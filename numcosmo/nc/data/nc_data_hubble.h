@@ -61,7 +61,7 @@ G_DECLARE_FINAL_TYPE (NcDataHubble, nc_data_hubble, NC, DATA_HUBBLE, NcmDataGaus
  *
  * Identifiers for different Hubble parameter observational datasets.
  */
-typedef enum _NcDataHubbleId
+typedef enum _NcDataHubbleId /*< prefix=NC_DATA_HUBBLE >*/
 {
   NC_DATA_HUBBLE_SIMON2005 = 0,
   NC_DATA_HUBBLE_CABRE,

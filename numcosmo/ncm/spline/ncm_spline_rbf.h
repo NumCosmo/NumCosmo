@@ -46,7 +46,7 @@ G_DECLARE_FINAL_TYPE (NcmSplineRBF, ncm_spline_rbf, NCM, SPLINE_RBF, NcmSpline)
  * Enumeration to choose which Gaussian [RBF](https://en.wikipedia.org/wiki/Radial_basis_function) interpolation method to be applied by the object.
  *
  */
-typedef enum _NcmSplineRBFType
+typedef enum _NcmSplineRBFType /*< prefix=NCM_SPLINE_RBF_TYPE >*/
 {
   NCM_SPLINE_RBF_TYPE_POSDEF_GAUSS = 0,
   NCM_SPLINE_RBF_TYPE_GAUSS,

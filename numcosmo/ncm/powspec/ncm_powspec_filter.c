@@ -77,6 +77,7 @@ enum
   PROP_RELTOL_Z,
   PROP_MAX_K_KNOTS,
   PROP_MAX_Z_KNOTS,
+  PROP_NDERIVS,
   PROP_POWERSPECTRUM,
   PROP_SIZE,
 };
@@ -98,11 +99,33 @@ struct _NcmPowspecFilter
   gdouble reltol_z;
   guint max_k_knots;
   guint max_z_knots;
-  NcmSpline2d *var;
-  NcmSpline2d *dvar;
+  guint nderivs;
+  GPtrArray *dnvar;
   NcmModelCtrl *ctrl;
   gboolean constructed;
 };
+
+/*
+ * Ensures that dnvar holds one spline per derivative order in [0, nderivs].
+ * Orders are only ever added, so splines already prepared are preserved.
+ */
+static void
+_ncm_powspec_filter_alloc_dnvar (NcmPowspecFilter *psf)
+{
+  while (psf->dnvar->len < psf->nderivs + 1)
+    g_ptr_array_add (psf->dnvar, ncm_spline2d_bicubic_notaknot_new ());
+
+  if (psf->dnvar->len > psf->nderivs + 1)
+    g_ptr_array_set_size (psf->dnvar, psf->nderivs + 1);
+}
+
+static NcmSpline2d *
+_ncm_powspec_filter_peek_dnvar (NcmPowspecFilter *psf, const guint n)
+{
+  g_assert_cmpuint (n, <, psf->dnvar->len);
+
+  return g_ptr_array_index (psf->dnvar, n);
+}
 
 G_DEFINE_TYPE (NcmPowspecFilter, ncm_powspec_filter, G_TYPE_OBJECT)
 
@@ -122,8 +145,8 @@ ncm_powspec_filter_init (NcmPowspecFilter *psf)
   psf->type        = NCM_POWSPEC_FILTER_TYPE_LEN;
   psf->fftlog      = NULL;
   psf->calibrated  = FALSE;
-  psf->var         = ncm_spline2d_bicubic_notaknot_new ();
-  psf->dvar        = ncm_spline2d_bicubic_notaknot_new ();
+  psf->nderivs     = 0;
+  psf->dnvar       = g_ptr_array_new_with_free_func ((GDestroyNotify) & ncm_spline2d_free);
   psf->ctrl        = ncm_model_ctrl_new (NULL);
   psf->constructed = FALSE;
 }
@@ -160,6 +183,9 @@ _ncm_powspec_filter_set_property (GObject *object, guint prop_id, const GValue *
       break;
     case PROP_MAX_Z_KNOTS:
       psf->max_z_knots = g_value_get_uint (value);
+      break;
+    case PROP_NDERIVS:
+      ncm_powspec_filter_set_nderivs (psf, g_value_get_uint (value));
       break;
     case PROP_POWERSPECTRUM:
       psf->ps = g_value_dup_object (value);
@@ -205,6 +231,9 @@ _ncm_powspec_filter_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_MAX_Z_KNOTS:
       g_value_set_uint (value, psf->max_z_knots);
       break;
+    case PROP_NDERIVS:
+      g_value_set_uint (value, psf->nderivs);
+      break;
     case PROP_POWERSPECTRUM:
       g_value_set_object (value, psf->ps);
       break;
@@ -238,8 +267,7 @@ _ncm_powspec_filter_dispose (GObject *object)
   ncm_powspec_clear (&psf->ps);
   ncm_fftlog_clear (&psf->fftlog);
 
-  ncm_spline2d_clear (&psf->var);
-  ncm_spline2d_clear (&psf->dvar);
+  g_clear_pointer (&psf->dnvar, g_ptr_array_unref);
 
   ncm_model_ctrl_clear (&psf->ctrl);
 
@@ -354,6 +382,26 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                       NULL,
                                                       "Maximum number of knots in the redshift direction",
                                                       0, G_MAXUINT, 1000,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmPowspecFilter:nderivs:
+   *
+   * Highest order $n$ of $\mathrm{d}^n\sigma^2/\mathrm{d}(\ln r)^n$ computed by the
+   * transform itself. Each additional order costs one extra Mellin kernel, output
+   * vector and two-dimensional spline, so the default of one covers the common case.
+   *
+   * Do not set this directly to declare a requirement; use
+   * ncm_powspec_filter_require_nderivs() instead, so that independent users of the
+   * same filter cannot lower an order somebody else still needs.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_NDERIVS,
+                                   g_param_spec_uint ("nderivs",
+                                                      NULL,
+                                                      "Number of derivatives computed by the transform",
+                                                      1, G_MAXUINT, 1,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -487,7 +535,7 @@ ncm_powspec_filter_set_type (NcmPowspecFilter *psf, NcmPowspecFilterType type)
     }
 
     ncm_fftlog_set_padding (psf->fftlog, 1.0);
-    ncm_fftlog_set_nderivs (psf->fftlog, 1);
+    ncm_fftlog_set_nderivs (psf->fftlog, psf->nderivs);
 
     ncm_powspec_filter_set_best_lnr0 (psf);
 
@@ -567,12 +615,15 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
     }
   }
 
+  ncm_fftlog_set_nderivs (psf->fftlog, psf->nderivs);
+  _ncm_powspec_filter_alloc_dnvar (psf);
+
   if (!psf->calibrated)
   {
-    NcmMatrix *lnvar, *dlnvar;
+    NcmMatrix **dnvar;
     NcmVector *z_vec, *lnr_vec;
     guint N_k = 0, N_z = 0;
-    guint i;
+    guint i, nd;
 
     ncm_powspec_get_nknots (psf->ps, &N_z, &N_k);
 
@@ -605,64 +656,67 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
  *           ncm_powspec_filter_get_r_max (psf),
  *           N_z, N_k);
  */
-    lnvar   = ncm_matrix_new (N_z, N_k);
-    dlnvar  = ncm_matrix_new (N_z, N_k);
+    dnvar = g_new0 (NcmMatrix *, psf->nderivs + 1);
+
+    for (nd = 0; nd <= psf->nderivs; nd++)
+      dnvar[nd] = ncm_matrix_new (N_z, N_k);
+
     lnr_vec = ncm_fftlog_get_vector_lnr (psf->fftlog);
 
     for (i = 0; i < N_z; i++)
     {
-      NcmVector *var_z  = ncm_matrix_get_row (lnvar, i);
-      NcmVector *dvar_z = ncm_matrix_get_row (dlnvar, i);
-
       arg.z = ncm_vector_get (z_vec, i);
       ncm_fftlog_eval_by_gsl_function (psf->fftlog, &F);
 
-      ncm_vector_memcpy (var_z, ncm_fftlog_peek_output_vector (psf->fftlog, 0));
-      ncm_vector_memcpy (dvar_z, ncm_fftlog_peek_output_vector (psf->fftlog, 1));
+      for (nd = 0; nd <= psf->nderivs; nd++)
+      {
+        NcmVector *dnvar_z = ncm_matrix_get_row (dnvar[nd], i);
 
-      /*ncm_vector_log_vals (var_z, "NADA: ", "% 11.5e", TRUE);*/
-
-      ncm_vector_free (var_z);
-      ncm_vector_free (dvar_z);
+        ncm_vector_memcpy (dnvar_z, ncm_fftlog_peek_output_vector (psf->fftlog, nd));
+        ncm_vector_free (dnvar_z);
+      }
     }
 
-    ncm_spline2d_set (psf->var, lnr_vec, z_vec, lnvar, TRUE);
-    ncm_spline2d_set (psf->dvar, lnr_vec, z_vec, dlnvar, TRUE);
+    for (nd = 0; nd <= psf->nderivs; nd++)
+    {
+      ncm_spline2d_set (_ncm_powspec_filter_peek_dnvar (psf, nd), lnr_vec, z_vec, dnvar[nd], TRUE);
+      ncm_matrix_free (dnvar[nd]);
+    }
+
+    g_free (dnvar);
 
     ncm_vector_free (z_vec);
     ncm_vector_free (lnr_vec);
-    ncm_matrix_free (lnvar);
-    ncm_matrix_free (dlnvar);
 
     psf->calibrated = TRUE;
   }
   else
   {
-    NcmMatrix *lnvar  = ncm_spline2d_peek_zm (psf->var);
-    NcmMatrix *dlnvar = ncm_spline2d_peek_zm (psf->dvar);
-    NcmVector *var_yv = ncm_spline2d_peek_yv (psf->var);
+    NcmSpline2d *var  = _ncm_powspec_filter_peek_dnvar (psf, 0);
+    NcmVector *var_yv = ncm_spline2d_peek_yv (var);
 
-    guint N_z = ncm_matrix_nrows (lnvar);
-    guint i;
+    guint N_z = ncm_matrix_nrows (ncm_spline2d_peek_zm (var));
+    guint i, nd;
 
     for (i = 0; i < N_z; i++)
     {
-      NcmVector *var_z  = ncm_matrix_get_row (lnvar, i);
-      NcmVector *dvar_z = ncm_matrix_get_row (dlnvar, i);
-
       arg.z = ncm_vector_get (var_yv, i);
       ncm_fftlog_eval_by_gsl_function (psf->fftlog, &F);
 
-      ncm_vector_memcpy (var_z, ncm_fftlog_peek_output_vector (psf->fftlog, 0));
-      ncm_vector_memcpy (dvar_z, ncm_fftlog_peek_output_vector (psf->fftlog, 1));
+      for (nd = 0; nd <= psf->nderivs; nd++)
+      {
+        NcmVector *dnvar_z = ncm_matrix_get_row (ncm_spline2d_peek_zm (_ncm_powspec_filter_peek_dnvar (psf, nd)), i);
 
-      ncm_vector_free (var_z);
-      ncm_vector_free (dvar_z);
+        ncm_vector_memcpy (dnvar_z, ncm_fftlog_peek_output_vector (psf->fftlog, nd));
+        ncm_vector_free (dnvar_z);
+      }
     }
 
-    ncm_spline2d_prepare (psf->var);
-    ncm_spline2d_prepare (psf->dvar);
+    for (nd = 0; nd <= psf->nderivs; nd++)
+      ncm_spline2d_prepare (_ncm_powspec_filter_peek_dnvar (psf, nd));
   }
+
+  ncm_model_ctrl_update (psf->ctrl, model);
 }
 
 /**
@@ -836,6 +890,66 @@ ncm_powspec_filter_require_zf (NcmPowspecFilter *psf, gdouble zf)
 }
 
 /**
+ * ncm_powspec_filter_set_nderivs:
+ * @psf: a #NcmPowspecFilter
+ * @nderivs: the highest derivative order $n$
+ *
+ * Sets the highest order $n$ of $\mathrm{d}^n\sigma^2/\mathrm{d}(\ln r)^n$ obtained
+ * from the transform itself. Lowering the order discards the extra tables, so
+ * prefer ncm_powspec_filter_require_nderivs() whenever the filter may be shared.
+ *
+ */
+void
+ncm_powspec_filter_set_nderivs (NcmPowspecFilter *psf, guint nderivs)
+{
+  g_assert_cmpuint (nderivs, >, 0);
+
+  if (psf->nderivs != nderivs)
+  {
+    psf->nderivs = nderivs;
+
+    _ncm_powspec_filter_alloc_dnvar (psf);
+
+    if (psf->fftlog != NULL)
+      ncm_fftlog_set_nderivs (psf->fftlog, nderivs);
+
+    ncm_model_ctrl_force_update (psf->ctrl);
+    psf->calibrated = FALSE;
+  }
+}
+
+/**
+ * ncm_powspec_filter_require_nderivs:
+ * @psf: a #NcmPowspecFilter
+ * @nderivs: the required derivative order $n$
+ *
+ * Requires derivatives up to at least order $n$. Requests at or below the order
+ * already in use do nothing, so several users of the same filter may each state
+ * their own minimum without any of them lowering an order another one needs.
+ *
+ */
+void
+ncm_powspec_filter_require_nderivs (NcmPowspecFilter *psf, guint nderivs)
+{
+  if (psf->nderivs < nderivs)
+    ncm_powspec_filter_set_nderivs (psf, nderivs);
+}
+
+/**
+ * ncm_powspec_filter_get_nderivs:
+ * @psf: a #NcmPowspecFilter
+ *
+ * Gets the highest derivative order currently computed by the transform.
+ *
+ * Returns: the highest derivative order $n$.
+ */
+guint
+ncm_powspec_filter_get_nderivs (NcmPowspecFilter *psf)
+{
+  return psf->nderivs;
+}
+
+/**
  * ncm_powspec_filter_get_filter_type:
  * @psf: a #NcmPowspecFilter
  *
@@ -918,7 +1032,7 @@ ncm_powspec_filter_get_r_max (NcmPowspecFilter *psf)
 gdouble
 ncm_powspec_filter_eval_lnvar_lnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
 {
-  return log (ncm_spline2d_eval (psf->var, lnr, z));
+  return log (ncm_spline2d_eval (_ncm_powspec_filter_peek_dnvar (psf, 0), lnr, z));
 }
 
 /**
@@ -934,7 +1048,7 @@ ncm_powspec_filter_eval_lnvar_lnr (NcmPowspecFilter *psf, const gdouble z, const
 gdouble
 ncm_powspec_filter_eval_var_lnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
 {
-  return ncm_spline2d_eval (psf->var, lnr, z);
+  return ncm_spline2d_eval (_ncm_powspec_filter_peek_dnvar (psf, 0), lnr, z);
 }
 
 /**
@@ -999,7 +1113,7 @@ ncm_powspec_filter_eval_sigma (NcmPowspecFilter *psf, const gdouble z, const gdo
 gdouble
 ncm_powspec_filter_eval_dvar_dlnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
 {
-  return ncm_spline2d_eval (psf->dvar, lnr, z);
+  return ncm_spline2d_eval (_ncm_powspec_filter_peek_dnvar (psf, 1), lnr, z);
 }
 
 /**
@@ -1016,7 +1130,8 @@ ncm_powspec_filter_eval_dvar_dlnr (NcmPowspecFilter *psf, const gdouble z, const
 gdouble
 ncm_powspec_filter_eval_dlnvar_dlnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
 {
-  return ncm_spline2d_eval (psf->dvar, lnr, z) / ncm_spline2d_eval (psf->var, lnr, z);
+  return ncm_spline2d_eval (_ncm_powspec_filter_peek_dnvar (psf, 1), lnr, z) /
+         ncm_spline2d_eval (_ncm_powspec_filter_peek_dnvar (psf, 0), lnr, z);
 }
 
 /**
@@ -1043,46 +1158,23 @@ ncm_powspec_filter_eval_dlnvar_dr (NcmPowspecFilter *psf, const gdouble z, const
  * @lnr: logarithm base e of $r$
  * @n: number of derivatives $n$
  *
- * Evaluates the derivatives of the filtered variance at @lnr and @z, namely:
- * - $n = 0 \rightarrow \sigma(r, z)^2$,
- * - $n = 1 \rightarrow \frac{\mathrm{d}\sigma^2}{\mathrm{d} \ln r}$,
- * - $n = 2 \rightarrow \frac{\mathrm{d}^2\sigma^2}{\mathrm{d}(\ln r)^2}$,
- * - $n = 3 \rightarrow \frac{\mathrm{d}^3\sigma^2}{\mathrm{d}(\ln r)^3}$.
+ * Evaluates $\frac{\mathrm{d}^n\sigma^2}{\mathrm{d}(\ln r)^n}$ at @lnr and @z, with
+ * $n = 0$ giving $\sigma(r, z)^2$ itself.
  *
- * Returns: one of the four derivatives described above.
+ * Every order comes from the transform itself rather than from differentiating an
+ * interpolation, so @n must not exceed the order the filter was prepared for; see
+ * ncm_powspec_filter_require_nderivs().
+ *
+ * Returns: the @n-th derivative described above.
  */
 gdouble
 ncm_powspec_filter_eval_dnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr, guint n)
 {
-  switch (n)
-  {
-    case 0:
+  if (n > psf->nderivs)
+    g_error ("ncm_powspec_filter_eval_dnvar_dlnrn: derivative %u requested but the transform "
+             "computes up to %u, call ncm_powspec_filter_require_nderivs () before preparing.", n, psf->nderivs);
 
-      return ncm_spline2d_eval (psf->var, lnr, z);
-
-      break;
-    case 1:
-
-      return ncm_spline2d_eval (psf->dvar, lnr, z);
-
-      break;
-    case 2:
-
-      return ncm_spline2d_deriv_dzdx (psf->dvar, lnr, z);
-
-      break;
-    case 3:
-
-      return ncm_spline2d_deriv_d2zdx2 (psf->dvar, lnr, z);
-
-      break;
-    default:
-      g_error ("ncm_powspec_filter_eval_dnvar_dlnrn: %u derivative not implemented.", n);
-
-      return 0.0;
-
-      break;
-  }
+  return ncm_spline2d_eval (_ncm_powspec_filter_peek_dnvar (psf, n), lnr, z);
 }
 
 /**
@@ -1117,9 +1209,9 @@ ncm_powspec_filter_eval_dnlnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, c
       break;
     case 2:
     {
-      const gdouble var   = ncm_spline2d_eval (psf->var, lnr, z);
-      const gdouble dvar  = ncm_spline2d_eval (psf->dvar, lnr, z);
-      const gdouble d2var = ncm_spline2d_deriv_dzdx (psf->dvar, lnr, z);
+      const gdouble var   = ncm_powspec_filter_eval_dnvar_dlnrn (psf, z, lnr, 0);
+      const gdouble dvar  = ncm_powspec_filter_eval_dnvar_dlnrn (psf, z, lnr, 1);
+      const gdouble d2var = ncm_powspec_filter_eval_dnvar_dlnrn (psf, z, lnr, 2);
 
       const gdouble dlnvar = dvar / var;
 

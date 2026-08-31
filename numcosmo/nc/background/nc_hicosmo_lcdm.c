@@ -31,6 +31,16 @@
  * provides the implementation of the normalized Hubble function and its derivatives
  * for the $\Lambda$CDM model.
  *
+ * It carries no massive neutrinos, so $E^2\Omega_{m\nu}$ and $E^2P_{m\nu}$ are
+ * zero and $N_\mathrm{eff}$ is the #NcHICosmoLCDM:ENnu parameter.
+ *
+ * $Y_p$ used to be a parameter of this model, taken at face value. It comes
+ * from the #NcBBN submodel now, which defaults to the PArthENoPE prediction --
+ * so a $\Lambda$CDM cosmology that never set $Y_p$ moves from the old 0.24
+ * placeholder to roughly 0.2453, and one that set it explicitly gets the
+ * prediction unless the file also marked $Y_p$ free. Attach a
+ * #NcBBNParametrized to keep a chosen value.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -72,9 +82,10 @@ static gdouble _nc_hicosmo_lcdm_Omega_r0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_lcdm_Omega_b0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_lcdm_Omega_g0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_lcdm_Omega_nu0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_lcdm_E2Omega_mnu (NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_hicosmo_lcdm_E2Press_mnu (NcHICosmo *cosmo, const gdouble z);
 static gdouble _nc_hicosmo_lcdm_Omega_t0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_lcdm_T_gamma0 (NcHICosmo *cosmo);
-static gdouble _nc_hicosmo_lcdm_Yp_4He (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_lcdm_bgp_cs2 (NcHICosmo *cosmo, gdouble z);
 
 static void
@@ -109,11 +120,6 @@ nc_hicosmo_lcdm_class_init (NcHICosmoLCDMClass *klass)
                               2.0, 3.0, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_T_GAMMA0,
                               NCM_PARAM_TYPE_FIXED);
-  /* Set He Yp param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_HE_YP, "Y_p", "Yp",
-                              0.0,  1.0, 1.0e-2,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_HE_YP,
-                              NCM_PARAM_TYPE_FIXED);
   /* Set ENnu param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_ENNU, "N_\\nu", "ENnu",
                               0.0,  10.0, 1.0e-2,
@@ -134,9 +140,10 @@ nc_hicosmo_lcdm_class_init (NcHICosmoLCDMClass *klass)
   nc_hicosmo_set_Omega_b0_impl   (parent_class, &_nc_hicosmo_lcdm_Omega_b0);
   nc_hicosmo_set_Omega_g0_impl   (parent_class, &_nc_hicosmo_lcdm_Omega_g0);
   nc_hicosmo_set_Omega_nu0_impl  (parent_class, &_nc_hicosmo_lcdm_Omega_nu0);
+  nc_hicosmo_set_E2Omega_mnu_impl (parent_class, &_nc_hicosmo_lcdm_E2Omega_mnu);
+  nc_hicosmo_set_E2Press_mnu_impl (parent_class, &_nc_hicosmo_lcdm_E2Press_mnu);
   nc_hicosmo_set_Omega_t0_impl   (parent_class, &_nc_hicosmo_lcdm_Omega_t0);
   nc_hicosmo_set_T_gamma0_impl  (parent_class, &_nc_hicosmo_lcdm_T_gamma0);
-  nc_hicosmo_set_Yp_4He_impl    (parent_class, &_nc_hicosmo_lcdm_Yp_4He);
 
   nc_hicosmo_set_dE2_dz_impl    (parent_class, &_nc_hicosmo_lcdm_dE2_dz);
   nc_hicosmo_set_d2E2_dz2_impl  (parent_class, &_nc_hicosmo_lcdm_d2E2_dz2);
@@ -149,7 +156,6 @@ nc_hicosmo_lcdm_class_init (NcHICosmoLCDMClass *klass)
 #define OMEGA_C  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_C))
 #define OMEGA_X  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
 #define T_GAMMA0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_T_GAMMA0))
-#define HE_YP    (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_HE_YP))
 #define ENNU     (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_ENNU))
 #define OMEGA_R  nc_hicosmo_Omega_r0 (cosmo)
 #define OMEGA_B  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_B))
@@ -231,12 +237,6 @@ _nc_hicosmo_lcdm_T_gamma0 (NcHICosmo *cosmo)
 }
 
 static gdouble
-_nc_hicosmo_lcdm_Yp_4He (NcHICosmo *cosmo)
-{
-  return HE_YP;
-}
-
-static gdouble
 _nc_hicosmo_lcdm_Omega_g0 (NcHICosmo *cosmo)
 {
   const gdouble h  = MACRO_H0 / 100.0;
@@ -251,6 +251,24 @@ _nc_hicosmo_lcdm_Omega_nu0 (NcHICosmo *cosmo)
   const gdouble conv = 7.0 / 8.0 * pow (4.0 / 11.0, 4.0 / 3.0);
 
   return ENNU * conv * _nc_hicosmo_lcdm_Omega_g0 (cosmo);
+}
+
+/*
+ * This model has no massive neutrinos, so both are identically zero. Stated
+ * rather than left unimplemented because nc_hicosmo_Neff() reads E2Press_mnu,
+ * and without it a model that carries an ENnu parameter could not report the
+ * effective number of neutrinos that parameter sets.
+ */
+static gdouble
+_nc_hicosmo_lcdm_E2Omega_mnu (NcHICosmo *cosmo, const gdouble z)
+{
+  return 0.0;
+}
+
+static gdouble
+_nc_hicosmo_lcdm_E2Press_mnu (NcHICosmo *cosmo, const gdouble z)
+{
+  return 0.0;
 }
 
 static gdouble
@@ -288,8 +306,30 @@ _nc_hicosmo_lcdm_bgp_cs2 (NcHICosmo *cosmo, gdouble z)
 NcHICosmoLCDM *
 nc_hicosmo_lcdm_new (void)
 {
-  NcHICosmoLCDM *lcdm = g_object_new (NC_TYPE_HICOSMO_LCDM, NULL);
+  return nc_hicosmo_lcdm_new_full (NULL, NULL, NULL);
+}
 
-  return lcdm;
+/**
+ * nc_hicosmo_lcdm_new_full:
+ * @reion: (nullable): a #NcHIReion
+ * @prim: (nullable): a #NcHIPrim
+ * @bbn: (nullable): a #NcBBN
+ *
+ * Creates a new instance of #NcHICosmoLCDM (Lambda-CDM cosmological model),
+ * with @reion, @prim, and @bbn attached at construction time (submodels are
+ * construction-only and cannot be attached afterward). Each may be
+ * %NULL to leave that slot unset (a %NULL @bbn slot gets a default
+ * #NcBBNParthenope).
+ *
+ * Returns: (transfer full): a new #NcHICosmoLCDM
+ */
+NcHICosmoLCDM *
+nc_hicosmo_lcdm_new_full (NcHIReion *reion, NcHIPrim *prim, NcBBN *bbn)
+{
+  return g_object_new (NC_TYPE_HICOSMO_LCDM,
+                       "reion", reion,
+                       "prim", prim,
+                       "bbn", bbn,
+                       NULL);
 }
 

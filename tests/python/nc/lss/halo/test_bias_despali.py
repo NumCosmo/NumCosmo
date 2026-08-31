@@ -25,6 +25,8 @@
 """Tests for Nc.HaloBiasDespali model."""
 
 import pytest
+import math
+
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
@@ -110,7 +112,7 @@ def test_halo_bias_despali_eval_virial(
     # Test all flag combinations for virial
     for eo, cmf in [(False, False), (True, False), (False, True)]:
         bias_despali = Nc.HaloBiasDespali.new_full(mfunc, eo, cmf)
-        bias_value = bias_despali.eval(cosmo, 0.5, 0.5)
+        bias_value = bias_despali.eval(cosmo, 0.5, math.log(1.0e14), 0.5)
         assert np.isfinite(bias_value)
         assert bias_value > 0.0
 
@@ -126,7 +128,7 @@ def test_halo_bias_despali_eval_mean(
     # Test both eo flag values for mean
     for eo in [False, True]:
         bias_despali = Nc.HaloBiasDespali.new_full(mfunc, eo, False)
-        bias_value = bias_despali.eval(cosmo, 0.5, 0.5)
+        bias_value = bias_despali.eval(cosmo, 0.5, math.log(1.0e14), 0.5)
         assert np.isfinite(bias_value)
         assert bias_value > 0.0
 
@@ -142,7 +144,7 @@ def test_halo_bias_despali_eval_critical(
     # Test both eo flag values for critical
     for eo in [False, True]:
         bias_despali = Nc.HaloBiasDespali.new_full(mfunc, eo, False)
-        bias_value = bias_despali.eval(cosmo, 0.5, 0.5)
+        bias_value = bias_despali.eval(cosmo, 0.5, math.log(1.0e14), 0.5)
         assert np.isfinite(bias_value)
         assert bias_value > 0.0
 

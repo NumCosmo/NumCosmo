@@ -48,7 +48,7 @@ G_DECLARE_FINAL_TYPE (NcmPowspecFilter, ncm_powspec_filter, NCM, POWSPEC_FILTER,
  * See also #NcmFftlogTophatwin2 and #NcmFftlogGausswin2, for the top-hat and Gaussian filters, respectively.
  *
  */
-typedef enum _NcmPowspecFilterType
+typedef enum _NcmPowspecFilterType /*< prefix=NCM_POWSPEC_FILTER_TYPE >*/
 {
   NCM_POWSPEC_FILTER_TYPE_TOPHAT = 0,
   NCM_POWSPEC_FILTER_TYPE_GAUSS,
@@ -77,6 +77,10 @@ void ncm_powspec_filter_set_zf (NcmPowspecFilter *psf, gdouble zf);
 
 void ncm_powspec_filter_require_zi (NcmPowspecFilter *psf, gdouble zi);
 void ncm_powspec_filter_require_zf (NcmPowspecFilter *psf, gdouble zf);
+
+void ncm_powspec_filter_set_nderivs (NcmPowspecFilter *psf, guint nderivs);
+void ncm_powspec_filter_require_nderivs (NcmPowspecFilter *psf, guint nderivs);
+guint ncm_powspec_filter_get_nderivs (NcmPowspecFilter *psf);
 
 NcmPowspecFilterType ncm_powspec_filter_get_filter_type (NcmPowspecFilter *psf);
 

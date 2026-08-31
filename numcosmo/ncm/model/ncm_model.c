@@ -68,6 +68,18 @@ typedef struct _NcmModelPrivate
   guint64 skey;
   guint64 slkey[NCM_MODEL_MAX_STATES];
   gdouble *params_ptr;
+  gboolean constructed;
+
+  /*
+   * Weak backpointer to the host this instance is currently attached to as
+   * a submodel, or unset if it isn't anyone's submodel right now. Set in
+   * _ncm_model_add_submodel() at attach time, cleared there when a
+   * submodel is replaced at the same slot position, and cleared here (via
+   * g_weak_ref_clear()) at dispose. Any future submodel detach/remove API
+   * must clear the departing submodel's host_wr the same way the REPLACE
+   * branch does, or a stale backpointer can outlive the actual attachment.
+   */
+  GWeakRef host_wr;
 } NcmModelPrivate;
 
 enum
@@ -89,6 +101,27 @@ G_DEFINE_QUARK (ncm-model-error, ncm_model_error)
 /* *INDENT-ON* */
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmModel, ncm_model, G_TYPE_OBJECT)
+
+typedef struct _NcmModelSubmodelSlot
+{
+  gchar *name;
+  gchar *symbol;
+  GType submodel_type;
+} NcmModelSubmodelSlot;
+
+/* LCOV_EXCL_START: a class's slot array is only freed on class
+ * destruction, which never happens for static types. */
+static void
+_ncm_model_submodel_slot_free (gpointer ptr)
+{
+  NcmModelSubmodelSlot *slot = ptr;
+
+  g_free (slot->name);
+  g_free (slot->symbol);
+  g_slice_free (NcmModelSubmodelSlot, slot);
+}
+
+/* LCOV_EXCL_STOP */
 
 static void
 ncm_model_init (NcmModel *model)
@@ -114,6 +147,9 @@ ncm_model_init (NcmModel *model)
   self->ptypes           = g_array_new (FALSE, TRUE, sizeof (NcmParamType));
   self->submodel_array   = g_ptr_array_new ();
   self->submodel_mid_pos = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, NULL);
+  self->constructed      = FALSE;
+
+  g_weak_ref_init (&self->host_wr, NULL);
 
   g_ptr_array_set_free_func (self->submodel_array, (GDestroyNotify) ncm_model_free);
 }
@@ -234,6 +270,8 @@ _ncm_model_constructed (GObject *object)
     g_array_set_size (self->ptypes, self->total_len);
     _ncm_model_set_sparams (model);
     ncm_model_params_set_default (model);
+
+    self->constructed = TRUE;
   }
 }
 
@@ -257,6 +295,8 @@ _ncm_model_dispose (GObject *object)
 
   g_clear_pointer (&self->submodel_array,   g_ptr_array_unref);
   g_clear_pointer (&self->submodel_mid_pos, g_hash_table_unref);
+
+  g_weak_ref_clear (&self->host_wr);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_parent_class)->dispose (object);
@@ -420,6 +460,10 @@ ncm_model_class_init (NcmModelClass *klass)
   klass->sparam            = NULL;
   klass->vparam            = NULL;
 
+  klass->submodel_slot_len        = 0;
+  klass->parent_submodel_slot_len = 0;
+  klass->submodel_slot            = NULL;
+
   g_object_class_install_property (object_class,
                                    PROP_NAME,
                                    g_param_spec_string ("name",
@@ -513,6 +557,7 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
   const guint vparam_len_id    = vparam_id     - model_class->vparam_len        + model_class->parent_vparam_len;
   const guint sparam_fit_id    = vparam_len_id - model_class->vparam_len        + model_class->parent_sparam_len;
   const guint vparam_fit_id    = sparam_fit_id - model_class->sparam_len        + model_class->parent_vparam_len;
+  const guint submodel_slot_id = vparam_fit_id - model_class->vparam_len        + model_class->parent_submodel_slot_len;
 
   if ((prop_id < model_class->nonparam_prop_len) && model_class->get_property)
   {
@@ -558,6 +603,18 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
 
     g_value_take_variant (value, var);
   }
+
+  /* LCOV_EXCL_START: slot properties are write-only, GObject never routes a
+   * read here; kept so the dispatcher stays total over its property range. */
+  else if (submodel_slot_id < model_class->submodel_slot_len)
+  {
+    NcmModelSubmodelSlot *slot = g_ptr_array_index (model_class->submodel_slot, submodel_slot_id);
+    NcmModelID mid             = ncm_model_id_by_type (slot->submodel_type, NULL);
+    NcmModel *submodel         = (mid >= 0) ? ncm_model_peek_submodel_by_mid (model, mid) : NULL;
+
+    g_value_set_object (value, submodel);
+  }
+  /* LCOV_EXCL_STOP */
   else
   {
     g_assert_not_reached ();
@@ -586,6 +643,7 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
   const guint vparam_len_id    = vparam_id     - model_class->vparam_len        + model_class->parent_vparam_len;
   const guint sparam_fit_id    = vparam_len_id - model_class->vparam_len        + model_class->parent_sparam_len;
   const guint vparam_fit_id    = sparam_fit_id - model_class->sparam_len        + model_class->parent_vparam_len;
+  const guint submodel_slot_id = vparam_fit_id - model_class->vparam_len        + model_class->parent_submodel_slot_len;
 
   /*printf ("[%u %u] [%u %u] [%u %u] [%u %u] [%u %u] [%u %u]\n", prop_id, model_class->nonparam_prop_len, sparam_id, model_class->sparam_len, vparam_id, model_class->vparam_len, vparam_len_id, model_class->vparam_len, sparam_fit_id, model_class->sparam_len, vparam_fit_id, model_class->vparam_len);*/
 
@@ -696,6 +754,13 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
       }
     }
   }
+  else if (submodel_slot_id < model_class->submodel_slot_len)
+  {
+    NcmModel *submodel = g_value_get_object (value);
+
+    if (submodel != NULL)
+      ncm_model_add_submodel (model, submodel);
+  }
   else
   {
     g_assert_not_reached ();
@@ -718,13 +783,14 @@ ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint 
 {
   GObjectClass *object_class = G_OBJECT_CLASS (model_class);
 
-  object_class->set_property     = &ncm_model_class_set_property;
-  object_class->get_property     = &ncm_model_class_get_property;
-  model_class->parent_sparam_len = model_class->sparam_len;
-  model_class->parent_vparam_len = model_class->vparam_len;
-  model_class->sparam_len       += sparam_len;
-  model_class->vparam_len       += vparam_len;
-  model_class->nonparam_prop_len = nonparam_prop_len;
+  object_class->set_property            = &ncm_model_class_set_property;
+  object_class->get_property            = &ncm_model_class_get_property;
+  model_class->parent_sparam_len        = model_class->sparam_len;
+  model_class->parent_vparam_len        = model_class->vparam_len;
+  model_class->parent_submodel_slot_len = model_class->submodel_slot_len;
+  model_class->sparam_len              += sparam_len;
+  model_class->vparam_len              += vparam_len;
+  model_class->nonparam_prop_len        = nonparam_prop_len;
 
   if (model_class->sparam_len > 0)
   {
@@ -950,6 +1016,101 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
 }
 
 /**
+ * ncm_model_class_add_submodels:
+ * @model_class: a #NcmModelClass
+ * @submodel_slot_len: number of submodel slots to add
+ *
+ * Class function to be used when implementing NcmModels. It declares that the
+ * model has @submodel_slot_len submodel slots, in addition to any inherited
+ * from the parent class. Submodels can only be attached at construction time,
+ * through the slots declared with ncm_model_class_set_submodel(). It must be
+ * called after ncm_model_class_add_params().
+ *
+ */
+void
+ncm_model_class_add_submodels (NcmModelClass *model_class, guint submodel_slot_len)
+{
+  model_class->submodel_slot_len += submodel_slot_len;
+
+  if (model_class->submodel_slot_len > 0)
+  {
+    if (model_class->submodel_slot == NULL)
+    {
+      model_class->submodel_slot = g_ptr_array_new_with_free_func (&_ncm_model_submodel_slot_free);
+      g_ptr_array_set_size (model_class->submodel_slot, model_class->submodel_slot_len);
+    }
+    else
+    {
+      GPtrArray *submodel_slot = g_ptr_array_new_with_free_func (&_ncm_model_submodel_slot_free);
+      guint i;
+
+      g_ptr_array_set_size (submodel_slot, model_class->submodel_slot_len);
+
+      /* Copy all parent submodel slot info */
+      for (i = 0; i < model_class->parent_submodel_slot_len; i++)
+      {
+        NcmModelSubmodelSlot *pslot = g_ptr_array_index (model_class->submodel_slot, i);
+        NcmModelSubmodelSlot *slot  = g_slice_new0 (NcmModelSubmodelSlot);
+
+        slot->name                           = g_strdup (pslot->name);
+        slot->symbol                         = g_strdup (pslot->symbol);
+        slot->submodel_type                  = pslot->submodel_type;
+        g_ptr_array_index (submodel_slot, i) = slot;
+      }
+
+      model_class->submodel_slot = submodel_slot;
+    }
+  }
+}
+
+/**
+ * ncm_model_class_set_submodel:
+ * @model_class: a #NcmModelClass
+ * @submodel_slot_id: id of the submodel slot
+ * @name: name of the submodel slot
+ * @symbol: symbol of the submodel slot
+ * @submodel_type: the #GType of the submodel accepted by the slot
+ *
+ * Sets the @submodel_slot_id-th submodel slot of the model. The slot is
+ * exposed as a construct-only, type-checked object property named @name. The
+ * submodel is therefore part of the model's structure, fixed at construction.
+ *
+ */
+void
+ncm_model_class_set_submodel (NcmModelClass *model_class, guint submodel_slot_id, const gchar *name, const gchar *symbol, GType submodel_type)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (model_class);
+  const guint base           = model_class->nonparam_prop_len
+                               + 2 * (model_class->sparam_len - model_class->parent_sparam_len)
+                               + 3 * (model_class->vparam_len - model_class->parent_vparam_len);
+  const guint prop_id = base + (submodel_slot_id - model_class->parent_submodel_slot_len);
+  NcmModelSubmodelSlot *slot;
+
+  g_assert (g_type_is_a (submodel_type, NCM_TYPE_MODEL));
+
+  if (submodel_slot_id >= model_class->submodel_slot_len)
+    g_error ("ncm_model_class_set_submodel: setting submodel slot %u-th of %u declared for model ``%s''.",
+             submodel_slot_id + 1, model_class->submodel_slot_len, model_class->name);
+
+  g_assert_cmpint (prop_id, >, 0);
+
+  if (g_ptr_array_index (model_class->submodel_slot, submodel_slot_id) != NULL)
+    g_error ("ncm_model_class_set_submodel: submodel slot %u is already set.", submodel_slot_id);
+
+  slot                = g_slice_new0 (NcmModelSubmodelSlot);
+  slot->name          = g_strdup (name);
+  slot->symbol        = g_strdup (symbol);
+  slot->submodel_type = submodel_type;
+
+  g_ptr_array_index (model_class->submodel_slot, submodel_slot_id) = slot;
+
+  g_object_class_install_property (object_class, prop_id,
+                                   g_param_spec_object (name, NULL, symbol,
+                                                        submodel_type,
+                                                        G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+}
+
+/**
  * ncm_model_class_check_params_info:
  * @model_class: a #NcmModelClass
  *
@@ -1105,6 +1266,103 @@ ncm_model_clear (NcmModel **model)
   g_clear_object (model);
 }
 
+/*
+ * The type of a property @reparam declares beyond NcmReparam's own, or %NULL
+ * if it declares none.
+ *
+ * Rebuilding a reparametrization carries over length, params-desc and
+ * compat-type. That is the whole of a NcmReparam, but not of a subclass that
+ * adds state: NcmReparamLinear's matrix and vector are sized to the old
+ * length, and a rebuild would leave them unset. Such a subclass cannot be
+ * resized here, whatever its descriptors say.
+ */
+static const gchar *
+_ncm_model_reparam_extra_state (NcmReparam *reparam)
+{
+  GParamSpec **pspecs = NULL;
+  const gchar *extra  = NULL;
+  guint n             = 0;
+  guint i;
+
+  pspecs = g_object_class_list_properties (G_OBJECT_GET_CLASS (reparam), &n);
+
+  for (i = 0; i < n; i++)
+  {
+    if (!g_type_is_a (NCM_TYPE_REPARAM, pspecs[i]->owner_type))
+    {
+      extra = g_param_spec_get_name (pspecs[i]);
+      break;
+    }
+  }
+
+  g_free (pspecs);
+
+  return extra;
+}
+
+/*
+ * A copy of @reparam sized for a model of @length parameters, or %NULL if it
+ * cannot be rebuilt there -- in which case @reason says why.
+ *
+ * A NcmReparam stores no parameter *values*: length, params-desc and
+ * compat-type are all it carries, and the working vector is allocated empty at
+ * construction and filled from the model by old2new(). Rebuilding one at a
+ * different length therefore loses nothing -- and since NcmReparam:length is
+ * construct-only, agreeing with the model means a new instance.
+ */
+static NcmReparam *
+_ncm_model_reparam_resize (NcmReparam *reparam, guint length, gchar **reason)
+{
+  NcmObjDictInt *desc = NULL;
+  const gchar *extra  = _ncm_model_reparam_extra_state (reparam);
+  NcmReparam *out;
+
+  if (extra != NULL)
+  {
+    *reason = g_strdup_printf ("it carries state of its own (property `%s') that no rebuild can size", extra);
+
+    return NULL;
+  }
+
+  g_object_get (reparam, "params-desc", &desc, NULL);
+
+  if (desc != NULL)
+  {
+    GArray *keys = ncm_obj_dict_int_keys (desc);
+    guint i;
+
+    for (i = 0; i < keys->len; i++)
+    {
+      const gint key = g_array_index (keys, gint, i);
+
+      if ((key < 0) || ((guint) key >= length))
+      {
+        *reason = g_strdup_printf ("it reparametrizes parameter %d, which no longer exists", key);
+
+        g_array_unref (keys);
+        ncm_obj_dict_int_unref (desc);
+
+        return NULL;
+      }
+    }
+
+    g_array_unref (keys);
+  }
+
+  out = g_object_new (G_OBJECT_TYPE (reparam),
+                      "length", length,
+                      "compat-type", g_type_name (ncm_reparam_get_compat_type (reparam)),
+                      NULL);
+
+  if (desc != NULL)
+  {
+    g_object_set (out, "params-desc", desc, NULL);
+    ncm_obj_dict_int_unref (desc);
+  }
+
+  return out;
+}
+
 /**
  * ncm_model_set_reparam:
  * @model: a #NcmModel
@@ -1118,6 +1376,8 @@ void
 ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
 {
   NcmModelPrivate * const self = ncm_model_get_instance_private (model);
+  NcmReparam *resized          = NULL;
+  gchar *reason                = NULL;
 
   g_return_if_fail (error == NULL || *error == NULL);
 
@@ -1134,6 +1394,30 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
       return;
     }
 
+    /* A model can lose a parameter between a file being written and read --
+     * NcHICosmoDE dropping Yp to the NcBBN submodel is the case this was
+     * written for -- which leaves every stored reparametrization one slot too
+     * long. Adopting it regardless aborted inside ncm_vector_memcpy(). */
+    if (ncm_reparam_get_length (reparam) != ncm_model_len (model))
+    {
+      resized = _ncm_model_reparam_resize (reparam, ncm_model_len (model), &reason);
+
+      if (resized == NULL)
+      {
+        ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE,
+                                    "ncm_model_set_reparam: reparametrization `%s' is for %u parameters "
+                                    "but model `%s' has %u, and %s.",
+                                    g_type_name (G_OBJECT_TYPE (reparam)), ncm_reparam_get_length (reparam),
+                                    g_type_name (G_OBJECT_TYPE (model)), ncm_model_len (model), reason);
+
+        g_free (reason);
+
+        return;
+      }
+
+      reparam = resized;
+    }
+
     if (self->reparam != reparam)
     {
       ncm_reparam_clear (&self->reparam);
@@ -1147,6 +1431,8 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
     }
 
     ncm_reparam_old2new (self->reparam, model);
+
+    ncm_reparam_clear (&resized);
   }
   else
   {
@@ -2498,11 +2784,14 @@ ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
 
   {
+    NcmModel *target;
     guint i;
-    const gboolean has_param = ncm_model_param_index_from_name (model, param, &i, error);
+    const gboolean has_param = ncm_model_param_index_from_name_full (model, param, &target, &i, error);
 
     if (!has_param)
     {
+      NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
+
       ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
                                   "ncm_model_param_get_desc: model `%s' does not have a parameter called `%s'.",
                                   G_OBJECT_TYPE_NAME (model), param);
@@ -2517,7 +2806,7 @@ ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
         GValue *value = g_new0 (GValue, 1);
 
         g_value_init (value, G_TYPE_STRING);
-        g_value_set_static_string (value, ncm_model_param_name (model, i));
+        g_value_set_static_string (value, ncm_model_param_name (target, i));
         g_hash_table_insert (desc, g_strdup ("name"), value);
       }
 
@@ -2525,7 +2814,7 @@ ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
         GValue *value = g_new0 (GValue, 1);
 
         g_value_init (value, G_TYPE_STRING);
-        g_value_set_static_string (value, ncm_model_param_symbol (model, i));
+        g_value_set_static_string (value, ncm_model_param_symbol (target, i));
         g_hash_table_insert (desc, g_strdup ("symbol"), value);
       }
 
@@ -2533,7 +2822,7 @@ ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
         GValue *value = g_new0 (GValue, 1);
 
         g_value_init (value, G_TYPE_DOUBLE);
-        g_value_set_double (value, ncm_model_param_get_scale (model, i));
+        g_value_set_double (value, ncm_model_param_get_scale (target, i));
         g_hash_table_insert (desc, g_strdup ("scale"), value);
       }
 
@@ -2541,7 +2830,7 @@ ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
         GValue *value = g_new0 (GValue, 1);
 
         g_value_init (value, G_TYPE_DOUBLE);
-        g_value_set_double (value, ncm_model_param_get_lower_bound (model, i));
+        g_value_set_double (value, ncm_model_param_get_lower_bound (target, i));
         g_hash_table_insert (desc, g_strdup ("lower-bound"), value);
       }
 
@@ -2549,7 +2838,7 @@ ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
         GValue *value = g_new0 (GValue, 1);
 
         g_value_init (value, G_TYPE_DOUBLE);
-        g_value_set_double (value, ncm_model_param_get_upper_bound (model, i));
+        g_value_set_double (value, ncm_model_param_get_upper_bound (target, i));
         g_hash_table_insert (desc, g_strdup ("upper-bound"), value);
       }
 
@@ -2557,7 +2846,7 @@ ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
         GValue *value = g_new0 (GValue, 1);
 
         g_value_init (value, G_TYPE_DOUBLE);
-        g_value_set_double (value, ncm_model_param_get_abstol (model, i));
+        g_value_set_double (value, ncm_model_param_get_abstol (target, i));
         g_hash_table_insert (desc, g_strdup ("abstol"), value);
       }
 
@@ -2565,7 +2854,7 @@ ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
         GValue *value = g_new0 (GValue, 1);
 
         g_value_init (value, G_TYPE_BOOLEAN);
-        g_value_set_boolean (value, (ncm_model_param_get_ftype (model, i) == NCM_PARAM_TYPE_FREE) ? TRUE : FALSE);
+        g_value_set_boolean (value, (ncm_model_param_get_ftype (target, i) == NCM_PARAM_TYPE_FREE) ? TRUE : FALSE);
         g_hash_table_insert (desc, g_strdup ("fit"), value);
       }
 
@@ -2573,7 +2862,7 @@ ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
         GValue *value = g_new0 (GValue, 1);
 
         g_value_init (value, G_TYPE_DOUBLE);
-        g_value_set_double (value, ncm_model_param_get (model, i));
+        g_value_set_double (value, ncm_model_param_get (target, i));
         g_hash_table_insert (desc, g_strdup ("value"), value);
       }
 
@@ -2610,19 +2899,23 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
   g_return_if_fail (error == NULL || *error == NULL);
 
   {
+    NcmModel *target;
     guint i;
-    const gboolean has_param = ncm_model_param_index_from_name (model, param, &i, error);
+    const gboolean has_param = ncm_model_param_index_from_name_full (model, param, &target, &i, error);
     GHashTableIter iter;
     gpointer key, value;
 
     if (!has_param)
     {
+      NCM_UTIL_ON_ERROR_RETURN (error, , );
+
       ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
                                   "ncm_model_param_set_desc: model `%s' does not have a parameter called `%s'.",
                                   G_OBJECT_TYPE_NAME (model), param);
 
       return;
     }
+
 
     g_hash_table_iter_init (&iter, desc);
 
@@ -2640,7 +2933,7 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
           return;
         }
 
-        ncm_model_param_set_scale (model, i, g_value_get_double (value));
+        ncm_model_param_set_scale (target, i, g_value_get_double (value));
         continue;
       }
 
@@ -2654,7 +2947,7 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
           return;
         }
 
-        ncm_model_param_set_lower_bound (model, i, g_value_get_double (value));
+        ncm_model_param_set_lower_bound (target, i, g_value_get_double (value));
         continue;
       }
 
@@ -2668,7 +2961,7 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
           return;
         }
 
-        ncm_model_param_set_upper_bound (model, i, g_value_get_double (value));
+        ncm_model_param_set_upper_bound (target, i, g_value_get_double (value));
         continue;
       }
 
@@ -2682,7 +2975,7 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
           return;
         }
 
-        ncm_model_param_set_abstol (model, i, g_value_get_double (value));
+        ncm_model_param_set_abstol (target, i, g_value_get_double (value));
         continue;
       }
 
@@ -2696,7 +2989,7 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
           return;
         }
 
-        ncm_model_param_set_ftype (model, i, g_value_get_boolean (value) ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
+        ncm_model_param_set_ftype (target, i, g_value_get_boolean (value) ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
         continue;
       }
 
@@ -2710,7 +3003,7 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
           return;
         }
 
-        ncm_model_param_set (model, i, g_value_get_double (value));
+        ncm_model_param_set (target, i, g_value_get_double (value));
         continue;
       }
 
@@ -2888,6 +3181,187 @@ ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint
   }
 }
 
+/*
+ * Finds @model's attached submodel occupying the construction-only typed
+ * slot named @slot_name (see ncm_model_class_set_submodel()), or %NULL if
+ * there is no such slot on @model's class, or the slot is declared but
+ * currently unattached.
+ */
+static NcmModel *
+_ncm_model_peek_submodel_by_slot_name (NcmModel *model, const gchar *slot_name)
+{
+  NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
+  guint i;
+
+  if (model_class->submodel_slot == NULL)
+    return NULL;
+
+  for (i = 0; i < model_class->submodel_slot_len; i++)
+  {
+    NcmModelSubmodelSlot *slot = g_ptr_array_index (model_class->submodel_slot, i);
+
+    if ((slot != NULL) && (g_strcmp0 (slot->name, slot_name) == 0))
+    {
+      NcmModelPrivate * const self = ncm_model_get_instance_private (model);
+      guint j;
+
+      for (j = 0; j < self->submodel_array->len; j++)
+      {
+        NcmModel *submodel = g_ptr_array_index (self->submodel_array, j);
+
+        if (g_type_is_a (G_OBJECT_TYPE (submodel), slot->submodel_type))
+          return submodel;
+      }
+
+      return NULL;
+    }
+  }
+
+  return NULL;
+}
+
+/**
+ * ncm_model_param_index_from_name_full:
+ * @model: a #NcmModel
+ * @param_name: parameter name, optionally qualified as "slot:param"
+ * @target: (out) (transfer none): the model that actually owns the parameter
+ * @i: (out): the parameter index within @target
+ * @error: a #GError
+ *
+ * Like ncm_model_param_index_from_name(), but also reaches into @model's
+ * attached submodels when the parameter is not found on @model itself.
+ *
+ * @param_name may be qualified as "slot:param", where "slot" is the
+ * submodel slot's construction-property name (e.g. "reion", "prim", see
+ * ncm_model_class_set_submodel()), to address a specific submodel's
+ * parameter directly. An unqualified name matching more than one attached
+ * submodel is an error (%NCM_MODEL_ERROR_PARAM_NAME_AMBIGUOUS) -- use the
+ * qualified form to disambiguate. A name present on @model itself always
+ * takes precedence over any submodel match.
+ *
+ * If @param_name is not found anywhere (on @model or any attached
+ * submodel), @error is left untouched (%FALSE is returned), matching
+ * ncm_model_param_index_from_name()'s own convention for the plain
+ * not-found case -- callers are expected to report that with their own,
+ * function-specific message. Any other failure (e.g. the name was
+ * changed by an active #NcmReparam, or a qualified slot name does not
+ * exist) does set @error.
+ *
+ * Returns: %TRUE if the parameter was found, in which case @target and @i
+ * are set.
+ */
+gboolean
+ncm_model_param_index_from_name_full (NcmModel *model, const gchar *param_name, NcmModel **target, guint *i, GError **error)
+{
+  g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+  {
+    gchar *colon = strchr (param_name, ':');
+
+    if (colon != NULL)
+    {
+      gchar *slot_name       = g_strndup (param_name, colon - param_name);
+      const gchar *bare_name = colon + 1;
+      NcmModel *submodel     = _ncm_model_peek_submodel_by_slot_name (model, slot_name);
+
+      if (submodel == NULL)
+      {
+        ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
+                                    "ncm_model_param_index_from_name_full: model `%s' has no attached "
+                                    "submodel slot `%s'.", G_OBJECT_TYPE_NAME (model), slot_name);
+        g_free (slot_name);
+
+        return FALSE;
+      }
+
+      if (ncm_model_param_index_from_name (submodel, bare_name, i, error))
+      {
+        *target = submodel;
+        g_free (slot_name);
+
+        return TRUE;
+      }
+
+      if ((error == NULL) || (*error == NULL))
+        ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
+                                    "ncm_model_param_index_from_name_full: submodel slot `%s' of model "
+                                    "`%s' does not have a parameter called `%s'.",
+                                    slot_name, G_OBJECT_TYPE_NAME (model), bare_name);
+
+      g_free (slot_name);
+
+      return FALSE;
+    }
+    else
+    {
+      GError *local_error = NULL;
+
+      if (ncm_model_param_index_from_name (model, param_name, i, &local_error))
+      {
+        *target = model;
+
+        return TRUE;
+      }
+
+      if (local_error != NULL)
+      {
+        /* A genuine error (e.g. the name was changed by a NcmReparam) --
+         * not a plain "not found", forward it as-is instead of masking
+         * it by searching submodels. */
+        g_propagate_error (error, local_error);
+
+        return FALSE;
+      }
+
+      /* Plain not-found on the host -- search attached submodels. */
+      {
+        NcmModelPrivate * const self = ncm_model_get_instance_private (model);
+        NcmModel *found_in           = NULL;
+        guint found_i                = 0;
+        guint n_matches              = 0;
+        guint j;
+
+        for (j = 0; j < self->submodel_array->len; j++)
+        {
+          NcmModel *submodel = g_ptr_array_index (self->submodel_array, j);
+          guint sub_i;
+
+          if (ncm_model_param_index_from_name (submodel, param_name, &sub_i, NULL))
+          {
+            found_in = submodel;
+            found_i  = sub_i;
+            n_matches++;
+          }
+        }
+
+        if (n_matches == 1)
+        {
+          *target = found_in;
+          *i      = found_i;
+
+          return TRUE;
+        }
+        else if (n_matches > 1)
+        {
+          ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_AMBIGUOUS,
+                                      "ncm_model_param_index_from_name_full: parameter `%s' is ambiguous -- "
+                                      "present in %u attached submodels of `%s'; use the qualified "
+                                      "`slot:param' form to disambiguate.",
+                                      param_name, n_matches, G_OBJECT_TYPE_NAME (model));
+
+          return FALSE;
+        }
+        else
+        {
+          /* Not found anywhere -- leave @error unset so callers can
+           * report it with their own message, exactly as they already
+           * do for the plain (no-submodel) not-found case. */
+          return FALSE;
+        }
+      }
+    }
+  }
+}
+
 /**
  * ncm_model_param_set_by_name:
  * @model: a #NcmModel
@@ -2903,11 +3377,14 @@ ncm_model_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble v
 {
   g_return_if_fail (error == NULL || *error == NULL);
   {
+    NcmModel *target;
     guint i;
-    const gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i, error);
+    const gboolean has_param = ncm_model_param_index_from_name_full (model, param_name, &target, &i, error);
 
     if (!has_param)
     {
+      NCM_UTIL_ON_ERROR_RETURN (error, , );
+
       ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
                                   "ncm_model_param_set_by_name: model `%s' does not have a parameter called `%s'. "
                                   "Use the method ncm_model_param_index_from_name() to check if the parameter exists.",
@@ -2916,7 +3393,7 @@ ncm_model_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble v
       return;
     }
 
-    ncm_model_param_set (model, i, val);
+    ncm_model_param_set (target, i, val);
   }
 }
 
@@ -2967,11 +3444,14 @@ ncm_model_param_get_by_name (NcmModel *model, const gchar *param_name, GError **
 {
   g_return_val_if_fail (error == NULL || *error == NULL, GSL_NAN);
   {
+    NcmModel *target;
     guint i;
-    const gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i, error);
+    const gboolean has_param = ncm_model_param_index_from_name_full (model, param_name, &target, &i, error);
 
     if (!has_param)
     {
+      NCM_UTIL_ON_ERROR_RETURN (error, , GSL_NAN);
+
       ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
                                   "ncm_model_param_get_by_name: model `%s' does not have a parameter called `%s'. "
                                   "Use the method ncm_model_param_index_from_name() to check if the parameter exists.",
@@ -2980,7 +3460,7 @@ ncm_model_param_get_by_name (NcmModel *model, const gchar *param_name, GError **
       return GSL_NAN;
     }
 
-    return ncm_model_param_get (model, i);
+    return ncm_model_param_get (target, i);
   }
 }
 
@@ -3107,30 +3587,41 @@ ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
 static void
 _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
 {
-  NcmModelPrivate * const self   = ncm_model_get_instance_private (model);
-  NcmModelClass *submodel_class  = NCM_MODEL_GET_CLASS (submodel);
-  const NcmModelID main_model_id = submodel_class->main_model_id;
-  const gboolean is_submodel     = submodel_class->is_submodel;
-  const NcmModelID submodel_mid  = ncm_model_id (submodel);
-  gpointer pos_ptr, orig_key;
+  NcmModelPrivate * const self          = ncm_model_get_instance_private (model);
+  NcmModelPrivate * const submodel_self = ncm_model_get_instance_private (submodel);
+  NcmModelClass *submodel_class         = NCM_MODEL_GET_CLASS (submodel);
+  const NcmModelID main_model_id        = submodel_class->main_model_id;
+  const gboolean is_submodel            = submodel_class->is_submodel;
+  const NcmModelID submodel_mid         = ncm_model_id (submodel);
 
   g_assert (is_submodel);
   g_assert_cmpint (main_model_id, ==, ncm_model_id (model));
 
-  if (g_hash_table_lookup_extended (self->submodel_mid_pos, GINT_TO_POINTER (submodel_mid), &orig_key, &pos_ptr))
+  if (self->constructed)
+    g_error ("_ncm_model_add_submodel: submodels are construction-fixed -- `%s' must receive its `%s' "
+             "as a construction property (e.g. `g_object_new()`/constructor kwarg), "
+             "not attached after construction.",
+             G_OBJECT_TYPE_NAME (model), G_OBJECT_TYPE_NAME (submodel));
+
   {
-    const gint pos = GPOINTER_TO_INT (pos_ptr);
+    NcmModel *current_host = g_weak_ref_get (&submodel_self->host_wr);
 
-    g_assert_cmpint (pos, >, -1);
-    g_assert_cmpint (pos, <, self->submodel_array->len);
+    if ((current_host != NULL) && (current_host != model))
     {
-      NcmModel *old_submodel = g_ptr_array_index (self->submodel_array, pos);
-
-      g_ptr_array_index (self->submodel_array, pos) = ncm_model_ref (submodel);
-      ncm_model_free (old_submodel);
+      g_object_unref (current_host);
+      g_error ("_ncm_model_add_submodel: `%s' is already attached to a `%s' host -- a submodel "
+               "can only ever belong to one host for its lifetime.",
+               G_OBJECT_TYPE_NAME (submodel), G_OBJECT_TYPE_NAME (model));
     }
+
+    g_clear_object (&current_host);
   }
-  else
+
+  if (g_hash_table_contains (self->submodel_mid_pos, GINT_TO_POINTER (submodel_mid)))
+    g_error ("_ncm_model_add_submodel: `%s' already carries a `%s' submodel -- submodels are "
+             "construction-fixed and cannot be replaced.",
+             G_OBJECT_TYPE_NAME (model), G_OBJECT_TYPE_NAME (submodel));
+
   {
     gint pos = self->submodel_array->len;
 
@@ -3138,6 +3629,8 @@ _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
     g_ptr_array_add (self->submodel_array, submodel);
     g_hash_table_insert (self->submodel_mid_pos, GINT_TO_POINTER (submodel_mid), GINT_TO_POINTER (pos));
   }
+
+  g_weak_ref_set (&submodel_self->host_wr, model);
 }
 
 /**
@@ -3206,6 +3699,34 @@ ncm_model_peek_submodel_by_mid (NcmModel *model, NcmModelID mid)
 }
 
 /**
+ * ncm_model_peek_host:
+ * @submodel: a #NcmModel
+ *
+ * If @submodel is currently attached as a submodel of some host #NcmModel
+ * (through ncm_model_add_submodel()), gets that host without increasing
+ * its reference count. This is a pure function of @submodel's own current
+ * attachment state -- it never reaches outside @submodel itself.
+ *
+ * Returns: (transfer none) (nullable): the host #NcmModel, or %NULL if
+ * @submodel is not currently attached to any host.
+ */
+NcmModel *
+ncm_model_peek_host (NcmModel *submodel)
+{
+  NcmModelPrivate * const self = ncm_model_get_instance_private (submodel);
+  NcmModel *host               = g_weak_ref_get (&self->host_wr);
+
+  /* Downgrading transfer-full -> transfer-none is safe here: @submodel is
+   * alive throughout this call, and the host->submodel strong-ref
+   * invariant means a non-NULL host_wr cannot point at a host that is
+   * mid-dispose. */
+  if (host != NULL)
+    g_object_unref (host);
+
+  return host;
+}
+
+/**
  * ncm_model_peek_submodel_pos_by_mid:
  * @model: a #NcmModel
  * @mid: a #NcmModelID
@@ -3250,25 +3771,22 @@ ncm_model___getitem__ (NcmModel *model, gchar *param, GError **error)
 {
   g_return_val_if_fail (error == NULL || *error == NULL, GSL_NAN);
   {
+    NcmModel *target;
     guint i;
-    gboolean exists = ncm_model_param_index_from_name (model, param, &i, error);
+    gboolean exists = ncm_model_param_index_from_name_full (model, param, &target, &i, error);
 
-    if (error && *error)
-      return GSL_NAN;
+    if (!exists)
+    {
+      NCM_UTIL_ON_ERROR_RETURN (error, , GSL_NAN);
 
-    if (exists)
-    {
-      return ncm_model_param_get (model, i);
-    }
-    else
-    {
       ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
                                   "Parameter named: %s does not exist in %s",
                                   param, G_OBJECT_TYPE_NAME (model));
-      NCM_UTIL_ON_ERROR_RETURN (error, , GSL_NAN);
+
+      return GSL_NAN;
     }
 
-    return GSL_NAN;
+    return ncm_model_param_get (target, i);
   }
 }
 
@@ -3287,23 +3805,22 @@ ncm_model___setitem__ (NcmModel *model, gchar *param, gdouble val, GError **erro
 {
   g_return_if_fail (error == NULL || *error == NULL);
   {
+    NcmModel *target;
     guint i;
-    gboolean exists = ncm_model_param_index_from_name (model, param, &i, error);
+    gboolean exists = ncm_model_param_index_from_name_full (model, param, &target, &i, error);
 
-    if (error && *error)
-      return;
+    if (!exists)
+    {
+      NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-    if (exists)
-    {
-      ncm_model_param_set (model, i, val);
-    }
-    else
-    {
       ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
                                   "Parameter named: %s does not exist in %s",
                                   param, G_OBJECT_TYPE_NAME (model));
-      NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+      return;
     }
+
+    ncm_model_param_set (target, i, val);
   }
 }
 

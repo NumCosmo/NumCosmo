@@ -3,6 +3,7 @@ Coveralls/
 Debug/
 Intel/
 Optimized/
+BenchNative/
 Profiling/
 numcosmo_py.egg-info/
 .vscode
@@ -29,8 +30,13 @@ __pycache__
 *.fits
 *.log
 
+# ... except the catalogs committed as test fixtures.
+!data/truth_tables/**/*.fits
+
 
 /.luarc.json
 
 build/
 *.info
+
+/devel/

@@ -38,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "nc/data/nc_data_snia_cov.h"
+#include "nc/data/nc_data_download_priv.h"
 #include "nc/supernova/nc_snia_dist_cov.h"
 #include "nc_enum_types.h"
 #include "ncm/model/ncm_model_ctrl.h"
@@ -340,7 +341,9 @@ struct _NcDataSNIACov
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcDataSNIACov, nc_data_snia_cov, NCM_TYPE_DATA_GAUSS_COV)
-G_DEFINE_QUARK (nc - data - snia - cov - error - quark, nc_data_snia_cov_error)
+/* *INDENT-OFF* */
+G_DEFINE_QUARK (nc-data-snia-cov-error-quark, nc_data_snia_cov_error)
+/* *INDENT-ON* */
 
 enum
 {
@@ -4000,18 +4003,16 @@ nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size)
 
   if (download)
   {
-    const gchar *dir = ncm_cfg_get_fullpath_base ();
-    gchar *cmd[]     = {"wget", "--tries=3", "--timeout=30", "-O", full_filename, url_str, NULL };
+    gchar *lockdir = NULL;
 
-    ncm_message ("# Downloading file [%s]...\n", url_str);
-
-    if (!g_spawn_sync (dir, cmd, NULL,
-                       G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
-                       NULL, NULL, NULL, NULL, NULL, &error))
-      g_error ("nc_data_snia_cov_get_fits: cannot download file: %s. Error: %s. "
-               "Please download the file manually from %s and extract it to %s.",
-               filename, error->message,
-               url_str, dir);
+    /* Serialize with any other process fetching the same catalog: wget used to
+     * write straight to full_filename, so a concurrent reader could open a
+     * half-written FITS ("tried to move past end of file"). */
+    if (_nc_data_download_lock (full_filename, full_filename, 900, &lockdir))
+    {
+      _nc_data_download_file (url_str, full_filename, filename);
+      _nc_data_download_unlock (lockdir);
+    }
   }
 
   g_free (url_str);

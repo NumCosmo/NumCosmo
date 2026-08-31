@@ -26,7 +26,7 @@ standalone with the same seed, it reproduces the NcDataClusterNCount golden
 snapshot (the two share the extracted pipeline).
 
 The reference is the stored seed-0 NcDataClusterNCount catalog at
-``data/truth_tables/nc_data_cluster_ncount_golden_seed0.bin`` (see
+``data/truth_tables/cluster/nc_data_cluster_ncount_golden_seed0.bin`` (see
 test_ncount_resample_golden.py). The comparison is tolerance-based so it survives
 cross-stack sub-ULP rounding while still catching real regressions.
 """
@@ -42,7 +42,7 @@ Ncm.cfg_init()
 
 AREA = 270 * (math.pi / 180.0) ** 2
 
-GOLDEN_FILE = "truth_tables/nc_data_cluster_ncount_golden_seed0.bin"
+GOLDEN_FILE = "truth_tables/cluster/nc_data_cluster_ncount_golden_seed0.bin"
 GOLDEN_RTOL = 1.0e-9
 GOLDEN_ATOL = 1.0e-12
 
@@ -63,9 +63,7 @@ def _load_golden_columns() -> dict[str, np.ndarray]:
 
 def _setup():
     """Build cosmology, abundance, models and mset matching the golden test."""
-    cosmo = Nc.HICosmoDEXcdm()
-    cosmo.add_submodel(Nc.HIReionCamb())
-    cosmo.add_submodel(Nc.HIPrimPowerLaw())
+    cosmo = Nc.HICosmoDEXcdm(reion=Nc.HIReionCamb(), prim=Nc.HIPrimPowerLaw())
 
     dist = Nc.Distance.new(2.0)
     psml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())

@@ -1,0 +1,36 @@
+name: 'Install NumCosmo apt dependencies'
+description: >-
+  Installs the Debian/Ubuntu packages needed to build and test NumCosmo from
+  distro packages. Shared by build-gcc-ubuntu in build_check.yml and by the
+  weekly flaky-test job -- extracted so the package list only needs to be
+  changed in one place. Requires a release whose GSL is >= 2.8 (24.04 ships
+  2.7.1), which is why both callers pin ubuntu-26.04.
+
+runs:
+  using: composite
+  steps:
+    - name: Install apt dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          gcc \
+          gfortran \
+          pkg-config \
+          libglib2.0-dev \
+          gobject-introspection \
+          gir1.2-glib-2.0 \
+          gir1.2-glib-2.0-dev \
+          libgirepository-2.0-dev \
+          libcairo2-dev \
+          libgsl-dev \
+          libgmp3-dev \
+          libmpfr-dev \
+          libflint-dev \
+          libfftw3-dev \
+          libopenblas-dev \
+          libnlopt-dev \
+          libcfitsio-dev \
+          libhdf5-dev \
+          libopenmpi-dev \
+          uncrustify

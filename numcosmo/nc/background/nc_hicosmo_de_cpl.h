@@ -49,7 +49,7 @@ typedef struct _NcHICosmoDECpl NcHICosmoDECpl;
  * Dark Energy equation of state: $w(z) = w_0 + w_1 \frac{z}{1.0 + z}$
  *
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_CPL_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_CPL_SPARAMS,prefix=NC_HICOSMO_DE_CPL >*/
 {
   NC_HICOSMO_DE_CPL_W0 = NC_HICOSMO_DE_SPARAM_LEN,
   NC_HICOSMO_DE_CPL_W1,
@@ -77,6 +77,7 @@ struct _NcHICosmoDECpl
 GType nc_hicosmo_de_cpl_get_type (void) G_GNUC_CONST;
 
 NcHICosmoDECpl *nc_hicosmo_de_cpl_new (void);
+NcHICosmoDECpl *nc_hicosmo_de_cpl_new_full (NcHIReion *reion, NcHIPrim *prim, NcBBN *bbn);
 
 G_END_DECLS
 

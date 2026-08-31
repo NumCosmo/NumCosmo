@@ -49,6 +49,7 @@ static void test_nc_halo_position_model_id (TestNcHaloPosition *test, gconstpoin
 
 static void test_nc_halo_position_polar_angles (TestNcHaloPosition *test, gconstpointer pdata);
 static void test_nc_halo_position_projected_radius (TestNcHaloPosition *test, gconstpointer pdata);
+static void test_nc_halo_position_shared_distance (TestNcHaloPosition *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -75,6 +76,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/halo_position/projected_radius", TestNcHaloPosition, NULL,
               &test_nc_halo_position_new,
               &test_nc_halo_position_projected_radius,
+              &test_nc_halo_position_free);
+
+  g_test_add ("/nc/halo_position/shared_distance", TestNcHaloPosition, NULL,
+              &test_nc_halo_position_new,
+              &test_nc_halo_position_shared_distance,
               &test_nc_halo_position_free);
 
   g_test_run ();
@@ -190,5 +196,41 @@ test_nc_halo_position_projected_radius (TestNcHaloPosition *test, gconstpointer 
   g_assert_cmpfloat (r, >=, 0.0);
 
   nc_hicosmo_clear (&cosmo);
+}
+
+static void
+test_nc_halo_position_shared_distance (TestNcHaloPosition *test, gconstpointer pdata)
+{
+  /* nc_halo_position_prepare() has no local state: it only delegates to
+   * nc_distance_prepare_if_needed(), which carries its own control. So it must
+   * not mark itself current -- doing so lets prepare_if_needed() skip the
+   * delegation, and a NcDistance shared with a second cosmology then stays
+   * driven by that other cosmology. Regression for PR #318. */
+  NcDistance *dist   = nc_distance_new (1100.0);
+  NcHaloPosition *hp = nc_halo_position_new (dist);
+  NcHICosmo *cosmo_a = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcHICosmo *cosmo_b = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  const gdouble z    = 1.0;
+  gdouble d_a, d_after;
+
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo_a), "Omegac", 0.25, NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo_b), "Omegac", 0.40, NULL);
+
+  nc_halo_position_prepare (hp, cosmo_a);
+  d_a = nc_distance_comoving (dist, cosmo_a, z);
+
+  /* Another consumer drives the shared distance to the second cosmology. */
+  nc_distance_prepare_if_needed (dist, cosmo_b);
+
+  /* This call must restore it. */
+  nc_halo_position_prepare_if_needed (hp, cosmo_a);
+  d_after = nc_distance_comoving (dist, cosmo_a, z);
+
+  ncm_assert_cmpdouble_e (d_after, ==, d_a, 1.0e-14, 0.0);
+
+  nc_halo_position_free (hp);
+  nc_distance_free (dist);
+  nc_hicosmo_free (cosmo_a);
+  nc_hicosmo_free (cosmo_b);
 }
 

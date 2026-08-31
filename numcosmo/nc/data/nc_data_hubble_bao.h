@@ -52,7 +52,7 @@ typedef struct _NcDataHubbleBao NcDataHubbleBao;
  * These identifiers select specific datasets for the Hubble parameter
  * derived from Baryon Acoustic Oscillation observations.
  */
-typedef enum _NcDataHubbleBaoId
+typedef enum _NcDataHubbleBaoId /*< prefix=NC_DATA_HUBBLE_BAO >*/
 {
   NC_DATA_HUBBLE_BAO_BUSCA2013,
   /* < private > */

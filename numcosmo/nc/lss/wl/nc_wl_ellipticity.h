@@ -76,7 +76,7 @@ G_BEGIN_DECLS
  * unchanged.
  *
  */
-typedef enum _NcWLEllipticityFrame
+typedef enum _NcWLEllipticityFrame /*< prefix=NC_WL_ELLIPTICITY_FRAME >*/
 {
   NC_WL_ELLIPTICITY_FRAME_CELESTIAL = 0,
   NC_WL_ELLIPTICITY_FRAME_CARTESIAN,
@@ -142,11 +142,13 @@ void nc_wl_ellipticity_trace_kernel_prep_clear (NcWLEllipticityTraceKernelPrep *
 /* Introspectable NcmComplex API (TRACE convention: distortion chi). */
 void nc_wl_ellipticity_apply_shear_trace_ptr (const NcmComplex *g, const NcmComplex *chi, NcmComplex *chi_obs);
 void nc_wl_ellipticity_apply_shear_inv_trace_ptr (const NcmComplex *g, const NcmComplex *chi_obs, NcmComplex *chi);
+void nc_wl_ellipticity_shear_at_origin_trace_ptr (const NcmComplex *target, NcmComplex *g);
 gdouble nc_wl_ellipticity_lndet_jac_trace_ptr (const NcmComplex *g, const NcmComplex *chi_obs);
 
 /* Introspectable NcmComplex API (TRACE_DET convention: ellipticity epsilon). */
 void nc_wl_ellipticity_apply_shear_trace_det_ptr (const NcmComplex *g, const NcmComplex *e, NcmComplex *e_obs);
 void nc_wl_ellipticity_apply_shear_inv_trace_det_ptr (const NcmComplex *g, const NcmComplex *e_obs, NcmComplex *e);
+void nc_wl_ellipticity_shear_at_origin_trace_det_ptr (const NcmComplex *target, NcmComplex *g);
 gdouble nc_wl_ellipticity_lndet_jac_trace_det_ptr (const NcmComplex *g, const NcmComplex *e_obs);
 
 /* Re-express the celestial position angle phi_C (as returned by
@@ -170,6 +172,7 @@ NCM_INLINE NcmComplex nc_wl_ellipticity_celestial_to_frame (NcWLEllipticityFrame
 /* Inline complex kernels (TRACE convention: distortion chi). */
 NCM_INLINE NcmComplex nc_wl_ellipticity_apply_shear_trace (NcmComplex g, NcmComplex chi);
 NCM_INLINE NcmComplex nc_wl_ellipticity_apply_shear_inv_trace (NcmComplex g, NcmComplex chi_obs);
+NCM_INLINE NcmComplex nc_wl_ellipticity_shear_at_origin_trace (NcmComplex target);
 NCM_INLINE gdouble nc_wl_ellipticity_lndet_jac_trace (NcmComplex g, NcmComplex chi_obs);
 NCM_INLINE gdouble nc_wl_ellipticity_det_jac_trace (NcmComplex g, NcmComplex chi_obs);
 NCM_INLINE void nc_wl_ellipticity_trace_kernel (NcmComplex g, NcmComplex chi_obs, gdouble * restrict x_i, gdouble * restrict jac);
@@ -179,6 +182,7 @@ NCM_INLINE void nc_wl_ellipticity_trace_kernel_apply (const NcWLEllipticityTrace
 /* Inline complex kernels (TRACE_DET convention: ellipticity epsilon). */
 NCM_INLINE NcmComplex nc_wl_ellipticity_apply_shear_trace_det (NcmComplex g, NcmComplex e);
 NCM_INLINE NcmComplex nc_wl_ellipticity_apply_shear_inv_trace_det (NcmComplex g, NcmComplex e_obs);
+NCM_INLINE NcmComplex nc_wl_ellipticity_shear_at_origin_trace_det (NcmComplex target);
 NCM_INLINE gdouble nc_wl_ellipticity_lndet_jac_trace_det (NcmComplex g, NcmComplex e_obs);
 NCM_INLINE gdouble nc_wl_ellipticity_det_jac_trace_det (NcmComplex g, NcmComplex e_obs);
 NCM_INLINE void nc_wl_ellipticity_trace_det_kernel (NcmComplex g, NcmComplex e_obs, gdouble * restrict x_i, gdouble * restrict jac);
@@ -245,6 +249,19 @@ nc_wl_ellipticity_apply_shear_inv_trace (NcmComplex g, NcmComplex chi_obs)
   const gdouble den_inv = 1.0 / den;
 
   return num * den_inv;
+}
+
+/* apply_shear_trace(g,0) = 2g/(1+|g|^2) (the distortion of a pure shear g,
+ * not g itself). This is that map's inverse: the g whose own distortion is
+ * @target, i.e. the ordinary ellipticity<->distortion relation
+ * g = target/(1+sqrt(1-|target|^2)). Requires |target|<1; used to
+ * re-center a Mobius disc automorphism at an arbitrary disc point. */
+NCM_INLINE NcmComplex
+nc_wl_ellipticity_shear_at_origin_trace (NcmComplex target)
+{
+  const gdouble abs_target = cabs (target);
+
+  return target / (1.0 + sqrt ((1.0 - abs_target) * (1.0 + abs_target)));
 }
 
 NCM_INLINE gdouble
@@ -386,6 +403,16 @@ nc_wl_ellipticity_apply_shear_inv_trace_det (NcmComplex g, NcmComplex e_obs)
     return _nc_wl_ellipticity_cdiv (e_obs - g, 1.0 - conj (g) * e_obs);
   else
     return _nc_wl_ellipticity_cdiv (1.0 - g * conj (e_obs), conj (e_obs) - conj (g));
+}
+
+/* apply_shear_trace_det(g,0) = g exactly, so this map is its own trivial
+ * inverse: the g whose own ellipticity is @target is target itself. Kept
+ * as a named function (rather than inlined at call sites) so both
+ * conventions expose the same "shear_at_origin" interface. */
+NCM_INLINE NcmComplex
+nc_wl_ellipticity_shear_at_origin_trace_det (NcmComplex target)
+{
+  return target;
 }
 
 NCM_INLINE gdouble

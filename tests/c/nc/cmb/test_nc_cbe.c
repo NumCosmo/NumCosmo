@@ -138,9 +138,9 @@ void
 test_nc_cbe_lcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
 
   ncm_model_param_set_by_name (NCM_MODEL (cosmo), "w", -1.0, NULL);
 
@@ -154,18 +154,15 @@ test_nc_cbe_lcdm_new (TestNcCBE *test, gconstpointer pdata)
   g_assert_true (NC_IS_HICOSMO (cosmo));
   g_assert_true (NC_IS_HIREION (reion));
   g_assert_true (NC_IS_HIPRIM  (prim));
-
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
 }
 
 void
 test_nc_cbe_xcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
 
   ncm_model_param_set_by_name (NCM_MODEL (cosmo), "w", -1.1, NULL);
 
@@ -179,18 +176,56 @@ test_nc_cbe_xcdm_new (TestNcCBE *test, gconstpointer pdata)
   g_assert_true (NC_IS_HICOSMO (cosmo));
   g_assert_true (NC_IS_HIREION (reion));
   g_assert_true (NC_IS_HIPRIM  (prim));
+}
 
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
+/*
+ * Builds an NcHICosmo of @obj_ser's type/plain-properties with @reion/@prim
+ * already attached via their construction-only typed slots -- submodels
+ * can no longer be attached with ncm_model_add_submodel() after
+ * construction, so they must be referenced inline as named instances in
+ * the same construction string.
+ */
+static NcHICosmo *
+_test_nc_cbe_cosmo_new (const gchar *obj_ser, NcHIReion *reion, NcHIPrim *prim)
+{
+  NcmSerialize *lser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GString *full_ser  = g_string_new (obj_ser);
+  NcHICosmo *cosmo;
+
+  ncm_serialize_set (lser, reion, "reion", FALSE);
+  ncm_serialize_set (lser, prim, "prim", FALSE);
+
+  if (full_ser->str[full_ser->len - 1] == '}')
+  {
+    /* @obj_ser already has a non-empty property dict -- splice into it
+     * instead of appending a second, syntactically-separate one. */
+    g_string_truncate (full_ser, full_ser->len - 1);
+    g_string_append (full_ser, ", ");
+  }
+  else
+  {
+    g_string_append (full_ser, "{");
+  }
+
+  g_string_append_printf (full_ser,
+                          "'reion':<('%s[reion]', @a{sv} {})>, 'prim':<('%s[prim]', @a{sv} {})>}",
+                          G_OBJECT_TYPE_NAME (reion), G_OBJECT_TYPE_NAME (prim));
+
+  cosmo = NC_HICOSMO (ncm_serialize_from_string (lser, full_ser->str));
+
+  g_string_free (full_ser, TRUE);
+  ncm_serialize_free (lser);
+
+  return cosmo;
 }
 
 void
 test_nc_cbe_mnu_lcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_serialize_global_from_string ("NcHICosmoDEXcdm{'w' : <-1.0>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}"));
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo = _test_nc_cbe_cosmo_new ("NcHICosmoDEXcdm{'w' : <-1.0>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}", reion, prim);
 
   g_assert_true (cosmo != NULL);
   g_assert_true (NC_IS_HICOSMO (cosmo));
@@ -205,18 +240,15 @@ test_nc_cbe_mnu_lcdm_new (TestNcCBE *test, gconstpointer pdata)
   g_assert_true (NC_IS_HICOSMO (cosmo));
   g_assert_true (NC_IS_HIREION (reion));
   g_assert_true (NC_IS_HIPRIM  (prim));
-
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
 }
 
 void
 test_nc_cbe_mnu_xcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_serialize_global_from_string  ("NcHICosmoDEXcdm{'w' : <-1.1>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}"));
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo = _test_nc_cbe_cosmo_new ("NcHICosmoDEXcdm{'w' : <-1.1>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}", reion, prim);
 
   g_assert_true (cosmo != NULL);
   g_assert_true (NC_IS_HICOSMO (cosmo));
@@ -231,18 +263,15 @@ test_nc_cbe_mnu_xcdm_new (TestNcCBE *test, gconstpointer pdata)
   g_assert_true (NC_IS_HICOSMO (cosmo));
   g_assert_true (NC_IS_HIREION (reion));
   g_assert_true (NC_IS_HIPRIM  (prim));
-
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
 }
 
 void
 test_nc_cbe_flat_lcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_serialize_global_from_string ("NcHICosmoDEXcdm{'w' : <-1.0>}"));
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo = _test_nc_cbe_cosmo_new ("NcHICosmoDEXcdm{'w' : <-1.0>}", reion, prim);
 
   g_assert_true (cosmo != NULL);
   g_assert_true (NC_IS_HICOSMO (cosmo));
@@ -260,18 +289,15 @@ test_nc_cbe_flat_lcdm_new (TestNcCBE *test, gconstpointer pdata)
 
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
   ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.0);
-
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
 }
 
 void
 test_nc_cbe_flat_xcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_serialize_global_from_string  ("NcHICosmoDEXcdm{'w' : <-1.1>}"));
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo = _test_nc_cbe_cosmo_new ("NcHICosmoDEXcdm{'w' : <-1.1>}", reion, prim);
 
   g_assert_true (cosmo != NULL);
   g_assert_true (NC_IS_HICOSMO (cosmo));
@@ -289,18 +315,15 @@ test_nc_cbe_flat_xcdm_new (TestNcCBE *test, gconstpointer pdata)
 
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
   ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.0);
-
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
 }
 
 void
 test_nc_cbe_flat_mnu_lcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_serialize_global_from_string  ("NcHICosmoDEXcdm{'w' : <-1.0>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}"));
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo = _test_nc_cbe_cosmo_new ("NcHICosmoDEXcdm{'w' : <-1.0>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}", reion, prim);
 
   g_assert_true (cosmo != NULL);
   g_assert_true (NC_IS_HICOSMO (cosmo));
@@ -318,18 +341,15 @@ test_nc_cbe_flat_mnu_lcdm_new (TestNcCBE *test, gconstpointer pdata)
 
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
   ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.0);
-
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
 }
 
 void
 test_nc_cbe_flat_mnu_xcdm_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_serialize_global_from_string  ("NcHICosmoDEXcdm{'w' : <-1.1>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}"));
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo = _test_nc_cbe_cosmo_new ("NcHICosmoDEXcdm{'w' : <-1.1>, 'massnu-length' : <1>, 'massnu' : <[0.6]>}", reion, prim);
 
   g_assert_true (cosmo != NULL);
   g_assert_true (NC_IS_HICOSMO (cosmo));
@@ -347,18 +367,15 @@ test_nc_cbe_flat_mnu_xcdm_new (TestNcCBE *test, gconstpointer pdata)
 
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
   ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.0);
-
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
 }
 
 void
 test_nc_cbe_pad_new (TestNcCBE *test, gconstpointer pdata)
 {
   NcCBE *cbe       = nc_cbe_new ();
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_serialize_global_from_string ("NcHICosmoDEPad"));
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo = _test_nc_cbe_cosmo_new ("NcHICosmoDEPad", reion, prim);
 
   g_assert_true (cosmo != NULL);
   g_assert_true (NC_IS_HICOSMO (cosmo));
@@ -373,9 +390,6 @@ test_nc_cbe_pad_new (TestNcCBE *test, gconstpointer pdata)
   g_assert_true (NC_IS_HICOSMO (cosmo));
   g_assert_true (NC_IS_HIREION (reion));
   g_assert_true (NC_IS_HIPRIM  (prim));
-
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
 }
 
 void

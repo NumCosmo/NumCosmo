@@ -859,3 +859,161 @@ def test_mset_load_not_found():
     ):
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
         _ = Ncm.MSet.load("file_not_found.ini", ser)
+
+
+def _save_lcdm_mset(tmp_path, name="cosmo.mset"):
+    """Save an mset holding a plain NcHICosmoLCDM (carries its default NcBBN)."""
+    mset = Ncm.MSet.new_array([Nc.HICosmoLCDM.new()])
+    tmp_file = tmp_path / name
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    mset.save(ser, tmp_file.as_posix(), False)
+    return tmp_file
+
+
+def _mset_file_groups(path):
+    """Split an mset keyfile into a header and a {group name: group text} dict."""
+    text = path.read_text()
+    parts = re.split(r"(?m)^(?=\[)", text)
+    header = parts[0]
+    groups = {p.split("]")[0][1:]: p for p in parts[1:]}
+    return header, groups
+
+
+def test_mset_load_duplicate_submodel_group(tmp_path):
+    """A submodel type appearing in two groups is a clean error."""
+    tmp_file = _save_lcdm_mset(tmp_path)
+    header, groups = _mset_file_groups(tmp_file)
+    dup = groups["NcBBN"].replace("[NcBBN]", "[NcBBN:1]")
+    tmp_file.write_text(header + "".join(groups.values()) + dup)
+
+    with pytest.raises(
+        GLib.Error,
+        match=r"^ncm-mset-error: ncm_mset_load: submodel `NcBBN' appears more than once",
+    ):
+        _ = Ncm.MSet.load(
+            tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        )
+
+
+def test_mset_load_submodel_without_main_model(tmp_path):
+    """A submodel group without its main model's group is a clean error."""
+    tmp_file = _save_lcdm_mset(tmp_path)
+    header, groups = _mset_file_groups(tmp_file)
+    tmp_file.write_text(header + groups["NcBBN"])
+
+    with pytest.raises(
+        GLib.Error,
+        match=(
+            r"^ncm-mset-error: ncm_mset_load: cannot add submodel `NcBBNParthenope', "
+            r"main model `NcHICosmo' not found"
+        ),
+    ):
+        _ = Ncm.MSet.load(
+            tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        )
+
+
+def test_mset_load_submodel_array_rejected(tmp_path):
+    """The generic submodel-array property is forbidden in mset keyfiles."""
+    tmp_file = _save_lcdm_mset(tmp_path)
+    header, groups = _mset_file_groups(tmp_file)
+    groups["NcHICosmo"] = groups["NcHICosmo"].rstrip() + "\nsubmodel-array=@ao []\n"
+    tmp_file.write_text(header + "".join(groups.values()))
+
+    with pytest.raises(
+        GLib.Error,
+        match=(
+            r"^ncm-mset-error: ncm_mset_load: serialized version of mset models "
+            r"cannot contain the submodel-array property"
+        ),
+    ):
+        _ = Ncm.MSet.load(
+            tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        )
+
+
+@pytest.mark.parametrize("group", ["NcHICosmo", "NcBBN"])
+def test_mset_load_group_missing_type_key(tmp_path, group):
+    """A group without its self-referencing type key is a clean error (host and submodel)."""
+    tmp_file = _save_lcdm_mset(tmp_path)
+    header, groups = _mset_file_groups(tmp_path / "cosmo.mset")
+    groups[group] = re.sub(rf"(?m)^{group}=.*\n", "", groups[group])
+    tmp_file.write_text(header + "".join(groups.values()))
+
+    with pytest.raises(
+        GLib.Error,
+        match=r"^ncm-mset-error: ncm_mset_load: Every group must contain a key with same name",
+    ):
+        _ = Ncm.MSet.load(
+            tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        )
+
+
+def test_mset_load_stackpos_qualified_submodel_group(tmp_path):
+    """A stackpos-qualified submodel group name still resolves to its namespace."""
+    tmp_file = _save_lcdm_mset(tmp_path)
+    header, groups = _mset_file_groups(tmp_file)
+    groups["NcBBN"] = groups["NcBBN"].replace("[NcBBN]", "[NcBBN:1]")
+    tmp_file.write_text(header + "".join(groups.values()))
+
+    mset = Ncm.MSet.load(
+        tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    )
+    cosmo = mset.peek(Nc.HICosmo.id())
+    assert type(cosmo.peek_bbn()).__name__ == "BBNParthenope"
+
+
+def test_model_qualified_param_unknown_slot():
+    """A qualified name naming a slot the model does not have is an error."""
+    cosmo = Nc.HICosmoLCDM.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=(
+            r"^ncm-model-error: ncm_model_param_index_from_name_full: model "
+            r"`NcHICosmoLCDM' has no attached submodel slot `nosuchslot'"
+        ),
+    ):
+        _ = cosmo["nosuchslot:x"]
+
+
+def test_model_qualified_param_slotless_model():
+    """A qualified name on a model with no slots at all is an error."""
+    prim = Nc.HIPrimPowerLaw.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=(
+            r"^ncm-model-error: ncm_model_param_index_from_name_full: model "
+            r"`NcHIPrimPowerLaw' has no attached submodel slot `a'"
+        ),
+    ):
+        _ = prim["a:b"]
+
+
+def test_model_qualified_param_unknown_param_in_slot():
+    """A qualified name with a valid slot but unknown parameter is an error."""
+    cosmo = Nc.HICosmoLCDM(reion=Nc.HIReionCamb.new())
+
+    with pytest.raises(
+        GLib.Error,
+        match=(
+            r"^ncm-model-error: ncm_model_param_index_from_name_full: submodel slot "
+            r"`reion' of model `NcHICosmoLCDM' does not have a parameter called `frobnicate'"
+        ),
+    ):
+        _ = cosmo["reion:frobnicate"]
+
+
+def test_model_qualified_param_empty_slot():
+    """A qualified name for a declared but unfilled slot is an error."""
+    cosmo = Nc.HICosmoLCDM.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=(
+            r"^ncm-model-error: ncm_model_param_index_from_name_full: model "
+            r"`NcHICosmoLCDM' has no attached submodel slot `reion'"
+        ),
+    ):
+        _ = cosmo["reion:z_re"]

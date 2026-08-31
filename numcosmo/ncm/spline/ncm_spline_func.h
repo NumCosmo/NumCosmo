@@ -52,7 +52,7 @@ G_BEGIN_DECLS
  * For more details see [description][numcosmo-NcmSplineFunc.description] above.
  *
  */
-typedef enum _NcmSplineFuncType
+typedef enum _NcmSplineFuncType /*< prefix=NCM_SPLINE >*/
 {
   NCM_SPLINE_FUNCTION_4POINTS,
   NCM_SPLINE_FUNCTION_SPLINE,

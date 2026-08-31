@@ -59,7 +59,7 @@ typedef struct _NcClusterMassPlCL NcClusterMassPlCL;
  *
  * Parameters for the Planck cluster mass relation combining SZ and lensing.
  */
-typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_PLCL_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_PLCL_SPARAMS,prefix=NC_CLUSTER_MASS_PLCL >*/
 {
   NC_CLUSTER_MASS_PLCL_A_SZ = 0,
   NC_CLUSTER_MASS_PLCL_B_SZ,

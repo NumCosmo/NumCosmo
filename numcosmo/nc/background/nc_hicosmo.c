@@ -37,6 +37,9 @@
 #include "build_cfg.h"
 
 #include "nc/background/nc_hicosmo.h"
+#include "nc/bbn/nc_bbn.h"
+#include "nc/bbn/nc_bbn_parthenope.h"
+#include "nc/bbn/nc_bbn_parametrized.h"
 #include "nc/primordial/nc_hiprim.h"
 #include "nc/reion/nc_hireion.h"
 #include "ncm/core/ncm_serialize.h"
@@ -55,10 +58,104 @@ nc_hicosmo_init (NcHICosmo *cosmo)
 {
   cosmo->prim  = NULL;
   cosmo->reion = NULL;
-  cosmo->T     = gsl_root_fsolver_brent;
-  cosmo->s     = gsl_root_fsolver_alloc (cosmo->T);
-  cosmo->Tmin  = gsl_min_fminimizer_brent;
-  cosmo->smin  = gsl_min_fminimizer_alloc (cosmo->Tmin);
+  cosmo->bbn   = NULL;
+
+  cosmo->T    = gsl_root_fsolver_brent;
+  cosmo->s    = gsl_root_fsolver_alloc (cosmo->T);
+  cosmo->Tmin = gsl_min_fminimizer_brent;
+  cosmo->smin = gsl_min_fminimizer_alloc (cosmo->Tmin);
+}
+
+enum
+{
+  PROP_0,
+  PROP_YP,
+  PROP_YP_FIT,
+  PROP_SIZE,
+};
+
+/*
+ * Yp used to be a parameter of NcHICosmoDE and NcHICosmoLCDM, with its fit type
+ * doubling as the switch between "predict Yp from BBN" and "sample Yp". Both
+ * jobs belong to the NcBBN submodel now. The two properties below are inert
+ * sinks kept only so files written before the move still deserialize: the old
+ * fixed-Yp mode is physically identical to the default #NcBBNParthenope, so
+ * the value is ignored; the old sampled-Yp mode was removed, so requesting it
+ * is a fatal, actionable error. Both properties are dropped entirely in 1.0.
+ *
+ * Deliberately not flagged G_PARAM_DEPRECATED. Under G_ENABLE_DIAGNOSTIC that
+ * flag makes every load of an old file emit a GLib warning, PyGObject turns it
+ * into a Python warning, and pytest-xdist cannot unserialize that warning
+ * across workers -- it kills the worker and takes the run down with it.
+ */
+
+static void
+_nc_hicosmo_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  g_return_if_fail (NC_IS_HICOSMO (object));
+
+  switch (prop_id)
+  {
+    case PROP_YP:
+      /* Inert: the old fixed-Yp mode is the default NcBBNParthenope. */
+      break;
+    case PROP_YP_FIT:
+
+      if (g_value_get_boolean (value))
+        g_error ("NcHICosmo:Yp-fit: this file requests the removed sampled-Yp "
+                 "compatibility mode; attach an NcBBNParametrized with a free "
+                 "Yp to the cosmology's `bbn' slot explicitly.");
+
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
+}
+
+/*
+ * Both properties are write-only, so GObject never routes a read here; NcmModel
+ * requires the handler to exist whenever a class has non-parameter properties.
+ */
+static void
+_nc_hicosmo_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  g_return_if_fail (NC_IS_HICOSMO (object));
+
+  switch (prop_id)
+  {
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
+}
+
+static void
+nc_hicosmo_constructed (GObject *object)
+{
+  {
+    NcmModel *model = NCM_MODEL (object);
+
+    /*
+     * Give every cosmology a nucleosynthesis model, so that Yp has an answer
+     * without the caller having to know it needs one. Guarded: construct
+     * properties (the "bbn" typed slot and a deserialized submodel-array)
+     * are applied before constructed() runs, so a
+     * caller-provided NcBBN is already attached here and must not be
+     * overwritten. This block must stay before the chain-up: NcmModel's
+     * constructed() marks the model constructed, and "bbn" is a typed slot,
+     * fixed at construction from then on.
+     */
+    if (ncm_model_peek_submodel_by_mid (model, nc_bbn_id ()) == NULL)
+    {
+      NcBBNParthenope *bbn_pn = nc_bbn_parthenope_new ();
+
+      ncm_model_add_submodel (model, NCM_MODEL (bbn_pn));
+      nc_bbn_parthenope_free (bbn_pn);
+    }
+  }
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_hicosmo_parent_class)->constructed (object);
 }
 
 static void
@@ -68,6 +165,7 @@ nc_hicosmo_dispose (GObject *object)
 
   nc_hiprim_clear (&cosmo->prim);
   nc_hireion_clear (&cosmo->reion);
+  nc_bbn_clear (&cosmo->bbn);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_parent_class)->dispose (object);
@@ -146,11 +244,35 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  object_class->dispose  = &nc_hicosmo_dispose;
-  object_class->finalize = &nc_hicosmo_finalize;
+  model_class->set_property = &_nc_hicosmo_set_property;
+  model_class->get_property = &_nc_hicosmo_get_property;
+  object_class->constructed = &nc_hicosmo_constructed;
+  object_class->dispose     = &nc_hicosmo_dispose;
+  object_class->finalize    = &nc_hicosmo_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Abstract class for HI cosmological models.", "NcHICosmo");
-  ncm_model_class_add_params (model_class, 0, 0, 1);
+  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
+
+  g_object_class_install_property (object_class,
+                                   PROP_YP,
+                                   g_param_spec_double ("Yp",
+                                                        NULL,
+                                                        "Removed: ignored, Yp now comes from the bbn submodel",
+                                                        0.0, 1.0, NC_BBN_PARAMETRIZED_DEFAULT_YP_4HE,
+                                                        G_PARAM_WRITABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_YP_FIT,
+                                   g_param_spec_boolean ("Yp-fit",
+                                                         NULL,
+                                                         "Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error",
+                                                         FALSE,
+                                                         G_PARAM_WRITABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  ncm_model_class_add_submodels (model_class, 3);
+  ncm_model_class_set_submodel (model_class, 0, "reion", "reion", NC_TYPE_HIREION);
+  ncm_model_class_set_submodel (model_class, 1, "prim", "prim", NC_TYPE_HIPRIM);
+  ncm_model_class_set_submodel (model_class, 2, "bbn", "bbn", NC_TYPE_BBN);
 
   ncm_mset_model_register_id (model_class,
                               "NcHICosmo",
@@ -283,9 +405,16 @@ _nc_hicosmo_T_gamma0 (NcHICosmo *cosmo)
 static gdouble
 _nc_hicosmo_Yp_4He (NcHICosmo *cosmo)
 {
-  g_error ("nc_hicosmo_Yp_4He: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo));
+  /*
+   * Every cosmology carries a nucleosynthesis submodel, created by default in
+   * nc_hicosmo_constructed(), so Yp is answered here once for all of them
+   * rather than reimplemented per background model.
+   */
+  NcBBN *bbn = nc_hicosmo_peek_bbn (cosmo);
 
-  return 0.0;
+  g_assert (bbn != NULL);
+
+  return nc_bbn_Yp_4He (bbn, cosmo);
 }
 
 static gdouble
@@ -521,6 +650,11 @@ _nc_hicosmo_add_submodel (NcmModel *model, NcmModel *submodel)
     {
       nc_hireion_clear (&cosmo->reion);
       cosmo->reion = nc_hireion_ref (NC_HIREION (submodel));
+    }
+    else if (ncm_model_id (submodel) == nc_bbn_id ())
+    {
+      nc_bbn_clear (&cosmo->bbn);
+      cosmo->bbn = nc_bbn_ref (NC_BBN (submodel));
     }
   }
 }
@@ -2006,6 +2140,17 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * Gets the reionization submodel without increasing its reference count.
  *
  * Returns: (transfer none): the #NcHIReion submodel.
+ */
+
+/**
+ * nc_hicosmo_peek_bbn:
+ * @cosmo: a #NcHICosmo
+ *
+ * Gets the primordial nucleosynthesis submodel without increasing its
+ * reference count. Never %NULL: a default #NcBBNParthenope is created with the
+ * cosmology unless one was supplied.
+ *
+ * Returns: (transfer none): the #NcBBN submodel.
  */
 
 /*

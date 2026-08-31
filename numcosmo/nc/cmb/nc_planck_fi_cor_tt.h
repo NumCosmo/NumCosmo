@@ -72,7 +72,7 @@ typedef struct _NcPlanckFICorTT NcPlanckFICorTT;
  * [Planck 2018 results V (2019)](https://arxiv.org/abs/1907.12875)).
  *
  */
-typedef enum /*< enum,underscore_name=NC_PLANCK_FI_COR_TT_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_PLANCK_FI_COR_TT_SPARAMS,prefix=NC_PLANCK_FI_COR_TT >*/
 {
   NC_PLANCK_FI_COR_TT_A_cib_217 = 0,
   NC_PLANCK_FI_COR_TT_cib_index,

@@ -36,7 +36,7 @@ This module builds ``NcDataClusterWLFactor`` experiments, on the
   ``NcGalaxyRedshiftFactorSpline`` and the chosen ``shape_dist`` scheme.
 """
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Sequence
 from enum import StrEnum, auto
 from dataclasses import dataclass
 import numpy as np
@@ -155,15 +155,19 @@ class LSSTVariant(GEnum):
         )
 
 
-class HWLCatalogID(GEnum):
-    """Curated Subaru HSC-SSP PDR1 weak lensing catalog (NumCosmo data release)."""
+class WLCatalogID(GEnum):
+    """A curated weak lensing catalog from the NumCosmo data release.
+
+    Presently all Subaru HSC-SSP PDR1 cluster fields; the identifiers carry the
+    survey and data release so that catalogs from elsewhere can join them.
+    """
 
     # pylint: disable=no-member
-    HWL16A_002 = Nc.GalaxyWLObsCatalogId(0)
-    HWL16A_007 = Nc.GalaxyWLObsCatalogId(1)
-    HWL16A_060 = Nc.GalaxyWLObsCatalogId(2)
-    HWL16A_064 = Nc.GalaxyWLObsCatalogId(3)
-    HWL16A_094 = Nc.GalaxyWLObsCatalogId(4)
+    HSC_PDR1_HWL16A_002 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_002
+    HSC_PDR1_HWL16A_007 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_007
+    HSC_PDR1_HWL16A_060 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_060
+    HSC_PDR1_HWL16A_064 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_064
+    HSC_PDR1_HWL16A_094 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_094
 
     @classmethod
     def __get_pydantic_core_schema__(
@@ -442,20 +446,42 @@ class GalaxyShapeFactorGenQuad(GalaxyShapeFactorGenBase):
         return Nc.GalaxyShapeFactorQuad.new(self.ellip_conv.genum)
 
 
+DEFAULT_SHAPE_USE_MARGINAL_SPLINE = False
+DEFAULT_SHAPE_SPLINE_G_MAX = 0.3
+DEFAULT_SHAPE_SPLINE_REL_ERR = 1.0e-4
+
+
 class GalaxyShapeFactorGenFixedQuad(GalaxyShapeFactorGenBase):
     """Fixed lens-domain quadrature (``NcGalaxyShapeFactorFixedQuad``)."""
+
+    use_marginal_spline: Annotated[bool, Field()] = DEFAULT_SHAPE_USE_MARGINAL_SPLINE
+    spline_g_max: Annotated[float, Field(gt=0.0, le=1.0)] = DEFAULT_SHAPE_SPLINE_G_MAX
+    spline_rel_err: Annotated[float, Field(gt=0.0, le=1.0)] = (
+        DEFAULT_SHAPE_SPLINE_REL_ERR
+    )
 
     @staticmethod
     def help_text() -> list[str]:
         """Return the help text for this scheme."""
-        return ["GalaxyShapeFactorGenFixedQuad", _SHARED_SHAPE_FACTOR_HELP]
+        return [
+            "GalaxyShapeFactorGenFixedQuad",
+            f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
+            f"use_marginal_spline={DEFAULT_SHAPE_USE_MARGINAL_SPLINE}, "
+            f"spline_g_max={DEFAULT_SHAPE_SPLINE_G_MAX}, "
+            f"spline_rel_err={DEFAULT_SHAPE_SPLINE_REL_ERR}",
+        ]
 
     def requires_sigma(self) -> bool:
         """FixedQuad works with any population (no Gaussian linearization)."""
         return False
 
     def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
-        return Nc.GalaxyShapeFactorFixedQuad.new(self.ellip_conv.genum)
+        return Nc.GalaxyShapeFactorFixedQuad(
+            ellip_conv=self.ellip_conv.genum,
+            use_marginal_spline=self.use_marginal_spline,
+            spline_g_max=self.spline_g_max,
+            spline_rel_err=self.spline_rel_err,
+        )
 
 
 class GalaxyShapeFactorGenLaplace(GalaxyShapeFactorGenBase):
@@ -720,7 +746,21 @@ class GalaxyPopGenBeta(BaseModel):
         run's own equivalent, the same convention every other generate
         command in this CLI uses for its own derived quantities (see e.g.
         GenerateQSpline's mean_kappa/q_transition).
+
+        Called after --parameter-list has been applied to the registered
+        NcGalaxyShapePopBeta (see ClusterWL.__post_init__), so self._pop's
+        own fit-type flags reflect it: skipped entirely when both alpha and
+        beta are fixed, since e_rms/mode would then just be the same
+        constant repeated on every catalog row.
         """
+        alpha_beta_free = any(
+            self._pop.param_get_ftype(pid) == Ncm.ParamType.FREE
+            for pid in range(self._pop.len())
+        )
+
+        if not alpha_beta_free:
+            return []
+
         return [
             Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:e_rms", None),
             Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:mode", None),
@@ -1054,7 +1094,13 @@ class GalaxyDistributionModel:
 
 def create_cosmo() -> Nc.HICosmo:
     """Create a cosmology for the cluster model."""
-    cosmo = Nc.HICosmoDEXcdm()
+    prim = Nc.HIPrimPowerLaw.new()
+    prim["ln10e10ASA"] = 3.02745
+    prim["n_SA"] = 0.9660
+
+    reion = Nc.HIReionCamb.new()
+
+    cosmo = Nc.HICosmoDEXcdm(prim=prim, reion=reion)
 
     cosmo.params_set_default_ftype()
     cosmo.omega_x2omega_k()
@@ -1064,12 +1110,6 @@ def create_cosmo() -> Nc.HICosmo:
     cosmo["w"] = -1.0
     cosmo["Omegak"] = 0.00
 
-    prim = Nc.HIPrimPowerLaw.new()
-    prim["ln10e10ASA"] = 3.02745
-    prim["n_SA"] = 0.9660
-
-    reion = Nc.HIReionCamb.new()
-
     cosmo.param_set_desc("H0", {"fit": False})
     cosmo.param_set_desc("Omegac", {"fit": False})
     cosmo.param_set_desc("Omegab", {"fit": False})
@@ -1078,9 +1118,6 @@ def create_cosmo() -> Nc.HICosmo:
     prim.param_set_desc("ln10e10ASA", {"fit": False})
     prim.param_set_desc("n_SA", {"fit": False})
     reion.param_set_desc("z_re", {"fit": False})
-
-    cosmo.add_submodel(prim)
-    cosmo.add_submodel(reion)
 
     return cosmo
 
@@ -1217,6 +1254,46 @@ def generate_lsst_cluster_wl(
     return experiment
 
 
+class ResampleFlagChoice(StrEnum):
+    """Which per-galaxy inputs ``ncm_data_resample()`` regenerates.
+
+    Only meaningful for :func:`load_cluster_wl`'s real-catalog experiments:
+    ``POSITION``/``REDSHIFT`` redraw from the (parametric) position/redshift
+    factor, not from the catalog's own empirical footprint/p(z), so leaving
+    them off is what keeps a real catalog's actual spatial/photo-z
+    heterogeneity intact across resamples -- ``SHAPE`` alone conditions on
+    the real per-galaxy (ra, dec, z, noise) and only redraws intrinsic
+    ellipticity, which is the appropriate choice for a real-catalog bias
+    test. ``ALL`` (the default) matches historical/mock-generation
+    behaviour.
+    """
+
+    POSITION = "position"
+    REDSHIFT = "redshift"
+    SHAPE = "shape"
+    ALL = "all"
+
+    @property
+    def genum(self) -> Nc.DataClusterWLResampleFlag:
+        """Return the corresponding NcDataClusterWLResampleFlag bit(s)."""
+        return {
+            ResampleFlagChoice.POSITION: Nc.DataClusterWLResampleFlag.POSITION,
+            ResampleFlagChoice.REDSHIFT: Nc.DataClusterWLResampleFlag.REDSHIFT,
+            ResampleFlagChoice.SHAPE: Nc.DataClusterWLResampleFlag.SHAPE,
+            ResampleFlagChoice.ALL: Nc.DataClusterWLResampleFlag.ALL,
+        }[self]
+
+
+def resolve_resample_flag(
+    choices: Sequence[ResampleFlagChoice],
+) -> Nc.DataClusterWLResampleFlag:
+    """OR a list of ResampleFlagChoice into a single NcDataClusterWLResampleFlag."""
+    flag = 0
+    for choice in choices:
+        flag |= choice.genum
+    return Nc.DataClusterWLResampleFlag(flag)
+
+
 def _resolve_cluster_value(
     obs: Nc.GalaxyWLObs, key: str, override: float | None, human_name: str
 ) -> float:
@@ -1259,6 +1336,7 @@ def load_cluster_wl(
     pop_gen: GalaxyPopGenTypes,
     integ_options: IntegMethodOptions,
     summary: bool,
+    resample_flag: Nc.DataClusterWLResampleFlag = Nc.DataClusterWLResampleFlag.ALL,
 ) -> Ncm.ObjDictStr:
     """Build a cluster weak lensing experiment from a real NcGalaxyWLObs catalog.
 
@@ -1272,6 +1350,11 @@ def load_cluster_wl(
     metadata (see ncm_catalog_peek_meta(), keys ``cluster_ra``/``cluster_dec``/
     ``cluster_z``/``cluster_c``) when not given -- the galaxy catalog itself
     only describes the observed background galaxies, not the lensing cluster.
+
+    ``resample_flag`` is written onto the resulting ``NcDataClusterWLFactor``
+    as-is (default ``ALL``, matching historical behaviour); see
+    ``ResampleFlagChoice`` for why a real-catalog bias test wants ``SHAPE``
+    only.
     """
     if not (obs.has_column("ra") and obs.has_column("dec")):
         raise ValueError("obs must have 'ra' and 'dec' columns")
@@ -1398,6 +1481,7 @@ def load_cluster_wl(
     cluster_data.set_cut(cluster.r_min, cluster.r_max)
     integ_options.apply(cluster_data)
     cluster_data.set_obs(obs)
+    cluster_data.set_resample_flag(resample_flag)
 
     dset = Ncm.Dataset.new_array([cluster_data])
     likelihood = Ncm.Likelihood.new(dset)

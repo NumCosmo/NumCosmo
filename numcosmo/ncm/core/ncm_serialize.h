@@ -48,7 +48,7 @@ G_DECLARE_FINAL_TYPE (NcmSerialize, ncm_serialize, NCM, SERIALIZE, GObject)
  * Options for serialization.
  *
  */
-typedef enum _NcmSerializeOpt
+typedef enum _NcmSerializeOpt /*< prefix=NCM_SERIALIZE_OPT >*/
 {
   NCM_SERIALIZE_OPT_NONE         = 0,
   NCM_SERIALIZE_OPT_AUTOSAVE_SER = 1 << 0,

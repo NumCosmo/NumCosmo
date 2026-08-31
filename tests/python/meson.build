@@ -59,7 +59,14 @@ if enable_gir and python_for_tests.found()
         required: false,
     )
     if py_xdist.found()
-        pytest_parallel_args = pytest_base_args + ['-n', 'auto']
+        # loadgroup, not the default load: tests marked with xdist_group go to
+        # one worker, everything else still distributes test by test. An xdist
+        # worker is its own session, so a module-scoped fixture is built once
+        # per *worker* -- for the xcor lane's heaviest files that is several GB
+        # replicated 12 or 24 times, which exhausted a 30 GB machine. Grouping
+        # those files costs them their internal parallelism and nothing else.
+        # Ungrouped tests behave exactly as under load.
+        pytest_parallel_args = pytest_base_args + ['-n', 'auto', '--dist', 'loadgroup']
     else
         pytest_parallel_args = pytest_base_args
     endif
@@ -122,7 +129,7 @@ if enable_gir and python_for_tests.found()
         + ['--run-powspec', '-m', 'powspec', meson.current_source_dir()],
         depends: [numcosmo_gir, numcosmo_math_gir],
         env: env,
-        timeout: 0,
+        timeout: 1800,
         protocol: pytest_protocol,
         is_parallel: pytest_is_parallel,
         suite: ['py-powspec'],
@@ -136,7 +143,7 @@ if enable_gir and python_for_tests.found()
         + ['--run-xcor', '-m', 'xcor', meson.current_source_dir()],
         depends: [numcosmo_gir, numcosmo_math_gir],
         env: env,
-        timeout: 0,
+        timeout: 1800,
         protocol: pytest_protocol,
         is_parallel: pytest_is_parallel,
         suite: ['py-xcor'],
@@ -151,7 +158,7 @@ if enable_gir and python_for_tests.found()
         + ['--run-app', '-m', 'app', meson.current_source_dir()],
         depends: [numcosmo_gir, numcosmo_math_gir],
         env: env,
-        timeout: 0,
+        timeout: 1800,
         protocol: pytest_protocol,
         is_parallel: pytest_is_parallel,
         suite: ['py-app'],
@@ -171,7 +178,7 @@ if enable_gir and python_for_tests.found()
         + ['-m', 'omp', meson.current_source_dir()],
         depends: [numcosmo_gir, numcosmo_math_gir],
         env: env_omp,
-        timeout: 0,
+        timeout: 1800,
         protocol: pytest_protocol,
         is_parallel: pytest_is_parallel,
         suite: ['py-omp'],
@@ -185,7 +192,7 @@ if enable_gir and python_for_tests.found()
         + ['--run-sphere-map', '-m', 'sphere_map', meson.current_source_dir()],
         depends: [numcosmo_gir, numcosmo_math_gir],
         env: env_sphere_map,
-        timeout: 0,
+        timeout: 1800,
         protocol: pytest_protocol,
         is_parallel: pytest_is_parallel,
         suite: ['python'],
@@ -203,7 +210,7 @@ if enable_gir and python_for_tests.found()
                 + ['--run-mpi', '-m', 'mpi', meson.current_source_dir()],
                 depends: [numcosmo_gir, numcosmo_math_gir],
                 env: env,
-                timeout: 0,
+                timeout: 1800,
                 is_parallel: pytest_is_parallel,
                 suite: ['python', 'mpi'],
             )

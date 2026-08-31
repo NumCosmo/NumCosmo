@@ -281,8 +281,8 @@ _nc_galaxy_redshift_pop_lsst_srd_get_lim (NcGalaxyRedshiftPop *gsdrp, gdouble *z
 /**
  * nc_galaxy_redshift_pop_lsst_srd_new:
  *
- * Creates a new #NcGalaxyRedshiftPopLSSTSRD. The default parameter values correspond to the
- * LSST SRD year 1 source parametrization.
+ * Creates a new #NcGalaxyRedshiftPopLSSTSRD. The default parameter values correspond
+ * to the LSST SRD year 1 source parametrization.
  *
  * Returns: (transfer full): a new #NcGalaxyRedshiftPopLSSTSRD
  */
@@ -394,9 +394,9 @@ nc_galaxy_redshift_pop_lsst_srd_new_y10_lens (void)
  * nc_galaxy_redshift_pop_lsst_srd_new_from_type:
  * @type: a #NcGalaxyRedshiftPopLSSTSRDType
  *
- * Creates a new #NcGalaxyRedshiftPopLSSTSRD using a predefined type.
- * The type determines which LSST SRD parametrization to use (Year 1 or Year 10,
- * source or lens).
+ * Creates a new #NcGalaxyRedshiftPopLSSTSRD using a predefined type. The type
+ * determines which LSST SRD parametrization to use (Year 1 or Year 10, source or
+ * lens).
  *
  * Returns: (transfer full): a new #NcGalaxyRedshiftPopLSSTSRD
  */

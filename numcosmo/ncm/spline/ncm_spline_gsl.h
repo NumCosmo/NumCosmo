@@ -47,7 +47,7 @@ G_DECLARE_FINAL_TYPE (NcmSplineGsl, ncm_spline_gsl, NCM, SPLINE_GSL, NcmSpline)
  *
  * Enumeration to choose which [GSL interpolation method](https://www.gnu.org/software/gsl/doc/html/interp.html#interpolation) as backend to be used by the object. It can be used with the function ncm_spline_gsl_new_by_id() when a new #NcmSplineGsl is created.
  */
-typedef enum _NcmSplineGslType
+typedef enum _NcmSplineGslType /*< prefix=NCM_SPLINE_GSL >*/
 {
   NCM_SPLINE_GSL_LINEAR = 0,
   NCM_SPLINE_GSL_POLYNOMIAL,

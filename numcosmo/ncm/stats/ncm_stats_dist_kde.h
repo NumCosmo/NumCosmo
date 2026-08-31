@@ -61,7 +61,7 @@ struct _NcmStatsDistKDEClass
  * Selects the covariance type to use in the kernel interpolation.
  *
  */
-typedef enum _NcmStatsDistKDECovType
+typedef enum _NcmStatsDistKDECovType /*< prefix=NCM_STATS_DIST_KDE_COV_TYPE >*/
 {
   NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE,
   NCM_STATS_DIST_KDE_COV_TYPE_FIXED,

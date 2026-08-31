@@ -62,8 +62,6 @@ main (gint argc, gchar *argv[])
   gchar *full_cmd_line                  = NULL;
   gchar *runconf_cmd_line               = NULL;
   gboolean is_de                        = FALSE;
-  gboolean is_gcg                       = FALSE;
-  gboolean is_idem2                     = FALSE;
   NcmRNG *rng                           = ncm_rng_pool_get ("darkenergy");
   NcmMSetCatalog *mcat                  = NULL;
   NcmSerialize *ser                     = ncm_serialize_global ();
@@ -259,22 +257,26 @@ main (gint argc, gchar *argv[])
 
   dset = ncm_dataset_new ();
 
-  if ((cosmo = NC_HICOSMO (ncm_mset_get (mset, nc_hicosmo_id ()))) == NULL)
+  if ((cosmo = NC_HICOSMO (ncm_mset_get (mset, nc_hicosmo_id ()))) != NULL)
   {
-    if (de_model.model_name != NULL)
-    {
-      cosmo = NC_HICOSMO (ncm_serialize_global_from_string (de_model.model_name));
-      g_assert (NC_IS_HICOSMO (cosmo));
-    }
-    else
-    {
-      cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-    }
+    /* @cosmo came from a loaded @mset -- its submodels (if any) are
+     * already attached at construction time (see ncm_mset_load()). A
+     * missing reion/prim can no longer be patched onto an
+     * already-constructed cosmology (submodels are construction-only for
+     * types declaring a typed slot, see ncm_model_class_set_submodel()). */
+    if ((ncm_mset_peek (mset, nc_hireion_id ()) == NULL) ||
+        (ncm_mset_peek (mset, nc_hiprim_id ()) == NULL))
+      g_error ("darkenergy: the cosmology loaded from `%s' is missing its "
+               "reionization and/or primordial submodel -- provide a "
+               "complete model file (with both attached) instead of "
+               "relying on --reion-model/--prim-model to patch an "
+               "already-loaded cosmology.",
+               de_model.mset_file);
   }
-
-  if (ncm_mset_peek (mset, nc_hireion_id ()) == NULL)
+  else
   {
     NcHIReion *reion;
+    NcHIPrim *prim;
 
     if (de_model.model_reion != NULL)
     {
@@ -286,14 +288,6 @@ main (gint argc, gchar *argv[])
       reion = NC_HIREION (nc_hireion_camb_new ());
     }
 
-    ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-    nc_hireion_free (reion);
-  }
-
-  if (ncm_mset_peek (mset, nc_hiprim_id ()) == NULL)
-  {
-    NcHIPrim *prim;
-
     if (de_model.model_prim != NULL)
     {
       prim = NC_HIPRIM (ncm_serialize_global_from_string (de_model.model_prim));
@@ -304,7 +298,40 @@ main (gint argc, gchar *argv[])
       prim = NC_HIPRIM (nc_hiprim_power_law_new ());
     }
 
-    ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
+    if (de_model.model_name != NULL)
+    {
+      NcmSerialize *lser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+      GString *cosmo_ser = g_string_new (de_model.model_name);
+
+      ncm_serialize_set (lser, reion, "reion", FALSE);
+      ncm_serialize_set (lser, prim, "prim", FALSE);
+
+      if ((cosmo_ser->len > 0) && (cosmo_ser->str[cosmo_ser->len - 1] == '}'))
+      {
+        g_string_truncate (cosmo_ser, cosmo_ser->len - 1);
+        g_string_append (cosmo_ser, ", ");
+      }
+      else
+      {
+        g_string_append (cosmo_ser, "{");
+      }
+
+      g_string_append_printf (cosmo_ser,
+                              "'reion':<('%s[reion]', @a{sv} {})>, 'prim':<('%s[prim]', @a{sv} {})>}",
+                              G_OBJECT_TYPE_NAME (reion), G_OBJECT_TYPE_NAME (prim));
+
+      cosmo = NC_HICOSMO (ncm_serialize_from_string (lser, cosmo_ser->str));
+      g_assert (NC_IS_HICOSMO (cosmo));
+
+      g_string_free (cosmo_ser, TRUE);
+      ncm_serialize_free (lser);
+    }
+    else
+    {
+      cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
+    }
+
+    nc_hireion_free (reion);
     nc_hiprim_free (prim);
   }
 
@@ -313,10 +340,6 @@ main (gint argc, gchar *argv[])
 
   if (g_type_is_a (G_OBJECT_TYPE (cosmo), NC_TYPE_HICOSMO_DE))
     is_de = TRUE;
-  else if (g_type_is_a (G_OBJECT_TYPE (cosmo), NC_TYPE_HICOSMO_GCG))
-    is_gcg = TRUE;
-  else if (g_type_is_a (G_OBJECT_TYPE (cosmo), NC_TYPE_HICOSMO_IDEM2))
-    is_idem2 = TRUE;
 
   if (de_model.help_names)
   {
@@ -340,18 +363,6 @@ main (gint argc, gchar *argv[])
       ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.0);
       ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FIXED);
     }
-    else if (is_gcg)
-    {
-      nc_hicosmo_gcg_omega_x2omega_k (NC_HICOSMO_GCG (cosmo), NULL);
-      ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_GCG_OMEGA_X, 0.0);
-      ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_GCG_OMEGA_X, NCM_PARAM_TYPE_FIXED);
-    }
-    else if (is_idem2)
-    {
-      nc_hicosmo_idem2_omega_x2omega_k (NC_HICOSMO_IDEM2 (cosmo), NULL);
-      ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_IDEM2_OMEGA_X, 0.0);
-      ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_IDEM2_OMEGA_X, NCM_PARAM_TYPE_FIXED);
-    }
     else
     {
       g_error ("flat option is valid only for darkenergy models");
@@ -364,16 +375,6 @@ main (gint argc, gchar *argv[])
       nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
       ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FREE);
     }
-    else if (is_gcg)
-    {
-      nc_hicosmo_gcg_omega_x2omega_k (NC_HICOSMO_GCG (cosmo), NULL);
-      ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_GCG_OMEGA_X, NCM_PARAM_TYPE_FREE);
-    }
-    else if (is_idem2)
-    {
-      nc_hicosmo_idem2_omega_x2omega_k (NC_HICOSMO_IDEM2 (cosmo), NULL);
-      ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_IDEM2_OMEGA_X, NCM_PARAM_TYPE_FREE);
-    }
     else
     {
       g_error ("omegak option is valid only for darkenergy models");
@@ -382,7 +383,7 @@ main (gint argc, gchar *argv[])
 
   if (de_model.pos_Omega_x)
   {
-    if (is_de || is_gcg || is_idem2)
+    if (is_de)
       ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_flat_param_new_name ("NcHICosmo:Omegax", 0.0, HUGE_VAL, 1.0, NULL)));
     else
       g_error ("omegak > 0 option is valid only for darkenergy models");
@@ -589,9 +590,6 @@ main (gint argc, gchar *argv[])
       }
     }
   }
-
-  if (de_data_simple.BBN)
-    nc_hicosmo_de_new_add_bbn (lh);
 
   if (de_data_simple.BBN_Ob)
   {

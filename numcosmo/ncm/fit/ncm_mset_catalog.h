@@ -29,6 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/ncm/core/ncm_obj_array.h>
 #include <numcosmo/ncm/fit/ncm_fit.h>
 #include <numcosmo/ncm/stats/ncm_stats_vec.h>
 #include <numcosmo/ncm/stats/ncm_stats_dist1d_epdf.h>
@@ -48,7 +49,7 @@ G_DECLARE_FINAL_TYPE (NcmMSetCatalog, ncm_mset_catalog, NCM, MSET_CATALOG, GObje
  * Catalog sync modes.
  *
  */
-typedef enum _NcmMSetCatalogSync
+typedef enum _NcmMSetCatalogSync /*< prefix=NCM_MSET_CATALOG_SYNC >*/
 {
   NCM_MSET_CATALOG_SYNC_DISABLE,
   NCM_MSET_CATALOG_SYNC_AUTO,
@@ -67,7 +68,7 @@ typedef enum _NcmMSetCatalogSync
  * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().
  *
  */
-typedef enum _NcmMSetCatalogTrimType
+typedef enum _NcmMSetCatalogTrimType /*< prefix=NCM_MSET_CATALOG_TRIM_TYPE >*/
 {
   NCM_MSET_CATALOG_TRIM_TYPE_ESS    = 1 << 0,
   NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL = 1 << 1,
@@ -84,7 +85,7 @@ typedef enum _NcmMSetCatalogTrimType
  * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().
  *
  */
-typedef enum _NcmMSetCatalogPostNormMethod
+typedef enum _NcmMSetCatalogPostNormMethod /*< prefix=NCM_MSET_CATALOG_POST_LNNORM_METHOD >*/
 {
   NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX = 0,
   NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS,
@@ -101,7 +102,7 @@ typedef enum _NcmMSetCatalogPostNormMethod
  * Method used to estimate the autocorrelation time $\tau$.
  *
  */
-typedef enum _NcmMSetCatalogTauMethod
+typedef enum _NcmMSetCatalogTauMethod /*< prefix=NCM_MSET_CATALOG_TAU_METHOD >*/
 {
   NCM_MSET_CATALOG_TAU_METHOD_ACOR = 0,
   NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL,
@@ -114,6 +115,7 @@ NcmMSetCatalog *ncm_mset_catalog_new_array (NcmMSet *mset, guint nadd_vals, guin
 
 NcmMSetCatalog *ncm_mset_catalog_new_from_file (const gchar *filename, glong burnin);
 NcmMSetCatalog *ncm_mset_catalog_new_from_file_ro (const gchar *filename, glong burnin);
+void ncm_mset_catalog_peek_info_from_file (const gchar *filename, glong *nrows, guint *nchains, gint *first_id);
 NcmMSetCatalog *ncm_mset_catalog_ref (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_free (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_clear (NcmMSetCatalog **mcat);
@@ -171,6 +173,9 @@ void ncm_mset_catalog_log_current_chain_stats (NcmMSetCatalog *mcat);
 NcmMSet *ncm_mset_catalog_get_mset (NcmMSetCatalog *mcat);
 NcmMSet *ncm_mset_catalog_peek_mset (NcmMSetCatalog *mcat);
 const gchar *ncm_mset_catalog_get_run_type (NcmMSetCatalog *mcat);
+
+void ncm_mset_catalog_set_functions_array (NcmMSetCatalog *mcat, NcmObjArray *functions);
+NcmObjArray *ncm_mset_catalog_peek_functions_array (NcmMSetCatalog *mcat);
 
 NcmStatsVec *ncm_mset_catalog_peek_pstats (NcmMSetCatalog *mcat);
 NcmStatsVec *ncm_mset_catalog_peek_e_mean_stats (NcmMSetCatalog *mcat);
@@ -245,6 +250,10 @@ guint ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint n
 #define NCM_MSET_CATALOG_FSYMB_LABEL "FSYMB"
 #define NCM_MSET_CATALOG_ASYMB_LABEL "ASYMB"
 #define NCM_MSET_CATALOG_MSET_FORMAT_LABEL "MSETFMT"
+#define NCM_MSET_CATALOG_MSET_FORMAT_OBJECT "gvariant"
+#define NCM_MSET_CATALOG_MSET_FORMAT_VARDICT "vardict"
+#define NCM_MSET_CATALOG_HDU0_MSET_KEY "model-set"
+#define NCM_MSET_CATALOG_HDU0_FUNCTIONS_KEY "functions"
 #define NCM_MSET_CATALOG_DIST_EST_SD_SCALE (1.0e-3)
 
 G_END_DECLS

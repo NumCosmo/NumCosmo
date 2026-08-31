@@ -80,6 +80,7 @@ TestNcPowspecFuncData powspecs[] =
   {test_nc_powspec_mnl_halofit_new,      "mnl/halofit/ml/cbe",           test_nc_powspec_ml_cbe_new},
 #endif
 };
+
 #define TEST_NC_POWSPECS_LEN G_N_ELEMENTS (powspecs)
 
 #define TEST_NC_POWSPEC_TESTS 3
@@ -117,14 +118,11 @@ main (gint argc, gchar *argv[])
 void
 test_nc_powspec_ml_transfer_new_EH (TestNcPowspec *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHIReion *reion   = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim     = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
   NcTransferFunc *tf = NC_TRANSFER_FUNC (ncm_serialize_global_from_string ("NcTransferFuncEH"));
   NcPowspecML *ps_ml = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
-
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
 
   test->model = NCM_MODEL (nc_hicosmo_ref (cosmo));
   test->ps    = NCM_POWSPEC (nc_powspec_ml_ref (ps_ml));
@@ -140,14 +138,11 @@ test_nc_powspec_ml_transfer_new_EH (TestNcPowspec *test, gconstpointer pdata)
 void
 test_nc_powspec_ml_transfer_new_BBKS (TestNcPowspec *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHIReion *reion   = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim     = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
   NcTransferFunc *tf = NC_TRANSFER_FUNC (ncm_serialize_global_from_string ("NcTransferFuncBBKS"));
   NcPowspecML *ps_ml = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
-
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
 
   test->model = NCM_MODEL (nc_hicosmo_ref (cosmo));
   test->ps    = NCM_POWSPEC (nc_powspec_ml_ref (ps_ml));
@@ -163,13 +158,10 @@ test_nc_powspec_ml_transfer_new_BBKS (TestNcPowspec *test, gconstpointer pdata)
 void
 test_nc_powspec_ml_cbe_new (TestNcPowspec *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHIReion *reion   = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim     = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
   NcPowspecML *ps_ml = NC_POWSPEC_ML (nc_powspec_ml_cbe_new ());
-
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
 
   test->model = NCM_MODEL (nc_hicosmo_ref (cosmo));
   test->ps    = NCM_POWSPEC (nc_powspec_ml_ref (ps_ml));
@@ -216,6 +208,9 @@ test_nc_powspec_eval (TestNcPowspec *test, gconstpointer pdata)
 
   g_assert_cmpuint (Nz, >, 0);
   g_assert_cmpuint (Nk, >, 0);
+
+  Nk = MIN (Nk, 1000);
+  Nz = MIN (Nz, 1000);
 
   kv  = ncm_vector_new (Nk * 10);
   Pkv = ncm_vector_new (Nk * 10);

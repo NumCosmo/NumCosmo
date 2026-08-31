@@ -6,13 +6,17 @@ channels:
 dependencies:
   - astropy
   - black
-  - c-compiler
+  # pyccl pulls in camb, which is built against the gcc/gfortran 14 toolchain,
+  # while the unpinned compiler metapackages resolve to 15 (c-compiler 2.x).
+  # Reconciling the two costs the solver hours on linux-64; pin to the series
+  # camb uses. Drop the pin once camb ships gcc 15 builds.
+  - c-compiler <2
   - cfitsio
   - click
   - coverage
   - fftw
   - flake8
-  - fortran-compiler
+  - fortran-compiler <2  # see the c-compiler note above
   - gcovr
   - getdist
   - gi-docgen
@@ -20,7 +24,7 @@ dependencies:
   - glib-tools
   - gmp
   - gobject-introspection
-  - gsl
+  - gsl>=2.8
   - hdf5
   - healpy
   - jupyter

@@ -52,7 +52,7 @@ typedef struct _NcHICosmoQConst NcHICosmoQConst;
  * @NC_HICOSMO_QCONST_Z1: initial redshift
  *
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_QCONST_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_QCONST_SPARAMS,prefix=NC_HICOSMO_QCONST >*/
 {
   NC_HICOSMO_QCONST_H0 = 0,
   NC_HICOSMO_QCONST_OMEGA_T,

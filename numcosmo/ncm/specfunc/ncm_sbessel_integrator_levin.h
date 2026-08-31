@@ -55,6 +55,14 @@ guint ncm_sbessel_integrator_levin_get_cheb_min_order (NcmSBesselIntegratorLevin
 void ncm_sbessel_integrator_levin_set_cheb_reltol (NcmSBesselIntegratorLevin *sbilv, gdouble cheb_reltol);
 gdouble ncm_sbessel_integrator_levin_get_cheb_reltol (NcmSBesselIntegratorLevin *sbilv);
 
+void ncm_sbessel_integrator_levin_set_record_panels (NcmSBesselIntegratorLevin *sbilv, gboolean record);
+gboolean ncm_sbessel_integrator_levin_get_record_panels (NcmSBesselIntegratorLevin *sbilv);
+guint ncm_sbessel_integrator_levin_get_n_panel_records (NcmSBesselIntegratorLevin *sbilv);
+gdouble ncm_sbessel_integrator_levin_get_panel_a (NcmSBesselIntegratorLevin *sbilv, guint i);
+gdouble ncm_sbessel_integrator_levin_get_panel_b (NcmSBesselIntegratorLevin *sbilv, guint i);
+gint ncm_sbessel_integrator_levin_get_panel_ell (NcmSBesselIntegratorLevin *sbilv, guint i);
+gdouble ncm_sbessel_integrator_levin_get_panel_contrib (NcmSBesselIntegratorLevin *sbilv, guint i);
+
 gdouble ncm_sbessel_integrator_levin_get_y_knots_min (NcmSBesselIntegratorLevin *sbilv);
 gdouble ncm_sbessel_integrator_levin_get_y_knots_max (NcmSBesselIntegratorLevin *sbilv);
 guint ncm_sbessel_integrator_levin_get_n_knots (NcmSBesselIntegratorLevin *sbilv);

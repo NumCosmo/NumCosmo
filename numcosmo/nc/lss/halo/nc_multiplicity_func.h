@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
+#include <numcosmo/ncm/powspec/ncm_powspec_filter.h>
 
 G_BEGIN_DECLS
 
@@ -52,7 +53,7 @@ G_DECLARE_DERIVABLE_TYPE (NcMultiplicityFunc, nc_multiplicity_func, NC, MULTIPLI
  * \end{equation}
  *
  */
-typedef enum _NcMultiplicityFuncMassDef
+typedef enum _NcMultiplicityFuncMassDef /*< prefix=NC_MULTIPLICITY_FUNC_MASS_DEF >*/
 {
   NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN = 0,
   NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL,
@@ -71,7 +72,7 @@ struct _NcMultiplicityFuncClass
   gdouble (*get_Delta) (NcMultiplicityFunc *mulf);
   gdouble (*get_matter_Delta) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble z);
   NcMultiplicityFuncMassDef (*get_mdef) (NcMultiplicityFunc *mulf);
-  gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+  gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z);
   gboolean (*has_correction_factor) (NcMultiplicityFunc *mulf);
   gdouble (*correction_factor) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
@@ -89,7 +90,10 @@ gdouble nc_multiplicity_func_get_Delta (NcMultiplicityFunc *mulf);
 gdouble nc_multiplicity_func_get_matter_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble z);
 NcMultiplicityFuncMassDef nc_multiplicity_func_get_mdef (NcMultiplicityFunc *mulf);
 
-gdouble nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+void nc_multiplicity_func_set_psf (NcMultiplicityFunc *mulf, NcmPowspecFilter *psf);
+NcmPowspecFilter *nc_multiplicity_func_peek_psf (NcMultiplicityFunc *mulf);
+
+gdouble nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z);
 gboolean nc_multiplicity_func_has_correction_factor (NcMultiplicityFunc *mulf);
 gdouble nc_multiplicity_func_correction_factor (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 

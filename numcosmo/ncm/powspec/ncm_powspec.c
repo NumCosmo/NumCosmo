@@ -708,12 +708,24 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
  *
  * Prepares the power spectrum @powspec using the model @model.
  *
+ * The object is left up to date with respect to @model, so a subsequent
+ * ncm_powspec_prepare_if_needed() call is a no-op: preparing does the work
+ * *and* records that it was done.
+ *
  */
 
 void
 ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model)
 {
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
   NCM_POWSPEC_GET_CLASS (powspec)->prepare (powspec, model);
+
+  /* @model is (allow-none) -- ncm_powspec_prepare (ps, NULL) is a supported
+   * call for spectra that carry their own table. There is nothing to record
+   * against in that case, and ncm_model_ctrl_update() dereferences its model. */
+  if (model != NULL)
+    ncm_model_ctrl_update (self->ctrl, model);
 }
 
 /**
@@ -729,7 +741,19 @@ void
 ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model)
 {
   NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
-  gboolean model_up              = ncm_model_ctrl_update (self->ctrl, NCM_MODEL (model));
+  gboolean model_up;
+
+  /* Same (allow-none) contract as ncm_powspec_prepare(): with no model there
+   * is nothing to compare against, so prepare unconditionally rather than
+   * dereference NULL inside ncm_model_ctrl_update(). */
+  if (model == NULL)
+  {
+    ncm_powspec_prepare (powspec, NULL);
+
+    return;
+  }
+
+  model_up = ncm_model_ctrl_update (self->ctrl, NCM_MODEL (model));
 
   if (model_up)
     ncm_powspec_prepare (powspec, model);

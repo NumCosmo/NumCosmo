@@ -49,28 +49,13 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "ncm/integration/ncm_integrate.h"
-#include "ncm/core/ncm_memory_pool.h"
 #include "ncm/core/ncm_cfg.h"
-#include "ncm/core/ncm_serialize.h"
-#include "ncm/integration/ncm_integral_nd.h"
 #include "nc/xcor/nc_xcor.h"
+#include "nc/xcor/nc_xcor_priv.h"
 #include "nc_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #endif /* NUMCOSMO_GIR_SCAN */
-
-struct _NcXcor
-{
-  /*< private > */
-  GObject parent_instance;
-  NcDistance *dist;
-  NcmPowspec *ps;
-  gdouble RH;
-  NcXcorMethod meth;
-  gdouble reltol;
-  guint ell_batch_size;
-};
 
 enum
 {
@@ -78,46 +63,12 @@ enum
   PROP_DISTANCE,
   PROP_MATTER_POWER_SPECTRUM,
   PROP_METH,
+  PROP_CLOSURE_TYPE,
   PROP_RELTOL,
   PROP_ELL_BATCH_SIZE,
 };
 
 G_DEFINE_TYPE (NcXcor, nc_xcor, G_TYPE_OBJECT)
-
-typedef struct _NcXcorArg
-{
-  NcXcor *xc;
-  NcHICosmo *cosmo;
-  NcDistance *dist;
-  NcmPowspec *ps;
-
-  NcXcorKernel *xclk1;
-  NcXcorKernel *xclk2;
-  gint *ells;
-  guint nells;
-
-  /* Vectorized kernel integrands (for kernel cubature methods) */
-  NcXcorKernelIntegrand *xclki1;
-  NcXcorKernelIntegrand *xclki2;
-  gdouble *W1;
-  gdouble *W2;
-
-  gdouble RH;
-} NcXcorArg;
-
-static void nc_xcor_auto_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
-static void nc_xcor_auto_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
-static void nc_xcor_cross_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
-static void nc_xcor_cross_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
-static void nc_xcor_kernel_auto_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
-static void nc_xcor_kernel_auto_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
-static void nc_xcor_kernel_cross_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
-static void nc_xcor_kernel_cross_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
-
-NCM_INTEGRAL_ND_DEFINE_TYPE (NC, XCOR_AUTO, NcXcorAuto, nc_xcor_auto, nc_xcor_auto_dim, nc_xcor_auto_integ, NcXcorArg);
-NCM_INTEGRAL_ND_DEFINE_TYPE (NC, XCOR_CROSS, NcXcorCross, nc_xcor_cross, nc_xcor_cross_dim, nc_xcor_cross_integ, NcXcorArg);
-NCM_INTEGRAL_ND_DEFINE_TYPE (NC, XCOR_KERNEL_AUTO, NcXcorKernelAuto, nc_xcor_kernel_auto, nc_xcor_kernel_auto_dim, nc_xcor_kernel_auto_integ, NcXcorArg);
-NCM_INTEGRAL_ND_DEFINE_TYPE (NC, XCOR_KERNEL_CROSS, NcXcorKernelCross, nc_xcor_kernel_cross, nc_xcor_kernel_cross_dim, nc_xcor_kernel_cross_integ, NcXcorArg);
 
 static void
 nc_xcor_init (NcXcor *xc)
@@ -126,6 +77,7 @@ nc_xcor_init (NcXcor *xc)
   xc->dist           = NULL;
   xc->RH             = 0.0;
   xc->meth           = NC_XCOR_METHOD_LIMBER_Z_GSL;
+  xc->closure_type   = NC_XCOR_KERNEL_CLOSURE_SPLINE;
   xc->ell_batch_size = 8;
 }
 
@@ -148,6 +100,9 @@ _nc_xcor_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       break;
     case PROP_METH:
       xc->meth = g_value_get_enum (value);
+      break;
+    case PROP_CLOSURE_TYPE:
+      nc_xcor_set_closure_type (xc, g_value_get_enum (value));
       break;
     case PROP_RELTOL:
       nc_xcor_set_reltol (xc, g_value_get_double (value));
@@ -178,6 +133,9 @@ _nc_xcor_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
       break;
     case PROP_METH:
       g_value_set_enum (value, xc->meth);
+      break;
+    case PROP_CLOSURE_TYPE:
+      g_value_set_enum (value, nc_xcor_get_closure_type (xc));
       break;
     case PROP_RELTOL:
       g_value_set_double (value, nc_xcor_get_reltol (xc));
@@ -263,6 +221,42 @@ nc_xcor_class_init (NcXcorClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
+   * NcXcor:closure-type:
+   *
+   * How each kernel represents its sampled $W_\ell(k)$. See
+   * #NcXcorKernelClosure.
+   *
+   * The choice is made here rather than on #NcXcorKernel because it is the
+   * pair, not the kernel, that constrains it. %NC_XCOR_METHOD_KERNEL_EXACT
+   * integrates a pair on the common refinement of the two closures' panels,
+   * which requires both to be of the same kind; a per-kernel setting could
+   * express a mixed pair the exact method cannot integrate at all. The
+   * pointwise methods are indifferent to it, but they read the same property,
+   * so no computation mixes the two representations.
+   *
+   * The spline default is what every method has been calibrated against.
+   * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV samples the same function over the same
+   * domain and differs only in what is fitted to it, so a computation can be
+   * switched over and the two compared directly.
+   *
+   * It applies to the non-Limber closure only. Under Limber each multipole is
+   * supported on its own band and zero outside it, so the block's window
+   * carries a step per multipole; a Chebyshev series converges on the
+   * non-Limber kernel because $W_\ell(k)$ is entire in $k$, and a step is not.
+   * Multipoles taken under Limber keep the spline closure whatever this is set
+   * to.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_CLOSURE_TYPE,
+                                   g_param_spec_enum ("closure-type",
+                                                      NULL,
+                                                      "Representation used for the k-space closures.",
+                                                      NC_TYPE_XCOR_KERNEL_CLOSURE,
+                                                      NC_XCOR_KERNEL_CLOSURE_SPLINE,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
    * NcXcor:reltol:
    *
    * This property keeps the relative tolerance.
@@ -278,165 +272,17 @@ nc_xcor_class_init (NcXcorClass *klass)
   /**
    * NcXcor:ell-batch-size:
    *
-   * This property keeps the multipole batch size for cubature methods.
+   * This property keeps the multipole batch size for the kernel-space block
+   * methods. Tuned for 8 or 16; #NC_XCOR_KERNEL_MAX_ELL_BLOCK is only a hard
+   * safety cap. See nc_xcor_set_ell_batch_size().
    */
   g_object_class_install_property (object_class,
                                    PROP_ELL_BATCH_SIZE,
                                    g_param_spec_uint ("ell-batch-size",
                                                       NULL,
-                                                      "Multipole batch size for cubature methods.",
-                                                      1, 64, 8,
+                                                      "Multipole batch size for the kernel-space block methods.",
+                                                      1, NC_XCOR_KERNEL_MAX_ELL_BLOCK, 8,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-}
-
-static void
-nc_xcor_auto_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
-{
-  NcXcorAuto *xcor_auto = NC_XCOR_AUTO (intnd);
-  NcXcorArg *xcor_arg   = &xcor_auto->data;
-
-  *dim  = 1;
-  *fdim = xcor_arg->nells;
-}
-
-static void
-nc_xcor_cross_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
-{
-  NcXcorCross *xcor_cross = NC_XCOR_CROSS (intnd);
-  NcXcorArg *xcor_arg     = &xcor_cross->data;
-
-  *dim  = 1;
-  *fdim = xcor_arg->nells;
-}
-
-static void
-nc_xcor_auto_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
-{
-  NcXcorAuto *xcor_int    = NC_XCOR_AUTO (intnd);
-  NcXcorArg *xcor_int_arg = &xcor_int->data;
-  guint i, j;
-
-  for (i = 0; i < npoints; i++)
-  {
-    const gdouble z         = ncm_vector_fast_get (x, i);
-    const gdouble xi_z      = nc_distance_comoving (xcor_int_arg->dist, xcor_int_arg->cosmo, z); /* in units of Hubble radius */
-    const gdouble xi_z_phys = xi_z * xcor_int_arg->RH;                                           /* in Mpc */
-    const gdouble E_z       = nc_hicosmo_E (xcor_int_arg->cosmo, z);
-    const NcXcorKinetic xck = { xi_z, E_z };
-
-    for (j = 0; j < fdim; j++)
-    {
-      const gint l             = xcor_int_arg->ells[j];
-      const gdouble k          = (l + 0.5) / (xi_z_phys); /* in Mpc-1 */
-      const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xcor_int_arg->ps), NCM_MODEL (xcor_int_arg->cosmo), z, k);
-      const gdouble k1z        = nc_xcor_kernel_eval_limber_z (xcor_int_arg->xclk1, xcor_int_arg->cosmo, z, &xck, l);
-      const gdouble res        = gsl_pow_2 (k1z / xi_z) * power_spec / E_z;
-
-      ncm_vector_fast_set (fval, i * fdim + j, res);
-    }
-  }
-}
-
-static void
-nc_xcor_cross_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
-{
-  NcXcorCross *xcor_cross = NC_XCOR_CROSS (intnd);
-  NcXcorArg *xcor_arg     = &xcor_cross->data;
-  guint i, j;
-
-  for (i = 0; i < npoints; i++)
-  {
-    const gdouble z         = ncm_vector_fast_get (x, i);
-    const gdouble xi_z      = nc_distance_comoving (xcor_arg->dist, xcor_arg->cosmo, z); /* in units of Hubble radius */
-    const gdouble xi_z_phys = xi_z * xcor_arg->RH;                                       /* in Mpc */
-    const gdouble E_z       = nc_hicosmo_E (xcor_arg->cosmo, z);
-    const NcXcorKinetic xck = { xi_z, E_z };
-
-    for (j = 0; j < fdim; j++)
-    {
-      const gint l             = xcor_arg->ells[j];
-      const gdouble k          = (l + 0.5) / (xi_z_phys); /* in Mpc-1 */
-      const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xcor_arg->ps), NCM_MODEL (xcor_arg->cosmo), z, k);
-      const gdouble k1z        = nc_xcor_kernel_eval_limber_z (xcor_arg->xclk1, xcor_arg->cosmo, z, &xck, l);
-      const gdouble k2z        = nc_xcor_kernel_eval_limber_z (xcor_arg->xclk2, xcor_arg->cosmo, z, &xck, l);
-      const gdouble res        = k1z * k2z * power_spec / (xi_z * xi_z * E_z);
-
-      ncm_vector_fast_set (fval, i * fdim + j, res);
-    }
-  }
-}
-
-static void
-nc_xcor_kernel_auto_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
-{
-  NcXcorKernelAuto *xcor_kernel_auto = NC_XCOR_KERNEL_AUTO (intnd);
-  NcXcorArg *xcor_arg                = &xcor_kernel_auto->data;
-
-  *dim  = 1;
-  *fdim = xcor_arg->nells;
-}
-
-static void
-nc_xcor_kernel_cross_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
-{
-  NcXcorKernelCross *xcor_kernel_cross = NC_XCOR_KERNEL_CROSS (intnd);
-  NcXcorArg *xcor_arg                  = &xcor_kernel_cross->data;
-
-  *dim  = 1;
-  *fdim = xcor_arg->nells;
-}
-
-static void
-nc_xcor_kernel_auto_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
-{
-  NcXcorKernelAuto *xcor_kernel_auto = NC_XCOR_KERNEL_AUTO (intnd);
-  NcXcorArg *xcor_arg                = &xcor_kernel_auto->data;
-  guint i;
-
-  for (i = 0; i < npoints; i++)
-  {
-    const gdouble lnk = ncm_vector_fast_get (x, i);
-    const gdouble k   = exp (lnk);
-    const gdouble k3  = gsl_pow_3 (k);
-    guint j;
-
-    /* Evaluate all multipoles at once using pre-computed integrand */
-    nc_xcor_kernel_integrand_eval (xcor_arg->xclki1, k, xcor_arg->W1);
-
-    for (j = 0; j < fdim; j++)
-    {
-      const gdouble res = k3 * xcor_arg->W1[j] * xcor_arg->W1[j];
-
-      ncm_vector_fast_set (fval, i * fdim + j, res);
-    }
-  }
-}
-
-static void
-nc_xcor_kernel_cross_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
-{
-  NcXcorKernelCross *xcor_kernel_cross = NC_XCOR_KERNEL_CROSS (intnd);
-  NcXcorArg *xcor_arg                  = &xcor_kernel_cross->data;
-  guint i;
-
-  for (i = 0; i < npoints; i++)
-  {
-    const gdouble lnk = ncm_vector_fast_get (x, i);
-    const gdouble k   = exp (lnk);
-    const gdouble k3  = gsl_pow_3 (k);
-    guint j;
-
-    /* Evaluate all multipoles at once using pre-computed integrands */
-    nc_xcor_kernel_integrand_eval (xcor_arg->xclki1, k, xcor_arg->W1);
-    nc_xcor_kernel_integrand_eval (xcor_arg->xclki2, k, xcor_arg->W2);
-
-    for (j = 0; j < fdim; j++)
-    {
-      const gdouble res = k3 * xcor_arg->W1[j] * xcor_arg->W2[j];
-
-      ncm_vector_fast_set (fval, i * fdim + j, res);
-    }
-  }
 }
 
 /**
@@ -502,6 +348,46 @@ nc_xcor_clear (NcXcor **xc)
 }
 
 /**
+ * nc_xcor_get_meth:
+ * @xc: a #NcXcor
+ *
+ * Returns: the #NcXcorMethod used by @xc
+ */
+NcXcorMethod
+nc_xcor_get_meth (NcXcor *xc)
+{
+  return xc->meth;
+}
+
+/**
+ * nc_xcor_set_closure_type:
+ * @xc: a #NcXcor
+ * @closure_type: a #NcXcorKernelClosure
+ *
+ * Sets #NcXcor:closure-type. Read when a closure is built, so one already built
+ * keeps the representation it was built with.
+ *
+ */
+void
+nc_xcor_set_closure_type (NcXcor *xc, NcXcorKernelClosure closure_type)
+{
+  xc->closure_type = closure_type;
+}
+
+/**
+ * nc_xcor_get_closure_type:
+ * @xc: a #NcXcor
+ *
+ * Returns: the representation used for the k-space closures. See
+ * #NcXcor:closure-type.
+ */
+NcXcorKernelClosure
+nc_xcor_get_closure_type (NcXcor *xc)
+{
+  return xc->closure_type;
+}
+
+/**
  * nc_xcor_set_reltol:
  * @xc: a #NcXcor
  * @reltol: a relative tolerance
@@ -532,12 +418,23 @@ nc_xcor_get_reltol (NcXcor *xc)
  * @xc: a #NcXcor
  * @ell_batch_size: multipole batch size
  *
- * Sets the multipole batch size for cubature methods.
+ * Sets the multipole batch size used by the kernel-space block methods
+ * (%NC_XCOR_METHOD_KERNEL_CUBATURE, %NC_XCOR_METHOD_KERNEL_EXACT and
+ * %NC_XCOR_METHOD_KERNEL_GSL_BLOCK): each batch builds one k-space closure per
+ * kernel and shares it across the whole batch. It does not reach
+ * %NC_XCOR_METHOD_KERNEL_GSL, which fits one closure per multipole.
+ *
+ * The Levin machinery is tuned for 8 (the default) or 16; wider batches are
+ * counterproductive, not faster. #NC_XCOR_KERNEL_MAX_ELL_BLOCK is a hard
+ * safety cap on a single nc_xcor_kernel_get_eval_vectorized() call, not a
+ * setting to aim for.
  *
  */
 void
 nc_xcor_set_ell_batch_size (NcXcor *xc, const guint ell_batch_size)
 {
+  g_return_if_fail ((ell_batch_size > 0) && (ell_batch_size <= (guint) NC_XCOR_KERNEL_MAX_ELL_BLOCK));
+
   xc->ell_batch_size = ell_batch_size;
 }
 
@@ -570,512 +467,222 @@ nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo)
   xc->RH = nc_hicosmo_RH_Mpc (cosmo);
 }
 
-typedef struct _xcor_gsl
-{
-  NcHICosmo *cosmo;
-  NcDistance *dist;
-  NcmPowspec *ps;
-
-  NcXcorKernel *xclk1;
-  NcXcorKernel *xclk2;
-  guint l;
-
-  gdouble RH;
-} xcor_gsl;
-
-static gdouble
-_xcor_limber_z_gsl_cross_int (gdouble z, gpointer ptr)
-{
-  xcor_gsl *xclki          = (xcor_gsl *) ptr;
-  const gdouble xi_z       = nc_distance_comoving (xclki->dist, xclki->cosmo, z); /* in units of Hubble radius */
-  const gdouble xi_z_phys  = xi_z * xclki->RH;                                    /* in Mpc */
-  const gdouble E_z        = nc_hicosmo_E (xclki->cosmo, z);
-  const NcXcorKinetic xck  = { xi_z, E_z };
-  const gdouble k          = (xclki->l + 0.5) / (xi_z_phys); /* in Mpc-1 */
-  const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xclki->ps), NCM_MODEL (xclki->cosmo), z, k);
-
-  const gdouble k1z = nc_xcor_kernel_eval_limber_z (xclki->xclk1, xclki->cosmo, z, &xck, xclki->l);
-  const gdouble k2z = nc_xcor_kernel_eval_limber_z (xclki->xclk2, xclki->cosmo, z, &xck, xclki->l);
-
-  return k1z * k2z * power_spec / (xi_z * xi_z * E_z);
-}
-
-static gdouble
-_xcor_limber_z_gsl_auto_int (gdouble z, gpointer ptr)
-{
-  xcor_gsl *xclki          = (xcor_gsl *) ptr;
-  const gdouble xi_z       = nc_distance_comoving (xclki->dist, xclki->cosmo, z); /* in units of Hubble radius */
-  const gdouble xi_z_phys  = xi_z * xclki->RH;                                    /* in Mpc */
-  const gdouble E_z        = nc_hicosmo_E (xclki->cosmo, z);
-  const NcXcorKinetic xck  = { xi_z, E_z };
-  const gdouble k          = (xclki->l + 0.5) / (xi_z_phys); /* in Mpc-1 */
-  const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xclki->ps), NCM_MODEL (xclki->cosmo), z, k);
-  const gdouble k1z        = nc_xcor_kernel_eval_limber_z (xclki->xclk1, xclki->cosmo, z, &xck, xclki->l);
-
-  return gsl_pow_2 (k1z / xi_z) * power_spec / E_z;
-}
-
-static void
-_nc_xcor_limber_z_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gdouble zmin, gdouble zmax, gboolean isauto, NcmVector *vp)
-{
-  xcor_gsl xclki;
-  gdouble r, err;
-  gsl_function F;
-  guint i;
-  gint ret;
-
-  xclki.xclk1 = xclk1;
-  xclki.xclk2 = xclk2;
-  xclki.cosmo = cosmo;
-  xclki.dist  = xc->dist;
-  xclki.ps    = xc->ps;
-  xclki.RH    = xc->RH;
-
-  zmin = zmin ? zmin != 0.0 : 1.0e-6;
-
-  if (isauto)
-    F.function = &_xcor_limber_z_gsl_auto_int;
-  else
-    F.function = &_xcor_limber_z_gsl_cross_int;
-
-  F.params = &xclki;
-
-  gsl_integration_workspace **w = ncm_integral_get_workspace ();
-
-  for (i = 0; i < lmax - lmin + 1; i++)
-  {
-    xclki.l = lmin + i;
-    /* GSL integration sometimes underestimates the error, so we multiply the relative tolerance by 1e-2 */
-    ret = gsl_integration_qag (&F, zmin, zmax, 0.0, xc->reltol * 1.0e-2, NCM_INTEGRAL_PARTITION, 6, *w, &r, &err);
-
-    if (ret != GSL_SUCCESS)
-      g_error ("_nc_xcor_limber_z_gsl: %s.", gsl_strerror (ret));
-
-    ncm_vector_set (vp, i, r);
-  }
-
-  ncm_memory_pool_return (w);
-}
-
-static void
-_nc_xcor_cubature_worker (NcmIntegralND *xcor_int_nd, NcXcorArg *xcor_arg, gdouble zmin, gdouble zmax, guint lmin, guint lmax, NcmVector *vp)
-{
-  NcmVector *z_min   = ncm_vector_new_data_static (&zmin, 1, 1);
-  NcmVector *z_max   = ncm_vector_new_data_static (&zmax, 1, 1);
-  const guint size   = lmax - lmin + 1;
-  NcmVector *err     = ncm_vector_new (size);
-  GArray *ells_array = g_array_new (FALSE, FALSE, sizeof (gint));
-  const gint block   = sqrt (size);
-  guint i;
-
-  zmin = zmin ? zmin != 0.0 : 1.0e-6;
-
-  ncm_integral_nd_set_reltol (xcor_int_nd, xcor_arg->xc->reltol);
-  ncm_integral_nd_set_abstol (xcor_int_nd, 0.0);
-  ncm_integral_nd_set_method (xcor_int_nd, NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V);
-
-  g_array_set_size (ells_array, size);
-
-  for (i = 0; i < size; i++)
-  {
-    g_array_index (ells_array, gint, i) = lmin + i;
-  }
-
-  for (i = 0; i + block < size; i += block)
-  {
-    NcmVector *vp_i  = ncm_vector_get_subvector (vp, i, block);
-    NcmVector *err_i = ncm_vector_get_subvector (err, i, block);
-
-    xcor_arg->ells  = &g_array_index (ells_array, gint, i);
-    xcor_arg->nells = block;
-
-    ncm_integral_nd_eval (xcor_int_nd, z_min, z_max, vp_i, err_i);
-    ncm_vector_free (vp_i);
-    ncm_vector_free (err_i);
-  }
-
-  {
-    NcmVector *vp_i  = ncm_vector_get_subvector (vp, i, size - i);
-    NcmVector *err_i = ncm_vector_get_subvector (err, i, size - i);
-
-    xcor_arg->ells  = &g_array_index (ells_array, gint, i);
-    xcor_arg->nells = size - i;
-
-    ncm_integral_nd_eval (xcor_int_nd, z_min, z_max, vp_i, err_i);
-    ncm_vector_free (vp_i);
-    ncm_vector_free (err_i);
-  }
-
-  g_array_unref (ells_array);
-  ncm_vector_free (z_min);
-  ncm_vector_free (z_max);
-  ncm_vector_free (err);
-}
-
-static void
-_nc_xcor_limber_z_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gdouble zmin, gdouble zmax, gboolean isauto, NcmVector *vp)
-{
-  if (isauto)
-  {
-    NcXcorAuto *xcor_int       = g_object_new (nc_xcor_auto_get_type (), NULL);
-    NcXcorArg *xcor_arg        = &xcor_int->data;
-    NcmIntegralND *xcor_int_nd = NCM_INTEGRAL_ND (xcor_int);
-
-    xcor_arg->xc    = xc;
-    xcor_arg->dist  = xc->dist;
-    xcor_arg->ps    = xc->ps;
-    xcor_arg->RH    = xc->RH;
-    xcor_arg->cosmo = cosmo;
-    xcor_arg->xclk1 = xclk1;
-    xcor_arg->xclk2 = xclk1;
-
-    _nc_xcor_cubature_worker (xcor_int_nd, xcor_arg, zmin, zmax, lmin, lmax, vp);
-
-    g_object_unref (xcor_int);
-  }
-  else
-  {
-    NcXcorCross *xcor_cross    = g_object_new (nc_xcor_cross_get_type (), NULL);
-    NcXcorArg *xcor_arg        = &xcor_cross->data;
-    NcmIntegralND *xcor_int_nd = NCM_INTEGRAL_ND (xcor_cross);
-
-    xcor_arg->xc    = xc;
-    xcor_arg->dist  = xc->dist;
-    xcor_arg->ps    = xc->ps;
-    xcor_arg->RH    = xc->RH;
-    xcor_arg->cosmo = cosmo;
-    xcor_arg->xclk1 = xclk1;
-    xcor_arg->xclk2 = xclk2;
-
-    _nc_xcor_cubature_worker (xcor_int_nd, xcor_arg, zmin, zmax, lmin, lmax, vp);
-
-    g_object_unref (xcor_cross);
-  }
-}
-
-static gdouble
-_xcor_kernel_gsl_cross_int (gdouble lnk, gpointer ptr)
-{
-  NcXcorKernelIntegrand **xclki = (NcXcorKernelIntegrand **) ptr;
-  const gdouble k               = exp (lnk);
-  gdouble W1[1], W2[1];
-
-  nc_xcor_kernel_integrand_eval (xclki[0], k, W1);
-  nc_xcor_kernel_integrand_eval (xclki[1], k, W2);
-
-  return gsl_pow_3 (k) * W1[0] * W2[0];
-}
-
-static gdouble
-_xcor_kernel_gsl_auto_int (gdouble lnk, gpointer ptr)
-{
-  NcXcorKernelIntegrand **xclki = (NcXcorKernelIntegrand **) ptr;
-  const gdouble k               = exp (lnk);
-  gdouble W[1];
-
-  nc_xcor_kernel_integrand_eval (xclki[0], k, W);
-
-  return gsl_pow_3 (k) * W[0] * W[0];
-}
-
+/*
+ * QUADPACK's status is a statement about certification, not about the answer:
+ * GSL_EROUND means the error estimate stopped improving before reaching the
+ * requested tolerance. Where the request carries a safety margin over
+ * NcXcor:reltol, the margin is a goal and reltol is the requirement, so the
+ * achieved error decides -- aborting on the status alone throws away a result
+ * that already meets what the caller asked for.
+ */
 void
-_nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp)
+_nc_xcor_check_qag_status (const gchar *where, gint ret, gdouble reltol, gdouble result, gdouble err)
 {
-  const guint nell              = ncm_vector_len (vp);
-  const gdouble const_factor    = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
-  gsl_integration_workspace **w = ncm_integral_get_workspace ();
-  NcXcorKernelIntegrand *xclki_array[2];
-  gsl_function F;
-  guint i;
-  gint ret;
+  if (ret == GSL_SUCCESS)
+    return;
 
-  if (nell != lmax - lmin + 1)
-    g_error ("_nc_xcor_kernel_gsl: vector size does not match multipole limits");
+  if ((ret == GSL_EROUND) && (err <= reltol * fabs (result)))
+    return;
 
-  if (lmax < lmin)
-    g_error ("_nc_xcor_kernel_gsl: lmax < lmin");
-
-  if (isauto)
-    F.function = &_xcor_kernel_gsl_auto_int;
-  else
-    F.function = &_xcor_kernel_gsl_cross_int;
-
-  F.params = xclki_array;
-
-  for (i = 0; i < nell; i++)
-  {
-    const guint ell = lmin + i;
-    gdouble k_min, k_max;
-    gdouble k2_min, k2_max, result, err;
-
-    nc_xcor_kernel_get_k_range (xclk1, cosmo, ell, &k_min, &k_max);
-    nc_xcor_kernel_get_k_range (xclk2, cosmo, ell, &k2_min, &k2_max);
-
-    k_min = GSL_MAX (k_min, k2_min);
-    k_max = GSL_MIN (k_max, k2_max);
-
-    if (isauto)
-    {
-      xclki_array[0] = nc_xcor_kernel_get_eval (xclk1, cosmo, ell);
-    }
-    else
-    {
-      xclki_array[0] = nc_xcor_kernel_get_eval (xclk1, cosmo, ell);
-      xclki_array[1] = nc_xcor_kernel_get_eval (xclk2, cosmo, ell);
-    }
-
-    ret = gsl_integration_qag (&F, log (k_min), log (k_max), 0.0, xc->reltol * 1.0e-2, NCM_INTEGRAL_PARTITION, 6, *w, &result, &err);
-
-    if (ret != GSL_SUCCESS)
-      g_error ("_nc_xcor_kernel_gsl: %s.", gsl_strerror (ret));
-
-    ncm_vector_set (vp, i, const_factor * result);
-  }
-
-  ncm_memory_pool_return (w);
+  g_error ("%s: %s. Result % 22.15g with estimated error %.8e, against the "
+           "requested %.8e (NcXcor:reltol %.8e). The quadrature could not "
+           "certify that accuracy on this integrand; loosen NcXcor:reltol to "
+           "what the integrand carries.",
+           where, gsl_strerror (ret), result, err, reltol * fabs (result), reltol);
 }
 
-static void
-_nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp)
+gboolean
+_nc_xcor_kernels_limber_disjoint (NcXcorKernel *xclk1, NcXcorKernel *xclk2, gboolean isauto, guint *l_zero)
 {
-  const guint size           = lmax - lmin + 1;
-  const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
-  gdouble k_min, k_max;
-  gdouble k2_min, k2_max;
-  const gint block   = xc->ell_batch_size;
-  GArray *ells_array = g_array_new (FALSE, FALSE, sizeof (gint));
-  guint i;
-
-  /* Get k ranges from both kernels */
-  nc_xcor_kernel_get_k_range (xclk1, cosmo, lmin, &k_min, &k_max);
-
-  if (!isauto)
-  {
-    nc_xcor_kernel_get_k_range (xclk2, cosmo, lmin, &k2_min, &k2_max);
-    k_min = GSL_MAX (k_min, k2_min);
-    k_max = GSL_MIN (k_max, k2_max);
-  }
-
-  /* Update k range for the full ell range */
-  for (i = lmin + 1; i <= lmax; i++)
-  {
-    gdouble k_min_i, k_max_i;
-
-    nc_xcor_kernel_get_k_range (xclk1, cosmo, i, &k_min_i, &k_max_i);
-    k_min = GSL_MAX (k_min, k_min_i);
-    k_max = GSL_MIN (k_max, k_max_i);
-
-    if (!isauto)
-    {
-      nc_xcor_kernel_get_k_range (xclk2, cosmo, i, &k_min_i, &k_max_i);
-      k_min = GSL_MAX (k_min, k_min_i);
-      k_max = GSL_MIN (k_max, k_max_i);
-    }
-  }
-
-  g_array_set_size (ells_array, size);
-
-  for (i = 0; i < size; i++)
-  {
-    g_array_index (ells_array, gint, i) = lmin + i;
-  }
+  gdouble zmin, zmax, zmid, zmin_2, zmax_2, zmid_2;
+  gint l_limber_1, l_limber_2;
 
   if (isauto)
+    return FALSE;  /* A kernel always overlaps itself. */
+
+  l_limber_1 = nc_xcor_kernel_get_l_limber (xclk1);
+  l_limber_2 = nc_xcor_kernel_get_l_limber (xclk2);
+
+  /* A negative l_limber pins the kernel to the non-Limber tier at every
+   * multipole, so no threshold exists. */
+  if ((l_limber_1 < 0) || (l_limber_2 < 0))
+    return FALSE;
+
+  nc_xcor_kernel_get_z_range (xclk1, &zmin, &zmax, &zmid);
+  nc_xcor_kernel_get_z_range (xclk2, &zmin_2, &zmax_2, &zmid_2);
+
+  if (GSL_MAX (zmin, zmin_2) < GSL_MIN (zmax, zmax_2))
+    return FALSE;
+
+  /* Both kernels are in the Limber tier from the larger of the two thresholds
+   * up; below it at least one is still non-Limber and the pair correlates. */
+  *l_zero = (guint) GSL_MAX (l_limber_1, l_limber_2);
+
+  return TRUE;
+}
+
+/*
+ * Dispatches one contiguous multipole range to the configured kernel-space
+ * method. Split out so nc_xcor_compute() can drive it for a sub-range without
+ * duplicating the switch, which is what a range straddling a Limber threshold
+ * needs.
+ */
+static void
+_nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp, NcmVector *vp_err)
+{
+  /* Only some methods know their own error budget -- see
+   * nc_xcor_method_has_error_estimate(). The others leave NaN rather than a
+   * zero that would read as "no error". */
+  if (vp_err != NULL)
+    ncm_vector_set_all (vp_err, GSL_NAN);
+
+  if (xc->meth == NC_XCOR_METHOD_KERNEL_GSL)
   {
-    NcXcorKernelAuto *xcor_kernel_auto = g_object_new (nc_xcor_kernel_auto_get_type (), NULL);
-    NcXcorArg *xcor_arg                = &xcor_kernel_auto->data;
-    NcmIntegralND *xcor_int_nd         = NCM_INTEGRAL_ND (xcor_kernel_auto);
-    NcmVector *lnk_min                 = ncm_vector_new (1);
-    NcmVector *lnk_max                 = ncm_vector_new (1);
-    NcmVector *err                     = ncm_vector_new (size);
-
-    ncm_vector_set (lnk_min, 0, log (k_min));
-    ncm_vector_set (lnk_max, 0, log (k_max));
-
-    xcor_arg->xc    = xc;
-    xcor_arg->dist  = xc->dist;
-    xcor_arg->ps    = xc->ps;
-    xcor_arg->RH    = xc->RH;
-    xcor_arg->cosmo = cosmo;
-    xcor_arg->xclk1 = xclk1;
-    xcor_arg->xclk2 = xclk1;
-
-    ncm_integral_nd_set_reltol (xcor_int_nd, xc->reltol);
-    ncm_integral_nd_set_abstol (xcor_int_nd, 0.0);
-    ncm_integral_nd_set_method (xcor_int_nd, NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V);
-
-    for (i = 0; i + block < size; i += block)
-    {
-      NcmVector *vp_i  = ncm_vector_get_subvector (vp, i, block);
-      NcmVector *err_i = ncm_vector_get_subvector (err, i, block);
-
-      xcor_arg->ells  = &g_array_index (ells_array, gint, i);
-      xcor_arg->nells = block;
-
-      /* Get vectorized kernel integrand for this batch */
-      xcor_arg->xclki1 = nc_xcor_kernel_get_eval_vectorized (xclk1, cosmo, xcor_arg->ells[0], xcor_arg->ells[block - 1]);
-      xcor_arg->W1     = g_new (gdouble, block);
-
-      ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
-
-      /* Clean up batch resources */
-      g_free (xcor_arg->W1);
-      xcor_arg->xclki1 = NULL;
-      xcor_arg->W1     = NULL;
-
-      /* Apply constant factor */
-      ncm_vector_scale (vp_i, const_factor);
-
-      ncm_vector_free (vp_i);
-      ncm_vector_free (err_i);
-    }
-
-    if (i < size)
-    {
-      NcmVector *vp_i       = ncm_vector_get_subvector (vp, i, size - i);
-      NcmVector *err_i      = ncm_vector_get_subvector (err, i, size - i);
-      const guint remaining = size - i;
-
-      xcor_arg->ells  = &g_array_index (ells_array, gint, i);
-      xcor_arg->nells = remaining;
-
-      /* Get vectorized kernel integrand for this batch */
-      xcor_arg->xclki1 = nc_xcor_kernel_get_eval_vectorized (xclk1, cosmo, xcor_arg->ells[0], xcor_arg->ells[remaining - 1]);
-      xcor_arg->W1     = g_new (gdouble, remaining);
-
-      ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
-
-      /* Clean up batch resources */
-      g_free (xcor_arg->W1);
-      xcor_arg->xclki1 = NULL;
-      xcor_arg->W1     = NULL;
-
-      /* Apply constant factor */
-      ncm_vector_scale (vp_i, const_factor);
-
-      ncm_vector_free (vp_i);
-      ncm_vector_free (err_i);
-    }
-
-    ncm_vector_free (lnk_min);
-    ncm_vector_free (lnk_max);
-    ncm_vector_free (err);
-    g_object_unref (xcor_kernel_auto);
+    _nc_xcor_kernel_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
   }
   else
   {
-    NcXcorKernelCross *xcor_kernel_cross = g_object_new (nc_xcor_kernel_cross_get_type (), NULL);
-    NcXcorArg *xcor_arg                  = &xcor_kernel_cross->data;
-    NcmIntegralND *xcor_int_nd           = NCM_INTEGRAL_ND (xcor_kernel_cross);
-    NcmVector *lnk_min                   = ncm_vector_new (1);
-    NcmVector *lnk_max                   = ncm_vector_new (1);
-    NcmVector *err                       = ncm_vector_new (size);
+    const NcXcorKQuad *kquad = _nc_xcor_kquad_for_method (xc->meth);
 
-    ncm_vector_set (lnk_min, 0, log (k_min));
-    ncm_vector_set (lnk_max, 0, log (k_max));
+    g_assert (kquad != NULL);
 
-    xcor_arg->xc    = xc;
-    xcor_arg->dist  = xc->dist;
-    xcor_arg->ps    = xc->ps;
-    xcor_arg->RH    = xc->RH;
-    xcor_arg->cosmo = cosmo;
-    xcor_arg->xclk1 = xclk1;
-    xcor_arg->xclk2 = xclk2;
-
-    ncm_integral_nd_set_reltol (xcor_int_nd, xc->reltol);
-    ncm_integral_nd_set_abstol (xcor_int_nd, 0.0);
-    ncm_integral_nd_set_method (xcor_int_nd, NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V);
-
-    for (i = 0; i + block < size; i += block)
-    {
-      NcmVector *vp_i  = ncm_vector_get_subvector (vp, i, block);
-      NcmVector *err_i = ncm_vector_get_subvector (err, i, block);
-
-      xcor_arg->ells  = &g_array_index (ells_array, gint, i);
-      xcor_arg->nells = block;
-
-      /* Get vectorized kernel integrands for this batch */
-      xcor_arg->xclki1 = nc_xcor_kernel_get_eval_vectorized (xclk1, cosmo, xcor_arg->ells[0], xcor_arg->ells[block - 1]);
-      xcor_arg->xclki2 = nc_xcor_kernel_get_eval_vectorized (xclk2, cosmo, xcor_arg->ells[0], xcor_arg->ells[block - 1]);
-      xcor_arg->W1     = g_new (gdouble, block);
-      xcor_arg->W2     = g_new (gdouble, block);
-
-      ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
-
-      /* Clean up batch resources */
-      g_free (xcor_arg->W1);
-      g_free (xcor_arg->W2);
-      xcor_arg->xclki1 = NULL;
-      xcor_arg->xclki2 = NULL;
-      xcor_arg->W1     = NULL;
-      xcor_arg->W2     = NULL;
-
-      /* Apply constant factor */
-      ncm_vector_scale (vp_i, const_factor);
-
-      ncm_vector_free (vp_i);
-      ncm_vector_free (err_i);
-    }
-
-    if (i < size)
-    {
-      NcmVector *vp_i       = ncm_vector_get_subvector (vp, i, size - i);
-      NcmVector *err_i      = ncm_vector_get_subvector (err, i, size - i);
-      const guint remaining = size - i;
-
-      xcor_arg->ells  = &g_array_index (ells_array, gint, i);
-      xcor_arg->nells = remaining;
-
-      /* Get vectorized kernel integrands for this batch */
-      xcor_arg->xclki1 = nc_xcor_kernel_get_eval_vectorized (xclk1, cosmo, xcor_arg->ells[0], xcor_arg->ells[remaining - 1]);
-      xcor_arg->xclki2 = nc_xcor_kernel_get_eval_vectorized (xclk2, cosmo, xcor_arg->ells[0], xcor_arg->ells[remaining - 1]);
-      xcor_arg->W1     = g_new (gdouble, remaining);
-      xcor_arg->W2     = g_new (gdouble, remaining);
-
-      ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
-
-      /* Clean up batch resources */
-      g_free (xcor_arg->W1);
-      g_free (xcor_arg->W2);
-      xcor_arg->xclki1 = NULL;
-      xcor_arg->xclki2 = NULL;
-      xcor_arg->W1     = NULL;
-      xcor_arg->W2     = NULL;
-
-      /* Apply constant factor */
-      ncm_vector_scale (vp_i, const_factor);
-
-      ncm_vector_free (vp_i);
-      ncm_vector_free (err_i);
-    }
-
-    ncm_vector_free (lnk_min);
-    ncm_vector_free (lnk_max);
-    ncm_vector_free (err);
-    g_object_unref (xcor_kernel_cross);
+    _nc_xcor_kernel_space_run (xc, kquad, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp, vp_err);
   }
-
-  g_array_unref (ells_array);
 }
 
 /**
- * nc_xcor_compute:
+ * nc_xcor_compute_full:
  * @xc: a #NcXcor
  * @xclk1: a #NcXcorKernel
- * @xclk2: a #NcXcorKernel
+ * @xclk2: (nullable): a #NcXcorKernel, or %NULL for the auto spectrum
  * @cosmo: a #NcHICosmo
  * @lmin: a #guint
  * @lmax: a #guint
  * @vp: a #NcmVector
+ * @vp_err: (nullable): a #NcmVector for the error estimate, or %NULL
  *
- * Performs the computation of the power spectrum $C_{\ell}^{AB}$. The kernels of
- * observables A and B are @xclk1 and @xclk2. If @xclk2 is NULL, the auto power
- * spectrum is computed. The result for multipoles lmin to lmax (included) is stored in
- * the #NcmVector @vp.
+ * As nc_xcor_compute(), additionally filling @vp_err with an estimate of the
+ * absolute error on each $C_\ell$ -- the same length as @vp, and in the same
+ * units, so @vp_err[i] / @vp[i] is the relative estimate.
+ *
+ * Only %NC_XCOR_METHOD_KERNEL_EXACT provides one; every other method leaves
+ * NaN, which is deliberate -- a zero there would read as "no error".
+ *
+ * The estimate is not a quadrature error, and does not belong to the k
+ * integral at all. That method integrates its spline closures exactly, so the
+ * outer quadrature contributes nothing; what @vp_err reports is a
+ * **kernel-building** error -- how well nc_xcor_kernel_get_eval_vectorized_full()
+ * fitted $W_\ell(k)$ -- propagated through the conditioning of this particular
+ * pair. The quadrature's only contribution is the amplification factor, which
+ * is also the one thing that cannot be known before the pair is formed.
+ *
+ * Propagating $\delta (W^A W^B) = \vert W^A \vert \delta W^B + \vert W^B
+ * \vert \delta W^A$ gives
+ *
+ * $$ \sigma_\ell \simeq \int \mathrm{d}k\, k^2 \left( \vert W^A_\ell \vert\, \delta W^B_\ell
+ *    + \vert W^B_\ell \vert\, \delta W^A_\ell \right) $$
+ *
+ * with $\delta W^i$ the residual the closure's fit **achieved**, recorded per
+ * knot interval while #NcXcorKernel:track-fit-residual is on -- which it is by
+ * default. See nc_xcor_kernel_integrand_peek_residuals().
+ *
+ * With tracking off, or on an interval whose refinement was never accepted,
+ * $\delta W^i$ falls back to the criterion the fit was *asked* for,
+ * nc_xcor_kernel_integrand_set_tolerances()'s $\delta W^i \le \epsilon_i \vert
+ * W^i \vert + a_i W^i_\mathrm{max}$, and the same propagation gives the older
+ * three-term form:
+ *
+ * $$ \sigma_\ell \simeq (\epsilon_A + \epsilon_B) \int \mathrm{d}k\, k^2 \vert W^A_\ell W^B_\ell \vert
+ *    + a_A W^A_{\ell,\mathrm{max}} \int \mathrm{d}k\, k^2 \vert W^B_\ell \vert
+ *    + a_B W^B_{\ell,\mathrm{max}} \int \mathrm{d}k\, k^2 \vert W^A_\ell \vert $$
+ *
+ * The first rides on the product, so it is the one the pair's cancellation
+ * amplifies. The second and third are each closure's peak-scaled floor weighted
+ * by the *other* closure's true size, and they are usually the larger of the
+ * two: for cluster top-hat bins at the library defaults they dominate the
+ * relative term by one to two orders. That is worth stating plainly, because a
+ * floor set per closure is often assumed to reach $C_\ell$ only squared. It
+ * does so only where both closures sit on their floors at once; wherever just
+ * one does, it is linear in $a$ and weighted by the other's real amplitude.
+ *
+ * ## How conservative, measured
+ *
+ * Refinement beats the tolerance it was given by one to three orders, and by
+ * an amount that depends on the kernel, so the fallback form above is a ceiling
+ * rather than an estimate. Measured against a reference built at reltol
+ * $10^{-10}$, over $\ell = 2 \dots 9$ at the library defaults, worst ratio of
+ * estimate to true relative error:
+ *
+ * | pair | true relative error | achieved | tolerance-only |
+ * |---|---|---|---|
+ * | top-hat, auto | 4.3e-6 to 1.3e-4 | 1.2-50x | 12-858x |
+ * | top-hat, cross adjacent | 6.7e-4 to 0.13 | 2.9-16x | 35-320x |
+ * | top-hat, cross separated | 0.07 to 8993 | 3.7e-4-11x | 5.1e-3-161x |
+ * | Gaussian, auto | 6.5e-8 to 9.6e-7 | 68-630x | 537-7949x |
+ * | Gaussian, cross separated | 5.0e-4 to 1.2 | 237-1467x | 6440-50487x |
+ *
+ * Using the achieved residual is worth a uniform 13 to 34 times across all
+ * five, at no measurable cost -- the record is one double per knot per
+ * multipole, and building it does not slow the closure down.
+ *
+ * Read the result as a ceiling still: a small @vp_err is a strong statement, a
+ * large one warrants checking rather than despair. Both rows where the ratio
+ * drops below one are separated top-hat bins whose $C_\ell$ has no digits left
+ * at all, and where the estimate says so -- over the three pairs, three
+ * thresholds and both forms, there is no cell where @vp_err calls a $C_\ell$
+ * good that is not.
+ *
+ * Those figures are a **worst case**, and deliberately so: a cluster top-hat has
+ * a sharp edge in $\xi$, which gives $W_\ell(k)$ a $1/k$ tail instead of an
+ * exponential one. Nothing integrates across that edge -- it is declared through
+ * the component's limits, see #NcXcorKernelComponent -- but the tail keeps far
+ * more of k-space above the closure's floor, so the fit costs more and is
+ * worse. On the same comoving shells a smooth kernel needs 161 knots against
+ * the top-hat's 541, and its cross spectrum is accurate to 7.7e-4 rather than
+ * 0.13 -- a factor of 165.
+ *
+ * That comparison also bounds what @vp_err can do, and the achieved residual
+ * only half fixes it. The table above still runs from 2.9x over-conservative on
+ * a top-hat cross to 1467x on a Gaussian one, because a second mechanism is
+ * left: a spline's error alternates sign from panel to panel, and an estimate
+ * built on $\vert \cdot \vert$ adds what the integral cancels. That
+ * cancellation is near-total for a smoothly fitted kernel and partial for a
+ * ragged one, which is exactly the direction of the spread. Closing it needs a
+ * signed error model, not a better residual.
+ *
+ * ## And read them against the tolerances an application actually sets
+ *
+ * The table uses #NcXcorKernel's bare defaults, which exist to be cheap. A
+ * caller that cares sets its own: #NcXcorSSCSij uses reltol $10^{-6}$ with
+ * scaled-abstol $10^{-5}$, deliberately offset from each other -- the rationale
+ * lives at that object's defaults, and is worth reading before changing either
+ * here. At those, on the same top-hat bins, the diagonal is accurate to 5.9e-6
+ * rather than 1.3e-4, and the adjacent-bin cross to 2.8e-3 rather than 0.13.
+ *
+ * The separated-bin cross stays poor in *relative* terms, but that is the wrong
+ * measure for it: it is 2.4e-4 of the diagonal, so what it contributes to
+ * anything built from these is far below the diagonal's own error. Judge a
+ * @vp_err against the amplitude its term carries, never on its own.
+ *
+ * One thing pushes the other way, against the conservatism: the criterion is an
+ * $L^2$ norm over the whole multipole block at each $k$, not over one
+ * multipole, so a multipole that is sub-dominant within its block is held only
+ * to the block's norm. For those, $\epsilon \vert W_\ell \vert$ understates the
+ * fit error.
+ *
+ * **What it does not cover**, and it is the same classification again -- the
+ * other kernel-building error, which is a range rather than a residual. The
+ * outer integral runs over the intersection of
+ * the two closures' fitted k-ranges, and @vp_err measures only what is inside
+ * that range -- it cannot see what the intersection discarded. Two kernels
+ * whose closures are fitted on different k-supports lose the non-overlapping
+ * part silently, and that loss grows with separation, the same direction in
+ * which the cancellation grows. A small @vp_err therefore means the quadrature
+ * and the fit are in hand, not that the $C_\ell$ is right.
  *
  */
 void
-nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp)
+nc_xcor_compute_full (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp, NcmVector *vp_err)
 {
   const guint nell           = ncm_vector_len (vp);
   const gboolean isauto      = (xclk2 == NULL) || (xclk2 == xclk1);
@@ -1084,7 +691,65 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
   gdouble zmin, zmax, zmid;
 
   if (nell != lmax - lmin + 1)
-    g_error ("nc_xcor_compute: vector size does not match multipole limits");
+    g_error ("nc_xcor_compute_full: vector size does not match multipole limits");
+
+  if ((vp_err != NULL) && (ncm_vector_len (vp_err) != nell))
+    g_error ("nc_xcor_compute_full: error vector size does not match multipole limits");
+
+  if (isauto)
+    xclk2 = xclk1;
+
+  /* The kernel-space (non-Limber) methods perform each kernel's radial
+   * integral separately and couple the two only through the outer k integral,
+   * so two kernels with disjoint redshift support still have a non-zero cross
+   * spectrum -- two disjoint radial shells are correlated through the same 3D
+   * field. The z-overlap short-circuit below is therefore specific to the
+   * Limber-z tier, whose C_l is a single integral over the common support, and
+   * must not be applied here.
+   *
+   * The exception is a kernel-space method running kernels that are themselves
+   * in the Limber tier: there W(k) is supported only on its own per-ell band,
+   * disjoint bins have disjoint support, and the Cl is zero. Integrating it
+   * anyway multiplies the two exponential extrapolation tails, which is a
+   * numerical smoothing device rather than physics, and yields a large
+   * spurious cross spectrum.
+   *
+   * The tier is chosen per multipole, so a range straddling the threshold is
+   * split: the tail from l_zero up is zeroed, the head below it is integrated
+   * normally. */
+  if (nc_xcor_method_is_kernel_space (xc->meth))
+  {
+    guint l_zero = 0;
+
+    if (_nc_xcor_kernels_limber_disjoint (xclk1, xclk2, isauto, &l_zero) && (l_zero <= lmax))
+    {
+      ncm_vector_set_zero (vp);
+
+      /* The zeroed tail is exactly zero, not merely small, so its error is
+       * zero too -- the head below overwrites its own entries. */
+      if (vp_err != NULL)
+        ncm_vector_set_zero (vp_err);
+
+      if (l_zero > lmin)
+      {
+        NcmVector *vp_head     = ncm_vector_get_subvector (vp, 0, l_zero - lmin);
+        NcmVector *vp_err_head = (vp_err != NULL) ? ncm_vector_get_subvector (vp_err, 0, l_zero - lmin) : NULL;
+
+        _nc_xcor_kernel_space_compute (xc, xclk1, xclk2, cosmo, lmin, l_zero - 1, isauto, vp_head, vp_err_head);
+        ncm_vector_free (vp_head);
+        ncm_vector_clear (&vp_err_head);
+      }
+    }
+    else
+    {
+      _nc_xcor_kernel_space_compute (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp, vp_err);
+    }
+
+    return;
+  }
+
+  if (vp_err != NULL)
+    ncm_vector_set_all (vp_err, GSL_NAN);
 
   nc_xcor_kernel_get_z_range (xclk1, &zmin, &zmax, &zmid);
 
@@ -1096,10 +761,6 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
     zmin = GSL_MAX (zmin, zmin_2);
     zmax = GSL_MIN (zmax, zmax_2);
   }
-  else
-  {
-    xclk2 = xclk1;
-  }
 
   if (zmin < zmax)
   {
@@ -1110,18 +771,6 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
         break;
       case NC_XCOR_METHOD_LIMBER_Z_CUBATURE:
         _nc_xcor_limber_z_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
-        break;
-      case NC_XCOR_METHOD_KERNEL_GSL:
-        _nc_xcor_kernel_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
-
-        return;
-
-        break;
-      case NC_XCOR_METHOD_KERNEL_CUBATURE:
-        _nc_xcor_kernel_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
-
-        return;
-
         break;
       default:                   /* LCOV_EXCL_LINE */
         g_assert_not_reached (); /* LCOV_EXCL_LINE */
@@ -1154,5 +803,29 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
   {
     ncm_vector_set_zero (vp);
   }
+}
+
+/**
+ * nc_xcor_compute:
+ * @xc: a #NcXcor
+ * @xclk1: a #NcXcorKernel
+ * @xclk2: (nullable): a #NcXcorKernel, or %NULL for the auto spectrum
+ * @cosmo: a #NcHICosmo
+ * @lmin: a #guint
+ * @lmax: a #guint
+ * @vp: a #NcmVector
+ *
+ * Performs the computation of the power spectrum $C_{\ell}^{AB}$. The kernels of
+ * observables A and B are @xclk1 and @xclk2. If @xclk2 is NULL, the auto power
+ * spectrum is computed. The result for multipoles lmin to lmax (included) is stored in
+ * the #NcmVector @vp.
+ *
+ * Use nc_xcor_compute_full() to also obtain a per-multipole error estimate.
+ *
+ */
+void
+nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp)
+{
+  nc_xcor_compute_full (xc, xclk1, xclk2, cosmo, lmin, lmax, vp, NULL);
 }
 

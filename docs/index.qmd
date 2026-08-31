@@ -86,6 +86,7 @@ FFTW (Fourier transforms), NLopt (nonlinear optimization), and libcuba/cubature
 ## Next steps
 
 - [Install NumCosmo](install.qmd)
-- Browse the [examples and tutorials](examples/intro/simple.qmd)
+- Work through a [tutorial](tutorials/index.qmd), or browse the
+  [examples](examples/index.qmd)
 - Reference: [NumCosmoMath API](reference/numcosmo-math/index.html) ·
   [NumCosmo API](reference/numcosmo/index.html)

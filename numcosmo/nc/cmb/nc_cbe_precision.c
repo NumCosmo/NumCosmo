@@ -1352,7 +1352,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                      PROP_SBBN_FILE,
                                      g_param_spec_string ("sBBN-file",
                                                           NULL,
-                                                          "SBBN filename",
+                                                          "SBBN filename (unused: NumCosmo always supplies YHe)",
                                                           sBBN_file,
                                                           G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
     g_free (sBBN_file);

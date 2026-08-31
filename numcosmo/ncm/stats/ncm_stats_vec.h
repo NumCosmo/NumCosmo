@@ -54,7 +54,7 @@ G_DECLARE_FINAL_TYPE (NcmStatsVec, ncm_stats_vec, NCM, STATS_VEC, GObject)
  * during data accumulation.
  *
  */
-typedef enum
+typedef enum /*< prefix=NCM_STATS_VEC >*/
 {
   NCM_STATS_VEC_MEAN = 0,
   NCM_STATS_VEC_VAR,
@@ -77,7 +77,7 @@ typedef void (*NcmStatsVecUpdateFunc) (NcmStatsVec *svec, const gdouble w, NcmVe
  * for autoregressive models in time series analysis.
  *
  */
-typedef enum
+typedef enum /*< prefix=NCM_STATS_VEC_AR >*/
 {
   NCM_STATS_VEC_AR_NONE = 0,
   NCM_STATS_VEC_AR_FPE,

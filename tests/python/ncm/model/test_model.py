@@ -513,3 +513,141 @@ def test_model_set_desc_invalid_key() -> None:
         ),
     ):
         rosenbrock.param_set_desc("x1", {"cow": 1.0})
+
+
+def test_ncm_model_reparam_longer_than_model_is_resized() -> None:
+    """A reparametrization written for more parameters than the model now has.
+
+    NcmReparam carries no parameter values -- only its length, its descriptors
+    and its compatible type -- so the model rebuilds it at its own length. This
+    is how catalogs written before NcHICosmoDE dropped Yp still load.
+    """
+    cosmo = Nc.HICosmoDEXcdm.new()
+    assert cosmo.len() == 7
+
+    cosmo.set_reparam(Nc.HICosmoDEReparamOk.new(8))
+
+    assert cosmo.len() == 7
+    assert cosmo.param_name(Nc.HICosmoDESParams.OMEGA_X) == "Omegak"
+    assert cosmo.peek_reparam() is not None
+
+
+def test_ncm_model_reparam_shorter_than_model_is_resized() -> None:
+    """Resizing is not a one-way shrink: a short reparametrization grows too."""
+    cosmo = Nc.HICosmoDEXcdm.new()
+
+    cosmo.set_reparam(Nc.HICosmoDEReparamOk.new(3))
+
+    assert cosmo.len() == 7
+    assert cosmo.param_name(Nc.HICosmoDESParams.OMEGA_X) == "Omegak"
+
+
+def test_ncm_model_reparam_resized_reparametrizes_the_same_slot() -> None:
+    """The rebuilt reparametrization must act, not merely attach.
+
+    Omegak is Omegax expressed as curvature, so a resized reparametrization
+    that ran old2new() reports the same value as one built at the right length.
+    """
+    expected = Nc.HICosmoDEXcdm.new()
+    expected.set_reparam(Nc.HICosmoDEReparamOk.new(expected.len()))
+
+    cosmo = Nc.HICosmoDEXcdm.new()
+    cosmo.set_reparam(Nc.HICosmoDEReparamOk.new(8))
+
+    assert_allclose(
+        cosmo.param_get(Nc.HICosmoDESParams.OMEGA_X),
+        expected.param_get(Nc.HICosmoDESParams.OMEGA_X),
+    )
+
+
+def test_ncm_model_reparam_without_descriptors_is_resized() -> None:
+    """A reparametrization whose descriptor dictionary was dropped still fits."""
+    cosmo = Nc.HICosmoDEXcdm.new()
+    reparam = Nc.HICosmoDEReparamOk.new(8)
+    reparam.set_property("params-desc", None)
+
+    cosmo.set_reparam(reparam)
+
+    assert cosmo.len() == 7
+
+
+@pytest.mark.parametrize("index", [7, -1])
+def test_ncm_model_reparam_descriptor_outside_model_raises(index: int) -> None:
+    """A descriptor naming a slot the model does not have cannot be rebuilt.
+
+    Descriptors are keyed by index into the model's original parameters, so a
+    key outside [0, len) means the parameter it reparametrizes is gone. Index 7
+    is past the end; a negative one is not a slot at all.
+    """
+    cosmo = Nc.HICosmoDEXcdm.new()
+    reparam = Nc.HICosmoDEReparamOk.new(8)
+
+    desc = Ncm.ObjDictInt.new()
+    desc.add(
+        index,
+        Ncm.SParam.new("Bogus", "B", 0.0, 1.0, 0.1, 0.0, 0.5, Ncm.ParamType.FIXED),
+    )
+    reparam.set_property("params-desc", desc)
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-model-error: ncm_model_set_reparam: reparametrization "
+            rf"`NcHICosmoDEReparamOk' is for 8 parameters but model "
+            rf"`NcHICosmoDEXcdm' has 7, and it reparametrizes parameter {index}, "
+            rf"which no longer exists\. "
+            rf"\({int(Ncm.ModelError.REPARAM_INCOMPATIBLE)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        cosmo.set_reparam(reparam)
+
+
+def test_ncm_model_reparam_with_extra_state_raises() -> None:
+    """A subclass carrying its own state cannot be rebuilt at another length.
+
+    Rebuilding carries over length, params-desc and compat-type -- the whole of
+    a NcmReparam, but not of NcmReparamLinear, whose matrix and vector are sized
+    to the old length. Refusing is the only honest answer; constructing one
+    without them used to dereference NULL.
+    """
+    rosenbrock = Ncm.ModelRosenbrock.new()
+    assert rosenbrock.len() == 2
+
+    matrix = Ncm.Matrix.new(3, 3)
+    matrix.set_identity()
+    vector = Ncm.Vector.new(3)
+    vector.set_all(0.0)
+
+    reparam = Ncm.ReparamLinear.new(3, matrix, vector)
+    reparam.set_compat_type("NcmModelRosenbrock")
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-model-error: ncm_model_set_reparam: reparametrization "
+            rf"`NcmReparamLinear' is for 3 parameters but model "
+            rf"`NcmModelRosenbrock' has 2, and it carries state of its own "
+            rf"\(property `(vector|matrix)'\) that no rebuild can size\. "
+            rf"\({int(Ncm.ModelError.REPARAM_INCOMPATIBLE)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        rosenbrock.set_reparam(reparam)
+
+
+def test_ncm_model_reparam_with_extra_state_at_the_right_length_attaches() -> None:
+    """The refusal above is about the length, not about NcmReparamLinear."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    matrix = Ncm.Matrix.new(2, 2)
+    matrix.set_identity()
+    vector = Ncm.Vector.new(2)
+    vector.set_all(0.0)
+
+    reparam = Ncm.ReparamLinear.new(2, matrix, vector)
+    reparam.set_compat_type("NcmModelRosenbrock")
+
+    rosenbrock.set_reparam(reparam)
+
+    assert rosenbrock.peek_reparam() == reparam

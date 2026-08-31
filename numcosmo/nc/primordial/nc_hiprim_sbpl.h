@@ -58,7 +58,7 @@ typedef struct _NcHIPrimSBPL NcHIPrimSBPL;
  * Parameters for the smooth broken power law primordial spectrum model.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HIPRIM_SBPL_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HIPRIM_SBPL_SPARAMS,prefix=NC_HIPRIM_SBPL >*/
 {
   NC_HIPRIM_SBPL_LN10E10ASA,
   NC_HIPRIM_SBPL_N_SA,

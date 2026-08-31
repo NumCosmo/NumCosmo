@@ -46,7 +46,7 @@ G_DECLARE_FINAL_TYPE (NcGalaxyShapePopBeta, nc_galaxy_shape_pop_beta, NC, GALAXY
  * (see the class documentation).
  *
  */
-typedef enum /*< enum,underscore_name=NC_GALAXY_SHAPE_POP_BETA_PARAMS >*/
+typedef enum /*< enum,underscore_name=NC_GALAXY_SHAPE_POP_BETA_PARAMS,prefix=NC_GALAXY_SHAPE_POP_BETA >*/
 {
   NC_GALAXY_SHAPE_POP_BETA_ALPHA = 0,
   NC_GALAXY_SHAPE_POP_BETA_BETA,
@@ -54,12 +54,8 @@ typedef enum /*< enum,underscore_name=NC_GALAXY_SHAPE_POP_BETA_PARAMS >*/
   NC_GALAXY_SHAPE_POP_BETA_SPARAM_LEN, /*< skip >*/
 } NcGalaxyShapePopBetaParams;
 
-/* alpha=2x the pre-reparametrization default (that model's alpha=0.7 on
- * x=|chi_I|^2 becomes alpha=1.4 on r=|chi_I|, see the class documentation);
- * beta carries over unchanged (same leading-order tail behavior at r=1
- * either way). */
-#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA (1.4)
-#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_BETA (2.5)
+#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA (1.55)
+#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_BETA (1.55)
 #define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL (0.0)
 
 NcGalaxyShapePopBeta *nc_galaxy_shape_pop_beta_new (void);

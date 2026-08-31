@@ -45,7 +45,7 @@ G_DECLARE_FINAL_TYPE (NcmModelMVND, ncm_model_mvnd, NCM, MODEL_MVND, NcmModel)
  * MVND model parameters
  *
  */
-typedef enum _NcmModelMVNDVParams
+typedef enum _NcmModelMVNDVParams /*< prefix=NCM_MODEL_MVND >*/
 {
   NCM_MODEL_MVND_MEAN,
   /* < private > */

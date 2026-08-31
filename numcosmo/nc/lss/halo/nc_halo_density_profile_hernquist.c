@@ -259,18 +259,8 @@ _nc_halo_density_profile_hernquist_eval_dl_cyl_mass (NcHaloDensityProfile *dp, c
 NcHaloDensityProfileHernquist *
 nc_halo_density_profile_hernquist_new (NcHaloMassSummary *hms)
 {
-  NcmObjArray *submodels = ncm_obj_array_new ();
-
-  ncm_obj_array_add (submodels, G_OBJECT (hms));
-
-  {
-    NcHaloDensityProfileHernquist *dph = g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST,
-                                                       "submodel-array", submodels,
-                                                       NULL);
-
-    ncm_obj_array_unref (submodels);
-
-    return dph;
-  }
+  return g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST,
+                       "mass-summary", hms,
+                       NULL);
 }
 

@@ -25,6 +25,8 @@
 """Tests for Nc.HaloBiasTinker model."""
 
 import pytest
+import math
+
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
@@ -111,11 +113,11 @@ def test_halo_bias_tinker_eval(bias_tinker: Nc.HaloBiasTinker, cosmo: Nc.HICosmo
     z_array = np.linspace(0.0, 2.0, 10)
 
     for sigma in sigma_array:
-        bias_value = bias_tinker.eval(cosmo, sigma, 0.5)
+        bias_value = bias_tinker.eval(cosmo, sigma, math.log(1.0e14), 0.5)
         assert np.isfinite(bias_value)
 
     for z in z_array:
-        bias_value = bias_tinker.eval(cosmo, 0.5, z)
+        bias_value = bias_tinker.eval(cosmo, 0.5, math.log(1.0e14), z)
         assert np.isfinite(bias_value)
 
 
@@ -132,7 +134,7 @@ def test_halo_bias_tinker_eval_different_mdef(
         mfunc = Nc.HaloMassFunction.new(dist, psf, mulf)
 
         bias_tinker = Nc.HaloBiasTinker.new_full(mfunc, 1.686, 0.183, 1.5, 2.4)
-        bias_value = bias_tinker.eval(cosmo, 0.5, 0.5)
+        bias_value = bias_tinker.eval(cosmo, 0.5, math.log(1.0e14), 0.5)
 
         assert np.isfinite(bias_value)
 

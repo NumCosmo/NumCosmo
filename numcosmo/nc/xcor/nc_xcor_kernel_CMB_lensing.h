@@ -50,7 +50,7 @@ G_DECLARE_FINAL_TYPE (NcXcorKernelCMBLensing, nc_xcor_kernel_cmb_lensing, NC, XC
  *
  * Scalar parameters for CMB lensing kernel (currently none defined).
  */
-typedef enum /*< enum,underscore_name=NC_XCOR_KERNEL_CMB_LENSING_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_XCOR_KERNEL_CMB_LENSING_SPARAMS,prefix=NC_XCOR_KERNEL_CMB_LENSING_SPARAM >*/
 {
   NC_XCOR_KERNEL_CMB_LENSING_SPARAM_LEN,
 } NcXcorKernelCMBLensingSParams;

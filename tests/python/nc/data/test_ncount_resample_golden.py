@@ -26,7 +26,7 @@ pipeline into NcHaloCatalogGenerator can be verified to preserve behavior.
 
 The reference is the resampled :class:`Nc.DataClusterNCount` itself, serialized
 with NumCosmo's GVariant binfile format under
-``data/truth_tables/nc_data_cluster_ncount_golden_seed0.bin``. The comparison is
+``data/truth_tables/cluster/nc_data_cluster_ncount_golden_seed0.bin``. The comparison is
 tolerance-based (not a byte hash) so it survives the sub-ULP drift of the
 spline/transcendental evaluations across different libm/GSL/BLAS builds, while
 still catching genuine regressions. Regenerate the reference with::
@@ -43,7 +43,7 @@ from numcosmo_py import Nc, Ncm
 
 Ncm.cfg_init()
 
-GOLDEN_FILE = "truth_tables/nc_data_cluster_ncount_golden_seed0.bin"
+GOLDEN_FILE = "truth_tables/cluster/nc_data_cluster_ncount_golden_seed0.bin"
 # Cross-stack libm/GSL/BLAS rounding drifts the proxy draws by a few ULP; this
 # tolerance absorbs that while still flagging real changes in the draw order.
 GOLDEN_RTOL = 1.0e-9
@@ -61,9 +61,7 @@ def _load_golden() -> Nc.DataClusterNCount:
 
 def _resampled_ncount() -> Nc.DataClusterNCount:
     """Build and resample an NcDataClusterNCount deterministically (seed 0)."""
-    cosmo = Nc.HICosmoDEXcdm()
-    cosmo.add_submodel(Nc.HIReionCamb())
-    cosmo.add_submodel(Nc.HIPrimPowerLaw())
+    cosmo = Nc.HICosmoDEXcdm(reion=Nc.HIReionCamb(), prim=Nc.HIPrimPowerLaw())
 
     dist = Nc.Distance.new(2.0)
     psml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())

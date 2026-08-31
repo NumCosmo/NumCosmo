@@ -102,9 +102,9 @@ test_nc_cluster_pseudo_counts_free (TestNcClusterPseudoCounts *test, gconstpoint
 void
 test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo                = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHIReion *reion                = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim                  = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo                = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
   NcDistance *dist                = nc_distance_new (3.0);
   NcWindow *wf                    = NC_WINDOW (ncm_serialize_global_from_string ("NcWindowTophat"));
   NcTransferFunc *tf              = NC_TRANSFER_FUNC (ncm_serialize_global_from_string ("NcTransferFuncEH"));
@@ -124,9 +124,6 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   NcmLikelihood *lh;
   NcmFit *fit;
   gdouble m1, m2;
-
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
 
   m1                   = g_test_rand_double_range (1.235, 2.496); /* ln(M/M0), M0 = 10^14 h^-1 M_sun */
   m2                   = m1 + 0.4;

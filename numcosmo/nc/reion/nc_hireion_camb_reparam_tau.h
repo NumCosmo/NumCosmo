@@ -31,7 +31,6 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/model/ncm_reparam.h>
 #include <numcosmo/ncm/model/ncm_model.h>
-#include <numcosmo/ncm/model/ncm_model_ctrl.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
 
 G_BEGIN_DECLS
@@ -56,12 +55,11 @@ struct _NcHIReionCambReparamTau
 {
   /*< private >*/
   NcmReparam parent_instance;
-  NcmModelCtrl *ctrl;
 };
 
 GType nc_hireion_camb_reparam_tau_get_type (void) G_GNUC_CONST;
 
-NcHIReionCambReparamTau *nc_hireion_camb_reparam_tau_new (guint length, NcHICosmo *cosmo);
+NcHIReionCambReparamTau *nc_hireion_camb_reparam_tau_new (guint length);
 
 G_END_DECLS
 

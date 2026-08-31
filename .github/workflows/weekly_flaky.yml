@@ -15,21 +15,31 @@ on:
 
 env:
   CONDA_ENV: numcosmo_developer
+  # Kept in step with build_check.yml's knob of the same name, so both
+  # workflows share one stored copy of the data files.
+  DATA_CACHE_VERSION: 0
 
 jobs:
   flaky:
     name: (ubuntu, apt) random seed x repeat
-    runs-on: ubuntu-24.04
+    # Pinned to 26.04 for GSL >= 2.8; see build_check.yml.
+    runs-on: ubuntu-26.04
     steps:
     - uses: actions/checkout@v4
+    - name: Restore data cache
+      # Restore only: this lane repeats the python suite 20 times and would
+      # otherwise re-download every asset, but build_check.yml is what keeps
+      # the entry current.
+      uses: ./.github/actions/data-cache
+      with:
+        version: ${{ env.DATA_CACHE_VERSION }}
     - uses: actions/setup-python@v6
       with:
-        python-version: '3.12'
+        python-version: '3.13'
     - name: Install pre-requisites
-      run: |
-        sudo apt-get update
-        sudo apt-get install gobject-introspection gir1.2-glib-2.0 gir1.2-glib-2.0-dev libgirepository-2.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-dev libcfitsio-dev libnlopt-dev libhdf5-dev libopenmpi-dev libcairo2-dev
-        pip install -e ".[test]" meson ninja --break-system-packages
+      uses: ./.github/actions/apt-deps
+    - name: Pip install pre-requisites
+      run: pip install -e ".[test]" meson ninja --break-system-packages
     - name: Configure NumCosmo (flaky mode)
       run: meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate -Ddocumentation=false -Dflaky_tests=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo

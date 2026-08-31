@@ -49,7 +49,7 @@ G_DECLARE_FINAL_TYPE (NcmSplineFuncTest, ncm_spline_func_test, NCM, SPLINE_FUNC_
  *
  * Enum to choose which base function to be used in the test suite.
  */
-typedef enum _NcmSplineFuncTestType
+typedef enum _NcmSplineFuncTestType /*< prefix=NCM_SPLINE_FUNC_TEST_TYPE >*/
 {
   NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL,
   NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL_POS,
@@ -68,7 +68,7 @@ typedef void (*NcmSplineFuncTestPrepare) (gpointer p);
  *
  * Enum to choose which PDF type.
  */
-typedef enum _NcmSplineFuncTestTypePDF
+typedef enum _NcmSplineFuncTestTypePDF /*< prefix=NCM_SPLINE_FUNC_TEST_TYPE_PDF >*/
 {
   NCM_SPLINE_FUNC_TEST_TYPE_PDF_FLAT,
   NCM_SPLINE_FUNC_TEST_TYPE_PDF_NORMAL,

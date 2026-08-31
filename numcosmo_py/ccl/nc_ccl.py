@@ -64,7 +64,15 @@ def create_nc_obj(
 ) -> Cosmology:
     """Create a NumCosmo object from a CCL cosmology."""
     massnu_length, m_nu = _get_neutrino_masses(ccl_cosmo)
-    cosmo = Nc.HICosmoDECpl(massnu_length=massnu_length)
+
+    # Creates the HI Primordial object
+    hiprim = Nc.HIPrimPowerLaw.new()
+    hiprim["n_SA"] = ccl_cosmo["n_s"]
+
+    # Creates the HI Reionization object
+    hireion = Nc.HIReionCamb.new()
+
+    cosmo = Nc.HICosmoDECpl(massnu_length=massnu_length, prim=hiprim, reion=hireion)
     cosmo.props.CCL_comp = True
     cosmo.omega_x2omega_k()
     cosmo["H0"] = ccl_cosmo["h"] * 100.0
@@ -78,16 +86,6 @@ def create_nc_obj(
     for i, m in enumerate(m_nu):
         cosmo[f"massnu_{i}"] = m
         cosmo[f"Tnu_{i}"] = ccl_cosmo["T_ncdm"]
-
-    # Creates the HI Primordial object
-    hiprim = Nc.HIPrimPowerLaw.new()
-    hiprim["n_SA"] = ccl_cosmo["n_s"]
-
-    # Creates the HI Reionization object
-    hireion = Nc.HIReionCamb.new()
-
-    cosmo.add_submodel(hiprim)
-    cosmo.add_submodel(hireion)
 
     dist = Nc.Distance.new(dist_z_max)
     dist.prepare(cosmo)

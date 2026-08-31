@@ -29,8 +29,13 @@
  * Truncated-Gaussian intrinsic ellipticity distribution.
  *
  * The intrinsic ellipticity follows an isotropic Gaussian of width $\sigma$
- * truncated to the unit disk. The induced density of $x = |\chi_I|^2$ is
- * $P(x) \propto \exp(-x / 2\sigma^2)$ on $[0,1]$.
+ * truncated to the unit disk: the 2D area density is
+ * $P_\mathrm{2D}(\chi_I) \propto \exp(-r^2/2\sigma^2)$, $r=|\chi_I|$. The
+ * public r-marginal contract (see #NcGalaxyShapePop's own docs)
+ * is $P_\mathrm{pop}(r) = 2\pi r\,P_\mathrm{2D}(r) \propto r\exp(-r^2/2\sigma^2)$
+ * on $[0,1)$ -- multiplying the natural area-density form by $r$, always
+ * safe (never a pole), unlike populations whose natural form is the
+ * r-marginal itself (see #NcGalaxyShapePopBeta).
  *
  */
 
@@ -82,10 +87,11 @@ _nc_galaxy_shape_pop_gauss_finalize (GObject *object)
  * nc_galaxy_shape_pop_gauss_private.h) so are not static; forward-declared
  * here only to keep definition order readable. */
 void _nc_galaxy_shape_pop_gauss_data_init (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
-gdouble _nc_galaxy_shape_pop_gauss_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble x);
+gdouble _nc_galaxy_shape_pop_gauss_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r);
 void _nc_galaxy_shape_pop_gauss_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, NcmRNG *rng, gdouble *e_int_1, gdouble *e_int_2);
 static void _nc_galaxy_shape_pop_gauss_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static gdouble _nc_galaxy_shape_pop_gauss_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
+static gdouble _nc_galaxy_shape_pop_gauss_exponent_at_origin (NcGalaxyShapePop *gsp);
 void _nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
                                                       const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 
@@ -122,6 +128,7 @@ nc_galaxy_shape_pop_gauss_class_init (NcGalaxyShapePopGaussClass *klass)
   gsp_class->eval_p               = &_nc_galaxy_shape_pop_gauss_eval_p;
   gsp_class->gen                  = &_nc_galaxy_shape_pop_gauss_gen;
   gsp_class->e_rms                = &_nc_galaxy_shape_pop_gauss_e_rms;
+  gsp_class->exponent_at_origin   = &_nc_galaxy_shape_pop_gauss_exponent_at_origin;
   gsp_class->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series;
 }
 
@@ -165,7 +172,9 @@ _nc_galaxy_shape_pop_gauss_ldata_set_sigma (NcGalaxyShapePopData *data, const gd
   NcGalaxyShapePopGaussLData *ldata = (NcGalaxyShapePopGaussLData *) data->ldata;
   const gdouble inv_2sigma2         = 0.5 / (sigma * sigma);
 
-  /* P(x) ∝ exp(-x/2σ²) on [0,1]. */
+  /* norm/inv_2sigma2 are the x-space (x=r^2) normalization,
+   * P(x) = norm*exp(-x/2σ²) on [0,1]: used directly by
+   * eval_p_rho2_g_series, and by eval_p() below via the *2r conversion. */
   ldata->sigma       = sigma;
   ldata->inv_2sigma2 = inv_2sigma2;
   ldata->norm        = inv_2sigma2 / (-expm1 (-inv_2sigma2));
@@ -178,11 +187,16 @@ _nc_galaxy_shape_pop_gauss_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData 
 }
 
 gdouble
-_nc_galaxy_shape_pop_gauss_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble x)
+_nc_galaxy_shape_pop_gauss_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r)
 {
   NcGalaxyShapePopGaussLData *ldata = (NcGalaxyShapePopGaussLData *) data->ldata;
 
-  return ldata->norm * exp (-ldata->inv_2sigma2 * x);
+  /* P_pop(r) = 2*pi*r*P_2D(r) = 2*r*norm*exp(-r^2/2sigma^2) -- norm is
+   * unchanged from the area-density form (see _ldata_set_sigma()'s own
+   * docs), the substitution u=r^2 recovers exactly the integral norm's own
+   * definition already satisfies, so no new normalization constant is
+   * needed here. */
+  return 2.0 * r * ldata->norm * exp (-ldata->inv_2sigma2 * r * r);
 }
 
 static complex double
@@ -219,6 +233,12 @@ _nc_galaxy_shape_pop_gauss_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *d
   const gdouble mean_x = (1.0 - exp_ml * (1.0 + lambda)) / (lambda * (1.0 - exp_ml));
 
   return sqrt (0.5 * mean_x);
+}
+
+static gdouble
+_nc_galaxy_shape_pop_gauss_exponent_at_origin (NcGalaxyShapePop *gsp)
+{
+  return 1.0;
 }
 
 /* P(x) = norm*exp(-x/2sigma^2) (eval_p()'s own full, normalized form): scale

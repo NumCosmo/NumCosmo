@@ -10,9 +10,14 @@ on:
 
 env:
   CONDA_ENV: numcosmo_developer
-  CACHE_VERSION: 0
   # Bump to force recomputing slice-tests.txt from scratch instead of restoring cached durations.
-  TEST_DURATION_CACHE_VERSION: 3
+  TEST_DURATION_CACHE_VERSION: 0
+  # Bump to discard the cached data files (~470 MB of Planck/SNIa/weak-lensing
+  # assets) and download them again. The cache also goes stale on its own when
+  # the datafile release tag changes; this knob covers everything else, such as
+  # a file replaced in place under an unchanged tag. See
+  # .github/actions/data-cache.
+  DATA_CACHE_VERSION: 0
   # Thread policy is set PER TEST by meson (tests/meson.build), not here: concurrent tests
   # get OMP/BLAS = 1 (avoid cores^2 oversubscription + the mixed-OpenBLAS deadlock, e.g.
   # scipy.linalg.solve in test_sbessel_ode_solver), and the run-alone OpenMP tests
@@ -48,25 +53,50 @@ env:
 
 jobs:
 
-  build-gcc-ubuntu:
-    name: (ubuntu, apt, pip)
-    runs-on: ubuntu-24.04
+  check-conda-locks:
+    name: (conda lock files)
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    # Fails when environment.yml was changed without regenerating
+    # .github/locks/*.lock. The conda jobs below don't fail on a stale lock,
+    # they fall back to solving it (slow), so this job is what makes the
+    # mismatch visible. See CONTRIBUTING.md, section "CI conda environment".
+    - run: python3 .github/scripts/conda_locks.py check
+
+  build-gcc-ubuntu:
+    name: (ubuntu, apt, pip)
+    # Pinned to 26.04, not ubuntu-latest: NumCosmo needs GSL >= 2.8 and 24.04
+    # ships 2.7.1. Revisit once ubuntu-latest has moved to 26.04.
+    runs-on: ubuntu-26.04
+    steps:
+    - uses: actions/checkout@v4
+    - name: Restore data cache
+      id: data-cache
+      uses: ./.github/actions/data-cache
+      with:
+        version: ${{ env.DATA_CACHE_VERSION }}
     - uses: actions/setup-python@v6
       with:
-        python-version: '3.12'
+        python-version: '3.13'
     - name: Install pre-requisites
-      run: |
-        sudo apt-get update
-        sudo apt-get install gobject-introspection gir1.2-glib-2.0 gir1.2-glib-2.0-dev libgirepository-2.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-dev libcfitsio-dev libnlopt-dev libhdf5-dev libopenmpi-dev libcairo2-dev uncrustify
-        pip install -e ".[test]" meson ninja --break-system-packages
+      uses: ./.github/actions/apt-deps
+    - name: Pip install pre-requisites
+      run: pip install -e ".[test]" meson ninja --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
       run: meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate -Ddocumentation=false --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: meson compile -C build
+    - name: Prefetch data files
+      # This job writes the Linux data cache, so it fetches every asset, not
+      # just the ones its own tests happen to touch -- see the step at the end
+      # of the job and prefetch_data.py.
+      if: steps.data-cache.outputs.hit != 'true'
+      run: |
+        source build/numcosmo_export.sh
+        python3 .github/scripts/prefetch_data.py
     - name: Checking indentation
       run: |
         find numcosmo -path numcosmo/external -prune -o \( -name '*.c' -o -name '*.h' \) -print0 \
@@ -106,6 +136,17 @@ jobs:
         gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca $(pkg-config numcosmo --libs --cflags)
         ./example_simple
         ./example_ca
+    - name: Save data cache
+      # One writer per OS: every other Linux job restores this entry and never
+      # writes one, so a job that downloads only its own slice of the assets
+      # can never be what gets stored. Written only on success, since the key
+      # is exact and a partial entry would then stick until DATA_CACHE_VERSION
+      # is bumped.
+      if: success() && steps.data-cache.outputs.hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ steps.data-cache.outputs.paths }}
+        key: ${{ steps.data-cache.outputs.key }}
 
   build-gcc-macos:
     name: (macos, brew, pip)
@@ -115,47 +156,57 @@ jobs:
       FC: gfortran-14
       F77: gfortran-14
       F90: gfortran-14
-      LIBRARY_PATH: /usr/local/lib:/opt/homebrew/Cellar/gmp/6.3.0/lib
-      LD_LIBRARY_PATH: /usr/local/lib:/opt/homebrew/Cellar/gmp/6.3.0/lib
-      DYLD_LIBRARY_PATH: /usr/local/lib:/opt/homebrew/Cellar/gmp/6.3.0/lib
       CPATH: /usr/local/include
 
     steps:
     - uses: actions/checkout@v4
+    - name: Restore data cache
+      id: data-cache
+      uses: ./.github/actions/data-cache
+      with:
+        version: ${{ env.DATA_CACHE_VERSION }}
     - name: Brew install pre-requisites
       run: |
+        # The runner image carries both pkgconf and the older pkg-config@0.29.2
+        # formula, which conflict; removing the old one is the workaround found
+        # in #169. Keep it before any step that queries pkg-config.
         brew uninstall --ignore-dependencies --force pkg-config@0.29.2
-        brew install python3 gobject-introspection pygobject3 numpy scipy python-matplotlib meson ninja gsl gmp mpfr fftw cfitsio nlopt gfortran glib openblas
+        brew install \
+          gfortran meson ninja \
+          glib gobject-introspection \
+          gsl gmp mpfr fftw openblas nlopt \
+          cfitsio \
+          python3 pygobject3 numpy scipy python-matplotlib
+        # The Python packages come from brew rather than being left to pip:
+        # the pip step below then finds them already satisfied for brew's
+        # interpreter instead of building them.
+    - name: Export brew library paths
+      run: |
+        # gmp installs no pkg-config file, so its prefix has to be passed to
+        # the linker directly. This was a hardcoded Cellar path
+        # (/opt/homebrew/Cellar/gmp/6.3.0/lib), which stops existing at the
+        # next gmp update; ask brew for the prefix instead.
+        gmp_lib="$(brew --prefix gmp)/lib"
+        for var in LIBRARY_PATH LD_LIBRARY_PATH DYLD_LIBRARY_PATH; do
+          echo "${var}=/usr/local/lib:${gmp_lib}" >> "$GITHUB_ENV"
+        done
     - name: Pip install pre-requisites
       run: |
         python3 -m pip install -e ".[test]" --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
-    - name: Dump pkg-config info (cfitsio)
-      run: |
-        set -x
-
-        echo "which pkg-config:"
-        which pkg-config || true
-
-        echo "version:"
-        pkg-config --version || true
-
-        echo "env:"
-        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
-        echo "PKG_CONFIG_LIBDIR=$PKG_CONFIG_LIBDIR"
-
-        echo "---- cfitsio ----"
-        pkg-config --libs cfitsio || true
-        pkg-config --cflags cfitsio || true
-        pkg-config --variable=pcfiledir cfitsio || true
-        pkg-config --debug --libs cfitsio || true
     - name: Configure NumCosmo
       run: |
         meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate -Dmpi=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: |
         meson compile -C build
+    - name: Prefetch data files
+      # Writes the macOS data cache; see the same step in build-gcc-ubuntu.
+      if: steps.data-cache.outputs.hit != 'true'
+      run: |
+        source build/numcosmo_export.sh
+        python3 .github/scripts/prefetch_data.py
     - name: Test python examples
       run: |
         source build/numcosmo_export.sh
@@ -167,6 +218,13 @@ jobs:
     - name: Check NumCosmo
       run: |
         meson test -v -C build --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ env.FAST_TEST_ARGS }} || (cat build/meson-logs/testlog.txt && exit 1)
+    - name: Save data cache
+      # The macOS writer; see the same step in build-gcc-ubuntu.
+      if: success() && steps.data-cache.outputs.hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ steps.data-cache.outputs.paths }}
+        key: ${{ steps.data-cache.outputs.key }}
 
   build-miniforge:
     name: (${{ matrix.os }}, py${{ matrix.python-version }}, ${{ matrix.mpi }}, Miniforge)
@@ -174,7 +232,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu", "macos"]
-        python-version: ["3.12"]
+        python-version: ["3.13"]
         mpi: ["openmpi", "mpich"]
         exclude:
           - os: "macos"
@@ -184,6 +242,10 @@ jobs:
         shell: bash -el {0}
     steps:
       - uses: actions/checkout@v4
+      - name: Restore data cache
+        uses: ./.github/actions/data-cache
+        with:
+          version: ${{ env.DATA_CACHE_VERSION }}
       - uses: ./.github/actions/setup-miniforge
         with:
           python-version: ${{ matrix.python-version }}
@@ -238,23 +300,23 @@ jobs:
       # opt-in, not for balancing.
       matrix:
         include:
-          - { os: ubuntu, python-version: "3.12", name: python, args: "--suite python" }
-          - { os: ubuntu, python-version: "3.12", name: py-acceptance, args: "--suite py-acceptance" }
+          - { os: ubuntu, python-version: "3.13", name: python, args: "--suite python" }
+          - { os: ubuntu, python-version: "3.13", name: py-acceptance, args: "--suite py-acceptance" }
           # omp-marked tests are excluded from the plain `python` suite (tests/python/meson.build) so
           # the fast xdist lane isn't starved by a thread-pinned-to-1 test hogging one worker; they
           # need their own shard here or the coverage job would silently stop exercising them.
-          - { os: ubuntu, python-version: "3.12", name: py-omp, args: "--suite py-omp" }
-          - { os: ubuntu, python-version: "3.12", name: py-powspec, args: "--suite py-powspec" }
-          - { os: ubuntu, python-version: "3.12", name: py-xcor, args: "--suite py-xcor" }
-          - { os: ubuntu, python-version: "3.12", name: py-app, args: "--suite py-app" }
+          - { os: ubuntu, python-version: "3.13", name: py-omp, args: "--suite py-omp" }
+          - { os: ubuntu, python-version: "3.13", name: py-powspec, args: "--suite py-powspec" }
+          - { os: ubuntu, python-version: "3.13", name: py-xcor, args: "--suite py-xcor" }
+          - { os: ubuntu, python-version: "3.13", name: py-app, args: "--suite py-app" }
           # c-1/c-2/c-3 no longer use meson's own --slice K/N (count-balanced, not
           # time-balanced -- see .github/scripts/test_slicer.py); the `slice` field
           # here selects which duration-aware slice this leg runs, computed at
           # runtime from cached historical per-test durations. Legs without a
           # `slice` field (above) are unaffected -- see the steps below.
-          - { os: ubuntu, python-version: "3.12", name: c-1, slice: 1 }
-          - { os: ubuntu, python-version: "3.12", name: c-2, slice: 2 }
-          - { os: ubuntu, python-version: "3.12", name: c-3, slice: 3 }
+          - { os: ubuntu, python-version: "3.13", name: c-1, slice: 1 }
+          - { os: ubuntu, python-version: "3.13", name: c-2, slice: 2 }
+          - { os: ubuntu, python-version: "3.13", name: c-3, slice: 3 }
     defaults:
       run:
         shell: bash -el {0}
@@ -271,6 +333,14 @@ jobs:
           key: test-durations-c-bundle-v${{ env.TEST_DURATION_CACHE_VERSION }}-${{ github.run_id }}
           restore-keys: |
             test-durations-c-bundle-v${{ env.TEST_DURATION_CACHE_VERSION }}-
+      - name: Restore data cache
+        # Only the shards whose tests reach a downloaded file: the marker-gated
+        # powspec/xcor/omp lanes touch none, and neither do the c-* slices, so
+        # restoring ~470 MB there would cost them time and buy nothing.
+        if: contains(fromJSON('["python", "py-acceptance", "py-app"]'), matrix.name)
+        uses: ./.github/actions/data-cache
+        with:
+          version: ${{ env.DATA_CACHE_VERSION }}
       - uses: ./.github/actions/setup-miniforge
         with:
           python-version: ${{ matrix.python-version }}
@@ -301,9 +371,9 @@ jobs:
           lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
           if [ -n "${{ matrix.slice }}" ]; then
             mapfile -t TEST_ARGS < slice-tests.txt
-            meson test -v -C build --timeout-multiplier 0 --num-processes=$(getconf _NPROCESSORS_ONLN) "${TEST_ARGS[@]}" || (cat build/meson-logs/testlog.txt && exit 1)
+            meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) "${TEST_ARGS[@]}" || (cat build/meson-logs/testlog.txt && exit 1)
           else
-            meson test -v -C build --timeout-multiplier 0 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
+            meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
           fi
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
