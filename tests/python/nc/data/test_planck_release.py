@@ -183,6 +183,44 @@ def test_download_populates_the_cache(tmp_path, monkeypatch):
     assert calls[0].startswith(pnr.RELEASE_URL)
 
 
+def test_download_publishes_by_rename(tmp_path, monkeypatch):
+    """The cached name must appear only once the artifact is complete.
+
+    urlretrieve wrote straight to it, so a concurrent reader could deserialize a
+    half-written .gvar, and an interrupted fetch left a truncated one that every
+    later run took for a complete download -- the existence check is all that
+    guards it. Fetching under a private name and renaming makes the final name
+    atomic: it is either absent or whole.
+    """
+    source = tmp_path / "source"
+    cache = tmp_path / "cache"
+    source.mkdir()
+    clik = make_commander_cldf(source)
+    _write_cached(source, PlanckReleaseId.PR3_COMMANDER, build_commander(clik))
+
+    final = cache / release_filename(PlanckReleaseId.PR3_COMMANDER)
+    observed = {}
+
+    def _fake_download(url, path):  # pylint: disable=unused-argument
+        # Mid-transfer: the destination the caller will read must not be here.
+        observed["final_exists"] = final.exists()
+        observed["wrote_to"] = path
+        shutil.copyfile(
+            os.path.join(str(source), release_filename(PlanckReleaseId.PR3_COMMANDER)),
+            path,
+        )
+
+    monkeypatch.setattr(pnr.urllib.request, "urlretrieve", _fake_download)
+
+    data = load_planck_release(PlanckReleaseId.PR3_COMMANDER, cache_dir=str(cache))
+
+    assert isinstance(data, Nc.DataPlanckCommander)
+    assert observed["final_exists"] is False, "the final name existed mid-download"
+    assert observed["wrote_to"] != str(final), "wrote straight to the final name"
+    assert final.exists()
+    assert not list(cache.glob("*.part"))
+
+
 def test_download_failure_is_reported_and_leaves_no_stub(tmp_path, monkeypatch):
     """A failed download raises with the URL and removes the partial file."""
 
@@ -199,6 +237,7 @@ def test_download_failure_is_reported_and_leaves_no_stub(tmp_path, monkeypatch):
     assert not os.path.exists(
         os.path.join(str(tmp_path), release_filename(PlanckReleaseId.PR3_LENSING))
     )
+    assert not list(tmp_path.glob("*.part"))
 
 
 def test_build_release_skips_ids_without_source_data(tmp_path, monkeypatch):

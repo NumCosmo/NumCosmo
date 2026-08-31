@@ -65,10 +65,26 @@ from numcosmo_py import Nc, Ncm
 # lives; ell = 2 is not decoration.
 ELLS: typing.Final[list[int]] = [2, 3, 4, 6, 10, 20, 50, 100, 200]
 
-# What the committed suite runs, as leading multipoles of a block: the two ends
-# and one in between. The full list is the bench driver's, where cost is not
-# charged to every CI run.
-ELLS_SUITE: typing.Final[list[int]] = [2, 20, 200]
+# What the committed suite runs, as leading multipoles of a block. Chosen from
+# the bench sweep over the full ELLS above, by where the methods are actually
+# worst -- which is NOT the high end. Measured worst deviation of the block's
+# peak, over the case matrix:
+#
+#   exact/chebyshev  2.3e-08 at l=6     gsl/chebyshev   1.6e-03 at l=10
+#   exact/spline     8.1e-12 at l=6     gsl_block/spl   3.6e-11 at l=4
+#
+# against 4.7e-10, 1.7e-04, 5.3e-13 and 8.6e-12 at l=200. The error peaks
+# around l = 4-10 and falls away by l = 50, so a ladder of [2, 20, 200] tested
+# the easy end hard and the hard end not at all. l = 2 stays for the
+# cancellation reason above; 6 and 10 are the peak; 50 keeps a high-l point
+# without paying for l = 200, whose Levin operator is the most expensive of the
+# ladder (its closure is the *smallest* -- 159 knots against 263 at l = 2 --
+# so the cost is the operator, not the fit).
+#
+# Knowingly not covered: cubature/chebyshev is worst at l = 20 (4.1e-05 against
+# 1.1e-05 here), and gsl_block/chebyshev at l = 200 (4.6e-04 against 3.2e-04).
+# Both are within a factor of four of a point that is covered.
+ELLS_SUITE: typing.Final[list[int]] = [2, 6, 10, 50]
 
 # Gauss-Legendre orders the reference escalates through, per cell. A spline
 # cell is a cubic and a k^2-weighted product of two is degree 8, so it is exact
@@ -444,13 +460,22 @@ def build_kernel(
     dist: Nc.Distance,
     ps: Ncm.Powspec,
     settings: Settings,
+    sbi: Ncm.SBesselIntegrator | None = None,
 ) -> Nc.XcorKernelAnalytic:
     """Build and prepare one kernel of the matrix at the given settings.
 
-    Each kernel gets its own Levin integrator: the sbessel ODE solver is not
-    reentrant and a shared one corrupts memory across concurrent blocks.
+    Pass @sbi to share one Levin integrator across the kernels of a block, the
+    way nc_xcor_solver_solve() does -- it dups one integrator per block and
+    hands the same one to every kernel, which is what makes the stored
+    Givens-rotation decomposition reusable across kernels (plan doc
+    dev-notes/xcor_ultralevin_batching_plan.md §6.1). With %None each kernel
+    gets its own, which is safe under concurrency -- the sbessel ODE solver is
+    not reentrant, so a shared one corrupts memory across concurrent blocks --
+    but disables that reuse entirely.
     """
-    kernel = KERNELS[name].builder(dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8))
+    kernel = KERNELS[name].builder(
+        dist, ps, sbi if sbi is not None else Ncm.SBesselIntegratorLevin.new(0, 8)
+    )
     kernel.set_l_limber(settings.l_limber)
     kernel.set_property("reltol", settings.reltol)
     kernel.set_property("scaled-abstol", settings.scaled_abstol)
@@ -465,6 +490,7 @@ def build_integrand(
     lmin: int,
     lmax: int,
     settings: Settings,
+    sbi: Ncm.SBesselIntegrator | None = None,
 ) -> Nc.XcorKernelIntegrand:
     """Freeze one closure for an ell block, and check it is the one asked for.
 
@@ -474,7 +500,11 @@ def build_integrand(
     block is taken under Limber.
     """
     integrand = kernel.get_eval_vectorized_full(
-        cosmo, lmin, lmax, Ncm.SBesselIntegratorLevin.new(lmin, lmax), settings.closure
+        cosmo,
+        lmin,
+        lmax,
+        sbi if sbi is not None else Ncm.SBesselIntegratorLevin.new(lmin, lmax),
+        settings.closure,
     )
 
     wanted_panels = settings.closure == Nc.XcorKernelClosure.CHEBYSHEV

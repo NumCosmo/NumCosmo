@@ -28,8 +28,11 @@ import json
 import subprocess
 import sys
 
+import numpy as np
 import pytest
 from numpy.testing import assert_allclose
+
+from gi.repository import GLib
 
 from numcosmo_py import Nc, Ncm
 
@@ -149,3 +152,161 @@ def test_a_new_cosmology_does_not_serialize_yp():
     cosmo = Nc.HICosmoDEXcdm.new()
 
     assert "'Yp'" not in ser.to_string(cosmo, True)
+
+
+def test_a_stale_reparam_still_attaches():
+    """A reparametrization written before Yp left is one slot too long.
+
+    NcHICosmoDE went from eight scalar parameters to seven, so every stored
+    NcHICosmoDEReparamOk says length = 8. It carries no parameter *values* --
+    only its length, its descriptors and its compatible type -- so the model
+    rebuilds it at its own length instead of adopting a vector one too long,
+    which used to abort inside ncm_vector_memcpy().
+    """
+    cosmo = Nc.HICosmoDEXcdm.new()
+
+    assert cosmo.len() == 7
+
+    cosmo.set_reparam(Nc.HICosmoDEReparamOk.new(8))
+
+    assert cosmo.param_name(Nc.HICosmoDESParams.OMEGA_X) == "Omegak"
+    assert cosmo.len() == 7
+
+
+def test_a_reparam_of_a_gone_parameter_fails_loudly():
+    """Resizing is only safe while the descriptors still fit.
+
+    A descriptor pointing past the end of the model means the parameter it
+    reparametrizes is gone, which no rebuild can repair -- so it must raise
+    rather than abort or silently reparametrize the wrong slot.
+    """
+    cosmo = Nc.HICosmoDEXcdm.new()
+    reparam = Nc.HICosmoDEReparamOk.new(8)
+
+    # Slot 7 existed while the cosmology had eight parameters and does not now.
+    reparam.set_param_desc_full(
+        7, "Bogus", "B", 0.0, 1.0, 0.1, 0.0, 0.5, Ncm.ParamType.FIXED
+    )
+
+    with pytest.raises(GLib.Error, match="no longer exists"):
+        cosmo.set_reparam(reparam)
+
+
+# The three containers a catalog has ever used for its model-set, all written by
+# tests/tools/make_reparam_catalog_fixtures.py with a pre-migration NcHICosmoDE:
+# eight scalar parameters, an NcHICosmoDEReparamOk of length 8, a Yp property and
+# no NcBBN submodel. `sidecar' keeps its model-set in a `.mset' GKeyFile beside
+# the FITS instead of in HDU0.
+CATALOGS = ("vardict", "object", "sidecar")
+
+CATALOG_NROWS = 40
+CATALOG_NCOLS = 3
+
+
+def read_catalog(name):
+    """Open one pre-migration catalog fixture read-only."""
+    filename = Ncm.cfg_get_data_filename(
+        f"truth_tables/bbn/old_reparam_{name}.mc.fits", True
+    )
+
+    return Ncm.MSetCatalog.new_from_file_ro(filename, 0)
+
+
+@pytest.mark.parametrize("name", CATALOGS)
+def test_an_old_catalog_still_opens(name):
+    """Reading one used to abort inside ncm_vector_memcpy(): 8 into 7."""
+    cosmo = read_catalog(name).peek_mset().peek(Nc.HICosmo.id())
+
+    assert cosmo.__gtype__.name == "NcHICosmoDEXcdm"
+    assert cosmo.len() == 7
+
+
+@pytest.mark.parametrize("name", CATALOGS)
+def test_an_old_catalog_keeps_its_reparametrization(name):
+    """The stale length is bookkeeping; the reparametrization itself survives.
+
+    NcHICosmoDEReparamOk names index 2 Omegak, and Yp was index 4, so nothing it
+    names moved when Yp left. The value has to agree with the Omegax the file
+    stores, which is what proves old2new() ran on the rebuilt reparametrization.
+    """
+    mset = read_catalog(name).peek_mset()
+    cosmo = mset.peek(Nc.HICosmo.id())
+
+    assert cosmo.peek_reparam() is not None
+    assert cosmo.param_name(Nc.HICosmoDESParams.OMEGA_X) == "Omegak"
+
+    expected = (
+        1.0
+        - cosmo.orig_param_get(Nc.HICosmoDESParams.OMEGA_X)
+        - (
+            cosmo.orig_param_get(Nc.HICosmoDESParams.OMEGA_C)
+            + cosmo.orig_param_get(Nc.HICosmoDESParams.OMEGA_B)
+        )
+    )
+    assert_allclose(cosmo.param_get(Nc.HICosmoDESParams.OMEGA_X), expected, atol=1.0e-3)
+
+
+@pytest.mark.parametrize("name", CATALOGS)
+def test_an_old_catalog_maps_its_free_parameters(name):
+    """A catalog is unusable unless its columns still name its free parameters."""
+    mcat = read_catalog(name)
+    mset = mcat.peek_mset()
+
+    assert mcat.len() == CATALOG_NROWS
+    assert mcat.ncols() == CATALOG_NCOLS
+    assert [mset.fparam_full_name(i) for i in range(mset.fparam_len())] == [
+        "NcHICosmo:Omegak",
+        "NcHICosmo:w",
+    ]
+
+
+@pytest.mark.parametrize("name", CATALOGS)
+def test_an_old_catalog_gets_the_default_bbn(name):
+    """The Yp the file carries is a fixed one, so it lands on PArthENoPE."""
+    cosmo = read_catalog(name).peek_mset().peek(Nc.HICosmo.id())
+    bbn = cosmo.peek_bbn()
+
+    assert bbn is not None
+    assert bbn.__gtype__.name == "NcBBNParthenope"
+
+
+@pytest.mark.parametrize("name", CATALOGS)
+def test_an_old_catalog_still_has_its_rows(name):
+    """Loading the model-set must not disturb the chain itself."""
+    mcat = read_catalog(name)
+    rows = np.array([mcat.peek_row(i).dup_array() for i in range(mcat.len())])
+
+    assert rows.shape == (CATALOG_NROWS, CATALOG_NCOLS)
+    assert np.all(np.isfinite(rows))
+    # Column 0 is m2lnL = Omegak^2 + (w + 1)^2, the fixture's stand-in likelihood.
+    assert_allclose(rows[:, 0], rows[:, 1] ** 2 + (rows[:, 2] + 1.0) ** 2)
+
+
+def test_a_catalog_whose_reparam_cannot_be_resized_fails_loudly():
+    """Deserialization has no error channel, so the refusal is a g_error.
+
+    ncm_model_set_reparam() is reached through the `reparam' property, which
+    cannot report a GError -- the refusal must still be a clean abort with the
+    reason in it, never a NULL dereference.
+    """
+    script = (
+        "from numcosmo_py import Ncm\n"
+        "Ncm.cfg_init()\n"
+        "ser = Ncm.Serialize.new(0)\n"
+        "matrix = Ncm.Matrix.new(3, 3)\n"
+        "matrix.set_identity()\n"
+        "vector = Ncm.Vector.new(3)\n"
+        "vector.set_all(0.0)\n"
+        "reparam = Ncm.ReparamLinear.new(3, matrix, vector)\n"
+        "reparam.set_compat_type('NcmModelRosenbrock')\n"
+        "text = ser.to_string(Ncm.ModelRosenbrock.new(), True)\n"
+        "ser.from_string(\n"
+        "    text[:-2] + \", 'reparam': <\" + ser.to_string(reparam, True) + '>})'\n"
+        ")\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, check=False
+    )
+
+    assert result.returncode != 0
+    assert "carries state of its own" in result.stderr
