@@ -33,4 +33,5 @@ liblevmar = static_library(
     install: false,
     gnu_symbol_visibility: 'hidden',
     c_args: levmar_c_args,
+    override_options: ['b_coverage=false'],
 )

@@ -37,6 +37,7 @@ libcuba_cuhre = static_library(
     install: false,
     gnu_symbol_visibility: 'hidden',
     c_args: cuba_c_args,
+    override_options: ['b_coverage=false'],
 )
 
 divonne_sources = files(
@@ -54,6 +55,7 @@ libcuba_divonne = static_library(
     install: false,
     gnu_symbol_visibility: 'hidden',
     c_args: cuba_c_args,
+    override_options: ['b_coverage=false'],
 )
 
 suave_sources = files(
@@ -71,6 +73,7 @@ libcuba_suave = static_library(
     install: false,
     gnu_symbol_visibility: 'hidden',
     c_args: cuba_c_args,
+    override_options: ['b_coverage=false'],
 )
 
 vegas_sources = files(
@@ -88,6 +91,7 @@ libcuba_vegas = static_library(
     install: false,
     gnu_symbol_visibility: 'hidden',
     c_args: cuba_c_args,
+    override_options: ['b_coverage=false'],
 )
 
 libcuba_sources = files(
@@ -113,4 +117,5 @@ libcuba = static_library(
     install: false,
     gnu_symbol_visibility: 'hidden',
     c_args: cuba_c_args,
+    override_options: ['b_coverage=false'],
 )
