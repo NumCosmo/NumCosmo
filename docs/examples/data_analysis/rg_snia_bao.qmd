@@ -175,7 +175,7 @@ for clevel, name in reversed(levels):
 
 lh_pd = pd.concat(lh_pd_list)
 expected_pd = pd.concat(expected_pd_list)
-best_fit = pd.DataFrame({"Omegac": [cosmo["Omegac"]], "w": [cosmo["w"]]})
+best_fit_pd = pd.DataFrame({"Omegac": [cosmo["Omegac"]], "w": [cosmo["w"]]})
 ```
 
 ```{python}
@@ -192,7 +192,9 @@ best_fit = pd.DataFrame({"Omegac": [cosmo["Omegac"]], "w": [cosmo["w"]]})
         mapping=aes("Omegac", "w", group="border", linetype="information"),
         inherit_aes=False,
     )
-    + geom_point(data=best_fit, mapping=aes("Omegac", "w"), inherit_aes=False, size=3)
+    + geom_point(
+        data=best_fit_pd, mapping=aes("Omegac", "w"), inherit_aes=False, size=3
+    )
     + labs(x=r"$\Omega_c$", y=r"$w$", fill="Confidence", linetype="Method")
     + doc_theme()
 )
@@ -241,21 +243,21 @@ fit.log_covar()
 covar = fit.get_covar()
 covar_obs = np.array([[covar.get(i, j) for j in range(2)] for i in range(2)])
 
-centre = np.array([cosmo["Omegac"], cosmo["w"]])
+centre_a = np.array([cosmo["Omegac"], cosmo["w"]])
 cholesky = np.linalg.cholesky(covar_obs)
-theta = np.linspace(0.0, 2.0 * np.pi, 300)
-unit_circle = np.vstack([np.cos(theta), np.sin(theta)])
+theta_a = np.linspace(0.0, 2.0 * np.pi, 300)
+unit_circle_a = np.vstack([np.cos(theta_a), np.sin(theta_a)])
 
 observed_pd_list = []
 for clevel, name in reversed(levels):
-    points = centre[:, None] + np.sqrt(-2.0 * np.log1p(-clevel)) * (
-        cholesky @ unit_circle
+    points_a = centre_a[:, None] + np.sqrt(-2.0 * np.log1p(-clevel)) * (
+        cholesky @ unit_circle_a
     )
     observed_pd_list.append(
         pd.DataFrame(
             {
-                "Omegac": points[0],
-                "w": points[1],
+                "Omegac": points_a[0],
+                "w": points_a[1],
                 "sigma": name,
                 "information": "Observed",
                 "border": f"observed {name}",
@@ -281,7 +283,9 @@ border_pd = pd.concat([expected_pd, observed_pd])
         mapping=aes("Omegac", "w", group="border", linetype="information"),
         inherit_aes=False,
     )
-    + geom_point(data=best_fit, mapping=aes("Omegac", "w"), inherit_aes=False, size=3)
+    + geom_point(
+        data=best_fit_pd, mapping=aes("Omegac", "w"), inherit_aes=False, size=3
+    )
     + labs(x=r"$\Omega_c$", y=r"$w$", fill="Confidence", linetype="Information")
     + doc_theme()
 )
