@@ -60,6 +60,20 @@ Ncm.cfg_init()
 sys.stdout.write(Nc.DataSNIACov.get_fits(sys.argv[1], False))
 """
 
+_FETCH_WL = """
+import sys
+from numcosmo_py import Nc, Ncm
+
+Ncm.cfg_init()
+sys.stdout.write(
+    Nc.galaxy_wl_obs_catalog_id_get_filename(Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_094)
+)
+"""
+
+# Smallest curated weak-lensing catalog, 3.1 MB. Neither test below fetches it:
+# each arranges for the file to be there, and asserts it was left alone.
+WL_ASSET = "wl_obs_HWL16a-094.gvar"
+
 
 def run_isolated(script: str, home, *args) -> subprocess.CompletedProcess:
     """Run @script with an empty HOME, so the data directory starts bare."""
@@ -218,3 +232,71 @@ def test_a_waiter_uses_what_the_holder_produced(tmp_path):
     # it -- which is the whole point of waiting.
     assert target.read_bytes() == b"SENTINEL"
     assert not list(tmp_path.rglob("*.part"))
+
+
+def test_wl_catalog_waits_for_the_holder(tmp_path):
+    """The WL catalogs must take the lock like every other download.
+
+    They did not: the fetch ran `wget` straight to the final name, ignoring a
+    held lock, so a concurrent reader could open the file half-written.
+
+    Holding the lock from outside and letting the data appear separates the
+    two: the old code writes the real catalog over the sentinel, the shared
+    path waits and returns what the holder produced. The lock and rename
+    machinery is raced four ways over the tiny asset above; what this checks is
+    that this caller goes through it.
+    """
+    base = tmp_path / ".numcosmo"
+    base.mkdir()
+    target = base / WL_ASSET
+
+    # Held by nobody, which is what a live download looks like from outside.
+    (base / f"{WL_ASSET}.lock").mkdir()
+
+    proc = subprocess.Popen(  # pylint: disable=consider-using-with
+        [sys.executable, "-c", _FETCH_WL],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=dict(os.environ, HOME=str(tmp_path)),
+    )
+
+    try:
+        # Same six seconds as the SNIa waiter above: long enough that the child
+        # is past its own existence check and sitting in the lock's wait loop.
+        time.sleep(6.0)
+        # The holder finishes: distinguishable from a real fetch by content.
+        target.write_bytes(b"SENTINEL")
+        out, err = proc.communicate(timeout=120)
+    finally:
+        if proc.poll() is None:  # pragma: no cover - only on a hang
+            proc.kill()
+
+    assert proc.returncode == 0, err
+
+    # The discriminator, asserted first so a regression names itself: 8 bytes,
+    # not 3.1 MB, and no transfer announced. The old code ignored the lock and
+    # wrote the real catalog over the holder's file.
+    assert "Downloading" not in out, "fetched the catalog despite the held lock"
+    assert target.read_bytes() == b"SENTINEL"
+
+    # Last line, not the whole of stdout: a fetch would have printed first, and
+    # that is the assertion above's job to report, not this one's.
+    assert out.strip().splitlines()[-1] == str(target)
+    assert not list(tmp_path.rglob("*.part"))
+
+
+def test_wl_catalog_already_there_is_not_refetched(tmp_path):
+    """A catalog already in the data directory is returned untouched."""
+    base = tmp_path / ".numcosmo"
+    base.mkdir()
+    target = base / WL_ASSET
+    target.write_bytes(b"ALREADY")
+
+    result = run_isolated(_FETCH_WL, tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == str(target)
+    assert target.read_bytes() == b"ALREADY"
+    assert not list(tmp_path.rglob("*.part"))
+    assert not list(tmp_path.rglob("*.lock"))
