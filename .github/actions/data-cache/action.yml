@@ -1,0 +1,72 @@
+name: 'NumCosmo data cache'
+description: >-
+  Restores the on-demand data files (Planck baseline, SNIa catalogs, curated
+  weak-lensing catalogs and native Planck likelihoods) that NumCosmo otherwise
+  downloads from the GitHub release on first use -- around 470 MB per job, on
+  every job, on every run. Restore only: the caller decides whether to write
+  the entry back, since a partial or failed run must not be what gets stored.
+  See CONTRIBUTING.md, section "CI data-file cache".
+
+inputs:
+  version:
+    description: >-
+      Bump to discard every stored copy -- for a data file replaced in place
+      under an unchanged release tag, or any other reason the cached copy is no
+      longer the right one. Passed by the caller from a single workflow-level
+      env var.
+    required: true
+
+outputs:
+  key:
+    description: 'Cache key this job restored from, for a matching save step.'
+    value: ${{ steps.key.outputs.value }}
+  paths:
+    description: 'Newline-separated cached paths, for a matching save step.'
+    value: ${{ steps.key.outputs.paths }}
+  hit:
+    description: "'true' when the entry was restored, so no save is needed."
+    value: ${{ steps.restore.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Compute data cache key
+      id: key
+      shell: bash
+      run: |
+        set -eu
+        # Second staleness trigger, alongside the version input: the assets live
+        # in a tagged GitHub release, so a new release means new files. The tag
+        # is read back out of the sources that name it rather than repeated
+        # here, so bumping it there is enough.
+        # -I: skip binary files. Without it a stray __pycache__/*.pyc gets
+        # reported as "binary file matches" straight into the key.
+        tags=$(grep -rhoIE 'datafile-release-v[0-9]+(\.[0-9]+)*' numcosmo numcosmo_py | sort -u | paste -sd_ -)
+        if [ -z "${tags}" ]; then
+          echo "::error title=Data cache::No datafile-release tag found in numcosmo/ or numcosmo_py/. The cache key would be constant and would never go stale; fix the pattern in .github/actions/data-cache."
+          exit 1
+        fi
+        echo "value=numcosmo-data-${RUNNER_OS}-v${{ inputs.version }}-${tags}" >> "$GITHUB_OUTPUT"
+        # Only the downloaded files. The FFTW wisdom (*.fftw3, *.fftw3f) and
+        # the FFTLog tables the library writes into the same directory are
+        # deliberately left out: they are a record of what one machine measured
+        # to be fastest, and restoring them would hand a later run plans that
+        # were never timed on it. Absolute paths rather than ~/..., so the
+        # globs need no tilde expansion.
+        {
+          echo "paths<<EOF"
+          echo "${HOME}/.numcosmo/baseline"
+          echo "${HOME}/.numcosmo/*.fits"
+          echo "${HOME}/.numcosmo/*.gvar"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+    - name: Restore data cache
+      id: restore
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ steps.key.outputs.paths }}
+        key: ${{ steps.key.outputs.value }}
+        # No restore-keys on purpose. A partial match would reuse files whose
+        # name is unchanged but whose content the new release replaced, and the
+        # library only downloads what is missing -- so the stale copy would
+        # never be corrected.
