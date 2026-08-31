@@ -28,5 +28,6 @@ New here? Start with the [Simple Example](intro/simple.qmd).
 ## Data & Statistics
 
 - [SN Ia Fitting](data_analysis/snia.qmd) — fitting a Type Ia supernova sample.
+- [SNIa + BAO Confidence Regions](data_analysis/rg_snia_bao.qmd) — comparing likelihood-ratio and Fisher confidence regions.
 - [Inspect Data Objects](data_analysis/inspect_data_objects.qmd) — exploring NumCosmo data objects.
 - [Empirical PDF](intro/epdf.qmd) — building an empirical distribution.

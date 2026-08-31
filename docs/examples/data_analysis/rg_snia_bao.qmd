@@ -1,0 +1,328 @@
+---
+title: "Confidence Regions from SNIa and BAO Data"
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+---
+
+{{< include /_functions.qmd >}} 
+
+{{< include /notes/_numcosmo_py.qmd >}}
+
+## Introduction
+
+This example combines type Ia supernovae with baryon acoustic oscillation measurements
+and maps two-dimensional confidence regions in the $(\Omega_c, w)$ plane, using the
+`numcosmo_py`[^numcosmo_py] package and `plotnine` for visualization.
+
+A confidence region can be obtained either by following the likelihood surface itself,
+through a likelihood-ratio test, or by approximating that surface with a Gaussian centred
+on the best fit. Here the two answers differ by a large factor, and tracking down the
+reason turns out to be more interesting than the discrepancy itself: most of it comes not
+from the likelihood being non-Gaussian, but from which information matrix is used to build
+the approximation. The underlying fitting workflow is introduced in
+[Supernova Type Ia Analysis](snia.qmd) and is assumed below.
+
+## Combining Datasets
+
+A `Dataset` holds an arbitrary collection of data objects. Since the likelihood is a sum
+of $-2\ln L$ contributions, heterogeneous probes are combined simply by appending them to
+the same container. We join the Union2.1 supernova compilation with two BAO measurements,
+one at low redshift from the 6dF Galaxy Survey and one at $z \approx 1.5$ from BOSS
+quasars.
+
+```{python}
+import numpy as np
+import pandas as pd
+from plotnine import *
+
+from numcosmo_py import Nc, Ncm
+
+# Initialize the library
+Ncm.cfg_init()
+
+# Dark energy model with a constant equation of state.
+cosmo = Nc.HICosmoDEXcdm()
+
+# Change the parameterization and enforce spatial flatness, so that the dark
+# energy density follows from the closure relation instead of being fitted.
+cosmo.omega_x2omega_k()
+cosmo["Omegak"] = 0.0
+
+cosmo["H0"] = 70.0
+cosmo["Omegab"] = 0.05
+cosmo["Omegac"] = 0.25
+cosmo["Tgamma0"] = 2.72
+cosmo["w"] = -1.0
+
+mset = Ncm.MSet.new_array([cosmo])
+
+# Free parameters: the cold dark matter density and the equation of state.
+cosmo.props.Omegac_fit = True
+cosmo.props.w_fit = True
+mset.prepare_fparam_map()
+
+mset.pretty_log()
+```
+
+The distance object is shared by every probe, so the background is computed once and
+reused.
+
+```{python}
+dist = Nc.Distance(zf=2.5)
+
+dset = Ncm.Dataset.new_array(
+    [
+        Nc.DataDistMu.new_from_id(dist, Nc.DataSNIAId.SIMPLE_UNION2_1),
+        Nc.data_bao_create(dist, Nc.DataBaoId.RDV_BEUTLER2011),
+        Nc.data_bao_create(dist, Nc.DataBaoId.RDV_BOSS_QSO_ATA2017),
+    ]
+)
+
+lh = Ncm.Likelihood(dataset=dset)
+```
+
+::: {.callout-note}
+NumCosmo also provides BAO likelihoods given as tabulated $-2\ln p$ curves, such as
+`EMPIRICAL_FIT_ROSS2015`. These carry no Gaussian mean vector, so no Fisher matrix can be
+built from them. Since everything below relies on the Fisher matrix, the combination here
+is restricted to likelihoods with an explicit mean.
+:::
+
+## Fitting the Model
+
+We minimize $-2\ln L$ with the derivative-free Nelder--Mead algorithm from NLOPT and then
+compute the parameter covariance.
+
+```{python}
+fit = Ncm.Fit.factory(
+    Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD
+)
+
+fit.run(Ncm.FitRunMsgs.SIMPLE)
+fit.log_info()
+
+fit.fisher()
+fit.log_covar()
+```
+
+## Confidence Regions
+
+The `LHRatio2d` object maps out regions for a chosen pair of parameters. It requires a fit
+that has converged to its best fit and that already carries a covariance, which is why
+`Ncm.Fit.fisher` is called before it is constructed.
+
+```{python}
+lhr2d = Ncm.LHRatio2d.new(
+    fit,
+    mset.fparam_get_pi_by_name("Omegac"),
+    mset.fparam_get_pi_by_name("w"),
+    1.0e-3,
+)
+```
+
+Two methods are then available. `fisher_border` returns the ellipse implied by the
+covariance matrix, that is, the quadratic approximation to $-2\ln L$ around the minimum.
+`conf_region` instead traces the contour where the likelihood ratio reaches the threshold
+for the requested confidence level, evaluating the likelihood itself at every boundary
+point and assuming nothing about its shape.
+
+Two remarks on `conf_region`. When parameters other than the two being scanned are left
+free, it minimizes over them at each boundary point, so that the contour is a profile
+likelihood; in this example $\Omega_c$ and $w$ are the only free parameters, so no inner
+minimization is required and the calculation is correspondingly cheap. And for two
+parameters the $68.27\%$ level corresponds to $\Delta\chi^2 = 2.30$ rather than $1$, a
+conversion handled internally from the confidence level.
+
+```{python}
+levels = [
+    (Ncm.C.stats_1sigma(), r"1$\sigma$"),
+    (Ncm.C.stats_2sigma(), r"2$\sigma$"),
+    (Ncm.C.stats_3sigma(), r"3$\sigma$"),
+]
+
+lh_pd_list, expected_pd_list = [], []
+
+# Largest region first, so that the nested fills stack sensibly.
+for clevel, name in reversed(levels):
+    lh_rg = lhr2d.conf_region(clevel, 300.0, Ncm.FitRunMsgs.NONE)
+    fisher_rg = lhr2d.fisher_border(clevel, 300.0, Ncm.FitRunMsgs.NONE)
+
+    lh_pd_list.append(
+        pd.DataFrame(
+            {
+                "Omegac": np.array(lh_rg.p1.dup_array()),
+                "w": np.array(lh_rg.p2.dup_array()),
+                "sigma": name,
+            }
+        )
+    )
+    expected_pd_list.append(
+        pd.DataFrame(
+            {
+                "Omegac": np.array(fisher_rg.p1.dup_array()),
+                "w": np.array(fisher_rg.p2.dup_array()),
+                "sigma": name,
+                "information": "Expected",
+                "border": f"expected {name}",
+            }
+        )
+    )
+
+lh_pd = pd.concat(lh_pd_list)
+expected_pd = pd.concat(expected_pd_list)
+best_fit_pd = pd.DataFrame({"Omegac": [cosmo["Omegac"]], "w": [cosmo["w"]]})
+```
+
+```{python}
+# | label: fig-lhratio-vs-fisher
+# | fig-cap: Confidence regions in the $(\Omega_c, w)$ plane at 1, 2 and 3$\sigma$. Filled areas are the likelihood-ratio regions; the lines are the Gaussian (Fisher) approximation from the expected information, which is visibly too small.
+# | fig-cap-location: margin
+# | code-fold: true
+
+(
+    ggplot(lh_pd, aes("Omegac", "w", fill="sigma"))
+    + geom_polygon(alpha=0.30)
+    + geom_path(
+        data=expected_pd,
+        mapping=aes("Omegac", "w", group="border", linetype="information"),
+        inherit_aes=False,
+    )
+    + geom_point(
+        data=best_fit_pd, mapping=aes("Omegac", "w"), inherit_aes=False, size=3
+    )
+    + labs(x=r"$\Omega_c$", y=r"$w$", fill="Confidence", linetype="Method")
+    + doc_theme()
+)
+```
+
+The ellipses are clearly too small. Comparing the enclosed areas puts a number on it.
+
+```{python}
+def region_area(frame):
+    """Area enclosed by a closed contour, from the shoelace formula."""
+    x = frame["Omegac"].to_numpy()
+    y = frame["w"].to_numpy()
+    return 0.5 * abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
+
+
+for _, name in levels:
+    area_lh = region_area(lh_pd[lh_pd["sigma"] == name])
+    area_ex = region_area(expected_pd[expected_pd["sigma"] == name])
+    print(f"{name}: likelihood ratio / expected information = {area_lh / area_ex:.3f}")
+```
+
+## Expected and Observed Information
+
+The ratio is close to $1.8$ and, more tellingly, barely changes between $1\sigma$ and
+$3\sigma$. That rules out non-Gaussianity as the main cause: a quadratic approximation
+degrades as one moves away from the minimum, so a shape effect would grow with the
+confidence level rather than staying flat.
+
+The explanation lies in which information matrix `Ncm.Fit.fisher` computes. It returns the
+*expected* information, an average of the curvature of $-2\ln L$ over hypothetical
+realizations of the data drawn from the model. The likelihood-ratio contour, in contrast,
+responds to the *observed* information, the curvature of $-2\ln L$ at this particular best
+fit with these particular residuals. The two agree when the model is linear in its
+parameters, or when it describes the data perfectly, and otherwise they need not.
+
+`Ncm.Fit.obs_fisher` computes the observed version. It must be called only after every
+`LHRatio2d` calculation is finished, since it leaves the fit state without its best-fit
+flag. The corresponding ellipse is then built directly from the covariance matrix, using
+the fact that for two parameters the $\chi^2$ threshold inverts in closed form,
+$\Delta\chi^2 = -2\ln(1 - P)$.
+
+```{python}
+fit.obs_fisher()
+fit.log_covar()
+
+covar = fit.get_covar()
+covar_obs = np.array([[covar.get(i, j) for j in range(2)] for i in range(2)])
+
+centre_a = np.array([cosmo["Omegac"], cosmo["w"]])
+cholesky = np.linalg.cholesky(covar_obs)
+theta_a = np.linspace(0.0, 2.0 * np.pi, 300)
+unit_circle_a = np.vstack([np.cos(theta_a), np.sin(theta_a)])
+
+observed_pd_list = []
+for clevel, name in reversed(levels):
+    points_a = centre_a[:, None] + np.sqrt(-2.0 * np.log1p(-clevel)) * (
+        cholesky @ unit_circle_a
+    )
+    observed_pd_list.append(
+        pd.DataFrame(
+            {
+                "Omegac": points_a[0],
+                "w": points_a[1],
+                "sigma": name,
+                "information": "Observed",
+                "border": f"observed {name}",
+            }
+        )
+    )
+
+observed_pd = pd.concat(observed_pd_list)
+border_pd = pd.concat([expected_pd, observed_pd])
+```
+
+```{python}
+# | label: fig-confidence-regions
+# | fig-cap: Likelihood ratio regions (filled) with the ellipses built from the expected and from the observed information.
+# | fig-cap-location: margin
+# | code-fold: true
+
+(
+    ggplot(lh_pd, aes("Omegac", "w", fill="sigma"))
+    + geom_polygon(alpha=0.30)
+    + geom_path(
+        data=border_pd,
+        mapping=aes("Omegac", "w", group="border", linetype="information"),
+        inherit_aes=False,
+    )
+    + geom_point(
+        data=best_fit_pd, mapping=aes("Omegac", "w"), inherit_aes=False, size=3
+    )
+    + labs(x=r"$\Omega_c$", y=r"$w$", fill="Confidence", linetype="Information")
+    + doc_theme()
+)
+```
+
+The observed-information ellipses land almost on top of the likelihood-ratio regions.
+
+```{python}
+for _, name in levels:
+    area_lh = region_area(lh_pd[lh_pd["sigma"] == name])
+    area_ex = region_area(expected_pd[expected_pd["sigma"] == name])
+    area_ob = region_area(observed_pd[observed_pd["sigma"] == name])
+    print(
+        f"{name}: likelihood ratio / expected = {area_lh / area_ex:.3f}, "
+        f"likelihood ratio / observed = {area_lh / area_ob:.3f}"
+    )
+```
+
+This separates the two effects cleanly. The choice of information matrix accounts for a
+factor of roughly $1.8$ that is the same at every confidence level, while the
+non-Gaussianity of the likelihood accounts for the small remainder, which grows from
+under one per cent at $1\sigma$ to a few per cent at $3\sigma$ exactly as a failing
+quadratic approximation should. Practically, quoting errors from the expected information
+would understate the uncertainty on $w$ by about twenty per cent, for a reason unrelated
+to the shape of the likelihood.
+
+## Conclusion
+
+We combined supernova and BAO data into a single likelihood, fitted a flat dark energy
+model, and compared confidence regions obtained from the likelihood-ratio test with the
+Gaussian approximations built from the expected and from the observed information. All
+three are frequentist constructions describing the coverage of the region under repeated
+sampling, unlike the credible regions produced by the MCMC analysis at the end of
+[Supernova Type Ia Analysis](snia.qmd).
+
+Both the model and the data can be extended from here. Cosmic chronometer measurements of
+$H(z)$, available through `Nc.DataHubble`, constrain the expansion rate directly and pair
+naturally with treating $H_0$ as a free parameter; note that any additional free parameter
+turns each boundary point of `conf_region` into a minimization, which raises the cost of
+the calculation considerably.
