@@ -99,6 +99,7 @@ void test_nc_cluster_photoz_gauss_basic (void);
 void test_nc_xcor_basic (void);
 void test_nc_xcor_solver_basic (void);
 void test_nc_xcor_kernel_radial_kdep_growth_basic (void);
+void test_nc_xcor_kernel_table_basic (void);
 
 void test_nc_galaxy_position_factor_flat_basic (void);
 void test_nc_galaxy_redshift_factor_composed_basic (void);
@@ -191,6 +192,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/xcor/basic", test_nc_xcor_basic);
   g_test_add_func ("/nc/xcor/solver/basic", test_nc_xcor_solver_basic);
   g_test_add_func ("/nc/xcor/kernel_radial_kdep_growth/basic", test_nc_xcor_kernel_radial_kdep_growth_basic);
+  g_test_add_func ("/nc/xcor/kernel_table/basic", test_nc_xcor_kernel_table_basic);
 
   g_test_add_func ("/nc/galaxy/position_factor_flat/basic", test_nc_galaxy_position_factor_flat_basic);
   g_test_add_func ("/nc/galaxy/redshift_factor_composed/basic", test_nc_galaxy_redshift_factor_composed_basic);
@@ -1248,6 +1250,50 @@ test_nc_xcor_kernel_radial_kdep_growth_basic (void)
   g_assert_true (NC_IS_XCOR_KERNEL_RADIAL_KDEP (kdep));
 
   NCM_TEST_FREE (nc_xcor_kernel_radial_kdep_free, kdep);
+}
+
+void
+test_nc_xcor_kernel_table_basic (void)
+{
+  NcDistance *dist = nc_distance_new (5.0);
+  NcmPowspec *ps   = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS, NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  NcmVector *chi   = ncm_vector_new (64);
+  NcmVector *W     = ncm_vector_new (64);
+  NcXcorKernelTable *xckt;
+  NcXcorKernel *xclk, *xclk2;
+  guint i;
+
+  for (i = 0; i < 64; i++)
+  {
+    const gdouble chi_i = 1000.0 + 20.0 * i;
+    const gdouble t     = (chi_i - 1630.0) / 300.0;
+
+    ncm_vector_set (chi, i, chi_i);
+    ncm_vector_set (W, i, exp (-0.5 * t * t));
+  }
+
+  xckt = nc_xcor_kernel_table_new (dist, ps, chi, W);
+  xclk = NC_XCOR_KERNEL (xckt);
+
+  g_assert_true (xclk != NULL);
+  g_assert_true (NC_IS_XCOR_KERNEL_TABLE (xclk));
+  g_assert_true (NC_IS_XCOR_KERNEL_RADIAL (xclk));
+  g_assert_cmpuint (nc_xcor_kernel_table_get_order (xckt), ==, NCM_SPLINE_BSPLINE_DEFAULT_ORDER);
+  g_assert_cmpuint (nc_xcor_kernel_table_get_kind (xckt), ==, NC_XCOR_KERNEL_TABLE_KIND_DENSITY);
+  g_assert_true (nc_xcor_kernel_table_peek_spline (xckt) != NULL);
+  g_assert_true (nc_xcor_kernel_table_peek_knots (xckt) != NULL);
+  g_assert_true (gsl_finite (nc_xcor_kernel_table_get_norm (xckt)));
+
+  xclk2 = nc_xcor_kernel_ref (xclk);
+  nc_xcor_kernel_clear (&xclk2);
+  g_assert_true (xclk2 == NULL);
+
+  ncm_vector_free (chi);
+  ncm_vector_free (W);
+  ncm_powspec_free (ps);
+  nc_distance_free (dist);
+
+  NCM_TEST_FREE (nc_xcor_kernel_free, xclk);
 }
 
 void

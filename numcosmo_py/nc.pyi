@@ -25306,10 +25306,14 @@ class XcorKernelRadial(XcorKernel):
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     def do_eval_W_comp(self, comp: int, chi: float) -> float: ...
+    def do_eval_kernel_factor(self, cosmo: HICosmo, chi: float, k: float) -> float: ...
+    def do_eval_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
     def do_get_comp_support(self, comp: int) -> typing.Tuple[float, float]: ...
     def do_get_n_comps(self) -> int: ...
     def eval_W(self, chi: float) -> float: ...
     def eval_W_comp(self, comp: int, chi: float) -> float: ...
+    def eval_kernel_factor(self, cosmo: HICosmo, chi: float, k: float) -> float: ...
+    def eval_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
     def get_comp_support(self, comp: int) -> typing.Tuple[float, float]: ...
     def get_n_comps(self) -> int: ...
     def get_support(self) -> typing.Tuple[float, float]: ...
@@ -25330,6 +25334,10 @@ class XcorKernelRadialClass(GObject.GPointer):
     get_comp_support: typing.Callable[
         [XcorKernelRadial, int], typing.Tuple[float, float]
     ] = ...
+    eval_kernel_factor: typing.Callable[
+        [XcorKernelRadial, HICosmo, float, float], float
+    ] = ...
+    eval_prefactor: typing.Callable[[XcorKernelRadial, HICosmo, int], float] = ...
     padding: list[None] = ...
 
 class XcorKernelRadialKDep(GObject.Object):
@@ -25417,6 +25425,184 @@ class XcorKernelRadialKDepGrowthClass(GObject.GPointer):
     """
 
     parent_class: XcorKernelRadialKDepClass = ...
+
+class XcorKernelTable(XcorKernelRadial):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelTable(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi:NumCosmoMath.Vector, W:NumCosmoMath.Vector) -> NumCosmo.XcorKernelTable
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi:NumCosmoMath.Vector, W:NumCosmoMath.Vector, kind:NumCosmo.XcorKernelTableKind, order:int, normalize:bool, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelTable
+
+    Object NcXcorKernelTable
+
+    Properties from NcXcorKernelTable:
+      chi -> NcmVector: chi
+        Sample comoving distances in Mpc
+      W -> NcmVector: W
+        Window samples
+      kind -> NcXcorKernelTableKind: kind
+        Window kind
+      order -> guint: order
+        B-spline order of the reconstruction
+      normalize -> gboolean: normalize
+        Rescale to unit integral over the support
+
+    Properties from NcXcorKernelRadial:
+      scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        W: NumCosmoMath.Vector
+        chi: NumCosmoMath.Vector
+        kind: XcorKernelTableKind
+        normalize: bool
+        order: int
+        scale_dependence: XcorKernelRadialKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        panel_order_cap: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        track_fit_residual: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        W: NumCosmoMath.Vector = ...,
+        chi: NumCosmoMath.Vector = ...,
+        kind: XcorKernelTableKind = ...,
+        normalize: bool = ...,
+        order: int = ...,
+        scale_dependence: XcorKernelRadialKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        panel_order_cap: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_kind(self) -> XcorKernelTableKind: ...
+    def get_norm(self) -> float: ...
+    def get_normalize(self) -> bool: ...
+    def get_order(self) -> int: ...
+    @classmethod
+    def new(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi: NumCosmoMath.Vector,
+        W: NumCosmoMath.Vector,
+    ) -> XcorKernelTable: ...
+    @classmethod
+    def new_full(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi: NumCosmoMath.Vector,
+        W: NumCosmoMath.Vector,
+        kind: XcorKernelTableKind,
+        order: int,
+        normalize: bool,
+        sbi: NumCosmoMath.SBesselIntegrator,
+    ) -> XcorKernelTable: ...
+    def peek_knots(self) -> NumCosmoMath.Vector: ...
+    def peek_spline(self) -> NumCosmoMath.Spline: ...
+
+class XcorKernelTableClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelTableClass()
+    """
+
+    parent_class: XcorKernelRadialClass = ...
 
 class XcorKernelWeakLensing(XcorKernel):
     r"""
@@ -28098,6 +28284,21 @@ class XcorKernelImpl(GObject.GEnum):
     ADD_NOISE: XcorKernelImpl = ...
     EVAL_RADIAL_WEIGHT: XcorKernelImpl = ...
     PREPARE: XcorKernelImpl = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class XcorKernelTableKind(GObject.GEnum):
+    DENSITY: XcorKernelTableKind = ...
+    SHEAR: XcorKernelTableKind = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

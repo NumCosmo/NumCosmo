@@ -271,6 +271,7 @@
 #include "nc/xcor/nc_xcor_kernel_tSZ.h"
 #include "nc/xcor/nc_xcor_kernel_radial_kdep.h"
 #include "nc/xcor/nc_xcor_kernel_radial.h"
+#include "nc/xcor/nc_xcor_kernel_table.h"
 #include "nc/xcor/tests/nc_xcor_kernel_analytic_gauss.h"
 #include "nc/xcor/tests/nc_xcor_kernel_analytic_tophat.h"
 #include "nc/xcor/tests/nc_xcor_kernel_analytic_multi.h"
@@ -941,6 +942,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_RADIAL_KDEP);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_RADIAL_KDEP_GROWTH);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_RADIAL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_TABLE);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_TOPHAT);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_MULTI);
