@@ -233,4 +233,5 @@ libsundials = static_library(
     install: false,
     gnu_symbol_visibility: 'hidden',
     c_args: sundials_c_args,
+    override_options: ['b_coverage=false'],
 )
