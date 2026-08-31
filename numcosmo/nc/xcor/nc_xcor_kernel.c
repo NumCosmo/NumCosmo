@@ -477,11 +477,8 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * resolve oscillations that contribute negligibly to the integral.
    *
    * The useful precision is ultimately limited by the radial integration used to
-   * compute $W_i(k)$. This integral is evaluated to an absolute tolerance given by
-   * %NC_XCOR_KERNEL_INTEG_ABSTOL_FRAC times its running maximum. Where $\vert W\vert$
-   * is much smaller than its peak, its relative accuracy is therefore limited by the
-   * accuracy of the radial integral. Refining the spline beyond this level does not
-   * add reliable information.
+   * compute $W_i(k)$: far below its peak that integral is dominated by cancellation,
+   * so refining the spline beyond that level does not add reliable information.
    *
    * **Do not set this below $10^{-6}$.** The floor is measured against the peak of
    * $W_i(k)$, but the quantity actually integrated is $k^2 W_i W_j$, so the floor

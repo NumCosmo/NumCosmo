@@ -263,7 +263,10 @@ def test_view_kernel_integrator_reltol_reaches_the_computation(
 
     monkeypatch.setattr(view.KernelEvaluation, "evaluate", spy)
 
-    for reltol in ("1e-4", "1e-12"):
+    # 1e-8 rather than something tighter: the Levin RHS Chebyshev fit uses the
+    # relative criterion alone, and a request below the integrator's accuracy
+    # floor cannot converge, which is fatal at max-order.
+    for reltol in ("1e-4", "1e-8"):
         result = _view(
             "--integrator-reltol", reltol, "--integrator-cheb-reltol", reltol
         )
@@ -273,7 +276,7 @@ def test_view_kernel_integrator_reltol_reaches_the_computation(
     loose, tight = captured[0], captured[1]
     assert loose.shape == tight.shape
 
-    # Built at the requested tolerances the two runs differ by ~9e-5 here. Were
+    # Built at the requested tolerances the two runs differ by ~5e-5 here. Were
     # the tolerance applied after construction instead, both runs would compute
     # at the library default and agree to ~1e-9.
     assert np.abs(loose / tight - 1.0).max() > 1e-6

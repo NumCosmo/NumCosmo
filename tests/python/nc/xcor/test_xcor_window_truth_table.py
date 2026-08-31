@@ -51,10 +51,7 @@ from numcosmo_py import Nc, Ncm
 
 Ncm.cfg_init()
 
-# Pinned to one worker under --dist loadgroup: this file is one of the
-# xcor lane's memory peaks, and an xdist worker is its own session, so
-# without this its cost is paid once per worker rather than once.
-pytestmark = [pytest.mark.xcor, pytest.mark.xdist_group("window_truth")]
+pytestmark = pytest.mark.xcor
 
 TRUTH_TABLE = "truth_tables/xcor/xcor_window_ilk.json.gz"
 
@@ -70,11 +67,6 @@ RTOL = 1.0e-8
 # relative criterion is meaningless -- the grid reaches |I|/peak = 1e-70 -- so
 # this is what those entries are actually held to.
 ATOL_FRAC = 1.0e-11
-
-# The production rule, from nc_xcor_kernel.c: the caller knows the scale the
-# result feeds into, and without an absolute floor the Chebyshev fit refuses to
-# converge on the deep-tail entries and aborts on max-order.
-INTEG_ABSTOL_FRAC = 1.0e-16
 
 
 def _make_kernel(shape, dist, ps, sbi, ctor):
@@ -177,7 +169,6 @@ def test_radial_integral_matches_arb(
         peak = np.abs(expected).max()
 
         integrator = Ncm.SBesselIntegratorLevin.new(ell, ell)
-        integrator.set_abstol(INTEG_ABSTOL_FRAC * peak)
 
         got = np.array(
             [

@@ -59,15 +59,13 @@ from xcor import cases_k_integral as cases
 
 pytest_plugins = ["python.fixtures_xcor"]
 
-# xdist_group pins this whole file to one worker under --dist loadgroup.
-# The frozen fixture below caches up to 102 Frozen objects, each holding two
-# kernels, two closures and their references -- 3.5 GB by the end of the file.
-# That is per *worker*, since an xdist worker is its own session, so plain
-# --dist load builds one copy per worker and exhausts memory on a many-core
-# machine (measured: OOM at 12 workers, and every run at 24). Grouping costs
-# this file its internal parallelism and nothing else -- every other file still
-# distributes test by test.
-pytestmark = [pytest.mark.xcor, pytest.mark.xdist_group("k_integral")]
+# An xdist worker is its own session, so the frozen fixture's cache below is paid per
+# worker; FROZEN_CACHE_MAXSIZE is what bounds it. Before that cap existed the fixture
+# held every Frozen object it built -- 3.5 GB by the end of the file -- and exhausted
+# memory at 12 workers. This file was additionally pinned to a single worker at the same
+# time; measuring the two separately afterwards showed the cap alone is sufficient and
+# the pin cost 5.1x wall time (278 s vs 54 s across the lane) for no memory saving.
+pytestmark = pytest.mark.xcor
 
 CLOSURES = {
     "spline": Nc.XcorKernelClosure.SPLINE,
