@@ -59,15 +59,14 @@ if enable_gir and python_for_tests.found()
         required: false,
     )
     if py_xdist.found()
-        # worksteal: split the suite across workers up front, then let a worker
-        # that runs dry take work from one that has not. That keeps the tail
-        # short without pinning anything to a single worker. The xcor lane's
-        # heaviest file used to be pinned with xdist_group under loadgroup,
-        # because an xdist worker is its own session and its fixture cache is
-        # therefore paid per worker; bounding that cache is what actually fixed
-        # the memory, and measuring the two separately showed the pin cost 5.1x
-        # wall time (278 s vs 54 s for the lane) while saving no memory.
-        pytest_parallel_args = pytest_base_args + ['-n', 'auto', '--dist', 'worksteal']
+        # loadgroup, not the default load: tests marked with xdist_group go to
+        # one worker, everything else still distributes test by test. An xdist
+        # worker is its own session, so a module-scoped fixture is built once
+        # per *worker* -- for the xcor lane's heaviest files that is several GB
+        # replicated 12 or 24 times, which exhausted a 30 GB machine. Grouping
+        # those files costs them their internal parallelism and nothing else.
+        # Ungrouped tests behave exactly as under load.
+        pytest_parallel_args = pytest_base_args + ['-n', 'auto', '--dist', 'loadgroup']
     else
         pytest_parallel_args = pytest_base_args
     endif
