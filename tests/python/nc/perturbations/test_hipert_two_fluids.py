@@ -133,7 +133,7 @@ def test_compute_full_spectrum(
 
 def test_evolve_array(two_fluids: Nc.HIPertTwoFluids, cosmo_qgrw: Nc.HICosmo):
     """Test NcHIPertTwoFluids evolve_array."""
-    init_cond = Ncm.Vector.new_array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    init_cond = Ncm.Vector.new(8)
     two_fluids.props.reltol = 1.0e-9
 
     alpha_i = two_fluids.get_wkb_limit(cosmo_qgrw, 1, -90.0, 1.0e-8)
