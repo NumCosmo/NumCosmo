@@ -262,6 +262,41 @@ environment forward — locks never drift on their own.
 Local development environments are unaffected: `conda env create -f
 environment.yml` still solves normally (see [docs/install.qmd](docs/install.qmd)).
 
+## CI data-file cache
+
+Several data sets are not in the repository: the Planck baseline (`plc_3.0`),
+the SNIa covariance catalogs, the curated weak-lensing catalogs and the native
+Planck likelihood objects. NumCosmo downloads each one from a tagged GitHub
+release the first time it is asked for and keeps it in `~/.numcosmo`. That is
+about 470 MB, and without a cache every CI job fetches its share of it on every
+run.
+
+`.github/actions/data-cache` restores that directory — only the downloaded
+files, never the FFTW wisdom and FFTLog tables the library writes alongside
+them. Two things make an entry stale, and nothing else does:
+
+- **The release tag.** The key embeds the `datafile-release-vX.Y.Z` tag read
+  back out of the sources that name it, so bumping the tag there is enough.
+- **`DATA_CACHE_VERSION`** in `.github/workflows/build_check.yml`. Bump it for
+  anything the tag does not catch — most importantly a file replaced in place
+  under an unchanged tag, which the library would otherwise never re-download.
+
+There are no `restore-keys`: a partial match would hand back a file whose name
+is unchanged but whose contents the new release replaced, and the library only
+downloads what is missing, so the stale copy would never be corrected.
+
+One job per OS writes the entry (`build-gcc-ubuntu` and `build-gcc-macos`);
+every other job restores it. That writer runs
+`.github/scripts/prefetch_data.py` first, which fetches *every* asset rather
+than the ones its own tests happen to touch — the key is exact, so whatever the
+writer stored is what the rest of the matrix gets until the key changes. The
+script enumerates the assets from the enums that define them, so a catalog
+added to `NcDataSNIAId`, `NcGalaxyWLObsCatalogId` or `PlanckReleaseId` is
+picked up without editing it.
+
+A cold cache is not a failure: every job simply downloads what it needs, as it
+did before, and the next run is warm.
+
 ## Submitting contributions
 
 1. Fork the repository (skip if you are on the development team).
