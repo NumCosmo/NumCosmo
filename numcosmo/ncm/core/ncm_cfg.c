@@ -269,8 +269,8 @@
 #include "nc/xcor/nc_xcor_kernel_CMB_lensing.h"
 #include "nc/xcor/nc_xcor_kernel_weak_lensing.h"
 #include "nc/xcor/nc_xcor_kernel_tSZ.h"
-#include "nc/xcor/tests/nc_xcor_kernel_analytic_kdep.h"
-#include "nc/xcor/tests/nc_xcor_kernel_analytic.h"
+#include "nc/xcor/nc_xcor_kernel_radial_kdep.h"
+#include "nc/xcor/nc_xcor_kernel_radial.h"
 #include "nc/xcor/tests/nc_xcor_kernel_analytic_gauss.h"
 #include "nc/xcor/tests/nc_xcor_kernel_analytic_tophat.h"
 #include "nc/xcor/tests/nc_xcor_kernel_analytic_multi.h"
@@ -938,9 +938,9 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_XCOR_SSC_SIJ);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_COMPONENT);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_KDEP);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_KDEP_GROWTH);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_RADIAL_KDEP);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_RADIAL_KDEP_GROWTH);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_RADIAL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_TOPHAT);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_MULTI);

@@ -441,7 +441,7 @@ GX, GW = np.polynomial.legendre.leggauss(12)
 
 
 def _gauss_with_kdep(
-    cosmology: Cosmology, kdep: typing.Optional[Nc.XcorKernelAnalyticKDep]
+    cosmology: Cosmology, kdep: typing.Optional[Nc.XcorKernelRadialKDep]
 ) -> Nc.XcorKernelAnalyticGauss:
     """The baseline Gaussian, optionally carrying a scale dependence.
 
@@ -469,7 +469,7 @@ def _gauss_with_kdep(
     return kernel
 
 
-def _any_shape(cosmology: Cosmology, shape: str) -> Nc.XcorKernelAnalytic:
+def _any_shape(cosmology: Cosmology, shape: str) -> Nc.XcorKernelRadial:
     """Any shape by name, including the ones the C_ell cases do not cover."""
     if shape == "multi":
         return _multi(cosmology, MULTI_MEAN, MULTI_SIGMA)
@@ -480,7 +480,7 @@ def _any_shape(cosmology: Cosmology, shape: str) -> Nc.XcorKernelAnalytic:
     return _cl_kernel(cosmology, shape)
 
 
-def _cl_kernel(cosmology: Cosmology, shape: str) -> Nc.XcorKernelAnalytic:
+def _cl_kernel(cosmology: Cosmology, shape: str) -> Nc.XcorKernelRadial:
     """The kernel a C_ell case names."""
     builder = {
         "gauss": _gauss,
@@ -568,7 +568,7 @@ def _window(shape: str) -> typing.Callable[[np.ndarray], np.ndarray]:
 
 
 def _cl_reference(
-    kernel: Nc.XcorKernelAnalytic,
+    kernel: Nc.XcorKernelRadial,
     cosmology: Cosmology,
     shape: str,
     ell: int,
@@ -811,7 +811,7 @@ def test_multi_vanishes_in_the_gap(cosmology: Cosmology) -> None:
 def test_kdep_is_scale_free_below_the_transition() -> None:
     """Well below k_t the factor is one, so the kernel is unchanged there."""
     alpha, k_t, chi_ref = 0.3, 0.05, 1500.0
-    kdep = Nc.XcorKernelAnalyticKDepGrowth.new(alpha, k_t, chi_ref)
+    kdep = Nc.XcorKernelRadialKDepGrowth.new(alpha, k_t, chi_ref)
 
     chi = np.array([600.0, 1500.0, 2400.0])
     k = np.array([1.0e-4, 1.0e-2, 0.05, 1.0, 10.0])
@@ -841,9 +841,9 @@ def test_zero_amplitude_kdep_changes_nothing(cosmology: Cosmology) -> None:
     lmin, lmax = 2, 8
     out = {}
 
-    kdeps: list[tuple[str, typing.Optional[Nc.XcorKernelAnalyticKDep]]] = [
+    kdeps: list[tuple[str, typing.Optional[Nc.XcorKernelRadialKDep]]] = [
         ("none", None),
-        ("zero", Nc.XcorKernelAnalyticKDepGrowth.new(0.0, 0.05, 1500.0)),
+        ("zero", Nc.XcorKernelRadialKDepGrowth.new(0.0, 0.05, 1500.0)),
     ]
 
     for label, kdep in kdeps:
@@ -872,9 +872,9 @@ def test_kdep_makes_the_integrand_non_separable(cosmology: Cosmology) -> None:
     lmin, lmax = 2, 8
     out = {}
 
-    kdeps: list[tuple[str, typing.Optional[Nc.XcorKernelAnalyticKDep]]] = [
+    kdeps: list[tuple[str, typing.Optional[Nc.XcorKernelRadialKDep]]] = [
         ("off", None),
-        ("on", Nc.XcorKernelAnalyticKDepGrowth.new(0.3, 0.05, 3000.0)),
+        ("on", Nc.XcorKernelRadialKDepGrowth.new(0.3, 0.05, 3000.0)),
     ]
 
     for label, kdep in kdeps:
@@ -1105,7 +1105,7 @@ def test_kdep_reports_its_parameters() -> None:
     Through the accessors and through the GObject properties: serialization
     reads the latter, so the two have to agree.
     """
-    kdep = Nc.XcorKernelAnalyticKDepGrowth.new(0.3, 0.05, 1500.0)
+    kdep = Nc.XcorKernelRadialKDepGrowth.new(0.3, 0.05, 1500.0)
 
     assert (
         kdep.get_amplitude(),
@@ -1127,7 +1127,7 @@ def test_a_kernel_reports_the_scale_dependence_it_carries(cosmology: Cosmology) 
     evaluates to one are different states, and a reader of a stored kernel has
     to be able to tell them apart.
     """
-    kdep = Nc.XcorKernelAnalyticKDepGrowth.new(0.3, 0.05, 1500.0)
+    kdep = Nc.XcorKernelRadialKDepGrowth.new(0.3, 0.05, 1500.0)
 
     assert _gauss_with_kdep(cosmology, None).peek_kdep() is None
     assert _gauss_with_kdep(cosmology, kdep).peek_kdep() is not None

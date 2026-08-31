@@ -36,7 +36,7 @@
  * and zero outside. The discontinuities at the two edges are the point of the
  * shape: it is the piecewise stress case, where a solver that assumes a smooth
  * integrand has nothing to converge to and panel edges must fall on the
- * breakpoints. See #NcXcorKernelAnalytic for the unit and normalization
+ * breakpoints. See #NcXcorKernelRadial for the unit and normalization
  * conventions.
  *
  */
@@ -56,7 +56,7 @@
 struct _NcXcorKernelAnalyticTophat
 {
   /*< private >*/
-  NcXcorKernelAnalytic parent_instance;
+  NcXcorKernelRadial parent_instance;
 
   gdouble chi_lower;
   gdouble chi_upper;
@@ -70,7 +70,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcXcorKernelAnalyticTophat, nc_xcor_kernel_analytic_tophat, NC_TYPE_XCOR_KERNEL_ANALYTIC)
+G_DEFINE_TYPE (NcXcorKernelAnalyticTophat, nc_xcor_kernel_analytic_tophat, NC_TYPE_XCOR_KERNEL_RADIAL)
 
 static void
 nc_xcor_kernel_analytic_tophat_init (NcXcorKernelAnalyticTophat *xckat)
@@ -142,16 +142,16 @@ nc_xcor_kernel_analytic_tophat_finalize (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_analytic_tophat_parent_class)->finalize (object);
 }
 
-static guint _nc_xcor_kernel_analytic_tophat_get_n_comps (NcXcorKernelAnalytic *xcka);
-static gdouble _nc_xcor_kernel_analytic_tophat_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi);
-static void _nc_xcor_kernel_analytic_tophat_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
+static guint _nc_xcor_kernel_analytic_tophat_get_n_comps (NcXcorKernelRadial *xcka);
+static gdouble _nc_xcor_kernel_analytic_tophat_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi);
+static void _nc_xcor_kernel_analytic_tophat_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
 
 static void
 nc_xcor_kernel_analytic_tophat_class_init (NcXcorKernelAnalyticTophatClass *klass)
 {
-  GObjectClass *object_class              = G_OBJECT_CLASS (klass);
-  NcmModelClass *model_class              = NCM_MODEL_CLASS (klass);
-  NcXcorKernelAnalyticClass *parent_class = NC_XCOR_KERNEL_ANALYTIC_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class            = NCM_MODEL_CLASS (klass);
+  NcXcorKernelRadialClass *parent_class = NC_XCOR_KERNEL_RADIAL_CLASS (klass);
 
   object_class->constructed = &nc_xcor_kernel_analytic_tophat_constructed;
   object_class->finalize    = &nc_xcor_kernel_analytic_tophat_finalize;
@@ -275,13 +275,13 @@ nc_xcor_kernel_analytic_tophat_get_chi_upper (NcXcorKernelAnalyticTophat *xckat)
 }
 
 static guint
-_nc_xcor_kernel_analytic_tophat_get_n_comps (NcXcorKernelAnalytic *xcka)
+_nc_xcor_kernel_analytic_tophat_get_n_comps (NcXcorKernelRadial *xcka)
 {
   return 1;
 }
 
 static gdouble
-_nc_xcor_kernel_analytic_tophat_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi)
+_nc_xcor_kernel_analytic_tophat_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi)
 {
   NcXcorKernelAnalyticTophat *xckat = NC_XCOR_KERNEL_ANALYTIC_TOPHAT (xcka);
 
@@ -292,7 +292,7 @@ _nc_xcor_kernel_analytic_tophat_eval_W_comp (NcXcorKernelAnalytic *xcka, guint c
 }
 
 static void
-_nc_xcor_kernel_analytic_tophat_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
+_nc_xcor_kernel_analytic_tophat_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
 {
   NcXcorKernelAnalyticTophat *xckat = NC_XCOR_KERNEL_ANALYTIC_TOPHAT (xcka);
 

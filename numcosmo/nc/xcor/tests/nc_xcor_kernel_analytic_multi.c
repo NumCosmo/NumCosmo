@@ -42,7 +42,7 @@
  * form **one** component spanning their union, and a bump whose interval
  * touches no other is a component on its own. A component is then integrated
  * over exactly its own interval, so every boundary of the window is a boundary
- * of an integration domain -- see #NcXcorKernelAnalytic.
+ * of an integration domain -- see #NcXcorKernelRadial.
  *
  * The grouping is by support, not by peak. Bumps that merge into one
  * continuous stretch stay together and each is evaluated across the whole
@@ -81,7 +81,7 @@ typedef struct _NcXcorKernelAnalyticMultiComp
 struct _NcXcorKernelAnalyticMulti
 {
   /*< private >*/
-  NcXcorKernelAnalytic parent_instance;
+  NcXcorKernelRadial parent_instance;
 
   NcmVector *chi_mean;
   NcmVector *chi_sigma;
@@ -91,7 +91,7 @@ struct _NcXcorKernelAnalyticMulti
   /* Bumps sorted by the lower end of their support, and the components they
    * group into. */
   GArray *order;
-  NcXcorKernelAnalyticMultiComp comps[NC_XCOR_KERNEL_ANALYTIC_MAX_COMPS];
+  NcXcorKernelAnalyticMultiComp comps[NC_XCOR_KERNEL_RADIAL_MAX_COMPS];
   guint n_comps;
   gdouble norm;
 };
@@ -106,7 +106,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcXcorKernelAnalyticMulti, nc_xcor_kernel_analytic_multi, NC_TYPE_XCOR_KERNEL_ANALYTIC)
+G_DEFINE_TYPE (NcXcorKernelAnalyticMulti, nc_xcor_kernel_analytic_multi, NC_TYPE_XCOR_KERNEL_RADIAL)
 
 static void
 nc_xcor_kernel_analytic_multi_init (NcXcorKernelAnalyticMulti *xckam)
@@ -249,11 +249,11 @@ _nc_xcor_kernel_analytic_multi_build_comps (NcXcorKernelAnalyticMulti *xckam)
     }
     else
     {
-      if (xckam->n_comps == NC_XCOR_KERNEL_ANALYTIC_MAX_COMPS)
+      if (xckam->n_comps == NC_XCOR_KERNEL_RADIAL_MAX_COMPS)
         g_error ("nc_xcor_kernel_analytic_multi: the bumps fall into more than %d disjoint "
                  "groups, which is more components than a kernel carries. Widen n-sigma, "
                  "move the bumps closer, or use fewer of them.",
-                 NC_XCOR_KERNEL_ANALYTIC_MAX_COMPS);
+                 NC_XCOR_KERNEL_RADIAL_MAX_COMPS);
 
       xckam->comps[xckam->n_comps].chi_min = lo;
       xckam->comps[xckam->n_comps].chi_max = hi;
@@ -333,16 +333,16 @@ nc_xcor_kernel_analytic_multi_finalize (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_analytic_multi_parent_class)->finalize (object);
 }
 
-static guint _nc_xcor_kernel_analytic_multi_get_n_comps (NcXcorKernelAnalytic *xcka);
-static gdouble _nc_xcor_kernel_analytic_multi_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi);
-static void _nc_xcor_kernel_analytic_multi_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
+static guint _nc_xcor_kernel_analytic_multi_get_n_comps (NcXcorKernelRadial *xcka);
+static gdouble _nc_xcor_kernel_analytic_multi_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi);
+static void _nc_xcor_kernel_analytic_multi_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
 
 static void
 nc_xcor_kernel_analytic_multi_class_init (NcXcorKernelAnalyticMultiClass *klass)
 {
-  GObjectClass *object_class              = G_OBJECT_CLASS (klass);
-  NcmModelClass *model_class              = NCM_MODEL_CLASS (klass);
-  NcXcorKernelAnalyticClass *parent_class = NC_XCOR_KERNEL_ANALYTIC_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class            = NCM_MODEL_CLASS (klass);
+  NcXcorKernelRadialClass *parent_class = NC_XCOR_KERNEL_RADIAL_CLASS (klass);
 
   object_class->constructed = &nc_xcor_kernel_analytic_multi_constructed;
   object_class->dispose     = &nc_xcor_kernel_analytic_multi_dispose;
@@ -544,13 +544,13 @@ nc_xcor_kernel_analytic_multi_peek_weight (NcXcorKernelAnalyticMulti *xckam)
 }
 
 static guint
-_nc_xcor_kernel_analytic_multi_get_n_comps (NcXcorKernelAnalytic *xcka)
+_nc_xcor_kernel_analytic_multi_get_n_comps (NcXcorKernelRadial *xcka)
 {
   return NC_XCOR_KERNEL_ANALYTIC_MULTI (xcka)->n_comps;
 }
 
 static gdouble
-_nc_xcor_kernel_analytic_multi_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi)
+_nc_xcor_kernel_analytic_multi_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi)
 {
   NcXcorKernelAnalyticMulti *xckam           = NC_XCOR_KERNEL_ANALYTIC_MULTI (xcka);
   const NcXcorKernelAnalyticMultiComp *cinfo = &xckam->comps[comp];
@@ -577,7 +577,7 @@ _nc_xcor_kernel_analytic_multi_eval_W_comp (NcXcorKernelAnalytic *xcka, guint co
 }
 
 static void
-_nc_xcor_kernel_analytic_multi_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
+_nc_xcor_kernel_analytic_multi_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
 {
   NcXcorKernelAnalyticMulti *xckam = NC_XCOR_KERNEL_ANALYTIC_MULTI (xcka);
 

@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_xcor_kernel_analytic.h
+ *            nc_xcor_kernel_radial.h
  *
  *  Thu August 21 12:00:00 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
@@ -23,53 +23,53 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_XCOR_KERNEL_ANALYTIC_H_
-#define _NC_XCOR_KERNEL_ANALYTIC_H_
+#ifndef _NC_XCOR_KERNEL_RADIAL_H_
+#define _NC_XCOR_KERNEL_RADIAL_H_
 
 #include <glib-object.h>
 #include <glib.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel.h>
-#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_kdep.h>
+#include <numcosmo/nc/xcor/nc_xcor_kernel_radial_kdep.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_XCOR_KERNEL_ANALYTIC (nc_xcor_kernel_analytic_get_type ())
+#define NC_TYPE_XCOR_KERNEL_RADIAL (nc_xcor_kernel_radial_get_type ())
 
-G_DECLARE_DERIVABLE_TYPE (NcXcorKernelAnalytic, nc_xcor_kernel_analytic, NC, XCOR_KERNEL_ANALYTIC, NcXcorKernel)
+G_DECLARE_DERIVABLE_TYPE (NcXcorKernelRadial, nc_xcor_kernel_radial, NC, XCOR_KERNEL_RADIAL, NcXcorKernel)
 
 /**
- * NC_XCOR_KERNEL_ANALYTIC_MAX_COMPS:
+ * NC_XCOR_KERNEL_RADIAL_MAX_COMPS:
  *
- * Largest number of components a #NcXcorKernelAnalytic may declare. Each becomes
+ * Largest number of components a #NcXcorKernelRadial may declare. Each becomes
  * one #NcXcorKernelComponent, and #NcXcorKernel integrates at most six of those
  * in a single multipole block.
  */
-#define NC_XCOR_KERNEL_ANALYTIC_MAX_COMPS 6
+#define NC_XCOR_KERNEL_RADIAL_MAX_COMPS 6
 
-struct _NcXcorKernelAnalyticClass
+struct _NcXcorKernelRadialClass
 {
   /*< private >*/
   NcXcorKernelClass parent_class;
 
-  guint (*get_n_comps) (NcXcorKernelAnalytic *xcka);
-  gdouble (*eval_W_comp) (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi);
-  void (*get_comp_support) (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
+  guint (*get_n_comps) (NcXcorKernelRadial *xcka);
+  gdouble (*eval_W_comp) (NcXcorKernelRadial *xcka, guint comp, gdouble chi);
+  void (*get_comp_support) (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[15];
 };
 
-guint nc_xcor_kernel_analytic_get_n_comps (NcXcorKernelAnalytic *xcka);
-gdouble nc_xcor_kernel_analytic_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi);
-void nc_xcor_kernel_analytic_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
+guint nc_xcor_kernel_radial_get_n_comps (NcXcorKernelRadial *xcka);
+gdouble nc_xcor_kernel_radial_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi);
+void nc_xcor_kernel_radial_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
 
-NcXcorKernelAnalyticKDep *nc_xcor_kernel_analytic_peek_kdep (NcXcorKernelAnalytic *xcka);
+NcXcorKernelRadialKDep *nc_xcor_kernel_radial_peek_kdep (NcXcorKernelRadial *xcka);
 
-gdouble nc_xcor_kernel_analytic_eval_W (NcXcorKernelAnalytic *xcka, gdouble chi);
-void nc_xcor_kernel_analytic_get_support (NcXcorKernelAnalytic *xcka, gdouble *chi_min, gdouble *chi_max);
+gdouble nc_xcor_kernel_radial_eval_W (NcXcorKernelRadial *xcka, gdouble chi);
+void nc_xcor_kernel_radial_get_support (NcXcorKernelRadial *xcka, gdouble *chi_min, gdouble *chi_max);
 
 G_END_DECLS
 
-#endif /* _NC_XCOR_KERNEL_ANALYTIC_H_ */
+#endif /* _NC_XCOR_KERNEL_RADIAL_H_ */
 

@@ -252,8 +252,8 @@
 #include <numcosmo/nc/xcor/nc_xcor_lensing_efficiency.h>
 #include <numcosmo/nc/xcor/nc_xcor_solver.h>
 #include <numcosmo/nc/xcor/nc_xcor_ssc_sij.h>
-#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_kdep.h>
-#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic.h>
+#include <numcosmo/nc/xcor/nc_xcor_kernel_radial_kdep.h>
+#include <numcosmo/nc/xcor/nc_xcor_kernel_radial.h>
 #include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_gauss.h>
 #include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_tophat.h>
 #include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_multi.h>
