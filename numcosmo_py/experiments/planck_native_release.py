@@ -139,12 +139,18 @@ def _ensure_downloaded(rid: PlanckReleaseId, cache_dir: str | None = None) -> st
     if not os.path.exists(path):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         url = f"{RELEASE_URL}/{release_filename(rid)}"
+        # Fetched under a private name and published by rename, so a reader
+        # never sees a partial file and an interrupted fetch leaves nothing
+        # that a later run would take for a complete download. The name carries
+        # the pid: several processes may fetch the same id at once.
+        tmp = f"{path}.{os.getpid()}.part"
         try:
             print(f"# Downloading file [{url}]...", flush=True)
-            urllib.request.urlretrieve(url, path)  # nosec B310 - fixed https host
+            urllib.request.urlretrieve(url, tmp)  # nosec B310 - fixed https host
+            os.replace(tmp, path)
         except Exception as exc:  # pylint: disable=broad-except
-            if os.path.exists(path):
-                os.remove(path)
+            if os.path.exists(tmp):
+                os.remove(tmp)
             raise RuntimeError(
                 f"cannot download {url}: {exc}. Download it manually to {path}, "
                 f"or rebuild the release with build_release()."
