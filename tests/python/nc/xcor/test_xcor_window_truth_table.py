@@ -51,10 +51,7 @@ from numcosmo_py import Nc, Ncm
 
 Ncm.cfg_init()
 
-# Pinned to one worker under --dist loadgroup: this file is one of the
-# xcor lane's memory peaks, and an xdist worker is its own session, so
-# without this its cost is paid once per worker rather than once.
-pytestmark = [pytest.mark.xcor, pytest.mark.xdist_group("window_truth")]
+pytestmark = pytest.mark.xcor
 
 TRUTH_TABLE = "truth_tables/xcor/xcor_window_ilk.json.gz"
 
