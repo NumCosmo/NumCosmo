@@ -665,6 +665,8 @@ nc_hipert_two_fluids_wkb (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alph
 void
 nc_hipert_two_fluids_get_init_cond_QP (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, guint main_mode, const gdouble beta_R, NcmVector *init_cond)
 {
+  g_return_if_fail (ncm_vector_len (init_cond) == NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+
   NcHIPert *pert             = NC_HIPERT (ptf);
   NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, nc_hipert_get_mode_k (pert));
   const gdouble beta_I       = beta_R + 0.5 * M_PI;
@@ -756,6 +758,8 @@ nc_hipert_two_fluids_get_init_cond_QP (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo,
 void
 nc_hipert_two_fluids_get_init_cond_zetaS (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, guint main_mode, const gdouble beta_R, NcmVector *init_cond)
 {
+  g_return_if_fail (ncm_vector_len (init_cond) == NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+
   NcHIPert *pert                = NC_HIPERT (ptf);
   NcHIPertITwoFluidsWKB *tf_wkb = nc_hipert_itwo_fluids_wkb_eval (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, nc_hipert_get_mode_k (pert));
 
@@ -1106,6 +1110,8 @@ _nc_hipert_two_fluids_J_QP (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatri
 void
 nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, guint main_mode, gboolean useQP, NcmVector *init_cond)
 {
+  g_return_if_fail (ncm_vector_len (init_cond) == NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+
   NcHIPertTwoFluidsPrivate * const self = ptf->priv;
   NcHIPert *pert                        = NC_HIPERT (ptf);
   NcHIPertPrivate * const pself         = nc_hipert_get_private (pert);
