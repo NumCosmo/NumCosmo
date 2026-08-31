@@ -1267,8 +1267,42 @@ ncm_model_clear (NcmModel **model)
 }
 
 /*
- * A copy of @reparam sized for a model of @length parameters, or %NULL if its
- * descriptors do not fit there.
+ * The type of a property @reparam declares beyond NcmReparam's own, or %NULL
+ * if it declares none.
+ *
+ * Rebuilding a reparametrization carries over length, params-desc and
+ * compat-type. That is the whole of a NcmReparam, but not of a subclass that
+ * adds state: NcmReparamLinear's matrix and vector are sized to the old
+ * length, and a rebuild would leave them unset. Such a subclass cannot be
+ * resized here, whatever its descriptors say.
+ */
+static const gchar *
+_ncm_model_reparam_extra_state (NcmReparam *reparam)
+{
+  GParamSpec **pspecs = NULL;
+  const gchar *extra  = NULL;
+  guint n             = 0;
+  guint i;
+
+  pspecs = g_object_class_list_properties (G_OBJECT_GET_CLASS (reparam), &n);
+
+  for (i = 0; i < n; i++)
+  {
+    if (!g_type_is_a (NCM_TYPE_REPARAM, pspecs[i]->owner_type))
+    {
+      extra = g_param_spec_get_name (pspecs[i]);
+      break;
+    }
+  }
+
+  g_free (pspecs);
+
+  return extra;
+}
+
+/*
+ * A copy of @reparam sized for a model of @length parameters, or %NULL if it
+ * cannot be rebuilt there -- in which case @reason says why.
  *
  * A NcmReparam stores no parameter *values*: length, params-desc and
  * compat-type are all it carries, and the working vector is allocated empty at
@@ -1277,10 +1311,18 @@ ncm_model_clear (NcmModel **model)
  * construct-only, agreeing with the model means a new instance.
  */
 static NcmReparam *
-_ncm_model_reparam_resize (NcmReparam *reparam, guint length)
+_ncm_model_reparam_resize (NcmReparam *reparam, guint length, gchar **reason)
 {
   NcmObjDictInt *desc = NULL;
+  const gchar *extra  = _ncm_model_reparam_extra_state (reparam);
   NcmReparam *out;
+
+  if (extra != NULL)
+  {
+    *reason = g_strdup_printf ("it carries state of its own (property `%s') that no rebuild can size", extra);
+
+    return NULL;
+  }
 
   g_object_get (reparam, "params-desc", &desc, NULL);
 
@@ -1295,6 +1337,8 @@ _ncm_model_reparam_resize (NcmReparam *reparam, guint length)
 
       if ((key < 0) || ((guint) key >= length))
       {
+        *reason = g_strdup_printf ("it reparametrizes parameter %d, which no longer exists", key);
+
         g_array_unref (keys);
         ncm_obj_dict_int_unref (desc);
 
@@ -1333,6 +1377,7 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
 {
   NcmModelPrivate * const self = ncm_model_get_instance_private (model);
   NcmReparam *resized          = NULL;
+  gchar *reason                = NULL;
 
   g_return_if_fail (error == NULL || *error == NULL);
 
@@ -1355,15 +1400,17 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
      * long. Adopting it regardless aborted inside ncm_vector_memcpy(). */
     if (ncm_reparam_get_length (reparam) != ncm_model_len (model))
     {
-      resized = _ncm_model_reparam_resize (reparam, ncm_model_len (model));
+      resized = _ncm_model_reparam_resize (reparam, ncm_model_len (model), &reason);
 
       if (resized == NULL)
       {
         ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE,
                                     "ncm_model_set_reparam: reparametrization `%s' is for %u parameters "
-                                    "but model `%s' has %u, and it reparametrizes one that no longer exists.",
+                                    "but model `%s' has %u, and %s.",
                                     g_type_name (G_OBJECT_TYPE (reparam)), ncm_reparam_get_length (reparam),
-                                    g_type_name (G_OBJECT_TYPE (model)), ncm_model_len (model));
+                                    g_type_name (G_OBJECT_TYPE (model)), ncm_model_len (model), reason);
+
+        g_free (reason);
 
         return;
       }
