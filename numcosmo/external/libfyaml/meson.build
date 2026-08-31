@@ -117,5 +117,5 @@ libfyaml = static_library(
     # atomics header and use of DBL_DECIMAL_DIG depend on C11-or-later
     # features. Pinned explicitly so it keeps building C17 regardless of
     # NumCosmo's own project-wide c_std default.
-    override_options: ['c_std=gnu17'],
+    override_options: ['c_std=gnu17', 'b_coverage=false'],
 )
