@@ -52,6 +52,7 @@
 #include "nc/lss/halo/nc_halo_density_profile.h"
 #include "nc/lss/halo/nc_halo_position.h"
 #include "nc/lss/wl/nc_wl_surface_mass_density.h"
+#include "nc/data/nc_data_download_priv.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_serialize.h"
 
@@ -311,20 +312,18 @@ nc_galaxy_wl_obs_catalog_id_get_filename (NcGalaxyWLObsCatalogId id)
 
     if (!g_file_test (full_filename, G_FILE_TEST_EXISTS))
     {
-      gchar *url_str   = g_strdup_printf ("https://github.com/NumCosmo/NumCosmo/releases/download/datafile-release-v1.0.0/%s", filename);
-      const gchar *dir = ncm_cfg_get_fullpath_base ();
-      gchar *cmd[]     = {"wget", "--tries=3", "--timeout=30", "-O", full_filename, url_str, NULL };
-      GError *error    = NULL;
+      gchar *url_str = g_strdup_printf ("https://github.com/NumCosmo/NumCosmo/releases/download/datafile-release-v1.0.0/%s", filename);
+      gchar *lockdir = NULL;
 
-      ncm_message ("# Downloading file [%s]...\n", url_str);
-
-      if (!g_spawn_sync (dir, cmd, NULL,
-                         G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
-                         NULL, NULL, NULL, NULL, NULL, &error))
-        g_error ("nc_galaxy_wl_obs_catalog_id_get_filename: cannot download file: %s. Error: %s. "
-                 "Please download the file manually from %s and extract it to %s.",
-                 filename, error->message,
-                 url_str, dir);
+      /* Serialize with any other process fetching the same catalog, and let it
+       * publish by rename: writing straight to full_filename let a concurrent
+       * reader open a half-written catalog, and an interrupted fetch left a
+       * truncated one that every later run took for complete. */
+      if (_nc_data_download_lock (full_filename, full_filename, 900, &lockdir))
+      {
+        _nc_data_download_file (url_str, full_filename, filename);
+        _nc_data_download_unlock (lockdir);
+      }
 
       g_free (url_str);
     }
