@@ -3263,6 +3263,14 @@
     "nick": "prepare",
     "type": "Nc.XcorKernelImpl"
   },
+  "NC_XCOR_KERNEL_TABLE_KIND_DENSITY": {
+    "nick": "density",
+    "type": "Nc.XcorKernelTableKind"
+  },
+  "NC_XCOR_KERNEL_TABLE_KIND_SHEAR": {
+    "nick": "shear",
+    "type": "Nc.XcorKernelTableKind"
+  },
   "NC_XCOR_KERNEL_TSZ_SPARAM_LEN": {
     "nick": "len",
     "type": "Nc.XcorKerneltSZSParams"

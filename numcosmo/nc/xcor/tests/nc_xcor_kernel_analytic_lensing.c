@@ -49,7 +49,7 @@
  *
  * The geometric efficiency alone is used; the $(1+z)$ and prefactor a physical
  * convergence kernel carries are evolution, and by the convention of
- * #NcXcorKernelAnalytic all evolution belongs in the window's definition
+ * #NcXcorKernelRadial all evolution belongs in the window's definition
  * rather than being applied on top of it.
  *
  */
@@ -70,7 +70,7 @@
 struct _NcXcorKernelAnalyticLensing
 {
   /*< private >*/
-  NcXcorKernelAnalytic parent_instance;
+  NcXcorKernelRadial parent_instance;
 
   gdouble chi_lower;
   gdouble chi_source_lower;
@@ -88,7 +88,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcXcorKernelAnalyticLensing, nc_xcor_kernel_analytic_lensing, NC_TYPE_XCOR_KERNEL_ANALYTIC)
+G_DEFINE_TYPE (NcXcorKernelAnalyticLensing, nc_xcor_kernel_analytic_lensing, NC_TYPE_XCOR_KERNEL_RADIAL)
 
 static void
 nc_xcor_kernel_analytic_lensing_init (NcXcorKernelAnalyticLensing *xckal)
@@ -254,16 +254,16 @@ nc_xcor_kernel_analytic_lensing_finalize (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_analytic_lensing_parent_class)->finalize (object);
 }
 
-static guint _nc_xcor_kernel_analytic_lensing_get_n_comps (NcXcorKernelAnalytic *xcka);
-static gdouble _nc_xcor_kernel_analytic_lensing_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi);
-static void _nc_xcor_kernel_analytic_lensing_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
+static guint _nc_xcor_kernel_analytic_lensing_get_n_comps (NcXcorKernelRadial *xcka);
+static gdouble _nc_xcor_kernel_analytic_lensing_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi);
+static void _nc_xcor_kernel_analytic_lensing_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
 
 static void
 nc_xcor_kernel_analytic_lensing_class_init (NcXcorKernelAnalyticLensingClass *klass)
 {
-  GObjectClass *object_class              = G_OBJECT_CLASS (klass);
-  NcmModelClass *model_class              = NCM_MODEL_CLASS (klass);
-  NcXcorKernelAnalyticClass *parent_class = NC_XCOR_KERNEL_ANALYTIC_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class            = NCM_MODEL_CLASS (klass);
+  NcXcorKernelRadialClass *parent_class = NC_XCOR_KERNEL_RADIAL_CLASS (klass);
 
   object_class->constructed = &nc_xcor_kernel_analytic_lensing_constructed;
   object_class->finalize    = &nc_xcor_kernel_analytic_lensing_finalize;
@@ -406,7 +406,7 @@ nc_xcor_kernel_analytic_lensing_get_chi_source_upper (NcXcorKernelAnalyticLensin
 }
 
 static guint
-_nc_xcor_kernel_analytic_lensing_get_n_comps (NcXcorKernelAnalytic *xcka)
+_nc_xcor_kernel_analytic_lensing_get_n_comps (NcXcorKernelRadial *xcka)
 {
   /* One per branch of _lensing_shape (). The branches meet at chi_source_lower
    * with a kink, and a Chebyshev fit spanning it converges algebraically: over
@@ -416,7 +416,7 @@ _nc_xcor_kernel_analytic_lensing_get_n_comps (NcXcorKernelAnalytic *xcka)
 }
 
 static gdouble
-_nc_xcor_kernel_analytic_lensing_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi)
+_nc_xcor_kernel_analytic_lensing_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi)
 {
   NcXcorKernelAnalyticLensing *xckal = NC_XCOR_KERNEL_ANALYTIC_LENSING (xcka);
   gdouble chi_min, chi_max;
@@ -430,7 +430,7 @@ _nc_xcor_kernel_analytic_lensing_eval_W_comp (NcXcorKernelAnalytic *xcka, guint 
 }
 
 static void
-_nc_xcor_kernel_analytic_lensing_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
+_nc_xcor_kernel_analytic_lensing_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
 {
   NcXcorKernelAnalyticLensing *xckal = NC_XCOR_KERNEL_ANALYTIC_LENSING (xcka);
 

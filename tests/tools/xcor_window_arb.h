@@ -110,7 +110,7 @@ typedef struct
   double mu[MAX_BUMPS], sg[MAX_BUMPS], wt[MAX_BUMPS];
 
   /* Scale-dependent growth, off unless kdep_on. Matches
-   * _nc_xcor_kernel_analytic_kdep_growth_eval(). */
+   * _nc_xcor_kernel_radial_kdep_growth_eval(). */
   int kdep_on;
   double kdep_amplitude, kdep_k_transition, kdep_chi_ref;
 
