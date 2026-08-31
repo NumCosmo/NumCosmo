@@ -1144,6 +1144,11 @@ def test_limber_z_is_the_window_in_hubble_radius_units(
     shared domain for the whole kernel, unlike the non-Limber path: the gap of
     a disjoint multimodal window is zero there only if each component refuses
     to contribute outside its own interval, so that shape is included.
+
+    It carries one factor beyond the window. This class puts the growth in W and
+    pairs it with P(k, 0), while the Limber integrand multiplies the two kernels
+    by P(k, z); each kernel therefore returns sqrt(P(k,0)/P(k,z)) so the product
+    restores P(k, 0). The factor is 1 for a power spectrum without growth.
     """
     if shape == "multi_disjoint":
         kernel = _multi(cosmology, MULTI_DISJOINT_MEAN, MULTI_DISJOINT_SIGMA)
@@ -1154,11 +1159,15 @@ def test_limber_z_is_the_window_in_hubble_radius_units(
     rh = cosmo.RH_Mpc()
     zmin, zmax, _ = kernel.get_z_range()
 
+    ps = kernel.peek_powspec()
+
     for z in np.linspace(zmin, zmax, 16):
         chi = cosmology.dist.comoving(cosmo, z) * rh
         got = kernel.eval_limber_z_full(cosmo, z, cosmology.dist, 8)
+        k = (8 + 0.5) / chi
+        growth = np.sqrt(ps.eval(cosmo, 0.0, k) / ps.eval(cosmo, z, k))
 
-        assert_allclose(got, rh * kernel.eval_W(chi), rtol=1.0e-12)
+        assert_allclose(got, rh * kernel.eval_W(chi) * growth, rtol=1.0e-12)
 
     assert kernel.eval_limber_z_prefactor(cosmo, 8) == 1.0
 
@@ -1180,3 +1189,47 @@ def test_an_analytic_kernel_is_a_window_not_a_survey(cosmology: Cosmology) -> No
     kernel.add_noise(Ncm.Vector.new_array(cl), cl_noisy, 0)
 
     assert_allclose(cl_noisy.dup_array(), cl)
+
+
+def test_limber_agrees_with_non_limber_at_high_ell():
+    """The two branches must describe the same kernel.
+
+    NcXcorKernelRadial carries the growth in W and pairs it with P(k, 0), while
+    the Limber integrand multiplies the two kernels by P(k, z). Getting that
+    wrong is invisible to self-convergence and to any comparison at fixed
+    method: it is an ell-independent factor, so it reads as a normalization.
+    Limber is an excellent approximation at these ell, so requiring the branches
+    to agree is what pins it.
+    """
+    cosmo = Nc.HICosmoDEXcdm.new()
+    dist = Nc.Distance.new(5.0)
+    dist.prepare(cosmo)
+
+    for growth in (Ncm.PowspecAnalyticGrowth.LCDM, Ncm.PowspecAnalyticGrowth.NONE):
+        ps = Ncm.PowspecAnalytic.new(Ncm.PowspecAnalyticShape.BBKS, growth)
+
+        for ell in (100, 200):
+            # One integrator per multipole: new_full(lmin, lmax) allocates over
+            # the whole contiguous range.
+            sbi = Ncm.SBesselIntegratorLevin.new(ell, ell)
+            k_nl = Nc.XcorKernelAnalyticGauss.new_full(
+                dist, ps, 1500.0, 300.0, 4.0, sbi
+            )
+            k_nl.set_l_limber(-1)
+            k_nl.prepare(cosmo)
+
+            k_li = Nc.XcorKernelAnalyticGauss.new(dist, ps, 1500.0, 300.0, 4.0)
+            k_li.set_l_limber(0)
+            k_li.prepare(cosmo)
+
+            def _cl(kernel, method):
+                xc = Nc.Xcor.new(dist, ps, method)
+                xc.prepare(cosmo)
+                v = Ncm.Vector.new(1)
+                xc.compute(kernel, kernel, cosmo, ell, ell, v)
+                return v.get(0)
+
+            non_limber = _cl(k_nl, Nc.XcorMethod.KERNEL_EXACT)
+            limber = _cl(k_li, Nc.XcorMethod.LIMBER_Z_CUBATURE)
+
+            assert limber == pytest.approx(non_limber, rel=2.0e-3)

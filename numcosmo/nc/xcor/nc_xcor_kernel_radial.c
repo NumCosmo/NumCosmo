@@ -465,6 +465,17 @@ _nc_xcor_kernel_radial_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *
   *zmid = self->z_mid;
 }
 
+/*
+ * The window per unit Hubble radius, times the two factors this class owes the
+ * Limber integrand: its (chi, k) factor, and sqrt(P(k,0)/P(k,z)).
+ *
+ * The second exists because the conventions differ. This class carries the
+ * growth in W and pairs it with P(k, 0) (see the class documentation), while
+ * nc_xcor_limber_z.c multiplies the two kernels by P(k, z) -- the convention of
+ * the physical kernels, whose W carries no growth. Each kernel returning
+ * sqrt(P(k,0)/P(k,z)) makes the product come out as P(k, 0) without the shared
+ * integrand having to know which kind of kernel it holds.
+ */
 static gdouble
 _nc_xcor_kernel_radial_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
@@ -488,9 +499,22 @@ _nc_xcor_kernel_radial_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdou
       W += nc_xcor_kernel_radial_eval_W_comp (xcka, i, chi);
   }
 
-  /* Limber fixes k = (l + 1/2) / chi, so the (chi, k) factor is evaluated there
-   * rather than being left out of this branch. */
-  return RH_Mpc * W * nc_xcor_kernel_radial_eval_kernel_factor (xcka, cosmo, chi, (l + 0.5) / chi);
+  {
+    /* Limber fixes k = (l + 1/2) / chi, so the (chi, k) factor is evaluated
+     * there rather than being left out of this branch. */
+    const gdouble k = (l + 0.5) / chi;
+    const gdouble f = nc_xcor_kernel_radial_eval_kernel_factor (xcka, cosmo, chi, k);
+
+    /* This class carries the growth in W and pairs it with P(k, 0), but the
+     * Limber integrand multiplies the two kernels by P(k, z). Each kernel hands
+     * back sqrt(P(k,0)/P(k,z)) so the product restores P(k, 0). */
+    NcmPowspec *ps       = nc_xcor_kernel_peek_powspec (xclk);
+    const gdouble P_z    = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k);
+    const gdouble P_0    = ncm_powspec_eval (ps, NCM_MODEL (cosmo), 0.0, k);
+    const gdouble growth = (P_z > 0.0) ? sqrt (P_0 / P_z) : 0.0;
+
+    return RH_Mpc * W * f * growth;
+  }
 }
 
 static gdouble
