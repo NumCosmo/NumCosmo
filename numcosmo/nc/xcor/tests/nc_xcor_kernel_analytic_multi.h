@@ -30,13 +30,13 @@
 #include <glib.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/algebra/ncm_vector.h>
-#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic.h>
+#include <numcosmo/nc/xcor/nc_xcor_kernel_radial.h>
 
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_KERNEL_ANALYTIC_MULTI (nc_xcor_kernel_analytic_multi_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcXcorKernelAnalyticMulti, nc_xcor_kernel_analytic_multi, NC, XCOR_KERNEL_ANALYTIC_MULTI, NcXcorKernelAnalytic)
+G_DECLARE_FINAL_TYPE (NcXcorKernelAnalyticMulti, nc_xcor_kernel_analytic_multi, NC, XCOR_KERNEL_ANALYTIC_MULTI, NcXcorKernelRadial)
 
 NcXcorKernelAnalyticMulti *nc_xcor_kernel_analytic_multi_new (NcDistance * dist, NcmPowspec * ps, NcmVector * chi_mean, NcmVector * chi_sigma, NcmVector * weight, gdouble n_sigma);
 NcXcorKernelAnalyticMulti *nc_xcor_kernel_analytic_multi_new_full (NcDistance *dist, NcmPowspec *ps, NcmVector *chi_mean, NcmVector *chi_sigma, NcmVector *weight, gdouble n_sigma, NcmSBesselIntegrator *sbi);

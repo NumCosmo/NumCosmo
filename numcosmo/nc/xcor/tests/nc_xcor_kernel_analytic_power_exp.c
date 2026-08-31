@@ -47,7 +47,7 @@
  * of an ISW kernel. Both are emulations with the right structure, exactly
  * evaluable, not fits to a particular survey.
  *
- * See #NcXcorKernelAnalytic for the unit and normalization conventions.
+ * See #NcXcorKernelRadial for the unit and normalization conventions.
  *
  */
 
@@ -68,7 +68,7 @@
 struct _NcXcorKernelAnalyticPowerExp
 {
   /*< private >*/
-  NcXcorKernelAnalytic parent_instance;
+  NcXcorKernelRadial parent_instance;
 
   gdouble chi_scale;
   gdouble alpha;
@@ -90,7 +90,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcXcorKernelAnalyticPowerExp, nc_xcor_kernel_analytic_power_exp, NC_TYPE_XCOR_KERNEL_ANALYTIC)
+G_DEFINE_TYPE (NcXcorKernelAnalyticPowerExp, nc_xcor_kernel_analytic_power_exp, NC_TYPE_XCOR_KERNEL_RADIAL)
 
 static void
 nc_xcor_kernel_analytic_power_exp_init (NcXcorKernelAnalyticPowerExp *xckap)
@@ -203,16 +203,16 @@ nc_xcor_kernel_analytic_power_exp_finalize (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_analytic_power_exp_parent_class)->finalize (object);
 }
 
-static guint _nc_xcor_kernel_analytic_power_exp_get_n_comps (NcXcorKernelAnalytic *xcka);
-static gdouble _nc_xcor_kernel_analytic_power_exp_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi);
-static void _nc_xcor_kernel_analytic_power_exp_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
+static guint _nc_xcor_kernel_analytic_power_exp_get_n_comps (NcXcorKernelRadial *xcka);
+static gdouble _nc_xcor_kernel_analytic_power_exp_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi);
+static void _nc_xcor_kernel_analytic_power_exp_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
 
 static void
 nc_xcor_kernel_analytic_power_exp_class_init (NcXcorKernelAnalyticPowerExpClass *klass)
 {
-  GObjectClass *object_class              = G_OBJECT_CLASS (klass);
-  NcmModelClass *model_class              = NCM_MODEL_CLASS (klass);
-  NcXcorKernelAnalyticClass *parent_class = NC_XCOR_KERNEL_ANALYTIC_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class            = NCM_MODEL_CLASS (klass);
+  NcXcorKernelRadialClass *parent_class = NC_XCOR_KERNEL_RADIAL_CLASS (klass);
 
   object_class->constructed = &nc_xcor_kernel_analytic_power_exp_constructed;
   object_class->finalize    = &nc_xcor_kernel_analytic_power_exp_finalize;
@@ -400,13 +400,13 @@ nc_xcor_kernel_analytic_power_exp_get_beta (NcXcorKernelAnalyticPowerExp *xckap)
 }
 
 static guint
-_nc_xcor_kernel_analytic_power_exp_get_n_comps (NcXcorKernelAnalytic *xcka)
+_nc_xcor_kernel_analytic_power_exp_get_n_comps (NcXcorKernelRadial *xcka)
 {
   return 1;
 }
 
 static gdouble
-_nc_xcor_kernel_analytic_power_exp_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi)
+_nc_xcor_kernel_analytic_power_exp_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi)
 {
   NcXcorKernelAnalyticPowerExp *xckap = NC_XCOR_KERNEL_ANALYTIC_POWER_EXP (xcka);
   const gdouble x                     = chi / xckap->chi_scale;
@@ -418,7 +418,7 @@ _nc_xcor_kernel_analytic_power_exp_eval_W_comp (NcXcorKernelAnalytic *xcka, guin
 }
 
 static void
-_nc_xcor_kernel_analytic_power_exp_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
+_nc_xcor_kernel_analytic_power_exp_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
 {
   NcXcorKernelAnalyticPowerExp *xckap = NC_XCOR_KERNEL_ANALYTIC_POWER_EXP (xcka);
 

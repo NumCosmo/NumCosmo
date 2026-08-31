@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_xcor_kernel_analytic_kdep.c
+ *            nc_xcor_kernel_radial_kdep.c
  *
  *  Thu August 21 12:00:00 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
@@ -24,9 +24,9 @@
  */
 
 /**
- * NcXcorKernelAnalyticKDep:
+ * NcXcorKernelRadialKDep:
  *
- * Closed-form scale dependence that a #NcXcorKernelAnalytic can carry.
+ * Closed-form scale dependence that a #NcXcorKernelRadial can carry.
  *
  * Attached to a kernel, it multiplies the radial integrand,
  * \begin{equation}
@@ -50,7 +50,7 @@
  */
 
 /**
- * NcXcorKernelAnalyticKDepGrowth:
+ * NcXcorKernelRadialKDepGrowth:
  *
  * Scale-dependent growth across a smooth transition in $k$.
  *
@@ -82,7 +82,7 @@
 #include "build_cfg.h"
 
 #include "ncm/core/ncm_cfg.h"
-#include "nc/xcor/tests/nc_xcor_kernel_analytic_kdep.h"
+#include "nc/xcor/nc_xcor_kernel_radial_kdep.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -95,70 +95,70 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcXcorKernelAnalyticKDep, nc_xcor_kernel_analytic_kdep, G_TYPE_OBJECT)
+G_DEFINE_ABSTRACT_TYPE (NcXcorKernelRadialKDep, nc_xcor_kernel_radial_kdep, G_TYPE_OBJECT)
 
 static void
-nc_xcor_kernel_analytic_kdep_init (NcXcorKernelAnalyticKDep *kdep)
+nc_xcor_kernel_radial_kdep_init (NcXcorKernelRadialKDep *kdep)
 {
 }
 
 static void
-nc_xcor_kernel_analytic_kdep_finalize (GObject *object)
+nc_xcor_kernel_radial_kdep_finalize (GObject *object)
 {
   /* Chain up : end */
-  G_OBJECT_CLASS (nc_xcor_kernel_analytic_kdep_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_xcor_kernel_radial_kdep_parent_class)->finalize (object);
 }
 
 static void
-nc_xcor_kernel_analytic_kdep_class_init (NcXcorKernelAnalyticKDepClass *klass)
+nc_xcor_kernel_radial_kdep_class_init (NcXcorKernelRadialKDepClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  object_class->finalize = &nc_xcor_kernel_analytic_kdep_finalize;
+  object_class->finalize = &nc_xcor_kernel_radial_kdep_finalize;
 }
 
 /**
- * nc_xcor_kernel_analytic_kdep_ref:
- * @kdep: a #NcXcorKernelAnalyticKDep
+ * nc_xcor_kernel_radial_kdep_ref:
+ * @kdep: a #NcXcorKernelRadialKDep
  *
  * Increases the reference count of @kdep by one.
  *
  * Returns: (transfer full): @kdep
  */
-NcXcorKernelAnalyticKDep *
-nc_xcor_kernel_analytic_kdep_ref (NcXcorKernelAnalyticKDep *kdep)
+NcXcorKernelRadialKDep *
+nc_xcor_kernel_radial_kdep_ref (NcXcorKernelRadialKDep *kdep)
 {
   return g_object_ref (kdep);
 }
 
 /**
- * nc_xcor_kernel_analytic_kdep_free:
- * @kdep: a #NcXcorKernelAnalyticKDep
+ * nc_xcor_kernel_radial_kdep_free:
+ * @kdep: a #NcXcorKernelRadialKDep
  *
  * Decreases the reference count of @kdep by one.
  */
 void
-nc_xcor_kernel_analytic_kdep_free (NcXcorKernelAnalyticKDep *kdep)
+nc_xcor_kernel_radial_kdep_free (NcXcorKernelRadialKDep *kdep)
 {
   g_object_unref (kdep);
 }
 
 /**
- * nc_xcor_kernel_analytic_kdep_clear:
- * @kdep: a #NcXcorKernelAnalyticKDep
+ * nc_xcor_kernel_radial_kdep_clear:
+ * @kdep: a #NcXcorKernelRadialKDep
  *
  * If *@kdep is not %NULL, decreases its reference count by one and sets
  * *@kdep to %NULL.
  */
 void
-nc_xcor_kernel_analytic_kdep_clear (NcXcorKernelAnalyticKDep **kdep)
+nc_xcor_kernel_radial_kdep_clear (NcXcorKernelRadialKDep **kdep)
 {
   g_clear_object (kdep);
 }
 
 /**
- * nc_xcor_kernel_analytic_kdep_eval: (virtual eval)
- * @kdep: a #NcXcorKernelAnalyticKDep
+ * nc_xcor_kernel_radial_kdep_eval: (virtual eval)
+ * @kdep: a #NcXcorKernelRadialKDep
  * @chi: comoving distance $\chi$ in Mpc
  * @k: wavenumber $k$ in $\mathrm{Mpc}^{-1}$
  *
@@ -168,19 +168,19 @@ nc_xcor_kernel_analytic_kdep_clear (NcXcorKernelAnalyticKDep **kdep)
  * Returns: the value of $g(\chi,k)$, dimensionless.
  */
 gdouble
-nc_xcor_kernel_analytic_kdep_eval (NcXcorKernelAnalyticKDep *kdep, gdouble chi, gdouble k)
+nc_xcor_kernel_radial_kdep_eval (NcXcorKernelRadialKDep *kdep, gdouble chi, gdouble k)
 {
-  return NC_XCOR_KERNEL_ANALYTIC_KDEP_GET_CLASS (kdep)->eval (kdep, chi, k);
+  return NC_XCOR_KERNEL_RADIAL_KDEP_GET_CLASS (kdep)->eval (kdep, chi, k);
 }
 
 /*
  * Growth transition
  */
 
-struct _NcXcorKernelAnalyticKDepGrowth
+struct _NcXcorKernelRadialKDepGrowth
 {
   /*< private >*/
-  NcXcorKernelAnalyticKDep parent_instance;
+  NcXcorKernelRadialKDep parent_instance;
 
   gdouble amplitude;
   gdouble k_transition;
@@ -196,10 +196,10 @@ enum
   PROP_GROWTH_SIZE,
 };
 
-G_DEFINE_TYPE (NcXcorKernelAnalyticKDepGrowth, nc_xcor_kernel_analytic_kdep_growth, NC_TYPE_XCOR_KERNEL_ANALYTIC_KDEP)
+G_DEFINE_TYPE (NcXcorKernelRadialKDepGrowth, nc_xcor_kernel_radial_kdep_growth, NC_TYPE_XCOR_KERNEL_RADIAL_KDEP)
 
 static void
-nc_xcor_kernel_analytic_kdep_growth_init (NcXcorKernelAnalyticKDepGrowth *kdepg)
+nc_xcor_kernel_radial_kdep_growth_init (NcXcorKernelRadialKDepGrowth *kdepg)
 {
   kdepg->amplitude    = 0.0;
   kdepg->k_transition = 0.0;
@@ -207,11 +207,11 @@ nc_xcor_kernel_analytic_kdep_growth_init (NcXcorKernelAnalyticKDepGrowth *kdepg)
 }
 
 static void
-nc_xcor_kernel_analytic_kdep_growth_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+nc_xcor_kernel_radial_kdep_growth_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcXcorKernelAnalyticKDepGrowth *kdepg = NC_XCOR_KERNEL_ANALYTIC_KDEP_GROWTH (object);
+  NcXcorKernelRadialKDepGrowth *kdepg = NC_XCOR_KERNEL_RADIAL_KDEP_GROWTH (object);
 
-  g_return_if_fail (NC_IS_XCOR_KERNEL_ANALYTIC_KDEP_GROWTH (object));
+  g_return_if_fail (NC_IS_XCOR_KERNEL_RADIAL_KDEP_GROWTH (object));
 
   switch (prop_id)
   {
@@ -231,11 +231,11 @@ nc_xcor_kernel_analytic_kdep_growth_set_property (GObject *object, guint prop_id
 }
 
 static void
-nc_xcor_kernel_analytic_kdep_growth_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+nc_xcor_kernel_radial_kdep_growth_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcXcorKernelAnalyticKDepGrowth *kdepg = NC_XCOR_KERNEL_ANALYTIC_KDEP_GROWTH (object);
+  NcXcorKernelRadialKDepGrowth *kdepg = NC_XCOR_KERNEL_RADIAL_KDEP_GROWTH (object);
 
-  g_return_if_fail (NC_IS_XCOR_KERNEL_ANALYTIC_KDEP_GROWTH (object));
+  g_return_if_fail (NC_IS_XCOR_KERNEL_RADIAL_KDEP_GROWTH (object));
 
   switch (prop_id)
   {
@@ -254,19 +254,19 @@ nc_xcor_kernel_analytic_kdep_growth_get_property (GObject *object, guint prop_id
   }
 }
 
-static gdouble _nc_xcor_kernel_analytic_kdep_growth_eval (NcXcorKernelAnalyticKDep *kdep, gdouble chi, gdouble k);
+static gdouble _nc_xcor_kernel_radial_kdep_growth_eval (NcXcorKernelRadialKDep *kdep, gdouble chi, gdouble k);
 
 static void
-nc_xcor_kernel_analytic_kdep_growth_class_init (NcXcorKernelAnalyticKDepGrowthClass *klass)
+nc_xcor_kernel_radial_kdep_growth_class_init (NcXcorKernelRadialKDepGrowthClass *klass)
 {
-  GObjectClass *object_class                  = G_OBJECT_CLASS (klass);
-  NcXcorKernelAnalyticKDepClass *parent_class = NC_XCOR_KERNEL_ANALYTIC_KDEP_CLASS (klass);
+  GObjectClass *object_class                = G_OBJECT_CLASS (klass);
+  NcXcorKernelRadialKDepClass *parent_class = NC_XCOR_KERNEL_RADIAL_KDEP_CLASS (klass);
 
-  object_class->set_property = &nc_xcor_kernel_analytic_kdep_growth_set_property;
-  object_class->get_property = &nc_xcor_kernel_analytic_kdep_growth_get_property;
+  object_class->set_property = &nc_xcor_kernel_radial_kdep_growth_set_property;
+  object_class->get_property = &nc_xcor_kernel_radial_kdep_growth_get_property;
 
   /**
-   * NcXcorKernelAnalyticKDepGrowth:amplitude:
+   * NcXcorKernelRadialKDepGrowth:amplitude:
    *
    * Saturated suppression $\alpha$ reached well above the transition. Zero
    * recovers the scale-independent case exactly.
@@ -280,7 +280,7 @@ nc_xcor_kernel_analytic_kdep_growth_class_init (NcXcorKernelAnalyticKDepGrowthCl
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcXcorKernelAnalyticKDepGrowth:k-transition:
+   * NcXcorKernelRadialKDepGrowth:k-transition:
    *
    * Wavenumber $k_t$ of the transition, in $\mathrm{Mpc}^{-1}$.
    */
@@ -293,7 +293,7 @@ nc_xcor_kernel_analytic_kdep_growth_class_init (NcXcorKernelAnalyticKDepGrowthCl
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcXcorKernelAnalyticKDepGrowth:chi-ref:
+   * NcXcorKernelRadialKDepGrowth:chi-ref:
    *
    * Comoving distance $\chi_\mathrm{ref}$ at which the suppression vanishes,
    * in Mpc. It sets where along the line of sight the factor is normalized to
@@ -307,74 +307,74 @@ nc_xcor_kernel_analytic_kdep_growth_class_init (NcXcorKernelAnalyticKDepGrowthCl
                                                         G_MINDOUBLE, G_MAXDOUBLE, 1500.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  parent_class->eval = &_nc_xcor_kernel_analytic_kdep_growth_eval;
+  parent_class->eval = &_nc_xcor_kernel_radial_kdep_growth_eval;
 }
 
 /**
- * nc_xcor_kernel_analytic_kdep_growth_new:
+ * nc_xcor_kernel_radial_kdep_growth_new:
  * @amplitude: saturated suppression $\alpha$
  * @k_transition: transition wavenumber $k_t$, in $\mathrm{Mpc}^{-1}$
  * @chi_ref: reference comoving distance $\chi_\mathrm{ref}$, in Mpc
  *
- * Creates a new #NcXcorKernelAnalyticKDepGrowth.
+ * Creates a new #NcXcorKernelRadialKDepGrowth.
  *
- * Returns: (transfer full): a new #NcXcorKernelAnalyticKDepGrowth
+ * Returns: (transfer full): a new #NcXcorKernelRadialKDepGrowth
  */
-NcXcorKernelAnalyticKDepGrowth *
-nc_xcor_kernel_analytic_kdep_growth_new (gdouble amplitude, gdouble k_transition, gdouble chi_ref)
+NcXcorKernelRadialKDepGrowth *
+nc_xcor_kernel_radial_kdep_growth_new (gdouble amplitude, gdouble k_transition, gdouble chi_ref)
 {
-  NcXcorKernelAnalyticKDepGrowth *kdepg = g_object_new (NC_TYPE_XCOR_KERNEL_ANALYTIC_KDEP_GROWTH,
-                                                        "amplitude", amplitude,
-                                                        "k-transition", k_transition,
-                                                        "chi-ref", chi_ref,
-                                                        NULL);
+  NcXcorKernelRadialKDepGrowth *kdepg = g_object_new (NC_TYPE_XCOR_KERNEL_RADIAL_KDEP_GROWTH,
+                                                      "amplitude", amplitude,
+                                                      "k-transition", k_transition,
+                                                      "chi-ref", chi_ref,
+                                                      NULL);
 
   return kdepg;
 }
 
 /**
- * nc_xcor_kernel_analytic_kdep_growth_get_amplitude:
- * @kdepg: a #NcXcorKernelAnalyticKDepGrowth
+ * nc_xcor_kernel_radial_kdep_growth_get_amplitude:
+ * @kdepg: a #NcXcorKernelRadialKDepGrowth
  *
  * Returns: the saturated suppression $\alpha$.
  */
 gdouble
-nc_xcor_kernel_analytic_kdep_growth_get_amplitude (NcXcorKernelAnalyticKDepGrowth *kdepg)
+nc_xcor_kernel_radial_kdep_growth_get_amplitude (NcXcorKernelRadialKDepGrowth *kdepg)
 {
   return kdepg->amplitude;
 }
 
 /**
- * nc_xcor_kernel_analytic_kdep_growth_get_k_transition:
- * @kdepg: a #NcXcorKernelAnalyticKDepGrowth
+ * nc_xcor_kernel_radial_kdep_growth_get_k_transition:
+ * @kdepg: a #NcXcorKernelRadialKDepGrowth
  *
  * Returns: the transition wavenumber $k_t$, in $\mathrm{Mpc}^{-1}$.
  */
 gdouble
-nc_xcor_kernel_analytic_kdep_growth_get_k_transition (NcXcorKernelAnalyticKDepGrowth *kdepg)
+nc_xcor_kernel_radial_kdep_growth_get_k_transition (NcXcorKernelRadialKDepGrowth *kdepg)
 {
   return kdepg->k_transition;
 }
 
 /**
- * nc_xcor_kernel_analytic_kdep_growth_get_chi_ref:
- * @kdepg: a #NcXcorKernelAnalyticKDepGrowth
+ * nc_xcor_kernel_radial_kdep_growth_get_chi_ref:
+ * @kdepg: a #NcXcorKernelRadialKDepGrowth
  *
  * Returns: the reference comoving distance $\chi_\mathrm{ref}$, in Mpc.
  */
 gdouble
-nc_xcor_kernel_analytic_kdep_growth_get_chi_ref (NcXcorKernelAnalyticKDepGrowth *kdepg)
+nc_xcor_kernel_radial_kdep_growth_get_chi_ref (NcXcorKernelRadialKDepGrowth *kdepg)
 {
   return kdepg->chi_ref;
 }
 
 static gdouble
-_nc_xcor_kernel_analytic_kdep_growth_eval (NcXcorKernelAnalyticKDep *kdep, gdouble chi, gdouble k)
+_nc_xcor_kernel_radial_kdep_growth_eval (NcXcorKernelRadialKDep *kdep, gdouble chi, gdouble k)
 {
-  NcXcorKernelAnalyticKDepGrowth *kdepg = NC_XCOR_KERNEL_ANALYTIC_KDEP_GROWTH (kdep);
-  const gdouble x                       = k / kdepg->k_transition;
-  const gdouble x2                      = x * x;
-  const gdouble sigma                   = x2 / (1.0 + x2);
+  NcXcorKernelRadialKDepGrowth *kdepg = NC_XCOR_KERNEL_RADIAL_KDEP_GROWTH (kdep);
+  const gdouble x                     = k / kdepg->k_transition;
+  const gdouble x2                    = x * x;
+  const gdouble sigma                 = x2 / (1.0 + x2);
 
   return exp (-kdepg->amplitude * sigma * (kdepg->chi_ref - chi) / kdepg->chi_ref);
 }

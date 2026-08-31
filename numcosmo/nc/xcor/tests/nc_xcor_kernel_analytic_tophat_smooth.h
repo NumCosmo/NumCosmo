@@ -29,13 +29,13 @@
 #include <glib-object.h>
 #include <glib.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic.h>
+#include <numcosmo/nc/xcor/nc_xcor_kernel_radial.h>
 
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_KERNEL_ANALYTIC_TOPHAT_SMOOTH (nc_xcor_kernel_analytic_tophat_smooth_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcXcorKernelAnalyticTophatSmooth, nc_xcor_kernel_analytic_tophat_smooth, NC, XCOR_KERNEL_ANALYTIC_TOPHAT_SMOOTH, NcXcorKernelAnalytic)
+G_DECLARE_FINAL_TYPE (NcXcorKernelAnalyticTophatSmooth, nc_xcor_kernel_analytic_tophat_smooth, NC, XCOR_KERNEL_ANALYTIC_TOPHAT_SMOOTH, NcXcorKernelRadial)
 
 NcXcorKernelAnalyticTophatSmooth *nc_xcor_kernel_analytic_tophat_smooth_new (NcDistance * dist, NcmPowspec * ps, gdouble chi_lower, gdouble chi_upper, gdouble chi_sigma, gdouble n_sigma);
 NcXcorKernelAnalyticTophatSmooth *nc_xcor_kernel_analytic_tophat_smooth_new_full (NcDistance *dist, NcmPowspec *ps, gdouble chi_lower, gdouble chi_upper, gdouble chi_sigma, gdouble n_sigma, NcmSBesselIntegrator *sbi);

@@ -42,7 +42,7 @@
  * limit.
  *
  * This is the baseline photo-z bin shape: $\sigma \sim 300$ Mpc for a wide
- * bin, $\sigma \sim 50$ Mpc for a thin one. See #NcXcorKernelAnalytic for the
+ * bin, $\sigma \sim 50$ Mpc for a thin one. See #NcXcorKernelRadial for the
  * unit and normalization conventions.
  *
  */
@@ -63,7 +63,7 @@
 struct _NcXcorKernelAnalyticGauss
 {
   /*< private >*/
-  NcXcorKernelAnalytic parent_instance;
+  NcXcorKernelRadial parent_instance;
 
   gdouble chi_mean;
   gdouble chi_sigma;
@@ -83,7 +83,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcXcorKernelAnalyticGauss, nc_xcor_kernel_analytic_gauss, NC_TYPE_XCOR_KERNEL_ANALYTIC)
+G_DEFINE_TYPE (NcXcorKernelAnalyticGauss, nc_xcor_kernel_analytic_gauss, NC_TYPE_XCOR_KERNEL_RADIAL)
 
 static void
 nc_xcor_kernel_analytic_gauss_init (NcXcorKernelAnalyticGauss *xckag)
@@ -174,16 +174,16 @@ nc_xcor_kernel_analytic_gauss_finalize (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_analytic_gauss_parent_class)->finalize (object);
 }
 
-static guint _nc_xcor_kernel_analytic_gauss_get_n_comps (NcXcorKernelAnalytic *xcka);
-static gdouble _nc_xcor_kernel_analytic_gauss_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi);
-static void _nc_xcor_kernel_analytic_gauss_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
+static guint _nc_xcor_kernel_analytic_gauss_get_n_comps (NcXcorKernelRadial *xcka);
+static gdouble _nc_xcor_kernel_analytic_gauss_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi);
+static void _nc_xcor_kernel_analytic_gauss_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
 
 static void
 nc_xcor_kernel_analytic_gauss_class_init (NcXcorKernelAnalyticGaussClass *klass)
 {
-  GObjectClass *object_class              = G_OBJECT_CLASS (klass);
-  NcmModelClass *model_class              = NCM_MODEL_CLASS (klass);
-  NcXcorKernelAnalyticClass *parent_class = NC_XCOR_KERNEL_ANALYTIC_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class            = NCM_MODEL_CLASS (klass);
+  NcXcorKernelRadialClass *parent_class = NC_XCOR_KERNEL_RADIAL_CLASS (klass);
 
   object_class->constructed = &nc_xcor_kernel_analytic_gauss_constructed;
   object_class->finalize    = &nc_xcor_kernel_analytic_gauss_finalize;
@@ -338,13 +338,13 @@ nc_xcor_kernel_analytic_gauss_get_n_sigma (NcXcorKernelAnalyticGauss *xckag)
 }
 
 static guint
-_nc_xcor_kernel_analytic_gauss_get_n_comps (NcXcorKernelAnalytic *xcka)
+_nc_xcor_kernel_analytic_gauss_get_n_comps (NcXcorKernelRadial *xcka)
 {
   return 1;
 }
 
 static gdouble
-_nc_xcor_kernel_analytic_gauss_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi)
+_nc_xcor_kernel_analytic_gauss_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi)
 {
   NcXcorKernelAnalyticGauss *xckag = NC_XCOR_KERNEL_ANALYTIC_GAUSS (xcka);
   const gdouble d                  = chi - xckag->chi_mean;
@@ -356,7 +356,7 @@ _nc_xcor_kernel_analytic_gauss_eval_W_comp (NcXcorKernelAnalytic *xcka, guint co
 }
 
 static void
-_nc_xcor_kernel_analytic_gauss_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
+_nc_xcor_kernel_analytic_gauss_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
 {
   NcXcorKernelAnalyticGauss *xckag = NC_XCOR_KERNEL_ANALYTIC_GAUSS (xcka);
 
