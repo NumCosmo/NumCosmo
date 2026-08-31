@@ -479,11 +479,12 @@ _nc_xcor_kernel_radial_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *
 static gdouble
 _nc_xcor_kernel_radial_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
-  NcXcorKernelRadial *xcka = NC_XCOR_KERNEL_RADIAL (xclk);
-  const gdouble RH_Mpc     = nc_hicosmo_RH_Mpc (cosmo);
-  const gdouble chi        = xck->xi_z * RH_Mpc;
-  const guint n_comps      = nc_xcor_kernel_radial_get_n_comps (xcka);
-  gdouble W                = 0.0;
+  NcXcorKernelRadial *xcka               = NC_XCOR_KERNEL_RADIAL (xclk);
+  NcXcorKernelRadialPrivate * const self = NC_XCOR_KERNEL_RADIAL_GET_PRIVATE (xcka);
+  const gdouble RH_Mpc                   = nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble chi                      = xck->xi_z * RH_Mpc;
+  const guint n_comps                    = nc_xcor_kernel_radial_get_n_comps (xcka);
+  gdouble W                              = 0.0;
   guint i;
 
   /* The Limber path has one integration domain for the whole kernel, so a
@@ -513,7 +514,11 @@ _nc_xcor_kernel_radial_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdou
     const gdouble P_0    = ncm_powspec_eval (ps, NCM_MODEL (cosmo), 0.0, k);
     const gdouble growth = (P_z > 0.0) ? sqrt (P_0 / P_z) : 0.0;
 
-    return RH_Mpc * W * f * growth;
+    /* The scale dependence is part of the kernel, so it belongs on both
+     * branches. Limber knows k, so there is nothing here it cannot evaluate. */
+    const gdouble g = (self->kdep != NULL) ? nc_xcor_kernel_radial_kdep_eval (self->kdep, chi, k) : 1.0;
+
+    return RH_Mpc * W * f * g * growth;
   }
 }
 

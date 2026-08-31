@@ -1233,3 +1233,59 @@ def test_limber_agrees_with_non_limber_at_high_ell():
             limber = _cl(k_li, Nc.XcorMethod.LIMBER_Z_CUBATURE)
 
             assert limber == pytest.approx(non_limber, rel=2.0e-3)
+
+
+def test_limber_agrees_with_non_limber_under_scale_dependence():
+    """The same invariant with a scale dependence attached.
+
+    The factor is part of the kernel, so both branches owe it. Limber has k in
+    hand -- k = (l + 1/2) / chi -- so there is nothing it cannot evaluate, and
+    dropping it there is silent: the shape of C_ell survives, only its scale
+    moves.
+    """
+    cosmo = Nc.HICosmoDEXcdm.new()
+    dist = Nc.Distance.new(5.0)
+    dist.prepare(cosmo)
+    ps = Ncm.PowspecAnalytic.new(
+        Ncm.PowspecAnalyticShape.BBKS, Ncm.PowspecAnalyticGrowth.NONE
+    )
+
+    for ell in (100, 200):
+        sbi = Ncm.SBesselIntegratorLevin.new(ell, ell)
+        kdep_a = Nc.XcorKernelRadialKDepGrowth.new(0.3, 0.05, 1500.0)
+        kdep_b = Nc.XcorKernelRadialKDepGrowth.new(0.3, 0.05, 1500.0)
+
+        k_nl = Nc.XcorKernelAnalyticGauss(
+            dist=dist,
+            powspec=ps,
+            chi_mean=1500.0,
+            chi_sigma=300.0,
+            n_sigma=4.0,
+            integrator=sbi,
+            scale_dependence=kdep_a,
+        )
+        k_nl.set_l_limber(-1)
+        k_nl.prepare(cosmo)
+
+        k_li = Nc.XcorKernelAnalyticGauss(
+            dist=dist,
+            powspec=ps,
+            chi_mean=1500.0,
+            chi_sigma=300.0,
+            n_sigma=4.0,
+            scale_dependence=kdep_b,
+        )
+        k_li.set_l_limber(0)
+        k_li.prepare(cosmo)
+
+        def _cl(kernel, method):
+            xc = Nc.Xcor.new(dist, ps, method)
+            xc.prepare(cosmo)
+            v = Ncm.Vector.new(1)
+            xc.compute(kernel, kernel, cosmo, ell, ell, v)
+            return v.get(0)
+
+        non_limber = _cl(k_nl, Nc.XcorMethod.KERNEL_EXACT)
+        limber = _cl(k_li, Nc.XcorMethod.LIMBER_Z_CUBATURE)
+
+        assert limber == pytest.approx(non_limber, rel=5.0e-3)
