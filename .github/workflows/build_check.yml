@@ -355,6 +355,7 @@ jobs:
           export CFLAGS="$CFLAGS -O0"
           export CPPFLAGS="$CPPFLAGS -O0"
           export FFLAGS="$FFLAGS -O0"
+          echo "CFLAGS=[$CFLAGS]"; echo "CPPFLAGS=[$CPPFLAGS]"
           meson setup build -Dbuildtype=debug -Db_coverage=true -Dnumcosmo_py=true -Dfftw-planner=estimate -Dnumcosmo_debug=disabled --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
         run: |
