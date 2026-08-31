@@ -31,7 +31,7 @@
  *
  * over the window's own truncated support, with chi in Mpc.
  *
- * Re-implements each window of numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_*.c
+ * Re-implements each window of numcosmo/nc/xcor/nc_xcor_kernel_radial_*.c
  * in Arb ball arithmetic, independently of the library. The normalization is
  * *not* copied from the library's closed form -- it is computed here as a
  * certified integral of the unnormalized shape, so comparing against the

@@ -53,7 +53,7 @@
  * nc_xcor_kernel_analytic_student_t_get_tail_mass() reports the fraction
  * discarded, so a spec can state it rather than discover it.
  *
- * See #NcXcorKernelAnalytic for the unit and normalization conventions.
+ * See #NcXcorKernelRadial for the unit and normalization conventions.
  *
  */
 
@@ -75,7 +75,7 @@
 struct _NcXcorKernelAnalyticStudentT
 {
   /*< private >*/
-  NcXcorKernelAnalytic parent_instance;
+  NcXcorKernelRadial parent_instance;
 
   gdouble chi_mean;
   gdouble chi_scale;
@@ -98,7 +98,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcXcorKernelAnalyticStudentT, nc_xcor_kernel_analytic_student_t, NC_TYPE_XCOR_KERNEL_ANALYTIC)
+G_DEFINE_TYPE (NcXcorKernelAnalyticStudentT, nc_xcor_kernel_analytic_student_t, NC_TYPE_XCOR_KERNEL_RADIAL)
 
 static void
 nc_xcor_kernel_analytic_student_t_init (NcXcorKernelAnalyticStudentT *xckas)
@@ -207,16 +207,16 @@ nc_xcor_kernel_analytic_student_t_finalize (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_analytic_student_t_parent_class)->finalize (object);
 }
 
-static guint _nc_xcor_kernel_analytic_student_t_get_n_comps (NcXcorKernelAnalytic *xcka);
-static gdouble _nc_xcor_kernel_analytic_student_t_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi);
-static void _nc_xcor_kernel_analytic_student_t_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
+static guint _nc_xcor_kernel_analytic_student_t_get_n_comps (NcXcorKernelRadial *xcka);
+static gdouble _nc_xcor_kernel_analytic_student_t_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi);
+static void _nc_xcor_kernel_analytic_student_t_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
 
 static void
 nc_xcor_kernel_analytic_student_t_class_init (NcXcorKernelAnalyticStudentTClass *klass)
 {
-  GObjectClass *object_class              = G_OBJECT_CLASS (klass);
-  NcmModelClass *model_class              = NCM_MODEL_CLASS (klass);
-  NcXcorKernelAnalyticClass *parent_class = NC_XCOR_KERNEL_ANALYTIC_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class            = NCM_MODEL_CLASS (klass);
+  NcXcorKernelRadialClass *parent_class = NC_XCOR_KERNEL_RADIAL_CLASS (klass);
 
   object_class->constructed = &nc_xcor_kernel_analytic_student_t_constructed;
   object_class->finalize    = &nc_xcor_kernel_analytic_student_t_finalize;
@@ -422,13 +422,13 @@ nc_xcor_kernel_analytic_student_t_get_tail_mass (NcXcorKernelAnalyticStudentT *x
 }
 
 static guint
-_nc_xcor_kernel_analytic_student_t_get_n_comps (NcXcorKernelAnalytic *xcka)
+_nc_xcor_kernel_analytic_student_t_get_n_comps (NcXcorKernelRadial *xcka)
 {
   return 1;
 }
 
 static gdouble
-_nc_xcor_kernel_analytic_student_t_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi)
+_nc_xcor_kernel_analytic_student_t_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi)
 {
   NcXcorKernelAnalyticStudentT *xckas = NC_XCOR_KERNEL_ANALYTIC_STUDENT_T (xcka);
   const gdouble t                     = (chi - xckas->chi_mean) / xckas->chi_scale;
@@ -440,7 +440,7 @@ _nc_xcor_kernel_analytic_student_t_eval_W_comp (NcXcorKernelAnalytic *xcka, guin
 }
 
 static void
-_nc_xcor_kernel_analytic_student_t_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
+_nc_xcor_kernel_analytic_student_t_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
 {
   NcXcorKernelAnalyticStudentT *xckas = NC_XCOR_KERNEL_ANALYTIC_STUDENT_T (xcka);
 

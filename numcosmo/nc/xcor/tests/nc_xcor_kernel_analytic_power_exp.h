@@ -29,13 +29,13 @@
 #include <glib-object.h>
 #include <glib.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic.h>
+#include <numcosmo/nc/xcor/nc_xcor_kernel_radial.h>
 
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_KERNEL_ANALYTIC_POWER_EXP (nc_xcor_kernel_analytic_power_exp_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcXcorKernelAnalyticPowerExp, nc_xcor_kernel_analytic_power_exp, NC, XCOR_KERNEL_ANALYTIC_POWER_EXP, NcXcorKernelAnalytic)
+G_DECLARE_FINAL_TYPE (NcXcorKernelAnalyticPowerExp, nc_xcor_kernel_analytic_power_exp, NC, XCOR_KERNEL_ANALYTIC_POWER_EXP, NcXcorKernelRadial)
 
 NcXcorKernelAnalyticPowerExp *nc_xcor_kernel_analytic_power_exp_new (NcDistance * dist, NcmPowspec * ps, gdouble chi_scale, gdouble alpha, gdouble beta, gdouble chi_lower, gdouble chi_upper);
 NcXcorKernelAnalyticPowerExp *nc_xcor_kernel_analytic_power_exp_new_full (NcDistance *dist, NcmPowspec *ps, gdouble chi_scale, gdouble alpha, gdouble beta, gdouble chi_lower, gdouble chi_upper, NcmSBesselIntegrator *sbi);

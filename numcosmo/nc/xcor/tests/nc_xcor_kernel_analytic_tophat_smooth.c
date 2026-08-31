@@ -47,7 +47,7 @@
  * $\chi_\mathrm{u} \to \chi_\mathrm{l}$ the Gaussian, so it interpolates the two
  * stress cases the other shapes probe separately.
  *
- * See #NcXcorKernelAnalytic for the unit and normalization conventions.
+ * See #NcXcorKernelRadial for the unit and normalization conventions.
  *
  */
 
@@ -67,7 +67,7 @@
 struct _NcXcorKernelAnalyticTophatSmooth
 {
   /*< private >*/
-  NcXcorKernelAnalytic parent_instance;
+  NcXcorKernelRadial parent_instance;
 
   gdouble chi_lower;
   gdouble chi_upper;
@@ -89,7 +89,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcXcorKernelAnalyticTophatSmooth, nc_xcor_kernel_analytic_tophat_smooth, NC_TYPE_XCOR_KERNEL_ANALYTIC)
+G_DEFINE_TYPE (NcXcorKernelAnalyticTophatSmooth, nc_xcor_kernel_analytic_tophat_smooth, NC_TYPE_XCOR_KERNEL_RADIAL)
 
 static void
 nc_xcor_kernel_analytic_tophat_smooth_init (NcXcorKernelAnalyticTophatSmooth *xckats)
@@ -207,16 +207,16 @@ nc_xcor_kernel_analytic_tophat_smooth_finalize (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_analytic_tophat_smooth_parent_class)->finalize (object);
 }
 
-static guint _nc_xcor_kernel_analytic_tophat_smooth_get_n_comps (NcXcorKernelAnalytic *xcka);
-static gdouble _nc_xcor_kernel_analytic_tophat_smooth_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi);
-static void _nc_xcor_kernel_analytic_tophat_smooth_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
+static guint _nc_xcor_kernel_analytic_tophat_smooth_get_n_comps (NcXcorKernelRadial *xcka);
+static gdouble _nc_xcor_kernel_analytic_tophat_smooth_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi);
+static void _nc_xcor_kernel_analytic_tophat_smooth_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
 
 static void
 nc_xcor_kernel_analytic_tophat_smooth_class_init (NcXcorKernelAnalyticTophatSmoothClass *klass)
 {
-  GObjectClass *object_class              = G_OBJECT_CLASS (klass);
-  NcmModelClass *model_class              = NCM_MODEL_CLASS (klass);
-  NcXcorKernelAnalyticClass *parent_class = NC_XCOR_KERNEL_ANALYTIC_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class            = NCM_MODEL_CLASS (klass);
+  NcXcorKernelRadialClass *parent_class = NC_XCOR_KERNEL_RADIAL_CLASS (klass);
 
   object_class->constructed = &nc_xcor_kernel_analytic_tophat_smooth_constructed;
   object_class->finalize    = &nc_xcor_kernel_analytic_tophat_smooth_finalize;
@@ -388,13 +388,13 @@ nc_xcor_kernel_analytic_tophat_smooth_get_chi_sigma (NcXcorKernelAnalyticTophatS
 }
 
 static guint
-_nc_xcor_kernel_analytic_tophat_smooth_get_n_comps (NcXcorKernelAnalytic *xcka)
+_nc_xcor_kernel_analytic_tophat_smooth_get_n_comps (NcXcorKernelRadial *xcka)
 {
   return 1;
 }
 
 static gdouble
-_nc_xcor_kernel_analytic_tophat_smooth_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi)
+_nc_xcor_kernel_analytic_tophat_smooth_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi)
 {
   NcXcorKernelAnalyticTophatSmooth *xckats = NC_XCOR_KERNEL_ANALYTIC_TOPHAT_SMOOTH (xcka);
   const gdouble s2                         = M_SQRT2 * xckats->chi_sigma;
@@ -417,7 +417,7 @@ _nc_xcor_kernel_analytic_tophat_smooth_eval_W_comp (NcXcorKernelAnalytic *xcka, 
 }
 
 static void
-_nc_xcor_kernel_analytic_tophat_smooth_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
+_nc_xcor_kernel_analytic_tophat_smooth_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
 {
   NcXcorKernelAnalyticTophatSmooth *xckats = NC_XCOR_KERNEL_ANALYTIC_TOPHAT_SMOOTH (xcka);
 

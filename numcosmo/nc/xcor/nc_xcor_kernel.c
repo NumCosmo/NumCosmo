@@ -986,27 +986,6 @@ _nc_xcor_kernel_component_kernel_integ (gpointer params, gdouble x, gdouble k)
 #define MAX_ELL_BLOCK NC_XCOR_KERNEL_MAX_ELL_BLOCK
 #define MAX_COMP_BLOCK 6
 
-/* Fraction of a component's largest spherical-Bessel integral, over all k,
- * below which a further integral cannot affect the k-spline built from them.
- *
- * This is measured against the same peak as NcXcorKernel:scaled-abstol, but it
- * is the opposite kind of knob: a sentinel that stops the *inner* radial
- * integrator chasing relative accuracy in the deep tail, not a precision
- * request. It sits ten orders below NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL and
- * twelve below the 1e-4 default, which looks wasteful -- the inner integral
- * appears to be running at full relative precision even where the k-spline
- * above it discards the result.
- *
- * Measured, and it is not: sweeping this constant over 1e-16, 1e-12, 1e-10 and
- * 1e-8 against closed-form kernels (Gaussian, sharp top-hat, Student-t) at
- * ell = 2, 8, 32 and outer floors of 1e-4 and 1e-6 leaves C_l unchanged to at
- * worst 1.4e-13, and leaves the runtime *identical* -- 0.179 s and 0.327 s for
- * the eighteen-case set at every value. The Levin solve meets its relative
- * criterion first, so this floor is only ever a rescue for the deep tail and
- * that path costs nothing here. Raising it would buy no speed; it is a free
- * safety net and stays where it is. */
-#define NC_XCOR_KERNEL_INTEG_ABSTOL_FRAC 1.0e-16
-
 typedef struct _ComponentState
 {
   NcXcorKernelComponent *comp;
@@ -1021,7 +1000,6 @@ typedef struct _ComponentState
   gdouble last_values_right[MAX_ELL_BLOCK];
   guint left_boundary_found;
   guint right_boundary_found;
-  gdouble integ_max;                       /* Running max |integrator output| over k, pre-prefactor */
   gdouble k_min_limber_ell[MAX_ELL_BLOCK]; /* Per-ell minimum k for Limber */
   gdouble k_max_limber_ell[MAX_ELL_BLOCK]; /* Per-ell maximum k for Limber */
   ComponentParams params;
@@ -1052,7 +1030,6 @@ _component_state_init (ComponentState *state, NcXcorKernelComponent *comp, guint
   state->last_k_right         = 0.0;
   state->left_boundary_found  = 0;
   state->right_boundary_found = 0;
-  state->integ_max            = 0.0;
   state->params.comp          = comp;
   state->params.cosmo         = cosmo;
 
@@ -1353,22 +1330,10 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
       gboolean below_epsilon    = FALSE;
 
       /* Exact integration within boundaries */
-      {
-        /* The integrator cannot know the scale its result feeds into: this
-         * component's kernel over all k. Below a k-independent floor tied to
-         * that scale the result cannot move the k-spline built from it, and
-         * chasing relative accuracy there is both wasted and, where the
-         * integrand has an unresolvable feature, unattainable. */
-        ncm_sbessel_integrator_set_abstol (comp_states->sbi, NC_XCOR_KERNEL_INTEG_ABSTOL_FRAC * state->integ_max);
-
-        ncm_sbessel_integrator_integrate (
-          comp_states->sbi, _nc_xcor_kernel_component_kernel_integ,
-          state->xi_min, state->xi_max, k, integ_result, &state->params
-        );
-      }
-
-      for (i = 0; i < comp_states->n_l; i++)
-        state->integ_max = GSL_MAX (state->integ_max, fabs (kernel_out[ci][i]));
+      ncm_sbessel_integrator_integrate (
+        comp_states->sbi, _nc_xcor_kernel_component_kernel_integ,
+        state->xi_min, state->xi_max, k, integ_result, &state->params
+      );
 
       for (i = 0; i < comp_states->n_l; i++)
       {

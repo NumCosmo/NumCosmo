@@ -26,7 +26,7 @@
 
 Two things are checked, separately, because they fail for different reasons:
 
-**The window itself.** ``nc_xcor_kernel_analytic_eval_W`` is compared pointwise
+**The window itself.** ``nc_xcor_kernel_radial_eval_W`` is compared pointwise
 against the closed form re-implemented in Arb, including the normalization --
 which the reference *measures* as a certified integral rather than copying the
 library's formula.
@@ -275,7 +275,7 @@ def main() -> int:
             # unavoidable at the endpoints -- is a cliff the Chebyshev fit
             # cannot resolve, and the fit aborts on max-order. The library's own
             # integration path clamps for exactly this reason
-            # (_nc_xcor_kernel_analytic_eval_W_comp_clamped), so the comparison
+            # (_nc_xcor_kernel_radial_eval_W_comp_clamped), so the comparison
             # clamps too.
             def window_cb(_ud, chi, _k, _lo=lo, _hi=hi, _kern=kern):
                 return _kern.eval_W(min(max(chi, _lo), _hi))

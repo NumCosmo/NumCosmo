@@ -267,4 +267,5 @@ libplc = static_library(
     gnu_symbol_visibility: 'default',
     c_args: plc_c_args,
     fortran_args: plc_fc_args,
+    override_options: ['b_coverage=false'],
 )
