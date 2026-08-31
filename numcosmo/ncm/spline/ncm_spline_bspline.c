@@ -45,6 +45,12 @@
  * Hence the default order of %NCM_SPLINE_BSPLINE_DEFAULT_ORDER and the cap at
  * %NCM_SPLINE_BSPLINE_MAX_ORDER.
  *
+ * On a prepared spline, ncm_spline_eval() is safe to call concurrently: it evaluates
+ * the basis with stack scratch and touches no shared mutable state. The derivative and
+ * integral entry points go through the GSL workspace, whose scratch is per instance,
+ * and therefore serialize on an internal lock. Preparing concurrently with any
+ * evaluation is not supported, as for every #NcmSpline.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -75,6 +81,7 @@ struct _NcmSplineBSpline
   gdouble abstol;
   gdouble achieved_err; /* estimated interpolation error of the chosen order */
   gchar *inst_name;
+  GMutex lock; /* serializes the paths that write gsl workspace scratch */
 };
 
 G_DEFINE_TYPE (NcmSplineBSpline, ncm_spline_bspline, NCM_TYPE_SPLINE)
@@ -100,6 +107,8 @@ ncm_spline_bspline_init (NcmSplineBSpline *sbs)
   sbs->abstol       = 0.0;
   sbs->achieved_err = 0.0;
   sbs->inst_name    = NULL;
+
+  g_mutex_init (&sbs->lock);
 }
 
 static void
@@ -119,6 +128,7 @@ _ncm_spline_bspline_finalize (GObject *object)
 
   _ncm_spline_bspline_free_workspace (sbs);
   g_clear_pointer (&sbs->inst_name, g_free);
+  g_mutex_clear (&sbs->lock);
 
   /* Chain up: end */
   G_OBJECT_CLASS (ncm_spline_bspline_parent_class)->finalize (object);
@@ -261,8 +271,12 @@ _ncm_spline_bspline_name (NcmSpline *s)
 {
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE (s);
 
+  g_mutex_lock (&sbs->lock);
+
   if (sbs->inst_name == NULL)
     sbs->inst_name = g_strdup_printf ("NcmSplineBSpline[order %u]", sbs->order);
+
+  g_mutex_unlock (&sbs->lock);
 
   return sbs->inst_name;
 }
@@ -450,20 +464,88 @@ _ncm_spline_bspline_min_size (const NcmSpline *s)
   return sbs->order;
 }
 
+/*
+ * The gsl_bspline_calc* family writes scratch (deltal, deltar, B, dB, icache) into the
+ * per-instance workspace, so it cannot run concurrently. Evaluation is the one hot path
+ * -- kernel integrands call it from OpenMP loops on shared splines -- so it is computed
+ * here with de Boor's recursion (PPPACK bsplvb, the same algorithm GSL runs) on stack
+ * scratch, reading only state that preparation froze. The derivative and integral
+ * entry points stay on GSL and serialize on the instance lock instead.
+ */
 static gdouble
 _ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x)
 {
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
-  gdouble res           = 0.0;
+  const gsize k         = sbs->order;
+  const gsize ncontrol  = sbs->alloc_len;
+  const gdouble *t      = sbs->w->knots->data; /* contiguous: allocated by gsl_bspline_alloc_ncontrol() */
+  const gdouble *c      = sbs->c->data;
+  gdouble deltal[NCM_SPLINE_BSPLINE_MAX_ORDER];
+  gdouble deltar[NCM_SPLINE_BSPLINE_MAX_ORDER];
+  gdouble B[NCM_SPLINE_BSPLINE_MAX_ORDER];
+  gsize l, i, j;
 
-  gsl_bspline_calc (x, sbs->c, &res, sbs->w);
+  /* Largest span index l in [k - 1, ncontrol - 1] with t[l] <= x. Outside the range the
+   * clamped edge span extrapolates its polynomial, matching gsl_bspline_calc(). */
+  if (x < t[k - 1])
+  {
+    l = k - 1;
+  }
+  else if (x >= t[ncontrol])
+  {
+    l = ncontrol - 1;
+  }
+  else
+  {
+    gsize lo = k - 1;
+    gsize hi = ncontrol;
 
-  return res;
+    while (hi - lo > 1)
+    {
+      const gsize mid = (lo + hi) / 2;
+
+      if (x < t[mid])
+        hi = mid;
+      else
+        lo = mid;
+    }
+
+    l = lo;
+  }
+
+  B[0] = 1.0;
+
+  for (j = 0; j + 1 < k; j++)
+  {
+    gdouble saved = 0.0;
+
+    deltar[j] = t[l + j + 1] - x;
+    deltal[j] = x - t[l - j];
+
+    for (i = 0; i <= j; i++)
+    {
+      const gdouble term = B[i] / (deltar[i] + deltal[j - i]);
+
+      B[i]  = saved + deltar[i] * term;
+      saved = deltal[j - i] * term;
+    }
+
+    B[j + 1] = saved;
+  }
+
+  {
+    gdouble res = 0.0;
+
+    for (i = 0; i < k; i++)
+      res += B[i] * c[l - (k - 1) + i];
+
+    return res;
+  }
 }
 
 /*
  * @i is a hint, letting callers that already know the interval skip a binary
- * search. gsl_bspline_calc() locates the span itself and takes no index, so the
+ * search. The evaluation locates the span itself and takes no index, so the
  * hint is dropped and this is a plain evaluation -- correct, but carrying none
  * of the saving the fast path exists for. Callers that lean on it, such as
  * ncm_spline_vec_eval() over a shared abscissa, pay full lookup per component.
@@ -480,7 +562,9 @@ _ncm_spline_bspline_deriv (const NcmSpline *s, const gdouble x)
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
   gdouble res           = 0.0;
 
+  g_mutex_lock (&sbs->lock);
   gsl_bspline_calc_deriv (x, sbs->c, 1, &res, sbs->w);
+  g_mutex_unlock (&sbs->lock);
 
   return res;
 }
@@ -491,7 +575,9 @@ _ncm_spline_bspline_deriv2 (const NcmSpline *s, const gdouble x)
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
   gdouble res           = 0.0;
 
+  g_mutex_lock (&sbs->lock);
   gsl_bspline_calc_deriv (x, sbs->c, 2, &res, sbs->w);
+  g_mutex_unlock (&sbs->lock);
 
   return res;
 }
@@ -503,7 +589,9 @@ _ncm_spline_bspline_deriv_nmax (const NcmSpline *s, const gdouble x)
   gdouble res           = 0.0;
 
   /* Highest derivative that is not identically zero: the degree, order - 1. */
+  g_mutex_lock (&sbs->lock);
   gsl_bspline_calc_deriv (x, sbs->c, sbs->order - 1, &res, sbs->w);
+  g_mutex_unlock (&sbs->lock);
 
   return res;
 }
@@ -514,7 +602,9 @@ _ncm_spline_bspline_integ (const NcmSpline *s, const gdouble x0, const gdouble x
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
   gdouble res           = 0.0;
 
+  g_mutex_lock (&sbs->lock);
   gsl_bspline_calc_integ (x0, x1, sbs->c, &res, sbs->w);
+  g_mutex_unlock (&sbs->lock);
 
   return res;
 }
