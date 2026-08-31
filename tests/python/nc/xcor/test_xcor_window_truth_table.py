@@ -71,11 +71,6 @@ RTOL = 1.0e-8
 # this is what those entries are actually held to.
 ATOL_FRAC = 1.0e-11
 
-# The production rule, from nc_xcor_kernel.c: the caller knows the scale the
-# result feeds into, and without an absolute floor the Chebyshev fit refuses to
-# converge on the deep-tail entries and aborts on max-order.
-INTEG_ABSTOL_FRAC = 1.0e-16
-
 
 def _make_kernel(shape, dist, ps, sbi, ctor):
     """Build one analytic kernel from the constructor arguments in the table."""
@@ -177,7 +172,6 @@ def test_radial_integral_matches_arb(
         peak = np.abs(expected).max()
 
         integrator = Ncm.SBesselIntegratorLevin.new(ell, ell)
-        integrator.set_abstol(INTEG_ABSTOL_FRAC * peak)
 
         got = np.array(
             [
