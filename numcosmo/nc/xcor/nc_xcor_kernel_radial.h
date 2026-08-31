@@ -55,9 +55,11 @@ struct _NcXcorKernelRadialClass
   guint (*get_n_comps) (NcXcorKernelRadial *xcka);
   gdouble (*eval_W_comp) (NcXcorKernelRadial *xcka, guint comp, gdouble chi);
   void (*get_comp_support) (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
+  gdouble (*eval_kernel_factor) (NcXcorKernelRadial *xcka, NcHICosmo *cosmo, gdouble chi, gdouble k);
+  gdouble (*eval_prefactor) (NcXcorKernelRadial *xcka, NcHICosmo *cosmo, gint l);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[15];
+  gpointer padding[13];
 };
 
 guint nc_xcor_kernel_radial_get_n_comps (NcXcorKernelRadial *xcka);
@@ -65,6 +67,9 @@ gdouble nc_xcor_kernel_radial_eval_W_comp (NcXcorKernelRadial *xcka, guint comp,
 void nc_xcor_kernel_radial_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
 
 NcXcorKernelRadialKDep *nc_xcor_kernel_radial_peek_kdep (NcXcorKernelRadial *xcka);
+
+gdouble nc_xcor_kernel_radial_eval_kernel_factor (NcXcorKernelRadial *xcka, NcHICosmo *cosmo, gdouble chi, gdouble k);
+gdouble nc_xcor_kernel_radial_eval_prefactor (NcXcorKernelRadial *xcka, NcHICosmo *cosmo, gint l);
 
 gdouble nc_xcor_kernel_radial_eval_W (NcXcorKernelRadial *xcka, gdouble chi);
 void nc_xcor_kernel_radial_get_support (NcXcorKernelRadial *xcka, gdouble *chi_min, gdouble *chi_max);
