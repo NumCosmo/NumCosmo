@@ -30,6 +30,9 @@ __pycache__
 *.fits
 *.log
 
+# ... except the catalogs committed as test fixtures.
+!data/truth_tables/**/*.fits
+
 
 /.luarc.json
 
