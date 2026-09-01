@@ -295,9 +295,23 @@ model_tests = [
         'name': 'nc_recomb',
         'sources': ['nc/recomb/test_nc_recomb.c'],
     },
+    # Split by cost: Cls and calc_ps run CLASS deep enough to take 12.3 s and 4.4 s
+    # per model, where every other check is 0.4 s or less. Measured per line those
+    # two are 91% of this file's runtime for about 2% of the lines only they
+    # reach, so they run in the acceptance tier and the cheap checks stay in the
+    # instrumented lane. Split by check rather than by sharing a prepared state,
+    # which would couple the subtests: calc_ps mutates the object with
+    # nc_cbe_set_calc_transfer().
     {
         'name': 'nc_cbe',
-        'sources': ['nc/cmb/test_nc_cbe.c'],
+        'sources': ['nc/cmb/test_nc_cbe.c', 'nc/cmb/test_nc_cbe_common.c'],
+        'priority': 4,
+        'timeout': 0,
+    },
+    {
+        'name': 'nc_cbe_class',
+        'sources': ['nc/cmb/test_nc_cbe_class.c', 'nc/cmb/test_nc_cbe_common.c'],
+        'suite': ['c-acceptance'],
         'priority': 4,
         'timeout': 0,
     },
