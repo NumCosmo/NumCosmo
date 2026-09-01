@@ -63,6 +63,7 @@ typedef struct _NcmDiffPrivate
   gdouble roff_pad;
   gdouble ini_h;
   gboolean dual_series;
+  gdouble spectral_window;
   GPtrArray *central_tables;
   GPtrArray *forward_tables;
   GPtrArray *backward_tables;
@@ -87,6 +88,7 @@ enum
   PROP_TERR_PAD,
   PROP_INI_H,
   PROP_DUAL_SERIES,
+  PROP_SPECTRAL_WINDOW,
   PROP_SIZE,
 };
 
@@ -102,12 +104,13 @@ ncm_diff_init (NcmDiff *diff)
 {
   NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
 
-  self->maxorder    = 0;
-  self->rs          = 0.0;
-  self->terr_pad    = 0.0;
-  self->roff_pad    = 0.0;
-  self->ini_h       = 0.0;
-  self->dual_series = FALSE;
+  self->maxorder        = 0;
+  self->rs              = 0.0;
+  self->terr_pad        = 0.0;
+  self->roff_pad        = 0.0;
+  self->ini_h           = 0.0;
+  self->dual_series     = FALSE;
+  self->spectral_window = 0.0;
 
   self->central_tables  = g_ptr_array_new ();
   self->forward_tables  = g_ptr_array_new ();
@@ -145,6 +148,9 @@ _ncm_diff_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_DUAL_SERIES:
       ncm_diff_set_dual_series (diff, g_value_get_boolean (value));
       break;
+    case PROP_SPECTRAL_WINDOW:
+      ncm_diff_set_spectral_window (diff, g_value_get_double (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -177,6 +183,9 @@ _ncm_diff_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
       break;
     case PROP_DUAL_SERIES:
       g_value_set_boolean (value, ncm_diff_get_dual_series (diff));
+      break;
+    case PROP_SPECTRAL_WINDOW:
+      g_value_set_double (value, ncm_diff_get_spectral_window (diff));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -274,6 +283,13 @@ ncm_diff_class_init (NcmDiffClass *klass)
                                                          "Use two parallel extrapolation series",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_SPECTRAL_WINDOW,
+                                   g_param_spec_double ("spectral-window",
+                                                        NULL,
+                                                        "Initial spectral window half-width in units of the variable scale",
+                                                        GSL_DBL_EPSILON, G_MAXDOUBLE, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static NcmDiffTable *
@@ -685,6 +701,42 @@ ncm_diff_get_dual_series (NcmDiff *diff)
   NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
 
   return self->dual_series;
+}
+
+/**
+ * ncm_diff_set_spectral_window:
+ * @diff: a #NcmDiff
+ * @spectral_window: the new initial spectral window half-width
+ *
+ * Sets the initial half-width of the window used by the spectral methods
+ * (ncm_diff_sc_d1_N_to_M() and related), in units of the variable scale.
+ * The window search starts from this value and expands or shrinks it to
+ * match the scale of variation of the function.
+ *
+ */
+void
+ncm_diff_set_spectral_window (NcmDiff *diff, const gdouble spectral_window)
+{
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
+  g_assert_cmpfloat (spectral_window, >, 0.0);
+  self->spectral_window = spectral_window;
+}
+
+/**
+ * ncm_diff_get_spectral_window:
+ * @diff: a #NcmDiff
+ *
+ * Gets the initial spectral window half-width, see ncm_diff_set_spectral_window().
+ *
+ * Returns: the initial spectral window half-width.
+ */
+gdouble
+ncm_diff_get_spectral_window (NcmDiff *diff)
+{
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
+  return self->spectral_window;
 }
 
 /**
@@ -1706,6 +1758,570 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
   return _ncm_diff_Hessian_by_step_algo_single (diff, Hstep_algo, po, x_a, f, user_data, Eerr);
 }
 
+/*
+ * Spectral (Chebyshev) derivatives.
+ *
+ * The derivative along each variable is computed from a Chebyshev fit of the
+ * function on a window [x - R, x + R]. The window half-width R is found by
+ * probing a dyadic ladder of candidates with a fixed-order fit and scoring
+ * each by the estimated derivative error (series tail plus propagated
+ * round-off): shrinking resolves sharp features, expanding lowers the
+ * round-off amplification of flat ones. The accepted window is then refined
+ * on nested Chebyshev-Lobatto grids.
+ *
+ * Convergence is judged on the derivative itself between refinement levels,
+ * never on the coefficients: a relative test on the coefficient norm would be
+ * dominated by components the derivative does not use (e.g. a large constant
+ * offset), declaring convergence while the derivative-carrying coefficients
+ * are still unresolved. The round-off floor eps * sum |c_k|, propagated
+ * through the coefficient differentiation, carries such offsets explicitly.
+ */
+
+#define NCM_DIFF_SC_PROBE_N (17) /* fixed order of the window probes */
+#define NCM_DIFF_SC_MAX_N (65)   /* refinement grids: 17, 33, 65 nodes */
+#define NCM_DIFF_SC_ERR_PAD (10.0)
+#define NCM_DIFF_SC_MAX_SHRINK (45)
+#define NCM_DIFF_SC_MAX_EXPAND (8)
+#define NCM_DIFF_SC_BAD_Q (1.0e-3) /* q_fit above this marks an unresolved window */
+#define NCM_DIFF_SC_PATIENCE (2)   /* non-improving steps allowed after a resolved window */
+#define NCM_DIFF_SC_IMPROVE (0.9)  /* required score reduction factor */
+
+typedef struct _NcmDiffSCData
+{
+  NcmDiffFuncNtoM f;
+  gpointer user_data;
+  NcmVector *x_v;
+  guint a;
+} NcmDiffSCData;
+
+/*
+ * Evaluates the function at the Chebyshev-Lobatto nodes of [x - R, x + R]
+ * along variable data->a, storing component c at fvals[c][i]. With N_old == 0
+ * all N nodes are evaluated; with N_new == 2 * N_old - 1 the old values are
+ * spread to the even indices and only the new odd nodes are evaluated.
+ * Returns FALSE when any value is non-finite (fvals is then partial).
+ */
+static gboolean
+_ncm_diff_sc_eval_nodes (NcmDiffSCData *data, const gdouble x, const gdouble R,
+                         const guint dim, NcmVector *y_v, NcmMatrix *fvals,
+                         const guint N_old, const guint N_new)
+{
+  gboolean finite = TRUE;
+  guint i, c;
+
+  if (N_old > 0)
+  {
+    g_assert_cmpuint (N_new, ==, 2 * N_old - 1);
+
+    for (i = N_old - 1; ; i--)
+    {
+      for (c = 0; c < dim; c++)
+        ncm_matrix_set (fvals, c, 2 * i, ncm_matrix_get (fvals, c, i));
+
+      if (i == 0)
+        break;
+    }
+  }
+
+  for (i = 0; i < N_new; i++)
+  {
+    const gboolean new_node = (N_old == 0) || ((i % 2) == 1);
+
+    if (new_node)
+    {
+      const gdouble t  = cos (M_PI * i / (N_new - 1.0));
+      const gdouble xi = x + R * t;
+
+      ncm_vector_set (data->x_v, data->a, xi);
+      data->f (data->x_v, y_v, data->user_data);
+
+      for (c = 0; c < dim; c++)
+      {
+        const gdouble yc = ncm_vector_get (y_v, c);
+
+        ncm_matrix_set (fvals, c, i, yc);
+
+        if (!gsl_finite (yc))
+          finite = FALSE;
+      }
+    }
+  }
+
+  ncm_vector_set (data->x_v, data->a, x);
+
+  return finite;
+}
+
+/*
+ * Direct DCT-I of the node values: coeffs[c][k] such that component c is
+ * sum_k coeffs[c][k] T_k(t) on the window. O(N^2) per component, negligible
+ * against the function evaluations for the N used here.
+ */
+static void
+_ncm_diff_sc_dct (NcmMatrix *fvals, const guint dim, const guint N, NcmMatrix *coeffs)
+{
+  const guint two_Nm1 = 2 * (N - 1);
+  gdouble *cosm       = g_new (gdouble, two_Nm1);
+  guint i, k, c;
+
+  for (i = 0; i < two_Nm1; i++)
+    cosm[i] = cos ((M_PI * i) / (N - 1.0));
+
+  for (c = 0; c < dim; c++)
+  {
+    const gdouble f_first = ncm_matrix_get (fvals, c, 0);
+    const gdouble f_last  = ncm_matrix_get (fvals, c, N - 1);
+
+    for (k = 0; k < N; k++)
+    {
+      gdouble s = 0.5 * (f_first + (((k % 2) == 0) ? f_last : -f_last));
+
+      for (i = 1; i < N - 1; i++)
+        s += ncm_matrix_get (fvals, c, i) * cosm[(k * i) % two_Nm1];
+
+      ncm_matrix_set (coeffs, c, k, s * (((k == 0) || (k == N - 1)) ? 1.0 : 2.0) / (N - 1.0));
+    }
+  }
+
+  g_free (cosm);
+}
+
+/*
+ * Derivative of a Chebyshev series in coefficient space: given
+ * f(t) = sum_{k=0}^{n-1} c_k T_k(t), fills b with the n - 1 coefficients of
+ * f'(t) in the same convention. With non-negative input the output is
+ * non-negative, so the same recurrence propagates error magnitudes.
+ */
+static void
+_ncm_diff_sc_cheb_deriv (const gdouble *c, const guint n, gdouble *b)
+{
+  guint j;
+
+  b[n - 2] = 2.0 * (n - 1.0) * c[n - 1];
+
+  for (j = n - 2; j >= 1; j--)
+    b[j - 1] = ((j + 1 <= n - 2) ? b[j + 1] : 0.0) + 2.0 * j * c[j];
+
+  b[0] *= 0.5;
+}
+
+/* Chebyshev series value at the window center, t = 0. */
+static gdouble
+_ncm_diff_sc_eval0 (const gdouble *c, const guint n)
+{
+  gdouble s = 0.0;
+  guint k;
+
+  for (k = 0; k < n; k += 2)
+    s += (((k % 4) == 0) ? c[k] : -c[k]);
+
+  return s;
+}
+
+/*
+ * Derivative of @order of one fitted component at the window center, with an
+ * unpadded error estimate in two parts:
+ *
+ * - tail: the top quarter of the fitted coefficients, propagated in absolute
+ *   value through the differentiation (truncation). Measured on the original
+ *   coefficients, never on the differentiated ones: differentiation makes a
+ *   slowly decaying series bottom-heavy, so its own tail can look converged
+ *   while the fit has not resolved the function at all.
+ * - roff: the coefficient round-off eps * sum |c_k|, propagated the same way
+ *   (the amplification of the k-th coefficient grows as k^2 per order).
+ *
+ * Also returns q_fit, the fraction of the coefficient mass in the top
+ * quarter: a scale-free measure of how resolved the fit is.
+ */
+static void
+_ncm_diff_sc_deriv_est (const gdouble *c, const guint len, const gdouble R, const guint order,
+                        gdouble *deriv, gdouble *tail, gdouble *roff, gdouble *q_fit)
+{
+  const gdouble Rinv     = 1.0 / R;
+  const guint tail_start = (3 * len) / 4;
+  gdouble *b             = g_new (gdouble, len);
+  gdouble *nb            = g_new (gdouble, len);
+  gdouble *tb            = g_new (gdouble, len);
+  gdouble *tmp           = g_new (gdouble, len);
+  gdouble sum_abs_c      = 0.0;
+  gdouble sum_abs_tail   = 0.0;
+  gdouble scale          = 1.0;
+  guint n                = len;
+  guint k, j;
+
+  g_assert_cmpuint (len, >, order + 1);
+
+  for (k = 0; k < len; k++)
+  {
+    const gdouble abs_ck = fabs (c[k]);
+
+    b[k]       = c[k];
+    tb[k]      = (k >= tail_start) ? abs_ck : 0.0;
+    sum_abs_c += abs_ck;
+
+    if (k >= tail_start)
+      sum_abs_tail += abs_ck;
+  }
+
+  q_fit[0] = sum_abs_tail / (sum_abs_c + GSL_DBL_MIN);
+
+  {
+    const gdouble nu = GSL_DBL_EPSILON * sum_abs_c;
+
+    for (k = 0; k < len; k++)
+      nb[k] = nu;
+  }
+
+  for (j = 0; j < order; j++)
+  {
+    _ncm_diff_sc_cheb_deriv (b, n, tmp);
+    memcpy (b, tmp, sizeof (gdouble) * (n - 1));
+
+    _ncm_diff_sc_cheb_deriv (nb, n, tmp);
+    memcpy (nb, tmp, sizeof (gdouble) * (n - 1));
+
+    _ncm_diff_sc_cheb_deriv (tb, n, tmp);
+    memcpy (tb, tmp, sizeof (gdouble) * (n - 1));
+
+    n--;
+    scale *= Rinv;
+  }
+
+  deriv[0] = _ncm_diff_sc_eval0 (b, n) * scale;
+
+  {
+    gdouble tail_sum = 0.0;
+    gdouble roff_sum = 0.0;
+
+    for (k = 0; k < n; k++)
+    {
+      tail_sum += tb[k];
+      roff_sum += nb[k];
+    }
+
+    tail[0] = tail_sum * scale;
+    roff[0] = roff_sum * scale;
+  }
+
+  g_free (b);
+  g_free (nb);
+  g_free (tb);
+  g_free (tmp);
+}
+
+/*
+ * Probes the window [x - R, x + R]: node evaluation plus fixed-order fit.
+ * Produces two figures of merit over the components:
+ *
+ * - score: the estimated derivative errors, each in units of the fixed
+ *   per-component weight w[c], summed. Window-independent normalization, so
+ *   scores of different windows compare directly. With w_set FALSE the
+ *   weights are first filled from this probe.
+ * - q: the worst q_fit over components, the fraction of coefficient mass in
+ *   the top quarter of the series. A resolved window sits at round-off
+ *   (q ~ 1e-12); an unresolved one at q >~ 1e-3.
+ *
+ * Returns FALSE (score GSL_POSINF) when the function is non-finite on the window.
+ */
+static gboolean
+_ncm_diff_sc_probe (NcmDiffSCData *data, const gdouble x, const gdouble R, const guint dim,
+                    const guint order, NcmVector *y_v, NcmMatrix *fvals, NcmMatrix *coeffs,
+                    gdouble *w, gboolean w_set, gdouble *score, gdouble *q)
+{
+  gdouble score_sum = 0.0;
+  gdouble q_max     = 0.0;
+  guint c;
+
+  score[0] = GSL_POSINF;
+  q[0]     = 1.0;
+
+  if (!_ncm_diff_sc_eval_nodes (data, x, R, dim, y_v, fvals, 0, NCM_DIFF_SC_PROBE_N))
+    return FALSE;
+
+  _ncm_diff_sc_dct (fvals, dim, NCM_DIFF_SC_PROBE_N, coeffs);
+
+  for (c = 0; c < dim; c++)
+  {
+    gdouble deriv, tail, roff, q_fit, err;
+
+    _ncm_diff_sc_deriv_est (ncm_matrix_ptr (coeffs, c, 0), NCM_DIFF_SC_PROBE_N, R, order, &deriv, &tail, &roff, &q_fit);
+
+    err = tail + roff;
+
+    if (!w_set)
+      w[c] = fabs (deriv) + err + GSL_DBL_MIN;
+
+    score_sum += err / w[c];
+    q_max      = GSL_MAX (q_max, q_fit);
+  }
+
+  score[0] = score_sum;
+  q[0]     = q_max;
+
+  return TRUE;
+}
+
+/*
+ * Window search: hill descent on the probe score over a dyadic ladder of
+ * half-widths, shrinking first and expanding only when shrinking never beat
+ * the initial window. While no resolved window (q below NCM_DIFF_SC_BAD_Q)
+ * has been seen the shrinking never gives up: for a feature much narrower
+ * than the window the score can even move away from the eventual minimum
+ * until the window reaches the feature scale. Expansion only makes sense for
+ * a resolved fit (it lowers the round-off amplification), so it requires one.
+ * Stores the node values of the best window in fvals_best and returns its
+ * half-width, or 0.0 when no finite window was found.
+ */
+static gdouble
+_ncm_diff_sc_scan_window (NcmDiffSCData *data, const gdouble x, const gdouble R0, const guint dim,
+                          const guint order, NcmVector *y_v, NcmMatrix *fvals, NcmMatrix *coeffs,
+                          NcmMatrix *fvals_best, gdouble *w)
+{
+  gdouble R_best     = 0.0;
+  gdouble score_best = GSL_POSINF;
+  gdouble q_best     = 1.0;
+  gboolean w_set     = FALSE;
+  gdouble R          = R0;
+  guint worse        = 0;
+  guint iter;
+  gdouble score, q;
+
+  if (_ncm_diff_sc_probe (data, x, R0, dim, order, y_v, fvals, coeffs, w, w_set, &score, &q))
+  {
+    w_set      = TRUE;
+    score_best = score;
+    q_best     = q;
+    R_best     = R0;
+    ncm_matrix_memcpy (fvals_best, fvals);
+  }
+
+  for (iter = 0; iter < NCM_DIFF_SC_MAX_SHRINK; iter++)
+  {
+    gboolean improved = FALSE;
+
+    if (q_best < 1.0e-14)
+      break;
+
+    R *= 0.5;
+
+    if (_ncm_diff_sc_probe (data, x, R, dim, order, y_v, fvals, coeffs, w, w_set, &score, &q))
+      w_set = TRUE;
+
+    /* A first resolved window always wins over an unresolved best: the score
+     * of an unresolved fit only measures how wrong it knows itself to be. */
+    if ((q_best > NCM_DIFF_SC_BAD_Q) && (q <= NCM_DIFF_SC_BAD_Q))
+      improved = TRUE;
+    else if ((score < NCM_DIFF_SC_IMPROVE * score_best) && (q <= GSL_MAX (q_best, NCM_DIFF_SC_BAD_Q)))
+      improved = TRUE;
+
+    if (improved)
+    {
+      score_best = score;
+      q_best     = q;
+      R_best     = R;
+      worse      = 0;
+      ncm_matrix_memcpy (fvals_best, fvals);
+    }
+    else if (q_best <= NCM_DIFF_SC_BAD_Q)
+    {
+      worse++;
+
+      if (worse >= NCM_DIFF_SC_PATIENCE)
+        break;
+    }
+  }
+
+  if ((R_best == R0) && (q_best <= NCM_DIFF_SC_BAD_Q))
+  {
+    R     = R0;
+    worse = 0;
+
+    for (iter = 0; iter < NCM_DIFF_SC_MAX_EXPAND; iter++)
+    {
+      if (q_best < 1.0e-14)
+        break;
+
+      R *= 2.0;
+
+      _ncm_diff_sc_probe (data, x, R, dim, order, y_v, fvals, coeffs, w, w_set, &score, &q);
+
+      if ((score < NCM_DIFF_SC_IMPROVE * score_best) && (q <= NCM_DIFF_SC_BAD_Q))
+      {
+        score_best = score;
+        q_best     = q;
+        R_best     = R;
+        worse      = 0;
+        ncm_matrix_memcpy (fvals_best, fvals);
+      }
+      else
+      {
+        worse++;
+
+        if (worse >= NCM_DIFF_SC_PATIENCE)
+          break;
+      }
+    }
+  }
+
+  return R_best;
+}
+
+static GArray *
+_ncm_diff_sc_dn (NcmDiff *diff, const guint order, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
+{
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+  const guint nvar            = x_a->len;
+  GArray *df                  = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmVector *x_v              = ncm_vector_new_array (x_a);
+  NcmVector *y_v              = ncm_vector_new (dim);
+  NcmMatrix *fvals            = ncm_matrix_new (dim, NCM_DIFF_SC_MAX_N);
+  NcmMatrix *coeffs           = ncm_matrix_new (dim, NCM_DIFF_SC_MAX_N);
+  NcmMatrix *fvals_probe      = ncm_matrix_new (dim, NCM_DIFF_SC_PROBE_N);
+  NcmMatrix *coeffs_probe     = ncm_matrix_new (dim, NCM_DIFF_SC_PROBE_N);
+  NcmMatrix *fvals_best       = ncm_matrix_new (dim, NCM_DIFF_SC_PROBE_N);
+  GArray *d_prev              = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *w_a                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *conv                = g_array_new (FALSE, FALSE, sizeof (NcmDiffDualConv));
+  NcmDiffSCData data          = {f, user_data, x_v, 0};
+  NcmMatrix *Eerr_m           = NULL;
+  NcmMatrix *df_m;
+  guint a;
+
+  g_array_set_size (df, dim * nvar);
+  df_m = ncm_matrix_new_array (df, dim);
+
+  if (Eerr != NULL)
+  {
+    *Eerr = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    g_array_set_size (*Eerr, dim * nvar);
+    Eerr_m = ncm_matrix_new_array (*Eerr, dim);
+  }
+
+  g_array_set_size (d_prev, dim);
+  g_array_set_size (w_a, dim);
+  g_array_set_size (conv, dim);
+
+  for (a = 0; a < nvar; a++)
+  {
+    const gdouble x     = g_array_index (x_a, gdouble, a);
+    const gdouble scale = (x == 0.0) ? 1.0 : fabs (x);
+    const gdouble R0    = self->spectral_window * scale;
+    gdouble R;
+    guint N_cur = 0;
+    guint c;
+
+    data.a = a;
+
+    R = _ncm_diff_sc_scan_window (&data, x, R0, dim, order, y_v, fvals_probe, coeffs_probe, fvals_best,
+                                  &g_array_index (w_a, gdouble, 0));
+
+    if (R == 0.0)
+      g_error ("ncm_diff_sc: no window around x[%u] = % 22.15g with finite function values.", a, x);
+
+    for (c = 0; c < dim; c++)
+      _ncm_diff_dual_conv_init (&g_array_index (conv, NcmDiffDualConv, c));
+
+    /* Refinement on nested grids, starting from the best probe. */
+    {
+      guint N;
+
+      for (c = 0; c < dim; c++)
+      {
+        guint i;
+
+        for (i = 0; i < NCM_DIFF_SC_PROBE_N; i++)
+          ncm_matrix_set (fvals, c, i, ncm_matrix_get (fvals_best, c, i));
+      }
+
+      N_cur = NCM_DIFF_SC_PROBE_N;
+
+      for (N = NCM_DIFF_SC_PROBE_N; N <= NCM_DIFF_SC_MAX_N; N = 2 * N - 1)
+      {
+        gboolean improve  = FALSE;
+        gboolean resolved = TRUE;
+
+        if (N > N_cur)
+        {
+          if (!_ncm_diff_sc_eval_nodes (&data, x, R, dim, y_v, fvals, N_cur, N))
+            break;
+
+          N_cur = N;
+        }
+
+        _ncm_diff_sc_dct (fvals, dim, N, coeffs);
+
+        for (c = 0; c < dim; c++)
+        {
+          NcmDiffDualConv *cs = &g_array_index (conv, NcmDiffDualConv, c);
+          gdouble d_c, tail_c, roff_c, q_fit_c;
+
+          _ncm_diff_sc_deriv_est (ncm_matrix_ptr (coeffs, c, 0), N, R, order, &d_c, &tail_c, &roff_c, &q_fit_c);
+
+          if (tail_c > roff_c)
+            resolved = FALSE;
+
+          if (N == NCM_DIFF_SC_PROBE_N)
+          {
+            /* No cross-level check yet: record the value, leave the error
+             * unknown. It only reaches the caller when the refinement cannot
+             * run (non-finite values between the probe nodes). */
+            cs->df_best = d_c;
+            improve     = TRUE;
+          }
+          else
+          {
+            const gdouble err_c = GSL_MAX (fabs (d_c - g_array_index (d_prev, gdouble, c)), tail_c + roff_c);
+
+            if (err_c < cs->err_best)
+            {
+              cs->df_best  = d_c;
+              cs->err_best = err_c;
+              improve      = TRUE;
+            }
+          }
+
+          g_array_index (d_prev, gdouble, c) = d_c;
+        }
+
+        /* Once every component's series tail is below its round-off, a finer
+         * grid can only add noise. Never stop before one cross-level check. */
+        if ((N > NCM_DIFF_SC_PROBE_N) && (!improve || resolved))
+          break;
+      }
+    }
+
+    for (c = 0; c < dim; c++)
+    {
+      const NcmDiffDualConv *cs = &g_array_index (conv, NcmDiffDualConv, c);
+
+      ncm_matrix_set (df_m, a, c, cs->df_best);
+
+      if (Eerr_m != NULL)
+        ncm_matrix_set (Eerr_m, a, c, cs->err_best * NCM_DIFF_SC_ERR_PAD);
+    }
+  }
+
+  {
+    g_array_unref (d_prev);
+    g_array_unref (w_a);
+    g_array_unref (conv);
+
+    ncm_vector_clear (&x_v);
+    ncm_vector_clear (&y_v);
+
+    ncm_matrix_clear (&fvals);
+    ncm_matrix_clear (&coeffs);
+    ncm_matrix_clear (&fvals_probe);
+    ncm_matrix_clear (&coeffs_probe);
+    ncm_matrix_clear (&fvals_best);
+
+    ncm_matrix_clear (&df_m);
+    ncm_matrix_clear (&Eerr_m);
+
+    return df;
+  }
+}
+
 /**
  * ncm_diff_rf_d1_N_to_M:
  * @diff: a #NcmDiff
@@ -2121,6 +2737,246 @@ ncm_diff_rc_d2_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpoint
   g_array_index (x_a, gdouble, 0) = x;
 
   df_a = ncm_diff_by_step_algo (diff, _ncm_diff_rc_d2_step, 1, x_a, 1, &_ncm_diff_trans_1_to_1, &fp, &Eerr);
+
+  df = g_array_index (df_a, gdouble, 0);
+
+  g_array_unref (x_a);
+  g_array_unref (df_a);
+
+  if (err != NULL)
+    *err = g_array_index (Eerr, gdouble, 0);
+
+  g_array_unref (Eerr);
+
+  return df;
+}
+
+/**
+ * ncm_diff_sc_d1_N_to_M:
+ * @diff: a #NcmDiff
+ * @x_a: (array) (element-type double) (in): function argument
+ * @dim: dimension of @f
+ * @f: (scope call): function to differentiate
+ * @user_data: (nullable): function user data
+ * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
+ *
+ * Calculates the first derivative of @f: $\partial_i f$ using the spectral method:
+ * for each variable the function is expanded in Chebyshev polynomials on a window
+ * whose half-width is searched for automatically (starting from
+ * #NcmDiff:spectral-window times the variable scale), and the expansion is
+ * differentiated analytically at the window center. The function $f$ is considered
+ * as a $f:\mathbb{R}^N\to \mathbb{R}^M$, where $N = $ length of @x_a and $M = $ @dim.
+ *
+ * Compared to the finite-difference methods, the spectral method samples the
+ * function on a wide window instead of a shrinking neighborhood, which lowers the
+ * round-off amplification and handles functions whose scale of variation differs
+ * from the magnitude of the variable. It uses more function evaluations.
+ *
+ * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ */
+GArray *
+ncm_diff_sc_d1_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
+{
+  return _ncm_diff_sc_dn (diff, 1, x_a, dim, f, user_data, Eerr);
+}
+
+/**
+ * ncm_diff_sc_d2_N_to_M:
+ * @diff: a #NcmDiff
+ * @x_a: (array) (element-type double) (in): function argument
+ * @dim: dimension of @f
+ * @f: (scope call): function to differentiate
+ * @user_data: (nullable): function user data
+ * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
+ *
+ * Calculates the second derivative of @f: $\partial_i^2 f$ using the spectral
+ * method, see ncm_diff_sc_d1_N_to_M(). The function $f$ is considered as a
+ * $f:\mathbb{R}^N\to \mathbb{R}^M$, where $N = $ length of @x_a and $M = $ @dim.
+ *
+ * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ */
+GArray *
+ncm_diff_sc_d2_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
+{
+  return _ncm_diff_sc_dn (diff, 2, x_a, dim, f, user_data, Eerr);
+}
+
+/**
+ * ncm_diff_sc_d1_1_to_M:
+ * @diff: a #NcmDiff
+ * @x: function argument
+ * @dim: dimension of @f
+ * @f: (scope call): function to differentiate
+ * @user_data: (nullable): function user data
+ * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
+ *
+ * Calculates the first derivative of @f using the spectral method, see
+ * ncm_diff_sc_d1_N_to_M(). The function $f$ is considered as a
+ * $f:\mathbb{R}\to \mathbb{R}^M$, where $M = $ @dim.
+ *
+ * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x.
+ */
+GArray *
+ncm_diff_sc_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr)
+{
+  NcmDiffFuncParams fp = {f, NULL, NULL, user_data};
+  GArray *x_a          = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *df_a;
+
+  g_array_set_size (x_a, 1);
+  g_array_index (x_a, gdouble, 0) = x;
+
+  df_a = _ncm_diff_sc_dn (diff, 1, x_a, dim, &_ncm_diff_trans_1_to_M, &fp, Eerr);
+
+  g_array_unref (x_a);
+
+  return df_a;
+}
+
+/**
+ * ncm_diff_sc_d2_1_to_M:
+ * @diff: a #NcmDiff
+ * @x: function argument
+ * @dim: dimension of @f
+ * @f: (scope call): function to differentiate
+ * @user_data: (nullable): function user data
+ * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
+ *
+ * Calculates the second derivative of @f using the spectral method, see
+ * ncm_diff_sc_d1_N_to_M(). The function $f$ is considered as a
+ * $f:\mathbb{R}\to \mathbb{R}^M$, where $M = $ @dim.
+ *
+ * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x.
+ */
+GArray *
+ncm_diff_sc_d2_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr)
+{
+  NcmDiffFuncParams fp = {f, NULL, NULL, user_data};
+  GArray *x_a          = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *df_a;
+
+  g_array_set_size (x_a, 1);
+  g_array_index (x_a, gdouble, 0) = x;
+
+  df_a = _ncm_diff_sc_dn (diff, 2, x_a, dim, &_ncm_diff_trans_1_to_M, &fp, Eerr);
+
+  g_array_unref (x_a);
+
+  return df_a;
+}
+
+/**
+ * ncm_diff_sc_d1_N_to_1:
+ * @diff: a #NcmDiff
+ * @x_a: (array) (element-type double) (in): function argument
+ * @f: (scope call): function to differentiate
+ * @user_data: (nullable): function user data
+ * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
+ *
+ * Calculates the gradient of @f using the spectral method, see
+ * ncm_diff_sc_d1_N_to_M(). The function $f$ is considered as a
+ * $f:\mathbb{R}^N \to \mathbb{R}$, where $N = $ length of @x_a.
+ *
+ * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ */
+GArray *
+ncm_diff_sc_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
+{
+  NcmDiffFuncParams fp = {NULL, f, NULL, user_data};
+
+  return _ncm_diff_sc_dn (diff, 1, x_a, 1, &_ncm_diff_trans_N_to_1, &fp, Eerr);
+}
+
+/**
+ * ncm_diff_sc_d2_N_to_1:
+ * @diff: a #NcmDiff
+ * @x_a: (array) (element-type double) (in): function argument
+ * @f: (scope call): function to differentiate
+ * @user_data: (nullable): function user data
+ * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
+ *
+ * Calculates the second derivatives $\partial_i^2 f$ using the spectral method,
+ * see ncm_diff_sc_d1_N_to_M(). The function $f$ is considered as a
+ * $f:\mathbb{R}^N \to \mathbb{R}$, where $N = $ length of @x_a.
+ *
+ * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ */
+GArray *
+ncm_diff_sc_d2_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
+{
+  NcmDiffFuncParams fp = {NULL, f, NULL, user_data};
+
+  return _ncm_diff_sc_dn (diff, 2, x_a, 1, &_ncm_diff_trans_N_to_1, &fp, Eerr);
+}
+
+/**
+ * ncm_diff_sc_d1_1_to_1:
+ * @diff: a #NcmDiff
+ * @x: function argument
+ * @f: (scope call): function to differentiate
+ * @user_data: (nullable): function user data
+ * @err: (out) (nullable): estimated error
+ *
+ * Calculates the first derivative of @f using the spectral method, see
+ * ncm_diff_sc_d1_N_to_M(). The function $f$ is considered as a
+ * $f:\mathbb{R} \to \mathbb{R}$.
+ *
+ * Returns: The derivative of @f at @x.
+ */
+gdouble
+ncm_diff_sc_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpointer user_data, gdouble *err)
+{
+  NcmDiffFuncParams fp = {NULL, NULL, f, user_data};
+  GArray *x_a          = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *Eerr         = NULL;
+  GArray *df_a;
+  gdouble df;
+
+  g_array_set_size (x_a, 1);
+  g_array_index (x_a, gdouble, 0) = x;
+
+  df_a = _ncm_diff_sc_dn (diff, 1, x_a, 1, &_ncm_diff_trans_1_to_1, &fp, &Eerr);
+
+  df = g_array_index (df_a, gdouble, 0);
+
+  g_array_unref (x_a);
+  g_array_unref (df_a);
+
+  if (err != NULL)
+    *err = g_array_index (Eerr, gdouble, 0);
+
+  g_array_unref (Eerr);
+
+  return df;
+}
+
+/**
+ * ncm_diff_sc_d2_1_to_1:
+ * @diff: a #NcmDiff
+ * @x: function argument
+ * @f: (scope call): function to differentiate
+ * @user_data: (nullable): function user data
+ * @err: (out) (nullable): estimated error
+ *
+ * Calculates the second derivative of @f using the spectral method, see
+ * ncm_diff_sc_d1_N_to_M(). The function $f$ is considered as a
+ * $f:\mathbb{R} \to \mathbb{R}$.
+ *
+ * Returns: The derivative of @f at @x.
+ */
+gdouble
+ncm_diff_sc_d2_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpointer user_data, gdouble *err)
+{
+  NcmDiffFuncParams fp = {NULL, NULL, f, user_data};
+  GArray *x_a          = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *Eerr         = NULL;
+  GArray *df_a;
+  gdouble df;
+
+  g_array_set_size (x_a, 1);
+  g_array_index (x_a, gdouble, 0) = x;
+
+  df_a = _ncm_diff_sc_dn (diff, 2, x_a, 1, &_ncm_diff_trans_1_to_1, &fp, &Eerr);
 
   df = g_array_index (df_a, gdouble, 0);
 

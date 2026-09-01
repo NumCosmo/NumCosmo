@@ -2453,6 +2453,8 @@ class Diff(GObject.Object):
         Initial h
       dual-series -> gboolean: dual-series
         Use two parallel extrapolation series
+      spectral-window -> gdouble: spectral-window
+        Initial spectral window half-width in units of the variable scale
 
     Signals from GObject:
       notify (GParam)
@@ -2464,6 +2466,7 @@ class Diff(GObject.Object):
         max_order: int
         richardson_step: float
         round_off_pad: float
+        spectral_window: float
         terr_pad: float
 
     props: Props = ...
@@ -2474,6 +2477,7 @@ class Diff(GObject.Object):
         max_order: int = ...,
         richardson_step: float = ...,
         round_off_pad: float = ...,
+        spectral_window: float = ...,
         terr_pad: float = ...,
     ) -> None: ...
     @staticmethod
@@ -2484,6 +2488,7 @@ class Diff(GObject.Object):
     def get_max_order(self) -> int: ...
     def get_richardson_step(self) -> float: ...
     def get_round_off_pad(self) -> float: ...
+    def get_spectral_window(self) -> float: ...
     def get_trunc_error_pad(self) -> float: ...
     def log_backward_tables(self) -> None: ...
     def log_central_tables(self) -> None: ...
@@ -2554,11 +2559,50 @@ class Diff(GObject.Object):
         f: typing.Callable[..., None],
         *user_data: typing.Any,
     ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d1_1_to_1(
+        self, x: float, f: typing.Callable[..., float], *user_data: typing.Any
+    ) -> typing.Tuple[float, float]: ...
+    def sc_d1_1_to_M(
+        self, x: float, dim: int, f: typing.Callable[..., None], *user_data: typing.Any
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d1_N_to_1(
+        self,
+        x_a: typing.Sequence[float] | npt.NDArray[np.float64],
+        f: typing.Callable[..., float],
+        *user_data: typing.Any,
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d1_N_to_M(
+        self,
+        x_a: typing.Sequence[float] | npt.NDArray[np.float64],
+        dim: int,
+        f: typing.Callable[..., None],
+        *user_data: typing.Any,
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d2_1_to_1(
+        self, x: float, f: typing.Callable[..., float], *user_data: typing.Any
+    ) -> typing.Tuple[float, float]: ...
+    def sc_d2_1_to_M(
+        self, x: float, dim: int, f: typing.Callable[..., None], *user_data: typing.Any
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d2_N_to_1(
+        self,
+        x_a: typing.Sequence[float] | npt.NDArray[np.float64],
+        f: typing.Callable[..., float],
+        *user_data: typing.Any,
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d2_N_to_M(
+        self,
+        x_a: typing.Sequence[float] | npt.NDArray[np.float64],
+        dim: int,
+        f: typing.Callable[..., None],
+        *user_data: typing.Any,
+    ) -> typing.Tuple[list[float], list[float]]: ...
     def set_dual_series(self, dual_series: bool) -> None: ...
     def set_ini_h(self, ini_h: float) -> None: ...
     def set_max_order(self, maxorder: int) -> None: ...
     def set_richardson_step(self, rs: float) -> None: ...
     def set_round_off_pad(self, roff_pad: float) -> None: ...
+    def set_spectral_window(self, spectral_window: float) -> None: ...
     def set_trunc_error_pad(self, terr_pad: float) -> None: ...
 
 class DiffClass(GObject.GPointer):

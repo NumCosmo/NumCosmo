@@ -92,6 +92,7 @@ gdouble ncm_diff_get_round_off_pad (NcmDiff *diff);
 gdouble ncm_diff_get_trunc_error_pad (NcmDiff *diff);
 gdouble ncm_diff_get_ini_h (NcmDiff *diff);
 gboolean ncm_diff_get_dual_series (NcmDiff *diff);
+gdouble ncm_diff_get_spectral_window (NcmDiff *diff);
 
 void ncm_diff_set_max_order (NcmDiff *diff, const guint maxorder);
 void ncm_diff_set_richardson_step (NcmDiff *diff, const gdouble rs);
@@ -99,6 +100,7 @@ void ncm_diff_set_round_off_pad (NcmDiff *diff, const gdouble roff_pad);
 void ncm_diff_set_trunc_error_pad (NcmDiff *diff, const gdouble terr_pad);
 void ncm_diff_set_ini_h (NcmDiff *diff, const gdouble ini_h);
 void ncm_diff_set_dual_series (NcmDiff *diff, const gboolean dual_series);
+void ncm_diff_set_spectral_window (NcmDiff *diff, const gdouble spectral_window);
 
 void ncm_diff_log_central_tables (NcmDiff *diff);
 void ncm_diff_log_forward_tables (NcmDiff *diff);
@@ -121,6 +123,18 @@ GArray *ncm_diff_rf_Hessian_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 
 gdouble ncm_diff_rf_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpointer user_data, gdouble *err);
 gdouble ncm_diff_rc_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpointer user_data, gdouble *err);
 gdouble ncm_diff_rc_d2_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpointer user_data, gdouble *err);
+
+GArray *ncm_diff_sc_d1_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr);
+GArray *ncm_diff_sc_d2_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr);
+
+GArray *ncm_diff_sc_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr);
+GArray *ncm_diff_sc_d2_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr);
+
+GArray *ncm_diff_sc_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr);
+GArray *ncm_diff_sc_d2_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr);
+
+gdouble ncm_diff_sc_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpointer user_data, gdouble *err);
+gdouble ncm_diff_sc_d2_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpointer user_data, gdouble *err);
 
 G_END_DECLS
 

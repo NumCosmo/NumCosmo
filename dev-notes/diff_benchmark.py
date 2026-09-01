@@ -44,17 +44,17 @@ CASES = [
         1.3,
     ),
     ("cube@2", lambda x: x**3, lambda x: 3.0 * x**2, lambda x: 6.0 * x, 2.0),
-    ("log@1e-2", math.log, lambda x: 1.0 / x, lambda x: -1.0 / x**2, 1.0e-2),
+    ("log@1e-2", lambda x: math.log(x) if x > 0 else float("nan"), lambda x: 1.0 / x, lambda x: -1.0 / x**2, 1.0e-2),
     (
         "inv@1e-3",
-        lambda x: 1.0 / x,
+        lambda x: 1.0 / x if x != 0.0 else float("nan"),
         lambda x: -1.0 / x**2,
         lambda x: 2.0 / x**3,
         1.0e-3,
     ),
     (
         "sqrt@1e-4",
-        math.sqrt,
+        lambda x: math.sqrt(x) if x >= 0 else float("nan"),
         lambda x: 0.5 / math.sqrt(x),
         lambda x: -0.25 / x**1.5,
         1.0e-4,
@@ -128,6 +128,10 @@ def run_method(diff, method, f, x0):
         val, err = diff.rf_d1_1_to_1(x0, cnt, None)
     elif method == "rc_d2":
         val, err = diff.rc_d2_1_to_1(x0, cnt, None)
+    elif method == "sc_d1":
+        val, err = diff.sc_d1_1_to_1(x0, cnt, None)
+    elif method == "sc_d2":
+        val, err = diff.sc_d2_1_to_1(x0, cnt, None)
     else:
         raise ValueError(method)
     return val, err, cnt.n
@@ -148,8 +152,8 @@ def main():
         f"{'est/act':>9s} {'ok':>3s} {'nev':>5s}"
     )
     for name, f, df, d2f, x0 in CASES:
-        for method in ("rc_d1", "rf_d1", "rc_d2"):
-            ref = df(x0) if method != "rc_d2" else d2f(x0)
+        for method in ("rc_d1", "rf_d1", "sc_d1", "rc_d2", "sc_d2"):
+            ref = d2f(x0) if method in ("rc_d2", "sc_d2") else df(x0)
             val, err, nev = run_method(diff, method, f, x0)
             act = relerr(val, ref)
             est = abs(err / ref) if ref != 0.0 else abs(err)
@@ -174,7 +178,7 @@ def main():
 
     # Aggregates per method
     print()
-    for method in ("rc_d1", "rf_d1", "rc_d2"):
+    for method in ("rc_d1", "rf_d1", "sc_d1", "rc_d2", "sc_d2"):
         rows = [r for r in results if r["method"] == method]
         acts = np.array([max(r["actual"], 1e-18) for r in rows])
         gm = math.exp(np.mean(np.log(acts)))
