@@ -411,6 +411,7 @@ void _nc_galaxy_shape_pop_beta_register_functions (void);
 
 #ifdef HAVE_MPI
 static void _ncm_cfg_mpi_main_loop (void);
+static gboolean _ncm_cfg_mpi_launched (void);
 
 #endif /* HAVE_MPI */
 
@@ -543,6 +544,52 @@ ncm_cfg_init_full (gint argc, gchar **argv)
  *
  * See also: ncm_cfg_init() ncm_cfg_init_full().
  */
+#ifdef HAVE_MPI
+
+/*
+ * Was this process started by a parallel launcher?
+ *
+ * MPI_Init costs around a second of OpenMPI/UCX device probing, and every
+ * NumCosmo process paid it: every CLI invocation, every test binary, every
+ * pytest worker. Outside a launcher it buys nothing. The world is a single
+ * rank, so _mpi_ctrl keeps the size/rank/nslaves defaults set in the caller,
+ * and the dispatch in ncm_mpi_job.c is gated on nslaves > 0 and never runs.
+ *
+ * Detection is by the launcher's own environment rather than by initialising
+ * and backing out: a rank other than the master must enter the slave main loop
+ * during init and never return, so deferring the decision would run the
+ * caller's entire program once per rank.
+ *
+ * NUMCOSMO_MPI_INIT overrides the detection in both directions, for a launcher
+ * that sets none of these variables (=1) or to force the serial path (=0).
+ */
+static gboolean
+_ncm_cfg_mpi_launched (void)
+{
+  const gchar *vars[] = {
+    "OMPI_COMM_WORLD_SIZE", /* Open MPI      */
+    "PMIX_RANK",            /* Open MPI 4+   */
+    "PMI_SIZE",             /* MPICH, Hydra  */
+    "PMI_RANK",             /* MPICH, Hydra  */
+    "SLURM_PROCID",         /* srun          */
+  };
+  const gchar *force = g_getenv ("NUMCOSMO_MPI_INIT");
+  guint i;
+
+  if (force != NULL)
+    return g_strcmp0 (force, "0") != 0;
+
+  for (i = 0; i < G_N_ELEMENTS (vars); i++)
+  {
+    if (g_getenv (vars[i]) != NULL)
+      return TRUE;
+  }
+
+  return FALSE;
+}
+
+#endif /* HAVE_MPI */
+
 void
 ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 {
@@ -603,39 +650,50 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   atexit (_ncm_cfg_exit);
 
 #ifdef HAVE_MPI
-  MPI_Initialized (&_mpi_ctrl.initialized);
 
-  if (!_mpi_ctrl.initialized)
+  /* Only under a parallel launcher; see _ncm_cfg_mpi_launched(). */
+  if (_ncm_cfg_mpi_launched ())
   {
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI not initialized, calling MPI_Init.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-    MPI_Init (argc, argv);
     MPI_Initialized (&_mpi_ctrl.initialized);
-  }
-  else
-  {
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI was already initialized!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-  }
 
-  {
-    gchar mpi_hostname[MPI_MAX_PROCESSOR_NAME];
-    gint len = 0;
-
-    MPI_Comm_size (MPI_COMM_WORLD, &_mpi_ctrl.size);
-    MPI_Comm_rank (MPI_COMM_WORLD, &_mpi_ctrl.rank);
-    MPI_Get_processor_name (mpi_hostname, &len);
-
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] We have %d MPI process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);
-
-    if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
+    if (!_mpi_ctrl.initialized)
     {
-      _ncm_cfg_mpi_main_loop ();
+      NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI not initialized, calling MPI_Init.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+      MPI_Init (argc, argv);
+      MPI_Initialized (&_mpi_ctrl.initialized);
     }
     else
     {
-      _mpi_ctrl.nslaves        = (_mpi_ctrl.size - 1);
-      _mpi_ctrl.working_slaves = 0;
+      NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI was already initialized!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+    }
+
+    {
+      gchar mpi_hostname[MPI_MAX_PROCESSOR_NAME];
+      gint len = 0;
+
+      MPI_Comm_size (MPI_COMM_WORLD, &_mpi_ctrl.size);
+      MPI_Comm_rank (MPI_COMM_WORLD, &_mpi_ctrl.rank);
+      MPI_Get_processor_name (mpi_hostname, &len);
+
+      NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] We have %d MPI process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);
+
+      if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
+      {
+        _ncm_cfg_mpi_main_loop ();
+      }
+      else
+      {
+        _mpi_ctrl.nslaves        = (_mpi_ctrl.size - 1);
+        _mpi_ctrl.working_slaves = 0;
+      }
     }
   }
+  else
+  {
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] No MPI launcher detected, skipping MPI_Init.\n",
+                             _mpi_ctrl.size, _mpi_ctrl.rank);
+  }
+
 #endif /* HAVE_MPI */
 
   return;
