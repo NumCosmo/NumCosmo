@@ -369,7 +369,12 @@ jobs:
           fi
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
-          lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/external/*' '*/tools/*' --output-file numcosmo-coverage.info
+          # tests/c and tests/python are the harness, not the library: they are ~22k lines
+          # at ~98%, since a test file is covered by its own execution, and counting them
+          # lifts the reported figure about three points above what the library actually
+          # reaches. numcosmo/**/tests/*.c is a different thing -- installed helpers like
+          # the analytic xcor kernels -- and stays.
+          lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/external/*' '*/tools/*' '*/tests/c/*' '*/tests/python/*' --output-file numcosmo-coverage.info
       - name: Test timing summary
         if: always()
         # Surface the slowest tests of this shard in the job summary. Since --slice balances
