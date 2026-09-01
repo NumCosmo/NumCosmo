@@ -6,6 +6,7 @@ python_for_tests = python_module.find_installation(
         'numpy',
         'pydantic',
         'pytest_lazy_fixtures',
+        'pytest_timeout',
         'pytest',
         'scipy',
         'typer',
