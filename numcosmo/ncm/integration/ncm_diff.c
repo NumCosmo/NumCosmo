@@ -28,8 +28,23 @@
  *
  * Numerical differentiation object.
  *
- * Class to perform numerical differentiation.
+ * Computes first and second derivatives of user functions by finite
+ * differences plus Richardson extrapolation.
  *
+ * The extrapolation uses precomputed tables. For a step sequence
+ * $g_k$ (powers of #NcmDiff:richardson-step), order $n$ holds the nodes
+ * $h_i = 1/g_i$, $i = 0, \dots, n+1$, and the Lagrange weights
+ * $\lambda_i = \prod_{j \neq i} 1/(1 - g_j/g_i)$ that extrapolate a
+ * polynomial in $h$ (forward) or $h^2$ (central) to $h \to 0$. The
+ * extrapolated derivative at order $n$ is $\sum_i \lambda_i D(h_0 h_i)$,
+ * where $D(h)$ is the finite-difference quotient at step $h$.
+ *
+ * Each result carries an error estimate combining the truncation error
+ * (difference between consecutive extrapolation orders, padded by
+ * #NcmDiff:terr-pad) and the propagated round-off of the difference
+ * quotients (padded by #NcmDiff:round-off-pad). Orders are increased
+ * while any component still improves; the best value per component is
+ * returned.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -52,14 +67,15 @@ typedef struct _NcmDiffPrivate
   GPtrArray *backward_tables;
 } NcmDiffPrivate;
 
+/* Extrapolation nodes h_i = 1/g_i and Lagrange weights lambda_i for one order. */
 typedef struct _NcmDiffTable
 {
   NcmVector *h;
   NcmVector *lambda;
 } NcmDiffTable;
 
-NcmDiffTable *_ncm_diff_table_new (const guint n);
-void _ncm_diff_table_free (gpointer dtable_ptr);
+static NcmDiffTable *_ncm_diff_table_new (const guint n);
+static void _ncm_diff_table_free (gpointer dtable_ptr);
 
 enum
 {
@@ -244,7 +260,7 @@ ncm_diff_class_init (NcmDiffClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
-NcmDiffTable *
+static NcmDiffTable *
 _ncm_diff_table_new (const guint n)
 {
   NcmDiffTable *dtable = g_new (NcmDiffTable, 1);
@@ -256,7 +272,7 @@ _ncm_diff_table_new (const guint n)
   return dtable;
 }
 
-void
+static void
 _ncm_diff_table_free (gpointer dtable_ptr)
 {
   NcmDiffTable *dtable = (NcmDiffTable *) dtable_ptr;
@@ -773,7 +789,7 @@ _ncm_diff_rc_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, cons
   NCM_UNUSED (yh2_v);
 }
 
-void
+static void
 _ncm_diff_rf_Hessian_step (NcmDiff *diff, NcmDiffFuncNto1 f, gpointer user_data, const guint a, const gdouble x, const gdouble hx, const guint b, const gdouble y, const gdouble hy, NcmVector *x_v, const gdouble fval, gdouble *df, gdouble *roff)
 {
   gdouble f_hx, f_hy, f_hxhy;
@@ -815,32 +831,130 @@ _ncm_diff_rf_Hessian_step (NcmDiff *diff, NcmDiffFuncNto1 f, gpointer user_data,
 }
 
 #define NCM_DIFF_ERR_PAD (1.0e0)
+#define NCM_DIFF_NTRY_CONV (3)
+
+/*
+ * Per-component convergence tracker, shared by the vector and Hessian
+ * drivers. At each extrapolation order it receives the current and previous
+ * extrapolated values with their round-off estimates, updates the best value
+ * and error seen so far, and reports whether this component still wants a
+ * higher order.
+ */
+typedef struct _NcmDiffConv
+{
+  gdouble df_best;
+  gdouble err_best;
+  gdouble err_last_max;
+  guchar not_conv;
+  guchar cstarted;
+} NcmDiffConv;
+
+static void
+_ncm_diff_conv_init (NcmDiffConv *cs)
+{
+  cs->df_best      = 0.0;
+  cs->err_best     = GSL_POSINF;
+  cs->err_last_max = 0.0;
+  cs->not_conv     = NCM_DIFF_NTRY_CONV;
+  cs->cstarted     = 0;
+}
+
+/* Relative difference used for the convergence test, with the same zero
+ * handling as ncm_vector_cmp(). */
+static gdouble
+_ncm_diff_rel_diff (const gdouble x1, const gdouble x2)
+{
+  if (G_UNLIKELY (x1 == 0.0))
+    return (x2 == 0.0) ? 0.0 : fabs (x2);
+  else if (G_UNLIKELY (x2 == 0.0))
+    return fabs (x1);
+  else
+    return fabs ((x1 - x2) / GSL_MIN (fabs (x1), fabs (x2)));
+}
+
+static gboolean
+_ncm_diff_conv_update (NcmDiffConv *cs, const gdouble terr_pad, const gdouble roff_pad,
+                       const gdouble df_curr, const gdouble df_last,
+                       const gdouble roff_curr, const gdouble roff_last)
+{
+  const gdouble err_trunc    = fabs (df_curr - df_last) * terr_pad;
+  const gdouble err_err      = _ncm_diff_rel_diff (df_curr, df_last);
+  const gdouble Eroff_last   = fabs (roff_last) * roff_pad;
+  const gdouble Eroff_curr   = fabs (roff_curr) * roff_pad;
+  const gdouble err_curr_max = GSL_MAX (err_trunc, GSL_MAX (Eroff_last, Eroff_curr));
+  gdouble err_curr_best      = cs->err_best;
+  gboolean improve           = FALSE;
+
+  /*
+   * Estimates fluctuate in the beginning. Thus we only start checking for
+   * convergence after they agree at 1.0e-3.
+   */
+  if (cs->not_conv && (err_err < 1.0e-3))
+  {
+    cs->not_conv--;
+
+    if (!cs->not_conv)
+      cs->cstarted = 1;
+  }
+  else if (err_err > 1.0e-3)
+  {
+    cs->not_conv = NCM_DIFF_NTRY_CONV;
+  }
+
+  /*
+   * If the current maximum error is smaller than the best error estimate
+   * improve it again. It also sets the best error estimate to the average of
+   * the last two to avoid fake convergence due to fluctuations on error
+   * estimates.
+   */
+  if (cs->cstarted || ((err_curr_max < cs->err_best) && !cs->not_conv))
+  {
+    cs->df_best  = df_curr;
+    cs->err_best = 0.5 * (err_curr_max + cs->err_last_max);
+
+    err_curr_best = cs->err_best;
+    improve       = TRUE;
+  }
+  else
+  {
+    const gdouble rel_error      = fabs (err_curr_max / df_curr);
+    const gdouble best_rel_error = fabs (cs->err_best / cs->df_best);
+
+    if (rel_error < best_rel_error)
+    {
+      cs->df_best  = df_curr;
+      cs->err_best = err_curr_max;
+
+      err_curr_best = err_curr_max;
+    }
+  }
+
+  if (cs->not_conv || (Eroff_curr < err_curr_best))
+    improve = TRUE;
+
+  cs->cstarted     = 0;
+  cs->err_last_max = err_curr_max;
+
+  return improve;
+}
 
 static GArray *
 ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
 {
   NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
-  GPtrArray *tables           = NULL;
+  GPtrArray *tables           = (po == 0) ? self->forward_tables : self->central_tables;
   GPtrArray *dfs              = g_ptr_array_new ();
   GPtrArray *roffs            = g_ptr_array_new ();
-  GArray *f_a                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *yh_a                = g_array_new (FALSE, FALSE, sizeof (gdouble));
   NcmVector *x_v              = NULL;
   NcmVector *f_v              = NULL;
   NcmVector *yh1_v            = NULL;
   NcmVector *yh2_v            = NULL;
   NcmVector *df_last          = NULL;
   NcmVector *df_curr          = NULL;
-  NcmVector *df_best          = NULL;
   NcmVector *roff_last        = NULL;
   NcmVector *roff_curr        = NULL;
-  NcmVector *err_trunc        = NULL;
-  NcmVector *err_best         = NULL;
-  NcmVector *err_last_max     = NULL;
-  NcmVector *err_err          = NULL;
   GArray *df                  = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *not_conv            = g_array_new (FALSE, FALSE, sizeof (guchar));
-  GArray *cstarted            = g_array_new (FALSE, FALSE, sizeof (guchar));
+  GArray *conv                = g_array_new (FALSE, FALSE, sizeof (NcmDiffConv));
   const guint nvar            = x_a->len;
   NcmMatrix *Eerr_m           = NULL;
   NcmMatrix *df_m;
@@ -849,11 +963,6 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
 
   g_array_set_size (df, dim * nvar);
   df_m = ncm_matrix_new_array (df, dim);
-
-  if (po == 0)
-    tables = self->forward_tables;
-  else
-    tables = self->central_tables;
 
   if (Eerr != NULL)
   {
@@ -865,57 +974,42 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
   g_ptr_array_set_free_func (dfs,   (GDestroyNotify) ncm_vector_free);
   g_ptr_array_set_free_func (roffs, (GDestroyNotify) ncm_vector_free);
 
-  g_array_set_size (f_a,      dim);
-  g_array_set_size (yh_a,     dim);
-  g_array_set_size (not_conv, dim);
-  g_array_set_size (cstarted, dim);
+  g_array_set_size (conv, dim);
 
   x_v   = ncm_vector_new_array (x_a);
-  f_v   = ncm_vector_new_array (f_a);
-  yh1_v = ncm_vector_new_array (yh_a);
-  yh2_v = ncm_vector_new_array (yh_a);
+  f_v   = ncm_vector_new (dim);
+  yh1_v = ncm_vector_new (dim);
+  yh2_v = ncm_vector_new (dim);
 
   df_last = ncm_vector_new (dim);
   df_curr = ncm_vector_new (dim);
-  df_best = ncm_vector_new (dim);
 
   roff_last = ncm_vector_new (dim);
   roff_curr = ncm_vector_new (dim);
 
-  err_trunc    = ncm_vector_new (dim);
-  err_err      = ncm_vector_new (dim);
-  err_best     = ncm_vector_new (dim);
-  err_last_max = ncm_vector_new (dim);
-
-  g_array_unref (f_a);
-  g_array_unref (yh_a);
-
   f (x_v, f_v, user_data);
 
-  for (a = 0; a < x_a->len; a++)
+  for (a = 0; a < nvar; a++)
   {
     const gdouble x       = g_array_index (x_a, gdouble, a);
     const gdouble scale   = (x == 0.0) ? 1.0 : fabs (x);
     const gdouble h0      = self->ini_h * scale;
-    const guint ntry_conv = 3;
     NcmDiffTable *ldtable = NULL;
     guint order_index;
+    guint i;
     guint t = 0;
 
 
-    ncm_vector_set_all (err_best, GSL_POSINF);
     g_ptr_array_set_size (dfs, 0);
     g_ptr_array_set_size (roffs, 0);
 
-    memset (not_conv->data, ntry_conv, not_conv->len);
-    memset (cstarted->data, 0, cstarted->len);
-    ncm_vector_set_zero (err_last_max);
+    for (i = 0; i < dim; i++)
+      _ncm_diff_conv_init (&g_array_index (conv, NcmDiffConv, i));
 
     for (order_index = 0; order_index < self->maxorder; order_index++)
     {
       const guint nt       = order_index + 2;
       NcmDiffTable *dtable = g_ptr_array_index (tables, order_index);
-      guint i;
 
 
       for ( ; t < nt; t++)
@@ -939,151 +1033,54 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
       if (ldtable == NULL)
       {
         ncm_vector_memcpy (df_last, g_ptr_array_index (dfs, 0));
-        ncm_vector_memcpy (df_curr, g_ptr_array_index (dfs, 0));
-
         ncm_vector_memcpy (roff_last, g_ptr_array_index (roffs, 0));
-        ncm_vector_memcpy (roff_curr, g_ptr_array_index (roffs, 0));
 
-        ncm_vector_memcpy (df_best, df_last);
-
-        ncm_vector_scale (df_curr, ncm_vector_get (dtable->lambda, 0));
-        ncm_vector_axpy  (df_curr, ncm_vector_get (dtable->lambda, 1), g_ptr_array_index (dfs, 1));
-
-        ncm_vector_scale (roff_curr, ncm_vector_get (dtable->lambda, 0));
-        ncm_vector_hypot  (roff_curr, ncm_vector_get (dtable->lambda, 1), g_ptr_array_index (roffs, 1));
+        for (i = 0; i < dim; i++)
+          g_array_index (conv, NcmDiffConv, i).df_best = ncm_vector_get (df_last, i);
       }
-      else
+
+      ncm_vector_memcpy (df_curr, g_ptr_array_index (dfs, 0));
+      ncm_vector_scale (df_curr, ncm_vector_get (dtable->lambda, 0));
+
+      ncm_vector_memcpy (roff_curr, g_ptr_array_index (roffs, 0));
+      ncm_vector_scale (roff_curr, ncm_vector_get (dtable->lambda, 0));
+
+      for (i = 1; i < nt; i++)
       {
-        ncm_vector_memcpy (df_curr, g_ptr_array_index (dfs, 0));
-        ncm_vector_scale (df_curr, ncm_vector_get (dtable->lambda, 0));
-
-        ncm_vector_memcpy (roff_curr, g_ptr_array_index (roffs, 0));
-        ncm_vector_scale (roff_curr, ncm_vector_get (dtable->lambda, 0));
-
-        for (i = 1; i < nt; i++)
-        {
-          ncm_vector_axpy (df_curr, ncm_vector_get (dtable->lambda, i), g_ptr_array_index (dfs, i));
-          ncm_vector_hypot (roff_curr, ncm_vector_get (dtable->lambda, i), g_ptr_array_index (roffs, i));
-        }
+        ncm_vector_axpy (df_curr, ncm_vector_get (dtable->lambda, i), g_ptr_array_index (dfs, i));
+        ncm_vector_hypot (roff_curr, ncm_vector_get (dtable->lambda, i), g_ptr_array_index (roffs, i));
       }
-
-      ncm_vector_memcpy (err_trunc, df_curr);
-      ncm_vector_memcpy (err_err, df_curr);
-
-      ncm_vector_sub (err_trunc, df_last);
-      ncm_vector_cmp (err_err, df_last);
 
       {
         gboolean improve = FALSE;
 
         for (i = 0; i < dim; i++)
         {
-          const gdouble err_trunc_i    = fabs (ncm_vector_get (err_trunc, i)) * self->terr_pad;
-          const gdouble roff_last_i    = fabs (ncm_vector_get (roff_last, i)) * self->roff_pad;
-          const gdouble roff_curr_i    = fabs (ncm_vector_get (roff_curr, i)) * self->roff_pad;
-          const gdouble err_best_i     = ncm_vector_get (err_best, i);
-          const gdouble err_curr_max_i = GSL_MAX (err_trunc_i, GSL_MAX (roff_last_i, roff_curr_i));
-          const gdouble err_err_i      = ncm_vector_get (err_err, i);
-          const gdouble df_curr_i      = ncm_vector_get (df_curr, i);
-          gdouble df_best_i            = ncm_vector_get (df_best, i);
-          gdouble err_curr_best_i      = err_best_i;
+          NcmDiffConv *cs = &g_array_index (conv, NcmDiffConv, i);
 
-#define NOT_CONV (g_array_index (not_conv, guchar, i))
-#define CONV (!(g_array_index (not_conv, guchar, i)))
-#define CONV_STARTED (g_array_index (cstarted, guchar, i))
-
-          /*
-           * Estimates fluctuate in the beginning. Thus we only
-           * start checking for convergence after they agree at
-           * 1.0e-3.
-           */
-          if (NOT_CONV && (err_err_i < 1.0e-3))
-          {
-            NOT_CONV--;
-
-            if (CONV)
-              CONV_STARTED = 1;
-          }
-          else if (err_err_i > 1.0e-3)
-          {
-            NOT_CONV = ntry_conv;
-          }
-
-          /*
-           * If the current maximum error is smaller than
-           * the best error estimate improve it again.
-           * It also sets the best error estimate to the
-           * average of the last two to avoid fake convergence
-           * due to fluctuations on error estimates.
-           */
-          if (CONV_STARTED || ((err_curr_max_i < err_best_i) && CONV))
-          {
-            const gdouble err_last_max_i = ncm_vector_get (err_last_max, i);
-
-            df_best_i = df_curr_i;
-            ncm_vector_set (df_best, i, df_best_i);
-
-            err_curr_best_i = 0.5 * (err_curr_max_i + err_last_max_i);
-            ncm_vector_set (err_best, i, err_curr_best_i);
-
+          if (_ncm_diff_conv_update (cs, self->terr_pad, self->roff_pad,
+                                     ncm_vector_get (df_curr, i), ncm_vector_get (df_last, i),
+                                     ncm_vector_get (roff_curr, i), ncm_vector_get (roff_last, i)))
             improve = TRUE;
-          }
-          else
-          {
-            const gdouble rel_error      = fabs (err_curr_max_i / df_curr_i);
-            const gdouble best_rel_error = fabs (err_best_i / df_best_i);
-
-            if (rel_error < best_rel_error)
-            {
-              df_best_i = df_curr_i;
-              ncm_vector_set (df_best, i, df_best_i);
-
-              err_curr_best_i = err_curr_max_i;
-              ncm_vector_set (err_best, i, err_curr_best_i);
-            }
-          }
-
-          if (NOT_CONV || (roff_curr_i < err_curr_best_i))
-            improve = TRUE;
-
-          /*
-           *  printf ("[%3u, %3u, %3u] !conv %u cstarted %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15e % 22.15e improve: %s\n",
-           *       nt, i, a, NOT_CONV, CONV_STARTED, df_best_i, df_curr_i, err_curr_max_i, err_curr_best_i, err_best_i, err_trunc_i, roff_last_i, roff_curr_i,
-           *       err_err_i, err_curr_max_i / df_curr_i, improve ? "T" : "F");
-           */
-
-          CONV_STARTED = 0;
-          ncm_vector_set (err_last_max, i, err_curr_max_i);
         }
 
         if (!improve)
           break;
       }
 
-/*
- *     ncm_vector_log_vals (df_last,   "df_last   ", "% 22.15g", TRUE);
- *     ncm_vector_log_vals (df_curr,   "df_curr   ", "% 22.15g", TRUE);
- *     ncm_vector_log_vals (df_best,   "df_best   ", "% 22.15g", TRUE);
- *     ncm_vector_log_vals (err_trunc, "err_trunc ", "% 22.15e", TRUE);
- *     ncm_vector_log_vals (err_best,  "err_best  ", "% 22.15e", TRUE);
- */
-
       ncm_vector_memcpy (df_last, df_curr);
       ncm_vector_memcpy (roff_last, roff_curr);
       ldtable = dtable;
     }
 
+    for (i = 0; i < dim; i++)
     {
-      NcmVector *df_a = ncm_matrix_get_row (df_m, a);
-      ncm_vector_memcpy (df_a, df_best);
-      ncm_vector_free (df_a);
+      const NcmDiffConv *cs = &g_array_index (conv, NcmDiffConv, i);
+
+      ncm_matrix_set (df_m, a, i, cs->df_best);
 
       if (Eerr_m != NULL)
-      {
-        NcmVector *Eerr_a = ncm_matrix_get_row (Eerr_m, a);
-        ncm_vector_memcpy (Eerr_a, err_best);
-        ncm_vector_free (Eerr_a);
-      }
+        ncm_matrix_set (Eerr_m, a, i, cs->err_best);
     }
   }
 
@@ -1091,8 +1088,7 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
     ncm_matrix_scale (Eerr_m, NCM_DIFF_ERR_PAD);
 
   {
-    g_array_unref (not_conv);
-    g_array_unref (cstarted);
+    g_array_unref (conv);
 
     g_ptr_array_unref (dfs);
     g_ptr_array_unref (roffs);
@@ -1104,15 +1100,9 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
 
     ncm_vector_clear (&df_last);
     ncm_vector_clear (&df_curr);
-    ncm_vector_clear (&df_best);
 
     ncm_vector_clear (&roff_last);
     ncm_vector_clear (&roff_curr);
-
-    ncm_vector_clear (&err_trunc);
-    ncm_vector_clear (&err_best);
-    ncm_vector_clear (&err_last_max);
-    ncm_vector_clear (&err_err);
 
     ncm_matrix_clear (&df_m);
     ncm_matrix_clear (&Eerr_m);
@@ -1164,7 +1154,6 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
 
     for (b = a + 1; b < x_a->len; b++)
     {
-      const guint ntry_conv = 3;
       const gdouble x       = g_array_index (x_a, gdouble, a);
       const gdouble y       = g_array_index (x_a, gdouble, b);
       const gdouble scale_x = (x == 0.0) ? 1.0 : fabs (x);
@@ -1172,20 +1161,16 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
       const gdouble hx0     = self->ini_h * scale_x;
       const gdouble hy0     = self->ini_h * scale_y;
       NcmDiffTable *ldtable = NULL;
-      gdouble err_best      = GSL_POSINF;
-      gdouble err_trunc     = 0.0;
-      gdouble err_err       = 0.0;
-      gdouble err_last_max  = 0.0;
-      gdouble df_best       = 0.0;
       gdouble df_last       = 0.0;
       gdouble df_curr       = 0.0;
       gdouble roff_last     = 0.0;
       gdouble roff_curr     = 0.0;
       guint t               = 0;
-      guint not_converging  = ntry_conv;
-      gboolean cstarted     = FALSE;
+      NcmDiffConv cs;
       guint order_index;
 
+
+      _ncm_diff_conv_init (&cs);
 
       g_array_set_size (dfs, 0);
       g_array_set_size (roffs, 0);
@@ -1221,99 +1206,42 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
 
         if (ldtable == NULL)
         {
-          const gdouble lambda0 = ncm_vector_get (dtable->lambda, 0);
-          const gdouble lambda1 = ncm_vector_get (dtable->lambda, 1);
-
-
-          df_last = g_array_index (dfs, gdouble, 0);
-          df_curr = df_last * lambda0 + g_array_index (dfs, gdouble, 1) * lambda1;
-
+          df_last   = g_array_index (dfs, gdouble, 0);
           roff_last = fabs (g_array_index (roffs, gdouble, 0));
-          roff_curr = hypot (roff_last * lambda0, g_array_index (roffs, gdouble, 1) * lambda1);
-
-          df_best = df_curr;
         }
-        else
+
+        df_curr   = 0.0;
+        roff_curr = 0.0;
+
+        for (i = 0; i < nt; i++)
         {
-          df_curr   = 0.0;
-          roff_curr = 0.0;
+          const gdouble lambda_i = ncm_vector_get (dtable->lambda,  i);
+          const gdouble df_i     = g_array_index (dfs, gdouble, i);
+          const gdouble roff_i   = g_array_index (roffs, gdouble, i);
 
-          for (i = 0; i < nt; i++)
-          {
-            const gdouble lambda_i = ncm_vector_get (dtable->lambda,  i);
-            const gdouble df_i     = g_array_index (dfs, gdouble, i);
-            const gdouble roff_i   = g_array_index (roffs, gdouble, i);
-
-            df_curr  += lambda_i * df_i;
-            roff_curr = hypot (roff_curr, lambda_i * roff_i);
-          }
+          df_curr  += lambda_i * df_i;
+          roff_curr = hypot (roff_curr, lambda_i * roff_i);
         }
 
-        err_trunc = fabs (df_curr - df_last) * self->terr_pad;
-        err_err   = (df_curr == 0.0) ? ((df_last == 0.0) ? 0.0 : fabs (df_last)) : ((df_last == 0.0) ? fabs (df_curr) : fabs ((df_curr - df_last) / GSL_MIN (fabs (df_curr), fabs (df_last))));
+        if (ldtable == NULL)
+          cs.df_best = df_curr;
 
-        {
-          gboolean improve = FALSE;
-
-          const gdouble Eroff_last   = fabs (roff_last) * self->roff_pad;
-          const gdouble Eroff_curr   = fabs (roff_curr) * self->roff_pad;
-          const gdouble err_curr_max = GSL_MAX (err_trunc, GSL_MAX (Eroff_last, Eroff_curr));
-          gdouble err_curr_best      = err_best;
-
-
-          if (not_converging && (err_err < 1.0e-3))
-          {
-            not_converging--;
-
-            if (!not_converging)
-              cstarted = TRUE;
-          }
-          else if (err_err > 1.0e-3)
-          {
-            not_converging = ntry_conv;
-          }
-
-          if (cstarted || ((err_curr_max < err_best) && !not_converging))
-          {
-            df_best       = df_curr;
-            err_best      = 0.5 * (err_curr_max + err_last_max);
-            err_curr_best = err_best;
-            improve       = TRUE;
-          }
-          else
-          {
-            const gdouble rel_error    = fabs (err_curr_max / df_curr);
-            const gdouble best_rel_err = fabs (err_best / df_best);
-
-            if (rel_error < best_rel_err)
-            {
-              df_best  = df_curr;
-              err_best = err_curr_max;
-            }
-          }
-
-          if (not_converging || (Eroff_curr < err_curr_best))
-            improve = TRUE;
-
-          if (!improve)
-            break;
-
-          cstarted     = FALSE;
-          err_last_max = err_curr_max;
-        }
+        if (!_ncm_diff_conv_update (&cs, self->terr_pad, self->roff_pad,
+                                    df_curr, df_last, roff_curr, roff_last))
+          break;
 
         df_last   = df_curr;
         roff_last = roff_curr;
         ldtable   = dtable;
       }
 
-      ncm_matrix_set (df_m, a, b, df_best);
-      ncm_matrix_set (df_m, b, a, df_best);
+      ncm_matrix_set (df_m, a, b, cs.df_best);
+      ncm_matrix_set (df_m, b, a, cs.df_best);
 
       if (Eerr_m != NULL)
       {
-        ncm_matrix_set (Eerr_m, a, b, err_best);
-        ncm_matrix_set (Eerr_m, b, a, err_best);
+        ncm_matrix_set (Eerr_m, a, b, cs.err_best);
+        ncm_matrix_set (Eerr_m, b, a, cs.err_best);
       }
     }
   }
