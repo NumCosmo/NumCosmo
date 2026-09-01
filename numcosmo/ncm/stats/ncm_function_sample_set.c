@@ -2052,7 +2052,7 @@ ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
   }
 
   if (iteration == max_iter)
-    g_message ("ncm_function_sample_set_adaptive_midpoint: Max iterations (%u) reached with %u knots",
+    g_message ("# ncm_function_sample_set_adaptive_midpoint: Max iterations (%u) reached with %u knots\n",
                max_iter, ncm_function_sample_set_get_nsamples (fss));
 }
 
