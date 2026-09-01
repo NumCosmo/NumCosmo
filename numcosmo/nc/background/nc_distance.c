@@ -1172,7 +1172,10 @@ nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo)
  * the last scattering surface of the cosmic microwave background photons.
  *
  * This function computes $z_\star$ using [nc_hicosmo_z_lss()], if @cosmo implements
- * it, or using Hu & Sugiyama fitting formula [Hu (1996)](https://arxiv.org/abs/astro-ph/9510117),
+ * it. Otherwise, if the @dist object contains a #NcRecomb object, it obtains
+ * $z_\star$ from the recombination history, as the redshift of the maximum of the
+ * visibility function [nc_recomb_get_v_tau_max_z()]. Otherwise, it computes $z_\star$
+ * using Hu & Sugiyama fitting formula [Hu (1996)](https://arxiv.org/abs/astro-ph/9510117),
  * $$ z_\star = 1048 \left(1 + 1.24 \times 10^{-3}  (\Omega_{b0} h^2)^{-0.738}\right) \left(1 + g_1 (\Omega_{m0} h^2)^{g_2}\right),$$
  * where $\Omega_{b0} h^2$ [nc_hicosmo_Omega_b0h2()] and $\Omega_{m0} h^2$ [nc_hicosmo_Omega_m0h2()]
  * are, respectively, the baryonic and matter density parameters times the square
@@ -1186,11 +1189,13 @@ nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo)
 gdouble
 nc_distance_decoupling_redshift (NcDistance *dist, NcHICosmo *cosmo)
 {
-  NCM_UNUSED (dist);
-
   if (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_z_lss))
   {
     return nc_hicosmo_z_lss (cosmo);
+  }
+  else if (dist->recomb != NULL)
+  {
+    return nc_recomb_get_v_tau_max_z (dist->recomb, cosmo);
   }
   else
   {
@@ -1333,7 +1338,7 @@ nc_distance_theta100CMB (NcDistance *dist, NcHICosmo *cosmo)
  *
  * Drag redshift is the epoch at which baryons were released from photons.
  *
- * If the @dist object constains a NcRecomb object, it calculates the drag
+ * If the @dist object contains a NcRecomb object, it calculates the drag
  * redshift through the recombination history. Otherwise, it computes $z_d$
  * using the fitting formula given in [Eisenstein & Hu (1998)](https://arxiv.org/abs/astro-ph/9709112),
  * $$z_d = \frac{1291 (\Omega_{m0} h^2)^{0.251}}{(1 + 0.659 (\Omega_{m0} h^2)^{0.828})}
@@ -1360,8 +1365,6 @@ nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo)
     gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
     gdouble b1         = 0.313 * pow (omega_m_h2, -0.419) * (1.0 + 0.607 * pow (omega_m_h2, 0.674));
     gdouble b2         = 0.238 * pow (omega_m_h2, 0.223);
-
-    NCM_UNUSED (dist);
 
     return 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
            (1.0 + b1 * pow (omega_b_h2, b2));

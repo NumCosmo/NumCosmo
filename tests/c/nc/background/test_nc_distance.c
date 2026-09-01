@@ -36,6 +36,7 @@ typedef struct _TestNcDistance
 {
   NcDistance *dist;
   NcHICosmo *cosmo;
+  NcRecomb *recomb;
   gdouble z1, z2, z3;
   guint ntests;
 } TestNcDistance;
@@ -65,6 +66,8 @@ void test_nc_distance_new_no_lambda (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_new_no_lambda_spherical (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_new_no_lambda_hyperbolic (TestNcDistance *test, gconstpointer pdata);
 
+void test_nc_distance_new_recomb (TestNcDistance *test, gconstpointer pdata);
+
 void test_nc_distance_comoving (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_transverse (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_angular_diameter (TestNcDistance *test, gconstpointer pdata);
@@ -88,7 +91,13 @@ void test_nc_distance_comoving_volume_radial_integral_closed (TestNcDistance *te
 void test_nc_distance_from_Dc_functions (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_wrapper_functions (TestNcDistance *test, gconstpointer pdata);
 
+void test_nc_distance_decoupling_redshift_recomb (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_decoupling_redshift_no_recomb (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_drag_redshift_recomb (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_drag_redshift_no_recomb (TestNcDistance *test, gconstpointer pdata);
+
 void test_nc_distance_free (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_free_recomb (TestNcDistance *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -369,6 +378,26 @@ main (gint argc, gchar *argv[])
               &test_nc_distance_wrapper_functions,
               &test_nc_distance_free);
 
+  /*
+   * Testing the characteristic redshifts, with and without an attached NcRecomb
+   */
+  g_test_add ("/nc/distance/decoupling_redshift/recomb", TestNcDistance, NULL,
+              &test_nc_distance_new_recomb,
+              &test_nc_distance_decoupling_redshift_recomb,
+              &test_nc_distance_free_recomb);
+  g_test_add ("/nc/distance/decoupling_redshift/no_recomb", TestNcDistance, NULL,
+              &test_nc_distance_new,
+              &test_nc_distance_decoupling_redshift_no_recomb,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/drag_redshift/recomb", TestNcDistance, NULL,
+              &test_nc_distance_new_recomb,
+              &test_nc_distance_drag_redshift_recomb,
+              &test_nc_distance_free_recomb);
+  g_test_add ("/nc/distance/drag_redshift/no_recomb", TestNcDistance, NULL,
+              &test_nc_distance_new,
+              &test_nc_distance_drag_redshift_no_recomb,
+              &test_nc_distance_free);
+
   g_test_run ();
 }
 
@@ -377,6 +406,19 @@ test_nc_distance_free (TestNcDistance *test, gconstpointer pdata)
 {
   NCM_TEST_FREE (nc_hicosmo_free, test->cosmo);
   NCM_TEST_FREE (nc_distance_free, test->dist);
+}
+
+void
+test_nc_distance_free_recomb (TestNcDistance *test, gconstpointer pdata)
+{
+  NCM_TEST_FREE (nc_hicosmo_free, test->cosmo);
+  /*
+   * The NcDistance holds a reference to the recomb (nc_distance_set_recomb () refs
+   * it), so it must be released first: NCM_TEST_FREE asserts that the object was
+   * actually destroyed.
+   */
+  NCM_TEST_FREE (nc_distance_free, test->dist);
+  NCM_TEST_FREE (nc_recomb_free, test->recomb);
 }
 
 void
@@ -404,6 +446,48 @@ test_nc_distance_new (TestNcDistance *test, gconstpointer pdata)
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo), NULL);
   ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.0, NULL);
 
+  nc_distance_prepare (dist, cosmo);
+}
+
+/*
+ * Same cosmology as test_nc_distance_new (), but with a NcRecombSeager attached to
+ * the NcDistance, so the recomb and no-recomb tests below differ only in that.
+ */
+void
+test_nc_distance_new_recomb (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist = nc_distance_new (6.0);
+  NcRecomb *recomb = NC_RECOMB (nc_recomb_seager_new ());
+
+  g_assert_true (dist != NULL);
+  g_assert_true (NC_IS_DISTANCE (dist));
+  g_assert_true (NC_IS_RECOMB (recomb));
+
+  test->cosmo  = cosmo;
+  test->dist   = dist;
+  test->recomb = recomb;
+  test->z1     = 0.5;
+  test->z2     = 2.5;
+  test->z3     = 5.0;
+  test->ntests = 10000;
+
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_H0,       70.0);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_C,   0.255);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_X,   0.7);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.7245);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_B,   0.045);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo), NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.0, NULL);
+
+  /*
+   * The recomb must be attached *before* nc_distance_prepare (), which is what
+   * prepares it (nc_distance_prepare () calls nc_recomb_prepare_if_needed ()).  A
+   * recomb attached afterwards is never prepared and its cached redshifts stay at
+   * their initial value of zero.
+   */
+  nc_distance_set_recomb (dist, recomb);
   nc_distance_prepare (dist, cosmo);
 }
 
@@ -1293,5 +1377,109 @@ test_nc_distance_wrapper_functions (TestNcDistance *test, gconstpointer pdata)
 
     ncm_assert_cmpdouble_e (result_wrapper, ==, result_from_Dc, 1.0e-14, 0.0);
   }
+}
+
+/*
+ * The two fitting formulas nc_distance_decoupling_redshift () and
+ * nc_distance_drag_redshift () fall back on when no NcRecomb is attached: Hu &
+ * Sugiyama (1996) for $z_\star$ and Eisenstein & Hu (1998) for $z_d$.
+ *
+ * These are deliberate copies of the expressions in nc_distance.c.  They are here to
+ * lock the documented default in place -- a change to either fallback has to be made
+ * twice, on purpose -- and to check that an attached NcRecomb actually displaces it.
+ * They are not a re-derivation, and they involve no ODE solve.
+ */
+static gdouble
+test_nc_distance_z_star_hu_sugiyama (NcHICosmo *cosmo)
+{
+  const gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
+  const gdouble omega_m_h2 = nc_hicosmo_Omega_m0h2 (cosmo);
+  const gdouble g1         = 0.0783 * pow (omega_b_h2, -0.238) / (1.0 + 39.5 * pow (omega_b_h2, 0.763));
+  const gdouble g2         = 0.560 / (1.0 + 21.1 * pow (omega_b_h2, 1.81));
+
+  return 1048.0 * (1.0 + 1.24e-3 * pow (omega_b_h2, -0.738)) * (1.0 + g1 * pow (omega_m_h2, g2));
+}
+
+static gdouble
+test_nc_distance_z_d_eisenstein_hu (NcHICosmo *cosmo)
+{
+  const gdouble omega_m_h2 = nc_hicosmo_Omega_m0h2 (cosmo);
+  const gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
+  const gdouble b1         = 0.313 * pow (omega_m_h2, -0.419) * (1.0 + 0.607 * pow (omega_m_h2, 0.674));
+  const gdouble b2         = 0.238 * pow (omega_m_h2, 0.223);
+
+  return 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
+         (1.0 + b1 * pow (omega_b_h2, b2));
+}
+
+void
+test_nc_distance_decoupling_redshift_recomb (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo     = test->cosmo;
+  NcDistance *dist     = test->dist;
+  const gdouble z_star = nc_distance_decoupling_redshift (dist, cosmo);
+
+  g_assert_true (dist->recomb != NULL);
+
+  /* Routing: with a NcRecomb attached, $z_\star$ is the redshift of the maximum of
+   * the visibility function taken from the recombination history, exactly. */
+  ncm_assert_cmpdouble_e (z_star, ==, nc_recomb_get_v_tau_max_z (test->recomb, cosmo), 0.0, 0.0);
+
+  /* Non-vacuity: the attached NcRecomb must actually displace the fitting formula. */
+  ncm_assert_cmpdouble_e (z_star, !=, test_nc_distance_z_star_hu_sugiyama (cosmo), 1.0e-6, 0.0);
+
+  /* A recombination redshift at all.  A wide band, not a pin on the Seager solver:
+   * the two assertions above both hold vacuously if the cached redshift is zero. */
+  g_assert_cmpfloat (z_star, >, 500.0);
+  g_assert_cmpfloat (z_star, <, 2000.0);
+}
+
+void
+test_nc_distance_decoupling_redshift_no_recomb (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo     = test->cosmo;
+  NcDistance *dist     = test->dist;
+  const gdouble z_star = nc_distance_decoupling_redshift (dist, cosmo);
+
+  g_assert_null (dist->recomb);
+
+  /* With no NcRecomb attached the Hu & Sugiyama fitting formula is the documented
+   * fallback, and this cosmology does not implement nc_hicosmo_z_lss (). */
+  ncm_assert_cmpdouble_e (z_star, ==, test_nc_distance_z_star_hu_sugiyama (cosmo), 1.0e-14, 0.0);
+}
+
+void
+test_nc_distance_drag_redshift_recomb (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo  = test->cosmo;
+  NcDistance *dist  = test->dist;
+  const gdouble z_d = nc_distance_drag_redshift (dist, cosmo);
+
+  g_assert_true (dist->recomb != NULL);
+
+  /* Routing: with a NcRecomb attached, $z_d$ is the drag redshift taken from the
+   * recombination history, exactly. */
+  ncm_assert_cmpdouble_e (z_d, ==, nc_recomb_get_tau_drag_z (test->recomb, cosmo), 0.0, 0.0);
+
+  /* Non-vacuity: the attached NcRecomb must actually displace the fitting formula. */
+  ncm_assert_cmpdouble_e (z_d, !=, test_nc_distance_z_d_eisenstein_hu (cosmo), 1.0e-6, 0.0);
+
+  /* A drag redshift at all -- see the note in the decoupling test above. */
+  g_assert_cmpfloat (z_d, >, 500.0);
+  g_assert_cmpfloat (z_d, <, 2000.0);
+}
+
+void
+test_nc_distance_drag_redshift_no_recomb (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo  = test->cosmo;
+  NcDistance *dist  = test->dist;
+  const gdouble z_d = nc_distance_drag_redshift (dist, cosmo);
+
+  g_assert_null (dist->recomb);
+
+  /* With no NcRecomb attached the Eisenstein & Hu fitting formula is the documented
+   * fallback. */
+  ncm_assert_cmpdouble_e (z_d, ==, test_nc_distance_z_d_eisenstein_hu (cosmo), 1.0e-14, 0.0);
 }
 
