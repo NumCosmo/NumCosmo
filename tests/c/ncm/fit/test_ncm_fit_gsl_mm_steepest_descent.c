@@ -1,13 +1,13 @@
 /***************************************************************************
- *            test_nc_cbe.c
+ *            test_ncm_fit.c
  *
- *  Thu January 05 19:23:54 2017
- *  Copyright  2017  Sandro Dias Pinto Vitenti
+ *  Sun February 04 16:02:57 2018
+ *  Copyright  2018  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2017 <vitenti@uel.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2018 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -23,7 +23,8 @@
  */
 
 /*
- * NcCBE -- the cheap checks; the CLASS-heavy ones are in test_nc_cbe_class.c.
+ * gsl:mm_steepest_descent. Every check lives in test_ncm_fit_common.c; this file names the
+ * algorithm and nothing else.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -31,20 +32,21 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include "test_ncm_fit_common.h"
 
-#include "test_nc_cbe_common.h"
-
-static const TestNcCBEFunc tests[] = {
-  { test_nc_cbe_sanity, "sanity", NULL },
-  { test_nc_cbe_compare_bg, "compare_bg", NULL },
-  { test_nc_cbe_serialize, "serialize", NULL },
-  { test_nc_cbe_prec, "precision", NULL },
-  { test_nc_cbe_thermodyn, "Thermodyn", NULL },
+static const TestNcmFitAlgo algo = {
+  .lib       = "gsl",
+  .algo      = "mm_steepest_descent",
+  .fit_type  = NCM_FIT_TYPE_GSL_MM,
+  .algo_str  = "steepest-descent",
+  .fit_gtype = ncm_fit_gsl_mm_get_type,
+  .max_dim   = TEST_NCM_FIT_DIM,
+  .max_iter  = 10000000,
 };
 
 gint
 main (gint argc, gchar *argv[])
 {
-  return test_nc_cbe_main (argc, argv, tests, G_N_ELEMENTS (tests), TRUE);
+  return test_ncm_fit_main (argc, argv, &algo);
 }
 

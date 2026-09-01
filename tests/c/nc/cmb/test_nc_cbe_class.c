@@ -23,7 +23,7 @@
  */
 
 /*
- * NcCBE -- the cheap checks; the CLASS-heavy ones are in test_nc_cbe_class.c.
+ * NcCBE -- the checks that run CLASS deep enough to dominate this file's runtime: 12.3 s and 4.4 s per model against 0.4 s or less for the rest.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -35,16 +35,13 @@
 #include "test_nc_cbe_common.h"
 
 static const TestNcCBEFunc tests[] = {
-  { test_nc_cbe_sanity, "sanity", NULL },
-  { test_nc_cbe_compare_bg, "compare_bg", NULL },
-  { test_nc_cbe_serialize, "serialize", NULL },
-  { test_nc_cbe_prec, "precision", NULL },
-  { test_nc_cbe_thermodyn, "Thermodyn", NULL },
+  { test_nc_cbe_calc_ps, "calc_ps", NULL },
+  { test_nc_cbe_Cls, "Cls", NULL },
 };
 
 gint
 main (gint argc, gchar *argv[])
 {
-  return test_nc_cbe_main (argc, argv, tests, G_N_ELEMENTS (tests), TRUE);
+  return test_nc_cbe_main (argc, argv, tests, G_N_ELEMENTS (tests), FALSE);
 }
 

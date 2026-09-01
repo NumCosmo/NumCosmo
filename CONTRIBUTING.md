@@ -221,7 +221,7 @@ missing or stale lock is slow, never broken.
 The environment is no longer cached between runs: installing a lock is a
 download and link of a fixed package list, comparable to restoring a
 multi-gigabyte cache entry, and dropping it leaves the repository's cache quota
-to the test-duration caches.
+to the data-file cache.
 
 ### Changing dependencies
 
