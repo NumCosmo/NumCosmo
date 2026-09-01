@@ -134,7 +134,7 @@ inside a fit.
 The 2025 calibration does **not** reduce to the 2023 one when the dark-energy
 term vanishes. At $w = -1$ the two still differ, typically by a few percent and by
 up to $\sim 24\%$ over the cluster range, because the 2025 form carries the extra
-$r$ and $\nu_p$ terms and was fitted independently. They are siblings, not nested
+$r$ and $\nu_p$ terms and was fitted independently. They are separate terms, not nested
 models.
 :::
 

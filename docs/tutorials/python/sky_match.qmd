@@ -13,21 +13,15 @@ format-links: [ipynb]
 
 ## Purpose {#sec-purpose}  
 
-This document provides a guide to using NumCosmo's `sky_match` module, which employs the `SkyMatch` class to match objects in the sky.  
-
-The `SkyMatch` class is designed to associate detected objects, such as galaxy clusters or halos, with observational data. 
-A common application is matching cluster detections to halos in simulations. 
-This process enables the evaluation of completeness and purity in observations.
-
-In this tutorial, we generate mock data for galaxy clusters and halos, then use the `SkyMatch` class to perform matching and analyze the results.
+Uses `SkyMatch` to associate detected objects with simulated objects and
+compute matching statistics.
 
 ## Defining Theoretical Models
 ### Cosmological Model
 
-To begin, we define a cosmological model using NumCosmo's background cosmology models. 
-We also create an `Nc.Distance` object to compute the cosmological distances required for the weak lensing analysis. 
+Define a background cosmology and an `Nc.Distance` calculator.
 
-For this example, we consider a Lambda Cold Dark Matter ($\Lambda$CDM) cosmology with the following parameters:
+Use a Lambda Cold Dark Matter ($\Lambda$CDM) cosmology with:
 
 - $\Omega_{c0} = 0.25$: Cold dark matter density parameter at present
 - $\Omega_{b0} = 0.05$: Baryon density parameter at present
@@ -1124,4 +1118,3 @@ By quantifying completeness (successful cluster-halo matches) and purity (minimi
 While simplified mock data omitted complexities like mass-observable scatter or projection effects, the workflow mirrors steps essential for cosmological analyses, such as calibrating selection functions for cluster abundance studies.  
 
 Tools like `SkyMatch` bridge simulations and observations, allowing to diagnose catalog reliability and refine strategies for upcoming surveys (e.g., LSST, Euclid), where accurate matching will be crucial for constraining dark energy and structure growth.  
-

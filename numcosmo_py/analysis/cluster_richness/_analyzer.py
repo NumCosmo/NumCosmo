@@ -106,14 +106,7 @@ def _get_default_console() -> Console:
 
 
 class CutAnalyzer:
-    """Analyze cluster mass-richness relation with progressive cuts.
-
-    This class handles:
-    - Setting up the mass-richness model (any NcClusterMassRichness subclass)
-    - Applying richness cuts to the dataset
-    - Running MCMC and bootstrap analyses
-    - Storing and displaying results
-    """
+    """Analyze a cluster mass-richness relation for a sequence of cuts."""
 
     def __init__(
         self,

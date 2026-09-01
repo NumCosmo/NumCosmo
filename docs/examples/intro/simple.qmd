@@ -15,9 +15,7 @@ format-links: [ipynb]
 
 ## Introduction
 
-This example demonstrates how to compute cosmological distances using the `numcosmo`
-library. In this example, we initialize the library, configure a cosmological model, and
-compute comoving distances for a range of redshifts.
+Computes comoving distances for a range of redshifts.
 
 ## Prerequisites
 
@@ -31,9 +29,7 @@ these packages are already installed.
 
 ## Import and Initialize
 
-First, import the required modules and initialize the NumCosmo library. We also import
-`numpy`, `matplotlib` and `pandas`. The `Nc` and `Ncm` modules provide the core functionality of 
-the NumCosmo library. The call to `Ncm.cfg_init()` initializes the library objects.
+Import the required modules and initialize the library with `Ncm.cfg_init()`.
 
 ```{python}
 import numpy as np
@@ -163,4 +159,3 @@ plt.title("Comoving Distance vs. Redshift")
 plt.grid()
 plt.show()
 ```
-

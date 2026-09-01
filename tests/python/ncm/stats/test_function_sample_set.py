@@ -2447,7 +2447,7 @@ def test_refine_exact_zero_function_passes() -> None:
 
 
 def test_adaptive_midpoint_exact_zero_component_terminates_quickly() -> None:
-    """A flat-zero function must converge immediately, not blow up exponentially.
+    """A flat-zero function must converge immediately, not grow exponentially.
 
     max_iter is kept deliberately small so that a *regression* of this fix
     still fails fast and safely (bounded sample growth) instead of
@@ -2473,7 +2473,7 @@ def test_adaptive_midpoint_exact_zero_component_terminates_quickly() -> None:
 
     assert fss.all_intervals_ok(1)
     # With the fix this converges on the first pass; well under the
-    # exponential blow-up (2**10 = 1024) max_iter=10 alone would otherwise
+    # exponential growth (2**10 = 1024) max_iter=10 alone would otherwise
     # permit -- the bound below is generous, not tight.
     assert fss.get_nsamples() < 20
 

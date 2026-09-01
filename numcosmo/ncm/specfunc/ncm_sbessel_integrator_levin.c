@@ -28,13 +28,12 @@
  *
  * Levin-Bessel method for spherical Bessel function integration.
  *
- * This class implements integration of functions multiplied by spherical Bessel
- * functions using a Levin-type method for low multipoles and vector cubature
- * integration for high multipoles.
+ * Uses a Levin-type method for low multipoles and vector cubature for high
+ * multipoles.
  *
  * The integral is written in the dimensionless variable $y = k x$, so that
  * $\int K(x, k) j_\ell(k x) \mathrm{d}x = \int F(y) j_\ell(y) \mathrm{d}y$ with
- * $F(y) = K(y / k, k) / k$. This is what allows one panel set to serve every $k$.
+ * $F(y) = K(y / k, k) / k$. A single panel set therefore supports every $k$.
  *
  * For low ell values, the contribution of a panel $[a, b]$ is obtained by solving
  * $y^2 w''(y) + 2 y w'(y) + (y^2 - \ell(\ell+1)) w(y) = F(y)$ with boundary conditions
@@ -42,41 +41,43 @@
  * $y^2 (w' j_\ell - j_\ell' w)$ has derivative $F j_\ell$, so the panel integral is
  * the boundary term $b^2 w'(b) j_\ell(b) - a^2 w'(a) j_\ell(a)$.
  *
- * In practice the equation is solved for $u = y w$, which removes the first-derivative
- * term and yields $y^2 u'' + (y^2 - \ell(\ell+1)) u = y F(y)$ --- the forcing handed to
- * #NcmSBesselOdeSolver is the weighted $y F(y)$. Because $w$ vanishes at the endpoints,
- * $u'(a) = a w'(a)$ and $u'(b) = b w'(b)$ there, and the panel contribution actually
- * evaluated is $b j_\ell(b) u'(b) - a j_\ell(a) u'(a)$.
+ * In practice the equation is solved for $u = y w$, which removes the
+ * first-derivative term and gives $y^2 u'' + (y^2 - \ell(\ell+1)) u = y F(y)$, so
+ * the forcing handed to #NcmSBesselOdeSolver is the weighted $y F(y)$. Since $w$
+ * vanishes at the endpoints, $u'(a) = a w'(a)$ and $u'(b) = b w'(b)$, and the
+ * panel contribution evaluated is $b j_\ell(b) u'(b) - a j_\ell(a) u'(a)$.
  *
- * For high ell values, it uses vector cubature integration where the integrand evaluates
- * $f(x)$ and all $j_\ell(x)$ values simultaneously for efficiency.
+ * For high multipoles, vector cubature evaluates the integrand and all requested
+ * spherical Bessel functions together.
  *
  * ## Accuracy limit from panel placement
  *
  * Panel edges come from the fixed $y$-knot grid
- * (#NcmSBesselIntegratorLevin:y-knots-min, :y-knots-max, :n-knots), which is what lets
- * one panel set serve every $k$. They therefore fall where that grid says rather than
- * where the integrand would prefer, and adjacent panels can nearly cancel: for a
- * $4\sigma$-truncated Gaussian at $\ell = 50$, $k = 8247$, two panels contribute
- * $-1.71\times10^{-4}$ and $+1.75\times10^{-4}$ against a total of $8.4\times10^{-9}$.
+ * (#NcmSBesselIntegratorLevin:y-knots-min, :y-knots-max, :n-knots), which is what
+ * lets one panel set serve every $k$. They therefore fall where that grid says
+ * rather than where the integrand would prefer, and adjacent panels can nearly
+ * cancel: for a $4\sigma$-truncated Gaussian at $\ell = 50$, $k = 8247$, two
+ * panels contribute $-1.71\times10^{-4}$ and $+1.75\times10^{-4}$ against a total
+ * of $8.4\times10^{-9}$.
  *
  * The relative error there reaches $7\times10^{-5}$, against $\sim10^{-9}$ for
- * #NcmSBesselIntegratorGL on the same integrand, so it is not the conditioning of the
- * integral. It is not a tolerance either: #NcmSBesselIntegratorLevin:cheb-reltol from
- * $10^{-8}$ to $10^{-14}$ changes nothing. Scaling the whole knot grid moves the error
- * by four orders in either direction, and no offset is good for every $k$.
+ * #NcmSBesselIntegratorGL on the same integrand, so it is not the conditioning of
+ * the integral. It is not a tolerance either: changing
+ * #NcmSBesselIntegratorLevin:cheb-reltol from $10^{-8}$ to $10^{-14}$ has no
+ * effect. Scaling the whole knot grid moves the error by four orders in either
+ * direction, and no offset is good for every $k$.
  *
- * What makes it tolerable is that it is bounded in absolute terms. It appears only where
- * the integral is $10^{-7}$ to $10^{-9}$ of its own peak over $k$ -- the deep oscillatory
- * tail, $y \gg \ell$ -- and the worst absolute error measured is $2\times10^{-11}$ of
- * that peak; near the peak the same scan gives $4\times10^{-11}$ relative. Every consumer
- * in the library reaches this class through #NcXcorKernel, whose
- * #NcXcorKernel:scaled-abstol floors the $k$-spline at $10^{-4}$ of the peak ($10^{-5}$
- * for #NcXcorSSCSij) and refuses to go below $10^{-6}$, leaving the panel error at least
- * four orders under a floor that is applied anyway.
+ * The error is bounded in absolute terms. It appears only where the integral is
+ * $10^{-7}$ to $10^{-9}$ of its own peak over $k$, in the deep oscillatory tail
+ * $y \gg \ell$, and the worst absolute error measured is $2\times10^{-11}$ of
+ * that peak; near the peak the same scan gives $4\times10^{-11}$ relative. Every
+ * consumer in the library reaches this class through #NcXcorKernel, whose
+ * #NcXcorKernel:scaled-abstol floors the $k$-spline at $10^{-4}$ of the peak,
+ * $10^{-5}$ for #NcXcorSSCSij, and refuses to go below $10^{-6}$, leaving the
+ * panel error at least four orders under a floor that is applied anyway.
  *
- * Use #NcmSBesselIntegratorGL where a small value has to be accurate in its own right
- * rather than as part of a larger integral.
+ * Use #NcmSBesselIntegratorGL where a small value has to be accurate in its own
+ * right rather than as part of a larger integral.
  *
  */
 

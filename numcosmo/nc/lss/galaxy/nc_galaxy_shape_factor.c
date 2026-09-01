@@ -31,7 +31,7 @@
  *
  * Shape likelihood-factor calculator for the weak-lensing pipeline.
  *
- * The calculator owns the whole HSM measurement engine: the intrinsic
+ * The calculator provides the HSM measurement engine: the intrinsic
  * ellipticity $\chi_I$ is drawn from the #NcGalaxyShapePop resolved from the
  * #NcmMSet, mapped deterministically by the reduced-shear transformation with
  * calibration bias $\tilde g = (1+m)\,g + c$, and observed with additive
@@ -42,13 +42,9 @@
  * $$P(\epsilon_\mathrm{obs} \mid z, \ldots) = \int_{|\chi_I| < 1} d^2\chi_I\,
  *   P_\mathrm{pop}(\chi_I)\, N_2\!\big(\epsilon_\mathrm{obs} - f_{\tilde g}(\chi_I);
  *   \sigma_\mathrm{noise}^2\big),$$
- * evaluated per galaxy at each source redshift $z$ (the outer $z$-integral
- * belongs to the orchestrator). How this two-dimensional marginal is computed
- * is the only axis subclasses vary: each subclass is one evaluation strategy
- * implementing the eval_marginal / eval_ln_marginal hooks. Everything else -
- * generation, per-galaxy geometry caches (projected radius, optzs, critical
- * surface-density nodes), frame bookkeeping and data IO - lives here, written
- * once.
+ * Evaluates the marginal per galaxy and source redshift. Subclasses implement
+ * the eval_marginal() and eval_ln_marginal() hooks; geometry caches and frame
+ * handling are provided by this class.
  *
  * This is a calculator, not a model: it holds no fitted parameters and does
  * not live in the #NcmMSet; the models it needs (cosmology, halo position and
@@ -107,11 +103,8 @@ typedef struct _NcGalaxyShapeFactorPrivate
 } NcGalaxyShapeFactorPrivate;
 
 /*
- * Engine-owned per-galaxy geometry caches, opaque to the integration-method
- * subclasses. rot_re/rot_im = cos(2phi)/sin(2phi): rotates the
- * tangential-native reduced shear into data->coord, where the stored
- * epsilon_obs_1/2 already lives (see docs/theory/wl_shape_factor_history.md
- * for why the shear rotates and not epsilon_obs).
+ * Engine-owned per-galaxy geometry caches. rot_re/rot_im are the spin-2
+ * rotation factors from the tangential frame to data->coord.
  */
 typedef struct _NcGalaxyShapeFactorCData
 {

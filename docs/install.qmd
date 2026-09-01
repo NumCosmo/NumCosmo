@@ -8,18 +8,22 @@ subtitle: Get started with NumCosmo
 Version {{< meta version >}} of NumCosmo is the latest release version available at
 NumCosmo's GitHub page [github releases](https://github.com/NumCosmo/NumCosmo/releases).
 
-To compile NumCosmo on a Mac OS, you can use HomeBrew. The compilation steps can be found in [NumCosmo GitHub actions](https://github.com/NumCosmo/NumCosmo/blob/master/.github/workflows/build_check.yml), providing a detailed, step-by-step process.
+For macOS, use Homebrew and the dependency list in the
+[GitHub Actions workflow](https://github.com/NumCosmo/NumCosmo/blob/master/.github/workflows/build_check.yml).
 
 [![Build Status](https://github.com/NumCosmo/NumCosmo/workflows/Build%20and%20Check/badge.svg)](https://github.com/NumCosmo/NumCosmo/actions) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![codecov](https://codecov.io/gh/NumCosmo/NumCosmo/graph/badge.svg?token=FZ3PX0PKWG)](https://codecov.io/gh/NumCosmo/NumCosmo)
 
 # Install using conda
 
-For non-developers, NumCosmo and all necessary dependencies can be installed using conda.
-If you don't have conda installed, you can download the full Anaconda distribution from [here](https://www.anaconda.com/download/) or Miniconda from [here](https://conda.io/miniconda.html).
+Install NumCosmo and its dependencies with conda. Install
+[Anaconda](https://www.anaconda.com/download/) or
+[Miniconda](https://conda.io/miniconda.html) first if needed.
 
 ## Installing NumCosmo using conda-forge
 
-To streamline the installation process of NumCosmo, conda-forge offers a convenient option. You can install NumCosmo either by explicitly setting the conda-forge channel or by utilizing a conda-forge-only environment, available for download [here](https://github.com/conda-forge/miniforge).
+conda-forge provides precompiled NumCosmo packages. Use the conda-forge
+channel or a conda-forge-only environment from
+[Miniforge](https://github.com/conda-forge/miniforge).
 
 ### Using Conda
 
@@ -43,10 +47,7 @@ conda install numcosmo
 
 ## Conda Development Environment
 
-Conda streamlines the installation process for NumCosmo Library on Linux and Mac OS. 
-These self-contained steps eliminate the need for additional instructions. 
-Follow these guidelines when building from the repository or a release. 
-Execute the following commands in the root directory of the NumCosmo repository:
+Create the development environment from the repository root:
 
 ```bash
 conda env create -n numcosmo_developer -f environment.yml

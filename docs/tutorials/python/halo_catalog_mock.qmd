@@ -13,9 +13,8 @@ format-links: [ipynb]
 
 ## Purpose {#sec-purpose}
 
-This tutorial shows how to generate mock halo/cluster catalogs and their galaxy
-members entirely from NumCosmo's C objects, and how to chain them together with
-the `MockPipeline` orchestrator.
+Generates mock halo, cluster, and member catalogs with NumCosmo objects and
+`MockPipeline`.
 
 The generation is split into small, reusable pieces, each assembled from the
 existing modelling machinery rather than reimplemented:

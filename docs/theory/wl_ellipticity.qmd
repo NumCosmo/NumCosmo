@@ -89,7 +89,7 @@ These are the standard reduced-shear ellipticity transforms (see e.g.
 @Bartelmann2001). They are implemented as inlined kernels (`apply_shear`,
 `apply_shear_inv`) selected once per convention in `nc_wl_ellipticity.h`
 (`nc_wl_ellipticity_apply_shear_trace`/`_trace_det` and their `_inv`
-counterparts); the `_ptr`-suffixed siblings are the introspectable
+counterparts); the `_ptr`-suffixed functions are the introspectable
 (Python-usable) entry points.
 
 ### Calibration

@@ -92,7 +92,7 @@ z=0.6-0.7 at l=9 gave `-3.8e-11` against cubature's `-7.6e-11`.
 Both problems are artifacts of the shared domain. With per-kernel knots each
 spline is only ever evaluated inside its own fitted domain, the pair range is
 the intersection of the two `get_range()`s — exactly what `KERNEL_CUBATURE`
-uses — and neither the extrapolation blow-up nor the tail clipping arises. The
+uses — and neither the extrapolation instability nor the tail clipping arises. The
 support machinery was deleted with the joint sampler.
 
 ## 6. Share across kernels? No. Across ell blocks? Also no.
@@ -191,7 +191,85 @@ effort spent resolving it is what breaks the outer integration. Nothing here is
 urgent, though -- at the tolerances actually in use (`scaled_abstol >= 1e-6`)
 the current criterion works and top-hats validate at `l = 800`.
 
-## 10. Related open items
+## 10. What `vp_err` measures, and how conservative it is
+
+`nc_xcor_compute_full()`'s `vp_err` is a kernel-building error, not a
+quadrature error: `KERNEL_EXACT` integrates its spline closures exactly, so the
+outer quadrature contributes nothing and only supplies the amplification
+factor, which cannot be known before the pair is formed.
+
+Refinement beats the tolerance it is given by one to three orders, by an amount
+that depends on the kernel, so the tolerance-only form is a ceiling rather than
+an estimate. Measured against a reference built at `reltol = 1e-10`, over
+`l = 2..9` at the library defaults, worst ratio of estimate to true relative
+error:
+
+| pair | true relative error | achieved | tolerance-only |
+|---|---|---|---|
+| top-hat, auto | 4.3e-6 to 1.3e-4 | 1.2-50x | 12-858x |
+| top-hat, cross adjacent | 6.7e-4 to 0.13 | 2.9-16x | 35-320x |
+| top-hat, cross separated | 0.07 to 8993 | 3.7e-4-11x | 5.1e-3-161x |
+| Gaussian, auto | 6.5e-8 to 9.6e-7 | 68-630x | 537-7949x |
+| Gaussian, cross separated | 5.0e-4 to 1.2 | 237-1467x | 6440-50487x |
+
+Using the achieved residual is worth a uniform 13 to 34 times across all five
+at no measurable cost: the record is one double per knot per multipole, and
+building it does not slow the closure down.
+
+Both rows where the ratio drops below one are separated top-hat bins whose
+`C_l` has no significant digits left, and the estimate reports that. Over the
+three pairs, three thresholds and both forms there is no cell where `vp_err`
+calls a `C_l` accurate that is not.
+
+These figures are a worst case. A cluster top-hat has a sharp edge in `xi`,
+which gives `W_l(k)` a `1/k` tail instead of an exponential one. Nothing
+integrates across that edge — it is declared through the component's limits,
+see `NcXcorKernelComponent` — but the tail keeps far more of k-space above the
+closure's floor, so the fit costs more and is less accurate. On the same
+comoving shells a smooth kernel needs 161 knots against the top-hat's 541, and
+its cross spectrum is accurate to 7.7e-4 rather than 0.13.
+
+The residual record only halves the gap. The remaining spread, from 2.9x on a
+top-hat cross to 1467x on a Gaussian one, comes from a second mechanism: a
+spline's error alternates sign from panel to panel, and an estimate built on
+absolute values adds what the integral cancels. That cancellation is near-total
+for a smoothly fitted kernel and partial for a ragged one, which is the
+direction of the spread. Closing it needs a signed error model rather than a
+better residual. That was evaluated and not built: the measured gain is
+bounded at about 11x, and the estimate would have to be verified at roughly
+twice the closure build cost.
+
+Read the table against the tolerances an application sets, not the bare
+defaults, which exist to be cheap. `NcXcorSSCSij` uses `reltol = 1e-6` with
+`scaled_abstol = 1e-5`, deliberately offset from each other; the rationale is
+at that object's defaults and should be read before changing either. At those,
+on the same top-hat bins, the diagonal is accurate to 5.9e-6 rather than
+1.3e-4, and the adjacent-bin cross to 2.8e-3 rather than 0.13. The
+separated-bin cross stays poor in relative terms, but it is 2.4e-4 of the
+diagonal, so its contribution is far below the diagonal's own error. Judge a
+`vp_err` against the amplitude its term carries.
+
+Two effects push against the conservatism:
+
+- The absolute term dominates. In
+  `dW <= eps |W| + a W_max`, the `a` terms are each closure's peak-scaled floor
+  weighted by the *other* closure's true size. For cluster top-hat bins at the
+  library defaults they exceed the relative term by one to two orders. A floor
+  set per closure reaches `C_l` squared only where both closures sit on their
+  floors at once; wherever one does, it is linear in `a` and weighted by the
+  other's real amplitude.
+- The fit criterion is an `L2` norm over the whole multipole block at each `k`,
+  not over one multipole, so a multipole that is sub-dominant within its block
+  is held only to the block's norm. For those, `eps |W_l|` understates the fit
+  error and `vp_err` can be too small.
+
+`vp_err` also cannot see the k-range intersection. The outer integral runs over
+the intersection of the two closures' fitted k-ranges, and the estimate covers
+only what is inside it. Two kernels fitted on different k-supports lose the
+non-overlapping part silently, and that loss grows with bin separation, the
+same direction in which the cancellation grows.
+
+## 11. Related open items
 
 - `ncm_integral_nd_eval` hard-`g_error`s when `pcubature` runs out of
   Clenshaw-Curtis levels. This blocks `scaled_abstol = 1e-8` on masked runs and

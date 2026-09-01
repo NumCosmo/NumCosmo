@@ -15,16 +15,19 @@ format-links: [ipynb]
 
 ## Introduction
 
-This example combines type Ia supernovae with baryon acoustic oscillation measurements
-and maps two-dimensional confidence regions in the $(\Omega_c, w)$ plane, using the
-`numcosmo_py`[^numcosmo_py] package and `plotnine` for visualization.
+Combines type Ia supernovae and baryon acoustic oscillation measurements to map
+two-dimensional confidence regions in the $(\Omega_c, w)$ plane with
+`numcosmo_py`[^numcosmo_py] and `plotnine`.
 
-A confidence region can be obtained either by following the likelihood surface itself,
-through a likelihood-ratio test, or by approximating that surface with a Gaussian centred
-on the best fit. Here the two answers differ by a large factor, and tracking down the
-reason turns out to be more interesting than the discrepancy itself: most of it comes not
-from the likelihood being non-Gaussian, but from which information matrix is used to build
-the approximation. The underlying fitting workflow is introduced in
+A confidence region can be obtained either from the likelihood surface itself,
+through a likelihood-ratio test, or by approximating that surface with a
+Gaussian centred on the best fit. Here the two answers differ by a large
+factor, and most of the difference comes not from the likelihood being
+non-Gaussian but from which information matrix is used to build the
+approximation. `fisher_border` uses the covariance ellipse; `conf_region`
+evaluates the likelihood-ratio contour and profiles any nuisance parameters.
+
+The underlying fitting workflow is introduced in
 [Supernova Type Ia Analysis](snia.qmd) and is assumed below.
 
 ## Combining Datasets

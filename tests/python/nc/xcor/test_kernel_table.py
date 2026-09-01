@@ -258,5 +258,5 @@ def test_shear_kernel_factor(bits):
 
 
 # Construct-time invariants (mismatched lengths, too few samples for the requested
-# degree) are reported with g_error, as every sibling kernel reports its own. That
+# degree) are reported with g_error, as every related kernel reports its own. That
 # is fatal by design and so cannot be exercised from here.

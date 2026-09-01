@@ -28,34 +28,31 @@
  *
  * Super-sample covariance $S_{ij}$ matrix for a set of top-hat redshift bins.
  *
- * Each redshift bin becomes a #NcXcorKernelClusterTophat whose radial window is
- * normalized to unit integral in comoving distance, so the angular power
- * spectrum $C^{ij}_\ell$ of the pair is that of the volume-averaged matter
- * density contrast. Given the angular power spectrum $C^{\rm mask}_\ell$ of the
- * survey footprint,
+ * Each redshift bin becomes a #NcXcorKernelClusterTophat with a radial window
+ * normalized to unit integral. Given the mask spectrum $C^{\rm mask}_\ell$,
  *
  * $$S_{ij} = \frac{1}{4\pi C^{\rm mask}_0}
  *     \sum_{\ell=0}^{\ell_{\rm max}} (2\ell+1) C^{\rm mask}_\ell C^{ij}_\ell,$$
  *
  * which reduces to the full-sky $S_{ij} = C^{ij}_0 / 4\pi$ for the trivial mask
- * $C^{\rm mask}_\ell = 4\pi \delta_{\ell 0}$ --- the default here, also
- * available as nc_xcor_ssc_sij_mask_cl_fullsky(). See
+ * $C^{\rm mask}_\ell = 4\pi \delta_{\ell 0}$, the default here, also available
+ * as nc_xcor_ssc_sij_mask_cl_fullsky(). See
  * <a href="../../theory/ssc.html">Super-sample covariance</a> for the
  * derivation and the accuracy study.
  *
  * The mask spectrum does not depend on cosmology, so it is supplied once, by
  * nc_xcor_ssc_sij_set_mask_cl(); #NcmSphereMap computes it from a HEALPix
- * footprint. Only the $C^{ij}_\ell$ are recomputed per cosmology, which is what
- * makes this object cheap enough to call once per likelihood step.
+ * footprint. Only the $C^{ij}_\ell$ are recomputed per cosmology, which is
+ * what makes this object cheap enough to call once per likelihood step.
  *
  * Every kernel is put in permanent non-Limber mode (`l_limber = -1`): the
- * Limber approximation is meaningless at the low multipoles that dominate
+ * Limber approximation is not valid at the low multipoles that dominate
  * $S_{ij}$, and it makes the cross spectrum of two disjoint bins vanish.
  *
  * The default quadrature is %NC_XCOR_METHOD_KERNEL_EXACT, which needs no
  * tolerance and cannot fail to converge. The adaptive alternatives target a
  * tolerance the integrand may not support and abort when they cannot reach it,
- * which would kill a Monte Carlo chain mid-flight.
+ * which would end a Monte Carlo chain mid-run.
  *
  * A single #NcXcorSolver is built once and reused across cosmologies, so the
  * per-block spherical Bessel factorizations are paid for only on the first
@@ -82,33 +79,33 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-/* Empirical sweet spot for nc_xcor_solver_plan_blocks(), from
+/* Measured best value for nc_xcor_solver_plan_blocks(), see
  * dev-notes/xcor_ultralevin_batching_plan.md section 1.3. */
 #define NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE (8)
 
-/* One order tighter than #NcXcorKernel's own 1.0e-4 default. This, not
- * `reltol`, is what limits the accuracy of the off-diagonal S_ij: they are a
- * small residual of a large cancellation, four orders of magnitude below the
- * diagonal for well-separated bins.
+/* Scaled absolute tolerance for the closure fit, one order tighter than
+ * #NcXcorKernel's own 1.0e-4 default. This, not `reltol`, is what limits the
+ * accuracy of the off-diagonal S_ij: they are a small residual of a large
+ * cancellation, four orders of magnitude below the diagonal for well-separated
+ * bins.
  *
- * Offset from NC_XCOR_SSC_SIJ_DEFAULT_RELTOL below, upwards, because this
- * object rebuilds S at every likelihood step, where tightening costs ~2x per
- * rebuild for accuracy no forecast can use. That cost argument is the whole
- * reason for the value.
+ * It is offset upwards from NC_XCOR_SSC_SIJ_DEFAULT_RELTOL below because this
+ * object rebuilds S at every likelihood step, where tightening costs about 2x
+ * per rebuild for accuracy no forecast can use.
  *
- * It is *not* offset to dodge the p-adaptive cubature failure that
- * numcosmo_py/ssc.py documents at length, and which equal values are the one
- * setting to trigger. That failure needs an adaptive outer rule refining
- * against a tolerance the closure's own fit error puts out of reach; this
- * object defaults to %NC_XCOR_METHOD_KERNEL_EXACT, which has no outer tolerance
- * and no adaptive step, so it cannot occur here. Equal values would be safe --
- * they would just cost more.
+ * The offset is not there to avoid the p-adaptive cubature failure described
+ * in numcosmo_py/ssc.py, which equal values are the one setting to trigger.
+ * That failure needs an adaptive outer rule refining against a tolerance the
+ * closure's own fit error puts out of reach; this object defaults to
+ * %NC_XCOR_METHOD_KERNEL_EXACT, which has no outer tolerance and no adaptive
+ * step, so it cannot occur here. Equal values would be safe, only more
+ * expensive.
  *
  * Must be kept equal to DEFAULT_SCALED_ABSTOL in numcosmo_py/ssc.py, which is
  * what the frozen path uses: the two are documented to differ only in whether
- * S_ij follows the cosmology, not in how it is computed. Note that this promise
- * is already imperfect on a second axis -- that path builds its NcXcor with
- * %NC_XCOR_METHOD_KERNEL_CUBATURE while this one defaults to
+ * S_ij follows the cosmology, not in how it is computed. That correspondence
+ * is already imperfect on a second axis: the frozen path builds its NcXcor
+ * with %NC_XCOR_METHOD_KERNEL_CUBATURE while this one defaults to
  * %NC_XCOR_METHOD_KERNEL_EXACT. */
 #define NC_XCOR_SSC_SIJ_DEFAULT_SCALED_ABSTOL (1.0e-5)
 

@@ -28,24 +28,23 @@
  *
  * Ordered sample set for vector-valued functions $\vec{F}: \mathbb{R} \to \mathbb{R}^n$.
  *
- * This object stores an ordered set of samples $(x_i, \vec{y}_i)$ where each sample
- * consists of a knot position $x_i$ and a vector value $\vec{y}_i \in \mathbb{R}^n$.
- * Each sample also has an associated "interval_ok" flag that indicates whether
- * the interval between that node and the next node has passed refinement tests.
+ * Stores samples $(x_i, \vec{y}_i)$ in ascending $x_i$ order. Each interval
+ * has an `interval_ok` flag for refinement status.
  *
- * The primary use case is for iterative refinement algorithms that build splines
- * from vector-valued functions. The typical workflow is:
- * 1. Add initial samples using ncm_function_sample_set_add() or ncm_function_sample_set_add_func()
- * 2. Convert to NcmSplineVec and test interpolation error using ncm_function_sample_set_refine()
- * 3. Insert new samples where error exceeds tolerance using iterator-based insertion
- * 4. Mark samples as interval_ok when bins pass error tests
- * 5. Repeat until ncm_function_sample_set_all_intervals_ok() returns TRUE
+ * The intended use is iterative refinement of splines built from
+ * vector-valued functions:
  *
- * # Iterator-Based API
+ * 1. Add initial samples with ncm_function_sample_set_add() or
+ *    ncm_function_sample_set_add_func().
+ * 2. Convert to #NcmSplineVec and test the interpolation error with
+ *    ncm_function_sample_set_refine().
+ * 3. Insert new samples where the error exceeds the tolerance, using the
+ *    iterators.
+ * 4. Mark an interval as `interval_ok` once it passes the error test.
+ * 5. Repeat until ncm_function_sample_set_all_intervals_ok() returns TRUE.
  *
- * This class provides an efficient iterator-based API for traversing and manipulating samples.
- * Iterators provide O(1) access to sample data once positioned, making sequential operations
- * efficient. Example usage:
+ * Iterators provide traversal, interval access, and insertion operations, with
+ * O(1) access to sample data once positioned.
  *
  * |[<!-- language="C" -->
  * // Create iterator and traverse all samples (stack-allocated - no free needed)
@@ -80,22 +79,10 @@
  * }
  * ]|
  *
- * # Memory Management and Performance
+ * Conversion to #NcmSplineVec reuses internal arrays and invalidates the
+ * previously returned spline. Duplicate the spline to retain it.
  *
- * Samples are maintained in ascending x-order using a GList internally, which
- * provides efficient insertion operations during the building phase.
- *
- * When converting to NcmSplineVec using ncm_function_sample_set_to_spline_vec() or
- * ncm_function_sample_set_to_spline_vec_old(), the object reuses internal cached
- * arrays for optimal performance. This means:
- * - Each call to these functions invalidates the previously returned #NcmSplineVec
- * - If you need to preserve multiple splines, call ncm_spline_vec_dup() before
- *   generating a new one
- * - This pattern matches ncm_spline_func behavior and is optimal for iterative
- *   refinement workflows
- *
- * The dimension $n$ of the vector values is fixed at creation time and validated
- * on every insertion.
+ * The vector dimension $n$ is fixed at creation and checked on insertion.
  *
  */
 

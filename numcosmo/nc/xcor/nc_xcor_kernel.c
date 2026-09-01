@@ -1554,15 +1554,7 @@ _cheb_sampler_call (gpointer user_data, gdouble k, NcmVector *y)
   sampler->compute_func (k, y, sampler->comp_states);
 }
 
-/*
- * Default for #NcXcorKernel:panel-order-cap, which is where the reasoning and
- * the sweep behind the value live. A single global panel has to resolve the
- * whole domain uniformly in phase, which at high multipole is mostly domain
- * where W is negligible -- the spline's adaptive knots go where the window
- * actually lives and a global expansion cannot. Capping the order and bisecting
- * recovers that: panels over the quiet region converge at once and cost almost
- * nothing, and the resolution concentrates where the oscillation is.
- */
+/* Default panel-order cap for Chebyshev closure fits. */
 #define NC_XCOR_KERNEL_CHEB_PANEL_K_CAP (5)
 #define NC_XCOR_KERNEL_CHEB_MIN_PANEL_FRAC (1.0e-6)
 

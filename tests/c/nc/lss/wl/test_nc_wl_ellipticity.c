@@ -197,7 +197,7 @@ test_nc_wl_ellipticity_det_jac_matches_log_form (gconstpointer pdata)
   }
 }
 
-/* nc_galaxy_shape_factor_fixed_quad.c's hot loop calls the fused *_kernel()
+/* nc_galaxy_shape_factor_fixed_quad.c's performance-critical loop calls the fused *_kernel()
  * instead of apply_inv()+det_jac() separately (see nc_wl_ellipticity.h's
  * docs on why); kernel()'s x_i/jac must agree with |apply_inv()|^2 and
  * det_jac() computed independently, to double-precision accuracy (not
@@ -229,7 +229,7 @@ test_nc_wl_ellipticity_kernel_matches_separate (gconstpointer pdata)
   }
 }
 
-/* nc_galaxy_shape_factor_fixed_quad.c's hot loop calls
+/* nc_galaxy_shape_factor_fixed_quad.c's performance-critical loop calls
  * nc_wl_ellipticity_trace_kernel_prepare() once per g and
  * nc_wl_ellipticity_trace_kernel_apply() once per node instead of
  * nc_wl_ellipticity_trace_kernel() per node (measured ~12% faster, see its
@@ -472,4 +472,3 @@ main (gint argc, gchar *argv[])
 
   return g_test_run ();
 }
-

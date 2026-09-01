@@ -252,7 +252,7 @@ def test_marginal_matches_scipy_truth_table_narrow_trace_convention():
 @pytest.mark.parametrize("ellip_conv", _CONVS)
 def test_marginal_matches_scipy_truth_table_beta_peaked_off_center(ellip_conv):
     """Places eps_obs at the population's peak ring (mode(r) != 0) to
-    sanity-check the mode hint; not itself proof the hint is load-bearing
+    sanity-check the mode hint; not itself proof the hint is required
     (see class doc)."""
     alpha, beta, std_noise = 700.0, 300.0, 0.02
     g = 0.1 + 0.05j

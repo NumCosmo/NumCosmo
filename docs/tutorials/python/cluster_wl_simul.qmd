@@ -13,17 +13,15 @@ format-links: [ipynb]
 
 ## Purpose {#sec-purpose}
 
-This document serves as a guide for utilizing NumCosmo's cluster weak lensing tools to simulate the weak lensing signal produced by galaxy clusters. 
-In this tutorial, we demonstrate how to generate mock weak lensing data for galaxy clusters, focusing on simulating galaxy shapes with varying cluster positions and masses using NumCosmo. 
-These simulations provide insights into how weak lensing signal changes with cluster properties and can be used to test the performance of weak lensing analysis methods.
+Generates mock cluster weak-lensing data with varying cluster positions and
+masses.
 
 ## Defining Theoretical Models
 ### Cosmological Model
 
-To begin, we define a cosmological model using NumCosmo's background cosmology models. 
-We also create an `Nc.Distance` object to compute the cosmological distances required for the weak lensing analysis. 
+Define a background cosmology and an `Nc.Distance` calculator.
 
-For this example, we consider a Lambda Cold Dark Matter ($\Lambda$CDM) cosmology with the following parameters:
+Use a Lambda Cold Dark Matter ($\Lambda$CDM) cosmology with:
 
 - $\Omega_{c0} = 0.25$: Cold dark matter density parameter at present
 - $\Omega_{b0} = 0.05$: Baryon density parameter at present
@@ -62,10 +60,8 @@ dist.prepare(cosmo)
 
 ### Cluster Profile Model
 
-Next, we define a model for the cluster density profile. 
-For this example, we consider the NFW (Navarro-Frenk-White) profile, a widely used model for the density profile of galaxy clusters.
-Since we are taking into account the miscentering effect, we also need to define a model for the cluster position. 
-Additionally, we create an `Nc.WLSurfaceMassDensity` object to compute the shear produced by the cluster.
+Define an NFW halo profile, a cluster-position model, and an
+`Nc.WLSurfaceMassDensity` calculator.
 
 For our simulation, we define the following parameters:
 

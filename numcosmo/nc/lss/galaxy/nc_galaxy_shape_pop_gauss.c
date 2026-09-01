@@ -83,7 +83,7 @@ _nc_galaxy_shape_pop_gauss_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_shape_pop_gauss_parent_class)->finalize (object);
 }
 
-/* _data_init, _eval_p and _gen are shared with sibling models (see
+/* _data_init, _eval_p and _gen are shared with related models (see
  * nc_galaxy_shape_pop_gauss_private.h) so are not static; forward-declared
  * here only to keep definition order readable. */
 void _nc_galaxy_shape_pop_gauss_data_init (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);

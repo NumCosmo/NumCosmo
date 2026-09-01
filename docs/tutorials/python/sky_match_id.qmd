@@ -7,19 +7,19 @@ format: html
 
 ## Purpose {#sec-purpose}
 
-The companion tutorial [Matching Observations to Simulations](sky_match.qmd) matches
-objects by their **positions** on the sky. NumCosmo's `sky_match` module also supports a
-complementary strategy: matching objects by their **shared members**.
+The companion tutorial [Matching Observations to Simulations](sky_match.qmd)
+matches objects by their positions on the sky. NumCosmo's `sky_match` module
+also matches objects by their shared members.
 
-Many catalogs describe extended objects (galaxy clusters, halos) as collections of member
-galaxies. When two catalogs are built from the same underlying galaxies, two objects can
-be associated by how many members they have in common, regardless of their catalog
-positions. This is what the `match_ID` method does: it links a *query* object to a *match*
-object whenever they share member galaxies, and scores each candidate link with a
-**linking coefficient**.
+Many catalogs describe extended objects, such as galaxy clusters and halos, as
+collections of member galaxies. When two catalogs are built from the same
+underlying galaxies, two objects can be associated by how many members they
+have in common, independently of their catalog positions. `match_ID` links a
+query object to a match object whenever they share member galaxies, and scores
+each candidate link with a linking coefficient.
 
-In this tutorial we build a pair of mock catalogs of halos and detected clusters, each
-described by a member catalog, and use `match_ID` to associate them.
+This tutorial builds a pair of mock catalogs of halos and detected clusters,
+each described by a member catalog, and uses `match_ID` to associate them.
 
 ## Member Catalogs {#sec-mock}
 

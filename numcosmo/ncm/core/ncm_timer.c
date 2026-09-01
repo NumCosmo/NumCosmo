@@ -29,10 +29,8 @@
  *
  * A timer with ETA support.
  *
- * This object has several functions to track time, with the availability to be devided
- * in several tasks. Also it provides two different formats: the default is time in
- * seconds but also have date plus time. All with estimated time of accomplishment (ETA)
- * support.
+ * Tracks elapsed time for a timer and a sequence of tasks, with elapsed-time
+ * and calendar-time output and ETA estimates.
  *
  */
 

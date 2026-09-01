@@ -26,12 +26,7 @@
 /**
  * NcXcorKernelComponent:
  *
- * Abstract base class for kernel components in cross-correlation calculations.
- *
- * This class provides a framework for defining physical components of
- * cross-correlation kernels. Each component represents a distinct physical
- * contribution, such as galaxy number counts, magnification bias, or ISW effect.
- * Components can be combined to form multi-component kernels.
+ * Abstract base class for cross-correlation kernel components.
  *
  * Subclasses must implement:
  * - `eval_kernel`: evaluates K(k, xi) for the component
@@ -40,45 +35,32 @@
  * Optionally, subclasses can implement:
  * - `get_limits`: returns valid integration ranges for xi and k
  *
- * The class provides automatic kernel analysis functionality that studies the behavior
- * of KL(k, y/k) using the Limber approximation to optimize integration strategies.
+ * The class analyzes KL(k, y/k) with the Limber approximation.
  *
  * ## Edges belong in get_limits, never inside eval_kernel
  *
  * `get_limits` declares where the component lives, and the radial integral is
- * confined to the $[\xi_\mathrm{min}, \xi_\mathrm{max}]$ it reports. So
- * `eval_kernel` is only ever called inside that range and **must not** test
- * against it: a component with a sharp edge returns its interior value
- * unconditionally and lets the limits carry the edge. #NcXcorKernelClusterTophat
- * is the clearest case -- an indicator function whose `eval_kernel` simply
- * returns 1.
+ * confined to the $[\xi_\mathrm{min}, \xi_\mathrm{max}]$ it reports.
+ * `eval_kernel` is therefore only ever called inside that range and must not
+ * test against it: a component with a sharp edge returns its interior value
+ * unconditionally and lets the limits carry the edge.
+ * #NcXcorKernelClusterTophat is the clearest case, an indicator function whose
+ * `eval_kernel` returns 1.
  *
- * The reason is that the edge then falls on a panel boundary rather than inside
- * one. A step written into `eval_kernel` would be integrated across, and the
- * Chebyshev fit of the radial integrand cannot resolve a discontinuity in its
- * interior -- it refines until it hits max-order and aborts. A component that is
- * only piecewise smooth *within* its support has the same problem at each
- * interior kink, and the remedy is the same: split it into one component per
- * smooth piece, so every break is a limit.
+ * This places the edge on a panel boundary rather than inside one. A step
+ * written into `eval_kernel` would be integrated across, and the Chebyshev fit
+ * of the radial integrand cannot resolve a discontinuity in its interior: it
+ * refines until it reaches max-order and aborts. A component that is only
+ * piecewise smooth within its support has the same problem at each interior
+ * kink. Split it into one component per smooth piece, so that every break is a
+ * limit.
  *
- * ## What a sharp edge still costs
+ * A sharp edge remains more expensive even when declared correctly. It gives
+ * $W_\ell(k)$ a $1/k$ tail rather than an exponential one, so more of k-space
+ * stays above the closure's absolute floor: on the same comoving shell and
+ * tolerances, a cluster top-hat needs 541 k-space knots over 0.061-4800
+ * against a Gaussian's 161 over 0.064-480. Each knot is one radial solve.
  *
- * Respecting the edge makes the radial integral exact, but it cannot change what
- * the transform of a step looks like. A sharp edge in $\xi$ gives $W_\ell(k)$ a
- * $1/k$ tail rather than an exponential one, so far more of k-space stays above
- * the closure's absolute floor. Measured on the same comoving shell, with the
- * same tolerances:
- *
- * | component | k-space knots | k range | knots per decade |
- * |---|---|---|---|
- * | cluster top-hat (sharp edge) | 541 | 0.061 - 4800 | 111 |
- * | smoothed top-hat | 169 | 0.058 - 520 | 43 |
- * | Gaussian | 161 | 0.064 - 480 | 42 |
- *
- * A whole extra decade of range, and 2.6 times the knot density inside each
- * decade. That is intrinsic to the shape, not a numerical defect, and it is
- * worth knowing before reading a top-hat's cost or accuracy as typical: each
- * knot is one radial solve.
  */
 
 #ifdef HAVE_CONFIG_H

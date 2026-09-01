@@ -53,15 +53,7 @@ def _get_default_console() -> Console:
 
 
 class MockStudy:
-    """Generate mocks from a fiducial model and analyze each with CutAnalyzer.
-
-    This class orchestrates mock data generation and analysis:
-    1. Generates mock realizations from fiducial parameters
-    2. Analyzes each mock using CutAnalyzer
-    3. Aggregates results across mocks
-
-    Works with any NcClusterMassRichness subclass (Ascaso, Ext, etc.).
-    """
+    """Generate mocks from a fiducial model and analyze them with CutAnalyzer."""
 
     def __init__(
         self,

@@ -203,7 +203,7 @@ gdouble (*ldata_get_sigma) (NcGalaxyShapePopData *data);
 marginalization scheme) needs exactly this width and gets it through the
 base-level dispatcher `nc_galaxy_shape_pop_get_sigma()`, which reads the slot
 and raises a clear error if it is `NULL`. This is the reason
-`NcGalaxyShapePopGaussLocal` is a *sibling* of `NcGalaxyShapePopGauss` — both
+`NcGalaxyShapePopGaussLocal` is a *parallel type* to `NcGalaxyShapePopGauss` — both
 derive directly from `NcGalaxyShapePop` and fill this slot with the same
 function — rather than a subclass kept around only so a concrete type-check
 would accept it: the capability the consumer needs is expressed on the shared
