@@ -93,6 +93,38 @@ per order). NcmDiff currently has no d3+ at all, and sc_d1/sc_d2 each redo the
 scan+fit: a shared-fit multi-order entry point would halve the d1+d2 cost and
 add d^n. The window should be scored on the highest requested order.
 
+## Augur + derivkit assessment (2026-09-01)
+
+Augur (origin/master f8ab7cf; local checkout left untouched on its stale
+branch) offers three derivative backends for its Fisher matrices: a five-point
+stencil with a FIXED absolute step (default 0.01, not scaled per parameter),
+numdifftools Jacobian (same fixed step), and derivkit (LSSTDESC, PyPI 1.2.1)
+with defaults n_points=27, spacing='1%', base_abs=1e-3, ridge=1e-8.
+
+derivkit's "adaptive" method is one ridge-regularized least-squares polynomial
+of degree order+2 (cap 8) on a Chebyshev grid of fixed half-width (1% of |x0|,
+floor base_abs); the returned "error" is the fit's relative RMS residual, in
+function units. On the 15-case battery (d1/d2):
+
+- dk defaults: d1 geo-mean 8.2e-6, worst 2.5e+1; d2 worst 5.8e+1; the residual
+  proxy is below the actual error in 8/15 (d1) and 13/15 (d2) cells;
+  sqrt@1e-4 is NaN (base_abs floor steps across the singularity).
+- dk Augur config: the ridge puts a hard floor of ~7e-9 relative on EVERY
+  smooth d1 (even an exact cubic); offset1e10 d2 comes out 7.7e+5 relative;
+  no scale adaptation (inv@1e-3 is 100% wrong, atan1000 67%).
+- Its one strength is realized in the noisy-pipeline regime it was built for:
+  with 1e-6 relative white noise it gets ~2e-5..8e-5 honestly at 28 evals.
+  But NcmDiff spectral is 3-400x more accurate on the same noisy battery
+  (wide window averages the noise), dual stays honest with tight estimates,
+  and both add scale discovery and derivative-unit error estimates that
+  derivkit lacks. NcmDiff variants: 0 dishonest cells under noise too
+  (single's estimate is honest but uselessly loose there).
+
+Summary: the "smoothing polynomial = stability" idea is our spectral method
+minus the window search, minus the refinement, minus honest error estimation,
+plus a ridge bias floor. Its advantages are fixed low cost (28 evals) and
+embarrassingly parallel evaluation.
+
 ## Follow-ups (not done)
 
 - Spectral Hessian off-diagonals (needs 2D fits).
