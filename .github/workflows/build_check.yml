@@ -10,8 +10,6 @@ on:
 
 env:
   CONDA_ENV: numcosmo_developer
-  # Bump to force recomputing slice-tests.txt from scratch instead of restoring cached durations.
-  TEST_DURATION_CACHE_VERSION: 0
   # Bump to discard the cached data files (~470 MB of Planck/SNIa/weak-lensing
   # assets) and download them again. The cache also goes stale on its own when
   # the datafile release tag changes; this knob covers everything else, such as
@@ -302,12 +300,10 @@ jobs:
     runs-on: ${{ matrix.os }}-latest
     strategy:
       # Shards are DERIVED, not hand-labeled (see TESTING.md): the C tests are split by
-      # test_slicer.py into 3 duration-balanced groups (see the c-1/c-2/c-3 entries and
-      # steps below), so they auto-distribute -- and stay balanced by wall time, not just
-      # count -- as tests are added/changed/removed (no per-test shard suite to curate).
-      # The Python `pytest` lane is internally parallel (xdist), so it stays a single
-      # shard; the marker-gated py-* subsets are their own shards because they are
-      # opt-in, not for balancing.
+      # meson's own --slice, so they auto-distribute as tests are added or removed, with
+      # no per-test shard suite to curate. The Python `pytest` lane is internally parallel
+      # (xdist), so it stays a single shard; the marker-gated py-* subsets are their own
+      # shards because they are opt-in, not for balancing.
       matrix:
         include:
           - { os: ubuntu, python-version: "3.13", name: python, args: "--suite python" }
@@ -318,11 +314,13 @@ jobs:
           - { os: ubuntu, python-version: "3.13", name: py-powspec, args: "--suite py-powspec" }
           - { os: ubuntu, python-version: "3.13", name: py-xcor, args: "--suite py-xcor" }
           - { os: ubuntu, python-version: "3.13", name: py-app, args: "--suite py-app" }
-          # c-1/c-2/c-3 no longer use meson's own --slice K/N (count-balanced, not
-          # time-balanced -- see .github/scripts/test_slicer.py); the `slice` field
-          # here selects which duration-aware slice this leg runs, computed at
-          # runtime from cached historical per-test durations. Legs without a
-          # `slice` field (above) are unaffected -- see the steps below.
+          # The `slice` field selects which third of the C tests this leg runs, passed
+          # straight to meson --slice. That balances by test count, not wall time, which
+          # is the right trade here: measured over the current suite, count-balancing
+          # gives a 518 s worst slice against 403 s for duration-balancing -- 115 s, on
+          # legs that finish in 9-11 min while the critical path of this job is py-xcor
+          # at 30-47 min. When a single test grows enough for that to matter, the answer
+          # is to split the test, which is worth doing for its own sake; see TESTING.md.
           - { os: ubuntu, python-version: "3.13", name: c-1, slice: 1 }
           - { os: ubuntu, python-version: "3.13", name: c-2, slice: 2 }
           - { os: ubuntu, python-version: "3.13", name: c-3, slice: 3 }
@@ -331,17 +329,6 @@ jobs:
         shell: bash -el {0}
     steps:
       - uses: actions/checkout@v4
-      # All c-* legs restore the same bundled cache entry (written by
-      # merge-test-durations) so every leg computes the same duration-balanced
-      # partition; a cold cache degrades to test_slicer.py's count-balanced split.
-      - name: Restore test duration history
-        if: matrix.slice != ''
-        uses: actions/cache/restore@v4
-        with:
-          path: test-durations
-          key: test-durations-c-bundle-v${{ env.TEST_DURATION_CACHE_VERSION }}-${{ github.run_id }}
-          restore-keys: |
-            test-durations-c-bundle-v${{ env.TEST_DURATION_CACHE_VERSION }}-
       - name: Restore data cache
         # Only the shards whose tests reach a downloaded file: the marker-gated
         # powspec/xcor/omp lanes touch none, and neither do the c-* slices, so
@@ -368,18 +355,6 @@ jobs:
       - name: Building NumCosmo
         run: |
           meson compile -C build
-      - name: Compute test slice
-        if: matrix.slice != ''
-        run: |
-          python3 .github/scripts/test_slicer.py plan \
-            --build-dir build \
-            --suite c --suite c-acceptance --suite c-statistical \
-            --durations test-durations/durations-slice1.json test-durations/durations-slice2.json test-durations/durations-slice3.json \
-            --num-slices 3 --slice ${{ matrix.slice }} \
-            > slice-tests.txt
-          echo "::group::slice-tests.txt ($(wc -l < slice-tests.txt) tests)"
-          cat slice-tests.txt
-          echo "::endgroup::"
       - name: Check and coverage
         # First run to generate the coverage base
         # Second run to generate the coverage for the tests
@@ -387,43 +362,21 @@ jobs:
         run: |
           lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
           if [ -n "${{ matrix.slice }}" ]; then
-            mapfile -t TEST_ARGS < slice-tests.txt
-            meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) "${TEST_ARGS[@]}" || (cat build/meson-logs/testlog.txt && exit 1)
+            meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) \
+              --suite c --suite c-acceptance --suite c-statistical --slice ${{ matrix.slice }}/3 || (cat build/meson-logs/testlog.txt && exit 1)
           else
             meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
           fi
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
           lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/external/*' '*/tools/*' --output-file numcosmo-coverage.info
-      - name: Extract test slice durations
-        # Feeds next run's duration balancing; runs even on test failure but
-        # has_data guards against uploading an empty bundle if an earlier step
-        # never produced testlog.json.
-        id: extract_durations
-        if: always() && matrix.slice != ''
-        run: |
-          python3 .github/scripts/test_slicer.py extract --testlog build/meson-logs/testlog.json > durations-slice${{ matrix.slice }}.json
-          if python3 -c "import json, sys; sys.exit(0 if json.load(open('durations-slice${{ matrix.slice }}.json')) else 1)"; then
-            echo "has_data=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_data=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Upload test slice duration artifact
-        # Handed to merge-test-durations, which bundles all three legs' fresh
-        # durations into one cache entry.
-        if: always() && matrix.slice != '' && steps.extract_durations.outputs.has_data == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-durations-slice${{ matrix.slice }}
-          path: durations-slice${{ matrix.slice }}.json
-          retention-days: 1
       - name: Test timing summary
         if: always()
-        # Surface the slowest tests of this shard in the job summary so wall-time imbalance
-        # across slices is visible at a glance. (For c-* legs this is now mostly a sanity
-        # check -- the split itself is duration-balanced by test_slicer.py, not meson --slice.)
+        # Surface the slowest tests of this shard in the job summary. Since --slice balances
+        # by count, this is how a test growing fat enough to unbalance its leg becomes
+        # visible -- and the fix for that is to split the test, not to reweight the split.
         run: |
-          python3 .github/scripts/test_slicer.py summary --testlog build/meson-logs/testlog.json --title "${{ matrix.name }}" >> "$GITHUB_STEP_SUMMARY"
+          python3 .github/scripts/test_summary.py summary --testlog build/meson-logs/testlog.json --title "${{ matrix.name }}" >> "$GITHUB_STEP_SUMMARY"
       - name: CodeCov
         uses: codecov/codecov-action@v4
         with:
@@ -443,38 +396,3 @@ jobs:
       #    files: ./numcosmo-coverage.info
       #    format: lcov
       #    github-token: ${{ secrets.GITHUB_TOKEN }}
-
-  merge-test-durations:
-    name: Merge test-duration cache
-    # Bundles all legs' slice durations into one cache entry so every leg next
-    # run sees the same snapshot, never a per-slice mix of vintages; if:
-    # always() so an upstream test failure doesn't lose timing data.
-    needs: build-miniforge-coverage
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download slice duration artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: test-durations-slice*
-          path: test-durations
-          merge-multiple: true
-        continue-on-error: true
-      - name: Check for data
-        id: check
-        run: |
-          shopt -s nullglob
-          files=(test-durations/durations-slice*.json)
-          if [ ${#files[@]} -gt 0 ]; then
-            echo "has_data=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_data=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Cache merged test durations
-        if: steps.check.outputs.has_data == 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: test-durations
-          key: test-durations-c-bundle-v${{ env.TEST_DURATION_CACHE_VERSION }}-${{ github.run_id }}
-
-
