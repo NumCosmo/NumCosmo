@@ -213,26 +213,84 @@ test_nc_xcor_auto (TestNcXcor *test, gconstpointer pdata)
   ncm_vector_free (auto_);
 }
 
+/* Two windows with no redshift in common. Under Limber the integrand is a product of
+ * the two at the same chi, so the cross spectrum is exactly zero -- not small, zero --
+ * and the library short-circuits the pair rather than integrating it. The threshold
+ * below which it declines to do so is the larger of the two kernels' l_limber, which is
+ * 0 for both here, so the whole band is zero.
+ *
+ * The check is worth stating precisely because the non-Limber methods disagree: there
+ * the same pair correlates, which is what tests/python/nc/xcor/test_disjoint_bins.py is
+ * about. */
 static void
 test_nc_xcor_disjoint (TestNcXcor *test, gconstpointer pdata)
 {
-  NcXcorKernel *far = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_tophat_new (test->dist, test->ps, 300.0, 500.0));
-  NcmVector *cl     = ncm_vector_new (TEST_NELL);
+  NcXcorKernel *near = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_tophat_new (test->dist, test->ps, 200.0, 400.0));
+  NcXcorKernel *far  = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_tophat_new (test->dist, test->ps, 2000.0, 2500.0));
+  NcmVector *cl      = ncm_vector_new (TEST_NELL);
+  gdouble zmin_n, zmax_n, zmid_n, zmin_f, zmax_f, zmid_f;
   guint i;
 
+  nc_xcor_kernel_prepare (near, test->cosmo);
   nc_xcor_kernel_prepare (far, test->cosmo);
 
-  /* Under Limber a pair with no common redshift correlates exactly zero: the integrand
-   * is a product of the two windows at the same chi. The non-Limber methods disagree,
-   * which is the point of tests/python/nc/xcor/test_disjoint_bins.py -- here the check is
-   * only that the empty-overlap path returns rather than dividing by an empty range. */
-  nc_xcor_compute (test->xc, test->k1, far, test->cosmo, TEST_LMIN, TEST_LMAX, cl);
+  nc_xcor_kernel_get_z_range (near, &zmin_n, &zmax_n, &zmid_n);
+  nc_xcor_kernel_get_z_range (far, &zmin_f, &zmax_f, &zmid_f);
+
+  /* The premise of the check, asserted rather than assumed. */
+  g_assert_cmpfloat (zmax_n, <, zmin_f);
+
+  ncm_vector_set_all (cl, GSL_NAN);
+  nc_xcor_compute (test->xc, near, far, test->cosmo, TEST_LMIN, TEST_LMAX, cl);
 
   for (i = 0; i < TEST_NELL; i++)
-    g_assert_true (gsl_finite (ncm_vector_get (cl, i)));
+    ncm_assert_cmpdouble_e (ncm_vector_get (cl, i), ==, 0.0, 0.0, 0.0);
 
+  /* A kernel always overlaps itself, so the same short circuit must not fire. */
+  nc_xcor_compute (test->xc, near, near, test->cosmo, TEST_LMIN, TEST_LMAX, cl);
+
+  for (i = 0; i < TEST_NELL; i++)
+    g_assert_cmpfloat (ncm_vector_get (cl, i), >, 0.0);
+
+  nc_xcor_kernel_free (near);
   nc_xcor_kernel_free (far);
   ncm_vector_free (cl);
+}
+
+/* Every property reads back what it was constructed or set with. */
+static void
+test_nc_xcor_properties (TestNcXcor *test, gconstpointer pdata)
+{
+  const TestMethod *tm = pdata;
+  NcDistance *dist     = NULL;
+  NcmPowspec *ps       = NULL;
+  NcXcorMethod meth;
+  NcXcorKernelClosure closure;
+  gdouble reltol;
+  guint batch;
+
+  nc_xcor_set_reltol (test->xc, 1.0e-7);
+  nc_xcor_set_ell_batch_size (test->xc, 8);
+  nc_xcor_set_closure_type (test->xc, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
+
+  g_object_get (test->xc,
+                "distance", &dist,
+                "power-spec", &ps,
+                "meth", &meth,
+                "closure-type", &closure,
+                "reltol", &reltol,
+                "ell-batch-size", &batch,
+                NULL);
+
+  g_assert_true (dist == test->dist);
+  g_assert_true (ps == test->ps);
+  g_assert_cmpuint (meth, ==, tm->meth);
+  g_assert_cmpuint (closure, ==, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
+  ncm_assert_cmpdouble_e (reltol, ==, 1.0e-7, 1.0e-15, 0.0);
+  g_assert_cmpuint (batch, ==, 8);
+
+  nc_distance_free (dist);
+  ncm_powspec_free (ps);
 }
 
 typedef struct _TestCheck
@@ -248,6 +306,7 @@ static const TestCheck test_checks[] = {
   {"compute_full", &test_nc_xcor_compute_full},
   {"auto",         &test_nc_xcor_auto        },
   {"disjoint",     &test_nc_xcor_disjoint    },
+  {"properties",   &test_nc_xcor_properties  },
 };
 
 /* The two Limber backends integrate the same integrand with different quadrature, so

@@ -413,6 +413,24 @@ test_nc_xcor_kernel_components (TestNcXcorKernel *test, gconstpointer pdata)
     g_assert_cmpuint (nc_xcor_kernel_component_get_max_iter (comp), ==, 5);
     ncm_assert_cmpdouble_e (nc_xcor_kernel_component_get_tol (comp), ==, 1.0e-4, 1.0e-15, 0.0);
 
+    /* The same four through the property interface, which serialization uses. */
+    {
+      NcXcorKernelComponent *comp2 = nc_xcor_kernel_component_ref (comp);
+      gdouble epsilon, tol;
+      guint ny, max_iter;
+
+      g_object_get (comp, "epsilon", &epsilon, "ny", &ny,
+                    "max-iter", &max_iter, "tol", &tol, NULL);
+
+      ncm_assert_cmpdouble_e (epsilon, ==, 1.0e-6, 1.0e-15, 0.0);
+      g_assert_cmpuint (ny, ==, 8);
+      g_assert_cmpuint (max_iter, ==, 5);
+      ncm_assert_cmpdouble_e (tol, ==, 1.0e-4, 1.0e-15, 0.0);
+
+      nc_xcor_kernel_component_clear (&comp2);
+      g_assert_true (comp2 == NULL);
+    }
+
     nc_xcor_kernel_component_prepare (comp, test->cosmo);
     nc_xcor_kernel_component_get_limits (comp, test->cosmo, &xi_min, &xi_max, &k_min, &k_max);
 
