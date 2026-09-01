@@ -125,6 +125,46 @@ minus the window search, minus the refinement, minus honest error estimation,
 plus a ridge bias floor. Its advantages are fixed low cost (28 evals) and
 embarrassingly parallel evaluation.
 
+## Coherent (deterministic) noise — measured failure in the dual scheme
+
+Sandro's concern: real numerical error is consistent (same value at the same
+x) and spatially coherent (tolerance plateaus, ulp staircases), not white.
+Tested with plateau noise of controlled coherence length p and a pure
+quantization staircase (f rounded to steps of 1e-6), sin@1.3, A = 1e-6:
+
+- Quantization staircase: DUAL d1 catastrophically fails: value 100% wrong,
+  estimate 7e-92. Below the plateau width every quotient is exactly 0 on both
+  ladders: cross-disagreement 0, round-off estimate 0 (exact subtraction of
+  identical values), so "0 +- 0" wins best-tracking over the correct value
+  from earlier orders. A staircase is locally indistinguishable from a
+  constant. Single d1 also dishonest there (17x); spectral honest and accurate
+  (3.4e-6, window >> plateau makes the staircase visible as tail mass).
+- Plateau noise, p in [1e-6, 1e-1]: values degrade like white noise or less;
+  spectral honest in all cells and 10-1000x more accurate; dual underestimates
+  by 2-3x in two d2 cells (correlated samples); single honest but loose.
+- p = 10 (coherence >> every window): all methods "dishonest" by construction,
+  and necessarily so: the computed function IS (1+c) sin(x) with constant c;
+  its derivative is computed exactly; no sample-based method can detect c.
+  The induced error is bounded by the noise variation over the window --
+  constant offsets drop out of derivatives entirely, so coherence >> window
+  means bounded (~A), un-amplified error. Coherent noise hurts derivatives
+  only through its VARIATION across the sampled set.
+- The in-quotient FP cancellation case (offset1e10) remains honest for all
+  methods: sub_round_off computes from actual operand magnitudes, so
+  cancellation happening inside the quotient is modeled. The gap is
+  amplitude >> eps noise hidden INSIDE f (tolerance-driven), where the eps
+  assumption fails and coherence can zero the scatter channels.
+
+Candidate fixes, not yet implemented (owner decision -- they trade estimate
+tightness): (a) interval-consistency veto in the dual tracker: a new best
+whose interval does not overlap the previous best's is distrusted, err
+inflated to cover the jump -- kills the exact-zero collapse at no eval cost;
+(b) function-noise property (relative amplitude, default eps) feeding all
+round-off estimators: with declared A the ladder never descends below the
+noise-optimal step and estimates are honest by construction; (c) prefer
+spectral when noise is suspected (its window >> coherence detects, not
+smooths).
+
 ## Follow-ups (not done)
 
 - Spectral Hessian off-diagonals (needs 2D fits).
