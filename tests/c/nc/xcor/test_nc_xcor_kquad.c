@@ -100,7 +100,10 @@ _tophat (TestNcXcorKQuad *test, gdouble chi_lower, gdouble chi_upper)
   nc_xcor_kernel_set_scaled_abstol (xclk, 1.0e-4);
   nc_xcor_kernel_set_panel_order_cap (xclk, 12);
   nc_xcor_kernel_set_lmax (xclk, 16);
-  nc_xcor_kernel_set_l_limber (xclk, 0);
+
+  /* Never Limber: the kernel-space methods integrate a W_l(k) representation, which is
+   * what the non-Limber builder produces. */
+  nc_xcor_kernel_set_l_limber (xclk, -1);
 
   nc_xcor_kernel_prepare (xclk, test->cosmo);
 

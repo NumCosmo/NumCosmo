@@ -151,9 +151,9 @@ test_nc_xcor_kernel_integrand_new (TestNcXcorKernelIntegrand *test, gconstpointe
   nc_xcor_kernel_set_panel_order_cap (test->xclk, 12);
   nc_xcor_kernel_set_lmax (test->xclk, 16);
 
-  /* l_limber = -1 keeps every multipole on the Limber side; 0 puts them all on the
-   * non-Limber side. Both need an integrator, which _new_full supplied. */
-  nc_xcor_kernel_set_l_limber (test->xclk, tc->non_limber ? 0 : -1);
+  /* The threshold is "use Limber for l >= this": 0 means always, -1 means never. Both
+   * settings need an integrator, which _new_full supplied. */
+  nc_xcor_kernel_set_l_limber (test->xclk, tc->non_limber ? -1 : 0);
 
   nc_xcor_kernel_prepare (test->xclk, cosmo);
 }
