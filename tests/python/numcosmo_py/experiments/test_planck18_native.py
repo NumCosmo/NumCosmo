@@ -24,7 +24,7 @@
 
 """Tests for the native (clik-free) Planck 2018 experiment assembly.
 
-``generate_planck18_native`` glues the four native likelihood blocks onto one
+``generate_planck18_native`` combines the four native likelihood blocks into one
 shared CBE. The blocks themselves are covered by the per-likelihood tests; here
 they are stood in for by synthetic ones (see tests/python/fixtures_planck.py),
 driven by a fixed-spectra Boltzmann, so the assembly, the priors and the

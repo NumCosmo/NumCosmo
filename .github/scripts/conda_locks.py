@@ -28,7 +28,7 @@ SHA_COMMENT = "# environment.yml sha256: "
 
 # One entry per conda environment built by CI. Keep in sync with the
 # build-miniforge/build-miniforge-coverage matrices of build_check.yml -- a
-# missing combination is not fatal, the job just falls back to solving.
+# missing combination is not fatal; the job falls back to solving.
 TARGETS = [
     ("linux-64", "3.13", "openmpi"),
     ("linux-64", "3.13", "mpich"),

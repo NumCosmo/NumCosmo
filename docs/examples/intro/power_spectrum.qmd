@@ -20,12 +20,8 @@ format-links: [ipynb]
 
 ## Introduction
 
-This example demonstrates how to test power spectra in cosmological models using the
-`numcosmo` library. We will set up a cosmological model, compute the linear and
-nonlinear matter power spectra, and compare the results using the Eisenstein-Hu (EH)
-transfer function and the CLASS backend. The results are visualized to highlight the
-differences between the methods. This guide assumes familiarity with cosmological
-concepts and basic Python programming.
+Computes and compares linear and nonlinear matter power spectra using the
+Eisenstein-Hu transfer function and CLASS backend.
 
 ## Prerequisites
 
@@ -38,9 +34,7 @@ these packages are already installed.
 
 ## Import and Initialize
 
-First, import the required modules and initialize the NumCosmo library. The `Nc` and
-`Ncm` modules provide the core functionality of the NumCosmo library. The call to
-`Ncm.cfg_init()` initializes the library objects.
+Import the required modules and initialize the library with `Ncm.cfg_init()`.
 
 ```{python}
 import math
@@ -244,7 +238,5 @@ plt.show()
 
 ## Conclusion
 
-We computed the linear and nonlinear matter power spectra,
-compared the results using the Eisenstein-Hu transfer function and the CLASS backend,
-and visualized the differences. This example serves as a foundation for further
-exploration of power spectra in cosmological models.
+Computes and compares linear and nonlinear matter power spectra with the
+Eisenstein-Hu transfer function and CLASS backend.

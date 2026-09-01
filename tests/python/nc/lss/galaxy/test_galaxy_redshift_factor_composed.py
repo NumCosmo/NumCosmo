@@ -221,7 +221,7 @@ def test_zp_lim_get_matches_new_and_property():
 @pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
 def test_gen1_matches_gen_semantics(variant, zp, sigma0, zp_min, zp_max):
     """gen1() draws the same way as gen() but reports (via its boolean
-    return) whether the drawn zp landed inside the selection window,
+return) whether the drawn zp fell inside the selection window,
     instead of rejection-sampling until it does."""
     composed, mset, pop, data = _build_new(variant, zp, sigma0, zp_min, zp_max)
     z_lo, z_hi = pop.get_lim()

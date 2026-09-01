@@ -4,11 +4,9 @@ title: Examples
 
 # Examples
 
-Short, self-contained scripts showing one part of the API in use; read one as
-reference. To work through a complete analysis instead, see the
-[Tutorials](../tutorials/index.qmd).
-
-New here? Start with the [Simple Example](intro/simple.qmd).
+Examples show individual API operations. For complete workflows, see
+[Tutorials](../tutorials/index.qmd). Start with the
+[Simple Example](intro/simple.qmd).
 
 ## Background & Distances
 

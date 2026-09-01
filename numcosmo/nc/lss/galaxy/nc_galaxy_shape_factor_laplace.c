@@ -35,37 +35,28 @@
  * $$P(\epsilon_\mathrm{obs} \mid g) = \int_{|\chi_I|<1} \mathrm{d}^2\chi_I\,
  *   P_\mathrm{pop}(\chi_I)\, N_2\big(\epsilon_\mathrm{obs} - f_g(\chi_I);
  *   \sigma_\mathrm{noise}^2\big)$$
- * by a single Gaussian expansion around the joint mode of the integrand,
- * found by nc_galaxy_shape_intrinsic_mode_find() (a nested search: since
- * $P_\mathrm{pop}$ has no angular dependence, the whole $\theta$-direction is
- * resolved by the noise term alone at any fixed $\rho$, so only the radial
- * direction needs profiling against $P_\mathrm{pop}$ -- see that file's
- * documentation for why this beats a blind joint 2D minimization). The
- * result is the standard Laplace formula,
+ * by a Gaussian expansion around the joint mode found by
+ * nc_galaxy_shape_intrinsic_mode_find(). The result is
  * $$P(\epsilon_\mathrm{obs}\mid g) \approx \frac{2\pi}{\sqrt{\det(-H)}}\,
  *   \exp\big(\ln P_\mathrm{pop}(\chi_{I,\star})+\ln
  *   N_2(\epsilon_\mathrm{obs}-f_g(\chi_{I,\star}))\big),$$
  * with $H$ the Hessian of the log-integrand in Cartesian $\chi_I$ coordinates
  * at the mode $\chi_{I,\star}$.
  *
- * This is a single closed-form evaluation (a handful of Newton steps plus
- * one Hessian, all on cheap arithmetic -- no cubature), orders of magnitude
- * cheaper than #NcGalaxyShapeFactorQuad's ~100ms/evaluation Divonne call, and
- * unlike #NcGalaxyShapeFactorVarAdd it needs no
- * nc_galaxy_shape_pop_get_sigma() support, so it works for any population
- * (e.g. #NcGalaxyShapePopBeta) that implements eval_p().
+ * Uses Newton iterations and one Hessian evaluation. Requires only a
+ * population that implements eval_p().
  *
- * The approximation is exact in the limit of an infinitely sharp,
- * single-peaked integrand and degrades as the population/noise combination
- * gets broader or flatter (verified against #NcGalaxyShapeFactorQuad: from
- * sub-percent for concentrated populations to a genuine few percent for a
- * broad, barely-peaked one, e.g. #NcGalaxyShapePopBeta with a small
- * concentration parameter). nc_galaxy_shape_factor_laplace_eval_marginal()
- * returns NAN (propagating to eval_ln_marginal() as well) when the found
- * point is not a proper local maximum (a non-positive-definite Hessian),
- * which signals that a single local Gaussian is not a meaningful description
- * of the integrand there -- callers needing a guaranteed answer in that
- * regime should fall back to #NcGalaxyShapeFactorQuad.
+ * The approximation is exact for an infinitely sharp, single-peaked integrand
+ * and degrades as the population and noise combination becomes broader or
+ * flatter. Checked against #NcGalaxyShapeFactorQuad, the error runs from
+ * sub-percent for concentrated populations to a few percent for a broad,
+ * barely-peaked one, such as #NcGalaxyShapePopBeta with a small concentration
+ * parameter.
+ *
+ * Evaluation returns NaN, in both the marginal and the log-marginal, when the
+ * point found is not a local maximum, that is when the Hessian is not negative
+ * definite. A single local Gaussian does not describe the integrand there. Use
+ * #NcGalaxyShapeFactorQuad when an answer is required in that regime.
  */
 
 #ifdef HAVE_CONFIG_H

@@ -4,11 +4,9 @@ title: Tutorials
 
 # Tutorials
 
-Each tutorial walks through a complete workflow and explains every step; read
-one start to finish. For a short script showing a single part of the API, see
-the [Examples](../examples/index.qmd) instead.
-
-New to the library? Start with the [Simple Example](../examples/intro/simple.qmd).
+Tutorials cover complete workflows. For short API examples, see
+[Examples](../examples/index.qmd). Start with the
+[Simple Example](../examples/intro/simple.qmd).
 
 ## C Foundations
 

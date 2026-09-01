@@ -26,9 +26,7 @@
 /**
  * NcmStatsDist2d:
  *
- * Base class for implementing two-dimensional probability distributions.
- *
- * Abstract class to reconstruct an arbitrary two-dimensional probability distribution.
+ * Base class for two-dimensional probability distributions.
  *
  */
 

@@ -3,10 +3,7 @@ title: "Dark Energy WSpline Background Evolution"
 author: "Sandro Dias Pinto Vitenti"
 date: "2026-05-14"
 abstract: |
-  This example compares the dark-energy spline model `NcHICosmoDEWSpline` against the constant-$w$
-  model `NcHICosmoDEXcdm`. It shows how to configure parameters using the dictionary-style API,
-  assign knot values for the spline equation of state, and inspect the impact on background
-  quantities and distances.
+  Compares `NcHICosmoDEWSpline` with a constant-$w$ cosmology.
 
 format:
   html: default
@@ -18,12 +15,12 @@ format-links: [ipynb]
 
 ## Introduction
 
-This example compares two cosmologies with the same background parameters:
+Compare two cosmologies with the same background parameters:
 
 1. `NcHICosmoDEXcdm` with constant $w = -1$.
 2. `NcHICosmoDEWSpline` with a knot-based $w(z)$ history.
 
-The notebook focuses on:
+The comparison covers:
 
 - dictionary-style parameter assignment (`cosmo["param"] = value`),
 - spline-knot configuration using `w_i` parameters,

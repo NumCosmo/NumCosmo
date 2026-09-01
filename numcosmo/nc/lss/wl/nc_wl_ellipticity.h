@@ -42,34 +42,33 @@ G_BEGIN_DECLS
  * @NC_WL_ELLIPTICITY_FRAME_CELESTIAL: celestial frame (reference frame).
  * @NC_WL_ELLIPTICITY_FRAME_CARTESIAN: Earth-view ("Euclidean"/image) frame.
  *
- * Handedness of the orthonormal frame whose basis vectors are used to resolve a
- * complex spin-2 ellipticity (or reduced shear) into its two components.
+ * Handedness of the orthonormal frame whose basis vectors resolve a complex
+ * spin-2 ellipticity, or reduced shear, into its two components.
  *
- * Every sky position in NumCosmo is given as right ascension and declination, so
- * the position angle is always *measured* in the celestial convention ($\phi$
- * increases eastward, i.e. with increasing RA). This enum does not change how the
- * angle is measured; it only selects the basis onto which the spin-2 ellipticity
- * components are projected:
+ * Every sky position in NumCosmo is given as right ascension and declination,
+ * so the position angle is always measured in the celestial convention, with
+ * $\phi$ increasing eastward. This enum does not change how the angle is
+ * measured; it selects the basis onto which the components are projected:
  *
  * - #NC_WL_ELLIPTICITY_FRAME_CELESTIAL: the holonomic frame of the celestial
- *   convention. The position angle $\phi_C$ increases eastward. Taken as the
- *   reference frame (identity).
+ *   convention, position angle increasing eastward. Taken as the reference
+ *   frame, that is the identity.
  *
- * - #NC_WL_ELLIPTICITY_FRAME_CARTESIAN: the frame an observer on the ground sees
- *   when facing the object with their head pointing to the North celestial pole.
- *   The right-hand direction then points East, so the image $x$-axis increases
- *   towards the West (decreasing RA) -- the opposite handedness. This is the
- *   "Euclidean" image-plane view, the value #NcGalaxyWLObsCoord calls EUCLIDEAN.
+ * - #NC_WL_ELLIPTICITY_FRAME_CARTESIAN: the frame an observer on the ground
+ *   sees when facing the object with their head pointing to the North
+ *   celestial pole. The right-hand direction then points East, so the image
+ *   $x$-axis increases towards the West, that is towards decreasing RA, giving
+ *   the opposite handedness. This is the image-plane view that
+ *   #NcGalaxyWLObsCoord calls EUCLIDEAN.
  *
- * The two frames differ by a parity (handedness) flip. The position angle
- * reverses sense,
+ * The two frames differ by a parity flip. The position angle reverses sense,
  * $$ \phi_E = \pi - \phi_C \quad (\equiv -\phi_C \bmod \pi), $$
- * and the spin-2 ellipticity transforms by complex conjugation, i.e. its
- * second/cross component changes sign,
+ * and the spin-2 ellipticity transforms by complex conjugation, so its cross
+ * component changes sign,
  * $$ \epsilon_E = \epsilon_C^{*} . $$
  * Since $e^{2 i \phi_E} = e^{-2 i \phi_C}$, flipping $\phi$ and conjugating
- * $\epsilon$ are the same operation; the parity is its own inverse, so a single
- * map converts CELESTIAL -> CARTESIAN and CARTESIAN -> CELESTIAL alike.
+ * $\epsilon$ are the same operation. The parity is its own inverse, so a
+ * single map converts CELESTIAL to CARTESIAN and CARTESIAN to CELESTIAL.
  *
  * The integer values match the legacy #NcGalaxyWLObsCoord (CELESTIAL = 0,
  * EUCLIDEAN = CARTESIAN = 1), so previously serialized data is read back
@@ -84,15 +83,13 @@ typedef enum _NcWLEllipticityFrame /*< prefix=NC_WL_ELLIPTICITY_FRAME >*/
 
 /* g-only terms for the TRACE kernel, resolved once per @g by
  * nc_wl_ellipticity_trace_kernel_prepare() and reused by
- * nc_wl_ellipticity_trace_kernel_apply() across every node evaluated at
- * that g -- see that pair's own docs below for why this earns real cycles
- * (unlike TRACE_DET, kept single-call: no equivalent win there). A simple
- * #GBoxed struct, same pattern as #NcmComplex: opaque to introspection (the
- * NUMCOSMO_GIR_SCAN branch below), a real by-value struct of
- * #NcmComplex/#gdouble fields otherwise. Stack allocation (as
- * nc_galaxy_shape_factor_fixed_quad.c's hot loop does) is still the
- * intended use in C; the boxed registration is for GValue/introspection
- * interoperability, not a requirement to heap-allocate. */
+ * nc_wl_ellipticity_trace_kernel_apply() at every node evaluated at that g.
+ * A #GBoxed struct, the same pattern as #NcmComplex: opaque to introspection
+ * under NUMCOSMO_GIR_SCAN, a by-value struct of #NcmComplex and #gdouble
+ * fields otherwise. Stack allocation, as nc_galaxy_shape_factor_fixed_quad.c
+ * does, remains the intended use in C; the boxed registration exists for
+ * GValue and introspection interoperability and does not require heap
+ * allocation. */
 #ifndef NUMCOSMO_GIR_SCAN
 typedef struct _NcWLEllipticityTraceKernelPrep
 {
@@ -128,7 +125,7 @@ void nc_wl_ellipticity_trace_kernel_prep_clear (NcWLEllipticityTraceKernelPrep *
  *
  * Two flavours of each kernel, matching ncm_laurent_series.h's own bare/`_ptr`
  * convention: the plain name takes/returns #NcmComplex by value and is
- * inlined for the C hot loops; the `_ptr`-suffixed sibling takes it by
+ * inlined for performance-critical C loops; the `_ptr`-suffixed function takes it by
  * pointer and is GObject-introspectable (usable from Python). Unlike
  * ncm_laurent_series.h, the plain-name kernels here stay behind
  * `#ifndef NUMCOSMO_GIR_SCAN` (not just `(skip)`-ed): they are NCM_INLINE,
@@ -156,7 +153,7 @@ gdouble nc_wl_ellipticity_lndet_jac_trace_det_ptr (const NcmComplex *g, const Nc
  * phi_E = pi - phi_C; CELESTIAL leaves it unchanged. Using this angle in the
  * spin-2 factor e^{2 i phi} is equivalent to conjugating the ellipticity, so it
  * stays consistent with nc_wl_ellipticity_celestial_to_frame(). No complex
- * value involved, so unlike its sibling below this is fully introspectable. */
+ * value involved, so unlike the related function below this is fully introspectable. */
 NCM_INLINE gdouble nc_wl_ellipticity_celestial_to_frame_angle (NcWLEllipticityFrame frame, gdouble phi);
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -165,7 +162,7 @@ NCM_INLINE gdouble nc_wl_ellipticity_celestial_to_frame_angle (NcWLEllipticityFr
  * epsilon_E = conj (epsilon_C) for CARTESIAN, identity for CELESTIAL. The map is
  * its own inverse (a parity flip), so it equally takes a @frame ellipticity back
  * to celestial; a separate frame_to_celestial entry point can be added if a call
- * site needs to read in the opposite direction. No `_ptr` sibling exists yet
+ * site needs to read in the opposite direction. No `_ptr` function exists yet
  * (nothing calls one). */
 NCM_INLINE NcmComplex nc_wl_ellipticity_celestial_to_frame (NcWLEllipticityFrame frame, NcmComplex e);
 
@@ -218,19 +215,16 @@ nc_wl_ellipticity_celestial_to_frame (NcWLEllipticityFrame frame, NcmComplex e)
 
 /* TRACE convention (distortion chi). */
 
-/* Both functions' denominators are 1.0 + |g|^2 (+/-) 2*Re(g*conj(chi)) --
- * manifestly real (g*conj(g) has an exactly-zero imaginary part in floating
- * point too, being a-b+b-a in disguise), even though the unreduced
- * expression is complex-typed. Dividing the complex numerator by that plain
- * gdouble denominator as a single reciprocal (den_inv) times the complex
- * numerator -- one division shared by two independent real multiplies,
- * instead of two divisions by the same den -- skips the general
- * complex/complex division routine (__divdc3) entirely and measured ~13%
- * faster (own microbenchmark); not bit-identical to dividing the real/
- * imaginary parts separately (multiplying by a rounded reciprocal isn't the
- * same as dividing), but within a couple ULP -- see
- * _nc_wl_ellipticity_cdiv()'s own comment below for the general (genuinely
- * complex denominator) case this trick does not apply to. */
+/* Both functions' denominators are 1.0 + |g|^2 (+/-) 2*Re(g*conj(chi)), which
+ * is real even though the unreduced expression is complex-typed. The complex
+ * numerator is multiplied by a single reciprocal of that gdouble denominator,
+ * one division feeding two real multiplies rather than two divisions, which
+ * avoids the general complex division routine (__divdc3) and measured about
+ * 13% faster. This is not bit-identical to dividing the real and imaginary
+ * parts separately, since multiplying by a rounded reciprocal is not the same
+ * as dividing, but agrees to within a couple of ULP. See
+ * _nc_wl_ellipticity_cdiv() below for the general case, with a complex
+ * denominator, where this does not apply. */
 NCM_INLINE NcmComplex
 nc_wl_ellipticity_apply_shear_trace (NcmComplex g, NcmComplex chi)
 {
@@ -298,7 +292,7 @@ nc_wl_ellipticity_det_jac_trace (NcmComplex g, NcmComplex chi_obs)
 }
 
 /* Fused apply_shear_inv_trace + det_jac_trace: nc_galaxy_shape_factor_fixed_quad.c's
- * hot loop only ever needs |chi_i|^2 -- never the complex chi_i itself --
+ * performance-critical loop only ever needs |chi_i|^2 -- never the complex chi_i itself --
  * together with det_jac at the same node, and the two kernels above already
  * recompute the same g_conj/abs_g2/den terms independently. Fusing removes
  * that duplication, and replaces apply_shear_inv_trace's division by den
@@ -325,21 +319,23 @@ nc_wl_ellipticity_trace_kernel (NcmComplex g, NcmComplex chi_obs, gdouble * rest
   *jac = (num_base * num_base * num_base) / (fabs (den) * den2);
 }
 
-/* g-only half of nc_wl_ellipticity_trace_kernel(), meant to be called ONCE
- * per g (e.g. once per _nc_galaxy_shape_factor_fixed_quad_marginal() call,
- * outside its n_used-node loop) and reused by
- * nc_wl_ellipticity_trace_kernel_apply() at every node: num = chi_obs +
- * g*(g*conj(chi_obs) - 2.0) algebraically expands to chi_obs +
- * g^2*conj(chi_obs) - 2*g, so g^2 and 2*g are g-only; precomputing them
- * drops apply()'s per-node cost from two complex multiplies to one
- * (measured ~12% faster end to end). g_conj/abs_g2/num_base are also
- * g-only but need no FP reassociation to hoist, so the compiler already
- * does that on its own -- caching them here is free, not the reason for
- * this split (contrast TRACE_DET below, kept single-call: no g^2 hidden in
- * its num, so no reassociation win, and a prepare/apply split there
- * measured a wash). Not bit-identical to nc_wl_ellipticity_trace_kernel()
- * (the g^2 factoring reassociates), but agrees to double-precision
- * accuracy -- see tests/c/nc/lss/wl/test_nc_wl_ellipticity.c. */
+/* g-only half of nc_wl_ellipticity_trace_kernel(). Call it once per g, for
+ * example once per _nc_galaxy_shape_factor_fixed_quad_marginal() call outside
+ * its node loop, and reuse the result through
+ * nc_wl_ellipticity_trace_kernel_apply() at every node.
+ *
+ * num = chi_obs + g*(g*conj(chi_obs) - 2.0) expands to
+ * chi_obs + g^2*conj(chi_obs) - 2*g, so g^2 and 2*g depend only on g.
+ * Precomputing them drops apply()'s per-node cost from two complex multiplies
+ * to one, measured about 12% faster end to end. g_conj, abs_g2 and num_base
+ * are also g-only but need no floating-point reassociation to hoist, so the
+ * compiler already does that; caching them here is free and is not the reason
+ * for the split. TRACE_DET is kept single-call because its num hides no g^2,
+ * so there is no reassociation to gain and the same split measured no change.
+ *
+ * Not bit-identical to nc_wl_ellipticity_trace_kernel(), since the g^2
+ * factoring reassociates, but agrees to double-precision accuracy; see
+ * tests/c/nc/lss/wl/test_nc_wl_ellipticity.c. */
 NCM_INLINE void
 nc_wl_ellipticity_trace_kernel_prepare (NcmComplex g, NcWLEllipticityTraceKernelPrep *prep)
 {

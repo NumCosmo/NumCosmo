@@ -634,7 +634,7 @@ def test_chebyshev_closure_reports_a_spectral_representation(
 ) -> None:
     """A Chebyshev closure carries coefficients; a spline one does not.
 
-    The two are siblings rather than a replacement: each reports what it has,
+    The two are parallel implementations rather than a replacement: each reports what it has,
     and a caller that wants coefficients asks for them.
     """
     cheb = _closure(cosmology, Nc.XcorKernelClosure.CHEBYSHEV)

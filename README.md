@@ -1,6 +1,8 @@
 # NumCosmo
 
-NumCosmo is a C library for cosmological calculations and statistical analysis. It is written in C using GObject, so every class is usable from Python (and other GObject-Introspection languages) through the `numcosmo_py` package without writing binding code.
+NumCosmo is a GObject-based C library for cosmological calculations and
+statistical analysis. Its classes are available through the
+`numcosmo_py` bindings.
 
 [![Build Status](https://github.com/NumCosmo/NumCosmo/workflows/Build%20and%20Check/badge.svg)](https://github.com/NumCosmo/NumCosmo/actions) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![codecov](https://codecov.io/gh/NumCosmo/NumCosmo/graph/badge.svg?token=FZ3PX0PKWG)](https://codecov.io/gh/NumCosmo/NumCosmo)
 
@@ -16,13 +18,9 @@ Visit [NumCosmo's website](https://numcosmo.readthedocs.io/en/latest/) for more 
 
 ## Get Started
 
-To get started with NumCosmo, follow these steps:
-
-1. **Installation:** Clone the repository and install the necessary dependencies as outlined in the [installation guide](https://numcosmo.readthedocs.io/en/latest/install.html).
-
-2. **Examples and Tutorials:** Work through the [examples and tutorials](https://numcosmo.readthedocs.io/en/latest/) on the website to see how to drive NumCosmo for cosmological calculations and statistical analysis.
-
-3. **Contribute:** NumCosmo is an open-source project, and we welcome contributions from the community.
+Install NumCosmo using the [installation guide](https://numcosmo.readthedocs.io/en/latest/install.html).
+Use the [examples and tutorials](https://numcosmo.readthedocs.io/en/latest/) for
+API usage and workflows.
 
 ## Citation
 
@@ -44,4 +42,3 @@ If you find NumCosmo useful for your research or project, please consider citing
 ## License
 
 NumCosmo is released under the GNU General Public License v3.0. See the [license file](https://github.com/NumCosmo/NumCosmo/blob/master/COPYING) for more details.
-

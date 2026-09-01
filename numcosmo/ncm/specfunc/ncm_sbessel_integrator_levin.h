@@ -35,6 +35,13 @@ G_BEGIN_DECLS
 
 #define NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN (ncm_sbessel_integrator_levin_get_type ())
 
+/**
+ * NcmSBesselIntegratorLevin:
+ *
+ * Spherical-Bessel integrator using Levin panels for low multipoles and direct
+ * cubature for high multipoles. Panel boundaries are defined on the
+ * dimensionless variable $y=kx$.
+ */
 G_DECLARE_FINAL_TYPE (NcmSBesselIntegratorLevin, ncm_sbessel_integrator_levin, NCM, SBESSEL_INTEGRATOR_LEVIN, NcmSBesselIntegrator)
 
 NcmSBesselIntegratorLevin *ncm_sbessel_integrator_levin_new (guint ell_min, guint ell_max);

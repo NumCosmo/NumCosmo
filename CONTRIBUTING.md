@@ -96,6 +96,48 @@ pandoc `[@Key]` against `docs/references.bib`; API doc comments (gi-docgen has n
 bibliography support) use inline links instead, e.g.
 `[Author (year)](https://arxiv.org/abs/...)`.
 
+### Writing style for comments and documentation
+
+Comments and docs are read by people holding a large amount of the library in
+their head at once. Every phrase that has to be decoded before it can be used
+costs them. Write so a sentence can be read once, at speed.
+
+**State facts, not impressions.** Do not use evaluative or promotional wording
+for the project's own work. These are rejected by the style check:
+
+> shipped, blow up / blows up, blowup, comfortably, blindly, genuinely,
+> decisive, safe zone, sweet spot, nets out, load-bearing, at length,
+> worth knowing, needlessly, magic, trap, story, wins big, of course
+
+Name the object instead of gesturing at it: not "each piece" but "the
+`chi_I` series, the Jacobian series and their product".
+
+**Placement.** A function or class doc states what the thing does and its error
+modes, and stops. Derivations go on a theory page (see above). Measurement
+tables, rejected approaches, and how a bug was found go in
+`dev-notes/<topic>.md` or an area history document such as
+`docs/theory/wl_shape_factor_history.md`, with a pointer left in the code.
+
+**Do not delete these when shortening a comment.** Move them if they belong
+elsewhere, but they must survive somewhere findable:
+
+- error modes: what returns NaN, what aborts, what is clamped and why
+- concurrency contracts: safe or unsafe to call in parallel, and what makes it so
+- usage limits: the regime where the code gives a wrong answer, and what to use there
+- cross-file invariants: "must be kept equal to `X` in `y.py`"
+- measured accuracy envelopes, and the guidance drawn from them
+- links: `<a href="../../theory/....html">` from C, `[[numcosmo|Sym]]` from `.qmd`
+
+**Checking.** `.github/scripts/check_doc_style.sh` flags the wording above in added lines
+and reports theory-page links removed by the current branch. CI runs it on pull
+requests. It is advisory for the link report and blocking for the word list; to
+run it locally:
+
+```bash
+.github/scripts/check_doc_style.sh              # check the diff against origin/master
+.github/scripts/check_doc_style.sh --all        # check the whole tree
+```
+
 ### Bibliography (`docs/references.bib`)
 
 `bibtex-tidy` is the canonical formatter for `docs/references.bib`; the file is no
@@ -131,7 +173,7 @@ sidebar:
 4. **The index page for its area** — `docs/tutorials/index.qmd`,
    `docs/examples/index.qmd`, or `docs/theory/index.qmd`. The sidebar and the
    index are separate; adding a page to the sidebar alone leaves it off the
-   landing page a reader actually browses.
+   landing page a reader browses.
 
 Keep the section names in 2-4 consistent: if a page needs a new section, add it
 to both the sidebar and the index.
@@ -186,7 +228,7 @@ So `docs/readthedocs.org:numcosmo` **fails on every PR at first**: RTD's own
 webhook fires on the push and looks for an artifact that does not exist yet. It
 goes green once `docs-artifacts` finishes and restarts it, and RTD then serves a
 per-PR preview. Judge documentation health from `docs-artifacts`, and do not
-compare against merged PRs — those are green because their artifact landed long
+compare against merged PRs — those are green because their artifact was uploaded long
 ago.
 
 ## Code formatting
@@ -294,7 +336,7 @@ script enumerates the assets from the enums that define them, so a catalog
 added to `NcDataSNIAId`, `NcGalaxyWLObsCatalogId` or `PlanckReleaseId` is
 picked up without editing it.
 
-A cold cache is not a failure: every job simply downloads what it needs, as it
+A cold cache is not a failure: every job downloads what it needs, as it
 did before, and the next run is warm.
 
 ## Submitting contributions

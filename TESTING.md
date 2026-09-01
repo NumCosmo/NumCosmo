@@ -209,7 +209,7 @@ and runs them — and the non-xdist `py-omp` pytest lane — through
 `tests/scripts/detect_omp_threads.sh`, a wrapper that sets `OMP_NUM_THREADS`/`OMP_THREAD_LIMIT`
 to the CPU count available right then (`nproc` on Linux, `sysctl -n hw.ncpu` on macOS, falling
 back to `getconf _NPROCESSORS_ONLN`) before `exec`ing the real test/`pytest`, so the parallel
-branch (thread coordination, `reduction`, scheduling) actually runs. This is deliberately
+branch (thread coordination, `reduction`, scheduling) runs. This is deliberately
 evaluated fresh on every `meson test` invocation (not baked in at `meson setup` time) so a
 builddir built on one machine can run correctly on a differently-sized one. Because
 these tests run alone, this happens inside the ordinary `meson test` invocation — no
@@ -284,8 +284,8 @@ else, and their coverage is the signal that they are missing.
 A lane may stop being instrumented when the lines it covers **and nothing else does** are
 either bought back by cheap tests or explicitly accepted, with the count and the reason
 recorded at the point of the change. Accepting is legitimate: 13 lines reachable only by
-running CLASS are not worth holding a tier in the coverage job for. Silently losing them
-is not.
+running CLASS are not worth holding a tier in the coverage job for. Losing them
+without recording it is not.
 
 ---
 

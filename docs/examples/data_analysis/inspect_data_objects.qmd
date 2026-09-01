@@ -15,16 +15,13 @@ format-links: [ipynb]
 
 ## Introduction
 
-In this example, we show how to inspect observational data objects available in
-NumCosmo through the `numcosmo_py`[^numcosmo_py] package. This is useful before building a likelihood or adapting an existing fitting
-example to a different dataset.
+Inspects NumCosmo data objects through the `numcosmo_py`[^numcosmo_py]
+package.
 
-A pure Python companion script is also provided with this example as
-`inspect_data_objects.py`.
+A Python companion script is provided as `inspect_data_objects.py`.
 
-We first inspect the NumCosmo source tree to identify the available data-object files.
-Then we inspect one selected data source file and finally create a concrete `DataHubble`
-object from Python to examine its runtime properties.
+The example lists data-object source files, inspects one source file, and
+creates a `DataHubble` object to inspect its runtime properties.
 
 The source-tree inspection gives a broad map of available data types. The runtime
 inspection shows what a concrete object exposes through methods such as

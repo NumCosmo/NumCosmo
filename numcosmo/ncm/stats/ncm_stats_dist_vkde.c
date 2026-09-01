@@ -26,39 +26,21 @@
 /**
  * NcmStatsDistVKDE
  *
- * Base class for implementing N-dimensional probability distributions with a variable
- * density estimator kernel.
+ * Variable-bandwidth kernel estimator for #NcmStatsDist.
  *
- * Abstract object to reconstruct an arbitrary N-dimensional probability distribution.
- * This object provides the complementary tools to perform a radial basis interpolation
- * in a multidimensional function using the #NcmStatsDist class.
+ * Uses one covariance matrix per sample point, computed in
+ * ncm_stats_dist_prepare_kernel() from the @local_frac nearest sample points.
+ * The rest of the calculation follows #NcmStatsDist and #NcmStatsDistKDE, with
+ * a different covariance matrix and normalization factor per kernel.
  *
- * This object sets the kernel $\phi$ to be used in the radial basis interpolation. This
- * object also implements some calculations needed in the #NcmStatsDist class, such as
- * the covariance matrices of the whole sample points and its Cholesky decompositions,
- * the preparation of the interpolation matrix $IM$, the kernel normalization factors,
- * and given a sample vector $\vec{x}$, the distribution evaluated in these points. Some
- * of these calculations are explained below.
+ * The caller must supply @sdk and @CV_type through ncm_stats_dist_vkde_new(),
+ * @y through ncm_stats_dist_add_obs(), @split_frac through
+ * ncm_stats_dist_set_split_frac(), @over_smooth through
+ * ncm_stats_dist_set_over_smooth(), @local_frac through
+ * ncm_stats_dist_vkde_set_local_frac(), and $v(x)$ through
+ * ncm_stats_dist_prepare_interp().
  *
- * The #NcmStatsDistVKDE uses a different covariance matrix for each sample point. This
- * feature is computed in the ncm_stats_dist_prepare_kernel() function. In this
- * algorithm, one should define the @local_frac parameter, that is, the fraction of
- * nearest sample points that will be used to compute each covariance matrix of each
- * sample point. This is done by calling the function
- * ncm_stats_dist_vkde_set_local_frac(). The rest of the calculation follows the same
- * procedure as the #NcmStatsDist and #NcmStatsDistKDE objects, using now a different
- * covariance matrix and normalization factor for each kernel. For more information
- * about how the #NcmStatsDist class works, check #NcmStatsDist and #NcmStatsDistKDE
- * objects.
- *
- * The user must provide input the values: @sdk, @CV_type - ncm_stats_dist_vkde_new(),
- * @y - ncm_stats_dist_add_obs(), @split_frac - ncm_stats_dist_set_split_frac(),
- * @over_smooth - ncm_stats_dist_set_over_smooth(), @local_Frac -
- * ncm_stats_dist_vkde_set_local_frac(), $v(x)$ - ncm_stats_dist_prepare_interp(). To
- * see an example of how to use this object and the main functions that are called
- * within each function, check the flowchart at the end of this documentation, where the
- * order of the functions that should be called by the user and some of the functions
- * that the algorithm calls.
+ * The flowchart below gives the call order.
  *
  * ![vkde_sketch](vkde.png)
  */

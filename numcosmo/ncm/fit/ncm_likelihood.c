@@ -28,11 +28,8 @@
  *
  * Likelihood combining a NcmDataset and priors.
  *
- * Class combining a #NcmDataset and priors. It represents the posterior distribution
- * of the parameters of a model given the data and the priors. For historical reasons
- * it is called likelihood, but it is actually the posterior distribution. This will
- * be fixed in version 1.0 but for backward compatibility for version 0 it will remain
- * as likelihood.
+ * Combines a #NcmDataset and priors into the posterior distribution of model
+ * parameters.
  *
  * The posterior distribution is the combination of the #NcmDataset containing the
  * individual likelihoods of the data and the priors. The priors are defined as
@@ -45,8 +42,8 @@
  * -2\ln P_{\mathrm{posterior}} = -2\ln L_{\mathrm{data}} + \sum_i \vec{f}_i\cdot\vec{f}_i + \sum_i -2\ln P_{\mathrm{prior},i}
  * \end{equation}
  *
- * Note that to be able to use least squares the posterior must contain least-squares
- * priors only and all individual likelihoods in the #NcmDataset must also be least-squares.
+ * Least-squares evaluation requires least-squares priors and least-squares
+ * data likelihoods.
  *
  */
 

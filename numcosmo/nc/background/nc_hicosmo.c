@@ -25,9 +25,7 @@
 /**
  * NcHICosmo:
  *
- * Abstract class for implementing homogeneous and isotropic cosmological models.
- *
- * This object provides an interface for homogeneous and isotropic cosmological models.
+ * Abstract interface for homogeneous and isotropic cosmological models.
  *
  */
 

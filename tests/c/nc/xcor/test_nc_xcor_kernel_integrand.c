@@ -241,7 +241,7 @@ test_nc_xcor_kernel_integrand_comps (TestNcXcorKernelIntegrand *test, gconstpoin
   }
 
   /* Evaluating all components at once and one at a time must give the same thing: the
-   * offset/len form is the hot path and the whole-array form is the reference. */
+   * offset/len form is the performance-critical path and the whole-array form is the reference. */
   nc_xcor_kernel_integrand_eval (integ, sqrt (k_min * k_max), W);
 
   for (i = 0; i < len; i++)
@@ -453,4 +453,3 @@ main (gint argc, gchar *argv[])
 
   g_test_run ();
 }
-

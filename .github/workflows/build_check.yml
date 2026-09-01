@@ -19,7 +19,7 @@ env:
   # Thread policy is set PER TEST by meson (tests/meson.build), not here: concurrent tests
   # get OMP/BLAS = 1 (avoid cores^2 oversubscription + the mixed-OpenBLAS deadlock, e.g.
   # scipy.linalg.solve in test_sbessel_ode_solver), and the run-alone OpenMP tests
-  # (omp suite ⇒ is_parallel: false) get OMP_NUM_THREADS = cores so their `#pragma omp
+  # (omp suite => is_parallel: false) get OMP_NUM_THREADS = cores so their `#pragma omp
   # parallel` branches actually run, inside the ordinary `meson test` invocation (see
   # TESTING.md). The globals below are just a single-thread fallback for the meson driver
   # and any non-test step; meson's per-test env overrides them.
@@ -39,19 +39,10 @@ env:
   # platform-independent physics and statistical validation. One leg runs it (see
   # build-miniforge), so it is named here rather than spelled out at the call site.
   #
-  # The three capability lanes still missing from both -- py-app, py-powspec, py-xcor --
-  # run instrumented in the coverage job, because what they uniquely cover has not been
-  # bought back yet.
   FAST_TEST_ARGS: "--no-suite py-app --no-suite py-acceptance --no-suite py-powspec --no-suite py-xcor --no-suite c-acceptance --no-suite c-statistical"
   VALIDATION_TEST_ARGS: "--suite py-acceptance --suite c-acceptance --suite c-statistical"
-  # GitHub-hosted runners on Azure expose a paravirtualized "mana" NIC that advertises
-  # InfiniBand-like RDMA verbs but doesn't actually support the specific operations (UD
-  # QP) that transport needs, causing spurious MPI init/comm failures on both MPI
-  # implementations this repo tests -- OpenMPI ("Failed to create UCP worker") and
-  # MPICH's ch4:ucx netmod ("MPIDI_UCX_init_worker: Address not valid"). We don't need
-  # real RDMA performance for correctness testing. Two knobs, since each implementation
-  # picks its transport a different way:
-  #  - OMPI_MCA_pml=ob1 selects OpenMPI's non-UCX PML (tcp/vader/self BTLs) directly.
+  # GitHub-hosted runners have no RDMA hardware, but the MPI stacks still probe for it.
+  #  - OMPI_MCA_pml selects OpenMPI's ob1 point-to-point layer.
   #  - UCX_TLS restricts UCX itself (read by both OpenMPI's and MPICH's copies of the
   #    UCX library) to non-RDMA transports, which is what actually fixes the MPICH side
   #    (OMPI_MCA_* vars are OpenMPI-specific and MPICH silently ignores them).
@@ -71,6 +62,19 @@ jobs:
     # they fall back to solving it (slow), so this job is what makes the
     # mismatch visible. See CONTRIBUTING.md, section "CI conda environment".
     - run: python3 .github/scripts/conda_locks.py check
+
+  check-doc-style:
+    name: (doc style)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        # Needs the merge base with the target branch to see only added lines.
+        fetch-depth: 0
+    # Rejects evaluative wording in comments and docs, and reports theory-page
+    # cross-references the branch drops. See CONTRIBUTING.md, section "Writing
+    # style for comments and documentation".
+    - run: ./.github/scripts/check_doc_style.sh --base origin/${{ github.base_ref || 'master' }}
 
   build-gcc-ubuntu:
     name: (ubuntu, apt, pip)
@@ -354,7 +358,7 @@ jobs:
           # glibc's features.h warns when that is set without optimization, which at -O0
           # is once per translation unit -- 900 lines of noise per build, hiding real
           # warnings. The fortified variants need -O to do anything anyway, so this drops
-          # nothing. Appended last in each variable, so it wins over conda's -D.
+          # nothing. Appended last in each variable, so it takes precedence over conda's -D.
           export CFLAGS="$CFLAGS -O0 -U_FORTIFY_SOURCE"
           export CPPFLAGS="$CPPFLAGS -O0 -U_FORTIFY_SOURCE"
           export FFLAGS="$FFLAGS -O0"
@@ -374,7 +378,8 @@ jobs:
           # tests/c and tests/python are the harness, not the library: they are ~22k lines
           # at ~98%, since a test file is covered by its own execution, and counting them
           # lifts the reported figure about three points above what the library actually
-          # reaches. numcosmo/**/tests/*.c is a different thing -- installed helpers like
+          # reaches.
+          # numcosmo/**/tests/*.c is a different thing -- installed helpers like
           # the analytic xcor kernels -- and stays.
           lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/external/*' '*/tools/*' '*/tests/c/*' '*/tests/python/*' --output-file numcosmo-coverage.info
       - name: Test timing summary

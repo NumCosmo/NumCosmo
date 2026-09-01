@@ -33,40 +33,40 @@
  * calculators (#NcGalaxyPositionFactor / #NcGalaxyRedshiftFactor /
  * #NcGalaxyShapeFactor).
  *
- * The likelihood factor per galaxy is
+ * The per-galaxy shape factor is
  * $$P(\epsilon_\mathrm{obs} \mid g) = \int_{|\chi_I|<1} \mathrm{d}^2\chi_I\,
  *   P_\mathrm{pop}(\chi_I)\, N_2\big(\epsilon_\mathrm{obs} - f_g(\chi_I);
  *   \sigma_\mathrm{noise}^2\big),$$
- * combined multiplicatively with the position and joint-redshift factors and
- * integrated once over the source redshift $z$ -- exactly
- * #NcGalaxyRedshiftFactor's documented contract ("the calculator never
- * integrates $z$ itself; the orchestrator integrates this against every
- * other $z$-dependent factor").
+ * combined with the position and redshift factors and integrated over source
+ * redshift.
  *
- * Supports three redshift-integral methods: `LNINT` (default, adaptive
- * log-domain 1D), `FIXED_NODES` (fixed Gauss-Legendre, with an optional
- * per-galaxy `auto-nodes` calibration -- see
- * nc_data_cluster_wl_factor_set_auto_nodes()) and `CUBATURE` (adaptive
- * `NcmIntegralND` over the linear-domain product). All three are
- * mathematically exact, differing only in numerical strategy/cost, and all
- * three support bootstrap resampling. No OpenMP parallelism yet (including
- * for `auto-nodes` calibration, which stays serial): deferred, since it
- * needs per-thread duplication of the (currently prepare()-shared, mutable)
- * integrator/integrand state before it can be added safely -- see the
- * class's own git history for the planning notes. No fit-time
- * `r_min`/`r_max` weighting: applying it biases the mass estimate.
+ * The redshift integral is done once, by this class, against every other
+ * $z$-dependent factor. This follows #NcGalaxyRedshiftFactor's contract: the
+ * calculator never integrates $z$ itself.
  *
- * Design principle followed throughout: all preparation work happens in
- * prepare() -- resolving models, refreshing each Factor's own caches,
- * re-preparing the z-integrands -- so m2lnL_val() and resample() only *use*
- * already-prepared state. The three Factor objects are held as direct,
- * construct-only references (confirmed the intended pattern: calculators
- * are designed to be held and shared across likelihoods); this orchestrator
- * never computes a Factor's change-detection hash itself, never calls
- * `ncm_model_state_get_pkey()`, and never knows which `NcmModel`s a given
- * Factor depends on -- it only compares the opaque `guint64` values each
- * Factor's own prepare() call produces. See the three Factor classes' own
- * documentation for the get_hash()/update_data() contract this relies on.
+ * Three methods are available: `LNINT`, the default, an adaptive log-domain 1D
+ * integral; `FIXED_NODES`, fixed Gauss-Legendre with an optional per-galaxy
+ * calibration, see nc_data_cluster_wl_factor_set_auto_nodes(); and `CUBATURE`,
+ * an adaptive #NcmIntegralND over the linear-domain product. All three are
+ * exact and differ only in numerical strategy and cost, and all three support
+ * bootstrap resampling.
+ *
+ * There is no OpenMP parallelism, including in the auto-nodes calibration.
+ * Adding it requires per-thread duplication of the integrator and integrand
+ * state, which prepare() currently shares and mutates.
+ *
+ * No `r_min`/`r_max` weighting is applied at fit time, because applying it
+ * biases the mass estimate.
+ *
+ * All preparation happens in prepare(): resolving models, refreshing each
+ * Factor's caches, and re-preparing the $z$-integrands. m2lnL_val() and
+ * resample() only use already-prepared state. The three Factor objects are
+ * held as construct-only references, since calculators are designed to be
+ * shared across likelihoods. This class never computes a Factor's
+ * change-detection hash, never calls ncm_model_state_get_pkey(), and never
+ * knows which #NcmModel a Factor depends on; it only compares the opaque
+ * #guint64 values each Factor's prepare() returns. See the Factor classes for
+ * that get_hash() and update_data() contract.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -98,9 +98,11 @@ typedef struct _NcDataClusterWLFactorIntArg
   NcGalaxyShapeFactorData *s_data;
 } NcDataClusterWLFactorIntArg;
 
+/* Linear-domain argument for auto-node calibration. */
+
 /* Linear-domain arg for the auto-nodes calibration probes F(z)=P(z),
- * G(z)=P(eps_obs|z): the position factor is deliberately not included, since
- * it scales F*G and INT F equally and so cancels in every tolerance
+ * G(z)=P(eps_obs|z). The position factor is deliberately excluded: it scales
+ * F*G and INT F equally, so it cancels in every tolerance
  * ncm_integral_fixed_calibrate() checks. */
 typedef struct _NcDataClusterWLFactorCalibArg
 {
@@ -110,9 +112,7 @@ typedef struct _NcDataClusterWLFactorCalibArg
   NcGalaxyShapeFactorData *s_data;
 } NcDataClusterWLFactorCalibArg;
 
-/* Linear-domain arg for CUBATURE's product integrand int_pos*int_z*int_shape
- * -- reuses the same integ_pos_lin/integ_z_lin/integ_shape_lin twins the
- * auto-nodes calibration above already needs. */
+/* Linear-domain argument for the cubature product integrand. */
 typedef struct _NcDataClusterWLFactorCubatureIntArg
 {
   NcGalaxyPositionFactorIntegrand *integ_pos_lin;

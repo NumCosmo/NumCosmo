@@ -421,7 +421,7 @@ test_reset_grows_only_when_needed (void)
 }
 
 /* Every `_into` variant must produce results bit-identical to its existing
- * "returns new" sibling, both when the output object already has enough
+ * "returns new" counterpart, both when the output object already has enough
  * capacity (pure reuse) and when it must grow -- the two paths inside
  * ncm_laurent_series_reset(). */
 static void
@@ -520,7 +520,7 @@ test_tps_new_owns_coefficients_and_reports_order (void)
 }
 
 /* The boxed "copy" is a ref-count increment (matching NcGalaxyShapeFactorData
- * and siblings), not a deep copy: a "copy" shares the same underlying
+ * and related types), not a deep copy: a "copy" shares the same underlying
  * storage, so mutating through one reference must be visible through the
  * other. */
 static void
@@ -724,4 +724,3 @@ main (gint argc, gchar *argv[])
 
   return g_test_run ();
 }
-
