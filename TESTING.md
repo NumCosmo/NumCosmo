@@ -218,11 +218,19 @@ FP/RNG order varies), so any omp-path statistical assertion must tolerate that s
 
 ## 4. CI sharding is derived, not labeled
 
-Do not add suites like `stats-dist`, `fit-esmcmc`, `data-cluster-wl` to balance CI. Wall
-time is balanced by `meson test --slice ${i}/N` over a `slice: [1..N]` matrix; tests
+Do not add suites like `stats-dist`, `fit-esmcmc`, `data-cluster-wl` to balance CI. Shards
+are derived by `meson test --slice ${i}/N` over a `slice: [1..N]` matrix; tests
 auto-distribute as they are added. Keep `priority: 10` on the heaviest executables so they
-start first. Note `--slice` balances by test **count**, so genuinely huge single
-executables must be **split** into multiple executables first (one cost class each).
+start first.
+
+`--slice` balances by test **count**, not by wall time. That is deliberate: weighting the
+split by measured durations was tried and removed, because it bought about two minutes on
+a shard that is not the critical path while making the partition depend on per-shard cached
+state that could disagree between shards and silently drop tests from the coverage report.
+So a genuinely huge single executable must be **split** into several (one cost class each)
+rather than balanced around — which is worth doing anyway, for failure isolation and for
+per-test timeouts. Each shard's job summary lists its slowest tests, which is how one
+growing fat becomes visible.
 
 ---
 
