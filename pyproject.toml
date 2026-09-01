@@ -52,6 +52,7 @@ test = [
     "numcosmo_py[all]",
     "pytest",
     "pytest-lazy-fixtures",
+    "pytest-timeout",
 ]
 dev = [
     "mypy",

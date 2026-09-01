@@ -51,6 +51,7 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-lazy-fixtures
+  - pytest-timeout
   - pytest-xdist
   - python >= 3.11
   - quarto
