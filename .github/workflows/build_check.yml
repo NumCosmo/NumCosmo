@@ -286,6 +286,16 @@ jobs:
         # above; only py-omp is excluded there, so run it here. meson sets OMP_NUM_THREADS =
         # cores for this non-xdist lane (see TESTING.md), so no manual env is needed.
         run: meson test -v -C build --suite py-omp || (cat build/meson-logs/testlog.txt && exit 1)
+      - name: Check NumCosmo (py-acceptance lane)
+        # The acceptance tier is slow and, measured per line, almost entirely redundant for
+        # coverage: it reaches 31021 lines of which only 170 are reached by nothing else. It
+        # used to run solely as a coverage leg, which is both the slowest way to run it and
+        # the least useful -- 48 min there against 84 s on an optimized build locally, and it
+        # was the critical path of the whole coverage job. Run it optimized instead, on the
+        # one platform combination it already ran on (the coverage matrix is ubuntu-only), so
+        # this changes where it runs, not what it covers.
+        if: matrix.os == 'ubuntu' && matrix.mpi == 'openmpi'
+        run: meson test -v -C build --suite py-acceptance || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge-coverage:
     name: Cov-${{ matrix.name }} (py${{ matrix.python-version }}, openmpi)
@@ -301,7 +311,6 @@ jobs:
       matrix:
         include:
           - { os: ubuntu, python-version: "3.13", name: python, args: "--suite python" }
-          - { os: ubuntu, python-version: "3.13", name: py-acceptance, args: "--suite py-acceptance" }
           # omp-marked tests are excluded from the plain `python` suite (tests/python/meson.build) so
           # the fast xdist lane isn't starved by a thread-pinned-to-1 test hogging one worker; they
           # need their own shard here or the coverage job would silently stop exercising them.
@@ -337,7 +346,7 @@ jobs:
         # Only the shards whose tests reach a downloaded file: the marker-gated
         # powspec/xcor/omp lanes touch none, and neither do the c-* slices, so
         # restoring ~470 MB there would cost them time and buy nothing.
-        if: contains(fromJSON('["python", "py-acceptance", "py-app"]'), matrix.name)
+        if: contains(fromJSON('["python", "py-app"]'), matrix.name)
         uses: ./.github/actions/data-cache
         with:
           version: ${{ env.DATA_CACHE_VERSION }}
