@@ -268,6 +268,10 @@ math_tests = [
         'name': 'ncm_mset_trans_kern_gauss',
         'sources': ['ncm/fit/test_ncm_mset_trans_kern_gauss.c'],
     },
+    {
+        'name': 'ncm_mset_trans_kern_cat',
+        'sources': ['ncm/fit/test_ncm_mset_trans_kern_cat.c'],
+    },
     # Split by claim, not by check: driving a chain is mechanics a short run covers, while
     # requiring the sample covariance to reproduce the data covariance converges as
     # 1/sqrt(n) and is chased by loops that double the chain length up to fifteen times.
