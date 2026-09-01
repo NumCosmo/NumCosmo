@@ -1,5 +1,5 @@
 /***************************************************************************
- *            test_ncm_stats_dist.c
+ *            test_ncm_fit_esmcmc_recovery.c
  *
  *  Copyright  2026  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
@@ -27,11 +27,11 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 
-#include "test_ncm_stats_dist_common.h"
+#include "test_ncm_fit_esmcmc_common.h"
 
 gint
 main (gint argc, gchar *argv[])
 {
-  return test_ncm_stats_dist_main (argc, argv, TEST_NCM_STATS_DIST_MECHANICS);
+  return test_ncm_fit_esmcmc_main (argc, argv, TEST_NCM_FIT_ESMCMC_RECOVERY);
 }
 

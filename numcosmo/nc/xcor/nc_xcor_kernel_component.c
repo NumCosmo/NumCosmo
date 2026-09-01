@@ -96,6 +96,11 @@
 #include <gsl/gsl_roots.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+/* Narrowest k range worth bracketing, relative. Below this the minimizer has no point
+ * to place strictly inside and the endpoint is the answer; a few ULP of room is all
+ * that separates the two. */
+#define NC_XCOR_KERNEL_COMPONENT_K_RANGE_MIN_WIDTH (8.0 * GSL_DBL_EPSILON)
+
 typedef struct _NcXcorKernelComponentPrivate
 {
   NcmSpline *k_max_spline;       /* k_max(y) - k value that maximizes KL(k, y/k) */
@@ -646,6 +651,19 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
     }
   }
 
+  /* gsl_min_fminimizer_set() requires k_lower < k_init < k_upper strictly, and raises a
+   * fatal GSL error -- an abort under ncm_cfg_enable_gsl_err_handler() -- rather than
+   * returning a status when it does not hold. The caller rejects ranges that start out
+   * that narrow, but the grid search above can still close k_lower and k_upper onto
+   * adjacent points. Over a range that narrow the endpoint is the answer. */
+  if (!((k_lower < k_init) && (k_init < k_upper)))
+  {
+    *k_at_max = k_init;
+    *KL_max   = -_nc_xcor_kernel_component_minus_KL (*k_at_max, data);
+
+    return;
+  }
+
   gsl_min_fminimizer_set (self->minimizer, &F_min, k_init, k_lower, k_upper);
 
   do {
@@ -767,14 +785,26 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
       const gdouble k_from_xi_max = y / xi_min;
       const gdouble k_valid_min   = GSL_MAX (k_min, k_from_xi_min);
       const gdouble k_valid_max   = GSL_MIN (k_max, k_from_xi_max);
+      const gdouble k_range_width = (k_valid_max - k_valid_min) / k_valid_max;
       gdouble k_at_max, KL_max;
 
       data.y = y;
       ncm_vector_set (yv, i, y);
 
-      if (k_valid_min >= k_valid_max)
+      /* Anything narrower than a few ULP is skipped, whichever side of zero it falls.
+       * The last grid point sits at y = y_max = k_max xi_max, where k_from_xi_min is
+       * k_max and the valid k set is the single point k_max; but y is rebuilt as
+       * exp (log y_max) and lands a ULP either side, so an exact-order test made the
+       * endpoint a coin flip between warning here and handing the minimizer a bracket
+       * too narrow to place a point inside -- a fatal GSL error. */
+      if (k_range_width <= NC_XCOR_KERNEL_COMPONENT_K_RANGE_MIN_WIDTH)
       {
-        g_warning ("# Skipping y = % 22.15g: no valid k range [% 22.15g, % 22.15g]\n", y, k_valid_min, k_valid_max);
+        /* Empty by more than rounding, on the other hand, means the component's support
+         * and the k range genuinely fail to overlap here: a misconfigured kernel, and
+         * worth saying so. */
+        if (k_range_width < -NC_XCOR_KERNEL_COMPONENT_K_RANGE_MIN_WIDTH)
+          g_warning ("# Skipping y = % 22.15g: no valid k range [% 22.15g, % 22.15g]\n", y, k_valid_min, k_valid_max);
+
         ncm_vector_set (k_max_v, i, 0.5 * (k_valid_min + k_valid_max));
         ncm_vector_set (KL_max_v, i, 0.0);
         ncm_vector_set (k_epsilon_v, i, 0.5 * (k_valid_min + k_valid_max));

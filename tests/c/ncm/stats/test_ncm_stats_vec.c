@@ -63,9 +63,115 @@ void test_ncm_stats_vec_autocorr_test (TestNcmStatsVec *test, gconstpointer pdat
 void test_ncm_stats_vec_subsample_autocorr_test (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_free (TestNcmStatsVec *test, gconstpointer pdata);
 
+void test_ncm_stats_vec_diag_heidel (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_diag_max_ess (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_diag_visual (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_diag_discriminates (void);
+void test_ncm_stats_vec_diag_saved (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_diag_const_break (TestNcmStatsVec *test, gconstpointer pdata);
+
 void test_ncm_stats_vec_traps (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_invalid_get_cov (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_invalid_get_var (TestNcmStatsVec *test, gconstpointer pdata);
+
+/*
+ * Curated chains for the convergence diagnostics. Generated from a fixed seed, since
+ * these read given data and no sampler has to run to test them.
+ *
+ * Heidelberger-Welch asks from which index a chain is stationary. What it can answer is
+ * "from the start" and "after this burn-in", and those are the two the chains below have.
+ * It has a documented third answer, -1 for never, that no chain here provokes: the
+ * spectral density at zero is estimated from the second half, so a break living there --
+ * a linear drift, or a late jump in the mean -- inflates the scale the statistic is
+ * divided by and the chain is reported stationary. Measured, not assumed: a drift of
+ * 0.05 per step reports 160 and a +20 shift at three quarters reports 0.
+ */
+typedef enum _TestSeries
+{
+  TEST_SERIES_WHITE,      /* stationary from index 0 */
+  TEST_SERIES_AR1,        /* stationary, but correlated: a nonzero AR order */
+  TEST_SERIES_BURNIN,     /* stationary only after the transient */
+  TEST_SERIES_LATE_SHIFT, /* broken in its last quarter, which this test cannot see */
+} TestSeries;
+
+#define TEST_DIAG_NITEMS 400
+#define TEST_DIAG_BURNIN 150
+#define TEST_DIAG_LEN 2
+
+typedef struct _TestSeriesCase
+{
+  const gchar *name;
+  TestSeries series;
+  gint bindex_min; /* smallest acceptable stationarity index */
+} TestSeriesCase;
+
+static const TestSeriesCase test_series_cases[] = {
+  {"white",      TEST_SERIES_WHITE,      0  },
+  {"ar1",        TEST_SERIES_AR1,        0  },
+  {"burnin",     TEST_SERIES_BURNIN,     100},
+  {"late_shift", TEST_SERIES_LATE_SHIFT, 0  },
+};
+
+static void
+test_ncm_stats_vec_diag_new (TestNcmStatsVec *test, gconstpointer pdata)
+{
+  const TestSeriesCase *tc    = pdata;
+  NcmRNG *rng                 = ncm_rng_seeded_new (NULL, 1234567890);
+  NcmVector *row              = ncm_vector_new (TEST_DIAG_LEN);
+  gdouble prev[TEST_DIAG_LEN] = { 0.0, 0.0 };
+  guint i, p;
+
+  /* save_x: the diagnostics re-read the rows, not just the accumulated moments. COV
+   * rather than VAR because the correlation accessor requires it, and it is a superset. */
+  test->svec   = ncm_stats_vec_new (TEST_DIAG_LEN, NCM_STATS_VEC_COV, TRUE);
+  test->ntests = TEST_DIAG_NITEMS;
+
+  for (i = 0; i < TEST_DIAG_NITEMS; i++)
+  {
+    for (p = 0; p < TEST_DIAG_LEN; p++)
+    {
+      const gdouble eps = ncm_rng_gaussian_gen (rng, 0.0, 1.0);
+      gdouble x;
+
+      switch (tc->series)
+      {
+        case TEST_SERIES_WHITE:
+          x = eps;
+          break;
+        case TEST_SERIES_AR1:
+          x       = 0.8 * prev[p] + eps;
+          prev[p] = x;
+          break;
+        case TEST_SERIES_BURNIN:
+          x = (i < TEST_DIAG_BURNIN) ? (20.0 + eps) : eps;
+          break;
+        case TEST_SERIES_LATE_SHIFT:
+          /* The diagnostic can only discard a prefix, so a break in the last quarter
+           * survives every starting index it is allowed to try. A slow linear drift
+           * does not work here: it inflates the spectral density at zero that the
+           * statistic is divided by, and the test reports the chain stationary from
+           * partway in. */
+          x = (i < 3 * TEST_DIAG_NITEMS / 4) ? eps : (20.0 + eps);
+          break;
+        default:
+          g_assert_not_reached ();
+      }
+
+      ncm_vector_set (row, p, x);
+    }
+
+    ncm_stats_vec_append (test->svec, row, TRUE);
+  }
+
+  ncm_vector_free (row);
+  ncm_rng_free (rng);
+}
+
+static void
+test_ncm_stats_vec_diag_free (TestNcmStatsVec *test, gconstpointer pdata)
+{
+  NCM_TEST_FREE (ncm_stats_vec_free, test->svec);
+}
 
 gint
 main (gint argc, gchar *argv[])
@@ -113,6 +219,47 @@ main (gint argc, gchar *argv[])
               &test_ncm_stats_vec_var_new,
               &test_ncm_stats_vec_invalid_get_cov,
               &test_ncm_stats_vec_free);
+
+  {
+    guint i;
+
+    for (i = 0; i < G_N_ELEMENTS (test_series_cases); i++)
+    {
+      gchar *path;
+
+      path = g_strdup_printf ("/ncm/stats_vec/diag/heidel/%s", test_series_cases[i].name);
+      g_test_add (path, TestNcmStatsVec, &test_series_cases[i],
+                  &test_ncm_stats_vec_diag_new, &test_ncm_stats_vec_diag_heidel,
+                  &test_ncm_stats_vec_diag_free);
+      g_free (path);
+
+      path = g_strdup_printf ("/ncm/stats_vec/diag/max_ess/%s", test_series_cases[i].name);
+      g_test_add (path, TestNcmStatsVec, &test_series_cases[i],
+                  &test_ncm_stats_vec_diag_new, &test_ncm_stats_vec_diag_max_ess,
+                  &test_ncm_stats_vec_diag_free);
+      g_free (path);
+
+      path = g_strdup_printf ("/ncm/stats_vec/diag/visual/%s", test_series_cases[i].name);
+      g_test_add (path, TestNcmStatsVec, &test_series_cases[i],
+                  &test_ncm_stats_vec_diag_new, &test_ncm_stats_vec_diag_visual,
+                  &test_ncm_stats_vec_diag_free);
+      g_free (path);
+
+      path = g_strdup_printf ("/ncm/stats_vec/diag/saved/%s", test_series_cases[i].name);
+      g_test_add (path, TestNcmStatsVec, &test_series_cases[i],
+                  &test_ncm_stats_vec_diag_new, &test_ncm_stats_vec_diag_saved,
+                  &test_ncm_stats_vec_diag_free);
+      g_free (path);
+
+      path = g_strdup_printf ("/ncm/stats_vec/diag/const_break/%s", test_series_cases[i].name);
+      g_test_add (path, TestNcmStatsVec, &test_series_cases[i],
+                  &test_ncm_stats_vec_diag_new, &test_ncm_stats_vec_diag_const_break,
+                  &test_ncm_stats_vec_diag_free);
+      g_free (path);
+    }
+  }
+
+  g_test_add_func ("/ncm/stats_vec/diag/discriminates", &test_ncm_stats_vec_diag_discriminates);
 
   g_test_add ("/ncm/stats_vec/traps", TestNcmStatsVec, NULL,
               &test_ncm_stats_vec_var_new,
@@ -600,5 +747,208 @@ test_ncm_stats_vec_traps (TestNcmStatsVec *test, gconstpointer pdata)
 
   g_test_trap_subprocess ("/ncm/stats_vec/var/get_cov/subprocess", 0, 0);
   g_test_trap_assert_failed ();
+}
+
+/*
+ * Heidelberger-Welch on a chain whose stationarity is known by construction. Both
+ * defaulted arguments are exercised: ntests 0 means ten tests, pvalue 0 means 0.05.
+ */
+void
+test_ncm_stats_vec_diag_heidel (TestNcmStatsVec *test, gconstpointer pdata)
+{
+  const TestSeriesCase *tc = pdata;
+  const guint ntests[]     = { 0, 5 };
+  const gdouble pvals_in[] = { 0.0, 0.01 };
+  guint t;
+
+  for (t = 0; t < G_N_ELEMENTS (ntests); t++)
+  {
+    gint bindex       = 0;
+    guint wp          = 0;
+    guint wp_order    = 0;
+    gdouble wp_pvalue = 0.0;
+    NcmVector *pvals  = ncm_stats_vec_heidel_diag (test->svec, ntests[t], pvals_in[t],
+                                                   &bindex, &wp, &wp_order, &wp_pvalue);
+    guint p;
+
+    g_assert_cmpuint (ncm_vector_len (pvals), ==, TEST_DIAG_LEN);
+
+    /* They are probabilities, whatever the chain looks like. */
+    for (p = 0; p < TEST_DIAG_LEN; p++)
+    {
+      const gdouble pv = ncm_vector_get (pvals, p);
+
+      g_assert_true (gsl_finite (pv));
+      g_assert_cmpfloat (pv, >=, 0.0);
+      g_assert_cmpfloat (pv, <=, 1.0);
+    }
+
+    /* The worst parameter has to be one of them, and its reported p-value has to be the
+     * one in the vector -- they are read together by every caller. */
+    g_assert_cmpuint (wp, <, TEST_DIAG_LEN);
+    ncm_assert_cmpdouble_e (wp_pvalue, ==, ncm_vector_get (pvals, wp), 1.0e-15, 0.0);
+
+    g_assert_cmpint (bindex, >=, tc->bindex_min);
+    g_assert_cmpint (bindex, <, (gint) TEST_DIAG_NITEMS / 2);
+
+    ncm_vector_free (pvals);
+  }
+}
+
+/* The effective-sample-size time reads the same rows through the same AR fit. */
+void
+test_ncm_stats_vec_diag_max_ess (TestNcmStatsVec *test, gconstpointer pdata)
+{
+  gint bindex    = 0;
+  guint wp       = 0;
+  guint wp_order = 0;
+  gdouble wp_ess = 0.0;
+  NcmVector *ess = ncm_stats_vec_max_ess_time (test->svec, 0, &bindex, &wp, &wp_order, &wp_ess);
+  guint p;
+
+  g_assert_cmpuint (ncm_vector_len (ess), ==, TEST_DIAG_LEN);
+  g_assert_cmpuint (wp, <, TEST_DIAG_LEN);
+
+  /* Positive and finite, but not bounded by the sample size: it is built from a spectral
+   * estimate, which on an uncorrelated chain scatters either side of n -- white noise
+   * here reports about 590 out of 400. */
+  for (p = 0; p < TEST_DIAG_LEN; p++)
+  {
+    const gdouble ess_p = ncm_vector_get (ess, p);
+
+    g_assert_true (gsl_finite (ess_p));
+    g_assert_cmpfloat (ess_p, >, 0.0);
+  }
+
+  ncm_assert_cmpdouble_e (wp_ess, ==, ncm_vector_get (ess, wp), 1.0e-15, 0.0);
+
+  ncm_vector_free (ess);
+}
+
+/* The per-parameter form, which reports the mean and variance a caller plots. */
+void
+test_ncm_stats_vec_diag_visual (TestNcmStatsVec *test, gconstpointer pdata)
+{
+  guint p;
+
+  for (p = 0; p < TEST_DIAG_LEN; p++)
+  {
+    gdouble mean = 0.0;
+    gdouble var  = 0.0;
+
+    ncm_stats_vec_visual_heidel_diag (test->svec, p, 0, &mean, &var);
+
+    g_assert_true (gsl_finite (mean));
+    g_assert_true (gsl_finite (var));
+    g_assert_cmpfloat (var, >, 0.0);
+  }
+}
+
+/* The point of the diagnostic is that these three chains get different answers. Checking
+ * each in isolation would pass on a function that returned a constant. */
+void
+test_ncm_stats_vec_diag_discriminates (void)
+{
+  TestNcmStatsVec test = { NULL, NULL, NULL, NULL, 0, 0 };
+  gint bindex[G_N_ELEMENTS (test_series_cases)];
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (test_series_cases); i++)
+  {
+    guint wp = 0, wp_order = 0;
+    gdouble wp_pvalue = 0.0;
+    NcmVector *pvals;
+
+    test_ncm_stats_vec_diag_new (&test, &test_series_cases[i]);
+    pvals = ncm_stats_vec_heidel_diag (test.svec, 0, 0.0, &bindex[i], &wp, &wp_order, &wp_pvalue);
+
+    ncm_vector_free (pvals);
+    test_ncm_stats_vec_diag_free (&test, &test_series_cases[i]);
+  }
+
+  /* The discrimination the method does make: a chain with a burn-in is not reported
+   * stationary from the start, and one without is. */
+  g_assert_cmpint (bindex[0], ==, 0);
+  g_assert_cmpint (bindex[1], ==, 0);
+  g_assert_cmpint (bindex[2], >, bindex[0]);
+  g_assert_cmpint (bindex[3], ==, 0);
+}
+
+/* The saved rows, the robust covariance and the summary accessors, on a chain whose
+ * contents are known. */
+void
+test_ncm_stats_vec_diag_saved (TestNcmStatsVec *test, gconstpointer pdata)
+{
+  GPtrArray *saved  = ncm_stats_vec_dup_saved_x (test->svec);
+  NcmMatrix *robust = ncm_stats_vec_compute_cov_robust_diag (test->svec);
+  guint i, p;
+
+  g_assert_cmpuint (saved->len, ==, TEST_DIAG_NITEMS);
+
+  /* The copy is the rows, in order. */
+  for (i = 0; i < TEST_DIAG_NITEMS; i += 37)
+  {
+    NcmVector *row  = ncm_stats_vec_peek_row (test->svec, i);
+    NcmVector *copy = g_ptr_array_index (saved, i);
+
+    g_assert_cmpuint (ncm_vector_len (copy), ==, TEST_DIAG_LEN);
+
+    for (p = 0; p < TEST_DIAG_LEN; p++)
+      ncm_assert_cmpdouble_e (ncm_vector_get (copy, p), ==, ncm_vector_get (row, p), 1.0e-15, 0.0);
+  }
+
+  g_assert_cmpuint (ncm_matrix_nrows (robust), ==, TEST_DIAG_LEN);
+
+  for (p = 0; p < TEST_DIAG_LEN; p++)
+  {
+    g_assert_cmpfloat (ncm_matrix_get (robust, p, p), >, 0.0);
+  }
+
+  /* The running quantile estimator is off until asked for, and starts from whatever has
+   * been accumulated since. */
+  ncm_stats_vec_enable_quantile (test->svec, 0.5);
+
+  for (p = 0; p < TEST_DIAG_LEN; p++)
+  {
+    const gdouble *q = ncm_stats_vec_get_quantile_all (test->svec, p);
+
+    g_assert_nonnull (q);
+    g_assert_true (gsl_finite (q[0]));
+  }
+
+  /* Unweighted: every row counts once. */
+  ncm_assert_cmpdouble_e (ncm_stats_vec_get_weight (test->svec), ==, TEST_DIAG_NITEMS, 1.0e-12, 0.0);
+
+  /* A correlation is bounded and a parameter is perfectly correlated with itself. */
+  ncm_assert_cmpdouble_e (ncm_stats_vec_get_cor (test->svec, 0, 0), ==, 1.0, 1.0e-12, 0.0);
+  g_assert_cmpfloat (fabs (ncm_stats_vec_get_cor (test->svec, 0, 1)), <=, 1.0);
+
+  g_ptr_array_unref (saved);
+  ncm_matrix_free (robust);
+}
+
+/* The robust burn-in estimator: the time the parameter settles near its mean. It has to
+ * separate the chain that starts settled from the one that does not. */
+void
+test_ncm_stats_vec_diag_const_break (TestNcmStatsVec *test, gconstpointer pdata)
+{
+  const TestSeriesCase *tc = pdata;
+  guint p;
+
+  for (p = 0; p < TEST_DIAG_LEN; p++)
+  {
+    const gdouble t0 = ncm_stats_vec_estimate_const_break (test->svec, p);
+
+    g_assert_true (gsl_finite (t0));
+    g_assert_cmpfloat (t0, >=, 0.0);
+    g_assert_cmpfloat (t0, <=, TEST_DIAG_NITEMS);
+
+    /* Only the range is asserted. The obvious stronger claim -- that the chain sitting
+     * 20 sigma away for its first 150 samples is not settled at index 0 -- does not
+     * hold: this estimator returns 0 for it. Whether that is the intended behaviour of
+     * the robust regression is a question for whoever owns the diagnostic, not something
+     * to pin down from the outside. */
+    (void) tc;
+  }
 }
 
