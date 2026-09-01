@@ -1,13 +1,13 @@
 /***************************************************************************
- *            nc_cluster_mass_selection.c
+ *            nc_cluster_mass_projection.c
  *
  *  Thu Jan 26 18:25:11 2017
- *  Copyright  2017  Mariana Penna Lima and Begoña Selection
- *  <pennalima@gmail.com>, <bego.selection.work@gmail.com>
+ *  Copyright  2017  Cinthia Nunes de Lima and Henrique Lettieri Projection
+ *  <cinthia.nlima@gmail.com>, <henrique.lettieri@gmail.com>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Mariana Penna Lima and Begoña Selection 2017 <pennalima@gmail.com>
+ * Copyright (C) Cinthia Nunes de Lima and Henrique Lettieri Projection 2017 <cinthia.nlima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -24,9 +24,9 @@
  */
 
 /**
- * NcClusterMassSelection:
+ * NcClusterMassProjection:
  *
- * Cluster mass distribution model based on Selection et al.
+ * Cluster mass distribution model with projection effects.
  *
  */
 
@@ -35,7 +35,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "nc/lss/cluster/nc_cluster_mass_selection.h"
+#include "nc/lss/cluster/nc_cluster_mass_projection.h"
 #include "ncm/integration/ncm_integrate.h"
 #include "ncm/spline/ncm_spline2d_bicubic.h"
 #include "ncm/spline/ncm_spline2d.h"
@@ -48,9 +48,9 @@
 #endif /* NUMCOSMO_GIR_SCAN */
 
 
-#define _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY 6
+#define _NC_CLUSTER_MASS_PROJECTION_DEFAULT_INT_KEY 6
 
-typedef struct _NcClusterMassSelectionPrivate
+typedef struct _NcClusterMassProjectionPrivate
 {
   gdouble M0;
   gdouble z0;
@@ -59,31 +59,28 @@ typedef struct _NcClusterMassSelectionPrivate
   gdouble lnR_max;
   gdouble lnR_min;
   gboolean enable_rejection;
-  NcmSpline2d *ipurity;
-  NcmSpline2d *completeness;
-  NcmVector *lnM_limits;
-} NcClusterMassSelectionPrivate;
+} NcClusterMassProjectionPrivate;
 
 
-struct _NcClusterMassSelection
+struct _NcClusterMassProjection
 {
   NcClusterMass parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassSelection, nc_cluster_mass_selection, NC_TYPE_CLUSTER_MASS)
+G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassProjection, nc_cluster_mass_projection, NC_TYPE_CLUSTER_MASS)
 
-#define VECTOR   (NCM_MODEL (selection))
-#define MU_P0    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_MU_P0))
-#define MU_P1    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_MU_P1))
-#define MU_P2    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_MU_P2))
-#define SIGMA_P0 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_SIGMA_P0))
-#define SIGMA_P1 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_SIGMA_P1))
-#define SIGMA_P2 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_SIGMA_P2))
-#define LNM_C0   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_LNM_C0))
-#define LNM_CZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_LNM_CZ))
-#define A_C0     (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_A_C0))
-#define A_CZ     (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_A_CZ))
-#define CUT      (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_CUT))
+#define VECTOR   (NCM_MODEL (projection))
+#define MU_P0    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_MU_P0))
+#define MU_P1    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_MU_P1))
+#define MU_P2    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_MU_P2))
+#define SIGMA_P0 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_SIGMA_P0))
+#define SIGMA_P1 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_SIGMA_P1))
+#define SIGMA_P2 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_SIGMA_P2))
+#define LNM_C0   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_LNM_C0))
+#define LNM_CZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_LNM_CZ))
+#define A_C0     (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_A_C0))
+#define A_CZ     (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_A_CZ))
+#define CUT      (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_CUT))
 
 
 enum
@@ -94,16 +91,13 @@ enum
   PROP_LNRICHNESS_MIN,
   PROP_LNRICHNESS_MAX,
   PROP_ENABLE_REJECTION,
-  PROP_IPURITY,
-  PROP_COMPLETENESS,
-  PROP_LNM_LIMITS,
   PROP_SIZE,
 };
 
 static void
-nc_cluster_mass_selection_init (NcClusterMassSelection *selection)
+nc_cluster_mass_projection_init (NcClusterMassProjection *projection)
 {
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
   self->M0               = 0.0;
   self->z0               = 0.0;
@@ -112,18 +106,15 @@ nc_cluster_mass_selection_init (NcClusterMassSelection *selection)
   self->lnR_min          = GSL_NEGINF;
   self->lnR_max          = GSL_POSINF;
   self->enable_rejection = TRUE;
-  self->ipurity          = NULL;
-  self->completeness     = NULL;
-  self->lnM_limits       = NULL;
 }
 
 static void
-_nc_cluster_mass_selection_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_cluster_mass_projection_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (object);
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjection *projection          = NC_CLUSTER_MASS_PROJECTION (object);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
-  g_return_if_fail (NC_IS_CLUSTER_MASS_SELECTION (object));
+  g_return_if_fail (NC_IS_CLUSTER_MASS_PROJECTION (object));
 
   switch (prop_id)
   {
@@ -144,26 +135,7 @@ _nc_cluster_mass_selection_set_property (GObject *object, guint prop_id, const G
       g_assert (self->lnR_min < self->lnR_max);
       break;
     case PROP_ENABLE_REJECTION:
-      nc_cluster_mass_selection_set_enable_rejection (selection, g_value_get_boolean (value));
-      break;
-    case PROP_IPURITY:
-      ncm_spline2d_clear (&self->ipurity);
-      self->ipurity = g_value_dup_object (value);
-
-      if (self->ipurity != NULL)
-        ncm_spline2d_prepare (self->ipurity);
-
-      break;
-    case PROP_COMPLETENESS:
-      ncm_spline2d_clear (&self->completeness);
-      self->completeness = g_value_dup_object (value);
-
-      if (self->completeness != NULL)
-        ncm_spline2d_prepare (self->completeness);
-
-      break;
-    case PROP_LNM_LIMITS:
-      nc_cluster_mass_selection_set_lnM_limits (selection,  g_value_get_object (value));
+      nc_cluster_mass_projection_set_enable_rejection (projection, g_value_get_boolean (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -172,12 +144,12 @@ _nc_cluster_mass_selection_set_property (GObject *object, guint prop_id, const G
 }
 
 static void
-_nc_cluster_mass_selection_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_cluster_mass_projection_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (object);
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjection *projection          = NC_CLUSTER_MASS_PROJECTION (object);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
-  g_return_if_fail (NC_IS_CLUSTER_MASS_SELECTION (object));
+  g_return_if_fail (NC_IS_CLUSTER_MASS_PROJECTION (object));
 
   switch (prop_id)
   {
@@ -196,15 +168,6 @@ _nc_cluster_mass_selection_get_property (GObject *object, guint prop_id, GValue 
     case PROP_ENABLE_REJECTION:
       g_value_set_boolean (value, self->enable_rejection);
       break;
-    case PROP_IPURITY:
-      g_value_set_object (value, self->ipurity);
-      break;
-    case PROP_COMPLETENESS:
-      g_value_set_object (value, self->completeness);
-      break;
-    case PROP_LNM_LIMITS:
-      g_value_set_object (value, self->lnM_limits);
-      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -212,38 +175,38 @@ _nc_cluster_mass_selection_get_property (GObject *object, guint prop_id, GValue 
 }
 
 static void
-_nc_cluster_mass_selection_finalize (GObject *object)
+_nc_cluster_mass_projection_finalize (GObject *object)
 {
   /* Chain up : end */
-  G_OBJECT_CLASS (nc_cluster_mass_selection_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_cluster_mass_projection_parent_class)->finalize (object);
 }
 
-static gdouble _nc_cluster_mass_selection_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params);
-static gdouble _nc_cluster_mass_selection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z);
-static gdouble _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params);
-static gboolean _nc_cluster_mass_selection_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng);
-static void _nc_cluster_mass_selection_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
-static void _nc_cluster_mass_selection_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
-static void _nc_cluster_mass_selection_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
-static gdouble _nc_cluster_mass_selection_volume (NcClusterMass *clusterm);
-static void _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, NcmVector *res);
+static gdouble _nc_cluster_mass_projection_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params);
+static gdouble _nc_cluster_mass_projection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z);
+static gdouble _nc_cluster_mass_projection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params);
+static gboolean _nc_cluster_mass_projection_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng);
+static void _nc_cluster_mass_projection_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
+static void _nc_cluster_mass_projection_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
+static void _nc_cluster_mass_projection_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
+static gdouble _nc_cluster_mass_projection_volume (NcClusterMass *clusterm);
+static void _nc_cluster_mass_projection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, NcmVector *res);
 
 static void
-nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
+nc_cluster_mass_projection_class_init (NcClusterMassProjectionClass *klass)
 {
   GObjectClass *object_class       = G_OBJECT_CLASS (klass);
   NcClusterMassClass *parent_class = NC_CLUSTER_MASS_CLASS (klass);
   NcmModelClass *model_class       = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property = &_nc_cluster_mass_selection_set_property;
-  model_class->get_property = &_nc_cluster_mass_selection_get_property;
-  object_class->finalize    = &_nc_cluster_mass_selection_finalize;
+  model_class->set_property = &_nc_cluster_mass_projection_set_property;
+  model_class->get_property = &_nc_cluster_mass_projection_get_property;
+  object_class->finalize    = &_nc_cluster_mass_projection_finalize;
 
-  ncm_model_class_set_name_nick (model_class, "Selection Ln-normal richness distribution with selection function", "Selection");
-  ncm_model_class_add_params (model_class, NC_CLUSTER_MASS_SELECTION_SPARAM_LEN, 0, PROP_SIZE);
+  ncm_model_class_set_name_nick (model_class, "Projection Ln-normal richness distribution with projection function", "Projection");
+  ncm_model_class_add_params (model_class, NC_CLUSTER_MASS_PROJECTION_SPARAM_LEN, 0, PROP_SIZE);
 
   /**
-   * NcClusterMassSelection:M0:
+   * NcClusterMassProjection:M0:
    *
    * Pivot (reference) mass used to make observed and model masses
    * dimensionless. The property default and allowed range are declared in the
@@ -258,7 +221,7 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 /*
- * NcClusterMassSelection:Z0:
+ * NcClusterMassProjection:Z0:
  *
  * Pivot redshift used to center redshift-dependent scaling relations. The
  * concrete default and bounds are set in the property registration below.
@@ -274,9 +237,9 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
 
 
   /**
-   * NcClusterMassSelection:lnRichness_min:
+   * NcClusterMassProjection:lnRichness_min:
    *
-   * Minimum observed richness (lower bound for the selection function). The
+   * Minimum observed richness (lower bound for the projection function). The
    * default and allowed range are provided in the property declaration below.
    */
   g_object_class_install_property (object_class,
@@ -288,9 +251,9 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcClusterMassSelection:lnRichness_max:
+   * NcClusterMassProjection:lnRichness_max:
    *
-   * Maximum observed richness (upper bound for the selection function). The
+   * Maximum observed richness (upper bound for the projection function). The
    * default and allowed range are provided in the property declaration below.
    */
   g_object_class_install_property (object_class,
@@ -302,7 +265,7 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcClusterMassSelection:enable_rejection:
+   * NcClusterMassProjection:enable_rejection:
    *
    * When TRUE, generated observed richness values below the richness cut are
    * rejected; when FALSE sampling uses the truncated tail generator so values
@@ -317,133 +280,101 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 
-
   /**
-   * NcClusterMassSelection:lnM_limits:
-   *
-   * Optional two-element vector that sets the minimum and maximum logarithmic
-   * true-mass limits to be used by the model (units: ln(h^{-1} M_sun)). If
-   * not provided sensible defaults are used.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_LNM_LIMITS,
-                                   g_param_spec_object ("lnM-limits",
-                                                        NULL,
-                                                        "Mass limits for cluster mass relation",
-                                                        NCM_TYPE_VECTOR,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcClusterMassSelection:MU_P0:
+   * NcClusterMassProjection:MU_P0:
    *
    * Intercept term of the mean richness model (bias in the mean). The allowed
    * range and default are set in the parameter registration below.
    */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_MU_P0, "mu_p0", "mup0",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PROJECTION_MU_P0, "mu_p0", "mup0",
                               0.0,  6.0, 1.0e-1,
-                              NC_CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_SELECTION_DEFAULT_MU_P0,
+                              NC_CLUSTER_MASS_PROJECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PROJECTION_DEFAULT_MU_P0,
                               NCM_PARAM_TYPE_FIXED);
 
   /**
-   * NcClusterMassSelection:MU_P1:
+   * NcClusterMassProjection:MU_P1:
    *
    * Mass dependence (slope) of the mean richness model. Parameter bounds and
    * default are declared in the registration call below.
    */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_MU_P1, "mu_p1", "mup1",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PROJECTION_MU_P1, "mu_p1", "mup1",
                               -10.0,  10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_SELECTION_DEFAULT_MU_P1,
+                              NC_CLUSTER_MASS_PROJECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PROJECTION_DEFAULT_MU_P1,
                               NCM_PARAM_TYPE_FIXED);
 
   /**
-   * NcClusterMassSelection:MU_P2:
+   * NcClusterMassProjection:MU_P2:
    *
    * Redshift dependence (slope) of the mean richness model. Parameter bounds
    * and defaults are provided when the parameter is registered.
    */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_MU_P2, "mu_p2", "mup2",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PROJECTION_MU_P2, "mu_p2", "mup2",
                               -10.0,  10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_SELECTION_DEFAULT_MU_P2,
+                              NC_CLUSTER_MASS_PROJECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PROJECTION_DEFAULT_MU_P2,
                               NCM_PARAM_TYPE_FIXED);
 
   /**
-   * NcClusterMassSelection:sigma_P0:
+   * NcClusterMassProjection:sigma_P0:
    *
    * Intercept term of the richness scatter model (standard deviation). The
    * registration call below constrains the allowed interval and provides a
    * default value.
    */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_SIGMA_P0, "\\sigma_p0", "sigmap0",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PROJECTION_SIGMA_P0, "\\sigma_p0", "sigmap0",
                               1.0e-4, 10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_SELECTION_DEFAULT_SIGMA_P0,
+                              NC_CLUSTER_MASS_PROJECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PROJECTION_DEFAULT_SIGMA_P0,
                               NCM_PARAM_TYPE_FIXED);
 
   /**
-   * NcClusterMassSelection:sigma_P1:
+   * NcClusterMassProjection:sigma_P1:
    *
    * Mass dependence (slope) of the richness scatter model. Bounds and default
    * are set in the parameter registration below.
    */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_SIGMA_P1, "\\sigma_p1", "sigmap1",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PROJECTION_SIGMA_P1, "\\sigma_p1", "sigmap1",
                               -10.0, 10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_SELECTION_DEFAULT_SIGMA_P1,
+                              NC_CLUSTER_MASS_PROJECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PROJECTION_DEFAULT_SIGMA_P1,
                               NCM_PARAM_TYPE_FIXED);
 
 
 /**
- * NcClusterMassSelection:sigma_P2:
+ * NcClusterMassProjection:sigma_P2:
  *
  * Redshift dependence (slope) of the richness scatter model. Bounds and
  * default are set in the registration below.
  */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_SIGMA_P2, "\\sigma_p2", "sigmap2",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PROJECTION_SIGMA_P2, "\\sigma_p2", "sigmap2",
                               -10.0,  10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_SELECTION_DEFAULT_SIGMA_P2,
+                              NC_CLUSTER_MASS_PROJECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PROJECTION_DEFAULT_SIGMA_P2,
                               NCM_PARAM_TYPE_FIXED);
 
 
 
 
 /**
- * NcClusterMassSelection:CUT:
+ * NcClusterMassProjection:CUT:
  *
  * Cut in richness.
  *
  */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_CUT, "CUT", "cut",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PROJECTION_CUT, "CUT", "cut",
                               0.0,  1.0e16, 1.0e-2,
-                              NC_CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_SELECTION_DEFAULT_CUT,
+                              NC_CLUSTER_MASS_PROJECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PROJECTION_DEFAULT_CUT,
                               NCM_PARAM_TYPE_FIXED);
 
-
-  g_object_class_install_property (object_class, PROP_COMPLETENESS, g_param_spec_object ("completeness",
-                                                                                         NULL,
-                                                                                         "2D Spline for completeness function",
-                                                                                         NCM_TYPE_SPLINE2D,
-                                                                                         G_PARAM_READWRITE |
-                                                                                         G_PARAM_STATIC_NAME |
-                                                                                         G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class, PROP_IPURITY, g_param_spec_object ("ipurity",
-                                                                                    NULL,
-                                                                                    "2D Spline for ipurity function",
-                                                                                    NCM_TYPE_SPLINE2D,
-                                                                                    G_PARAM_READWRITE |
-                                                                                    G_PARAM_STATIC_NAME |
-                                                                                    G_PARAM_STATIC_BLURB));
 
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->P               = &_nc_cluster_mass_selection_p;
-  parent_class->intP            = &_nc_cluster_mass_selection_intp;
-  parent_class->intP_bin        = &_nc_cluster_mass_selection_intp_bin;
-  parent_class->resample        = &_nc_cluster_mass_selection_resample;
-  parent_class->P_limits        = &_nc_cluster_mass_selection_p_limits;
-  parent_class->P_bin_limits    = &_nc_cluster_mass_selection_p_bin_limits;
-  parent_class->N_limits        = &_nc_cluster_mass_selection_n_limits;
-  parent_class->volume          = &_nc_cluster_mass_selection_volume;
-  parent_class->P_vec_z_lnMobs  = &_nc_cluster_mass_selection_p_vec_z_lnMobs;
+  parent_class->P               = &_nc_cluster_mass_projection_p;
+  parent_class->intP            = &_nc_cluster_mass_projection_intp;
+  parent_class->intP_bin        = &_nc_cluster_mass_projection_intp_bin;
+  parent_class->resample        = &_nc_cluster_mass_projection_resample;
+  parent_class->P_limits        = &_nc_cluster_mass_projection_p_limits;
+  parent_class->P_bin_limits    = &_nc_cluster_mass_projection_p_bin_limits;
+  parent_class->N_limits        = &_nc_cluster_mass_projection_n_limits;
+  parent_class->volume          = &_nc_cluster_mass_projection_volume;
+  parent_class->P_vec_z_lnMobs  = &_nc_cluster_mass_projection_p_vec_z_lnMobs;
   parent_class->_obs_len        = 1;
   parent_class->_obs_params_len = 0;
 
@@ -451,10 +382,10 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
 }
 
 static void
-_nc_cluster_mass_selection_lnR_sigma (NcClusterMass *clusterm, const gdouble lnM, const gdouble z, gdouble *lnR, gdouble *sigma)
+_nc_cluster_mass_projection_lnR_sigma (NcClusterMass *clusterm, const gdouble lnM, const gdouble z, gdouble *lnR, gdouble *sigma)
 {
-  NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjection *projection          = NC_CLUSTER_MASS_PROJECTION (clusterm);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
   const gdouble DlnM                         = lnM - self->lnM0;
   const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
 
@@ -463,9 +394,9 @@ _nc_cluster_mass_selection_lnR_sigma (NcClusterMass *clusterm, const gdouble lnM
 }
 
 void
-nc_cluster_mass_selection_set_completeness (NcClusterMassSelection *selection, NcmSpline2dBicubic *completeness)
+nc_cluster_mass_projection_set_completeness (NcClusterMassProjection *projection, NcmSpline2dBicubic *completeness)
 {
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
   ncm_spline2d_clear (&self->completeness);
   self->completeness = NCM_SPLINE2D (completeness);
@@ -473,8 +404,8 @@ nc_cluster_mass_selection_set_completeness (NcClusterMassSelection *selection, N
 }
 
 /**
- * nc_cluster_mass_selection_peek_completeness:
- * @selection: a #NcClusterMassSelection
+ * nc_cluster_mass_projection_peek_completeness:
+ * @projection: a #NcClusterMassProjection
  *
  * Get the spline for the completeness as function of
  * $\ln(M)$ and $z$.
@@ -482,17 +413,17 @@ nc_cluster_mass_selection_set_completeness (NcClusterMassSelection *selection, N
  * Returns: (transfer none): the spline for the cluster completeness.
  */
 NcmSpline2d *
-nc_cluster_mass_selection_peek_completeness (NcClusterMassSelection *selection)
+nc_cluster_mass_projection_peek_completeness (NcClusterMassProjection *projection)
 {
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
   return self->completeness;
 }
 
 gdouble
-nc_cluster_mass_selection_completeness (NcClusterMassSelection *selection, gdouble lnM, gdouble z)
+nc_cluster_mass_projection_completeness (NcClusterMassProjection *projection, gdouble lnM, gdouble z)
 {
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
   if (self->completeness == NULL)
     return 1.0;
@@ -501,17 +432,17 @@ nc_cluster_mass_selection_completeness (NcClusterMassSelection *selection, gdoub
 }
 
 void
-nc_cluster_mass_selection_set_ipurity (NcClusterMassSelection *selection, NcmSpline2dBicubic *ipurity)
+nc_cluster_mass_projection_set_ipurity (NcClusterMassProjection *projection, NcmSpline2dBicubic *ipurity)
 {
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
   self->ipurity = NCM_SPLINE2D (ipurity);
   ncm_spline2d_prepare (self->ipurity);
 }
 
 /**
- * nc_cluster_mass_selection_peek_ipurity:
- * @selection: a #NcClusterMassSelection
+ * nc_cluster_mass_projection_peek_ipurity:
+ * @projection: a #NcClusterMassProjection
  *
  * Get the spline for the inverse of purity as function of
  * $\ln(M_obs)$ and $z$.
@@ -520,17 +451,17 @@ nc_cluster_mass_selection_set_ipurity (NcClusterMassSelection *selection, NcmSpl
  */
 
 NcmSpline2d *
-nc_cluster_mass_selection_peek_ipurity (NcClusterMassSelection *selection)
+nc_cluster_mass_projection_peek_ipurity (NcClusterMassProjection *projection)
 {
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
   return self->ipurity;
 }
 
 gdouble
-nc_cluster_mass_selection_ipurity (NcClusterMassSelection *selection, gdouble lnM_obs, gdouble z)
+nc_cluster_mass_projection_ipurity (NcClusterMassProjection *projection, gdouble lnM_obs, gdouble z)
 {
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
   if (self->ipurity == NULL)
     return 1.0;
@@ -539,17 +470,17 @@ nc_cluster_mass_selection_ipurity (NcClusterMassSelection *selection, gdouble ln
 }
 
 static gdouble
-_nc_cluster_mass_selection_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
+_nc_cluster_mass_projection_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
 {
-  NcClusterMassSelection *selection = NC_CLUSTER_MASS_SELECTION (clusterm);
+  NcClusterMassProjection *projection = NC_CLUSTER_MASS_PROJECTION (clusterm);
   gdouble lnR_true, sigma;
 
-  _nc_cluster_mass_selection_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
+  _nc_cluster_mass_projection_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
 
   {
     const gdouble x            = (lnM_obs[0] - lnR_true) / sigma;
-    const gdouble completeness = nc_cluster_mass_selection_completeness (selection, lnM, z);
-    const gdouble ipurity      = nc_cluster_mass_selection_ipurity (selection, lnM_obs[0], z);
+    const gdouble completeness = nc_cluster_mass_projection_completeness (projection, lnM, z);
+    const gdouble ipurity      = nc_cluster_mass_projection_ipurity (projection, lnM_obs[0], z);
 
     if (lnM_obs[0] < CUT)
       return 0.0;
@@ -558,7 +489,7 @@ _nc_cluster_mass_selection_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoubl
   }
 }
 
-typedef struct _NcClusterMassSelectionInt
+typedef struct _NcClusterMassProjectionInt
 {
   NcHICosmo *cosmo;
   NcClusterMass *clusterm;
@@ -566,19 +497,19 @@ typedef struct _NcClusterMassSelectionInt
   gdouble lnM;
   gdouble z;
   const gdouble *lnM_obs_params;
-} NcClusterMassSelectionInt;
+} NcClusterMassProjectionInt;
 
 static gdouble
-_nc_cluster_mass_selection_integrand (gdouble lnM_obs, gpointer userdata)
+_nc_cluster_mass_projection_integrand (gdouble lnM_obs, gpointer userdata)
 {
-  NcClusterMassSelectionInt *obs_data = (NcClusterMassSelectionInt *) userdata;
-  NcClusterMassSelection *selection   = NC_CLUSTER_MASS_SELECTION (obs_data->clusterm);
+  NcClusterMassProjectionInt *obs_data = (NcClusterMassProjectionInt *) userdata;
+  NcClusterMassProjection *projection   = NC_CLUSTER_MASS_PROJECTION (obs_data->clusterm);
   gdouble lnR_true, sigma;
 
-  _nc_cluster_mass_selection_lnR_sigma (obs_data->clusterm, obs_data->lnM, obs_data->z, &lnR_true, &sigma);
+  _nc_cluster_mass_projection_lnR_sigma (obs_data->clusterm, obs_data->lnM, obs_data->z, &lnR_true, &sigma);
   {
     const gdouble x       = (lnM_obs - lnR_true) / sigma;
-    const gdouble ipurity = nc_cluster_mass_selection_ipurity (selection, lnM_obs, obs_data->z);
+    const gdouble ipurity = nc_cluster_mass_projection_ipurity (projection, lnM_obs, obs_data->z);
 
     if (lnM_obs < CUT)
       return 0.0;
@@ -588,12 +519,12 @@ _nc_cluster_mass_selection_integrand (gdouble lnM_obs, gpointer userdata)
 }
 
 static gdouble
-_nc_cluster_mass_selection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z)
+_nc_cluster_mass_projection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
-  NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjection *projection          = NC_CLUSTER_MASS_PROJECTION (clusterm);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
   gsl_integration_workspace **w              = ncm_integral_get_workspace ();
-  NcClusterMassSelectionInt obs_data;
+  NcClusterMassProjectionInt obs_data;
   gdouble intp, err, completeness;
   gsl_function F;
 
@@ -602,20 +533,20 @@ _nc_cluster_mass_selection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdo
   obs_data.lnM      = lnM;
   obs_data.z        = z;
 
-  F.function = &_nc_cluster_mass_selection_integrand;
+  F.function = &_nc_cluster_mass_projection_integrand;
   F.params   = &obs_data;
 
-  gsl_integration_qag (&F, CUT, self->lnR_max, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp, &err);
+  gsl_integration_qag (&F, CUT, self->lnR_max, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_PROJECTION_DEFAULT_INT_KEY, *w, &intp, &err);
   ncm_memory_pool_return (w);
-  completeness = nc_cluster_mass_selection_completeness (selection, lnM, z);
+  completeness = nc_cluster_mass_projection_completeness (projection, lnM, z);
 
   return fabs (intp * completeness);
 }
 
 static gdouble
-_nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params)
+_nc_cluster_mass_projection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params)
 {
-  NcClusterMassSelection *selection = NC_CLUSTER_MASS_SELECTION (clusterm);
+  NcClusterMassProjection *projection = NC_CLUSTER_MASS_PROJECTION (clusterm);
 
   if ((lnM_obs_lower[0] < CUT) && (lnM_obs_upper[0] < CUT))
   {
@@ -623,7 +554,7 @@ _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, 
   }
   else
   {
-    NcClusterMassSelectionInt obs_data;
+    NcClusterMassProjectionInt obs_data;
     gdouble intp_bin, err, completeness;
     gsl_function F;
     gsl_integration_workspace **w = ncm_integral_get_workspace ();
@@ -633,15 +564,15 @@ _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, 
     obs_data.lnM            = lnM;
     obs_data.lnM_obs_params = lnM_obs_params;
     obs_data.z              = z;
-    completeness            = nc_cluster_mass_selection_completeness (selection, lnM, z);
+    completeness            = nc_cluster_mass_projection_completeness (projection, lnM, z);
 
-    F.function = &_nc_cluster_mass_selection_integrand;
+    F.function = &_nc_cluster_mass_projection_integrand;
     F.params   = &obs_data;
 
     if ((lnM_obs_lower[0] < CUT) && (lnM_obs_upper[0] >= CUT))
-      gsl_integration_qag (&F, CUT, lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp_bin, &err);
+      gsl_integration_qag (&F, CUT, lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_PROJECTION_DEFAULT_INT_KEY, *w, &intp_bin, &err);
     else
-      gsl_integration_qag (&F, lnM_obs_lower[0], lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp_bin, &err);
+      gsl_integration_qag (&F, lnM_obs_lower[0], lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_PROJECTION_DEFAULT_INT_KEY, *w, &intp_bin, &err);
 
     ncm_memory_pool_return (w);
 
@@ -654,13 +585,13 @@ _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, 
 }
 
 static gboolean
-_nc_cluster_mass_selection_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng)
+_nc_cluster_mass_projection_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng)
 {
-  NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjection *projection          = NC_CLUSTER_MASS_PROJECTION (clusterm);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
   gdouble lnR_true, sigma;
 
-  _nc_cluster_mass_selection_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
+  _nc_cluster_mass_projection_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
 
   ncm_rng_lock (rng);
 
@@ -680,17 +611,17 @@ _nc_cluster_mass_selection_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo,
 }
 
 /**
- * ncluster_mass_selection_set_lnM_limits:
- * @selection: a #NcClusterMassSelection
+ * ncluster_mass_projection_set_lnM_limits:
+ * @projection: a #NcClusterMassProjection
  * @lnM_limits: a #NcmVector of length 2
  *
  * Set the limits for the cluster mass function.
  *
  */
 void
-nc_cluster_mass_selection_set_lnM_limits (NcClusterMassSelection *selection, NcmVector *lnM_limits)
+nc_cluster_mass_projection_set_lnM_limits (NcClusterMassProjection *projection, NcmVector *lnM_limits)
 {
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
   g_assert_cmpuint (ncm_vector_len (lnM_limits), ==, 2);
 
@@ -699,10 +630,10 @@ nc_cluster_mass_selection_set_lnM_limits (NcClusterMassSelection *selection, Ncm
 }
 
 static void
-_nc_cluster_mass_selection_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
+_nc_cluster_mass_projection_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjection *projection          = NC_CLUSTER_MASS_PROJECTION (clusterm);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
   gdouble lnMl, lnMu;
 
   if (self->lnM_limits == NULL)
@@ -723,10 +654,10 @@ _nc_cluster_mass_selection_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo,
 }
 
 static void
-_nc_cluster_mass_selection_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
+_nc_cluster_mass_projection_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjection *projection          = NC_CLUSTER_MASS_PROJECTION (clusterm);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
   gdouble lnMl, lnMu;
 
   if (self->lnM_limits == NULL)
@@ -747,10 +678,10 @@ _nc_cluster_mass_selection_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cos
 }
 
 static void
-_nc_cluster_mass_selection_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
+_nc_cluster_mass_projection_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjection *projection          = NC_CLUSTER_MASS_PROJECTION (clusterm);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
   gdouble lnMl, lnMu;
 
   if (self->lnM_limits == NULL)
@@ -771,19 +702,19 @@ _nc_cluster_mass_selection_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo,
 }
 
 static gdouble
-_nc_cluster_mass_selection_volume (NcClusterMass *clusterm)
+_nc_cluster_mass_projection_volume (NcClusterMass *clusterm)
 {
-  NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjection *projection          = NC_CLUSTER_MASS_PROJECTION (clusterm);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
   return (self->lnR_max - CUT);
 }
 
 static void
-_nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, NcmVector *res)
+_nc_cluster_mass_projection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, NcmVector *res)
 {
-  NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjection *projection          = NC_CLUSTER_MASS_PROJECTION (clusterm);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
   const gdouble *lnM_obs_ptr = ncm_matrix_const_data (lnM_obs);
   const gdouble *z_ptr       = ncm_vector_const_data (z);
@@ -812,8 +743,8 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
       const gdouble sigma  = sigma_pre + sigma_p2 * Dln1pz;
       const gdouble x      = (lnM_obs_ptr[i] - lnR) / sigma;
 
-      completeness = nc_cluster_mass_selection_completeness (selection, lnM, z_ptr[i]);
-      ipurity      = nc_cluster_mass_selection_ipurity (selection, lnM_obs_ptr[i], z_ptr[i]);
+      completeness = nc_cluster_mass_projection_completeness (projection, lnM, z_ptr[i]);
+      ipurity      = nc_cluster_mass_projection_ipurity (projection, lnM_obs_ptr[i], z_ptr[i]);
 
       if (lnM_obs_ptr[i] < cut)
         res_ptr[i] = 0.0;
@@ -829,8 +760,8 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
       const gdouble lnR    = lnR_pre + mu_p2 * Dln1pz;
       const gdouble sigma  = sigma_pre + sigma_p2 * Dln1pz;
       const gdouble x      = (lnM_obs_ptr[i * tda] - lnR) / sigma;
-      gdouble completeness = nc_cluster_mass_selection_completeness (selection, lnM, z_ptr[i * sz]);
-      gdouble ipurity      = nc_cluster_mass_selection_ipurity (selection, lnM_obs_ptr[i * tda], z_ptr[i *  sz]);
+      gdouble completeness = nc_cluster_mass_projection_completeness (projection, lnM, z_ptr[i * sz]);
+      gdouble ipurity      = nc_cluster_mass_projection_ipurity (projection, lnM_obs_ptr[i * tda], z_ptr[i *  sz]);
 
       if (lnM_obs_ptr[i * tda] < cut)
         res_ptr[i] = 0.0;
@@ -841,8 +772,8 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
 }
 
 /**
- * nc_cluster_mass_selection_get_mean_richness:
- * @selection: a #NcClusterMassSelection
+ * nc_cluster_mass_projection_get_mean_richness:
+ * @projection: a #NcClusterMassProjection
  * @lnM: ln of the mass
  * @z: redshift
  *
@@ -850,9 +781,9 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
  *
  */
 gdouble
-nc_cluster_mass_selection_get_mean_richness (NcClusterMassSelection *selection, gdouble lnM, gdouble z)
+nc_cluster_mass_projection_get_mean_richness (NcClusterMassProjection *projection, gdouble lnM, gdouble z)
 {
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
   const gdouble DlnM                         = lnM - self->lnM0;
   const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
 
@@ -860,8 +791,8 @@ nc_cluster_mass_selection_get_mean_richness (NcClusterMassSelection *selection, 
 }
 
 /**
- * nc_cluster_mass_selection_get_std_richness:
- * @selection: a #NcClusterMassSelection
+ * nc_cluster_mass_projection_get_std_richness:
+ * @projection: a #NcClusterMassProjection
  * @lnM: ln of the mass
  * @z: redshift
  *
@@ -869,9 +800,9 @@ nc_cluster_mass_selection_get_mean_richness (NcClusterMassSelection *selection, 
  *
  */
 gdouble
-nc_cluster_mass_selection_get_std_richness (NcClusterMassSelection *selection, gdouble lnM, gdouble z)
+nc_cluster_mass_projection_get_std_richness (NcClusterMassProjection *projection, gdouble lnM, gdouble z)
 {
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
   const gdouble DlnM                         = lnM - self->lnM0;
   const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
 
@@ -879,22 +810,22 @@ nc_cluster_mass_selection_get_std_richness (NcClusterMassSelection *selection, g
 }
 
 /**
- * nc_cluster_mass_selection_get_cut:
- * @selection: a #NcClusterMassSelection
+ * nc_cluster_mass_projection_get_cut:
+ * @projection: a #NcClusterMassProjection
  *
  * Computes the cut in richness.
  *
  * Returns: the cut in richness.
  */
 gdouble
-nc_cluster_mass_selection_get_cut (NcClusterMassSelection *selection)
+nc_cluster_mass_projection_get_cut (NcClusterMassProjection *projection)
 {
   return CUT;
 }
 
 /**
- * nc_cluster_mass_selection_get_mean:
- * @selection: a #NcClusterMassSelection
+ * nc_cluster_mass_projection_get_mean:
+ * @projection: a #NcClusterMassProjection
  * @lnM: ln of the mass
  * @z: redshift
  *
@@ -902,10 +833,10 @@ nc_cluster_mass_selection_get_cut (NcClusterMassSelection *selection)
  *
  */
 gdouble
-nc_cluster_mass_selection_get_mean (NcClusterMassSelection *selection, gdouble lnM, gdouble z)
+nc_cluster_mass_projection_get_mean (NcClusterMassProjection *projection, gdouble lnM, gdouble z)
 {
-  const gdouble lnR_mean        = nc_cluster_mass_selection_get_mean_richness (selection, lnM, z);
-  const gdouble lnR_sigma       = nc_cluster_mass_selection_get_std_richness  (selection, lnM, z);
+  const gdouble lnR_mean        = nc_cluster_mass_projection_get_mean_richness (projection, lnM, z);
+  const gdouble lnR_sigma       = nc_cluster_mass_projection_get_std_richness  (projection, lnM, z);
   const gdouble A               = (CUT - lnR_mean) / lnR_sigma;
   const gdouble B               = (1.0 / (ncm_c_sqrt_2pi ())) * exp (-0.5 * (A  * A));
   const gdouble C               = 1.0 - 0.5 * (1.0 + erf (A / M_SQRT2));
@@ -915,8 +846,8 @@ nc_cluster_mass_selection_get_mean (NcClusterMassSelection *selection, gdouble l
 }
 
 /**
- * nc_cluster_mass_selection_get_std:
- * @selection: a #NcClusterMassSelection
+ * nc_cluster_mass_projection_get_std:
+ * @projection: a #NcClusterMassProjection
  * @lnM: ln of the mass
  * @z: redshift
  *
@@ -924,10 +855,10 @@ nc_cluster_mass_selection_get_mean (NcClusterMassSelection *selection, gdouble l
  *
  */
 gdouble
-nc_cluster_mass_selection_get_std (NcClusterMassSelection *selection, gdouble lnM, gdouble z)
+nc_cluster_mass_projection_get_std (NcClusterMassProjection *projection, gdouble lnM, gdouble z)
 {
-  const gdouble lnR_mean       = nc_cluster_mass_selection_get_mean_richness (selection, lnM, z);
-  const gdouble lnR_sigma      = nc_cluster_mass_selection_get_std_richness  (selection, lnM, z);
+  const gdouble lnR_mean       = nc_cluster_mass_projection_get_mean_richness (projection, lnM, z);
+  const gdouble lnR_sigma      = nc_cluster_mass_projection_get_std_richness  (projection, lnM, z);
   const gdouble A              = (CUT - lnR_mean) / lnR_sigma;
   const gdouble B              = (1.0 / (ncm_c_sqrt_2pi ())) * exp (-0.5 * (A  * A));
   const gdouble C              = 1.0 - 0.5 * (1.0 + erf (A / M_SQRT2));
@@ -937,33 +868,33 @@ nc_cluster_mass_selection_get_std (NcClusterMassSelection *selection, gdouble ln
 }
 
 /**
- * nc_cluster_mass_selection_set_enable_rejection:
- * @selection: a #NcClusterMassSelection
- * @on: a #NcClusterMassSelection
+ * nc_cluster_mass_projection_set_enable_rejection:
+ * @projection: a #NcClusterMassProjection
+ * @on: a #NcClusterMassProjection
  *
  * Set the enable_rejection property.
  *
  */
 
 void
-nc_cluster_mass_selection_set_enable_rejection (NcClusterMassSelection *selection, gboolean on)
+nc_cluster_mass_projection_set_enable_rejection (NcClusterMassProjection *projection, gboolean on)
 {
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
   self->enable_rejection = on;
 }
 
 /**
- * nc_cluster_mass_selection_get_enable_rejection:
- * @selection: a #NcClusterMassSelection
+ * nc_cluster_mass_projection_get_enable_rejection:
+ * @projection: a #NcClusterMassProjection
  *
  * Get if the enable_rejection property is on.
  *
  */
 gboolean
-nc_cluster_mass_selection_get_enable_rejection (NcClusterMassSelection *selection)
+nc_cluster_mass_projection_get_enable_rejection (NcClusterMassProjection *projection)
 {
-  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
   return self->enable_rejection;
 }
