@@ -478,8 +478,40 @@ galaxy_tests = [
     },
 ]
 
+# Cross-correlation tests
+xcor_tests = [
+    {
+        'name': 'nc_xcor',
+        'sources': ['nc/xcor/test_nc_xcor.c'],
+    },
+    {
+        'name': 'nc_xcor_kernel',
+        'sources': ['nc/xcor/test_nc_xcor_kernel.c'],
+    },
+    {
+        'name': 'nc_xcor_kquad',
+        'sources': ['nc/xcor/test_nc_xcor_kquad.c'],
+    },
+    {
+        'name': 'nc_xcor_kernel_analytic',
+        'sources': ['nc/xcor/test_nc_xcor_kernel_analytic.c'],
+    },
+    {
+        'name': 'nc_xcor_kernel_integrand',
+        'sources': ['nc/xcor/test_nc_xcor_kernel_integrand.c'],
+    },
+    {
+        'name': 'nc_xcor_solver',
+        'sources': ['nc/xcor/test_nc_xcor_solver.c'],
+    },
+    {
+        'name': 'nc_xcor_ssc_sij',
+        'sources': ['nc/xcor/test_nc_xcor_ssc_sij.c'],
+    },
+]
+
 # Combine all test arrays
-all_c_tests = math_tests + model_tests + data_tests + lss_tests + galaxy_tests
+all_c_tests = math_tests + model_tests + data_tests + lss_tests + galaxy_tests + xcor_tests
 
 # Build and register all tests
 tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
