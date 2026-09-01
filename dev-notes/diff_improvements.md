@@ -70,6 +70,29 @@ evaluations (median ~84 per derivative). The window search is the point: it
 finds features at scales far from |x| (atan1000: 3e-13 relative where a fixed
 window would return noise).
 
+## numdifftools 0.11.0 comparison (2026-09-01, same battery, defaults both sides)
+
+nd d1: geo-mean 6.3e-11, worst 1.0 (total failure), 31 evals/call, 5/15 cells
+with estimate < actual error. nd d2: geo-mean 8.7e-09, worst 1.0, 5/15
+dishonest. Failures: inv@1e-3 and sqrt@1e-4 (its default step ladder is not
+scaled to |x|, steps across the singularity: NaN or 100% error with confident
+estimates), sin100 d2, atan1000 d1, gauss_n d2 (fixed ladder misses the
+feature scale). On easy smooth cases it matches NcmDiff (~1e-14) with tight
+estimates (est/act ~2-10). All NcmDiff variants: 0 dishonest cells, no value
+failures, on this battery. Run via a scratch venv; numdifftools is not
+installed system-wide.
+
+## Higher-order derivatives from the spectral fit (prototype, numpy)
+
+One Chebyshev fit yields every derivative order by repeating the coefficient
+recurrence; the marginal cost per extra order is zero function evaluations.
+Measured (same window-scan logic, N = 65): d3/d4 actual relative errors
+exp@1 2e-12/6e-11, sin@1.3 9e-14/1e-12, sin100 2e-13/8e-13, log@1e-2 1e-8/6e-8;
+noise-limited offset1e10 degrades to ~1e-2 as expected (amplification ~N^2/R
+per order). NcmDiff currently has no d3+ at all, and sc_d1/sc_d2 each redo the
+scan+fit: a shared-fit multi-order entry point would halve the d1+d2 cost and
+add d^n. The window should be scored on the highest requested order.
+
 ## Follow-ups (not done)
 
 - Spectral Hessian off-diagonals (needs 2D fits).
