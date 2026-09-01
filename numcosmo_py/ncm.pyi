@@ -2451,12 +2451,15 @@ class Diff(GObject.Object):
         Truncation error padding
       ini-h -> gdouble: ini-h
         Initial h
+      dual-series -> gboolean: dual-series
+        Use two parallel extrapolation series
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
+        dual_series: bool
         ini_h: float
         max_order: int
         richardson_step: float
@@ -2466,6 +2469,7 @@ class Diff(GObject.Object):
     props: Props = ...
     def __init__(
         self,
+        dual_series: bool = ...,
         ini_h: float = ...,
         max_order: int = ...,
         richardson_step: float = ...,
@@ -2475,6 +2479,7 @@ class Diff(GObject.Object):
     @staticmethod
     def clear(diff: Diff) -> None: ...
     def free(self) -> None: ...
+    def get_dual_series(self) -> bool: ...
     def get_ini_h(self) -> float: ...
     def get_max_order(self) -> int: ...
     def get_richardson_step(self) -> float: ...
@@ -2549,6 +2554,7 @@ class Diff(GObject.Object):
         f: typing.Callable[..., None],
         *user_data: typing.Any,
     ) -> typing.Tuple[list[float], list[float]]: ...
+    def set_dual_series(self, dual_series: bool) -> None: ...
     def set_ini_h(self, ini_h: float) -> None: ...
     def set_max_order(self, maxorder: int) -> None: ...
     def set_richardson_step(self, rs: float) -> None: ...

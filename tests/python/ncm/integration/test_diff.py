@@ -92,6 +92,46 @@ def cmp_array(a, b, err):
 def test_diff() -> None:
     """Test the numcosmo library to calculate derivatives of functions."""
     diff = Ncm.Diff.new()
+    _run_diff_checks(diff)
+
+
+def test_diff_dual_series() -> None:
+    """Test derivatives with the dual-series scheme enabled."""
+    diff = Ncm.Diff.new()
+    diff.set_dual_series(True)
+    assert diff.get_dual_series()
+    _run_diff_checks(diff)
+
+
+def test_diff_dual_series_property() -> None:
+    """Test the dual-series property default and round trip."""
+    diff = Ncm.Diff.new()
+    assert not diff.get_dual_series()
+
+    diff_dual = Ncm.Diff(**{"dual-series": True})
+    assert diff_dual.get_dual_series()
+    assert diff_dual.props.dual_series
+
+    diff_dual.set_dual_series(False)
+    assert not diff_dual.get_dual_series()
+
+
+def test_diff_dual_series_1_to_1() -> None:
+    """Test the scalar entry points with the dual-series scheme enabled."""
+    diff = Ncm.Diff(**{"dual-series": True})
+    x0 = 1.3
+
+    for method, exact in (
+        (diff.rc_d1_1_to_1, math.cos(x0)),
+        (diff.rf_d1_1_to_1, math.cos(x0)),
+        (diff.rc_d2_1_to_1, -math.sin(x0)),
+    ):
+        val, err = method(x0, lambda x, *_: math.sin(x), None)
+        assert math.fabs(val - exact) <= err
+
+
+def _run_diff_checks(diff: Ncm.Diff) -> None:
+    """Check all derivative methods of diff against analytical results."""
 
     roffpad = 0.0
     x0_a = np.array([3.0, 1.01234])
