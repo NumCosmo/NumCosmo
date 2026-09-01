@@ -180,6 +180,8 @@ _nc_distance_dispose (GObject *object)
   ncm_ode_spline_clear (&dist->comoving_distance_spline);
   ncm_spline_clear (&dist->inv_comoving_dist);
 
+  nc_recomb_clear (&dist->recomb);
+
   ncm_model_ctrl_clear (&dist->ctrl);
 
   /* Chain up : end */
