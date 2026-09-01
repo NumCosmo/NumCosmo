@@ -26,9 +26,7 @@
 /**
  * NcmStatsDist1d:
  *
- * Base class for implementing one dimensional probability distributions.
- *
- * Abstract class to reconstruct an arbitrary one dimensional probability distribution.
+ * Base class for one-dimensional probability distributions.
  *
  */
 

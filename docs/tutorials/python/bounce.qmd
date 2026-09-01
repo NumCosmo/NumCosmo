@@ -15,13 +15,9 @@ format-links: [ipynb]
 
 ## Purpose {#sec-purpose}
 
-This tutorial demonstrates how to compute the power spectrum of a bouncing cosmology using NumCosmo. A bouncing cosmology modifies the standard $\Lambda$CDM model by introducing a bounce, typically arising from quantum cosmology effects. 
-
-We compute and compare the power spectrum of a bouncing cosmology with that of standard $\Lambda$CDM. Two models are considered:  
-1. **Single-fluid model** – A single component with an arbitrary equation of state, usually interpreted as dark matter.  
-2. **Two-fluid model** – A combination of radiation and a fluid with an arbitrary equation of state (typically dark matter).  
-
-In both cases we are considering only adiabatic perturbations, see the tutorial [Bounce Spectra](bounce_spectra.qmd) for a more general treatment including entropy perturbations.
+Computes and compares adiabatic power spectra for single-fluid and
+two-fluid bouncing cosmologies. For entropy perturbations, see
+[Bounce Spectra](bounce_spectra.qmd).
 
 ## Defining Theoretical Models  
 

@@ -1966,7 +1966,7 @@ ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str)
  * explicit seed on a resumed run) would silently discard the persisted
  * state and restart the stream from scratch, so every "new" row generated
  * from the replayed prefix of the stream would exactly duplicate a row
- * already in the catalog -- a silent data-corruption footgun, not merely a
+ * already in the catalog -- a silent data-corruption hazard, not merely a
  * cosmetic issue, so this aborts instead of warning (see, e.g., a resumed
  * NcmFitMC run bit-for-bit duplicating its own first N rows into rows
  * N+1..2N).

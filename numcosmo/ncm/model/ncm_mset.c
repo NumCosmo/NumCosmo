@@ -28,31 +28,22 @@
  *
  * A set of different NcmModel objects.
  *
- * A #NcmMSet is a set of different #NcmModel objects. It is used to
- * represent a set of models that can be used to fit a data set.
+ * A #NcmMSet stores a collection of #NcmModel objects for fitting a data set.
  *
- * When the model class is created the class method ncm_mset_model_register_id()
- * must be used to register the model class. This function must be used once
- * and only once in the model class definition. Any subclasse of the model
- * class will inherit the model id. The same compilation unit must call the macro
- * NCM_MSET_MODEL_REGISTER_ID() for each model class that will be used in the #NcmMSet.
- * It should also include NCM_MSET_MODEL_DECLARE_ID() in the header file.
+ * Model classes must register an ID with ncm_mset_model_register_id().
+ * Subclasses inherit the ID. Use NCM_MSET_MODEL_DECLARE_ID() in headers and
+ * NCM_MSET_MODEL_REGISTER_ID() once per class in the implementation.
  *
  * Models can be stackable or not. If a model is stackable, the #NcmMSet can contain
  * more than one instance of the same model. If a model is not stackable, the #NcmMSet
  * can contain only one instance of the model.
  *
- * The model can be a submodel of another model. In this case, the
- * model class must set the main_model_id field to the model id of the
- * parent model. If it is the main model, the main_model_id must be
- * set to NCM_MSET_MODEL_MAIN().
+ * A submodel sets main_model_id to its parent model ID. A main model uses
+ * NCM_MSET_MODEL_MAIN().
  *
- * The #NcmMSet can be created empty or with a list of models. The stackable models can
- * be added to the #NcmMSet using the function ncm_mset_push() to add the model to the
- * end of the list or using ncm_mset_set_pos() to add the model in a specific position.
- * The non-stackable models can be added using ncm_mset_set(). For both
- * ncm_mset_set_pos() and ncm_mset_set() if there is already a model in the position
- * it will be replaced.
+ * Stackable models may be added with ncm_mset_push() or ncm_mset_set_pos().
+ * Non-stackable models use ncm_mset_set(). Existing models at a selected
+ * position are replaced.
  *
  */
 

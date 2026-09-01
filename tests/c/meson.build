@@ -58,9 +58,25 @@ math_tests = [
         'name': 'ncm_stats_dist1d_epdf',
         'sources': ['ncm/stats/test_ncm_stats_dist1d_epdf.c'],
     },
+    # Split by claim: building an estimator is mechanics a small sample exercises fully,
+    # while requiring it to reproduce its own distribution needs the full sample and costs
+    # three quarters of the runtime -- a Jensen-Shannon divergence, a covariance recovered
+    # to 50%, a sampling frequency matched over ten million draws.
     {
         'name': 'ncm_stats_dist',
-        'sources': ['ncm/stats/test_ncm_stats_dist.c'],
+        'sources': [
+            'ncm/stats/test_ncm_stats_dist.c',
+            'ncm/stats/test_ncm_stats_dist_common.c',
+        ],
+        'timeout': 0,
+        'suite': ['c', 'omp'],
+    },
+    {
+        'name': 'ncm_stats_dist_divergence',
+        'sources': [
+            'ncm/stats/test_ncm_stats_dist_divergence.c',
+            'ncm/stats/test_ncm_stats_dist_common.c',
+        ],
         'timeout': 0,
         'suite': ['c-statistical', 'omp'],
     },
@@ -253,10 +269,31 @@ math_tests = [
         'sources': ['ncm/fit/test_ncm_mset_trans_kern_gauss.c'],
     },
     {
+        'name': 'ncm_mset_trans_kern_cat',
+        'sources': ['ncm/fit/test_ncm_mset_trans_kern_cat.c'],
+    },
+    # Split by claim, not by check: driving a chain is mechanics a short run covers, while
+    # requiring the sample covariance to reproduce the data covariance converges as
+    # 1/sqrt(n) and is chased by loops that double the chain length up to fifteen times.
+    # The mechanics run in the instrumented lane at a fixed short length; the recovery
+    # assertions, with their retries, run in the statistical tier.
+    {
         'name': 'ncm_fit_esmcmc',
-        'sources': ['ncm/fit/test_ncm_fit_esmcmc.c'],
+        'sources': [
+            'ncm/fit/test_ncm_fit_esmcmc.c',
+            'ncm/fit/test_ncm_fit_esmcmc_common.c',
+        ],
         'timeout': 0,
-        'suite': ['c-acceptance', 'omp'],
+        'suite': ['c', 'omp'],
+    },
+    {
+        'name': 'ncm_fit_esmcmc_recovery',
+        'sources': [
+            'ncm/fit/test_ncm_fit_esmcmc_recovery.c',
+            'ncm/fit/test_ncm_fit_esmcmc_common.c',
+        ],
+        'timeout': 0,
+        'suite': ['c-statistical', 'omp'],
     },
     {
         'name': 'ncm_func_eval',
@@ -294,6 +331,10 @@ model_tests = [
     {
         'name': 'nc_recomb',
         'sources': ['nc/recomb/test_nc_recomb.c'],
+    },
+    {
+        'name': 'nc_hiprim',
+        'sources': ['nc/primordial/test_nc_hiprim.c'],
     },
     # Split by cost: Cls and calc_ps run CLASS deep enough to take 12.3 s and 4.4 s
     # per model, where every other check is 0.4 s or less. Measured per line those
@@ -478,8 +519,40 @@ galaxy_tests = [
     },
 ]
 
+# Cross-correlation tests
+xcor_tests = [
+    {
+        'name': 'nc_xcor',
+        'sources': ['nc/xcor/test_nc_xcor.c'],
+    },
+    {
+        'name': 'nc_xcor_kernel',
+        'sources': ['nc/xcor/test_nc_xcor_kernel.c'],
+    },
+    {
+        'name': 'nc_xcor_kquad',
+        'sources': ['nc/xcor/test_nc_xcor_kquad.c'],
+    },
+    {
+        'name': 'nc_xcor_kernel_analytic',
+        'sources': ['nc/xcor/test_nc_xcor_kernel_analytic.c'],
+    },
+    {
+        'name': 'nc_xcor_kernel_integrand',
+        'sources': ['nc/xcor/test_nc_xcor_kernel_integrand.c'],
+    },
+    {
+        'name': 'nc_xcor_solver',
+        'sources': ['nc/xcor/test_nc_xcor_solver.c'],
+    },
+    {
+        'name': 'nc_xcor_ssc_sij',
+        'sources': ['nc/xcor/test_nc_xcor_ssc_sij.c'],
+    },
+]
+
 # Combine all test arrays
-all_c_tests = math_tests + model_tests + data_tests + lss_tests + galaxy_tests
+all_c_tests = math_tests + model_tests + data_tests + lss_tests + galaxy_tests + xcor_tests
 
 # Build and register all tests
 tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']

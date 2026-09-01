@@ -15,9 +15,7 @@ format-links: [ipynb]
 
 ## Introduction
 
-This example demonstrates how to implement a primordial cosmology model using the
-`numcosmo` library. In this example, we create a primordial cosmological model and
-compute comoving distances for a range of redshifts.
+Implements a primordial cosmology model and computes its power spectrum.
 
 ## Prerequisites
 
@@ -32,10 +30,7 @@ these packages are already installed.
 
 ## Import and Initialize
 
-First, import the required modules and initialize the NumCosmo library. We also import
-`numpy` and `matplotlib`. The `Nc` and `Ncm` modules provide the core
-functionality of the NumCosmo library. The call to `Ncm.cfg_init()` initializes the
-library objects.
+Import the required modules and initialize the library with `Ncm.cfg_init()`.
 
 ```{python}
 import math
@@ -67,8 +62,7 @@ mb = Ncm.ModelBuilder.new(Nc.HIPrim, "NcHIPrimExample", "An example primordial m
 
 ### Step 2: Add Parameters to the Model
 
-Next, we add parameters to the model. These parameters will be used in statistical
-analyses and simulations. Here, we define the following parameters:
+Add the parameters used by the primordial spectrum:
 
 -   **`A_s`**: The amplitude of the primordial power spectrum. This parameter controls
     the overall amplitude of the power spectrum.
@@ -186,16 +180,14 @@ class HIPrimExampleImpl(HIPrimExample):
 -   **Power Spectrum Calculation**: The power spectrum is computed using a combination
     of the parameters and the wavenumber `k`.
 
-With this implementation, the `NcHIPrimExample` model is now fully functional and ready
-for use in cosmological simulations and analyses.
+The `NcHIPrimExample` model is ready for use.
 
 ----------------------------------------------------------------------------------------
 
 ## Computing the Power Spectrum
 
-In this section, we demonstrate how to use the `HIPrimExampleImpl` model to compute the
-power spectrum and compare it with a non-modified spectrum. The following Python code
-sets up the cosmological model, computes the power spectrum, and generates a plot.
+Compute the `HIPrimExampleImpl` power spectrum and compare it with the
+unmodified spectrum.
 
 ### Set Up 
 

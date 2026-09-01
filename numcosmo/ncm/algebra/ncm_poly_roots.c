@@ -37,7 +37,7 @@
  * polynomial *evaluations* (Horner, $O(\text{degree})$ flops each) plus a
  * safeguarded Newton/bisection per bracket -- never a matrix decomposition.
  *
- * Needing only real roots, this is 1.6-1.8x faster in a hot loop than
+ * Needing only real roots, this is 1.6-1.8x faster in a performance-critical loop than
  * `gsl_poly_complex_solve()`'s general eigenvalue-based approach (full
  * complex root set, balancing, Hessenberg reduction, QR iteration). See
  * `nc_galaxy_shape_intrinsic_mode.c` for the physics context this is used

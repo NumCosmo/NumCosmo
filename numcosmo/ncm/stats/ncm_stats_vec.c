@@ -26,34 +26,33 @@
 /**
  * NcmStatsVec:
  *
- * An online statistics vector.
+ * Online weighted statistics for vectors.
  *
- * This object calculates some basic statistics (mean, variance and covariance) of a set
- * of random variables.
+ * Maintains the weighted mean, variance, covariance, quantiles, and
+ * autocorrelation diagnostics of appended samples.
  *
- * The mean can be calculated online using the following formula: $$\bar{x}_n =
- * \bar{x}_{n-1} + (x_n - \bar{x}_{n-1})\frac{w_n}{W_n},$$ where $\bar{x}_n$ is the mean
- * calculated using the first $n$ elements, $x_n$ is the $n$-th element, $w_n$ the
- * $n$-th weight and finally $W_n$ is the sum of the first $n$ weights.
+ * The mean is updated as $$\bar{x}_n = \bar{x}_{n-1} + (x_n -
+ * \bar{x}_{n-1})\frac{w_n}{W_n},$$ where $\bar{x}_n$ is the mean of the first
+ * $n$ elements, $x_n$ the $n$-th element, $w_n$ the $n$-th weight and $W_n$ the
+ * sum of the first $n$ weights.
  *
- * Using the expressions above we obtain the variance from as following: $$M_n = M_{n-1}
- * + (x_n - \bar{x}_{n-1})^2w_n\frac{W_{n-1}}{W_n},$$ where the variance of the first
- * $n$ elements is $$V_n = \frac{M_n}{W^\text{bias}_{n}}, \quad W^\text{bias}_{n} \equiv
- * \frac{W_n^2 - \sum^n_iw_i^2}{W_n}.$$ In the formula above we defined the bias
- * corrected weight $W^\text{bias}_{n}$.
+ * The variance follows from $$M_n = M_{n-1} + (x_n -
+ * \bar{x}_{n-1})^2w_n\frac{W_{n-1}}{W_n},$$ with $$V_n =
+ * \frac{M_n}{W^\text{bias}_{n}}, \quad W^\text{bias}_{n} \equiv
+ * \frac{W_n^2 - \sum^n_iw_i^2}{W_n},$$ where $W^\text{bias}_{n}$ is the bias
+ * corrected weight.
  *
- * Finally, the covariance is computed through the following expression: $$N(x,y)_n =
- * N(x,y)_{n-1} + (x_n - \bar{x}_n)(y_n - \bar{y}_{n-1})w_n,$$ where the covariance of
- * two variables $x$, $y$ is given by $$Cov(x,y)_n =
+ * The covariance follows from $$N(x,y)_n = N(x,y)_{n-1} + (x_n -
+ * \bar{x}_n)(y_n - \bar{y}_{n-1})w_n,$$ with $$Cov(x,y)_n =
  * \frac{N(x,y)_n}{W^\text{bias}_{n}}.$$
  *
  * # Using a NcmStatsVec. #
  * |[<!-- language="C" -->
  *
- * // Creates a new one dimensional NcmStatsVec to calculates mean and variance.
+ * // One dimensional NcmStatsVec computing mean and variance.
  * NcmStatsVec *svec = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
  *
- * // Set and update three different values of the only random variable.
+ * // Set and update three values of the single random variable.
  * ncm_stats_vec_set (svec, 0, 1.0);
  * ncm_stats_vec_update (svec);
  * ncm_stats_vec_set (svec, 0, 2.0);
@@ -68,7 +67,6 @@
  * }
  *
  * ]|
- *
  *
  */
 
@@ -369,14 +367,14 @@ ncm_stats_vec_class_init (NcmStatsVecClass *klass)
   /**
    * NcmStatsVec:save-x:
    *
-   * Whenever to save each vector x through each interation.
+   * Whether to save each input vector.
    *
    */
   g_object_class_install_property (object_class,
                                    PROP_SAVE_X,
                                    g_param_spec_boolean ("save-x",
                                                          NULL,
-                                                         "Whenever to save all x vectors",
+                                                         "Whether to save all input vectors",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
@@ -931,8 +929,8 @@ ncm_stats_vec_disable_quantile (NcmStatsVec *svec)
  * @svec: a #NcmStatsVec
  * @i: a variable index
  *
- * Returns the current estimate of the quantile initialized
- * through ncm_stats_vec_enable_quantile().
+ * Returns the current quantile estimate configured by
+ * ncm_stats_vec_enable_quantile().
  *
  * Returns: the current estimate of the quantile.
  */
@@ -949,10 +947,8 @@ ncm_stats_vec_get_quantile (NcmStatsVec *svec, guint i)
  * @svec: a #NcmStatsVec
  * @i: a variable index
  *
- * Returns the current estimate of the quantile spread, from the
- * probability $p$ initialized through ncm_stats_vec_enable_quantile(),
- * i.e., it returns the difference between $(p + 1)/2$ quantile
- * and the $p/2$. For example, if $p = 0.5$ then it returns the
+ * Returns the difference between the $(p + 1)/2$ and $p/2$ quantiles
+ * configured by ncm_stats_vec_enable_quantile(). For $p = 0.5$ this is the
  * inter-quartile range.
  *
  * Returns: the current estimate of the quantile spread.
@@ -974,10 +970,8 @@ ncm_stats_vec_get_quantile_spread (NcmStatsVec *svec, guint i)
  * @svec: a #NcmStatsVec
  * @i: a variable index
  *
- * Returns the current estimate of the quantile initialized
- * through ncm_stats_vec_enable_quantile(). It returns an
- * array containing the minimum, p/2, p, (p + 1)/2 and maximum
- * value.
+ * Returns the minimum, $p/2$, $p$, $(p + 1)/2$, and maximum quantiles
+ * configured by ncm_stats_vec_enable_quantile().
  *
  * Returns: (transfer none) (array fixed-size=5): the current estimate of the quantile.
  */
@@ -1452,9 +1446,9 @@ _ncm_stats_vec_estimate_const_break_int (NcmStatsVec *svec, guint p, guint pad)
  * @svec: a #NcmStatsVec
  * @p: parameter id
  *
- * Estimate mean $\mu$ and standard deviation $\sigma$ fitting the paramater @p
- * using robust regression. Computes the time $t_0$ where the parameter @p falls
- * within the $\alpha\sigma$ from $\mu$, where $\alpha$ is implicitly defined by
+ * Estimates the mean $\mu$ and standard deviation $\sigma$ of parameter @p
+ * with robust regression and returns the first index $t_0$ within
+ * $\alpha\sigma$ of $\mu$, where $\alpha$ satisfies
  * $$ \int_\alpha^\infty\chi_1(X)\mathrm{d}X = 1/N,$$
  * and $N$ is the size of the sample.
  *
@@ -1519,14 +1513,15 @@ _ncm_stats_vec_heidel_diag_pcramer (const gdouble q)
  * @wp_order: (out): worst parameter AR fit order
  * @wp_pvalue: (out): worst parameter p-value
  *
- * Applies the Heidelberger and Welch’s convergence diagnostic
- * applying @ntests Schruben tests sequentially, if @ntests == 0
- * it will use the default 10 tests. The variable @bindex will
- * contains the smallest index where all p-values are smaller than
- * @pvalue, if @pvalue is zero it used the default value of $0.05$.
+ * Applies the Heidelberger--Welch convergence diagnostic with @ntests
+ * sequential Schruben tests. Uses 10 tests when @ntests is zero and a
+ * p-value of $0.05$ when @pvalue is zero.
  *
- * If the test is not satisfied by any index @bindex will contain
- * -1 and the return vector the p-values considering the whole system.
+ * Sets @bindex to the smallest index at which every parameter's p-value is
+ * below $1 -$ @pvalue, and to -1 when no index qualifies. The returned vector
+ * contains the p-values at @bindex, or for the full sample when no index
+ * qualifies. @wp, @wp_order, and @wp_pvalue identify the
+ * worst parameter at the selected index.
  *
  * See:
  * - [Heidelberger (1981)](https://doi.org/10.1145/358598.358630)
@@ -1657,8 +1652,8 @@ ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble 
  * @mean: (out): mean
  * @var: (out): test's variance
  *
- * Computes the empirical cumulative and the mean used to build
- * the Heidelberger and Welch’s convergence diagnostic.
+ * Computes the empirical cumulative, mean, and variance used by
+ * ncm_stats_vec_heidel_diag().
  *
  * See ncm_stats_vec_heidel_diag().
  *

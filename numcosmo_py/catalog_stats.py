@@ -23,11 +23,11 @@
 
 """Posterior-statistics helpers for catalog parameters and derived quantities.
 
-Utilities to resolve catalog parameters/add-values by name or numeric index,
-parse "name=parameter" variable bindings, and compute asymmetric
-confidence-interval bounds around a median, mode, or arbitrary center. These
-are plain, CLI-agnostic helpers shared by the `catalog` CLI commands and by
-the corner-plot derived-quantity support in `numcosmo_py.plotting.derived`.
+Resolves catalog parameters and add-values by name or numeric index, parses
+"name=parameter" variable bindings, and computes asymmetric confidence-interval
+bounds around a median, mode, or arbitrary center. These are CLI-agnostic
+helpers shared by the `catalog` CLI commands and by the corner-plot
+derived-quantity support in `numcosmo_py.plotting.derived`.
 """
 
 from __future__ import annotations
@@ -101,26 +101,24 @@ def parse_variable_bindings(
 
 
 def safe_eval_mode(sd1: Ncm.StatsDist1d, n_grid: int = 1000) -> float:
-    """Mode of `sd1`, without risking `Ncm.StatsDist1d.eval_mode()`'s crash.
+    """Return the mode, using a grid fallback at domain boundaries.
 
-    `eval_mode()` locates the mode with a GSL bracketing minimizer that
-    requires the density's maximum to be strictly interior to `[xi, xf]`
-    (i.e. above the density at both endpoints). For a skewed or
-    prior-bounded posterior whose true maximum sits at (or beyond,
-    numerically, right at) the domain edge, that precondition used to fail
-    and abort the whole process via a fatal `g_error` -- not something a
-    Python `try/except` can catch.
+    The grid result is returned when the maximum density is at either
+    boundary; otherwise the distribution's mode evaluator is used.
 
-    This has since been fixed directly in `ncm_stats_dist1d_eval_mode()`
-    (numcosmo/ncm/stats/ncm_stats_dist1d.c), which now detects the same
-    edge case internally and returns the coarse-grid estimate instead of
-    aborting. This function remains as a cheap, redundant safety net (e.g.
-    if numcosmo_py is ever run against a native libnumcosmo build predating
-    that fix): it replicates `eval_mode()`'s own coarse linear pre-scan
-    (same resolution) to detect the edge case first. When the scan's
-    maximiser is strictly interior and above both endpoints, it delegates
-    to the precise `eval_mode()`. Otherwise, the coarse-grid maximiser is
-    returned directly instead of risking the crash.
+    `Ncm.StatsDist1d.eval_mode()` locates the mode with a GSL bracketing
+    minimizer that requires the density maximum to be strictly interior to
+    `[xi, xf]`. For a skewed or prior-bounded posterior whose maximum sits at
+    the domain edge, that precondition used to fail and abort the process with
+    a fatal `g_error`, which Python cannot catch.
+
+    That case is now handled inside `ncm_stats_dist1d_eval_mode()`
+    (numcosmo/ncm/stats/ncm_stats_dist1d.c), which returns the coarse-grid
+    estimate instead of aborting. This function is kept as a redundant guard
+    for a numcosmo_py running against a native build that predates that fix.
+    It repeats `eval_mode()`'s coarse linear pre-scan at the same resolution
+    and delegates to `eval_mode()` only when the scan maximiser is strictly
+    interior and above both endpoints.
     """
     xi = sd1.get_xi()
     xf = sd1.get_xf()

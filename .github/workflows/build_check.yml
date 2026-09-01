@@ -19,7 +19,7 @@ env:
   # Thread policy is set PER TEST by meson (tests/meson.build), not here: concurrent tests
   # get OMP/BLAS = 1 (avoid cores^2 oversubscription + the mixed-OpenBLAS deadlock, e.g.
   # scipy.linalg.solve in test_sbessel_ode_solver), and the run-alone OpenMP tests
-  # (omp suite ⇒ is_parallel: false) get OMP_NUM_THREADS = cores so their `#pragma omp
+  # (omp suite => is_parallel: false) get OMP_NUM_THREADS = cores so their `#pragma omp
   # parallel` branches actually run, inside the ordinary `meson test` invocation (see
   # TESTING.md). The globals below are just a single-thread fallback for the meson driver
   # and any non-test step; meson's per-test env overrides them.
@@ -29,19 +29,20 @@ env:
   OPENBLAS_NUM_THREADS: 1
   BLIS_NUM_THREADS: 1
   MKL_NUM_THREADS: 1
-  # The non-coverage build jobs run a FAST subset: skip the heavy acceptance/statistical
-  # tiers and the opt-in capability lanes. Full coverage of these is provided by the
-  # sharded coverage job below, which runs everything. (The omp-suite C tests already run
-  # threaded in this subset; only the py-omp lane needs the extra step in build-miniforge.)
-  FAST_TEST_ARGS: "--no-suite py-app --no-suite py-acceptance --no-suite py-powspec --no-suite py-xcor --no-suite py-omp --no-suite c-acceptance --no-suite c-statistical"
-  # GitHub-hosted runners on Azure expose a paravirtualized "mana" NIC that advertises
-  # InfiniBand-like RDMA verbs but doesn't actually support the specific operations (UD
-  # QP) that transport needs, causing spurious MPI init/comm failures on both MPI
-  # implementations this repo tests -- OpenMPI ("Failed to create UCP worker") and
-  # MPICH's ch4:ucx netmod ("MPIDI_UCX_init_worker: Address not valid"). We don't need
-  # real RDMA performance for correctness testing. Two knobs, since each implementation
-  # picks its transport a different way:
-  #  - OMPI_MCA_pml=ob1 selects OpenMPI's non-UCX PML (tcp/vader/self BTLs) directly.
+  # Two sets, and every job runs exactly one of them plus optionally the other.
+  #
+  # FAST_TEST_ARGS is what runs on every build leg: the unit tiers. It is a deny-list so
+  # that a newly added suite runs by default and has to be excluded deliberately -- the
+  # opposite convention would let a new lane be silently skipped everywhere.
+  #
+  # VALIDATION_TEST_ARGS is the tier that does not need repeating per platform: slow,
+  # platform-independent physics and statistical validation. One leg runs it (see
+  # build-miniforge), so it is named here rather than spelled out at the call site.
+  #
+  FAST_TEST_ARGS: "--no-suite py-app --no-suite py-acceptance --no-suite py-powspec --no-suite py-xcor --no-suite c-acceptance --no-suite c-statistical"
+  VALIDATION_TEST_ARGS: "--suite py-acceptance --suite c-acceptance --suite c-statistical"
+  # GitHub-hosted runners have no RDMA hardware, but the MPI stacks still probe for it.
+  #  - OMPI_MCA_pml selects OpenMPI's ob1 point-to-point layer.
   #  - UCX_TLS restricts UCX itself (read by both OpenMPI's and MPICH's copies of the
   #    UCX library) to non-RDMA transports, which is what actually fixes the MPICH side
   #    (OMPI_MCA_* vars are OpenMPI-specific and MPICH silently ignores them).
@@ -61,6 +62,19 @@ jobs:
     # they fall back to solving it (slow), so this job is what makes the
     # mismatch visible. See CONTRIBUTING.md, section "CI conda environment".
     - run: python3 .github/scripts/conda_locks.py check
+
+  check-doc-style:
+    name: (doc style)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        # Needs the merge base with the target branch to see only added lines.
+        fetch-depth: 0
+    # Rejects evaluative wording in comments and docs, and reports theory-page
+    # cross-references the branch drops. See CONTRIBUTING.md, section "Writing
+    # style for comments and documentation".
+    - run: ./.github/scripts/check_doc_style.sh --base origin/${{ github.base_ref || 'master' }}
 
   build-gcc-ubuntu:
     name: (ubuntu, apt, pip)
@@ -279,31 +293,25 @@ jobs:
       #    pylint --rcfile .pylintrc numcosmo_py
       - name: Check NumCosmo
         run: meson test -v -C build --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ env.FAST_TEST_ARGS }} || (cat build/meson-logs/testlog.txt && exit 1)
-      - name: Check NumCosmo (py-omp lane)
-        # The omp-suite C tests already run threaded (is_parallel: false) in the fast subset
-        # above; only py-omp is excluded there, so run it here. meson sets OMP_NUM_THREADS =
-        # cores for this non-xdist lane (see TESTING.md), so no manual env is needed.
-        run: meson test -v -C build --suite py-omp || (cat build/meson-logs/testlog.txt && exit 1)
-      - name: Check NumCosmo (py-acceptance lane)
-        # The acceptance tier is slow and, measured per line, almost entirely redundant for
-        # coverage: it reaches 31021 lines of which only 170 are reached by nothing else. It
-        # used to run solely as a coverage leg, which is both the slowest way to run it and
-        # the least useful -- 48 min there against 84 s on an optimized build locally, and it
-        # was the critical path of the whole coverage job. Run it optimized instead, on the
-        # one platform combination it already ran on (the coverage matrix is ubuntu-only), so
-        # this changes where it runs, not what it covers.
+      - name: Check NumCosmo (validation tier)
+        # Slow, platform-independent validation, run once rather than on every leg. Both
+        # halves used to sit in the coverage job, which is the slowest place to run them
+        # and the least useful: py-acceptance reached 31021 lines of which 170 were its
+        # alone, 48 min there against 84 s optimized; the two C tiers were 356 s of that
+        # job's 947 s of C work for 13 uniquely covered lines, all needing a CLASS run.
+        # The mechanics they shared with the unit tier were split out into the `c` suite
+        # (tests/c/meson.build), so this changed where they run, not what is covered.
         if: matrix.os == 'ubuntu' && matrix.mpi == 'openmpi'
-        run: meson test -v -C build --suite py-acceptance || (cat build/meson-logs/testlog.txt && exit 1)
+        run: meson test -v -C build ${{ env.VALIDATION_TEST_ARGS }} || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge-coverage:
     name: Cov-${{ matrix.name }} (py${{ matrix.python-version }}, openmpi)
     runs-on: ${{ matrix.os }}-latest
     strategy:
-      # Shards are DERIVED, not hand-labeled (see TESTING.md): the C tests are split by
-      # meson's own --slice, so they auto-distribute as tests are added or removed, with
-      # no per-test shard suite to curate. The Python `pytest` lane is internally parallel
-      # (xdist), so it stays a single shard; the marker-gated py-* subsets are their own
-      # shards because they are opt-in, not for balancing.
+      # Shards follow the lanes, not a hand-curated split (see TESTING.md). The Python
+      # `pytest` lane is internally parallel (xdist), so it stays a single shard; the
+      # marker-gated py-* subsets are their own shards because they are opt-in, not for
+      # balancing.
       matrix:
         include:
           - { os: ubuntu, python-version: "3.13", name: python, args: "--suite python" }
@@ -314,16 +322,13 @@ jobs:
           - { os: ubuntu, python-version: "3.13", name: py-powspec, args: "--suite py-powspec" }
           - { os: ubuntu, python-version: "3.13", name: py-xcor, args: "--suite py-xcor" }
           - { os: ubuntu, python-version: "3.13", name: py-app, args: "--suite py-app" }
-          # The `slice` field selects which third of the C tests this leg runs, passed
-          # straight to meson --slice. That balances by test count, not wall time, which
-          # is the right trade here: measured over the current suite, count-balancing
-          # gives a 518 s worst slice against 403 s for duration-balancing -- 115 s, on
-          # legs that finish in 9-11 min while the critical path of this job is py-xcor
-          # at 30-47 min. When a single test grows enough for that to matter, the answer
-          # is to split the test, which is worth doing for its own sake; see TESTING.md.
-          - { os: ubuntu, python-version: "3.13", name: c-1, slice: 1 }
-          - { os: ubuntu, python-version: "3.13", name: c-2, slice: 2 }
-          - { os: ubuntu, python-version: "3.13", name: c-3, slice: 3 }
+          # One shard, not three. The C suite is 591 s of summed test time, which at
+          # --num-processes here is about 2.5 min of actual work; three legs spent ~19 min
+          # of machine time to parallelize that, because ~5 min of each 6-min leg was
+          # checkout, conda and the -O0 build. Slicing bought no wall time either: this
+          # job's critical path is py-xcor, several times longer. Split again if the C
+          # suite grows enough to become that critical path.
+          - { os: ubuntu, python-version: "3.13", name: c, args: "--suite c" }
     defaults:
       run:
         shell: bash -el {0}
@@ -348,8 +353,14 @@ jobs:
           # left this build optimized. gcc's inlining then detaches a function's line
           # counts from its own record, which lcov 2.x rejects, and erases inlined
           # functions from the report entirely. Append -O0 so it actually wins.
-          export CFLAGS="$CFLAGS -O0"
-          export CPPFLAGS="$CPPFLAGS -O0"
+          #
+          # -U_FORTIFY_SOURCE goes with it: conda also injects -D_FORTIFY_SOURCE=2, and
+          # glibc's features.h warns when that is set without optimization, which at -O0
+          # is once per translation unit -- 900 lines of noise per build, hiding real
+          # warnings. The fortified variants need -O to do anything anyway, so this drops
+          # nothing. Appended last in each variable, so it takes precedence over conda's -D.
+          export CFLAGS="$CFLAGS -O0 -U_FORTIFY_SOURCE"
+          export CPPFLAGS="$CPPFLAGS -O0 -U_FORTIFY_SOURCE"
           export FFLAGS="$FFLAGS -O0"
           meson setup build -Dbuildtype=debug -Db_coverage=true -Dnumcosmo_py=true -Dfftw-planner=estimate -Dnumcosmo_debug=disabled --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
@@ -361,20 +372,21 @@ jobs:
         # Third run to merge the coverage base and the coverage for the tests
         run: |
           lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
-          if [ -n "${{ matrix.slice }}" ]; then
-            meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) \
-              --suite c --suite c-acceptance --suite c-statistical --slice ${{ matrix.slice }}/3 || (cat build/meson-logs/testlog.txt && exit 1)
-          else
-            meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
-          fi
+          meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
-          lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/external/*' '*/tools/*' --output-file numcosmo-coverage.info
+          # tests/c and tests/python are the harness, not the library: they are ~22k lines
+          # at ~98%, since a test file is covered by its own execution, and counting them
+          # lifts the reported figure about three points above what the library actually
+          # reaches.
+          # numcosmo/**/tests/*.c is a different thing -- installed helpers like
+          # the analytic xcor kernels -- and stays.
+          lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/external/*' '*/tools/*' '*/tests/c/*' '*/tests/python/*' --output-file numcosmo-coverage.info
       - name: Test timing summary
         if: always()
-        # Surface the slowest tests of this shard in the job summary. Since --slice balances
-        # by count, this is how a test growing fat enough to unbalance its leg becomes
-        # visible -- and the fix for that is to split the test, not to reweight the split.
+        # Surface the slowest tests of this shard in the job summary: this is how a test
+        # growing fat enough to matter becomes visible, and the fix for that is to split
+        # the test rather than to shard around it.
         run: |
           python3 .github/scripts/test_summary.py summary --testlog build/meson-logs/testlog.json --title "${{ matrix.name }}" >> "$GITHUB_STEP_SUMMARY"
       - name: CodeCov

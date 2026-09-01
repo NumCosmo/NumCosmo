@@ -3,9 +3,7 @@ title: "Testing Tensor Modes in Primordial Models"
 author: "Sandro Dias Pinto Vitenti"
 date: "2023-05-22"
 abstract: |
-  This document demonstrates how to test tensor modes in primordial cosmological models using the `numcosmo` library. 
-  It covers the setup of a cosmological model with tensor modes, computation of the power spectrum for different 
-  CMB observables (TT, TE, EE, BB), and visualization of the results.
+  Computes TT, TE, EE, and BB spectra with tensor modes.
 
 format:
   html: default
@@ -19,10 +17,7 @@ format-links: [ipynb]
 
 ## Introduction
 
-This example demonstrates how to test tensor modes in primordial cosmological models using the `numcosmo` library. 
-We will create a cosmological model with tensor modes, compute the power spectrum for temperature (TT), 
-temperature-polarization (TE), E-mode polarization (EE), and B-mode polarization (BB), and visualize the results. 
-This guide assumes familiarity with cosmological concepts and basic Python programming.
+Tests tensor modes and computes TT, TE, EE, and BB spectra.
 
 ## Prerequisites
 
@@ -35,8 +30,7 @@ these packages are already installed.
 
 ## Import and Initialize
 
-First, import the required modules and initialize the NumCosmo library. The `Nc` and `Ncm` modules provide the core 
-functionality of the NumCosmo library. The call to `Ncm.cfg_init()` initializes the library objects.
+Import the modules and call `Ncm.cfg_init()`.
 
 ```{python}
 import math
@@ -51,8 +45,7 @@ Ncm.cfg_init()
 
 ## Setting Up the Primordial Model
 
-We start by creating a new instance of the `Nc.HIPrimPowerLaw` model, which describes a power-law primordial power spectrum. 
-We set the tensor-to-scalar ratio (`r`) and the tensor spectral index (`n_T`).
+Create an `Nc.HIPrimPowerLaw` model and set `r` and `n_T`.
 
 ```{python}
 
@@ -259,6 +252,5 @@ plt.show()
 
 ## Conclusion
 
-In this document, we demonstrated how to test tensor modes in primordial cosmological models using the `numcosmo` library. 
-We computed the power spectrum for TT, TE, EE, and BB modes, comparing the contributions of tensor and scalar modes. 
-The results were visualized to highlight the impact of tensor modes on the CMB power spectra. 
+The example computes and plots TT, TE, EE, and BB spectra with scalar and
+tensor contributions.

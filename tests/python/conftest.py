@@ -142,35 +142,37 @@ def pytest_addoption(parser):
     )
 
 
+#: Capability marker -> the option that opts into it. A test carrying the marker is
+#: skipped unless its option is given.
+_CAPABILITY_GATES = {
+    "mpi": "--run-mpi",
+    "powspec": "--run-powspec",
+    "xcor": "--run-xcor",
+    "sphere_map": "--run-sphere-map",
+    "app": "--run-app",
+    "planck_data": "--run-planck-data",
+}
+
+
 def pytest_collection_modifyitems(config, items):
-    """Skip tests based on markers and command-line options."""
-    run_mpi = config.getoption("--run-mpi")
-    run_powspec = config.getoption("--run-powspec")
-    run_xcor = config.getoption("--run-xcor")
-    run_sphere_map = config.getoption("--run-sphere-map")
-    run_app = config.getoption("--run-app")
-    run_planck_data = config.getoption("--run-planck-data")
+    """Skip tests based on markers and command-line options.
 
-    skip_mpi = pytest.mark.skip(reason="Need --run-mpi option to run")
-    skip_powspec = pytest.mark.skip(reason="Need --run-powspec option to run")
-    skip_xcor = pytest.mark.skip(reason="Need --run-xcor option to run")
-    skip_sphere_map = pytest.mark.skip(reason="Need --run-sphere-map option to run")
-    skip_app = pytest.mark.skip(reason="Need --run-app option to run")
-    skip_planck_data = pytest.mark.skip(reason="Need --run-planck-data option to run")
+    Gates on the marker, via ``get_closest_marker``, not on ``item.keywords``. A test's
+    keywords include the names of the directories it lives under, and three of these
+    gates -- app, xcor, powspec -- are also directory names, so keyword membership
+    skipped every test under those directories whether or not it carried the marker.
+    That is invisible while every file in them happens to be marked, and silently
+    swallows the first one that is not.
+    """
+    for marker, option in _CAPABILITY_GATES.items():
+        if config.getoption(option):
+            continue
 
-    for item in items:
-        if "mpi" in item.keywords and not run_mpi:
-            item.add_marker(skip_mpi)
-        if "powspec" in item.keywords and not run_powspec:
-            item.add_marker(skip_powspec)
-        if "xcor" in item.keywords and not run_xcor:
-            item.add_marker(skip_xcor)
-        if "sphere_map" in item.keywords and not run_sphere_map:
-            item.add_marker(skip_sphere_map)
-        if "app" in item.keywords and not run_app:
-            item.add_marker(skip_app)
-        if "planck_data" in item.keywords and not run_planck_data:
-            item.add_marker(skip_planck_data)
+        skip = pytest.mark.skip(reason=f"Need {option} option to run")
+
+        for item in items:
+            if item.get_closest_marker(marker) is not None:
+                item.add_marker(skip)
 
 
 @pytest.fixture(name="prim")

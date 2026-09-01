@@ -18,10 +18,10 @@ format-links: [ipynb]
 
 ## Introduction
 
-This notebook explores the power spectra and their derived quantities implemented in the Core Cosmology Library (CCL) and NumCosmo, two frameworks for computing cosmological observables.
-We aim to assess the consistency and accuracy of the matter power spectrum and related quantities, such as the linear growth factor and `sigma_8`, across these frameworks by comparing their outputs under identical physical parameters.
-To facilitate this analysis, we first establish a set of cosmological models with fixed and variable parameters, then define functions to compute and visualize the power spectra alongside their relative differences.
-The results are summarized in tables and plots below.
+Compares power spectra and derived quantities from CCL and NumCosmo.
+Reports the relative differences of the matter power spectrum, growth factor, and `sigma_8`.
+The comparison uses matched cosmological parameters and reports relative
+differences in tables and plots.
 
 ```{python}
 import sys

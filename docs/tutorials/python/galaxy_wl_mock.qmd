@@ -13,18 +13,15 @@ format-links: [ipynb]
 
 ## Purpose {#sec-purpose}
 
-This tutorial builds a mock weak-lensing galaxy catalog directly from the
-per-observation *factor* calculators described in
-[The Galaxy Population & Weak-Lensing Framework](../../theory/galaxy_wl_framework.qmd):
-one for the sky position, one for the redshift, one for the shape. Reading
-that page first will make the vocabulary here (`Factor`, `Pop`, `Obs`,
-per-galaxy `Data`) much less cryptic; this page is deliberately about *using*
-the pieces, not about *why* they are shaped this way.
+Builds a mock weak-lensing galaxy catalog from the position, redshift, and
+shape factor calculators described in
+[The Galaxy Population & Weak-Lensing Framework](../../theory/galaxy_wl_framework.qmd).
+Read that page first for the vocabulary used here: `Factor`, `Pop`, `Obs`,
+and the per-galaxy `Data`.
 
-Because the orchestrator that wires the three factors automatically has not
-been built yet (see the framework page's status note), this tutorial threads
-the per-galaxy data between them by hand — which is also the best way to see
-exactly what each factor needs from its neighbors.
+The orchestrator that wires the three factors together has not been built
+yet, so this tutorial threads the per-galaxy data between them by hand. That
+also shows exactly what each factor needs from its neighbours.
 
 ## Setting Up the Lens and the Models {#sec-models}
 

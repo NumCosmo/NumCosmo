@@ -162,21 +162,11 @@ _xcor_kernel_gsl_auto_int (gdouble lnk, gpointer ptr)
 }
 
 /*
- * Five-node Gauss-Legendre rule on [-1, 1]. Exact through degree 9, which is
- * one more than the degree-8 polynomial the outer integrand k^2 W_i W_j is on
- * each knot panel of a cubic spline: 2 from k^2 plus 3 from each spline.
- */
-/*
- * Five-node Gauss-Legendre, nodes and weights on [-1, 1].
- *
- * Five is not a tuning parameter. On the merged knot set each closure is a
- * single cubic per panel, so the outer integrand k^2 W_i W_j is a degree-8
- * polynomial there, and an n-node Gauss-Legendre rule is exact through degree
- * 2n - 1. Five nodes reach degree 9 -- exact with one degree to spare. Raising
- * the order buys nothing on a spline pair and costs proportionally; lowering it
- * to four caps at degree 7 and stops being exact. A closure that is not
- * piecewise cubic breaks the argument rather than the constant, and that case
- * goes to _nc_xcor_kernel_integrate_block_spectral() instead.
+ * Five-node Gauss-Legendre rule on [-1, 1], exact through degree 9. The outer
+ * integrand k^2 W_i W_j is degree 8 on a merged knot panel of two cubic
+ * closures, so five nodes are the smallest exact choice: four cap at degree 7.
+ * A closure that is not piecewise cubic is handled by
+ * _nc_xcor_kernel_integrate_block_spectral() instead.
  */
 #define NC_XCOR_GL5_N 5
 
@@ -191,26 +181,14 @@ static const gdouble _nc_xcor_gl5_w[NC_XCOR_GL5_N] = {
 };
 
 /*
- * The two GL(5) sweeps over a pair's merged panels. Auto and cross differ only
- * in whether the second integrand is evaluated at all, which is fixed for the
- * whole sweep -- so they are separate functions and the inner loops carry no
- * branch. Each is a flat loop over panel x node x multipole.
- */
-/*
- * Everything the error estimate of _nc_xcor_kernel_integrate_block_exact ()
- * needs, accumulated in the same pass as the integral itself.
+ * GL(5) accumulators for the integral and the closure-error estimate.
  *
- * The estimate propagates d(W1 W2) = |W1| dW2 + |W2| dW1 with dW_i the closure
- * fit's own error, so what it needs from the sweep is that product integrated
- * against k^2. Where the closure recorded the residual it *achieved* on a
- * panel (nc_xcor_kernel_integrand_peek_residuals()), dW_i is that residual and
- * the term lands in @res. Where it did not -- tracking off, or a panel
- * refinement never accepted -- the panel lands in @unk_i instead, to be closed
- * afterwards with the tolerance the fit was *asked* for, times the peak. The
- * masks are per panel, so the inner loop multiplies rather than branches.
- *
- * The peaks enter only as multipliers of the accumulated integrals, so a
- * running maximum is enough and no second sweep is required.
+ * The estimate propagates d(W1 W2) = |W1| dW2 + |W2| dW1, with dW_i the
+ * closure fit's own error. A panel whose achieved residual was recorded by
+ * nc_xcor_kernel_integrand_peek_residuals() uses that residual and
+ * accumulates into @res. A panel with no record -- tracking off, or a
+ * refinement never accepted -- accumulates into @unk_i instead and is closed
+ * afterwards with the requested tolerance times the peak.
  */
 typedef struct _NcXcorGL5Err
 {
@@ -425,43 +403,20 @@ _nc_xcor_merge_knots (NcmVector *knots1, NcmVector *knots2, gdouble k_min, gdoub
 }
 
 /*
- * Exact outer quadrature for one pair, on the union of the two kernels' own
- * knot sets.
+ * Exact outer quadrature for a pair on the union of both knot sets. Each
+ * closure is cubic on a merged panel, so k^2 W_1 W_2 has degree at most 8 and
+ * GL(5) is exact.
  *
- * Each kernel is sampled independently -- the same per-kernel closures
- * KERNEL_CUBATURE builds and NcXcorSolver caches -- so the two splines live on
- * different abscissas. On the common refinement of those abscissas each spline
- * is still a single cubic piece per panel, so k^2 W_i W_j is a degree-8
- * polynomial there and GL(5) integrates it exactly. Merging two knot sets is
- * all the coupling the exactness argument needs; a shared abscissa built by
- * sampling the kernels jointly is not required, and costs about twice as much
- * to produce.
+ * The integration range is the intersection of the two fitted domains,
+ * because NcmSpline does not range-check and an out-of-domain evaluation
+ * returns an extrapolation rather than a small number.
  *
- * The range is the intersection of the two integrands' fitted domains, exactly
- * as _nc_xcor_kernel_integrate_block_cubature() uses, because NcmSpline does
- * not range-check and an out-of-domain evaluation returns extrapolation rather
- * than a small number.
- *
- * ## What this means for error control
- *
- * Exact is meant literally: refining every panel fourfold moves the result by
- * 1e-15 to 1e-12, which is rounding. So there is nothing for an embedded
- * quadrature rule to measure here -- a Kronrod extension, or GL(5) against
- * GL(9), would report machine zero on every call and never fire. Do not add
- * one; it would be false confidence rather than error control.
- *
- * The error is entirely in the closure: a spline is a fit, and $C_\ell$ can be
- * far smaller than the integral of the absolute integrand, which amplifies
- * that fit's error. Two disjoint Gaussian bins already reach a cancellation of
- * 1.4e4 by $\ell = 9$, so a closure good to 1e-8 leaves 1e-4 on $C_\ell$.
+ * Refining every panel fourfold moves the result by 1e-15 to 1e-12, so an
+ * embedded rule (Kronrod, or GL(5) against GL(9)) would report machine zero
+ * on every call. Do not add one. The remaining error is the closure fit's,
+ * amplified by cancellation in C_ell: two disjoint Gaussian bins cancel by a
+ * factor 1.4e4 at ell = 9, so a closure good to 1e-8 leaves 1e-4 on C_ell.
  * @vp_err reports that product; see nc_xcor_compute_full().
- *
- * The same C^2 kinks are why the adaptive kernel-space methods struggle on
- * this integrand and this one does not. A cubic spline's third derivative
- * jumps at every knot, so an adaptive scheme subdivides at each of them
- * forever, chasing a relative criterion that the fit's own error puts out of
- * reach. Here the knots *are* the panel edges, so the kinks fall between
- * panels and never enter a rule's smoothness assumption.
  */
 static gint
 _nc_xcor_cmp_edge (gconstpointer a, gconstpointer b)
@@ -1039,26 +994,14 @@ _xcor_kernel_gsl_block_cross_int (gdouble lnk, gpointer ptr)
  * which no pair of methods could do while one of them fitted its own closure
  * per multipole.
  *
- * Each multipole is integrated over its own component range rather than the
- * block's, for the reason _nc_xcor_kernel_cubature_runs() gives at length: a
- * Limber multipole vanishes outside its band, and a rule handed the block's
- * shared domain sees that edge as a discontinuity instead of a limit.
+ * Each multipole is integrated over its component range because the Limber
+ * integrand vanishes outside that range.
  *
- * ## Diagnostic, not a production method
- *
- * Measured over the case matrix on spline closures, this costs 5.1 ms against
- * %NC_XCOR_METHOD_KERNEL_EXACT's 0.13 ms for the same accuracy, and both are
- * dwarfed by the 56 ms the closures took to build. Two things make up the
- * factor of forty, and neither is fixable here. QUADPACK is scalar, so the
- * loop below drives it once per multipole over a closure whose evaluation
- * produces the whole block at each node -- every call computes all of
- * @lmax - @lmin + 1 values and keeps one. And an adaptive rule subdivides,
- * while GL(5) is exact on these panels at five nodes with no refinement at
- * all. A block closure exists to be evaluated vectorized; a scalar quadrature
- * cannot collect that.
- *
- * So use this to ask what a rule does to a given integrand, which is what it
- * was added for, and use %NC_XCOR_METHOD_KERNEL_EXACT to compute.
+ * This is a diagnostic method, not a production one. On spline closures it
+ * costs 5.1 ms against %NC_XCOR_METHOD_KERNEL_EXACT's 0.13 ms at the same
+ * accuracy: QUADPACK is scalar, so it calls a block closure once per
+ * multipole and discards the rest of the block, and it subdivides where
+ * GL(5) is already exact.
  *
  * The caller retains ownership of @xclki1/@xclki2.
  */

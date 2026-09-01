@@ -26,14 +26,14 @@
 /**
  * NcXcorKernelRadial:
  *
- * Base class for kernels whose radial window is a closed-form function of
+ * Base class for kernels whose radial window is defined as a function of
  * comoving distance.
  *
  * Every other #NcXcorKernel builds its window from splined physical input, so
  * its $C_\ell$ has no independently known value. A subclass of this one is
- * defined by a formula, which makes it exactly evaluable outside NumCosmo and
- * therefore usable both as an exactly-known test case and as the shared input
- * of a cross-code benchmark.
+ * defined by a formula, so it is exactly evaluable outside NumCosmo and can
+ * serve both as a test case with a known answer and as the shared input of a
+ * cross-code benchmark.
  *
  * The window is a function of comoving distance in Mpc, normalized to unit
  * integral over its support,
@@ -46,31 +46,28 @@
  *   K(\chi,k) = W(\chi)\sqrt{P(k, z=0)} .
  * \end{equation}
  *
- * The power spectrum is evaluated at $z = 0$: all redshift dependence,
+ * The power spectrum is evaluated at $z = 0$, so all redshift dependence,
  * including growth, is carried by $W$. This is the convention of the N5K
- * challenge and of CCL's tracer kernels, and it keeps $z(\chi)$ -- itself a
- * spline -- out of the exact path.
+ * challenge and of CCL's tracer kernels, and it keeps $z(\chi)$, itself a
+ * spline, out of the exact path.
  *
- * Distances are in Mpc rather than in the library's internal units of $R_H$,
- * so that the resulting $C_\ell$ is directly comparable to a code working in
- * Mpc, with no cosmology-dependent conversion factor.
+ * Distances are in Mpc rather than the library's internal $R_H$, so the
+ * resulting $C_\ell$ is directly comparable to a code working in Mpc with no
+ * cosmology-dependent conversion factor.
  *
- * A subclass declares its **components**: the maximal intervals on which the
- * window is supported. Each becomes one #NcXcorKernelComponent, integrated over
- * exactly that interval and summed with the others, so **no boundary is ever
- * interior to an integration domain**. An edge a solver has to discover by
- * refinement is an edge stated in the wrong place -- the shape knows where its
- * boundaries are, and reports them.
+ * A subclass declares its components: the maximal intervals on which the
+ * window is supported. Each becomes one #NcXcorKernelComponent, integrated
+ * over exactly that interval and summed with the others, so no boundary is
+ * ever interior to an integration domain.
  *
  * The split is by support, not by feature. A window with several bumps that
- * overlap into one continuous stretch is one component: it is smooth
- * throughout, and cutting it would manufacture edges rather than declare them.
- * Bumps far enough apart that their supports are disjoint are separate
- * components, because there the gap is real.
+ * overlap into one continuous stretch is a single component, because it is
+ * smooth throughout and cutting it would create edges rather than declare
+ * them. Bumps whose supports are disjoint are separate components.
  *
- * A component is required to vanish outside the interval it reports -- the
- * truncation is part of the definition, not an implementation detail, since a
- * comparison against an external code only means something if both truncate
+ * A component must vanish outside the interval it reports. The truncation is
+ * part of the definition rather than an implementation detail, since a
+ * comparison against an external code is only meaningful if both truncate
  * identically.
  *
  */
@@ -373,13 +370,13 @@ nc_xcor_kernel_radial_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gd
  * Evaluates the whole radial window, the sum of its components, normalized to unit
  * integral over its support and zero outside it.
  *
- * The cut-off is a step, not a taper: a truncated shape is finite at its own edge
- * and this returns exactly zero one ulp beyond it. Handing this function
- * straight to a quadrature over $[\chi_\mathrm{min}, \chi_\mathrm{max}]$ is
- * therefore a trap -- a node placed a hair outside by rounding sees the step,
- * and a spectral rule cannot fit it: #NcmSBesselIntegratorLevin aborts on
- * max-order rather than converge. Clamp $\chi$ into the support first, which is
- * what this class does internally on every integration path.
+ * The cut-off is a step, not a taper: a truncated shape is finite at its own
+ * edge and this returns exactly zero one ulp beyond it. Passing this function
+ * directly to a quadrature over $[\chi_\mathrm{min}, \chi_\mathrm{max}]$ is
+ * therefore unsafe, because a node placed just outside by rounding sees the
+ * step and a spectral rule cannot fit it: #NcmSBesselIntegratorLevin aborts on
+ * max-order instead of converging. Clamp $\chi$ into the support first, which
+ * is what this class does internally on every integration path.
  *
  * Returns: the value of $W(\chi)$, in $\mathrm{Mpc}^{-1}$.
  */
@@ -427,13 +424,15 @@ nc_xcor_kernel_radial_get_support (NcXcorKernelRadial *xcka, gdouble *chi_min, g
 }
 
 /*
+ * Clamp roundoff outside a component's reported interval before evaluating it.
+ *
  * A component is integrated over exactly the interval it reports, but the
- * caller reaches the ends of that interval indirectly -- the radial integral
- * through y = k xi and back, the Limber one through z(chi) and back -- so the
- * argument can land just outside, where the component is exactly zero. That step is a
- * discontinuity the Levin panel's Chebyshev fit cannot resolve at any order,
- * and it aborts on the last panel of every k. Clamping onto the interval is
- * what the caller means, and changes no value it could have asked for.
+ * caller reaches the ends of that interval indirectly -- the radial path
+ * through y = k xi and back, the Limber path through z(chi) and back -- so the
+ * argument can land just outside, where the component is exactly zero. That
+ * step is a discontinuity the Levin panel's Chebyshev fit cannot resolve at any
+ * order, and it aborts on the last panel of every k. Clamping onto the interval
+ * changes no value the caller could have asked for.
  */
 static gdouble
 _nc_xcor_kernel_radial_eval_W_comp_clamped (NcXcorKernelRadial *xcka, guint comp, gdouble chi)

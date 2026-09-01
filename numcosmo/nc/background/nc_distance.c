@@ -28,19 +28,18 @@
  *
  * Cosmological distance and time related quantities.
  *
- * This object computes the dimensionless distances used in cosmology, built on
- * the comoving distance
+ * Computes dimensionless cosmological distances from the comoving distance
  * \begin{equation}
  * D_c(z) = \int_0^z \frac{\mathrm{d}z^\prime}{E(z^\prime)},
  * \qquad E(z) \equiv \frac{H(z)}{H_0},
  * \end{equation}
  * where $E(z)$ is the normalized Hubble function. Dimensionful distances are
- * recovered by multiplying by the appropriate Hubble radius $R_H = c/H_0$. From
- * $D_c$ it derives the transverse comoving, luminosity, and angular diameter
- * distances, the distance modulus, and distances between two redshifts.
+ * recovered by multiplying by the Hubble radius $R_H = c/H_0$. Derives
+ * transverse comoving, luminosity, angular-diameter, distance-modulus, and
+ * two-redshift distances.
  *
- * For the full set of definitions, conventions, and the dimensionless-to-physical
- * conversion, see the theoretical background page:
+ * For the full set of definitions, conventions, and the
+ * dimensionless-to-physical conversion, see
  * <a href="../../theory/distances.html">Cosmological Distances</a>.
  */
 

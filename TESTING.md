@@ -14,7 +14,7 @@ mechanism, so the axes never get conflated:
 | **Tier** | *How fast/deterministic is it?* | **Marker** (Python) / **suite** (C) |
 | **Capability** | *Does it need an optional dependency or runtime?* | **Marker + `--run-*` opt-in** |
 
-CI shard balancing is **not** an axis: it is derived mechanically (`meson test --slice`),
+CI shard balancing is **not** an axis: a shard is a lane (see §4),
 never encoded as a hand-written label. Do not invent per-shard suites.
 
 ---
@@ -87,6 +87,24 @@ Every test belongs to exactly one tier. The default lane (plain `pytest`, plain
 - **Python:** `@pytest.mark.statistical` / `@pytest.mark.acceptance`. Unmarked = unit.
 - **C:** meson `suite` field: `['c']` (unit, default), `['c-statistical']`, `['c-acceptance']`.
 
+### Split by claim, not by check
+
+A check that drives machinery *and* asserts a statistical result is two tests wearing one
+name, and the tier it belongs to is ambiguous because both answers are wrong. Driving an
+MCMC chain — `start_run`, `run`, `trim`, `validate` — is mechanics, and a short fixed chain
+exercises every line of it. Requiring the sample covariance to recover the data covariance
+is a statistical claim: it converges as $1/\sqrt{n}$, so it is chased by loops that double
+the chain length until it passes.
+
+Moving the whole check to the statistical tier takes the mechanics out of the instrumented
+lane with it. Keeping it in the unit lane brings an unbounded retry loop along. Split the
+claim instead: the mechanics run short and deterministic in the unit tier, the assertion
+runs at full size in the statistical one, sharing one compilation unit and selected by a
+mode its `main()` picks (`test_ncm_fit_esmcmc_common.c`, `test_ncm_stats_dist_common.c`).
+
+The tell is a loop that retries until an assertion passes. That is a statistical claim, and
+it belongs in the statistical tier whatever the check around it is called.
+
 ### Fuzz exception (C only)
 
 C tests using GLib `g_test_rand_*` pick a fresh seed each run; their randomness is a
@@ -131,19 +149,21 @@ the `--run-*` options and their skip logic — it must not re-declare markers.
 
 ### Declare the marker; the directory name is not one
 
-The two halves of an opt-in capability gate read **different things**, and a file can fall
-between them:
+Both halves of an opt-in capability gate read **declared markers**, and neither reads the
+directory name:
 
-- `conftest.py` skips on `"<cap>" in item.keywords`. `item.keywords` carries the name of
-  every parent node — **including the directory** — so a file under a directory named after
-  a capability is treated as gated whether or not it declares anything.
-- The capability lane selects with `-m <cap>`, and `-m` evaluates **declared markers only**.
-  A directory name is not a marker.
+- `conftest.py` skips on `item.get_closest_marker("<cap>")`. It deliberately does *not*
+  test `"<cap>" in item.keywords`: `item.keywords` carries the name of every parent node,
+  including the directory, so keyword membership gated every file under `tests/python/nc/xcor/`,
+  `.../numcosmo_py/app/` and the `powspec` directories whether or not they declared anything.
+  That is invisible while every file in them happens to be marked, and swallows the first
+  one that is not — as an ordinary skip, so nothing fails.
+- The capability lane selects with `-m <cap>`, which has always evaluated declared markers
+  only.
 
-So a file placed in a capability-named directory *without* the marker is skipped in the
-default lane (keyword matched, no `--run-*` flag) **and** deselected in the capability lane
-(no marker): it runs nowhere. Nothing fails — it reports as an ordinary skip — so this is
-silent unless someone looks.
+So a file in a capability-named directory *without* the marker now runs in the default
+lane — ungated, which is wrong for an opt-in test but at least visible — and is deselected
+from the capability lane.
 
 Always declare it at module top, next to the imports:
 
@@ -189,7 +209,7 @@ and runs them — and the non-xdist `py-omp` pytest lane — through
 `tests/scripts/detect_omp_threads.sh`, a wrapper that sets `OMP_NUM_THREADS`/`OMP_THREAD_LIMIT`
 to the CPU count available right then (`nproc` on Linux, `sysctl -n hw.ncpu` on macOS, falling
 back to `getconf _NPROCESSORS_ONLN`) before `exec`ing the real test/`pytest`, so the parallel
-branch (thread coordination, `reduction`, scheduling) actually runs. This is deliberately
+branch (thread coordination, `reduction`, scheduling) runs. This is deliberately
 evaluated fresh on every `meson test` invocation (not baked in at `meson setup` time) so a
 builddir built on one machine can run correctly on a differently-sized one. Because
 these tests run alone, this happens inside the ordinary `meson test` invocation — no
@@ -216,21 +236,56 @@ FP/RNG order varies), so any omp-path statistical assertion must tolerate that s
 
 ---
 
-## 4. CI sharding is derived, not labeled
+## 4. CI shards follow the lanes, not a balancing scheme
 
-Do not add suites like `stats-dist`, `fit-esmcmc`, `data-cluster-wl` to balance CI. Shards
-are derived by `meson test --slice ${i}/N` over a `slice: [1..N]` matrix; tests
-auto-distribute as they are added. Keep `priority: 10` on the heaviest executables so they
-start first.
+Do not add suites like `stats-dist`, `fit-esmcmc`, `data-cluster-wl` to balance CI. A shard
+is a lane, and there is one per lane that needs its own environment or gate. The C tests
+are a single shard: 591 s of summed test time is a few minutes at the job's process count,
+and splitting it three ways spent more machine time on checkout, conda and the `-O0` build
+than it saved. Keep `priority: 10` on the heaviest executables so they start first.
 
-`--slice` balances by test **count**, not by wall time. That is deliberate: weighting the
-split by measured durations was tried and removed, because it bought about two minutes on
-a shard that is not the critical path while making the partition depend on per-shard cached
-state that could disagree between shards and silently drop tests from the coverage report.
-So a genuinely huge single executable must be **split** into several (one cost class each)
-rather than balanced around — which is worth doing anyway, for failure isolation and for
-per-test timeouts. Each shard's job summary lists its slowest tests, which is how one
-growing fat becomes visible.
+Split a shard only when its lane becomes the **critical path** of its job, and prefer
+splitting the fat *test* instead. A huge single executable wants splitting anyway, for
+failure isolation and per-test timeouts, and once it is split a count-based partition
+balances itself. Each shard's job summary lists its slowest tests, which is how one growing
+fat becomes visible.
+
+### Where each tier runs
+
+| | runs | where |
+|---|---|---|
+| unit (`c`, `python`, `py-omp`) | every build leg | `FAST_TEST_ARGS`, a deny-list |
+| validation (`c-acceptance`, `c-statistical`, `py-acceptance`) | once | `VALIDATION_TEST_ARGS`, on one leg |
+| capability (`py-app`, `py-powspec`, `py-xcor`) | once | coverage job shards |
+
+`py-omp` is in the fast set — it is unit work, only scheduled alone with the threads
+(§3) — but it is excluded from the plain `python` suite, so the coverage job needs it as
+its own shard or those OpenMP branches would stop being measured. The instrumented set is
+therefore the unit lanes plus the capability lanes: `c`, `python`, `py-omp`, `py-app`,
+`py-powspec`, `py-xcor`.
+
+`FAST_TEST_ARGS` is a deny-list on purpose: a newly added suite then runs by default and
+has to be excluded deliberately. An allow-list would let a new lane be skipped everywhere
+without anyone noticing — the same silent-skip failure as a missing marker.
+
+The validation tier is slow and platform-independent, so it does not repeat per platform,
+and it is the one tier that is not instrumented. A lane leaves the coverage job only under
+the rule in §4.1.
+
+## 4.1 What is instrumented, and when a lane may stop being
+
+Coverage measures the **library**, so `tests/c` and `tests/python` are excluded from the
+report: a test file is covered by the fact that it ran, which says nothing about the code
+under test, and including ~22k such lines at ~98% lifts the reported figure about three
+points. `numcosmo/**/tests/*.c` is different — installed helpers like the analytic xcor
+kernels — and stays. So do the generated `*_enum_types.c`: they need tests like anything
+else, and their coverage is the signal that they are missing.
+
+A lane may stop being instrumented when the lines it covers **and nothing else does** are
+either bought back by cheap tests or explicitly accepted, with the count and the reason
+recorded at the point of the change. Accepting is legitimate: 13 lines reachable only by
+running CLASS are not worth holding a tier in the coverage job for. Losing them
+without recording it is not.
 
 ---
 
@@ -266,8 +321,10 @@ lcov --config-file .lcovrc --no-external --capture --initial \
      --directory Coverage --directory numcosmo --directory tests \
      --base-directory "$PWD/Coverage" --output-file cov-base.info
 
-# One lane at a time -- see the warning below.
-for s in c c-acceptance c-statistical python py-acceptance py-omp py-powspec py-xcor py-app; do
+# The instrumented lanes, one at a time -- see the warning below. This list mirrors the
+# coverage matrix in .github/workflows/build_check.yml; the validation tier
+# (c-acceptance, c-statistical, py-acceptance) is deliberately not instrumented (§4.1).
+for s in c python py-omp py-powspec py-xcor py-app; do
     meson test -C Coverage --timeout-multiplier 0 --num-processes=<physical-cores> --suite "$s"
 done
 
@@ -277,7 +334,7 @@ lcov --config-file .lcovrc --no-external --capture \
 lcov --config-file .lcovrc --add-tracefile cov-base.info --add-tracefile cov-tests.info \
      --output-file cov-full.info
 lcov --config-file .lcovrc --remove cov-full.info '*/external/*' '*/tools/*' \
-     --output-file numcosmo-coverage.info
+     '*/tests/c/*' '*/tests/python/*' --output-file numcosmo-coverage.info
 ```
 
 `.gcda` counters accumulate across runs inside one builddir, so running the lanes in

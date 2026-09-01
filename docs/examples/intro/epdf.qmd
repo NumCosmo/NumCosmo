@@ -3,9 +3,7 @@ title: "Empirical Probability Density Function (EPDF) Example"
 author: "Sandro Dias Pinto Vitenti"
 date: "2023-05-19"
 abstract: |
-  This document demonstrates how to use the `Ncm.StatsDist1dEPDF` object from the `numcosmo` library to compute
-  the probability density function (PDF) and cumulative distribution function (CDF) of a distribution of points.
-  The example uses a Gaussian mixture distribution and compares the results with the true distribution.
+  Computes a PDF and CDF from samples using `Ncm.StatsDist1dEPDF`.
 
 format:
   html: default
@@ -19,12 +17,8 @@ format-links: [ipynb]
 
 ## Introduction
 
-This example demonstrates how to use the `Ncm.StatsDist1dEPDF` object from the
-`numcosmo` library to compute the probability density function (PDF) and cumulative
-distribution function (CDF) of a distribution of points. We generate a sample from a
-Gaussian mixture distribution, reconstruct the PDF and CDF using the `numcosmo` library,
-and compare the results with the true distribution. This guide assumes familiarity with
-probability distributions and basic Python programming.
+Builds a Gaussian-mixture sample, reconstructs its PDF and CDF, and compares
+the result with the analytic distribution.
 
 ## Prerequisites
 
@@ -105,9 +99,8 @@ print(f"# Number of points = {n}")
 
 ## Reconstructing the PDF and CDF
 
-We use the `Ncm.StatsDist1dEPDF` object to reconstruct the PDF and CDF from the sample.
-Two methods are used for bandwidth selection: automatic bandwidth selection (`AUTO`) and
-the rule-of-thumb (`ROT`).
+Reconstruct the PDF and CDF with `Ncm.StatsDist1dEPDF`, using automatic
+(`AUTO`) and rule-of-thumb (`ROT`) bandwidths.
 
 ```{python}
 # Create the EPDF objects
@@ -126,8 +119,7 @@ epdf_rot.prepare()
 
 ## Plotting the Results
 
-We plot the reconstructed PDF, CDF, and inverse CDF, and compare them with the true
-distribution.
+Plot the reconstructed PDF, CDF, and inverse CDF against the true distribution.
 
 ### Probability Density Function (PDF)
 
@@ -252,9 +244,4 @@ plt.show()
 
 ## Conclusion
 
-In this document, we demonstrated how to use the `Ncm.StatsDist1dEPDF` object from the
-`numcosmo` library to reconstruct the probability density function (PDF) and cumulative
-distribution function (CDF) of a distribution of points. We compared the results with
-the true distribution and visualized the differences. This example serves as a
-foundation for further exploration of empirical distribution functions in cosmological
-and statistical analyses.
+`Ncm.StatsDist1dEPDF` reconstructs the PDF and CDF of sampled points.

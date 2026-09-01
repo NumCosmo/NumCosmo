@@ -3,7 +3,7 @@ title: "Benchmarking NumCosmo vs. CCL"
 author: "Sandro Dias Pinto Vitenti"
 date: "2025-02-09"
 abstract: |
-    This document shows the NumCosmo implementation of cosmology background functions and compares it to the CCL ones.
+    Compares NumCosmo and CCL cosmological background functions.
 
 format:
   html:
@@ -18,10 +18,8 @@ format-links: [ipynb]
 
 ## Introduction
 
-This notebook explores the cosmological background functions implemented in the Core Cosmology Library (CCL) and NumCosmo, two frameworks for computing cosmological quantities. 
-We aim to assess the consistency and accuracy of distance measures, such as comoving and luminosity distances, across these frameworks by comparing their outputs under identical physical parameters. 
-To facilitate this analysis, we first establish a set of cosmological models with fixed and variable parameters, then define a function to compute and visualize the distances alongside their relative differences. 
-The results are summarized in tables and plots below. 
+Compares distance, expansion, and growth functions from CCL and NumCosmo for
+the same cosmological parameters.
 
 
 ```{python}
@@ -79,12 +77,12 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 
 ## Cosmology Parameters  
 
-The following function compares the total mass density (baryonic + cold dark matter + massive neutrinos), the total mass density parameter, and the normalized Hubble function. 
-Below, we present the results for all sets of parameters.
+Compare total matter density, density parameters, and the normalized Hubble
+function for each parameter set.
 
 Note that in CCL, the total matter density parameter is defined as the sum of the matter density parameter and the massive neutrino density parameter. 
 In contrast, NumCosmo defines it as the sum of the matter density parameter and the fraction of the massive neutrino density parameter that is non-relativistic at a given redshift. 
-For consistency, we compute $\Omega_m$ using the CCL prescription, this is done turning the `CCL_comp` parameter to `True` in the NumCosmo cosmology object.
+Use the CCL definition of $\Omega_m$ by setting `CCL_comp` to `True`.
 
 ```{python}
 
@@ -144,9 +142,7 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 
 ## Distances
 
-We define a function to compare cosmological distances calculated by the CCL and NumCosmo frameworks. 
-The function then evaluates and compares the cosmological distances implemented in both libraries. 
-Expand the cell below to view the code.
+Compare the distance observables implemented by CCL and NumCosmo.
 
 ```{python}
 
@@ -168,7 +164,7 @@ distance_comparisons: list[list[nc_cmp.CompareFunc1d]] = [
 
 ```
 
-We plot the distance comparisons for all parameter sets.
+Plot the distance comparisons for all parameter sets.
 
 ```{python}
 # | label: fig-ccl-vs-nc-distances-set0
@@ -218,9 +214,7 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 
 ### Time Comparison
 
-We compare the time spent on calculating the cosmological distances. 
-First, it is necessary to create again the cosmology used in the function, then we use "timeit" to estimate the mean time intervals it takes for each library to perform the calculations. 
-Below we show the comparison using the first set of parameters.
+Measure the time required to compute cosmological distances with `timeit`.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-times-set0
@@ -438,16 +432,8 @@ df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
 ```
 
-## Summary  
+## Summary
 
-In this notebook, we compared the cosmological results obtained using CCL and NumCosmo across several sections.  
-
-- **Cosmology Parameters**: We examined the differences in the parameters, noting how the definitions of $\Omega_m$ and the inclusion of massive neutrinos affect the results.  
-- **Distances**: We compared cosmological distances and found strong agreement between CCL and NumCosmo.
-  - **Time Comparison**: A detailed analysis of time measurements confirmed this consistency.
-- **Growth Factor and Growth Rate**: We highlighted the discrepancies in the growth factor and growth rate due to CCL's inclusion of the full neutrino energy density, which leads to increased deviations at higher redshifts.  
-- **Scale Factor**: The scale factor was also compared, showing similar trends across both methods.  
-- **Critical Surface Mass Density**: We assessed this observable and observed agreement.  
-
-Overall, the results demonstrate good agreement between the two methods, with the main differences arising from CCL's handling of neutrinos in the background model, particularly affecting growth-related observables at higher redshifts.
-
+The comparison covers background parameters, distances, growth, scale factor,
+and critical surface mass density. Differences in growth increase with
+redshift because CCL includes the full neutrino energy density.

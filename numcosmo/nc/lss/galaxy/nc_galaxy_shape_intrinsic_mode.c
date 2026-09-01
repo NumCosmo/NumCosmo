@@ -31,26 +31,12 @@
  * over the disc $\chi_I=\rho e^{i\theta}$, $\rho\in[0,1)$, plus the 2x2
  * Hessian of its log in Cartesian $\chi_I$ coordinates at that point.
  *
- * The search is nested rather than a blind joint 2D minimization: since
- * $P_\mathrm{pop}(\chi_I)=P_\mathrm{pop}(\rho)$ has no $\theta$ dependence,
- * the argmin over $\theta$ at ANY fixed $\rho$ comes entirely from the noise
- * term (a fixed 3-step Newton refinement on
- * $|\epsilon_\mathrm{obs}-f_g(\rho e^{i\theta})|^2$, the same scheme already
- * used by #NcGalaxyShapeFactorQuad's Beta-mode hint, generalized here to
- * arbitrary $\rho$, not just the population's own marginal mode). A blind
- * joint 2D minimizer cannot exploit this: it would needlessly re-evaluate
- * $P_\mathrm{pop}$ (a special-function call for e.g. #NcGalaxyShapePopBeta)
- * at every stencil point even when only $\theta$ moved. Nesting the search
- * instead means $P_\mathrm{pop}$ is only ever evaluated along the outer
- * (cheap-to-profile) $\rho$ direction.
- *
- * Both Newton loops are a small fixed number of steps with a concavity/
- * curvature guard (fall back to the current estimate rather than diverge),
- * matching the project's existing convention for these one-shot,
- * once-per-evaluation hint computations (see
- * nc_galaxy_shape_factor_quad.c's own theta-only refiner) -- this is a peak
- * finder for a single, generally well-behaved (unimodal) bump, not a general-
- * purpose robust optimizer.
+ * The search is nested: at fixed $\rho$, $P_\mathrm{pop}(\rho)$ is independent
+ * of $\theta$, so the angular mode is obtained from the noise term. Both the
+ * angular and radial searches use a fixed, small number of Newton iterations
+ * with a concavity and curvature guard that falls back to the current estimate
+ * rather than diverging. This is a peak finder for a single unimodal bump, not
+ * a general-purpose robust optimizer.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -571,11 +557,11 @@ _trace_theta_hat_rot (const gdouble rho, const gdouble lam,
 
       for (branch = -1; branch <= 1; branch++)
       {
-        /* t=tan(theta_B/4) where theta_B is the Weierstrass-substitution
-         * variable from the symbolic derivation; the actual angle is
-         * theta_B/2, NOT theta_B itself -- i.e. 2*atan(t)+branch*pi, not
+        /* t=tan(theta_B/4), where theta_B is the Weierstrass-substitution
+         * variable from the symbolic derivation. The angle wanted is
+         * theta_B/2, not theta_B: 2*atan(t)+branch*pi, not
          * 4*atan(t)+branch*2pi. See docs/theory/wl_shape_factor_history.md
-         * for the off-by-factor-of-2 mistake this guards against. */
+         * for the factor-of-2 error this guards against. */
         const gdouble theta_rot = 2.0 * atan (zr) + branch * M_PI;
         const gdouble D2        = _trace_D2_only (rho, theta_rot, g_rot, 0.0, chiOr_r, chiOr_i);
 

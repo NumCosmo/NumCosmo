@@ -33,10 +33,10 @@ $(\epsilon_\mathrm{obs},\sigma_\mathrm{noise})$ alone — never $g$:
   to the farthest point of the unit disc, so this condition holds exactly
   when the noise kernel already covers the whole disc.)
 
-Both schemes are exact (no truncation, no linearization). Validated to a 2.0%
-worst case and $\sim10^{-6}$ median error against an independent scipy
-integral, across population shape, $|\epsilon_\mathrm{obs}|$,
-$\sigma_\mathrm{noise}$, $g$, and both ellipticity conventions.
+Both schemes are exact: no truncation or linearization is applied. They were
+validated against an independent scipy integral across population shape,
+$|\epsilon_\mathrm{obs}|$, $\sigma_\mathrm{noise}$, $g$ and both ellipticity
+conventions, giving a 2.0% worst case and $\sim10^{-6}$ median error.
 
 ## Two-panel $\psi$
 

@@ -17,9 +17,8 @@ format-links: [ipynb]
 
 ## Introduction
 
-This example demonstrates the recombination evolution using the `numcosmo` library. We
-initialize the library, configure a cosmological model, and calculate the ionization
-history, equilibrium fractions, and visibility function.
+Computes ionization history, equilibrium fractions, and visibility functions
+with the `numcosmo` library.
 
 ## Prerequisites
 
@@ -33,9 +32,7 @@ these packages are already installed.
 
 ## Import and Initialize
 
-First, import the required modules and initialize the NumCosmo library. We also import
-`numpy`, `matplotlib` and `pandas`. The `Nc` and `Ncm` modules provide the core functionality of
-the NumCosmo library. The call to `Ncm.cfg_init()` initializes the library objects.
+Import the required modules and initialize the library with `Ncm.cfg_init()`.
 
 ```{python}
 import numpy as np
@@ -420,4 +417,3 @@ In this plot, we show the optical depth as a function of the scale factor $1 + z
 - **$\frac{x}{\eta_{\tau}}$**: The ratio of the scale factor $x$ to the quantity $\eta_{\tau}$.
 
 We use a log-log scale for both axes to better visualize the changes across the broad range of values. The plot displays these quantities, making it easier to compare their behavior over the scale factor range.
-
