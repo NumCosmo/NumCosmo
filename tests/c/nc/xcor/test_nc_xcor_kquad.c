@@ -68,6 +68,7 @@ typedef struct _TestNcXcorKQuad
  * @name: path component naming the method
  * @meth: the method itself
  * @has_block: whether nc_xcor_integrate_block() accepts it
+ * @closure: how the kernels represent W_l(k) for this case
  *
  * Kernel-space is not the same as block-capable: NC_XCOR_METHOD_KERNEL_GSL builds its
  * closure per multipole, so it has no block quadrature and integrate_block() refuses it.
@@ -77,13 +78,22 @@ typedef struct _TestMethod
   const gchar *name;
   NcXcorMethod meth;
   gboolean has_block;
+  NcXcorKernelClosure closure;
 } TestMethod;
 
+/* Both closures, because they are not interchangeable downstream: a Chebyshev closure
+ * gives the integrands panels, and NC_XCOR_METHOD_KERNEL_EXACT hands a pair that has
+ * them to the spectral block quadrature instead of integrating them itself. The default
+ * closure is the spline, so asking for one is the only way through that branch. */
 static const TestMethod test_methods[] = {
-  {"kernel_gsl",       NC_XCOR_METHOD_KERNEL_GSL,       FALSE},
-  {"kernel_cubature",  NC_XCOR_METHOD_KERNEL_CUBATURE,  TRUE },
-  {"kernel_exact",     NC_XCOR_METHOD_KERNEL_EXACT,     TRUE },
-  {"kernel_gsl_block", NC_XCOR_METHOD_KERNEL_GSL_BLOCK, TRUE },
+  {"kernel_gsl/spline",          NC_XCOR_METHOD_KERNEL_GSL,       FALSE, NC_XCOR_KERNEL_CLOSURE_SPLINE   },
+  {"kernel_cubature/spline",     NC_XCOR_METHOD_KERNEL_CUBATURE,  TRUE,  NC_XCOR_KERNEL_CLOSURE_SPLINE   },
+  {"kernel_exact/spline",        NC_XCOR_METHOD_KERNEL_EXACT,     TRUE,  NC_XCOR_KERNEL_CLOSURE_SPLINE   },
+  {"kernel_gsl_block/spline",    NC_XCOR_METHOD_KERNEL_GSL_BLOCK, TRUE,  NC_XCOR_KERNEL_CLOSURE_SPLINE   },
+  {"kernel_gsl/chebyshev",       NC_XCOR_METHOD_KERNEL_GSL,       FALSE, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
+  {"kernel_cubature/chebyshev",  NC_XCOR_METHOD_KERNEL_CUBATURE,  TRUE,  NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
+  {"kernel_exact/chebyshev",     NC_XCOR_METHOD_KERNEL_EXACT,     TRUE,  NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
+  {"kernel_gsl_block/chebyshev", NC_XCOR_METHOD_KERNEL_GSL_BLOCK, TRUE,  NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
 };
 
 static NcXcorKernel *
@@ -140,6 +150,7 @@ test_nc_xcor_kquad_new (TestNcXcorKQuad *test, gconstpointer pdata)
   test->k2 = _tophat (test, 250.0, 450.0);
 
   test->xc = nc_xcor_new (test->dist, test->ps, tm->meth);
+  nc_xcor_set_closure_type (test->xc, tm->closure);
   nc_xcor_set_ell_batch_size (test->xc, TEST_NELL);
   nc_xcor_prepare (test->xc, cosmo);
 
@@ -209,8 +220,19 @@ test_nc_xcor_kquad_error (TestNcXcorKQuad *test, gconstpointer pdata)
   {
     g_assert_true (gsl_finite (ncm_vector_get (cl, i)));
 
-    /* A method that advertises an error estimate has to fill the vector it was given. */
-    if (nc_xcor_method_has_error_estimate (tm->meth))
+    /* A method that advertises an error estimate has to fill the vector it was given --
+     * except where the quadrature is exact in closed form and there is no estimate to
+     * make. NC_XCOR_METHOD_KERNEL_EXACT on a Chebyshev pair takes that route, and says
+     * so with NaN rather than reporting a zero that would read as a tight bound. */
+    if (!nc_xcor_method_has_error_estimate (tm->meth))
+      continue;
+
+    if ((tm->meth == NC_XCOR_METHOD_KERNEL_EXACT) &&
+        (tm->closure == NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV))
+    {
+      g_assert_true (gsl_isnan (ncm_vector_get (cl_err, i)));
+    }
+    else
     {
       g_assert_true (gsl_finite (ncm_vector_get (cl_err, i)));
       g_assert_cmpfloat (ncm_vector_get (cl_err, i), >=, 0.0);
