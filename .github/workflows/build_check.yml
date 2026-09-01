@@ -308,11 +308,10 @@ jobs:
     name: Cov-${{ matrix.name }} (py${{ matrix.python-version }}, openmpi)
     runs-on: ${{ matrix.os }}-latest
     strategy:
-      # Shards are DERIVED, not hand-labeled (see TESTING.md): the C tests are split by
-      # meson's own --slice, so they auto-distribute as tests are added or removed, with
-      # no per-test shard suite to curate. The Python `pytest` lane is internally parallel
-      # (xdist), so it stays a single shard; the marker-gated py-* subsets are their own
-      # shards because they are opt-in, not for balancing.
+      # Shards follow the lanes, not a hand-curated split (see TESTING.md). The Python
+      # `pytest` lane is internally parallel (xdist), so it stays a single shard; the
+      # marker-gated py-* subsets are their own shards because they are opt-in, not for
+      # balancing.
       matrix:
         include:
           - { os: ubuntu, python-version: "3.13", name: python, args: "--suite python" }
@@ -323,16 +322,13 @@ jobs:
           - { os: ubuntu, python-version: "3.13", name: py-powspec, args: "--suite py-powspec" }
           - { os: ubuntu, python-version: "3.13", name: py-xcor, args: "--suite py-xcor" }
           - { os: ubuntu, python-version: "3.13", name: py-app, args: "--suite py-app" }
-          # The `slice` field selects which third of the C tests this leg runs, passed
-          # straight to meson --slice. That balances by test count, not wall time, which
-          # is the right trade here: measured over the current suite, count-balancing
-          # gives a 518 s worst slice against 403 s for duration-balancing -- 115 s, on
-          # legs that finish in 9-11 min while the critical path of this job is py-xcor
-          # at 30-47 min. When a single test grows enough for that to matter, the answer
-          # is to split the test, which is worth doing for its own sake; see TESTING.md.
-          - { os: ubuntu, python-version: "3.13", name: c-1, slice: 1 }
-          - { os: ubuntu, python-version: "3.13", name: c-2, slice: 2 }
-          - { os: ubuntu, python-version: "3.13", name: c-3, slice: 3 }
+          # One shard, not three. The C suite is 591 s of summed test time, which at
+          # --num-processes here is about 2.5 min of actual work; three legs spent ~19 min
+          # of machine time to parallelize that, because ~5 min of each 6-min leg was
+          # checkout, conda and the -O0 build. Slicing bought no wall time either: this
+          # job's critical path is py-xcor, several times longer. Split again if the C
+          # suite grows enough to become that critical path.
+          - { os: ubuntu, python-version: "3.13", name: c, args: "--suite c" }
     defaults:
       run:
         shell: bash -el {0}
@@ -370,12 +366,7 @@ jobs:
         # Third run to merge the coverage base and the coverage for the tests
         run: |
           lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
-          if [ -n "${{ matrix.slice }}" ]; then
-            meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) \
-              --suite c --slice ${{ matrix.slice }}/3 || (cat build/meson-logs/testlog.txt && exit 1)
-          else
-            meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
-          fi
+          meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
           # tests/c and tests/python are the harness, not the library: they are ~22k lines
@@ -386,9 +377,9 @@ jobs:
           lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/external/*' '*/tools/*' '*/tests/c/*' '*/tests/python/*' --output-file numcosmo-coverage.info
       - name: Test timing summary
         if: always()
-        # Surface the slowest tests of this shard in the job summary. Since --slice balances
-        # by count, this is how a test growing fat enough to unbalance its leg becomes
-        # visible -- and the fix for that is to split the test, not to reweight the split.
+        # Surface the slowest tests of this shard in the job summary: this is how a test
+        # growing fat enough to matter becomes visible, and the fix for that is to split
+        # the test rather than to shard around it.
         run: |
           python3 .github/scripts/test_summary.py summary --testlog build/meson-logs/testlog.json --title "${{ matrix.name }}" >> "$GITHUB_STEP_SUMMARY"
       - name: CodeCov
