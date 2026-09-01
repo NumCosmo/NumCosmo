@@ -252,11 +252,28 @@ math_tests = [
         'name': 'ncm_mset_trans_kern_gauss',
         'sources': ['ncm/fit/test_ncm_mset_trans_kern_gauss.c'],
     },
+    # Split by claim, not by check: driving a chain is mechanics a short run covers, while
+    # requiring the sample covariance to reproduce the data covariance converges as
+    # 1/sqrt(n) and is chased by loops that double the chain length up to fifteen times.
+    # The mechanics run in the instrumented lane at a fixed short length; the recovery
+    # assertions, with their retries, run in the statistical tier.
     {
         'name': 'ncm_fit_esmcmc',
-        'sources': ['ncm/fit/test_ncm_fit_esmcmc.c'],
+        'sources': [
+            'ncm/fit/test_ncm_fit_esmcmc.c',
+            'ncm/fit/test_ncm_fit_esmcmc_common.c',
+        ],
         'timeout': 0,
-        'suite': ['c-acceptance', 'omp'],
+        'suite': ['c', 'omp'],
+    },
+    {
+        'name': 'ncm_fit_esmcmc_recovery',
+        'sources': [
+            'ncm/fit/test_ncm_fit_esmcmc_recovery.c',
+            'ncm/fit/test_ncm_fit_esmcmc_common.c',
+        ],
+        'timeout': 0,
+        'suite': ['c-statistical', 'omp'],
     },
     {
         'name': 'ncm_func_eval',

@@ -1,5 +1,5 @@
 /***************************************************************************
- *            test_ncm_fit_esmcmc.c
+ *            test_ncm_fit_esmcmc_recovery.c
  *
  *  Copyright  2026  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
@@ -32,6 +32,6 @@
 gint
 main (gint argc, gchar *argv[])
 {
-  return test_ncm_fit_esmcmc_main (argc, argv, TEST_NCM_FIT_ESMCMC_MECHANICS);
+  return test_ncm_fit_esmcmc_main (argc, argv, TEST_NCM_FIT_ESMCMC_RECOVERY);
 }
 
