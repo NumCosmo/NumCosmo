@@ -294,6 +294,15 @@ jobs:
         # this changes where it runs, not what it covers.
         if: matrix.os == 'ubuntu' && matrix.mpi == 'openmpi'
         run: meson test -v -C build --suite py-acceptance || (cat build/meson-logs/testlog.txt && exit 1)
+      - name: Check NumCosmo (C acceptance and statistical tiers)
+        # Same move as py-acceptance above, for the same reason. These four tests are 356 s
+        # of the coverage job's 947 s of C work -- 38% of it -- and what they uniquely
+        # cover is 13 lines, all in nc_cbe_class and nc_powspec_transfer, reachable only
+        # by running CLASS. The mechanics they share with the instrumented tier were split
+        # out into the `c` suite (see tests/c/meson.build), so this changes where they run,
+        # not what is covered. Optimized they cost 78 s instead of 356 s.
+        if: matrix.os == 'ubuntu' && matrix.mpi == 'openmpi'
+        run: meson test -v -C build --suite c-acceptance --suite c-statistical || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge-coverage:
     name: Cov-${{ matrix.name }} (py${{ matrix.python-version }}, openmpi)
@@ -363,7 +372,7 @@ jobs:
           lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
           if [ -n "${{ matrix.slice }}" ]; then
             meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) \
-              --suite c --suite c-acceptance --suite c-statistical --slice ${{ matrix.slice }}/3 || (cat build/meson-logs/testlog.txt && exit 1)
+              --suite c --slice ${{ matrix.slice }}/3 || (cat build/meson-logs/testlog.txt && exit 1)
           else
             meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
           fi
