@@ -58,9 +58,25 @@ math_tests = [
         'name': 'ncm_stats_dist1d_epdf',
         'sources': ['ncm/stats/test_ncm_stats_dist1d_epdf.c'],
     },
+    # Split by claim: building an estimator is mechanics a small sample exercises fully,
+    # while requiring it to reproduce its own distribution needs the full sample and costs
+    # three quarters of the runtime -- a Jensen-Shannon divergence, a covariance recovered
+    # to 50%, a sampling frequency matched over ten million draws.
     {
         'name': 'ncm_stats_dist',
-        'sources': ['ncm/stats/test_ncm_stats_dist.c'],
+        'sources': [
+            'ncm/stats/test_ncm_stats_dist.c',
+            'ncm/stats/test_ncm_stats_dist_common.c',
+        ],
+        'timeout': 0,
+        'suite': ['c', 'omp'],
+    },
+    {
+        'name': 'ncm_stats_dist_divergence',
+        'sources': [
+            'ncm/stats/test_ncm_stats_dist_divergence.c',
+            'ncm/stats/test_ncm_stats_dist_common.c',
+        ],
         'timeout': 0,
         'suite': ['c-statistical', 'omp'],
     },
