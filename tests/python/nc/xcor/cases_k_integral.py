@@ -140,7 +140,7 @@ class KernelSpec:
     """
 
     name: str
-    builder: typing.Callable[..., Nc.XcorKernelAnalytic]
+    builder: typing.Callable[..., Nc.XcorKernelRadial]
     stresses: str
     shape: str = ""
     params: typing.Mapping[str, typing.Any] = dataclasses.field(default_factory=dict)
@@ -247,7 +247,7 @@ def _gauss_kdep(
             chi_sigma=chi_sigma,
             n_sigma=n_sigma,
             integrator=sbi,
-            scale_dependence=Nc.XcorKernelAnalyticKDepGrowth.new(
+            scale_dependence=Nc.XcorKernelRadialKDepGrowth.new(
                 amplitude, k_transition, chi_ref
             ),
         )
@@ -461,7 +461,7 @@ def build_kernel(
     ps: Ncm.Powspec,
     settings: Settings,
     sbi: Ncm.SBesselIntegrator | None = None,
-) -> Nc.XcorKernelAnalytic:
+) -> Nc.XcorKernelRadial:
     """Build and prepare one kernel of the matrix at the given settings.
 
     Pass @sbi to share one Levin integrator across the kernels of a block, the
@@ -485,7 +485,7 @@ def build_kernel(
 
 
 def build_integrand(
-    kernel: Nc.XcorKernelAnalytic,
+    kernel: Nc.XcorKernelRadial,
     cosmo: Nc.HICosmo,
     lmin: int,
     lmax: int,
@@ -709,8 +709,8 @@ def reference_cl(
 
 def per_multipole_reference(
     RH: float,
-    kernel_a: Nc.XcorKernelAnalytic,
-    kernel_b: typing.Optional[Nc.XcorKernelAnalytic],
+    kernel_a: Nc.XcorKernelRadial,
+    kernel_b: typing.Optional[Nc.XcorKernelRadial],
     cosmo: Nc.HICosmo,
     lmin: int,
     lmax: int,

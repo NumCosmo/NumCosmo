@@ -140,11 +140,8 @@ def tracer_components(
 
     comps = []
     for W_a, transfer, der in zip(resampled, transfers_list, der_bessel):
-        if der not in (-1, 0):
-            raise NotImplementedError(
-                f"der_bessel = {der} needs derivatives of j_l, which the "
-                "kernel-folding form used here cannot express."
-            )
+        if der not in (-1, 0, 1, 2):
+            raise NotImplementedError(f"unsupported der_bessel = {der}")
         comps.append(W_a * np.asarray(transfer) * D_a)
 
     # Strip the endpoints, as compute_kernel does: CCL pads the grid.
@@ -199,14 +196,17 @@ def bessel_transform_block(
         )
         f_c = f_ell[:, 0] if f_ell.shape[1] == 1 else f_ell[:, 0]
         bes = 1.0 / nu**2 if der == -1 else np.ones_like(nu, dtype=float)
+        # positive orders are the Bessel-derivative weights (2 is CCL's RSD)
+        deriv = der if der > 0 else 0
 
         block = np.zeros((n_ell, len(k_a)))
         for ik, k in enumerate(k_a):
-            integ.integrate(
+            integ.integrate_deriv(
                 lambda _p, chi, _k, _s=sp: _s.eval(chi),
                 chi_min,
                 chi_max,
                 float(k),
+                deriv,
                 res,
                 None,
             )

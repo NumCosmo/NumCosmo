@@ -47,7 +47,7 @@ measuring the legacy bias (see the plan/session notes): the bound itself
 isn't too narrow (14 +/- a few dex of headroom), the realization is just
 uninformative. These boundary-clamped realizations are excluded from the
 statistics below as non-converged, exactly as one would exclude a
-non-converged MCMC chain; with them excluded, this reproduction landed at
+non-converged MCMC chain; with them excluded, this reproduction yielded
 -20% to -30% (measured from a 300-realization run while writing this test),
 squarely matching the legacy-measured range.
 

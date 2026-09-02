@@ -3,11 +3,8 @@ title: "Halo Mass Function"
 author: "Disrael Camargo Neves da Cunha"
 date: "2026-07-20"
 abstract: |
-  This document demonstrates how to compute the halo mass function and its supporting quantities using
-  the `numcosmo` library. Starting from a dark-energy cosmology, we build the linear growth function, the
-  Eisenstein-Hu transfer function and the resulting linear matter power spectrum, the tophat-filtered
-  variance, and finally the comoving halo number density per logarithmic mass interval and the halo
-  counts per unit redshift for a survey of fixed area.
+  Computes a halo mass function from a dark-energy cosmology, linear power
+  spectrum, filtered variance, and multiplicity function.
 
 format:
   html: default
@@ -21,12 +18,9 @@ format-links: [ipynb]
 
 ## Introduction
 
-The halo mass function quantifies the comoving number density of dark-matter halos as a function of mass
-and redshift. Computing it requires several ingredients: the linear growth factor $D(z)$, the linear
-matter power spectrum $P_m(k)$, the variance $\sigma^2(R)$ of the density field smoothed on a scale $R$,
-and a multiplicity function that maps that variance onto a halo abundance. This example walks through each
-ingredient in turn and then assembles them into the mass function, reproducing the comoving number
-density $dn / d\ln M$ and the number of halos per unit redshift over a survey of fixed solid angle.
+The calculation uses the linear growth factor $D(z)$, matter power spectrum
+$P_m(k)$, filtered variance $\sigma^2(R)$, and multiplicity function to
+evaluate $dn/d\ln M$ and halo counts per redshift.
 
 ## Prerequisites
 
@@ -308,14 +302,11 @@ plt.legend(loc="best")
 plt.show()
 ```
 
-The counts above peak near the redshift printed by the cell that computed them, where two competing
-effects balance: at lower redshift a fixed solid angle encloses little comoving volume, while at higher
-redshift halos this massive have not yet formed in appreciable numbers.
+The counts peak where comoving volume and the abundance of massive halos
+balance.
 
 ## Conclusion
 
-We built the halo mass function from its constituent pieces: the linear growth factor, the Eisenstein-Hu
-transfer function and matter power spectrum, and the tophat-filtered variance, and used the Tinker
-multiplicity function to compute the comoving number density $dn / d\ln M$ and the halo counts per unit
-redshift. This example serves as a foundation for cluster-abundance forecasts and for constructing mock
-halo catalogs.
+The example combines linear growth, the Eisenstein-Hu transfer function,
+tophat-filtered variance, and the Tinker multiplicity function to compute
+$dn/d\ln M$ and halo counts per redshift.

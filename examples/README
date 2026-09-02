@@ -1,10 +1,5 @@
-Examples of how to use the library.
-
-Every example below assumes that you have the library in `/home/[username]/NumCosmo`
-and compiled in `/home/[username]/NumCosmo/build`
-
-To setup the environment variables for the examples, you can use the script:
-`source path_to_numcosmo_build/numcosmo_export.sh`
+The examples require a compiled NumCosmo tree. Source
+`numcosmo_export.sh` from the build directory before running them.
 
 ****************************************************************************
 * Compilation of the examples in C
@@ -25,17 +20,15 @@ installed library.
 gcc -Wall example_simple.c -o example_simple \
 `pkg-config numcosmo --libs --cflags`
 
-This line may need modification depending on the system. Just look
+This line may need modification depending on the system. Inspect
 for the missing header and add the corresponding pkg-config lib or -I
 
 ****************************************************************************
 * Running the python examples
 ***************************************************************************
 
-All examples assumes that you are using python >= 3.11
-To test the example ust run the script:
+Python examples require Python >= 3.11. Run an example with:
 
 `python ./example_simple.py`
 
-Note that some examples depend on matplotlib and/or other python modules.
-
+Some examples require matplotlib or additional Python modules.

@@ -5,35 +5,35 @@ title: A Small-Shear Series Marginalization for the Shape Likelihood
 # A Small-Shear Series Marginalization for the Shape Likelihood
 
 ::: {.callout-note}
-This page derives a small-shear ($g$) series expansion of the shape
-marginal, alongside the sibling schemes
+This page defines a small-shear ($g$) expansion of the shape marginal, one of
+the schemes described in
+[Galaxy Population & WL Framework](galaxy_wl_framework.qmd); the siblings are
 [[numcosmo|NcGalaxyShapeFactorVarAdd]], [[numcosmo|NcGalaxyShapeFactorLaplace]],
 [[numcosmo|NcGalaxyShapeFactorQuad]] and
-[[numcosmo|NcGalaxyShapeFactorFixedQuad]] (see
-[Galaxy Population & WL Framework](galaxy_wl_framework.qmd)). Two variants
-were derived and implemented: the original **noise-side** expansion (expand
-the *noise kernel* in $g$, integrate $\chi_I$ over the disc exactly), and a
-**lensed-frame reformulation** ([A Lensed-Frame Reformulation](#sec-lensed))
-that expands the *population* in $g$ instead, sidestepping the noise-side
-scheme's small-$\sigma_\mathrm{noise}$ blowup (described below) by
-construction. The noise-side scheme was shipped as
-`NcGalaxyShapeFactorSeries` and later **removed** once
-[[numcosmo|NcGalaxyShapeFactorFixedQuad]] (an exact, series-free fixed-node
-quadrature — see
+[[numcosmo|NcGalaxyShapeFactorFixedQuad]].
+
+The expansion has two forms, differing in whether the noise kernel or the
+population is expanded in $g$. The lensed-frame form
+([A Lensed-Frame Reformulation](#sec-lensed)) avoids the
+small-$\sigma_\mathrm{noise}$ breakdown of the noise-side form.
+[[numcosmo|NcGalaxyShapeFactorSeriesLensed]] implements it for both
+ellipticity conventions with a Gaussian population; see
+[Open Questions](#sec-open) for what is still missing there.
+
+The noise-side form was implemented as `NcGalaxyShapeFactorSeries` and
+later removed once [[numcosmo|NcGalaxyShapeFactorFixedQuad]] (exact,
+series-free — see
 [Fixed-Node Lens-Domain Quadrature](wl_shape_marginalization_fixed_quad.qmd))
-and [[numcosmo|NcGalaxyShapeFactorSeriesLensed]] made it redundant for every
-regime this project actually uses; its derivation is kept below because
-[A Lensed-Frame Reformulation](#sec-lensed) reuses and cross-checks against
-several of its results (the map's own $g$-series, the Jacobi–Anger
-$\theta$-integral technique). [[numcosmo|NcGalaxyShapeFactorSeriesLensed]]
-(lensed-frame, both conventions, Gaussian population only so far) remains
-shipped and tested against `Quad` — see [Open Questions](#sec-open) for what
-is still missing there. Every formula below is checked against either
-sympy, a brute-force numerical integral, or a C implementation (see
+and [[numcosmo|NcGalaxyShapeFactorSeriesLensed]] covered every regime this
+project uses. Its derivation is kept below because
+[A Lensed-Frame Reformulation](#sec-lensed) reuses several of its results:
+the map's own $g$-series and the Jacobi–Anger $\theta$-integral.
+
+Every formula below is checked against sympy, a brute-force numerical
+integral, or a C implementation (see
 `dev-notes/wl_shape_series_marginalization_derivation.py`). See
-`docs/theory/wl_shape_factor_history.md` for the design history: bugs found
-and fixed, approaches tried and rejected, and the verification evidence
-behind the choices made here.
+`docs/theory/wl_shape_factor_history.md` for the design history behind these
+choices.
 :::
 
 ## Motivation
@@ -145,8 +145,8 @@ R\cos\phi - R\rho^2\cos(2\theta-\phi) + (\rho^3-\rho)\cos\theta
 \Big] + O(g^2).
 $$
 
-$O(g^2)$ and $O(g^3)$ are verified but too long to be illuminating written
-out; see `dev-notes/wl_shape_series_marginalization_derivation.py`
+$O(g^2)$ and $O(g^3)$ are verified but too long to reproduce here; see
+`dev-notes/wl_shape_series_marginalization_derivation.py`
 (`verify_delta_series`) for the exact, checked expressions.
 
 ## Step 3 — The $\theta$-Integral is Exact (Jacobi–Anger) {#sec-step3-anger}
@@ -268,8 +268,7 @@ Denominators are cleared with an explicit $w^{2m}$ rather than
 auto-detected from the fraction's own degree, so the $1/\sigma^{2m}$ part of
 the mixed $(w,\sigma^2)$ denominator is never silently dropped for
 $m\ge2$ — see `extract_laurent` in `verify_delta_series_chi`, and
-`docs/theory/wl_shape_factor_history.md` for the extraction bug this
-guards against.
+the extraction contract used by the implementation.
 
 ## Convergence {#sec-convergence}
 
@@ -280,9 +279,7 @@ fixed: full rotation covariance requires $g$ to rotate too
 identity used elsewhere in the project's TRACE mode-finder derivation). Step
 2's expansion therefore keeps $\epsilon_\mathrm{obs}$ as a general complex
 parameter throughout, rather than rotating it to the real axis before
-expanding; see `verify_delta_series` in the derivation script. See
-`docs/theory/wl_shape_factor_history.md` for the mistake this guards
-against.
+expanding; see `verify_delta_series` in the derivation script.
 :::
 
 ### $\epsilon$ (TRACE\_DET) Convention
@@ -312,7 +309,7 @@ $R\in[0.3,5.0]\,\mathrm{Mpc}$, $z_l=0.2$, $z_s\in[0.4,2.0]$, NFW $c=5$, see
 `tests/python/nc/data/test_data_cluster_wl_factor_mc_bias.py`): $g_t$ tops
 out around $0.09$ at the innermost radius / highest mass / highest source
 redshift corner, and is typically $\lesssim0.02$ through most of the fitted
-range. That is comfortably inside the regime where $N=1$ alone is already
+range. That is inside the regime where $N=1$ alone is already
 sub-percent accurate — this scheme's own $g$-truncation is not the limiting
 error source for this project's actual parameter range; $N=2$ would push it
 well below $10^{-3}$ almost everywhere.
@@ -351,12 +348,9 @@ implementation using this recursion, has been **removed**:
 [[numcosmo|NcGalaxyShapeFactorFixedQuad]] (exact, no series truncation) and
 [[numcosmo|NcGalaxyShapeFactorSeriesLensed]] (the lensed-frame
 reformulation below) cover every regime this project uses, without the
-combinatorial-blowup failure mode described in
-[Convergence](#sec-convergence). See
-`docs/theory/wl_shape_factor_history.md` for the recursion formulas, the
-higher-order convergence data, and the removed class's design, and
-`dev-notes/wl_shape_series_marginalization_derivation.py` for the Python
-reference implementation.
+combinatorial-growth failure mode described in
+[Convergence](#sec-convergence). The recursion formulas are implemented in
+`dev-notes/wl_shape_series_marginalization_derivation.py`.
 
 ## A Small-$\sigma_\mathrm{noise}$ Complement: The Heat-Kernel Expansion {#sec-heat-kernel}
 
@@ -368,7 +362,7 @@ guaranteed accurate when $\epsilon_\mathrm{obs}$ is "typical" given
 $(g,\sigma_\mathrm{noise})$ and the population — i.e. not many
 $\sigma_\mathrm{noise}$ into the tail of what the model can explain — and
 degrades as $\sigma_\mathrm{noise}$ shrinks relative to the scale over which
-the population/map varies. A genuinely complementary expansion, valid in
+the population/map varies. A complementary expansion, valid in
 (part of) the *opposite* limit, comes from substituting $u=f_g(\chi_I)$ in
 the exact marginal:
 
@@ -417,9 +411,8 @@ points to $11\%$, $1.1\%$, $0.08\%$.
 
 Mapping both series and `Quad` together (Gaussian population, deliberately
 small $\sigma_\mathrm{pop}=0.05$ to expose *both* regimes, real $g=0.08$)
-shows they are genuinely complementary — each excellent in its own
-asymptotic limit, **not** a universal small-$g$ story, with a real gap
-between them:
+shows that each is accurate in its own asymptotic limit, and that neither
+covers all small $g$. A gap remains between them:
 
 | $\sigma_\mathrm{noise}$ | `Quad` | $g$-series | rel. err | heat $n{=}0{+}1$ | rel. err |
 |---:|---:|---:|---:|---:|---:|
@@ -448,11 +441,11 @@ $\sigma_\mathrm{pop}\in(0.2,0.4)$ for any analysis using this scheme.
 Combined with this project's real per-galaxy $\sigma_\mathrm{noise}\sim0.3$
 (the regime `tests/python/nc/data/test_data_cluster_wl_factor_mc_bias.py`'s
 own MC bias campaign targets), that keeps every
-evaluation solidly in the $g$-series' validated safe zone — exactly the
+evaluation inside the $g$-series' validated range — the
 $(\sigma_\mathrm{noise},\sigma_\mathrm{pop})=(0.30,0.25)$ point checked in
 [Convergence](#sec-convergence) above. If a posterior for $\sigma_\mathrm{pop}$
 ever concentrates at that prior's boundary, that is a signal to re-validate
-the affected run against `Quad` rather than trust the series blindly.
+the affected run against `Quad` rather than use the series without comparison.
 
 **This guards the population parameter, not the per-galaxy noise.**
 $\sigma_\mathrm{noise}$ is per-galaxy *data*, not something the prior
@@ -460,16 +453,16 @@ constrains: an unusually well-measured galaxy could still have
 $\sigma_\mathrm{noise}$ small relative to $\sigma_\mathrm{pop}$'s prior floor,
 landing it in the gap or the heat-kernel-only regime regardless of the
 population prior. A production-safe implementation should therefore also
-guard *per galaxy* (e.g. flag or fall back to `Quad` when a galaxy's
-$\sigma_\mathrm{noise}$ is not comfortably above $\sigma_\mathrm{pop}$'s prior
-floor) rather than relying on the population-level prior alone — not yet
-implemented, see [Open Questions](#sec-open).
+guard per galaxy — flag or fall back to `Quad` when a galaxy's
+$\sigma_\mathrm{noise}$ is not well above $\sigma_\mathrm{pop}$'s prior
+floor — rather than rely on the population-level prior alone. This is not
+implemented; see [Open Questions](#sec-open).
 
 ## A Lensed-Frame Reformulation: Expanding the Population Instead of the Noise {#sec-lensed}
 
 The series above expands the *noise kernel* in $g$ at fixed $\chi_I$. Its
 coefficients ($a_{n,k}$, [Convergence](#sec-convergence)) scale like
-$1/\sigma_\mathrm{noise}^{2n}$, and combinatorially blow up whenever a
+$1/\sigma_\mathrm{noise}^{2n}$, and become unstable whenever a
 galaxy's per-object $\sigma_\mathrm{noise}$ — observational data, unbounded,
 with no prior constraining it — is small relative to $g$: not roundoff (this
 was confirmed with a 50-digit `mpmath` reproduction of the same computation,
@@ -503,7 +496,7 @@ $F_g$'s own definition.
 ### Closed forms, both conventions
 
 Both $\chi_I(\chi_L,g)=f_{-g}(\chi_L)$ and the Jacobian have closed forms —
-no finite differences anywhere, which matters since extracting the
+no finite differences anywhere. This matters because extracting the
 population-side Taylor coefficients via fixed-step central differences is
 numerically unstable at high order ($h^n$ cancellation, unrelated to the
 true series' own convergence — see
@@ -526,12 +519,12 @@ true series' own convergence — see
   $\mathrm{Jac}(\chi_L,g)=|1-g^2|^3/|D(g)|^3$, $D(g)$ the same denominator as
   $\chi_I$'s own series.
 
-Both closed forms were independently confirmed to machine precision against
-the **already-shipped** `nc_wl_ellipticity_apply_shear_inv_trace(_det)_c` /
+Both closed forms were confirmed to machine precision against the existing
+`nc_wl_ellipticity_apply_shear_inv_trace(_det)_c` /
 `nc_wl_ellipticity_lndet_jac_trace(_det)_c` (also used by
-`nc_galaxy_shape_intrinsic_mode.c` for an unrelated Laplace-mode search) —
-so the C port reuses those functions' own *evaluated* form as a correctness
-anchor, even though the *Taylor-series* recursion around them is new.
+`nc_galaxy_shape_intrinsic_mode.c` for an unrelated Laplace-mode search), so
+the C port reuses those functions' evaluated form as a correctness anchor
+even though the Taylor-series recursion around them is new.
 
 $P_\mathrm{pop}=\exp(-|\chi_I|^2/2\sigma_\mathrm{pop}^2)$'s composition with
 $\chi_I(\chi_L,g)$'s series reuses the same exp-of-power-series recursion as
@@ -543,22 +536,24 @@ $\theta$-integral is done exactly via the same Jacobi-Anger identity as
 
 ### Verification
 
-Both the closed forms and the full pipeline (population series $\times$
-Jacobian series, reduced via Jacobi-Anger, radial-quadrature windowed exactly
-as in [A Compact, Arbitrary-Order Engine](#sec-compact)) were verified layer
-by layer in `dev-notes/wl_shape_series_marginalization_derivation.py`
-(sections 9–11): pieces vs. direct evaluation (machine precision), the full
-series vs. brute-force ground truth at the real production $g$ range, and —
-the decisive check — $\sigma_\mathrm{noise}$-independence confirmed via an
-**exact** Jacobi-Anger reduction (scaled Bessel functions, no adaptive
-quadrature of any kind, since a naive adaptive quadrature silently returns
-zero for a peak too narrow to resolve rather than raising an error, which can
-fake a stable-looking result if both compared quantities degrade together).
-At the real production $g$ ceiling ($\sim0.09$), the default truncation order
-gives $\sim4\times10^{-3}$ (TRACE) / $\sim6\times10^{-5}$ (TRACE_DET) relative
-error against ground truth, flat across five decades of $\sigma_\mathrm{noise}$
-— TRACE consistently needing more terms than TRACE_DET for comparable
-accuracy, the same ordering as the noise-side scheme's own convergence table.
+The closed forms and the full pipeline (population series $\times$ Jacobian
+series, reduced via Jacobi–Anger, radial quadrature windowed as in
+[A Compact, Arbitrary-Order Engine](#sec-compact)) were verified layer by
+layer in `dev-notes/wl_shape_series_marginalization_derivation.py`
+(sections 9–11): the $\chi_I(\chi_L,g)$ series, the Jacobian series and
+their product against direct evaluation of the same quantities (machine
+precision), the full series against brute-force ground truth over the
+production $g$ range, and $\sigma_\mathrm{noise}$-independence via an
+exact Jacobi–Anger reduction. That last check uses scaled Bessel functions rather than adaptive
+quadrature: adaptive quadrature returns zero for a peak too narrow to
+resolve instead of reporting an error, which can make an unstable result
+look stable when both compared quantities degrade together.
+
+At the production $g$ ceiling ($\sim0.09$), the default truncation order
+gives relative errors against ground truth of $\sim4\times10^{-3}$ (TRACE)
+and $\sim6\times10^{-5}$ (TRACE_DET), flat across five decades of
+$\sigma_\mathrm{noise}$. TRACE needs more terms than TRACE_DET for
+comparable accuracy, the same ordering as the noise-side scheme.
 
 A C implementation, [[numcosmo|NcGalaxyShapeFactorSeriesLensed]]
 (`nc_galaxy_shape_factor_series_lensed.c`), exists for both conventions at a
@@ -566,23 +561,18 @@ configurable truncation order, reusing a new generic
 [[numcosmo|NcmLaurentSeries]] module
 (`numcosmo/ncm/algebra/ncm_laurent_series.c`, extracted — like
 `ncm_poly_roots.c` before it — once the underlying complex Laurent-series
-arithmetic and Jacobi-Anger reduction turned out to have no physics content
-of their own, and independently tested in
+arithmetic and Jacobi-Anger reduction, with tests in
 `tests/c/ncm/algebra/test_ncm_laurent_series.c`) rather than duplicating the
 now-removed `NcGalaxyShapeFactorSeries`'s own private implementation of the
 same primitives. Tested against `Quad`, for cache-consistency, and
 specifically at the small-$\sigma_\mathrm{noise}$ scenario that makes the
-noise-side scheme blow up — see
+noise-side scheme fail — see
 `tests/python/nc/lss/galaxy/test_galaxy_shape_factor_series_lensed.py`.
 
-**Scope of this first version**: Gaussian population only (matching
+**Population**: Gaussian only (matching
 [[numcosmo|NcGalaxyShapeFactorVarAdd]]'s own existing precedent), via the
 same `nc_galaxy_shape_pop_get_sigma()` capability-based accessor `VarAdd`
-already relies on, checked once at `prepare()` time. General-population
-support — Taylor-composing an arbitrary population's own local Taylor
-coefficients in $x=|\chi_I|^2$ with the closed-form $\chi_I(g)$ series above
-— is real, not-yet-attempted future work; the `exp`-of-series composition
-used here is specific to a Gaussian population's analytic form.
+already relies on, checked once at `prepare()` time.
 
 The per-galaxy cache is keyed to `nc_galaxy_shape_factor_get_pop_hash()` in
 addition to $(R,\phi,\sigma_\mathrm{noise})$, since this scheme's
@@ -604,7 +594,7 @@ $g\to\infty$. If $J(g)$ starts positive at $g=0$ (it must — $J_0$ is a
 population-normalized probability density) and trends downward as $g$ grows
 (the common case: the observed ellipticity becomes harder to explain as the
 shear pulls further from it), it is **guaranteed** to cross zero at some
-finite $g$ and diverge to $-\infty$ beyond that — not a bug, a property of
+finite $g$ and diverge to $-\infty$ beyond that — a consequence of
 any finite-degree polynomial approximating something that must stay
 positive. Once $J(g)<0$, `eval_ln_marginal`'s $\log J(g)$ is `NaN`, which
 reaches `NcDataClusterWLFactor`'s adaptive redshift integral
@@ -617,45 +607,43 @@ $$
 J(g) \;\to\; \begin{cases} J(g) & J(g) > 0 \\ 10^{-300} & \text{otherwise} \end{cases}
 $$
 
-a comfortably positive floor (its $\log$ is a large but finite $\approx-691$,
-never $-\infty$, so no $\infty-\infty=\mathrm{NaN}$ risk downstream). This
-guard is order-agnostic, unlike a fixed $g$-window would be, since the
-crossing point depends on both $N$ and $(R,\phi,\sigma_\mathrm{noise})$. See
-`docs/theory/wl_shape_factor_history.md` for how this crash was found, an
-alternative reparametrization that was tried and did not help, and the
-specific crash-triggering configuration.
+The floor keeps $\log J$ finite ($\approx-691$ rather than $-\infty$), so no
+$\infty-\infty=\mathrm{NaN}$ arises downstream. The guard does not depend on
+the truncation order, unlike a fixed $g$-window, because the crossing point
+depends on both $N$ and $(R,\phi,\sigma_\mathrm{noise})$. See
+`docs/theory/wl_shape_factor_history.md` for how this was found, the
+reparametrization that was tried and did not help, and the triggering
+configuration.
 
 ## Open Questions {#sec-open}
 
 - $J_{m,k}(R,\sigma_\mathrm{noise})$ (and `SeriesLensed`'s analogous
-  per-galaxy cache) is a 1D integral over a *fixed* prior $P_\mathrm{pop}$;
-  if the population's own parameters (e.g. `NcGalaxyShapePopGauss`'s
-  $\sigma$) are being fit, it must be recomputed whenever they change.
-  Whether that still nets out ahead of `Quad`/`Laplace` in an actual MCMC
-  (not just per fixed-parameter evaluation) is unverified.
+  per-galaxy cache) is a 1D integral over a fixed prior $P_\mathrm{pop}$; if
+  the population's own parameters (for example `NcGalaxyShapePopGauss`'s
+  $\sigma$) are fit, it must be recomputed whenever they change. Whether
+  that remains cheaper than `Quad`/`Laplace` in an actual MCMC, rather than
+  per fixed-parameter evaluation, is unverified.
 - The $\epsilon$-convention table in [Convergence](#sec-convergence) was run
-  at a single $\sigma_\mathrm{noise}=0.30$; it does **not** show that the
-  series is safe at any $\sigma_\mathrm{noise}$ for small $g$ — see
-  [A Small-$\sigma_\mathrm{noise}$ Complement](#sec-heat-kernel) for the full
-  picture (a real gap between this series and its small-noise complement)
-  and the recommended $\sigma_\mathrm{pop}$ prior that keeps this project's
-  actual use case away from it.
-- The heat-kernel complement ([A Small-$\sigma_\mathrm{noise}$
-  Complement](#sec-heat-kernel)) is verified in Python only
-  (`dev-notes/wl_shape_series_marginalization_derivation.py`); no C
-  implementation exists. Nor does the per-galaxy $\sigma_\mathrm{noise}$
-  guard that section recommends — both are natural follow-ups if a use case
-  ever needs galaxies outside the $g$-series' safe zone.
+  at a single $\sigma_\mathrm{noise}=0.30$. It does not show that the series
+  is safe at any $\sigma_\mathrm{noise}$ for small $g$ — see
+  [A Small-$\sigma_\mathrm{noise}$ Complement](#sec-heat-kernel) for the gap
+  between this series and its small-noise complement, and for the
+  $\sigma_\mathrm{pop}$ prior that keeps this project's use case away from
+  it.
+- The heat-kernel complement is verified in Python only
+  (`dev-notes/wl_shape_series_marginalization_derivation.py`); there is no C
+  implementation, nor the per-galaxy $\sigma_\mathrm{noise}$ guard that
+  section recommends. Both are follow-ups if a use case needs galaxies
+  outside the $g$-series' validated range.
 - The gap between the two series (comparable $\sigma_\mathrm{noise}$ and
-  $\sigma_\mathrm{pop}$) has no closed-form treatment here — a proper
-  uniform/matched asymptotic expansion spanning it was not attempted; `Quad`
-  is the only validated fallback there. The lensed-frame reformulation
-  ([above](#sec-lensed)) sidesteps the noise-side blowup specifically, but
-  does not (yet) close this particular gap either, since it has its own
-  (different, population-side) small-$\sigma_\mathrm{pop}$ convergence
-  boundary.
-- [A Lensed-Frame Reformulation](#sec-lensed)'s general-population support
-  (beyond Gaussian) is not yet derived — see that section's own scope note.
+  $\sigma_\mathrm{pop}$) has no closed-form treatment here; a uniform
+  matched asymptotic expansion spanning it was not attempted, and `Quad` is
+  the only validated fallback. The lensed-frame reformulation
+  ([A Lensed-Frame Reformulation](#sec-lensed)) avoids the noise-side
+  breakdown specifically, but does not close this gap: it has its own
+  population-side small-$\sigma_\mathrm{pop}$ convergence boundary.
+- General-population support for the lensed-frame form is not yet derived;
+  see that section's scope note.
 
 ## API Reference
 
@@ -663,7 +651,7 @@ specific crash-triggering configuration.
   and `docs/theory/wl_shape_factor_history.md` (C implementation removed)
 - Lensed-frame (population-side) scheme: [[numcosmo|NcGalaxyShapeFactorSeriesLensed]],
   [[numcosmo|NcmLaurentSeries]]
-- Sibling schemes: [[numcosmo|NcGalaxyShapeFactorVarAdd]],
+- Related schemes: [[numcosmo|NcGalaxyShapeFactorVarAdd]],
   [[numcosmo|NcGalaxyShapeFactorLaplace]], [[numcosmo|NcGalaxyShapeFactorQuad]],
   [[numcosmo|NcGalaxyShapeFactorFixedQuad]]
 - Shear map: `nc_wl_ellipticity_apply_shear_trace`/`_trace_det` in

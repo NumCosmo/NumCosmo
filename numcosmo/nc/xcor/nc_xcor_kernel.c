@@ -477,11 +477,8 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * resolve oscillations that contribute negligibly to the integral.
    *
    * The useful precision is ultimately limited by the radial integration used to
-   * compute $W_i(k)$. This integral is evaluated to an absolute tolerance given by
-   * %NC_XCOR_KERNEL_INTEG_ABSTOL_FRAC times its running maximum. Where $\vert W\vert$
-   * is much smaller than its peak, its relative accuracy is therefore limited by the
-   * accuracy of the radial integral. Refining the spline beyond this level does not
-   * add reliable information.
+   * compute $W_i(k)$: far below its peak that integral is dominated by cancellation,
+   * so refining the spline beyond that level does not add reliable information.
    *
    * **Do not set this below $10^{-6}$.** The floor is measured against the peak of
    * $W_i(k)$, but the quantity actually integrated is $k^2 W_i W_j$, so the floor
@@ -986,27 +983,6 @@ _nc_xcor_kernel_component_kernel_integ (gpointer params, gdouble x, gdouble k)
 #define MAX_ELL_BLOCK NC_XCOR_KERNEL_MAX_ELL_BLOCK
 #define MAX_COMP_BLOCK 6
 
-/* Fraction of a component's largest spherical-Bessel integral, over all k,
- * below which a further integral cannot affect the k-spline built from them.
- *
- * This is measured against the same peak as NcXcorKernel:scaled-abstol, but it
- * is the opposite kind of knob: a sentinel that stops the *inner* radial
- * integrator chasing relative accuracy in the deep tail, not a precision
- * request. It sits ten orders below NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL and
- * twelve below the 1e-4 default, which looks wasteful -- the inner integral
- * appears to be running at full relative precision even where the k-spline
- * above it discards the result.
- *
- * Measured, and it is not: sweeping this constant over 1e-16, 1e-12, 1e-10 and
- * 1e-8 against closed-form kernels (Gaussian, sharp top-hat, Student-t) at
- * ell = 2, 8, 32 and outer floors of 1e-4 and 1e-6 leaves C_l unchanged to at
- * worst 1.4e-13, and leaves the runtime *identical* -- 0.179 s and 0.327 s for
- * the eighteen-case set at every value. The Levin solve meets its relative
- * criterion first, so this floor is only ever a rescue for the deep tail and
- * that path costs nothing here. Raising it would buy no speed; it is a free
- * safety net and stays where it is. */
-#define NC_XCOR_KERNEL_INTEG_ABSTOL_FRAC 1.0e-16
-
 typedef struct _ComponentState
 {
   NcXcorKernelComponent *comp;
@@ -1021,7 +997,6 @@ typedef struct _ComponentState
   gdouble last_values_right[MAX_ELL_BLOCK];
   guint left_boundary_found;
   guint right_boundary_found;
-  gdouble integ_max;                       /* Running max |integrator output| over k, pre-prefactor */
   gdouble k_min_limber_ell[MAX_ELL_BLOCK]; /* Per-ell minimum k for Limber */
   gdouble k_max_limber_ell[MAX_ELL_BLOCK]; /* Per-ell maximum k for Limber */
   ComponentParams params;
@@ -1052,7 +1027,6 @@ _component_state_init (ComponentState *state, NcXcorKernelComponent *comp, guint
   state->last_k_right         = 0.0;
   state->left_boundary_found  = 0;
   state->right_boundary_found = 0;
-  state->integ_max            = 0.0;
   state->params.comp          = comp;
   state->params.cosmo         = cosmo;
 
@@ -1147,6 +1121,45 @@ _component_states_init_non_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
   return comp_states;
 }
 
+/*
+ * Limber peak value of one component at (k, l): the stationary-phase
+ * approximation of int K(chi, k) j_l^(d)(k chi) dchi, including the
+ * component prefactor. For d > 0 the derivative is expanded in j_l and
+ * j_{l+1} through the downward recurrences and each term is
+ * peak-approximated at its own nu / k. The j_{l+1} peak sits at
+ * (nu + 1) / k, slightly deeper than the j_l one; when it falls beyond the
+ * component's support the window there is zero and the term is dropped.
+ */
+static gdouble
+_component_limber_eval (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi_max, gdouble k, gint l)
+{
+  const guint deriv       = nc_xcor_kernel_component_get_bessel_deriv (comp);
+  const gdouble nu        = l + 0.5;
+  const gdouble prefactor = nc_xcor_kernel_component_eval_prefactor (comp, cosmo, k, l);
+  const gdouble peak_l    = sqrt (M_PI / (2.0 * nu)) * nc_xcor_kernel_component_eval_kernel (comp, cosmo, nu / k, k);
+  gdouble val;
+
+  if (deriv == 0)
+  {
+    val = peak_l;
+  }
+  else
+  {
+    const gdouble nup      = nu + 1.0;
+    const gdouble xi_p     = nup / k;
+    const gdouble peak_lp1 = (xi_p <= xi_max) ?
+                             sqrt (M_PI / (2.0 * nup)) * nc_xcor_kernel_component_eval_kernel (comp, cosmo, xi_p, k) :
+                             0.0;
+
+    if (deriv == 1) /* j_l' = (l/y) j_l - j_{l+1} */
+      val = (l / nu) * peak_l - peak_lp1;
+    else /* j_l'' = (l (l-1)/y^2 - 1) j_l + (2/y) j_{l+1} */
+      val = -(2.0 * l + 0.25) / (nu * nu) * peak_l + (2.0 / nup) * peak_lp1;
+  }
+
+  return prefactor * val / k;
+}
+
 static ComponentStates
 _component_states_init_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
                                GPtrArray *comp_list, NcHICosmo *cosmo)
@@ -1215,31 +1228,12 @@ _component_states_init_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
     for (j = 0; j < n_l; j++)
     {
       const gint l_j        = lmin + j;
-      const gdouble nu_j    = l_j + 0.5;
       const gdouble k_min_j = state->k_min_limber_ell[j];
       const gdouble k_max_j = state->k_max_limber_ell[j];
 
-      /* Evaluate at left boundary */
-      {
-        const gdouble xi_left         = nu_j / k_min_j;
-        const gdouble limber_k_left   = 1.0 / k_min_j;
-        const gdouble prefactor_limb  = sqrt (M_PI / (2.0 * nu_j));
-        const gdouble kernel_val_left = nc_xcor_kernel_component_eval_kernel (state->comp, cosmo, xi_left, k_min_j);
-        const gdouble prefactor_left  = nc_xcor_kernel_component_eval_prefactor (state->comp, cosmo, k_min_j, l_j);
-
-        state->last_values_left[j] = prefactor_limb * prefactor_left * limber_k_left * kernel_val_left;
-      }
-
-      /* Evaluate at right boundary */
-      {
-        const gdouble xi_right         = nu_j / k_max_j;
-        const gdouble limber_k_right   = 1.0 / k_max_j;
-        const gdouble prefactor_limb   = sqrt (M_PI / (2.0 * nu_j));
-        const gdouble kernel_val_right = nc_xcor_kernel_component_eval_kernel (state->comp, cosmo, xi_right, k_max_j);
-        const gdouble prefactor_right  = nc_xcor_kernel_component_eval_prefactor (state->comp, cosmo, k_max_j, l_j);
-
-        state->last_values_right[j] = prefactor_limb * prefactor_right * limber_k_right * kernel_val_right;
-      }
+      /* Evaluate at the two boundaries */
+      state->last_values_left[j]  = _component_limber_eval (state->comp, cosmo, state->xi_max, k_min_j, l_j);
+      state->last_values_right[j] = _component_limber_eval (state->comp, cosmo, state->xi_max, k_max_j, l_j);
     }
   }
 
@@ -1353,22 +1347,12 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
       gboolean below_epsilon    = FALSE;
 
       /* Exact integration within boundaries */
-      {
-        /* The integrator cannot know the scale its result feeds into: this
-         * component's kernel over all k. Below a k-independent floor tied to
-         * that scale the result cannot move the k-spline built from it, and
-         * chasing relative accuracy there is both wasted and, where the
-         * integrand has an unresolvable feature, unattainable. */
-        ncm_sbessel_integrator_set_abstol (comp_states->sbi, NC_XCOR_KERNEL_INTEG_ABSTOL_FRAC * state->integ_max);
-
-        ncm_sbessel_integrator_integrate (
-          comp_states->sbi, _nc_xcor_kernel_component_kernel_integ,
-          state->xi_min, state->xi_max, k, integ_result, &state->params
-        );
-      }
-
-      for (i = 0; i < comp_states->n_l; i++)
-        state->integ_max = GSL_MAX (state->integ_max, fabs (kernel_out[ci][i]));
+      ncm_sbessel_integrator_integrate_deriv (
+        comp_states->sbi, _nc_xcor_kernel_component_kernel_integ,
+        state->xi_min, state->xi_max, k,
+        nc_xcor_kernel_component_get_bessel_deriv (state->comp),
+        integ_result, &state->params
+      );
 
       for (i = 0; i < comp_states->n_l; i++)
       {
@@ -1478,19 +1462,12 @@ _component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_d
     for (i = 0; i < comp_states->n_l; i++)
     {
       const gint l                = comp_states->lmin + i;
-      const gdouble nu            = l + 0.5;
       const gboolean within_range = (k >= state->k_min_limber_ell[i]) && (k <= state->k_max_limber_ell[i]);
 
       if (within_range)
       {
         /* Normal Limber evaluation within valid range */
-        const gdouble xi               = nu / k;
-        const gdouble limber_k         = 1.0 / k;
-        const gdouble prefactor_limber = sqrt (M_PI / (2.0 * nu));
-        const gdouble kernel_val       = nc_xcor_kernel_component_eval_kernel (state->comp, state->params.cosmo, xi, k);
-        const gdouble prefactor        = nc_xcor_kernel_component_eval_prefactor (state->comp, state->params.cosmo, k, l);
-
-        kernel_out[ci][i] = prefactor_limber * prefactor * limber_k * kernel_val;
+        kernel_out[ci][i] = _component_limber_eval (state->comp, state->params.cosmo, state->xi_max, k, l);
       }
       else
       {
@@ -1592,15 +1569,7 @@ _cheb_sampler_call (gpointer user_data, gdouble k, NcmVector *y)
   sampler->compute_func (k, y, sampler->comp_states);
 }
 
-/*
- * Default for #NcXcorKernel:panel-order-cap, which is where the reasoning and
- * the sweep behind the value live. A single global panel has to resolve the
- * whole domain uniformly in phase, which at high multipole is mostly domain
- * where W is negligible -- the spline's adaptive knots go where the window
- * actually lives and a global expansion cannot. Capping the order and bisecting
- * recovers that: panels over the quiet region converge at once and cost almost
- * nothing, and the resolution concentrates where the oscillation is.
- */
+/* Default panel-order cap for Chebyshev closure fits. */
 #define NC_XCOR_KERNEL_CHEB_PANEL_K_CAP (5)
 #define NC_XCOR_KERNEL_CHEB_MIN_PANEL_FRAC (1.0e-6)
 

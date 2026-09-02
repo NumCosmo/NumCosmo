@@ -412,7 +412,6 @@ WINDOW_VOLUME_TOPHAT: int = 0
 WL_SURFACE_MASS_DENSITY_DEFAULT_PARAMS_ABSTOL: float = 0.0
 WL_SURFACE_MASS_DENSITY_DEFAULT_PCC: float = 0.8
 WL_SURFACE_MASS_DENSITY_DEFAULT_ROFF: float = 1.0
-XCOR_KERNEL_ANALYTIC_MAX_COMPS: int = 6
 XCOR_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_KERNEL_COMPONENT_DEFAULT_EPSILON: float = 0.0
@@ -424,6 +423,7 @@ XCOR_KERNEL_GAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_KERNEL_GAL_G_FUNC_LEN: int = 200
 XCOR_KERNEL_MAX_ELL_BLOCK: int = 64
 XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL: float = 1e-06
+XCOR_KERNEL_RADIAL_MAX_COMPS: int = 6
 XCOR_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_LENSING_EFFICIENCY_DEFAULT_ABSTOL: float = 0.0
 XCOR_LENSING_EFFICIENCY_DEFAULT_RELTOL: float = 0.0
@@ -23086,151 +23086,7 @@ class XcorKernel(NumCosmoMath.Model):
     def set_scaled_abstol(self, scaled_abstol: float) -> None: ...
     def set_track_fit_residual(self, track_fit_residual: bool) -> None: ...
 
-class XcorKernelAnalytic(XcorKernel):
-    r"""
-    :Constructors:
-
-    ::
-
-        XcorKernelAnalytic(**properties)
-
-    Object NcXcorKernelAnalytic
-
-    Properties from NcXcorKernelAnalytic:
-      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
-        Scale-dependent factor multiplying the radial integrand
-
-    Properties from NcXcorKernel:
-      dist -> NcDistance: dist
-        Distance object
-      powspec -> NcmPowspec: powspec
-        Power spectrum object
-      integrator -> NcmSBesselIntegrator: integrator
-        Spherical Bessel integrator object
-      lmax -> guint: lmax
-        Maximum multipole
-      l-limber -> gint: l-limber
-        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
-      adaptive-epsilon -> gdouble: adaptive-epsilon
-        Convergence threshold for adaptive k-range determination
-      adaptive-boundary-tries -> guint: adaptive-boundary-tries
-        Number of consecutive boundary points below threshold before stopping extension
-      reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
-      max-border-expansions -> guint: max-border-expansions
-        Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
-      expansion-factor -> gdouble: expansion-factor
-        Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-
-    Properties from NcmModel:
-      name -> gchararray: name
-        Model's name
-      nick -> gchararray: nick
-        Model's nick
-      scalar-params-len -> guint: scalar-params-len
-        Number of scalar parameters
-      vector-params-len -> guint: vector-params-len
-        Number of vector parameters
-      implementation -> guint64: implementation
-        Bitwise specification of functions implementation
-      sparam-array -> NcmObjDictInt: sparam-array
-        NcmModel array of NcmSParam
-      params-types -> GArray: params-types
-        Parameters' types
-      reparam -> NcmReparam: reparam
-        Model reparametrization
-      submodel-array -> NcmObjArray: submodel-array
-        NcmModel array of submodels
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        scale_dependence: XcorKernelAnalyticKDep
-        adaptive_boundary_tries: int
-        adaptive_epsilon: float
-        dist: Distance
-        expansion_factor: float
-        integrator: NumCosmoMath.SBesselIntegrator
-        l_limber: int
-        lmax: int
-        max_border_expansions: int
-        max_iter: int
-        panel_order_cap: int
-        powspec: NumCosmoMath.Powspec
-        reltol: float
-        scaled_abstol: float
-        track_fit_residual: bool
-        implementation: int
-        name: str
-        nick: str
-        params_types: list[None]
-        reparam: NumCosmoMath.Reparam
-        scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjDictInt
-        submodel_array: NumCosmoMath.ObjArray
-        vector_params_len: int
-
-    props: Props = ...
-    parent_instance: XcorKernel = ...
-    def __init__(
-        self,
-        scale_dependence: XcorKernelAnalyticKDep = ...,
-        adaptive_boundary_tries: int = ...,
-        adaptive_epsilon: float = ...,
-        dist: Distance = ...,
-        expansion_factor: float = ...,
-        integrator: NumCosmoMath.SBesselIntegrator = ...,
-        l_limber: int = ...,
-        lmax: int = ...,
-        max_border_expansions: int = ...,
-        max_iter: int = ...,
-        panel_order_cap: int = ...,
-        powspec: NumCosmoMath.Powspec = ...,
-        reltol: float = ...,
-        scaled_abstol: float = ...,
-        track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjDictInt = ...,
-        submodel_array: NumCosmoMath.ObjArray = ...,
-    ) -> None: ...
-    def do_eval_W_comp(self, comp: int, chi: float) -> float: ...
-    def do_get_comp_support(self, comp: int) -> typing.Tuple[float, float]: ...
-    def do_get_n_comps(self) -> int: ...
-    def eval_W(self, chi: float) -> float: ...
-    def eval_W_comp(self, comp: int, chi: float) -> float: ...
-    def get_comp_support(self, comp: int) -> typing.Tuple[float, float]: ...
-    def get_n_comps(self) -> int: ...
-    def get_support(self) -> typing.Tuple[float, float]: ...
-    def peek_kdep(self) -> typing.Optional[XcorKernelAnalyticKDep]: ...
-
-class XcorKernelAnalyticClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        XcorKernelAnalyticClass()
-    """
-
-    parent_class: XcorKernelClass = ...
-    get_n_comps: typing.Callable[[XcorKernelAnalytic], int] = ...
-    eval_W_comp: typing.Callable[[XcorKernelAnalytic, int, float], float] = ...
-    get_comp_support: typing.Callable[
-        [XcorKernelAnalytic, int], typing.Tuple[float, float]
-    ] = ...
-    padding: list[None] = ...
-
-class XcorKernelAnalyticGauss(XcorKernelAnalytic):
+class XcorKernelAnalyticGauss(XcorKernelRadial):
     r"""
     :Constructors:
 
@@ -23250,8 +23106,8 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
       n-sigma -> gdouble: n-sigma
         Truncation half-width in units of sigma
 
-    Properties from NcXcorKernelAnalytic:
-      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+    Properties from NcXcorKernelRadial:
+      scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
 
     Properties from NcXcorKernel:
@@ -23312,7 +23168,7 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
         chi_mean: float
         chi_sigma: float
         n_sigma: float
-        scale_dependence: XcorKernelAnalyticKDep
+        scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
@@ -23343,7 +23199,7 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
         chi_mean: float = ...,
         chi_sigma: float = ...,
         n_sigma: float = ...,
-        scale_dependence: XcorKernelAnalyticKDep = ...,
+        scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
@@ -23394,95 +23250,9 @@ class XcorKernelAnalyticGaussClass(GObject.GPointer):
         XcorKernelAnalyticGaussClass()
     """
 
-    parent_class: XcorKernelAnalyticClass = ...
+    parent_class: XcorKernelRadialClass = ...
 
-class XcorKernelAnalyticKDep(GObject.Object):
-    r"""
-    :Constructors:
-
-    ::
-
-        XcorKernelAnalyticKDep(**properties)
-
-    Object NcXcorKernelAnalyticKDep
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    parent_instance: GObject.Object = ...
-    @staticmethod
-    def clear(kdep: XcorKernelAnalyticKDep) -> None: ...
-    def do_eval(self, chi: float, k: float) -> float: ...
-    def eval(self, chi: float, k: float) -> float: ...
-    def free(self) -> None: ...
-    def ref(self) -> XcorKernelAnalyticKDep: ...
-
-class XcorKernelAnalyticKDepClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        XcorKernelAnalyticKDepClass()
-    """
-
-    parent_class: GObject.ObjectClass = ...
-    eval: typing.Callable[[XcorKernelAnalyticKDep, float, float], float] = ...
-    padding: list[None] = ...
-
-class XcorKernelAnalyticKDepGrowth(XcorKernelAnalyticKDep):
-    r"""
-    :Constructors:
-
-    ::
-
-        XcorKernelAnalyticKDepGrowth(**properties)
-        new(amplitude:float, k_transition:float, chi_ref:float) -> NumCosmo.XcorKernelAnalyticKDepGrowth
-
-    Object NcXcorKernelAnalyticKDepGrowth
-
-    Properties from NcXcorKernelAnalyticKDepGrowth:
-      amplitude -> gdouble: amplitude
-        Saturated suppression
-      k-transition -> gdouble: k-transition
-        Transition wavenumber in 1/Mpc
-      chi-ref -> gdouble: chi-ref
-        Reference comoving distance in Mpc
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        amplitude: float
-        chi_ref: float
-        k_transition: float
-
-    props: Props = ...
-    def __init__(
-        self, amplitude: float = ..., chi_ref: float = ..., k_transition: float = ...
-    ) -> None: ...
-    def get_amplitude(self) -> float: ...
-    def get_chi_ref(self) -> float: ...
-    def get_k_transition(self) -> float: ...
-    @classmethod
-    def new(
-        cls, amplitude: float, k_transition: float, chi_ref: float
-    ) -> XcorKernelAnalyticKDepGrowth: ...
-
-class XcorKernelAnalyticKDepGrowthClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        XcorKernelAnalyticKDepGrowthClass()
-    """
-
-    parent_class: XcorKernelAnalyticKDepClass = ...
-
-class XcorKernelAnalyticLensing(XcorKernelAnalytic):
+class XcorKernelAnalyticLensing(XcorKernelRadial):
     r"""
     :Constructors:
 
@@ -23502,8 +23272,8 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
       chi-source-upper -> gdouble: chi-source-upper
         Far edge of the source bin in Mpc
 
-    Properties from NcXcorKernelAnalytic:
-      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+    Properties from NcXcorKernelRadial:
+      scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
 
     Properties from NcXcorKernel:
@@ -23564,7 +23334,7 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
         chi_lower: float
         chi_source_lower: float
         chi_source_upper: float
-        scale_dependence: XcorKernelAnalyticKDep
+        scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
@@ -23595,7 +23365,7 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
         chi_lower: float = ...,
         chi_source_lower: float = ...,
         chi_source_upper: float = ...,
-        scale_dependence: XcorKernelAnalyticKDep = ...,
+        scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
@@ -23645,9 +23415,9 @@ class XcorKernelAnalyticLensingClass(GObject.GPointer):
         XcorKernelAnalyticLensingClass()
     """
 
-    parent_class: XcorKernelAnalyticClass = ...
+    parent_class: XcorKernelRadialClass = ...
 
-class XcorKernelAnalyticMulti(XcorKernelAnalytic):
+class XcorKernelAnalyticMulti(XcorKernelRadial):
     r"""
     :Constructors:
 
@@ -23669,8 +23439,8 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
       n-sigma -> gdouble: n-sigma
         Truncation half-width in units of sigma
 
-    Properties from NcXcorKernelAnalytic:
-      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+    Properties from NcXcorKernelRadial:
+      scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
 
     Properties from NcXcorKernel:
@@ -23732,7 +23502,7 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
         chi_sigma: NumCosmoMath.Vector
         n_sigma: float
         weight: NumCosmoMath.Vector
-        scale_dependence: XcorKernelAnalyticKDep
+        scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
@@ -23764,7 +23534,7 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
         chi_sigma: NumCosmoMath.Vector = ...,
         n_sigma: float = ...,
         weight: NumCosmoMath.Vector = ...,
-        scale_dependence: XcorKernelAnalyticKDep = ...,
+        scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
@@ -23819,9 +23589,9 @@ class XcorKernelAnalyticMultiClass(GObject.GPointer):
         XcorKernelAnalyticMultiClass()
     """
 
-    parent_class: XcorKernelAnalyticClass = ...
+    parent_class: XcorKernelRadialClass = ...
 
-class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
+class XcorKernelAnalyticPowerExp(XcorKernelRadial):
     r"""
     :Constructors:
 
@@ -23845,8 +23615,8 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
       chi-upper -> gdouble: chi-upper
         Upper end of the support in Mpc
 
-    Properties from NcXcorKernelAnalytic:
-      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+    Properties from NcXcorKernelRadial:
+      scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
 
     Properties from NcXcorKernel:
@@ -23909,7 +23679,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
         chi_lower: float
         chi_scale: float
         chi_upper: float
-        scale_dependence: XcorKernelAnalyticKDep
+        scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
@@ -23942,7 +23712,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
         chi_lower: float = ...,
         chi_scale: float = ...,
         chi_upper: float = ...,
-        scale_dependence: XcorKernelAnalyticKDep = ...,
+        scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
@@ -23997,9 +23767,9 @@ class XcorKernelAnalyticPowerExpClass(GObject.GPointer):
         XcorKernelAnalyticPowerExpClass()
     """
 
-    parent_class: XcorKernelAnalyticClass = ...
+    parent_class: XcorKernelRadialClass = ...
 
-class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
+class XcorKernelAnalyticStudentT(XcorKernelRadial):
     r"""
     :Constructors:
 
@@ -24021,8 +23791,8 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
       n-scale -> gdouble: n-scale
         Truncation half-width in units of the scale
 
-    Properties from NcXcorKernelAnalytic:
-      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+    Properties from NcXcorKernelRadial:
+      scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
 
     Properties from NcXcorKernel:
@@ -24084,7 +23854,7 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
         chi_scale: float
         n_scale: float
         nu: float
-        scale_dependence: XcorKernelAnalyticKDep
+        scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
@@ -24116,7 +23886,7 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
         chi_scale: float = ...,
         n_scale: float = ...,
         nu: float = ...,
-        scale_dependence: XcorKernelAnalyticKDep = ...,
+        scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
@@ -24171,9 +23941,9 @@ class XcorKernelAnalyticStudentTClass(GObject.GPointer):
         XcorKernelAnalyticStudentTClass()
     """
 
-    parent_class: XcorKernelAnalyticClass = ...
+    parent_class: XcorKernelRadialClass = ...
 
-class XcorKernelAnalyticTophat(XcorKernelAnalytic):
+class XcorKernelAnalyticTophat(XcorKernelRadial):
     r"""
     :Constructors:
 
@@ -24191,8 +23961,8 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
       chi-upper -> gdouble: chi-upper
         Upper edge in Mpc
 
-    Properties from NcXcorKernelAnalytic:
-      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+    Properties from NcXcorKernelRadial:
+      scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
 
     Properties from NcXcorKernel:
@@ -24252,7 +24022,7 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
     class Props:
         chi_lower: float
         chi_upper: float
-        scale_dependence: XcorKernelAnalyticKDep
+        scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
@@ -24282,7 +24052,7 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
         self,
         chi_lower: float = ...,
         chi_upper: float = ...,
-        scale_dependence: XcorKernelAnalyticKDep = ...,
+        scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
@@ -24330,9 +24100,9 @@ class XcorKernelAnalyticTophatClass(GObject.GPointer):
         XcorKernelAnalyticTophatClass()
     """
 
-    parent_class: XcorKernelAnalyticClass = ...
+    parent_class: XcorKernelRadialClass = ...
 
-class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
+class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
     r"""
     :Constructors:
 
@@ -24354,8 +24124,8 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
       n-sigma -> gdouble: n-sigma
         Truncation beyond each edge in units of sigma
 
-    Properties from NcXcorKernelAnalytic:
-      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+    Properties from NcXcorKernelRadial:
+      scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
 
     Properties from NcXcorKernel:
@@ -24417,7 +24187,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
         chi_sigma: float
         chi_upper: float
         n_sigma: float
-        scale_dependence: XcorKernelAnalyticKDep
+        scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
@@ -24449,7 +24219,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
         chi_sigma: float = ...,
         chi_upper: float = ...,
         n_sigma: float = ...,
-        scale_dependence: XcorKernelAnalyticKDep = ...,
+        scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
@@ -24502,7 +24272,7 @@ class XcorKernelAnalyticTophatSmoothClass(GObject.GPointer):
         XcorKernelAnalyticTophatSmoothClass()
     """
 
-    parent_class: XcorKernelAnalyticClass = ...
+    parent_class: XcorKernelRadialClass = ...
 
 class XcorKernelCMBISW(XcorKernel):
     r"""
@@ -25104,12 +24874,15 @@ class XcorKernelComponent(GObject.Object):
         Maximum iterations for GSL solvers
       tol -> gdouble: tol
         Tolerance for GSL solvers
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
+        bessel_deriv: int
         epsilon: float
         max_iter: int
         ny: int
@@ -25118,7 +24891,12 @@ class XcorKernelComponent(GObject.Object):
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
-        self, epsilon: float = ..., max_iter: int = ..., ny: int = ..., tol: float = ...
+        self,
+        bessel_deriv: int = ...,
+        epsilon: float = ...,
+        max_iter: int = ...,
+        ny: int = ...,
+        tol: float = ...,
     ) -> None: ...
     @staticmethod
     def clear(comp: XcorKernelComponent) -> None: ...
@@ -25133,6 +24911,7 @@ class XcorKernelComponent(GObject.Object):
     def eval_kernel(self, cosmo: HICosmo, xi: float, k: float) -> float: ...
     def eval_prefactor(self, cosmo: HICosmo, k: float, l: int) -> float: ...
     def free(self) -> None: ...
+    def get_bessel_deriv(self) -> int: ...
     def get_epsilon(self) -> float: ...
     def get_limits(
         self, cosmo: HICosmo
@@ -25142,6 +24921,7 @@ class XcorKernelComponent(GObject.Object):
     def get_tol(self) -> float: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> XcorKernelComponent: ...
+    def set_bessel_deriv(self, bessel_deriv: int) -> None: ...
     def set_epsilon(self, epsilon: float) -> None: ...
     def set_max_iter(self, max_iter: int) -> None: ...
     def set_ny(self, ny: int) -> None: ...
@@ -25186,6 +24966,8 @@ class XcorKernelGal(XcorKernel):
         Bias spline object
       domagbias -> gboolean: domagbias
         Do magnification bias
+      dorsd -> gboolean: dorsd
+        Do redshift-space distortions
       nbarm1 -> gdouble: nbarm1
         One over nbar (galaxy angular density)
       mag-bias -> gdouble: mag-bias
@@ -25264,6 +25046,7 @@ class XcorKernelGal(XcorKernel):
         bparam_length: int
         dndz: NumCosmoMath.Spline
         domagbias: bool
+        dorsd: bool
         mag_bias: float
         mag_bias_fit: bool
         nbarm1: float
@@ -25302,6 +25085,7 @@ class XcorKernelGal(XcorKernel):
         bparam_length: int = ...,
         dndz: NumCosmoMath.Spline = ...,
         domagbias: bool = ...,
+        dorsd: bool = ...,
         mag_bias: float = ...,
         mag_bias_fit: bool = ...,
         nbarm1: float = ...,
@@ -25417,6 +25201,422 @@ class XcorKernelIntegrand(GObject.GBoxed):
     ) -> None: ...
     def set_tolerances(self, reltol: float, scaled_abstol: float) -> None: ...
     def unref(self) -> None: ...
+
+class XcorKernelRadial(XcorKernel):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelRadial(**properties)
+
+    Object NcXcorKernelRadial
+
+    Properties from NcXcorKernelRadial:
+      scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        scale_dependence: XcorKernelRadialKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        panel_order_cap: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        track_fit_residual: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: XcorKernel = ...
+    def __init__(
+        self,
+        scale_dependence: XcorKernelRadialKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        panel_order_cap: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def do_eval_W_comp(self, comp: int, chi: float) -> float: ...
+    def do_eval_kernel_factor(self, cosmo: HICosmo, chi: float, k: float) -> float: ...
+    def do_eval_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
+    def do_get_comp_support(self, comp: int) -> typing.Tuple[float, float]: ...
+    def do_get_n_comps(self) -> int: ...
+    def eval_W(self, chi: float) -> float: ...
+    def eval_W_comp(self, comp: int, chi: float) -> float: ...
+    def eval_kernel_factor(self, cosmo: HICosmo, chi: float, k: float) -> float: ...
+    def eval_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
+    def get_comp_support(self, comp: int) -> typing.Tuple[float, float]: ...
+    def get_n_comps(self) -> int: ...
+    def get_support(self) -> typing.Tuple[float, float]: ...
+    def peek_kdep(self) -> typing.Optional[XcorKernelRadialKDep]: ...
+
+class XcorKernelRadialClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelRadialClass()
+    """
+
+    parent_class: XcorKernelClass = ...
+    get_n_comps: typing.Callable[[XcorKernelRadial], int] = ...
+    eval_W_comp: typing.Callable[[XcorKernelRadial, int, float], float] = ...
+    get_comp_support: typing.Callable[
+        [XcorKernelRadial, int], typing.Tuple[float, float]
+    ] = ...
+    eval_kernel_factor: typing.Callable[
+        [XcorKernelRadial, HICosmo, float, float], float
+    ] = ...
+    eval_prefactor: typing.Callable[[XcorKernelRadial, HICosmo, int], float] = ...
+    padding: list[None] = ...
+
+class XcorKernelRadialKDep(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelRadialKDep(**properties)
+
+    Object NcXcorKernelRadialKDep
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    parent_instance: GObject.Object = ...
+    @staticmethod
+    def clear(kdep: XcorKernelRadialKDep) -> None: ...
+    def do_eval(self, chi: float, k: float) -> float: ...
+    def eval(self, chi: float, k: float) -> float: ...
+    def free(self) -> None: ...
+    def ref(self) -> XcorKernelRadialKDep: ...
+
+class XcorKernelRadialKDepClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelRadialKDepClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+    eval: typing.Callable[[XcorKernelRadialKDep, float, float], float] = ...
+    padding: list[None] = ...
+
+class XcorKernelRadialKDepGrowth(XcorKernelRadialKDep):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelRadialKDepGrowth(**properties)
+        new(amplitude:float, k_transition:float, chi_ref:float) -> NumCosmo.XcorKernelRadialKDepGrowth
+
+    Object NcXcorKernelRadialKDepGrowth
+
+    Properties from NcXcorKernelRadialKDepGrowth:
+      amplitude -> gdouble: amplitude
+        Saturated suppression
+      k-transition -> gdouble: k-transition
+        Transition wavenumber in 1/Mpc
+      chi-ref -> gdouble: chi-ref
+        Reference comoving distance in Mpc
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        amplitude: float
+        chi_ref: float
+        k_transition: float
+
+    props: Props = ...
+    def __init__(
+        self, amplitude: float = ..., chi_ref: float = ..., k_transition: float = ...
+    ) -> None: ...
+    def get_amplitude(self) -> float: ...
+    def get_chi_ref(self) -> float: ...
+    def get_k_transition(self) -> float: ...
+    @classmethod
+    def new(
+        cls, amplitude: float, k_transition: float, chi_ref: float
+    ) -> XcorKernelRadialKDepGrowth: ...
+
+class XcorKernelRadialKDepGrowthClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelRadialKDepGrowthClass()
+    """
+
+    parent_class: XcorKernelRadialKDepClass = ...
+
+class XcorKernelTable(XcorKernelRadial):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelTable(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi:NumCosmoMath.Vector, W:NumCosmoMath.Vector) -> NumCosmo.XcorKernelTable
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi:NumCosmoMath.Vector, W:NumCosmoMath.Vector, kind:NumCosmo.XcorKernelTableKind, order:int, normalize:bool, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelTable
+
+    Object NcXcorKernelTable
+
+    Properties from NcXcorKernelTable:
+      chi -> NcmVector: chi
+        Sample comoving distances in Mpc
+      W -> NcmVector: W
+        Window samples
+      kind -> NcXcorKernelTableKind: kind
+        Window kind
+      order -> guint: order
+        B-spline order of the reconstruction
+      normalize -> gboolean: normalize
+        Rescale to unit integral over the support
+
+    Properties from NcXcorKernelRadial:
+      scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        W: NumCosmoMath.Vector
+        chi: NumCosmoMath.Vector
+        kind: XcorKernelTableKind
+        normalize: bool
+        order: int
+        scale_dependence: XcorKernelRadialKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        panel_order_cap: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        track_fit_residual: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        W: NumCosmoMath.Vector = ...,
+        chi: NumCosmoMath.Vector = ...,
+        kind: XcorKernelTableKind = ...,
+        normalize: bool = ...,
+        order: int = ...,
+        scale_dependence: XcorKernelRadialKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        panel_order_cap: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_kind(self) -> XcorKernelTableKind: ...
+    def get_norm(self) -> float: ...
+    def get_normalize(self) -> bool: ...
+    def get_order(self) -> int: ...
+    @classmethod
+    def new(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi: NumCosmoMath.Vector,
+        W: NumCosmoMath.Vector,
+    ) -> XcorKernelTable: ...
+    @classmethod
+    def new_full(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi: NumCosmoMath.Vector,
+        W: NumCosmoMath.Vector,
+        kind: XcorKernelTableKind,
+        order: int,
+        normalize: bool,
+        sbi: NumCosmoMath.SBesselIntegrator,
+    ) -> XcorKernelTable: ...
+    def peek_knots(self) -> NumCosmoMath.Vector: ...
+    def peek_spline(self) -> NumCosmoMath.Spline: ...
+
+class XcorKernelTableClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelTableClass()
+    """
+
+    parent_class: XcorKernelRadialClass = ...
 
 class XcorKernelWeakLensing(XcorKernel):
     r"""
@@ -28098,6 +28298,21 @@ class XcorKernelImpl(GObject.GEnum):
     ADD_NOISE: XcorKernelImpl = ...
     EVAL_RADIAL_WEIGHT: XcorKernelImpl = ...
     PREPARE: XcorKernelImpl = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class XcorKernelTableKind(GObject.GEnum):
+    DENSITY: XcorKernelTableKind = ...
+    SHEAR: XcorKernelTableKind = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

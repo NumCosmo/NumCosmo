@@ -835,6 +835,7 @@ class ViewKernel:
             powspec=self.ps_ml,
             dndz=dndz_spline,
             domagbias=config.domagbias,
+            dorsd=config.dorsd,
             integrator=self.integrator,
         )
         kernel_obj.orig_vparam_set(Nc.XcorKernelGalVParams.BIAS, 0, config.bias)

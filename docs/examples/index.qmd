@@ -4,11 +4,9 @@ title: Examples
 
 # Examples
 
-Short, self-contained scripts showing one part of the API in use; read one as
-reference. To work through a complete analysis instead, see the
-[Tutorials](../tutorials/index.qmd).
-
-New here? Start with the [Simple Example](intro/simple.qmd).
+Examples show individual API operations. For complete workflows, see
+[Tutorials](../tutorials/index.qmd). Start with the
+[Simple Example](intro/simple.qmd).
 
 ## Background & Distances
 
@@ -28,5 +26,6 @@ New here? Start with the [Simple Example](intro/simple.qmd).
 ## Data & Statistics
 
 - [SN Ia Fitting](data_analysis/snia.qmd) — fitting a Type Ia supernova sample.
+- [SNIa + BAO Confidence Regions](data_analysis/rg_snia_bao.qmd) — comparing likelihood-ratio and Fisher confidence regions.
 - [Inspect Data Objects](data_analysis/inspect_data_objects.qmd) — exploring NumCosmo data objects.
 - [Empirical PDF](intro/epdf.qmd) — building an empirical distribution.

@@ -28,44 +28,41 @@
  *
  * Beta intrinsic ellipticity distribution (BetaGlobal).
  *
- * The intrinsic ellipticity MODULUS $r = |\chi_I|$ follows a Beta
- * distribution $r \sim \mathrm{Beta}(\alpha,\beta)$ directly in its own
- * shape parameters -- the natural coordinate, and exactly the base class's
- * own vfunc contract (see #NcGalaxyShapePop): essentially every empirical
- * ellipticity distribution in the weak-lensing literature is reported/fit
- * against $|\chi_I|$, and this way $\alpha$/$\beta$ are directly comparable
- * to those fits, and $\mathrm{mode}(r) = (\alpha-1)/(\alpha+\beta-2)$ is
- * literally the "peak ellipticity" number such papers quote:
+ * The intrinsic ellipticity modulus $r = |\chi_I|$ follows
+ * $r \sim \mathrm{Beta}(\alpha,\beta)$:
  * $$P_\mathrm{pop}(r) = \frac{r^{\alpha-1}(1-r)^{\beta-1}}{B(\alpha,\beta)}, \qquad r\in[0,1).$$
- * eval_p() below returns exactly this -- no change of variables, no
- * Jacobian, a direct transcription of the formula above.
  *
- * $\alpha$ and $\beta$ are both bounded to $\ge 1$: $P_\mathrm{pop}(r)$
- * itself never diverges (it vanishes at $r=0$ for $\alpha>1$, is a nonzero
- * constant at $\alpha=1$, and symmetrically at $r=1$ for $\beta$). What
- * DOES diverge for $\alpha<2$ is the *derived 2D area density*
- * $P_\mathrm{pop}(r)/(2\pi r)$ -- not computed by this class at all, but by
- * whichever consumer needs it (#NcGalaxyShapeFactorFixedQuad,
- * #NcGalaxyShapeFactorQuad), and only as a pointwise artifact of their own
- * non-polar-in-$\chi_I$ quadrature (see #NcGalaxyShapePop's own docs for
- * why the exact 2D integral itself stays finite through $r=0$) --
- * `g_spline_pop_safe` guards FixedQuad's cache against exactly this.
- * #NcGalaxyShapeFactorSeriesLensed's $g$-Taylor composition
- * (eval_p_rho2_g_series(), see its own doc comment in nc_galaxy_shape_pop.h)
- * needs $\sqrt{x(g)}$, whose branch point at $x(g)=0$ collapses the
- * series' own radius of convergence to unusably small for any $\alpha<2$
- * -- including this class's own $\alpha=1.4$ default. SeriesLensed callers
- * should keep $\alpha\ge2$ in practice (see
- * `docs/theory/wl_shape_factor_history.md`).
- * nc_galaxy_shape_pop_beta_get_e_rms()/_get_mode() report
- * $e_\mathrm{rms}=\sqrt{\langle x\rangle/2}$ (with $\langle x\rangle=\langle
- * r^2\rangle=\alpha(\alpha+1)/[(\alpha+\beta)(\alpha+\beta+1)]$ for
- * $r\sim\mathrm{Beta}(\alpha,\beta)$) and $\mathrm{mode}(r) =
- * (\alpha-1)/(\alpha+\beta-2)$ -- now literally the argmax of
- * $P_\mathrm{pop}(r)$ itself (also registered as the
- * `NcGalaxyShapePopBeta:e_rms`/`NcGalaxyShapePopBeta:mode`
- * `NcmMSetFuncList` entries) for reporting purposes -- they are not
- * themselves model parameters.
+ * The modulus is the coordinate the weak-lensing literature reports fits
+ * against, so $\alpha$ and $\beta$ here are directly comparable to published
+ * values. eval_p() returns the expression above with no change of variables
+ * and no Jacobian.
+ *
+ * $\alpha$ and $\beta$ are both bounded to $\ge 1$, and $P_\mathrm{pop}(r)$
+ * never diverges: it vanishes at $r=0$ for $\alpha>1$, is a nonzero constant
+ * at $\alpha=1$, and behaves symmetrically at $r=1$ in $\beta$. What does
+ * diverge for $\alpha<2$ is the derived 2D area density
+ * $P_\mathrm{pop}(r)/(2\pi r)$. This class does not compute that; its
+ * consumers do (#NcGalaxyShapeFactorFixedQuad, #NcGalaxyShapeFactorQuad), and
+ * only as a pointwise artifact of their own quadrature, which is not polar in
+ * $\chi_I$. See #NcGalaxyShapePop for why the exact 2D integral stays finite
+ * through $r=0$. FixedQuad's cache is guarded against this by
+ * `g_spline_pop_safe`.
+ *
+ * #NcGalaxyShapeFactorSeriesLensed's $g$-Taylor composition needs
+ * $\sqrt{x(g)}$, whose branch point at $x(g)=0$ shrinks the series' radius of
+ * convergence to an unusable value for any $\alpha<2$, including this class's
+ * $\alpha=1.4$ default. SeriesLensed callers should keep $\alpha\ge2$; see
+ * `docs/theory/wl_shape_factor_history.md`.
+ *
+ * nc_galaxy_shape_pop_beta_get_e_rms() and
+ * nc_galaxy_shape_pop_beta_get_mode() report
+ * $e_\mathrm{rms}=\sqrt{\langle x\rangle/2}$, with $\langle x\rangle=\langle
+ * r^2\rangle=\alpha(\alpha+1)/[(\alpha+\beta)(\alpha+\beta+1)]$, and
+ * $\mathrm{mode}(r) = (\alpha-1)/(\alpha+\beta-2)$, the argmax of
+ * $P_\mathrm{pop}(r)$.
+ * The shape parameters satisfy $\alpha,\beta \ge 1$. The class also exposes
+ * $e_\mathrm{rms}=\sqrt{\langle r^2\rangle/2}$ and
+ * $\mathrm{mode}(r)=(\alpha-1)/(\alpha+\beta-2)$ as derived quantities.
  *
  */
 
@@ -250,7 +247,8 @@ _nc_galaxy_shape_pop_beta_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *d
 
 /* Batched form of eval_p() above: alpha/beta/lnnorm are invariant across
  * the whole call, so this is a straight-line loop with no per-element
- * vfunc dispatch (#NcGalaxyShapeFactorFixedQuad's hot path). A three-pass
+ * vfunc dispatch (#NcGalaxyShapeFactorFixedQuad's performance-critical path).
+ * A three-pass
  * split (separate log/log1p/exp loops, to let the compiler vectorize via
  * libmvec) was tried and measured no benefit on this toolchain -- GCC's
  * vectorizer found no vectype for these calls regardless -- so this stays
@@ -281,24 +279,25 @@ _nc_galaxy_shape_pop_beta_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopD
     p_data[i] = exp (alpha_m1 * log (r_data[i]) + beta_m1 * log1p (-r_data[i]) + lnnorm_r);
 }
 
-/* Composes x(g)=|chi_I(chi_L,g)|^2's own g-Taylor series with this
- * population's x-space density P(x) ~ x^(alpha/2-1)*(1-sqrt(x))^(beta-1)
- * (see ldata->lnnorm_x's own comment; NOT what eval_p(r) above returns).
- * sqrt_x = @x_series^0.5 via ncm_laurent_series_tps_pow() (the same
- * generalized-binomial recursion the fractional alpha/2-1, beta-1
- * exponents below rely on); 1-sqrt(x) is built by scaling sqrt_x by -1 and
- * bumping its order-0 term by one (a single harmonic-0 entry, since
- * x(g)=|chi_I(chi_L,g)|^2, hence sqrt_x, is real-valued at every order).
- * See tests/c/nc/lss/galaxy/test_nc_galaxy_shape_pop_series.c for the
- * cross-check against eval_p(sqrt(x))/(2*sqrt(x)) at various g.
+/* Composes the g-series of x=|chi_I(chi_L,g)|^2 with this population's x-space
+ * density P(x) ~ x^(alpha/2-1)*(1-sqrt(x))^(beta-1). Note that this is the
+ * x-space density (see ldata->lnnorm_x's own comment), NOT what eval_p(r)
+ * returns.
  *
- * sqrt(x) has a branch point at x=0, unconditionally (even at integer
- * alpha), shrinking this series' radius of convergence in g to wherever
- * x(g) first reaches 0 in the complex g-plane. Empirically this collapses
- * to unusably small for any alpha<2 (P(x) has an actual pole at x=0
- * there, not just a branch point) -- #NcGalaxyShapeFactorSeriesLensed
- * callers should keep alpha>=2 in practice (see
- * docs/theory/wl_shape_factor_history.md). */
+ * sqrt_x is @x_series^0.5 via ncm_laurent_series_tps_pow(), the same
+ * generalized-binomial recursion the fractional exponents below rely on.
+ * 1-sqrt(x) is built by scaling sqrt_x by -1 and adding one to its order-0
+ * term, a single harmonic-0 entry, since x(g) and therefore sqrt_x are real
+ * at every order. See
+ * tests/c/nc/lss/galaxy/test_nc_galaxy_shape_pop_series.c for the cross-check
+ * against eval_p(sqrt(x))/(2*sqrt(x)) at various g.
+ *
+ * sqrt(x) has a branch point at x=0 even at integer alpha, which limits this
+ * series' radius of convergence in g to wherever x(g) first reaches 0 in the
+ * complex g-plane. That radius becomes unusably small for any alpha<2, where
+ * P(x) has a pole at x=0 rather than only a branch point.
+ * #NcGalaxyShapeFactorSeriesLensed callers should keep alpha>=2; see
+ * docs/theory/wl_shape_factor_history.md. */
 static void
 _nc_galaxy_shape_pop_beta_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
                                                 const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out)

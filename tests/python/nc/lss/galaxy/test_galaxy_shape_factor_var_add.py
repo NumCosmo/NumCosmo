@@ -319,7 +319,7 @@ def test_direct_estimate_parity_legacy(ellip_conv):
     new_est = gsf.direct_estimate(mset, new_array)
     frozen = _DIRECT_ESTIMATE_FROZEN[_CONV_NAMES[ellip_conv]]
     # gt/gx are near-zero cancellation sums over many intrinsic-noise draws,
-    # so a sub-ULP cross-platform summation-order difference can blow up a
+    # so a sub-ULP cross-platform summation-order difference can amplify a
     # pure rtol check even though it's numerically negligible (see
     # test_gen_parity_legacy above for the same rationale).
     assert_allclose(

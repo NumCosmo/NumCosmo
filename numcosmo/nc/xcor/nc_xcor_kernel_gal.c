@@ -58,6 +58,7 @@
 #include "nc/xcor/nc_xcor_kernel_component.h"
 #include "nc/xcor/nc_xcor_lensing_efficiency.h"
 #include "nc/xcor/nc_xcor.h"
+#include "nc/powspec/nc_growth_func.h"
 
 #include "ncm/integration/ncm_integrate.h"
 #include "ncm/spline/ncm_spline_gsl.h"
@@ -86,6 +87,9 @@ struct _NcXcorKernelGal
   NcXcorLensingEfficiency *lens_eff;
   gboolean domagbias;
 
+  NcGrowthFunc *gf;
+  gboolean dorsd;
+
   gboolean fast_update;
   gdouble bias_old;
   gdouble noise_bias_old;
@@ -94,6 +98,7 @@ struct _NcXcorKernelGal
 
   NcXcorKernelComponent *clustering_comp;
   NcXcorKernelComponent *magbias_comp;
+  NcXcorKernelComponent *rsd_comp;
 };
 
 enum
@@ -102,6 +107,7 @@ enum
   PROP_DN_DZ,
   PROP_BIAS,
   PROP_DOMAGBIAS,
+  PROP_DORSD,
   PROP_NBARM1,
   PROP_SIZE,
 };
@@ -155,6 +161,38 @@ NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_CLUSTERING,
 
 
 /*
+ * Redshift-Space Distortion Component Definition
+ * Handles the Kaiser term: -f(z) * dn_dz(z), weighted by the second
+ * derivative of the spherical Bessel function (bessel-deriv = 2)
+ */
+
+typedef struct _RSDComponentData
+{
+  NcXcorKernelGal *xclkg;
+  NcDistance *dist;
+  NcmPowspec *ps;
+} RSDComponentData;
+
+#define _NC_XCOR_KERNEL_COMPONENT_RSD_GET_DATA(comp) \
+        ((RSDComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
+
+static gdouble _rsd_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k);
+static gdouble _rsd_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
+static void _rsd_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
+static void _rsd_component_data_clear (RSDComponentData *data);
+static NcXcorKernelComponent *_nc_xcor_kernel_component_rsd_new (NcXcorKernelGal *xclkg, NcDistance *dist, NcmPowspec *ps);
+
+NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_RSD,
+                                      NcXcorKernelComponentRSD,
+                                      nc_xcor_kernel_component_rsd,
+                                      _rsd_component_eval_kernel,
+                                      _rsd_component_eval_prefactor,
+                                      _rsd_component_get_limits,
+                                      RSDComponentData,
+                                      _rsd_component_data_clear)
+
+
+/*
  * Magnification Bias Component Definition
  * Handles the lensing/magnification term involving lensing efficiency
  */
@@ -205,6 +243,8 @@ nc_xcor_kernel_gal_init (NcXcorKernelGal *xclkg)
 
   xclkg->lens_eff  = NULL;
   xclkg->domagbias = FALSE;
+  xclkg->dorsd     = FALSE;
+  xclkg->gf        = NULL;
 
   xclkg->fast_update    = FALSE;
   xclkg->bias_old       = 0.0;
@@ -213,6 +253,7 @@ nc_xcor_kernel_gal_init (NcXcorKernelGal *xclkg)
   xclkg->nbarm1          = 0.0;
   xclkg->clustering_comp = NULL;
   xclkg->magbias_comp    = NULL;
+  xclkg->rsd_comp        = NULL;
 }
 
 static void
@@ -241,6 +282,9 @@ _nc_xcor_kernel_gal_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_DOMAGBIAS:
       xclkg->domagbias = g_value_get_boolean (value);
       break;
+    case PROP_DORSD:
+      xclkg->dorsd = g_value_get_boolean (value);
+      break;
     case PROP_NBARM1:
       xclkg->nbarm1 = g_value_get_double (value);
       break;
@@ -267,6 +311,9 @@ _nc_xcor_kernel_gal_get_property (GObject *object, guint prop_id, GValue *value,
       break;
     case PROP_DOMAGBIAS:
       g_value_set_boolean (value, xclkg->domagbias);
+      break;
+    case PROP_DORSD:
+      g_value_set_boolean (value, xclkg->dorsd);
       break;
     case PROP_NBARM1:
       g_value_set_double (value, xclkg->nbarm1);
@@ -322,6 +369,14 @@ _nc_xcor_kernel_gal_constructed (GObject *object)
       xclkg->lens_eff    = NC_XCOR_LENSING_EFFICIENCY (lens_eff_obj);
       g_assert_null (xclkg->magbias_comp);
       xclkg->magbias_comp = _nc_xcor_kernel_component_magbias_new (xclkg, dist, ps);
+    }
+
+    /* Growth rate and component for redshift-space distortions */
+    if (xclkg->dorsd)
+    {
+      g_assert_null (xclkg->rsd_comp);
+      xclkg->gf       = nc_growth_func_new ();
+      xclkg->rsd_comp = _nc_xcor_kernel_component_rsd_new (xclkg, dist, ps);
     }
 
     /* Normalize the redshift distribution */
@@ -386,8 +441,9 @@ _nc_xcor_kernel_gal_constructed (GObject *object)
     ncm_vector_free (bv);
     ncm_vector_free (zv);
 
-    /* If bias is constant, it's just a multiplicative factor, so possible to accelerate recomputation of C_l's */
-    xclkg->fast_update = (bz_size == 1) && !(xclkg->domagbias);
+    /* If bias is constant, it's just a multiplicative factor, so possible to accelerate recomputation of C_l's.
+     * The RSD term is not proportional to the bias, so it disables the shortcut. */
+    xclkg->fast_update = (bz_size == 1) && !(xclkg->domagbias) && !(xclkg->dorsd);
   }
 }
 
@@ -401,6 +457,8 @@ _nc_xcor_kernel_gal_dispose (GObject *object)
   nc_xcor_lensing_efficiency_clear (&xclkg->lens_eff);
   nc_xcor_kernel_component_clear (&xclkg->clustering_comp);
   nc_xcor_kernel_component_clear (&xclkg->magbias_comp);
+  nc_xcor_kernel_component_clear (&xclkg->rsd_comp);
+  nc_growth_func_clear (&xclkg->gf);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_gal_parent_class)->dispose (object);
@@ -449,6 +507,22 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
                                    g_param_spec_boolean ("domagbias",
                                                          NULL,
                                                          "Do magnification bias",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcXcorKernelGal:dorsd:
+   *
+   * Whether to include the linear redshift-space distortion (Kaiser) term.
+   * Adds a component with kernel $-f(z)\, \mathrm{d}n/\mathrm{d}z$ weighted by
+   * $j_\ell''(k\chi)$, where $f$ is the linear growth rate. Supported by the
+   * kernel-space methods only.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_DORSD,
+                                   g_param_spec_boolean ("dorsd",
+                                                         NULL,
+                                                         "Do redshift-space distortions",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -577,8 +651,14 @@ _nc_xcor_kernel_gal_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble
 {
   NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (xclk);
   const gdouble dn_dz_z  = _nc_xcor_kernel_gal_dndz (xclkg, z);
-  const gdouble bias_z   = _nc_xcor_kernel_gal_bias (xclkg, z);
-  gdouble res            = bias_z * dn_dz_z * xck->E_z;
+
+  if (xclkg->dorsd)
+    g_error ("nc_xcor_kernel_gal: redshift-space distortions are not supported by the "
+             "redshift-space Limber methods; use the kernel-space methods "
+             "(NC_XCOR_METHOD_KERNEL_*).");
+
+  const gdouble bias_z = _nc_xcor_kernel_gal_bias (xclkg, z);
+  gdouble res          = bias_z * dn_dz_z * xck->E_z;
 
   if (xclkg->domagbias)
   {
@@ -662,6 +742,80 @@ _nc_xcor_kernel_component_clustering_new (NcXcorKernelGal *xclkg, NcDistance *di
 {
   NcXcorKernelComponent *comp   = g_object_new (nc_xcor_kernel_component_clustering_get_type (), NULL);
   ClusteringComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CLUSTERING_GET_DATA (comp);
+
+  data->xclkg = xclkg;
+  data->dist  = dist;
+  data->ps    = ps;
+
+  return comp;
+}
+
+/*
+ * Implementation of the redshift-space distortion component.
+ *
+ * Mirrors the clustering component with the linear growth rate
+ * f(z) = dln D / dln a in place of the bias, with the CCL sign convention:
+ * the number-counts transfer is b(z) j_l(k chi) - f(z) j_l''(k chi). The
+ * Bessel weight order is set at construction through the component's
+ * bessel-deriv property.
+ */
+
+static void
+_rsd_component_data_clear (RSDComponentData *data)
+{
+  /* No need to clear, these are weak references from parent kernel */
+}
+
+static gdouble
+_rsd_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
+{
+  RSDComponentData *data = _NC_XCOR_KERNEL_COMPONENT_RSD_GET_DATA (comp);
+  const gdouble z        = nc_distance_inv_comoving (data->dist, cosmo, xi);
+  const gdouble E_z      = nc_hicosmo_E (cosmo, z);
+  const gdouble powspec  = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
+  const gdouble dn_dz_z  = _nc_xcor_kernel_gal_dndz (data->xclkg, z);
+  gdouble D_z, dD_dz;
+
+  nc_growth_func_eval_both (data->xclkg->gf, cosmo, z, &D_z, &dD_dz);
+  {
+    const gdouble f_z = -(1.0 + z) * dD_dz / D_z;
+
+    return -f_z *dn_dz_z *E_z *sqrt (powspec);
+  }
+}
+
+static gdouble
+_rsd_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l)
+{
+  return 1.0;
+}
+
+static void
+_rsd_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
+{
+  RSDComponentData *data = _NC_XCOR_KERNEL_COMPONENT_RSD_GET_DATA (comp);
+  NcDistance *dist       = data->dist;
+  NcmPowspec *ps         = data->ps;
+  NcXcorKernelGal *xclkg = data->xclkg;
+
+  nc_distance_prepare_if_needed (dist, cosmo);
+  ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
+  nc_growth_func_prepare_if_needed (xclkg->gf, cosmo);
+
+  /* Same support as the clustering component: bounded by dn_dz. */
+  *xi_min = nc_distance_comoving (dist, cosmo, MAX (xclkg->dn_dz_zmin, 1.0e-6));
+  *xi_max = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
+  *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
+}
+
+static NcXcorKernelComponent *
+_nc_xcor_kernel_component_rsd_new (NcXcorKernelGal *xclkg, NcDistance *dist, NcmPowspec *ps)
+{
+  NcXcorKernelComponent *comp = g_object_new (nc_xcor_kernel_component_rsd_get_type (),
+                                              "bessel-deriv", 2,
+                                              NULL);
+  RSDComponentData *data = _NC_XCOR_KERNEL_COMPONENT_RSD_GET_DATA (comp);
 
   data->xclkg = xclkg;
   data->dist  = dist;
@@ -772,6 +926,13 @@ _nc_xcor_kernel_gal_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
     g_assert_nonnull (xclkg->magbias_comp);
     nc_xcor_kernel_component_prepare (xclkg->magbias_comp, cosmo);
   }
+
+  if (xclkg->dorsd)
+  {
+    g_assert_nonnull (xclkg->rsd_comp);
+    nc_growth_func_prepare_if_needed (xclkg->gf, cosmo);
+    nc_xcor_kernel_component_prepare (xclkg->rsd_comp, cosmo);
+  }
 }
 
 static void
@@ -807,6 +968,9 @@ _nc_xcor_kernel_gal_get_component_list (NcXcorKernel *xclk)
 
   if (xclkg->domagbias && (xclkg->magbias_comp != NULL))
     g_ptr_array_add (comp_list, g_object_ref (xclkg->magbias_comp));
+
+  if (xclkg->dorsd && (xclkg->rsd_comp != NULL))
+    g_ptr_array_add (comp_list, g_object_ref (xclkg->rsd_comp));
 
   return comp_list;
 }

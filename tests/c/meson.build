@@ -58,9 +58,25 @@ math_tests = [
         'name': 'ncm_stats_dist1d_epdf',
         'sources': ['ncm/stats/test_ncm_stats_dist1d_epdf.c'],
     },
+    # Split by claim: building an estimator is mechanics a small sample exercises fully,
+    # while requiring it to reproduce its own distribution needs the full sample and costs
+    # three quarters of the runtime -- a Jensen-Shannon divergence, a covariance recovered
+    # to 50%, a sampling frequency matched over ten million draws.
     {
         'name': 'ncm_stats_dist',
-        'sources': ['ncm/stats/test_ncm_stats_dist.c'],
+        'sources': [
+            'ncm/stats/test_ncm_stats_dist.c',
+            'ncm/stats/test_ncm_stats_dist_common.c',
+        ],
+        'timeout': 0,
+        'suite': ['c', 'omp'],
+    },
+    {
+        'name': 'ncm_stats_dist_divergence',
+        'sources': [
+            'ncm/stats/test_ncm_stats_dist_divergence.c',
+            'ncm/stats/test_ncm_stats_dist_common.c',
+        ],
         'timeout': 0,
         'suite': ['c-statistical', 'omp'],
     },
@@ -80,6 +96,14 @@ math_tests = [
     {
         'name': 'ncm_spline_vec',
         'sources': ['ncm/spline/test_ncm_spline_vec.c'],
+    },
+    # Bit-exact agreement between serial and concurrent evaluation of one shared
+    # prepared NcmSplineBSpline: its GSL workspace is per-call scratch, so this is
+    # the regression test for evaluating it from parallel kernel integrands.
+    {
+        'name': 'ncm_spline_bspline_threads',
+        'sources': ['ncm/spline/test_ncm_spline_bspline_threads.c'],
+        'suite': ['c', 'omp'],
     },
     {
         'name': 'ncm_ode_spline',
@@ -139,44 +163,100 @@ math_tests = [
         'name': 'ncm_serialize',
         'sources': ['ncm/core/test_ncm_serialize.c'],
     },
-    # test_ncm_fit.c builds once per optimizer group rather than as one binary.
-    # `meson test --num-processes` cannot split a single executable, so as one
-    # target these took 177 s and set the whole C suite's wall clock on their
-    # own. The groups are independent and the source gates on TEST_FIT_* -- see
-    # the top of main() there. Undefined means all, so a hand build still runs
-    # everything.
+    # One executable per NcmFit algorithm. The checks are identical for all of
+    # them and live in test_ncm_fit_common.c, which every one of these links; the
+    # per-algorithm source only names its algorithm. Splitting this far keeps a
+    # failure attributable without reading the whole log, lets each carry a
+    # timeout its own size, and gives `meson test --slice` units it can balance
+    # by count -- as one binary these were 177 s, which no amount of
+    # --num-processes could divide.
     {
-        'name': 'ncm_fit_nlopt',
-        'sources': ['ncm/fit/test_ncm_fit.c'],
-        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_NLOPT'],
+        'name': 'ncm_fit_nlopt_neldermead',
+        'sources': ['ncm/fit/test_ncm_fit_nlopt_neldermead.c', 'ncm/fit/test_ncm_fit_common.c'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_nlopt_slsqp',
+        'sources': ['ncm/fit/test_ncm_fit_nlopt_slsqp.c', 'ncm/fit/test_ncm_fit_common.c'],
         'priority': 6,
         'timeout': 0,
     },
     {
         'name': 'ncm_fit_gsl_ls',
-        'sources': ['ncm/fit/test_ncm_fit.c'],
-        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_GSL_LS'],
+        'sources': ['ncm/fit/test_ncm_fit_gsl_ls.c', 'ncm/fit/test_ncm_fit_common.c'],
         'priority': 6,
         'timeout': 0,
     },
     {
-        'name': 'ncm_fit_gsl_mm',
-        'sources': ['ncm/fit/test_ncm_fit.c'],
-        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_GSL_MM'],
+        'name': 'ncm_fit_gsl_mm_conjugate_fr',
+        'sources': ['ncm/fit/test_ncm_fit_gsl_mm_conjugate_fr.c', 'ncm/fit/test_ncm_fit_common.c'],
         'priority': 6,
         'timeout': 0,
     },
     {
-        'name': 'ncm_fit_gsl_simplex',
-        'sources': ['ncm/fit/test_ncm_fit.c'],
-        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_GSL_SIMPLEX'],
+        'name': 'ncm_fit_gsl_mm_conjugate_pr',
+        'sources': ['ncm/fit/test_ncm_fit_gsl_mm_conjugate_pr.c', 'ncm/fit/test_ncm_fit_common.c'],
         'priority': 6,
         'timeout': 0,
     },
     {
-        'name': 'ncm_fit_levmar',
-        'sources': ['ncm/fit/test_ncm_fit.c'],
-        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_LEVMAR'],
+        'name': 'ncm_fit_gsl_mm_vector_bfgs',
+        'sources': ['ncm/fit/test_ncm_fit_gsl_mm_vector_bfgs.c', 'ncm/fit/test_ncm_fit_common.c'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_gsl_mm_vector_bfgs2',
+        'sources': ['ncm/fit/test_ncm_fit_gsl_mm_vector_bfgs2.c', 'ncm/fit/test_ncm_fit_common.c'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_gsl_mm_steepest_descent',
+        'sources': ['ncm/fit/test_ncm_fit_gsl_mm_steepest_descent.c', 'ncm/fit/test_ncm_fit_common.c'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_gsl_nmsimplex',
+        'sources': ['ncm/fit/test_ncm_fit_gsl_nmsimplex.c', 'ncm/fit/test_ncm_fit_common.c'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_gsl_nmsimplex2',
+        'sources': ['ncm/fit/test_ncm_fit_gsl_nmsimplex2.c', 'ncm/fit/test_ncm_fit_common.c'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_gsl_nmsimplex2rand',
+        'sources': ['ncm/fit/test_ncm_fit_gsl_nmsimplex2rand.c', 'ncm/fit/test_ncm_fit_common.c'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_levmar_der',
+        'sources': ['ncm/fit/test_ncm_fit_levmar_der.c', 'ncm/fit/test_ncm_fit_common.c'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_levmar_dif',
+        'sources': ['ncm/fit/test_ncm_fit_levmar_dif.c', 'ncm/fit/test_ncm_fit_common.c'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_levmar_bc_der',
+        'sources': ['ncm/fit/test_ncm_fit_levmar_bc_der.c', 'ncm/fit/test_ncm_fit_common.c'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_levmar_bc_dif',
+        'sources': ['ncm/fit/test_ncm_fit_levmar_bc_dif.c', 'ncm/fit/test_ncm_fit_common.c'],
         'priority': 6,
         'timeout': 0,
     },
@@ -189,10 +269,31 @@ math_tests = [
         'sources': ['ncm/fit/test_ncm_mset_trans_kern_gauss.c'],
     },
     {
+        'name': 'ncm_mset_trans_kern_cat',
+        'sources': ['ncm/fit/test_ncm_mset_trans_kern_cat.c'],
+    },
+    # Split by claim, not by check: driving a chain is mechanics a short run covers, while
+    # requiring the sample covariance to reproduce the data covariance converges as
+    # 1/sqrt(n) and is chased by loops that double the chain length up to fifteen times.
+    # The mechanics run in the instrumented lane at a fixed short length; the recovery
+    # assertions, with their retries, run in the statistical tier.
+    {
         'name': 'ncm_fit_esmcmc',
-        'sources': ['ncm/fit/test_ncm_fit_esmcmc.c'],
+        'sources': [
+            'ncm/fit/test_ncm_fit_esmcmc.c',
+            'ncm/fit/test_ncm_fit_esmcmc_common.c',
+        ],
         'timeout': 0,
-        'suite': ['c-acceptance', 'omp'],
+        'suite': ['c', 'omp'],
+    },
+    {
+        'name': 'ncm_fit_esmcmc_recovery',
+        'sources': [
+            'ncm/fit/test_ncm_fit_esmcmc_recovery.c',
+            'ncm/fit/test_ncm_fit_esmcmc_common.c',
+        ],
+        'timeout': 0,
+        'suite': ['c-statistical', 'omp'],
     },
     {
         'name': 'ncm_func_eval',
@@ -232,8 +333,26 @@ model_tests = [
         'sources': ['nc/recomb/test_nc_recomb.c'],
     },
     {
+        'name': 'nc_hiprim',
+        'sources': ['nc/primordial/test_nc_hiprim.c'],
+    },
+    # Split by cost: Cls and calc_ps run CLASS deep enough to take 12.3 s and 4.4 s
+    # per model, where every other check is 0.4 s or less. Measured per line those
+    # two are 91% of this file's runtime for about 2% of the lines only they
+    # reach, so they run in the acceptance tier and the cheap checks stay in the
+    # instrumented lane. Split by check rather than by sharing a prepared state,
+    # which would couple the subtests: calc_ps mutates the object with
+    # nc_cbe_set_calc_transfer().
+    {
         'name': 'nc_cbe',
-        'sources': ['nc/cmb/test_nc_cbe.c'],
+        'sources': ['nc/cmb/test_nc_cbe.c', 'nc/cmb/test_nc_cbe_common.c'],
+        'priority': 4,
+        'timeout': 0,
+    },
+    {
+        'name': 'nc_cbe_class',
+        'sources': ['nc/cmb/test_nc_cbe_class.c', 'nc/cmb/test_nc_cbe_common.c'],
+        'suite': ['c-acceptance'],
         'priority': 4,
         'timeout': 0,
     },
@@ -400,8 +519,40 @@ galaxy_tests = [
     },
 ]
 
+# Cross-correlation tests
+xcor_tests = [
+    {
+        'name': 'nc_xcor',
+        'sources': ['nc/xcor/test_nc_xcor.c'],
+    },
+    {
+        'name': 'nc_xcor_kernel',
+        'sources': ['nc/xcor/test_nc_xcor_kernel.c'],
+    },
+    {
+        'name': 'nc_xcor_kquad',
+        'sources': ['nc/xcor/test_nc_xcor_kquad.c'],
+    },
+    {
+        'name': 'nc_xcor_kernel_analytic',
+        'sources': ['nc/xcor/test_nc_xcor_kernel_analytic.c'],
+    },
+    {
+        'name': 'nc_xcor_kernel_integrand',
+        'sources': ['nc/xcor/test_nc_xcor_kernel_integrand.c'],
+    },
+    {
+        'name': 'nc_xcor_solver',
+        'sources': ['nc/xcor/test_nc_xcor_solver.c'],
+    },
+    {
+        'name': 'nc_xcor_ssc_sij',
+        'sources': ['nc/xcor/test_nc_xcor_ssc_sij.c'],
+    },
+]
+
 # Combine all test arrays
-all_c_tests = math_tests + model_tests + data_tests + lss_tests + galaxy_tests
+all_c_tests = math_tests + model_tests + data_tests + lss_tests + galaxy_tests + xcor_tests
 
 # Build and register all tests
 tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']

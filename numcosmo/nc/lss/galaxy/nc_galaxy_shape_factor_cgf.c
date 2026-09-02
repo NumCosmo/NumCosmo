@@ -37,40 +37,38 @@
  *   P_\mathrm{pop}(\chi_I)\, N_2\big(\epsilon_\mathrm{obs} - f_g(\chi_I);
  *   \sigma_\mathrm{noise}^2\big)
  * $$
- * by a single Gaussian in $\epsilon_\mathrm{obs}$ obtained from a
- * cumulant-generating-function (moment) expansion of the pushforward of the intrinsic
- * distribution through the forward shear map $S(g,\cdot) \equiv f_g$. Writing the
- * analytic low-order response moments of $S$ around $\chi_I=0$ — the value $S_0 =
- * S(g,0)$, the (real $2\times2$) Jacobian $A = \partial S/ \partial\chi_I|_0$, and the
- * Laplacian $\nabla^2 S|_0$ — the observed ellipticity is modelled as
- * $\mathcal{N}(\mu, C)$ with $$\mu = S_0 + \tfrac12 V\,\nabla^2 S|_0, \qquad C = V\,A
- * A^{\mathsf T} + \sigma_\mathrm{noise}^2\, I_2,$$ where $V$ is the per-component
- * variance of the intrinsic ellipticity.
+ * by a Gaussian in $\epsilon_\mathrm{obs}$ with
+ * $$\mu = S_0 + \tfrac12 V\,\nabla^2 S|_0, \qquad
+ * C = V\,A A^{\mathsf T} + \sigma_\mathrm{noise}^2 I_2,$$
+ * where $S_0$, $A$, and $\nabla^2 S|_0$ are the response of the forward
+ * shear map at $\chi_I=0$ and $V$ is the intrinsic per-component variance.
  *
- * Unlike #NcGalaxyShapeFactorVarAdd (which pulls $\epsilon_\mathrm{obs}$ back through
- * the inverse map and adds scalar variances), CGF keeps the map's curvature: the mean
- * picks up the Laplacian correction and the covariance is the full $A A^{\mathsf T}$
- * pushforward of the intrinsic variance, not an isotropic sum. It is therefore more
- * accurate than VarAdd, while remaining a single closed-form arithmetic evaluation —
- * cheaper than #NcGalaxyShapeFactorLaplace, which needs a per-galaxy Newton mode
- * search and a Hessian.
+ * Unlike #NcGalaxyShapeFactorVarAdd, which pulls $\epsilon_\mathrm{obs}$ back
+ * through the inverse map and adds scalar variances, this keeps the map's
+ * curvature: the mean picks up the Laplacian correction and the covariance is
+ * the full $A A^{\mathsf T}$ pushforward of the intrinsic variance rather than
+ * an isotropic sum. It is more accurate than VarAdd and remains a single
+ * closed-form evaluation, so it is cheaper than
+ * #NcGalaxyShapeFactorLaplace, which needs a per-galaxy Newton mode search and
+ * a Hessian.
  *
- * The variance $V$ used here is the *truncated* per-component second moment of the
- * intrinsic ellipticity, i.e. $V = e_\mathrm{rms}^2$ with $e_\mathrm{rms}$ from
- * nc_galaxy_shape_pop_e_rms(), NOT the square of the untruncated Gaussian width
- * nc_galaxy_shape_pop_get_sigma() (which always exceeds it and would bias the
- * recovered shear high).
+ * $V$ is the truncated per-component second moment,
+ * $V=e_\mathrm{rms}^2$ with $e_\mathrm{rms}$ from nc_galaxy_shape_pop_e_rms().
+ * It is not the square of the untruncated Gaussian width from
+ * nc_galaxy_shape_pop_get_sigma(), which always exceeds it and would bias the
+ * recovered shear high.
  *
- * The moment expansion keeps only the intrinsic second moment, so it is a
- * Gaussian-population method: like #NcGalaxyShapeFactorVarAdd it requires the
- * population resolved from the #NcmMSet to support nc_galaxy_shape_pop_get_sigma()
- * (currently #NcGalaxyShapePopGauss or #NcGalaxyShapePopGaussLocal, Global or
- * per-galaxy).
+ * The expansion keeps only the intrinsic second moment, so this is a
+ * Gaussian-population method: like #NcGalaxyShapeFactorVarAdd, the population
+ * resolved from the #NcmMSet must support nc_galaxy_shape_pop_get_sigma(),
+ * currently #NcGalaxyShapePopGauss or #NcGalaxyShapePopGaussLocal, global or
+ * per-galaxy.
  *
- * The approximation is exact in the doubly-linear ($g\to0$ or $V\to0$) limit and
- * degrades as the reduced shear or the intrinsic width grows (the dropped higher
- * moments and higher map derivatives then matter). See the accuracy envelope measured
- * in tests/python/nc/lss/galaxy/test_galaxy_shape_factor_cgf.py.
+ * The approximation is exact in the doubly-linear limit, $g\to0$ or $V\to0$,
+ * and degrades as the reduced shear or the intrinsic width grows, where the
+ * dropped higher moments and higher map derivatives start to matter. The
+ * measured accuracy envelope is in
+ * tests/python/nc/lss/galaxy/test_galaxy_shape_factor_cgf.py.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -86,21 +84,23 @@
 #endif /* NUMCOSMO_GIR_SCAN */
 
 /*
- * Analytic response moments of the forward shear map S(g,chi_I) at chi_I=0. S(g,.) is
- * exactly nc_wl_ellipticity_apply_shear_*(). Derived in closed form per ellipticity
- * convention:
+ * Analytic response moments of the forward shear map S(g,chi_I) at chi_I=0.
+ * S(g,.) is nc_wl_ellipticity_apply_shear_*(). Derived in closed form per
+ * ellipticity convention:
  *
- * TRACE_DET (epsilon convention), |g|<=1: S is holomorphic in chi_I (no conj(chi_I)
- * dependence), so S(g,0)=g, the Jacobian is the real scalar (1-|g|^2) times the
- * identity, and S is harmonic, so its Laplacian vanishes. |g|>1: S depends on chi_I
- * only through conj(chi_I) (anti-holomorphic), S(g,0)=g/|g|^2, Jacobian is a
- * reflection built from beta=(|g|^2-1)/conj(g)^2, and the Laplacian still vanishes.
+ * TRACE_DET (epsilon convention), |g|<=1: S is holomorphic in chi_I, with no
+ * conj(chi_I) dependence, so S(g,0)=g, the Jacobian is the real scalar
+ * (1-|g|^2) times the identity, and S is harmonic, so its Laplacian vanishes.
+ * For |g|>1, S depends on chi_I only through conj(chi_I), so S(g,0)=g/|g|^2,
+ * the Jacobian is a reflection built from beta=(|g|^2-1)/conj(g)^2, and the
+ * Laplacian still vanishes.
  *
- * TRACE (chi/distortion convention): S depends on both chi_I and conj(chi_I), so
- * neither holomorphicity shortcut applies; Jacobian and Laplacian were obtained by
- * direct Wirtinger-calculus differentiation of the Möbius-style map.
+ * TRACE (chi/distortion convention): S depends on both chi_I and conj(chi_I),
+ * so neither holomorphicity shortcut applies. Jacobian and Laplacian were
+ * obtained by direct Wirtinger-calculus differentiation of the Moebius-style
+ * map.
  *
- * The |g|>1 (strong-lensing) branches are outside this project's shear range.
+ * The |g|>1 strong-lensing branches are outside this project's shear range.
  */
 typedef struct _NcGalaxyShapeFactorCGFMoments
 {

@@ -45,7 +45,6 @@ typedef struct _NcmSBesselIntegratorPrivate
 {
   guint ell_min;
   guint ell_max;
-  gdouble abstol;
 } NcmSBesselIntegratorPrivate;
 
 enum
@@ -64,7 +63,6 @@ ncm_sbessel_integrator_init (NcmSBesselIntegrator *sbi)
 
   self->ell_min = 0;
   self->ell_max = 0;
-  self->abstol  = 0.0;
 }
 
 static void
@@ -151,6 +149,7 @@ _ncm_sbessel_integrator_finalize (GObject *object)
 static void _ncm_sbessel_integrator_set_ell_range_default (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max);
 static gdouble _ncm_sbessel_integrator_integrate_ell_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, gint ell, gpointer user_data);
 static void _ncm_sbessel_integrator_integrate_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data);
+static void _ncm_sbessel_integrator_integrate_deriv_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, guint deriv, NcmVector *result, gpointer user_data);
 
 static void
 ncm_sbessel_integrator_class_init (NcmSBesselIntegratorClass *klass)
@@ -176,9 +175,10 @@ ncm_sbessel_integrator_class_init (NcmSBesselIntegratorClass *klass)
                                                        NCM_TYPE_DTUPLE2,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->set_ell_range = &_ncm_sbessel_integrator_set_ell_range_default;
-  klass->integrate_ell = &_ncm_sbessel_integrator_integrate_ell_default;
-  klass->integrate     = &_ncm_sbessel_integrator_integrate_not_implemented;
+  klass->set_ell_range   = &_ncm_sbessel_integrator_set_ell_range_default;
+  klass->integrate_ell   = &_ncm_sbessel_integrator_integrate_ell_default;
+  klass->integrate       = &_ncm_sbessel_integrator_integrate_not_implemented;
+  klass->integrate_deriv = &_ncm_sbessel_integrator_integrate_deriv_not_implemented;
 }
 
 static void
@@ -221,6 +221,13 @@ static void
 _ncm_sbessel_integrator_integrate_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data)
 {
   g_error ("ncm_sbessel_integrator_integrate: method not implemented for `%s'",
+           G_OBJECT_TYPE_NAME (sbi));
+}
+
+static void
+_ncm_sbessel_integrator_integrate_deriv_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, guint deriv, NcmVector *result, gpointer user_data)
+{
+  g_error ("ncm_sbessel_integrator_integrate_deriv: method not implemented for `%s'",
            G_OBJECT_TYPE_NAME (sbi));
 }
 
@@ -304,52 +311,6 @@ ncm_sbessel_integrator_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, 
 }
 
 /**
- * ncm_sbessel_integrator_set_abstol:
- * @sbi: a #NcmSBesselIntegrator
- * @abstol: absolute tolerance on the integral, or 0.0 for none
- *
- * Sets the absolute accuracy the caller needs from the next
- * ncm_sbessel_integrator_integrate() calls. Implementations may stop refining
- * once the remaining error is below @abstol even if their own relative
- * criterion is not met.
- *
- * This exists because the caller, not the integrator, knows the scale the
- * result feeds into. An integral that comes out many orders of magnitude below
- * the largest one in the same batch cannot affect the sum it belongs to, and
- * pursuing full relative accuracy on it is wasted -- worse, an integrand with
- * an unresolvable feature may never reach the relative criterion at all.
- *
- * Applies until changed. The default, 0.0, means the pure relative criterion.
- *
- */
-void
-ncm_sbessel_integrator_set_abstol (NcmSBesselIntegrator *sbi, gdouble abstol)
-{
-  NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
-
-  g_return_if_fail (NCM_IS_SBESSEL_INTEGRATOR (sbi));
-  g_return_if_fail (abstol >= 0.0);
-
-  self->abstol = abstol;
-}
-
-/**
- * ncm_sbessel_integrator_get_abstol:
- * @sbi: a #NcmSBesselIntegrator
- *
- * Returns: the absolute tolerance set by ncm_sbessel_integrator_set_abstol(), or 0.0
- */
-gdouble
-ncm_sbessel_integrator_get_abstol (NcmSBesselIntegrator *sbi)
-{
-  NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
-
-  g_return_val_if_fail (NCM_IS_SBESSEL_INTEGRATOR (sbi), 0.0);
-
-  return self->abstol;
-}
-
-/**
  * ncm_sbessel_integrator_integrate_ell: (virtual integrate_ell)
  * @sbi: a #NcmSBesselIntegrator
  * @F: (scope call) (closure user_data): function to integrate
@@ -391,6 +352,34 @@ void
 ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data)
 {
   NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate (sbi, F, a, b, k, result, user_data);
+}
+
+/**
+ * ncm_sbessel_integrator_integrate_deriv: (virtual integrate_deriv)
+ * @sbi: a #NcmSBesselIntegrator
+ * @F: (scope call) (closure user_data): function to integrate
+ * @a: lower integration limit
+ * @b: upper integration limit
+ * @k: wave number parameter
+ * @deriv: derivative order of the spherical Bessel weight, up to 2
+ * @result: a #NcmVector to store results
+ * @user_data: (nullable): user data passed to @F
+ *
+ * Integrates the function @F(x, k) multiplied by the @deriv-th derivative of the
+ * spherical Bessel function with respect to its argument, computing
+ * $\int_a^b K(x,k)\, j_\ell^{(d)}(kx)\, \mathrm{d}x$ for each $\ell$ from ell_min
+ * to ell_max. For @deriv equal to zero this is ncm_sbessel_integrator_integrate().
+ * The results are stored in @result, which must have length (ell_max - ell_min + 1).
+ */
+void
+ncm_sbessel_integrator_integrate_deriv (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, guint deriv, NcmVector *result, gpointer user_data)
+{
+  g_return_if_fail (deriv <= 2);
+
+  if (deriv == 0)
+    NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate (sbi, F, a, b, k, result, user_data);
+  else
+    NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate_deriv (sbi, F, a, b, k, deriv, result, user_data);
 }
 
 typedef struct _NcmSBesselIntegratorGaussianData

@@ -18,11 +18,7 @@ format-links: [ipynb]
 
 ## Introduction
 
-This notebook examines the two-point correlation functions and related quantities implemented in the Core Cosmology Library (CCL) and NumCosmo. 
-Our goal is to evaluate the consistency and accuracy of these functions by analyzing their relative differences.
-
-To this end, we define a set of cosmological models with fixed and variable parameters, then implement functions to compute and visualize the power spectra and their relative differences. 
-The results are presented through tables and plots.
+Compares two-point cosmological observables from CCL and NumCosmo.
 
 ### Scope of the comparison
 

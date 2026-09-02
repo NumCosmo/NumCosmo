@@ -40,7 +40,7 @@
  * nc_wl_ellipticity.h's own convention): the plain name takes/returns
  * #NcmComplex by value -- fast, used internally, `(skip)`-ed from
  * introspection since C99 complex types are not GObject-introspectable --
- * and the `_ptr`-suffixed sibling takes/returns it by pointer, which is
+ * and the `_ptr`-suffixed function takes/returns it by pointer, which is
  * introspectable and usable from Python. Functions with no complex-valued
  * parameter at all (e.g. add/conv/conj, jacobi_anger_reduce) have only one,
  * fully introspectable, form.
@@ -50,7 +50,7 @@
  * batch, e.g. a #GPtrArray with ncm_laurent_series_free() as its free
  * function, freed in one sweep at the end of a computation).
  *
- * For hot loops that would otherwise allocate and free many of these per
+ * For performance-critical loops that would otherwise allocate and free many of these per
  * call, ncm_laurent_series_reset() plus the `_into`-suffixed counterparts
  * of add/conv/scale/conj/new_single write into a caller-supplied,
  * already-allocated #NcmLaurentSeries instead of allocating a new one
@@ -108,7 +108,7 @@ ncm_laurent_series_new (gint hmin, gint hmax)
  * Resizes @a in place to harmonics $h\in[hmin,hmax]$, zeroing every
  * coefficient. Grow-only: reuses @a's existing buffer (no allocation) when
  * it is already big enough, reallocates bigger otherwise -- never shrinks
- * the underlying allocation. Lets a hot loop reuse one #NcmLaurentSeries
+ * the underlying allocation. Lets a performance-critical loop reuse one #NcmLaurentSeries
  * across many calls instead of allocating fresh every time (see
  * nc_galaxy_shape_factor_series_lensed.c).
  */
@@ -604,7 +604,7 @@ ncm_laurent_series_tps_new (guint order)
  *
  * Increases the reference count of @tps by one. This is the boxed type's
  * "copy" function: it shares the same underlying storage rather than
- * deep-copying it (matching #NcGalaxyShapeFactorData and siblings), so later
+ * deep-copying it (matching #NcGalaxyShapeFactorData and related types), so later
  * mutations through any reference (e.g. the owning evaluator's own compute
  * step) are visible through every other outstanding reference.
  *

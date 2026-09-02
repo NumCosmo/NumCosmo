@@ -29,13 +29,13 @@
 #include <glib-object.h>
 #include <glib.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic.h>
+#include <numcosmo/nc/xcor/nc_xcor_kernel_radial.h>
 
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_KERNEL_ANALYTIC_STUDENT_T (nc_xcor_kernel_analytic_student_t_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcXcorKernelAnalyticStudentT, nc_xcor_kernel_analytic_student_t, NC, XCOR_KERNEL_ANALYTIC_STUDENT_T, NcXcorKernelAnalytic)
+G_DECLARE_FINAL_TYPE (NcXcorKernelAnalyticStudentT, nc_xcor_kernel_analytic_student_t, NC, XCOR_KERNEL_ANALYTIC_STUDENT_T, NcXcorKernelRadial)
 
 NcXcorKernelAnalyticStudentT *nc_xcor_kernel_analytic_student_t_new (NcDistance * dist, NcmPowspec * ps, gdouble chi_mean, gdouble chi_scale, gdouble nu, gdouble n_scale);
 NcXcorKernelAnalyticStudentT *nc_xcor_kernel_analytic_student_t_new_full (NcDistance *dist, NcmPowspec *ps, gdouble chi_mean, gdouble chi_scale, gdouble nu, gdouble n_scale, NcmSBesselIntegrator *sbi);

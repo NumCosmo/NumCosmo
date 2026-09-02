@@ -106,6 +106,9 @@ guint nc_xcor_kernel_component_get_max_iter (NcXcorKernelComponent *comp);
 void nc_xcor_kernel_component_set_tol (NcXcorKernelComponent *comp, gdouble tol);
 gdouble nc_xcor_kernel_component_get_tol (NcXcorKernelComponent *comp);
 
+void nc_xcor_kernel_component_set_bessel_deriv (NcXcorKernelComponent *comp, guint bessel_deriv);
+guint nc_xcor_kernel_component_get_bessel_deriv (NcXcorKernelComponent *comp);
+
 void nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo);
 
 gdouble nc_xcor_kernel_component_eval_k_max (NcXcorKernelComponent *comp, gdouble y);

@@ -26,12 +26,7 @@
 /**
  * NcXcorKernelComponent:
  *
- * Abstract base class for kernel components in cross-correlation calculations.
- *
- * This class provides a framework for defining physical components of
- * cross-correlation kernels. Each component represents a distinct physical
- * contribution, such as galaxy number counts, magnification bias, or ISW effect.
- * Components can be combined to form multi-component kernels.
+ * Abstract base class for cross-correlation kernel components.
  *
  * Subclasses must implement:
  * - `eval_kernel`: evaluates K(k, xi) for the component
@@ -40,45 +35,32 @@
  * Optionally, subclasses can implement:
  * - `get_limits`: returns valid integration ranges for xi and k
  *
- * The class provides automatic kernel analysis functionality that studies the behavior
- * of KL(k, y/k) using the Limber approximation to optimize integration strategies.
+ * The class analyzes KL(k, y/k) with the Limber approximation.
  *
  * ## Edges belong in get_limits, never inside eval_kernel
  *
  * `get_limits` declares where the component lives, and the radial integral is
- * confined to the $[\xi_\mathrm{min}, \xi_\mathrm{max}]$ it reports. So
- * `eval_kernel` is only ever called inside that range and **must not** test
- * against it: a component with a sharp edge returns its interior value
- * unconditionally and lets the limits carry the edge. #NcXcorKernelClusterTophat
- * is the clearest case -- an indicator function whose `eval_kernel` simply
- * returns 1.
+ * confined to the $[\xi_\mathrm{min}, \xi_\mathrm{max}]$ it reports.
+ * `eval_kernel` is therefore only ever called inside that range and must not
+ * test against it: a component with a sharp edge returns its interior value
+ * unconditionally and lets the limits carry the edge.
+ * #NcXcorKernelClusterTophat is the clearest case, an indicator function whose
+ * `eval_kernel` returns 1.
  *
- * The reason is that the edge then falls on a panel boundary rather than inside
- * one. A step written into `eval_kernel` would be integrated across, and the
- * Chebyshev fit of the radial integrand cannot resolve a discontinuity in its
- * interior -- it refines until it hits max-order and aborts. A component that is
- * only piecewise smooth *within* its support has the same problem at each
- * interior kink, and the remedy is the same: split it into one component per
- * smooth piece, so every break is a limit.
+ * This places the edge on a panel boundary rather than inside one. A step
+ * written into `eval_kernel` would be integrated across, and the Chebyshev fit
+ * of the radial integrand cannot resolve a discontinuity in its interior: it
+ * refines until it reaches max-order and aborts. A component that is only
+ * piecewise smooth within its support has the same problem at each interior
+ * kink. Split it into one component per smooth piece, so that every break is a
+ * limit.
  *
- * ## What a sharp edge still costs
+ * A sharp edge remains more expensive even when declared correctly. It gives
+ * $W_\ell(k)$ a $1/k$ tail rather than an exponential one, so more of k-space
+ * stays above the closure's absolute floor: on the same comoving shell and
+ * tolerances, a cluster top-hat needs 541 k-space knots over 0.061-4800
+ * against a Gaussian's 161 over 0.064-480. Each knot is one radial solve.
  *
- * Respecting the edge makes the radial integral exact, but it cannot change what
- * the transform of a step looks like. A sharp edge in $\xi$ gives $W_\ell(k)$ a
- * $1/k$ tail rather than an exponential one, so far more of k-space stays above
- * the closure's absolute floor. Measured on the same comoving shell, with the
- * same tolerances:
- *
- * | component | k-space knots | k range | knots per decade |
- * |---|---|---|---|
- * | cluster top-hat (sharp edge) | 541 | 0.061 - 4800 | 111 |
- * | smoothed top-hat | 169 | 0.058 - 520 | 43 |
- * | Gaussian | 161 | 0.064 - 480 | 42 |
- *
- * A whole extra decade of range, and 2.6 times the knot density inside each
- * decade. That is intrinsic to the shape, not a numerical defect, and it is
- * worth knowing before reading a top-hat's cost or accuracy as typical: each
- * knot is one radial solve.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -96,6 +78,11 @@
 #include <gsl/gsl_roots.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+/* Narrowest k range worth bracketing, relative. Below this the minimizer has no point
+ * to place strictly inside and the endpoint is the answer; a few ULP of room is all
+ * that separates the two. */
+#define NC_XCOR_KERNEL_COMPONENT_K_RANGE_MIN_WIDTH (8.0 * GSL_DBL_EPSILON)
+
 typedef struct _NcXcorKernelComponentPrivate
 {
   NcmSpline *k_max_spline;       /* k_max(y) - k value that maximizes KL(k, y/k) */
@@ -105,9 +92,10 @@ typedef struct _NcXcorKernelComponentPrivate
   gsl_root_fsolver *root_solver; /* GSL root solver for finding k_epsilon */
   gdouble epsilon;
   gdouble sqrt_epsilon;
-  guint ny;       /* Number of y points for analysis */
-  guint max_iter; /* Maximum iterations for GSL solvers */
-  gdouble tol;    /* Tolerance for GSL solvers */
+  guint ny;           /* Number of y points for analysis */
+  guint max_iter;     /* Maximum iterations for GSL solvers */
+  gdouble tol;        /* Tolerance for GSL solvers */
+  guint bessel_deriv; /* Derivative order of the spherical Bessel weight */
 } NcXcorKernelComponentPrivate;
 
 enum
@@ -117,6 +105,7 @@ enum
   PROP_NY,
   PROP_MAX_ITER,
   PROP_TOL,
+  PROP_BESSEL_DERIV,
 };
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcXcorKernelComponent, nc_xcor_kernel_component, G_TYPE_OBJECT)
@@ -136,6 +125,7 @@ nc_xcor_kernel_component_init (NcXcorKernelComponent *comp)
   self->ny               = 0.0;
   self->max_iter         = 0.0;
   self->tol              = 0.0;
+  self->bessel_deriv     = 0;
 }
 
 static void
@@ -194,6 +184,9 @@ nc_xcor_kernel_component_set_property (GObject *object, guint prop_id, const GVa
     case PROP_TOL:
       nc_xcor_kernel_component_set_tol (comp, g_value_get_double (value));
       break;
+    case PROP_BESSEL_DERIV:
+      nc_xcor_kernel_component_set_bessel_deriv (comp, g_value_get_uint (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -218,6 +211,9 @@ nc_xcor_kernel_component_get_property (GObject *object, guint prop_id, GValue *v
       break;
     case PROP_TOL:
       g_value_set_double (value, nc_xcor_kernel_component_get_tol (comp));
+      break;
+    case PROP_BESSEL_DERIV:
+      g_value_set_uint (value, nc_xcor_kernel_component_get_bessel_deriv (comp));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -291,6 +287,56 @@ nc_xcor_kernel_component_class_init (NcXcorKernelComponentClass *klass)
                                                         "Tolerance for GSL solvers",
                                                         0.0, 1.0, 1.0e-6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcXcorKernelComponent:bessel-deriv:
+   *
+   * Derivative order of the spherical Bessel weight in the component's radial
+   * integral: the component contributes with $j_\ell^{(d)}(k\chi)$ instead of
+   * $j_\ell(k\chi)$. Order 2 is the redshift-space-distortion weight.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_BESSEL_DERIV,
+                                   g_param_spec_uint ("bessel-deriv",
+                                                      NULL,
+                                                      "Derivative order of the spherical Bessel weight",
+                                                      0, 2, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
+
+/**
+ * nc_xcor_kernel_component_set_bessel_deriv:
+ * @comp: a #NcXcorKernelComponent
+ * @bessel_deriv: derivative order of the spherical Bessel weight, up to 2
+ *
+ * Sets the derivative order $d$ of the spherical Bessel weight: the component
+ * contributes to the kernel through $\int K(\chi, k)\, j_\ell^{(d)}(k\chi)\,
+ * \mathrm{d}\chi$.
+ */
+void
+nc_xcor_kernel_component_set_bessel_deriv (NcXcorKernelComponent *comp, guint bessel_deriv)
+{
+  NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
+
+  g_return_if_fail (bessel_deriv <= 2);
+
+  self->bessel_deriv = bessel_deriv;
+}
+
+/**
+ * nc_xcor_kernel_component_get_bessel_deriv:
+ * @comp: a #NcXcorKernelComponent
+ *
+ * Gets the derivative order of the spherical Bessel weight.
+ *
+ * Returns: the derivative order
+ */
+guint
+nc_xcor_kernel_component_get_bessel_deriv (NcXcorKernelComponent *comp)
+{
+  NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
+
+  return self->bessel_deriv;
 }
 
 /**
@@ -646,6 +692,19 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
     }
   }
 
+  /* gsl_min_fminimizer_set() requires k_lower < k_init < k_upper strictly, and raises a
+   * fatal GSL error -- an abort under ncm_cfg_enable_gsl_err_handler() -- rather than
+   * returning a status when it does not hold. The caller rejects ranges that start out
+   * that narrow, but the grid search above can still close k_lower and k_upper onto
+   * adjacent points. Over a range that narrow the endpoint is the answer. */
+  if (!((k_lower < k_init) && (k_init < k_upper)))
+  {
+    *k_at_max = k_init;
+    *KL_max   = -_nc_xcor_kernel_component_minus_KL (*k_at_max, data);
+
+    return;
+  }
+
   gsl_min_fminimizer_set (self->minimizer, &F_min, k_init, k_lower, k_upper);
 
   do {
@@ -767,14 +826,26 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
       const gdouble k_from_xi_max = y / xi_min;
       const gdouble k_valid_min   = GSL_MAX (k_min, k_from_xi_min);
       const gdouble k_valid_max   = GSL_MIN (k_max, k_from_xi_max);
+      const gdouble k_range_width = (k_valid_max - k_valid_min) / k_valid_max;
       gdouble k_at_max, KL_max;
 
       data.y = y;
       ncm_vector_set (yv, i, y);
 
-      if (k_valid_min >= k_valid_max)
+      /* Anything narrower than a few ULP is skipped, whichever side of zero it falls.
+       * The last grid point sits at y = y_max = k_max xi_max, where k_from_xi_min is
+       * k_max and the valid k set is the single point k_max; but y is rebuilt as
+       * exp (log y_max) and lands a ULP either side, so an exact-order test made the
+       * endpoint a coin flip between warning here and handing the minimizer a bracket
+       * too narrow to place a point inside -- a fatal GSL error. */
+      if (k_range_width <= NC_XCOR_KERNEL_COMPONENT_K_RANGE_MIN_WIDTH)
       {
-        g_warning ("# Skipping y = % 22.15g: no valid k range [% 22.15g, % 22.15g]\n", y, k_valid_min, k_valid_max);
+        /* Empty by more than rounding, on the other hand, means the component's support
+         * and the k range genuinely fail to overlap here: a misconfigured kernel, and
+         * worth saying so. */
+        if (k_range_width < -NC_XCOR_KERNEL_COMPONENT_K_RANGE_MIN_WIDTH)
+          g_warning ("# Skipping y = % 22.15g: no valid k range [% 22.15g, % 22.15g]\n", y, k_valid_min, k_valid_max);
+
         ncm_vector_set (k_max_v, i, 0.5 * (k_valid_min + k_valid_max));
         ncm_vector_set (KL_max_v, i, 0.0);
         ncm_vector_set (k_epsilon_v, i, 0.5 * (k_valid_min + k_valid_max));

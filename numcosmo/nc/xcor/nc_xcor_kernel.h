@@ -84,21 +84,20 @@ typedef struct _NcXcorKernelIntegrand NcXcorKernelIntegrand;
  * @NC_XCOR_KERNEL_CLOSURE_SPLINE: cubic spline on an adaptively refined grid
  * @NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV: Chebyshev series on a Chebyshev-Lobatto grid
  *
- * How a kernel represents $W_\ell(k)$ once it has been sampled. Selected by
- * #NcXcor:closure-type, which applies it to every kernel in a computation --
- * see that property for why the choice is not per kernel.
+ * Representation of $W_\ell(k)$ after sampling. Selected by
+ * #NcXcor:closure-type for all kernels in a computation.
  *
  * %NC_XCOR_KERNEL_CLOSURE_SPLINE discovers its grid: it bisects until the fit
  * meets a tolerance, so the sample count grows as $\epsilon^{-1/4}$ and the
- * spacing it arrives at is ragged.
+ * resulting spacing is uneven.
  *
- * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV prescribes it. $W_\ell(k)$ is an integral
- * of a compactly supported window against $j_\ell(k\chi)$, which is entire in
- * $k$, so $W_\ell$ is entire in $k$ whatever the window is -- and a Chebyshev
- * series converges geometrically on it. The order is then set by the total
- * phase $k_\mathrm{max}\chi_\mathrm{max}$ rather than discovered, and below
- * the order that resolves that phase the expansion carries nothing while above
- * it accuracy is nearly free.
+ * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV prescribes its grid. $W_\ell(k)$ is an
+ * integral of a compactly supported window against $j_\ell(k\chi)$, which is
+ * entire in $k$, so $W_\ell$ is entire in $k$ for any window and a Chebyshev
+ * series converges geometrically on it. The order follows from the total phase
+ * $k_\mathrm{max}\chi_\mathrm{max}$ rather than being discovered: below the
+ * order that resolves that phase the expansion carries nothing, and above it
+ * accuracy is nearly free.
  *
  */
 typedef enum _NcXcorKernelClosure /*< prefix=NC_XCOR_KERNEL_CLOSURE >*/

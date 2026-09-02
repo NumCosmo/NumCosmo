@@ -1297,7 +1297,7 @@ def test_eval_two_panel_aborts_on_non_finite_marginal(ellip_conv):
     but forcing the two-panel branch directly via eval_two_panel() instead of
     the chi_i_native branch: this is the only way to reach
     _marginal_two_panel_debug() (_direct_marginal_at_g()'s TWO_PANEL
-    diagnostic dump, the two-panel sibling of _marginal_chi_i_native_debug()
+    diagnostic dump, the two-panel counterpart of _marginal_chi_i_native_debug()
     exercised above). Parametrized over both ellipticity conventions since
     the debug dump's own kernel choice (TRACE vs TRACE_DET) is a separate
     branch inside it. Fatal via g_error, checked in a subprocess as above."""

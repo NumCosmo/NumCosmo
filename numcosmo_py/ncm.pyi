@@ -9626,6 +9626,16 @@ class SBesselIntegrator(GObject.Object):
         result: Vector,
         *user_data: typing.Any,
     ) -> None: ...
+    def do_integrate_deriv(
+        self,
+        F: typing.Callable[..., float],
+        a: float,
+        b: float,
+        k: float,
+        deriv: int,
+        result: Vector,
+        *user_data: typing.Any,
+    ) -> None: ...
     def do_integrate_ell(
         self,
         F: typing.Callable[..., float],
@@ -9637,7 +9647,6 @@ class SBesselIntegrator(GObject.Object):
     ) -> float: ...
     def do_set_ell_range(self, ell_min: int, ell_max: int) -> None: ...
     def free(self) -> None: ...
-    def get_abstol(self) -> float: ...
     def get_ell_range(self) -> typing.Tuple[int, int]: ...
     def integrate(
         self,
@@ -9645,6 +9654,16 @@ class SBesselIntegrator(GObject.Object):
         a: float,
         b: float,
         k: float,
+        result: Vector,
+        *user_data: typing.Any,
+    ) -> None: ...
+    def integrate_deriv(
+        self,
+        F: typing.Callable[..., float],
+        a: float,
+        b: float,
+        k: float,
+        deriv: int,
         result: Vector,
         *user_data: typing.Any,
     ) -> None: ...
@@ -9670,7 +9689,6 @@ class SBesselIntegrator(GObject.Object):
         self, center: float, std: float, a: float, b: float, k: float, ell: int
     ) -> float: ...
     def ref(self) -> SBesselIntegrator: ...
-    def set_abstol(self, abstol: float) -> None: ...
     def set_ell_range(self, ell_min: int, ell_max: int) -> None: ...
 
 class SBesselIntegratorClass(GObject.GPointer):
@@ -9686,6 +9704,7 @@ class SBesselIntegratorClass(GObject.GPointer):
     set_ell_range: typing.Callable[[SBesselIntegrator, int, int], None] = ...
     integrate_ell: typing.Callable[..., float] = ...
     integrate: typing.Callable[..., None] = ...
+    integrate_deriv: typing.Callable[..., None] = ...
     padding: list[None] = ...
 
 class SBesselIntegratorFFTL(SBesselIntegrator):
@@ -10614,6 +10633,14 @@ class Spectral(GObject.Object):
     props: Props = ...
     def __init__(self, max_order: int = ...) -> None: ...
     @staticmethod
+    def chebT_deriv2_to_gegenbauer_alpha2(
+        c: typing.Sequence[float] | npt.NDArray[np.float64],
+    ) -> list[float]: ...
+    @staticmethod
+    def chebT_deriv_to_gegenbauer_alpha2(
+        c: typing.Sequence[float] | npt.NDArray[np.float64],
+    ) -> list[float]: ...
+    @staticmethod
     def chebT_to_gegenbauer_alpha1(
         c: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> list[float]: ...
@@ -10759,6 +10786,10 @@ class Spectral(GObject.Object):
         b: float,
         x: float,
     ) -> float: ...
+    @staticmethod
+    def gegenbauer_alpha2_xmul(
+        g: typing.Sequence[float] | npt.NDArray[np.float64], alpha: float, beta: float
+    ) -> list[float]: ...
     @staticmethod
     def get_d2_matrix(N: int) -> Matrix: ...
     @staticmethod
@@ -12915,7 +12946,7 @@ class StatsVec(GObject.Object):
       type -> NcmStatsVecType: type
         Statistics vector type
       save-x -> gboolean: save-x
-        Whenever to save all x vectors
+        Whether to save all input vectors
 
     Signals from GObject:
       notify (GParam)

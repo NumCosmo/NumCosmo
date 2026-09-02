@@ -35,6 +35,10 @@ G_BEGIN_DECLS
 
 #define NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN (ncm_sbessel_integrator_levin_get_type ())
 
+/*
+ * Documented as NcmSBesselIntegratorLevin: in ncm_sbessel_integrator_levin.c;
+ * a second doc block here would duplicate the identifier for the GIR scanner.
+ */
 G_DECLARE_FINAL_TYPE (NcmSBesselIntegratorLevin, ncm_sbessel_integrator_levin, NCM, SBESSEL_INTEGRATOR_LEVIN, NcmSBesselIntegrator)
 
 NcmSBesselIntegratorLevin *ncm_sbessel_integrator_levin_new (guint ell_min, guint ell_max);

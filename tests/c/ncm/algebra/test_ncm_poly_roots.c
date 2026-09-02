@@ -25,7 +25,7 @@
 /* Independent tests for NcmPolyRoots, deliberately with no reference to the
  * weak-lensing problem it was extracted from -- this module is pure
  * polynomial-root-finding, cross-checked here against gsl_poly_complex_solve
- * (trustworthy for correctness; it was only ever avoided in the hot loop
+ * (trustworthy for correctness; it was only ever avoided in the performance-critical loop
  * this was extracted from for performance reasons, not correctness). */
 
 #ifdef HAVE_CONFIG_H
@@ -342,4 +342,3 @@ main (gint argc, gchar *argv[])
 
   return g_test_run ();
 }
-

@@ -58,9 +58,10 @@ struct _NcmSBesselIntegratorClass
   void (*set_ell_range) (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max);
   gdouble (*integrate_ell) (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, gint ell, gpointer user_data);
   void (*integrate) (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data);
+  void (*integrate_deriv) (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, guint deriv, NcmVector *result, gpointer user_data);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[15];
+  gpointer padding[14];
 };
 
 NcmSBesselIntegrator *ncm_sbessel_integrator_ref (NcmSBesselIntegrator *sbi);
@@ -70,11 +71,10 @@ void ncm_sbessel_integrator_clear (NcmSBesselIntegrator **sbi);
 void ncm_sbessel_integrator_get_ell_range (NcmSBesselIntegrator *sbi, guint *ell_min, guint *ell_max);
 void ncm_sbessel_integrator_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max);
 
-void ncm_sbessel_integrator_set_abstol (NcmSBesselIntegrator *sbi, gdouble abstol);
-gdouble ncm_sbessel_integrator_get_abstol (NcmSBesselIntegrator *sbi);
 
 gdouble ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, gint ell, gpointer user_data);
 void ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data);
+void ncm_sbessel_integrator_integrate_deriv (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, guint deriv, NcmVector *result, gpointer user_data);
 
 gdouble ncm_sbessel_integrator_integrate_gaussian_ell (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble a, gdouble b, gdouble k, gint ell);
 void ncm_sbessel_integrator_integrate_gaussian (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble a, gdouble b, gdouble k, NcmVector *result);

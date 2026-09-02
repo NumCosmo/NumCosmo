@@ -10,14 +10,8 @@ format-links: [ipynb]
 
 ## Purpose {#sec-purpose}
 
-This tutorial shows how to compute perturbation power spectra for a simple bouncing cosmology using NumCosmo. The example replaces the usual inflationary phase with a nonsingular bounce and compares the resulting spectra with those from standard $\Lambda$CDM.
-
-We use a two-component model (radiation + a fluid with equation-of-state parameter $w$) and compute all relevant perturbation spectra, including adiabatic and entropy modes. The tutorial covers:
-
-- setting up the background model and parameters,
-- defining vacuum initial conditions using the adiabatic prescription and checking the adiabatic regime,
-- evolving mode functions through contraction and bounce phases,
-- computing and visualizing time- and wavenumber-dependent power spectra.
+Computes adiabatic and entropy perturbation spectra for a two-component
+radiation-plus-fluid bouncing cosmology.
 
 ## Defining the model
 
