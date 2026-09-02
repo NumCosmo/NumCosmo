@@ -178,6 +178,8 @@ nc_xcor_kernel_radial_constructed (GObject *object)
       data->kdep = self->kdep;
       data->comp = i;
 
+      nc_xcor_kernel_component_set_bessel_deriv (comp, nc_xcor_kernel_radial_get_comp_bessel_deriv (xcka, i));
+
       g_ptr_array_add (self->comps, comp);
     }
   }
@@ -210,8 +212,9 @@ static void _nc_xcor_kernel_radial_add_noise (NcXcorKernel *xclk, NcmVector *vp1
 static guint _nc_xcor_kernel_radial_obs_len (NcXcorKernel *xclk);
 static guint _nc_xcor_kernel_radial_obs_params_len (NcXcorKernel *xclk);
 static GPtrArray *_nc_xcor_kernel_radial_get_component_list (NcXcorKernel *xclk);
-static gdouble _nc_xcor_kernel_radial_eval_kernel_factor_default (NcXcorKernelRadial *xcka, NcHICosmo *cosmo, gdouble chi, gdouble k);
-static gdouble _nc_xcor_kernel_radial_eval_prefactor_default (NcXcorKernelRadial *xcka, NcHICosmo *cosmo, gint l);
+static gdouble _nc_xcor_kernel_radial_eval_kernel_factor_default (NcXcorKernelRadial *xcka, guint comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
+static gdouble _nc_xcor_kernel_radial_eval_prefactor_default (NcXcorKernelRadial *xcka, guint comp, NcHICosmo *cosmo, gint l);
+static guint _nc_xcor_kernel_radial_get_comp_bessel_deriv_default (NcXcorKernelRadial *xcka, guint comp);
 
 static void
 nc_xcor_kernel_radial_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -270,8 +273,9 @@ nc_xcor_kernel_radial_class_init (NcXcorKernelRadialClass *klass)
   parent_class->obs_params_len          = &_nc_xcor_kernel_radial_obs_params_len;
   parent_class->get_component_list      = &_nc_xcor_kernel_radial_get_component_list;
 
-  klass->eval_kernel_factor = &_nc_xcor_kernel_radial_eval_kernel_factor_default;
-  klass->eval_prefactor     = &_nc_xcor_kernel_radial_eval_prefactor_default;
+  klass->eval_kernel_factor    = &_nc_xcor_kernel_radial_eval_kernel_factor_default;
+  klass->eval_prefactor        = &_nc_xcor_kernel_radial_eval_prefactor_default;
+  klass->get_comp_bessel_deriv = &_nc_xcor_kernel_radial_get_comp_bessel_deriv_default;
 
   model_class->set_property = &nc_xcor_kernel_radial_set_property;
   model_class->get_property = &nc_xcor_kernel_radial_get_property;
@@ -465,15 +469,20 @@ _nc_xcor_kernel_radial_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *
 }
 
 /*
- * The window per unit Hubble radius, times the two factors this class owes the
- * Limber integrand: its (chi, k) factor, and sqrt(P(k,0)/P(k,z)).
+ * The window per unit Hubble radius, with the factors this class owes the
+ * Limber integrand: each component's (chi, k) factor and ell prefactor, and
+ * sqrt(P(k,0)/P(k,z)).
  *
- * The second exists because the conventions differ. This class carries the
+ * The last exists because the conventions differ. This class carries the
  * growth in W and pairs it with P(k, 0) (see the class documentation), while
  * nc_xcor_limber_z.c multiplies the two kernels by P(k, z) -- the convention of
  * the physical kernels, whose W carries no growth. Each kernel returning
  * sqrt(P(k,0)/P(k,z)) makes the product come out as P(k, 0) without the shared
  * integrand having to know which kind of kernel it holds.
+ *
+ * The prefactor is per component here, so it is folded into this value and
+ * eval_limber_z_prefactor returns 1: components of one kernel may carry
+ * different ell dependence (a density and a shear window, say).
  */
 static gdouble
 _nc_xcor_kernel_radial_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
@@ -483,7 +492,11 @@ _nc_xcor_kernel_radial_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdou
   const gdouble RH_Mpc                   = nc_hicosmo_RH_Mpc (cosmo);
   const gdouble chi                      = xck->xi_z * RH_Mpc;
   const guint n_comps                    = nc_xcor_kernel_radial_get_n_comps (xcka);
-  gdouble W                              = 0.0;
+
+  /* Limber fixes k = (l + 1/2) / chi, so the (chi, k) factor is evaluated
+   * there rather than being left out of this branch. */
+  const gdouble k = (l + 0.5) / chi;
+  gdouble W       = 0.0;
   guint i;
 
   /* The Limber path has one integration domain for the whole kernel, so a
@@ -493,18 +506,21 @@ _nc_xcor_kernel_radial_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdou
   {
     gdouble lo, hi;
 
+    if (nc_xcor_kernel_radial_get_comp_bessel_deriv (xcka, i) > 0)
+      g_error ("_nc_xcor_kernel_radial_eval_limber_z: component %u of %s is weighted by a "
+               "derivative of the spherical Bessel function, which the redshift-space Limber "
+               "methods do not support; use the kernel-space methods (NC_XCOR_METHOD_KERNEL_*).",
+               i, G_OBJECT_TYPE_NAME (xclk));
+
     nc_xcor_kernel_radial_get_comp_support (xcka, i, &lo, &hi);
 
     if ((chi >= lo) && (chi <= hi))
-      W += nc_xcor_kernel_radial_eval_W_comp (xcka, i, chi);
+      W += nc_xcor_kernel_radial_eval_W_comp (xcka, i, chi)
+           * nc_xcor_kernel_radial_eval_kernel_factor (xcka, i, cosmo, chi, k)
+           * nc_xcor_kernel_radial_eval_prefactor (xcka, i, cosmo, l);
   }
 
   {
-    /* Limber fixes k = (l + 1/2) / chi, so the (chi, k) factor is evaluated
-     * there rather than being left out of this branch. */
-    const gdouble k = (l + 0.5) / chi;
-    const gdouble f = nc_xcor_kernel_radial_eval_kernel_factor (xcka, cosmo, chi, k);
-
     /* This class carries the growth in W and pairs it with P(k, 0), but the
      * Limber integrand multiplies the two kernels by P(k, z). Each kernel hands
      * back sqrt(P(k,0)/P(k,z)) so the product restores P(k, 0). */
@@ -517,14 +533,15 @@ _nc_xcor_kernel_radial_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdou
      * branches. Limber knows k, so there is nothing here it cannot evaluate. */
     const gdouble g = (self->kdep != NULL) ? nc_xcor_kernel_radial_kdep_eval (self->kdep, chi, k) : 1.0;
 
-    return RH_Mpc * W * f * g * growth;
+    return RH_Mpc * W * g * growth;
   }
 }
 
 static gdouble
 _nc_xcor_kernel_radial_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
-  return nc_xcor_kernel_radial_eval_prefactor (NC_XCOR_KERNEL_RADIAL (xclk), cosmo, l);
+  /* Folded into eval_limber_z, where it can differ between components. */
+  return 1.0;
 }
 
 static void
@@ -585,27 +602,34 @@ _nc_xcor_kernel_radial_get_component_list (NcXcorKernel *xclk)
 }
 
 static gdouble
-_nc_xcor_kernel_radial_eval_kernel_factor_default (NcXcorKernelRadial *xcka, NcHICosmo *cosmo, gdouble chi, gdouble k)
+_nc_xcor_kernel_radial_eval_kernel_factor_default (NcXcorKernelRadial *xcka, guint comp, NcHICosmo *cosmo, gdouble chi, gdouble k)
 {
   return 1.0;
 }
 
 static gdouble
-_nc_xcor_kernel_radial_eval_prefactor_default (NcXcorKernelRadial *xcka, NcHICosmo *cosmo, gint l)
+_nc_xcor_kernel_radial_eval_prefactor_default (NcXcorKernelRadial *xcka, guint comp, NcHICosmo *cosmo, gint l)
 {
   return 1.0;
+}
+
+static guint
+_nc_xcor_kernel_radial_get_comp_bessel_deriv_default (NcXcorKernelRadial *xcka, guint comp)
+{
+  return 0;
 }
 
 /**
  * nc_xcor_kernel_radial_eval_kernel_factor: (virtual eval_kernel_factor)
  * @xcka: a #NcXcorKernelRadial
+ * @comp: component index
  * @cosmo: a #NcHICosmo
  * @chi: comoving distance $\chi$ in Mpc
  * @k: wave number in Mpc$^{-1}$
  *
- * Evaluates a multiplicative factor of $(\chi, k)$ applied to the kernel on top
- * of $W(\chi)\sqrt{P(k,0)}$. It must not depend on $\ell$: one closure serves a
- * whole block of multipoles, so anything $\ell$-dependent belongs in
+ * Evaluates a multiplicative factor of $(\chi, k)$ applied to component @comp
+ * on top of $W(\chi)\sqrt{P(k,0)}$. It must not depend on $\ell$: one closure
+ * serves a whole block of multipoles, so anything $\ell$-dependent belongs in
  * nc_xcor_kernel_radial_eval_prefactor() instead.
  *
  * Shear is the motivating case, where the kernel carries $1/(k\chi)^2$.
@@ -615,29 +639,49 @@ _nc_xcor_kernel_radial_eval_prefactor_default (NcXcorKernelRadial *xcka, NcHICos
  * Returns: the factor at @chi and @k.
  */
 gdouble
-nc_xcor_kernel_radial_eval_kernel_factor (NcXcorKernelRadial *xcka, NcHICosmo *cosmo, gdouble chi, gdouble k)
+nc_xcor_kernel_radial_eval_kernel_factor (NcXcorKernelRadial *xcka, guint comp, NcHICosmo *cosmo, gdouble chi, gdouble k)
 {
-  return NC_XCOR_KERNEL_RADIAL_GET_CLASS (xcka)->eval_kernel_factor (xcka, cosmo, chi, k);
+  return NC_XCOR_KERNEL_RADIAL_GET_CLASS (xcka)->eval_kernel_factor (xcka, comp, cosmo, chi, k);
 }
 
 /**
  * nc_xcor_kernel_radial_eval_prefactor: (virtual eval_prefactor)
  * @xcka: a #NcXcorKernelRadial
+ * @comp: component index
  * @cosmo: a #NcHICosmo
  * @l: multipole $\ell$
  *
- * Evaluates a multiplicative factor that depends only on $\ell$, applied to the
- * whole kernel. Shear contributes
- * $\sqrt{(\ell+2)(\ell+1)\ell(\ell-1)}$ here.
+ * Evaluates a multiplicative factor that depends only on $\ell$, applied to
+ * component @comp. Shear contributes $\sqrt{(\ell+2)(\ell+1)\ell(\ell-1)}$
+ * here.
  *
  * Defaults to 1.
  *
  * Returns: the prefactor at @l.
  */
 gdouble
-nc_xcor_kernel_radial_eval_prefactor (NcXcorKernelRadial *xcka, NcHICosmo *cosmo, gint l)
+nc_xcor_kernel_radial_eval_prefactor (NcXcorKernelRadial *xcka, guint comp, NcHICosmo *cosmo, gint l)
 {
-  return NC_XCOR_KERNEL_RADIAL_GET_CLASS (xcka)->eval_prefactor (xcka, cosmo, l);
+  return NC_XCOR_KERNEL_RADIAL_GET_CLASS (xcka)->eval_prefactor (xcka, comp, cosmo, l);
+}
+
+/**
+ * nc_xcor_kernel_radial_get_comp_bessel_deriv: (virtual get_comp_bessel_deriv)
+ * @xcka: a #NcXcorKernelRadial
+ * @comp: component index
+ *
+ * Gets the derivative order of the spherical Bessel weight of component @comp:
+ * 0 for $j_\ell$, 2 for the $j_\ell''$ of a redshift-space distortion term.
+ * It is set on the #NcXcorKernelComponent at construction.
+ *
+ * Defaults to 0.
+ *
+ * Returns: the Bessel-derivative order, up to 2.
+ */
+guint
+nc_xcor_kernel_radial_get_comp_bessel_deriv (NcXcorKernelRadial *xcka, guint comp)
+{
+  return NC_XCOR_KERNEL_RADIAL_GET_CLASS (xcka)->get_comp_bessel_deriv (xcka, comp);
 }
 
 /*
@@ -660,7 +704,7 @@ _radial_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gd
   const gdouble W           = _nc_xcor_kernel_radial_eval_W_comp_clamped (data->xcka, data->comp, chi);
   const gdouble powspec     = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), 0.0, k_Mpc);
   const gdouble g           = (data->kdep != NULL) ? nc_xcor_kernel_radial_kdep_eval (data->kdep, chi, k_Mpc) : 1.0;
-  const gdouble f           = nc_xcor_kernel_radial_eval_kernel_factor (data->xcka, cosmo, chi, k_Mpc);
+  const gdouble f           = nc_xcor_kernel_radial_eval_kernel_factor (data->xcka, data->comp, cosmo, chi, k_Mpc);
 
   return RH_Mpc * W * g * f * sqrt (powspec);
 }
@@ -670,7 +714,7 @@ _radial_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo,
 {
   RadialComponentData *data = _NC_XCOR_KERNEL_COMPONENT_RADIAL_GET_DATA (comp);
 
-  return nc_xcor_kernel_radial_eval_prefactor (data->xcka, cosmo, l);
+  return nc_xcor_kernel_radial_eval_prefactor (data->xcka, data->comp, cosmo, l);
 }
 
 static void
