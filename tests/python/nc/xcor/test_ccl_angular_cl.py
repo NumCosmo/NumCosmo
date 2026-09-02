@@ -277,6 +277,17 @@ def test_tracer_cl_solver_updates_in_place(cosmology, ccl_cosmo, tracer):
     with pytest.raises(ValueError, match="tracers"):
         solver.update_tracers([tracer, tracer])
 
+    # a tracer whose non-zero terms differ in number or kind is refused
+    with_rsd = pyccl.NumberCountsTracer(
+        ccl_cosmo, has_rsd=True, dndz=(z, nz_shifted), bias=(z, np.ones_like(z))
+    )
+    with pytest.raises(ValueError, match="non-zero terms"):
+        solver.update_tracers([with_rsd])
+
+    shear = pyccl.WeakLensingTracer(ccl_cosmo, dndz=(z, nz_shifted))
+    with pytest.raises(ValueError, match="kind"):
+        solver.update_tracers([shear])
+
 
 def test_batching_agrees_within_the_error_budget(cosmology, tracer):
     """A multipole's transform is the same alone or inside a block, to within the bound.
