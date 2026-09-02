@@ -178,22 +178,22 @@ def _spin2_kernel_callback(
     return kernel_cb
 
 
-def bessel_transform_block(
+def block_transformer(
     tracer: pyccl.Tracer,
     cosmology: Cosmology,
     ell_min: int,
     ell_max: int,
-    k_a: np.ndarray,
     *,
     reltol: float = 1.0e-8,
-) -> np.ndarray:
-    r"""Batched :math:`\Delta_\ell(k)` for every multipole in ``[ell_min, ell_max]``.
+) -> Callable[[np.ndarray], np.ndarray]:
+    r"""Build the batched :math:`\Delta_\ell(k)` evaluator for one multipole block.
 
-    One operator factorisation serves the whole block, and one call per wavenumber
-    returns every multipole in it. This is the reuse structure the method is designed
-    around; solving multipole by multipole discards it.
+    The kernel splines and the integrator (one operator factorisation for the whole
+    block) are set up once; the returned callable evaluates every multipole of the
+    block on any wavenumber array, so an outer integral can grow its grid in pieces
+    without paying the setup again.
 
-    :returns: array of shape ``(ell_max - ell_min + 1, len(k_a))``.
+    :returns: ``f(k_a) -> array`` of shape ``(ell_max - ell_min + 1, len(k_a))``.
     """
     n_ell = ell_max - ell_min + 1
     chi_a, comps, der_bessel = tracer_components(tracer, cosmology, reltol=reltol)
@@ -212,10 +212,9 @@ def bessel_transform_block(
         reltol,
     )
     res = Ncm.Vector.new(n_ell)
-    out = np.zeros((n_ell, len(k_a)))
-
     ells = np.arange(ell_min, ell_max + 1)
 
+    pieces: list[tuple[Callable, int, np.ndarray, float]] = []
     for comp, der in zip(comps, der_bessel):
         sp = Ncm.SplineBSpline.new_tol(reltol, 0.0)
         sp.set_array(chi_a.tolist(), comp.tolist(), True)
@@ -247,22 +246,48 @@ def bessel_transform_block(
             kernel_cb = _kernel_callback(sp)
 
         # positive orders are the Bessel-derivative weights (2 is CCL's RSD)
-        deriv = der if der > 0 else 0
+        pieces.append((kernel_cb, der, f_c, chi_from))
 
-        block = np.zeros((n_ell, len(k_a)))
-        for ik, k in enumerate(k_a):
-            integ.integrate_deriv(
-                kernel_cb, chi_from, chi_max, float(k), deriv, res, None
-            )
-            for j in range(n_ell):
-                block[j, ik] = res.get(j)
+    def evaluate(k_a: np.ndarray) -> np.ndarray:
+        out = np.zeros((n_ell, len(k_a)))
+        for kernel_cb, der, f_c, chi_from in pieces:
+            deriv = der if der > 0 else 0
+            block = np.zeros((n_ell, len(k_a)))
+            for ik, k in enumerate(k_a):
+                integ.integrate_deriv(
+                    kernel_cb, chi_from, chi_max, float(k), deriv, res, None
+                )
+                for j in range(n_ell):
+                    block[j, ik] = res.get(j)
 
-        if der == -1:
-            block /= k_a[None, :] ** 2
+            if der == -1:
+                block /= k_a[None, :] ** 2
 
-        out += block * f_c[:, None]
+            out += block * f_c[:, None]
 
-    return out
+        return out
+
+    return evaluate
+
+
+def bessel_transform_block(
+    tracer: pyccl.Tracer,
+    cosmology: Cosmology,
+    ell_min: int,
+    ell_max: int,
+    k_a: np.ndarray,
+    *,
+    reltol: float = 1.0e-8,
+) -> np.ndarray:
+    r"""Batched :math:`\Delta_\ell(k)` for every multipole in ``[ell_min, ell_max]``.
+
+    One operator factorisation serves the whole block, and one call per wavenumber
+    returns every multipole in it. This is the reuse structure the method is designed
+    around; solving multipole by multipole discards it.
+
+    :returns: array of shape ``(ell_max - ell_min + 1, len(k_a))``.
+    """
+    return block_transformer(tracer, cosmology, ell_min, ell_max, reltol=reltol)(k_a)
 
 
 def bessel_transform(
@@ -285,6 +310,71 @@ def bessel_transform(
             "k-dependent transfers need one kernel per k; use tracer_components(lk=...)"
         )
     return bessel_transform_block(tracer, cosmology, ell, ell, k_a, reltol=reltol)[0]
+
+
+_OUTER_CHUNK = 512
+
+
+def _grow_outer_grid(
+    integrand_of: Callable[[np.ndarray], np.ndarray],
+    k_lo: float,
+    k_hi: float,
+    dk: float,
+    *,
+    chunk: int,
+    tol: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Sample the outer integrand on a step-``dk`` grid whose ends the integrand sets.
+
+    Both ends are placed by a bound on the *integrated* tail left outside,
+    relative to the integral accumulated so far, per multipole. Upward from
+    ``k_lo`` in chunks: past the peak the integrand falls at least as fast as
+    ``k^-3`` (``P(k)/k^2`` for a spin-2 pair, faster for density kernels), so
+    the tail beyond ``k_end`` is at most ``|I(k_end)| k_end / 2``; stop once that
+    is below ``tol`` of the integral for every multipole, or at ``k_hi``.
+    Downward from ``k_lo`` by halving: the integrand rises at least as
+    ``k^(2 + n_s)``, so the piece below ``k_0`` is at most ``|I(k_0)| k_0 / 3``.
+    A pointwise cut at ``tol`` of the peak is not enough here: on a lensing
+    pair it left a tail worth 2e-4 of C_10.
+
+    :returns: ``(k_a, vals)`` with ``vals`` of shape ``(n_ell, len(k_a))``.
+    """
+
+    def accumulated(k_a: np.ndarray, vals: np.ndarray) -> np.ndarray:
+        return np.trapezoid(np.abs(vals), k_a, axis=1)
+
+    k_a = np.empty(0)
+    vals = np.empty((0, 0))
+    k_start = k_lo
+    while k_start < k_hi:
+        k_stop = min(k_start + chunk * dk, k_hi)
+        n_pts = max(2, int(np.round((k_stop - k_start) / dk)) + 1)
+        k_c = np.linspace(k_start, k_stop, n_pts)
+        if k_a.size:
+            k_c = k_c[1:]  # shared endpoint
+        v_c = integrand_of(k_c)
+        k_a = np.concatenate([k_a, k_c])
+        vals = v_c if vals.size == 0 else np.concatenate([vals, v_c], axis=1)
+        k_start = k_stop
+
+        peaked = np.all(np.argmax(np.abs(vals), axis=1) < vals.shape[1] - v_c.shape[1])
+        tail = 0.5 * np.abs(vals[:, -1]) * k_a[-1]
+        if peaked and np.all(tail < tol * accumulated(k_a, vals)):
+            break
+
+    # Downward the integrand is smooth (no oscillation below the first peak),
+    # so each halving adds a handful of points rather than a step-dk chunk.
+    k_floor = 1.0e-4 * k_lo
+    while k_a[0] > k_floor:
+        head = np.abs(vals[:, 0]) * k_a[0] / 3.0
+        if np.all(head < tol * accumulated(k_a, vals)):
+            break
+        k_c = np.linspace(0.5 * k_a[0], k_a[0], 9)[:-1]
+        v_c = integrand_of(k_c)
+        k_a = np.concatenate([k_c, k_a])
+        vals = np.concatenate([v_c, vals], axis=1)
+
+    return k_a, vals
 
 
 def angular_cl(
@@ -317,13 +407,17 @@ def angular_cl(
     :param n_k: floor on the number of wavenumbers in the outer integral.
     :param n_osc: samples per oscillation of Delta_l(k) in the outer integral.
     :param support_tol: fraction of the kernel's peak below which its tail is
-        treated as outside the support. This is the dominant cost control, not a
-        safety margin: the grid's upper end is ``k_hi = 8 nu / chi_lo``, so
-        shrinking ``chi_lo`` raises ``k_hi`` and the point count with it. On the
-        Gaussian test tracer at ell = 32, 1e-10 (the old value) admits tail down
-        to chi = 16.7 Mpc and needs 180,720 wavenumbers for 293 s; 1e-6 needs
-        3,945 for 2.4 s, and the two C_ell agree to 2.6e-9. Tighten it only with
-        a measurement in hand.
+        treated as outside the support, and the fraction of the outer integral
+        allowed outside the k grid. This is the dominant cost control, not a
+        safety margin: the sampling step and the starting window come from
+        ``chi_lo`` and ``chi_hi``, so shrinking ``chi_lo`` raises the point
+        count. On the Gaussian test tracer at ell = 32, 1e-10 (the old value)
+        admits tail down to chi = 16.7 Mpc and needs 180,720 wavenumbers for
+        293 s; 1e-6 needs 3,945 for 2.4 s, and the two C_ell agree to 2.6e-9.
+        The grid then grows on the integrand itself, so a spin-2 tracer, whose
+        transform tends to a constant at small k and to 1/k^2 at large k, is
+        integrated to the same fraction (see :func:`_grow_outer_grid`).
+        Tighten it only with a measurement in hand.
     :param block_size: number of consecutive multipoles sharing a factorisation.
         Clamped to what the solver will honour: NC_XCOR_KERNEL_MAX_ELL_BLOCK and the
         integrator's ell_cache_max. Wider is not better -- the truncation order is a
@@ -343,40 +437,49 @@ def angular_cl(
 
     chi_a, comps, _ = tracer_components(tracer1, cosmology, reltol=reltol)
     w_abs = np.abs(sum(comps))
-    # See support_tol: chi_lo sets k_hi, so this threshold sets the grid size.
+    # See support_tol: chi_lo sets the sampling step and the starting window.
     keep = np.nonzero(w_abs > support_tol * w_abs.max())[0]
     chi_lo, chi_hi = float(chi_a[keep[0]]), float(chi_a[keep[-1]])
+
+    def pk_of(k_a: np.ndarray) -> np.ndarray:
+        # NumCosmo's power spectrum already takes k in Mpc^-1 and returns Mpc^3.
+        return np.array([ps_lin.eval(cosmo, 0.0, float(k)) for k in k_a])
 
     for start_i in range(0, len(ells), block_size):
         sel = np.arange(start_i, min(start_i + block_size, len(ells)))
         ell_min, ell_max = int(ells[sel[0]]), int(ells[sel[-1]])
 
-        # One k-grid serves the block, so it must cover the largest multipole in it.
+        d1_of = block_transformer(tracer1, cosmology, ell_min, ell_max, reltol=reltol)
+        d2_of = (
+            d1_of
+            if tracer2 is tracer1
+            else block_transformer(tracer2, cosmology, ell_min, ell_max, reltol=reltol)
+        )
+
+        def integrand_of(k_a: np.ndarray) -> np.ndarray:
+            return k_a[None, :] ** 2 * pk_of(k_a)[None, :] * d1_of(k_a) * d2_of(k_a)
+
+        # The window a density kernel needs: Delta_l ~ (k chi_hi)^l below k_lo
+        # and averaged out above k_hi. A spin-2 (der_bessel = -1) transform
+        # tends to a constant at small k and falls as 1/k^2 at large k, so
+        # neither bound holds for it; the grid is therefore grown on the
+        # integrand itself from this window, downward until its low end is
+        # below support_tol of the peak and upward until it stays there.
         nu_lo, nu_hi = ell_min + 0.5, ell_max + 0.5
         k_lo = 0.2 * nu_lo / chi_hi
         k_hi = 8.0 * nu_hi / chi_lo
+        # sampling step from the fastest oscillation in k, period 2 pi / chi_hi
         n_k_min = int(np.ceil(n_osc * (k_hi - k_lo) * chi_hi / np.pi))
-        k_a = np.linspace(k_lo, k_hi, max(n_k, n_k_min))
+        dk = (k_hi - k_lo) / max(n_k, n_k_min)
 
-        d1 = bessel_transform_block(
-            tracer1, cosmology, ell_min, ell_max, k_a, reltol=reltol
+        k_a, vals = _grow_outer_grid(
+            integrand_of, k_lo, k_hi, dk, chunk=_OUTER_CHUNK, tol=support_tol
         )
-        d2 = (
-            d1
-            if tracer2 is tracer1
-            else bessel_transform_block(
-                tracer2, cosmology, ell_min, ell_max, k_a, reltol=reltol
-            )
-        )
-
-        # NumCosmo's power spectrum already takes k in Mpc^-1 and returns Mpc^3.
-        pk = np.array([ps_lin.eval(cosmo, 0.0, float(k)) for k in k_a])
 
         for j, i in enumerate(sel):
             row = int(ells[i]) - ell_min
-            integrand = k_a**2 * pk * d1[row] * d2[row]
             sp = Ncm.SplineCubicNotaknot.new()
-            sp.set_array(k_a.tolist(), integrand.tolist(), True)
-            out[i] = (2.0 / np.pi) * sp.eval_integ(k_lo, k_hi)
+            sp.set_array(k_a.tolist(), vals[row].tolist(), True)
+            out[i] = (2.0 / np.pi) * sp.eval_integ(float(k_a[0]), float(k_a[-1]))
 
     return out

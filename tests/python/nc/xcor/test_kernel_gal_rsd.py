@@ -163,9 +163,8 @@ def test_rsd_auto_exact_matches_ccl_kernel_bridge_at_low_ell(
     derivative-weighted Levin solve, so the two sides share the solver and
     nothing else: NumCosmo's dn/dz, bias, distances and growth on one side,
     CCL's tables on the other. The bridge's support cut at 1e-4 of the kernel
-    peak keeps it at a few seconds; measured deviation 3.5e-6 at ell = 2
-    (2.1e-6 with the cut at 1e-5), so the tolerance below is the cut, not
-    the solve.
+    peak keeps it at a few seconds; measured deviations 1.7e-6, 1.7e-6, 6e-7
+    at ell 2, 5, 10, so the tolerance below is the cut, not the solve.
     """
     ells = np.array([2, 5, 10])
 

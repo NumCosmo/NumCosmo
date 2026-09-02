@@ -127,8 +127,10 @@ def test_angular_cl_spin2_weight_matches_the_lensing_kernel(cosmology, ccl_cosmo
     NumCosmo's own weak-lensing kernel carries that weight exactly (1 / chi^2 in
     the component, 1 / k^2 in the transform), so a CCL WeakLensingTracer run
     through the bridge must reproduce it at low ell, where the Limber value
-    1 / nu^2 of the same weight is 6% off at ell = 2. The tolerance is set by
-    the bridge's support cut, not by the transform.
+    1 / nu^2 of the same weight is 6% off at ell = 2. Measured deviations at
+    ell 2, 5, 10 with the support cut at 1e-4: 2.4e-5, 2.9e-5, 6.0e-5 (at 1e-6
+    they fall to 1.8e-6, 2.4e-6, 5e-7, for 6x the run time); the tolerance is
+    set by the cut, not by the transform.
     """
     ells = np.array([2, 5, 10])
     z = np.linspace(0.0, 2.5, 1000)
