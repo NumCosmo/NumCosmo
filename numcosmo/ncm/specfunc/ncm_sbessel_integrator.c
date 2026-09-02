@@ -149,6 +149,7 @@ _ncm_sbessel_integrator_finalize (GObject *object)
 static void _ncm_sbessel_integrator_set_ell_range_default (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max);
 static gdouble _ncm_sbessel_integrator_integrate_ell_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, gint ell, gpointer user_data);
 static void _ncm_sbessel_integrator_integrate_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data);
+static void _ncm_sbessel_integrator_integrate_deriv_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, guint deriv, NcmVector *result, gpointer user_data);
 
 static void
 ncm_sbessel_integrator_class_init (NcmSBesselIntegratorClass *klass)
@@ -174,9 +175,10 @@ ncm_sbessel_integrator_class_init (NcmSBesselIntegratorClass *klass)
                                                        NCM_TYPE_DTUPLE2,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->set_ell_range = &_ncm_sbessel_integrator_set_ell_range_default;
-  klass->integrate_ell = &_ncm_sbessel_integrator_integrate_ell_default;
-  klass->integrate     = &_ncm_sbessel_integrator_integrate_not_implemented;
+  klass->set_ell_range   = &_ncm_sbessel_integrator_set_ell_range_default;
+  klass->integrate_ell   = &_ncm_sbessel_integrator_integrate_ell_default;
+  klass->integrate       = &_ncm_sbessel_integrator_integrate_not_implemented;
+  klass->integrate_deriv = &_ncm_sbessel_integrator_integrate_deriv_not_implemented;
 }
 
 static void
@@ -219,6 +221,13 @@ static void
 _ncm_sbessel_integrator_integrate_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data)
 {
   g_error ("ncm_sbessel_integrator_integrate: method not implemented for `%s'",
+           G_OBJECT_TYPE_NAME (sbi));
+}
+
+static void
+_ncm_sbessel_integrator_integrate_deriv_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, guint deriv, NcmVector *result, gpointer user_data)
+{
+  g_error ("ncm_sbessel_integrator_integrate_deriv: method not implemented for `%s'",
            G_OBJECT_TYPE_NAME (sbi));
 }
 
@@ -343,6 +352,34 @@ void
 ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data)
 {
   NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate (sbi, F, a, b, k, result, user_data);
+}
+
+/**
+ * ncm_sbessel_integrator_integrate_deriv: (virtual integrate_deriv)
+ * @sbi: a #NcmSBesselIntegrator
+ * @F: (scope call) (closure user_data): function to integrate
+ * @a: lower integration limit
+ * @b: upper integration limit
+ * @k: wave number parameter
+ * @deriv: derivative order of the spherical Bessel weight, up to 2
+ * @result: a #NcmVector to store results
+ * @user_data: (nullable): user data passed to @F
+ *
+ * Integrates the function @F(x, k) multiplied by the @deriv-th derivative of the
+ * spherical Bessel function with respect to its argument, computing
+ * $\int_a^b K(x,k)\, j_\ell^{(d)}(kx)\, \mathrm{d}x$ for each $\ell$ from ell_min
+ * to ell_max. For @deriv equal to zero this is ncm_sbessel_integrator_integrate().
+ * The results are stored in @result, which must have length (ell_max - ell_min + 1).
+ */
+void
+ncm_sbessel_integrator_integrate_deriv (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, guint deriv, NcmVector *result, gpointer user_data)
+{
+  g_return_if_fail (deriv <= 2);
+
+  if (deriv == 0)
+    NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate (sbi, F, a, b, k, result, user_data);
+  else
+    NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate_deriv (sbi, F, a, b, k, deriv, result, user_data);
 }
 
 typedef struct _NcmSBesselIntegratorGaussianData
