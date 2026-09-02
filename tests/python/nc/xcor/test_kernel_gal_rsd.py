@@ -158,13 +158,13 @@ def test_rsd_auto_exact_matches_ccl_kernel_bridge_at_low_ell(
 ) -> None:
     """Exact-tier C_ell with RSD against the CCL-kernel bridge where RSD matters.
 
-    numcosmo_py.ccl.two_point.angular_cl integrates CCL's own tracer kernels,
-    transfer (-f for the RSD piece, der_bessel = 2) and growth with the
-    derivative-weighted Levin solve, so the two sides share the solver and
-    nothing else: NumCosmo's dn/dz, bias, distances and growth on one side,
-    CCL's tables on the other. The bridge's support cut at 1e-4 of the kernel
-    peak keeps it at a few seconds; measured deviations 1.7e-6, 1.7e-6, 6e-7
-    at ell 2, 5, 10, so the tolerance below is the cut, not the solve.
+    numcosmo_py.ccl.two_point.angular_cl turns CCL's own tracer kernels,
+    transfer (-f for the RSD piece, der_bessel = 2) and growth into an
+    NcXcorKernelTable with a density and an RSD component and solves it with
+    NcXcorSolver, so the two sides share the library and nothing else:
+    NumCosmo's dn/dz, bias, distances and growth on one side, CCL's tables on
+    the other. Measured deviations 1.3e-7, 8e-9, 4e-8 at ell 2, 5, 10; the
+    tolerance leaves room for the two kernels' independent closure fits.
     """
     ells = np.array([2, 5, 10])
 
@@ -172,7 +172,7 @@ def test_rsd_auto_exact_matches_ccl_kernel_bridge_at_low_ell(
     got = _nc_cl(cosmology, kernel, ells, l_limber=-1)
 
     tracer = _ccl_gal_tracer(ccl_cosmo, dndz_arrays, has_rsd=True)
-    ref = two_point.angular_cl(cosmology, tracer, tracer, ells, support_tol=1.0e-4)
+    ref = two_point.angular_cl(cosmology, tracer, tracer, ells)
 
     assert_allclose(got, ref, rtol=2.0e-5)
 
@@ -185,7 +185,7 @@ def test_rsd_cross_spectrum_matches_ccl_kernel_bridge(
     The cross of a density-plus-RSD kernel with a plain density kernel is
     negative here (the bins do not overlap), so the sign and the mixed
     j_l x j_l'' term are both checked; a second case switches RSD on in
-    both bins. Measured deviations vs the bridge are at or below 1.3e-5.
+    both bins. Measured deviations vs the bridge are at or below 2.7e-6.
     """
     ells = np.array([2, 5, 10])
     z2 = np.linspace(0.0, 2.0, Z_LEN)
@@ -201,12 +201,10 @@ def test_rsd_cross_spectrum_matches_ccl_kernel_bridge(
         tracer_2 = _ccl_gal_tracer(ccl_cosmo, (z2, nz2), has_rsd=has_rsd)
 
         got = _nc_cl(cosmology, kernel_1, ells, l_limber=-1, kernel_2=kernel_2)
-        ref = two_point.angular_cl(
-            cosmology, tracer_1, tracer_2, ells, support_tol=1.0e-4
-        )
+        ref = two_point.angular_cl(cosmology, tracer_1, tracer_2, ells)
 
         assert np.all(ref < 0.0)
-        assert_allclose(got, ref, rtol=5.0e-5)
+        assert_allclose(got, ref, rtol=2.0e-5)
 
 
 def test_rsd_auto_limber_matches_ccl(ccl_cosmo, cosmology, dndz_arrays) -> None:

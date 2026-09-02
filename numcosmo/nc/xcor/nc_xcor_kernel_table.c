@@ -25,29 +25,32 @@
 /**
  * NcXcorKernelTable:
  *
- * Radial window supplied as a table of $(\chi, W)$ samples.
+ * Radial window supplied as a table of $(\chi, W)$ samples, or as a list of
+ * such tables.
  *
  * Every other #NcXcorKernelRadial is a formula. This one is the case a survey
  * pipeline actually hands you: the window already evaluated on a grid, with no
- * closed form behind it. It reconstructs that table with a #NcmSplineBSpline
- * and is otherwise an ordinary radial kernel, so #NcXcor and #NcXcorSolver
- * drive it exactly as they drive the analytic ones.
+ * closed form behind it. Each table is one #NcXcorComponentTable, which
+ * reconstructs its samples with a #NcmSplineBSpline and declares what the
+ * window is a window of; this kernel integrates every component over its own
+ * support and sums them, and is otherwise an ordinary radial kernel, so
+ * #NcXcor and #NcXcorSolver drive it exactly as they drive the analytic ones.
  *
- * The reconstruction order is the point. A cubic spline never reaches machine
- * precision at any sample density, so tabulated input silently caps everything
- * downstream; on a 2000-sample window a cubic reconstruction is accurate to
- * $\sim 10^{-8}$ while degree 7 reaches $\sim 10^{-15}$ from the same data.
- * The default is therefore %NCM_SPLINE_BSPLINE_DEFAULT_ORDER, degree 7, not a
- * cubic.
+ * A tracer with several terms -- density plus redshift-space distortions plus
+ * magnification for galaxy counts, shear plus intrinsic alignments for
+ * lensing -- is one kernel with one component per term, each carrying its own
+ * Bessel weight and $\ell$ prefactor through its #NcXcorComponentTable:kind.
+ *
+ * The single-table properties #NcXcorKernelTable:chi, #NcXcorKernelTable:W,
+ * #NcXcorKernelTable:kind, #NcXcorKernelTable:order and
+ * #NcXcorKernelTable:normalize build one component at construction; they are
+ * the convenience for the one-term case and are consumed by it, so a kernel
+ * always serializes through #NcXcorKernelTable:components.
  *
  * The convention is #NcXcorKernelRadial's: $\chi$ in Mpc, $P(k)$ at $z=0$, and
  * all redshift dependence -- growth included -- carried by $W$. A table
  * exported from CCL's tracer kernels or from the N5K challenge already
  * satisfies it.
- *
- * Leading and trailing runs of exact zeros are trimmed from the support, so the
- * oscillatory integral runs over the interval the window actually occupies
- * rather than the whole tabulated range.
  *
  */
 
@@ -58,6 +61,7 @@
 
 #include "nc/xcor/nc_xcor_kernel_table.h"
 #include "ncm/spline/ncm_spline_bspline.h"
+#include "ncm/core/ncm_obj_array.h"
 #include "nc_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -68,17 +72,12 @@ struct _NcXcorKernelTable
 {
   /*< private >*/
   NcXcorKernelRadial parent_instance;
-
   NcmVector *chi;
   NcmVector *W;
   NcXcorKernelTableKind kind;
   guint order;
   gboolean normalize;
-
-  NcmSpline *spline;
-  gdouble chi_min;
-  gdouble chi_max;
-  gdouble norm;
+  NcmObjArray *components;
 };
 
 enum
@@ -89,6 +88,7 @@ enum
   PROP_KIND,
   PROP_ORDER,
   PROP_NORMALIZE,
+  PROP_COMPONENTS,
   PROP_SIZE,
 };
 
@@ -97,15 +97,12 @@ G_DEFINE_TYPE (NcXcorKernelTable, nc_xcor_kernel_table, NC_TYPE_XCOR_KERNEL_RADI
 static void
 nc_xcor_kernel_table_init (NcXcorKernelTable *xckt)
 {
-  xckt->chi       = NULL;
-  xckt->W         = NULL;
-  xckt->kind      = NC_XCOR_KERNEL_TABLE_KIND_DENSITY;
-  xckt->order     = NCM_SPLINE_BSPLINE_DEFAULT_ORDER;
-  xckt->normalize = TRUE;
-  xckt->spline    = NULL;
-  xckt->chi_min   = 0.0;
-  xckt->chi_max   = 0.0;
-  xckt->norm      = 1.0;
+  xckt->chi        = NULL;
+  xckt->W          = NULL;
+  xckt->kind       = NC_XCOR_KERNEL_TABLE_KIND_DENSITY;
+  xckt->order      = NCM_SPLINE_BSPLINE_DEFAULT_ORDER;
+  xckt->normalize  = TRUE;
+  xckt->components = NULL;
 }
 
 static void
@@ -134,6 +131,10 @@ nc_xcor_kernel_table_set_property (GObject *object, guint prop_id, const GValue 
     case PROP_NORMALIZE:
       xckt->normalize = g_value_get_boolean (value);
       break;
+    case PROP_COMPONENTS:
+      ncm_obj_array_clear (&xckt->components);
+      xckt->components = g_value_dup_boxed (value);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -156,13 +157,16 @@ nc_xcor_kernel_table_get_property (GObject *object, guint prop_id, GValue *value
       g_value_set_object (value, xckt->W);
       break;
     case PROP_KIND:
-      g_value_set_enum (value, xckt->kind);
+      g_value_set_enum (value, nc_xcor_kernel_table_get_kind (xckt));
       break;
     case PROP_ORDER:
-      g_value_set_uint (value, xckt->order);
+      g_value_set_uint (value, nc_xcor_kernel_table_get_order (xckt));
       break;
     case PROP_NORMALIZE:
-      g_value_set_boolean (value, xckt->normalize);
+      g_value_set_boolean (value, nc_xcor_kernel_table_get_normalize (xckt));
+      break;
+    case PROP_COMPONENTS:
+      g_value_set_boxed (value, xckt->components);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -171,73 +175,48 @@ nc_xcor_kernel_table_get_property (GObject *object, guint prop_id, GValue *value
 }
 
 /*
- * Trim leading and trailing runs of exact zeros. One zero sample is kept on each
- * side so the reconstruction still goes to zero at the reported edge rather than
- * being cut where the window is already non-zero.
+ * Runs before the radial parent's constructed, which asks for the number of
+ * components: the list must exist by then. The single-table properties are
+ * consumed here, so the object always describes itself through the list.
  */
-static void
-_nc_xcor_kernel_table_trim (NcmVector *chi, NcmVector *W, gsize *first, gsize *last)
-{
-  const gsize len = ncm_vector_len (W);
-  gsize i         = 0;
-  gsize j         = len - 1;
-
-  while ((i < len - 1) && (ncm_vector_get (W, i) == 0.0))
-    i++;
-
-  while ((j > i) && (ncm_vector_get (W, j) == 0.0))
-    j--;
-
-  *first = (i > 0) ? i - 1 : 0;
-  *last  = (j < len - 1) ? j + 1 : len - 1;
-}
-
 static void
 nc_xcor_kernel_table_constructed (GObject *object)
 {
-  /* Chain up : start */
-  G_OBJECT_CLASS (nc_xcor_kernel_table_parent_class)->constructed (object);
+  NcXcorKernelTable *xckt = NC_XCOR_KERNEL_TABLE (object);
+
+  if (xckt->components == NULL)
   {
-    NcXcorKernelTable *xckt = NC_XCOR_KERNEL_TABLE (object);
-    gsize first, last, n;
-    NcmVector *chi_t, *W_t;
+    NcXcorComponentTable *xcct;
 
     if ((xckt->chi == NULL) || (xckt->W == NULL))
-      g_error ("nc_xcor_kernel_table_constructed: both chi and W must be given.");
+      g_error ("nc_xcor_kernel_table_constructed: give either a list of components or both chi and W.");
 
-    if (ncm_vector_len (xckt->chi) != ncm_vector_len (xckt->W))
-      g_error ("nc_xcor_kernel_table_constructed: chi and W have different lengths (%u != %u).",
-               ncm_vector_len (xckt->chi), ncm_vector_len (xckt->W));
-
-    if (ncm_vector_len (xckt->chi) < xckt->order)
-      g_error ("nc_xcor_kernel_table_constructed: a degree %u reconstruction needs at least %u samples, got %u.",
-               xckt->order - 1, xckt->order, ncm_vector_len (xckt->chi));
-
-    _nc_xcor_kernel_table_trim (xckt->chi, xckt->W, &first, &last);
-    n = last - first + 1;
-
-    if (n < xckt->order)
-      g_error ("nc_xcor_kernel_table_constructed: the window's support holds %u samples, "
-               "fewer than the %u a degree %u reconstruction needs.",
-               (guint) n, xckt->order, xckt->order - 1);
-
-    chi_t = ncm_vector_get_subvector (xckt->chi, first, n);
-    W_t   = ncm_vector_get_subvector (xckt->W, first, n);
-
-    xckt->spline  = NCM_SPLINE (ncm_spline_bspline_new_full (xckt->order, chi_t, W_t, TRUE));
-    xckt->chi_min = ncm_vector_get (chi_t, 0);
-    xckt->chi_max = ncm_vector_get (chi_t, n - 1);
-
-    xckt->norm = xckt->normalize ?
-                 ncm_spline_eval_integ (xckt->spline, xckt->chi_min, xckt->chi_max) : 1.0;
-
-    if (!gsl_finite (xckt->norm) || (xckt->norm == 0.0))
-      g_error ("nc_xcor_kernel_table_constructed: the tabulated window integrates to %g over "
-               "[%g, %g] Mpc; it cannot be normalized.", xckt->norm, xckt->chi_min, xckt->chi_max);
-
-    ncm_vector_free (chi_t);
-    ncm_vector_free (W_t);
+    xcct             = nc_xcor_component_table_new_full (xckt->chi, xckt->W, xckt->kind, xckt->order, xckt->normalize);
+    xckt->components = ncm_obj_array_new ();
+    ncm_obj_array_add (xckt->components, G_OBJECT (xcct));
+    nc_xcor_component_table_free (xcct);
   }
+  else
+  {
+    guint i;
+
+    if ((xckt->chi != NULL) || (xckt->W != NULL))
+      g_error ("nc_xcor_kernel_table_constructed: give either a list of components or chi and W, not both.");
+
+    if (ncm_obj_array_len (xckt->components) == 0)
+      g_error ("nc_xcor_kernel_table_constructed: the list of components is empty.");
+
+    for (i = 0; i < ncm_obj_array_len (xckt->components); i++)
+      if (!NC_IS_XCOR_COMPONENT_TABLE (ncm_obj_array_peek (xckt->components, i)))
+        g_error ("nc_xcor_kernel_table_constructed: component %u is a %s, not a NcXcorComponentTable.",
+                 i, G_OBJECT_TYPE_NAME (ncm_obj_array_peek (xckt->components, i)));
+  }
+
+  ncm_vector_clear (&xckt->chi);
+  ncm_vector_clear (&xckt->W);
+
+  /* Chain up : end, the parent counts the components */
+  G_OBJECT_CLASS (nc_xcor_kernel_table_parent_class)->constructed (object);
 }
 
 static void
@@ -247,7 +226,7 @@ nc_xcor_kernel_table_dispose (GObject *object)
 
   ncm_vector_clear (&xckt->chi);
   ncm_vector_clear (&xckt->W);
-  ncm_spline_clear (&xckt->spline);
+  ncm_obj_array_clear (&xckt->components);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_table_parent_class)->dispose (object);
@@ -263,8 +242,9 @@ nc_xcor_kernel_table_finalize (GObject *object)
 static guint _nc_xcor_kernel_table_get_n_comps (NcXcorKernelRadial *xcka);
 static gdouble _nc_xcor_kernel_table_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi);
 static void _nc_xcor_kernel_table_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max);
-static gdouble _nc_xcor_kernel_table_eval_kernel_factor (NcXcorKernelRadial *xcka, NcHICosmo *cosmo, gdouble chi, gdouble k);
-static gdouble _nc_xcor_kernel_table_eval_prefactor (NcXcorKernelRadial *xcka, NcHICosmo *cosmo, gint l);
+static gdouble _nc_xcor_kernel_table_eval_kernel_factor (NcXcorKernelRadial *xcka, guint comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
+static gdouble _nc_xcor_kernel_table_eval_prefactor (NcXcorKernelRadial *xcka, guint comp, NcHICosmo *cosmo, gint l);
+static guint _nc_xcor_kernel_table_get_comp_bessel_deriv (NcXcorKernelRadial *xcka, guint comp);
 
 static void
 nc_xcor_kernel_table_class_init (NcXcorKernelTableClass *klass)
@@ -285,7 +265,9 @@ nc_xcor_kernel_table_class_init (NcXcorKernelTableClass *klass)
   /**
    * NcXcorKernelTable:chi:
    *
-   * Comoving distances of the samples, in Mpc, strictly increasing.
+   * Comoving distances of the samples, in Mpc, strictly increasing. Builds a
+   * single component with #NcXcorKernelTable:W at construction; %NULL once
+   * the kernel exists.
    */
   g_object_class_install_property (object_class,
                                    PROP_CHI,
@@ -298,7 +280,8 @@ nc_xcor_kernel_table_class_init (NcXcorKernelTableClass *klass)
   /**
    * NcXcorKernelTable:W:
    *
-   * Window samples $W(\chi)$, one per entry of #NcXcorKernelTable:chi.
+   * Window samples $W(\chi)$, one per entry of #NcXcorKernelTable:chi. See
+   * #NcXcorKernelTable:chi.
    */
   g_object_class_install_property (object_class,
                                    PROP_W,
@@ -311,7 +294,8 @@ nc_xcor_kernel_table_class_init (NcXcorKernelTableClass *klass)
   /**
    * NcXcorKernelTable:kind:
    *
-   * What the window is a window of, which fixes the factors applied on top of it.
+   * Kind of the single component built from #NcXcorKernelTable:chi and
+   * #NcXcorKernelTable:W. Reads back the first component's kind.
    */
   g_object_class_install_property (object_class,
                                    PROP_KIND,
@@ -325,9 +309,9 @@ nc_xcor_kernel_table_class_init (NcXcorKernelTableClass *klass)
   /**
    * NcXcorKernelTable:order:
    *
-   * B-spline order of the reconstruction; the degree is one less. The default is
-   * degree 7, not a cubic: a cubic caps a 2000-sample window at $\sim 10^{-8}$
-   * while degree 7 reaches $\sim 10^{-15}$ from the same data.
+   * B-spline order of the single component built from #NcXcorKernelTable:chi
+   * and #NcXcorKernelTable:W; see #NcXcorComponentTable:order. Reads back the
+   * first component's order.
    */
   g_object_class_install_property (object_class,
                                    PROP_ORDER,
@@ -340,8 +324,9 @@ nc_xcor_kernel_table_class_init (NcXcorKernelTableClass *klass)
   /**
    * NcXcorKernelTable:normalize:
    *
-   * Whether to rescale the window to unit integral over its support. Turn it off
-   * only when the supplied table is already normalized in the same convention.
+   * Whether the single component built from #NcXcorKernelTable:chi and
+   * #NcXcorKernelTable:W is rescaled to unit integral; see
+   * #NcXcorComponentTable:normalize. Reads back the first component's flag.
    */
   g_object_class_install_property (object_class,
                                    PROP_NORMALIZE,
@@ -351,66 +336,75 @@ nc_xcor_kernel_table_class_init (NcXcorKernelTableClass *klass)
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  parent_class->get_n_comps        = &_nc_xcor_kernel_table_get_n_comps;
-  parent_class->eval_W_comp        = &_nc_xcor_kernel_table_eval_W_comp;
-  parent_class->get_comp_support   = &_nc_xcor_kernel_table_get_comp_support;
-  parent_class->eval_kernel_factor = &_nc_xcor_kernel_table_eval_kernel_factor;
-  parent_class->eval_prefactor     = &_nc_xcor_kernel_table_eval_prefactor;
+  /**
+   * NcXcorKernelTable:components:
+   *
+   * The tabulated components, a #NcmObjArray of #NcXcorComponentTable, one per
+   * term of the tracer. Either this or the pair #NcXcorKernelTable:chi and
+   * #NcXcorKernelTable:W is given at construction, not both.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_COMPONENTS,
+                                   g_param_spec_boxed ("components",
+                                                       NULL,
+                                                       "Tabulated components",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  parent_class->get_n_comps           = &_nc_xcor_kernel_table_get_n_comps;
+  parent_class->eval_W_comp           = &_nc_xcor_kernel_table_eval_W_comp;
+  parent_class->get_comp_support      = &_nc_xcor_kernel_table_get_comp_support;
+  parent_class->eval_kernel_factor    = &_nc_xcor_kernel_table_eval_kernel_factor;
+  parent_class->eval_prefactor        = &_nc_xcor_kernel_table_eval_prefactor;
+  parent_class->get_comp_bessel_deriv = &_nc_xcor_kernel_table_get_comp_bessel_deriv;
 
   ncm_model_class_add_impl_flag (model_class, NC_XCOR_KERNEL_IMPL_ALL);
+}
+
+static NcXcorComponentTable *
+_nc_xcor_kernel_table_comp (NcXcorKernelRadial *xcka, guint comp)
+{
+  NcXcorKernelTable *xckt = NC_XCOR_KERNEL_TABLE (xcka);
+
+  return NC_XCOR_COMPONENT_TABLE (ncm_obj_array_peek (xckt->components, comp));
 }
 
 static guint
 _nc_xcor_kernel_table_get_n_comps (NcXcorKernelRadial *xcka)
 {
-  return 1;
+  NcXcorKernelTable *xckt = NC_XCOR_KERNEL_TABLE (xcka);
+
+  return ncm_obj_array_len (xckt->components);
 }
 
 static gdouble
 _nc_xcor_kernel_table_eval_W_comp (NcXcorKernelRadial *xcka, guint comp, gdouble chi)
 {
-  NcXcorKernelTable *xckt = NC_XCOR_KERNEL_TABLE (xcka);
-
-  return ncm_spline_eval (xckt->spline, chi) / xckt->norm;
+  return nc_xcor_component_table_eval_W (_nc_xcor_kernel_table_comp (xcka, comp), chi);
 }
 
 static void
 _nc_xcor_kernel_table_get_comp_support (NcXcorKernelRadial *xcka, guint comp, gdouble *chi_min, gdouble *chi_max)
 {
-  NcXcorKernelTable *xckt = NC_XCOR_KERNEL_TABLE (xcka);
-
-  *chi_min = xckt->chi_min;
-  *chi_max = xckt->chi_max;
+  nc_xcor_component_table_get_support (_nc_xcor_kernel_table_comp (xcka, comp), chi_min, chi_max);
 }
 
 static gdouble
-_nc_xcor_kernel_table_eval_kernel_factor (NcXcorKernelRadial *xcka, NcHICosmo *cosmo, gdouble chi, gdouble k)
+_nc_xcor_kernel_table_eval_kernel_factor (NcXcorKernelRadial *xcka, guint comp, NcHICosmo *cosmo, gdouble chi, gdouble k)
 {
-  NcXcorKernelTable *xckt = NC_XCOR_KERNEL_TABLE (xcka);
-
-  if (xckt->kind == NC_XCOR_KERNEL_TABLE_KIND_SHEAR)
-  {
-    const gdouble kchi = k * chi;
-
-    return 1.0 / (kchi * kchi);
-  }
-
-  return 1.0;
+  return nc_xcor_component_table_eval_kernel_factor (_nc_xcor_kernel_table_comp (xcka, comp), chi, k);
 }
 
 static gdouble
-_nc_xcor_kernel_table_eval_prefactor (NcXcorKernelRadial *xcka, NcHICosmo *cosmo, gint l)
+_nc_xcor_kernel_table_eval_prefactor (NcXcorKernelRadial *xcka, guint comp, NcHICosmo *cosmo, gint l)
 {
-  NcXcorKernelTable *xckt = NC_XCOR_KERNEL_TABLE (xcka);
+  return nc_xcor_component_table_eval_prefactor (_nc_xcor_kernel_table_comp (xcka, comp), l);
+}
 
-  if (xckt->kind == NC_XCOR_KERNEL_TABLE_KIND_SHEAR)
-  {
-    const gdouble v = (l + 2.0) * (l + 1.0) * l * (l - 1.0);
-
-    return (v > 0.0) ? sqrt (v) : 0.0;
-  }
-
-  return 1.0;
+static guint
+_nc_xcor_kernel_table_get_comp_bessel_deriv (NcXcorKernelRadial *xcka, guint comp)
+{
+  return nc_xcor_component_table_get_bessel_deriv (_nc_xcor_kernel_table_comp (xcka, comp));
 }
 
 /**
@@ -420,22 +414,20 @@ _nc_xcor_kernel_table_eval_prefactor (NcXcorKernelRadial *xcka, NcHICosmo *cosmo
  * @chi: a #NcmVector of sample comoving distances in Mpc
  * @W: a #NcmVector of window samples
  *
- * Creates a new #NcXcorKernelTable of kind %NC_XCOR_KERNEL_TABLE_KIND_DENSITY,
- * reconstructed at the default order and normalized to unit integral.
+ * Creates a one-component density kernel of default order, normalized to unit
+ * integral, with no integrator set.
  *
  * Returns: (transfer full): a new #NcXcorKernelTable
  */
 NcXcorKernelTable *
 nc_xcor_kernel_table_new (NcDistance *dist, NcmPowspec *ps, NcmVector *chi, NcmVector *W)
 {
-  NcXcorKernelTable *xckt = g_object_new (NC_TYPE_XCOR_KERNEL_TABLE,
-                                          "dist", dist,
-                                          "powspec", ps,
-                                          "chi", chi,
-                                          "W", W,
-                                          NULL);
-
-  return xckt;
+  return g_object_new (NC_TYPE_XCOR_KERNEL_TABLE,
+                       "dist", dist,
+                       "powspec", ps,
+                       "chi", chi,
+                       "W", W,
+                       NULL);
 }
 
 /**
@@ -444,114 +436,171 @@ nc_xcor_kernel_table_new (NcDistance *dist, NcmPowspec *ps, NcmVector *chi, NcmV
  * @ps: a #NcmPowspec
  * @chi: a #NcmVector of sample comoving distances in Mpc
  * @W: a #NcmVector of window samples
- * @kind: what the window is a window of
- * @order: B-spline order of the reconstruction, 2 to 10
- * @normalize: whether to rescale to unit integral over the support
- * @sbi: a #NcmSBesselIntegrator
+ * @kind: a #NcXcorKernelTableKind
+ * @order: B-spline order of the reconstruction
+ * @normalize: whether to rescale the window to unit integral
+ * @sbi: (nullable): a #NcmSBesselIntegrator
  *
- * Creates a new #NcXcorKernelTable carrying @sbi, as nc_xcor_kernel_table_new()
- * does not. A #NcXcorKernel only accepts the non-Limber modes of
- * nc_xcor_kernel_set_l_limber() once it holds an integrator, so this is the
- * constructor to use for them.
+ * Creates a one-component kernel with every option set.
  *
  * Returns: (transfer full): a new #NcXcorKernelTable
  */
 NcXcorKernelTable *
 nc_xcor_kernel_table_new_full (NcDistance *dist, NcmPowspec *ps, NcmVector *chi, NcmVector *W, NcXcorKernelTableKind kind, guint order, gboolean normalize, NcmSBesselIntegrator *sbi)
 {
-  NcXcorKernelTable *xckt = g_object_new (NC_TYPE_XCOR_KERNEL_TABLE,
-                                          "dist", dist,
-                                          "powspec", ps,
-                                          "chi", chi,
-                                          "W", W,
-                                          "kind", kind,
-                                          "order", order,
-                                          "normalize", normalize,
-                                          "integrator", sbi,
-                                          NULL);
+  return g_object_new (NC_TYPE_XCOR_KERNEL_TABLE,
+                       "dist", dist,
+                       "powspec", ps,
+                       "chi", chi,
+                       "W", W,
+                       "kind", kind,
+                       "order", order,
+                       "normalize", normalize,
+                       "integrator", sbi,
+                       NULL);
+}
 
-  return xckt;
+/**
+ * nc_xcor_kernel_table_new_from_components:
+ * @dist: a #NcDistance
+ * @ps: a #NcmPowspec
+ * @components: a #NcmObjArray of #NcXcorComponentTable
+ * @sbi: (nullable): a #NcmSBesselIntegrator
+ *
+ * Creates a kernel from a list of tabulated components, one per term of the
+ * tracer.
+ *
+ * Returns: (transfer full): a new #NcXcorKernelTable
+ */
+NcXcorKernelTable *
+nc_xcor_kernel_table_new_from_components (NcDistance *dist, NcmPowspec *ps, NcmObjArray *components, NcmSBesselIntegrator *sbi)
+{
+  return g_object_new (NC_TYPE_XCOR_KERNEL_TABLE,
+                       "dist", dist,
+                       "powspec", ps,
+                       "components", components,
+                       "integrator", sbi,
+                       NULL);
+}
+
+/**
+ * nc_xcor_kernel_table_get_n_components:
+ * @xckt: a #NcXcorKernelTable
+ *
+ * Returns: the number of tabulated components.
+ */
+guint
+nc_xcor_kernel_table_get_n_components (NcXcorKernelTable *xckt)
+{
+  return ncm_obj_array_len (xckt->components);
+}
+
+/**
+ * nc_xcor_kernel_table_peek_component:
+ * @xckt: a #NcXcorKernelTable
+ * @i: component index
+ *
+ * Returns: (transfer none): the @i-th #NcXcorComponentTable
+ */
+NcXcorComponentTable *
+nc_xcor_kernel_table_peek_component (NcXcorKernelTable *xckt, guint i)
+{
+  g_assert_cmpuint (i, <, ncm_obj_array_len (xckt->components));
+
+  return NC_XCOR_COMPONENT_TABLE (ncm_obj_array_peek (xckt->components, i));
+}
+
+/**
+ * nc_xcor_kernel_table_replace_samples:
+ * @xckt: a #NcXcorKernelTable
+ * @i: component index
+ * @chi: a #NcmVector of sample comoving distances in Mpc
+ * @W: a #NcmVector of window samples
+ *
+ * Replaces the samples of the @i-th component in place (see
+ * nc_xcor_component_table_set_samples()) and marks the kernel outdated, so its
+ * next nc_xcor_kernel_prepare_if_needed() prepares again. The kernel object,
+ * and with it its registration in a #NcXcorSolver and the solver's per-block
+ * integrators, is unchanged: this is the per-step update of a sampler whose
+ * windows come from a tabulating code.
+ */
+void
+nc_xcor_kernel_table_replace_samples (NcXcorKernelTable *xckt, guint i, NcmVector *chi, NcmVector *W)
+{
+  nc_xcor_component_table_set_samples (nc_xcor_kernel_table_peek_component (xckt, i), chi, W);
+  nc_xcor_kernel_mark_outdated (NC_XCOR_KERNEL (xckt));
 }
 
 /**
  * nc_xcor_kernel_table_get_kind:
  * @xckt: a #NcXcorKernelTable
  *
- * Returns: what the window is a window of.
+ * Returns: the kind of the first component.
  */
 NcXcorKernelTableKind
 nc_xcor_kernel_table_get_kind (NcXcorKernelTable *xckt)
 {
-  return xckt->kind;
+  return nc_xcor_component_table_get_kind (nc_xcor_kernel_table_peek_component (xckt, 0));
 }
 
 /**
  * nc_xcor_kernel_table_get_order:
  * @xckt: a #NcXcorKernelTable
  *
- * Returns: the B-spline order of the reconstruction.
+ * Returns: the B-spline order of the first component.
  */
 guint
 nc_xcor_kernel_table_get_order (NcXcorKernelTable *xckt)
 {
-  return xckt->order;
+  return nc_xcor_component_table_get_order (nc_xcor_kernel_table_peek_component (xckt, 0));
 }
 
 /**
  * nc_xcor_kernel_table_get_normalize:
  * @xckt: a #NcXcorKernelTable
  *
- * Returns: whether the window was rescaled to unit integral.
+ * Returns: whether the first component is rescaled to unit integral.
  */
 gboolean
 nc_xcor_kernel_table_get_normalize (NcXcorKernelTable *xckt)
 {
-  return xckt->normalize;
+  return nc_xcor_component_table_get_normalize (nc_xcor_kernel_table_peek_component (xckt, 0));
 }
 
 /**
  * nc_xcor_kernel_table_get_norm:
  * @xckt: a #NcXcorKernelTable
  *
- * Gets the divisor applied to the reconstruction, that is the integral of the
- * supplied table over its support, or 1 when #NcXcorKernelTable:normalize is
- * %FALSE.
- *
- * Returns: the normalization.
+ * Returns: the normalization constant of the first component; see
+ * nc_xcor_component_table_get_norm().
  */
 gdouble
 nc_xcor_kernel_table_get_norm (NcXcorKernelTable *xckt)
 {
-  return xckt->norm;
+  return nc_xcor_component_table_get_norm (nc_xcor_kernel_table_peek_component (xckt, 0));
 }
 
 /**
  * nc_xcor_kernel_table_peek_spline:
  * @xckt: a #NcXcorKernelTable
  *
- * Gets the reconstruction itself, un-normalized.
- *
- * Returns: (transfer none): the #NcmSpline reconstructing the table.
+ * Returns: (transfer none): the reconstruction of the first component's samples
  */
 NcmSpline *
 nc_xcor_kernel_table_peek_spline (NcXcorKernelTable *xckt)
 {
-  return xckt->spline;
+  return nc_xcor_component_table_peek_spline (nc_xcor_kernel_table_peek_component (xckt, 0));
 }
 
 /**
  * nc_xcor_kernel_table_peek_knots:
  * @xckt: a #NcXcorKernelTable
  *
- * Gets the reconstruction's breakpoints, that is the sample abscissae kept after
- * trimming. These are the natural panel edges for the radial quadrature: a panel
- * holding no interior breakpoint carries a forcing that is exactly a polynomial.
- *
- * Returns: (transfer none): the breakpoints, in Mpc.
+ * Returns: (transfer none): the first component's knots, in Mpc
  */
 NcmVector *
 nc_xcor_kernel_table_peek_knots (NcXcorKernelTable *xckt)
 {
-  return ncm_spline_peek_xv (xckt->spline);
+  return nc_xcor_component_table_peek_knots (nc_xcor_kernel_table_peek_component (xckt, 0));
 }
 

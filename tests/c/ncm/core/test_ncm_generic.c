@@ -100,6 +100,7 @@ void test_nc_xcor_basic (void);
 void test_nc_xcor_solver_basic (void);
 void test_nc_xcor_kernel_radial_kdep_growth_basic (void);
 void test_nc_xcor_kernel_table_basic (void);
+void test_nc_xcor_component_table_basic (void);
 
 void test_nc_galaxy_position_factor_flat_basic (void);
 void test_nc_galaxy_redshift_factor_composed_basic (void);
@@ -193,6 +194,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/xcor/solver/basic", test_nc_xcor_solver_basic);
   g_test_add_func ("/nc/xcor/kernel_radial_kdep_growth/basic", test_nc_xcor_kernel_radial_kdep_growth_basic);
   g_test_add_func ("/nc/xcor/kernel_table/basic", test_nc_xcor_kernel_table_basic);
+  g_test_add_func ("/nc/xcor/component_table/basic", test_nc_xcor_component_table_basic);
 
   g_test_add_func ("/nc/galaxy/position_factor_flat/basic", test_nc_galaxy_position_factor_flat_basic);
   g_test_add_func ("/nc/galaxy/redshift_factor_composed/basic", test_nc_galaxy_redshift_factor_composed_basic);
@@ -1829,5 +1831,52 @@ test_nc_data_cluster_wl_factor_basic (void)
   nc_galaxy_shape_factor_clear (&shape_factor);
 
   NCM_TEST_FREE (nc_data_cluster_wl_factor_free, dcwlf);
+}
+
+void
+test_nc_xcor_component_table_basic (void)
+{
+  NcmVector *chi = ncm_vector_new (64);
+  NcmVector *W   = ncm_vector_new (64);
+  NcXcorComponentTable *xcct, *xcct2;
+  gdouble chi_min, chi_max;
+  guint i;
+
+  for (i = 0; i < 64; i++)
+  {
+    const gdouble chi_i = 1000.0 + 20.0 * i;
+    const gdouble t     = (chi_i - 1630.0) / 300.0;
+
+    ncm_vector_set (chi, i, chi_i);
+    ncm_vector_set (W, i, exp (-0.5 * t * t));
+  }
+
+  xcct = nc_xcor_component_table_new (chi, W);
+
+  g_assert_true (xcct != NULL);
+  g_assert_true (NC_IS_XCOR_COMPONENT_TABLE (xcct));
+  g_assert_cmpuint (nc_xcor_component_table_get_kind (xcct), ==, NC_XCOR_KERNEL_TABLE_KIND_DENSITY);
+  g_assert_cmpuint (nc_xcor_component_table_get_order (xcct), ==, NCM_SPLINE_BSPLINE_DEFAULT_ORDER);
+  g_assert_true (nc_xcor_component_table_get_normalize (xcct));
+  g_assert_true (gsl_finite (nc_xcor_component_table_get_norm (xcct)));
+  g_assert_true (nc_xcor_component_table_peek_spline (xcct) != NULL);
+  g_assert_true (nc_xcor_component_table_peek_knots (xcct) != NULL);
+  g_assert_cmpuint (nc_xcor_component_table_get_bessel_deriv (xcct), ==, 0);
+  g_assert_cmpfloat (nc_xcor_component_table_eval_kernel_factor (xcct, 1500.0, 0.1), ==, 1.0);
+  g_assert_cmpfloat (nc_xcor_component_table_eval_prefactor (xcct, 8), ==, 1.0);
+
+  nc_xcor_component_table_get_support (xcct, &chi_min, &chi_max);
+  g_assert_cmpfloat (chi_min, ==, 1000.0);
+  g_assert_cmpfloat (chi_max, ==, 1000.0 + 20.0 * 63);
+  g_assert_true (gsl_finite (nc_xcor_component_table_eval_W (xcct, 1630.0)));
+
+  xcct2 = nc_xcor_component_table_ref (xcct);
+  nc_xcor_component_table_clear (&xcct2);
+  g_assert_true (xcct2 == NULL);
+
+  ncm_vector_free (chi);
+  ncm_vector_free (W);
+
+  NCM_TEST_FREE (nc_xcor_component_table_free, xcct);
 }
 

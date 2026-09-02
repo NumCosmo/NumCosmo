@@ -801,3 +801,38 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
         for got, expected in zip(through_solver, direct):
             assert np.all(np.isfinite(got))
             assert_allclose(got, expected, rtol=1.0e-10)
+
+
+def test_replan_with_the_same_blocks_keeps_the_integrators(
+    cosmology: Cosmology,
+) -> None:
+    """A plan that reproduces the previous blocks keeps the per-block integrators.
+
+    They carry the factorised operators, the expensive part of a cold solve, and
+    are keyed by the block's ell range only. A plan with different blocks drops
+    them.
+    """
+    kernel = _tier3_wl_kernel(cosmology, 2, 17)
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc.props.reltol = 1.0e-2
+    xc.prepare(cosmology.cosmo)
+
+    solver = Nc.XcorSolver.new()
+    kid = solver.register_kernel(kernel)
+    solver.request_cl(kid, kid, 2, 17)
+    solver.plan_blocks(8)
+    solver.solve(xc, cosmology.cosmo)
+    before = [solver.peek_block_integrator(b) for b in range(solver.get_n_blocks())]
+    assert all(b is not None for b in before)
+
+    solver.clear_requests()
+    solver.request_cl(kid, kid, 2, 17)
+    solver.plan_blocks(8)
+    after = [solver.peek_block_integrator(b) for b in range(solver.get_n_blocks())]
+    assert all(a is b for a, b in zip(after, before))
+
+    solver.clear_requests()
+    solver.request_cl(kid, kid, 2, 17)
+    solver.plan_blocks(4)
+    assert solver.get_n_blocks() == 4
+    assert all(solver.peek_block_integrator(b) is None for b in range(4))

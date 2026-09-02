@@ -254,6 +254,7 @@
 #include <numcosmo/nc/xcor/nc_xcor_ssc_sij.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_radial_kdep.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_radial.h>
+#include <numcosmo/nc/xcor/nc_xcor_component_table.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_table.h>
 #include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_gauss.h>
 #include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_tophat.h>

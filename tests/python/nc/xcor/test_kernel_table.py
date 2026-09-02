@@ -233,12 +233,12 @@ def test_shear_prefactor(bits):
     dens = _table(bits, chi, W)
 
     for ell in (0, 1):
-        assert shear.eval_prefactor(cosmo, ell) == 0.0
+        assert shear.eval_prefactor(0, cosmo, ell) == 0.0
 
     for ell in (2, 8, 32, 100):
         expect = np.sqrt((ell + 2) * (ell + 1) * ell * (ell - 1))
-        assert_allclose(shear.eval_prefactor(cosmo, ell), expect, rtol=1e-14)
-        assert dens.eval_prefactor(cosmo, ell) == 1.0
+        assert_allclose(shear.eval_prefactor(0, cosmo, ell), expect, rtol=1e-14)
+        assert dens.eval_prefactor(0, cosmo, ell) == 1.0
 
 
 def test_shear_kernel_factor(bits):
@@ -252,11 +252,237 @@ def test_shear_kernel_factor(bits):
 
     for c, k in ((1500.0, 0.1), (900.0, 0.02)):
         assert_allclose(
-            shear.eval_kernel_factor(cosmo, c, k), 1.0 / (k * c) ** 2, rtol=1e-14
+            shear.eval_kernel_factor(0, cosmo, c, k), 1.0 / (k * c) ** 2, rtol=1e-14
         )
-        assert dens.eval_kernel_factor(cosmo, c, k) == 1.0
+        assert dens.eval_kernel_factor(0, cosmo, c, k) == 1.0
 
 
 # Construct-time invariants (mismatched lengths, too few samples for the requested
 # degree) are reported with g_error, as every related kernel reports its own. That
 # is fatal by design and so cannot be exercised from here.
+
+
+# --- components ---------------------------------------------------------------
+
+
+def _component(chi, W, kind=Nc.XcorKernelTableKind.DENSITY, order=8, normalize=False):
+    return Nc.XcorComponentTable.new_full(
+        Ncm.Vector.new_array(chi.tolist()),
+        Ncm.Vector.new_array(W.tolist()),
+        kind,
+        order,
+        normalize,
+    )
+
+
+def _table_from(bits, components):
+    _, dist, ps = bits
+    oa = Ncm.ObjArray.new()
+    for c in components:
+        oa.add(c)
+    k = Nc.XcorKernelTable.new_from_components(
+        dist, ps, oa, Ncm.SBesselIntegratorLevin.new(0, 128)
+    )
+    k.set_l_limber(-1)
+    k.prepare(bits[0])
+    return k
+
+
+def test_component_kinds_fix_weight_factor_and_prefactor():
+    """Each kind maps to one (Bessel order, (chi, k) factor, ell prefactor) triple."""
+    chi = np.linspace(100.0, 2000.0, 64)
+    W = np.exp(-0.5 * ((chi - 1000.0) / 200.0) ** 2)
+    kinds = Nc.XcorKernelTableKind
+    expect = {
+        kinds.DENSITY: (0, 1.0, lambda l: 1.0),
+        kinds.SHEAR: (
+            0,
+            1.0 / (0.1 * 1500.0) ** 2,
+            lambda l: np.sqrt((l + 2) * (l + 1) * l * (l - 1)),
+        ),
+        kinds.CONVERGENCE: (0, 1.0 / (0.1 * 1500.0) ** 2, lambda l: l * (l + 1.0)),
+        kinds.RSD: (2, 1.0, lambda l: 1.0),
+    }
+    for kind, (deriv, factor, pref) in expect.items():
+        comp = _component(chi, W, kind=kind)
+        assert comp.get_kind() == kind
+        assert comp.get_bessel_deriv() == deriv
+        assert_allclose(comp.eval_kernel_factor(1500.0, 0.1), factor, rtol=1e-14)
+        for ell in (2, 8, 32):
+            assert_allclose(comp.eval_prefactor(ell), pref(ell), rtol=1e-14)
+
+
+def test_component_with_inverse_square_weight_never_starts_at_the_origin():
+    """A lensing table from chi = 0: the support starts at the fixed floor, 0.01 Mpc."""
+    chi = np.linspace(0.0, 3000.0, 301)
+    W = chi * np.exp(-chi / 1000.0)  # linear at the origin, as a lensing kernel is
+    dens = _component(chi, W)
+    shear = _component(chi, W, kind=Nc.XcorKernelTableKind.SHEAR)
+
+    lo_d, hi_d = dens.get_support()
+    lo_s, hi_s = shear.get_support()
+
+    assert lo_d == 0.0
+    assert lo_s == Nc.XCOR_COMPONENT_TABLE_CHI_FLOOR == 1.0e-2
+    assert hi_s == hi_d
+
+
+def test_kernel_from_components_exposes_them(bits):
+    """The list is the canonical description; the single-table properties are consumed."""
+    ana = _analytic(bits)
+    chi, W = _samples(ana)
+    comps = [
+        _component(chi, W),
+        _component(chi, 0.5 * W, kind=Nc.XcorKernelTableKind.RSD),
+    ]
+    tab = _table_from(bits, comps)
+
+    assert tab.get_n_components() == 2
+    assert tab.peek_component(1).get_kind() == Nc.XcorKernelTableKind.RSD
+    assert tab.props.chi is None
+    assert tab.props.W is None
+    assert tab.props.components.len() == 2
+
+    orders = [c.get_bessel_deriv() for c in tab.get_component_list()]
+    assert orders == [0, 2]
+
+    single = _table(bits, chi, W)
+    assert single.get_n_components() == 1
+    assert single.props.chi is None
+    assert single.props.components.len() == 1
+
+
+def test_disjoint_components_equal_the_one_table_holding_both(bits):
+    """Two separated bumps as two components integrate to the single-table answer.
+
+    A table that holds both bumps keeps the zero run between them (only leading
+    and trailing zeros are trimmed), so it integrates across the gap; the
+    two-component kernel integrates each bump over its own support. Both are
+    smooth reconstructions of the same window.
+    """
+    cosmo = bits[0]
+    chi = np.linspace(200.0, 3400.0, 3201)
+    bump_a = np.exp(-0.5 * ((chi - 1000.0) / 120.0) ** 2)
+    bump_b = 0.6 * np.exp(-0.5 * ((chi - 2600.0) / 150.0) ** 2)
+    bump_a[np.abs(chi - 1000.0) > 6.0 * 120.0] = 0.0
+    bump_b[np.abs(chi - 2600.0) > 6.0 * 150.0] = 0.0
+
+    whole = _table(bits, chi, bump_a + bump_b, normalize=False)
+    split = _table_from(bits, [_component(chi, bump_a), _component(chi, bump_b)])
+    # The two kernels fit their k-space closures independently, so at the
+    # default 1e-4 they differ by the closure tolerance (8e-6 measured);
+    # tightening it isolates the component sum.
+    for k in (whole, split):
+        k.set_reltol(1.0e-6)
+        k.set_scaled_abstol(1.0e-6)
+        k.set_l_limber(-1)
+        k.prepare(cosmo)
+
+    assert_allclose(_cls(bits, split), _cls(bits, whole), rtol=1.0e-6)
+
+
+def test_multi_component_kernel_survives_serialization(bits):
+    """dup_obj rebuilds every component and its kind, and the C_ell is unchanged."""
+    cosmo = bits[0]
+    ana = _analytic(bits)
+    chi, W = _samples(ana)
+    tab = _table_from(
+        bits,
+        [
+            _component(chi, W),
+            _component(chi, 0.3 * W, kind=Nc.XcorKernelTableKind.SHEAR),
+        ],
+    )
+    copy = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).dup_obj(tab)
+    copy.set_l_limber(-1)
+    copy.prepare(cosmo)
+
+    assert copy.get_n_components() == 2
+    assert copy.peek_component(1).get_kind() == Nc.XcorKernelTableKind.SHEAR
+    assert_allclose(
+        _cls(bits, copy, ells=(2, 32)), _cls(bits, tab, ells=(2, 32)), rtol=1.0e-12
+    )
+
+
+def test_shear_prefactor_is_folded_into_the_limber_window(bits):
+    """Per-component prefactors live in eval_limber_z; the kernel-wide prefactor is one."""
+    cosmo, dist, _ = bits
+    ana = _analytic(bits)
+    chi, W = _samples(ana)
+    shear = _table(bits, chi, W, kind=Nc.XcorKernelTableKind.SHEAR)
+    dens = _table(bits, chi, W)
+    for k in (shear, dens):
+        k.set_l_limber(-1)
+        k.prepare(cosmo)
+
+    ell = 32
+    z = dist.inv_comoving(cosmo, CHI_MEAN / cosmo.RH_Mpc())
+    assert shear.eval_limber_z_prefactor(cosmo, ell) == 1.0
+    ratio = shear.eval_limber_z_full(cosmo, z, dist, ell) / dens.eval_limber_z_full(
+        cosmo, z, dist, ell
+    )
+    k_limber = (ell + 0.5) / CHI_MEAN
+    expect = (
+        np.sqrt((ell + 2) * (ell + 1) * ell * (ell - 1)) / (k_limber * CHI_MEAN) ** 2
+    )
+    assert_allclose(ratio, expect, rtol=1.0e-10)
+
+
+# --- in-place update and prepare bookkeeping -----------------------------------
+
+
+def test_replace_samples_matches_a_fresh_kernel(bits):
+    """Replacing a component's table in place gives the C_ell of a kernel built on it."""
+    cosmo = bits[0]
+    chi = np.linspace(200.0, 3400.0, 1601)
+    w_a = np.exp(-0.5 * ((chi - 1200.0) / 200.0) ** 2)
+    w_b = np.exp(-0.5 * ((chi - 2000.0) / 300.0) ** 2)
+
+    live = _table_from(bits, [_component(chi, w_a)])
+    cl_a = _cls(bits, live, ells=(2, 32))
+    live.replace_samples(
+        0, Ncm.Vector.new_array(chi.tolist()), Ncm.Vector.new_array(w_b.tolist())
+    )
+    live.prepare_if_needed(cosmo)  # the replacement marked the kernel outdated
+    cl_b = _cls(bits, live, ells=(2, 32))
+
+    fresh = _table_from(bits, [_component(chi, w_b)])
+    assert_allclose(cl_b, _cls(bits, fresh, ells=(2, 32)), rtol=1.0e-12)
+    assert not np.allclose(cl_a, cl_b, rtol=1.0e-3)
+
+    lo, hi = live.peek_component(0).get_support()
+    assert lo == chi[0] and hi == chi[-1]
+    assert live.props.components.peek(0).props.W.get(800) == w_b[800]
+
+
+def test_prepare_if_needed_tracks_cosmology_and_data(bits):
+    """prepare_if_needed re-prepares on a cosmology move or a marked change, not otherwise."""
+    cosmo, dist, _ = bits
+    ana = _analytic(bits)
+    chi, W = _samples(ana)
+    tab = _table(bits, chi, W)
+    tab.set_l_limber(-1)
+    tab.prepare_if_needed(cosmo)
+    z0 = tab.get_z_range()
+
+    tab.prepare_if_needed(cosmo)
+    assert tab.get_z_range() == z0
+
+    omega_c = cosmo.props.Omegac
+    cosmo.props.Omegac = omega_c * 1.05
+    tab.prepare_if_needed(cosmo)
+    z1 = tab.get_z_range()
+    assert z1 != z0  # the support in Mpc is fixed, so its redshift range moved
+    cosmo.props.Omegac = omega_c
+
+    tab.prepare_if_needed(cosmo)
+    assert tab.get_z_range() == z0
+
+    # a table with a different support, replaced in place, is only seen after the mark
+    tab.replace_samples(
+        0,
+        Ncm.Vector.new_array((chi + 100.0).tolist()),
+        Ncm.Vector.new_array(W.tolist()),
+    )
+    tab.prepare_if_needed(cosmo)
+    assert tab.get_z_range()[0] > z0[0]

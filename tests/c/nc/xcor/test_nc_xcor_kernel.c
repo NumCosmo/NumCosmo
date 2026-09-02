@@ -729,7 +729,7 @@ test_nc_xcor_kernel_radial_kdep (void)
                           nc_xcor_kernel_radial_eval_W (NC_XCOR_KERNEL_RADIAL (plain), 1600.0),
                           1.0e-14, 0.0);
 
-  g_assert_true (gsl_finite (nc_xcor_kernel_radial_eval_kernel_factor (NC_XCOR_KERNEL_RADIAL (withk),
+  g_assert_true (gsl_finite (nc_xcor_kernel_radial_eval_kernel_factor (NC_XCOR_KERNEL_RADIAL (withk), 0,
                                                                        cosmo, 1600.0, 0.5)));
 
   nc_xcor_kernel_free (plain);

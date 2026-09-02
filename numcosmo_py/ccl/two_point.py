@@ -23,7 +23,7 @@
 
 """Two-point correlation functions."""
 
-from typing import Callable
+from typing import Callable, Sequence
 
 import numpy as np
 import pyccl
@@ -151,6 +151,25 @@ def tracer_components(
     return chi_a[1:-1], [c[1:-1] for c in comps], der_bessel
 
 
+def _levin_integrator(
+    ell_min: int, ell_max: int, reltol: float
+) -> Ncm.SBesselIntegratorLevin:
+    """A Levin integrator at the library's knot defaults with both tolerances set."""
+    proto = Ncm.SBesselIntegratorLevin.new(ell_min, ell_max)
+
+    return Ncm.SBesselIntegratorLevin.new_full(
+        ell_min,
+        ell_max,
+        proto.get_y_knots_min(),
+        proto.get_y_knots_max(),
+        proto.get_n_knots(),
+        proto.get_ell_cache_max(),
+        reltol,
+        proto.get_cheb_min_order(),
+        reltol,
+    )
+
+
 def _kernel_callback(sp: Ncm.Spline) -> Callable[[object, float, float], float]:
     """Radial kernel callback for the integrator: the resampled table itself."""
 
@@ -199,18 +218,7 @@ def block_transformer(
     chi_a, comps, der_bessel = tracer_components(tracer, cosmology, reltol=reltol)
     chi_min, chi_max = float(chi_a[0]), float(chi_a[-1])
 
-    proto = Ncm.SBesselIntegratorLevin.new(ell_min, ell_max)
-    integ = Ncm.SBesselIntegratorLevin.new_full(
-        ell_min,
-        ell_max,
-        proto.get_y_knots_min(),
-        proto.get_y_knots_max(),
-        proto.get_n_knots(),
-        proto.get_ell_cache_max(),
-        reltol,
-        proto.get_cheb_min_order(),
-        reltol,
-    )
+    integ = _levin_integrator(ell_min, ell_max, reltol)
     res = Ncm.Vector.new(n_ell)
     ells = np.arange(ell_min, ell_max + 1)
 
@@ -312,69 +320,252 @@ def bessel_transform(
     return bessel_transform_block(tracer, cosmology, ell, ell, k_a, reltol=reltol)[0]
 
 
-_OUTER_CHUNK = 512
+_KIND_BY_DERIVATIVES = {
+    (0, 0): Nc.XcorKernelTableKind.DENSITY,
+    (-1, 2): Nc.XcorKernelTableKind.SHEAR,
+    (-1, 1): Nc.XcorKernelTableKind.CONVERGENCE,
+    (2, 0): Nc.XcorKernelTableKind.RSD,
+}
 
 
-def _grow_outer_grid(
-    integrand_of: Callable[[np.ndarray], np.ndarray],
-    k_lo: float,
-    k_hi: float,
-    dk: float,
+def tracer_component_arrays(
+    tracer: pyccl.Tracer,
+    cosmology: Cosmology,
+) -> list[tuple[np.ndarray, np.ndarray, Nc.XcorKernelTableKind]]:
+    r"""The ``(chi, W, kind)`` of every non-zero term of a CCL tracer.
+
+    Each term keeps its own chi grid; a term whose window is identically zero
+    is dropped. The window is ``W(chi) * transfer(a) * D(z)``
+    -- CCL's kernel, its scale-factor transfer (bias, minus the growth rate for
+    RSD, ...) and the linear growth, which CCL leaves out because it evaluates
+    the two-dimensional ``P(k, a)`` while the radial family pairs the window
+    with ``P(k, 0)``. The pair (``der_bessel``, ``der_angles``) selects the kind,
+    which fixes the Bessel weight, the ``1/(k chi)^2`` factor and the ell
+    prefactor on the NumCosmo side.
+
+    The transfer is taken at ``lk = 0``: CCL's is formally k-dependent, but for
+    the standard tracers it is a function of the scale factor alone. A
+    k-dependent transfer would go through the radial family's scale-dependence
+    slot, which this adapter does not populate.
+
+    Do not oversample CCL's kernels. Its lensing kernel is a numerical integral
+    with its own accuracy, and denser sampling exposes that noise rather than
+    more shape: the relative fourth difference of a WeakLensingTracer table is
+    2e-7 at 1000 samples and 1.7e-5 at 4000. The closure refinement resolves
+    what it is given, so the 4000-sample table costs seven times the 1000-sample
+    one for the same C_ell (2e-8 of peak from NumCosmo's own lensing kernel
+    either way). CCL's analytic CMB lensing kernel has no such floor.
+    """
+    cosmo = cosmology.cosmo
+    dist = cosmology.dist
+    RH_Mpc = cosmo.RH_Mpc()
+    gf = Nc.GrowthFunc.new()
+    gf.prepare_if_needed(cosmo)
+
+    Wchi_list, chi_list = tracer.get_kernel()
+    assert chi_list is not None
+    # z(chi) comes from the distance object's inverse spline. Extend its reach
+    # the way every NcXcorKernel does at construction, so a CMB lensing tracer
+    # (z ~ 1100) inverts regardless of the cosmology's dist_z_max.
+    dist.compute_inv_comoving(True)
+    dist.require_zf(1.0e10)
+    dist.prepare_if_needed(cosmo)
+
+    der_bessel = [int(d) for d in tracer.get_bessel_derivative()]
+    der_angles = [int(d) for d in tracer.get_angles_derivative()]
+
+    terms = []
+    for i, (chi_a, W_a, der, ang) in enumerate(
+        zip(chi_list, Wchi_list, der_bessel, der_angles)
+    ):
+        kind = _KIND_BY_DERIVATIVES.get((der, ang))
+        if kind is None:
+            raise NotImplementedError(
+                f"tracer term {i}: der_bessel = {der}, der_angles = {ang} has no "
+                "NcXcorKernelTableKind"
+            )
+
+        W_a = np.asarray(W_a, dtype=float)
+        if not np.any(W_a):
+            # CCL emits an identically zero window for a term that cancels, e.g.
+            # magnification at s = 0.4 where 5 s - 2 = 0; it carries nothing.
+            continue
+
+        chi_a = np.asarray(chi_a, dtype=float)
+        z_a = np.array([dist.inv_comoving(cosmo, float(c) / RH_Mpc) for c in chi_a])
+        a_a = 1.0 / (1.0 + z_a)
+        transfer = np.asarray(tracer.get_transfer(0.0, a_a)[i], dtype=float)
+        D_a = np.array([gf.eval(cosmo, float(zz)) for zz in z_a])
+        terms.append((chi_a, W_a * transfer * D_a, kind))
+
+    return terms
+
+
+def tracer_component_tables(
+    tracer: pyccl.Tracer,
+    cosmology: Cosmology,
     *,
-    chunk: int,
-    tol: float,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Sample the outer integrand on a step-``dk`` grid whose ends the integrand sets.
+    order: int = 8,
+) -> list[Nc.XcorComponentTable]:
+    r"""One :class:`Nc.XcorComponentTable` per non-zero term of a CCL tracer.
 
-    Both ends are placed by a bound on the *integrated* tail left outside,
-    relative to the integral accumulated so far, per multipole. Upward from
-    ``k_lo`` in chunks: past the peak the integrand falls at least as fast as
-    ``k^-3`` (``P(k)/k^2`` for a spin-2 pair, faster for density kernels), so
-    the tail beyond ``k_end`` is at most ``|I(k_end)| k_end / 2``; stop once that
-    is below ``tol`` of the integral for every multipole, or at ``k_hi``.
-    Downward from ``k_lo`` by halving: the integrand rises at least as
-    ``k^(2 + n_s)``, so the piece below ``k_0`` is at most ``|I(k_0)| k_0 / 3``.
-    A pointwise cut at ``tol`` of the peak is not enough here: on a lensing
-    pair it left a tail worth 2e-4 of C_10.
+    See :func:`tracer_component_arrays` for what each table holds.
 
-    :returns: ``(k_a, vals)`` with ``vals`` of shape ``(n_ell, len(k_a))``.
+    :param order: B-spline order of the reconstruction (degree ``order - 1``).
+    """
+    return [
+        Nc.XcorComponentTable.new_full(
+            Ncm.Vector.new_array(chi_a.tolist()),
+            Ncm.Vector.new_array(W.tolist()),
+            kind,
+            order,
+            False,
+        )
+        for chi_a, W, kind in tracer_component_arrays(tracer, cosmology)
+    ]
+
+
+def tracer_kernel(
+    tracer: pyccl.Tracer,
+    cosmology: Cosmology,
+    *,
+    order: int = 8,
+    kernel_reltol: float | None = None,
+) -> Nc.XcorKernelTable:
+    r"""A CCL tracer as a prepared :class:`Nc.XcorKernelTable`, never Limber.
+
+    The kernel owns everything the solver needs: the components, their supports,
+    the Levin integrator and the k-space closure. NumCosmo then discovers the k
+    domain, places the knots and integrates the outer integral exactly, so the
+    only things CCL contributes are the tabulated windows and the growth.
+
+    The Levin integrator is the library default. Loosening its solve tolerance
+    (1e-13) to the 1e-8 the raw transforms above use makes the closure
+    refinement at 1e-6 chase solve noise on an RSD table and never finish; the
+    accuracy knob here is ``kernel_reltol``, not the solve.
+
+    :param order: B-spline order of the window reconstruction.
+    :param kernel_reltol: when given, sets both the kernel's closure ``reltol``
+        and ``scaled-abstol``; the library default (1e-4) applies otherwise.
+    """
+    comps = tracer_component_tables(tracer, cosmology, order=order)
+    oa = Ncm.ObjArray.new()
+    for comp in comps:
+        oa.add(comp)
+
+    kernel = Nc.XcorKernelTable.new_from_components(
+        cosmology.dist, cosmology.ps_ml, oa, Ncm.SBesselIntegratorLevin.new(0, 8)
+    )
+    if kernel_reltol is not None:
+        kernel.set_reltol(kernel_reltol)
+        kernel.set_scaled_abstol(kernel_reltol)
+    kernel.set_l_limber(-1)
+    kernel.prepare(cosmology.cosmo)
+
+    return kernel
+
+
+class TracerClSolver:
+    r"""Persistent non-Limber solver for a set of CCL tracers.
+
+    Built once for a set of tracers, the pairs wanted and the multipoles; the
+    kernels stay registered with one :class:`Nc.XcorSolver`, whose blocks and
+    per-block Levin integrators (the factorised operators, the expensive part of
+    a cold solve) then survive every step of a chain. Per step, hand it the
+    tracers recomputed at the new cosmology with :meth:`update_tracers`, which
+    replaces the window samples inside the existing kernels, and call
+    :meth:`solve`. Kernels are re-prepared only when the cosmology, their
+    parameters or their tables moved.
+
+    :param tracers: the CCL tracers, one kernel each.
+    :param pairs: ``(i, j)`` indices into ``tracers`` for the spectra wanted.
+    :param ells: the multipoles, requested one by one; contiguous runs merge into
+        blocks of up to ``block_size`` sharing one operator factorisation.
+    :param order: B-spline order of the window reconstruction.
+    :param kernel_reltol: closure tolerance for every kernel; see :func:`tracer_kernel`.
+    :param block_size: largest number of consecutive multipoles per block,
+        clamped to what the solver honours.
     """
 
-    def accumulated(k_a: np.ndarray, vals: np.ndarray) -> np.ndarray:
-        return np.trapezoid(np.abs(vals), k_a, axis=1)
+    def __init__(
+        self,
+        cosmology: Cosmology,
+        tracers: Sequence[pyccl.Tracer],
+        pairs: Sequence[tuple[int, int]],
+        ells: np.ndarray,
+        *,
+        order: int = 8,
+        kernel_reltol: float | None = None,
+        block_size: int = 8,
+    ) -> None:
+        self.cosmology = cosmology
+        self.ells = np.atleast_1d(np.asarray(ells, dtype=int))
+        self.pairs = [(int(a), int(b)) for a, b in pairs]
+        self.order = order
+        self.kernels = [
+            tracer_kernel(t, cosmology, order=order, kernel_reltol=kernel_reltol)
+            for t in tracers
+        ]
 
-    k_a = np.empty(0)
-    vals = np.empty((0, 0))
-    k_start = k_lo
-    while k_start < k_hi:
-        k_stop = min(k_start + chunk * dk, k_hi)
-        n_pts = max(2, int(np.round((k_stop - k_start) / dk)) + 1)
-        k_c = np.linspace(k_start, k_stop, n_pts)
-        if k_a.size:
-            k_c = k_c[1:]  # shared endpoint
-        v_c = integrand_of(k_c)
-        k_a = np.concatenate([k_a, k_c])
-        vals = v_c if vals.size == 0 else np.concatenate([vals, v_c], axis=1)
-        k_start = k_stop
+        cache_max = Ncm.SBesselIntegratorLevin.new(0, 0).get_ell_cache_max()
+        block_size = max(1, min(block_size, Nc.XCOR_KERNEL_MAX_ELL_BLOCK, cache_max))
 
-        peaked = np.all(np.argmax(np.abs(vals), axis=1) < vals.shape[1] - v_c.shape[1])
-        tail = 0.5 * np.abs(vals[:, -1]) * k_a[-1]
-        if peaked and np.all(tail < tol * accumulated(k_a, vals)):
-            break
+        self.solver = Nc.XcorSolver.new()
+        ids = [self.solver.register_kernel(k) for k in self.kernels]
+        for a, b in self.pairs:
+            for ell in self.ells:
+                self.solver.request_cl(ids[a], ids[b], int(ell), int(ell))
+        self.solver.plan_blocks(block_size)
 
-    # Downward the integrand is smooth (no oscillation below the first peak),
-    # so each halving adds a handful of points rather than a step-dk chunk.
-    k_floor = 1.0e-4 * k_lo
-    while k_a[0] > k_floor:
-        head = np.abs(vals[:, 0]) * k_a[0] / 3.0
-        if np.all(head < tol * accumulated(k_a, vals)):
-            break
-        k_c = np.linspace(0.5 * k_a[0], k_a[0], 9)[:-1]
-        v_c = integrand_of(k_c)
-        k_a = np.concatenate([k_c, k_a])
-        vals = np.concatenate([v_c, vals], axis=1)
+        self.xcor = Nc.Xcor.new(
+            cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT
+        )
 
-    return k_a, vals
+    def update_tracers(self, tracers: Sequence[pyccl.Tracer]) -> None:
+        """Replace every kernel's window samples with the tracers' current ones.
+
+        The tracers must have the same non-zero terms, in the same order and of
+        the same kinds, as the ones the solver was built with; the tables may
+        change length. The NumCosmo cosmology the windows are converted with is
+        ``self.cosmology``, which the caller moves in place alongside CCL's.
+        """
+        if len(tracers) != len(self.kernels):
+            raise ValueError(
+                f"expected {len(self.kernels)} tracers, got {len(tracers)}"
+            )
+
+        for kernel, tracer in zip(self.kernels, tracers):
+            terms = tracer_component_arrays(tracer, self.cosmology)
+            if len(terms) != kernel.get_n_components():
+                raise ValueError(
+                    f"tracer has {len(terms)} non-zero terms, kernel has "
+                    f"{kernel.get_n_components()} components"
+                )
+
+            for i, (chi_a, W, kind) in enumerate(terms):
+                if kernel.peek_component(i).get_kind() != kind:
+                    raise ValueError(f"component {i} changed kind to {kind}")
+
+                kernel.replace_samples(
+                    i,
+                    Ncm.Vector.new_array(chi_a.tolist()),
+                    Ncm.Vector.new_array(W.tolist()),
+                )
+
+    def solve(self) -> np.ndarray:
+        """Compute every requested spectrum; shape ``(len(pairs), len(ells))``."""
+        cosmo = self.cosmology.cosmo
+        self.xcor.prepare(cosmo)
+        self.solver.solve(self.xcor, cosmo)
+
+        out = np.empty((len(self.pairs), len(self.ells)))
+        r = 0
+        for p in range(len(self.pairs)):
+            for i in range(len(self.ells)):
+                out[p, i] = self.solver.get_result(r).get(0)
+                r += 1
+
+        return out
 
 
 def angular_cl(
@@ -383,11 +574,9 @@ def angular_cl(
     tracer2: pyccl.Tracer,
     ells: np.ndarray,
     *,
-    reltol: float = 1.0e-8,
-    n_k: int = 512,
-    n_osc: int = 8,
+    order: int = 8,
+    kernel_reltol: float | None = None,
     block_size: int = 8,
-    support_tol: float = 1.0e-6,
 ) -> np.ndarray:
     r"""Non-Limber angular power spectrum of two CCL tracers, solved by NumCosmo.
 
@@ -395,91 +584,24 @@ def angular_cl(
         C_\ell = \frac{2}{\pi}\int dk\, k^2 P_{\rm lin}(k)\,
                  \Delta^1_\ell(k)\,\Delta^2_\ell(k)
 
-    The tracers, their kernels and the power spectrum are CCL's; only the oscillatory
-    integral and the reconstruction of the tabulated kernels are NumCosmo's.
+    One-shot form of :class:`TracerClSolver`: builds the kernels and the solver,
+    solves once and returns. Every call pays the per-block operator setup; a
+    chain should keep a :class:`TracerClSolver` instead.
 
-    Multipoles are processed in blocks that share one operator factorisation. Block
-    width has an optimum rather than being as large as possible: the truncation order
-    is chosen by a max-reduction across the block, so every member pays the order the
-    hardest member needs, and the k-grid must span the whole block's range.
-
-    :param reltol: requested relative accuracy of the oscillatory solve.
-    :param n_k: floor on the number of wavenumbers in the outer integral.
-    :param n_osc: samples per oscillation of Delta_l(k) in the outer integral.
-    :param support_tol: fraction of the kernel's peak below which its tail is
-        treated as outside the support, and the fraction of the outer integral
-        allowed outside the k grid. This is the dominant cost control, not a
-        safety margin: the sampling step and the starting window come from
-        ``chi_lo`` and ``chi_hi``, so shrinking ``chi_lo`` raises the point
-        count. On the Gaussian test tracer at ell = 32, 1e-10 (the old value)
-        admits tail down to chi = 16.7 Mpc and needs 180,720 wavenumbers for
-        293 s; 1e-6 needs 3,945 for 2.4 s, and the two C_ell agree to 2.6e-9.
-        The grid then grows on the integrand itself, so a spin-2 tracer, whose
-        transform tends to a constant at small k and to 1/k^2 at large k, is
-        integrated to the same fraction (see :func:`_grow_outer_grid`).
-        Tighten it only with a measurement in hand.
-    :param block_size: number of consecutive multipoles sharing a factorisation.
-        Clamped to what the solver will honour: NC_XCOR_KERNEL_MAX_ELL_BLOCK and the
-        integrator's ell_cache_max. Wider is not better -- the truncation order is a
-        max-reduction across the block, so every member pays the hardest member's
-        order, and one k-grid must span the block's whole range. Measured on eight
-        consecutive multipoles at fixed accuracy, the cost turns over at four:
-        1 -> 214.5 s, 2 -> 128.0 s, 4 -> 98.9 s, 8 -> 117.1 s.
+    :param order: B-spline order of the window reconstruction.
+    :param kernel_reltol: closure tolerance for both kernels; see :func:`tracer_kernel`.
+    :param block_size: largest number of consecutive multipoles per block.
     """
-    ps_lin = cosmology.ps_ml
-    cosmo = cosmology.cosmo
-    ps_lin.prepare_if_needed(cosmo)
-    ells = np.atleast_1d(np.asarray(ells, dtype=int))
-    out = np.zeros(len(ells), dtype=float)
+    tracers = [tracer1] if tracer2 is tracer1 else [tracer1, tracer2]
+    pair = (0, 0) if tracer2 is tracer1 else (0, 1)
+    solver = TracerClSolver(
+        cosmology,
+        tracers,
+        [pair],
+        ells,
+        order=order,
+        kernel_reltol=kernel_reltol,
+        block_size=block_size,
+    )
 
-    cache_max = Ncm.SBesselIntegratorLevin.new(0, 0).get_ell_cache_max()
-    block_size = max(1, min(block_size, Nc.XCOR_KERNEL_MAX_ELL_BLOCK, cache_max))
-
-    chi_a, comps, _ = tracer_components(tracer1, cosmology, reltol=reltol)
-    w_abs = np.abs(sum(comps))
-    # See support_tol: chi_lo sets the sampling step and the starting window.
-    keep = np.nonzero(w_abs > support_tol * w_abs.max())[0]
-    chi_lo, chi_hi = float(chi_a[keep[0]]), float(chi_a[keep[-1]])
-
-    def pk_of(k_a: np.ndarray) -> np.ndarray:
-        # NumCosmo's power spectrum already takes k in Mpc^-1 and returns Mpc^3.
-        return np.array([ps_lin.eval(cosmo, 0.0, float(k)) for k in k_a])
-
-    for start_i in range(0, len(ells), block_size):
-        sel = np.arange(start_i, min(start_i + block_size, len(ells)))
-        ell_min, ell_max = int(ells[sel[0]]), int(ells[sel[-1]])
-
-        d1_of = block_transformer(tracer1, cosmology, ell_min, ell_max, reltol=reltol)
-        d2_of = (
-            d1_of
-            if tracer2 is tracer1
-            else block_transformer(tracer2, cosmology, ell_min, ell_max, reltol=reltol)
-        )
-
-        def integrand_of(k_a: np.ndarray) -> np.ndarray:
-            return k_a[None, :] ** 2 * pk_of(k_a)[None, :] * d1_of(k_a) * d2_of(k_a)
-
-        # The window a density kernel needs: Delta_l ~ (k chi_hi)^l below k_lo
-        # and averaged out above k_hi. A spin-2 (der_bessel = -1) transform
-        # tends to a constant at small k and falls as 1/k^2 at large k, so
-        # neither bound holds for it; the grid is therefore grown on the
-        # integrand itself from this window, downward until its low end is
-        # below support_tol of the peak and upward until it stays there.
-        nu_lo, nu_hi = ell_min + 0.5, ell_max + 0.5
-        k_lo = 0.2 * nu_lo / chi_hi
-        k_hi = 8.0 * nu_hi / chi_lo
-        # sampling step from the fastest oscillation in k, period 2 pi / chi_hi
-        n_k_min = int(np.ceil(n_osc * (k_hi - k_lo) * chi_hi / np.pi))
-        dk = (k_hi - k_lo) / max(n_k, n_k_min)
-
-        k_a, vals = _grow_outer_grid(
-            integrand_of, k_lo, k_hi, dk, chunk=_OUTER_CHUNK, tol=support_tol
-        )
-
-        for j, i in enumerate(sel):
-            row = int(ells[i]) - ell_min
-            sp = Ncm.SplineCubicNotaknot.new()
-            sp.set_array(k_a.tolist(), vals[row].tolist(), True)
-            out[i] = (2.0 / np.pi) * sp.eval_integ(float(k_a[0]), float(k_a[-1]))
-
-    return out
+    return solver.solve()[0]
