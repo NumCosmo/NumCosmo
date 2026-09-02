@@ -268,7 +268,12 @@ def main() -> None:
 
 
 def write_table(out: pathlib.Path, entries: dict, args) -> None:
-    """Serialize what is finished so far."""
+    """Serialize what is finished so far.
+
+    The ``ells`` header is derived from the entries rather than taken from the
+    invocation: a partial rerun (one case, a subset of multipoles) must not
+    relabel a table that still carries every other case.
+    """
     payload = {
         "convention": (
             "C_ell = 2/pi INT dk k^2 P(k) I1_ell(k) I2_ell(k), k in 1/Mpc, "
@@ -282,7 +287,7 @@ def write_table(out: pathlib.Path, entries: dict, args) -> None:
             "k_eq": 0.10594,
         },
         "target_rel": args.target_rel,
-        "ells": args.ells,
+        "ells": sorted({entry["ell"] for entry in entries.values()}),
         "generator": "tests/tools/nc_xcor_kquad_arb.c",
         "cases": entries,
     }

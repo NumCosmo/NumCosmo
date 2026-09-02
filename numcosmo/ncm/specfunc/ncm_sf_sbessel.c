@@ -504,6 +504,53 @@ ncm_sf_sbessel_array_eval1 (NcmSFSBesselArray *sba, guint ell, gdouble x)
 }
 
 /**
+ * ncm_sf_sbessel_jl_deriv_from_array: (skip)
+ * @ell: the l value
+ * @x: argument value
+ * @jl_x: array of $j_l(x)$ values covering at least indices $0$ to @ell
+ *
+ * Computes $j_\ell'(x)$ from precomputed $j_l(x)$ values (such as those filled by
+ * ncm_sf_sbessel_array_eval()) using $j_\ell'(x) = j_{\ell-1}(x) - \frac{\ell+1}{x}
+ * j_\ell(x)$. The downward form keeps the required indices within $[0, \ell]$; its
+ * two terms agree to a factor of about two at small $x$, so no accuracy is lost to
+ * cancellation there. For $\ell = 0$ it returns $-j_1(x)$ evaluated directly.
+ *
+ * Returns: the value $j_\ell'(x)$
+ */
+gdouble
+ncm_sf_sbessel_jl_deriv_from_array (guint ell, gdouble x, const gdouble *jl_x)
+{
+  if (x == 0.0)
+    return (ell == 1) ? 1.0 / 3.0 : 0.0;
+
+  if (ell > 0)
+    return jl_x[ell - 1] - ((ell + 1.0) / x) * jl_x[ell];
+
+  return -gsl_sf_bessel_j1 (x);
+}
+
+/**
+ * ncm_sf_sbessel_xjl_deriv_from_array: (skip)
+ * @ell: the l value
+ * @x: argument value
+ * @jl_x: array of $j_l(x)$ values covering at least indices $0$ to @ell
+ *
+ * Computes $\left(x\, j_\ell(x)\right)'$ from precomputed $j_l(x)$ values using
+ * $\left(x\, j_\ell(x)\right)' = x\, j_{\ell-1}(x) - \ell\, j_\ell(x)$. For
+ * $\ell = 0$ it returns $\cos(x)$ exactly.
+ *
+ * Returns: the value $\left(x\, j_\ell(x)\right)'$
+ */
+gdouble
+ncm_sf_sbessel_xjl_deriv_from_array (guint ell, gdouble x, const gdouble *jl_x)
+{
+  if (ell > 0)
+    return x * jl_x[ell - 1] - ell * jl_x[ell];
+
+  return cos (x);
+}
+
+/**
  * ncm_sf_sbessel_array_eval_ell_cutoff:
  * @sba: a #NcmSFSBesselArray
  * @x: argument value

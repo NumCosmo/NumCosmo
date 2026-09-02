@@ -92,9 +92,10 @@ typedef struct _NcXcorKernelComponentPrivate
   gsl_root_fsolver *root_solver; /* GSL root solver for finding k_epsilon */
   gdouble epsilon;
   gdouble sqrt_epsilon;
-  guint ny;       /* Number of y points for analysis */
-  guint max_iter; /* Maximum iterations for GSL solvers */
-  gdouble tol;    /* Tolerance for GSL solvers */
+  guint ny;           /* Number of y points for analysis */
+  guint max_iter;     /* Maximum iterations for GSL solvers */
+  gdouble tol;        /* Tolerance for GSL solvers */
+  guint bessel_deriv; /* Derivative order of the spherical Bessel weight */
 } NcXcorKernelComponentPrivate;
 
 enum
@@ -104,6 +105,7 @@ enum
   PROP_NY,
   PROP_MAX_ITER,
   PROP_TOL,
+  PROP_BESSEL_DERIV,
 };
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcXcorKernelComponent, nc_xcor_kernel_component, G_TYPE_OBJECT)
@@ -123,6 +125,7 @@ nc_xcor_kernel_component_init (NcXcorKernelComponent *comp)
   self->ny               = 0.0;
   self->max_iter         = 0.0;
   self->tol              = 0.0;
+  self->bessel_deriv     = 0;
 }
 
 static void
@@ -181,6 +184,9 @@ nc_xcor_kernel_component_set_property (GObject *object, guint prop_id, const GVa
     case PROP_TOL:
       nc_xcor_kernel_component_set_tol (comp, g_value_get_double (value));
       break;
+    case PROP_BESSEL_DERIV:
+      nc_xcor_kernel_component_set_bessel_deriv (comp, g_value_get_uint (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -205,6 +211,9 @@ nc_xcor_kernel_component_get_property (GObject *object, guint prop_id, GValue *v
       break;
     case PROP_TOL:
       g_value_set_double (value, nc_xcor_kernel_component_get_tol (comp));
+      break;
+    case PROP_BESSEL_DERIV:
+      g_value_set_uint (value, nc_xcor_kernel_component_get_bessel_deriv (comp));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -278,6 +287,56 @@ nc_xcor_kernel_component_class_init (NcXcorKernelComponentClass *klass)
                                                         "Tolerance for GSL solvers",
                                                         0.0, 1.0, 1.0e-6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcXcorKernelComponent:bessel-deriv:
+   *
+   * Derivative order of the spherical Bessel weight in the component's radial
+   * integral: the component contributes with $j_\ell^{(d)}(k\chi)$ instead of
+   * $j_\ell(k\chi)$. Order 2 is the redshift-space-distortion weight.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_BESSEL_DERIV,
+                                   g_param_spec_uint ("bessel-deriv",
+                                                      NULL,
+                                                      "Derivative order of the spherical Bessel weight",
+                                                      0, 2, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
+
+/**
+ * nc_xcor_kernel_component_set_bessel_deriv:
+ * @comp: a #NcXcorKernelComponent
+ * @bessel_deriv: derivative order of the spherical Bessel weight, up to 2
+ *
+ * Sets the derivative order $d$ of the spherical Bessel weight: the component
+ * contributes to the kernel through $\int K(\chi, k)\, j_\ell^{(d)}(k\chi)\,
+ * \mathrm{d}\chi$.
+ */
+void
+nc_xcor_kernel_component_set_bessel_deriv (NcXcorKernelComponent *comp, guint bessel_deriv)
+{
+  NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
+
+  g_return_if_fail (bessel_deriv <= 2);
+
+  self->bessel_deriv = bessel_deriv;
+}
+
+/**
+ * nc_xcor_kernel_component_get_bessel_deriv:
+ * @comp: a #NcXcorKernelComponent
+ *
+ * Gets the derivative order of the spherical Bessel weight.
+ *
+ * Returns: the derivative order
+ */
+guint
+nc_xcor_kernel_component_get_bessel_deriv (NcXcorKernelComponent *comp)
+{
+  NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
+
+  return self->bessel_deriv;
 }
 
 /**

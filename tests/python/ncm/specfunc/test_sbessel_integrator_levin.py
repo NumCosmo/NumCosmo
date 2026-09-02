@@ -924,3 +924,181 @@ class TestPanelRecording:
 
         sbi.set_record_panels(False)
         assert sbi.get_n_panel_records() == 0
+
+
+def _jl_second_deriv(ell: int, y: np.ndarray) -> np.ndarray:
+    """j_l'' from the homogeneous ODE and scipy's j_l, j_l'."""
+    j = spherical_jn(ell, y)
+    jp = spherical_jn(ell, y, derivative=True)
+    return -2.0 / y * jp + (ell * (ell + 1.0) / y**2 - 1.0) * j
+
+
+class TestSBesselIntegratorLevinDeriv:
+    """Tests for the derivative-weighted integrals of NcmSBesselIntegratorLevin.
+
+    integrate_deriv computes int_a^b K(x, k) j_l^{(d)}(k x) dx with the
+    derivative taken with respect to the Bessel argument y = k x.
+    """
+
+    @pytest.mark.parametrize("l_val", [0, 1, 2, 5, 20, 60])
+    @pytest.mark.parametrize("k", [0.5, 3.0, 40.0])
+    def test_constant_closed_form(self, l_val: int, k: float) -> None:
+        """For K = 1 the integrals reduce to endpoint evaluations.
+
+        int j_l'(k x) dx = [j_l(k x)]/k and int j_l''(k x) dx = [j_l'(k x)]/k,
+        exactly.
+        """
+        a, b = 0.3, 12.0
+        integrator = Ncm.SBesselIntegratorLevin.new(l_val, l_val)
+        result = Ncm.Vector.new(1)
+
+        def f_constant(_x: float, _k: float) -> float:
+            return 1.0
+
+        integrator.integrate_deriv(f_constant, a, b, k, 1, result)
+        expected_d1 = (spherical_jn(l_val, k * b) - spherical_jn(l_val, k * a)) / k
+        assert_allclose(result.get(0), expected_d1, rtol=1.0e-11, atol=1.0e-16)
+
+        integrator.integrate_deriv(f_constant, a, b, k, 2, result)
+        expected_d2 = (
+            spherical_jn(l_val, k * b, derivative=True)
+            - spherical_jn(l_val, k * a, derivative=True)
+        ) / k
+        assert_allclose(result.get(0), expected_d2, rtol=1.0e-11, atol=1.0e-16)
+
+    @pytest.mark.parametrize("l_val", [0, 2, 10, 30])
+    @pytest.mark.parametrize("deriv", [1, 2])
+    def test_gaussian_vs_quadrature(self, l_val: int, deriv: int) -> None:
+        """Gaussian K against scipy adaptive quadrature, including the turning point."""
+        a, b = 1.0, 8.0
+        center, sigma = 4.0, 1.2
+        integrator = Ncm.SBesselIntegratorLevin.new(l_val, l_val)
+        result = Ncm.Vector.new(1)
+
+        def f_gauss(x: float, _k: float) -> float:
+            return np.exp(-0.5 * ((x - center) / sigma) ** 2)
+
+        # k values placing the turning point y ~ l inside, below and above the window
+        k_list = [0.5, 2.0]
+        if l_val > 0:
+            k_list += [l_val / center, l_val / a]
+
+        for k in k_list:
+            integrator.integrate_deriv(f_gauss, a, b, k, deriv, result)
+
+            if deriv == 1:
+
+                def integrand(x: float) -> float:
+                    return f_gauss(x, k) * spherical_jn(l_val, k * x, derivative=True)
+
+            else:
+
+                def integrand(x: float) -> float:
+                    return f_gauss(x, k) * _jl_second_deriv(l_val, np.asarray(k * x))
+
+            expected, _ = quad(integrand, a, b, limit=800, epsabs=1e-14, epsrel=1e-13)
+            assert_allclose(
+                result.get(0),
+                expected,
+                rtol=1.0e-8,
+                atol=1.0e-13,
+                err_msg=f"l={l_val}, deriv={deriv}, k={k}",
+            )
+
+    def test_batched_matches_single(self) -> None:
+        """A batched ell block must reproduce the per-ell results."""
+        ell_min, ell_max = 2, 33
+        a, b, k = 0.5, 9.0, 7.0
+        n_ell = ell_max - ell_min + 1
+
+        def f_gauss(x: float, _k: float) -> float:
+            return np.exp(-0.5 * ((x - 4.0) / 1.5) ** 2)
+
+        batched = Ncm.SBesselIntegratorLevin.new(ell_min, ell_max)
+        res_batch = Ncm.Vector.new(n_ell)
+
+        for deriv in (1, 2):
+            batched.integrate_deriv(f_gauss, a, b, k, deriv, res_batch)
+
+            for ell in (ell_min, ell_min + 7, ell_max):
+                single = Ncm.SBesselIntegratorLevin.new(ell, ell)
+                res_single = Ncm.Vector.new(1)
+                single.integrate_deriv(f_gauss, a, b, k, deriv, res_single)
+                assert_allclose(
+                    res_batch.get(ell - ell_min),
+                    res_single.get(0),
+                    rtol=1.0e-10,
+                    atol=1.0e-16,
+                    err_msg=f"ell={ell}, deriv={deriv}",
+                )
+
+    def test_deriv_zero_matches_integrate(self) -> None:
+        """deriv = 0 must dispatch to the plain integrate path."""
+        ell_min, ell_max = 0, 8
+        a, b, k = 0.5, 9.0, 3.0
+        n_ell = ell_max - ell_min + 1
+
+        def f_gauss(x: float, _k: float) -> float:
+            return np.exp(-0.5 * ((x - 4.0) / 1.5) ** 2)
+
+        integrator = Ncm.SBesselIntegratorLevin.new(ell_min, ell_max)
+        res_a = Ncm.Vector.new(n_ell)
+        res_b = Ncm.Vector.new(n_ell)
+
+        integrator.integrate_deriv(f_gauss, a, b, k, 0, res_a)
+        integrator.integrate(f_gauss, a, b, k, res_b)
+
+        for i in range(n_ell):
+            assert res_a.get(i) == res_b.get(i)
+
+    def test_evanescent_region_keeps_relative_precision(self) -> None:
+        """Deep small-argument tail: tiny values must stay relatively accurate."""
+        l_val = 30
+        a, b, k = 1.0, 8.0, 0.5
+        integrator = Ncm.SBesselIntegratorLevin.new(l_val, l_val)
+        result = Ncm.Vector.new(1)
+
+        def f_gauss(x: float, _k: float) -> float:
+            return np.exp(-0.5 * ((x - 4.0) / 1.2) ** 2)
+
+        integrator.integrate_deriv(f_gauss, a, b, k, 2, result)
+
+        def integrand(x: float) -> float:
+            return f_gauss(x, k) * _jl_second_deriv(l_val, np.asarray(k * x))
+
+        expected, _ = quad(integrand, a, b, limit=400, epsabs=0.0, epsrel=1e-13)
+
+        # values are ~1e-26 here; the point is relative, not absolute, accuracy
+        assert expected != 0.0
+        assert_allclose(result.get(0), expected, rtol=1.0e-9)
+
+    def test_recurrence_cross_check(self) -> None:
+        """deriv = 2 against the l-recurrence combination of plain integrals.
+
+        j_l''(y) = (l (l-1)/y^2 - 1) j_l(y) + (2/y) j_{l+1}(y), so the deriv-2
+        integral must match a combination of three deriv-0 integrals computed
+        through an independent code path.
+        """
+        l_val = 12
+        a, b, k = 0.8, 10.0, 5.0
+
+        def f_gauss(x: float, _k: float) -> float:
+            return np.exp(-0.5 * ((x - 4.0) / 1.5) ** 2)
+
+        integrator = Ncm.SBesselIntegratorLevin.new(l_val, l_val + 1)
+        result = Ncm.Vector.new(2)
+        integrator.integrate_deriv(f_gauss, a, b, k, 2, result)
+        got = result.get(0)
+
+        def f_over_y2(x: float, kk: float) -> float:
+            return f_gauss(x, kk) / (kk * x) ** 2
+
+        def f_over_y(x: float, kk: float) -> float:
+            return f_gauss(x, kk) / (kk * x)
+
+        i_f = integrator.integrate_ell(f_gauss, a, b, k, l_val)
+        i_f_y2 = integrator.integrate_ell(f_over_y2, a, b, k, l_val)
+        i_f_y1 = integrator.integrate_ell(f_over_y, a, b, k, l_val + 1)
+
+        expected = l_val * (l_val - 1.0) * i_f_y2 - i_f + 2.0 * i_f_y1
+        assert_allclose(got, expected, rtol=1.0e-9)
