@@ -17,6 +17,8 @@ from numcosmo_py.ccl.two_point import (
     angular_cl,
     bessel_transform,
     bessel_transform_block,
+    tracer_component_tables,
+    tracer_kernel,
     compute_kernel,
 )
 
@@ -92,7 +94,7 @@ def test_angular_cl_matches_ccl_non_limber(cosmology, ccl_cosmo, tracer, ell):
     `l_limber=100000` selects non-Limber and the default `-1` selects Limber
     everywhere. Getting this backwards makes a correct result look like Limber.
     """
-    got = angular_cl(cosmology, tracer, tracer, np.array([ell]), reltol=1.0e-8)[0]
+    got = angular_cl(cosmology, tracer, tracer, np.array([ell]))[0]
     ref = pyccl.angular_cl(ccl_cosmo, tracer, tracer, np.array([ell]), l_limber=100000)[
         0
     ]
@@ -100,12 +102,45 @@ def test_angular_cl_matches_ccl_non_limber(cosmology, ccl_cosmo, tracer, ell):
     assert_allclose(got, ref, rtol=3.0e-3)
 
 
-def test_outer_integral_is_converged(cosmology, tracer):
-    """The default samples-per-oscillation is enough: 4x more changes nothing."""
-    a = angular_cl(cosmology, tracer, tracer, np.array([2]), reltol=1.0e-8, n_osc=8)[0]
-    b = angular_cl(cosmology, tracer, tracer, np.array([2]), reltol=1.0e-8, n_osc=32)[0]
+def test_closure_tolerance_is_converged(cosmology, tracer):
+    """The library default closure tolerance is enough: 100x tighter changes little.
 
-    assert_allclose(a, b, rtol=1.0e-5)
+    Measured difference 8e-6 on a lensing tracer at ell 2; the bound below is
+    for a density tracer, whose closure is easier.
+    """
+    a = angular_cl(cosmology, tracer, tracer, np.array([2]))[0]
+    b = angular_cl(cosmology, tracer, tracer, np.array([2]), kernel_reltol=1.0e-6)[0]
+
+    assert_allclose(a, b, rtol=2.0e-5)
+
+
+def test_tracer_terms_map_to_component_kinds(cosmology, ccl_cosmo):
+    """Every term of a CCL tracer becomes one component of the matching kind."""
+    z = np.linspace(0.0, 2.0, 256)
+    nz = np.exp(-0.5 * ((z - 0.8) / 0.12) ** 2)
+    ones = np.ones_like(z)
+    kinds = Nc.XcorKernelTableKind
+
+    counts = pyccl.NumberCountsTracer(
+        ccl_cosmo, has_rsd=True, dndz=(z, nz), bias=(z, ones), mag_bias=(z, 0.8 * ones)
+    )
+    got = [c.get_kind() for c in tracer_component_tables(counts, cosmology)]
+    assert got == [kinds.DENSITY, kinds.RSD, kinds.CONVERGENCE]
+
+    # at s = 0.4 the magnification window 5 s - 2 vanishes and CCL emits zeros
+    cancelled = pyccl.NumberCountsTracer(
+        ccl_cosmo, has_rsd=False, dndz=(z, nz), bias=(z, ones), mag_bias=(z, 0.4 * ones)
+    )
+    got = [c.get_kind() for c in tracer_component_tables(cancelled, cosmology)]
+    assert got == [kinds.DENSITY]
+
+    shear = pyccl.WeakLensingTracer(ccl_cosmo, dndz=(z, nz))
+    got = [c.get_kind() for c in tracer_component_tables(shear, cosmology)]
+    assert got == [kinds.SHEAR]
+
+    kernel = tracer_kernel(counts, cosmology)
+    assert kernel.get_n_components() == 3
+    assert [c.get_bessel_deriv() for c in kernel.get_component_list()] == [0, 2, 0]
 
 
 def test_der_bessel_unsupported_is_explicit(cosmology, ccl_cosmo):
@@ -122,15 +157,15 @@ def test_der_bessel_unsupported_is_explicit(cosmology, ccl_cosmo):
 
 
 def test_angular_cl_spin2_weight_matches_the_lensing_kernel(cosmology, ccl_cosmo):
-    """der_bessel = -1 is integrated as the exact j_l(k chi) / (k chi)^2.
+    """A CCL WeakLensingTracer reproduces NumCosmo's exact weak-lensing kernel.
 
-    NumCosmo's own weak-lensing kernel carries that weight exactly (1 / chi^2 in
-    the component, 1 / k^2 in the transform), so a CCL WeakLensingTracer run
-    through the bridge must reproduce it at low ell, where the Limber value
-    1 / nu^2 of the same weight is 6% off at ell = 2. Measured deviations at
-    ell 2, 5, 10 with the support cut at 1e-4: 2.4e-5, 2.9e-5, 6.0e-5 (at 1e-6
-    they fall to 1.8e-6, 2.4e-6, 5e-7, for 6x the run time); the tolerance is
-    set by the cut, not by the transform.
+    The tracer becomes a SHEAR table component, so the spin-2 weight
+    j_l(k chi) / (k chi)^2 and the prefactor sqrt((l+2)(l+1)l(l-1)) are the
+    library's, applied exactly; its Limber value 1 / nu^2 would be 6% off at
+    ell = 2. What remains is the reconstruction of CCL's table and the two
+    kernels' independent closure fits: measured 3.6e-6, 6.2e-6, 8.3e-6 at
+    ell 2, 5, 10 at the default closure tolerance and 1.1e-7, 1.9e-7, 3.2e-7
+    at 1e-6, which is what is asserted.
     """
     ells = np.array([2, 5, 10])
     z = np.linspace(0.0, 2.5, 1000)
@@ -148,6 +183,8 @@ def test_angular_cl_spin2_weight_matches_the_lensing_kernel(cosmology, ccl_cosmo
         intr_shear=0.0,
         integrator=Ncm.SBesselIntegratorLevin.new(2, int(ells[-1])),
     )
+    wl_nc.set_reltol(1.0e-6)
+    wl_nc.set_scaled_abstol(1.0e-6)
     wl_nc.set_l_limber(-1)
     wl_nc.prepare(cosmology.cosmo)
 
@@ -158,9 +195,56 @@ def test_angular_cl_spin2_weight_matches_the_lensing_kernel(cosmology, ccl_cosmo
     xcor.compute(wl_nc, wl_nc, cosmology.cosmo, lmin, lmax, res)
     expected = np.array(res.dup_array())[ells - lmin]
 
-    got = angular_cl(cosmology, wl_ccl, wl_ccl, ells, support_tol=1.0e-4)
+    got = angular_cl(cosmology, wl_ccl, wl_ccl, ells, kernel_reltol=1.0e-6)
 
-    assert_allclose(got, expected, rtol=1.0e-4)
+    assert_allclose(got, expected, rtol=2.0e-6)
+
+
+def test_angular_cl_convergence_kind_matches_the_cmb_lensing_kernel(ccl_cosmo):
+    """A CCL CMBLensingTracer reproduces NumCosmo's exact CMB lensing kernel.
+
+    der_bessel = -1 with der_angles = 1 becomes a CONVERGENCE component: the
+    same 1 / (k chi)^2 weight as shear with the prefactor l (l + 1). The
+    tracer reaches the last-scattering surface, so the cosmology needs a
+    distance object inverting that far, and its source redshift must be the
+    recombination value the NumCosmo kernel uses (z_source = 1100 instead
+    leaves a 1e-4 difference that is the kernel, not the method). Measured
+    2.7e-9, 1e-11, 2e-11 at ell 2, 5, 10.
+    """
+    cosmology = create_nc_obj(ccl_cosmo, dist_z_max=1200.0)
+    ells = np.array([2, 5, 10])
+    z_lss = cosmology.dist.decoupling_redshift(cosmology.cosmo)
+
+    cmb_ccl = pyccl.CMBLensingTracer(ccl_cosmo, z_source=z_lss, n_samples=1000)
+    noise = Ncm.Vector.new(int(ells[-1]) + 1)
+    noise.set_zero()
+    cmb_nc = Nc.XcorKernelCMBLensing.new(
+        cosmology.dist, cosmology.ps_ml, cosmology.recomb, noise
+    )
+    cmb_nc.props.integrator = Ncm.SBesselIntegratorLevin.new(2, int(ells[-1]))
+    cmb_nc.set_reltol(1.0e-6)
+    cmb_nc.set_scaled_abstol(1.0e-6)
+    cmb_nc.set_l_limber(-1)
+    cmb_nc.prepare(cosmology.cosmo)
+
+    lmin, lmax = int(ells[0]), int(ells[-1])
+    res = Ncm.Vector.new(lmax - lmin + 1)
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+    xcor.prepare(cosmology.cosmo)
+    xcor.compute(cmb_nc, cmb_nc, cosmology.cosmo, lmin, lmax, res)
+    expected = np.array(res.dup_array())[ells - lmin]
+
+    got = angular_cl(cosmology, cmb_ccl, cmb_ccl, ells, kernel_reltol=1.0e-6)
+
+    assert_allclose(got, expected, rtol=1.0e-7)
+
+
+def test_tracer_beyond_the_distance_range_is_refused(cosmology, ccl_cosmo):
+    """The default cosmology inverts distances to z = 15; a CMB tracer needs more."""
+    cmb_ccl = pyccl.CMBLensingTracer(ccl_cosmo, z_source=1100.0)
+
+    with pytest.raises(ValueError, match="dist_z_max"):
+        tracer_component_tables(cmb_ccl, cosmology)
 
 
 def test_batching_agrees_within_the_error_budget(cosmology, tracer):
@@ -212,7 +296,6 @@ def test_block_size_is_clamped(cosmology, tracer):
         tracer,
         tracer,
         np.array([2, 3]),
-        reltol=1.0e-6,
         block_size=Nc.XCOR_KERNEL_MAX_ELL_BLOCK * 100,
     )
 
