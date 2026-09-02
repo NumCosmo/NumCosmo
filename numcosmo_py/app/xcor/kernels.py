@@ -186,6 +186,7 @@ class KernelNumberCountsConfig(BaseModel):
     :ivar bias: Galaxy bias parameter.
     :ivar mag_bias: Magnification bias parameter.
     :ivar domagbias: Whether to include magnification bias.
+    :ivar dorsd: Whether to include linear redshift-space distortions.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -195,6 +196,7 @@ class KernelNumberCountsConfig(BaseModel):
     bias: Annotated[float, Field(gt=0.0)] = 1.5
     mag_bias: Annotated[float, Field()] = 0.0
     domagbias: Annotated[bool, Field()] = True
+    dorsd: Annotated[bool, Field()] = False
 
     @property
     def bin_type(self) -> LSSTBinType:
@@ -228,7 +230,8 @@ class KernelNumberCountsConfig(BaseModel):
         """
         return [
             "KernelNumberCounts",
-            "survey=LSST-Y1, bin_idx=0, bias=1.5, mag_bias=0.0, domagbias=True",
+            "survey=LSST-Y1, bin_idx=0, bias=1.5, mag_bias=0.0, domagbias=True, "
+            "dorsd=False",
         ]
 
 

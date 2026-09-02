@@ -170,6 +170,32 @@ def test_view_kernel_cls_pairs() -> None:
     assert "2 kernel(s), 3 spectra" in result.output
 
 
+def test_view_kernel_number_counts_rsd() -> None:
+    """dorsd=True runs the RSD component through both tiers and the C_ell."""
+    result = runner.invoke(
+        app,
+        [
+            "xcor",
+            "kernel",
+            "view",
+            "--kernel",
+            "number-counts survey=LSST-Y1 bin_idx=0 bias=1.5 dorsd=True",
+            "--ell",
+            "2",
+            "--n-ell",
+            "2",
+            "--no-show-plot",
+            "--compare-limber",
+            "--cls",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "dorsd=True" in result.output
+    assert "Computing C_ell (non-Limber)" in result.output
+    assert "Computing C_ell (Limber)" in result.output
+
+
 def test_view_kernel_cls_compare_limber() -> None:
     """--compare-limber adds a second, Limber, C_ell computation.
 
