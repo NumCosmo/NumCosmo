@@ -1051,6 +1051,29 @@ class TestSBesselIntegratorLevinDeriv:
         for i in range(n_ell):
             assert res_a.get(i) == res_b.get(i)
 
+    def test_order_above_two_is_rejected(self) -> None:
+        """Orders above 2 have no implementation anywhere and must fail loudly.
+
+        Runs in a subprocess since g_error aborts rather than raises.
+        """
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from numcosmo_py import Ncm\n"
+                "Ncm.cfg_init()\n"
+                "sbi = Ncm.SBesselIntegratorLevin.new(0, 3)\n"
+                "res = Ncm.Vector.new(4)\n"
+                "sbi.integrate_deriv(lambda x, k: 1.0, 1.0, 2.0, 1.0, 3, res)\n",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        assert proc.returncode != 0
+        assert "not supported" in proc.stderr
+
     def test_evanescent_region_keeps_relative_precision(self) -> None:
         """Deep small-argument tail: tiny values must stay relatively accurate."""
         l_val = 30
