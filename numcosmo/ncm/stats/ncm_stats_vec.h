@@ -41,13 +41,6 @@ G_BEGIN_DECLS
 
 #define NCM_TYPE_STATS_VEC (ncm_stats_vec_get_type ())
 
-/**
- * NcmStatsVec:
- *
- * Online weighted statistics for fixed-length vectors. The object can retain
- * appended vectors for autocorrelation, effective-sample-size, and convergence
- * diagnostics.
- */
 G_DECLARE_FINAL_TYPE (NcmStatsVec, ncm_stats_vec, NCM, STATS_VEC, GObject)
 
 /**
@@ -102,16 +95,6 @@ typedef enum /*< prefix=NCM_STATS_VEC_AR >*/
   NCM_STATS_VEC_AR_LEN, /*< skip >*/
 } NcmStatsVecARType;
 
-/**
- * ncm_stats_vec_new:
- * @len: vector length
- * @t: accumulated statistics
- * @save_x: whether to retain input vectors
- *
- * Creates a statistics accumulator.
- *
- * Returns: (transfer full): a new #NcmStatsVec.
- */
 NcmStatsVec *ncm_stats_vec_new (guint len, NcmStatsVecType t, gboolean save_x);
 NcmStatsVec *ncm_stats_vec_ref (NcmStatsVec *svec);
 void ncm_stats_vec_free (NcmStatsVec *svec);
