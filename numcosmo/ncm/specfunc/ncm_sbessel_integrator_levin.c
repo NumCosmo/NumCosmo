@@ -1050,7 +1050,7 @@ _ncm_sbessel_integrator_levin_solve_rhs_and_accumulate (NcmSBesselIntegratorLevi
                                                         guint ell_min, guint ell_max,
                                                         gdouble *result_data)
 {
-  NcmSBesselIntegratorLevinBoundary bd;
+  NcmSBesselIntegratorLevinBoundary bd = {0.0, 0.0, 0.0, 0.0};
   guint ell;
 
   if (sbilv->deriv > 0)
@@ -1344,7 +1344,7 @@ _ncm_sbessel_integrator_levin_integrate_extended_panel (NcmSBesselIntegratorLevi
                                          integral_a, integral_b, &sbilv->values_result);
 
   {
-    NcmSBesselIntegratorLevinBoundary bd;
+    NcmSBesselIntegratorLevinBoundary bd = {0.0, 0.0, 0.0, 0.0};
 
     if (sbilv->deriv > 0)
       _ncm_sbessel_integrator_levin_boundary_data (sbilv, panel_a, panel_b, integral_a, integral_b, &bd);
