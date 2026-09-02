@@ -121,6 +121,46 @@ def test_der_bessel_unsupported_is_explicit(cosmology, ccl_cosmo):
         compute_kernel(wl, cosmology, 32.0)
 
 
+def test_angular_cl_spin2_weight_matches_the_lensing_kernel(cosmology, ccl_cosmo):
+    """der_bessel = -1 is integrated as the exact j_l(k chi) / (k chi)^2.
+
+    NumCosmo's own weak-lensing kernel carries that weight exactly (1 / chi^2 in
+    the component, 1 / k^2 in the transform), so a CCL WeakLensingTracer run
+    through the bridge must reproduce it at low ell, where the Limber value
+    1 / nu^2 of the same weight is 6% off at ell = 2. The tolerance is set by
+    the bridge's support cut, not by the transform.
+    """
+    ells = np.array([2, 5, 10])
+    z = np.linspace(0.0, 2.5, 1000)
+    nz = np.exp(-0.5 * ((z - 1.0) / 0.2) ** 2)
+
+    wl_ccl = pyccl.WeakLensingTracer(ccl_cosmo, dndz=(z, nz), n_samples=len(z))
+    dndz = Ncm.Spline.new_array(
+        Ncm.SplineCubicNotaknot.new(), z.tolist(), nz.tolist(), True
+    )
+    wl_nc = Nc.XcorKernelWeakLensing(
+        dist=cosmology.dist,
+        powspec=cosmology.ps_ml,
+        dndz=dndz,
+        nbar=1.0,
+        intr_shear=0.0,
+        integrator=Ncm.SBesselIntegratorLevin.new(2, int(ells[-1])),
+    )
+    wl_nc.set_l_limber(-1)
+    wl_nc.prepare(cosmology.cosmo)
+
+    lmin, lmax = int(ells[0]), int(ells[-1])
+    res = Ncm.Vector.new(lmax - lmin + 1)
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+    xcor.prepare(cosmology.cosmo)
+    xcor.compute(wl_nc, wl_nc, cosmology.cosmo, lmin, lmax, res)
+    expected = np.array(res.dup_array())[ells - lmin]
+
+    got = angular_cl(cosmology, wl_ccl, wl_ccl, ells, support_tol=1.0e-4)
+
+    assert_allclose(got, expected, rtol=1.0e-4)
+
+
 def test_batching_agrees_within_the_error_budget(cosmology, tracer):
     """A multipole's transform is the same alone or inside a block, to within the bound.
 

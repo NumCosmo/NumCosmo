@@ -23,6 +23,8 @@
 
 """Two-point correlation functions."""
 
+from typing import Callable
+
 import numpy as np
 import pyccl
 
@@ -73,7 +75,8 @@ def compute_kernel(
             case 0:
                 bessel_factors_list.append(1.0)
             case -1:
-                # j_l(x)/x^2, folded into the kernel as CCL does.
+                # j_l(x)/x^2 at the Limber point x = nu. A single-ell kernel
+                # cannot carry the exact 1/(k chi)^2; angular_cl does.
                 bessel_factors_list.append(1.0 / nu**2)
             case 1 | 2:
                 raise NotImplementedError(
@@ -148,6 +151,33 @@ def tracer_components(
     return chi_a[1:-1], [c[1:-1] for c in comps], der_bessel
 
 
+def _kernel_callback(sp: Ncm.Spline) -> Callable[[object, float, float], float]:
+    """Radial kernel callback for the integrator: the resampled table itself."""
+
+    def kernel_cb(_p: object, chi: float, _k: float) -> float:
+        return sp.eval(chi)
+
+    return kernel_cb
+
+
+def _spin2_kernel_callback(
+    sp: Ncm.Spline, slope: float, chi0: float
+) -> Callable[[object, float, float], float]:
+    """Radial kernel callback carrying the spin-2 weight 1 / chi^2.
+
+    Below the table's first sample ``chi0`` the kernel is continued linearly,
+    ``W = slope * chi``, so the callback returns ``slope / chi`` there.
+    """
+
+    def kernel_cb(_p: object, chi: float, _k: float) -> float:
+        if chi < chi0:
+            return slope / chi
+
+        return sp.eval(chi) / chi**2
+
+    return kernel_cb
+
+
 def bessel_transform_block(
     tracer: pyccl.Tracer,
     cosmology: Cosmology,
@@ -185,7 +215,6 @@ def bessel_transform_block(
     out = np.zeros((n_ell, len(k_a)))
 
     ells = np.arange(ell_min, ell_max + 1)
-    nu = ells + 0.5
 
     for comp, der in zip(comps, der_bessel):
         sp = Ncm.SplineBSpline.new_tol(reltol, 0.0)
@@ -194,26 +223,44 @@ def bessel_transform_block(
         f_ell = np.array([tracer.get_f_ell(float(ell)) for ell in ells]).reshape(
             len(ells), -1
         )
-        f_c = f_ell[:, 0] if f_ell.shape[1] == 1 else f_ell[:, 0]
-        bes = 1.0 / nu**2 if der == -1 else np.ones_like(nu, dtype=float)
+        f_c = f_ell[:, 0]
+        # der_bessel = -1 is CCL's spin-2 weight j_l(k chi) / (k chi)^2. It is
+        # separable: 1/chi^2 multiplies the radial kernel inside the solve and
+        # 1/k^2 comes out of the transform, so it is integrated exactly.
+        # Replacing it by 1/nu^2 (its Limber value, x = nu) is 6% off at
+        # ell = 2 on a lensing kernel. The weight is applied in the callback,
+        # not to the table: W ~ chi near the origin, so W / chi^2 ~ 1 / chi
+        # cannot be tabulated to the requested tolerance, while the solver's
+        # panel fits in y = k chi handle it (NumCosmo's own lensing kernel
+        # carries the same 1 / chi).
+        if der == -1:
+            # CCL's kernel table starts a few Mpc from the observer, where a
+            # lensing kernel is already linear in chi. The 1 / chi left of the
+            # first sample still contributes: at the ell = 2 peak the
+            # transform is oscillation-suppressed and the omitted piece is
+            # 0.2% of it (0.4% of C_2). Continue W linearly to the origin and
+            # integrate from far inside the first cell.
+            chi_from = 1.0e-3 * chi_min
+            kernel_cb = _spin2_kernel_callback(sp, float(comp[0]) / chi_min, chi_min)
+        else:
+            chi_from = chi_min
+            kernel_cb = _kernel_callback(sp)
+
         # positive orders are the Bessel-derivative weights (2 is CCL's RSD)
         deriv = der if der > 0 else 0
 
         block = np.zeros((n_ell, len(k_a)))
         for ik, k in enumerate(k_a):
             integ.integrate_deriv(
-                lambda _p, chi, _k, _s=sp: _s.eval(chi),
-                chi_min,
-                chi_max,
-                float(k),
-                deriv,
-                res,
-                None,
+                kernel_cb, chi_from, chi_max, float(k), deriv, res, None
             )
             for j in range(n_ell):
                 block[j, ik] = res.get(j)
 
-        out += block * (f_c * bes)[:, None]
+        if der == -1:
+            block /= k_a[None, :] ** 2
+
+        out += block * f_c[:, None]
 
     return out
 
