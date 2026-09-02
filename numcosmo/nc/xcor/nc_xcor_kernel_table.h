@@ -55,6 +55,7 @@ NcXcorKernelTable *nc_xcor_kernel_table_new_from_components (NcDistance *dist, N
 
 guint nc_xcor_kernel_table_get_n_components (NcXcorKernelTable *xckt);
 NcXcorComponentTable *nc_xcor_kernel_table_peek_component (NcXcorKernelTable *xckt, guint i);
+void nc_xcor_kernel_table_replace_samples (NcXcorKernelTable *xckt, guint i, NcmVector *chi, NcmVector *W);
 
 NcXcorKernelTableKind nc_xcor_kernel_table_get_kind (NcXcorKernelTable *xckt);
 guint nc_xcor_kernel_table_get_order (NcXcorKernelTable *xckt);

@@ -14,6 +14,7 @@ import pyccl
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams
 from numcosmo_py.ccl.two_point import (
+    TracerClSolver,
     angular_cl,
     bessel_transform,
     bessel_transform_block,
@@ -238,6 +239,43 @@ def test_angular_cl_convergence_kind_matches_the_cmb_lensing_kernel(
     got = angular_cl(cosmology, cmb_ccl, cmb_ccl, ells, kernel_reltol=1.0e-6)
 
     assert_allclose(got, expected, rtol=1.0e-7)
+
+
+def test_tracer_cl_solver_updates_in_place(cosmology, ccl_cosmo, tracer):
+    """A persistent solver fed new tracer tables reproduces the one-shot answer.
+
+    The kernels, blocks and per-block integrators are built once; a step
+    replaces the window samples in place and re-solves. The result must equal
+    a fresh one-shot solve on the new tracers, and the integrators must be the
+    same objects before and after.
+    """
+    ells = np.array([2, 3, 4, 5])
+    z = np.linspace(0.0, 2.0, 512)
+    nz_shifted = np.exp(-0.5 * ((z - 0.9) / 0.12) ** 2)
+    shifted = pyccl.NumberCountsTracer(
+        ccl_cosmo, has_rsd=False, dndz=(z, nz_shifted), bias=(z, np.ones_like(z))
+    )
+
+    solver = TracerClSolver(cosmology, [tracer], [(0, 0)], ells)
+    first = solver.solve()
+    integrators = [
+        solver.solver.peek_block_integrator(b)
+        for b in range(solver.solver.get_n_blocks())
+    ]
+
+    solver.update_tracers([shifted])
+    second = solver.solve()
+    assert not np.allclose(second, first, rtol=1.0e-2)
+    assert integrators == [
+        solver.solver.peek_block_integrator(b)
+        for b in range(solver.solver.get_n_blocks())
+    ]
+
+    one_shot = angular_cl(cosmology, shifted, shifted, ells)
+    assert_allclose(second[0], one_shot, rtol=1.0e-12)
+
+    with pytest.raises(ValueError, match="tracers"):
+        solver.update_tracers([tracer, tracer])
 
 
 def test_batching_agrees_within_the_error_budget(cosmology, tracer):

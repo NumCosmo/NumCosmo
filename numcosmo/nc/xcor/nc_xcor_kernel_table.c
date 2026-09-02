@@ -511,6 +511,27 @@ nc_xcor_kernel_table_peek_component (NcXcorKernelTable *xckt, guint i)
 }
 
 /**
+ * nc_xcor_kernel_table_replace_samples:
+ * @xckt: a #NcXcorKernelTable
+ * @i: component index
+ * @chi: a #NcmVector of sample comoving distances in Mpc
+ * @W: a #NcmVector of window samples
+ *
+ * Replaces the samples of the @i-th component in place (see
+ * nc_xcor_component_table_set_samples()) and marks the kernel outdated, so its
+ * next nc_xcor_kernel_prepare_if_needed() prepares again. The kernel object,
+ * and with it its registration in a #NcXcorSolver and the solver's per-block
+ * integrators, is unchanged: this is the per-step update of a sampler whose
+ * windows come from a tabulating code.
+ */
+void
+nc_xcor_kernel_table_replace_samples (NcXcorKernelTable *xckt, guint i, NcmVector *chi, NcmVector *W)
+{
+  nc_xcor_component_table_set_samples (nc_xcor_kernel_table_peek_component (xckt, i), chi, W);
+  nc_xcor_kernel_mark_outdated (NC_XCOR_KERNEL (xckt));
+}
+
+/**
  * nc_xcor_kernel_table_get_kind:
  * @xckt: a #NcXcorKernelTable
  *

@@ -83,6 +83,7 @@ gdouble nc_xcor_component_table_get_norm (NcXcorComponentTable *xcct);
 NcmSpline *nc_xcor_component_table_peek_spline (NcXcorComponentTable *xcct);
 NcmVector *nc_xcor_component_table_peek_knots (NcXcorComponentTable *xcct);
 
+void nc_xcor_component_table_set_samples (NcXcorComponentTable *xcct, NcmVector *chi, NcmVector *W);
 void nc_xcor_component_table_get_support (NcXcorComponentTable *xcct, gdouble *chi_min, gdouble *chi_max);
 gdouble nc_xcor_component_table_eval_W (NcXcorComponentTable *xcct, gdouble chi);
 gdouble nc_xcor_component_table_eval_kernel_factor (NcXcorComponentTable *xcct, gdouble chi, gdouble k);

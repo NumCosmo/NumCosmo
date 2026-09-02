@@ -204,61 +204,66 @@ _nc_xcor_component_table_kind_has_inverse_square (NcXcorKernelTableKind kind)
 }
 
 static void
+_nc_xcor_component_table_build (NcXcorComponentTable *xcct)
+{
+  gsize first, last, n;
+  NcmVector *chi_t, *W_t;
+
+  if ((xcct->chi == NULL) || (xcct->W == NULL))
+    g_error ("nc_xcor_component_table: both chi and W must be given.");
+
+  if (ncm_vector_len (xcct->chi) != ncm_vector_len (xcct->W))
+    g_error ("nc_xcor_component_table: chi and W have different lengths (%u != %u).",
+             ncm_vector_len (xcct->chi), ncm_vector_len (xcct->W));
+
+  if (ncm_vector_len (xcct->chi) < xcct->order)
+    g_error ("nc_xcor_component_table: a degree %u reconstruction needs at least %u samples, got %u.",
+             xcct->order - 1, xcct->order, ncm_vector_len (xcct->chi));
+
+  _nc_xcor_component_table_trim (xcct->W, &first, &last);
+  n = last - first + 1;
+
+  if (n < xcct->order)
+    g_error ("nc_xcor_component_table: the window's support holds %u samples, "
+             "fewer than the %u a degree %u reconstruction needs.",
+             (guint) n, xcct->order, xcct->order - 1);
+
+  chi_t = ncm_vector_get_subvector (xcct->chi, first, n);
+  W_t   = ncm_vector_get_subvector (xcct->W, first, n);
+
+  ncm_spline_clear (&xcct->spline);
+  xcct->spline  = NCM_SPLINE (ncm_spline_bspline_new_full (xcct->order, chi_t, W_t, TRUE));
+  xcct->chi_min = ncm_vector_get (chi_t, 0);
+  xcct->chi_max = ncm_vector_get (chi_t, n - 1);
+
+  xcct->norm = xcct->normalize ?
+               ncm_spline_eval_integ (xcct->spline, xcct->chi_min, xcct->chi_max) : 1.0;
+
+  if (!gsl_finite (xcct->norm) || (xcct->norm == 0.0))
+    g_error ("nc_xcor_component_table: the tabulated window integrates to %g over "
+             "[%g, %g] Mpc; it cannot be normalized.", xcct->norm, xcct->chi_min, xcct->chi_max);
+
+  /* See the class documentation: 1/(k chi)^2 kinds cannot start at the origin. */
+  if (_nc_xcor_component_table_kind_has_inverse_square (xcct->kind) && (xcct->chi_min < NC_XCOR_COMPONENT_TABLE_CHI_FLOOR))
+  {
+    if (xcct->chi_max <= NC_XCOR_COMPONENT_TABLE_CHI_FLOOR)
+      g_error ("nc_xcor_component_table: a window with a 1/(k chi)^2 weight must extend "
+               "beyond %g Mpc.", NC_XCOR_COMPONENT_TABLE_CHI_FLOOR);
+
+    xcct->chi_min = NC_XCOR_COMPONENT_TABLE_CHI_FLOOR;
+  }
+
+  ncm_vector_free (chi_t);
+  ncm_vector_free (W_t);
+}
+
+static void
 nc_xcor_component_table_constructed (GObject *object)
 {
   /* Chain up : start */
   G_OBJECT_CLASS (nc_xcor_component_table_parent_class)->constructed (object);
-  {
-    NcXcorComponentTable *xcct = NC_XCOR_COMPONENT_TABLE (object);
-    gsize first, last, n;
-    NcmVector *chi_t, *W_t;
 
-    if ((xcct->chi == NULL) || (xcct->W == NULL))
-      g_error ("nc_xcor_component_table_constructed: both chi and W must be given.");
-
-    if (ncm_vector_len (xcct->chi) != ncm_vector_len (xcct->W))
-      g_error ("nc_xcor_component_table_constructed: chi and W have different lengths (%u != %u).",
-               ncm_vector_len (xcct->chi), ncm_vector_len (xcct->W));
-
-    if (ncm_vector_len (xcct->chi) < xcct->order)
-      g_error ("nc_xcor_component_table_constructed: a degree %u reconstruction needs at least %u samples, got %u.",
-               xcct->order - 1, xcct->order, ncm_vector_len (xcct->chi));
-
-    _nc_xcor_component_table_trim (xcct->W, &first, &last);
-    n = last - first + 1;
-
-    if (n < xcct->order)
-      g_error ("nc_xcor_component_table_constructed: the window's support holds %u samples, "
-               "fewer than the %u a degree %u reconstruction needs.",
-               (guint) n, xcct->order, xcct->order - 1);
-
-    chi_t = ncm_vector_get_subvector (xcct->chi, first, n);
-    W_t   = ncm_vector_get_subvector (xcct->W, first, n);
-
-    xcct->spline  = NCM_SPLINE (ncm_spline_bspline_new_full (xcct->order, chi_t, W_t, TRUE));
-    xcct->chi_min = ncm_vector_get (chi_t, 0);
-    xcct->chi_max = ncm_vector_get (chi_t, n - 1);
-
-    xcct->norm = xcct->normalize ?
-                 ncm_spline_eval_integ (xcct->spline, xcct->chi_min, xcct->chi_max) : 1.0;
-
-    if (!gsl_finite (xcct->norm) || (xcct->norm == 0.0))
-      g_error ("nc_xcor_component_table_constructed: the tabulated window integrates to %g over "
-               "[%g, %g] Mpc; it cannot be normalized.", xcct->norm, xcct->chi_min, xcct->chi_max);
-
-    /* See the class documentation: 1/(k chi)^2 kinds cannot start at the origin. */
-    if (_nc_xcor_component_table_kind_has_inverse_square (xcct->kind) && (xcct->chi_min < NC_XCOR_COMPONENT_TABLE_CHI_FLOOR))
-    {
-      if (xcct->chi_max <= NC_XCOR_COMPONENT_TABLE_CHI_FLOOR)
-        g_error ("nc_xcor_component_table_constructed: a window with a 1/(k chi)^2 weight must extend "
-                 "beyond %g Mpc.", NC_XCOR_COMPONENT_TABLE_CHI_FLOOR);
-
-      xcct->chi_min = NC_XCOR_COMPONENT_TABLE_CHI_FLOOR;
-    }
-
-    ncm_vector_free (chi_t);
-    ncm_vector_free (W_t);
-  }
+  _nc_xcor_component_table_build (NC_XCOR_COMPONENT_TABLE (object));
 }
 
 static void
@@ -522,6 +527,30 @@ NcmVector *
 nc_xcor_component_table_peek_knots (NcXcorComponentTable *xcct)
 {
   return ncm_spline_peek_xv (xcct->spline);
+}
+
+/**
+ * nc_xcor_component_table_set_samples:
+ * @xcct: a #NcXcorComponentTable
+ * @chi: a #NcmVector of sample comoving distances in Mpc
+ * @W: a #NcmVector of window samples
+ *
+ * Replaces the tabulated samples and rebuilds the reconstruction, keeping the
+ * kind, order and normalization. The table may change length. This is how a
+ * sampler feeds a new cosmology's window into a kernel that stays registered
+ * with its #NcXcorSolver, so the solver's per-block integrators survive the
+ * step; the owning kernel must be told through nc_xcor_kernel_mark_outdated(),
+ * which nc_xcor_kernel_table_replace_samples() does.
+ */
+void
+nc_xcor_component_table_set_samples (NcXcorComponentTable *xcct, NcmVector *chi, NcmVector *W)
+{
+  ncm_vector_clear (&xcct->chi);
+  ncm_vector_clear (&xcct->W);
+  xcct->chi = ncm_vector_ref (chi);
+  xcct->W   = ncm_vector_ref (W);
+
+  _nc_xcor_component_table_build (xcct);
 }
 
 /**

@@ -23,7 +23,7 @@
 
 """Two-point correlation functions."""
 
-from typing import Callable
+from typing import Callable, Sequence
 
 import numpy as np
 import pyccl
@@ -328,13 +328,11 @@ _KIND_BY_DERIVATIVES = {
 }
 
 
-def tracer_component_tables(
+def tracer_component_arrays(
     tracer: pyccl.Tracer,
     cosmology: Cosmology,
-    *,
-    order: int = 8,
-) -> list[Nc.XcorComponentTable]:
-    r"""One :class:`Nc.XcorComponentTable` per term of a CCL tracer.
+) -> list[tuple[np.ndarray, np.ndarray, Nc.XcorKernelTableKind]]:
+    r"""The ``(chi, W, kind)`` of every non-zero term of a CCL tracer.
 
     Each term keeps its own chi grid; a term whose window is identically zero
     is dropped. The window is ``W(chi) * transfer(a) * D(z)``
@@ -357,8 +355,6 @@ def tracer_component_tables(
     what it is given, so the 4000-sample table costs seven times the 1000-sample
     one for the same C_ell (2e-8 of peak from NumCosmo's own lensing kernel
     either way). CCL's analytic CMB lensing kernel has no such floor.
-
-    :param order: B-spline order of the reconstruction (degree ``order - 1``).
     """
     cosmo = cosmology.cosmo
     dist = cosmology.dist
@@ -378,7 +374,7 @@ def tracer_component_tables(
     der_bessel = [int(d) for d in tracer.get_bessel_derivative()]
     der_angles = [int(d) for d in tracer.get_angles_derivative()]
 
-    comps = []
+    terms = []
     for i, (chi_a, W_a, der, ang) in enumerate(
         zip(chi_list, Wchi_list, der_bessel, der_angles)
     ):
@@ -400,19 +396,33 @@ def tracer_component_tables(
         a_a = 1.0 / (1.0 + z_a)
         transfer = np.asarray(tracer.get_transfer(0.0, a_a)[i], dtype=float)
         D_a = np.array([gf.eval(cosmo, float(zz)) for zz in z_a])
-        W = W_a * transfer * D_a
+        terms.append((chi_a, W_a * transfer * D_a, kind))
 
-        comps.append(
-            Nc.XcorComponentTable.new_full(
-                Ncm.Vector.new_array(chi_a.tolist()),
-                Ncm.Vector.new_array(W.tolist()),
-                kind,
-                order,
-                False,
-            )
+    return terms
+
+
+def tracer_component_tables(
+    tracer: pyccl.Tracer,
+    cosmology: Cosmology,
+    *,
+    order: int = 8,
+) -> list[Nc.XcorComponentTable]:
+    r"""One :class:`Nc.XcorComponentTable` per non-zero term of a CCL tracer.
+
+    See :func:`tracer_component_arrays` for what each table holds.
+
+    :param order: B-spline order of the reconstruction (degree ``order - 1``).
+    """
+    return [
+        Nc.XcorComponentTable.new_full(
+            Ncm.Vector.new_array(chi_a.tolist()),
+            Ncm.Vector.new_array(W.tolist()),
+            kind,
+            order,
+            False,
         )
-
-    return comps
+        for chi_a, W, kind in tracer_component_arrays(tracer, cosmology)
+    ]
 
 
 def tracer_kernel(
@@ -455,6 +465,109 @@ def tracer_kernel(
     return kernel
 
 
+class TracerClSolver:
+    r"""Persistent non-Limber solver for a set of CCL tracers.
+
+    Built once for a set of tracers, the pairs wanted and the multipoles; the
+    kernels stay registered with one :class:`Nc.XcorSolver`, whose blocks and
+    per-block Levin integrators (the factorised operators, the expensive part of
+    a cold solve) then survive every step of a chain. Per step, hand it the
+    tracers recomputed at the new cosmology with :meth:`update_tracers`, which
+    replaces the window samples inside the existing kernels, and call
+    :meth:`solve`. Kernels are re-prepared only when the cosmology, their
+    parameters or their tables moved.
+
+    :param tracers: the CCL tracers, one kernel each.
+    :param pairs: ``(i, j)`` indices into ``tracers`` for the spectra wanted.
+    :param ells: the multipoles, requested one by one; contiguous runs merge into
+        blocks of up to ``block_size`` sharing one operator factorisation.
+    :param order: B-spline order of the window reconstruction.
+    :param kernel_reltol: closure tolerance for every kernel; see :func:`tracer_kernel`.
+    :param block_size: largest number of consecutive multipoles per block,
+        clamped to what the solver honours.
+    """
+
+    def __init__(
+        self,
+        cosmology: Cosmology,
+        tracers: Sequence[pyccl.Tracer],
+        pairs: Sequence[tuple[int, int]],
+        ells: np.ndarray,
+        *,
+        order: int = 8,
+        kernel_reltol: float | None = None,
+        block_size: int = 8,
+    ) -> None:
+        self.cosmology = cosmology
+        self.ells = np.atleast_1d(np.asarray(ells, dtype=int))
+        self.pairs = [(int(a), int(b)) for a, b in pairs]
+        self.order = order
+        self.kernels = [
+            tracer_kernel(t, cosmology, order=order, kernel_reltol=kernel_reltol)
+            for t in tracers
+        ]
+
+        cache_max = Ncm.SBesselIntegratorLevin.new(0, 0).get_ell_cache_max()
+        block_size = max(1, min(block_size, Nc.XCOR_KERNEL_MAX_ELL_BLOCK, cache_max))
+
+        self.solver = Nc.XcorSolver.new()
+        ids = [self.solver.register_kernel(k) for k in self.kernels]
+        for a, b in self.pairs:
+            for ell in self.ells:
+                self.solver.request_cl(ids[a], ids[b], int(ell), int(ell))
+        self.solver.plan_blocks(block_size)
+
+        self.xcor = Nc.Xcor.new(
+            cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT
+        )
+
+    def update_tracers(self, tracers: Sequence[pyccl.Tracer]) -> None:
+        """Replace every kernel's window samples with the tracers' current ones.
+
+        The tracers must have the same non-zero terms, in the same order and of
+        the same kinds, as the ones the solver was built with; the tables may
+        change length. The NumCosmo cosmology the windows are converted with is
+        ``self.cosmology``, which the caller moves in place alongside CCL's.
+        """
+        if len(tracers) != len(self.kernels):
+            raise ValueError(
+                f"expected {len(self.kernels)} tracers, got {len(tracers)}"
+            )
+
+        for kernel, tracer in zip(self.kernels, tracers):
+            terms = tracer_component_arrays(tracer, self.cosmology)
+            if len(terms) != kernel.get_n_components():
+                raise ValueError(
+                    f"tracer has {len(terms)} non-zero terms, kernel has "
+                    f"{kernel.get_n_components()} components"
+                )
+
+            for i, (chi_a, W, kind) in enumerate(terms):
+                if kernel.peek_component(i).get_kind() != kind:
+                    raise ValueError(f"component {i} changed kind to {kind}")
+
+                kernel.replace_samples(
+                    i,
+                    Ncm.Vector.new_array(chi_a.tolist()),
+                    Ncm.Vector.new_array(W.tolist()),
+                )
+
+    def solve(self) -> np.ndarray:
+        """Compute every requested spectrum; shape ``(len(pairs), len(ells))``."""
+        cosmo = self.cosmology.cosmo
+        self.xcor.prepare(cosmo)
+        self.solver.solve(self.xcor, cosmo)
+
+        out = np.empty((len(self.pairs), len(self.ells)))
+        r = 0
+        for p in range(len(self.pairs)):
+            for i in range(len(self.ells)):
+                out[p, i] = self.solver.get_result(r).get(0)
+                r += 1
+
+        return out
+
+
 def angular_cl(
     cosmology: Cosmology,
     tracer1: pyccl.Tracer,
@@ -471,42 +584,24 @@ def angular_cl(
         C_\ell = \frac{2}{\pi}\int dk\, k^2 P_{\rm lin}(k)\,
                  \Delta^1_\ell(k)\,\Delta^2_\ell(k)
 
-    The tracers are CCL's; everything else is :class:`Nc.XcorSolver` on
-    :func:`tracer_kernel` kernels with the exact kernel-space method: the k
-    domain is discovered, the knots are placed adaptively, each kernel's closure
-    is shared across every pair and multipole block that needs it, and the
-    outer integral is exact on the closure. Multipoles are requested one by one;
-    contiguous runs merge into blocks of up to ``block_size``, which share one
-    operator factorisation.
+    One-shot form of :class:`TracerClSolver`: builds the kernels and the solver,
+    solves once and returns. Every call pays the per-block operator setup; a
+    chain should keep a :class:`TracerClSolver` instead.
 
     :param order: B-spline order of the window reconstruction.
     :param kernel_reltol: closure tolerance for both kernels; see :func:`tracer_kernel`.
-    :param block_size: largest number of consecutive multipoles per block. Clamped
-        to what the solver honours: NC_XCOR_KERNEL_MAX_ELL_BLOCK and the
-        integrator's ell_cache_max.
+    :param block_size: largest number of consecutive multipoles per block.
     """
-    ells = np.atleast_1d(np.asarray(ells, dtype=int))
-    cache_max = Ncm.SBesselIntegratorLevin.new(0, 0).get_ell_cache_max()
-    block_size = max(1, min(block_size, Nc.XCOR_KERNEL_MAX_ELL_BLOCK, cache_max))
-
-    kernel_1 = tracer_kernel(
-        tracer1, cosmology, order=order, kernel_reltol=kernel_reltol
+    tracers = [tracer1] if tracer2 is tracer1 else [tracer1, tracer2]
+    pair = (0, 0) if tracer2 is tracer1 else (0, 1)
+    solver = TracerClSolver(
+        cosmology,
+        tracers,
+        [pair],
+        ells,
+        order=order,
+        kernel_reltol=kernel_reltol,
+        block_size=block_size,
     )
-    kernel_2 = (
-        kernel_1
-        if tracer2 is tracer1
-        else tracer_kernel(tracer2, cosmology, order=order, kernel_reltol=kernel_reltol)
-    )
 
-    solver = Nc.XcorSolver.new()
-    id_1 = solver.register_kernel(kernel_1)
-    id_2 = id_1 if kernel_2 is kernel_1 else solver.register_kernel(kernel_2)
-    for ell in ells:
-        solver.request_cl(id_1, id_2, int(ell), int(ell))
-    solver.plan_blocks(block_size)
-
-    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-    xcor.prepare(cosmology.cosmo)
-    solver.solve(xcor, cosmology.cosmo)
-
-    return np.array([solver.get_result(i).get(0) for i in range(len(ells))])
+    return solver.solve()[0]
