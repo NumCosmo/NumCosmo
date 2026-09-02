@@ -1139,10 +1139,10 @@ _nc_data_cluster_wl_factor_eval_m2lnP_lnint (NcDataClusterWLFactor *dcwlf, NcmMS
   gdouble result                            = 0.0;
   guint i;
 
-  /* LNINT never substitutes NC_GALAXY_LOW_PROB -- it skips a non-finite galaxy
-   * and stores NaN -- so its count is genuinely zero. Reset it anyway, or
-   * get_low_prob_count() would report a stale count from an earlier
-   * FIXED_NODES/CUBATURE evaluation on the same object. */
+  /* LNINT never substitutes NC_GALAXY_LOW_PROB -- it skips a non-finite galaxy and
+   * stores NaN -- so its count is zero. Reset it anyway, or get_low_prob_count() would
+   * report a stale count from an earlier FIXED_NODES/CUBATURE evaluation on the same
+   * object. */
   self->low_prob_count = 0;
 
   if (m2lnP_gal != NULL)
