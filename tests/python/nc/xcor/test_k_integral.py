@@ -512,8 +512,18 @@ TRUTH_TABLE = "truth_tables/xcor/xcor_kquad.json.gz"
 # Measured over the 43 certified entries, with headroom. These are loose
 # because one regime is genuinely bad and the table says so rather than hiding
 # it: on the far-separated pair at ell = 2 the spline closure is wrong by 435%
-# of the pair's own scale. The tight statement is the comparative test below.
-CERTIFIED_TOLERANCE = {"spline": 1.5e1, "chebyshev": 1.0e-1}
+# of the pair's own scale. The chebyshev worst is that same pair at ell = 50,
+# 1.04e-2 of scale, on a certified value eleven orders below the pair's peak.
+# The tight statement is the comparative test below.
+#
+# A loose gate has a cost, paid once already: the X9 entries were certified
+# with the generator's side-b leak (kdep applied to both windows), putting
+# the reference 5.3% off at ell = 50, and both closures' agreement with each
+# other while sitting 2.9e-2 from the table stayed under the old chebyshev
+# gate of 1e-1. A tolerance-independent, closure-independent deviation is a
+# wrong reference, not a bad fit -- worth a ladder check before widening
+# either number here.
+CERTIFIED_TOLERANCE = {"spline": 1.5e1, "chebyshev": 3.0e-2}
 
 
 @pytest.fixture(name="certified", scope="module")
@@ -617,6 +627,8 @@ def test_spectral_closure_is_closer_to_certified_truth(certified: dict) -> None:
 
     closer = sum(1 for s, c in zip(spline, chebyshev) if c < s)
 
-    # Measured: closer in 34 of 43, median 9.0e-6 against 5.9e-5.
+    # Measured: closer in 36 of 43, median 4.0e-6 against 1.8e-5. (An earlier
+    # 34-of-43 was taken against X9 entries certified with the generator's
+    # side-b leak; the library was right and the table was wrong there.)
     assert closer >= 0.7 * len(spline)
     assert np.median(chebyshev) < 0.5 * np.median(spline)
