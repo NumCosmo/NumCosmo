@@ -194,11 +194,23 @@ typedef struct _NcDataClusterWLFactorPrivate
   /* Per-galaxy auto-nodes calibration (FIXED_NODES only): instead of every
    * galaxy using the global (n_nodes, rule_n), calibrate each galaxy's own
    * minimal fixed Gauss-Legendre configuration reaching node_reltol, via
-   * ncm_integral_fixed_calibrate(). Opt-in, default off (matches every
-   * other orchestrator knob's own opt-in convention). */
+   * ncm_integral_fixed_calibrate(). Opt-in, default off: the selection is
+   * discrete, so a grid flip steps the marginal by up to node_reltol and the
+   * likelihood is only piecewise continuous in anything that rebuilds the
+   * grid (z_cl, or any redshift-factor parameter). Mass is unaffected --
+   * fixed_grid_changed deliberately ignores radius/optzs (see
+   * _nc_data_cluster_wl_factor_prepare). */
   gboolean auto_nodes;
   gdouble node_reltol;
   guint max_total_nodes;
+
+  /* How many NC_GALAXY_LOW_PROB substitutions happened during the LAST eval_m2lnP. Zeroed at the top of every evaluation. */
+  guint low_prob_count;
+
+  /* Auto-node calibration outcome for the LAST grid rebuild: how many galaxies
+   * failed to reach node_reltol, and the worst relative error among them. */
+  guint calib_unconverged;
+  gdouble calib_worst_relerr;
 
   /* Per-galaxy fixed-node grid: index i pairs with shape_data's element i.
    * fixed_bg_nodes[i] is NULL when galaxy i's redshift support lies entirely
@@ -207,6 +219,19 @@ typedef struct _NcDataClusterWLFactorPrivate
   GPtrArray *fixed_bg_nodes;     /* element type: NcmIntegralFixed* */
   GPtrArray *z_nodes_per_galaxy; /* element type: NcmVector* */
   GArray *fixed_norm;            /* element type: gdouble */
+
+  /* Per-galaxy background P(z) mass Q_bg[P], accumulated with exactly the
+   * nodes and weights the shape integral uses. Pairs with fixed_fg_norm as the
+   * denominator of _fixed_panels_integ's self-normalised ratio (see there);
+   * 0 for fully-foreground galaxies. */
+  GArray *fixed_bg_norm; /* element type: gdouble */
+
+  /* Per-galaxy FOREGROUND P(z) mass Q_fg[P], accumulated with its own fixed
+   * Gauss-Legendre panel over [z_lo, z_cl]. Non-negative by construction, and
+   * consistent with fixed_bg_norm (both are quadratures, neither is exact), so
+   * the self-normalised combine in _fixed_panels_integ never mixes an exact
+   * mass with a quadrature one. 0 when the galaxy has no foreground. */
+  GArray *fixed_fg_norm; /* element type: gdouble */
 
   /* Per-galaxy background node count (n_nodes-1)*rule_n selected by the
    * auto-nodes calibration (or the global value when auto_nodes is off,
@@ -399,6 +424,8 @@ _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
   guint rule_n_i  = self->rule_n;
   guint n_total_i = 0;
   gdouble z_lo, z_hi, norm;
+  gdouble bg_norm = 0.0;
+  gdouble fg_norm = 0.0;
   gboolean has_bg;
   NcmIntegralFixed *bg_intf;
   NcmVector *z_nodes;
@@ -418,7 +445,15 @@ _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
       gsl_function F                          = { &_nc_data_cluster_wl_factor_calib_pz, &calib_arg };
       gsl_function G                          = { &_nc_data_cluster_wl_factor_calib_shape, &calib_arg };
       const gdouble exact_bg_norm             = (z_lo >= self->z_cl) ? norm : GSL_NAN;
-      NcmIntegralFixed *cal                   = ncm_integral_fixed_calibrate (&F, &G, bg_lo, z_hi, self->node_reltol, exact_bg_norm, self->max_total_nodes, &n_nodes_i, &rule_n_i);
+      gdouble relerr                          = 0.0;
+      NcmIntegralFixed *cal                   = ncm_integral_fixed_calibrate (&F, &G, bg_lo, z_hi, self->node_reltol, exact_bg_norm, self->max_total_nodes, &n_nodes_i, &rule_n_i, &relerr);
+
+      /* Accumulate rather than warn: summarised once per prepare() below. */
+      if (relerr > self->node_reltol)
+      {
+        self->calib_unconverged++;
+        self->calib_worst_relerr = MAX (self->calib_worst_relerr, relerr);
+      }
 
       ncm_integral_fixed_free (cal);
     }
@@ -430,6 +465,18 @@ _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
 
     ncm_integral_fixed_get_nodes (bg_intf, z_nodes_bg);
     ncm_vector_free (z_nodes_bg);
+
+    /* Background P(z) mass on exactly these nodes and weights. Depends only on
+     * the redshift factor and the node layout -- no fitted parameter -- so it
+     * is computed once per grid build and reused by every likelihood
+     * evaluation. */
+    {
+      NcmVector *ones = ncm_vector_new (n_total_i);
+
+      ncm_vector_set_all (ones, 1.0);
+      bg_norm = ncm_integral_fixed_integ_vec_mult (bg_intf, ones);
+      ncm_vector_free (ones);
+    }
   }
   else
   {
@@ -437,11 +484,24 @@ _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
     z_nodes = ncm_vector_new (1);
   }
 
+  /* Foreground P(z) mass on its own panel, only when the support straddles
+   * z_cl: with no background the exact @norm is already the whole mass, and
+   * with no foreground there is nothing to integrate. */
+  if (has_bg && (z_lo < self->z_cl))
+  {
+    NcmIntegralFixed *fg_intf = nc_galaxy_redshift_factor_make_fixed_nodes (self->redshift_factor, mset, s_data->z_data, z_lo, self->z_cl, n_nodes_i, rule_n_i);
+
+    fg_norm = ncm_integral_fixed_nodes_eval (fg_intf);
+    ncm_integral_fixed_free (fg_intf);
+  }
+
   ncm_vector_set (z_nodes, 0, z_lo);
 
   g_ptr_array_index (self->fixed_bg_nodes, gal_i)        = bg_intf;
   g_ptr_array_index (self->z_nodes_per_galaxy, gal_i)    = z_nodes;
   g_array_index (self->fixed_norm, gdouble, gal_i)       = norm;
+  g_array_index (self->fixed_bg_norm, gdouble, gal_i)    = bg_norm;
+  g_array_index (self->fixed_fg_norm, gdouble, gal_i)    = fg_norm;
   g_array_index (self->n_total_per_galaxy, guint, gal_i) = n_total_i;
 }
 
@@ -493,6 +553,8 @@ _fixed_nodes_grid_reset (NcDataClusterWLFactorPrivate *self)
   g_ptr_array_set_size (self->z_nodes_per_galaxy, self->shape_data->len);
 
   g_array_set_size (self->fixed_norm, self->shape_data->len);
+  g_array_set_size (self->fixed_bg_norm, self->shape_data->len);
+  g_array_set_size (self->fixed_fg_norm, self->shape_data->len);
 
   g_array_set_size (self->n_total_per_galaxy, 0);
   g_array_set_size (self->n_total_per_galaxy, self->shape_data->len);
@@ -540,6 +602,7 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->auto_nodes      = FALSE;
   self->node_reltol     = 1.0e-4;
   self->max_total_nodes = 2000;
+  self->low_prob_count  = 0;
 
   /* No destroy-func on fixed_bg_nodes: entries are nullable (NcmIntegralFixed
    * is not NULL-safe to free), so clearing/resizing this array is handled
@@ -549,6 +612,8 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->fixed_bg_nodes                   = g_ptr_array_new ();
   self->z_nodes_per_galaxy               = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
   self->fixed_norm                       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->fixed_bg_norm                    = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->fixed_fg_norm                    = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->n_total_per_galaxy               = g_array_new (FALSE, FALSE, sizeof (guint));
   self->fixed_nodes_zcl                  = GSL_NAN;
   self->fixed_nodes_n_nodes_seen         = 0;
@@ -730,6 +795,8 @@ _nc_data_cluster_wl_factor_dispose (GObject *object)
   g_clear_pointer (&self->fixed_bg_nodes, g_ptr_array_unref);
   g_clear_pointer (&self->z_nodes_per_galaxy, g_ptr_array_unref);
   g_clear_pointer (&self->fixed_norm, g_array_unref);
+  g_clear_pointer (&self->fixed_bg_norm, g_array_unref);
+  g_clear_pointer (&self->fixed_fg_norm, g_array_unref);
   g_clear_pointer (&self->n_total_per_galaxy, g_array_unref);
 
   /* Chain up: end */
@@ -1010,6 +1077,9 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   {
     guint gal_i;
 
+    self->calib_unconverged  = 0;
+    self->calib_worst_relerr = 0.0;
+
     for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
     {
       NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_i);
@@ -1019,6 +1089,15 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
         steps[j](self, mset, s_data, gal_i);
     }
   }
+
+  /* One line per prepare() instead of one per galaxy. */
+  if (self->calib_unconverged > 0)
+    g_warning ("nc_data_cluster_wl_factor: auto-node calibration did not reach "
+               "node-reltol %g for %u of %u galaxies (worst relative error %g). "
+               "Raise max-total-nodes, or loosen node-reltol to a value this "
+               "integrand can actually reach.",
+               self->node_reltol, self->calib_unconverged,
+               self->shape_data->len, self->calib_worst_relerr);
 }
 
 /* Combine two adaptive sub-integrals split at z_cl. Each panel returns
@@ -1059,6 +1138,12 @@ _nc_data_cluster_wl_factor_eval_m2lnP_lnint (NcDataClusterWLFactor *dcwlf, NcmMS
   const guint n_iter                        = use_bootstrap ? ncm_bootstrap_get_bsize (bstrap) : self->shape_data->len;
   gdouble result                            = 0.0;
   guint i;
+
+  /* LNINT never substitutes NC_GALAXY_LOW_PROB -- it skips a non-finite galaxy and
+   * stores NaN -- so its count is zero. Reset it anyway, or get_low_prob_count() would
+   * report a stale count from an earlier FIXED_NODES/CUBATURE evaluation on the same
+   * object. */
+  self->low_prob_count = 0;
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
@@ -1107,27 +1192,57 @@ _nc_data_cluster_wl_factor_eval_m2lnP_lnint (NcDataClusterWLFactor *dcwlf, NcmMS
 }
 
 /* Integrates the shape values at @shape_at_nodes against galaxy @gal_i's
- * precomputed P(z)-weighted background quadrature using a control-variate
- * form: P_gal = p_a * norm + Int_bg P(z) [P(e_o,z) - p_a] dz, where @p_a is
- * the anchor value (index 0) and @norm is the exact full-support P(z)
- * normalization -- algebraically exact, and never places a quadrature
- * interval across the non-smooth point at z_cl (the foreground is handled
- * analytically through @norm). */
+ * precomputed P(z)-weighted quadrature, as a self-normalised ratio:
+ *
+ *   P_gal = norm * Q[P(z) P(e_o,z)] / Q[P(z)]
+ *
+ * Both quadratures use the same nodes and weights, split at z_cl so no
+ * interval crosses the non-smooth point there. P(e_o,z) is constant in z in
+ * front of the lens, so the foreground panel contributes analytically through
+ * @p_a (index 0) and its cached mass Q_fg[P] (fixed_fg_norm):
+ *
+ *   P_gal = norm * (p_a Q_fg[P] + Q_bg[P P(e_o,z)]) / (Q_fg[P] + Q_bg[P])
+ *
+ * NON-NEGATIVE BY CONSTRUCTION, with no clamp or branch to get wrong: every
+ * P(z_k) >= 0, every Gauss-Legendre weight is positive, p_a > 0 and
+ * P(e_o,z) > 0 (both are probability densities), and norm > 0.
+ *
+ * The exact @norm enters as an overall scale rather than inside a
+ * subtraction. That is the whole point: computing the foreground mass as
+ * (exact norm) - (quadrature background) mixes an exact quantity with an
+ * approximate one, and the difference can come out negative on a coarse grid
+ * -- which drove P_gal negative and substituted the flat NC_GALAXY_LOW_PROB.
+ *
+ * The ratio also carries the optimal control-variate coefficient for free.
+ * Writing Q[P] = norm + e1 and Q[P P(e_o,z)] = Int P P(e_o,z) + e2, the error
+ * is e2 - Sbar e1 with Sbar the P-weighted mean of P(e_o,z) -- where an
+ * anchored control variate would give e2 - p_a e1 against the endpoint value
+ * p_a. Hence this form is more accurate than the anchored one at every
+ * resolution, not merely safer. */
 static gdouble
 _nc_data_cluster_wl_factor_fixed_panels_integ (NcDataClusterWLFactorPrivate * const self, guint gal_i, NcmVector *shape_at_nodes, NcmVector *sub)
 {
   NcmIntegralFixed *bg_intf = (NcmIntegralFixed *) g_ptr_array_index (self->fixed_bg_nodes, gal_i);
   const gdouble norm        = g_array_index (self->fixed_norm, gdouble, gal_i);
+  const gdouble bg_norm     = g_array_index (self->fixed_bg_norm, gdouble, gal_i);
+  const gdouble fg_norm     = g_array_index (self->fixed_fg_norm, gdouble, gal_i);
   const gdouble p_a         = ncm_vector_get (shape_at_nodes, 0);
-  gdouble P                 = p_a * norm;
+  const gdouble mass_Q      = fg_norm + bg_norm;
+  gdouble num;
 
-  if (bg_intf != NULL)
-  {
-    ncm_vector_add_constant (sub, -p_a);
-    P += ncm_integral_fixed_integ_vec_mult (bg_intf, sub);
-  }
+  if (bg_intf == NULL)
+    return p_a * norm;
 
-  return P;
+  num = p_a * fg_norm + ncm_integral_fixed_integ_vec_mult (bg_intf, sub);
+
+  /* Degenerate grid: the quadrature sees no P(z) mass at all, so the ratio is
+   * undefined. Returning 0 routes into the caller's NC_GALAXY_LOW_PROB path,
+   * which counts the substitution and makes it visible through
+   * nc_data_cluster_wl_factor_get_low_prob_count(). */
+  if (mass_Q <= 0.0)
+    return 0.0;
+
+  return norm * (num / mass_Q);
 }
 
 static gdouble
@@ -1152,7 +1267,8 @@ _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMS
   for (gal_i = 0; gal_i < self->n_total_per_galaxy->len; gal_i++)
     max_n_total = MAX (max_n_total, g_array_index (self->n_total_per_galaxy, guint, gal_i));
 
-  shape_at_nodes = ncm_vector_new (max_n_total + 1);
+  shape_at_nodes       = ncm_vector_new (max_n_total + 1);
+  self->low_prob_count = 0;
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
@@ -1178,8 +1294,17 @@ _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMS
 
     nc_galaxy_shape_factor_eval_at_nodes (self->shape_factor, mset, s_data, z_nodes, nodes_view);
 
-    P_gal       = _nc_data_cluster_wl_factor_fixed_panels_integ (self, gal_i, shape_at_nodes, sub) * int_pos;
-    m2lnP_gal_i = P_gal > 0.0 ? -2.0 * log (P_gal) : NC_GALAXY_LOW_PROB;
+    P_gal = _nc_data_cluster_wl_factor_fixed_panels_integ (self, gal_i, shape_at_nodes, sub) * int_pos;
+
+    if (P_gal > 0.0)
+    {
+      m2lnP_gal_i = -2.0 * log (P_gal);
+    }
+    else
+    {
+      m2lnP_gal_i = NC_GALAXY_LOW_PROB;
+      self->low_prob_count++;
+    }
 
     if (nodes_view != shape_at_nodes)
       ncm_vector_free (nodes_view);
@@ -1221,7 +1346,12 @@ _nc_data_cluster_wl_factor_cubature_integrate (NcDataClusterWLFactorPrivate * co
 
   P_gal = ncm_vector_fast_get (self->cub_res, 0);
 
-  return P_gal > 0.0 ? -2.0 * log (P_gal) : NC_GALAXY_LOW_PROB;
+  if (P_gal > 0.0)
+    return -2.0 * log (P_gal);
+
+  self->low_prob_count++;
+
+  return NC_GALAXY_LOW_PROB;
 }
 
 static gdouble
@@ -1234,6 +1364,8 @@ _nc_data_cluster_wl_factor_eval_m2lnP_cubature (NcDataClusterWLFactor *dcwlf, Nc
   const guint n_iter                        = use_bootstrap ? ncm_bootstrap_get_bsize (bstrap) : self->shape_data->len;
   gdouble result                            = 0.0;
   guint gal_i, i;
+
+  self->low_prob_count = 0;
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
@@ -2007,6 +2139,28 @@ nc_data_cluster_wl_factor_get_max_total_nodes (NcDataClusterWLFactor *dcwlf)
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   return self->max_total_nodes;
+}
+
+/**
+ * nc_data_cluster_wl_factor_get_low_prob_count:
+ * @dcwlf: a #NcDataClusterWLFactor
+ *
+ * Number of galaxies whose marginal probability evaluated non-positive during
+ * the most recent likelihood evaluation, and for which the flat
+ * NC_GALAXY_LOW_PROB fallback was therefore substituted in place of
+ * -2ln(P_gal).
+ *
+ * Reset to zero at the start of every evaluation, so it always describes the
+ * last one.
+ *
+ * Returns: the number of low-probability substitutions in the last evaluation.
+ */
+guint
+nc_data_cluster_wl_factor_get_low_prob_count (NcDataClusterWLFactor *dcwlf)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  return self->low_prob_count;
 }
 
 /**

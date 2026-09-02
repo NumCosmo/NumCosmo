@@ -45,6 +45,8 @@ static void test_ncm_integral_fixed_get_nodes (gconstpointer pdata);
 static void test_ncm_integral_fixed_integ_vec_mult (gconstpointer pdata);
 static void test_ncm_integral_fixed_vec_mult_constant (gconstpointer pdata);
 static void test_ncm_integral_fixed_calibrate (void);
+static void test_ncm_integral_fixed_calibrate_relerr_unconverged (void);
+static void test_ncm_integral_fixed_calibrate_warns (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -82,6 +84,8 @@ main (gint argc, gchar *argv[])
   }
 
   g_test_add_func ("/ncm/integral_fixed/calibrate", test_ncm_integral_fixed_calibrate);
+  g_test_add_func ("/ncm/integral_fixed/calibrate_relerr_unconverged", test_ncm_integral_fixed_calibrate_relerr_unconverged);
+  g_test_add_func ("/ncm/integral_fixed/calibrate_warns", test_ncm_integral_fixed_calibrate_warns);
 
   g_test_run ();
 
@@ -295,12 +299,16 @@ test_ncm_integral_fixed_calibrate (void)
   guint n_nodes = 0, rule_n = 0;
   NcmIntegralFixed *intf;
   gdouble I_sel, I_truth, mass_sel;
+  gdouble relerr = GSL_NAN;
 
-  intf = ncm_integral_fixed_calibrate (&F, &G, xl, xu, reltol, exact_F, max_tot, &n_nodes, &rule_n);
+  intf = ncm_integral_fixed_calibrate (&F, &G, xl, xu, reltol, exact_F, max_tot, &n_nodes, &rule_n, &relerr);
 
   g_assert_nonnull (intf);
   g_assert_cmpuint (n_nodes, >=, 2);
   g_assert_cmpuint (rule_n, >=, 1);
+
+  /* On success the reported achieved error is <= the requested tolerance. */
+  g_assert_cmpfloat (relerr, <=, reltol);
   g_assert_cmpuint ((n_nodes - 1) * rule_n, <=, max_tot);
 
   /* Integral of F*G at the selected config. */
@@ -329,6 +337,91 @@ test_ncm_integral_fixed_calibrate (void)
     g_assert_false (_calib_config_passes (&F, &G, xl, xu, n_nodes - 1, rule_n, reltol, I_truth, exact_F));
 
   ncm_integral_fixed_free (intf);
+}
+
+/* A target no fixed rule can reach inside the node budget: 1e-14 relative on a
+ * narrow Gaussian with at most 30 total nodes. Shared by the two tests below so
+ * they differ in exactly one thing -- whether @relerr_out is NULL. */
+#define CALIB_UNCONV_RELTOL (1.0e-14)
+#define CALIB_UNCONV_MAX_TOT (30)
+
+static NcmIntegralFixed *
+_calib_unconverged (gdouble *relerr_out, guint *n_nodes_out, guint *rule_n_out)
+{
+  static GaussArg garg  = { 0.4, 0.25 };
+  const gdouble xl      = -6.0;
+  const gdouble xu      = 6.0;
+  gsl_function F        = {_f_gauss, &garg};
+  gsl_function G        = {_g_tilt, NULL};
+  const gdouble exact_F = 0.5 * (erf ((xu - garg.mu) / (M_SQRT2 * garg.sigma)) -
+                                 erf ((xl - garg.mu) / (M_SQRT2 * garg.sigma)));
+
+  return ncm_integral_fixed_calibrate (&F, &G, xl, xu, CALIB_UNCONV_RELTOL, exact_F,
+                                       CALIB_UNCONV_MAX_TOT, n_nodes_out, rule_n_out,
+                                       relerr_out);
+}
+
+/* Unconverged, @relerr_out NON-NULL: the caller has taken over reporting, so
+ * calibrate() must hand back the best relative error it found and stay SILENT.
+ * This is what lets nc_data_cluster_wl_factor -- which calibrates once per
+ * galaxy -- aggregate into one warning per prepare() instead of thousands. */
+static void
+test_ncm_integral_fixed_calibrate_relerr_unconverged (void)
+{
+  if (g_test_subprocess ())
+  {
+    guint n_nodes = 0, rule_n = 0;
+    gdouble relerr           = GSL_NAN;
+    NcmIntegralFixed *intf   = _calib_unconverged (&relerr, &n_nodes, &rule_n);
+
+    /* A usable fallback rule is still returned, within the node budget. */
+    g_assert_nonnull (intf);
+    g_assert_cmpuint (n_nodes, >=, 2);
+    g_assert_cmpuint (rule_n, >=, 1);
+    g_assert_cmpuint ((n_nodes - 1) * rule_n, <=, CALIB_UNCONV_MAX_TOT);
+
+    /* The achieved error is reported, is a real number, and honestly exceeds
+     * the target that could not be met. */
+    g_assert_true (gsl_finite (relerr));
+    g_assert_cmpfloat (relerr, >, CALIB_UNCONV_RELTOL);
+
+    ncm_integral_fixed_free (intf);
+
+    return; /* LCOV_EXCL_LINE */
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_passed ();
+  g_test_trap_assert_stderr_unmatched ("*did not reach reltol*");
+}
+
+/* Unconverged, @relerr_out NULL: nobody else is reporting, so the historical
+ * per-call warning must still fire. Pins the "NULL preserves today's behaviour
+ * exactly" guarantee the nullable out-parameter was added under -- every other
+ * caller in the tree passes NULL.
+ *
+ * Uses g_test_expect_message rather than this suite's more common
+ * g_test_trap_subprocess: the trap works (g_test_init makes g_warning fatal, so
+ * the child aborts on the expected message), but a process killed by abort()
+ * never flushes its gcov counters, which would leave the very warning line
+ * under test reported as uncovered. Expecting the message keeps it in-process
+ * and non-fatal, so the branch is both asserted and counted. */
+static void
+test_ncm_integral_fixed_calibrate_warns (void)
+{
+  guint n_nodes = 0, rule_n = 0;
+
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*did not reach reltol*");
+
+  ncm_integral_fixed_free (_calib_unconverged (NULL, &n_nodes, &rule_n));
+
+  g_test_assert_expected_messages ();
+
+  /* The fallback configuration is still usable and still inside the budget --
+   * failing to converge must not mean failing to return a rule. */
+  g_assert_cmpuint (n_nodes, >=, 2);
+  g_assert_cmpuint (rule_n, >=, 1);
+  g_assert_cmpuint ((n_nodes - 1) * rule_n, <=, CALIB_UNCONV_MAX_TOT);
 }
 
 /* Trivial sanity: F(x)=1, G(x)=c => integral = c*(xu-xl) */
