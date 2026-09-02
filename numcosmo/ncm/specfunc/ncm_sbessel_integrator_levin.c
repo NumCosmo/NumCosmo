@@ -821,8 +821,8 @@ _ncm_sbessel_integrator_levin_build_rhs (NcmSBesselIntegratorLevin *sbilv, gdoub
       ncm_spectral_gegenbauer_alpha2_xmul (sbilv->deriv_gegen_coeffs, half, mid, &sbilv->gegen_coeffs);
       break;
     }
-    default:
-      g_assert_not_reached ();
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
   }
 
   _ncm_sbessel_integrator_levin_build_rhs_from_gegen (sbilv);
@@ -1465,37 +1465,6 @@ _ncm_sbessel_integrator_levin_get_ell_threshold (NcmSBesselIntegratorLevin *sbil
   return (guint) floor (b);
 }
 
-/*
- * Pointwise spherical Bessel weight of the direct cubature path: j_ell, its
- * first derivative, or its second derivative, from the precomputed j array.
- * The second derivative uses the homogeneous ODE,
- * j_ell'' = -(2/y) j_ell' + (ell (ell+1)/y^2 - 1) j_ell.
- */
-static gdouble
-_ncm_sbessel_integrator_levin_jl_weight (guint deriv, guint ell, gdouble y, const gdouble *jl)
-{
-  switch (deriv)
-  {
-    case 0:
-      return jl[ell];
-
-    case 1:
-      return ncm_sf_sbessel_jl_deriv_from_array (ell, y, jl);
-
-    default:
-    {
-      if (y == 0.0)
-        return (ell == 0) ? -1.0 / 3.0 : ((ell == 2) ? 2.0 / 15.0 : 0.0);
-
-      {
-        const gdouble jp = ncm_sf_sbessel_jl_deriv_from_array (ell, y, jl);
-
-        return -2.0 / y * jp + (ell * (ell + 1.0) / (y * y) - 1.0) * jl[ell];
-      }
-    }
-  }
-}
-
 static void
 _ncm_sbessel_integrator_levin_integrate_direct (NcmSBesselIntegratorLevin *sbilv,
                                                 const guint ell_min, guint ell_max,
@@ -1510,6 +1479,11 @@ _ncm_sbessel_integrator_levin_integrate_direct (NcmSBesselIntegratorLevin *sbilv
   NcmSBesselIntegratorLevinWrapper wrapper = {F, k, user_data};
   guint i, ell;
 
+  /* The derivative-weighted integrals are implemented by the Levin path only. */
+  if (sbilv->deriv > 0)                                                         /* LCOV_EXCL_LINE */
+    g_error ("ncm_sbessel_integrator_levin: the direct cubature path does not " /* LCOV_EXCL_LINE */
+             "support Bessel-derivative weights; only the Levin path does.");  /* LCOV_EXCL_LINE */
+
   g_assert_cmpuint (ncm_vector_stride (result), ==, 1);
   /* Initialize direct results to zero */
   memset (result_ptr, 0, sizeof (gdouble) * (ell_max - ell_min + 1));
@@ -1523,7 +1497,7 @@ _ncm_sbessel_integrator_levin_integrate_direct (NcmSBesselIntegratorLevin *sbilv
 
     for (ell = ell_min; ell <= ell_max; ell++)
     {
-      result_ptr[ell - ell_min] = fa * _ncm_sbessel_integrator_levin_jl_weight (sbilv->deriv, ell, y_min, sbilv->jl_arr);
+      result_ptr[ell - ell_min] = fa * sbilv->jl_arr[ell];
     }
   }
 
@@ -1538,7 +1512,7 @@ _ncm_sbessel_integrator_levin_integrate_direct (NcmSBesselIntegratorLevin *sbilv
 
     for (ell = ell_min; ell <= ell_max; ell++)
     {
-      result_ptr[ell - ell_min] += weight * fy * _ncm_sbessel_integrator_levin_jl_weight (sbilv->deriv, ell, y, sbilv->jl_arr);
+      result_ptr[ell - ell_min] += weight * fy * sbilv->jl_arr[ell];
     }
   }
 
@@ -1550,7 +1524,7 @@ _ncm_sbessel_integrator_levin_integrate_direct (NcmSBesselIntegratorLevin *sbilv
 
     for (ell = ell_min; ell <= ell_max; ell++)
     {
-      result_ptr[ell - ell_min] += fb * _ncm_sbessel_integrator_levin_jl_weight (sbilv->deriv, ell, y_max, sbilv->jl_arr);
+      result_ptr[ell - ell_min] += fb * sbilv->jl_arr[ell];
     }
   }
 

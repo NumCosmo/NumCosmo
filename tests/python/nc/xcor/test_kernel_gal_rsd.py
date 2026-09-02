@@ -31,6 +31,8 @@ the derivative-weighted Levin solve; the kernel-space Limber tier peak-
 approximates the j_l and j_{l+1} pieces of the recurrence separately.
 """
 
+import gc
+
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
@@ -205,3 +207,45 @@ def test_rsd_growth_rate_matches_ccl(ccl_cosmo, cosmology) -> None:
     f_ccl = ccl_cosmo.growth_rate(1.0 / (1.0 + z_a))
 
     assert_allclose(f_nc, f_ccl, rtol=1.0e-6)
+
+
+def test_rsd_component_list_and_properties(cosmology, dndz_arrays) -> None:
+    """dorsd adds one component of Bessel-derivative order 2 beside the density one."""
+    kernel = _nc_gal_kernel(cosmology, dndz_arrays, dorsd=True, lmax=10)
+    assert kernel.get_property("dorsd") is True
+
+    comps = kernel.get_component_list()
+    orders = sorted(c.get_bessel_deriv() for c in comps)
+    assert orders == [0, 2]
+
+    rsd = next(c for c in comps if c.get_bessel_deriv() == 2)
+    assert rsd.get_property("bessel-deriv") == 2
+
+    kernel_plain = _nc_gal_kernel(cosmology, dndz_arrays, dorsd=False, lmax=10)
+    assert kernel_plain.get_property("dorsd") is False
+    assert [c.get_bessel_deriv() for c in kernel_plain.get_component_list()] == [0]
+
+    # dropping the kernel disposes the RSD component and its data
+    del comps, rsd, kernel
+    gc.collect()
+
+
+def test_deriv_one_limber_matches_exact_at_high_ell(cosmology, dndz_arrays) -> None:
+    """A j_l'-weighted component: the two-point Limber peak formula vs the exact solve.
+
+    No physical kernel uses order 1 yet, so this reconfigures the density
+    component; the point is that both tiers implement the same integral.
+    """
+    ell = 200
+
+    kernel = _nc_gal_kernel(cosmology, dndz_arrays, dorsd=False, lmax=ell)
+    comp = kernel.get_component_list()[0]
+    comp.set_bessel_deriv(1)
+    assert comp.get_bessel_deriv() == 1
+
+    exact = _nc_cl(cosmology, kernel, np.array([ell]), l_limber=-1)
+    limber = _nc_cl(cosmology, kernel, np.array([ell]), l_limber=0)
+
+    assert exact[0] > 0.0
+    # measured: -8.4e-3 at ell = 200 (the Limber error of this suppressed integral)
+    assert_allclose(limber, exact, rtol=2.0e-2)
