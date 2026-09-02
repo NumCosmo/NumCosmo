@@ -1171,10 +1171,7 @@ nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo)
  * the last scattering surface of the cosmic microwave background photons.
  *
  * This function computes $z_\star$ using [nc_hicosmo_z_lss()], if @cosmo implements
- * it. Otherwise, if the @dist object contains a #NcRecomb object, it obtains
- * $z_\star$ from the recombination history, as the redshift of the maximum of the
- * visibility function [nc_recomb_get_v_tau_max_z()]. Otherwise, it computes $z_\star$
- * using Hu & Sugiyama fitting formula [Hu (1996)](https://arxiv.org/abs/astro-ph/9510117),
+ * it, or using Hu & Sugiyama fitting formula [Hu (1996)](https://arxiv.org/abs/astro-ph/9510117),
  * $$ z_\star = 1048 \left(1 + 1.24 \times 10^{-3}  (\Omega_{b0} h^2)^{-0.738}\right) \left(1 + g_1 (\Omega_{m0} h^2)^{g_2}\right),$$
  * where $\Omega_{b0} h^2$ [nc_hicosmo_Omega_b0h2()] and $\Omega_{m0} h^2$ [nc_hicosmo_Omega_m0h2()]
  * are, respectively, the baryonic and matter density parameters times the square
@@ -1183,18 +1180,24 @@ nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo)
  * $$g_1 = \frac{0.0783 (\Omega_{b0} h^2)^{-0.238}}{(1 + 39.5 (\Omega_{b0} h^2)^{0.763})}
  * \; \text{and} \; g_2 = \frac{0.56}{\left(1 + 21.1 (\Omega_{b0} h^2)^{1.81}\right)}.$$
  *
+ * A #NcRecomb attached to @dist does not change the result. The published CMB
+ * distance priors quote $z_\star$, $R$ and $l_A$ in the convention of the fitting
+ * formula above, which is the convention their means were computed in, so the
+ * quantities derived from $z_\star$ -- [nc_distance_shift_parameter()],
+ * [nc_distance_acoustic_scale()], [nc_distance_theta100CMB()] -- have to be evaluated
+ * in it as well. The $\tau = 1$ redshift of a recombination history is available
+ * through [nc_recomb_get_tau_z()].
+ *
  * Returns: $z_\star$.
  */
 gdouble
 nc_distance_decoupling_redshift (NcDistance *dist, NcHICosmo *cosmo)
 {
+  NCM_UNUSED (dist);
+
   if (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_z_lss))
   {
     return nc_hicosmo_z_lss (cosmo);
-  }
-  else if (dist->recomb != NULL)
-  {
-    return nc_recomb_get_v_tau_max_z (dist->recomb, cosmo);
   }
   else
   {
