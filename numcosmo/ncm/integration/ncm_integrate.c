@@ -1184,6 +1184,11 @@ _ncm_integral_fixed_calib_try (gsl_function *F, gsl_function *G, gdouble xl, gdo
  * @max_total_nodes: ceiling on the total node count $(n_\mathrm{nodes}-1)\,r$.
  * @n_nodes_out: (out): receives the selected number of nodes.
  * @rule_n_out: (out): receives the selected Gauss-Legendre rule order.
+ * @relerr_out: (out) (nullable): receives the relative error actually achieved,
+ *   which is <= @reltol on success and the best found otherwise. Pass %NULL to
+ *   keep the built-in per-call warning; pass non-%NULL to silence it and take
+ *   responsibility for reporting. Callers that calibrate in a loop should do the
+ *   latter and report once, not once per element.
  *
  * Searches the $(n_\mathrm{nodes}, \mathrm{rule}_n)$ configuration space for the
  * fixed Gauss-Legendre rule of minimal *total* node count whose estimate of
@@ -1209,7 +1214,7 @@ _ncm_integral_fixed_calib_try (gsl_function *F, gsl_function *G, gdouble xl, gdo
  * #ncm_integral_fixed_calc_nodes).
  */
 NcmIntegralFixed *
-ncm_integral_fixed_calibrate (gsl_function *F, gsl_function *G, gdouble xl, gdouble xu, gdouble reltol, gdouble exact_F_integ, gulong max_total_nodes, guint *n_nodes_out, guint *rule_n_out)
+ncm_integral_fixed_calibrate (gsl_function *F, gsl_function *G, gdouble xl, gdouble xu, gdouble reltol, gdouble exact_F_integ, gulong max_total_nodes, guint *n_nodes_out, guint *rule_n_out, gdouble *relerr_out)
 {
   /* Reference resolution scaled to the target tolerance. A fixed Gauss-Legendre
    * rule resolves a piecewise-smooth weight at ~4th order, so panels growing as
@@ -1337,10 +1342,18 @@ ncm_integral_fixed_calibrate (gsl_function *F, gsl_function *G, gdouble xl, gdou
   {
     best_n_nodes = fb_n_nodes;
     best_rule_n  = fb_rule_n;
-    g_warning ("ncm_integral_fixed_calibrate: did not reach reltol %g within %lu total nodes "
-               "(best rel error %g at n_nodes=%lu, rule_n=%lu).",
-               reltol, max_total_nodes, fb_err, best_n_nodes, best_rule_n);
+
+    /* Silent when the caller asked for the achieved error: it is then reporting
+     * on our behalf, and this function is called in a per-element loop where one
+     * warning each is thousands of duplicates. */
+    if (relerr_out == NULL)
+      g_warning ("ncm_integral_fixed_calibrate: did not reach reltol %g within %lu total nodes "
+                 "(best rel error %g at n_nodes=%lu, rule_n=%lu).",
+                 reltol, max_total_nodes, fb_err, best_n_nodes, best_rule_n);
   }
+
+  if (relerr_out != NULL)
+    *relerr_out = converged ? reltol : fb_err;
 
   if (n_nodes_out != NULL)
     *n_nodes_out = (guint) best_n_nodes;
