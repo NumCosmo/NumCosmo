@@ -193,10 +193,10 @@ _truth_eval (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, guint nrows, NcDataClu
   return v;
 }
 
-/* The shipped default: FIXED_NODES with auto-nodes on, each galaxy getting its
- * own calibrated (n_nodes, rule_n) at node-reltol. Pinning _truth_eval off
- * above would otherwise leave this matrix -- the repo's strongest cross-method
- * check -- never touching the configuration users actually get. */
+/* The opt-in auto-nodes configuration: FIXED_NODES with each galaxy getting
+ * its own calibrated (n_nodes, rule_n) at node-reltol. _truth_eval pins
+ * auto-nodes off above, so without this arm the matrix -- the repo's strongest
+ * cross-method check -- would never touch the calibrated grid. */
 static NcmVector *
 _truth_eval_auto (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, guint nrows)
 {
@@ -519,11 +519,11 @@ test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *te
   _truth_cmp ("LNINT vs golden", vL, test->golden, 1.0e-6, abstol);
   _truth_cmp ("CUBATURE vs golden", vC, test->golden, 1.0e-6, abstol);
 
-  /* Auto-nodes -- the shipped default -- targets the node-reltol default of
-   * 1e-2 per galaxy, so it is held to a bar set by that tolerance, not by the
-   * 1e-6 the three pinned arms above meet. It is here to prove the default
-   * configuration integrates the right thing at all, not to re-prove
-   * convergence. */
+  /* Auto-nodes targets node-reltol per galaxy (1e-4 by default, and the
+   * calibration may stop short of it), so it is held to a bar set by that
+   * tolerance, not by the 1e-6 the three pinned arms above meet. It is here
+   * to prove the calibrated configuration integrates the right thing at all,
+   * not to re-prove convergence. */
   _truth_cmp ("AUTO_NODES vs golden", vA, test->golden, 5.0e-2, GSL_MAX (abstol, 1.0e-3));
 
   ncm_vector_free (vF);

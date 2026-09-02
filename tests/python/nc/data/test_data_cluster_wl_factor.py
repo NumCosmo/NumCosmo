@@ -608,8 +608,8 @@ def test_foreground_and_background_galaxies_mix():
     # the global grid, while with it on each gets its own size -- the case where
     # a misalignment between fixed_bg_nodes/fixed_bg_norm/n_total_per_galaxy and
     # the foreground entry would actually bite. The tolerances differ only
-    # because auto-nodes targets node-reltol (1e-2 by default), not because the
-    # claim differs.
+    # because auto-nodes targets node-reltol rather than the fixed grid's
+    # resolution, not because the claim differs.
     for auto_nodes, rtol in ((False, 1.0e-5), (True, 1.0e-2)):
         dcwlf.set_auto_nodes(auto_nodes)
         fixed_gal = Ncm.Vector.new(len(galaxies))
