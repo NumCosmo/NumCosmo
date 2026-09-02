@@ -430,11 +430,16 @@ main (int argc, char **argv)
       }
       else
       {
+        /* b keeps its own par_init state plus the shared numeric defaults.
+         * It must never start as a copy of a's parsed window: a latched
+         * field such as kdep_on has no "off" argument, so the copy silently
+         * applied a's scale dependence to b as well -- the X9 entries of the
+         * committed truth table were certified with that leak. */
         if (isauto)
         {
-          b = a;
-          acb_init (b.k);
-          isauto = 0;
+          b.n_sigma = 4.0;
+          b.n_scale = 6.0;
+          isauto    = 0;
         }
 
         parse_window (&b, key, eq + 1);
