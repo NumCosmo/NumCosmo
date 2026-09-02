@@ -682,3 +682,4 @@ test_nc_data_cluster_wl_factor_truth_cross_shape (void)
   ncm_mset_clear (&mset);
   ncm_rng_free (rng);
 }
+
