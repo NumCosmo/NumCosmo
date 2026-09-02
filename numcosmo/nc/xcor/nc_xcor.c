@@ -234,10 +234,29 @@ nc_xcor_class_init (NcXcorClass *klass)
    * pointwise methods are indifferent to it, but they read the same property,
    * so no computation mixes the two representations.
    *
-   * The spline default is what every method has been calibrated against.
-   * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV samples the same function over the same
-   * domain and differs only in what is fitted to it, so a computation can be
-   * switched over and the two compared directly.
+   * Both closures sample the same function over the same domain and differ
+   * only in what is fitted to it, so a computation can be switched over and
+   * the two compared directly. Measured against the certified Arb C_ell
+   * table (43 entries, 17 pairs): the Chebyshev closure is closer in 36 of
+   * 43, its median deviation is 4.5x smaller at every tolerance rung, it has
+   * no catastrophic regime -- the spline at loose tolerance returns the
+   * wrong sign at 31x the pair scale on a far-separated pair -- and it costs
+   * 6% more at the median (32% at the 90th percentile) on the same workload.
+   *
+   * The default stays %NC_XCOR_KERNEL_CLOSURE_SPLINE despite that
+   * measurement, for two reasons that gate a flip. Under Limber the closure
+   * is always a spline, so with a Chebyshev default a pair whose kernels sit
+   * in different tiers -- one multipole block Limber for one kernel and not
+   * for the other, which any two kernels with different #NcXcorKernel:l-limber
+   * values produce -- hands %NC_XCOR_METHOD_KERNEL_EXACT one spline-backed
+   * and one panel-backed integrand, a mixed pair it cannot integrate and
+   * aborts on. And the spectral (panel x panel) exact path returns no error
+   * estimate, so the flip would silently withdraw error reporting from the
+   * default configuration. Flip the default once the exact method integrates
+   * mixed pairs and the spectral path carries an estimate. The spline also
+   * stays as the independent cross-check: a deviation both closures share at
+   * every tolerance is a wrong reference, not a bad fit, and that diagnostic
+   * needs two structurally different representations.
    *
    * It applies to the non-Limber closure only. Under Limber each multipole is
    * supported on its own band and zero outside it, so the block's window
