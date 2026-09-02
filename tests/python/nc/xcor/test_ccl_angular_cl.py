@@ -200,18 +200,19 @@ def test_angular_cl_spin2_weight_matches_the_lensing_kernel(cosmology, ccl_cosmo
     assert_allclose(got, expected, rtol=2.0e-6)
 
 
-def test_angular_cl_convergence_kind_matches_the_cmb_lensing_kernel(ccl_cosmo):
+def test_angular_cl_convergence_kind_matches_the_cmb_lensing_kernel(
+    cosmology, ccl_cosmo
+):
     """A CCL CMBLensingTracer reproduces NumCosmo's exact CMB lensing kernel.
 
     der_bessel = -1 with der_angles = 1 becomes a CONVERGENCE component: the
     same 1 / (k chi)^2 weight as shear with the prefactor l (l + 1). The
-    tracer reaches the last-scattering surface, so the cosmology needs a
-    distance object inverting that far, and its source redshift must be the
-    recombination value the NumCosmo kernel uses (z_source = 1100 instead
-    leaves a 1e-4 difference that is the kernel, not the method). Measured
-    2.7e-9, 1e-11, 2e-11 at ell 2, 5, 10.
+    tracer reaches the last-scattering surface; the adapter extends the
+    distance object's reach as every kernel does, so the default cosmology
+    serves. Its source redshift must be the recombination value the NumCosmo
+    kernel uses (z_source = 1100 instead leaves a 1e-4 difference that is the
+    kernel, not the method). Measured 2.7e-9, 1e-11, 2e-11 at ell 2, 5, 10.
     """
-    cosmology = create_nc_obj(ccl_cosmo, dist_z_max=1200.0)
     ells = np.array([2, 5, 10])
     z_lss = cosmology.dist.decoupling_redshift(cosmology.cosmo)
 
@@ -237,14 +238,6 @@ def test_angular_cl_convergence_kind_matches_the_cmb_lensing_kernel(ccl_cosmo):
     got = angular_cl(cosmology, cmb_ccl, cmb_ccl, ells, kernel_reltol=1.0e-6)
 
     assert_allclose(got, expected, rtol=1.0e-7)
-
-
-def test_tracer_beyond_the_distance_range_is_refused(cosmology, ccl_cosmo):
-    """The default cosmology inverts distances to z = 15; a CMB tracer needs more."""
-    cmb_ccl = pyccl.CMBLensingTracer(ccl_cosmo, z_source=1100.0)
-
-    with pytest.raises(ValueError, match="dist_z_max"):
-        tracer_component_tables(cmb_ccl, cosmology)
 
 
 def test_batching_agrees_within_the_error_budget(cosmology, tracer):

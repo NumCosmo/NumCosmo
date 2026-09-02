@@ -313,7 +313,7 @@ def test_component_kinds_fix_weight_factor_and_prefactor():
 
 
 def test_component_with_inverse_square_weight_never_starts_at_the_origin():
-    """A lensing table from chi = 0: the support starts a thousandth of the first positive sample in."""
+    """A lensing table from chi = 0: the support starts at the fixed floor, 0.01 Mpc."""
     chi = np.linspace(0.0, 3000.0, 301)
     W = chi * np.exp(-chi / 1000.0)  # linear at the origin, as a lensing kernel is
     dens = _component(chi, W)
@@ -323,7 +323,7 @@ def test_component_with_inverse_square_weight_never_starts_at_the_origin():
     lo_s, hi_s = shear.get_support()
 
     assert lo_d == 0.0
-    assert_allclose(lo_s, 1.0e-3 * chi[1], rtol=1e-14)
+    assert lo_s == Nc.XCOR_COMPONENT_TABLE_CHI_FLOOR == 1.0e-2
     assert hi_s == hi_d
 
 

@@ -48,9 +48,13 @@
  * For the kinds that carry $1/(k\chi)^2$ the reported support never starts at
  * the origin. A lensing window is linear in $\chi$ there, so $W/\chi^2$ is a
  * $1/\chi$ the solver handles but the origin itself is not a valid lower limit;
- * when the table's support starts at $\chi = 0$ it is moved to a thousandth
- * of the first positive sample. The window omitted below that point is
- * $\sim W'(0)\,\chi_\mathrm{min}^2/2$, negligible for any survey window.
+ * when the table's support starts below %NC_XCOR_COMPONENT_TABLE_CHI_FLOOR
+ * (0.01 Mpc) it is moved there. The window omitted below that point is
+ * $\sim W'(0)\,\chi_\mathrm{min}^2/2$, negligible for any survey window. The
+ * floor is a fixed distance, not a fraction of the sample spacing: the closure's
+ * $k$ range for these kinds grows as the inverse of the lower limit, and a
+ * 4000-sample lensing table with the floor at a thousandth of its first sample
+ * (1.5 Mpc) cost seven times the same window tabulated on 1000 samples.
  *
  */
 
@@ -243,13 +247,13 @@ nc_xcor_component_table_constructed (GObject *object)
                "[%g, %g] Mpc; it cannot be normalized.", xcct->norm, xcct->chi_min, xcct->chi_max);
 
     /* See the class documentation: 1/(k chi)^2 kinds cannot start at the origin. */
-    if (_nc_xcor_component_table_kind_has_inverse_square (xcct->kind) && (xcct->chi_min <= 0.0))
+    if (_nc_xcor_component_table_kind_has_inverse_square (xcct->kind) && (xcct->chi_min < NC_XCOR_COMPONENT_TABLE_CHI_FLOOR))
     {
-      if (n < 2)
-        g_error ("nc_xcor_component_table_constructed: a window with a 1/(k chi)^2 weight needs a "
-                 "positive sample to start from.");
+      if (xcct->chi_max <= NC_XCOR_COMPONENT_TABLE_CHI_FLOOR)
+        g_error ("nc_xcor_component_table_constructed: a window with a 1/(k chi)^2 weight must extend "
+                 "beyond %g Mpc.", NC_XCOR_COMPONENT_TABLE_CHI_FLOOR);
 
-      xcct->chi_min = 1.0e-3 * ncm_vector_get (chi_t, 1);
+      xcct->chi_min = NC_XCOR_COMPONENT_TABLE_CHI_FLOOR;
     }
 
     ncm_vector_free (chi_t);

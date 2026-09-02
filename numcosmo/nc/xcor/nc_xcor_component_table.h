@@ -62,6 +62,14 @@ typedef enum _NcXcorKernelTableKind /*< prefix=NC_XCOR_KERNEL_TABLE_KIND >*/
   NC_XCOR_KERNEL_TABLE_KIND_LEN, /*< skip >*/
 } NcXcorKernelTableKind;
 
+/**
+ * NC_XCOR_COMPONENT_TABLE_CHI_FLOOR:
+ *
+ * Lower end of the support, in Mpc, of a component whose kind carries
+ * $1/(k\chi)^2$ when its table reaches closer to the origin than this.
+ */
+#define NC_XCOR_COMPONENT_TABLE_CHI_FLOOR (1.0e-2)
+
 NcXcorComponentTable *nc_xcor_component_table_new (NcmVector *chi, NcmVector *W);
 NcXcorComponentTable *nc_xcor_component_table_new_full (NcmVector *chi, NcmVector *W, NcXcorKernelTableKind kind, guint order, gboolean normalize);
 NcXcorComponentTable *nc_xcor_component_table_ref (NcXcorComponentTable *xcct);

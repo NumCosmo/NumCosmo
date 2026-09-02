@@ -350,6 +350,14 @@ def tracer_component_tables(
     k-dependent transfer would go through the radial family's scale-dependence
     slot, which this adapter does not populate.
 
+    Do not oversample CCL's kernels. Its lensing kernel is a numerical integral
+    with its own accuracy, and denser sampling exposes that noise rather than
+    more shape: the relative fourth difference of a WeakLensingTracer table is
+    2e-7 at 1000 samples and 1.7e-5 at 4000. The closure refinement resolves
+    what it is given, so the 4000-sample table costs seven times the 1000-sample
+    one for the same C_ell (2e-8 of peak from NumCosmo's own lensing kernel
+    either way). CCL's analytic CMB lensing kernel has no such floor.
+
     :param order: B-spline order of the reconstruction (degree ``order - 1``).
     """
     cosmo = cosmology.cosmo
@@ -360,17 +368,12 @@ def tracer_component_tables(
 
     Wchi_list, chi_list = tracer.get_kernel()
     assert chi_list is not None
-    # z(chi) comes from the distance object's inverse spline, which ends at its
-    # zf; a CMB lensing tracer reaches z ~ 1100 and needs a cosmology built
-    # with dist_z_max that far.
-    chi_reach = dist.comoving(cosmo, float(dist.props.zf)) * RH_Mpc
-    chi_top = max(float(np.max(c)) for c in chi_list)
-    if chi_top > chi_reach:
-        raise ValueError(
-            f"the tracer's kernel reaches chi = {chi_top:.1f} Mpc but the distance "
-            f"object only inverts up to zf = {dist.props.zf:g} (chi = {chi_reach:.1f} "
-            "Mpc); build the Cosmology with a larger dist_z_max"
-        )
+    # z(chi) comes from the distance object's inverse spline. Extend its reach
+    # the way every NcXcorKernel does at construction, so a CMB lensing tracer
+    # (z ~ 1100) inverts regardless of the cosmology's dist_z_max.
+    dist.compute_inv_comoving(True)
+    dist.require_zf(1.0e10)
+    dist.prepare_if_needed(cosmo)
 
     der_bessel = [int(d) for d in tracer.get_bessel_derivative()]
     der_angles = [int(d) for d in tracer.get_angles_derivative()]
