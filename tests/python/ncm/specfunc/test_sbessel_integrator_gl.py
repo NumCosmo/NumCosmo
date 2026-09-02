@@ -25,6 +25,8 @@
 """Unit tests for spherical Bessel integrator."""
 
 from typing import Callable
+import subprocess
+import sys
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -1176,3 +1178,45 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
             ref = np.sqrt(np.pi / (2.0 * ell + 1.0)) * f(ell + 0.5, 1.0)
 
             assert_allclose(num, ref, rtol=rtol, err_msg=f"ell={ell}")
+
+
+class TestSBesselIntegratorGLDeriv:
+    """integrate_deriv on the GL integrator: order 0 is integrate, higher orders abort."""
+
+    def test_deriv_zero_matches_integrate(self) -> None:
+        """deriv = 0 must dispatch to the plain integrate path, bit for bit."""
+        integrator = Ncm.SBesselIntegratorGL.new(0, 8)
+        res_a = Ncm.Vector.new(9)
+        res_b = Ncm.Vector.new(9)
+
+        def f_gauss(x: float, _k: float) -> float:
+            return np.exp(-0.5 * ((x - 40.0) / 10.0) ** 2)
+
+        integrator.integrate_deriv(f_gauss, 5.0, 80.0, 1.0, 0, res_a)
+        integrator.integrate(f_gauss, 5.0, 80.0, 1.0, res_b)
+
+        assert res_a.dup_array() == res_b.dup_array()
+
+    @pytest.mark.parametrize("deriv", [1, 2])
+    def test_positive_order_is_not_implemented(self, deriv: int) -> None:
+        """Only the Levin path implements the derivative weights; the base class must fail loudly.
+
+        Runs in a subprocess since g_error aborts rather than raises.
+        """
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from numcosmo_py import Ncm\n"
+                "Ncm.cfg_init()\n"
+                "sbi = Ncm.SBesselIntegratorGL.new(0, 3)\n"
+                "res = Ncm.Vector.new(4)\n"
+                f"sbi.integrate_deriv(lambda x, k: 1.0, 1.0, 2.0, 1.0, {deriv}, res)\n",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        assert proc.returncode != 0
+        assert "not implemented" in proc.stderr

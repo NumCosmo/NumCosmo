@@ -44,6 +44,7 @@ import pyccl
 
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams
+from numcosmo_py.ccl import two_point
 
 pytestmark = [pytest.mark.ccl, pytest.mark.xcor, pytest.mark.xdist_group("ccl_rsd")]
 
@@ -112,14 +113,16 @@ def _ccl_gal_tracer(ccl_cosmo, dndz_arrays, *, has_rsd: bool):
     )
 
 
-def _nc_cl(cosmology, kernel, ells, l_limber):
-    kernel.set_l_limber(l_limber)
-    kernel.prepare(cosmology.cosmo)
+def _nc_cl(cosmology, kernel, ells, l_limber, kernel_2=None):
+    kernel_2 = kernel if kernel_2 is None else kernel_2
+    for k in (kernel, kernel_2):
+        k.set_l_limber(l_limber)
+        k.prepare(cosmology.cosmo)
     lmin, lmax = int(ells[0]), int(ells[-1])
     res = Ncm.Vector.new(lmax - lmin + 1)
     xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     xcor.prepare(cosmology.cosmo)
-    xcor.compute(kernel, kernel, cosmology.cosmo, lmin, lmax, res)
+    xcor.compute(kernel, kernel_2, cosmology.cosmo, lmin, lmax, res)
     return np.array(res.dup_array())[np.asarray(ells) - lmin]
 
 
@@ -148,6 +151,60 @@ def test_rsd_auto_exact_matches_ccl_limber_at_high_ell(
     )
 
     assert_allclose(got, ref, rtol=2.0e-3)
+
+
+def test_rsd_auto_exact_matches_ccl_kernel_bridge_at_low_ell(
+    ccl_cosmo, cosmology, dndz_arrays
+) -> None:
+    """Exact-tier C_ell with RSD against the CCL-kernel bridge where RSD matters.
+
+    numcosmo_py.ccl.two_point.angular_cl turns CCL's own tracer kernels,
+    transfer (-f for the RSD piece, der_bessel = 2) and growth into an
+    NcXcorKernelTable with a density and an RSD component and solves it with
+    NcXcorSolver, so the two sides share the library and nothing else:
+    NumCosmo's dn/dz, bias, distances and growth on one side, CCL's tables on
+    the other. Measured deviations 1.3e-7, 8e-9, 4e-8 at ell 2, 5, 10; the
+    tolerance leaves room for the two kernels' independent closure fits.
+    """
+    ells = np.array([2, 5, 10])
+
+    kernel = _nc_gal_kernel(cosmology, dndz_arrays, dorsd=True, lmax=int(ells[-1]))
+    got = _nc_cl(cosmology, kernel, ells, l_limber=-1)
+
+    tracer = _ccl_gal_tracer(ccl_cosmo, dndz_arrays, has_rsd=True)
+    ref = two_point.angular_cl(cosmology, tracer, tracer, ells)
+
+    assert_allclose(got, ref, rtol=2.0e-5)
+
+
+def test_rsd_cross_spectrum_matches_ccl_kernel_bridge(
+    ccl_cosmo, cosmology, dndz_arrays
+) -> None:
+    """Cross spectrum of an RSD bin with a second, non-overlapping bin.
+
+    The cross of a density-plus-RSD kernel with a plain density kernel is
+    negative here (the bins do not overlap), so the sign and the mixed
+    j_l x j_l'' term are both checked; a second case switches RSD on in
+    both bins. Measured deviations vs the bridge are at or below 2.7e-6.
+    """
+    ells = np.array([2, 5, 10])
+    z2 = np.linspace(0.0, 2.0, Z_LEN)
+    nz2 = np.exp(-0.5 * ((z2 - 0.9) / SIGMA) ** 2)
+
+    kernel_1 = _nc_gal_kernel(cosmology, dndz_arrays, dorsd=True, lmax=int(ells[-1]))
+    tracer_1 = _ccl_gal_tracer(ccl_cosmo, dndz_arrays, has_rsd=True)
+
+    for has_rsd in (False, True):
+        kernel_2 = _nc_gal_kernel(
+            cosmology, (z2, nz2), dorsd=has_rsd, lmax=int(ells[-1])
+        )
+        tracer_2 = _ccl_gal_tracer(ccl_cosmo, (z2, nz2), has_rsd=has_rsd)
+
+        got = _nc_cl(cosmology, kernel_1, ells, l_limber=-1, kernel_2=kernel_2)
+        ref = two_point.angular_cl(cosmology, tracer_1, tracer_2, ells)
+
+        assert np.all(ref < 0.0)
+        assert_allclose(got, ref, rtol=2.0e-5)
 
 
 def test_rsd_auto_limber_matches_ccl(ccl_cosmo, cosmology, dndz_arrays) -> None:
@@ -228,6 +285,56 @@ def test_rsd_component_list_and_properties(cosmology, dndz_arrays) -> None:
     # dropping the kernel disposes the RSD component and its data
     del comps, rsd, kernel
     gc.collect()
+
+
+def test_rsd_kernel_survives_serialization(cosmology, dndz_arrays) -> None:
+    """A serialized copy keeps dorsd, rebuilds the RSD component and gives the same C_ell.
+
+    NcXcorSolver hands each OpenMP thread NcmSerialize-duplicated objects, so
+    a construct-only property that did not survive the round trip would
+    silently drop the Kaiser term there.
+    """
+    ells = np.array([2, 5, 10])
+    kernel = _nc_gal_kernel(cosmology, dndz_arrays, dorsd=True, lmax=int(ells[-1]))
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    copy = ser.dup_obj(kernel)
+
+    assert copy.get_property("dorsd") is True
+    assert sorted(c.get_bessel_deriv() for c in copy.get_component_list()) == [0, 2]
+
+    original = _nc_cl(cosmology, kernel, ells, l_limber=-1)
+    duplicate = _nc_cl(cosmology, copy, ells, l_limber=-1)
+
+    assert_allclose(duplicate, original, rtol=1.0e-12)
+
+
+def test_rsd_through_solver_matches_compute(cosmology, dndz_arrays) -> None:
+    """NcXcorSolver's block path reproduces nc_xcor_compute() with the RSD component.
+
+    One 8-ell block, exact tier; the solver runs its OpenMP team over blocks
+    with per-block integrator clones, so this covers the deriv state living on
+    the integrator rather than on the shared kernel.
+    """
+    lmin, lmax = 2, 9
+    kernel = _nc_gal_kernel(cosmology, dndz_arrays, dorsd=True, lmax=lmax)
+    kernel.set_l_limber(-1)
+    kernel.prepare(cosmology.cosmo)
+
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+    xcor.prepare(cosmology.cosmo)
+
+    expected = Ncm.Vector.new(lmax - lmin + 1)
+    xcor.compute(kernel, kernel, cosmology.cosmo, lmin, lmax, expected)
+
+    solver = Nc.XcorSolver.new()
+    kid = solver.register_kernel(kernel)
+    solver.request_cl(kid, kid, lmin, lmax)
+    solver.plan_blocks(8)
+    solver.solve(xcor, cosmology.cosmo)
+
+    got = np.array(solver.get_result(0).dup_array())
+    assert_allclose(got, np.array(expected.dup_array()), rtol=1.0e-10)
 
 
 def test_deriv_one_limber_matches_exact_at_high_ell(cosmology, dndz_arrays) -> None:

@@ -1547,6 +1547,11 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
   gint first_knot_idx         = -1;
   gint last_knot_idx          = -1;
   const guint n_ell           = ell_max - ell_min + 1;
+
+  /* Lowest order read from the Bessel array in a panel: the deriv > 0
+   * boundary terms use j_{ell-1}, so the panel-skip gate must match
+   * _ncm_sbessel_integrator_levin_panel_is_null and look one order down. */
+  const guint ell_gate = ((sbilv->deriv > 0) && (ell_min > 0)) ? ell_min - 1 : ell_min;
   gdouble first_knot, last_knot;
   guint i;
 
@@ -1581,7 +1586,7 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
       const gdouble a_p = y_min;
       const gdouble b_p = g_array_index (sbilv->knots, gdouble, first_knot_idx);
 
-      if (ell_min <= ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p))
+      if (ell_gate <= ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p))
       {
         if (first_knot_idx > 0)
         {
@@ -1617,7 +1622,7 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
       const gdouble a_p = g_array_index (sbilv->knots, gdouble, i);
       const gdouble b_p = g_array_index (sbilv->knots, gdouble, i + 1);
 
-      if (ell_min <= ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p))
+      if (ell_gate <= ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p))
         _ncm_sbessel_integrator_levin_integrate_panel (sbilv, i, i + 1,
                                                        a_p, b_p, spectral, F, k,
                                                        ell_min, ell_max, result_data, user_data, FALSE);
@@ -1628,7 +1633,7 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
       const gdouble a_p = g_array_index (sbilv->knots, gdouble, last_knot_idx);
       const gdouble b_p = y_max;
 
-      if (ell_min <= ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p))
+      if (ell_gate <= ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p))
       {
         if ((guint) last_knot_idx + 1 < sbilv->knots->len)
         {

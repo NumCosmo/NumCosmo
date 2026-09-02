@@ -516,7 +516,11 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
    * Whether to include the linear redshift-space distortion (Kaiser) term.
    * Adds a component with kernel $-f(z)\, \mathrm{d}n/\mathrm{d}z$ weighted by
    * $j_\ell''(k\chi)$, where $f$ is the linear growth rate. Supported by the
-   * kernel-space methods only.
+   * kernel-space methods only (%NC_XCOR_METHOD_KERNEL_EXACT,
+   * %NC_XCOR_METHOD_KERNEL_CUBATURE, %NC_XCOR_METHOD_KERNEL_GSL): the
+   * redshift-space Limber methods, including the #NcXcor:meth default
+   * %NC_XCOR_METHOD_LIMBER_Z_GSL, stop with an error on a kernel with this
+   * property set.
    */
   g_object_class_install_property (object_class,
                                    PROP_DORSD,

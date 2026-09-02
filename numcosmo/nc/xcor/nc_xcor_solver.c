@@ -571,30 +571,52 @@ nc_xcor_solver_plan_blocks (NcXcorSolver *solver, guint default_block_size)
 
   g_array_sort (boundaries, _nc_xcor_solver_guint_cmp);
 
-  g_array_set_size (solver->blocks, 0);
-  g_ptr_array_set_size (solver->block_integrators, 0);
-
-  cursor = overall_lmin;
-
-  while (cursor <= overall_lmax)
   {
-    guint block_end = MIN (cursor + max_block_size - 1, overall_lmax);
+    GArray *blocks = g_array_new (FALSE, FALSE, sizeof (NcXcorSolverBlock));
+    gboolean same;
 
-    while ((next_boundary_idx < boundaries->len) &&
-           (g_array_index (boundaries, guint, next_boundary_idx) <= cursor))
-      next_boundary_idx++;
+    cursor = overall_lmin;
 
-    if ((next_boundary_idx < boundaries->len) &&
-        (g_array_index (boundaries, guint, next_boundary_idx) - 1 < block_end))
-      block_end = g_array_index (boundaries, guint, next_boundary_idx) - 1;
-
+    while (cursor <= overall_lmax)
     {
-      NcXcorSolverBlock block = { cursor, block_end };
+      guint block_end = MIN (cursor + max_block_size - 1, overall_lmax);
 
-      g_array_append_val (solver->blocks, block);
+      while ((next_boundary_idx < boundaries->len) &&
+             (g_array_index (boundaries, guint, next_boundary_idx) <= cursor))
+        next_boundary_idx++;
+
+      if ((next_boundary_idx < boundaries->len) &&
+          (g_array_index (boundaries, guint, next_boundary_idx) - 1 < block_end))
+        block_end = g_array_index (boundaries, guint, next_boundary_idx) - 1;
+
+      {
+        NcXcorSolverBlock block = { cursor, block_end };
+
+        g_array_append_val (blocks, block);
+      }
+
+      cursor = block_end + 1;
     }
 
-    cursor = block_end + 1;
+    /* The per-block integrators carry the factorised operators, the expensive
+     * part of a cold solve. They are keyed by the block's ell range only, so a
+     * plan that reproduces the previous blocks keeps them. */
+    same = (blocks->len == solver->blocks->len);
+
+    for (i = 0; same && (i < blocks->len); i++)
+    {
+      NcXcorSolverBlock *nb = &g_array_index (blocks, NcXcorSolverBlock, i);
+      NcXcorSolverBlock *ob = &g_array_index (solver->blocks, NcXcorSolverBlock, i);
+
+      same = (nb->lmin == ob->lmin) && (nb->lmax == ob->lmax);
+    }
+
+    if (!same)
+      g_ptr_array_set_size (solver->block_integrators, 0);
+
+    g_array_set_size (solver->blocks, 0);
+    g_array_append_vals (solver->blocks, blocks->data, blocks->len);
+    g_array_unref (blocks);
   }
 
   g_array_unref (boundaries);
@@ -829,9 +851,10 @@ nc_xcor_solver_solve (NcXcorSolver *solver, NcXcor *xc, NcHICosmo *cosmo)
     guint k;
 
     /* Kernels are shared by every thread from here on, so prepare them, and
-     * build the per-block integrators, before the parallel region. */
+     * build the per-block integrators, before the parallel region. A kernel
+     * whose cosmology, parameters and data have not moved is left alone. */
     for (k = 0; k < kernels->len; k++)
-      nc_xcor_kernel_prepare (g_ptr_array_index (kernels, k), cosmo);
+      nc_xcor_kernel_prepare_if_needed (g_ptr_array_index (kernels, k), cosmo);
 
     _nc_xcor_solver_prepare_block_integrators (solver);
 

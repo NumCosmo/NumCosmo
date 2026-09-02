@@ -374,7 +374,8 @@ ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegrato
 void
 ncm_sbessel_integrator_integrate_deriv (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, guint deriv, NcmVector *result, gpointer user_data)
 {
-  g_return_if_fail (deriv <= 2);
+  if (deriv > 2)
+    g_error ("ncm_sbessel_integrator_integrate_deriv: derivative order %u not supported (up to 2)", deriv);
 
   if (deriv == 0)
     NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate (sbi, F, a, b, k, result, user_data);

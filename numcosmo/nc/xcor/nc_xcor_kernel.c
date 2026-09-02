@@ -58,6 +58,7 @@
 #include "ncm/stats/ncm_function_sample_set.h"
 #include "nc/background/nc_distance.h"
 #include "nc/xcor/nc_xcor_kernel.h"
+#include "ncm/model/ncm_model_ctrl.h"
 #include "ncm/algebra/ncm_spectral.h"
 #include "ncm/core/ncm_memory_pool.h"
 #include "nc/xcor/nc_xcor_kernel_component.h"
@@ -86,6 +87,9 @@ typedef struct _NcXcorKernelPrivate
   gboolean track_fit_residual;
   gboolean tolerance_balance_warned;
   gboolean constructed;
+  NcmModelCtrl *cosmo_ctrl;
+  guint64 prepared_pkey;
+  gboolean outdated;
 } NcXcorKernelPrivate;
 
 enum
@@ -121,6 +125,9 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
   self->dist                     = NULL;
   self->ps                       = NULL;
   self->sbi                      = NULL;
+  self->cosmo_ctrl               = ncm_model_ctrl_new (NULL);
+  self->prepared_pkey            = 0;
+  self->outdated                 = TRUE;
   self->lmax                     = 0;
   self->l_limber                 = 0;
   self->adaptive_epsilon         = 0.0;
@@ -145,6 +152,7 @@ _nc_xcor_kernel_dispose (GObject *object)
   nc_distance_clear (&self->dist);
   ncm_powspec_clear (&self->ps);
   ncm_sbessel_integrator_clear (&self->sbi);
+  ncm_model_ctrl_clear (&self->cosmo_ctrl);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_parent_class)->dispose (object);
@@ -3200,7 +3208,52 @@ nc_xcor_kernel_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, gu
 void
 nc_xcor_kernel_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 {
-  return NC_XCOR_KERNEL_GET_CLASS (xclk)->prepare (xclk, cosmo);
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  NC_XCOR_KERNEL_GET_CLASS (xclk)->prepare (xclk, cosmo);
+
+  ncm_model_ctrl_update (self->cosmo_ctrl, NCM_MODEL (cosmo));
+  self->prepared_pkey = ncm_model_state_get_pkey (NCM_MODEL (xclk));
+  self->outdated      = FALSE;
+}
+
+/**
+ * nc_xcor_kernel_prepare_if_needed:
+ * @xclk: a #NcXcorKernel
+ * @cosmo: a #NcHICosmo
+ *
+ * Calls nc_xcor_kernel_prepare() only when something the prepared state
+ * depends on has changed since the last preparation: the cosmology (tracked
+ * through a #NcmModelCtrl), the kernel's own parameters (its #NcmModel pkey),
+ * or a change announced with nc_xcor_kernel_mark_outdated(). Repeated solves
+ * at one cosmology then pay nothing here, which is what a sampler that keeps
+ * its kernels and its #NcXcorSolver across steps relies on.
+ */
+void
+nc_xcor_kernel_prepare_if_needed (NcXcorKernel *xclk, NcHICosmo *cosmo)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+  const gboolean cosmo_up   = ncm_model_ctrl_update (self->cosmo_ctrl, NCM_MODEL (cosmo));
+  const gboolean self_up    = ncm_model_state_get_pkey (NCM_MODEL (xclk)) != self->prepared_pkey;
+
+  if (cosmo_up || self_up || self->outdated)
+    nc_xcor_kernel_prepare (xclk, cosmo);
+}
+
+/**
+ * nc_xcor_kernel_mark_outdated:
+ * @xclk: a #NcXcorKernel
+ *
+ * Announces that data the kernel is built on changed outside its parameters
+ * (a replaced window table, say), so the next nc_xcor_kernel_prepare_if_needed()
+ * prepares again even at an unchanged cosmology.
+ */
+void
+nc_xcor_kernel_mark_outdated (NcXcorKernel *xclk)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  self->outdated = TRUE;
 }
 
 /**
