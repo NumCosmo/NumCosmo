@@ -1372,6 +1372,137 @@ ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g)
 }
 
 /**
+ * ncm_spectral_chebT_deriv_to_gegenbauer_alpha2:
+ * @c: (element-type gdouble): Chebyshev coefficients array
+ * @g: (out callee-allocates) (transfer full) (element-type gdouble): Gegenbauer $C^{(2)}_k$ coefficients array
+ *
+ * Computes the Gegenbauer $C^{(2)}_k$ coefficients of the first derivative
+ * $f'(t)$ of the Chebyshev series $f(t) = \sum_n c_n T_n(t)$. Combining
+ * $T_n' = n\, U_{n-1}$ with the ladder $U_m = \left(C^{(2)}_m -
+ * C^{(2)}_{m-2}\right)/(m+1)$ collapses to the two-term rule
+ * $g_k = c_{k+1} - c_{k+3}$.
+ *
+ * The derivative is taken with respect to the Chebyshev variable $t$; a series
+ * living on $[a, b]$ requires the additional chain-rule factor $2/(b-a)$ per
+ * derivative, which is left to the caller.
+ *
+ * If @g points to NULL, allocates a new GArray. Through bindings, @g always
+ * receives NULL.
+ */
+void
+ncm_spectral_chebT_deriv_to_gegenbauer_alpha2 (GArray *c, GArray **g)
+{
+  const guint N    = c->len;
+  const guint Nout = (N > 1) ? N - 1 : 1;
+  guint k;
+
+  if (*g == NULL)
+    *g = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), Nout);
+
+  g_array_set_size (*g, Nout);
+
+  {
+    const gdouble *c_data = (gdouble *) c->data;
+    gdouble *g_data       = (gdouble *) (*g)->data;
+
+    memset (g_data, 0, Nout * sizeof (gdouble));
+
+    for (k = 0; k + 1 < N; k++)
+      g_data[k] = c_data[k + 1] - ((k + 3 < N) ? c_data[k + 3] : 0.0);
+  }
+}
+
+/**
+ * ncm_spectral_chebT_deriv2_to_gegenbauer_alpha2:
+ * @c: (element-type gdouble): Chebyshev coefficients array
+ * @g: (out callee-allocates) (transfer full) (element-type gdouble): Gegenbauer $C^{(2)}_k$ coefficients array
+ *
+ * Computes the Gegenbauer $C^{(2)}_k$ coefficients of the second derivative
+ * $f''(t)$ of the Chebyshev series $f(t) = \sum_n c_n T_n(t)$. In the
+ * ultraspherical basis this map is diagonal, $T_n'' = 2n\, C^{(2)}_{n-2}$, so
+ * $g_k = 2\,(k+2)\, c_{k+2}$.
+ *
+ * The derivative is taken with respect to the Chebyshev variable $t$; a series
+ * living on $[a, b]$ requires the additional chain-rule factor $(2/(b-a))^2$,
+ * which is left to the caller.
+ *
+ * If @g points to NULL, allocates a new GArray. Through bindings, @g always
+ * receives NULL.
+ */
+void
+ncm_spectral_chebT_deriv2_to_gegenbauer_alpha2 (GArray *c, GArray **g)
+{
+  const guint N    = c->len;
+  const guint Nout = (N > 2) ? N - 2 : 1;
+  guint k;
+
+  if (*g == NULL)
+    *g = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), Nout);
+
+  g_array_set_size (*g, Nout);
+
+  {
+    const gdouble *c_data = (gdouble *) c->data;
+    gdouble *g_data       = (gdouble *) (*g)->data;
+
+    memset (g_data, 0, Nout * sizeof (gdouble));
+
+    for (k = 0; k + 2 < N; k++)
+      g_data[k] = 2.0 * (k + 2.0) * c_data[k + 2];
+  }
+}
+
+/**
+ * ncm_spectral_gegenbauer_alpha2_xmul:
+ * @g: (element-type gdouble): Gegenbauer $C^{(2)}_k$ coefficients array
+ * @alpha: linear coefficient of the multiplier
+ * @beta: constant coefficient of the multiplier
+ * @out: (out callee-allocates) (transfer full) (element-type gdouble): Gegenbauer $C^{(2)}_k$ coefficients of the product
+ *
+ * Multiplies the Gegenbauer series $h(t) = \sum_n g_n C^{(2)}_n(t)$ by the
+ * affine factor $\alpha t + \beta$, staying in the $C^{(2)}$ basis. Uses the
+ * three-term recurrence $t\, C^{(2)}_n = \left[(n+1)\, C^{(2)}_{n+1} +
+ * (n+3)\, C^{(2)}_{n-1}\right] / \left(2 (n+2)\right)$.
+ *
+ * @out must not alias @g. If @out points to NULL, allocates a new GArray.
+ * Through bindings, @out always receives NULL.
+ */
+void
+ncm_spectral_gegenbauer_alpha2_xmul (GArray *g, gdouble alpha, gdouble beta, GArray **out)
+{
+  const guint N    = g->len;
+  const guint Nout = N + 1;
+  guint n;
+
+  g_assert (*out != g);
+
+  if (*out == NULL)
+    *out = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), Nout);
+
+  g_array_set_size (*out, Nout);
+
+  {
+    const gdouble *g_data = (gdouble *) g->data;
+    gdouble *out_data     = (gdouble *) (*out)->data;
+
+    memset (out_data, 0, Nout * sizeof (gdouble));
+
+    for (n = 0; n < N; n++)
+    {
+      const gdouble nd  = (gdouble) n;
+      const gdouble gn  = g_data[n];
+      const gdouble den = 2.0 * (nd + 2.0);
+
+      out_data[n + 1] += alpha * gn * (nd + 1.0) / den;
+      out_data[n]     += beta * gn;
+
+      if (n > 0)
+        out_data[n - 1] += alpha * gn * (nd + 3.0) / den;
+    }
+  }
+}
+
+/**
  * ncm_spectral_chebyshev_rebase:
  * @spectral: a #NcmSpectral
  * @c: (element-type gdouble): Chebyshev coefficients on [@a_in, @b_in]

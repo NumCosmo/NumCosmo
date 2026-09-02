@@ -24874,12 +24874,15 @@ class XcorKernelComponent(GObject.Object):
         Maximum iterations for GSL solvers
       tol -> gdouble: tol
         Tolerance for GSL solvers
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
+        bessel_deriv: int
         epsilon: float
         max_iter: int
         ny: int
@@ -24888,7 +24891,12 @@ class XcorKernelComponent(GObject.Object):
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
-        self, epsilon: float = ..., max_iter: int = ..., ny: int = ..., tol: float = ...
+        self,
+        bessel_deriv: int = ...,
+        epsilon: float = ...,
+        max_iter: int = ...,
+        ny: int = ...,
+        tol: float = ...,
     ) -> None: ...
     @staticmethod
     def clear(comp: XcorKernelComponent) -> None: ...
@@ -24903,6 +24911,7 @@ class XcorKernelComponent(GObject.Object):
     def eval_kernel(self, cosmo: HICosmo, xi: float, k: float) -> float: ...
     def eval_prefactor(self, cosmo: HICosmo, k: float, l: int) -> float: ...
     def free(self) -> None: ...
+    def get_bessel_deriv(self) -> int: ...
     def get_epsilon(self) -> float: ...
     def get_limits(
         self, cosmo: HICosmo
@@ -24912,6 +24921,7 @@ class XcorKernelComponent(GObject.Object):
     def get_tol(self) -> float: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> XcorKernelComponent: ...
+    def set_bessel_deriv(self, bessel_deriv: int) -> None: ...
     def set_epsilon(self, epsilon: float) -> None: ...
     def set_max_iter(self, max_iter: int) -> None: ...
     def set_ny(self, ny: int) -> None: ...
@@ -24956,6 +24966,8 @@ class XcorKernelGal(XcorKernel):
         Bias spline object
       domagbias -> gboolean: domagbias
         Do magnification bias
+      dorsd -> gboolean: dorsd
+        Do redshift-space distortions
       nbarm1 -> gdouble: nbarm1
         One over nbar (galaxy angular density)
       mag-bias -> gdouble: mag-bias
@@ -25034,6 +25046,7 @@ class XcorKernelGal(XcorKernel):
         bparam_length: int
         dndz: NumCosmoMath.Spline
         domagbias: bool
+        dorsd: bool
         mag_bias: float
         mag_bias_fit: bool
         nbarm1: float
@@ -25072,6 +25085,7 @@ class XcorKernelGal(XcorKernel):
         bparam_length: int = ...,
         dndz: NumCosmoMath.Spline = ...,
         domagbias: bool = ...,
+        dorsd: bool = ...,
         mag_bias: float = ...,
         mag_bias_fit: bool = ...,
         nbarm1: float = ...,
