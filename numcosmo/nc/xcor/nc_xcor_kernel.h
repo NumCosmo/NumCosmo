@@ -379,6 +379,8 @@ gdouble nc_xcor_kernel_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *c
 gdouble nc_xcor_kernel_eval_limber_z_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l);
 
 void nc_xcor_kernel_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
+void nc_xcor_kernel_prepare_if_needed (NcXcorKernel *xclk, NcHICosmo *cosmo);
+void nc_xcor_kernel_mark_outdated (NcXcorKernel *xclk);
 void nc_xcor_kernel_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 
 GPtrArray *nc_xcor_kernel_get_component_list (NcXcorKernel *xclk);

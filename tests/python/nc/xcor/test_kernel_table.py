@@ -426,3 +426,63 @@ def test_shear_prefactor_is_folded_into_the_limber_window(bits):
         np.sqrt((ell + 2) * (ell + 1) * ell * (ell - 1)) / (k_limber * CHI_MEAN) ** 2
     )
     assert_allclose(ratio, expect, rtol=1.0e-10)
+
+
+# --- in-place update and prepare bookkeeping -----------------------------------
+
+
+def test_replace_samples_matches_a_fresh_kernel(bits):
+    """Replacing a component's table in place gives the C_ell of a kernel built on it."""
+    cosmo = bits[0]
+    chi = np.linspace(200.0, 3400.0, 1601)
+    w_a = np.exp(-0.5 * ((chi - 1200.0) / 200.0) ** 2)
+    w_b = np.exp(-0.5 * ((chi - 2000.0) / 300.0) ** 2)
+
+    live = _table_from(bits, [_component(chi, w_a)])
+    cl_a = _cls(bits, live, ells=(2, 32))
+    live.replace_samples(
+        0, Ncm.Vector.new_array(chi.tolist()), Ncm.Vector.new_array(w_b.tolist())
+    )
+    live.prepare_if_needed(cosmo)  # the replacement marked the kernel outdated
+    cl_b = _cls(bits, live, ells=(2, 32))
+
+    fresh = _table_from(bits, [_component(chi, w_b)])
+    assert_allclose(cl_b, _cls(bits, fresh, ells=(2, 32)), rtol=1.0e-12)
+    assert not np.allclose(cl_a, cl_b, rtol=1.0e-3)
+
+    lo, hi = live.peek_component(0).get_support()
+    assert lo == chi[0] and hi == chi[-1]
+    assert live.props.components.peek(0).props.W.get(800) == w_b[800]
+
+
+def test_prepare_if_needed_tracks_cosmology_and_data(bits):
+    """prepare_if_needed re-prepares on a cosmology move or a marked change, not otherwise."""
+    cosmo, dist, _ = bits
+    ana = _analytic(bits)
+    chi, W = _samples(ana)
+    tab = _table(bits, chi, W)
+    tab.set_l_limber(-1)
+    tab.prepare_if_needed(cosmo)
+    z0 = tab.get_z_range()
+
+    tab.prepare_if_needed(cosmo)
+    assert tab.get_z_range() == z0
+
+    omega_c = cosmo.props.Omegac
+    cosmo.props.Omegac = omega_c * 1.05
+    tab.prepare_if_needed(cosmo)
+    z1 = tab.get_z_range()
+    assert z1 != z0  # the support in Mpc is fixed, so its redshift range moved
+    cosmo.props.Omegac = omega_c
+
+    tab.prepare_if_needed(cosmo)
+    assert tab.get_z_range() == z0
+
+    # a table with a different support, replaced in place, is only seen after the mark
+    tab.replace_samples(
+        0,
+        Ncm.Vector.new_array((chi + 100.0).tolist()),
+        Ncm.Vector.new_array(W.tolist()),
+    )
+    tab.prepare_if_needed(cosmo)
+    assert tab.get_z_range()[0] > z0[0]
