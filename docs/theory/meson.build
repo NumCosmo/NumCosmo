@@ -12,6 +12,7 @@ src_site_theory_files = files(
     'halo_density_profile.qmd',
     'fftlog.qmd',
     'spectral.qmd',
+    'sbessel_projection.qmd',
     'ssc.qmd',
     'castro_hmf.qmd',
 )

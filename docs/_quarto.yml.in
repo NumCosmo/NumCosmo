@@ -23,6 +23,7 @@ project:
     - theory/halo_density_profile.qmd
     - theory/fftlog.qmd
     - theory/spectral.qmd
+    - theory/sbessel_projection.qmd
     - theory/ssc.qmd
     - theory/castro_hmf.qmd
     - benchmarks/ccl_background.qmd
@@ -158,6 +159,8 @@ website:
                 text: "FFTLog"
               - href: theory/spectral.qmd
                 text: "Spectral Methods"
+              - href: theory/sbessel_projection.qmd
+                text: Spherical Bessel Projections
               - href: theory/csq1d.qmd
                 text: "CSQ1D Formalism"
       - section: examples/index.qmd

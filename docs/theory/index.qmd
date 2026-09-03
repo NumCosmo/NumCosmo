@@ -35,4 +35,5 @@ classes and methods.
 
 - [FFTLog](fftlog.qmd) — logarithmic fast Fourier transform.
 - [Spectral Methods](spectral.qmd) — Chebyshev approximation, Clenshaw–Curtis integration, and ultraspherical operators.
+- [Projection Integrals with Spherical Bessel Weights](sbessel_projection.qmd) — the Levin reduction, the ultraspherical solver, fixed panels in y, the window over k and its exact outer integral.
 - [CSQ1D Formalism](csq1d.qmd) — complex-structure evolution of a time-dependent oscillator.
