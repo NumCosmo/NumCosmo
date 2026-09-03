@@ -528,17 +528,29 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * NcXcorKernel:track-fit-residual:
    *
    * Whether the closure records the residual its fit actually achieved on each
-   * knot interval, which is what nc_xcor_compute_full() turns into an error
-   * estimate. On by default: without it the estimate has only
-   * #NcXcorKernel:reltol and #NcXcorKernel:scaled-abstol to work from -- the
-   * tolerances the fit was asked for, which it beats by 12 to 3100 times
-   * depending on the kernel, so the resulting bound tracks the pair's
-   * cancellation rather than its accuracy.
+   * interval it is a single polynomial on -- a knot interval of a spline
+   * closure, a panel of a Chebyshev one -- which is what
+   * nc_xcor_compute_full() turns into an error estimate. On by default:
+   * without it the estimate has only #NcXcorKernel:reltol and
+   * #NcXcorKernel:scaled-abstol to work from -- the tolerances the fit was
+   * asked for, which it beats by 12 to 3100 times depending on the kernel, so
+   * the resulting bound tracks the pair's cancellation rather than its
+   * accuracy.
    *
-   * The record costs one double per knot per multipole in the block, about
+   * What is recorded differs with the representation, because what the fit
+   * measured differs. A spline records the residual of its refinement. A
+   * Chebyshev panel is accepted when doubling its order moves the expansion
+   * less than the tolerance, so what it records is the $l^1$ mass of the modes
+   * the previous order did not carry -- the tail whose smallness that test
+   * checked, which bounds the sup-norm error of the order the panel keeps.
+   *
+   * The record costs one double per interval per multipole in the block, about
    * what the closure's own spline data costs, and #NcXcorSolver holds one
    * closure per kernel per $\ell$ block. Turn it off to get that memory back
-   * from a run that never asks for an error.
+   * from a run that never asks for an error. On the Chebyshev closure the
+   * record itself is free -- it is read off coefficients already computed --
+   * and the property is honoured there only so that @vp_err means the same
+   * thing on both representations.
    *
    */
   g_object_class_install_property (object_class,
@@ -1402,7 +1414,15 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
     }
     else
     {
-      /* Exponential tail extrapolation beyond boundaries */
+      /* Exponential tail extrapolation beyond boundaries.
+       *
+       * At DECAY_RATE this falls by e^-100 within a *relative* 1e-8 of the
+       * boundary, so what it contributes is nothing; what it does is keep the
+       * sampled function continuous there, which is what lets one cubic spline
+       * span the boundary and what the domain expansion reads to decide where
+       * to stop. Replacing it by an exact zero was tried and is a regression:
+       * NcXcorKernelAnalyticStudentT's closure moved from 2.0e-8 to 3.9e-8
+       * against the Arb table, and the expansion stopped earlier. */
       if (!within_right_boundary)
       {
         for (i = 0; i < comp_states->n_l; i++)
@@ -1559,6 +1579,48 @@ _nc_xcor_kernel_check_tolerance_balance (NcXcorKernel *xclk)
 }
 
 /*
+ * A closure cannot be fitted to more precision than the samples carry.
+ *
+ * The radial integral is what supplies the samples, so its own relative
+ * tolerance is a floor under both halves of the fit criterion. Below it the
+ * sampled W_l(k) is not a smooth function at all -- the integrator's adaptive
+ * decisions flip from one k to the next -- and no representation converges on
+ * it. The spline does not say so: measured on a deliberately loose integrator
+ * (reltol 1e-2) asked for a 1e-8 fit, refinement ran to 975161 knots, one
+ * radial solve each, and the second differences never came down. The Chebyshev
+ * panel splitter bisects to its width guard and aborts instead. Neither is a
+ * result, so this reports the cause rather than either symptom.
+ *
+ * The looser of the two fit tolerances is what refinement stops at -- the
+ * criterion adds them -- so that is what has to clear the floor.
+ */
+static void
+_nc_xcor_kernel_check_sampler_tolerance (NcXcorKernel *xclk, NcmSBesselIntegrator *sbi)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+  const gdouble fit_tol     = GSL_MAX (self->reltol, self->scaled_abstol);
+  gdouble sampler_reltol;
+
+  if ((sbi == NULL) || !NCM_IS_SBESSEL_INTEGRATOR_LEVIN (sbi))
+    return;
+
+  {
+    NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (sbi);
+
+    sampler_reltol = GSL_MAX (ncm_sbessel_integrator_levin_get_reltol (sbilv),
+                              ncm_sbessel_integrator_levin_get_cheb_reltol (sbilv));
+  }
+
+  if (fit_tol < sampler_reltol)
+    g_error ("_nc_xcor_kernel_check_sampler_tolerance: kernel %s fits its k-space closure "
+             "to %.17g but the integrator samples W_l(k) only to %.17g (the looser of its "
+             "reltol and cheb-reltol). A fit cannot resolve what the samples do not carry. "
+             "Loosen NcXcorKernel:reltol and NcXcorKernel:scaled-abstol to at least %.17g, "
+             "or construct the integrator with tighter tolerances.",
+             G_OBJECT_TYPE_NAME (xclk), fit_tol, sampler_reltol, sampler_reltol);
+}
+
+/*
  * NcmSpectralFBatch takes user data first; the samplers here take x first, as
  * NcmFunctionSampleSetFunc does. One adapter rather than changing either.
  */
@@ -1654,6 +1716,7 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
     NcmFunctionSampleSet *fss = ncm_function_sample_set_new (n_l);
     GArray *k_seeds           = g_array_new (FALSE, FALSE, sizeof (gdouble));
     ChebSampler sampler       = { compute_func, comp_states };
+    NcmMatrix *residuals      = NULL;
     gdouble abstol;
     guint i;
 
@@ -1714,6 +1777,41 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
         g_array_append_val (cid->edges, g_array_index (cid->panels, ChebPanel, i).b);
     }
 
+    /* The residual this fit achieved, per panel per multipole, in the same
+     * units the spline path records: an amplitude of W, one row per interval
+     * on which the closure is a single polynomial.
+     *
+     * A panel is accepted when doubling its order changes the expansion by
+     * less than the tolerance, so the modes the previous level did not carry
+     * are what that test measured. Their l1 mass bounds the sup-norm
+     * contribution of the tail, which is the error of the level the panel
+     * keeps -- conservatively, since the modes beyond it are smaller again
+     * wherever the acceptance test was met. Unlike the spline residual this
+     * costs nothing to record, but it stays behind the same property so that
+     * @vp_err means the same thing on both representations: the achieved
+     * residual with tracking on, the requested tolerance without it. */
+    if (self->track_fit_residual)
+    {
+      residuals = ncm_matrix_new (cid->panels->len, n_l);
+
+      for (i = 0; i < cid->panels->len; i++)
+      {
+        const ChebPanel *panel = &g_array_index (cid->panels, ChebPanel, i);
+        const guint n_prev     = (panel->N + 1) / 2;
+        guint c, j;
+
+        for (c = 0; c < n_l; c++)
+        {
+          gdouble tail = 0.0;
+
+          for (j = n_prev; j < panel->N; j++)
+            tail += fabs (ncm_matrix_get (panel->coeffs, c, j));
+
+          ncm_matrix_set (residuals, i, c, tail);
+        }
+      }
+    }
+
     cid->k_min_comp = g_new (gdouble, n_l);
     cid->k_max_comp = g_new (gdouble, n_l);
 
@@ -1765,6 +1863,8 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
                                                     _cheb_integrand_peek_panel);
       nc_xcor_kernel_integrand_set_restrict (integrand, _cheb_integrand_restrict);
       nc_xcor_kernel_integrand_set_tolerances (integrand, reltol, abs_reltol);
+      nc_xcor_kernel_integrand_set_residuals (integrand, residuals);
+      ncm_matrix_clear (&residuals);
 
       return integrand;
     }
@@ -1820,6 +1920,7 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
         comp_states
       );
     }
+
     ncm_function_sample_set_mark_all_old (fss);
     ncm_function_sample_set_reset_interval_ok (fss);
     {
@@ -1955,6 +2056,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
     return NULL;
   }
 
+  _nc_xcor_kernel_check_sampler_tolerance (xclk, sbi);
   ncm_sbessel_integrator_set_ell_range (sbi, lmin, lmax);
 
   /* Initialize with standard (non-Limber) limits */

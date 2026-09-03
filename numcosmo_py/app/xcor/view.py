@@ -592,6 +592,14 @@ class ViewKernel:
         )
         if self.integrator_max_order is not None:
             self.integrator.set_max_order(self.integrator_max_order)
+        # A closure cannot be fitted to more precision than the integrator
+        # samples, and the library refuses the pairing. The integrator
+        # tolerances are the ones this command exposes, so a request to compute
+        # loosely is honoured by loosening the fit to match rather than by
+        # failing.
+        self.closure_tol_floor = max(
+            self.integrator.get_reltol(), self.integrator.get_cheb_reltol()
+        )
         print(
             f"  ✓ Levin integrator created (reltol={self.integrator.get_reltol():.1e}, "
             f"cheb_reltol={self.integrator.get_cheb_reltol():.1e}, "
@@ -687,22 +695,49 @@ class ViewKernel:
 
         match kernel_config:
             case KernelCMBLensingConfig():
-                return self._create_cmb_lensing_kernels(kernel_config)
+                result = self._create_cmb_lensing_kernels(kernel_config)
             case KernelCMBISWConfig():
-                return self._create_cmb_isw_kernels(kernel_config)
+                result = self._create_cmb_isw_kernels(kernel_config)
             case KernelTSZConfig():
-                return self._create_tsz_kernels(kernel_config)
+                result = self._create_tsz_kernels(kernel_config)
             case KernelNumberCountsConfig():
-                return self._create_number_counts_kernels(kernel_config)
+                result = self._create_number_counts_kernels(kernel_config)
             case KernelWeakLensingConfig():
-                return self._create_weak_lensing_kernels(kernel_config)
+                result = self._create_weak_lensing_kernels(kernel_config)
             case KernelClusterTophatConfig():
-                return self._create_cluster_tophat_kernels(kernel_config)
+                result = self._create_cluster_tophat_kernels(kernel_config)
             case _:
                 raise ValueError(f"Unknown kernel type: {type(kernel_config)}")
 
+        self._apply_closure_tolerance_floor(result[1])
+
         print("  ✓ Kernels created and prepared")
         print()
+
+        return result
+
+    def _apply_closure_tolerance_floor(self, kernel: Nc.XcorKernel) -> None:
+        """Keep the closure fit no tighter than the integrator samples.
+
+        The library refuses a kernel that fits its k-space closure tighter than
+        its integrator carries -- below that the sampled window is not a smooth
+        function and no representation converges on it. This command exposes the
+        integrator tolerances and not the kernel's, so a request to compute
+        loosely is honoured by loosening the fit to match.
+
+        :param kernel: Kernel whose fit tolerances may need loosening.
+        """
+        floor = self.closure_tol_floor
+
+        if kernel.get_reltol() >= floor and kernel.get_scaled_abstol() >= floor:
+            return
+
+        kernel.set_reltol(max(kernel.get_reltol(), floor))
+        kernel.set_scaled_abstol(max(kernel.get_scaled_abstol(), floor))
+        print(
+            f"  ✓ Closure fit tolerances raised to {floor:.1e} to match the "
+            f"integrator"
+        )
 
     def _create_cmb_lensing_kernels(
         self, config: KernelCMBLensingConfig

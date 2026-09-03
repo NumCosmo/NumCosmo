@@ -467,6 +467,10 @@ def test_solve_tier3_duplicated_kernel_shrinking_last_block(
         nbar=3.0,
         intr_shear=7.0,
         integrator=integrator,
+        # Matched to the integrator above: a closure cannot be fitted to more
+        # precision than the samples carry, and the library refuses the pairing.
+        reltol=1.0e-2,
+        scaled_abstol=1.0e-2,
     )
     kernel.set_l_limber(-1)  # tier 3: true non-Limber
     kernel.prepare(cosmology.cosmo)
@@ -510,6 +514,8 @@ def _tier3_wl_kernel(cosmology: Cosmology, lmin: int, lmax: int) -> Nc.XcorKerne
         nbar=3.0,
         intr_shear=7.0,
         integrator=integrator,
+        reltol=1.0e-2,
+        scaled_abstol=1.0e-2,
     )
     kernel.set_l_limber(-1)
     kernel.prepare(cosmology.cosmo)

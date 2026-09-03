@@ -77,7 +77,7 @@ nc_xcor_init (NcXcor *xc)
   xc->dist           = NULL;
   xc->RH             = 0.0;
   xc->meth           = NC_XCOR_METHOD_LIMBER_Z_GSL;
-  xc->closure_type   = NC_XCOR_KERNEL_CLOSURE_SPLINE;
+  xc->closure_type   = NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV;
   xc->ell_batch_size = 8;
 }
 
@@ -227,36 +227,34 @@ nc_xcor_class_init (NcXcorClass *klass)
    * #NcXcorKernelClosure.
    *
    * The choice is made here rather than on #NcXcorKernel because it is the
-   * pair, not the kernel, that constrains it. %NC_XCOR_METHOD_KERNEL_EXACT
-   * integrates a pair on the common refinement of the two closures' panels,
-   * which requires both to be of the same kind; a per-kernel setting could
-   * express a mixed pair the exact method cannot integrate at all. The
-   * pointwise methods are indifferent to it, but they read the same property,
-   * so no computation mixes the two representations.
+   * computation, not the kernel, that should be switchable as a whole: the
+   * two representations are alternative fits to the same sampled function, and
+   * comparing them is only meaningful when every kernel in a run uses the
+   * same one. A pair may still be mixed -- %NC_XCOR_METHOD_KERNEL_EXACT
+   * integrates a spline against a panel set exactly, on the common refinement
+   * of the two breakpoint sets -- which is what a pair straddling the Limber
+   * threshold produces whatever this is set to.
    *
    * Both closures sample the same function over the same domain and differ
    * only in what is fitted to it, so a computation can be switched over and
    * the two compared directly. Measured against the certified Arb C_ell
    * table (43 entries, 17 pairs): the Chebyshev closure is closer in 36 of
-   * 43, its median deviation is 4.5x smaller at every tolerance rung, it has
-   * no catastrophic regime -- the spline at loose tolerance returns the
-   * wrong sign at 31x the pair scale on a far-separated pair -- and it costs
-   * 6% more at the median (32% at the 90th percentile) on the same workload.
+   * 43, its median deviation is 4.5x smaller at every tolerance rung, and it
+   * has no catastrophic regime -- the spline at loose tolerance returns the
+   * wrong sign at 31x the pair scale on a far-separated pair. On a
+   * tomographic workload through #NcXcorSolver (5 Gaussian bins, 15 pairs,
+   * $\ell \le 60$, one thread) it costs 1.4x at reltol $10^{-4}$ and 1.13x at
+   * $10^{-6}$, for a median deviation 4 to 5 orders smaller; on hard-edged
+   * cluster top-hats it costs 1.8x and the spline does not converge at all,
+   * the two disagreeing by $10^{-4}$ of the pair scale with both asked for
+   * $10^{-8}$.
    *
-   * The default stays %NC_XCOR_KERNEL_CLOSURE_SPLINE despite that
-   * measurement, for two reasons that gate a flip. Under Limber the closure
-   * is always a spline, so with a Chebyshev default a pair whose kernels sit
-   * in different tiers -- one multipole block Limber for one kernel and not
-   * for the other, which any two kernels with different #NcXcorKernel:l-limber
-   * values produce -- hands %NC_XCOR_METHOD_KERNEL_EXACT one spline-backed
-   * and one panel-backed integrand, a mixed pair it cannot integrate and
-   * aborts on. And the spectral (panel x panel) exact path returns no error
-   * estimate, so the flip would silently withdraw error reporting from the
-   * default configuration. Flip the default once the exact method integrates
-   * mixed pairs and the spectral path carries an estimate. The spline also
+   * That is why the default is %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV. The spline
    * stays as the independent cross-check: a deviation both closures share at
    * every tolerance is a wrong reference, not a bad fit, and that diagnostic
-   * needs two structurally different representations.
+   * needs two structurally different representations. It is also the cheaper
+   * one where the requested tolerance, rather than the representation, is
+   * what binds.
    *
    * It applies to the non-Limber closure only. Under Limber each multipole is
    * supported on its own band and zero outside it, so the block's window
@@ -272,7 +270,7 @@ nc_xcor_class_init (NcXcorClass *klass)
                                                       NULL,
                                                       "Representation used for the k-space closures.",
                                                       NC_TYPE_XCOR_KERNEL_CLOSURE,
-                                                      NC_XCOR_KERNEL_CLOSURE_SPLINE,
+                                                      NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -587,21 +585,23 @@ _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xc
  * Only %NC_XCOR_METHOD_KERNEL_EXACT provides an estimate. Other methods set
  * @vp_err to NaN rather than zero, which would read as "no error".
  *
- * For %NC_XCOR_METHOD_KERNEL_EXACT, the outer integral is exact on the cubic
- * spline closures, so the quadrature contributes no error and @vp_err reports
- * the closure fit error, how well
- * nc_xcor_kernel_get_eval_vectorized_full() fitted $W_\ell(k)$, propagated
- * through this pair's conditioning. It propagates
+ * For %NC_XCOR_METHOD_KERNEL_EXACT, the outer integral is exact on both
+ * closures -- GL(5) on merged knot panels of two cubics, a bilinear form in
+ * the coefficients on cells where either side is a Chebyshev panel -- so the
+ * quadrature contributes no error and @vp_err reports the closure fit error,
+ * how well nc_xcor_kernel_get_eval_vectorized_full() fitted $W_\ell(k)$,
+ * propagated through this pair's conditioning. It propagates
  * $\delta (W^A W^B) = \vert W^A \vert \delta W^B + \vert W^B \vert \delta W^A$:
  *
  * $$ \sigma_\ell \simeq \int \mathrm{d}k\, k^2 \left( \vert W^A_\ell \vert\, \delta W^B_\ell
  *    + \vert W^B_\ell \vert\, \delta W^A_\ell \right) $$
  *
- * The per-panel $\delta W^i$ is the residual the fit achieved, recorded per knot
- * interval while #NcXcorKernel:track-fit-residual is on, which is the default;
- * see nc_xcor_kernel_integrand_peek_residuals(). With tracking off, or on an
- * interval whose refinement was never accepted, $\delta W^i$ falls back to the
- * criterion the fit was asked for,
+ * The per-cell $\delta W^i$ is the residual the fit achieved, recorded per
+ * interval on which the closure is a single polynomial -- a knot interval, or
+ * a Chebyshev panel -- while #NcXcorKernel:track-fit-residual is on, which is
+ * the default; see nc_xcor_kernel_integrand_peek_residuals(). With tracking
+ * off, or on an interval whose refinement was never accepted, $\delta W^i$
+ * falls back to the criterion the fit was asked for,
  * $\delta W^i \le \epsilon_i \vert W^i \vert + a_i W^i_\mathrm{max}$, and the
  * same propagation gives
  *
