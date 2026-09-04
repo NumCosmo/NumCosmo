@@ -58,7 +58,7 @@ def setup_models(
         ["$\\Omega_k$", "Curvature Density", [f"{v:.3f}" for v in Omega_k_vals]],
         ["$h$", "Hubble Constant (dimensionless)", h],
         ["$n_s$", "Scalar Spectral Index", n_s],
-        ["$N_\\mathrm{eff}$", "Effective Nº of Massless Neutrinos", Neff],
+        ["$N_\\mathrm{eff}$", "Effective Number of Massless Neutrinos", Neff],
         ["$\\sigma_8$", "Matter Density Contrast Std. Dev. (8 Mpc/h)", sigma8],
         ["$w_0$", "DE Equation of State Parameter", w0_vals],
         ["$w_a$", "DE Equation of State Parameter", wa_vals],

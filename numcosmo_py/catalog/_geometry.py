@@ -50,7 +50,7 @@ def rectangular_sky_area(
 
     The region is bounded by meridians and parallels (constant RA and DEC), which
     matches a catalog sampled uniformly in RA and ``sin(DEC)``. The exact solid
-    angle is ``ΔRA · (sin δ_max − sin δ_min)``.
+    angle is ``DeltaRA * (sin delta_max - sin delta_min)``.
     """
     delta_ra = np.radians(ra_max - ra_min)
     delta_sin_dec = np.sin(np.radians(dec_max)) - np.sin(np.radians(dec_min))

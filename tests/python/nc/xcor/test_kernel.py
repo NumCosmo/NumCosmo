@@ -309,7 +309,7 @@ def test_k_projection_limber_vs_non_limber(
 ) -> None:
     """Test k-space projection integral agreement between Limber and non-Limber.
 
-    Validates that the k-space projection integral I = ∫ k³ K²(k) d(ln k) computed
+    Validates that the k-space projection integral I = int k^3 K^2(k) d(ln k) computed
     using the Limber approximation agrees with the exact non-Limber calculation at
     moderate to high multipoles. This tests whether the Limber approximation preserves
     the integrated power, which is the physically relevant quantity for cosmological
@@ -374,7 +374,7 @@ def test_k_projection_limber_vs_non_limber(
             [non_limber_func.eval_array(k)[0] for k in k_array]
         )
 
-        # Compute k-space projection integrals: I = ∫ k^3 K^2(k) d(ln k)
+        # Compute k-space projection integrals: I = int k^3 K^2(k) d(ln k)
         integrand_limber = k_array**3 * limber_result**2
         integrand_non_limber = k_array**3 * non_limber_result**2
 
@@ -481,7 +481,7 @@ def test_k_projection_limber_vs_non_limber_vectorized(
 ) -> None:
     """Test k-space projection with vectorized evaluation for blocks of ells.
 
-    Validates that k-space projection integrals I = ∫ k³ K²(k) d(ln k) computed
+    Validates that k-space projection integrals I = int k^3 K^2(k) d(ln k) computed
     using vectorized Limber approximation agree with non-Limber calculation when
     evaluating multiple multipoles simultaneously. Tests blocks of 8 and 16 ells.
     """

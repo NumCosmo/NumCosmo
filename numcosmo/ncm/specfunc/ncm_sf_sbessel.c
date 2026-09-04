@@ -22,20 +22,6 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * NcmSFSBessel:
- *
- * Double precision spherical bessel implementation.
- *
- * Implementation of double precision spherical Bessel functions. This module leverages
- * the multiple precision spherical Bessel functions implementation for precise
- * computations. It involves converting the arguments to multiple precision, performing
- * the calculations, and then converting the results back to double precision, ensuring
- * accuracy in the computation of spherical Bessel functions with the convenience of
- * double precision output.
- *
- */
-
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -59,9 +45,18 @@
  *
  * Spherical Bessel function array evaluator with automatic cutoff.
  *
- * This object efficiently evaluates spherical Bessel functions j_l(x) for multiple l values
- * using the Steed/Barnett algorithm. It includes automatic cutoff logic to prevent numerical
- * instability for high l values where j_l(x) becomes negligibly small.
+ * Evaluates $j_\ell(x)$ in double precision for every order from zero up to a requested
+ * maximum in a single call. The method depends on the argument: the first two terms of
+ * the Taylor series for $x$ near zero, upward recurrence when $x$ exceeds the highest
+ * order requested, and the Steed/Barnett continued fraction followed by downward
+ * recurrence otherwise [Comp. Phys. Comm. 21, 297 (1981)].
+ *
+ * Orders whose value would fall below #NcmSFSBesselArray:threshold are not computed and
+ * are returned as zero. The order at which each $x$ crosses the threshold is tabulated
+ * when the object is constructed.
+ *
+ * This object does not use the multiple precision implementation. For a single
+ * $j_\ell(x)$ computed without cancellation error, use ncm_sf_sbessel().
  */
 
 struct _NcmSFSBesselArray
@@ -176,8 +171,9 @@ ncm_sf_sbessel_array_class_init (NcmSFSBesselArrayClass *klass)
   /**
    * NcmSFSBesselArray:lmax:
    *
-   * Maximum l value for which the array can compute spherical Bessel functions. This
-   * value is relevant to automatic cutoff logic.
+   * Maximum l value for which the array can compute spherical Bessel functions.
+   * ncm_sf_sbessel_array_eval() rejects any order above it, and the cutoff table built
+   * at construction holds one entry per order from zero up to it.
    */
   g_object_class_install_property (object_class,
                                    PROP_LMAX,
@@ -489,7 +485,8 @@ ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble
  * values for l = 0 to min(ell, lmax, cutoff(x)). Values beyond the cutoff are set to
  * zero.
  *
- * Returns: (transfer full) (element-type gdouble): a new GArray containing j_l(x) values for l = 0 to min(ell, lmax, cutoff(x)).
+ * Returns: (transfer full) (element-type gdouble): a new GArray containing j_l(x)
+ * values for l = 0 to min(ell, lmax, cutoff(x)).
  */
 GArray *
 ncm_sf_sbessel_array_eval1 (NcmSFSBesselArray *sba, guint ell, gdouble x)
@@ -511,8 +508,8 @@ ncm_sf_sbessel_array_eval1 (NcmSFSBesselArray *sba, guint ell, gdouble x)
  *
  * Computes $j_\ell'(x)$ from precomputed $j_l(x)$ values (such as those filled by
  * ncm_sf_sbessel_array_eval()) using $j_\ell'(x) = j_{\ell-1}(x) - \frac{\ell+1}{x}
- * j_\ell(x)$. The downward form keeps the required indices within $[0, \ell]$; its
- * two terms agree to a factor of about two at small $x$, so no accuracy is lost to
+ * j_\ell(x)$. The downward form keeps the required indices within $[0, \ell]$; its two
+ * terms agree to a factor of about two at small $x$, so no accuracy is lost to
  * cancellation there. For $\ell = 0$ it returns $-j_1(x)$ evaluated directly.
  *
  * Returns: the value $j_\ell'(x)$
@@ -536,8 +533,8 @@ ncm_sf_sbessel_jl_deriv_from_array (guint ell, gdouble x, const gdouble *jl_x)
  * @jl_x: array of $j_l(x)$ values covering at least indices $0$ to @ell
  *
  * Computes $\left(x\, j_\ell(x)\right)'$ from precomputed $j_l(x)$ values using
- * $\left(x\, j_\ell(x)\right)' = x\, j_{\ell-1}(x) - \ell\, j_\ell(x)$. For
- * $\ell = 0$ it returns $\cos(x)$ exactly.
+ * $\left(x\, j_\ell(x)\right)' = x\, j_{\ell-1}(x) - \ell\, j_\ell(x)$. For $\ell = 0$
+ * it returns $\cos(x)$ exactly.
  *
  * Returns: the value $\left(x\, j_\ell(x)\right)'$
  */
@@ -555,8 +552,8 @@ ncm_sf_sbessel_xjl_deriv_from_array (guint ell, gdouble x, const gdouble *jl_x)
  * @sba: a #NcmSFSBesselArray
  * @x: argument value
  *
- * Determines the maximum l value for which j_l(x) is above the threshold.
- * For l values above this cutoff, j_l(x) is negligibly small and set to zero.
+ * Determines the maximum l value for which j_l(x) is above the threshold. For l values
+ * above this cutoff, j_l(x) is negligibly small and set to zero.
  *
  * Returns: the cutoff l value
  */
@@ -607,6 +604,14 @@ ncm_sf_sbessel_array_get_threshold (NcmSFSBesselArray *sba)
  *
  * Computes Spherical Bessel function $j_\ell(x)$.
  *
+ * The computation goes through the multiple precision implementation: @x is replaced
+ * by a rational $q$ agreeing with it to at least one part in $10^{15}$, and
+ * ncm_mpsf_sbessel_d() evaluates $j_\ell(q)$ by binary splitting in exact integer
+ * arithmetic. The cancellation between series terms is therefore exact, and only the
+ * conversion of the result to double rounds.
+ *
+ * Underflows to zero when $|j_\ell(x)|$ is below the smallest representable double.
+ *
  * Returns: the value of $j_\ell(x)$.
  */
 gdouble
@@ -640,9 +645,12 @@ _taylor_jl (const glong l, const gdouble x, const gdouble x2, const gdouble x3, 
  * @x: Spherical Bessel argument $x$
  * @djl: (out) (array fixed-size=4): Output power series coefficients
  *
- * Computes Spherical Bessel function power series
- * coefficients up to order three, i.e.,
- * $$\left(j_\ell(x),\; j'_\ell(x), \frac{j''_\ell(x)}{2!}, \frac{j'''_\ell(x)}{3!}\right).$$
+ * Computes Spherical Bessel function power series coefficients up to order three,
+ * i.e.,
+ * $$
+ * \left(j_\ell(x),\; j'_\ell(x), \frac{j''_\ell(x)}{2!},
+ * \frac{j'''_\ell(x)}{3!}\right).
+ * $$
  */
 void
 ncm_sf_sbessel_taylor (gulong l, gdouble x, gdouble *djl)
@@ -672,8 +680,8 @@ _ncm_sf_sbessel_spline_calc (gdouble x, gpointer data)
  * @xf: Spherical Bessel interval lower-bound $x_f$.
  * @reltol: Interpolation error tolerance.
  *
- * Computes a spline approximation of the Spherical Bessel
- * $j_\ell$ in the interval $[x_i, x_f]$.
+ * Computes a spline approximation of the Spherical Bessel $j_\ell$ in the interval
+ * $[x_i, x_f]$.
  *
  * Returns: (transfer full): A #NcmSpline with the Spherical Bessel approximation.
  */

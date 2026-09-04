@@ -25,7 +25,7 @@
 """Tests for NcXcorSolver: the batched register/request interface.
 
 Covers registration/request bookkeeping (dev-notes/xcor_ultralevin_batching_plan.md
-sec 5.1), the ℓ-block planner (sec 5), and solve() (sec 5-6): the
+sec 5.1), the ell-block planner (sec 5), and solve() (sec 5-6): the
 per-block shared-closure KERNEL_CUBATURE path and the direct-delegation
 fallback for every other method.
 """
@@ -142,7 +142,7 @@ def test_plan_blocks_single_request_tiling(kernel_tsz: Nc.XcorKernel) -> None:
 def test_plan_blocks_multiple_requests_union(
     kernel_tsz: Nc.XcorKernel, kernel_cmb_isw: Nc.XcorKernel
 ) -> None:
-    """Blocks tile the union of every request's ℓ-range."""
+    """Blocks tile the union of every request's ell-range."""
     solver = Nc.XcorSolver.new()
     id_a = solver.register_kernel(kernel_tsz)
     id_b = solver.register_kernel(kernel_cmb_isw)
@@ -366,7 +366,7 @@ def test_solve_block_parallel_stress(
 ) -> None:
     """solve() over many blocks/kernels/requests matches nc_xcor_compute(),
     exercising the OpenMP block-parallel path (dev-notes/xcor_ultralevin_batching_plan.md
-    §6.3) with real concurrency, not just a single-block sanity check.
+    sec. 6.3) with real concurrency, not just a single-block sanity check.
 
     Each thread gets its own #NcmSerialize-duplicated clone of every
     registered kernel; this is the one test that would (nondeterministically)
@@ -467,6 +467,10 @@ def test_solve_tier3_duplicated_kernel_shrinking_last_block(
         nbar=3.0,
         intr_shear=7.0,
         integrator=integrator,
+        # Matched to the integrator above: a closure cannot be fitted to more
+        # precision than the samples carry, and the library refuses the pairing.
+        reltol=1.0e-2,
+        scaled_abstol=1.0e-2,
     )
     kernel.set_l_limber(-1)  # tier 3: true non-Limber
     kernel.prepare(cosmology.cosmo)
@@ -510,6 +514,8 @@ def _tier3_wl_kernel(cosmology: Cosmology, lmin: int, lmax: int) -> Nc.XcorKerne
         nbar=3.0,
         intr_shear=7.0,
         integrator=integrator,
+        reltol=1.0e-2,
+        scaled_abstol=1.0e-2,
     )
     kernel.set_l_limber(-1)
     kernel.prepare(cosmology.cosmo)

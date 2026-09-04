@@ -29,7 +29,7 @@
  * Truncated-Gaussian intrinsic ellipticity distribution, per-galaxy width.
  *
  * Same truncated-Gaussian family as #NcGalaxyShapePopGauss (the "Global"
- * variant) — a parallel type, not a subclass: both derive directly from
+ * variant) -- a parallel type, not a subclass: both derive directly from
  * #NcGalaxyShapePop and share the family's mechanism (data layout,
  * eval_p, gen) as plain functions reused across the two files (see
  * nc_galaxy_shape_pop_gauss_private.h), not through inheritance. The only

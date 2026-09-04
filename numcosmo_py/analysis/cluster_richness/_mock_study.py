@@ -183,7 +183,7 @@ class MockStudy:
 
         self.console.print(
             f"[magenta]Running mock study: {self.n_mocks} mocks "
-            f"× {len(self.cuts)} cuts[/magenta]"
+            f"x {len(self.cuts)} cuts[/magenta]"
         )
 
         # Get parameter names for display
@@ -213,7 +213,7 @@ class MockStudy:
             )
             gof_table.add_column("Cut", style="green", width=6)
             gof_table.add_column("Fiducial m2lnL", style="yellow", width=14)
-            gof_table.add_column("Mock Mean ± Std", style="cyan", width=18)
+            gof_table.add_column("Mock Mean +/- Std", style="cyan", width=18)
             gof_table.add_column("p-value", style="blue", width=10)
             gof_table.add_column("z-score", style="magenta", width=10)
             gof_table.add_column("n_mocks", style="white", width=8)
@@ -236,7 +236,7 @@ class MockStudy:
                 gof_table.add_row(
                     f"{np.exp(cut):.1f}",
                     f"{fiducial_m2lnL:.2f}",
-                    f"{mock_mean:.2f} ± {mock_std:.2f}",
+                    f"{mock_mean:.2f} +/- {mock_std:.2f}",
                     f"{p_value:.4f}",
                     f"{z_score:+.2f}",
                     f"{len(mock_m2lnLs)}",
@@ -278,7 +278,7 @@ class MockStudy:
                         ),
                         ", ".join(
                             [
-                                f"{val: {PARAM_FORMAT}} ± {err: {PARAM_FORMAT}}"
+                                f"{val: {PARAM_FORMAT}} +/- {err: {PARAM_FORMAT}}"
                                 for val, err in zip(mean_bf, std_bf)
                             ]
                         ),
@@ -299,7 +299,7 @@ class MockStudy:
                         ),
                         ", ".join(
                             [
-                                f"{val: {PARAM_FORMAT}} ± {err: {PARAM_FORMAT}}"
+                                f"{val: {PARAM_FORMAT}} +/- {err: {PARAM_FORMAT}}"
                                 for val, err in zip(mean_mc, std_mc)
                             ]
                         ),
@@ -322,7 +322,7 @@ class MockStudy:
                         ),
                         ", ".join(
                             [
-                                f"{val: {PARAM_FORMAT}} ± {err: {PARAM_FORMAT}}"
+                                f"{val: {PARAM_FORMAT}} +/- {err: {PARAM_FORMAT}}"
                                 for val, err in zip(mean_mc, std_mc)
                             ]
                         ),
@@ -343,7 +343,7 @@ class MockStudy:
                         ),
                         ", ".join(
                             [
-                                f"{val: {PARAM_FORMAT}} ± {err: {PARAM_FORMAT}}"
+                                f"{val: {PARAM_FORMAT}} +/- {err: {PARAM_FORMAT}}"
                                 for val, err in zip(mean_bs, std_bs)
                             ]
                         ),
@@ -499,7 +499,7 @@ class MockStudy:
         )
         table.add_column("Cut", style="green", width=6)
         table.add_column("Fiducial m2lnL", style="yellow", width=14)
-        table.add_column("Mock Mean ± Std", style="cyan", width=18)
+        table.add_column("Mock Mean +/- Std", style="cyan", width=18)
         table.add_column("p-value", style="blue", width=10)
         table.add_column("z-score", style="magenta", width=10)
         table.add_column("n_mocks", style="white", width=8)
@@ -509,7 +509,7 @@ class MockStudy:
             table.add_row(
                 f"{np.exp(cut):.1f}",
                 f"{stats['fiducial_m2lnL']:.2f}",
-                f"{stats['mock_mean']:.2f} ± {stats['mock_std']:.2f}",
+                f"{stats['mock_mean']:.2f} +/- {stats['mock_std']:.2f}",
                 f"{stats['p_value']:.4f}",
                 f"{stats['z_score']:+.2f}",
                 f"{stats['n_mocks']}",

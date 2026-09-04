@@ -344,7 +344,7 @@ def test_component_k_epsilon_drop(
 ) -> None:
     """Test that k_epsilon is where KL drops by epsilon from KL_max.
 
-    The algorithm finds k_epsilon where KL(y/k_epsilon, k_epsilon) ≈ epsilon * KL_max.
+    The algorithm finds k_epsilon where KL(y/k_epsilon, k_epsilon) ~= epsilon * KL_max.
     Since set_epsilon sets the squared threshold, we use epsilon^2 in the test.
     """
     _, _, component = kernel_component_drop
@@ -544,7 +544,7 @@ def test_component_k_epsilon_drop1(
 ) -> None:
     """Test that k_epsilon is where KL drops by epsilon from KL_max for k > k_max.
 
-    At k_epsilon: KL(y/k_epsilon, k_epsilon) ≈ epsilon * KL_max.
+    At k_epsilon: KL(y/k_epsilon, k_epsilon) ~= epsilon * KL_max.
     Since set_epsilon sets the squared threshold, we configure epsilon^2.
     Allows factor of 10 tolerance due to search algorithm behavior at boundaries.
     """

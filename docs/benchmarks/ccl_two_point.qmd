@@ -22,7 +22,7 @@ Compares two-point cosmological observables from CCL and NumCosmo.
 
 ### Scope of the comparison
 
-Both libraries are run in the **Limber approximation** throughout this page.
+Both libraries are run in the Limber approximation throughout this page.
 NumCosmo uses `Nc.XcorMethod.LIMBER_Z_CUBATURE`, the redshift-space Limber
 integral, as the closest counterpart to CCL's own `angular_cl` path. Every
 difference reported below is therefore between two Limber implementations, not
@@ -212,13 +212,13 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 ```
 
 
-The CCL calculations show marginal agreement with those from NumCosmo. This discrepancy stems from CCL’s reduced accuracy in computing the growth function and growth factor at high redshifts ($z \gtrsim 10$). While this limitation does not significantly impact cross-correlations involving the ISW kernel when combined with probes anchored at lower redshifts, it introduces pronounced errors in the ISW autocorrelation, which depends on precise integration over the full redshift range up to $z_\mathrm{lss}$.  
+The CCL calculations show marginal agreement with those from NumCosmo. This discrepancy stems from CCL's reduced accuracy in computing the growth function and growth factor at high redshifts ($z \gtrsim 10$). While this limitation does not significantly impact cross-correlations involving the ISW kernel when combined with probes anchored at lower redshifts, it introduces pronounced errors in the ISW autocorrelation, which depends on precise integration over the full redshift range up to $z_\mathrm{lss}$.  
 
-As illustrated in the ISW kernel plot, the results exhibit strong agreement up to $z \sim 10$, beyond which discrepancies grow increasingly pronounced, reflecting the cumulative effect of inaccuracies in CCL’s high-$z$ growth calculations.  
+As illustrated in the ISW kernel plot, the results exhibit strong agreement up to $z \sim 10$, beyond which discrepancies grow increasingly pronounced, reflecting the cumulative effect of inaccuracies in CCL's high-$z$ growth calculations.  
 
-## Thermal Sunyaev-Zel’dovich (tSZ) Effect  
+## Thermal Sunyaev-Zel'dovich (tSZ) Effect  
 
-The code below benchmarks the thermal Sunyaev-Zel’dovich (tSZ) kernel and angular power spectrum ($C_\ell$) implementations in CCL and NumCosmo. 
+The code below benchmarks the thermal Sunyaev-Zel'dovich (tSZ) kernel and angular power spectrum ($C_\ell$) implementations in CCL and NumCosmo. 
 This comparison cross-validates the two frameworks, focusing on relative differences in the kernel and $C_\ell$ values.
 
 ```{python} 
@@ -407,8 +407,8 @@ fresh kernel and `Xcor` object and re-runs `prepare()` each time. Timing a
 lambda that constructs everything therefore charges NumCosmo for setup that CCL
 has already amortized away.
 
-We report both stages instead. **Setup + $C_\ell$** builds the tracer/kernel and
-computes the spectrum, as a cold call would; **$C_\ell$ only** re-uses objects
+We report both stages instead. Setup + $C_\ell$ builds the tracer/kernel and
+computes the spectrum, as a cold call would; $C_\ell$ only re-uses objects
 that have already been prepared, which is what an inner loop over $\ell$ or a
 repeated evaluation at fixed cosmology actually costs. Neither number is
 accuracy-matched: both codes run at the default settings described above, so
@@ -537,7 +537,7 @@ benchmarks = [
 
 def timed(mean_std):
     """Render a (mean, std) pair from compute_times."""
-    return f"{format_time(mean_std[0])} ± {format_time(mean_std[1])}"
+    return f"{format_time(mean_std[0])} +/- {format_time(mean_std[1])}"
 
 
 table = []

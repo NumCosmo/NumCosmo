@@ -2,8 +2,6 @@
 title: Halo Density Profiles
 ---
 
-# Halo Density Profiles
-
 This page describes the spherical matter density profiles used to model dark
 matter halos, implemented by the abstract base class
 [[numcosmo|NcHaloDensityProfile]] and its concrete subclasses (NFW, Einasto,
@@ -36,7 +34,7 @@ the profile at construction time.
 
 ### Scale Radius
 
-The mass–radius relation defines $r_\Delta$ through
+The mass--radius relation defines $r_\Delta$ through
 $$
 M_\Delta = \frac{4\pi}{3}\,r_\Delta^3\,\Delta\,\rho_\mathrm{bg},
 $$
@@ -60,7 +58,7 @@ M_\Delta = \int_0^{r_\Delta} 4\pi r^2 \rho(r)\,\mathrm{d}r
 \qquad
 I_{x^2\hat\rho}(c_\Delta) \equiv \int_0^{c_\Delta} x^2\,\hat\rho(x)\,\mathrm{d}x.
 $$
-Equating this to the mass–radius relation fixes the density scale,
+Equating this to the mass--radius relation fixes the density scale,
 $$
 \rho_s = \frac{c_\Delta^3\,\Delta\,\rho_\mathrm{bg}}{3\,I_{x^2\hat\rho}(c_\Delta)},
 \qquad
@@ -109,7 +107,7 @@ $\mathrm{M}_\odot\,\mathrm{Mpc}^{-2}$.
 
 ## Profile Families
 
-### Navarro–Frenk–White
+### Navarro--Frenk--White
 
 The NFW profile [@Navarro1996] is
 $$
@@ -141,7 +139,7 @@ I_{x^2\hat\rho}(x) = \left(\frac{\alpha}{2}\right)^{3/\alpha}\frac{e^{2/\alpha}}
 \left[1 - \frac{\Gamma\!\left(3/\alpha,\;2x^\alpha/\alpha\right)}{\Gamma\!\left(3/\alpha\right)}\right],
 $$
 where $\Gamma(s)$ and $\Gamma(s,\,t)$ are the complete and upper incomplete gamma
-functions. Typical values $\alpha \approx 0.12$–$0.35$ are motivated by $N$-body
+functions. Typical values $\alpha \approx 0.12$--$0.35$ are motivated by $N$-body
 simulations [@Gao2008; @Dutton2014]. The projected quantities are computed
 numerically.
 Implemented by [[numcosmo|NcHaloDensityProfileEinasto]].

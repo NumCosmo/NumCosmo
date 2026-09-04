@@ -28,37 +28,31 @@
  *
  * Ultraspherical coefficient solver for the spherical-Bessel operator.
  *
- * For each $\ell$, the solver computes the Dirichlet boundary-value problem
+ * For each $\ell$, solves the two-point boundary-value problem
  * $$
- * x^2 u''(x) + [x^2 - \ell(\ell+1)]u(x) = x f(x),
+ * x^2 u^{\prime\prime}(x) + [x^2 - \ell(\ell+1)]u(x) = x f(x),
  * $$
- * on $x \in [a,b]$. With $x=m+ht$, $m=(a+b)/2$ and $h=(b-a)/2$, this becomes
- * $$
- * \frac{(m+ht)^2}{h^2}u_{tt}
- * + [(m+ht)^2-\ell(\ell+1)]u = (m+ht)f(m+ht),
- * $$
- * for $t \in [-1,1]$.
+ * on $x \in [a,b]$.
  *
- * # Spectral Discretization Method
+ * The right-hand side is passed as a coefficient array. Its first two entries are
+ * $u(a)$ and $u(b)$; the remaining ones are the $C^{(2)}$ ultraspherical coefficients
+ * of $x f(x)$. Zero endpoint entries impose homogeneous Dirichlet data.
  *
- * The unknown is represented by Chebyshev coefficients, while the equation is
- * represented in the $C^{(2)}$ ultraspherical coefficient basis. Polynomial
- * multiplication keeps the matrix banded. The first two RHS entries are $u(a)$ and
- * $u(b)$; subsequent entries are the $C^{(2)}$ coefficients of $x f(x)$. Zero endpoint
- * entries therefore impose homogeneous Dirichlet data.
+ * Truncation stops on the decay of the transformed solution coefficients relative to
+ * the largest one seen, which is not a rigorous solution-error bound. In a batch,
+ * every multipole must satisfy the criterion.
  *
- * Rows are triangularized incrementally with Givens rotations. Truncation stops after
- * a resolution floor and a run of transformed solution coefficients smaller than the
- * configured tolerance relative to the largest coefficient seen. This coefficient
- * decay criterion is not a rigorous solution-error bound. In a batch, every multipole
- * must satisfy the criterion.
+ * A #NcmSBesselOdeOperator stores the factorization for one interval and one multipole
+ * range. Repeated solves reuse it and extend it only when the new right-hand side
+ * needs more columns. The solver tolerance is copied into an operator when it is
+ * created; changing the solver later does not alter existing operators.
+ * ncm_sbessel_ode_solver_reconfigure_operator() moves an existing operator to another
+ * interval and multipole range, keeping its allocated storage.
  *
- * A #NcmSBesselOdeOperator stores the matrix and rotations for one interval and one
- * multipole range. Repeated solves reuse those rotations and extend the factorization
- * only when the new RHS needs more columns. The solver tolerance is copied into an
- * operator when it is created; changing the solver later does not alter existing
- * operators. ncm_sbessel_ode_operator_reset() invalidates the factorization while
- * retaining allocated storage and the copied tolerance.
+ * See <a href="../../theory/sbessel_ode_solver.html">The Ultraspherical Spectral
+ * Solver</a> for the discretisation, the truncation floor and the singular panel
+ * spans, and <a href="../../theory/spectral.html">Spectral Methods</a> for the
+ * ultraspherical primitives the operator is assembled from.
  *
  */
 
@@ -80,7 +74,11 @@
 #endif /* NUMCOSMO_GIR_SCAN */
 
 /* Operator bandwidth */
-/* Number of rows to rotate lower bandwidth plus number of boundary conditions */
+
+/* Number of rows to rotate lower bandwidth plus number of boundary conditions, these
+ * numbers are fixed by the ultraspherical primitives and the spherical Bessel
+ * operator.
+ */
 #define NUMBER_OF_BOUNDARY_CONDITIONS 2
 #define LOWER_BANDWIDTH 2
 #define UPPER_BANDWIDTH 6
@@ -91,7 +89,7 @@
  * Minimum number of spectral columns for the panel [@a, @b] at multipole @ell_min.
  *
  * The solution oscillates only beyond the turning point y ~ sqrt(ell(ell+1)); below it
- * the spherical Bessel functions are evanescent and the solution is smooth, so few
+ * the spherical Bessel functions are power-law like and the solution is smooth, so few
  * coefficients suffice. Only the oscillatory part of the panel sets a resolution
  * requirement: it carries about (b - y_turn)/pi oscillations, and a Chebyshev
  * expansion needs of order two coefficients per oscillation.
@@ -118,8 +116,7 @@ _ncm_sbessel_min_cols (const gdouble a, const gdouble b, const gint ell_min)
 
 #define ALIGNMENT 64 /* 64-byte alignment for cache lines */
 
-#define PADDED_BANDWIDTH \
-        ((TOTAL_BANDWIDTH + 7) & ~7) /* round up to multiple of 8 */
+#define PADDED_BANDWIDTH ((TOTAL_BANDWIDTH + 7) & ~7) /* round up to multiple of 8 */
 
 /* Rotation parameter accessors for interleaved cos/sin storage */
 #define ROTATION_COS(ptr) (ptr)[0]
@@ -142,8 +139,8 @@ typedef struct _NcmSBesselOdeSolverRow
 /**
  * _NcmSBesselOdeOperator:
  *
- * Reference-counted operator for one interval and one contiguous multipole range.
- * It owns the banded rows, reusable Givens rotations, transformed RHS, and scratch
+ * Reference-counted operator for one interval and one contiguous multipole range. It
+ * owns the banded rows, reusable Givens rotations, transformed RHS, and scratch
  * storage used by scalar and batched solves.
  */
 struct _NcmSBesselOdeOperator
@@ -156,11 +153,11 @@ struct _NcmSBesselOdeOperator
   gdouble b;         /* Right endpoint of interval [a,b] */
   gdouble half_len;  /* Half-length h = (b-a)/2 for coordinate transformation */
   gdouble mid_point; /* Midpoint m = (a+b)/2 for coordinate transformation */
-  gint ell_min;      /* Minimum angular momentum in batch */
-  gint ell_max;      /* Maximum angular momentum in batch */
-  guint n_ell;       /* Number of angular momentum values: n_ell = ell_max - ell_min + 1 */
+  gint ell_min;      /* Minimum multipole in batch */
+  gint ell_max;      /* Maximum multipole in batch */
+  guint n_ell;       /* Number of multipoles in batch: n_ell = ell_max - ell_min + 1 */
   gdouble tolerance; /* Relative coefficient-decay tolerance */
-  glong min_cols;    /* Resolution floor: the decay test may not fire below this many
+  glong min_cols;    /* Resolution floor: the decay test may not stop below this many
                       * columns. Set from the oscillatory part of the panel, i.e. the
                       * span beyond the turning point; fewer columns than that cannot
                       * represent the solution however quiet the leading coefficients
@@ -357,12 +354,13 @@ _ensure_operator_size (NcmSBesselOdeOperator *op, gsize required_order)
 
     if (op->c != NULL)
     {
-      /* old_c_size is padded by ROWS_TO_ROTATE * op->n_ell using n_ell as of
-       * the *previous* resize; if a ncm_sbessel_ode_operator_reset() call
-       * shrank n_ell since then, that padding term shrinks too, and
-       * old_c_size can end up larger than new_c_size even though this is
-       * the grow branch (required_size, unpadded, is still what triggered
-       * it) -- clamp to avoid writing past the freshly allocated new_c. */
+      /* op->padded_operator_size dates from the previous resize and used the n_ell in
+       * effect then. ncm_sbessel_ode_solver_reconfigure_operator() can lower n_ell while
+       * keeping
+       * this buffer, so old_c_size can exceed new_c_size even in this grow branch,
+       * whose test compares the unpadded sizes. Copy the smaller of the two: the read
+       * stays inside op->c and the write inside new_c. Nothing live is lost when the
+       * smaller one wins, since reconfiguring also sets last_n_cols to zero. */
       memcpy (new_c, op->c, GSL_MIN (old_c_size, new_c_size));
       free (op->c);
     }
@@ -454,7 +452,9 @@ ncm_sbessel_ode_solver_class_init (NcmSBesselOdeSolverClass *klass)
   /**
    * NcmSBesselOdeSolver:tolerance:
    *
-   * Relative coefficient-decay tolerance copied into new operators.
+   * Relative coefficient-decay tolerance copied into new operators, by default a tenth
+   * of the double precision epsilon. It measures how fast the Chebyshev coefficients
+   * decay, not how far the solution is from the exact one.
    */
   g_object_class_install_property (object_class,
                                    PROP_TOLERANCE,
@@ -500,6 +500,7 @@ ncm_sbessel_ode_solver_ref (NcmSBesselOdeSolver *solver)
  * @solver: a #NcmSBesselOdeSolver
  *
  * Decreases the reference count of @solver by one.
+ *
  */
 void
 ncm_sbessel_ode_solver_free (NcmSBesselOdeSolver *solver)
@@ -512,6 +513,7 @@ ncm_sbessel_ode_solver_free (NcmSBesselOdeSolver *solver)
  * @solver: a #NcmSBesselOdeSolver
  *
  * Decreases the reference count of *@solver by one and sets *@solver to NULL.
+ *
  */
 void
 ncm_sbessel_ode_solver_clear (NcmSBesselOdeSolver **solver)
@@ -519,17 +521,48 @@ ncm_sbessel_ode_solver_clear (NcmSBesselOdeSolver **solver)
   g_clear_object (solver);
 }
 
+/* Sets the five values that configure an operator, plus everything derived from them,
+ * and marks it as carrying no factorization. Shared by creation and reconfiguration. */
+static void
+_ncm_sbessel_ode_operator_configure (NcmSBesselOdeOperator *op, gdouble a, gdouble b, gint ell_min, gint ell_max, gdouble tolerance)
+{
+  g_assert_cmpfloat (a, <, b);
+  g_assert_cmpint (ell_min, <=, ell_max);
+  g_assert_cmpint (ell_min, >=, 0);
+
+  op->a         = a;
+  op->b         = b;
+  op->half_len  = (b - a) / 2.0;
+  op->mid_point = (a + b) / 2.0;
+  op->ell_min   = ell_min;
+  op->ell_max   = ell_max;
+  op->n_ell     = (guint) (ell_max - ell_min + 1);
+  op->min_cols  = _ncm_sbessel_min_cols (a, b, ell_min);
+  op->tolerance = tolerance;
+
+  g_assert_cmpuint (op->n_ell, >, 0);
+  g_assert_cmpuint (op->n_ell, <, UINT_MAX / 2); /* Prevent overflow in capacity calculations */
+
+  op->last_n_cols = 0;
+}
+
 /**
  * ncm_sbessel_ode_solver_create_operator:
  * @solver: a #NcmSBesselOdeSolver
  * @a: left endpoint of interval
  * @b: right endpoint of interval
- * @ell_min: minimum angular momentum
- * @ell_max: maximum angular momentum
+ * @ell_min: minimum multipole
+ * @ell_max: maximum multipole
  *
- * Creates a new #NcmSBesselOdeOperator with the specified structural parameters.
- * The operator encapsulates all problem-specific data including the interval,
- * angular momentum range, matrix storage, and diagonalization state.
+ * Creates a #NcmSBesselOdeOperator for the interval [@a, @b] and the multipoles
+ * @ell_min to @ell_max, with a copy of the solver's current
+ * #NcmSBesselOdeSolver:tolerance. Those five values are its whole configuration;
+ * everything else it holds is derived from them. The operator keeps no reference to
+ * @solver, so later changes to the solver do not reach it.
+ *
+ * No matrix is assembled here and no storage for one is allocated. The first solve
+ * builds the factorization, and later solves on the same operator reuse it and extend
+ * it only when they need more columns.
  *
  * Returns: (transfer full): a new #NcmSBesselOdeOperator with refcount = 1
  */
@@ -549,23 +582,10 @@ ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, 
   /* Initialize reference count */
   op->ref_count = 1;
 
-  /* Set structural parameters */
-  op->a         = a;
-  op->b         = b;
-  op->half_len  = (b - a) / 2.0;
-  op->mid_point = (a + b) / 2.0;
-  op->ell_min   = ell_min;
-  op->ell_max   = ell_max;
-  op->n_ell     = (guint) (ell_max - ell_min + 1);
-  op->min_cols  = _ncm_sbessel_min_cols (a, b, ell_min);
-  op->tolerance = self->tolerance; /* Copy tolerance from solver */
-
-  g_assert_cmpuint (op->n_ell, >, 0);
-  g_assert_cmpuint (op->n_ell, <, UINT_MAX / 2); /* Prevent overflow in capacity calculations */
+  _ncm_sbessel_ode_operator_configure (op, a, b, ell_min, ell_max, self->tolerance);
 
   op->matrix_rows          = NULL;
   op->c                    = NULL;
-  op->last_n_cols          = 0;
   op->rotation_params      = NULL;
   op->operator_size        = 0;
   op->padded_operator_size = 0;
@@ -581,6 +601,35 @@ ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, 
   op->convergence_capacity      = 0;
 
   return op;
+}
+
+/**
+ * ncm_sbessel_ode_solver_reconfigure_operator:
+ * @solver: a #NcmSBesselOdeSolver
+ * @op: a #NcmSBesselOdeOperator
+ * @a: new left endpoint of interval
+ * @b: new right endpoint of interval
+ * @ell_min: new minimum multipole
+ * @ell_max: new maximum multipole
+ *
+ * Gives @op the configuration ncm_sbessel_ode_solver_create_operator() would give a
+ * new operator, including the solver's current #NcmSBesselOdeSolver:tolerance. The
+ * reference count is untouched.
+ *
+ * The factorization is discarded and the next solve builds it again. The buffers
+ * holding it are kept, so a call that does not need more room allocates nothing.
+ *
+ */
+void
+ncm_sbessel_ode_solver_reconfigure_operator (NcmSBesselOdeSolver *solver, NcmSBesselOdeOperator *op, gdouble a, gdouble b, gint ell_min, gint ell_max)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+
+  g_assert (solver != NULL);
+  g_assert (op != NULL);
+  g_assert (op->ref_count > 0);
+
+  _ncm_sbessel_ode_operator_configure (op, a, b, ell_min, ell_max, self->tolerance);
 }
 
 /**
@@ -606,8 +655,9 @@ ncm_sbessel_ode_operator_ref (NcmSBesselOdeOperator *op)
  * ncm_sbessel_ode_operator_unref:
  * @op: a #NcmSBesselOdeOperator
  *
- * Decreases the reference count of @op by one.
- * When the reference count reaches zero, frees all allocated memory.
+ * Decreases the reference count of @op by one. When the reference count reaches zero,
+ * frees all allocated memory.
+ *
  */
 void
 ncm_sbessel_ode_operator_unref (NcmSBesselOdeOperator *op)
@@ -651,6 +701,7 @@ ncm_sbessel_ode_operator_unref (NcmSBesselOdeOperator *op)
  * @op: a #NcmSBesselOdeOperator
  *
  * Decreases the reference count of *@op by one and sets *@op to NULL.
+ *
  */
 void
 ncm_sbessel_ode_operator_clear (NcmSBesselOdeOperator **op)
@@ -663,54 +714,13 @@ ncm_sbessel_ode_operator_clear (NcmSBesselOdeOperator **op)
 }
 
 /**
- * ncm_sbessel_ode_operator_reset:
- * @op: a #NcmSBesselOdeOperator
- * @a: new left endpoint of interval
- * @b: new right endpoint of interval
- * @ell_min: new minimum angular momentum
- * @ell_max: new maximum angular momentum
- *
- * Resets the operator with new structural parameters without modifying the reference count.
- * Clears all factorization state, rotations, and convergence state, but preserves
- * allocated capacities for efficiency. After reset, the operator behaves exactly like
- * a freshly created one.
- */
-void
-ncm_sbessel_ode_operator_reset (NcmSBesselOdeOperator *op, gdouble a, gdouble b, gint ell_min, gint ell_max)
-{
-  g_assert (op != NULL);
-  g_assert (op->ref_count > 0);
-  g_assert_cmpfloat (a, <, b);
-  g_assert_cmpint (ell_min, <=, ell_max);
-  g_assert_cmpint (ell_min, >=, 0);
-
-  /* Update structural parameters */
-  op->a         = a;
-  op->b         = b;
-  op->half_len  = (b - a) / 2.0;
-  op->mid_point = (a + b) / 2.0;
-  op->ell_min   = ell_min;
-  op->ell_max   = ell_max;
-  op->n_ell     = (guint) (ell_max - ell_min + 1);
-  op->min_cols  = _ncm_sbessel_min_cols (a, b, ell_min);
-
-  g_assert_cmpuint (op->n_ell, >, 0);
-  g_assert_cmpuint (op->n_ell, <, UINT_MAX / 2); /* Prevent overflow in capacity calculations */
-
-  op->last_n_cols = 0;
-
-  /* Clear RHS storage - no need to actually zero, capacity tracking is sufficient */
-
-  /* Note: We don't free allocated buffers to allow reuse */
-}
-
-/**
  * ncm_sbessel_ode_solver_set_tolerance:
  * @solver: a #NcmSBesselOdeSolver
  * @tol: convergence tolerance
  *
  * Sets the relative coefficient-decay tolerance copied into subsequently created
  * operators. Existing operators retain their current tolerance.
+ *
  */
 void
 ncm_sbessel_ode_solver_set_tolerance (NcmSBesselOdeSolver *solver, gdouble tol)
@@ -750,8 +760,9 @@ _ncm_sbessel_bc_row (NcmSBesselOdeSolverRow *row, glong col_index)
  * @op: a #NcmSBesselOdeOperator (unused in this function)
  * @row: output row
  *
- * Creates boundary condition row for u(-1) = 0.
- * All data entries are zero, bc_at_m1 = 1.0, bc_at_p1 = 0.0.
+ * Creates boundary condition row for u(-1) = 0. All data entries are zero, bc_at_m1 =
+ * 1.0, bc_at_p1 = 0.0.
+ *
  */
 static void
 _ncm_sbessel_create_row_bc_at_m1 (NcmSBesselOdeOperator *op, NcmSBesselOdeSolverRow *row)
@@ -766,8 +777,9 @@ _ncm_sbessel_create_row_bc_at_m1 (NcmSBesselOdeOperator *op, NcmSBesselOdeSolver
  * @op: a #NcmSBesselOdeOperator (unused in this function)
  * @row: output row
  *
- * Creates boundary condition row for u(+1) = 0.
- * All data entries are zero, bc_at_m1 = 0.0, bc_at_p1 = 1.0.
+ * Creates boundary condition row for u(+1) = 0. All data entries are zero, bc_at_m1 =
+ * 0.0, bc_at_p1 = 1.0.
+ *
  */
 static void
 _ncm_sbessel_create_row_bc_at_p1 (NcmSBesselOdeOperator *op, NcmSBesselOdeSolverRow *row)
@@ -784,9 +796,12 @@ _ncm_sbessel_create_row_bc_at_p1 (NcmSBesselOdeOperator *op, NcmSBesselOdeSolver
  * @row_index: row index (0-based, corresponding to k in the Gegenbauer basis)
  *
  * Creates row @row_index of the mapped operator
- * $$L = \frac{(m+ht)^2}{h^2}\frac{d^2}{dt^2}
- *       +(m+ht)^2-\ell(\ell+1)$$
+ * $$
+ * L = \frac{(m+ht)^2}{h^2}\frac{d^2}{dt^2}
+ *       +(m+ht)^2-\ell(\ell+1)
+ * $$
  * in the $C^{(2)}$ coefficient basis.
+ *
  */
 static void
 _ncm_sbessel_create_row_operator (NcmSBesselOdeOperator *op, NcmSBesselOdeSolverRow *row, glong row_index)
@@ -825,22 +840,24 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeOperator *op, NcmSBesselOdeSolver
  * @ell_min: minimum ell value
  * @n_ell: number of ell values to process
  *
- * Creates differential operator rows for multiple ell values at once using an optimized
- * incremental algorithm. The key insight is that operator rows for consecutive ell values
- * differ only in the ell(ell+1) term:
+ * Creates differential operator rows for multiple ell values at once using an
+ * optimized incremental algorithm. The key insight is that operator rows for
+ * consecutive ell values differ only in the ell(ell+1) term:
  *
- * - All derivative operators (d², t d², t² d²) are ell-independent
- * - Identity terms (x, x²) are ell-independent
- * - Only the projection term m² - ell(ell+1) depends on ell
+ * - All derivative operators ($d^2$, $t\,d^2$, $t^2 d^2$) are ell-independent
+ * - Identity terms ($x$, $x^2$) are ell-independent
+ * - Only the projection term $m^2 - \ell(\ell+1)$ depends on ell
  *
- * The optimization uses the recurrence: (ell+1)(ell+2) - ell(ell+1) = 2(ell+1), allowing
- * incremental updates by adding -2l for each successive ell value. This reduces
- * O(n_ell × operations) to O(operations + n_ell) complexity.
+ * The optimization uses the recurrence $(\ell+1)(\ell+2) - \ell(\ell+1) = 2(\ell+1)$,
+ * allowing incremental updates by adding $-2\ell$ for each successive ell value. This
+ * reduces $O(n_\ell \times \mathrm{operations})$ to $O(\mathrm{operations} + n_\ell)$.
  *
  * Algorithm:
+ *
  * 1. Compute all ell-independent terms once into row[0]
- * 2. Add ell-dependent term (m² - ell_min(ell_min+1)) to row[0]
- * 3. For each subsequent row: memcpy row[0] and add incremental correction -2l
+ * 2. Add ell-dependent term $m^2 - \ell_\mathrm{min}(\ell_\mathrm{min}+1)$ to row[0]
+ * 3. For each subsequent row: memcpy row[0] and add incremental correction $-2\ell$
+ *
  */
 static void
 _ncm_sbessel_create_row_operator_batched (NcmSBesselOdeOperator *op, NcmSBesselOdeSolverRow *row, glong row_index, gint ell_min, guint n_ell)
@@ -908,8 +925,9 @@ _ncm_sbessel_create_row_operator_batched (NcmSBesselOdeOperator *op, NcmSBesselO
  * @row: output row
  * @row_index: row index (first two rows are boundary conditions, rest are operators)
  *
- * Creates the appropriate row based on the row index.
- * Rows 0-1 are boundary conditions, rows >= 2 are differential operators.
+ * Creates the appropriate row based on the row index. Rows 0-1 are boundary
+ * conditions, rows >= 2 are differential operators.
+ *
  */
 static void
 _ncm_sbessel_create_row (NcmSBesselOdeOperator *op, NcmSBesselOdeSolverRow *row, glong row_index)
@@ -938,9 +956,10 @@ _ncm_sbessel_create_row (NcmSBesselOdeOperator *op, NcmSBesselOdeSolverRow *row,
  * @ell_min: minimum ell value
  * @n_ell: number of ell values to process
  *
- * Creates the appropriate rows for multiple ell values at once.
- * The i-th element row[i] will contain the row for ell = ell_min + i.
- * Rows 0-1 are boundary conditions (same for all ell), rows >= 2 are differential operators.
+ * Creates the appropriate rows for multiple ell values at once. The i-th element
+ * row[i] will contain the row for ell = ell_min + i. Rows 0-1 are boundary conditions
+ * (same for all ell), rows >= 2 are differential operators.
+ *
  */
 static void
 _ncm_sbessel_create_row_batched (NcmSBesselOdeOperator *op, NcmSBesselOdeSolverRow *row, glong row_index, gint ell_min, guint n_ell)
@@ -989,10 +1008,13 @@ _compute_inv_hypot (gdouble a, gdouble b)
  *
  * Applies Givens rotation to eliminate the entry at (row2, col=pivot_col).
  * The rotation transforms the rows as:
- *   new_row1 = c*row1 + s*row2
- *   new_row2 = -s*row1 + c*row2
- * where c and s are chosen to zero out element (row2, pivot_col).
- * The rotation parameters are stored at rot_ptr[0] (cos) and rot_ptr[1] (sin).
+ *
+ *   - new_row1 = c*row1 + s*row2
+ *   - new_row2 = -s*row1 + c*row2
+ *
+ * where c and s are chosen to zero out element (row2, pivot_col). The rotation
+ * parameters are stored at rot_ptr[0] (cos) and rot_ptr[1] (sin).
+ *
  */
 static inline __attribute__ ((hot)) void
 
@@ -1140,6 +1162,7 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
  * @max_solution_order: maximum allowed solution order
  *
  * Checks if storage needs to be extended and extends if necessary.
+ *
  */
 static inline void
 _ncm_sbessel_check_storage (NcmSBesselOdeOperator *op, glong col,
@@ -1220,8 +1243,10 @@ _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, gu
  * Applies a stored Givens rotation to RHS elements only (no matrix operations).
  * This is much faster than the full Givens rotation as it only performs 4 FLOPs.
  * The rotation transforms:
- *   new_c1 = cos*c1 + sin*c2
- *   new_c2 = -sin*c1 + cos*c2
+ *
+ *   - new_c1 = cos*c1 + sin*c2
+ *   - new_c2 = -sin*c1 + cos*c2
+ *
  */
 static inline void
 _ncm_sbessel_apply_stored_rotation_to_rhs (gdouble * restrict rot_ptr, gdouble * restrict c1, gdouble * restrict c2)
@@ -1403,8 +1428,9 @@ _ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArr
  * @rhs: endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
  * @solution_order: initial solution order
  *
- * Sets up the first ROWS_TO_ROTATE rows (boundary conditions) and initializes
- * the RHS vector. This function is called only when starting a fresh diagonalization.
+ * Sets up the first ROWS_TO_ROTATE rows (boundary conditions) and initializes the RHS
+ * vector. This function is called only when starting a fresh diagonalization.
+ *
  */
 static void
 _ncm_sbessel_ode_solver_setup_initial_rows (NcmSBesselOdeOperator *op, GArray *rhs, guint solution_order)
@@ -1425,11 +1451,14 @@ _ncm_sbessel_ode_solver_setup_initial_rows (NcmSBesselOdeOperator *op, GArray *r
 }
 
 /*
- * Initial column count for a solve. The decay test may not fire below
- * op->min_cols, so that many columns get built whatever the coefficients look
- * like; starting below it only makes _ncm_sbessel_check_storage() double its
- * way up, copying at every step and overshooting the count actually used by up
- * to a factor two.
+ * The column count allocated before the factorization starts: op->min_cols, the floor
+ * the convergence test cannot stop below, plus the ROWS_TO_ROTATE + 2 margin
+ * _ncm_sbessel_check_storage() keeps above the current column; or twice the right-hand
+ * side length, when the forcing needs more columns than the floor. A solve that
+ * converges near the floor therefore never grows its allocation.
+ *
+ * Growing from a smaller start would copy every row built so far at each doubling, and
+ * the last doubling can leave twice the columns the solve uses.
  */
 static inline guint
 _ncm_sbessel_initial_solution_order (NcmSBesselOdeOperator *op, guint rhs_len)
@@ -1442,10 +1471,10 @@ _ncm_sbessel_initial_solution_order (NcmSBesselOdeOperator *op, guint rhs_len)
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
  * @rhs: endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
  *
- * Diagonalizes the operator using adaptive QR decomposition.
- * This function applies Givens rotations to transform the system into upper triangular form
- * and applies the same rotations to the RHS vector. The transformed RHS is stored in
- * op->c and the upper triangular matrix is stored in op->matrix_rows.
+ * Diagonalizes the operator using adaptive QR decomposition. This function applies
+ * Givens rotations to transform the system into upper triangular form and applies the
+ * same rotations to the RHS vector. The transformed RHS is stored in op->c and the
+ * upper triangular matrix is stored in op->matrix_rows.
  *
  * Returns: the effective number of columns used (may be less than rhs_len due to convergence)
  */
@@ -1578,9 +1607,10 @@ _ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
  * @n_cols: number of columns in the solution (from diagonalization)
  * @solution: (out): output array for solution coefficients
  *
- * Builds the full Chebyshev coefficient solution by back-substitution on the
- * upper triangular system. Assumes _ncm_sbessel_ode_operator_diagonalize
- * has been called first.
+ * Builds the full Chebyshev coefficient solution by back-substitution on the upper
+ * triangular system. Assumes _ncm_sbessel_ode_operator_diagonalize has been called
+ * first.
+ *
  */
 static void
 _ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeOperator *op, glong n_cols, GArray *solution)
@@ -1630,7 +1660,8 @@ _ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeOperator *op, glong n_cols,
  * @solver: a #NcmSBesselOdeSolver
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
  * @n_cols: number of columns in the solution (from diagonalization)
- * @endpoints: (out callee-allocates) (element-type gdouble): output array for endpoint derivatives and error estimate
+ * @endpoints: (out callee-allocates) (element-type gdouble): output array for endpoint
+ * derivatives and error estimate
  *
  * Computes endpoint derivatives u'(a) and u'(b) and error estimate directly from the
  * diagonalized system without building the full solution vector. This is much more
@@ -1639,6 +1670,7 @@ _ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeOperator *op, glong n_cols,
  * derivatives without storing the full coefficient array.
  *
  * Assumes _ncm_sbessel_ode_operator_diagonalize has been called first.
+ *
  */
 static void
 _ncm_sbessel_ode_solver_compute_endpoints (NcmSBesselOdeOperator *op, glong n_cols, GArray *endpoints)
@@ -1763,9 +1795,10 @@ _ncm_sbessel_apply_rotations_batched (NcmSBesselOdeOperator *op, glong col, guin
  * @rhs: endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
  * @solution_order: initial solution order
  *
- * Sets up the first ROWS_TO_ROTATE rows (boundary conditions) for all ell values
- * and initializes the RHS vectors. This function is called only when starting a
- * fresh diagonalization in batched mode.
+ * Sets up the first ROWS_TO_ROTATE rows (boundary conditions) for all ell values and
+ * initializes the RHS vectors. This function is called only when starting a fresh
+ * diagonalization in batched mode.
+ *
  */
 static void
 _ncm_sbessel_ode_operator_setup_initial_rows_batched (NcmSBesselOdeOperator *op, const guint n_ell, GArray *rhs, guint solution_order)
@@ -1799,14 +1832,16 @@ _ncm_sbessel_ode_operator_setup_initial_rows_batched (NcmSBesselOdeOperator *op,
  * _ncm_sbessel_ode_operator_diagonalize_batched:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
  * @n_ell: number of ell values to process
- * @rhs: (element-type gdouble): endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
+ * @rhs: (element-type gdouble): endpoint data followed by $C^{(2)}$ coefficients of $x
+ * f(x)$
  *
  * Diagonalizes the operator using adaptive QR decomposition for multiple ell values.
- * This function applies Givens rotations to transform the system into upper triangular form
- * and applies the same rotations to the RHS vectors. The transformed RHS is stored in
- * op->c and the upper triangular matrix is stored in op->matrix_rows.
+ * This function applies Givens rotations to transform the system into upper triangular
+ * form and applies the same rotations to the RHS vectors. The transformed RHS is
+ * stored in op->c and the upper triangular matrix is stored in op->matrix_rows.
  *
- * Returns: the effective number of columns used (may be less than rhs_len due to convergence)
+ * Returns: the effective number of columns used (may be less than rhs_len due to
+ * convergence)
  */
 static inline __attribute__ ((always_inline)) glong
 
@@ -1959,11 +1994,12 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
  * @n_ell: number of ell values
  * @solutions: output array of solution matrices
  *
- * Builds the full Chebyshev coefficient solution by back-substitution on the
- * upper triangular system. Assumes _ncm_sbessel_ode_operator_diagonalize_batched
- * has been called first.
+ * Builds the full Chebyshev coefficient solution by back-substitution on the upper
+ * triangular system. Assumes _ncm_sbessel_ode_operator_diagonalize_batched has been
+ * called first.
  *
- * Returns: (transfer full): solution matrix where each row is the solution for one ell value
+ * Returns: (transfer full): solution matrix where each row is the solution for one ell
+ * value
  */
 static inline __attribute__ ((always_inline)) void
 
@@ -2041,15 +2077,15 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
  * @n_ell: number of ell values
  * @endpoints: (out): matrix with 3 columns per ell: [u'(a), u'(b), error]
  *
- * Computes endpoint derivatives u'(a) and u'(b) and error estimates directly from
- * the diagonalized system without building the full solution matrix. This is much more
+ * Computes endpoint derivatives u'(a) and u'(b) and error estimates directly from the
+ * diagonalized system without building the full solution matrix. This is much more
  * efficient when only endpoint information is needed, as it computes coefficients
  * on-the-fly during back-substitution and accumulates their contributions to the
  * derivatives without storing the full coefficient array.
  *
  * This function writes the results into the provided @endpoints matrix, which should
- * have at least n_ell rows and exactly 3 columns. Each row corresponds to one ell value,
- * with columns for u'(a), u'(b), and error estimate.
+ * have at least n_ell rows and exactly 3 columns. Each row corresponds to one ell
+ * value, with columns for u'(a), u'(b), and error estimate.
  *
  * Assumes _ncm_sbessel_ode_operator_diagonalize_batched has been called first.
  *
@@ -2299,16 +2335,18 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
  * _ncm_sbessel_ode_operator_solve_batched_internal:
  * @op: a #NcmSBesselOdeOperator
  * @rhs: endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
- * @n_ell: number of ell values to solve for (ell = ell_min, ell_min+1, ..., ell_min+n_ell-1)
+ * @n_ell: number of ell values to solve for (ell = ell_min, ell_min+1, ...,
+ * ell_min+n_ell-1)
  * @solutions: array of solution matrices, one per ell value
  *
- * Internal batched solver implementation. Can be specialized at compile time
- * when n_ell is known at compile time for better optimization.
+ * Internal batched solver implementation. Can be specialized at compile time when
+ * n_ell is known at compile time for better optimization.
  *
  * This function uses the factored implementation: first diagonalizes the operator,
  * then builds the full solution.
  *
- * Returns: (transfer full): solution matrix where each row is the solution for one ell value
+ * Returns: (transfer full): solution matrix where each row is the solution for one ell
+ * value
  */
 static inline __attribute__ ((always_inline)) void
 
@@ -2325,11 +2363,14 @@ _ncm_sbessel_ode_operator_solve_batched_internal (NcmSBesselOdeOperator *op, GAr
  * _ncm_sbessel_ode_operator_solve_endpoints_batched_internal:
  * @op: a #NcmSBesselOdeOperator
  * @rhs: endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
- * @n_ell: number of ell values to solve for (ell = ell_min, ell_min+1, ..., ell_min+n_ell-1)
+ * @n_ell: number of ell values to solve for (ell = ell_min, ell_min+1, ...,
+ * ell_min+n_ell-1)
  * @solutions: array of solution matrices, one per ell value
  *
- * Internal batched solver for endpoint computations. Diagonalizes the operator and computes
- * endpoint derivatives and error estimates without building the full solution matrix.
+ * Internal batched solver for endpoint computations. Diagonalizes the operator and
+ * computes endpoint derivatives and error estimates without building the full solution
+ * matrix.
+ *
  * Returns: (transfer full): matrix with 3 columns per ell: [u'(a), u'(b), error]
  */
 static inline __attribute__ ((always_inline)) void
@@ -2477,11 +2518,12 @@ ncm_sbessel_ode_operator_get_interval (NcmSBesselOdeOperator *op, gdouble *a, gd
 /**
  * ncm_sbessel_ode_operator_get_ell_range:
  * @op: a #NcmSBesselOdeOperator
- * @ell_min: (out): minimum angular momentum value
- * @ell_max: (out): maximum angular momentum value
+ * @ell_min: (out): minimum multipole
+ * @ell_max: (out): maximum multipole
  *
- * Gets the range of angular momentum values [ell_min, ell_max] for which
- * the operator solves. For single-ell operators, ell_min == ell_max.
+ * Gets the multipole range [ell_min, ell_max] for which the operator solves. For
+ * single-ell operators, ell_min == ell_max.
+ *
  */
 void
 ncm_sbessel_ode_operator_get_ell_range (NcmSBesselOdeOperator *op, gint *ell_min, gint *ell_max)
@@ -2511,10 +2553,10 @@ ncm_sbessel_ode_operator_get_tolerance (NcmSBesselOdeOperator *op)
  * ncm_sbessel_ode_operator_get_n_cols:
  * @op: a #NcmSBesselOdeOperator
  *
- * Gets the number of columns in the currently stored diagonalization.
- * Returns 0 if no diagonalization has been performed yet, or if the operator
- * has been reset. This is useful for understanding the convergence behavior
- * and for testing that diagonalization reuse is working correctly.
+ * Gets the number of columns in the currently stored diagonalization. Returns 0 if no
+ * diagonalization has been performed yet, or if the operator has been reset. This is
+ * useful for understanding the convergence behavior and for testing that
+ * diagonalization reuse is working correctly.
  *
  * Returns: the number of columns in the stored diagonalization (0 if none)
  */
@@ -2528,15 +2570,15 @@ ncm_sbessel_ode_operator_get_n_cols (NcmSBesselOdeOperator *op)
  * ncm_sbessel_ode_operator_get_operator_size:
  * @op: a #NcmSBesselOdeOperator
  *
- * Gets the total allocated size of the operator's internal storage.
- * This represents the allocated size (operator_order * n_ell) for the arrays
- * (matrix_rows, rotation_params, c) that store the diagonalized operator and
- * factorization data. The operator size grows as needed when solving problems
- * that require more storage than currently allocated.
+ * Gets the total allocated size of the operator's internal storage. This represents
+ * the allocated size (operator_order * n_ell) for the arrays (matrix_rows,
+ * rotation_params, c) that store the diagonalized operator and factorization data. The
+ * operator size grows as needed when solving problems that require more storage than
+ * currently allocated.
  *
- * This function is primarily useful for testing memory management and verifying
- * that the operator size grows correctly during consecutive solves with different
- * RHS sizes or ell ranges.
+ * This function is primarily useful for testing memory management and verifying that
+ * the operator size grows correctly during consecutive solves with different RHS sizes
+ * or ell ranges.
  *
  * Returns: the allocated operator size (0 if no memory has been allocated yet)
  */
@@ -2549,27 +2591,29 @@ ncm_sbessel_ode_operator_get_operator_size (NcmSBesselOdeOperator *op)
 /**
  * ncm_sbessel_ode_operator_solve:
  * @op: a #NcmSBesselOdeOperator
- * @rhs: (element-type gdouble): endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
- * @solution: (out callee-allocates) (transfer full) (element-type gdouble): solution vector (Chebyshev coefficients)
+ * @rhs: (element-type gdouble): endpoint data followed by $C^{(2)}$ coefficients of $x
+ * f(x)$
+ * @solution: (out callee-allocates) (transfer full) (element-type gdouble): solution
+ * vector (Chebyshev coefficients)
  * @solution_len: (out): length of solution per ell value
  *
  * Solves the ODE by adaptive QR in ultraspherical coefficient space. The matrix grows
- * until the relative coefficient-decay criterion described by #NcmSBesselOdeSolver is met.
+ * until the relative coefficient-decay criterion described by #NcmSBesselOdeSolver is
+ * met.
  *
  * For operators with a single ell value, the @solution array has length @solution_len.
- * For operators with multiple ell values (n_ell), the @solution array has length @solution_len * n_ell,
- * with solutions stored contiguously: first solution at indices [0, solution_len), second at
- * [solution_len, 2*solution_len), etc.
+ * For operators with multiple ell values (n_ell), the @solution array has length
+ * @solution_len * n_ell, with solutions stored contiguously: first solution at indices
+ * [0, solution_len), second at [solution_len, 2*solution_len), etc.
  *
  * The @solution parameter supports two usage patterns:
  *
- * - **Python/convenience usage**: Pass `solution` pointing to NULL (`*solution == NULL`).
- *   A new #GArray will be allocated and returned. The `(out callee-allocates)` annotation
- *   ensures Python bindings automatically use this mode.
- *
- * - **C optimization**: Pass `solution` pointing to a pre-allocated #GArray (`*solution != NULL`).
- *   The existing array will be reused (cleared and refilled), avoiding repeated allocation/deallocation
- *   in performance-critical loops.
+ * - Python/convenience usage: Pass `solution` pointing to NULL (`*solution ==
+ *   NULL`). A new #GArray will be allocated and returned. The `(out callee-allocates)`
+ *   annotation ensures Python bindings automatically use this mode.
+ * - C optimization: Pass `solution` pointing to a pre-allocated #GArray
+ *   (`*solution != NULL`). The existing array will be reused (cleared and refilled),
+ *   avoiding repeated allocation/deallocation in performance-critical loops.
  *
  */
 void
@@ -2625,16 +2669,19 @@ ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray *
 /**
  * ncm_sbessel_ode_operator_solve_endpoints:
  * @op: a #NcmSBesselOdeOperator
- * @rhs: (element-type gdouble): endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
- * @endpoints: (out callee-allocates) (transfer full) (element-type gdouble): array with 3*n_ell elements storing [u'(a), u'(b), error] for each ell value
+ * @rhs: (element-type gdouble): endpoint data followed by $C^{(2)}$ coefficients of $x
+ * f(x)$
+ * @endpoints: (out callee-allocates) (transfer full) (element-type gdouble): array
+ * with 3*n_ell elements storing [u'(a), u'(b), error] for each ell value
  *
- * Efficiently computes only the endpoint derivatives u'(a) and u'(b)
- * without building the full solution vector. This is much more efficient when only endpoint
- * information is needed (e.g., for integral computations via Green's identity).
+ * Efficiently computes only the endpoint derivatives u'(a) and u'(b) without building
+ * the full solution vector. This is much more efficient when only endpoint information
+ * is needed (e.g., for integral computations via Green's identity).
  *
- * For an operator with n_ell angular momentum values (ell_min to ell_max), the output
- * array contains n_ell triplets. Each triplet at index i (where i = 0 to n_ell-1)
+ * For an operator with n_ell multipoles (ell_min to ell_max), the output array
+ * contains n_ell triplets. Each triplet at index i (where i = 0 to n_ell-1)
  * corresponds to ell = ell_min + i, with elements:
+ *
  * - endpoints[3*i + 0] = u'(a) for ell_min + i
  * - endpoints[3*i + 1] = u'(b) for ell_min + i
  * - endpoints[3*i + 2] = error estimate for ell_min + i
@@ -2646,13 +2693,12 @@ ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray *
  *
  * The @endpoints parameter supports two usage patterns:
  *
- * - **Python/convenience usage**: Pass `endpoints` pointing to NULL (`*endpoints == NULL`).
- *   A new #GArray will be allocated and returned. The `(out callee-allocates)` annotation
- *   ensures Python bindings automatically use this mode.
- *
- * - **C optimization**: Pass `endpoints` pointing to a pre-allocated #GArray (`*endpoints != NULL`).
- *   The existing array will be reused (cleared and refilled), avoiding repeated allocation/deallocation
- *   in performance-critical loops.
+ * - Python/convenience usage: Pass `endpoints` pointing to NULL (`*endpoints ==
+ *   NULL`). A new #GArray will be allocated and returned. The `(out callee-allocates)`
+ *   annotation ensures Python bindings automatically use this mode.
+ * - C optimization: Pass `endpoints` pointing to a pre-allocated #GArray
+ *   (`*endpoints != NULL`). The existing array will be reused (cleared and refilled),
+ *   avoiding repeated allocation/deallocation in performance-critical loops.
  *
  */
 void
@@ -2706,12 +2752,13 @@ ncm_sbessel_ode_operator_solve_endpoints (NcmSBesselOdeOperator *op, GArray *rhs
  * @rhs: (element-type gdouble): right-hand side vector
  * @x0: first evaluation point in the operator interval
  * @x1: second evaluation point in the operator interval
- * @values: (out callee-allocates) (transfer full) (element-type gdouble): values and derivatives at @x0 and @x1
+ * @values: (out callee-allocates) (transfer full) (element-type gdouble): values and
+ * derivatives at @x0 and @x1
  *
- * Solves the ODE and evaluates the solution and its physical-coordinate
- * derivative at two points without constructing the complete Chebyshev
- * coefficient vectors. For each multipole the output contains
- * `[u(x0), u'(x0), u(x1), u'(x1)]`.
+ * Solves the ODE and evaluates the solution and its physical-coordinate derivative at
+ * two points without constructing the complete Chebyshev coefficient vectors. For each
+ * multipole the output contains `[u(x0), u'(x0), u(x1), u'(x1)]`.
+ *
  */
 void
 ncm_sbessel_ode_operator_solve_values (NcmSBesselOdeOperator *op, GArray *rhs,
@@ -2764,8 +2811,10 @@ ncm_sbessel_ode_operator_solve_values (NcmSBesselOdeOperator *op, GArray *rhs,
  * @data: pointer to matrix data
  * @colmajor: TRUE for column-major layout, FALSE for row-major
  *
- * Helper function to fill operator matrix data in either row-major or column-major format.
- * Extracts matrix entries from operator rows and fills them into the provided data array.
+ * Helper function to fill operator matrix data in either row-major or column-major
+ * format. Extracts matrix entries from operator rows and fills them into the provided
+ * data array.
+ *
  */
 static void
 _ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
@@ -2837,10 +2886,11 @@ _ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
  * @nrows: number of rows to extract (including 2 boundary condition rows)
  *
  * Builds and returns a dense matrix representation of the differential operator
- * truncated to @nrows rows in row-major format. This is useful for validation,
- * testing against truth tables, and comparison with standard dense solvers.
+ * truncated to @nrows rows in row-major format. This is useful for validation, testing
+ * against truth tables, and comparison with standard dense solvers.
  *
  * The matrix includes:
+ *
  * - Row 0: boundary condition u(-1) = 0
  * - Row 1: boundary condition u(+1) = 0
  * - Rows 2 to nrows-1: differential operator rows
@@ -2881,12 +2931,13 @@ ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, const g
  * truncated to @nrows rows in column-major format (suitable for LAPACK/BLAS routines).
  *
  * The matrix includes:
+ *
  * - Row 0: boundary condition u(-1) = 0
  * - Row 1: boundary condition u(+1) = 0
  * - Rows 2 to nrows-1: differential operator rows
  *
- * The matrix is square (nrows x nrows) and stored in column-major order as expected
- * by LAPACK routines like dgesv.
+ * The matrix is square (nrows x nrows) and stored in column-major order as expected by
+ * LAPACK routines like dgesv.
  *
  * Returns: (transfer full): dense matrix representation of the operator (column-major)
  */
@@ -2916,11 +2967,11 @@ ncm_sbessel_ode_solver_get_operator_matrix_colmajor (NcmSBesselOdeSolver *solver
  * @nrows: size of the truncated system to solve
  *
  * Solves the ODE using a dense matrix representation with standard linear algebra.
- * This method is useful for validation and testing, providing a reference solution
- * to compare against the adaptive QR method.
+ * This method is useful for validation and testing, providing a reference solution to
+ * compare against the adaptive QR method.
  *
- * The system is truncated to @nrows equations (including 2 boundary conditions),
- * and solved using LAPACK's general linear solver (LU decomposition).
+ * The system is truncated to @nrows equations (including 2 boundary conditions), and
+ * solved using LAPACK's general linear solver (LU decomposition).
  *
  * Returns: (transfer full): solution vector (Chebyshev coefficients)
  */

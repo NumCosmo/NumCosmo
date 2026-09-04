@@ -118,15 +118,17 @@ vis_func = pd.DataFrame(vis_func)
 
 In the first plot, we compare the fraction of free electrons ($X_e$) with the equilibrium fraction of free electrons ($X_{\text{efi}}$) as functions of the scale factor.  
 
-- **$X_e$**: Represents the actual ionization fraction of free electrons, determined by solving the Boltzmann equation, which accounts for the dynamical evolution of the ionization state.  
-- **$X_{\text{efi}}$**: Represents the equilibrium fraction of free electrons, calculated assuming ionization equilibrium at each point in time.  
+- $X_e$: Represents the actual ionization fraction of free electrons, determined by solving the Boltzmann equation, which accounts for the dynamical evolution of the ionization state.  
+- $X_{\text{efi}}$: Represents the equilibrium fraction of free electrons, calculated assuming ionization equilibrium at each point in time.  
 
 This comparison highlights the deviation of $X_e$ from $X_{\text{efi}}$ due to the out-of-equilibrium processes that occur during recombination and reionization.
 
 
 ```{python}
 # | label: fig-ionization-history
-# | fig-cap: Ionization history. The plot shows the evolution of the ionization fractions with the scale factor.
+# | fig-cap: >
+# |   Ionization history. The plot shows the evolution of the ionization fractions with
+# |   the scale factor.
 # | fig-width: 100%
 # | fig-cap-location: margin
 # | code-fold: true
@@ -167,7 +169,9 @@ To better illustrate the contributions to the total ionization fraction, we also
 
 ```{python}
 # | label: fig-equilibrium-ions
-# | fig-cap: Equilibrium fraction of ionized hydrogen and helium as a function of the scale factor.
+# | fig-cap: >
+# |   Equilibrium fraction of ionized hydrogen and helium as a function of the scale
+# |   factor.
 # | fig-width: 100%
 # | fig-cap-location: margin
 # | code-fold: true
@@ -195,7 +199,7 @@ ion_history_melted = ion_history.melt(
 ```
 
 
-Here’s the Quarto chunk that includes both the converted `plotnine` code and the accompanying description:
+Here's the Quarto chunk that includes both the converted `plotnine` code and the accompanying description:
 
 ## Visibility Function and Derivatives
 
@@ -412,8 +416,8 @@ optical_depth_melted["Quantity"] = optical_depth_melted["Quantity"].replace(
 
 In this plot, we show the optical depth as a function of the scale factor $1 + z$. We present the following quantities:
 
-- **Optical Depth**: The differential optical depth (`dtau_dlambda`).
-- **$\frac{x}{E}$**: The ratio of the scale factor $x$ to the energy $E$.
-- **$\frac{x}{\eta_{\tau}}$**: The ratio of the scale factor $x$ to the quantity $\eta_{\tau}$.
+- Optical Depth: The differential optical depth (`dtau_dlambda`).
+- $\frac{x}{E}$: The ratio of the scale factor $x$ to the energy $E$.
+- $\frac{x}{\eta_{\tau}}$: The ratio of the scale factor $x$ to the quantity $\eta_{\tau}$.
 
 We use a log-log scale for both axes to better visualize the changes across the broad range of values. The plot displays these quantities, making it easier to compare their behavior over the scale factor range.

@@ -183,7 +183,10 @@ best_fit_pd = pd.DataFrame({"Omegac": [cosmo["Omegac"]], "w": [cosmo["w"]]})
 
 ```{python}
 # | label: fig-lhratio-vs-fisher
-# | fig-cap: Confidence regions in the $(\Omega_c, w)$ plane at 1, 2 and 3$\sigma$. Filled areas are the likelihood-ratio regions; the lines are the Gaussian (Fisher) approximation from the expected information, which is visibly too small.
+# | fig-cap: >
+# |   Confidence regions in the $(\Omega_c, w)$ plane at 1, 2 and 3$\sigma$. Filled
+# |   areas are the likelihood-ratio regions; the lines are the Gaussian (Fisher)
+# |   approximation from the expected information, which is visibly too small.
 # | fig-cap-location: margin
 # | code-fold: true
 
@@ -274,7 +277,9 @@ border_pd = pd.concat([expected_pd, observed_pd])
 
 ```{python}
 # | label: fig-confidence-regions
-# | fig-cap: Likelihood ratio regions (filled) with the ellipses built from the expected and from the observed information.
+# | fig-cap: >
+# |   Likelihood ratio regions (filled) with the ellipses built from the expected and
+# |   from the observed information.
 # | fig-cap-location: margin
 # | code-fold: true
 

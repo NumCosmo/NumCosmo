@@ -91,7 +91,7 @@ Each factor's `data_new` allocates the per-galaxy fragment for that factor.
 The shape factor's fragment is built *from* the position and redshift
 fragments, since the shape likelihood needs the projected radius (from
 `ra`/`dec`) and the source redshift `z` (see the framework page's
-[Z ⇒ P ⇒ S pipeline](../../theory/galaxy_wl_framework.qmd#the-fixed-pipeline-z-p-s)) —
+[Z $\Rightarrow$ P $\Rightarrow$ S pipeline](../../theory/galaxy_wl_framework.qmd#the-fixed-pipeline-z-p-s)) ---
 this one call is the whole "orchestration" this tutorial needs to do by hand:
 
 ```{python}
@@ -123,7 +123,7 @@ for cols in (
 print(columns)
 ```
 
-The storage object is [[numcosmo|NcGalaxyWLObs]] — a plain named-column
+The storage object is [[numcosmo|NcGalaxyWLObs]] --- a plain named-column
 catalog, agnostic to which calculators fill it in.
 
 ```{python}
@@ -137,10 +137,10 @@ wl_obs = Nc.GalaxyWLObs.new(
 ```
 
 For each galaxy we draw a position and a redshift, fix the noise/calibration
-inputs (`std_noise`, `c1`, `c2`, `m` — these stay plain scalars on the shape
+inputs (`std_noise`, `c1`, `c2`, `m` --- these stay plain scalars on the shape
 factor's data, not a pluggable model, for now), draw the shape, and write the
 three fragments into their row. `gen` is the same code path `integ` uses
-below for the likelihood — see
+below for the likelihood --- see
 [Generation and Likelihood Share One Engine](../../theory/galaxy_wl_framework.qmd#generation-and-likelihood-share-one-engine).
 
 ```{python}
@@ -177,7 +177,7 @@ show_table(catalog_to_table(wl_obs))
 
 `read_row` is the inverse of `write_row`: it re-populates a fragment from one
 row of the catalog. This is exactly what a likelihood evaluation does when
-loading an observed catalog rather than a freshly generated one — a fragment
+loading an observed catalog rather than a generated one --- a fragment
 does not care whether the values it is holding were drawn or measured.
 
 ```{python}
@@ -206,7 +206,7 @@ for z in z_grid:
 ```
 
 In a full likelihood this integrand would be combined with the redshift
-factor's own $p(z_p, z)$ and integrated over $z$ once per galaxy — the single
+factor's own $p(z_p, z)$ and integrated over $z$ once per galaxy --- the single
 outer integral the orchestrator (once built) will perform automatically.
 
 ## Summary {#sec-summary}

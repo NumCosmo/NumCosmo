@@ -1304,12 +1304,12 @@ def test_absmaxF_l2_norm_with_negatives(
         fss.add(x, y)
 
     l2_norm = fss.get_absmaxF_l2_norm()
-    expected_l2 = math.sqrt(5.0**2 + 6.0**2 + 7.0**2)  # sqrt(110) ≈ 10.488
+    expected_l2 = math.sqrt(5.0**2 + 6.0**2 + 7.0**2)  # sqrt(110) ~= 10.488
     assert abs(l2_norm - expected_l2) < 1e-10
 
 
 def test_absmaxF_linf_norm_basic(sample_set_dim2: Ncm.FunctionSampleSet) -> None:
-    """Test L∞ norm computation with simple values."""
+    """Test Linf norm computation with simple values."""
     fss = sample_set_dim2
 
     # Initially should be zero (no samples)
@@ -1319,7 +1319,7 @@ def test_absmaxF_linf_norm_basic(sample_set_dim2: Ncm.FunctionSampleSet) -> None
     # Add samples
     # Component 0: max will be 3.0
     # Component 1: max will be 4.0
-    # L∞ norm should be max(3.0, 4.0) = 4.0
+    # Linf norm should be max(3.0, 4.0) = 4.0
     test_data = [
         (0.0, [1.0, 2.0]),
         (1.0, [3.0, 1.5]),
@@ -1339,13 +1339,13 @@ def test_absmaxF_linf_norm_basic(sample_set_dim2: Ncm.FunctionSampleSet) -> None
 def test_absmaxF_linf_norm_with_negatives(
     sample_set_dim3: Ncm.FunctionSampleSet,
 ) -> None:
-    """Test L∞ norm with negative values (should use absolute values)."""
+    """Test Linf norm with negative values (should use absolute values)."""
     fss = sample_set_dim3
 
     # Component 0: max |y| = 5.0 (from -5.0)
     # Component 1: max |y| = 6.0 (from -6.0)
     # Component 2: max |y| = 8.0 (from -8.0)
-    # L∞ norm should be max(5.0, 6.0, 8.0) = 8.0
+    # Linf norm should be max(5.0, 6.0, 8.0) = 8.0
     test_data = [
         (0.0, [1.0, 2.0, 3.0]),
         (1.0, [-5.0, 1.5, 2.5]),
@@ -1369,7 +1369,7 @@ def test_absmaxF_norms_single_component() -> None:
     # Add some samples
     # Component 0: max will be 7.0
     # L2 norm should be 7.0 (sqrt(7^2) = 7)
-    # L∞ norm should be 7.0 (max(7.0) = 7)
+    # Linf norm should be 7.0 (max(7.0) = 7)
     test_data = [0.0, 1.0, 7.0, 3.0, 2.0]
 
     for x in test_data:
@@ -1461,14 +1461,14 @@ def test_absmaxF_min_identifies_weakest_component(
     # Min should be 2.0 (component 1)
     assert abs(min_absF - 2.0) < 1e-10
 
-    # L∞ should be 100.0 (component 0)
+    # Linf should be 100.0 (component 0)
     assert abs(linf_norm - 100.0) < 1e-10
 
     # L2 should be sqrt(100^2 + 2^2 + 50^2) = sqrt(10000 + 4 + 2500)
     expected_l2 = math.sqrt(100.0**2 + 2.0**2 + 50.0**2)
     assert abs(l2_norm - expected_l2) < 1e-10
 
-    # Verify the relationship: min <= L2 <= L∞ * sqrt(n)
+    # Verify the relationship: min <= L2 <= Linf * sqrt(n)
     assert min_absF <= l2_norm
     assert l2_norm <= linf_norm * math.sqrt(3)
 

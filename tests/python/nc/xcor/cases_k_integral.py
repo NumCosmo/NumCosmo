@@ -468,7 +468,7 @@ def build_kernel(
     way nc_xcor_solver_solve() does -- it dups one integrator per block and
     hands the same one to every kernel, which is what makes the stored
     Givens-rotation decomposition reusable across kernels (plan doc
-    dev-notes/xcor_ultralevin_batching_plan.md §6.1). With %None each kernel
+    dev-notes/xcor_ultralevin_batching_plan.md sec. 6.1). With %None each kernel
     gets its own, which is safe under concurrency -- the sbessel ODE solver is
     not reentrant, so a shared one corrupts memory across concurrent blocks --
     but disables that reuse entirely.

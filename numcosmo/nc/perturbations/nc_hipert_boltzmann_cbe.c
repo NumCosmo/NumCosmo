@@ -30,6 +30,7 @@
  *
  * If you use this object please cite: [Blas (2011) CLASS II](https://doi.org/10.1088/1475-7516/2011/07/034),
  * see also:
+ *
  * - [Lesgourgues (2011) CLASS I](https://arxiv.org/abs/1104.2932),
  * - [Lesgourgues (2011) CLASS III](https://arxiv.org/abs/1104.2934),
  * - [Lesgourgues (2011) CLASS IV](https://arxiv.org/abs/1104.2935) and

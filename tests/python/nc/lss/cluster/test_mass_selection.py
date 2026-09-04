@@ -794,7 +794,7 @@ def test_cluster_mass_selection_p_integral(
     mean_lnR = cluster_m.get_mean_richness(lnM, z)
     std_lnR = cluster_m.get_std_richness(lnM, z)
 
-    # Integrate over ±5 sigma range
+    # Integrate over +/-5 sigma range
     lnR_array = np.linspace(mean_lnR - 5 * std_lnR, mean_lnR + 5 * std_lnR, 200)
     p_array = np.array([cluster_m.p(cosmo, lnM, z, [lnR], None) for lnR in lnR_array])
 
@@ -908,11 +908,11 @@ def test_cluster_mass_selection_truncated_gaussian(
     phi_alpha = np.exp(-0.5 * alpha**2) / np.sqrt(2 * np.pi)
     Phi_alpha = 0.5 * (1 + math.erf(alpha / np.sqrt(2)))
 
-    # Mean correction: μ_trunc = μ + σ * φ(α) / (1 - Φ(α))
+    # Mean correction: mu_trunc = mu + sigma * phi(alpha) / (1 - Phi(alpha))
     expected_mean = mean_untrunc + std_untrunc * phi_alpha / (1 - Phi_alpha)
     assert np.isclose(mean_trunc, expected_mean, rtol=1e-10)
 
-    # Std correction: σ_trunc = σ * sqrt(1 + α*φ(α)/(1-Φ(α)) - (φ(α)/(1-Φ(α)))²)
+    # Std correction: sigma_trunc = sigma * sqrt(1 + alpha*phi(alpha)/(1-Phi(alpha)) - (phi(alpha)/(1-Phi(alpha)))^2)
     lambda_alpha = phi_alpha / (1 - Phi_alpha)
     expected_std = std_untrunc * np.sqrt(1 + alpha * lambda_alpha - lambda_alpha**2)
     assert np.isclose(std_trunc, expected_std, rtol=1e-10)
