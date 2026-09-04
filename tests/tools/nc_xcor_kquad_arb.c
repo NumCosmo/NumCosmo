@@ -400,7 +400,7 @@ main (int argc, char **argv)
   double k_lo = 1.0e-6, k_hi = 10.0, target = 1.0e-20, chi_max;
   slong prec_max = 4096, eval_limit = 2000;
   long ells[64];
-  int n_ells = 0, i, isauto = 1, verbose = 0, negligible = 0;
+  int n_ells = 0, i, isauto = 1, verbose = 0;
 
   par_init (&a);
   par_init (&b);
@@ -529,7 +529,6 @@ main (int argc, char **argv)
     acb_t total, part, pi;
     double lo, scale = 0.0;
     slong prec_used = 0;
-    int pass;
     char *str;
 
     a.ell     = ells[i];

@@ -525,6 +525,65 @@ _ncm_spectral_batch_check_convergence (NcmMatrix *c_2N, NcmMatrix *c_N, guint N,
   return TRUE;
 }
 
+/*
+ * Whether one more doubling can be predicted to fail, from this level alone.
+ *
+ * The monotone envelope falls by d = |c_{N-1}| / e_{N/2} over the top half of the
+ * spectrum, so the modes the next level adds -- another N - 1 of them -- start near
+ * |c_{N-1}| d and carry an l2 mass of at most about |c_{N-1}| d sqrt(N). The
+ * acceptance test is that mass against max(@reltol ||c||, @abstol), so predicting it
+ * larger is grounds to split now rather than pay for the level.
+ *
+ * A panel far below the resolution its content needs has coefficients that do not
+ * decay at all: d is of order one and the prediction is emphatic. The safety factor
+ * is what keeps a marginal case from being abandoned: measured over every panel the
+ * splitter accepted on LSST-Y1 lensing and number counts, a Gaussian and two
+ * top-hat shells at reltol 1e-4 and 1e-6, a factor of 10 abandons none of them.
+ *
+ * Only used where not converging is how the caller learns to split. Half of such a
+ * caller's sampling goes to expansions it discards -- a child grid is not a subset
+ * of its parent's, so nothing is reused -- and this is what makes giving up cost
+ * one level less.
+ */
+#define NCM_SPECTRAL_ABANDON_SAFETY (10.0)
+
+static gboolean
+_ncm_spectral_batch_cannot_converge (NcmMatrix *c, guint N, guint n_comp,
+                                     gdouble reltol, gdouble abstol)
+{
+  const guint half = N / 2;
+  guint comp, i;
+
+  for (comp = 0; comp < n_comp; comp++)
+  {
+    const gdouble c_end = fabs (ncm_matrix_get (c, comp, N - 1));
+    gdouble env_half    = 0.0;
+    gdouble norm2       = 0.0;
+    gdouble d, tol_eff;
+
+    for (i = 0; i < N; i++)
+    {
+      const gdouble a = fabs (ncm_matrix_get (c, comp, i));
+
+      norm2 += a * a;
+
+      if (i >= half)
+        env_half = MAX (env_half, a);
+    }
+
+    if (env_half <= 0.0)
+      continue;
+
+    d       = c_end / env_half;
+    tol_eff = MAX (reltol * sqrt (norm2), abstol);
+
+    if (c_end * d * sqrt (N) > NCM_SPECTRAL_ABANDON_SAFETY * tol_eff)
+      return TRUE;
+  }
+
+  return FALSE;
+}
+
 /**
  * ncm_spectral_compute_chebyshev_coeffs_batch_adaptive:
  * @spectral: a #NcmSpectral
@@ -590,6 +649,13 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, Ncm
  * A caller expanding on one interval wants @fatal %TRUE, since for it the cap
  * is a memory guard rather than a stopping rule.
  *
+ * For @fatal %FALSE the last doubling is skipped when the level below it already
+ * predicts failure -- its coefficient envelope decays too slowly for the modes the
+ * cap would add to fall under the tolerance.
+ * Half of the sampling in a bisecting caller goes to expansions it discards -- a
+ * child grid is not a subset of its parent's, so nothing is reused -- and this is
+ * what makes giving up cost one level less.
+ *
  * Returns: the level reached, or 0 when @fatal is %FALSE and @k_cap was not
  * enough, in which case @coeffs is left alone
  */
@@ -631,6 +697,13 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
   {
     const guint N_prev = (1 << k) + 1;
     guint N;
+
+    /* c_previous holds level k here. Asking for level k_cap is only worth it if
+     * level k does not already say the answer. */
+    if (!fatal && (k + 1 == k_cap) &&
+        _ncm_spectral_batch_cannot_converge (c_previous, N_prev, n_comp,
+                                             reltol, abstol))
+      break;
 
     _ncm_spectral_batch_prepare_plan_for_k (spectral, k + 1);
     _ncm_spectral_batch_refine_to_k (spectral, F, y, a, b, k, k + 1, user_data);

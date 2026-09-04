@@ -302,8 +302,14 @@ window_u (acb_t out, const acb_t chi, Par *p, slong order, slong prec)
        * across the group's whole stretch. The caller places panel edges at the
        * gap edges, so any one call lies wholly on one side of them, and the
        * midpoint of chi is enough to select the group. */
-      const double c = arf_get_d (arb_midref (acb_realref (chi)), ARF_RND_NEAR);
-      const int g    = g_of (p, c);
+      double c;
+      int g;
+
+      /* Through a local copy: an interior pointer into @chi makes GCC 16 size
+       * the ball as its midpoint alone and warn on every later read of it. */
+      acb_set (v, chi);
+      c = arf_get_d (arb_midref (acb_realref (v)), ARF_RND_NEAR);
+      g = g_of (p, c);
 
       acb_zero (out);
 
