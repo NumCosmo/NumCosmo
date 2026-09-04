@@ -695,6 +695,10 @@ class ViewKernel:
         """
         print("Creating kernel(s)...")
 
+        # Each branch returns its own kernel subclass; widen to the common base so
+        # the first branch does not fix the type of the others.
+        result: tuple[str, Nc.XcorKernel]
+
         match kernel_config:
             case KernelCMBLensingConfig():
                 result = self._create_cmb_lensing_kernels(kernel_config)
