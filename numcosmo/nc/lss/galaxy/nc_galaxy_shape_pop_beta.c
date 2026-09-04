@@ -122,6 +122,7 @@ static void _nc_galaxy_shape_pop_beta_eval_p_array (NcGalaxyShapePop *gsp, NcGal
 static void _nc_galaxy_shape_pop_beta_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, NcmRNG *rng, gdouble *e_int_1, gdouble *e_int_2);
 static gdouble _nc_galaxy_shape_pop_beta_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static gdouble _nc_galaxy_shape_pop_beta_exponent_at_origin (NcGalaxyShapePop *gsp);
+static gdouble _nc_galaxy_shape_pop_beta_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
 static void _nc_galaxy_shape_pop_beta_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
                                                             const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 
@@ -177,6 +178,7 @@ nc_galaxy_shape_pop_beta_class_init (NcGalaxyShapePopBetaClass *klass)
   gsp_class->e_rms                = &_nc_galaxy_shape_pop_beta_e_rms;
   gsp_class->exponent_at_origin   = &_nc_galaxy_shape_pop_beta_exponent_at_origin;
   gsp_class->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_beta_eval_p_rho2_g_series;
+  gsp_class->moment_2k            = &_nc_galaxy_shape_pop_beta_moment_2k;
 }
 
 #define VECTOR (NCM_MODEL (gsp))
@@ -357,6 +359,36 @@ _nc_galaxy_shape_pop_beta_exponent_at_origin (NcGalaxyShapePop *gsp)
   const gdouble alpha = ALPHA;
 
   return (alpha - 1.0);
+}
+
+/* M_2k = <r^2k> = B(alpha+2k,beta)/B(alpha,beta) = prod_{j=0}^{2k-1}
+ * (alpha+j)/(alpha+beta+j), the r=|chi_I| reparametrization's own moment
+ * (note alpha+2k, not alpha+k -- see the class docs' x=r^2 vs r discussion).
+ * The k=1 case reduces to nc_galaxy_shape_pop_beta_get_e_rms()'s own
+ * alpha(alpha+1)/[(alpha+beta)(alpha+beta+1)]. Elementary product, no
+ * gsl_sf_lnbeta() call needed for this integer-order case -- verified to
+ * machine precision. Uses the already-resolved @data->ldata, matching
+ * eval_p()'s own read contract. */
+static gdouble
+_nc_galaxy_shape_pop_beta_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k)
+{
+  if (k == 0)
+  {
+    return 1.0;
+  }
+  else
+  {
+    NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
+    const gdouble alpha              = ldata->alpha;
+    const gdouble beta               = ldata->beta;
+    gdouble moment                   = 1.0;
+    guint j;
+
+    for (j = 0; j < 2 * k; j++)
+      moment *= (alpha + j) / (alpha + beta + j);
+
+    return moment;
+  }
 }
 
 /**
