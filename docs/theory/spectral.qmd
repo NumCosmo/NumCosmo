@@ -75,7 +75,7 @@ final level $k$.
 ## Spectral Integration
 
 A weighted variant expands $F(x(t))\,\sqrt{1-t^2}\,h$ with $h = (b-a)/2$, taking
-advantage of the fact that at the Lobatto nodes the weight is simply $\sqrt{1-t_j^2} =
+advantage of the fact that at the Lobatto nodes the weight is $\sqrt{1-t_j^2} =
 \sin(j\pi/2^{k})$. Writing this weighted function as $\sum_k b_k T_k(t)$ and using the
 orthogonality relation
 $$
