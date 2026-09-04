@@ -511,3 +511,50 @@ accuracy (up to 600% error on unrelated cases).
 
 See `docs/theory/wl_shape_marginalization_fixed_quad.qmd` for the shipped
 design.
+
+## `NcGalaxyShapeFactorMomentSeries`: a map error in its own design note, found before implementation (2026)
+
+The design note this class was built from (`MOMENT_SERIES.md`, repository
+root) gives the TRACE_DET forward map's series recursion as
+$c_j = n_j - \bar\epsilon_s\,c_{j-1}$ (denominator $D=1+g\bar\epsilon_s$),
+implying $\langle\epsilon_\mathrm{obs}\rangle=(1-M_2)g$. The map this
+codebase actually implements
+(`nc_wl_ellipticity_apply_shear_trace_det_ptr`/the inline
+`nc_wl_ellipticity_apply_shear_trace_det`, both in `nc_wl_ellipticity.h`) is
+`(e + g) / (1.0 + conj(g) * e)` — holomorphic in the intrinsic ellipticity,
+with the conjugate on $g$, not on $\epsilon$. Under the class's own
+tangential gauge fix ($g$ real) the correct recursion is
+$c_j = n_j - \epsilon_s\,c_{j-1}$ instead, giving
+$\langle\epsilon_\mathrm{obs}\rangle=g$ **exactly** (the responsivity term
+vanishes identically, not just at $n=1$).
+
+Found by cross-checking both candidate recursions against three independent
+sources before writing any C: a brute-force 2D quadrature of the true map
+(reproducing $g$ exactly, not $(1-M_2)g$); the class doc's own reference
+Python (`tests/python/nc/lss/galaxy/test_galaxy_shape_factor_cgf.py`'s
+`_shear_map`, which spells out the identical `(chi+g)/(1+conj(g)*chi)`
+form independently); and
+`nc_galaxy_shape_factor_direct_estimate()`'s TRACE_DET branch, whose
+comment already states "epsilon convention: `<epsilon> = g`, no
+responsivity factor R". `NcGalaxyShapeFactorCGF`'s own TRACE_DET response
+moments corroborate the same isotropy
+(`A12=A21=0`, `A11=A22`, `lap_S=0`). All three agree with the corrected
+recursion and none agree with the note's stated one.
+
+The TRACE recursion in the same note is correct as written and needed no
+change — checked the same way, against
+`nc_wl_ellipticity_apply_shear_trace_ptr` and against
+`direct_estimate()`'s TRACE responsivity $R=1-\langle e_\mathrm{rms}^2\rangle$,
+which is exactly the corrected $m_1=2-M_2$.
+
+A second departure from the note: its own step ordering (§4.1) builds the
+coefficient tables "per population, in `prepare()`". The tables are
+rational functions of `(ellip-conv, trunc-order)` alone — the population
+enters only through radial moments contracted against them afterward — so
+building them in `prepare()` would repeat that $O(n^3)$ work once per
+galaxy per MCMC step under a per-galaxy population
+(`NcGalaxyShapePopGaussLocal`, whose `prepare()` runs per galaxy, unlike a
+global population's). They are built once in `constructed()` instead,
+alongside the convention dispatch; the per-galaxy contraction against that
+galaxy's moments still happens in `prepare()`'s usual cache-refresh slot,
+mirroring `NcGalaxyShapeFactorCGF`'s own `_peek_V`.
