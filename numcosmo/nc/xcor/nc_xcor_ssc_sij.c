@@ -654,7 +654,7 @@ nc_xcor_ssc_sij_peek_mask_cl (NcXcorSSCSij *ssc_sij)
  *
  * Selects the crude finite-area estimator, $S_{ij} = S^{\rm fullsky}_{ij} /
  * f_{\rm sky}$ with $f_{\rm sky} = \Omega / 4\pi$: the full-sky matrix simply
- * rescaled by the sky fraction @area subtends. This is **not** a mask
+ * rescaled by the sky fraction @area subtends. This is not a mask
  * deconvolution, and it knows nothing about the shape of the footprint; use
  * nc_xcor_ssc_sij_set_mask_cl() when the shape matters.
  *
@@ -776,8 +776,8 @@ nc_xcor_ssc_sij_get_reltol (NcXcorSSCSij *ssc_sij)
  * @scaled_abstol: the absolute floor of the adaptive refinement
  *
  * Sets the absolute floor of the adaptive refinement building the $U_i(k)$
- * spline of every kernel. **This, not the relative tolerance, is what limits
- * the accuracy of the off-diagonal $S_{ij}$**, which are a small residual of a
+ * spline of every kernel. This, not the relative tolerance, is what limits
+ * the accuracy of the off-diagonal $S_{ij}$, which are a small residual of a
  * large cancellation: tightening it from #NcXcorKernel's own `1.0e-4` default
  * to the `1.0e-6` used here moves $S_{06}$ by tens of percent for J-PAS-like
  * bins while barely moving $S_{00}$.

@@ -32,7 +32,7 @@ inverse maps are [[numcosmo-math|ncm_spectral_x_to_t]] and
 ## Computing the Coefficients
 
 The coefficients in Eq. (1) are obtained by sampling $f$ at the
-Chebyshev–Lobatto nodes
+Chebyshev--Lobatto nodes
 $$
 t_k = \cos\!\left(\frac{k\pi}{N-1}\right),
 \qquad
@@ -48,7 +48,7 @@ a_{N-1} = \frac{\tilde a_{N-1}}{2(N-1)},
 \qquad
 a_k = \frac{\tilde a_k}{N-1}\;\;(0 < k < N-1),
 $$
-the half-weight on the endpoints being the usual Clenshaw–Curtis rule for the
+the half-weight on the endpoints being the usual Clenshaw--Curtis rule for the
 Lobatto grid. This fixed-order transform is
 [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs]].
 
@@ -61,7 +61,7 @@ t_j = \cos\!\left(\frac{j\pi}{2^{k}}\right),
 \qquad j = 0,\dots,2^{k},
 $$
 are a subset of those at level $k+1$. Refining therefore reuses every existing
-sample — the previous values move to the even-indexed positions and only the new
+sample --- the previous values move to the even-indexed positions and only the new
 odd-indexed nodes are evaluated, halving the number of function calls per level.
 
 Starting from a minimum level $k_\mathrm{min}$, the level is doubled until the
@@ -89,7 +89,7 @@ the definite integral collapses to a single coefficient,
 $$
 \int_a^b F(x)\,\mathrm{d}x = \pi\,b_0,
 $$
-which is Clenshaw–Curtis quadrature [@Trefethen2008]. The same weighted
+which is Clenshaw--Curtis quadrature [@Trefethen2008]. The same weighted
 coefficients give weighted inner products: if $G$ has standard Chebyshev
 coefficients $d_k$, then
 $$
@@ -174,14 +174,14 @@ two is assembled as a banded linear combination of these primitives.
 
 | Operator | $C^{(2)}$ coefficient of the output | Method |
 |---|---|---|
-| identity | $\dfrac{c_k}{2(k+1)} - \dfrac{(k+2)c_{k+2}}{(k+1)(k+3)} + \dfrac{c_{k+4}}{2(k+3)}$ $\big(+\tfrac12 c_0\,\delta_{k,0}\big)$ | [[numcosmo-math|ncm_spectral_get_proj_matrix]] |
-| $x$ | $\dfrac{\theta(k-1)\,c_{k-1}}{4(k+1)} - \dfrac{c_{k+1}}{4(k+3)} - \dfrac{c_{k+3}}{4(k+1)} + \dfrac{c_{k+5}}{4(k+3)}$ | [[numcosmo-math|ncm_spectral_get_x_matrix]] |
-| $x^2$ | $\dfrac{\theta(k-2)\,c_{k-2}}{8(k+1)} + \dfrac{c_k}{4(k+1)(k+3)} - \dfrac{(k+2)c_{k+2}}{4(k+1)(k+3)} - \dfrac{c_{k+4}}{4(k+1)(k+3)} + \dfrac{c_{k+6}}{8(k+3)}$ | [[numcosmo-math|ncm_spectral_get_x2_matrix]] |
-| $\mathrm{d}/\mathrm{d}x$ | $c_{k+1} - c_{k+3}$ | [[numcosmo-math|ncm_spectral_get_d_matrix]] |
-| $x\,\mathrm{d}/\mathrm{d}x$ | $\dfrac{k\,c_k}{2(k+1)} + \dfrac{(k+2)c_{k+2}}{(k+1)(k+3)} - \dfrac{(k+4)c_{k+4}}{2(k+3)}$ | [[numcosmo-math|ncm_spectral_get_x_d_matrix]] |
-| $\mathrm{d}^2/\mathrm{d}x^2$ | $2(k+2)\,c_{k+2}$ | [[numcosmo-math|ncm_spectral_get_d2_matrix]] |
-| $x\,\mathrm{d}^2/\mathrm{d}x^2$ | $k\,c_{k+1} + (k+4)\,c_{k+3}$ | [[numcosmo-math|ncm_spectral_get_x_d2_matrix]] |
-| $x^2\,\mathrm{d}^2/\mathrm{d}x^2$ | $\dfrac{k(k-1)c_k}{2(k+1)} + \dfrac{(k+2)\big((k+2)^2-3\big)c_{k+2}}{(k+1)(k+3)} + \dfrac{(k+4)(k+5)c_{k+4}}{2(k+3)}$ | [[numcosmo-math|ncm_spectral_get_x2_d2_matrix]] |
+| identity | $\dfrac{c_k}{2(k+1)} - \dfrac{(k+2)c_{k+2}}{(k+1)(k+3)} + \dfrac{c_{k+4}}{2(k+3)}$ $\big(+\tfrac12 c_0\,\delta_{k,0}\big)$ | [[numcosmo-math\|ncm_spectral_get_proj_matrix]] |
+| $x$ | $\dfrac{\theta(k-1)\,c_{k-1}}{4(k+1)} - \dfrac{c_{k+1}}{4(k+3)} - \dfrac{c_{k+3}}{4(k+1)} + \dfrac{c_{k+5}}{4(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_x_matrix]] |
+| $x^2$ | $\dfrac{\theta(k-2)\,c_{k-2}}{8(k+1)} + \dfrac{c_k}{4(k+1)(k+3)} - \dfrac{(k+2)c_{k+2}}{4(k+1)(k+3)} - \dfrac{c_{k+4}}{4(k+1)(k+3)} + \dfrac{c_{k+6}}{8(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_x2_matrix]] |
+| $\mathrm{d}/\mathrm{d}x$ | $c_{k+1} - c_{k+3}$ | [[numcosmo-math\|ncm_spectral_get_d_matrix]] |
+| $x\,\mathrm{d}/\mathrm{d}x$ | $\dfrac{k\,c_k}{2(k+1)} + \dfrac{(k+2)c_{k+2}}{(k+1)(k+3)} - \dfrac{(k+4)c_{k+4}}{2(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_x_d_matrix]] |
+| $\mathrm{d}^2/\mathrm{d}x^2$ | $2(k+2)\,c_{k+2}$ | [[numcosmo-math\|ncm_spectral_get_d2_matrix]] |
+| $x\,\mathrm{d}^2/\mathrm{d}x^2$ | $k\,c_{k+1} + (k+4)\,c_{k+3}$ | [[numcosmo-math\|ncm_spectral_get_x_d2_matrix]] |
+| $x^2\,\mathrm{d}^2/\mathrm{d}x^2$ | $\dfrac{k(k-1)c_k}{2(k+1)} + \dfrac{(k+2)\big((k+2)^2-3\big)c_{k+2}}{(k+1)(k+3)} + \dfrac{(k+4)(k+5)c_{k+4}}{2(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_x2_d2_matrix]] |
 
 Here $\theta$ is the Heaviside step (terms with negative index are dropped) and a
 few extra contributions appear in the first one or two rows of the $x$ and $x^2$

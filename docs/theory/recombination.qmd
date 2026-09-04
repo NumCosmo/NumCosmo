@@ -97,7 +97,7 @@ $$
 
 [[numcosmo|NcRecombSeager]] implements cosmic recombination following Seager
 (1999) and Seager (2000), with the modifications of
-[recfast 1.5.2](http://www.astro.ubc.ca/people/scott/recfast.html) — including
+[recfast 1.5.2](http://www.astro.ubc.ca/people/scott/recfast.html) --- including
 those discussed in Wong (2008). The matter-temperature modification of
 Scott (2009) is not included, as the more robust integration method used here
 makes it unnecessary.

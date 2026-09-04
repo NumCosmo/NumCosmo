@@ -39,7 +39,7 @@
  *
  * Each bump is truncated at $n\sigma_i$, and the bumps are grouped into
  * components by whether those intervals meet: bumps whose intervals overlap
- * form **one** component spanning their union, and a bump whose interval
+ * form one component spanning their union, and a bump whose interval
  * touches no other is a component on its own. A component is then integrated
  * over exactly its own interval, so every boundary of the window is a boundary
  * of an integration domain -- see #NcXcorKernelRadial.

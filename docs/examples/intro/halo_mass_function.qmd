@@ -177,7 +177,9 @@ Pm_a = np.array([psml.eval(cosmo, 0.0, k) for k in k_a])
 
 ```{python}
 # | label: fig-hmf-transfer
-# | fig-cap: Eisenstein-Hu transfer function $T(k)$ and linear matter power spectrum $P_m(k)$ at $z = 0$.
+# | fig-cap: >
+# |   Eisenstein-Hu transfer function $T(k)$ and linear matter power spectrum $P_m(k)$
+# |   at $z = 0$.
 # | fig-width: 100%
 # | fig-cap-location: margin
 # | code-fold: true
@@ -215,7 +217,9 @@ dlnsigma2_a = np.array([psf.eval_dlnvar_dlnr(0.0, np.log(R)) for R in R_a])
 
 ```{python}
 # | label: fig-hmf-variance
-# | fig-cap: "Tophat-filtered variance $\\sigma^2(\\ln R)$ and its logarithmic derivative at $z = 0$."
+# | fig-cap: >
+# |   Tophat-filtered variance $\sigma^2(\ln R)$ and its logarithmic derivative at $z
+# |   = 0$.
 # | fig-width: 100%
 # | fig-cap-location: margin
 # | code-fold: true
@@ -283,7 +287,9 @@ print(f"# peak at z = {z_a[np.argmax(dndz_a)]: .2f}")
 
 ```{python}
 # | label: fig-hmf-dndz
-# | fig-cap: "Number of halos per unit redshift for $M \\in [10^{14}, 10^{16}]\\,\\mathrm{M}_\\odot$ over a $200\\,\\mathrm{deg}^2$ survey."
+# | fig-cap: >
+# |   Number of halos per unit redshift for $M \in [10^{14},
+# |   10^{16}]\,\mathrm{M}_\odot$ over a $200\,\mathrm{deg}^2$ survey.
 # | fig-width: 100%
 # | fig-cap-location: margin
 # | code-fold: true

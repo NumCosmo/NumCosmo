@@ -58,7 +58,7 @@ G_BEGIN_DECLS
  * call: #NcXcorKernel's internal per-block state uses fixed-size stack
  * arrays sized by this constant (not just the Levin integrator's own,
  * larger ell_cache_max). Exceeding it is a fatal, non-catchable g_error.
- * Public so callers planning ℓ-block tilings (e.g. #NcXcorSolver) can
+ * Public so callers planning $\ell$-block tilings (e.g. #NcXcorSolver) can
  * respect it without duplicating the number.
  */
 #define NC_XCOR_KERNEL_MAX_ELL_BLOCK 64

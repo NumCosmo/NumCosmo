@@ -1195,7 +1195,7 @@ _ncm_integral_fixed_calib_try (gsl_function *F, gsl_function *G, gdouble xl, gdo
  * $\int F(x) G(x) \mathrm{d}x$ over [@xl, @xu] matches a high-resolution
  * reference (n_nodes = 1000, rule_n = 7) to within @reltol. The selected
  * configuration must additionally reproduce $\int F \mathrm{d}x$ (via
- * #ncm_integral_fixed_nodes_eval) to within @reltol — this catches an @F feature
+ * #ncm_integral_fixed_nodes_eval) to within @reltol -- this catches an @F feature
  * narrower than the reference panel width, where the $F\,G$ test alone could
  * false-pass because both reference and trial straddle it. The guard baseline is
  * @exact_F_integ when finite, otherwise the reference's own $\int F$.

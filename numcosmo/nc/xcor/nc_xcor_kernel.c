@@ -40,6 +40,11 @@
  * where $\delta$ is the matter density field.
  *
  * Kernels also implement the noise power spectrum.
+ *
+ * See <a href="../../theory/sbessel_projection.html">Projection Integrals with
+ * Spherical Bessel Weights</a> for the pipeline a kernel drives: the adaptive
+ * $k$ domain, the closure fitted to $W_\ell(k)$, and the error estimate the fit
+ * residuals feed.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -440,7 +445,7 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    *
    * Refinement accepts an interval when
    * $\Vert f - \tilde f \Vert_2 \le \mathrm{reltol} \Vert f \Vert_2 + a \Vert f
-   * \Vert_2^\mathrm{max}$, a **sum**. Whichever term is larger decides where
+   * \Vert_2^\mathrm{max}$, a sum. Whichever term is larger decides where
    * refinement stops, so tightening the other one alone changes nothing at all.
    * Measured on a Gaussian kernel, accuracy gained over the 1e-4/1e-4 defaults:
    *
@@ -532,31 +537,30 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
   /**
    * NcXcorKernel:track-fit-residual:
    *
-   * Whether the closure records the residual its fit actually achieved on each
-   * interval it is a single polynomial on -- a knot interval of a spline
-   * closure, a panel of a Chebyshev one -- which is what
-   * nc_xcor_compute_full() turns into an error estimate. On by default:
-   * without it the estimate has only #NcXcorKernel:reltol and
-   * #NcXcorKernel:scaled-abstol to work from -- the tolerances the fit was
-   * asked for, which it beats by 12 to 3100 times depending on the kernel, so
-   * the resulting bound tracks the pair's cancellation rather than its
-   * accuracy.
+   * Whether the closure records the residual its fit achieved on each interval
+   * it is a single polynomial on -- a knot interval of a spline closure, a
+   * panel of a Chebyshev one. That record is what nc_xcor_compute_full() turns
+   * into an error estimate. On by default: without it the estimate has only
+   * #NcXcorKernel:reltol and #NcXcorKernel:scaled-abstol to work from -- the
+   * tolerances the fit was asked for, which it beats by 12 to 3100 times
+   * depending on the kernel, so the resulting bound tracks the pair's
+   * cancellation rather than its accuracy.
    *
-   * What is recorded differs with the representation, because what the fit
-   * measured differs. A spline records the residual of its refinement. A
-   * Chebyshev panel is accepted when doubling its order moves the expansion
-   * less than the tolerance, so what it records is the $l^1$ mass of the modes
-   * the previous order did not carry -- the tail whose smallness that test
-   * checked, which bounds the sup-norm error of the order the panel keeps.
+   * Each representation records what its own acceptance test measured. A
+   * spline records $|f - s|$ at the interval's midpoint, measured on the pass
+   * that accepted the interval; see ncm_function_sample_set_get_residuals(). A
+   * Chebyshev panel is accepted when doubling its order moves the expansion by
+   * less than the tolerance, so it records the $l^1$ mass of the modes the
+   * previous order did not carry; that mass bounds the sup-norm error of the
+   * order the panel keeps.
    *
    * The record costs one double per interval per multipole in the block, about
    * what the closure's own spline data costs, and #NcXcorSolver holds one
    * closure per kernel per $\ell$ block. Turn it off to get that memory back
-   * from a run that never asks for an error. On the Chebyshev closure the
-   * record itself is free -- it is read off coefficients already computed --
-   * and the property is honoured there only so that @vp_err means the same
-   * thing on both representations.
-   *
+   * from a run that never asks for an error. The Chebyshev closure reads its
+   * record off coefficients it has already computed, so nothing is saved there
+   * by turning it off; the property applies to both representations so that
+   * @vp_err means the same thing on either.
    */
   g_object_class_install_property (object_class,
                                    PROP_TRACK_FIT_RESIDUAL,
@@ -572,7 +576,7 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * Highest Chebyshev order tried on one panel before it is bisected, as
    * $N = 2^\\mathrm{cap} + 1$ coefficients.
    *
-   * **This is a heuristic, and the default is fitted rather than derived.** The
+   * This is a heuristic, and the default is fitted rather than derived. The
    * cap trades waste against panel count: a panel that fails to converge at it
    * discards its whole grid before splitting, so a high cap wastes more per
    * failure while a low one fails more often. Neither side has a closed form,
@@ -588,8 +592,8 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * Uniformly best at 5 there, and accuracy did not move with it. But those are
    * two kernel families at one multipole range on one machine, and the optimum
    * depends on how a window's phase is distributed across its domain -- which
-   * is a property of the kernel, not of the library. **A caller with a
-   * different kernel should sweep this rather than assume 5 transfers**, and it
+   * is a property of the kernel, not of the library. A caller with a
+   * different kernel should sweep this rather than assume 5 transfers, and it
    * is a property rather than a compile-time constant so that they can.
    *
    * Zero selects the default.
@@ -1153,12 +1157,16 @@ _component_states_init_non_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
 
   /* Components whose chi supports touch or overlap are pieces of one window
    * and are truncated together. The k-space tail of a piece is set by its
-   * edges, and at an edge two pieces share, the two tails cancel in the sum.
+   * edges, and at an edge shared by two pieces the two tails cancel in the sum.
    * A piece cut on its own size leaves its partner's edge tail behind: an
-   * oscillation the sum never had, as large as the cut allowed, over the
+   * oscillation absent from the sum, as large as the cut allowed, over the
    * whole range where the partner is still integrated. Measured on
-   * NcXcorKernelAnalyticLensing at ell 50-57, fitted to 1e-8: 256 panels of
-   * 33 coefficients on that tail alone. */
+   * NcXcorKernelAnalyticLensing at ell 50-57, fitted to 1e-8: 256 panels of 33
+   * coefficients on that tail alone.
+   *
+   * Grouping is transitive, so a chain of touching components is one group.
+   * Merging relabels every member of the absorbed group, O(n_comp) per
+   * overlapping pair, with n_comp at most MAX_COMP_BLOCK. */
   for (i = 0; i < n_comp; i++)
   {
     guint j;
@@ -1437,10 +1445,10 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
       /* Exponential tail extrapolation beyond boundaries.
        *
        * At DECAY_RATE this falls by e^-100 within a *relative* 1e-8 of the
-       * boundary, so what it contributes is nothing; what it does is keep the
-       * sampled function continuous there, which is what lets one cubic spline
-       * span the boundary. What remains is a jump in the first derivative, of
-       * the component's size at the boundary.
+       * boundary, so it adds nothing to the integral. Its purpose is
+       * continuity: the sampled function has no jump at the boundary, so one
+       * cubic spline can span it. The first derivative still jumps, by the
+       * component's value at the boundary.
        *
        * A Chebyshev panel needs none of that: the boundary is one of its
        * edges, so the whole panel is outside and the component is zero on it,
@@ -1622,7 +1630,7 @@ _component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_d
  *
  * The two terms are not compared directly -- one is scaled to the block's norm
  * and the other to its peak, a factor of order sqrt(n_l) apart -- so the
- * threshold is deliberately loose at two orders, firing only where the
+ * threshold is deliberately loose at two orders, triggering only where the
  * imbalance cannot be anything else. Once per kernel: closures are built per
  * ell block, and the tolerances do not change between them.
  */
@@ -1658,11 +1666,12 @@ _nc_xcor_kernel_check_tolerance_balance (NcXcorKernel *xclk)
  * tolerance is a floor under both halves of the fit criterion. Below it the
  * sampled W_l(k) is not a smooth function at all -- the integrator's adaptive
  * decisions flip from one k to the next -- and no representation converges on
- * it. The spline does not say so: measured on a deliberately loose integrator
- * (reltol 1e-2) asked for a 1e-8 fit, refinement ran to 975161 knots, one
- * radial solve each, and the second differences never came down. The Chebyshev
- * panel splitter bisects to its width guard and aborts instead. Neither is a
- * result, so this reports the cause rather than either symptom.
+ * it. Neither representation reports the cause on its own. The spline refines
+ * without bound: measured on a deliberately loose integrator (reltol 1e-2)
+ * asked for a 1e-8 fit, refinement ran to 975161 knots, one radial solve each,
+ * with the second differences never coming down. The Chebyshev panel splitter
+ * bisects to its width guard and aborts. This check names the cause instead of
+ * leaving either symptom to be diagnosed.
  *
  * The looser of the two fit tolerances is what refinement stops at -- the
  * criterion adds them -- so that is what has to clear the floor.
@@ -1730,10 +1739,10 @@ _nc_xcor_kernel_cmp_gdouble (gconstpointer a, gconstpointer b)
  * by the component's value there -- at most adaptive-epsilon times the block
  * norm. A polynomial fitted across the jump converges only while the jump is
  * below its tolerance: the doubling test sees an aliasing residual of order
- * h / sqrt(N), so a 4e-5 jump on a peak of 10 passes at 1e-6 and fails at 1e-7,
- * where the splitter bisects to its width guard and aborts. Making each
- * boundary a panel edge, with the component off on the outer panel, leaves
- * every panel a smooth function.
+ * (jump / peak) / sqrt(N), so a 4e-5 jump on a peak of 10 passes at 1e-6 and
+ * fails at 1e-7, where the splitter bisects to its width guard and aborts.
+ * Making each boundary a panel edge, with the component off on the outer panel,
+ * leaves every panel a smooth function.
  *
  * The boundaries are fixed by the time this runs: the domain expansion is the
  * only sampling that moves them, and it has finished.
@@ -1787,7 +1796,8 @@ _component_states_collect_cuts (ComponentStates *comp_states, gdouble k_min, gdo
  * and the test passes. Measured on NcXcorKernelAnalyticMulti with
  * adaptive-epsilon 1e-11: the closure's peak came out at 4.9e-5 against 16.2,
  * with no diagnostic. The expansion's samples are independent of the nodes,
- * sit on every component's scale by construction, and are already paid for.
+ * sit on every component's scale by construction, and have already been
+ * evaluated.
  *
  * Samples on the edges are excluded: a cut edge is two-valued there. The
  * factor of ten separates a missed feature from the fit criterion's own
@@ -1964,7 +1974,7 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
       _component_states_collect_cuts (comp_states, cid->k_min, cid->k_max, cuts);
 
       /* Each segment between two boundaries carries a fixed set of components,
-       * so the sampler is told which by the panel it is on. */
+       * so membership is decided per panel rather than per k. */
       comp_states->panel_mode = TRUE;
 
       for (i = 0; i < cuts->len; i++)
@@ -1994,19 +2004,21 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
         g_array_append_val (cid->edges, g_array_index (cid->panels, ChebPanel, i).b);
     }
 
-    /* The residual this fit achieved, per panel per multipole, in the same
-     * units the spline path records: an amplitude of W, one row per interval
-     * on which the closure is a single polynomial.
+    /* The residual this fit achieved, per panel per multipole, in the units
+     * the spline path records: an amplitude of W, one row per interval on
+     * which the closure is a single polynomial.
      *
      * A panel is accepted when doubling its order changes the expansion by
      * less than the tolerance, so the modes the previous level did not carry
      * are what that test measured. Their l1 mass bounds the sup-norm
-     * contribution of the tail, which is the error of the level the panel
+     * contribution of that tail, which is the error of the level the panel
      * keeps -- conservatively, since the modes beyond it are smaller again
-     * wherever the acceptance test was met. Unlike the spline residual this
-     * costs nothing to record, but it stays behind the same property so that
-     * @vp_err means the same thing on both representations: the achieved
-     * residual with tracking on, the requested tolerance without it. */
+     * wherever the acceptance test was met.
+     *
+     * Recording it costs nothing, the coefficients being already computed. It
+     * is still gated on NcXcorKernel:track-fit-residual so that @vp_err means
+     * one thing on both representations: the achieved residual with tracking
+     * on, the requested tolerance without it. */
     if (self->track_fit_residual)
     {
       residuals = ncm_matrix_new (cid->panels->len, n_l);
@@ -2982,6 +2994,7 @@ nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, NcXcorKer
  * multipoles in the range [lmin, lmax] simultaneously.
  *
  * Uses the base class implementation which checks the l-limber property:
+ *
  * - If lmin >= l_limber (or l_limber == 0), uses component-based Limber approximation
  * - If l_limber < 0, use the non-Limber method
  * - Otherwise falls back to single-l get_eval for lmin

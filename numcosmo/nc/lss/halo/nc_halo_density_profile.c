@@ -700,6 +700,7 @@ nc_halo_density_profile_get_lnXf (NcHaloDensityProfile *dp)
  * Gets the physical computation interval $(R_i,\, R_f)$.
  * This interval is relevant only if the object relies on
  * the numerical computation of the functions:
+ *
  * - nc_halo_density_profile_eval_dl_2d_density()
  * - nc_halo_density_profile_eval_dl_cyl_mass()
  *

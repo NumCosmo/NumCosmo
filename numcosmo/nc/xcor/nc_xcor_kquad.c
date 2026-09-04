@@ -190,18 +190,17 @@ static const gdouble _nc_xcor_gl5_w[NC_XCOR_GL5_N] = {
  * refinement never accepted -- accumulates into @unk_i instead and is closed
  * afterwards with the requested tolerance times the peak.
  *
- * It belongs to the closures and not to the quadrature: what a cell is (a
- * merged knot panel, or a cell of the common refinement of two panel sets)
- * changes with the representation, but the propagation above does not. So both
- * exact paths -- the GL(5) sweep over cubics and the coefficient-space
- * bilinear form over Chebyshev panels -- fill it with the same sweep, and
- * @vp_err means the same thing whichever representation the pair carries.
+ * The estimate is a property of the closures, not of the quadrature above
+ * them. What a cell is does change with the representation -- a merged knot
+ * interval, or a cell of the common refinement of two panel sets -- but the
+ * propagation above does not. Both exact paths therefore fill these
+ * accumulators with the same sweep, and @vp_err means one thing whichever
+ * representations the pair carries.
  *
- * The sweep samples |W| at the same GL(5) nodes the spline path integrates on.
- * These are error terms, not the answer: |W| is not a polynomial, so no rule
- * is exact on them, and asking for @vp_err costs one extra sweep of closure
- * evaluations. That is a fraction of a pair's cost, which the closure build
- * dominates.
+ * The sweep samples |W| at the GL(5) nodes of every cell. These are error
+ * terms, not the answer: |W| is not a polynomial, so no rule is exact on them.
+ * Asking for @vp_err therefore costs one extra sweep of closure evaluations,
+ * a fraction of a pair's total cost, which the closure build dominates.
  */
 typedef struct _NcXcorClosureErr
 {
@@ -400,9 +399,9 @@ _nc_xcor_closure_err_init (NcXcorClosureErr *err, NcXcorKernelIntegrand *xclki1,
 }
 
 /*
- * Samples |W| at the GL(5) nodes of every cell and accumulates the error terms
- * of the pair. Fills no value: the answer comes from the path that owns the
- * representation.
+ * Samples |W| at the GL(5) nodes of every cell and accumulates the pair's
+ * error terms. It does not compute the integral: that is left to whichever
+ * exact path matches the representations.
  *
  * The auto and cross cases are separate sweeps rather than one with a test
  * inside, because the aliasing that makes them one set of accumulators also
@@ -754,10 +753,10 @@ _nc_xcor_cell_coeffs (NcXcorKernelIntegrand *xclki, gdouble a, gdouble b, guint 
  * k^2 weight is itself degree two in the cell's own variable and is folded into
  * one side.
  *
- * This is what a Chebyshev closure buys over feeding it to an adaptive rule:
- * the quadrature stops rediscovering per pair what the closure already knows.
- * It also takes a spline on either side, at four coefficients per cell, which
- * is what a pair split across the Limber threshold hands it.
+ * This is what a Chebyshev closure gains over feeding it to an adaptive rule:
+ * the quadrature does not rediscover per pair what the closure already
+ * describes. Either side may equally be a spline, at four coefficients per
+ * cell, which is what a pair split across the Limber threshold produces.
  */
 static void
 _nc_xcor_kernel_integrate_block_spectral (NcXcor *xc, NcXcorKernelIntegrand *xclki1,
@@ -904,8 +903,8 @@ _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1
 
   /* One double per multipole, and a block is capped at
    * NC_XCOR_KERNEL_MAX_ELL_BLOCK by the closure builder -- 512 bytes each. On
-   * the stack they cost no allocation at all, and the early returns above and
-   * the two exit paths below carry nothing to free. */
+   * the stack they need no allocation, and no exit path from this function has
+   * anything of theirs to free. */
   gdouble sum[NC_XCOR_KERNEL_MAX_ELL_BLOCK] = { 0.0 };
   gdouble W1_store[NC_XCOR_KERNEL_MAX_ELL_BLOCK];
   gdouble W2_store[NC_XCOR_KERNEL_MAX_ELL_BLOCK];
@@ -930,12 +929,15 @@ _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1
 
   /* Chosen here rather than by the callers: NcXcorSolver and
    * _nc_xcor_kernel_space_compute() both enter through this function, and a
-   * choice made in one of them is a choice the other silently misses. A pair
-   * with a panelled closure on either side goes to the common refinement of
-   * the two breakpoint sets, where the product is a polynomial and the
-   * integral is exact in closed form; two splines take the merged-knot GL(5)
-   * sweep below, which is exact for the same reason one level down. Either way
-   * the method integrates the closures it is handed exactly. */
+   * choice made in one of them is a choice the other silently misses.
+   *
+   * A pair with a panel-backed closure on at least one side goes to the common
+   * refinement of the two breakpoint sets, where the product is a polynomial
+   * and the integral is a bilinear form in the coefficients. Two splines take
+   * the merged-knot GL(5) sweep below: on a merged interval the product is
+   * two cubics times k^2, degree 8, and five-point Gauss-Legendre is exact
+   * through degree 9. Either way the closures handed in are integrated
+   * exactly. */
   if ((nc_xcor_kernel_integrand_get_n_panels (xclki1) > 0) ||
       (nc_xcor_kernel_integrand_get_n_panels (side2) > 0))
   {
@@ -1088,7 +1090,7 @@ _nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHIC
     /* Build the integrand(s) first, then read the outer bound off their own
      * fitted domain (get_range) -- NOT the independent Limber-band formula
      * from nc_xcor_kernel_get_k_range(), which has no guarantee of matching
-     * it (see plan doc dev-notes/xcor_ultralevin_batching_plan.md §3). */
+     * it (see plan doc dev-notes/xcor_ultralevin_batching_plan.md sec. 3). */
     xclki_array[0] = nc_xcor_kernel_get_eval (xclk1, cosmo, ell, xc->closure_type);
     nc_xcor_kernel_integrand_get_range (xclki_array[0], &k_min, &k_max);
 
@@ -1117,8 +1119,8 @@ _nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHIC
      * QUADPACK reports as roundoff (GSL_EROUND). Breaking on the knots leaves
      * every subinterval a single cubic piece: the same integral converges to
      * machine precision instead of stalling near 1e-6, for about twice the
-     * evaluations. No safety margin is applied over NcXcor:reltol; the margin
-     * that used to be (reltol * 1e-2) only moved the stall.
+     * evaluations. No safety margin is applied over NcXcor:reltol: a margin
+     * of (reltol * 1e-2) was measured to move the stall rather than remove it.
      */
     breakpoints = _nc_xcor_kernel_gsl_breakpoints (xclki_array[0], isauto ? NULL : xclki_array[1], k_min, k_max);
 
@@ -1445,7 +1447,7 @@ _nc_xcor_kernel_cubature_runs (NcmIntegralND *xcor_int_nd, NcXcorArg *xcor_arg, 
  * This is #NcXcorSolver's building block for sharing one kernel's k-space
  * closure across every request that needs it in a given block, instead of
  * rebuilding it once per pair (see plan doc
- * dev-notes/xcor_ultralevin_batching_plan.md §5-§6). Reached through the
+ * dev-notes/xcor_ultralevin_batching_plan.md sec. 5-6). Reached through the
  * #NcXcorKQuad table, publicly through nc_xcor_integrate_block().
  *
  * The caller retains ownership of @xclki1/@xclki2 -- they are not unreffed

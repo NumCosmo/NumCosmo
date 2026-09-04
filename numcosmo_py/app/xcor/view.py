@@ -561,8 +561,10 @@ class ViewKernel:
         self.dist = nc_cosmo.dist
         self.ps_ml = nc_cosmo.ps_ml
         self.recomb = nc_cosmo.recomb
-        print(f"  ✓ H0 = {self.cosmo['H0']:.2f}, Omega_b = {self.cosmo['Omegab']:.4f}")
-        print(f"  ✓ Maximum redshift: {dist_max_z}")
+        print(
+            f"  [OK] H0 = {self.cosmo['H0']:.2f}, Omega_b = {self.cosmo['Omegab']:.4f}"
+        )
+        print(f"  [OK] Maximum redshift: {dist_max_z}")
         print()
 
         # Create integrator.
@@ -601,7 +603,7 @@ class ViewKernel:
             self.integrator.get_reltol(), self.integrator.get_cheb_reltol()
         )
         print(
-            f"  ✓ Levin integrator created (reltol={self.integrator.get_reltol():.1e}, "
+            f"  [OK] Levin integrator created (reltol={self.integrator.get_reltol():.1e}, "
             f"cheb_reltol={self.integrator.get_cheb_reltol():.1e}, "
             f"max_order={self.integrator.get_max_order()})"
         )
@@ -610,18 +612,18 @@ class ViewKernel:
         print("Parsing kernel specification...")
         if self.n_ell > 1:
             print(
-                f"  ✓ Evaluating {self.n_ell} multipoles: ell = {self.ell} "
+                f"  [OK] Evaluating {self.n_ell} multipoles: ell = {self.ell} "
                 f"to {self.ell + self.n_ell - 1}"
             )
         else:
-            print(f"  ✓ Evaluating single multipole: ell = {self.ell}")
+            print(f"  [OK] Evaluating single multipole: ell = {self.ell}")
         print()
         kernel_evals = []
         kernel_objs: list[tuple[str, Nc.XcorKernel]] = []
         for k0 in self.kernel:
             kernel_name, kernel_config = parse_kernel_spec(k0)
-            print(f"  ✓ Kernel type: {kernel_name}")
-            print(f"  ✓ Configuration: {kernel_config}")
+            print(f"  [OK] Kernel type: {kernel_name}")
+            print(f"  [OK] Configuration: {kernel_config}")
             print()
 
             # Create kernel(s)
@@ -646,7 +648,7 @@ class ViewKernel:
             self._plot_cls(kernel_objs, cls_main, cls_alt)
 
         print()
-        print("✓ Kernel visualization complete!")
+        print("[OK] Kernel visualization complete!")
 
     @property
     def _alt_closure_type(self) -> XcorClosureOption:
@@ -711,7 +713,7 @@ class ViewKernel:
 
         self._apply_closure_tolerance_floor(result[1])
 
-        print("  ✓ Kernels created and prepared")
+        print("  [OK] Kernels created and prepared")
         print()
 
         return result
@@ -735,7 +737,7 @@ class ViewKernel:
         kernel.set_reltol(max(kernel.get_reltol(), floor))
         kernel.set_scaled_abstol(max(kernel.get_scaled_abstol(), floor))
         print(
-            f"  ✓ Closure fit tolerances raised to {floor:.1e} to match the "
+            f"  [OK] Closure fit tolerances raised to {floor:.1e} to match the "
             f"integrator"
         )
 
@@ -1009,7 +1011,7 @@ class ViewKernel:
                 f"{k_max_alt:.2e}] Mpc^-1"
             )
 
-        print("  ✓ Kernel evaluation complete")
+        print("  [OK] Kernel evaluation complete")
         print()
 
         return [KernelVariants(main=kernel_eval, alternative=kernel_eval_alt)]
@@ -1074,7 +1076,7 @@ class ViewKernel:
         }
 
         print(
-            f"  ✓ {len(pairs)} spectra in {elapsed:.2f} s "
+            f"  [OK] {len(pairs)} spectra in {elapsed:.2f} s "
             f"({solver.get_n_blocks()} multipole block(s))"
         )
         print()
@@ -1142,7 +1144,7 @@ class ViewKernel:
                 f"{self.output.stem}_cls{self.output.suffix}"
             )
             fig.savefig(cls_output, dpi=150, bbox_inches="tight")
-            print(f"  ✓ Saved to {cls_output}")
+            print(f"  [OK] Saved to {cls_output}")
 
         if self.show_plot:
             plt.show()
@@ -1275,13 +1277,13 @@ class ViewKernel:
         # Save figure if output path specified
         if self.output:
             plt.savefig(self.output, dpi=150, bbox_inches="tight")
-            print(f"  ✓ Figure saved to: {self.output}")
+            print(f"  [OK] Figure saved to: {self.output}")
 
         # Show plot if requested
         if self.show_plot:
-            print("  ✓ Displaying plot...")
+            print("  [OK] Displaying plot...")
             plt.show()
         else:
-            print("  ✓ Plot generated (not displayed)")
+            print("  [OK] Plot generated (not displayed)")
 
         print()

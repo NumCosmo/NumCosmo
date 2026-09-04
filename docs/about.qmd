@@ -8,13 +8,13 @@ analysis, written in C with GObject and usable from Python. For an overview of
 what it computes, see the [home page](index.qmd); for setup, the
 [installation guide](install.qmd).
 
-**Current version**: {{< meta version >}}.
+Current version: {{< meta version >}}.
 
 ## Project
 
 NumCosmo is developed in the open on
 [GitHub](https://github.com/NumCosmo/NumCosmo) under the GPL v3 license.
-Contributions are welcome — bug reports, feature requests, and code. See the
+Contributions are welcome --- bug reports, feature requests, and code. See the
 [contributing guide](https://github.com/NumCosmo/NumCosmo/blob/master/CONTRIBUTING.md)
 for the mechanics of adding code, tests, and documentation.
 

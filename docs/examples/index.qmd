@@ -10,22 +10,22 @@ Examples show individual API operations. For complete workflows, see
 
 ## Background & Distances
 
-- [Dark Energy WSpline](intro/wspline.qmd) — a spline-reconstructed dark-energy equation of state.
-- [Recombination](intro/recombination.qmd) — computing the ionization and visibility history.
+- [Dark Energy WSpline](intro/wspline.qmd) --- a spline-reconstructed dark-energy equation of state.
+- [Recombination](intro/recombination.qmd) --- computing the ionization and visibility history.
 
 ## Large-Scale Structure
 
-- [Matter Power Spectrum](intro/power_spectrum.qmd) — linear and nonlinear power spectra.
-- [Halo Mass Function](intro/halo_mass_function.qmd) — halo abundance from the filtered power spectrum.
+- [Matter Power Spectrum](intro/power_spectrum.qmd) --- linear and nonlinear power spectra.
+- [Halo Mass Function](intro/halo_mass_function.qmd) --- halo abundance from the filtered power spectrum.
 
 ## Primordial
 
-- [Primordial Modeling](intro/hiprim.qmd) — implementing a primordial cosmology model.
-- [Primordial Tensor Contribution](intro/hiprim_tensor.qmd) — testing tensor modes.
+- [Primordial Modeling](intro/hiprim.qmd) --- implementing a primordial cosmology model.
+- [Primordial Tensor Contribution](intro/hiprim_tensor.qmd) --- testing tensor modes.
 
 ## Data & Statistics
 
-- [SN Ia Fitting](data_analysis/snia.qmd) — fitting a Type Ia supernova sample.
-- [SNIa + BAO Confidence Regions](data_analysis/rg_snia_bao.qmd) — comparing likelihood-ratio and Fisher confidence regions.
-- [Inspect Data Objects](data_analysis/inspect_data_objects.qmd) — exploring NumCosmo data objects.
-- [Empirical PDF](intro/epdf.qmd) — building an empirical distribution.
+- [SN Ia Fitting](data_analysis/snia.qmd) --- fitting a Type Ia supernova sample.
+- [SNIa + BAO Confidence Regions](data_analysis/rg_snia_bao.qmd) --- comparing likelihood-ratio and Fisher confidence regions.
+- [Inspect Data Objects](data_analysis/inspect_data_objects.qmd) --- exploring NumCosmo data objects.
+- [Empirical PDF](intro/epdf.qmd) --- building an empirical distribution.

@@ -10,30 +10,31 @@ classes and methods.
 
 ## Background & Thermal History
 
-- [Cosmological Distances](distances.qmd) — comoving, transverse, luminosity, and angular diameter distances.
-- [Cosmic Recombination](recombination.qmd) — Saha equilibrium, the Seager solver, optical depth and visibility.
+- [Cosmological Distances](distances.qmd) --- comoving, transverse, luminosity, and angular diameter distances.
+- [Cosmic Recombination](recombination.qmd) --- Saha equilibrium, the Seager solver, optical depth and visibility.
 
 ## Linear Theory & Power Spectrum
 
-- [Eisenstein–Hu Transfer Function](transfer_func_eh.qmd) — the EH (1998) fitting formula, with and without baryons.
+- [Eisenstein--Hu Transfer Function](transfer_func_eh.qmd) --- the EH (1998) fitting formula, with and without baryons.
 
 ## Clusters & Weak Lensing
 
-- [Halo Density Profiles](halo_density_profile.qmd) — NFW, Einasto, and Hernquist profiles and their projected quantities.
-- [Weak-Lensing Surface Mass Density](wl_surface_mass_density.qmd) — projected surface density, convergence, and shear.
-- [Castro Halo Mass Function and Bias](castro_hmf.qmd) — the non-universal $f(\sigma)$ calibrations and the linear bias fitted alongside them.
-- [Super-Sample Covariance](ssc.qmd) — the $S_{ij}$ matrix of long-wavelength modes, and its role in the cluster number-count likelihood.
+- [Halo Density Profiles](halo_density_profile.qmd) --- NFW, Einasto, and Hernquist profiles and their projected quantities.
+- [Weak-Lensing Surface Mass Density](wl_surface_mass_density.qmd) --- projected surface density, convergence, and shear.
+- [Castro Halo Mass Function and Bias](castro_hmf.qmd) --- the non-universal $f(\sigma)$ calibrations and the linear bias fitted alongside them.
+- [Super-Sample Covariance](ssc.qmd) --- the $S_{ij}$ matrix of long-wavelength modes, and its role in the cluster number-count likelihood.
 
 ## Galaxy Population & Weak Lensing
 
-- [Galaxy Population & WL Framework](galaxy_wl_framework.qmd) — the Pop/Obs/ObsSel/Factor vocabulary, the fixed Z⇒P⇒S pipeline, and the per-galaxy data/cache idiom shared by every calculator.
-- [Galaxy Shapes and Ellipticity Frames](wl_ellipticity.qmd) — the shape forward model, ellipticity conventions, and the celestial/Euclidean handedness frames.
-- [A Small-Shear Series Marginalization for the Shape Likelihood](wl_shape_marginalization_series.qmd) — in-progress derivation of a Bessel-series marginalization scheme for the large-noise, small-$g$ regime.
-- [Fixed-Node Lens-Domain Quadrature for the Shape Likelihood](wl_shape_marginalization_fixed_quad.qmd) — a fast, series-free alternative: fixed-node quadrature over the noise-disk/unit-disc intersection in the lensed frame.
+- [Galaxy Population & WL Framework](galaxy_wl_framework.qmd) --- the Pop/Obs/ObsSel/Factor vocabulary, the fixed Z$\Rightarrow$P$\Rightarrow$S pipeline, and the per-galaxy data/cache idiom shared by every calculator.
+- [Galaxy Shapes and Ellipticity Frames](wl_ellipticity.qmd) --- the shape forward model, ellipticity conventions, and the celestial/Euclidean handedness frames.
+- [A Small-Shear Series Marginalization for the Shape Likelihood](wl_shape_marginalization_series.qmd) --- in-progress derivation of a Bessel-series marginalization scheme for the large-noise, small-$g$ regime.
+- [Fixed-Node Lens-Domain Quadrature for the Shape Likelihood](wl_shape_marginalization_fixed_quad.qmd) --- a fast, series-free alternative: fixed-node quadrature over the noise-disk/unit-disc intersection in the lensed frame.
 
 ## Numerical Methods
 
-- [FFTLog](fftlog.qmd) — logarithmic fast Fourier transform.
-- [Spectral Methods](spectral.qmd) — Chebyshev approximation, Clenshaw–Curtis integration, and ultraspherical operators.
-- [Projection Integrals with Spherical Bessel Weights](sbessel_projection.qmd) — the Levin reduction, the ultraspherical solver, fixed panels in y, the window over k and its exact outer integral.
-- [CSQ1D Formalism](csq1d.qmd) — complex-structure evolution of a time-dependent oscillator.
+- [FFTLog](fftlog.qmd) --- logarithmic fast Fourier transform.
+- [Spectral Methods](spectral.qmd) --- Chebyshev approximation, Clenshaw--Curtis integration, and ultraspherical operators.
+- [Projection Integrals with Spherical Bessel Weights](sbessel_projection.qmd) --- the Levin reduction, fixed panels in y, the window over k and its exact outer integral.
+- [The Ultraspherical Spectral Solver](sbessel_ode_solver.qmd) --- the banded discretisation of the spherical Bessel operator, batching over multipoles, the incremental Givens QR and conjugate panel spans.
+- [CSQ1D Formalism](csq1d.qmd) --- complex-structure evolution of a time-dependent oscillator.

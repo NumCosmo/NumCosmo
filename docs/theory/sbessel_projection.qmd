@@ -25,11 +25,23 @@ I_\ell(k) \;=\; \int_a^b \mathrm{d}\chi\, K(\chi,k)\, j_\ell(k\chi)
 \tag{2}
 $$
 for a whole block of consecutive multipoles at once
-([Sections 2–7](#the-oscillatory-integral)). The outer stage decides which $k$
-to ask for, builds a representation of $I_\ell(k)$ over $k$ for each kernel,
-and integrates the product of two such representations exactly
-([Sections 8–10](#the-window-over-k)). Every resolution-like quantity in both
-stages is an output of a tolerance, not an input.
+([The oscillatory integral](#the-oscillatory-integral) through
+[Panels fixed in y](#panels-fixed-in-y)). The outer stage decides which $k$ to
+ask for, builds a representation of $I_\ell(k)$ over $k$ for each kernel, and
+integrates the product of two such representations exactly
+([The window over k](#the-window-over-k) through
+[The outer integral](#the-outer-integral)).
+
+The inner stage is [[numcosmo-math|NcmSBesselIntegratorLevin]] over
+[[numcosmo-math|NcmSBesselOdeSolver]], and the outer stage is
+[[numcosmo|NcXcorKernel]] over [[numcosmo|NcXcor]]. Each section below names
+the object it describes.
+
+Every quantity that sets resolution is an output of a tolerance rather than an
+input: the truncation order of each solve, the number of samples of each
+kernel, the knot or panel count of each representation, and the range of $k$
+integrated over. Two quantities are prescribed, and neither sets the accuracy
+of the result: the panel grid in $y$ and the number of multipoles per block.
 
 The figures on this page are produced by the library itself. The only objects
 from cosmology are constructor arguments that the analytic test windows require;
@@ -77,12 +89,13 @@ The weight no longer depends on $k$. Everything that is expensive to prepare
 for $j_\ell$ can therefore be prepared once on a fixed grid in $y$ and reused
 for every $k$, every kernel and every block of multipoles: only the integration
 bounds $[ka, kb]$ and the forcing $F$ move with $k$. This is the organising
-principle of the implementation ([Section 6](#panels-fixed-in-y)).
+principle of the implementation ([Panels fixed in y](#panels-fixed-in-y)).
 
 ### From the integral to a boundary-value problem
 
-$j_\ell$ solves the spherical Bessel equation; equivalently $v(y) = y\,j_\ell(y)$
-solves
+The reduction below is what [[numcosmo-math|NcmSBesselIntegratorLevin]]
+implements. $j_\ell$ solves the spherical Bessel equation; equivalently
+$v(y) = y\,j_\ell(y)$ solves
 $$
 y^2 v'' + \left[y^2 - \ell(\ell+1)\right] v = 0 .
 \tag{4}
@@ -109,7 +122,8 @@ operator, and it is exact: no approximation enters until Eq. (5) is solved.
 $j_\ell$ itself is evaluated only at the two ends of each panel. The unknown
 $u$ is not free of oscillation: with Dirichlet data it carries homogeneous
 solutions of Eq. (4), and its Chebyshev expansion needs about two coefficients
-per oscillation of the panel, which is the floor of Eq. (9) below. What the
+per oscillation of the panel, which is the floor $N_{\min}$ of [Incremental
+Givens QR](sbessel_ode_solver.qmd#incremental-givens-qr). What the
 reduction changes is where the oscillations are paid for. They cost $O(1)$
 per coefficient in a banded linear solve and no evaluation of the kernel,
 which enters only through the forcing $yF$ and is sampled as its own
@@ -123,12 +137,17 @@ of the equation with the first-derivative term) because Eq. (5) has no
 first-derivative term and no singular coefficient, which keeps the spectral
 operator banded and well conditioned. The general form (6), with the $u$ term
 kept, is what the code evaluates, because the extended cells of
-[Section 6](#panels-fixed-in-y) solve on an interval larger than the one
-integrated over.
+[Panels fixed in y](#panels-fixed-in-y) solve on an interval larger than the
+one integrated over.
 
 ```{python}
 #| label: fig-levin-smooth
-#| fig-cap: "Left: the integrand F(y) j_20(y) on the panel [100, 316] for a smooth forcing. Right: the solution u of the boundary-value problem (5) on the same panel, from the library's ultraspherical solver. It still oscillates, since the boundary conditions bring in homogeneous solutions, but the forcing needed 64 samples of the kernel and the solve is a banded linear system."
+#| fig-cap: >
+#|   Left: the integrand F(y) j_20(y) on the panel [100, 316] for a smooth forcing.
+#|   Right: the solution u of the boundary-value problem (5) on the same panel, from
+#|   the library's ultraspherical solver. It still oscillates, since the boundary
+#|   conditions bring in homogeneous solutions, but the forcing needed 64 samples of
+#|   the kernel and the solve is a banded linear system.
 ell = 20
 a, b = 100.0, 316.2278
 m, h = 0.5 * (a + b), 0.5 * (b - a)
@@ -163,9 +182,11 @@ u = np.polynomial.chebyshev.chebval(tt, coeffs)
 
 fig, ax = plt.subplots(1, 2, figsize=(10, 3.4))
 ax[0].plot(yy, F(yy) * spherical_jn(ell, yy), lw=0.8)
-ax[0].set_xlabel("y"); ax[0].set_title("F(y) j_l(y)")
+ax[0].set_xlabel("y")
+ax[0].set_title("F(y) j_l(y)")
 ax[1].plot(yy, u, lw=1.2)
-ax[1].set_xlabel("y"); ax[1].set_title(f"u(y), {n_cols} Chebyshev coefficients")
+ax[1].set_xlabel("y")
+ax[1].set_title(f"u(y), {n_cols} Chebyshev coefficients")
 plt.tight_layout()
 
 # the boundary term (6) against composite Gauss-Legendre on the oscillatory integrand
@@ -180,8 +201,8 @@ print(f"boundary term {levin:.12e}   quadrature reference {ref:.12e}   rel. diff
 
 ### Derivative weights
 
-Two more weights are needed in practice, $j_\ell'(y)$ and $j_\ell''(y)$. They
-are reduced to the plain weight by integration by parts, once and twice,
+Two further weights are needed, $j_\ell'(y)$ and $j_\ell''(y)$. They are
+reduced to the plain weight by integration by parts, once and twice,
 $$
 \int F\, j_\ell' = \big[F\, j_\ell\big] - \int F'\, j_\ell,
 \qquad
@@ -197,197 +218,48 @@ panel ends and $j_\ell'$ from the recurrence $j_\ell' = j_{\ell-1} -
 \tfrac{\ell+1}{y} j_\ell$, which is why a derivative-weighted block reads the
 Bessel array one order below its lowest multipole.
 
-## The ultraspherical spectral solver
+## The spectral solver
 
-### Discretisation
-
-Each panel $[y_a, y_b]$ is mapped to $t \in [-1,1]$ by $y = m + h t$,
-$m = (y_a+y_b)/2$, $h = (y_b-y_a)/2$. Equation (5) becomes
-$$
-\left[\frac{m^2}{h^2} + \frac{2m}{h}\,t + t^2\right]\frac{\mathrm{d}^2 u}{\mathrm{d}t^2}
-+ \left[(m^2 - \ell(\ell+1)) + 2mh\,t + h^2 t^2\right] u
-= (m + ht)\,F(m+ht).
-\tag{8}
-$$
-The unknown is expanded in Chebyshev polynomials, $u = \sum_n a_n T_n(t)$, and
-the equation is imposed in the ultraspherical basis $C^{(2)}_n$, following
-@Olver2013. In that basis the second derivative is a diagonal map,
-$\mathrm{d}^2/\mathrm{d}t^2: a_n \mapsto 2(n+2)a_{n+2}$, and multiplication by
-$t$ and $t^2$ are banded. The six primitives that Eq. (8) needs, with their
-coefficient formulas, are tabulated on the [Spectral Methods](spectral.qmd)
-page; assembled, the operator has bandwidth $2$ below and $6$ above the
-diagonal, independent of the truncation order. The right-hand side is the
-Chebyshev fit of $y F(y)$ converted to $C^{(2)}$ coefficients by the identity
-map of the same table.
-
-The first two rows are replaced by the boundary conditions. Since
-$T_n(\pm1) = (\pm1)^n$, they are the dense rows $\sum_n (-1)^n a_n = u(y_a)$ and
-$\sum_n a_n = u(y_b)$, and the corresponding right-hand-side entries are the
-endpoint values; zero entries give the homogeneous problem. The matrix is
-therefore almost banded: banded, plus two dense rows.
-
-```{python}
-#| label: fig-operator
-#| fig-cap: "Nonzero pattern of the discretised operator (8) for l = 20 on the panel of the previous figure, 40 rows: two dense boundary rows, then a band of width 9."
-M = solver.get_operator_matrix(a, b, ell, 40)
-A = np.array(M.dup_array()).reshape(M.nrows(), M.ncols())
-fig, ax = plt.subplots(figsize=(4.2, 4.2))
-ax.spy(A, markersize=3)
-ax.set_xlabel("Chebyshev coefficient index of u"); ax.set_ylabel("row")
-plt.tight_layout()
-```
-
-### Batching over multipoles
-
-The only $\ell$ dependence of Eq. (8) is the constant $m^2 - \ell(\ell+1)$ in
-the identity term, and $(\ell+1)(\ell+2) - \ell(\ell+1) = 2(\ell+1)$. A block of
-consecutive multipoles therefore shares every derivative and multiplication
-entry; the rows for $\ell+1$ are those for $\ell$ with $-2(\ell+1)$ added to
-the three identity-term entries. The block is factorised together and the
-stopping test below is a max-reduction over the block, so the whole block is
-solved to the tolerance the hardest member needs.
-
-### Incremental Givens QR
-
-The system is not solved at a prescribed size. Columns are added one at a
-time and the factorisation is grown with Givens rotations: adding column $c$
-brings in one new row, $c + 4$, and four rotations eliminate the entries below
-the diagonal in that column (two for the lower bandwidth and two for the
-boundary rows, which touch every column). Each rotation is applied to the
-right-hand side as well, so after column $c$ the transformed right-hand side
-$\tilde c_c$ divided by the diagonal $R_{cc}$ is the value the back-substitution
-would assign to $a_c$ if the expansion stopped there.
-
-The stopping test watches exactly that ratio. Let $\rho_c = |\tilde c_c /
-R_{cc}|$ and $\rho_{\max}$ its running maximum. The factorisation stops at the
-first column such that $\rho_c/\rho_{\max} < \tau$ for five consecutive
-columns and $c + 1 \ge N_{\min}$, where
-$$
-N_{\min} = \left\lceil \frac{2}{\pi}\,\big(y_b - \max(y_a, \nu)\big) \right\rceil,
-\qquad \nu = \sqrt{\ell(\ell+1)} .
-\tag{9}
-$$
-The floor $N_{\min}$ is the number of Chebyshev coefficients the oscillatory
-part of the panel needs, two per half-oscillation beyond the turning point
-$y = \nu$; below the turning point $j_\ell$ is evanescent and the solution is
-smooth. Without the floor the test can fire on the quiet leading coefficients
-of a solution whose oscillation has not yet been reached, and the delivered
-error then fails to decrease with the requested tolerance.
-
-Once the factorisation stops, back-substitution gives the coefficients, or,
-when only the boundary term is wanted, the endpoint derivatives directly,
-$$
-u'(y_a) = \frac{1}{h}\sum_n (-1)^{n+1} n^2 a_n,
-\qquad
-u'(y_b) = \frac{1}{h}\sum_n n^2 a_n,
-$$
-from $T_n'(\pm1) = (\pm1)^{n+1} n^2$. The rotations are stored with the
-operator. A new right-hand side on the same panel and block replays them in
-$O(N)$ and extends the factorisation only if its own stopping test asks for
-more columns. Because the bandwidth is fixed, the whole solve is $O(N)$ per
-multipole, which is what makes discovering $N$ affordable.
-
-```{python}
-#| label: fig-qr-stop
-#| fig-cap: "Chebyshev coefficients of u for the panel of the first figure at three solver tolerances. The adaptive QR stops where the coefficients fall below the tolerance relative to the largest one, never before the floor N_min of Eq. (9), here 138 for this panel and l = 20."
-fig, ax = plt.subplots(figsize=(6, 3.4))
-nmin = int(np.ceil(2.0 / np.pi * (b - max(a, np.sqrt(ell * (ell + 1))))))
-for tol in (1.0e-4, 1.0e-8, 1.0e-12):
-    solver.set_tolerance(tol)
-    op = solver.create_operator(a, b, ell, ell)
-    cf, n = op.solve(np.concatenate([[0.0, 0.0], g]))
-    cf = np.abs(np.array(cf)) / np.max(np.abs(cf))
-    ax.semilogy(cf, ".", ms=3, label=f"tolerance {tol:g}: {n} coefficients")
-ax.axvline(nmin, color="k", ls="--", lw=0.8, label=f"N_min = {nmin}")
-ax.set_xlabel("n"); ax.set_ylabel("|a_n| / max |a_n|"); ax.legend(fontsize=8)
-plt.tight_layout()
-```
-
-### Conjugate points
-
-A two-point Dirichlet problem is singular when the homogeneous equation has a
-solution vanishing at both ends. With $j_\ell = M\cos\theta$ and $y_\ell = M
-\sin\theta$ in amplitude-phase form, the boundary determinant is
-$$
-\Phi_\ell(y_a, y_b) = j_\ell(y_a)\,y_\ell(y_b) - j_\ell(y_b)\,y_\ell(y_a)
- = M(y_a)\,M(y_b)\,\sin\!\big(\theta(y_b) - \theta(y_a)\big),
-$$
-so the panel is singular when the phase advances by a multiple of $\pi$
-across it. The phase is not $y$: in the oscillatory regime it is the WKB phase
-$$
-\theta_\ell(y) = \sqrt{y^2 - \nu^2} - \nu \arccos\frac{\nu}{y},
-\tag{10}
-$$
-which reproduces the measured conjugate spans to four decimals for $\ell$ from
-2 to 300, while the naive rule "span equal to $n\pi$" is off by up to half a
-period at $\ell \gtrsim 50$. Below the turning point $\theta$ is imaginary and
-there are no conjugate points. The condition number of the boundary matrix
-also carries the amplitude ratio, $\kappa \sim [M(y_a)/M(y_b) + M(y_b)/M(y_a)]
-/ |\sin\Delta\theta|$, so a panel reaching from deep in the evanescent region
-into the oscillatory one is ill conditioned whatever its span.
-
-```{python}
-#| label: fig-conjugate
-#| fig-cap: "Condition number of the 2x2 boundary matrix [[j(A), y(A)], [j(B), y(B)]] on panels starting at A = 200 as the panel span varies, for l = 2 and l = 50. The spikes are conjugate points. They sit at integer multiples of pi for l = 2 and shift for l = 50, exactly where the WKB phase (10) advances by n pi (dotted lines)."
-A0 = 200.0
-spans = np.linspace(19.9, 22.6, 1400) * np.pi
-fig, ax = plt.subplots(figsize=(7, 3.4))
-for l, col in ((2, "C0"), (50, "C3")):
-    cond = []
-    for s in spans:
-        B = A0 + s
-        Mx = np.array([[spherical_jn(l, A0), spherical_yn(l, A0)], [spherical_jn(l, B), spherical_yn(l, B)]])
-        cond.append(np.linalg.cond(Mx))
-    ax.semilogy(spans / np.pi, cond, color=col, lw=0.9, label=f"l = {l}")
-    nu = np.sqrt(l * (l + 1.0))
-    theta = lambda y: np.sqrt(y * y - nu * nu) - nu * np.arccos(nu / y)
-    dth = (theta(A0 + spans) - theta(A0)) / np.pi
-    for n in range(20, 23):
-        idx = np.argmin(np.abs(dth - n))
-        ax.axvline(spans[idx] / np.pi, color=col, ls=":", lw=0.8)
-ax.set_xlabel("panel span / pi"); ax.set_ylabel("condition number"); ax.legend()
-plt.tight_layout()
-```
-
-The knot grid of [Section 6](#panels-fixed-in-y) is logarithmic in $y$, so
-panel spans land where the grid puts them, and one grid serves a whole block of
-multipoles whose conjugate spans differ. Measured on the configurations in use,
-no solved oscillatory panel lies within $0.15\pi$ of a conjugate span, against
-a maximum possible distance of $0.5\pi$, so the effect is not active; the
-library records per-panel contributions on request so that this can be checked
-for any new configuration. Two fixes are known and neither is implemented:
-placing knots at half-integer increments of the phase (10) per block, which
-touches only the grid construction, or closing the problem as an initial-value
-problem with both conditions at one end, which is immune by construction but
-needs a derivative row in the innermost loop.
+Equation (5) is solved by [[numcosmo-math|NcmSBesselOdeSolver]], which
+discretises it in the ultraspherical $C^{(2)}$ basis and grows an incremental
+Givens QR until the solution coefficients decay. The discretisation, the
+batching over multipoles, the truncation floor and the conjugate panel spans
+are described on [The Ultraspherical Spectral
+Solver](sbessel_ode_solver.qmd). Only two of its properties are used below: the
+right-hand side is the $C^{(2)}$ expansion of $y F(y)$ with the endpoint values
+in the first two entries, and the truncation order $N$ it returns is an output
+of the tolerance, floored at about two coefficients per oscillation of the
+panel.
 
 ## The forcing on a panel
 
-The right-hand side of Eq. (8) is the Chebyshev expansion of $y\,F(y)$ on the
-panel, computed adaptively: the function is sampled at Chebyshev–Lobatto nodes
+The right-hand side of the discretised operator is the Chebyshev expansion of
+$y\,F(y)$ on the
+panel, computed adaptively: the function is sampled at Chebyshev--Lobatto nodes
 $t_j = \cos(j\pi/2^k)$, whose grids nest so that going from level $k$ to $k+1$
 evaluates only the new odd nodes, and the level is doubled until the
 coefficients shared by two successive levels agree,
 $$
 \|c^{(2N)}_{0:N} - c^{(N)}\|_2^2 < \max\!\big(\tau_F^2\,\|c^{(2N)}\|_2^2,\; \epsilon_{\rm abs}^2\big).
-\tag{11}
+\tag{8}
 $$
 The transform is a type-I DCT and the details are on the
 [Spectral Methods](spectral.qmd) page. The default $\tau_F = 10^{-8}$ is the
 looser of the two solver tolerances and therefore the one that bounds the
 result; the ODE tolerance $\tau = 10^{-13}$ is well below it. Two consequences
-follow. A kernel evaluated with noise above $\tau_F$ makes Eq. (11) fail on
+follow. A kernel evaluated with noise above $\tau_F$ makes Eq. (8) fail on
 every level, and the expansion refuses to return rather than returning a
 wrong number. And anything fitted downstream to the samples this stage produces
-cannot be asked for more than $\tau_F$: [Section 9](#two-representations-of-the-window)
+cannot be asked for more than $\tau_F$;
+[Two representations of the window](#two-representations-of-the-window)
 enforces that.
 
 The number of kernel evaluations per panel is set by the smoothness of $K$,
 typically nine to thirty-three, and does not depend on how many oscillations
 the panel holds. The oscillations are paid for in the solve, $O(N)$ per panel
-with $N$ at least the floor of Eq. (9), about two per oscillation. Kernel
-evaluations are the expensive operation in practice, so this is the split
-that matters.
+with $N$ at least the floor $N_{\min}$, about two per oscillation. Kernel
+evaluations dominate the cost of a call, which is what makes this split the
+one to optimise.
 
 ## Panels fixed in y
 
@@ -396,7 +268,7 @@ $$
 y_i = 10^{-4 + i/2}, \qquad i = 0,\dots,20,
 $$
 two per decade from $10^{-4}$ to $10^6$. For each knot interval and each block
-of multipoles the operator of Eq. (8) is built and factorised once, and
+of multipoles the discretised operator is built and factorised once, and
 $j_\ell$ at every knot is cached for every $\ell$ up to a cap. An integral over
 $[ka, kb]$ is then the sum over the knot intervals inside it, each a replay of
 stored rotations against a new right-hand side, plus two partial panels at the
@@ -418,11 +290,15 @@ to an operator built on the exact piece.
 
 Panels on which $y\,j_\ell(y)$ has underflowed at both ends for every
 multipole in the block contribute exactly zero and are skipped before anything
-is built or solved: this is what removes the deep evanescent region at no cost.
+is built or solved: this is what removes the region far below the turning point at
+no cost.
 
 ```{python}
 #| label: fig-ygrid
-#| fig-cap: "The fixed knot grid in y (vertical lines) and the intervals [ka, kb] two different k values map a window on chi in [1000, 2000] onto. Interior knot panels are replayed from stored factorisations; the shaded ends are the partial panels."
+#| fig-cap: >
+#|   The fixed knot grid in y (vertical lines) and the intervals [ka, kb] two different
+#|   k values map a window on chi in [1000, 2000] onto. Interior knot panels are
+#|   replayed from stored factorisations; the shaded ends are the partial panels.
 knots = 10.0 ** (-4 + 0.5 * np.arange(21))
 fig, ax = plt.subplots(figsize=(8, 2.2))
 for yk in knots:
@@ -434,7 +310,10 @@ for i, (k, col) in enumerate(((0.01, "C0"), (0.3, "C3"))):
     if len(inside):
         ax.axvspan(ya, inside[0], ymin=0.55 - 0.4 * i, ymax=0.75 - 0.4 * i, color=col, alpha=0.25)
         ax.axvspan(inside[-1], yb, ymin=0.55 - 0.4 * i, ymax=0.75 - 0.4 * i, color=col, alpha=0.25)
-ax.set_xscale("log"); ax.set_xlim(1e-4, 1e6); ax.set_yticks([]); ax.set_xlabel("y = k chi")
+ax.set_xscale("log")
+ax.set_xlim(1e-4, 1e6)
+ax.set_yticks([])
+ax.set_xlabel("y = k chi")
 ax.legend(loc="upper left", fontsize=8)
 plt.tight_layout()
 ```
@@ -448,6 +327,9 @@ panel, both set by the kernel's smoothness.
 
 ## The window over k
 
+This stage is [[numcosmo|NcXcorKernel]], and its output is an
+[[numcosmo|NcXcorKernelIntegrand]] holding one closure per kernel per block.
+
 The inner stage returns $I_\ell(k)$, for a block of $\ell$, at whatever $k$ it
 is asked. The outer stage has to decide the range of $k$ that matters, sample
 it, represent $I_\ell(k)$ over that range, and integrate the product of two
@@ -458,7 +340,8 @@ brackets.
 
 ### Domain expansion
 
-The support in $k$ is found rather than prescribed. A few seeds are placed
+The support in $k$ is found rather than prescribed, by
+[[numcosmo-math|ncm_function_sample_set_expand_domain]]. A few seeds are placed
 where each component of the kernel peaks, near $k \sim \nu/\chi$ for the
 block's multipoles and the component's support in $\chi$. The domain is then
 grown outward, alternately to the left and to the right by a factor
@@ -492,10 +375,11 @@ that jump depends on the representation.
 
 ### Two representations of the window
 
-Both representations are fits to the same samples on the same domain and can
-be switched to compare; the default is the second.
+Both representations are fits to the same samples on the same domain, and
+either can be selected for a whole computation through
+[[numcosmo|NcXcor]]:closure-type. The default is the Chebyshev one.
 
-**Cubic spline.** The domain is refined by inserting midpoints where a held-out
+Cubic spline. The domain is refined by inserting midpoints where a held-out
 test fails: a not-a-knot cubic spline is built from the accepted points only,
 evaluated at the candidate, and the candidate is accepted when
 $\|f - s\|_2 \le \tau_r \|f\|_2 + \tau_a\, W_{\max}$ in the norm over the
@@ -509,28 +393,36 @@ large $\epsilon$ the refinement chases the $10^{-8}$-wide transition and the
 cubic through knots with spacing ratios of $10^7$ overshoots between them;
 this is a limitation of the spline representation at non-default settings.
 
-**Chebyshev panels.** The domain is split into panels on which the whole block
-is expanded on one Chebyshev–Lobatto grid, doubling the order from 9 to at most
-33 nodes until Eq. (11) holds for every multipole, with $\epsilon_{\rm abs} =
+Chebyshev panels. The domain is split into panels on which the whole block
+is expanded on one Chebyshev--Lobatto grid, doubling the order from 9 to at most
+33 nodes until Eq. (8) holds for every multipole, with $\epsilon_{\rm abs} =
 \tau_a W_{\max}$; a panel that does not converge at 33 is bisected and its
-evaluations discarded. Three rules keep the panels honest. First, every
-component boundary found by the expansion is a panel edge, and while a panel
-is fitted each component is either on or off for the whole panel, decided at
-the panel's midpoint, so the outer panel reads exactly zero including at the
-shared edge. A jump fitted across a panel produces an aliasing residual of
-order $h/\sqrt N$ in Eq. (11), which passes a tolerance of $10^{-6}$ and fails
-$10^{-7}$; as an edge it costs nothing. Second, an accepted panel is checked
-against the expansion's own samples that fall strictly inside it, which are
-independent of the Lobatto nodes and sit on every component's scale; a panel
-whose first grid straddled a narrow peak passes Eq. (11) on two levels of a
-small smooth function and is caught here and bisected. Third, the fit
-tolerance may not be tighter than the sampler's $\tau_F$, which is enforced as
-a fatal check: below it the samples are not a smooth function of $k$ and
-neither representation converges.
+evaluations discarded. Three rules constrain where a panel may sit and when it
+may be accepted. First, every component boundary found by the expansion is a
+panel edge, and while a panel is fitted each component is either on or off for
+the whole panel, decided at the panel's midpoint, so the outer panel reads
+exactly zero including at the shared edge. A jump fitted across a panel
+instead produces an aliasing residual of order $(j/W_{\max})/\sqrt N$ in
+Eq. (8), with $j$ the height of the jump: a $4\times10^{-5}$ jump on a peak of
+$10$ passes a tolerance of $10^{-6}$ and fails $10^{-7}$, where the splitter
+bisects to its width guard and gives up. As an edge the same jump costs
+nothing.
+
+Second, an accepted panel is checked against the expansion's own samples that
+fall strictly inside it, which are independent of the Lobatto nodes and sit on
+every component's scale; a panel whose first grid straddled a narrow peak
+passes Eq. (8) on two levels of a small smooth function, and is caught here
+and bisected instead. Third, the fit tolerance may not be tighter than the
+sampler's $\tau_F$, which is enforced as a fatal check: below it the samples
+are not a smooth function of $k$ and neither representation converges.
 
 ```{python}
 #| label: fig-window
-#| fig-cap: "The block window W_l(k) for l = 2..9 of a Gaussian window in chi (mean 1500, width 300, cut at 4 sigma), as the Chebyshev closure represents it. Vertical lines are the panel edges; the expansion stopped where every multipole is below 1e-5 of its peak."
+#| fig-cap: >
+#|   The block window W_l(k) for l = 2..9 of a Gaussian window in chi (mean 1500, width
+#|   300, cut at 4 sigma), as the Chebyshev closure represents it. Vertical lines are
+#|   the panel edges; the expansion stopped where every multipole is below 1e-5 of its
+#|   peak.
 sbi = Ncm.SBesselIntegratorLevin.new(2, 9)
 gauss = Nc.XcorKernelAnalyticGauss.new_full(dist, ps, 1500.0, 300.0, 4.0, sbi)
 gauss.set_l_limber(-1)
@@ -545,28 +437,45 @@ for i in range(0, 8, 2):
 for i in range(cheb.get_n_panels()):
     _, pa, pb = cheb.peek_panel(i)
     ax.axvline(pb / RH, color="0.6", lw=0.7)
-ax.set_xscale("log"); ax.set_xlabel("k [1/Mpc]"); ax.set_ylabel("W_l(k) / max |W_l|")
-ax.legend(fontsize=8); plt.tight_layout()
+ax.set_xscale("log")
+ax.set_xlabel("k [1/Mpc]")
+ax.set_ylabel("W_l(k) / max |W_l|")
+ax.legend(fontsize=8)
+plt.tight_layout()
 orders = [cheb.peek_panel(i)[0].ncols() for i in range(cheb.get_n_panels())]
 print(f"{cheb.get_n_panels()} panels, coefficients per panel: {orders}")
 ```
 
 ```{python}
 #| label: fig-two-closures
-#| fig-cap: "The same window fitted by both representations: knots of the cubic spline against the panel edges of the Chebyshev expansion. The spline needs a knot every few oscillations; a panel holds up to 33 coefficients and covers as much as the oscillation count allows."
+#| fig-cap: >
+#|   The same window fitted by both representations: knots of the cubic spline against
+#|   the panel edges of the Chebyshev expansion. The spline needs a knot every few
+#|   oscillations; a panel holds up to 33 coefficients and covers as much as the
+#|   oscillation count allows.
 spline = gauss.get_eval_vectorized_full(cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(2, 9), Nc.XcorKernelClosure.SPLINE)
 knots_k = np.array(spline.peek_knots().dup_array())
 fig, ax = plt.subplots(figsize=(8, 2.0))
 ax.plot(knots_k / RH, np.ones_like(knots_k), "|", ms=12, color="C0", label=f"spline knots ({knots_k.size})")
 edges_k = np.array([cheb.peek_panel(0)[1]] + [cheb.peek_panel(i)[2] for i in range(cheb.get_n_panels())])
 ax.plot(edges_k / RH, 0.4 * np.ones_like(edges_k), "|", ms=18, color="C3", label=f"Chebyshev panel edges ({edges_k.size})")
-ax.set_xscale("log"); ax.set_ylim(0, 1.4); ax.set_yticks([]); ax.set_xlabel("k [1/Mpc]"); ax.legend(loc="upper left", fontsize=8)
+ax.set_xscale("log")
+ax.set_ylim(0, 1.4)
+ax.set_yticks([])
+ax.set_xlabel("k [1/Mpc]")
+ax.legend(loc="upper left", fontsize=8)
 plt.tight_layout()
 ```
 
 ```{python}
 #| label: fig-cut
-#| fig-cap: "A two-component window (Gaussians at chi = 600 and 2600, widths 100 and 150) at l = 2..9. Each component is dropped where its own window falls below 1e-5 of the block, inside the domain of the other, so the domain has three segments: one component alive, both, one. Every interior panel edge (dashed) is a bisection of one of those segments rather than of the whole domain; the outermost two are the component boundaries themselves."
+#| fig-cap: >
+#|   A two-component window (Gaussians at chi = 600 and 2600, widths 100 and 150) at l
+#|   = 2..9. Each component is dropped where its own window falls below 1e-5 of the
+#|   block, inside the domain of the other, so the domain has three segments: one
+#|   component alive, both, one. Every interior panel edge (dashed) is a bisection of
+#|   one of those segments rather than of the whole domain; the outermost two are the
+#|   component boundaries themselves.
 sbi2 = Ncm.SBesselIntegratorLevin.new(2, 9)
 multi = Nc.XcorKernelAnalyticMulti.new_full(
     dist, ps, Ncm.Vector.new_array([600.0, 2600.0]), Ncm.Vector.new_array([100.0, 150.0]),
@@ -584,8 +493,11 @@ fig, ax = plt.subplots(figsize=(8, 3.4))
 ax.plot(ks / RH, np.abs(Wm) / np.abs(Wm).max(), lw=1)
 for e, d in zip(edges[1:-1], dyadic):
     ax.axvline(e / RH, color="0.6" if d else "C3", lw=0.8, ls="-" if d else "--")
-ax.set_xscale("log"); ax.set_yscale("log"); ax.set_ylim(1e-8, 2)
-ax.set_xlabel("k [1/Mpc]"); ax.set_ylabel("|W_2(k)| / max")
+ax.set_xscale("log")
+ax.set_yscale("log")
+ax.set_ylim(1e-8, 2)
+ax.set_xlabel("k [1/Mpc]")
+ax.set_ylabel("|W_2(k)| / max")
 plt.tight_layout()
 ```
 
@@ -600,11 +512,11 @@ exactly. No node, no adaptive step and no tolerance enter this stage; the only
 error of the final $C_\ell$ is the closures' own fit error and the truncation
 of the domain.
 
-**Two splines.** The cell integrand is $k^2$ times two cubics, degree 8, and
-five-point Gauss–Legendre is exact through degree 9. Both closures are
+Two splines. The cell integrand is $k^2$ times two cubics, degree 8, and
+five-point Gauss--Legendre is exact through degree 9. Both closures are
 evaluated at the five nodes of each cell; the sum is the integral.
 
-**Two Chebyshev panels.** On a cell $[k_a, k_b]$ with $k = m + h t$, each
+Two Chebyshev panels. On a cell $[k_a, k_b]$ with $k = m + h t$, each
 closure's panel polynomial is restricted to the cell by the affine change of
 variable, which is a change of basis and exact. Write the restrictions as
 $W^X = \sum_i a_i T_i(t)$ and $W^Y = \sum_j b_j T_j(t)$. The weight is a
@@ -620,16 +532,16 @@ $$
  = h \sum_{i}\sum_{j} a_i\, \tilde b_j \int_{-1}^{1} T_i T_j\, \mathrm{d}t,
 \qquad
 \int_{-1}^{1} T_i T_j\, \mathrm{d}t = \frac{1}{1-(i+j)^2} + \frac{1}{1-(i-j)^2}
-\tag{12}
+\tag{9}
 $$
 for $i+j$ even and zero otherwise, from $\int_{-1}^{1} T_n = 2/(1-n^2)$ for
 even $n$. The form is $O(N^2)$ per cell with $N \le 33$; it is affordable
 because the panels bound $N$.
 
-**A spline against a panel.** A cell of the common refinement lies inside one
+A spline against a panel. A cell of the common refinement lies inside one
 knot interval, so the spline is one cubic there, and interpolation at four
-Chebyshev–Lobatto nodes reproduces a cubic exactly. The spline side is thus
-turned into four Chebyshev coefficients and Eq. (12) applies. This is what
+Chebyshev--Lobatto nodes reproduces a cubic exactly. The spline side is thus
+turned into four Chebyshev coefficients and Eq. (9) applies. This is what
 allows a pair whose two kernels sit in different regimes to be integrated
 without either being refitted.
 
@@ -643,14 +555,19 @@ ceiling rather than an estimate.
 
 ```{python}
 #| label: fig-cells
-#| fig-cap: "The product integrand k^2 W^X_2 W^Y_2 for the Gaussian window against the two-component window, on the intersection of their domains. Vertical lines are the cells of the common refinement of the two panel sets; on each the integrand is a single polynomial and Eq. (12) integrates it in closed form."
+#| fig-cap: >
+#|   The product integrand k^2 W^X_2 W^Y_2 for the Gaussian window against the
+#|   two-component window, on the intersection of their domains. Vertical lines are the
+#|   cells of the common refinement of the two panel sets; on each the integrand is a
+#|   single polynomial and Eq. (9) integrates it in closed form.
 xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
 xcor.set_ell_batch_size(8)
 xcor.prepare(cosmo)
 vp = Ncm.Vector.new(8)
 xcor.compute(gauss, multi, cosmo, 2, 9, vp)
 
-lo = max(cheb.get_range()[0], mc.get_range()[0]); hi = min(cheb.get_range()[1], mc.get_range()[1])
+lo = max(cheb.get_range()[0], mc.get_range()[0])
+hi = min(cheb.get_range()[1], mc.get_range()[1])
 ks = np.geomspace(lo, hi, 6000)
 prod = np.array([k * k * cheb.eval_array(k)[0] * mc.eval_array(k)[0] for k in ks])
 e1 = np.array([cheb.peek_panel(i)[2] for i in range(cheb.get_n_panels())])
@@ -660,7 +577,9 @@ fig, ax = plt.subplots(figsize=(8, 3.4))
 ax.plot(ks / RH, prod / np.abs(prod).max(), lw=1)
 for c_ in cells:
     ax.axvline(c_ / RH, color="0.6", lw=0.7)
-ax.set_xscale("log"); ax.set_xlabel("k [1/Mpc]"); ax.set_ylabel("k^2 W^X W^Y / max")
+ax.set_xscale("log")
+ax.set_xlabel("k [1/Mpc]")
+ax.set_ylabel("k^2 W^X W^Y / max")
 plt.tight_layout()
 
 # exactness check: high-order Gauss-Legendre on the same cells, against the library
@@ -680,10 +599,10 @@ print(f"C_2: library {vp.get(0):.15e}   GL(40) on the same cells {ref:.15e}   re
 | truncation order $N$ of each panel solve | adaptive QR, stopping test with floor (9) | $\tau = 10^{-13}$ |
 | Chebyshev order of the forcing on a panel | level doubling until (11) | $\tau_F = 10^{-8}$ |
 | panel grid in $y$ | prescribed, two knots per decade on $[10^{-4}, 10^6]$ | 21 knots |
-| partial panels at the ends | smallest dyadic sub-cell containing the piece | — |
+| partial panels at the ends | smallest dyadic sub-cell containing the piece | --- |
 | multipoles per block | prescribed by the caller | 8 |
 | domain in $k$ | expansion until $\|W\| < \epsilon W_{\rm ref}$ five times | $\epsilon = 10^{-5}$, $\alpha = 0.2$ |
-| component boundaries | same test per group of touching components | — |
+| component boundaries | same test per group of touching components | --- |
 | spline knots | held-out midpoint refinement | $\tau_r = \tau_a = 10^{-4}$ |
 | Chebyshev panels in $k$ | bisection with order cap, cuts at boundaries, sample check | cap $2^5+1$ |
 | outer integral | exact on the common refinement | none |

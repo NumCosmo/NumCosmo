@@ -36,6 +36,7 @@
  * methods (*_idx()).
  *
  * The object can be constructed from:
+ *
  * - An x-vector and a matrix where each row is a component y-vector
  * - An x-vector and a GPtrArray of y-vectors
  *

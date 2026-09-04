@@ -24,6 +24,7 @@ project:
     - theory/fftlog.qmd
     - theory/spectral.qmd
     - theory/sbessel_projection.qmd
+    - theory/sbessel_ode_solver.qmd
     - theory/ssc.qmd
     - theory/castro_hmf.qmd
     - benchmarks/ccl_background.qmd
@@ -161,6 +162,8 @@ website:
                 text: "Spectral Methods"
               - href: theory/sbessel_projection.qmd
                 text: Spherical Bessel Projections
+              - href: theory/sbessel_ode_solver.qmd
+                text: "Ultraspherical Spectral Solver"
               - href: theory/csq1d.qmd
                 text: "CSQ1D Formalism"
       - section: examples/index.qmd

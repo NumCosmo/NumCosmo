@@ -86,8 +86,8 @@ A(p,q) = \left[
         + \Gamma\!\left(\tfrac{q}{2} - p\right)\right)
 \right]^{-1}.
 $$
-It provides four parameter sets, one per halo finder — ROCKSTAR, AHF, SUBFIND and
-VELOCIraptor — selected through the `halo-finder` property of
+It provides four parameter sets, one per halo finder --- ROCKSTAR, AHF, SUBFIND and
+VELOCIraptor --- selected through the `halo-finder` property of
 [[numcosmo|NcMultiplicityFuncCastro]]. They differ from one another by
 up to $\sim 20\%$ over the cluster range.
 
@@ -112,7 +112,7 @@ a \to a\,(1 + \alpha_a q_{\mathrm{de}}),
 \qquad
 p \to p\,(1 + \alpha_p q_{\mathrm{de}}),
 $$
-with the turn-around redshift taken in the Einstein–de Sitter approximation,
+with the turn-around redshift taken in the Einstein--de Sitter approximation,
 $1 + z_{\rm ta} = (1+z)\,2^{2/3}$. Writing $\nu_{\rm st} = \nu\sqrt{a}$, the
 multiplicity function is
 $$
@@ -131,7 +131,7 @@ rather than quietly evaluating a different model, which would be hard to detect
 inside a fit.
 
 ::: {.callout-note}
-The 2025 calibration does **not** reduce to the 2023 one when the dark-energy
+The 2025 calibration does not reduce to the 2023 one when the dark-energy
 term vanishes. At $w = -1$ the two still differ, typically by a few percent and by
 up to $\sim 24\%$ over the cluster range, because the 2025 form carries the extra
 $r$ and $\nu_p$ terms and was fitted independently. They are separate terms, not nested
@@ -158,7 +158,7 @@ $c_1 = -0.0372$. Each is exposed as a property so it can be varied or refitted.
 
 ### Which derivative
 
-The derivative above is the **total** one along the mass direction. This matters:
+The derivative above is the total one along the mass direction. This matters:
 since $a$, $p$ and $q$ all depend on $s$, and $s$ itself varies with $R$ for any
 realistic spectrum, the total and partial derivatives differ,
 $$

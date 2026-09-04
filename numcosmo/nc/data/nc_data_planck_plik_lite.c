@@ -26,7 +26,7 @@
 /**
  * NcDataPlanckPlikLite:
  *
- * Planck plik_lite (CMB-marginalized, foreground-free) high-ℓ likelihood.
+ * Planck plik_lite (CMB-marginalized, foreground-free) high-$\ell$ likelihood.
  *
  * Native reimplementation of the Planck `plik_cmbonly` likelihood as an
  * #NcmDataGaussCov subclass. The data are binned cross-spectra bandpowers

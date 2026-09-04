@@ -406,11 +406,11 @@ nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePo
  *
  * The @p parameter supports two usage patterns:
  *
- * - **Python/convenience usage**: pass @p pointing to NULL (`*p == NULL`).
+ * - Python/convenience usage: pass @p pointing to NULL (`*p == NULL`).
  *   A new #GArray is allocated and returned. The `(out callee-allocates)`
  *   annotation ensures Python bindings automatically use this mode.
  *
- * - **C optimization**: pass @p pointing to a pre-allocated #GArray
+ * - C optimization: pass @p pointing to a pre-allocated #GArray
  *   (`*p != NULL`). The existing array is resized and refilled, avoiding
  *   repeated allocation/deallocation in performance-critical loops (e.g.
  *   #NcGalaxyShapeFactorFixedQuad, which reuses the same @p across every

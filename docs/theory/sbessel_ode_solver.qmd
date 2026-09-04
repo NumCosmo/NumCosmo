@@ -1,0 +1,242 @@
+---
+title: The Ultraspherical Spectral Solver
+---
+
+# The Ultraspherical Spectral Solver
+
+This page is the technical description of [[numcosmo-math|NcmSBesselOdeSolver]] and the
+[[numcosmo-math|NcmSBesselOdeOperator]] it builds for one interval and one block of
+multipoles.
+
+The solver is written for the spherical Bessel operator but is not tied to any
+particular use of it. Its one caller today is
+[[numcosmo-math|NcmSBesselIntegratorLevin]], which reduces the projection integrals of
+[Projection Integrals with Spherical Bessel Weights](sbessel_projection.qmd) to one
+boundary-value problem per panel; that page supplies the forcing and the panel grid,
+and nothing below depends on where either comes from.
+
+The figures on this page are produced by the library itself.
+
+```{python}
+#| echo: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.special import spherical_jn, spherical_yn
+from numcosmo_py import Ncm
+
+Ncm.cfg_init()
+plt.rcParams.update({"figure.dpi": 110, "axes.grid": True, "grid.alpha": 0.3})
+
+# One panel, one multipole and a smooth forcing, reused by the figures below.
+ell = 20
+a, b = 100.0, 316.2278
+m, h = 0.5 * (a + b), 0.5 * (b - a)
+
+
+def F(y):  # a smooth bump in y, standing in for a kernel
+    return np.exp(-0.5 * ((y - 200.0) / 40.0) ** 2)
+
+
+# Chebyshev coefficients of y F(y) on [a, b], then the C^(2) coefficients
+N = 64
+t = np.cos(np.pi * np.arange(N + 1) / N)
+vals = (m + h * t) * F(m + h * t)
+c = np.fft.rfft(np.concatenate([vals, vals[-2:0:-1]])).real / N
+c[0] *= 0.5
+c[-1] *= 0.5
+c = np.concatenate([c, np.zeros(8)])
+g = np.zeros(N + 1)
+for kk in range(N + 1):
+    g[kk] = c[kk] / (2 * (kk + 1)) - (kk + 2) * c[kk + 2] / ((kk + 1) * (kk + 3)) + c[kk + 4] / (2 * (kk + 3))
+g[0] += 0.5 * c[0]
+
+solver = Ncm.SBesselOdeSolver.new()
+solver.set_tolerance(1.0e-12)
+```
+
+## The boundary-value problem
+
+For a multipole $\ell$, an interval $[y_a, y_b]$ and a forcing $F$, the solver computes
+$u$ from
+$$
+y^2 u'' + \left[y^2 - \ell(\ell+1)\right] u = y\,F(y),
+\tag{1}
+$$
+with Dirichlet data at both ends. The homogeneous solutions are $y\,j_\ell(y)$ and
+$y\,y_\ell(y)$: this is the spherical Bessel equation written for $u = y\,w$ rather
+than for $w$ itself, which removes the first-derivative term and the singular
+coefficient at the origin, and is what keeps the discretised operator banded and well
+conditioned.
+
+## Discretisation
+
+Each panel $[y_a, y_b]$ is mapped to $t \in [-1,1]$ by $y = m + h t$, $m =
+(y_a+y_b)/2$, $h = (y_b-y_a)/2$. Equation (1) becomes
+$$
+\left[\frac{m^2}{h^2} + \frac{2m}{h}\,t + t^2\right]\frac{\mathrm{d}^2 u}{\mathrm{d}t^2}
++ \left[(m^2 - \ell(\ell+1)) + 2mh\,t + h^2 t^2\right] u
+= (m + ht)\,F(m+ht).
+\tag{2}
+$$
+The unknown is expanded in Chebyshev polynomials, $u = \sum_n a_n T_n(t)$, and the
+equation is imposed in the ultraspherical basis $C^{(2)}_n$, following @Olver2013. In
+that basis the second derivative is a diagonal map, $\mathrm{d}^2/\mathrm{d}t^2: a_n
+\mapsto 2(n+2)a_{n+2}$, and multiplication by $t$ and $t^2$ are banded. The six
+primitives that Eq. (2) needs, with their coefficient formulas, are tabulated on the
+[Spectral Methods](spectral.qmd) page; assembled, the operator has bandwidth $2$ below
+and $6$ above the diagonal, independent of the truncation order. The right-hand side is
+the Chebyshev fit of $y F(y)$ converted to $C^{(2)}$ coefficients by the identity map
+of the same table.
+
+The first two rows are replaced by the boundary conditions. Since $T_n(\pm1) =
+(\pm1)^n$, they are the dense rows $\sum_n (-1)^n a_n = u(y_a)$ and $\sum_n a_n =
+u(y_b)$, and the corresponding right-hand-side entries are the endpoint values; zero
+entries give the homogeneous problem. The matrix is therefore almost banded: banded,
+plus two dense rows.
+
+```{python}
+#| label: fig-operator
+#| fig-cap: >
+#|   Nonzero pattern of the discretised operator (2) for l = 20 on the panel
+#|   [100, 316], 40 rows: two dense boundary rows, then a band of width 9.
+
+M = solver.get_operator_matrix(a, b, ell, 40)
+A = np.array(M.dup_array()).reshape(M.nrows(), M.ncols())
+fig, ax = plt.subplots(figsize=(4.2, 4.2))
+ax.spy(A, markersize=3)
+ax.set_xlabel("Chebyshev coefficient index of u")
+ax.set_ylabel("row")
+plt.tight_layout()
+```
+
+## Batching over multipoles
+
+The only $\ell$ dependence of Eq. (2) is the constant $m^2 - \ell(\ell+1)$ in
+the identity term, and $(\ell+1)(\ell+2) - \ell(\ell+1) = 2(\ell+1)$. A block of
+consecutive multipoles therefore shares every derivative and multiplication
+entry; the rows for $\ell+1$ are those for $\ell$ with $-2(\ell+1)$ added to
+the three identity-term entries. The block is factorised together and the
+stopping test below is a max-reduction over the block, so the whole block is
+solved to the tolerance the hardest member needs.
+
+## Incremental Givens QR
+
+The system is not solved at a prescribed size. Columns are added one at a
+time and the factorisation is grown with Givens rotations: adding column $c$
+brings in one new row, $c + 4$, and four rotations eliminate the entries below
+the diagonal in that column (two for the lower bandwidth and two for the
+boundary rows, which touch every column). Each rotation is applied to the
+right-hand side as well, so after column $c$ the transformed right-hand side
+$\tilde c_c$ divided by the diagonal $R_{cc}$ is the value the back-substitution
+would assign to $a_c$ if the expansion stopped there.
+
+The stopping test watches exactly that ratio. Let $\rho_c = |\tilde c_c /
+R_{cc}|$ and $\rho_{\max}$ its running maximum. The factorisation stops at the
+first column such that $\rho_c/\rho_{\max} < \tau$ for five consecutive
+columns and $c + 1 \ge N_{\min}$, where
+$$
+N_{\min} = \left\lceil \frac{2}{\pi}\,\big(y_b - \max(y_a, \nu)\big) \right\rceil,
+\qquad \nu = \sqrt{\ell(\ell+1)} .
+\tag{3}
+$$
+The floor $N_{\min}$ is the number of Chebyshev coefficients the oscillatory
+part of the panel needs, two per half-oscillation beyond the turning point
+$y = \nu$; below the turning point $j_\ell$ is evanescent and the solution is
+smooth. Without the floor the test can fire on the quiet leading coefficients
+of a solution whose oscillation has not yet been reached, and the delivered
+error then fails to decrease with the requested tolerance.
+
+Once the factorisation stops, back-substitution gives the coefficients, or,
+when only the boundary term is wanted, the endpoint derivatives directly,
+$$
+u'(y_a) = \frac{1}{h}\sum_n (-1)^{n+1} n^2 a_n,
+\qquad
+u'(y_b) = \frac{1}{h}\sum_n n^2 a_n,
+$$
+from $T_n'(\pm1) = (\pm1)^{n+1} n^2$. The rotations are stored with the
+operator. A new right-hand side on the same panel and block replays them in
+$O(N)$ and extends the factorisation only if its own stopping test asks for
+more columns. Because the bandwidth is fixed, the whole solve is $O(N)$ per
+multipole, which is what makes discovering $N$ affordable.
+
+```{python}
+#| label: fig-qr-stop
+#| fig-cap: >
+#|   Chebyshev coefficients of u on the panel [100, 316] at three solver tolerances.
+#|   The adaptive QR stops where the coefficients fall below the tolerance relative to
+#|   the largest one, never before the floor N_min of Eq. (3), here 138 for this panel
+#|   and l = 20.
+fig, ax = plt.subplots(figsize=(6, 3.4))
+nmin = int(np.ceil(2.0 / np.pi * (b - max(a, np.sqrt(ell * (ell + 1))))))
+for tol in (1.0e-4, 1.0e-8, 1.0e-12):
+    solver.set_tolerance(tol)
+    op = solver.create_operator(a, b, ell, ell)
+    cf, n = op.solve(np.concatenate([[0.0, 0.0], g]))
+    cf = np.abs(np.array(cf)) / np.max(np.abs(cf))
+    ax.semilogy(cf, ".", ms=3, label=f"tolerance {tol:g}: {n} coefficients")
+ax.axvline(nmin, color="k", ls="--", lw=0.8, label=f"N_min = {nmin}")
+ax.set_xlabel("n"); ax.set_ylabel("|a_n| / max |a_n|"); ax.legend(fontsize=8)
+plt.tight_layout()
+```
+
+## Conjugate points
+
+A two-point Dirichlet problem is singular when the homogeneous equation has a
+solution vanishing at both ends. With $j_\ell = M\cos\theta$ and $y_\ell = M
+\sin\theta$ in amplitude-phase form, the boundary determinant is
+$$
+\Phi_\ell(y_a, y_b) = j_\ell(y_a)\,y_\ell(y_b) - j_\ell(y_b)\,y_\ell(y_a)
+ = M(y_a)\,M(y_b)\,\sin\!\big(\theta(y_b) - \theta(y_a)\big),
+$$
+so the panel is singular when the phase advances by a multiple of $\pi$
+across it. The phase is not $y$: in the oscillatory regime it is the WKB phase
+$$
+\theta_\ell(y) = \sqrt{y^2 - \nu^2} - \nu \arccos\frac{\nu}{y},
+\tag{4}
+$$
+which reproduces the measured conjugate spans to four decimals for $\ell$ from
+2 to 300, while the rule "span equal to $n\pi$" is off by up to half a period
+at $\ell \gtrsim 50$. Below the turning point $\theta$ is imaginary and
+there are no conjugate points. The condition number of the boundary matrix
+also carries the amplitude ratio, $\kappa \sim [M(y_a)/M(y_b) + M(y_b)/M(y_a)]
+/ |\sin\Delta\theta|$, so a panel reaching from deep in the evanescent region
+into the oscillatory one is ill conditioned whatever its span.
+
+```{python}
+#| label: fig-conjugate
+#| fig-cap: >
+#|   Condition number of the 2x2 boundary matrix [[j(A), y(A)], [j(B), y(B)]] on panels
+#|   starting at A = 200 as the panel span varies, for l = 2 and l = 50. The spikes are
+#|   conjugate points. They sit at integer multiples of pi for l = 2 and shift for l =
+#|   50, exactly where the WKB phase (4) advances by n pi (dotted lines).
+A0 = 200.0
+spans = np.linspace(19.9, 22.6, 1400) * np.pi
+fig, ax = plt.subplots(figsize=(7, 3.4))
+for l, col in ((2, "C0"), (50, "C3")):
+    cond = []
+    for s in spans:
+        B = A0 + s
+        Mx = np.array([[spherical_jn(l, A0), spherical_yn(l, A0)], [spherical_jn(l, B), spherical_yn(l, B)]])
+        cond.append(np.linalg.cond(Mx))
+    ax.semilogy(spans / np.pi, cond, color=col, lw=0.9, label=f"l = {l}")
+    nu = np.sqrt(l * (l + 1.0))
+    theta = lambda y: np.sqrt(y * y - nu * nu) - nu * np.arccos(nu / y)
+    dth = (theta(A0 + spans) - theta(A0)) / np.pi
+    for n in range(20, 23):
+        idx = np.argmin(np.abs(dth - n))
+        ax.axvline(spans[idx] / np.pi, color=col, ls=":", lw=0.8)
+ax.set_xlabel("panel span / pi"); ax.set_ylabel("condition number"); ax.legend()
+plt.tight_layout()
+```
+
+The knot grid of [Panels fixed in y](sbessel_projection.qmd#panels-fixed-in-y) is logarithmic in
+$y$, so panel spans land where the grid puts them, and one grid serves a whole
+block of multipoles whose conjugate spans differ. Measured on the
+configurations in use, no solved oscillatory panel lies within $0.15\pi$ of a
+conjugate span, against a maximum possible distance of $0.5\pi$, so the effect
+is not active; the library records per-panel contributions on request so that
+this can be checked for any new configuration. Two fixes are known and neither is implemented:
+placing knots at half-integer increments of the phase (4) per block, which
+touches only the grid construction, or closing the problem as an initial-value
+problem with both conditions at one end, which is immune by construction but
+needs a derivative row in the innermost loop.

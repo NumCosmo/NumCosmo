@@ -37,7 +37,7 @@ Or if you have conda-forge in your channels:
 conda install numcosmo
 ```
 
-**Current release info**
+Current release info
 
 | Name | Downloads | Version | Platforms |
 | --- | --- | --- | --- |
@@ -196,7 +196,7 @@ meson compile -C build
 meson test -v -C build
 ```
   - Install the library (optional). 
-  Note that most developers **don't** want to install the library since they prefer to update/modify the library without installing it.
+  Note that most developers don't want to install the library since they prefer to update/modify the library without installing it.
 ```bash
 meson install -C build
 ```

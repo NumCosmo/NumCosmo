@@ -59,14 +59,14 @@ $$ \Vert f - \tilde f \Vert_2 \le \mathrm{reltol} \cdot \Vert f \Vert_2
 with $a$ the `scaled-abstol` property. Three consequences follow, and each one
 is easy to get wrong:
 
-The two terms are **added**, not maxed. The second is an unconditional floor
+The two terms are added, not maxed. The second is an unconditional floor
 measured against the closure's own peak, so `reltol` only bites where the
-closure is within a few orders of that peak — it is, in effect, the tolerance
+closure is within a few orders of that peak --- it is, in effect, the tolerance
 *around the peak*. Far out in the tail, the floor is what governs.
 
-That makes **`scaled-abstol` the lever and `reltol` nearly free.** Below we
+That makes `scaled-abstol` the lever and `reltol` nearly free. Below we
 tighten each in turn and count knots, since one knot is one radial solve and
-therefore the honest unit of cost.
+therefore the unit of cost.
 
 ```{python}
 def make_kernel(z_lower, z_upper, reltol, scaled_abstol):
@@ -113,14 +113,14 @@ for reltol, scaled_abstol in [
 
 Tightening `reltol` a hundredfold barely moves the cost; tightening the floor
 tenfold moves it a great deal. The knot count scales as
-$a^{-1/4}$ — textbook cubic-spline convergence, since halving the error four
+$a^{-1/4}$ --- textbook cubic-spline convergence, since halving the error four
 times over needs twice the knots.
 
 ::: {.callout-warning}
 ## Do not set the two equal, and do not go below $10^{-10}$
 
 Equal values are the one setting that starves the $p$-adaptive cubature of
-Clenshaw–Curtis levels: refinement then stops exactly at the level the outer
+Clenshaw--Curtis levels: refinement then stops exactly at the level the outer
 rule is trying to resolve. `NcXcorSSCSij` offsets them deliberately, upwards.
 
 Below $a \simeq 10^{-10}$ the refinement starts resolving the radial
@@ -134,7 +134,7 @@ explodes. That is a real out-of-memory risk, not a slow run.
 estimate. It is worth being precise about what that number is, because it is
 not what most people expect.
 
-The outer quadrature contributes **nothing**: on the merged knots of a pair of
+The outer quadrature contributes nothing: on the merged knots of a pair of
 closures the integrand $k^2 W^A W^B$ is a degree-8 polynomial per panel, and
 the default `KERNEL_EXACT` method integrates it exactly. So the entire error is
 the closures' *fit*, propagated through how much the pair cancels.
@@ -175,7 +175,7 @@ for label, cl, err in [
 ```
 
 The auto spectrum is reported at roughly the tolerance the closures were built
-to. The cross spectra are not — and the separated pair comes back with a
+to. The cross spectra are not --- and the separated pair comes back with a
 relative estimate far above one, meaning the estimate cannot vouch for a single
 digit of it.
 
@@ -229,7 +229,7 @@ for label, cl, err in [
 ```
 
 Read the last column rather than the relative error. The separated pair's
-estimate, measured against the diagonal, is *smaller* than the diagonal's own —
+estimate, measured against the diagonal, is *smaller* than the diagonal's own ---
 the worst-conditioned spectrum here contributes less absolute uncertainty than
 the best-conditioned one, because it is orders of magnitude smaller to begin
 with. For a cluster covariance these are off-diagonal terms that have been
@@ -245,7 +245,7 @@ wrong. A small estimate on the diagonal is the statement worth having.
 
 Two further limits matter. The estimate bounds the *criterion* the
 refinement was asked for, not the fit it achieved, and the refinement routinely
-beats its own threshold — so it is a ceiling, typically by one to three orders,
+beats its own threshold --- so it is a ceiling, typically by one to three orders,
 and loosest where the answer is healthiest. And it cannot see domain
 truncation: the outer integral runs over the intersection of the two closures'
 fitted $k$ ranges, and what that intersection discards is invisible to it.
@@ -254,8 +254,8 @@ fitted $k$ ranges, and what that intersection discards is invisible to it.
 
 Not every kernel is equally hard. A cluster top-hat has a sharp edge in
 $\chi$, which gives $W_\ell(k)$ a $1/k$ tail rather than an exponential one.
-Nothing is integrated across that edge — it is declared through the component's
-limits — but the tail keeps far more of $k$-space above the closure's floor.
+Nothing is integrated across that edge --- it is declared through the component's
+limits --- but the tail keeps far more of $k$-space above the closure's floor.
 
 ```{python}
 RH = cosmo.RH_Mpc()
@@ -314,7 +314,7 @@ Each rung costs two to three times the knots and buys one to three orders.
 ## Accuracy is not monotonic in the tolerance
 
 Loosening the floor to $10^{-3}$ at `reltol` $10^{-4}$ gives 295 knots and a
-diagonal accurate to $7.8 \times 10^{-5}$ — *fewer* knots and a *better* answer
+diagonal accurate to $7.8 \times 10^{-5}$ --- *fewer* knots and a *better* answer
 than the default's 541 and $1.3 \times 10^{-4}$. The floor does not only set how
 many knots there are, it changes where they land. Verify a setting on your own
 configuration rather than assuming a tighter one is safer.

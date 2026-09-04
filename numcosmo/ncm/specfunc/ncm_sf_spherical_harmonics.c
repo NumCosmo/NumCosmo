@@ -132,6 +132,14 @@ ncm_sf_spherical_harmonics_class_init (NcmSFSphericalHarmonicsClass *klass)
   object_class->dispose      = &_ncm_sf_spherical_harmonics_dispose;
   object_class->finalize     = &_ncm_sf_spherical_harmonics_finalize;
 
+  /**
+   * NcmSFSphericalHarmonics:lmax:
+   *
+   * Largest multipole the recursions can reach. Setting it precomputes the recurrence
+   * coefficients for every $(l, m)$ pair with $m \le l < \ell_\mathrm{max}$, so both
+   * the memory and the setup cost grow as $\ell_\mathrm{max}^2$.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_LMAX,
                                    g_param_spec_int ("lmax",
@@ -186,6 +194,11 @@ ncm_sf_spherical_harmonics_Y_dup (NcmSFSphericalHarmonicsY *sphaY)
 {
   NcmSFSphericalHarmonicsY *sphaY_dup = ncm_sf_spherical_harmonics_Y_new (sphaY->spha, sphaY->abstol);
 
+  /*
+   * The struct copy overwrites sphaY_dup->spha with the same pointer it already holds,
+   * and the reference for it was taken by the call above. Nothing is leaked and the
+   * copy owns a valid reference.
+   */
   sphaY_dup[0] = sphaY[0];
 
   return sphaY_dup;
@@ -279,7 +292,7 @@ ncm_sf_spherical_harmonics_Y_array_free (NcmSFSphericalHarmonicsYArray *sphaYa)
 /**
  * ncm_sf_spherical_harmonics_Y_next_l2:
  * @sphaY: a #NcmSFSphericalHarmonicsY
- * @Yblm: (array fixed-size=2) (element-type gdouble) (out caller-allocates): the four Yblm from l to l + 2
+ * @Yblm: (array fixed-size=2) (element-type gdouble) (out caller-allocates): the two Yblm from l to l + 1
  *
  * Move the recursion for $x$ to $l = l + 2$.
  *
@@ -293,10 +306,10 @@ ncm_sf_spherical_harmonics_Y_array_free (NcmSFSphericalHarmonicsYArray *sphaYa)
  *
  */
 /**
- * ncm_sf_spherical_harmonics_Y_next_lnp2:
+ * ncm_sf_spherical_harmonics_Y_next_l2pn:
  * @sphaY: a #NcmSFSphericalHarmonicsY
- * @Yblm: (array length=n) (element-type gdouble) (out caller-allocates): the four Yblm from l to l + n + 2
- * @n: an integer
+ * @Yblm: buffer of $n + 2$ doubles, filled with the $\bar{Y}_l^m$ from $l$ to $l + n + 1$
+ * @n: number of additional steps
  *
  * Move the recursion for $x$ to $l = l + n + 2$.
  *
@@ -338,6 +351,110 @@ ncm_sf_spherical_harmonics_Y_array_free (NcmSFSphericalHarmonicsYArray *sphaYa)
 /**
  * ncm_sf_spherical_harmonics_Y_get_m:
  * @sphaY: a #NcmSFSphericalHarmonicsY
+ *
+ * Returns: the current value of $m$.
+ */
+
+/**
+ * ncm_sf_spherical_harmonics_Y_reset:
+ * @sphaY: a #NcmSFSphericalHarmonicsY
+ *
+ * Restart the recursion at $l = 0,\; m = 0$, keeping the angle set by
+ * ncm_sf_spherical_harmonics_start_rec().
+ *
+ */
+
+/**
+ * ncm_sf_spherical_harmonics_Y_array_next_l:
+ * @sphaYa: a #NcmSFSphericalHarmonicsYArray
+ * @len: array length
+ *
+ * Move the recursion for every $x_i$ to $l = l + 1$.
+ *
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_array_next_l2:
+ * @sphaYa: a #NcmSFSphericalHarmonicsYArray
+ * @len: array length
+ * @Yblm: buffer of $2 \times$ @len doubles, filled with the $\bar{Y}_l^m (x_i)$ from $l$ to $l + 1$
+ *
+ * Move the recursion for every $x_i$ to $l = l + 2$. Index @Yblm with
+ * NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX().
+ *
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_array_next_l4:
+ * @sphaYa: a #NcmSFSphericalHarmonicsYArray
+ * @len: array length
+ * @Yblm: buffer of $4 \times$ @len doubles, filled with the $\bar{Y}_l^m (x_i)$ from $l$ to $l + 3$
+ *
+ * Move the recursion for every $x_i$ to $l = l + 4$. Index @Yblm with
+ * NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX().
+ *
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_array_next_l2pn:
+ * @sphaYa: a #NcmSFSphericalHarmonicsYArray
+ * @len: array length
+ * @Yblm: buffer of $(n + 2) \times$ @len doubles, filled with the $\bar{Y}_l^m (x_i)$ from $l$ to $l + n + 1$
+ * @n: number of additional steps
+ *
+ * Move the recursion for every $x_i$ to $l = l + n + 2$. Index @Yblm with
+ * NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX().
+ *
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_array_next_m:
+ * @sphaYa: a #NcmSFSphericalHarmonicsYArray
+ * @len: array length
+ *
+ * Restart the recursion for every $x_i$ at $l = m + 1,\; m = m + 1$.
+ * If the smallest $\bar{Y}_l^m (x_i)$ over the array is below the absolute
+ * tolerance, advance $l$ until the tolerance is reached.
+ *
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_array_reset:
+ * @sphaYa: a #NcmSFSphericalHarmonicsYArray
+ * @len: array length
+ *
+ * Restart the recursion at $l = 0,\; m = 0$, keeping the angles set by
+ * ncm_sf_spherical_harmonics_start_rec_array().
+ *
+ */
+
+/**
+ * ncm_sf_spherical_harmonics_Y_array_get_lm:
+ * @sphaYa: a #NcmSFSphericalHarmonicsYArray
+ * @len: array length
+ * @i: angle index
+ *
+ * Returns: the current value of $\bar{Y}_l^m (x_i)$.
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_array_get_lp1m:
+ * @sphaYa: a #NcmSFSphericalHarmonicsYArray
+ * @len: array length
+ * @i: angle index
+ *
+ * Returns: the current value of $\bar{Y}_{l+1}^m (x_i)$.
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_array_get_x:
+ * @sphaYa: a #NcmSFSphericalHarmonicsYArray
+ * @i: angle index
+ *
+ * Returns: the current value of $x_i$.
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_array_get_l:
+ * @sphaYa: a #NcmSFSphericalHarmonicsYArray
+ *
+ * Returns: the current value of $l$.
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_array_get_m:
+ * @sphaYa: a #NcmSFSphericalHarmonicsYArray
  *
  * Returns: the current value of $m$.
  */

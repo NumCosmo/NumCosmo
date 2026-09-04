@@ -138,7 +138,7 @@
  * ]|
  *
  * The function ncm_spline_func_test_set_params_info_all() creates the 8 rows matrix,
- * “#NcmSplineFuncTest:par-info”, the number of ordinate points $y$ (consequently 8 abscissa $x$), and two columns.
+ * "#NcmSplineFuncTest:par-info", the number of ordinate points $y$ (consequently 8 abscissa $x$), and two columns.
  * The first column is $\mu=0$ and the second $\sigma = 1$ with
  * the same value for all parameters (rows) to be used by the gaussian PDF.
  *
@@ -164,6 +164,7 @@
  *
  *   </programlisting>
  * </informalexample>
+ *
  * * "NcmSplineFunc number of knots = 3847": is self explanatory.
  * * "diff." first value (-7.377e-13 and -3.826e-13): it is the [mean signed difference](https://en.wikipedia.org/wiki/Mean_signed_deviation)
  *   between the base and approximated functions, $f(x)$ and $\hat{f}(x)$.
@@ -1037,6 +1038,7 @@ ncm_spline_func_test_set_seed (NcmSplineFuncTest *sft, const gulong seed)
  * Sets the matrix @par_info in order to create the base function and to perform statistics.
  *
  * The matrix must have dimensions (rows = number of parameters, cols = 2).
+ *
  * - columns: (min, max) for a flat PDF or (mean, sigma) for a normal PDF.
  *
  */
@@ -1070,6 +1072,7 @@ ncm_spline_func_test_set_params_info (NcmSplineFuncTest *sft, NcmMatrix *par_inf
  * in order to create the base function and to perform statistics.
  *
  * The matrix must have dimensions (rows = @npar, cols = 2).
+ *
  * - columns: (@p1 = min. value , @p2 = max. value) for a flat PDF or (@p1 = mean, @p2 = sigma) for a normal PDF.
  *
  */
@@ -1815,6 +1818,7 @@ ncm_spline_func_test_log_vals_one_grid_stats (NcmSplineFuncTest *sft)
  * @fname: text file name to save one grid informations
  *
  * Saves one grid functions in the text @fname file. The colums are:
+ *
  * - $x$.
  * - the base function $f(x)$.
  * - the [NcmSplineFunc](numcosmo-NcmSplineFunc.html) estimation of $f(x)$.

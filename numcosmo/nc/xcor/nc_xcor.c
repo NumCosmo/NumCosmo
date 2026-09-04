@@ -28,7 +28,7 @@
  */
 
 /**
- * NcXCor:
+ * NcXcor:
  *
  * Angular auto- and cross-spectra.
  *
@@ -41,6 +41,11 @@
  * C_{\ell}^{AB} = \int_0^{z_*} dz \frac{H(z)}{c \chi^2(z)} W^A(z) W^B (z) P\left(k = \frac{\ell +1/2}{\chi(z)} , z \right),
  * \end{equation}
  * where $P\left(k = \frac{\ell +1/2}{\chi(z)} , z \right)$ is the power spectrum (a #NcmPowspec) at redshift $z$ and $chi(z)$ the comoving distance (a #NcDistance).
+ *
+ * See <a href="../../theory/sbessel_projection.html">Projection Integrals with
+ * Spherical Bessel Weights</a> for how the non-Limber form is evaluated: the
+ * Levin reduction of the radial integral, the two representations of
+ * $W_\ell(k)$, and the exact outer integral over $k$.
  *
  */
 
@@ -223,46 +228,43 @@ nc_xcor_class_init (NcXcorClass *klass)
   /**
    * NcXcor:closure-type:
    *
-   * How each kernel represents its sampled $W_\ell(k)$. See
-   * #NcXcorKernelClosure.
+   * How each kernel represents its sampled $W_\ell(k)$. Defaults to
+   * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV; see #NcXcorKernelClosure.
    *
-   * The choice is made here rather than on #NcXcorKernel because it is the
-   * computation, not the kernel, that should be switchable as a whole: the
-   * two representations are alternative fits to the same sampled function, and
-   * comparing them is only meaningful when every kernel in a run uses the
-   * same one. A pair may still be mixed -- %NC_XCOR_METHOD_KERNEL_EXACT
-   * integrates a spline against a panel set exactly, on the common refinement
-   * of the two breakpoint sets -- which is what a pair straddling the Limber
-   * threshold produces whatever this is set to.
+   * The property is on #NcXcor rather than on #NcXcorKernel because the two
+   * representations are alternative fits to the same sampled function:
+   * comparing them means something only when every kernel in one computation
+   * uses the same one. A single pair may nonetheless be mixed, and is
+   * integrated exactly -- %NC_XCOR_METHOD_KERNEL_EXACT takes a spline against
+   * a panel set on the common refinement of the two breakpoint sets. Two
+   * kernels with different #NcXcorKernel:l-limber values produce such a pair
+   * whatever this property is set to.
    *
-   * Both closures sample the same function over the same domain and differ
-   * only in what is fitted to it, so a computation can be switched over and
-   * the two compared directly. Measured against the certified Arb C_ell
-   * table (43 entries, 17 pairs): the Chebyshev closure is closer in 36 of
-   * 43, its median deviation is 4.5x smaller at every tolerance rung, and it
-   * has no catastrophic regime -- the spline at loose tolerance returns the
-   * wrong sign at 31x the pair scale on a far-separated pair. On a
-   * tomographic workload through #NcXcorSolver (5 Gaussian bins, 15 pairs,
-   * $\ell \le 60$, one thread) it costs 1.4x at reltol $10^{-4}$ and 1.13x at
-   * $10^{-6}$, for a median deviation 4 to 5 orders smaller; on hard-edged
-   * cluster top-hats it costs 1.8x and the spline does not converge at all,
-   * the two disagreeing by $10^{-4}$ of the pair scale with both asked for
-   * $10^{-8}$.
+   * Accuracy, against the certified Arb $C_\ell$ table (43 entries, 17 pairs):
+   * the Chebyshev closure is closer in 36 of the 43, and its median deviation
+   * is 4.5x smaller at every tolerance rung. The spline has one failure mode
+   * the Chebyshev closure does not: on a far-separated pair at loose tolerance
+   * it returns the wrong sign, with an error 31x the pair's own $|C_\ell|$.
    *
-   * That is why the default is %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV. The spline
-   * stays as the independent cross-check: a deviation both closures share at
-   * every tolerance is a wrong reference, not a bad fit, and that diagnostic
-   * needs two structurally different representations. It is also the cheaper
-   * one where the requested tolerance, rather than the representation, is
-   * what binds.
+   * Cost, on a tomographic workload through #NcXcorSolver (5 Gaussian bins,
+   * 15 pairs, $\ell \le 60$, one thread): the Chebyshev closure costs 1.4x the
+   * spline at #NcXcorKernel:reltol $10^{-4}$ and 1.13x at $10^{-6}$, for a
+   * median deviation 4 to 5 orders of magnitude smaller. On hard-edged cluster
+   * top-hats it costs 1.8x and the spline does not converge: asked for
+   * $10^{-8}$, the two disagree by $10^{-4}$ of the pair's own $|C_\ell|$.
    *
-   * It applies to the non-Limber closure only. Under Limber each multipole is
-   * supported on its own band and zero outside it, so the block's window
-   * carries a step per multipole; a Chebyshev series converges on the
-   * non-Limber kernel because $W_\ell(k)$ is entire in $k$, and a step is not.
-   * Multipoles taken under Limber keep the spline closure whatever this is set
-   * to.
+   * %NC_XCOR_KERNEL_CLOSURE_SPLINE has two uses. It is the independent
+   * cross-check: a deviation both closures show at every tolerance is a wrong
+   * reference rather than a bad fit, and that diagnostic needs two
+   * structurally different representations. And it recovers that 1.13x to 1.4x
+   * on smooth windows at tolerances where both converge.
    *
+   * This property governs the non-Limber closure only. Under Limber each
+   * multipole is supported on its own band in $k$ and zero outside it, so a
+   * block's window carries one step per multipole. A Chebyshev series
+   * converges on the non-Limber window because $W_\ell(k)$ is entire in $k$; a
+   * step is not. Multipoles taken under Limber keep the spline closure
+   * whatever this property is set to.
    */
   g_object_class_install_property (object_class,
                                    PROP_CLOSURE_TYPE,

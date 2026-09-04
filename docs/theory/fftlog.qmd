@@ -88,9 +88,9 @@ non-negative integers.
 ## Usage
 
 The user provides $\ln k_0$, $\ln r_0$, $L$, the padding percentage, $N$, and the
-function $F(k)$. The function can be supplied either as a `gsl_function` —
+function $F(k)$. The function can be supplied either as a `gsl_function` ---
 evaluated at the fundamental-interval knots and set to zero in the padding
-intervals — or as a vector of values computed at each $\ln k$ knot.
+intervals --- or as a vector of values computed at each $\ln k$ knot.
 
 The kernel-dependent coefficients $Y_n$ are provided by the concrete
 implementations, e.g. [[numcosmo-math|NcmFftlogTophatwin2]] and

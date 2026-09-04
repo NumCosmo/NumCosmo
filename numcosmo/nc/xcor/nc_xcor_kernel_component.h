@@ -58,7 +58,7 @@ typedef gdouble (*NcXcorKernelComponentEvalKernel) (NcXcorKernelComponent *comp,
  * @k: wave number
  * @l: multipole
  *
- * Evaluates the prefactor that may depend on k and ℓ.
+ * Evaluates the prefactor that may depend on k and $\ell$.
  *
  * Returns: the prefactor value
  */

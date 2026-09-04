@@ -64,11 +64,11 @@ mb = Ncm.ModelBuilder.new(Nc.HIPrim, "NcHIPrimExample", "An example primordial m
 
 Add the parameters used by the primordial spectrum:
 
--   **`A_s`**: The amplitude of the primordial power spectrum. This parameter controls
+-   `A_s`: The amplitude of the primordial power spectrum. This parameter controls
     the overall amplitude of the power spectrum.
--   **`n_s`**: The spectral index, which describes the slope of the primordial power
+-   `n_s`: The spectral index, which describes the slope of the primordial power
     spectrum.
--   **`a`, `b`, and `c`**: Additional parameters to describe modifications to the
+-   `a`, `b`, and `c`: Additional parameters to describe modifications to the
     primordial spectrum.
 
 ```{python}
@@ -108,14 +108,14 @@ required by the `NcHIPrim` interface. This involves defining how the primordial 
 spectrum is calculated based on the model's parameters. Below is an outline of the steps
 required:
 
-1.  **Subclass `HIPrimExample`**: Create a new class that inherits from `HIPrimExample`.
-2.  **Implement Required Methods**: Define methods such as `do_lnSA_powspec_lnk` to
+1.  Subclass `HIPrimExample`: Create a new class that inherits from `HIPrimExample`.
+2.  Implement Required Methods: Define methods such as `do_lnSA_powspec_lnk` to
     compute the primordial power spectrum.
 
 Note that it is not necessary to register the model class again after implementing the
 interface.
 
-Here’s an example implementation:
+Here's an example implementation:
 
 ```{python}
 class HIPrimExampleImpl(HIPrimExample):
@@ -164,7 +164,7 @@ class HIPrimExampleImpl(HIPrimExample):
 
 ### Explanation of the Implementation
 
--   **`do_lnSA_powspec_lnk` Method**: This method computes the natural logarithm of the
+-   `do_lnSA_powspec_lnk` Method: This method computes the natural logarithm of the
     primordial power spectrum for the adiabatic scalar mode at a given wavenumber `k`.
     It uses the model's parameters (`As`, `ns`, `a`, `b`, and `c`) to calculate the
     spectrum. The final expression for the power spectrum is:
@@ -172,12 +172,12 @@ class HIPrimExampleImpl(HIPrimExample):
     \ln P(k) = (n_s - 1) \ln k + \ln A_s + \ln \left[1 + a^2 \cos^2\left(b \frac{k}{k_0} + c\right)\right],
     $$
     where `k_0` is the pivot wavenumber.
--   **`get_lnSA_powspec_lnk0` Method**: This method computes the natural logarithm of
+-   `get_lnSA_powspec_lnk0` Method: This method computes the natural logarithm of
     the power spectrum at the pivot wavenumber, which is a reference point for
     cosmological calculations. 
--   **Parameter Retrieval**: The `self.props` attribute is used to access the model's
+-   Parameter Retrieval: The `self.props` attribute is used to access the model's
     parameters.
--   **Power Spectrum Calculation**: The power spectrum is computed using a combination
+-   Power Spectrum Calculation: The power spectrum is computed using a combination
     of the parameters and the wavenumber `k`.
 
 The `NcHIPrimExample` model is ready for use.

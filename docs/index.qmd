@@ -6,10 +6,10 @@ title: "NumCosmo"
 NumCosmo is a C library for cosmological calculations and statistical analysis.
 It is written in C using the [GObject](tutorials/c/gobject.qmd) system, so every
 class is available from Python and other GObject-Introspection languages through
-the `numcosmo_py` package — without writing binding code. Computations run in C;
+the `numcosmo_py` package --- without writing binding code. Computations run in C;
 models, data, and fits are scripted from Python.
 
-**Current version**: {{< meta version >}}
+Current version: {{< meta version >}}
 
 [![Build Status](https://github.com/NumCosmo/NumCosmo/workflows/Build%20and%20Check/badge.svg)](https://github.com/NumCosmo/NumCosmo/actions) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![codecov](https://codecov.io/gh/NumCosmo/NumCosmo/graph/badge.svg?token=FZ3PX0PKWG)](https://codecov.io/gh/NumCosmo/NumCosmo)
 
@@ -20,14 +20,14 @@ New to the library? Start with the [installation guide](install.qmd) and the
 
 NumCosmo is organized around three ideas:
 
-- **C performance, Python ergonomics.** Classes implemented in C are subclassed,
+- C performance, Python ergonomics. Classes implemented in C are subclassed,
   configured, and driven from Python via GObject-Introspection. There is no
   separate binding layer to maintain.
-- **Models behind interfaces.** Each cosmological ingredient is a model with a
-  well-defined interface, so implementations are interchangeable — swap a dark
+- Models behind interfaces. Each cosmological ingredient is a model with a
+  well-defined interface, so implementations are interchangeable --- swap a dark
   energy parametrization or a halo mass function without touching the code that
   consumes it.
-- **Statistics built in.** Models are parameterized objects that connect directly
+- Statistics built in. Models are parameterized objects that connect directly
   to the fitting and sampling tools, so the same object used for a prediction is
   the one constrained against data.
 
@@ -64,7 +64,7 @@ Primordial and bouncing cosmology
 
 The library provides best-fit estimation, Fisher-matrix forecasts, likelihood
 ratio tests, and several Markov Chain Monte Carlo samplers, including the
-Ensemble Sampler MCMC ([[numcosmo-math|NcmFitESMCMC]]) and **APES**, an
+Ensemble Sampler MCMC ([[numcosmo-math|NcmFitESMCMC]]) and APES, an
 approximate-posterior ensemble sampler
 ([[numcosmo-math|NcmFitESMCMCWalkerAPES]]). The
 [benchmarks](benchmarks/ccl_background.qmd) compare results against the Core
@@ -75,7 +75,7 @@ Cosmology Library (CCL). Fits and samplers are parallelized with MPI and OpenMP.
 Beyond cosmology, NumCosmo includes reusable building blocks: adaptive numerical
 differentiation, multidimensional KDE and RBF interpolation, a HEALPix
 implementation, FFTLog transforms, and spline and ODE utilities. These live in
-the **NumCosmoMath** namespace.
+the NumCosmoMath namespace.
 
 ## External libraries
 
@@ -88,5 +88,5 @@ FFTW (Fourier transforms), NLopt (nonlinear optimization), and libcuba/cubature
 - [Install NumCosmo](install.qmd)
 - Work through a [tutorial](tutorials/index.qmd), or browse the
   [examples](examples/index.qmd)
-- Reference: [NumCosmoMath API](reference/numcosmo-math/index.html) ·
+- Reference: [NumCosmoMath API](reference/numcosmo-math/index.html) $\cdot$
   [NumCosmo API](reference/numcosmo/index.html)

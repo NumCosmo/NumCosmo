@@ -40,7 +40,7 @@ G_BEGIN_DECLS
  * @k: the wave number parameter
  *
  * Function to be integrated with spherical Bessel functions.
- * Computes K(x, k) for the integral ∫K(x,k)*j_ℓ(kx)dx.
+ * Computes K(x, k) for the integral $\int K(x,k)\,j_\ell(kx)\,\mathrm{d}x$.
  *
  * Returns: the function value at @x with parameter @k
  */

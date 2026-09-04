@@ -619,10 +619,11 @@ ncm_lapack_dsytri (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapa
  * the PARAMS argument.
  *
  * Returns: INFO is INTEGER
+ *
  * - = 0:  Successful exit. The solution to every right-hand side is
  *   guaranteed.
  * - < 0:  If INFO = -i, the i-th argument had an illegal value
- * - > 0 and <= N:  U(INFO,INFO) is exactly zero.  The factorization
+ * - \> 0 and <= N:  U(INFO,INFO) is exactly zero.  The factorization
  *   has been completed, but the factor U is exactly singular, so
  *   the solution and error bounds could not be computed. RCOND = 0
  *   is returned.
@@ -787,9 +788,10 @@ ncm_lapack_dsyevd (gchar jobz, gchar uplo, gint n, gdouble *a, gint lda, gdouble
  * matrices.
  *
  * Returns: INFO is INTEGER
+ *
  * - = 0: successful exit
  * - < 0: if INFO = -i, the i-th argument had an illegal value
- * - > 0: if INFO = i, and i is
+ * - \> 0: if INFO = i, and i is
  * - <= N:  D(i,i) is exactly zero.  The factorization
  *   has been completed but the factor D is exactly
  *   singular, so the solution could not be computed.
@@ -868,9 +870,10 @@ ncm_lapack_dsysv (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gint *ipi
  *    for it.
  *
  * Returns: INFO is INTEGER
+ *
  * - = 0: successful exit
  * - < 0: if INFO = -i, the i-th argument had an illegal value
- * - > 0: if INFO = i, and i is
+ * - \> 0: if INFO = i, and i is
  * - <= N:  D(i,i) is exactly zero.  The factorization
  *   has been completed but the factor D is exactly
  *   singular, so the solution and error bounds could

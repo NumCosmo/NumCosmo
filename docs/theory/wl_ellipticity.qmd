@@ -4,13 +4,13 @@ title: Galaxy Shapes and Ellipticity Frames
 
 # Galaxy Shapes and Ellipticity Frames
 
-This page describes the weak-lensing forward model for galaxy shapes — how an
-intrinsic ellipticity is sheared, calibrated, and observed — and the two
+This page describes the weak-lensing forward model for galaxy shapes --- how an
+intrinsic ellipticity is sheared, calibrated, and observed --- and the two
 conventions that NumCosmo must keep track of: the *ellipticity convention*
 (how a shape is turned into a complex number) and the *handedness frame* (which
 basis the two ellipticity components are projected onto). The forward model is
 implemented by the shape factor calculators, [[numcosmo|NcGalaxyShapeFactor]]
-(concretely [[numcosmo|NcGalaxyShapeFactorVarAdd]] — see the
+(concretely [[numcosmo|NcGalaxyShapeFactorVarAdd]] --- see the
 [Galaxy Population & WL Framework](galaxy_wl_framework.qmd) page for that
 vocabulary); the reduced-shear transforms live in
 [[numcosmo|NcWLEllipticityFrame]] and the surrounding `nc_wl_ellipticity`
@@ -32,7 +32,7 @@ $$
 \epsilon = \frac{a - b}{a + b}\, e^{2 i \theta} .
 $$
 
-The trace normalization $\chi$ (the *distortion*) and the trace–determinant
+The trace normalization $\chi$ (the *distortion*) and the trace--determinant
 normalization $\epsilon$ (the *axis-ratio ellipticity*) are selected by
 [[numcosmo|NcGalaxyWLObsEllipConv]]
 (`NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE` and
@@ -44,7 +44,7 @@ distributions; the spin-2 factor $e^{2 i \theta}$ is common to both.
 
 For a source at projected radius $R$ and redshift $z$ behind a lens at $z_l$,
 the lensing distortion is set by the convergence $\kappa$ and the (tangential)
-shear $\gamma$ through the complex **reduced shear**
+shear $\gamma$ through the complex reduced shear
 
 $$
 g = \frac{\gamma}{1 - \kappa}.
@@ -104,15 +104,15 @@ $$
 
 and adds a complex measurement noise $n$ to the result,
 $\epsilon^{(o)} \to \epsilon^{(o)} + n$. The additive bias $c$ is a per-catalog
-calibration and is taken to be **already expressed in the catalog's storage
-frame** (see below); it is therefore never re-projected.
+calibration and is taken to be already expressed in the catalog's storage
+frame (see below); it is therefore never re-projected.
 
 ## Handedness Frames: Celestial vs. Euclidean
 
 Every sky position in NumCosmo is given as right ascension and declination, so
-the **position angle is always measured in the celestial convention**: building
+the position angle is always measured in the celestial convention: building
 a halo-centred coordinate system with [[numcosmo|nc_halo_position_polar_angles]]
-returns the polar angle $\theta$ (the lens–source separation) and the azimuth
+returns the polar angle $\theta$ (the lens--source separation) and the azimuth
 $\phi_C$, which increases eastward (with increasing RA).
 
 What the catalog *chooses* is the orthonormal basis onto which the two
@@ -122,14 +122,14 @@ for these two handedness frames follows the GalSim image-simulation toolkit
 the celestial convention throughout [@Mandelbaum2018; @Li2022]. This is the
 handedness frame [[numcosmo|NcWLEllipticityFrame]]:
 
-- **Celestial** (`CELESTIAL`): the holonomic frame of the celestial convention.
+- Celestial (`CELESTIAL`): the holonomic frame of the celestial convention.
   The position angle is $\phi_C$ and the complex ellipticity is
   $\epsilon_C = |\epsilon|\,e^{2 i \phi_C}$. This is the reference frame.
 
-- **Euclidean / image** (`CARTESIAN`): the frame an observer on the ground sees
+- Euclidean / image (`CARTESIAN`): the frame an observer on the ground sees
   when facing the source with their head toward the North celestial pole. The
   right-hand direction then points East, so the image $x$-axis increases toward
-  the **West** (decreasing RA). This is the opposite handedness (the legacy name
+  the West (decreasing RA). This is the opposite handedness (the legacy name
   was `EUCLIDEAN`).
 
 The two frames differ by a parity (handedness) flip. The position angle reverses
@@ -148,7 +148,7 @@ $$
 
 The equivalence follows from $e^{2 i \phi_E} = e^{2 i (\pi - \phi_C)} = e^{-2 i
 \phi_C}$. Conjugating the ellipticity and flipping $\phi$ are thus the *same*
-operation, and the parity is its own inverse — a single map converts
+operation, and the parity is its own inverse --- a single map converts
 celestial $\to$ Euclidean and Euclidean $\to$ celestial alike. The two helpers
 [[numcosmo|nc_wl_ellipticity_celestial_to_frame_c]] (conjugates $\epsilon$ for
 `CARTESIAN`, identity for `CELESTIAL`) and
@@ -164,8 +164,8 @@ into the catalog's storage frame so that it is stored consistently. Because the
 intrinsic shape and noise are isotropic, conjugating them leaves their
 distribution unchanged: generating in celestial-and-conjugating is statistically
 identical to generating directly in the Euclidean frame. The parity flip
-therefore affects only the *deterministic* pieces — the position angle and hence
-the lensed shape — while the calibration bias $c$, assumed to live in the
+therefore affects only the *deterministic* pieces --- the position angle and hence
+the lensed shape --- while the calibration bias $c$, assumed to live in the
 storage frame, is added without any flip.
 
 ## The Shape Likelihood
@@ -183,24 +183,24 @@ P_{\rm pop}(\chi_I)\, \mathcal{N}\!\big(\chi_{\mathrm{obs}} - f_g(\chi_I);\,
 \sigma_{\rm noise}^2\big),
 $$
 with $f_g$ the exact (nonlinear) shear map. The variance-add approximation
-replaces this with something analytically closed-form by making **two**
+replaces this with something analytically closed-form by making two
 independent simplifications, not one:
 
-1. **Linearize the map jointly in $g$ and $\chi_I$.** Expanding the exact
+1. Linearize the map jointly in $g$ and $\chi_I$. Expanding the exact
    Möbius transform to first order in *both* small quantities together
    collapses it to a plain shift, $\chi^{(o)} \approx \chi^{(s)} + 2g$
-   (dropping the calibration bias for clarity — see the
+   (dropping the calibration bias for clarity --- see the
    [linearized shear response](#complex-ellipticity-and-the-two-conventions)
    above), so
    $$
    \chi_{\mathrm{obs}} = \chi_{\mathrm{int}} + 2g + n .
    $$
    This is exact only when *both* $|g|$ and $|\chi_I|$ (i.e. $\sigma$) are
-   small — dropping only $|g|$ is not enough, since the discarded terms mix
+   small --- dropping only $|g|$ is not enough, since the discarded terms mix
    the two (e.g. $g^2\chi_I^{*}$).
-2. **Extend the intrinsic integral from the disc to the whole plane.** Once
+2. Extend the intrinsic integral from the disc to the whole plane. Once
    the map is linear, $\chi_{\mathrm{int}}$ and $n$ are independent Gaussians
-   and their sum is Gaussian too — but only if $\chi_{\mathrm{int}}$ is
+   and their sum is Gaussian too --- but only if $\chi_{\mathrm{int}}$ is
    allowed to range over all of $\mathbb{R}^2$ rather than being cut off at
    $\lvert\chi_I\rvert=1$ as the physical ellipticity requires. Dropping the
    truncation is what makes the convolution closed-form; keeping it would
@@ -215,8 +215,8 @@ P(\chi_{\mathrm{obs}} \mid g) \propto
 {2\,(\sigma^2 + \sigma_{\rm noise}^2)}\right],
 $$
 i.e. measurement noise does nothing more than replace the intrinsic variance
-by the **added** effective variance
-$\sigma_{\rm tot}^2 = \sigma^2 + \sigma_{\rm noise}^2$ — the origin of the
+by the added effective variance
+$\sigma_{\rm tot}^2 = \sigma^2 + \sigma_{\rm noise}^2$ --- the origin of the
 name *variance-add*. Both approximations are controlled by the same
 parameter regime the engine targets (weak lensing, $|g| \ll 1$) together with
 $\sigma \ll 1$ (so the disc truncation is negligible), not by anything
@@ -238,7 +238,7 @@ P\!\left(\epsilon^{(o)} \mid z\right)
 \right].
 $$
 
-Step 2 (plane instead of disc) is **not** removed by this — the exact
+Step 2 (plane instead of disc) is not removed by this --- the exact
 $\sigma_{\rm tot}^2$ combination and the un-truncated Gaussian normalization
 are still used regardless of how exactly the map itself is handled. Pulling
 one point back through an exact nonlinear map and re-weighting it by the
@@ -265,7 +265,7 @@ branch. These are provided by the `lndet_jac` kernels in `nc_wl_ellipticity.h`
 (`nc_wl_ellipticity_lndet_jac_trace`/`_trace_det`).
 
 Because the likelihood is rotation invariant, the implementation works in the
-**tangential/cross frame**: the stored observed ellipticity is rotated by
+tangential/cross frame: the stored observed ellipticity is rotated by
 $e^{-2 i \phi}$ (with $\phi = \phi_E$ in the catalog frame), which makes the
 reduced shear real ($g \to g_t$) and the calibration bias is pre-rotated
 consistently. The full observed likelihood marginalizes this expression over the

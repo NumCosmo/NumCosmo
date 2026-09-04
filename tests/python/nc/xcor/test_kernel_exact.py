@@ -383,16 +383,16 @@ def test_error_estimate_is_small_on_an_auto_spectrum(cosmology: Cosmology) -> No
 def test_error_estimate_scales_with_the_fit_criterion(
     cosmology: Cosmology, closure_type, bounds
 ) -> None:
-    """Tightening the kernels must buy down the reported error.
+    """Tightening the kernels must reduce the reported error.
 
-    This is what makes the estimate a lever rather than a label. How much it
-    buys is the representation's own convergence rate, so the two closures get
-    different bounds. Both halves of the spline's criterion enter its refinement
-    linearly, so a request 100x tighter buys about 100x -- to within a factor of
-    two, the closures being rebuilt on different knots. The Chebyshev closure
-    answers a tighter request with a higher order instead, and its convergence
-    in the order is spectral, so the same request buys at least as much and
-    measurably more: 205x here.
+    This is what makes the estimate a lever rather than a label. The factor by
+    which it falls is the representation's own convergence rate, so the two
+    closures get different bounds. Both halves of the spline's criterion enter
+    its refinement linearly, so a request 100x tighter reduces the estimate by
+    about 100x -- to within a factor of two, the closures being rebuilt on
+    different knots. The Chebyshev closure answers a tighter request with a
+    higher order instead, and converges spectrally in that order, so the same
+    request reduces the estimate by more: 205x here.
     """
     cosmo = cosmology.cosmo
     lmin, lmax = 2, 9
@@ -556,14 +556,15 @@ def test_tracking_off_leaves_no_record_and_a_looser_estimate(
 ) -> None:
     """Turning the record off falls back to the tolerance-only ceiling.
 
-    How much the record buys is itself a statement about the representation.
-    The spline's bisection overshoots the criterion it stops at, by 12 to 3100x
-    depending on the kernel, so its achieved residual is far below the
-    tolerance-only ceiling. A Chebyshev panel is accepted as soon as doubling
-    its order moves it less than the tolerance, so it delivers close to what was
-    asked and no more, and the gap is correspondingly narrower -- 3.4 to 7.1x
-    here against the spline's 5 to 20x. Narrower is not worse: the same
-    tolerance already bought a more accurate closure.
+    The size of the gap between the two is itself a statement about the
+    representation. The spline's bisection overshoots the criterion it stops
+    at, by 12 to 3100x depending on the kernel, so its achieved residual sits
+    far below the tolerance-only ceiling. A Chebyshev panel is accepted as soon
+    as doubling its order moves it less than the tolerance, so it delivers
+    close to what was asked and no more, and the gap is correspondingly
+    narrower -- 3.4 to 7.1x here against the spline's 5 to 20x. A narrower gap
+    does not mean a worse closure: at the same tolerance the Chebyshev fit is
+    the more accurate of the two.
     """
     cosmo = cosmology.cosmo
     lmin, lmax = 2, 9
@@ -911,14 +912,13 @@ def test_mixed_closure_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
     Under Limber a window is a step in k per multipole, so those blocks keep the
     spline closure whatever NcXcor:closure-type asks for. Two kernels with
     different NcXcorKernel:l-limber therefore hand KERNEL_EXACT one
-    spline-backed and one panel-backed integrand -- the pair that used to abort,
-    and the reason the Chebyshev closure could not be the default.
+    spline-backed and one panel-backed integrand.
 
-    It is integrated exactly, not approximately. On the common refinement of the
-    two breakpoint sets the spline is one cubic, which four Chebyshev-Lobatto
-    nodes reproduce exactly, and the panel is one polynomial already; the
-    product is then a polynomial the bilinear form integrates in closed form.
-    The reference is that same statement evaluated a completely different way:
+    Such a pair is integrated exactly, not approximately. On the common
+    refinement of the two breakpoint sets the spline is one cubic, which four
+    Chebyshev-Lobatto nodes reproduce exactly, and the panel is one polynomial
+    already; the product is then a polynomial the bilinear form integrates in
+    closed form. The reference evaluates that same statement a different way:
     GL(24) on the same cells, exact through degree 47 and so exact on a cubic
     times a panel of order at most 33 times k^2.
     """
@@ -973,7 +973,7 @@ def test_mixed_closure_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
     vp = Ncm.Vector.new(nell)
     xcor.compute(k_limber, k_exact, cosmo, lmin, lmax, vp)
 
-    # 1e-12 rather than machine epsilon: this is a strongly cancelling cross
+    # 1e-11 rather than machine epsilon: this is a strongly cancelling cross
     # spectrum between disjoint shells, and the two routes sum the same cells in
     # different orders.
     assert_allclose(np.array(vp.dup_array()), reference, rtol=1.0e-11)
@@ -982,11 +982,11 @@ def test_mixed_closure_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
 def test_spectral_path_reports_an_error_estimate(cosmology: Cosmology) -> None:
     """The panel route carries vp_err, and the estimate still covers the truth.
 
-    Withdrawing error reporting from the default configuration was the second
-    thing that gated the Chebyshev default. The estimate is the same object the
-    merged-knot route reports -- the closures' own fit error propagated through
-    the pair's conditioning -- because it is a property of the closures rather
-    than of the quadrature above them.
+    The estimate is the same object the merged-knot route reports -- the
+    closures' own fit error propagated through the pair's conditioning --
+    because it is a property of the closures rather than of the quadrature
+    above them. So a computation on the default closure reports an error like
+    any other, and that error still bounds the deviation from a tighter run.
     """
     cosmo = cosmology.cosmo
     lmin, lmax = 2, 9
