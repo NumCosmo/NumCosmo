@@ -9416,6 +9416,57 @@ class GalaxyShapeFactorLaplaceClass(GObject.GPointer):
 
     parent_class: GalaxyShapeFactorClass = ...
 
+class GalaxyShapeFactorMomentSeries(GalaxyShapeFactor):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorMomentSeries(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv, trunc_order:int) -> NumCosmo.GalaxyShapeFactorMomentSeries
+
+    Object NcGalaxyShapeFactorMomentSeries
+
+    Properties from NcGalaxyShapeFactorMomentSeries:
+      trunc-order -> guint: Truncation order
+        Truncation order n of the g-power series
+
+    Properties from NcGalaxyShapeFactor:
+      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
+        Weak lensing observables ellipticity convention
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        trunc_order: int
+        ellip_conv: GalaxyWLObsEllipConv
+
+    props: Props = ...
+    def __init__(
+        self, trunc_order: int = ..., ellip_conv: GalaxyWLObsEllipConv = ...
+    ) -> None: ...
+    @staticmethod
+    def clear(gsfms: GalaxyShapeFactorMomentSeries) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(
+        cls, ellip_conv: GalaxyWLObsEllipConv, trunc_order: int
+    ) -> GalaxyShapeFactorMomentSeries: ...
+    def ref(self) -> GalaxyShapeFactorMomentSeries: ...
+
+class GalaxyShapeFactorMomentSeriesClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorMomentSeriesClass()
+    """
+
+    parent_class: GalaxyShapeFactorClass = ...
+
 class GalaxyShapeFactorQuad(GalaxyShapeFactor):
     r"""
     :Constructors:
@@ -9648,6 +9699,7 @@ class GalaxyShapePop(NumCosmoMath.Model):
     def do_gen(
         self, data: GalaxyShapePopData, rng: NumCosmoMath.RNG
     ) -> typing.Tuple[float, float]: ...
+    def do_moment_2k(self, data: GalaxyShapePopData, k: int) -> float: ...
     def do_prepare(self, data: GalaxyShapePopData) -> None: ...
     def e_rms(self, data: GalaxyShapePopData) -> float: ...
     def eval_p(self, data: GalaxyShapePopData, r: float) -> float: ...
@@ -9671,6 +9723,7 @@ class GalaxyShapePop(NumCosmoMath.Model):
     def get_sigma(self, data: GalaxyShapePopData) -> float: ...
     @staticmethod
     def id() -> int: ...
+    def moment_2k(self, data: GalaxyShapePopData, k: int) -> float: ...
     def prepare(self, data: GalaxyShapePopData) -> None: ...
     def ref(self) -> GalaxyShapePop: ...
 
@@ -9801,6 +9854,7 @@ class GalaxyShapePopClass(GObject.GPointer):
         ],
         list[float],
     ] = ...
+    moment_2k: typing.Callable[[GalaxyShapePop, GalaxyShapePopData, int], float] = ...
     padding: list[None] = ...
 
 class GalaxyShapePopData(GObject.GBoxed):
