@@ -3,7 +3,7 @@ title: Installation Instructions
 subtitle: Get started with NumCosmo
 ---
 
-# Download
+## Download
 
 Version {{< meta version >}} of NumCosmo is the latest release version available at
 NumCosmo's GitHub page [github releases](https://github.com/NumCosmo/NumCosmo/releases).
@@ -13,19 +13,19 @@ For macOS, use Homebrew and the dependency list in the
 
 [![Build Status](https://github.com/NumCosmo/NumCosmo/workflows/Build%20and%20Check/badge.svg)](https://github.com/NumCosmo/NumCosmo/actions) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![codecov](https://codecov.io/gh/NumCosmo/NumCosmo/graph/badge.svg?token=FZ3PX0PKWG)](https://codecov.io/gh/NumCosmo/NumCosmo)
 
-# Install using conda
+## Install using conda
 
 Install NumCosmo and its dependencies with conda. Install
 [Anaconda](https://www.anaconda.com/download/) or
 [Miniconda](https://conda.io/miniconda.html) first if needed.
 
-## Installing NumCosmo using conda-forge
+### Installing NumCosmo using conda-forge
 
 conda-forge provides precompiled NumCosmo packages. Use the conda-forge
 channel or a conda-forge-only environment from
 [Miniforge](https://github.com/conda-forge/miniforge).
 
-### Using Conda
+#### Using Conda
 
 We recommend installing NumCosmo from the conda-forge channel, which provides pre-compiled binaries for Linux and macOS. 
 You can install it with:
@@ -43,9 +43,9 @@ Current release info
 | --- | --- | --- | --- |
 | [![Conda Recipe](https://img.shields.io/badge/recipe-numcosmo-green.svg)](https://anaconda.org/conda-forge/numcosmo) | [![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/numcosmo.svg)](https://anaconda.org/conda-forge/numcosmo) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/numcosmo.svg)](https://anaconda.org/conda-forge/numcosmo) | [![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/numcosmo.svg)](https://anaconda.org/conda-forge/numcosmo) |
 
-# Development Environment
+## Development Environment
 
-## Conda Development Environment
+### Conda Development Environment
 
 Create the development environment from the repository root:
 
@@ -70,7 +70,7 @@ source build/numcosmo_export.sh
 ```
 This script sets essential environment variables such as `LD_LIBRARY_PATH` and `PYTHONPATH`, enabling library usage without installation. Keep in mind that these variables apply only to the current shell session, so you'll need to source this script each time you open a new terminal. Note that these variables may interfere with `meson setup`, so unset them before rerunning the setup command.
 
-### Installation
+#### Installation
 
 In general, developers do not need to install the library. However, if you wish to install it in your conda environment, use the following command:
 ```bash
@@ -78,13 +78,13 @@ meson install -C build
 ```
 Note that during library development, you'll need to run `meson install` each time you modify the library to reflect changes in the conda environment.
 
-## Other Development Environments
+### Other Development Environments
 
 For developers, NumCosmo can be installed from the source code.
 This provides the latest version of the code on the master branch.
 It is recommended for those interested in contributing to the project.
 
-### Requirements
+#### Requirements
 
 The requirements below can be found on most Linux distributions. Click [here](#sec-pack_deb) for a list of package names for Debian-like distributions.
 
@@ -110,7 +110,7 @@ The requirements below can be found on most Linux distributions. Click [here](#s
 
 Note: [libfyaml](https://github.com/pantoniou/libfyaml) (used for YAML/JSON (de)serialization) does not need to be installed separately -- NumCosmo bundles the parser/emitter core it needs under `numcosmo/external/libfyaml`.
 
-#### Optional packages
+##### Optional packages
 
   - Any optimized BLAS library (OpenBLAS, MKL, etc)
     Improves speed in linear algebra calculations, e.g.,
@@ -123,11 +123,11 @@ Note: [libfyaml](https://github.com/pantoniou/libfyaml) (used for YAML/JSON (de)
   - [ARB](http://fredrikj.net/arb/) --
     C library for arbitrary-precision interval arithmetic.
 
-#### Installing Prerequisites
+##### Installing Prerequisites
 
 To streamline the installation process, we provide instructions for installing prerequisites on Debian-like systems (including Ubuntu) and Mac OS using Homebrew.
 
-#### Debian-like Systems (including Ubuntu) {#sec-pack_deb}
+##### Debian-like Systems (including Ubuntu) {#sec-pack_deb}
 
 On Debian-like systems, you can install the required packages from the main repositories using the following command:
 ```bash
@@ -150,7 +150,7 @@ installation described at the top of this page.
 Note: in recent Debian and Ubuntu releases, the package name changed from
 `libflint-arb-dev` to `libflint-dev`.
 
-#### Mac OS using Homebrew
+##### Mac OS using Homebrew
 
 For Mac OS users, Homebrew simplifies the installation process. Execute the following command to install the required packages:
 ```bash
@@ -161,7 +161,7 @@ brew install gfortran glib gobject-introspection pygobject3 \
 Installing `pygobject3` from Homebrew avoids pip having to build PyGObject
 from source against Homebrew's interpreter.
 
-#### Python packages using pip
+##### Python packages using pip
 
 For Python-related functionality and the build system, install the following using pip:
 ```bash
@@ -173,7 +173,7 @@ For development with type checking and additional testing tools (type stubs prov
 pip install pygobject-stubs pytest-tap types-tabulate
 ```
 
-### Building from repository {#sec-building}
+#### Building from repository {#sec-building}
 
 To build from the git repository, follow the steps below. 
 These instructions are for developers; if you just want to use NumCosmo, you should install it using conda.
@@ -206,7 +206,7 @@ meson install -C build
 source build/numcosmo_export.sh
 ```
 
-# Compiling example_simple.c
+## Compiling example_simple.c
 
 ```bash
 cd $NUMCOSMO_DIR/examples

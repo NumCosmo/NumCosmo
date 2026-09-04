@@ -1,8 +1,6 @@
 ---
-title: Validation
+title: Validation & Benchmarks
 ---
-
-# Validation & Benchmarks
 
 Comparisons of NumCosmo against the Core Cosmology Library (CCL), validating
 agreement on key observables.

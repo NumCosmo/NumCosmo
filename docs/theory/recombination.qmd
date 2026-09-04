@@ -15,8 +15,6 @@ $$
 $$
 :::
 
-# Cosmic Recombination
-
 This page describes the recombination physics implemented by the abstract
 [[numcosmo|NcRecomb]] class and its concrete Seager solver
 [[numcosmo|NcRecombSeager]]. Further background is given in Weinberg (2008),

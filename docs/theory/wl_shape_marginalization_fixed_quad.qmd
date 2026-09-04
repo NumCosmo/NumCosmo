@@ -2,8 +2,6 @@
 title: Fixed-Node Quadrature for the Shape Likelihood
 ---
 
-# Fixed-Node Quadrature for the Shape Likelihood
-
 ::: {.callout-note}
 This page documents [[numcosmo|NcGalaxyShapeFactorFixedQuad]]: the same
 exact marginalization integral as [[numcosmo|NcGalaxyShapeFactorQuad]], but

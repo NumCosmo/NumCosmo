@@ -2,8 +2,6 @@
 title: Spectral Methods
 ---
 
-# Spectral Methods
-
 This page describes the spectral approximation tools implemented by the
 [[numcosmo-math|NcmSpectral]] class: representing a function by its Chebyshev
 series, computing the series adaptively, integrating and evaluating it, and

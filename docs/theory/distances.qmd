@@ -9,8 +9,6 @@ $$
 $$
 :::
 
-# Cosmological Distances
-
 This page describes the distance and time-related quantities implemented by
 `NcDistance`. The object computes the dimensionless versions of these distances;
 the dimensionful results are recovered by multiplying by the appropriate Hubble

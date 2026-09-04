@@ -123,6 +123,7 @@ website:
               - href: tutorials/python/xcor_accuracy.qmd
                 text: "Angular Power Spectrum Accuracy"
       - section: theory/index.qmd
+        text: "Theory"
         contents:
           - section: "Background & Thermal History"
             contents:
@@ -197,6 +198,7 @@ website:
               - href: examples/intro/epdf.qmd
                 text: "Empirical PDF"
       - section: benchmarks/index.qmd
+        text: "Validation"
         contents:
           - href: benchmarks/ccl_background.qmd
             text: "CCL Background"

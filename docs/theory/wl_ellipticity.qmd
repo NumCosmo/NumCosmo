@@ -2,8 +2,6 @@
 title: Galaxy Shapes and Ellipticity Frames
 ---
 
-# Galaxy Shapes and Ellipticity Frames
-
 This page describes the weak-lensing forward model for galaxy shapes --- how an
 intrinsic ellipticity is sheared, calibrated, and observed --- and the two
 conventions that NumCosmo must keep track of: the *ellipticity convention*

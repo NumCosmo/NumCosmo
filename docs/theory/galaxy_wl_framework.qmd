@@ -2,8 +2,6 @@
 title: The Galaxy Population & Weak-Lensing Framework
 ---
 
-# The Galaxy Population & Weak-Lensing Framework
-
 NumCosmo builds a galaxy weak-lensing likelihood out of small, single-purpose
 pieces rather than one monolithic class per survey. This page is the map: the
 vocabulary shared by every piece, how they nest into a pipeline, and how a

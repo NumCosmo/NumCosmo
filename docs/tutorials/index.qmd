@@ -2,8 +2,6 @@
 title: Tutorials
 ---
 
-# Tutorials
-
 Tutorials cover complete workflows. For short API examples, see
 [Examples](../examples/index.qmd). Start with the
 [Simple Example](../examples/intro/simple.qmd).

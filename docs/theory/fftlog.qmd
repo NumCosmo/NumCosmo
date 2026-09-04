@@ -2,8 +2,6 @@
 title: FFTLog
 ---
 
-# FFTLog
-
 This page describes the logarithmic Fast Fourier Transform implemented by the
 abstract [[numcosmo-math|NcmFftlog]] class. It computes the FFT of a function
 assumed to be a periodic sequence of logarithmically spaced points, following

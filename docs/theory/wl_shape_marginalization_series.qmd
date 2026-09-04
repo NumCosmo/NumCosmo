@@ -2,8 +2,6 @@
 title: A Small-Shear Series Marginalization for the Shape Likelihood
 ---
 
-# A Small-Shear Series Marginalization for the Shape Likelihood
-
 ::: {.callout-note}
 This page defines a small-shear ($g$) expansion of the shape marginal, one of
 the schemes described in

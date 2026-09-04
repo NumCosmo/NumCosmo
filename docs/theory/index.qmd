@@ -1,8 +1,6 @@
 ---
-title: Theory
+title: Theoretical Background
 ---
-
-# Theoretical Background
 
 The physics, derivations, and conventions behind NumCosmo's models. Each page is
 linked from the corresponding API documentation, and links back to the relevant

@@ -1,8 +1,6 @@
 ---
-title: "NumCosmo"
+title: "NumCosmo: The Numerical Cosmology Library"
 ---
-# NumCosmo: The Numerical Cosmology Library
-
 NumCosmo is a C library for cosmological calculations and statistical analysis.
 It is written in C using the [GObject](tutorials/c/gobject.qmd) system, so every
 class is available from Python and other GObject-Introspection languages through

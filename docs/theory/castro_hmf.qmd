@@ -2,8 +2,6 @@
 title: Castro Halo Mass Function and Bias
 ---
 
-# Castro Halo Mass Function and Bias
-
 This page collects the expressions behind [[numcosmo|NcMultiplicityFuncCastro]]
 and [[numcosmo|NcHaloBiasCastro]]: two calibrations of the halo multiplicity
 function on spherical-overdensity virial masses, and the linear halo bias fitted

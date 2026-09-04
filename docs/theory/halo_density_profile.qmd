@@ -2,8 +2,6 @@
 title: Halo Density Profiles
 ---
 
-# Halo Density Profiles
-
 This page describes the spherical matter density profiles used to model dark
 matter halos, implemented by the abstract base class
 [[numcosmo|NcHaloDensityProfile]] and its concrete subclasses (NFW, Einasto,

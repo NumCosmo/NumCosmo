@@ -2,8 +2,6 @@
 title: Examples
 ---
 
-# Examples
-
 Examples show individual API operations. For complete workflows, see
 [Tutorials](../tutorials/index.qmd). Start with the
 [Simple Example](intro/simple.qmd).

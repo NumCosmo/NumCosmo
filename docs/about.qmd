@@ -1,8 +1,6 @@
 ---
 title: About NumCosmo
 ---
-# About NumCosmo
-
 NumCosmo is an open-source library for cosmological calculations and statistical
 analysis, written in C with GObject and usable from Python. For an overview of
 what it computes, see the [home page](index.qmd); for setup, the

@@ -2,8 +2,6 @@
 title: Super-Sample Covariance
 ---
 
-# Super-Sample Covariance
-
 This page describes the super-sample covariance (SSC) matrix $S_{ij}$ computed by
 [[numcosmo|NcXcorSSCSij]], and how it enters the Gaussian cluster number-count
 likelihood [[numcosmo|NcDataClusterNCountsGauss]].

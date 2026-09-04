@@ -2,8 +2,6 @@
 title: Weak-Lensing Surface Mass Density
 ---
 
-# Weak-Lensing Surface Mass Density
-
 This page describes the projected surface mass density and the related
 weak-lensing observables --- convergence and tangential shear --- implemented by
 [[numcosmo|NcWLSurfaceMassDensity]]. The three-dimensional mass distribution is

@@ -2,8 +2,6 @@
 title: Projection Integrals with Spherical Bessel Weights
 ---
 
-# Projection Integrals with Spherical Bessel Weights
-
 This page is the technical description of how NumCosmo evaluates
 $$
 C_\ell^{XY} \;=\; \frac{2}{\pi}\int_0^\infty \mathrm{d}k\, k^2\,
