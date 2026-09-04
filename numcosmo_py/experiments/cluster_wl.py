@@ -304,6 +304,7 @@ DEFAULT_SHAPE_M_SIGMA = 0.08
 
 
 DEFAULT_SHAPE_SERIES_TRUNC_ORDER = 4
+DEFAULT_SHAPE_MOMENT_SERIES_TRUNC_ORDER = 5
 
 
 class GalaxyShapeFactorGenBase(BaseModel):
@@ -484,6 +485,30 @@ class GalaxyShapeFactorGenFixedQuad(GalaxyShapeFactorGenBase):
         )
 
 
+class GalaxyShapeFactorGenMomentSeries(GalaxyShapeFactorGenBase):
+    """Truncated g-power-series marginal (``NcGalaxyShapeFactorMomentSeries``)."""
+
+    trunc_order: Annotated[int, Field(gt=0)] = DEFAULT_SHAPE_MOMENT_SERIES_TRUNC_ORDER
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return the help text for this scheme."""
+        return [
+            "GalaxyShapeFactorGenMomentSeries",
+            f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
+            f"trunc_order={DEFAULT_SHAPE_MOMENT_SERIES_TRUNC_ORDER}",
+        ]
+
+    def requires_sigma(self) -> bool:
+        """MomentSeries needs only radial moments, not a Gaussian width."""
+        return False
+
+    def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
+        return Nc.GalaxyShapeFactorMomentSeries.new(
+            self.ellip_conv.genum, self.trunc_order
+        )
+
+
 class GalaxyShapeFactorGenLaplace(GalaxyShapeFactorGenBase):
     """Laplace-approximation marginal (``NcGalaxyShapeFactorLaplace``)."""
 
@@ -502,6 +527,7 @@ GalaxyShapeFactorGenTypes = (
     | GalaxyShapeFactorGenQuad
     | GalaxyShapeFactorGenFixedQuad
     | GalaxyShapeFactorGenLaplace
+    | GalaxyShapeFactorGenMomentSeries
 )
 
 
@@ -513,6 +539,7 @@ class ShapeFactorGen(StrEnum):
     QUAD = (auto(), GalaxyShapeFactorGenQuad)
     FIXED_QUAD = (auto(), GalaxyShapeFactorGenFixedQuad)
     LAPLACE = (auto(), GalaxyShapeFactorGenLaplace)
+    MOMENT_SERIES = (auto(), GalaxyShapeFactorGenMomentSeries)
 
     def __new__(
         cls, value: str, _model_cls: type[GalaxyShapeFactorGenTypes]
