@@ -2,8 +2,6 @@
 title: The Ultraspherical Spectral Solver
 ---
 
-# The Ultraspherical Spectral Solver
-
 This page is the technical description of [[numcosmo-math|NcmSBesselOdeSolver]] and the
 [[numcosmo-math|NcmSBesselOdeOperator]] it builds for one interval and one block of
 multipoles.
@@ -70,23 +68,55 @@ conditioned.
 
 ## Discretisation
 
-Each panel $[y_a, y_b]$ is mapped to $t \in [-1,1]$ by $y = m + h t$, $m =
-(y_a+y_b)/2$, $h = (y_b-y_a)/2$. Equation (1) becomes
+Each panel $[y_a, y_b]$ is mapped to $t \in [-1,1]$ by $y = m + h t$, $m \equiv
+(y_a+y_b)/2$, $h \equiv (y_b-y_a)/2$. Equation (1) becomes
 $$
 \left[\frac{m^2}{h^2} + \frac{2m}{h}\,t + t^2\right]\frac{\mathrm{d}^2 u}{\mathrm{d}t^2}
 + \left[(m^2 - \ell(\ell+1)) + 2mh\,t + h^2 t^2\right] u
 = (m + ht)\,F(m+ht).
 \tag{2}
 $$
-The unknown is expanded in Chebyshev polynomials, $u = \sum_n a_n T_n(t)$, and the
-equation is imposed in the ultraspherical basis $C^{(2)}_n$, following @Olver2013. In
-that basis the second derivative is a diagonal map, $\mathrm{d}^2/\mathrm{d}t^2: a_n
-\mapsto 2(n+2)a_{n+2}$, and multiplication by $t$ and $t^2$ are banded. The six
-primitives that Eq. (2) needs, with their coefficient formulas, are tabulated on the
-[Spectral Methods](spectral.qmd) page; assembled, the operator has bandwidth $2$ below
-and $6$ above the diagonal, independent of the truncation order. The right-hand side is
-the Chebyshev fit of $y F(y)$ converted to $C^{(2)}$ coefficients by the identity map
-of the same table.
+The unknown is expanded in Chebyshev polynomials, $u = \sum_n a_n T_n(t)$, while the
+equation is imposed in the ultraspherical basis $C^{(2)}_n$, following @Olver2013. Two
+separate things happen in that sentence, and it helps to keep them apart.
+
+The first is that differentiation raises the basis. From $\mathrm{d}T_n/\mathrm{d}t =
+n\,C^{(1)}_{n-1}$ and $\mathrm{d}C^{(\lambda)}_n/\mathrm{d}t =
+2\lambda\,C^{(\lambda+1)}_{n-1}$,
+$$
+\frac{\mathrm{d}^2 T_n}{\mathrm{d}t^2} = 2n\,C^{(2)}_{n-2},
+$$
+so the second derivative carries the Chebyshev coefficients of $u$ straight into
+$C^{(2)}$ coefficients, as the single shifted diagonal $a_n \mapsto 2(n+2)a_{n+2}$.
+That is the reason to work in $C^{(2)}$ for a second-order problem: the highest
+derivative, the term that a collocation discretisation renders dense and ill
+conditioned, is one diagonal here.
+
+The second is that the undifferentiated terms have to be moved to the same basis. The
+$[\,\cdot\,]\,u$ bracket of Eq. (2) is still written in Chebyshev polynomials, so
+before it can be added to the derivative term it must be re-expressed in $C^{(2)}$.
+That conversion is itself a banded matrix acting on coefficients, obtained by composing
+$T_n = \tfrac12(C^{(1)}_n - C^{(1)}_{n-2})$ with $C^{(1)}_n = (C^{(2)}_n -
+C^{(2)}_{n-2})/(n+1)$. It is an exact change of basis rather than a projection: both
+bases describe the same polynomial and nothing is discarded. It is the primitive listed
+as the identity on the [Spectral Methods](spectral.qmd) page, which is why that row is
+not the identity matrix.
+
+The same construction covers every term. A term $p(t)\,\mathrm{d}^j u/\mathrm{d}t^j$
+with polynomial $p$ becomes one banded matrix from the Chebyshev coefficients of $u$ to
+the $C^{(2)}$ coefficients of that term: the $j$-th derivative delivers $C^{(j)}$
+coefficients, further conversions raise those to $C^{(2)}$, and multiplication by $p$ is
+banded once everything is in the same basis. It is that composite that gets assembled
+and tabulated, never a multiplication on its own; multiplication by $t$ is only the case
+this particular equation happens to need. Eq. (2) uses six of them: three with $j = 2$,
+where the derivative already lands in $C^{(2)}$ and no conversion is left to do, and
+three with $j = 0$, where the conversion is the whole of it. Their sum is the discretised
+operator; assembled, it has bandwidth $2$ below and $6$ above the diagonal, independent
+of the truncation order. Nothing here is approximated: the only approximation is the
+truncation of the expansions.
+
+The right-hand side is treated the same way. $y F(y)$ is fitted in Chebyshev and
+converted to $C^{(2)}$ coefficients by that same conversion matrix.
 
 The first two rows are replaced by the boundary conditions. Since $T_n(\pm1) =
 (\pm1)^n$, they are the dense rows $\sum_n (-1)^n a_n = u(y_a)$ and $\sum_n a_n =
@@ -121,86 +151,124 @@ solved to the tolerance the hardest member needs.
 
 ## Incremental Givens QR
 
-The system is not solved at a prescribed size. Columns are added one at a
-time and the factorisation is grown with Givens rotations: adding column $c$
-brings in one new row, $c + 4$, and four rotations eliminate the entries below
-the diagonal in that column (two for the lower bandwidth and two for the
-boundary rows, which touch every column). Each rotation is applied to the
-right-hand side as well, so after column $c$ the transformed right-hand side
-$\tilde c_c$ divided by the diagonal $R_{cc}$ is the value the back-substitution
-would assign to $a_c$ if the expansion stopped there.
+Write the discretised problem of the previous section as $A\,a = b$. The unknown $a$
+collects the Chebyshev coefficients $a_n$ of $u$; the right-hand side $b$ holds
+$u(y_a)$ and $u(y_b)$ in its first two entries and the $C^{(2)}$ coefficients of $y
+F(y)$ in the rest; $A$ is the almost-banded matrix, two dense boundary rows over a
+band. Column $c$ of $A$ is the one multiplying $a_c$, so the number of columns kept is
+the truncation order $N$ of the expansion.
 
-The stopping test watches exactly that ratio. Let $\rho_c = |\tilde c_c /
-R_{cc}|$ and $\rho_{\max}$ its running maximum. The factorisation stops at the
-first column such that $\rho_c/\rho_{\max} < \tau$ for five consecutive
-columns and $c + 1 \ge N_{\min}$, where
+The value of $N$ is not prescribed. The factorisation is built one column at a time by
+Givens rotations, producing an orthogonal $Q$ such that $R \equiv Q^{\mathsf{T}} A$ is
+upper triangular.
+
+Column $c$ has exactly four entries below the diagonal, in rows $c+1$ to $c+4$: two
+from the lower bandwidth of the band, and two from the boundary rows, which are dense
+and so reach every column. Four rotations clear them, working upward, each pairing a
+row with the one above it. Moving on to column $c+1$ draws in one further row, so the
+work per column is constant however long the expansion becomes.
+
+Every rotation is applied to $b$ as well, giving $\tilde b \equiv Q^{\mathsf{T}} b$.
+After column $c$ the transformed entry $\tilde b_c$ divided by the diagonal $R_{cc}$ is
+therefore the value back-substitution would assign to $a_c$ if the expansion stopped
+there.
+
+The stopping test watches exactly that ratio. Let $\rho_c \equiv |\tilde b_c /
+R_{cc}|$ and $\rho_{\max}$ its running maximum. With $\tau$ the tolerance the operator
+was created with, the factorisation stops at the first column such that
+$\rho_c/\rho_{\max} < \tau$ for five consecutive columns and $c + 1 \ge N_{\min}$,
+where
 $$
 N_{\min} = \left\lceil \frac{2}{\pi}\,\big(y_b - \max(y_a, \nu)\big) \right\rceil,
-\qquad \nu = \sqrt{\ell(\ell+1)} .
+\qquad \nu \equiv \sqrt{\ell(\ell+1)} .
 \tag{3}
 $$
-The floor $N_{\min}$ is the number of Chebyshev coefficients the oscillatory
-part of the panel needs, two per half-oscillation beyond the turning point
-$y = \nu$; below the turning point $j_\ell$ is evanescent and the solution is
-smooth. Without the floor the test can fire on the quiet leading coefficients
-of a solution whose oscillation has not yet been reached, and the delivered
-error then fails to decrease with the requested tolerance.
+The floor $N_{\min}$ is the number of Chebyshev coefficients the oscillatory part of
+the panel needs, two per half-oscillation beyond the turning point $y = \nu$; below the
+turning point $j_\ell$ does not oscillate and the solution is smooth. Without the floor
+the test can be satisfied by the quiet leading coefficients of a solution whose
+oscillation has not yet been reached, and the delivered error then fails to decrease
+with the requested tolerance.
 
-Once the factorisation stops, back-substitution gives the coefficients, or,
-when only the boundary term is wanted, the endpoint derivatives directly,
+Once the factorisation stops, back-substitution gives the coefficients, or, when only
+the boundary term is wanted, the endpoint derivatives directly,
 $$
 u'(y_a) = \frac{1}{h}\sum_n (-1)^{n+1} n^2 a_n,
 \qquad
 u'(y_b) = \frac{1}{h}\sum_n n^2 a_n,
 $$
-from $T_n'(\pm1) = (\pm1)^{n+1} n^2$. The rotations are stored with the
-operator. A new right-hand side on the same panel and block replays them in
-$O(N)$ and extends the factorisation only if its own stopping test asks for
-more columns. Because the bandwidth is fixed, the whole solve is $O(N)$ per
-multipole, which is what makes discovering $N$ affordable.
+from $T_n'(\pm1) = (\pm1)^{n+1} n^2$. The rotations are stored with the operator. A new
+right-hand side on the same panel and block replays them in $O(N)$ and extends the
+factorisation only if its own stopping test asks for more columns. Because the
+bandwidth is fixed, the whole solve is $O(N)$ per multipole, which is what makes
+discovering $N$ affordable.
 
 ```{python}
 #| label: fig-qr-stop
 #| fig-cap: >
-#|   Chebyshev coefficients of u on the panel [100, 316] at three solver tolerances.
-#|   The adaptive QR stops where the coefficients fall below the tolerance relative to
-#|   the largest one, never before the floor N_min of Eq. (3), here 138 for this panel
-#|   and l = 20.
+#|   Chebyshev coefficients of u on the panel [100, 316] for l = 20. The three
+#|   tolerances return the same coefficients to within 1e-9 and differ only in where
+#|   the factorisation stops, so the curve is drawn once and each tolerance is marked
+#|   by its stopping column. The floor N_min of Eq. (3) is 138 here, which is where
+#|   the loosest tolerance stops: the floor holds it, not the decay test.
 fig, ax = plt.subplots(figsize=(6, 3.4))
 nmin = int(np.ceil(2.0 / np.pi * (b - max(a, np.sqrt(ell * (ell + 1))))))
+
+# The three tolerances return the same coefficients to within 1e-9 wherever they
+# overlap; only the stopping column differs. Plotting all three would hide the
+# first two under the longest, so the curve is drawn once and each tolerance
+# contributes its stopping column.
+stops = {}
 for tol in (1.0e-4, 1.0e-8, 1.0e-12):
     solver.set_tolerance(tol)
     op = solver.create_operator(a, b, ell, ell)
     cf, n = op.solve(np.concatenate([[0.0, 0.0], g]))
-    cf = np.abs(np.array(cf)) / np.max(np.abs(cf))
-    ax.semilogy(cf, ".", ms=3, label=f"tolerance {tol:g}: {n} coefficients")
-ax.axvline(nmin, color="k", ls="--", lw=0.8, label=f"N_min = {nmin}")
-ax.set_xlabel("n"); ax.set_ylabel("|a_n| / max |a_n|"); ax.legend(fontsize=8)
+    stops[tol] = n
+    coeffs = np.abs(np.array(cf)) / np.max(np.abs(cf))
+
+ax.semilogy(coeffs, ".", ms=3, color="0.45")
+for (tol, n), col in zip(stops.items(), ("C0", "C1", "C2")):
+    ax.axvline(n, color=col, lw=1.2, label=f"tolerance {tol:g} stops at n = {n}")
+ax.axvline(nmin, color="k", ls="--", lw=1.0, label=f"N_min = {nmin}")
+ax.set_xlabel("n")
+ax.set_ylabel("|a_n| / max |a_n|")
+ax.legend(fontsize=8)
 plt.tight_layout()
 ```
 
 ## Conjugate points
 
 A two-point Dirichlet problem is singular when the homogeneous equation has a
-solution vanishing at both ends. With $j_\ell = M\cos\theta$ and $y_\ell = M
-\sin\theta$ in amplitude-phase form, the boundary determinant is
+solution vanishing at both ends. Write the pair $(j_\ell, y_\ell)$ in polar form,
+$M \equiv \sqrt{j_\ell^2 + y_\ell^2}$ and $\theta \equiv \arctan(y_\ell/j_\ell)$, so
+that $j_\ell = M\cos\theta$ and $y_\ell = M\sin\theta$ hold by construction. The
+boundary determinant is then
 $$
 \Phi_\ell(y_a, y_b) = j_\ell(y_a)\,y_\ell(y_b) - j_\ell(y_b)\,y_\ell(y_a)
  = M(y_a)\,M(y_b)\,\sin\!\big(\theta(y_b) - \theta(y_a)\big),
 $$
-so the panel is singular when the phase advances by a multiple of $\pi$
-across it. The phase is not $y$: in the oscillatory regime it is the WKB phase
+which is an identity rather than an approximation: it is angle subtraction applied to
+a definition. The panel is singular when the phase advances by a multiple of $\pi$
+across it.
+
+The approximation enters when that phase is evaluated. The phase is not $y$; above the
+turning point it is given asymptotically by the WKB expression
 $$
-\theta_\ell(y) = \sqrt{y^2 - \nu^2} - \nu \arccos\frac{\nu}{y},
+\theta_\ell(y) \simeq \sqrt{y^2 - \nu^2} - \nu \arccos\frac{\nu}{y},
 \tag{4}
 $$
-which reproduces the measured conjugate spans to four decimals for $\ell$ from
-2 to 300, while the rule "span equal to $n\pi$" is off by up to half a period
-at $\ell \gtrsim 50$. Below the turning point $\theta$ is imaginary and
+whose accuracy improves with $\ell$: measured against $\arctan(y_\ell/j_\ell)$ over a
+window of $60$ in $y$ above the turning point, the two phases drift apart by
+$4\times10^{-2}$ rad at $\ell = 2$ and by $3\times10^{-4}$ rad at $\ell = 300$. Only the
+increment $\Delta\theta$ across a panel decides a conjugate point, so a constant offset
+between the two is harmless. Eq. (4) reproduces the measured conjugate spans to four
+decimals for $\ell$ from 2 to 300, while the rule "span equal to $n\pi$" is off by up to
+half a period at $\ell \gtrsim 50$. Below the turning point Eq. (4) is not real and
 there are no conjugate points. The condition number of the boundary matrix
 also carries the amplitude ratio, $\kappa \sim [M(y_a)/M(y_b) + M(y_b)/M(y_a)]
-/ |\sin\Delta\theta|$, so a panel reaching from deep in the evanescent region
-into the oscillatory one is ill conditioned whatever its span.
+/ |\sin\Delta\theta|$, so a panel reaching from far below the turning point, where
+the amplitude is exponentially small, into the oscillatory region is ill conditioned
+whatever its span.
 
 ```{python}
 #| label: fig-conjugate
@@ -225,7 +293,9 @@ for l, col in ((2, "C0"), (50, "C3")):
     for n in range(20, 23):
         idx = np.argmin(np.abs(dth - n))
         ax.axvline(spans[idx] / np.pi, color=col, ls=":", lw=0.8)
-ax.set_xlabel("panel span / pi"); ax.set_ylabel("condition number"); ax.legend()
+ax.set_xlabel("panel span / pi")
+ax.set_ylabel("condition number")
+ax.legend()
 plt.tight_layout()
 ```
 
