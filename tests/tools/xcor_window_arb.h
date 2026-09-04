@@ -105,9 +105,14 @@ typedef struct
   double alpha, beta;
   /* lensing */
   double chi_source_lower, chi_source_upper;
-  /* multi */
+
+  /* multi. Bumps whose n_sigma supports meet form one group; the window is
+   * the sum of a group's bumps over the group's whole stretch and zero in the
+   * gaps between groups, as nc_xcor_kernel_analytic_multi.c defines it. */
   int n_bumps;
   double mu[MAX_BUMPS], sg[MAX_BUMPS], wt[MAX_BUMPS];
+  int n_groups;
+  double grp_lo[MAX_BUMPS], grp_hi[MAX_BUMPS];
 
   /* Scale-dependent growth, off unless kdep_on. Matches
    * _nc_xcor_kernel_radial_kdep_growth_eval(). */
@@ -123,6 +128,19 @@ typedef struct
   /* set while integrating: 0 = bare window, 1 = window times j_ell */
   int with_bessel;
 } Par;
+
+/* Index of the multi group holding chi, or -1 in a gap. */
+static int
+g_of (const Par *p, double c)
+{
+  int g;
+
+  for (g = 0; g < p->n_groups; g++)
+    if ((c >= p->grp_lo[g]) && (c <= p->grp_hi[g]))
+      return g;
+
+  return -1;
+}
 
 static void
 par_init (Par *p)
@@ -279,10 +297,23 @@ window_u (acb_t out, const acb_t chi, Par *p, slong order, slong prec)
     }
 
     case SHAPE_MULTI:
+    {
+      /* Zero in a gap between groups; inside a group, every bump of that group
+       * across the group's whole stretch. The caller places panel edges at the
+       * gap edges, so any one call lies wholly on one side of them, and the
+       * midpoint of chi is enough to select the group. */
+      const double c = arf_get_d (arb_midref (acb_realref (chi)), ARF_RND_NEAR);
+      const int g    = g_of (p, c);
+
       acb_zero (out);
 
-      for (i = 0; i < p->n_bumps; i++)
+      for (i = 0; (g >= 0) && (i < p->n_bumps); i++)
       {
+        const double lo_i = fmax (0.0, p->mu[i] - p->n_sigma * p->sg[i]);
+
+        if ((lo_i < p->grp_lo[g]) || (lo_i > p->grp_hi[g]))
+          continue;
+
         acb_set_d (t, p->mu[i]);
         acb_sub (u, chi, t, prec);
         acb_set_d (t, p->sg[i]);
@@ -296,6 +327,7 @@ window_u (acb_t out, const acb_t chi, Par *p, slong order, slong prec)
       }
 
       break;
+    }
 
     default:
       fprintf (stderr, "window_u: bad shape\n");
@@ -661,17 +693,60 @@ shape_support (Par *p)
       break;
 
     case SHAPE_MULTI:
-      p->chi_min = p->mu[0] - p->n_sigma * p->sg[0];
-      p->chi_max = p->mu[0] + p->n_sigma * p->sg[0];
+    {
+      /* Merge the bumps' supports into groups, as the library does: sort by
+       * lower edge, and a bump whose support starts inside the current group
+       * extends it. The window is zero between groups, so the gap edges are
+       * breakpoints. */
+      double lo[MAX_BUMPS], hi[MAX_BUMPS];
+      int j;
 
-      for (i = 1; i < p->n_bumps; i++)
+      for (i = 0; i < p->n_bumps; i++)
       {
-        p->chi_min = fmin (p->chi_min, p->mu[i] - p->n_sigma * p->sg[i]);
-        p->chi_max = fmax (p->chi_max, p->mu[i] + p->n_sigma * p->sg[i]);
+        lo[i] = fmax (0.0, p->mu[i] - p->n_sigma * p->sg[i]);
+        hi[i] = p->mu[i] + p->n_sigma * p->sg[i];
       }
 
-      p->chi_min = fmax (0.0, p->chi_min);
+      for (i = 1; i < p->n_bumps; i++)
+        for (j = i; (j > 0) && (lo[j] < lo[j - 1]); j--)
+        {
+          double s;
+
+          s         = lo[j];
+          lo[j]     = lo[j - 1];
+          lo[j - 1] = s;
+          s         = hi[j];
+          hi[j]     = hi[j - 1];
+          hi[j - 1] = s;
+        }
+
+      p->n_groups = 0;
+
+      for (i = 0; i < p->n_bumps; i++)
+      {
+        if ((p->n_groups > 0) && (lo[i] <= p->grp_hi[p->n_groups - 1]))
+        {
+          p->grp_hi[p->n_groups - 1] = fmax (p->grp_hi[p->n_groups - 1], hi[i]);
+        }
+        else
+        {
+          p->grp_lo[p->n_groups] = lo[i];
+          p->grp_hi[p->n_groups] = hi[i];
+          p->n_groups++;
+        }
+      }
+
+      p->chi_min = p->grp_lo[0];
+      p->chi_max = p->grp_hi[p->n_groups - 1];
+
+      for (i = 1; i < p->n_groups; i++)
+      {
+        p->breaks[p->n_break++] = p->grp_hi[i - 1];
+        p->breaks[p->n_break++] = p->grp_lo[i];
+      }
+
       break;
+    }
 
     default:
       fprintf (stderr, "shape_support: bad shape\n");

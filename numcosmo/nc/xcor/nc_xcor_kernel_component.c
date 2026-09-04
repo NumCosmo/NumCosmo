@@ -29,10 +29,12 @@
  * Abstract base class for cross-correlation kernel components.
  *
  * Subclasses must implement:
+ *
  * - `eval_kernel`: evaluates K(k, xi) for the component
  * - `eval_prefactor`: evaluates any k and $\ell$-dependent prefactor
  *
  * Optionally, subclasses can implement:
+ *
  * - `get_limits`: returns valid integration ranges for xi and k
  *
  * The class analyzes KL(k, y/k) with the Limber approximation.
@@ -530,7 +532,7 @@ nc_xcor_kernel_component_eval_k_max (NcXcorKernelComponent *comp, gdouble y)
  * @y: the y value (y = k * xi)
  *
  * Evaluates the maximum value of KL(k, y/k) at the given y value from kernel analysis
- * using the Limber approximation KL = sqrt(π/(2*y)) * K(y/k, k) / k.
+ * using the Limber approximation $K_L = \sqrt{\pi/(2y)}\,K(y/k, k)/k$.
  * This is the value of KL at k = k_max(y).
  *
  * Returns: the KL_max value at y

@@ -38,17 +38,6 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcXcorKernelTable, nc_xcor_kernel_table, NC, XCOR_KERNEL_TABLE, NcXcorKernelRadial)
 
-/**
- * NcXcorKernelTableKind:
- * @NC_XCOR_KERNEL_TABLE_KIND_DENSITY: the window multiplies $j_\ell(k\chi)$ directly
- * @NC_XCOR_KERNEL_TABLE_KIND_SHEAR: the window carries the shear factors
- *
- * What the tabulated window is a window *of*, which fixes the factors applied
- * on top of it. %NC_XCOR_KERNEL_TABLE_KIND_SHEAR reproduces CCL's
- * `der_bessel = -1`, `der_angles = 2`: the kernel gains $1/(k\chi)^2$ and the
- * multipole gains $\sqrt{(\ell+2)(\ell+1)\ell(\ell-1)}$.
- *
- */
 NcXcorKernelTable *nc_xcor_kernel_table_new (NcDistance * dist, NcmPowspec * ps, NcmVector * chi, NcmVector * W);
 NcXcorKernelTable *nc_xcor_kernel_table_new_full (NcDistance *dist, NcmPowspec *ps, NcmVector *chi, NcmVector *W, NcXcorKernelTableKind kind, guint order, gboolean normalize, NcmSBesselIntegrator *sbi);
 NcXcorKernelTable *nc_xcor_kernel_table_new_from_components (NcDistance *dist, NcmPowspec *ps, NcmObjArray *components, NcmSBesselIntegrator *sbi);

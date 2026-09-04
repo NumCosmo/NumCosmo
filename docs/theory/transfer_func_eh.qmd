@@ -1,8 +1,6 @@
 ---
-title: Eisenstein–Hu Transfer Function
+title: Eisenstein--Hu Transfer Function
 ---
-
-# Eisenstein–Hu Transfer Function
 
 This page describes the Eisenstein & Hu (1998) fitting function for the matter
 transfer function implemented by `NcTransferFuncEH`. The full fit, including

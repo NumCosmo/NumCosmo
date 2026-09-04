@@ -819,6 +819,7 @@ ncm_var_dict_set_boolean_array (NcmVarDict *vd, const gchar *key, GArray *value)
  * with key @key, it is unreferenced.
  *
  * Valid #GVariant types are:
+ *
  * - G_VARIANT_TYPE_STRING
  * - G_VARIANT_TYPE_INT32
  * - G_VARIANT_TYPE_DOUBLE

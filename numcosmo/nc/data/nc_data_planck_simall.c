@@ -26,7 +26,7 @@
 /**
  * NcDataPlanckSimall:
  *
- * Planck low-ℓ simall (SimAll) polarization likelihood, native port.
+ * Planck low-$\ell$ simall (SimAll) polarization likelihood, native port.
  *
  * A per-multipole tabulated likelihood: each theory $D_\ell = C_\ell
  * \ell(\ell+1)/2\pi$ (with $C_\ell$ divided by $A_\mathrm{planck}^2$) indexes a

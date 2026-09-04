@@ -130,10 +130,11 @@ typedef enum _NcmMPIJobCtrlMsg /*< prefix=NCM_MPI_CTRL_SLAVE >*/
  * #NCM_MPI_CTRL_SLAVE_KILL should not be followed by any message. The slave will exit.
  *
  * Slaves receive messages with tags below:
+ *
  * - Waits for a message with tag @NCM_MPI_CTRL_TAG_CMD:
- *   - If the control message is #NCM_MPI_CTRL_SLAVE_INIT, the slave receives #NCM_MPI_CTRL_TAG_JOB with the serialized job.
- *   - If the control message is #NCM_MPI_CTRL_SLAVE_WORK, the slave receives #NCM_MPI_CTRL_TAG_WORK_INPUT with the serialized input.
- *   - After #NCM_MPI_CTRL_SLAVE_WORK, the slave sends @NCM_MPI_CTRL_TAG_WORK_RETURN with the serialized return.
+ *     - If the control message is #NCM_MPI_CTRL_SLAVE_INIT, the slave receives #NCM_MPI_CTRL_TAG_JOB with the serialized job.
+ *     - If the control message is #NCM_MPI_CTRL_SLAVE_WORK, the slave receives #NCM_MPI_CTRL_TAG_WORK_INPUT with the serialized input.
+ *     - After #NCM_MPI_CTRL_SLAVE_WORK, the slave sends @NCM_MPI_CTRL_TAG_WORK_RETURN with the serialized return.
  *
  */
 typedef enum _NcmMPIJobCtrlTag /*< prefix=NCM_MPI_CTRL_TAG >*/

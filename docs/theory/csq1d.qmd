@@ -2,8 +2,6 @@
 title: CSQ1D Formalism
 ---
 
-# CSQ1D Formalism
-
 This page describes the complex-structure formalism implemented by
 `NcmCSQ1D`.
 

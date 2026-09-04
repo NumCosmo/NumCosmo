@@ -29,8 +29,8 @@
  * Spectral methods for function approximation.
  *
  * Represents a function on an interval by its Chebyshev series, computed
- * adaptively on nested Chebyshev–Lobatto grids via FFTW. Provides
- * Clenshaw–Curtis integration, Clenshaw evaluation and differentiation, and the
+ * adaptively on nested Chebyshev-Lobatto grids via FFTW. Provides
+ * Clenshaw-Curtis integration, Clenshaw evaluation and differentiation, and the
  * banded ultraspherical (Gegenbauer) operators of the well-conditioned spectral
  * method.
  *
@@ -713,7 +713,7 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
  * @user_data: user data for @F
  *
  * Computes @order Chebyshev coefficients of $f(x)$ on $[a,b]$ at fixed resolution,
- * sampling @F at the Chebyshev–Lobatto nodes and applying FFTW DCT-I. See the
+ * sampling @F at the Chebyshev-Lobatto nodes and applying FFTW DCT-I. See the
  * <a href="../../theory/spectral.html">Spectral Methods</a> page for the node
  * placement and coefficient normalization.
  *
@@ -1155,7 +1155,7 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
  * @user_data: user data for @F
  *
  * Computes Chebyshev coefficients of $f(x)$ on $[a,b]$ adaptively, starting at
- * level @k_min and doubling the nested Chebyshev–Lobatto grid until the
+ * level @k_min and doubling the nested Chebyshev-Lobatto grid until the
  * coefficients converge to @tol. Only the new odd nodes are evaluated at each
  * refinement. Reaching `max-order` without converging is a fatal error:
  * `max-order` bounds memory, it is not an alternative stopping condition. See
@@ -1230,7 +1230,7 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive_full (NcmSpectral *spectral, NcmS
  * Computes the Chebyshev coefficients of the weighted function
  * $F(x(t))\sqrt{1-t^2}\,h$, with $h = (b-a)/2$, using the same adaptive nested
  * grids as ncm_spectral_compute_chebyshev_coeffs_adaptive(). The weight turns
- * the expansion into a Clenshaw–Curtis quadrature: $\int_a^b F(x)\,dx = \pi\,$
+ * the expansion into a Clenshaw-Curtis quadrature: $\int_a^b F(x)\,dx = \pi\,$
  * coeffs[0], and weighted inner products $\int_a^b F(x)G(x)\,dx$ follow from
  * these coefficients and the standard coefficients of $G$. See the
  * <a href="../../theory/spectral.html">Spectral Methods</a> page for the
@@ -2424,6 +2424,7 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  * Adds to existing row data (for linear combinations of operators).
  *
  * Matrix entries for row k:
+ *
  * - column k: coeff * 1/(2*(k+1))
  * - column k+2: coeff * -(k+2)/((k+1)*(k+3))
  * - column k+4: coeff * 1/(2*(k+3))
@@ -2446,6 +2447,7 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  * Adds to existing row data (for linear combinations of operators).
  *
  * Matrix entries for row k:
+ *
  * - If k >= 1: column k-1: coeff * 1/(4*(k+1))
  * - column k+1: coeff * -1/(4*(k+3))
  * - column k+3: coeff * -1/(4*(k+1))
@@ -2470,6 +2472,7 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  * Adds to existing row data (for linear combinations of operators).
  *
  * Matrix entries for row k:
+ *
  * - If k >= 2: column k-2: coeff * 1/(8*(k+1))
  * - column k: coeff * 1/(4*(k+1)*(k+3))
  * - column k+2: coeff * -(k+2)/(4*(k+1)*(k+3))
@@ -2495,6 +2498,7 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  * Adds to existing row data (for linear combinations of operators).
  *
  * Matrix entries for row k:
+ *
  * - column k+1: coeff * 1.0
  * - column k+3: coeff * (-1.0)
  */
@@ -2515,6 +2519,7 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  * Adds to existing row data (for linear combinations of operators).
  *
  * Matrix entries for row k:
+ *
  * - column k: coeff * k/(2*(k+1))
  * - column k+2: coeff * (k+2)/((k+1)*(k+3))
  * - column k+4: coeff * -(k+4)/(2*(k+3))
@@ -2536,6 +2541,7 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  * Adds to existing row data (for linear combinations of operators).
  *
  * Matrix entries for row k:
+ *
  * - column k+2: coeff * 2*(k+2) (single non-zero entry)
  */
 
@@ -2555,6 +2561,7 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  * Adds to existing row data (for linear combinations of operators).
  *
  * Matrix entries for row k:
+ *
  * - column k+1: coeff * k
  * - column k+3: coeff * (k+4)
  */
@@ -2575,6 +2582,7 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  * Adds to existing row data (for linear combinations of operators).
  *
  * Matrix entries for row k:
+ *
  * - column k: coeff * k*(k-1)/(2*(k+1))
  * - column k+2: coeff * (k+2)*((k+2)^2 - 3)/((k+1)*(k+3))
  * - column k+4: coeff * (k+4)*(k+5)/(2*(k+3))

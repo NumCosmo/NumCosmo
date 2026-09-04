@@ -23,6 +23,8 @@ project:
     - theory/halo_density_profile.qmd
     - theory/fftlog.qmd
     - theory/spectral.qmd
+    - theory/sbessel_projection.qmd
+    - theory/sbessel_ode_solver.qmd
     - theory/ssc.qmd
     - theory/castro_hmf.qmd
     - benchmarks/ccl_background.qmd
@@ -121,6 +123,7 @@ website:
               - href: tutorials/python/xcor_accuracy.qmd
                 text: "Angular Power Spectrum Accuracy"
       - section: theory/index.qmd
+        text: "Theory"
         contents:
           - section: "Background & Thermal History"
             contents:
@@ -158,6 +161,10 @@ website:
                 text: "FFTLog"
               - href: theory/spectral.qmd
                 text: "Spectral Methods"
+              - href: theory/sbessel_projection.qmd
+                text: Spherical Bessel Projections
+              - href: theory/sbessel_ode_solver.qmd
+                text: "Ultraspherical Spectral Solver"
               - href: theory/csq1d.qmd
                 text: "CSQ1D Formalism"
       - section: examples/index.qmd
@@ -191,6 +198,7 @@ website:
               - href: examples/intro/epdf.qmd
                 text: "Empirical PDF"
       - section: benchmarks/index.qmd
+        text: "Validation"
         contents:
           - href: benchmarks/ccl_background.qmd
             text: "CCL Background"

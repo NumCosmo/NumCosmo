@@ -501,7 +501,7 @@ class TestSBesselIntegratorLevin:
         # Compute all relative errors: shape (n_ells, n_k)
         rel_errors = np.zeros((n_ells, n_k))
 
-        # Iterate over ell blocks first to leverage caching
+        # Iterate over ell blocks first to reuse the cache
         for ell0 in range(ell_min, ell_max + 1, ell_block_size):
             ell1 = min(ell0 + ell_block_size - 1, ell_max)
             n_ell = ell1 - ell0 + 1
@@ -697,7 +697,7 @@ class TestSBesselIntegratorLevin:
         a, b = 5.0, 5.001
         result = integrator.integrate_ell(f_test, a, b, 1.0, 5)
 
-        # For narrow intervals, approximate j_l(k*x) ≈ j_l(k*x_mid)
+        # For narrow intervals, approximate j_l(k*x) ~= j_l(k*x_mid)
         def integrand(x: float) -> float:
             return x * spherical_jn(5, x)
 

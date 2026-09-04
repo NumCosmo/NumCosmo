@@ -40,9 +40,10 @@ G_BEGIN_DECLS
  * @user_data: user-provided data pointer passed through from the caller
  * @x: evaluation point in the physical domain (not the mapped Chebyshev domain)
  *
- * Callback function type for the right-hand side forcing term $f(x)$ in the
- * modified spherical Bessel ODE. The function is evaluated at physical coordinates
- * $x \in [a,b]$ and should return $f(x)$ corresponding to the inhomogeneous term.
+ * Callback function type for the forcing term $f(x)$ in the spherical Bessel ODE in
+ * Riccati-Bessel form $u = x y$, whose right-hand side is $x f(x)$. The function is
+ * evaluated at physical coordinates $x \in [a,b]$ and returns $f(x)$ itself, not the
+ * right-hand side.
  *
  * Returns: the value $f(x)$ at the given point @x
  */
@@ -53,21 +54,25 @@ typedef gdouble (*NcmSBesselOdeSolverF) (gpointer user_data, gdouble x);
  *
  * Opaque boxed type for a configured spectral operator.
  *
- * Represents a fully configured two-point boundary value problem for the modified
- * spherical Bessel ODE over a specific interval $[a, b]$ and angular momentum range
- * $[\ell_{\min}, \ell_{\max}]$. Encapsulates:
- * - Problem parameters: interval endpoints, angular momentum range, and tolerance
+ * Represents a fully configured two-point boundary value problem for the spherical
+ * Bessel ODE in Riccati-Bessel form over a specific interval $[a, b]$ and angular
+ * momentum range $[\ell_{\min}, \ell_{\max}]$. Encapsulates:
+ *
+ * - Problem parameters: interval endpoints, multipole range, and tolerance
  * - Discretized system: banded matrix representation and right-hand side storage
  * - Factorization state: adaptive QR decomposition and spectral truncation order
  *
- * Operators are created from a #NcmSBesselOdeSolver via ncm_sbessel_ode_solver_create_operator()
- * and managed via reference counting. Once created, an operator can be:
+ * Operators are created from a #NcmSBesselOdeSolver via
+ * ncm_sbessel_ode_solver_create_operator() and managed via reference counting. Once
+ * created, an operator can be:
+ *
  * - Reused for multiple right-hand sides with the same $[a,b]$ and $[\ell_{\min}, \ell_{\max}]$
- * - Reconfigured for different parameters via ncm_sbessel_ode_operator_reset()
+ * - Reconfigured for another interval or multipole range via
+ *   ncm_sbessel_ode_solver_reconfigure_operator()
  * - Deallocated via ncm_sbessel_ode_operator_unref()
  *
- * Batched mode (multiple $\ell$ values) is automatically selected and optimized based on
- * $n_\ell = \ell_{\max} - \ell_{\min} + 1$.
+ * Batched mode (multiple $\ell$ values) is automatically selected and optimized based
+ * on $n_\ell = \ell_{\max} - \ell_{\min} + 1$.
  */
 typedef struct _NcmSBesselOdeOperator NcmSBesselOdeOperator;
 
@@ -93,11 +98,11 @@ NcmVector *ncm_sbessel_ode_solver_solve_dense (NcmSBesselOdeSolver *solver, cons
 NcmSpectral *ncm_sbessel_ode_solver_peek_spectral (NcmSBesselOdeSolver *solver);
 
 NcmSBesselOdeOperator *ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, gdouble b, gint ell_min, gint ell_max);
+void ncm_sbessel_ode_solver_reconfigure_operator (NcmSBesselOdeSolver *solver, NcmSBesselOdeOperator *op, gdouble a, gdouble b, gint ell_min, gint ell_max);
 NcmSBesselOdeOperator *ncm_sbessel_ode_operator_ref (NcmSBesselOdeOperator *op);
 void ncm_sbessel_ode_operator_unref (NcmSBesselOdeOperator *op);
 void ncm_sbessel_ode_operator_clear (NcmSBesselOdeOperator **op);
 
-void ncm_sbessel_ode_operator_reset (NcmSBesselOdeOperator *op, gdouble a, gdouble b, gint ell_min, gint ell_max);
 
 void ncm_sbessel_ode_operator_get_interval (NcmSBesselOdeOperator *op, gdouble *a, gdouble *b);
 void ncm_sbessel_ode_operator_get_ell_range (NcmSBesselOdeOperator *op, gint *ell_min, gint *ell_max);

@@ -28,7 +28,7 @@
  * Weak lensing surface mass density.
  *
  * This object implements the projected surface mass density and related
- * weak-lensing observables — convergence and tangential shear — from a halo
+ * weak-lensing observables -- convergence and tangential shear -- from a halo
  * density profile (#NcHaloDensityProfile). The projected surface mass density is
  * \begin{equation*}
  * \Sigma(R) = \int \mathrm{d}\chi\,\rho\!\left(\sqrt{R^2 + \chi^2}\right),

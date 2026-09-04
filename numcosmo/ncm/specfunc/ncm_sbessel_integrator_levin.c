@@ -50,6 +50,10 @@
  * For high multipoles, vector cubature evaluates the integrand and all requested
  * spherical Bessel functions together.
  *
+ * See <a href="../../theory/sbessel_projection.html">Projection Integrals with
+ * Spherical Bessel Weights</a> for the derivation, the fixed panel grid in $y$,
+ * and the conjugate-point condition on a panel's span.
+ *
  * ## Accuracy limit from panel placement
  *
  * Panel edges come from the fixed $y$-knot grid
@@ -646,10 +650,12 @@ _ncm_sbessel_integrator_levin_prepare_ell_cache (NcmSBesselIntegratorLevin *sbil
  * @ell_max: maximum multipole
  *
  * Prepares ODE operators for the knots-based paneling system:
+ *
  * - Pre-allocated ODE operators for each panel between consecutive knots
  * - Two temporary operators for edge panels [a, smallest_knot > a] and [largest_knot < b, b]
  *
- * Uses ncm_sbessel_ode_operator_reset() to efficiently update operators when ell range changes.
+ * Uses ncm_sbessel_ode_solver_reconfigure_operator() to update operators in place when the
+ * multipole range or the tolerance changes.
  */
 static void
 _ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin *sbilv, guint ell_min, guint ell_max)
@@ -682,8 +688,6 @@ _ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin
         g_ptr_array_add (sbilv->operators, op);
       }
 
-      /* set_reltol() re-enters this branch to rebuild every operator, so the
-       * previous temporaries must go before the new ones take their place. */
       ncm_sbessel_ode_operator_clear (&sbilv->ode_operator_temp_a);
       ncm_sbessel_ode_operator_clear (&sbilv->ode_operator_temp_b);
 
@@ -702,12 +706,12 @@ _ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin
         const gdouble y_a         = g_array_index (sbilv->knots, gdouble, i);
         const gdouble y_b         = g_array_index (sbilv->knots, gdouble, i + 1);
 
-        ncm_sbessel_ode_operator_reset (op, y_a, y_b, ell_min, ell_max);
+        ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, op, y_a, y_b, ell_min, ell_max);
       }
 
       /* Reset temporary operators */
-      ncm_sbessel_ode_operator_reset (sbilv->ode_operator_temp_a, 0.0, 1.0, ell_min, ell_max);
-      ncm_sbessel_ode_operator_reset (sbilv->ode_operator_temp_b, 0.0, 1.0, ell_min, ell_max);
+      ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, sbilv->ode_operator_temp_a, 0.0, 1.0, ell_min, ell_max);
+      ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, sbilv->ode_operator_temp_b, 0.0, 1.0, ell_min, ell_max);
       sbilv->ode_operator_temp_a_valid = FALSE;
       sbilv->ode_operator_temp_b_valid = FALSE;
     }
@@ -839,6 +843,7 @@ _ncm_sbessel_integrator_levin_build_rhs (NcmSBesselIntegratorLevin *sbilv, gdoub
  * @user_data: user data for integrand
  *
  * Computes the RHS for the Levin ODE by:
+ *
  * 1. Computing Chebyshev coefficients for f(y) = K(y/k, k)/k
  * 2. Converting to Gegenbauer C^(2) basis
  * 3. Setting up RHS with homogeneous boundary conditions
@@ -923,7 +928,7 @@ _ncm_sbessel_integrator_levin_get_panel_resources (NcmSBesselIntegratorLevin *sb
         (sbilv->ode_operator_temp_a_ell_min != ell_min) ||
         (sbilv->ode_operator_temp_a_ell_max != ell_max))
     {
-      ncm_sbessel_ode_operator_reset (op, a_p, b_p, ell_min, ell_max);
+      ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, op, a_p, b_p, ell_min, ell_max);
       sbilv->ode_operator_temp_a_a       = a_p;
       sbilv->ode_operator_temp_a_b       = b_p;
       sbilv->ode_operator_temp_a_ell_min = ell_min;
@@ -941,7 +946,7 @@ _ncm_sbessel_integrator_levin_get_panel_resources (NcmSBesselIntegratorLevin *sb
         (sbilv->ode_operator_temp_b_ell_min != ell_min) ||
         (sbilv->ode_operator_temp_b_ell_max != ell_max))
     {
-      ncm_sbessel_ode_operator_reset (op, a_p, b_p, ell_min, ell_max);
+      ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, op, a_p, b_p, ell_min, ell_max);
       sbilv->ode_operator_temp_b_a       = a_p;
       sbilv->ode_operator_temp_b_b       = b_p;
       sbilv->ode_operator_temp_b_ell_min = ell_min;
@@ -1397,6 +1402,7 @@ _ncm_sbessel_integrator_levin_integrate_extended_panel (NcmSBesselIntegratorLevi
  * @user_data: user data for integrand
  *
  * High-level wrapper that integrates a single panel by:
+ *
  * 1. Acquiring panel resources (j_ell arrays and operator)
  * 2. Solving the Levin ODE and accumulating results
  *
@@ -1679,7 +1685,7 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
     j_b_p = sbilv->j_array_b;
 
     op = sbilv->ode_operator;
-    ncm_sbessel_ode_operator_reset (op, y_min, y_max, ell_min, ell_max);
+    ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, op, y_min, y_max, ell_min, ell_max);
 
     _ncm_sbessel_integrator_levin_solve_and_accumulate (sbilv, spectral, op,
                                                         F, y_min, y_max, j_a_p, j_b_p, k,
@@ -1879,6 +1885,7 @@ ncm_sbessel_integrator_levin_get_panel_contrib (NcmSBesselIntegratorLevin *sbilv
  * @ell_max: maximum multipole
  *
  * Creates a new #NcmSBesselIntegratorLevin with default parameters:
+ *
  * - y_knots_min = %NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_Y_KNOTS_MIN
  * - y_knots_max = %NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_Y_KNOTS_MAX
  * - n_knots = %NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_N_KNOTS
@@ -2036,13 +2043,34 @@ ncm_sbessel_integrator_levin_set_reltol (NcmSBesselIntegratorLevin *sbilv, gdoub
   sbilv->reltol = reltol;
   ncm_sbessel_ode_solver_set_tolerance (sbilv->ode_solver, reltol);
 
-  if (sbilv->operators != NULL)
+  if (sbilv->operators == NULL)
   {
-    g_ptr_array_unref (sbilv->operators);
-    sbilv->operators = NULL;
+    _ncm_sbessel_integrator_levin_prepare_knots_operators (sbilv, sbilv->alloc_ell_min, sbilv->alloc_ell_max);
   }
+  else
+  {
+    /* Each operator holds its own copy of the tolerance, so all of them have to be
+     * moved to the new one. Their intervals and multipole range do not change. */
+    const guint ell_min = sbilv->alloc_ell_min;
+    const guint ell_max = sbilv->alloc_ell_max;
+    guint i;
 
-  _ncm_sbessel_integrator_levin_prepare_knots_operators (sbilv, sbilv->alloc_ell_min, sbilv->alloc_ell_max);
+    g_hash_table_remove_all (sbilv->edge_operators);
+
+    for (i = 0; i < sbilv->operators->len; i++)
+    {
+      NcmSBesselOdeOperator *op = g_ptr_array_index (sbilv->operators, i);
+      const gdouble y_a         = g_array_index (sbilv->knots, gdouble, i);
+      const gdouble y_b         = g_array_index (sbilv->knots, gdouble, i + 1);
+
+      ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, op, y_a, y_b, ell_min, ell_max);
+    }
+
+    ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, sbilv->ode_operator_temp_a, 0.0, 1.0, ell_min, ell_max);
+    ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, sbilv->ode_operator_temp_b, 0.0, 1.0, ell_min, ell_max);
+    sbilv->ode_operator_temp_a_valid = FALSE;
+    sbilv->ode_operator_temp_b_valid = FALSE;
+  }
 }
 
 /**

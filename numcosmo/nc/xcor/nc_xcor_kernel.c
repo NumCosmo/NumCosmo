@@ -40,6 +40,11 @@
  * where $\delta$ is the matter density field.
  *
  * Kernels also implement the noise power spectrum.
+ *
+ * See <a href="../../theory/sbessel_projection.html">Projection Integrals with
+ * Spherical Bessel Weights</a> for the pipeline a kernel drives: the adaptive
+ * $k$ domain, the closure fitted to $W_\ell(k)$, and the error estimate the fit
+ * residuals feed.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -403,6 +408,11 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * Smooth kernels (galaxy, weak lensing, CMB lensing, tSZ) have amplitude and
    * integral contributions that fall off together, making the criterion a more direct
    * indication of the relevant integration range.
+   *
+   * The same criterion is applied to each component of a multi-component kernel,
+   * which is then dropped from the sum beyond its own range. Components whose
+   * $\chi$ supports touch or overlap are pieces of one window and are judged and
+   * dropped together, on the size of their sum.
    */
   g_object_class_install_property (object_class,
                                    PROP_ADAPTIVE_EPSILON,
@@ -435,7 +445,7 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    *
    * Refinement accepts an interval when
    * $\Vert f - \tilde f \Vert_2 \le \mathrm{reltol} \Vert f \Vert_2 + a \Vert f
-   * \Vert_2^\mathrm{max}$, a **sum**. Whichever term is larger decides where
+   * \Vert_2^\mathrm{max}$, a sum. Whichever term is larger decides where
    * refinement stops, so tightening the other one alone changes nothing at all.
    * Measured on a Gaussian kernel, accuracy gained over the 1e-4/1e-4 defaults:
    *
@@ -527,19 +537,30 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
   /**
    * NcXcorKernel:track-fit-residual:
    *
-   * Whether the closure records the residual its fit actually achieved on each
-   * knot interval, which is what nc_xcor_compute_full() turns into an error
-   * estimate. On by default: without it the estimate has only
+   * Whether the closure records the residual its fit achieved on each interval
+   * it is a single polynomial on -- a knot interval of a spline closure, a
+   * panel of a Chebyshev one. That record is what nc_xcor_compute_full() turns
+   * into an error estimate. On by default: without it the estimate has only
    * #NcXcorKernel:reltol and #NcXcorKernel:scaled-abstol to work from -- the
    * tolerances the fit was asked for, which it beats by 12 to 3100 times
    * depending on the kernel, so the resulting bound tracks the pair's
    * cancellation rather than its accuracy.
    *
-   * The record costs one double per knot per multipole in the block, about
+   * Each representation records what its own acceptance test measured. A
+   * spline records $|f - s|$ at the interval's midpoint, measured on the pass
+   * that accepted the interval; see ncm_function_sample_set_get_residuals(). A
+   * Chebyshev panel is accepted when doubling its order moves the expansion by
+   * less than the tolerance, so it records the $l^1$ mass of the modes the
+   * previous order did not carry; that mass bounds the sup-norm error of the
+   * order the panel keeps.
+   *
+   * The record costs one double per interval per multipole in the block, about
    * what the closure's own spline data costs, and #NcXcorSolver holds one
    * closure per kernel per $\ell$ block. Turn it off to get that memory back
-   * from a run that never asks for an error.
-   *
+   * from a run that never asks for an error. The Chebyshev closure reads its
+   * record off coefficients it has already computed, so nothing is saved there
+   * by turning it off; the property applies to both representations so that
+   * @vp_err means the same thing on either.
    */
   g_object_class_install_property (object_class,
                                    PROP_TRACK_FIT_RESIDUAL,
@@ -555,7 +576,7 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * Highest Chebyshev order tried on one panel before it is bisected, as
    * $N = 2^\\mathrm{cap} + 1$ coefficients.
    *
-   * **This is a heuristic, and the default is fitted rather than derived.** The
+   * This is a heuristic, and the default is fitted rather than derived. The
    * cap trades waste against panel count: a panel that fails to converge at it
    * discards its whole grid before splitting, so a high cap wastes more per
    * failure while a low one fails more often. Neither side has a closed form,
@@ -571,8 +592,8 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * Uniformly best at 5 there, and accuracy did not move with it. But those are
    * two kernel families at one multipole range on one machine, and the optimum
    * depends on how a window's phase is distributed across its domain -- which
-   * is a property of the kernel, not of the library. **A caller with a
-   * different kernel should sweep this rather than assume 5 transfers**, and it
+   * is a property of the kernel, not of the library. A caller with a
+   * different kernel should sweep this rather than assume 5 transfers, and it
    * is a property rather than a compile-time constant so that they can.
    *
    * Zero selects the default.
@@ -1005,6 +1026,7 @@ typedef struct _ComponentState
   gdouble last_values_right[MAX_ELL_BLOCK];
   guint left_boundary_found;
   guint right_boundary_found;
+  guint group;                             /* Components truncated together, see _component_states_init_non_limber */
   gdouble k_min_limber_ell[MAX_ELL_BLOCK]; /* Per-ell minimum k for Limber */
   gdouble k_max_limber_ell[MAX_ELL_BLOCK]; /* Per-ell maximum k for Limber */
   ComponentParams params;
@@ -1024,6 +1046,11 @@ typedef struct _ComponentStates
   const gdouble epsilon;
   const guint adaptive_boundary_tries;
   const gboolean is_limber; /* k_min_limber_ell/k_max_limber_ell are set only then */
+
+  /* Chebyshev path only. While a panel is being expanded a component is on or
+   * off for the whole panel, decided at panel_mid against its boundaries. */
+  gboolean panel_mode;
+  gdouble panel_mid;
 } ComponentStates;
 
 static void
@@ -1122,9 +1149,46 @@ _component_states_init_non_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
     /* Compute global hard limits as intersection of all component limits */
     comp_states.k_min_hard = GSL_MAX (comp_states.k_min_hard, state->k_min_hard);
     comp_states.k_max_hard = GSL_MIN (comp_states.k_max_hard, state->k_max_hard);
+
+    state->group = i;
   }
 
   g_assert_cmpfloat (comp_states.k_min_hard, <, comp_states.k_max_hard);
+
+  /* Components whose chi supports touch or overlap are pieces of one window
+   * and are truncated together. The k-space tail of a piece is set by its
+   * edges, and at an edge shared by two pieces the two tails cancel in the sum.
+   * A piece cut on its own size leaves its partner's edge tail behind: an
+   * oscillation absent from the sum, as large as the cut allowed, over the
+   * whole range where the partner is still integrated. Measured on
+   * NcXcorKernelAnalyticLensing at ell 50-57, fitted to 1e-8: 256 panels of 33
+   * coefficients on that tail alone.
+   *
+   * Grouping is transitive, so a chain of touching components is one group.
+   * Merging relabels every member of the absorbed group, O(n_comp) per
+   * overlapping pair, with n_comp at most MAX_COMP_BLOCK. */
+  for (i = 0; i < n_comp; i++)
+  {
+    guint j;
+
+    for (j = 0; j < i; j++)
+    {
+      ComponentState *si = &comp_states.states[i];
+      ComponentState *sj = &comp_states.states[j];
+      const gdouble tol  = 1.0e-9 * GSL_MAX (si->xi_max, sj->xi_max);
+
+      if ((si->xi_min <= sj->xi_max + tol) && (sj->xi_min <= si->xi_max + tol))
+      {
+        const guint gi = si->group;
+        const guint gj = sj->group;
+        guint m;
+
+        for (m = 0; m < n_comp; m++)
+          if (comp_states.states[m].group == gj)
+            comp_states.states[m].group = gi;
+      }
+    }
+  }
 
   return comp_states;
 }
@@ -1336,8 +1400,12 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
 {
   ComponentStates *comp_states = (ComponentStates *) user_data;
   gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
+  gdouble group_sum[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
+  gboolean integrated[MAX_COMP_BLOCK];
   gdouble l2_norm = 0.0;
   guint ci, i;
+
+  memset (group_sum, 0, sizeof (group_sum));
 
   /* Compute kernel for each component */
   for (ci = 0; ci < comp_states->n_comp; ci++)
@@ -1346,14 +1414,14 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
     ComponentState *state                = &comp_states->states[ci];
     const gboolean right_boundary_found  = state->right_boundary_found >= comp_states->adaptive_boundary_tries;
     const gboolean left_boundary_found   = state->left_boundary_found >= comp_states->adaptive_boundary_tries;
-    const gboolean within_left_boundary  = !left_boundary_found || (k >= state->last_k_left);
-    const gboolean within_right_boundary = !right_boundary_found || (k <= state->last_k_right);
+    const gdouble k_side                 = comp_states->panel_mode ? comp_states->panel_mid : k;
+    const gboolean within_left_boundary  = !left_boundary_found || (k_side >= state->last_k_left);
+    const gboolean within_right_boundary = !right_boundary_found || (k_side <= state->last_k_right);
 
-    if (within_left_boundary && within_right_boundary)
+    integrated[ci] = within_left_boundary && within_right_boundary;
+
+    if (integrated[ci])
     {
-      gdouble component_l2_norm = 0.0;
-      gboolean below_epsilon    = FALSE;
-
       /* Exact integration within boundaries */
       ncm_sbessel_integrator_integrate_deriv (
         comp_states->sbi, _nc_xcor_kernel_component_kernel_integ,
@@ -1368,42 +1436,29 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
           state->comp, state->params.cosmo, k, comp_states->lmin + i
         );
 
-        kernel_out[ci][i] *= prefactor * k * sqrt (k);
-        component_l2_norm += kernel_out[ci][i] * kernel_out[ci][i];
-      }
-
-      below_epsilon = component_l2_norm < gsl_pow_2 (comp_states->epsilon * comp_states->l2_norm);
-
-      /* Update boundary tracking */
-      if (k > state->last_k_right)
-      {
-        state->last_k_right = k;
-
-        for (i = 0; i < comp_states->n_l; i++)
-          state->last_values_right[i] = kernel_out[ci][i];
-
-        if (below_epsilon)
-          state->right_boundary_found++;
-        else
-          state->right_boundary_found = 0;
-      }
-      else if (k < state->last_k_left)
-      {
-        state->last_k_left = k;
-
-        for (i = 0; i < comp_states->n_l; i++)
-          state->last_values_left[i] = kernel_out[ci][i];
-
-        if (below_epsilon)
-          state->left_boundary_found++;
-        else
-          state->left_boundary_found = 0;
+        kernel_out[ci][i]          *= prefactor * k * sqrt (k);
+        group_sum[state->group][i] += kernel_out[ci][i];
       }
     }
     else
     {
-      /* Exponential tail extrapolation beyond boundaries */
-      if (!within_right_boundary)
+      /* Exponential tail extrapolation beyond boundaries.
+       *
+       * At DECAY_RATE this falls by e^-100 within a *relative* 1e-8 of the
+       * boundary, so it adds nothing to the integral. Its purpose is
+       * continuity: the sampled function has no jump at the boundary, so one
+       * cubic spline can span it. The first derivative still jumps, by the
+       * component's value at the boundary.
+       *
+       * A Chebyshev panel needs none of that: the boundary is one of its
+       * edges, so the whole panel is outside and the component is zero on it,
+       * including at the shared edge. */
+      if (comp_states->panel_mode)
+      {
+        for (i = 0; i < comp_states->n_l; i++)
+          kernel_out[ci][i] = 0.0;
+      }
+      else if (!within_right_boundary)
       {
         for (i = 0; i < comp_states->n_l; i++)
         {
@@ -1430,6 +1485,52 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
     }
 
     ncm_vector_clear (&integ_result);
+  }
+
+  /* Boundary tracking, on the size of the group's sum: pieces of one window
+   * are cut together, and the sum is what the cut drops. In panel mode the
+   * boundaries are already panel edges and must not move under the fit. */
+  if (!comp_states->panel_mode)
+  {
+    for (ci = 0; ci < comp_states->n_comp; ci++)
+    {
+      ComponentState *state  = &comp_states->states[ci];
+      gdouble group_l2_norm2 = 0.0;
+      gboolean below_epsilon;
+
+      if (!integrated[ci])
+        continue;
+
+      for (i = 0; i < comp_states->n_l; i++)
+        group_l2_norm2 += gsl_pow_2 (group_sum[state->group][i]);
+
+      below_epsilon = group_l2_norm2 < gsl_pow_2 (comp_states->epsilon * comp_states->l2_norm);
+
+      if (k > state->last_k_right)
+      {
+        state->last_k_right = k;
+
+        for (i = 0; i < comp_states->n_l; i++)
+          state->last_values_right[i] = kernel_out[ci][i];
+
+        if (below_epsilon)
+          state->right_boundary_found++;
+        else
+          state->right_boundary_found = 0;
+      }
+      else if (k < state->last_k_left)
+      {
+        state->last_k_left = k;
+
+        for (i = 0; i < comp_states->n_l; i++)
+          state->last_values_left[i] = kernel_out[ci][i];
+
+        if (below_epsilon)
+          state->left_boundary_found++;
+        else
+          state->left_boundary_found = 0;
+      }
+    }
   }
 
   /* Sum contributions from all components and compute total L2 norm */
@@ -1529,7 +1630,7 @@ _component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_d
  *
  * The two terms are not compared directly -- one is scaled to the block's norm
  * and the other to its peak, a factor of order sqrt(n_l) apart -- so the
- * threshold is deliberately loose at two orders, firing only where the
+ * threshold is deliberately loose at two orders, triggering only where the
  * imbalance cannot be anything else. Once per kernel: closures are built per
  * ell block, and the tolerances do not change between them.
  */
@@ -1559,6 +1660,49 @@ _nc_xcor_kernel_check_tolerance_balance (NcXcorKernel *xclk)
 }
 
 /*
+ * A closure cannot be fitted to more precision than the samples carry.
+ *
+ * The radial integral is what supplies the samples, so its own relative
+ * tolerance is a floor under both halves of the fit criterion. Below it the
+ * sampled W_l(k) is not a smooth function at all -- the integrator's adaptive
+ * decisions flip from one k to the next -- and no representation converges on
+ * it. Neither representation reports the cause on its own. The spline refines
+ * without bound: measured on a deliberately loose integrator (reltol 1e-2)
+ * asked for a 1e-8 fit, refinement ran to 975161 knots, one radial solve each,
+ * with the second differences never coming down. The Chebyshev panel splitter
+ * bisects to its width guard and aborts. This check names the cause instead of
+ * leaving either symptom to be diagnosed.
+ *
+ * The looser of the two fit tolerances is what refinement stops at -- the
+ * criterion adds them -- so that is what has to clear the floor.
+ */
+static void
+_nc_xcor_kernel_check_sampler_tolerance (NcXcorKernel *xclk, NcmSBesselIntegrator *sbi)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+  const gdouble fit_tol     = GSL_MAX (self->reltol, self->scaled_abstol);
+  gdouble sampler_reltol;
+
+  if ((sbi == NULL) || !NCM_IS_SBESSEL_INTEGRATOR_LEVIN (sbi))
+    return;
+
+  {
+    NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (sbi);
+
+    sampler_reltol = GSL_MAX (ncm_sbessel_integrator_levin_get_reltol (sbilv),
+                              ncm_sbessel_integrator_levin_get_cheb_reltol (sbilv));
+  }
+
+  if (fit_tol < sampler_reltol)
+    g_error ("_nc_xcor_kernel_check_sampler_tolerance: kernel %s fits its k-space closure "
+             "to %.17g but the integrator samples W_l(k) only to %.17g (the looser of its "
+             "reltol and cheb-reltol). A fit cannot resolve what the samples do not carry. "
+             "Loosen NcXcorKernel:reltol and NcXcorKernel:scaled-abstol to at least %.17g, "
+             "or construct the integrator with tighter tolerances.",
+             G_OBJECT_TYPE_NAME (xclk), fit_tol, sampler_reltol, sampler_reltol);
+}
+
+/*
  * NcmSpectralFBatch takes user data first; the samplers here take x first, as
  * NcmFunctionSampleSetFunc does. One adapter rather than changing either.
  */
@@ -1566,7 +1710,8 @@ typedef struct _ChebSampler
 {
   void (*compute_func) (const gdouble, NcmVector *, gpointer);
 
-  gpointer comp_states;
+  ComponentStates *comp_states;
+  NcmFunctionSampleSet *samples; /* the domain expansion's, to check a fit against */
 } ChebSampler;
 
 static void
@@ -1577,21 +1722,141 @@ _cheb_sampler_call (gpointer user_data, gdouble k, NcmVector *y)
   sampler->compute_func (k, y, sampler->comp_states);
 }
 
+static gint
+_nc_xcor_kernel_cmp_gdouble (gconstpointer a, gconstpointer b)
+{
+  const gdouble x = *(const gdouble *) a;
+  const gdouble y = *(const gdouble *) b;
+
+  return (x > y) - (x < y);
+}
+
+/*
+ * Component boundaries strictly inside (k_min, k_max), ascending and unique.
+ *
+ * Beyond its boundary a component is dropped from the sum, so the sampled
+ * block is a smooth function on each side of the boundary and jumps across it
+ * by the component's value there -- at most adaptive-epsilon times the block
+ * norm. A polynomial fitted across the jump converges only while the jump is
+ * below its tolerance: the doubling test sees an aliasing residual of order
+ * (jump / peak) / sqrt(N), so a 4e-5 jump on a peak of 10 passes at 1e-6 and
+ * fails at 1e-7, where the splitter bisects to its width guard and aborts.
+ * Making each boundary a panel edge, with the component off on the outer panel,
+ * leaves every panel a smooth function.
+ *
+ * The boundaries are fixed by the time this runs: the domain expansion is the
+ * only sampling that moves them, and it has finished.
+ */
+static void
+_component_states_collect_cuts (ComponentStates *comp_states, gdouble k_min, gdouble k_max, GArray *cuts)
+{
+  guint ci;
+
+  g_array_set_size (cuts, 0);
+
+  for (ci = 0; ci < comp_states->n_comp; ci++)
+  {
+    const ComponentState *state = &comp_states->states[ci];
+
+    if ((state->left_boundary_found >= comp_states->adaptive_boundary_tries) &&
+        (state->last_k_left > k_min) && (state->last_k_left < k_max))
+      g_array_append_val (cuts, state->last_k_left);
+
+    if ((state->right_boundary_found >= comp_states->adaptive_boundary_tries) &&
+        (state->last_k_right > k_min) && (state->last_k_right < k_max))
+      g_array_append_val (cuts, state->last_k_right);
+  }
+
+  g_array_sort (cuts, _nc_xcor_kernel_cmp_gdouble);
+
+  /* Two components stopping at the same expansion sample share the double. */
+  {
+    guint w = 0;
+
+    for (ci = 0; ci < cuts->len; ci++)
+      if ((w == 0) || (g_array_index (cuts, gdouble, ci) > g_array_index (cuts, gdouble, w - 1)))
+        g_array_index (cuts, gdouble, w++) = g_array_index (cuts, gdouble, ci);
+
+    g_array_set_size (cuts, w);
+  }
+}
+
 /* Default panel-order cap for Chebyshev closure fits. */
 #define NC_XCOR_KERNEL_CHEB_PANEL_K_CAP (5)
 #define NC_XCOR_KERNEL_CHEB_MIN_PANEL_FRAC (1.0e-6)
 
 /*
- * Expands on [a, b], bisecting where the capped order does not converge.
+ * Whether an accepted fit on (a, b) reproduces the domain expansion's samples
+ * that fall strictly inside it.
+ *
+ * The doubling test compares two expansions of what the nodes saw, and a
+ * feature narrower than the first grid's spacing is seen by neither: the
+ * nodes of a 9-point grid on a domain five decades wide start past a peak
+ * that sits at a thousandth of it, both levels read a small smooth function,
+ * and the test passes. Measured on NcXcorKernelAnalyticMulti with
+ * adaptive-epsilon 1e-11: the closure's peak came out at 4.9e-5 against 16.2,
+ * with no diagnostic. The expansion's samples are independent of the nodes,
+ * sit on every component's scale by construction, and have already been
+ * evaluated.
+ *
+ * Samples on the edges are excluded: a cut edge is two-valued there. The
+ * factor of ten separates a missed feature from the fit criterion's own
+ * slack, which is an l2 statement over the coefficients, not a pointwise one.
+ */
+static gboolean
+_nc_xcor_kernel_cheb_panel_matches_samples (const ChebPanel *panel, NcmFunctionSampleSet *samples,
+                                            guint n_l, gdouble reltol, gdouble abstol)
+{
+  NcmFunctionSampleSetIter *iter = NULL;
+  gboolean ok                    = TRUE;
+
+  ncm_function_sample_set_iter_begin (samples, &iter);
+
+  for ( ; ok && ncm_function_sample_set_iter_is_valid (iter); ncm_function_sample_set_iter_next (iter))
+  {
+    const gdouble x = ncm_function_sample_set_iter_get_x (iter);
+
+    if ((x > panel->a) && (x < panel->b))
+    {
+      NcmVector *y    = ncm_function_sample_set_iter_get_y (iter);
+      const gdouble t = ncm_spectral_x_to_t (panel->a, panel->b, x);
+      guint c;
+
+      for (c = 0; c < n_l; c++)
+      {
+        const gdouble yc  = ncm_vector_get (y, c);
+        const gdouble fit = _cheb_panel_eval_one (panel, c, t);
+
+        if (fabs (fit - yc) > 10.0 * (reltol * fabs (yc) + abstol))
+        {
+          ok = FALSE;
+          break;
+        }
+      }
+    }
+  }
+
+  ncm_function_sample_set_iter_free (iter);
+
+  return ok;
+}
+
+/*
+ * Expands on [a, b], bisecting where the capped order does not converge or
+ * where the converged fit misses a sample the domain expansion took.
  * Panels are appended in ascending order, so the result is contiguous.
  */
 static void
-_nc_xcor_kernel_cheb_split (NcmSpectral *spectral, gpointer sampler, guint n_l,
+_nc_xcor_kernel_cheb_split (NcmSpectral *spectral, ChebSampler *sampler, guint n_l,
                             gdouble a, gdouble b, gdouble reltol, gdouble abstol,
                             guint k_cap, GArray *panels)
 {
   NcmMatrix *coeffs = NULL;
-  const guint k_ord = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (
+  guint k_ord;
+
+  sampler->comp_states->panel_mid = 0.5 * (a + b);
+
+  k_ord = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (
     spectral, _cheb_sampler_call, n_l, a, b, 3,
     k_cap, reltol, abstol, FALSE, &coeffs, sampler);
 
@@ -1599,9 +1864,14 @@ _nc_xcor_kernel_cheb_split (NcmSpectral *spectral, gpointer sampler, guint n_l,
   {
     ChebPanel panel = { a, b, coeffs, (1u << k_ord) + 1u };
 
-    g_array_append_val (panels, panel);
+    if (_nc_xcor_kernel_cheb_panel_matches_samples (&panel, sampler->samples, n_l, reltol, abstol))
+    {
+      g_array_append_val (panels, panel);
 
-    return;
+      return;
+    }
+
+    ncm_matrix_clear (&coeffs);
   }
 
   {
@@ -1634,11 +1904,13 @@ _nc_xcor_kernel_cheb_split (NcmSpectral *spectral, gpointer sampler, guint n_l,
  * ncm_function_sample_set_expand_domain() are shared, since where W is
  * negligible is a property of the kernel and not of the representation. What
  * changes is everything after: instead of bisecting until a fit criterion is
- * met, the whole ell block is expanded on one Chebyshev-Lobatto grid, doubling
- * the order until every multipole's coefficients converge.
+ * met, the whole ell block is expanded on one Chebyshev-Lobatto grid per
+ * panel, doubling the order until every multipole's coefficients converge.
  *
- * The samples that the domain expansion took are discarded, which the spline
- * path also does -- it keeps their abscissa but re-tests everything.
+ * The panels start from the component boundaries the expansion found, since
+ * the sampled block jumps there (see _component_states_collect_cuts), and a
+ * converged panel is checked against the expansion's samples before it is
+ * kept (see _nc_xcor_kernel_cheb_panel_matches_samples).
  */
 static NcXcorKernelIntegrand *
 _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax,
@@ -1653,7 +1925,8 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
   {
     NcmFunctionSampleSet *fss = ncm_function_sample_set_new (n_l);
     GArray *k_seeds           = g_array_new (FALSE, FALSE, sizeof (gdouble));
-    ChebSampler sampler       = { compute_func, comp_states };
+    ChebSampler sampler       = { compute_func, comp_states, fss };
+    NcmMatrix *residuals      = NULL;
     gdouble abstol;
     guint i;
 
@@ -1688,22 +1961,39 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
      * tolerance relative to its neighbours. */
     abstol = ncm_function_sample_set_get_absmaxF_min (fss) * abs_reltol;
 
-    ncm_function_sample_set_clear (&fss);
-
     cid->panels = g_array_new (FALSE, FALSE, sizeof (ChebPanel));
     cid->edges  = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
     {
       NcmSpectral **spectral = _nc_xcor_spectral_get ();
+      GArray *cuts           = g_array_new (FALSE, FALSE, sizeof (gdouble));
+      const guint k_cap      = (self->panel_order_cap == 0) ?
+                               NC_XCOR_KERNEL_CHEB_PANEL_K_CAP : self->panel_order_cap;
+      gdouble a = cid->k_min;
 
-      _nc_xcor_kernel_cheb_split (*spectral, &sampler, n_l,
-                                  cid->k_min, cid->k_max, reltol, abstol,
-                                  (self->panel_order_cap == 0) ?
-                                  NC_XCOR_KERNEL_CHEB_PANEL_K_CAP : self->panel_order_cap,
-                                  cid->panels);
+      _component_states_collect_cuts (comp_states, cid->k_min, cid->k_max, cuts);
 
+      /* Each segment between two boundaries carries a fixed set of components,
+       * so membership is decided per panel rather than per k. */
+      comp_states->panel_mode = TRUE;
+
+      for (i = 0; i < cuts->len; i++)
+      {
+        const gdouble b = g_array_index (cuts, gdouble, i);
+
+        _nc_xcor_kernel_cheb_split (*spectral, &sampler, n_l, a, b, reltol, abstol, k_cap, cid->panels);
+        a = b;
+      }
+
+      _nc_xcor_kernel_cheb_split (*spectral, &sampler, n_l, a, cid->k_max, reltol, abstol, k_cap, cid->panels);
+
+      comp_states->panel_mode = FALSE;
+
+      g_array_unref (cuts);
       ncm_memory_pool_return (spectral);
     }
+
+    ncm_function_sample_set_clear (&fss);
 
     {
       const gdouble first = g_array_index (cid->panels, ChebPanel, 0).a;
@@ -1712,6 +2002,43 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
 
       for (i = 0; i < cid->panels->len; i++)
         g_array_append_val (cid->edges, g_array_index (cid->panels, ChebPanel, i).b);
+    }
+
+    /* The residual this fit achieved, per panel per multipole, in the units
+     * the spline path records: an amplitude of W, one row per interval on
+     * which the closure is a single polynomial.
+     *
+     * A panel is accepted when doubling its order changes the expansion by
+     * less than the tolerance, so the modes the previous level did not carry
+     * are what that test measured. Their l1 mass bounds the sup-norm
+     * contribution of that tail, which is the error of the level the panel
+     * keeps -- conservatively, since the modes beyond it are smaller again
+     * wherever the acceptance test was met.
+     *
+     * Recording it costs nothing, the coefficients being already computed. It
+     * is still gated on NcXcorKernel:track-fit-residual so that @vp_err means
+     * one thing on both representations: the achieved residual with tracking
+     * on, the requested tolerance without it. */
+    if (self->track_fit_residual)
+    {
+      residuals = ncm_matrix_new (cid->panels->len, n_l);
+
+      for (i = 0; i < cid->panels->len; i++)
+      {
+        const ChebPanel *panel = &g_array_index (cid->panels, ChebPanel, i);
+        const guint n_prev     = (panel->N + 1) / 2;
+        guint c, j;
+
+        for (c = 0; c < n_l; c++)
+        {
+          gdouble tail = 0.0;
+
+          for (j = n_prev; j < panel->N; j++)
+            tail += fabs (ncm_matrix_get (panel->coeffs, c, j));
+
+          ncm_matrix_set (residuals, i, c, tail);
+        }
+      }
     }
 
     cid->k_min_comp = g_new (gdouble, n_l);
@@ -1765,6 +2092,8 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
                                                     _cheb_integrand_peek_panel);
       nc_xcor_kernel_integrand_set_restrict (integrand, _cheb_integrand_restrict);
       nc_xcor_kernel_integrand_set_tolerances (integrand, reltol, abs_reltol);
+      nc_xcor_kernel_integrand_set_residuals (integrand, residuals);
+      ncm_matrix_clear (&residuals);
 
       return integrand;
     }
@@ -1820,6 +2149,7 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
         comp_states
       );
     }
+
     ncm_function_sample_set_mark_all_old (fss);
     ncm_function_sample_set_reset_interval_ok (fss);
     {
@@ -1955,6 +2285,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
     return NULL;
   }
 
+  _nc_xcor_kernel_check_sampler_tolerance (xclk, sbi);
   ncm_sbessel_integrator_set_ell_range (sbi, lmin, lmax);
 
   /* Initialize with standard (non-Limber) limits */
@@ -2663,6 +2994,7 @@ nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, NcXcorKer
  * multipoles in the range [lmin, lmax] simultaneously.
  *
  * Uses the base class implementation which checks the l-limber property:
+ *
  * - If lmin >= l_limber (or l_limber == 0), uses component-based Limber approximation
  * - If l_limber < 0, use the non-Limber method
  * - Otherwise falls back to single-l get_eval for lmin

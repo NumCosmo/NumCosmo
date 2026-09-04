@@ -44,7 +44,7 @@ Both reduce to the same $C^{ij}_\ell$ engine, which here is
 #NcXcorKernelClusterTophat plus #NcXcorSolver in its non-Limber mode.
 
 Long partial-sky runs report progress through the `progress` callback of
-:meth:`SijCalculator.compute_cl`, which fires once per solved multipole chunk.
+:meth:`SijCalculator.compute_cl`, which is called once per solved multipole chunk.
 
 Precision
 ---------
@@ -128,7 +128,7 @@ free of everything below --- equal values would be safe there, merely dearer.
 `scaled_abstol` must not equal the outer $k$-integral's `reltol`. The p-adaptive
 `g_error` in `ncm_integral_nd_eval` ("p-adaptive methods report failure when
 they run out of Clenshaw-Curtis levels") is not monotonic in `scaled_abstol`:
-it fires at that one coincidence and nowhere near it. Generating the
+it peaks at that one coincidence and nowhere near it. Generating the
 configuration that first hit it (15 knots, cap, 3000 deg$^2$, $w = -0.8$, with
 `reltol = 1e-6`) at each floor:
 

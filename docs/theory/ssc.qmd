@@ -2,8 +2,6 @@
 title: Super-Sample Covariance
 ---
 
-# Super-Sample Covariance
-
 This page describes the super-sample covariance (SSC) matrix $S_{ij}$ computed by
 [[numcosmo|NcXcorSSCSij]], and how it enters the Gaussian cluster number-count
 likelihood [[numcosmo|NcDataClusterNCountsGauss]].
@@ -68,7 +66,7 @@ value $C^{\mathrm{mask}}_\ell = 4\pi\,\delta_{\ell 0}$, for which the sum
 collapses to $C^{ij}_0 / 4\pi$. [[numcosmo|NcXcorSSCSij]] uses that spectrum as
 its default footprint, so full sky and masked runs share one code path.
 
-### Finite area, and a trap
+### Finite area, and its failure mode
 
 Between the two extremes sits the estimator an analysis quoting only a survey
 area uses: the full-sky matrix rescaled by the sky fraction,
@@ -76,17 +74,17 @@ $$
 S_{ij} = \frac{S^{\rm fullsky}_{ij}}{f_{\rm sky}},
 \qquad f_{\rm sky} = \frac{\Omega}{4\pi} .
 $$
-It is a crude correction rather than a mask deconvolution — it knows the solid
-angle of the footprint but nothing about its shape — yet it captures the effect
+It is a crude correction rather than a mask deconvolution --- it knows the solid
+angle of the footprint but nothing about its shape --- yet it captures the effect
 that actually dominates: a smaller volume samples fewer long-wavelength modes,
 so the background density fluctuates more. It costs a single multipole, like the
 full-sky case. `nc_xcor_ssc_sij_set_area()` selects it.
 
-**Using the plain full-sky $S_{ij}$ for a survey that does not cover the full
-sky is a mistake, not a conservative approximation.** With
+Using the plain full-sky $S_{ij}$ for a survey that does not cover the full
+sky is a mistake, not a conservative approximation. With
 $f_{\rm sky} < 1$ the rescaling only ever increases $S_{ij}$, so omitting it
 understates the super-sample variance, and the resulting parameter constraints
-come out too tight. The size of the error is $1/f_{\rm sky}$ — a factor of
+come out too tight. The size of the error is $1/f_{\rm sky}$ --- a factor of
 about $2.3$ for $18\,000\ \mathrm{deg}^2$, and about $14$ for
 $3\,000\ \mathrm{deg}^2$. A finite survey needs either an area or a mask.
 
@@ -99,7 +97,7 @@ requested tolerance.
 
 The Limber approximation replaces the spherical Bessel functions in the radial
 integral by a delta function, which is accurate only when the window is broad
-compared with the oscillation scale — that is, at high $\ell$. Here the sum is
+compared with the oscillation scale --- that is, at high $\ell$. Here the sum is
 dominated by the very lowest multipoles, $\ell = 0$ for a full-sky survey, where
 Limber is meaningless. Worse, it makes the cross spectrum of two bins with
 disjoint redshift support vanish identically, whereas the true $C^{ij}_\ell$ is
@@ -117,7 +115,7 @@ The off-diagonal $S_{ij}$ of well-separated bins are a small residual of a large
 cancellation: for seven top-hat bins over $z \in [0.1, 0.8]$, $|S_{06}|$ is four
 orders of magnitude below $S_{00}$. Their accuracy is set by `scaled-abstol`, the
 absolute floor of the adaptive refinement building the $U_i(k)$ spline, and
-**not** by `reltol`, which is inactive while `scaled-abstol` binds. Measured
+not by `reltol`, which is inactive while `scaled-abstol` binds. Measured
 against a converged independent quadrature:
 
 | `scaled-abstol`               | $S_{00}$ | $S_{01}$ | $S_{04}$ | $S_{06}$ |
@@ -128,9 +126,9 @@ against a converged independent quadrature:
 
 The residual at $10^{-8}$ is consistent with the reference's own convergence
 rather than with a NumCosmo error. It is not the default because the adaptive
-cubature can run out of Clenshaw–Curtis levels at that setting on masked runs and
+cubature can run out of Clenshaw--Curtis levels at that setting on masked runs and
 abort, which is fatal inside a Monte Carlo chain. For the same reason the default
-quadrature is `NC_XCOR_METHOD_KERNEL_EXACT`, an exact Gauss–Legendre rule on the
+quadrature is `NC_XCOR_METHOD_KERNEL_EXACT`, an exact Gauss--Legendre rule on the
 union of the pair's spline knots: it targets no tolerance, so it cannot fail to
 reach one.
 
@@ -149,19 +147,19 @@ approximation rather than assuming it: run both and compare the posteriors.
 
 Two conditions make that comparison meaningful.
 
-**The normalization must be kept.** For a Gaussian likelihood,
+The normalization must be kept. For a Gaussian likelihood,
 $$
 -2\ln L = \left(N - \bar{N}\right)^\mathsf{T} C^{-1} \left(N - \bar{N}\right)
         + \ln \det C + n \ln 2\pi ,
 $$
 and the $\ln \det C$ term is constant only while $C$ is. Once the covariance
 varies with cosmology, dropping it biases the posterior towards high-variance
-cosmologies — exactly the direction in which a varying $S_{ij}$ moves. The
+cosmologies --- exactly the direction in which a varying $S_{ij}$ moves. The
 `use-norma` property of [[numcosmo-math|NcmDataGaussCov]] controls that term, and
 [[numcosmo|NcDataClusterNCountsGauss]] refuses to begin with a varying $S_{ij}$
 unless it is set.
 
-**The mock must not move.** Only the fitting covariance may follow the
+The mock must not move. Only the fitting covariance may follow the
 cosmology; the matrix used while resampling stays the one given to
 `nc_data_cluster_ncounts_gauss_set_resample_s_matrix()`, so the fixed and varying
 analyses fit the same realization and differ only in what is being tested.

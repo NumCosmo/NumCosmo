@@ -41,7 +41,7 @@ Ncm.cfg_init()
 class NcXcorKernelComponentTest(Nc.XcorKernelComponent):
     """
     A simple test component that implements a Gaussian kernel in xi-space.
-    K(k, xi) = exp(-xi²/2sigma²) * sin(k*xi)/(k*xi)
+    K(k, xi) = exp(-xi^2/2sigma^2) * sin(k*xi)/(k*xi)
     This is a simple, well-behaved kernel for testing purposes.
     """
 

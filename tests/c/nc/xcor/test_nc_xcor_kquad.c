@@ -83,8 +83,9 @@ typedef struct _TestMethod
 
 /* Both closures, because they are not interchangeable downstream: a Chebyshev closure
  * gives the integrands panels, and NC_XCOR_METHOD_KERNEL_EXACT hands a pair that has
- * them to the spectral block quadrature instead of integrating them itself. The default
- * closure is the spline, so asking for one is the only way through that branch. */
+ * them to the spectral block quadrature instead of the merged-knot GL(5) sweep. The
+ * default closure is the Chebyshev one, so asking for the spline is the only way
+ * through that second branch. */
 static const TestMethod test_methods[] = {
   {"kernel_gsl/spline",          NC_XCOR_METHOD_KERNEL_GSL,       FALSE, NC_XCOR_KERNEL_CLOSURE_SPLINE   },
   {"kernel_cubature/spline",     NC_XCOR_METHOD_KERNEL_CUBATURE,  TRUE,  NC_XCOR_KERNEL_CLOSURE_SPLINE   },
@@ -220,23 +221,16 @@ test_nc_xcor_kquad_error (TestNcXcorKQuad *test, gconstpointer pdata)
   {
     g_assert_true (gsl_finite (ncm_vector_get (cl, i)));
 
-    /* A method that advertises an error estimate has to fill the vector it was given --
-     * except where the quadrature is exact in closed form and there is no estimate to
-     * make. NC_XCOR_METHOD_KERNEL_EXACT on a Chebyshev pair takes that route, and says
-     * so with NaN rather than reporting a zero that would read as a tight bound. */
+    /* A method that advertises an error estimate has to fill the vector it was given,
+     * on either representation. The estimate is the closures' own fit error, which is
+     * a property of the closures and not of the quadrature above them, so the exact
+     * method reports it whether it took the merged-knot sweep or the coefficient-space
+     * bilinear form. */
     if (!nc_xcor_method_has_error_estimate (tm->meth))
       continue;
 
-    if ((tm->meth == NC_XCOR_METHOD_KERNEL_EXACT) &&
-        (tm->closure == NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV))
-    {
-      g_assert_true (gsl_isnan (ncm_vector_get (cl_err, i)));
-    }
-    else
-    {
-      g_assert_true (gsl_finite (ncm_vector_get (cl_err, i)));
-      g_assert_cmpfloat (ncm_vector_get (cl_err, i), >=, 0.0);
-    }
+    g_assert_true (gsl_finite (ncm_vector_get (cl_err, i)));
+    g_assert_cmpfloat (ncm_vector_get (cl_err, i), >=, 0.0);
   }
 
   ncm_vector_free (cl);

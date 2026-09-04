@@ -109,7 +109,7 @@ and updates the implementation flags to assert that child implements this method
 
 ## Abstract model source
 
-We include the full **C** file below, however, first we are going to highlight the main
+We include the full C file below, however, first we are going to highlight the main
 steps:
 
 ### Private properties

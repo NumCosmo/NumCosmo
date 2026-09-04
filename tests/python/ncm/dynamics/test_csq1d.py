@@ -326,7 +326,7 @@ def test_eval_int_nu_default():
     # For t <= t_ode_ini the default implementation returns 0
     assert_allclose(bs.eval_int_nu(None, ti), 0.0, atol=1.0e-30)
 
-    # For BesselTest, nu = k (constant), and the spline starts at π/4 at t_ode_ini ≈
+    # For BesselTest, nu = k (constant), and the spline starts at pi/4 at t_ode_ini ~=
     # -10. Check that d(int_nu)/dt = nu = k via finite difference.
     test_times = np.linspace(-9.9, -1.0e-3, 20)[:-1]
     h = 1.0e-7

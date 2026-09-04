@@ -1524,6 +1524,7 @@ _ncm_stats_vec_heidel_diag_pcramer (const gdouble q)
  * worst parameter at the selected index.
  *
  * See:
+ *
  * - [Heidelberger (1981)](https://doi.org/10.1145/358598.358630)
  * - [Schruben (1982)](https://doi.org/10.1287/opre.30.3.569)
  * - [Heidelberger (1983)](https://doi.org/10.1287/opre.31.6.1109)

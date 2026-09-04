@@ -1469,6 +1469,33 @@ class TestSBesselOperators:
         assert ell_min_out == 5, "Ell range: ell_min mismatch"
         assert ell_max_out == 15, "Ell range: ell_max mismatch"
 
+    def test_reconfigure_operator_updates_tolerance(self) -> None:
+        """Reconfiguring takes the solver's current tolerance, unlike a plain reset."""
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-6)
+        op = solver.create_operator(1.0, 20.0, 5, 5)
+        assert_allclose(op.get_tolerance(), 1.0e-6, rtol=1.0e-15, atol=0.0)
+
+        # A tighter tolerance on the solver must reach the operator through
+        # reconfigure_operator(), so that a reused operator and a newly created one
+        # solve to the same accuracy.
+        solver.set_tolerance(1.0e-12)
+        solver.reconfigure_operator(op, 1.0, 20.0, 5, 5)
+        assert_allclose(op.get_tolerance(), 1.0e-12, rtol=1.0e-15, atol=0.0)
+
+        fresh = solver.create_operator(1.0, 20.0, 5, 5)
+        assert_allclose(
+            op.get_tolerance(), fresh.get_tolerance(), rtol=1.0e-15, atol=0.0
+        )
+
+        # The tighter tolerance must actually be used: the same right-hand side needs
+        # at least as many columns as it did at 1.0e-6.
+        rhs = np.zeros(64)
+        rhs[2] = 1.0
+        _, _ = op.solve(rhs)
+        _, _ = fresh.solve(rhs)
+        assert op.get_n_cols() == fresh.get_n_cols()
+
     def test_operator_get_tolerance(self) -> None:
         """Test that operator returns the correct tolerance."""
         solver = Ncm.SBesselOdeSolver.new()
@@ -1611,7 +1638,7 @@ class TestSBesselOperators:
         )
 
         # Reset operator - should clear diagonalization
-        op.reset(a, b, l_val, l_val)
+        solver.reconfigure_operator(op, a, b, l_val, l_val)
         n_cols_after_reset = op.get_n_cols()
         assert (
             n_cols_after_reset == 0
@@ -1691,7 +1718,7 @@ class TestSBesselOperators:
         )
 
         # Reset operator - should clear diagonalization
-        op.reset(a, b, ell_min, ell_max)
+        solver.reconfigure_operator(op, a, b, ell_min, ell_max)
         n_cols_after_reset = op.get_n_cols()
         assert (
             n_cols_after_reset == 0
@@ -2550,7 +2577,7 @@ class TestSBesselOperators:
         )
 
         # Reset should clear
-        op.reset(a, b, lmin, lmax)
+        solver.reconfigure_operator(op, a, b, lmin, lmax)
         n_cols_after_reset = op.get_n_cols()
         assert (
             n_cols_after_reset == 0
@@ -2594,7 +2621,7 @@ class TestSBesselOperators:
         start_reset = time.perf_counter()
         for rhs in rhs_list:
             _solution, _sol_len = op_reset.solve(rhs)
-            op_reset.reset(a, b, l_val, l_val)
+            solver.reconfigure_operator(op_reset, a, b, l_val, l_val)
         end_reset = time.perf_counter()
         time_reset = end_reset - start_reset
 
@@ -2656,7 +2683,7 @@ class TestSBesselOperators:
         start_reset = time.perf_counter()
         for rhs in rhs_list:
             _solution, _sol_len = op_reset.solve(rhs)
-            op_reset.reset(a, b, lmin, lmax)
+            solver.reconfigure_operator(op_reset, a, b, lmin, lmax)
         end_reset = time.perf_counter()
         time_reset = end_reset - start_reset
 
@@ -3210,7 +3237,7 @@ class TestSBesselOperatorMemoryManagement:
         assert n_cols_before > 0, "Should have n_cols before reset"
 
         # Reset the operator
-        op.reset(1.0, 20.0, 1, 1)
+        solver.reconfigure_operator(op, 1.0, 20.0, 1, 1)
 
         _ = op.get_operator_size()
         n_cols_after = op.get_n_cols()

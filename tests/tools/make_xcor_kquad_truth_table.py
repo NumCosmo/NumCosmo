@@ -71,6 +71,19 @@ import cases_k_integral as cases  # noqa: E402  pylint: disable=wrong-import-pos
 # reach, so it is stated instead.
 K_MARGIN = 1.5
 
+# Cases where K_MARGIN is not enough, as an absolute k_hi in 1/Mpc.
+#
+# The lensing window has a hard edge at chi_lower where it does not vanish, so
+# its I_ell falls as 1/k and the C_ell integrand only as k^-3.5. Beyond the
+# library's ell = 2 range times the margin (0.86/Mpc), the auto spectrum has
+# 2.9e-7 of its own value still outstanding, against a target of 1e-10.
+# Measured on the library's own closure built out to 79/Mpc: 1.8e-8 outstanding
+# beyond 2/Mpc, 7.5e-10 beyond 5/Mpc, 5.0e-11 beyond 10/Mpc. The cross spectrum
+# with a Gaussian needs no floor -- the Gaussian side cuts the product off, at
+# 4e-10 beyond that same 0.86/Mpc. Cost grows as the square of the phase
+# k_hi chi_max, which is why this is one entry and not a global bound.
+K_HI_FLOOR = {"A4": 10.0}
+
 
 def library_k_range(pair: cases.PairSpec, ell: int) -> tuple[float, float]:
     """The k interval the library's own closures span at ONE multipole, in 1/Mpc.
@@ -105,7 +118,9 @@ def library_k_range(pair: cases.PairSpec, ell: int) -> tuple[float, float]:
             kernel_b, cosmo, ell, ell, settings
         ).get_range()
 
-    return min(a_lo, b_lo) / RH / K_MARGIN, max(a_hi, b_hi) / RH * K_MARGIN
+    k_hi = max(a_hi, b_hi) / RH * K_MARGIN
+
+    return min(a_lo, b_lo) / RH / K_MARGIN, max(k_hi, K_HI_FLOOR.get(pair.case, 0.0))
 
 
 def run_one(
