@@ -92,8 +92,27 @@ struct _NcGalaxyShapePopClass
    */
   void (*eval_p_array) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *r, GArray **p);
 
-  /* Padding to allow adding up to 10 more virtual functions without breaking ABI. */
-  gpointer padding[10];
+  /*
+   * Radial moment M_2k = <|chi_I|^2k> = int_0^1 r^2k P_pop(r) dr (P_pop(r)
+   * is eval_p()'s own normalization, int_0^1 P_pop(r) dr = 1, so the radial
+   * Jacobian is already folded in -- see nc_galaxy_shape_pop_eval_p()'s doc
+   * comment). Unlike eval_p_rho2_g_series() above, a population-agnostic
+   * generic default exists (fixed Gauss-Legendre quadrature over
+   * eval_p_array()), so this is a real fallback, not an error stub -- the
+   * second one in this class, after eval_p_array() itself. A subclass whose
+   * moments have a closed form (e.g. the truncated Gaussian's regularized
+   * incomplete gamma, or the Beta population's Beta-function ratio)
+   * overrides it. Reads resolved parameters from @data (the eval_p()
+   * contract), so a caller must have run nc_galaxy_shape_pop_prepare() on
+   * @data since the population's parameters last changed -- guaranteed by
+   * nc_galaxy_shape_factor_update_data_pop() and the array-prepare paths
+   * that call it unconditionally per pass. Consumed by
+   * #NcGalaxyShapeFactorMomentSeries.
+   */
+  gdouble (*moment_2k) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
+
+  /* Padding to allow adding up to 9 more virtual functions without breaking ABI. */
+  gpointer padding[9];
 };
 
 /**
@@ -169,6 +188,7 @@ gdouble nc_galaxy_shape_pop_get_mode_r (NcGalaxyShapePop *gsp, NcGalaxyShapePopD
 void nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
                                                const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 void nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *r, GArray **p);
+gdouble nc_galaxy_shape_pop_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
 
 G_END_DECLS
 
