@@ -2135,7 +2135,10 @@ nc_cbe_thermodyn_get_Xe (NcCBE *cbe)
  * nc_cbe_thermodyn_v_tau_max_z:
  * @cbe: a #NcCBE
  *
- * Gets the redshift of the maximum visibility function.
+ * Gets CLASS's $z_\mathrm{rec}$, the redshift where the visibility function per unit
+ * conformal time is maximum. This is not the same as
+ * [nc_recomb_get_v_tau_max_z()], which maximizes the visibility function per unit
+ * $\lambda = -\ln(1+z)$; the two differ by about 4 in $z$.
  *
  * Returns: $z_\mathrm{rec}$.
  */
