@@ -162,24 +162,26 @@ operator as a *banded* matrix by mapping the Chebyshev coefficients $c_n$ of $f$
 $C^{(2)}$ coefficients of the transformed function. Each operator below is banded
 (bandwidth $\le 9$) and adds into a shared row buffer, so that a full operator such as
 $a_2(x)\,f'' + a_1(x)\,f' + a_0(x)\,f$ with polynomial coefficients up to degree two is
-assembled as a banded linear combination of these primitives.
+assembled as a banded linear combination of these primitives. Throughout the table
+$c_k \equiv 0$ for $k < 0$, so a term whose index runs off the start simply vanishes.
 
 | Operator | $C^{(2)}$ coefficient of the output | Method |
 |---|---|---|
-| identity | $\dfrac{c_k}{2(k+1)} - \dfrac{(k+2)c_{k+2}}{(k+1)(k+3)} + \dfrac{c_{k+4}}{2(k+3)}$ $\big(+\tfrac12 c_0\,\delta_{k,0}\big)$ | [[numcosmo-math\|ncm_spectral_get_proj_matrix]] |
-| $x$ | $\dfrac{\theta(k-1)\,c_{k-1}}{4(k+1)} - \dfrac{c_{k+1}}{4(k+3)} - \dfrac{c_{k+3}}{4(k+1)} + \dfrac{c_{k+5}}{4(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_x_matrix]] |
-| $x^2$ | $\dfrac{\theta(k-2)\,c_{k-2}}{8(k+1)} + \dfrac{c_k}{4(k+1)(k+3)} - \dfrac{(k+2)c_{k+2}}{4(k+1)(k+3)} - \dfrac{c_{k+4}}{4(k+1)(k+3)} + \dfrac{c_{k+6}}{8(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_x2_matrix]] |
+| identity | $\dfrac{c_k}{2(k+1)} - \dfrac{(k+2)c_{k+2}}{(k+1)(k+3)} + \dfrac{c_{k+4}}{2(k+3)} + \tfrac12 c_0\,\delta_{k,0}$ | [[numcosmo-math\|ncm_spectral_get_proj_matrix]] |
+| $x$ | $\dfrac{c_{k-1}}{4(k+1)} - \dfrac{c_{k+1}}{4(k+3)} - \dfrac{c_{k+3}}{4(k+1)} + \dfrac{c_{k+5}}{4(k+3)} + \tfrac14 c_1\,\delta_{k,0} + \tfrac18 c_0\,\delta_{k,1}$ | [[numcosmo-math\|ncm_spectral_get_x_matrix]] |
+| $x^2$ | $\dfrac{c_{k-2}}{8(k+1)} + \dfrac{c_k}{4(k+1)(k+3)} - \dfrac{(k+2)c_{k+2}}{4(k+1)(k+3)} - \dfrac{c_{k+4}}{4(k+1)(k+3)} + \dfrac{c_{k+6}}{8(k+3)} + \big(\tfrac1{12}c_0 + \tfrac18 c_2\big)\delta_{k,0} + \tfrac1{16}c_1\,\delta_{k,1} + \tfrac1{24}c_0\,\delta_{k,2}$ | [[numcosmo-math\|ncm_spectral_get_x2_matrix]] |
 | $\mathrm{d}/\mathrm{d}x$ | $c_{k+1} - c_{k+3}$ | [[numcosmo-math\|ncm_spectral_get_d_matrix]] |
 | $x\,\mathrm{d}/\mathrm{d}x$ | $\dfrac{k\,c_k}{2(k+1)} + \dfrac{(k+2)c_{k+2}}{(k+1)(k+3)} - \dfrac{(k+4)c_{k+4}}{2(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_x_d_matrix]] |
 | $\mathrm{d}^2/\mathrm{d}x^2$ | $2(k+2)\,c_{k+2}$ | [[numcosmo-math\|ncm_spectral_get_d2_matrix]] |
 | $x\,\mathrm{d}^2/\mathrm{d}x^2$ | $k\,c_{k+1} + (k+4)\,c_{k+3}$ | [[numcosmo-math\|ncm_spectral_get_x_d2_matrix]] |
 | $x^2\,\mathrm{d}^2/\mathrm{d}x^2$ | $\dfrac{k(k-1)c_k}{2(k+1)} + \dfrac{(k+2)\big((k+2)^2-3\big)c_{k+2}}{(k+1)(k+3)} + \dfrac{(k+4)(k+5)c_{k+4}}{2(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_x2_d2_matrix]] |
 
-Here $\theta$ is the Heaviside step (terms with negative index are dropped) and a few
-extra contributions appear in the first one or two rows of the $x$ and $x^2$ operators;
-see the per-method documentation for the exact low-$k$ entries. The single-row builders
-([[numcosmo-math|ncm_spectral_compute_proj_row]] and the companions) expose the same
-coefficients for assembling custom combinations.
+Every row holds for all $k$ as written. The Kronecker-delta terms are the $T_0$ and
+$T_1$ special cases of Chebyshev multiplication, which contribute only to the first one
+to three rows of an operator.
+
+The single-row builders ([[numcosmo-math|ncm_spectral_compute_proj_row]] and the
+companions) expose the same coefficients for assembling custom combinations.
 
 ## API Reference
 
