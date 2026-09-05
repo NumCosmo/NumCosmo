@@ -205,6 +205,146 @@ def test_radial_integral_matches_arb(
         )
 
 
+# The free (tau) closure of the panel solve. "rule" is the production setting: a
+# panel goes free when its oscillation count exceeds free-closure-min-osc. "forced"
+# bypasses the rule and turns the free closure on everywhere, including panels below
+# the turning point where it is invalid; the guard in the integrator must catch
+# those and redo them with Dirichlet data, so this mode is the guard's own test.
+FREE_CLOSURE_MODES = ["rule", "forced"]
+FREE_CLOSURE_MIN_OSC = 200.0
+
+
+def _set_closure(integrator: Ncm.SBesselIntegratorLevin, mode: str) -> None:
+    if mode == "rule":
+        integrator.set_free_closure_min_osc(FREE_CLOSURE_MIN_OSC)
+    else:
+        integrator.set_free_closure(True)
+
+
+@pytest.mark.parametrize("mode", FREE_CLOSURE_MODES)
+@pytest.mark.parametrize(
+    "shape",
+    ["gauss", "tophat", "tophat_smooth", "student_t", "power_exp", "lensing", "multi"],
+)
+def test_radial_integral_matches_arb_with_free_closure(
+    shape: str, mode: str, truth_table: dict, cosmo_bits: tuple
+) -> None:
+    """I_ell(k) against Arb with the free closure, one multipole at a time."""
+    cosmo, dist, ps = cosmo_bits
+    entry = truth_table["shapes"][shape]
+
+    kernel = _make_kernel(
+        shape, dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
+    )
+    kernel.set_l_limber(-1)
+    kernel.prepare(cosmo)
+
+    supports = [kernel.get_comp_support(comp) for comp in range(kernel.get_n_comps())]
+    fallbacks = 0
+
+    for index, ell in enumerate(truth_table["ells"]):
+        expected = np.array([float(value) for value in entry["table"][index]])
+        peak = np.abs(expected).max()
+
+        integrator = Ncm.SBesselIntegratorLevin.new(ell, ell)
+        _set_closure(integrator, mode)
+
+        got = np.array(
+            [
+                sum(
+                    integrator.integrate_ell(
+                        lambda _ud, chi, _k, c=comp, lo=low, hi=high: (
+                            kernel.eval_W_comp(c, min(max(chi, lo), hi))
+                        ),
+                        low,
+                        high,
+                        k,
+                        ell,
+                        None,
+                    )
+                    for comp, (low, high) in enumerate(supports)
+                )
+                for k in entry["kvals"][index]
+            ]
+        )
+        fallbacks += integrator.get_n_closure_fallbacks()
+
+        assert_allclose(
+            got,
+            expected,
+            rtol=RTOL,
+            atol=ATOL_FRAC * peak,
+            err_msg=f"{shape} at ell = {ell}, free closure ({mode})",
+        )
+
+    if mode == "forced":
+        # The table samples below the turning point for every shape; without the
+        # guard those entries were wrong by 1e10 and more.
+        assert fallbacks > 0, "the guard never fired on a table that requires it"
+
+
+@pytest.mark.parametrize("mode", FREE_CLOSURE_MODES)
+@pytest.mark.parametrize(
+    "shape",
+    ["gauss", "tophat", "tophat_smooth", "student_t", "power_exp", "lensing", "multi"],
+)
+def test_radial_integral_batched_matches_arb_with_free_closure(
+    shape: str, mode: str, truth_table: dict, cosmo_bits: tuple
+) -> None:
+    """Same comparison through the batched path, blocks of eight multipoles."""
+    cosmo, dist, ps = cosmo_bits
+    entry = truth_table["shapes"][shape]
+    n_block = 8
+
+    kernel = _make_kernel(
+        shape, dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
+    )
+    kernel.set_l_limber(-1)
+    kernel.prepare(cosmo)
+
+    supports = [kernel.get_comp_support(comp) for comp in range(kernel.get_n_comps())]
+    fallbacks = 0
+
+    for index, ell in enumerate(truth_table["ells"]):
+        expected = np.array([float(value) for value in entry["table"][index]])
+        peak = np.abs(expected).max()
+
+        integrator = Ncm.SBesselIntegratorLevin.new(ell, ell + n_block - 1)
+        _set_closure(integrator, mode)
+        block = Ncm.Vector.new(n_block)
+        got = []
+
+        for k in entry["kvals"][index]:
+            total = 0.0
+
+            for comp, (low, high) in enumerate(supports):
+                integrator.integrate(
+                    lambda chi, _k, c=comp, lo=low, hi=high: (
+                        kernel.eval_W_comp(c, min(max(chi, lo), hi))
+                    ),
+                    low,
+                    high,
+                    k,
+                    block,
+                )
+                total += block.get(0)
+
+            got.append(total)
+
+        fallbacks += integrator.get_n_closure_fallbacks()
+
+        assert_allclose(
+            np.array(got),
+            expected,
+            rtol=RTOL,
+            atol=ATOL_FRAC * peak,
+            err_msg=f"{shape} at ell = {ell}, batched free closure ({mode})",
+        )
+
+    if mode == "forced":
+        assert fallbacks > 0, "the guard never fired on a table that requires it"
+
+
 # Worst deviation measured per shape, closure at reltol = scaled-abstol = 1e-6,
 # with roughly a factor of three of headroom. Re-measure these after changing
 # NC_XCOR_KERNEL_CHEB_PANEL_K_CAP: a smaller cap makes more, lower-order panels,

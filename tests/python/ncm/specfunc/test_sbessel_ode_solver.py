@@ -3707,3 +3707,228 @@ class TestSBesselStoredRotations:
         assert columns_added >= 20, (
             f"Should have added many columns for high ell: " f"added {columns_added}"
         )
+
+
+class TestSBesselFreeClosure:
+    """The free (tau) closure against Dirichlet data.
+
+    The boundary functional of the Levin reduction is invariant under adding
+    homogeneous solutions to u, so both closures must return the same panel
+    integral. They differ in which member of the solution family is represented:
+    Dirichlet data forces the oscillatory one, the free closure leaves the smooth
+    one, which needs only the forcing's own order. The free closure is valid only
+    while the homogeneous solutions are unrepresentable at that order; on a short or
+    evanescent panel they are not, and the solve admits them. Both regimes are
+    pinned here so the guard in the integrator has a documented target.
+    """
+
+    ELL = 20
+
+    @staticmethod
+    def _forcing_rhs(a: float, b: float, order: int = 96) -> np.ndarray:
+        """Endpoint data followed by the C^(2) coefficients of y F(y).
+
+        F is a Gaussian bump centred on the panel with width a fixed fraction of
+        it, so its Chebyshev order is the same on every panel.
+        """
+        m, h = 0.5 * (a + b), 0.5 * (b - a)
+        spectral = Ncm.Spectral.new()
+
+        def forcing(_user_data, t):
+            y = m + h * t
+            return y * np.exp(-0.5 * ((y - m) / (0.35 * h)) ** 2)
+
+        cheb = np.array(
+            spectral.compute_chebyshev_coeffs(forcing, -1.0, 1.0, order, None)
+        )
+        gegen = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb))
+        rhs = np.zeros(len(gegen) + 2)
+        rhs[2:] = gegen
+
+        return rhs
+
+    @staticmethod
+    def _boundary_functional(coeffs: np.ndarray, a: float, b: float, ell: int) -> float:
+        """W(b) - W(a) with W = y j_l u' - (y j_l)' u, u from its Chebyshev series."""
+        h = 0.5 * (b - a)
+        u_a, u_b = np.polynomial.chebyshev.chebval([-1.0, 1.0], coeffs)
+        du = (
+            np.polynomial.chebyshev.chebval(
+                [-1.0, 1.0], np.polynomial.chebyshev.chebder(coeffs)
+            )
+            / h
+        )
+
+        def term(y: float, u: float, dudy: float) -> float:
+            jl = spherical_jn(ell, y)
+            djl = spherical_jn(ell, y, derivative=True)
+            return y * jl * dudy - (jl + y * djl) * u
+
+        return term(b, u_b, du[1]) - term(a, u_a, du[0])
+
+    def _solve(self, a: float, b: float, ell_min: int, ell_max: int, free: bool):
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-12)
+        solver.set_free_closure(free)
+        op = solver.create_operator(a, b, ell_min, ell_max)
+        coeffs, n_cols = op.solve(self._forcing_rhs(a, b))
+
+        return op, np.array(coeffs), n_cols
+
+    def test_same_integral_far_fewer_columns_on_deep_panel(self) -> None:
+        """Deep oscillatory panel: identical integral, ~400x fewer columns."""
+        a, b = 1.0e4, 10.0**4.5
+        op_d, c_d, n_d = self._solve(a, b, self.ELL, self.ELL, False)
+        op_f, c_f, n_f = self._solve(a, b, self.ELL, self.ELL, True)
+
+        i_d = self._boundary_functional(c_d, a, b, self.ELL)
+        i_f = self._boundary_functional(c_f, a, b, self.ELL)
+
+        assert_allclose(i_f, i_d, rtol=1.0e-9)
+        assert n_f * 100 < n_d, f"free closure used {n_f} columns, Dirichlet {n_d}"
+        assert op_f.get_min_cols() == 0
+        assert op_d.get_min_cols() > 0
+        assert not op_d.get_free_closure()
+        assert op_f.get_free_closure()
+
+    def test_free_closure_matches_quadrature_on_narrow_panel(self) -> None:
+        """Narrow panel, where direct quadrature is affordable."""
+        a, b = 100.0, 10.0**2.5
+        m, h = 0.5 * (a + b), 0.5 * (b - a)
+        _, c_f, _ = self._solve(a, b, self.ELL, self.ELL, True)
+
+        ref, _ = quad(
+            lambda y: np.exp(-0.5 * ((y - m) / (0.35 * h)) ** 2)
+            * spherical_jn(self.ELL, y),
+            a,
+            b,
+            limit=5000,
+            epsabs=0.0,
+            epsrel=1.0e-13,
+        )
+
+        assert_allclose(
+            self._boundary_functional(c_f, a, b, self.ELL), ref, rtol=1.0e-9
+        )
+
+    def test_batched_free_closure_matches_single(self) -> None:
+        """A block shares one factorisation; every member must match its own solve."""
+        a, b = 1.0e4, 10.0**4.5
+        lmin, lmax = self.ELL, self.ELL + 7
+        n_ell = lmax - lmin + 1
+        _, c_b, n_b = self._solve(a, b, lmin, lmax, True)
+        c_b = c_b.reshape(n_ell, n_b)
+
+        for i, ell in enumerate(range(lmin, lmax + 1)):
+            _, c_s, n_s = self._solve(a, b, ell, ell, True)
+            padded = np.zeros(max(n_b, n_s))
+            padded[:n_s] = c_s
+            assert_allclose(
+                c_b[i],
+                padded[:n_b],
+                rtol=1.0e-9,
+                atol=1.0e-13 * np.abs(c_s).max(),
+                err_msg=f"batched free closure differs from single solve at ell={ell}",
+            )
+
+    def test_shallow_panel_admits_homogeneous_content(self) -> None:
+        """Where N_min is small the free solve is contaminated; where large it is not.
+
+        This is the failure the integrator's guard detects: on [3.162, 10] at l=2 the
+        panel holds ~4 oscillations against a working order of ~32, so the
+        homogeneous solutions are representable and the coefficient norm explodes.
+        """
+        a, b, ell = 3.162, 10.0, 2
+        _, c_d, _ = self._solve(a, b, ell, ell, False)
+        _, c_f, _ = self._solve(a, b, ell, ell, True)
+        ratio_shallow = np.abs(c_f).max() / np.abs(c_d).max()
+
+        a, b = 100.0, 10.0**2.5
+        _, c_d, _ = self._solve(a, b, ell, ell, False)
+        _, c_f, _ = self._solve(a, b, ell, ell, True)
+        ratio_deep = np.abs(c_f).max() / np.abs(c_d).max()
+
+        assert (
+            ratio_shallow > 1.0e6
+        ), f"expected contamination, got ratio {ratio_shallow:.3e}"
+        assert (
+            ratio_deep < 10.0
+        ), f"unexpected contamination on a deep panel: {ratio_deep:.3e}"
+
+    @pytest.mark.parametrize("n_ell", [1, 8])
+    def test_last_max_coeff_tracks_the_solution(self, n_ell: int) -> None:
+        """The per-ell max |a_j| the guard reads equals the solution's own maximum."""
+        a, b = 1.0e4, 10.0**4.5
+        op, coeffs, n_cols = self._solve(a, b, self.ELL, self.ELL + n_ell - 1, True)
+        coeffs = coeffs.reshape(n_ell, n_cols)
+
+        for i in range(n_ell):
+            assert op.get_last_max_coeff(i) == np.abs(coeffs[i]).max()
+
+    def test_last_max_coeff_after_reconfigure_to_wider_block(self) -> None:
+        """Regression: storage sized for one multipole, then reconfigured to eight.
+
+        The tracking array is allocated with the accumulator arrays; a scalar solve
+        allocates for one multipole, and a later reconfigure to a block must not
+        write past it.
+        """
+        a, b = 1.0e4, 10.0**4.5
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-12)
+        solver.set_free_closure(True)
+        rhs = self._forcing_rhs(a, b)
+
+        op = solver.create_operator(a, b, self.ELL, self.ELL)
+        op.solve(rhs)
+
+        solver.reconfigure_operator(op, a, b, self.ELL, self.ELL + 7)
+        coeffs, n_cols = op.solve(rhs)
+        coeffs = np.array(coeffs).reshape(8, n_cols)
+
+        for i in range(8):
+            assert op.get_last_max_coeff(i) == np.abs(coeffs[i]).max()
+
+    def test_pinned_closure_same_integral(self) -> None:
+        """Pinning two coefficients selects another member with the same integral."""
+        a, b = 1.0e4, 10.0**4.5
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-12)
+        rhs = self._forcing_rhs(a, b)
+
+        op = solver.create_operator(a, b, self.ELL, self.ELL)
+        c_d, _ = op.solve(rhs)
+        i_d = self._boundary_functional(np.array(c_d), a, b, self.ELL)
+        floor = op.get_min_cols()
+
+        op.set_pinned_bc(120, 144)
+        assert op.get_pinned_bc() == (True, 120, 144)
+        assert op.get_min_cols() == 145
+        c_p, n_p = op.solve(rhs)
+        assert n_p == 145
+        assert_allclose(
+            self._boundary_functional(np.array(c_p), a, b, self.ELL), i_d, rtol=1.0e-9
+        )
+
+        op.set_dirichlet_bc()
+        assert op.get_pinned_bc()[0] is False
+        assert op.get_min_cols() == floor
+
+    def test_closure_setting_propagates_and_overrides(self) -> None:
+        """Operators inherit the solver's closure; a per-operator setter overrides it."""
+        a, b = 1.0e4, 10.0**4.5
+        solver = Ncm.SBesselOdeSolver.new()
+        assert not solver.get_free_closure()
+
+        solver.set_free_closure(True)
+        op = solver.create_operator(a, b, self.ELL, self.ELL)
+        assert op.get_free_closure()
+        assert op.get_min_cols() == 0
+
+        op.set_free_closure(False)
+        assert not op.get_free_closure()
+        assert op.get_min_cols() > 0
+
+        op.set_min_cols(7)
+        assert op.get_min_cols() == 7
+        op.set_min_cols(-1)
+        assert op.get_min_cols() > 7

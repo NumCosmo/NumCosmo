@@ -173,11 +173,13 @@ one integrated over.
 ```{python}
 #| label: fig-levin-smooth
 #| fig-cap: >
-#|   Left: the integrand F(y) j_20(y) on the panel [100, 316] for a smooth forcing.
-#|   Right: the solution u of the boundary-value problem (5) on the same panel, from
-#|   the library's ultraspherical solver. It still oscillates, since the boundary
-#|   conditions bring in homogeneous solutions, but the forcing needed 64 samples of
-#|   the kernel and the solve is a banded linear system.
+#|   Top: the smooth forcing F(y) on the panel [100, 316], and the integrand F(y) j_20(y)
+#|   it multiplies. Bottom: the solution u of Eq. (5) on the same panel for three
+#|   closures of the same forcing. Dirichlet data force u(a) = u(b) = 0 and bring in the
+#|   homogeneous solutions, so u oscillates and the expansion runs to the panel's
+#|   oscillation count. Pinning two Chebyshev coefficients, or leaving the closure rows
+#|   empty, selects the smooth member of the same family, whose expansion is set by the
+#|   forcing alone. All three return the same integral.
 ell = 20
 a, b = 100.0, 316.2278
 m, h = 0.5 * (a + b), 0.5 * (b - a)
@@ -199,34 +201,69 @@ g = np.zeros(N + 1)
 for kk in range(N + 1):
     g[kk] = c[kk] / (2 * (kk + 1)) - (kk + 2) * c[kk + 2] / ((kk + 1) * (kk + 3)) + c[kk + 4] / (2 * (kk + 3))
 g[0] += 0.5 * c[0]
+rhs = np.concatenate([[0.0, 0.0], g])
 
+# The same operator solved under three closures. Dirichlet is the default; the pinned
+# closure fixes <T_80, u> = <T_96, u> = 0; the free closure leaves both closure rows
+# empty and lets the truncation itself select the solution.
 solver = Ncm.SBesselOdeSolver.new()
 solver.set_tolerance(1.0e-12)
 op = solver.create_operator(a, b, ell, ell)
-coeffs, n_cols = op.solve(np.concatenate([[0.0, 0.0], g]))
-coeffs = np.array(coeffs)
+solutions = {}
+for name, setup in (
+    ("Dirichlet", op.set_dirichlet_bc),
+    ("pinned (80, 96)", lambda: op.set_pinned_bc(80, 96)),
+    ("free", lambda: op.set_free_closure(True)),
+):
+    setup()
+    coeffs, n_cols = op.solve(rhs)
+    solutions[name] = (np.array(coeffs), n_cols)
 
 yy = np.linspace(a, b, 2000)
 tt = (yy - m) / h
-u = np.polynomial.chebyshev.chebval(tt, coeffs)
 
-fig, ax = plt.subplots(1, 2, figsize=(10, 3.4))
-ax[0].plot(yy, F(yy) * spherical_jn(ell, yy), lw=0.8)
-ax[0].set_xlabel("y")
-ax[0].set_title("F(y) j_l(y)")
-ax[1].plot(yy, u, lw=1.2)
-ax[1].set_xlabel("y")
-ax[1].set_title(f"u(y), {n_cols} Chebyshev coefficients")
+fig, ax = plt.subplot_mosaic(
+    [["F", "F", "F", "Fj", "Fj", "Fj"], ["Dirichlet", "Dirichlet", "pinned (80, 96)", "pinned (80, 96)", "free", "free"]],
+    figsize=(10, 6.2),
+)
+ax["F"].plot(yy, F(yy), lw=1.2)
+ax["F"].set_title("F(y)")
+ax["Fj"].plot(yy, F(yy) * spherical_jn(ell, yy), lw=0.8)
+ax["Fj"].set_title("F(y) j_l(y)")
+ylim = None
+for name, (coeffs, n_cols) in solutions.items():
+    u = np.polynomial.chebyshev.chebval(tt, coeffs)
+    ax[name].plot(yy, u, lw=1.0 if name == "Dirichlet" else 1.6)
+    ax[name].set_title(f"u(y), {name}: {n_cols} coefficients", fontsize=10)
+    lo_, hi_ = ax[name].get_ylim()
+    ylim = (lo_, hi_) if ylim is None else (min(ylim[0], lo_), max(ylim[1], hi_))
+for name in solutions:
+    ax[name].set_ylim(ylim)
+    ax[name].set_xlabel("y")
+ax["F"].set_xlabel("y")
+ax["Fj"].set_xlabel("y")
 plt.tight_layout()
 
-# the boundary term (6) against composite Gauss-Legendre on the oscillatory integrand
-du = np.polynomial.chebyshev.chebval([-1.0, 1.0], np.polynomial.chebyshev.chebder(coeffs)) / h
-levin = b * spherical_jn(ell, b) * du[1] - a * spherical_jn(ell, a) * du[0]
+
+# The boundary term (6) for each closure, against composite Gauss-Legendre on the
+# oscillatory integrand. With u nonzero at the panel ends the u term of W is kept.
+def boundary_term(coeffs):
+    u_a, u_b = np.polynomial.chebyshev.chebval([-1.0, 1.0], coeffs)
+    du = np.polynomial.chebyshev.chebval([-1.0, 1.0], np.polynomial.chebyshev.chebder(coeffs)) / h
+
+    def W(y, u, dudy):
+        return y * spherical_jn(ell, y) * dudy - (spherical_jn(ell, y) + y * spherical_jn(ell, y, derivative=True)) * u
+
+    return W(b, u_b, du[1]) - W(a, u_a, du[0])
+
+
 gx, gw = np.polynomial.legendre.leggauss(20)
 edges = np.linspace(a, b, 401)
 ref = sum(0.5 * (e1 - e0) * np.sum(gw * F(0.5 * (e0 + e1) + 0.5 * (e1 - e0) * gx) * spherical_jn(ell, 0.5 * (e0 + e1) + 0.5 * (e1 - e0) * gx))
           for e0, e1 in zip(edges[:-1], edges[1:]))
-print(f"boundary term {levin:.12e}   quadrature reference {ref:.12e}   rel. diff {abs(levin-ref)/abs(ref):.1e}")
+for name, (coeffs, n_cols) in solutions.items():
+    levin = boundary_term(coeffs)
+    print(f"{name:16s} {n_cols:4d} coefficients   boundary term {levin:.12e}   rel. diff to quadrature {abs(levin - ref) / abs(ref):.1e}")
 ```
 
 ### Derivative weights
