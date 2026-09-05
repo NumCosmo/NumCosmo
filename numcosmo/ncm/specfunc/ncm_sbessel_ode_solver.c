@@ -114,6 +114,17 @@ _ncm_sbessel_min_cols (const gdouble a, const gdouble b, const gint ell_min)
   return (glong) ceil (2.0 * osc_span / M_PI);
 }
 
+/*
+ * The floor the decay test may not stop below.
+ *
+ * Dirichlet closure: the oscillatory span of the panel, _ncm_sbessel_min_cols().
+ * Pinned closure: the pins must be inside the column range before the system is
+ * determined, so the floor is one past the last pin. The oscillatory floor does not
+ * apply, because the selected solution is the one the pins leave, not the one the
+ * boundary values force.
+ */
+static inline void _ncm_sbessel_update_min_cols (NcmSBesselOdeOperator *op);
+
 #define ALIGNMENT 64 /* 64-byte alignment for cache lines */
 
 #define PADDED_BANDWIDTH ((TOTAL_BANDWIDTH + 7) & ~7) /* round up to multiple of 8 */
@@ -163,6 +174,30 @@ struct _NcmSBesselOdeOperator
                       * represent the solution however quiet the leading coefficients
                       * happen to look. See _ncm_sbessel_min_cols(). */
 
+  /* Closure rows: the two linear functionals that close the system.
+   *
+   * Dirichlet (default): u(-1) = u(+1) = 0, whose coefficient patterns over the
+   * columns are (-1)^j and 1.
+   * Pinned: <T_{pin1}, u> = <T_{pin2}, u> = 0, patterns delta_{j,pin1} and
+   * delta_{j,pin2}.
+   *
+   * Each row carries two scalars (bc_at_m1, bc_at_p1) holding its coefficients of
+   * whichever pattern pair is active. Givens rotations mix those scalars the same way
+   * in either mode, so only the pattern evaluation changes. Both patterns are
+   * evaluated at every column: the pinned rows are treated as full-width rows, not as
+   * sparse ones.
+   */
+  gboolean bc_pinned;
+  glong bc_pin1;
+  glong bc_pin2;
+
+  /* Free closure: both closure rows are identically zero, so the system is short two
+   * pivots and back-substitution closes it on the trailing coefficients. That is the
+   * tau closure, and it selects the smooth member of the solution family. The
+   * oscillatory floor does not apply; set one with
+   * ncm_sbessel_ode_operator_set_min_cols() if the forcing needs it. */
+  gboolean bc_free;
+
   /* Matrix storage */
   NcmSBesselOdeSolverRow *matrix_rows; /* Aligned array of NcmSBesselOdeSolverRow */
   gdouble *c;                          /* Aligned array of gdouble for right-hand side */
@@ -197,6 +232,7 @@ struct _NcmSBesselOdeOperator
   gsize solution_batched_capacity; /* Allocated capacity of solution_batched */
   gdouble *acc_bc_at_m1;           /* Aligned array of gdouble for boundary condition accumulators at -1 */
   gdouble *acc_bc_at_p1;           /* Aligned array of gdouble for boundary condition accumulators at +1 */
+  gdouble *last_max_coeff;         /* Per-ell max |a_j| of the last back-substitution; sized with the acc arrays */
   gsize acc_bc_capacity;           /* Allocated capacity of acc_bc_at_m1 and acc_bc_at_p1 */
 
   /* Per-ell adaptive convergence state. */
@@ -207,7 +243,8 @@ struct _NcmSBesselOdeOperator
 
 typedef struct _NcmSBesselOdeSolverPrivate
 {
-  gdouble tolerance; /* Default copied into newly created operators */
+  gdouble tolerance;     /* Default copied into newly created operators */
+  gboolean free_closure; /* Default copied into newly created operators */
   NcmSpectral *spectral;
 } NcmSBesselOdeSolverPrivate;
 
@@ -240,15 +277,16 @@ _row_reset (NcmSBesselOdeSolverRow *row, gdouble bc_at_m1, gdouble bc_at_p1, glo
 }
 
 /* Operator row computation */
-static gdouble _ncm_sbessel_bc_row (NcmSBesselOdeSolverRow *row, glong col_index);
+static gdouble _ncm_sbessel_bc_row (const NcmSBesselOdeOperator *op, NcmSBesselOdeSolverRow *row, glong col_index);
 
 static void
 ncm_sbessel_ode_solver_init (NcmSBesselOdeSolver *solver)
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
 
-  self->tolerance = 0.0;
-  self->spectral  = ncm_spectral_new ();
+  self->tolerance    = 0.0;
+  self->free_closure = FALSE;
+  self->spectral     = ncm_spectral_new ();
 }
 
 static void
@@ -425,6 +463,7 @@ _ensure_acc_bc_capacity (NcmSBesselOdeOperator *op, gsize required_capacity)
 
     op->acc_bc_at_m1    = new_m1;
     op->acc_bc_at_p1    = new_p1;
+    op->last_max_coeff  = g_renew (gdouble, op->last_max_coeff, new_capacity);
     op->acc_bc_capacity = new_capacity;
   }
 }
@@ -524,7 +563,7 @@ ncm_sbessel_ode_solver_clear (NcmSBesselOdeSolver **solver)
 /* Sets the five values that configure an operator, plus everything derived from them,
  * and marks it as carrying no factorization. Shared by creation and reconfiguration. */
 static void
-_ncm_sbessel_ode_operator_configure (NcmSBesselOdeOperator *op, gdouble a, gdouble b, gint ell_min, gint ell_max, gdouble tolerance)
+_ncm_sbessel_ode_operator_configure (NcmSBesselOdeOperator *op, gdouble a, gdouble b, gint ell_min, gint ell_max, gdouble tolerance, gboolean free_closure)
 {
   g_assert_cmpfloat (a, <, b);
   g_assert_cmpint (ell_min, <=, ell_max);
@@ -537,8 +576,10 @@ _ncm_sbessel_ode_operator_configure (NcmSBesselOdeOperator *op, gdouble a, gdoub
   op->ell_min   = ell_min;
   op->ell_max   = ell_max;
   op->n_ell     = (guint) (ell_max - ell_min + 1);
-  op->min_cols  = _ncm_sbessel_min_cols (a, b, ell_min);
   op->tolerance = tolerance;
+  op->bc_free   = free_closure;
+
+  _ncm_sbessel_update_min_cols (op);
 
   g_assert_cmpuint (op->n_ell, >, 0);
   g_assert_cmpuint (op->n_ell, <, UINT_MAX / 2); /* Prevent overflow in capacity calculations */
@@ -581,8 +622,12 @@ ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, 
 
   /* Initialize reference count */
   op->ref_count = 1;
+  op->bc_free   = FALSE;
+  op->bc_pinned = FALSE;
+  op->bc_pin1   = 0;
+  op->bc_pin2   = 0;
 
-  _ncm_sbessel_ode_operator_configure (op, a, b, ell_min, ell_max, self->tolerance);
+  _ncm_sbessel_ode_operator_configure (op, a, b, ell_min, ell_max, self->tolerance, self->free_closure);
 
   op->matrix_rows          = NULL;
   op->c                    = NULL;
@@ -595,6 +640,7 @@ ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, 
   op->solution_batched_capacity = 0;
   op->acc_bc_at_m1              = NULL;
   op->acc_bc_at_p1              = NULL;
+  op->last_max_coeff            = NULL;
   op->acc_bc_capacity           = 0;
   op->max_c_A_batched           = NULL;
   op->quiet_cols_batched        = NULL;
@@ -629,7 +675,7 @@ ncm_sbessel_ode_solver_reconfigure_operator (NcmSBesselOdeSolver *solver, NcmSBe
   g_assert (op != NULL);
   g_assert (op->ref_count > 0);
 
-  _ncm_sbessel_ode_operator_configure (op, a, b, ell_min, ell_max, self->tolerance);
+  _ncm_sbessel_ode_operator_configure (op, a, b, ell_min, ell_max, self->tolerance, self->free_closure);
 }
 
 /**
@@ -688,6 +734,7 @@ ncm_sbessel_ode_operator_unref (NcmSBesselOdeOperator *op)
     if (op->acc_bc_at_p1 != NULL)
       free (op->acc_bc_at_p1);
 
+    g_free (op->last_max_coeff);
     g_free (op->max_c_A_batched);
     g_free (op->quiet_cols_batched);
 
@@ -746,13 +793,243 @@ ncm_sbessel_ode_solver_get_tolerance (NcmSBesselOdeSolver *solver)
   return self->tolerance;
 }
 
-static gdouble
-_ncm_sbessel_bc_row (NcmSBesselOdeSolverRow *row, glong col_index)
+/*
+ * Column patterns of the two closure functionals. In Dirichlet mode these are
+ * T_j(-1) = (-1)^j and T_j(+1) = 1; in pinned mode they are delta_{j,pin1} and
+ * delta_{j,pin2}. See the bc_pinned block of #_NcmSBesselOdeOperator.
+ */
+static inline gdouble
+_ncm_sbessel_bc_pat1 (const NcmSBesselOdeOperator *op, glong col_index)
 {
-  const gdouble bc_at_m1 = (col_index % 2) == 0 ? row->bc_at_m1 : -row->bc_at_m1;
-  const gdouble bc_at_p1 = row->bc_at_p1;
+  if (op->bc_free)
+    return 0.0;
 
-  return (bc_at_m1 + bc_at_p1);
+  if (op->bc_pinned)
+    return (col_index == op->bc_pin1) ? 1.0 : 0.0;
+
+  return ((col_index % 2) == 0) ? 1.0 : -1.0;
+}
+
+static inline gdouble
+_ncm_sbessel_bc_pat2 (const NcmSBesselOdeOperator *op, glong col_index)
+{
+  if (op->bc_free)
+    return 0.0;
+
+  if (op->bc_pinned)
+    return (col_index == op->bc_pin2) ? 1.0 : 0.0;
+
+  return 1.0;
+}
+
+static inline void
+_ncm_sbessel_update_min_cols (NcmSBesselOdeOperator *op)
+{
+  if (op->bc_free)
+    op->min_cols = 0;
+  else if (op->bc_pinned)
+    op->min_cols = GSL_MAX (op->bc_pin1, op->bc_pin2) + 1;
+  else
+    op->min_cols = _ncm_sbessel_min_cols (op->a, op->b, op->ell_min);
+}
+
+/**
+ * ncm_sbessel_ode_solver_set_free_closure:
+ * @solver: a #NcmSBesselOdeSolver
+ * @free_closure: whether new operators use the free (tau) closure
+ *
+ * Operators created or reconfigured after this call leave both closure rows zero and
+ * close the system on the trailing coefficients, selecting the smooth member of the
+ * solution family instead of the one the Dirichlet data forces. Operators that
+ * already exist keep their setting until they are reconfigured.
+ *
+ */
+void
+ncm_sbessel_ode_solver_set_free_closure (NcmSBesselOdeSolver *solver, gboolean free_closure)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+
+  self->free_closure = free_closure;
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_free_closure:
+ * @solver: a #NcmSBesselOdeSolver
+ *
+ * Returns: whether new operators use the free (tau) closure.
+ */
+gboolean
+ncm_sbessel_ode_solver_get_free_closure (NcmSBesselOdeSolver *solver)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+
+  return self->free_closure;
+}
+
+/**
+ * ncm_sbessel_ode_operator_set_free_closure:
+ * @op: a #NcmSBesselOdeOperator
+ * @free_closure: whether @op uses the free (tau) closure
+ *
+ * Sets the closure of this operator alone, overriding what it inherited from the
+ * solver. The stored factorization is discarded and the resolution floor recomputed.
+ *
+ */
+void
+ncm_sbessel_ode_operator_set_free_closure (NcmSBesselOdeOperator *op, gboolean free_closure)
+{
+  if (op->bc_free == free_closure)
+    return;
+
+  op->bc_free     = free_closure;
+  op->last_n_cols = 0;
+
+  _ncm_sbessel_update_min_cols (op);
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_last_max_coeff:
+ * @op: a #NcmSBesselOdeOperator
+ * @ell_idx: index of the multipole within the block
+ *
+ * Largest $|a_j|$ produced by the last back-substitution for that multipole. Under
+ * the free closure a value far above the forcing's own scale
+ * $\max|yF| / \min|y^2 - \nu^2|$ means the solve admitted homogeneous content, and
+ * the panel must be redone with Dirichlet data.
+ *
+ * Returns: $\max_j |a_j|$ of the last solve.
+ */
+gdouble
+ncm_sbessel_ode_operator_get_last_max_coeff (NcmSBesselOdeOperator *op, guint ell_idx)
+{
+  g_assert (op->last_max_coeff != NULL);
+  g_assert_cmpuint (ell_idx, <, op->acc_bc_capacity);
+
+  return op->last_max_coeff[ell_idx];
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_free_closure:
+ * @op: a #NcmSBesselOdeOperator
+ *
+ * Returns: %TRUE when @op uses the free (tau) closure, so that $u$ does not vanish at
+ * the panel ends and the general boundary functional is required.
+ */
+gboolean
+ncm_sbessel_ode_operator_get_free_closure (NcmSBesselOdeOperator *op)
+{
+  return op->bc_free;
+}
+
+/**
+ * ncm_sbessel_ode_operator_set_pinned_bc:
+ * @op: a #NcmSBesselOdeOperator
+ * @pin1: index of the first pinned Chebyshev coefficient
+ * @pin2: index of the second pinned Chebyshev coefficient
+ *
+ * Closes the system with $\langle T_{@pin1}, u\rangle = \langle T_{@pin2}, u\rangle = 0$
+ * instead of the Dirichlet data $u(y_a) = u(y_b) = 0$. Both closures pick a member of
+ * the same solution family, and the boundary functional of the Levin reduction is
+ * invariant under the choice, so the panel integral is unchanged; what changes is
+ * which member has to be represented.
+ *
+ * The pins must be distinct. The resolution floor is raised to one past the last pin,
+ * since below that the pinned rows are still empty and the system is short two pivots.
+ * The stored factorization is discarded.
+ *
+ */
+void
+ncm_sbessel_ode_operator_set_pinned_bc (NcmSBesselOdeOperator *op, glong pin1, glong pin2)
+{
+  g_assert_cmpint (pin1, >=, 0);
+  g_assert_cmpint (pin2, >=, 0);
+  g_assert_cmpint (pin1, !=, pin2);
+
+  op->bc_pinned   = TRUE;
+  op->bc_pin1     = pin1;
+  op->bc_pin2     = pin2;
+  op->last_n_cols = 0;
+
+  _ncm_sbessel_update_min_cols (op);
+}
+
+/**
+ * ncm_sbessel_ode_operator_set_dirichlet_bc:
+ * @op: a #NcmSBesselOdeOperator
+ *
+ * Restores the default closure $u(y_a) = u(y_b) = 0$. The stored factorization is
+ * discarded and the resolution floor returns to the oscillatory span of the panel.
+ *
+ */
+void
+ncm_sbessel_ode_operator_set_dirichlet_bc (NcmSBesselOdeOperator *op)
+{
+  op->bc_pinned   = FALSE;
+  op->last_n_cols = 0;
+
+  _ncm_sbessel_update_min_cols (op);
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_pinned_bc:
+ * @op: a #NcmSBesselOdeOperator
+ * @pin1: (out) (optional): index of the first pinned coefficient
+ * @pin2: (out) (optional): index of the second pinned coefficient
+ *
+ * Returns: %TRUE when @op uses the pinned closure, %FALSE for Dirichlet.
+ */
+gboolean
+ncm_sbessel_ode_operator_get_pinned_bc (NcmSBesselOdeOperator *op, glong *pin1, glong *pin2)
+{
+  if (pin1 != NULL)
+    *pin1 = op->bc_pin1;
+
+  if (pin2 != NULL)
+    *pin2 = op->bc_pin2;
+
+  return op->bc_pinned;
+}
+
+/**
+ * ncm_sbessel_ode_operator_set_min_cols:
+ * @op: a #NcmSBesselOdeOperator
+ * @min_cols: resolution floor, or a negative value to restore the derived one
+ *
+ * Overrides the floor the decay test may not stop below. Experimental: with the
+ * pinned closure and a floor of zero the test may stop before the pinned columns have
+ * entered the system, in which case the pins never act and the solve is closed by
+ * whatever back-substitution assigns to the trailing coefficients. The stored
+ * factorization is discarded.
+ *
+ */
+void
+ncm_sbessel_ode_operator_set_min_cols (NcmSBesselOdeOperator *op, glong min_cols)
+{
+  if (min_cols < 0)
+    _ncm_sbessel_update_min_cols (op);
+  else
+    op->min_cols = min_cols;
+
+  op->last_n_cols = 0;
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_min_cols:
+ * @op: a #NcmSBesselOdeOperator
+ *
+ * Returns: the resolution floor the decay test may not stop below.
+ */
+glong
+ncm_sbessel_ode_operator_get_min_cols (NcmSBesselOdeOperator *op)
+{
+  return op->min_cols;
+}
+
+static gdouble
+_ncm_sbessel_bc_row (const NcmSBesselOdeOperator *op, NcmSBesselOdeSolverRow *row, glong col_index)
+{
+  return row->bc_at_m1 * _ncm_sbessel_bc_pat1 (op, col_index) +
+         row->bc_at_p1 * _ncm_sbessel_bc_pat2 (op, col_index);
 }
 
 /**
@@ -1018,10 +1295,10 @@ _compute_inv_hypot (gdouble a, gdouble b)
  */
 static inline __attribute__ ((hot)) void
 
-_ncm_sbessel_apply_givens (glong pivot_col, NcmSBesselOdeSolverRow * restrict r1, NcmSBesselOdeSolverRow * restrict r2, gdouble * restrict c1, gdouble * restrict c2, gdouble * restrict rot_ptr)
+_ncm_sbessel_apply_givens (const NcmSBesselOdeOperator *op, glong pivot_col, NcmSBesselOdeSolverRow * restrict r1, NcmSBesselOdeSolverRow * restrict r2, gdouble * restrict c1, gdouble * restrict c2, gdouble * restrict rot_ptr)
 {
-  const gdouble a_val    = r1->data[0] + _ncm_sbessel_bc_row (r1, pivot_col);
-  const gdouble b_val    = r2->data[0] + _ncm_sbessel_bc_row (r2, pivot_col);
+  const gdouble a_val    = r1->data[0] + _ncm_sbessel_bc_row (op, r1, pivot_col);
+  const gdouble b_val    = r2->data[0] + _ncm_sbessel_bc_row (op, r2, pivot_col);
   const gdouble inv_norm = _compute_inv_hypot (a_val, b_val);
 
   if (__builtin_expect ((inv_norm > 1.0e100), 0))
@@ -1134,7 +1411,7 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
                                 gdouble *max_c_A, guint *quiet_cols)
 {
   NcmSBesselOdeSolverRow *row = &op->matrix_rows[col];
-  const gdouble diag          = row->data[0] + _ncm_sbessel_bc_row (row, col);
+  const gdouble diag          = row->data[0] + _ncm_sbessel_bc_row (op, row, col);
   const gdouble c_col         = op->c[col];
   const gdouble Acol          = fabs (c_col / diag);
 
@@ -1209,7 +1486,7 @@ _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, gu
   {
     const glong row_idx         = col * n_ell + l_idx;
     NcmSBesselOdeSolverRow *row = &op->matrix_rows[row_idx];
-    const gdouble diag          = row->data[0] + _ncm_sbessel_bc_row (row, col);
+    const gdouble diag          = row->data[0] + _ncm_sbessel_bc_row (op, row, col);
     const gdouble c_col         = op->c[row_idx];
     const gdouble Acol          = fabs (c_col / diag);
 
@@ -1532,7 +1809,7 @@ _ncm_sbessel_ode_operator_factorize (NcmSBesselOdeOperator *op, GArray *rhs)
       gdouble *c2                = &op->c[r2_index];
       gdouble *rot_ptr           = &op->rotation_params[2 * rot_idx];
 
-      _ncm_sbessel_apply_givens (col, r1, r2, c1, c2, rot_ptr);
+      _ncm_sbessel_apply_givens (op, col, r1, r2, c1, c2, rot_ptr);
     }
 
     /* Check storage */
@@ -1574,7 +1851,7 @@ _ncm_sbessel_ode_operator_factorize (NcmSBesselOdeOperator *op, GArray *rhs)
         gdouble *c2                = &op->c[r2_index];
         gdouble *rot_ptr           = &op->rotation_params[2 * rot_idx];
 
-        _ncm_sbessel_apply_givens (col, r1, r2, c1, c2, rot_ptr);
+        _ncm_sbessel_apply_givens (op, col, r1, r2, c1, c2, rot_ptr);
       }
 
       /* Check storage */
@@ -1617,6 +1894,7 @@ _ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeOperator *op, glong n_cols,
 {
   gdouble acc_bc_at_m1 = 0.0;
   gdouble acc_bc_at_p1 = 0.0;
+  gdouble maxabs       = 0.0;
   gdouble * restrict sol_ptr;
   glong row;
 
@@ -1628,7 +1906,7 @@ _ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeOperator *op, glong n_cols,
   {
     NcmSBesselOdeSolverRow *r = &op->matrix_rows[row];
     gdouble sum               = op->c[row];
-    const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (r, row);
+    const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (op, r, row);
     gdouble sol;
     glong j;
 
@@ -1647,10 +1925,14 @@ _ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeOperator *op, glong n_cols,
 
     sol          = sum / diag;
     sol_ptr[row] = sol;
+    maxabs       = GSL_MAX (maxabs, fabs (sol));
 
-    acc_bc_at_m1 += (row % 2 == 0 ? 1.0 : -1.0) * sol;
-    acc_bc_at_p1 += sol;
+    acc_bc_at_m1 += _ncm_sbessel_bc_pat1 (op, row) * sol;
+    acc_bc_at_p1 += _ncm_sbessel_bc_pat2 (op, row) * sol;
   }
+
+  _ensure_acc_bc_capacity (op, 1);
+  op->last_max_coeff[0] = maxabs;
 
   g_array_set_size (solution, n_cols);
 }
@@ -1678,6 +1960,7 @@ _ncm_sbessel_ode_solver_compute_endpoints (NcmSBesselOdeOperator *op, glong n_co
   const gdouble h        = op->half_len;
   gdouble acc_bc_at_m1   = 0.0;
   gdouble acc_bc_at_p1   = 0.0;
+  gdouble maxabs         = 0.0;
   gdouble deriv_at_m1    = 0.0; /* u'(-1) accumulator */
   gdouble deriv_at_p1    = 0.0; /* u'(+1) accumulator */
   gdouble error_estimate = 0.0; /* error accumulator */
@@ -1692,7 +1975,7 @@ _ncm_sbessel_ode_solver_compute_endpoints (NcmSBesselOdeOperator *op, glong n_co
   {
     NcmSBesselOdeSolverRow *r = &op->matrix_rows[row];
     gdouble sum               = op->c[row];
-    const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (r, row);
+    const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (op, r, row);
     const gdouble row_sign    = (row % 2) == 0 ? 1.0 : -1.0;
     const gdouble kd          = (gdouble) row;
     const gdouble k_squared   = kd * kd;
@@ -1723,14 +2006,15 @@ _ncm_sbessel_ode_solver_compute_endpoints (NcmSBesselOdeOperator *op, glong n_co
     sum -= acc_bc_at_m1 * r->bc_at_m1;
     sum -= acc_bc_at_p1 * r->bc_at_p1;
 
-    c_k = sum / diag;
+    c_k    = sum / diag;
+    maxabs = GSL_MAX (maxabs, fabs (c_k));
 
     /* Store coefficient in circular buffer for future back-substitution steps */
     sol_buf[buffer_pos] = c_k;
 
     /* Update boundary condition accumulators for next iteration */
-    acc_bc_at_m1 += row_sign * c_k;
-    acc_bc_at_p1 += c_k;
+    acc_bc_at_m1 += _ncm_sbessel_bc_pat1 (op, row) * c_k;
+    acc_bc_at_p1 += _ncm_sbessel_bc_pat2 (op, row) * c_k;
 
     /* Accumulate derivative contributions:
      * dy/dt|_{t=-1} = sum_k k^2 * (-1)^(k+1) * c_k
@@ -1746,6 +2030,9 @@ _ncm_sbessel_ode_solver_compute_endpoints (NcmSBesselOdeOperator *op, glong n_co
   g_array_index (endpoints, gdouble, 0) = deriv_at_m1 / h;    /* u'(a) = u'(-1) / h */
   g_array_index (endpoints, gdouble, 1) = deriv_at_p1 / h;    /* u'(b) = u'(+1) / h */
   g_array_index (endpoints, gdouble, 2) = error_estimate / h; /* error estimate */
+
+  _ensure_acc_bc_capacity (op, 1);
+  op->last_max_coeff[0] = maxabs;
 
   g_free (sol_buf);
 }
@@ -1783,7 +2070,7 @@ _ncm_sbessel_apply_rotations_batched (NcmSBesselOdeOperator *op, glong col, guin
       gdouble *c2                = &op->c[r2_idx_batch];
       gdouble *rot_ptr           = &op->rotation_params[2 * rot_idx];
 
-      _ncm_sbessel_apply_givens (col, r1, r2, c1, c2, rot_ptr);
+      _ncm_sbessel_apply_givens (op, col, r1, r2, c1, c2, rot_ptr);
     }
   }
 }
@@ -2017,8 +2304,9 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
 
   for (l_idx = 0; l_idx < n_ell; l_idx++)
   {
-    op->acc_bc_at_m1[l_idx] = 0.0;
-    op->acc_bc_at_p1[l_idx] = 0.0;
+    op->acc_bc_at_m1[l_idx]   = 0.0;
+    op->acc_bc_at_p1[l_idx]   = 0.0;
+    op->last_max_coeff[l_idx] = 0.0;
   }
 
   g_array_set_size (solutions, (n_cols + TOTAL_BANDWIDTH) * n_ell);
@@ -2029,7 +2317,6 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
   for (row = n_cols - 1; row >= 0; row--)
   {
     const glong row_base_idx = row * n_ell;
-    const gdouble row_sign   = (row % 2) == 0 ? 1.0 : -1.0;
 
     #pragma omp simd
 
@@ -2041,7 +2328,7 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
       const glong base_sol_idx                  = l_idx * n_cols;
       const gdouble * restrict sol_row          = &sol_data[base_sol_idx];
       gdouble sum                               = op->c[row_idx];
-      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row ((NcmSBesselOdeSolverRow *) r, row);
+      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row (op, (NcmSBesselOdeSolverRow *) r, row);
       gdouble sol;
 
       g_assert_cmpuint (r->col_index, ==, row); /* Banded matrix */
@@ -2061,9 +2348,10 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
 
       sol                          = sum / diag;
       sol_data[base_sol_idx + row] = sol;
+      op->last_max_coeff[l_idx]    = GSL_MAX (op->last_max_coeff[l_idx], fabs (sol));
 
-      op->acc_bc_at_m1[l_idx] += row_sign * sol;
-      op->acc_bc_at_p1[l_idx] += sol;
+      op->acc_bc_at_m1[l_idx] += _ncm_sbessel_bc_pat1 (op, row) * sol;
+      op->acc_bc_at_p1[l_idx] += _ncm_sbessel_bc_pat2 (op, row) * sol;
     }
   }
 
@@ -2127,8 +2415,9 @@ _ncm_sbessel_ode_operator_compute_endpoints_batched (NcmSBesselOdeOperator *op, 
 
   for (l_idx = 0; l_idx < n_ell; l_idx++)
   {
-    op->acc_bc_at_m1[l_idx] = 0.0;
-    op->acc_bc_at_p1[l_idx] = 0.0;
+    op->acc_bc_at_m1[l_idx]   = 0.0;
+    op->acc_bc_at_p1[l_idx]   = 0.0;
+    op->last_max_coeff[l_idx] = 0.0;
   }
 
   /* Back-substitution: compute coefficients and accumulate derivative contributions */
@@ -2159,7 +2448,7 @@ _ncm_sbessel_ode_operator_compute_endpoints_batched (NcmSBesselOdeOperator *op, 
       const glong base_buffer_idx               = l_idx * TOTAL_BANDWIDTH;
       const gdouble * restrict sol_buf          = &op->solution_batched[base_buffer_idx];
       gdouble sum                               = op->c[row_idx];
-      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row ((NcmSBesselOdeSolverRow *) r, row);
+      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row (op, (NcmSBesselOdeSolverRow *) r, row);
       gdouble c_k;
 
       g_assert_cmpuint (r->col_index, ==, row); /* Banded matrix */
@@ -2176,14 +2465,15 @@ _ncm_sbessel_ode_operator_compute_endpoints_batched (NcmSBesselOdeOperator *op, 
       sum -= op->acc_bc_at_m1[l_idx] * r->bc_at_m1;
       sum -= op->acc_bc_at_p1[l_idx] * r->bc_at_p1;
 
-      c_k = sum / diag;
+      c_k                       = sum / diag;
+      op->last_max_coeff[l_idx] = GSL_MAX (op->last_max_coeff[l_idx], fabs (c_k));
 
       /* Store coefficient in circular buffer for future back-substitution steps */
       op->solution_batched[base_buffer_idx + buffer_pos] = c_k;
 
       /* Update boundary condition accumulators for next iteration */
-      op->acc_bc_at_m1[l_idx] += row_sign * c_k;
-      op->acc_bc_at_p1[l_idx] += c_k;
+      op->acc_bc_at_m1[l_idx] += _ncm_sbessel_bc_pat1 (op, row) * c_k;
+      op->acc_bc_at_p1[l_idx] += _ncm_sbessel_bc_pat2 (op, row) * c_k;
 
       /* Accumulate derivative contributions:
        * du/dt|_{t=-1} = sum_k k^2 * (-1)^(k+1) * c_k
@@ -2265,14 +2555,14 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
 
   for (l_idx = 0; l_idx < n_ell; l_idx++)
   {
-    op->acc_bc_at_m1[l_idx] = 0.0;
-    op->acc_bc_at_p1[l_idx] = 0.0;
+    op->acc_bc_at_m1[l_idx]   = 0.0;
+    op->acc_bc_at_p1[l_idx]   = 0.0;
+    op->last_max_coeff[l_idx] = 0.0;
   }
 
   for (row = n_cols - 1; row >= 0; row--)
   {
     const glong row_base_idx = row * n_ell;
-    const gdouble row_sign   = (row % 2) == 0 ? 1.0 : -1.0;
     const glong buffer_pos   = row % TOTAL_BANDWIDTH;
     const glong buf_pos_1    = (row + 1) % TOTAL_BANDWIDTH;
     const glong buf_pos_2    = (row + 2) % TOTAL_BANDWIDTH;
@@ -2295,7 +2585,7 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
       const NcmSBesselOdeSolverRow * restrict r = &op->matrix_rows[row_idx];
       const gdouble * restrict r_data           = r->data;
       gdouble sum                               = op->c[row_idx];
-      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row ((NcmSBesselOdeSolverRow *) r, row);
+      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row (op, (NcmSBesselOdeSolverRow *) r, row);
       gdouble c_k;
 
       g_assert_cmpuint (r->col_index, ==, row);
@@ -2313,8 +2603,9 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
 
       c_k                                              = sum / diag;
       op->solution_batched[buffer_pos * n_ell + l_idx] = c_k;
-      op->acc_bc_at_m1[l_idx]                         += row_sign * c_k;
-      op->acc_bc_at_p1[l_idx]                         += c_k;
+      op->last_max_coeff[l_idx]                        = GSL_MAX (op->last_max_coeff[l_idx], fabs (c_k));
+      op->acc_bc_at_m1[l_idx]                         += _ncm_sbessel_bc_pat1 (op, row) * c_k;
+      op->acc_bc_at_p1[l_idx]                         += _ncm_sbessel_bc_pat2 (op, row) * c_k;
       value_data[4 * l_idx + 0]                       += w0 * c_k;
       value_data[4 * l_idx + 1]                       += dw0 * c_k;
       value_data[4 * l_idx + 2]                       += w1 * c_k;
@@ -2837,11 +3128,10 @@ _ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
     /* Handle boundary condition rows with infinite components */
     if (fabs (row->bc_at_m1) > 1.0e-100)
     {
-      /* bc_at_m1 contributes (-1)^k at every column k */
+      /* first closure pattern, evaluated at every column k */
       for (k = row->col_index; k < ncols; k++)
       {
-        const gdouble sign  = (k % 2 == 0) ? 1.0 : -1.0;
-        const gdouble value = row->bc_at_m1 * sign;
+        const gdouble value = row->bc_at_m1 * _ncm_sbessel_bc_pat1 (op, k);
         const gint idx      = colmajor ? (k * nrows + i) : (i * ncols + k);
 
         data[idx] += value;
@@ -2850,10 +3140,10 @@ _ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
 
     if (fabs (row->bc_at_p1) > 1.0e-100)
     {
-      /* bc_at_p1 contributes 1.0 at every column k */
+      /* second closure pattern, evaluated at every column k */
       for (k = row->col_index; k < ncols; k++)
       {
-        const gdouble value = row->bc_at_p1;
+        const gdouble value = row->bc_at_p1 * _ncm_sbessel_bc_pat2 (op, k);
         const gint idx      = colmajor ? (k * nrows + i) : (i * ncols + k);
 
         data[idx] += value;

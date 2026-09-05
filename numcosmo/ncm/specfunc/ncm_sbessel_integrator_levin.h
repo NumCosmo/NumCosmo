@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_integrator.h>
+#include <numcosmo/ncm/specfunc/ncm_sbessel_ode_solver.h>
 
 G_BEGIN_DECLS
 
@@ -50,6 +51,12 @@ void ncm_sbessel_integrator_levin_clear (NcmSBesselIntegratorLevin **sbilv);
 void ncm_sbessel_integrator_levin_set_max_order (NcmSBesselIntegratorLevin *sbilv, guint max_order);
 guint ncm_sbessel_integrator_levin_get_max_order (NcmSBesselIntegratorLevin *sbilv);
 
+void ncm_sbessel_integrator_levin_set_free_closure_min_osc (NcmSBesselIntegratorLevin *sbilv, gdouble min_osc);
+gdouble ncm_sbessel_integrator_levin_get_free_closure_min_osc (NcmSBesselIntegratorLevin *sbilv);
+void ncm_sbessel_integrator_levin_set_free_closure (NcmSBesselIntegratorLevin *sbilv, gboolean free_closure);
+gboolean ncm_sbessel_integrator_levin_get_free_closure (NcmSBesselIntegratorLevin *sbilv);
+guint ncm_sbessel_integrator_levin_get_n_closure_fallbacks (NcmSBesselIntegratorLevin *sbilv);
+NcmSBesselOdeSolver *ncm_sbessel_integrator_levin_peek_ode_solver (NcmSBesselIntegratorLevin *sbilv);
 void ncm_sbessel_integrator_levin_set_reltol (NcmSBesselIntegratorLevin *sbilv, gdouble reltol);
 gdouble ncm_sbessel_integrator_levin_get_reltol (NcmSBesselIntegratorLevin *sbilv);
 

@@ -91,6 +91,9 @@ void ncm_sbessel_ode_solver_clear (NcmSBesselOdeSolver **solver);
 void ncm_sbessel_ode_solver_set_tolerance (NcmSBesselOdeSolver *solver, gdouble tol);
 gdouble ncm_sbessel_ode_solver_get_tolerance (NcmSBesselOdeSolver *solver);
 
+void ncm_sbessel_ode_solver_set_free_closure (NcmSBesselOdeSolver *solver, gboolean free_closure);
+gboolean ncm_sbessel_ode_solver_get_free_closure (NcmSBesselOdeSolver *solver);
+
 NcmMatrix *ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, const gdouble a, const gdouble b, guint ell, gint nrows);
 NcmMatrix *ncm_sbessel_ode_solver_get_operator_matrix_colmajor (NcmSBesselOdeSolver *solver, const gdouble a, const gdouble b, guint ell, gint nrows);
 NcmVector *ncm_sbessel_ode_solver_solve_dense (NcmSBesselOdeSolver *solver, const gdouble a, const gdouble b, guint ell, NcmVector *rhs, gint nrows);
@@ -108,6 +111,15 @@ void ncm_sbessel_ode_operator_get_interval (NcmSBesselOdeOperator *op, gdouble *
 void ncm_sbessel_ode_operator_get_ell_range (NcmSBesselOdeOperator *op, gint *ell_min, gint *ell_max);
 gdouble ncm_sbessel_ode_operator_get_tolerance (NcmSBesselOdeOperator *op);
 glong ncm_sbessel_ode_operator_get_n_cols (NcmSBesselOdeOperator *op);
+void ncm_sbessel_ode_operator_set_min_cols (NcmSBesselOdeOperator *op, glong min_cols);
+glong ncm_sbessel_ode_operator_get_min_cols (NcmSBesselOdeOperator *op);
+
+void ncm_sbessel_ode_operator_set_pinned_bc (NcmSBesselOdeOperator *op, glong pin1, glong pin2);
+void ncm_sbessel_ode_operator_set_dirichlet_bc (NcmSBesselOdeOperator *op);
+gboolean ncm_sbessel_ode_operator_get_pinned_bc (NcmSBesselOdeOperator *op, glong *pin1, glong *pin2);
+void ncm_sbessel_ode_operator_set_free_closure (NcmSBesselOdeOperator *op, gboolean free_closure);
+gboolean ncm_sbessel_ode_operator_get_free_closure (NcmSBesselOdeOperator *op);
+gdouble ncm_sbessel_ode_operator_get_last_max_coeff (NcmSBesselOdeOperator *op, guint ell_idx);
 gsize ncm_sbessel_ode_operator_get_operator_size (NcmSBesselOdeOperator *op);
 
 void ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray **solution, gsize *solution_len);

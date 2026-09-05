@@ -153,7 +153,14 @@ struct _NcmSBesselIntegratorLevin
   GArray *endpoints_result;
   gdouble *jl_arr;
   gboolean record_panels; /* Diagnostic panel recording (off by default) */
-  GArray *panel_records;  /* NcmSBesselIntegratorLevinPanelRec, valid when recording */
+
+  /* Per-panel closure rule. A panel whose oscillation count, measured from the
+   * highest turning point in the block, exceeds this uses the free (tau) closure;
+   * every other panel keeps Dirichlet data. Zero disables the rule and the
+   * solver-wide setting governs. */
+  gdouble free_closure_min_osc;
+  guint n_closure_fallbacks; /* Panels the guard sent back to Dirichlet (diagnostic) */
+  GArray *panel_records;     /* NcmSBesselIntegratorLevinPanelRec, valid when recording */
   /* Knots-based paneling */
   gdouble y_knots_min;
   gdouble y_knots_max;
@@ -188,11 +195,14 @@ enum
   PROP_Y_KNOTS_MAX,
   PROP_N_KNOTS,
   PROP_ELL_CACHE_MAX,
+  PROP_FREE_CLOSURE_MIN_OSC,
 };
 
 static void _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegratorLevin *sbilv);
 static void _ncm_sbessel_integrator_levin_prepare_ell_cache (NcmSBesselIntegratorLevin *sbilv);
 static void _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv, guint max_order, guint ell_min, guint ell_max);
+static void _ncm_sbessel_integrator_levin_apply_closure (NcmSBesselIntegratorLevin *sbilv, NcmSBesselOdeOperator *op, gdouble a, gdouble b, guint ell_max);
+static gboolean _ncm_sbessel_integrator_levin_free_closure_blew_up (NcmSBesselOdeOperator *op, GArray *cheb, gdouble a, gdouble b, guint ell_min, guint ell_max);
 static void _ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin *sbilv, guint ell_min, guint ell_max);
 static void _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv, NcmSpectral *spectral, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, gpointer user_data);
 static void _ncm_sbessel_integrator_levin_solve_and_accumulate (NcmSBesselIntegratorLevin *sbilv, NcmSpectral *spectral, NcmSBesselOdeOperator *operator, NcmSBesselIntegratorF F, gdouble a_p, gdouble b_p, const gdouble *j_a_p, const gdouble *j_b_p, gdouble k, guint ell_min, guint ell_max, gdouble *result_data, gpointer user_data);
@@ -206,30 +216,32 @@ G_DEFINE_TYPE (NcmSBesselIntegratorLevin, ncm_sbessel_integrator_levin, NCM_TYPE
 static void
 ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
 {
-  sbilv->max_order          = 0;
-  sbilv->reltol             = 0.0;
-  sbilv->cheb_min_order     = 0;
-  sbilv->cheb_reltol        = 0.0;
-  sbilv->ode_solver         = ncm_sbessel_ode_solver_new ();
-  sbilv->ode_operator       = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, 2, 2);
-  sbilv->sba                = ncm_sf_sbessel_array_new ();
-  sbilv->alloc_max_order    = 0;
-  sbilv->alloc_ell_min      = -1;
-  sbilv->alloc_ell_max      = -1;
-  sbilv->deriv              = 0;
-  sbilv->cheb_coeffs        = NULL;
-  sbilv->edge_cheb_coeffs   = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  sbilv->gegen_coeffs       = NULL;
-  sbilv->deriv_gegen_coeffs = NULL;
-  sbilv->rhs                = NULL;
-  sbilv->values_result      = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  sbilv->j_array_a          = NULL;
-  sbilv->j_array_b          = NULL;
-  sbilv->endpoints_result   = NULL;
-  sbilv->jl_arr             = NULL;
-  sbilv->constructed        = FALSE;
-  sbilv->record_panels      = FALSE;
-  sbilv->panel_records      = g_array_new (FALSE, FALSE, sizeof (NcmSBesselIntegratorLevinPanelRec));
+  sbilv->max_order            = 0;
+  sbilv->reltol               = 0.0;
+  sbilv->cheb_min_order       = 0;
+  sbilv->cheb_reltol          = 0.0;
+  sbilv->free_closure_min_osc = 0.0;
+  sbilv->n_closure_fallbacks  = 0;
+  sbilv->ode_solver           = ncm_sbessel_ode_solver_new ();
+  sbilv->ode_operator         = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, 2, 2);
+  sbilv->sba                  = ncm_sf_sbessel_array_new ();
+  sbilv->alloc_max_order      = 0;
+  sbilv->alloc_ell_min        = -1;
+  sbilv->alloc_ell_max        = -1;
+  sbilv->deriv                = 0;
+  sbilv->cheb_coeffs          = NULL;
+  sbilv->edge_cheb_coeffs     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  sbilv->gegen_coeffs         = NULL;
+  sbilv->deriv_gegen_coeffs   = NULL;
+  sbilv->rhs                  = NULL;
+  sbilv->values_result        = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  sbilv->j_array_a            = NULL;
+  sbilv->j_array_b            = NULL;
+  sbilv->endpoints_result     = NULL;
+  sbilv->jl_arr               = NULL;
+  sbilv->constructed          = FALSE;
+  sbilv->record_panels        = FALSE;
+  sbilv->panel_records        = g_array_new (FALSE, FALSE, sizeof (NcmSBesselIntegratorLevinPanelRec));
   /* Knots-based paneling */
   sbilv->y_knots_min    = 0.0;
   sbilv->y_knots_max    = 0.0;
@@ -356,6 +368,9 @@ _ncm_sbessel_integrator_levin_set_property (GObject *object, guint prop_id, cons
     case PROP_CHEB_RELTOL:
       ncm_sbessel_integrator_levin_set_cheb_reltol (sbilv, g_value_get_double (value));
       break;
+    case PROP_FREE_CLOSURE_MIN_OSC:
+      ncm_sbessel_integrator_levin_set_free_closure_min_osc (sbilv, g_value_get_double (value));
+      break;
     case PROP_Y_KNOTS_MIN:
       sbilv->y_knots_min = g_value_get_double (value);
       break;
@@ -394,6 +409,9 @@ _ncm_sbessel_integrator_levin_get_property (GObject *object, guint prop_id, GVal
       break;
     case PROP_CHEB_RELTOL:
       g_value_set_double (value, ncm_sbessel_integrator_levin_get_cheb_reltol (sbilv));
+      break;
+    case PROP_FREE_CLOSURE_MIN_OSC:
+      g_value_set_double (value, ncm_sbessel_integrator_levin_get_free_closure_min_osc (sbilv));
       break;
     case PROP_Y_KNOTS_MIN:
       g_value_set_double (value, ncm_sbessel_integrator_levin_get_y_knots_min (sbilv));
@@ -480,6 +498,24 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
                                                         NULL,
                                                         "Integrand Chebyshev fit relative tolerance",
                                                         0.0, 1.0, 1.0e-8,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmSBesselIntegratorLevin:free-closure-min-osc:
+   *
+   * A panel solve uses the free (tau) closure when the panel's oscillation count,
+   * $\frac{2}{\pi}\,(b - \max(a, \nu_{\max}))$ with $\nu_{\max}$ the turning point of
+   * the highest multipole in the block, exceeds this value; otherwise it keeps the
+   * Dirichlet data. Zero disables the rule. The free closure is valid only where the
+   * homogeneous solutions are unrepresentable at the working order, which is what
+   * the count measures.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_FREE_CLOSURE_MIN_OSC,
+                                   g_param_spec_double ("free-closure-min-osc",
+                                                        NULL,
+                                                        "Panel oscillation count above which the free closure is used (0 disables)",
+                                                        0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -685,6 +721,7 @@ _ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin
         NcmSBesselOdeOperator *op;
 
         op = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, y_a, y_b, ell_min, ell_max);
+        _ncm_sbessel_integrator_levin_apply_closure (sbilv, op, y_a, y_b, ell_max);
         g_ptr_array_add (sbilv->operators, op);
       }
 
@@ -707,6 +744,7 @@ _ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin
         const gdouble y_b         = g_array_index (sbilv->knots, gdouble, i + 1);
 
         ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, op, y_a, y_b, ell_min, ell_max);
+        _ncm_sbessel_integrator_levin_apply_closure (sbilv, op, y_a, y_b, ell_max);
       }
 
       /* Reset temporary operators */
@@ -929,6 +967,7 @@ _ncm_sbessel_integrator_levin_get_panel_resources (NcmSBesselIntegratorLevin *sb
         (sbilv->ode_operator_temp_a_ell_max != ell_max))
     {
       ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, op, a_p, b_p, ell_min, ell_max);
+      _ncm_sbessel_integrator_levin_apply_closure (sbilv, op, a_p, b_p, ell_max);
       sbilv->ode_operator_temp_a_a       = a_p;
       sbilv->ode_operator_temp_a_b       = b_p;
       sbilv->ode_operator_temp_a_ell_min = ell_min;
@@ -947,6 +986,7 @@ _ncm_sbessel_integrator_levin_get_panel_resources (NcmSBesselIntegratorLevin *sb
         (sbilv->ode_operator_temp_b_ell_max != ell_max))
     {
       ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, op, a_p, b_p, ell_min, ell_max);
+      _ncm_sbessel_integrator_levin_apply_closure (sbilv, op, a_p, b_p, ell_max);
       sbilv->ode_operator_temp_b_a       = a_p;
       sbilv->ode_operator_temp_b_b       = b_p;
       sbilv->ode_operator_temp_b_ell_min = ell_min;
@@ -1061,16 +1101,51 @@ _ncm_sbessel_integrator_levin_solve_rhs_and_accumulate (NcmSBesselIntegratorLevi
   if (sbilv->deriv > 0)
     _ncm_sbessel_integrator_levin_boundary_data (sbilv, a_p, b_p, a_p, b_p, &bd);
 
-  ncm_sbessel_ode_operator_solve_endpoints (operator, sbilv->rhs, &sbilv->endpoints_result);
+  /* Dirichlet data makes u vanish at both ends, so the u term of W drops and only the
+   * derivatives are needed. The free closure leaves u nonzero there, and the general
+   * functional -- the same one the extended cells below use -- is required. */
+  gboolean use_free = ncm_sbessel_ode_operator_get_free_closure (operator);
+
+  if (use_free)
+  {
+    ncm_sbessel_ode_operator_solve_values (operator, sbilv->rhs, a_p, b_p, &sbilv->values_result);
+
+    if (_ncm_sbessel_integrator_levin_free_closure_blew_up (operator, sbilv->cheb_coeffs, a_p, b_p, ell_min, ell_max))
+    {
+      /* The free solve admitted homogeneous content: this panel is not in the
+       * regime where that closure is valid. Redo it, and keep it, with Dirichlet. */
+      ncm_sbessel_ode_operator_set_free_closure (operator, FALSE);
+      sbilv->n_closure_fallbacks++;
+      use_free = FALSE;
+    }
+  }
+
+  if (!use_free)
+    ncm_sbessel_ode_operator_solve_endpoints (operator, sbilv->rhs, &sbilv->endpoints_result);
 
   for (ell = ell_min; ell <= ell_max; ell++)
   {
-    const gint ell_idx      = ell - ell_min;
-    const gdouble y_prime_a = g_array_index (sbilv->endpoints_result, gdouble, ell_idx * 3 + 0);
-    const gdouble y_prime_b = g_array_index (sbilv->endpoints_result, gdouble, ell_idx * 3 + 1);
-    const gdouble j_l_a     = j_a_p[ell];
-    const gdouble j_l_b     = j_b_p[ell];
-    gdouble contrib         = b_p * j_l_b * y_prime_b - a_p * j_l_a * y_prime_a;
+    const gint ell_idx  = ell - ell_min;
+    const gdouble j_l_a = j_a_p[ell];
+    const gdouble j_l_b = j_b_p[ell];
+    gdouble contrib;
+
+    if (use_free)
+    {
+      const gdouble *values = &g_array_index (sbilv->values_result, gdouble, 4 * ell_idx);
+      const gdouble yj_p_a  = ncm_sf_sbessel_xjl_deriv_from_array (ell, a_p, j_a_p);
+      const gdouble yj_p_b  = ncm_sf_sbessel_xjl_deriv_from_array (ell, b_p, j_b_p);
+
+      contrib = (b_p * j_l_b * values[3] - yj_p_b * values[2]) -
+                (a_p * j_l_a * values[1] - yj_p_a * values[0]);
+    }
+    else
+    {
+      const gdouble y_prime_a = g_array_index (sbilv->endpoints_result, gdouble, ell_idx * 3 + 0);
+      const gdouble y_prime_b = g_array_index (sbilv->endpoints_result, gdouble, ell_idx * 3 + 1);
+
+      contrib = b_p * j_l_b * y_prime_b - a_p * j_l_a * y_prime_a;
+    }
 
     if (sbilv->deriv > 0)
       contrib += _ncm_sbessel_integrator_levin_boundary_contrib (sbilv, &bd, ell, a_p, b_p, j_a_p, j_b_p);
@@ -1160,6 +1235,7 @@ _ncm_sbessel_integrator_levin_get_edge_operator (NcmSBesselIntegratorLevin *sbil
 
       *key = key_value;
       op   = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, *panel_a, *panel_b, ell_min, ell_max);
+      _ncm_sbessel_integrator_levin_apply_closure (sbilv, op, *panel_a, *panel_b, ell_max);
       g_hash_table_insert (sbilv->edge_operators, key, op);
     }
 
@@ -1347,6 +1423,15 @@ _ncm_sbessel_integrator_levin_integrate_extended_panel (NcmSBesselIntegratorLevi
 
   ncm_sbessel_ode_operator_solve_values (operator, sbilv->rhs,
                                          integral_a, integral_b, &sbilv->values_result);
+
+  if (ncm_sbessel_ode_operator_get_free_closure (operator) &&
+      _ncm_sbessel_integrator_levin_free_closure_blew_up (operator, sbilv->edge_cheb_coeffs, panel_a, panel_b, ell_min, ell_max))
+  {
+    ncm_sbessel_ode_operator_set_free_closure (operator, FALSE);
+    sbilv->n_closure_fallbacks++;
+    ncm_sbessel_ode_operator_solve_values (operator, sbilv->rhs,
+                                           integral_a, integral_b, &sbilv->values_result);
+  }
 
   {
     NcmSBesselIntegratorLevinBoundary bd = {0.0, 0.0, 0.0, 0.0};
@@ -1686,6 +1771,7 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
 
     op = sbilv->ode_operator;
     ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, op, y_min, y_max, ell_min, ell_max);
+    _ncm_sbessel_integrator_levin_apply_closure (sbilv, op, y_min, y_max, ell_max);
 
     _ncm_sbessel_integrator_levin_solve_and_accumulate (sbilv, spectral, op,
                                                         F, y_min, y_max, j_a_p, j_b_p, k,
@@ -2032,6 +2118,180 @@ ncm_sbessel_integrator_levin_get_max_order (NcmSBesselIntegratorLevin *sbilv)
  * ncm_sbessel_integrator_levin_set_cheb_reltol(). The looser of the two
  * bounds the result.
  */
+
+/*
+ * Rebuilds the closure of every cached panel operator after a closure setting
+ * changed. The operators are reconfigured in place through the set_ell_range path,
+ * which is the only place the preparation guard lives: a plain integrate() call
+ * never re-prepares, so invalidating the allocated range alone would leave the
+ * operators untouched until the next range change. Before construction nothing
+ * exists yet and the constructed handler prepares with the setting already in place.
+ */
+static void
+_ncm_sbessel_integrator_levin_reprepare (NcmSBesselIntegratorLevin *sbilv)
+{
+  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (sbilv);
+  guint ell_min, ell_max;
+
+  g_hash_table_remove_all (sbilv->edge_operators);
+  sbilv->ode_operator_temp_a_valid = FALSE;
+  sbilv->ode_operator_temp_b_valid = FALSE;
+
+  if (!sbilv->constructed)
+    return;
+
+  sbilv->alloc_ell_min = G_MAXUINT;
+  sbilv->alloc_ell_max = G_MAXUINT;
+  ncm_sbessel_integrator_get_ell_range (sbi, &ell_min, &ell_max);
+  ncm_sbessel_integrator_set_ell_range (sbi, ell_min, ell_max);
+}
+
+/* Factor above the forcing's own scale at which a free-closure solve is rejected.
+ * Measured separation: a valid solve sits at ratio ~1, a contaminated one at ~1e11. */
+#define NCM_SBESSEL_INTEGRATOR_LEVIN_FREE_CLOSURE_GUARD (1.0e3)
+
+/*
+ * Returns TRUE when the last free-closure solve on @op admitted homogeneous content.
+ * The smooth member is u_p ~ yF / (y^2 - nu^2), so its coefficients are bounded by
+ * max|yF| / min(y^2 - nu^2); @cheb holds the Chebyshev coefficients of F on the
+ * panel, so b * sum|c_k| bounds max|yF|. A panel that reaches the turning point of
+ * the highest multipole has no smooth member and is rejected outright.
+ */
+static gboolean
+_ncm_sbessel_integrator_levin_free_closure_blew_up (NcmSBesselOdeOperator *op, GArray *cheb, gdouble a, gdouble b, guint ell_min, guint ell_max)
+{
+  const gdouble nu_max = sqrt (ell_max * (ell_max + 1.0));
+  const gdouble denom  = a * a - nu_max * nu_max;
+  gdouble sum_c        = 0.0;
+  guint i;
+
+  if (denom <= 0.0)
+    return TRUE;
+
+  for (i = 0; i < cheb->len; i++)
+    sum_c += fabs (g_array_index (cheb, gdouble, i));
+
+  {
+    const gdouble scale = b * sum_c / denom;
+    const gdouble limit = NCM_SBESSEL_INTEGRATOR_LEVIN_FREE_CLOSURE_GUARD * scale;
+
+    for (i = 0; i <= ell_max - ell_min; i++)
+      if (ncm_sbessel_ode_operator_get_last_max_coeff (op, i) > limit)
+        return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * ncm_sbessel_integrator_levin_get_n_closure_fallbacks:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ *
+ * Returns: how many panel operators the free-closure guard has sent back to
+ * Dirichlet data since construction.
+ */
+guint
+ncm_sbessel_integrator_levin_get_n_closure_fallbacks (NcmSBesselIntegratorLevin *sbilv)
+{
+  return sbilv->n_closure_fallbacks;
+}
+
+/*
+ * Applies the per-panel closure rule to an operator that has just been given the
+ * bounds [a, b] for multipoles up to ell_max. No-op when the rule is disabled.
+ */
+static void
+_ncm_sbessel_integrator_levin_apply_closure (NcmSBesselIntegratorLevin *sbilv, NcmSBesselOdeOperator *op, gdouble a, gdouble b, guint ell_max)
+{
+  if (sbilv->free_closure_min_osc > 0.0)
+  {
+    const gdouble nu_max = sqrt (ell_max * (ell_max + 1.0));
+    const gdouble span   = b - GSL_MAX (a, nu_max);
+    const gdouble osc    = (span > 0.0) ? 2.0 * span / M_PI : 0.0;
+
+    ncm_sbessel_ode_operator_set_free_closure (op, osc > sbilv->free_closure_min_osc);
+  }
+}
+
+/**
+ * ncm_sbessel_integrator_levin_set_free_closure_min_osc:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ * @min_osc: oscillation count above which a panel uses the free closure; 0 disables
+ *
+ * Sets #NcmSBesselIntegratorLevin:free-closure-min-osc. Cached panel operators are
+ * reconfigured on the next solve so the rule reaches them.
+ *
+ */
+void
+ncm_sbessel_integrator_levin_set_free_closure_min_osc (NcmSBesselIntegratorLevin *sbilv, gdouble min_osc)
+{
+  g_assert_cmpfloat (min_osc, >=, 0.0);
+
+  if (sbilv->free_closure_min_osc == min_osc)
+    return;
+
+  sbilv->free_closure_min_osc = min_osc;
+
+  _ncm_sbessel_integrator_levin_reprepare (sbilv);
+}
+
+/**
+ * ncm_sbessel_integrator_levin_get_free_closure_min_osc:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ *
+ * Returns: the value of #NcmSBesselIntegratorLevin:free-closure-min-osc.
+ */
+gdouble
+ncm_sbessel_integrator_levin_get_free_closure_min_osc (NcmSBesselIntegratorLevin *sbilv)
+{
+  return sbilv->free_closure_min_osc;
+}
+
+/**
+ * ncm_sbessel_integrator_levin_set_free_closure:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ * @free_closure: whether panel solves use the free (tau) closure
+ *
+ * Selects the closure used by every panel solve. The panel operators carry the
+ * closure they were built with, so the cached ones are discarded here and rebuilt on
+ * the next solve; setting the flag on the solver alone would leave them untouched.
+ *
+ */
+void
+ncm_sbessel_integrator_levin_set_free_closure (NcmSBesselIntegratorLevin *sbilv, gboolean free_closure)
+{
+  ncm_sbessel_ode_solver_set_free_closure (sbilv->ode_solver, free_closure);
+
+  _ncm_sbessel_integrator_levin_reprepare (sbilv);
+}
+
+/**
+ * ncm_sbessel_integrator_levin_get_free_closure:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ *
+ * Returns: whether panel solves use the free (tau) closure.
+ */
+gboolean
+ncm_sbessel_integrator_levin_get_free_closure (NcmSBesselIntegratorLevin *sbilv)
+{
+  return ncm_sbessel_ode_solver_get_free_closure (sbilv->ode_solver);
+}
+
+/**
+ * ncm_sbessel_integrator_levin_peek_ode_solver:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ *
+ * Gives access to the #NcmSBesselOdeSolver the integrator builds its panel operators
+ * from. Settings applied here reach operators created or reconfigured afterwards.
+ *
+ * Returns: (transfer none): the integrator's solver
+ */
+NcmSBesselOdeSolver *
+ncm_sbessel_integrator_levin_peek_ode_solver (NcmSBesselIntegratorLevin *sbilv)
+{
+  return sbilv->ode_solver;
+}
+
 void
 ncm_sbessel_integrator_levin_set_reltol (NcmSBesselIntegratorLevin *sbilv, gdouble reltol)
 {
@@ -2064,6 +2324,7 @@ ncm_sbessel_integrator_levin_set_reltol (NcmSBesselIntegratorLevin *sbilv, gdoub
       const gdouble y_b         = g_array_index (sbilv->knots, gdouble, i + 1);
 
       ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, op, y_a, y_b, ell_min, ell_max);
+      _ncm_sbessel_integrator_levin_apply_closure (sbilv, op, y_a, y_b, ell_max);
     }
 
     ncm_sbessel_ode_solver_reconfigure_operator (sbilv->ode_solver, sbilv->ode_operator_temp_a, 0.0, 1.0, ell_min, ell_max);
