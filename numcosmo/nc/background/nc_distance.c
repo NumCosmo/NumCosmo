@@ -179,6 +179,8 @@ _nc_distance_dispose (GObject *object)
   ncm_ode_spline_clear (&dist->comoving_distance_spline);
   ncm_spline_clear (&dist->inv_comoving_dist);
 
+  nc_recomb_clear (&dist->recomb);
+
   ncm_model_ctrl_clear (&dist->ctrl);
 
   /* Chain up : end */
@@ -1178,6 +1180,14 @@ nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo)
  * $$g_1 = \frac{0.0783 (\Omega_{b0} h^2)^{-0.238}}{(1 + 39.5 (\Omega_{b0} h^2)^{0.763})}
  * \; \text{and} \; g_2 = \frac{0.56}{\left(1 + 21.1 (\Omega_{b0} h^2)^{1.81}\right)}.$$
  *
+ * A #NcRecomb attached to @dist does not change the result. The published CMB
+ * distance priors quote $z_\star$, $R$ and $l_A$ in the convention of the fitting
+ * formula above, which is the convention their means were computed in, so the
+ * quantities derived from $z_\star$ -- [nc_distance_shift_parameter()],
+ * [nc_distance_acoustic_scale()], [nc_distance_theta100CMB()] -- have to be evaluated
+ * in it as well. The $\tau = 1$ redshift of a recombination history is available
+ * through [nc_recomb_get_tau_z()].
+ *
  * Returns: $z_\star$.
  */
 gdouble
@@ -1330,7 +1340,7 @@ nc_distance_theta100CMB (NcDistance *dist, NcHICosmo *cosmo)
  *
  * Drag redshift is the epoch at which baryons were released from photons.
  *
- * If the @dist object constains a NcRecomb object, it calculates the drag
+ * If the @dist object contains a NcRecomb object, it calculates the drag
  * redshift through the recombination history. Otherwise, it computes $z_d$
  * using the fitting formula given in [Eisenstein & Hu (1998)](https://arxiv.org/abs/astro-ph/9709112),
  * $$z_d = \frac{1291 (\Omega_{m0} h^2)^{0.251}}{(1 + 0.659 (\Omega_{m0} h^2)^{0.828})}
@@ -1357,8 +1367,6 @@ nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo)
     gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
     gdouble b1         = 0.313 * pow (omega_m_h2, -0.419) * (1.0 + 0.607 * pow (omega_m_h2, 0.674));
     gdouble b2         = 0.238 * pow (omega_m_h2, 0.223);
-
-    NCM_UNUSED (dist);
 
     return 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
            (1.0 + b1 * pow (omega_b_h2, b2));
