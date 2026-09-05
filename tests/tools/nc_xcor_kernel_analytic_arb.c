@@ -211,6 +211,7 @@ main (int argc, char **argv)
       }
 
       acb_clear (nrm);
+      par_clear (&p);
       flint_cleanup ();
 
       return 0;
@@ -241,6 +242,7 @@ main (int argc, char **argv)
     acb_clear (nrm);
   }
 
+  par_clear (&p);
   flint_cleanup ();
 
   return 0;
