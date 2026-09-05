@@ -42,8 +42,8 @@
  * \end{equation}
  * where $P\left(k = \frac{\ell +1/2}{\chi(z)} , z \right)$ is the power spectrum (a #NcmPowspec) at redshift $z$ and $chi(z)$ the comoving distance (a #NcDistance).
  *
- * See <a href="../../theory/sbessel_projection.html">Projection Integrals with
- * Spherical Bessel Weights</a> for how the non-Limber form is evaluated: the
+ * See <a href="../../theory/sbessel_projection.html">UltraLevin: Non-Limber
+ * Angular Power Spectra</a> for how the non-Limber form is evaluated: the
  * Levin reduction of the radial integral, the two representations of
  * $W_\ell(k)$, and the exact outer integral over $k$.
  *

@@ -41,8 +41,8 @@
  *
  * Kernels also implement the noise power spectrum.
  *
- * See <a href="../../theory/sbessel_projection.html">Projection Integrals with
- * Spherical Bessel Weights</a> for the pipeline a kernel drives: the adaptive
+ * See <a href="../../theory/sbessel_projection.html">UltraLevin: Non-Limber
+ * Angular Power Spectra</a> for the pipeline a kernel drives: the adaptive
  * $k$ domain, the closure fitted to $W_\ell(k)$, and the error estimate the fit
  * residuals feed.
  */

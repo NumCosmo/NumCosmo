@@ -1,52 +1,84 @@
 ---
-title: Projection Integrals with Spherical Bessel Weights
+title: "UltraLevin: Non-Limber Angular Power Spectra"
 ---
 
-This page is the technical description of how NumCosmo evaluates
+This page is the description of how NumCosmo evaluates
 $$
 C_\ell^{XY} \;=\; \frac{2}{\pi}\int_0^\infty \mathrm{d}k\, k^2\,
 \left[\int \mathrm{d}\chi_1\, K^X(\chi_1,k)\, j_\ell(k\chi_1)\right]
 \left[\int \mathrm{d}\chi_2\, K^Y(\chi_2,k)\, j_\ell(k\chi_2)\right],
 \tag{1}
 $$
-a triple integral whose two inner factors oscillate. It is written as a problem
-in scientific computing: the only property of the kernels used anywhere is that
-each $K(\chi,k)$ is a smooth function of $\chi$ on a compact support, possibly
-with a smooth $k$ dependence. A scale-dependent kernel is one where that $k$
-dependence carries a factor such as $\sqrt{P(k,\chi)}$; nothing below depends on
-what $P$ means, only on it being smooth.
+a triple integral whose two inner factors oscillate. The method is *UltraLevin*, named
+for the two ingredients it combines: Levin's reduction of an oscillatory integral to a
+boundary-value problem, and the [ultraspherical spectral
+solver](sbessel_ode_solver.qmd) that solves it.
 
-The pipeline has two stages with a clean interface between them. The inner
-stage computes, for one kernel and one $k$, the window
+The only property of the kernels used anywhere is that each $K(\chi,k)$ is smooth in
+$\chi$ on a compact support and smooth in $k$. The scale dependence is built in from
+the start rather than add on as a special case: each kernel carries its own factor
+$\sqrt{P(k,\chi)}$, so that the pair in Eq. (1) reproduces the power spectrum. The
+inner integral is solved at one $k$ at a time, so nothing assumes $K$ factorizes into a
+function of $\chi$ times a function of $k$, and nothing below depends on what $P$ is
+beyond its smoothness.
+
+The pipeline has two stages with a clean interface between them. The inner stage
+computes, for one kernel and one $k$, the integral
 $$
-I_\ell(k) \;=\; \int_a^b \mathrm{d}\chi\, K(\chi,k)\, j_\ell(k\chi)
+I^X_\ell(k) = \int_a^b \mathrm{d}\chi\, K^X(\chi,k)\, j_\ell(k\chi).
 \tag{2}
 $$
-for a whole block of consecutive multipoles at once
-([The oscillatory integral](#the-oscillatory-integral) through
-[Panels fixed in y](#panels-fixed-in-y)). The outer stage decides which $k$ to
-ask for, builds a representation of $I_\ell(k)$ over $k$ for each kernel, and
-integrates the product of two such representations exactly
-([The window over k](#the-window-over-k) through
-[The outer integral](#the-outer-integral)).
+Evaluated directly, this integral is expensive. The factor $j_\ell$ oscillates, so the
+$\chi$ grid has to resolve the oscillation rather than the kernel, and every node costs
+one kernel evaluation and one Bessel evaluation. As we will see below, a Levin-like
+approach breaks this coupling by replacing the integral with an ODE whose coefficients
+are low-degree polynomials in the integration variable, independent of the kernel and
+cheap to evaluate. The kernel enters only through the forcing, sampled according to its
+own smoothness.
+
+The ODE is solved on panels, subintervals of the integration range, so $j_\ell$ is
+needed only at the two ends of each panel. There is a trade-off between panel width and
+ODE order: wider panels require higher order, while narrower panels require more
+splitting. Since both increase the computational cost, the method balances the two.
+This choice does not affect the target accuracy, although cancellation errors from
+panel splitting and from the ODE solution have different behavior. Consecutive
+multipoles give discretizations that differ only by a constant, allowing a block of
+multipoles to be factorized together and solved in one pass.
+
+The outer stage decides which $k$ to ask for, builds a representation of $I^X_\ell(k)$
+over $k$ for each kernel, and integrates the product of two such representations
+exactly ([The window over k](#the-window-over-k) through [The outer
+integral](#the-outer-integral)).
 
 The inner stage is [[numcosmo-math|NcmSBesselIntegratorLevin]] over
-[[numcosmo-math|NcmSBesselOdeSolver]], and the outer stage is
-[[numcosmo|NcXcorKernel]] over [[numcosmo|NcXcor]]. Each section below names
-the object it describes.
+[[numcosmo-math|NcmSBesselOdeSolver]], and the outer stage is [[numcosmo|NcXcorKernel]]
+over [[numcosmo|NcXcor]]. Each section below names the object it describes.
 
-Every quantity that sets resolution is an output of a tolerance rather than an
-input: the truncation order of each solve, the number of samples of each
-kernel, the knot or panel count of each representation, and the range of $k$
-integrated over. Two quantities are prescribed, and neither sets the accuracy
-of the result: the panel grid in $y$ and the number of multipoles per block.
+No resolution is chosen by hand. In more traditional approaches, the resolution is
+specified directly, through the number and placement of knots or integration nodes, and
+the accuracy that follows from it is implicit. Here, instead, the calculation is
+controlled by a target tolerance, and each adaptive step, such as the construction of a
+Chebyshev representation, refines its resolution until that tolerance is reached. The
+truncation order, the number of kernel samples, the knot or panel count of each
+representation, and the range in $k$ are all determined this way.
 
-The figures on this page are produced by the library itself. The only objects
-from cosmology are constructor arguments that the analytic test windows require;
-the plotted quantities depend on them only through one smooth function $P(k)$.
+As in any numerical calculation, this control is not absolute. Errors in the input
+functions, round-off, cancellations, and other numerical effects can limit the accuracy
+that is actually attained. Two parameters are prescribed rather than adapted --- the
+panel grid in $y$ and the number of multipoles per block --- but neither is a
+resolution: panel splitting is exact, and the block size only decides how many
+multipoles share a factorization. They therefore do not set the target accuracy,
+although the grid does affect what is attainable, through the cancellation between
+panel terms. [What is adaptive and what is
+prescribed](#what-is-adaptive-and-what-is-prescribed) summarizes both kinds of choice
+and their defaults.
+
+The figures on this page are produced by the library itself. The only objects from
+cosmology are constructor arguments that the analytic test windows require; the plotted
+quantities depend on them only through one smooth function $P(k)$.
 
 ```{python}
-#| echo: false
+#| code-fold: true
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import spherical_jn, spherical_yn
@@ -66,14 +98,12 @@ RH = cosmo.RH_Mpc()
 
 ## The oscillatory integral
 
-The difficulty of Eq. (2) is entirely in $j_\ell(k\chi)$. Over a support
-$[a,b]$ the weight completes about $k(b-a)/\pi$ oscillations, and a quadrature
-rule needs several nodes per oscillation. The kernel $K$, by contrast, is
-smooth and needs a few dozen samples however large $k$ is. Any method that
-resolves the oscillations by sampling the integrand pays a cost in kernel
-evaluations that grows linearly in $k$; the method below evaluates $K$ only
-as often as its own smoothness requires and pays for the oscillations in a
-banded linear solve.
+The difficulty of Eq. (2) is entirely in $j_\ell(k\chi)$. Its zeros are asymptotically
+$\pi$ apart, and an oscillation always means one such half-wave here, so over a support
+$[a,b]$ the weight completes about $k(b-a)/\pi$ oscillations and a quadrature rule
+needs several nodes per oscillation. The kernel $K$, by contrast, is smooth and needs a
+few dozen samples however large $k$ is. Any method that resolves the oscillations by
+sampling the integrand pays a cost in kernel evaluations that grows linearly in $k$.
 
 ### The dimensionless variable
 
@@ -83,17 +113,19 @@ I_\ell(k) = \int_{ka}^{kb} \mathrm{d}y\; F(y)\, j_\ell(y),
 \qquad F(y) \equiv \frac{1}{k}\,K\!\left(\frac{y}{k}, k\right).
 \tag{3}
 $$
-The weight no longer depends on $k$. Everything that is expensive to prepare
-for $j_\ell$ can therefore be prepared once on a fixed grid in $y$ and reused
-for every $k$, every kernel and every block of multipoles: only the integration
-bounds $[ka, kb]$ and the forcing $F$ move with $k$. This is the organising
-principle of the implementation ([Panels fixed in y](#panels-fixed-in-y)).
+The weight $j_\ell(y)$ no longer depends on $k$. Consequently, on a fixed panel in $y$,
+the discretized operator depends only on the panel and the multipole block, not on $k$
+or on the kernel. Its construction and factorization can therefore be done once and
+reused for every $k$ and every kernel. Each new integral only changes the integration
+bounds $[ka,kb]$ and the forcing $F$. This reuse of the same precomputed operators is
+the organizing principle of the implementation ([Panels fixed in
+y](#panels-fixed-in-y)).
 
 ### From the integral to a boundary-value problem
 
 The reduction below is what [[numcosmo-math|NcmSBesselIntegratorLevin]]
-implements. $j_\ell$ solves the spherical Bessel equation; equivalently
-$v(y) = y\,j_\ell(y)$ solves
+implements. $j_\ell$ solves the spherical Bessel equation; equivalently $v(y) =
+y\,j_\ell(y)$ solves
 $$
 y^2 v'' + \left[y^2 - \ell(\ell+1)\right] v = 0 .
 \tag{4}
@@ -115,7 +147,7 @@ $$
 \mathcal{W}(y) = y\, j_\ell(y)\, u'(y) - \big(y\,j_\ell(y)\big)'\, u(y).
 \tag{6}
 $$
-This is Levin's reduction [@Levin1996] specialised to the spherical Bessel
+This is Levin's reduction [@Levin1996] specialized to the spherical Bessel
 operator, and it is exact: no approximation enters until Eq. (5) is solved.
 $j_\ell$ itself is evaluated only at the two ends of each panel. The unknown
 $u$ is not free of oscillation: with Dirichlet data it carries homogeneous
@@ -130,10 +162,10 @@ smoothness requires.
 Equation (5) is solved as a two-point boundary-value problem with homogeneous
 Dirichlet data, $u(y_a) = u(y_b) = 0$, so that the second term of
 $\mathcal{W}$ vanishes and the panel integral is $y_b j_\ell(y_b) u'(y_b) - y_a
-j_\ell(y_a) u'(y_a)$. The unknown is $u = y\,w$ rather than $w$ (the solution
-of the equation with the first-derivative term) because Eq. (5) has no
-first-derivative term and no singular coefficient, which keeps the spectral
-operator banded and well conditioned. The general form (6), with the $u$ term
+j_\ell(y_a) u'(y_a)$. The unknown is $u = y\,w$ rather than $w$, the solution
+of the equation with the first-derivative term; Eq. (5) is Eq. (1) of
+[The Ultraspherical Spectral Solver](sbessel_ode_solver.qmd), where that choice
+is justified. The general form (6), with the $u$ term
 kept, is what the code evaluates, because the extended cells of
 [Panels fixed in y](#panels-fixed-in-y) solve on an interval larger than the
 one integrated over.
@@ -219,8 +251,8 @@ Bessel array one order below its lowest multipole.
 ## The spectral solver
 
 Equation (5) is solved by [[numcosmo-math|NcmSBesselOdeSolver]], which
-discretises it in the ultraspherical $C^{(2)}$ basis and grows an incremental
-Givens QR until the solution coefficients decay. The discretisation, the
+discretizes it in the ultraspherical $C^{(2)}$ basis and grows an incremental
+Givens QR until the solution coefficients decay. The discretization, the
 batching over multipoles, the truncation floor and the conjugate panel spans
 are described on [The Ultraspherical Spectral
 Solver](sbessel_ode_solver.qmd). Only two of its properties are used below: the
@@ -231,7 +263,7 @@ panel.
 
 ## The forcing on a panel
 
-The right-hand side of the discretised operator is the Chebyshev expansion of
+The right-hand side of the discretized operator is the Chebyshev expansion of
 $y\,F(y)$ on the
 panel, computed adaptively: the function is sampled at Chebyshev--Lobatto nodes
 $t_j = \cos(j\pi/2^k)$, whose grids nest so that going from level $k$ to $k+1$
@@ -257,7 +289,7 @@ typically nine to thirty-three, and does not depend on how many oscillations
 the panel holds. The oscillations are paid for in the solve, $O(N)$ per panel
 with $N$ at least the floor $N_{\min}$, about two per oscillation. Kernel
 evaluations dominate the cost of a call, which is what makes this split the
-one to optimise.
+one to optimize.
 
 ## Panels fixed in y
 
@@ -266,7 +298,7 @@ $$
 y_i = 10^{-4 + i/2}, \qquad i = 0,\dots,20,
 $$
 two per decade from $10^{-4}$ to $10^6$. For each knot interval and each block
-of multipoles the discretised operator is built and factorised once, and
+of multipoles the discretized operator is built and factorized once, and
 $j_\ell$ at every knot is cached for every $\ell$ up to a cap. An integral over
 $[ka, kb]$ is then the sum over the knot intervals inside it, each a replay of
 stored rotations against a new right-hand side, plus two partial panels at the
@@ -296,7 +328,7 @@ no cost.
 #| fig-cap: >
 #|   The fixed knot grid in y (vertical lines) and the intervals [ka, kb] two different
 #|   k values map a window on chi in [1000, 2000] onto. Interior knot panels are
-#|   replayed from stored factorisations; the shaded ends are the partial panels.
+#|   replayed from stored factorizations; the shaded ends are the partial panels.
 knots = 10.0 ** (-4 + 0.5 * np.arange(21))
 fig, ax = plt.subplots(figsize=(8, 2.2))
 for yk in knots:
@@ -317,9 +349,9 @@ plt.tight_layout()
 ```
 
 Three reuse axes fall out of this construction. Across $k$: the panels and
-their factorisations do not depend on $k$. Across kernels: two kernels at the
+their factorizations do not depend on $k$. Across kernels: two kernels at the
 same block and panel differ only in the right-hand side. Across multipoles: a
-block shares one factorisation. The cost that remains per $(k,\text{kernel})$
+block shares one factorization. The cost that remains per $(k,\text{kernel})$
 is the Chebyshev fit of the forcing on each panel and one $O(N)$ replay per
 panel, both set by the kernel's smoothness.
 
@@ -550,6 +582,17 @@ its refinement achieved on each knot interval; a Chebyshev panel records the
 $\ell^1$ mass of the coefficients above the level its convergence test compared
 against. Where no record exists the requested tolerance is used, which is a
 ceiling rather than an estimate.
+
+Complex windows. Nothing above requires $W_\ell(k)$ to be real. A
+field-theoretic treatment writes the observable as the real part of $\langle
+\delta^X_{\ell m} \delta^{Y*}_{\ell m} \rangle$ with each field complex, so
+the cell integrand becomes $k^2 W^X_\ell \overline{W^Y_\ell}$ and the real part
+is taken once, at the end. Neither stage resists that. The operator of Eq. (5)
+depends on the panel and on $\ell$ alone and not on the forcing, so a complex
+kernel is a second right-hand side carried through the same factorization, and
+Eq. (9) is bilinear in the two coefficient sets, so it holds verbatim for
+complex coefficients. It is not implemented: every kernel in the library today
+is real.
 
 ```{python}
 #| label: fig-cells

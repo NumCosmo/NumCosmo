@@ -167,7 +167,7 @@ struct _NcmSBesselOdeOperator
   NcmSBesselOdeSolverRow *matrix_rows; /* Aligned array of NcmSBesselOdeSolverRow */
   gdouble *c;                          /* Aligned array of gdouble for right-hand side */
   /* Factorization state */
-  glong last_n_cols; /* Number of columns from last diagonalization (0 = no factorization) */
+  glong last_n_cols; /* Number of columns from the last factorization (0 = none) */
 
   /* Rotation storage - interleaved cos/sin pairs for cache efficiency
    *
@@ -1429,7 +1429,7 @@ _ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArr
  * @solution_order: initial solution order
  *
  * Sets up the first ROWS_TO_ROTATE rows (boundary conditions) and initializes the RHS
- * vector. This function is called only when starting a fresh diagonalization.
+ * vector. This function is called only when starting a fresh factorization.
  *
  */
 static void
@@ -1467,11 +1467,11 @@ _ncm_sbessel_initial_solution_order (NcmSBesselOdeOperator *op, guint rhs_len)
 }
 
 /**
- * _ncm_sbessel_ode_operator_diagonalize:
+ * _ncm_sbessel_ode_operator_factorize:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
  * @rhs: endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
  *
- * Diagonalizes the operator using adaptive QR decomposition. This function applies
+ * Factorizes the operator using adaptive QR decomposition. This function applies
  * Givens rotations to transform the system into upper triangular form and applies the
  * same rotations to the RHS vector. The transformed RHS is stored in op->c and the
  * upper triangular matrix is stored in op->matrix_rows.
@@ -1479,7 +1479,7 @@ _ncm_sbessel_initial_solution_order (NcmSBesselOdeOperator *op, guint rhs_len)
  * Returns: the effective number of columns used (may be less than rhs_len due to convergence)
  */
 static glong
-_ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
+_ncm_sbessel_ode_operator_factorize (NcmSBesselOdeOperator *op, GArray *rhs)
 {
   const guint rhs_len            = rhs->len;
   guint solution_order           = _ncm_sbessel_initial_solution_order (op, rhs_len);
@@ -1591,7 +1591,7 @@ _ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
 
   /* Warn if we exhausted max_solution_order without convergence */
   if ((solution_order >= max_solution_order) && (quiet_cols < ROWS_TO_ROTATE + 1))
-    g_warning ("_ncm_sbessel_ode_operator_diagonalize: "
+    g_warning ("_ncm_sbessel_ode_operator_factorize: "
                "reached max_solution_order=%u without convergence (quiet_cols=%u, needed %d). "
                "Results may be inaccurate.",
                max_solution_order, quiet_cols, ROWS_TO_ROTATE + 1);
@@ -1604,11 +1604,11 @@ _ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
 /**
  * _ncm_sbessel_ode_solver_build_solution:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
- * @n_cols: number of columns in the solution (from diagonalization)
+ * @n_cols: number of columns in the solution (from factorization)
  * @solution: (out): output array for solution coefficients
  *
  * Builds the full Chebyshev coefficient solution by back-substitution on the upper
- * triangular system. Assumes _ncm_sbessel_ode_operator_diagonalize has been called
+ * triangular system. Assumes _ncm_sbessel_ode_operator_factorize has been called
  * first.
  *
  */
@@ -1659,17 +1659,17 @@ _ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeOperator *op, glong n_cols,
  * _ncm_sbessel_ode_solver_compute_endpoints:
  * @solver: a #NcmSBesselOdeSolver
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
- * @n_cols: number of columns in the solution (from diagonalization)
+ * @n_cols: number of columns in the solution (from factorization)
  * @endpoints: (out callee-allocates) (element-type gdouble): output array for endpoint
  * derivatives and error estimate
  *
  * Computes endpoint derivatives u'(a) and u'(b) and error estimate directly from the
- * diagonalized system without building the full solution vector. This is much more
+ * factorized system without building the full solution vector. This is much more
  * efficient when only endpoint information is needed, as it computes coefficients
  * on-the-fly during back-substitution and accumulates their contributions to the
  * derivatives without storing the full coefficient array.
  *
- * Assumes _ncm_sbessel_ode_operator_diagonalize has been called first.
+ * Assumes _ncm_sbessel_ode_operator_factorize has been called first.
  *
  */
 static void
@@ -1797,7 +1797,7 @@ _ncm_sbessel_apply_rotations_batched (NcmSBesselOdeOperator *op, glong col, guin
  *
  * Sets up the first ROWS_TO_ROTATE rows (boundary conditions) for all ell values and
  * initializes the RHS vectors. This function is called only when starting a fresh
- * diagonalization in batched mode.
+ * factorization in batched mode.
  *
  */
 static void
@@ -1829,13 +1829,13 @@ _ncm_sbessel_ode_operator_setup_initial_rows_batched (NcmSBesselOdeOperator *op,
 }
 
 /**
- * _ncm_sbessel_ode_operator_diagonalize_batched:
+ * _ncm_sbessel_ode_operator_factorize_batched:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
  * @n_ell: number of ell values to process
  * @rhs: (element-type gdouble): endpoint data followed by $C^{(2)}$ coefficients of $x
  * f(x)$
  *
- * Diagonalizes the operator using adaptive QR decomposition for multiple ell values.
+ * Factorizes the operator using adaptive QR decomposition for multiple ell values.
  * This function applies Givens rotations to transform the system into upper triangular
  * form and applies the same rotations to the RHS vectors. The transformed RHS is
  * stored in op->c and the upper triangular matrix is stored in op->matrix_rows.
@@ -1845,7 +1845,7 @@ _ncm_sbessel_ode_operator_setup_initial_rows_batched (NcmSBesselOdeOperator *op,
  */
 static inline __attribute__ ((always_inline)) glong
 
-_ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const guint n_ell, GArray *rhs)
+_ncm_sbessel_ode_operator_factorize_batched (NcmSBesselOdeOperator *op, const guint n_ell, GArray *rhs)
 {
   const guint rhs_len            = rhs->len;
   guint solution_order           = _ncm_sbessel_initial_solution_order (op, rhs_len);
@@ -1976,7 +1976,7 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
         unconverged_lanes++;
     }
 
-    g_warning ("_ncm_sbessel_ode_operator_diagonalize_batched: "
+    g_warning ("_ncm_sbessel_ode_operator_factorize_batched: "
                "reached max_solution_order=%u with %u of %u ell lanes unconverged. "
                "Results may be inaccurate.",
                max_solution_order, unconverged_lanes, n_ell);
@@ -1990,12 +1990,12 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
 /**
  * _ncm_sbessel_ode_operator_build_solution_batched:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
- * @n_cols: number of columns in the solution (from diagonalization)
+ * @n_cols: number of columns in the solution (from factorization)
  * @n_ell: number of ell values
  * @solutions: output array of solution matrices
  *
  * Builds the full Chebyshev coefficient solution by back-substitution on the upper
- * triangular system. Assumes _ncm_sbessel_ode_operator_diagonalize_batched has been
+ * triangular system. Assumes _ncm_sbessel_ode_operator_factorize_batched has been
  * called first.
  *
  * Returns: (transfer full): solution matrix where each row is the solution for one ell
@@ -2073,12 +2073,12 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
 /**
  * _ncm_sbessel_ode_solver_compute_endpoints_batched:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
- * @n_cols: number of columns in the solution (from diagonalization)
+ * @n_cols: number of columns in the solution (from factorization)
  * @n_ell: number of ell values
  * @endpoints: (out): matrix with 3 columns per ell: [u'(a), u'(b), error]
  *
  * Computes endpoint derivatives u'(a) and u'(b) and error estimates directly from the
- * diagonalized system without building the full solution matrix. This is much more
+ * factorized system without building the full solution matrix. This is much more
  * efficient when only endpoint information is needed, as it computes coefficients
  * on-the-fly during back-substitution and accumulates their contributions to the
  * derivatives without storing the full coefficient array.
@@ -2087,7 +2087,7 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
  * have at least n_ell rows and exactly 3 columns. Each row corresponds to one ell
  * value, with columns for u'(a), u'(b), and error estimate.
  *
- * Assumes _ncm_sbessel_ode_operator_diagonalize_batched has been called first.
+ * Assumes _ncm_sbessel_ode_operator_factorize_batched has been called first.
  *
  * Returns: (transfer full): matrix with 3 columns per ell: [u'(a), u'(b), error]
  */
@@ -2342,7 +2342,7 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
  * Internal batched solver implementation. Can be specialized at compile time when
  * n_ell is known at compile time for better optimization.
  *
- * This function uses the factored implementation: first diagonalizes the operator,
+ * This function uses the factored implementation: first factorizes the operator,
  * then builds the full solution.
  *
  * Returns: (transfer full): solution matrix where each row is the solution for one ell
@@ -2352,8 +2352,8 @@ static inline __attribute__ ((always_inline)) void
 
 _ncm_sbessel_ode_operator_solve_batched_internal (NcmSBesselOdeOperator *op, GArray *rhs, const guint n_ell, GArray *solutions)
 {
-  /* Step 1: Diagonalize the operator using QR decomposition */
-  const glong n_cols = _ncm_sbessel_ode_operator_diagonalize_batched (op, n_ell, rhs);
+  /* Step 1: Factorize the operator using QR decomposition */
+  const glong n_cols = _ncm_sbessel_ode_operator_factorize_batched (op, n_ell, rhs);
 
   /* Step 2: Build the full solution by back-substitution */
   _ncm_sbessel_ode_operator_build_solution_batched (op, n_cols, n_ell, solutions);
@@ -2367,7 +2367,7 @@ _ncm_sbessel_ode_operator_solve_batched_internal (NcmSBesselOdeOperator *op, GAr
  * ell_min+n_ell-1)
  * @solutions: array of solution matrices, one per ell value
  *
- * Internal batched solver for endpoint computations. Diagonalizes the operator and
+ * Internal batched solver for endpoint computations. Factorizes the operator and
  * computes endpoint derivatives and error estimates without building the full solution
  * matrix.
  *
@@ -2377,10 +2377,10 @@ static inline __attribute__ ((always_inline)) void
 
 _ncm_sbessel_ode_operator_solve_endpoints_batched_internal (NcmSBesselOdeOperator *op, GArray *rhs, const guint n_ell, GArray *solutions)
 {
-  /* Step 1: Diagonalize the operator using QR decomposition */
-  const glong n_cols = _ncm_sbessel_ode_operator_diagonalize_batched (op, n_ell, rhs);
+  /* Step 1: Factorize the operator using QR decomposition */
+  const glong n_cols = _ncm_sbessel_ode_operator_factorize_batched (op, n_ell, rhs);
 
-  /* Step 2: Compute endpoint derivatives and error estimates directly from diagonalized system */
+  /* Step 2: Compute endpoint derivatives and error estimates directly from factorized system */
   _ncm_sbessel_ode_operator_compute_endpoints_batched (op, n_cols, n_ell, solutions);
 }
 
@@ -2391,7 +2391,7 @@ _ncm_sbessel_ode_operator_solve_values_batched_internal (NcmSBesselOdeOperator *
                                                          gdouble t0, gdouble t1,
                                                          GArray *values)
 {
-  const glong n_cols = _ncm_sbessel_ode_operator_diagonalize_batched (op, n_ell, rhs);
+  const glong n_cols = _ncm_sbessel_ode_operator_factorize_batched (op, n_ell, rhs);
 
   _ncm_sbessel_ode_operator_compute_values_batched (op, n_cols, n_ell, t0, t1, values);
 }
@@ -2553,12 +2553,12 @@ ncm_sbessel_ode_operator_get_tolerance (NcmSBesselOdeOperator *op)
  * ncm_sbessel_ode_operator_get_n_cols:
  * @op: a #NcmSBesselOdeOperator
  *
- * Gets the number of columns in the currently stored diagonalization. Returns 0 if no
- * diagonalization has been performed yet, or if the operator has been reset. This is
+ * Gets the number of columns in the currently stored factorization. Returns 0 if no
+ * factorization has been performed yet, or if the operator has been reset. This is
  * useful for understanding the convergence behavior and for testing that
- * diagonalization reuse is working correctly.
+ * factorization reuse is working correctly.
  *
- * Returns: the number of columns in the stored diagonalization (0 if none)
+ * Returns: the number of columns in the stored factorization (0 if none)
  */
 glong
 ncm_sbessel_ode_operator_get_n_cols (NcmSBesselOdeOperator *op)
@@ -2572,7 +2572,7 @@ ncm_sbessel_ode_operator_get_n_cols (NcmSBesselOdeOperator *op)
  *
  * Gets the total allocated size of the operator's internal storage. This represents
  * the allocated size (operator_order * n_ell) for the arrays (matrix_rows,
- * rotation_params, c) that store the diagonalized operator and factorization data. The
+ * rotation_params, c) that store the factorization and its rotation data. The
  * operator size grows as needed when solving problems that require more storage than
  * currently allocated.
  *
@@ -2626,7 +2626,7 @@ ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray *
 
   if (op->n_ell == 1)
   {
-    n_cols = _ncm_sbessel_ode_operator_diagonalize (op, rhs);
+    n_cols = _ncm_sbessel_ode_operator_factorize (op, rhs);
 
     _ncm_sbessel_ode_solver_build_solution (op, n_cols, *solution);
   }
@@ -2686,7 +2686,7 @@ ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray *
  * - endpoints[3*i + 1] = u'(b) for ell_min + i
  * - endpoints[3*i + 2] = error estimate for ell_min + i
  *
- * The function first diagonalizes the operator using adaptive QR decomposition, then
+ * The function first factorizes the operator using adaptive QR decomposition, then
  * performs back-substitution while accumulating the contributions to the endpoint
  * derivatives on-the-fly, avoiding the memory allocation and computation cost of the
  * full solution.
@@ -2709,7 +2709,7 @@ ncm_sbessel_ode_operator_solve_endpoints (NcmSBesselOdeOperator *op, GArray *rhs
 
   if (op->n_ell == 1)
   {
-    const glong n_cols = _ncm_sbessel_ode_operator_diagonalize (op, rhs);
+    const glong n_cols = _ncm_sbessel_ode_operator_factorize (op, rhs);
 
     _ncm_sbessel_ode_solver_compute_endpoints (op, n_cols, *endpoints);
 

@@ -8,8 +8,8 @@ multipoles.
 
 The solver is written for the spherical Bessel operator but is not tied to any
 particular use of it. Its one caller today is
-[[numcosmo-math|NcmSBesselIntegratorLevin]], which reduces the projection integrals of
-[Projection Integrals with Spherical Bessel Weights](sbessel_projection.qmd) to one
+[[numcosmo-math|NcmSBesselIntegratorLevin]], the inner stage of
+[UltraLevin](sbessel_projection.qmd), which reduces each projection integral to one
 boundary-value problem per panel; that page supplies the forcing and the panel grid,
 and nothing below depends on where either comes from.
 

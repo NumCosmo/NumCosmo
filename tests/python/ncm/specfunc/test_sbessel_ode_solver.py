@@ -1565,15 +1565,15 @@ class TestSBesselOperators:
         assert ell_max_out2 == ell_max
         assert_allclose(tol_out2, tol, rtol=1.0e-15, atol=1.0e-15)
 
-    def test_operator_diagonalization_reuse_single_ell(self) -> None:
-        """Test that diagonalization is correctly reused for single ell."""
+    def test_operator_factorization_reuse_single_ell(self) -> None:
+        """Test that factorization is correctly reused for single ell."""
         a, b = 1.0, 20.0
         l_val = 5
 
         solver = Ncm.SBesselOdeSolver.new()
         op = solver.create_operator(a, b, l_val, l_val)
 
-        # Initially, no diagonalization should be stored
+        # Initially, no factorization should be stored
         n_cols_initial = op.get_n_cols()
         assert n_cols_initial == 0, "Fresh operator should have n_cols = 0"
 
@@ -1589,7 +1589,7 @@ class TestSBesselOperators:
         assert n_cols_after_first > 0, "After first solve, n_cols should be positive"
         # Note: n_cols can exceed N1 due to adaptive extension for convergence
 
-        # Second solve with same RHS size - should reuse diagonalization
+        # Second solve with same RHS size - should reuse factorization
         rhs2 = np.zeros(N1)
         rhs2[0] = 0.0
         rhs2[1] = 0.0
@@ -1598,7 +1598,7 @@ class TestSBesselOperators:
         n_cols_after_second = op.get_n_cols()
 
         assert n_cols_after_second == n_cols_after_first, (
-            f"Same size solve should reuse diagonalization: "
+            f"Same size solve should reuse factorization: "
             f"{n_cols_after_second} != {n_cols_after_first}"
         )
 
@@ -1609,7 +1609,7 @@ class TestSBesselOperators:
             solution1_np, solution2_np, rtol=1e-10
         ), "Different RHS should produce different solutions"
 
-        # Third solve with smaller RHS - should still reuse existing diagonalization
+        # Third solve with smaller RHS - should still reuse existing factorization
         N2 = 32
         rhs3 = np.zeros(N2)
         rhs3[0] = 0.0
@@ -1623,7 +1623,7 @@ class TestSBesselOperators:
             f"{n_cols_after_third} > {n_cols_after_first}"
         )
 
-        # Fourth solve with larger RHS - should extend diagonalization
+        # Fourth solve with larger RHS - should extend factorization
         N3 = 128
         rhs4 = np.zeros(N3)
         rhs4[0] = 0.0
@@ -1637,22 +1637,22 @@ class TestSBesselOperators:
             f"{n_cols_after_fourth} < {n_cols_after_first}"
         )
 
-        # Reset operator - should clear diagonalization
+        # Reset operator - should clear factorization
         solver.reconfigure_operator(op, a, b, l_val, l_val)
         n_cols_after_reset = op.get_n_cols()
         assert (
             n_cols_after_reset == 0
         ), f"After reset, n_cols should be 0, got {n_cols_after_reset}"
 
-    def test_operator_diagonalization_reuse_batched(self) -> None:
-        """Test that diagonalization is correctly reused for multiple ell values."""
+    def test_operator_factorization_reuse_batched(self) -> None:
+        """Test that factorization is correctly reused for multiple ell values."""
         a, b = 1.0, 20.0
         ell_min, ell_max = 2, 8
 
         solver = Ncm.SBesselOdeSolver.new()
         op = solver.create_operator(a, b, ell_min, ell_max)
 
-        # Initially, no diagonalization should be stored
+        # Initially, no factorization should be stored
         n_cols_initial = op.get_n_cols()
         assert n_cols_initial == 0, "Fresh operator should have n_cols = 0"
 
@@ -1668,7 +1668,7 @@ class TestSBesselOperators:
         assert n_cols_after_first > 0, "After first solve, n_cols should be positive"
         # Note: n_cols can exceed N1 due to adaptive extension for convergence
 
-        # Second solve with same RHS size - should reuse diagonalization
+        # Second solve with same RHS size - should reuse factorization
         rhs2 = np.zeros(N1)
         rhs2[0] = 0.0
         rhs2[1] = 0.0
@@ -1677,7 +1677,7 @@ class TestSBesselOperators:
         n_cols_after_second = op.get_n_cols()
 
         assert n_cols_after_second == n_cols_after_first, (
-            f"Same size solve should reuse diagonalization: "
+            f"Same size solve should reuse factorization: "
             f"{n_cols_after_second} != {n_cols_after_first}"
         )
 
@@ -1703,7 +1703,7 @@ class TestSBesselOperators:
             f"{n_cols_after_third} > {n_cols_after_first}"
         )
 
-        # Fourth solve with larger RHS - should extend diagonalization
+        # Fourth solve with larger RHS - should extend factorization
         N3 = 128
         rhs4 = np.zeros(N3)
         rhs4[0] = 0.0
@@ -1717,15 +1717,15 @@ class TestSBesselOperators:
             f"{n_cols_after_fourth} < {n_cols_after_first}"
         )
 
-        # Reset operator - should clear diagonalization
+        # Reset operator - should clear factorization
         solver.reconfigure_operator(op, a, b, ell_min, ell_max)
         n_cols_after_reset = op.get_n_cols()
         assert (
             n_cols_after_reset == 0
         ), f"After reset, n_cols should be 0, got {n_cols_after_reset}"
 
-    def test_operator_diagonalization_reuse_correctness(self) -> None:
-        """Test that reused diagonalization produces correct results."""
+    def test_operator_factorization_reuse_correctness(self) -> None:
+        """Test that reused factorization produces correct results."""
         a, b = 1.0, 20.0
         l_val = 7
 
@@ -1739,7 +1739,7 @@ class TestSBesselOperators:
         rhs[1] = 0.0
         rhs[2] = 1.0
 
-        # Solve with first operator (fresh diagonalization)
+        # Solve with first operator (fresh factorization)
         solution1, _sol_len1 = op1.solve(rhs)
         solution1_np = np.array(solution1)
 
@@ -1753,10 +1753,10 @@ class TestSBesselOperators:
             solution2_np,
             rtol=1e-14,
             atol=1e-14,
-            err_msg="Fresh diagonalizations should give identical results",
+            err_msg="Fresh factorizations should give identical results",
         )
 
-        # Now solve again with first operator (reusing diagonalization)
+        # Now solve again with first operator (reusing factorization)
         solution1_reused, _sol_len1_reused = op1.solve(rhs)
         solution1_reused_np = np.array(solution1_reused)
 
@@ -1766,12 +1766,12 @@ class TestSBesselOperators:
             solution1_np,
             rtol=1e-14,
             atol=1e-14,
-            err_msg="Reused diagonalization should give identical results to fresh",
+            err_msg="Reused factorization should give identical results to fresh",
         )
 
     @pytest.mark.parametrize("l_val", [0, 5, 10, 15])
-    def test_operator_diagonalization_endpoints_reuse(self, l_val: int) -> None:
-        """Test that diagonalization reuse works correctly with solve_endpoints."""
+    def test_operator_factorization_endpoints_reuse(self, l_val: int) -> None:
+        """Test that factorization reuse works correctly with solve_endpoints."""
         a, b = 1.0, 20.0
 
         solver = Ncm.SBesselOdeSolver.new()
@@ -1795,7 +1795,7 @@ class TestSBesselOperators:
         endpoints2 = op.solve_endpoints(rhs)
         n_cols2 = op.get_n_cols()
 
-        # Should reuse diagonalization
+        # Should reuse factorization
         assert (
             n_cols2 == n_cols1
         ), f"Same size solve_endpoints should reuse: {n_cols2} != {n_cols1}"
@@ -1808,7 +1808,7 @@ class TestSBesselOperators:
             endpoints2_np,
             rtol=1e-14,
             atol=1e-14,
-            err_msg="Reused diagonalization should give identical endpoints",
+            err_msg="Reused factorization should give identical endpoints",
         )
 
     @pytest.mark.parametrize("l_val", [0, 5, 10, 15])
@@ -2530,12 +2530,10 @@ class TestSBesselOperators:
         )
 
     @pytest.mark.parametrize("n_ell", [2, 4, 8, 16, 32, 64])
-    def test_optimized_batched_dimensions_diagonalization_reuse(
-        self, n_ell: int
-    ) -> None:
-        """Test that optimized batched paths correctly reuse diagonalization.
+    def test_optimized_batched_dimensions_factorization_reuse(self, n_ell: int) -> None:
+        """Test that optimized batched paths correctly reuse factorization.
 
-        Verifies that the diagonalization reuse works correctly for all
+        Verifies that the factorization reuse works correctly for all
         optimized batch dimensions.
         """
         N = 64
@@ -2572,7 +2570,7 @@ class TestSBesselOperators:
         n_cols_second = op.get_n_cols()
 
         assert n_cols_second == n_cols_first, (
-            f"Second solve (n_ell={n_ell}) should reuse diagonalization: "
+            f"Second solve (n_ell={n_ell}) should reuse factorization: "
             f"{n_cols_second} != {n_cols_first}"
         )
 
@@ -2583,12 +2581,12 @@ class TestSBesselOperators:
             n_cols_after_reset == 0
         ), f"After reset (n_ell={n_ell}), n_cols should be 0, got {n_cols_after_reset}"
 
-    def test_diagonalization_reuse_performance_single_ell(self) -> None:
-        """Test that diagonalization reuse is significantly faster than reset.
+    def test_factorization_reuse_performance_single_ell(self) -> None:
+        """Test that factorization reuse is significantly faster than reset.
 
         Compares the performance of:
-        1. Repeated solve() calls (reuses diagonalization)
-        2. Repeated solve() + reset() calls (re-diagonalizes each time)
+        1. Repeated solve() calls (reuses factorization)
+        2. Repeated solve() + reset() calls (re-factorizes each time)
 
         The reuse case should be significantly faster.
         """
@@ -2630,7 +2628,7 @@ class TestSBesselOperators:
 
         # Print timing results
         print(f"\n{'='*60}")
-        print("Single-ell Diagonalization Reuse Performance Test")
+        print("Single-ell Factorization Reuse Performance Test")
         print(f"{'='*60}")
         print(f"Number of iterations: {n_iterations}")
         print(f"Matrix size: {N}")
@@ -2644,12 +2642,12 @@ class TestSBesselOperators:
         # Timing is informational only to avoid flakiness in CI
 
     @pytest.mark.parametrize("n_ell", [2, 4, 8, 16, 32, 64])
-    def test_diagonalization_reuse_performance_batched(self, n_ell: int) -> None:
-        """Test that diagonalization reuse is faster for batched operations.
+    def test_factorization_reuse_performance_batched(self, n_ell: int) -> None:
+        """Test that factorization reuse is faster for batched operations.
 
         Compares the performance of:
-        1. Repeated solve() calls (reuses diagonalization)
-        2. Repeated solve() + reset() calls (re-diagonalizes each time)
+        1. Repeated solve() calls (reuses factorization)
+        2. Repeated solve() + reset() calls (re-factorizes each time)
 
         The reuse case should be significantly faster, especially for larger batches.
         """
@@ -2692,7 +2690,7 @@ class TestSBesselOperators:
 
         # Print timing results
         print(f"\n{'='*60}")
-        print("Batched Diagonalization Reuse Performance Test")
+        print("Batched Factorization Reuse Performance Test")
         print(f"{'='*60}")
         print(f"Number of iterations: {n_iterations}")
         print(f"Matrix size: {N}")
@@ -3221,7 +3219,7 @@ class TestSBesselOperatorMemoryManagement:
         assert n_cols_high > 0, "n_cols should be positive after second solve_endpoints"
 
     def test_reset_clears_memory_status(self) -> None:
-        """Test that reset() clears the diagonalization but keeps capacity."""
+        """Test that reset() clears the factorization but keeps capacity."""
         solver = Ncm.SBesselOdeSolver.new()
         op = solver.create_operator(1.0, 20.0, 0, 0)
 
