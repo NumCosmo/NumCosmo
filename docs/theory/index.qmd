@@ -33,6 +33,6 @@ classes and methods.
 
 - [FFTLog](fftlog.qmd) --- logarithmic fast Fourier transform.
 - [Spectral Methods](spectral.qmd) --- Chebyshev approximation, Clenshaw--Curtis integration, and ultraspherical operators.
-- [The Ultraspherical Spectral Solver](sbessel_ode_solver.qmd) --- the banded discretisation of the spherical Bessel operator, batching over multipoles, the incremental Givens QR and conjugate panel spans.
+- [The Ultraspherical Spectral Solver](sbessel_ode_solver.qmd) --- the banded discretization of the spherical Bessel operator, batching over multipoles, the incremental Givens QR and conjugate panel spans.
 - [UltraLevin: Non-Limber Angular Power Spectra](sbessel_projection.qmd) --- the Levin reduction, fixed panels in y, the window over k and its exact outer integral.
 - [CSQ1D Formalism](csq1d.qmd) --- complex-structure evolution of a time-dependent oscillator.

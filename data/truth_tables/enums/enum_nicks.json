@@ -571,6 +571,18 @@
     "nick": "tophat",
     "type": "Ncm.PowspecFilterType"
   },
+  "NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET": {
+    "nick": "dirichlet",
+    "type": "Ncm.SBesselOdeConstraint"
+  },
+  "NCM_SBESSEL_ODE_CONSTRAINT_PINNED": {
+    "nick": "pinned",
+    "type": "Ncm.SBesselOdeConstraint"
+  },
+  "NCM_SBESSEL_ODE_CONSTRAINT_TAU": {
+    "nick": "tau",
+    "type": "Ncm.SBesselOdeConstraint"
+  },
   "NCM_SERIALIZE_OPT_AUTONAME_SER": {
     "nick": "autoname-ser",
     "type": "Ncm.SerializeOpt"

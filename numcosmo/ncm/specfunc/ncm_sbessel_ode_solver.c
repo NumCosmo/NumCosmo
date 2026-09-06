@@ -50,7 +50,7 @@
  * interval and multipole range, keeping its allocated storage.
  *
  * See <a href="../../theory/sbessel_ode_solver.html">The Ultraspherical Spectral
- * Solver</a> for the discretisation, the truncation floor and the singular panel
+ * Solver</a> for the discretization, the truncation floor and the singular panel
  * spans, and <a href="../../theory/spectral.html">Spectral Methods</a> for the
  * ultraspherical primitives the operator is assembled from.
  *
@@ -117,16 +117,19 @@ _ncm_sbessel_min_cols (const gdouble a, const gdouble b, const gint ell_min)
 /*
  * The floor the decay test may not stop below.
  *
- * Dirichlet closure: the oscillatory span of the panel, _ncm_sbessel_min_cols().
- * Pinned closure: the pins must be inside the column range before the system is
+ * Dirichlet constraint: the oscillatory span of the panel, _ncm_sbessel_min_cols().
+ * Pinned constraint: the pins must be inside the column range before the system is
  * determined, so the floor is one past the last pin. The oscillatory floor does not
  * apply, because the selected solution is the one the pins leave, not the one the
  * boundary values force.
+ * Tau constraint: zero, for the same reason; what that constraint needs instead is a floor
+ * above the forcing's own order, applied per solve in _ncm_sbessel_set_solve_min_cols().
  */
 static inline void _ncm_sbessel_update_min_cols (NcmSBesselOdeOperator *op);
 
-/* Free-closure floor as a multiple of the forcing order; see solve_min_cols. */
-#define FREE_CLOSURE_FLOOR_FACTOR (1.5)
+/* Default tau-constraint floor as a multiple of the forcing order; see solve_min_cols.
+ * Overridable per solver with ncm_sbessel_ode_solver_set_tau_floor_factor(). */
+#define NCM_SBESSEL_ODE_DEFAULT_TAU_FLOOR_FACTOR (1.1)
 
 #define ALIGNMENT 64 /* 64-byte alignment for cache lines */
 
@@ -172,41 +175,42 @@ struct _NcmSBesselOdeOperator
   guint n_ell;          /* Number of multipoles in batch: n_ell = ell_max - ell_min + 1 */
   gdouble tolerance;    /* Relative coefficient-decay tolerance */
   glong solve_min_cols; /* Floor in force for the running solve: min_cols, raised under
-                         * the free closure to FREE_CLOSURE_FLOOR_FACTOR times the forcing
-                         * order. The endpoint derivative u'(+-1) = sum n^2 a_n amplifies
-                         * the truncation tail by n^2, and the Dirichlet span floor hides
-                         * that by overshooting the forcing; the free closure has to
-                         * overshoot it on purpose. Measured on a narrow forcing (n_F ~ 450):
-                         * no floor 4.5e-10, 1.25 n_F 3.8e-11, 1.5 n_F 1.8e-12 = reference. */
+                         * the tau constraint to tau_floor_factor times the forcing order.
+                         * The tau constraint has no oscillatory floor, and the decay test
+                         * does not stop later than this floor in practice, so the factor
+                         * sets the working order outright. It has to exceed one: at
+                         * exactly the forcing's order the forcing itself is not resolved.
+                         * Swept against three gates -- absolute error over the integrand
+                         * scale on synthetic panels, the Arb window table in its
+                         * tau-exercising modes, and the k-reach metric of the jl_500
+                         * tables -- all are flat from 1.05 to 2.0 and only 1.0 degrades.
+                         * See ncm_sbessel_ode_solver_set_tau_floor_factor(). */
   glong min_cols;       /* Resolution floor: the decay test may not stop below this many
                          * columns. Set from the oscillatory part of the panel, i.e. the
                          * span beyond the turning point; fewer columns than that cannot
                          * represent the solution however quiet the leading coefficients
                          * happen to look. See _ncm_sbessel_min_cols(). */
 
-  /* Closure rows: the two linear functionals that close the system.
+  /* Constraint rows: the two linear functionals that close the system. Their column
+   * patterns are, per NcmSBesselOdeConstraint:
    *
-   * Dirichlet (default): u(-1) = u(+1) = 0, whose coefficient patterns over the
-   * columns are (-1)^j and 1.
-   * Pinned: <T_{pin1}, u> = <T_{pin2}, u> = 0, patterns delta_{j,pin1} and
+   * DIRICHLET (default): u(-1) = u(+1) = 0, patterns (-1)^j and 1.
+   * PINNED: <T_{pin1}, u> = <T_{pin2}, u> = 0, patterns delta_{j,pin1} and
    * delta_{j,pin2}.
+   * TAU: both patterns identically zero, so the system is short two pivots and
+   * back-substitution closes it on the trailing coefficients, selecting the smooth
+   * member of the solution family.
    *
    * Each row carries two scalars (bc_at_m1, bc_at_p1) holding its coefficients of
    * whichever pattern pair is active. Givens rotations mix those scalars the same way
-   * in either mode, so only the pattern evaluation changes. Both patterns are
-   * evaluated at every column: the pinned rows are treated as full-width rows, not as
-   * sparse ones.
+   * in every mode, so only the pattern evaluation changes. Both patterns are evaluated
+   * at every column: the pinned rows are treated as full-width rows, not as sparse
+   * ones.
    */
-  gboolean bc_pinned;
-  glong bc_pin1;
-  glong bc_pin2;
-
-  /* Free closure: both closure rows are identically zero, so the system is short two
-   * pivots and back-substitution closes it on the trailing coefficients. That is the
-   * tau closure, and it selects the smooth member of the solution family. The
-   * oscillatory floor does not apply; set one with
-   * ncm_sbessel_ode_operator_set_min_cols() if the forcing needs it. */
-  gboolean bc_free;
+  NcmSBesselOdeConstraint constraint;
+  glong pin1;
+  glong pin2;
+  gdouble tau_floor_factor; /* Multiple of the forcing order the tau floor uses */
 
   /* Matrix storage */
   NcmSBesselOdeSolverRow *matrix_rows; /* Aligned array of NcmSBesselOdeSolverRow */
@@ -243,6 +247,10 @@ struct _NcmSBesselOdeOperator
   gdouble *acc_bc_at_m1;           /* Aligned array of gdouble for boundary condition accumulators at -1 */
   gdouble *acc_bc_at_p1;           /* Aligned array of gdouble for boundary condition accumulators at +1 */
   gdouble *last_max_coeff;         /* Per-ell max |a_j| of the last back-substitution; sized with the acc arrays */
+  gdouble *last_deriv_error;       /* Per-ell sum_j j^2 |a_j| / h of the last back-substitution. The endpoint
+                                    * derivative is u'(+-1) = (1/h) sum_j (+-1)^(j+1) j^2 a_j, so eps times
+                                    * this bounds the roundoff left in u'(+-1) once the homogeneous part of
+                                    * the solution has cancelled. Sized with the acc arrays. */
   gsize acc_bc_capacity;           /* Allocated capacity of acc_bc_at_m1 and acc_bc_at_p1 */
 
   /* Per-ell adaptive convergence state. */
@@ -253,8 +261,9 @@ struct _NcmSBesselOdeOperator
 
 typedef struct _NcmSBesselOdeSolverPrivate
 {
-  gdouble tolerance;     /* Default copied into newly created operators */
-  gboolean free_closure; /* Default copied into newly created operators */
+  gdouble tolerance;                          /* Default copied into newly created operators */
+  NcmSBesselOdeConstraint default_constraint; /* Default copied into newly created operators */
+  gdouble tau_floor_factor;                   /* Default copied into newly created operators */
   NcmSpectral *spectral;
 } NcmSBesselOdeSolverPrivate;
 
@@ -294,9 +303,10 @@ ncm_sbessel_ode_solver_init (NcmSBesselOdeSolver *solver)
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
 
-  self->tolerance    = 0.0;
-  self->free_closure = FALSE;
-  self->spectral     = ncm_spectral_new ();
+  self->tolerance          = 0.0;
+  self->default_constraint = NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET;
+  self->tau_floor_factor   = NCM_SBESSEL_ODE_DEFAULT_TAU_FLOOR_FACTOR;
+  self->spectral           = ncm_spectral_new ();
 }
 
 static void
@@ -471,10 +481,11 @@ _ensure_acc_bc_capacity (NcmSBesselOdeOperator *op, gsize required_capacity)
     if (op->acc_bc_at_p1 != NULL)
       free (op->acc_bc_at_p1);
 
-    op->acc_bc_at_m1    = new_m1;
-    op->acc_bc_at_p1    = new_p1;
-    op->last_max_coeff  = g_renew (gdouble, op->last_max_coeff, new_capacity);
-    op->acc_bc_capacity = new_capacity;
+    op->acc_bc_at_m1     = new_m1;
+    op->acc_bc_at_p1     = new_p1;
+    op->last_max_coeff   = g_renew (gdouble, op->last_max_coeff, new_capacity);
+    op->last_deriv_error = g_renew (gdouble, op->last_deriv_error, new_capacity);
+    op->acc_bc_capacity  = new_capacity;
   }
 }
 
@@ -573,22 +584,23 @@ ncm_sbessel_ode_solver_clear (NcmSBesselOdeSolver **solver)
 /* Sets the five values that configure an operator, plus everything derived from them,
  * and marks it as carrying no factorization. Shared by creation and reconfiguration. */
 static void
-_ncm_sbessel_ode_operator_configure (NcmSBesselOdeOperator *op, gdouble a, gdouble b, gint ell_min, gint ell_max, gdouble tolerance, gboolean free_closure)
+_ncm_sbessel_ode_operator_configure (NcmSBesselOdeOperator *op, gdouble a, gdouble b, gint ell_min, gint ell_max, gdouble tolerance, NcmSBesselOdeConstraint constraint, gdouble tau_floor_factor)
 {
   g_assert_cmpfloat (a, <, b);
   g_assert_cmpint (ell_min, <=, ell_max);
   g_assert_cmpint (ell_min, >=, 0);
 
-  op->a              = a;
-  op->b              = b;
-  op->half_len       = (b - a) / 2.0;
-  op->mid_point      = (a + b) / 2.0;
-  op->ell_min        = ell_min;
-  op->ell_max        = ell_max;
-  op->n_ell          = (guint) (ell_max - ell_min + 1);
-  op->tolerance      = tolerance;
-  op->bc_free        = free_closure;
-  op->solve_min_cols = 0;
+  op->a                = a;
+  op->b                = b;
+  op->half_len         = (b - a) / 2.0;
+  op->mid_point        = (a + b) / 2.0;
+  op->ell_min          = ell_min;
+  op->ell_max          = ell_max;
+  op->n_ell            = (guint) (ell_max - ell_min + 1);
+  op->tolerance        = tolerance;
+  op->constraint       = constraint;
+  op->tau_floor_factor = tau_floor_factor;
+  op->solve_min_cols   = 0;
 
   _ncm_sbessel_update_min_cols (op);
 
@@ -633,12 +645,10 @@ ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, 
 
   /* Initialize reference count */
   op->ref_count = 1;
-  op->bc_free   = FALSE;
-  op->bc_pinned = FALSE;
-  op->bc_pin1   = 0;
-  op->bc_pin2   = 0;
+  op->pin1      = 0;
+  op->pin2      = 0;
 
-  _ncm_sbessel_ode_operator_configure (op, a, b, ell_min, ell_max, self->tolerance, self->free_closure);
+  _ncm_sbessel_ode_operator_configure (op, a, b, ell_min, ell_max, self->tolerance, self->default_constraint, self->tau_floor_factor);
 
   op->matrix_rows          = NULL;
   op->c                    = NULL;
@@ -652,6 +662,7 @@ ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, 
   op->acc_bc_at_m1              = NULL;
   op->acc_bc_at_p1              = NULL;
   op->last_max_coeff            = NULL;
+  op->last_deriv_error          = NULL;
   op->acc_bc_capacity           = 0;
   op->max_c_A_batched           = NULL;
   op->quiet_cols_batched        = NULL;
@@ -686,7 +697,7 @@ ncm_sbessel_ode_solver_reconfigure_operator (NcmSBesselOdeSolver *solver, NcmSBe
   g_assert (op != NULL);
   g_assert (op->ref_count > 0);
 
-  _ncm_sbessel_ode_operator_configure (op, a, b, ell_min, ell_max, self->tolerance, self->free_closure);
+  _ncm_sbessel_ode_operator_configure (op, a, b, ell_min, ell_max, self->tolerance, self->default_constraint, self->tau_floor_factor);
 }
 
 /**
@@ -746,6 +757,7 @@ ncm_sbessel_ode_operator_unref (NcmSBesselOdeOperator *op)
       free (op->acc_bc_at_p1);
 
     g_free (op->last_max_coeff);
+    g_free (op->last_deriv_error);
     g_free (op->max_c_A_batched);
     g_free (op->quiet_cols_batched);
 
@@ -805,39 +817,47 @@ ncm_sbessel_ode_solver_get_tolerance (NcmSBesselOdeSolver *solver)
 }
 
 /*
- * Column patterns of the two closure functionals. In Dirichlet mode these are
- * T_j(-1) = (-1)^j and T_j(+1) = 1; in pinned mode they are delta_{j,pin1} and
- * delta_{j,pin2}. See the bc_pinned block of #_NcmSBesselOdeOperator.
+ * Column patterns of the two constraint functionals, per NcmSBesselOdeConstraint: T_j(-1) =
+ * (-1)^j and T_j(+1) = 1 for Dirichlet, delta_{j,pin1} and delta_{j,pin2} for pinned,
+ * identically zero for tau. See the constraint block of #_NcmSBesselOdeOperator.
  */
 static inline gdouble
 _ncm_sbessel_bc_pat1 (const NcmSBesselOdeOperator *op, glong col_index)
 {
-  if (op->bc_free)
-    return 0.0;
+  switch (op->constraint)
+  {
+    case NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET:
+      return ((col_index % 2) == 0) ? 1.0 : -1.0;
 
-  if (op->bc_pinned)
-    return (col_index == op->bc_pin1) ? 1.0 : 0.0;
+    case NCM_SBESSEL_ODE_CONSTRAINT_PINNED:
+      return (col_index == op->pin1) ? 1.0 : 0.0;
 
-  return ((col_index % 2) == 0) ? 1.0 : -1.0;
+    default:
+      return 0.0;
+  }
 }
 
 static inline gdouble
 _ncm_sbessel_bc_pat2 (const NcmSBesselOdeOperator *op, glong col_index)
 {
-  if (op->bc_free)
-    return 0.0;
+  switch (op->constraint)
+  {
+    case NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET:
+      return 1.0;
 
-  if (op->bc_pinned)
-    return (col_index == op->bc_pin2) ? 1.0 : 0.0;
+    case NCM_SBESSEL_ODE_CONSTRAINT_PINNED:
+      return (col_index == op->pin2) ? 1.0 : 0.0;
 
-  return 1.0;
+    default:
+      return 0.0;
+  }
 }
 
 /* The floor for one solve, from the right-hand side just handed in. */
 static inline glong
-_ncm_sbessel_free_closure_floor (guint rhs_len)
+_ncm_sbessel_tau_constraint_floor (const NcmSBesselOdeOperator *op, guint rhs_len)
 {
-  return (glong) ceil (FREE_CLOSURE_FLOOR_FACTOR * (gdouble) (rhs_len - NUMBER_OF_BOUNDARY_CONDITIONS));
+  return (glong) ceil (op->tau_floor_factor * (gdouble) (rhs_len - NUMBER_OF_BOUNDARY_CONDITIONS));
 }
 
 static inline void
@@ -845,9 +865,9 @@ _ncm_sbessel_set_solve_min_cols (NcmSBesselOdeOperator *op, guint rhs_len)
 {
   op->solve_min_cols = op->min_cols;
 
-  if (op->bc_free)
+  if (op->constraint == NCM_SBESSEL_ODE_CONSTRAINT_TAU)
   {
-    const glong forcing_floor = _ncm_sbessel_free_closure_floor (rhs_len);
+    const glong forcing_floor = _ncm_sbessel_tau_constraint_floor (op, rhs_len);
 
     op->solve_min_cols = GSL_MAX (op->solve_min_cols, forcing_floor);
   }
@@ -856,66 +876,188 @@ _ncm_sbessel_set_solve_min_cols (NcmSBesselOdeOperator *op, guint rhs_len)
 static inline void
 _ncm_sbessel_update_min_cols (NcmSBesselOdeOperator *op)
 {
-  if (op->bc_free)
-    op->min_cols = 0;
-  else if (op->bc_pinned)
-    op->min_cols = GSL_MAX (op->bc_pin1, op->bc_pin2) + 1;
-  else
-    op->min_cols = _ncm_sbessel_min_cols (op->a, op->b, op->ell_min);
+  switch (op->constraint)
+  {
+    case NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET:
+      op->min_cols = _ncm_sbessel_min_cols (op->a, op->b, op->ell_min);
+      break;
+
+    case NCM_SBESSEL_ODE_CONSTRAINT_PINNED:
+      op->min_cols = GSL_MAX (op->pin1, op->pin2) + 1;
+      break;
+
+    default:
+      op->min_cols = 0;
+      break;
+  }
 }
 
 /**
- * ncm_sbessel_ode_solver_set_free_closure:
+ * ncm_sbessel_ode_solver_set_default_constraint:
  * @solver: a #NcmSBesselOdeSolver
- * @free_closure: whether new operators use the free (tau) closure
+ * @constraint: the constraint new operators are created with
  *
- * Operators created or reconfigured after this call leave both closure rows zero and
- * close the system on the trailing coefficients, selecting the smooth member of the
- * solution family instead of the one the Dirichlet data forces. Operators that
- * already exist keep their setting until they are reconfigured.
+ * Sets the #NcmSBesselOdeConstraint that operators created or reconfigured after this
+ * call are given. Operators that already exist keep the constraint they have until they
+ * are reconfigured. %NCM_SBESSEL_ODE_CONSTRAINT_PINNED is not accepted here, since the
+ * pins belong to one interval and one solve: set it per operator with
+ * ncm_sbessel_ode_operator_set_pinned_constraint().
  *
  */
 void
-ncm_sbessel_ode_solver_set_free_closure (NcmSBesselOdeSolver *solver, gboolean free_closure)
+ncm_sbessel_ode_solver_set_default_constraint (NcmSBesselOdeSolver *solver, NcmSBesselOdeConstraint constraint)
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
 
-  self->free_closure = free_closure;
+  g_assert (constraint != NCM_SBESSEL_ODE_CONSTRAINT_PINNED);
+  g_assert_cmpint (constraint, <, NCM_SBESSEL_ODE_CONSTRAINT_LEN);
+
+  self->default_constraint = constraint;
 }
 
 /**
- * ncm_sbessel_ode_solver_get_free_closure:
+ * ncm_sbessel_ode_solver_get_default_constraint:
  * @solver: a #NcmSBesselOdeSolver
  *
- * Returns: whether new operators use the free (tau) closure.
+ * Returns: the constraint new operators are created with.
  */
-gboolean
-ncm_sbessel_ode_solver_get_free_closure (NcmSBesselOdeSolver *solver)
+NcmSBesselOdeConstraint
+ncm_sbessel_ode_solver_get_default_constraint (NcmSBesselOdeSolver *solver)
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
 
-  return self->free_closure;
+  return self->default_constraint;
 }
 
 /**
- * ncm_sbessel_ode_operator_set_free_closure:
- * @op: a #NcmSBesselOdeOperator
- * @free_closure: whether @op uses the free (tau) closure
+ * ncm_sbessel_ode_solver_set_tau_floor_factor:
+ * @solver: a #NcmSBesselOdeSolver
+ * @factor: multiple of the forcing order
  *
- * Sets the closure of this operator alone, overriding what it inherited from the
+ * Sets the multiple of the forcing's own order that a %NCM_SBESSEL_ODE_CONSTRAINT_TAU solve
+ * uses as its floor, for operators created or reconfigured after this call. The tau
+ * constraint has no oscillatory floor of its own, so this is what sets its working order;
+ * the decay test does not stop later than it in practice, which makes the factor the
+ * order rather than a lower bound on it.
+ *
+ */
+void
+ncm_sbessel_ode_solver_set_tau_floor_factor (NcmSBesselOdeSolver *solver, gdouble factor)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+
+  g_assert_cmpfloat (factor, >, 0.0);
+
+  self->tau_floor_factor = factor;
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_tau_floor_factor:
+ * @solver: a #NcmSBesselOdeSolver
+ *
+ * Returns: the tau-constraint floor factor new operators are created with.
+ */
+gdouble
+ncm_sbessel_ode_solver_get_tau_floor_factor (NcmSBesselOdeSolver *solver)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+
+  return self->tau_floor_factor;
+}
+
+/**
+ * ncm_sbessel_ode_operator_set_constraint:
+ * @op: a #NcmSBesselOdeOperator
+ * @constraint: the constraint to use
+ *
+ * Sets the constraint of this operator alone, overriding what it inherited from the
  * solver. The stored factorization is discarded and the resolution floor recomputed.
  *
+ * All three constraints pick a member of the same solution family, and the boundary
+ * functional of the Levin reduction is invariant under the choice, so the panel
+ * integral is unchanged; what changes is which member has to be represented, and hence
+ * how many coefficients the solve needs. %NCM_SBESSEL_ODE_CONSTRAINT_PINNED needs its two
+ * indices and is set by ncm_sbessel_ode_operator_set_pinned_constraint() instead.
+ *
  */
 void
-ncm_sbessel_ode_operator_set_free_closure (NcmSBesselOdeOperator *op, gboolean free_closure)
+ncm_sbessel_ode_operator_set_constraint (NcmSBesselOdeOperator *op, NcmSBesselOdeConstraint constraint)
 {
-  if (op->bc_free == free_closure)
+  g_assert (constraint != NCM_SBESSEL_ODE_CONSTRAINT_PINNED);
+  g_assert_cmpint (constraint, <, NCM_SBESSEL_ODE_CONSTRAINT_LEN);
+
+  if (op->constraint == constraint)
     return;
 
-  op->bc_free     = free_closure;
+  op->constraint  = constraint;
   op->last_n_cols = 0;
 
   _ncm_sbessel_update_min_cols (op);
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_constraint:
+ * @op: a #NcmSBesselOdeOperator
+ *
+ * Returns: the constraint @op uses. Under %NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET alone does
+ * $u$ vanish at the panel ends, so the other two require the general boundary
+ * functional, with the $u$ term kept.
+ */
+NcmSBesselOdeConstraint
+ncm_sbessel_ode_operator_get_constraint (NcmSBesselOdeOperator *op)
+{
+  return op->constraint;
+}
+
+/**
+ * ncm_sbessel_ode_operator_set_pinned_constraint:
+ * @op: a #NcmSBesselOdeOperator
+ * @pin1: index of the first pinned Chebyshev coefficient
+ * @pin2: index of the second pinned Chebyshev coefficient
+ *
+ * Puts @op on %NCM_SBESSEL_ODE_CONSTRAINT_PINNED, closing the system with $\langle
+ * T_{@pin1}, u\rangle = \langle T_{@pin2}, u\rangle = 0$ instead of the Dirichlet data
+ * $u(y_a) = u(y_b) = 0$.
+ *
+ * The pins must be distinct. The resolution floor is raised to one past the last pin,
+ * since below that the pinned rows are still empty and the system is short two pivots.
+ * The stored factorization is discarded.
+ *
+ */
+void
+ncm_sbessel_ode_operator_set_pinned_constraint (NcmSBesselOdeOperator *op, glong pin1, glong pin2)
+{
+  g_assert_cmpint (pin1, >=, 0);
+  g_assert_cmpint (pin2, >=, 0);
+  g_assert_cmpint (pin1, !=, pin2);
+
+  op->constraint  = NCM_SBESSEL_ODE_CONSTRAINT_PINNED;
+  op->pin1        = pin1;
+  op->pin2        = pin2;
+  op->last_n_cols = 0;
+
+  _ncm_sbessel_update_min_cols (op);
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_pins:
+ * @op: a #NcmSBesselOdeOperator
+ * @pin1: (out) (optional): index of the first pinned coefficient
+ * @pin2: (out) (optional): index of the second pinned coefficient
+ *
+ * Reads back the indices last given to ncm_sbessel_ode_operator_set_pinned_constraint(),
+ * both zero if it was never called. They act only while
+ * ncm_sbessel_ode_operator_get_constraint() is %NCM_SBESSEL_ODE_CONSTRAINT_PINNED.
+ *
+ */
+void
+ncm_sbessel_ode_operator_get_pins (NcmSBesselOdeOperator *op, glong *pin1, glong *pin2)
+{
+  if (pin1 != NULL)
+    *pin1 = op->pin1;
+
+  if (pin2 != NULL)
+    *pin2 = op->pin2;
 }
 
 /**
@@ -924,7 +1066,7 @@ ncm_sbessel_ode_operator_set_free_closure (NcmSBesselOdeOperator *op, gboolean f
  * @ell_idx: index of the multipole within the block
  *
  * Largest $|a_j|$ produced by the last back-substitution for that multipole. Under
- * the free closure a value far above the forcing's own scale
+ * %NCM_SBESSEL_ODE_CONSTRAINT_TAU a value far above the forcing's own scale
  * $\max|yF| / \min|y^2 - \nu^2|$ means the solve admitted homogeneous content, and
  * the panel must be redone with Dirichlet data.
  *
@@ -940,101 +1082,50 @@ ncm_sbessel_ode_operator_get_last_max_coeff (NcmSBesselOdeOperator *op, guint el
 }
 
 /**
- * ncm_sbessel_ode_operator_get_free_closure:
+ * ncm_sbessel_ode_operator_get_last_deriv_error:
  * @op: a #NcmSBesselOdeOperator
+ * @ell_idx: index of the multipole within the block
  *
- * Returns: %TRUE when @op uses the free (tau) closure, so that $u$ does not vanish at
- * the panel ends and the general boundary functional is required.
+ * Bound on the roundoff left in the endpoint derivatives of the last solve for that
+ * multipole: $\sum_j j^2 |a_j| / h$, which multiplied by the machine epsilon bounds
+ * the absolute error of $u'(y_a)$ and $u'(y_b)$. Those are formed as $u'(\pm 1) =
+ * (1/h)\sum_j (\pm 1)^{j+1} j^2 a_j$, and under %NCM_SBESSEL_ODE_CONSTRAINT_TAU any
+ * homogeneous content the truncation admitted cancels in that sum, exactly but not in
+ * floating point --- so this is what survives, and it is what limits the accuracy of a
+ * boundary functional built from the derivatives.
+ *
+ * Measured against a reference on panels carrying admitted homogeneous content, the
+ * bound is 2 to 27 times above the realized error over 84 orders of magnitude, and
+ * never below it. It accounts for that error alone: on a panel where the constraint is
+ * valid the error is dominated by the forcing's own fit instead, and this quantity is
+ * far smaller than it.
+ *
+ * Returns: $\sum_j j^2 |a_j| / h$ of the last solve.
  */
-gboolean
-ncm_sbessel_ode_operator_get_free_closure (NcmSBesselOdeOperator *op)
+gdouble
+ncm_sbessel_ode_operator_get_last_deriv_error (NcmSBesselOdeOperator *op, guint ell_idx)
 {
-  return op->bc_free;
+  g_assert (op->last_deriv_error != NULL);
+  g_assert_cmpuint (ell_idx, <, op->acc_bc_capacity);
+
+  return op->last_deriv_error[ell_idx];
 }
 
 /**
- * ncm_sbessel_ode_operator_get_free_closure_order:
+ * ncm_sbessel_ode_operator_get_tau_constraint_order:
  * @op: a #NcmSBesselOdeOperator
  * @rhs_len: length of the right-hand side, boundary rows included
  *
- * Number of coefficients a free-closure solve of a right-hand side with @rhs_len
- * entries uses at least: the larger of the operator's minimum and the forcing floor.
+ * Number of coefficients a %NCM_SBESSEL_ODE_CONSTRAINT_TAU solve of a right-hand side
+ * with @rhs_len entries uses at least: the larger of the operator's minimum and the
+ * forcing floor.
  *
  * Returns: the minimum working order of that solve.
  */
 glong
-ncm_sbessel_ode_operator_get_free_closure_order (NcmSBesselOdeOperator *op, guint rhs_len)
+ncm_sbessel_ode_operator_get_tau_constraint_order (NcmSBesselOdeOperator *op, guint rhs_len)
 {
-  return GSL_MAX (op->min_cols, _ncm_sbessel_free_closure_floor (rhs_len));
-}
-
-/**
- * ncm_sbessel_ode_operator_set_pinned_bc:
- * @op: a #NcmSBesselOdeOperator
- * @pin1: index of the first pinned Chebyshev coefficient
- * @pin2: index of the second pinned Chebyshev coefficient
- *
- * Closes the system with $\langle T_{@pin1}, u\rangle = \langle T_{@pin2}, u\rangle = 0$
- * instead of the Dirichlet data $u(y_a) = u(y_b) = 0$. Both closures pick a member of
- * the same solution family, and the boundary functional of the Levin reduction is
- * invariant under the choice, so the panel integral is unchanged; what changes is
- * which member has to be represented.
- *
- * The pins must be distinct. The resolution floor is raised to one past the last pin,
- * since below that the pinned rows are still empty and the system is short two pivots.
- * The stored factorization is discarded.
- *
- */
-void
-ncm_sbessel_ode_operator_set_pinned_bc (NcmSBesselOdeOperator *op, glong pin1, glong pin2)
-{
-  g_assert_cmpint (pin1, >=, 0);
-  g_assert_cmpint (pin2, >=, 0);
-  g_assert_cmpint (pin1, !=, pin2);
-
-  op->bc_pinned   = TRUE;
-  op->bc_pin1     = pin1;
-  op->bc_pin2     = pin2;
-  op->last_n_cols = 0;
-
-  _ncm_sbessel_update_min_cols (op);
-}
-
-/**
- * ncm_sbessel_ode_operator_set_dirichlet_bc:
- * @op: a #NcmSBesselOdeOperator
- *
- * Restores the default closure $u(y_a) = u(y_b) = 0$. The stored factorization is
- * discarded and the resolution floor returns to the oscillatory span of the panel.
- *
- */
-void
-ncm_sbessel_ode_operator_set_dirichlet_bc (NcmSBesselOdeOperator *op)
-{
-  op->bc_pinned   = FALSE;
-  op->last_n_cols = 0;
-
-  _ncm_sbessel_update_min_cols (op);
-}
-
-/**
- * ncm_sbessel_ode_operator_get_pinned_bc:
- * @op: a #NcmSBesselOdeOperator
- * @pin1: (out) (optional): index of the first pinned coefficient
- * @pin2: (out) (optional): index of the second pinned coefficient
- *
- * Returns: %TRUE when @op uses the pinned closure, %FALSE for Dirichlet.
- */
-gboolean
-ncm_sbessel_ode_operator_get_pinned_bc (NcmSBesselOdeOperator *op, glong *pin1, glong *pin2)
-{
-  if (pin1 != NULL)
-    *pin1 = op->bc_pin1;
-
-  if (pin2 != NULL)
-    *pin2 = op->bc_pin2;
-
-  return op->bc_pinned;
+  return GSL_MAX (op->min_cols, _ncm_sbessel_tau_constraint_floor (op, rhs_len));
 }
 
 /**
@@ -1042,11 +1133,12 @@ ncm_sbessel_ode_operator_get_pinned_bc (NcmSBesselOdeOperator *op, glong *pin1, 
  * @op: a #NcmSBesselOdeOperator
  * @min_cols: resolution floor, or a negative value to restore the derived one
  *
- * Overrides the floor the decay test may not stop below. Experimental: with the
- * pinned closure and a floor of zero the test may stop before the pinned columns have
- * entered the system, in which case the pins never act and the solve is closed by
- * whatever back-substitution assigns to the trailing coefficients. The stored
- * factorization is discarded.
+ * Overrides the floor the decay test may not stop below. Experimental: with
+ * %NCM_SBESSEL_ODE_CONSTRAINT_PINNED and a floor of zero the test may stop before the
+ * pinned columns have entered the system, in which case the pins never act and the
+ * solve is closed by whatever back-substitution assigns to the trailing coefficients,
+ * which is %NCM_SBESSEL_ODE_CONSTRAINT_TAU by another route. The stored factorization is
+ * discarded.
  *
  */
 void
@@ -1949,6 +2041,7 @@ _ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeOperator *op, glong n_cols,
   gdouble acc_bc_at_m1 = 0.0;
   gdouble acc_bc_at_p1 = 0.0;
   gdouble maxabs       = 0.0;
+  gdouble deriv_error  = 0.0;
   gdouble * restrict sol_ptr;
   glong row;
 
@@ -1980,13 +2073,15 @@ _ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeOperator *op, glong n_cols,
     sol          = sum / diag;
     sol_ptr[row] = sol;
     maxabs       = GSL_MAX (maxabs, fabs (sol));
+    deriv_error += ((gdouble) row) * ((gdouble) row) * fabs (sol);
 
     acc_bc_at_m1 += _ncm_sbessel_bc_pat1 (op, row) * sol;
     acc_bc_at_p1 += _ncm_sbessel_bc_pat2 (op, row) * sol;
   }
 
   _ensure_acc_bc_capacity (op, 1);
-  op->last_max_coeff[0] = maxabs;
+  op->last_max_coeff[0]   = maxabs;
+  op->last_deriv_error[0] = deriv_error / op->half_len;
 
   g_array_set_size (solution, n_cols);
 }
@@ -2086,7 +2181,8 @@ _ncm_sbessel_ode_solver_compute_endpoints (NcmSBesselOdeOperator *op, glong n_co
   g_array_index (endpoints, gdouble, 2) = error_estimate / h; /* error estimate */
 
   _ensure_acc_bc_capacity (op, 1);
-  op->last_max_coeff[0] = maxabs;
+  op->last_max_coeff[0]   = maxabs;
+  op->last_deriv_error[0] = error_estimate / h;
 
   g_free (sol_buf);
 }
@@ -2365,9 +2461,10 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
 
   for (l_idx = 0; l_idx < n_ell; l_idx++)
   {
-    op->acc_bc_at_m1[l_idx]   = 0.0;
-    op->acc_bc_at_p1[l_idx]   = 0.0;
-    op->last_max_coeff[l_idx] = 0.0;
+    op->acc_bc_at_m1[l_idx]     = 0.0;
+    op->acc_bc_at_p1[l_idx]     = 0.0;
+    op->last_max_coeff[l_idx]   = 0.0;
+    op->last_deriv_error[l_idx] = 0.0;
   }
 
   g_array_set_size (solutions, (n_cols + TOTAL_BANDWIDTH) * n_ell);
@@ -2411,10 +2508,16 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
       sol_data[base_sol_idx + row] = sol;
       op->last_max_coeff[l_idx]    = GSL_MAX (op->last_max_coeff[l_idx], fabs (sol));
 
-      op->acc_bc_at_m1[l_idx] += _ncm_sbessel_bc_pat1 (op, row) * sol;
-      op->acc_bc_at_p1[l_idx] += _ncm_sbessel_bc_pat2 (op, row) * sol;
+      op->last_deriv_error[l_idx] += ((gdouble) row) * ((gdouble) row) * fabs (sol);
+      op->acc_bc_at_m1[l_idx]     += _ncm_sbessel_bc_pat1 (op, row) * sol;
+      op->acc_bc_at_p1[l_idx]     += _ncm_sbessel_bc_pat2 (op, row) * sol;
     }
   }
+
+  #pragma omp simd
+
+  for (l_idx = 0; l_idx < n_ell; l_idx++)
+    op->last_deriv_error[l_idx] /= op->half_len;
 
   g_array_set_size (solutions, (n_cols) * n_ell);
 }
@@ -2476,9 +2579,10 @@ _ncm_sbessel_ode_operator_compute_endpoints_batched (NcmSBesselOdeOperator *op, 
 
   for (l_idx = 0; l_idx < n_ell; l_idx++)
   {
-    op->acc_bc_at_m1[l_idx]   = 0.0;
-    op->acc_bc_at_p1[l_idx]   = 0.0;
-    op->last_max_coeff[l_idx] = 0.0;
+    op->acc_bc_at_m1[l_idx]     = 0.0;
+    op->acc_bc_at_p1[l_idx]     = 0.0;
+    op->last_max_coeff[l_idx]   = 0.0;
+    op->last_deriv_error[l_idx] = 0.0;
   }
 
   /* Back-substitution: compute coefficients and accumulate derivative contributions */
@@ -2554,6 +2658,8 @@ _ncm_sbessel_ode_operator_compute_endpoints_batched (NcmSBesselOdeOperator *op, 
     endp_data[l_idx * 3 + 0] /= h; /* u'(a) = u'(-1) / h */
     endp_data[l_idx * 3 + 1] /= h; /* u'(b) = u'(+1) / h */
     endp_data[l_idx * 3 + 2] /= h; /* error estimate */
+
+    op->last_deriv_error[l_idx] = endp_data[l_idx * 3 + 2];
   }
 }
 
@@ -2616,9 +2722,10 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
 
   for (l_idx = 0; l_idx < n_ell; l_idx++)
   {
-    op->acc_bc_at_m1[l_idx]   = 0.0;
-    op->acc_bc_at_p1[l_idx]   = 0.0;
-    op->last_max_coeff[l_idx] = 0.0;
+    op->acc_bc_at_m1[l_idx]     = 0.0;
+    op->acc_bc_at_p1[l_idx]     = 0.0;
+    op->last_max_coeff[l_idx]   = 0.0;
+    op->last_deriv_error[l_idx] = 0.0;
   }
 
   for (row = n_cols - 1; row >= 0; row--)
@@ -2665,6 +2772,7 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
       c_k                                              = sum / diag;
       op->solution_batched[buffer_pos * n_ell + l_idx] = c_k;
       op->last_max_coeff[l_idx]                        = GSL_MAX (op->last_max_coeff[l_idx], fabs (c_k));
+      op->last_deriv_error[l_idx]                     += ((gdouble) row) * ((gdouble) row) * fabs (c_k);
       op->acc_bc_at_m1[l_idx]                         += _ncm_sbessel_bc_pat1 (op, row) * c_k;
       op->acc_bc_at_p1[l_idx]                         += _ncm_sbessel_bc_pat2 (op, row) * c_k;
       value_data[4 * l_idx + 0]                       += w0 * c_k;
@@ -2678,8 +2786,9 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
 
   for (l_idx = 0; l_idx < n_ell; l_idx++)
   {
-    value_data[4 * l_idx + 1] /= h;
-    value_data[4 * l_idx + 3] /= h;
+    value_data[4 * l_idx + 1]   /= h;
+    value_data[4 * l_idx + 3]   /= h;
+    op->last_deriv_error[l_idx] /= h;
   }
 }
 
@@ -3156,8 +3265,8 @@ ncm_sbessel_ode_operator_solve_values (NcmSBesselOdeOperator *op, GArray *rhs,
 }
 
 /**
- * _ncm_sbessel_ode_solver_fill_operator_matrix:
- * @solver: a #NcmSBesselOdeSolver
+ * _ncm_sbessel_ode_fill_operator_matrix:
+ * @op: a #NcmSBesselOdeOperator
  * @nrows: number of rows
  * @ncols: number of columns
  * @data: pointer to matrix data
@@ -3165,16 +3274,14 @@ ncm_sbessel_ode_operator_solve_values (NcmSBesselOdeOperator *op, GArray *rhs,
  *
  * Helper function to fill operator matrix data in either row-major or column-major
  * format. Extracts matrix entries from operator rows and fills them into the provided
- * data array.
+ * data array. The two constraint rows follow the constraint @op carries.
  *
  */
 static void
-_ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
-                                              const gdouble a, const gdouble b, guint ell,
-                                              guint nrows, guint ncols,
-                                              gdouble *data, gboolean colmajor)
+_ncm_sbessel_ode_fill_operator_matrix (NcmSBesselOdeOperator *op,
+                                       guint nrows, guint ncols,
+                                       gdouble *data, gboolean colmajor)
 {
-  NcmSBesselOdeOperator *op = ncm_sbessel_ode_solver_create_operator (solver, a, b, ell, ell);
   NcmSBesselOdeSolverRow row_mem;
   NcmSBesselOdeSolverRow *row = &row_mem;
   guint i;
@@ -3189,7 +3296,7 @@ _ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
     /* Handle boundary condition rows with infinite components */
     if (fabs (row->bc_at_m1) > 1.0e-100)
     {
-      /* first closure pattern, evaluated at every column k */
+      /* first constraint pattern, evaluated at every column k */
       for (k = row->col_index; k < ncols; k++)
       {
         const gdouble value = row->bc_at_m1 * _ncm_sbessel_bc_pat1 (op, k);
@@ -3201,7 +3308,7 @@ _ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
 
     if (fabs (row->bc_at_p1) > 1.0e-100)
     {
-      /* second closure pattern, evaluated at every column k */
+      /* second constraint pattern, evaluated at every column k */
       for (k = row->col_index; k < ncols; k++)
       {
         const gdouble value = row->bc_at_p1 * _ncm_sbessel_bc_pat2 (op, k);
@@ -3224,8 +3331,35 @@ _ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
       }
     }
   }
+}
 
-  ncm_sbessel_ode_operator_unref (op);
+/**
+ * ncm_sbessel_ode_operator_get_matrix:
+ * @op: a #NcmSBesselOdeOperator
+ * @nrows: number of rows to extract, constraint rows included
+ *
+ * Dense $n \times n$ row-major representation of @op, closed the way @op is closed:
+ * rows 0 and 1 carry the two constraint functionals of its #NcmSBesselOdeConstraint --- the
+ * dense $(-1)^j$ and $1$ patterns of Dirichlet data, the two single entries of the
+ * pinned constraint, or nothing at all under %NCM_SBESSEL_ODE_CONSTRAINT_TAU --- and rows 2
+ * to @nrows-1 are the discretized operator. For validation and for comparison with
+ * dense solvers; the solve itself never forms this matrix.
+ *
+ * Returns: (transfer full): the dense matrix
+ */
+NcmMatrix *
+ncm_sbessel_ode_operator_get_matrix (NcmSBesselOdeOperator *op, gint nrows)
+{
+  NcmMatrix *mat;
+
+  g_assert_cmpint (nrows, >, 2);
+
+  mat = ncm_matrix_new (nrows, nrows);
+  ncm_matrix_set_zero (mat);
+
+  _ncm_sbessel_ode_fill_operator_matrix (op, nrows, nrows, ncm_matrix_data (mat), FALSE);
+
+  return mat;
 }
 
 /**
@@ -3242,9 +3376,13 @@ _ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
  *
  * The matrix includes:
  *
- * - Row 0: boundary condition u(-1) = 0
- * - Row 1: boundary condition u(+1) = 0
+ * - Rows 0 and 1: the two constraint functionals of the solver's current
+ *   #NcmSBesselOdeConstraint, $u(y_a) = 0$ and $u(y_b) = 0$ by default
  * - Rows 2 to nrows-1: differential operator rows
+ *
+ * The pinned constraint belongs to an operator rather than to a solver; for it, and for
+ * any operator whose constraint was set on its own, use
+ * ncm_sbessel_ode_operator_get_matrix().
  *
  * The matrix is square (nrows x nrows) for compatibility with standard solvers.
  *
@@ -3263,9 +3401,12 @@ ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, const g
 
   ncm_matrix_set_zero (mat);
 
-  /* Fill matrix data */
-  _ncm_sbessel_ode_solver_fill_operator_matrix (solver, a, b, ell, nrows, ncols,
-                                                ncm_matrix_data (mat), FALSE);
+  {
+    NcmSBesselOdeOperator *op = ncm_sbessel_ode_solver_create_operator (solver, a, b, ell, ell);
+
+    _ncm_sbessel_ode_fill_operator_matrix (op, nrows, ncols, ncm_matrix_data (mat), FALSE);
+    ncm_sbessel_ode_operator_unref (op);
+  }
 
   return mat;
 }
@@ -3283,9 +3424,13 @@ ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, const g
  *
  * The matrix includes:
  *
- * - Row 0: boundary condition u(-1) = 0
- * - Row 1: boundary condition u(+1) = 0
+ * - Rows 0 and 1: the two constraint functionals of the solver's current
+ *   #NcmSBesselOdeConstraint, $u(y_a) = 0$ and $u(y_b) = 0$ by default
  * - Rows 2 to nrows-1: differential operator rows
+ *
+ * The pinned constraint belongs to an operator rather than to a solver; for it, and for
+ * any operator whose constraint was set on its own, use
+ * ncm_sbessel_ode_operator_get_matrix().
  *
  * The matrix is square (nrows x nrows) and stored in column-major order as expected by
  * LAPACK routines like dgesv.
@@ -3301,8 +3446,10 @@ ncm_sbessel_ode_solver_get_operator_matrix_colmajor (NcmSBesselOdeSolver *solver
     gdouble *data_colmajor = g_new0 (gdouble, nrows * ncols);
     NcmMatrix *mat         = ncm_matrix_new_data_malloc (data_colmajor, nrows, ncols);
 
-    _ncm_sbessel_ode_solver_fill_operator_matrix (solver, a, b, ell, nrows, ncols,
-                                                  data_colmajor, TRUE);
+    NcmSBesselOdeOperator *op = ncm_sbessel_ode_solver_create_operator (solver, a, b, ell, ell);
+
+    _ncm_sbessel_ode_fill_operator_matrix (op, nrows, ncols, data_colmajor, TRUE);
+    ncm_sbessel_ode_operator_unref (op);
 
     return mat;
   }

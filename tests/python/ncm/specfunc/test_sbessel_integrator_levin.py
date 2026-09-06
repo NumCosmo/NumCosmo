@@ -298,7 +298,10 @@ class TestSBesselIntegratorLevin:
                 for ell in range(8)
             ]
         )
-        assert calls == 9
+        # One fit of nine samples, plus the five probes that decide whether the edge
+        # is a dead-junction cell: four interior ones and the first junction probe,
+        # which already rules it out here.
+        assert calls == 9 + 5
         assert_allclose(result.to_numpy(), expected, rtol=1.0e-9, atol=1.0e-14)
 
     def test_rejected_edge_reuses_fitted_rhs(self) -> None:
@@ -325,7 +328,8 @@ class TestSBesselIntegratorLevin:
             epsrel=1.0e-13,
             limit=1000,
         )
-        assert calls == 1025
+        # The fit of 1025 samples is reused; only the five dead-junction probes are added.
+        assert calls == 1025 + 5
         assert_allclose(result.get(0), expected, rtol=1.0e-8, atol=1.0e-13)
 
     def test_zero_bessel_batch_skips_rhs(self) -> None:
@@ -1125,3 +1129,209 @@ class TestSBesselIntegratorLevinDeriv:
 
         expected = l_val * (l_val - 1.0) * i_f_y2 - i_f + 2.0 * i_f_y1
         assert_allclose(got, expected, rtol=1.0e-9)
+
+
+class TestTauConstraintRule:
+    """Per-panel tau constraint: the rule, the order check and the guard.
+
+    The tau constraint is valid while the working order n sits on the plateau of the
+    homogeneous spectrum, n_F << n < N_min ~ 2 span / pi. The rule only sees the
+    panel (N_min); the order check runs once the forcing fit exists. A forcing that
+    needs more coefficients than the plateau holds must fall back to Dirichlet
+    instead of admitting a homogeneous multiple of the smooth solution.
+    """
+
+    A, B, K = 3162.28, 3672.79, 1.0
+    ELL_MIN, ELL_MAX = 200, 207
+
+    @classmethod
+    def _gaussian(cls, width_fraction: float):
+        x0 = 0.5 * (cls.A + cls.B)
+        width = (cls.B - cls.A) / width_fraction
+
+        def forcing(x: float, _k: float) -> float:
+            return 1.0e-16 * np.exp(-0.5 * ((x - x0) / width) ** 2)
+
+        return forcing
+
+    @classmethod
+    def _integrate(cls, forcing, min_osc: float):
+        sbi = Ncm.SBesselIntegratorLevin.new(cls.ELL_MIN, cls.ELL_MAX)
+        sbi.set_tau_constraint_min_osc(min_osc)
+        result = Ncm.Vector.new(cls.ELL_MAX - cls.ELL_MIN + 1)
+        sbi.integrate(forcing, cls.A, cls.B, cls.K, result)
+        return result.to_numpy(), sbi.get_n_constraint_fallbacks()
+
+    def test_panel_qualifies_for_the_rule(self) -> None:
+        """The test panel must hold more oscillations than the default threshold."""
+        osc = 2.0 / np.pi * (self.B - self.A)
+        defaults = Ncm.SBesselIntegratorLevin.new(self.ELL_MIN, self.ELL_MAX)
+
+        assert osc > defaults.get_tau_constraint_min_osc()
+
+    def test_smooth_forcing_uses_the_tau_constraint(self) -> None:
+        """A wide forcing is solved with the tau constraint and matches Dirichlet."""
+        forcing = self._gaussian(10.0)
+        dirichlet, _ = self._integrate(forcing, 0.0)
+        tau, fallbacks = self._integrate(forcing, 200.0)
+
+        assert fallbacks == 0
+        # The two constraints solve different systems: identical bits would mean the
+        # tau path was never taken.
+        assert np.any(tau != dirichlet)
+        assert_allclose(tau, dirichlet, atol=1.0e-8 * np.abs(dirichlet).max())
+
+    @pytest.mark.parametrize("width_fraction", [30.0, 100.0])
+    def test_forcing_above_the_plateau_falls_back(self, width_fraction: float) -> None:
+        """A forcing whose order exceeds 0.75 N_min is redone with Dirichlet.
+
+        Without the order check the tau truncation lands past N_min, the solution
+        grows without bound and the boundary term is non-finite.
+        """
+        forcing = self._gaussian(width_fraction)
+        dirichlet, _ = self._integrate(forcing, 0.0)
+        tau, fallbacks = self._integrate(forcing, 200.0)
+
+        assert fallbacks > 0
+        assert np.all(np.isfinite(tau))
+        assert_allclose(tau, dirichlet, rtol=1.0e-10)
+
+    def test_rule_off_never_falls_back(self) -> None:
+        """With the rule off every panel is Dirichlet and nothing is counted."""
+        _, fallbacks = self._integrate(self._gaussian(100.0), 0.0)
+
+        assert fallbacks == 0
+
+
+class TestTurningKnot:
+    """The per-block knot just above the turning point.
+
+    The guard cannot certify the tau constraint on a panel straddling the turning point,
+    because the bound on the smooth member carries min|y^2 - nu^2| in its denominator.
+    When the kernel's reach in y stops before the next base knot, that panel is the whole
+    oscillatory region and the constraint is unusable at every k. One knot lifts a panel edge
+    clear of the turning point.
+    """
+
+    A, B, K = 1.0e2, 1.0e5, 1.0
+
+    @staticmethod
+    def _forcing(x: float, _k: float) -> float:
+        return np.exp(-0.5 * ((x - 3.0e4) / 6.0e3) ** 2)
+
+    def test_default_is_on(self) -> None:
+        """The margin ships enabled."""
+        sbi = Ncm.SBesselIntegratorLevin.new(2, 9)
+        assert sbi.get_turning_knot_margin() == pytest.approx(
+            Ncm.SBESSEL_INTEGRATOR_LEVIN_DEFAULT_TURNING_KNOT_MARGIN
+        )
+        assert sbi.get_turning_knot_margin() > 1.0
+
+    def test_round_trip(self) -> None:
+        """The margin reads back, and zero is accepted as off."""
+        sbi = Ncm.SBesselIntegratorLevin.new(2, 9)
+        for value in (1.2, 0.0, 1.05):
+            sbi.set_turning_knot_margin(value)
+            assert sbi.get_turning_knot_margin() == value
+
+    def _run(self, ell: int, margin: float):
+        sbi = Ncm.SBesselIntegratorLevin.new(ell, ell + 7)
+        sbi.set_turning_knot_margin(margin)
+        result = Ncm.Vector.new(8)
+        sbi.integrate(self._forcing, self.A, self.B, self.K, result)
+
+        return (
+            result.to_numpy().copy(),
+            sbi.get_n_tau_solves(),
+            sbi.get_n_constraint_fallbacks(),
+        )
+
+    @pytest.mark.parametrize("ell", [500, 1000])
+    def test_removes_the_fallbacks_at_high_ell(self, ell: int) -> None:
+        """The straddling panel cannot be certified, so without the knot it is refused.
+
+        How much of the oscillatory region that panel holds depends on the kernel's reach
+        in y; on a kernel that stops before the next base knot it is all of it and the
+        constraint is unusable outright. Here the refusal is one panel, which is what the
+        counters show: a fallback that the knot removes, and one more panel taking the
+        cheap constraint.
+        """
+        off, tau_off, fb_off = self._run(ell, 0.0)
+        on, tau_on, fb_on = self._run(ell, 1.05)
+
+        assert fb_off > 0, "expected the straddling panel to be refused"
+        assert fb_on == 0, "the knot must leave nothing to refuse"
+        assert tau_on > tau_off
+
+    def test_same_integral_either_way(self) -> None:
+        """The knot changes which constraint runs, not the answer."""
+        for ell in (200, 1000):
+            off, _, _ = self._run(ell, 0.0)
+            on, _, _ = self._run(ell, 1.05)
+            peak = np.abs(off).max()
+            assert_allclose(on, off, rtol=0.0, atol=1.0e-8 * peak)
+
+    def test_low_ell_is_untouched(self) -> None:
+        """Below the rule's threshold the straddling panel is Dirichlet either way, so
+        no knot is added and the result is bit-identical."""
+        off, _, _ = self._run(20, 0.0)
+        on, _, _ = self._run(20, 1.05)
+        assert np.array_equal(on, off)
+
+    def test_rule_off_disables_the_knot(self) -> None:
+        """The insertion is gated on the same oscillation count as the rule."""
+        sbi = Ncm.SBesselIntegratorLevin.new(1000, 1007)
+        sbi.set_tau_constraint_min_osc(0.0)
+        result = Ncm.Vector.new(8)
+        sbi.integrate(self._forcing, self.A, self.B, self.K, result)
+        assert sbi.get_n_tau_solves() == 0
+
+
+class TestSharedKnotTable:
+    """Integrators over one grid share their j_l rows.
+
+    The table is a pure function of the abscissae and of ell_cache_max, and a solver holds
+    one integrator per multipole block, so the rows are shared rather than copied. Shared
+    rows are read-only, and the risk of getting that wrong is one integrator disturbing
+    another's results.
+    """
+
+    A, B, K = 1.0e2, 1.0e4, 1.0
+
+    @staticmethod
+    def _forcing(x: float, _k: float) -> float:
+        return np.exp(-0.5 * ((x - 3.0e3) / 6.0e2) ** 2)
+
+    def _run(self, sbi: Ncm.SBesselIntegratorLevin) -> np.ndarray:
+        result = Ncm.Vector.new(8)
+        sbi.integrate(self._forcing, self.A, self.B, self.K, result)
+
+        return result.to_numpy().copy()
+
+    def test_a_second_integrator_does_not_disturb_the_first(self) -> None:
+        """Same grid, different blocks: sharing must not be mutation."""
+        first = Ncm.SBesselIntegratorLevin.new(200, 207)
+        before = self._run(first)
+
+        second = Ncm.SBesselIntegratorLevin.new(600, 607)
+        self._run(second)
+
+        after = self._run(first)
+        assert np.array_equal(after, before)
+
+    def test_identical_grids_agree(self) -> None:
+        """Two integrators built alike give the same answer."""
+        a = Ncm.SBesselIntegratorLevin.new(200, 207)
+        b = Ncm.SBesselIntegratorLevin.new(200, 207)
+
+        assert np.array_equal(self._run(a), self._run(b))
+
+    def test_turning_knot_row_is_per_instance(self) -> None:
+        """Blocks insert their knot at different y, so that row cannot be shared."""
+        low = Ncm.SBesselIntegratorLevin.new(400, 407)
+        high = Ncm.SBesselIntegratorLevin.new(900, 907)
+
+        low_first = self._run(low)
+        self._run(high)
+
+        assert np.array_equal(self._run(low), low_first)

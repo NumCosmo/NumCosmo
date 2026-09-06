@@ -36,9 +36,10 @@ import numpy as np
 import pytest
 
 from numpy.testing import assert_allclose
-from scipy.special import spherical_jn
+from scipy.special import spherical_jn, spherical_yn
 from scipy.linalg import solve
 from scipy.integrate import quad
+from scipy.optimize import brentq
 
 from numcosmo_py import Ncm
 
@@ -3709,17 +3710,17 @@ class TestSBesselStoredRotations:
         )
 
 
-class TestSBesselFreeClosure:
-    """The free (tau) closure against Dirichlet data.
+class TestSBesselTauConstraint:
+    """The tau constraint against Dirichlet data.
 
     The boundary functional of the Levin reduction is invariant under adding
-    homogeneous solutions to u, so both closures must return the same panel
+    homogeneous solutions to u, so both constraints must return the same panel
     integral. They differ in which member of the solution family is represented:
-    Dirichlet data forces the oscillatory one, the free closure leaves the smooth
-    one, which needs only the forcing's own order. The free closure is valid only
+    Dirichlet data forces the oscillatory one, the tau constraint leaves the smooth
+    one, which needs only the forcing's own order. The tau constraint is valid only
     while the homogeneous solutions are unrepresentable at that order; on a short or
     evanescent panel they are not, and the solve admits them. Both regimes are
-    pinned here so the guard in the integrator has a documented target.
+    covered here so the guard in the integrator has a documented target.
     """
 
     ELL = 20
@@ -3766,10 +3767,12 @@ class TestSBesselFreeClosure:
 
         return term(b, u_b, du[1]) - term(a, u_a, du[0])
 
-    def _solve(self, a: float, b: float, ell_min: int, ell_max: int, free: bool):
+    def _solve(self, a: float, b: float, ell_min: int, ell_max: int, tau: bool):
         solver = Ncm.SBesselOdeSolver.new()
         solver.set_tolerance(1.0e-12)
-        solver.set_free_closure(free)
+        solver.set_default_constraint(
+            Ncm.SBesselOdeConstraint.TAU if tau else Ncm.SBesselOdeConstraint.DIRICHLET
+        )
         op = solver.create_operator(a, b, ell_min, ell_max)
         coeffs, n_cols = op.solve(self._forcing_rhs(a, b))
 
@@ -3785,13 +3788,19 @@ class TestSBesselFreeClosure:
         i_f = self._boundary_functional(c_f, a, b, self.ELL)
 
         assert_allclose(i_f, i_d, rtol=1.0e-9)
-        assert n_f * 100 < n_d, f"free closure used {n_f} columns, Dirichlet {n_d}"
+        # The tau solve stops at its forcing floor, 1.5 times the forcing order, which
+        # is set by F alone; Dirichlet runs to the panel's oscillation count.
+        n_forcing = len(self._forcing_rhs(a, b)) - 2
+        assert (
+            n_f <= 2 * n_forcing
+        ), f"tau constraint used {n_f} columns for a forcing of order {n_forcing}"
+        assert n_f * 20 < n_d, f"tau constraint used {n_f} columns, Dirichlet {n_d}"
         assert op_f.get_min_cols() == 0
         assert op_d.get_min_cols() > 0
-        assert not op_d.get_free_closure()
-        assert op_f.get_free_closure()
+        assert op_d.get_constraint() == Ncm.SBesselOdeConstraint.DIRICHLET
+        assert op_f.get_constraint() == Ncm.SBesselOdeConstraint.TAU
 
-    def test_free_closure_matches_quadrature_on_narrow_panel(self) -> None:
+    def test_tau_constraint_matches_quadrature_on_narrow_panel(self) -> None:
         """Narrow panel, where direct quadrature is affordable."""
         a, b = 100.0, 10.0**2.5
         m, h = 0.5 * (a + b), 0.5 * (b - a)
@@ -3811,8 +3820,8 @@ class TestSBesselFreeClosure:
             self._boundary_functional(c_f, a, b, self.ELL), ref, rtol=1.0e-9
         )
 
-    def test_batched_free_closure_matches_single(self) -> None:
-        """A block shares one factorisation; every member must match its own solve."""
+    def test_batched_tau_constraint_matches_single(self) -> None:
+        """A block shares one factorization; every member must match its own solve."""
         a, b = 1.0e4, 10.0**4.5
         lmin, lmax = self.ELL, self.ELL + 7
         n_ell = lmax - lmin + 1
@@ -3828,11 +3837,11 @@ class TestSBesselFreeClosure:
                 padded[:n_b],
                 rtol=1.0e-9,
                 atol=1.0e-13 * np.abs(c_s).max(),
-                err_msg=f"batched free closure differs from single solve at ell={ell}",
+                err_msg=f"batched tau constraint differs from single solve at ell={ell}",
             )
 
     def test_shallow_panel_admits_homogeneous_content(self) -> None:
-        """Where N_min is small the free solve is contaminated; where large it is not.
+        """Where N_min is small the tau solve is contaminated; where large it is not.
 
         This is the failure the integrator's guard detects: on [3.162, 10] at l=2 the
         panel holds ~4 oscillations against a working order of ~32, so the
@@ -3875,7 +3884,7 @@ class TestSBesselFreeClosure:
         a, b = 1.0e4, 10.0**4.5
         solver = Ncm.SBesselOdeSolver.new()
         solver.set_tolerance(1.0e-12)
-        solver.set_free_closure(True)
+        solver.set_default_constraint(Ncm.SBesselOdeConstraint.TAU)
         rhs = self._forcing_rhs(a, b)
 
         op = solver.create_operator(a, b, self.ELL, self.ELL)
@@ -3888,7 +3897,7 @@ class TestSBesselFreeClosure:
         for i in range(8):
             assert op.get_last_max_coeff(i) == np.abs(coeffs[i]).max()
 
-    def test_pinned_closure_same_integral(self) -> None:
+    def test_pinned_constraint_same_integral(self) -> None:
         """Pinning two coefficients selects another member with the same integral."""
         a, b = 1.0e4, 10.0**4.5
         solver = Ncm.SBesselOdeSolver.new()
@@ -3900,8 +3909,9 @@ class TestSBesselFreeClosure:
         i_d = self._boundary_functional(np.array(c_d), a, b, self.ELL)
         floor = op.get_min_cols()
 
-        op.set_pinned_bc(120, 144)
-        assert op.get_pinned_bc() == (True, 120, 144)
+        op.set_pinned_constraint(120, 144)
+        assert op.get_constraint() == Ncm.SBesselOdeConstraint.PINNED
+        assert op.get_pins() == (120, 144)
         assert op.get_min_cols() == 145
         c_p, n_p = op.solve(rhs)
         assert n_p == 145
@@ -3909,26 +3919,507 @@ class TestSBesselFreeClosure:
             self._boundary_functional(np.array(c_p), a, b, self.ELL), i_d, rtol=1.0e-9
         )
 
-        op.set_dirichlet_bc()
-        assert op.get_pinned_bc()[0] is False
+        op.set_constraint(Ncm.SBesselOdeConstraint.DIRICHLET)
+        assert op.get_constraint() == Ncm.SBesselOdeConstraint.DIRICHLET
         assert op.get_min_cols() == floor
 
-    def test_closure_setting_propagates_and_overrides(self) -> None:
-        """Operators inherit the solver's closure; a per-operator setter overrides it."""
+    def test_constraint_setting_propagates_and_overrides(self) -> None:
+        """Operators inherit the solver's constraint; a per-operator setter overrides it."""
         a, b = 1.0e4, 10.0**4.5
         solver = Ncm.SBesselOdeSolver.new()
-        assert not solver.get_free_closure()
+        assert solver.get_default_constraint() == Ncm.SBesselOdeConstraint.DIRICHLET
 
-        solver.set_free_closure(True)
+        solver.set_default_constraint(Ncm.SBesselOdeConstraint.TAU)
         op = solver.create_operator(a, b, self.ELL, self.ELL)
-        assert op.get_free_closure()
+        assert op.get_constraint() == Ncm.SBesselOdeConstraint.TAU
         assert op.get_min_cols() == 0
 
-        op.set_free_closure(False)
-        assert not op.get_free_closure()
+        op.set_constraint(Ncm.SBesselOdeConstraint.DIRICHLET)
+        assert op.get_constraint() == Ncm.SBesselOdeConstraint.DIRICHLET
         assert op.get_min_cols() > 0
 
         op.set_min_cols(7)
         assert op.get_min_cols() == 7
         op.set_min_cols(-1)
         assert op.get_min_cols() > 7
+
+
+class TestTauFloorFactorAndDiagnostics:
+    """The tau working order, the roundoff bound it implies, and the dense matrix.
+
+    The tau constraint has no oscillatory floor, and the decay test does not stop later than
+    the floor in practice, so the floor factor sets the working order outright. It has to
+    exceed one: at exactly the forcing's order the forcing itself is unresolved.
+    """
+
+    ELL = 20
+    A, B = 1.0e4, 10.0**4.5
+
+    def _rhs(self):
+        """C^(2) coefficients of y F(y) for a bump on [A, B], boundary rows included."""
+        solver = Ncm.SBesselOdeSolver.new()
+        spectral = solver.peek_spectral()
+        mid, half = 0.5 * (self.A + self.B), 0.5 * (self.B - self.A)
+        cheb = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                lambda _d, y: y * np.exp(-0.5 * ((y - mid) / (0.25 * half)) ** 2),
+                self.A,
+                self.B,
+                3,
+                1.0e-13,
+                None,
+            )[1]
+        )
+        n = len(cheb)
+        padded = np.concatenate([cheb, np.zeros(8)])
+        kk = np.arange(n)
+        geg = (
+            padded[:n] / (2 * (kk + 1))
+            - (kk + 2) * padded[2 : n + 2] / ((kk + 1) * (kk + 3))
+            + padded[4 : n + 4] / (2 * (kk + 3))
+        )
+        geg[0] += 0.5 * padded[0]
+
+        return np.concatenate([[0.0, 0.0], geg]), n
+
+    def test_default_factor(self) -> None:
+        """The factor ships above one and reads back."""
+        solver = Ncm.SBesselOdeSolver.new()
+        assert solver.get_tau_floor_factor() > 1.0
+
+        solver.set_tau_floor_factor(1.4)
+        assert solver.get_tau_floor_factor() == 1.4
+
+    def test_factor_sets_the_working_order(self) -> None:
+        """The columns kept track the factor times the forcing order."""
+        rhs, n_forcing = self._rhs()
+
+        for factor in (1.1, 1.5, 2.0):
+            solver = Ncm.SBesselOdeSolver.new()
+            solver.set_tolerance(1.0e-12)
+            solver.set_tau_floor_factor(factor)
+            solver.set_default_constraint(Ncm.SBesselOdeConstraint.TAU)
+            op = solver.create_operator(self.A, self.B, self.ELL, self.ELL)
+            _, n_cols = op.solve(rhs)
+
+            assert n_cols == int(np.ceil(factor * n_forcing))
+            assert op.get_tau_constraint_order(len(rhs)) == n_cols
+
+    def test_deriv_error_is_the_weighted_coefficient_sum(self) -> None:
+        """The reported bound is sum_j j^2 |a_j| / h, on every solve path."""
+        rhs, _ = self._rhs()
+        half = 0.5 * (self.B - self.A)
+
+        for constraint in (
+            Ncm.SBesselOdeConstraint.DIRICHLET,
+            Ncm.SBesselOdeConstraint.TAU,
+        ):
+            solver = Ncm.SBesselOdeSolver.new()
+            solver.set_tolerance(1.0e-12)
+            solver.set_default_constraint(constraint)
+            op = solver.create_operator(self.A, self.B, self.ELL, self.ELL)
+            coeffs, n_cols = op.solve(rhs)
+            expected = np.sum(np.arange(n_cols) ** 2 * np.abs(np.array(coeffs))) / half
+
+            assert_allclose(op.get_last_deriv_error(0), expected, rtol=1.0e-13)
+
+            op.solve_values(rhs, self.A, self.B)
+            assert_allclose(op.get_last_deriv_error(0), expected, rtol=1.0e-13)
+
+            endpoints = np.array(op.solve_endpoints(rhs))
+            assert_allclose(op.get_last_deriv_error(0), endpoints[2], rtol=1.0e-13)
+
+    @pytest.mark.parametrize("n_ell", [1, 4, 8])
+    def test_deriv_error_per_multipole(self, n_ell: int) -> None:
+        """Each member of a block reports its own bound."""
+        rhs, _ = self._rhs()
+        half = 0.5 * (self.B - self.A)
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-12)
+        solver.set_default_constraint(Ncm.SBesselOdeConstraint.TAU)
+        op = solver.create_operator(self.A, self.B, self.ELL, self.ELL + n_ell - 1)
+        coeffs, n_cols = op.solve(rhs)
+        block = np.array(coeffs).reshape(n_ell, n_cols)
+
+        for i in range(n_ell):
+            expected = np.sum(np.arange(n_cols) ** 2 * np.abs(block[i])) / half
+            assert_allclose(op.get_last_deriv_error(i), expected, rtol=1.0e-13)
+
+    def test_operator_matrix_follows_the_constraint(self) -> None:
+        """The dense matrix carries the constraint rows the operator actually has.
+
+        The solver-level accessor takes its constraint from the solver and so cannot express
+        the pinned one; this is the entry point that can.
+        """
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-12)
+        op = solver.create_operator(self.A, self.B, self.ELL, self.ELL)
+        nrows = 40
+
+        def rows01(matrix):
+            data = np.array(matrix.dup_array()).reshape(matrix.nrows(), matrix.ncols())
+
+            return np.count_nonzero(data[0]), np.count_nonzero(data[1])
+
+        op.set_constraint(Ncm.SBesselOdeConstraint.DIRICHLET)
+        assert rows01(op.get_matrix(nrows)) == (nrows, nrows)
+
+        op.set_pinned_constraint(10, 20)
+        assert rows01(op.get_matrix(nrows)) == (1, 1)
+
+        op.set_constraint(Ncm.SBesselOdeConstraint.TAU)
+        assert rows01(op.get_matrix(nrows)) == (0, 0)
+
+    def test_operator_matrix_band_is_the_same_below_the_constraint(self) -> None:
+        """Only the two constraint rows differ between constraints."""
+        solver = Ncm.SBesselOdeSolver.new()
+        op = solver.create_operator(self.A, self.B, self.ELL, self.ELL)
+
+        op.set_constraint(Ncm.SBesselOdeConstraint.DIRICHLET)
+        m_d = op.get_matrix(40)
+        band_d = np.array(m_d.dup_array()).reshape(40, 40)[2:]
+
+        op.set_constraint(Ncm.SBesselOdeConstraint.TAU)
+        m_t = op.get_matrix(40)
+        band_t = np.array(m_t.dup_array()).reshape(40, 40)[2:]
+
+        assert_allclose(band_t, band_d, rtol=0.0, atol=0.0)
+
+
+class TestDerivErrorBoundsTheFailure:
+    """The reported bound has to bound the realized error, not merely correlate.
+
+    Under the tau constraint the homogeneous content the truncation admits cancels exactly
+    in the boundary functional, so what survives is the floating-point residue of that
+    cancellation, and the functional weights coefficient j by j^2 / h. That is what
+    get_last_deriv_error() reports, and the point of it is that it never under-reports.
+    """
+
+    ELL = 20
+    Y_A = 1.0e3
+
+    def _panel(self, span: float):
+        """A bump of fixed relative width, its right-hand side and a reference."""
+        y_b = self.Y_A + span
+        mid, half = 0.5 * (self.Y_A + y_b), 0.5 * span
+
+        def bump(y):
+            return np.exp(-0.5 * ((y - mid) / (0.25 * half)) ** 2)
+
+        solver = Ncm.SBesselOdeSolver.new()
+        spectral = solver.peek_spectral()
+        cheb = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                lambda _d, y: y * bump(y), self.Y_A, y_b, 3, 1.0e-13, None
+            )[1]
+        )
+        n = len(cheb)
+        padded = np.concatenate([cheb, np.zeros(8)])
+        kk = np.arange(n)
+        geg = (
+            padded[:n] / (2 * (kk + 1))
+            - (kk + 2) * padded[2 : n + 2] / ((kk + 1) * (kk + 3))
+            + padded[4 : n + 4] / (2 * (kk + 3))
+        )
+        geg[0] += 0.5 * padded[0]
+        rhs = np.concatenate([[0.0, 0.0], geg])
+
+        gx, gw = np.polynomial.legendre.leggauss(24)
+        edges = np.linspace(self.Y_A, y_b, max(int(np.ceil(2 * span)), 400) + 1)
+        reference = sum(
+            0.5
+            * (e1 - e0)
+            * np.sum(
+                gw
+                * bump(0.5 * (e0 + e1) + 0.5 * (e1 - e0) * gx)
+                * spherical_jn(self.ELL, 0.5 * (e0 + e1) + 0.5 * (e1 - e0) * gx)
+            )
+            for e0, e1 in zip(edges[:-1], edges[1:])
+        )
+
+        return y_b, rhs, reference
+
+    def _solve(self, y_b: float, rhs):
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-12)
+        solver.set_default_constraint(Ncm.SBesselOdeConstraint.TAU)
+        op = solver.create_operator(self.Y_A, y_b, self.ELL, self.ELL)
+        coeffs = np.array(op.solve(rhs)[0])
+        half = 0.5 * (y_b - self.Y_A)
+        u = np.polynomial.chebyshev.chebval([-1.0, 1.0], coeffs)
+        du = (
+            np.polynomial.chebyshev.chebval(
+                [-1.0, 1.0], np.polynomial.chebyshev.chebder(coeffs)
+            )
+            / half
+        )
+
+        def term(y, u_val, du_val):
+            jl = spherical_jn(self.ELL, y)
+            djl = spherical_jn(self.ELL, y, derivative=True)
+
+            return y * jl * du_val - (jl + y * djl) * u_val
+
+        value = term(y_b, u[1], du[1]) - term(self.Y_A, u[0], du[0])
+
+        return value, op.get_last_deriv_error(0)
+
+    @pytest.mark.parametrize("span", [30.0, 60.0, 100.0, 150.0, 250.0, 3000.0])
+    def test_bound_is_never_below_the_error(self, span: float) -> None:
+        """Across spans where the constraint is sound and where it fails outright."""
+        y_b, rhs, reference = self._panel(span)
+        value, deriv_error = self._solve(y_b, rhs)
+
+        amplitude = max(
+            abs(self.Y_A * spherical_jn(self.ELL, self.Y_A)),
+            abs(y_b * spherical_jn(self.ELL, y_b)),
+        )
+        predicted = np.finfo(float).eps * deriv_error * amplitude / abs(reference)
+        realized = abs(value - reference) / abs(reference)
+
+        if realized > 1.0e-9:
+            assert (
+                predicted >= realized
+            ), f"span {span}: bound {predicted:.2e} under the error {realized:.2e}"
+
+    def test_it_separates_the_two_regimes(self) -> None:
+        """A contaminated panel reports a bound orders above a sound one."""
+        _, deriv_sound = self._solve(*self._panel(3000.0)[:2])
+        _, deriv_broken = self._solve(*self._panel(30.0)[:2])
+
+        assert deriv_broken > 1.0e6 * deriv_sound
+
+
+class TestConjugatePoints:
+    """Panels whose ends make the Dirichlet boundary matrix singular.
+
+    A conjugate point is a zero of Phi = j(a) y(b) - j(b) y(a). There the two-point
+    Dirichlet problem has no unique solution and the error grows as the machine epsilon
+    times the boundary condition number. Neither of the other two constraints imposes an
+    endpoint condition, so neither has that determinant to lose.
+    """
+
+    ELL = 2
+    A0 = 200.0
+
+    @classmethod
+    def _phi(cls, span: float) -> float:
+        b = cls.A0 + span
+
+        return spherical_jn(cls.ELL, cls.A0) * spherical_yn(cls.ELL, b) - spherical_jn(
+            cls.ELL, b
+        ) * spherical_yn(cls.ELL, cls.A0)
+
+    @classmethod
+    def _conjugate_span(cls) -> float:
+        """A span where Phi vanishes, found by root finding.
+
+        Scanning for a maximum of the condition number is not enough: a scan of 2001
+        points over 0.2 pi lands at cond ~ 1e4, where Dirichlet is still accurate to
+        5e-13 and the effect looks absent.
+        """
+        return brentq(cls._phi, 7.9 * np.pi, 8.1 * np.pi, xtol=1.0e-13)
+
+    @staticmethod
+    def _boundary_cond(ell: int, a: float, b: float) -> float:
+        mat = np.array(
+            [
+                [spherical_jn(ell, a), spherical_yn(ell, a)],
+                [spherical_jn(ell, b), spherical_yn(ell, b)],
+            ]
+        )
+
+        return np.linalg.cond(mat)
+
+    def _rhs(self, a: float, b: float):
+        solver = Ncm.SBesselOdeSolver.new()
+        spectral = solver.peek_spectral()
+        mid, half = 0.5 * (a + b), 0.5 * (b - a)
+        cheb = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                lambda _d, y: y * np.exp(-0.5 * ((y - mid) / (0.35 * half)) ** 2),
+                a,
+                b,
+                3,
+                1.0e-13,
+                None,
+            )[1]
+        )
+        n = len(cheb)
+        padded = np.concatenate([cheb, np.zeros(8)])
+        kk = np.arange(n)
+        geg = (
+            padded[:n] / (2 * (kk + 1))
+            - (kk + 2) * padded[2 : n + 2] / ((kk + 1) * (kk + 3))
+            + padded[4 : n + 4] / (2 * (kk + 3))
+        )
+        geg[0] += 0.5 * padded[0]
+
+        return np.concatenate([[0.0, 0.0], geg])
+
+    def _integral(self, a: float, b: float, constraint, pins=None) -> float:
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-12)
+        op = solver.create_operator(a, b, self.ELL, self.ELL)
+
+        if pins is not None:
+            op.set_pinned_constraint(*pins)
+        else:
+            op.set_constraint(constraint)
+
+        coeffs = np.array(op.solve(self._rhs(a, b))[0])
+        half = 0.5 * (b - a)
+        u = np.polynomial.chebyshev.chebval([-1.0, 1.0], coeffs)
+        du = (
+            np.polynomial.chebyshev.chebval(
+                [-1.0, 1.0], np.polynomial.chebyshev.chebder(coeffs)
+            )
+            / half
+        )
+
+        def term(y: float, u_val: float, du_val: float) -> float:
+            jl = spherical_jn(self.ELL, y)
+            djl = spherical_jn(self.ELL, y, derivative=True)
+
+            return y * jl * du_val - (jl + y * djl) * u_val
+
+        return term(b, u[1], du[1]) - term(a, u[0], du[0])
+
+    def _reference(self, a: float, b: float) -> float:
+        mid, half = 0.5 * (a + b), 0.5 * (b - a)
+        value, _ = quad(
+            lambda y: np.exp(-0.5 * ((y - mid) / (0.35 * half)) ** 2)
+            * spherical_jn(self.ELL, y),
+            a,
+            b,
+            limit=4000,
+            epsabs=0.0,
+            epsrel=1.0e-13,
+        )
+
+        return value
+
+    def test_the_span_is_really_conjugate(self) -> None:
+        """The root finder lands on a vanishing determinant, not merely a large one."""
+        span = self._conjugate_span()
+
+        assert abs(self._phi(span)) < 1.0e-17
+        assert self._boundary_cond(self.ELL, self.A0, self.A0 + span) > 1.0e13
+
+    def test_dirichlet_loses_digits_there(self) -> None:
+        """Dirichlet error tracks the machine epsilon times the condition number."""
+        a = self.A0
+        b = a + self._conjugate_span()
+        reference = self._reference(a, b)
+
+        got = self._integral(a, b, Ncm.SBesselOdeConstraint.DIRICHLET)
+        error = abs(got - reference) / abs(reference)
+
+        assert (
+            error > 1.0e-6
+        ), f"expected the singular constraint to fail, got {error:.2e}"
+
+    @pytest.mark.parametrize("pins", [(0, 1), (2, 3), (10, 11)])
+    def test_pinned_is_immune(self, pins) -> None:
+        """No endpoint condition means no determinant to degenerate."""
+        a = self.A0
+        b = a + self._conjugate_span()
+        reference = self._reference(a, b)
+
+        got = self._integral(a, b, None, pins=pins)
+
+        assert_allclose(got, reference, rtol=1.0e-9)
+
+    def test_away_from_the_conjugate_span_dirichlet_is_fine(self) -> None:
+        """The failure is the determinant, not the panel."""
+        a = self.A0
+        b = a + self._conjugate_span() + 1.0e-2
+        reference = self._reference(a, b)
+
+        assert_allclose(
+            self._integral(a, b, Ncm.SBesselOdeConstraint.DIRICHLET),
+            reference,
+            rtol=1.0e-9,
+        )
+
+
+class TestPhaseIncrementConditioning:
+    """Which phase increments are safe to space knots by.
+
+    Placing knots at the zeros of j_l would put both ends of every panel on a zero, so
+    Phi = j(a) y(b) - j(b) y(a) vanishes identically and every panel is conjugate. The
+    extrema are no better, being a further half period apart in the same sense. What
+    decides it is the increment: a multiple of pi is singular, an odd multiple of pi/2 is
+    where sin(dtheta) is one.
+    """
+
+    @staticmethod
+    def _theta(ell: int, y: float) -> float:
+        """WKB phase above the turning point."""
+        nu = np.sqrt(ell * (ell + 1.0))
+
+        return np.sqrt(y * y - nu * nu) - nu * np.arccos(nu / y)
+
+    @classmethod
+    def _y_at_phase(cls, ell: int, target: float, lo: float) -> float:
+        return brentq(
+            lambda y: cls._theta(ell, y) - target, lo + 1.0e-6, lo + 200.0, xtol=1.0e-12
+        )
+
+    @staticmethod
+    def _cond(ell: int, a: float, b: float) -> float:
+        mat = np.array(
+            [
+                [spherical_jn(ell, a), spherical_yn(ell, a)],
+                [spherical_jn(ell, b), spherical_yn(ell, b)],
+            ]
+        )
+
+        return np.linalg.cond(mat)
+
+    @pytest.mark.parametrize("ell", [2, 20, 200])
+    def test_multiples_of_pi_are_singular_and_half_odd_are_not(self, ell: int) -> None:
+        """Spacing by pi is conjugate; spacing by pi/2 or 3pi/2 is well conditioned."""
+        y0 = 3.0 * np.sqrt(ell * (ell + 1.0))
+        theta0 = self._theta(ell, y0)
+
+        worst_half_odd = 0.0
+        best_multiple = np.inf
+        for increment, is_multiple in (
+            (np.pi, True),
+            (2.0 * np.pi, True),
+            (0.5 * np.pi, False),
+            (1.5 * np.pi, False),
+        ):
+            y1 = self._y_at_phase(ell, theta0 + increment, y0)
+            value = self._cond(ell, y0, y1)
+
+            if is_multiple:
+                best_multiple = min(best_multiple, value)
+            else:
+                worst_half_odd = max(worst_half_odd, value)
+
+        assert worst_half_odd < 10.0, "odd multiples of pi/2 must be well conditioned"
+        assert best_multiple > 1.0e2, "multiples of pi must be near conjugate"
+        assert best_multiple > 50.0 * worst_half_odd
+
+    def test_zeros_of_jl_are_the_worst_knots(self) -> None:
+        """Both ends on a zero makes the determinant vanish identically."""
+        ell = 20
+        nu = np.sqrt(ell * (ell + 1.0))
+        zeros, y, step = [], 3.0 * nu, 0.05
+        previous = spherical_jn(ell, y)
+
+        while len(zeros) < 3:
+            nxt = y + step
+            current = spherical_jn(ell, nxt)
+
+            if previous * current < 0.0:
+                zeros.append(
+                    brentq(lambda t: spherical_jn(ell, t), y, nxt, xtol=1.0e-12)
+                )
+
+            y, previous = nxt, current
+
+        for a, b in zip(zeros[:-1], zeros[1:]):
+            assert self._cond(ell, a, b) > 1.0e12

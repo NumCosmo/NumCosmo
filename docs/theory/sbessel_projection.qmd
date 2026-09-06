@@ -175,11 +175,11 @@ one integrated over.
 #| fig-cap: >
 #|   Top: the smooth forcing F(y) on the panel [100, 316], and the integrand F(y) j_20(y)
 #|   it multiplies. Bottom: the solution u of Eq. (5) on the same panel for three
-#|   closures of the same forcing. Dirichlet data force u(a) = u(b) = 0 and bring in the
+#|   constraints of the same forcing. Dirichlet data force u(a) = u(b) = 0 and bring in the
 #|   homogeneous solutions, so u oscillates and the expansion runs to the panel's
-#|   oscillation count. Pinning two Chebyshev coefficients, or leaving the closure rows
-#|   empty, selects the smooth member of the same family, whose expansion is set by the
-#|   forcing alone. All three return the same integral.
+#|   oscillation count. Pinning two Chebyshev coefficients, or leaving the constraint rows
+#|   empty (the tau constraint), selects the smooth member of the same family, whose
+#|   expansion is set by the forcing alone. All three return the same integral.
 ell = 20
 a, b = 100.0, 316.2278
 m, h = 0.5 * (a + b), 0.5 * (b - a)
@@ -203,17 +203,17 @@ for kk in range(N + 1):
 g[0] += 0.5 * c[0]
 rhs = np.concatenate([[0.0, 0.0], g])
 
-# The same operator solved under three closures. Dirichlet is the default; the pinned
-# closure fixes <T_80, u> = <T_96, u> = 0; the free closure leaves both closure rows
+# The same operator solved under three constraints. Dirichlet is the default; the pinned
+# constraint fixes <T_80, u> = <T_96, u> = 0; the tau constraint leaves both constraint rows
 # empty and lets the truncation itself select the solution.
 solver = Ncm.SBesselOdeSolver.new()
 solver.set_tolerance(1.0e-12)
 op = solver.create_operator(a, b, ell, ell)
 solutions = {}
 for name, setup in (
-    ("Dirichlet", op.set_dirichlet_bc),
-    ("pinned (80, 96)", lambda: op.set_pinned_bc(80, 96)),
-    ("free", lambda: op.set_free_closure(True)),
+    ("Dirichlet", lambda: op.set_constraint(Ncm.SBesselOdeConstraint.DIRICHLET)),
+    ("pinned (80, 96)", lambda: op.set_pinned_constraint(80, 96)),
+    ("tau", lambda: op.set_constraint(Ncm.SBesselOdeConstraint.TAU)),
 ):
     setup()
     coeffs, n_cols = op.solve(rhs)
@@ -223,7 +223,7 @@ yy = np.linspace(a, b, 2000)
 tt = (yy - m) / h
 
 fig, ax = plt.subplot_mosaic(
-    [["F", "F", "F", "Fj", "Fj", "Fj"], ["Dirichlet", "Dirichlet", "pinned (80, 96)", "pinned (80, 96)", "free", "free"]],
+    [["F", "F", "F", "Fj", "Fj", "Fj"], ["Dirichlet", "Dirichlet", "pinned (80, 96)", "pinned (80, 96)", "tau", "tau"]],
     figsize=(10, 6.2),
 )
 ax["F"].plot(yy, F(yy), lw=1.2)
@@ -245,7 +245,7 @@ ax["Fj"].set_xlabel("y")
 plt.tight_layout()
 
 
-# The boundary term (6) for each closure, against composite Gauss-Legendre on the
+# The boundary term (6) for each constraint, against composite Gauss-Legendre on the
 # oscillatory integrand. With u nonzero at the panel ends the u term of W is kept.
 def boundary_term(coeffs):
     u_a, u_b = np.polynomial.chebyshev.chebval([-1.0, 1.0], coeffs)

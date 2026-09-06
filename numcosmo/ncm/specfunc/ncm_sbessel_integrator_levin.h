@@ -51,11 +51,22 @@ void ncm_sbessel_integrator_levin_clear (NcmSBesselIntegratorLevin **sbilv);
 void ncm_sbessel_integrator_levin_set_max_order (NcmSBesselIntegratorLevin *sbilv, guint max_order);
 guint ncm_sbessel_integrator_levin_get_max_order (NcmSBesselIntegratorLevin *sbilv);
 
-void ncm_sbessel_integrator_levin_set_free_closure_min_osc (NcmSBesselIntegratorLevin *sbilv, gdouble min_osc);
-gdouble ncm_sbessel_integrator_levin_get_free_closure_min_osc (NcmSBesselIntegratorLevin *sbilv);
-void ncm_sbessel_integrator_levin_set_free_closure (NcmSBesselIntegratorLevin *sbilv, gboolean free_closure);
-gboolean ncm_sbessel_integrator_levin_get_free_closure (NcmSBesselIntegratorLevin *sbilv);
-guint ncm_sbessel_integrator_levin_get_n_closure_fallbacks (NcmSBesselIntegratorLevin *sbilv);
+void ncm_sbessel_integrator_levin_set_tau_constraint_min_osc (NcmSBesselIntegratorLevin *sbilv, gdouble min_osc);
+gdouble ncm_sbessel_integrator_levin_get_tau_constraint_min_osc (NcmSBesselIntegratorLevin *sbilv);
+void ncm_sbessel_integrator_levin_set_tau_constraint (NcmSBesselIntegratorLevin *sbilv, gboolean tau_constraint);
+gboolean ncm_sbessel_integrator_levin_get_tau_constraint (NcmSBesselIntegratorLevin *sbilv);
+void ncm_sbessel_integrator_levin_set_tau_constraint_guard (NcmSBesselIntegratorLevin *sbilv, gdouble guard);
+gdouble ncm_sbessel_integrator_levin_get_tau_constraint_guard (NcmSBesselIntegratorLevin *sbilv);
+void ncm_sbessel_integrator_levin_set_tau_constraint_order_fraction (NcmSBesselIntegratorLevin *sbilv, gdouble fraction);
+gdouble ncm_sbessel_integrator_levin_get_tau_constraint_order_fraction (NcmSBesselIntegratorLevin *sbilv);
+void ncm_sbessel_integrator_levin_set_turning_knot_margin (NcmSBesselIntegratorLevin *sbilv, gdouble margin);
+gdouble ncm_sbessel_integrator_levin_get_turning_knot_margin (NcmSBesselIntegratorLevin *sbilv);
+void ncm_sbessel_integrator_levin_set_dead_edge_cells (NcmSBesselIntegratorLevin *sbilv, gboolean enable);
+gboolean ncm_sbessel_integrator_levin_get_dead_edge_cells (NcmSBesselIntegratorLevin *sbilv);
+guint ncm_sbessel_integrator_levin_get_n_constraint_fallbacks (NcmSBesselIntegratorLevin *sbilv);
+guint ncm_sbessel_integrator_levin_get_n_panel_solves (NcmSBesselIntegratorLevin *sbilv);
+guint ncm_sbessel_integrator_levin_get_n_tau_solves (NcmSBesselIntegratorLevin *sbilv);
+guint ncm_sbessel_integrator_levin_get_n_locked_eligible_solves (NcmSBesselIntegratorLevin *sbilv);
 NcmSBesselOdeSolver *ncm_sbessel_integrator_levin_peek_ode_solver (NcmSBesselIntegratorLevin *sbilv);
 void ncm_sbessel_integrator_levin_set_reltol (NcmSBesselIntegratorLevin *sbilv, gdouble reltol);
 gdouble ncm_sbessel_integrator_levin_get_reltol (NcmSBesselIntegratorLevin *sbilv);
@@ -86,6 +97,10 @@ guint ncm_sbessel_integrator_levin_get_ell_cache_max (NcmSBesselIntegratorLevin 
 #define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_RELTOL (1.0e-13)
 #define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER (2)
 #define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_RELTOL (1.0e-8)
+#define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_TAU_CONSTRAINT_MIN_OSC (200.0)
+#define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_TAU_CONSTRAINT_GUARD (10.0)
+#define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_TAU_CONSTRAINT_ORDER_FRACTION (0.75)
+#define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_TURNING_KNOT_MARGIN (1.05)
 
 
 G_END_DECLS

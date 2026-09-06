@@ -50,6 +50,36 @@ G_BEGIN_DECLS
 typedef gdouble (*NcmSBesselOdeSolverF) (gpointer user_data, gdouble x);
 
 /**
+ * NcmSBesselOdeConstraint:
+ * @NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET: $u(y_a) = u(y_b) = 0$
+ * @NCM_SBESSEL_ODE_CONSTRAINT_PINNED: $\langle T_{p_1}, u\rangle = \langle T_{p_2}, u\rangle = 0$
+ *   for two chosen coefficient indices
+ * @NCM_SBESSEL_ODE_CONSTRAINT_TAU: no constraint rows; the truncation of the expansion
+ *   closes the system
+ *
+ * Which two linear conditions close the two-point problem. Truncating the expansion at
+ * $N$ Chebyshev coefficients and keeping the first $N-2$ rows of the discretized
+ * equation leaves $N$ unknowns against $N-2$ equations, so two conditions have to be
+ * added; the solution family they choose from is the same in all three cases, since the
+ * homogeneous solutions $y j_\ell$ and $y y_\ell$ span a two-parameter space. The Levin boundary functional
+ * is invariant under that choice, so the constraint decides which member of the family
+ * has to be represented, not what the panel integral is.
+ *
+ * Dirichlet is the default and is valid everywhere. Tau is cheap where the panel holds
+ * many more oscillations than the forcing needs coefficients, and invalid otherwise.
+ * Pinned is the intermediate form. See the <a
+ * href="../../theory/sbessel_ode_solver.html">Ultraspherical Spectral Solver</a> page.
+ */
+typedef enum _NcmSBesselOdeConstraint /*< enum,underscore_name=NCM_SBESSEL_ODE_CONSTRAINT,prefix=NCM_SBESSEL_ODE_CONSTRAINT >*/
+{
+  NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET,
+  NCM_SBESSEL_ODE_CONSTRAINT_PINNED,
+  NCM_SBESSEL_ODE_CONSTRAINT_TAU,
+  /* < private > */
+  NCM_SBESSEL_ODE_CONSTRAINT_LEN, /*< skip >*/
+} NcmSBesselOdeConstraint;
+
+/**
  * NcmSBesselOdeOperator:
  *
  * Opaque boxed type for a configured spectral operator.
@@ -91,8 +121,11 @@ void ncm_sbessel_ode_solver_clear (NcmSBesselOdeSolver **solver);
 void ncm_sbessel_ode_solver_set_tolerance (NcmSBesselOdeSolver *solver, gdouble tol);
 gdouble ncm_sbessel_ode_solver_get_tolerance (NcmSBesselOdeSolver *solver);
 
-void ncm_sbessel_ode_solver_set_free_closure (NcmSBesselOdeSolver *solver, gboolean free_closure);
-gboolean ncm_sbessel_ode_solver_get_free_closure (NcmSBesselOdeSolver *solver);
+void ncm_sbessel_ode_solver_set_default_constraint (NcmSBesselOdeSolver *solver, NcmSBesselOdeConstraint constraint);
+NcmSBesselOdeConstraint ncm_sbessel_ode_solver_get_default_constraint (NcmSBesselOdeSolver *solver);
+
+void ncm_sbessel_ode_solver_set_tau_floor_factor (NcmSBesselOdeSolver *solver, gdouble factor);
+gdouble ncm_sbessel_ode_solver_get_tau_floor_factor (NcmSBesselOdeSolver *solver);
 
 NcmMatrix *ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, const gdouble a, const gdouble b, guint ell, gint nrows);
 NcmMatrix *ncm_sbessel_ode_solver_get_operator_matrix_colmajor (NcmSBesselOdeSolver *solver, const gdouble a, const gdouble b, guint ell, gint nrows);
@@ -114,13 +147,14 @@ glong ncm_sbessel_ode_operator_get_n_cols (NcmSBesselOdeOperator *op);
 void ncm_sbessel_ode_operator_set_min_cols (NcmSBesselOdeOperator *op, glong min_cols);
 glong ncm_sbessel_ode_operator_get_min_cols (NcmSBesselOdeOperator *op);
 
-void ncm_sbessel_ode_operator_set_pinned_bc (NcmSBesselOdeOperator *op, glong pin1, glong pin2);
-void ncm_sbessel_ode_operator_set_dirichlet_bc (NcmSBesselOdeOperator *op);
-gboolean ncm_sbessel_ode_operator_get_pinned_bc (NcmSBesselOdeOperator *op, glong *pin1, glong *pin2);
-void ncm_sbessel_ode_operator_set_free_closure (NcmSBesselOdeOperator *op, gboolean free_closure);
-gboolean ncm_sbessel_ode_operator_get_free_closure (NcmSBesselOdeOperator *op);
-glong ncm_sbessel_ode_operator_get_free_closure_order (NcmSBesselOdeOperator *op, guint rhs_len);
+void ncm_sbessel_ode_operator_set_constraint (NcmSBesselOdeOperator *op, NcmSBesselOdeConstraint constraint);
+void ncm_sbessel_ode_operator_set_pinned_constraint (NcmSBesselOdeOperator *op, glong pin1, glong pin2);
+NcmSBesselOdeConstraint ncm_sbessel_ode_operator_get_constraint (NcmSBesselOdeOperator *op);
+void ncm_sbessel_ode_operator_get_pins (NcmSBesselOdeOperator *op, glong *pin1, glong *pin2);
+glong ncm_sbessel_ode_operator_get_tau_constraint_order (NcmSBesselOdeOperator *op, guint rhs_len);
+NcmMatrix *ncm_sbessel_ode_operator_get_matrix (NcmSBesselOdeOperator *op, gint nrows);
 gdouble ncm_sbessel_ode_operator_get_last_max_coeff (NcmSBesselOdeOperator *op, guint ell_idx);
+gdouble ncm_sbessel_ode_operator_get_last_deriv_error (NcmSBesselOdeOperator *op, guint ell_idx);
 gsize ncm_sbessel_ode_operator_get_operator_size (NcmSBesselOdeOperator *op);
 
 void ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray **solution, gsize *solution_len);

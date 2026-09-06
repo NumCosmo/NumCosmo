@@ -1266,7 +1266,7 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive_full (NcmSpectral *spectral, NcmS
  * @k_cap: highest refinement level to try, capped at #NcmSpectral:max-order
  * @reltol: relative tolerance on the coefficients
  * @abstol: absolute tolerance on the coefficients, or 0.0 for none
- * @coeffs: (inout) (transfer none): coefficient array, resized as needed
+ * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): output array of coefficients
  * @user_data: user data for @F
  * @converged: (out): whether the tolerance was met by @k_cap
  *

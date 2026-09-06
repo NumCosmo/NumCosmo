@@ -205,31 +205,34 @@ def test_radial_integral_matches_arb(
         )
 
 
-# The free (tau) closure of the panel solve. "rule" is the production setting: a
-# panel goes free when its oscillation count exceeds free-closure-min-osc. "forced"
-# bypasses the rule and turns the free closure on everywhere, including panels below
+# The tau constraint of the panel solve. "rule" is the production setting: a
+# panel takes it when its oscillation count exceeds tau-constraint-min-osc. "forced"
+# bypasses the rule and turns the tau constraint on everywhere, including panels below
 # the turning point where it is invalid; the guard in the integrator must catch
 # those and redo them with Dirichlet data, so this mode is the guard's own test.
-FREE_CLOSURE_MODES = ["rule", "forced"]
-FREE_CLOSURE_MIN_OSC = 200.0
+TAU_CONSTRAINT_MODES = ["rule", "forced"]
+TAU_CONSTRAINT_MIN_OSC = 200.0
 
 
-def _set_closure(integrator: Ncm.SBesselIntegratorLevin, mode: str) -> None:
+def _set_constraint(integrator: Ncm.SBesselIntegratorLevin, mode: str) -> None:
     if mode == "rule":
-        integrator.set_free_closure_min_osc(FREE_CLOSURE_MIN_OSC)
+        integrator.set_tau_constraint_min_osc(TAU_CONSTRAINT_MIN_OSC)
     else:
-        integrator.set_free_closure(True)
+        # The rule reapplies its own decision to every operator it configures, so
+        # it has to be off for the solver-wide flag to reach the shallow panels.
+        integrator.set_tau_constraint_min_osc(0.0)
+        integrator.set_tau_constraint(True)
 
 
-@pytest.mark.parametrize("mode", FREE_CLOSURE_MODES)
+@pytest.mark.parametrize("mode", TAU_CONSTRAINT_MODES)
 @pytest.mark.parametrize(
     "shape",
     ["gauss", "tophat", "tophat_smooth", "student_t", "power_exp", "lensing", "multi"],
 )
-def test_radial_integral_matches_arb_with_free_closure(
+def test_radial_integral_matches_arb_with_tau_constraint(
     shape: str, mode: str, truth_table: dict, cosmo_bits: tuple
 ) -> None:
-    """I_ell(k) against Arb with the free closure, one multipole at a time."""
+    """I_ell(k) against Arb with the tau constraint, one multipole at a time."""
     cosmo, dist, ps = cosmo_bits
     entry = truth_table["shapes"][shape]
 
@@ -247,7 +250,7 @@ def test_radial_integral_matches_arb_with_free_closure(
         peak = np.abs(expected).max()
 
         integrator = Ncm.SBesselIntegratorLevin.new(ell, ell)
-        _set_closure(integrator, mode)
+        _set_constraint(integrator, mode)
 
         got = np.array(
             [
@@ -267,14 +270,14 @@ def test_radial_integral_matches_arb_with_free_closure(
                 for k in entry["kvals"][index]
             ]
         )
-        fallbacks += integrator.get_n_closure_fallbacks()
+        fallbacks += integrator.get_n_constraint_fallbacks()
 
         assert_allclose(
             got,
             expected,
             rtol=RTOL,
             atol=ATOL_FRAC * peak,
-            err_msg=f"{shape} at ell = {ell}, free closure ({mode})",
+            err_msg=f"{shape} at ell = {ell}, tau constraint ({mode})",
         )
 
     if mode == "forced":
@@ -283,12 +286,12 @@ def test_radial_integral_matches_arb_with_free_closure(
         assert fallbacks > 0, "the guard never fired on a table that requires it"
 
 
-@pytest.mark.parametrize("mode", FREE_CLOSURE_MODES)
+@pytest.mark.parametrize("mode", TAU_CONSTRAINT_MODES)
 @pytest.mark.parametrize(
     "shape",
     ["gauss", "tophat", "tophat_smooth", "student_t", "power_exp", "lensing", "multi"],
 )
-def test_radial_integral_batched_matches_arb_with_free_closure(
+def test_radial_integral_batched_matches_arb_with_tau_constraint(
     shape: str, mode: str, truth_table: dict, cosmo_bits: tuple
 ) -> None:
     """Same comparison through the batched path, blocks of eight multipoles."""
@@ -310,7 +313,7 @@ def test_radial_integral_batched_matches_arb_with_free_closure(
         peak = np.abs(expected).max()
 
         integrator = Ncm.SBesselIntegratorLevin.new(ell, ell + n_block - 1)
-        _set_closure(integrator, mode)
+        _set_constraint(integrator, mode)
         block = Ncm.Vector.new(n_block)
         got = []
 
@@ -331,14 +334,14 @@ def test_radial_integral_batched_matches_arb_with_free_closure(
 
             got.append(total)
 
-        fallbacks += integrator.get_n_closure_fallbacks()
+        fallbacks += integrator.get_n_constraint_fallbacks()
 
         assert_allclose(
             np.array(got),
             expected,
             rtol=RTOL,
             atol=ATOL_FRAC * peak,
-            err_msg=f"{shape} at ell = {ell}, batched free closure ({mode})",
+            err_msg=f"{shape} at ell = {ell}, batched tau constraint ({mode})",
         )
 
     if mode == "forced":
