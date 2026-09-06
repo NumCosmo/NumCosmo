@@ -160,8 +160,8 @@ def _levin_integrator(
     return Ncm.SBesselIntegratorLevin.new_full(
         ell_min,
         ell_max,
-        proto.get_y_knots_min(),
-        proto.get_y_knots_max(),
+        proto.get_x_knots_min(),
+        proto.get_x_knots_max(),
         proto.get_n_knots(),
         proto.get_ell_cache_max(),
         reltol,

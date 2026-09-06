@@ -576,8 +576,8 @@ class ViewKernel:
         self.integrator = Ncm.SBesselIntegratorLevin.new_full(
             0,
             8,
-            defaults.get_y_knots_min(),
-            defaults.get_y_knots_max(),
+            defaults.get_x_knots_min(),
+            defaults.get_x_knots_max(),
             defaults.get_n_knots(),
             defaults.get_ell_cache_max(),
             (

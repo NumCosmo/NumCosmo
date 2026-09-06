@@ -88,10 +88,10 @@
 /*
  * Minimum number of spectral columns for the panel [@a, @b] at multipole @ell_min.
  *
- * The solution oscillates only beyond the turning point y ~ sqrt(ell(ell+1)); below it
+ * The solution oscillates only beyond the turning point x ~ sqrt(ell(ell+1)); below it
  * the spherical Bessel functions are power-law like and the solution is smooth, so few
  * coefficients suffice. Only the oscillatory part of the panel sets a resolution
- * requirement: it carries about (b - y_turn)/pi oscillations, and a Chebyshev
+ * requirement: it carries about (b - x_turn)/pi oscillations, and a Chebyshev
  * expansion needs of order two coefficients per oscillation.
  *
  * The adaptive QR may not declare convergence below this count. On a panel whose
@@ -104,8 +104,8 @@
 static inline glong
 _ncm_sbessel_min_cols (const gdouble a, const gdouble b, const gint ell_min)
 {
-  const gdouble y_turn   = sqrt (ell_min * (ell_min + 1.0));
-  const gdouble osc_from = GSL_MAX (a, y_turn);
+  const gdouble x_turn   = sqrt (ell_min * (ell_min + 1.0));
+  const gdouble osc_from = GSL_MAX (a, x_turn);
   const gdouble osc_span = b - osc_from;
 
   if (osc_span <= 0.0)
@@ -1017,7 +1017,7 @@ ncm_sbessel_ode_operator_get_constraint (NcmSBesselOdeOperator *op)
  *
  * Puts @op on %NCM_SBESSEL_ODE_CONSTRAINT_PINNED, closing the system with $\langle
  * T_{@pin1}, u\rangle = \langle T_{@pin2}, u\rangle = 0$ instead of the Dirichlet data
- * $u(y_a) = u(y_b) = 0$.
+ * $u(x_a) = u(x_b) = 0$.
  *
  * The pins must be distinct. The resolution floor is raised to one past the last pin,
  * since below that the pinned rows are still empty and the system is short two pivots.
@@ -1067,7 +1067,7 @@ ncm_sbessel_ode_operator_get_pins (NcmSBesselOdeOperator *op, glong *pin1, glong
  *
  * Largest $|a_j|$ produced by the last back-substitution for that multipole. Under
  * %NCM_SBESSEL_ODE_CONSTRAINT_TAU a value far above the forcing's own scale
- * $\max|yF| / \min|y^2 - \nu^2|$ means the solve admitted homogeneous content, and
+ * $\max|yF| / \min|x^2 - \nu^2|$ means the solve admitted homogeneous content, and
  * the panel must be redone with Dirichlet data.
  *
  * Returns: $\max_j |a_j|$ of the last solve.
@@ -1088,7 +1088,7 @@ ncm_sbessel_ode_operator_get_last_max_coeff (NcmSBesselOdeOperator *op, guint el
  *
  * Bound on the roundoff left in the endpoint derivatives of the last solve for that
  * multipole: $\sum_j j^2 |a_j| / h$, which multiplied by the machine epsilon bounds
- * the absolute error of $u'(y_a)$ and $u'(y_b)$. Those are formed as $u'(\pm 1) =
+ * the absolute error of $u'(x_a)$ and $u'(x_b)$. Those are formed as $u'(\pm 1) =
  * (1/h)\sum_j (\pm 1)^{j+1} j^2 a_j$, and under %NCM_SBESSEL_ODE_CONSTRAINT_TAU any
  * homogeneous content the truncation admitted cancels in that sum, exactly but not in
  * floating point --- so this is what survives, and it is what limits the accuracy of a
@@ -3377,7 +3377,7 @@ ncm_sbessel_ode_operator_get_matrix (NcmSBesselOdeOperator *op, gint nrows)
  * The matrix includes:
  *
  * - Rows 0 and 1: the two constraint functionals of the solver's current
- *   #NcmSBesselOdeConstraint, $u(y_a) = 0$ and $u(y_b) = 0$ by default
+ *   #NcmSBesselOdeConstraint, $u(x_a) = 0$ and $u(x_b) = 0$ by default
  * - Rows 2 to nrows-1: differential operator rows
  *
  * The pinned constraint belongs to an operator rather than to a solver; for it, and for
@@ -3425,7 +3425,7 @@ ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, const g
  * The matrix includes:
  *
  * - Rows 0 and 1: the two constraint functionals of the solver's current
- *   #NcmSBesselOdeConstraint, $u(y_a) = 0$ and $u(y_b) = 0$ by default
+ *   #NcmSBesselOdeConstraint, $u(x_a) = 0$ and $u(x_b) = 0$ by default
  * - Rows 2 to nrows-1: differential operator rows
  *
  * The pinned constraint belongs to an operator rather than to a solver; for it, and for

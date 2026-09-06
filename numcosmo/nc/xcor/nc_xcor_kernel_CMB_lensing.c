@@ -65,7 +65,7 @@ struct _NcXcorKernelCMBLensing
   guint Nlmax;
 
   gdouble z_lss;
-  gdouble xi_lss;
+  gdouble chi_lss;
   gdouble dt_lss;
   gdouble dt;
 
@@ -100,9 +100,9 @@ typedef struct _CMBLensingComponentData
 #define _NC_XCOR_KERNEL_COMPONENT_CMB_LENSING_GET_DATA(comp) \
         ((CMBLensingComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
-static gdouble _cmb_lensing_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k);
+static gdouble _cmb_lensing_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
 static gdouble _cmb_lensing_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
-static void _cmb_lensing_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
+static void _cmb_lensing_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _cmb_lensing_component_data_clear (CMBLensingComponentData *data);
 static NcXcorKernelComponent *_nc_xcor_kernel_component_cmb_lensing_new (NcDistance *dist, NcmPowspec *ps);
 
@@ -124,7 +124,7 @@ nc_xcor_kernel_cmb_lensing_init (NcXcorKernelCMBLensing *xclkl)
   xclkl->Nlmax = 0;
 
   xclkl->z_lss         = 0.0;
-  xclkl->xi_lss        = 0.0;
+  xclkl->chi_lss       = 0.0;
   xclkl->dt_lss        = 0.0;
   xclkl->dt            = 0.0;
   xclkl->dist          = NULL;
@@ -285,7 +285,7 @@ _nc_xcor_kernel_cmb_lensing_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo,
   const gdouble dt              = nc_distance_transverse (dist, cosmo, z);
   const gdouble dt_z_zlss       = nc_distance_transverse_z1_z2 (dist, cosmo, z, xclkl->z_lss);
 
-  return xck->xi_z * xck->xi_z * (1.0 + z) * dt_z_zlss / (xclkl->dt_lss * dt);
+  return xck->chi_z * xck->chi_z * (1.0 + z) * dt_z_zlss / (xclkl->dt_lss * dt);
 }
 
 static gdouble
@@ -308,10 +308,10 @@ _cmb_lensing_component_data_clear (CMBLensingComponentData *data)
 }
 
 static gdouble
-_cmb_lensing_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
+_cmb_lensing_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k)
 {
   CMBLensingComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CMB_LENSING_GET_DATA (comp);
-  const gdouble z               = nc_distance_inv_comoving (data->dist, cosmo, xi);
+  const gdouble z               = nc_distance_inv_comoving (data->dist, cosmo, chi);
   const gdouble powspec         = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble dt              = nc_distance_transverse (data->dist, cosmo, z);
   const gdouble dt_z_zlss       = nc_distance_transverse_z1_z2 (data->dist, cosmo, z, data->z_lss);
@@ -329,7 +329,7 @@ _cmb_lensing_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *c
 }
 
 static void
-_cmb_lensing_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
+_cmb_lensing_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max)
 {
   CMBLensingComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CMB_LENSING_GET_DATA (comp);
   NcDistance *dist              = data->dist;
@@ -339,12 +339,12 @@ _cmb_lensing_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
   {
-    const gdouble xi_lss = nc_distance_comoving_lss (dist, cosmo);
+    const gdouble chi_lss = nc_distance_comoving_lss (dist, cosmo);
 
-    *xi_min = nc_distance_comoving (dist, cosmo, 1.0e-6);
-    *xi_max = xi_lss * (1.0 - 1.0e-6);
-    *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
-    *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
+    *chi_min = nc_distance_comoving (dist, cosmo, 1.0e-6);
+    *chi_max = chi_lss * (1.0 - 1.0e-6);
+    *k_min   = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+    *k_max   = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
   }
 }
 
@@ -379,9 +379,9 @@ _nc_xcor_kernel_cmb_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
-  xclkl->z_lss  = nc_distance_decoupling_redshift (dist, cosmo);
-  xclkl->xi_lss = nc_distance_comoving_lss (dist, cosmo);
-  xclkl->dt_lss = nc_distance_transverse (dist, cosmo, xclkl->z_lss);
+  xclkl->z_lss   = nc_distance_decoupling_redshift (dist, cosmo);
+  xclkl->chi_lss = nc_distance_comoving_lss (dist, cosmo);
+  xclkl->dt_lss  = nc_distance_transverse (dist, cosmo, xclkl->z_lss);
 
   /* Update component data with computed values */
   {

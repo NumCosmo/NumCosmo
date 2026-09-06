@@ -780,10 +780,10 @@ class TestSBesselIntegratorLevin:
 class TestOscillatoryResolutionFloor:
     """The decay test must not converge below a panel's oscillation count.
 
-    A panel [a, b] in y = kx carries about (b - a) / pi oscillations of the
+    A panel [a, b] in x = k chi carries about (b - a) / pi oscillations of the
     solution. On such a panel the leading Chebyshev coefficients are small and
     nearly flat, so the adaptive QR's decay test used to fire on them and declare
-    convergence at a tiny order -- a panel spanning 2162 in y was "converged"
+    convergence at a tiny order -- a panel spanning 2162 in x was "converged"
     with 19 columns instead of the ~1200 it needs.
 
     Because panel contributions cancel heavily, the visible symptom was
@@ -801,8 +801,8 @@ class TestOscillatoryResolutionFloor:
         integrator = Ncm.SBesselIntegratorLevin.new_full(
             ell,
             ell,
-            defaults.get_y_knots_min(),
-            defaults.get_y_knots_max(),
+            defaults.get_x_knots_min(),
+            defaults.get_x_knots_max(),
             defaults.get_n_knots(),
             defaults.get_ell_cache_max(),
             reltol,
@@ -864,8 +864,8 @@ class TestPanelRecording:
         sbi = Ncm.SBesselIntegratorLevin.new_full(
             ell,
             ell,
-            defaults.get_y_knots_min(),
-            defaults.get_y_knots_max(),
+            defaults.get_x_knots_min(),
+            defaults.get_x_knots_max(),
             defaults.get_n_knots(),
             defaults.get_ell_cache_max(),
             1.0e-12,
@@ -930,18 +930,18 @@ class TestPanelRecording:
         assert sbi.get_n_panel_records() == 0
 
 
-def _jl_second_deriv(ell: int, y: np.ndarray) -> np.ndarray:
+def _jl_second_deriv(ell: int, x: np.ndarray) -> np.ndarray:
     """j_l'' from the homogeneous ODE and scipy's j_l, j_l'."""
-    j = spherical_jn(ell, y)
-    jp = spherical_jn(ell, y, derivative=True)
-    return -2.0 / y * jp + (ell * (ell + 1.0) / y**2 - 1.0) * j
+    j = spherical_jn(ell, x)
+    jp = spherical_jn(ell, x, derivative=True)
+    return -2.0 / x * jp + (ell * (ell + 1.0) / x**2 - 1.0) * j
 
 
 class TestSBesselIntegratorLevinDeriv:
     """Tests for the derivative-weighted integrals of NcmSBesselIntegratorLevin.
 
     integrate_deriv computes int_a^b K(x, k) j_l^{(d)}(k x) dx with the
-    derivative taken with respect to the Bessel argument y = k x.
+    derivative taken with respect to the Bessel argument x = k chi.
     """
 
     @pytest.mark.parametrize("l_val", [0, 1, 2, 5, 20, 60])
@@ -982,7 +982,7 @@ class TestSBesselIntegratorLevinDeriv:
         def f_gauss(x: float, _k: float) -> float:
             return np.exp(-0.5 * ((x - center) / sigma) ** 2)
 
-        # k values placing the turning point y ~ l inside, below and above the window
+        # k values placing the turning point x ~ l inside, below and above the window
         k_list = [0.5, 2.0]
         if l_val > 0:
             k_list += [l_val / center, l_val / a]
@@ -1102,7 +1102,7 @@ class TestSBesselIntegratorLevinDeriv:
     def test_recurrence_cross_check(self) -> None:
         """deriv = 2 against the l-recurrence combination of plain integrals.
 
-        j_l''(y) = (l (l-1)/y^2 - 1) j_l(y) + (2/y) j_{l+1}(y), so the deriv-2
+        j_l''(x) = (l (l-1)/x^2 - 1) j_l(x) + (2/x) j_{l+1}(x), so the deriv-2
         integral must match a combination of three deriv-0 integrals computed
         through an independent code path.
         """
@@ -1207,8 +1207,8 @@ class TestTurningKnot:
     """The per-block knot just above the turning point.
 
     The guard cannot certify the tau constraint on a panel straddling the turning point,
-    because the bound on the smooth member carries min|y^2 - nu^2| in its denominator.
-    When the kernel's reach in y stops before the next base knot, that panel is the whole
+    because the bound on the smooth member carries min|x^2 - nu^2| in its denominator.
+    When the kernel's reach in x stops before the next base knot, that panel is the whole
     oscillatory region and the constraint is unusable at every k. One knot lifts a panel edge
     clear of the turning point.
     """
@@ -1251,7 +1251,7 @@ class TestTurningKnot:
         """The straddling panel cannot be certified, so without the knot it is refused.
 
         How much of the oscillatory region that panel holds depends on the kernel's reach
-        in y; on a kernel that stops before the next base knot it is all of it and the
+        in x; on a kernel that stops before the next base knot it is all of it and the
         constraint is unusable outright. Here the refusal is one panel, which is what the
         counters show: a fallback that the knot removes, and one more panel taking the
         cheap constraint.
@@ -1327,7 +1327,7 @@ class TestSharedKnotTable:
         assert np.array_equal(self._run(a), self._run(b))
 
     def test_turning_knot_row_is_per_instance(self) -> None:
-        """Blocks insert their knot at different y, so that row cannot be shared."""
+        """Blocks insert their knot at different x, so that row cannot be shared."""
         low = Ncm.SBesselIntegratorLevin.new(400, 407)
         high = Ncm.SBesselIntegratorLevin.new(900, 907)
 

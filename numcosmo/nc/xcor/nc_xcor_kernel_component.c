@@ -30,19 +30,19 @@
  *
  * Subclasses must implement:
  *
- * - `eval_kernel`: evaluates K(k, xi) for the component
+ * - `eval_kernel`: evaluates K(k, chi) for the component
  * - `eval_prefactor`: evaluates any k and $\ell$-dependent prefactor
  *
  * Optionally, subclasses can implement:
  *
- * - `get_limits`: returns valid integration ranges for xi and k
+ * - `get_limits`: returns valid integration ranges for chi and k
  *
- * The class analyzes KL(k, y/k) with the Limber approximation.
+ * The class analyzes KL(k, x/k) with the Limber approximation.
  *
  * ## Edges belong in get_limits, never inside eval_kernel
  *
  * `get_limits` declares where the component lives, and the radial integral is
- * confined to the $[\xi_\mathrm{min}, \xi_\mathrm{max}]$ it reports.
+ * confined to the $[\chi_\mathrm{min}, \chi_\mathrm{max}]$ it reports.
  * `eval_kernel` is therefore only ever called inside that range and must not
  * test against it: a component with a sharp edge returns its interior value
  * unconditionally and lets the limits carry the edge.
@@ -87,14 +87,14 @@
 
 typedef struct _NcXcorKernelComponentPrivate
 {
-  NcmSpline *k_max_spline;       /* k_max(y) - k value that maximizes KL(k, y/k) */
-  NcmSpline *KL_max_spline;      /* KL_max(y) - maximum value of KL(k, y/k) using Limber approximation */
-  NcmSpline *k_epsilon_spline;   /* k_epsilon(y) - k where KL drops to epsilon*KL_max */
+  NcmSpline *k_max_spline;       /* k_max(x) - k value that maximizes KL(k, x/k) */
+  NcmSpline *KL_max_spline;      /* KL_max(x) - maximum value of KL(k, x/k) using Limber approximation */
+  NcmSpline *k_epsilon_spline;   /* k_epsilon(x) - k where KL drops to epsilon*KL_max */
   gsl_min_fminimizer *minimizer; /* GSL minimizer for finding k_max */
   gsl_root_fsolver *root_solver; /* GSL root solver for finding k_epsilon */
   gdouble epsilon;
   gdouble sqrt_epsilon;
-  guint ny;           /* Number of y points for analysis */
+  guint ny;           /* Number of x points for analysis */
   guint max_iter;     /* Maximum iterations for GSL solvers */
   gdouble tol;        /* Tolerance for GSL solvers */
   guint bessel_deriv; /* Derivative order of the spherical Bessel weight */
@@ -240,7 +240,7 @@ nc_xcor_kernel_component_class_init (NcXcorKernelComponentClass *klass)
   /**
    * NcXcorKernelComponent:epsilon:
    *
-   * The epsilon value for kernel analysis, determining where KL(k, y/k)
+   * The epsilon value for kernel analysis, determining where KL(k, x/k)
    * drops to epsilon * KL_max.
    */
   g_object_class_install_property (object_class,
@@ -254,13 +254,13 @@ nc_xcor_kernel_component_class_init (NcXcorKernelComponentClass *klass)
   /**
    * NcXcorKernelComponent:ny:
    *
-   * Number of y points for kernel analysis.
+   * Number of x points for kernel analysis.
    */
   g_object_class_install_property (object_class,
                                    PROP_NY,
                                    g_param_spec_uint ("ny",
                                                       NULL,
-                                                      "Number of y points",
+                                                      "Number of x points",
                                                       1, G_MAXUINT, 600,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -385,7 +385,7 @@ nc_xcor_kernel_component_clear (NcXcorKernelComponent **comp)
  * @comp: a #NcXcorKernelComponent
  * @epsilon: the epsilon value for kernel analysis
  *
- * Sets the epsilon value used in kernel analysis to determine where KL(k, y/k) drops
+ * Sets the epsilon value used in kernel analysis to determine where KL(k, x/k) drops
  * to epsilon * KL_max.
  */
 void
@@ -416,9 +416,9 @@ nc_xcor_kernel_component_get_epsilon (NcXcorKernelComponent *comp)
 /**
  * nc_xcor_kernel_component_set_ny:
  * @comp: a #NcXcorKernelComponent
- * @ny: number of y points for analysis
+ * @ny: number of x points for analysis
  *
- * Sets the number of y points to use in kernel analysis.
+ * Sets the number of x points to use in kernel analysis.
  */
 void
 nc_xcor_kernel_component_set_ny (NcXcorKernelComponent *comp, guint ny)
@@ -432,9 +432,9 @@ nc_xcor_kernel_component_set_ny (NcXcorKernelComponent *comp, guint ny)
  * nc_xcor_kernel_component_get_ny:
  * @comp: a #NcXcorKernelComponent
  *
- * Gets the number of y points used in kernel analysis.
+ * Gets the number of x points used in kernel analysis.
  *
- * Returns: the number of y points
+ * Returns: the number of x points
  */
 guint
 nc_xcor_kernel_component_get_ny (NcXcorKernelComponent *comp)
@@ -509,62 +509,62 @@ nc_xcor_kernel_component_get_tol (NcXcorKernelComponent *comp)
 /**
  * nc_xcor_kernel_component_eval_k_max:
  * @comp: a #NcXcorKernelComponent
- * @y: the y value (y = k * xi)
+ * @x: the x value (x = k * chi)
  *
- * Evaluates k_max at the given y value from kernel analysis, where k_max
- * is the value of k that maximizes KL(k, y/k) for this y.
+ * Evaluates k_max at the given x value from kernel analysis, where k_max
+ * is the value of k that maximizes KL(k, x/k) for this x.
  *
- * Returns: the k_max value at y
+ * Returns: the k_max value at x
  */
 gdouble
-nc_xcor_kernel_component_eval_k_max (NcXcorKernelComponent *comp, gdouble y)
+nc_xcor_kernel_component_eval_k_max (NcXcorKernelComponent *comp, gdouble x)
 {
   NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
 
   g_assert (self->k_max_spline != NULL);
 
-  return ncm_spline_eval (self->k_max_spline, y);
+  return ncm_spline_eval (self->k_max_spline, x);
 }
 
 /**
  * nc_xcor_kernel_component_eval_KL_max:
  * @comp: a #NcXcorKernelComponent
- * @y: the y value (y = k * xi)
+ * @x: the x value (x = k * chi)
  *
- * Evaluates the maximum value of KL(k, y/k) at the given y value from kernel analysis
- * using the Limber approximation $K_L = \sqrt{\pi/(2y)}\,K(y/k, k)/k$.
- * This is the value of KL at k = k_max(y).
+ * Evaluates the maximum value of KL(k, x/k) at the given x value from kernel analysis
+ * using the Limber approximation $K_L = \sqrt{\pi/(2x)}\,K(x/k, k)/k$.
+ * This is the value of KL at k = k_max(x).
  *
- * Returns: the KL_max value at y
+ * Returns: the KL_max value at x
  */
 gdouble
-nc_xcor_kernel_component_eval_KL_max (NcXcorKernelComponent *comp, gdouble y)
+nc_xcor_kernel_component_eval_KL_max (NcXcorKernelComponent *comp, gdouble x)
 {
   NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
 
   g_assert (self->KL_max_spline != NULL);
 
-  return ncm_spline_eval (self->KL_max_spline, y);
+  return ncm_spline_eval (self->KL_max_spline, x);
 }
 
 /**
  * nc_xcor_kernel_component_eval_k_epsilon:
  * @comp: a #NcXcorKernelComponent
- * @y: the y value (y = k * xi)
+ * @x: the x value (x = k * chi)
  *
- * Evaluates k_epsilon at the given y value from kernel analysis, where k_epsilon
- * is the value of k (beyond k_max) where KL(k, y/k) drops to epsilon times KL_max.
+ * Evaluates k_epsilon at the given x value from kernel analysis, where k_epsilon
+ * is the value of k (beyond k_max) where KL(k, x/k) drops to epsilon times KL_max.
  *
- * Returns: the k_epsilon value at y
+ * Returns: the k_epsilon value at x
  */
 gdouble
-nc_xcor_kernel_component_eval_k_epsilon (NcXcorKernelComponent *comp, gdouble y)
+nc_xcor_kernel_component_eval_k_epsilon (NcXcorKernelComponent *comp, gdouble x)
 {
   NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
 
   g_assert (self->k_epsilon_spline != NULL);
 
-  return ncm_spline_eval (self->k_epsilon_spline, y);
+  return ncm_spline_eval (self->k_epsilon_spline, x);
 }
 
 /* Structure for GSL function evaluation */
@@ -572,20 +572,20 @@ typedef struct _NcXcorKernelAnalysisData
 {
   NcXcorKernelComponent *comp;
   NcHICosmo *cosmo;
-  gdouble y;
-  gdouble xi_min;
-  gdouble xi_max;
+  gdouble x;
+  gdouble chi_min;
+  gdouble chi_max;
   gdouble KL_threshold;
 } NcXcorKernelAnalysisData;
 
-/* GSL function: Returns -KL(k, y/k) for minimization (we want maximum, so negate) */
+/* GSL function: Returns -KL(k, x/k) for minimization (we want maximum, so negate) */
 static gdouble
 _nc_xcor_kernel_component_minus_KL (gdouble k, void *params)
 {
   NcXcorKernelAnalysisData *data = (NcXcorKernelAnalysisData *) params;
-  const gdouble xi               = data->y / k;
-  const gdouble K_val            = nc_xcor_kernel_component_eval_kernel (data->comp, data->cosmo, xi, k);
-  const gdouble KL               = sqrt (M_PI / (2.0 * data->y)) * K_val / k;
+  const gdouble chi              = data->x / k;
+  const gdouble K_val            = nc_xcor_kernel_component_eval_kernel (data->comp, data->cosmo, chi, k);
+  const gdouble KL               = sqrt (M_PI / (2.0 * data->x)) * K_val / k;
 
   return -fabs (KL);
 }
@@ -594,9 +594,9 @@ static gdouble
 _nc_xcor_kernel_component_KL_minus_threshold (gdouble k, void *params)
 {
   NcXcorKernelAnalysisData *data = (NcXcorKernelAnalysisData *) params;
-  const gdouble xi               = data->y / k;
-  const gdouble K_val            = nc_xcor_kernel_component_eval_kernel (data->comp, data->cosmo, xi, k);
-  const gdouble KL               = fabs (sqrt (M_PI / (2.0 * data->y)) * K_val / k);
+  const gdouble chi              = data->x / k;
+  const gdouble K_val            = nc_xcor_kernel_component_eval_kernel (data->comp, data->cosmo, chi, k);
+  const gdouble KL               = fabs (sqrt (M_PI / (2.0 * data->x)) * K_val / k);
 
   return (KL - data->KL_threshold) / (data->KL_threshold + KL);
 }
@@ -728,8 +728,8 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
       }
       else
       {
-        g_error ("_nc_xcor_kernel_component_find_k_max: minimizer stuck at k = % 22.15g, y = % 22.15g",
-                 *k_at_max, data->y);
+        g_error ("_nc_xcor_kernel_component_find_k_max: minimizer stuck at k = % 22.15g, x = % 22.15g",
+                 *k_at_max, data->x);
         break;
       }
     }
@@ -789,8 +789,8 @@ _nc_xcor_kernel_component_find_k_epsilon_high (NcXcorKernelComponent    *comp,
  * @cosmo: a #NcHICosmo
  *
  * Prepares the kernel component by analyzing its behavior over the valid ranges. This
- * method calls get_limits to obtain the integration ranges, then studies KL(k, y/k)
- * using the Limber approximation to compute k_max(y), KL_max(y), and k_epsilon(y)
+ * method calls get_limits to obtain the integration ranges, then studies KL(k, x/k)
+ * using the Limber approximation to compute k_max(x), KL_max(x), and k_epsilon(x)
  * using GSL Brent minimizer and root finder with warm starts.
  */
 void
@@ -798,23 +798,23 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
 {
   NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
   NcXcorKernelComponentClass *klass  = NC_XCOR_KERNEL_COMPONENT_GET_CLASS (comp);
-  gdouble xi_min = 0.0, xi_max = 0.0, k_min = 0.0, k_max = 0.0;
+  gdouble chi_min = 0.0, chi_max = 0.0, k_min = 0.0, k_max = 0.0;
 
-  klass->get_limits (comp, cosmo, &xi_min, &xi_max, &k_min, &k_max);
+  klass->get_limits (comp, cosmo, &chi_min, &chi_max, &k_min, &k_max);
 
   {
     NcmVector *yv                 = ncm_vector_new (self->ny);
     NcmVector *k_max_v            = ncm_vector_new (self->ny);
     NcmVector *KL_max_v           = ncm_vector_new (self->ny);
     NcmVector *k_epsilon_v        = ncm_vector_new (self->ny);
-    const gdouble y_min           = GSL_MAX (k_min * xi_min, 0.5);
-    const gdouble y_max           = GSL_MIN (k_max * xi_max, 1000.0);
+    const gdouble x_min           = GSL_MAX (k_min * chi_min, 0.5);
+    const gdouble x_max           = GSL_MIN (k_max * chi_max, 1000.0);
     NcXcorKernelAnalysisData data = {
       .comp         = comp,
       .cosmo        = cosmo,
-      .y            = 0.0,
-      .xi_min       = xi_min,
-      .xi_max       = xi_max,
+      .x            = 0.0,
+      .chi_min      = chi_min,
+      .chi_max      = chi_max,
       .KL_threshold = 0.0
     };
     gdouble k_guess = 0.0;
@@ -822,22 +822,22 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
 
     for (i = 0; i < self->ny; i++)
     {
-      const gdouble log_y         = log (y_min) + (log (y_max) - log (y_min)) * i / (self->ny - 1.0);
-      const gdouble y             = exp (log_y);
-      const gdouble k_from_xi_min = y / xi_max;
-      const gdouble k_from_xi_max = y / xi_min;
-      const gdouble k_valid_min   = GSL_MAX (k_min, k_from_xi_min);
-      const gdouble k_valid_max   = GSL_MIN (k_max, k_from_xi_max);
+      const gdouble log_y         = log (x_min) + (log (x_max) - log (x_min)) * i / (self->ny - 1.0);
+      const gdouble x             = exp (log_y);
+      const gdouble k_from_chi_min = x / chi_max;
+      const gdouble k_from_chi_max = x / chi_min;
+      const gdouble k_valid_min   = GSL_MAX (k_min, k_from_chi_min);
+      const gdouble k_valid_max   = GSL_MIN (k_max, k_from_chi_max);
       const gdouble k_range_width = (k_valid_max - k_valid_min) / k_valid_max;
       gdouble k_at_max, KL_max;
 
-      data.y = y;
-      ncm_vector_set (yv, i, y);
+      data.x = x;
+      ncm_vector_set (yv, i, x);
 
       /* Anything narrower than a few ULP is skipped, whichever side of zero it falls.
-       * The last grid point sits at y = y_max = k_max xi_max, where k_from_xi_min is
-       * k_max and the valid k set is the single point k_max; but y is rebuilt as
-       * exp (log y_max) and lands a ULP either side, so an exact-order test made the
+       * The last grid point sits at x = x_max = k_max chi_max, where k_from_chi_min is
+       * k_max and the valid k set is the single point k_max; but x is rebuilt as
+       * exp (log x_max) and lands a ULP either side, so an exact-order test made the
        * endpoint a coin flip between warning here and handing the minimizer a bracket
        * too narrow to place a point inside -- a fatal GSL error. */
       if (k_range_width <= NC_XCOR_KERNEL_COMPONENT_K_RANGE_MIN_WIDTH)
@@ -846,7 +846,7 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
          * and the k range genuinely fail to overlap here: a misconfigured kernel, and
          * worth saying so. */
         if (k_range_width < -NC_XCOR_KERNEL_COMPONENT_K_RANGE_MIN_WIDTH)
-          g_warning ("# Skipping y = % 22.15g: no valid k range [% 22.15g, % 22.15g]\n", y, k_valid_min, k_valid_max);
+          g_warning ("# Skipping x = % 22.15g: no valid k range [% 22.15g, % 22.15g]\n", x, k_valid_min, k_valid_max);
 
         ncm_vector_set (k_max_v, i, 0.5 * (k_valid_min + k_valid_max));
         ncm_vector_set (KL_max_v, i, 0.0);
@@ -884,19 +884,19 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
  * nc_xcor_kernel_component_eval_kernel: (virtual eval_kernel)
  * @comp: a #NcXcorKernelComponent
  * @cosmo: a #NcHICosmo
- * @xi: comoving distance
+ * @chi: comoving distance
  * @k: wave number
  *
- * Evaluates the kernel function K(k, xi) for this component.
+ * Evaluates the kernel function K(k, chi) for this component.
  *
- * Returns: the value of K(k, xi)
+ * Returns: the value of K(k, chi)
  */
 gdouble
-nc_xcor_kernel_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
+nc_xcor_kernel_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k)
 {
   NcXcorKernelComponentClass *klass = NC_XCOR_KERNEL_COMPONENT_GET_CLASS (comp);
 
-  return klass->eval_kernel (comp, cosmo, xi, k);
+  return klass->eval_kernel (comp, cosmo, chi, k);
 }
 
 /**
@@ -924,20 +924,20 @@ nc_xcor_kernel_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo 
  * nc_xcor_kernel_component_get_limits: (virtual get_limits)
  * @comp: a #NcXcorKernelComponent
  * @cosmo: a #NcHICosmo
- * @xi_min: (out): minimum comoving distance
- * @xi_max: (out): maximum comoving distance
+ * @chi_min: (out): minimum comoving distance
+ * @chi_max: (out): maximum comoving distance
  * @k_min: (out): minimum wave number
  * @k_max: (out): maximum wave number
  *
  * Gets the valid integration ranges for this component.
  */
 void
-nc_xcor_kernel_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
+nc_xcor_kernel_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max)
 {
   NcXcorKernelComponentClass *klass = NC_XCOR_KERNEL_COMPONENT_GET_CLASS (comp);
 
   g_assert (klass->get_limits != NULL);
 
-  klass->get_limits (comp, cosmo, xi_min, xi_max, k_min, k_max);
+  klass->get_limits (comp, cosmo, chi_min, chi_max, k_min, k_max);
 }
 

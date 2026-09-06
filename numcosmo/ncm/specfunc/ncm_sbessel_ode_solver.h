@@ -41,7 +41,7 @@ G_BEGIN_DECLS
  * @x: evaluation point in the physical domain (not the mapped Chebyshev domain)
  *
  * Callback function type for the forcing term $f(x)$ in the spherical Bessel ODE in
- * Riccati-Bessel form $u = x y$, whose right-hand side is $x f(x)$. The function is
+ * Riccati-Bessel form $u = x\,w$, whose right-hand side is $x f(x)$. The function is
  * evaluated at physical coordinates $x \in [a,b]$ and returns $f(x)$ itself, not the
  * right-hand side.
  *
@@ -51,7 +51,7 @@ typedef gdouble (*NcmSBesselOdeSolverF) (gpointer user_data, gdouble x);
 
 /**
  * NcmSBesselOdeConstraint:
- * @NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET: $u(y_a) = u(y_b) = 0$
+ * @NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET: $u(x_a) = u(x_b) = 0$
  * @NCM_SBESSEL_ODE_CONSTRAINT_PINNED: $\langle T_{p_1}, u\rangle = \langle T_{p_2}, u\rangle = 0$
  *   for two chosen coefficient indices
  * @NCM_SBESSEL_ODE_CONSTRAINT_TAU: no constraint rows; the truncation of the expansion
@@ -61,7 +61,7 @@ typedef gdouble (*NcmSBesselOdeSolverF) (gpointer user_data, gdouble x);
  * $N$ Chebyshev coefficients and keeping the first $N-2$ rows of the discretized
  * equation leaves $N$ unknowns against $N-2$ equations, so two conditions have to be
  * added; the solution family they choose from is the same in all three cases, since the
- * homogeneous solutions $y j_\ell$ and $y y_\ell$ span a two-parameter space. The Levin boundary functional
+ * homogeneous solutions $x j_\ell$ and $x n_\ell$ span a two-parameter space. The Levin boundary functional
  * is invariant under that choice, so the constraint decides which member of the family
  * has to be represented, not what the panel integral is.
  *

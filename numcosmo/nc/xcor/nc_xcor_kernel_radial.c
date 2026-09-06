@@ -122,9 +122,9 @@ typedef struct _RadialComponentData
 #define _NC_XCOR_KERNEL_COMPONENT_RADIAL_GET_DATA(comp) \
         ((RadialComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
-static gdouble _radial_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k);
+static gdouble _radial_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
 static gdouble _radial_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
-static void _radial_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
+static void _radial_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _radial_component_data_clear (RadialComponentData *data);
 
 NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_RADIAL,
@@ -432,7 +432,7 @@ nc_xcor_kernel_radial_get_support (NcXcorKernelRadial *xcka, gdouble *chi_min, g
  *
  * A component is integrated over exactly the interval it reports, but the
  * caller reaches the ends of that interval indirectly -- the radial path
- * through y = k xi and back, the Limber path through z(chi) and back -- so the
+ * through x = k chi and back, the Limber path through z(chi) and back -- so the
  * argument can land just outside, where the component is exactly zero. That
  * step is a discontinuity the Levin panel's Chebyshev fit cannot resolve at any
  * order, and it aborts on the last panel of every k. Clamping onto the interval
@@ -490,7 +490,7 @@ _nc_xcor_kernel_radial_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdou
   NcXcorKernelRadial *xcka               = NC_XCOR_KERNEL_RADIAL (xclk);
   NcXcorKernelRadialPrivate * const self = NC_XCOR_KERNEL_RADIAL_GET_PRIVATE (xcka);
   const gdouble RH_Mpc                   = nc_hicosmo_RH_Mpc (cosmo);
-  const gdouble chi                      = xck->xi_z * RH_Mpc;
+  const gdouble chi                      = xck->chi_z * RH_Mpc;
   const guint n_comps                    = nc_xcor_kernel_radial_get_n_comps (xcka);
 
   /* Limber fixes k = (l + 1/2) / chi, so the (chi, k) factor is evaluated
@@ -695,16 +695,16 @@ _radial_component_data_clear (RadialComponentData *data)
 }
 
 static gdouble
-_radial_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
+_radial_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k)
 {
   RadialComponentData *data = _NC_XCOR_KERNEL_COMPONENT_RADIAL_GET_DATA (comp);
   const gdouble RH_Mpc      = nc_hicosmo_RH_Mpc (cosmo);
-  const gdouble chi         = xi * RH_Mpc;
+  const gdouble chi_Mpc     = chi * RH_Mpc;
   const gdouble k_Mpc       = k / RH_Mpc;
-  const gdouble W           = _nc_xcor_kernel_radial_eval_W_comp_clamped (data->xcka, data->comp, chi);
+  const gdouble W           = _nc_xcor_kernel_radial_eval_W_comp_clamped (data->xcka, data->comp, chi_Mpc);
   const gdouble powspec     = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), 0.0, k_Mpc);
-  const gdouble g           = (data->kdep != NULL) ? nc_xcor_kernel_radial_kdep_eval (data->kdep, chi, k_Mpc) : 1.0;
-  const gdouble f           = nc_xcor_kernel_radial_eval_kernel_factor (data->xcka, data->comp, cosmo, chi, k_Mpc);
+  const gdouble g           = (data->kdep != NULL) ? nc_xcor_kernel_radial_kdep_eval (data->kdep, chi_Mpc, k_Mpc) : 1.0;
+  const gdouble f           = nc_xcor_kernel_radial_eval_kernel_factor (data->xcka, data->comp, cosmo, chi_Mpc, k_Mpc);
 
   return RH_Mpc * W * g * f * sqrt (powspec);
 }
@@ -718,18 +718,18 @@ _radial_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo,
 }
 
 static void
-_radial_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
+_radial_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max)
 {
   RadialComponentData *data = _NC_XCOR_KERNEL_COMPONENT_RADIAL_GET_DATA (comp);
   const gdouble RH_Mpc      = nc_hicosmo_RH_Mpc (cosmo);
-  gdouble chi_min, chi_max;
+  gdouble chi_min_Mpc, chi_max_Mpc;
 
   ncm_powspec_prepare_if_needed (data->ps, NCM_MODEL (cosmo));
-  nc_xcor_kernel_radial_get_comp_support (data->xcka, data->comp, &chi_min, &chi_max);
+  nc_xcor_kernel_radial_get_comp_support (data->xcka, data->comp, &chi_min_Mpc, &chi_max_Mpc);
 
-  *xi_min = chi_min / RH_Mpc;
-  *xi_max = chi_max / RH_Mpc;
-  *k_min  = ncm_powspec_get_kmin (data->ps) * RH_Mpc;
-  *k_max  = ncm_powspec_get_kmax (data->ps) * RH_Mpc;
+  *chi_min = chi_min_Mpc / RH_Mpc;
+  *chi_max = chi_max_Mpc / RH_Mpc;
+  *k_min   = ncm_powspec_get_kmin (data->ps) * RH_Mpc;
+  *k_max   = ncm_powspec_get_kmax (data->ps) * RH_Mpc;
 }
 

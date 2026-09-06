@@ -358,9 +358,9 @@ test_nc_xcor_kernel_limber (TestNcXcorKernel *test, gconstpointer pdata)
 
     /* The _full form looks the kinetic quantities up and folds in the prefactor; the
      * plain form takes them and does not. Composing them must reproduce it exactly --
-     * and xi_z is in Hubble-radius units, which is the easy thing to get wrong. */
-    xck.xi_z = nc_distance_comoving (test->dist, test->cosmo, z);
-    xck.E_z  = nc_hicosmo_E (test->cosmo, z);
+     * and chi_z is in Hubble-radius units, which is the easy thing to get wrong. */
+    xck.chi_z = nc_distance_comoving (test->dist, test->cosmo, z);
+    xck.E_z   = nc_hicosmo_E (test->cosmo, z);
 
     ncm_assert_cmpdouble_e (nc_xcor_kernel_eval_limber_z (test->xclk, test->cosmo, z, &xck, l) *
                             nc_xcor_kernel_eval_limber_z_prefactor (test->xclk, test->cosmo, l),

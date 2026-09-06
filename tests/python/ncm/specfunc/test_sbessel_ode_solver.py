@@ -263,15 +263,15 @@ class TestSBesselOperators:
         mat_np = mat.to_numpy()
 
         # Get boundary values using scipy
-        y_a = spherical_jn(l_val, a) * a
-        y_b = spherical_jn(l_val, b) * b
+        u_a = spherical_jn(l_val, a) * a
+        u_b = spherical_jn(l_val, b) * b
 
         # Debug: print matrix shape
-        # Row 1 enforces u(+1) = y_b (i.e., u(b) in physical coords)
+        # Row 1 enforces u(+1) = u_b (i.e., u(b) in physical coords)
         # Rows 2 to N-1 are the differential operator (homogeneous: RHS = 0)
         rhs_np = np.zeros(N)
-        rhs_np[0] = y_a
-        rhs_np[1] = y_b
+        rhs_np[0] = u_a
+        rhs_np[1] = u_b
 
         # Assert matrix is square
         assert (
@@ -287,30 +287,30 @@ class TestSBesselOperators:
 
         for t in t_test:
             # Evaluate solution at t (coefficients are in Chebyshev basis)
-            y_computed = Ncm.Spectral.chebyshev_eval(solution_coeffs, t)
+            u_computed = Ncm.Spectral.chebyshev_eval(solution_coeffs, t)
 
             # Map t to physical x
             x_physical = (a + b) / 2.0 + (b - a) / 2.0 * t
 
             # Get exact value
-            y_exact = spherical_jn(l_val, x_physical) * x_physical
+            u_exact = spherical_jn(l_val, x_physical) * x_physical
 
             assert_allclose(
-                y_computed,
-                y_exact,
+                u_computed,
+                u_exact,
                 rtol=1.0e-10,
                 atol=1.0e-15,
                 err_msg=f"Spherical Bessel solution mismatch at x={x_physical}",
             )
 
         # Verify boundary conditions are satisfied (use Chebyshev eval)
-        y_at_a = Ncm.Spectral.chebyshev_eval(solution_coeffs, -1.0)
-        y_at_b = Ncm.Spectral.chebyshev_eval(solution_coeffs, 1.0)
+        u_at_a = Ncm.Spectral.chebyshev_eval(solution_coeffs, -1.0)
+        u_at_b = Ncm.Spectral.chebyshev_eval(solution_coeffs, 1.0)
         assert_allclose(
-            y_at_a, y_a, rtol=1.0e-13, atol=1.0e-13, err_msg="BC at x=a not satisfied"
+            u_at_a, u_a, rtol=1.0e-13, atol=1.0e-13, err_msg="BC at x=a not satisfied"
         )
         assert_allclose(
-            y_at_b, y_b, rtol=1.0e-13, atol=1.0e-13, err_msg="BC at x=b not satisfied"
+            u_at_b, u_b, rtol=1.0e-13, atol=1.0e-13, err_msg="BC at x=b not satisfied"
         )
 
     @pytest.mark.parametrize("l_val", list(range(21)))
@@ -331,7 +331,7 @@ class TestSBesselOperators:
         mat = solver.get_operator_matrix(a, b, l_val, N)
         mat_np = mat.to_numpy()
 
-        # Set up RHS: homogeneous BCs (y(a)=0, y(b)=0) with RHS=1
+        # Set up RHS: homogeneous BCs (x(a)=0, x(b)=0) with RHS=1
         rhs_np = np.zeros(N)
         rhs_np[0] = 0.0  # BC at x=a (t=-1)
         rhs_np[1] = 0.0  # BC at x=b (t=+1)
@@ -347,20 +347,20 @@ class TestSBesselOperators:
         # dy/dx = (dy/dt) * (dt/dx) = (dy/dt) / h
         h = (b - a) / 2.0
 
-        # Evaluate y'(t) at t=-1 (corresponds to x=a) and t=+1 (corresponds to x=b)
-        y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-        y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+        # Evaluate x'(t) at t=-1 (corresponds to x=a) and t=+1 (corresponds to x=b)
+        u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+        u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
 
         # Convert from dy/dt to dy/dx
-        y_prime_a = y_prime_at_minus1 / h
-        y_prime_b = y_prime_at_plus1 / h
+        u_prime_a = u_prime_at_minus1 / h
+        u_prime_b = u_prime_at_plus1 / h
 
         # Get j_l values at endpoints
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
         # Compute left-hand side: [x*j_l(x)]*u'(x) from a to b
-        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
+        lhs = b * j_l_b * u_prime_b - a * j_l_a * u_prime_a
 
         # Compute right-hand side: integral of j_l(x) from a to b
         # Note: The Green's identity for u''+(x^2-l(l+1))u=1 gives this relation
@@ -400,7 +400,7 @@ class TestSBesselOperators:
         mat = solver.get_operator_matrix(a, b, l_val, N)
         mat_np = mat.to_numpy()
 
-        # Set up RHS: homogeneous BCs (y(a)=0, y(b)=0) with RHS=x
+        # Set up RHS: homogeneous BCs (x(a)=0, x(b)=0) with RHS=x
         # In the mapped coordinates, x = m + h*t where m=(a+b)/2, h=(b-a)/2
         # So we need RHS = m + h*t in Chebyshev basis
         # T_0(t) = 1, T_1(t) = t
@@ -424,19 +424,19 @@ class TestSBesselOperators:
 
         # Compute derivatives at endpoints
         # dy/dx = (dy/dt) / h
-        y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-        y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+        u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+        u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
 
         # Convert from dy/dt to dy/dx
-        y_prime_a = y_prime_at_minus1 / h
-        y_prime_b = y_prime_at_plus1 / h
+        u_prime_a = u_prime_at_minus1 / h
+        u_prime_b = u_prime_at_plus1 / h
 
         # Get j_l values at endpoints
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
         # Compute left-hand side: [x*j_l(x)] * u'(x) from a to b
-        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
+        lhs = b * j_l_b * u_prime_b - a * j_l_a * u_prime_a
 
         # Compute right-hand side: integral of x*j_l(x) from a to b
         def integrand(x: float) -> float:
@@ -554,17 +554,17 @@ class TestSBesselOperators:
 
         # Compute derivatives at endpoints
         h = (b - a) / 2.0
-        y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-        y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
-        y_prime_a = y_prime_at_minus1 / h
-        y_prime_b = y_prime_at_plus1 / h
+        u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+        u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+        u_prime_a = u_prime_at_minus1 / h
+        u_prime_b = u_prime_at_plus1 / h
 
         # Get j_l values
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
         # Compute LHS: [x*j_l(x)]*u'(x) from a to b
-        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
+        lhs = b * j_l_b * u_prime_b - a * j_l_a * u_prime_a
 
         # Compute RHS: integral
         def integrand(x: float) -> float:
@@ -611,17 +611,17 @@ class TestSBesselOperators:
         solution_coeffs = solution_vec.to_numpy()
 
         # Compute derivatives at endpoints
-        y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-        y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
-        y_prime_a = y_prime_at_minus1 / h
-        y_prime_b = y_prime_at_plus1 / h
+        u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+        u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+        u_prime_a = u_prime_at_minus1 / h
+        u_prime_b = u_prime_at_plus1 / h
 
         # Get j_l values
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
         # Compute LHS: [x*j_l(x)]*u'(x) from a to b
-        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
+        lhs = b * j_l_b * u_prime_b - a * j_l_a * u_prime_a
 
         # Compute RHS: integral of x*j_l(x)
         def integrand(x: float) -> float:
@@ -663,17 +663,17 @@ class TestSBesselOperators:
 
         # Compute derivatives at endpoints
         h = (b - a) / 2.0
-        y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-        y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
-        y_prime_a = y_prime_at_minus1 / h
-        y_prime_b = y_prime_at_plus1 / h
+        u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+        u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+        u_prime_a = u_prime_at_minus1 / h
+        u_prime_b = u_prime_at_plus1 / h
 
         # Get j_l values
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
         # Compute LHS: [x*j_l(x)]*u'(x) from a to b
-        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
+        lhs = b * j_l_b * u_prime_b - a * j_l_a * u_prime_a
 
         # Compute RHS: integral
         def integrand(x: float) -> float:
@@ -720,17 +720,17 @@ class TestSBesselOperators:
         solution_coeffs, _solution_len = op.solve(rhs_np)
 
         # Compute derivatives at endpoints
-        y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-        y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
-        y_prime_a = y_prime_at_minus1 / h
-        y_prime_b = y_prime_at_plus1 / h
+        u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+        u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+        u_prime_a = u_prime_at_minus1 / h
+        u_prime_b = u_prime_at_plus1 / h
 
         # Get j_l values
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
         # Compute LHS: [x*j_l(x)]*u'(x) from a to b
-        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
+        lhs = b * j_l_b * u_prime_b - a * j_l_a * u_prime_a
 
         # Compute RHS: integral of x*j_l(x)
         def integrand(x: float) -> float:
@@ -1119,10 +1119,10 @@ class TestSBesselOperators:
 
         # Compute derivatives at endpoints from full solution
         h = (b - a) / 2.0
-        y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-        y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
-        deriv_a_full = y_prime_at_minus1 / h
-        deriv_b_full = y_prime_at_plus1 / h
+        u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+        u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+        deriv_a_full = u_prime_at_minus1 / h
+        deriv_b_full = u_prime_at_plus1 / h
 
         # Compare
         assert_allclose(
@@ -1374,10 +1374,10 @@ class TestSBesselOperators:
             solution_coeffs = solutions_batched_np[i, :]
 
             # Compute derivatives at endpoints from full solution
-            y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-            y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
-            deriv_a_full = y_prime_at_minus1 / h
-            deriv_b_full = y_prime_at_plus1 / h
+            u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+            u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+            deriv_a_full = u_prime_at_minus1 / h
+            deriv_b_full = u_prime_at_plus1 / h
 
             # Compare with fast computation
             assert_allclose(
@@ -3727,7 +3727,7 @@ class TestSBesselTauConstraint:
 
     @staticmethod
     def _forcing_rhs(a: float, b: float, order: int = 96) -> np.ndarray:
-        """Endpoint data followed by the C^(2) coefficients of y F(y).
+        """Endpoint data followed by the C^(2) coefficients of x F(x).
 
         F is a Gaussian bump centred on the panel with width a fixed fraction of
         it, so its Chebyshev order is the same on every panel.
@@ -3736,8 +3736,8 @@ class TestSBesselTauConstraint:
         spectral = Ncm.Spectral.new()
 
         def forcing(_user_data, t):
-            y = m + h * t
-            return y * np.exp(-0.5 * ((y - m) / (0.35 * h)) ** 2)
+            x = m + h * t
+            return x * np.exp(-0.5 * ((x - m) / (0.35 * h)) ** 2)
 
         cheb = np.array(
             spectral.compute_chebyshev_coeffs(forcing, -1.0, 1.0, order, None)
@@ -3750,7 +3750,7 @@ class TestSBesselTauConstraint:
 
     @staticmethod
     def _boundary_functional(coeffs: np.ndarray, a: float, b: float, ell: int) -> float:
-        """W(b) - W(a) with W = y j_l u' - (y j_l)' u, u from its Chebyshev series."""
+        """W(b) - W(a) with W = x j_l u' - (x j_l)' u, u from its Chebyshev series."""
         h = 0.5 * (b - a)
         u_a, u_b = np.polynomial.chebyshev.chebval([-1.0, 1.0], coeffs)
         du = (
@@ -3760,10 +3760,10 @@ class TestSBesselTauConstraint:
             / h
         )
 
-        def term(y: float, u: float, dudy: float) -> float:
-            jl = spherical_jn(ell, y)
-            djl = spherical_jn(ell, y, derivative=True)
-            return y * jl * dudy - (jl + y * djl) * u
+        def term(x: float, u: float, dudy: float) -> float:
+            jl = spherical_jn(ell, x)
+            djl = spherical_jn(ell, x, derivative=True)
+            return x * jl * dudy - (jl + x * djl) * u
 
         return term(b, u_b, du[1]) - term(a, u_a, du[0])
 
@@ -3807,8 +3807,8 @@ class TestSBesselTauConstraint:
         _, c_f, _ = self._solve(a, b, self.ELL, self.ELL, True)
 
         ref, _ = quad(
-            lambda y: np.exp(-0.5 * ((y - m) / (0.35 * h)) ** 2)
-            * spherical_jn(self.ELL, y),
+            lambda x: np.exp(-0.5 * ((x - m) / (0.35 * h)) ** 2)
+            * spherical_jn(self.ELL, x),
             a,
             b,
             limit=5000,
@@ -3956,13 +3956,13 @@ class TestTauFloorFactorAndDiagnostics:
     A, B = 1.0e4, 10.0**4.5
 
     def _rhs(self):
-        """C^(2) coefficients of y F(y) for a bump on [A, B], boundary rows included."""
+        """C^(2) coefficients of x F(x) for a bump on [A, B], boundary rows included."""
         solver = Ncm.SBesselOdeSolver.new()
         spectral = solver.peek_spectral()
         mid, half = 0.5 * (self.A + self.B), 0.5 * (self.B - self.A)
         cheb = np.array(
             spectral.compute_chebyshev_coeffs_adaptive(
-                lambda _d, y: y * np.exp(-0.5 * ((y - mid) / (0.25 * half)) ** 2),
+                lambda _d, x: x * np.exp(-0.5 * ((x - mid) / (0.25 * half)) ** 2),
                 self.A,
                 self.B,
                 3,
@@ -4096,21 +4096,21 @@ class TestDerivErrorBoundsTheFailure:
     """
 
     ELL = 20
-    Y_A = 1.0e3
+    X_A = 1.0e3
 
     def _panel(self, span: float):
         """A bump of fixed relative width, its right-hand side and a reference."""
-        y_b = self.Y_A + span
-        mid, half = 0.5 * (self.Y_A + y_b), 0.5 * span
+        x_b = self.X_A + span
+        mid, half = 0.5 * (self.X_A + x_b), 0.5 * span
 
-        def bump(y):
-            return np.exp(-0.5 * ((y - mid) / (0.25 * half)) ** 2)
+        def bump(x):
+            return np.exp(-0.5 * ((x - mid) / (0.25 * half)) ** 2)
 
         solver = Ncm.SBesselOdeSolver.new()
         spectral = solver.peek_spectral()
         cheb = np.array(
             spectral.compute_chebyshev_coeffs_adaptive(
-                lambda _d, y: y * bump(y), self.Y_A, y_b, 3, 1.0e-13, None
+                lambda _d, x: x * bump(x), self.X_A, x_b, 3, 1.0e-13, None
             )[1]
         )
         n = len(cheb)
@@ -4125,7 +4125,7 @@ class TestDerivErrorBoundsTheFailure:
         rhs = np.concatenate([[0.0, 0.0], geg])
 
         gx, gw = np.polynomial.legendre.leggauss(24)
-        edges = np.linspace(self.Y_A, y_b, max(int(np.ceil(2 * span)), 400) + 1)
+        edges = np.linspace(self.X_A, x_b, max(int(np.ceil(2 * span)), 400) + 1)
         reference = sum(
             0.5
             * (e1 - e0)
@@ -4137,15 +4137,15 @@ class TestDerivErrorBoundsTheFailure:
             for e0, e1 in zip(edges[:-1], edges[1:])
         )
 
-        return y_b, rhs, reference
+        return x_b, rhs, reference
 
-    def _solve(self, y_b: float, rhs):
+    def _solve(self, x_b: float, rhs):
         solver = Ncm.SBesselOdeSolver.new()
         solver.set_tolerance(1.0e-12)
         solver.set_default_constraint(Ncm.SBesselOdeConstraint.TAU)
-        op = solver.create_operator(self.Y_A, y_b, self.ELL, self.ELL)
+        op = solver.create_operator(self.X_A, x_b, self.ELL, self.ELL)
         coeffs = np.array(op.solve(rhs)[0])
-        half = 0.5 * (y_b - self.Y_A)
+        half = 0.5 * (x_b - self.X_A)
         u = np.polynomial.chebyshev.chebval([-1.0, 1.0], coeffs)
         du = (
             np.polynomial.chebyshev.chebval(
@@ -4154,25 +4154,25 @@ class TestDerivErrorBoundsTheFailure:
             / half
         )
 
-        def term(y, u_val, du_val):
-            jl = spherical_jn(self.ELL, y)
-            djl = spherical_jn(self.ELL, y, derivative=True)
+        def term(x, u_val, du_val):
+            jl = spherical_jn(self.ELL, x)
+            djl = spherical_jn(self.ELL, x, derivative=True)
 
-            return y * jl * du_val - (jl + y * djl) * u_val
+            return x * jl * du_val - (jl + x * djl) * u_val
 
-        value = term(y_b, u[1], du[1]) - term(self.Y_A, u[0], du[0])
+        value = term(x_b, u[1], du[1]) - term(self.X_A, u[0], du[0])
 
         return value, op.get_last_deriv_error(0)
 
     @pytest.mark.parametrize("span", [30.0, 60.0, 100.0, 150.0, 250.0, 3000.0])
     def test_bound_is_never_below_the_error(self, span: float) -> None:
         """Across spans where the constraint is sound and where it fails outright."""
-        y_b, rhs, reference = self._panel(span)
-        value, deriv_error = self._solve(y_b, rhs)
+        x_b, rhs, reference = self._panel(span)
+        value, deriv_error = self._solve(x_b, rhs)
 
         amplitude = max(
-            abs(self.Y_A * spherical_jn(self.ELL, self.Y_A)),
-            abs(y_b * spherical_jn(self.ELL, y_b)),
+            abs(self.X_A * spherical_jn(self.ELL, self.X_A)),
+            abs(x_b * spherical_jn(self.ELL, x_b)),
         )
         predicted = np.finfo(float).eps * deriv_error * amplitude / abs(reference)
         realized = abs(value - reference) / abs(reference)
@@ -4193,7 +4193,7 @@ class TestDerivErrorBoundsTheFailure:
 class TestConjugatePoints:
     """Panels whose ends make the Dirichlet boundary matrix singular.
 
-    A conjugate point is a zero of Phi = j(a) y(b) - j(b) y(a). There the two-point
+    A conjugate point is a zero of Phi = j(a) x(b) - j(b) x(a). There the two-point
     Dirichlet problem has no unique solution and the error grows as the machine epsilon
     times the boundary condition number. Neither of the other two constraints imposes an
     endpoint condition, so neither has that determinant to lose.
@@ -4237,7 +4237,7 @@ class TestConjugatePoints:
         mid, half = 0.5 * (a + b), 0.5 * (b - a)
         cheb = np.array(
             spectral.compute_chebyshev_coeffs_adaptive(
-                lambda _d, y: y * np.exp(-0.5 * ((y - mid) / (0.35 * half)) ** 2),
+                lambda _d, x: x * np.exp(-0.5 * ((x - mid) / (0.35 * half)) ** 2),
                 a,
                 b,
                 3,
@@ -4277,19 +4277,19 @@ class TestConjugatePoints:
             / half
         )
 
-        def term(y: float, u_val: float, du_val: float) -> float:
-            jl = spherical_jn(self.ELL, y)
-            djl = spherical_jn(self.ELL, y, derivative=True)
+        def term(x: float, u_val: float, du_val: float) -> float:
+            jl = spherical_jn(self.ELL, x)
+            djl = spherical_jn(self.ELL, x, derivative=True)
 
-            return y * jl * du_val - (jl + y * djl) * u_val
+            return x * jl * du_val - (jl + x * djl) * u_val
 
         return term(b, u[1], du[1]) - term(a, u[0], du[0])
 
     def _reference(self, a: float, b: float) -> float:
         mid, half = 0.5 * (a + b), 0.5 * (b - a)
         value, _ = quad(
-            lambda y: np.exp(-0.5 * ((y - mid) / (0.35 * half)) ** 2)
-            * spherical_jn(self.ELL, y),
+            lambda x: np.exp(-0.5 * ((x - mid) / (0.35 * half)) ** 2)
+            * spherical_jn(self.ELL, x),
             a,
             b,
             limit=4000,
@@ -4347,23 +4347,23 @@ class TestPhaseIncrementConditioning:
     """Which phase increments are safe to space knots by.
 
     Placing knots at the zeros of j_l would put both ends of every panel on a zero, so
-    Phi = j(a) y(b) - j(b) y(a) vanishes identically and every panel is conjugate. The
+    Phi = j(a) x(b) - j(b) x(a) vanishes identically and every panel is conjugate. The
     extrema are no better, being a further half period apart in the same sense. What
     decides it is the increment: a multiple of pi is singular, an odd multiple of pi/2 is
     where sin(dtheta) is one.
     """
 
     @staticmethod
-    def _theta(ell: int, y: float) -> float:
+    def _theta(ell: int, x: float) -> float:
         """WKB phase above the turning point."""
         nu = np.sqrt(ell * (ell + 1.0))
 
-        return np.sqrt(y * y - nu * nu) - nu * np.arccos(nu / y)
+        return np.sqrt(x * x - nu * nu) - nu * np.arccos(nu / x)
 
     @classmethod
-    def _y_at_phase(cls, ell: int, target: float, lo: float) -> float:
+    def _x_at_phase(cls, ell: int, target: float, lo: float) -> float:
         return brentq(
-            lambda y: cls._theta(ell, y) - target, lo + 1.0e-6, lo + 200.0, xtol=1.0e-12
+            lambda x: cls._theta(ell, x) - target, lo + 1.0e-6, lo + 200.0, xtol=1.0e-12
         )
 
     @staticmethod
@@ -4380,8 +4380,8 @@ class TestPhaseIncrementConditioning:
     @pytest.mark.parametrize("ell", [2, 20, 200])
     def test_multiples_of_pi_are_singular_and_half_odd_are_not(self, ell: int) -> None:
         """Spacing by pi is conjugate; spacing by pi/2 or 3pi/2 is well conditioned."""
-        y0 = 3.0 * np.sqrt(ell * (ell + 1.0))
-        theta0 = self._theta(ell, y0)
+        x0 = 3.0 * np.sqrt(ell * (ell + 1.0))
+        theta0 = self._theta(ell, x0)
 
         worst_half_odd = 0.0
         best_multiple = np.inf
@@ -4391,8 +4391,8 @@ class TestPhaseIncrementConditioning:
             (0.5 * np.pi, False),
             (1.5 * np.pi, False),
         ):
-            y1 = self._y_at_phase(ell, theta0 + increment, y0)
-            value = self._cond(ell, y0, y1)
+            x1 = self._x_at_phase(ell, theta0 + increment, x0)
+            value = self._cond(ell, x0, x1)
 
             if is_multiple:
                 best_multiple = min(best_multiple, value)
@@ -4407,19 +4407,19 @@ class TestPhaseIncrementConditioning:
         """Both ends on a zero makes the determinant vanish identically."""
         ell = 20
         nu = np.sqrt(ell * (ell + 1.0))
-        zeros, y, step = [], 3.0 * nu, 0.05
-        previous = spherical_jn(ell, y)
+        zeros, x, step = [], 3.0 * nu, 0.05
+        previous = spherical_jn(ell, x)
 
         while len(zeros) < 3:
-            nxt = y + step
+            nxt = x + step
             current = spherical_jn(ell, nxt)
 
             if previous * current < 0.0:
                 zeros.append(
-                    brentq(lambda t: spherical_jn(ell, t), y, nxt, xtol=1.0e-12)
+                    brentq(lambda t: spherical_jn(ell, t), x, nxt, xtol=1.0e-12)
                 )
 
-            y, previous = nxt, current
+            x, previous = nxt, current
 
         for a, b in zip(zeros[:-1], zeros[1:]):
             assert self._cond(ell, a, b) > 1.0e12

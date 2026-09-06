@@ -85,9 +85,9 @@ typedef struct _tSZComponentData
 #define _NC_XCOR_KERNEL_COMPONENT_TSZ_GET_DATA(comp) \
         ((tSZComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
-static gdouble _tsz_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k);
+static gdouble _tsz_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
 static gdouble _tsz_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
-static void _tsz_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
+static void _tsz_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _tsz_component_data_clear (tSZComponentData *data);
 static NcXcorKernelComponent *_nc_xcor_kernel_component_tsz_new (NcDistance *dist, NcmPowspec *ps, gdouble zmax);
 
@@ -258,7 +258,7 @@ nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
 }
 
 static gdouble
-_nc_xcor_kernel_tsz_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, const gdouble z, const gdouble xi, const gdouble E)
+_nc_xcor_kernel_tsz_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, const gdouble z, const gdouble chi, const gdouble E)
 {
   return 1.0 / (1.0 + z);
 }
@@ -266,7 +266,7 @@ _nc_xcor_kernel_tsz_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, co
 static gdouble
 _nc_xcor_kernel_tsz_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
-  const gdouble kernel = _nc_xcor_kernel_tsz_eval_radial_weight (xclk, cosmo, z, xck->xi_z, xck->E_z);
+  const gdouble kernel = _nc_xcor_kernel_tsz_eval_radial_weight (xclk, cosmo, z, xck->chi_z, xck->E_z);
 
   return kernel;
 }
@@ -292,10 +292,10 @@ _tsz_component_data_clear (tSZComponentData *data)
 }
 
 static gdouble
-_tsz_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
+_tsz_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k)
 {
   tSZComponentData *data = _NC_XCOR_KERNEL_COMPONENT_TSZ_GET_DATA (comp);
-  const gdouble z        = nc_distance_inv_comoving (data->dist, cosmo, xi);
+  const gdouble z        = nc_distance_inv_comoving (data->dist, cosmo, chi);
   const gdouble powspec  = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble kernel   = 1.0 / (1.0 + z);
 
@@ -312,7 +312,7 @@ _tsz_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gd
 }
 
 static void
-_tsz_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
+_tsz_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max)
 {
   tSZComponentData *data = _NC_XCOR_KERNEL_COMPONENT_TSZ_GET_DATA (comp);
   NcDistance *dist       = data->dist;
@@ -321,10 +321,10 @@ _tsz_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdoubl
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
-  *xi_min = nc_distance_comoving (dist, cosmo, 1.0e-6);
-  *xi_max = nc_distance_comoving (dist, cosmo, data->zmax);
-  *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
-  *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *chi_min = nc_distance_comoving (dist, cosmo, 1.0e-6);
+  *chi_max = nc_distance_comoving (dist, cosmo, data->zmax);
+  *k_min   = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *k_max   = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
 }
 
 static NcXcorKernelComponent *

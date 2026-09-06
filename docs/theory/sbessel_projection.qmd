@@ -22,6 +22,13 @@ inner integral is solved at one $k$ at a time, so nothing assumes $K$ factorizes
 function of $\chi$ times a function of $k$, and nothing below depends on what $P$ is
 beyond its smoothness.
 
+Here $\chi$ is the comoving distance and $k$ the wavenumber, so that $k\chi$ is
+dimensionless. [[numcosmo|NcDistance]] calls the same quantity $D_c$ and returns it in
+units of the Hubble radius, which is the unit the kernel components use as well, with
+$k$ in $R_{H0}^{-1}$; multiplying by $R_{H0} = c/H_0$ in Mpc, from
+[[numcosmo|nc_hicosmo_RH_Mpc]], gives the dimensionful pair, which is what the Limber
+path uses. See [Cosmological Distances](distances.qmd).
+
 The pipeline has two stages with a clean interface between them. The inner stage
 computes, for one kernel and one $k$, the integral
 $$
@@ -65,7 +72,7 @@ representation, and the range in $k$ are all determined this way.
 As in any numerical calculation, this control is not absolute. Errors in the input
 functions, round-off, cancellations, and other numerical effects can limit the accuracy
 that is actually attained. Two parameters are prescribed rather than adapted --- the
-panel grid in $y$ and the number of multipoles per block --- but neither is a
+panel grid in $x$ and the number of multipoles per block --- but neither is a
 resolution: panel splitting is exact, and the block size only decides how many
 multipoles share a factorization. They therefore do not set the target accuracy,
 although the grid does affect what is attainable, through the cancellation between
@@ -107,44 +114,44 @@ sampling the integrand pays a cost in kernel evaluations that grows linearly in 
 
 ### The dimensionless variable
 
-With $y = k\chi$,
+With $x = k\chi$,
 $$
-I_\ell(k) = \int_{ka}^{kb} \mathrm{d}y\; F(y)\, j_\ell(y),
-\qquad F(y) \equiv \frac{1}{k}\,K\!\left(\frac{y}{k}, k\right).
+I_\ell(k) = \int_{ka}^{kb} \mathrm{d}x\; F(x)\, j_\ell(x),
+\qquad F(x) \equiv \frac{1}{k}\,K\!\left(\frac{x}{k}, k\right).
 \tag{3}
 $$
-The weight $j_\ell(y)$ no longer depends on $k$. Consequently, on a fixed panel in $y$,
+The weight $j_\ell(x)$ no longer depends on $k$. Consequently, on a fixed panel in $x$,
 the discretized operator depends only on the panel and the multipole block, not on $k$
 or on the kernel. Its construction and factorization can therefore be done once and
 reused for every $k$ and every kernel. Each new integral only changes the integration
 bounds $[ka,kb]$ and the forcing $F$. This reuse of the same precomputed operators is
 the organizing principle of the implementation ([Panels fixed in
-y](#panels-fixed-in-y)).
+x](#panels-fixed-in-x)).
 
 ### From the integral to a boundary-value problem
 
 The reduction below is what [[numcosmo-math|NcmSBesselIntegratorLevin]]
-implements. $j_\ell$ solves the spherical Bessel equation; equivalently $v(y) =
-y\,j_\ell(y)$ solves
+implements. $j_\ell$ solves the spherical Bessel equation; equivalently $v(x) =
+x\,j_\ell(x)$ solves
 $$
-y^2 v'' + \left[y^2 - \ell(\ell+1)\right] v = 0 .
+x^2 v'' + \left[x^2 - \ell(\ell+1)\right] v = 0 .
 \tag{4}
 $$
 Let $u$ solve the same operator with a forcing,
 $$
-y^2 u'' + \left[y^2 - \ell(\ell+1)\right] u = y\,F(y).
+x^2 u'' + \left[x^2 - \ell(\ell+1)\right] u = x\,F(x).
 \tag{5}
 $$
 Then the Wronskian-like combination $\mathcal{W} = v u' - v' u$ satisfies
 $$
-\mathcal{W}' = v u'' - v'' u = \frac{v\,yF}{y^2} = F\, j_\ell ,
+\mathcal{W}' = v u'' - v'' u = \frac{v\,yF}{x^2} = F\, j_\ell ,
 $$
 so on any interval
 $$
-\int_{y_a}^{y_b} \mathrm{d}y\; F(y)\, j_\ell(y)
- = \mathcal{W}(y_b) - \mathcal{W}(y_a),
+\int_{x_a}^{x_b} \mathrm{d}x\; F(x)\, j_\ell(x)
+ = \mathcal{W}(x_b) - \mathcal{W}(x_a),
 \qquad
-\mathcal{W}(y) = y\, j_\ell(y)\, u'(y) - \big(y\,j_\ell(y)\big)'\, u(y).
+\mathcal{W}(x) = x\, j_\ell(x)\, u'(x) - \big(x\,j_\ell(x)\big)'\, u(x).
 \tag{6}
 $$
 This is Levin's reduction [@Levin1996] specialized to the spherical Bessel
@@ -160,20 +167,20 @@ which enters only through the forcing $yF$ and is sampled as its own
 smoothness requires.
 
 Equation (5) is solved as a two-point boundary-value problem with homogeneous
-Dirichlet data, $u(y_a) = u(y_b) = 0$, so that the second term of
-$\mathcal{W}$ vanishes and the panel integral is $y_b j_\ell(y_b) u'(y_b) - y_a
-j_\ell(y_a) u'(y_a)$. The unknown is $u = y\,w$ rather than $w$, the solution
+Dirichlet data, $u(x_a) = u(x_b) = 0$, so that the second term of
+$\mathcal{W}$ vanishes and the panel integral is $x_b j_\ell(x_b) u'(x_b) - x_a
+j_\ell(x_a) u'(x_a)$. The unknown is $u = x\,w$ rather than $w$, the solution
 of the equation with the first-derivative term; Eq. (5) is Eq. (1) of
 [The Ultraspherical Spectral Solver](sbessel_ode_solver.qmd), where that choice
 is justified. The general form (6), with the $u$ term
 kept, is what the code evaluates, because the extended cells of
-[Panels fixed in y](#panels-fixed-in-y) solve on an interval larger than the
+[Panels fixed in x](#panels-fixed-in-x) solve on an interval larger than the
 one integrated over.
 
 ```{python}
 #| label: fig-levin-smooth
 #| fig-cap: >
-#|   Top: the smooth forcing F(y) on the panel [100, 316], and the integrand F(y) j_20(y)
+#|   Top: the smooth forcing F(x) on the panel [100, 316], and the integrand F(x) j_20(x)
 #|   it multiplies. Bottom: the solution u of Eq. (5) on the same panel for three
 #|   constraints of the same forcing. Dirichlet data force u(a) = u(b) = 0 and bring in the
 #|   homogeneous solutions, so u oscillates and the expansion runs to the panel's
@@ -185,11 +192,11 @@ a, b = 100.0, 316.2278
 m, h = 0.5 * (a + b), 0.5 * (b - a)
 
 
-def F(y):  # a smooth bump in y, standing in for K(y/k, k)/k
-    return np.exp(-0.5 * ((y - 200.0) / 40.0) ** 2)
+def F(x):  # a smooth bump in x, standing in for K(x/k, k)/k
+    return np.exp(-0.5 * ((x - 200.0) / 40.0) ** 2)
 
 
-# Chebyshev coefficients of y F(y) on [a, b], then the C^(2) coefficients
+# Chebyshev coefficients of x F(x) on [a, b], then the C^(2) coefficients
 N = 64
 t = np.cos(np.pi * np.arange(N + 1) / N)
 vals = (m + h * t) * F(m + h * t)
@@ -219,29 +226,29 @@ for name, setup in (
     coeffs, n_cols = op.solve(rhs)
     solutions[name] = (np.array(coeffs), n_cols)
 
-yy = np.linspace(a, b, 2000)
-tt = (yy - m) / h
+xx = np.linspace(a, b, 2000)
+tt = (xx - m) / h
 
 fig, ax = plt.subplot_mosaic(
     [["F", "F", "F", "Fj", "Fj", "Fj"], ["Dirichlet", "Dirichlet", "pinned (80, 96)", "pinned (80, 96)", "tau", "tau"]],
     figsize=(10, 6.2),
 )
-ax["F"].plot(yy, F(yy), lw=1.2)
-ax["F"].set_title("F(y)")
-ax["Fj"].plot(yy, F(yy) * spherical_jn(ell, yy), lw=0.8)
-ax["Fj"].set_title("F(y) j_l(y)")
+ax["F"].plot(xx, F(xx), lw=1.2)
+ax["F"].set_title("F(x)")
+ax["Fj"].plot(xx, F(xx) * spherical_jn(ell, xx), lw=0.8)
+ax["Fj"].set_title("F(x) j_l(x)")
 ylim = None
 for name, (coeffs, n_cols) in solutions.items():
     u = np.polynomial.chebyshev.chebval(tt, coeffs)
-    ax[name].plot(yy, u, lw=1.0 if name == "Dirichlet" else 1.6)
-    ax[name].set_title(f"u(y), {name}: {n_cols} coefficients", fontsize=10)
+    ax[name].plot(xx, u, lw=1.0 if name == "Dirichlet" else 1.6)
+    ax[name].set_title(f"u(x), {name}: {n_cols} coefficients", fontsize=10)
     lo_, hi_ = ax[name].get_ylim()
     ylim = (lo_, hi_) if ylim is None else (min(ylim[0], lo_), max(ylim[1], hi_))
 for name in solutions:
     ax[name].set_ylim(ylim)
-    ax[name].set_xlabel("y")
-ax["F"].set_xlabel("y")
-ax["Fj"].set_xlabel("y")
+    ax[name].set_xlabel("x")
+ax["F"].set_xlabel("x")
+ax["Fj"].set_xlabel("x")
 plt.tight_layout()
 
 
@@ -251,8 +258,8 @@ def boundary_term(coeffs):
     u_a, u_b = np.polynomial.chebyshev.chebval([-1.0, 1.0], coeffs)
     du = np.polynomial.chebyshev.chebval([-1.0, 1.0], np.polynomial.chebyshev.chebder(coeffs)) / h
 
-    def W(y, u, dudy):
-        return y * spherical_jn(ell, y) * dudy - (spherical_jn(ell, y) + y * spherical_jn(ell, y, derivative=True)) * u
+    def W(x, u, dudy):
+        return x * spherical_jn(ell, x) * dudy - (spherical_jn(ell, x) + x * spherical_jn(ell, x, derivative=True)) * u
 
     return W(b, u_b, du[1]) - W(a, u_a, du[0])
 
@@ -268,7 +275,7 @@ for name, (coeffs, n_cols) in solutions.items():
 
 ### Derivative weights
 
-Two further weights are needed, $j_\ell'(y)$ and $j_\ell''(y)$. They are
+Two further weights are needed, $j_\ell'(x)$ and $j_\ell''(x)$. They are
 reduced to the plain weight by integration by parts, once and twice,
 $$
 \int F\, j_\ell' = \big[F\, j_\ell\big] - \int F'\, j_\ell,
@@ -276,13 +283,13 @@ $$
 \int F\, j_\ell'' = \big[F\, j_\ell' - F'\, j_\ell\big] + \int F''\, j_\ell .
 \tag{7}
 $$
-The remaining integrals are Eq. (3) with forcing $-y F'$ and $+y F''$. Both
+The remaining integrals are Eq. (3) with forcing $-x F'$ and $+x F''$. Both
 are read off the same Chebyshev fit of $F$ that the plain case uses: the
 derivative maps in the ultraspherical basis are banded (first derivative) or
 diagonal (second derivative), so no extra evaluations of the kernel are needed.
 The bracketed boundary terms use the fit's values and first derivative at the
 panel ends and $j_\ell'$ from the recurrence $j_\ell' = j_{\ell-1} -
-\tfrac{\ell+1}{y} j_\ell$, which is why a derivative-weighted block reads the
+\tfrac{\ell+1}{x} j_\ell$, which is why a derivative-weighted block reads the
 Bessel array one order below its lowest multipole.
 
 ## The spectral solver
@@ -293,7 +300,7 @@ Givens QR until the solution coefficients decay. The discretization, the
 batching over multipoles, the truncation floor and the conjugate panel spans
 are described on [The Ultraspherical Spectral
 Solver](sbessel_ode_solver.qmd). Only two of its properties are used below: the
-right-hand side is the $C^{(2)}$ expansion of $y F(y)$ with the endpoint values
+right-hand side is the $C^{(2)}$ expansion of $x F(x)$ with the endpoint values
 in the first two entries, and the truncation order $N$ it returns is an output
 of the tolerance, floored at about two coefficients per oscillation of the
 panel.
@@ -301,7 +308,7 @@ panel.
 ## The forcing on a panel
 
 The right-hand side of the discretized operator is the Chebyshev expansion of
-$y\,F(y)$ on the
+$x\,F(x)$ on the
 panel, computed adaptively: the function is sampled at Chebyshev--Lobatto nodes
 $t_j = \cos(j\pi/2^k)$, whose grids nest so that going from level $k$ to $k+1$
 evaluates only the new odd nodes, and the level is doubled until the
@@ -328,11 +335,11 @@ with $N$ at least the floor $N_{\min}$, about two per oscillation. Kernel
 evaluations dominate the cost of a call, which is what makes this split the
 one to optimize.
 
-## Panels fixed in y
+## Panels fixed in x
 
-The integrator keeps a fixed grid of knots in $y$, logarithmically spaced,
+The integrator keeps a fixed grid of knots in $x$, logarithmically spaced,
 $$
-y_i = 10^{-4 + i/2}, \qquad i = 0,\dots,20,
+x_i = 10^{-4 + i/2}, \qquad i = 0,\dots,20,
 $$
 two per decade from $10^{-4}$ to $10^6$. For each knot interval and each block
 of multipoles the discretized operator is built and factorized once, and
@@ -345,42 +352,42 @@ The partial panels are where a moving bound meets a fixed cell. The forced
 equation is solved on a fixed dyadic sub-cell of the knot interval that
 contains the bound, the smallest one wider than the piece to integrate, so that
 sub-cell operators are also reusable and never wider than twice what is
-needed. The forcing is fitted on the true piece $[ka, y_i]$ only, so the kernel
+needed. The forcing is fitted on the true piece $[ka, x_i]$ only, so the kernel
 is never evaluated outside its support, and the fit is rebased onto the
 sub-cell by the exact affine change of variable. Since Eq. (6) holds for any
-smooth extension of the forcing, $\mathcal{W}(y_i) - \mathcal{W}(ka)$ evaluated
+smooth extension of the forcing, $\mathcal{W}(x_i) - \mathcal{W}(ka)$ evaluated
 from that solution is the integral over the true piece alone; this is why the
 general boundary functional, with its $u$ term, is the one implemented. The
 rebased polynomial can grow outside the fitting interval, so its norm is
 checked against the fit's own scale and a cell that fails the check falls back
 to an operator built on the exact piece.
 
-Panels on which $y\,j_\ell(y)$ has underflowed at both ends for every
+Panels on which $x\,j_\ell(x)$ has underflowed at both ends for every
 multipole in the block contribute exactly zero and are skipped before anything
 is built or solved: this is what removes the region far below the turning point at
 no cost.
 
 ```{python}
-#| label: fig-ygrid
+#| label: fig-xgrid
 #| fig-cap: >
-#|   The fixed knot grid in y (vertical lines) and the intervals [ka, kb] two different
+#|   The fixed knot grid in x (vertical lines) and the intervals [ka, kb] two different
 #|   k values map a window on chi in [1000, 2000] onto. Interior knot panels are
 #|   replayed from stored factorizations; the shaded ends are the partial panels.
 knots = 10.0 ** (-4 + 0.5 * np.arange(21))
 fig, ax = plt.subplots(figsize=(8, 2.2))
-for yk in knots:
-    ax.axvline(yk, color="0.6", lw=0.8)
+for xk in knots:
+    ax.axvline(xk, color="0.6", lw=0.8)
 for i, (k, col) in enumerate(((0.01, "C0"), (0.3, "C3"))):
-    ya, yb = k * 1000.0, k * 2000.0
-    inside = knots[(knots >= ya) & (knots <= yb)]
-    ax.hlines(1 - 0.4 * i, ya, yb, color=col, lw=6, label=f"k = {k}: [{ya:g}, {yb:g}]")
+    xa, xb = k * 1000.0, k * 2000.0
+    inside = knots[(knots >= xa) & (knots <= xb)]
+    ax.hlines(1 - 0.4 * i, xa, xb, color=col, lw=6, label=f"k = {k}: [{xa:g}, {xb:g}]")
     if len(inside):
-        ax.axvspan(ya, inside[0], ymin=0.55 - 0.4 * i, ymax=0.75 - 0.4 * i, color=col, alpha=0.25)
-        ax.axvspan(inside[-1], yb, ymin=0.55 - 0.4 * i, ymax=0.75 - 0.4 * i, color=col, alpha=0.25)
+        ax.axvspan(xa, inside[0], ymin=0.55 - 0.4 * i, ymax=0.75 - 0.4 * i, color=col, alpha=0.25)
+        ax.axvspan(inside[-1], xb, ymin=0.55 - 0.4 * i, ymax=0.75 - 0.4 * i, color=col, alpha=0.25)
 ax.set_xscale("log")
 ax.set_xlim(1e-4, 1e6)
 ax.set_yticks([])
-ax.set_xlabel("y = k chi")
+ax.set_xlabel("x = k chi")
 ax.legend(loc="upper left", fontsize=8)
 plt.tight_layout()
 ```
@@ -676,7 +683,7 @@ print(f"C_2: library {vp.get(0):.15e}   GL(40) on the same cells {ref:.15e}   re
 |---|---|---|
 | truncation order $N$ of each panel solve | adaptive QR, stopping test with floor (9) | $\tau = 10^{-13}$ |
 | Chebyshev order of the forcing on a panel | level doubling until (11) | $\tau_F = 10^{-8}$ |
-| panel grid in $y$ | prescribed, two knots per decade on $[10^{-4}, 10^6]$ | 21 knots |
+| panel grid in $x$ | prescribed, two knots per decade on $[10^{-4}, 10^6]$ | 21 knots |
 | partial panels at the ends | smallest dyadic sub-cell containing the piece | --- |
 | multipoles per block | prescribed by the caller | 8 |
 | domain in $k$ | expansion until $\|W\| < \epsilon W_{\rm ref}$ five times | $\epsilon = 10^{-5}$, $\alpha = 0.2$ |

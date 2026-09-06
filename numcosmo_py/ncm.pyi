@@ -78,8 +78,8 @@ SBESSEL_INTEGRATOR_LEVIN_DEFAULT_TAU_CONSTRAINT_GUARD: float = 10.0
 SBESSEL_INTEGRATOR_LEVIN_DEFAULT_TAU_CONSTRAINT_MIN_OSC: float = 200.0
 SBESSEL_INTEGRATOR_LEVIN_DEFAULT_TAU_CONSTRAINT_ORDER_FRACTION: float = 0.75
 SBESSEL_INTEGRATOR_LEVIN_DEFAULT_TURNING_KNOT_MARGIN: float = 1.05
-SBESSEL_INTEGRATOR_LEVIN_DEFAULT_Y_KNOTS_MAX: float = 1000000.0
-SBESSEL_INTEGRATOR_LEVIN_DEFAULT_Y_KNOTS_MIN: float = 0.0001
+SBESSEL_INTEGRATOR_LEVIN_DEFAULT_X_KNOTS_MAX: float = 1000000.0
+SBESSEL_INTEGRATOR_LEVIN_DEFAULT_X_KNOTS_MIN: float = 0.0001
 SERIALIZE_AUTOSAVE_NAME: str = r"S"
 SERIALIZE_AUTOSAVE_NFORMAT: str = r"%u"
 SERIALIZE_MATRIX_TYPE: str = r"aad"
@@ -9831,7 +9831,7 @@ class SBesselIntegratorLevin(SBesselIntegrator):
 
         SBesselIntegratorLevin(**properties)
         new(ell_min:int, ell_max:int) -> NumCosmoMath.SBesselIntegratorLevin
-        new_full(ell_min:int, ell_max:int, y_knots_min:float, y_knots_max:float, n_knots:int, ell_cache_max:int, reltol:float, cheb_min_order:int, cheb_reltol:float) -> NumCosmoMath.SBesselIntegratorLevin
+        new_full(ell_min:int, ell_max:int, x_knots_min:float, x_knots_max:float, n_knots:int, ell_cache_max:int, reltol:float, cheb_min_order:int, cheb_reltol:float) -> NumCosmoMath.SBesselIntegratorLevin
 
     Object NcmSBesselIntegratorLevin
 
@@ -9844,9 +9844,9 @@ class SBesselIntegratorLevin(SBesselIntegrator):
         Minimum Chebyshev order for RHS
       cheb-reltol -> gdouble: cheb-reltol
         Integrand Chebyshev fit relative tolerance
-      y-knots-min -> gdouble: y-knots-min
+      x-knots-min -> gdouble: x-knots-min
         Minimum knot value
-      y-knots-max -> gdouble: y-knots-max
+      x-knots-max -> gdouble: x-knots-max
         Maximum knot value
       n-knots -> guint: n-knots
         Number of knots
@@ -9883,8 +9883,8 @@ class SBesselIntegratorLevin(SBesselIntegrator):
         tau_constraint_min_osc: float
         tau_constraint_order_fraction: float
         turning_knot_margin: float
-        y_knots_max: float
-        y_knots_min: float
+        x_knots_max: float
+        x_knots_min: float
         ell_range: DTuple2
 
     props: Props = ...
@@ -9901,8 +9901,8 @@ class SBesselIntegratorLevin(SBesselIntegrator):
         tau_constraint_min_osc: float = ...,
         tau_constraint_order_fraction: float = ...,
         turning_knot_margin: float = ...,
-        y_knots_max: float = ...,
-        y_knots_min: float = ...,
+        x_knots_max: float = ...,
+        x_knots_min: float = ...,
         ell_range: DTuple2 = ...,
     ) -> None: ...
     @staticmethod
@@ -9930,8 +9930,8 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     def get_tau_constraint_min_osc(self) -> float: ...
     def get_tau_constraint_order_fraction(self) -> float: ...
     def get_turning_knot_margin(self) -> float: ...
-    def get_y_knots_max(self) -> float: ...
-    def get_y_knots_min(self) -> float: ...
+    def get_x_knots_max(self) -> float: ...
+    def get_x_knots_min(self) -> float: ...
     @classmethod
     def new(cls, ell_min: int, ell_max: int) -> SBesselIntegratorLevin: ...
     @classmethod
@@ -9939,8 +9939,8 @@ class SBesselIntegratorLevin(SBesselIntegrator):
         cls,
         ell_min: int,
         ell_max: int,
-        y_knots_min: float,
-        y_knots_max: float,
+        x_knots_min: float,
+        x_knots_max: float,
         n_knots: int,
         ell_cache_max: int,
         reltol: float,
