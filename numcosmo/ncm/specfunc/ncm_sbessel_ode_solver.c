@@ -125,6 +125,9 @@ _ncm_sbessel_min_cols (const gdouble a, const gdouble b, const gint ell_min)
  */
 static inline void _ncm_sbessel_update_min_cols (NcmSBesselOdeOperator *op);
 
+/* Free-closure floor as a multiple of the forcing order; see solve_min_cols. */
+#define FREE_CLOSURE_FLOOR_FACTOR (1.5)
+
 #define ALIGNMENT 64 /* 64-byte alignment for cache lines */
 
 #define PADDED_BANDWIDTH ((TOTAL_BANDWIDTH + 7) & ~7) /* round up to multiple of 8 */
@@ -160,19 +163,26 @@ struct _NcmSBesselOdeOperator
   gint ref_count;
 
   /* Structural parameters defining the problem configuration */
-  gdouble a;         /* Left endpoint of interval [a,b] */
-  gdouble b;         /* Right endpoint of interval [a,b] */
-  gdouble half_len;  /* Half-length h = (b-a)/2 for coordinate transformation */
-  gdouble mid_point; /* Midpoint m = (a+b)/2 for coordinate transformation */
-  gint ell_min;      /* Minimum multipole in batch */
-  gint ell_max;      /* Maximum multipole in batch */
-  guint n_ell;       /* Number of multipoles in batch: n_ell = ell_max - ell_min + 1 */
-  gdouble tolerance; /* Relative coefficient-decay tolerance */
-  glong min_cols;    /* Resolution floor: the decay test may not stop below this many
-                      * columns. Set from the oscillatory part of the panel, i.e. the
-                      * span beyond the turning point; fewer columns than that cannot
-                      * represent the solution however quiet the leading coefficients
-                      * happen to look. See _ncm_sbessel_min_cols(). */
+  gdouble a;            /* Left endpoint of interval [a,b] */
+  gdouble b;            /* Right endpoint of interval [a,b] */
+  gdouble half_len;     /* Half-length h = (b-a)/2 for coordinate transformation */
+  gdouble mid_point;    /* Midpoint m = (a+b)/2 for coordinate transformation */
+  gint ell_min;         /* Minimum multipole in batch */
+  gint ell_max;         /* Maximum multipole in batch */
+  guint n_ell;          /* Number of multipoles in batch: n_ell = ell_max - ell_min + 1 */
+  gdouble tolerance;    /* Relative coefficient-decay tolerance */
+  glong solve_min_cols; /* Floor in force for the running solve: min_cols, raised under
+                         * the free closure to FREE_CLOSURE_FLOOR_FACTOR times the forcing
+                         * order. The endpoint derivative u'(+-1) = sum n^2 a_n amplifies
+                         * the truncation tail by n^2, and the Dirichlet span floor hides
+                         * that by overshooting the forcing; the free closure has to
+                         * overshoot it on purpose. Measured on a narrow forcing (n_F ~ 450):
+                         * no floor 4.5e-10, 1.25 n_F 3.8e-11, 1.5 n_F 1.8e-12 = reference. */
+  glong min_cols;       /* Resolution floor: the decay test may not stop below this many
+                         * columns. Set from the oscillatory part of the panel, i.e. the
+                         * span beyond the turning point; fewer columns than that cannot
+                         * represent the solution however quiet the leading coefficients
+                         * happen to look. See _ncm_sbessel_min_cols(). */
 
   /* Closure rows: the two linear functionals that close the system.
    *
@@ -569,15 +579,16 @@ _ncm_sbessel_ode_operator_configure (NcmSBesselOdeOperator *op, gdouble a, gdoub
   g_assert_cmpint (ell_min, <=, ell_max);
   g_assert_cmpint (ell_min, >=, 0);
 
-  op->a         = a;
-  op->b         = b;
-  op->half_len  = (b - a) / 2.0;
-  op->mid_point = (a + b) / 2.0;
-  op->ell_min   = ell_min;
-  op->ell_max   = ell_max;
-  op->n_ell     = (guint) (ell_max - ell_min + 1);
-  op->tolerance = tolerance;
-  op->bc_free   = free_closure;
+  op->a              = a;
+  op->b              = b;
+  op->half_len       = (b - a) / 2.0;
+  op->mid_point      = (a + b) / 2.0;
+  op->ell_min        = ell_min;
+  op->ell_max        = ell_max;
+  op->n_ell          = (guint) (ell_max - ell_min + 1);
+  op->tolerance      = tolerance;
+  op->bc_free        = free_closure;
+  op->solve_min_cols = 0;
 
   _ncm_sbessel_update_min_cols (op);
 
@@ -822,6 +833,26 @@ _ncm_sbessel_bc_pat2 (const NcmSBesselOdeOperator *op, glong col_index)
   return 1.0;
 }
 
+/* The floor for one solve, from the right-hand side just handed in. */
+static inline glong
+_ncm_sbessel_free_closure_floor (guint rhs_len)
+{
+  return (glong) ceil (FREE_CLOSURE_FLOOR_FACTOR * (gdouble) (rhs_len - NUMBER_OF_BOUNDARY_CONDITIONS));
+}
+
+static inline void
+_ncm_sbessel_set_solve_min_cols (NcmSBesselOdeOperator *op, guint rhs_len)
+{
+  op->solve_min_cols = op->min_cols;
+
+  if (op->bc_free)
+  {
+    const glong forcing_floor = _ncm_sbessel_free_closure_floor (rhs_len);
+
+    op->solve_min_cols = GSL_MAX (op->solve_min_cols, forcing_floor);
+  }
+}
+
 static inline void
 _ncm_sbessel_update_min_cols (NcmSBesselOdeOperator *op)
 {
@@ -919,6 +950,22 @@ gboolean
 ncm_sbessel_ode_operator_get_free_closure (NcmSBesselOdeOperator *op)
 {
   return op->bc_free;
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_free_closure_order:
+ * @op: a #NcmSBesselOdeOperator
+ * @rhs_len: length of the right-hand side, boundary rows included
+ *
+ * Number of coefficients a free-closure solve of a right-hand side with @rhs_len
+ * entries uses at least: the larger of the operator's minimum and the forcing floor.
+ *
+ * Returns: the minimum working order of that solve.
+ */
+glong
+ncm_sbessel_ode_operator_get_free_closure_order (NcmSBesselOdeOperator *op, guint rhs_len)
+{
+  return GSL_MAX (op->min_cols, _ncm_sbessel_free_closure_floor (rhs_len));
 }
 
 /**
@@ -1428,7 +1475,7 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
       *quiet_cols = 0;
   }
 
-  return (*quiet_cols >= ROWS_TO_ROTATE + 1) && (col + 1 >= op->min_cols);
+  return (*quiet_cols >= ROWS_TO_ROTATE + 1) && (col + 1 >= op->solve_min_cols);
 }
 
 /**
@@ -1508,7 +1555,7 @@ _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, gu
       converged_lanes++;
   }
 
-  return (converged_lanes == n_ell) && (col + 1 >= op->min_cols);
+  return (converged_lanes == n_ell) && (col + 1 >= op->solve_min_cols);
 }
 
 /**
@@ -1740,7 +1787,7 @@ _ncm_sbessel_ode_solver_setup_initial_rows (NcmSBesselOdeOperator *op, GArray *r
 static inline guint
 _ncm_sbessel_initial_solution_order (NcmSBesselOdeOperator *op, guint rhs_len)
 {
-  return MAX (rhs_len * 2, (guint) op->min_cols + ROWS_TO_ROTATE + 2);
+  return MAX (rhs_len * 2, (guint) op->solve_min_cols + ROWS_TO_ROTATE + 2);
 }
 
 /**
@@ -1758,8 +1805,12 @@ _ncm_sbessel_initial_solution_order (NcmSBesselOdeOperator *op, guint rhs_len)
 static glong
 _ncm_sbessel_ode_operator_factorize (NcmSBesselOdeOperator *op, GArray *rhs)
 {
-  const guint rhs_len            = rhs->len;
-  guint solution_order           = _ncm_sbessel_initial_solution_order (op, rhs_len);
+  const guint rhs_len = rhs->len;
+  guint solution_order;
+
+  _ncm_sbessel_set_solve_min_cols (op, rhs_len);
+  solution_order = _ncm_sbessel_initial_solution_order (op, rhs_len);
+
   const guint max_solution_order = 1 << 24;
   const gdouble *rhs_data        = (gdouble *) rhs->data;
   gboolean converged             = FALSE;
@@ -1873,7 +1924,10 @@ _ncm_sbessel_ode_operator_factorize (NcmSBesselOdeOperator *op, GArray *rhs)
                "Results may be inaccurate.",
                max_solution_order, quiet_cols, ROWS_TO_ROTATE + 1);
 
-  op->last_n_cols = col;
+  /* Rotations depend on the operator rows only, never on the right-hand side, so a
+   * solve that converges before the stored columns run out must not shrink the
+   * record: the next longer forcing would recompute rotations it already has. */
+  op->last_n_cols = GSL_MAX (op->last_n_cols, col);
 
   return col;
 }
@@ -2134,8 +2188,12 @@ static inline __attribute__ ((always_inline)) glong
 
 _ncm_sbessel_ode_operator_factorize_batched (NcmSBesselOdeOperator *op, const guint n_ell, GArray *rhs)
 {
-  const guint rhs_len            = rhs->len;
-  guint solution_order           = _ncm_sbessel_initial_solution_order (op, rhs_len);
+  const guint rhs_len = rhs->len;
+  guint solution_order;
+
+  _ncm_sbessel_set_solve_min_cols (op, rhs_len);
+  solution_order = _ncm_sbessel_initial_solution_order (op, rhs_len);
+
   const guint max_solution_order = 1 << 24;
   const gint ell_min             = op->ell_min;
   const gdouble *rhs_data        = (gdouble *) rhs->data;
@@ -2269,7 +2327,10 @@ _ncm_sbessel_ode_operator_factorize_batched (NcmSBesselOdeOperator *op, const gu
                max_solution_order, unconverged_lanes, n_ell);
   }
 
-  op->last_n_cols = col;
+  /* Rotations depend on the operator rows only, never on the right-hand side, so a
+   * solve that converges before the stored columns run out must not shrink the
+   * record: the next longer forcing would recompute rotations it already has. */
+  op->last_n_cols = GSL_MAX (op->last_n_cols, col);
 
   return col;
 }

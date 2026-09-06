@@ -119,6 +119,7 @@ void ncm_sbessel_ode_operator_set_dirichlet_bc (NcmSBesselOdeOperator *op);
 gboolean ncm_sbessel_ode_operator_get_pinned_bc (NcmSBesselOdeOperator *op, glong *pin1, glong *pin2);
 void ncm_sbessel_ode_operator_set_free_closure (NcmSBesselOdeOperator *op, gboolean free_closure);
 gboolean ncm_sbessel_ode_operator_get_free_closure (NcmSBesselOdeOperator *op);
+glong ncm_sbessel_ode_operator_get_free_closure_order (NcmSBesselOdeOperator *op, guint rhs_len);
 gdouble ncm_sbessel_ode_operator_get_last_max_coeff (NcmSBesselOdeOperator *op, guint ell_idx);
 gsize ncm_sbessel_ode_operator_get_operator_size (NcmSBesselOdeOperator *op);
 
