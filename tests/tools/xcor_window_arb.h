@@ -149,7 +149,8 @@ par_init (Par *p)
   acb_init (p->k);
 }
 
-static void
+/* static inline: only one of the tools including this header clears a Par. */
+static inline void
 par_clear (Par *p)
 {
   acb_clear (p->k);

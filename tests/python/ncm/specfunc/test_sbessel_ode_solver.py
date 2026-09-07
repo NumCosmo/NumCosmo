@@ -3813,7 +3813,10 @@ class TestSBesselTauConstraint:
             b,
             limit=5000,
             epsabs=0.0,
-            epsrel=1.0e-13,
+            # A tighter request makes QUADPACK bisect into the oscillation and report
+            # roundoff without moving the value: at 1e-10 it agrees with a composite
+            # Gauss-Legendre reference to 1e-13, at 1e-13 only to 8e-12.
+            epsrel=1.0e-10,
         )
 
         assert_allclose(
@@ -4294,7 +4297,9 @@ class TestConjugatePoints:
             b,
             limit=4000,
             epsabs=0.0,
-            epsrel=1.0e-13,
+            # See the note in TestSBesselTauConstraint: a tighter request buys nothing
+            # on an oscillatory integrand and only reports roundoff.
+            epsrel=1.0e-10,
         )
 
         return value

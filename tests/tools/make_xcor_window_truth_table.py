@@ -149,8 +149,12 @@ def build_tool(workdir: pathlib.Path) -> pathlib.Path:
         text=True,
     ).stdout.split()
     exe = workdir / "xcor_window_arb"
+    # FLINT's headers trip -Wstringop-overread and -Warray-bounds under GCC 16, on its
+    # own inline functions rather than on anything here; nothing in this compile is ours
+    # to fix, so the diagnostics are filtered.
+    quiet = ["-Wno-stringop-overread", "-Wno-array-bounds"]
     subprocess.run(
-        ["cc", "-O2", "-o", str(exe), str(SOURCE), *flags, "-lm"], check=True
+        ["cc", "-O2", "-o", str(exe), str(SOURCE), *flags, *quiet, "-lm"], check=True
     )
 
     return exe
