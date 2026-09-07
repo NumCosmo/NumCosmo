@@ -46,7 +46,7 @@
 #include <glib-object.h>
 
 /* A narrow window close in, and a power spectrum cut well below its default kmax: the
- * Levin ODE's cost is linear in the top of y = k chi_max, and these bound it at a few
+ * Levin ODE's cost is linear in the top of x = k chi_max, and these bound it at a few
  * hundred rather than a few hundred thousand. */
 #define TEST_CHI_LOWER 200.0
 #define TEST_CHI_UPPER 400.0

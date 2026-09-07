@@ -65,11 +65,11 @@ cache — is computed once and reused along three axes:
    selected based on `n_ℓ`
    ([ncm_sbessel_ode_solver.h:69-70](numcosmo/ncm/specfunc/ncm_sbessel_ode_solver.h#L69-L70)).
    Calling `set_ell_range` with the *same* range repeatedly is free.
-2. **Knot/panel axis.** Operators are built once per log-spaced `y = kx` knot
+2. **Knot/panel axis.** Operators are built once per log-spaced `x = k chi` knot
    panel ([ncm_sbessel_integrator_levin.c:95](numcosmo/ncm/specfunc/ncm_sbessel_integrator_levin.c#L95),
-   bounds `y_knots_min`/`y_knots_max`,
+   bounds `x_knots_min`/`x_knots_max`,
    [ncm_sbessel_integrator_levin.h:63-64](numcosmo/ncm/specfunc/ncm_sbessel_integrator_levin.h#L63-L64)).
-   Because panels live in the *dimensionless* `y = kx` variable, one panel
+   Because panels live in the *dimensionless* `x = k chi` variable, one panel
    set serves any physical `k` and any physical `[a,b]` — this is what lets
    one integrator instance answer many `k` queries during adaptive
    k-sampling without re-factorizing anything.

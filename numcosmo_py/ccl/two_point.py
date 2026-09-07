@@ -238,7 +238,7 @@ def block_transformer(
         # ell = 2 on a lensing kernel. The weight is applied in the callback,
         # not to the table: W ~ chi near the origin, so W / chi^2 ~ 1 / chi
         # cannot be tabulated to the requested tolerance, while the solver's
-        # panel fits in y = k chi handle it (NumCosmo's own lensing kernel
+        # panel fits in x = k chi handle it (NumCosmo's own lensing kernel
         # carries the same 1 / chi).
         if der == -1:
             # CCL's kernel table starts a few Mpc from the observer, where a
