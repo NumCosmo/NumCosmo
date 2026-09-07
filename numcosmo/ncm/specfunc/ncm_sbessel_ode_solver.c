@@ -188,8 +188,8 @@ struct _NcmSBesselOdeOperator
   glong min_cols;       /* Resolution floor: the decay test may not stop below this many
                          * columns. Set from the oscillatory part of the panel, i.e. the
                          * span beyond the turning point; fewer columns than that cannot
-                         * represent the solution however quiet the leading coefficients
-                         * happen to look. See _ncm_sbessel_min_cols(). */
+                         * represent the solution however small the leading coefficients
+                         * happen to be. See _ncm_sbessel_min_cols(). */
 
   /* Constraint rows: the two linear functionals that close the system. Their column
    * patterns are, per NcmSBesselOdeConstraint:

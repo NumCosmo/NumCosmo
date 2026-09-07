@@ -61,7 +61,7 @@ typedef gdouble (*NcmSBesselOdeSolverF) (gpointer user_data, gdouble x);
  * $N$ Chebyshev coefficients and keeping the first $N-2$ rows of the discretized
  * equation leaves $N$ unknowns against $N-2$ equations, so two conditions have to be
  * added; the solution family they choose from is the same in all three cases, since the
- * homogeneous solutions $x j_\ell$ and $x n_\ell$ span a two-parameter space. The Levin boundary functional
+ * homogeneous solutions $x j_\ell$ and $x y_\ell$ span a two-parameter space. The Levin boundary functional
  * is invariant under that choice, so the constraint decides which member of the family
  * has to be represented, not what the panel integral is.
  *
