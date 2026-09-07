@@ -154,7 +154,9 @@ uses; [Choosing the constraint](#choosing-the-constraint) is where they are comp
   coefficients of the expansion to zero, $a_{p_1} = a_{p_2} = 0$, so each row carries a
   single entry, in the column of the coefficient it pins. The indices $p_1$ and $p_2$
   belong to one interval and one solve, and are given per operator with
-  [[numcosmo-math|ncm_sbessel_ode_operator_set_pinned_constraint]].
+  [[numcosmo-math|ncm_sbessel_ode_operator_set_pinned_constraint]]. Where they are put
+  decides what the constraint is worth; [Where to pin](#where-to-pin) derives the
+  choice the library makes.
 - **Tau**, `NCM_SBESSEL_ODE_CONSTRAINT_TAU`. The two rows are empty. The system is then
   short two pivots, and the truncation of the expansion is what closes it, which is the
   classical tau construction the name comes from.
@@ -385,6 +387,50 @@ measures it, pair by pair.
 
 @fig-constraint-spectra is the three selections seen in the coefficients themselves, on
 one panel and one forcing.
+
+### Where to pin
+
+The pinned constraint is only as good as the choice of $p_1$ and $p_2$, and that choice
+can be made from the asymptotics. Above the turning point the two homogeneous solutions
+are $x j_\ell(x) \simeq \sin(x - \ell\pi/2)$ and $x y_\ell(x) \simeq -\cos(x -
+\ell\pi/2)$. On the panel mapped to $t \in [-1,1]$ that is $\sin(\Delta t + \phi)$ with
+$\Delta = (b-a)/2$ and $\phi = m - \ell\pi/2$, and the Chebyshev inner product becomes a
+cosine transform under $t = \cos\theta$. The Jacobi-Anger expansion then gives the
+coefficients as ordinary Bessel functions of the half-width,
+$$
+|\langle x j_\ell, T_n \rangle| \propto |J_n(\Delta)|,
+$$
+with $\phi$ selecting which parity carries the weight, and the same for $x y_\ell$ with
+the parities exchanged. $|J_n(\Delta)|$ rises to a maximum just below $n = \Delta$, at
+$n_{\mathrm{peak}} \simeq \Delta - 0.81\,\Delta^{1/3}$, and collapses past it. That is
+the same collapse the tau constraint lives on, seen from the other side: the plateau of
+[Where the tau constraint is valid](#where-the-tau-constraint-is-valid) ends there
+because $|J_n(\Delta)|$ does.
+
+Fitting the two solutions with the library's own adaptive Chebyshev fit puts the maximum
+where the expansion says:
+
+| $\Delta$ | 50 | 125 | 500 | 1500 |
+|---|---|---|---|---|
+| $\arg\max_n \lvert a_n(x j_\ell)\rvert$ | 48 | 121 | 494 | 1491 |
+| $\arg\max_n \lvert a_n(x y_\ell)\rvert$ | 47 | 120 | 493 | 1490 |
+| $\Delta - 0.81\,\Delta^{1/3}$ | 47 | 121 | 494 | 1491 |
+
+So the pins go at $n_{\mathrm{peak}}$ and $n_{\mathrm{peak}} + 1$. There the two
+conditions fall where the homogeneous content is largest, which makes the multiple a
+truncation can admit, $|a_n(u_p)|/|a_n(v)|$, as small as the panel allows; and taking
+two adjacent indices covers one even and one odd mode, so the parity $\phi$ selects does
+not matter. Measured over a phase scan of $x_a$ across a full period, the error moves
+between $1.7\times10^{-12}$ and $7.4\times10^{-11}$ while Dirichlet data on the same
+panels stays between $10^{-10}$ and $5\times10^{-9}$, and pinning $(p, p+1)$, $(p, p+2)$
+or $(p+1, p+3)$ agrees to a factor of two.
+
+This is what [[numcosmo-math|NcmSBesselIntegratorLevin]] gives a panel whose oscillation
+count falls below its tau threshold, in place of the Dirichlet data such a panel used to
+keep. Against the certified window table the change is uniformly an improvement or a
+wash, up to $55$ times more accurate on the quarter of panels that reach it, at the same
+column count and the same wall time. A panel too short for $n_{\mathrm{peak}} \ge 4$
+keeps Dirichlet data, where the two are the same thing anyway.
 
 ```{python}
 #| label: fig-constraint-spectra
@@ -757,7 +803,11 @@ twice more, all three tests being cheap next to a solve:
   [[numcosmo-math|NcmSBesselIntegratorLevin]]:tau-constraint-min-osc, default 50. The
   count uses $\nu_{\max}$ from the highest multipole of the block, the conservative
   direction for a switch, where the floor $N_{\min}$ uses $\ell_{\min}$ because a floor
-  wants the widest span.
+  wants the widest span. A panel below the threshold does not go to Dirichlet data: it
+  takes the pinned constraint with the pins at $n_{\mathrm{peak}}$ and
+  $n_{\mathrm{peak}} + 1$, which is cheaper and, measured against the certified window
+  table, at least as accurate. Only a panel too short to leave room for those pins keeps
+  Dirichlet data.
 - The order check. Once the forcing is fitted the working order is known, and
   [[numcosmo-math|NcmSBesselIntegratorLevin]]:tau-constraint-order-fraction, default
   0.75, refuses the tau constraint when
@@ -794,8 +844,8 @@ x](sbessel_projection.qmd#panels-fixed-in-x), aligned to the decades, a knot sit
 $x=10^3$ while $\ell = 1000$ has $\nu = 1000.5$; the panel holding the turning point
 runs to the next knot at $x = 10^{3.5}$, and a kernel whose support ends before that has
 its entire oscillatory region inside that one straddling panel. Every solve there is
-refused and falls back to Dirichlet data on the widest panel of the range: measured on
-the analytic windows, no tau solve at all for $\ell \gtrsim 500$.
+refused on the widest panel of the range: measured on the analytic windows, no tau solve
+at all for $\ell \gtrsim 500$.
 
 One knot per block fixes it.
 [[numcosmo-math|NcmSBesselIntegratorLevin]]:turning-knot-margin, default 1.05, adds a

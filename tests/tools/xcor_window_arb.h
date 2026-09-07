@@ -625,13 +625,19 @@ integrate_panels (acb_t res, Par *p, slong prec)
   mag_clear (tol);
 }
 
-/* Recompute at doubling precision until the relative radius clears @target. */
+/*
+ * Recompute at doubling precision until the relative radius clears @target, giving up
+ * past @prec_max. A relative target is what costs: in the evanescent regime, k chi_max
+ * well below ell, the integral is astronomically small and certifying its leading
+ * digits needs a working precision that grows with ell. 8192 covers ell <= 200 for
+ * every shape here; ell = 1000 needs more.
+ */
 static slong
-certified (acb_t res, Par *p, double target)
+certified (acb_t res, Par *p, double target, slong prec_max)
 {
   slong prec;
 
-  for (prec = 128; prec <= 8192; prec *= 2)
+  for (prec = 128; prec <= prec_max; prec *= 2)
   {
     double r, m;
 
@@ -647,8 +653,9 @@ certified (acb_t res, Par *p, double target)
       return prec;
   }
 
-  fprintf (stderr, "certified: did not reach %g (shape %s ell %ld)\n",
-           target, shape_names[p->shape], p->ell);
+  fprintf (stderr, "certified: did not reach %g at prec %ld (shape %s ell %ld); "
+           "raise --prec-max\n",
+           target, prec_max, shape_names[p->shape], p->ell);
   exit (1);
 }
 

@@ -135,17 +135,32 @@ def test_table_is_certified_far_below_the_tolerance(truth_table: dict) -> None:
     """The reference must be a reference: its own uncertainty cannot matter.
 
     Guards a regeneration that silently lowered the precision target -- the
-    comparison would still pass while no longer checking anything.
+    comparison would still pass while no longer checking anything. The target is per
+    multipole, because near the turning point the precision needed grows steeply with
+    ell: the high multipoles are certified to 1e-18 rather than 1e-25. Both checks
+    below are what makes that safe, the second one being the one that matters.
     """
-    worst = max(
-        radius / abs(float(value))
-        for shape in truth_table["shapes"].values()
-        for values, radii in zip(shape["table"], shape["radius"])
-        for value, radius in zip(values, radii)
-        if float(value) != 0.0
+    targets = truth_table["target_rel"]
+    targets = (
+        targets if isinstance(targets, list) else [targets] * len(truth_table["ells"])
     )
 
-    assert worst < 1.0e-20
+    # Every target must sit far below the comparison this file makes, or the reference
+    # stops being one.
+    assert max(targets) < 1.0e-3 * RTOL
+
+    for index, (ell, target) in enumerate(zip(truth_table["ells"], targets)):
+        worst = max(
+            (
+                radius / abs(float(value))
+                for shape in truth_table["shapes"].values()
+                for value, radius in zip(shape["table"][index], shape["radius"][index])
+                if float(value) != 0.0
+            ),
+            default=0.0,
+        )
+
+        assert worst < target, f"ell = {ell} certified only to {worst:.2e}"
 
 
 @pytest.mark.parametrize(
@@ -353,9 +368,11 @@ def test_radial_integral_batched_matches_arb_with_tau_constraint(
 # NC_XCOR_KERNEL_CHEB_PANEL_K_CAP: a smaller cap makes more, lower-order panels,
 # which converge to the requested tolerance by a different route.
 #
-# Read the spread against the spline's, not on its own -- against Arb the spline
-# reaches 2.5e-4, 6.2e-5, 7.4e-4, 8.6e-3, 3.1e-5, 1.2e-4, 1.5e-5 on these same
-# shapes.
+# Read the spread against the spline's, not on its own. Held to this same allowance
+# the Chebyshev closure sits at 0.33x of it on every shape, which is the headroom
+# above and not a marginal pass, while the spline needs 1.2x, 0.2x, 11x, 32x, 1.8x,
+# 7.4x and 264x of it: it misses on five of the seven shapes, and beats the Chebyshev
+# closure only on the plain tophat.
 # Where a number here is large it is the *sampling* that binds, not the fit:
 # per multipole the closure sits on the sampling floor wherever the convergence
 # criterion lets it reach, which a worst-over-ell figure like this cannot show.
@@ -367,6 +384,26 @@ CLOSURE_TOL = {
     "lensing": 7.0e-6,
     "multi": 4.0e-4,
     "tophat_smooth": 4.0e-8,
+}
+
+# The absolute half of the same criterion, as a fraction of the block's peak, and the
+# reason no point has to be excluded. A relative bound alone is unreachable wherever
+# I_ell is small, which #NcXcorKernel:scaled-abstol documents: its criterion is
+# absolute, so "the corresponding relative error can become large where the resulting
+# C_l is small", and the useful precision is capped by cancellation in the radial
+# integral that produces W_i(k). Measured, that is exactly what happens -- on
+# power_exp at ell = 50 the point at 1.08e-3 of peak reads 1.7e-2 relative and does
+# not move between reltol 1e-6 and 1e-9 while its neighbours reach 1e-13. An error
+# that no tolerance moves belongs in an atol, not in a widened rtol or a discarded
+# sample. Measured per shape with roughly a factor of three of headroom.
+CLOSURE_ATOL = {
+    "gauss": 1.9e-6,
+    "tophat": 1.6e-5,
+    "student_t": 7.9e-6,
+    "power_exp": 4.9e-6,
+    "lensing": 1.8e-6,
+    "multi": 6.3e-13,
+    "tophat_smooth": 5.5e-8,
 }
 
 
@@ -387,6 +424,7 @@ def test_chebyshev_closure_matches_arb(
     RH = Nc.HICosmo.RH_Mpc(cosmo)
 
     worst = 0.0
+    worst_at = ""
     compared = 0
 
     for index, ell in enumerate(truth_table["ells"]):
@@ -408,26 +446,40 @@ def test_chebyshev_closure_matches_arb(
         k_min, k_max = integrand.get_range()
 
         expected = np.array([float(value) for value in entry["table"][index]])
-        peak = np.abs(expected).max()
 
-        ratios = [
-            integrand.eval_array(k * RH)[0] / (value * np.sqrt(ps.eval(cosmo, 0.0, k)))
+        # Outside the fitted domain the closure extrapolates, so only the fitted
+        # range is comparable. Every point inside it is kept: the criterion below
+        # carries an absolute term, so a sample where I_ell is a thousandth of its
+        # peak no longer has to clear a relative bound that the closure's own
+        # sampling floor puts out of reach.
+        kept = [
+            (k, value)
             for k, value in zip(entry["kvals"][index], expected)
-            # Outside the fitted domain the closure extrapolates, and where
-            # I_ell is a thousandth of its peak the ratio is dominated by the
-            # certified value's own smallness rather than by the fit.
-            if k_min < k * RH < k_max and abs(value) > 1.0e-3 * peak
+            if k_min < k * RH < k_max
         ]
 
-        if len(ratios) < 3:
+        if len(kept) < 3:
             continue
 
-        ratios = np.array(ratios)
-        worst = max(worst, np.abs(ratios / np.median(ratios) - 1.0).max())
-        compared += len(ratios)
+        reference = np.array(
+            [value * np.sqrt(ps.eval(cosmo, 0.0, k)) for k, value in kept]
+        )
+        got = np.array([integrand.eval_array(k * RH)[0] for k, _ in kept])
+        # The closure carries an overall constant, so the comparison is up to one.
+        held = np.median(got / reference) * reference
+        allowed = (
+            CLOSURE_TOL[shape] * np.abs(held) + CLOSURE_ATOL[shape] * np.abs(held).max()
+        )
+        excess = (np.abs(got - held) / allowed).max()
+
+        if excess > worst:
+            worst, worst_at = excess, f"ell = {ell}"
+
+        compared += len(kept)
 
     assert compared > 0, f"{shape} shared no k with the closure's fitted range"
-    assert worst < CLOSURE_TOL[shape], (
-        f"{shape}: closure wanders by {worst:.3e} against Arb over "
-        f"{compared} points, above the measured {CLOSURE_TOL[shape]:.1e}"
+    assert worst < 1.0, (
+        f"{shape}: closure exceeds rtol {CLOSURE_TOL[shape]:.1e} plus atol "
+        f"{CLOSURE_ATOL[shape]:.1e} of peak by {worst:.3f}x at {worst_at}, "
+        f"over {compared} points"
     )

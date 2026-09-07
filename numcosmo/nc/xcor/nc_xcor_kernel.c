@@ -482,6 +482,14 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * estimated interpolation error falls below `scaled-abstol` $\times \max\vert
    * F\vert$.
    *
+   * The name anticipates the tolerance on the final integral that produces the
+   * $C_\ell$, and not what the criterion does here: it is applied to $W_i(k)$, one
+   * level below the integral it is named for, and the two are separated by the
+   * squaring described below and by the cancellation limit. Read it as a
+   * peak-relative epsilon on the $W_i(k)$ refinement rather than as a requested
+   * accuracy on $C_\ell$. #NcXcorKernel:adaptive-epsilon is the domain-expansion
+   * threshold and is a distinct quantity.
+   *
    * This criterion sets the absolute accuracy of the spline where it binds. Tightening
    * #NcXcorKernel:reltol has no effect in those regions. Since the tolerance is
    * absolute, the corresponding relative error can become large where the resulting

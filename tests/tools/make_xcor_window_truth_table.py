@@ -39,14 +39,47 @@ nor this script.
 peak at one :math:`\\ell` and the dead tail at every other. The grid is laid
 down in
 
-.. math:: y = k \\chi_\\mathrm{ref} / (\\ell + 1/2)
+.. math:: x_\\nu = k \\chi_\\mathrm{ref} / (\\ell + 1/2)
 
 instead, with :math:`\\chi_\\mathrm{ref}` the midpoint of the window's support,
-which puts the peak at :math:`y \\simeq 1` for every multipole and every shape.
+which puts the peak at :math:`x_\\nu \\simeq 1` for every multipole and every shape.
+The library writes the Bessel argument as :math:`x = k\\chi`, so this grid is that
+argument at mid-support in units of the turning point.
 
-Usage::
+**What the committed table covers.** It is the base check every change to the radial
+machinery is measured against, so its grid spans the regimes the solver distinguishes
+rather than a convenient corner of them:
 
-    python tests/tools/make_xcor_window_truth_table.py [--ells=2,10,50,200]
+===================  ===========================  =========================
+:math:`x_\\nu`        regime                       what it exercises
+===================  ===========================  =========================
+0.2, 0.5             power law, below the         the sub-turning-point branch;
+                     turning point                dropped above
+                                                  ``POWER_LAW_ELL_MAX``, where
+                                                  :math:`j_\\ell` underflows a double
+0.8, 1.0, 1.25       the turning point            the runtime guard, the pinned
+                                                  constraint
+1.6, 2.5, 4, 6       moderately oscillatory       mixed panels
+20, 60               deeply oscillatory           the tau constraint, which the
+                                                  grid did not reach at all before
+===================  ===========================  =========================
+
+Multipoles run to 1000. Near the turning point the precision Arb needs grows steeply
+with :math:`\\ell`, roughly a factor of six per decade, so the high multipoles are
+certified to a looser target; that is what ``--target-rel`` takes per multipole. Every
+target stays far below the :math:`10^{-8}` comparison the test makes, which
+``test_table_is_certified_far_below_the_tolerance`` enforces.
+
+Usage, and the command that reproduces the committed table::
+
+    python tests/tools/make_xcor_window_truth_table.py \\
+        --ells=2,10,50,200,500,1000 \\
+        --target-rel=1e-25,1e-25,1e-25,1e-25,1e-18,1e-18
+
+Two hours wall clock on twelve cores, and ell = 1000 alone is 98% of it: every shape
+below ell = 500 finishes inside 25 s, while at ell = 1000 tophat takes 999 s and
+multi 6828 s. The multipoles run concurrently, one process per (shape, ell), so the
+wall clock is set by the slowest single cell rather than by the total.
 """
 
 import argparse
@@ -113,11 +146,18 @@ CASES = {
     },
 }
 
-# Below y = 1 the Bessel argument sits under the turning point and I_ell is
+# Below x_nu = 1 the Bessel argument sits under the turning point and I_ell is
 # exponentially small -- 1e-74 at ell = 200 -- which is a noise-floor case, not
 # an accuracy case. Above it the integrand oscillates and the Levin ODE does
 # the actual work, so the grid is denser there.
-Y_GRID = [0.2, 0.5, 0.8, 1.0, 1.25, 1.6, 2.5, 4.0, 6.0]
+X_NU_GRID = [0.2, 0.5, 0.8, 1.0, 1.25, 1.6, 2.5, 4.0, 6.0, 20.0, 60.0]
+
+# Multipole above which the sub-turning-point points are dropped. There j_ell(x) is
+# below the smallest double: at ell = 1000 and x_nu = 0.2 it is 1e-328 at mid-support
+# and 5e-574 at the far edge, so the library's own answer is exactly 0.0 and comparing
+# it against a certified value tests nothing. Below this multipole the same points are
+# small but representable (1e-117 at ell = 200), and they do test the power-law branch.
+POWER_LAW_ELL_MAX = 200
 
 CONVENTION = (
     "table[shape][i_ell][i_k] = int_{support[0]}^{support[1]} W(chi) "
@@ -160,7 +200,9 @@ def build_tool(workdir: pathlib.Path) -> pathlib.Path:
     return exe
 
 
-def run_tool(exe: pathlib.Path, shape: str, ell: int, ks, target_rel: float) -> tuple:
+def run_tool(
+    exe: pathlib.Path, shape: str, ell: int, ks, target_rel: float, support_only=False
+) -> tuple:
     """Return (support, [value strings], [radii]) for one shape and multipole."""
     out = subprocess.run(
         [
@@ -168,6 +210,7 @@ def run_tool(exe: pathlib.Path, shape: str, ell: int, ks, target_rel: float) -> 
             f"--shape={shape}",
             f"--ell={ell}",
             f"--target-rel={target_rel:g}",
+            *(["--support-only"] if support_only else []),
             *CASES[shape]["arb"],
         ],
         input=" ".join(repr(float(k)) for k in ks),
@@ -193,15 +236,25 @@ def run_tool(exe: pathlib.Path, shape: str, ell: int, ks, target_rel: float) -> 
     return support, vals, rads
 
 
-def one_shape(exe: pathlib.Path, shape: str, ells, target_rel: float) -> dict:
+def one_shape(exe: pathlib.Path, shape: str, ells, targets, x_nu_grid=None) -> dict:
     """Certify every (ell, k) for one shape. Support fixes the k grid's origin."""
-    support, _, _ = run_tool(exe, shape, ells[0], [1.0e-3], target_rel)
+    support, _, _ = run_tool(exe, shape, ells[0], [], targets[0], support_only=True)
     chi_ref = 0.5 * (support[0] + support[1])
+    x_nu_grid = X_NU_GRID if x_nu_grid is None else x_nu_grid
 
     kvals, table, radius = [], [], []
-    for ell in ells:
-        ks = [y * (ell + 0.5) / chi_ref for y in Y_GRID]
+    for ell, target_rel in zip(ells, targets):
+        grid = [xnu for xnu in x_nu_grid if xnu >= 0.8 or ell <= POWER_LAW_ELL_MAX]
+        ks = [xnu * (ell + 0.5) / chi_ref for xnu in grid]
+        t0 = time.monotonic()
         _, vals, rads = run_tool(exe, shape, ell, ks, target_rel)
+        # One line per (shape, ell): the only way to judge how long a run has left,
+        # since the cost per multipole grows steeply and unevenly across shapes.
+        print(
+            f"  {shape:>14} ell={ell:<5} {len(ks)} k in {time.monotonic() - t0:7.1f} s",
+            file=sys.stderr,
+            flush=True,
+        )
         kvals.append(ks)
         table.append(vals)
         radius.append(rads)
@@ -220,11 +273,39 @@ def main() -> int:
     """Certify every shape and write the compressed table."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ells", default="2,10,50,200")
-    parser.add_argument("--target-rel", type=float, default=1.0e-25)
+    parser.add_argument(
+        "--x-nu-min",
+        type=float,
+        default=0.0,
+        help=(
+            "drop grid points below this x_nu = k chi_ref / (ell + 1/2), the Bessel "
+            "argument at mid-support over the turning point. Deep in the "
+            "power-law region the integral is hundreds of orders below anything double "
+            "precision holds (j_1000 is 1e-328 at x_nu = 0.2), so certifying it to a "
+            "relative target costs precision and tests nothing."
+        ),
+    )
+    parser.add_argument(
+        "--target-rel",
+        default="1e-25",
+        help=(
+            "certified relative radius to reach, one value or one per multipole. Near "
+            "the turning point the precision needed grows steeply with ell, so the high "
+            "multipoles are certified less tightly: 1e-18 there is still ten orders "
+            "below the comparison the test makes."
+        ),
+    )
     parser.add_argument("--output", type=pathlib.Path, default=OUTPUT)
     args = parser.parse_args()
 
     ells = [int(e) for e in args.ells.split(",")]
+    targets = [float(t) for t in str(args.target_rel).split(",")]
+
+    if len(targets) == 1:
+        targets = targets * len(ells)
+    elif len(targets) != len(ells):
+        sys.exit("--target-rel takes one value or one per --ells entry")
+    x_nu_grid = [xnu for xnu in X_NU_GRID if xnu >= args.x_nu_min]
 
     with tempfile.TemporaryDirectory() as tmp:
         exe = build_tool(pathlib.Path(tmp))
@@ -235,7 +316,7 @@ def main() -> int:
         started = time.monotonic()
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(CASES)) as pool:
             futures = {
-                shape: pool.submit(one_shape, exe, shape, ells, args.target_rel)
+                shape: pool.submit(one_shape, exe, shape, ells, targets, x_nu_grid)
                 for shape in CASES
             }
             shapes = {shape: f.result() for shape, f in futures.items()}
@@ -244,9 +325,9 @@ def main() -> int:
     payload = {
         "convention": CONVENTION,
         "generator": "tests/tools/make_xcor_window_truth_table.py",
-        "target_rel": args.target_rel,
+        "target_rel": targets,
         "ells": ells,
-        "y_grid": Y_GRID,
+        "x_nu_grid": x_nu_grid,
         "shapes": shapes,
     }
 
@@ -254,7 +335,7 @@ def main() -> int:
     with gzip.open(args.output, "wt") as f:
         json.dump(payload, f, indent=1, sort_keys=True)
 
-    n = len(CASES) * len(ells) * len(Y_GRID)
+    n = len(CASES) * len(ells) * len(X_NU_GRID)
     print(f"{n} certified values for {len(CASES)} shapes in {elapsed:.1f} s")
     print(f"wrote {args.output} ({args.output.stat().st_size / 1024:.1f} KiB)")
 

@@ -67,7 +67,10 @@ typedef gdouble (*NcmSBesselOdeSolverF) (gpointer user_data, gdouble x);
  *
  * Dirichlet is the default and is valid everywhere. Tau is cheap where the panel holds
  * many more oscillations than the forcing needs coefficients, and invalid otherwise.
- * Pinned is the intermediate form. See the <a
+ * Pinned is the intermediate form, and it is what #NcmSBesselIntegratorLevin gives a
+ * panel whose oscillation count falls below its tau threshold: with the pins at the
+ * peak of the homogeneous spectrum it costs less than Dirichlet data and is at least as
+ * accurate. See the <a
  * href="../../theory/sbessel_ode_solver.html">Ultraspherical Spectral Solver</a> page.
  */
 typedef enum _NcmSBesselOdeConstraint /*< enum,underscore_name=NCM_SBESSEL_ODE_CONSTRAINT,prefix=NCM_SBESSEL_ODE_CONSTRAINT >*/

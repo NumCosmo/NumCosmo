@@ -593,10 +593,12 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
    *
    * A panel solve uses the tau constraint when the panel's oscillation count,
    * $\frac{2}{\pi}\,(b - \max(a, \nu_{\max}))$ with $\nu_{\max}$ the turning point of
-   * the highest multipole in the block, exceeds this value; otherwise it keeps the
-   * Dirichlet data. Zero disables the rule. The tau constraint is valid only where the
-   * homogeneous solutions are unrepresentable at the working order, which is what
-   * the count measures. That condition is $N_{\min} \gtrsim 1.5\,n_F$, from the floor
+   * the highest multipole in the block, exceeds this value; otherwise the panel takes
+   * the pinned constraint, with its pins at the peak of the homogeneous spectrum, and
+   * Dirichlet data only when the panel is too short to leave room for them. Zero
+   * disables the rule, leaving every panel on the Dirichlet data it is created with.
+   * The tau constraint is valid only where the homogeneous solutions are
+   * unrepresentable at the working order, which is what the count measures. That condition is $N_{\min} \gtrsim 1.5\,n_F$, from the floor
    * $1.1\,n_F$ against the order check's $0.75\,N_{\min}$, so the count a kernel needs
    * follows its forcing order: 15 to 30 for the analytic windows ($n_F$ of 9 to 18) and
    * 60 to 200 for tabulated kernels, whose sampling noise gives them an algebraic
@@ -3000,11 +3002,28 @@ _ncm_sbessel_integrator_levin_apply_constraint (NcmSBesselIntegratorLevin *sbilv
     return;
   }
 
-  /* EXPERIMENT, opt-in through NCM_SBESSEL_PIN_AT_PEAK. */
-  if (g_getenv ("NCM_SBESSEL_PIN_AT_PEAK") != NULL)
+  /*
+   * A panel the tau rule turns down goes to the pinned constraint, with the pins at
+   * the peak of the homogeneous spectrum. Above the turning point the Chebyshev
+   * coefficients of $x j_\ell$ and $x y_\ell$ behave as $|J_n(\Delta)|$, which peaks
+   * at $n = \Delta - 0.81\Delta^{1/3}$, so pinning the adjacent pair there sets the
+   * two conditions where the homogeneous content is largest and the multiple the
+   * truncation can admit, $a_n(u_p)/a_n(v)$, is smallest. Two adjacent indices cover
+   * both parities, which is what makes the choice insensitive to where the panel sits
+   * in phase.
+   *
+   * $\Delta = (b - \max(a,\nu))/2$ is the half-width of the oscillatory part of the
+   * panel, taken over the same span the oscillation count uses and not over the full
+   * $b-a$. Below the turning point the coefficients have already collapsed, so a
+   * $\Delta$ from the full width puts the pins where there is no homogeneous content
+   * left to pin and the two conditions go nearly degenerate: at $\ell = 500$ that
+   * costs O(1) relative error on every window of the certified table. A panel too
+   * short for the peak to leave room keeps Dirichlet data.
+   */
   {
-    const gdouble delta = 0.5 * (b - a);
-    const glong peak    = (glong) round (delta - 0.81 * cbrt (delta));
+    const gdouble nu_max = sqrt (ell_max * (ell_max + 1.0));
+    const gdouble delta  = 0.5 * (b - GSL_MAX (a, nu_max));
+    const glong peak     = (glong) round (delta - 0.81 * cbrt (delta));
 
     if (peak >= 4)
     {

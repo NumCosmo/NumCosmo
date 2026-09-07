@@ -297,7 +297,9 @@ normalize (acb_t norm, Par *p, double target)
 {
   p->with_bessel = 0;
   acb_zero (p->k);
-  certified (norm, p, target);
+  /* The window norm is a smooth integral with no Bessel factor: the 8192 ceiling of
+   * xcor_window_arb.h has always been ample here. */
+  certified (norm, p, target, 8192);
 }
 
 static void

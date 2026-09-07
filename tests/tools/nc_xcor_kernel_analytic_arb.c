@@ -57,8 +57,10 @@ main (int argc, char **argv)
 {
   Par p;
   int window_mode;
-  double target = 1.0e-25;
-  long ell      = 2;
+  double target   = 1.0e-25;
+  slong prec_max  = 8192;
+  int support_only = 0;
+  long ell        = 2;
   double k;
   int i;
 
@@ -120,6 +122,14 @@ main (int argc, char **argv)
     {
       p.beta = atof (a + 7);
     }
+    else if (strncmp (a, "--prec-max=", 11) == 0)
+    {
+      prec_max = (slong) atol (a + 11);
+    }
+    else if (strcmp (a, "--support-only") == 0)
+    {
+      support_only = 1;
+    }
     else if (strncmp (a, "--chi-source-lower=", 19) == 0)
     {
       p.chi_source_lower = atof (a + 19);
@@ -169,11 +179,23 @@ main (int argc, char **argv)
 
     acb_init (nrm);
     p.with_bessel = 0;
-    certified (nrm, &p, target);
+    certified (nrm, &p, target, prec_max);
     s = arb_get_str (acb_realref (nrm), 30, ARB_STR_NO_RADIUS);
     printf ("# shape=%s ell=%ld support=[%.17g,%.17g] norm=%s\n",
             shape_names[p.shape], p.ell, p.chi_min, p.chi_max, s);
     flint_free (s);
+
+    /* The support and the normalization are properties of the window alone. A caller
+     * that wants only those must not be made to certify an I_ell(k) as well: at high
+     * ell any convenient probe k lands in the power-law region, where a relative
+     * target is unreachable and meaningless. */
+    if (support_only)
+    {
+      acb_clear (nrm);
+      par_clear (&p);
+
+      return 0;
+    }
 
     if (window_mode)
     {
@@ -227,7 +249,7 @@ main (int argc, char **argv)
       acb_set_d (p.k, k);
       acb_init (res);
       acb_init (val);
-      prec = certified (res, &p, target);
+      prec = certified (res, &p, target, prec_max);
       acb_div (val, res, nrm, prec);
       s = arb_get_str (acb_realref (val), 30, ARB_STR_NO_RADIUS);
       printf ("%s\t%ld\t%.17g\t%s\t%.4e\t%ld\n",
