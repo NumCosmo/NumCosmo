@@ -135,7 +135,7 @@ The two-photon decay rates are $\Lambda_\Hy$ for hydrogen and $\Lambda_\He$ for
 helium-I. The Case B recombination coefficient for hydrogen, $\alpha_\Hy$, uses
 the Pequignot (1991) fit; the helium-I coefficients $\alpha_\He$ and
 $\alpha_\He^\mathrm{t}$ (triplet) use the Hummer (1998) fits. The
-`NcRecombSeagerOpt` flags select which $K$ factors are used and whether the
+[[numcosmo|NcRecombSeagerOpt]] flags select which $K$ factors are used and whether the
 triplet contribution is included in the helium rate.
 
 The integration starting point in $\lambda$ is obtained from the helium Saha

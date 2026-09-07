@@ -50,7 +50,7 @@ Ncm.cfg_init()
 ## Setting Up the Cosmological Model
 
 We start by creating a new homogeneous and isotropic cosmological model
-(`NcHICosmoDEXcdm`) and setting its parameters. We also include a reionization model and
+([[numcosmo|NcHICosmoDEXcdm]]) and setting its parameters. We also include a reionization model and
 a power-law primordial power spectrum.
 
 ```{python}

@@ -10,7 +10,7 @@ $$
 :::
 
 This page describes the distance and time-related quantities implemented by
-`NcDistance`. The object computes the dimensionless versions of these distances;
+[[numcosmo|NcDistance]]. The object computes the dimensionless versions of these distances;
 the dimensionful results are recovered by multiplying by the appropriate Hubble
 radius, as described below.
 
@@ -62,7 +62,7 @@ with the wavenumber in $\RH_0^{-1}$, so that $k\chi$ is dimensionless. Multiplyi
 $\RH_0 = c/H_0$ in Mpc, from [[numcosmo|nc_hicosmo_RH_Mpc]], gives the dimensionful
 pair; the Limber path in [[numcosmo|NcXcor]] does exactly that. So $\chi = D_c$ there,
 and $\RH_0 D_c$ is the proper distance today $r(z)$ defined above, which is $d_c(z)$
-when $a_0 = 1$. Nothing in `NcDistance` uses $\chi$, except
+when $a_0 = 1$. Nothing in [[numcosmo|NcDistance]] uses $\chi$, except
 [[numcosmo|nc_distance_inv_comoving]], whose argument is named for it.
 
 ## Transverse, Luminosity, and Angular Diameter Distances

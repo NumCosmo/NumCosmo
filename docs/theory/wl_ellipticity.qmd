@@ -148,7 +148,7 @@ The equivalence follows from $e^{2 i \phi_E} = e^{2 i (\pi - \phi_C)} = e^{-2 i
 \phi_C}$. Conjugating the ellipticity and flipping $\phi$ are thus the *same*
 operation, and the parity is its own inverse --- a single map converts
 celestial $\to$ Euclidean and Euclidean $\to$ celestial alike. The two helpers
-[[numcosmo|nc_wl_ellipticity_celestial_to_frame_c]] (conjugates $\epsilon$ for
+`nc_wl_ellipticity_celestial_to_frame` (conjugates $\epsilon$ for
 `CARTESIAN`, identity for `CELESTIAL`) and
 [[numcosmo|nc_wl_ellipticity_celestial_to_frame_angle]] ($\phi_C \to \phi_E$) encode
 exactly this, and are no-ops for the celestial frame.
@@ -281,7 +281,7 @@ The forward model and the frame machinery are spread over a few classes:
 - shear transforms and Jacobian: `nc_wl_ellipticity_apply_shear_trace`/
   `_trace_det`, their `_inv` counterparts, and
   `nc_wl_ellipticity_lndet_jac_trace`/`_trace_det` in `nc_wl_ellipticity.h`
-- frame helpers: [[numcosmo|nc_wl_ellipticity_celestial_to_frame_c]],
+- frame helpers: `nc_wl_ellipticity_celestial_to_frame`,
   [[numcosmo|nc_wl_ellipticity_celestial_to_frame_angle]]
 - lens geometry and reduced shear:
   [[numcosmo|nc_halo_position_polar_angles]],

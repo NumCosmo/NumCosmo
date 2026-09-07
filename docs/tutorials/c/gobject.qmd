@@ -25,27 +25,27 @@ generic mathematical and statistical objects and functions are defined, `Nc`
 All types must be labeled using the 
 [camel-case](https://en.wikipedia.org/wiki/CamelCase), 
 and start with the respective name-space. For example, 
-[`NcmSpline`](manual/NcmSpline.html) is the type used
+[[numcosmo-math|NcmSpline]] is the type used
 to store instances of the Spline object which lives in the NumCosmoMath
-name-space. Similarly, [`NcHICosmo`](manual/NcHICosmo.html) is the type 
+name-space. Similarly, [[numcosmo|NcHICosmo]] is the type 
 used for the abstract object defining homogeneous and isotropic models (HICosmo).
 
 ## Methods, functions and other names
 
 Functions and methods must be lower case and the terms separated by underscores,
-that is, a method of [`NcmSpline`](manual/NcmSpline.html) must be called `ncm_spline_method_name`. It is 
+that is, a method of [[numcosmo-math|NcmSpline]] must be called `ncm_spline_method_name`. It is 
 acceptable for the method_name to have upper case letters when necessary.
-For example, [*nc_hicosmo_Omega_m0*](manual/NcHICosmo.html#nc-hicosmo-Omega-m0)
+For example, [[numcosmo|nc_hicosmo_Omega_m0]]
 uses the capital Omega to avoid confusion with lowercase omega_m0, which has
 a different meaning in the cosmological literature.
 
 Macros, enumerator and flags labels should be in uppercase and separated by 
-underscores. See for example [`NcHICosmoImpl`](manual/NcHICosmo.html#NcHICosmoImpl)
+underscores. See for example [[numcosmo|NcHICosmoImpl]]
 for a flag type. The flag type itself, NcHICosmoImpl, must be in camel-case
 but its labels are underscore separated uppercase.
 
-A full example of a GObject implementation inside NumCosmo can be found
-[here](manual/NcmModel.html#NcmModel.description).
+A full example of a GObject implementation inside NumCosmo is the
+[[numcosmo-math|NcmModel]] class description.
 
 ## Object implementation
 
@@ -56,7 +56,7 @@ An object named `NcObjectName` implements:
 
 - `nc_object_name_init`: initialize each instance, including private members
   that are not properties. Members of a type such as
-  [`NcmModelCtrl`](manual/NcmModelCtrl.html) are initialized here rather than
+  [[numcosmo-math|NcmModelCtrl]] are initialized here rather than
   through a property.
 
 - `_nc_object_name_set_property/_get_property`: handle property assignment.
