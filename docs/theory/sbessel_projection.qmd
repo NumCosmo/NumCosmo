@@ -187,6 +187,7 @@ one integrated over.
 #|   oscillation count. Pinning two Chebyshev coefficients, or leaving the constraint rows
 #|   empty (the tau constraint), selects the smooth member of the same family, whose
 #|   expansion is set by the forcing alone. All three return the same integral.
+#| code-fold: true
 ell = 20
 a, b = 100.0, 316.2278
 m, h = 0.5 * (a + b), 0.5 * (b - a)
@@ -373,6 +374,7 @@ no cost.
 #|   The fixed knot grid in x (vertical lines) and the intervals [ka, kb] two different
 #|   k values map a window on chi in [1000, 2000] onto. Interior knot panels are
 #|   replayed from stored factorizations; the shaded ends are the partial panels.
+#| code-fold: true
 knots = 10.0 ** (-4 + 0.5 * np.arange(21))
 fig, ax = plt.subplots(figsize=(8, 2.2))
 for xk in knots:
@@ -497,6 +499,7 @@ are not a smooth function of $k$ and neither representation converges.
 #|   300, cut at 4 sigma), as the Chebyshev closure represents it. Vertical lines are
 #|   the panel edges; the expansion stopped where every multipole is below 1e-5 of its
 #|   peak.
+#| code-fold: true
 sbi = Ncm.SBesselIntegratorLevin.new(2, 9)
 gauss = Nc.XcorKernelAnalyticGauss.new_full(dist, ps, 1500.0, 300.0, 4.0, sbi)
 gauss.set_l_limber(-1)
@@ -527,6 +530,7 @@ print(f"{cheb.get_n_panels()} panels, coefficients per panel: {orders}")
 #|   the panel edges of the Chebyshev expansion. The spline needs a knot every few
 #|   oscillations; a panel holds up to 33 coefficients and covers as much as the
 #|   oscillation count allows.
+#| code-fold: true
 spline = gauss.get_eval_vectorized_full(cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(2, 9), Nc.XcorKernelClosure.SPLINE)
 knots_k = np.array(spline.peek_knots().dup_array())
 fig, ax = plt.subplots(figsize=(8, 2.0))
@@ -550,6 +554,7 @@ plt.tight_layout()
 #|   component alive, both, one. Every interior panel edge (dashed) is a bisection of
 #|   one of those segments rather than of the whole domain; the outermost two are the
 #|   component boundaries themselves.
+#| code-fold: true
 sbi2 = Ncm.SBesselIntegratorLevin.new(2, 9)
 multi = Nc.XcorKernelAnalyticMulti.new_full(
     dist, ps, Ncm.Vector.new_array([600.0, 2600.0]), Ncm.Vector.new_array([100.0, 150.0]),
@@ -645,6 +650,7 @@ is real.
 #|   two-component window, on the intersection of their domains. Vertical lines are the
 #|   cells of the common refinement of the two panel sets; on each the integrand is a
 #|   single polynomial and Eq. (9) integrates it in closed form.
+#| code-fold: true
 xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
 xcor.set_ell_batch_size(8)
 xcor.prepare(cosmo)

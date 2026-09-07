@@ -36,21 +36,16 @@ def F(x):  # a smooth bump in x, standing in for a kernel
     return np.exp(-0.5 * ((x - 200.0) / 40.0) ** 2)
 
 
-# Chebyshev coefficients of x F(x) on [a, b], then the C^(2) coefficients
-N = 64
-t = np.cos(np.pi * np.arange(N + 1) / N)
-vals = (m + h * t) * F(m + h * t)
-c = np.fft.rfft(np.concatenate([vals, vals[-2:0:-1]])).real / N
-c[0] *= 0.5
-c[-1] *= 0.5
-c = np.concatenate([c, np.zeros(8)])
-g = np.zeros(N + 1)
-for kk in range(N + 1):
-    g[kk] = c[kk] / (2 * (kk + 1)) - (kk + 2) * c[kk + 2] / ((kk + 1) * (kk + 3)) + c[kk + 4] / (2 * (kk + 3))
-g[0] += 0.5 * c[0]
-
 solver = Ncm.SBesselOdeSolver.new()
 solver.set_tolerance(1.0e-12)
+spectral = solver.peek_spectral()
+
+# The library fits x F(x) in Chebyshev and converts it to the C^(2) coefficients the
+# operator takes: g is the right-hand side of the panel system, less its two first
+# entries.
+_, cheb = spectral.compute_chebyshev_coeffs_adaptive(
+    lambda _d, x: x * F(x), a, b, 3, 1.0e-13, None)
+g = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(list(cheb)))
 ```
 
 ## The boundary-value problem
@@ -63,12 +58,11 @@ x^2 u'' + \left[x^2 - \ell(\ell+1)\right] u = x\,F(x),
 $$
 and two further conditions, discussed below. This is the spherical Bessel equation for
 $w$, whose solutions are the spherical Bessel functions of the first and second kind,
-$j_\ell$ and $n_\ell$ (the second kind is also written $y_\ell$), written for $u =
-x\,w$ instead of for $w$; the two
-homogeneous solutions of Eq. (1) are therefore $x\,j_\ell(x)$ and $x\,n_\ell(x)$. The
-substitution does two things. It removes the first-derivative term, which makes the
-quantity the caller wants, the integral of $F$ against $j_\ell$ over the panel,
-independent of which two conditions are chosen, the subject of [Choosing the
+$j_\ell$ and $y_\ell$, written for $u = x\,w$ instead of for $w$; the two homogeneous
+solutions of Eq. (1) are therefore $x\,j_\ell(x)$ and $x\,y_\ell(x)$. The substitution
+does two things. It removes the first-derivative term, which makes the quantity the
+caller wants, the integral of $F$ against $j_\ell$ over the panel, independent of which
+two conditions are chosen, the subject of [Choosing the
 constraint](#choosing-the-constraint). And it moves a factor $x$ onto the right-hand
 side, where the forcing enters as $x\,F(x)$: that vanishes at the origin and stays
 bounded there for forcings that diverge mildly on their own, so the right-hand side is
@@ -99,9 +93,9 @@ $$
 so the second derivative carries the Chebyshev coefficients of $u$ straight into
 $C^{(2)}$ coefficients along a single shifted diagonal: the $k$-th $C^{(2)}$
 coefficient of $u''$ is $2(k+2)\,a_{k+2}$. That is the reason to work in $C^{(2)}$ for a
-second-order problem: the highest derivative, the term that would be dense and ill
-conditioned if the equation were imposed pointwise on a grid instead, is one diagonal
-here.
+second-order problem: the highest derivative, the term that a collocation
+discretization, one that imposes the equation pointwise on a grid, renders dense and ill
+conditioned, is one diagonal here.
 
 The second is that the undifferentiated terms have to be moved to the same basis. The
 $[\,\cdot\,]\,u$ bracket of Eq. (2) is still written in Chebyshev polynomials, so
@@ -128,7 +122,9 @@ independent of the truncation order. Nothing here is approximated: the only
 approximation is the truncation of the expansions.
 
 The right-hand side is treated the same way. The term $x F(x)$ is expanded in Chebyshev
-polynomials and converted to $C^{(2)}$ coefficients by that same conversion matrix.
+polynomials and converted to $C^{(2)}$ coefficients by that same conversion matrix. The
+number of coefficients that expansion needs is written $n_F$ below; it is a property of
+the forcing alone, and the caller supplies it with the right-hand side.
 
 Two rows still have to be supplied. The differential equation on its own does not
 determine $u$: any homogeneous solution can be added to it, and Eq. (1) has two of
@@ -140,18 +136,31 @@ The two missing rows are two further linear conditions on the coefficients $a_n$
 they are what closes the system. They are the *constraint*, the enumeration
 [[numcosmo-math|NcmSBesselOdeConstraint]]. The literature usually calls such rows
 boundary conditions, after the commonest choice; the wider name is used here because
-only one of the three implemented is a boundary condition. [Choosing the constraint](#choosing-the-constraint) compares the three. What
-matters here is only where their nonzero entries sit, because that is all the
-factorization of [Incremental Givens QR](#incremental-givens-qr) sees of them.
+only one of the three implemented is a boundary condition. What matters for the
+discretization is only that a constraint row may be dense, and a dense row reaches every
+column: that is what makes $A$ almost banded rather than banded, and it sets the layout
+the factorization of [Incremental Givens QR](#incremental-givens-qr) is built for.
 
-Dirichlet data, $u(x_a) = \alpha$ and $u(x_b) = \beta$, is the default. Since $T_n(\pm1)
-= (\pm1)^n$ the two rows are dense, $\sum_n (-1)^n a_n = \alpha$ and $\sum_n a_n =
-\beta$, so the matrix is *almost banded*: banded, plus two dense rows. The pinned
-constraint sets two chosen coefficients to zero, $a_{p_1} = a_{p_2} = 0$, and its rows
-carry a single entry each. The tau constraint supplies nothing: both rows stay empty,
-the system is short two pivots, and the truncation of the expansion is what closes it.
-In all three cases the first two right-hand-side entries are the values the two
-functionals take; every caller in the library passes zero, and under the tau constraint
+### The three constraints
+
+Three are implemented. Each is defined here once, with the symbols the rest of the page
+uses; [Choosing the constraint](#choosing-the-constraint) is where they are compared.
+
+- **Dirichlet**, `NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET`, the default. The two rows fix
+  the endpoint values, $u(x_a) = \alpha$ and $u(x_b) = \beta$. Since $T_n(\pm1) =
+  (\pm1)^n$ they read $\sum_n (-1)^n a_n = \alpha$ and $\sum_n a_n = \beta$, so both are
+  dense. That is what makes the matrix *almost banded*: banded, plus two dense rows.
+- **Pinned**, `NCM_SBESSEL_ODE_CONSTRAINT_PINNED`. The two rows set two chosen
+  coefficients of the expansion to zero, $a_{p_1} = a_{p_2} = 0$, so each row carries a
+  single entry, in the column of the coefficient it pins. The indices $p_1$ and $p_2$
+  belong to one interval and one solve, and are given per operator with
+  [[numcosmo-math|ncm_sbessel_ode_operator_set_pinned_constraint]].
+- **Tau**, `NCM_SBESSEL_ODE_CONSTRAINT_TAU`. The two rows are empty. The system is then
+  short two pivots, and the truncation of the expansion is what closes it, which is the
+  classical tau construction the name comes from.
+
+In all three cases the first two entries of the right-hand side are the values the two
+functionals take. Every caller in the library passes zero, and under the tau constraint
 they multiply empty rows and do not reach the solution at all.
 
 ```{python}
@@ -162,6 +171,7 @@ they multiply empty rows and do not reach the solution at all.
 #|   band of width 9 in every case; the constraints differ only in those two rows, which
 #|   are dense for Dirichlet data, one entry each for the pinned constraint, and empty for
 #|   the tau constraint.
+#| code-fold: true
 op_fig = solver.create_operator(a, b, ell, ell)
 patterns = []
 for name, setup in (
@@ -184,54 +194,79 @@ plt.tight_layout()
 
 ## Batching over multipoles
 
-The only $\ell$ dependence of Eq. (2) is the constant $m^2 - \ell(\ell+1)$ in
-the identity term, and $(\ell+1)(\ell+2) - \ell(\ell+1) = 2(\ell+1)$. A block of
-consecutive multipoles therefore shares every derivative and multiplication
-entry; the rows for $\ell+1$ are those for $\ell$ with $-2(\ell+1)$ added to
-the three identity-term entries. The block is factorized together and the
-stopping test below is a max-reduction over the block, so the whole block is
-solved to the tolerance the hardest member needs.
+The only $\ell$ dependence of Eq. (2) is the constant $m^2 - \ell(\ell+1)$ in the
+identity term, and $(\ell+1)(\ell+2) - \ell(\ell+1) = 2(\ell+1)$. A block of
+consecutive multipoles therefore shares every derivative and multiplication entry; the
+rows for $\ell+1$ are those for $\ell$ with $-2(\ell+1)$ added to the three
+identity-term entries. The block is factorized together and the stopping test below is
+a max-reduction over the block, so the whole block is solved to the tolerance the
+hardest member needs.
 
 ## Incremental Givens QR
 
-Write the discretized problem of the previous section as $A\,a = b$. The unknown $a$
-collects the Chebyshev coefficients $a_n$ of $u$; the right-hand side $b$ holds
-$u(x_a)$ and $u(x_b)$ in its first two entries and the $C^{(2)}$ coefficients of $x
-F(x)$ in the rest; $A$ is the almost-banded matrix, two dense boundary rows over a
-band. Column $c$ of $A$ is the one multiplying $a_c$, so the number of columns kept is
-the truncation order $N$ of the expansion.
+Write the discretized problem of the previous section as $A\,a = r$. The unknown $a$
+collects the Chebyshev coefficients $a_n$ of $u$; the right-hand side $r$ holds the two
+constraint values in its first two entries, $u(x_a)$ and $u(x_b)$ under Dirichlet data,
+and the $C^{(2)}$ coefficients of $x F(x)$ in the rest; $A$ is the almost-banded matrix,
+the two constraint rows over a band. Column $c$ of $A$ is the one multiplying $a_c$, so
+the number of columns kept is the truncation order $N$ of the expansion. Although $A\,a
+= r$ is written as a matrix equation, it relates coefficients in two different bases:
+$A$ takes the Chebyshev coefficients of $u$ to the $C^{(2)}$ coefficients of the
+left-hand side of Eq. (2), and the matching entries of $r$ are the $C^{(2)}$
+coefficients of its right-hand side. Each of those rows equates one coefficient of the
+two sides. The first two rows are the exception, being the constraint functionals, with
+the values they take in the first two entries of $r$; under Dirichlet data those are the
+only point evaluations anywhere in the system, and they are evaluations of $u$, not of
+the equation.
 
 The value of $N$ is not prescribed. The factorization is built one column at a time by
 Givens rotations, producing an orthogonal $Q$ such that $R \equiv Q^{\mathsf{T}} A$ is
 upper triangular.
 
-Column $c$ has exactly four entries below the diagonal, in rows $c+1$ to $c+4$: two
-from the lower bandwidth of the band, and two from the boundary rows, which are dense
-and so reach every column. Four rotations clear them, working upward, each pairing a
-row with the one above it. Moving on to column $c+1$ draws in one further row, so the
-work per column is constant however long the expansion becomes.
+Column $c$ has four entries below the diagonal, in rows $c+1$ to $c+4$: two from the
+lower bandwidth of the band, and two from the constraint rows, which under Dirichlet
+data are dense and so reach every column. Four rotations clear them, working upward,
+each pairing a row with the one above it. Moving on to column $c+1$ draws in one further
+row, so the work per column is constant however long the expansion becomes. That count
+belongs to the layout, not to the constraint: the pinned rows carry one entry each and
+the tau rows none, but the same four rotations per column are applied and stored in all
+three cases. What the constraint changes is how many columns are needed, which is the
+subject of [Choosing the constraint](#choosing-the-constraint).
 
-Every rotation is applied to $b$ as well, giving $\tilde b \equiv Q^{\mathsf{T}} b$.
-After column $c$ the transformed entry $\tilde b_c$ divided by the diagonal $R_{cc}$ is
+Every rotation is applied to $r$ as well, giving $\tilde r \equiv Q^{\mathsf{T}} r$.
+After column $c$ the transformed entry $\tilde r_c$ divided by the diagonal $R_{cc}$ is
 therefore the value back-substitution would assign to $a_c$ if the expansion stopped
 there.
 
-The stopping test watches exactly that ratio. Let $\rho_c \equiv |\tilde b_c /
+The stopping test watches exactly that ratio. Let $\rho_c \equiv |\tilde r_c /
 R_{cc}|$ and $\rho_{\max}$ its running maximum. With $\tau$ the tolerance the operator
 was created with, the factorization stops at the first column such that
-$\rho_c/\rho_{\max} < \tau$ for five consecutive columns and $c + 1 \ge N_{\min}$,
-where
+$\rho_c/\rho_{\max} < \tau$ for five consecutive columns and $c + 1$ has reached the
+floor the constraint sets. Under Dirichlet data that floor is
 $$
 N_{\min} = \left\lceil \frac{2}{\pi}\,\big(x_b - \max(x_a, \nu)\big) \right\rceil,
 \qquad \nu \equiv \sqrt{\ell(\ell+1)} .
 \tag{3}
 $$
-The floor $N_{\min}$ is the number of Chebyshev coefficients the oscillatory part of
-the panel needs, two per half-oscillation beyond the turning point $x = \nu$; below the
-turning point $j_\ell$ does not oscillate and the solution is smooth. Without the floor
-the test can be satisfied by the quiet leading coefficients of a solution whose
-oscillation has not yet been reached, and the delivered error then fails to decrease
-with the requested tolerance.
+$N_{\min}$ is the number of Chebyshev coefficients the oscillatory part of the panel
+needs, two per half-oscillation beyond the turning point $x = \nu$; below the turning
+point $j_\ell$ does not oscillate and the solution is smooth. Without a floor the test
+can be satisfied by leading coefficients that are small only because the expansion has
+not reached the oscillatory part of the panel yet, and are small next to the ones that
+part will add; the delivered error then fails to decrease with the requested tolerance.
+
+The other two constraints need floors of their own. The reason is the same, but the
+value is not $N_{\min}$, because neither of them puts the oscillation into $u$. The
+pinned constraint uses $\max(p_1,p_2) + 1$, one past the larger of the two indices it
+pins, $a_{p_1} = a_{p_2} = 0$. Each of its rows carries a single entry, in the column of
+the coefficient it pins; stopping before that column leaves the row empty in the block
+factorized, and the condition is then not imposed at all. The tau constraint uses a
+multiple of $n_F$, the number of coefficients the right-hand side $x F(x)$ was fitted
+with. Its solution is the one carrying no homogeneous content, so its coefficients decay
+with those of the right-hand side and $n_F$ is the order it needs; the multiple is
+[[numcosmo-math|ncm_sbessel_ode_solver_set_tau_floor_factor]], default $1.1$. Both
+floors are set per solve, and neither grows with the panel width, which is the cost
+difference [Choosing the constraint](#choosing-the-constraint) is about.
 
 Once the factorization stops, back-substitution gives the coefficients, or, when only
 the boundary term is wanted, the endpoint derivatives directly,
@@ -254,6 +289,7 @@ discovering $N$ affordable.
 #|   the factorization stops, so the curve is drawn once and each tolerance is marked
 #|   by its stopping column. The floor N_min of Eq. (3) is 138 here, which is where
 #|   the loosest tolerance stops: the floor holds it, not the decay test.
+#| code-fold: true
 fig, ax = plt.subplots(figsize=(6, 3.4))
 nmin = int(np.ceil(2.0 / np.pi * (b - max(a, np.sqrt(ell * (ell + 1))))))
 
@@ -281,9 +317,9 @@ plt.tight_layout()
 
 ## Choosing the constraint
 
-The three constraints of [Discretization](#discretization) are not three approximations
-of one answer. They select different members of the same solution family, and the
-quantity their caller wants is the same for all of them.
+The three constraints [defined above](#the-three-constraints) are not three
+approximations of one answer. They select different members of the same solution family,
+and the quantity their caller wants is the same for all of them.
 
 The reason is the missing first-derivative term. Let $v$ solve the homogeneous equation
 and let $\mathcal{W} = v u' - v' u$. Then $\mathcal{W}' = v u'' - v'' u = F j_\ell$ from
@@ -298,14 +334,123 @@ constraint. What the constraint decides is which member of the two-parameter fam
 expansion has to represent, and the members differ by orders of magnitude in how many
 coefficients that takes.
 
-Under Dirichlet data the member is fixed at both ends, and pushing $u$ through zero
-there brings in the homogeneous solutions $x j_\ell$ and $x n_\ell$, which oscillate. So
-the expansion has to resolve the panel's whole oscillation count, which is exactly the
-floor $N_{\min}$ of Eq. (3), and that grows with the panel width. Leaving the two rows
-empty instead selects the particular solution carrying no homogeneous content, whose
-coefficients decay with the forcing's own: the working order is then set by $F$ alone
-and does not grow with the panel. The pinned constraint lies between the two, and where
-its pins sit is what decides which end it resembles.
+### Which member the constraint selects
+
+Write the panel solution as 
+$$ 
+u = u_p + \gamma_1\,x j_\ell(x) + \gamma_2\,x y_\ell(x),
+$$ 
+with $u_p$ a particular solution. The constraint is what fixes $\gamma_1$ and
+$\gamma_2$, and the cost of the choice is decided by how the two homogeneous terms
+expand. Above the turning point they oscillate with a period of about $2\pi$ in $x$, so
+a panel reaching from $\max(x_a,\nu)$ to $x_b$ holds $(x_b - \max(x_a,\nu))/2\pi$ of
+their oscillations and needs the $N_{\min}$ coefficients of Eq. (3) to carry them at
+all.
+
+One member of the family costs nothing of the sort. Away from the turning point the
+undifferentiated term of Eq. (1) dominates, and the equation can be solved by iterating
+$$
+u = \frac{x F(x) - x^2 u''}{x^2 - \nu^2},
+$$
+from $u^{(0)} = x F/(x^2 - \nu^2)$. Each pass differentiates twice and divides by $x^2 -
+\nu^2$, so on a panel that stays clear of the turning point, and for a forcing smooth
+there, the series converges and every term of it is as smooth as $F$. What it converges
+to is the member with $\gamma_1 = \gamma_2 = 0$: its coefficients decay with those of $x
+F$, so its order is $n_F$ whatever the panel width, and its size is bounded by $x_b
+\sum_k |c_k| / (x_a^2 - \nu^2)$, with $c_k$ the coefficients of $x F$. That is the bound
+[Enforcement](#enforcement) tests against. It is *the smooth member* below.
+
+Dirichlet data fixes the two endpoint values, and the smooth member does not take them:
+reaching $u(x_a) = \alpha$ and $u(x_b) = \beta$ needs $\gamma_1$ and $\gamma_2$ of the
+size of the mismatch at the ends. Oscillation is then present across the whole panel,
+not only near the ends, because the homogeneous solutions oscillate everywhere above the
+turning point; the expansion has to resolve all of it, so the working order is
+$N_{\min}$ and it grows with the panel width.
+
+The tau constraint asks for nothing, and that is what selects the smooth member: at a
+working order well below $N_{\min}$ the homogeneous solutions are not representable, so
+no multiple of them can appear in what the truncated system returns. The selection is a
+consequence of stopping early rather than a condition imposed, which is why it holds
+only in a window. [Where the tau constraint is
+valid](#where-the-tau-constraint-is-valid) is that window, measured.
+
+The pinned constraint states the same selection instead of inheriting it from the
+truncation. At two indices above $n_F$ and below $N_{\min}$ the smooth member's
+coefficients have already decayed, while a homogeneous term still has coefficients of
+order one there, so $a_{p_1} = a_{p_2} = 0$ costs the smooth member nothing and admits
+nothing else. Pinning below $n_F$ does the reverse: it constrains coefficients the
+smooth member needs, homogeneous content returns to satisfy the two conditions, and the
+oscillation returns with it. That is what the choice of pins decides; the same section
+measures it, pair by pair.
+
+@fig-constraint-spectra is the three selections seen in the coefficients themselves, on
+one panel and one forcing.
+
+```{python}
+#| label: fig-constraint-spectra
+#| fig-cap: >
+#|   Chebyshev coefficients of u on [1000, 4000] at l = 20, under the three constraints,
+#|   for one Gaussian forcing fitted to 129 coefficients. Dirichlet data holds the
+#|   homogeneous solutions, whose coefficients stay at 1e-4 of the peak out to about
+#|   N_min = 1910 and only then collapse; the pinned and tau solutions are the smooth
+#|   member and reach machine precision by j = 50. The three are the same solution up to
+#|   homogeneous content, and all three give the same panel integral.
+#| code-fold: true
+
+sel_ell, sel_a, sel_b = 20, 1000.0, 4000.0
+sel_spectral = solver.peek_spectral()
+sel_mid, sel_half = 0.5 * (sel_a + sel_b), 0.5 * (sel_b - sel_a)
+
+
+def sel_bump(x):
+    return np.exp(-0.5 * ((x - sel_mid) / (0.25 * sel_half)) ** 2)
+
+
+# The library fits x F(x) and converts to C^(2); nothing here is reimplemented.
+_, sel_cheb = sel_spectral.compute_chebyshev_coeffs_adaptive(
+    lambda _d, x: x * sel_bump(x), sel_a, sel_b, 3, 1.0e-13, None
+)
+sel_rhs = np.concatenate(
+    [[0.0, 0.0], np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(list(sel_cheb)))]
+)
+
+sel_nu = np.sqrt(sel_ell * (sel_ell + 1.0))
+sel_nmin = int(np.ceil(2.0 / np.pi * (sel_b - max(sel_a, sel_nu))))
+
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+# Pinned and tau return the same coefficients wherever both are defined, so tau is
+# drawn dashed over the pinned line instead of hiding it.
+for name, setup, colour, style, width in (
+    (
+        "Dirichlet",
+        lambda op: op.set_constraint(Ncm.SBesselOdeConstraint.DIRICHLET),
+        "C0",
+        "-",
+        1.0,
+    ),
+    ("pinned (160, 161)", lambda op: op.set_pinned_constraint(160, 161), "C1", "-", 2.4),
+    ("tau", lambda op: op.set_constraint(Ncm.SBesselOdeConstraint.TAU), "C2", "--", 1.2),
+):
+    sel_op = solver.create_operator(sel_a, sel_b, sel_ell, sel_ell)
+    setup(sel_op)
+    sel_cf, sel_n = sel_op.solve(sel_rhs)
+    sel_c = np.abs(np.array(sel_cf))
+    ax.semilogy(
+        sel_c / np.max(sel_c),
+        ls=style,
+        lw=width,
+        color=colour,
+        label=f"{name}: {sel_n} columns",
+    )
+
+ax.axvline(len(sel_cheb), color="k", ls=":", lw=1.0, label=f"n_F = {len(sel_cheb)}")
+ax.axvline(sel_nmin, color="k", ls="--", lw=1.0, label=f"N_min = {sel_nmin}")
+ax.set_xlabel("coefficient index j")
+ax.set_ylabel("|a_j| / max |a_j|")
+ax.set_ylim(1.0e-18, 3.0)
+ax.legend(fontsize=8)
+plt.tight_layout()
+```
 
 ```{python}
 #| label: fig-constraint-cost
@@ -320,19 +465,8 @@ its pins sit is what decides which end it resembles.
 #|   1e-12..1e-9; at spans of 100 and below the tau and pinned solves admit the
 #|   homogeneous solutions and fail outright. Dotted line: where the tau working order
 #|   equals N_min. Dash-dotted: where the order check of the next section refuses it.
-spectral = solver.peek_spectral()
+#| code-fold: true
 nu = np.sqrt(ell * (ell + 1.0))
-
-
-def geg2(coeffs):
-    """C^(2) coefficients of a Chebyshev series."""
-    n = len(coeffs)
-    cp = np.concatenate([coeffs, np.zeros(8)])
-    kk = np.arange(n)
-    out = (cp[:n] / (2 * (kk + 1)) - (kk + 2) * cp[2 : n + 2] / ((kk + 1) * (kk + 3))
-           + cp[4 : n + 4] / (2 * (kk + 3)))
-    out[0] += 0.5 * cp[0]
-    return out
 
 
 def panel_rhs(x_a, x_b):
@@ -345,7 +479,9 @@ def panel_rhs(x_a, x_b):
     cheb = np.array(spectral.compute_chebyshev_coeffs_adaptive(
         lambda _d, x: x * bump(x), x_a, x_b, 3, 1.0e-13, None)[1])
 
-    return bump, np.concatenate([[0.0, 0.0], geg2(cheb)]), len(cheb)
+    return (bump,
+            np.concatenate([[0.0, 0.0], Ncm.Spectral.chebT_to_gegenbauer_alpha2(list(cheb))]),
+            len(cheb))
 
 
 def boundary_term(coeffs, x_a, x_b):
@@ -416,11 +552,11 @@ plt.tight_layout()
 
 The left panel of @fig-constraint-cost is the whole cost argument. The forcing is held
 at a fixed relative width so that its own order stays at 129 coefficients across four
-decades of panel span; Dirichlet runs from 42 columns to 19099, the two other
-constraints stay at 194 and 196. Since the stored Givens rotations are proportional to
-the column count, the same ratio applies to the memory a cached operator holds, which is
-what makes the choice matter for a block of multipoles, where that storage is multiplied
-by the block size.
+decades of panel span; Dirichlet runs from 42 columns to 19099, while the tau constraint
+stays at 142 and the pinned one at 196. Since the stored Givens rotations are
+proportional to the column count, the same ratio applies to the memory a cached operator
+holds, which is what makes the choice matter for a block of multipoles, where that
+storage is multiplied by the block size.
 
 Cheaper is not always cheaper, though. Below a span of about 290 the Dirichlet solve
 needs fewer columns than the forcing's order does, so there it is the cheaper of the
@@ -437,8 +573,78 @@ about $N_{\min}$ and collapse super-exponentially past it, while the coefficient
 $a_j(u_p)$ of the particular solution decay from $j = 0$. Truncating at order $n$
 therefore admits a homogeneous multiple of relative size $|a_n(u_p)|/|a_n(v)|$, and that
 is small only while $n$ is still on the plateau. Both sides of $n$ matter: the floor
-$1.5\,n_F$ of the previous section is needed because $u'(\pm1) = \sum_n n^2 a_n$
-amplifies the truncation tail, and the ceiling is $N_{\min}$.
+$1.1\,n_F$ of the previous section is needed because $u'(\pm1) = \sum_n n^2 a_n$
+amplifies the truncation tail, and the ceiling is $N_{\min}$. Together they are one
+condition on the panel: the order check below allows the tau constraint while $1.1\,n_F
+< 0.75\,N_{\min}$, that is while $N_{\min} \gtrsim 1.5\,n_F$.
+@fig-constraint-spectra-failed is that plateau appearing in the coefficients, on a panel
+short enough for it to fit under the working order.
+
+```{python}
+#| label: fig-constraint-spectra-failed
+#| fig-cap: >
+#|   The coefficients of @fig-constraint-spectra on a panel where the tau constraint has
+#|   lost: [1000, 1125] at l = 20, same forcing shape, n_F = 129 against N_min = 80. The
+#|   tau and pinned solutions no longer decay from j = 0; they carry the homogeneous
+#|   solution, whose coefficients are of order one out to N_min and collapse past it, and
+#|   their boundary terms are wrong by 0.41 and 1.4 against a converged quadrature.
+#|   Dirichlet on the same panel is unaffected, at 2.9e-9. The pins sit at (194, 195),
+#|   above N_min, where the homogeneous coefficients have already collapsed, so pinning
+#|   there excludes nothing and the pinned solution is the tau one.
+#| code-fold: true
+fail_a, fail_b = 1000.0, 1125.0
+fail_bump, fail_rhs, fail_nF = panel_rhs(fail_a, fail_b)
+fail_ref = quadrature(fail_bump, fail_a, fail_b)
+fail_nmin = int(np.ceil(2.0 / np.pi * (fail_b - max(fail_a, nu))))
+
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+# Pinned and tau return the same coefficients here too, so tau is dashed over pinned.
+for name, setup, colour, style, width in (
+    (
+        "Dirichlet",
+        lambda op: op.set_constraint(Ncm.SBesselOdeConstraint.DIRICHLET),
+        "C0",
+        "-",
+        1.0,
+    ),
+    (
+        "pinned (194, 195)",
+        lambda op: op.set_pinned_constraint(194, 195),
+        "C1",
+        "-",
+        2.4,
+    ),
+    (
+        "tau",
+        lambda op: op.set_constraint(Ncm.SBesselOdeConstraint.TAU),
+        "C2",
+        "--",
+        1.2,
+    ),
+):
+    fail_op = solver.create_operator(fail_a, fail_b, ell, ell)
+    setup(fail_op)
+    fail_cf, fail_n = fail_op.solve(fail_rhs)
+    fail_c = np.abs(np.array(fail_cf))
+    fail_err = abs(boundary_term(np.array(fail_cf), fail_a, fail_b) - fail_ref) / abs(
+        fail_ref
+    )
+    ax.semilogy(
+        fail_c / np.max(fail_c),
+        ls=style,
+        lw=width,
+        color=colour,
+        label=f"{name}: {fail_n} columns, error {fail_err:.1e}",
+    )
+
+ax.axvline(fail_nmin, color="k", ls="--", lw=1.0, label=f"N_min = {fail_nmin}")
+ax.axvline(fail_nF, color="k", ls=":", lw=1.0, label=f"n_F = {fail_nF}")
+ax.set_xlabel("coefficient index j")
+ax.set_ylabel("|a_j| / max |a_j|")
+ax.set_ylim(1.0e-18, 3.0)
+ax.legend(fontsize=8)
+plt.tight_layout()
+```
 
 The right panel of @fig-constraint-cost measures where the ceiling actually bites, at a
 working order held at $n = 194$ throughout. Reading down the spans: at 400
@@ -486,7 +692,7 @@ Asking for the *minimum-norm* solution of the rectangular system, $n$ operator r
 against $n+2$ unknowns, states the requirement directly: the smallest coefficient vector
 is the one with no homogeneous content, since homogeneous solutions have $O(1)$
 coefficients on the plateau. Replacing the two rows with explicit orthogonality to the
-homogeneous solutions, $\langle a(x j_\ell), a\rangle = \langle a(x n_\ell), a\rangle =
+homogeneous solutions, $\langle a(x j_\ell), a\rangle = \langle a(x y_\ell), a\rangle =
 0$, states it even more directly. Both work where the tau constraint fails, and both
 fail where it works: measured at the same working order on the panels of
 @fig-constraint-cost, they return $10^{-12}$ where tau returns $10^{75}$, and $10^{3}$
@@ -505,7 +711,7 @@ $N_{\min}$), neither buys anything the two constraints in use do not.
 Removing the homogeneous content after the fact does not work either, and cannot: the
 panel integral is *exactly* invariant under that subtraction, so it carries no
 information the solve did not already have. Fitting and subtracting the components along
-$x j_\ell$ and $x n_\ell$ recovers their amplitudes correctly and still makes the answer
+$x j_\ell$ and $x y_\ell$ recovers their amplitudes correctly and still makes the answer
 two to five orders worse, because the smooth part is already below the roundoff of the
 stored coefficients and differencing two large numbers only adds to it.
 
@@ -548,7 +754,7 @@ twice more, all three tests being cheap next to a solve:
 
 - The rule. A panel takes the tau constraint when its oscillation count $\frac{2}{\pi}(x_b
   - \max(x_a, \nu_{\max}))$ exceeds
-  [[numcosmo-math|NcmSBesselIntegratorLevin]]:tau-constraint-min-osc, default 200. The
+  [[numcosmo-math|NcmSBesselIntegratorLevin]]:tau-constraint-min-osc, default 50. The
   count uses $\nu_{\max}$ from the highest multipole of the block, the conservative
   direction for a switch, where the floor $N_{\min}$ uses $\ell_{\min}$ because a floor
   wants the widest span.
@@ -615,12 +821,12 @@ window of [Choosing the constraint](#choosing-the-constraint) is solved with Dir
 data, the two concerns are complementary rather than alternatives.
 
 A two-point Dirichlet problem is singular when the homogeneous equation has a
-solution vanishing at both ends. Write the pair $(j_\ell, n_\ell)$ in polar form,
-$M \equiv \sqrt{j_\ell^2 + n_\ell^2}$ and $\theta \equiv \arctan(n_\ell/j_\ell)$, so
-that $j_\ell = M\cos\theta$ and $n_\ell = M\sin\theta$ hold by construction. The
+solution vanishing at both ends. Write the pair $(j_\ell, y_\ell)$ in polar form,
+$M \equiv \sqrt{j_\ell^2 + y_\ell^2}$ and $\theta \equiv \arctan(y_\ell/j_\ell)$, so
+that $j_\ell = M\cos\theta$ and $y_\ell = M\sin\theta$ hold by construction. The
 boundary determinant is then
 $$
-\Phi_\ell(x_a, x_b) = j_\ell(x_a)\,n_\ell(x_b) - j_\ell(x_b)\,n_\ell(x_a)
+\Phi_\ell(x_a, x_b) = j_\ell(x_a)\,y_\ell(x_b) - j_\ell(x_b)\,y_\ell(x_a)
  = M(x_a)\,M(x_b)\,\sin\!\big(\theta(x_b) - \theta(x_a)\big),
 $$
 which is an identity rather than an approximation: it is angle subtraction applied to
@@ -633,7 +839,7 @@ $$
 \theta_\ell(x) \simeq \sqrt{x^2 - \nu^2} - \nu \arccos\frac{\nu}{x},
 \tag{4}
 $$
-whose accuracy improves with $\ell$: measured against $\arctan(n_\ell/j_\ell)$ over a
+whose accuracy improves with $\ell$: measured against $\arctan(y_\ell/j_\ell)$ over a
 window of $60$ in $x$ above the turning point, the two phases drift apart by
 $4\times10^{-2}$ rad at $\ell = 2$ and by $3\times10^{-4}$ rad at $\ell = 300$. Only the
 increment $\Delta\theta$ across a panel decides a conjugate point, so a constant offset
@@ -653,6 +859,7 @@ whatever its span.
 #|   starting at A = 200 as the panel span varies, for l = 2 and l = 50. The spikes are
 #|   conjugate points. They sit at integer multiples of pi for l = 2 and shift for l =
 #|   50, exactly where the WKB phase (4) advances by n pi (dotted lines).
+#| code-fold: true
 A0 = 200.0
 spans = np.linspace(19.9, 22.6, 1400) * np.pi
 fig, ax = plt.subplots(figsize=(7, 3.4))
