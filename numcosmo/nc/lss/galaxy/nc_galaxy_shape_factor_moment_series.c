@@ -82,6 +82,12 @@
  * than one root in a wide bracket, of which only one is the maximum: an
  * optimizer using this class must maximise the likelihood (e.g. a coarse
  * scan then a local refinement), never root-find the score directly.
+ *
+ * The population-independent shear-map series algebra (`Poly2` and the
+ * table builder) that computes this class' own target moment series is
+ * shared, via nc_galaxy_shape_factor_moment_series_private.h, with
+ * #NcGalaxyShapeFactorTiltedSeries, which matches its own tilt against the
+ * same exact-in-$g$ moments this class already computes.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -90,6 +96,7 @@
 #include "build_cfg.h"
 
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moment_series.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_moment_series_private.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -118,16 +125,16 @@
  * TRACE_DET branch (<epsilon>=g, no responsivity factor) and with
  * NcGalaxyShapeFactorCGF's isotropic TRACE_DET response moments -- the
  * map used here reproduces both.
+ *
+ * Poly2, and the build_c_trace/build_c_trace_det/build_tables functions
+ * below, are declared (non-static) in
+ * nc_galaxy_shape_factor_moment_series_private.h and defined here, shared
+ * with NcGalaxyShapeFactorTiltedSeries -- see this file's own class doc
+ * comment and that header's.
  */
 
-typedef struct _Poly2
-{
-  gdouble *c; /* c[a*sz+b]: coefficient of chi_I^a * chibar_I^b */
-  guint sz;
-} Poly2;
-
-static Poly2
-poly2_new (guint sz)
+Poly2
+_nc_galaxy_shape_factor_moment_series_poly2_new (guint sz)
 {
   Poly2 p;
 
@@ -137,14 +144,14 @@ poly2_new (guint sz)
   return p;
 }
 
-static void
-poly2_clear (Poly2 *p)
+void
+_nc_galaxy_shape_factor_moment_series_poly2_clear (Poly2 *p)
 {
   g_clear_pointer (&p->c, g_free);
 }
 
-static inline gdouble
-poly2_get (const Poly2 *p, guint a, guint b)
+gdouble
+_nc_galaxy_shape_factor_moment_series_poly2_get (const Poly2 *p, guint a, guint b)
 {
   return p->c[a * p->sz + b];
 }
@@ -163,7 +170,7 @@ poly2_axpy_mul_a (Poly2 *out, const Poly2 *in, gdouble scale)
 
   for (a = 0; a + 1 < out->sz; a++)
     for (b = 0; b < out->sz; b++)
-      poly2_addto (out, a + 1, b, scale * poly2_get (in, a, b));
+      poly2_addto (out, a + 1, b, scale * _nc_galaxy_shape_factor_moment_series_poly2_get (in, a, b));
 }
 
 /* out += scale * in, shifted by (0,+1): multiplication by chibar_I. */
@@ -174,7 +181,7 @@ poly2_axpy_mul_b (Poly2 *out, const Poly2 *in, gdouble scale)
 
   for (a = 0; a < out->sz; a++)
     for (b = 0; b + 1 < out->sz; b++)
-      poly2_addto (out, a, b + 1, scale * poly2_get (in, a, b));
+      poly2_addto (out, a, b + 1, scale * _nc_galaxy_shape_factor_moment_series_poly2_get (in, a, b));
 }
 
 /* out += scale * in, unshifted. */
@@ -199,7 +206,7 @@ poly2_axpy_conv (Poly2 *out, const Poly2 *A, const Poly2 *B, gdouble scale)
   {
     for (b1 = 0; b1 < A->sz; b1++)
     {
-      const gdouble va = poly2_get (A, a1, b1);
+      const gdouble va = _nc_galaxy_shape_factor_moment_series_poly2_get (A, a1, b1);
       guint a2, b2;
 
       if (va == 0.0)
@@ -209,7 +216,7 @@ poly2_axpy_conv (Poly2 *out, const Poly2 *A, const Poly2 *B, gdouble scale)
       {
         for (b2 = 0; b2 + b1 < out->sz; b2++)
         {
-          const gdouble vb = poly2_get (B, a2, b2);
+          const gdouble vb = _nc_galaxy_shape_factor_moment_series_poly2_get (B, a2, b2);
 
           if (vb != 0.0)
             poly2_addto (out, a1 + a2, b1 + b2, scale * va * vb);
@@ -228,19 +235,19 @@ poly2_axpy_transpose (Poly2 *out, const Poly2 *in)
 
   for (a = 0; a < out->sz; a++)
     for (b = 0; b < out->sz; b++)
-      poly2_addto (out, a, b, poly2_get (in, b, a));
+      poly2_addto (out, a, b, _nc_galaxy_shape_factor_moment_series_poly2_get (in, b, a));
 }
 
 /* c_j = n_j - (chi_I+chibar_I) c_{j-1} - c_{j-2}, n_0=chi_I, n_1=2,
  * n_2=chibar_I, n_{j>2}=0, c_{j<0}=0 (MOMENT_SERIES.md eq. 5). */
-static void
-_build_c_trace (Poly2 *c, guint n, guint sz)
+void
+_nc_galaxy_shape_factor_moment_series_build_c_trace (Poly2 *c, guint n, guint sz)
 {
   guint j;
 
   for (j = 0; j <= n; j++)
   {
-    c[j] = poly2_new (sz);
+    c[j] = _nc_galaxy_shape_factor_moment_series_poly2_new (sz);
 
     if (j == 0)
       poly2_addto (&c[j], 1, 0, 1.0);
@@ -262,14 +269,14 @@ _build_c_trace (Poly2 *c, guint n, guint sz)
 
 /* c_j = n_j - chi_I c_{j-1}, n_0=chi_I, n_1=1, n_{j>1}=0 -- see this file's
  * top-of-file note on why the shift is by chi_I, not chibar_I. */
-static void
-_build_c_trace_det (Poly2 *c, guint n, guint sz)
+void
+_nc_galaxy_shape_factor_moment_series_build_c_trace_det (Poly2 *c, guint n, guint sz)
 {
   guint j;
 
   for (j = 0; j <= n; j++)
   {
-    c[j] = poly2_new (sz);
+    c[j] = _nc_galaxy_shape_factor_moment_series_poly2_new (sz);
 
     if (j == 0)
       poly2_addto (&c[j], 1, 0, 1.0);
@@ -334,17 +341,20 @@ enum
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyShapeFactorMomentSeries, nc_galaxy_shape_factor_moment_series, NC_TYPE_GALAXY_SHAPE_FACTOR)
 
-/* Builds tab_m/tab_v/tab_w for the given convention and self->trunc_order.
- * The raw covariance tables (tab_v/tab_w) hold <(Re S)^2>_j and
- * <(Im S)^2>_j themselves, linear in the moments; the mu*mu subtraction
- * that turns <(Re S)^2>_j into Var(Re S)_j is population-dependent (it
- * uses the concrete m_l values), so it happens per galaxy in
- * _peek_coeffs(), not here -- see that function's own comment. */
-static void
-_nc_galaxy_shape_factor_moment_series_build_tables (NcGalaxyShapeFactorMomentSeriesPrivate * const self,
-                                                    NcGalaxyWLObsEllipConv                         ellip_conv)
+/* Builds tab_m/tab_v/tab_w for the given convention and trunc_order. The
+ * raw covariance tables (tab_v/tab_w) hold <(Re S)^2>_j and <(Im S)^2>_j
+ * themselves, linear in the moments; the mu*mu subtraction that turns
+ * <(Re S)^2>_j into Var(Re S)_j is population-dependent (it uses the
+ * concrete m_l values), so it happens per galaxy in _peek_coeffs(), not
+ * here -- see that function's own comment. Out-params rather than writing
+ * into NcGalaxyShapeFactorMomentSeriesPrivate directly: see this class'
+ * own private header for why (shared with NcGalaxyShapeFactorTiltedSeries). */
+void
+_nc_galaxy_shape_factor_moment_series_build_tables (guint trunc_order, NcGalaxyWLObsEllipConv ellip_conv,
+                                                    guint *n_m_out, guint *n_v_out, guint *n_moments_out,
+                                                    gdouble **tab_m_out, gdouble **tab_v_out, gdouble **tab_w_out)
 {
-  const guint n   = self->trunc_order;
+  const guint n   = trunc_order;
   const guint sz  = n + 3;
   Poly2 *c        = g_new (Poly2, n + 1);
   const guint n_m = (n + 1) / 2;
@@ -359,17 +369,14 @@ _nc_galaxy_shape_factor_moment_series_build_tables (NcGalaxyShapeFactorMomentSer
   switch (ellip_conv)
   {
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-      _build_c_trace (c, n, sz);
+      _nc_galaxy_shape_factor_moment_series_build_c_trace (c, n, sz);
       break;
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-      _build_c_trace_det (c, n, sz);
+      _nc_galaxy_shape_factor_moment_series_build_c_trace_det (c, n, sz);
       break;
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
   }
-
-  self->n_m = n_m;
-  self->n_v = n_v;
 
   /* Mean series: m_j = diag(c_j), j odd, l = (j-1)/2 -- reading the
    * diagonal is exactly the isotropic average <chi_I^a chibar_I^a> = M_2a
@@ -380,7 +387,7 @@ _nc_galaxy_shape_factor_moment_series_build_tables (NcGalaxyShapeFactorMomentSer
 
     for (a = 0; a < sz; a++)
     {
-      const gdouble val = poly2_get (&c[j], a, a);
+      const gdouble val = _nc_galaxy_shape_factor_moment_series_poly2_get (&c[j], a, a);
 
       tab_m[l * sz + a] = val;
 
@@ -393,26 +400,26 @@ _nc_galaxy_shape_factor_moment_series_build_tables (NcGalaxyShapeFactorMomentSer
    * raw_w_j = diag((c*conj(c) - c*c)/2) = <(Im S)^2>_j, j even, l = j/2. */
   for (l = 0; l < n_v; l++)
   {
-    Poly2 p2 = poly2_new (sz); /* sum_i c_i * c_{j-i}:       <S^2>_j    */
-    Poly2 ps = poly2_new (sz); /* sum_i c_i * conj(c_{j-i}): <|S|^2>_j  */
+    Poly2 p2 = _nc_galaxy_shape_factor_moment_series_poly2_new (sz); /* sum_i c_i * c_{j-i}:       <S^2>_j    */
+    Poly2 ps = _nc_galaxy_shape_factor_moment_series_poly2_new (sz); /* sum_i c_i * conj(c_{j-i}): <|S|^2>_j  */
     guint i;
 
     j = 2 * l;
 
     for (i = 0; i <= j; i++)
     {
-      Poly2 ct = poly2_new (sz);
+      Poly2 ct = _nc_galaxy_shape_factor_moment_series_poly2_new (sz);
 
       poly2_axpy_transpose (&ct, &c[j - i]);
       poly2_axpy_conv (&p2, &c[i], &c[j - i], 1.0);
       poly2_axpy_conv (&ps, &c[i], &ct, 1.0);
-      poly2_clear (&ct);
+      _nc_galaxy_shape_factor_moment_series_poly2_clear (&ct);
     }
 
     for (a = 0; a < sz; a++)
     {
-      const gdouble p2aa = poly2_get (&p2, a, a);
-      const gdouble psaa = poly2_get (&ps, a, a);
+      const gdouble p2aa = _nc_galaxy_shape_factor_moment_series_poly2_get (&p2, a, a);
+      const gdouble psaa = _nc_galaxy_shape_factor_moment_series_poly2_get (&ps, a, a);
       const gdouble vval = 0.5 * (p2aa + psaa);
       const gdouble wval = 0.5 * (psaa - p2aa);
 
@@ -423,27 +430,29 @@ _nc_galaxy_shape_factor_moment_series_build_tables (NcGalaxyShapeFactorMomentSer
         max_a = MAX (max_a, a);
     }
 
-    poly2_clear (&p2);
-    poly2_clear (&ps);
+    _nc_galaxy_shape_factor_moment_series_poly2_clear (&p2);
+    _nc_galaxy_shape_factor_moment_series_poly2_clear (&ps);
   }
 
   n_moments = max_a + 1;
 
-  self->n_moments = n_moments;
-  self->tab_m     = g_new (gdouble, n_m * n_moments);
-  self->tab_v     = g_new (gdouble, n_v * n_moments);
-  self->tab_w     = g_new (gdouble, n_v * n_moments);
+  *n_m_out       = n_m;
+  *n_v_out       = n_v;
+  *n_moments_out = n_moments;
+  *tab_m_out     = g_new (gdouble, n_m * n_moments);
+  *tab_v_out     = g_new (gdouble, n_v * n_moments);
+  *tab_w_out     = g_new (gdouble, n_v * n_moments);
 
   for (l = 0; l < n_m; l++)
     for (a = 0; a < n_moments; a++)
-      self->tab_m[l * n_moments + a] = tab_m[l * sz + a];
+      (*tab_m_out)[l * n_moments + a] = tab_m[l * sz + a];
 
   for (l = 0; l < n_v; l++)
   {
     for (a = 0; a < n_moments; a++)
     {
-      self->tab_v[l * n_moments + a] = tab_v[l * sz + a];
-      self->tab_w[l * n_moments + a] = tab_w[l * sz + a];
+      (*tab_v_out)[l * n_moments + a] = tab_v[l * sz + a];
+      (*tab_w_out)[l * n_moments + a] = tab_w[l * sz + a];
     }
   }
 
@@ -452,7 +461,7 @@ _nc_galaxy_shape_factor_moment_series_build_tables (NcGalaxyShapeFactorMomentSer
   g_free (tab_w);
 
   for (j = 0; j <= n; j++)
-    poly2_clear (&c[j]);
+    _nc_galaxy_shape_factor_moment_series_poly2_clear (&c[j]);
 
   g_free (c);
 }
@@ -523,7 +532,9 @@ _nc_galaxy_shape_factor_moment_series_constructed (GObject *object)
      * (NcGalaxyShapePopGaussLocal) prepare() runs per galaxy, so building
      * these O(n^3) tables there would repeat that cost per galaxy per MCMC
      * step instead of once at construction. */
-    _nc_galaxy_shape_factor_moment_series_build_tables (self, ellip_conv);
+    _nc_galaxy_shape_factor_moment_series_build_tables (self->trunc_order, ellip_conv,
+                                                        &self->n_m, &self->n_v, &self->n_moments,
+                                                        &self->tab_m, &self->tab_v, &self->tab_w);
   }
 }
 
@@ -851,4 +862,3 @@ nc_galaxy_shape_factor_moment_series_clear (NcGalaxyShapeFactorMomentSeries **gs
 {
   g_clear_object (gsfms);
 }
-
