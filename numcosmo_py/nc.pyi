@@ -9584,6 +9584,57 @@ class GalaxyShapeFactorSeriesLensedClass(GObject.GPointer):
 
     parent_class: GalaxyShapeFactorClass = ...
 
+class GalaxyShapeFactorTiltedSeries(GalaxyShapeFactor):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorTiltedSeries(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv, trunc_order:int) -> NumCosmo.GalaxyShapeFactorTiltedSeries
+
+    Object NcGalaxyShapeFactorTiltedSeries
+
+    Properties from NcGalaxyShapeFactorTiltedSeries:
+      trunc-order -> guint: Truncation order
+        Truncation order N of the g-power series for lambda(g)
+
+    Properties from NcGalaxyShapeFactor:
+      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
+        Weak lensing observables ellipticity convention
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        trunc_order: int
+        ellip_conv: GalaxyWLObsEllipConv
+
+    props: Props = ...
+    def __init__(
+        self, trunc_order: int = ..., ellip_conv: GalaxyWLObsEllipConv = ...
+    ) -> None: ...
+    @staticmethod
+    def clear(gsfts: GalaxyShapeFactorTiltedSeries) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(
+        cls, ellip_conv: GalaxyWLObsEllipConv, trunc_order: int
+    ) -> GalaxyShapeFactorTiltedSeries: ...
+    def ref(self) -> GalaxyShapeFactorTiltedSeries: ...
+
+class GalaxyShapeFactorTiltedSeriesClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorTiltedSeriesClass()
+    """
+
+    parent_class: GalaxyShapeFactorClass = ...
+
 class GalaxyShapeFactorVarAdd(GalaxyShapeFactor):
     r"""
     :Constructors:
@@ -26300,6 +26351,18 @@ class XcorSolverClass(GObject.GPointer):
     """
 
     parent_class: GObject.ObjectClass = ...
+
+class _GalaxyShapeFactorMomentSeriesPoly2(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        _GalaxyShapeFactorMomentSeriesPoly2()
+    """
+
+    c: float = ...
+    sz: int = ...
 
 class _HaloPositionClass(GObject.GPointer):
     r"""
