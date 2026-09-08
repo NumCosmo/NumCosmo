@@ -558,3 +558,79 @@ global population's). They are built once in `constructed()` instead,
 alongside the convention dispatch; the per-galaxy contraction against that
 galaxy's moments still happens in `prepare()`'s usual cache-refresh slot,
 mirroring `NcGalaxyShapeFactorCGF`'s own `_peek_V`.
+
+## `NcGalaxyShapeFactorTiltedSeries`: three departures from its design notes (2026)
+
+The design notes this class was built from (`TILT_SERIES.md` and
+`tilt_series.tex`, repository root) leave the tilt parameter's higher-order
+coefficients $\lambda^{(p)}$ as "computed numerically here; for production
+[they] should be reduced symbolically to rational functions of
+$(M_2,M_4,M_6,\dots,\sigma_\nu^2)$ and hardcoded, matching how $m_j/v_j/w_j$
+already ship" (`TILT_SERIES.md` §8). That production plan was not followed.
+Hardcoding a fixed symbolic form freezes both the truncation order (unlike
+`NcGalaxyShapeFactorMomentSeries`, whose target-series tables are already
+built to arbitrary order at construction time) and the population's
+functional form — reopening exactly the population-genericity question
+§6/§8 of the same note works hard to close. Instead, $\lambda(g)$ and $W(g)$
+are solved via a noise-integrated generating function
+$Z(\lambda)=\mathbb{E}_{P_0}[e^{\lambda\cdot T}]$, expanded as a formal power
+series in $g$ using the population's own radial moments
+(`nc_galaxy_shape_pop_moment_2k()`) at each order — exact, reaches any
+`trunc-order` with the same code, and works for every population the class
+docs claim to support (`NcGalaxyShapePopBeta` included), which a fixed
+symbolic reduction pinned to a specific population parametrisation could
+not. See `nc_galaxy_shape_factor_tilted_series.c`'s own top-of-file and
+`_tilted_series_solve()`/`_tilted_series_compute_D()` comments for the
+derivation.
+
+Validated against the design notes before this was trusted: a from-scratch
+Python re-derivation (not sharing any code with either the tex or the C
+class) reproduced `TILT_SERIES.md`'s published $V$ matrix
+($0.183144, 0.050334, -0.005583$) and the full $\lambda^{(1..5)}$ table
+exactly, to six significant figures. The one number that did *not* match
+was the tex's printed Gaussian-core value at $|g|=0.25$, $N=9$:
+$m=\lambda_1 c_t = 0.595680$ (tex §4.2). Both the from-scratch Python
+re-derivation and this class's own evaluated $\lambda(g)$ agree with each
+other exactly on $m=0.595548$ — a $0.022\%$ discrepancy from the tex's
+printed value, while $c_t=0.253087$ and $c_x=0.224074$ (the other two
+numbers in the same tex sentence) match exactly. Two independent
+implementations agreeing with each other and disagreeing with a single
+printed reference number is evidence the *reference* value is itself
+series/precision-limited (the tex's own §8 repeatedly documents comparably
+small residuals as "series-limited, not quadrature-limited" for adjacent
+quantities), not evidence of a bug here — recorded rather than chased
+further; see the test suite's module docstring
+(`tests/python/nc/lss/galaxy/test_galaxy_shape_factor_tilted_series.py`).
+
+**Second departure.** `TILT_SERIES.md` §6 claims the per-evaluation cost is
+"cheaper than the Gaussian... No `log`, no division, no `exp`". That is true
+only of `eval_ln_marginal`. `eval_marginal` needs a final `exp()` to undo the
+log-domain evaluation, and it is `eval_marginal`, not `eval_ln_marginal`,
+that the fixed-nodes pipeline path
+(`nc_galaxy_shape_factor_eval_at_nodes()`) actually calls
+(`nc_galaxy_shape_factor.c:1488`). So on the path the pipeline runs, this
+class is not cheaper than `MomentSeries`' Gaussian evaluation — the class
+docs state the honest operation count instead of repeating the note's claim.
+
+**Third departure, a convention trap rather than a design choice.**
+`tilt_series.tex`'s closed form for $\ln P_0$ (Remark 3.5) uses $P_\text{pop}$
+as the population's raw 2-D area density. NumCosmo's own
+`nc_galaxy_shape_pop_eval_p()` is instead the *radial marginal* — the disc
+measure $2\pi r$ already folded in (`nc_galaxy_shape_pop.h`'s own doc
+comment). Substituting NumCosmo's convention into the tex's polar-coordinate
+convolution derivation changes which exponential form is stable to evaluate:
+the raw form needs $I_0(Rr/\sigma_\nu^2)$ against $\exp[-(R^2+r^2)/2\sigma_\nu^2]$,
+while NumCosmo's convention (after the $2\pi r$ cancels against the r-Jacobian
+already in the tex's own integral) is best evaluated as
+$I_{0,\text{scaled}}(Rr/\sigma_\nu^2)$ against $\exp[-(R-r)^2/2\sigma_\nu^2]$ —
+the same numerical-stability trick tex Remark 3.4 already flags for the
+Marcum-$Q$ closed form, but it has to be re-derived from scratch for the
+radial-marginal convention rather than copied, because the prefactor and the
+exponent both change, not just the prefactor. Getting this wrong would not
+error: it silently returns $\ln P_0$ for the wrong radial convention.
+Verified against an independent from-scratch trapezoid reference to six
+decimal digits across the full catalogue $\sigma_\nu$ range, including the
+sharp small-$\sigma_\nu$, near-disc-boundary corner where
+`NcGalaxyShapeFactorFixedQuad`'s own default resolution (`n-radial=n-angular=21`)
+turns out to be under-converged (confirmed by re-running `FixedQuad` at much
+higher resolution and watching it converge toward this class's answer).

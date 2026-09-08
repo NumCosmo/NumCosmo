@@ -305,6 +305,7 @@ DEFAULT_SHAPE_M_SIGMA = 0.08
 
 DEFAULT_SHAPE_SERIES_TRUNC_ORDER = 4
 DEFAULT_SHAPE_MOMENT_SERIES_TRUNC_ORDER = 5
+DEFAULT_SHAPE_TILTED_SERIES_TRUNC_ORDER = 9
 
 
 class GalaxyShapeFactorGenBase(BaseModel):
@@ -521,6 +522,30 @@ class GalaxyShapeFactorGenLaplace(GalaxyShapeFactorGenBase):
         return Nc.GalaxyShapeFactorLaplace.new(self.ellip_conv.genum)
 
 
+class GalaxyShapeFactorGenTiltedSeries(GalaxyShapeFactorGenBase):
+    """Exponential-tilt marginal (``NcGalaxyShapeFactorTiltedSeries``)."""
+
+    trunc_order: Annotated[int, Field(gt=0)] = DEFAULT_SHAPE_TILTED_SERIES_TRUNC_ORDER
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return the help text for this scheme."""
+        return [
+            "GalaxyShapeFactorGenTiltedSeries",
+            f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
+            f"trunc_order={DEFAULT_SHAPE_TILTED_SERIES_TRUNC_ORDER}",
+        ]
+
+    def requires_sigma(self) -> bool:
+        """TiltedSeries needs only radial moments, not a Gaussian width."""
+        return False
+
+    def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
+        return Nc.GalaxyShapeFactorTiltedSeries.new(
+            self.ellip_conv.genum, self.trunc_order
+        )
+
+
 GalaxyShapeFactorGenTypes = (
     GalaxyShapeFactorGenVarAdd
     | GalaxyShapeFactorGenSeriesLensed
@@ -528,6 +553,7 @@ GalaxyShapeFactorGenTypes = (
     | GalaxyShapeFactorGenFixedQuad
     | GalaxyShapeFactorGenLaplace
     | GalaxyShapeFactorGenMomentSeries
+    | GalaxyShapeFactorGenTiltedSeries
 )
 
 
@@ -540,6 +566,7 @@ class ShapeFactorGen(StrEnum):
     FIXED_QUAD = (auto(), GalaxyShapeFactorGenFixedQuad)
     LAPLACE = (auto(), GalaxyShapeFactorGenLaplace)
     MOMENT_SERIES = (auto(), GalaxyShapeFactorGenMomentSeries)
+    TILTED_SERIES = (auto(), GalaxyShapeFactorGenTiltedSeries)
 
     def __new__(
         cls, value: str, _model_cls: type[GalaxyShapeFactorGenTypes]
