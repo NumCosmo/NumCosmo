@@ -143,11 +143,37 @@
  *
  * The tilt parameter must stay inside $Z(\lambda)$'s natural domain,
  * $\max(\lambda_2,\lambda_3) < 1/2\sigma_\nu^2$ (`TILT_SERIES.md' sec. 7):
- * asserted at evaluation time, not silently clamped, exactly like
- * `MomentSeries`' own covariance-positivity guard -- but unlike that guard,
- * this one is not reachable at any physical shear/noise combination the
- * catalogue exercises (the margin is $>300\times$ everywhere; the closed
- * form for the second-order coefficients shows $V\succ0$ unconditionally).
+ * checked at evaluation time, not silently clamped, exactly like
+ * `MomentSeries`' own covariance-positivity guard.
+ *
+ * That domain IS reachable on real data, contrary to what this comment
+ * asserted before. The $g$-series has radius of convergence exactly $1$
+ * (`TILT_SERIES.md' prop. 2.4), and $|g|>1$ does occur at the innermost fit
+ * radii once the sampler visits a high enough mass: $g=\gamma/(1-\kappa)$
+ * has a pole at $\kappa=1$, and the source-redshift quadrature integrates
+ * over source planes that reach it. Past $|g|=1$ the truncated
+ * $\lambda(g)$ is a divergent sum and can cross the bound from below.
+ *
+ * Raising `trunc-order` does NOT help there. It makes the divergence worse
+ * while pushing the guard's trip point further out, i.e. it converts a loud
+ * failure into a silent wrong answer -- which is what `MomentSeries` at
+ * order 5 already does in the same regime (its covariance polynomial grows
+ * away from its own positivity wall rather than through it, so its guard
+ * never fires; at order 3 it fires *earlier* than this one ever does). The
+ * two guards differ in orientation, not in robustness.
+ *
+ * An MCMC walker reaching that region is a routine event -- walkers are
+ * initialised over the whole prior box -- so the default is to report it,
+ * not to abort the process. The guard returns $0$ from `eval_marginal()`
+ * (and $-\infty$ from `eval_ln_marginal()`, keeping the two consistent),
+ * which routes into #NcDataClusterWLFactor's existing `NC_GALAXY_LOW_PROB`
+ * path and pushes the sampler back out of the region. Occurrences are
+ * counted and readable through
+ * nc_galaxy_shape_factor_tilted_series_get_domain_error_count(); a non-zero
+ * count on a converged chain means the shear range (in practice the mass
+ * prior) wants restricting. Set
+ * #NcGalaxyShapeFactorTiltedSeries:strict-domain to restore the fatal
+ * behaviour, which is how the test suite exercises the guard.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -933,6 +959,19 @@ typedef struct _NcGalaxyShapeFactorTiltedSeriesPrivate
   guint n_M;
 
   guint64 pop_hash;
+
+  /* Domain-guard bookkeeping; see the class doc comment. @strict_domain
+   * restores the pre-existing fatal behaviour. @domain_error_count is the
+   * running number of out-of-domain evaluations and @domain_warned the
+   * one-shot flag for the warning that accompanies the first of them;
+   * both are gint and touched only through g_atomic_int_*, since APES
+   * evaluates a shared factor from several walker threads at once and an
+   * undercount here would understate exactly the diagnostic the caller is
+   * reading. Neither is reset internally -- the caller owns that, through
+   * nc_galaxy_shape_factor_tilted_series_reset_domain_error_count(). */
+  gboolean strict_domain;
+  gint domain_error_count;
+  gint domain_warned;
 } NcGalaxyShapeFactorTiltedSeriesPrivate;
 
 /*
@@ -978,6 +1017,7 @@ enum
 {
   PROP_0,
   PROP_TRUNC_ORDER,
+  PROP_STRICT_DOMAIN,
   PROP_LEN,
 };
 
@@ -997,6 +1037,10 @@ nc_galaxy_shape_factor_tilted_series_init (NcGalaxyShapeFactorTiltedSeries *gsft
   self->tab_v       = NULL;
   self->tab_w       = NULL;
   self->pop_hash    = 0;
+
+  self->strict_domain      = FALSE;
+  self->domain_error_count = 0;
+  self->domain_warned      = 0;
 }
 
 static void
@@ -1009,6 +1053,9 @@ _nc_galaxy_shape_factor_tilted_series_set_property (GObject *object, guint prop_
   {
     case PROP_TRUNC_ORDER:
       self->trunc_order = g_value_get_uint (value);
+      break;
+    case PROP_STRICT_DOMAIN:
+      self->strict_domain = g_value_get_boolean (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -1026,6 +1073,9 @@ _nc_galaxy_shape_factor_tilted_series_get_property (GObject *object, guint prop_
   {
     case PROP_TRUNC_ORDER:
       g_value_set_uint (value, self->trunc_order);
+      break;
+    case PROP_STRICT_DOMAIN:
+      g_value_set_boolean (value, self->strict_domain);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -1276,12 +1326,37 @@ _nc_galaxy_shape_factor_tilted_series_eval (NcGalaxyShapeFactorTiltedSeriesPriva
   }
 
   if (G_UNLIKELY (MAX (l2, l3) >= lam_bound))
-    g_error ("NcGalaxyShapeFactorTiltedSeries: the tilt parameter left the "
-             "natural domain (lambda_2=%g, lambda_3=%g, bound=%g) at "
-             "trunc-order=%u, |g|=%g. This marks a truncation breakdown "
-             "outside this order's valid range -- raise trunc-order or "
-             "restrict the shear range.",
-             l2, l3, lam_bound, N, g_mag);
+  {
+    if (G_UNLIKELY (self->strict_domain))
+      g_error ("NcGalaxyShapeFactorTiltedSeries: the tilt parameter left the "
+               "natural domain (lambda_2=%g, lambda_3=%g, bound=%g) at "
+               "trunc-order=%u, |g|=%g. The g-series has radius of "
+               "convergence exactly 1, so |g|>1 is a divergent sum: restrict "
+               "the shear range (in a cluster fit, tighten the mass prior). "
+               "Do NOT raise trunc-order -- that worsens the divergence and "
+               "only moves this check's trip point further out.",
+               l2, l3, lam_bound, N, g_mag);
+
+    /* One warning per instance: the sampler can revisit this region for
+     * many galaxies over many walkers, and the count below is the number
+     * that matters, not one line per occurrence. */
+    if (G_UNLIKELY (g_atomic_int_compare_and_exchange (&self->domain_warned, 0, 1)))
+      g_warning ("NcGalaxyShapeFactorTiltedSeries: the tilt parameter left the "
+                 "natural domain (lambda_2=%g, lambda_3=%g, bound=%g) at "
+                 "trunc-order=%u, |g|=%g; returning zero probability, which "
+                 "routes into the caller's NC_GALAXY_LOW_PROB path. The "
+                 "g-series has radius of convergence exactly 1, so |g|>1 is a "
+                 "divergent sum: restrict the shear range (in a cluster fit, "
+                 "tighten the mass prior). Do NOT raise trunc-order. Warned "
+                 "once per instance -- read the running total with "
+                 "nc_galaxy_shape_factor_tilted_series_get_domain_error_count().",
+                 l2, l3, lam_bound, N, g_mag);
+
+    g_atomic_int_inc (&self->domain_error_count);
+
+    /* exp(GSL_NEGINF) == 0.0 exactly, so the two hooks stay consistent. */
+    return want_log ? GSL_NEGINF : 0.0;
+  }
 
   lnP = ln_P0 + l1 * x + l2 * x * x + l3 * y * y - Wg;
 
@@ -1345,6 +1420,30 @@ nc_galaxy_shape_factor_tilted_series_class_init (NcGalaxyShapeFactorTiltedSeries
                                                       "Truncation order N of the g-power series for lambda(g)",
                                                       1, G_MAXUINT, 5,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyShapeFactorTiltedSeries:strict-domain:
+   *
+   * Whether leaving $Z(\lambda)$'s natural domain,
+   * $\max(\lambda_2,\lambda_3) < 1/2\sigma_\nu^2$, is fatal.
+   *
+   * %FALSE (the default) returns zero probability and counts the
+   * occurrence, so a sampler that wanders past $|g|=1$ is pushed back out
+   * by #NcDataClusterWLFactor's `NC_GALAXY_LOW_PROB` penalty instead of
+   * killing the process mid-chain. %TRUE aborts, which is useful in tests
+   * and in any batch job that would rather fail than quietly penalise.
+   *
+   * Deliberately NOT %G_PARAM_CONSTRUCT: that flag would have GObject
+   * write the pspec default over whatever _init() set, at construction
+   * time, for every instance.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_STRICT_DOMAIN,
+                                   g_param_spec_boolean ("strict-domain",
+                                                         "Strict domain",
+                                                         "Abort instead of returning zero probability when the tilt leaves its natural domain",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   gsf_class->data_init        = &_nc_galaxy_shape_factor_tilted_series_data_init;
   gsf_class->prepare          = &_nc_galaxy_shape_factor_tilted_series_prepare;
@@ -1410,4 +1509,56 @@ void
 nc_galaxy_shape_factor_tilted_series_clear (NcGalaxyShapeFactorTiltedSeries **gsfts)
 {
   g_clear_object (gsfts);
+}
+
+/**
+ * nc_galaxy_shape_factor_tilted_series_get_domain_error_count:
+ * @gsfts: a #NcGalaxyShapeFactorTiltedSeries
+ *
+ * Number of evaluations that found the tilt parameter outside
+ * $Z(\lambda)$'s natural domain since construction, or since the last
+ * nc_galaxy_shape_factor_tilted_series_reset_domain_error_count().
+ *
+ * Each one returned zero probability rather than a truncated-series value
+ * (see this class' doc comment), so a non-zero count means part of the
+ * likelihood was replaced by #NcDataClusterWLFactor's `NC_GALAXY_LOW_PROB`
+ * penalty. On a converged chain that is a signal to restrict the shear
+ * range -- in a cluster fit, to tighten the mass prior -- not to raise
+ * #NcGalaxyShapeFactorTiltedSeries:trunc-order.
+ *
+ * Returns: the number of out-of-domain evaluations.
+ */
+guint
+nc_galaxy_shape_factor_tilted_series_get_domain_error_count (NcGalaxyShapeFactorTiltedSeries *gsfts)
+{
+  NcGalaxyShapeFactorTiltedSeriesPrivate *self;
+
+  g_return_val_if_fail (NC_IS_GALAXY_SHAPE_FACTOR_TILTED_SERIES (gsfts), 0);
+
+  self = nc_galaxy_shape_factor_tilted_series_get_instance_private (gsfts);
+
+  return (guint) g_atomic_int_get (&self->domain_error_count);
+}
+
+/**
+ * nc_galaxy_shape_factor_tilted_series_reset_domain_error_count:
+ * @gsfts: a #NcGalaxyShapeFactorTiltedSeries
+ *
+ * Zeroes the counter read by
+ * nc_galaxy_shape_factor_tilted_series_get_domain_error_count() and re-arms
+ * the once-per-instance warning, so a caller can attribute out-of-domain
+ * evaluations to a single likelihood evaluation, chain segment, or fit.
+ *
+ */
+void
+nc_galaxy_shape_factor_tilted_series_reset_domain_error_count (NcGalaxyShapeFactorTiltedSeries *gsfts)
+{
+  NcGalaxyShapeFactorTiltedSeriesPrivate *self;
+
+  g_return_if_fail (NC_IS_GALAXY_SHAPE_FACTOR_TILTED_SERIES (gsfts));
+
+  self = nc_galaxy_shape_factor_tilted_series_get_instance_private (gsfts);
+
+  g_atomic_int_set (&self->domain_error_count, 0);
+  g_atomic_int_set (&self->domain_warned, 0);
 }

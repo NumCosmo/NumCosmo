@@ -47,16 +47,18 @@ recorded here rather than silently worked around:
   (unsurprising: sec. 8 repeatedly documents comparably small residuals as
   "series-limited, not quadrature-limited"). $c_t$ and $c_x$ at the same
   point match the tex exactly and are checked tightly.
-* No test forces the $\\max(\\lambda_2,\\lambda_3)<1/2\\sigma_\\nu^2$ domain
-  guard to fire (contrast ``MomentSeries``' own reachable covariance
-  guard, forced in a subprocess below its test). An exploratory sweep over
-  ``trunc-order`` in [1,4], $|g|$ up to 0.999, $\\sigma_\\nu$ up to 2.0, and
-  adversarial (edge-peaked) ``NcGalaxyShapePopBeta`` populations found no
-  triggering combination, consistent with the class docs' own claim that
-  $V\\succ0$ unconditionally makes this guard structurally different from
-  ``MomentSeries``' -- an internal invariant rather than a reachable
-  failure mode. `test_domain_guard_holds_across_wide_sweep` below tests the
-  positive claim instead.
+* The $\\max(\\lambda_2,\\lambda_3)<1/2\\sigma_\\nu^2$ domain guard is
+  unreachable *within* the series' radius of convergence, and that is what
+  the sweeps here test: an exploratory sweep over ``trunc-order`` in [1,4],
+  $|g|$ up to 0.999, $\\sigma_\\nu$ up to 2.0, and adversarial
+  (edge-peaked) ``NcGalaxyShapePopBeta`` populations found no triggering
+  combination. That is a statement about $|g|<1$ only. The radius of
+  convergence is exactly 1, and past it the truncated $\\lambda(g)$ is a
+  divergent sum that does cross the bound -- reached in practice by an
+  MCMC walker at high mass, where $g=\\gamma/(1-\\kappa)$ passes through
+  its pole. `test_domain_guard_holds_across_wide_sweep` tests the
+  in-radius claim; the two guard tests below cover the soft (default) and
+  fatal (``strict-domain``) responses to leaving it.
 """
 
 import subprocess
@@ -495,15 +497,15 @@ def test_domain_guard_survives_exploratory_adversarial_sweep():
 
 
 def test_domain_guard_aborts_when_forced_via_synthetic_lambda_bound():
-    """The guard code path itself (an assert-not-clamp `g_error`, exactly
-    like MomentSeries' own covariance guard) is exercised directly by
-    driving sigma_nu large enough that 1/(2 sigma_nu^2) is pushed below a
-    lambda_2 the low-order truncated series can plausibly reach, checked
-    in a subprocess since it is a fatal abort. This is a coarse sweep
-    over sigma_nu at trunc-order=2 with |g| near the physical bound; if no
-    sigma_nu in the swept range triggers it, the test is skipped rather
-    than asserted false, since non-triggering is itself the (separately
-    tested) expected behaviour."""
+    """Under `strict-domain`, the guard is still the assert-not-clamp
+    `g_error` it always was. Exercised directly by driving sigma_nu large
+    enough that 1/(2 sigma_nu^2) is pushed below a lambda_2 the low-order
+    truncated series can plausibly reach, checked in a subprocess since it
+    is a fatal abort. This is a coarse sweep over sigma_nu at
+    trunc-order=2 with |g| near the physical bound; if no sigma_nu in the
+    swept range triggers it, the test is skipped rather than asserted
+    false, since non-triggering is itself the (separately tested) expected
+    behaviour."""
     script_template = (
         "from numcosmo_py import Nc, Ncm\n"
         "Ncm.cfg_init()\n"
@@ -525,6 +527,7 @@ def test_domain_guard_aborts_when_forced_via_synthetic_lambda_bound():
         "zf = Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0)\n"
         "z_data = Nc.GalaxyRedshiftFactorData.new(zf, mset)\n"
         "gsf = Nc.GalaxyShapeFactorTiltedSeries.new(Nc.GalaxyWLObsEllipConv.TRACE, 2)\n"
+        "gsf.props.strict_domain = True\n"
         "data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)\n"
         "gsf.data_set(data, 0.0, 0.0, {sn}, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)\n"
         "gsf.prepare_data_array(mset, [data], True, True)\n"
@@ -550,6 +553,88 @@ def test_domain_guard_aborts_when_forced_via_synthetic_lambda_bound():
             "reached the domain guard -- consistent with V's unconditional "
             "positive-definiteness; see test_domain_guard_survives_"
             "exploratory_adversarial_sweep for the broader search."
+        )
+
+
+def test_domain_guard_default_is_soft_and_counted():
+    """The DEFAULT response to leaving the natural domain is not fatal: the
+    evaluation returns zero probability (-inf in log), which routes into
+    NcDataClusterWLFactor's NC_GALAXY_LOW_PROB path, and the occurrence is
+    counted. Run in a subprocess for the same reason as the fatal test --
+    here to prove the process does NOT die, and because the accompanying
+    one-shot g_warning would abort under G_DEBUG=fatal-warnings in the
+    parent. Same forcing sweep and same skip-if-not-triggered policy as the
+    strict test above."""
+    script_template = (
+        "from numcosmo_py import Nc, Ncm\n"
+        "Ncm.cfg_init()\n"
+        "cosmo = Nc.HICosmoDEXcdm.new()\n"
+        "dist = Nc.Distance.new(100.0)\n"
+        "hms = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.MEAN, 200.0)\n"
+        "dp = Nc.HaloDensityProfileNFW.new(hms)\n"
+        "hp = Nc.HaloPosition.new(dist)\n"
+        "smd = Nc.WLSurfaceMassDensity.new(dist)\n"
+        "pop = Nc.GalaxyShapePopGauss.new()\n"
+        "pop['sigma'] = 0.9\n"
+        "hp.prepare(cosmo)\n"
+        "mset = Ncm.MSet.empty_new()\n"
+        "[mset.set(m) for m in (cosmo, dp, hp, smd, pop)]\n"
+        "mset.set(Nc.GalaxyRedshiftPopLSSTSRD.new_y1_source())\n"
+        "mset.set(Nc.GalaxyRedshiftObsGauss.new())\n"
+        "posf = Nc.GalaxyPositionFactorFlat.new(-0.2, 0.2, -0.2, 0.2)\n"
+        "pos_data = Nc.GalaxyPositionFactorData.new(posf, mset)\n"
+        "zf = Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0)\n"
+        "z_data = Nc.GalaxyRedshiftFactorData.new(zf, mset)\n"
+        "gsf = Nc.GalaxyShapeFactorTiltedSeries.new(Nc.GalaxyWLObsEllipConv.TRACE, 2)\n"
+        "assert gsf.props.strict_domain is False\n"
+        "assert gsf.get_domain_error_count() == 0\n"
+        "data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)\n"
+        "gsf.data_set(data, 0.0, 0.0, {sn}, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)\n"
+        "gsf.prepare_data_array(mset, [data], True, True)\n"
+        "ln_p = gsf.eval_ln_marginal(pop, data, 0.999, 0.0, 0.1, 0.05)\n"
+        "p = gsf.eval_marginal(pop, data, 0.999, 0.0, 0.1, 0.05)\n"
+        "print('RESULT', ln_p, p, gsf.get_domain_error_count())\n"
+        "gsf.reset_domain_error_count()\n"
+        "print('AFTERRESET', gsf.get_domain_error_count())\n"
+    )
+
+    triggered = False
+    for sn in (0.5, 1.0, 1.5, 2.0, 3.0, 5.0, 8.0):
+        result = subprocess.run(
+            [sys.executable, "-c", script_template.format(sn=sn)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        # The whole point: no abort, whether or not the guard fired.
+        assert result.returncode == 0, result.stderr
+
+        line = [ln for ln in result.stdout.splitlines() if ln.startswith("RESULT")]
+        assert line, result.stdout
+        _, ln_p_s, p_s, count_s = line[0].split()
+        count = int(count_s)
+
+        if count > 0:
+            # eval_marginal and eval_ln_marginal must agree: exp(-inf) == 0.
+            assert float(ln_p_s) == -np.inf
+            assert float(p_s) == 0.0
+            # Two evaluations above, both out of domain.
+            assert count == 2
+            assert "left the natural domain" in result.stderr
+            # Warned once per instance, not once per evaluation.
+            assert result.stderr.count("left the natural domain") == 1
+            assert "AFTERRESET 0" in result.stdout
+            triggered = True
+            break
+
+        # Not triggered: the value must be an ordinary finite log-density.
+        assert np.isfinite(float(ln_p_s))
+
+    if not triggered:
+        pytest.skip(
+            "no sigma_nu in this sweep reached the domain guard -- same "
+            "coarse forcing sweep as the strict-domain test above, and "
+            "non-triggering is itself the expected in-radius behaviour."
         )
 
 

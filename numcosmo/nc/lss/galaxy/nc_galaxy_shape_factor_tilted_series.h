@@ -45,6 +45,9 @@ NcGalaxyShapeFactorTiltedSeries *nc_galaxy_shape_factor_tilted_series_ref (NcGal
 void nc_galaxy_shape_factor_tilted_series_free (NcGalaxyShapeFactorTiltedSeries *gsfts);
 void nc_galaxy_shape_factor_tilted_series_clear (NcGalaxyShapeFactorTiltedSeries **gsfts);
 
+guint nc_galaxy_shape_factor_tilted_series_get_domain_error_count (NcGalaxyShapeFactorTiltedSeries *gsfts);
+void nc_galaxy_shape_factor_tilted_series_reset_domain_error_count (NcGalaxyShapeFactorTiltedSeries *gsfts);
+
 G_END_DECLS
 
 #endif /* _NC_GALAXY_SHAPE_FACTOR_TILTED_SERIES_H_ */
