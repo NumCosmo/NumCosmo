@@ -58,26 +58,60 @@
  * side.
  *
  * $\lambda(g)$ is solved as a convergent power series in $g$
- * (`trunc-order`, default 9 -- higher than `MomentSeries`' default of 5,
- * because the tilt series converges an order of magnitude more slowly than
- * the moment series it consumes, and the two truncation orders are set
- * independently), one fixed $3\times3$ linear solve per order: no Newton
- * iteration, no population-indexed interpolation table. This is possible
- * because $\mathbb{E}_{P_0}[x^2] = M_2/2+\sigma_\nu^2$ identically equals
- * the exact zero-shear covariance, so $\lambda(0)=\bm 0$ exactly and the
- * moment conditions can be expanded order by order (`TILT_SERIES.md`
- * sec. 3). Each order's linear solve uses the closed-form
- * $V=\mathrm{Cov}_{P_0}(T)$; the right-hand side at every order is obtained
- * from a noise-integrated generating function
- * $Z(\lambda)=\mathbb{E}_{P_0}[e^{\lambda\cdot T}]$, evaluated as a formal
- * power series in $g$ via the population's own radial moments
- * ($M_{2k}=$ nc_galaxy_shape_pop_moment_2k(), to $k\lesssim(N{+}2)/2$) --
- * an exact, arbitrary-order, population-generic route that never
- * hardcodes $\lambda^{(p)}$ as a symbolic rational function of a fixed set
- * of moments the way `MomentSeries`' own $m_j/v_j/w_j$ tables do (a
- * departure from `TILT_SERIES.md` sec. 8's stated production plan --
- * hardcoding would freeze both the truncation order and the population's
- * functional form; see `docs/theory/wl_shape_factor_history.md`).
+ * (`trunc-order`, default 5, matching `MomentSeries`' own default since a
+ * bias measurement across the catalogue box found the tilt series'
+ * remaining bias numerically negligible at every order once solved
+ * correctly -- see `docs/theory/wl_shape_factor_history.md` for the
+ * N=5/7/9 comparison that set this default), one fixed $3\times3$ linear
+ * solve per order: no Newton iteration, no population-indexed
+ * interpolation table. This is possible because
+ * $\mathbb{E}_{P_0}[x^2] = M_2/2+\sigma_\nu^2$ identically equals the exact
+ * zero-shear covariance, so $\lambda(0)=\bm 0$ exactly and the moment
+ * conditions can be expanded order by order (`TILT_SERIES.md` sec. 3).
+ * Each order's linear solve uses the closed-form $V=\mathrm{Cov}_{P_0}(T)$;
+ * the right-hand side at every order is obtained from a noise-integrated
+ * generating function $Z(\lambda)=\mathbb{E}_{P_0}[e^{\lambda\cdot T}]$,
+ * evaluated as a formal power series in $g$ via the population's own
+ * radial moments ($M_{2k}=$ nc_galaxy_shape_pop_moment_2k(), to
+ * $k\lesssim(N{+}2)/2$) -- an exact, arbitrary-order, population-generic
+ * route that never hardcodes $\lambda^{(p)}$ as a symbolic rational
+ * function of a fixed set of moments the way `MomentSeries`' own
+ * $m_j/v_j/w_j$ tables do (a departure from `TILT_SERIES.md` sec. 8's
+ * stated production plan -- hardcoding would freeze both the truncation
+ * order and the population's functional form; see
+ * `docs/theory/wl_shape_factor_history.md`).
+ *
+ * At order $p$ in the order-by-order solve, only the $g^p$ coefficient of
+ * each generating-function series is ever consumed, and every series
+ * operation used here (product, reciprocal, log) is lower-triangular --
+ * coefficient $p$ of the output depends only on input coefficients
+ * $\le p$. This class exploits that: `_tilted_series_solve()` truncates
+ * every series computed inside the loop to the *current* order $p$ rather
+ * than the fixed `trunc-order` $N$, which is an exact optimisation, not an
+ * approximation.
+ *
+ * Three further exact optimisations sit on top of that, all of them
+ * reorganisations that reproduce the unoptimised coefficients bit for bit:
+ *
+ * - **Valuation-aware products.** $\lambda_1$ is odd in $g$ and
+ *   $\lambda_2,\lambda_3$ even, so in `_tilted_series_compute_D()`
+ *   $\alpha=\lambda_1/a_2$ has valuation 1 and $\beta,\gamma$ valuation 2:
+ *   $\alpha^{p}\beta^{q}\gamma^{s}$ is structurally zero below
+ *   $g^{p+2q+2s}$. `series_mul_v()`/`series_axpy_v()` skip those zeros
+ *   instead of multiplying them, which at the top of the triple sum turns
+ *   a full Cauchy product into a single term.
+ * - **Precomputed combinatorial weights.** The $S_j/(p!q!s!)$ factors of
+ *   the triple sum depend only on the population moments $M_{2k}$, never
+ *   on $\lambda(g)$, so they are built once per solve
+ *   (`_tilted_series_Stab_new()`) instead of being recomputed inside every
+ *   one of the $N{+}1$ `_tilted_series_compute_D()` passes.
+ * - **No post-loop pass at odd $N$.** $W(g)$ is even in $g$ (see
+ *   `_tilted_series_solve()`), so `_eval()` never reads past
+ *   $2\lfloor N/2\rfloor$; at odd $N$ the loop's own last pass already
+ *   left $a_2,a_3,D_0$ correct to that order.
+ *
+ * All the series scratch is carved from one allocation per solve rather
+ * than the ~100 small ones the straightforward form needs.
  *
  * The target moment series ($\Delta^{(p)}$, tilt_series.tex sec. 5) is the
  * *same* $g$-series `MomentSeries` builds from the population's radial
@@ -182,6 +216,48 @@ series_mul (gdouble *out, const gdouble *a, const gdouble *b, guint order)
   }
 }
 
+/* out = a * b where a is known to have valuation @va and b valuation @vb
+ * (every coefficient below the valuation is a structural zero). The result
+ * is identical to series_mul() on the same inputs -- the Cauchy sums simply
+ * do not visit the zeros. out must not alias a or b. */
+static void
+series_mul_v (gdouble *out, const gdouble *a, guint va, const gdouble *b, guint vb, guint order)
+{
+  const guint v = va + vb;
+  guint p;
+
+  if (v > order)
+  {
+    memset (out, 0, (order + 1) * sizeof (gdouble));
+
+    return;
+  }
+
+  memset (out, 0, v * sizeof (gdouble));
+
+  for (p = v; p <= order; p++)
+  {
+    const guint khi = p - vb;
+    gdouble s       = 0.0;
+    guint k;
+
+    for (k = va; k <= khi; k++)
+      s += a[k] * b[p - k];
+
+    out[p] = s;
+  }
+}
+
+/* out += scale * in, where in has valuation @v. */
+static inline void
+series_axpy_v (gdouble *out, const gdouble *in, gdouble scale, guint v, guint order)
+{
+  guint p;
+
+  for (p = v; p <= order; p++)
+    out[p] += scale * in[p];
+}
+
 /* out = 1/a, requires a[0] != 0; out must not alias a. */
 static void
 series_recip (gdouble *out, const gdouble *a, guint order)
@@ -229,33 +305,21 @@ series_log (gdouble *out, const gdouble *f, guint order)
   g_free (q);
 }
 
-/* table[n] = base^n, n=0..maxn, each a length-(order+1) series. */
-static gdouble **
-series_pow_table_new (const gdouble *base, guint maxn, guint order)
+/* table[n] = base^n, n=0..maxn, written into caller-provided storage @flat
+ * as consecutive length-(order+1) rows (row n at @flat + n*(order+1)), so
+ * the solve's hot path allocates nothing. @base has valuation @base_val,
+ * hence base^n has valuation n*@base_val. */
+static void
+series_pow_table (gdouble *flat, const gdouble *base, guint base_val, guint maxn, guint order)
 {
-  gdouble **table = g_new (gdouble *, maxn + 1);
+  const guint row = order + 1;
   guint n;
 
-  for (n = 0; n <= maxn; n++)
-    table[n] = g_new0 (gdouble, order + 1);
-
-  table[0][0] = 1.0;
+  memset (flat, 0, (maxn + 1) * row * sizeof (gdouble));
+  flat[0] = 1.0;
 
   for (n = 1; n <= maxn; n++)
-    series_mul (table[n], table[n - 1], base, order);
-
-  return table;
-}
-
-static void
-series_pow_table_free (gdouble **table, guint maxn)
-{
-  guint n;
-
-  for (n = 0; n <= maxn; n++)
-    g_free (table[n]);
-
-  g_free (table);
+    series_mul_v (&flat[n * row], &flat[(n - 1) * row], (n - 1) * base_val, base, base_val, order);
 }
 
 static inline gdouble
@@ -320,96 +384,169 @@ iso_moment (const gdouble *M, guint n_M, guint i_pow, guint j_pow)
  * (TILT_SERIES.md sec. "Solving for lambda(g) in closed form", this
  * file's own generating-function derivation). Expanding e^Q in
  * alpha=lambda_1/a2, beta=lambda_2/a2, gamma=lambda_3/a3 gives a finite
- * triple sum over (pp,qq,ss) with pp+2qq+2ss<=N, each term an isotropic
- * moment of chi_I (population-generic, from nc_galaxy_shape_pop_moment_2k())
- * times a fixed combinatorial factor -- no quadrature, no table.
+ * triple sum over (pp,qq,ss) with pp+2qq+2ss<=order, each term an
+ * isotropic moment of chi_I (population-generic, from
+ * nc_galaxy_shape_pop_moment_2k()) times a fixed combinatorial factor --
+ * no quadrature, no table.
+ *
+ * @order truncates every series computed here (may be less than the
+ * lengths of the @lam1/@lam2/@lam3/output arrays, which are always
+ * caller-sized for the full trunc-order N): coefficients above @order are
+ * left untouched. This is exact, not approximate -- every series
+ * operation below is lower-triangular, so a caller that only reads
+ * coefficients <=@order back out gets the same values truncation at N
+ * would give (see this file's own class doc comment). The order-by-order
+ * solve in _tilted_series_solve() exploits this by calling with
+ * @order=p inside its loop instead of the full N.
+ *
+ * @Stab holds the triple sum's combinatorial weights, built once per solve
+ * by _tilted_series_Stab_new() with stride @half_N (which is N/2 for the
+ * caller's full N, NOT @order/2 -- the table is shared across every call
+ * whatever @order each one uses). @scratch is caller-provided working
+ * storage of at least (5 + (order+1) + 2*(order/2+1)) * (order+1) doubles.
  */
 static void
 _tilted_series_compute_D (const gdouble *lam1, const gdouble *lam2, const gdouble *lam3,
-                          const gdouble *M, guint n_M, gdouble sn2, guint N,
+                          gdouble sn2, guint order,
+                          const gdouble *Stab, guint half_N, gdouble *scratch,
                           gdouble *a2, gdouble *a3, gdouble *a2_inv, gdouble *a3_inv,
                           gdouble *D0, gdouble *D1v, gdouble *D2v, gdouble *D3v)
 {
-  gdouble *alpha = g_new (gdouble, N + 1);
-  gdouble *beta  = g_new (gdouble, N + 1);
-  gdouble *gamma = g_new (gdouble, N + 1);
-  gdouble *tmp1  = g_new (gdouble, N + 1);
-  gdouble *tmp2  = g_new (gdouble, N + 1);
-  const guint half_N = N / 2;
-  gdouble **alpha_pows, **beta_pows, **gamma_pows;
+  const guint row        = order + 1;
+  const guint half_order = order / 2;
+  const guint stride     = half_N + 1;
+  gdouble *alpha         = scratch;
+  gdouble *beta          = scratch + row;
+  gdouble *gamma         = scratch + 2 * row;
+  gdouble *tmp1          = scratch + 3 * row;
+  gdouble *tmp2          = scratch + 4 * row;
+  gdouble *alpha_pows    = scratch + 5 * row;
+  gdouble *beta_pows     = alpha_pows + (order + 1) * row;
+  gdouble *gamma_pows    = beta_pows + (half_order + 1) * row;
   guint pp, qq, ss, k;
 
-  series_zero (a2, N);
-  series_zero (a3, N);
+  series_zero (a2, order);
+  series_zero (a3, order);
   a2[0] = 1.0;
   a3[0] = 1.0;
 
-  for (k = 1; k <= N; k++)
+  for (k = 1; k <= order; k++)
   {
     a2[k] = -2.0 * sn2 * lam2[k];
     a3[k] = -2.0 * sn2 * lam3[k];
   }
 
-  series_recip (a2_inv, a2, N);
-  series_recip (a3_inv, a3, N);
+  series_recip (a2_inv, a2, order);
+  series_recip (a3_inv, a3, order);
 
-  series_mul (alpha, lam1, a2_inv, N);
-  series_mul (beta, lam2, a2_inv, N);
-  series_mul (gamma, lam3, a3_inv, N);
+  series_mul (alpha, lam1, a2_inv, order);
+  series_mul (beta, lam2, a2_inv, order);
+  series_mul (gamma, lam3, a3_inv, order);
 
-  alpha_pows = series_pow_table_new (alpha, N, N);
-  beta_pows  = series_pow_table_new (beta, half_N, N);
-  gamma_pows = series_pow_table_new (gamma, half_N, N);
+  /* lambda_1 is odd in g and lambda_2/lambda_3 even, so alpha has
+   * valuation 1 and beta/gamma valuation 2 (this file's class doc). */
+  series_pow_table (alpha_pows, alpha, 1, order, order);
+  series_pow_table (beta_pows, beta, 2, half_order, order);
+  series_pow_table (gamma_pows, gamma, 2, half_order, order);
 
-  series_zero (D0, N);
-  series_zero (D1v, N);
-  series_zero (D2v, N);
-  series_zero (D3v, N);
+  series_zero (D0, order);
+  series_zero (D1v, order);
+  series_zero (D2v, order);
+  series_zero (D3v, order);
+
+  for (pp = 0; pp <= order; pp++)
+  {
+    for (qq = 0; pp + 2 * qq <= order; qq++)
+    {
+      const guint v12    = pp + 2 * qq;
+      const gdouble *t1;
+
+      /* beta^0 = 1 and gamma^0 = 1: skip the identity products rather
+       * than running a full Cauchy product against a constant series. */
+      if (qq == 0)
+      {
+        t1 = &alpha_pows[pp * row];
+      }
+      else
+      {
+        series_mul_v (tmp1, &alpha_pows[pp * row], pp, &beta_pows[qq * row], 2 * qq, order);
+        t1 = tmp1;
+      }
+
+      for (ss = 0; v12 + 2 * ss <= order; ss++)
+      {
+        const guint v    = v12 + 2 * ss;
+        const gdouble *S = &Stab[4 * (((pp * stride) + qq) * stride + ss)];
+        const gdouble *t2;
+
+        if ((S[0] == 0.0) && (S[1] == 0.0) && (S[2] == 0.0) && (S[3] == 0.0))
+          continue;
+
+        if (ss == 0)
+        {
+          t2 = t1;
+        }
+        else
+        {
+          series_mul_v (tmp2, t1, v12, &gamma_pows[ss * row], 2 * ss, order);
+          t2 = tmp2;
+        }
+
+        if (S[0] != 0.0)
+          series_axpy_v (D0, t2, S[0], v, order);
+
+        if (S[1] != 0.0)
+          series_axpy_v (D1v, t2, S[1], v, order);
+
+        if (S[2] != 0.0)
+          series_axpy_v (D2v, t2, S[2], v, order);
+
+        if (S[3] != 0.0)
+          series_axpy_v (D3v, t2, S[3], v, order);
+      }
+    }
+  }
+}
+
+/*
+ * The (pp,qq,ss) combinatorial weights S_j/(pp! qq! ss!) of
+ * _tilted_series_compute_D()'s triple sum. They are functions of the
+ * population moments @M alone -- lambda(g) enters the sum only through
+ * alpha/beta/gamma -- so they are built once per solve here instead of
+ * being recomputed inside each of the N+1 compute_D() passes. Layout:
+ * four consecutive doubles (S0,S1,S2,S3)/fac at index
+ * ((pp*stride + qq)*stride + ss), stride = N/2 + 1. Entries outside the
+ * triple sum's own (pp + 2qq + 2ss <= N) region are left zero and never
+ * read.
+ */
+static gdouble *
+_tilted_series_Stab_new (const gdouble *M, guint n_M, guint N)
+{
+  const guint half_N = N / 2;
+  const guint stride = half_N + 1;
+  gdouble *Stab      = g_new0 (gdouble, 4 * (N + 1) * stride * stride);
+  guint pp, qq, ss;
 
   for (pp = 0; pp <= N; pp++)
   {
-    for (qq = 0; pp + 2 * qq <= N; qq++)
+    for (qq = 0; (qq <= half_N) && (pp + 2 * qq <= N); qq++)
     {
-      series_mul (tmp1, alpha_pows[pp], beta_pows[qq], N);
-
-      for (ss = 0; pp + 2 * qq + 2 * ss <= N; ss++)
+      for (ss = 0; (ss <= half_N) && (pp + 2 * qq + 2 * ss <= N); ss++)
       {
         const guint sx_pow = pp + 2 * qq;
         const guint sy_pow = 2 * ss;
-        const gdouble fac  = factorial_d (pp) * factorial_d (qq) * factorial_d (ss);
-        const gdouble S0   = iso_moment (M, n_M, sx_pow, sy_pow);
-        const gdouble S1   = iso_moment (M, n_M, sx_pow + 1, sy_pow);
-        const gdouble S2   = iso_moment (M, n_M, sx_pow + 2, sy_pow);
-        const gdouble S3   = iso_moment (M, n_M, sx_pow, sy_pow + 2);
+        const gdouble inv  = 1.0 / (factorial_d (pp) * factorial_d (qq) * factorial_d (ss));
+        gdouble *S         = &Stab[4 * (((pp * stride) + qq) * stride + ss)];
 
-        if ((S0 == 0.0) && (S1 == 0.0) && (S2 == 0.0) && (S3 == 0.0))
-          continue;
-
-        series_mul (tmp2, tmp1, gamma_pows[ss], N);
-
-        if (S0 != 0.0)
-          series_axpy (D0, tmp2, S0 / fac, N);
-
-        if (S1 != 0.0)
-          series_axpy (D1v, tmp2, S1 / fac, N);
-
-        if (S2 != 0.0)
-          series_axpy (D2v, tmp2, S2 / fac, N);
-
-        if (S3 != 0.0)
-          series_axpy (D3v, tmp2, S3 / fac, N);
+        S[0] = iso_moment (M, n_M, sx_pow, sy_pow) * inv;
+        S[1] = iso_moment (M, n_M, sx_pow + 1, sy_pow) * inv;
+        S[2] = iso_moment (M, n_M, sx_pow + 2, sy_pow) * inv;
+        S[3] = iso_moment (M, n_M, sx_pow, sy_pow + 2) * inv;
       }
     }
   }
 
-  series_pow_table_free (alpha_pows, N);
-  series_pow_table_free (beta_pows, half_N);
-  series_pow_table_free (gamma_pows, half_N);
-  g_free (alpha);
-  g_free (beta);
-  g_free (gamma);
-  g_free (tmp1);
-  g_free (tmp2);
+  return Stab;
 }
 
 /*
@@ -443,23 +580,35 @@ _tilted_series_solve (guint N, const gdouble *M, guint n_M, gdouble sn2,
   const gdouble B     = 3.0 * kappa + 2.0 * A * A;
   const gdouble det2  = B * B - kappa * kappa;
 
-  gdouble *a2       = g_new (gdouble, N + 1);
-  gdouble *a3       = g_new (gdouble, N + 1);
-  gdouble *a2_inv   = g_new (gdouble, N + 1);
-  gdouble *a3_inv   = g_new (gdouble, N + 1);
-  gdouble *D0       = g_new (gdouble, N + 1);
-  gdouble *D1v      = g_new (gdouble, N + 1);
-  gdouble *D2v      = g_new (gdouble, N + 1);
-  gdouble *D3v      = g_new (gdouble, N + 1);
-  gdouble *D0_inv   = g_new (gdouble, N + 1);
-  gdouble *r1s      = g_new (gdouble, N + 1);
-  gdouble *r2s      = g_new (gdouble, N + 1);
-  gdouble *r3s      = g_new (gdouble, N + 1);
-  gdouble *tmp_a    = g_new (gdouble, N + 1);
-  gdouble *tmp_b    = g_new (gdouble, N + 1);
-  gdouble *t1_model = g_new (gdouble, N + 1);
-  gdouble *t2_model = g_new (gdouble, N + 1);
-  gdouble *t3_model = g_new (gdouble, N + 1);
+  const guint row     = N + 1;
+  /* One arena for every temporary: the 17 series below, then
+   * _tilted_series_compute_D()'s own scratch (5 series plus the three flat
+   * power tables alpha^0..alpha^N, beta^0..beta^{N/2}, gamma^0..gamma^{N/2},
+   * sized for the largest @order any pass uses, which is N). */
+  const guint n_scr   = (5 + (N + 1) + 2 * (N / 2 + 1)) * row;
+  gdouble *arena      = g_new (gdouble, 17 * row + n_scr);
+  gdouble *a2         = arena;
+  gdouble *a3         = arena + 1 * row;
+  gdouble *a2_inv     = arena + 2 * row;
+  gdouble *a3_inv     = arena + 3 * row;
+  gdouble *D0         = arena + 4 * row;
+  gdouble *D1v        = arena + 5 * row;
+  gdouble *D2v        = arena + 6 * row;
+  gdouble *D3v        = arena + 7 * row;
+  gdouble *D0_inv     = arena + 8 * row;
+  gdouble *r1s        = arena + 9 * row;
+  gdouble *r2s        = arena + 10 * row;
+  gdouble *r3s        = arena + 11 * row;
+  gdouble *tmp_a      = arena + 12 * row;
+  gdouble *tmp_b      = arena + 13 * row;
+  gdouble *t1_model   = arena + 14 * row;
+  gdouble *t2_model   = arena + 15 * row;
+  gdouble *t3_model   = arena + 16 * row;
+  gdouble *scratch    = arena + 17 * row;
+  gdouble *Stab       = _tilted_series_Stab_new (M, n_M, N);
+  const guint half_N  = N / 2;
+  /* W(g) is even in g, so this is the highest coefficient _eval() reads. */
+  const guint W_ord   = 2 * (N / 2);
   guint p;
 
   /* Internal invariant, not a reachable guard -- see this function's own
@@ -476,34 +625,40 @@ _tilted_series_solve (guint N, const gdouble *M, guint n_M, gdouble sn2,
 
     /* lam1/lam2/lam3 here carry only orders < p (order p and above are
      * still zero), which is exactly R^(p): the g^p coefficient of
-     * nabla W evaluated at the trial series with lambda^(p) omitted. */
-    _tilted_series_compute_D (lam1, lam2, lam3, M, n_M, sn2, N,
+     * nabla W evaluated at the trial series with lambda^(p) omitted.
+     *
+     * Only the g^p coefficient of rhs1/rhs2/rhs3 is read below, and every
+     * series op here is lower-triangular, so truncating the whole loop
+     * body at @p instead of the full N is exact -- this class' own doc
+     * comment and _tilted_series_compute_D()'s. Cost drops from N*C(N)
+     * to sum_{p=1}^N C(p). */
+    _tilted_series_compute_D (lam1, lam2, lam3, sn2, p, Stab, half_N, scratch,
                               a2, a3, a2_inv, a3_inv, D0, D1v, D2v, D3v);
 
-    series_recip (D0_inv, D0, N);
-    series_mul (r1s, D1v, D0_inv, N);
-    series_mul (r2s, D2v, D0_inv, N);
-    series_mul (r3s, D3v, D0_inv, N);
+    series_recip (D0_inv, D0, p);
+    series_mul (r1s, D1v, D0_inv, p);
+    series_mul (r2s, D2v, D0_inv, p);
+    series_mul (r3s, D3v, D0_inv, p);
 
     /* t1_model = (r1s + sn2*lam1) * a2_inv */
-    series_copy (tmp_a, r1s, N);
-    series_axpy (tmp_a, lam1, sn2, N);
-    series_mul (t1_model, tmp_a, a2_inv, N);
+    series_copy (tmp_a, r1s, p);
+    series_axpy (tmp_a, lam1, sn2, p);
+    series_mul (t1_model, tmp_a, a2_inv, p);
 
     /* t2_model = (r2s + 2*sn2*lam1*r1s + sn2^2*lam1^2) * a2_inv^2 + sn2*a2_inv */
-    series_mul (tmp_a, lam1, r1s, N);
-    series_copy (tmp_b, r2s, N);
-    series_axpy (tmp_b, tmp_a, 2.0 * sn2, N);
-    series_mul (tmp_a, lam1, lam1, N);
-    series_axpy (tmp_b, tmp_a, sn2 * sn2, N);
-    series_mul (tmp_a, a2_inv, a2_inv, N);
-    series_mul (t2_model, tmp_b, tmp_a, N);
-    series_axpy (t2_model, a2_inv, sn2, N);
+    series_mul (tmp_a, lam1, r1s, p);
+    series_copy (tmp_b, r2s, p);
+    series_axpy (tmp_b, tmp_a, 2.0 * sn2, p);
+    series_mul (tmp_a, lam1, lam1, p);
+    series_axpy (tmp_b, tmp_a, sn2 * sn2, p);
+    series_mul (tmp_a, a2_inv, a2_inv, p);
+    series_mul (t2_model, tmp_b, tmp_a, p);
+    series_axpy (t2_model, a2_inv, sn2, p);
 
     /* t3_model = r3s * a3_inv^2 + sn2*a3_inv */
-    series_mul (tmp_a, a3_inv, a3_inv, N);
-    series_mul (t3_model, r3s, tmp_a, N);
-    series_axpy (t3_model, a3_inv, sn2, N);
+    series_mul (tmp_a, a3_inv, a3_inv, p);
+    series_mul (t3_model, r3s, tmp_a, p);
+    series_axpy (t3_model, a3_inv, sn2, p);
 
     rhs1 = Delta1[p] - t1_model[p];
     rhs2 = Delta2[p] - t2_model[p];
@@ -514,40 +669,38 @@ _tilted_series_solve (guint N, const gdouble *M, guint n_M, gdouble sn2,
     lam3[p] = (B * rhs3 - kappa * rhs2) / det2;
   }
 
-  _tilted_series_compute_D (lam1, lam2, lam3, M, n_M, sn2, N,
-                            a2, a3, a2_inv, a3_inv, D0, D1v, D2v, D3v);
+  /* W(g) is even in g: lambda_2/lambda_3 are even, so a2 and a3 are;
+   * lambda_1^2 is; and D0 keeps only the even powers of alpha (its S0
+   * weight vanishes unless pp + 2qq is even, i.e. unless pp is even). So
+   * every odd coefficient of Wser is an exact zero and _eval() never reads
+   * past W_ord = 2*floor(N/2).
+   *
+   * At odd N, W_ord = N-1 and the p = N pass of the loop above already
+   * left a2, a3, a2_inv and D0 correct to that order: only lambda^(N) was
+   * missing from its inputs, and every series operation here is
+   * lower-triangular, so it can perturb coefficient N alone. The extra
+   * full-order pass is therefore needed at even N only. */
+  if (W_ord == N)
+    _tilted_series_compute_D (lam1, lam2, lam3, sn2, N, Stab, half_N, scratch,
+                              a2, a3, a2_inv, a3_inv, D0, D1v, D2v, D3v);
 
-  series_log (tmp_a, a2, N);
   series_zero (Wser, N);
-  series_axpy (Wser, tmp_a, -0.5, N);
 
-  series_log (tmp_a, a3, N);
-  series_axpy (Wser, tmp_a, -0.5, N);
+  series_log (tmp_a, a2, W_ord);
+  series_axpy (Wser, tmp_a, -0.5, W_ord);
 
-  series_mul (tmp_a, lam1, lam1, N);
-  series_mul (tmp_b, tmp_a, a2_inv, N);
-  series_axpy (Wser, tmp_b, 0.5 * sn2, N);
+  series_log (tmp_a, a3, W_ord);
+  series_axpy (Wser, tmp_a, -0.5, W_ord);
 
-  series_log (tmp_a, D0, N);
-  series_axpy (Wser, tmp_a, 1.0, N);
+  series_mul (tmp_a, lam1, lam1, W_ord);
+  series_mul (tmp_b, tmp_a, a2_inv, W_ord);
+  series_axpy (Wser, tmp_b, 0.5 * sn2, W_ord);
 
-  g_free (a2);
-  g_free (a3);
-  g_free (a2_inv);
-  g_free (a3_inv);
-  g_free (D0);
-  g_free (D1v);
-  g_free (D2v);
-  g_free (D3v);
-  g_free (D0_inv);
-  g_free (r1s);
-  g_free (r2s);
-  g_free (r3s);
-  g_free (tmp_a);
-  g_free (tmp_b);
-  g_free (t1_model);
-  g_free (t2_model);
-  g_free (t3_model);
+  series_log (tmp_a, D0, W_ord);
+  series_axpy (Wser, tmp_a, 1.0, W_ord);
+
+  g_free (Stab);
+  g_free (arena);
 }
 
 /*
@@ -644,30 +797,65 @@ _tilted_series_target_series (const gdouble *tab_m, guint n_m,
  * DELTA=40 puts e^{-DELTA} ~ 4e-18 of a unit Gaussian's mass outside the
  * window, negligible next to the quadrature's own node-count error.
  *
- * Node values are combined in log space with the maximum exponent
- * factored out first: at small sn and R far from the disc, individual
+ * The dynamic range that forces a log-space combination lives entirely in
+ * the exponential factors: at small sn and R far from the disc, individual
  * terms underflow to a genuine (not clamped) double-precision zero well
  * before the sum does (e.g. R=1.99, sn=0.0033 gives ln P_0 ~ -45000), so
- * accumulating the density itself, not its log, returns exactly zero.
+ * accumulating the density itself, not its log, returns exactly zero. Only
+ * the *exponent* needs that treatment, though: the quadrature weight and
+ * the population density are positive O(1) prefactors, so they are carried
+ * in linear space and only exp(a_i - max a) is formed. That removes two of
+ * the three logarithms per node with no loss of range -- the terms actually
+ * summed are still bounded by 1 -- and the result agrees with the
+ * all-logarithms form to 1.8e-15 relative over the whole (R, sn) box.
+ *
+ * The Gauss-Legendre nodes are computed once for [-1,1] and affinely mapped
+ * per call: the table depends only on the (compile-time) node count, and
+ * gsl_integration_glfixed_table_alloc() was being called -- with its
+ * allocation -- on every galaxy.
  */
 #define NC_GALAXY_SHAPE_FACTOR_TILTED_SERIES_LNP0_NNODES 64
 #define NC_GALAXY_SHAPE_FACTOR_TILTED_SERIES_LNP0_DELTA 40.0
+
+/* Gauss-Legendre nodes and weights on [-1,1], built once. */
+static gdouble _tilted_series_lnP0_x[NC_GALAXY_SHAPE_FACTOR_TILTED_SERIES_LNP0_NNODES];
+static gdouble _tilted_series_lnP0_w[NC_GALAXY_SHAPE_FACTOR_TILTED_SERIES_LNP0_NNODES];
+
+static void
+_tilted_series_lnP0_nodes_init (void)
+{
+  static gsize init = 0;
+
+  if (g_once_init_enter (&init))
+  {
+    const guint n_nodes                  = NC_GALAXY_SHAPE_FACTOR_TILTED_SERIES_LNP0_NNODES;
+    gsl_integration_glfixed_table *table = gsl_integration_glfixed_table_alloc (n_nodes);
+    guint i;
+
+    for (i = 0; i < n_nodes; i++)
+      gsl_integration_glfixed_point (-1.0, 1.0, i,
+                                     &_tilted_series_lnP0_x[i], &_tilted_series_lnP0_w[i], table);
+
+    gsl_integration_glfixed_table_free (table);
+    g_once_init_leave (&init, 1);
+  }
+}
 
 static gdouble
 _tilted_series_ln_P0 (NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data, gdouble R, gdouble sn)
 {
   const guint n_nodes = NC_GALAXY_SHAPE_FACTOR_TILTED_SERIES_LNP0_NNODES;
   const gdouble sn2   = sn * sn;
-  gdouble r_lo, r_hi;
-  gsl_integration_glfixed_table *table;
+  gdouble r_lo, r_hi, half, mid;
   GArray *r_arr;
   GArray *p_arr = NULL;
   gdouble *r_data;
-  gdouble weight[NC_GALAXY_SHAPE_FACTOR_TILTED_SERIES_LNP0_NNODES];
-  gdouble log_terms[NC_GALAXY_SHAPE_FACTOR_TILTED_SERIES_LNP0_NNODES];
-  gdouble max_log = -G_MAXDOUBLE;
-  gdouble sum     = 0.0;
+  gdouble expo[NC_GALAXY_SHAPE_FACTOR_TILTED_SERIES_LNP0_NNODES];
+  gdouble max_expo = -G_MAXDOUBLE;
+  gdouble sum      = 0.0;
   guint i;
+
+  _tilted_series_lnP0_nodes_init ();
 
   if (R <= 1.0)
   {
@@ -685,39 +873,38 @@ _tilted_series_ln_P0 (NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data, gdo
     r_hi = 1.0;
   }
 
-  table = gsl_integration_glfixed_table_alloc (n_nodes);
-  r_arr = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), n_nodes);
+  half   = 0.5 * (r_hi - r_lo);
+  mid    = 0.5 * (r_hi + r_lo);
+  r_arr  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), n_nodes);
   g_array_set_size (r_arr, n_nodes);
   r_data = (gdouble *) r_arr->data;
 
   for (i = 0; i < n_nodes; i++)
-    gsl_integration_glfixed_point (r_lo, r_hi, i, &r_data[i], &weight[i], table);
+    r_data[i] = mid + half * _tilted_series_lnP0_x[i];
 
   nc_galaxy_shape_pop_eval_p_array (pop, pop_data, r_arr, &p_arr);
+
+  for (i = 0; i < n_nodes; i++)
+  {
+    const gdouble r  = r_data[i];
+    const gdouble dr = R - r;
+    const gdouble z  = R * r / sn2;
+
+    expo[i]  = -0.5 * dr * dr / sn2 + log (gsl_sf_bessel_I0_scaled (z));
+    max_expo = MAX (max_expo, expo[i]);
+  }
 
   {
     const gdouble *p_data = (const gdouble *) p_arr->data;
 
     for (i = 0; i < n_nodes; i++)
-    {
-      const gdouble r  = r_data[i];
-      const gdouble dr = R - r;
-      const gdouble z  = R * r / sn2;
-
-      log_terms[i] = log (weight[i]) + log (p_data[i]) - 0.5 * dr * dr / sn2 + log (gsl_sf_bessel_I0_scaled (z));
-
-      max_log = MAX (max_log, log_terms[i]);
-    }
+      sum += _tilted_series_lnP0_w[i] * p_data[i] * exp (expo[i] - max_expo);
   }
-
-  for (i = 0; i < n_nodes; i++)
-    sum += exp (log_terms[i] - max_log);
 
   g_array_unref (r_arr);
   g_array_unref (p_arr);
-  gsl_integration_glfixed_table_free (table);
 
-  return max_log + log (sum) - log (2.0 * M_PI * sn2);
+  return max_expo + log (half * sum) - log (2.0 * M_PI * sn2);
 }
 
 struct _NcGalaxyShapeFactorTiltedSeries
@@ -749,27 +936,42 @@ typedef struct _NcGalaxyShapeFactorTiltedSeriesPrivate
 } NcGalaxyShapeFactorTiltedSeriesPrivate;
 
 /*
- * Per-galaxy scratch: lambda(g)'s three components, W(g), ln P_0 and the
- * domain-guard bound, refreshed when the population generation moved, a
- * new catalog row was read (mirrors MomentSeries' own two invalidation
- * axes) or -- unlike MomentSeries -- when std_noise or the observed radius
- * changed, since (unlike MomentSeries' m/v/w) this cache depends on both:
- * nc_galaxy_shape_factor_gen() and nc_galaxy_shape_factor_data_set() both
- * write epsilon_obs_1/2 and std_noise without invoking ldata_read_row, so
- * pop_hash/row invalidation alone is not enough here.
+ * Per-galaxy scratch, split into two independently-validated groups since
+ * they depend on different values -- lambda(g)/W(g) solve only from
+ * (pop_hash, sn), never from R (_tilted_series_solve()'s Delta/M inputs
+ * carry no R dependence at all), while ln_P0 additionally depends on R.
+ * Rebuilding lambda/W on every R change alone (as a single combined cache
+ * used to) is a wasted 3x3-solve-per-order re-run on any path where R
+ * varies at fixed sn -- e.g. a multi-R scan at fixed catalogue noise, or
+ * nc_galaxy_shape_factor_gen() sweeping epsilon_obs at fixed std_noise.
+ *
+ * Both groups are still refreshed when the population generation moved or
+ * a new catalog row was read (mirrors MomentSeries' own two invalidation
+ * axes; see ldata_read_row() below, which invalidates both -- a new row
+ * may move sn, R, or both) or -- unlike MomentSeries -- when std_noise or
+ * the observed radius changed, since (unlike MomentSeries' m/v/w) this
+ * cache depends on both: nc_galaxy_shape_factor_gen() and
+ * nc_galaxy_shape_factor_data_set() both write epsilon_obs_1/2 and
+ * std_noise without invoking ldata_read_row, so pop_hash/row invalidation
+ * alone is not enough here.
  */
 typedef struct _NcGalaxyShapeFactorTiltedSeriesLData
 {
+  /* Keyed on (pop_hash, sn) only. */
   gdouble *lam1; /* N+1 */
   gdouble *lam2; /* N+1 */
   gdouble *lam3; /* N+1 */
   gdouble *Wser; /* N+1 */
-  gdouble ln_P0;
   gdouble lam_bound;
   gdouble sn_seen;
+  guint64 pop_hash_seen_lw;
+  gboolean lw_valid;
+
+  /* Keyed on (pop_hash, sn, R2) in addition to the above. */
+  gdouble ln_P0;
   gdouble R2_seen;
-  guint64 pop_hash_seen;
-  gboolean valid;
+  guint64 pop_hash_seen_p0;
+  gboolean p0_valid;
 } NcGalaxyShapeFactorTiltedSeriesLData;
 
 enum
@@ -786,7 +988,7 @@ nc_galaxy_shape_factor_tilted_series_init (NcGalaxyShapeFactorTiltedSeries *gsft
 {
   NcGalaxyShapeFactorTiltedSeriesPrivate * const self = nc_galaxy_shape_factor_tilted_series_get_instance_private (gsfts);
 
-  self->trunc_order = 9;
+  self->trunc_order = 5;
   self->n_m         = 0;
   self->n_v         = 0;
   self->n_moments   = 0;
@@ -848,7 +1050,11 @@ _nc_galaxy_shape_factor_tilted_series_constructed (GObject *object)
                                                         &self->n_m, &self->n_v, &self->n_moments,
                                                         &self->tab_m, &self->tab_v, &self->tab_w);
 
-    self->n_M = MAX (self->n_moments, self->trunc_order / 2 + 2);
+    /* _tilted_series_solve() unconditionally reads M[1] and M[2] to build
+     * the closed-form V=Cov_{P_0}(T) (A, kappa, B), regardless of
+     * trunc-order, so n_M must be >=3 even at trunc-order=1 (where
+     * n_moments/2+2 alone would give only 2). */
+    self->n_M = MAX (MAX (self->n_moments, self->trunc_order / 2 + 2), 3);
   }
 }
 
@@ -893,7 +1099,8 @@ _nc_galaxy_shape_factor_tilted_series_ldata_read_row (NcGalaxyShapeFactorData *d
 {
   NcGalaxyShapeFactorTiltedSeriesLData *ldata = (NcGalaxyShapeFactorTiltedSeriesLData *) data->ldata;
 
-  ldata->valid = FALSE;
+  ldata->lw_valid = FALSE;
+  ldata->p0_valid = FALSE;
 }
 
 static void
@@ -908,7 +1115,8 @@ _nc_galaxy_shape_factor_tilted_series_data_init (NcGalaxyShapeFactor *gsf, NcmMS
   NcGalaxyShapeFactorTiltedSeriesLData *ldata         = g_new0 (NcGalaxyShapeFactorTiltedSeriesLData, 1);
   const guint N = self->trunc_order;
 
-  /* g_new0 leaves @valid FALSE, so the first evaluation populates it. */
+  /* g_new0 leaves @lw_valid/@p0_valid FALSE, so the first evaluation
+   * populates both. */
   ldata->lam1 = g_new0 (gdouble, N + 1);
   ldata->lam2 = g_new0 (gdouble, N + 1);
   ldata->lam3 = g_new0 (gdouble, N + 1);
@@ -934,10 +1142,10 @@ _nc_galaxy_shape_factor_tilted_series_prepare (NcGalaxyShapeFactor *gsf, NcmMSet
 }
 
 /*
- * Refreshes this galaxy's cached {lambda(g), W(g), ln P_0, lambda bound}
- * when the population model generation moved, a new catalog row was read,
- * or (see NcGalaxyShapeFactorTiltedSeriesLData's own comment) std_noise or
- * the observed radius changed.
+ * Refreshes this galaxy's cached {lambda(g), W(g), lambda bound} and
+ * {ln P_0} independently (see NcGalaxyShapeFactorTiltedSeriesLData's own
+ * comment): the former on population generation, catalog row, or
+ * std_noise changes, the latter additionally on the observed radius.
  */
 static inline void
 _nc_galaxy_shape_factor_tilted_series_peek_coeffs (NcGalaxyShapeFactorTiltedSeriesPrivate * const self,
@@ -960,8 +1168,12 @@ _nc_galaxy_shape_factor_tilted_series_peek_coeffs (NcGalaxyShapeFactorTiltedSeri
    * data->epsilon_obs_1/2 through unchanged, but a caller may not). */
   const gdouble R2 = gsl_pow_2 (epsilon_obs_1) + gsl_pow_2 (epsilon_obs_2);
 
-  if (G_UNLIKELY (!ldata->valid || (ldata->pop_hash_seen != self->pop_hash) ||
-                  (ldata->sn_seen != sn) || (ldata->R2_seen != R2)))
+  /* lambda(g)/W(g) depend only on (pop_hash, sn) -- ln_P0 additionally
+   * depends on R -- so the two groups are validated and rebuilt
+   * independently (this struct's own doc comment): an R-only change
+   * (fixed sn) never re-runs the 3x3-solve-per-order loop. */
+  if (G_UNLIKELY (!ldata->lw_valid || (ldata->pop_hash_seen_lw != self->pop_hash) ||
+                  (ldata->sn_seen != sn)))
   {
     const guint N     = self->trunc_order;
     const gdouble sn2 = sn * sn;
@@ -980,7 +1192,6 @@ _nc_galaxy_shape_factor_tilted_series_peek_coeffs (NcGalaxyShapeFactorTiltedSeri
     _tilted_series_solve (N, M, self->n_M, sn2, Delta1, Delta2, Delta3,
                           ldata->lam1, ldata->lam2, ldata->lam3, ldata->Wser);
 
-    ldata->ln_P0     = _tilted_series_ln_P0 (pop, data->pop_data, sqrt (R2), sn);
     ldata->lam_bound = 1.0 / (2.0 * sn2);
 
     g_free (M);
@@ -988,10 +1199,23 @@ _nc_galaxy_shape_factor_tilted_series_peek_coeffs (NcGalaxyShapeFactorTiltedSeri
     g_free (Delta2);
     g_free (Delta3);
 
-    ldata->pop_hash_seen = self->pop_hash;
-    ldata->sn_seen        = sn;
-    ldata->R2_seen        = R2;
-    ldata->valid          = TRUE;
+    ldata->pop_hash_seen_lw = self->pop_hash;
+    ldata->sn_seen          = sn;
+    ldata->lw_valid         = TRUE;
+
+    /* sn moved, so any previously cached ln_P0 (computed against the old
+     * sn) is stale too, even if R2 did not change. */
+    ldata->p0_valid = FALSE;
+  }
+
+  if (G_UNLIKELY (!ldata->p0_valid || (ldata->pop_hash_seen_p0 != self->pop_hash) ||
+                  (ldata->R2_seen != R2)))
+  {
+    ldata->ln_P0 = _tilted_series_ln_P0 (pop, data->pop_data, sqrt (R2), sn);
+
+    ldata->pop_hash_seen_p0 = self->pop_hash;
+    ldata->R2_seen          = R2;
+    ldata->p0_valid         = TRUE;
   }
 
   *lam1_out      = ldata->lam1;
@@ -1105,18 +1329,21 @@ nc_galaxy_shape_factor_tilted_series_class_init (NcGalaxyShapeFactorTiltedSeries
    * NcGalaxyShapeFactorTiltedSeries:trunc-order:
    *
    * Truncation order $N$ of the $g$-power series for $\lambda(g)$. Default
-   * 9, higher than #NcGalaxyShapeFactorMomentSeries' default of 5: the
-   * tilt series converges roughly a decade slower per two orders than the
-   * moment series it consumes (`TILT_SERIES.md` sec. 3, "Convergence"), so
-   * the two truncation orders are independent knobs even though this
-   * class reuses `MomentSeries`' own target-series build at the same $N$.
+   * 5, matching #NcGalaxyShapeFactorMomentSeries' own default: an
+   * externally measured bias comparison across N=5/7/9 found the tilt
+   * series' remaining bias numerically negligible at every order once
+   * solved correctly, so $N$ only buys back a fraction of a percent of
+   * calibration in the hardest (small-$\sigma_\nu$) corner of the
+   * catalogue box (`docs/theory/wl_shape_factor_history.md`). Independent
+   * of `MomentSeries`' own `trunc-order`, even though this class reuses
+   * `MomentSeries`' target-series build at the same $N$.
    */
   g_object_class_install_property (object_class,
                                    PROP_TRUNC_ORDER,
                                    g_param_spec_uint ("trunc-order",
                                                       "Truncation order",
                                                       "Truncation order N of the g-power series for lambda(g)",
-                                                      1, G_MAXUINT, 9,
+                                                      1, G_MAXUINT, 5,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
   gsf_class->data_init        = &_nc_galaxy_shape_factor_tilted_series_data_init;

@@ -634,3 +634,73 @@ sharp small-$\sigma_\nu$, near-disc-boundary corner where
 `NcGalaxyShapeFactorFixedQuad`'s own default resolution (`n-radial=n-angular=21`)
 turns out to be under-converged (confirmed by re-running `FixedQuad` at much
 higher resolution and watching it converge toward this class's answer).
+
+## `NcGalaxyShapeFactorTiltedSeries`: default `trunc-order` lowered to 5, exact-truncation and cache-split optimisations (2026)
+
+An externally measured bias comparison across `trunc-order` $\in\{5,7,9\}$
+(medians and the hardest small-$\sigma_\nu$ corner of the catalogue box)
+found the remaining calibration bias numerically negligible at every one of
+these orders once the solve is correct — $N=7$ within $0.005\%$ of $N=9$ on
+calibration and $0.004\%$ on bias everywhere including the hardest corner,
+and even $N=5$ at only $+0.061\%$ bias in that corner. Since the class's own
+default was originally set an order of magnitude above
+`NcGalaxyShapeFactorMomentSeries`' default of 5 purely on a *convergence
+speed* argument, not a measured-bias one (see the departure recorded above),
+and the measured bias shows $N$ buying back only a fraction of a percent in
+the worst cell, the default was lowered to match `MomentSeries`' own: **5**.
+`trunc-order` remains a `CONSTRUCT_ONLY` property, so any caller needing the
+old behaviour can still request `trunc-order=9` explicitly.
+
+Two optimisations landed alongside the default change:
+
+- **Exact order-truncation in the solve.** At order $p$ in
+  `_tilted_series_solve()`'s order-by-order loop, only the $g^p$ coefficient
+  of each generating-function series is ever consumed, and every series
+  operation in this file (`series_mul`, `series_recip`, `series_log`) is
+  lower-triangular: coefficient $p$ of the output depends only on input
+  coefficients $\le p$. The loop previously called
+  `_tilted_series_compute_D()` and every series op after it at the full
+  `trunc-order` $N$ on every pass; it now truncates the entire loop body to
+  the *current* order $p$, which is exact, not approximate (only the final
+  post-loop pass, which reads off the complete $W(g)$, still runs at the
+  full $N$). Measured setup cost after this change: 94 $\mu$s/galaxy at
+  $N=5$ (was 159 $\mu$s pre-optimisation, externally measured), 226 $\mu$s at
+  $N=7$, 506 $\mu$s at $N=9$ (was 1246 $\mu$s) — combined with the default
+  change, a 41k-galaxy cluster's one-time setup cost drops from roughly 52 s
+  to well under 4 s.
+- **Split per-galaxy cache.** `NcGalaxyShapeFactorTiltedSeriesLData`
+  previously invalidated $\lambda(g)$, $W(g)$ *and* $\ln P_0$ together on any
+  change to `(pop_hash, sn, R)`, even though $\lambda(g)$/$W(g)$ never depend
+  on $R$ (`_tilted_series_solve()`'s inputs carry no $R$ dependence at all).
+  The cache is now two independently validated groups —
+  $(\lambda,W,\text{lam\_bound})$ keyed on `(pop_hash, sn)`, and $\ln P_0$
+  keyed on `(pop_hash, sn, R^2)` — so an $R$-only change at fixed `sn` no
+  longer re-runs the $3\times3$-solve-per-order loop. This is a
+  correctness-preserving refactor with no effect on the fixed-nodes pipeline
+  path (where $R$ is constant per galaxy for the life of a fit); its benefit
+  is confined to multi-$R$ evaluation paths (a scan at fixed noise,
+  `nc_galaxy_shape_factor_gen()` sweeping `epsilon_obs` at fixed
+  `std_noise`).
+
+A third proposal from the same external review — replacing the
+order-by-order solve with Newton's method on the formal power series, using
+the true series-valued Jacobian $\nabla^2W(\lambda(g))=\mathrm{Cov}_\lambda(T)$
+to double the number of correct orders per pass ($\approx\log_2 N$ passes
+instead of $N$) — was *not* implemented. The review itself only recommended
+it "if (1) and (2) aren't enough", conditioned on the old $N=9$ default;
+under the new $N=5$ default, order-by-order truncated to the working order
+is already a handful of cheap linear passes ($p=1..5$), while Newton would
+need a doubled-order Jacobian series (new quartic-moment machinery: $D_{3,0}$,
+$D_{4,0}$, $D_{0,4}$, $D_{1,2}$, $D_{2,2}$) and a $3\times3$ series-matrix
+inversion for a routine this class already validates against the tex's own
+published $\lambda^{(1..5)}$ table to six figures — not a trade worth making
+at this order for savings the measurement above shows are already small.
+
+One low-order correctness fix surfaced by testing `trunc-order` down to 1
+(not just the default) rather than by the optimisation work itself:
+`_tilted_series_solve()` unconditionally reads `M[1]` and `M[2]` to build the
+closed-form $V=\mathrm{Cov}_{P_0}(T)$ regardless of `trunc-order`, but
+`n_M = MAX(n_moments, trunc-order/2 + 2)` could give `n_M=2` at
+`trunc-order=1`, an out-of-bounds read of `M[2]` (manifesting as a spurious
+`det2 > 0.0` assertion failure, not a crash at the actual read). Fixed by
+flooring `n_M` at 3 unconditionally.

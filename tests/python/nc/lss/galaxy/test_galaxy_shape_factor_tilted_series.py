@@ -578,11 +578,30 @@ def test_trunc_order_property_round_trip(ellip_conv):
     assert gsf.get_ellip_conv() == ellip_conv
 
 
-def test_default_trunc_order_is_nine():
-    """Higher than MomentSeries' default of 5: the tilt series converges
-    an order of magnitude more slowly (TILT_SERIES.md sec. 3)."""
+def test_default_trunc_order_is_five():
+    """Matches MomentSeries' own default of 5: an externally measured
+    bias comparison across N=5/7/9 found the remaining bias numerically
+    negligible at every order once solved correctly, so N only buys back
+    a fraction of a percent of calibration in the hardest corner."""
     gsf = Nc.GalaxyShapeFactorTiltedSeries(ellip_conv=Nc.GalaxyWLObsEllipConv.TRACE)
-    assert gsf.get_property("trunc-order") == 9
+    assert gsf.get_property("trunc-order") == 5
+
+
+@pytest.mark.parametrize("trunc_order", [1, 2, 3, 4, 5, 7, 9])
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_eval_finite_across_trunc_orders(trunc_order, ellip_conv):
+    """Sweep trunc-order down to 1 (not just the default) to exercise the
+    low-order edges of _tilted_series_compute_D's order-truncation
+    optimisation and the kmax_odd=(N-1)/2 Horner indexing at N=1, which
+    the fixed default=5 construction alone never touches."""
+    pop = _pop_gauss(0.4847)
+    mset = _build_mset(pop)
+    gsf = Nc.GalaxyShapeFactorTiltedSeries.new(ellip_conv, trunc_order)
+
+    for g in (0.0, 0.05, 0.2):
+        for eps in (0.0, 0.1, -0.15):
+            val = _eval_ln(gsf, pop, mset, complex(g, 0.0), complex(eps, eps), 0.1256)
+            assert np.isfinite(val)
 
 
 if __name__ == "__main__":
