@@ -308,6 +308,60 @@ def test_parity_of_log_marginal_under_joint_g_x_reflection():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.parametrize("sn", [0.05, 0.25])
+@pytest.mark.parametrize("g_mag", [1.5, 2.0, 5.0, 20.0])
+def test_self_duality_under_g_to_one_over_g(sn, g_mag):
+    """The exact marginal obeys P(eps|g) = P(eps|1/g*): the local degeneracy of
+    Schneider & Seitz (1995, eq. 3.13), which survives the observed-plane noise
+    convolution because the noise kernel is isotropic.
+
+    Evaluating the series at v(g) -- a function of the distortion
+    delta = 2g/(1+g^2) alone -- makes the MODEL obey it identically rather than
+    approximately: delta is invariant under the map, so the two evaluations
+    read the same coefficients at the same argument and can differ only by the
+    rounding in forming delta. A model evaluated at g cannot pass this at any
+    truncation order, since the only g-polynomials invariant under g -> 1/g are
+    the constants."""
+    pop = _pop_gauss(0.3)
+    mset = _build_mset(pop)
+    gsf = Nc.GalaxyShapeFactorTiltedSeries.new(Nc.GalaxyWLObsEllipConv.TRACE, 5)
+
+    g = g_mag * np.exp(0.7j)
+    g_dual = g / abs(g) ** 2  # same direction, reciprocal magnitude
+
+    for eps_obs in (0.05 + 0.02j, -0.3 + 0.15j, 0.42 - 0.28j):
+        assert_allclose(
+            _eval_ln(gsf, pop, mset, g, eps_obs, sn),
+            _eval_ln(gsf, pop, mset, g_dual, eps_obs, sn),
+            rtol=1e-10,
+            atol=1e-10,
+        )
+
+
+@pytest.mark.parametrize("sn", [0.05, 0.25])
+def test_marginal_respects_the_exact_ceiling_past_the_critical_curve(sn):
+    """The marginal is a convolution of a probability density with the noise
+    kernel, so P <= max(kernel) = 1/(2 pi sn^2) for every g and every eps_obs.
+
+    The regression this argument change was introduced for was not an abort but
+    a breach of exactly that bound: evaluated at g, galaxies at |g| > 1 returned
+    P >> 1 (ln P ~ +667 against a ceiling of ~+4 was measured), and a few of
+    those put a cluster likelihood's global maximum at the mass prior's upper
+    edge. Sweep well past the critical curve and check the bound holds with the
+    slack the guard itself allows -- i.e. that no galaxy in the physical range
+    trips the guard at the default order."""
+    pop = _pop_gauss(0.3)
+    mset = _build_mset(pop)
+    gsf = Nc.GalaxyShapeFactorTiltedSeries.new(Nc.GalaxyWLObsEllipConv.TRACE, 5)
+    ceiling = -np.log(2.0 * np.pi * sn**2)
+
+    for g_mag in np.geomspace(0.01, 50.0, 40):
+        for eps_obs in (0.0 + 0.0j, 0.5 + 0.1j, -0.7 + 0.4j, 0.95 + 0.0j):
+            ln_p = _eval_ln(gsf, pop, mset, g_mag + 0.0j, eps_obs, sn)
+            assert np.isfinite(ln_p)
+            assert ln_p < ceiling + 20.0
+
+
 def test_normalisation_at_nonzero_shear():
     pop = _pop_gauss(0.4847)
     mset = _build_mset(pop)

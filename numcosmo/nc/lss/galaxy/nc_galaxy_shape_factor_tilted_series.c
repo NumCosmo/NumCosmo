@@ -141,26 +141,46 @@
  * nominally wants -- this class does not claim to be cheaper than a
  * Gaussian evaluation.
  *
- * The tilt parameter must stay inside $Z(\lambda)$'s natural domain,
- * $\max(\lambda_2,\lambda_3) < 1/2\sigma_\nu^2$ (`TILT_SERIES.md' sec. 7):
- * checked at evaluation time, not silently clamped, exactly like
- * `MomentSeries`' own covariance-positivity guard.
+ * The series is evaluated at $v(g)$, not at $g$ itself -- see
+ * `_tilted_series_argument()`. The coefficients are unchanged: $v$ agrees
+ * with $g$ to the truncation order, so this is a change of argument, not a
+ * re-expansion, but $v$ is a function of the distortion
+ * $\delta = 2g/(1+g^2)$ alone and is therefore bounded and invariant under
+ * $g\to1/g$, as the exact marginal is.
  *
- * That domain IS reachable on real data, contrary to what this comment
- * asserted before. The $g$-series has radius of convergence exactly $1$
- * (`TILT_SERIES.md' prop. 2.4), and $|g|>1$ does occur at the innermost fit
- * radii once the sampler visits a high enough mass: $g=\gamma/(1-\kappa)$
- * has a pole at $\kappa=1$, and the source-redshift quadrature integrates
- * over source planes that reach it. Past $|g|=1$ the truncated
- * $\lambda(g)$ is a divergent sum and can cross the bound from below.
+ * That matters because $|g|>1$ IS reachable on real data, contrary to what
+ * this comment asserted before, at the innermost fit radii once the sampler
+ * visits a high enough mass: $g=\gamma/(1-\kappa)$ has a pole at
+ * $\kappa=1$, and the source-redshift quadrature integrates over source
+ * planes that reach it. Evaluated at $g$, the truncated $\lambda$ grows
+ * without bound there and the model returns spuriously large
+ * probabilities -- a few such galaxies are enough to put a cluster
+ * likelihood's global maximum at the mass prior's upper edge. Evaluated at
+ * $v$ the model is bounded a priori, by $\max_{[0,v_\mathrm{max}]}|\lambda|$.
  *
- * Raising `trunc-order` does NOT help there. It makes the divergence worse
- * while pushing the guard's trip point further out, i.e. it converts a loud
- * failure into a silent wrong answer -- which is what `MomentSeries` at
- * order 5 already does in the same regime (its covariance polynomial grows
- * away from its own positivity wall rather than through it, so its guard
- * never fires; at order 3 it fires *earlier* than this one ever does). The
- * two guards differ in orientation, not in robustness.
+ * Raising `trunc-order` does not help here, and can hurt. It cannot touch
+ * the boundedness, which is now structural, but the truncation error near
+ * $|g|\simeq1$ -- where $v$ comes closest to its own maximum -- grows with
+ * order, and how fast depends on the population: on a narrow, low-noise one
+ * ($\sigma_e=0.3$, $\sigma_\nu=0.05$, $|\chi_\mathrm{obs}|=0.8$) the
+ * model's peak excess over the exact ceiling below is $+3$ nats at order 5,
+ * $+46$ at order 9 and $+4884$ at order 15, so the ceiling test starts
+ * firing on physical configurations. Order 9 is safe on the wider
+ * populations the test suite uses. Raising the order buys accuracy at small
+ * shear and pays for it in the very regime this argument is here to
+ * protect; check the ceiling before doing it.
+ *
+ * Two sanity tests run at evaluation time, not silent clamps, exactly like
+ * `MomentSeries`' own covariance-positivity guard: $Z(\lambda)$'s natural
+ * domain $\max(\lambda_2,\lambda_3)<1/2\sigma_\nu^2$ (`TILT_SERIES.md'
+ * sec. 7), and an exact ceiling on the marginal itself. The marginal is a
+ * convolution of a probability density with the noise kernel, so
+ * $P\le1/2\pi\sigma_\nu^2$ for every $g$ and every
+ * $\chi_\mathrm{obs}$; the second test trips well above that. The ceiling
+ * is the one that catches the failure this argument change was introduced
+ * for -- a truncated $\lambda$ far too *negative* makes $P$ a spurious
+ * spike, which no test on $\max(\lambda_2,\lambda_3)$ can see, since the
+ * exact $\lambda_2,\lambda_3$ are themselves negative.
  *
  * An MCMC walker reaching that region is a routine event -- walkers are
  * initialised over the whole prior box -- so the default is to report it,
@@ -170,8 +190,9 @@
  * path and pushes the sampler back out of the region. Occurrences are
  * counted and readable through
  * nc_galaxy_shape_factor_tilted_series_get_domain_error_count(); a non-zero
- * count on a converged chain means the shear range (in practice the mass
- * prior) wants restricting. Set
+ * count means the model returned something no probability density can
+ * return, and should be reported rather than worked around by widening
+ * bounds. Set
  * #NcGalaxyShapeFactorTiltedSeries:strict-domain to restore the fatal
  * behaviour, which is how the test suite exercises the guard.
  */
@@ -1277,10 +1298,67 @@ _nc_galaxy_shape_factor_tilted_series_peek_coeffs (NcGalaxyShapeFactorTiltedSeri
 }
 
 /*
+ * The variable the truncated series is evaluated at.
+ *
+ * The exact marginal is invariant under g -> 1/g -- the classical local
+ * degeneracy of weak lensing (Schneider & Seitz 1995, A&A 294, 411,
+ * eq. 3.13), stated there for the distortion convention this class uses. It
+ * survives the observed-plane noise convolution because the noise kernel is
+ * isotropic, so it is a property of the per-galaxy likelihood and not only
+ * of the noise-free push-forward. Every coefficient of lambda(g) and W(g) is
+ * therefore a function of the distortion delta = 2g/(1+g^2) = S(g,0) alone.
+ *
+ * A truncated polynomial in g cannot represent such a function: the only
+ * g-polynomials invariant under g -> 1/g are the constants, and the exact
+ * answer is bounded on g in [0,inf) while a non-constant polynomial is not.
+ * That is not academic -- see this class' doc comment on why |g| > 1 is
+ * reached at the innermost fit radii.
+ *
+ * The remedy is to hand the series an argument that has the symmetry:
+ *
+ *   v = sum_{k : 2k-1 <= N} c_k delta^(2k-1),
+ *   c_1 = 1/2,  c_{k+1} = c_k (2k-1) / (2(k+1)).
+ *
+ * This is the degree-N Taylor section of the exact inverse map
+ * g(delta) = (1 - sqrt(1-delta^2))/delta = min(g, 1/g), so v = g + O(g^(N+2)):
+ * to the truncation order the series cannot tell the two apart, and the
+ * coefficients need no change at all. Re-expanding the coefficients in delta
+ * instead is exact too, but converges markedly slower per order at the
+ * moderate shears (g ~ 0.25-0.4) that dominate a cluster fit. Keeping the
+ * g-coefficients and moving only the argument is both simpler and, measured
+ * against the converged answer, at least as accurate as g itself at every
+ * shear tested.
+ *
+ * v inherits what matters: it is a function of delta, hence invariant under
+ * g -> 1/g; it is odd in g through delta, so the odd/even split below --
+ * lambda_1 odd, lambda_2/lambda_3/W even -- is untouched; and it is bounded,
+ * v <= 0.6875 at N = 5 and 0.7539 at N = 9, so the series is never evaluated
+ * outside a fixed interval however large |g| gets.
+ */
+static gdouble
+_tilted_series_argument (const gdouble g_mag, const guint N)
+{
+  const gdouble d  = 2.0 * g_mag / (1.0 + g_mag * g_mag);
+  const gdouble d2 = d * d;
+  gdouble term     = 0.5 * d;
+  gdouble v        = term;
+  guint k;
+
+  for (k = 1; 2 * k + 1 <= N; k++)
+  {
+    term *= d2 * (2.0 * k - 1.0) / (2.0 * (k + 1.0));
+    v    += term;
+  }
+
+  return v;
+}
+
+/*
  * Gauge-fixes (g,eps_obs) together by -arg(g) (exact, same rotation as
- * MomentSeries' own _eval), Horner-evaluates lambda_1 (odd powers of g
- * only), lambda_2/lambda_3/W (even powers only) in u=g^2, asserts the
- * domain guard (this class' own doc comment / TILT_SERIES.md sec. 7), and
+ * MomentSeries' own _eval), Horner-evaluates lambda_1 (odd powers only),
+ * lambda_2/lambda_3/W (even powers only) in u=v^2 where v is the bounded,
+ * g -> 1/g invariant argument built by _tilted_series_argument(), asserts
+ * the two sanity guards (this class' own doc comment), and
  * returns ln P_0 + lambda_1 x + lambda_2 x^2 + lambda_3 y^2 - W. Both
  * eval_marginal and eval_ln_marginal route through here (want_log picks
  * whether the final exp() runs) since nc_galaxy_shape_factor_eval_at_nodes()
@@ -1301,7 +1379,8 @@ _nc_galaxy_shape_factor_tilted_series_eval (NcGalaxyShapeFactorTiltedSeriesPriva
   const gdouble x      = epsilon_obs_1 * cos_pg + epsilon_obs_2 * sin_pg;
   const gdouble y      = -epsilon_obs_1 * sin_pg + epsilon_obs_2 * cos_pg;
   const guint N        = self->trunc_order;
-  const gdouble u      = g_mag * g_mag;
+  const gdouble v      = _tilted_series_argument (g_mag, N);
+  const gdouble u      = v * v;
   const gint kmax_odd  = (gint) ((N - 1) / 2);
   const gint kmax_even = (gint) (N / 2);
   gdouble l1, l2, l3, Wg, lnP;
@@ -1312,7 +1391,7 @@ _nc_galaxy_shape_factor_tilted_series_eval (NcGalaxyShapeFactorTiltedSeriesPriva
   for (k = kmax_odd - 1; k >= 0; k--)
     l1 = l1 * u + lam1[2 * k + 1];
 
-  l1 *= g_mag;
+  l1 *= v;
 
   l2 = lam2[2 * kmax_even];
   l3 = lam3[2 * kmax_even];
@@ -1325,40 +1404,64 @@ _nc_galaxy_shape_factor_tilted_series_eval (NcGalaxyShapeFactorTiltedSeriesPriva
     Wg = Wg * u + Wser[2 * k];
   }
 
-  if (G_UNLIKELY (MAX (l2, l3) >= lam_bound))
+  lnP = ln_P0 + l1 * x + l2 * x * x + l3 * y * y - Wg;
+
+  /* Two independent sanity tests, in one branch.
+   *
+   * The first is the natural domain of Z(lambda). The second is an exact
+   * ceiling: the marginal is a convolution of a probability density with
+   * the noise kernel, so P <= max(kernel) = 1/(2 pi sn^2) for every g and
+   * every eps_obs, i.e. lnP <= log(lam_bound / pi). The model is an
+   * approximation and can sit above that (a few nats at trunc-order 5),
+   * so trip only far above it: this is a "returned nonsense" tripwire, not
+   * an accuracy test.
+   *
+   * The ceiling is the one that catches the failure that actually
+   * occurred. A truncated lambda far too NEGATIVE makes P a spurious
+   * spike -- lnP reached +667 against a ceiling of +4 -- and no test on
+   * max(lambda_2, lambda_3) can see that, because the exact lambda_2 and
+   * lambda_3 are themselves negative. Testing |lambda| instead is not an
+   * option: the exact |lambda_3| comes within 5% of lam_bound at small sn,
+   * so a two-sided bound would fire on legitimate configurations.
+   */
+  if (G_UNLIKELY ((MAX (l2, l3) >= lam_bound) ||
+                  (lnP > log (lam_bound / M_PI) + 20.0)))
   {
     if (G_UNLIKELY (self->strict_domain))
-      g_error ("NcGalaxyShapeFactorTiltedSeries: the tilt parameter left the "
-               "natural domain (lambda_2=%g, lambda_3=%g, bound=%g) at "
-               "trunc-order=%u, |g|=%g. The g-series has radius of "
-               "convergence exactly 1, so |g|>1 is a divergent sum: restrict "
-               "the shear range (in a cluster fit, tighten the mass prior). "
-               "Do NOT raise trunc-order -- that worsens the divergence and "
-               "only moves this check's trip point further out.",
-               l2, l3, lam_bound, N, g_mag);
+      g_error ("NcGalaxyShapeFactorTiltedSeries: the tilt left its sanity "
+               "bounds (lambda_2=%g, lambda_3=%g, bound=%g, lnP=%g, "
+               "ceiling=%g) at trunc-order=%u, |g|=%g, v=%g. The series is "
+               "evaluated at a bounded argument, so this is a truncation "
+               "artefact rather than a reachable regime: either the target "
+               "moment series handed to the solve was not the moment vector "
+               "of any distribution -- check the population parameters -- or "
+               "trunc-order is too high for this population (the error near "
+               "|g|=1 grows with order, fastest for narrow, low-noise "
+               "populations).",
+               l2, l3, lam_bound, lnP, log (lam_bound / M_PI), N, g_mag, v);
 
     /* One warning per instance: the sampler can revisit this region for
      * many galaxies over many walkers, and the count below is the number
      * that matters, not one line per occurrence. */
     if (G_UNLIKELY (g_atomic_int_compare_and_exchange (&self->domain_warned, 0, 1)))
-      g_warning ("NcGalaxyShapeFactorTiltedSeries: the tilt parameter left the "
-                 "natural domain (lambda_2=%g, lambda_3=%g, bound=%g) at "
-                 "trunc-order=%u, |g|=%g; returning zero probability, which "
-                 "routes into the caller's NC_GALAXY_LOW_PROB path. The "
-                 "g-series has radius of convergence exactly 1, so |g|>1 is a "
-                 "divergent sum: restrict the shear range (in a cluster fit, "
-                 "tighten the mass prior). Do NOT raise trunc-order. Warned "
-                 "once per instance -- read the running total with "
+      g_warning ("NcGalaxyShapeFactorTiltedSeries: the tilt left its sanity "
+                 "bounds (lambda_2=%g, lambda_3=%g, bound=%g, lnP=%g, "
+                 "ceiling=%g) at trunc-order=%u, |g|=%g, v=%g; returning zero "
+                 "probability, which routes into the caller's "
+                 "NC_GALAXY_LOW_PROB path. The series is evaluated at a "
+                 "bounded argument, so this is a truncation artefact rather "
+                 "than a reachable regime: check the population parameters, "
+                 "and do not raise trunc-order to work around it -- the error "
+                 "near |g|=1 grows with order. Warned once per instance -- "
+                 "read the running total with "
                  "nc_galaxy_shape_factor_tilted_series_get_domain_error_count().",
-                 l2, l3, lam_bound, N, g_mag);
+                 l2, l3, lam_bound, lnP, log (lam_bound / M_PI), N, g_mag, v);
 
     g_atomic_int_inc (&self->domain_error_count);
 
     /* exp(GSL_NEGINF) == 0.0 exactly, so the two hooks stay consistent. */
     return want_log ? GSL_NEGINF : 0.0;
   }
-
-  lnP = ln_P0 + l1 * x + l2 * x * x + l3 * y * y - Wg;
 
   return want_log ? lnP : exp (lnP);
 }
