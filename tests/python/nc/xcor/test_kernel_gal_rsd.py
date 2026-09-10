@@ -356,3 +356,61 @@ def test_deriv_one_limber_matches_exact_at_high_ell(cosmology, dndz_arrays) -> N
     assert exact[0] > 0.0
     # measured: -8.4e-3 at ell = 200 (the Limber error of this suppressed integral)
     assert_allclose(limber, exact, rtol=2.0e-2)
+
+
+def test_limber_tier_error_tracks_the_rsd_share(cosmology, dndz_arrays) -> None:
+    """How much the Limber tier's j_l'' branch costs, and why it is affordable.
+
+    The kernel-space Limber tier builds W_l(k) from the two-point peak formula in
+    _component_limber_eval rather than from a Levin solve. For the j_l'' weight that
+    formula does not converge to the integral it approximates: against the certified
+    d = 2 table (data/truth_tables/xcor/xcor_window_ilk_d2.json.gz) it sits at 0.38,
+    0.106 and 0.093 of int W j_l'' at l = 10, 50 and 200 -- flat, not shrinking --
+    because its two terms are both O(1/l) and cancel to leading order, so
+    peak-approximating each at its own turning point discards what survives. CCL
+    computes the identical expression (transfer_limber_single in src/ccl_cls.c), which
+    is why test_rsd_auto_limber_matches_ccl agrees to 5e-4 while both sit a factor of
+    ten from the certified value: two codes sharing an approximation cannot expose it
+    by agreeing with each other.
+
+    On a spectrum it is bounded by the Kaiser term's own share, which falls fast:
+    measured 9.87%, 0.63%, 0.17%, 0.04%, 0.01% of the total at these multipoles,
+    against Limber-tier errors of -10.9%, -0.25%, -0.05%, +0.01%, 0.00%. That is the
+    operational statement worth pinning -- raise l_limber on an RSD kernel around
+    l = 10 and the spectrum is wrong by 10%, not by the sub-percent the plain-weight
+    tier would suggest.
+    """
+    ells = np.array([10, 50, 100, 200, 400])
+    lmax = int(ells[-1])
+
+    rsd_exact = _nc_cl(
+        cosmology,
+        _nc_gal_kernel(cosmology, dndz_arrays, dorsd=True, lmax=lmax),
+        ells,
+        l_limber=-1,
+    )
+    rsd_limber = _nc_cl(
+        cosmology,
+        _nc_gal_kernel(cosmology, dndz_arrays, dorsd=True, lmax=lmax),
+        ells,
+        l_limber=0,
+    )
+    density_exact = _nc_cl(
+        cosmology,
+        _nc_gal_kernel(cosmology, dndz_arrays, dorsd=False, lmax=lmax),
+        ells,
+        l_limber=-1,
+    )
+
+    share = (rsd_exact - density_exact) / rsd_exact
+    error = np.abs(rsd_limber / rsd_exact - 1.0)
+
+    # The share is what makes the tier usable, so it is asserted rather than assumed.
+    assert share[0] > 0.05
+    assert np.all(np.diff(share) < 0.0)
+    assert share[-1] < 1.0e-3
+
+    # The tier's error follows it down, with an order of headroom on each rung.
+    assert error[0] < 0.15
+    assert np.all(error[1:] < 5.0e-3)
+    assert np.all(error[2:] < 1.0e-3)

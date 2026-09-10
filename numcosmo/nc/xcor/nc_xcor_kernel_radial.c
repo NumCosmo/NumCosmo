@@ -92,12 +92,14 @@ typedef struct _NcXcorKernelRadialPrivate
   gdouble z_min;
   gdouble z_max;
   gdouble z_mid;
+  guint bessel_deriv;
 } NcXcorKernelRadialPrivate;
 
 enum
 {
   PROP_0,
   PROP_SCALE_DEPENDENCE,
+  PROP_BESSEL_DERIV,
   PROP_SIZE,
 };
 
@@ -229,6 +231,9 @@ nc_xcor_kernel_radial_set_property (GObject *object, guint prop_id, const GValue
       nc_xcor_kernel_radial_kdep_clear (&self->kdep);
       self->kdep = g_value_dup_object (value);
       break;
+    case PROP_BESSEL_DERIV:
+      self->bessel_deriv = g_value_get_uint (value);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -246,6 +251,9 @@ nc_xcor_kernel_radial_get_property (GObject *object, guint prop_id, GValue *valu
   {
     case PROP_SCALE_DEPENDENCE:
       g_value_set_object (value, self->kdep);
+      break;
+    case PROP_BESSEL_DERIV:
+      g_value_set_uint (value, self->bessel_deriv);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -299,6 +307,39 @@ nc_xcor_kernel_radial_class_init (NcXcorKernelRadialClass *klass)
                                                         "Scale-dependent factor multiplying the radial integrand",
                                                         NC_TYPE_XCOR_KERNEL_RADIAL_KDEP,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcXcorKernelRadial:bessel-deriv:
+   *
+   * Derivative order of the spherical Bessel weight every component of this
+   * kernel carries: 0 for $j_\ell$, 1 for $j_\ell'$, 2 for the $j_\ell''$ of a
+   * redshift-space distortion term. The derivative is with respect to the
+   * argument $x = k\chi$.
+   *
+   * It is read once, in constructed(), where the components are built -- hence
+   * construct-only. A subclass that needs a *different* order per component
+   * overrides nc_xcor_kernel_radial_get_comp_bessel_deriv() instead, as
+   * #NcXcorKernelTable does; this property is what the default implementation
+   * returns, so such a subclass ignores it.
+   *
+   * The point of having it on the shape-independent base is that the weight
+   * and the window vary independently: any analytic shape can be certified
+   * against Arb carrying any of the three orders, which is what proves the
+   * derivative path rather than one shape's use of it.
+   *
+   * A component weighted by a derivative has no redshift-space Limber form, so
+   * a kernel with this set nonzero must be used through the kernel-space
+   * methods (%NC_XCOR_METHOD_KERNEL_EXACT and its siblings);
+   * nc_xcor_kernel_radial_eval_limber_z() errors out if a Limber-in-z method
+   * reaches one.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_BESSEL_DERIV,
+                                   g_param_spec_uint ("bessel-deriv",
+                                                      NULL,
+                                                      "Derivative order of the spherical Bessel weight",
+                                                      0, 2, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -616,7 +657,7 @@ _nc_xcor_kernel_radial_eval_prefactor_default (NcXcorKernelRadial *xcka, guint c
 static guint
 _nc_xcor_kernel_radial_get_comp_bessel_deriv_default (NcXcorKernelRadial *xcka, guint comp)
 {
-  return 0;
+  return NC_XCOR_KERNEL_RADIAL_GET_PRIVATE (xcka)->bessel_deriv;
 }
 
 /**

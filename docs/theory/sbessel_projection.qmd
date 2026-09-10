@@ -350,10 +350,13 @@ stored rotations against a new right-hand side, plus two partial panels at the
 ends.
 
 The partial panels are where a moving bound meets a fixed cell. The forced
-equation is solved on a fixed dyadic sub-cell of the knot interval that
-contains the bound, the smallest one wider than the piece to integrate, so that
-sub-cell operators are also reusable and never wider than twice what is
-needed. The forcing is fitted on the true piece $[ka, x_i]$ only, so the kernel
+equation is solved on a fixed sub-cell of the knot interval that contains the
+bound, the smallest one of a half-octave ladder that is wider than the piece to
+integrate, so that sub-cell operators are also reusable and the piece fills more
+than $1/\sqrt{2}$ of its cell. The fill matters: the piece fit is extrapolated
+over the rest of the cell, and on an octave ladder, where a piece can fill only
+half the cell, about eight percent of the pieces fail the growth check below and
+fall back to an operator factorised anew at every $k$. The forcing is fitted on the true piece $[ka, x_i]$ only, so the kernel
 is never evaluated outside its support, and the fit is rebased onto the
 sub-cell by the exact affine change of variable. Since Eq. (6) holds for any
 smooth extension of the forcing, $\mathcal{W}(x_i) - \mathcal{W}(ka)$ evaluated
@@ -690,7 +693,7 @@ print(f"C_2: library {vp.get(0):.15e}   GL(40) on the same cells {ref:.15e}   re
 | truncation order $N$ of each panel solve | adaptive QR, stopping test with floor (9) | $\tau = 10^{-13}$ |
 | Chebyshev order of the forcing on a panel | level doubling until (11) | $\tau_F = 10^{-8}$ |
 | panel grid in $x$ | prescribed, two knots per decade on $[10^{-4}, 10^6]$ | 21 knots |
-| partial panels at the ends | smallest dyadic sub-cell containing the piece | --- |
+| partial panels at the ends | smallest half-octave sub-cell containing the piece | --- |
 | multipoles per block | prescribed by the caller | 8 |
 | domain in $k$ | expansion until $\|W\| < \epsilon W_{\rm ref}$ five times | $\epsilon = 10^{-5}$, $\alpha = 0.2$ |
 | component boundaries | same test per group of touching components | --- |

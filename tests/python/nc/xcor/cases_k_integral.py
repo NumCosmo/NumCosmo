@@ -255,6 +255,27 @@ def _gauss_kdep(
     return build
 
 
+def _deriv(cls, bessel_deriv: int, **props):
+    """Any certified window, weighted by a Bessel derivative.
+
+    ``bessel-deriv`` lives on #NcXcorKernelRadial, so every analytic shape carries
+    it and the weight varies independently of the window -- which is the point: the
+    RSD term of NcXcorKernelGal is a component of order 2, but its window is a
+    spline over a sampled dn/dz and cannot be certified to 1e-10. Putting the same
+    weight on a closed-form window gives a certified C_ell for the j_ell'' path, on
+    every shape rather than on one.
+
+    Construct-only, hence keyword construction rather than ``new_full``.
+    """
+
+    def build(dist, ps, sbi):
+        return cls(
+            dist=dist, powspec=ps, integrator=sbi, bessel_deriv=bessel_deriv, **props
+        )
+
+    return build
+
+
 KERNELS: typing.Final[dict[str, KernelSpec]] = {
     spec.name: spec
     for spec in (
@@ -279,8 +300,13 @@ KERNELS: typing.Final[dict[str, KernelSpec]] = {
             "gauss",
             {"chi-mean": 1650.0, "chi-sigma": 50.0, "n-sigma": 4.0},
         ),
+        # `gauss_over`, not `gauss_near`: this window overlaps gauss_mid rather
+        # than sitting nearer than it, and `gauss_near` is the SRD Y10 lens bin at
+        # 1095 Mpc in the shared vocabulary. The two names meant two different
+        # windows in two rosters until this rename; test_window_vocabulary.py is
+        # what keeps it that way.
         KernelSpec(
-            "gauss_near",
+            "gauss_over",
             _gauss(1800.0, 300.0),
             "overlapping bin",
             "gauss",
@@ -377,6 +403,242 @@ KERNELS: typing.Final[dict[str, KernelSpec]] = {
             "lensing",
             {"chi-lower": 50.0, "chi-source-lower": 2000.0, "chi-source-upper": 3000.0},
         ),
+        # The SRD's own locations and widths, so the far-separated regime below is
+        # a cross a 3x2pt analysis actually computes rather than a constructed one.
+        # Names match the cases of the same parameters in the window truth table.
+        # The equal-variance top-hat partners of the SRD Gaussians. Parameters are
+        # the vocabulary's (tests/python/nc/xcor/windows.py) and
+        # test_window_vocabulary.py checks that they stay so -- they are typed here
+        # a second time only because this roster does not yet derive from it.
+        KernelSpec(
+            "tophat_near",
+            _tophat(780.0, 1410.0),
+            "hard edges at the SRD Y10 lens 0 centre and variance",
+            "tophat",
+            {"chi-lower": 780.0, "chi-upper": 1410.0},
+        ),
+        KernelSpec(
+            "tophat_far",
+            _tophat(3514.0, 4086.0),
+            "hard edges at the SRD Y10 lens 9 centre and variance",
+            "tophat",
+            {"chi-lower": 3514.0, "chi-upper": 4086.0},
+        ),
+        KernelSpec(
+            "tophat_broad",
+            _tophat(3282.0, 5758.0),
+            "hard edges at the source-bin centre and variance",
+            "tophat",
+            {"chi-lower": 3282.0, "chi-upper": 5758.0},
+        ),
+        KernelSpec(
+            "srd_lens0",
+            _gauss(1095.0, 182.0),
+            "LSST-SRD Y10 lens bin 0",
+            "gauss",
+            {"chi-mean": 1095.0, "chi-sigma": 182.0, "n-sigma": 4.0},
+        ),
+        KernelSpec(
+            "srd_lens9",
+            _gauss(3800.0, 165.0),
+            "LSST-SRD Y10 lens bin 9: sigma/chi = 0.043",
+            "gauss",
+            {"chi-mean": 3800.0, "chi-sigma": 165.0, "n-sigma": 4.0},
+        ),
+        # A source bin is not a lens bin, and the difference is the shape rather
+        # than the width: measured on the SRD's own dn/dz in chi, the Y10 lens bins
+        # are Gaussian to skew 0.05, while Y1 source bin 4 reaches skew 0.82. This
+        # is a skewed window at that location and width in round numbers, not a fit
+        # to the bin -- the roster has to span the regimes in forms Arb certifies
+        # exactly, not track a survey's dn/dz through its data releases.
+        KernelSpec(
+            "srd_source4",
+            _power_exp(2400.0, 6.0, 2.0, 3500.0, 7200.0),
+            "skewed window at source-bin location and width",
+            "power_exp",
+            {
+                "chi-scale": 2400.0,
+                "alpha": 6.0,
+                "beta": 2.0,
+                "chi-lower": 3500.0,
+                "chi-upper": 7200.0,
+            },
+        ),
+        KernelSpec(
+            "srd_lens9_rsd",
+            _deriv(
+                Nc.XcorKernelAnalyticGauss,
+                2,
+                chi_mean=3800.0,
+                chi_sigma=165.0,
+                n_sigma=4.0,
+            ),
+            "j_ell'' on the SRD's thinnest bin",
+            "gauss",
+            {
+                "chi-mean": 3800.0,
+                "chi-sigma": 165.0,
+                "n-sigma": 4.0,
+                "bessel-deriv": 2,
+            },
+        ),
+        KernelSpec(
+            "gauss_rsd",
+            _deriv(
+                Nc.XcorKernelAnalyticGauss,
+                2,
+                chi_mean=1500.0,
+                chi_sigma=300.0,
+                n_sigma=4.0,
+            ),
+            "j_ell'' weight: the redshift-space term",
+            "gauss",
+            {
+                "chi-mean": 1500.0,
+                "chi-sigma": 300.0,
+                "n-sigma": 4.0,
+                "bessel-deriv": 2,
+            },
+        ),
+        KernelSpec(
+            "gauss_deriv1",
+            _deriv(
+                Nc.XcorKernelAnalyticGauss,
+                1,
+                chi_mean=1500.0,
+                chi_sigma=300.0,
+                n_sigma=4.0,
+            ),
+            "j_ell' weight: first order, the control for the second",
+            "gauss",
+            {
+                "chi-mean": 1500.0,
+                "chi-sigma": 300.0,
+                "n-sigma": 4.0,
+                "bessel-deriv": 1,
+            },
+        ),
+        KernelSpec(
+            "tophat_rsd",
+            _deriv(Nc.XcorKernelAnalyticTophat, 2, chi_lower=500.0, chi_upper=2500.0),
+            "j_ell'' on hard edges",
+            "tophat",
+            {"chi-lower": 500.0, "chi-upper": 2500.0, "bessel-deriv": 2},
+        ),
+        KernelSpec(
+            "tophat_smooth_rsd",
+            _deriv(
+                Nc.XcorKernelAnalyticTophatSmooth,
+                2,
+                chi_lower=1000.0,
+                chi_upper=2000.0,
+                chi_sigma=150.0,
+                n_sigma=6.0,
+            ),
+            "j_ell'' on a smoothed edge",
+            "tophat_smooth",
+            {
+                "chi-lower": 1000.0,
+                "chi-upper": 2000.0,
+                "chi-sigma": 150.0,
+                "n-sigma": 6.0,
+                "bessel-deriv": 2,
+            },
+        ),
+        KernelSpec(
+            "student_t_rsd",
+            _deriv(
+                Nc.XcorKernelAnalyticStudentT,
+                2,
+                chi_mean=1500.0,
+                chi_scale=200.0,
+                nu=2.0,
+                n_scale=6.0,
+            ),
+            "j_ell'' on a power-law tail",
+            "student_t",
+            {
+                "chi-mean": 1500.0,
+                "chi-scale": 200.0,
+                "nu": 2.0,
+                "n-scale": 6.0,
+                "bessel-deriv": 2,
+            },
+        ),
+        KernelSpec(
+            "power_exp_rsd",
+            _deriv(
+                Nc.XcorKernelAnalyticPowerExp,
+                2,
+                chi_scale=1200.0,
+                alpha=2.0,
+                beta=1.5,
+                chi_lower=50.0,
+                chi_upper=4000.0,
+            ),
+            "j_ell'' on a skewed, broad window",
+            "power_exp",
+            {
+                "chi-scale": 1200.0,
+                "alpha": 2.0,
+                "beta": 1.5,
+                "chi-lower": 50.0,
+                "chi-upper": 4000.0,
+                "bessel-deriv": 2,
+            },
+        ),
+        KernelSpec(
+            "lensing_rsd",
+            _deriv(
+                Nc.XcorKernelAnalyticLensing,
+                2,
+                chi_lower=50.0,
+                chi_source_lower=2000.0,
+                chi_source_upper=3000.0,
+            ),
+            "j_ell'' on a broad, smoothed source",
+            "lensing",
+            {
+                "chi-lower": 50.0,
+                "chi-source-lower": 2000.0,
+                "chi-source-upper": 3000.0,
+                "bessel-deriv": 2,
+            },
+        ),
+        KernelSpec(
+            "multi_disjoint_rsd",
+            _deriv(
+                Nc.XcorKernelAnalyticMulti,
+                2,
+                chi_mean=Ncm.Vector.new_array([600.0, 2600.0]),
+                chi_sigma=Ncm.Vector.new_array([100.0, 150.0]),
+                weight=Ncm.Vector.new_array([1.0, 1.0]),
+                n_sigma=4.0,
+            ),
+            "j_ell'' on disconnected support",
+            "multi",
+            {
+                "mu": [600.0, 2600.0],
+                "sigma": [100.0, 150.0],
+                "weight": [1.0, 1.0],
+                "n-sigma": 4.0,
+                "bessel-deriv": 2,
+            },
+        ),
+        KernelSpec(
+            "shell_wide_rsd",
+            _deriv(Nc.XcorKernelAnalyticTophat, 2, chi_lower=1100.0, chi_upper=1500.0),
+            "j_ell'' on a wide hard shell",
+            "tophat",
+            {"chi-lower": 1100.0, "chi-upper": 1500.0, "bessel-deriv": 2},
+        ),
+        KernelSpec(
+            "shell_narrow_rsd",
+            _deriv(Nc.XcorKernelAnalyticTophat, 2, chi_lower=1000.0, chi_upper=1056.0),
+            "j_ell'' on a narrow hard shell",
+            "tophat",
+            {"chi-lower": 1000.0, "chi-upper": 1056.0, "bessel-deriv": 2},
+        ),
         KernelSpec(
             "kdep",
             _gauss_kdep(1500.0, 300.0, 4.0, 0.3, 0.05, 3000.0),
@@ -416,7 +678,7 @@ PAIRS: typing.Final[list[PairSpec]] = [
     PairSpec("A3", "student_t", "student_t", "positive, power-law tail"),
     PairSpec("A4", "lensing", "lensing", "positive, broad"),
     PairSpec("A5", "multi_disjoint", "multi_disjoint", "positive, disconnected"),
-    PairSpec("X1", "gauss_mid", "gauss_near", "overlapping, benign"),
+    PairSpec("X1", "gauss_mid", "gauss_over", "overlapping, benign"),
     PairSpec("X2", "gauss_mid", "gauss_low", "separated peaks"),
     PairSpec("X3", "gauss_low", "gauss_high", "far separated, tail x tail"),
     PairSpec("X4", "gauss_thin", "gauss_thin_shift", "thin x thin"),
@@ -425,6 +687,81 @@ PAIRS: typing.Final[list[PairSpec]] = [
     PairSpec("X7", "tophat", "tophat_smooth", "edge x smoothed edge"),
     PairSpec("X8", "power_exp", "gauss_high", "skewed x narrow, tail-dominated"),
     PairSpec("X9", "kdep", "gauss_mid", "non-separable W"),
+    # One derivative-weighted pair per shape, each mirroring that shape's own
+    # d = 0 pair above so the two layouts can be read side by side. R1 and R3 are
+    # the controls on the gauss window: the auto pair squares the weight, and R3
+    # carries first order, which is what makes the second-order numbers readable.
+    PairSpec("R1", "gauss_rsd", "gauss_rsd", "j_ell'' auto, the RSD weight squared"),
+    PairSpec("R2", "gauss_rsd", "gauss_mid", "j_ell'' x j_ell, density x RSD"),
+    PairSpec("R3", "gauss_deriv1", "gauss_mid", "j_ell' x j_ell, first order"),
+    PairSpec("R4", "tophat_rsd", "tophat", "j_ell'' x j_ell, hard edges (mirrors A2)"),
+    PairSpec(
+        "R5",
+        "tophat_smooth_rsd",
+        "tophat_smooth",
+        "j_ell'' x j_ell, smoothed edge (mirrors X7)",
+    ),
+    PairSpec(
+        "R6", "student_t_rsd", "student_t", "j_ell'' x j_ell, power-law tail (A3)"
+    ),
+    PairSpec(
+        "R7", "power_exp_rsd", "gauss_high", "j_ell'' x j_ell, skewed x narrow (X8)"
+    ),
+    PairSpec(
+        "R8", "lensing_rsd", "gauss_mid", "j_ell'' x j_ell, broad x narrow (X6)"
+    ),
+    PairSpec(
+        "R9",
+        "multi_disjoint_rsd",
+        "multi_disjoint",
+        "j_ell'' x j_ell, disconnected support (A5)",
+    ),
+    PairSpec(
+        "R10", "shell_narrow_rsd", "shell_narrow", "j_ell'' x j_ell, hard shell (N1)"
+    ),
+    PairSpec(
+        "R11", "shell_wide_rsd", "shell_wide", "j_ell'' x j_ell, wide hard shell (N2)"
+    ),
+    PairSpec(
+        "R12",
+        "shell_narrow_rsd",
+        "shell_wide",
+        "j_ell'' x j_ell, narrow x wide hard shells (N3)",
+    ),
+    # Tail x tail, from the survey rather than constructed: bins 0 and 9 of the
+    # Y10 lens sample have disjoint supports, so their spectrum lives entirely in
+    # the product of two exponential tails -- the regime where the spline closure
+    # returns the wrong sign at loose tolerance (section 14). X3 probes the same
+    # corner with chosen parameters; these say it is not a corner case.
+    # The separation ladder: one pair per rung, the ratio of the two turning
+    # points being 1.4, 2.3 and 3.5. Only the separation differs, so a method's
+    # behaviour across the three is a statement about the configuration.
+    PairSpec("X12", "srd_lens0", "gauss_mid", "adjacent bins, ratio 1.4"),
+    PairSpec("X13", "gauss_mid", "gauss_high", "bins apart, ratio 2.3"),
+    PairSpec("X10", "srd_lens0", "srd_lens9", "tail x tail, SRD lens 0 x lens 9"),
+    # The same tail x tail configuration with hard edges instead of Gaussian ones:
+    # these two top-hats carry the *same centres and the same variances* as X10's
+    # Gaussians, so the pair isolates the edge and nothing else. It is a different
+    # regime rather than a harder version of the same one -- a top-hat's transform
+    # decays as a power law, so two of them multiply to something that stays
+    # significant over a far wider k range than two exponential tails do, and the
+    # certified k range has to follow it out there.
+    #
+    # Note the existing tophat/tophat disjoint pairs, N3 and R12, are not this:
+    # shell_narrow and shell_wide sit at 1028 and 1300 Mpc, a separation ratio of
+    # 1.26, which is the adjacent regime with a 44 Mpc gap between the supports.
+    PairSpec(
+        "X14", "tophat_near", "tophat_far", "tail x tail with hard edges (mirrors X10)"
+    ),
+    PairSpec(
+        "X11", "srd_lens9", "srd_source4", "thin x skewed broad, SRD lens 9 x source 4"
+    ),
+    PairSpec(
+        "R13",
+        "srd_lens9_rsd",
+        "srd_lens0",
+        "j_ell'' x j_ell, tail x tail on SRD bins",
+    ),
     PairSpec("N1", "shell_narrow", "shell_narrow", "narrow hard shell, auto"),
     PairSpec("N2", "shell_wide", "shell_wide", "wide hard shell, auto"),
     PairSpec("N3", "shell_narrow", "shell_wide", "narrow x wide hard shells"),

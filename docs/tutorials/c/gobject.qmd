@@ -27,13 +27,13 @@ All types must be labeled using the
 and start with the respective name-space. For example, 
 [[numcosmo-math|NcmSpline]] is the type used
 to store instances of the Spline object which lives in the NumCosmoMath
-name-space. Similarly, [[numcosmo|NcHICosmo]] is the type 
+name-space. Similarly, [[numcosmo|NcHICosmo]] is the type
 used for the abstract object defining homogeneous and isotropic models (HICosmo).
 
 ## Methods, functions and other names
 
 Functions and methods must be lower case and the terms separated by underscores,
-that is, a method of [[numcosmo-math|NcmSpline]] must be called `ncm_spline_method_name`. It is 
+that is, a method of [[numcosmo-math|NcmSpline]] must be called `ncm_spline_method_name`. It is
 acceptable for the method_name to have upper case letters when necessary.
 For example, [[numcosmo|nc_hicosmo_Omega_m0]]
 uses the capital Omega to avoid confusion with lowercase omega_m0, which has

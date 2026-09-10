@@ -27,10 +27,13 @@
  * The analytic xcor windows in Arb ball arithmetic, shared by the reference
  * generators in this directory.
  *
- *   I_ell(k) = int W(chi) g(chi, k) j_ell(k chi) dchi
+ *   I_ell(k) = int W(chi) g(chi, k) j_ell^(d) (k chi) dchi
  *
  * with chi in Mpc, W normalized so that int W dchi = 1 over its truncated
- * support, and g the optional scale-dependent growth (1 unless kdep is on).
+ * support, g the optional scale-dependent growth (1 unless kdep is on), and d
+ * the Bessel-derivative order (0 unless bessel_deriv is set; d = 2 is the
+ * redshift-space distortion term's weight). The derivative is taken with
+ * respect to the argument k chi.
  *
  * Header-only and all-static: these tools are standalone programs compiled one
  * at a time, so this is the whole build integration.
@@ -127,6 +130,13 @@ typedef struct
 
   /* set while integrating: 0 = bare window, 1 = window times j_ell */
   int with_bessel;
+
+  /* Derivative order of the spherical Bessel weight, up to 2. Mirrors
+   * NcXcorKernelComponent:bessel-deriv: 0 for j_ell, 1 for j_ell', 2 for the
+   * j_ell'' a redshift-space distortion term carries. The derivative is with
+   * respect to the Bessel argument x = k chi, not with respect to chi, which
+   * is the convention the library integrates in. */
+  int bessel_deriv;
 } Par;
 
 /* Index of the multi group holding chi, or -1 in a gap. */
@@ -463,7 +473,108 @@ sph_bessel (acb_t out, const acb_t z, long ell, slong prec)
   acb_clear (t);
 }
 
-/* The integrand handed to acb_calc_integrate: W_u, optionally times g j_ell. */
+/*
+ * j_ell^(d) (z) for d = 0, 1, 2, through the recurrences in the ORDER:
+ *
+ *   j_l'  = [ l j_{l-1} - (l+1) j_{l+1} ] / (2l+1)
+ *   j_l'' = { l [ (l-1) j_{l-2} - l j_l ] / (2l-1)
+ *             - (l+1) [ (l+1) j_l - (l+2) j_{l+2} ] / (2l+3) } / (2l+1)
+ *
+ * the second being the first applied twice.
+ *
+ * Deliberately NOT the argument recurrences the library uses --
+ * j_l' = (l/x) j_l - j_{l+1} and j_l'' = (l(l-1)/x^2 - 1) j_l + (2/x) j_{l+1}
+ * -- for two independent reasons. The first is that a reference must not share
+ * a route with what it certifies: the library reaches a derivative component
+ * by integration by parts on those identities, so a reference built on them
+ * would agree with it for reasons that are not the answer being right. The
+ * second is arithmetic: those forms divide by x, and a window whose support
+ * reaches the observer puts x = 0 inside the domain, where a ball divided by a
+ * ball straddling zero is everything. The order recurrences have no division
+ * at all, so every ball stays finite on the whole domain.
+ *
+ * Nor is there cancellation to pay for near the origin: j_l'' ~ l(l-1)
+ * z^(l-2)/(2l+1)!!, and the j_{l-2} term alone carries exactly that leading
+ * behaviour -- (2l+1)(2l-1)(2l-3)!! = (2l+1)!! -- with the rest higher order.
+ *
+ * Orders below zero never appear: their coefficients (l, or l-1) vanish first,
+ * so the guards below are exact rather than approximations at small l.
+ */
+static void
+sph_bessel_deriv (acb_t out, const acb_t z, long ell, int deriv, slong prec)
+{
+  acb_t jm2, jm1, j0, jp1, jp2, t;
+
+  if (deriv == 0)
+  {
+    sph_bessel (out, z, ell, prec);
+
+    return;
+  }
+
+  acb_init (jm2);
+  acb_init (jm1);
+  acb_init (j0);
+  acb_init (jp1);
+  acb_init (jp2);
+  acb_init (t);
+
+  if (deriv == 1)
+  {
+    /* [ l j_{l-1} - (l+1) j_{l+1} ] / (2l+1) */
+    if (ell >= 1)
+    {
+      sph_bessel (jm1, z, ell - 1, prec);
+      acb_mul_si (jm1, jm1, ell, prec);
+    }
+
+    sph_bessel (jp1, z, ell + 1, prec);
+    acb_mul_si (jp1, jp1, ell + 1, prec);
+
+    acb_sub (out, jm1, jp1, prec);
+    acb_div_si (out, out, 2 * ell + 1, prec);
+  }
+  else
+  {
+    /* l [ (l-1) j_{l-2} - l j_l ] / (2l-1) */
+    sph_bessel (j0, z, ell, prec);
+
+    if (ell >= 2)
+    {
+      sph_bessel (jm2, z, ell - 2, prec);
+      acb_mul_si (jm2, jm2, ell - 1, prec);
+    }
+
+    acb_mul_si (t, j0, ell, prec);
+    acb_sub (jm2, jm2, t, prec);
+    acb_mul_si (jm2, jm2, ell, prec);
+
+    if (ell >= 1)
+      acb_div_si (jm2, jm2, 2 * ell - 1, prec);
+    else
+      acb_zero (jm2);  /* the l factor above already killed it */
+
+    /* (l+1) [ (l+1) j_l - (l+2) j_{l+2} ] / (2l+3) */
+    sph_bessel (jp2, z, ell + 2, prec);
+    acb_mul_si (jp2, jp2, ell + 2, prec);
+    acb_mul_si (t, j0, ell + 1, prec);
+    acb_sub (jp2, t, jp2, prec);
+    acb_mul_si (jp2, jp2, ell + 1, prec);
+    acb_div_si (jp2, jp2, 2 * ell + 3, prec);
+
+    acb_sub (out, jm2, jp2, prec);
+    acb_div_si (out, out, 2 * ell + 1, prec);
+  }
+
+  acb_clear (jm2);
+  acb_clear (jm1);
+  acb_clear (j0);
+  acb_clear (jp1);
+  acb_clear (jp2);
+  acb_clear (t);
+}
+
+/* The integrand handed to acb_calc_integrate: W_u, optionally times g j_ell^(d). */
 static int
 window_integrand (acb_ptr out, const acb_t chi, void *param, slong order, slong prec)
 {
@@ -489,7 +600,7 @@ window_integrand (acb_ptr out, const acb_t chi, void *param, slong order, slong 
   acb_init (g);
 
   acb_mul (z, chi, p->k, prec);
-  sph_bessel (J, z, p->ell, prec);
+  sph_bessel_deriv (J, z, p->ell, p->bessel_deriv, prec);
   kdep_growth (g, chi, p, prec);
 
   acb_mul (out, W, J, prec);
@@ -660,7 +771,7 @@ certified (acb_t res, Par *p, double target, slong prec_max)
   }
 
   fprintf (stderr, "certified: did not reach %g at prec %ld (shape %s ell %ld); "
-           "raise --prec-max\n",
+                   "raise --prec-max\n",
            target, prec_max, shape_names[p->shape], p->ell);
   exit (1);
 }

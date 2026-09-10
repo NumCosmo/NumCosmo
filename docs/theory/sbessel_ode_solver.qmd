@@ -338,10 +338,10 @@ coefficients that takes.
 
 ### Which member the constraint selects
 
-Write the panel solution as 
-$$ 
+Write the panel solution as
+$$
 u = u_p + \gamma_1\,x j_\ell(x) + \gamma_2\,x y_\ell(x),
-$$ 
+$$
 with $u_p$ a particular solution. The constraint is what fixes $\gamma_1$ and
 $\gamma_2$, and the cost of the choice is decided by how the two homogeneous terms
 expand. Above the turning point they oscillate with a period of about $2\pi$ in $x$, so

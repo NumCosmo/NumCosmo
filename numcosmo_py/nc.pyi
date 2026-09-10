@@ -23194,6 +23194,8 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         Window standard deviation in Mpc
       n-sigma -> gdouble: n-sigma
         Truncation half-width in units of sigma
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
@@ -23254,6 +23256,7 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
     """
 
     class Props:
+        bessel_deriv: int
         chi_mean: float
         chi_sigma: float
         n_sigma: float
@@ -23285,6 +23288,7 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
     props: Props = ...
     def __init__(
         self,
+        bessel_deriv: int = ...,
         chi_mean: float = ...,
         chi_sigma: float = ...,
         n_sigma: float = ...,
@@ -23307,6 +23311,7 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
+    def get_bessel_deriv(self) -> int: ...
     def get_chi_mean(self) -> float: ...
     def get_chi_sigma(self) -> float: ...
     def get_n_sigma(self) -> float: ...

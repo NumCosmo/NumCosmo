@@ -1,0 +1,1582 @@
+---
+title: "The radial projection against certified values"
+author: "Sandro Dias Pinto Vitenti"
+date: "2026-09-07"
+abstract: |
+    The radial integral $I_\ell(k) = \int W(\chi) j_\ell^{(d)}(k\chi)\,\mathrm{d}\chi$
+    for every analytic window, shown against values certified in arbitrary
+    precision, including the $j_\ell''$ weight a redshift-space distortion term
+    carries.
+
+format:
+  html:
+    tbl-cap-location: margin
+    fig-cap-location: margin
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+
+---
+
+## What this page shows
+
+Three quarters of an `NcXcorSolver` run is spent in the radial integral
+
+$$
+I_\ell(k) = \int W(\chi)\, j_\ell^{(d)}(k\chi)\,\mathrm{d}\chi ,
+$$
+
+and inside NumCosmo every route to it goes through the same Levin machinery, so
+no internal comparison can establish that it is right. The tables under
+`data/truth_tables/xcor/` hold it computed in Arb ball arithmetic instead,
+certified to a relative ball radius below $10^{-25}$ for the plain weight and
+below $10^{-18}$ at the highest multipoles.
+
+This page reads those **precomputed** tables. Regenerating them needs FLINT and
+a cluster: the generators are `tests/tools/make_xcor_window_truth_table.py`,
+`make_xcor_pair_grid.py` and `make_xcor_kquad_truth_table.py`, the campaign that
+runs them lives outside the library, and the $C_\ell$ table alone records 56
+core-hours of Arb time in its per-entry `seconds` field. Reading the tables needs
+neither, so this page renders anywhere the library does.
+
+Two things are not on the axes below.
+
+The quantity plotted is the radial integral of the window alone,
+$\int W j_\ell^{(d)}\,\mathrm{d}\chi$ in Mpc, with $W$ normalised to unit
+integral over its truncated support. It is not what `numcosmo xcor kernel view`
+draws, and the difference is not a factor pulled outside: a physical kernel's
+component evaluates
+
+$$
+K(\chi, k) = W(\chi)\,\sqrt{P\!\left(k, z(\chi)\right)}
+$$
+
+*inside* the radial integral, at each shell's own redshift. There is no
+$\sqrt{P(k,0)}$ waiting to be multiplied back afterwards and no growth factor
+taken out — the power spectrum is part of the integrand, which is what makes the
+kernels non-separable in $\chi$ and $k$ from the start, and what lets a
+scale-dependent growth be carried correctly with no change to the machinery.
+
+These analytic windows carry no power spectrum at all, by construction: their
+closed forms are functions of $\chi$, so both sides of the comparison below are
+the same bare integral, with no $P$, no Hubble radius and no $k^{3/2}$ that could
+put a $k$-dependent factor between the library and its reference.
+
+And only the closed-form windows appear. The physical kernels — `cmb_lensing`,
+`cmb_isw`, `tsz`, the LSST-Y1 number-counts and weak-lensing bins — have no
+closed form, so no certified value exists for them; they are cross-checked
+against CCL and against an independent quadrature elsewhere. That is the whole
+reason this roster of analytic shapes exists: it emulates the support and decay
+of every physical kernel in a setting where a certificate is possible.
+
+```{python}
+# | code-fold: true
+
+import gzip
+import json
+import pathlib
+
+import numpy as np
+import matplotlib.pyplot as plt
+from IPython.display import Markdown, display
+
+from numcosmo_py import Nc, Ncm
+
+Ncm.cfg_init()
+
+# Sized for a screen, not for a print column. `set_rc_params_article`, which the
+# other benchmark pages use, fits a figure to a LaTeX column at 8 pt: rendered to
+# the page width of an HTML document the same figure comes out with unreadably
+# small labels. These figures are wide and their text is set relative to that
+# width instead.
+plt.rcParams.update(
+    {
+        "figure.figsize": (11.0, 4.6),
+        "figure.dpi": 110,
+        "font.size": 13,
+        "axes.titlesize": 13,
+        "axes.labelsize": 13,
+        "xtick.labelsize": 11,
+        "ytick.labelsize": 11,
+        "legend.fontsize": 10,
+        "lines.linewidth": 1.6,
+    }
+)
+COLORS = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+```
+
+## The windows
+
+Seven shapes, each a subclass of `NcXcorKernelRadial`, spanning what the solver
+has to survive: a photometric bin, hard edges, a smoothed edge, a non-exponential
+tail, a skewed and broad window, a lensing efficiency, and disconnected support.
+The constructor arguments are read from the truth table itself, so the curves
+below are the certified windows, not a retyping of them.
+
+```{python}
+# | code-fold: true
+
+TABLES = {
+    0: "truth_tables/xcor/xcor_window_ilk.json.gz",
+    1: "truth_tables/xcor/xcor_window_ilk_d1.json.gz",
+    2: "truth_tables/xcor/xcor_window_ilk_d2.json.gz",
+}
+
+# The closed forms, by the name the table records. Several cases are the same form
+# at different centres and widths -- the LSST-SRD locations and their paired
+# top-hats -- so the case key names the case and `shape` names the form.
+FORMS = {
+    "gauss": (Nc.XcorKernelAnalyticGauss, "Gaussian"),
+    "tophat": (Nc.XcorKernelAnalyticTophat, "Top-hat"),
+    "tophat_smooth": (Nc.XcorKernelAnalyticTophatSmooth, "Smoothed top-hat"),
+    "student_t": (Nc.XcorKernelAnalyticStudentT, "Student-t"),
+    "power_exp": (Nc.XcorKernelAnalyticPowerExp, "Power-exponential"),
+    "lensing": (Nc.XcorKernelAnalyticLensing, "Lensing"),
+    "multi": (Nc.XcorKernelAnalyticMulti, "Multi-bump"),
+}
+
+# Keyed by case, in the shared vocabulary of tests/python/nc/xcor/windows.py.
+LABELS = {
+    "gauss_mid": "Gaussian, $\\chi_0 = 1500$",
+    "gauss_near": "Gaussian, SRD Y10 lens 0",
+    "gauss_far": "Gaussian, SRD Y10 lens 9",
+    "gauss_broad": "Gaussian, SRD Y1 source 4",
+    "tophat_mid": "Top-hat, wide",
+    "tophat_near": "Top-hat, paired with Y10 lens 0",
+    "tophat_far": "Top-hat, paired with Y10 lens 9",
+    "tophat_broad": "Top-hat, paired with Y1 source 4",
+    "tophat_smooth_mid": "Smoothed top-hat",
+    "student_t_mid": "Student-t",
+    "power_exp_mid": "Power-exponential",
+    "power_exp_isw": "Power-exponential, ISW range",
+    "power_exp_skew_far": "Power-exponential, skewed at high $\\chi$",
+    "lensing_gal": "Lensing, galaxy sources",
+    "lensing_cmb": "Lensing, CMB sources",
+    "multi_mid": "Multi-bump",
+    "multi_disjoint": "Multi-bump, disjoint",
+}
+
+
+def form_of(entry, case):
+    """The closed form a case carries; tables predating the field use the key."""
+    return entry.get("shape", case)
+
+
+# The place vocabulary, in the order a reader meets it going outwards. Colour
+# encodes the place and nothing else, so the same colour means the same distance
+# in every panel of the window figure -- which is what lets one legend serve the
+# whole figure instead of one legend per panel sitting on top of the curves.
+PLACES = ("mid", "near", "far", "broad", "isw", "cmb", "gal", "skew_far")
+
+
+def place_of(case, entry):
+    """Which place a case sits at: its name with the form stripped off."""
+    form = form_of(entry, case)
+    rest = case[len(form) :].lstrip("_")
+
+    return rest or "mid"
+
+
+def label_of(case, table=None):
+    """A readable name, with the location in both variables where one is known.
+
+    A window is defined in Mpc, but which epoch it probes is what a reader wants,
+    so a label that names a distance names the redshift beside it.
+    """
+    label = LABELS.get(case, case)
+
+    if table is None or case not in table["shapes"]:
+        return label
+
+    chi_ref = table["shapes"][case]["chi_ref"]
+
+    return f"{label}, $z = {chi_to_z(chi_ref):.2f}$"
+
+
+def load_table(deriv):
+    """The certified table for one Bessel-derivative order, or None if absent."""
+    try:
+        path = pathlib.Path(Ncm.cfg_get_data_filename(TABLES[deriv], True))
+    except RuntimeError:
+        return None
+
+    with gzip.open(path, "rt") as handle:
+        return json.load(handle)
+
+
+def make_kernel(form, ctor, dist, ps, sbi, deriv=0):
+    """Build one analytic window from the constructor arguments in the table."""
+    cls, _ = FORMS[form]
+
+    if form == "multi":
+        chi_mean, chi_sigma, weight, n_sigma = ctor
+        return cls(
+            dist=dist,
+            powspec=ps,
+            integrator=sbi,
+            bessel_deriv=deriv,
+            chi_mean=Ncm.Vector.new_array(chi_mean),
+            chi_sigma=Ncm.Vector.new_array(chi_sigma),
+            weight=Ncm.Vector.new_array(weight),
+            n_sigma=n_sigma,
+        )
+
+    return cls.new_full(dist, ps, *ctor, sbi)
+
+
+cosmo = Nc.HICosmoDEXcdm.new()
+# Out to last scattering, not to z = 5. The CMB windows are the reason:
+# lensing_cmb's support ends at 14146 Mpc, which is chi(z = 1100), and a distance
+# prepared to z = 5 stops at 8078 Mpc -- every chi -> z inversion past that point,
+# the redshift axis on the window figures included, would be an extrapolation.
+# Values below z = 5 are unchanged by the wider range.
+dist = Nc.Distance.new(1500.0)
+dist.prepare(cosmo)
+ps = Ncm.PowspecAnalytic.new(
+    Ncm.PowspecAnalyticShape.BBKS, Ncm.PowspecAnalyticGrowth.LCDM
+)
+
+table0 = load_table(0)
+CASES = sorted(table0["shapes"])
+
+
+def build(case, table, deriv=0):
+    """The kernel for one case of a table, prepared and non-Limber."""
+    entry = table["shapes"][case]
+    kernel = make_kernel(
+        form_of(entry, case),
+        entry["ctor"],
+        dist,
+        ps,
+        Ncm.SBesselIntegratorLevin.new(0, 8),
+        deriv=deriv,
+    )
+    kernel.set_l_limber(-1)
+    kernel.prepare_if_needed(cosmo)
+
+    return kernel
+
+
+def chi_to_z(chi_mpc):
+    """Redshift at a comoving distance, for the top axis of the window panels."""
+    return np.interp(np.asarray(chi_mpc, dtype=float), Z_GRID_CHI, Z_GRID)
+
+
+def z_to_chi(z):
+    """Comoving distance at a redshift, the inverse of the above."""
+    return np.interp(np.asarray(z, dtype=float), Z_GRID, Z_GRID_CHI)
+
+
+Z_GRID = np.concatenate([np.linspace(0.0, 6.0, 400), np.geomspace(6.1, 1200.0, 200)])
+Z_GRID_CHI = np.array(
+    [dist.comoving(cosmo, float(z)) * cosmo.RH_Mpc() for z in Z_GRID]
+)
+```
+
+```{python}
+# | label: fig-certified-windows
+# | fig-cap: "The certified windows, one panel per closed form. Top axis: redshift. Bottom: comoving distance in Mpc."
+# | code-fold: true
+
+# One panel per closed form, carrying every location and scale certified for it.
+# Grouping this way is what makes the roster legible: the forms differ in how
+# their transform decays -- exponentially for a Gaussian, as 1/k for a hard edge
+# -- while within a form only the centre and the width move, and those are the
+# axes the solver's difficulty actually runs along.
+groups: dict[str, list[str]] = {}
+
+for case in CASES:
+    groups.setdefault(form_of(table0["shapes"][case], case), []).append(case)
+
+# Widest first, so the panel that sets the shared x limit is read first.
+order = sorted(
+    groups, key=lambda f: -max(table0["shapes"][c]["support"][1] for c in groups[f])
+)
+
+n_col = 3
+n_row = -(-len(order) // n_col)
+fig, axs = plt.subplots(
+    n_row,
+    n_col,
+    sharex=True,
+    sharey=True,
+    squeeze=False,
+    figsize=(8.6, 2.5 * n_row + 0.5),
+)
+# The rows and columns sit flush. Nothing goes between them because each form's
+# name is drawn inside its own axes rather than above it: a title band per row is
+# what pushed the redshift axis at the top away from the distance axis at the
+# bottom, and those two have to be readable against each other.
+fig.subplots_adjust(hspace=0.04, wspace=0.04)
+
+# Shared limits, so the panels compare rather than each rescaling to its own
+# window. Each curve is divided by its own peak: normalised to unit integral, a
+# window 165 Mpc wide peaks twenty times higher than one spanning gigaparsecs,
+# and on a shared linear axis the broad ones would be invisible.
+chi_max = max(table0["shapes"][c]["support"][1] for c in CASES)
+
+_seen = []
+
+for _case in CASES:
+    _p = place_of(_case, table0["shapes"][_case])
+
+    if _p not in _seen:
+        _seen.append(_p)
+
+_ordered = [q for q in PLACES if q in _seen] + [q for q in _seen if q not in PLACES]
+
+
+def place_color(place):
+    """One colour per place, shared by every panel."""
+    return COLORS[_ordered.index(place) % len(COLORS)]
+
+for idx, form in enumerate(order):
+    ax = axs[idx // n_col][idx % n_col]
+
+    for jdx, case in enumerate(sorted(groups[form])):
+        entry = table0["shapes"][case]
+        kernel = build(case, table0)
+        lo, hi = entry["support"]
+        chi = np.linspace(lo, hi, 1500)
+        w = np.array(
+            [
+                sum(
+                    kernel.eval_W_comp(comp, c)
+                    for comp in range(kernel.get_n_comps())
+                )
+                for c in chi
+            ]
+        )
+        # Lines rather than filled areas: a panel carries several locations of the
+        # same form, and overlapping fills hide exactly the differences the panel
+        # exists to show. The curve is closed to zero at both edges of the support,
+        # since the window really is zero beyond them and a hard edge is the
+        # feature that distinguishes these forms -- drawn open, a top-hat reads as
+        # a floating horizontal line.
+        ax.plot(
+            np.concatenate([[lo], chi, [hi]]),
+            np.concatenate([[0.0], w / w.max(), [0.0]]),
+            color=place_color(place_of(case, entry)),
+            lw=1.2,
+        )
+
+    ax.text(
+        0.04,
+        0.94,
+        FORMS[form][1],
+        transform=ax.transAxes,
+        ha="left",
+        va="top",
+        fontsize=11,
+    )
+    ax.set_xlim(0.0, chi_max * 1.02)
+    ax.set_ylim(0.0, 1.12)
+    ax.grid(alpha=0.3)
+    # Ticks away from the panel edges: with the columns flush, a panel's last
+    # label and its neighbour's first would otherwise overlap.
+    ax.xaxis.set_major_locator(plt.MaxNLocator(4, prune="both"))
+
+    if idx < n_col:
+        top = ax.secondary_xaxis("top", functions=(chi_to_z, z_to_chi))
+        top.set_xticks([0.5, 1, 2, 5, 100])
+        top.tick_params(pad=2)
+
+for idx in range(len(order), n_row * n_col):
+    axs[idx // n_col][idx % n_col].axis("off")
+
+# The distance axis goes on the lowest *occupied* panel of each column, not on
+# the last row: the grid is ragged whenever the form count is not a multiple of
+# the column count, and labelling the last row alone leaves whole columns with no
+# ticks under them.
+for col in range(n_col):
+    rows = [r for r in range(n_row) if r * n_col + col < len(order)]
+
+    if not rows:
+        continue
+
+    ax = axs[max(rows)][col]
+    ax.set_xlabel(r"$\chi$ [Mpc]", labelpad=2)
+    ax.tick_params(labelbottom=True)
+
+for row in axs:
+    row[0].set_ylabel(r"$W/W_\mathrm{max}$")
+
+# One legend for the figure, under the panels: colour means the place, the same
+# in every panel, so a legend inside each one would repeat itself and cover the
+# windows it is describing.
+fig.legend(
+    handles=[
+        plt.Line2D([0], [0], color=place_color(q), lw=1.6, label=q.replace("_", " "))
+        for q in _ordered
+    ],
+    loc="lower center",
+    ncol=min(len(_ordered), 6),
+    bbox_to_anchor=(0.5, -0.02),
+    frameon=False,
+)
+
+plt.show()
+plt.close()
+```
+
+The panels share both axes, and the top axis carries redshift, non-linearly
+spaced against the comoving distance below it.
+
+Within a panel only the centre and the width change, which is the comparison the
+LSST-SRD bins motivate: the survey's own bins run from $\chi = 1.1$ to
+$5.4$ Gpc with $\sigma_\chi/\chi$ between $0.04$ and $0.36$, and each Gaussian
+here is paired with a top-hat at the same centre and the same variance, so a
+difference between a pair is the edge and nothing else. The two CMB-sourced
+windows run to the last-scattering surface and spend most of their support
+beyond any galaxy survey.
+
+## The projections, against the certificate
+
+The library's value is drawn as a continuous curve: `integrate_ell` costs well
+under a millisecond per $k$, so the curve is as dense as the figure can show.
+The certified values are the markers. There are eleven of them per shape and
+multipole, and their placement is the point — they are laid down on
+
+$$
+x_\nu = \frac{k\,\chi_\mathrm{ref}}{\ell + 1/2},
+$$
+
+with $\chi_\mathrm{ref}$ the midpoint of the window's support, so that one marker
+falls in each regime the solver distinguishes: the power-law branch below the
+turning point, the turning point itself, the moderately oscillatory band, and the
+deeply oscillatory tail at $x_\nu = 20$ and $60$. A dense grid of markers would
+say less than these eleven do.
+
+```{python}
+# | code-fold: true
+
+def library_ilk(kernel, ell, k_values, deriv=0):
+    """int W j_ell^(d) from the library, the same route the truth-table test takes."""
+    integrator = Ncm.SBesselIntegratorLevin.new(ell, ell)
+    block = Ncm.Vector.new(1)
+    supports = [
+        kernel.get_comp_support(comp) for comp in range(kernel.get_n_comps())
+    ]
+    out = []
+
+    for k in k_values:
+        total = 0.0
+
+        for comp, (low, high) in enumerate(supports):
+            # The window is a hard zero outside its support and the k*chi round
+            # trip can put a node a hair beyond the edge, a cliff no fit resolves.
+            # The library's own path clamps for this reason; so does this one.
+            integrator.integrate_deriv(
+                lambda chi, _k, c=comp, lo=low, hi=high: kernel.eval_W_comp(
+                    c, min(max(chi, lo), hi)
+                ),
+                low,
+                high,
+                k,
+                deriv,
+                block,
+            )
+            total += block.get(0)
+
+        out.append(total)
+
+    return np.array(out)
+
+
+def panel(ax_curve, ax_dev, shape, ell, deriv, table, color):
+    """One shape at one multipole: library curve, certified markers, deviation."""
+    entry = table["shapes"][shape]
+    index = table["ells"].index(ell)
+    k_cert = np.array(entry["kvals"][index])
+    i_cert = np.array([float(v) for v in entry["table"][index]])
+
+    kernel = build(shape, table, deriv=deriv)
+
+    k_dense = np.geomspace(k_cert.min(), k_cert.max(), 400)
+    i_dense = library_ilk(kernel, ell, k_dense, deriv)
+    i_lib = library_ilk(kernel, ell, k_cert, deriv)
+
+    name = label_of(shape, table0)
+    ax_curve.plot(k_dense, np.abs(i_dense), color=color, lw=1.2, label=name)
+    ax_curve.plot(
+        k_cert, np.abs(i_cert), "o", color=color, ms=5, mfc="none", mew=1.4
+    )
+
+    peak = np.abs(i_cert).max()
+    ax_dev.plot(
+        k_cert,
+        np.abs(i_lib - i_cert) / peak,
+        "o-",
+        color=color,
+        ms=4,
+        lw=0.8,
+        label=name,
+    )
+```
+
+Each window is normalised to unit integral over its own truncated support, and
+that truncation is part of the shape's definition rather than a numerical cutoff:
+the window is exactly zero beyond it, which is what lets two codes be asked for
+the same integral.
+
+The lower panel of every comparison below reports the deviation as a fraction of
+the multipole's own peak, not as a relative error. The shared helper the other
+benchmark pages use, `nc_cmp.CompareFunc1d`, reports $\Delta P/P$, and that
+measure cannot be used here: the probed grid reaches $|I_\ell| = 10^{-22}$ below
+the turning point, where a relative error is arbitrarily large and says nothing
+about the solve.
+
+```{python}
+# | label: fig-certified-projection
+# | fig-cap: "Radial integral at $\\ell = 50$, every shape"
+ELL = 50
+
+fig, (ax1, ax2) = plt.subplots(
+    2, sharex=True, height_ratios=[2, 1], figsize=(11.0, 7.0)
+)
+fig.subplots_adjust(hspace=0)
+
+for idx, shape in enumerate(CASES):
+    panel(ax1, ax2, shape, ELL, 0, table0, COLORS[idx % len(COLORS)])
+
+ax1.set_xscale("log")
+ax1.set_yscale("log")
+ax1.set_ylabel(r"$|I_\ell(k)|$ [Mpc]")
+ax1.set_title(rf"Radial integral at $\ell = {ELL}$ (markers: certified in Arb)")
+ax1.legend(fontsize=9, ncol=2)
+ax1.grid(alpha=0.3)
+
+ax2.set_yscale("log")
+ax2.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+ax2.set_ylabel("deviation / peak")
+ax2.grid(alpha=0.3)
+plt.show()
+plt.close()
+```
+
+The deviations sit near $10^{-11}$ of the peak and are bounded by the
+conditioning of the integrand rather than by the requested tolerance: the panel
+integrals that the Levin solve assembles cancel heavily, so the attainable
+relative accuracy is the cancellation ratio times the machine epsilon. The
+integrator's nominal $10^{-13}$ is not the right anchor and is not reached.
+
+## The redshift-space weight
+
+A redshift-space distortion term reaches the solver as a component carrying
+`bessel-deriv = 2`: the same window, integrated against $j_\ell''$. The library
+never differentiates a Bessel function to get there — it integrates by parts, so
+the derivative lands on the window's own Chebyshev fit plus the boundary terms
+that leaves. The reference does the opposite, evaluating $j_\ell^{(d)}$ pointwise
+through the recurrences in the *order*,
+
+$$
+j_\ell' = \frac{\ell\, j_{\ell-1} - (\ell+1)\, j_{\ell+1}}{2\ell+1},
+$$
+
+and integrating $W j_\ell^{(d)}$ directly. The two share the window and nothing
+else, which is what makes their agreement evidence rather than a restatement.
+
+The $j_\ell''$ transform decays far more slowly in $k$ than the plain one -- two
+orders more power at $x_\nu = 20$ -- which is why a redshift-space term costs the
+solver a wider $k$ range, and why the certified $C_\ell$ entries for those pairs
+are integrated further out than their $d = 0$ counterparts.
+
+```{python}
+# | label: fig-certified-deriv
+# | fig-cap: "Derivative weights on the Gaussian window, $d = 0, 1, 2$"
+fig, (ax1, ax2) = plt.subplots(
+    2, sharex=True, height_ratios=[2, 1], figsize=(11.0, 7.0)
+)
+fig.subplots_adjust(hspace=0)
+
+for idx, deriv in enumerate((0, 1, 2)):
+    table = load_table(deriv)
+
+    if table is None or ELL not in table["ells"]:
+        continue
+
+    panel(ax1, ax2, "gauss_mid", ELL, deriv, table, COLORS[idx % len(COLORS)])
+
+ax1.set_xscale("log")
+ax1.set_yscale("log")
+ax1.set_ylabel(r"$|I_\ell(k)|$ [Mpc]")
+ax1.set_title(rf"$\int W j_\ell^{{(d)}}$ at $\ell = {ELL}$, $d = 0, 1, 2$")
+ax1.legend(
+    [f"$d = {d}$" for d in (0, 1, 2)], loc="lower left"
+)
+ax1.grid(alpha=0.3)
+
+ax2.set_yscale("log")
+ax2.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+ax2.set_ylabel("deviation / peak")
+ax2.grid(alpha=0.3)
+plt.show()
+plt.close()
+```
+
+Taking one derivative costs nothing: $d = 1$ lands on the same floor as $d = 0$.
+Taking two costs about an order of magnitude, and the worst cells are the ones
+where cancellation is structural anyway — the lowest multipoles, with the fewest
+oscillations to average over, and the multi-bump window with its disjoint groups.
+That is the integrand's conditioning one derivative deeper, not a defect in the
+solve.
+
+## How each method handles the modes
+
+The window decides which $k$ modes carry the spectrum, and the certified curve
+says what the answer is at each of them. That makes it possible to ask the
+question this page exists for: where in $k$ does each method still have the mode?
+
+CCL's non-Limber method, FKEM, reaches the same integral by a different
+route — it resamples the window onto a logarithmic $\chi$ grid of its
+own and takes an FFTLog transform of $W(\chi)\chi$. Its per-tracer projection can
+be read back after a spectrum call, and it needs no conversion: with the growth
+factor and transfer function set to unity, what FKEM transforms is exactly
+$\int W j_\ell^{(d)}\,\mathrm{d}\chi$ in the same units and the same convention.
+This is measured, not assumed: on the Gaussian at $\chi_0 = 1500$ Mpc, where
+FKEM resolves the window, the ratio of its projection to the certified one at the
+modes carrying the spectrum is one to within the value printed under the table
+below, a few times $10^{-4}$. A convention error would be a constant factor on
+every shape; the differences below vary by shape and by mode, so they are
+accuracy.
+
+Two settings keep the comparison to the method itself. CCL is built in
+**calculator mode**, so both codes integrate the same tabulated $P(k)$, and the
+`CCLParams` precision knobs, which tune CCL's internal background and $P(k)$
+splines, are not used. What remains on CCL's side belongs to the method: the
+window arrives as a table it Akima-splines, and FKEM resamples that spline onto
+its own grid. Both densities are stated below.
+
+```{python}
+# | code-fold: true
+
+import warnings
+
+import pyccl
+
+FKEM_NCHI = 4096
+FKEM_CHI_MIN = 1.0e-6
+TRACER_NCHI = 2048
+
+
+def ccl_calculator():
+    """CCL in calculator mode, carrying this page's own background and P(k, 0).
+
+    The growth table is supplied and set to unity. That is not decoration:
+    calculator mode replaces only what it is given, so without it CCL computes
+    D(a) from the parameters and FKEM multiplies the chi integrand by it while the
+    supplied P(k) carries no growth -- a flat factor of D^2 at the window's mean
+    redshift, identical at every ell and unmoved by any grid, which is exactly how
+    a convention error announces itself.
+    """
+    # The low-z grid is kept exactly as it was and the range only extended, so
+    # the windows that already worked are interpolated on the same points. The
+    # extension is what lensing_cmb needs: its support reaches chi(z = 1100), and
+    # a background table stopping at a = 0.1 covers only 9567 Mpc, so CCL's
+    # scale_factor_of_chi raises `Error 1` on the tracer before FKEM ever runs.
+    a = np.concatenate(
+        [np.geomspace(5.0e-4, 0.1, 256, endpoint=False), np.linspace(0.1, 1.0, 1024)]
+    )
+    z = 1.0 / a - 1.0
+    rh = cosmo.RH_Mpc()
+    chi = np.array([dist.comoving(cosmo, zi) for zi in z]) * rh
+    k = np.geomspace(1.0e-7, 1.0e3, 3000)
+    pk0 = np.array([ps.eval(cosmo, 0.0, ki) for ki in k])
+
+    # CCL reports a chi outside its background table as `Error 1` with an empty
+    # message, which says nothing about which window or which distance. A window
+    # added past this range should say so itself.
+    widest = max(entry["support"][1] for entry in table0["shapes"].values())
+
+    if chi.max() < widest:
+        raise ValueError(
+            f"the CCL background reaches {chi.max():.1f} Mpc but a window's support "
+            f"ends at {widest:.1f} Mpc; lower the first argument of geomspace above "
+            "until it covers the window."
+        )
+
+    return pyccl.CosmologyCalculator(
+        Omega_c=0.25,
+        Omega_b=0.05,
+        h=cosmo.H0() / 100.0,
+        n_s=0.96,
+        sigma8=0.8,
+        background={
+            "a": a,
+            "chi": chi,
+            "h_over_h0": np.array([cosmo.E(zi) for zi in z]),
+        },
+        growth={
+            "a": a,
+            "growth_factor": np.ones_like(a),
+            "growth_rate": np.zeros_like(a),
+        },
+        pk_linear={"a": a, "k": k, "delta_matter:delta_matter": np.tile(pk0, (a.size, 1))},
+        nonlinear_model=None,
+    )
+
+
+def fkem_ilk(ccl_cosmo, kernel, ell, deriv=0, nchi=None):
+    """FKEM's own projection, read back from its cache after a spectrum call.
+
+    ``_get_fkem_fft`` is a cache getter keyed on
+    ``(tracer, Nchi, chi_min, chi_max, ell, cosmo_hash)``, so the key has to be
+    the one FKEM used: chi_max is the largest chi in the tracer's table, and Nchi
+    and chi_min are whatever the call passed. A mismatch returns ``(None, None)``
+    rather than an error.
+    """
+    lo, hi = kernel.get_comp_support(0)
+    chi = np.linspace(lo, hi, TRACER_NCHI)
+    w = np.array([kernel.eval_W_comp(0, c) for c in chi])
+    trc = pyccl.Tracer()
+    trc.add_tracer(ccl_cosmo, kernel=(chi, w), der_bessel=deriv)
+
+    psp = ccl_cosmo.get_linear_power()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        pyccl.angular_cl(
+            ccl_cosmo,
+            trc,
+            trc,
+            np.array([ell]),
+            l_limber=ell + 1,
+            fkem_Nchi=FKEM_NCHI if nchi is None else nchi,
+            fkem_chi_min=FKEM_CHI_MIN,
+            p_of_k_a=psp,
+            p_of_k_a_lin=psp,
+        )
+
+    return trc._get_fkem_fft(
+        trc._trc[0],
+        FKEM_NCHI if nchi is None else nchi,
+        FKEM_CHI_MIN,
+        chi.max(),
+        ell,
+        ccl_cosmo,
+    )
+
+
+ccl_cosmo = ccl_calculator()
+```
+
+```{python}
+# | code-fold: true
+
+
+def fkem_on_certified(ccl_cosmo, kernel, ell, k_cert, deriv=0, nchi=None):
+    """FKEM at the certified modes, and which of them its grid actually covers.
+
+    FKEM's k grid is the reciprocal of its logarithmic chi grid, so it starts
+    around 1/chi_max and no resampling density extends it downwards. The certified
+    grid deliberately probes below the turning point, where FKEM therefore has no
+    value at all. Interpolating into that region silently returns the endpoint and
+    reads as an error of order the peak, which is an artefact of the reader and not
+    a property of the method -- so the uncovered modes are reported as uncovered.
+    """
+    k_f, fk = fkem_ilk(ccl_cosmo, kernel, ell, deriv=deriv, nchi=nchi)
+
+    if k_f is None:
+        return None, None, None
+
+    covered = (k_cert >= k_f.min()) & (k_cert <= k_f.max())
+
+    return np.interp(k_cert, k_f, fk), covered, (k_f, fk)
+```
+
+```{python}
+# | label: fig-certified-per-shape
+# | fig-cap: "Each window against its certified values, and FKEM where it reaches"
+# | fig-cap-location: top
+# | layout-ncol: 2
+# | code-fold: true
+
+# One panel per case, and the panel names itself in its title -- so there is no
+# per-panel caption list here on purpose. The list this cell used to carry named
+# the seven closed *forms* while the loop emits one figure per *case*: at seven
+# captions and sixteen cases Quarto laid out the first six cleanly and put every
+# panel after them in a `page-full` row, which is a figure breaking out of the
+# content column. A caption list has to be kept in step with the roster by hand,
+# and the roster has grown twice; a title read from the table cannot fall behind.
+
+for shape in CASES:
+    name = label_of(shape, table0)
+    entry = table0["shapes"][shape]
+    index = table0["ells"].index(ELL)
+    k_cert = np.array(entry["kvals"][index])
+    i_cert = np.array([float(v) for v in entry["table"][index]])
+    peak = np.abs(i_cert).max()
+
+    kernel = build(shape, table0)
+
+    k_dense = np.geomspace(k_cert.min(), k_cert.max(), 400)
+    i_dense = library_ilk(kernel, ELL, k_dense)
+    i_lib = library_ilk(kernel, ELL, k_cert)
+    i_fkem, covered, grid = fkem_on_certified(ccl_cosmo, kernel, ELL, k_cert)
+
+    fig, axs = plt.subplots(
+        2, sharex=True, height_ratios=[2, 1], figsize=(3.7, 3.4)
+    )
+    fig.subplots_adjust(hspace=0)
+
+    axs[0].plot(k_dense, np.abs(i_dense), color=COLORS[0], lw=1.2, label="UltraLevin")
+    axs[0].plot(
+        k_cert,
+        np.abs(i_cert),
+        "o",
+        color="k",
+        ms=5,
+        mfc="none",
+        mew=1.2,
+        label="certified (Arb)",
+    )
+    axs[1].plot(
+        k_cert, np.abs(i_lib - i_cert) / peak, "o-", color=COLORS[0], ms=4, lw=0.8
+    )
+
+    if grid is not None:
+        k_f, fk = grid
+        sel = (k_f >= k_cert.min()) & (k_f <= k_cert.max())
+        axs[0].plot(
+            k_f[sel], np.abs(fk[sel]), color=COLORS[1], lw=0.9, ls="--", label="FKEM"
+        )
+        axs[1].plot(
+            k_cert[covered],
+            (np.abs(i_fkem - i_cert) / peak)[covered],
+            "s--",
+            color=COLORS[1],
+            ms=4,
+            lw=0.8,
+        )
+        # Mark where FKEM's grid begins: the certified modes to its left are not
+        # computed by the method, rather than computed badly.
+        if not covered.all():
+            axs[0].axvspan(k_cert.min(), k_f.min(), color="0.85", alpha=0.6, lw=0)
+            axs[1].axvspan(k_cert.min(), k_f.min(), color="0.85", alpha=0.6, lw=0)
+
+    axs[0].set_xscale("log")
+    axs[0].set_yscale("log")
+    axs[0].set_ylabel(r"$|I_\ell(k)|$ [Mpc]")
+    axs[0].set_title(rf"{name}, $\ell = {ELL}$")
+    axs[0].legend()
+    axs[0].grid(alpha=0.3)
+    axs[1].set_yscale("log")
+    axs[1].set_xlabel(r"$k$ [Mpc$^{-1}$]")
+    axs[1].set_ylabel("dev. / peak")
+    axs[1].grid(alpha=0.3)
+
+    plt.show()
+plt.close()
+```
+
+The shaded band on the left of several panels is the part of the certified grid
+FKEM does not reach. Its $k$ values are the reciprocal of its logarithmic $\chi$
+grid, so they begin near $1/\chi_\mathrm{max}$ and no resampling density moves
+that edge: the sub-turning-point modes are outside the method; it does not
+compute them. Every deviation quoted below is taken only where FKEM has a
+value.
+
+```{python}
+# | tbl-cap: Worst deviation from the certified values, in units of the peak
+# | code-fold: true
+
+rows = []
+
+for shape in CASES:
+    name = label_of(shape, table0)
+    entry = table0["shapes"][shape]
+    index = table0["ells"].index(ELL)
+    k_cert = np.array(entry["kvals"][index])
+    i_cert = np.array([float(v) for v in entry["table"][index]])
+    peak = np.abs(i_cert).max()
+
+    kernel = build(shape, table0)
+
+    ul = np.abs(library_ilk(kernel, ELL, k_cert) - i_cert) / peak
+    row = [name, f"{ul.max():.1e}"]
+
+    for nchi in (2048, 8192):
+        i_fkem, covered, _ = fkem_on_certified(
+            ccl_cosmo, kernel, ELL, k_cert, nchi=nchi
+        )
+
+        if i_fkem is None:
+            row += ["--", "--"]
+            continue
+
+        dev = (np.abs(i_fkem - i_cert) / peak)[covered]
+        row += [f"{dev.max():.1e}", f"{int(covered.sum())}/{covered.size}"]
+
+    rows.append(row)
+
+header = ["window", "UltraLevin", "FKEM 2048", "modes", "FKEM 8192", "modes"]
+table = [
+    "| " + " | ".join(header) + " |",
+    "|" + "---|" * len(header),
+] + ["| " + " | ".join(row) + " |" for row in rows]
+display(Markdown("\n".join(table)))
+
+# The convention check the text above refers to: FKEM against the certificate as a
+# ratio, on the modes that carry the spectrum (|I| above one percent of the peak)
+# and inside FKEM's grid, for the shape FKEM resolves best.
+entry = table0["shapes"]["gauss_mid"]
+index = table0["ells"].index(ELL)
+k_cert = np.array(entry["kvals"][index])
+i_cert = np.array([float(v) for v in entry["table"][index]])
+i_fkem, covered, _ = fkem_on_certified(ccl_cosmo, build("gauss_mid", table0), ELL, k_cert)
+carrying = covered & (np.abs(i_cert) > 1.0e-2 * np.abs(i_cert).max())
+ratio = i_fkem[carrying] / i_cert[carrying]
+display(
+    Markdown(
+        f"FKEM / certified on the Gaussian at $\\chi_0 = 1500$ Mpc, $\\ell = {ELL}$, "
+        f"{int(carrying.sum())} modes: $|{{\\rm ratio}} - 1| \\le {np.abs(ratio - 1).max():.1e}$."
+    )
+)
+```
+
+The physical reading is per shape. A Gaussian window of width $\sigma_\chi$ has a
+transform that dies exponentially above $k \sim 1/\sigma_\chi$, so the spectrum is
+carried by a narrow band of modes and any method that resolves that band gets the
+answer. A top-hat does not: its hard edges make $I_\ell(k)$ decay as a power law
+with undamped oscillation, so modes two decades above the peak still contribute,
+and a method is judged by how far out it keeps them.
+
+## Tail against tail: where a pair spectrum actually lives
+
+A cross spectrum of two well-separated bins is not a small version of an auto
+spectrum. Its integrand is the *product* of the two projections, and each
+projection peaks near $k \simeq (\ell + 1/2)/\chi_0$, at its own bin's distance.
+Two bins at different distances therefore peak at different $k$, and the product
+is supported where **both** are far below their own peak -- in the oscillatory
+tail of one and the power-law rise of the other. Nothing about a method's
+behaviour at the peak predicts what it does there.
+
+This configuration is ordinary in the LSST-SRD:
+bins 0 and 9 of the Y10 lens sample sit at $\chi = 1.1$ and $3.8$ Gpc with
+disjoint supports, and any 3x2pt analysis computes their cross.
+
+```{python}
+# | code-fold: true
+
+# Built from parameters rather than from the truth table: the point of this
+# section is the pair, and the two windows involved may not both be certified yet
+# -- certified markers are added below wherever the table does have them.
+def place(chi0):
+    """A window's location in both variables, for a legend entry.
+
+    The windows are defined in Mpc, but which epoch one probes is what a reader
+    wants from a legend, so both are given rather than either alone.
+    """
+    return rf"$\chi_0 = {chi0 / 1000.0:.1f}$ Gpc, $z = {chi_to_z(chi0):.2f}$"
+
+
+TAIL_PAIR = (
+    ("gauss_near", Nc.XcorKernelAnalyticGauss, (1095.0, 182.0, 4.0), place(1095.0)),
+    ("gauss_far", Nc.XcorKernelAnalyticGauss, (3800.0, 165.0, 4.0), place(3800.0)),
+)
+
+
+def tail_kernel(cls, ctor):
+    """One window of the pair, prepared and non-Limber."""
+    kernel = cls.new_full(dist, ps, *ctor, Ncm.SBesselIntegratorLevin.new(0, 8))
+    kernel.set_l_limber(-1)
+    kernel.prepare_if_needed(cosmo)
+
+    return kernel
+```
+
+```{python}
+# | label: fig-tail-by-tail
+# | fig-cap:
+# |   - "Adjacent bins: the product sits under both peaks"
+# |   - "Bins apart: the product moves off both peaks"
+# |   - "Separated bins: the product lives in both tails"
+# | fig-cap-location: top
+# | layout-ncol: 1
+# | code-fold: true
+
+# The pairs certified on *shared* k grids. The per-shape tables lay each window's
+# grid on its own turning point, so two windows at different distances carry
+# certified values at different k and their product is certified nowhere. These
+# files exist for that reason (tests/tools/make_xcor_pair_grid.py).
+# Three rungs of one ladder: the ratio of the two turning points, 1.4, 2.3 and
+# 3.5. Nothing else differs between them.
+PAIR_GRIDS = {
+    "adjacent": "truth_tables/xcor/xcor_pair_grid_mild.json.gz",
+    "apart": "truth_tables/xcor/xcor_pair_grid_apart.json.gz",
+    "separated": "truth_tables/xcor/xcor_pair_grid.json.gz",
+}
+
+
+def load_pair_grid(name):
+    """One shared-grid pair table, or None if it has not been generated."""
+    try:
+        path = pathlib.Path(Ncm.cfg_get_data_filename(PAIR_GRIDS[name], True))
+    except RuntimeError:
+        return None
+
+    with gzip.open(path, "rt") as handle:
+        return json.load(handle)
+
+
+def tail_panels(grid, axes):
+    """One pair: both projections above, their product below.
+
+    Everything is keyed by case rather than accumulated in a list -- the product
+    has to multiply UltraLevin by UltraLevin and FKEM by FKEM, and index
+    arithmetic over a flat list silently mixes the two the moment FKEM declines
+    to produce one of the windows.
+    """
+    ax1, ax2 = axes
+    index = grid["ells"].index(ELL)
+    k_cert = np.array(grid["kvals"][index])
+    k_grid = np.geomspace(k_cert.min() * 0.7, k_cert.max() * 1.4, 500)
+    ul, fkem, certified, reach = {}, {}, {}, []
+
+    for idx, case in enumerate(grid["pair"]):
+        entry = grid["cases"][case]
+        chi_0 = entry["ctor"][0]
+        tag = rf"$\chi_0 = {chi_0 / 1000.0:.1f}$ Gpc, $z = {chi_to_z(chi_0):.2f}$"
+        kernel = make_kernel(
+            entry["form"],
+            entry["ctor"],
+            dist,
+            ps,
+            Ncm.SBesselIntegratorLevin.new(0, 8),
+            deriv=entry["deriv"],
+        )
+        kernel.set_l_limber(-1)
+        kernel.prepare_if_needed(cosmo)
+
+        ul[case] = library_ilk(kernel, ELL, k_grid, deriv=entry["deriv"])
+        certified[case] = np.array([float(v) for v in entry["table"][index]])
+        color = COLORS[idx % len(COLORS)]
+
+        ax1.plot(k_grid, np.abs(ul[case]), color=color, lw=1.4, label=f"UltraLevin, {tag}")
+        ax1.axvline((ELL + 0.5) / chi_0, color=color, ls=":", lw=1.0, alpha=0.7)
+        ax1.plot(
+            k_cert, np.abs(certified[case]), "o", color="k", ms=5, mfc="none", mew=1.2,
+            label="certified (Arb)" if idx == 0 else None,
+        )
+
+        k_f, fk = fkem_ilk(ccl_cosmo, kernel, ELL, deriv=entry["deriv"])
+
+        if k_f is not None:
+            sel = (k_f >= k_grid.min()) & (k_f <= k_grid.max())
+            ax1.plot(
+                k_f[sel], np.abs(fk[sel]), color=color, lw=1.0, ls="--",
+                label=f"FKEM, {tag}",
+            )
+            fkem[case] = np.interp(k_grid, k_f, fk)
+            # Where FKEM's grid begins, and it is not a plotting choice: its k
+            # values are the reciprocal of its logarithmic chi grid, so they start
+            # near 1/chi_max and no resampling density extends them downwards.
+            # np.interp would happily return the endpoint value below that, which
+            # draws a flat segment FKEM never produced.
+            reach.append((k_f.min(), k_f.max()))
+
+    first, second = grid["pair"]
+    prod_ul = np.abs(ul[first] * ul[second])
+    prod_fkem = np.abs(fkem[first] * fkem[second]) if len(fkem) == 2 else None
+
+    ax1.set_xscale("log")
+    ax1.set_yscale("log")
+    ax1.set_ylabel(r"$|I_\ell(k)|$ [Mpc]")
+    ax1.set_ylim(max(1.0e-16, np.abs(certified[first]).max() * 1.0e-11), 1.0e-1)
+    ax1.legend(loc="lower left", ncol=2, fontsize=8)
+    ax1.grid(alpha=0.3)
+
+    ax2.plot(k_grid, prod_ul, color=COLORS[2], lw=1.4, label="UltraLevin")
+
+    if prod_fkem is not None and reach:
+        # Only where both windows are inside FKEM's own grid: the product of two
+        # extrapolations is not FKEM's answer, it is the reader's.
+        k_lo = max(lo for lo, _ in reach)
+        k_hi = min(hi for _, hi in reach)
+        covered = (k_grid >= k_lo) & (k_grid <= k_hi)
+        ax2.plot(
+            k_grid[covered], prod_fkem[covered], color=COLORS[3], lw=1.0, ls="--",
+            label="FKEM",
+        )
+
+        for axis in (ax1, ax2):
+            if k_lo > k_grid.min():
+                axis.axvspan(k_grid.min(), k_lo, color="0.85", alpha=0.6, lw=0)
+
+    ax2.plot(
+        k_cert, np.abs(certified[first] * certified[second]),
+        "o", color="k", ms=5, mfc="none", mew=1.2, label="certified (Arb)",
+    )
+    ax2.set_xscale("log")
+    ax2.set_yscale("log")
+    # The window is set by *both* curves: how far above the truth FKEM sits is the
+    # point of the panel, and a limit taken from the true product alone clips it
+    # away. Ten decades below that product's peak keeps the band that carries the
+    # spectrum legible -- on the full range the curve plunges ninety decades where
+    # one window has not started.
+    top = prod_ul.max() if prod_fkem is None else max(prod_ul.max(), prod_fkem.max())
+    ax2.set_ylim(prod_ul.max() * 1.0e-10, top * 20.0)
+    ax2.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+    ax2.set_ylabel(r"$|I^{(1)}_\ell I^{(2)}_\ell|$ [Mpc$^2$]")
+    ax2.legend(loc="lower left", ncol=3, fontsize=8)
+    ax2.grid(alpha=0.3)
+
+
+
+for _name, _title in (
+    ("adjacent", "Adjacent bins: 1.1 and 1.5 Gpc"),
+    ("apart", "Bins apart: 1.5 and 3.5 Gpc"),
+    ("separated", "Separated bins: 1.1 and 3.8 Gpc"),
+):
+    _grid = load_pair_grid(_name)
+
+    if _grid is None:
+        continue
+
+    fig, axes = plt.subplots(
+        2, sharex=True, height_ratios=[1, 1], figsize=(8.4, 7.0)
+    )
+    fig.subplots_adjust(hspace=0.06)
+    tail_panels(_grid, axes)
+    axes[0].set_title(rf"{_title}, $\ell = {ELL}$ (dotted: each turning point)")
+    plt.show()
+    plt.close()
+plt.show()
+plt.close()
+```
+
+The two figures differ in one thing only: how far apart the bins are. Everything
+else -- the multipole, the method, the settings, the form of both windows -- is
+held fixed, which is what makes the comparison a statement about the
+configuration rather than about the codes.
+
+**Adjacent bins, 1.1 and 1.5 Gpc.** The turning points nearly coincide, the
+product sits under both peaks, and FKEM lies *on top of* the certified product
+through the entire band that carries the spectrum. It departs from it only in the
+far tail, where the product is already eight orders below its maximum and
+contributes nothing. On this pair FKEM is correct.
+
+**Separated bins, 1.1 and 3.8 Gpc.** The turning points are a factor of 3.5
+apart, the product peaks between them where both factors are deep in their own
+tails, and FKEM's product sits three to four orders *above* the certified one
+across that whole band. Same method, same multipole; only the separation changed.
+
+That is the answer to when a method fails here, and it is not "on hard cases":
+it is whenever the pair's integrand is built out of tails rather than peaks.
+
+Read the upper panel at the dotted lines. Each window's projection peaks at its
+own turning point, and the two are a factor of 3.5 apart in $k$. At the near
+bin's peak the far bin's projection is already oscillating; at the far bin's peak
+the near bin's is in its exponentially small power-law rise. There is no $k$ at
+which both are large.
+
+The markers in the lower panel are a product of *two certified numbers* at the
+same $k$, which is why this pair needed its own table: the per-shape grids hang
+on each window's own turning point, so two windows at different distances are
+certified at different $k$ and their product is certified nowhere.
+`tests/tools/make_xcor_pair_grid.py` fixes one grid spanning both turning points
+and certifies both windows on it, at a worst relative radius of 2.4e-26.
+
+The lower panel is what that costs. The product carries its weight in a band
+where each factor is orders below its own maximum -- so the pair spectrum is
+built entirely out of the part of each kernel that a method is least likely to
+represent well. Where FKEM's curve in the upper panel stops oscillating and
+becomes a smooth power law, its product in the lower panel departs from the
+certified one by orders of magnitude, and the deviation does not shrink when its
+resampling density is raised: an FFTLog on a logarithmic grid cannot resolve an
+oscillation whose period keeps shrinking, so it fits through it.
+
+**The same figure states our own limit, which is a different one.** UltraLevin
+represents the oscillation -- that is what the certified markers in the upper
+panel establish -- but the accuracy it can deliver on the *product* is bounded by
+cancellation, not by representation: the panel integrals the Levin solve sums
+cancel heavily in the tail, so the attainable relative accuracy there is the
+cancellation ratio times the machine epsilon. A method fails here for one of two
+reasons, and they are worth keeping apart: FKEM because it does not describe the
+oscillatory tail, ours because summing an oscillating series in double precision
+eventually loses digits to cancellation however well each term is known.
+
+## What it costs in the spectrum
+
+The panels above are about the integrand. What a reader wants next is the
+consequence: if a method misrepresents the tails, how wrong is the $C_\ell$ that
+integrates them?
+
+$$
+C_\ell = \frac{2}{\pi} \int \mathrm{d}k\, k^2 P(k)\,
+         I^{(1)}_\ell(k)\, I^{(2)}_\ell(k)
+$$
+
+Same three rungs, same windows, and the same CCL built in calculator mode, so
+both codes integrate the identical tabulated $P(k)$. The certified column comes
+from `data/truth_tables/xcor/xcor_kquad.json.gz`, whose entries are nested Arb
+integrations of this expression -- the outer integral over $k$ evaluated on balls
+of the inner one, not a quadrature of interpolated values.
+
+```{python}
+# | tbl-cap: "Angular power spectrum for the three rungs, against certified values"
+# | code-fold: true
+
+LADDER = (("adjacent", "X12"), ("apart", "X13"), ("separated", "X10"))
+
+# The production configuration: every multipole from LMIN_SOLVE to the largest
+# certified one in one request, planned in blocks of BLOCK_SIZE, solved once. This
+# is the path a likelihood evaluation takes; nc_xcor_compute at a single ell with
+# batch size one is not, and its numbers differ from these in the last digits.
+LMIN_SOLVE = 2
+BLOCK_SIZE = 8
+
+try:
+    _kq_path = pathlib.Path(
+        Ncm.cfg_get_data_filename("truth_tables/xcor/xcor_kquad.json.gz", True)
+    )
+
+    with gzip.open(_kq_path, "rt") as _handle:
+        kquad = json.load(_handle)
+except RuntimeError:
+    kquad = {"cases": {}}
+
+
+def pair_kernels(grid):
+    """The two kernels of a pair grid, prepared and non-Limber."""
+    kernels = []
+
+    for case in grid["pair"]:
+        entry = grid["cases"][case]
+        kernel = make_kernel(
+            entry["form"],
+            entry["ctor"],
+            dist,
+            ps,
+            Ncm.SBesselIntegratorLevin.new(0, 8),
+            deriv=entry["deriv"],
+        )
+        kernel.set_l_limber(-1)
+        # A far-separated pair is the regime where the closure *fit* dominates:
+        # at the default 1e-4 the spline closure can return the wrong sign, so a
+        # comparison run there measures the fit rather than the quadrature.
+        kernel.set_reltol(1.0e-6)
+        kernel.set_scaled_abstol(1.0e-6)
+        kernel.prepare_if_needed(cosmo)
+        kernels.append(kernel)
+
+    return kernels
+
+
+def ultralevin_cls(grid, ells):
+    """The library's C_ell at each of `ells`, from one batched solve."""
+    kernels = pair_kernels(grid)
+    xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
+    xcor.set_closure_type(Nc.XcorKernelClosure.CHEBYSHEV)
+    xcor.set_reltol(1.0e-6)
+    xcor.prepare(cosmo)
+
+    solver = Nc.XcorSolver.new()
+    ids = [solver.register_kernel(kernel) for kernel in kernels]
+    solver.request_cl(ids[0], ids[1], LMIN_SOLVE, max(ells))
+    solver.plan_blocks(BLOCK_SIZE)
+    solver.solve(xcor, cosmo)
+    result = solver.get_result(0)
+
+    return {ell: result.get(ell - LMIN_SOLVE) for ell in ells}
+
+
+def fkem_cls(grid, ells):
+    """FKEM's C_ell at each of `ells`, on the same tabulated P(k), in one call."""
+    tracers = []
+
+    for kernel in pair_kernels(grid):
+        lo, hi = kernel.get_comp_support(0)
+        chi = np.linspace(lo, hi, TRACER_NCHI)
+        w = np.array([kernel.eval_W_comp(0, c) for c in chi])
+        trc = pyccl.Tracer()
+        trc.add_tracer(ccl_cosmo, kernel=(chi, w), der_bessel=kernel.get_comp_bessel_deriv(0))
+        tracers.append(trc)
+
+    psp = ccl_cosmo.get_linear_power()
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        cls = pyccl.angular_cl(
+            ccl_cosmo,
+            tracers[0],
+            tracers[1],
+            np.array(ells, dtype=float),
+            l_limber=max(ells) + 1,
+            fkem_Nchi=FKEM_NCHI,
+            fkem_chi_min=FKEM_CHI_MIN,
+            p_of_k_a=psp,
+            p_of_k_a_lin=psp,
+        )
+
+    return dict(zip(ells, cls))
+
+
+rows = []
+
+for name, case in LADDER:
+    grid = load_pair_grid(name)
+
+    if grid is None:
+        continue
+
+    # Each rung's own scale: the largest certified |C_ell| it carries, or the
+    # largest the library returns where no certificate exists yet. Deviations are
+    # measured against that rather than pointwise, because a separated pair's
+    # C_ell crosses zero and a relative error at a near-null is arbitrarily large
+    # while saying nothing -- the same reason the projection panels scale by peak.
+    values = ultralevin_cls(grid, grid["ells"])
+    fkem_values = fkem_cls(grid, grid["ells"])
+    truths = {
+        ell: (
+            float(kquad["cases"][f"{case}_l{ell}"]["value"])
+            if f"{case}_l{ell}" in kquad["cases"]
+            else None
+        )
+        for ell in grid["ells"]
+    }
+    known = [abs(v) for v in truths.values() if v is not None]
+    scale = max(known) if known else max(abs(v) for v in values.values())
+
+    for ell in grid["ells"]:
+        truth = truths[ell]
+        ul_cl = values[ell]
+        fk_cl = fkem_values[ell]
+        rows.append(
+            [
+                name,
+                str(ell),
+                f"{ul_cl: .3e}",
+                "--" if truth is None else f"{truth: .3e}",
+                "--" if truth is None else f"{abs(ul_cl - truth) / scale:.1e}",
+                "--" if truth is None else f"{abs(fk_cl - truth) / scale:.1e}",
+                f"{abs(fk_cl - ul_cl) / scale:.1e}",
+            ]
+        )
+
+header = [
+    "rung",
+    "ell",
+    "C_ell (UltraLevin)",
+    "C_ell (certified)",
+    "UltraLevin dev.",
+    "FKEM dev.",
+    "FKEM vs UltraLevin",
+]
+table = [
+    "| " + " | ".join(header) + " |",
+    "|" + "---|" * len(header),
+] + ["| " + " | ".join(row) + " |" for row in rows]
+display(Markdown("\n".join(table)))
+```
+
+Three things to read off it.
+
+**The ladder is monotonic, and it is steeper for one method than the other.**
+Against certified values at $\ell = 10$, as a fraction of each rung's own scale:
+
+| separation ratio | UltraLevin | FKEM |
+|---|---|---|
+| 1.4, adjacent | 2.3e-10 | 2.8e-05 |
+| 2.3, apart | 2.6e-07 | 1.2e+03 |
+| 3.5, separated | 1.1e-04 | 4.6e+05 |
+
+Both degrade as the bins separate, which is the cancellation the integrand panels
+show. UltraLevin moves through six orders while FKEM moves through ten, and
+crosses unity -- an error larger than the spectrum itself -- between the first and
+second rung.
+
+**On adjacent bins both are usable.** FKEM's $2.8\times10^{-5}$ is the ordinary
+case, which is why it serves most of a 3x2pt data vector; UltraLevin is five
+orders better on the same pair.
+
+**One rung out, at a turning-point ratio of 2.3, FKEM is wrong by a thousand
+times the pair's own scale** while UltraLevin is at $3\times10^{-7}$. Nothing
+changed but the separation. That is the consequence the integrand panels predict:
+the product moved off both peaks into the tails, and the tails are what FKEM
+smooths.
+
+**At the widest separation both methods fail, for different reasons.**
+UltraLevin sits at $1\times10^{-4}$ of the pair's scale at $\ell = 10$ and
+$3\times10^{-2}$ at $\ell = 50$. That is not a solver failure: the certified
+$C_\ell$ at $\ell = 50$ is $2.8\times10^{-21}$, nine orders below the rung's own
+scale, so the pair's spectrum at that multipole is below what double precision
+can represent once the oscillating panel sums have cancelled. UltraLevin's error
+is the cancellation floor. FKEM's is $2\times10^{5}$ of scale at the same
+multipole, seven orders above that floor, because it is not integrating the right
+integrand. A method can be limited by arithmetic or by representation, and only a
+certificate separates the two.
+
+Deviations are fractions of each rung's own scale -- its largest $|C_\ell|$ --
+not pointwise relative errors: a separated pair's spectrum crosses zero, and a
+relative error at a near-null is arbitrarily large while saying nothing. The last
+column compares the two codes to each other and involves no certified value. Read
+the certified columns: two codes agreeing says less than either code's distance
+from a proven value.
+
+## What it costs in time
+
+The number that matters is the one a likelihood evaluation pays: one call to
+`NcXcorSolver.solve()` with the kernels already registered and prepared, every
+multipole of a range requested at once, and the per-block integrators built by an
+earlier solve. The cell below times exactly that. The first solve is run and
+discarded, the following ones are timed and the minimum is kept, and FKEM is
+called once on the same multipole array through `pyccl.angular_cl`.
+
+The timed solve contains the work that cannot be moved out of it: for
+every multipole block, every $k$ node of the closure and every panel of the
+radial integral, the forcing $W(\chi)\sqrt{P(k, z(\chi))}$ is evaluated at the
+panel's Chebyshev nodes, fitted, and the stored factorisation of the panel operator
+is replayed against it. Nothing is factorised anew in a warm solve. The window and
+$P(k)$ evaluations are inside the loop by construction, since the right-hand side
+depends on $k$, and they do not amortise over repetitions.
+
+```{python}
+# | tbl-cap: "Time per multipole for the three rungs, warm solve, against FKEM on the same multipoles"
+# | code-fold: true
+
+import os
+import timeit
+
+TIMING_LMIN = 2
+TIMING_LMAX = 129
+TIMING_BLOCKS = (8, 16, 32, 64)
+TIMING_REPEAT = 3
+n_ell_timed = TIMING_LMAX - TIMING_LMIN + 1
+
+
+def timed_min(func, repeat):
+    """Seconds for one call: the minimum over `repeat` calls after one untimed call."""
+    func()
+
+    return min(timeit.repeat(func, number=1, repeat=repeat))
+
+
+def warm_solver(grid, block_size):
+    """A solver with its per-block integrators already built, and its Xcor."""
+    kernels = pair_kernels(grid)
+    xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
+    xcor.set_closure_type(Nc.XcorKernelClosure.CHEBYSHEV)
+    xcor.set_reltol(1.0e-6)
+    xcor.prepare(cosmo)
+    solver = Nc.XcorSolver.new()
+    ids = [solver.register_kernel(kernel) for kernel in kernels]
+    solver.request_cl(ids[0], ids[1], TIMING_LMIN, TIMING_LMAX)
+    solver.plan_blocks(block_size)
+
+    return solver, xcor
+
+
+def fkem_call(grid):
+    """FKEM on the timed multipole array, as a zero-argument callable."""
+    tracers = []
+
+    for kernel in pair_kernels(grid):
+        lo, hi = kernel.get_comp_support(0)
+        chi = np.linspace(lo, hi, TRACER_NCHI)
+        w = np.array([kernel.eval_W_comp(0, c) for c in chi])
+        trc = pyccl.Tracer()
+        trc.add_tracer(ccl_cosmo, kernel=(chi, w), der_bessel=kernel.get_comp_bessel_deriv(0))
+        tracers.append(trc)
+
+    psp = ccl_cosmo.get_linear_power()
+    ells = np.arange(TIMING_LMIN, TIMING_LMAX + 1, dtype=float)
+
+    def call():
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+
+            return pyccl.angular_cl(
+                ccl_cosmo,
+                tracers[0],
+                tracers[1],
+                ells,
+                l_limber=TIMING_LMAX + 1,
+                fkem_Nchi=FKEM_NCHI,
+                fkem_chi_min=FKEM_CHI_MIN,
+                p_of_k_a=psp,
+                p_of_k_a_lin=psp,
+            )
+
+    return call
+
+
+rows = []
+
+for name, _case in LADDER:
+    grid = load_pair_grid(name)
+
+    if grid is None:
+        continue
+
+    for block_size in TIMING_BLOCKS:
+        solver, xcor = warm_solver(grid, block_size)
+        seconds = timed_min(lambda: solver.solve(xcor, cosmo), TIMING_REPEAT)
+        rows.append(
+            [
+                name,
+                f"UltraLevin, B = {block_size}",
+                str(solver.get_n_blocks()),
+                f"{1.0e3 * seconds:.0f}",
+                f"{1.0e3 * seconds / n_ell_timed:.2f}",
+            ]
+        )
+
+    seconds = timed_min(fkem_call(grid), TIMING_REPEAT)
+    rows.append([name, "FKEM", "--", f"{1.0e3 * seconds:.0f}", f"{1.0e3 * seconds / n_ell_timed:.2f}"])
+
+header = ["rung", "method", "blocks", f"ms for {n_ell_timed} multipoles", "ms per multipole"]
+table = [
+    "| " + " | ".join(header) + " |",
+    "|" + "---|" * len(header),
+] + ["| " + " | ".join(row) + " |" for row in rows]
+display(Markdown("\n".join(table)))
+display(
+    Markdown(
+        f"Timed with `OMP_NUM_THREADS={os.environ.get('OMP_NUM_THREADS', 'unset')}` on "
+        f"{len(os.sched_getaffinity(0))} of {os.cpu_count()} logical CPUs, "
+        f"multipoles {TIMING_LMIN} to {TIMING_LMAX}, minimum of {TIMING_REPEAT} warm solves."
+    )
+)
+```
+
+Measured on one performance core of an i7-1255U with a single OpenMP thread,
+minimum of three warm solves, the three rungs give the same picture:
+
+| method | ms per multipole |
+|---|---|
+| UltraLevin, B = 8 | 4.3 to 4.8 |
+| UltraLevin, B = 16 | 3.6 to 4.5 |
+| UltraLevin, B = 32 | 4.5 to 5.5 |
+| UltraLevin, B = 64 | 14 to 24 |
+| FKEM | 1.2 |
+
+Blocks of 8 and 16 cost the same; 32 costs a fifth more and 64 several times more.
+A block's truncation order is set by its hardest multipole, the replay of stored
+rotations and the convergence check scale with the number of multipoles in the
+block, and the batched solves have specialised kernels only up to 32 lanes. FKEM is four times
+cheaper per multipole at these settings. The accuracy that buys is in the table
+above: on the adjacent rung the two methods differ by five orders of magnitude
+against the certificate, and on the other two rungs FKEM's error exceeds the
+spectrum itself.
+
+Where a warm solve spends its time, from a profile of the adjacent rung at
+B = 8: half in replaying stored factorisations and back-substituting, one
+sixth in evaluating the window and $P(k)$ at the panel nodes, one tenth in the
+Chebyshev fits of the forcing, and the rest in glue. Nothing is factorised in a
+warm solve. Two thirds of the panel solves are edge pieces, where a moving bound
+meets a fixed cell, and an edge piece costs about 2.5 times an interior panel;
+that count, not the factorisation, is what sets the cost now.
+
+The certificate itself cost 56 core-hours of Arb arithmetic for the $C_\ell$
+table alone, recorded entry by entry in its `seconds` field, against
+milliseconds for either library. That ratio is the reason the tables are
+committed rather than regenerated.
+
+## Where the certificate stops
+
+The tables cover the closed-form windows, the three Bessel-derivative orders, and
+the multipoles and $k$ values printed above. They do not cover a physical
+kernel's window, a Limber tier of any kind, or the outer $k$ quadrature — the
+last of these has its own certified table, `xcor_kquad.json.gz`, holding $C_\ell$
+for pairs of these same windows.

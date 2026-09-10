@@ -182,7 +182,7 @@ struct _NcmSBesselIntegratorLevin
   gint split_pos;                             /* Index of that knot in the working grid, -1 when there is none */
   GPtrArray *operators;                       /* Operators for each panel between consecutive knots */
   GPtrArray *dirichlet_operators;             /* Dirichlet twin of a panel operator, built on that panel's first fallback */
-  GHashTable *edge_operators;                 /* Dyadic fixed-cell operators used by moving edge panels */
+  GHashTable *edge_operators;                 /* Fixed-cell operators (half-octave ladder) used by moving edge panels */
   NcmSBesselOdeOperator *ode_operator_temp_a; /* Temporary operator for [a, smallest_knot > a] */
   NcmSBesselOdeOperator *ode_operator_temp_b; /* Temporary operator for [largest_knot < b, b] */
   gboolean ode_operator_temp_a_valid;         /* True when temp_a matches the cached panel */
@@ -682,7 +682,7 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
    * NcmSBesselIntegratorLevin:dead-edge-cells:
    *
    * Whether a moving end piece whose forcing has died at the junction with the
-   * rest of its dyadic cell is solved on the cached cell operator, with the true
+   * rest of its cell is solved on the cached cell operator, with the true
    * forcing inside the piece and zero outside. Saves the per-$k$ factorization of
    * the moving operator at the cost of keeping those cells' factorizations.
    */
@@ -1634,12 +1634,18 @@ _ncm_sbessel_integrator_levin_get_edge_operator (NcmSBesselIntegratorLevin *sbil
 
   g_assert_cmpfloat (span, >, 0.0);
 
-  /* Select the smallest dyadic cell containing the edge.  Consequently its
-   * width is less than twice the requested span, avoiding the very high
-   * solution orders of a complete coarse logarithmic panel. */
-  while ((0.5 * width >= span) && (level < 52))
+  /* Select the smallest cell of a half-octave ladder that contains the edge, so
+   * the piece fills more than 1/sqrt(2) of it. The fill sets how far the piece
+   * fit is extrapolated when it is rebased onto the cell: on an octave ladder a
+   * piece can fill as little as half the cell, and a fit of 17 to 32 coefficients
+   * extrapolated over the other half exceeds the growth limit by orders of
+   * magnitude, sending about eight percent of the edge pieces to the moving
+   * operator and a fresh factorisation at every k. Above a fill of 0.7 the
+   * rejections are a few per thousand. A quarter-octave ladder removes them
+   * entirely but fails the certified top-hat at ell = 2 by 3e-8 relative. */
+  while ((width * M_SQRT1_2 >= span) && (level < 104))
   {
-    width *= 0.5;
+    width *= M_SQRT1_2;
     level++;
   }
 

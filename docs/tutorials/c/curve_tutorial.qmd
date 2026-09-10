@@ -71,7 +71,7 @@ struct _NcCurveClass
 
 ### Implementation enumerator
 
-The [[numcosmo-math|NcmModel]] framework is designed to support 
+The [[numcosmo-math|NcmModel]] framework is designed to support
 complex models that may involve several virtual methods. Some of these methods may not
 be required by every implementation. For this reason in introduced the implementation 
 enumerator, this way, the object that use the model may ask if that model implements a
@@ -237,7 +237,7 @@ _nc_curve_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
 
 ### Defining the id function
 
-The [[numcosmo-math|NcmMSet]] framework provides the macro 
+The [[numcosmo-math|NcmMSet]] framework provides the macro
 *NCM_MSET_MODEL_REGISTER_ID* that should be used in the object code to create
 the *nc_curve_id* function. This function will return the unique ID defined
 in the [[numcosmo-math|NcmMSet]] type list.

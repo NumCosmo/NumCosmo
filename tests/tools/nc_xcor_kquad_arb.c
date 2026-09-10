@@ -28,11 +28,15 @@
  * analytic xcor windows,
  *
  *   C_ell = 2/pi INT dk k^2 P(k) I1_ell(k) I2_ell(k),
- *   I_ell(k) = INT dchi W(chi) g(chi, k) j_ell(k chi),
+ *   I_ell(k) = INT dchi W(chi) g(chi, k) j_ell^(d) (k chi),
  *
  * with k in 1/Mpc, chi in Mpc, each W normalized to unit integral over its own
  * truncated support, and P the closed-form NcmPowspecAnalytic BBKS spectrum at
- * z = 0 (where its growth factor is exactly 1, so none is needed here).
+ * z = 0 (where its growth factor is exactly 1, so none is needed here). The
+ * Bessel-derivative order d is per side (--a:bessel-deriv, --b:bessel-deriv)
+ * and defaults to 0; d = 2 is the weight a redshift-space distortion term
+ * carries, so a pair with it certifies the RSD path through both the closure
+ * and this outer quadrature.
  *
  * This is a *nested* certified integration: the outer integrator evaluates the
  * inner one on complex balls of k. Three things are needed to make that work,
@@ -297,6 +301,7 @@ normalize (acb_t norm, Par *p, double target)
 {
   p->with_bessel = 0;
   acb_zero (p->k);
+
   /* The window norm is a smooth integral with no Bessel factor: the 8192 ceiling of
    * xcor_window_arb.h has always been ample here. */
   certified (norm, p, target, 8192);
@@ -320,6 +325,18 @@ parse_window (Par *p, const char *key, const char *val)
   else if (!strcmp (key, "n-sigma"))
   {
     p->n_sigma = atof (val);
+  }
+  else if (!strcmp (key, "bessel-deriv"))
+  {
+    /* Per side, and never latched across sides: a pair may weight one window
+     * by j_ell'' (the redshift-space term) and the other by j_ell. */
+    p->bessel_deriv = atoi (val);
+
+    if ((p->bessel_deriv < 0) || (p->bessel_deriv > 2))
+    {
+      fprintf (stderr, "bessel-deriv takes 0, 1 or 2\n");
+      exit (1);
+    }
   }
   else if (!strcmp (key, "chi-lower"))
   {

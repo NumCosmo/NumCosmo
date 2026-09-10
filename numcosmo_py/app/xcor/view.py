@@ -26,7 +26,7 @@
 import dataclasses
 import enum
 import time
-from typing import Annotated, Optional
+from typing import Annotated, Any, Optional
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -48,6 +48,13 @@ from .kernels import (
     KernelNumberCountsConfig,
     KernelWeakLensingConfig,
     KernelClusterTophatConfig,
+    KernelRadialGaussConfig,
+    KernelRadialTophatConfig,
+    KernelRadialTophatSmoothConfig,
+    KernelRadialStudentTConfig,
+    KernelRadialPowerExpConfig,
+    KernelRadialLensingConfig,
+    KernelRadialMultiConfig,
     KernelConfigTypes,
 )
 
@@ -712,6 +719,16 @@ class ViewKernel:
                 result = self._create_weak_lensing_kernels(kernel_config)
             case KernelClusterTophatConfig():
                 result = self._create_cluster_tophat_kernels(kernel_config)
+            case (
+                KernelRadialGaussConfig()
+                | KernelRadialTophatConfig()
+                | KernelRadialTophatSmoothConfig()
+                | KernelRadialStudentTConfig()
+                | KernelRadialPowerExpConfig()
+                | KernelRadialLensingConfig()
+                | KernelRadialMultiConfig()
+            ):
+                result = self._create_radial_kernels(kernel_config)
             case _:
                 raise ValueError(f"Unknown kernel type: {type(kernel_config)}")
 
@@ -913,6 +930,59 @@ class ViewKernel:
         kernel_obj.prepare(self.cosmo)
 
         kernel_label = f"Weak Lensing ({config.survey} bin {config.bin_idx})"
+
+        return kernel_label, kernel_obj
+
+    def _create_radial_kernels(
+        self, config: KernelConfigTypes
+    ) -> tuple[str, Nc.XcorKernelRadial]:
+        """Create one of the analytic radial windows.
+
+        One builder for all seven shapes: they differ only in which closed form
+        they carry, and every one takes its parameters straight through as
+        construct properties. The vector-valued ones are wrapped on the way in.
+
+        These are the shapes the Arb truth tables certify, so a curve drawn from
+        one of them can be shown against proven values -- which no physical kernel
+        above can offer, since none has a closed form.
+
+        :param config: One of the radial window configurations.
+        :return: Tuple of (kernel_label, kernel_object).
+        """
+        shapes: dict[type, tuple[Any, str]] = {
+            KernelRadialGaussConfig: (Nc.XcorKernelAnalyticGauss, "Gaussian"),
+            KernelRadialTophatConfig: (Nc.XcorKernelAnalyticTophat, "Top-hat"),
+            KernelRadialTophatSmoothConfig: (
+                Nc.XcorKernelAnalyticTophatSmooth,
+                "Smoothed top-hat",
+            ),
+            KernelRadialStudentTConfig: (Nc.XcorKernelAnalyticStudentT, "Student-t"),
+            KernelRadialPowerExpConfig: (
+                Nc.XcorKernelAnalyticPowerExp,
+                "Power-exponential",
+            ),
+            KernelRadialLensingConfig: (Nc.XcorKernelAnalyticLensing, "Lensing"),
+            KernelRadialMultiConfig: (Nc.XcorKernelAnalyticMulti, "Multi-bump"),
+        }
+        kernel_type, name = shapes[type(config)]
+
+        props: dict[str, Any] = {}
+        for field, value in config.model_dump().items():
+            props[field] = (
+                Ncm.Vector.new_array(value) if isinstance(value, list) else value
+            )
+
+        kernel_obj = kernel_type(
+            dist=self.dist,
+            powspec=self.ps_ml,
+            integrator=self.integrator,
+            **props,
+        )
+        kernel_obj.prepare(self.cosmo)
+
+        deriv = config.bessel_deriv
+        weight = "" if deriv == 0 else f", $j_\\ell^{{({deriv})}}$"
+        kernel_label = f"{name}{weight}"
 
         return kernel_label, kernel_obj
 
