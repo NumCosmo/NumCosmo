@@ -40,10 +40,16 @@
  * \begin{equation}
  * C_{\ell}^{AB} = \int_0^{z_*} dz \frac{H(z)}{c \chi^2(z)} W^A(z) W^B (z) P\left(k = \frac{\ell +1/2}{\chi(z)} , z \right),
  * \end{equation}
- * where $P\left(k = \frac{\ell +1/2}{\chi(z)} , z \right)$ is the power spectrum (a #NcmPowspec) at redshift $z$ and $chi(z)$ the comoving distance (a #NcDistance).
+ * where $P\left(k = \frac{\ell +1/2}{\chi(z)} , z \right)$ is the power spectrum (a #NcmPowspec) at redshift $z$ and $\chi(z)$ the comoving distance (a #NcDistance).
  *
- * See <a href="../../theory/sbessel_projection.html">Projection Integrals with
- * Spherical Bessel Weights</a> for how the non-Limber form is evaluated: the
+ * The symbol $\chi$ is the one used in the cross-correlation literature; #NcDistance
+ * calls the same quantity $D_c$. The kernel components work in units of the Hubble
+ * radius, with $k$ in $R_{H0}^{-1}$, so that $k\chi$ is dimensionless and $\chi$ is
+ * exactly nc_distance_comoving(); the Limber expression above is in Mpc, reached by
+ * multiplying by $R_{H0} = c/H_0$ from nc_hicosmo_RH_Mpc().
+ *
+ * See <a href="../../theory/sbessel_projection.html">UltraLevin: Non-Limber
+ * Angular Power Spectra</a> for how the non-Limber form is evaluated: the
  * Levin reduction of the radial integral, the two representations of
  * $W_\ell(k)$, and the exact outer integral over $k$.
  *

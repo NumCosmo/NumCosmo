@@ -46,7 +46,7 @@ RELTOL = 1.0e-7
 SCALED_ABSTOL = 1.0e-4
 
 # The tests below that build non-Limber closures run the Levin ODE over
-# y = k xi, and its cost -- both time and the spectral order the panels must
+# x = k chi, and its cost -- both time and the spectral order the panels must
 # carry -- is linear in the top of that range. The kernels' own domain rule
 # stops around k = 147 Mpc^-1 with the fixture power spectrum, which for a
 # multipole block of 16 means panels holding ~2e5 oscillations and gigabytes of

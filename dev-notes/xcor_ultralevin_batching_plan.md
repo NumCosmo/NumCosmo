@@ -1,8 +1,8 @@
 # NcXcor non-Limber infrastructure plan (UltraLevin)
 
-Status: plan, nothing implemented yet. Documentation-first by design — this
-is the spec the implementation work will follow, kept up to date as decisions
-are made and as pieces land.
+Status: milestones 1 to 3 and 5 of section 7 are done; `NcXcorSolver` exists
+and is validated against CCL and the certified tables (section 9). Sections 1 to 6
+are the design as written before implementation; section 7 tracks what landed.
 
 ## 0. Goal
 
@@ -65,11 +65,11 @@ cache — is computed once and reused along three axes:
    selected based on `n_ℓ`
    ([ncm_sbessel_ode_solver.h:69-70](numcosmo/ncm/specfunc/ncm_sbessel_ode_solver.h#L69-L70)).
    Calling `set_ell_range` with the *same* range repeatedly is free.
-2. **Knot/panel axis.** Operators are built once per log-spaced `y = kx` knot
+2. **Knot/panel axis.** Operators are built once per log-spaced `x = k chi` knot
    panel ([ncm_sbessel_integrator_levin.c:95](numcosmo/ncm/specfunc/ncm_sbessel_integrator_levin.c#L95),
-   bounds `y_knots_min`/`y_knots_max`,
+   bounds `x_knots_min`/`x_knots_max`,
    [ncm_sbessel_integrator_levin.h:63-64](numcosmo/ncm/specfunc/ncm_sbessel_integrator_levin.h#L63-L64)).
-   Because panels live in the *dimensionless* `y = kx` variable, one panel
+   Because panels live in the *dimensionless* `x = k chi` variable, one panel
    set serves any physical `k` and any physical `[a,b]` — this is what lets
    one integrator instance answer many `k` queries during adaptive
    k-sampling without re-factorizing anything.
@@ -1315,3 +1315,52 @@ level-doubling test clears it), the reproducer shrunk to `xc.compute` on the
 single failing block (wrong code path), and the reproducer with a narrowed ℓ
 range (which is what exposed the 2×2 above). Always rebuild the pre-fix code
 and confirm the candidate fails before keeping it.
+
+### 9.11 Where a warm solve spends its time (2026-09-10)
+
+Setup: the certified-projection page's adjacent pair (`xcor_pair_grid_mild`),
+`NcXcorSolver`, ell in [2, 129], `plan_blocks(8)`, one P-core of an i7-1255U,
+`OMP_NUM_THREADS=1`, kernels prepared once, first solve discarded.
+
+**Factorisation is not repeated for fixed panels, and that was never the cost.**
+Temporary counters in `_ncm_sbessel_ode_operator_factorize_batched` gave, per
+solve: 72,388 factorise calls (one per panel solve), 66,925 to 68,346 served by
+replaying stored rotations, 365 extensions in the cold solve and none afterwards,
+and 5,098 (cold) versus 4,042 (warm) fresh factorisations. Only 1,056
+factorisations and 28,530 columns are one-time. The 4,042 recurring ones are edge
+pieces the extended-panel path rejected: counters on every exit of
+`_ncm_sbessel_integrator_levin_integrate_extended_panel` showed 49,336 edge
+pieces per solve (68% of all panel solves), the dead-junction probe failing on
+every one of them (the junctions are interior chi-panel boundaries where the
+forcing is alive), the continuation accepted for 45,280 and rejected by the
+growth check for 4,056. Every rejected piece had a fit of 17 to 32 coefficients
+and filled less than 0.7 of its dyadic cell; most overshot the limit by two to six
+orders. Pieces filling 0.8 or more were never rejected.
+
+**Ladder experiment.** A quarter-octave cell ladder (fill in (0.84, 1]) removed
+every rejection, cut the warm solve from 575 to 504 ms at B = 8 with identical
+certified deviations on all three rungs, but failed
+`test_radial_integral_matches_arb[tophat_near]` at ell = 2 by 3e-8 relative
+(tolerance 1e-8). A half-octave ladder (fill in (0.71, 1]) leaves 131 rejections
+per solve, gives the same speed gain, and passes the near top-hat tests; it is the
+one in the tree. Open: at B = 64 the half-octave ladder is 2.6x slower than the
+octave one (3.4 s versus 1.3 s warm). The profile there is 41%
+`ncm_sbessel_ode_operator_solve_values` (the generic path; batched kernels exist
+up to 32 lanes) and 25% `_ncm_sbessel_check_convergence_batched`, with no new
+Givens work, so it is replay volume, not refactorisation. Not understood yet.
+
+**Composition of a warm solve with 100% edge reuse** (quarter-octave build, but
+half-octave is within a few percent): 36% `solve_values` (edge pieces), 8%
+convergence check inside the replay, 7% `solve_endpoints` (interior panels), 9%
+right-hand side (Chebyshev fit, rebase, Gegenbauer, FFTW), 16% window and P(k)
+evaluation at the panel nodes plus libm, 9% Python and glue. An edge piece costs
+about 2.5x an interior panel and edges are two thirds of the solves. The count
+comes from geometry: 63 k-nodes per kernel-block x 32 kernel-blocks x about 12
+chi-panels per kernel x 2 edges. Integrating a kernel's support in one call
+instead of one call per chi-panel would cut the edge count by roughly 5x.
+
+**Measurement notes.** Pin to a P-core (CPUs 0-3) with `taskset`; E-cores are
+2.0x slower and unpinned runs mix them. Warm-versus-cold is a 5-10% effect here
+because the one-time factorisation is under 10% of the Givens work in any solve.
+P(k) and W evaluations do not amortise over repetitions: the right-hand side is
+rebuilt per k, per block, per panel inside `solve()`.

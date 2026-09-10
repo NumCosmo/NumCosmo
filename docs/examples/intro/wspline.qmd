@@ -3,7 +3,7 @@ title: "Dark Energy WSpline Background Evolution"
 author: "Sandro Dias Pinto Vitenti"
 date: "2026-05-14"
 abstract: |
-  Compares `NcHICosmoDEWSpline` with a constant-$w$ cosmology.
+  Compares [[numcosmo|NcHICosmoDEWSpline]] with a constant-$w$ cosmology.
 
 format:
   html: default
@@ -17,8 +17,8 @@ format-links: [ipynb]
 
 Compare two cosmologies with the same background parameters:
 
-1. `NcHICosmoDEXcdm` with constant $w = -1$.
-2. `NcHICosmoDEWSpline` with a knot-based $w(z)$ history.
+1. [[numcosmo|NcHICosmoDEXcdm]] with constant $w = -1$.
+2. [[numcosmo|NcHICosmoDEWSpline]] with a knot-based $w(z)$ history.
 
 The comparison covers:
 

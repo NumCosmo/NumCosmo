@@ -23,13 +23,14 @@ project:
     - theory/halo_density_profile.qmd
     - theory/fftlog.qmd
     - theory/spectral.qmd
-    - theory/sbessel_projection.qmd
     - theory/sbessel_ode_solver.qmd
+    - theory/sbessel_projection.qmd
     - theory/ssc.qmd
     - theory/castro_hmf.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
     - benchmarks/ccl_two_point.qmd
+    - benchmarks/xcor_certified_projection.qmd
     - tutorials/c/gobject.qmd
     - tutorials/c/curve_tutorial.qmd
     - tutorials/python/bounce.qmd
@@ -161,10 +162,10 @@ website:
                 text: "FFTLog"
               - href: theory/spectral.qmd
                 text: "Spectral Methods"
-              - href: theory/sbessel_projection.qmd
-                text: Spherical Bessel Projections
               - href: theory/sbessel_ode_solver.qmd
                 text: "Ultraspherical Spectral Solver"
+              - href: theory/sbessel_projection.qmd
+                text: "UltraLevin: Angular Power Spectra"
               - href: theory/csq1d.qmd
                 text: "CSQ1D Formalism"
       - section: examples/index.qmd
@@ -206,6 +207,8 @@ website:
             text: "CCL Power Spectrum"
           - href: benchmarks/ccl_two_point.qmd
             text: "CCL Two-Point Correlation"
+          - href: benchmarks/xcor_certified_projection.qmd
+            text: "Certified Radial Projection"
 
 resources:
   - reference/**

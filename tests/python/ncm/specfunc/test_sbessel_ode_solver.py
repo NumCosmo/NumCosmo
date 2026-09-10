@@ -36,9 +36,10 @@ import numpy as np
 import pytest
 
 from numpy.testing import assert_allclose
-from scipy.special import spherical_jn
+from scipy.special import spherical_jn, spherical_yn
 from scipy.linalg import solve
 from scipy.integrate import quad
+from scipy.optimize import brentq
 
 from numcosmo_py import Ncm
 
@@ -262,15 +263,15 @@ class TestSBesselOperators:
         mat_np = mat.to_numpy()
 
         # Get boundary values using scipy
-        y_a = spherical_jn(l_val, a) * a
-        y_b = spherical_jn(l_val, b) * b
+        u_a = spherical_jn(l_val, a) * a
+        u_b = spherical_jn(l_val, b) * b
 
         # Debug: print matrix shape
-        # Row 1 enforces u(+1) = y_b (i.e., u(b) in physical coords)
+        # Row 1 enforces u(+1) = u_b (i.e., u(b) in physical coords)
         # Rows 2 to N-1 are the differential operator (homogeneous: RHS = 0)
         rhs_np = np.zeros(N)
-        rhs_np[0] = y_a
-        rhs_np[1] = y_b
+        rhs_np[0] = u_a
+        rhs_np[1] = u_b
 
         # Assert matrix is square
         assert (
@@ -286,30 +287,30 @@ class TestSBesselOperators:
 
         for t in t_test:
             # Evaluate solution at t (coefficients are in Chebyshev basis)
-            y_computed = Ncm.Spectral.chebyshev_eval(solution_coeffs, t)
+            u_computed = Ncm.Spectral.chebyshev_eval(solution_coeffs, t)
 
             # Map t to physical x
             x_physical = (a + b) / 2.0 + (b - a) / 2.0 * t
 
             # Get exact value
-            y_exact = spherical_jn(l_val, x_physical) * x_physical
+            u_exact = spherical_jn(l_val, x_physical) * x_physical
 
             assert_allclose(
-                y_computed,
-                y_exact,
+                u_computed,
+                u_exact,
                 rtol=1.0e-10,
                 atol=1.0e-15,
                 err_msg=f"Spherical Bessel solution mismatch at x={x_physical}",
             )
 
         # Verify boundary conditions are satisfied (use Chebyshev eval)
-        y_at_a = Ncm.Spectral.chebyshev_eval(solution_coeffs, -1.0)
-        y_at_b = Ncm.Spectral.chebyshev_eval(solution_coeffs, 1.0)
+        u_at_a = Ncm.Spectral.chebyshev_eval(solution_coeffs, -1.0)
+        u_at_b = Ncm.Spectral.chebyshev_eval(solution_coeffs, 1.0)
         assert_allclose(
-            y_at_a, y_a, rtol=1.0e-13, atol=1.0e-13, err_msg="BC at x=a not satisfied"
+            u_at_a, u_a, rtol=1.0e-13, atol=1.0e-13, err_msg="BC at x=a not satisfied"
         )
         assert_allclose(
-            y_at_b, y_b, rtol=1.0e-13, atol=1.0e-13, err_msg="BC at x=b not satisfied"
+            u_at_b, u_b, rtol=1.0e-13, atol=1.0e-13, err_msg="BC at x=b not satisfied"
         )
 
     @pytest.mark.parametrize("l_val", list(range(21)))
@@ -330,7 +331,7 @@ class TestSBesselOperators:
         mat = solver.get_operator_matrix(a, b, l_val, N)
         mat_np = mat.to_numpy()
 
-        # Set up RHS: homogeneous BCs (y(a)=0, y(b)=0) with RHS=1
+        # Set up RHS: homogeneous BCs (x(a)=0, x(b)=0) with RHS=1
         rhs_np = np.zeros(N)
         rhs_np[0] = 0.0  # BC at x=a (t=-1)
         rhs_np[1] = 0.0  # BC at x=b (t=+1)
@@ -346,20 +347,20 @@ class TestSBesselOperators:
         # dy/dx = (dy/dt) * (dt/dx) = (dy/dt) / h
         h = (b - a) / 2.0
 
-        # Evaluate y'(t) at t=-1 (corresponds to x=a) and t=+1 (corresponds to x=b)
-        y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-        y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+        # Evaluate x'(t) at t=-1 (corresponds to x=a) and t=+1 (corresponds to x=b)
+        u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+        u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
 
         # Convert from dy/dt to dy/dx
-        y_prime_a = y_prime_at_minus1 / h
-        y_prime_b = y_prime_at_plus1 / h
+        u_prime_a = u_prime_at_minus1 / h
+        u_prime_b = u_prime_at_plus1 / h
 
         # Get j_l values at endpoints
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
         # Compute left-hand side: [x*j_l(x)]*u'(x) from a to b
-        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
+        lhs = b * j_l_b * u_prime_b - a * j_l_a * u_prime_a
 
         # Compute right-hand side: integral of j_l(x) from a to b
         # Note: The Green's identity for u''+(x^2-l(l+1))u=1 gives this relation
@@ -399,7 +400,7 @@ class TestSBesselOperators:
         mat = solver.get_operator_matrix(a, b, l_val, N)
         mat_np = mat.to_numpy()
 
-        # Set up RHS: homogeneous BCs (y(a)=0, y(b)=0) with RHS=x
+        # Set up RHS: homogeneous BCs (x(a)=0, x(b)=0) with RHS=x
         # In the mapped coordinates, x = m + h*t where m=(a+b)/2, h=(b-a)/2
         # So we need RHS = m + h*t in Chebyshev basis
         # T_0(t) = 1, T_1(t) = t
@@ -423,19 +424,19 @@ class TestSBesselOperators:
 
         # Compute derivatives at endpoints
         # dy/dx = (dy/dt) / h
-        y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-        y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+        u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+        u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
 
         # Convert from dy/dt to dy/dx
-        y_prime_a = y_prime_at_minus1 / h
-        y_prime_b = y_prime_at_plus1 / h
+        u_prime_a = u_prime_at_minus1 / h
+        u_prime_b = u_prime_at_plus1 / h
 
         # Get j_l values at endpoints
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
         # Compute left-hand side: [x*j_l(x)] * u'(x) from a to b
-        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
+        lhs = b * j_l_b * u_prime_b - a * j_l_a * u_prime_a
 
         # Compute right-hand side: integral of x*j_l(x) from a to b
         def integrand(x: float) -> float:
@@ -553,17 +554,17 @@ class TestSBesselOperators:
 
         # Compute derivatives at endpoints
         h = (b - a) / 2.0
-        y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-        y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
-        y_prime_a = y_prime_at_minus1 / h
-        y_prime_b = y_prime_at_plus1 / h
+        u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+        u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+        u_prime_a = u_prime_at_minus1 / h
+        u_prime_b = u_prime_at_plus1 / h
 
         # Get j_l values
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
         # Compute LHS: [x*j_l(x)]*u'(x) from a to b
-        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
+        lhs = b * j_l_b * u_prime_b - a * j_l_a * u_prime_a
 
         # Compute RHS: integral
         def integrand(x: float) -> float:
@@ -610,17 +611,17 @@ class TestSBesselOperators:
         solution_coeffs = solution_vec.to_numpy()
 
         # Compute derivatives at endpoints
-        y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-        y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
-        y_prime_a = y_prime_at_minus1 / h
-        y_prime_b = y_prime_at_plus1 / h
+        u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+        u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+        u_prime_a = u_prime_at_minus1 / h
+        u_prime_b = u_prime_at_plus1 / h
 
         # Get j_l values
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
         # Compute LHS: [x*j_l(x)]*u'(x) from a to b
-        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
+        lhs = b * j_l_b * u_prime_b - a * j_l_a * u_prime_a
 
         # Compute RHS: integral of x*j_l(x)
         def integrand(x: float) -> float:
@@ -662,17 +663,17 @@ class TestSBesselOperators:
 
         # Compute derivatives at endpoints
         h = (b - a) / 2.0
-        y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-        y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
-        y_prime_a = y_prime_at_minus1 / h
-        y_prime_b = y_prime_at_plus1 / h
+        u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+        u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+        u_prime_a = u_prime_at_minus1 / h
+        u_prime_b = u_prime_at_plus1 / h
 
         # Get j_l values
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
         # Compute LHS: [x*j_l(x)]*u'(x) from a to b
-        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
+        lhs = b * j_l_b * u_prime_b - a * j_l_a * u_prime_a
 
         # Compute RHS: integral
         def integrand(x: float) -> float:
@@ -719,17 +720,17 @@ class TestSBesselOperators:
         solution_coeffs, _solution_len = op.solve(rhs_np)
 
         # Compute derivatives at endpoints
-        y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-        y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
-        y_prime_a = y_prime_at_minus1 / h
-        y_prime_b = y_prime_at_plus1 / h
+        u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+        u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+        u_prime_a = u_prime_at_minus1 / h
+        u_prime_b = u_prime_at_plus1 / h
 
         # Get j_l values
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
         # Compute LHS: [x*j_l(x)]*u'(x) from a to b
-        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
+        lhs = b * j_l_b * u_prime_b - a * j_l_a * u_prime_a
 
         # Compute RHS: integral of x*j_l(x)
         def integrand(x: float) -> float:
@@ -1118,10 +1119,10 @@ class TestSBesselOperators:
 
         # Compute derivatives at endpoints from full solution
         h = (b - a) / 2.0
-        y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-        y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
-        deriv_a_full = y_prime_at_minus1 / h
-        deriv_b_full = y_prime_at_plus1 / h
+        u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+        u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+        deriv_a_full = u_prime_at_minus1 / h
+        deriv_b_full = u_prime_at_plus1 / h
 
         # Compare
         assert_allclose(
@@ -1373,10 +1374,10 @@ class TestSBesselOperators:
             solution_coeffs = solutions_batched_np[i, :]
 
             # Compute derivatives at endpoints from full solution
-            y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
-            y_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
-            deriv_a_full = y_prime_at_minus1 / h
-            deriv_b_full = y_prime_at_plus1 / h
+            u_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
+            u_prime_at_plus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, 1.0)
+            deriv_a_full = u_prime_at_minus1 / h
+            deriv_b_full = u_prime_at_plus1 / h
 
             # Compare with fast computation
             assert_allclose(
@@ -1565,15 +1566,15 @@ class TestSBesselOperators:
         assert ell_max_out2 == ell_max
         assert_allclose(tol_out2, tol, rtol=1.0e-15, atol=1.0e-15)
 
-    def test_operator_diagonalization_reuse_single_ell(self) -> None:
-        """Test that diagonalization is correctly reused for single ell."""
+    def test_operator_factorization_reuse_single_ell(self) -> None:
+        """Test that factorization is correctly reused for single ell."""
         a, b = 1.0, 20.0
         l_val = 5
 
         solver = Ncm.SBesselOdeSolver.new()
         op = solver.create_operator(a, b, l_val, l_val)
 
-        # Initially, no diagonalization should be stored
+        # Initially, no factorization should be stored
         n_cols_initial = op.get_n_cols()
         assert n_cols_initial == 0, "Fresh operator should have n_cols = 0"
 
@@ -1589,7 +1590,7 @@ class TestSBesselOperators:
         assert n_cols_after_first > 0, "After first solve, n_cols should be positive"
         # Note: n_cols can exceed N1 due to adaptive extension for convergence
 
-        # Second solve with same RHS size - should reuse diagonalization
+        # Second solve with same RHS size - should reuse factorization
         rhs2 = np.zeros(N1)
         rhs2[0] = 0.0
         rhs2[1] = 0.0
@@ -1598,7 +1599,7 @@ class TestSBesselOperators:
         n_cols_after_second = op.get_n_cols()
 
         assert n_cols_after_second == n_cols_after_first, (
-            f"Same size solve should reuse diagonalization: "
+            f"Same size solve should reuse factorization: "
             f"{n_cols_after_second} != {n_cols_after_first}"
         )
 
@@ -1609,7 +1610,7 @@ class TestSBesselOperators:
             solution1_np, solution2_np, rtol=1e-10
         ), "Different RHS should produce different solutions"
 
-        # Third solve with smaller RHS - should still reuse existing diagonalization
+        # Third solve with smaller RHS - should still reuse existing factorization
         N2 = 32
         rhs3 = np.zeros(N2)
         rhs3[0] = 0.0
@@ -1623,7 +1624,7 @@ class TestSBesselOperators:
             f"{n_cols_after_third} > {n_cols_after_first}"
         )
 
-        # Fourth solve with larger RHS - should extend diagonalization
+        # Fourth solve with larger RHS - should extend factorization
         N3 = 128
         rhs4 = np.zeros(N3)
         rhs4[0] = 0.0
@@ -1637,22 +1638,22 @@ class TestSBesselOperators:
             f"{n_cols_after_fourth} < {n_cols_after_first}"
         )
 
-        # Reset operator - should clear diagonalization
+        # Reset operator - should clear factorization
         solver.reconfigure_operator(op, a, b, l_val, l_val)
         n_cols_after_reset = op.get_n_cols()
         assert (
             n_cols_after_reset == 0
         ), f"After reset, n_cols should be 0, got {n_cols_after_reset}"
 
-    def test_operator_diagonalization_reuse_batched(self) -> None:
-        """Test that diagonalization is correctly reused for multiple ell values."""
+    def test_operator_factorization_reuse_batched(self) -> None:
+        """Test that factorization is correctly reused for multiple ell values."""
         a, b = 1.0, 20.0
         ell_min, ell_max = 2, 8
 
         solver = Ncm.SBesselOdeSolver.new()
         op = solver.create_operator(a, b, ell_min, ell_max)
 
-        # Initially, no diagonalization should be stored
+        # Initially, no factorization should be stored
         n_cols_initial = op.get_n_cols()
         assert n_cols_initial == 0, "Fresh operator should have n_cols = 0"
 
@@ -1668,7 +1669,7 @@ class TestSBesselOperators:
         assert n_cols_after_first > 0, "After first solve, n_cols should be positive"
         # Note: n_cols can exceed N1 due to adaptive extension for convergence
 
-        # Second solve with same RHS size - should reuse diagonalization
+        # Second solve with same RHS size - should reuse factorization
         rhs2 = np.zeros(N1)
         rhs2[0] = 0.0
         rhs2[1] = 0.0
@@ -1677,7 +1678,7 @@ class TestSBesselOperators:
         n_cols_after_second = op.get_n_cols()
 
         assert n_cols_after_second == n_cols_after_first, (
-            f"Same size solve should reuse diagonalization: "
+            f"Same size solve should reuse factorization: "
             f"{n_cols_after_second} != {n_cols_after_first}"
         )
 
@@ -1703,7 +1704,7 @@ class TestSBesselOperators:
             f"{n_cols_after_third} > {n_cols_after_first}"
         )
 
-        # Fourth solve with larger RHS - should extend diagonalization
+        # Fourth solve with larger RHS - should extend factorization
         N3 = 128
         rhs4 = np.zeros(N3)
         rhs4[0] = 0.0
@@ -1717,15 +1718,15 @@ class TestSBesselOperators:
             f"{n_cols_after_fourth} < {n_cols_after_first}"
         )
 
-        # Reset operator - should clear diagonalization
+        # Reset operator - should clear factorization
         solver.reconfigure_operator(op, a, b, ell_min, ell_max)
         n_cols_after_reset = op.get_n_cols()
         assert (
             n_cols_after_reset == 0
         ), f"After reset, n_cols should be 0, got {n_cols_after_reset}"
 
-    def test_operator_diagonalization_reuse_correctness(self) -> None:
-        """Test that reused diagonalization produces correct results."""
+    def test_operator_factorization_reuse_correctness(self) -> None:
+        """Test that reused factorization produces correct results."""
         a, b = 1.0, 20.0
         l_val = 7
 
@@ -1739,7 +1740,7 @@ class TestSBesselOperators:
         rhs[1] = 0.0
         rhs[2] = 1.0
 
-        # Solve with first operator (fresh diagonalization)
+        # Solve with first operator (fresh factorization)
         solution1, _sol_len1 = op1.solve(rhs)
         solution1_np = np.array(solution1)
 
@@ -1753,10 +1754,10 @@ class TestSBesselOperators:
             solution2_np,
             rtol=1e-14,
             atol=1e-14,
-            err_msg="Fresh diagonalizations should give identical results",
+            err_msg="Fresh factorizations should give identical results",
         )
 
-        # Now solve again with first operator (reusing diagonalization)
+        # Now solve again with first operator (reusing factorization)
         solution1_reused, _sol_len1_reused = op1.solve(rhs)
         solution1_reused_np = np.array(solution1_reused)
 
@@ -1766,12 +1767,12 @@ class TestSBesselOperators:
             solution1_np,
             rtol=1e-14,
             atol=1e-14,
-            err_msg="Reused diagonalization should give identical results to fresh",
+            err_msg="Reused factorization should give identical results to fresh",
         )
 
     @pytest.mark.parametrize("l_val", [0, 5, 10, 15])
-    def test_operator_diagonalization_endpoints_reuse(self, l_val: int) -> None:
-        """Test that diagonalization reuse works correctly with solve_endpoints."""
+    def test_operator_factorization_endpoints_reuse(self, l_val: int) -> None:
+        """Test that factorization reuse works correctly with solve_endpoints."""
         a, b = 1.0, 20.0
 
         solver = Ncm.SBesselOdeSolver.new()
@@ -1795,7 +1796,7 @@ class TestSBesselOperators:
         endpoints2 = op.solve_endpoints(rhs)
         n_cols2 = op.get_n_cols()
 
-        # Should reuse diagonalization
+        # Should reuse factorization
         assert (
             n_cols2 == n_cols1
         ), f"Same size solve_endpoints should reuse: {n_cols2} != {n_cols1}"
@@ -1808,7 +1809,7 @@ class TestSBesselOperators:
             endpoints2_np,
             rtol=1e-14,
             atol=1e-14,
-            err_msg="Reused diagonalization should give identical endpoints",
+            err_msg="Reused factorization should give identical endpoints",
         )
 
     @pytest.mark.parametrize("l_val", [0, 5, 10, 15])
@@ -2530,12 +2531,10 @@ class TestSBesselOperators:
         )
 
     @pytest.mark.parametrize("n_ell", [2, 4, 8, 16, 32, 64])
-    def test_optimized_batched_dimensions_diagonalization_reuse(
-        self, n_ell: int
-    ) -> None:
-        """Test that optimized batched paths correctly reuse diagonalization.
+    def test_optimized_batched_dimensions_factorization_reuse(self, n_ell: int) -> None:
+        """Test that optimized batched paths correctly reuse factorization.
 
-        Verifies that the diagonalization reuse works correctly for all
+        Verifies that the factorization reuse works correctly for all
         optimized batch dimensions.
         """
         N = 64
@@ -2572,7 +2571,7 @@ class TestSBesselOperators:
         n_cols_second = op.get_n_cols()
 
         assert n_cols_second == n_cols_first, (
-            f"Second solve (n_ell={n_ell}) should reuse diagonalization: "
+            f"Second solve (n_ell={n_ell}) should reuse factorization: "
             f"{n_cols_second} != {n_cols_first}"
         )
 
@@ -2583,12 +2582,12 @@ class TestSBesselOperators:
             n_cols_after_reset == 0
         ), f"After reset (n_ell={n_ell}), n_cols should be 0, got {n_cols_after_reset}"
 
-    def test_diagonalization_reuse_performance_single_ell(self) -> None:
-        """Test that diagonalization reuse is significantly faster than reset.
+    def test_factorization_reuse_performance_single_ell(self) -> None:
+        """Test that factorization reuse is significantly faster than reset.
 
         Compares the performance of:
-        1. Repeated solve() calls (reuses diagonalization)
-        2. Repeated solve() + reset() calls (re-diagonalizes each time)
+        1. Repeated solve() calls (reuses factorization)
+        2. Repeated solve() + reset() calls (re-factorizes each time)
 
         The reuse case should be significantly faster.
         """
@@ -2630,7 +2629,7 @@ class TestSBesselOperators:
 
         # Print timing results
         print(f"\n{'='*60}")
-        print("Single-ell Diagonalization Reuse Performance Test")
+        print("Single-ell Factorization Reuse Performance Test")
         print(f"{'='*60}")
         print(f"Number of iterations: {n_iterations}")
         print(f"Matrix size: {N}")
@@ -2644,12 +2643,12 @@ class TestSBesselOperators:
         # Timing is informational only to avoid flakiness in CI
 
     @pytest.mark.parametrize("n_ell", [2, 4, 8, 16, 32, 64])
-    def test_diagonalization_reuse_performance_batched(self, n_ell: int) -> None:
-        """Test that diagonalization reuse is faster for batched operations.
+    def test_factorization_reuse_performance_batched(self, n_ell: int) -> None:
+        """Test that factorization reuse is faster for batched operations.
 
         Compares the performance of:
-        1. Repeated solve() calls (reuses diagonalization)
-        2. Repeated solve() + reset() calls (re-diagonalizes each time)
+        1. Repeated solve() calls (reuses factorization)
+        2. Repeated solve() + reset() calls (re-factorizes each time)
 
         The reuse case should be significantly faster, especially for larger batches.
         """
@@ -2692,7 +2691,7 @@ class TestSBesselOperators:
 
         # Print timing results
         print(f"\n{'='*60}")
-        print("Batched Diagonalization Reuse Performance Test")
+        print("Batched Factorization Reuse Performance Test")
         print(f"{'='*60}")
         print(f"Number of iterations: {n_iterations}")
         print(f"Matrix size: {N}")
@@ -3221,7 +3220,7 @@ class TestSBesselOperatorMemoryManagement:
         assert n_cols_high > 0, "n_cols should be positive after second solve_endpoints"
 
     def test_reset_clears_memory_status(self) -> None:
-        """Test that reset() clears the diagonalization but keeps capacity."""
+        """Test that reset() clears the factorization but keeps capacity."""
         solver = Ncm.SBesselOdeSolver.new()
         op = solver.create_operator(1.0, 20.0, 0, 0)
 
@@ -3709,3 +3708,723 @@ class TestSBesselStoredRotations:
         assert columns_added >= 20, (
             f"Should have added many columns for high ell: " f"added {columns_added}"
         )
+
+
+class TestSBesselTauConstraint:
+    """The tau constraint against Dirichlet data.
+
+    The boundary functional of the Levin reduction is invariant under adding
+    homogeneous solutions to u, so both constraints must return the same panel
+    integral. They differ in which member of the solution family is represented:
+    Dirichlet data forces the oscillatory one, the tau constraint leaves the smooth
+    one, which needs only the forcing's own order. The tau constraint is valid only
+    while the homogeneous solutions are unrepresentable at that order; on a short or
+    evanescent panel they are not, and the solve admits them. Both regimes are
+    covered here so the guard in the integrator has a documented target.
+    """
+
+    ELL = 20
+
+    @staticmethod
+    def _forcing_rhs(a: float, b: float, order: int = 96) -> np.ndarray:
+        """Endpoint data followed by the C^(2) coefficients of x F(x).
+
+        F is a Gaussian bump centred on the panel with width a fixed fraction of
+        it, so its Chebyshev order is the same on every panel.
+        """
+        m, h = 0.5 * (a + b), 0.5 * (b - a)
+        spectral = Ncm.Spectral.new()
+
+        def forcing(_user_data, t):
+            x = m + h * t
+            return x * np.exp(-0.5 * ((x - m) / (0.35 * h)) ** 2)
+
+        cheb = np.array(
+            spectral.compute_chebyshev_coeffs(forcing, -1.0, 1.0, order, None)
+        )
+        gegen = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb))
+        rhs = np.zeros(len(gegen) + 2)
+        rhs[2:] = gegen
+
+        return rhs
+
+    @staticmethod
+    def _boundary_functional(coeffs: np.ndarray, a: float, b: float, ell: int) -> float:
+        """W(b) - W(a) with W = x j_l u' - (x j_l)' u, u from its Chebyshev series."""
+        h = 0.5 * (b - a)
+        u_a, u_b = np.polynomial.chebyshev.chebval([-1.0, 1.0], coeffs)
+        du = (
+            np.polynomial.chebyshev.chebval(
+                [-1.0, 1.0], np.polynomial.chebyshev.chebder(coeffs)
+            )
+            / h
+        )
+
+        def term(x: float, u: float, dudy: float) -> float:
+            jl = spherical_jn(ell, x)
+            djl = spherical_jn(ell, x, derivative=True)
+            return x * jl * dudy - (jl + x * djl) * u
+
+        return term(b, u_b, du[1]) - term(a, u_a, du[0])
+
+    def _solve(self, a: float, b: float, ell_min: int, ell_max: int, tau: bool):
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-12)
+        solver.set_default_constraint(
+            Ncm.SBesselOdeConstraint.TAU if tau else Ncm.SBesselOdeConstraint.DIRICHLET
+        )
+        op = solver.create_operator(a, b, ell_min, ell_max)
+        coeffs, n_cols = op.solve(self._forcing_rhs(a, b))
+
+        return op, np.array(coeffs), n_cols
+
+    def test_same_integral_far_fewer_columns_on_deep_panel(self) -> None:
+        """Deep oscillatory panel: identical integral, ~400x fewer columns."""
+        a, b = 1.0e4, 10.0**4.5
+        op_d, c_d, n_d = self._solve(a, b, self.ELL, self.ELL, False)
+        op_f, c_f, n_f = self._solve(a, b, self.ELL, self.ELL, True)
+
+        i_d = self._boundary_functional(c_d, a, b, self.ELL)
+        i_f = self._boundary_functional(c_f, a, b, self.ELL)
+
+        assert_allclose(i_f, i_d, rtol=1.0e-9)
+        # The tau solve stops at its forcing floor, 1.5 times the forcing order, which
+        # is set by F alone; Dirichlet runs to the panel's oscillation count.
+        n_forcing = len(self._forcing_rhs(a, b)) - 2
+        assert (
+            n_f <= 2 * n_forcing
+        ), f"tau constraint used {n_f} columns for a forcing of order {n_forcing}"
+        assert n_f * 20 < n_d, f"tau constraint used {n_f} columns, Dirichlet {n_d}"
+        assert op_f.get_min_cols() == 0
+        assert op_d.get_min_cols() > 0
+        assert op_d.get_constraint() == Ncm.SBesselOdeConstraint.DIRICHLET
+        assert op_f.get_constraint() == Ncm.SBesselOdeConstraint.TAU
+
+    def test_tau_constraint_matches_quadrature_on_narrow_panel(self) -> None:
+        """Narrow panel, where direct quadrature is affordable."""
+        a, b = 100.0, 10.0**2.5
+        m, h = 0.5 * (a + b), 0.5 * (b - a)
+        _, c_f, _ = self._solve(a, b, self.ELL, self.ELL, True)
+
+        ref, _ = quad(
+            lambda x: np.exp(-0.5 * ((x - m) / (0.35 * h)) ** 2)
+            * spherical_jn(self.ELL, x),
+            a,
+            b,
+            limit=5000,
+            epsabs=0.0,
+            # A tighter request makes QUADPACK bisect into the oscillation and report
+            # roundoff without moving the value: at 1e-10 it agrees with a composite
+            # Gauss-Legendre reference to 1e-13, at 1e-13 only to 8e-12.
+            epsrel=1.0e-10,
+        )
+
+        assert_allclose(
+            self._boundary_functional(c_f, a, b, self.ELL), ref, rtol=1.0e-9
+        )
+
+    def test_batched_tau_constraint_matches_single(self) -> None:
+        """A block shares one factorization; every member must match its own solve."""
+        a, b = 1.0e4, 10.0**4.5
+        lmin, lmax = self.ELL, self.ELL + 7
+        n_ell = lmax - lmin + 1
+        _, c_b, n_b = self._solve(a, b, lmin, lmax, True)
+        c_b = c_b.reshape(n_ell, n_b)
+
+        for i, ell in enumerate(range(lmin, lmax + 1)):
+            _, c_s, n_s = self._solve(a, b, ell, ell, True)
+            padded = np.zeros(max(n_b, n_s))
+            padded[:n_s] = c_s
+            assert_allclose(
+                c_b[i],
+                padded[:n_b],
+                rtol=1.0e-9,
+                atol=1.0e-13 * np.abs(c_s).max(),
+                err_msg=f"batched tau constraint differs from single solve at ell={ell}",
+            )
+
+    def test_shallow_panel_admits_homogeneous_content(self) -> None:
+        """Where N_min is small the tau solve is contaminated; where large it is not.
+
+        This is the failure the integrator's guard detects: on [3.162, 10] at l=2 the
+        panel holds ~4 oscillations against a working order of ~32, so the
+        homogeneous solutions are representable and the coefficient norm explodes.
+        """
+        a, b, ell = 3.162, 10.0, 2
+        _, c_d, _ = self._solve(a, b, ell, ell, False)
+        _, c_f, _ = self._solve(a, b, ell, ell, True)
+        ratio_shallow = np.abs(c_f).max() / np.abs(c_d).max()
+
+        a, b = 100.0, 10.0**2.5
+        _, c_d, _ = self._solve(a, b, ell, ell, False)
+        _, c_f, _ = self._solve(a, b, ell, ell, True)
+        ratio_deep = np.abs(c_f).max() / np.abs(c_d).max()
+
+        assert (
+            ratio_shallow > 1.0e6
+        ), f"expected contamination, got ratio {ratio_shallow:.3e}"
+        assert (
+            ratio_deep < 10.0
+        ), f"unexpected contamination on a deep panel: {ratio_deep:.3e}"
+
+    @pytest.mark.parametrize("n_ell", [1, 8])
+    def test_last_max_coeff_tracks_the_solution(self, n_ell: int) -> None:
+        """The per-ell max |a_j| the guard reads equals the solution's own maximum."""
+        a, b = 1.0e4, 10.0**4.5
+        op, coeffs, n_cols = self._solve(a, b, self.ELL, self.ELL + n_ell - 1, True)
+        coeffs = coeffs.reshape(n_ell, n_cols)
+
+        for i in range(n_ell):
+            assert op.get_last_max_coeff(i) == np.abs(coeffs[i]).max()
+
+    def test_last_max_coeff_after_reconfigure_to_wider_block(self) -> None:
+        """Regression: storage sized for one multipole, then reconfigured to eight.
+
+        The tracking array is allocated with the accumulator arrays; a scalar solve
+        allocates for one multipole, and a later reconfigure to a block must not
+        write past it.
+        """
+        a, b = 1.0e4, 10.0**4.5
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-12)
+        solver.set_default_constraint(Ncm.SBesselOdeConstraint.TAU)
+        rhs = self._forcing_rhs(a, b)
+
+        op = solver.create_operator(a, b, self.ELL, self.ELL)
+        op.solve(rhs)
+
+        solver.reconfigure_operator(op, a, b, self.ELL, self.ELL + 7)
+        coeffs, n_cols = op.solve(rhs)
+        coeffs = np.array(coeffs).reshape(8, n_cols)
+
+        for i in range(8):
+            assert op.get_last_max_coeff(i) == np.abs(coeffs[i]).max()
+
+    def test_pinned_constraint_same_integral(self) -> None:
+        """Pinning two coefficients selects another member with the same integral."""
+        a, b = 1.0e4, 10.0**4.5
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-12)
+        rhs = self._forcing_rhs(a, b)
+
+        op = solver.create_operator(a, b, self.ELL, self.ELL)
+        c_d, _ = op.solve(rhs)
+        i_d = self._boundary_functional(np.array(c_d), a, b, self.ELL)
+        floor = op.get_min_cols()
+
+        op.set_pinned_constraint(120, 144)
+        assert op.get_constraint() == Ncm.SBesselOdeConstraint.PINNED
+        assert op.get_pins() == (120, 144)
+        assert op.get_min_cols() == 145
+        c_p, n_p = op.solve(rhs)
+        assert n_p == 145
+        assert_allclose(
+            self._boundary_functional(np.array(c_p), a, b, self.ELL), i_d, rtol=1.0e-9
+        )
+
+        op.set_constraint(Ncm.SBesselOdeConstraint.DIRICHLET)
+        assert op.get_constraint() == Ncm.SBesselOdeConstraint.DIRICHLET
+        assert op.get_min_cols() == floor
+
+    def test_constraint_setting_propagates_and_overrides(self) -> None:
+        """Operators inherit the solver's constraint; a per-operator setter overrides it."""
+        a, b = 1.0e4, 10.0**4.5
+        solver = Ncm.SBesselOdeSolver.new()
+        assert solver.get_default_constraint() == Ncm.SBesselOdeConstraint.DIRICHLET
+
+        solver.set_default_constraint(Ncm.SBesselOdeConstraint.TAU)
+        op = solver.create_operator(a, b, self.ELL, self.ELL)
+        assert op.get_constraint() == Ncm.SBesselOdeConstraint.TAU
+        assert op.get_min_cols() == 0
+
+        op.set_constraint(Ncm.SBesselOdeConstraint.DIRICHLET)
+        assert op.get_constraint() == Ncm.SBesselOdeConstraint.DIRICHLET
+        assert op.get_min_cols() > 0
+
+        op.set_min_cols(7)
+        assert op.get_min_cols() == 7
+        op.set_min_cols(-1)
+        assert op.get_min_cols() > 7
+
+
+class TestTauFloorFactorAndDiagnostics:
+    """The tau working order, the roundoff bound it implies, and the dense matrix.
+
+    The tau constraint has no oscillatory floor, and the decay test does not stop later than
+    the floor in practice, so the floor factor sets the working order outright. It has to
+    exceed one: at exactly the forcing's order the forcing itself is unresolved.
+    """
+
+    ELL = 20
+    A, B = 1.0e4, 10.0**4.5
+
+    def _rhs(self):
+        """C^(2) coefficients of x F(x) for a bump on [A, B], boundary rows included."""
+        solver = Ncm.SBesselOdeSolver.new()
+        spectral = solver.peek_spectral()
+        mid, half = 0.5 * (self.A + self.B), 0.5 * (self.B - self.A)
+        cheb = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                lambda _d, x: x * np.exp(-0.5 * ((x - mid) / (0.25 * half)) ** 2),
+                self.A,
+                self.B,
+                3,
+                1.0e-13,
+                None,
+            )[1]
+        )
+        n = len(cheb)
+        padded = np.concatenate([cheb, np.zeros(8)])
+        kk = np.arange(n)
+        geg = (
+            padded[:n] / (2 * (kk + 1))
+            - (kk + 2) * padded[2 : n + 2] / ((kk + 1) * (kk + 3))
+            + padded[4 : n + 4] / (2 * (kk + 3))
+        )
+        geg[0] += 0.5 * padded[0]
+
+        return np.concatenate([[0.0, 0.0], geg]), n
+
+    def test_default_factor(self) -> None:
+        """The factor ships above one and reads back."""
+        solver = Ncm.SBesselOdeSolver.new()
+        assert solver.get_tau_floor_factor() > 1.0
+
+        solver.set_tau_floor_factor(1.4)
+        assert solver.get_tau_floor_factor() == 1.4
+
+    def test_factor_sets_the_working_order(self) -> None:
+        """The columns kept track the factor times the forcing order."""
+        rhs, n_forcing = self._rhs()
+
+        for factor in (1.1, 1.5, 2.0):
+            solver = Ncm.SBesselOdeSolver.new()
+            solver.set_tolerance(1.0e-12)
+            solver.set_tau_floor_factor(factor)
+            solver.set_default_constraint(Ncm.SBesselOdeConstraint.TAU)
+            op = solver.create_operator(self.A, self.B, self.ELL, self.ELL)
+            _, n_cols = op.solve(rhs)
+
+            assert n_cols == int(np.ceil(factor * n_forcing))
+            assert op.get_tau_constraint_order(len(rhs)) == n_cols
+
+    def test_deriv_error_is_the_weighted_coefficient_sum(self) -> None:
+        """The reported bound is sum_j j^2 |a_j| / h, on every solve path."""
+        rhs, _ = self._rhs()
+        half = 0.5 * (self.B - self.A)
+
+        for constraint in (
+            Ncm.SBesselOdeConstraint.DIRICHLET,
+            Ncm.SBesselOdeConstraint.TAU,
+        ):
+            solver = Ncm.SBesselOdeSolver.new()
+            solver.set_tolerance(1.0e-12)
+            solver.set_default_constraint(constraint)
+            op = solver.create_operator(self.A, self.B, self.ELL, self.ELL)
+            coeffs, n_cols = op.solve(rhs)
+            expected = np.sum(np.arange(n_cols) ** 2 * np.abs(np.array(coeffs))) / half
+
+            assert_allclose(op.get_last_deriv_error(0), expected, rtol=1.0e-13)
+
+            op.solve_values(rhs, self.A, self.B)
+            assert_allclose(op.get_last_deriv_error(0), expected, rtol=1.0e-13)
+
+            endpoints = np.array(op.solve_endpoints(rhs))
+            assert_allclose(op.get_last_deriv_error(0), endpoints[2], rtol=1.0e-13)
+
+    @pytest.mark.parametrize("n_ell", [1, 4, 8])
+    def test_deriv_error_per_multipole(self, n_ell: int) -> None:
+        """Each member of a block reports its own bound."""
+        rhs, _ = self._rhs()
+        half = 0.5 * (self.B - self.A)
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-12)
+        solver.set_default_constraint(Ncm.SBesselOdeConstraint.TAU)
+        op = solver.create_operator(self.A, self.B, self.ELL, self.ELL + n_ell - 1)
+        coeffs, n_cols = op.solve(rhs)
+        block = np.array(coeffs).reshape(n_ell, n_cols)
+
+        for i in range(n_ell):
+            expected = np.sum(np.arange(n_cols) ** 2 * np.abs(block[i])) / half
+            assert_allclose(op.get_last_deriv_error(i), expected, rtol=1.0e-13)
+
+    def test_operator_matrix_follows_the_constraint(self) -> None:
+        """The dense matrix carries the constraint rows the operator actually has.
+
+        The solver-level accessor takes its constraint from the solver and so cannot express
+        the pinned one; this is the entry point that can.
+        """
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-12)
+        op = solver.create_operator(self.A, self.B, self.ELL, self.ELL)
+        nrows = 40
+
+        def rows01(matrix):
+            data = np.array(matrix.dup_array()).reshape(matrix.nrows(), matrix.ncols())
+
+            return np.count_nonzero(data[0]), np.count_nonzero(data[1])
+
+        op.set_constraint(Ncm.SBesselOdeConstraint.DIRICHLET)
+        assert rows01(op.get_matrix(nrows)) == (nrows, nrows)
+
+        op.set_pinned_constraint(10, 20)
+        assert rows01(op.get_matrix(nrows)) == (1, 1)
+
+        op.set_constraint(Ncm.SBesselOdeConstraint.TAU)
+        assert rows01(op.get_matrix(nrows)) == (0, 0)
+
+    def test_operator_matrix_band_is_the_same_below_the_constraint(self) -> None:
+        """Only the two constraint rows differ between constraints."""
+        solver = Ncm.SBesselOdeSolver.new()
+        op = solver.create_operator(self.A, self.B, self.ELL, self.ELL)
+
+        op.set_constraint(Ncm.SBesselOdeConstraint.DIRICHLET)
+        m_d = op.get_matrix(40)
+        band_d = np.array(m_d.dup_array()).reshape(40, 40)[2:]
+
+        op.set_constraint(Ncm.SBesselOdeConstraint.TAU)
+        m_t = op.get_matrix(40)
+        band_t = np.array(m_t.dup_array()).reshape(40, 40)[2:]
+
+        assert_allclose(band_t, band_d, rtol=0.0, atol=0.0)
+
+
+class TestDerivErrorBoundsTheFailure:
+    """The reported bound has to bound the realized error, not merely correlate.
+
+    Under the tau constraint the homogeneous content the truncation admits cancels exactly
+    in the boundary functional, so what survives is the floating-point residue of that
+    cancellation, and the functional weights coefficient j by j^2 / h. That is what
+    get_last_deriv_error() reports, and the point of it is that it never under-reports.
+    """
+
+    ELL = 20
+    X_A = 1.0e3
+
+    def _panel(self, span: float):
+        """A bump of fixed relative width, its right-hand side and a reference."""
+        x_b = self.X_A + span
+        mid, half = 0.5 * (self.X_A + x_b), 0.5 * span
+
+        def bump(x):
+            return np.exp(-0.5 * ((x - mid) / (0.25 * half)) ** 2)
+
+        solver = Ncm.SBesselOdeSolver.new()
+        spectral = solver.peek_spectral()
+        cheb = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                lambda _d, x: x * bump(x), self.X_A, x_b, 3, 1.0e-13, None
+            )[1]
+        )
+        n = len(cheb)
+        padded = np.concatenate([cheb, np.zeros(8)])
+        kk = np.arange(n)
+        geg = (
+            padded[:n] / (2 * (kk + 1))
+            - (kk + 2) * padded[2 : n + 2] / ((kk + 1) * (kk + 3))
+            + padded[4 : n + 4] / (2 * (kk + 3))
+        )
+        geg[0] += 0.5 * padded[0]
+        rhs = np.concatenate([[0.0, 0.0], geg])
+
+        gx, gw = np.polynomial.legendre.leggauss(24)
+        edges = np.linspace(self.X_A, x_b, max(int(np.ceil(2 * span)), 400) + 1)
+        reference = sum(
+            0.5
+            * (e1 - e0)
+            * np.sum(
+                gw
+                * bump(0.5 * (e0 + e1) + 0.5 * (e1 - e0) * gx)
+                * spherical_jn(self.ELL, 0.5 * (e0 + e1) + 0.5 * (e1 - e0) * gx)
+            )
+            for e0, e1 in zip(edges[:-1], edges[1:])
+        )
+
+        return x_b, rhs, reference
+
+    def _solve(self, x_b: float, rhs):
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-12)
+        solver.set_default_constraint(Ncm.SBesselOdeConstraint.TAU)
+        op = solver.create_operator(self.X_A, x_b, self.ELL, self.ELL)
+        coeffs = np.array(op.solve(rhs)[0])
+        half = 0.5 * (x_b - self.X_A)
+        u = np.polynomial.chebyshev.chebval([-1.0, 1.0], coeffs)
+        du = (
+            np.polynomial.chebyshev.chebval(
+                [-1.0, 1.0], np.polynomial.chebyshev.chebder(coeffs)
+            )
+            / half
+        )
+
+        def term(x, u_val, du_val):
+            jl = spherical_jn(self.ELL, x)
+            djl = spherical_jn(self.ELL, x, derivative=True)
+
+            return x * jl * du_val - (jl + x * djl) * u_val
+
+        value = term(x_b, u[1], du[1]) - term(self.X_A, u[0], du[0])
+
+        return value, op.get_last_deriv_error(0)
+
+    @pytest.mark.parametrize("span", [30.0, 60.0, 100.0, 150.0, 250.0, 3000.0])
+    def test_bound_is_never_below_the_error(self, span: float) -> None:
+        """Across spans where the constraint is sound and where it fails outright."""
+        x_b, rhs, reference = self._panel(span)
+        value, deriv_error = self._solve(x_b, rhs)
+
+        amplitude = max(
+            abs(self.X_A * spherical_jn(self.ELL, self.X_A)),
+            abs(x_b * spherical_jn(self.ELL, x_b)),
+        )
+        predicted = np.finfo(float).eps * deriv_error * amplitude / abs(reference)
+        realized = abs(value - reference) / abs(reference)
+
+        if realized > 1.0e-9:
+            assert (
+                predicted >= realized
+            ), f"span {span}: bound {predicted:.2e} under the error {realized:.2e}"
+
+    def test_it_separates_the_two_regimes(self) -> None:
+        """A contaminated panel reports a bound orders above a sound one."""
+        _, deriv_sound = self._solve(*self._panel(3000.0)[:2])
+        _, deriv_broken = self._solve(*self._panel(30.0)[:2])
+
+        assert deriv_broken > 1.0e6 * deriv_sound
+
+
+class TestConjugatePoints:
+    """Panels whose ends make the Dirichlet boundary matrix singular.
+
+    A conjugate point is a zero of Phi = j(a) x(b) - j(b) x(a). There the two-point
+    Dirichlet problem has no unique solution and the error grows as the machine epsilon
+    times the boundary condition number. Neither of the other two constraints imposes an
+    endpoint condition, so neither has that determinant to lose.
+    """
+
+    ELL = 2
+    A0 = 200.0
+
+    @classmethod
+    def _phi(cls, span: float) -> float:
+        b = cls.A0 + span
+
+        return spherical_jn(cls.ELL, cls.A0) * spherical_yn(cls.ELL, b) - spherical_jn(
+            cls.ELL, b
+        ) * spherical_yn(cls.ELL, cls.A0)
+
+    @classmethod
+    def _conjugate_span(cls) -> float:
+        """A span where Phi vanishes, found by root finding.
+
+        Scanning for a maximum of the condition number is not enough: a scan of 2001
+        points over 0.2 pi lands at cond ~ 1e4, where Dirichlet is still accurate to
+        5e-13 and the effect looks absent.
+        """
+        return brentq(cls._phi, 7.9 * np.pi, 8.1 * np.pi, xtol=1.0e-13)
+
+    @staticmethod
+    def _boundary_cond(ell: int, a: float, b: float) -> float:
+        mat = np.array(
+            [
+                [spherical_jn(ell, a), spherical_yn(ell, a)],
+                [spherical_jn(ell, b), spherical_yn(ell, b)],
+            ]
+        )
+
+        return np.linalg.cond(mat)
+
+    def _rhs(self, a: float, b: float):
+        solver = Ncm.SBesselOdeSolver.new()
+        spectral = solver.peek_spectral()
+        mid, half = 0.5 * (a + b), 0.5 * (b - a)
+        cheb = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                lambda _d, x: x * np.exp(-0.5 * ((x - mid) / (0.35 * half)) ** 2),
+                a,
+                b,
+                3,
+                1.0e-13,
+                None,
+            )[1]
+        )
+        n = len(cheb)
+        padded = np.concatenate([cheb, np.zeros(8)])
+        kk = np.arange(n)
+        geg = (
+            padded[:n] / (2 * (kk + 1))
+            - (kk + 2) * padded[2 : n + 2] / ((kk + 1) * (kk + 3))
+            + padded[4 : n + 4] / (2 * (kk + 3))
+        )
+        geg[0] += 0.5 * padded[0]
+
+        return np.concatenate([[0.0, 0.0], geg])
+
+    def _integral(self, a: float, b: float, constraint, pins=None) -> float:
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(1.0e-12)
+        op = solver.create_operator(a, b, self.ELL, self.ELL)
+
+        if pins is not None:
+            op.set_pinned_constraint(*pins)
+        else:
+            op.set_constraint(constraint)
+
+        coeffs = np.array(op.solve(self._rhs(a, b))[0])
+        half = 0.5 * (b - a)
+        u = np.polynomial.chebyshev.chebval([-1.0, 1.0], coeffs)
+        du = (
+            np.polynomial.chebyshev.chebval(
+                [-1.0, 1.0], np.polynomial.chebyshev.chebder(coeffs)
+            )
+            / half
+        )
+
+        def term(x: float, u_val: float, du_val: float) -> float:
+            jl = spherical_jn(self.ELL, x)
+            djl = spherical_jn(self.ELL, x, derivative=True)
+
+            return x * jl * du_val - (jl + x * djl) * u_val
+
+        return term(b, u[1], du[1]) - term(a, u[0], du[0])
+
+    def _reference(self, a: float, b: float) -> float:
+        mid, half = 0.5 * (a + b), 0.5 * (b - a)
+        value, _ = quad(
+            lambda x: np.exp(-0.5 * ((x - mid) / (0.35 * half)) ** 2)
+            * spherical_jn(self.ELL, x),
+            a,
+            b,
+            limit=4000,
+            epsabs=0.0,
+            # See the note in TestSBesselTauConstraint: a tighter request buys nothing
+            # on an oscillatory integrand and only reports roundoff.
+            epsrel=1.0e-10,
+        )
+
+        return value
+
+    def test_the_span_is_really_conjugate(self) -> None:
+        """The root finder lands on a vanishing determinant, not merely a large one."""
+        span = self._conjugate_span()
+
+        assert abs(self._phi(span)) < 1.0e-17
+        assert self._boundary_cond(self.ELL, self.A0, self.A0 + span) > 1.0e13
+
+    def test_dirichlet_loses_digits_there(self) -> None:
+        """Dirichlet error tracks the machine epsilon times the condition number."""
+        a = self.A0
+        b = a + self._conjugate_span()
+        reference = self._reference(a, b)
+
+        got = self._integral(a, b, Ncm.SBesselOdeConstraint.DIRICHLET)
+        error = abs(got - reference) / abs(reference)
+
+        assert (
+            error > 1.0e-6
+        ), f"expected the singular constraint to fail, got {error:.2e}"
+
+    @pytest.mark.parametrize("pins", [(0, 1), (2, 3), (10, 11)])
+    def test_pinned_is_immune(self, pins) -> None:
+        """No endpoint condition means no determinant to degenerate."""
+        a = self.A0
+        b = a + self._conjugate_span()
+        reference = self._reference(a, b)
+
+        got = self._integral(a, b, None, pins=pins)
+
+        assert_allclose(got, reference, rtol=1.0e-9)
+
+    def test_away_from_the_conjugate_span_dirichlet_is_fine(self) -> None:
+        """The failure is the determinant, not the panel."""
+        a = self.A0
+        b = a + self._conjugate_span() + 1.0e-2
+        reference = self._reference(a, b)
+
+        assert_allclose(
+            self._integral(a, b, Ncm.SBesselOdeConstraint.DIRICHLET),
+            reference,
+            rtol=1.0e-9,
+        )
+
+
+class TestPhaseIncrementConditioning:
+    """Which phase increments are safe to space knots by.
+
+    Placing knots at the zeros of j_l would put both ends of every panel on a zero, so
+    Phi = j(a) x(b) - j(b) x(a) vanishes identically and every panel is conjugate. The
+    extrema are no better, being a further half period apart in the same sense. What
+    decides it is the increment: a multiple of pi is singular, an odd multiple of pi/2 is
+    where sin(dtheta) is one.
+    """
+
+    @staticmethod
+    def _theta(ell: int, x: float) -> float:
+        """WKB phase above the turning point."""
+        nu = np.sqrt(ell * (ell + 1.0))
+
+        return np.sqrt(x * x - nu * nu) - nu * np.arccos(nu / x)
+
+    @classmethod
+    def _x_at_phase(cls, ell: int, target: float, lo: float) -> float:
+        return brentq(
+            lambda x: cls._theta(ell, x) - target, lo + 1.0e-6, lo + 200.0, xtol=1.0e-12
+        )
+
+    @staticmethod
+    def _cond(ell: int, a: float, b: float) -> float:
+        mat = np.array(
+            [
+                [spherical_jn(ell, a), spherical_yn(ell, a)],
+                [spherical_jn(ell, b), spherical_yn(ell, b)],
+            ]
+        )
+
+        return np.linalg.cond(mat)
+
+    @pytest.mark.parametrize("ell", [2, 20, 200])
+    def test_multiples_of_pi_are_singular_and_half_odd_are_not(self, ell: int) -> None:
+        """Spacing by pi is conjugate; spacing by pi/2 or 3pi/2 is well conditioned."""
+        x0 = 3.0 * np.sqrt(ell * (ell + 1.0))
+        theta0 = self._theta(ell, x0)
+
+        worst_half_odd = 0.0
+        best_multiple = np.inf
+        for increment, is_multiple in (
+            (np.pi, True),
+            (2.0 * np.pi, True),
+            (0.5 * np.pi, False),
+            (1.5 * np.pi, False),
+        ):
+            x1 = self._x_at_phase(ell, theta0 + increment, x0)
+            value = self._cond(ell, x0, x1)
+
+            if is_multiple:
+                best_multiple = min(best_multiple, value)
+            else:
+                worst_half_odd = max(worst_half_odd, value)
+
+        assert worst_half_odd < 10.0, "odd multiples of pi/2 must be well conditioned"
+        assert best_multiple > 1.0e2, "multiples of pi must be near conjugate"
+        assert best_multiple > 50.0 * worst_half_odd
+
+    def test_zeros_of_jl_are_the_worst_knots(self) -> None:
+        """Both ends on a zero makes the determinant vanish identically."""
+        ell = 20
+        nu = np.sqrt(ell * (ell + 1.0))
+        zeros, x, step = [], 3.0 * nu, 0.05
+        previous = spherical_jn(ell, x)
+
+        while len(zeros) < 3:
+            nxt = x + step
+            current = spherical_jn(ell, nxt)
+
+            if previous * current < 0.0:
+                zeros.append(
+                    brentq(lambda t: spherical_jn(ell, t), x, nxt, xtol=1.0e-12)
+                )
+
+            x, previous = nxt, current
+
+        for a, b in zip(zeros[:-1], zeros[1:]):
+            assert self._cond(ell, a, b) > 1.0e12

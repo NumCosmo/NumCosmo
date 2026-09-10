@@ -157,7 +157,7 @@ The perturbation equations require several background functions; an important ex
 $$
 \gamma_i = \frac{a^3 \kappa (\rho_i + p_i)}{3|H|}, \qquad \kappa = \frac{8\pi G}{c^4},
 $$
-with $i=\mathrm{r},w$ for radiation and the $w$-fluid. The `NcHIPertITwoFluids` interface (implemented by `HICosmoQGRW`) returns these weights in code units. In these units one finds
+with $i=\mathrm{r},w$ for radiation and the $w$-fluid. The [[numcosmo|NcHIPertITwoFluids]] interface (implemented by `HICosmoQGRW`) returns these weights in code units. In these units one finds
 $$
 \gamma_i = \frac{a^3 \Omega_i x^{3(1+w_i)} (1+w_i)}{|E|}, \qquad E=\frac{H}{H_0},
 $$

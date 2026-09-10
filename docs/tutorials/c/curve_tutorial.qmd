@@ -38,7 +38,7 @@ parametrization, since those belong to the implementations.
 
 See the [GObject tutorial](gobject.qmd) for the object framework.
 
-The abstract `NcCurve` type subclasses [`NcmModel`](manual/NcmModel.html).
+The abstract `NcCurve` type subclasses [[numcosmo-math|NcmModel]].
 `nc_curve_f` evaluates $f(x)$; `xl` and `xu` define the domain.
 
 ## Abstract model header
@@ -71,7 +71,7 @@ struct _NcCurveClass
 
 ### Implementation enumerator
 
-The [`NcmModel`](manual/NcmModel.html) framework is designed to support 
+The [[numcosmo-math|NcmModel]] framework is designed to support
 complex models that may involve several virtual methods. Some of these methods may not
 be required by every implementation. For this reason in introduced the implementation 
 enumerator, this way, the object that use the model may ask if that model implements a
@@ -89,8 +89,8 @@ controls if the child implements this method.
 ### Defining the class id prototype
 In order to be able to analyze different models, we need an object to aggregate all
 necessary models. In NumCosmo this task is performed by the 
-[`NcmMSet`](manual/NcmMSet.html) (model set) object. We use the `NCM_MSET_MODEL_DECLARE_ID`
-macro to declare the id function `nc_curve_id` in the [`NcmMSet`](manual/NcmMSet.html)
+[[numcosmo-math|NcmMSet]] (model set) object. We use the [[numcosmo-math|NCM_MSET_MODEL_DECLARE_ID]]
+macro to declare the id function `nc_curve_id` in the [[numcosmo-math|NcmMSet]]
 framework.
 ```C
 NCM_MSET_MODEL_DECLARE_ID (nc_curve);
@@ -160,7 +160,7 @@ enum
 
 The first step in creating the object is to call the `GObject` macro
 G_DEFINE_ABSTRACT_TYPE. This macro creates an abstract object (that cannot
-be instantiated) that is a child of [`NcmModel`](manual/NcmModel.html).
+be instantiated) that is a child of [[numcosmo-math|NcmModel]].
 ```C
 G_DEFINE_ABSTRACT_TYPE (NcCurve, nc_curve, NCM_TYPE_MODEL);
 ```
@@ -237,10 +237,10 @@ _nc_curve_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
 
 ### Defining the id function
 
-The [`NcmMSet`](manual/NcmMSet.html) framework provides the macro 
+The [[numcosmo-math|NcmMSet]] framework provides the macro
 *NCM_MSET_MODEL_REGISTER_ID* that should be used in the object code to create
 the *nc_curve_id* function. This function will return the unique ID defined
-in the [`NcmMSet`](manual/NcmMSet.html) type list.
+in the [[numcosmo-math|NcmMSet]] type list.
 
 ```C
 NCM_MSET_MODEL_REGISTER_ID (nc_curve, NC_TYPE_CURVE);
@@ -251,7 +251,7 @@ NCM_MSET_MODEL_REGISTER_ID (nc_curve, NC_TYPE_CURVE);
 #### Attributing the Set/Get hooks
 
 In the class initialization hook one must define the object related hooks, 
-as the set/get functions. Since we are using the [`NcmModel`](manual/NcmModel.html)
+as the set/get functions. Since we are using the [[numcosmo-math|NcmModel]]
 framework, we need to attribute the set/get hooks to the `NcmModelClass`
 struct. This is necessary since the framework takes care in organizing all 
 model parameters and only the additional properties are handled by the set/get
@@ -277,7 +277,7 @@ it requires `0` scalar parameters and `0` vector parameters and it has additiona
 has no parameters, this happens because the parameters are usually
 connected to the specific implementations and not to the abstract definitions.
 
-#### Registering the ID in [`NcmMSet`](manual/NcmMSet.html)
+#### Registering the ID in [[numcosmo-math|NcmMSet]]
 
 ```C
   ncm_mset_model_register_id (model_class,
@@ -288,8 +288,8 @@ connected to the specific implementations and not to the abstract definitions.
                               NCM_MSET_MODEL_MAIN);
 ```
 This functions call takes care in registering the `NcCurve`
-type in the [`NcmMSet`](manual/NcmMSet.html) type list. This is
-necessary to set/get objects of this type from a [`NcmMSet`](manual/NcmMSet.html).
+type in the [[numcosmo-math|NcmMSet]] type list. This is
+necessary to set/get objects of this type from a [[numcosmo-math|NcmMSet]].
 
 #### Registering the properties
 
@@ -343,7 +343,7 @@ _nc_curve_f (NcCurve *curve, const gdouble x)
 }
 ```
 
-We use the `NCM_MODEL_SET_IMPL_FUNC` to generate the code for the implementation
+We use the [[numcosmo-math|NCM_MODEL_SET_IMPL_FUNC]] to generate the code for the implementation
 function `nc_curve_set_f_impl`. This class method, when called by the child 
 implementations will attribute the function to the class struct and enable the 
 implementation flag for this method.

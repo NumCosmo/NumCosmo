@@ -7,11 +7,15 @@ import faulthandler
 import pytest
 import numpy as np
 from gi import PyGIDeprecationWarning  # type: ignore
-from gi.repository import GLib
 
+# Installed before the GLib import, which is what emits it: pygobject's override
+# machinery touches the deprecated attribute while building the namespace, so a filter
+# added afterwards never sees the warning.
 warnings.filterwarnings(
     "ignore", message=".*unix_signal_add_full.*", category=PyGIDeprecationWarning
 )
+
+from gi.repository import GLib
 # flake8: noqa: E402
 # pylint: disable=wrong-import-position
 from numcosmo_py import Nc, Ncm

@@ -343,6 +343,16 @@ ncm_spectral_get_max_order (NcmSpectral *spectral)
 static void _ncm_spectral_prepare_plan_for_k (NcmSpectral *spectral, guint k);
 
 /*
+ * Sizes for which some instance in this process has already created a plan.
+ * FFTW keeps the wisdom it learned in memory, so later plans of the same size
+ * need neither the wisdom file nor a re-export of the whole wisdom string; the
+ * export alone was measured at a quarter of a solver run. Guarded by the FFTW
+ * plan lock, which both plan builders hold.
+ */
+static guint64 _ncm_spectral_planned_k_mask       = 0;
+static guint64 _ncm_spectral_batch_planned_k_mask = 0;
+
+/*
  * Buffers and plans for @n_comp components. Sized once per n_comp: changing it
  * invalidates every batched plan, since howmany is baked into the plan.
  */
@@ -390,21 +400,31 @@ _ncm_spectral_batch_prepare_plan_for_k (NcmSpectral *spectral, guint k)
   {
     const fftw_r2r_kind kind[] = { FFTW_REDFT00 };
     const gint n[]             = { (gint) N };
+    const guint64 k_bit        = (k < 64) ? (G_GUINT64_CONSTANT (1) << k) : 0;
+    gboolean first_of_size;
     fftw_plan plan;
 
     memcpy (spectral->batch_f_vals_tmp, spectral->batch_f_vals,
             sizeof (gdouble) * N * n_comp);
 
-    ncm_cfg_load_fftw_wisdom ("ncm_spectral");
     ncm_cfg_lock_plan_fftw ();
+
+    first_of_size = (k_bit == 0) || ((_ncm_spectral_batch_planned_k_mask & k_bit) == 0);
+
+    if (first_of_size)
+      ncm_cfg_load_fftw_wisdom ("ncm_spectral");
 
     plan = fftw_plan_many_r2r (1, n, (gint) n_comp,
                                spectral->batch_f_vals, NULL, (gint) n_comp, 1,
                                spectral->batch_coeffs_work, NULL, (gint) n_comp, 1,
                                kind, ncm_cfg_get_fftw_default_flag ());
 
+    _ncm_spectral_batch_planned_k_mask |= k_bit;
+
     ncm_cfg_unlock_plan_fftw ();
-    ncm_cfg_save_fftw_wisdom ("ncm_spectral");
+
+    if (first_of_size)
+      ncm_cfg_save_fftw_wisdom ("ncm_spectral");
 
     memcpy (spectral->batch_f_vals, spectral->batch_f_vals_tmp,
             sizeof (gdouble) * N * n_comp);
@@ -954,12 +974,17 @@ _ncm_spectral_prepare_plan_for_k (NcmSpectral *spectral, guint k)
 
   /* Create out-of-place FFTW plan */
   {
+    const guint64 k_bit = (k < 64) ? (G_GUINT64_CONSTANT (1) << k) : 0;
+    gboolean first_of_size;
     fftw_plan plan;
 
     memcpy (spectral->f_vals_tmp, spectral->f_vals, sizeof (gdouble) * N);
 
-    ncm_cfg_load_fftw_wisdom ("ncm_spectral");
     ncm_cfg_lock_plan_fftw ();
+    first_of_size = (k_bit == 0) || ((_ncm_spectral_planned_k_mask & k_bit) == 0);
+
+    if (first_of_size)
+      ncm_cfg_load_fftw_wisdom ("ncm_spectral");
 
     plan = fftw_plan_r2r_1d (N,
                              spectral->f_vals,
@@ -967,8 +992,11 @@ _ncm_spectral_prepare_plan_for_k (NcmSpectral *spectral, guint k)
                              FFTW_REDFT00,
                              ncm_cfg_get_fftw_default_flag ());
 
+    _ncm_spectral_planned_k_mask |= k_bit;
     ncm_cfg_unlock_plan_fftw ();
-    ncm_cfg_save_fftw_wisdom ("ncm_spectral");
+
+    if (first_of_size)
+      ncm_cfg_save_fftw_wisdom ("ncm_spectral");
 
     memcpy (spectral->f_vals, spectral->f_vals_tmp, sizeof (gdouble) * N);
 
@@ -1109,6 +1137,7 @@ _ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble to
     norm2_2N   += coeffs_2N_data[i] * coeffs_2N_data[i];
   }
 
+
   if (norm2_diff < MAX (tol * tol * norm2_2N, abstol * abstol) + 1.0e-100)
     return TRUE;
 
@@ -1122,13 +1151,16 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
                                                           GArray **coeffs, gpointer user_data,
                                                           _NcmSpectralEvaluateFunc evaluate_func,
                                                           _NcmSpectralRefineFunc refine_func,
-                                                          gboolean require_convergence)
+                                                          gboolean require_convergence,
+                                                          guint k_cap,
+                                                          gboolean *converged_out)
 {
   guint k            = k_min;
   gboolean converged = FALSE;
   GArray *c_previous, *c_current;
 
-  g_assert (k_min <= spectral->max_order);
+  k_cap = MIN (k_cap, spectral->max_order);
+  g_assert (k_min <= k_cap);
 
   if (*coeffs == NULL)
     *coeffs = g_array_new (FALSE, FALSE, sizeof (gdouble));
@@ -1155,7 +1187,7 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
     _ncm_spectral_normalize_coeffs (spectral->coeffs_work, c_previous, N);
   }
 
-  while (k < spectral->max_order)
+  while (k < k_cap)
   {
     /* Transform using 2N and store in coeffs */
     _ncm_spectral_prepare_plan_for_k (spectral, k + 1);
@@ -1180,7 +1212,7 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
     }
 
     /* Swap c_previous and c_current for next iteration */
-    if (k < spectral->max_order)
+    if (k < k_cap)
     {
       GArray *tmp = c_previous;
 
@@ -1212,6 +1244,10 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
     g_array_set_size (*coeffs, c_current->len);
     memcpy ((*coeffs)->data, c_current->data, sizeof (gdouble) * c_current->len);
   }
+
+  if (converged_out != NULL)
+    *converged_out = converged;
+
 
   return k;
 }
@@ -1249,7 +1285,9 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
                                                                    tol, 0.0, coeffs, user_data,
                                                                    _ncm_spectral_evaluate_all_nodes,
                                                                    _ncm_spectral_refine_to_k,
-                                                                   TRUE);
+                                                                   TRUE,
+                                                                   spectral->max_order,
+                                                                   NULL);
 }
 
 /**
@@ -1286,7 +1324,46 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive_full (NcmSpectral *spectral, NcmS
                                                                    reltol, abstol, coeffs, user_data,
                                                                    _ncm_spectral_evaluate_all_nodes,
                                                                    _ncm_spectral_refine_to_k,
-                                                                   TRUE);
+                                                                   TRUE,
+                                                                   spectral->max_order,
+                                                                   NULL);
+}
+
+/**
+ * ncm_spectral_compute_chebyshev_coeffs_adaptive_try:
+ * @spectral: a #NcmSpectral
+ * @F: (scope call): function to evaluate, receives x in [a,b]
+ * @a: interval lower bound
+ * @b: interval upper bound
+ * @k_min: starting refinement level
+ * @k_cap: highest refinement level to try, capped at #NcmSpectral:max-order
+ * @reltol: relative tolerance on the coefficients
+ * @abstol: absolute tolerance on the coefficients, or 0.0 for none
+ * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): output array of coefficients
+ * @user_data: user data for @F
+ * @converged: (out): whether the tolerance was met by @k_cap
+ *
+ * Same expansion as ncm_spectral_compute_chebyshev_coeffs_adaptive_full(), for a
+ * caller that has a fallback: stopping at @k_cap without convergence is reported
+ * through @converged instead of being an error. Unlike the batch variant it uses
+ * the single-function buffers, so it may be called from inside a batch expansion.
+ *
+ * Returns: the refinement level reached.
+ */
+guint
+ncm_spectral_compute_chebyshev_coeffs_adaptive_try (NcmSpectral *spectral, NcmSpectralF F,
+                                                    gdouble a, gdouble b, guint k_min, guint k_cap,
+                                                    gdouble reltol, gdouble abstol,
+                                                    GArray **coeffs, gpointer user_data,
+                                                    gboolean *converged)
+{
+  return _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (spectral, F, a, b, k_min,
+                                                                   reltol, abstol, coeffs, user_data,
+                                                                   _ncm_spectral_evaluate_all_nodes,
+                                                                   _ncm_spectral_refine_to_k,
+                                                                   FALSE,
+                                                                   k_cap,
+                                                                   converged);
 }
 
 /**
@@ -1328,7 +1405,9 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted (NcmSpectral *spectral, 
                                                                    tol, 0.0, coeffs, user_data,
                                                                    _ncm_spectral_evaluate_all_nodes_weighted,
                                                                    _ncm_spectral_refine_to_k_weighted,
-                                                                   FALSE);
+                                                                   FALSE,
+                                                                   spectral->max_order,
+                                                                   NULL);
 }
 
 /**

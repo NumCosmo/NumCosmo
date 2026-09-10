@@ -121,7 +121,7 @@ times over needs twice the knots.
 
 Equal values are the one setting that starves the $p$-adaptive cubature of
 Clenshaw--Curtis levels: refinement then stops exactly at the level the outer
-rule is trying to resolve. `NcXcorSSCSij` offsets them deliberately, upwards.
+rule is trying to resolve. [[numcosmo|NcXcorSSCSij]] offsets them deliberately, upwards.
 
 Below $a \simeq 10^{-10}$ the refinement starts resolving the radial
 integrator's own numerical noise rather than the function, and the knot count
@@ -304,8 +304,8 @@ on what a smoother kernel will cost.
 
 | setting | `reltol` | `scaled-abstol` | knots | diagonal accuracy |
 |---|---|---|---|---|
-| `NcXcorKernel` default | $10^{-4}$ | $10^{-4}$ | 541 | $1.3 \times 10^{-4}$ |
-| `NcXcorSSCSij` default | $10^{-6}$ | $10^{-5}$ | 1241 | $5.8 \times 10^{-6}$ |
+| [[numcosmo\|NcXcorKernel]] default | $10^{-4}$ | $10^{-4}$ | 541 | $1.3 \times 10^{-4}$ |
+| [[numcosmo\|NcXcorSSCSij]] default | $10^{-6}$ | $10^{-5}$ | 1241 | $5.8 \times 10^{-6}$ |
 | validation | $10^{-8}$ | $10^{-7}$ | 4363 | $3.7 \times 10^{-9}$ |
 
 Each rung costs two to three times the knots and buys one to three orders.

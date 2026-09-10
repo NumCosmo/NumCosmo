@@ -185,7 +185,7 @@ typedef void (*NcXcorKernelIntegrandGetRange) (gpointer data, gdouble *k_min, gd
  * Function type for getting the valid k range of a single component. A block
  * of multipoles shares one k-domain, but each multipole may be supported on
  * only part of it -- under the Limber approximation a multipole's window
- * vanishes outside $[\nu/\xi_\mathrm{max}, \nu/\xi_\mathrm{min}]$, and the
+ * vanishes outside $[\nu/\chi_\mathrm{max}, \nu/\chi_\mathrm{min}]$, and the
  * edge of that band is a step in the shared domain. See
  * nc_xcor_kernel_integrand_get_range_comp().
  */
@@ -309,7 +309,7 @@ typedef enum _NcXcorKernelImpl /*< prefix=NC_XCOR_KERNEL_IMPL >*/
 
 /**
  * NcXcorKinetic:
- * @xi_z: comoving distance $\xi(z)$ at redshift $z$
+ * @chi_z: comoving distance $\chi(z)$ at redshift $z$
  * @E_z: normalized Hubble function $E(z) = H(z)/H_0$ at redshift $z$
  *
  * A boxed type for the kinetic quantities necessary to compute the kernels.
@@ -317,7 +317,7 @@ typedef enum _NcXcorKernelImpl /*< prefix=NC_XCOR_KERNEL_IMPL >*/
  */
 struct _NcXcorKinetic
 {
-  gdouble xi_z;
+  gdouble chi_z;
   gdouble E_z;
 };
 

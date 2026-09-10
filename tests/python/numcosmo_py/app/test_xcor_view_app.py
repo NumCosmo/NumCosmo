@@ -255,8 +255,27 @@ def test_integrator_tolerance_setting() -> None:
         )
         return sbi.integrate_gaussian_ell(*args)
 
-    loose, tight = build(1e-4), build(1e-12)
-    assert abs(loose / tight - 1.0) > 1e-3
+    # The tolerance reaches the computation if asking for less costs accuracy, which
+    # is an ordering across requests and not a threshold on any one of them: a
+    # threshold holds only while the method is as accurate as it was when the number
+    # was written, and a `> 1e-3` one on the 1e-4 request did break once the pinned
+    # constraint moved to the peak of the homogeneous spectrum and took that request
+    # from 4.0e-2 off the converged value to 4.7e-5 off it.
+    #
+    # The ladder stays at 1e-4 and below because there is a largest useful reltol and
+    # asking for less than that is unstable rather than merely inaccurate: measured
+    # against the 1e-12 result, a 1e-1 request lands 35x off and every request from
+    # 3e-2 to 1e-3 is erratic and out of order. Inside the stable range the gaps are
+    # strictly ordered in all nine combinations of three multipoles with the three
+    # constraint regimes, so this asserts the full ordering and not just its ends.
+    tight = build(1e-12)
+    ladder = {tol: build(tol) for tol in (1e-4, 1e-6, 1e-8)}
+    gaps = [abs(ladder[tol] / tight - 1.0) for tol in (1e-4, 1e-6, 1e-8)]
+
+    assert gaps == sorted(gaps, reverse=True)
+    assert gaps[0] > gaps[-1]
+
+    loose = ladder[1e-4]
 
     sbi = Ncm.SBesselIntegratorLevin.new_full(2, 2, 1e-4, 1e6, 21, 1200, 1e-3, 2, 1e-3)
     sbi.set_reltol(1e-4)

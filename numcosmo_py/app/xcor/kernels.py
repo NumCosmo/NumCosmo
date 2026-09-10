@@ -39,7 +39,7 @@ command-line strings.
 import shlex
 from typing import Annotated, Any, Union, Type, cast
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, BeforeValidator, Field, ConfigDict
 from pydantic_core import core_schema
 from tabulate import tabulate
 
@@ -331,6 +331,238 @@ class KernelClusterTophatConfig(BaseModel):
         ]
 
 
+def _split_floats(value: object) -> object:
+    """Accept ``a,b,c`` from the command line as a list of floats.
+
+    The kernel options arrive as strings, one key=value at a time, so a
+    vector-valued parameter has nowhere to be a list yet.
+
+    :param value: Raw option value, a comma-separated string or an actual list.
+    :return: A list of floats when given a string, otherwise the value unchanged.
+    """
+    if isinstance(value, str):
+        return [float(part) for part in value.split(",")]
+
+    return value
+
+
+FloatList = Annotated[list[float], BeforeValidator(_split_floats)]
+
+
+class _KernelRadialConfig(BaseModel):
+    """Shared behaviour of the analytic radial windows.
+
+    These are the closed-form shapes of ``NcXcorKernelRadial``, the ones certified
+    against Arb (``data/truth_tables/xcor/``). Unlike every kernel above they carry
+    no cosmology: the window is a function of comoving distance in Mpc, given
+    directly. That is what makes them exactly known, and what makes them the right
+    thing to plot a certified reference on top of.
+
+    :ivar bessel_deriv: Derivative order of the spherical Bessel weight, 0, 1 or 2.
+        Order 2 is the weight a redshift-space distortion term carries. A kernel
+        with it set must be viewed non-Limber (``--l-limber -1``), since the
+        redshift-space Limber methods do not implement a derivative component.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    bessel_deriv: Annotated[int, Field(ge=0, le=2)] = 0
+
+    @classmethod
+    def from_args(cls, args: list[str]):
+        """Create a configuration from command line arguments.
+
+        :param args: List of key=value strings.
+        :return: Validated configuration object.
+        :raises ValidationError: If arguments are invalid.
+        """
+        return cls.model_validate(parse_options_strict(args))
+
+
+class KernelRadialGaussConfig(_KernelRadialConfig):
+    """Gaussian window in comoving distance, truncated at n_sigma.
+
+    :ivar chi_mean: Window centre, in Mpc.
+    :ivar chi_sigma: Window standard deviation, in Mpc.
+    :ivar n_sigma: Truncation half-width, in units of sigma.
+    """
+
+    chi_mean: Annotated[float, Field(gt=0.0)] = 1500.0
+    chi_sigma: Annotated[float, Field(gt=0.0)] = 300.0
+    n_sigma: Annotated[float, Field(gt=0.0)] = 4.0
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return help text for the Gaussian radial window.
+
+        :return: List containing [model name, parameter description].
+        """
+        return [
+            "XcorKernelAnalyticGauss",
+            "chi_mean=1500, chi_sigma=300, n_sigma=4, bessel_deriv=0",
+        ]
+
+
+class KernelRadialTophatConfig(_KernelRadialConfig):
+    """Top-hat window with hard edges.
+
+    :ivar chi_lower: Lower edge, in Mpc.
+    :ivar chi_upper: Upper edge, in Mpc.
+    """
+
+    chi_lower: Annotated[float, Field(ge=0.0)] = 500.0
+    chi_upper: Annotated[float, Field(gt=0.0)] = 2500.0
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return help text for the top-hat radial window.
+
+        :return: List containing [model name, parameter description].
+        """
+        return [
+            "XcorKernelAnalyticTophat",
+            "chi_lower=500, chi_upper=2500, bessel_deriv=0",
+        ]
+
+
+class KernelRadialTophatSmoothConfig(_KernelRadialConfig):
+    """Top-hat convolved with a Gaussian, i.e. what a photometric bin looks like.
+
+    :ivar chi_lower: Lower edge of the top-hat, in Mpc.
+    :ivar chi_upper: Upper edge of the top-hat, in Mpc.
+    :ivar chi_sigma: Smoothing scale, in Mpc.
+    :ivar n_sigma: Truncation half-width beyond the edges, in units of sigma.
+    """
+
+    chi_lower: Annotated[float, Field(ge=0.0)] = 1000.0
+    chi_upper: Annotated[float, Field(gt=0.0)] = 2000.0
+    chi_sigma: Annotated[float, Field(gt=0.0)] = 150.0
+    n_sigma: Annotated[float, Field(gt=0.0)] = 6.0
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return help text for the smoothed top-hat radial window.
+
+        :return: List containing [model name, parameter description].
+        """
+        return [
+            "XcorKernelAnalyticTophatSmooth",
+            "chi_lower=1000, chi_upper=2000, chi_sigma=150, n_sigma=6",
+        ]
+
+
+class KernelRadialStudentTConfig(_KernelRadialConfig):
+    """Student-t window: non-exponential tails, as physical kernels have.
+
+    :ivar chi_mean: Window centre, in Mpc.
+    :ivar chi_scale: Window scale, in Mpc.
+    :ivar nu: Degrees of freedom, which tunes the tail exponent.
+    :ivar n_scale: Truncation half-width, in units of the scale.
+    """
+
+    chi_mean: Annotated[float, Field(gt=0.0)] = 1500.0
+    chi_scale: Annotated[float, Field(gt=0.0)] = 200.0
+    nu: Annotated[float, Field(gt=0.0)] = 2.0
+    n_scale: Annotated[float, Field(gt=0.0)] = 6.0
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return help text for the Student-t radial window.
+
+        :return: List containing [model name, parameter description].
+        """
+        return [
+            "XcorKernelAnalyticStudentT",
+            "chi_mean=1500, chi_scale=200, nu=2, n_scale=6",
+        ]
+
+
+class KernelRadialPowerExpConfig(_KernelRadialConfig):
+    """Skewed, broad window: chi^alpha exp(-(chi/chi_scale)^beta).
+
+    Covers the shapes an LSST-like dn/dz and an ISW kernel take.
+
+    :ivar chi_scale: Scale, in Mpc.
+    :ivar alpha: Power-law index.
+    :ivar beta: Exponential index.
+    :ivar chi_lower: Lower truncation, in Mpc.
+    :ivar chi_upper: Upper truncation, in Mpc.
+    """
+
+    chi_scale: Annotated[float, Field(gt=0.0)] = 1200.0
+    alpha: Annotated[float, Field(gt=0.0)] = 2.0
+    beta: Annotated[float, Field(gt=0.0)] = 1.5
+    chi_lower: Annotated[float, Field(ge=0.0)] = 50.0
+    chi_upper: Annotated[float, Field(gt=0.0)] = 4000.0
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return help text for the power-exponential radial window.
+
+        :return: List containing [model name, parameter description].
+        """
+        return [
+            "XcorKernelAnalyticPowerExp",
+            "chi_scale=1200, alpha=2, beta=1.5, chi_lower=50, chi_upper=4000",
+        ]
+
+
+class KernelRadialLensingConfig(_KernelRadialConfig):
+    """Lensing-efficiency window over a top-hat source distribution.
+
+    Broad and smoother than its source, with a hard edge at chi_lower where it
+    does not vanish -- which is why its transform decays as 1/k.
+
+    :ivar chi_lower: Observer-side edge, in Mpc.
+    :ivar chi_source_lower: Lower edge of the source distribution, in Mpc.
+    :ivar chi_source_upper: Upper edge of the source distribution, in Mpc.
+    """
+
+    chi_lower: Annotated[float, Field(ge=0.0)] = 50.0
+    chi_source_lower: Annotated[float, Field(gt=0.0)] = 2000.0
+    chi_source_upper: Annotated[float, Field(gt=0.0)] = 3000.0
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return help text for the lensing radial window.
+
+        :return: List containing [model name, parameter description].
+        """
+        return [
+            "XcorKernelAnalyticLensing",
+            "chi_lower=50, chi_source_lower=2000, chi_source_upper=3000",
+        ]
+
+
+class KernelRadialMultiConfig(_KernelRadialConfig):
+    """Several Gaussian bumps, which may overlap or be disjoint.
+
+    Bumps whose truncated supports meet form one component; disjoint ones become
+    separate components, so this is the shape that exercises disconnected support.
+
+    :ivar chi_mean: Bump centres, in Mpc.
+    :ivar chi_sigma: Bump widths, in Mpc.
+    :ivar weight: Relative bump amplitudes.
+    :ivar n_sigma: Truncation half-width, in units of sigma.
+    """
+
+    chi_mean: FloatList = [1000.0, 1600.0]
+    chi_sigma: FloatList = [300.0, 300.0]
+    weight: FloatList = [1.0, 0.6]
+    n_sigma: Annotated[float, Field(gt=0.0)] = 4.0
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return help text for the multi-bump radial window.
+
+        :return: List containing [model name, parameter description].
+        """
+        return [
+            "XcorKernelAnalyticMulti",
+            "chi_mean=1000,1600 chi_sigma=300,300 weight=1,0.6 n_sigma=4",
+        ]
+
+
 # Type alias for all kernel configuration types
 KernelConfigTypes = Union[
     KernelCMBLensingConfig,
@@ -339,6 +571,13 @@ KernelConfigTypes = Union[
     KernelNumberCountsConfig,
     KernelWeakLensingConfig,
     KernelClusterTophatConfig,
+    KernelRadialGaussConfig,
+    KernelRadialTophatConfig,
+    KernelRadialTophatSmoothConfig,
+    KernelRadialStudentTConfig,
+    KernelRadialPowerExpConfig,
+    KernelRadialLensingConfig,
+    KernelRadialMultiConfig,
 ]
 
 
@@ -350,6 +589,13 @@ KERNEL_CONFIG_REGISTRY: dict[str, Type[BaseModel]] = {
     "number-counts": KernelNumberCountsConfig,
     "weak-lensing": KernelWeakLensingConfig,
     "cluster-tophat": KernelClusterTophatConfig,
+    "radial-gauss": KernelRadialGaussConfig,
+    "radial-tophat": KernelRadialTophatConfig,
+    "radial-tophat-smooth": KernelRadialTophatSmoothConfig,
+    "radial-student-t": KernelRadialStudentTConfig,
+    "radial-power-exp": KernelRadialPowerExpConfig,
+    "radial-lensing": KernelRadialLensingConfig,
+    "radial-multi": KernelRadialMultiConfig,
 }
 
 
