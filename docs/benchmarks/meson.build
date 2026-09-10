@@ -4,6 +4,7 @@ src_site_benchmark_files = files(
     'ccl_background.qmd',
     'ccl_power_spectrum.qmd',
     'ccl_two_point.qmd',
+    'xcor_certified_projection.qmd',
 )
 
 if get_option('documentation')

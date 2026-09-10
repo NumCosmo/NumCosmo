@@ -50,7 +50,7 @@
  * interval and multipole range, keeping its allocated storage.
  *
  * See <a href="../../theory/sbessel_ode_solver.html">The Ultraspherical Spectral
- * Solver</a> for the discretisation, the truncation floor and the singular panel
+ * Solver</a> for the discretization, the truncation floor and the singular panel
  * spans, and <a href="../../theory/spectral.html">Spectral Methods</a> for the
  * ultraspherical primitives the operator is assembled from.
  *
@@ -88,10 +88,10 @@
 /*
  * Minimum number of spectral columns for the panel [@a, @b] at multipole @ell_min.
  *
- * The solution oscillates only beyond the turning point y ~ sqrt(ell(ell+1)); below it
+ * The solution oscillates only beyond the turning point x ~ sqrt(ell(ell+1)); below it
  * the spherical Bessel functions are power-law like and the solution is smooth, so few
  * coefficients suffice. Only the oscillatory part of the panel sets a resolution
- * requirement: it carries about (b - y_turn)/pi oscillations, and a Chebyshev
+ * requirement: it carries about (b - x_turn)/pi oscillations, and a Chebyshev
  * expansion needs of order two coefficients per oscillation.
  *
  * The adaptive QR may not declare convergence below this count. On a panel whose
@@ -104,8 +104,8 @@
 static inline glong
 _ncm_sbessel_min_cols (const gdouble a, const gdouble b, const gint ell_min)
 {
-  const gdouble y_turn   = sqrt (ell_min * (ell_min + 1.0));
-  const gdouble osc_from = GSL_MAX (a, y_turn);
+  const gdouble x_turn   = sqrt (ell_min * (ell_min + 1.0));
+  const gdouble osc_from = GSL_MAX (a, x_turn);
   const gdouble osc_span = b - osc_from;
 
   if (osc_span <= 0.0)
@@ -113,6 +113,23 @@ _ncm_sbessel_min_cols (const gdouble a, const gdouble b, const gint ell_min)
 
   return (glong) ceil (2.0 * osc_span / M_PI);
 }
+
+/*
+ * The floor the decay test may not stop below.
+ *
+ * Dirichlet constraint: the oscillatory span of the panel, _ncm_sbessel_min_cols().
+ * Pinned constraint: the pins must be inside the column range before the system is
+ * determined, so the floor is one past the last pin. The oscillatory floor does not
+ * apply, because the selected solution is the one the pins leave, not the one the
+ * boundary values force.
+ * Tau constraint: zero, for the same reason; what that constraint needs instead is a floor
+ * above the forcing's own order, applied per solve in _ncm_sbessel_set_solve_min_cols().
+ */
+static inline void _ncm_sbessel_update_min_cols (NcmSBesselOdeOperator *op);
+
+/* Default tau-constraint floor as a multiple of the forcing order; see solve_min_cols.
+ * Overridable per solver with ncm_sbessel_ode_solver_set_tau_floor_factor(). */
+#define NCM_SBESSEL_ODE_DEFAULT_TAU_FLOOR_FACTOR (1.1)
 
 #define ALIGNMENT 64 /* 64-byte alignment for cache lines */
 
@@ -149,25 +166,57 @@ struct _NcmSBesselOdeOperator
   gint ref_count;
 
   /* Structural parameters defining the problem configuration */
-  gdouble a;         /* Left endpoint of interval [a,b] */
-  gdouble b;         /* Right endpoint of interval [a,b] */
-  gdouble half_len;  /* Half-length h = (b-a)/2 for coordinate transformation */
-  gdouble mid_point; /* Midpoint m = (a+b)/2 for coordinate transformation */
-  gint ell_min;      /* Minimum multipole in batch */
-  gint ell_max;      /* Maximum multipole in batch */
-  guint n_ell;       /* Number of multipoles in batch: n_ell = ell_max - ell_min + 1 */
-  gdouble tolerance; /* Relative coefficient-decay tolerance */
-  glong min_cols;    /* Resolution floor: the decay test may not stop below this many
-                      * columns. Set from the oscillatory part of the panel, i.e. the
-                      * span beyond the turning point; fewer columns than that cannot
-                      * represent the solution however quiet the leading coefficients
-                      * happen to look. See _ncm_sbessel_min_cols(). */
+  gdouble a;            /* Left endpoint of interval [a,b] */
+  gdouble b;            /* Right endpoint of interval [a,b] */
+  gdouble half_len;     /* Half-length h = (b-a)/2 for coordinate transformation */
+  gdouble mid_point;    /* Midpoint m = (a+b)/2 for coordinate transformation */
+  gint ell_min;         /* Minimum multipole in batch */
+  gint ell_max;         /* Maximum multipole in batch */
+  guint n_ell;          /* Number of multipoles in batch: n_ell = ell_max - ell_min + 1 */
+  gdouble tolerance;    /* Relative coefficient-decay tolerance */
+  glong solve_min_cols; /* Floor in force for the running solve: min_cols, raised under
+                         * the tau constraint to tau_floor_factor times the forcing order.
+                         * The tau constraint has no oscillatory floor, and the decay test
+                         * does not stop later than this floor in practice, so the factor
+                         * sets the working order outright. It has to exceed one: at
+                         * exactly the forcing's order the forcing itself is not resolved.
+                         * Swept against three gates -- absolute error over the integrand
+                         * scale on synthetic panels, the Arb window table in its
+                         * tau-exercising modes, and the k-reach metric of the jl_500
+                         * tables -- all are flat from 1.05 to 2.0 and only 1.0 degrades.
+                         * See ncm_sbessel_ode_solver_set_tau_floor_factor(). */
+  glong min_cols;       /* Resolution floor: the decay test may not stop below this many
+                         * columns. Set from the oscillatory part of the panel, i.e. the
+                         * span beyond the turning point; fewer columns than that cannot
+                         * represent the solution however small the leading coefficients
+                         * happen to be. See _ncm_sbessel_min_cols(). */
+
+  /* Constraint rows: the two linear functionals that close the system. Their column
+   * patterns are, per NcmSBesselOdeConstraint:
+   *
+   * DIRICHLET (default): u(-1) = u(+1) = 0, patterns (-1)^j and 1.
+   * PINNED: <T_{pin1}, u> = <T_{pin2}, u> = 0, patterns delta_{j,pin1} and
+   * delta_{j,pin2}.
+   * TAU: both patterns identically zero, so the system is short two pivots and
+   * back-substitution closes it on the trailing coefficients, selecting the smooth
+   * member of the solution family.
+   *
+   * Each row carries two scalars (bc_at_m1, bc_at_p1) holding its coefficients of
+   * whichever pattern pair is active. Givens rotations mix those scalars the same way
+   * in every mode, so only the pattern evaluation changes. Both patterns are evaluated
+   * at every column: the pinned rows are treated as full-width rows, not as sparse
+   * ones.
+   */
+  NcmSBesselOdeConstraint constraint;
+  glong pin1;
+  glong pin2;
+  gdouble tau_floor_factor; /* Multiple of the forcing order the tau floor uses */
 
   /* Matrix storage */
   NcmSBesselOdeSolverRow *matrix_rows; /* Aligned array of NcmSBesselOdeSolverRow */
   gdouble *c;                          /* Aligned array of gdouble for right-hand side */
   /* Factorization state */
-  glong last_n_cols; /* Number of columns from last diagonalization (0 = no factorization) */
+  glong last_n_cols; /* Number of columns from the last factorization (0 = none) */
 
   /* Rotation storage - interleaved cos/sin pairs for cache efficiency
    *
@@ -197,6 +246,11 @@ struct _NcmSBesselOdeOperator
   gsize solution_batched_capacity; /* Allocated capacity of solution_batched */
   gdouble *acc_bc_at_m1;           /* Aligned array of gdouble for boundary condition accumulators at -1 */
   gdouble *acc_bc_at_p1;           /* Aligned array of gdouble for boundary condition accumulators at +1 */
+  gdouble *last_max_coeff;         /* Per-ell max |a_j| of the last back-substitution; sized with the acc arrays */
+  gdouble *last_deriv_error;       /* Per-ell sum_j j^2 |a_j| / h of the last back-substitution. The endpoint
+                                    * derivative is u'(+-1) = (1/h) sum_j (+-1)^(j+1) j^2 a_j, so eps times
+                                    * this bounds the roundoff left in u'(+-1) once the homogeneous part of
+                                    * the solution has cancelled. Sized with the acc arrays. */
   gsize acc_bc_capacity;           /* Allocated capacity of acc_bc_at_m1 and acc_bc_at_p1 */
 
   /* Per-ell adaptive convergence state. */
@@ -207,7 +261,9 @@ struct _NcmSBesselOdeOperator
 
 typedef struct _NcmSBesselOdeSolverPrivate
 {
-  gdouble tolerance; /* Default copied into newly created operators */
+  gdouble tolerance;                          /* Default copied into newly created operators */
+  NcmSBesselOdeConstraint default_constraint; /* Default copied into newly created operators */
+  gdouble tau_floor_factor;                   /* Default copied into newly created operators */
   NcmSpectral *spectral;
 } NcmSBesselOdeSolverPrivate;
 
@@ -240,15 +296,17 @@ _row_reset (NcmSBesselOdeSolverRow *row, gdouble bc_at_m1, gdouble bc_at_p1, glo
 }
 
 /* Operator row computation */
-static gdouble _ncm_sbessel_bc_row (NcmSBesselOdeSolverRow *row, glong col_index);
+static gdouble _ncm_sbessel_bc_row (const NcmSBesselOdeOperator *op, NcmSBesselOdeSolverRow *row, glong col_index);
 
 static void
 ncm_sbessel_ode_solver_init (NcmSBesselOdeSolver *solver)
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
 
-  self->tolerance = 0.0;
-  self->spectral  = ncm_spectral_new ();
+  self->tolerance          = 0.0;
+  self->default_constraint = NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET;
+  self->tau_floor_factor   = NCM_SBESSEL_ODE_DEFAULT_TAU_FLOOR_FACTOR;
+  self->spectral           = ncm_spectral_new ();
 }
 
 static void
@@ -423,9 +481,11 @@ _ensure_acc_bc_capacity (NcmSBesselOdeOperator *op, gsize required_capacity)
     if (op->acc_bc_at_p1 != NULL)
       free (op->acc_bc_at_p1);
 
-    op->acc_bc_at_m1    = new_m1;
-    op->acc_bc_at_p1    = new_p1;
-    op->acc_bc_capacity = new_capacity;
+    op->acc_bc_at_m1     = new_m1;
+    op->acc_bc_at_p1     = new_p1;
+    op->last_max_coeff   = g_renew (gdouble, op->last_max_coeff, new_capacity);
+    op->last_deriv_error = g_renew (gdouble, op->last_deriv_error, new_capacity);
+    op->acc_bc_capacity  = new_capacity;
   }
 }
 
@@ -524,21 +584,25 @@ ncm_sbessel_ode_solver_clear (NcmSBesselOdeSolver **solver)
 /* Sets the five values that configure an operator, plus everything derived from them,
  * and marks it as carrying no factorization. Shared by creation and reconfiguration. */
 static void
-_ncm_sbessel_ode_operator_configure (NcmSBesselOdeOperator *op, gdouble a, gdouble b, gint ell_min, gint ell_max, gdouble tolerance)
+_ncm_sbessel_ode_operator_configure (NcmSBesselOdeOperator *op, gdouble a, gdouble b, gint ell_min, gint ell_max, gdouble tolerance, NcmSBesselOdeConstraint constraint, gdouble tau_floor_factor)
 {
   g_assert_cmpfloat (a, <, b);
   g_assert_cmpint (ell_min, <=, ell_max);
   g_assert_cmpint (ell_min, >=, 0);
 
-  op->a         = a;
-  op->b         = b;
-  op->half_len  = (b - a) / 2.0;
-  op->mid_point = (a + b) / 2.0;
-  op->ell_min   = ell_min;
-  op->ell_max   = ell_max;
-  op->n_ell     = (guint) (ell_max - ell_min + 1);
-  op->min_cols  = _ncm_sbessel_min_cols (a, b, ell_min);
-  op->tolerance = tolerance;
+  op->a                = a;
+  op->b                = b;
+  op->half_len         = (b - a) / 2.0;
+  op->mid_point        = (a + b) / 2.0;
+  op->ell_min          = ell_min;
+  op->ell_max          = ell_max;
+  op->n_ell            = (guint) (ell_max - ell_min + 1);
+  op->tolerance        = tolerance;
+  op->constraint       = constraint;
+  op->tau_floor_factor = tau_floor_factor;
+  op->solve_min_cols   = 0;
+
+  _ncm_sbessel_update_min_cols (op);
 
   g_assert_cmpuint (op->n_ell, >, 0);
   g_assert_cmpuint (op->n_ell, <, UINT_MAX / 2); /* Prevent overflow in capacity calculations */
@@ -581,8 +645,10 @@ ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, 
 
   /* Initialize reference count */
   op->ref_count = 1;
+  op->pin1      = 0;
+  op->pin2      = 0;
 
-  _ncm_sbessel_ode_operator_configure (op, a, b, ell_min, ell_max, self->tolerance);
+  _ncm_sbessel_ode_operator_configure (op, a, b, ell_min, ell_max, self->tolerance, self->default_constraint, self->tau_floor_factor);
 
   op->matrix_rows          = NULL;
   op->c                    = NULL;
@@ -595,6 +661,8 @@ ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, 
   op->solution_batched_capacity = 0;
   op->acc_bc_at_m1              = NULL;
   op->acc_bc_at_p1              = NULL;
+  op->last_max_coeff            = NULL;
+  op->last_deriv_error          = NULL;
   op->acc_bc_capacity           = 0;
   op->max_c_A_batched           = NULL;
   op->quiet_cols_batched        = NULL;
@@ -629,7 +697,7 @@ ncm_sbessel_ode_solver_reconfigure_operator (NcmSBesselOdeSolver *solver, NcmSBe
   g_assert (op != NULL);
   g_assert (op->ref_count > 0);
 
-  _ncm_sbessel_ode_operator_configure (op, a, b, ell_min, ell_max, self->tolerance);
+  _ncm_sbessel_ode_operator_configure (op, a, b, ell_min, ell_max, self->tolerance, self->default_constraint, self->tau_floor_factor);
 }
 
 /**
@@ -688,6 +756,8 @@ ncm_sbessel_ode_operator_unref (NcmSBesselOdeOperator *op)
     if (op->acc_bc_at_p1 != NULL)
       free (op->acc_bc_at_p1);
 
+    g_free (op->last_max_coeff);
+    g_free (op->last_deriv_error);
     g_free (op->max_c_A_batched);
     g_free (op->quiet_cols_batched);
 
@@ -746,13 +816,359 @@ ncm_sbessel_ode_solver_get_tolerance (NcmSBesselOdeSolver *solver)
   return self->tolerance;
 }
 
-static gdouble
-_ncm_sbessel_bc_row (NcmSBesselOdeSolverRow *row, glong col_index)
+/*
+ * Column patterns of the two constraint functionals, per NcmSBesselOdeConstraint: T_j(-1) =
+ * (-1)^j and T_j(+1) = 1 for Dirichlet, delta_{j,pin1} and delta_{j,pin2} for pinned,
+ * identically zero for tau. See the constraint block of #_NcmSBesselOdeOperator.
+ */
+static inline gdouble
+_ncm_sbessel_bc_pat1 (const NcmSBesselOdeOperator *op, glong col_index)
 {
-  const gdouble bc_at_m1 = (col_index % 2) == 0 ? row->bc_at_m1 : -row->bc_at_m1;
-  const gdouble bc_at_p1 = row->bc_at_p1;
+  switch (op->constraint)
+  {
+    case NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET:
+      return ((col_index % 2) == 0) ? 1.0 : -1.0;
 
-  return (bc_at_m1 + bc_at_p1);
+    case NCM_SBESSEL_ODE_CONSTRAINT_PINNED:
+      return (col_index == op->pin1) ? 1.0 : 0.0;
+
+    default:
+      return 0.0;
+  }
+}
+
+static inline gdouble
+_ncm_sbessel_bc_pat2 (const NcmSBesselOdeOperator *op, glong col_index)
+{
+  switch (op->constraint)
+  {
+    case NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET:
+      return 1.0;
+
+    case NCM_SBESSEL_ODE_CONSTRAINT_PINNED:
+      return (col_index == op->pin2) ? 1.0 : 0.0;
+
+    default:
+      return 0.0;
+  }
+}
+
+/* The floor for one solve, from the right-hand side just handed in. */
+static inline glong
+_ncm_sbessel_tau_constraint_floor (const NcmSBesselOdeOperator *op, guint rhs_len)
+{
+  return (glong) ceil (op->tau_floor_factor * (gdouble) (rhs_len - NUMBER_OF_BOUNDARY_CONDITIONS));
+}
+
+static inline void
+_ncm_sbessel_set_solve_min_cols (NcmSBesselOdeOperator *op, guint rhs_len)
+{
+  op->solve_min_cols = op->min_cols;
+
+  if (op->constraint == NCM_SBESSEL_ODE_CONSTRAINT_TAU)
+  {
+    const glong forcing_floor = _ncm_sbessel_tau_constraint_floor (op, rhs_len);
+
+    op->solve_min_cols = GSL_MAX (op->solve_min_cols, forcing_floor);
+  }
+}
+
+static inline void
+_ncm_sbessel_update_min_cols (NcmSBesselOdeOperator *op)
+{
+  switch (op->constraint)
+  {
+    case NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET:
+      op->min_cols = _ncm_sbessel_min_cols (op->a, op->b, op->ell_min);
+      break;
+
+    case NCM_SBESSEL_ODE_CONSTRAINT_PINNED:
+      op->min_cols = GSL_MAX (op->pin1, op->pin2) + 1;
+      break;
+
+    default:
+      op->min_cols = 0;
+      break;
+  }
+}
+
+/**
+ * ncm_sbessel_ode_solver_set_default_constraint:
+ * @solver: a #NcmSBesselOdeSolver
+ * @constraint: the constraint new operators are created with
+ *
+ * Sets the #NcmSBesselOdeConstraint that operators created or reconfigured after this
+ * call are given. Operators that already exist keep the constraint they have until they
+ * are reconfigured. %NCM_SBESSEL_ODE_CONSTRAINT_PINNED is not accepted here, since the
+ * pins belong to one interval and one solve: set it per operator with
+ * ncm_sbessel_ode_operator_set_pinned_constraint().
+ *
+ */
+void
+ncm_sbessel_ode_solver_set_default_constraint (NcmSBesselOdeSolver *solver, NcmSBesselOdeConstraint constraint)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+
+  g_assert (constraint != NCM_SBESSEL_ODE_CONSTRAINT_PINNED);
+  g_assert_cmpint (constraint, <, NCM_SBESSEL_ODE_CONSTRAINT_LEN);
+
+  self->default_constraint = constraint;
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_default_constraint:
+ * @solver: a #NcmSBesselOdeSolver
+ *
+ * Returns: the constraint new operators are created with.
+ */
+NcmSBesselOdeConstraint
+ncm_sbessel_ode_solver_get_default_constraint (NcmSBesselOdeSolver *solver)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+
+  return self->default_constraint;
+}
+
+/**
+ * ncm_sbessel_ode_solver_set_tau_floor_factor:
+ * @solver: a #NcmSBesselOdeSolver
+ * @factor: multiple of the forcing order
+ *
+ * Sets the multiple of the forcing's own order that a %NCM_SBESSEL_ODE_CONSTRAINT_TAU solve
+ * uses as its floor, for operators created or reconfigured after this call. The tau
+ * constraint has no oscillatory floor of its own, so this is what sets its working order;
+ * the decay test does not stop later than it in practice, which makes the factor the
+ * order rather than a lower bound on it.
+ *
+ */
+void
+ncm_sbessel_ode_solver_set_tau_floor_factor (NcmSBesselOdeSolver *solver, gdouble factor)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+
+  g_assert_cmpfloat (factor, >, 0.0);
+
+  self->tau_floor_factor = factor;
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_tau_floor_factor:
+ * @solver: a #NcmSBesselOdeSolver
+ *
+ * Returns: the tau-constraint floor factor new operators are created with.
+ */
+gdouble
+ncm_sbessel_ode_solver_get_tau_floor_factor (NcmSBesselOdeSolver *solver)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+
+  return self->tau_floor_factor;
+}
+
+/**
+ * ncm_sbessel_ode_operator_set_constraint:
+ * @op: a #NcmSBesselOdeOperator
+ * @constraint: the constraint to use
+ *
+ * Sets the constraint of this operator alone, overriding what it inherited from the
+ * solver. The stored factorization is discarded and the resolution floor recomputed.
+ *
+ * All three constraints pick a member of the same solution family, and the boundary
+ * functional of the Levin reduction is invariant under the choice, so the panel
+ * integral is unchanged; what changes is which member has to be represented, and hence
+ * how many coefficients the solve needs. %NCM_SBESSEL_ODE_CONSTRAINT_PINNED needs its two
+ * indices and is set by ncm_sbessel_ode_operator_set_pinned_constraint() instead.
+ *
+ */
+void
+ncm_sbessel_ode_operator_set_constraint (NcmSBesselOdeOperator *op, NcmSBesselOdeConstraint constraint)
+{
+  g_assert (constraint != NCM_SBESSEL_ODE_CONSTRAINT_PINNED);
+  g_assert_cmpint (constraint, <, NCM_SBESSEL_ODE_CONSTRAINT_LEN);
+
+  if (op->constraint == constraint)
+    return;
+
+  op->constraint  = constraint;
+  op->last_n_cols = 0;
+
+  _ncm_sbessel_update_min_cols (op);
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_constraint:
+ * @op: a #NcmSBesselOdeOperator
+ *
+ * Returns: the constraint @op uses. Under %NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET alone does
+ * $u$ vanish at the panel ends, so the other two require the general boundary
+ * functional, with the $u$ term kept.
+ */
+NcmSBesselOdeConstraint
+ncm_sbessel_ode_operator_get_constraint (NcmSBesselOdeOperator *op)
+{
+  return op->constraint;
+}
+
+/**
+ * ncm_sbessel_ode_operator_set_pinned_constraint:
+ * @op: a #NcmSBesselOdeOperator
+ * @pin1: index of the first pinned Chebyshev coefficient
+ * @pin2: index of the second pinned Chebyshev coefficient
+ *
+ * Puts @op on %NCM_SBESSEL_ODE_CONSTRAINT_PINNED, closing the system with $\langle
+ * T_{@pin1}, u\rangle = \langle T_{@pin2}, u\rangle = 0$ instead of the Dirichlet data
+ * $u(x_a) = u(x_b) = 0$.
+ *
+ * The pins must be distinct. The resolution floor is raised to one past the last pin,
+ * since below that the pinned rows are still empty and the system is short two pivots.
+ * The stored factorization is discarded.
+ *
+ */
+void
+ncm_sbessel_ode_operator_set_pinned_constraint (NcmSBesselOdeOperator *op, glong pin1, glong pin2)
+{
+  g_assert_cmpint (pin1, >=, 0);
+  g_assert_cmpint (pin2, >=, 0);
+  g_assert_cmpint (pin1, !=, pin2);
+
+  op->constraint  = NCM_SBESSEL_ODE_CONSTRAINT_PINNED;
+  op->pin1        = pin1;
+  op->pin2        = pin2;
+  op->last_n_cols = 0;
+
+  _ncm_sbessel_update_min_cols (op);
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_pins:
+ * @op: a #NcmSBesselOdeOperator
+ * @pin1: (out) (optional): index of the first pinned coefficient
+ * @pin2: (out) (optional): index of the second pinned coefficient
+ *
+ * Reads back the indices last given to ncm_sbessel_ode_operator_set_pinned_constraint(),
+ * both zero if it was never called. They act only while
+ * ncm_sbessel_ode_operator_get_constraint() is %NCM_SBESSEL_ODE_CONSTRAINT_PINNED.
+ *
+ */
+void
+ncm_sbessel_ode_operator_get_pins (NcmSBesselOdeOperator *op, glong *pin1, glong *pin2)
+{
+  if (pin1 != NULL)
+    *pin1 = op->pin1;
+
+  if (pin2 != NULL)
+    *pin2 = op->pin2;
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_last_max_coeff:
+ * @op: a #NcmSBesselOdeOperator
+ * @ell_idx: index of the multipole within the block
+ *
+ * Largest $|a_j|$ produced by the last back-substitution for that multipole. Under
+ * %NCM_SBESSEL_ODE_CONSTRAINT_TAU a value far above the forcing's own scale
+ * $\max|yF| / \min|x^2 - \nu^2|$ means the solve admitted homogeneous content, and
+ * the panel must be redone with Dirichlet data.
+ *
+ * Returns: $\max_j |a_j|$ of the last solve.
+ */
+gdouble
+ncm_sbessel_ode_operator_get_last_max_coeff (NcmSBesselOdeOperator *op, guint ell_idx)
+{
+  g_assert (op->last_max_coeff != NULL);
+  g_assert_cmpuint (ell_idx, <, op->acc_bc_capacity);
+
+  return op->last_max_coeff[ell_idx];
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_last_deriv_error:
+ * @op: a #NcmSBesselOdeOperator
+ * @ell_idx: index of the multipole within the block
+ *
+ * Bound on the roundoff left in the endpoint derivatives of the last solve for that
+ * multipole: $\sum_j j^2 |a_j| / h$, which multiplied by the machine epsilon bounds
+ * the absolute error of $u'(x_a)$ and $u'(x_b)$. Those are formed as $u'(\pm 1) =
+ * (1/h)\sum_j (\pm 1)^{j+1} j^2 a_j$, and under %NCM_SBESSEL_ODE_CONSTRAINT_TAU any
+ * homogeneous content the truncation admitted cancels in that sum, exactly but not in
+ * floating point --- so this is what survives, and it is what limits the accuracy of a
+ * boundary functional built from the derivatives.
+ *
+ * Measured against a reference on panels carrying admitted homogeneous content, the
+ * bound is 2 to 27 times above the realized error over 84 orders of magnitude, and
+ * never below it. It accounts for that error alone: on a panel where the constraint is
+ * valid the error is dominated by the forcing's own fit instead, and this quantity is
+ * far smaller than it.
+ *
+ * Returns: $\sum_j j^2 |a_j| / h$ of the last solve.
+ */
+gdouble
+ncm_sbessel_ode_operator_get_last_deriv_error (NcmSBesselOdeOperator *op, guint ell_idx)
+{
+  g_assert (op->last_deriv_error != NULL);
+  g_assert_cmpuint (ell_idx, <, op->acc_bc_capacity);
+
+  return op->last_deriv_error[ell_idx];
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_tau_constraint_order:
+ * @op: a #NcmSBesselOdeOperator
+ * @rhs_len: length of the right-hand side, boundary rows included
+ *
+ * Number of coefficients a %NCM_SBESSEL_ODE_CONSTRAINT_TAU solve of a right-hand side
+ * with @rhs_len entries uses at least: the larger of the operator's minimum and the
+ * forcing floor.
+ *
+ * Returns: the minimum working order of that solve.
+ */
+glong
+ncm_sbessel_ode_operator_get_tau_constraint_order (NcmSBesselOdeOperator *op, guint rhs_len)
+{
+  return GSL_MAX (op->min_cols, _ncm_sbessel_tau_constraint_floor (op, rhs_len));
+}
+
+/**
+ * ncm_sbessel_ode_operator_set_min_cols:
+ * @op: a #NcmSBesselOdeOperator
+ * @min_cols: resolution floor, or a negative value to restore the derived one
+ *
+ * Overrides the floor the decay test may not stop below. Experimental: with
+ * %NCM_SBESSEL_ODE_CONSTRAINT_PINNED and a floor of zero the test may stop before the
+ * pinned columns have entered the system, in which case the pins never act and the
+ * solve is closed by whatever back-substitution assigns to the trailing coefficients,
+ * which is %NCM_SBESSEL_ODE_CONSTRAINT_TAU by another route. The stored factorization is
+ * discarded.
+ *
+ */
+void
+ncm_sbessel_ode_operator_set_min_cols (NcmSBesselOdeOperator *op, glong min_cols)
+{
+  if (min_cols < 0)
+    _ncm_sbessel_update_min_cols (op);
+  else
+    op->min_cols = min_cols;
+
+  op->last_n_cols = 0;
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_min_cols:
+ * @op: a #NcmSBesselOdeOperator
+ *
+ * Returns: the resolution floor the decay test may not stop below.
+ */
+glong
+ncm_sbessel_ode_operator_get_min_cols (NcmSBesselOdeOperator *op)
+{
+  return op->min_cols;
+}
+
+static gdouble
+_ncm_sbessel_bc_row (const NcmSBesselOdeOperator *op, NcmSBesselOdeSolverRow *row, glong col_index)
+{
+  return row->bc_at_m1 * _ncm_sbessel_bc_pat1 (op, col_index) +
+         row->bc_at_p1 * _ncm_sbessel_bc_pat2 (op, col_index);
 }
 
 /**
@@ -1018,10 +1434,10 @@ _compute_inv_hypot (gdouble a, gdouble b)
  */
 static inline __attribute__ ((hot)) void
 
-_ncm_sbessel_apply_givens (glong pivot_col, NcmSBesselOdeSolverRow * restrict r1, NcmSBesselOdeSolverRow * restrict r2, gdouble * restrict c1, gdouble * restrict c2, gdouble * restrict rot_ptr)
+_ncm_sbessel_apply_givens (const NcmSBesselOdeOperator *op, glong pivot_col, NcmSBesselOdeSolverRow * restrict r1, NcmSBesselOdeSolverRow * restrict r2, gdouble * restrict c1, gdouble * restrict c2, gdouble * restrict rot_ptr)
 {
-  const gdouble a_val    = r1->data[0] + _ncm_sbessel_bc_row (r1, pivot_col);
-  const gdouble b_val    = r2->data[0] + _ncm_sbessel_bc_row (r2, pivot_col);
+  const gdouble a_val    = r1->data[0] + _ncm_sbessel_bc_row (op, r1, pivot_col);
+  const gdouble b_val    = r2->data[0] + _ncm_sbessel_bc_row (op, r2, pivot_col);
   const gdouble inv_norm = _compute_inv_hypot (a_val, b_val);
 
   if (__builtin_expect ((inv_norm > 1.0e100), 0))
@@ -1134,7 +1550,7 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
                                 gdouble *max_c_A, guint *quiet_cols)
 {
   NcmSBesselOdeSolverRow *row = &op->matrix_rows[col];
-  const gdouble diag          = row->data[0] + _ncm_sbessel_bc_row (row, col);
+  const gdouble diag          = row->data[0] + _ncm_sbessel_bc_row (op, row, col);
   const gdouble c_col         = op->c[col];
   const gdouble Acol          = fabs (c_col / diag);
 
@@ -1151,7 +1567,7 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
       *quiet_cols = 0;
   }
 
-  return (*quiet_cols >= ROWS_TO_ROTATE + 1) && (col + 1 >= op->min_cols);
+  return (*quiet_cols >= ROWS_TO_ROTATE + 1) && (col + 1 >= op->solve_min_cols);
 }
 
 /**
@@ -1209,7 +1625,7 @@ _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, gu
   {
     const glong row_idx         = col * n_ell + l_idx;
     NcmSBesselOdeSolverRow *row = &op->matrix_rows[row_idx];
-    const gdouble diag          = row->data[0] + _ncm_sbessel_bc_row (row, col);
+    const gdouble diag          = row->data[0] + _ncm_sbessel_bc_row (op, row, col);
     const gdouble c_col         = op->c[row_idx];
     const gdouble Acol          = fabs (c_col / diag);
 
@@ -1231,7 +1647,7 @@ _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, gu
       converged_lanes++;
   }
 
-  return (converged_lanes == n_ell) && (col + 1 >= op->min_cols);
+  return (converged_lanes == n_ell) && (col + 1 >= op->solve_min_cols);
 }
 
 /**
@@ -1429,7 +1845,7 @@ _ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArr
  * @solution_order: initial solution order
  *
  * Sets up the first ROWS_TO_ROTATE rows (boundary conditions) and initializes the RHS
- * vector. This function is called only when starting a fresh diagonalization.
+ * vector. This function is called only when starting a fresh factorization.
  *
  */
 static void
@@ -1463,15 +1879,15 @@ _ncm_sbessel_ode_solver_setup_initial_rows (NcmSBesselOdeOperator *op, GArray *r
 static inline guint
 _ncm_sbessel_initial_solution_order (NcmSBesselOdeOperator *op, guint rhs_len)
 {
-  return MAX (rhs_len * 2, (guint) op->min_cols + ROWS_TO_ROTATE + 2);
+  return MAX (rhs_len * 2, (guint) op->solve_min_cols + ROWS_TO_ROTATE + 2);
 }
 
 /**
- * _ncm_sbessel_ode_operator_diagonalize:
+ * _ncm_sbessel_ode_operator_factorize:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
  * @rhs: endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
  *
- * Diagonalizes the operator using adaptive QR decomposition. This function applies
+ * Factorizes the operator using adaptive QR decomposition. This function applies
  * Givens rotations to transform the system into upper triangular form and applies the
  * same rotations to the RHS vector. The transformed RHS is stored in op->c and the
  * upper triangular matrix is stored in op->matrix_rows.
@@ -1479,10 +1895,14 @@ _ncm_sbessel_initial_solution_order (NcmSBesselOdeOperator *op, guint rhs_len)
  * Returns: the effective number of columns used (may be less than rhs_len due to convergence)
  */
 static glong
-_ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
+_ncm_sbessel_ode_operator_factorize (NcmSBesselOdeOperator *op, GArray *rhs)
 {
-  const guint rhs_len            = rhs->len;
-  guint solution_order           = _ncm_sbessel_initial_solution_order (op, rhs_len);
+  const guint rhs_len = rhs->len;
+  guint solution_order;
+
+  _ncm_sbessel_set_solve_min_cols (op, rhs_len);
+  solution_order = _ncm_sbessel_initial_solution_order (op, rhs_len);
+
   const guint max_solution_order = 1 << 24;
   const gdouble *rhs_data        = (gdouble *) rhs->data;
   gboolean converged             = FALSE;
@@ -1532,7 +1952,7 @@ _ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
       gdouble *c2                = &op->c[r2_index];
       gdouble *rot_ptr           = &op->rotation_params[2 * rot_idx];
 
-      _ncm_sbessel_apply_givens (col, r1, r2, c1, c2, rot_ptr);
+      _ncm_sbessel_apply_givens (op, col, r1, r2, c1, c2, rot_ptr);
     }
 
     /* Check storage */
@@ -1574,7 +1994,7 @@ _ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
         gdouble *c2                = &op->c[r2_index];
         gdouble *rot_ptr           = &op->rotation_params[2 * rot_idx];
 
-        _ncm_sbessel_apply_givens (col, r1, r2, c1, c2, rot_ptr);
+        _ncm_sbessel_apply_givens (op, col, r1, r2, c1, c2, rot_ptr);
       }
 
       /* Check storage */
@@ -1591,12 +2011,15 @@ _ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
 
   /* Warn if we exhausted max_solution_order without convergence */
   if ((solution_order >= max_solution_order) && (quiet_cols < ROWS_TO_ROTATE + 1))
-    g_warning ("_ncm_sbessel_ode_operator_diagonalize: "
+    g_warning ("_ncm_sbessel_ode_operator_factorize: "
                "reached max_solution_order=%u without convergence (quiet_cols=%u, needed %d). "
                "Results may be inaccurate.",
                max_solution_order, quiet_cols, ROWS_TO_ROTATE + 1);
 
-  op->last_n_cols = col;
+  /* Rotations depend on the operator rows only, never on the right-hand side, so a
+   * solve that converges before the stored columns run out must not shrink the
+   * record: the next longer forcing would recompute rotations it already has. */
+  op->last_n_cols = GSL_MAX (op->last_n_cols, col);
 
   return col;
 }
@@ -1604,11 +2027,11 @@ _ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
 /**
  * _ncm_sbessel_ode_solver_build_solution:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
- * @n_cols: number of columns in the solution (from diagonalization)
+ * @n_cols: number of columns in the solution (from factorization)
  * @solution: (out): output array for solution coefficients
  *
  * Builds the full Chebyshev coefficient solution by back-substitution on the upper
- * triangular system. Assumes _ncm_sbessel_ode_operator_diagonalize has been called
+ * triangular system. Assumes _ncm_sbessel_ode_operator_factorize has been called
  * first.
  *
  */
@@ -1617,6 +2040,8 @@ _ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeOperator *op, glong n_cols,
 {
   gdouble acc_bc_at_m1 = 0.0;
   gdouble acc_bc_at_p1 = 0.0;
+  gdouble maxabs       = 0.0;
+  gdouble deriv_error  = 0.0;
   gdouble * restrict sol_ptr;
   glong row;
 
@@ -1628,7 +2053,7 @@ _ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeOperator *op, glong n_cols,
   {
     NcmSBesselOdeSolverRow *r = &op->matrix_rows[row];
     gdouble sum               = op->c[row];
-    const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (r, row);
+    const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (op, r, row);
     gdouble sol;
     glong j;
 
@@ -1647,10 +2072,16 @@ _ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeOperator *op, glong n_cols,
 
     sol          = sum / diag;
     sol_ptr[row] = sol;
+    maxabs       = GSL_MAX (maxabs, fabs (sol));
+    deriv_error += ((gdouble) row) * ((gdouble) row) * fabs (sol);
 
-    acc_bc_at_m1 += (row % 2 == 0 ? 1.0 : -1.0) * sol;
-    acc_bc_at_p1 += sol;
+    acc_bc_at_m1 += _ncm_sbessel_bc_pat1 (op, row) * sol;
+    acc_bc_at_p1 += _ncm_sbessel_bc_pat2 (op, row) * sol;
   }
+
+  _ensure_acc_bc_capacity (op, 1);
+  op->last_max_coeff[0]   = maxabs;
+  op->last_deriv_error[0] = deriv_error / op->half_len;
 
   g_array_set_size (solution, n_cols);
 }
@@ -1659,17 +2090,17 @@ _ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeOperator *op, glong n_cols,
  * _ncm_sbessel_ode_solver_compute_endpoints:
  * @solver: a #NcmSBesselOdeSolver
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
- * @n_cols: number of columns in the solution (from diagonalization)
+ * @n_cols: number of columns in the solution (from factorization)
  * @endpoints: (out callee-allocates) (element-type gdouble): output array for endpoint
  * derivatives and error estimate
  *
  * Computes endpoint derivatives u'(a) and u'(b) and error estimate directly from the
- * diagonalized system without building the full solution vector. This is much more
+ * factorized system without building the full solution vector. This is much more
  * efficient when only endpoint information is needed, as it computes coefficients
  * on-the-fly during back-substitution and accumulates their contributions to the
  * derivatives without storing the full coefficient array.
  *
- * Assumes _ncm_sbessel_ode_operator_diagonalize has been called first.
+ * Assumes _ncm_sbessel_ode_operator_factorize has been called first.
  *
  */
 static void
@@ -1678,6 +2109,7 @@ _ncm_sbessel_ode_solver_compute_endpoints (NcmSBesselOdeOperator *op, glong n_co
   const gdouble h        = op->half_len;
   gdouble acc_bc_at_m1   = 0.0;
   gdouble acc_bc_at_p1   = 0.0;
+  gdouble maxabs         = 0.0;
   gdouble deriv_at_m1    = 0.0; /* u'(-1) accumulator */
   gdouble deriv_at_p1    = 0.0; /* u'(+1) accumulator */
   gdouble error_estimate = 0.0; /* error accumulator */
@@ -1692,7 +2124,7 @@ _ncm_sbessel_ode_solver_compute_endpoints (NcmSBesselOdeOperator *op, glong n_co
   {
     NcmSBesselOdeSolverRow *r = &op->matrix_rows[row];
     gdouble sum               = op->c[row];
-    const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (r, row);
+    const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (op, r, row);
     const gdouble row_sign    = (row % 2) == 0 ? 1.0 : -1.0;
     const gdouble kd          = (gdouble) row;
     const gdouble k_squared   = kd * kd;
@@ -1723,14 +2155,15 @@ _ncm_sbessel_ode_solver_compute_endpoints (NcmSBesselOdeOperator *op, glong n_co
     sum -= acc_bc_at_m1 * r->bc_at_m1;
     sum -= acc_bc_at_p1 * r->bc_at_p1;
 
-    c_k = sum / diag;
+    c_k    = sum / diag;
+    maxabs = GSL_MAX (maxabs, fabs (c_k));
 
     /* Store coefficient in circular buffer for future back-substitution steps */
     sol_buf[buffer_pos] = c_k;
 
     /* Update boundary condition accumulators for next iteration */
-    acc_bc_at_m1 += row_sign * c_k;
-    acc_bc_at_p1 += c_k;
+    acc_bc_at_m1 += _ncm_sbessel_bc_pat1 (op, row) * c_k;
+    acc_bc_at_p1 += _ncm_sbessel_bc_pat2 (op, row) * c_k;
 
     /* Accumulate derivative contributions:
      * dy/dt|_{t=-1} = sum_k k^2 * (-1)^(k+1) * c_k
@@ -1746,6 +2179,10 @@ _ncm_sbessel_ode_solver_compute_endpoints (NcmSBesselOdeOperator *op, glong n_co
   g_array_index (endpoints, gdouble, 0) = deriv_at_m1 / h;    /* u'(a) = u'(-1) / h */
   g_array_index (endpoints, gdouble, 1) = deriv_at_p1 / h;    /* u'(b) = u'(+1) / h */
   g_array_index (endpoints, gdouble, 2) = error_estimate / h; /* error estimate */
+
+  _ensure_acc_bc_capacity (op, 1);
+  op->last_max_coeff[0]   = maxabs;
+  op->last_deriv_error[0] = error_estimate / h;
 
   g_free (sol_buf);
 }
@@ -1783,7 +2220,7 @@ _ncm_sbessel_apply_rotations_batched (NcmSBesselOdeOperator *op, glong col, guin
       gdouble *c2                = &op->c[r2_idx_batch];
       gdouble *rot_ptr           = &op->rotation_params[2 * rot_idx];
 
-      _ncm_sbessel_apply_givens (col, r1, r2, c1, c2, rot_ptr);
+      _ncm_sbessel_apply_givens (op, col, r1, r2, c1, c2, rot_ptr);
     }
   }
 }
@@ -1797,7 +2234,7 @@ _ncm_sbessel_apply_rotations_batched (NcmSBesselOdeOperator *op, glong col, guin
  *
  * Sets up the first ROWS_TO_ROTATE rows (boundary conditions) for all ell values and
  * initializes the RHS vectors. This function is called only when starting a fresh
- * diagonalization in batched mode.
+ * factorization in batched mode.
  *
  */
 static void
@@ -1829,13 +2266,13 @@ _ncm_sbessel_ode_operator_setup_initial_rows_batched (NcmSBesselOdeOperator *op,
 }
 
 /**
- * _ncm_sbessel_ode_operator_diagonalize_batched:
+ * _ncm_sbessel_ode_operator_factorize_batched:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
  * @n_ell: number of ell values to process
  * @rhs: (element-type gdouble): endpoint data followed by $C^{(2)}$ coefficients of $x
  * f(x)$
  *
- * Diagonalizes the operator using adaptive QR decomposition for multiple ell values.
+ * Factorizes the operator using adaptive QR decomposition for multiple ell values.
  * This function applies Givens rotations to transform the system into upper triangular
  * form and applies the same rotations to the RHS vectors. The transformed RHS is
  * stored in op->c and the upper triangular matrix is stored in op->matrix_rows.
@@ -1845,10 +2282,14 @@ _ncm_sbessel_ode_operator_setup_initial_rows_batched (NcmSBesselOdeOperator *op,
  */
 static inline __attribute__ ((always_inline)) glong
 
-_ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const guint n_ell, GArray *rhs)
+_ncm_sbessel_ode_operator_factorize_batched (NcmSBesselOdeOperator *op, const guint n_ell, GArray *rhs)
 {
-  const guint rhs_len            = rhs->len;
-  guint solution_order           = _ncm_sbessel_initial_solution_order (op, rhs_len);
+  const guint rhs_len = rhs->len;
+  guint solution_order;
+
+  _ncm_sbessel_set_solve_min_cols (op, rhs_len);
+  solution_order = _ncm_sbessel_initial_solution_order (op, rhs_len);
+
   const guint max_solution_order = 1 << 24;
   const gint ell_min             = op->ell_min;
   const gdouble *rhs_data        = (gdouble *) rhs->data;
@@ -1976,13 +2417,16 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
         unconverged_lanes++;
     }
 
-    g_warning ("_ncm_sbessel_ode_operator_diagonalize_batched: "
+    g_warning ("_ncm_sbessel_ode_operator_factorize_batched: "
                "reached max_solution_order=%u with %u of %u ell lanes unconverged. "
                "Results may be inaccurate.",
                max_solution_order, unconverged_lanes, n_ell);
   }
 
-  op->last_n_cols = col;
+  /* Rotations depend on the operator rows only, never on the right-hand side, so a
+   * solve that converges before the stored columns run out must not shrink the
+   * record: the next longer forcing would recompute rotations it already has. */
+  op->last_n_cols = GSL_MAX (op->last_n_cols, col);
 
   return col;
 }
@@ -1990,12 +2434,12 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
 /**
  * _ncm_sbessel_ode_operator_build_solution_batched:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
- * @n_cols: number of columns in the solution (from diagonalization)
+ * @n_cols: number of columns in the solution (from factorization)
  * @n_ell: number of ell values
  * @solutions: output array of solution matrices
  *
  * Builds the full Chebyshev coefficient solution by back-substitution on the upper
- * triangular system. Assumes _ncm_sbessel_ode_operator_diagonalize_batched has been
+ * triangular system. Assumes _ncm_sbessel_ode_operator_factorize_batched has been
  * called first.
  *
  * Returns: (transfer full): solution matrix where each row is the solution for one ell
@@ -2017,8 +2461,10 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
 
   for (l_idx = 0; l_idx < n_ell; l_idx++)
   {
-    op->acc_bc_at_m1[l_idx] = 0.0;
-    op->acc_bc_at_p1[l_idx] = 0.0;
+    op->acc_bc_at_m1[l_idx]     = 0.0;
+    op->acc_bc_at_p1[l_idx]     = 0.0;
+    op->last_max_coeff[l_idx]   = 0.0;
+    op->last_deriv_error[l_idx] = 0.0;
   }
 
   g_array_set_size (solutions, (n_cols + TOTAL_BANDWIDTH) * n_ell);
@@ -2029,7 +2475,6 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
   for (row = n_cols - 1; row >= 0; row--)
   {
     const glong row_base_idx = row * n_ell;
-    const gdouble row_sign   = (row % 2) == 0 ? 1.0 : -1.0;
 
     #pragma omp simd
 
@@ -2041,7 +2486,7 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
       const glong base_sol_idx                  = l_idx * n_cols;
       const gdouble * restrict sol_row          = &sol_data[base_sol_idx];
       gdouble sum                               = op->c[row_idx];
-      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row ((NcmSBesselOdeSolverRow *) r, row);
+      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row (op, (NcmSBesselOdeSolverRow *) r, row);
       gdouble sol;
 
       g_assert_cmpuint (r->col_index, ==, row); /* Banded matrix */
@@ -2061,11 +2506,18 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
 
       sol                          = sum / diag;
       sol_data[base_sol_idx + row] = sol;
+      op->last_max_coeff[l_idx]    = GSL_MAX (op->last_max_coeff[l_idx], fabs (sol));
 
-      op->acc_bc_at_m1[l_idx] += row_sign * sol;
-      op->acc_bc_at_p1[l_idx] += sol;
+      op->last_deriv_error[l_idx] += ((gdouble) row) * ((gdouble) row) * fabs (sol);
+      op->acc_bc_at_m1[l_idx]     += _ncm_sbessel_bc_pat1 (op, row) * sol;
+      op->acc_bc_at_p1[l_idx]     += _ncm_sbessel_bc_pat2 (op, row) * sol;
     }
   }
+
+  #pragma omp simd
+
+  for (l_idx = 0; l_idx < n_ell; l_idx++)
+    op->last_deriv_error[l_idx] /= op->half_len;
 
   g_array_set_size (solutions, (n_cols) * n_ell);
 }
@@ -2073,12 +2525,12 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
 /**
  * _ncm_sbessel_ode_solver_compute_endpoints_batched:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
- * @n_cols: number of columns in the solution (from diagonalization)
+ * @n_cols: number of columns in the solution (from factorization)
  * @n_ell: number of ell values
  * @endpoints: (out): matrix with 3 columns per ell: [u'(a), u'(b), error]
  *
  * Computes endpoint derivatives u'(a) and u'(b) and error estimates directly from the
- * diagonalized system without building the full solution matrix. This is much more
+ * factorized system without building the full solution matrix. This is much more
  * efficient when only endpoint information is needed, as it computes coefficients
  * on-the-fly during back-substitution and accumulates their contributions to the
  * derivatives without storing the full coefficient array.
@@ -2087,7 +2539,7 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
  * have at least n_ell rows and exactly 3 columns. Each row corresponds to one ell
  * value, with columns for u'(a), u'(b), and error estimate.
  *
- * Assumes _ncm_sbessel_ode_operator_diagonalize_batched has been called first.
+ * Assumes _ncm_sbessel_ode_operator_factorize_batched has been called first.
  *
  * Returns: (transfer full): matrix with 3 columns per ell: [u'(a), u'(b), error]
  */
@@ -2127,8 +2579,10 @@ _ncm_sbessel_ode_operator_compute_endpoints_batched (NcmSBesselOdeOperator *op, 
 
   for (l_idx = 0; l_idx < n_ell; l_idx++)
   {
-    op->acc_bc_at_m1[l_idx] = 0.0;
-    op->acc_bc_at_p1[l_idx] = 0.0;
+    op->acc_bc_at_m1[l_idx]     = 0.0;
+    op->acc_bc_at_p1[l_idx]     = 0.0;
+    op->last_max_coeff[l_idx]   = 0.0;
+    op->last_deriv_error[l_idx] = 0.0;
   }
 
   /* Back-substitution: compute coefficients and accumulate derivative contributions */
@@ -2159,7 +2613,7 @@ _ncm_sbessel_ode_operator_compute_endpoints_batched (NcmSBesselOdeOperator *op, 
       const glong base_buffer_idx               = l_idx * TOTAL_BANDWIDTH;
       const gdouble * restrict sol_buf          = &op->solution_batched[base_buffer_idx];
       gdouble sum                               = op->c[row_idx];
-      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row ((NcmSBesselOdeSolverRow *) r, row);
+      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row (op, (NcmSBesselOdeSolverRow *) r, row);
       gdouble c_k;
 
       g_assert_cmpuint (r->col_index, ==, row); /* Banded matrix */
@@ -2176,14 +2630,15 @@ _ncm_sbessel_ode_operator_compute_endpoints_batched (NcmSBesselOdeOperator *op, 
       sum -= op->acc_bc_at_m1[l_idx] * r->bc_at_m1;
       sum -= op->acc_bc_at_p1[l_idx] * r->bc_at_p1;
 
-      c_k = sum / diag;
+      c_k                       = sum / diag;
+      op->last_max_coeff[l_idx] = GSL_MAX (op->last_max_coeff[l_idx], fabs (c_k));
 
       /* Store coefficient in circular buffer for future back-substitution steps */
       op->solution_batched[base_buffer_idx + buffer_pos] = c_k;
 
       /* Update boundary condition accumulators for next iteration */
-      op->acc_bc_at_m1[l_idx] += row_sign * c_k;
-      op->acc_bc_at_p1[l_idx] += c_k;
+      op->acc_bc_at_m1[l_idx] += _ncm_sbessel_bc_pat1 (op, row) * c_k;
+      op->acc_bc_at_p1[l_idx] += _ncm_sbessel_bc_pat2 (op, row) * c_k;
 
       /* Accumulate derivative contributions:
        * du/dt|_{t=-1} = sum_k k^2 * (-1)^(k+1) * c_k
@@ -2203,6 +2658,8 @@ _ncm_sbessel_ode_operator_compute_endpoints_batched (NcmSBesselOdeOperator *op, 
     endp_data[l_idx * 3 + 0] /= h; /* u'(a) = u'(-1) / h */
     endp_data[l_idx * 3 + 1] /= h; /* u'(b) = u'(+1) / h */
     endp_data[l_idx * 3 + 2] /= h; /* error estimate */
+
+    op->last_deriv_error[l_idx] = endp_data[l_idx * 3 + 2];
   }
 }
 
@@ -2265,14 +2722,15 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
 
   for (l_idx = 0; l_idx < n_ell; l_idx++)
   {
-    op->acc_bc_at_m1[l_idx] = 0.0;
-    op->acc_bc_at_p1[l_idx] = 0.0;
+    op->acc_bc_at_m1[l_idx]     = 0.0;
+    op->acc_bc_at_p1[l_idx]     = 0.0;
+    op->last_max_coeff[l_idx]   = 0.0;
+    op->last_deriv_error[l_idx] = 0.0;
   }
 
   for (row = n_cols - 1; row >= 0; row--)
   {
     const glong row_base_idx = row * n_ell;
-    const gdouble row_sign   = (row % 2) == 0 ? 1.0 : -1.0;
     const glong buffer_pos   = row % TOTAL_BANDWIDTH;
     const glong buf_pos_1    = (row + 1) % TOTAL_BANDWIDTH;
     const glong buf_pos_2    = (row + 2) % TOTAL_BANDWIDTH;
@@ -2295,7 +2753,7 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
       const NcmSBesselOdeSolverRow * restrict r = &op->matrix_rows[row_idx];
       const gdouble * restrict r_data           = r->data;
       gdouble sum                               = op->c[row_idx];
-      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row ((NcmSBesselOdeSolverRow *) r, row);
+      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row (op, (NcmSBesselOdeSolverRow *) r, row);
       gdouble c_k;
 
       g_assert_cmpuint (r->col_index, ==, row);
@@ -2313,8 +2771,10 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
 
       c_k                                              = sum / diag;
       op->solution_batched[buffer_pos * n_ell + l_idx] = c_k;
-      op->acc_bc_at_m1[l_idx]                         += row_sign * c_k;
-      op->acc_bc_at_p1[l_idx]                         += c_k;
+      op->last_max_coeff[l_idx]                        = GSL_MAX (op->last_max_coeff[l_idx], fabs (c_k));
+      op->last_deriv_error[l_idx]                     += ((gdouble) row) * ((gdouble) row) * fabs (c_k);
+      op->acc_bc_at_m1[l_idx]                         += _ncm_sbessel_bc_pat1 (op, row) * c_k;
+      op->acc_bc_at_p1[l_idx]                         += _ncm_sbessel_bc_pat2 (op, row) * c_k;
       value_data[4 * l_idx + 0]                       += w0 * c_k;
       value_data[4 * l_idx + 1]                       += dw0 * c_k;
       value_data[4 * l_idx + 2]                       += w1 * c_k;
@@ -2326,8 +2786,9 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
 
   for (l_idx = 0; l_idx < n_ell; l_idx++)
   {
-    value_data[4 * l_idx + 1] /= h;
-    value_data[4 * l_idx + 3] /= h;
+    value_data[4 * l_idx + 1]   /= h;
+    value_data[4 * l_idx + 3]   /= h;
+    op->last_deriv_error[l_idx] /= h;
   }
 }
 
@@ -2342,7 +2803,7 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
  * Internal batched solver implementation. Can be specialized at compile time when
  * n_ell is known at compile time for better optimization.
  *
- * This function uses the factored implementation: first diagonalizes the operator,
+ * This function uses the factored implementation: first factorizes the operator,
  * then builds the full solution.
  *
  * Returns: (transfer full): solution matrix where each row is the solution for one ell
@@ -2352,8 +2813,8 @@ static inline __attribute__ ((always_inline)) void
 
 _ncm_sbessel_ode_operator_solve_batched_internal (NcmSBesselOdeOperator *op, GArray *rhs, const guint n_ell, GArray *solutions)
 {
-  /* Step 1: Diagonalize the operator using QR decomposition */
-  const glong n_cols = _ncm_sbessel_ode_operator_diagonalize_batched (op, n_ell, rhs);
+  /* Step 1: Factorize the operator using QR decomposition */
+  const glong n_cols = _ncm_sbessel_ode_operator_factorize_batched (op, n_ell, rhs);
 
   /* Step 2: Build the full solution by back-substitution */
   _ncm_sbessel_ode_operator_build_solution_batched (op, n_cols, n_ell, solutions);
@@ -2367,7 +2828,7 @@ _ncm_sbessel_ode_operator_solve_batched_internal (NcmSBesselOdeOperator *op, GAr
  * ell_min+n_ell-1)
  * @solutions: array of solution matrices, one per ell value
  *
- * Internal batched solver for endpoint computations. Diagonalizes the operator and
+ * Internal batched solver for endpoint computations. Factorizes the operator and
  * computes endpoint derivatives and error estimates without building the full solution
  * matrix.
  *
@@ -2377,10 +2838,10 @@ static inline __attribute__ ((always_inline)) void
 
 _ncm_sbessel_ode_operator_solve_endpoints_batched_internal (NcmSBesselOdeOperator *op, GArray *rhs, const guint n_ell, GArray *solutions)
 {
-  /* Step 1: Diagonalize the operator using QR decomposition */
-  const glong n_cols = _ncm_sbessel_ode_operator_diagonalize_batched (op, n_ell, rhs);
+  /* Step 1: Factorize the operator using QR decomposition */
+  const glong n_cols = _ncm_sbessel_ode_operator_factorize_batched (op, n_ell, rhs);
 
-  /* Step 2: Compute endpoint derivatives and error estimates directly from diagonalized system */
+  /* Step 2: Compute endpoint derivatives and error estimates directly from factorized system */
   _ncm_sbessel_ode_operator_compute_endpoints_batched (op, n_cols, n_ell, solutions);
 }
 
@@ -2391,7 +2852,7 @@ _ncm_sbessel_ode_operator_solve_values_batched_internal (NcmSBesselOdeOperator *
                                                          gdouble t0, gdouble t1,
                                                          GArray *values)
 {
-  const glong n_cols = _ncm_sbessel_ode_operator_diagonalize_batched (op, n_ell, rhs);
+  const glong n_cols = _ncm_sbessel_ode_operator_factorize_batched (op, n_ell, rhs);
 
   _ncm_sbessel_ode_operator_compute_values_batched (op, n_cols, n_ell, t0, t1, values);
 }
@@ -2553,12 +3014,12 @@ ncm_sbessel_ode_operator_get_tolerance (NcmSBesselOdeOperator *op)
  * ncm_sbessel_ode_operator_get_n_cols:
  * @op: a #NcmSBesselOdeOperator
  *
- * Gets the number of columns in the currently stored diagonalization. Returns 0 if no
- * diagonalization has been performed yet, or if the operator has been reset. This is
+ * Gets the number of columns in the currently stored factorization. Returns 0 if no
+ * factorization has been performed yet, or if the operator has been reset. This is
  * useful for understanding the convergence behavior and for testing that
- * diagonalization reuse is working correctly.
+ * factorization reuse is working correctly.
  *
- * Returns: the number of columns in the stored diagonalization (0 if none)
+ * Returns: the number of columns in the stored factorization (0 if none)
  */
 glong
 ncm_sbessel_ode_operator_get_n_cols (NcmSBesselOdeOperator *op)
@@ -2572,7 +3033,7 @@ ncm_sbessel_ode_operator_get_n_cols (NcmSBesselOdeOperator *op)
  *
  * Gets the total allocated size of the operator's internal storage. This represents
  * the allocated size (operator_order * n_ell) for the arrays (matrix_rows,
- * rotation_params, c) that store the diagonalized operator and factorization data. The
+ * rotation_params, c) that store the factorization and its rotation data. The
  * operator size grows as needed when solving problems that require more storage than
  * currently allocated.
  *
@@ -2626,7 +3087,7 @@ ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray *
 
   if (op->n_ell == 1)
   {
-    n_cols = _ncm_sbessel_ode_operator_diagonalize (op, rhs);
+    n_cols = _ncm_sbessel_ode_operator_factorize (op, rhs);
 
     _ncm_sbessel_ode_solver_build_solution (op, n_cols, *solution);
   }
@@ -2686,7 +3147,7 @@ ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray *
  * - endpoints[3*i + 1] = u'(b) for ell_min + i
  * - endpoints[3*i + 2] = error estimate for ell_min + i
  *
- * The function first diagonalizes the operator using adaptive QR decomposition, then
+ * The function first factorizes the operator using adaptive QR decomposition, then
  * performs back-substitution while accumulating the contributions to the endpoint
  * derivatives on-the-fly, avoiding the memory allocation and computation cost of the
  * full solution.
@@ -2709,7 +3170,7 @@ ncm_sbessel_ode_operator_solve_endpoints (NcmSBesselOdeOperator *op, GArray *rhs
 
   if (op->n_ell == 1)
   {
-    const glong n_cols = _ncm_sbessel_ode_operator_diagonalize (op, rhs);
+    const glong n_cols = _ncm_sbessel_ode_operator_factorize (op, rhs);
 
     _ncm_sbessel_ode_solver_compute_endpoints (op, n_cols, *endpoints);
 
@@ -2804,8 +3265,8 @@ ncm_sbessel_ode_operator_solve_values (NcmSBesselOdeOperator *op, GArray *rhs,
 }
 
 /**
- * _ncm_sbessel_ode_solver_fill_operator_matrix:
- * @solver: a #NcmSBesselOdeSolver
+ * _ncm_sbessel_ode_fill_operator_matrix:
+ * @op: a #NcmSBesselOdeOperator
  * @nrows: number of rows
  * @ncols: number of columns
  * @data: pointer to matrix data
@@ -2813,16 +3274,14 @@ ncm_sbessel_ode_operator_solve_values (NcmSBesselOdeOperator *op, GArray *rhs,
  *
  * Helper function to fill operator matrix data in either row-major or column-major
  * format. Extracts matrix entries from operator rows and fills them into the provided
- * data array.
+ * data array. The two constraint rows follow the constraint @op carries.
  *
  */
 static void
-_ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
-                                              const gdouble a, const gdouble b, guint ell,
-                                              guint nrows, guint ncols,
-                                              gdouble *data, gboolean colmajor)
+_ncm_sbessel_ode_fill_operator_matrix (NcmSBesselOdeOperator *op,
+                                       guint nrows, guint ncols,
+                                       gdouble *data, gboolean colmajor)
 {
-  NcmSBesselOdeOperator *op = ncm_sbessel_ode_solver_create_operator (solver, a, b, ell, ell);
   NcmSBesselOdeSolverRow row_mem;
   NcmSBesselOdeSolverRow *row = &row_mem;
   guint i;
@@ -2837,11 +3296,10 @@ _ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
     /* Handle boundary condition rows with infinite components */
     if (fabs (row->bc_at_m1) > 1.0e-100)
     {
-      /* bc_at_m1 contributes (-1)^k at every column k */
+      /* first constraint pattern, evaluated at every column k */
       for (k = row->col_index; k < ncols; k++)
       {
-        const gdouble sign  = (k % 2 == 0) ? 1.0 : -1.0;
-        const gdouble value = row->bc_at_m1 * sign;
+        const gdouble value = row->bc_at_m1 * _ncm_sbessel_bc_pat1 (op, k);
         const gint idx      = colmajor ? (k * nrows + i) : (i * ncols + k);
 
         data[idx] += value;
@@ -2850,10 +3308,10 @@ _ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
 
     if (fabs (row->bc_at_p1) > 1.0e-100)
     {
-      /* bc_at_p1 contributes 1.0 at every column k */
+      /* second constraint pattern, evaluated at every column k */
       for (k = row->col_index; k < ncols; k++)
       {
-        const gdouble value = row->bc_at_p1;
+        const gdouble value = row->bc_at_p1 * _ncm_sbessel_bc_pat2 (op, k);
         const gint idx      = colmajor ? (k * nrows + i) : (i * ncols + k);
 
         data[idx] += value;
@@ -2873,8 +3331,35 @@ _ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
       }
     }
   }
+}
 
-  ncm_sbessel_ode_operator_unref (op);
+/**
+ * ncm_sbessel_ode_operator_get_matrix:
+ * @op: a #NcmSBesselOdeOperator
+ * @nrows: number of rows to extract, constraint rows included
+ *
+ * Dense $n \times n$ row-major representation of @op, closed the way @op is closed:
+ * rows 0 and 1 carry the two constraint functionals of its #NcmSBesselOdeConstraint --- the
+ * dense $(-1)^j$ and $1$ patterns of Dirichlet data, the two single entries of the
+ * pinned constraint, or nothing at all under %NCM_SBESSEL_ODE_CONSTRAINT_TAU --- and rows 2
+ * to @nrows-1 are the discretized operator. For validation and for comparison with
+ * dense solvers; the solve itself never forms this matrix.
+ *
+ * Returns: (transfer full): the dense matrix
+ */
+NcmMatrix *
+ncm_sbessel_ode_operator_get_matrix (NcmSBesselOdeOperator *op, gint nrows)
+{
+  NcmMatrix *mat;
+
+  g_assert_cmpint (nrows, >, 2);
+
+  mat = ncm_matrix_new (nrows, nrows);
+  ncm_matrix_set_zero (mat);
+
+  _ncm_sbessel_ode_fill_operator_matrix (op, nrows, nrows, ncm_matrix_data (mat), FALSE);
+
+  return mat;
 }
 
 /**
@@ -2891,9 +3376,13 @@ _ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
  *
  * The matrix includes:
  *
- * - Row 0: boundary condition u(-1) = 0
- * - Row 1: boundary condition u(+1) = 0
+ * - Rows 0 and 1: the two constraint functionals of the solver's current
+ *   #NcmSBesselOdeConstraint, $u(x_a) = 0$ and $u(x_b) = 0$ by default
  * - Rows 2 to nrows-1: differential operator rows
+ *
+ * The pinned constraint belongs to an operator rather than to a solver; for it, and for
+ * any operator whose constraint was set on its own, use
+ * ncm_sbessel_ode_operator_get_matrix().
  *
  * The matrix is square (nrows x nrows) for compatibility with standard solvers.
  *
@@ -2912,9 +3401,12 @@ ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, const g
 
   ncm_matrix_set_zero (mat);
 
-  /* Fill matrix data */
-  _ncm_sbessel_ode_solver_fill_operator_matrix (solver, a, b, ell, nrows, ncols,
-                                                ncm_matrix_data (mat), FALSE);
+  {
+    NcmSBesselOdeOperator *op = ncm_sbessel_ode_solver_create_operator (solver, a, b, ell, ell);
+
+    _ncm_sbessel_ode_fill_operator_matrix (op, nrows, ncols, ncm_matrix_data (mat), FALSE);
+    ncm_sbessel_ode_operator_unref (op);
+  }
 
   return mat;
 }
@@ -2932,9 +3424,13 @@ ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, const g
  *
  * The matrix includes:
  *
- * - Row 0: boundary condition u(-1) = 0
- * - Row 1: boundary condition u(+1) = 0
+ * - Rows 0 and 1: the two constraint functionals of the solver's current
+ *   #NcmSBesselOdeConstraint, $u(x_a) = 0$ and $u(x_b) = 0$ by default
  * - Rows 2 to nrows-1: differential operator rows
+ *
+ * The pinned constraint belongs to an operator rather than to a solver; for it, and for
+ * any operator whose constraint was set on its own, use
+ * ncm_sbessel_ode_operator_get_matrix().
  *
  * The matrix is square (nrows x nrows) and stored in column-major order as expected by
  * LAPACK routines like dgesv.
@@ -2950,8 +3446,10 @@ ncm_sbessel_ode_solver_get_operator_matrix_colmajor (NcmSBesselOdeSolver *solver
     gdouble *data_colmajor = g_new0 (gdouble, nrows * ncols);
     NcmMatrix *mat         = ncm_matrix_new_data_malloc (data_colmajor, nrows, ncols);
 
-    _ncm_sbessel_ode_solver_fill_operator_matrix (solver, a, b, ell, nrows, ncols,
-                                                  data_colmajor, TRUE);
+    NcmSBesselOdeOperator *op = ncm_sbessel_ode_solver_create_operator (solver, a, b, ell, ell);
+
+    _ncm_sbessel_ode_fill_operator_matrix (op, nrows, ncols, data_colmajor, TRUE);
+    ncm_sbessel_ode_operator_unref (op);
 
     return mat;
   }

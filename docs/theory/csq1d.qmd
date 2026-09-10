@@ -3,7 +3,7 @@ title: CSQ1D Formalism
 ---
 
 This page describes the complex-structure formalism implemented by
-`NcmCSQ1D`.
+[[numcosmo-math|NcmCSQ1D]].
 
 The formalism provides a classical parametrization of the one-dimensional
 harmonic oscillator in terms of a complex canonical solution encoding two
@@ -60,7 +60,7 @@ expansion.
 
 ## Internal Adiabatic Variables
 
-Rather than evolving the complex mode directly, `NcmCSQ1D` evolves the
+Rather than evolving the complex mode directly, [[numcosmo-math|NcmCSQ1D]] evolves the
 adiabatic variables $(\alpha,\delta\gamma)$.
 
 The variable $\alpha$ controls the mixing between positive- and
@@ -85,7 +85,7 @@ $$
 \right].
 $$
 
-This system is internally integrated by `NcmCSQ1D`.
+This system is internally integrated by [[numcosmo-math|NcmCSQ1D]].
 
 ## Phase Decomposition
 

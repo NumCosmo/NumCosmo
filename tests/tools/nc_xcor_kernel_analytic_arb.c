@@ -27,9 +27,12 @@
  * Certified reference values for the radial integral of the analytic xcor
  * windows,
  *
- *   I_ell(k) = int W(chi) j_ell(k chi) dchi ,   W normalized to int W dchi = 1
+ *   I_ell(k) = int W(chi) j_ell^(d) (k chi) dchi ,  W normalized to int W dchi = 1
  *
- * over the window's own truncated support, with chi in Mpc.
+ * over the window's own truncated support, with chi in Mpc and d the
+ * Bessel-derivative order set by --bessel-deriv (0, 1 or 2; d = 2 is the
+ * weight a redshift-space distortion term carries). Note that the
+ * normalization is the window's, so it is the same integral for every d.
  *
  * Re-implements each window of numcosmo/nc/xcor/nc_xcor_kernel_radial_*.c
  * in Arb ball arithmetic, independently of the library. The normalization is
@@ -57,8 +60,10 @@ main (int argc, char **argv)
 {
   Par p;
   int window_mode;
-  double target = 1.0e-25;
-  long ell      = 2;
+  double target    = 1.0e-25;
+  slong prec_max   = 8192;
+  int support_only = 0;
+  long ell         = 2;
   double k;
   int i;
 
@@ -120,6 +125,14 @@ main (int argc, char **argv)
     {
       p.beta = atof (a + 7);
     }
+    else if (strncmp (a, "--prec-max=", 11) == 0)
+    {
+      prec_max = (slong) atol (a + 11);
+    }
+    else if (strcmp (a, "--support-only") == 0)
+    {
+      support_only = 1;
+    }
     else if (strncmp (a, "--chi-source-lower=", 19) == 0)
     {
       p.chi_source_lower = atof (a + 19);
@@ -148,6 +161,16 @@ main (int argc, char **argv)
     {
       target = atof (a + 13);
     }
+    else if (strncmp (a, "--bessel-deriv=", 15) == 0)
+    {
+      p.bessel_deriv = atoi (a + 15);
+
+      if ((p.bessel_deriv < 0) || (p.bessel_deriv > 2))
+      {
+        fprintf (stderr, "--bessel-deriv takes 0, 1 or 2\n");
+        exit (1);
+      }
+    }
     else if (strcmp (a, "--window") == 0)
     {
       window_mode = 1;
@@ -169,11 +192,23 @@ main (int argc, char **argv)
 
     acb_init (nrm);
     p.with_bessel = 0;
-    certified (nrm, &p, target);
+    certified (nrm, &p, target, prec_max);
     s = arb_get_str (acb_realref (nrm), 30, ARB_STR_NO_RADIUS);
-    printf ("# shape=%s ell=%ld support=[%.17g,%.17g] norm=%s\n",
-            shape_names[p.shape], p.ell, p.chi_min, p.chi_max, s);
+    printf ("# shape=%s ell=%ld deriv=%d support=[%.17g,%.17g] norm=%s\n",
+            shape_names[p.shape], p.ell, p.bessel_deriv, p.chi_min, p.chi_max, s);
     flint_free (s);
+
+    /* The support and the normalization are properties of the window alone. A caller
+     * that wants only those must not be made to certify an I_ell(k) as well: at high
+     * ell any convenient probe k lands in the power-law region, where a relative
+     * target is unreachable and meaningless. */
+    if (support_only)
+    {
+      acb_clear (nrm);
+      par_clear (&p);
+
+      return 0;
+    }
 
     if (window_mode)
     {
@@ -218,6 +253,9 @@ main (int argc, char **argv)
     }
 
     printf ("# shape\tell\tk\tvalue\tradius\tprec\n");
+
+    /* The normalization above was certified with with_bessel off, so it is the
+     * window's own and carries no derivative: only the integrand below does. */
     p.with_bessel = 1;
 
     while (scanf ("%lf", &k) == 1)
@@ -228,7 +266,7 @@ main (int argc, char **argv)
       acb_set_d (p.k, k);
       acb_init (res);
       acb_init (val);
-      prec = certified (res, &p, target);
+      prec = certified (res, &p, target, prec_max);
       acb_div (val, res, nrm, prec);
       s = arb_get_str (acb_realref (val), 30, ARB_STR_NO_RADIUS);
       printf ("%s\t%ld\t%.17g\t%s\t%.4e\t%ld\n",

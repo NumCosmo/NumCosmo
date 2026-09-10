@@ -160,8 +160,8 @@ def _levin_integrator(
     return Ncm.SBesselIntegratorLevin.new_full(
         ell_min,
         ell_max,
-        proto.get_y_knots_min(),
-        proto.get_y_knots_max(),
+        proto.get_x_knots_min(),
+        proto.get_x_knots_max(),
         proto.get_n_knots(),
         proto.get_ell_cache_max(),
         reltol,
@@ -238,7 +238,7 @@ def block_transformer(
         # ell = 2 on a lensing kernel. The weight is applied in the callback,
         # not to the table: W ~ chi near the origin, so W / chi^2 ~ 1 / chi
         # cannot be tabulated to the requested tolerance, while the solver's
-        # panel fits in y = k chi handle it (NumCosmo's own lensing kernel
+        # panel fits in x = k chi handle it (NumCosmo's own lensing kernel
         # carries the same 1 / chi).
         if der == -1:
             # CCL's kernel table starts a few Mpc from the observer, where a

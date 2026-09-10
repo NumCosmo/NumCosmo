@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_integrator.h>
+#include <numcosmo/ncm/specfunc/ncm_sbessel_ode_solver.h>
 
 G_BEGIN_DECLS
 
@@ -42,7 +43,7 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (NcmSBesselIntegratorLevin, ncm_sbessel_integrator_levin, NCM, SBESSEL_INTEGRATOR_LEVIN, NcmSBesselIntegrator)
 
 NcmSBesselIntegratorLevin *ncm_sbessel_integrator_levin_new (guint ell_min, guint ell_max);
-NcmSBesselIntegratorLevin *ncm_sbessel_integrator_levin_new_full (guint ell_min, guint ell_max, gdouble y_knots_min, gdouble y_knots_max, guint n_knots, guint ell_cache_max, gdouble reltol, guint cheb_min_order, gdouble cheb_reltol);
+NcmSBesselIntegratorLevin *ncm_sbessel_integrator_levin_new_full (guint ell_min, guint ell_max, gdouble x_knots_min, gdouble x_knots_max, guint n_knots, guint ell_cache_max, gdouble reltol, guint cheb_min_order, gdouble cheb_reltol);
 NcmSBesselIntegratorLevin *ncm_sbessel_integrator_levin_ref (NcmSBesselIntegratorLevin *sbilv);
 void ncm_sbessel_integrator_levin_free (NcmSBesselIntegratorLevin *sbilv);
 void ncm_sbessel_integrator_levin_clear (NcmSBesselIntegratorLevin **sbilv);
@@ -50,6 +51,23 @@ void ncm_sbessel_integrator_levin_clear (NcmSBesselIntegratorLevin **sbilv);
 void ncm_sbessel_integrator_levin_set_max_order (NcmSBesselIntegratorLevin *sbilv, guint max_order);
 guint ncm_sbessel_integrator_levin_get_max_order (NcmSBesselIntegratorLevin *sbilv);
 
+void ncm_sbessel_integrator_levin_set_tau_constraint_min_osc (NcmSBesselIntegratorLevin *sbilv, gdouble min_osc);
+gdouble ncm_sbessel_integrator_levin_get_tau_constraint_min_osc (NcmSBesselIntegratorLevin *sbilv);
+void ncm_sbessel_integrator_levin_set_tau_constraint (NcmSBesselIntegratorLevin *sbilv, gboolean tau_constraint);
+gboolean ncm_sbessel_integrator_levin_get_tau_constraint (NcmSBesselIntegratorLevin *sbilv);
+void ncm_sbessel_integrator_levin_set_tau_constraint_guard (NcmSBesselIntegratorLevin *sbilv, gdouble guard);
+gdouble ncm_sbessel_integrator_levin_get_tau_constraint_guard (NcmSBesselIntegratorLevin *sbilv);
+void ncm_sbessel_integrator_levin_set_tau_constraint_order_fraction (NcmSBesselIntegratorLevin *sbilv, gdouble fraction);
+gdouble ncm_sbessel_integrator_levin_get_tau_constraint_order_fraction (NcmSBesselIntegratorLevin *sbilv);
+void ncm_sbessel_integrator_levin_set_turning_knot_margin (NcmSBesselIntegratorLevin *sbilv, gdouble margin);
+gdouble ncm_sbessel_integrator_levin_get_turning_knot_margin (NcmSBesselIntegratorLevin *sbilv);
+void ncm_sbessel_integrator_levin_set_dead_edge_cells (NcmSBesselIntegratorLevin *sbilv, gboolean enable);
+gboolean ncm_sbessel_integrator_levin_get_dead_edge_cells (NcmSBesselIntegratorLevin *sbilv);
+guint ncm_sbessel_integrator_levin_get_n_constraint_fallbacks (NcmSBesselIntegratorLevin *sbilv);
+guint ncm_sbessel_integrator_levin_get_n_panel_solves (NcmSBesselIntegratorLevin *sbilv);
+guint ncm_sbessel_integrator_levin_get_n_tau_solves (NcmSBesselIntegratorLevin *sbilv);
+guint ncm_sbessel_integrator_levin_get_n_locked_eligible_solves (NcmSBesselIntegratorLevin *sbilv);
+NcmSBesselOdeSolver *ncm_sbessel_integrator_levin_peek_ode_solver (NcmSBesselIntegratorLevin *sbilv);
 void ncm_sbessel_integrator_levin_set_reltol (NcmSBesselIntegratorLevin *sbilv, gdouble reltol);
 gdouble ncm_sbessel_integrator_levin_get_reltol (NcmSBesselIntegratorLevin *sbilv);
 
@@ -67,18 +85,22 @@ gdouble ncm_sbessel_integrator_levin_get_panel_b (NcmSBesselIntegratorLevin *sbi
 gint ncm_sbessel_integrator_levin_get_panel_ell (NcmSBesselIntegratorLevin *sbilv, guint i);
 gdouble ncm_sbessel_integrator_levin_get_panel_contrib (NcmSBesselIntegratorLevin *sbilv, guint i);
 
-gdouble ncm_sbessel_integrator_levin_get_y_knots_min (NcmSBesselIntegratorLevin *sbilv);
-gdouble ncm_sbessel_integrator_levin_get_y_knots_max (NcmSBesselIntegratorLevin *sbilv);
+gdouble ncm_sbessel_integrator_levin_get_x_knots_min (NcmSBesselIntegratorLevin *sbilv);
+gdouble ncm_sbessel_integrator_levin_get_x_knots_max (NcmSBesselIntegratorLevin *sbilv);
 guint ncm_sbessel_integrator_levin_get_n_knots (NcmSBesselIntegratorLevin *sbilv);
 guint ncm_sbessel_integrator_levin_get_ell_cache_max (NcmSBesselIntegratorLevin *sbilv);
 
-#define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_Y_KNOTS_MIN (1.0e-4)
-#define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_Y_KNOTS_MAX (1.0e6)
+#define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_X_KNOTS_MIN (1.0e-4)
+#define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_X_KNOTS_MAX (1.0e6)
 #define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_N_KNOTS (21)
 #define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_ELL_CACHE_MAX (1200)
 #define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_RELTOL (1.0e-13)
 #define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER (2)
 #define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_RELTOL (1.0e-8)
+#define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_TAU_CONSTRAINT_MIN_OSC (50.0)
+#define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_TAU_CONSTRAINT_GUARD (10.0)
+#define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_TAU_CONSTRAINT_ORDER_FRACTION (0.75)
+#define NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_TURNING_KNOT_MARGIN (1.05)
 
 
 G_END_DECLS

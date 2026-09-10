@@ -10,7 +10,7 @@ $$
 :::
 
 This page describes the distance and time-related quantities implemented by
-`NcDistance`. The object computes the dimensionless versions of these distances;
+[[numcosmo|NcDistance]]. The object computes the dimensionless versions of these distances;
 the dimensionful results are recovered by multiplying by the appropriate Hubble
 radius, as described below.
 
@@ -51,6 +51,19 @@ $r(z) \equiv a_0 d_c(z)$, in units of the Hubble radius:
 $D_c(z) = r(z) / \RH_0$. The comoving distance and the proper distance today are
 therefore recovered by multiplying $D_c(z)$ by $\RHc_0$ and $\RH_0$,
 respectively.
+
+### The symbol used in the cross-correlation code
+
+The cross-correlation and angular power spectrum code writes the comoving distance as
+$\chi$, which is the symbol used in that part of the literature. It is the same
+quantity as $D_c$ on this page, and the kernel API keeps it in the same units: the
+kernel components report their support and are evaluated in units of the Hubble radius,
+with the wavenumber in $\RH_0^{-1}$, so that $k\chi$ is dimensionless. Multiplying by
+$\RH_0 = c/H_0$ in Mpc, from [[numcosmo|nc_hicosmo_RH_Mpc]], gives the dimensionful
+pair; the Limber path in [[numcosmo|NcXcor]] does exactly that. So $\chi = D_c$ there,
+and $\RH_0 D_c$ is the proper distance today $r(z)$ defined above, which is $d_c(z)$
+when $a_0 = 1$. Nothing in [[numcosmo|NcDistance]] uses $\chi$, except
+[[numcosmo|nc_distance_inv_comoving]], whose argument is named for it.
 
 ## Transverse, Luminosity, and Angular Diameter Distances
 

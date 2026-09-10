@@ -41,8 +41,8 @@
  *
  * Kernels also implement the noise power spectrum.
  *
- * See <a href="../../theory/sbessel_projection.html">Projection Integrals with
- * Spherical Bessel Weights</a> for the pipeline a kernel drives: the adaptive
+ * See <a href="../../theory/sbessel_projection.html">UltraLevin: Non-Limber
+ * Angular Power Spectra</a> for the pipeline a kernel drives: the adaptive
  * $k$ domain, the closure fitted to $W_\ell(k)$, and the error estimate the fit
  * residuals feed.
  */
@@ -481,6 +481,14 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * as a fraction of the peak sampled integrand. An interval is accepted once its
    * estimated interpolation error falls below `scaled-abstol` $\times \max\vert
    * F\vert$.
+   *
+   * The name anticipates the tolerance on the final integral that produces the
+   * $C_\ell$, and not what the criterion does here: it is applied to $W_i(k)$, one
+   * level below the integral it is named for, and the two are separated by the
+   * squaring described below and by the cancellation limit. Read it as a
+   * peak-relative epsilon on the $W_i(k)$ refinement rather than as a requested
+   * accuracy on $C_\ell$. #NcXcorKernel:adaptive-epsilon is the domain-expansion
+   * threshold and is a distinct quantity.
    *
    * This criterion sets the absolute accuracy of the spline where it binds. Tightening
    * #NcXcorKernel:reltol has no effect in those regions. Since the tolerance is
@@ -1001,10 +1009,10 @@ typedef struct _ComponentParams
 } ComponentParams;
 
 gdouble
-_nc_xcor_kernel_component_kernel_integ (gpointer params, gdouble x, gdouble k)
+_nc_xcor_kernel_component_kernel_integ (gpointer params, gdouble chi, gdouble k)
 {
   const ComponentParams *nlcp = (const ComponentParams *) params;
-  const gdouble kernel        = nc_xcor_kernel_component_eval_kernel (nlcp->comp, nlcp->cosmo, x, k);
+  const gdouble kernel        = nc_xcor_kernel_component_eval_kernel (nlcp->comp, nlcp->cosmo, chi, k);
 
   return kernel / (k * sqrt (k));
 }
@@ -1016,8 +1024,8 @@ typedef struct _ComponentState
 {
   NcXcorKernelComponent *comp;
   guint comp_idx;
-  gdouble xi_min;
-  gdouble xi_max;
+  gdouble chi_min;
+  gdouble chi_max;
   gdouble k_min_hard;
   gdouble k_max_hard;
   gdouble last_k_left;
@@ -1066,7 +1074,7 @@ _component_state_init (ComponentState *state, NcXcorKernelComponent *comp, guint
   state->params.cosmo         = cosmo;
 
   nc_xcor_kernel_component_get_limits (comp, cosmo,
-                                       &state->xi_min, &state->xi_max,
+                                       &state->chi_min, &state->chi_max,
                                        &state->k_min_hard, &state->k_max_hard);
 }
 
@@ -1175,9 +1183,9 @@ _component_states_init_non_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
     {
       ComponentState *si = &comp_states.states[i];
       ComponentState *sj = &comp_states.states[j];
-      const gdouble tol  = 1.0e-9 * GSL_MAX (si->xi_max, sj->xi_max);
+      const gdouble tol  = 1.0e-9 * GSL_MAX (si->chi_max, sj->chi_max);
 
-      if ((si->xi_min <= sj->xi_max + tol) && (sj->xi_min <= si->xi_max + tol))
+      if ((si->chi_min <= sj->chi_max + tol) && (sj->chi_min <= si->chi_max + tol))
       {
         const guint gi = si->group;
         const guint gj = sj->group;
@@ -1203,7 +1211,7 @@ _component_states_init_non_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
  * component's support the window there is zero and the term is dropped.
  */
 static gdouble
-_component_limber_eval (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi_max, gdouble k, gint l)
+_component_limber_eval (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi_max, gdouble k, gint l)
 {
   const guint deriv       = nc_xcor_kernel_component_get_bessel_deriv (comp);
   const gdouble nu        = l + 0.5;
@@ -1218,14 +1226,14 @@ _component_limber_eval (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble x
   else
   {
     const gdouble nup      = nu + 1.0;
-    const gdouble xi_p     = nup / k;
-    const gdouble peak_lp1 = (xi_p <= xi_max) ?
-                             sqrt (M_PI / (2.0 * nup)) * nc_xcor_kernel_component_eval_kernel (comp, cosmo, xi_p, k) :
+    const gdouble chi_p    = nup / k;
+    const gdouble peak_lp1 = (chi_p <= chi_max) ?
+                             sqrt (M_PI / (2.0 * nup)) * nc_xcor_kernel_component_eval_kernel (comp, cosmo, chi_p, k) :
                              0.0;
 
-    if (deriv == 1) /* j_l' = (l/y) j_l - j_{l+1} */
+    if (deriv == 1) /* j_l' = (l/x) j_l - j_{l+1} */
       val = (l / nu) * peak_l - peak_lp1;
-    else /* j_l'' = (l (l-1)/y^2 - 1) j_l + (2/y) j_{l+1} */
+    else /* j_l'' = (l (l-1)/x^2 - 1) j_l + (2/x) j_{l+1} */
       val = -(2.0 * l + 0.25) / (nu * nu) * peak_l + (2.0 / nup) * peak_lp1;
   }
 
@@ -1271,11 +1279,11 @@ _component_states_init_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
       const gint l_j     = lmin + j;
       const gdouble nu_j = l_j + 0.5;
 
-      /* Limber constraint: xi = nu/k must be in [xi_min, xi_max]
-       * Therefore: k must be in [nu/xi_max, nu/xi_min]
+      /* Limber constraint: chi = nu/k must be in [chi_min, chi_max]
+       * Therefore: k must be in [nu/chi_max, nu/chi_min]
        */
-      gdouble k_min_limber_j = nu_j / state->xi_max;
-      gdouble k_max_limber_j = nu_j / state->xi_min;
+      gdouble k_min_limber_j = nu_j / state->chi_max;
+      gdouble k_max_limber_j = nu_j / state->chi_min;
 
       state->k_min_limber_ell[j] = k_min_limber_j;
       state->k_max_limber_ell[j] = k_max_limber_j;
@@ -1304,8 +1312,8 @@ _component_states_init_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
       const gdouble k_max_j = state->k_max_limber_ell[j];
 
       /* Evaluate at the two boundaries */
-      state->last_values_left[j]  = _component_limber_eval (state->comp, cosmo, state->xi_max, k_min_j, l_j);
-      state->last_values_right[j] = _component_limber_eval (state->comp, cosmo, state->xi_max, k_max_j, l_j);
+      state->last_values_left[j]  = _component_limber_eval (state->comp, cosmo, state->chi_max, k_min_j, l_j);
+      state->last_values_right[j] = _component_limber_eval (state->comp, cosmo, state->chi_max, k_max_j, l_j);
     }
   }
 
@@ -1425,7 +1433,7 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
       /* Exact integration within boundaries */
       ncm_sbessel_integrator_integrate_deriv (
         comp_states->sbi, _nc_xcor_kernel_component_kernel_integ,
-        state->xi_min, state->xi_max, k,
+        state->chi_min, state->chi_max, k,
         nc_xcor_kernel_component_get_bessel_deriv (state->comp),
         integ_result, &state->params
       );
@@ -1576,7 +1584,7 @@ _component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_d
       if (within_range)
       {
         /* Normal Limber evaluation within valid range */
-        kernel_out[ci][i] = _component_limber_eval (state->comp, state->params.cosmo, state->xi_max, k, l);
+        kernel_out[ci][i] = _component_limber_eval (state->comp, state->params.cosmo, state->chi_max, k, l);
       }
       else
       {
@@ -2941,13 +2949,13 @@ nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdoubl
   for (i = 0; i < comp_list->len; i++)
   {
     NcXcorKernelComponent *comp = g_ptr_array_index (comp_list, i);
-    gdouble xi_min, xi_max, k_min, k_max;
+    gdouble chi_min, chi_max, k_min, k_max;
 
-    nc_xcor_kernel_component_get_limits (comp, cosmo, &xi_min, &xi_max, &k_min, &k_max);
+    nc_xcor_kernel_component_get_limits (comp, cosmo, &chi_min, &chi_max, &k_min, &k_max);
 
     {
-      const gdouble k_min_limb = nu / xi_max;
-      const gdouble k_max_limb = nu / xi_min;
+      const gdouble k_min_limb = nu / chi_max;
+      const gdouble k_max_limb = nu / chi_min;
 
       k_min = GSL_MAX (k_min, k_min_limb);
       k_max = GSL_MIN (k_max, k_max_limb);
@@ -3503,9 +3511,9 @@ nc_xcor_kernel_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
 gdouble
 nc_xcor_kernel_eval_limber_z_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l)
 {
-  const gdouble xi_z      = nc_distance_comoving (dist, cosmo, z); /* in units of Hubble radius */
+  const gdouble chi_z     = nc_distance_comoving (dist, cosmo, z); /* in units of Hubble radius */
   const gdouble E_z       = nc_hicosmo_E (cosmo, z);
-  const NcXcorKinetic xck = { xi_z, E_z };
+  const NcXcorKinetic xck = { chi_z, E_z };
   const gdouble prefactor = nc_xcor_kernel_eval_limber_z_prefactor (xclk, cosmo, l);
 
   return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval_limber_z (xclk, cosmo, z, &xck, l) * prefactor;

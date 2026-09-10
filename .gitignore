@@ -39,4 +39,7 @@ __pycache__
 build/
 *.info
 
-/devel/
+/devel
+
+# The resumable generators' checkpoint, written beside their output.
+data/truth_tables/**/*.partial.json

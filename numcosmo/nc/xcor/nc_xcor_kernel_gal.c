@@ -144,9 +144,9 @@ typedef struct _ClusteringComponentData
 #define _NC_XCOR_KERNEL_COMPONENT_CLUSTERING_GET_DATA(comp) \
         ((ClusteringComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
-static gdouble _clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k);
+static gdouble _clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
 static gdouble _clustering_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
-static void _clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
+static void _clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _clustering_component_data_clear (ClusteringComponentData *data);
 static NcXcorKernelComponent *_nc_xcor_kernel_component_clustering_new (NcXcorKernelGal *xclkg, NcDistance *dist, NcmPowspec *ps);
 
@@ -176,9 +176,9 @@ typedef struct _RSDComponentData
 #define _NC_XCOR_KERNEL_COMPONENT_RSD_GET_DATA(comp) \
         ((RSDComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
-static gdouble _rsd_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k);
+static gdouble _rsd_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
 static gdouble _rsd_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
-static void _rsd_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
+static void _rsd_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _rsd_component_data_clear (RSDComponentData *data);
 static NcXcorKernelComponent *_nc_xcor_kernel_component_rsd_new (NcXcorKernelGal *xclkg, NcDistance *dist, NcmPowspec *ps);
 
@@ -207,9 +207,9 @@ typedef struct _MagBiasComponentData
 #define _NC_XCOR_KERNEL_COMPONENT_MAGBIAS_GET_DATA(comp) \
         ((MagBiasComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
-static gdouble _magbias_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k);
+static gdouble _magbias_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
 static gdouble _magbias_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
-static void _magbias_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
+static void _magbias_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _magbias_component_data_clear (MagBiasComponentData *data);
 static NcXcorKernelComponent *_nc_xcor_kernel_component_magbias_new (NcXcorKernelGal *xclkg, NcDistance *dist, NcmPowspec *ps);
 
@@ -670,7 +670,7 @@ _nc_xcor_kernel_gal_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble
     const gdouble llp1 = l * (l + 1.0) / nu / nu;
     const gdouble g_z  = nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z) *
                          (1.0 + z) *
-                         xck->xi_z *
+                         xck->chi_z *
                          1.5 * nc_hicosmo_Omega_m0 (cosmo);
 
     res += llp1 * g_z;
@@ -699,10 +699,10 @@ _clustering_component_data_clear (ClusteringComponentData *data)
 }
 
 static gdouble
-_clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
+_clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k)
 {
   ClusteringComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CLUSTERING_GET_DATA (comp);
-  const gdouble z               = nc_distance_inv_comoving (data->dist, cosmo, xi);
+  const gdouble z               = nc_distance_inv_comoving (data->dist, cosmo, chi);
   const gdouble E_z             = nc_hicosmo_E (cosmo, z);
   const gdouble powspec         = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble dn_dz_z         = _nc_xcor_kernel_gal_dndz (data->xclkg, z);
@@ -718,7 +718,7 @@ _clustering_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *co
 }
 
 static void
-_clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
+_clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max)
 {
   ClusteringComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CLUSTERING_GET_DATA (comp);
   NcDistance *dist              = data->dist;
@@ -728,17 +728,17 @@ _clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo,
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
-  /* Bounded by the dn_dz support, mirroring xi_max. Below dn_dz_zmin this
+  /* Bounded by the dn_dz support, mirroring chi_max. Below dn_dz_zmin this
    * component only carries _nc_xcor_kernel_gal_dndz()'s Gaussian taper, which
    * is far narrower (alpha = 1e-2 in z) than one Levin panel and so cannot be
    * resolved by a panel-level spectral expansion; it then underflows to zero,
    * leaving an unresolvable edge inside a panel. The magnification-bias
    * component below is different -- a lensing efficiency is non-zero all the
    * way down to z ~ 0 -- and keeps the z ~ 0 lower limit. */
-  *xi_min = nc_distance_comoving (dist, cosmo, MAX (xclkg->dn_dz_zmin, 1.0e-6));
-  *xi_max = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
-  *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
-  *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *chi_min = nc_distance_comoving (dist, cosmo, MAX (xclkg->dn_dz_zmin, 1.0e-6));
+  *chi_max = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
+  *k_min   = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *k_max   = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
 }
 
 static NcXcorKernelComponent *
@@ -771,10 +771,10 @@ _rsd_component_data_clear (RSDComponentData *data)
 }
 
 static gdouble
-_rsd_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
+_rsd_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k)
 {
   RSDComponentData *data = _NC_XCOR_KERNEL_COMPONENT_RSD_GET_DATA (comp);
-  const gdouble z        = nc_distance_inv_comoving (data->dist, cosmo, xi);
+  const gdouble z        = nc_distance_inv_comoving (data->dist, cosmo, chi);
   const gdouble E_z      = nc_hicosmo_E (cosmo, z);
   const gdouble powspec  = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble dn_dz_z  = _nc_xcor_kernel_gal_dndz (data->xclkg, z);
@@ -795,7 +795,7 @@ _rsd_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gd
 }
 
 static void
-_rsd_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
+_rsd_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max)
 {
   RSDComponentData *data = _NC_XCOR_KERNEL_COMPONENT_RSD_GET_DATA (comp);
   NcDistance *dist       = data->dist;
@@ -807,10 +807,10 @@ _rsd_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdoubl
   nc_growth_func_prepare_if_needed (xclkg->gf, cosmo);
 
   /* Same support as the clustering component: bounded by dn_dz. */
-  *xi_min = nc_distance_comoving (dist, cosmo, MAX (xclkg->dn_dz_zmin, 1.0e-6));
-  *xi_max = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
-  *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
-  *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *chi_min = nc_distance_comoving (dist, cosmo, MAX (xclkg->dn_dz_zmin, 1.0e-6));
+  *chi_max = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
+  *k_min   = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *k_max   = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
 }
 
 static NcXcorKernelComponent *
@@ -839,12 +839,12 @@ _magbias_component_data_clear (MagBiasComponentData *data)
 }
 
 static gdouble
-_magbias_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
+_magbias_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k)
 {
   MagBiasComponentData *data = _NC_XCOR_KERNEL_COMPONENT_MAGBIAS_GET_DATA (comp);
-  const gdouble z            = nc_distance_inv_comoving (data->dist, cosmo, xi);
+  const gdouble z            = nc_distance_inv_comoving (data->dist, cosmo, chi);
   const gdouble powspec      = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
-  const gdouble g_z          = nc_xcor_lensing_efficiency_eval (data->xclkg->lens_eff, z) * (1.0 + z) / xi;
+  const gdouble g_z          = nc_xcor_lensing_efficiency_eval (data->xclkg->lens_eff, z) * (1.0 + z) / chi;
   const gdouble operator_k   = 1.0 / gsl_pow_2 (k);
 
   return operator_k * g_z * sqrt (powspec);
@@ -860,7 +860,7 @@ _magbias_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo
 }
 
 static void
-_magbias_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
+_magbias_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max)
 {
   MagBiasComponentData *data = _NC_XCOR_KERNEL_COMPONENT_MAGBIAS_GET_DATA (comp);
   NcDistance *dist           = data->dist;
@@ -870,10 +870,10 @@ _magbias_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gd
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
-  *xi_min = nc_distance_comoving (dist, cosmo, 1.0e-6);
-  *xi_max = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
-  *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
-  *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *chi_min = nc_distance_comoving (dist, cosmo, 1.0e-6);
+  *chi_max = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
+  *k_min   = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *k_max   = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
 }
 
 static NcXcorKernelComponent *

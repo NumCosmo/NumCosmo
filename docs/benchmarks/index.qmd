@@ -3,8 +3,12 @@ title: Validation & Benchmarks
 ---
 
 Comparisons of NumCosmo against the Core Cosmology Library (CCL), validating
-agreement on key observables.
+agreement on key observables, and against values certified in arbitrary
+precision, which establish accuracy rather than agreement.
 
 - [CCL Background](ccl_background.qmd) --- background expansion and distances.
 - [CCL Power Spectrum](ccl_power_spectrum.qmd) --- linear and nonlinear matter power spectra.
 - [CCL Two-Point Correlation](ccl_two_point.qmd) --- angular two-point statistics.
+- [Certified Radial Projection](xcor_certified_projection.qmd) --- the radial
+  integral $I_\ell(k)$ against Arb, including the redshift-space weight, with
+  CCL's non-Limber method on the same certified values.

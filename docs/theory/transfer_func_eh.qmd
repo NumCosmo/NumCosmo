@@ -3,9 +3,9 @@ title: Eisenstein--Hu Transfer Function
 ---
 
 This page describes the Eisenstein & Hu (1998) fitting function for the matter
-transfer function implemented by `NcTransferFuncEH`. The full fit, including
+transfer function implemented by [[numcosmo|NcTransferFuncEH]]. The full fit, including
 baryon acoustic features, is reproduced here; the zero-baryon ("no-wiggle")
-variant is implemented separately by `NcTransferFuncEHNoBaryon`.
+variant is implemented separately by [[numcosmo|NcTransferFuncEHNoBaryon]].
 
 Reference: [Eisenstein & Hu (1998)](https://arxiv.org/abs/astro-ph/9709112).
 
@@ -106,7 +106,7 @@ $$
 
 ## Zero-Baryon (No-Wiggle) Variant
 
-`NcTransferFuncEHNoBaryon` implements the Eisenstein & Hu (1998) zero-baryon
+[[numcosmo|NcTransferFuncEHNoBaryon]] implements the Eisenstein & Hu (1998) zero-baryon
 ("no-wiggle") form, which smooths over the baryon acoustic oscillations while
 retaining the broadband shape. Writing $\omega_b = \Omega_b h^2$,
 $\omega_m = \Omega_m h^2$, and $\theta = T_{\rm CMB}/2.7$, the transfer function is

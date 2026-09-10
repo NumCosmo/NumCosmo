@@ -40,8 +40,8 @@ Ncm.cfg_init()
 # Define a simple test component that subclasses NcXcorKernelComponent in Python
 class NcXcorKernelComponentTest(Nc.XcorKernelComponent):
     """
-    A simple test component that implements a Gaussian kernel in xi-space.
-    K(k, xi) = exp(-xi^2/2sigma^2) * sin(k*xi)/(k*xi)
+    A simple test component that implements a Gaussian kernel in chi-space.
+    K(k, chi) = exp(-chi^2/2sigma^2) * sin(k*chi)/(k*chi)
     This is a simple, well-behaved kernel for testing purposes.
     """
 
@@ -86,14 +86,14 @@ class NcXcorKernelComponentTest(Nc.XcorKernelComponent):
     def do_eval_kernel(  # pylint: disable=arguments-differ
         self,
         _cosmo: Nc.HICosmo,
-        xi: float,
+        chi: float,
         k: float,
     ) -> float:
         """Evaluate test kernel: Gaussian x sinc."""
-        if xi <= 0.0:
+        if chi <= 0.0:
             return 0.0
-        z = xi - self.mean
-        gaussian = xi * np.exp(-0.5 * (z / self.sigma) ** 2)
+        z = chi - self.mean
+        gaussian = chi * np.exp(-0.5 * (z / self.sigma) ** 2)
         return gaussian * np.sinc(k * z * 1.0e-20)
 
     def do_eval_prefactor(  # pylint: disable=arguments-differ

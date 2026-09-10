@@ -33,6 +33,7 @@
 #include "ncm/spline/ncm_spline_func.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_util.h"
+#include "ncm/algebra/ncm_matrix.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
@@ -358,6 +359,129 @@ sbessel_upward (gint lmax, gdouble x, gdouble *jl)
  * using the Steed/Barnett algorithm with automatic cutoff for numerical stability.
  * Values beyond the cutoff are set to zero.
  */
+/*
+ * Shared tables of j_ell over a fixed set of abscissae.
+ *
+ * A table is a pure function of the abscissae and of ell_max, so callers that hold many
+ * objects over one grid -- one integrator per multipole block, say -- would otherwise each
+ * carry an identical copy. Keyed on the abscissae themselves, they carry one.
+ *
+ * Building a table is fast, fractions of a millisecond for a few tens of abscissae, so
+ * nothing here trades time; what it saves is memory, which is also why the tables are not
+ * written to disk. The store keeps one reference for the life of the process, as the FFTW
+ * plan bookkeeping does: a process uses one or two grids, and the alternative is a weak
+ * cache whose eviction races with lookup.
+ */
+typedef struct _NcmSFSBesselArrayTableKey
+{
+  GArray *x;
+  guint ell_max;
+} NcmSFSBesselArrayTableKey;
+
+static guint
+_ncm_sf_sbessel_array_table_key_hash (gconstpointer p)
+{
+  const NcmSFSBesselArrayTableKey *key = p;
+  guint hash                           = key->ell_max * 2654435761u;
+  guint i;
+
+  for (i = 0; i < key->x->len; i++)
+  {
+    const gdouble v = g_array_index (key->x, gdouble, i);
+    guint64 bits;
+
+    memcpy (&bits, &v, sizeof (bits));
+    hash = hash * 31u + (guint) (bits ^ (bits >> 32));
+  }
+
+  return hash;
+}
+
+static gboolean
+_ncm_sf_sbessel_array_table_key_equal (gconstpointer pa, gconstpointer pb)
+{
+  const NcmSFSBesselArrayTableKey *a = pa;
+  const NcmSFSBesselArrayTableKey *b = pb;
+
+  if ((a->ell_max != b->ell_max) || (a->x->len != b->x->len))
+    return FALSE;
+
+  return memcmp (a->x->data, b->x->data, a->x->len * sizeof (gdouble)) == 0;
+}
+
+static void
+_ncm_sf_sbessel_array_table_key_free (gpointer p)
+{
+  NcmSFSBesselArrayTableKey *key = p;
+
+  g_array_unref (key->x);
+  g_free (key);
+}
+
+static GHashTable *_ncm_sf_sbessel_array_tables = NULL;
+static GMutex _ncm_sf_sbessel_array_tables_lock;
+
+/**
+ * ncm_sf_sbessel_array_ref_table:
+ * @sba: a #NcmSFSBesselArray
+ * @x: (element-type gdouble): the abscissae
+ * @ell_max: highest multipole in the table
+ *
+ * Table of $j_\ell(x_i)$ with one row per abscissa of @x and one column per $\ell$ from 0
+ * to @ell_max, so row $i$ holds that abscissa's multipoles in order and is contiguous.
+ *
+ * The table is shared process-wide and keyed on the abscissae together with @ell_max: a
+ * later call with the same two returns the same matrix rather than computing the rows
+ * again. Callers that hold many objects over one grid therefore hold one table between
+ * them. Release the returned reference as usual with ncm_matrix_free(); the store keeps
+ * its own for the life of the process.
+ *
+ * Returns: (transfer full): the table, @x->len by @ell_max + 1
+ */
+NcmMatrix *
+ncm_sf_sbessel_array_ref_table (NcmSFSBesselArray *sba, GArray *x, guint ell_max)
+{
+  NcmSFSBesselArrayTableKey lookup = {x, ell_max};
+  NcmMatrix *table;
+
+  g_return_val_if_fail (NCM_IS_SF_SBESSEL_ARRAY (sba), NULL);
+  g_return_val_if_fail (x != NULL, NULL);
+  g_return_val_if_fail (x->len > 0, NULL);
+
+  g_mutex_lock (&_ncm_sf_sbessel_array_tables_lock);
+
+  if (_ncm_sf_sbessel_array_tables == NULL)
+    _ncm_sf_sbessel_array_tables = g_hash_table_new_full (_ncm_sf_sbessel_array_table_key_hash,
+                                                          _ncm_sf_sbessel_array_table_key_equal,
+                                                          _ncm_sf_sbessel_array_table_key_free,
+                                                          (GDestroyNotify) ncm_matrix_free);
+
+  table = g_hash_table_lookup (_ncm_sf_sbessel_array_tables, &lookup);
+
+  if (table == NULL)
+  {
+    NcmSFSBesselArrayTableKey *key;
+    guint i;
+
+    table = ncm_matrix_new (x->len, ell_max + 1);
+
+    for (i = 0; i < x->len; i++)
+      ncm_sf_sbessel_array_eval (sba, ell_max, g_array_index (x, gdouble, i),
+                                 ncm_matrix_ptr (table, i, 0));
+
+    key          = g_new (NcmSFSBesselArrayTableKey, 1);
+    key->x       = g_array_ref (x);
+    key->ell_max = ell_max;
+
+    g_hash_table_insert (_ncm_sf_sbessel_array_tables, key, table);
+  }
+
+  ncm_matrix_ref (table);
+  g_mutex_unlock (&_ncm_sf_sbessel_array_tables_lock);
+
+  return table;
+}
+
 void
 ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble *jl_x)
 {
