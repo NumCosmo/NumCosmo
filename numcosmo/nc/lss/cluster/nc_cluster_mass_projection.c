@@ -1,13 +1,13 @@
 /***************************************************************************
  *            nc_cluster_mass_projection.c
  *
- *  Thu Jan 26 18:25:11 2017
- *  Copyright  2017  Cinthia Nunes de Lima and Henrique Lettieri Projection
+ *  Thu Sep 10 18:25:11 2026
+ *  Copyright  2026  Cinthia Nunes de Lima and Henrique Lettieri Projection
  *  <cinthia.nlima@gmail.com>, <henrique.lettieri@gmail.com>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Cinthia Nunes de Lima and Henrique Lettieri Projection 2017 <cinthia.nlima@gmail.com>
+ * Copyright (C) Cinthia Nunes de Lima and Henrique Lettieri Projection 2026 <cinthia.nlima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -42,13 +42,58 @@
 #include "ncm/core/ncm_memory_pool.h"
 #include "ncm/core/ncm_c.h"
 #include "ncm/core/ncm_cfg.h"
+#include "ncm/integration/ncm_integral1d.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 
-#define _NC_CLUSTER_MASS_PROJECTION_DEFAULT_INT_KEY 6
+#define NC_TYPE_PROJECTION_INT (nc_projection_int_get_type ())
+G_DECLARE_FINAL_TYPE (NcProjectionInt, nc_projection_int, NC, PROJECTION_INT, NcmIntegral1d)
+
+struct _NcProjectionInt
+{
+  NcmIntegral1d parent_instance;
+  gdouble tau;
+  gdouble mu;
+  gdouble sigma;
+  gdouble L;
+};
+
+G_DEFINE_TYPE (NcProjectionInt, nc_projection_int, NCM_TYPE_INTEGRAL1D)
+
+static void
+nc_projection_int_init (NcProjectionInt *pji)
+{
+  pji->tau   = 0.0;
+  pji->mu    = 0.0;
+  pji->sigma = 0.0;
+  pji->L     = 0.0;
+}
+
+static gdouble
+_nc_projection_int_integrand (NcmIntegral1d *int1d, const gdouble y, const gdouble w)
+{
+  NcProjectionInt *pji = NC_PROJECTION_INT (int1d);
+
+  if (y > pji->L)
+    return 0.0;
+
+  return exp (pji->tau * exp (pji->mu + M_SQRT2 * pji->sigma * y));
+}
+
+static void
+nc_projection_int_class_init (NcProjectionIntClass *klass)
+{
+  NcmIntegral1dClass *int1d_class = NCM_INTEGRAL1D_CLASS (klass);
+
+  int1d_class->integrand = &_nc_projection_int_integrand;
+}
+
+
+
+#define _NC_CLUSTER_MASS_PROJECTION_DEFAULT_INT_KEY 
 
 typedef struct _NcClusterMassProjectionPrivate
 {
@@ -59,8 +104,8 @@ typedef struct _NcClusterMassProjectionPrivate
   gdouble lnR_max;
   gdouble lnR_min;
   gboolean enable_rejection;
+  NcProjectionInt *pji; 
 } NcClusterMassProjectionPrivate;
-
 
 struct _NcClusterMassProjection
 {
@@ -81,6 +126,8 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassProjection, nc_cluster_mass_projection,
 #define A_C0     (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_A_C0))
 #define A_CZ     (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_A_CZ))
 #define CUT      (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_CUT))
+#define TAU    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_TAU))
+#define F_PROJ (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PROJECTION_F_PROJ))
 
 
 enum
@@ -91,6 +138,8 @@ enum
   PROP_LNRICHNESS_MIN,
   PROP_LNRICHNESS_MAX,
   PROP_ENABLE_REJECTION,
+  PROP_TAU,
+  PROP_F_PROJ,
   PROP_SIZE,
 };
 
@@ -99,13 +148,14 @@ nc_cluster_mass_projection_init (NcClusterMassProjection *projection)
 {
   NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
 
-  self->M0               = 0.0;
-  self->z0               = 0.0;
-  self->lnM0             = 0.0;
-  self->ln1pz0           = 0.0;
-  self->lnR_min          = GSL_NEGINF;
-  self->lnR_max          = GSL_POSINF;
+  self->M0 = 0.0;
+  self->z0 = 0.0;
+  self->lnM0 = 0.0;
+  self->ln1pz0 = 0.0;
+  self->lnR_min = GSL_NEGINF;
+  self->lnR_max = GSL_POSINF;
   self->enable_rejection = TRUE;
+  self->pji = g_object_new (NC_TYPE_PROJECTION_INT, NULL);
 }
 
 static void
@@ -174,10 +224,15 @@ _nc_cluster_mass_projection_get_property (GObject *object, guint prop_id, GValue
   }
 }
 
+
 static void
 _nc_cluster_mass_projection_finalize (GObject *object)
 {
-  /* Chain up : end */
+  NcClusterMassProjection *projection = NC_CLUSTER_MASS_PROJECTION (object);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
+
+  g_clear_object (&self->pji);
+
   G_OBJECT_CLASS (nc_cluster_mass_projection_parent_class)->finalize (object);
 }
 
@@ -348,7 +403,27 @@ nc_cluster_mass_projection_class_init (NcClusterMassProjectionClass *klass)
                               NC_CLUSTER_MASS_PROJECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PROJECTION_DEFAULT_SIGMA_P2,
                               NCM_PARAM_TYPE_FIXED);
 
+ /**
+ * NcClusterMassProjection:tau:
+ *
+ * 
+ * 
+ */ 
+ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PROJECTION_TAU, "\\tau", "tau",
+                               1.0e-6, 1.0e2, 1.0e-2,
+                               NC_CLUSTER_MASS_PROJECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PROJECTION_DEFAULT_TAU,
+                               NCM_PARAM_TYPE_FIXED);
 
+/**
+ * NcClusterMassProjection: fproj:
+ *
+ * 
+ * 
+ */                               
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PROJECTION_F_PROJ, "f_{proj}", "fproj",
+                               0.0, 1.0, 1.0e-2,
+                               NC_CLUSTER_MASS_PROJECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PROJECTION_DEFAULT_F_PROJ,
+                               NCM_PARAM_TYPE_FIXED);
 
 
 /**
@@ -393,99 +468,41 @@ _nc_cluster_mass_projection_lnR_sigma (NcClusterMass *clusterm, const gdouble ln
   sigma[0] = SIGMA_P0 + SIGMA_P1 * DlnM + SIGMA_P2 * Dln1pz;
 }
 
-void
-nc_cluster_mass_projection_set_completeness (NcClusterMassProjection *projection, NcmSpline2dBicubic *completeness)
-{
-  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
-
-  ncm_spline2d_clear (&self->completeness);
-  self->completeness = NCM_SPLINE2D (completeness);
-  ncm_spline2d_prepare (self->completeness);
-}
-
-/**
- * nc_cluster_mass_projection_peek_completeness:
- * @projection: a #NcClusterMassProjection
- *
- * Get the spline for the completeness as function of
- * $\ln(M)$ and $z$.
- *
- * Returns: (transfer none): the spline for the cluster completeness.
- */
-NcmSpline2d *
-nc_cluster_mass_projection_peek_completeness (NcClusterMassProjection *projection)
-{
-  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
-
-  return self->completeness;
-}
-
-gdouble
-nc_cluster_mass_projection_completeness (NcClusterMassProjection *projection, gdouble lnM, gdouble z)
-{
-  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
-
-  if (self->completeness == NULL)
-    return 1.0;
-  else
-    return ncm_spline2d_eval (self->completeness, lnM, z);
-}
-
-void
-nc_cluster_mass_projection_set_ipurity (NcClusterMassProjection *projection, NcmSpline2dBicubic *ipurity)
-{
-  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
-
-  self->ipurity = NCM_SPLINE2D (ipurity);
-  ncm_spline2d_prepare (self->ipurity);
-}
-
-/**
- * nc_cluster_mass_projection_peek_ipurity:
- * @projection: a #NcClusterMassProjection
- *
- * Get the spline for the inverse of purity as function of
- * $\ln(M_obs)$ and $z$.
- *
- * Returns: (transfer none): the spline for the cluster inverse purity.
- */
-
-NcmSpline2d *
-nc_cluster_mass_projection_peek_ipurity (NcClusterMassProjection *projection)
-{
-  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
-
-  return self->ipurity;
-}
-
-gdouble
-nc_cluster_mass_projection_ipurity (NcClusterMassProjection *projection, gdouble lnM_obs, gdouble z)
-{
-  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
-
-  if (self->ipurity == NULL)
-    return 1.0;
-  else
-    return ncm_spline2d_eval (self->ipurity, lnM_obs, z);
-}
 
 static gdouble
-_nc_cluster_mass_projection_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
+_nc_cluster_mass_projection_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
 {
   NcClusterMassProjection *projection = NC_CLUSTER_MASS_PROJECTION (clusterm);
+  NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (projection);
   gdouble lnR_true, sigma;
 
   _nc_cluster_mass_projection_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
 
-  {
-    const gdouble x            = (lnM_obs[0] - lnR_true) / sigma;
-    const gdouble completeness = nc_cluster_mass_projection_completeness (projection, lnM, z);
-    const gdouble ipurity      = nc_cluster_mass_projection_ipurity (projection, lnM_obs[0], z);
+  if (lnM_obs[0] < CUT)
+    return 0.0;
 
-    if (lnM_obs[0] < CUT)
-      return 0.0;
-    else
-      return fabs (2.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x) / erfc ((CUT - lnR_true) / (M_SQRT2 * sigma)) * completeness * ipurity);
+  {
+    const gdouble ln_lambda_obs = lnM_obs[0];
+    const gdouble lambda_obs    = exp (ln_lambda_obs);
+    const gdouble tau           = TAU;
+    const gdouble fproj         = F_PROJ;
+    const gdouble L             = (ln_lambda_obs - lnR_true) / (M_SQRT2 * sigma);
+    
+    const gdouble x    = (ln_lambda_obs - lnR_true) / sigma;
+    const gdouble f_LN = exp (-0.5 * x * x) / (lambda_obs * sigma * ncm_c_sqrt_2pi ());
+
+    gdouble err, I, P_proj, P;
+
+    self->pji->tau   = tau;
+    self->pji->mu    = lnR_true;
+    self->pji->sigma = sigma;
+    self->pji->L     = L;
+
+    I = ncm_integral1d_eval_gauss_hermite_mur (NCM_INTEGRAL1D (self->pji), M_SQRT2, 0.0, &err);
+
+    P_proj = tau * exp (-tau * lambda_obs) / sqrt (M_PI) * I;
+    
+    return (1.0 - fproj) * f_LN + fproj * P_proj;
   }
 }
 
