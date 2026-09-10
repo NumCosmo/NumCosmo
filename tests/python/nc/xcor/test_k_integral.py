@@ -45,6 +45,7 @@ spectrum -- one no method meets and none needs to, because that entry
 contributes nothing to any likelihood.
 """
 
+from typing import Callable
 import collections
 import gzip
 import json
@@ -54,25 +55,32 @@ import pathlib
 import numpy as np
 import pytest
 
-from numcosmo_py import Nc, Ncm
 from xcor import cases_k_integral as cases
+from numcosmo_py import Nc, Ncm
 
 pytest_plugins = ["python.fixtures_xcor"]
 
-# xdist_group pins this whole file to one worker under --dist loadgroup.
-# The frozen fixture below caches up to 102 Frozen objects, each holding two
-# kernels, two closures and their references -- 3.5 GB by the end of the file.
-# That is per *worker*, since an xdist worker is its own session, so plain
-# --dist load builds one copy per worker and exhausts memory on a many-core
-# machine (measured: OOM at 12 workers, and every run at 24). Grouping costs
-# this file its internal parallelism and nothing else -- every other file still
-# distributes test by test.
+# Under --dist loadgroup every test that uses the frozen fixture is pinned to one
+# of two workers, by closure, through CLOSURE_PARAMS below; the module-level
+# group holds the rest. An xdist worker is its own session, so the module-scoped
+# frozen cache exists once per worker: unbounded it reaches 3.5 GB (measured OOM
+# at 12 workers under plain --dist load), bounded by FROZEN_CACHE_MAXSIZE it is
+# under 1 GB, and a worker that only ever sees one closure never builds the other
+# closure's keys. Two groups let a two-core runner work on this file with both
+# cores; the file was the lane's critical path as a single group.
 pytestmark = [pytest.mark.xcor, pytest.mark.xdist_group("k_integral")]
 
 CLOSURES = {
     "spline": Nc.XcorKernelClosure.SPLINE,
     "chebyshev": Nc.XcorKernelClosure.CHEBYSHEV,
 }
+
+# The closure axis of every frozen-fixture test, each value carrying its worker
+# group. Use this, not sorted(CLOSURES), wherever the test takes `frozen`.
+CLOSURE_PARAMS = [
+    pytest.param(name, marks=pytest.mark.xdist_group(f"k_integral_{name}"))
+    for name in sorted(CLOSURES)
+]
 
 METHODS = {
     "exact": Nc.XcorMethod.KERNEL_EXACT,
@@ -169,9 +177,10 @@ REFERENCE_FLOOR = {"spline": 5.0e-11, "chebyshev": 1.0e-7}
 
 
 class Frozen:
-    """Two prepared kernels, their closures for one block, and the references."""
+    """Hold two prepared kernels, their closures for one block, and the references."""
 
     def __init__(self, case: str, closure: str, lmin: int) -> None:
+        """Build the kernels and closures for one (case, closure, block) once."""
         self.pair = cases.PAIRS_BY_CASE[case]
         self.settings = cases.Settings(closure=CLOSURES[closure])
         self.lmin = lmin
@@ -215,11 +224,11 @@ class Frozen:
         )
         self.reference = cases.reference_cl(self.RH, self.integrand_a, self.integrand_b)
         self.cancellation = cases.cancellation_ratio(self.integrand_a, self.integrand_b)
-        self._per_multipole = None
+        self._per_multipole: np.ndarray | None = None
 
     @property
     def per_multipole(self) -> np.ndarray:
-        """The same integral from one closure per multipole, built on demand."""
+        """Return the reference built on one closure per multipole, on first use."""
         if self._per_multipole is None:
             self._per_multipole = cases.per_multipole_reference(
                 self.RH,
@@ -234,7 +243,7 @@ class Frozen:
         return self._per_multipole
 
     def compute(self, method: str) -> np.ndarray:
-        """One block through the library, by the named kernel-space method."""
+        """Compute one block through the library, by the named kernel-space method."""
         xcor = Nc.Xcor.new(self.dist, self.ps, METHODS[method])
         xcor.set_closure_type(self.settings.closure)
         xcor.set_ell_batch_size(self.settings.ell_batch_size)
@@ -247,7 +256,7 @@ class Frozen:
         return np.array(vp.dup_array())
 
     def integrate_block(self, method: str) -> np.ndarray:
-        """The same block, driven straight off the closures built above.
+        """Integrate one block straight off the closures built above.
 
         No kernel, no closure build, no batching: this is the outer quadrature
         alone, which is the only way to compare two methods on one integrand
@@ -274,11 +283,11 @@ class Frozen:
         return np.array(vp.dup_array())
 
     def truth_for(self, method: str) -> np.ndarray:
-        """The reference built on the closure this method actually integrates."""
+        """Return the reference that matches the method's own closure and batching."""
         return self.per_multipole if method in PER_MULTIPOLE else self.reference.cl
 
     def peak_error(self, got: np.ndarray, truth: np.ndarray) -> float:
-        """Worst deviation over the block, against the block's own peak."""
+        """Return the worst deviation over the block, relative to the block's peak."""
         return float(np.abs(got - truth).max() / np.abs(truth).max())
 
 
@@ -293,7 +302,7 @@ FROZEN_CACHE_MAXSIZE = int(os.environ.get("XCOR_FROZEN_CACHE", "8"))
 
 
 @pytest.fixture(name="frozen", scope="module")
-def fixture_frozen():
+def fixture_frozen() -> Callable[[str, str, int], Frozen]:
     """Build each (case, closure, block) once and hand it to every test.
 
     Least-recently-used beyond FROZEN_CACHE_MAXSIZE, because holding all of
@@ -304,6 +313,7 @@ def fixture_frozen():
     )
 
     def get(case: str, closure: str, lmin: int) -> Frozen:
+        """Return the Frozen for one key, building it on a miss."""
         key = (case, closure, lmin)
 
         if key in cache:
@@ -322,10 +332,10 @@ def fixture_frozen():
 
 
 @pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS])
-@pytest.mark.parametrize("closure", sorted(CLOSURES))
+@pytest.mark.parametrize("closure", CLOSURE_PARAMS)
 @pytest.mark.parametrize("lmin", cases.ELLS_SUITE)
 def test_reference_is_a_reference(frozen, case: str, closure: str, lmin: int) -> None:
-    """The reference's own convergence, before anything is compared to it.
+    """Check that the reference converges before any method is compared to it.
 
     Raising the Gauss-Legendre order on a cell has to stop moving the answer,
     or the comparisons below measure the reference rather than the method. A
@@ -339,17 +349,24 @@ def test_reference_is_a_reference(frozen, case: str, closure: str, lmin: int) ->
     assert reference.worst_cell_move < REFERENCE_FLOOR[closure]
 
 
-@pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS])
-@pytest.mark.parametrize("closure", sorted(CLOSURES))
+# Parameter order is cache order. pytest exhausts the top decorator fastest and
+# the bottom one slowest, and the frozen fixture keeps eight keys: with `method`
+# innermost the four methods of one (case, closure, lmin) run back to back on one
+# build. With `case` innermost the 35 cases stream through the cache for each
+# method in turn and every key is rebuilt once per method.
 @pytest.mark.parametrize("method", sorted(METHODS))
+@pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS])
+@pytest.mark.parametrize("closure", CLOSURE_PARAMS)
 @pytest.mark.parametrize("lmin", cases.ELLS_SUITE)
 def test_method_matches_reference(
     frozen, case: str, closure: str, method: str, lmin: int
 ) -> None:
-    """Every kernel-space method against the quadrature's own truth."""
+    """Check every kernel-space method against the quadrature's own reference."""
     state = frozen(case, closure, lmin)
     error = state.peak_error(state.compute(method), state.truth_for(method))
-    tolerance = TOLERANCE_BY_CASE.get((method, closure, case), TOLERANCE[(method, closure)])
+    tolerance = TOLERANCE_BY_CASE.get(
+        (method, closure, case), TOLERANCE[(method, closure)]
+    )
 
     assert error < tolerance, (
         f"{case} ({state.pair.regime}): {method} on a {closure} closure "
@@ -358,14 +375,14 @@ def test_method_matches_reference(
     )
 
 
-@pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS])
-@pytest.mark.parametrize("closure", sorted(CLOSURES))
 @pytest.mark.parametrize("method", BLOCK_METHODS)
+@pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS])
+@pytest.mark.parametrize("closure", CLOSURE_PARAMS)
 @pytest.mark.parametrize("lmin", cases.ELLS_SUITE)
 def test_block_entry_point_matches_compute(
     frozen, case: str, closure: str, method: str, lmin: int
 ) -> None:
-    """integrate_block() on shared closures is what compute() runs internally.
+    """Check that integrate_block() and compute() agree exactly on shared closures.
 
     Exact equality, not a tolerance: compute() builds the closures and calls
     the same NcXcorKQuad entry this does, so any difference is the two paths
@@ -390,7 +407,7 @@ def test_block_entry_point_matches_compute(
 
 @pytest.mark.parametrize("method", sorted(METHODS))
 def test_method_introspection_is_consistent(method: str) -> None:
-    """What the table says about a method matches what it does."""
+    """Check that the method table's flags match what the method does."""
     meth = METHODS[method]
 
     assert Nc.xcor_method_is_kernel_space(meth)
@@ -402,7 +419,7 @@ def test_method_introspection_is_consistent(method: str) -> None:
 
 
 def test_limber_z_methods_have_no_block_quadrature() -> None:
-    """The redshift-space tier is a different approximation, not a rule.
+    """Check that integrate_block() refuses the redshift-space tier and KERNEL_GSL.
 
     integrate_block() refuses it, and refuses KERNEL_GSL too -- that one is
     kernel-space but fits its closure one multipole at a time, so there is no
@@ -420,9 +437,9 @@ def test_limber_z_methods_have_no_block_quadrature() -> None:
 
 
 @pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS if pair.isauto])
-@pytest.mark.parametrize("closure", sorted(CLOSURES))
+@pytest.mark.parametrize("closure", CLOSURE_PARAMS)
 def test_auto_spectra_cannot_cancel(frozen, case: str, closure: str) -> None:
-    """W^2 >= 0, so an auto spectrum's integrand has nothing to cancel.
+    """Check that an auto spectrum does not cancel: W^2 >= 0 leaves nothing to.
 
     This is why the matrix is not all auto spectra: a method's per-node error
     reaches the answer undivided here, and by up to seven orders more on a
@@ -432,13 +449,13 @@ def test_auto_spectra_cannot_cancel(frozen, case: str, closure: str) -> None:
     assert frozen(case, closure, 2).cancellation == pytest.approx(1.0, abs=1.0e-12)
 
 
-@pytest.mark.parametrize("closure", sorted(CLOSURES))
+@pytest.mark.parametrize("closure", CLOSURE_PARAMS)
 def test_far_separated_bins_cancel_by_orders(frozen, closure: str) -> None:
-    """And the cross pair the matrix exists for still does cancel.
+    """Check that the far-separated cross pair cancels by orders of magnitude.
 
     Tail against tail at ell = 2 is where a quadrature's per-node error is
     amplified the most; by ell = 200 each window is confined near its own
-    turning point and the overlap is genuinely small rather than cancelling.
+    turning point and the overlap is small rather than cancelling.
     """
     low = frozen("X3", closure, 2).cancellation[0]
 
@@ -446,7 +463,7 @@ def test_far_separated_bins_cancel_by_orders(frozen, closure: str) -> None:
 
 
 def test_narrow_shell_caps_the_spline_closure() -> None:
-    """A 56 Mpc hard shell: the case the spectral closure exists for.
+    """Check that a 56 Mpc hard shell caps the spline closure and not the spectral one.
 
     The knob that matters is ``scaled-abstol``, not ``reltol``. Measured on
     this shell, four decades of ``reltol`` (1e-4 to 1e-8) change the answer by
@@ -465,6 +482,7 @@ def test_narrow_shell_caps_the_spline_closure() -> None:
     pair = cases.PAIRS_BY_CASE["N1"]
 
     def solve(closure: Nc.XcorKernelClosure, scaled_abstol: float) -> np.ndarray:
+        """Return the N1 auto block for one closure at one scaled-abstol."""
         settings = cases.Settings(
             reltol=1.0e-6, scaled_abstol=scaled_abstol, closure=closure
         )
@@ -478,6 +496,7 @@ def test_narrow_shell_caps_the_spline_closure() -> None:
     peak = np.abs(truth).max()
 
     def error(values: np.ndarray) -> float:
+        """Return the worst deviation from the reference, relative to its peak."""
         return float(np.abs(values - truth).max() / peak)
 
     # The spline closure at the floor, and one decade above it. It improves
@@ -494,7 +513,7 @@ def test_narrow_shell_caps_the_spline_closure() -> None:
 
 
 def test_reltol_is_not_what_moves_the_narrow_shell() -> None:
-    """And the knob that looks like the accuracy knob is inert here.
+    """Check that reltol does not move the narrow-shell answer.
 
     Guards the reading above: if a future change makes ``reltol`` matter on
     this shell, the comparison in ``test_narrow_shell_caps_the_spline_closure``
@@ -505,6 +524,7 @@ def test_reltol_is_not_what_moves_the_narrow_shell() -> None:
     pair = cases.PAIRS_BY_CASE["N1"]
 
     def solve(reltol: float) -> np.ndarray:
+        """Return the N1 auto block on the spline closure at one reltol."""
         settings = cases.Settings(
             reltol=reltol,
             scaled_abstol=1.0e-5,
@@ -563,13 +583,15 @@ CERTIFIED_TOLERANCE_BY_CASE = {("X14", "chebyshev"): 2.0e-1}
 
 
 def _certified_budget(case: str, closure: str) -> float:
-    """What this pair is allowed to deviate by, carve-outs included."""
-    return CERTIFIED_TOLERANCE_BY_CASE.get((case, closure), CERTIFIED_TOLERANCE[closure])
+    """Return the certified tolerance for one (case, closure) pair, with headroom."""
+    return CERTIFIED_TOLERANCE_BY_CASE.get(
+        (case, closure), CERTIFIED_TOLERANCE[closure]
+    )
 
 
 @pytest.fixture(name="certified", scope="module")
 def fixture_certified() -> dict:
-    """The certified C_ell table, loaded once."""
+    """Load the certified C_ell table once per module."""
     path = pathlib.Path(Ncm.cfg_get_data_filename(TRUTH_TABLE, True))
 
     with gzip.open(path, "rt") as handle:
@@ -577,7 +599,7 @@ def fixture_certified() -> dict:
 
 
 def _pair_scale(table: dict) -> dict:
-    """Each pair's largest certified |C_ell| over the multipoles present."""
+    """Return each pair's largest certified |C_ell| over the multipoles present."""
     scale: dict[str, float] = {}
 
     for entry in table["cases"].values():
@@ -588,7 +610,7 @@ def _pair_scale(table: dict) -> dict:
 
 
 def _library_cl(case: str, ell: int, closure: str) -> float:
-    """What the library returns for one entry, by its exact method."""
+    """Return the library's C_ell for one (case, ell, closure) entry."""
     pair = cases.PAIRS_BY_CASE[case]
     settings = cases.Settings(closure=CLOSURES[closure])
     cosmo, dist, ps = cases.make_cosmo_bits()
@@ -613,7 +635,7 @@ def _library_cl(case: str, ell: int, closure: str) -> float:
 
 
 def test_certified_table_is_certified(certified: dict) -> None:
-    """The reference has to be a reference: its own radius cannot matter.
+    """Check that every certified radius is far below the tolerance used here.
 
     Guards a regeneration that quietly lowered the precision target -- every
     assertion below would still pass while checking nothing.
@@ -629,7 +651,7 @@ def test_certified_table_is_certified(certified: dict) -> None:
 
 @pytest.mark.parametrize("closure", sorted(CLOSURES))
 def test_closure_matches_certified_c_ell(certified: dict, closure: str) -> None:
-    """Both closures against Arb, over every entry the table certifies."""
+    """Check both closures against Arb over every entry the table certifies."""
     scale = _pair_scale(certified)
     worst: dict[str, tuple[float, int]] = {}
 
@@ -642,7 +664,10 @@ def test_closure_matches_certified_c_ell(certified: dict, closure: str) -> None:
             worst[case] = (deviation, entry["ell"])
 
     over = [
-        f"{case} ell={ell} by {deviation:.3e} (budget {_certified_budget(case, closure):.1e})"
+        (
+            f"{case} ell={ell} by {deviation:.3e} "
+            f"(budget {_certified_budget(case, closure):.1e})"
+        )
         for case, (deviation, ell) in sorted(worst.items())
         if deviation >= _certified_budget(case, closure)
     ]
@@ -654,7 +679,7 @@ def test_closure_matches_certified_c_ell(certified: dict, closure: str) -> None:
 
 
 def test_spectral_closure_is_closer_to_certified_truth(certified: dict) -> None:
-    """The reason two closure types exist, measured against proven values.
+    """Check that the spectral closure beats the spline one against certified values.
 
     Level 1 cannot state this: it compares each method to a reference built on
     the closure under test, so a closure that is wrong in the same way as its
