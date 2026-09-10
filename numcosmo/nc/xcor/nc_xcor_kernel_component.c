@@ -822,13 +822,13 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
 
     for (i = 0; i < self->ny; i++)
     {
-      const gdouble log_y         = log (x_min) + (log (x_max) - log (x_min)) * i / (self->ny - 1.0);
-      const gdouble x             = exp (log_y);
+      const gdouble log_y          = log (x_min) + (log (x_max) - log (x_min)) * i / (self->ny - 1.0);
+      const gdouble x              = exp (log_y);
       const gdouble k_from_chi_min = x / chi_max;
       const gdouble k_from_chi_max = x / chi_min;
-      const gdouble k_valid_min   = GSL_MAX (k_min, k_from_chi_min);
-      const gdouble k_valid_max   = GSL_MIN (k_max, k_from_chi_max);
-      const gdouble k_range_width = (k_valid_max - k_valid_min) / k_valid_max;
+      const gdouble k_valid_min    = GSL_MAX (k_min, k_from_chi_min);
+      const gdouble k_valid_max    = GSL_MIN (k_max, k_from_chi_max);
+      const gdouble k_range_width  = (k_valid_max - k_valid_min) / k_valid_max;
       gdouble k_at_max, KL_max;
 
       data.x = x;

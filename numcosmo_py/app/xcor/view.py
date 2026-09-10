@@ -39,6 +39,7 @@ from numcosmo_py import Nc, Ncm
 from numcosmo_py.cosmology import Cosmology
 
 from .kernels import (
+    _KernelRadialConfig,
     parse_kernel_spec,
     get_kernel_registry_help_text,
     LSSTBinType,
@@ -980,6 +981,9 @@ class ViewKernel:
         )
         kernel_obj.prepare(self.cosmo)
 
+        # Only the radial shapes carry the Bessel-derivative order; the dispatch
+        # table above already rejected everything else.
+        assert isinstance(config, _KernelRadialConfig)
         deriv = config.bessel_deriv
         weight = "" if deriv == 0 else f", $j_\\ell^{{({deriv})}}$"
         kernel_label = f"{name}{weight}"

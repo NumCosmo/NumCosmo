@@ -23194,12 +23194,12 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         Window standard deviation in Mpc
       n-sigma -> gdouble: n-sigma
         Truncation half-width in units of sigma
-      bessel-deriv -> guint: bessel-deriv
-        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -23256,10 +23256,10 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
     """
 
     class Props:
-        bessel_deriv: int
         chi_mean: float
         chi_sigma: float
         n_sigma: float
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -23288,10 +23288,10 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
     props: Props = ...
     def __init__(
         self,
-        bessel_deriv: int = ...,
         chi_mean: float = ...,
         chi_sigma: float = ...,
         n_sigma: float = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -23311,7 +23311,6 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
-    def get_bessel_deriv(self) -> int: ...
     def get_chi_mean(self) -> float: ...
     def get_chi_sigma(self) -> float: ...
     def get_n_sigma(self) -> float: ...
@@ -23369,6 +23368,8 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -23428,6 +23429,7 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         chi_lower: float
         chi_source_lower: float
         chi_source_upper: float
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -23459,6 +23461,7 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         chi_lower: float = ...,
         chi_source_lower: float = ...,
         chi_source_upper: float = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -23536,6 +23539,8 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -23596,6 +23601,7 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         chi_sigma: NumCosmoMath.Vector
         n_sigma: float
         weight: NumCosmoMath.Vector
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -23628,6 +23634,7 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         chi_sigma: NumCosmoMath.Vector = ...,
         n_sigma: float = ...,
         weight: NumCosmoMath.Vector = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -23712,6 +23719,8 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -23773,6 +23782,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         chi_lower: float
         chi_scale: float
         chi_upper: float
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -23806,6 +23816,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         chi_lower: float = ...,
         chi_scale: float = ...,
         chi_upper: float = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -23888,6 +23899,8 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -23948,6 +23961,7 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         chi_scale: float
         n_scale: float
         nu: float
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -23980,6 +23994,7 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         chi_scale: float = ...,
         n_scale: float = ...,
         nu: float = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -24058,6 +24073,8 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -24116,6 +24133,7 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
     class Props:
         chi_lower: float
         chi_upper: float
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -24146,6 +24164,7 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         self,
         chi_lower: float = ...,
         chi_upper: float = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -24221,6 +24240,8 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -24281,6 +24302,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         chi_sigma: float
         chi_upper: float
         n_sigma: float
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -24313,6 +24335,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         chi_sigma: float = ...,
         chi_upper: float = ...,
         n_sigma: float = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -25309,6 +25332,8 @@ class XcorKernelRadial(XcorKernel):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -25365,6 +25390,7 @@ class XcorKernelRadial(XcorKernel):
     """
 
     class Props:
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -25394,6 +25420,7 @@ class XcorKernelRadial(XcorKernel):
     parent_instance: XcorKernel = ...
     def __init__(
         self,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -25571,6 +25598,8 @@ class XcorKernelTable(XcorKernelRadial):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -25633,6 +25662,7 @@ class XcorKernelTable(XcorKernelRadial):
         kind: XcorKernelTableKind
         normalize: bool
         order: int
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -25667,6 +25697,7 @@ class XcorKernelTable(XcorKernelRadial):
         kind: XcorKernelTableKind = ...,
         normalize: bool = ...,
         order: int = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
