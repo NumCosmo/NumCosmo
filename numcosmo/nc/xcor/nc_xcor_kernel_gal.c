@@ -58,7 +58,6 @@
 #include "nc/xcor/nc_xcor_kernel_component.h"
 #include "nc/xcor/nc_xcor_lensing_efficiency.h"
 #include "nc/xcor/nc_xcor.h"
-#include "nc/powspec/nc_growth_func.h"
 
 #include "ncm/integration/ncm_integrate.h"
 #include "ncm/spline/ncm_spline_gsl.h"
@@ -87,7 +86,6 @@ struct _NcXcorKernelGal
   NcXcorLensingEfficiency *lens_eff;
   gboolean domagbias;
 
-  NcGrowthFunc *gf;
   gboolean dorsd;
 
   gboolean fast_update;
@@ -244,7 +242,6 @@ nc_xcor_kernel_gal_init (NcXcorKernelGal *xclkg)
   xclkg->lens_eff  = NULL;
   xclkg->domagbias = FALSE;
   xclkg->dorsd     = FALSE;
-  xclkg->gf        = NULL;
 
   xclkg->fast_update    = FALSE;
   xclkg->bias_old       = 0.0;
@@ -371,11 +368,10 @@ _nc_xcor_kernel_gal_constructed (GObject *object)
       xclkg->magbias_comp = _nc_xcor_kernel_component_magbias_new (xclkg, dist, ps);
     }
 
-    /* Growth rate and component for redshift-space distortions */
+    /* Component for redshift-space distortions */
     if (xclkg->dorsd)
     {
       g_assert_null (xclkg->rsd_comp);
-      xclkg->gf       = nc_growth_func_new ();
       xclkg->rsd_comp = _nc_xcor_kernel_component_rsd_new (xclkg, dist, ps);
     }
 
@@ -458,7 +454,6 @@ _nc_xcor_kernel_gal_dispose (GObject *object)
   nc_xcor_kernel_component_clear (&xclkg->clustering_comp);
   nc_xcor_kernel_component_clear (&xclkg->magbias_comp);
   nc_xcor_kernel_component_clear (&xclkg->rsd_comp);
-  nc_growth_func_clear (&xclkg->gf);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_gal_parent_class)->dispose (object);
@@ -514,8 +509,10 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
    * NcXcorKernelGal:dorsd:
    *
    * Whether to include the linear redshift-space distortion (Kaiser) term.
-   * Adds a component with kernel $-f(z)\, \mathrm{d}n/\mathrm{d}z$ weighted by
-   * $j_\ell''(k\chi)$, where $f$ is the linear growth rate. Supported by the
+   * Adds a component with kernel $-f(k,z)\, \mathrm{d}n/\mathrm{d}z$ weighted by
+   * $j_\ell''(k\chi)$, where $f(k,z) = -(1+z)\,\partial_z P(k,z) / (2P)$ is the
+   * linear growth rate read from the power spectrum, scale dependence included.
+   * Supported by the
    * kernel-space methods only (%NC_XCOR_METHOD_KERNEL_EXACT,
    * %NC_XCOR_METHOD_KERNEL_CUBATURE, %NC_XCOR_METHOD_KERNEL_GSL): the
    * redshift-space Limber methods, including the #NcXcor:meth default
@@ -758,8 +755,12 @@ _nc_xcor_kernel_component_clustering_new (NcXcorKernelGal *xclkg, NcDistance *di
  * Implementation of the redshift-space distortion component.
  *
  * Mirrors the clustering component with the linear growth rate
- * f(z) = dln D / dln a in place of the bias, with the CCL sign convention:
- * the number-counts transfer is b(z) j_l(k chi) - f(z) j_l''(k chi). The
+ * f(k, z) = dln D / dln a in place of the bias, with the CCL sign convention:
+ * the number-counts transfer is b(z) j_l(k chi) - f(k, z) j_l''(k chi). The
+ * growth rate is read from the power spectrum itself, D^2 being proportional
+ * to P(k, z) at fixed k, so f(k, z) = -(1 + z) (dP/dz) / (2 P): a power
+ * spectrum whose growth depends on scale (massive neutrinos, modified
+ * gravity) carries that dependence into the term with no further model. The
  * Bessel weight order is set at construction through the component's
  * bessel-deriv property.
  */
@@ -776,16 +777,13 @@ _rsd_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdoub
   RSDComponentData *data = _NC_XCOR_KERNEL_COMPONENT_RSD_GET_DATA (comp);
   const gdouble z        = nc_distance_inv_comoving (data->dist, cosmo, chi);
   const gdouble E_z      = nc_hicosmo_E (cosmo, z);
-  const gdouble powspec  = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
+  const gdouble k_RH     = k / nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble powspec  = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k_RH);
+  const gdouble dpowspec = ncm_powspec_deriv_z (data->ps, NCM_MODEL (cosmo), z, k_RH);
   const gdouble dn_dz_z  = _nc_xcor_kernel_gal_dndz (data->xclkg, z);
-  gdouble D_z, dD_dz;
+  const gdouble f_kz     = -(1.0 + z) * dpowspec / (2.0 * powspec);
 
-  nc_growth_func_eval_both (data->xclkg->gf, cosmo, z, &D_z, &dD_dz);
-  {
-    const gdouble f_z = -(1.0 + z) * dD_dz / D_z;
-
-    return -f_z *dn_dz_z *E_z *sqrt (powspec);
-  }
+  return -f_kz *dn_dz_z *E_z *sqrt (powspec);
 }
 
 static gdouble
@@ -804,7 +802,6 @@ _rsd_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdoubl
 
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
-  nc_growth_func_prepare_if_needed (xclkg->gf, cosmo);
 
   /* Same support as the clustering component: bounded by dn_dz. */
   *chi_min = nc_distance_comoving (dist, cosmo, MAX (xclkg->dn_dz_zmin, 1.0e-6));
@@ -934,7 +931,6 @@ _nc_xcor_kernel_gal_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   if (xclkg->dorsd)
   {
     g_assert_nonnull (xclkg->rsd_comp);
-    nc_growth_func_prepare_if_needed (xclkg->gf, cosmo);
     nc_xcor_kernel_component_prepare (xclkg->rsd_comp, cosmo);
   }
 }

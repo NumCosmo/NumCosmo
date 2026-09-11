@@ -177,6 +177,67 @@ _ncm_powspec_spline2d_eval (NcmPowspec *powspec, NcmModel *model, const gdouble 
   }
 }
 
+/*
+ * Derivatives from the spline itself. The table holds ln P on (z, ln k), so
+ * dP/dz = P d(ln P)/dz and dP/dk = P d(ln P)/d(ln k) / k, with the two
+ * extrapolation branches of eval() differentiated in the same way: below the
+ * table the slope in ln k is the fixed 3, above it the quadratic roll-off with
+ * the table's own slope lambda, both of which vary with z through the spline.
+ */
+static gdouble
+_ncm_powspec_spline2d_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
+{
+  NcmPowspecSpline2d *ps_s2d             = NCM_POWSPEC_SPLINE2D (powspec);
+  NcmPowspecSpline2dPrivate * const self = ncm_powspec_spline2d_get_instance_private (ps_s2d);
+  const gdouble lnk                      = log (k);
+  const gdouble P                        = _ncm_powspec_spline2d_eval (powspec, model, z, k);
+
+  if (lnk < self->intern_lnkmin)
+  {
+    return P * ncm_spline2d_deriv_dzdx (self->spline2d, z, self->intern_lnkmin);
+  }
+  else if (lnk > self->intern_lnkmax)
+  {
+    const gdouble dlnPkmax    = ncm_spline2d_deriv_dzdx (self->spline2d, z, self->intern_lnkmax);
+    const gdouble dlnPkmax_m1 = ncm_spline2d_deriv_dzdx (self->spline2d, z, self->intern_lnkmax_m1);
+    const gdouble delta_lnk   = lnk - self->intern_lnkmax;
+    const gdouble dlambda     = (dlnPkmax - dlnPkmax_m1) / (self->intern_lnkmax - self->intern_lnkmax_m1);
+
+    return P * (dlnPkmax + dlambda * delta_lnk);
+  }
+  else
+  {
+    return P * ncm_spline2d_deriv_dzdx (self->spline2d, z, lnk);
+  }
+}
+
+static gdouble
+_ncm_powspec_spline2d_deriv_k (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
+{
+  NcmPowspecSpline2d *ps_s2d             = NCM_POWSPEC_SPLINE2D (powspec);
+  NcmPowspecSpline2dPrivate * const self = ncm_powspec_spline2d_get_instance_private (ps_s2d);
+  const gdouble lnk                      = log (k);
+  const gdouble P                        = _ncm_powspec_spline2d_eval (powspec, model, z, k);
+
+  if (lnk < self->intern_lnkmin)
+  {
+    return P * 3.0 / k;
+  }
+  else if (lnk > self->intern_lnkmax)
+  {
+    const gdouble lnPkmax    = ncm_spline2d_eval (self->spline2d, z, self->intern_lnkmax);
+    const gdouble lnPkmax_m1 = ncm_spline2d_eval (self->spline2d, z, self->intern_lnkmax_m1);
+    const gdouble delta_lnk  = lnk - self->intern_lnkmax;
+    const gdouble lambda     = (lnPkmax - lnPkmax_m1) / (self->intern_lnkmax - self->intern_lnkmax_m1);
+
+    return P * (lambda - 10.0 * delta_lnk) / k;
+  }
+  else
+  {
+    return P * ncm_spline2d_deriv_dzdy (self->spline2d, z, lnk) / k;
+  }
+}
+
 static void
 _ncm_powspec_spline2d_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk)
 {
@@ -239,6 +300,8 @@ ncm_powspec_spline2d_class_init (NcmPowspecSpline2dClass *klass)
   powspec_class->prepare       = &_ncm_powspec_spline2d_prepare;
   powspec_class->eval          = &_ncm_powspec_spline2d_eval;
   powspec_class->eval_vec      = &_ncm_powspec_spline2d_eval_vec;
+  powspec_class->deriv_z       = &_ncm_powspec_spline2d_deriv_z;
+  powspec_class->deriv_k       = &_ncm_powspec_spline2d_deriv_k;
   powspec_class->get_nknots    = &_ncm_powspec_spline2d_get_nknots;
   powspec_class->get_spline_2d = &_ncm_powspec_spline2d_get_spline_2d;
 }

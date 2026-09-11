@@ -199,3 +199,38 @@ def test_extrapolation(Pk2d: Ncm.Spline2d) -> None:
     # Test extrapolation, increasing k, must be smaller than the value at kmax
     for k_large in np.geomspace(kmax * 1.01, kmax * 1.0e5, 100):
         assert ps.eval(None, 0.0, k_large) < ps.eval(None, 0.0, kmax)
+
+
+def test_deriv_z(Pk2d: Ncm.Spline2d) -> None:
+    """The z derivative comes from the spline; _f is linear in 1 + z."""
+    ps = Ncm.PowspecSpline2d.new(Pk2d)
+    ps.prepare()
+
+    for z, k in ((0.1, 0.5), (0.5, 1.0e-2), (0.9, 5.0)):
+        assert_allclose(ps.deriv_z(None, z, k), _f(z, k) / (1.0 + z), rtol=1.0e-4)
+
+    # Below the tabulated range in k the spectrum is extrapolated as k^3 with the
+    # slope of the first tabulated point; the z derivative follows the same rule.
+    k_low = 1.0e-6
+    assert_allclose(
+        ps.deriv_z(None, 0.5, k_low), ps.eval(None, 0.5, k_low) / 1.5, rtol=1.0e-4
+    )
+
+
+def test_deriv_k(Pk2d: Ncm.Spline2d) -> None:
+    """The k derivative comes from the spline; _f is a power law in k."""
+    ps = Ncm.PowspecSpline2d.new(Pk2d)
+    ps.prepare()
+
+    for z, k in ((0.1, 0.5), (0.5, 1.0e-2), (0.9, 5.0)):
+        assert_allclose(
+            ps.deriv_k(None, z, k), (0.96 - 1.0) * _f(z, k) / k, rtol=1.0e-6
+        )
+
+    # The extrapolation below the table is k^3, so d ln P / d ln k = 3 there.
+    k_low = 1.0e-6
+    assert_allclose(
+        ps.deriv_k(None, 0.5, k_low),
+        3.0 * ps.eval(None, 0.5, k_low) / k_low,
+        rtol=1.0e-10,
+    )
