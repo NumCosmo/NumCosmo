@@ -32,10 +32,22 @@
  *
  * Implementation of #NcXcorKernel for CMB lensing
  *
- * The kernel is given by
+ * With the thin-screen source, #NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN,
+ * the kernel is
  * \begin{equation}
- *    W^{\kappa_\mathrm{CMB}} (z) = \frac{3}{2} \frac{\Omega_m H_0^2}{c} \frac{(1+z)}{H(z)} \chi(z) \frac{\chi(z_*) - \chi(z)}{\chi(z_*)}.
+ *    W^{\kappa_\mathrm{CMB}} (z) = \frac{3}{2} \frac{\Omega_m H_0^2}{c} \frac{(1+z)}{H(z)} \chi(z) \frac{\chi(z_*) - \chi(z)}{\chi(z_*)},
  * \end{equation}
+ * every photon having last scattered at the decoupling redshift $z_*$ of the
+ * #NcDistance. With #NC_XCOR_KERNEL_CMB_LENSING_SOURCE_VISIBILITY the single
+ * plane is replaced by the recombination visibility function $g(z)$ of the
+ * #NcXcorKernelCMBLensing:recomb object, normalized to unit integral over the
+ * last-scattering shell, and the geometric factor becomes the lensing efficiency
+ * \begin{equation}
+ *    q(z) = \int_z^{z_{\max}} \mathrm{d}z'\, g(z') \frac{\chi(z') - \chi(z)}{\chi(z')},
+ * \end{equation}
+ * computed by #NcXcorLensingEfficiency. The two agree to the width of the shell
+ * over $\chi_*$; the difference is at the far end of the support, where the
+ * thin screen ends with a kink and the visibility source goes to zero smoothly.
  *
  */
 
@@ -47,10 +59,13 @@
 #include "ncm/core/ncm_cfg.h"
 #include "nc/xcor/nc_xcor_kernel_CMB_lensing.h"
 #include "nc/xcor/nc_xcor_kernel_component.h"
+#include "nc/xcor/nc_xcor_lensing_efficiency.h"
 #include "nc/xcor/nc_xcor.h"
+#include "nc_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>
+#include <gsl/gsl_integration.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 
@@ -69,6 +84,13 @@ struct _NcXcorKernelCMBLensing
   gdouble dt_lss;
   gdouble dt;
 
+  NcXcorKernelCMBLensingSource source;
+  NcXcorLensingEfficiency *lens_eff;
+  NcHICosmo *cosmo_prep; /* valid while prepare() runs; read by the visibility source */
+  gdouble z_src_min;
+  gdouble z_src_max;
+  gdouble src_norm;
+
   NcDistance *dist;
   NcmPowspec *ps;
   NcXcorKernelComponent *cmb_lens_comp;
@@ -79,10 +101,30 @@ enum
   PROP_0,
   PROP_RECOMB,
   PROP_NL,
+  PROP_SOURCE,
   PROP_SIZE,
 };
 
 G_DEFINE_TYPE (NcXcorKernelCMBLensing, nc_xcor_kernel_cmb_lensing, NC_TYPE_XCOR_KERNEL)
+
+/*
+ * The visibility source: W_src(z) = g(z) / (1 + z) / norm, with g the visibility
+ * of the recomb object in lambda = -ln(1 + z), restricted to the last-scattering
+ * shell found by nc_recomb_v_tau_lambda_features() and normalized to unit
+ * integral over it. The lensing efficiency it feeds is the same object the weak
+ * lensing kernel uses for its dn/dz.
+ */
+#define NC_XCOR_KERNEL_CMB_LENSING_VISIBILITY_LOGREF (4.0 * M_LN10)
+
+static gdouble _nc_xcor_kernel_cmb_lensing_lens_eff_eval_source (NcXcorLensingEfficiency *lens_eff, gdouble z);
+static void _nc_xcor_kernel_cmb_lensing_lens_eff_get_z_range (NcXcorLensingEfficiency *lens_eff, gdouble *zmin, gdouble *zmax);
+
+NC_XCOR_LENSING_EFFICIENCY_DEFINE_TYPE (NC, XCOR_KERNEL_CMB_LENSING_LENS_EFF,
+                                        NcXcorKernelCMBLensingLensEff,
+                                        nc_xcor_kernel_cmb_lensing_lens_eff,
+                                        _nc_xcor_kernel_cmb_lensing_lens_eff_eval_source,
+                                        _nc_xcor_kernel_cmb_lensing_lens_eff_get_z_range,
+                                        NcXcorKernelCMBLensing *)
 
 /*
  * CMB Lensing Component Definition
@@ -95,6 +137,9 @@ typedef struct _CMBLensingComponentData
   NcmPowspec *ps;
   gdouble z_lss;
   gdouble dt_lss;
+  NcXcorKernelCMBLensingSource source;
+  NcXcorLensingEfficiency *lens_eff;
+  gdouble z_src_max;
 } CMBLensingComponentData;
 
 #define _NC_XCOR_KERNEL_COMPONENT_CMB_LENSING_GET_DATA(comp) \
@@ -126,6 +171,12 @@ nc_xcor_kernel_cmb_lensing_init (NcXcorKernelCMBLensing *xclkl)
   xclkl->z_lss         = 0.0;
   xclkl->chi_lss       = 0.0;
   xclkl->dt_lss        = 0.0;
+  xclkl->source        = NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN;
+  xclkl->lens_eff      = NULL;
+  xclkl->cosmo_prep    = NULL;
+  xclkl->z_src_min     = 0.0;
+  xclkl->z_src_max     = 0.0;
+  xclkl->src_norm      = 1.0;
   xclkl->dt            = 0.0;
   xclkl->dist          = NULL;
   xclkl->ps            = NULL;
@@ -148,6 +199,9 @@ _nc_xcor_kernel_cmb_lensing_set_property (GObject *object, guint prop_id, const 
       xclkl->Nl    = g_value_dup_object (value);
       xclkl->Nlmax = ncm_vector_len (xclkl->Nl) - 1;
       break;
+    case PROP_SOURCE:
+      nc_xcor_kernel_cmb_lensing_set_source (xclkl, g_value_get_enum (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -169,6 +223,9 @@ _nc_xcor_kernel_cmb_lensing_get_property (GObject *object, guint prop_id, GValue
     case PROP_NL:
       g_value_set_object (value, xclkl->Nl);
       break;
+    case PROP_SOURCE:
+      g_value_set_enum (value, xclkl->source);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -183,6 +240,7 @@ _nc_xcor_kernel_cmb_lensing_dispose (GObject *object)
   nc_recomb_clear (&xclkl->recomb);
   ncm_vector_clear (&xclkl->Nl);
   nc_xcor_kernel_component_clear (&xclkl->cmb_lens_comp);
+  nc_xcor_lensing_efficiency_clear (&xclkl->lens_eff);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_cmb_lensing_parent_class)->dispose (object);
@@ -216,6 +274,16 @@ _nc_xcor_kernel_cmb_lensing_constructed (GObject *object)
 
     g_assert_null (xclkl->cmb_lens_comp);
     xclkl->cmb_lens_comp = _nc_xcor_kernel_component_cmb_lensing_new (dist, ps);
+
+    {
+      NcXcorKernelCMBLensingLensEff *lens_eff_obj = g_object_new (
+        nc_xcor_kernel_cmb_lensing_lens_eff_get_type (),
+        "distance", dist,
+        NULL);
+
+      lens_eff_obj->data = xclkl;
+      xclkl->lens_eff    = NC_XCOR_LENSING_EFFICIENCY (lens_eff_obj);
+    }
   }
 }
 
@@ -261,6 +329,22 @@ nc_xcor_kernel_cmb_lensing_class_init (NcXcorKernelCMBLensingClass *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcXcorKernelCMBLensing:source:
+   *
+   * Where the CMB photons are placed along the line of sight: a single plane at
+   * the decoupling redshift, or the recombination visibility function of
+   * #NcXcorKernelCMBLensing:recomb.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SOURCE,
+                                   g_param_spec_enum ("source",
+                                                      NULL,
+                                                      "Placement of the CMB sources along the line of sight",
+                                                      NC_TYPE_XCOR_KERNEL_CMB_LENSING_SOURCE,
+                                                      NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
@@ -283,9 +367,17 @@ _nc_xcor_kernel_cmb_lensing_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo,
   NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (xclk);
   NcDistance *dist              = nc_xcor_kernel_peek_dist (xclk);
   const gdouble dt              = nc_distance_transverse (dist, cosmo, z);
-  const gdouble dt_z_zlss       = nc_distance_transverse_z1_z2 (dist, cosmo, z, xclkl->z_lss);
 
-  return xck->chi_z * xck->chi_z * (1.0 + z) * dt_z_zlss / (xclkl->dt_lss * dt);
+  if (xclkl->source != NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN)
+  {
+    return xck->chi_z * xck->chi_z * (1.0 + z) * nc_xcor_lensing_efficiency_eval (xclkl->lens_eff, z) / dt;
+  }
+  else
+  {
+    const gdouble dt_z_zlss = nc_distance_transverse_z1_z2 (dist, cosmo, z, xclkl->z_lss);
+
+    return xck->chi_z * xck->chi_z * (1.0 + z) * dt_z_zlss / (xclkl->dt_lss * dt);
+  }
 }
 
 static gdouble
@@ -314,10 +406,18 @@ _cmb_lensing_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosm
   const gdouble z               = nc_distance_inv_comoving (data->dist, cosmo, chi);
   const gdouble powspec         = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble dt              = nc_distance_transverse (data->dist, cosmo, z);
-  const gdouble dt_z_zlss       = nc_distance_transverse_z1_z2 (data->dist, cosmo, z, data->z_lss);
   const gdouble operator_k      = 1.0 / gsl_pow_2 (k);
 
-  return operator_k * (1.0 + z) * dt_z_zlss / (data->dt_lss * dt) * sqrt (powspec);
+  if (data->source != NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN)
+  {
+    return operator_k * (1.0 + z) * nc_xcor_lensing_efficiency_eval (data->lens_eff, z) / dt * sqrt (powspec);
+  }
+  else
+  {
+    const gdouble dt_z_zlss = nc_distance_transverse_z1_z2 (data->dist, cosmo, z, data->z_lss);
+
+    return operator_k * (1.0 + z) * dt_z_zlss / (data->dt_lss * dt) * sqrt (powspec);
+  }
 }
 
 static gdouble
@@ -339,10 +439,12 @@ _cmb_lensing_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
   {
-    const gdouble chi_lss = nc_distance_comoving_lss (dist, cosmo);
+    const gdouble chi_src = (data->source != NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN) ?
+                            nc_distance_comoving (dist, cosmo, data->z_src_max) :
+                            nc_distance_comoving_lss (dist, cosmo);
 
     *chi_min = nc_distance_comoving (dist, cosmo, 1.0e-6);
-    *chi_max = chi_lss * (1.0 - 1.0e-6);
+    *chi_max = chi_src * (1.0 - 1.0e-6);
     *k_min   = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
     *k_max   = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
   }
@@ -354,12 +456,89 @@ _nc_xcor_kernel_component_cmb_lensing_new (NcDistance *dist, NcmPowspec *ps)
   NcXcorKernelComponent *comp   = g_object_new (nc_xcor_kernel_component_cmb_lensing_get_type (), NULL);
   CMBLensingComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CMB_LENSING_GET_DATA (comp);
 
-  data->dist   = dist;
-  data->ps     = ps;
-  data->z_lss  = 0.0;
-  data->dt_lss = 0.0;
+  data->dist      = dist;
+  data->ps        = ps;
+  data->z_lss     = 0.0;
+  data->dt_lss    = 0.0;
+  data->source    = NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN;
+  data->lens_eff  = NULL;
+  data->z_src_max = 0.0;
 
   return comp;
+}
+
+/*
+ * The visibility source and its normalization.
+ */
+
+static gdouble
+_nc_xcor_kernel_cmb_lensing_lens_eff_eval_source (NcXcorLensingEfficiency *lens_eff, gdouble z)
+{
+  NcXcorKernelCMBLensingLensEff *data_obj = NC_XCOR_KERNEL_CMB_LENSING_LENS_EFF (lens_eff);
+  NcXcorKernelCMBLensing *xclkl           = data_obj->data;
+
+  if ((z < xclkl->z_src_min) || (z > xclkl->z_src_max))
+    return 0.0;
+
+  /* g(z) dz = v_tau dlambda with lambda = -ln(1 + z), so |dlambda/dz| = 1/(1 + z). */
+  return nc_recomb_v_tau (xclkl->recomb, xclkl->cosmo_prep, -log1p (z)) / ((1.0 + z) * xclkl->src_norm);
+}
+
+static void
+_nc_xcor_kernel_cmb_lensing_lens_eff_get_z_range (NcXcorLensingEfficiency *lens_eff, gdouble *zmin, gdouble *zmax)
+{
+  NcXcorKernelCMBLensingLensEff *data_obj = NC_XCOR_KERNEL_CMB_LENSING_LENS_EFF (lens_eff);
+  NcXcorKernelCMBLensing *xclkl           = data_obj->data;
+
+  *zmin = xclkl->z_src_min;
+  *zmax = xclkl->z_src_max;
+}
+
+static gdouble
+_nc_xcor_kernel_cmb_lensing_src_integrand (gdouble z, gpointer user_data)
+{
+  NcXcorKernelCMBLensing *xclkl = user_data;
+
+  return nc_recomb_v_tau (xclkl->recomb, xclkl->cosmo_prep, -log1p (z)) / (1.0 + z);
+}
+
+static void
+_nc_xcor_kernel_cmb_lensing_prepare_visibility (NcXcorKernelCMBLensing *xclkl, NcHICosmo *cosmo)
+{
+  gdouble lambda_max, lambda_l, lambda_u;
+
+  if (xclkl->recomb == NULL)
+    g_error ("nc_xcor_kernel_cmb_lensing_prepare: the visibility source needs the recomb property set.");
+
+  nc_recomb_prepare_if_needed (xclkl->recomb, cosmo);
+  nc_recomb_v_tau_lambda_features (xclkl->recomb, cosmo, NC_XCOR_KERNEL_CMB_LENSING_VISIBILITY_LOGREF,
+                                   &lambda_max, &lambda_l, &lambda_u);
+
+  /*
+   * lambda decreases with z: lambda_u is the near edge of the shell, lambda_l
+   * the far one. With reionization the source starts at z = 0 and the low-z
+   * bump of the visibility is part of it.
+   */
+  xclkl->cosmo_prep = cosmo;
+  xclkl->z_src_min  = (xclkl->source == NC_XCOR_KERNEL_CMB_LENSING_SOURCE_VISIBILITY_REIONIZATION) ? 0.0 : expm1 (-lambda_u);
+  xclkl->z_src_max  = expm1 (-lambda_l);
+  xclkl->src_norm   = 1.0;
+
+  {
+    gsl_integration_workspace *w = gsl_integration_workspace_alloc (1000);
+    gsl_function F;
+    gdouble norm, err;
+
+    F.function = &_nc_xcor_kernel_cmb_lensing_src_integrand;
+    F.params   = xclkl;
+
+    gsl_integration_qag (&F, xclkl->z_src_min, xclkl->z_src_max, 0.0, 1.0e-11, 1000, GSL_INTEG_GAUSS61, w, &norm, &err);
+    gsl_integration_workspace_free (w);
+
+    xclkl->src_norm = norm;
+  }
+
+  nc_xcor_lensing_efficiency_prepare (xclkl->lens_eff, cosmo);
 }
 
 /*
@@ -383,19 +562,22 @@ _nc_xcor_kernel_cmb_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   xclkl->chi_lss = nc_distance_comoving_lss (dist, cosmo);
   xclkl->dt_lss  = nc_distance_transverse (dist, cosmo, xclkl->z_lss);
 
+  if (xclkl->source != NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN)
+    _nc_xcor_kernel_cmb_lensing_prepare_visibility (xclkl, cosmo);
+
   /* Update component data with computed values */
   {
     CMBLensingComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CMB_LENSING_GET_DATA (xclkl->cmb_lens_comp);
 
-    data->z_lss  = xclkl->z_lss;
-    data->dt_lss = xclkl->dt_lss;
+    data->z_lss     = xclkl->z_lss;
+    data->dt_lss    = xclkl->dt_lss;
+    data->source    = xclkl->source;
+    data->lens_eff  = xclkl->lens_eff;
+    data->z_src_max = xclkl->z_src_max;
   }
 
   g_assert_nonnull (xclkl->cmb_lens_comp);
   nc_xcor_kernel_component_prepare (xclkl->cmb_lens_comp, cosmo);
-
-  /* nc_recomb_prepare (xclkl->recomb, cosmo); */
-  /* gdouble lamb = nc_recomb_tau_zstar (xclkl->recomb, cosmo); */
 }
 
 static void
@@ -438,7 +620,7 @@ _nc_xcor_kernel_cmb_lensing_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdou
   NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (xclk);
 
   *zmin = 0.0;
-  *zmax = xclkl->z_lss;
+  *zmax = (xclkl->source != NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN) ? xclkl->z_src_max : xclkl->z_lss;
   *zmid = 2.0;
 }
 
@@ -479,5 +661,36 @@ nc_xcor_kernel_cmb_lensing_new (NcDistance *dist, NcmPowspec *ps, NcRecomb *reco
                                                 NULL);
 
   return xclkl;
+}
+
+/**
+ * nc_xcor_kernel_cmb_lensing_set_source:
+ * @xclkl: a #NcXcorKernelCMBLensing
+ * @source: a #NcXcorKernelCMBLensingSource
+ *
+ * Sets where the CMB photons are placed along the line of sight. The visibility
+ * source requires the #NcXcorKernelCMBLensing:recomb object. The kernel is
+ * marked outdated and is prepared again on the next use.
+ */
+void
+nc_xcor_kernel_cmb_lensing_set_source (NcXcorKernelCMBLensing *xclkl, NcXcorKernelCMBLensingSource source)
+{
+  if (xclkl->source != source)
+  {
+    xclkl->source = source;
+    nc_xcor_kernel_mark_outdated (NC_XCOR_KERNEL (xclkl));
+  }
+}
+
+/**
+ * nc_xcor_kernel_cmb_lensing_get_source:
+ * @xclkl: a #NcXcorKernelCMBLensing
+ *
+ * Returns: the #NcXcorKernelCMBLensingSource in use.
+ */
+NcXcorKernelCMBLensingSource
+nc_xcor_kernel_cmb_lensing_get_source (NcXcorKernelCMBLensing *xclkl)
+{
+  return xclkl->source;
 }
 

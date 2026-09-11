@@ -43,6 +43,7 @@ from numcosmo_py import Nc, Ncm
 from numcosmo_py.cosmology import Cosmology
 
 from .kernels import (
+    CMBLensingSource,
     _KernelRadialConfig,
     parse_kernel_spec,
     LSSTBinType,
@@ -540,12 +541,17 @@ class XcorKernelCommon:
             recomb=self.recomb,
             Nl=Nl,
             lmax=lmax,
+            source=config.source.genum,
             integrator=self.integrator,
         )
         kernel_obj.set_lmax(lmax)
         kernel_obj.prepare(self.cosmo)
 
-        kernel_label = config.label
+        kernel_label = (
+            config.label
+            if config.source is CMBLensingSource.THIN_SCREEN
+            else f"{config.label} ({config.source.value})"
+        )
 
         return kernel_label, kernel_obj
 

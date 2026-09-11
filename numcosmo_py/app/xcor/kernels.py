@@ -86,6 +86,36 @@ class LSSTBinType(GEnum):
         )
 
 
+class CMBLensingSource(GEnum):
+    """Where the CMB photons are placed along the line of sight.
+
+    :cvar THIN_SCREEN: one source plane at the decoupling redshift -
+        CLI value: 'thin-screen'
+    :cvar VISIBILITY: the recombination visibility function, normalized over the
+        last-scattering shell - CLI value: 'visibility'
+    :cvar VISIBILITY_REIONIZATION: the full visibility function, reionization
+        bump included - CLI value: 'visibility-reionization'
+    """
+
+    # pylint: disable=no-member
+    THIN_SCREEN = Nc.XcorKernelCMBLensingSource.THIN_SCREEN
+    VISIBILITY = Nc.XcorKernelCMBLensingSource.VISIBILITY
+    VISIBILITY_REIONIZATION = Nc.XcorKernelCMBLensingSource.VISIBILITY_REIONIZATION
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: Any
+    ) -> core_schema.CoreSchema:
+        """Get the Pydantic core schema for CMBLensingSource."""
+        return core_schema.no_info_before_validator_function(
+            lambda v: cls(v) if isinstance(v, str) else v,
+            core_schema.enum_schema(cls, list(cls), sub_type="str"),
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda v: str(v.value)
+            ),
+        )
+
+
 class KernelCMBLensingConfig(BaseModel):
     """CMB lensing kernel configuration.
 
@@ -93,6 +123,9 @@ class KernelCMBLensingConfig(BaseModel):
     the integrated matter distribution along the line of sight.
 
     :ivar lmax: Maximum multipole for noise power spectrum.
+    :ivar source: Placement of the CMB sources: a thin screen at decoupling, the
+        recombination visibility function, or the full visibility including
+        reionization.
     """
 
     nc_type: ClassVar[type] = Nc.XcorKernelCMBLensing
@@ -101,6 +134,7 @@ class KernelCMBLensingConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     lmax: Annotated[int, Field(gt=0)] = 3000
+    source: CMBLensingSource = CMBLensingSource.THIN_SCREEN
 
     @classmethod
     def from_args(cls, args: list[str]) -> "KernelCMBLensingConfig":
