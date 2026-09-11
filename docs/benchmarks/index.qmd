@@ -12,3 +12,7 @@ precision, which establish accuracy rather than agreement.
 - [Certified Radial Projection](xcor_certified_projection.qmd) --- the radial
   integral $I_\ell(k)$ against Arb, including the redshift-space weight, with
   CCL's non-Limber method on the same certified values.
+- [Angular Power Spectrum Derivatives](xcor_derivatives.qmd) --- the same
+  clustering spectrum from UltraLevin and from CCL's FKEM, and its derivative
+  with respect to $\Omega_c$ taken with `NcmDiff` on both: agreement on the
+  spectrum does not carry over to the derivative.

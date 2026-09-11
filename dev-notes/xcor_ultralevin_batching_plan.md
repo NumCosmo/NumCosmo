@@ -830,7 +830,7 @@ The precision/speed tradeoff is spread across **four separate objects**,
 found by enumerating every `g_param_spec` in the relevant files rather than
 assuming:
 
-- `NcXcorKernel`: `reltol`, `scaled-abstol` (k-space closure adaptive-
+- `NcXcorKernel`: `reltol`, `peak-epsilon` (k-space closure adaptive-
   midpoint refinement), `adaptive-epsilon`, `adaptive-boundary-tries`,
   `max-border-expansions`, `expansion-factor` (domain-expansion/boundary-
   finding phase), `max-iter`.

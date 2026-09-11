@@ -54,6 +54,7 @@
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/spline/ncm_spline_func.h"
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "nc/reion/nc_hireion.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_exp.h>
@@ -101,6 +102,10 @@ nc_recomb_init (NcRecomb *recomb)
   recomb->tau_z        = 0.0;
   recomb->tau_drag_z   = 0.0;
   recomb->tau_cutoff_z = 0.0;
+
+  recomb->v_tau_reion_min_z      = 0.0;
+  recomb->v_tau_reion_min_lambda = 0.0;
+  recomb->v_tau_reion_min_up     = FALSE;
 
   ncm_spline_free (tau_s);
   ncm_spline_free (tau_drag_s);
@@ -1429,5 +1434,97 @@ _nc_recomb_prepare_redshifts (NcRecomb *recomb, NcHICosmo *cosmo)
   recomb->tau_z        = expm1 (-recomb->tau_lambda);
   recomb->tau_drag_z   = expm1 (-recomb->tau_drag_lambda);
   recomb->tau_cutoff_z = expm1 (-recomb->tau_cutoff_lambda);
+
+  /* Computed on demand by nc_recomb_get_v_tau_reion_min_lambda(). */
+  recomb->v_tau_reion_min_up = FALSE;
+}
+
+static void
+_nc_recomb_prepare_v_tau_reion_min (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  NcHIReion *reion   = NC_HIREION (ncm_model_peek_submodel_by_mid (NCM_MODEL (cosmo), nc_hireion_id ()));
+  gdouble lambda_min = recomb->lambdaf;
+
+  if (reion != NULL)
+  {
+    _nc_recomb_func func;
+    gsl_function F;
+    const gdouble lambda_max  = recomb->v_tau_max_lambda;
+    const gdouble lambda_init = -log (nc_hireion_get_init_x (reion, cosmo));
+
+    /* With ref = 0 the features function is log|v_tau|, minimized at the valley. */
+    F.function = &_nc_recomb_v_tau_features;
+    F.params   = &func;
+
+    func.recomb = recomb;
+    func.cosmo  = cosmo;
+    func.ref    = 0.0;
+
+    /*
+     * Between the recombination peak and today the visibility falls along the
+     * shell, reaches its minimum where reionization starts to raise the
+     * ionization fraction, rises to the reionization bump and falls again. The
+     * onset of reionization lies in the valley and is below both ends, so it
+     * brackets the minimum for the minimizer.
+     */
+    if ((lambda_init > lambda_max) && (lambda_init < recomb->lambdaf) &&
+        (_nc_recomb_v_tau_features (lambda_init, &func) < _nc_recomb_v_tau_features (lambda_max, &func)) &&
+        (_nc_recomb_v_tau_features (lambda_init, &func) < _nc_recomb_v_tau_features (recomb->lambdaf, &func)))
+      lambda_min = _nc_recomb_min (recomb, &F, lambda_max, recomb->lambdaf, lambda_init);
+  }
+
+  recomb->v_tau_reion_min_lambda = lambda_min;
+  recomb->v_tau_reion_min_z      = expm1 (-lambda_min);
+  recomb->v_tau_reion_min_up     = TRUE;
+}
+
+/**
+ * nc_recomb_get_v_tau_reion_min_lambda:
+ * @recomb: a #NcRecomb
+ * @cosmo: a #NcHICosmo
+ *
+ * Calculates the minimum of the visibility function [Eq. \eqref{eq:def:vtau}]
+ * between the recombination shell and the reionization bump, i.e., the value of
+ * $\lambda_\text{min}$ where $dv_\tau(\lambda_\text{min})/d\lambda = 0$ with
+ * $\lambda_\text{min} > \lambda_\text{max}$. It separates the photons that last
+ * scattered at recombination from those rescattered at reionization. Without a
+ * reionization model in @cosmo the visibility decreases monotonically after the
+ * shell and $\lambda_\text{min} = \lambda_f$, the final value of $\lambda$.
+ *
+ * The value is computed on first use after each preparation and cached.
+ *
+ * Returns: $\lambda_\text{min}$
+ */
+gdouble
+nc_recomb_get_v_tau_reion_min_lambda (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  nc_recomb_prepare_if_needed (recomb, cosmo);
+
+  if (!recomb->v_tau_reion_min_up)
+    _nc_recomb_prepare_v_tau_reion_min (recomb, cosmo);
+
+  return recomb->v_tau_reion_min_lambda;
+}
+
+/**
+ * nc_recomb_get_v_tau_reion_min_z:
+ * @recomb: a #NcRecomb
+ * @cosmo: a #NcHICosmo
+ *
+ * Calculates the minimum of the visibility function [Eq. \eqref{eq:def:vtau}]
+ * between the recombination shell and the reionization bump, see
+ * nc_recomb_get_v_tau_reion_min_lambda().
+ *
+ * Returns: $z(\lambda_\text{min})$
+ */
+gdouble
+nc_recomb_get_v_tau_reion_min_z (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  nc_recomb_prepare_if_needed (recomb, cosmo);
+
+  if (!recomb->v_tau_reion_min_up)
+    _nc_recomb_prepare_v_tau_reion_min (recomb, cosmo);
+
+  return recomb->v_tau_reion_min_z;
 }
 

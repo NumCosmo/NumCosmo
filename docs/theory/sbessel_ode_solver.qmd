@@ -317,6 +317,110 @@ ax.legend(fontsize=8)
 plt.tight_layout()
 ```
 
+The factorization is easiest to follow column by column. The animation below
+replays it on the operator matrix the library returns for the same panel and
+forcing, with the rotation order described above, and tracks the stopping
+ratio beside it; the column it stops at is checked against the library's own
+solve. The dense fill above the band is the content of the two constraint
+rows, carried along as they are rotated down.
+
+```{python}
+#| code-fold: true
+from matplotlib.animation import FuncAnimation
+from matplotlib.colors import LogNorm
+from IPython.display import HTML
+
+solver.set_tolerance(1.0e-12)
+op_anim = solver.create_operator(a, b, ell, ell)
+_, n_lib = op_anim.solve(np.concatenate([[0.0, 0.0], g]))
+M_anim = op_anim.get_matrix(n_lib + 6)
+A_anim = np.array(M_anim.dup_array()).reshape(M_anim.nrows(), M_anim.ncols())
+r_anim = np.zeros(A_anim.shape[0])
+rhs_anim = np.concatenate([[0.0, 0.0], g])
+r_anim[:min(len(rhs_anim), len(r_anim))] = rhs_anim[:len(r_anim)]
+
+W_anim, rw_anim = A_anim.copy(), r_anim.copy()
+snapshots, rho, rho_max, stop_anim, below = [], [], 0.0, None, 0
+for c in range(A_anim.shape[1]):
+    rows = np.nonzero(np.abs(W_anim[c + 1:, c]) > 0)[0] + c + 1
+    for i in rows[::-1]:  # pair each row with the one above it
+        a_, b_ = W_anim[i - 1, c], W_anim[i, c]
+        rr = np.hypot(a_, b_)
+        if rr == 0.0:
+            continue
+        cs, sn = a_ / rr, b_ / rr
+        top, bot = W_anim[i - 1].copy(), W_anim[i].copy()
+        W_anim[i - 1], W_anim[i] = cs * top + sn * bot, -sn * top + cs * bot
+        rt, rb = rw_anim[i - 1], rw_anim[i]
+        rw_anim[i - 1], rw_anim[i] = cs * rt + sn * rb, -sn * rt + cs * rb
+    W_anim[c + 1:, c] = 0.0
+    rc = abs(rw_anim[c] / W_anim[c, c])
+    rho_max = max(rho_max, rc)
+    rho.append(rc)
+    if stop_anim is None:
+        below = below + 1 if rc / rho_max < 1.0e-12 else 0
+        if below >= 5 and c + 1 >= nmin:
+            stop_anim = c + 1
+    snapshots.append(np.abs(W_anim).copy())
+    if stop_anim is not None and c + 1 >= stop_anim:
+        break
+assert stop_anim == n_lib, (stop_anim, n_lib)
+rho = np.array(rho) / rho_max
+vmin_a, vmax_a = np.abs(A_anim[A_anim != 0]).min(), np.abs(A_anim).max()
+cmap_a = plt.get_cmap("viridis").copy()
+cmap_a.set_bad("white")
+
+
+def draw_state(ax_m, ax_r, c):
+    ax_m.clear()
+    ax_r.clear()
+    S = np.ma.masked_where(snapshots[c] == 0.0, snapshots[c])
+    ax_m.imshow(S, norm=LogNorm(vmin=vmin_a, vmax=vmax_a * 10), cmap=cmap_a, interpolation="nearest")
+    ax_m.axvspan(c - 0.5, c + 0.5, color="C3", alpha=0.25)
+    ax_m.set_title(f"column {c + 1}: four rotations", fontsize=9)
+    ax_m.set_xlabel("coefficient of u")
+    ax_m.set_ylabel("row")
+    ax_m.grid(False)
+    ax_r.semilogy(np.arange(1, c + 2), rho[:c + 1], "o-", ms=2, color="C0")
+    ax_r.axhline(1.0e-12, color="C3", ls="--", label="tolerance")
+    ax_r.axvline(nmin, color="k", ls=":", label=f"floor N_min = {nmin}")
+    if c + 1 >= stop_anim:
+        ax_r.axvline(stop_anim, color="C2", lw=2.0, label=f"stop: N = {stop_anim}")
+    ax_r.set_xlim(0, len(snapshots) + 1)
+    ax_r.set_ylim(1e-19, 3)
+    ax_r.set_xlabel("column")
+    ax_r.set_ylabel("next coefficient / largest")
+    ax_r.legend(loc="lower left", fontsize=8)
+
+
+fig_a, (ax_m, ax_r) = plt.subplots(1, 2, figsize=(9.6, 3.6), width_ratios=[1, 1.4], layout="constrained")
+anim_a = FuncAnimation(fig_a, lambda c: draw_state(ax_m, ax_r, min(c, len(snapshots) - 1)),
+                       frames=len(snapshots) + 12, interval=100)
+video = anim_a.to_html5_video()
+plt.close(fig_a)
+HTML(video)
+```
+
+```{python}
+#| label: fig-qr-stages
+#| fig-cap: >
+#|   Four stages of the factorization above: as built, one third and two thirds of the
+#|   way, and the column where the stopping test is met. Below the diagonal of every
+#|   processed column the entries are gone; the two constraint rows travel along, and
+#|   their content is the fill above the band.
+#| code-fold: true
+fig, axs = plt.subplots(1, 4, figsize=(9.6, 2.6))
+for ax, c in zip(axs, (0, len(snapshots) // 3, 2 * len(snapshots) // 3, len(snapshots) - 1)):
+    S = np.ma.masked_where(snapshots[c] == 0.0, snapshots[c])
+    ax.imshow(S, norm=LogNorm(vmin=vmin_a, vmax=vmax_a * 10), cmap=cmap_a, interpolation="nearest")
+    ax.axvspan(c - 0.5, c + 0.5, color="C3", alpha=0.25)
+    ax.set_title(f"column {c + 1}" + (f", stop at N = {stop_anim}" if c == len(snapshots) - 1 else ""), fontsize=9)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.grid(False)
+plt.tight_layout()
+```
+
 ## Choosing the constraint
 
 The three constraints [defined above](#the-three-constraints) are not three

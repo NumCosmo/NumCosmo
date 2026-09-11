@@ -64,15 +64,15 @@ G_BEGIN_DECLS
 #define NC_XCOR_KERNEL_MAX_ELL_BLOCK 64
 
 /**
- * NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL:
+ * NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON:
  *
- * Smallest #NcXcorKernel:scaled-abstol worth asking for. The tolerance is a
+ * Smallest #NcXcorKernel:peak-epsilon worth asking for. The tolerance is a
  * fraction of the peak of $W_i(k)$, but the quantity integrated to form
  * $C_\ell$ is $k^2 W_i W_j$, so it enters *squared*: this floor is $10^{-12}$
  * on the integrand, already past what the outer $k$ integral carries. Below it
- * nc_xcor_kernel_set_scaled_abstol() warns.
+ * nc_xcor_kernel_set_peak_epsilon() warns.
  */
-#define NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL (1.0e-6)
+#define NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON (1.0e-6)
 
 G_DECLARE_DERIVABLE_TYPE (NcXcorKernel, nc_xcor_kernel, NC, XCOR_KERNEL, NcmModel);
 
@@ -230,7 +230,7 @@ typedef NcmVector *(*NcXcorKernelIntegrandGetKnots) (gpointer data);
  *   only the whole vector can be evaluated at once
  * @reltol: the relative half of the fit criterion this integrand was built to,
  *   or 0.0 when it is exact or unknown
- * @scaled_abstol: the floor of that criterion, as a fraction of the fitted
+ * @peak_epsilon: the floor of that criterion, as a fraction of the fitted
  *   function's own peak, or 0.0 when there was none
  * @data: user data passed to @eval_func, @get_range_func and @get_knots_func
  * @data_free: function to free @data, or %NULL if no cleanup needed
@@ -271,7 +271,7 @@ struct _NcXcorKernelIntegrand
   NcXcorKernelIntegrandRestrict restrict_func;
   NcmMatrix *residuals;
   gdouble reltol;
-  gdouble scaled_abstol;
+  gdouble peak_epsilon;
 };
 
 struct _NcXcorKernelClass
@@ -348,8 +348,8 @@ void nc_xcor_kernel_set_adaptive_boundary_tries (NcXcorKernel *xclk, guint adapt
 gdouble nc_xcor_kernel_get_reltol (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_reltol (NcXcorKernel *xclk, gdouble reltol);
 
-gdouble nc_xcor_kernel_get_scaled_abstol (NcXcorKernel *xclk);
-void nc_xcor_kernel_set_scaled_abstol (NcXcorKernel *xclk, gdouble scaled_abstol);
+gdouble nc_xcor_kernel_get_peak_epsilon (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_peak_epsilon (NcXcorKernel *xclk, gdouble peak_epsilon);
 
 guint nc_xcor_kernel_get_max_border_expansions (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_max_border_expansions (NcXcorKernel *xclk, guint max_border_expansions);
@@ -401,9 +401,9 @@ guint nc_xcor_kernel_integrand_get_n_panels (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_peek_panel (NcXcorKernelIntegrand *integrand, guint i, NcmMatrix **coeffs, gdouble *a, gdouble *b);
 void nc_xcor_kernel_integrand_set_restrict (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandRestrict restrict_func);
 gboolean nc_xcor_kernel_integrand_restrict (NcXcorKernelIntegrand *integrand, gdouble a, gdouble b, NcmMatrix **coeffs);
-void nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdouble reltol, gdouble scaled_abstol);
+void nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdouble reltol, gdouble peak_epsilon);
 gdouble nc_xcor_kernel_integrand_get_reltol (NcXcorKernelIntegrand *integrand);
-gdouble nc_xcor_kernel_integrand_get_scaled_abstol (NcXcorKernelIntegrand *integrand);
+gdouble nc_xcor_kernel_integrand_get_peak_epsilon (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_set_residuals (NcXcorKernelIntegrand *integrand, NcmMatrix *residuals);
 NcmMatrix *nc_xcor_kernel_integrand_peek_residuals (NcXcorKernelIntegrand *integrand);
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_ref (NcXcorKernelIntegrand *integrand);

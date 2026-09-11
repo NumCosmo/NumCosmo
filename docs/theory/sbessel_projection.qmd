@@ -112,6 +112,36 @@ needs several nodes per oscillation. The kernel $K$, by contrast, is smooth and 
 few dozen samples however large $k$ is. Any method that resolves the oscillations by
 sampling the integrand pays a cost in kernel evaluations that grows linearly in $k$.
 
+```{python}
+#| label: fig-cost-k
+#| fig-cap: >
+#|   The integrand W(chi) j_10(k chi) of a Gaussian window (mean 1500 Mpc, width 300 Mpc,
+#|   cut at 4 sigma) at two wavenumbers a decade apart, with the window itself dashed.
+#|   The legend counts the oscillations a quadrature has to resolve and the samples the
+#|   window alone needs for a Chebyshev fit to 1e-8, which is the same at both k.
+#| code-fold: true
+cost_win = Nc.XcorKernelAnalyticGauss.new_full(
+    dist, ps, 1500.0, 300.0, 4.0, Ncm.SBesselIntegratorLevin.new(2, 9))
+cost_win.set_l_limber(-1)
+cost_win.prepare(cosmo)
+w_lo, w_hi = cost_win.get_comp_support(0)  # Mpc
+chi_w = np.linspace(w_lo, w_hi, 6000)
+W_chi = np.array([cost_win.eval_W_comp(0, c) for c in chi_w])
+level_w, _ = Ncm.SBesselOdeSolver.new().peek_spectral().compute_chebyshev_coeffs_adaptive(
+    lambda _d, c: cost_win.eval_W_comp(0, c), w_lo, w_hi, 3, 1.0e-8, None)
+fig, axs = plt.subplots(2, 1, figsize=(8, 4.6), sharex=True)
+for ax, k_Mpc in zip(axs, (0.02, 0.2)):
+    integrand = W_chi * spherical_jn(10, k_Mpc * chi_w)
+    n_osc = k_Mpc * (w_hi - w_lo) / np.pi
+    ax.plot(chi_w, integrand / np.abs(integrand).max(), lw=0.8,
+            label=f"k = {k_Mpc} / Mpc: {n_osc:.0f} oscillations; the window needs {2**level_w + 1} samples")
+    ax.plot(chi_w, W_chi / W_chi.max(), color="0.4", ls="--", lw=1.0)
+    ax.legend(loc="upper left", fontsize=8)
+    ax.set_ylabel("W j_10 / max")
+axs[1].set_xlabel("chi [Mpc]")
+plt.tight_layout()
+```
+
 ### The dimensionless variable
 
 With $x = k\chi$,
@@ -397,6 +427,48 @@ ax.legend(loc="upper left", fontsize=8)
 plt.tight_layout()
 ```
 
+```{python}
+#| label: fig-reuse
+#| fig-cap: >
+#|   Top: one bar per radial integral, a window's support mapped to x = k chi at one k,
+#|   for 14 values of k spanning each window's domain and two Gaussian windows (at 1500
+#|   and at 4520 Mpc). Every bar is a sum of the same fixed panels (vertical lines): a
+#|   larger k slides the bar to the right. Bottom: how many of the 28 integrals replay
+#|   each panel's factorization.
+#| code-fold: true
+fig, (ax_b, ax_h) = plt.subplots(2, 1, figsize=(8, 3.8), sharex=True, height_ratios=[2, 1])
+replays = np.zeros(len(knots) - 1)
+row = 0
+for (name, ctor), col in zip(
+    (("Gaussian at 1500 Mpc", (1500.0, 300.0, 4.0)), ("Gaussian at 4520 Mpc", (4520.0, 715.0, 4.0))),
+    ("C0", "C3"),
+):
+    sbi_r = Ncm.SBesselIntegratorLevin.new(2, 9)
+    win = Nc.XcorKernelAnalyticGauss.new_full(dist, ps, *ctor, sbi_r)
+    win.set_l_limber(-1)
+    win.prepare(cosmo)
+    lo_c, hi_c = win.get_comp_support(0)  # Mpc
+    k_lo, k_hi = win.get_eval_vectorized_full(cosmo, 2, 9, sbi_r, Nc.XcorKernelClosure.CHEBYSHEV).get_range()
+    for k in np.geomspace(k_lo, k_hi, 14):
+        x_lo, x_hi = k / RH * lo_c, k / RH * hi_c
+        ax_b.hlines(row, x_lo, x_hi, color=col, lw=4, label=name if row in (0, 14) else None)
+        replays += (knots[:-1] >= x_lo) & (knots[1:] <= x_hi)
+        row += 1
+for xk in knots:
+    ax_b.axvline(xk, color="0.6", lw=0.7)
+    ax_h.axvline(xk, color="0.6", lw=0.7)
+ax_b.set_xscale("log")
+ax_b.set_xlim(1e-4, 1e6)
+ax_b.set_yticks([])
+ax_b.set_ylabel("one bar per\nradial integral")
+ax_b.legend(loc="upper left", fontsize=8, ncol=2)
+ax_h.bar(np.sqrt(knots[:-1] * knots[1:]), replays, width=0.9 * (knots[1:] - knots[:-1]), color="0.35")
+ax_h.set_ylabel("replays")
+ax_h.set_xlabel("x = k chi")
+ax_h.set_title(f"{row} radial integrals, {int((replays > 0).sum())} panels factorized, {int(replays.sum())} replays", fontsize=9)
+plt.tight_layout()
+```
+
 Three reuse axes fall out of this construction. Across $k$: the panels and
 their factorizations do not depend on $k$. Across kernels: two kernels at the
 same block and panel differ only in the right-hand side. Across multipoles: a
@@ -434,6 +506,98 @@ a rising flank. The truncation error of the outer integral is then of order
 $\epsilon$ for a window whose amplitude and integrand fall off together, and
 larger for windows with power-law tails, where a pointwise criterion truncates
 late.
+
+The expansion is easiest to see running. The animation below calls
+[[numcosmo-math|ncm_function_sample_set_expand_domain]] on the bare radial
+integral $I_\ell(k)$ of a Gaussian window for $\ell = 2$ to $9$, with the two
+seeds and the stopping rule described above, and records the order in which
+the routine asks for samples. The grey curve is the block norm $\|I_{2..9}(k)\|$
+far beyond the found domain; the markers appear in the order they were placed.
+
+```{python}
+#| code-fold: true
+from matplotlib.animation import FuncAnimation
+from IPython.display import HTML
+
+dx_sbi = Ncm.SBesselIntegratorLevin.new(2, 9)
+dx_win = Nc.XcorKernelAnalyticGauss.new_full(dist, ps, 1500.0, 300.0, 4.0, dx_sbi)
+dx_win.set_l_limber(-1)
+dx_win.prepare(cosmo)
+dx_lo, dx_hi = dx_win.get_comp_support(0)  # Mpc
+dx_block = Ncm.Vector.new(8)
+
+
+def dx_I(k):
+    """The bare radial integral of the window for l = 2..9, k in 1/Mpc."""
+    dx_sbi.integrate_deriv(lambda chi, _k: dx_win.eval_W_comp(0, min(max(chi, dx_lo), dx_hi)),
+                           dx_lo, dx_hi, k, 0, dx_block)
+    return np.array(dx_block.dup_array())
+
+
+dx_order = []
+
+
+def dx_fill(x, y, *_):
+    v = dx_I(x)
+    dx_order.append((x, v))
+    for i, vi in enumerate(v):
+        y.set(i, vi)
+
+
+dx_fss = Ncm.FunctionSampleSet.new(8)
+dx_chi_ref = 0.5 * (dx_lo + dx_hi)
+dx_seeds = [np.sqrt(ell_ * (ell_ + 1.0)) / dx_chi_ref for ell_ in (2, 9)]
+for k_seed in dx_seeds:
+    dx_fss.add_func(k_seed, dx_fill, None)
+dx_fss.expand_domain(dx_fill, 1.0e-6, 10.0, 0.2, 1.0e-5, 1000, 5, None)
+dx_xs = np.array([x for x, _ in dx_order])
+dx_norms = np.array([np.linalg.norm(v) for _, v in dx_order])
+dx_peak = dx_norms.max()
+dx_kw = np.geomspace(dx_xs.min() / 30.0, dx_xs.max() * 30.0, 500)
+dx_norm_w = np.array([np.linalg.norm(dx_I(k)) for k in dx_kw])
+
+
+def draw_expansion(ax, n):
+    ax.clear()
+    ax.loglog(dx_kw, dx_norm_w / dx_peak, color="0.75", lw=1.0, label="block norm ||I_{2..9}(k)||")
+    ax.loglog(dx_xs[:2], dx_norms[:2] / dx_peak, "s", color="C3", ms=7, label="seeds")
+    if n > 2:
+        ax.loglog(dx_xs[2:n], dx_norms[2:n] / dx_peak, "o", color="C0", ms=5, mfc="none", label=f"expansion samples: {n - 2}")
+    ax.loglog(dx_xs[n - 1], dx_norms[n - 1] / dx_peak, "o", color="C1", ms=9)
+    ax.axhline(1.0e-5 * dx_norms[:n].max() / dx_peak, color="k", ls=":", lw=1.0, label="1e-5 of the running peak")
+    ax.axvspan(dx_xs[:n].min(), dx_xs[:n].max(), color="C2", alpha=0.10)
+    ax.set_xlim(dx_kw.min(), dx_kw.max())
+    ax.set_ylim(1e-11, 3)
+    ax.set_xlabel("k [1/Mpc]")
+    ax.set_ylabel("||I(k)|| / block peak")
+    ax.legend(loc="lower left", fontsize=8)
+
+
+fig_e, ax_e = plt.subplots(figsize=(8, 3.6), layout="constrained")
+anim_e = FuncAnimation(fig_e, lambda n: draw_expansion(ax_e, min(2 + n, len(dx_xs))),
+                       frames=len(dx_xs) - 2 + 10, interval=150)
+video = anim_e.to_html5_video()
+plt.close(fig_e)
+HTML(video)
+```
+
+```{python}
+#| label: fig-expansion-stages
+#| fig-cap: >
+#|   Four stages of the expansion above: the two seeds, one third and two thirds of the
+#|   samples, and the finished domain. Each new point is the outermost on its side, and a
+#|   side stops after five consecutive points under the threshold.
+#| code-fold: true
+fig, axs = plt.subplots(1, 4, figsize=(9.6, 2.6), sharey=True)
+for ax, n in zip(axs, (2, len(dx_xs) // 3, 2 * len(dx_xs) // 3, len(dx_xs))):
+    draw_expansion(ax, n)
+    ax.get_legend().remove()
+    ax.set_title(f"{n} samples", fontsize=9)
+    ax.set_ylabel("")
+    ax.set_xlabel("")
+    ax.tick_params(labelbottom=False)
+plt.tight_layout()
+```
 
 ### Several components
 

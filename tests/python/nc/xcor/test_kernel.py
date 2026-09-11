@@ -43,7 +43,7 @@ Ncm.cfg_init()
 pytest_plugins = ["python.fixtures_xcor"]
 
 RELTOL = 1.0e-7
-SCALED_ABSTOL = 1.0e-4
+PEAK_EPSILON = 1.0e-4
 
 # The tests below that build non-Limber closures run the Levin ODE over
 # x = k chi, and its cost -- both time and the spectral order the panels must
@@ -144,7 +144,7 @@ def test_limber_vs_limber_z_vectorized(
     kernel.set_l_limber(0)  # Treat all ells as limber
     kernel.prepare(cosmo)
     kernel.set_reltol(RELTOL)
-    kernel.set_scaled_abstol(SCALED_ABSTOL)
+    kernel.set_peak_epsilon(PEAK_EPSILON)
 
     # Test ell range
     ell_start = 100
@@ -208,8 +208,8 @@ def test_limber_vs_limber_z_vectorized(
 
     # Compute max and atol using only valid values
     max_result = np.max(np.abs(results_reference[valid_mask]))
-    scaled_abstol = kernel.get_scaled_abstol()
-    atol = max_result * scaled_abstol
+    peak_epsilon = kernel.get_peak_epsilon()
+    atol = max_result * peak_epsilon
 
     # Compare arrays (only valid elements)
     assert_allclose(
@@ -265,7 +265,7 @@ def test_limber_vs_non_limber(
     ell_array = np.array([200, 500, 800])
     default_rtol = 1.0e-13
     kernel.set_reltol(RELTOL)
-    kernel.set_scaled_abstol(SCALED_ABSTOL)
+    kernel.set_peak_epsilon(PEAK_EPSILON)
 
     for ell in ell_array:
         # Get limber result
@@ -345,7 +345,7 @@ def test_k_projection_limber_vs_non_limber(
     }
     default_rtol = 1.0e-13
     kernel.set_reltol(RELTOL)  # Use tight tolerance for this test
-    kernel.set_scaled_abstol(SCALED_ABSTOL)  # Use tight absolute minimum for this test
+    kernel.set_peak_epsilon(PEAK_EPSILON)  # Use tight absolute minimum for this test
 
     for ell in ell_array:
         # Get limber result
@@ -430,7 +430,7 @@ def test_limber_vs_non_limber_vectorized(
 
     default_rtol = 1.0e-13
     kernel.set_reltol(RELTOL)
-    kernel.set_scaled_abstol(SCALED_ABSTOL)
+    kernel.set_peak_epsilon(PEAK_EPSILON)
 
     for ell_start, n_ells in test_configs:
         ell_end = ell_start + n_ells - 1
@@ -514,7 +514,7 @@ def test_k_projection_limber_vs_non_limber_vectorized(
 
     default_rtol = 1.0e-13
     kernel.set_reltol(RELTOL)
-    kernel.set_scaled_abstol(SCALED_ABSTOL)
+    kernel.set_peak_epsilon(PEAK_EPSILON)
 
     for ell_start, n_ells in test_configs:
         ell_end = ell_start + n_ells - 1
@@ -572,7 +572,7 @@ def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
     """Test that all kernel properties can be set and retrieved correctly.
 
     Validates the getter/setter methods and GObject properties for the adaptive
-    refinement parameters: reltol, scaled_abstol, max_border_expansions, max_iter,
+    refinement parameters: reltol, peak_epsilon, max_border_expansions, max_iter,
     and expansion_factor.
     """
     # Test reltol property
@@ -589,22 +589,22 @@ def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
     # Restore original
     kernel.set_reltol(original_reltol)
 
-    # Test scaled_abstol property
-    original_scaled_abstol = kernel.get_scaled_abstol()
-    assert original_scaled_abstol == kernel.props.scaled_abstol
+    # Test peak_epsilon property
+    original_peak_epsilon = kernel.get_peak_epsilon()
+    assert original_peak_epsilon == kernel.props.peak_epsilon
 
     # Values only exercise the accessor, but stay at or above 1e-6: the floor
     # enters the C_ell integrand squared, so 1e-6 is already 1e-12 there and
     # nothing in the library should model going below it.
-    kernel.set_scaled_abstol(1.0e-6)
-    assert kernel.get_scaled_abstol() == 1.0e-6
-    assert kernel.props.scaled_abstol == 1.0e-6
+    kernel.set_peak_epsilon(1.0e-6)
+    assert kernel.get_peak_epsilon() == 1.0e-6
+    assert kernel.props.peak_epsilon == 1.0e-6
 
-    kernel.props.scaled_abstol = 5.0e-6
-    assert kernel.get_scaled_abstol() == 5.0e-6
+    kernel.props.peak_epsilon = 5.0e-6
+    assert kernel.get_peak_epsilon() == 5.0e-6
 
     # Restore original
-    kernel.set_scaled_abstol(original_scaled_abstol)
+    kernel.set_peak_epsilon(original_peak_epsilon)
 
     # Test max_border_expansions property
     original_max_border_expansions = kernel.get_max_border_expansions()
@@ -649,7 +649,7 @@ def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
     kernel.set_expansion_factor(original_expansion_factor)
 
 
-def test_scaled_abstol_below_the_floor_warns(
+def test_peak_epsilon_below_the_floor_warns(
     cosmology: Cosmology, capfd: pytest.CaptureFixture[str]
 ) -> None:
     """Asking for less than 1e-6 is accepted, and said to be useless.
@@ -663,15 +663,15 @@ def test_scaled_abstol_below_the_floor_warns(
         cosmology.dist, cosmology.ps_ml, 500.0, 2500.0
     )
 
-    kernel.set_scaled_abstol(1.0e-8)
+    kernel.set_peak_epsilon(1.0e-8)
 
     assert "below the useful floor" in capfd.readouterr().err
-    assert kernel.get_scaled_abstol() == 1.0e-8
+    assert kernel.get_peak_epsilon() == 1.0e-8
 
-    kernel.set_scaled_abstol(1.0e-6)
+    kernel.set_peak_epsilon(1.0e-6)
 
     assert "below the useful floor" not in capfd.readouterr().err
-    assert kernel.get_scaled_abstol() == 1.0e-6
+    assert kernel.get_peak_epsilon() == 1.0e-6
 
 
 def test_tolerances_more_than_two_orders_apart_warn(
@@ -685,7 +685,7 @@ def test_tolerances_more_than_two_orders_apart_warn(
     over the 1e-4/1e-4 defaults, where moving both to 1e-6/1e-5 is worth 15x.
     """
 
-    def build(reltol: float, scaled_abstol: float) -> str:
+    def build(reltol: float, peak_epsilon: float) -> str:
         kernel = Nc.XcorKernelAnalyticGauss(
             dist=cosmology.dist,
             powspec=cosmology.ps_ml,
@@ -693,7 +693,7 @@ def test_tolerances_more_than_two_orders_apart_warn(
             chi_sigma=300.0,
             integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
             reltol=reltol,
-            scaled_abstol=scaled_abstol,
+            peak_epsilon=peak_epsilon,
         )
         kernel.set_l_limber(-1)
         kernel.prepare(cosmology.cosmo)
@@ -721,4 +721,4 @@ def test_tolerances_more_than_two_orders_apart_warn(
 
     inert_floor = build(1.0e-4, 1.0e-8)
     assert inert_floor.count("orders apart") == 1
-    assert "and scaled-abstol is inert" in inert_floor
+    assert "and peak-epsilon is inert" in inert_floor

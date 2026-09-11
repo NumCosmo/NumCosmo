@@ -110,7 +110,7 @@ def _gl(order: int) -> tuple[np.ndarray, np.ndarray]:
 class Settings:
     """Everything a case is run at, carried with the case rather than the runner.
 
-    A ``scaled_abstol`` copied out of a test file once turned a 0.04 s top-hat
+    A ``peak_epsilon`` copied out of a test file once turned a 0.04 s top-hat
     into 19.9 s, so these are recorded in every row the bench driver emits.
 
     ``l_limber = -1`` is not a detail: at the library default of 0 every
@@ -119,7 +119,7 @@ class Settings:
     """
 
     reltol: float = 1.0e-4
-    scaled_abstol: float = 1.0e-4
+    peak_epsilon: float = 1.0e-4
     l_limber: int = -1
     ell_batch_size: int = 8
     closure: Nc.XcorKernelClosure = Nc.XcorKernelClosure.SPLINE
@@ -334,7 +334,7 @@ KERNELS: typing.Final[dict[str, KernelSpec]] = {
             {"chi-lower": 500.0, "chi-upper": 2500.0},
         ),
         # The regime the Chebyshev closure exists for. On a shell this narrow
-        # the adaptive spline closure's accuracy is capped by scaled-abstol at
+        # the adaptive spline closure's accuracy is capped by peak-epsilon at
         # the library's own documented floor, where it sits at ~2e-5 while the
         # spectral closure reaches machine zero. No case built from wide bins
         # reaches it.
@@ -815,7 +815,7 @@ def build_kernel(
     )
     kernel.set_l_limber(settings.l_limber)
     kernel.set_property("reltol", settings.reltol)
-    kernel.set_property("scaled-abstol", settings.scaled_abstol)
+    kernel.set_property("peak-epsilon", settings.peak_epsilon)
     kernel.prepare(cosmo)
 
     return kernel

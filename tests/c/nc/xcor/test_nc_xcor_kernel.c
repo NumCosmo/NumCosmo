@@ -296,7 +296,7 @@ test_nc_xcor_kernel_knobs (TestNcXcorKernel *test, gconstpointer pdata)
   nc_xcor_kernel_set_adaptive_epsilon (xclk, 1.0e-5);
   nc_xcor_kernel_set_adaptive_boundary_tries (xclk, 3);
   nc_xcor_kernel_set_reltol (xclk, 1.0e-3);
-  nc_xcor_kernel_set_scaled_abstol (xclk, 1.0e-4);
+  nc_xcor_kernel_set_peak_epsilon (xclk, 1.0e-4);
   nc_xcor_kernel_set_max_border_expansions (xclk, 1);
   nc_xcor_kernel_set_max_iter (xclk, 5);
   nc_xcor_kernel_set_expansion_factor (xclk, 0.5);
@@ -307,7 +307,7 @@ test_nc_xcor_kernel_knobs (TestNcXcorKernel *test, gconstpointer pdata)
   ncm_assert_cmpdouble_e (nc_xcor_kernel_get_adaptive_epsilon (xclk), ==, 1.0e-5, 1.0e-15, 0.0);
   g_assert_cmpuint (nc_xcor_kernel_get_adaptive_boundary_tries (xclk), ==, 3);
   ncm_assert_cmpdouble_e (nc_xcor_kernel_get_reltol (xclk), ==, 1.0e-3, 1.0e-15, 0.0);
-  ncm_assert_cmpdouble_e (nc_xcor_kernel_get_scaled_abstol (xclk), ==, 1.0e-4, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (nc_xcor_kernel_get_peak_epsilon (xclk), ==, 1.0e-4, 1.0e-15, 0.0);
   g_assert_cmpuint (nc_xcor_kernel_get_max_border_expansions (xclk), ==, 1);
   g_assert_cmpuint (nc_xcor_kernel_get_max_iter (xclk), ==, 5);
   ncm_assert_cmpdouble_e (nc_xcor_kernel_get_expansion_factor (xclk), ==, 0.5, 1.0e-15, 0.0);

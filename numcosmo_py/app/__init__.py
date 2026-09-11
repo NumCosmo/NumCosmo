@@ -61,7 +61,7 @@ from .inspect import (
     InspectClusterNCounts,
     InspectGalaxyShapeIntegrand,
 )
-from .xcor import ViewKernel, ListKernels
+from .xcor import ViewKernel, ListKernels, ComputeCls
 
 # Attempt optional import of the Firecrown-NumCosmo connector.
 # If available, the import registers the connector in the GObject registry,
@@ -304,6 +304,16 @@ XCOR_KERNEL_LIST_CMD: CMDArg = {
     "help": "List all available kernel types and their parameters.",
 }
 
+XCOR_CLS_CMD: CMDArg = {
+    "name": "cls",
+    "no_args_is_help": True,
+    "help": (
+        "Compute and plot cross-correlation angular power spectra. Unlike "
+        "'kernel view --cls', the multipole range is unbounded: the solver "
+        "tiles it into blocks."
+    ),
+}
+
 INSPECT_SUMMARY_CMD: CMDArg = {
     "name": "summary",
     "no_args_is_help": True,
@@ -375,3 +385,4 @@ app_inspect.command(**INSPECT_GALAXY_SHAPE_INTEGRAND_CMD)(InspectGalaxyShapeInte
 # Installing xcor kernel subcommands
 app_xcor_kernel.command(**XCOR_KERNEL_VIEW_CMD)(ViewKernel)
 app_xcor_kernel.command(**XCOR_KERNEL_LIST_CMD)(ListKernels)
+app_xcor.command(**XCOR_CLS_CMD)(ComputeCls)

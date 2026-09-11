@@ -3247,6 +3247,30 @@
     "nick": "spline",
     "type": "Nc.XcorKernelClosure"
   },
+  "NC_XCOR_KERNEL_CMB_ISW_SOURCE_THIN_SCREEN": {
+    "nick": "thin-screen",
+    "type": "Nc.XcorKernelCMBISWSource"
+  },
+  "NC_XCOR_KERNEL_CMB_ISW_SOURCE_VISIBILITY": {
+    "nick": "visibility",
+    "type": "Nc.XcorKernelCMBISWSource"
+  },
+  "NC_XCOR_KERNEL_CMB_ISW_SOURCE_VISIBILITY_REIONIZATION": {
+    "nick": "visibility-reionization",
+    "type": "Nc.XcorKernelCMBISWSource"
+  },
+  "NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN": {
+    "nick": "thin-screen",
+    "type": "Nc.XcorKernelCMBLensingSource"
+  },
+  "NC_XCOR_KERNEL_CMB_LENSING_SOURCE_VISIBILITY": {
+    "nick": "visibility",
+    "type": "Nc.XcorKernelCMBLensingSource"
+  },
+  "NC_XCOR_KERNEL_CMB_LENSING_SOURCE_VISIBILITY_REIONIZATION": {
+    "nick": "visibility-reionization",
+    "type": "Nc.XcorKernelCMBLensingSource"
+  },
   "NC_XCOR_KERNEL_CMB_LENSING_SPARAM_LEN": {
     "nick": "len",
     "type": "Nc.XcorKernelCMBLensingSParams"

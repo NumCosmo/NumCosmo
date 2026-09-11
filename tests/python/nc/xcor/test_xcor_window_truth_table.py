@@ -296,7 +296,7 @@ def fixture_deriv_truth_tables() -> dict:
 # two where cancellation is structural anyway, ell = 2 (fewest oscillations to
 # average over) and the multi window (disjoint bump groups). That is a property
 # of the integrand, not a defect: it is the same conditioning floor
-# #NcXcorKernel:scaled-abstol documents, one derivative deeper.
+# #NcXcorKernel:peak-epsilon documents, one derivative deeper.
 DERIV_RTOL = 1.0e-8
 DERIV_ATOL_FRAC = 1.0e-8
 
@@ -536,7 +536,7 @@ def test_radial_integral_batched_matches_arb_with_tau_constraint(
         assert fallbacks > 0, "the guard never fired on a table that requires it"
 
 
-# Worst deviation measured per shape, closure at reltol = scaled-abstol = 1e-6,
+# Worst deviation measured per shape, closure at reltol = peak-epsilon = 1e-6,
 # with roughly a factor of three of headroom. Re-measure these after changing
 # NC_XCOR_KERNEL_CHEB_PANEL_K_CAP: a smaller cap makes more, lower-order panels,
 # which converge to the requested tolerance by a different route.
@@ -561,7 +561,7 @@ CLOSURE_TOL = {
 
 # The absolute half of the same criterion, as a fraction of the block's peak, and the
 # reason no point has to be excluded. A relative bound alone is unreachable wherever
-# I_ell is small, which #NcXcorKernel:scaled-abstol documents: its criterion is
+# I_ell is small, which #NcXcorKernel:peak-epsilon documents: its criterion is
 # absolute, so "the corresponding relative error can become large where the resulting
 # C_l is small", and the useful precision is capped by cancellation in the radial
 # integral that produces W_i(k). Measured, that is exactly what happens -- on
@@ -606,7 +606,7 @@ def test_chebyshev_closure_matches_arb(
         )
         kernel.set_l_limber(-1)
         kernel.set_property("reltol", 1.0e-6)
-        kernel.set_property("scaled-abstol", 1.0e-6)
+        kernel.set_property("peak-epsilon", 1.0e-6)
         kernel.prepare(cosmo)
 
         integrand = kernel.get_eval_vectorized_full(

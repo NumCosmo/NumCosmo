@@ -56,7 +56,7 @@ A closure is accepted when
 $$ \Vert f - \tilde f \Vert_2 \le \mathrm{reltol} \cdot \Vert f \Vert_2
    + a \cdot \Vert f \Vert_2^{\mathrm{max}} $$
 
-with $a$ the `scaled-abstol` property. Three consequences follow, and each one
+with $a$ the `peak-epsilon` property. Three consequences follow, and each one
 is easy to get wrong:
 
 The two terms are added, not maxed. The second is an unconditional floor
@@ -64,12 +64,12 @@ measured against the closure's own peak, so `reltol` only bites where the
 closure is within a few orders of that peak --- it is, in effect, the tolerance
 *around the peak*. Far out in the tail, the floor is what governs.
 
-That makes `scaled-abstol` the lever and `reltol` nearly free. Below we
+That makes `peak-epsilon` the lever and `reltol` nearly free. Below we
 tighten each in turn and count knots, since one knot is one radial solve and
 therefore the unit of cost.
 
 ```{python}
-def make_kernel(z_lower, z_upper, reltol, scaled_abstol):
+def make_kernel(z_lower, z_upper, reltol, peak_epsilon):
     """One cluster top-hat bin, at a chosen accuracy."""
     kernel = Nc.XcorKernelClusterTophat(
         dist=dist,
@@ -77,7 +77,7 @@ def make_kernel(z_lower, z_upper, reltol, scaled_abstol):
         z_lower=z_lower,
         z_upper=z_upper,
         reltol=reltol,
-        scaled_abstol=scaled_abstol,
+        peak_epsilon=peak_epsilon,
         integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
     )
     # The Limber approximation is meaningless at the low multipoles that
@@ -101,14 +101,14 @@ def knot_count(kernel):
     return len(np.array(integrand.peek_knots().dup_array()))
 
 
-print(f"{'reltol':>8} {'scaled-abstol':>14} {'knots':>7}")
-for reltol, scaled_abstol in [
+print(f"{'reltol':>8} {'peak-epsilon':>14} {'knots':>7}")
+for reltol, peak_epsilon in [
     (1.0e-6, 1.0e-5),
     (1.0e-8, 1.0e-5),  # reltol tightened 100x, floor unchanged
     (1.0e-6, 1.0e-6),  # floor tightened 10x instead
 ]:
-    n = knot_count(make_kernel(0.1, 0.2, reltol, scaled_abstol))
-    print(f"{reltol:>8.0e} {scaled_abstol:>14.0e} {n:>7}")
+    n = knot_count(make_kernel(0.1, 0.2, reltol, peak_epsilon))
+    print(f"{reltol:>8.0e} {peak_epsilon:>14.0e} {n:>7}")
 ```
 
 Tightening `reltol` a hundredfold barely moves the cost; tightening the floor
@@ -143,11 +143,11 @@ the closures' *fit*, propagated through how much the pair cancels.
 xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
 xcor.prepare(cosmo)
 
-RELTOL, SCALED_ABSTOL = 1.0e-6, 1.0e-5  # the NcXcorSSCSij defaults
+RELTOL, PEAK_EPSILON = 1.0e-6, 1.0e-5  # the NcXcorSSCSij defaults
 bins = {
-    "0.1 < z < 0.2": make_kernel(0.1, 0.2, RELTOL, SCALED_ABSTOL),
-    "0.3 < z < 0.4": make_kernel(0.3, 0.4, RELTOL, SCALED_ABSTOL),
-    "0.6 < z < 0.7": make_kernel(0.6, 0.7, RELTOL, SCALED_ABSTOL),
+    "0.1 < z < 0.2": make_kernel(0.1, 0.2, RELTOL, PEAK_EPSILON),
+    "0.3 < z < 0.4": make_kernel(0.3, 0.4, RELTOL, PEAK_EPSILON),
+    "0.6 < z < 0.7": make_kernel(0.6, 0.7, RELTOL, PEAK_EPSILON),
 }
 names = list(bins)
 
@@ -302,7 +302,7 @@ typical of a galaxy or lensing kernel.
 These are measured on the top-hat bins above, so treat them as an upper bound
 on what a smoother kernel will cost.
 
-| setting | `reltol` | `scaled-abstol` | knots | diagonal accuracy |
+| setting | `reltol` | `peak-epsilon` | knots | diagonal accuracy |
 |---|---|---|---|---|
 | [[numcosmo\|NcXcorKernel]] default | $10^{-4}$ | $10^{-4}$ | 541 | $1.3 \times 10^{-4}$ |
 | [[numcosmo\|NcXcorSSCSij]] default | $10^{-6}$ | $10^{-5}$ | 1241 | $5.8 \times 10^{-6}$ |
@@ -322,7 +322,7 @@ configuration rather than assuming a tighter one is safer.
 
 ## Summary {#sec-summary}
 
-- `scaled-abstol` is the lever; `reltol` is close to free. Keep them offset, and
+- `peak-epsilon` is the lever; `reltol` is close to free. Keep them offset, and
   keep the floor above $10^{-10}$.
 - With `KERNEL_EXACT` the quadrature contributes no error at all. What
   `compute_full` reports is the closure fit, amplified by the pair's

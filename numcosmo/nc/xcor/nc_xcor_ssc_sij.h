@@ -63,8 +63,8 @@ guint nc_xcor_ssc_sij_get_block_size (NcXcorSSCSij *ssc_sij);
 void nc_xcor_ssc_sij_set_reltol (NcXcorSSCSij *ssc_sij, gdouble reltol);
 gdouble nc_xcor_ssc_sij_get_reltol (NcXcorSSCSij *ssc_sij);
 
-void nc_xcor_ssc_sij_set_scaled_abstol (NcXcorSSCSij *ssc_sij, gdouble scaled_abstol);
-gdouble nc_xcor_ssc_sij_get_scaled_abstol (NcXcorSSCSij *ssc_sij);
+void nc_xcor_ssc_sij_set_peak_epsilon (NcXcorSSCSij *ssc_sij, gdouble peak_epsilon);
+gdouble nc_xcor_ssc_sij_get_peak_epsilon (NcXcorSSCSij *ssc_sij);
 
 void nc_xcor_ssc_sij_set_method (NcXcorSSCSij *ssc_sij, NcXcorMethod method);
 NcXcorMethod nc_xcor_ssc_sij_get_method (NcXcorSSCSij *ssc_sij);

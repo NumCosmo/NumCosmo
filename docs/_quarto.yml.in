@@ -31,6 +31,7 @@ project:
     - benchmarks/ccl_power_spectrum.qmd
     - benchmarks/ccl_two_point.qmd
     - benchmarks/xcor_certified_projection.qmd
+    - benchmarks/xcor_derivatives.qmd
     - tutorials/c/gobject.qmd
     - tutorials/c/curve_tutorial.qmd
     - tutorials/python/bounce.qmd
@@ -212,6 +213,8 @@ website:
             text: "CCL Two-Point Correlation"
           - href: benchmarks/xcor_certified_projection.qmd
             text: "Certified Radial Projection"
+          - href: benchmarks/xcor_derivatives.qmd
+            text: "Angular Power Spectrum Derivatives"
 
 resources:
   - reference/**
