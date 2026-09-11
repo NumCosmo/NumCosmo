@@ -99,7 +99,7 @@ PER_MULTIPOLE = frozenset({"gsl"})
 # an entry in the NcXcorKQuad table.
 BLOCK_METHODS = sorted(set(METHODS) - PER_MULTIPOLE)
 
-# Measured over the case matrix at reltol = scaled_abstol = 1e-4, as the worst
+# Measured over the case matrix at reltol = peak_epsilon = 1e-4, as the worst
 # deviation from the matching reference relative to the block's peak, with an
 # order of headroom. Measured worst, on cases.ELLS_SUITE:
 #
@@ -465,10 +465,10 @@ def test_far_separated_bins_cancel_by_orders(frozen, closure: str) -> None:
 def test_narrow_shell_caps_the_spline_closure() -> None:
     """Check that a 56 Mpc hard shell caps the spline closure and not the spectral one.
 
-    The knob that matters is ``scaled-abstol``, not ``reltol``. Measured on
+    The knob that matters is ``peak-epsilon``, not ``reltol``. Measured on
     this shell, four decades of ``reltol`` (1e-4 to 1e-8) change the answer by
     nothing at all for either closure and cost nothing either; every decade of
-    ``scaled-abstol`` moves both. So the comparison is taken along that axis,
+    ``peak-epsilon`` moves both. So the comparison is taken along that axis,
     at the library's own documented floor of 1e-6 -- below it the setter warns,
     because the value is measured against the peak of W(k) while the C_ell
     integrand is k^2 W_a W_b, so it enters squared.
@@ -481,10 +481,10 @@ def test_narrow_shell_caps_the_spline_closure() -> None:
     RH = Nc.HICosmo.RH_Mpc(cosmo)
     pair = cases.PAIRS_BY_CASE["N1"]
 
-    def solve(closure: Nc.XcorKernelClosure, scaled_abstol: float) -> np.ndarray:
-        """Return the N1 auto block for one closure at one scaled-abstol."""
+    def solve(closure: Nc.XcorKernelClosure, peak_epsilon: float) -> np.ndarray:
+        """Return the N1 auto block for one closure at one peak-epsilon."""
         settings = cases.Settings(
-            reltol=1.0e-6, scaled_abstol=scaled_abstol, closure=closure
+            reltol=1.0e-6, peak_epsilon=peak_epsilon, closure=closure
         )
         kernel = cases.build_kernel(pair.kernel_a, cosmo, dist, ps, settings)
 
@@ -500,7 +500,7 @@ def test_narrow_shell_caps_the_spline_closure() -> None:
         return float(np.abs(values - truth).max() / peak)
 
     # The spline closure at the floor, and one decade above it. It improves
-    # with scaled-abstol, so this is not a stall -- it is a cap, and the floor
+    # with peak-epsilon, so this is not a stall -- it is a cap, and the floor
     # is where the cap bites.
     spline_floor = error(solve(Nc.XcorKernelClosure.SPLINE, 1.0e-6))
     spline_above = error(solve(Nc.XcorKernelClosure.SPLINE, 1.0e-5))
@@ -527,7 +527,7 @@ def test_reltol_is_not_what_moves_the_narrow_shell() -> None:
         """Return the N1 auto block on the spline closure at one reltol."""
         settings = cases.Settings(
             reltol=reltol,
-            scaled_abstol=1.0e-5,
+            peak_epsilon=1.0e-5,
             closure=Nc.XcorKernelClosure.SPLINE,
         )
         kernel = cases.build_kernel(pair.kernel_a, cosmo, dist, ps, settings)

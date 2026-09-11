@@ -64,8 +64,8 @@ def _kernels(cosmology: Cosmology, l_limber: int = -1) -> list[Nc.XcorKernel]:
             integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
         )
         kernel.set_l_limber(l_limber)
-        # Library default scaled-abstol, deliberately: this used to override it
-        # to 1e-8 and no assertion here needed it. scaled-abstol floors W(k)
+        # Library default peak-epsilon, deliberately: this used to override it
+        # to 1e-8 and no assertion here needed it. peak-epsilon floors W(k)
         # against its own peak, but the C_ell integrand is k^2 W_a W_b, so the
         # floor enters squared -- the 1e-4 default is already 1e-12 there. Every
         # test in this file passes at 1e-8 (14.3 s), 1e-6 (5.5 s) and the
@@ -409,7 +409,7 @@ def test_error_estimate_scales_with_the_fit_criterion(
             z_lower=Z_BINS[0][0],
             z_upper=Z_BINS[0][1],
             reltol=tol,
-            scaled_abstol=tol,
+            peak_epsilon=tol,
             integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
         )
         kernel.set_l_limber(-1)
@@ -538,7 +538,7 @@ def test_closure_records_the_residual_it_achieved(cosmology: Cosmology) -> None:
     # back would be flat instead.
     window = np.array([integrand.eval_array(k) for k in knots])
     criterion = kernel.get_reltol() * np.linalg.norm(window, axis=1).max()
-    criterion += kernel.get_scaled_abstol() * np.abs(window).max()
+    criterion += kernel.get_peak_epsilon() * np.abs(window).max()
 
     assert values[:-1].max() < criterion
     assert np.median(values[:-1]) < 0.05 * criterion
@@ -617,14 +617,14 @@ def test_achieved_residual_estimate_still_bounds_the_true_error(
     exact = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     exact.prepare(cosmo)
 
-    def auto_spectrum(reltol, scaled_abstol):
+    def auto_spectrum(reltol, peak_epsilon):
         kernel = Nc.XcorKernelClusterTophat(
             dist=cosmology.dist,
             powspec=cosmology.ps_ml,
             z_lower=Z_BINS[0][0],
             z_upper=Z_BINS[0][1],
             reltol=reltol,
-            scaled_abstol=scaled_abstol,
+            peak_epsilon=peak_epsilon,
             integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
         )
         kernel.set_l_limber(-1)
@@ -644,7 +644,7 @@ def test_achieved_residual_estimate_still_bounds_the_true_error(
     assert np.all(est_rel > true_rel)
 
 
-def _closure(cosmology: Cosmology, closure_type, reltol=1.0e-4, scaled_abstol=1.0e-4):
+def _closure(cosmology: Cosmology, closure_type, reltol=1.0e-4, peak_epsilon=1.0e-4):
     """A cluster top-hat closure in the requested representation."""
     kernel = Nc.XcorKernelClusterTophat(
         dist=cosmology.dist,
@@ -653,7 +653,7 @@ def _closure(cosmology: Cosmology, closure_type, reltol=1.0e-4, scaled_abstol=1.
         z_upper=Z_BINS[0][1],
         integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
         reltol=reltol,
-        scaled_abstol=scaled_abstol,
+        peak_epsilon=peak_epsilon,
     )
     kernel.set_l_limber(-1)
     kernel.prepare(cosmology.cosmo)
@@ -785,7 +785,7 @@ def test_limber_multipoles_keep_the_spline_closure(cosmology: Cosmology) -> None
             z_upper=Z_BINS[0][1],
             integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
             reltol=1.0e-4,
-            scaled_abstol=1.0e-4,
+            peak_epsilon=1.0e-4,
         )
         # Every multipole in the block falls on the Limber side.
         kernel.set_l_limber(0)
@@ -838,7 +838,7 @@ def test_spectral_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
                 z_upper=z_upper,
                 integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
                 reltol=tol,
-                scaled_abstol=tol,
+                peak_epsilon=tol,
             )
             kernel.set_l_limber(-1)
             kernel.prepare(cosmo)
@@ -992,14 +992,14 @@ def test_spectral_path_reports_an_error_estimate(cosmology: Cosmology) -> None:
     lmin, lmax = 2, 9
     nell = lmax - lmin + 1
 
-    def auto_spectrum(reltol, scaled_abstol):
+    def auto_spectrum(reltol, peak_epsilon):
         kernel = Nc.XcorKernelClusterTophat(
             dist=cosmology.dist,
             powspec=cosmology.ps_ml,
             z_lower=Z_BINS[0][0],
             z_upper=Z_BINS[0][1],
             reltol=reltol,
-            scaled_abstol=scaled_abstol,
+            peak_epsilon=peak_epsilon,
             integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
         )
         kernel.set_l_limber(-1)
@@ -1042,7 +1042,7 @@ def test_panel_order_cap_is_tunable(cosmology: Cosmology) -> None:
             z_upper=Z_BINS[0][1],
             integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
             reltol=1.0e-4,
-            scaled_abstol=1.0e-4,
+            peak_epsilon=1.0e-4,
             panel_order_cap=cap,
         )
         kernel.set_l_limber(-1)

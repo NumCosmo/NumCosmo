@@ -262,7 +262,7 @@ class XcorKernelCommon:
             min=1,
             help=(
                 "Multipole block size handed to NcXcorSolver.plan_blocks(). "
-                "Eight is the empirical sweet spot; see "
+                "Eight was the fastest block size measured; see "
                 "dev-notes/xcor_ultralevin_batching_plan.md section 1.3."
             ),
             show_default=True,
@@ -509,11 +509,11 @@ class XcorKernelCommon:
         """
         floor = self.closure_tol_floor
 
-        if kernel.get_reltol() >= floor and kernel.get_scaled_abstol() >= floor:
+        if kernel.get_reltol() >= floor and kernel.get_peak_epsilon() >= floor:
             return
 
         kernel.set_reltol(max(kernel.get_reltol(), floor))
-        kernel.set_scaled_abstol(max(kernel.get_scaled_abstol(), floor))
+        kernel.set_peak_epsilon(max(kernel.get_peak_epsilon(), floor))
         print(
             f"  [OK] Closure fit tolerances raised to {floor:.1e} to match the "
             f"integrator"

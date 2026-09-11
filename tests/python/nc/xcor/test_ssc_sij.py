@@ -176,7 +176,7 @@ def test_diagonal_dominates(cosmology: Cosmology) -> None:
     """Off-diagonal S_ij of separated bins are orders below the diagonal.
 
     This is what makes the off-diagonals hard: they are a small residual of a
-    large cancellation, which is why `scaled-abstol` and not `reltol` sets
+    large cancellation, which is why `peak-epsilon` and not `reltol` sets
     their accuracy.
     """
     sij = _matrix_to_np(_make_ssc_sij(cosmology).eval(cosmology.cosmo))
@@ -416,7 +416,7 @@ def test_serialization_round_trip(cosmology: Cosmology) -> None:
     # Non-default marker for the round trip, kept at or above 1e-6 and away from
     # reltol -- the floor enters the S_ij integrand squared, and ssc.py warns
     # against letting the two tolerances coincide.
-    ssc_sij.set_scaled_abstol(3.0e-6)
+    ssc_sij.set_peak_epsilon(3.0e-6)
     ssc_sij.set_block_size(4)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
@@ -428,7 +428,7 @@ def test_serialization_round_trip(cosmology: Cosmology) -> None:
     assert dup.get_block_size() == ssc_sij.get_block_size()
     assert dup.get_method() == ssc_sij.get_method()
     assert_allclose(dup.get_reltol(), ssc_sij.get_reltol())
-    assert_allclose(dup.get_scaled_abstol(), ssc_sij.get_scaled_abstol())
+    assert_allclose(dup.get_peak_epsilon(), ssc_sij.get_peak_epsilon())
     assert_allclose(dup.get_fsky(), ssc_sij.get_fsky(), rtol=1.0e-12)
 
     assert_allclose(

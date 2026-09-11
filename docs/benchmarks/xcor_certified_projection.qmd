@@ -1256,7 +1256,7 @@ def pair_kernels(grid):
         # at the default 1e-4 the spline closure can return the wrong sign, so a
         # comparison run there measures the fit rather than the quadrature.
         kernel.set_reltol(1.0e-6)
-        kernel.set_scaled_abstol(1.0e-6)
+        kernel.set_peak_epsilon(1.0e-6)
         kernel.prepare_if_needed(cosmo)
         kernels.append(kernel)
 

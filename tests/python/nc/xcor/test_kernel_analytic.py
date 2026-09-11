@@ -70,7 +70,7 @@ def _integrator() -> Ncm.SBesselIntegrator:
     return Ncm.SBesselIntegratorLevin.new(0, 8)
 
 
-# Every kernel here runs at the library's default tolerances. scaled-abstol
+# Every kernel here runs at the library's default tolerances. peak-epsilon
 # floors W_ell(k) against its own peak, but the C_ell integrand is k^2 W_1 W_2,
 # so the floor enters squared: the 1e-4 default is already 1e-8 on what is
 # integrated, which is about what the outer integral can carry. Overriding it to
@@ -610,7 +610,7 @@ def _cl_reference(
 # (shape, ell, rtol), at the library's default tolerances.
 #
 # The tolerances differ per shape because the achieved accuracy does, and by two
-# orders of magnitude. scaled-abstol floors W(k) against its own *peak*, so how
+# orders of magnitude. peak-epsilon floors W(k) against its own *peak*, so how
 # much of the contributing k-range it discards depends on how broad the window
 # is. Measured at ell = 8 against the quadrature below:
 #
@@ -622,7 +622,7 @@ def _cl_reference(
 # Nothing is wrong with the solver: a broad window carries weight over more of
 # the k-range, so the same peak-relative floor throws away more of it. The
 # numbers below are what the default delivers, not a target -- tightening the
-# floor moves them, at the cost documented in NcXcorKernel:scaled-abstol.
+# floor moves them, at the cost documented in NcXcorKernel:peak-epsilon.
 CL_CASES = [
     ("gauss", 2, 1.0e-5),
     ("gauss", 8, 1.0e-5),
@@ -1404,7 +1404,7 @@ def test_chebyshev_panels_are_checked_against_the_expansion_samples(
     kernel = _multi(cosmology, MULTI_DISJOINT_MEAN, MULTI_DISJOINT_SIGMA)
     kernel.set_adaptive_epsilon(1.0e-11)
     kernel.set_reltol(1.0e-6)
-    kernel.set_scaled_abstol(1.0e-6)
+    kernel.set_peak_epsilon(1.0e-6)
     ell = 10
 
     def peak(closure_type):

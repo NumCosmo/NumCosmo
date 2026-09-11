@@ -76,7 +76,7 @@
  * $x \gg \ell$, and the worst absolute error measured is $2\times10^{-11}$ of
  * that peak; near the peak the same scan gives $4\times10^{-11}$ relative. Every
  * consumer in the library reaches this class through #NcXcorKernel, whose
- * #NcXcorKernel:scaled-abstol floors the $k$-spline at $10^{-4}$ of the peak,
+ * #NcXcorKernel:peak-epsilon floors the $k$-spline at $10^{-4}$ of the peak,
  * $10^{-5}$ for #NcXcorSSCSij, and refuses to go below $10^{-6}$, leaving the
  * panel error at least four orders under a floor that is applied anyway.
  *

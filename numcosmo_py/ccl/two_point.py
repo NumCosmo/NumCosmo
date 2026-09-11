@@ -446,7 +446,7 @@ def tracer_kernel(
 
     :param order: B-spline order of the window reconstruction.
     :param kernel_reltol: when given, sets both the kernel's closure ``reltol``
-        and ``scaled-abstol``; the library default (1e-4) applies otherwise.
+        and ``peak-epsilon``; the library default (1e-4) applies otherwise.
     """
     comps = tracer_component_tables(tracer, cosmology, order=order)
     oa = Ncm.ObjArray.new()
@@ -458,7 +458,7 @@ def tracer_kernel(
     )
     if kernel_reltol is not None:
         kernel.set_reltol(kernel_reltol)
-        kernel.set_scaled_abstol(kernel_reltol)
+        kernel.set_peak_epsilon(kernel_reltol)
     kernel.set_l_limber(-1)
     kernel.prepare(cosmology.cosmo)
 

@@ -46,7 +46,7 @@ Measured over 7 bins at `l = 0`: 28 per-pair unions total 69356 panels against
 ## 3. The sampling dominates, not the quadrature
 
 This is the fact that decides the design. Measured, 7 bins, 28 pairs,
-`scaled_abstol = 1e-6`:
+`peak_epsilon = 1e-6`:
 
 | step | cost at l=0 |
 |------|-------------|
@@ -108,15 +108,15 @@ within a block was tried, and §3 is why it was undone.
 - **no tolerance parameter**, and no adaptive outer step that can fail;
 - **deterministic cost**, set by the knot count rather than by how hard the
   integrand turns out to be;
-- it collapses the `reltol` / `scaled_abstol` interaction to a single knob,
+- it collapses the `reltol` / `peak_epsilon` interaction to a single knob,
   since the quadrature contributes no error at all;
 - and it is not slower, so there is no accuracy-for-speed trade to weigh.
 
 Note that the `pcubature` abort that originally motivated an exact method is
 *not* an intrinsic property of top-hat kernels — it is induced by
-`scaled_abstol`, measured at `l = 32-39` over 7 bins:
+`peak_epsilon`, measured at `l = 32-39` over 7 bins:
 
-| `scaled_abstol` | knots/kernel | `KERNEL_CUBATURE` |
+| `peak_epsilon` | knots/kernel | `KERNEL_CUBATURE` |
 |-----------------|--------------|-------------------|
 | `1e-4` (default used by `test_kernel.py`) | 493 | OK, 0.57 s |
 | `1e-6` | 2367 | OK, 2.63 s |
@@ -126,7 +126,7 @@ Note that the `pcubature` abort that originally motivated an exact method is
 Cubature is fine on top-hats until the spline is refined enough to resolve the
 ringing tail of §9, which makes the outer integrand genuinely oscillatory. The
 exact rule removes that failure mode by construction, which is what makes
-`scaled_abstol = 1e-8` usable.
+`peak_epsilon = 1e-8` usable.
 
 ## 8. Where the sampled domain is actually decided
 
@@ -188,7 +188,7 @@ Worth 2-3.5x in knots, hence in runtime.
 It would also remove the `pcubature` abort of §7 at its root, since that abort
 is what happens when this tail is resolved well enough to be oscillatory: the
 effort spent resolving it is what breaks the outer integration. Nothing here is
-urgent, though -- at the tolerances actually in use (`scaled_abstol >= 1e-6`)
+urgent, though -- at the tolerances actually in use (`peak_epsilon >= 1e-6`)
 the current criterion works and top-hats validate at `l = 800`.
 
 ## 10. What `vp_err` measures, and how conservative it is
@@ -241,7 +241,7 @@ twice the closure build cost.
 
 Read the table against the tolerances an application sets, not the bare
 defaults, which exist to be cheap. `NcXcorSSCSij` uses `reltol = 1e-6` with
-`scaled_abstol = 1e-5`, deliberately offset from each other; the rationale is
+`peak_epsilon = 1e-5`, deliberately offset from each other; the rationale is
 at that object's defaults and should be read before changing either. At those,
 on the same top-hat bins, the diagonal is accurate to 5.9e-6 rather than
 1.3e-4, and the adjacent-bin cross to 2.8e-3 rather than 0.13. The
@@ -272,7 +272,7 @@ same direction in which the cancellation grows.
 ## 11. Related open items
 
 - `ncm_integral_nd_eval` hard-`g_error`s when `pcubature` runs out of
-  Clenshaw-Curtis levels. This blocks `scaled_abstol = 1e-8` on masked runs and
+  Clenshaw-Curtis levels. This blocks `peak_epsilon = 1e-8` on masked runs and
   would kill an MCMC chain mid-flight. The exact GL(5) path removes it by
   construction.
 - `_nc_xcor_kernel_gsl` targets `reltol * 1e-2` and aborts on GSL roundoff for
