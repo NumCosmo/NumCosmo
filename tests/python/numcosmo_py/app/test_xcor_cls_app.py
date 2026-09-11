@@ -38,11 +38,13 @@ matplotlib.use("Agg")
 
 import numpy as np
 from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.app import app
 from numcosmo_py.app.xcor.cls import ComputeCls, EllSpacing, sample_ells
 from numcosmo_py.app.xcor.common import XcorClosureOption, contiguous_runs
+from numcosmo_py.app.xcor.plotting import percent_tick, style_ratio_axis
 
 pytestmark = pytest.mark.app
 runner = CliRunner()
@@ -367,3 +369,31 @@ def test_cls_compare_limber_draws_both_spectra_on_top(
     ymin, ymax = bottom.get_ylim()
     assert -1.0e-4 <= ymin < 0.0
     assert ratio.max() < ymax < 10.0 * ratio.max()
+
+
+def test_style_ratio_axis_without_finite_deviations() -> None:
+    """A ratio panel with no finite deviation keeps matplotlib's own limits.
+
+    Every C_ell of a pair being zero makes the deviation NaN throughout; the
+    axis is still styled, and the limits are left to matplotlib.
+    """
+    fig, ax = plt.subplots()
+    ax.axhline(0.0)
+    before = ax.get_ylim()
+    style_ratio_axis(ax, [np.full(4, np.nan)])
+    assert ax.get_yscale() == "symlog"
+    assert ax.get_ylim() == before
+    plt.close(fig)
+
+
+def test_style_ratio_axis_limits_follow_both_signs() -> None:
+    """Deviations of both signs open both sides of the axis by a quarter decade."""
+    fig, ax = plt.subplots()
+    ratio = np.array([-0.02, 1.0e-6, 0.3])
+    ax.plot(ratio)
+    style_ratio_axis(ax, [ratio])
+    ymin, ymax = ax.get_ylim()
+    assert ymin == pytest.approx(-0.02 * 10.0**0.25)
+    assert ymax == pytest.approx(0.3 * 10.0**0.25)
+    assert percent_tick(-0.02) == "-2%"
+    plt.close(fig)
