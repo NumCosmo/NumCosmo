@@ -405,7 +405,7 @@ HTML(video)
 #| label: fig-qr-stages
 #| fig-cap: >
 #|   Four stages of the factorization above: as built, one third and two thirds of the
-#|   way, and the column where the stopping test fires. Below the diagonal of every
+#|   way, and the column where the stopping test is met. Below the diagonal of every
 #|   processed column the entries are gone; the two constraint rows travel along, and
 #|   their content is the fill above the band.
 #| code-fold: true
