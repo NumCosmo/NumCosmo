@@ -148,6 +148,36 @@ class KernelCMBLensingConfig(BaseModel):
         return cls.model_validate(opts)
 
 
+class CMBISWSource(GEnum):
+    """Where the CMB photons are placed along the line of sight, for ISW.
+
+    :cvar THIN_SCREEN: one source plane at the decoupling redshift -
+        CLI value: 'thin-screen'
+    :cvar VISIBILITY: the recombination visibility function, normalized over the
+        last-scattering shell - CLI value: 'visibility'
+    :cvar VISIBILITY_REIONIZATION: the full visibility function, reionization
+        bump included - CLI value: 'visibility-reionization'
+    """
+
+    # pylint: disable=no-member
+    THIN_SCREEN = Nc.XcorKernelCMBISWSource.THIN_SCREEN
+    VISIBILITY = Nc.XcorKernelCMBISWSource.VISIBILITY
+    VISIBILITY_REIONIZATION = Nc.XcorKernelCMBISWSource.VISIBILITY_REIONIZATION
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: Any
+    ) -> core_schema.CoreSchema:
+        """Get the Pydantic core schema for CMBISWSource."""
+        return core_schema.no_info_before_validator_function(
+            lambda v: cls(v) if isinstance(v, str) else v,
+            core_schema.enum_schema(cls, list(cls), sub_type="str"),
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda v: str(v.value)
+            ),
+        )
+
+
 class KernelCMBISWConfig(BaseModel):
     """CMB Integrated Sachs-Wolfe (ISW) kernel configuration.
 
@@ -155,6 +185,9 @@ class KernelCMBISWConfig(BaseModel):
     as photons traverse large-scale structures.
 
     :ivar lmax: Maximum multipole for noise power spectrum.
+    :ivar source: Placement of the CMB sources: a thin screen at decoupling, the
+        recombination visibility function, or the full visibility including
+        reionization.
     """
 
     nc_type: ClassVar[type] = Nc.XcorKernelCMBISW
@@ -163,6 +196,7 @@ class KernelCMBISWConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     lmax: Annotated[int, Field(gt=0)] = 3000
+    source: CMBISWSource = CMBISWSource.THIN_SCREEN
 
     @classmethod
     def from_args(cls, args: list[str]) -> "KernelCMBISWConfig":

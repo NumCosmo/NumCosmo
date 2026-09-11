@@ -517,8 +517,13 @@ _nc_xcor_kernel_cmb_lensing_prepare_visibility (NcXcorKernelCMBLensing *xclkl, N
   /*
    * lambda decreases with z: lambda_u is the near edge of the shell, lambda_l
    * the far one. With reionization the source starts at z = 0 and the low-z
-   * bump of the visibility is part of it.
+   * bump of the visibility is part of it; without it, it starts at the
+   * visibility minimum between the reionization bump and the shell, so that
+   * the cut falls where nothing scatters.
    */
+  if (xclkl->source != NC_XCOR_KERNEL_CMB_LENSING_SOURCE_VISIBILITY_REIONIZATION)
+    lambda_u = nc_recomb_get_v_tau_reion_min_lambda (xclkl->recomb, cosmo);
+
   xclkl->cosmo_prep = cosmo;
   xclkl->z_src_min  = (xclkl->source == NC_XCOR_KERNEL_CMB_LENSING_SOURCE_VISIBILITY_REIONIZATION) ? 0.0 : expm1 (-lambda_u);
   xclkl->z_src_max  = expm1 (-lambda_l);

@@ -45,7 +45,30 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcXcorKernelCMBISW, nc_xcor_kernel_cmb_isw, NC, XCOR_KERNEL_CMB_ISW, NcXcorKernel);
 
+/**
+ * NcXcorKernelCMBISWSource:
+ * @NC_XCOR_KERNEL_CMB_ISW_SOURCE_THIN_SCREEN: every CMB photon last scatters at the decoupling redshift of the #NcDistance
+ * @NC_XCOR_KERNEL_CMB_ISW_SOURCE_VISIBILITY: the sources follow the visibility function of the #NcXcorKernelCMBISW:recomb object over the last-scattering shell, normalized to unit integral there
+ * @NC_XCOR_KERNEL_CMB_ISW_SOURCE_VISIBILITY_REIONIZATION: the sources follow the full visibility function, the reionization bump included
+ *
+ * Where the CMB photons are placed along the line of sight. A photon that last
+ * scattered at $\chi'$ integrates the decay of the potential over $\chi < \chi'$
+ * only, so the kernel at $\chi$ is the thin-screen one times the fraction of
+ * photons that last scatter beyond $\chi$: one below the shell, zero beyond it,
+ * and lower by the rescattered fraction between the reionization bump and the
+ * shell when reionization is included.
+ */
+typedef enum _NcXcorKernelCMBISWSource /*< prefix=NC_XCOR_KERNEL_CMB_ISW_SOURCE >*/
+{
+  NC_XCOR_KERNEL_CMB_ISW_SOURCE_THIN_SCREEN = 0,
+  NC_XCOR_KERNEL_CMB_ISW_SOURCE_VISIBILITY,
+  NC_XCOR_KERNEL_CMB_ISW_SOURCE_VISIBILITY_REIONIZATION,
+} NcXcorKernelCMBISWSource;
+
 NcXcorKernelCMBISW *nc_xcor_kernel_cmb_isw_new (NcDistance *dist, NcmPowspec *ps, NcRecomb *recomb, NcmVector *Nl);
+
+void nc_xcor_kernel_cmb_isw_set_source (NcXcorKernelCMBISW *xcisw, NcXcorKernelCMBISWSource source);
+NcXcorKernelCMBISWSource nc_xcor_kernel_cmb_isw_get_source (NcXcorKernelCMBISW *xcisw);
 
 gdouble nc_xcor_kernel_cmb_isw_eval_k_max (NcXcorKernelCMBISW *xcisw, gdouble x);
 gdouble nc_xcor_kernel_cmb_isw_eval_KL_max (NcXcorKernelCMBISW *xcisw, gdouble x);

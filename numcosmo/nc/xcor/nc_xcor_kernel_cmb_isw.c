@@ -51,6 +51,7 @@
 #include "nc/xcor/nc_xcor_kernel_component.h"
 #include "nc/xcor/nc_xcor_kernel_cmb_isw.h"
 #include "nc/xcor/nc_xcor.h"
+#include "nc_enum_types.h"
 
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -71,6 +72,11 @@ typedef struct _NcXcorKernelCMBISWPrivate
   guint Nlmax;
   gdouble chi_lss;
   gdouble z_lss;
+  NcXcorKernelCMBISWSource source;
+  gdouble z_src_min;
+  gdouble z_src_max;
+  gdouble exp_mtau_min; /* e^{-tau} at the near and far edges of the source range */
+  gdouble exp_mtau_max;
   NcXcorKernelComponent *isw_comp;
 } NcXcorKernelCMBISWPrivate;
 
@@ -79,6 +85,7 @@ enum
   PROP_0,
   PROP_RECOMB,
   PROP_NL,
+  PROP_SOURCE,
   PROP_SIZE,
 };
 
@@ -94,7 +101,37 @@ typedef struct _ISWComponentData
 {
   NcDistance *dist;
   NcmPowspec *ps;
+  NcRecomb *recomb;
+  NcXcorKernelCMBISWSource source;
+  gdouble z_src_min;
+  gdouble z_src_max;
+  gdouble exp_mtau_min;
+  gdouble exp_mtau_max;
 } ISWComponentData;
+
+/*
+ * The survival fraction F(z) of the visibility sources, the fraction of photons
+ * that last scatter beyond z. Since v_tau = e^{-tau} dtau/dlambda, the
+ * cumulative visibility is e^{-tau} itself and F needs no table:
+ * F = (e^{-tau(z)} - e^{-tau_max}) / (e^{-tau_min} - e^{-tau_max}), one at the
+ * near edge of the source range and zero at the far one. The thin screen is
+ * the step at the decoupling redshift, handled through the support.
+ */
+static gdouble
+_nc_xcor_kernel_cmb_isw_survival (NcXcorKernelCMBISWSource source, NcRecomb *recomb, NcHICosmo *cosmo,
+                                  gdouble z_src_min, gdouble z_src_max, gdouble exp_mtau_min, gdouble exp_mtau_max, gdouble z)
+{
+  if (source == NC_XCOR_KERNEL_CMB_ISW_SOURCE_THIN_SCREEN)
+    return 1.0;
+
+  if (z <= z_src_min)
+    return 1.0;
+
+  if (z >= z_src_max)
+    return 0.0;
+
+  return (exp (-nc_recomb_tau (recomb, cosmo, -log1p (z))) - exp_mtau_max) / (exp_mtau_min - exp_mtau_max);
+}
 
 /* Helper to get data from component - uses pointer arithmetic to access
  * the data member that comes after the parent_instance in the struct
@@ -123,12 +160,17 @@ nc_xcor_kernel_cmb_isw_init (NcXcorKernelCMBISW *xcisw)
 {
   NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
 
-  self->recomb   = NULL;
-  self->Nl       = NULL;
-  self->Nlmax    = 0;
-  self->chi_lss  = 0.0;
-  self->z_lss    = 0.0;
-  self->isw_comp = NULL;
+  self->recomb       = NULL;
+  self->Nl           = NULL;
+  self->Nlmax        = 0;
+  self->chi_lss      = 0.0;
+  self->z_lss        = 0.0;
+  self->source       = NC_XCOR_KERNEL_CMB_ISW_SOURCE_THIN_SCREEN;
+  self->z_src_min    = 0.0;
+  self->z_src_max    = 0.0;
+  self->exp_mtau_min = 1.0;
+  self->exp_mtau_max = 0.0;
+  self->isw_comp     = NULL;
 }
 
 static void
@@ -147,6 +189,9 @@ _nc_xcor_kernel_cmb_isw_set_property (GObject *object, guint prop_id, const GVal
     case PROP_NL:
       self->Nl    = g_value_dup_object (value);
       self->Nlmax = ncm_vector_len (self->Nl) - 1;
+      break;
+    case PROP_SOURCE:
+      nc_xcor_kernel_cmb_isw_set_source (xcisw, g_value_get_enum (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -169,6 +214,9 @@ _nc_xcor_kernel_cmb_isw_get_property (GObject *object, guint prop_id, GValue *va
       break;
     case PROP_NL:
       g_value_set_object (value, self->Nl);
+      break;
+    case PROP_SOURCE:
+      g_value_set_enum (value, self->source);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -264,6 +312,22 @@ nc_xcor_kernel_cmb_isw_class_init (NcXcorKernelCMBISWClass *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcXcorKernelCMBISW:source:
+   *
+   * Where the CMB photons are placed along the line of sight: a single plane at
+   * the decoupling redshift, or the visibility function of
+   * #NcXcorKernelCMBISW:recomb, with or without the reionization bump.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SOURCE,
+                                   g_param_spec_enum ("source",
+                                                      NULL,
+                                                      "Placement of the CMB sources along the line of sight",
+                                                      NC_TYPE_XCOR_KERNEL_CMBISW_SOURCE,
+                                                      NC_XCOR_KERNEL_CMB_ISW_SOURCE_THIN_SCREEN,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
@@ -290,20 +354,24 @@ _nc_xcor_kernel_cmb_isw_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble 
   NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
 
   *zmin = 0.0;
-  *zmax = self->z_lss;
+  *zmax = (self->source == NC_XCOR_KERNEL_CMB_ISW_SOURCE_THIN_SCREEN) ? self->z_lss : self->z_src_max;
   *zmid = 2.0;
 }
 
 static gdouble
 _nc_xcor_kernel_cmb_isw_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
-  NcmPowspec *ps               = nc_xcor_kernel_peek_powspec (xclk);
-  const gdouble k_pivot        = 1.0;
-  const gdouble powspec        = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k_pivot);
-  const gdouble dpowspec_dz    = ncm_powspec_deriv_z (ps, NCM_MODEL (cosmo), z, k_pivot);
-  const gdouble d1pz_growth_dz = 1.0 + (1.0 + z) * dpowspec_dz / (2.0 * powspec);
+  NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (xclk);
+  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
+  NcmPowspec *ps                         = nc_xcor_kernel_peek_powspec (xclk);
+  const gdouble k_pivot                  = 1.0;
+  const gdouble powspec                  = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k_pivot);
+  const gdouble dpowspec_dz              = ncm_powspec_deriv_z (ps, NCM_MODEL (cosmo), z, k_pivot);
+  const gdouble d1pz_growth_dz           = 1.0 + (1.0 + z) * dpowspec_dz / (2.0 * powspec);
+  const gdouble F_z                      = _nc_xcor_kernel_cmb_isw_survival (self->source, self->recomb, cosmo, self->z_src_min, self->z_src_max,
+                                                                             self->exp_mtau_min, self->exp_mtau_max, z);
 
-  return xck->E_z * gsl_pow_2 (xck->chi_z) * d1pz_growth_dz;
+  return xck->E_z * gsl_pow_2 (xck->chi_z) * d1pz_growth_dz * F_z;
 }
 
 static gdouble
@@ -341,8 +409,10 @@ _isw_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdoub
   const gdouble dpowspec_dz    = ncm_powspec_deriv_z (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble d1pz_growth_dz = 1.0 + (1.0 + z) * dpowspec_dz / (2.0 * powspec);
   const gdouble operator       = 1.0 / gsl_pow_2 (k);
+  const gdouble F_z            = _nc_xcor_kernel_cmb_isw_survival (data->source, data->recomb, cosmo, data->z_src_min, data->z_src_max,
+                                                                   data->exp_mtau_min, data->exp_mtau_max, z);
 
-  return operator * E_z * d1pz_growth_dz * sqrt (powspec);
+  return operator * E_z * d1pz_growth_dz * F_z * sqrt (powspec);
 }
 
 static gdouble
@@ -367,7 +437,9 @@ _isw_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdoubl
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
   {
-    const gdouble chi_lss = nc_distance_comoving_lss (dist, cosmo);
+    const gdouble chi_lss = (data->source == NC_XCOR_KERNEL_CMB_ISW_SOURCE_THIN_SCREEN) ?
+                            nc_distance_comoving_lss (dist, cosmo) :
+                            nc_distance_comoving (dist, cosmo, data->z_src_max);
 
     *chi_min = nc_distance_comoving (dist, cosmo, 1.0e-6);
     *chi_max = chi_lss;
@@ -382,10 +454,56 @@ _nc_xcor_kernel_component_isw_new (NcDistance *dist, NcmPowspec *ps)
   NcXcorKernelComponent *comp = g_object_new (nc_xcor_kernel_component_isw_get_type (), NULL);
   ISWComponentData *data      = _NC_XCOR_KERNEL_COMPONENT_ISW_GET_DATA (comp);
 
-  data->dist = dist;
-  data->ps   = ps;
+  data->dist         = dist;
+  data->ps           = ps;
+  data->recomb       = NULL;
+  data->source       = NC_XCOR_KERNEL_CMB_ISW_SOURCE_THIN_SCREEN;
+  data->z_src_min    = 0.0;
+  data->z_src_max    = 0.0;
+  data->exp_mtau_min = 1.0;
+  data->exp_mtau_max = 0.0;
 
   return comp;
+}
+
+/*
+ * The visibility sources. The far edge of the source range is where the
+ * visibility has dropped to 1e-4 of its recombination peak. The near edge is
+ * z = 0 with reionization and, without it, the redshift between the
+ * reionization bump and the shell where the visibility is smallest: starting
+ * the source where nothing scatters keeps the survival fraction smooth to the
+ * tolerances the forcing is fitted to.
+ */
+#define NC_XCOR_KERNEL_CMB_ISW_VISIBILITY_LOGREF (4.0 * M_LN10)
+
+static void
+_nc_xcor_kernel_cmb_isw_prepare_visibility (NcXcorKernelCMBISW *xcisw, NcHICosmo *cosmo)
+{
+  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
+  gdouble lambda_max, lambda_l, lambda_u;
+
+  if (self->recomb == NULL)
+    g_error ("nc_xcor_kernel_cmb_isw_prepare: the visibility source needs the recomb property set.");
+
+  nc_recomb_prepare_if_needed (self->recomb, cosmo);
+  nc_recomb_v_tau_lambda_features (self->recomb, cosmo, NC_XCOR_KERNEL_CMB_ISW_VISIBILITY_LOGREF,
+                                   &lambda_max, &lambda_l, &lambda_u);
+
+  /*
+   * lambda decreases with z: lambda_u is the near edge of the shell, lambda_l
+   * the far one. With reionization the sources extend to z = 0; without it they
+   * stop at the visibility minimum between the shell and the reionization bump,
+   * where nothing scatters, so that no photon is cut in the middle of a source.
+   */
+  if (self->source == NC_XCOR_KERNEL_CMB_ISW_SOURCE_VISIBILITY_REIONIZATION)
+    lambda_u = 0.0;
+  else
+    lambda_u = nc_recomb_get_v_tau_reion_min_lambda (self->recomb, cosmo);
+
+  self->z_src_min    = expm1 (-lambda_u);
+  self->z_src_max    = expm1 (-lambda_l);
+  self->exp_mtau_min = exp (-nc_recomb_tau (self->recomb, cosmo, lambda_u));
+  self->exp_mtau_max = exp (-nc_recomb_tau (self->recomb, cosmo, lambda_l));
 }
 
 /*
@@ -406,6 +524,20 @@ _nc_xcor_kernel_cmb_isw_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 
   self->chi_lss = nc_distance_comoving_lss (dist, cosmo);
   self->z_lss   = z_lss;
+
+  if (self->source != NC_XCOR_KERNEL_CMB_ISW_SOURCE_THIN_SCREEN)
+    _nc_xcor_kernel_cmb_isw_prepare_visibility (xcisw, cosmo);
+
+  {
+    ISWComponentData *data = _NC_XCOR_KERNEL_COMPONENT_ISW_GET_DATA (self->isw_comp);
+
+    data->recomb       = self->recomb;
+    data->source       = self->source;
+    data->z_src_min    = self->z_src_min;
+    data->z_src_max    = self->z_src_max;
+    data->exp_mtau_min = self->exp_mtau_min;
+    data->exp_mtau_max = self->exp_mtau_max;
+  }
 
   g_assert_nonnull (self->isw_comp);
   nc_xcor_kernel_component_prepare (self->isw_comp, cosmo);
@@ -577,5 +709,40 @@ nc_xcor_kernel_cmb_isw_get_epsilon (NcXcorKernelCMBISW *xcisw)
     return NC_XCOR_KERNEL_COMPONENT_DEFAULT_EPSILON;
 
   return nc_xcor_kernel_component_get_epsilon (self->isw_comp);
+}
+
+/**
+ * nc_xcor_kernel_cmb_isw_set_source:
+ * @xcisw: a #NcXcorKernelCMBISW
+ * @source: a #NcXcorKernelCMBISWSource
+ *
+ * Sets where the CMB photons are placed along the line of sight. The visibility
+ * sources require the #NcXcorKernelCMBISW:recomb object. The kernel is marked
+ * outdated and is prepared again on the next use.
+ */
+void
+nc_xcor_kernel_cmb_isw_set_source (NcXcorKernelCMBISW *xcisw, NcXcorKernelCMBISWSource source)
+{
+  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
+
+  if (self->source != source)
+  {
+    self->source = source;
+    nc_xcor_kernel_mark_outdated (NC_XCOR_KERNEL (xcisw));
+  }
+}
+
+/**
+ * nc_xcor_kernel_cmb_isw_get_source:
+ * @xcisw: a #NcXcorKernelCMBISW
+ *
+ * Returns: the #NcXcorKernelCMBISWSource in use.
+ */
+NcXcorKernelCMBISWSource
+nc_xcor_kernel_cmb_isw_get_source (NcXcorKernelCMBISW *xcisw)
+{
+  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
+
+  return self->source;
 }
 
