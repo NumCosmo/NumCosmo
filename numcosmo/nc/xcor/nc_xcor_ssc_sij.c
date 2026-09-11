@@ -174,9 +174,9 @@ nc_xcor_ssc_sij_init (NcXcorSSCSij *ssc_sij)
   ssc_sij->mask_cl = NULL;
   ssc_sij->area    = 0.0;
 
-  ssc_sij->method        = NC_XCOR_METHOD_KERNEL_EXACT;
-  ssc_sij->block_size    = NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE;
-  ssc_sij->reltol        = NC_XCOR_SSC_SIJ_DEFAULT_RELTOL;
+  ssc_sij->method       = NC_XCOR_METHOD_KERNEL_EXACT;
+  ssc_sij->block_size   = NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE;
+  ssc_sij->reltol       = NC_XCOR_SSC_SIJ_DEFAULT_RELTOL;
   ssc_sij->peak_epsilon = NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON;
 
   ssc_sij->kernels     = g_ptr_array_new_with_free_func ((GDestroyNotify) nc_xcor_kernel_free);

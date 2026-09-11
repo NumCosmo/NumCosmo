@@ -138,7 +138,7 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
   self->adaptive_epsilon         = 0.0;
   self->adaptive_boundary_tries  = 0;
   self->reltol                   = 0.0;
-  self->peak_epsilon            = 0.0;
+  self->peak_epsilon             = 0.0;
   self->max_border_expansions    = 0;
   self->max_iter                 = 0;
   self->expansion_factor         = 0.0;
@@ -2423,8 +2423,8 @@ nc_xcor_kernel_integrand_new (guint len, void (*eval) (gpointer, gdouble, gdoubl
   integrand->peek_panel_func     = NULL;
   integrand->restrict_func       = NULL;
 
-  integrand->residuals     = NULL;
-  integrand->reltol        = 0.0;
+  integrand->residuals    = NULL;
+  integrand->reltol       = 0.0;
   integrand->peak_epsilon = 0.0;
 
   return integrand;
@@ -2671,7 +2671,7 @@ nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdoub
   g_return_if_fail (reltol >= 0.0);
   g_return_if_fail (peak_epsilon >= 0.0);
 
-  integrand->reltol        = reltol;
+  integrand->reltol       = reltol;
   integrand->peak_epsilon = peak_epsilon;
 }
 
