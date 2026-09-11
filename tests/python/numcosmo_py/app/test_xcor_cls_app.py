@@ -37,6 +37,7 @@ matplotlib.use("Agg")
 # pylint: disable=wrong-import-position
 
 import numpy as np
+from matplotlib.figure import Figure
 
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.app import app
@@ -312,3 +313,57 @@ def test_sampled_multipoles_match_the_contiguous_solve() -> None:
         assert cl.shape == sparse_ells.shape
         assert_allclose = np.testing.assert_allclose
         assert_allclose(cl, dense[pair][picked], rtol=1e-10)
+
+
+def test_cls_compare_limber_draws_both_spectra_on_top(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """--compare-limber draws the Limber spectrum dashed beside the solid one.
+
+    The ratio panel alone hides where the two curves sit, so the top panel
+    carries both: one solid and one dashed line per pair, in the same color.
+    """
+    captured: list[Figure] = []
+    original = Figure.savefig
+
+    def _capture(self, *args, **kwargs):
+        captured.append(self)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(Figure, "savefig", _capture)
+
+    output = tmp_path / "cls.png"
+    result = _cls("--compare-limber", "--output", output.as_posix())
+
+    assert result.exit_code == 0, result.output
+    assert output.exists()
+    assert len(captured) == 1
+    top, bottom = captured[0].axes
+    styles = [line.get_linestyle() for line in top.get_lines()]
+    assert styles == ["-", "--"]
+    labels = [str(line.get_label()) for line in top.get_lines()]
+    assert labels[0].endswith("(Non-Limber)")
+    assert labels[1].endswith("(Limber)")
+    assert [line.get_color() for line in top.get_lines()][0] == (
+        [line.get_color() for line in top.get_lines()][1]
+    )
+    # The ratio panel: one line per pair plus the zero guide; the percent
+    # levels come from the symlog ticks, not from guide lines that would widen
+    # the axis when the agreement is good.
+    assert len(bottom.get_lines()) == 2
+    assert bottom.get_yscale() == "symlog"
+    fmt = bottom.yaxis.get_major_formatter()
+    assert [fmt(v) for v in (0.0, 1.0e-4, 0.01, -0.1, 1.0)] == [
+        "0",
+        "0.01%",
+        "1%",
+        "-10%",
+        "100%",
+    ]
+    # Limber over-predicts this top hat at ell 10-20, so every deviation is
+    # positive and the negative side closes at the linear core.
+    ratio = np.asarray(bottom.get_lines()[0].get_ydata(), dtype=float)
+    assert np.all(ratio > 0.0)
+    ymin, ymax = bottom.get_ylim()
+    assert -1.0e-4 <= ymin < 0.0
+    assert ratio.max() < ymax < 10.0 * ratio.max()
