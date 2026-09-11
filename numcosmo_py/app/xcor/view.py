@@ -24,9 +24,7 @@
 """CLI command for viewing cross-correlation kernels."""
 
 import dataclasses
-import enum
-import time
-from typing import Annotated, Any, Optional
+from typing import Annotated, Optional
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -35,72 +33,10 @@ from matplotlib.lines import Line2D
 import numpy as np
 import typer
 
-from numcosmo_py import Nc, Ncm
-from numcosmo_py.cosmology import Cosmology
+from numcosmo_py import Nc
 
-from .kernels import (
-    _KernelRadialConfig,
-    parse_kernel_spec,
-    get_kernel_registry_help_text,
-    LSSTBinType,
-    KernelCMBLensingConfig,
-    KernelCMBISWConfig,
-    KernelTSZConfig,
-    KernelNumberCountsConfig,
-    KernelWeakLensingConfig,
-    KernelClusterTophatConfig,
-    KernelRadialGaussConfig,
-    KernelRadialTophatConfig,
-    KernelRadialTophatSmoothConfig,
-    KernelRadialStudentTConfig,
-    KernelRadialPowerExpConfig,
-    KernelRadialLensingConfig,
-    KernelRadialMultiConfig,
-    KernelConfigTypes,
-)
-
-Ncm.cfg_init()
-
-
-class XcorMethodOption(str, enum.Enum):
-    """Quadrature methods available for the C_ell computation."""
-
-    CUBATURE = "cubature"
-    GSL = "gsl"
-    FIXED = "fixed"
-
-    def to_nc(self) -> Nc.XcorMethod:
-        """Convert to the corresponding #NcXcorMethod value.
-
-        :return: The NumCosmo enumeration value.
-        """
-        match self:
-            case XcorMethodOption.CUBATURE:
-                return Nc.XcorMethod.KERNEL_CUBATURE
-            case XcorMethodOption.GSL:
-                return Nc.XcorMethod.KERNEL_GSL
-            case XcorMethodOption.FIXED:
-                return Nc.XcorMethod.KERNEL_EXACT
-        raise ValueError(f"Unknown method: {self}")
-
-
-class XcorClosureOption(str, enum.Enum):
-    """Representations available for the k-space closure."""
-
-    SPLINE = "spline"
-    CHEBYSHEV = "chebyshev"
-
-    def to_nc(self) -> Nc.XcorKernelClosure:
-        """Convert to the corresponding #NcXcorKernelClosure value.
-
-        :return: The NumCosmo enumeration value.
-        """
-        match self:
-            case XcorClosureOption.SPLINE:
-                return Nc.XcorKernelClosure.SPLINE
-            case XcorClosureOption.CHEBYSHEV:
-                return Nc.XcorKernelClosure.CHEBYSHEV
-        raise ValueError(f"Unknown closure type: {self}")
+from .common import XcorKernelCommon
+from .kernels import get_kernel_help_text, get_kernel_registry_help_text
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -285,20 +221,50 @@ class KernelVariants:
     alternative: KernelEvaluation | None = None
 
 
-def ListKernels() -> None:
-    """List all available cross-correlation kernel types.
+def ListKernels(
+    kernel_type: Annotated[
+        Optional[str],
+        typer.Argument(
+            help=(
+                "Kernel type to document. Given one, every parameter it takes "
+                "is listed with its type, default, range and meaning. Left out, "
+                "all kernel types are summarised."
+            ),
+            show_default=False,
+        ),
+    ] = None,
+) -> None:
+    """List the available cross-correlation kernel types, or document one.
 
-    Displays a formatted table showing all available kernel types,
-    their model names, and configuration parameters.
+    Displays a formatted table showing all available kernel types, the NumCosmo
+    object each builds, and its parameters -- or, given a kernel type, the full
+    documentation of that one's parameters.
+
+    :param kernel_type: A kernel type to document, or None for the summary.
+    :raises typer.BadParameter: If the kernel type is not recognized.
     """
+    if kernel_type is not None:
+        try:
+            print()
+            print(get_kernel_help_text(kernel_type))
+            print()
+        except ValueError as error:
+            raise typer.BadParameter(str(error)) from error
+        return
+
     print("\nAvailable Cross-Correlation Kernel Types\n")
     print(get_kernel_registry_help_text())
-    print('\nUsage: numcosmo xcor kernel view --kernel "<kernel_type> param=value ..."')
+    print(
+        '\nUsage: numcosmo xcor kernel view --kernel "<kernel_type> param=value ..."'
+        '\n       numcosmo xcor cls         --kernel "<kernel_type> param=value ..."'
+        "\n\nRun 'numcosmo xcor kernel list <kernel_type>' for what each "
+        "parameter means."
+    )
     print()
 
 
 @dataclasses.dataclass(kw_only=True)
-class ViewKernel:
+class ViewKernel(XcorKernelCommon):
     """View cross-correlation kernels.
 
     This command visualizes cross-correlation kernels used in cosmological
@@ -306,6 +272,10 @@ class ViewKernel:
     and plotted with full lines. Use --compare-limber to also show the
     Limber approximation (with thinner, semi-transparent dashed lines) for
     comparison.
+
+    The multipoles are handed to the kernel in one block, so --n-ell is capped
+    at NC_XCOR_KERNEL_MAX_ELL_BLOCK. Use 'numcosmo xcor cls' for a spectrum
+    over an arbitrarily wide multipole range.
 
     The kernel specification follows the format:
 
@@ -335,20 +305,6 @@ class ViewKernel:
             --output wl_comparison.png
     """
 
-    kernel: Annotated[
-        list[str],
-        typer.Option(
-            default_factory=lambda: ["cmb_lensing lmax=3000"],
-            help=(
-                "Kernel specification string. "
-                "Format: '<kernel_name> key=value ...'. "
-                "Use 'numcosmo xcor kernel list' to see "
-                "available kernel types and parameters."
-            ),
-            show_default=True,
-        ),
-    ]
-
     ell: Annotated[
         int,
         typer.Option(
@@ -361,10 +317,14 @@ class ViewKernel:
     n_ell: Annotated[
         int,
         typer.Option(
-            help="Number of multipole values to evaluate (starting from ell).",
+            help=(
+                "Number of multipole values to evaluate (starting from ell). "
+                "Capped at the largest block the kernel evaluates in one call; "
+                "'numcosmo xcor cls' has no such cap."
+            ),
             show_default=True,
             min=1,
-            max=64,
+            max=Nc.XCOR_KERNEL_MAX_ELL_BLOCK,
         ),
     ] = 1
 
@@ -376,31 +336,6 @@ class ViewKernel:
         ),
     ] = None
 
-    compare_limber: Annotated[
-        bool,
-        typer.Option(
-            help=(
-                "Also show Limber approximation for comparison "
-                "(with thinner dashed lines)."
-            ),
-            show_default=True,
-        ),
-    ] = False
-
-    compare_closure: Annotated[
-        bool,
-        typer.Option(
-            help=(
-                "Also show the other closure representation for comparison "
-                "(with thinner dashed lines). Mutually exclusive with "
-                "--compare-limber: there is one alternative curve. Under Limber "
-                "both representations are the spline, so pair this with "
-                "--l-limber -1 for it to show anything."
-            ),
-            show_default=True,
-        ),
-    ] = False
-
     n_points: Annotated[
         int,
         typer.Option(
@@ -411,124 +346,18 @@ class ViewKernel:
         ),
     ] = 5000
 
-    output: Annotated[
-        Optional[Path],
-        typer.Option(
-            help="Output file path for plot (e.g., kernel_plot.png).",
-        ),
-    ] = None
-
-    show_plot: Annotated[
-        bool,
-        typer.Option(
-            help="Display plot interactively.",
-            show_default=True,
-        ),
-    ] = True
-
-    l_limber: Annotated[
-        int,
-        typer.Option(
-            help=(
-                "Limber threshold for the primary evaluation "
-                "(-1: never [true non-Limber], 0: always [kernel-Limber], "
-                "N>0: Limber for ell>=N). See dev-notes/"
-                "xcor_ultralevin_batching_plan.md for tier semantics."
-            ),
-            show_default=True,
-        ),
-    ] = -1
-
-    integrator_reltol: Annotated[
-        Optional[float],
-        typer.Option(
-            min=0.0,
-            max=1.0,
-            help=(
-                "NcmSBesselIntegratorLevin ODE solve relative tolerance "
-                "(library default: 1e-13, near machine precision). "
-                "This is the dominant cost/precision knob for tier 3 -- "
-                "see dev-notes/xcor_ultralevin_batching_plan.md sec 9.4. "
-                "Leave unset to keep the library default."
-            ),
-        ),
-    ] = None
-
-    integrator_cheb_reltol: Annotated[
-        Optional[float],
-        typer.Option(
-            min=0.0,
-            max=1.0,
-            help=(
-                "NcmSBesselIntegratorLevin integrand Chebyshev-fit relative "
-                "tolerance (library default: 1e-8). The looser of this and "
-                "--integrator-reltol bounds the result. Leave unset to keep "
-                "the library default."
-            ),
-        ),
-    ] = None
-
-    integrator_max_order: Annotated[
-        Optional[int],
-        typer.Option(
-            help=(
-                "NcmSBesselIntegratorLevin maximum spectral order "
-                "(library default: 16384). Leave unset to keep the library "
-                "default."
-            ),
-        ),
-    ] = None
-
     cls: Annotated[
         bool,
         typer.Option(
             help=(
                 "Also compute and plot the angular power spectra C_ell for every "
                 "auto- and cross-pair of the requested kernels, over the multipole "
-                "range set by --ell/--n-ell."
+                "range set by --ell/--n-ell. Use 'numcosmo xcor cls' for a "
+                "spectrum over a wider range than --n-ell allows."
             ),
             show_default=True,
         ),
     ] = False
-
-    cls_method: Annotated[
-        XcorMethodOption,
-        typer.Option(
-            help=(
-                "Quadrature used for the C_ell computation. 'cubature' and 'gsl' "
-                "target a tolerance and abort if they cannot reach it; 'fixed' "
-                "needs no tolerance and cannot fail to converge."
-            ),
-            show_default=True,
-        ),
-    ] = XcorMethodOption.CUBATURE
-
-    closure_type: Annotated[
-        XcorClosureOption,
-        typer.Option(
-            help=(
-                "Representation fitted to the sampled kernel. 'spline' bisects "
-                "until it meets a tolerance; 'chebyshev' expands on panels of a "
-                "prescribed order. Both plot and both compute C_ell, so the two "
-                "can be compared directly. Limber multipoles keep the spline "
-                "whatever this is set to."
-            ),
-            show_default=True,
-        ),
-    ] = XcorClosureOption.SPLINE
-
-    cls_block_size: Annotated[
-        int,
-        typer.Option(
-            min=1,
-            help=(
-                "Multipole block size handed to NcXcorSolver.plan_blocks(). "
-                "Eight is the empirical sweet spot; see "
-                "dev-notes/xcor_ultralevin_batching_plan.md section 1.3."
-            ),
-            show_default=True,
-        ),
-    ] = 8
 
     def __post_init__(self) -> None:
         """Execute the kernel view command.
@@ -539,85 +368,14 @@ class ViewKernel:
         :raises ValueError: If the kernel specification is invalid.
         :raises RuntimeError: If kernel evaluation fails.
         """
-        # One alternative curve, so one thing to compare against.
-        if self.compare_limber and self.compare_closure:
-            raise ValueError(
-                "--compare-limber and --compare-closure both draw the "
-                "alternative curve; pick one."
-            )
-
         if self.k_range is not None:
             if self.k_range[0] <= 0 or self.k_range[1] <= 0:
                 raise ValueError("k range values must be positive")
             if self.k_range[0] >= self.k_range[1]:
                 raise ValueError("k range min must be less than max")
 
-        # typer's min is inclusive, but zero tolerance aborts in the library.
-        for name, tol in (
-            ("--integrator-reltol", self.integrator_reltol),
-            ("--integrator-cheb-reltol", self.integrator_cheb_reltol),
-        ):
-            if tol is not None and tol <= 0.0:
-                raise typer.BadParameter(f"{name} must be positive, got {tol}.")
+        super().__post_init__()
 
-        # Create cosmology with appropriate maximum redshift
-        # Always use larger dist_max_z for non-Limber calculations (default behavior)
-        print("Creating cosmology...")
-        dist_max_z = 1000.0
-        nc_cosmo = Cosmology.default(dist_max_z=dist_max_z)
-        self.cosmo = nc_cosmo.cosmo
-        self.dist = nc_cosmo.dist
-        self.ps_ml = nc_cosmo.ps_ml
-        self.recomb = nc_cosmo.recomb
-        print(
-            f"  [OK] H0 = {self.cosmo['H0']:.2f}, Omega_b = {self.cosmo['Omegab']:.4f}"
-        )
-        print(f"  [OK] Maximum redshift: {dist_max_z}")
-        print()
-
-        # Create integrator.
-        #
-        # Pass the tolerances at construction: set_reltol() would rebuild every
-        # operator to apply them, which is pure waste when nothing has run yet.
-        print("Creating integrator...")
-        defaults = Ncm.SBesselIntegratorLevin.new(0, 8)
-        self.integrator = Ncm.SBesselIntegratorLevin.new_full(
-            0,
-            8,
-            defaults.get_x_knots_min(),
-            defaults.get_x_knots_max(),
-            defaults.get_n_knots(),
-            defaults.get_ell_cache_max(),
-            (
-                self.integrator_reltol
-                if self.integrator_reltol is not None
-                else defaults.get_reltol()
-            ),
-            defaults.get_cheb_min_order(),
-            (
-                self.integrator_cheb_reltol
-                if self.integrator_cheb_reltol is not None
-                else defaults.get_cheb_reltol()
-            ),
-        )
-        if self.integrator_max_order is not None:
-            self.integrator.set_max_order(self.integrator_max_order)
-        # A closure cannot be fitted to more precision than the integrator
-        # samples, and the library refuses the pairing. The integrator
-        # tolerances are the ones this command exposes, so a request to compute
-        # loosely is honoured by loosening the fit to match rather than by
-        # failing.
-        self.closure_tol_floor = max(
-            self.integrator.get_reltol(), self.integrator.get_cheb_reltol()
-        )
-        print(
-            f"  [OK] Levin integrator created (reltol={self.integrator.get_reltol():.1e}, "
-            f"cheb_reltol={self.integrator.get_cheb_reltol():.1e}, "
-            f"max_order={self.integrator.get_max_order()})"
-        )
-        print()
-
-        print("Parsing kernel specification...")
         if self.n_ell > 1:
             print(
                 f"  [OK] Evaluating {self.n_ell} multipoles: ell = {self.ell} "
@@ -626,395 +384,31 @@ class ViewKernel:
         else:
             print(f"  [OK] Evaluating single multipole: ell = {self.ell}")
         print()
+
         kernel_evals = []
-        kernel_objs: list[tuple[str, Nc.XcorKernel]] = []
-        for k0 in self.kernel:
-            kernel_name, kernel_config = parse_kernel_spec(k0)
-            print(f"  [OK] Kernel type: {kernel_name}")
-            print(f"  [OK] Configuration: {kernel_config}")
-            print()
-
-            # Create kernel(s)
-            kernel_label, kernel_obj = self._create_kernels(kernel_config)
-            kernel_objs.append((kernel_label, kernel_obj))
-
-            # Evaluate kernels
+        for kernel_label, kernel_obj in self.kernels:
             kernel_evals += self._evaluate_kernels(kernel_label, kernel_obj)
 
         # Plot results
         self._plot_results(kernel_evals)
 
         if self.cls:
-            cls_main = self._compute_cls(kernel_objs, self.l_limber, self.closure_type)
-            cls_alt = None
-            if self.compare_limber:
-                cls_alt = self._compute_cls(kernel_objs, 0, self.closure_type)
-            elif self.compare_closure:
-                cls_alt = self._compute_cls(
-                    kernel_objs, self.l_limber, self._alt_closure_type
-                )
-            self._plot_cls(kernel_objs, cls_main, cls_alt)
+            self.compute_and_plot_cls(np.arange(self.ell, self.ell + self.n_ell))
 
         print()
         print("[OK] Kernel visualization complete!")
 
-    @property
-    def _alt_closure_type(self) -> XcorClosureOption:
-        """The representation the comparison curve uses.
+    def _cls_output_path(self) -> Optional[Path]:
+        """Where the C_ell figure is written.
 
-        :return: The option other than the one --closure-type selected.
+        The kernel figure already owns --output, so the spectra go beside it
+        under a suffixed name.
+
+        :return: The suffixed output path, or None when nothing is to be saved.
         """
-        if self.closure_type is XcorClosureOption.SPLINE:
-            return XcorClosureOption.CHEBYSHEV
-        return XcorClosureOption.SPLINE
-
-    @property
-    def _comparing(self) -> bool:
-        """Whether a second, alternative curve is drawn beside the main one.
-
-        :return: True when either comparison mode is on.
-        """
-        return self.compare_limber or self.compare_closure
-
-    @property
-    def _curve_labels(self) -> tuple[str, str]:
-        """Names for the main and the alternative curve, for titles and axes.
-
-        :return: Tuple of (main label, alternative label).
-        """
-        if self.compare_closure:
-            return self.closure_type.value.capitalize(), (
-                self._alt_closure_type.value.capitalize()
-            )
-        main = (
-            "Non-Limber"
-            if self.l_limber < 0
-            else ("Kernel-Limber" if self.l_limber == 0 else "Limber")
-        )
-        return main, "Limber"
-
-    def _create_kernels(
-        self, kernel_config: KernelConfigTypes
-    ) -> tuple[str, Nc.XcorKernel]:
-        """Create kernel objects based on configuration.
-
-        :param kernel_config: Kernel configuration object.
-        :return: Tuple of (kernel_label, kernel_object).
-        """
-        print("Creating kernel(s)...")
-
-        # Each branch returns its own kernel subclass; widen to the common base so
-        # the first branch does not fix the type of the others.
-        result: tuple[str, Nc.XcorKernel]
-
-        match kernel_config:
-            case KernelCMBLensingConfig():
-                result = self._create_cmb_lensing_kernels(kernel_config)
-            case KernelCMBISWConfig():
-                result = self._create_cmb_isw_kernels(kernel_config)
-            case KernelTSZConfig():
-                result = self._create_tsz_kernels(kernel_config)
-            case KernelNumberCountsConfig():
-                result = self._create_number_counts_kernels(kernel_config)
-            case KernelWeakLensingConfig():
-                result = self._create_weak_lensing_kernels(kernel_config)
-            case KernelClusterTophatConfig():
-                result = self._create_cluster_tophat_kernels(kernel_config)
-            case (
-                KernelRadialGaussConfig()
-                | KernelRadialTophatConfig()
-                | KernelRadialTophatSmoothConfig()
-                | KernelRadialStudentTConfig()
-                | KernelRadialPowerExpConfig()
-                | KernelRadialLensingConfig()
-                | KernelRadialMultiConfig()
-            ):
-                result = self._create_radial_kernels(kernel_config)
-            case _:
-                raise ValueError(f"Unknown kernel type: {type(kernel_config)}")
-
-        self._apply_closure_tolerance_floor(result[1])
-
-        print("  [OK] Kernels created and prepared")
-        print()
-
-        return result
-
-    def _apply_closure_tolerance_floor(self, kernel: Nc.XcorKernel) -> None:
-        """Keep the closure fit no tighter than the integrator samples.
-
-        The library refuses a kernel that fits its k-space closure tighter than
-        its integrator carries -- below that the sampled window is not a smooth
-        function and no representation converges on it. This command exposes the
-        integrator tolerances and not the kernel's, so a request to compute
-        loosely is honoured by loosening the fit to match.
-
-        :param kernel: Kernel whose fit tolerances may need loosening.
-        """
-        floor = self.closure_tol_floor
-
-        if kernel.get_reltol() >= floor and kernel.get_scaled_abstol() >= floor:
-            return
-
-        kernel.set_reltol(max(kernel.get_reltol(), floor))
-        kernel.set_scaled_abstol(max(kernel.get_scaled_abstol(), floor))
-        print(
-            f"  [OK] Closure fit tolerances raised to {floor:.1e} to match the "
-            f"integrator"
-        )
-
-    def _create_cmb_lensing_kernels(
-        self, config: KernelCMBLensingConfig
-    ) -> tuple[str, Nc.XcorKernelCMBLensing]:
-        """Create CMB lensing kernel.
-
-        :param config: CMB lensing configuration.
-        :return: Tuple of (kernel_label, kernel_object).
-        """
-        assert isinstance(config, KernelCMBLensingConfig)
-
-        lmax = config.lmax
-        Nl = Ncm.Vector.new_array(np.arange(lmax + 1))
-        Nl.set_zero()
-
-        # Create primary kernel (non-Limber if compare_limber, Limber otherwise)
-        kernel_obj = Nc.XcorKernelCMBLensing(
-            dist=self.dist,
-            powspec=self.ps_ml,
-            recomb=self.recomb,
-            Nl=Nl,
-            lmax=lmax,
-            integrator=self.integrator,
-        )
-        kernel_obj.set_lmax(lmax)
-        kernel_obj.prepare(self.cosmo)
-
-        kernel_label = "CMB Lensing"
-
-        return kernel_label, kernel_obj
-
-    def _create_cmb_isw_kernels(
-        self, config: KernelCMBISWConfig
-    ) -> tuple[str, Nc.XcorKernelCMBISW]:
-        """Create CMB ISW kernel.
-
-        :param config: CMB ISW configuration.
-        :return: Tuple of (kernel_label, kernel_object).
-        """
-        assert isinstance(config, KernelCMBISWConfig)
-
-        lmax = config.lmax
-        Nl = Ncm.Vector.new_array(np.arange(lmax + 1))
-        Nl.set_zero()
-
-        # Create primary kernel
-        kernel_obj = Nc.XcorKernelCMBISW(
-            dist=self.dist,
-            powspec=self.ps_ml,
-            recomb=self.recomb,
-            Nl=Nl,
-            lmax=lmax,
-            integrator=self.integrator,
-        )
-        kernel_obj.set_lmax(lmax)
-        kernel_obj.prepare(self.cosmo)
-
-        kernel_label = "CMB ISW"
-
-        return kernel_label, kernel_obj
-
-    def _create_tsz_kernels(
-        self, config: KernelTSZConfig
-    ) -> tuple[str, Nc.XcorKerneltSZ]:
-        """Create tSZ kernel.
-
-        :param config: tSZ configuration.
-        :return: Tuple of (kernel_label, kernel_object).
-        """
-        assert isinstance(config, KernelTSZConfig)
-
-        # Create primary kernel
-        kernel_obj = Nc.XcorKerneltSZ(
-            dist=self.dist,
-            powspec=self.ps_ml,
-            zmax=config.zmax,
-            integrator=self.integrator,
-        )
-        kernel_obj.prepare(self.cosmo)
-        kernel_label = "tSZ"
-
-        return kernel_label, kernel_obj
-
-    def _lsst_srd_bin_dndz(
-        self, bin_type: LSSTBinType, bin_idx: int, survey: str
-    ) -> Ncm.Spline:
-        """Compute the dN/dz spline for one LSST-SRD photo-z bin.
-
-        :param bin_type: LSST year/sample bin type.
-        :param bin_idx: Index of the bin within that type's edges.
-        :param survey: Survey label, used only for the error message.
-        :return: The binned dN/dz spline.
-        """
-        edges, population, observable_population = (
-            Nc.GalaxyRedshiftBinning.lsst_srd_edges(bin_type.genum)
-        )
-        n_bins = edges.len() - 1
-
-        if bin_idx >= n_bins:
-            raise ValueError(
-                f"Bin index {bin_idx} is out of range for survey '{survey}'"
-            )
-
-        binning = Nc.GalaxyRedshiftBinning.new()
-
-        return binning.compute_dndz(
-            population,
-            observable_population,
-            edges.get(bin_idx),
-            edges.get(bin_idx + 1),
-        )
-
-    def _create_number_counts_kernels(
-        self, config: KernelNumberCountsConfig
-    ) -> tuple[str, Nc.XcorKernelGal]:
-        """Create number counts kernel.
-
-        :param config: Number counts configuration.
-        :return: Tuple of (kernel_label, kernel_object).
-        """
-        assert isinstance(config, KernelNumberCountsConfig)
-
-        dndz_spline = self._lsst_srd_bin_dndz(
-            config.bin_type, config.bin_idx, config.survey
-        )
-
-        # Create primary kernel
-        kernel_obj = Nc.XcorKernelGal(
-            dist=self.dist,
-            powspec=self.ps_ml,
-            dndz=dndz_spline,
-            domagbias=config.domagbias,
-            dorsd=config.dorsd,
-            integrator=self.integrator,
-        )
-        kernel_obj.orig_vparam_set(Nc.XcorKernelGalVParams.BIAS, 0, config.bias)
-        kernel_obj.orig_param_set(Nc.XcorKernelGalSParams.MAG_BIAS, config.mag_bias)
-        kernel_obj.prepare(self.cosmo)
-
-        kernel_label = f"Number Counts ({config.survey} bin {config.bin_idx})"
-
-        return kernel_label, kernel_obj
-
-    def _create_weak_lensing_kernels(
-        self, config: KernelWeakLensingConfig
-    ) -> tuple[str, Nc.XcorKernelWeakLensing]:
-        """Create weak lensing kernel.
-
-        :param config: Weak lensing configuration.
-        :return: Tuple of (kernel_label, kernel_object).
-        """
-        assert isinstance(config, KernelWeakLensingConfig)
-
-        dndz_spline = self._lsst_srd_bin_dndz(
-            config.bin_type, config.bin_idx, config.survey
-        )
-
-        # Create primary kernel
-        kernel_obj = Nc.XcorKernelWeakLensing(
-            dist=self.dist,
-            powspec=self.ps_ml,
-            dndz=dndz_spline,
-            nbar=config.nbar,
-            intr_shear=config.intr_shear,
-            integrator=self.integrator,
-        )
-        kernel_obj.prepare(self.cosmo)
-
-        kernel_label = f"Weak Lensing ({config.survey} bin {config.bin_idx})"
-
-        return kernel_label, kernel_obj
-
-    def _create_radial_kernels(
-        self, config: KernelConfigTypes
-    ) -> tuple[str, Nc.XcorKernelRadial]:
-        """Create one of the analytic radial windows.
-
-        One builder for all seven shapes: they differ only in which closed form
-        they carry, and every one takes its parameters straight through as
-        construct properties. The vector-valued ones are wrapped on the way in.
-
-        These are the shapes the Arb truth tables certify, so a curve drawn from
-        one of them can be shown against proven values -- which no physical kernel
-        above can offer, since none has a closed form.
-
-        :param config: One of the radial window configurations.
-        :return: Tuple of (kernel_label, kernel_object).
-        """
-        shapes: dict[type, tuple[Any, str]] = {
-            KernelRadialGaussConfig: (Nc.XcorKernelAnalyticGauss, "Gaussian"),
-            KernelRadialTophatConfig: (Nc.XcorKernelAnalyticTophat, "Top-hat"),
-            KernelRadialTophatSmoothConfig: (
-                Nc.XcorKernelAnalyticTophatSmooth,
-                "Smoothed top-hat",
-            ),
-            KernelRadialStudentTConfig: (Nc.XcorKernelAnalyticStudentT, "Student-t"),
-            KernelRadialPowerExpConfig: (
-                Nc.XcorKernelAnalyticPowerExp,
-                "Power-exponential",
-            ),
-            KernelRadialLensingConfig: (Nc.XcorKernelAnalyticLensing, "Lensing"),
-            KernelRadialMultiConfig: (Nc.XcorKernelAnalyticMulti, "Multi-bump"),
-        }
-        kernel_type, name = shapes[type(config)]
-
-        props: dict[str, Any] = {}
-        for field, value in config.model_dump().items():
-            props[field] = (
-                Ncm.Vector.new_array(value) if isinstance(value, list) else value
-            )
-
-        kernel_obj = kernel_type(
-            dist=self.dist,
-            powspec=self.ps_ml,
-            integrator=self.integrator,
-            **props,
-        )
-        kernel_obj.prepare(self.cosmo)
-
-        # Only the radial shapes carry the Bessel-derivative order; the dispatch
-        # table above already rejected everything else.
-        assert isinstance(config, _KernelRadialConfig)
-        deriv = config.bessel_deriv
-        weight = "" if deriv == 0 else f", $j_\\ell^{{({deriv})}}$"
-        kernel_label = f"{name}{weight}"
-
-        return kernel_label, kernel_obj
-
-    def _create_cluster_tophat_kernels(
-        self, config: KernelClusterTophatConfig
-    ) -> tuple[str, Nc.XcorKernelClusterTophat]:
-        """Create cluster tophat kernel.
-
-        :param config: Cluster tophat configuration.
-        :return: Tuple of (kernel_label, kernel_object).
-        """
-        assert isinstance(config, KernelClusterTophatConfig)
-
-        # Create primary kernel
-        kernel_obj = Nc.XcorKernelClusterTophat(
-            dist=self.dist,
-            powspec=self.ps_ml,
-            z_lower=config.z_lower,
-            z_upper=config.z_upper,
-            integrator=self.integrator,
-        )
-        kernel_obj.prepare(self.cosmo)
-
-        kernel_label = (
-            f"Cluster Tophat (z=[{config.z_lower:.2f}, {config.z_upper:.2f}])"
-        )
-
-        return kernel_label, kernel_obj
+        if self.output is None:
+            return None
+        return self.output.with_name(f"{self.output.stem}_cls{self.output.suffix}")
 
     def _evaluate_kernels(
         self, kernel_label: str, kernel_obj: Nc.XcorKernel
@@ -1093,143 +487,6 @@ class ViewKernel:
         print()
 
         return [KernelVariants(main=kernel_eval, alternative=kernel_eval_alt)]
-
-    def _compute_cls(
-        self,
-        kernels: list[tuple[str, Nc.XcorKernel]],
-        l_limber: int,
-        closure_type: XcorClosureOption,
-    ) -> dict[tuple[int, int], np.ndarray]:
-        """Compute C_ell for every auto- and cross-pair of the given kernels.
-
-        The multipole range is the one set by ``--ell``/``--n-ell``. Every kernel is
-        put in the requested Limber mode first: :meth:`_evaluate_kernels` leaves the
-        kernels in Limber mode when ``--compare-limber`` is used, so the mode must be
-        set explicitly here rather than assumed.
-
-        :param kernels: List of (label, kernel object) pairs.
-        :param l_limber: Limber threshold to apply to every kernel.
-        :param closure_type: Representation to fit to every kernel.
-        :return: Mapping from (i, j) kernel index pair to the C_ell array.
-        """
-        lmin = self.ell
-        lmax = self.ell + self.n_ell - 1
-        method_label = (
-            "non-Limber"
-            if l_limber < 0
-            else ("Limber" if l_limber == 0 else f"Limber(ell>={l_limber})")
-        )
-        n_kernels = len(kernels)
-        pairs = [(i, j) for i in range(n_kernels) for j in range(i, n_kernels)]
-
-        print(f"Computing C_ell ({method_label}) for ell = {lmin} to {lmax}...")
-        print(
-            f"  {n_kernels} kernel(s), {len(pairs)} spectra, "
-            f"method={self.cls_method.value}, closure={closure_type.value}, "
-            f"block size={self.cls_block_size}"
-        )
-
-        self.dist.prepare_if_needed(self.cosmo)
-        self.ps_ml.prepare_if_needed(self.cosmo)
-
-        for _, kernel_obj in kernels:
-            kernel_obj.set_l_limber(l_limber)
-
-        xcor = Nc.Xcor.new(self.dist, self.ps_ml, self.cls_method.to_nc())
-        xcor.set_closure_type(closure_type.to_nc())
-
-        solver = Nc.XcorSolver.new()
-        ids = [solver.register_kernel(kernel_obj) for _, kernel_obj in kernels]
-        for i, j in pairs:
-            solver.request_cl(ids[i], ids[j], lmin, lmax)
-        solver.plan_blocks(self.cls_block_size)
-
-        start = time.monotonic()
-        solver.solve(xcor, self.cosmo)
-        elapsed = time.monotonic() - start
-
-        result = {
-            (i, j): np.array(solver.get_result(request).dup_array())
-            for request, (i, j) in enumerate(pairs)
-        }
-
-        print(
-            f"  [OK] {len(pairs)} spectra in {elapsed:.2f} s "
-            f"({solver.get_n_blocks()} multipole block(s))"
-        )
-        print()
-
-        return result
-
-    def _plot_cls(
-        self,
-        kernels: list[tuple[str, Nc.XcorKernel]],
-        cls_main: dict[tuple[int, int], np.ndarray],
-        cls_alt: dict[tuple[int, int], np.ndarray] | None,
-    ) -> None:
-        """Plot the angular power spectra, optionally against the alternative.
-
-        :param kernels: List of (label, kernel object) pairs.
-        :param cls_main: C_ell computed with the primary mode and representation.
-        :param cls_alt: C_ell from the comparison run, or None.
-        """
-        print("Plotting C_ell...")
-
-        ells = np.arange(self.ell, self.ell + self.n_ell)
-        colors = plt.cm.tab10.colors  # type: ignore # pylint: disable=no-member
-        ax1: plt.Axes
-
-        if cls_alt is not None:
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10), sharex=True)
-        else:
-            fig, ax1 = plt.subplots(1, 1, figsize=(10, 6))
-            ax2 = None
-
-        for idx, ((i, j), cl) in enumerate(cls_main.items()):
-            color = colors[idx % len(colors)]
-            label = kernels[i][0] if i == j else f"{kernels[i][0]} x {kernels[j][0]}"
-            ax1.plot(ells, np.abs(cl), color=color, label=label)
-            if cls_alt is not None and ax2 is not None:
-                with np.errstate(divide="ignore", invalid="ignore"):
-                    ratio = np.where(cl != 0.0, cls_alt[(i, j)] / cl - 1.0, np.nan)
-                ax2.plot(ells, ratio, color=color, label=label)
-
-        ax1.set_ylabel(r"$|C_\ell|$")
-        ax1.set_yscale("log")
-        if self.n_ell > 1:
-            ax1.set_xscale("log")
-        ax1.grid(True, alpha=0.3)
-        ax1.legend(fontsize=8)
-        ax1.set_title("Angular power spectra", fontweight="bold")
-
-        if ax2 is not None:
-            ax2.axhline(0.0, color="black", lw=0.8)
-            main_label, alt_label = self._curve_labels
-            ax2.set_ylabel(
-                rf"$C_\ell^{{\rm {alt_label}}}/C_\ell^{{\rm {main_label}}} - 1$"
-            )
-            ax2.set_xlabel(r"$\ell$")
-            if self.n_ell > 1:
-                ax2.set_xscale("log")
-            ax2.grid(True, alpha=0.3)
-        else:
-            ax1.set_xlabel(r"$\ell$")
-
-        fig.tight_layout()
-
-        if self.output is not None:
-            cls_output = self.output.with_name(
-                f"{self.output.stem}_cls{self.output.suffix}"
-            )
-            fig.savefig(cls_output, dpi=150, bbox_inches="tight")
-            print(f"  [OK] Saved to {cls_output}")
-
-        if self.show_plot:
-            plt.show()
-        else:
-            plt.close(fig)
-
-        print()
 
     def _plot_results(self, kernel_vars: list[KernelVariants]) -> None:
         """Plot kernel evaluation results.

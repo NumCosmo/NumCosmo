@@ -36,10 +36,21 @@ The module also provides utilities for parsing kernel specifications from
 command-line strings.
 """
 
+import re
 import shlex
-from typing import Annotated, Any, Union, Type, cast
+from typing import (
+    Annotated,
+    Any,
+    ClassVar,
+    Union,
+    Type,
+    cast,
+    get_args,
+    get_origin,
+)
 
 from pydantic import BaseModel, BeforeValidator, Field, ConfigDict
+from pydantic.fields import FieldInfo
 from pydantic_core import core_schema
 from tabulate import tabulate
 
@@ -84,6 +95,9 @@ class KernelCMBLensingConfig(BaseModel):
     :ivar lmax: Maximum multipole for noise power spectrum.
     """
 
+    nc_type: ClassVar[type] = Nc.XcorKernelCMBLensing
+    label: ClassVar[str] = "CMB Lensing"
+
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     lmax: Annotated[int, Field(gt=0)] = 3000
@@ -99,14 +113,6 @@ class KernelCMBLensingConfig(BaseModel):
         opts = parse_options_strict(args)
         return cls.model_validate(opts)
 
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return help text for CMB lensing kernel.
-
-        :return: List containing [model name, parameter description].
-        """
-        return ["KernelCMBLensing", "lmax=3000"]
-
 
 class KernelCMBISWConfig(BaseModel):
     """CMB Integrated Sachs-Wolfe (ISW) kernel configuration.
@@ -116,6 +122,9 @@ class KernelCMBISWConfig(BaseModel):
 
     :ivar lmax: Maximum multipole for noise power spectrum.
     """
+
+    nc_type: ClassVar[type] = Nc.XcorKernelCMBISW
+    label: ClassVar[str] = "CMB ISW"
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -132,14 +141,6 @@ class KernelCMBISWConfig(BaseModel):
         opts = parse_options_strict(args)
         return cls.model_validate(opts)
 
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return help text for CMB ISW kernel.
-
-        :return: List containing [model name, parameter description].
-        """
-        return ["KernelCMBISW", "lmax=3000"]
-
 
 class KernelTSZConfig(BaseModel):
     """Thermal Sunyaev-Zeldovich (tSZ) kernel configuration.
@@ -149,6 +150,9 @@ class KernelTSZConfig(BaseModel):
 
     :ivar zmax: Maximum redshift for integration.
     """
+
+    nc_type: ClassVar[type] = Nc.XcorKerneltSZ
+    label: ClassVar[str] = "tSZ"
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -165,14 +169,6 @@ class KernelTSZConfig(BaseModel):
         opts = parse_options_strict(args)
         return cls.model_validate(opts)
 
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return help text for tSZ kernel.
-
-        :return: List containing [model name, parameter description].
-        """
-        return ["KernelTSZ", "zmax=6.0"]
-
 
 class KernelNumberCountsConfig(BaseModel):
     """Galaxy number counts kernel configuration.
@@ -188,6 +184,9 @@ class KernelNumberCountsConfig(BaseModel):
     :ivar domagbias: Whether to include magnification bias.
     :ivar dorsd: Whether to include linear redshift-space distortions.
     """
+
+    nc_type: ClassVar[type] = Nc.XcorKernelGal
+    label: ClassVar[str] = "Number Counts"
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -222,18 +221,6 @@ class KernelNumberCountsConfig(BaseModel):
         opts = parse_options_strict(args)
         return cls.model_validate(opts)
 
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return help text for number counts kernel.
-
-        :return: List containing [model name, parameter description].
-        """
-        return [
-            "KernelNumberCounts",
-            "survey=LSST-Y1, bin_idx=0, bias=1.5, mag_bias=0.0, domagbias=True, "
-            "dorsd=False",
-        ]
-
 
 class KernelWeakLensingConfig(BaseModel):
     """Weak lensing kernel configuration.
@@ -247,6 +234,9 @@ class KernelWeakLensingConfig(BaseModel):
     :ivar nbar: Galaxy number density per square arcminute.
     :ivar intr_shear: Intrinsic shear dispersion.
     """
+
+    nc_type: ClassVar[type] = Nc.XcorKernelWeakLensing
+    label: ClassVar[str] = "Weak Lensing"
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -279,17 +269,6 @@ class KernelWeakLensingConfig(BaseModel):
         opts = parse_options_strict(args)
         return cls.model_validate(opts)
 
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return help text for weak lensing kernel.
-
-        :return: List containing [model name, parameter description].
-        """
-        return [
-            "KernelWeakLensing",
-            "survey=LSST-Y1, bin_idx=0, nbar=3.0, intr_shear=7.0",
-        ]
-
 
 class KernelClusterTophatConfig(BaseModel):
     """Cluster number counts kernel configuration (thin-z approximation).
@@ -302,6 +281,9 @@ class KernelClusterTophatConfig(BaseModel):
     :ivar z_lower: Lower edge of the redshift bin.
     :ivar z_upper: Upper edge of the redshift bin.
     """
+
+    nc_type: ClassVar[type] = Nc.XcorKernelClusterTophat
+    label: ClassVar[str] = "Cluster Tophat"
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -318,17 +300,6 @@ class KernelClusterTophatConfig(BaseModel):
         """
         opts = parse_options_strict(args)
         return cls.model_validate(opts)
-
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return help text for cluster tophat kernel.
-
-        :return: List containing [model name, parameter description].
-        """
-        return [
-            "KernelClusterTophat",
-            "z_lower=0.2, z_upper=0.8",
-        ]
 
 
 def _split_floats(value: object) -> object:
@@ -387,20 +358,12 @@ class KernelRadialGaussConfig(_KernelRadialConfig):
     :ivar n_sigma: Truncation half-width, in units of sigma.
     """
 
+    nc_type: ClassVar[type] = Nc.XcorKernelAnalyticGauss
+    label: ClassVar[str] = "Gaussian"
+
     chi_mean: Annotated[float, Field(gt=0.0)] = 1500.0
     chi_sigma: Annotated[float, Field(gt=0.0)] = 300.0
     n_sigma: Annotated[float, Field(gt=0.0)] = 4.0
-
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return help text for the Gaussian radial window.
-
-        :return: List containing [model name, parameter description].
-        """
-        return [
-            "XcorKernelAnalyticGauss",
-            "chi_mean=1500, chi_sigma=300, n_sigma=4, bessel_deriv=0",
-        ]
 
 
 class KernelRadialTophatConfig(_KernelRadialConfig):
@@ -410,19 +373,11 @@ class KernelRadialTophatConfig(_KernelRadialConfig):
     :ivar chi_upper: Upper edge, in Mpc.
     """
 
+    nc_type: ClassVar[type] = Nc.XcorKernelAnalyticTophat
+    label: ClassVar[str] = "Top-hat"
+
     chi_lower: Annotated[float, Field(ge=0.0)] = 500.0
     chi_upper: Annotated[float, Field(gt=0.0)] = 2500.0
-
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return help text for the top-hat radial window.
-
-        :return: List containing [model name, parameter description].
-        """
-        return [
-            "XcorKernelAnalyticTophat",
-            "chi_lower=500, chi_upper=2500, bessel_deriv=0",
-        ]
 
 
 class KernelRadialTophatSmoothConfig(_KernelRadialConfig):
@@ -434,21 +389,13 @@ class KernelRadialTophatSmoothConfig(_KernelRadialConfig):
     :ivar n_sigma: Truncation half-width beyond the edges, in units of sigma.
     """
 
+    nc_type: ClassVar[type] = Nc.XcorKernelAnalyticTophatSmooth
+    label: ClassVar[str] = "Smoothed top-hat"
+
     chi_lower: Annotated[float, Field(ge=0.0)] = 1000.0
     chi_upper: Annotated[float, Field(gt=0.0)] = 2000.0
     chi_sigma: Annotated[float, Field(gt=0.0)] = 150.0
     n_sigma: Annotated[float, Field(gt=0.0)] = 6.0
-
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return help text for the smoothed top-hat radial window.
-
-        :return: List containing [model name, parameter description].
-        """
-        return [
-            "XcorKernelAnalyticTophatSmooth",
-            "chi_lower=1000, chi_upper=2000, chi_sigma=150, n_sigma=6",
-        ]
 
 
 class KernelRadialStudentTConfig(_KernelRadialConfig):
@@ -460,21 +407,13 @@ class KernelRadialStudentTConfig(_KernelRadialConfig):
     :ivar n_scale: Truncation half-width, in units of the scale.
     """
 
+    nc_type: ClassVar[type] = Nc.XcorKernelAnalyticStudentT
+    label: ClassVar[str] = "Student-t"
+
     chi_mean: Annotated[float, Field(gt=0.0)] = 1500.0
     chi_scale: Annotated[float, Field(gt=0.0)] = 200.0
     nu: Annotated[float, Field(gt=0.0)] = 2.0
     n_scale: Annotated[float, Field(gt=0.0)] = 6.0
-
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return help text for the Student-t radial window.
-
-        :return: List containing [model name, parameter description].
-        """
-        return [
-            "XcorKernelAnalyticStudentT",
-            "chi_mean=1500, chi_scale=200, nu=2, n_scale=6",
-        ]
 
 
 class KernelRadialPowerExpConfig(_KernelRadialConfig):
@@ -489,22 +428,14 @@ class KernelRadialPowerExpConfig(_KernelRadialConfig):
     :ivar chi_upper: Upper truncation, in Mpc.
     """
 
+    nc_type: ClassVar[type] = Nc.XcorKernelAnalyticPowerExp
+    label: ClassVar[str] = "Power-exponential"
+
     chi_scale: Annotated[float, Field(gt=0.0)] = 1200.0
     alpha: Annotated[float, Field(gt=0.0)] = 2.0
     beta: Annotated[float, Field(gt=0.0)] = 1.5
     chi_lower: Annotated[float, Field(ge=0.0)] = 50.0
     chi_upper: Annotated[float, Field(gt=0.0)] = 4000.0
-
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return help text for the power-exponential radial window.
-
-        :return: List containing [model name, parameter description].
-        """
-        return [
-            "XcorKernelAnalyticPowerExp",
-            "chi_scale=1200, alpha=2, beta=1.5, chi_lower=50, chi_upper=4000",
-        ]
 
 
 class KernelRadialLensingConfig(_KernelRadialConfig):
@@ -518,20 +449,12 @@ class KernelRadialLensingConfig(_KernelRadialConfig):
     :ivar chi_source_upper: Upper edge of the source distribution, in Mpc.
     """
 
+    nc_type: ClassVar[type] = Nc.XcorKernelAnalyticLensing
+    label: ClassVar[str] = "Lensing"
+
     chi_lower: Annotated[float, Field(ge=0.0)] = 50.0
     chi_source_lower: Annotated[float, Field(gt=0.0)] = 2000.0
     chi_source_upper: Annotated[float, Field(gt=0.0)] = 3000.0
-
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return help text for the lensing radial window.
-
-        :return: List containing [model name, parameter description].
-        """
-        return [
-            "XcorKernelAnalyticLensing",
-            "chi_lower=50, chi_source_lower=2000, chi_source_upper=3000",
-        ]
 
 
 class KernelRadialMultiConfig(_KernelRadialConfig):
@@ -546,21 +469,13 @@ class KernelRadialMultiConfig(_KernelRadialConfig):
     :ivar n_sigma: Truncation half-width, in units of sigma.
     """
 
+    nc_type: ClassVar[type] = Nc.XcorKernelAnalyticMulti
+    label: ClassVar[str] = "Multi-bump"
+
     chi_mean: FloatList = [1000.0, 1600.0]
     chi_sigma: FloatList = [300.0, 300.0]
     weight: FloatList = [1.0, 0.6]
     n_sigma: Annotated[float, Field(gt=0.0)] = 4.0
-
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return help text for the multi-bump radial window.
-
-        :return: List containing [model name, parameter description].
-        """
-        return [
-            "XcorKernelAnalyticMulti",
-            "chi_mean=1000,1600 chi_sigma=300,300 weight=1,0.6 n_sigma=4",
-        ]
 
 
 # Type alias for all kernel configuration types
@@ -599,21 +514,197 @@ KERNEL_CONFIG_REGISTRY: dict[str, Type[BaseModel]] = {
 }
 
 
+_IVAR_RE = re.compile(r"^:ivar (\w+):\s*(.*)$")
+
+
+def _field_descriptions(config_class: Type[BaseModel]) -> dict[str, str]:
+    """Collect the ``:ivar:`` documentation of a config's fields.
+
+    The class docstring is the single place a parameter is described, so the
+    tables below read it rather than repeating it: a parameter documented there
+    is documented on the command line too, and one that is not shows up as
+    undocumented in the test that checks every field has a description.
+
+    :param config_class: A kernel configuration class.
+    :return: Mapping from field name to its documented description.
+    """
+    docs: dict[str, str] = {}
+
+    for klass in reversed(config_class.__mro__):
+        current: str | None = None
+        for raw in (klass.__doc__ or "").splitlines():
+            line = raw.strip()
+            match = _IVAR_RE.match(line)
+            if match is not None:
+                current = match.group(1)
+                docs[current] = match.group(2).strip()
+            elif current is not None:
+                # A blank line or another field directive ends the entry;
+                # anything else is its continuation.
+                if not line or line.startswith(":"):
+                    current = None
+                else:
+                    docs[current] = f"{docs[current]} {line}"
+
+    return docs
+
+
+def _constraint_text(field: FieldInfo) -> str:
+    """Describe the range a field is validated against.
+
+    :param field: Pydantic field information.
+    :return: A human-readable range, empty when the field is unconstrained.
+    """
+    bounds = []
+
+    for meta in field.metadata:
+        for attr, symbol in (("gt", ">"), ("ge", ">="), ("lt", "<"), ("le", "<=")):
+            value = getattr(meta, attr, None)
+            if value is not None:
+                bounds.append(f"{symbol} {value:g}")
+
+    return ", ".join(bounds)
+
+
+def _type_text(annotation: Any) -> str:
+    """Name the type a field takes on the command line.
+
+    :param annotation: The field's type annotation.
+    :return: A short type name.
+    """
+    if get_origin(annotation) is list:
+        return f"{get_args(annotation)[0].__name__} list"
+
+    return getattr(annotation, "__name__", str(annotation))
+
+
+def _default_text(value: Any) -> str:
+    """Render a default the way it would be typed back in.
+
+    :param value: The field's default value.
+    :return: The default as a command-line value.
+    """
+    if isinstance(value, list):
+        return ",".join(f"{item:g}" for item in value)
+
+    return str(value)
+
+
+def _ordered_fields(config_class: Type[BaseModel]) -> list[str]:
+    """List a config's fields, the ones it declares itself first.
+
+    :param config_class: A kernel configuration class.
+    :return: Field names, shape-specific ones before inherited ones.
+    """
+    fields = config_class.model_fields
+    own = [
+        name for name in getattr(config_class, "__annotations__", {}) if name in fields
+    ]
+
+    return own + [name for name in fields if name not in own]
+
+
+def kernel_parameter_summary(config_class: Type[BaseModel]) -> str:
+    """Summarise a kernel's parameters as the key=value list it is given as.
+
+    :param config_class: A kernel configuration class.
+    :return: A ``key=default`` list, comma separated.
+    """
+    fields = config_class.model_fields
+
+    return ", ".join(
+        f"{name}={_default_text(fields[name].default)}"
+        for name in _ordered_fields(config_class)
+    )
+
+
 def get_kernel_registry_help_text() -> str:
     """Generate formatted help text for all available kernel types.
 
-    Returns a formatted table showing kernel names, model names, and parameters.
+    Returns a formatted table showing kernel names, the NumCosmo object each
+    builds, and its parameters with their defaults.
 
     :return: Formatted help text as a string.
     """
-    headers = ["Kernel Type", "Model", "Parameters"]
-    rows = []
+    headers = ["Kernel Type", "Builds", "Parameters (with defaults)"]
+    rows = [
+        [
+            kernel_name,
+            config_class.nc_type.__name__,  # type: ignore[attr-defined]
+            kernel_parameter_summary(config_class),
+        ]
+        for kernel_name, config_class in KERNEL_CONFIG_REGISTRY.items()
+    ]
 
-    for kernel_name, config_class in KERNEL_CONFIG_REGISTRY.items():
-        help_info = config_class.help_text()  # type: ignore[attr-defined]
-        rows.append([kernel_name] + help_info)
+    return tabulate(
+        rows, headers=headers, tablefmt="rounded_grid", disable_numparse=True
+    )
 
-    return tabulate(rows, headers=headers, tablefmt="rounded_grid")
+
+def get_kernel_help_text(kernel_name: str) -> str:
+    """Generate formatted help text for one kernel type.
+
+    Documents every parameter the kernel takes: its type, default, the range it
+    is validated against and what it means.
+
+    :param kernel_name: A key of :data:`KERNEL_CONFIG_REGISTRY`.
+    :return: Formatted help text as a string.
+    :raises ValueError: If the kernel name is not recognized.
+    """
+    if kernel_name not in KERNEL_CONFIG_REGISTRY:
+        available = ", ".join(KERNEL_CONFIG_REGISTRY)
+        raise ValueError(
+            f"Unknown kernel type '{kernel_name}'. Available types: {available}"
+        )
+
+    config_class = KERNEL_CONFIG_REGISTRY[kernel_name]
+    fields = config_class.model_fields
+    descriptions = _field_descriptions(config_class)
+
+    # The prose above the :ivar: block describes the shape itself.
+    summary = []
+    for raw in (config_class.__doc__ or "").splitlines():
+        line = raw.strip()
+        if line.startswith(":ivar"):
+            break
+        summary.append(line)
+
+    rows = [
+        [
+            name,
+            _type_text(fields[name].annotation),
+            _default_text(fields[name].default),
+            _constraint_text(fields[name]),
+            descriptions.get(name, "").replace("``", ""),
+        ]
+        for name in _ordered_fields(config_class)
+    ]
+    table = tabulate(
+        rows,
+        headers=["Parameter", "Type", "Default", "Range", "Description"],
+        tablefmt="rounded_grid",
+        maxcolwidths=[None, None, None, None, 44],
+        disable_numparse=True,
+    )
+
+    example = " ".join(
+        f"{name}={_default_text(fields[name].default)}"
+        for name in _ordered_fields(config_class)
+    )
+
+    nc_type_name = config_class.nc_type.__name__  # type: ignore[attr-defined]
+
+    return "\n".join(
+        [
+            f"{kernel_name} -- builds {nc_type_name}",
+            "",
+            "\n".join(summary).strip(),
+            "",
+            table,
+            "",
+            f'Example: --kernel "{kernel_name} {example}"',
+        ]
+    )
 
 
 def parse_kernel_spec(spec: str) -> tuple[str, KernelConfigTypes]:
