@@ -1,7 +1,11 @@
 # NcXcor non-Limber infrastructure plan (UltraLevin)
 
-Status: milestones 1 to 3 and 5 of section 7 are done; `NcXcorSolver` exists
-and is validated against CCL and the certified tables (section 9). Sections 1 to 6
+Status (2026-09-11): milestones 1, 2, 3, 5 and 6 of section 7 are done and
+milestone 4 is skipped; `NcXcorSolver` exists and is validated against CCL and the
+certified tables (section 9). The production CLI is `numcosmo xcor cls` (#374),
+the outer quadrature default is `NC_XCOR_METHOD_KERNEL_EXACT`, the closure default is
+Chebyshev (#369), and the theory pages `docs/theory/sbessel_projection.qmd` and
+`docs/theory/sbessel_ode_solver.qmd` document the solver (#369, #373). Sections 1 to 6
 are the design as written before implementation; section 7 tracks what landed.
 
 ## 0. Goal
@@ -687,7 +691,11 @@ correct, batched baseline exists (§7 milestone 6).
    with no way to verify the result end-to-end isn't worth the risk for a
    performance win nothing currently exercises; revisit if/when something
    comes to depend on `NcDataXcor` being fast.
-5. **Production config exposure — done via milestone 1's `view.py` work**
+5. **Production config exposure — done.** Since #374 the production path is
+   `numcosmo xcor cls` (`numcosmo_py/app/xcor/cls.py`, options shared with the
+   viewer through `common.py`: kernels, `--method` cubature/gsl/exact, closure,
+   `peak-epsilon`, block size, multipole sampling). Originally done via milestone
+   1's `view.py` work
    (§7 milestone 1 exposed `l-limber`/`integrator`
    reltol/cheb-reltol/max-order as CLI options). No separate non-`view.py`
    "production config" path exists to extend, since `NcDataXcor` (the
@@ -702,8 +710,10 @@ correct, batched baseline exists (§7 milestone 6).
    a shrinking ℓ-block, and corrected §9.4's "tuned config" claim (doesn't
    generalize, was wrong by up to 23-29% outside the one case it was
    measured on). **Still open:** N beyond 10; block-level OpenMP effect on
-   these specific ratios (measured single-threaded here); docs (a theory
-   page for the ODE-solver/Levin combination, `docs/theory/`) not started.
+   these specific ratios (measured single-threaded here). Docs: **done**,
+   `docs/theory/sbessel_projection.qmd` (#369) and
+   `docs/theory/sbessel_ode_solver.qmd` (#373), plus the certified benchmark
+   `docs/benchmarks/xcor_certified_projection.qmd`.
 
 ## 8. Non-goals
 

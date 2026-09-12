@@ -63,6 +63,7 @@ from .kernels import (
     KernelRadialMultiConfig,
     KernelConfigTypes,
 )
+from .plotting import style_ratio_axis
 
 Ncm.cfg_init()
 
@@ -918,6 +919,8 @@ class XcorKernelCommon:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 6))
             ax2 = None
 
+        main_label, alt_label = self._curve_labels
+        ratios: list[np.ndarray] = []
         for idx, ((i, j), cl) in enumerate(cls_main.items()):
             color = colors[idx % len(colors)]
             label = (
@@ -925,10 +928,24 @@ class XcorKernelCommon:
                 if i == j
                 else f"{self.kernels[i][0]} x {self.kernels[j][0]}"
             )
-            ax1.plot(ells, np.abs(cl), color=color, label=label)
+            if cls_alt is None:
+                ax1.plot(ells, np.abs(cl), color=color, label=label)
+            else:
+                # Both spectra of a pair share a color; the comparison run is
+                # dashed so the two are told apart on the log-scale panel too,
+                # not only through the ratio below.
+                ax1.plot(ells, np.abs(cl), color=color, label=f"{label} ({main_label})")
+                ax1.plot(
+                    ells,
+                    np.abs(cls_alt[(i, j)]),
+                    color=color,
+                    ls="--",
+                    label=f"{label} ({alt_label})",
+                )
             if cls_alt is not None and ax2 is not None:
                 with np.errstate(divide="ignore", invalid="ignore"):
                     ratio = np.where(cl != 0.0, cls_alt[(i, j)] / cl - 1.0, np.nan)
+                ratios.append(ratio)
                 ax2.plot(ells, ratio, color=color, label=label)
 
         ax1.set_ylabel(r"$|C_\ell|$")
@@ -941,14 +958,13 @@ class XcorKernelCommon:
 
         if ax2 is not None:
             ax2.axhline(0.0, color="black", lw=0.8)
-            main_label, alt_label = self._curve_labels
             ax2.set_ylabel(
                 rf"$C_\ell^{{\rm {alt_label}}}/C_\ell^{{\rm {main_label}}} - 1$"
             )
             ax2.set_xlabel(r"$\ell$")
             if len(ells) > 1:
                 ax2.set_xscale("log")
-            ax2.grid(True, alpha=0.3)
+            style_ratio_axis(ax2, ratios)
         else:
             ax1.set_xlabel(r"$\ell$")
 

@@ -1,5 +1,13 @@
 # The ISW Limber step: why GH #297 aborts, and the shape of the fix
 
+Status (2026-09-11): GH #297 is closed (2026-08-21). Since #374 the ISW kernel
+has a `source` property (thin screen / recombination visibility / visibility with
+reionization); the thin-screen cut at recombination is what gives `W_isw(k)` its
+`j_ell(k chi_lss)` tail and its ~3000 k-samples per block (33 s of a 44 s four-kernel
+LSST-Y1 + CMB run, measured 2026-09-10 on the branch). Whether the visibility sources
+remove that cost has not been re-measured. Any support change goes through component
+ranges, never a taper inside `eval_kernel`.
+
 Branch `xcor-isw-aborts`, off `d2fd03b3`. Everything below is measured, not
 estimated. Visual write-up of the same material:
 <https://claude.ai/code/artifact/6d88e2fa-5b01-411f-a0de-bb5cf1f0d2af>
