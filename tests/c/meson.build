@@ -551,6 +551,29 @@ xcor_tests = [
     },
 ]
 
+# The Arb reference generator behind the certified tables. Its output reaches
+# the suite as committed tables, so without this nothing ever executed it and a
+# mistyped closed form surfaced only as a table disagreeing with the library.
+# FLINT is not a dependency of NumCosmo, so the test exists only where it is
+# available -- the same condition under which the generator itself is built.
+if arb_dep.found()
+    xcor_tests += [
+        {
+            'name': 'xcor_window_arb',
+            'sources': ['nc/xcor/test_xcor_window_arb.c'],
+            'dependencies': [arb_dep, flint_dep],
+            'include_directories': [include_directories('../tools')],
+            # FLINT's headers trip these under GCC 16, reading the interior
+            # pointers of an acb_t as if they sized the whole struct. Same
+            # filter tests/tools/meson.build applies to the generator.
+            'c_args': cc.get_supported_arguments(
+                '-Wno-stringop-overread',
+                '-Wno-array-bounds',
+            ),
+        },
+    ]
+endif
+
 # Combine all test arrays
 all_c_tests = math_tests + model_tests + data_tests + lss_tests + galaxy_tests + xcor_tests
 
@@ -559,12 +582,17 @@ tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
 
 foreach c_test : all_c_tests
     extra_c_args = c_test.has_key('c_args') ? c_test['c_args'] : []
+    # A test of an offline reference generator needs that generator's own
+    # dependencies, which are not the library's: FLINT is not a NumCosmo
+    # dependency and such a test is registered only where it was found.
+    extra_deps = c_test.has_key('dependencies') ? c_test['dependencies'] : []
+    extra_inc = c_test.has_key('include_directories') ? c_test['include_directories'] : []
     executable_test = executable(
         c_test['name'],
         c_test['sources'],
         c_args: tests_c_args + extra_c_args,
-        dependencies: [libnumcosmo_dep, gsl_dep],
-        include_directories: [configinc, numcosmoinc],
+        dependencies: [libnumcosmo_dep, gsl_dep] + extra_deps,
+        include_directories: [configinc, numcosmoinc] + extra_inc,
     )
     if c_test.has_key('timeout')
         timeout = c_test['timeout']

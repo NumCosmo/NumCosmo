@@ -41,8 +41,8 @@
  *
  * Kernels also implement the noise power spectrum.
  *
- * See <a href="../../theory/sbessel_projection.html">Projection Integrals with
- * Spherical Bessel Weights</a> for the pipeline a kernel drives: the adaptive
+ * See <a href="../../theory/sbessel_projection.html">UltraLevin: Non-Limber
+ * Angular Power Spectra</a> for the pipeline a kernel drives: the adaptive
  * $k$ domain, the closure fitted to $W_\ell(k)$, and the error estimate the fit
  * residuals feed.
  */
@@ -84,7 +84,7 @@ typedef struct _NcXcorKernelPrivate
   gdouble adaptive_epsilon;
   guint adaptive_boundary_tries;
   gdouble reltol;
-  gdouble scaled_abstol;
+  gdouble peak_epsilon;
   guint max_border_expansions;
   guint max_iter;
   gdouble expansion_factor;
@@ -108,7 +108,7 @@ enum
   PROP_ADAPTIVE_EPSILON,
   PROP_ADAPTIVE_BOUNDARY_TRIES,
   PROP_RELTOL,
-  PROP_SCALED_ABSTOL,
+  PROP_PEAK_EPSILON,
   PROP_MAX_BORDER_EXPANSIONS,
   PROP_MAX_ITER,
   PROP_EXPANSION_FACTOR,
@@ -138,7 +138,7 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
   self->adaptive_epsilon         = 0.0;
   self->adaptive_boundary_tries  = 0;
   self->reltol                   = 0.0;
-  self->scaled_abstol            = 0.0;
+  self->peak_epsilon             = 0.0;
   self->max_border_expansions    = 0;
   self->max_iter                 = 0;
   self->expansion_factor         = 0.0;
@@ -238,8 +238,8 @@ _nc_xcor_kernel_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_RELTOL:
       nc_xcor_kernel_set_reltol (xclk, g_value_get_double (value));
       break;
-    case PROP_SCALED_ABSTOL:
-      nc_xcor_kernel_set_scaled_abstol (xclk, g_value_get_double (value));
+    case PROP_PEAK_EPSILON:
+      nc_xcor_kernel_set_peak_epsilon (xclk, g_value_get_double (value));
       break;
     case PROP_MAX_BORDER_EXPANSIONS:
       nc_xcor_kernel_set_max_border_expansions (xclk, g_value_get_uint (value));
@@ -296,8 +296,8 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_RELTOL:
       g_value_set_double (value, nc_xcor_kernel_get_reltol (xclk));
       break;
-    case PROP_SCALED_ABSTOL:
-      g_value_set_double (value, nc_xcor_kernel_get_scaled_abstol (xclk));
+    case PROP_PEAK_EPSILON:
+      g_value_set_double (value, nc_xcor_kernel_get_peak_epsilon (xclk));
       break;
     case PROP_MAX_BORDER_EXPANSIONS:
       g_value_set_uint (value, nc_xcor_kernel_get_max_border_expansions (xclk));
@@ -435,11 +435,11 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    *
    * Relative tolerance for the adaptive refinement of the $W_i(k)$ spline.
    *
-   * The tolerance is applied only where #NcXcorKernel:scaled-abstol does not bind. For
+   * The tolerance is applied only where #NcXcorKernel:peak-epsilon does not bind. For
    * typical settings, the scaled absolute tolerance controls most of the refinement,
    * so this parameter primarily affects regions where the spline amplitude is
    * sufficiently large for relative accuracy to be relevant. See
-   * #NcXcorKernel:scaled-abstol for the complementary criterion.
+   * #NcXcorKernel:peak-epsilon for the complementary criterion.
    *
    * ## The two tolerances gate each other -- move them together
    *
@@ -475,28 +475,38 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcXcorKernel:scaled-abstol:
+   * NcXcorKernel:peak-epsilon:
    *
-   * Absolute tolerance for the adaptive refinement of the $W_i(k)$ spline, expressed
-   * as a fraction of the peak sampled integrand. An interval is accepted once its
-   * estimated interpolation error falls below `scaled-abstol` $\times \max\vert
-   * F\vert$.
+   * Peak-relative floor of the adaptive refinement of the $W_i(k)$ closure. An
+   * interval is accepted once its estimated interpolation error falls below
+   * `peak-epsilon` $\times \max\vert F\vert$, the maximum taken over the smallest
+   * of the block's peaks so that a sub-dominant multipole is not held to a
+   * tolerance relative to its neighbours.
    *
-   * This criterion sets the absolute accuracy of the spline where it binds. Tightening
-   * #NcXcorKernel:reltol has no effect in those regions. Since the tolerance is
-   * absolute, the corresponding relative error can become large where the resulting
-   * $C_\ell$ is small; these contributions are typically dominated by cancellation and
-   * have little impact on the total signal.
+   * It is not a tolerance on $C_\ell$. It is applied to $W_i(k)$, one level below
+   * the integral it feeds, and the two are separated by the squaring described
+   * below and by the cancellation limit. For a cross-spectrum it says how far
+   * below the louder kernel's peak the fit still resolves the quieter one: a pair
+   * whose product lives at that level of the louder window is computed at the
+   * floor, and shows it as scatter in $C_\ell$ rather than as a bias.
+   * #NcXcorKernel:adaptive-epsilon is the domain-expansion threshold and is a
+   * distinct quantity.
    *
-   * Tightening this tolerance can substantially increase the number of spline knots,
+   * This criterion sets the absolute accuracy of the closure where it binds.
+   * Tightening #NcXcorKernel:reltol has no effect in those regions. Since the
+   * floor is absolute, the corresponding relative error can become large where the
+   * resulting $C_\ell$ is small; these contributions are typically dominated by
+   * cancellation and have little impact on the total signal.
+   *
+   * Tightening this floor can substantially increase the number of samples,
    * particularly for kernels with slowly decaying oscillatory tails (see
    * #NcXcorKernel:adaptive-epsilon). The resulting increase in resolution can also
-   * make the outer $k$ integral more difficult to evaluate, since the spline may
+   * make the outer $k$ integral more difficult to evaluate, since the closure may
    * resolve oscillations that contribute negligibly to the integral.
    *
    * The useful precision is ultimately limited by the radial integration used to
    * compute $W_i(k)$: far below its peak that integral is dominated by cancellation,
-   * so refining the spline beyond that level does not add reliable information.
+   * so refining the closure beyond that level does not add reliable information.
    *
    * **Do not set this below $10^{-6}$.** The floor is measured against the peak of
    * $W_i(k)$, but the quantity actually integrated is $k^2 W_i W_j$, so the floor
@@ -508,13 +518,13 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * window. What a tighter floor would sharpen is the tail-times-tail part of the
    * product; a spectrum dominated by that is one whose two kernels barely overlap,
    * where the signal is negligible to begin with. Values below $10^{-6}$ emit a
-   * warning from nc_xcor_kernel_set_scaled_abstol().
+   * warning from nc_xcor_kernel_set_peak_epsilon().
    */
   g_object_class_install_property (object_class,
-                                   PROP_SCALED_ABSTOL,
-                                   g_param_spec_double ("scaled-abstol",
+                                   PROP_PEAK_EPSILON,
+                                   g_param_spec_double ("peak-epsilon",
                                                         NULL,
-                                                        "Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement",
+                                                        "Peak-relative floor of the adaptive refinement of the k-space closure",
                                                         GSL_DBL_MIN, 1.0, 1.0e-4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -541,7 +551,7 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * it is a single polynomial on -- a knot interval of a spline closure, a
    * panel of a Chebyshev one. That record is what nc_xcor_compute_full() turns
    * into an error estimate. On by default: without it the estimate has only
-   * #NcXcorKernel:reltol and #NcXcorKernel:scaled-abstol to work from -- the
+   * #NcXcorKernel:reltol and #NcXcorKernel:peak-epsilon to work from -- the
    * tolerances the fit was asked for, which it beats by 12 to 3100 times
    * depending on the kernel, so the resulting bound tracks the pair's
    * cancellation rather than its accuracy.
@@ -1001,10 +1011,10 @@ typedef struct _ComponentParams
 } ComponentParams;
 
 gdouble
-_nc_xcor_kernel_component_kernel_integ (gpointer params, gdouble x, gdouble k)
+_nc_xcor_kernel_component_kernel_integ (gpointer params, gdouble chi, gdouble k)
 {
   const ComponentParams *nlcp = (const ComponentParams *) params;
-  const gdouble kernel        = nc_xcor_kernel_component_eval_kernel (nlcp->comp, nlcp->cosmo, x, k);
+  const gdouble kernel        = nc_xcor_kernel_component_eval_kernel (nlcp->comp, nlcp->cosmo, chi, k);
 
   return kernel / (k * sqrt (k));
 }
@@ -1016,8 +1026,8 @@ typedef struct _ComponentState
 {
   NcXcorKernelComponent *comp;
   guint comp_idx;
-  gdouble xi_min;
-  gdouble xi_max;
+  gdouble chi_min;
+  gdouble chi_max;
   gdouble k_min_hard;
   gdouble k_max_hard;
   gdouble last_k_left;
@@ -1066,7 +1076,7 @@ _component_state_init (ComponentState *state, NcXcorKernelComponent *comp, guint
   state->params.cosmo         = cosmo;
 
   nc_xcor_kernel_component_get_limits (comp, cosmo,
-                                       &state->xi_min, &state->xi_max,
+                                       &state->chi_min, &state->chi_max,
                                        &state->k_min_hard, &state->k_max_hard);
 }
 
@@ -1175,9 +1185,9 @@ _component_states_init_non_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
     {
       ComponentState *si = &comp_states.states[i];
       ComponentState *sj = &comp_states.states[j];
-      const gdouble tol  = 1.0e-9 * GSL_MAX (si->xi_max, sj->xi_max);
+      const gdouble tol  = 1.0e-9 * GSL_MAX (si->chi_max, sj->chi_max);
 
-      if ((si->xi_min <= sj->xi_max + tol) && (sj->xi_min <= si->xi_max + tol))
+      if ((si->chi_min <= sj->chi_max + tol) && (sj->chi_min <= si->chi_max + tol))
       {
         const guint gi = si->group;
         const guint gj = sj->group;
@@ -1203,7 +1213,7 @@ _component_states_init_non_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
  * component's support the window there is zero and the term is dropped.
  */
 static gdouble
-_component_limber_eval (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi_max, gdouble k, gint l)
+_component_limber_eval (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi_max, gdouble k, gint l)
 {
   const guint deriv       = nc_xcor_kernel_component_get_bessel_deriv (comp);
   const gdouble nu        = l + 0.5;
@@ -1218,14 +1228,14 @@ _component_limber_eval (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble x
   else
   {
     const gdouble nup      = nu + 1.0;
-    const gdouble xi_p     = nup / k;
-    const gdouble peak_lp1 = (xi_p <= xi_max) ?
-                             sqrt (M_PI / (2.0 * nup)) * nc_xcor_kernel_component_eval_kernel (comp, cosmo, xi_p, k) :
+    const gdouble chi_p    = nup / k;
+    const gdouble peak_lp1 = (chi_p <= chi_max) ?
+                             sqrt (M_PI / (2.0 * nup)) * nc_xcor_kernel_component_eval_kernel (comp, cosmo, chi_p, k) :
                              0.0;
 
-    if (deriv == 1) /* j_l' = (l/y) j_l - j_{l+1} */
+    if (deriv == 1) /* j_l' = (l/x) j_l - j_{l+1} */
       val = (l / nu) * peak_l - peak_lp1;
-    else /* j_l'' = (l (l-1)/y^2 - 1) j_l + (2/y) j_{l+1} */
+    else /* j_l'' = (l (l-1)/x^2 - 1) j_l + (2/x) j_{l+1} */
       val = -(2.0 * l + 0.25) / (nu * nu) * peak_l + (2.0 / nup) * peak_lp1;
   }
 
@@ -1271,11 +1281,11 @@ _component_states_init_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
       const gint l_j     = lmin + j;
       const gdouble nu_j = l_j + 0.5;
 
-      /* Limber constraint: xi = nu/k must be in [xi_min, xi_max]
-       * Therefore: k must be in [nu/xi_max, nu/xi_min]
+      /* Limber constraint: chi = nu/k must be in [chi_min, chi_max]
+       * Therefore: k must be in [nu/chi_max, nu/chi_min]
        */
-      gdouble k_min_limber_j = nu_j / state->xi_max;
-      gdouble k_max_limber_j = nu_j / state->xi_min;
+      gdouble k_min_limber_j = nu_j / state->chi_max;
+      gdouble k_max_limber_j = nu_j / state->chi_min;
 
       state->k_min_limber_ell[j] = k_min_limber_j;
       state->k_max_limber_ell[j] = k_max_limber_j;
@@ -1304,8 +1314,8 @@ _component_states_init_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
       const gdouble k_max_j = state->k_max_limber_ell[j];
 
       /* Evaluate at the two boundaries */
-      state->last_values_left[j]  = _component_limber_eval (state->comp, cosmo, state->xi_max, k_min_j, l_j);
-      state->last_values_right[j] = _component_limber_eval (state->comp, cosmo, state->xi_max, k_max_j, l_j);
+      state->last_values_left[j]  = _component_limber_eval (state->comp, cosmo, state->chi_max, k_min_j, l_j);
+      state->last_values_right[j] = _component_limber_eval (state->comp, cosmo, state->chi_max, k_max_j, l_j);
     }
   }
 
@@ -1425,7 +1435,7 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
       /* Exact integration within boundaries */
       ncm_sbessel_integrator_integrate_deriv (
         comp_states->sbi, _nc_xcor_kernel_component_kernel_integ,
-        state->xi_min, state->xi_max, k,
+        state->chi_min, state->chi_max, k,
         nc_xcor_kernel_component_get_bessel_deriv (state->comp),
         integ_result, &state->params
       );
@@ -1576,7 +1586,7 @@ _component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_d
       if (within_range)
       {
         /* Normal Limber evaluation within valid range */
-        kernel_out[ci][i] = _component_limber_eval (state->comp, state->params.cosmo, state->xi_max, k, l);
+        kernel_out[ci][i] = _component_limber_eval (state->comp, state->params.cosmo, state->chi_max, k, l);
       }
       else
       {
@@ -1638,7 +1648,7 @@ static void
 _nc_xcor_kernel_check_tolerance_balance (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-  const gdouble ratio       = self->reltol / self->scaled_abstol;
+  const gdouble ratio       = self->reltol / self->peak_epsilon;
 
   if (self->tolerance_balance_warned)
     return;
@@ -1650,12 +1660,12 @@ _nc_xcor_kernel_check_tolerance_balance (NcXcorKernel *xclk)
     self->tolerance_balance_warned = TRUE;
 
     g_warning ("_nc_xcor_kernel_check_tolerance_balance: %s has reltol %.3e and "
-               "scaled-abstol %.3e, %.0f orders apart. The refinement criterion adds "
+               "peak-epsilon %.3e, %.0f orders apart. The refinement criterion adds "
                "the two, so the looser one decides where refinement stops and %s is "
                "inert -- tightening it alone cannot improve the result, and it is "
                "still paid for in spline knots. Move them together.",
-               G_OBJECT_TYPE_NAME (xclk), self->reltol, self->scaled_abstol,
-               fabs (log10 (ratio)), reltol_inert ? "reltol" : "scaled-abstol");
+               G_OBJECT_TYPE_NAME (xclk), self->reltol, self->peak_epsilon,
+               fabs (log10 (ratio)), reltol_inert ? "reltol" : "peak-epsilon");
   }
 }
 
@@ -1680,7 +1690,7 @@ static void
 _nc_xcor_kernel_check_sampler_tolerance (NcXcorKernel *xclk, NcmSBesselIntegrator *sbi)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-  const gdouble fit_tol     = GSL_MAX (self->reltol, self->scaled_abstol);
+  const gdouble fit_tol     = GSL_MAX (self->reltol, self->peak_epsilon);
   gdouble sampler_reltol;
 
   if ((sbi == NULL) || !NCM_IS_SBESSEL_INTEGRATOR_LEVIN (sbi))
@@ -1697,7 +1707,7 @@ _nc_xcor_kernel_check_sampler_tolerance (NcXcorKernel *xclk, NcmSBesselIntegrato
     g_error ("_nc_xcor_kernel_check_sampler_tolerance: kernel %s fits its k-space closure "
              "to %.17g but the integrator samples W_l(k) only to %.17g (the looser of its "
              "reltol and cheb-reltol). A fit cannot resolve what the samples do not carry. "
-             "Loosen NcXcorKernel:reltol and NcXcorKernel:scaled-abstol to at least %.17g, "
+             "Loosen NcXcorKernel:reltol and NcXcorKernel:peak-epsilon to at least %.17g, "
              "or construct the integrator with tighter tolerances.",
              G_OBJECT_TYPE_NAME (xclk), fit_tol, sampler_reltol, sampler_reltol);
 }
@@ -1916,7 +1926,7 @@ static NcXcorKernelIntegrand *
 _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax,
                                       ComponentStates *comp_states,
                                       void (*compute_func) (const gdouble, NcmVector *, gpointer),
-                                      const gdouble reltol, const gdouble abs_reltol)
+                                      const gdouble reltol, const gdouble peak_epsilon)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
   ChebIntegrandData *cid    = g_new0 (ChebIntegrandData, 1);
@@ -1959,7 +1969,7 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
     /* Same meaning the spline path gives it: a floor scaled to the smallest of
      * the block's peaks, so a sub-dominant multipole is not held to a
      * tolerance relative to its neighbours. */
-    abstol = ncm_function_sample_set_get_absmaxF_min (fss) * abs_reltol;
+    abstol = ncm_function_sample_set_get_absmaxF_min (fss) * peak_epsilon;
 
     cid->panels = g_array_new (FALSE, FALSE, sizeof (ChebPanel));
     cid->edges  = g_array_new (FALSE, FALSE, sizeof (gdouble));
@@ -2091,7 +2101,7 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
                                                     _cheb_integrand_get_panels,
                                                     _cheb_integrand_peek_panel);
       nc_xcor_kernel_integrand_set_restrict (integrand, _cheb_integrand_restrict);
-      nc_xcor_kernel_integrand_set_tolerances (integrand, reltol, abs_reltol);
+      nc_xcor_kernel_integrand_set_tolerances (integrand, reltol, peak_epsilon);
       nc_xcor_kernel_integrand_set_residuals (integrand, residuals);
       ncm_matrix_clear (&residuals);
 
@@ -2104,7 +2114,7 @@ static NcXcorKernelIntegrand *
 _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax,
                                         ComponentStates *comp_states,
                                         void (*compute_func) (const gdouble, NcmVector *, gpointer),
-                                        const gdouble reltol, const gdouble abs_reltol)
+                                        const gdouble reltol, const gdouble peak_epsilon)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
   SplineIntegrandData *sid  = g_new0 (SplineIntegrandData, 1);
@@ -2157,7 +2167,7 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
 
       ncm_function_sample_set_adaptive_midpoint (
         fss, compute_func,
-        reltol, max_absF_total * abs_reltol, self->max_iter, 1,
+        reltol, max_absF_total * peak_epsilon, self->max_iter, 1,
         spline, comp_states
       );
     }
@@ -2224,7 +2234,7 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
       nc_xcor_kernel_integrand_set_get_range_comp (integrand, _spline_integrand_get_range_comp);
       nc_xcor_kernel_integrand_set_eval_comps (integrand, _spline_integrand_eval_comps);
 
-      nc_xcor_kernel_integrand_set_tolerances (integrand, reltol, abs_reltol);
+      nc_xcor_kernel_integrand_set_tolerances (integrand, reltol, peak_epsilon);
       nc_xcor_kernel_integrand_set_residuals (integrand, residuals);
       ncm_matrix_clear (&residuals);
 
@@ -2260,7 +2270,7 @@ _nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
     return _nc_xcor_kernel_build_spline_integrand (xclk, cosmo, lmin, lmax,
                                                    &comp_states,
                                                    _component_states_compute_limber,
-                                                   self->reltol, self->scaled_abstol);
+                                                   self->reltol, self->peak_epsilon);
   }
 }
 
@@ -2298,12 +2308,12 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
       return _nc_xcor_kernel_build_cheb_integrand (xclk, cosmo, lmin, lmax,
                                                    &comp_states,
                                                    _component_states_compute_non_limber,
-                                                   self->reltol, self->scaled_abstol);
+                                                   self->reltol, self->peak_epsilon);
 
     return _nc_xcor_kernel_build_spline_integrand (xclk, cosmo, lmin, lmax,
                                                    &comp_states,
                                                    _component_states_compute_non_limber,
-                                                   self->reltol, self->scaled_abstol);
+                                                   self->reltol, self->peak_epsilon);
   }
 }
 
@@ -2413,9 +2423,9 @@ nc_xcor_kernel_integrand_new (guint len, void (*eval) (gpointer, gdouble, gdoubl
   integrand->peek_panel_func     = NULL;
   integrand->restrict_func       = NULL;
 
-  integrand->residuals     = NULL;
-  integrand->reltol        = 0.0;
-  integrand->scaled_abstol = 0.0;
+  integrand->residuals    = NULL;
+  integrand->reltol       = 0.0;
+  integrand->peak_epsilon = 0.0;
 
   return integrand;
 }
@@ -2635,7 +2645,7 @@ nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, NcXco
  * nc_xcor_kernel_integrand_set_tolerances:
  * @integrand: a #NcXcorKernelIntegrand
  * @reltol: the relative half of the fit criterion
- * @scaled_abstol: its floor, as a fraction of the fitted function's own peak
+ * @peak_epsilon: its floor, as a fraction of the fitted function's own peak
  *
  * Records the criterion @integrand was fitted to, in the two parts it actually
  * has. ncm_function_sample_set_refine() accepts a point when
@@ -2655,14 +2665,14 @@ nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, NcXco
  *
  */
 void
-nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdouble reltol, gdouble scaled_abstol)
+nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdouble reltol, gdouble peak_epsilon)
 {
   g_return_if_fail (integrand != NULL);
   g_return_if_fail (reltol >= 0.0);
-  g_return_if_fail (scaled_abstol >= 0.0);
+  g_return_if_fail (peak_epsilon >= 0.0);
 
-  integrand->reltol        = reltol;
-  integrand->scaled_abstol = scaled_abstol;
+  integrand->reltol       = reltol;
+  integrand->peak_epsilon = peak_epsilon;
 }
 
 /**
@@ -2681,7 +2691,7 @@ nc_xcor_kernel_integrand_get_reltol (NcXcorKernelIntegrand *integrand)
 }
 
 /**
- * nc_xcor_kernel_integrand_get_scaled_abstol:
+ * nc_xcor_kernel_integrand_get_peak_epsilon:
  * @integrand: a #NcXcorKernelIntegrand
  *
  * Returns: the floor of the fit criterion as a fraction of the fitted
@@ -2689,11 +2699,11 @@ nc_xcor_kernel_integrand_get_reltol (NcXcorKernelIntegrand *integrand)
  * nc_xcor_kernel_integrand_set_tolerances().
  */
 gdouble
-nc_xcor_kernel_integrand_get_scaled_abstol (NcXcorKernelIntegrand *integrand)
+nc_xcor_kernel_integrand_get_peak_epsilon (NcXcorKernelIntegrand *integrand)
 {
   g_return_val_if_fail (integrand != NULL, 0.0);
 
-  return integrand->scaled_abstol;
+  return integrand->peak_epsilon;
 }
 
 /**
@@ -2941,13 +2951,13 @@ nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdoubl
   for (i = 0; i < comp_list->len; i++)
   {
     NcXcorKernelComponent *comp = g_ptr_array_index (comp_list, i);
-    gdouble xi_min, xi_max, k_min, k_max;
+    gdouble chi_min, chi_max, k_min, k_max;
 
-    nc_xcor_kernel_component_get_limits (comp, cosmo, &xi_min, &xi_max, &k_min, &k_max);
+    nc_xcor_kernel_component_get_limits (comp, cosmo, &chi_min, &chi_max, &k_min, &k_max);
 
     {
-      const gdouble k_min_limb = nu / xi_max;
-      const gdouble k_max_limb = nu / xi_min;
+      const gdouble k_min_limb = nu / chi_max;
+      const gdouble k_max_limb = nu / chi_min;
 
       k_min = GSL_MAX (k_min, k_min_limb);
       k_max = GSL_MIN (k_max, k_max_limb);
@@ -3231,51 +3241,50 @@ nc_xcor_kernel_set_reltol (NcXcorKernel *xclk, gdouble reltol)
 }
 
 /**
- * nc_xcor_kernel_get_scaled_abstol:
+ * nc_xcor_kernel_get_peak_epsilon:
  * @xclk: a #NcXcorKernel
  *
  *
  */
 gdouble
-nc_xcor_kernel_get_scaled_abstol (NcXcorKernel *xclk)
+nc_xcor_kernel_get_peak_epsilon (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  return self->scaled_abstol;
+  return self->peak_epsilon;
 }
 
 /**
- * nc_xcor_kernel_set_scaled_abstol:
+ * nc_xcor_kernel_set_peak_epsilon:
  * @xclk: a #NcXcorKernel
- * @scaled_abstol: the absolute minimum, as a fraction of the peak (must be > 0)
+ * @peak_epsilon: the refinement floor, as a fraction of the peak (must be > 0)
  *
- * Sets the absolute minimum threshold for adaptive midpoint refinement. This parameter
- * helps prevent excessive refinement in cases where the kernel has very low amplitude,
- * by providing a floor below which the refinement will stop regardless of the relative
- * tolerance.
+ * Sets the peak-relative floor of the adaptive refinement. Below this fraction of
+ * the fitted function's own peak the refinement stops regardless of the relative
+ * tolerance, so a kernel is not resolved to a precision its amplitude cannot carry.
  *
- * Values below %NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL are accepted but warned about:
+ * Values below %NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON are accepted but warned about:
  * the floor enters the $C_\ell$ integrand squared, so they ask for accuracy the outer
  * integral cannot carry and pay for it in spline knots. See
- * #NcXcorKernel:scaled-abstol.
+ * #NcXcorKernel:peak-epsilon.
  */
 void
-nc_xcor_kernel_set_scaled_abstol (NcXcorKernel *xclk, gdouble scaled_abstol)
+nc_xcor_kernel_set_peak_epsilon (NcXcorKernel *xclk, gdouble peak_epsilon)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  g_assert_cmpfloat (scaled_abstol, >, 0.0);
+  g_assert_cmpfloat (peak_epsilon, >, 0.0);
 
-  if (scaled_abstol < NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL)
-    g_warning ("nc_xcor_kernel_set_scaled_abstol: %.3e is below the useful floor of %.0e. "
-               "This tolerance is measured against the peak of W(k), but the C_l integrand "
+  if (peak_epsilon < NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON)
+    g_warning ("nc_xcor_kernel_set_peak_epsilon: %.3e is below the useful floor of %.0e. "
+               "This floor is measured against the peak of W(k), but the C_l integrand "
                "is k^2 W_a W_b, so it enters squared: %.3e here is %.3e on the integrand, "
                "past what the outer integral carries. It cannot improve the result and can "
                "cost orders of magnitude in spline knots.",
-               scaled_abstol, NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL,
-               scaled_abstol, scaled_abstol * scaled_abstol);
+               peak_epsilon, NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON,
+               peak_epsilon, peak_epsilon * peak_epsilon);
 
-  self->scaled_abstol = scaled_abstol;
+  self->peak_epsilon = peak_epsilon;
 }
 
 /**
@@ -3503,9 +3512,9 @@ nc_xcor_kernel_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
 gdouble
 nc_xcor_kernel_eval_limber_z_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l)
 {
-  const gdouble xi_z      = nc_distance_comoving (dist, cosmo, z); /* in units of Hubble radius */
+  const gdouble chi_z     = nc_distance_comoving (dist, cosmo, z); /* in units of Hubble radius */
   const gdouble E_z       = nc_hicosmo_E (cosmo, z);
-  const NcXcorKinetic xck = { xi_z, E_z };
+  const NcXcorKinetic xck = { chi_z, E_z };
   const gdouble prefactor = nc_xcor_kernel_eval_limber_z_prefactor (xclk, cosmo, l);
 
   return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval_limber_z (xclk, cosmo, z, &xck, l) * prefactor;

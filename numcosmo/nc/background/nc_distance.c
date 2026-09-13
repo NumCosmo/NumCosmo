@@ -41,6 +41,13 @@
  * For the full set of definitions, conventions, and the
  * dimensionless-to-physical conversion, see
  * <a href="../../theory/distances.html">Cosmological Distances</a>.
+ *
+ * The cross-correlation code (#NcXcor and the UltraLevin integrator) writes the
+ * comoving distance as $\chi$, the symbol used in that part of the literature. It is
+ * the same quantity as $D_c$ here, in the same units: its kernel components work in
+ * units of the Hubble radius, with the wavenumber in $R_{H0}^{-1}$, so that $k\chi$ is
+ * dimensionless. Multiplying by $R_{H0} = c/H_0$ from nc_hicosmo_RH_Mpc() gives the
+ * dimensionful pair, which is what the Limber path uses.
  */
 
 #ifdef HAVE_CONFIG_H

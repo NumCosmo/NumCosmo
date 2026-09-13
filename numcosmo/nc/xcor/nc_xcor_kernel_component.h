@@ -42,14 +42,14 @@ G_DECLARE_DERIVABLE_TYPE (NcXcorKernelComponent, nc_xcor_kernel_component, NC, X
  * NcXcorKernelComponentEvalKernel:
  * @comp: a #NcXcorKernelComponent
  * @cosmo: a #NcHICosmo
- * @xi: comoving distance
+ * @chi: comoving distance
  * @k: wave number
  *
- * Evaluates the kernel function K(k, xi) at the given comoving distance and wave number.
+ * Evaluates the kernel function K(k, chi) at the given comoving distance and wave number.
  *
- * Returns: the value of K(k, xi)
+ * Returns: the value of K(k, chi)
  */
-typedef gdouble (*NcXcorKernelComponentEvalKernel) (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k);
+typedef gdouble (*NcXcorKernelComponentEvalKernel) (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
 
 /**
  * NcXcorKernelComponentEvalPrefactor:
@@ -68,14 +68,14 @@ typedef gdouble (*NcXcorKernelComponentEvalPrefactor) (NcXcorKernelComponent *co
  * NcXcorKernelComponentGetLimits:
  * @comp: a #NcXcorKernelComponent
  * @cosmo: a #NcHICosmo
- * @xi_min: (out): minimum comoving distance
- * @xi_max: (out): maximum comoving distance
+ * @chi_min: (out): minimum comoving distance
+ * @chi_max: (out): maximum comoving distance
  * @k_min: (out): minimum wave number
  * @k_max: (out): maximum wave number
  *
  * Gets the valid integration ranges for this component.
  */
-typedef void (*NcXcorKernelComponentGetLimits) (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
+typedef void (*NcXcorKernelComponentGetLimits) (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 
 struct _NcXcorKernelComponentClass
 {
@@ -111,13 +111,13 @@ guint nc_xcor_kernel_component_get_bessel_deriv (NcXcorKernelComponent *comp);
 
 void nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo);
 
-gdouble nc_xcor_kernel_component_eval_k_max (NcXcorKernelComponent *comp, gdouble y);
-gdouble nc_xcor_kernel_component_eval_KL_max (NcXcorKernelComponent *comp, gdouble y);
-gdouble nc_xcor_kernel_component_eval_k_epsilon (NcXcorKernelComponent *comp, gdouble y);
+gdouble nc_xcor_kernel_component_eval_k_max (NcXcorKernelComponent *comp, gdouble x);
+gdouble nc_xcor_kernel_component_eval_KL_max (NcXcorKernelComponent *comp, gdouble x);
+gdouble nc_xcor_kernel_component_eval_k_epsilon (NcXcorKernelComponent *comp, gdouble x);
 
-gdouble nc_xcor_kernel_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k);
+gdouble nc_xcor_kernel_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
 gdouble nc_xcor_kernel_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
-void nc_xcor_kernel_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
+void nc_xcor_kernel_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 
 #define NC_XCOR_KERNEL_COMPONENT_DEFAULT_EPSILON 1.0e-8
 
@@ -127,7 +127,7 @@ void nc_xcor_kernel_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo
  * @OBJ_NAME: the name of the type to define, all capitalized
  * @ModuleObjName: the name of the type to define, camel case
  * @module_obj_name: the name of the type to define, snake case
- * @method_eval_kernel: the name of the method that evaluates K(k, xi)
+ * @method_eval_kernel: the name of the method that evaluates K(k, chi)
  * @method_eval_prefactor: the name of the method that evaluates the prefactor
  * @method_get_limits: the name of the method that returns the valid ranges
  * @user_data: the type of the user data

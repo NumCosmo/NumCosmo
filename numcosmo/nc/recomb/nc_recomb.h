@@ -81,6 +81,8 @@ struct _NcRecomb
   gdouble tau_z, tau_lambda;
   gdouble tau_drag_z, tau_drag_lambda;
   gdouble tau_cutoff_z, tau_cutoff_lambda;
+  gdouble v_tau_reion_min_z, v_tau_reion_min_lambda;
+  gboolean v_tau_reion_min_up;
 };
 
 GType nc_recomb_get_type (void) G_GNUC_CONST;
@@ -138,6 +140,9 @@ NCM_INLINE gdouble nc_recomb_get_v_tau_max_z (NcRecomb *recomb, NcHICosmo *cosmo
 NCM_INLINE gdouble nc_recomb_get_tau_z (NcRecomb *recomb, NcHICosmo *cosmo);
 NCM_INLINE gdouble nc_recomb_get_tau_drag_z (NcRecomb *recomb, NcHICosmo *cosmo);
 NCM_INLINE gdouble nc_recomb_get_tau_cutoff_z (NcRecomb *recomb, NcHICosmo *cosmo);
+
+gdouble nc_recomb_get_v_tau_reion_min_lambda (NcRecomb *recomb, NcHICosmo *cosmo);
+gdouble nc_recomb_get_v_tau_reion_min_z (NcRecomb *recomb, NcHICosmo *cosmo);
 
 NCM_INLINE gdouble nc_recomb_dtau_dlambda_Xe (NcHICosmo *cosmo, const gdouble lambda);
 NCM_INLINE gdouble nc_recomb_He_fully_ionized_dtau_dlambda (NcHICosmo *cosmo, const gdouble lambda);

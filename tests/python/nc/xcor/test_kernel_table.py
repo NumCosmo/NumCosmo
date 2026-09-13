@@ -374,7 +374,7 @@ def test_disjoint_components_equal_the_one_table_holding_both(bits):
     # tightening it isolates the component sum.
     for k in (whole, split):
         k.set_reltol(1.0e-6)
-        k.set_scaled_abstol(1.0e-6)
+        k.set_peak_epsilon(1.0e-6)
         k.set_l_limber(-1)
         k.prepare(cosmo)
 

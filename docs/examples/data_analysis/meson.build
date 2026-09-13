@@ -1,6 +1,7 @@
 src_site_examples_data_analysis_files = files(
     'inspect_data_objects.qmd',
     'snia.qmd',
+    'hz.qmd',
     'bao_sdss_dr16.qmd',
     'rg_snia_bao.qmd',
 )

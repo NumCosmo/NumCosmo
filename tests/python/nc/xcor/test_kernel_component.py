@@ -164,7 +164,7 @@ def test_component_prepare(
     """Test prepare method and kernel analysis functions.
 
     Verifies that after calling prepare(), the component can evaluate k_max,
-    KL_max, and k_epsilon with positive finite values across multiple y values.
+    KL_max, and k_epsilon with positive finite values across multiple x values.
     """
     # Set parameters for analysis
     _, _, component = kernel_component
@@ -176,12 +176,12 @@ def test_component_prepare(
     component.prepare(cosmo)
 
     # After prepare, we should be able to evaluate k_max, KL_max, k_epsilon
-    y_array = np.linspace(1.0, 100.0, 10)
+    x_array = np.linspace(1.0, 100.0, 10)
 
-    for y in y_array:
-        k_max = component.eval_k_max(y)
-        KL_max = component.eval_KL_max(y)
-        k_epsilon = component.eval_k_epsilon(y)
+    for x in x_array:
+        k_max = component.eval_k_max(x)
+        KL_max = component.eval_KL_max(x)
+        k_epsilon = component.eval_k_epsilon(x)
 
         assert np.isfinite(k_max) and k_max > 0.0
         assert np.isfinite(KL_max)
@@ -206,10 +206,10 @@ def test_component_kernel_analysis_properties(
     component.prepare(cosmo)
 
     # Test that eval_k_max is monotonic or behaves reasonably
-    y_array = np.geomspace(1.0, 100.0, 20)
-    k_max_array = np.array([component.eval_k_max(y) for y in y_array])
-    KL_max_array = np.array([component.eval_KL_max(y) for y in y_array])
-    k_epsilon_array = np.array([component.eval_k_epsilon(y) for y in y_array])
+    x_array = np.geomspace(1.0, 100.0, 20)
+    k_max_array = np.array([component.eval_k_max(x) for x in x_array])
+    KL_max_array = np.array([component.eval_KL_max(x) for x in x_array])
+    k_epsilon_array = np.array([component.eval_k_epsilon(x) for x in x_array])
 
     # All should be positive and finite
     assert np.all(np.isfinite(k_max_array))
@@ -261,7 +261,7 @@ def test_component_k_max_is_maximum(
     kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
     cosmology: Cosmology,
 ) -> None:
-    """Test that k_max(y) gives the maximum of KL(k, y/k) using Limber approximation.
+    """Test that k_max(x) gives the maximum of KL(k, x/k) using Limber approximation.
 
     Verifies that the cached KL_max value matches direct evaluation at k_max
     within 5% relative tolerance.
@@ -271,27 +271,27 @@ def test_component_k_max_is_maximum(
 
     xi_min, xi_max, k_min, k_max = component.get_limits(cosmo)
 
-    y_min = k_min * xi_min
-    y_max = k_max * xi_max
+    x_min = k_min * xi_min
+    x_max = k_max * xi_max
 
-    # Test at several y values
-    y_test_values = np.geomspace(max(y_min * 1.1, 0.5), min(y_max * 0.9, 1000.0), 5)
+    # Test at several x values
+    x_test_values = np.geomspace(max(x_min * 1.1, 0.5), min(x_max * 0.9, 1000.0), 5)
 
-    for y in y_test_values:
-        k_max_val = component.eval_k_max(y)
-        KL_max_val = component.eval_KL_max(y)
-        xi = y / k_max_val
+    for x in x_test_values:
+        k_max_val = component.eval_k_max(x)
+        KL_max_val = component.eval_KL_max(x)
+        xi = x / k_max_val
 
         # Verify KL_max is approximately the actual value at k_max
         if xi_min <= xi <= xi_max:
-            K_at_k_max = abs(_compute_KL_at_k(component, cosmo, y, k_max_val))
+            K_at_k_max = abs(_compute_KL_at_k(component, cosmo, x, k_max_val))
             # Allow tolerance for spline/search errors
             assert_allclose(
                 KL_max_val,
                 K_at_k_max,
                 rtol=0.05,
                 atol=1e-10,
-                err_msg=f"KL_max doesn't match eval_kernel at y={y}",
+                err_msg=f"KL_max doesn't match eval_kernel at x={x}",
             )
 
 
@@ -299,7 +299,7 @@ def test_component_KL_max_value(
     kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
     cosmology: Cosmology,
 ) -> None:
-    """Test that KL_max(y) equals KL(y/k_max, k_max) using Limber approximation.
+    """Test that KL_max(x) equals KL(x/k_max, k_max) using Limber approximation.
 
     Validates consistency between the stored KL_max value and direct kernel
     evaluation. Uses 5% tolerance for real kernels with numerical artifacts.
@@ -308,22 +308,22 @@ def test_component_KL_max_value(
     cosmo = cosmology.cosmo
 
     xi_min, xi_max, k_min, k_max = component.get_limits(cosmo)
-    y_min = k_min * xi_min
-    y_max = k_max * xi_max
+    x_min = k_min * xi_min
+    x_max = k_max * xi_max
 
-    # Test at multiple y values
-    y_test_values = np.geomspace(max(y_min * 1.1, 0.5), min(y_max * 0.9, 1000.0), 10)
+    # Test at multiple x values
+    x_test_values = np.geomspace(max(x_min * 1.1, 0.5), min(x_max * 0.9, 1000.0), 10)
 
-    for y in y_test_values:
-        k_max_val = component.eval_k_max(y)
-        KL_max_val = component.eval_KL_max(y)
+    for x in x_test_values:
+        k_max_val = component.eval_k_max(x)
+        KL_max_val = component.eval_KL_max(x)
 
-        # Compute xi from y and k_max
-        xi = y / k_max_val
+        # Compute xi from x and k_max
+        xi = x / k_max_val
 
         if xi_min <= xi <= xi_max:
             # Compute KL directly using Limber approximation
-            K_direct = abs(_compute_KL_at_k(component, cosmo, y, k_max_val))
+            K_direct = abs(_compute_KL_at_k(component, cosmo, x, k_max_val))
 
             # They should match within ~0.2% for real kernels
             assert_allclose(
@@ -332,7 +332,7 @@ def test_component_KL_max_value(
                 rtol=0.05,
                 atol=1e-8,
                 err_msg=(
-                    f"KL_max mismatch at y={y}: "
+                    f"KL_max mismatch at x={x}: "
                     f"KL_max={KL_max_val}, direct={K_direct}"
                 ),
             )
@@ -344,7 +344,7 @@ def test_component_k_epsilon_drop(
 ) -> None:
     """Test that k_epsilon is where KL drops by epsilon from KL_max.
 
-    The algorithm finds k_epsilon where KL(y/k_epsilon, k_epsilon) ~= epsilon * KL_max.
+    The algorithm finds k_epsilon where KL(x/k_epsilon, k_epsilon) ~= epsilon * KL_max.
     Since set_epsilon sets the squared threshold, we use epsilon^2 in the test.
     """
     _, _, component = kernel_component_drop
@@ -359,80 +359,80 @@ def test_component_k_epsilon_drop(
 
     xi_min, xi_max, _, _ = component.get_limits(cosmo)
 
-    # Test at several y values
-    y_test_values = [20.0, 50.0, 100.0]
+    # Test at several x values
+    x_test_values = [20.0, 50.0, 100.0]
 
-    for y in y_test_values:
-        k_max_val = component.eval_k_max(y)
-        KL_max_val = component.eval_KL_max(y)
-        k_epsilon_val = component.eval_k_epsilon(y)
+    for x in x_test_values:
+        k_max_val = component.eval_k_max(x)
+        KL_max_val = component.eval_KL_max(x)
+        k_epsilon_val = component.eval_k_epsilon(x)
 
         # k_epsilon should be >= k_max (after the maximum)
         assert (
             k_epsilon_val >= k_max_val * 0.99
-        ), f"k_epsilon={k_epsilon_val} should be >= k_max={k_max_val} at y={y}"
+        ), f"k_epsilon={k_epsilon_val} should be >= k_max={k_max_val} at x={x}"
 
         # Compute KL at k_epsilon using Limber approximation
-        xi_epsilon = y / k_epsilon_val
+        xi_epsilon = x / k_epsilon_val
         if xi_min <= xi_epsilon <= xi_max:
-            K_at_epsilon = np.abs(_compute_KL_at_k(component, cosmo, y, k_epsilon_val))
+            K_at_epsilon = np.abs(_compute_KL_at_k(component, cosmo, x, k_epsilon_val))
             # Should be approximately epsilon * KL_max (allow factor of 5 tolerance due
             # to spline/search)
             expected_K = np.abs(epsilon * KL_max_val)
             assert K_at_epsilon >= expected_K * 0.2, (
                 f"K at k_epsilon ({K_at_epsilon}) too small vs "
-                f"epsilon*KL_max ({expected_K}) at y={y}"
+                f"epsilon*KL_max ({expected_K}) at x={x}"
             )
             assert K_at_epsilon <= expected_K * 5.0, (
                 f"K at k_epsilon ({K_at_epsilon}) too large vs "
-                f"epsilon*KL_max ({expected_K}) at y={y}"
+                f"epsilon*KL_max ({expected_K}) at x={x}"
             )
 
     component.set_epsilon(original_epsilon)
     component.prepare(cosmo)
 
 
-def test_component_y_range_pruning(
+def test_component_x_range_pruning(
     kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
     cosmology: Cosmology,
 ) -> None:
-    """Test that kernel analysis works within the expected y range [0.5, 1000.0].
+    """Test that kernel analysis works within the expected x range [0.5, 1000.0].
 
     Verifies that eval_k_max returns valid results at the boundaries of the
-    y range defined by the kernel limits.
+    x range defined by the kernel limits.
     """
     _, _kernel, component = kernel_component
     cosmo = cosmology.cosmo
 
     xi_min, xi_max, k_min, k_max = component.get_limits(cosmo)
 
-    # Calculate expected y range
-    y_min_expected = max(k_min * xi_min, 0.5)
-    y_max_expected = min(k_max * xi_max, 1000.0)
+    # Calculate expected x range
+    x_min_expected = max(k_min * xi_min, 0.5)
+    x_max_expected = min(k_max * xi_max, 1000.0)
 
     # Test that eval_k_max works at the boundaries
-    # Values near y_min
-    k_max_at_ymin = component.eval_k_max(y_min_expected)
+    # Values near x_min
+    k_max_at_ymin = component.eval_k_max(x_min_expected)
     assert np.isfinite(k_max_at_ymin) and k_max_at_ymin > 0.0
 
-    # Values near y_max
-    k_max_at_ymax = component.eval_k_max(y_max_expected)
+    # Values near x_max
+    k_max_at_ymax = component.eval_k_max(x_max_expected)
     assert np.isfinite(k_max_at_ymax) and k_max_at_ymax > 0.0
 
     # Test a few points in the valid range
-    y_test_values = np.geomspace(y_min_expected * 1.1, y_max_expected * 0.9, 5)
-    for y in y_test_values:
-        k = component.eval_k_max(y)
-        assert np.isfinite(k) and k > 0.0, f"Invalid k_max at y={y}"
+    x_test_values = np.geomspace(x_min_expected * 1.1, x_max_expected * 0.9, 5)
+    for x in x_test_values:
+        k = component.eval_k_max(x)
+        assert np.isfinite(k) and k > 0.0, f"Invalid k_max at x={x}"
 
 
 def test_component_k_max_is_maximum1(
     kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
     cosmology: Cosmology,
 ) -> None:
-    """Test that k_max(y).
+    """Test that k_max(x).
 
-    Test that k_max(y) gives a near-maximum value of KL(k, y/k) using Limber
+    Test that k_max(x) gives a near-maximum value of KL(k, x/k) using Limber
     approximation. Validates that k_max is among the larger values by sampling points
     around it. Uses percentile-based checking to handle kernels with oscillatory
     behavior.
@@ -441,25 +441,25 @@ def test_component_k_max_is_maximum1(
     cosmo = cosmology.cosmo
 
     xi_min, xi_max, k_min, k_max = component.get_limits(cosmo)
-    y_min = k_min * xi_min
-    y_max = k_max * xi_max
+    x_min = k_min * xi_min
+    x_max = k_max * xi_max
 
-    # Test at several y values
-    y_test_values = np.geomspace(max(y_min * 1.1, 0.5), min(y_max * 0.9, 1000.0), 5)
+    # Test at several x values
+    x_test_values = np.geomspace(max(x_min * 1.1, 0.5), min(x_max * 0.9, 1000.0), 5)
 
-    for y in y_test_values:
-        k_max_val = component.eval_k_max(y)
-        KL_max_val = component.eval_KL_max(y)
+    for x in x_test_values:
+        k_max_val = component.eval_k_max(x)
+        KL_max_val = component.eval_KL_max(x)
 
         # Verify KL_max is approximately the actual value at k_max
-        K_at_k_max = abs(_compute_KL_at_k(component, cosmo, y, k_max_val))
+        K_at_k_max = abs(_compute_KL_at_k(component, cosmo, x, k_max_val))
         # Allow tolerance due to spline interpolation and oscillating kernels
         assert_allclose(
             abs(KL_max_val),
             abs(K_at_k_max),
             rtol=0.2,
             atol=1e-8,
-            err_msg=f"KL_max doesn't match eval_kernel at y={y}, k_max={k_max_val}",
+            err_msg=f"KL_max doesn't match eval_kernel at x={x}, k_max={k_max_val}",
         )
 
         # Sample points around k_max to verify it's a local maximum
@@ -480,10 +480,10 @@ def test_component_k_max_is_maximum1(
 
         K_values_list = []
         for k_test in k_test_points:
-            xi_test = y / k_test
+            xi_test = x / k_test
             # Only test if xi is in valid range
             if xi_min <= xi_test <= xi_max:
-                K_val = abs(_compute_KL_at_k(component, cosmo, y, k_test))
+                K_val = abs(_compute_KL_at_k(component, cosmo, x, k_test))
                 K_values_list.append(K_val)
             else:
                 K_values_list.append(-np.inf)  # Mark as invalid
@@ -495,22 +495,22 @@ def test_component_k_max_is_maximum1(
             # KL_max should be among the larger values (allowing numerical errors)
             assert (
                 abs(KL_max_val) >= np.percentile(valid_K, 90) * 0.9
-            ), f"k_max={k_max_val} doesn't give a large |K| value at y={y}"
+            ), f"k_max={k_max_val} doesn't give a large |K| value at x={x}"
 
 
 def _compute_KL_at_k(
-    component: Nc.XcorKernelComponent, cosmo: Nc.HICosmo, y: float, k: float
+    component: Nc.XcorKernelComponent, cosmo: Nc.HICosmo, x: float, k: float
 ) -> float:
-    return component.eval_kernel(cosmo, y / k, k) / k * np.sqrt(np.pi / 2 / y)
+    return component.eval_kernel(cosmo, x / k, k) / k * np.sqrt(np.pi / 2 / x)
 
 
 def test_component_KL_max_value1(
     kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
     cosmology: Cosmology,
 ) -> None:
-    """Test KL_max(y).
+    """Test KL_max(x).
 
-    Test that KL_max(y) approximately equals KL(y/k_max, k_max) using Limber
+    Test that KL_max(x) approximately equals KL(x/k_max, k_max) using Limber
     approximation. Verifies consistency between the cached KL_max value and direct
     evaluation. Allows 5% tolerance for spline interpolation and search algorithm
     precision.
@@ -518,15 +518,15 @@ def test_component_KL_max_value1(
     _, _kernel, component = kernel_component
     cosmo = cosmology.cosmo
 
-    # Test at multiple y values
-    y_test_values = np.geomspace(2.0, 50.0, 10)
+    # Test at multiple x values
+    x_test_values = np.geomspace(2.0, 50.0, 10)
 
-    for y in y_test_values:
-        k_max_val = component.eval_k_max(y)
-        KL_max_val = component.eval_KL_max(y)
+    for x in x_test_values:
+        k_max_val = component.eval_k_max(x)
+        KL_max_val = component.eval_KL_max(x)
 
         # Compute KL directly using Limber approximation
-        K_direct = np.abs(_compute_KL_at_k(component, cosmo, y, k_max_val))
+        K_direct = np.abs(_compute_KL_at_k(component, cosmo, x, k_max_val))
 
         # Allow tolerance for spline interpolation and search errors
         assert_allclose(
@@ -534,7 +534,7 @@ def test_component_KL_max_value1(
             abs(K_direct),
             rtol=0.05,
             atol=1e-10,
-            err_msg=f"KL_max mismatch at y={y}: KL_max={KL_max_val}, direct={K_direct}",
+            err_msg=f"KL_max mismatch at x={x}: KL_max={KL_max_val}, direct={K_direct}",
         )
 
 
@@ -544,7 +544,7 @@ def test_component_k_epsilon_drop1(
 ) -> None:
     """Test that k_epsilon is where KL drops by epsilon from KL_max for k > k_max.
 
-    At k_epsilon: KL(y/k_epsilon, k_epsilon) ~= epsilon * KL_max.
+    At k_epsilon: KL(x/k_epsilon, k_epsilon) ~= epsilon * KL_max.
     Since set_epsilon sets the squared threshold, we configure epsilon^2.
     Allows factor of 10 tolerance due to search algorithm behavior at boundaries.
     """
@@ -558,25 +558,25 @@ def test_component_k_epsilon_drop1(
     component.prepare(cosmo)
 
     xi_min, xi_max, k_min, k_max = component.get_limits(cosmo)
-    y_min = k_min * xi_min
-    y_max = k_max * xi_max
+    x_min = k_min * xi_min
+    x_max = k_max * xi_max
 
-    # Test at several y values
-    y_test_values = np.geomspace(max(y_min * 1.1, 0.5), min(y_max * 0.9, 1000.0), 5)
+    # Test at several x values
+    x_test_values = np.geomspace(max(x_min * 1.1, 0.5), min(x_max * 0.9, 1000.0), 5)
 
-    for y in y_test_values:
-        k_max_val = component.eval_k_max(y)
-        KL_max_val = component.eval_KL_max(y)
-        k_epsilon_val = component.eval_k_epsilon(y)
+    for x in x_test_values:
+        k_max_val = component.eval_k_max(x)
+        KL_max_val = component.eval_KL_max(x)
+        k_epsilon_val = component.eval_k_epsilon(x)
 
         # k_epsilon should be >= k_max
         assert (
             k_epsilon_val >= k_max_val * 0.99
-        ), f"k_epsilon={k_epsilon_val} should be >= k_max={k_max_val} at y={y}"
+        ), f"k_epsilon={k_epsilon_val} should be >= k_max={k_max_val} at x={x}"
 
         # Compute |K*xi| at k_epsilon
-        xi_epsilon = y / k_epsilon_val
-        K_at_epsilon = np.abs(_compute_KL_at_k(component, cosmo, y, k_epsilon_val))
+        xi_epsilon = x / k_epsilon_val
+        K_at_epsilon = np.abs(_compute_KL_at_k(component, cosmo, x, k_epsilon_val))
 
         # Should be approximately epsilon * KL_max
         expected_K = epsilon * KL_max_val
@@ -589,12 +589,12 @@ def test_component_k_epsilon_drop1(
 
         assert K_at_epsilon <= expected_K * 10.0, (
             f"K at k_epsilon ({K_at_epsilon}) should be "
-            f"~epsilon*KL_max ({expected_K}) at y={y}"
+            f"~epsilon*KL_max ({expected_K}) at x={x}"
         )
         # Also check it's not way too small
         assert K_at_epsilon >= expected_K * 0.1, (
             f"K at k_epsilon ({K_at_epsilon}) too small "
-            f"compared to epsilon*KL_max ({expected_K}) at y={y}"
+            f"compared to epsilon*KL_max ({expected_K}) at x={x}"
         )
 
     component.set_epsilon(original_epsilon)
@@ -605,7 +605,7 @@ def test_component_k_epsilon_after_k_max(
     kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
     cosmology: Cosmology,
 ) -> None:
-    """Test that k_epsilon >= k_max for all y values.
+    """Test that k_epsilon >= k_max for all x values.
 
     The algorithm looks for the drop point k >= k_max where the kernel falls
     below the epsilon threshold.
@@ -616,17 +616,17 @@ def test_component_k_epsilon_after_k_max(
     component.set_epsilon(1.0e-7)
     component.prepare(cosmo)
 
-    # Test at many y values
-    y_test_values = np.geomspace(1.0, 100.0, 15)
+    # Test at many x values
+    x_test_values = np.geomspace(1.0, 100.0, 15)
 
-    for y in y_test_values:
-        k_max_val = component.eval_k_max(y)
-        k_epsilon_val = component.eval_k_epsilon(y)
+    for x in x_test_values:
+        k_max_val = component.eval_k_max(x)
+        k_epsilon_val = component.eval_k_epsilon(x)
 
         # k_epsilon should always be after k_max
         assert (
             k_epsilon_val >= k_max_val
-        ), f"k_epsilon={k_epsilon_val} should be >= k_max={k_max_val} at y={y}"
+        ), f"k_epsilon={k_epsilon_val} should be >= k_max={k_max_val} at x={x}"
 
     component.set_epsilon(original_epsilon)
     component.prepare(cosmo)
@@ -641,12 +641,12 @@ def test_component_monotonicity(
     """
     _, _, component = kernel_component
 
-    # Sample many y values
-    y_array = np.geomspace(1.0, 100.0, 30)
+    # Sample many x values
+    x_array = np.geomspace(1.0, 100.0, 30)
 
-    k_max_array = np.array([component.eval_k_max(y) for y in y_array])
-    KL_max_array = np.array([component.eval_KL_max(y) for y in y_array])
-    k_epsilon_array = np.array([component.eval_k_epsilon(y) for y in y_array])
+    k_max_array = np.array([component.eval_k_max(x) for x in x_array])
+    KL_max_array = np.array([component.eval_KL_max(x) for x in x_array])
+    k_epsilon_array = np.array([component.eval_k_epsilon(x) for x in x_array])
 
     # All should be positive and finite
     assert np.all(np.isfinite(k_max_array))
@@ -674,11 +674,11 @@ def test_component_spline_smoothness(
     _, _, component = kernel_component
 
     # Dense sampling
-    y_array = np.geomspace(2.0, 80.0, 600)
+    x_array = np.geomspace(2.0, 80.0, 600)
 
-    k_max_array = np.array([component.eval_k_max(y) for y in y_array])
-    KL_max_array = np.array([component.eval_KL_max(y) for y in y_array])
-    k_epsilon_array = np.array([component.eval_k_epsilon(y) for y in y_array])
+    k_max_array = np.array([component.eval_k_max(x) for x in x_array])
+    KL_max_array = np.array([component.eval_KL_max(x) for x in x_array])
+    k_epsilon_array = np.array([component.eval_k_epsilon(x) for x in x_array])
 
     # Check no sudden jumps (should be relatively smooth)
     # Compute relative differences between consecutive points
@@ -716,14 +716,14 @@ def test_kernel_analysis_with_different_epsilon(
 
     original_epsilon = component.get_epsilon()
     epsilon_values = [1e-4, 1e-6, 1e-8]
-    y_test = 20.0
+    x_test = 20.0
 
     k_epsilon_results = []
 
     for eps in epsilon_values:
         component.set_epsilon(eps)
         component.prepare(cosmo)
-        k_eps = component.eval_k_epsilon(y_test)
+        k_eps = component.eval_k_epsilon(x_test)
         k_epsilon_results.append(k_eps)
 
     component.set_epsilon(original_epsilon)
@@ -739,7 +739,7 @@ def test_component_correctness(
     kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
     cosmology: Cosmology,
 ) -> None:
-    """Test kernel analysis correctness at multiple y values.
+    """Test kernel analysis correctness at multiple x values.
 
     Verifies that KL_max matches direct evaluation and that k_epsilon >= k_max,
     using 5% relative tolerance for complex kernel structures.
@@ -750,27 +750,27 @@ def test_component_correctness(
     # Get limits
     xi_min, xi_max, _, _ = component.get_limits(cosmo)
 
-    # Test at a few y values
-    y_test_values = [10.0, 50.0, 200.0]
+    # Test at a few x values
+    x_test_values = [10.0, 50.0, 200.0]
 
-    for y in y_test_values:
-        k_max_val = component.eval_k_max(y)
-        KL_max_val = component.eval_KL_max(y)
+    for x in x_test_values:
+        k_max_val = component.eval_k_max(x)
+        KL_max_val = component.eval_KL_max(x)
 
-        # Verify KL_max equals KL(y/k_max, k_max) using Limber approximation
-        xi = y / k_max_val
+        # Verify KL_max equals KL(x/k_max, k_max) using Limber approximation
+        xi = x / k_max_val
         if xi_min <= xi <= xi_max:
-            K_direct = np.abs(_compute_KL_at_k(component, cosmo, y, k_max_val))
+            K_direct = np.abs(_compute_KL_at_k(component, cosmo, x, k_max_val))
             # Allow generous tolerance for real components with complex structure
             assert_allclose(
-                KL_max_val, K_direct, rtol=0.05, err_msg=f"KL_max mismatch at y={y}"
+                KL_max_val, K_direct, rtol=0.05, err_msg=f"KL_max mismatch at x={x}"
             )
 
         # Test that k_epsilon >= k_max
-        k_epsilon_val = component.eval_k_epsilon(y)
+        k_epsilon_val = component.eval_k_epsilon(x)
         assert (
             k_epsilon_val >= k_max_val * 0.99
-        ), f"k_epsilon should be >= k_max at y={y}"
+        ), f"k_epsilon should be >= k_max at x={x}"
 
 
 def test_kernel_gal_component_list(
@@ -909,13 +909,13 @@ def test_kernel_component_analysis(
     # After prepare, components should have kernel analysis done
     component = comp_list[0]
 
-    # Test at several y values
-    y_array = np.linspace(10.0, 100.0, 5)
+    # Test at several x values
+    x_array = np.linspace(10.0, 100.0, 5)
 
-    for y in y_array:
-        k_max = component.eval_k_max(y)
-        KL_max = component.eval_KL_max(y)
-        k_epsilon = component.eval_k_epsilon(y)
+    for x in x_array:
+        k_max = component.eval_k_max(x)
+        KL_max = component.eval_KL_max(x)
+        k_epsilon = component.eval_k_epsilon(x)
 
         assert np.isfinite(k_max) and k_max > 0.0
         assert np.isfinite(KL_max)
@@ -985,7 +985,7 @@ def test_component_chebyshev_decomposition(
     kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
     cosmology: Cosmology,
 ) -> None:
-    """Test Chebyshev decomposition of component kernel g_k(y) = K*xi(y/k, k).
+    """Test Chebyshev decomposition of component kernel g_k(x) = K*xi(x/k, k).
 
     Validates that the adaptive Chebyshev expansion accurately represents the
     kernel function within the specified tolerance (rtol=1e-9).
@@ -998,18 +998,18 @@ def test_component_chebyshev_decomposition(
     k_values = np.geomspace(k_min, k_max, 10)
     for k in k_values:
 
-        def g_k(y, k=k):
-            """Evaluate K*xi(y/k, k)."""
-            xi = y / k
+        def g_k(x, k=k):
+            """Evaluate K*xi(x/k, k)."""
+            xi = x / k
             K_val = xi * component.eval_kernel(cosmo, xi, k)
             return K_val
 
-        y_min = k * xi_min
-        y_max = k * xi_max
+        x_min = k * xi_min
+        x_max = k * xi_max
 
         # Compute Chebyshev coefficients adaptively
         final_k, coeffs = spectral.compute_chebyshev_coeffs_adaptive(
-            g_k, y_min, y_max, 4, 1.0e-8
+            g_k, x_min, x_max, 4, 1.0e-8
         )
         max_order_k = spectral.get_max_order()
 
@@ -1020,13 +1020,13 @@ def test_component_chebyshev_decomposition(
         assert len(coeffs) <= 2**max_order_k + 1
 
         # Verify the expansion is accurate at test points
-        y_test_points = np.linspace(y_min, y_max, 500)
-        direct_vals = np.array([g_k(y) for y in y_test_points])
+        x_test_points = np.linspace(x_min, x_max, 500)
+        direct_vals = np.array([g_k(x) for x in x_test_points])
         max_direct = np.max(np.abs(direct_vals))
         cheb_vals = np.array(
             [
-                Ncm.Spectral.chebyshev_eval_x(coeffs, y_min, y_max, y)
-                for y in y_test_points
+                Ncm.Spectral.chebyshev_eval_x(coeffs, x_min, x_max, x)
+                for x in x_test_points
             ]
         )
         assert all(

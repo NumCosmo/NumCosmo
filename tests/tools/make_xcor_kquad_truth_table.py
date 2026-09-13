@@ -273,7 +273,12 @@ def main() -> None:
 
     write_table(args.out, entries, args)
 
-    print(f"\nwrote {len(entries)} of {len(tasks)} entries to {args.out}")
+    # `entries` is the whole table, resumed cells included, while `tasks` is
+    # only this run's work: reporting one "of" the other read as "87 of 1".
+    print(
+        f"\nwrote {len(entries)} entries to {args.out}\n"
+        f"  {len(tasks) - len(failed)} of {len(tasks)} cells certified this run"
+    )
 
     if failed:
         print("failed:")

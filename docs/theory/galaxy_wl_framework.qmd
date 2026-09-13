@@ -30,7 +30,7 @@ or optimizer looks for degrees of freedom.
 Calculators (plain `GObject`s, *not* models, *not* in the `MSet`) own the
 *mechanism*: the per-galaxy data layout, the file/catalog I/O, the generative
 draw, and --- where relevant --- the marginalization/integration recipe. A
-calculator reads whichever models it needs from an `NcmMSet` passed into each
+calculator reads whichever models it needs from an [[numcosmo-math|NcmMSet]] passed into each
 call; it never stores a reference to one --- mirroring the
 [[numcosmo|NcDistance]] pattern of resolving cosmology on every call rather
 than caching it.
@@ -40,8 +40,8 @@ them together for a specific likelihood or generator (e.g.
 [[numcosmo|NcDataClusterWLFactor]]); see [Current Status](#sec-status).
 
 Distinguishing calc-vs-model is mostly by *type*, reinforced by naming: a
-bare object name (`NcGalaxyRedshiftFactor`) is a calculator; a name with a
-role suffix (`NcGalaxyRedshiftPop`, `NcGalaxyShapePopGauss`) is a model.
+bare object name ([[numcosmo|NcGalaxyRedshiftFactor]]) is a calculator; a name with a
+role suffix ([[numcosmo|NcGalaxyRedshiftPop]], [[numcosmo|NcGalaxyShapePopGauss]]) is a model.
 
 ## The Role Vocabulary
 
@@ -68,8 +68,8 @@ implementation they encode. The reserved role tokens are:
 - `Factor` --- the likelihood-factor *calculator role*: a normalized
   conditional density that (a) composes multiplicatively / by marginalization
   into a data likelihood, and (b) doubles as a generative node for sampling
-  (every `Factor` carries a `gen`). `NcGalaxyRedshiftFactor` assembles the
-  per-observation redshift factor $p(z_p, z)$; `NcGalaxyShapeFactor` the
+  (every `Factor` carries a `gen`). [[numcosmo|NcGalaxyRedshiftFactor]] assembles the
+  per-observation redshift factor $p(z_p, z)$; [[numcosmo|NcGalaxyShapeFactor]] the
   per-observation shape factor $p(\epsilon_\mathrm{obs} \mid z, \dots)$.
   Note the factors are a *mix* of priors (`Pop` terms) and likelihoods (`Obs`
   terms) --- "factor in the computation of the (marginal) likelihood," not
@@ -80,9 +80,9 @@ implementation they encode. The reserved role tokens are:
   tooling independently of any per-galaxy likelihood.
 
 Where a calculator role has more than one implementation strategy, they are
-*schemes* sharing one abstract base --- e.g. `NcGalaxyRedshiftFactorComposed`
+*schemes* sharing one abstract base --- e.g. [[numcosmo|NcGalaxyRedshiftFactorComposed]]
 (true-$z$ kernel $\otimes$ photo-$z$ error kernel) is one scheme of
-`NcGalaxyRedshiftFactor`, mirroring how [[numcosmo|NcPowspecMLTransfer]] and
+[[numcosmo|NcGalaxyRedshiftFactor]], mirroring how [[numcosmo|NcPowspecMLTransfer]] and
 friends are schemes of [[math|NcmPowspec]]. The scheme name is appended
 after the role (`Factor` + `Composed`), never a numerical-method name.
 
@@ -118,8 +118,8 @@ additive: add a pointer to that struct, not a redesign.
 
 ## Data Objects: Fragments, Vtables, and the Catalog
 
-Every calculator's per-galaxy `...Data` struct (`NcGalaxyRedshiftFactorData`,
-`NcGalaxyPositionFactorData`, `NcGalaxyShapeFactorData`, and each `Pop`
+Every calculator's per-galaxy `...Data` struct ([[numcosmo|NcGalaxyRedshiftFactorData]],
+[[numcosmo|NcGalaxyPositionFactorData]], [[numcosmo|NcGalaxyShapeFactorData]], and each `Pop`
 model's `...PopData`) follows the same small idiom, so that any of them can be
 stored, generated, or replayed the same way:
 
@@ -151,7 +151,7 @@ factor's `data_new(calculator, mset, ...)` allocates the typed fragments (a
 model-identity-dependent, param-*independent* layout, so it is safe to reuse
 across every galaxy and every `prepare()` in an MCMC chain --- no per-step
 reallocation); `write_row`/`read_row` move a fragment to/from one row of the
-shared `NcGalaxyWLObs`.
+shared [[numcosmo|NcGalaxyWLObs]].
 
 ## Caches and the Hot-Loop Discipline
 
@@ -161,7 +161,7 @@ evaluation --- so anything that does *not* depend on the integration variable
 must be computed exactly once per galaxy, not once per node. This discipline
 shows up as two kinds of cache:
 
-Engine-owned geometry caches (`cdata` on `NcGalaxyShapeFactorData`):
+Engine-owned geometry caches (`cdata` on [[numcosmo|NcGalaxyShapeFactorData]]):
 the projected radius from the lens, the rotation into the tangential/cross
 frame, and the surface-mass-density optimization structs
 ([[numcosmo|NcWLSurfaceMassDensityOptzs]] and the critical/$\Sigma$ caches)
@@ -173,12 +173,12 @@ observed ellipticity are already in the tangential/cross frame, so no
 subclass ever repeats that work per node.
 
 Per-galaxy resolved model state (`ldata` on a `Pop` model's `...Data`):
-the same principle applies one level down. `NcGalaxyShapePopGaussLocal`, for
+the same principle applies one level down. [[numcosmo|NcGalaxyShapePopGaussLocal]], for
 instance, must invert a per-galaxy target $e_\mathrm{rms}$ into the internal
 Gaussian width $\sigma$ by bisection --- an $O(\log)$ root-find that would be
 wasteful to repeat at every $z$-node, so the calculators keep to a strict rule: anything that
 does not depend on the integration variable is resolved once, in `prepare()`,
-never inside the marginalization loop. `NcGalaxyShapePopGaussLocal`'s
+never inside the marginalization loop. [[numcosmo|NcGalaxyShapePopGaussLocal]]'s
 `prepare()` vfunc runs the bisection once per galaxy and caches
 $\{\sigma, \sigma^{-2}/2, \mathrm{norm}\}$ into `ldata`; `eval_p`,
 called once per node thereafter, only ever reads the cache.
@@ -187,7 +187,7 @@ called once per node thereafter, only ever reads the cache.
 
 The same per-galaxy `...Data` struct is also how a model advertises an
 *optional* capability to a consumer it doesn't otherwise know about, without
-resorting to a concrete-type check. `NcGalaxyShapePopData` carries a fifth,
+resorting to a concrete-type check. [[numcosmo|NcGalaxyShapePopData]] carries a fifth,
 optional vtable slot,
 
 ```c
@@ -195,14 +195,14 @@ gdouble (*ldata_get_sigma) (NcGalaxyShapePopData *data);
 ```
 
 `NULL` unless the concrete `Pop` model parameterizes its density through an
-(untruncated) Gaussian width --- true for both `NcGalaxyShapePopGauss`
-(Global) and `NcGalaxyShapePopGaussLocal` (per-galaxy), false for
-`NcGalaxyShapePopBeta`. `NcGalaxyShapeFactorVarAdd` (the variance-add
+(untruncated) Gaussian width --- true for both [[numcosmo|NcGalaxyShapePopGauss]]
+(Global) and [[numcosmo|NcGalaxyShapePopGaussLocal]] (per-galaxy), false for
+[[numcosmo|NcGalaxyShapePopBeta]]. [[numcosmo|NcGalaxyShapeFactorVarAdd]] (the variance-add
 marginalization scheme) needs exactly this width and gets it through the
 base-level dispatcher `nc_galaxy_shape_pop_get_sigma()`, which reads the slot
 and raises a clear error if it is `NULL`. This is the reason
-`NcGalaxyShapePopGaussLocal` is a *parallel type* to `NcGalaxyShapePopGauss` --- both
-derive directly from `NcGalaxyShapePop` and fill this slot with the same
+[[numcosmo|NcGalaxyShapePopGaussLocal]] is a *parallel type* to [[numcosmo|NcGalaxyShapePopGauss]] --- both
+derive directly from [[numcosmo|NcGalaxyShapePop]] and fill this slot with the same
 function --- rather than a subclass kept around only so a concrete type-check
 would accept it: the capability the consumer needs is expressed on the shared
 data, not on the class hierarchy.
@@ -217,7 +217,7 @@ mock generator and the likelihood agree on every convention (frame, sign,
 calibration order) by construction, since they are, quite literally, the same
 code evaluated in different directions. The
 [Simulating a Weak-Lensing Galaxy Catalog](../tutorials/python/galaxy_wl_mock.qmd)
-tutorial exercises exactly this: the same `NcGalaxyShapeFactorVarAdd` instance
+tutorial exercises exactly this: the same [[numcosmo|NcGalaxyShapeFactorVarAdd]] instance
 first generates a catalog with `gen`, then evaluates its own likelihood
 factor for it with `integ`.
 
@@ -227,7 +227,7 @@ As of this writing, the redshift (`Composed`, `Spline` schemes), position
 (`Flat` scheme), and shape (`VarAdd`, `SeriesLensed`, `Quad`, `FixedQuad`,
 `Laplace` marginalization schemes) factors are implemented, and
 [[numcosmo|NcDataClusterWLFactor]] wires them into a single orchestrator
-that resolves models from an `NcmMSet` and runs the per-galaxy
+that resolves models from an [[numcosmo-math|NcmMSet]] and runs the per-galaxy
 $z$-integral automatically.
 
 ## API Reference

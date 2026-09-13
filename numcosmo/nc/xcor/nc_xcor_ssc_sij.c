@@ -101,13 +101,13 @@
  * step, so it cannot occur here. Equal values would be safe, only more
  * expensive.
  *
- * Must be kept equal to DEFAULT_SCALED_ABSTOL in numcosmo_py/ssc.py, which is
+ * Must be kept equal to DEFAULT_PEAK_EPSILON in numcosmo_py/ssc.py, which is
  * what the frozen path uses: the two are documented to differ only in whether
  * S_ij follows the cosmology, not in how it is computed. That correspondence
  * is already imperfect on a second axis: the frozen path builds its NcXcor
  * with %NC_XCOR_METHOD_KERNEL_CUBATURE while this one defaults to
  * %NC_XCOR_METHOD_KERNEL_EXACT. */
-#define NC_XCOR_SSC_SIJ_DEFAULT_SCALED_ABSTOL (1.0e-5)
+#define NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON (1.0e-5)
 
 #define NC_XCOR_SSC_SIJ_DEFAULT_RELTOL (1.0e-6)
 
@@ -122,7 +122,7 @@ enum
   PROP_METHOD,
   PROP_BLOCK_SIZE,
   PROP_RELTOL,
-  PROP_SCALED_ABSTOL,
+  PROP_PEAK_EPSILON,
   PROP_SIZE,
 };
 
@@ -140,7 +140,7 @@ struct _NcXcorSSCSij
   NcXcorMethod method;
   guint block_size;
   gdouble reltol;
-  gdouble scaled_abstol;
+  gdouble peak_epsilon;
 
   GPtrArray *kernels; /* element-type NcXcorKernel*, one per bin, owned refs */
   NcXcor *xcor;
@@ -174,10 +174,10 @@ nc_xcor_ssc_sij_init (NcXcorSSCSij *ssc_sij)
   ssc_sij->mask_cl = NULL;
   ssc_sij->area    = 0.0;
 
-  ssc_sij->method        = NC_XCOR_METHOD_KERNEL_EXACT;
-  ssc_sij->block_size    = NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE;
-  ssc_sij->reltol        = NC_XCOR_SSC_SIJ_DEFAULT_RELTOL;
-  ssc_sij->scaled_abstol = NC_XCOR_SSC_SIJ_DEFAULT_SCALED_ABSTOL;
+  ssc_sij->method       = NC_XCOR_METHOD_KERNEL_EXACT;
+  ssc_sij->block_size   = NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE;
+  ssc_sij->reltol       = NC_XCOR_SSC_SIJ_DEFAULT_RELTOL;
+  ssc_sij->peak_epsilon = NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON;
 
   ssc_sij->kernels     = g_ptr_array_new_with_free_func ((GDestroyNotify) nc_xcor_kernel_free);
   ssc_sij->xcor        = NULL;
@@ -230,8 +230,8 @@ _nc_xcor_ssc_sij_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_RELTOL:
       nc_xcor_ssc_sij_set_reltol (ssc_sij, g_value_get_double (value));
       break;
-    case PROP_SCALED_ABSTOL:
-      nc_xcor_ssc_sij_set_scaled_abstol (ssc_sij, g_value_get_double (value));
+    case PROP_PEAK_EPSILON:
+      nc_xcor_ssc_sij_set_peak_epsilon (ssc_sij, g_value_get_double (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -272,8 +272,8 @@ _nc_xcor_ssc_sij_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_RELTOL:
       g_value_set_double (value, ssc_sij->reltol);
       break;
-    case PROP_SCALED_ABSTOL:
-      g_value_set_double (value, ssc_sij->scaled_abstol);
+    case PROP_PEAK_EPSILON:
+      g_value_set_double (value, ssc_sij->peak_epsilon);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -341,7 +341,7 @@ _nc_xcor_ssc_sij_constructed (GObject *object)
      * S_ij, and makes the cross spectrum of two disjoint bins vanish. */
     nc_xcor_kernel_set_l_limber (kernel, -1);
     nc_xcor_kernel_set_reltol (kernel, ssc_sij->reltol);
-    nc_xcor_kernel_set_scaled_abstol (kernel, ssc_sij->scaled_abstol);
+    nc_xcor_kernel_set_peak_epsilon (kernel, ssc_sij->peak_epsilon);
 
     g_ptr_array_add (ssc_sij->kernels, kernel);
   }
@@ -459,11 +459,11 @@ nc_xcor_ssc_sij_class_init (NcXcorSSCSijClass *klass)
                                                         GSL_DBL_EPSILON, 1.0, NC_XCOR_SSC_SIJ_DEFAULT_RELTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_SCALED_ABSTOL,
-                                   g_param_spec_double ("scaled-abstol",
+                                   PROP_PEAK_EPSILON,
+                                   g_param_spec_double ("peak-epsilon",
                                                         NULL,
-                                                        "Absolute floor of the adaptive refinement of the U_i(k) spline",
-                                                        0.0, 1.0, NC_XCOR_SSC_SIJ_DEFAULT_SCALED_ABSTOL,
+                                                        "Peak-relative floor of the adaptive refinement of the U_i(k) spline",
+                                                        0.0, 1.0, NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -739,7 +739,7 @@ nc_xcor_ssc_sij_get_block_size (NcXcorSSCSij *ssc_sij)
  *
  * Sets the relative tolerance of the kernel splines and of the outer $k$
  * integral. This is not the knob limiting the accuracy of the off-diagonal
- * $S_{ij}$, see nc_xcor_ssc_sij_set_scaled_abstol().
+ * $S_{ij}$, see nc_xcor_ssc_sij_set_peak_epsilon().
  *
  */
 void
@@ -771,9 +771,9 @@ nc_xcor_ssc_sij_get_reltol (NcXcorSSCSij *ssc_sij)
 }
 
 /**
- * nc_xcor_ssc_sij_set_scaled_abstol:
+ * nc_xcor_ssc_sij_set_peak_epsilon:
  * @ssc_sij: a #NcXcorSSCSij
- * @scaled_abstol: the absolute floor of the adaptive refinement
+ * @peak_epsilon: the absolute floor of the adaptive refinement
  *
  * Sets the absolute floor of the adaptive refinement building the $U_i(k)$
  * spline of every kernel. This, not the relative tolerance, is what limits
@@ -785,33 +785,33 @@ nc_xcor_ssc_sij_get_reltol (NcXcorSSCSij *ssc_sij)
  * `1.0e-6` is the end of that road, not a waypoint. The floor is a fraction of
  * the peak of $W_i(k)$ while the integrand is $k^2 W_i W_j$, so it enters
  * squared: `1.0e-6` is already `1.0e-12` there. Below it
- * nc_xcor_kernel_set_scaled_abstol() warns and the accuracy is not recoverable
- * at any cost -- see %NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL.
+ * nc_xcor_kernel_set_peak_epsilon() warns and the accuracy is not recoverable
+ * at any cost -- see %NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON.
  *
  */
 void
-nc_xcor_ssc_sij_set_scaled_abstol (NcXcorSSCSij *ssc_sij, gdouble scaled_abstol)
+nc_xcor_ssc_sij_set_peak_epsilon (NcXcorSSCSij *ssc_sij, gdouble peak_epsilon)
 {
   guint i;
 
-  ssc_sij->scaled_abstol = scaled_abstol;
+  ssc_sij->peak_epsilon = peak_epsilon;
 
   for (i = 0; i < ssc_sij->kernels->len; i++)
-    nc_xcor_kernel_set_scaled_abstol (g_ptr_array_index (ssc_sij->kernels, i), scaled_abstol);
+    nc_xcor_kernel_set_peak_epsilon (g_ptr_array_index (ssc_sij->kernels, i), peak_epsilon);
 
   _nc_xcor_ssc_sij_invalidate (ssc_sij);
 }
 
 /**
- * nc_xcor_ssc_sij_get_scaled_abstol:
+ * nc_xcor_ssc_sij_get_peak_epsilon:
  * @ssc_sij: a #NcXcorSSCSij
  *
  * Returns: the absolute floor of the adaptive refinement
  */
 gdouble
-nc_xcor_ssc_sij_get_scaled_abstol (NcXcorSSCSij *ssc_sij)
+nc_xcor_ssc_sij_get_peak_epsilon (NcXcorSSCSij *ssc_sij)
 {
-  return ssc_sij->scaled_abstol;
+  return ssc_sij->peak_epsilon;
 }
 
 /**

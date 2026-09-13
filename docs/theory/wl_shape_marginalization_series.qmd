@@ -193,7 +193,7 @@ once per galaxy; the $z$-integral itself then reduces to evaluating a
 degree-$N$ polynomial in $g(z)$ at each node --- no repeated 1D integration,
 let alone 2D cubature, per node. This mirrors exactly the
 resolved-once-in-`prepare()` pattern the codebase already uses for e.g.
-`NcGalaxyShapePopGaussLocal`'s per-galaxy $\sigma$ bisection.
+[[numcosmo|NcGalaxyShapePopGaussLocal]]'s per-galaxy $\sigma$ bisection.
 
 ## The $\chi$ (TRACE/Distortion) Convention {#sec-chi}
 
@@ -595,8 +595,8 @@ shear pulls further from it), it is guaranteed to cross zero at some
 finite $g$ and diverge to $-\infty$ beyond that --- a consequence of
 any finite-degree polynomial approximating something that must stay
 positive. Once $J(g)<0$, `eval_ln_marginal`'s $\log J(g)$ is `NaN`, which
-reaches `NcDataClusterWLFactor`'s adaptive redshift integral
-(`ncm_integral1d_eval_lnint`) and is treated as fatal there
+reaches [[numcosmo|NcDataClusterWLFactor]]'s adaptive redshift integral
+([[numcosmo-math|ncm_integral1d_eval_lnint]]) and is treated as fatal there
 (`g_error()`, uncatchable from Python).
 
 The fix guards $J(g)$'s sign (and NaN) directly, right where it's computed:
@@ -617,7 +617,7 @@ configuration.
 
 - $J_{m,k}(R,\sigma_\mathrm{noise})$ (and `SeriesLensed`'s analogous
   per-galaxy cache) is a 1D integral over a fixed prior $P_\mathrm{pop}$; if
-  the population's own parameters (for example `NcGalaxyShapePopGauss`'s
+  the population's own parameters (for example [[numcosmo|NcGalaxyShapePopGauss]]'s
   $\sigma$) are fit, it must be recomputed whenever they change. Whether
   that remains cheaper than `Quad`/`Laplace` in an actual MCMC, rather than
   per fixed-parameter evaluation, is unverified.

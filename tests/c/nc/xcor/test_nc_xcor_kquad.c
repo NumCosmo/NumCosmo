@@ -108,7 +108,7 @@ _tophat (TestNcXcorKQuad *test, gdouble chi_lower, gdouble chi_upper)
   nc_xcor_kernel_set_max_border_expansions (xclk, 1);
   nc_xcor_kernel_set_max_iter (xclk, 4);
   nc_xcor_kernel_set_reltol (xclk, 1.0e-3);
-  nc_xcor_kernel_set_scaled_abstol (xclk, 1.0e-4);
+  nc_xcor_kernel_set_peak_epsilon (xclk, 1.0e-4);
   nc_xcor_kernel_set_panel_order_cap (xclk, 12);
   nc_xcor_kernel_set_lmax (xclk, 16);
 

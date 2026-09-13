@@ -470,7 +470,7 @@ def test_solve_tier3_duplicated_kernel_shrinking_last_block(
         # Matched to the integrator above: a closure cannot be fitted to more
         # precision than the samples carry, and the library refuses the pairing.
         reltol=1.0e-2,
-        scaled_abstol=1.0e-2,
+        peak_epsilon=1.0e-2,
     )
     kernel.set_l_limber(-1)  # tier 3: true non-Limber
     kernel.prepare(cosmology.cosmo)
@@ -515,7 +515,7 @@ def _tier3_wl_kernel(cosmology: Cosmology, lmin: int, lmax: int) -> Nc.XcorKerne
         intr_shear=7.0,
         integrator=integrator,
         reltol=1.0e-2,
-        scaled_abstol=1.0e-2,
+        peak_epsilon=1.0e-2,
     )
     kernel.set_l_limber(-1)
     kernel.prepare(cosmology.cosmo)
@@ -732,7 +732,7 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
                 z_upper=z_upper,
                 integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
                 reltol=1.0e-4,
-                scaled_abstol=1.0e-4,
+                peak_epsilon=1.0e-4,
             )
             kernel.set_l_limber(-1)
             kernel.prepare(cosmo)
@@ -766,7 +766,7 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
                 z_upper=z_upper,
                 integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
                 reltol=1.0e-4,
-                scaled_abstol=1.0e-4,
+                peak_epsilon=1.0e-4,
             )
             kernel.set_l_limber(-1)
             kernel.prepare(cosmo)

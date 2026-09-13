@@ -205,20 +205,54 @@ _ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const 
   return 0.0;
 }
 
+/*
+ * Default derivatives: a fourth-order finite difference on the child's own
+ * eval(). A child with a closed form overrides these; every other child gets
+ * derivatives good to about h^4 of the local curvature, which is far below
+ * the tolerances any caller of a power spectrum works to. The redshift step
+ * is relative to 1 + z and switches to a one-sided stencil next to z = 0, so
+ * the spectrum is never asked below the range it was prepared on; the
+ * wavenumber step is taken in ln k.
+ */
+#define NCM_POWSPEC_DERIV_REL_STEP (1.0e-3)
+
 static gdouble
 _ncm_powspec_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
-  g_error ("_ncm_powspec_deriv_z: no default implementation, all children must implement it.");
+  const gdouble h = NCM_POWSPEC_DERIV_REL_STEP * (1.0 + z);
 
-  return 0.0;
+  if (z >= 2.0 * h)
+  {
+    const gdouble Pm2 = ncm_powspec_eval (powspec, model, z - 2.0 * h, k);
+    const gdouble Pm1 = ncm_powspec_eval (powspec, model, z - h, k);
+    const gdouble Pp1 = ncm_powspec_eval (powspec, model, z + h, k);
+    const gdouble Pp2 = ncm_powspec_eval (powspec, model, z + 2.0 * h, k);
+
+    return (Pm2 - 8.0 * Pm1 + 8.0 * Pp1 - Pp2) / (12.0 * h);
+  }
+  else
+  {
+    const gdouble P0 = ncm_powspec_eval (powspec, model, z, k);
+    const gdouble P1 = ncm_powspec_eval (powspec, model, z + h, k);
+    const gdouble P2 = ncm_powspec_eval (powspec, model, z + 2.0 * h, k);
+    const gdouble P3 = ncm_powspec_eval (powspec, model, z + 3.0 * h, k);
+    const gdouble P4 = ncm_powspec_eval (powspec, model, z + 4.0 * h, k);
+
+    return (-25.0 * P0 + 48.0 * P1 - 36.0 * P2 + 16.0 * P3 - 3.0 * P4) / (12.0 * h);
+  }
 }
 
 static gdouble
 _ncm_powspec_deriv_k (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
-  g_error ("_ncm_powspec_deriv_k: no default implementation, all children must implement it.");
+  const gdouble h   = NCM_POWSPEC_DERIV_REL_STEP;
+  const gdouble Pm2 = ncm_powspec_eval (powspec, model, z, k * exp (-2.0 * h));
+  const gdouble Pm1 = ncm_powspec_eval (powspec, model, z, k * exp (-h));
+  const gdouble Pp1 = ncm_powspec_eval (powspec, model, z, k * exp (h));
+  const gdouble Pp2 = ncm_powspec_eval (powspec, model, z, k * exp (2.0 * h));
 
-  return 0.0;
+  /* d/dk = (d/dln k) / k */
+  return (Pm2 - 8.0 * Pm1 + 8.0 * Pp1 - Pp2) / (12.0 * h * k);
 }
 
 /* LCOV_EXCL_STOP */
@@ -802,6 +836,8 @@ ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, Ncm
  * @k: mode $k$
  *
  * Evaluates the derivative of the power spectrum @powspec with respect to $z$ at $(z, k)$.
+ * A child without a closed form inherits a fourth-order finite difference of its own
+ * ncm_powspec_eval(), with a step of $10^{-3}(1+z)$.
  *
  * Returns: $\partial P(z, k) / \partial z$.
  */
@@ -819,6 +855,8 @@ ncm_powspec_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, cons
  * @k: mode $k$
  *
  * Evaluates the derivative of the power spectrum @powspec with respect to $k$ at $(z, k)$.
+ * A child without a closed form inherits a fourth-order finite difference of its own
+ * ncm_powspec_eval(), with a step of $10^{-3}$ in $\ln k$.
  *
  * Returns: $\partial P(z, k) / \partial k$.
  */

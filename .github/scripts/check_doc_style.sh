@@ -9,7 +9,12 @@
 #   2. Blocking. Narration of the code's own history in lines this branch adds.
 #      A comment states what the code does now; how it came to do that goes in
 #      dev-notes/ or an area history document.
-#   3. Advisory. Theory-page links (<a href="../../theory/...">, [[numcosmo|Sym]])
+#   3. Blocking. Retired terminology in the files that renamed away from it:
+#      "closure" in the sbessel solver/integrator (the ODE rows are the
+#      *constraint*; "closure" is the xcor W_ell(k) fit and the GI callback
+#      closure, both of which live elsewhere), and "xi" in nc/xcor (the comoving
+#      distance is *chi* everywhere).
+#   4. Advisory. Theory-page links (<a href="../../theory/...">, [[numcosmo|Sym]])
 #      that this branch removes without adding an equivalent back. The pipe may
 #      be escaped as \| , which is how a link is written inside a table. Reported, not
 #      fatal: a link legitimately disappears when its page or symbol does.
@@ -78,7 +83,9 @@ scan_lines () {
   if [ "$MODE" = "all" ]; then
     git grep -nEI "$1" -- "${paths[@]}" | grep -Ev "$ALLOW" || true
   else
-    git diff -U0 "$merge_base" -- "${paths[@]}" | awk -v words="$1" '
+    # awk has no word-boundary operator (gawk spells it \y, mawk lacks it), so the
+    # patterns are applied by grep -E on the added lines awk hands over.
+    git diff -U0 "$merge_base" -- "${paths[@]}" | awk '
       /^\+\+\+ b\// { file = substr($0, 7); next }
       /^@@/ {
         # @@ -a,b +c,d @@ -> next added line is at c
@@ -88,13 +95,12 @@ scan_lines () {
         next
       }
       /^\+/ && !/^\+\+\+/ {
-        body = substr($0, 2)
-        if (tolower(body) ~ tolower(words)) printf "%s:%d:%s\n", file, lineno, body
+        printf "%s:%d:%s\n", file, lineno, substr($0, 2)
         lineno++
         next
       }
       /^ / { lineno++ }
-    ' | grep -Ev "$ALLOW" || true
+    ' | grep -Ei "$1" | grep -Ev "$ALLOW" || true
   fi
 }
 
@@ -121,6 +127,54 @@ if [ -n "$hits" ]; then
   echo ""
   echo "State the current behaviour. What the code did before, and why it changed, goes"
   echo "in dev-notes/<topic>.md or an area history document, with a pointer left here."
+  status=1
+fi
+
+# --------------------------------------------------------- terminology check
+# Renamed 2026-09-06. These files carry no legitimate use of the old words, so
+# the check is exact rather than heuristic; see the notation section of
+# docs/theory/sbessel_ode_solver.qmd.
+#
+#   closure  -> constraint   in the sbessel solver/integrator and their tests
+#   xi       -> chi          in nc/xcor
+#
+# "closure" stays correct in nc/xcor (the W_ell(k) fit) and in GI annotations
+# ((closure user_data)), which is why the check is scoped by path.
+term_scan () {
+  pattern="$1"
+  shift
+  if [ "$MODE" = "all" ]; then
+    git grep -nEI "$pattern" -- "$@" || true
+  else
+    git diff -U0 "$merge_base" -- "$@" \
+      | awk '
+        /^\+\+\+ b\// { file = substr($0, 7); next }
+        /^@@/ { split($3, p, ","); lineno = p[1] + 0; if (lineno < 0) lineno = -lineno; next }
+        /^\+/ && !/^\+\+\+/ {
+          printf "%s:%d:%s\n", file, lineno, substr($0, 2)
+          lineno++
+          next
+        }
+        /^ / { lineno++ }
+      ' | grep -E "$pattern" || true
+  fi
+}
+
+hits=$(term_scan '[Cc]losure|CLOSURE' \
+  ':(glob)numcosmo/ncm/specfunc/ncm_sbessel_*' \
+  ':(glob)tests/python/ncm/specfunc/test_sbessel_*' \
+  ':(glob)docs/theory/sbessel_ode_solver.qmd')
+hits="$hits
+$(term_scan '\bxi\b|\bxi_[a-z_]+\b|\\xi' ':(glob)numcosmo/nc/xcor/*')"
+
+if [ -n "$(echo "$hits" | tr -d '[:space:]')" ]; then
+  echo "Retired terminology found (see the header of this script):"
+  echo ""
+  echo "$hits" | sed '/^$/d' | sed 's/^/  /'
+  echo ""
+  echo "The two ODE rows are the *constraint* (NcmSBesselOdeConstraint), not the closure;"
+  echo "the comoving distance is *chi* everywhere in nc/xcor. \"closure\" remains correct"
+  echo "for the xcor W_ell(k) fit and for GI (closure user_data) annotations."
   status=1
 fi
 

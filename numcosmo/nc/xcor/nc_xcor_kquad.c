@@ -502,8 +502,8 @@ _nc_xcor_closure_err_assemble (NcXcorClosureErr *err, NcXcorKernelIntegrand *xcl
 {
   const gdouble reltol1 = nc_xcor_kernel_integrand_get_reltol (xclki1);
   const gdouble reltol2 = nc_xcor_kernel_integrand_get_reltol (xclki2);
-  const gdouble sabs1   = nc_xcor_kernel_integrand_get_scaled_abstol (xclki1);
-  const gdouble sabs2   = nc_xcor_kernel_integrand_get_scaled_abstol (xclki2);
+  const gdouble sabs1   = nc_xcor_kernel_integrand_get_peak_epsilon (xclki1);
+  const gdouble sabs2   = nc_xcor_kernel_integrand_get_peak_epsilon (xclki2);
   guint il;
 
   for (il = 0; il < nell; il++)

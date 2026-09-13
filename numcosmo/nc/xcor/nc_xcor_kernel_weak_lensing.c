@@ -120,9 +120,9 @@ typedef struct _WeakLensingComponentData
 #define _NC_XCOR_KERNEL_COMPONENT_WEAK_LENSING_GET_DATA(comp) \
         ((WeakLensingComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
-static gdouble _wl_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k);
+static gdouble _wl_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
 static gdouble _wl_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
-static void _wl_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
+static void _wl_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _wl_component_data_clear (WeakLensingComponentData *data);
 static NcXcorKernelComponent *_nc_xcor_kernel_component_weak_lensing_new (NcDistance *dist, NcmPowspec *ps, NcXcorLensingEfficiency *lens_eff, gdouble dn_dz_zmax);
 
@@ -400,13 +400,13 @@ _wl_component_data_clear (WeakLensingComponentData *data)
 }
 
 static gdouble
-_wl_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
+_wl_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k)
 {
   WeakLensingComponentData *data = _NC_XCOR_KERNEL_COMPONENT_WEAK_LENSING_GET_DATA (comp);
-  const gdouble z                = nc_distance_inv_comoving (data->dist, cosmo, xi);
+  const gdouble z                = nc_distance_inv_comoving (data->dist, cosmo, chi);
   const gdouble powspec          = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble lens_eff_z       = nc_xcor_lensing_efficiency_eval (data->lens_eff, z);
-  const gdouble kernel           = (1.0 + z) / xi * lens_eff_z;
+  const gdouble kernel           = (1.0 + z) / chi * lens_eff_z;
   const gdouble operator_k       = 1.0 / gsl_pow_2 (k);
 
   return operator_k * kernel * sqrt (powspec);
@@ -422,7 +422,7 @@ _wl_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdo
 }
 
 static void
-_wl_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
+_wl_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max)
 {
   WeakLensingComponentData *data = _NC_XCOR_KERNEL_COMPONENT_WEAK_LENSING_GET_DATA (comp);
   NcDistance *dist               = data->dist;
@@ -431,10 +431,10 @@ _wl_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
-  *xi_min = nc_distance_comoving (dist, cosmo, 1.0e-6);
-  *xi_max = nc_distance_comoving (dist, cosmo, data->dn_dz_zmax);
-  *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
-  *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *chi_min = nc_distance_comoving (dist, cosmo, 1.0e-6);
+  *chi_max = nc_distance_comoving (dist, cosmo, data->dn_dz_zmax);
+  *k_min   = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *k_max   = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
 }
 
 static NcXcorKernelComponent *
@@ -456,17 +456,17 @@ _nc_xcor_kernel_component_weak_lensing_new (NcDistance *dist, NcmPowspec *ps, Nc
  */
 
 static gdouble
-_nc_xcor_kernel_weak_lensing_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, const gdouble z, const gdouble xi, const gdouble E)
+_nc_xcor_kernel_weak_lensing_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, const gdouble z, const gdouble chi, const gdouble E)
 {
   NcXcorKernelWeakLensing *xclkg = NC_XCOR_KERNEL_WEAK_LENSING (xclk);
 
-  return (1.0 + z) / xi * nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z);
+  return (1.0 + z) / chi * nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z);
 }
 
 static gdouble
 _nc_xcor_kernel_weak_lensing_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
-  return gsl_pow_2 (xck->xi_z) * _nc_xcor_kernel_weak_lensing_eval_radial_weight (xclk, cosmo, z, xck->xi_z, xck->E_z);
+  return gsl_pow_2 (xck->chi_z) * _nc_xcor_kernel_weak_lensing_eval_radial_weight (xclk, cosmo, z, xck->chi_z, xck->E_z);
 }
 
 static gdouble

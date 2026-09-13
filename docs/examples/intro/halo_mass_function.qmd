@@ -49,7 +49,7 @@ Ncm.cfg_init()
 ## Setting Up the Cosmological Model
 
 We use a homogeneous and isotropic dark-energy model with a constant equation of state
-(`NcHICosmoDEXcdm`). Rather than setting the dark-energy density directly, we switch to the curvature
+([[numcosmo|NcHICosmoDEXcdm]]). Rather than setting the dark-energy density directly, we switch to the curvature
 parameterization with `omega_x2omega_k()` and fix `Omegak = 0.0`; flatness is then enforced as a
 constraint and the dark-energy density is derived from the closure relation. A reionization model and a
 power-law primordial power spectrum are built first and passed to the constructor: submodels are

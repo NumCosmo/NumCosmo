@@ -161,7 +161,7 @@ for i in range(n_galaxies):
     shape_data.write_row(wl_obs, i)
 ```
 
-`NcGalaxyWLObs` derives from [[math|NcmCatalog]], so the generic
+[[numcosmo|NcGalaxyWLObs]] derives from [[math|NcmCatalog]], so the generic
 `catalog_to_table` helper (used in the
 [halo/cluster mock tutorial](halo_catalog_mock.qmd)) works here unchanged:
 
