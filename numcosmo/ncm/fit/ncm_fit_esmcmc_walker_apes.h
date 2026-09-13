@@ -100,6 +100,9 @@ gboolean ncm_fit_esmcmc_walker_apes_interp (NcmFitESMCMCWalkerAPES *apes);
 void ncm_fit_esmcmc_walker_apes_set_use_threads (NcmFitESMCMCWalkerAPES *apes, gboolean use_threads);
 gboolean ncm_fit_esmcmc_walker_apes_get_use_threads (NcmFitESMCMCWalkerAPES *apes);
 
+void ncm_fit_esmcmc_walker_apes_set_center_shrink (NcmFitESMCMCWalkerAPES *apes, gboolean center_shrink);
+gboolean ncm_fit_esmcmc_walker_apes_get_center_shrink (NcmFitESMCMCWalkerAPES *apes);
+
 void ncm_fit_esmcmc_walker_apes_peek_sds (NcmFitESMCMCWalkerAPES *apes, NcmStatsDist **sd0, NcmStatsDist **sd1);
 
 void ncm_fit_esmcmc_walker_apes_set_local_frac (NcmFitESMCMCWalkerAPES *apes, gdouble local_frac);

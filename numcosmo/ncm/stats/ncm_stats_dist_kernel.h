@@ -44,6 +44,7 @@ G_DECLARE_DERIVABLE_TYPE (NcmStatsDistKernel, ncm_stats_dist_kernel, NCM, STATS_
  * @set_dim: Sets the dimension of the kernel.
  * @get_dim: Gets the dimension of the kernel.
  * @get_rot_bandwidth: Gets the rule-of-thumb bandwidth of the kernel.
+ * @get_var_factor: Gets the ratio between the kernel covariance and its scale matrix.
  * @get_lnnorm: Gets the log of the normalization constant of the kernel.
  * @eval_unnorm: Evaluates the unnormalized kernel at a given chi2.
  * @eval_unnorm_vec: Evaluates the unnormalized kernel at a given chi2 vector.
@@ -61,6 +62,7 @@ struct _NcmStatsDistKernelClass
   void (*set_dim) (NcmStatsDistKernel *sdk, const guint dim);
   guint (*get_dim) (NcmStatsDistKernel *sdk);
   gdouble (*get_rot_bandwidth) (NcmStatsDistKernel *sdk, const gdouble n);
+  gdouble (*get_var_factor) (NcmStatsDistKernel *sdk);
   gdouble (*get_lnnorm) (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp);
   gdouble (*eval_unnorm) (NcmStatsDistKernel *sdk, const gdouble chi2);
   void (*eval_unnorm_vec) (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *Ku);
@@ -70,7 +72,7 @@ struct _NcmStatsDistKernelClass
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   /* <private> */
-  gpointer padding[9];
+  gpointer padding[8];
 };
 
 NcmStatsDistKernel *ncm_stats_dist_kernel_ref (NcmStatsDistKernel *sdk);
@@ -80,6 +82,7 @@ void ncm_stats_dist_kernel_clear (NcmStatsDistKernel **sdk);
 guint ncm_stats_dist_kernel_get_dim (NcmStatsDistKernel *sdk);
 
 gdouble ncm_stats_dist_kernel_get_rot_bandwidth (NcmStatsDistKernel *sdk, const gdouble n);
+gdouble ncm_stats_dist_kernel_get_var_factor (NcmStatsDistKernel *sdk);
 gdouble ncm_stats_dist_kernel_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp);
 
 gdouble ncm_stats_dist_kernel_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble chi2);

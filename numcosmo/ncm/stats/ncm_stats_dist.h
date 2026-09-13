@@ -59,9 +59,10 @@ struct _NcmStatsDistClass
   gdouble (*eval_weights) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
   gdouble (*eval_weights_m2lnp) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
   void (*reset) (NcmStatsDist *sd);
+  void (*update_centers) (NcmStatsDist *sd);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[7];
+  gpointer padding[6];
 };
 
 /**
@@ -106,6 +107,10 @@ gdouble ncm_stats_dist_get_split_frac (NcmStatsDist *sd);
 void ncm_stats_dist_set_shrink (NcmStatsDist *sd, const gdouble shrink);
 gdouble ncm_stats_dist_get_shrink (NcmStatsDist *sd);
 
+void ncm_stats_dist_set_center_shrink (NcmStatsDist *sd, const gboolean center_shrink);
+gboolean ncm_stats_dist_get_center_shrink (NcmStatsDist *sd);
+gdouble ncm_stats_dist_get_center_shrink_factor (NcmStatsDist *sd);
+
 void ncm_stats_dist_set_print_fit (NcmStatsDist *sd, const gboolean print_fit);
 gboolean ncm_stats_dist_get_print_fit (NcmStatsDist *sd);
 
@@ -130,6 +135,7 @@ gdouble ncm_stats_dist_get_rnorm (NcmStatsDist *sd);
 void ncm_stats_dist_add_obs (NcmStatsDist *sd, NcmVector *y);
 
 GPtrArray *ncm_stats_dist_peek_sample_array (NcmStatsDist *sd);
+GPtrArray *ncm_stats_dist_peek_center_array (NcmStatsDist *sd);
 NcmMatrix *ncm_stats_dist_peek_cov_decomp (NcmStatsDist *sd, guint i);
 NcmMatrix *ncm_stats_dist_peek_full_cov_decomp (NcmStatsDist *sd);
 NcmMatrix *ncm_stats_dist_peek_full_cov (NcmStatsDist *sd);

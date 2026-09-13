@@ -430,6 +430,17 @@ class CalibrateCatalog(LoadCatalog):
         ),
     ] = True
 
+    center_shrink: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Shrink the kernel centres toward the sample mean so that the "
+                "approximation has the same covariance as the sample. Requires a "
+                "kernel with a finite covariance, so not the Cauchy one."
+            ),
+        ),
+    ] = False
+
     ntries: Annotated[
         int,
         typer.Option(
@@ -494,6 +505,7 @@ class CalibrateCatalog(LoadCatalog):
             over_smooth=math.fabs(self.over_smooth),
             split_fraction=self.split_fraction,
             local_fraction=self.local_fraction,
+            center_shrink=self.center_shrink,
             verbose=self.verbose,
         )
 
@@ -535,6 +547,10 @@ class CalibrateCatalog(LoadCatalog):
         main_table.add_row("Split fraction", f"{self.split_fraction}")
         main_table.add_row("Local fraction", f"{self.local_fraction}")
         main_table.add_row("Use interpolation", f"{self.interpolate}")
+        main_table.add_row("Centre shrinkage", f"{self.center_shrink}")
+        main_table.add_row(
+            "Centre shrinkage factor", f"{sdist.get_center_shrink_factor():.3f}"
+        )
         main_table.add_row("Use half of the walkers", f"{self.use_half}")
 
         rng = Ncm.RNG.new()

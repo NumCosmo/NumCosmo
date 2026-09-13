@@ -33,6 +33,11 @@
  * The rest of the calculation follows #NcmStatsDist and #NcmStatsDistKDE, with
  * a different covariance matrix and normalization factor per kernel.
  *
+ * With #NcmStatsDist:center-shrink enabled the shrinkage scale $s^2$ is the mean
+ * of $\mathrm{tr}(C_i \Sigma^{-1}) / d$ over the local covariances $C_i$, so that the
+ * mixture covariance matches the sample covariance $\Sigma$; the local covariances
+ * themselves are still estimated around the original sample points.
+ *
  * The caller must supply @sdk and @CV_type through ncm_stats_dist_vkde_new(),
  * @y through ncm_stats_dist_add_obs(), @split_frac through
  * ncm_stats_dist_set_split_frac(), @over_smooth through
@@ -405,9 +410,10 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
    * vector location.
    */
   {
-    const size_t k = GSL_MAX (self->local_frac * ppself->n_obs, 2);
+    const size_t k        = GSL_MAX (self->local_frac * ppself->n_obs, 2);
+    gdouble center_s2_sum = 0.0;
 
-    #pragma omp parallel for schedule(dynamic, 1) if (ppself->use_threads)
+    #pragma omp parallel for schedule(dynamic, 1) reduction(+ : center_s2_sum) if (ppself->use_threads)
 
     for (i = 0; i < ppself->n_kernels; i++)
     {
@@ -467,12 +473,42 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
           lnnorm_i = ncm_stats_dist_kernel_get_lnnorm (kernel, cov_decomp);
 
           ncm_vector_set (self->lnnorms, i, lnnorm_i);
+
+          /*
+           * tr (C_i Sigma^-1) = |U_i U^-1|_F^2 with C_i = U_i^T U_i and Sigma = U^T U.
+           * The Cholesky factor leaves the strict lower triangle untouched, so it is
+           * zeroed before the triangular solve.
+           */
+          {
+            NcmMatrix *UiinvU = ncm_matrix_dup (cov_decomp);
+            gdouble tr_i      = 0.0;
+            gint ret;
+            guint a, b;
+
+            for (a = 1; a < ppself->d; a++)
+              for (b = 0; b < a; b++)
+                ncm_matrix_set (UiinvU, a, b, 0.0);
+
+            ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
+                                  1.0, ncm_matrix_gsl (pself->cov_decomp),
+                                  ncm_matrix_gsl (UiinvU));
+            NCM_TEST_GSL_RESULT ("_ncm_stats_dist_vkde_build_cov_array_kdtree", ret);
+
+            for (a = 0; a < ppself->d; a++)
+              for (b = 0; b < ppself->d; b++)
+                tr_i += gsl_pow_2 (ncm_matrix_get (UiinvU, a, b));
+
+            center_s2_sum += tr_i;
+            ncm_matrix_free (UiinvU);
+          }
         }
       }
 
       ncm_stats_vec_reset (sample, TRUE);
       ncm_memory_pool_return (sample_ptr);
     }
+
+    ppself->center_s2 = center_s2_sum / (1.0 * ppself->n_kernels * ppself->d);
   }
   kdtree_destroy (tree);
 }
@@ -517,7 +553,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
     for (i = 0; i < ppself->n_kernels; i++)
     {
       NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
-      NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
+      NcmVector *theta_i      = g_ptr_array_index (ppself->center_array, i);
       gint ret;
       guint j;
 
@@ -628,7 +664,7 @@ _ncm_stats_dist_vkde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVect
     for (i = 0; i < ppself->n_kernels; i++)
     {
       NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
-      NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
+      NcmVector *theta_i      = g_ptr_array_index (ppself->center_array, i);
 
       ncm_vector_memcpy (ev->delta_x, x);
       ncm_vector_axpy (ev->delta_x, -1.0, theta_i);
@@ -677,7 +713,7 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
     for (i = 0; i < ppself->n_kernels; i++)
     {
       NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
-      NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
+      NcmVector *theta_i      = g_ptr_array_index (ppself->center_array, i);
 
       ncm_vector_memcpy (ev->delta_x, x);
       ncm_vector_axpy (ev->delta_x, -1.0, theta_i);

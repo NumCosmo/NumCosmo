@@ -43,6 +43,9 @@ typedef struct _NcmStatsDistKDEPrivate
   NcmMatrix *sample_matrix;
   NcmMatrix *invUsample_matrix;
   GPtrArray *invUsample_array;
+  NcmMatrix *center_matrix;
+  NcmMatrix *invUcenter_matrix;
+  GPtrArray *invUcenter_array;
   gdouble kernel_lnnorm;
   guint nearPD_maxiter;
   NcmMemoryPool *mp_eval_vars;

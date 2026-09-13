@@ -49,6 +49,7 @@ def create_esmcmc(
     fit_first: bool = False,
     robust: bool = False,
     use_apes_interpolation: bool = True,
+    use_apes_center_shrink: bool = False,
     use_apes_threads: Optional[bool] = None,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
@@ -111,6 +112,8 @@ def create_esmcmc(
         walker.use_interp(use_apes_interpolation)
         walker.set_method(interpolation_method.genum)
         walker.set_k_type(interpolation_kernel.genum)
+        # After the kernel, so that an incompatible pair is caught immediately.
+        walker.set_center_shrink(use_apes_center_shrink)
         if use_apes_threads is None:
             use_apes_threads = nwalkers >= 1000
 

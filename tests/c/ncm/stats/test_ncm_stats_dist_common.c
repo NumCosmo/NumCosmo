@@ -72,11 +72,13 @@ static void test_ncm_stats_dist_dens_interp_cv_loo (TestNcmStatsDist *test, gcon
 static void test_ncm_stats_dist_sampling (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_serialize (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata);
+static void test_ncm_stats_dist_center_shrink (TestNcmStatsDist *test, gconstpointer pdata);
 
 static void test_ncm_stats_dist_free (TestNcmStatsDist *test, gconstpointer pdata);
 
 static void test_ncm_stats_dist_traps (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_invalid_stub (TestNcmStatsDist *test, gconstpointer pdata);
+static void test_ncm_stats_dist_invalid_center_shrink (TestNcmStatsDist *test, gconstpointer pdata);
 
 typedef struct _TestNcmStatsDistFunc
 {
@@ -86,7 +88,7 @@ typedef struct _TestNcmStatsDistFunc
 } TestNcmStatsDistFunc;
 
 #define TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN 4
-#define TEST_NCM_STATS_DIST_TESTS_LEN 11
+#define TEST_NCM_STATS_DIST_TESTS_LEN 12
 
 static TestNcmStatsDistFunc constructors[TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN] = {
   {"kde/gauss",           &test_ncm_stats_dist_new_kde_gauss, },
@@ -107,6 +109,7 @@ static TestNcmStatsDistFunc tests[TEST_NCM_STATS_DIST_TESTS_LEN] = {
   {"gauss/sampling",                   &test_ncm_stats_dist_sampling},
   {"gauss/serialize",                  &test_ncm_stats_dist_serialize},
   {"gauss/get_kernel_info",            &test_ncm_stats_dist_get_kernel_info},
+  {"gauss/center_shrink",              &test_ncm_stats_dist_center_shrink},
 };
 
 /* The checks that assert the estimator reproduces its own distribution. In divergence
@@ -116,7 +119,8 @@ static gboolean
 _test_ncm_stats_dist_is_divergence_check (const gchar *name)
 {
   return g_str_has_prefix (name, "gauss/dens/") ||
-         (g_strcmp0 (name, "gauss/sampling") == 0);
+         (g_strcmp0 (name, "gauss/sampling") == 0) ||
+         (g_strcmp0 (name, "gauss/center_shrink") == 0);
 }
 
 gint
@@ -173,6 +177,11 @@ test_ncm_stats_dist_main (gint argc, gchar *argv[], TestNcmStatsDistMode mode)
     g_test_add ("/ncm/stats/dist/nd/kde/gauss/invalid/stub/subprocess", TestNcmStatsDist, NULL,
                 &test_ncm_stats_dist_new_kde_gauss,
                 &test_ncm_stats_dist_invalid_stub,
+                &test_ncm_stats_dist_free);
+
+    g_test_add ("/ncm/stats/dist/nd/vkde/cauchy/invalid/center_shrink/subprocess", TestNcmStatsDist, NULL,
+                &test_ncm_stats_dist_new_kde_gauss,
+                &test_ncm_stats_dist_invalid_center_shrink,
                 &test_ncm_stats_dist_free);
   }
 
@@ -396,6 +405,151 @@ test_ncm_stats_dist_new_vkde_studentt (TestNcmStatsDist *test, gconstpointer pda
 
   ncm_stats_dist_set_over_smooth (test->sd, 1.2);
   ncm_stats_dist_kde_set_cov_type (NCM_STATS_DIST_KDE (sdvkde), cov_type);
+}
+
+/* Centre shrinkage: with it off the kernel centres are the sample points; with it on
+ * they are mu + a (x_i - mu) with a = 1 / sqrt (1 + h^2 s^2), s = 1 for the fixed
+ * bandwidth estimator, and the mixture covariance matches the sample covariance. */
+static void
+test_ncm_stats_dist_center_shrink (TestNcmStatsDist *test, gconstpointer pdata)
+{
+  NcmRNG *rng                     = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmDataGaussCovMVND *data_mvnd  = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-2, test->corr_level, 1.0, 2.0, rng);
+  NcmModelMVND *model_mvnd        = ncm_model_mvnd_new (test->dim);
+  NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmStatsVec *sample_stats       = ncm_stats_vec_new (test->dim, NCM_STATS_VEC_COV, FALSE);
+  NcmStatsVec *test_stats         = ncm_stats_vec_new (test->dim, NCM_STATS_VEC_COV, FALSE);
+  NcmVector *y                    = ncm_vector_new (test->dim);
+  NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
+  gulong N                        = 0;
+  guint i, k;
+
+  switch (cov_type)
+  {
+    case NCM_STATS_DIST_KDE_COV_TYPE_FIXED:
+    {
+      NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
+
+      ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), ncm_data_gauss_cov_peek_cov (gcov));
+      break;
+    }
+    case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
+    case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST:
+    case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
+      break;
+    default:
+      g_assert_not_reached ();
+  }
+
+  ncm_mset_param_set_vector (mset, ncm_data_gauss_cov_mvnd_peek_mean (data_mvnd));
+
+  for (i = 0; i < test->np; i++)
+  {
+    NcmVector *y_i = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
+
+    ncm_stats_dist_add_obs (test->sd, y_i);
+    ncm_stats_vec_append (sample_stats, y_i, FALSE);
+  }
+
+  /* Off: the centres are the sample points and the factor is one. */
+  ncm_stats_dist_set_center_shrink (test->sd, FALSE);
+  g_assert_false (ncm_stats_dist_get_center_shrink (test->sd));
+
+  ncm_stats_dist_prepare (test->sd);
+
+  g_assert_cmpfloat (ncm_stats_dist_get_center_shrink_factor (test->sd), ==, 1.0);
+
+  {
+    GPtrArray *sample_array = ncm_stats_dist_peek_sample_array (test->sd);
+    GPtrArray *center_array = ncm_stats_dist_peek_center_array (test->sd);
+
+    g_assert_cmpuint (center_array->len, ==, ncm_stats_dist_get_n_kernels (test->sd));
+
+    for (i = 0; i < center_array->len; i++)
+    {
+      NcmVector *x_i = g_ptr_array_index (sample_array, i);
+      NcmVector *c_i = g_ptr_array_index (center_array, i);
+
+      for (k = 0; k < test->dim; k++)
+        g_assert_cmpfloat (ncm_vector_get (c_i, k), ==, ncm_vector_get (x_i, k));
+    }
+  }
+
+  /* On: c_i = mu + a (x_i - mu). */
+  ncm_stats_dist_set_center_shrink (test->sd, TRUE);
+  g_assert_true (ncm_stats_dist_get_center_shrink (test->sd));
+
+  ncm_stats_dist_prepare (test->sd);
+
+  {
+    GPtrArray *sample_array = ncm_stats_dist_peek_sample_array (test->sd);
+    GPtrArray *center_array = ncm_stats_dist_peek_center_array (test->sd);
+    NcmVector *mean         = ncm_stats_vec_peek_mean (sample_stats);
+    const gdouble a         = ncm_stats_dist_get_center_shrink_factor (test->sd);
+    const gdouble href      = ncm_stats_dist_get_href (test->sd);
+    const gdouble kappa     = ncm_stats_dist_kernel_get_var_factor (test->kernel);
+
+    g_assert_cmpfloat (a, >, 0.0);
+    g_assert_cmpfloat (a, <, 1.0);
+    g_assert_true (gsl_finite (kappa));
+
+    /* The fixed bandwidth estimator has kernel covariance kappa href^2 Sigma, so s = 1
+     * and, href being the applied (already shrunk) bandwidth, a^2 + kappa href^2 = 1. */
+    if (!NCM_IS_STATS_DIST_VKDE (test->sd))
+      ncm_assert_cmpdouble_e (a, ==, sqrt (1.0 - kappa * href * href), 1.0e-12, 0.0);
+
+    g_assert_cmpuint (center_array->len, ==, ncm_stats_dist_get_n_kernels (test->sd));
+
+    for (i = 0; i < center_array->len; i++)
+    {
+      NcmVector *x_i = g_ptr_array_index (sample_array, i);
+      NcmVector *c_i = g_ptr_array_index (center_array, i);
+
+      ncm_vector_memcpy (y, x_i);
+      ncm_vector_sub (y, mean);
+      ncm_vector_scale (y, a);
+      ncm_vector_add (y, mean);
+
+      for (k = 0; k < test->dim; k++)
+        ncm_assert_cmpdouble_e (ncm_vector_get (c_i, k), ==, ncm_vector_get (y, k), 1.0e-10, 1.0e-10);
+    }
+
+    /* The density must still be finite and positive at the sample points. */
+    for (i = 0; i < center_array->len; i++)
+    {
+      const gdouble p_i = ncm_stats_dist_eval (test->sd, g_ptr_array_index (sample_array, i));
+
+      g_assert_true (gsl_finite (p_i));
+      g_assert_cmpfloat (p_i, >, 0.0);
+    }
+  }
+
+  /* Mixture covariance equals the sample covariance for a Gaussian kernel. That is a
+   * statistical claim, so it belongs to the divergence lane. */
+  if (test->divergence && NCM_IS_STATS_DIST_KERNEL_GAUSS (test->kernel))
+  {
+    NcmMatrix *cov_sample = ncm_stats_vec_peek_cov_matrix (sample_stats, 0);
+    NcmMatrix *cov_est;
+
+    for (i = 0; i < test->ntests; i++)
+    {
+      ncm_stats_dist_sample (test->sd, y, rng);
+      ncm_stats_vec_append (test_stats, y, FALSE);
+    }
+
+    cov_est = ncm_stats_vec_peek_cov_matrix (test_stats, 0);
+
+    g_assert_cmpfloat (ncm_matrix_cmp (cov_est, cov_sample, 1.0), <, 0.5);
+    g_assert_cmpfloat (ncm_matrix_cmp_diag (cov_est, cov_sample, 1.0), <, 0.5);
+  }
+
+  ncm_model_mvnd_free (model_mvnd);
+  ncm_data_gauss_cov_mvnd_free (data_mvnd);
+  ncm_rng_free (rng);
+  ncm_vector_free (y);
+  ncm_stats_vec_free (sample_stats);
+  ncm_stats_vec_free (test_stats);
+  ncm_mset_free (mset);
 }
 
 static void
@@ -1190,11 +1344,45 @@ test_ncm_stats_dist_traps (TestNcmStatsDist *test, gconstpointer pdata)
 {
   g_test_trap_subprocess ("/ncm/stats/dist/nd/kde/gauss/invalid/stub/subprocess", 0, 0);
   g_test_trap_assert_failed ();
+
+  g_test_trap_subprocess ("/ncm/stats/dist/nd/vkde/cauchy/invalid/center_shrink/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
 }
 
 static void
 test_ncm_stats_dist_invalid_stub (TestNcmStatsDist *test, gconstpointer pdata)
 {
+  g_assert_not_reached ();
+}
+
+/* Centre shrinkage needs a kernel with a finite covariance; the Cauchy kernel
+ * (Student-t with nu = 1) has none and must be refused. */
+static void
+test_ncm_stats_dist_invalid_center_shrink (TestNcmStatsDist *test, gconstpointer pdata)
+{
+  NcmStatsDistKernelST *sdk_st = ncm_stats_dist_kernel_st_new (2, 1.0);
+  NcmStatsDistVKDE *sdvkde     = ncm_stats_dist_vkde_new (NCM_STATS_DIST_KERNEL (sdk_st), NCM_STATS_DIST_CV_NONE);
+  NcmStatsDist *sd             = NCM_STATS_DIST (sdvkde);
+  NcmRNG *rng                  = ncm_rng_seeded_new (NULL, 123);
+  guint i;
+
+  g_assert_cmpint (gsl_isinf (ncm_stats_dist_kernel_get_var_factor (NCM_STATS_DIST_KERNEL (sdk_st))), ==, 1);
+
+  ncm_stats_dist_set_center_shrink (sd, TRUE);
+  ncm_stats_dist_vkde_set_local_frac (sdvkde, 0.5);
+
+  for (i = 0; i < 100; i++)
+  {
+    NcmVector *y = ncm_vector_new (2);
+
+    ncm_vector_set (y, 0, ncm_rng_ugaussian_gen (rng));
+    ncm_vector_set (y, 1, ncm_rng_ugaussian_gen (rng));
+    ncm_stats_dist_add_obs (sd, y);
+    ncm_vector_free (y);
+  }
+
+  ncm_stats_dist_prepare (sd);
+
   g_assert_not_reached ();
 }
 

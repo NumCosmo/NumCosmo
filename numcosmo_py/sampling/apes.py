@@ -54,6 +54,7 @@ class APES:
         interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
         over_smooth: float = 0.2,
         local_fraction: Optional[float] = None,
+        center_shrink: bool = False,
     ):
         """Create a new APES sampler object."""
 
@@ -126,6 +127,8 @@ class APES:
         walker.use_interp(use_interpolation)
         walker.set_method(interpolation_method.genum)
         walker.set_k_type(interpolation_kernel.genum)
+        # After the kernel, so that an incompatible pair is caught immediately.
+        walker.set_center_shrink(center_shrink)
 
         init_sampler = Ncm.MSetTransKernGauss.new(0)
         init_sampler.set_mset(self.mset)
@@ -151,15 +154,23 @@ class APES:
 
         mcat = self.esmcmc.peek_catalog()
 
-        self.esmcmc.start_run()
-
+        # The initial sample must be in the catalog before start_run(), otherwise
+        # the sampler generates its own initial points and the sample is ignored.
+        # A non-empty catalog must already own its RNG, so seed one first as
+        # start_run() would.
         if mcat.len() == 0:
+            if mcat.peek_rng() is None:
+                rng = Ncm.RNG.new(None)
+                rng.set_random_seed(False)
+                self.esmcmc.set_rng(rng)
             for point in initial_sample:
                 point_vector = Ncm.Vector.new_array(point)
                 self.mset.fparams_set_vector(point_vector)
                 m2lnL = self.fit.m2lnL_val()  # pylint:disable=invalid-name
                 mcat.add_from_vector_array(point_vector, [m2lnL])
             assert mcat.len() == self.nwalkers
+
+        self.esmcmc.start_run()
 
         assert mcat.len() >= self.nwalkers
 

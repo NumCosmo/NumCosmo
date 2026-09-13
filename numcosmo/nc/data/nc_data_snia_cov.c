@@ -2204,6 +2204,12 @@ nc_data_snia_cov_set_abs_mag_set (NcDataSNIACov *snia_cov, GArray *abs_mag_set)
   }
 
   self->dataset_len = max_id + 1;
+
+  /* The counts below accumulate, so the array has to start from zero: the array
+   * is zero-filled only on growth, and this function runs twice on an object that
+   * is loaded from a catalog and then has its absmag-set property set, which is
+   * what happens when the data object is duplicated for a threaded run. */
+  g_array_set_size (self->dataset_size, 0);
   g_array_set_size (self->dataset_size, self->dataset_len);
 
   for (i = 0; i < abs_mag_set->len; i++)
