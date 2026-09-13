@@ -64,6 +64,7 @@ def create_stats_dist(
     over_smooth: float = 1.0,
     split_fraction: Optional[float] = None,
     local_fraction: Optional[float] = None,
+    center_shrink: bool = False,
     verbose: bool = False,
 ):
     """Create a new interpolation object.
@@ -76,6 +77,8 @@ def create_stats_dist(
     :param over_smooth: Oversmoothing factor.
     :param split_fraction: Split fraction.
     :param local_fraction: Local fraction.
+    :param center_shrink: Shrink the kernel centres toward the sample mean so that the
+        mixture covariance matches the sample covariance.
     :param verbose: Verbose output.
 
     :return: A new Ncm.StatsDist object.
@@ -101,6 +104,7 @@ def create_stats_dist(
             sdist.set_local_frac(local_fraction)
 
     sdist.set_over_smooth(over_smooth)
+    sdist.set_center_shrink(center_shrink)
     if robust:
         sdist.set_cov_type(Ncm.StatsDistKDECovType.ROBUST)
 

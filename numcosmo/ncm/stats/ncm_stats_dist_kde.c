@@ -157,6 +157,9 @@ ncm_stats_dist_kde_init (NcmStatsDistKDE *sdkde)
   self->sample_matrix     = NULL;
   self->invUsample_matrix = NULL;
   self->invUsample_array  = g_ptr_array_new ();
+  self->center_matrix     = NULL;
+  self->invUcenter_matrix = NULL;
+  self->invUcenter_array  = g_ptr_array_new ();
   self->kernel_lnnorm     = 0.0;
   self->nearPD_maxiter    = 0;
 
@@ -166,6 +169,7 @@ ncm_stats_dist_kde_init (NcmStatsDistKDE *sdkde)
 
 
   g_ptr_array_set_free_func (self->invUsample_array, (GDestroyNotify) ncm_vector_free);
+  g_ptr_array_set_free_func (self->invUcenter_array, (GDestroyNotify) ncm_vector_free);
 }
 
 static void
@@ -230,8 +234,11 @@ _ncm_stats_dist_kde_dispose (GObject *object)
   ncm_matrix_clear (&self->cov_decomp);
   ncm_matrix_clear (&self->sample_matrix);
   ncm_matrix_clear (&self->invUsample_matrix);
+  ncm_matrix_clear (&self->center_matrix);
+  ncm_matrix_clear (&self->invUcenter_matrix);
 
   g_clear_pointer (&self->invUsample_array, g_ptr_array_unref);
+  g_clear_pointer (&self->invUcenter_array, g_ptr_array_unref);
 
   if (self->mp_eval_vars)
   {
@@ -262,6 +269,7 @@ static NcmMatrix *_ncm_stats_dist_kde_peek_full_cov (NcmStatsDist *sd);
 static gdouble _ncm_stats_dist_kde_get_lnnorm (NcmStatsDist *sd, guint i);
 static gdouble _ncm_stats_dist_kde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
 static gdouble _ncm_stats_dist_kde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
+static void _ncm_stats_dist_kde_update_centers (NcmStatsDist *sd);
 
 static void
 ncm_stats_dist_kde_class_init (NcmStatsDistKDEClass *klass)
@@ -306,6 +314,7 @@ ncm_stats_dist_kde_class_init (NcmStatsDistKDEClass *klass)
   sd_class->get_lnnorm           = &_ncm_stats_dist_kde_get_lnnorm;
   sd_class->eval_weights         = &_ncm_stats_dist_kde_eval_weights;
   sd_class->eval_weights_m2lnp   = &_ncm_stats_dist_kde_eval_weights_m2lnp;
+  sd_class->update_centers       = &_ncm_stats_dist_kde_update_centers;
 }
 
 static void
@@ -322,6 +331,9 @@ _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim)
     ncm_matrix_clear (&self->cov_decomp);
     ncm_matrix_clear (&self->sample_matrix);
     ncm_matrix_clear (&self->invUsample_matrix);
+    ncm_matrix_clear (&self->center_matrix);
+    ncm_matrix_clear (&self->invUcenter_matrix);
+    g_ptr_array_set_size (self->invUcenter_array, 0);
 
     self->sample     = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, TRUE);
     self->cov_decomp = ncm_matrix_new (dim, dim);
@@ -466,6 +478,9 @@ _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
                         ncm_matrix_gsl (self->invUsample_matrix));
   NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kde_prepare_kernel", ret);
 
+  /* Kernel covariance is href^2 Sigma: the centre-shrinkage scale is one. */
+  pself->center_s2 = 1.0;
+
   /*
    * Allocating the evaluation vector
    */
@@ -485,50 +500,27 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
   const gdouble href2                 = pself->href * pself->href;
   guint i;
 
-  for (i = 0; i < pself->n_kernels; i++)
-  {
-    NcmVector *row_i = g_ptr_array_index (self->invUsample_array, i);
-    guint j;
-
-    ncm_matrix_set (IM, i, i, 0.0);
-
-    for (j = i + 1; j < pself->n_kernels; j++)
-    {
-      NcmVector *row_j = g_ptr_array_index (self->invUsample_array, j);
-      gdouble chi2_ij  = 0.0;
-      guint k;
-
-      for (k = 0; k < pself->d; k++)
-      {
-        chi2_ij += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (row_j, k)));
-      }
-
-      chi2_ij = chi2_ij / href2;
-
-      ncm_matrix_set (IM, i, j, chi2_ij);
-      ncm_matrix_set (IM, j, i, chi2_ij);
-    }
-  }
-
-  for (i = pself->n_kernels; i < pself->n_obs; i++)
+  /*
+   * Rows are the observation points, columns the kernel centres. With centre
+   * shrinkage the two differ, so IM is not symmetric in general.
+   */
+  for (i = 0; i < pself->n_obs; i++)
   {
     NcmVector *row_i = g_ptr_array_index (self->invUsample_array, i);
     guint j;
 
     for (j = 0; j < pself->n_kernels; j++)
     {
-      NcmVector *row_j = g_ptr_array_index (self->invUsample_array, j);
-      gdouble chi2_ij  = 0.0;
+      NcmVector *center_j = g_ptr_array_index (self->invUcenter_array, j);
+      gdouble chi2_ij     = 0.0;
       guint k;
 
       for (k = 0; k < pself->d; k++)
       {
-        chi2_ij += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (row_j, k)));
+        chi2_ij += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (center_j, k)));
       }
 
-      chi2_ij = chi2_ij / href2;
-
-      ncm_matrix_set (IM, i, j, chi2_ij);
+      ncm_matrix_set (IM, i, j, chi2_ij / href2);
     }
   }
 
@@ -600,7 +592,7 @@ _ncm_stats_dist_kde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVecto
 
   for (i = 0; i < pself->n_kernels; i++)
   {
-    NcmVector *row_i = g_ptr_array_index (self->invUsample_array, i);
+    NcmVector *row_i = g_ptr_array_index (self->invUcenter_array, i);
     gdouble chi2_i   = 0.0;
     guint k;
 
@@ -642,7 +634,7 @@ _ncm_stats_dist_kde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, Nc
 
   for (i = 0; i < pself->n_kernels; i++)
   {
-    NcmVector *row_i = g_ptr_array_index (self->invUsample_array, i);
+    NcmVector *row_i = g_ptr_array_index (self->invUcenter_array, i);
     gdouble chi2_i   = 0.0;
     guint k;
 
@@ -665,6 +657,44 @@ _ncm_stats_dist_kde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, Nc
 
     return -2.0 * (gamma + log1p (lambda) - pself->d * log (pself->href));
   }
+}
+
+static void
+_ncm_stats_dist_kde_update_centers (NcmStatsDist *sd)
+{
+  NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
+  NcmStatsDistPrivate * const pself   = ncm_stats_dist_get_instance_private (sd);
+  gint ret;
+  guint i;
+
+  if ((self->center_matrix == NULL) ||
+      (pself->n_kernels != ncm_matrix_nrows (self->center_matrix)) ||
+      (pself->d != ncm_matrix_ncols (self->center_matrix)))
+  {
+    ncm_matrix_clear (&self->center_matrix);
+    ncm_matrix_clear (&self->invUcenter_matrix);
+    self->center_matrix     = ncm_matrix_new (pself->n_kernels, pself->d);
+    self->invUcenter_matrix = ncm_matrix_new (pself->n_kernels, pself->d);
+
+    g_ptr_array_set_size (self->invUcenter_array, 0);
+
+    for (i = 0; i < pself->n_kernels; i++)
+    {
+      NcmVector *row_i = ncm_matrix_get_row (self->invUcenter_matrix, i);
+
+      g_ptr_array_add (self->invUcenter_array, row_i);
+    }
+  }
+
+  for (i = 0; i < pself->n_kernels; i++)
+    ncm_matrix_set_row (self->center_matrix, i, g_ptr_array_index (pself->center_array, i));
+
+  ncm_matrix_memcpy (self->invUcenter_matrix, self->center_matrix);
+  ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
+                        1.0, ncm_matrix_gsl (self->cov_decomp),
+                        ncm_matrix_gsl (self->invUcenter_matrix));
+  NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kde_update_centers", ret);
 }
 
 /**

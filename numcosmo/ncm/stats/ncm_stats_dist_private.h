@@ -54,6 +54,11 @@ typedef struct _NcmStatsDistPrivate
   gdouble max_m2lnp;
   gdouble href;
   gdouble rnorm;
+  gboolean center_shrink;
+  GPtrArray *center_array;
+  NcmVector *center_mean;
+  gdouble center_s2;
+  gdouble center_a;
   guint n_obs;
   guint n_kernels;
   guint alloc_n_obs;

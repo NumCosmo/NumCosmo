@@ -163,6 +163,7 @@ _ncm_stats_dist_kernel_gauss_finalize (GObject *object)
 }
 
 static gdouble _ncm_stats_dist_kernel_gauss_get_rot_bandwidth (NcmStatsDistKernel *sdk, const gdouble n);
+static gdouble _ncm_stats_dist_kernel_gauss_get_var_factor (NcmStatsDistKernel *sdk);
 static gdouble _ncm_stats_dist_kernel_gauss_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp);
 static gdouble _ncm_stats_dist_kernel_gauss_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble chi2);
 static void _ncm_stats_dist_kernel_gauss_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *Ku);
@@ -182,6 +183,7 @@ ncm_stats_dist_kernel_gauss_class_init (NcmStatsDistKernelGaussClass *klass)
   object_class->finalize     = &_ncm_stats_dist_kernel_gauss_finalize;
 
   sdk_class->get_rot_bandwidth      = &_ncm_stats_dist_kernel_gauss_get_rot_bandwidth;
+  sdk_class->get_var_factor         = &_ncm_stats_dist_kernel_gauss_get_var_factor;
   sdk_class->get_lnnorm             = &_ncm_stats_dist_kernel_gauss_get_lnnorm;
   sdk_class->eval_unnorm            = &_ncm_stats_dist_kernel_gauss_eval_unnorm;
   sdk_class->eval_unnorm_vec        = &_ncm_stats_dist_kernel_gauss_eval_unnorm_vec;
@@ -196,6 +198,12 @@ _ncm_stats_dist_kernel_gauss_get_rot_bandwidth (NcmStatsDistKernel *sdk, const g
   NcmStatsDistKernelPrivate * const pself = ncm_stats_dist_kernel_get_instance_private (sdk);
 
   return pow (4.0 / (n * (pself->d + 2.0)), 1.0 / (pself->d + 4.0));
+}
+
+static gdouble
+_ncm_stats_dist_kernel_gauss_get_var_factor (NcmStatsDistKernel *sdk)
+{
+  return 1.0;
 }
 
 static gdouble

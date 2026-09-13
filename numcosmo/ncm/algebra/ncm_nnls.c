@@ -634,7 +634,12 @@ _ncm_nnls_solve_normal_QR (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix
                           ncm_vector_data (self->sub_x_tmp), ldb,
                           &g_array_index (self->work, gdouble, 0), lwork);
 
-  g_assert_cmpint (ret, ==, 0);
+  g_assert_cmpint (ret, <=, 0);
+
+  /* ret > 0: the system is rank deficient (e.g. an all-zero column), use the
+   * SVD based minimum-norm solution instead. */
+  if (ret > 0)
+    _ncm_nnls_solve_normal_DGELSD (self, Pset, A, x, f);
 }
 
 static void
@@ -728,6 +733,14 @@ _ncm_nnls_compute_mgrad (NcmNNLSPrivate * const self, NcmMatrix *A, NcmVector *x
 static void
 _ncm_nnls_solve_feasible (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f, guint max_remove)
 {
+  /* An empty passive set has the zero vector as its only feasible solution. */
+  if (ncm_iset_get_len (Pset) == 0)
+  {
+    ncm_vector_set_zero (x);
+
+    return;
+  }
+
   /*ncm_iset_log_vals (Pset, "Pset: ");*/
   _ncm_nnls_solve_unconstrained (self, Pset, A, x, f);
 
@@ -739,6 +752,13 @@ _ncm_nnls_solve_feasible (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix 
   while (ncm_iset_get_len (self->invalid))
   {
     ncm_iset_remove_smallest_subset (self->invalid, Pset, x, max_remove);
+
+    if (ncm_iset_get_len (Pset) == 0)
+    {
+      ncm_vector_set_zero (x);
+
+      return;
+    }
 
     /*ncm_iset_log_vals (Pset, "Pset: ");*/
     _ncm_nnls_solve_unconstrained (self, Pset, A, x, f);
