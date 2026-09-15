@@ -154,6 +154,7 @@ ncm_stats_dist_kde_init (NcmStatsDistKDE *sdkde)
   self->cov               = NULL;
   self->cov_fixed         = NULL;
   self->cov_decomp        = NULL;
+  self->cov_decomp0       = NULL;
   self->sample_matrix     = NULL;
   self->invUsample_matrix = NULL;
   self->invUsample_array  = g_ptr_array_new ();
@@ -232,6 +233,7 @@ _ncm_stats_dist_kde_dispose (GObject *object)
   ncm_matrix_clear (&self->cov);
   ncm_matrix_clear (&self->cov_fixed);
   ncm_matrix_clear (&self->cov_decomp);
+  ncm_matrix_clear (&self->cov_decomp0);
   ncm_matrix_clear (&self->sample_matrix);
   ncm_matrix_clear (&self->invUsample_matrix);
   ncm_matrix_clear (&self->center_matrix);
@@ -262,6 +264,7 @@ _ncm_stats_dist_kde_finalize (GObject *object)
 
 static void _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim);
 static void _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array);
+static void _ncm_stats_dist_kde_update_kernel_norms (NcmStatsDist *sd);
 static void _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM);
 static NcmMatrix *_ncm_stats_dist_kde_peek_cov_decomp (NcmStatsDist *sd, guint i);
 static NcmMatrix *_ncm_stats_dist_kde_peek_full_cov_decomp (NcmStatsDist *sd);
@@ -307,6 +310,7 @@ ncm_stats_dist_kde_class_init (NcmStatsDistKDEClass *klass)
 
   sd_class->set_dim              = &_ncm_stats_dist_kde_set_dim;
   sd_class->prepare_kernel       = &_ncm_stats_dist_kde_prepare_kernel;
+  sd_class->update_kernel_norms  = &_ncm_stats_dist_kde_update_kernel_norms;
   sd_class->compute_IM           = &_ncm_stats_dist_kde_compute_IM;
   sd_class->peek_cov_decomp      = &_ncm_stats_dist_kde_peek_cov_decomp;
   sd_class->peek_full_cov_decomp = &_ncm_stats_dist_kde_peek_full_cov_decomp;
@@ -329,6 +333,7 @@ _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim)
     ncm_stats_vec_clear (&self->sample);
 
     ncm_matrix_clear (&self->cov_decomp);
+    ncm_matrix_clear (&self->cov_decomp0);
     ncm_matrix_clear (&self->sample_matrix);
     ncm_matrix_clear (&self->invUsample_matrix);
     ncm_matrix_clear (&self->center_matrix);
@@ -372,6 +377,16 @@ _save_cov (NcmStatsDistKDE *sdkde, NcmMatrix *cov)
 
   ncm_matrix_clear (&self->cov);
   self->cov = ncm_matrix_dup (cov);
+}
+
+static void
+_ncm_stats_dist_kde_update_kernel_norms (NcmStatsDist *sd)
+{
+  NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
+  NcmStatsDistPrivate * const pself   = ncm_stats_dist_get_instance_private (sd);
+
+  self->kernel_lnnorm = ncm_stats_dist_kernel_get_lnnorm (pself->kernel, self->cov_decomp);
 }
 
 static void
@@ -446,7 +461,7 @@ _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
   /*
    * Getting kernel normalization
    */
-  self->kernel_lnnorm = ncm_stats_dist_kernel_get_lnnorm (pself->kernel, self->cov_decomp);
+  _ncm_stats_dist_kde_update_kernel_norms (sd);
 
   if ((self->sample_matrix == NULL) ||
       (pself->n_obs != ncm_matrix_nrows (self->sample_matrix)) ||
@@ -478,8 +493,26 @@ _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
                         ncm_matrix_gsl (self->invUsample_matrix));
   NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kde_prepare_kernel", ret);
 
-  /* Kernel covariance is href^2 Sigma: the centre-shrinkage scale is one. */
-  pself->center_s2 = 1.0;
+  /*
+   * What center shrinkage needs: the factor of the sample covariance and the kernel
+   * scale matrix; NcmStatsDistVKDE replaces the latter with the mean over its kernels.
+   * The untransformed factor is kept, the applied one follows the bandwidth.
+   */
+  {
+    NcmMatrix *C_decomp, *mean_cov;
+
+    _ncm_stats_dist_center_matrices (sd, &C_decomp, &mean_cov);
+    _cholesky_decomp (C_decomp, ncm_stats_vec_peek_cov_matrix (self->sample, 0), pself->d, self->nearPD_maxiter);
+    ncm_matrix_memcpy (mean_cov, self->cov);
+
+    if ((self->cov_decomp0 == NULL) || (ncm_matrix_nrows (self->cov_decomp0) != pself->d))
+    {
+      ncm_matrix_clear (&self->cov_decomp0);
+      self->cov_decomp0 = ncm_matrix_new (pself->d, pself->d);
+    }
+
+    ncm_matrix_memcpy (self->cov_decomp0, self->cov_decomp);
+  }
 
   /*
    * Allocating the evaluation vector
@@ -501,26 +534,78 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
   guint i;
 
   /*
-   * Rows are the observation points, columns the kernel centres. With centre
-   * shrinkage the two differ, so IM is not symmetric in general.
+   * Rows are the observation points, columns the kernel centers. With center shrinkage
+   * the two differ and the whole block has to be computed. Without it the centers are
+   * the sample points themselves, so the first n_kernels x n_kernels block is symmetric
+   * and only half of it is worth computing.
    */
-  for (i = 0; i < pself->n_obs; i++)
+  if (pself->center_shrink)
   {
-    NcmVector *row_i = g_ptr_array_index (self->invUsample_array, i);
-    guint j;
-
-    for (j = 0; j < pself->n_kernels; j++)
+    for (i = 0; i < pself->n_obs; i++)
     {
-      NcmVector *center_j = g_ptr_array_index (self->invUcenter_array, j);
-      gdouble chi2_ij     = 0.0;
-      guint k;
+      NcmVector *row_i = g_ptr_array_index (self->invUsample_array, i);
+      guint j;
 
-      for (k = 0; k < pself->d; k++)
+      for (j = 0; j < pself->n_kernels; j++)
       {
-        chi2_ij += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (center_j, k)));
-      }
+        NcmVector *center_j = g_ptr_array_index (self->invUcenter_array, j);
+        gdouble chi2_ij     = 0.0;
+        guint k;
 
-      ncm_matrix_set (IM, i, j, chi2_ij / href2);
+        for (k = 0; k < pself->d; k++)
+        {
+          chi2_ij += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (center_j, k)));
+        }
+
+        ncm_matrix_set (IM, i, j, chi2_ij / href2);
+      }
+    }
+  }
+  else
+  {
+    for (i = 0; i < pself->n_kernels; i++)
+    {
+      NcmVector *row_i = g_ptr_array_index (self->invUsample_array, i);
+      guint j;
+
+      ncm_matrix_set (IM, i, i, 0.0);
+
+      for (j = i + 1; j < pself->n_kernels; j++)
+      {
+        NcmVector *row_j = g_ptr_array_index (self->invUsample_array, j);
+        gdouble chi2_ij  = 0.0;
+        guint k;
+
+        for (k = 0; k < pself->d; k++)
+        {
+          chi2_ij += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (row_j, k)));
+        }
+
+        chi2_ij = chi2_ij / href2;
+
+        ncm_matrix_set (IM, i, j, chi2_ij);
+        ncm_matrix_set (IM, j, i, chi2_ij);
+      }
+    }
+
+    for (i = pself->n_kernels; i < pself->n_obs; i++)
+    {
+      NcmVector *row_i = g_ptr_array_index (self->invUsample_array, i);
+      guint j;
+
+      for (j = 0; j < pself->n_kernels; j++)
+      {
+        NcmVector *row_j = g_ptr_array_index (self->invUsample_array, j);
+        gdouble chi2_ij  = 0.0;
+        guint k;
+
+        for (k = 0; k < pself->d; k++)
+        {
+          chi2_ij += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (row_j, k)));
+        }
+
+        ncm_matrix_set (IM, i, j, chi2_ij / href2);
+      }
     }
   }
 
@@ -667,6 +752,18 @@ _ncm_stats_dist_kde_update_centers (NcmStatsDist *sd)
   NcmStatsDistPrivate * const pself   = ncm_stats_dist_get_instance_private (sd);
   gint ret;
   guint i;
+
+  /*
+   * The applied factor follows the current center transform; the whitened sample was
+   * built from the untransformed one in prepare_kernel() and has to follow too.
+   */
+  _ncm_stats_dist_refactor_decomp (sd, self->cov_decomp0, self->cov_decomp);
+  ncm_matrix_memcpy (self->invUsample_matrix, self->sample_matrix);
+  ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
+                        1.0, ncm_matrix_gsl (self->cov_decomp),
+                        ncm_matrix_gsl (self->invUsample_matrix));
+  NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kde_update_centers", ret);
+  _ncm_stats_dist_kde_update_kernel_norms (sd);
 
   if ((self->center_matrix == NULL) ||
       (pself->n_kernels != ncm_matrix_nrows (self->center_matrix)) ||

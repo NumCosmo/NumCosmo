@@ -36,6 +36,7 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_sf_trig.h>
+#include <gsl/gsl_blas.h>
 
 #include "test_ncm_stats_dist_common.h"
 
@@ -73,12 +74,14 @@ static void test_ncm_stats_dist_sampling (TestNcmStatsDist *test, gconstpointer 
 static void test_ncm_stats_dist_serialize (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_center_shrink (TestNcmStatsDist *test, gconstpointer pdata);
+static void test_ncm_stats_dist_defensive (TestNcmStatsDist *test, gconstpointer pdata);
 
 static void test_ncm_stats_dist_free (TestNcmStatsDist *test, gconstpointer pdata);
 
 static void test_ncm_stats_dist_traps (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_invalid_stub (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_invalid_center_shrink (TestNcmStatsDist *test, gconstpointer pdata);
+static void test_ncm_stats_dist_split_underflowing_m2lnp (void);
 
 typedef struct _TestNcmStatsDistFunc
 {
@@ -88,7 +91,7 @@ typedef struct _TestNcmStatsDistFunc
 } TestNcmStatsDistFunc;
 
 #define TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN 4
-#define TEST_NCM_STATS_DIST_TESTS_LEN 12
+#define TEST_NCM_STATS_DIST_TESTS_LEN 13
 
 static TestNcmStatsDistFunc constructors[TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN] = {
   {"kde/gauss",           &test_ncm_stats_dist_new_kde_gauss, },
@@ -110,6 +113,7 @@ static TestNcmStatsDistFunc tests[TEST_NCM_STATS_DIST_TESTS_LEN] = {
   {"gauss/serialize",                  &test_ncm_stats_dist_serialize},
   {"gauss/get_kernel_info",            &test_ncm_stats_dist_get_kernel_info},
   {"gauss/center_shrink",              &test_ncm_stats_dist_center_shrink},
+  {"gauss/defensive",                  &test_ncm_stats_dist_defensive},
 };
 
 /* The checks that assert the estimator reproduces its own distribution. In divergence
@@ -183,6 +187,9 @@ test_ncm_stats_dist_main (gint argc, gchar *argv[], TestNcmStatsDistMode mode)
                 &test_ncm_stats_dist_new_kde_gauss,
                 &test_ncm_stats_dist_invalid_center_shrink,
                 &test_ncm_stats_dist_free);
+
+    g_test_add_func ("/ncm/stats/dist/nd/vkde/gauss/split/underflowing_m2lnp",
+                     &test_ncm_stats_dist_split_underflowing_m2lnp);
   }
 
   return g_test_run ();
@@ -493,25 +500,99 @@ test_ncm_stats_dist_center_shrink (TestNcmStatsDist *test, gconstpointer pdata)
     g_assert_cmpfloat (a, <, 1.0);
     g_assert_true (gsl_finite (kappa));
 
-    /* The fixed bandwidth estimator has kernel covariance kappa href^2 Sigma, so s = 1
-     * and, href being the applied (already shrunk) bandwidth, a^2 + kappa href^2 = 1. */
-    if (!NCM_IS_STATS_DIST_VKDE (test->sd))
-      ncm_assert_cmpdouble_e (a, ==, sqrt (1.0 - kappa * href * href), 1.0e-12, 0.0);
-
-    g_assert_cmpuint (center_array->len, ==, ncm_stats_dist_get_n_kernels (test->sd));
-
-    for (i = 0; i < center_array->len; i++)
+    /*
+     * Center shrinkage contracts the centers by the matrix A and the kernel scale
+     * matrices by Ahat = A / a, with det Ahat = 1, so that the mixture covariance equals
+     * the sample covariance C exactly:
+     *
+     *   A C A^T + kappa href^2 <Sigma'> = C,
+     *
+     * where href = a h is the applied bandwidth and <Sigma'> the mean of the applied
+     * kernel scale matrices U_i'^T U_i'. Everything on the left is public. For the fixed
+     * bandwidth estimator with the sample covariance the transform is isotropic, A = a I.
+     */
     {
-      NcmVector *x_i = g_ptr_array_index (sample_array, i);
-      NcmVector *c_i = g_ptr_array_index (center_array, i);
+      const guint d         = test->dim;
+      const guint n_kernels = ncm_stats_dist_get_n_kernels (test->sd);
+      NcmMatrix *A          = ncm_stats_dist_peek_center_shrink_matrix (test->sd);
+      NcmMatrix *C          = ncm_stats_vec_peek_cov_matrix (sample_stats, 0);
+      NcmMatrix *mean_cov   = ncm_matrix_new (d, d);
+      NcmMatrix *B          = ncm_matrix_new (d, d);
+      NcmMatrix *AC         = ncm_matrix_new (d, d);
+      NcmMatrix *lhs        = ncm_matrix_new (d, d);
+      gdouble max_C         = 0.0;
+      gdouble max_dev       = 0.0;
+      guint p, q, j;
 
-      ncm_vector_memcpy (y, x_i);
-      ncm_vector_sub (y, mean);
-      ncm_vector_scale (y, a);
-      ncm_vector_add (y, mean);
+      g_assert_nonnull (A);
+      g_assert_cmpuint (ncm_matrix_nrows (A), ==, d);
+      g_assert_cmpuint (ncm_matrix_ncols (A), ==, d);
 
-      for (k = 0; k < test->dim; k++)
-        ncm_assert_cmpdouble_e (ncm_vector_get (c_i, k), ==, ncm_vector_get (y, k), 1.0e-10, 1.0e-10);
+      /* <Sigma'> from the applied factors; Cholesky leaves the strict lower triangle untouched. */
+      gsl_matrix_set_zero (ncm_matrix_gsl (mean_cov));
+
+      for (j = 0; j < n_kernels; j++)
+      {
+        ncm_matrix_memcpy (B, ncm_stats_dist_peek_cov_decomp (test->sd, j));
+
+        for (p = 1; p < d; p++)
+          for (q = 0; q < p; q++)
+            ncm_matrix_set (B, p, q, 0.0);
+
+        ncm_matrix_dgemm (mean_cov, 'T', 'N', 1.0 / (1.0 * n_kernels), B, B, 1.0);
+      }
+
+      /* lhs = A C A^T + kappa href^2 <Sigma'> */
+      ncm_matrix_dgemm (AC, 'N', 'N', 1.0, A, C, 0.0);
+      ncm_matrix_dgemm (lhs, 'N', 'T', 1.0, AC, A, 0.0);
+      ncm_matrix_add_mul (lhs, kappa * href * href, mean_cov);
+
+      for (p = 0; p < d; p++)
+      {
+        for (q = 0; q < d; q++)
+        {
+          max_C   = GSL_MAX (max_C, fabs (ncm_matrix_get (C, p, q)));
+          max_dev = GSL_MAX (max_dev, fabs (ncm_matrix_get (lhs, p, q) - ncm_matrix_get (C, p, q)));
+        }
+      }
+
+      g_assert_cmpfloat (max_dev, <, 1.0e-8 * max_C);
+
+      /* det(A)^(1/d) is the reported scalar; for KDE with the sample covariance A = a I. */
+      if (!NCM_IS_STATS_DIST_VKDE (test->sd) && (cov_type == NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE))
+      {
+        ncm_assert_cmpdouble_e (a, ==, 1.0 / sqrt (1.0 + kappa * href * href / (a * a)), 1.0e-10, 0.0);
+
+        for (p = 0; p < d; p++)
+          for (q = 0; q < d; q++)
+            ncm_assert_cmpdouble_e (ncm_matrix_get (A, p, q), ==, (p == q) ? a : 0.0, 1.0e-10, 1.0e-12);
+      }
+
+      /* The centers are mu + A (x_i - mu). */
+      g_assert_cmpuint (center_array->len, ==, n_kernels);
+
+      for (i = 0; i < n_kernels; i++)
+      {
+        NcmVector *x_i = g_ptr_array_index (sample_array, i);
+        NcmVector *c_i = g_ptr_array_index (center_array, i);
+        NcmVector *dx  = ncm_vector_dup (x_i);
+        gint ret;
+
+        ncm_vector_sub (dx, mean);
+        ret = gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (A), ncm_vector_gsl (dx), 0.0, ncm_vector_gsl (y));
+        g_assert_cmpint (ret, ==, 0);
+        ncm_vector_add (y, mean);
+
+        for (k = 0; k < d; k++)
+          ncm_assert_cmpdouble_e (ncm_vector_get (c_i, k), ==, ncm_vector_get (y, k), 1.0e-10, 1.0e-10);
+
+        ncm_vector_free (dx);
+      }
+
+      ncm_matrix_free (mean_cov);
+      ncm_matrix_free (B);
+      ncm_matrix_free (AC);
+      ncm_matrix_free (lhs);
     }
 
     /* The density must still be finite and positive at the sample points. */
@@ -549,6 +630,165 @@ test_ncm_stats_dist_center_shrink (TestNcmStatsDist *test, gconstpointer pdata)
   ncm_vector_free (y);
   ncm_stats_vec_free (sample_stats);
   ncm_stats_vec_free (test_stats);
+  ncm_mset_free (mset);
+}
+
+/* Defensive component: eps = 0 leaves eval, eval_m2lnp and sample untouched; eps > 0
+ * gives q = (1 - eps) p + eps K with K the wide Student-t, eval and eval_m2lnp agree,
+ * and the density stays positive far from the sample where the kernels alone vanish. */
+static void
+test_ncm_stats_dist_defensive (TestNcmStatsDist *test, gconstpointer pdata)
+{
+  NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-2, test->corr_level, 1.0, 2.0, rng);
+  NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (test->dim);
+  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmStatsVec *sample_stats      = ncm_stats_vec_new (test->dim, NCM_STATS_VEC_COV, FALSE);
+  NcmVector *y                   = ncm_vector_new (test->dim);
+  NcmVector *far                 = ncm_vector_new (test->dim);
+  const gdouble eps              = 0.05;
+  const gdouble scale            = 3.0;
+  const gdouble nu               = 4.0;
+  gulong N                       = 0;
+  gdouble p0_far, p_far, m2lnp_far;
+  guint i, k;
+
+  if (GPOINTER_TO_INT (pdata) == NCM_STATS_DIST_KDE_COV_TYPE_FIXED)
+    ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (data_mvnd)));
+
+  ncm_mset_param_set_vector (mset, ncm_data_gauss_cov_mvnd_peek_mean (data_mvnd));
+
+  for (i = 0; i < test->np; i++)
+  {
+    NcmVector *y_i = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
+
+    ncm_stats_dist_add_obs (test->sd, y_i);
+    ncm_stats_vec_append (sample_stats, y_i, FALSE);
+  }
+
+  /* Defaults: off. */
+  g_assert_cmpfloat (ncm_stats_dist_get_defensive_frac (test->sd), ==, 0.0);
+  g_assert_cmpfloat (ncm_stats_dist_get_defensive_scale (test->sd), ==, 4.0);
+  g_assert_cmpfloat (ncm_stats_dist_get_defensive_nu (test->sd), ==, 3.0);
+
+  ncm_stats_dist_prepare (test->sd);
+
+  /* A point 40 sample standard deviations away along every axis. */
+  {
+    NcmVector *mean = ncm_stats_vec_peek_mean (sample_stats);
+
+    for (k = 0; k < test->dim; k++)
+      ncm_vector_set (far, k, ncm_vector_get (mean, k) + 40.0 * ncm_stats_vec_get_sd (sample_stats, k));
+  }
+
+  p0_far = ncm_stats_dist_eval (test->sd, far);
+
+  /* eps = 0 must be the plain mixture, both evaluators. */
+  {
+    NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (test->sd);
+    NcmVector *w                = ncm_stats_dist_peek_weights (test->sd);
+
+    for (i = 0; i < 10; i++)
+    {
+      NcmVector *x_i = g_ptr_array_index (ncm_stats_dist_peek_sample_array (test->sd), i);
+
+      g_assert_cmpfloat (ncm_stats_dist_eval (test->sd, x_i), ==, sd_class->eval_weights (test->sd, w, x_i));
+      g_assert_cmpfloat (ncm_stats_dist_eval_m2lnp (test->sd, x_i), ==, sd_class->eval_weights_m2lnp (test->sd, w, x_i));
+    }
+  }
+
+  ncm_stats_dist_set_defensive_frac (test->sd, eps);
+  ncm_stats_dist_set_defensive_scale (test->sd, scale);
+  ncm_stats_dist_set_defensive_nu (test->sd, nu);
+  g_assert_cmpfloat (ncm_stats_dist_get_defensive_frac (test->sd), ==, eps);
+  g_assert_cmpfloat (ncm_stats_dist_get_defensive_scale (test->sd), ==, scale);
+  g_assert_cmpfloat (ncm_stats_dist_get_defensive_nu (test->sd), ==, nu);
+
+  ncm_stats_dist_prepare (test->sd);
+
+  /* q = (1 - eps) p + eps K, against an independent evaluation of K. */
+  {
+    NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (test->sd);
+    NcmVector *w                = ncm_stats_dist_peek_weights (test->sd);
+    NcmVector *mean             = ncm_stats_vec_peek_mean (sample_stats);
+    NcmMatrix *C                = ncm_stats_vec_peek_cov_matrix (sample_stats, 0);
+    NcmMatrix *U                = ncm_matrix_dup (C);
+    NcmStatsDistKernelST *kst   = ncm_stats_dist_kernel_st_new (test->dim, nu);
+    NcmVector *dx               = ncm_vector_new (test->dim);
+    gdouble lnnorm;
+
+    gsl_matrix_scale (ncm_matrix_gsl (U), scale);
+    g_assert_cmpint (ncm_matrix_cholesky_decomp (U, 'U'), ==, 0);
+    lnnorm = ncm_stats_dist_kernel_get_lnnorm (NCM_STATS_DIST_KERNEL (kst), U);
+
+    for (i = 0; i < 10; i++)
+    {
+      NcmVector *x_i  = (i < 9) ? g_ptr_array_index (ncm_stats_dist_peek_sample_array (test->sd), i) : far;
+      const gdouble p = sd_class->eval_weights (test->sd, w, x_i);
+      gdouble chi2, K, q, m2lnq;
+
+      ncm_vector_memcpy (dx, x_i);
+      ncm_vector_sub (dx, mean);
+      g_assert_cmpint (gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, ncm_matrix_gsl (U), ncm_vector_gsl (dx)), ==, 0);
+      chi2  = ncm_vector_dot (dx, dx);
+      K     = ncm_stats_dist_kernel_eval_unnorm (NCM_STATS_DIST_KERNEL (kst), chi2) / exp (lnnorm);
+      q     = ncm_stats_dist_eval (test->sd, x_i);
+      m2lnq = ncm_stats_dist_eval_m2lnp (test->sd, x_i);
+
+      ncm_assert_cmpdouble_e (q, ==, (1.0 - eps) * p + eps * K, 1.0e-10, 0.0);
+      ncm_assert_cmpdouble_e (m2lnq, ==, -2.0 * log (q), 1.0e-10, 0.0);
+    }
+
+    ncm_matrix_free (U);
+    ncm_vector_free (dx);
+    ncm_stats_dist_kernel_st_free (kst);
+  }
+
+  /* Far from the sample the wide component dominates and the density is positive. */
+  p_far     = ncm_stats_dist_eval (test->sd, far);
+  m2lnp_far = ncm_stats_dist_eval_m2lnp (test->sd, far);
+  g_assert_true (gsl_finite (m2lnp_far));
+  g_assert_cmpfloat (p_far, >, 0.0);
+  g_assert_cmpfloat (p_far, >, p0_far);
+
+  /* Draws: roughly eps of them come from the wide component, seen as a heavier tail in
+   * the Mahalanobis distance; every draw is finite and the mean stays near the sample mean. */
+  {
+    NcmStatsVec *draw_stats = ncm_stats_vec_new (test->dim, NCM_STATS_VEC_COV, FALSE);
+    NcmVector *mean         = ncm_stats_vec_peek_mean (sample_stats);
+    const guint ndraws      = 2000;
+
+    for (i = 0; i < ndraws; i++)
+    {
+      ncm_stats_dist_sample (test->sd, y, rng);
+
+      for (k = 0; k < test->dim; k++)
+        g_assert_true (gsl_finite (ncm_vector_get (y, k)));
+
+      ncm_stats_vec_append (draw_stats, y, FALSE);
+    }
+
+    for (k = 0; k < test->dim; k++)
+    {
+      const gdouble sd_k = ncm_stats_vec_get_sd (sample_stats, k);
+
+      g_assert_cmpfloat (fabs (ncm_stats_vec_get_mean (draw_stats, k) - ncm_vector_get (mean, k)), <, 0.5 * sd_k);
+    }
+
+    ncm_stats_vec_free (draw_stats);
+  }
+
+  /* Back to zero: the plain mixture again. */
+  ncm_stats_dist_set_defensive_frac (test->sd, 0.0);
+  ncm_stats_dist_prepare (test->sd);
+  g_assert_cmpfloat (ncm_stats_dist_eval (test->sd, far), ==, p0_far);
+
+  ncm_model_mvnd_free (model_mvnd);
+  ncm_data_gauss_cov_mvnd_free (data_mvnd);
+  ncm_rng_free (rng);
+  ncm_vector_free (y);
+  ncm_vector_free (far);
+  ncm_stats_vec_free (sample_stats);
   ncm_mset_free (mset);
 }
 
@@ -1384,5 +1624,65 @@ test_ncm_stats_dist_invalid_center_shrink (TestNcmStatsDist *test, gconstpointer
   ncm_stats_dist_prepare (sd);
 
   g_assert_not_reached ();
+}
+
+static void
+test_ncm_stats_dist_split_underflowing_m2lnp (void)
+{
+  /*
+   * A cross-validation that splits the sample leaves n_kernels < n_obs. When the
+   * posterior values span more than the double range, prepare_interp() takes its cut
+   * path, which used to sort n_obs indices into an array holding n_kernels of them and
+   * corrupt the heap. Everything in that path is indexed by kernel, and the branch that
+   * rebuilds the sample needs its own count over the observations.
+   */
+  const guint d                   = 4;
+  const guint n_obs               = 2000;
+  NcmStatsDistKernelGauss *kernel = ncm_stats_dist_kernel_gauss_new (d);
+  NcmStatsDist *sd                = NCM_STATS_DIST (ncm_stats_dist_vkde_new (NCM_STATS_DIST_KERNEL (kernel),
+                                                                             NCM_STATS_DIST_CV_SPLIT_NOFIT));
+  NcmRNG *rng      = ncm_rng_seeded_new (NULL, 42);
+  NcmVector *m2lnp = ncm_vector_new (n_obs);
+  NcmVector *x     = ncm_vector_new (d);
+  guint i, k;
+
+  ncm_stats_dist_set_split_frac (sd, 0.1);
+  ncm_stats_dist_set_over_smooth (sd, 1.0);
+  ncm_stats_dist_vkde_set_local_frac (NCM_STATS_DIST_VKDE (sd), 0.4);
+
+  for (i = 0; i < n_obs; i++)
+  {
+    gdouble m2lnp_i = 0.0;
+
+    for (k = 0; k < d; k++)
+    {
+      const gdouble x_k = ncm_rng_gaussian_gen (rng, 0.0, 1.0);
+
+      ncm_vector_set (x, k, x_k);
+      m2lnp_i += x_k * x_k;
+    }
+
+    ncm_stats_dist_add_obs (sd, x);
+
+    /*
+     * A spread far beyond -2 * 2 * ln (DBL_EPSILON) ~ 144, alternating so that the kernel
+     * block itself spans the range and the cut path is entered. Half the kernels sit
+     * inside it, so the path taken is the one that reweights and returns; the sort that
+     * overflowed runs before either branch.
+     */
+    ncm_vector_set (m2lnp, i, ((i % 2) == 0) ? m2lnp_i : m2lnp_i + 1.0e3);
+  }
+
+  ncm_stats_dist_prepare_interp (sd, m2lnp);
+
+  g_assert_cmpuint (ncm_stats_dist_get_n_kernels (sd), >, 0);
+  g_assert_cmpuint (ncm_vector_len (ncm_stats_dist_peek_weights (sd)), ==,
+                    ncm_stats_dist_get_n_kernels (sd));
+
+  ncm_vector_free (x);
+  ncm_vector_free (m2lnp);
+  ncm_rng_free (rng);
+  ncm_stats_dist_free (sd);
+  ncm_stats_dist_kernel_gauss_free (kernel);
 }
 

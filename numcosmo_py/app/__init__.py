@@ -54,6 +54,7 @@ from .generate import (
     GenerateQSpline,
     GenerateXCDM,
     GenerateDEWSpline,
+    GenerateSamplerTest,
 )
 from .cluster_richness import RunClusterRichnessAnalysis
 from .inspect import (
@@ -287,6 +288,12 @@ GEN_DEWSPLINE_CMD: CMDArg = {
     "help": "Generate DE w(z) spline experiments.",
 }
 
+GEN_SAMPLER_TEST_CMD: CMDArg = {
+    "name": "sampler-test",
+    "no_args_is_help": True,
+    "help": "Generate synthetic sampler-benchmark experiments.",
+}
+
 ANALYSIS_CLUSTER_RICHNESS_CMD: CMDArg = {
     "name": "cluster-richness",
     "no_args_is_help": True,
@@ -375,6 +382,7 @@ app_generate.command(**GEN_CLUSTER_RICHNESS_COUNT_CMD)(GenerateClusterRichnessCo
 app_generate.command(**GEN_QSPLINE_CMD)(GenerateQSpline)
 app_generate.command(**GEN_XCDM_CMD)(GenerateXCDM)
 app_generate.command(**GEN_DEWSPLINE_CMD)(GenerateDEWSpline)
+app_generate.command(**GEN_SAMPLER_TEST_CMD)(GenerateSamplerTest)
 # ------------------------------------------------------------------------------
 # Installing analysis subcommands
 app_analysis.command(**ANALYSIS_CLUSTER_RICHNESS_CMD)(RunClusterRichnessAnalysis)

@@ -36,6 +36,7 @@ typedef struct _NcmStatsDistVKDEPrivate
 {
   /*< private >*/
   GPtrArray *cov_array;
+  GPtrArray *cov_array0;
   NcmVector *lnnorms;
   gdouble local_frac;
   gboolean use_rot_href;

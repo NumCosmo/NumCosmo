@@ -55,10 +55,21 @@ typedef struct _NcmStatsDistPrivate
   gdouble href;
   gdouble rnorm;
   gboolean center_shrink;
+  gboolean auto_kernel;
   GPtrArray *center_array;
   NcmVector *center_mean;
-  gdouble center_s2;
+  NcmMatrix *center_C_decomp;
+  NcmMatrix *center_mean_cov;
+  NcmMatrix *center_A;
+  NcmMatrix *center_Ahat;
+  gboolean center_Ahat_identity;
   gdouble center_a;
+  gdouble defensive_frac;
+  gdouble defensive_scale;
+  gdouble defensive_nu;
+  NcmStatsDistKernel *defensive_kernel;
+  NcmMatrix *defensive_decomp;
+  gdouble defensive_lnnorm;
   guint n_obs;
   guint n_kernels;
   guint alloc_n_obs;
@@ -72,6 +83,7 @@ typedef struct _NcmStatsDistPrivate
   NcmVector *sub_x;
   NcmVector *f;
   NcmVector *f1;
+  NcmVector *cv_m2lnp;
   gdouble *levmar_workz;
   guint levmar_n;
   gsl_multimin_fminimizer *fmin;
@@ -79,6 +91,12 @@ typedef struct _NcmStatsDistPrivate
   GArray *m2lnp;
   NcmRNG *rng;
 } NcmStatsDistPrivate;
+
+/* Center shrinkage protocol between NcmStatsDist and its subclasses. */
+void _ncm_stats_dist_center_matrices (NcmStatsDist *sd, NcmMatrix **C_decomp, NcmMatrix **mean_cov);
+void _ncm_stats_dist_refactor_decomp (NcmStatsDist *sd, NcmMatrix *U0, NcmMatrix *U);
+gboolean _ncm_stats_dist_center_transform_is_identity (NcmStatsDist *sd);
+void _ncm_stats_dist_zero_strict_lower (NcmMatrix *U);
 
 G_END_DECLS
 

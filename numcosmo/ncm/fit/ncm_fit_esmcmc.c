@@ -1673,19 +1673,19 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc)
 
   len = (guint) (self->cur_sample_id + 1);
 
-  /* self->accepted is reused across the run and may hold stale TRUE from a
-   * prior trim/resume; reset explicitly since the interval init path reads
-   * it to pick redraws. */
-  {
-    guint k;
-
-    for (k = len; k < self->nwalkers; k++)
-      g_array_index (self->accepted, gboolean, k) = FALSE;
-  }
-
   ncm_mset_trans_kern_reset (self->sampler);
 
   do {
+    /* self->accepted is reused across the run and holds TRUE for every walker of the
+     * previous pass, including the ones _ncm_fit_esmcmc_check_init_points () just
+     * discarded; both init paths read it to pick redraws, so reset the tail every pass. */
+    {
+      guint k;
+
+      for (k = len; k < self->nwalkers; k++)
+        g_array_index (self->accepted, gboolean, k) = FALSE;
+    }
+
     if (self->has_mpi)
       _ncm_fit_esmcmc_gen_init_points_mpi (esmcmc, len, self->nwalkers);
     else

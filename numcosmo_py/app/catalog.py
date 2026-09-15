@@ -99,6 +99,27 @@ class AnalyzeMCMC(LoadCatalog):
         details.add_row("Number of parameters", f"{self.fparams_len}")
         details.add_row("Number of extra columns", f"{self.nadd_vals}")
         details.add_row("Weighted", f"{mcat.weighted()}")
+
+        # Var(-2lnL) settles orders of magnitude sooner than the autocorrelation time, so
+        # it tells a short chain apart from a converged one. Where the posterior is locally
+        # Gaussian in n parameters, -2lnL is chi^2 with n degrees of freedom and the
+        # variance approaches 2n; the reference is printed for that comparison. It does NOT
+        # hold for a strongly non-Gaussian posterior: on a two-mode target the ratio sits
+        # near 1.4 whether or not the chain has converged. What is general is the trend,
+        # the variance falling and then holding steady from one iteration to the next.
+        m2lnL_id = mcat.get_m2lnp_var()
+        if (m2lnL_id >= 0) and (mcat.len() > 1):
+            m2lnL_var = mcat.peek_pstats().get_var(m2lnL_id)
+            expected = 2.0 * self.fparams_len
+
+            details.add_row("Var(-2lnL)", f"{m2lnL_var:.2f}")
+
+            if expected > 0.0:
+                details.add_row(
+                    "  vs 2n, if Gaussian",
+                    f"{expected:.2f}  (ratio {m2lnL_var / expected:.3f})",
+                )
+
         main_table.add_row(details)
 
         if self.nitems == 0:
@@ -430,6 +451,17 @@ class CalibrateCatalog(LoadCatalog):
         ),
     ] = True
 
+    auto_kernel: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Choose the interpolation kernel together with the over-smoothing "
+                "factor. Requires --cv-method split-nofit and overrides "
+                "--interpolation-kernel."
+            ),
+        ),
+    ] = False
+
     center_shrink: Annotated[
         bool,
         typer.Option(
@@ -506,6 +538,7 @@ class CalibrateCatalog(LoadCatalog):
             split_fraction=self.split_fraction,
             local_fraction=self.local_fraction,
             center_shrink=self.center_shrink,
+            auto_kernel=self.auto_kernel,
             verbose=self.verbose,
         )
 
@@ -548,6 +581,7 @@ class CalibrateCatalog(LoadCatalog):
         main_table.add_row("Local fraction", f"{self.local_fraction}")
         main_table.add_row("Use interpolation", f"{self.interpolate}")
         main_table.add_row("Centre shrinkage", f"{self.center_shrink}")
+        main_table.add_row("Automatic kernel", f"{self.auto_kernel}")
         main_table.add_row(
             "Centre shrinkage factor", f"{sdist.get_center_shrink_factor():.3f}"
         )

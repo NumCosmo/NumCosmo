@@ -396,3 +396,210 @@ universal: ST3 with shrinkage on the banana is worse than the default (tau 17.9 
 13.6), so the kernel must be chosen for the target rather than switched on blindly. On the
 funnel most of the gain comes from replacing Cauchy with ST3, not from shrinkage, which is
 nearly inert there (a = 0.78).
+
+## 11. The fairness control (2026-09-13)
+
+Every number in sections 9 and 10 was quoted against the Cauchy kernel at over-smooth 1,
+which is the library default but not necessarily a well-tuned baseline. Sweeping the
+baseline (d = 25 Gaussian, 1600 walkers, 200 iterations, interpolation on, no shrinkage,
+same binary and same session as the shrinkage runs):
+
+| kernel | h    | local_frac | acceptance | tau_mean | tau_max |
+|--------|------|-----------|-----------|----------|---------|
+| Cauchy | 0.5  | 0.2 | 0.019 | 40.7 |  92.1 |
+| Cauchy | 1.0  | 0.2 | 0.025 | 31.7 |  77.3 |
+| Cauchy | 1.5  | 0.2 | 0.024 | 33.8 |  88.4 |
+| Cauchy | 2.0  | 0.2 | 0.019 | 43.4 | 115.1 |
+| Cauchy | 3.0  | 0.2 | 0.008 | 65.3 | 123.5 |
+| Cauchy | 1.0  | 0.4 | 0.033 | 41.3 | 101.5 |
+| ST3    | 0.5  | 0.2 | 0.016 | 37.2 |  68.2 |
+| ST3    | 0.75 | 0.2 | 0.031 | 26.1 |  48.3 |
+| ST3    | 1.0  | 0.2 | 0.044 | 22.5 |  39.6 |
+| ST3    | 1.5  | 0.2 | 0.035 | 30.3 |  63.0 |
+| ST3    | 2.0  | 0.2 | 0.019 | 39.1 |  87.2 |
+| ST3    | 3.0  | 0.2 | 0.005 | 55.2 | 141.8 |
+| ST3    | 1.0  | 0.4 | 0.055 | 21.8 |  34.1 |
+| ST3    | 1.0  | 0.6 | 0.060 | **20.0** |  42.4 |
+| Gauss  | 0.5  | 0.2 | 0.004 | 80.2 | 216.2 |
+| Gauss  | 0.75 | 0.2 | 0.008 | 34.0 |  77.6 |
+| Gauss  | 1.0  | 0.2 | 0.054 | 30.0 |  72.6 |
+| Gauss  | 2.0  | 0.2 | 0.004 | 76.7 | 184.9 |
+| Gauss  | 3.0  | 0.2 | 0.004 | 67.3 | 156.9 |
+| Gauss  | 1.0  | 0.4 | 0.095 | 23.2 |  46.3 |
+
+and the shrinkage configurations re-measured in the same batch:
+
+| kernel | h | local_frac | acceptance | tau_mean | tau_max |
+|--------|---|-----------|-----------|----------|---------|
+| Gauss  | 3 | 0.2 | 0.486 | 3.5 | 6.0 |
+| Gauss  | 4 | 0.2 | 0.525 | 3.4 | 5.1 |
+| Gauss  | 4 | 0.4 | 0.580 | **3.0** | **4.5** |
+
+Conclusions:
+
+* **h = 1 is the optimum for every kernel without shrinkage.** The baseline was not
+  mis-tuned in h; the 4x span in tau across h in [0.5, 3] is real but h = 1 sits at the
+  minimum. The notebooks' 1.1 is the same point.
+* The baseline *is* improved by the other two knobs: ST3 instead of Cauchy (31.7 -> 22.5)
+  and a larger local_frac (22.5 -> 20.0). Best tuned baseline: ST3, h = 1, local_frac 0.6,
+  tau_mean 20.0; best tau_max 34.1 at local_frac 0.4.
+* Against that best tuned baseline the centre-shrinkage configuration gives **6.7x lower
+  mean autocorrelation and 7.6x lower worst-walker autocorrelation**, not the 11x and 24x
+  quoted against the untuned default. The conclusion survives; the size of the worst-walker
+  gain was mostly the untuned baseline.
+* Run-to-run scatter on tau_mean at these settings is about 7 % (Cauchy h = 1 gave 33.9 in
+  section 9 and 31.7 here), so differences below ~15 % in these tables are not significant.
+
+### The published baseline, from the paper's own runs
+
+The APES paper's `gauss_constraint` catalogs (dimensions 2 to 50, walkers-per-dimension
+100 to 600) give the baseline at its own walker count, which is the comparison that matters
+for any claim made outside this directory. Reading tau from the stored `.ess` diagnostics:
+
+| d  | walkers | w/d | acceptance | tau_mean | tau_max |
+|----|---------|-----|-----------|----------|---------|
+| 25 |  2500   | 100 | 0.026 | 106.1 | 232.6 |
+| 25 |  5000   | 200 | 0.089 |  21.2 |  50.1 |
+| 25 | 10000   | 400 | 0.164 |  17.2 |  22.4 |
+| 25 | 15000   | 600 | 0.210 |  10.8 |  15.0 |
+| 50 | 15000   | 300 | 0.003 |  99.9 | 276.4 |
+| 50 | 20000   | 400 | 0.004 | 111.8 | 478.0 |
+| 50 | 30000   | 600 | 0.005 |  36.2 |  72.0 |
+
+Two things to note. First, the acceptance of the published runs at d = 25 with 2500 walkers
+(0.026) matches the baseline measured here at 1600 walkers (0.025), so the two setups agree
+where they overlap despite the different Gaussian target. Second, at d >= 40 the published
+acceptance is below 0.5 % and tau scatters by a factor of 10 between neighbouring walker
+counts; those rows are not converged and should not be quoted as a baseline.
+
+The honest cross-comparison at d = 25: the shrinkage configuration reaches tau_mean 3.0
+with 1600 walkers, against tau_mean 10.8 for the published configuration with 15000. That
+is 3.6x in tau at 9.4x fewer likelihood evaluations per iteration. It is not a like-for-like
+run (different Gaussian target, different code revision), which is what the
+`numcosmo generate sampler-test` command added on this branch is for.
+
+## 12. Automatic tuning, and what the gain actually depends on (2026-09-13)
+
+### The tuner already existed; the walker could not reach it
+
+`NCM_STATS_DIST_CV_SPLIT_NOFIT` already splits each block into kernel centres and a disjoint
+held-out set and minimises the held-out `-2 ln p~` over `ln over_smooth`, with the NNLS
+weights fitted afterwards at the chosen bandwidth. The APES walker hardcoded
+`NCM_STATS_DIST_CV_NONE` at all four construction sites, so none of it ever ran inside a
+chain. That is the whole reason the centre-shrinkage results needed hand-tuning.
+
+Section 4 of this review proposed minimising `Var[ln(p~/pi)]` instead. Measured over 18
+bandwidth scans, that is the worst of the three candidates and should not be built:
+
+| objective | picks the grid optimum | median acceptance lost | worst |
+|-----------|------------------------|------------------------|-------|
+| `mean[r]`, i.e. what `CV_SPLIT_NOFIT` already does | 10 / 18 | 0.0 % | 38.2 % |
+| `Var[r]`, proposed in section 4 | 7 / 18 | 7.1 % | 92.2 % |
+| held-out importance-sampling estimate of the acceptance | 8 / 18 | 2.3 % | 29.7 % |
+
+### The kernel is a continuous parameter, not a choice
+
+The Student-t kernel `(1 + chi2/nu)^(-(nu+d)/2)` is the Cauchy kernel at `nu = 1` and tends
+to the Gaussian one as `nu` grows, so kernel and bandwidth are a single two-parameter fit
+over `(ln over_smooth, ln nu)`. Bounds: `nu > 2` with centre shrinkage, since the kernel
+covariance is `nu / (nu - 2)`; and `nu <= 1e4` at the other end, where the kernel is already
+within 5e-5 of the Gaussian and beyond which the `(1 + chi2/nu)` form loses precision rather
+than gaining accuracy. The Gaussian kernel itself is installed when the fit reaches the
+ceiling. See `auto_tuning.md`.
+
+### End to end
+
+d = 25, 1600 walkers, 200 iterations:
+
+| configuration | over-smooth | acceptance | tau_mean | time |
+|---------------|-------------|-----------|----------|------|
+| Cauchy h = 1, the default | 1.0 fixed | 0.024 | 32.2 | 170 s |
+| ST3 h = 1, local_frac 0.4, best tuned baseline | 1.0 fixed | 0.056 | 19.9 | 192 s |
+| Gauss + shrink, **auto**, local_frac 0.4, split 0.9 | -> 3.04 | 0.564 | **2.7** | 231 s |
+| Gauss h = 4 + shrink, local_frac 0.4, hand-tuned | 4.0 fixed | 0.583 | 2.6 | 189 s |
+
+d = 50, 2400 walkers, 150 iterations:
+
+| configuration | over-smooth | acceptance | tau_mean | tau_max | time |
+|---------------|-------------|-----------|----------|---------|------|
+| Cauchy h = 1, the default | 1.0 fixed | 0.002 | 40.7 | 109.9 | 1674 s |
+| ST3 h = 1, local_frac 0.4 | 1.0 fixed | 0.002 | 51.0 | 180.2 | 1870 s |
+| Gauss + shrink, **auto**, local_frac 0.4, split 0.8 | -> 4.34 | 0.328 | **5.8** | 11.4 | **1588 s** |
+| Gauss h = 4 + shrink, local_frac 0.4, hand-tuned | 4.0 fixed | 0.333 | 4.7 | 10.5 | 1757 s |
+
+The tuner reaches hand-tuned quality without the knob: 2.7 against 2.6 at d = 25, 5.8
+against 4.7 at d = 50. It is start-independent, landing on the same bandwidth from h = 1 and
+from h = 4. At d = 50 it is also the fastest configuration in the table, because
+`split_frac 0.8` builds the approximation from 20 % fewer kernels and that more than pays
+for the fit. Against the default that is 7.0x lower tau at 0.95x the wall-clock.
+
+ST3 is worse than Cauchy at d = 50 (51.0 against 40.7), which is the saturation of section 7
+showing up end to end: a fixed heavy-tailed kernel is the wrong default in high dimension,
+and that is the argument for fitting `nu` rather than choosing it.
+
+### The gain depends on walkers per dimension, and that changes the claim
+
+Repeating the comparison on the published `gauss_constraint` target at its own operating
+point, d = 25 with 10000 walkers (400 per dimension), 200 iterations:
+
+| configuration | acceptance | tau |
+|---------------|-----------|-----|
+| the published configuration, Gauss h = 1.1 | 0.219 | 40.7 |
+| the same with centre shrinkage at h = 1.1 | 0.116 | 62.0 |
+| Gauss h = 4 + shrink, local_frac 0.4 | **0.327** | **26.2** |
+| ST3 h = 1, local_frac 0.4 | 0.204 | 41.5 |
+
+That is 1.55x, not the 6.7x measured at 1600 walkers. These four chains are short (the
+Constant Break cut leaves 100 to 161 iterations, R-1 is 0.086 and the ESS is 6), so the
+absolute tau values are not converged and only the relative comparison is usable. The
+direction is nevertheless clear and it is what the mechanism predicts: the rule-of-thumb
+bandwidth falls as `n^(-1/(d+4))`, so the covariance inflation `1 + kappa h^2 s^2` shrinks as
+the ensemble grows and there is less for the shrinkage to remove.
+
+**The honest claim is therefore not lower tau at a fixed walker count, it is the same
+quality with far fewer walkers.** At d = 25 the shrinkage configuration reaches tau 3.0 with
+1600 walkers where the published configuration needs 15000 for tau 10.8. The second row is
+also a reminder that shrinkage at the old bandwidth is worse than no shrinkage at all.
+
+### d = 100, beyond where the paper stops
+
+4800 walkers (48 per dimension), 120 iterations, correlated Gaussian:
+
+| configuration | fitted h | acceptance | tau_mean | tau_max | time |
+|---------------|----------|-----------|----------|---------|------|
+| Cauchy h = 1, the default | 1.0 | **0.000** | 3.3 | 135.5 | 12684 s |
+| Gauss + shrink, auto | 5.52 | 0.176 | 11.1 | 49.3 | 20929 s |
+| Gauss h = 4 + shrink | 4.0 | 0.137 | 11.6 | 39.6 | 13746 s |
+| Gauss h = 6 + shrink | 6.0 | 0.187 | **9.9** | 30.2 | 13731 s |
+
+The default does not sample: acceptance is zero to three decimals. Its `tau_mean` of 3.3 is
+an artefact and a warning about reading tau alone, a frozen chain has no autocorrelation to
+measure; `tau_max = 135.5` against a 120-iteration chain is the real signal, and
+`Var(-2lnL)` would have said "collapsed" immediately.
+
+The fitted bandwidth follows roughly `h ~ sqrt(d)`: 2.0, 3.0, 3.9, 5.5 at `d = 10, 25, 50,
+100`, so no fixed default can be right across dimensions. The tuner lands within 12 % of the
+best hand-tuned tau without being told anything about the dimension.
+
+Cost of the tuner at `d = 100` is 52 % of wall-clock (20929 s against 13731 s), because each
+objective evaluation does a triangular solve per held-out point and kernel. That matters on
+a synthetic target and not at all on a real posterior: one Planck likelihood is 2.2 s, which
+puts the same tuner at about 1 %.
+
+### Robustness: where the default collapses, the tuned configuration does not
+
+Same target at `d = 10`, varying the ensemble size only:
+
+| walkers | default: Var/2n | default tau | auto: Var/2n | auto tau |
+|---------|-----------------|-------------|--------------|----------|
+| 100  | 1.53 | 61.8 | 1.05 | 13.7 |
+| 200  | **0.00** | 129 | 0.99 | 4.8 |
+| 400  | **0.00** | 192 | 1.01 | 2.5 |
+| 800  | 1.02 | 10.7 | 1.00 | 1.9 |
+| 1600 | 1.00 | 7.8  | 1.00 | 1.4 |
+
+The shipped default collapses the ensemble at 20 to 40 walkers per dimension, which
+`Var(-2lnL) -> 0` detects at once while tau is non-monotonic and easy to misread. The tuned
+configuration holds `Var/2n = 1.00` down to 10 walkers per dimension and is 5.6x better in
+tau at the top of the range. The gain is not only speed; it is that the sampler still works
+in an ensemble regime where the default fails outright.

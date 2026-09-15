@@ -476,7 +476,14 @@ nc_hipert_boltzmann_set_target_Cls (NcHIPertBoltzmann *pb, NcDataCMBDataType tCl
 void
 nc_hipert_boltzmann_append_target_Cls (NcHIPertBoltzmann *pb, NcDataCMBDataType tCls)
 {
-  if (pb->target_Cls != tCls)
+  /*
+   * Only a requirement that adds something new invalidates the prepared solution. The
+   * test used to compare the accumulated set with the requested one, so once several
+   * data blocks had contributed, every block asking for a subset of the union forced a
+   * full recomputation on each evaluation: with the native Planck TT set that is three
+   * Boltzmann solves per likelihood call instead of one.
+   */
+  if ((pb->target_Cls & tCls) != tCls)
   {
     pb->target_Cls |= tCls;
     ncm_model_ctrl_force_update (pb->ctrl_cosmo);

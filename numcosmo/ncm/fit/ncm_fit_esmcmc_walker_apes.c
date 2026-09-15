@@ -105,6 +105,12 @@ enum
   PROP_USE_INTERP,
   PROP_USE_THREADS,
   PROP_CENTER_SHRINK,
+  PROP_DEFENSIVE_FRAC,
+  PROP_DEFENSIVE_SCALE,
+  PROP_DEFENSIVE_NU,
+  PROP_CV_TYPE,
+  PROP_SPLIT_FRAC,
+  PROP_AUTO_KERNEL,
 };
 
 typedef struct _NcmFitESMCMCWalkerAPESRandomWalk
@@ -141,7 +147,13 @@ typedef struct _NcmFitESMCMCWalkerAPESPrivate
   gboolean use_interp;
   gboolean use_threads;
   gboolean center_shrink;
+  gdouble defensive_frac;
+  gdouble defensive_scale;
+  gdouble defensive_nu;
   gdouble local_frac;
+  NcmStatsDistCV cv_type;
+  gdouble split_frac;
+  gboolean auto_kernel;
   NcmStatsDistKDECovType cov_type;
   NcmMatrix *cov_fixed;
   gboolean constructed;
@@ -185,7 +197,13 @@ ncm_fit_esmcmc_walker_apes_init (NcmFitESMCMCWalkerAPES *apes)
   self->use_interp        = FALSE;
   self->use_threads       = FALSE;
   self->center_shrink     = FALSE;
+  self->defensive_frac    = 0.0;
+  self->defensive_scale   = 4.0;
+  self->defensive_nu      = 3.0;
   self->local_frac        = 0.0;
+  self->cv_type           = NCM_STATS_DIST_CV_NONE;
+  self->split_frac        = 0.0;
+  self->auto_kernel       = FALSE;
   self->cov_type          = NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE;
   self->cov_fixed         = NULL;
   self->constructed       = FALSE;
@@ -237,6 +255,24 @@ _ncm_fit_esmcmc_walker_apes_set_property (GObject *object, guint prop_id, const 
     case PROP_CENTER_SHRINK:
       ncm_fit_esmcmc_walker_apes_set_center_shrink (apes, g_value_get_boolean (value));
       break;
+    case PROP_DEFENSIVE_FRAC:
+      ncm_fit_esmcmc_walker_apes_set_defensive_frac (apes, g_value_get_double (value));
+      break;
+    case PROP_DEFENSIVE_SCALE:
+      ncm_fit_esmcmc_walker_apes_set_defensive_scale (apes, g_value_get_double (value));
+      break;
+    case PROP_DEFENSIVE_NU:
+      ncm_fit_esmcmc_walker_apes_set_defensive_nu (apes, g_value_get_double (value));
+      break;
+    case PROP_CV_TYPE:
+      ncm_fit_esmcmc_walker_apes_set_cv_type (apes, g_value_get_enum (value));
+      break;
+    case PROP_SPLIT_FRAC:
+      ncm_fit_esmcmc_walker_apes_set_split_frac (apes, g_value_get_double (value));
+      break;
+    case PROP_AUTO_KERNEL:
+      ncm_fit_esmcmc_walker_apes_set_auto_kernel (apes, g_value_get_boolean (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -278,6 +314,24 @@ _ncm_fit_esmcmc_walker_apes_get_property (GObject *object, guint prop_id, GValue
       break;
     case PROP_CENTER_SHRINK:
       g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_get_center_shrink (apes));
+      break;
+    case PROP_DEFENSIVE_FRAC:
+      g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_defensive_frac (apes));
+      break;
+    case PROP_DEFENSIVE_SCALE:
+      g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_defensive_scale (apes));
+      break;
+    case PROP_DEFENSIVE_NU:
+      g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_defensive_nu (apes));
+      break;
+    case PROP_CV_TYPE:
+      g_value_set_enum (value, ncm_fit_esmcmc_walker_apes_get_cv_type (apes));
+      break;
+    case PROP_SPLIT_FRAC:
+      g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_split_frac (apes));
+      break;
+    case PROP_AUTO_KERNEL:
+      g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_get_auto_kernel (apes));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -515,6 +569,100 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmFitESMCMCWalkerAPES:defensive-frac:
+   *
+   * Weight of the wide Student-t component in the proposal, see
+   * #NcmStatsDist:defensive-frac. Default: 0.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_DEFENSIVE_FRAC,
+                                   g_param_spec_double ("defensive-frac",
+                                                        NULL,
+                                                        "Weight of the wide Student-t component in the proposal",
+                                                        0.0, 1.0, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFitESMCMCWalkerAPES:defensive-scale:
+   *
+   * Covariance factor of the wide component, see #NcmStatsDist:defensive-scale.
+   * Default: 4.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_DEFENSIVE_SCALE,
+                                   g_param_spec_double ("defensive-scale",
+                                                        NULL,
+                                                        "Covariance factor of the wide component",
+                                                        1.0e-2, 1.0e4, 4.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFitESMCMCWalkerAPES:defensive-nu:
+   *
+   * Degrees of freedom of the wide component, see #NcmStatsDist:defensive-nu.
+   * Default: 3.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_DEFENSIVE_NU,
+                                   g_param_spec_double ("defensive-nu",
+                                                        NULL,
+                                                        "Degrees of freedom of the wide component",
+                                                        1.0, 1.0e4, 3.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFitESMCMCWalkerAPES:cv-type:
+   *
+   * The cross-validation used to choose the over-smooth factor. With
+   * #NCM_STATS_DIST_CV_SPLIT_NOFIT the approximation is built from a fraction
+   * #NcmFitESMCMCWalkerAPES:split-frac of the block and the over-smooth factor is
+   * chosen on the remaining points, which are an independent sample from the same
+   * block. The default, #NCM_STATS_DIST_CV_NONE, uses the over-smooth factor as given.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_CV_TYPE,
+                                   g_param_spec_enum ("cv-type",
+                                                      NULL,
+                                                      "Cross-validation used to choose the over-smooth factor",
+                                                      NCM_TYPE_STATS_DIST_CV, NCM_STATS_DIST_CV_NONE,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFitESMCMCWalkerAPES:split-frac:
+   *
+   * The fraction of the block used as kernel centres when the cross-validation
+   * splits the sample. Zero, the default, keeps whatever #NcmStatsDist uses.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SPLIT_FRAC,
+                                   g_param_spec_double ("split-frac",
+                                                        NULL,
+                                                        "Fraction of the block used as kernel centres",
+                                                        0.0, 1.0, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFitESMCMCWalkerAPES:auto-kernel:
+   *
+   * Whether the kernel is chosen together with the over-smooth factor, see
+   * #NcmStatsDist:auto-kernel. Requires a #NcmFitESMCMCWalkerAPES:cv-type that fits the
+   * bandwidth and overrides #NcmFitESMCMCWalkerAPES:kernel-type.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_AUTO_KERNEL,
+                                   g_param_spec_boolean ("auto-kernel",
+                                                         NULL,
+                                                         "Whether to choose the kernel with the bandwidth",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   walker_class->set_size    = &_ncm_fit_esmcmc_walker_apes_set_size;
   walker_class->get_size    = &_ncm_fit_esmcmc_walker_apes_get_size;
   walker_class->set_nparams = &_ncm_fit_esmcmc_walker_apes_set_nparams;
@@ -615,14 +763,14 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
       {
         case NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE:
         {
-          self->sd0 = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, NCM_STATS_DIST_CV_NONE));
-          self->sd1 = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, NCM_STATS_DIST_CV_NONE));
+          self->sd0 = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, self->cv_type));
+          self->sd1 = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, self->cv_type));
           break;
         }
         case NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE:
         {
-          self->sd0 = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_NONE));
-          self->sd1 = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_NONE));
+          self->sd0 = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, self->cv_type));
+          self->sd1 = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, self->cv_type));
           _ncm_fit_esmcmc_walker_apes_vkde_check_sizes (walker);
           break;
         }
@@ -640,12 +788,30 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
     ncm_stats_dist_set_shrink (self->sd0, self->shrink);
     ncm_stats_dist_set_shrink (self->sd1, self->shrink);
 
+    ncm_stats_dist_set_cv_type (self->sd0, self->cv_type);
+    ncm_stats_dist_set_cv_type (self->sd1, self->cv_type);
+
+    if (self->split_frac > 0.0)
+    {
+      ncm_stats_dist_set_split_frac (self->sd0, self->split_frac);
+      ncm_stats_dist_set_split_frac (self->sd1, self->split_frac);
+    }
+
+    ncm_stats_dist_set_auto_kernel (self->sd0, self->auto_kernel);
+    ncm_stats_dist_set_auto_kernel (self->sd1, self->auto_kernel);
+
     ncm_stats_dist_set_use_threads (self->sd0, self->use_threads);
     ncm_stats_dist_set_use_threads (self->sd1, self->use_threads);
 
     _ncm_fit_esmcmc_walker_apes_check_center_shrink (self);
     ncm_stats_dist_set_center_shrink (self->sd0, self->center_shrink);
     ncm_stats_dist_set_center_shrink (self->sd1, self->center_shrink);
+    ncm_stats_dist_set_defensive_frac (self->sd0, self->defensive_frac);
+    ncm_stats_dist_set_defensive_frac (self->sd1, self->defensive_frac);
+    ncm_stats_dist_set_defensive_scale (self->sd0, self->defensive_scale);
+    ncm_stats_dist_set_defensive_scale (self->sd1, self->defensive_scale);
+    ncm_stats_dist_set_defensive_nu (self->sd0, self->defensive_nu);
+    ncm_stats_dist_set_defensive_nu (self->sd1, self->defensive_nu);
 
     /* The objects above have just been created, so every setting that lives inside
      * them has to be applied again; otherwise changing the method or the kernel
@@ -1503,6 +1669,12 @@ ncm_fit_esmcmc_walker_apes_set_center_shrink (NcmFitESMCMCWalkerAPES *apes, gboo
      * failing that, by NcmStatsDist when it prepares. */
     ncm_stats_dist_set_center_shrink (self->sd0, self->center_shrink);
     ncm_stats_dist_set_center_shrink (self->sd1, self->center_shrink);
+    ncm_stats_dist_set_defensive_frac (self->sd0, self->defensive_frac);
+    ncm_stats_dist_set_defensive_frac (self->sd1, self->defensive_frac);
+    ncm_stats_dist_set_defensive_scale (self->sd0, self->defensive_scale);
+    ncm_stats_dist_set_defensive_scale (self->sd1, self->defensive_scale);
+    ncm_stats_dist_set_defensive_nu (self->sd0, self->defensive_nu);
+    ncm_stats_dist_set_defensive_nu (self->sd1, self->defensive_nu);
   }
 }
 
@@ -1518,6 +1690,230 @@ ncm_fit_esmcmc_walker_apes_get_center_shrink (NcmFitESMCMCWalkerAPES *apes)
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
 
   return self->center_shrink;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_set_defensive_frac:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @frac: weight of the wide Student-t component in the proposal
+ *
+ * Sets #NcmFitESMCMCWalkerAPES:defensive-frac, forwarded to both estimators.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_defensive_frac (NcmFitESMCMCWalkerAPES *apes, const gdouble frac)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  self->defensive_frac = frac;
+
+  if (self->constructed)
+  {
+    ncm_stats_dist_set_defensive_frac (self->sd0, frac);
+    ncm_stats_dist_set_defensive_frac (self->sd1, frac);
+  }
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_get_defensive_frac:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Returns: #NcmFitESMCMCWalkerAPES:defensive-frac.
+ */
+gdouble
+ncm_fit_esmcmc_walker_apes_get_defensive_frac (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  return self->defensive_frac;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_set_defensive_scale:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @scale: covariance factor of the wide component
+ *
+ * Sets #NcmFitESMCMCWalkerAPES:defensive-scale, forwarded to both estimators.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_defensive_scale (NcmFitESMCMCWalkerAPES *apes, const gdouble scale)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  self->defensive_scale = scale;
+
+  if (self->constructed)
+  {
+    ncm_stats_dist_set_defensive_scale (self->sd0, scale);
+    ncm_stats_dist_set_defensive_scale (self->sd1, scale);
+  }
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_get_defensive_scale:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Returns: #NcmFitESMCMCWalkerAPES:defensive-scale.
+ */
+gdouble
+ncm_fit_esmcmc_walker_apes_get_defensive_scale (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  return self->defensive_scale;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_set_defensive_nu:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @nu: degrees of freedom of the wide component
+ *
+ * Sets #NcmFitESMCMCWalkerAPES:defensive-nu, forwarded to both estimators.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_defensive_nu (NcmFitESMCMCWalkerAPES *apes, const gdouble nu)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  self->defensive_nu = nu;
+
+  if (self->constructed)
+  {
+    ncm_stats_dist_set_defensive_nu (self->sd0, nu);
+    ncm_stats_dist_set_defensive_nu (self->sd1, nu);
+  }
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_get_defensive_nu:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Returns: #NcmFitESMCMCWalkerAPES:defensive-nu.
+ */
+gdouble
+ncm_fit_esmcmc_walker_apes_get_defensive_nu (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  return self->defensive_nu;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_set_cv_type:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @cv_type: a #NcmStatsDistCV
+ *
+ * Sets the cross-validation used to choose the over-smooth factor, see
+ * #NcmFitESMCMCWalkerAPES:cv-type.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_cv_type (NcmFitESMCMCWalkerAPES *apes, NcmStatsDistCV cv_type)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  self->cv_type = cv_type;
+
+  if (self->constructed)
+  {
+    ncm_stats_dist_set_cv_type (self->sd0, self->cv_type);
+    ncm_stats_dist_set_cv_type (self->sd1, self->cv_type);
+  }
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_get_cv_type:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Returns: the cross-validation used to choose the over-smooth factor.
+ */
+NcmStatsDistCV
+ncm_fit_esmcmc_walker_apes_get_cv_type (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  return self->cv_type;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_set_split_frac:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @split_frac: the fraction of the block used as kernel centres
+ *
+ * Sets the fraction of the block used as kernel centres when the cross-validation
+ * splits the sample, see #NcmFitESMCMCWalkerAPES:split-frac. Zero keeps the
+ * #NcmStatsDist default.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_split_frac (NcmFitESMCMCWalkerAPES *apes, const gdouble split_frac)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  if ((split_frac > 0.0) && (split_frac < 0.01))
+    g_error ("ncm_fit_esmcmc_walker_apes_set_split_frac: invalid split fraction `%f', "
+             "use zero to keep the NcmStatsDist default or a value in [0.01, 1].", split_frac);
+
+  self->split_frac = split_frac;
+
+  if (self->constructed && (split_frac > 0.0))
+  {
+    ncm_stats_dist_set_split_frac (self->sd0, split_frac);
+    ncm_stats_dist_set_split_frac (self->sd1, split_frac);
+  }
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_get_split_frac:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Returns: the fraction of the block used as kernel centres.
+ */
+gdouble
+ncm_fit_esmcmc_walker_apes_get_split_frac (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  return self->split_frac;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_set_auto_kernel:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @auto_kernel: whether to choose the kernel with the bandwidth
+ *
+ * Sets whether the kernel is chosen together with the over-smooth factor, see
+ * #NcmFitESMCMCWalkerAPES:auto-kernel.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_auto_kernel (NcmFitESMCMCWalkerAPES *apes, gboolean auto_kernel)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  self->auto_kernel = auto_kernel;
+
+  if (self->constructed)
+  {
+    ncm_stats_dist_set_auto_kernel (self->sd0, self->auto_kernel);
+    ncm_stats_dist_set_auto_kernel (self->sd1, self->auto_kernel);
+  }
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_get_auto_kernel:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Returns: whether the kernel is chosen together with the over-smooth factor.
+ */
+gboolean
+ncm_fit_esmcmc_walker_apes_get_auto_kernel (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  return self->auto_kernel;
 }
 
 /**

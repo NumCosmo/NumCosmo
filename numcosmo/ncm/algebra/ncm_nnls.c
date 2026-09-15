@@ -634,10 +634,10 @@ _ncm_nnls_solve_normal_QR (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix
                           ncm_vector_data (self->sub_x_tmp), ldb,
                           &g_array_index (self->work, gdouble, 0), lwork);
 
-  g_assert_cmpint (ret, <=, 0);
+  /* ret < 0 is an illegal argument, a programming error. ret > 0 means the system is
+   * rank deficient (e.g. an all-zero column), use the SVD based minimum-norm solution. */
+  g_assert_cmpint (ret, >=, 0);
 
-  /* ret > 0: the system is rank deficient (e.g. an all-zero column), use the
-   * SVD based minimum-norm solution instead. */
   if (ret > 0)
     _ncm_nnls_solve_normal_DGELSD (self, Pset, A, x, f);
 }

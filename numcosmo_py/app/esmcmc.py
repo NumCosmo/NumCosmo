@@ -32,6 +32,7 @@ import typer
 
 from .. import Ncm
 from ..interpolation.stats_dist import (
+    CrossValidationMethod,
     InterpolationKernel,
     InterpolationMethod,
 )
@@ -161,6 +162,73 @@ class RunMCMC(RunCommonOptions):
         ),
     ] = True
 
+    cv_method: Annotated[
+        CrossValidationMethod,
+        typer.Option(
+            help=(
+                "Cross-validation used to choose the over-smoothing factor. NONE uses "
+                "the value given by --over-smooth. SPLIT_NOFIT builds the approximation "
+                "from a fraction --split-fraction of each block and chooses the "
+                "over-smoothing factor on the remaining points of that block."
+            ),
+        ),
+    ] = CrossValidationMethod.NONE
+
+    split_fraction: Annotated[
+        Optional[float],
+        typer.Option(
+            help="Fraction of each block used as kernel centres.",
+            min=0.02,
+            max=1.0,
+        ),
+    ] = None
+
+    auto_kernel: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Choose the interpolation kernel together with the over-smoothing "
+                "factor, by the same held-out objective. Requires --cv-method "
+                "split-nofit and overrides --interpolation-kernel."
+            ),
+        ),
+    ] = False
+
+    center_shrink: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Shrink the kernel centres toward the ensemble mean so that the APES "
+                "approximation has the same covariance as the ensemble. Requires a "
+                "kernel with a finite covariance, so not the Cauchy one."
+            ),
+        ),
+    ] = False
+
+    defensive_frac: Annotated[
+        float,
+        typer.Option(
+            min=0.0,
+            max=1.0,
+            help=(
+                "Weight of a wide Student-t component mixed into the APES proposal, "
+                "centered on the ensemble mean with --defensive-scale times its "
+                "covariance and --defensive-nu degrees of freedom. Keeps the proposal "
+                "density positive where the kernels leave holes. Zero disables it."
+            ),
+        ),
+    ] = 0.0
+
+    defensive_scale: Annotated[
+        float,
+        typer.Option(min=1.0e-2, help="Covariance factor of the wide component."),
+    ] = 4.0
+
+    defensive_nu: Annotated[
+        float,
+        typer.Option(min=1.0, help="Degrees of freedom of the wide component."),
+    ] = 3.0
+
     parallel: Annotated[
         Parallelization,
         typer.Option(
@@ -241,6 +309,18 @@ class RunMCMC(RunCommonOptions):
         ),
     ] = True
 
+    seed: Annotated[
+        Optional[int],
+        typer.Option(
+            min=0,
+            help=(
+                "Seed of the random number generator used by the sampler, including "
+                "the initial points. If not given, a seed is drawn and printed in the "
+                "log."
+            ),
+        ),
+    ] = None
+
     def __post_init__(self) -> None:
         """Run the ESMCMC algorithm."""
         super().__post_init__()
@@ -320,6 +400,15 @@ class RunMCMC(RunCommonOptions):
         apes_walker.use_interp(self.use_interpolation)
         apes_walker.set_method(self.interpolation_method.genum)
         apes_walker.set_k_type(self.interpolation_kernel.genum)
+        # After the kernel, so that an incompatible pair is caught immediately.
+        apes_walker.set_center_shrink(self.center_shrink)
+        apes_walker.set_defensive_frac(self.defensive_frac)
+        apes_walker.set_defensive_scale(self.defensive_scale)
+        apes_walker.set_defensive_nu(self.defensive_nu)
+        apes_walker.set_cv_type(self.cv_method.genum)
+        apes_walker.set_auto_kernel(self.auto_kernel)
+        if self.split_fraction is not None:
+            apes_walker.set_split_frac(self.split_fraction)
 
         if self.parallel == Parallelization.THREADS.value:
             apes_walker.set_use_threads(True)
@@ -360,6 +449,9 @@ class RunMCMC(RunCommonOptions):
             )
 
         esmcmc.set_skip_check(self.skip_check)
+
+        if self.seed is not None:
+            esmcmc.set_rng(Ncm.RNG.seeded_new(None, self.seed))
 
         esmcmc.start_run()
         esmcmc.run(self.nsamples)
