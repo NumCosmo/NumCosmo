@@ -575,6 +575,8 @@ ncm_dataset_clear (NcmDataset **dset)
   g_clear_object (dset);
 }
 
+static void _ncm_dataset_prepare_all (NcmDataset *dset, NcmMSet *mset);
+
 /**
  * ncm_dataset_resample:
  * @dset: a #NcmDataset
@@ -588,6 +590,11 @@ void
 ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng)
 {
   guint i;
+
+  /* Same reason as in the evaluation paths: a block must not be resampled against a
+   * shared resource that the later blocks have not yet placed their requirements on.
+   */
+  _ncm_dataset_prepare_all (dset, mset);
 
   for (i = 0; i < dset->oa->len; i++)
   {
@@ -842,10 +849,31 @@ ncm_dataset_has_m2lnL_val (NcmDataset *dset)
  * The vector @f is filled with the values of the leastsquares vector f.
  *
  */
+
+/*
+ * Every data block must be prepared before any of them is evaluated. Blocks that share a
+ * resource declare what they need from it in their own prepare(): the CMB likelihoods call
+ * nc_hipert_boltzmann_require() there, each asking for its own spectra and its own lmax.
+ * Preparing and evaluating one block at a time therefore scored the first block against a
+ * solution configured with only that block's requirements, and the answer depended on how
+ * many blocks had been prepared before it. On the native Planck TT set that shifted the
+ * first evaluation of a fresh experiment by 0.0067 in -2lnL, after which every call agreed.
+ */
+static void
+_ncm_dataset_prepare_all (NcmDataset *dset, NcmMSet *mset)
+{
+  guint i;
+
+  for (i = 0; i < dset->oa->len; i++)
+    ncm_data_prepare (ncm_dataset_peek_data (dset, i), mset);
+}
+
 void
 ncm_dataset_leastsquares_f (NcmDataset *dset, NcmMSet *mset, NcmVector *f)
 {
   guint pos = 0, i;
+
+  _ncm_dataset_prepare_all (dset, mset);
 
   for (i = 0; i < dset->oa->len; i++)
   {
@@ -860,7 +888,6 @@ ncm_dataset_leastsquares_f (NcmDataset *dset, NcmMSet *mset, NcmVector *f)
     {
       ncm_vector_get_subvector2 (dset->ls_f, f, pos, n);
 
-      ncm_data_prepare (data, mset);
       NCM_DATA_GET_CLASS (data)->leastsquares_f (data, mset, dset->ls_f);
       pos += n;
     }
@@ -886,6 +913,8 @@ ncm_dataset_m2lnL_val (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL)
 
   *m2lnL = 0.0;
 
+  _ncm_dataset_prepare_all (dset, mset);
+
   for (i = 0; i < dset->oa->len; i++)
   {
     NcmData *data = ncm_dataset_peek_data (dset, i);
@@ -898,7 +927,6 @@ ncm_dataset_m2lnL_val (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL)
     {
       gdouble m2lnL_i;
 
-      ncm_data_prepare (data, mset);
       NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, &m2lnL_i);
       *m2lnL += m2lnL_i;
     }
@@ -922,6 +950,8 @@ ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v)
 {
   guint i;
 
+  _ncm_dataset_prepare_all (dset, mset);
+
   g_assert_cmpuint (ncm_vector_len (m2lnL_v), >=, dset->oa->len);
 
   for (i = 0; i < dset->oa->len; i++)
@@ -936,7 +966,6 @@ ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v)
     {
       gdouble m2lnL_i;
 
-      ncm_data_prepare (data, mset);
       NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, &m2lnL_i);
       ncm_vector_set (m2lnL_v, i, m2lnL_i);
     }
@@ -961,18 +990,16 @@ ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2ln
   *m2lnL_i = 0.0;
 
   g_assert_cmpuint (i, <, dset->oa->len);
+
+  /* Every block, not only the requested one: see _ncm_dataset_prepare_all. */
+  _ncm_dataset_prepare_all (dset, mset);
   {
     NcmData *data = ncm_dataset_peek_data (dset, i);
 
     if (!NCM_DATA_GET_CLASS (data)->m2lnL_val)
-    {
       g_error ("ncm_dataset_m2lnL_val: %s dont implement m2lnL", G_OBJECT_TYPE_NAME (data));
-    }
     else
-    {
-      ncm_data_prepare (data, mset);
       NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, m2lnL_i);
-    }
   }
 
   return;

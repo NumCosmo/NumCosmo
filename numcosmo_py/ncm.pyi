@@ -3640,6 +3640,18 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         Whether to use threads when building the posterior approximation
       center-shrink -> gboolean: center-shrink
         Whether to shrink the kernel centres toward the ensemble mean
+      defensive-frac -> gdouble: defensive-frac
+        Weight of the wide Student-t component in the proposal
+      defensive-scale -> gdouble: defensive-scale
+        Covariance factor of the wide component
+      defensive-nu -> gdouble: defensive-nu
+        Degrees of freedom of the wide component
+      cv-type -> NcmStatsDistCV: cv-type
+        Cross-validation used to choose the over-smooth factor
+      split-frac -> gdouble: split-frac
+        Fraction of the block used as kernel centres
+      auto-kernel -> gboolean: auto-kernel
+        Whether to choose the kernel with the bandwidth
 
     Properties from NcmFitESMCMCWalker:
       size -> guint: size
@@ -3652,13 +3664,19 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
     """
 
     class Props:
+        auto_kernel: bool
         center_shrink: bool
+        cv_type: StatsDistCV
+        defensive_frac: float
+        defensive_nu: float
+        defensive_scale: float
         kernel_type: FitESMCMCWalkerAPESKType
         method: FitESMCMCWalkerAPESMethod
         over_smooth: float
         random_walk_prob: float
         random_walk_scale: float
         shrink: float
+        split_frac: float
         use_interp: bool
         use_threads: bool
         nparams: int
@@ -3667,13 +3685,19 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
     props: Props = ...
     def __init__(
         self,
+        auto_kernel: bool = ...,
         center_shrink: bool = ...,
+        cv_type: StatsDistCV = ...,
+        defensive_frac: float = ...,
+        defensive_nu: float = ...,
+        defensive_scale: float = ...,
         kernel_type: FitESMCMCWalkerAPESKType = ...,
         method: FitESMCMCWalkerAPESMethod = ...,
         over_smooth: float = ...,
         random_walk_prob: float = ...,
         random_walk_scale: float = ...,
         shrink: float = ...,
+        split_frac: float = ...,
         use_interp: bool = ...,
         use_threads: bool = ...,
         nparams: int = ...,
@@ -3682,13 +3706,19 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
     @staticmethod
     def clear(apes: FitESMCMCWalkerAPES) -> None: ...
     def free(self) -> None: ...
+    def get_auto_kernel(self) -> bool: ...
     def get_center_shrink(self) -> bool: ...
+    def get_cv_type(self) -> StatsDistCV: ...
+    def get_defensive_frac(self) -> float: ...
+    def get_defensive_nu(self) -> float: ...
+    def get_defensive_scale(self) -> float: ...
     def get_k_type(self) -> FitESMCMCWalkerAPESKType: ...
     def get_method(self) -> FitESMCMCWalkerAPESMethod: ...
     def get_over_smooth(self) -> float: ...
     def get_random_walk_prob(self) -> float: ...
     def get_random_walk_scale(self) -> float: ...
     def get_shrink(self) -> float: ...
+    def get_split_frac(self) -> float: ...
     def get_use_threads(self) -> bool: ...
     def interp(self) -> bool: ...
     @classmethod
@@ -3705,10 +3735,15 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
     ) -> FitESMCMCWalkerAPES: ...
     def peek_sds(self) -> typing.Tuple[StatsDist, StatsDist]: ...
     def ref(self) -> FitESMCMCWalkerAPES: ...
+    def set_auto_kernel(self, auto_kernel: bool) -> None: ...
     def set_center_shrink(self, center_shrink: bool) -> None: ...
     def set_cov_fixed_from_mset(self, mset: MSet) -> None: ...
     def set_cov_robust(self) -> None: ...
     def set_cov_robust_diag(self) -> None: ...
+    def set_cv_type(self, cv_type: StatsDistCV) -> None: ...
+    def set_defensive_frac(self, frac: float) -> None: ...
+    def set_defensive_nu(self, nu: float) -> None: ...
+    def set_defensive_scale(self, scale: float) -> None: ...
     def set_exploration(self, exploration: int) -> None: ...
     def set_k_type(self, k_type: FitESMCMCWalkerAPESKType) -> None: ...
     def set_local_frac(self, local_frac: float) -> None: ...
@@ -3717,6 +3752,7 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
     def set_random_walk_prob(self, prob: float) -> None: ...
     def set_random_walk_scale(self, scale: float) -> None: ...
     def set_shrink(self, shrink: float) -> None: ...
+    def set_split_frac(self, split_frac: float) -> None: ...
     def set_use_threads(self, use_threads: bool) -> None: ...
     def use_interp(self, use_interp: bool) -> None: ...
 
@@ -12153,7 +12189,15 @@ class StatsDist(GObject.Object):
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
       center-shrink -> gboolean: center-shrink
-        Whether to shrink the kernel centres toward the sample mean
+        Whether to shrink the kernel centers toward the sample mean
+      auto-kernel -> gboolean: auto-kernel
+        Whether to choose the kernel with the bandwidth
+      defensive-frac -> gdouble: defensive-frac
+        Weight of the wide Student-t component in the proposal
+      defensive-scale -> gdouble: defensive-scale
+        Covariance factor of the wide component
+      defensive-nu -> gdouble: defensive-nu
+        Degrees of freedom of the wide component
 
     Signals from GObject:
       notify (GParam)
@@ -12162,7 +12206,11 @@ class StatsDist(GObject.Object):
     class Props:
         CV_type: StatsDistCV
         N: int
+        auto_kernel: bool
         center_shrink: bool
+        defensive_frac: float
+        defensive_nu: float
+        defensive_scale: float
         kernel: StatsDistKernel
         over_smooth: float
         print_fit: bool
@@ -12175,7 +12223,11 @@ class StatsDist(GObject.Object):
     def __init__(
         self,
         CV_type: StatsDistCV = ...,
+        auto_kernel: bool = ...,
         center_shrink: bool = ...,
+        defensive_frac: float = ...,
+        defensive_nu: float = ...,
+        defensive_scale: float = ...,
         kernel: StatsDistKernel = ...,
         over_smooth: float = ...,
         print_fit: bool = ...,
@@ -12200,13 +12252,18 @@ class StatsDist(GObject.Object):
     def do_reset(self) -> None: ...
     def do_set_dim(self, dim: int) -> None: ...
     def do_update_centers(self) -> None: ...
+    def do_update_kernel_norms(self) -> None: ...
     def eval(self, x: Vector) -> float: ...
     def eval_m2lnp(self, x: Vector) -> float: ...
     def free(self) -> None: ...
     def get_Ki(self, i: int) -> typing.Tuple[Vector, Matrix, float, float]: ...
+    def get_auto_kernel(self) -> bool: ...
     def get_center_shrink(self) -> bool: ...
     def get_center_shrink_factor(self) -> float: ...
     def get_cv_type(self) -> StatsDistCV: ...
+    def get_defensive_frac(self) -> float: ...
+    def get_defensive_nu(self) -> float: ...
+    def get_defensive_scale(self) -> float: ...
     def get_dim(self) -> int: ...
     def get_href(self) -> float: ...
     def get_kernel(self) -> StatsDistKernel: ...
@@ -12221,6 +12278,7 @@ class StatsDist(GObject.Object):
     def get_use_threads(self) -> bool: ...
     def kernel_choose(self, rng: RNG) -> int: ...
     def peek_center_array(self) -> list[Vector]: ...
+    def peek_center_shrink_matrix(self) -> typing.Optional[Matrix]: ...
     def peek_cov_decomp(self, i: int) -> Matrix: ...
     def peek_full_cov(self) -> Matrix: ...
     def peek_full_cov_decomp(self) -> Matrix: ...
@@ -12233,8 +12291,12 @@ class StatsDist(GObject.Object):
     def ref(self) -> StatsDist: ...
     def reset(self) -> None: ...
     def sample(self, x: Vector, rng: RNG) -> None: ...
+    def set_auto_kernel(self, auto_kernel: bool) -> None: ...
     def set_center_shrink(self, center_shrink: bool) -> None: ...
     def set_cv_type(self, cv_type: StatsDistCV) -> None: ...
+    def set_defensive_frac(self, frac: float) -> None: ...
+    def set_defensive_nu(self, nu: float) -> None: ...
+    def set_defensive_scale(self, scale: float) -> None: ...
     def set_kernel(self, sdk: StatsDistKernel) -> None: ...
     def set_over_smooth(self, over_smooth: float) -> None: ...
     def set_print_fit(self, print_fit: bool) -> None: ...
@@ -12642,6 +12704,7 @@ class StatsDistClass(GObject.GPointer):
     eval_weights_m2lnp: typing.Callable[[StatsDist, Vector, Vector], float] = ...
     reset: typing.Callable[[StatsDist], None] = ...
     update_centers: typing.Callable[[StatsDist], None] = ...
+    update_kernel_norms: typing.Callable[[StatsDist], None] = ...
     padding: list[None] = ...
 
 class StatsDistKDE(StatsDist):
@@ -12681,7 +12744,15 @@ class StatsDistKDE(StatsDist):
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
       center-shrink -> gboolean: center-shrink
-        Whether to shrink the kernel centres toward the sample mean
+        Whether to shrink the kernel centers toward the sample mean
+      auto-kernel -> gboolean: auto-kernel
+        Whether to choose the kernel with the bandwidth
+      defensive-frac -> gdouble: defensive-frac
+        Weight of the wide Student-t component in the proposal
+      defensive-scale -> gdouble: defensive-scale
+        Covariance factor of the wide component
+      defensive-nu -> gdouble: defensive-nu
+        Degrees of freedom of the wide component
 
     Signals from GObject:
       notify (GParam)
@@ -12693,7 +12764,11 @@ class StatsDistKDE(StatsDist):
         nearPD_maxiter: int
         CV_type: StatsDistCV
         N: int
+        auto_kernel: bool
         center_shrink: bool
+        defensive_frac: float
+        defensive_nu: float
+        defensive_scale: float
         kernel: StatsDistKernel
         over_smooth: float
         print_fit: bool
@@ -12709,7 +12784,11 @@ class StatsDistKDE(StatsDist):
         cov_type: StatsDistKDECovType = ...,
         nearPD_maxiter: int = ...,
         CV_type: StatsDistCV = ...,
+        auto_kernel: bool = ...,
         center_shrink: bool = ...,
+        defensive_frac: float = ...,
+        defensive_nu: float = ...,
+        defensive_scale: float = ...,
         kernel: StatsDistKernel = ...,
         over_smooth: float = ...,
         print_fit: bool = ...,
@@ -12964,7 +13043,15 @@ class StatsDistVKDE(StatsDistKDE):
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
       center-shrink -> gboolean: center-shrink
-        Whether to shrink the kernel centres toward the sample mean
+        Whether to shrink the kernel centers toward the sample mean
+      auto-kernel -> gboolean: auto-kernel
+        Whether to choose the kernel with the bandwidth
+      defensive-frac -> gdouble: defensive-frac
+        Weight of the wide Student-t component in the proposal
+      defensive-scale -> gdouble: defensive-scale
+        Covariance factor of the wide component
+      defensive-nu -> gdouble: defensive-nu
+        Degrees of freedom of the wide component
 
     Signals from GObject:
       notify (GParam)
@@ -12978,7 +13065,11 @@ class StatsDistVKDE(StatsDistKDE):
         nearPD_maxiter: int
         CV_type: StatsDistCV
         N: int
+        auto_kernel: bool
         center_shrink: bool
+        defensive_frac: float
+        defensive_nu: float
+        defensive_scale: float
         kernel: StatsDistKernel
         over_smooth: float
         print_fit: bool
@@ -12996,7 +13087,11 @@ class StatsDistVKDE(StatsDistKDE):
         cov_type: StatsDistKDECovType = ...,
         nearPD_maxiter: int = ...,
         CV_type: StatsDistCV = ...,
+        auto_kernel: bool = ...,
         center_shrink: bool = ...,
+        defensive_frac: float = ...,
+        defensive_nu: float = ...,
+        defensive_scale: float = ...,
         kernel: StatsDistKernel = ...,
         over_smooth: float = ...,
         print_fit: bool = ...,

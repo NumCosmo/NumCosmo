@@ -29,6 +29,7 @@
 #include <numcosmo/numcosmo.h>
 
 #include "test_ncm_fit_esmcmc_common.h"
+#include "test_ncm_fit_esmcmc_parity.h"
 
 typedef struct _TestNcmFitESMCMC
 {
@@ -76,6 +77,8 @@ void test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointe
 void test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_parity_serial_vs_threaded (void);
+void test_ncm_fit_esmcmc_parity_apes_serial_vs_threaded (void);
+void test_ncm_fit_esmcmc_apes_settings_survive_rebuild (void);
 
 typedef struct _TestNcmFitEsmcmcFunc
 {
@@ -164,6 +167,9 @@ test_ncm_fit_esmcmc_main (gint argc, gchar *argv[], TestNcmFitESMCMCMode mode)
                 &test_ncm_fit_esmcmc_free);
 
     g_test_add_func ("/ncm/fit/esmcmc/parity/serial_vs_threaded", &test_ncm_fit_esmcmc_parity_serial_vs_threaded);
+    g_test_add_func ("/ncm/fit/esmcmc/parity/apes_serial_vs_threaded", &test_ncm_fit_esmcmc_parity_apes_serial_vs_threaded);
+
+    g_test_add_func ("/ncm/fit/esmcmc/apes/settings_survive_rebuild", &test_ncm_fit_esmcmc_apes_settings_survive_rebuild);
   }
 
   return g_test_run ();
@@ -1028,6 +1034,28 @@ _test_ncm_fit_esmcmc_parity_run (gboolean use_threads)
   return mcat;
 }
 
+/* APES in threads mode against serial, production configuration (shared unit
+ * test_ncm_fit_esmcmc_parity.c). Only the first new ensemble exists in the catalog, since
+ * the chain amplifies rounding differences of the fitted bandwidth within a few
+ * iterations; the tolerance covers the CV optimizer stopping at a rounding-dependent
+ * point of its xtol region (~1e-6 relative in h). Meaningful in the OMP lane; with
+ * OMP_NUM_THREADS=1 it reduces to a serial-vs-serial check. A shared accumulator in the
+ * CV objective once made the two disagree at order one. */
+void
+test_ncm_fit_esmcmc_parity_apes_serial_vs_threaded (void)
+{
+  NcmMSetCatalog *mcat_serial   = test_ncm_fit_esmcmc_parity_apes_catalog (FALSE, FALSE);
+  NcmMSetCatalog *mcat_serial2  = test_ncm_fit_esmcmc_parity_apes_catalog (FALSE, FALSE);
+  NcmMSetCatalog *mcat_threaded = test_ncm_fit_esmcmc_parity_apes_catalog (TRUE, FALSE);
+
+  test_ncm_fit_esmcmc_parity_compare (mcat_serial, mcat_serial2, 0.0, 0.0);
+  test_ncm_fit_esmcmc_parity_compare (mcat_serial, mcat_threaded, 1.0e-6, 1.0e-8);
+
+  ncm_mset_catalog_free (mcat_serial);
+  ncm_mset_catalog_free (mcat_serial2);
+  ncm_mset_catalog_free (mcat_threaded);
+}
+
 void
 test_ncm_fit_esmcmc_parity_serial_vs_threaded (void)
 {
@@ -1053,5 +1081,57 @@ test_ncm_fit_esmcmc_parity_serial_vs_threaded (void)
 
   ncm_mset_catalog_clear (&mcat_serial);
   ncm_mset_catalog_clear (&mcat_threaded);
+}
+
+void
+test_ncm_fit_esmcmc_apes_settings_survive_rebuild (void)
+{
+  const guint nwalkers         = 100;
+  const guint nparams          = 4;
+  NcmFitESMCMCWalkerAPES *apes = ncm_fit_esmcmc_walker_apes_new (nwalkers, nparams);
+  const gdouble local_frac     = 0.3;
+  const gdouble split_frac     = 0.6;
+  NcmStatsDist *sd0            = NULL;
+  NcmStatsDist *sd1            = NULL;
+
+  ncm_fit_esmcmc_walker_apes_set_local_frac (apes, local_frac);
+  ncm_fit_esmcmc_walker_apes_set_cv_type (apes, NCM_STATS_DIST_CV_SPLIT_NOFIT);
+  ncm_fit_esmcmc_walker_apes_set_split_frac (apes, split_frac);
+  ncm_fit_esmcmc_walker_apes_set_auto_kernel (apes, TRUE);
+  ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, 2.5);
+
+  /* Changing the kernel or the method destroys and recreates both estimators. Everything
+   * the caller has configured must be reapplied, otherwise it silently reverts to the
+   * defaults, which is what happened to local-frac and the covariance type before.
+   */
+  ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS);
+  ncm_fit_esmcmc_walker_apes_set_center_shrink (apes, TRUE);
+
+  ncm_fit_esmcmc_walker_apes_peek_sds (apes, &sd0, &sd1);
+
+  g_assert_cmpint (ncm_stats_dist_get_cv_type (sd0), ==, NCM_STATS_DIST_CV_SPLIT_NOFIT);
+  g_assert_cmpint (ncm_stats_dist_get_cv_type (sd1), ==, NCM_STATS_DIST_CV_SPLIT_NOFIT);
+  g_assert_cmpfloat (ncm_stats_dist_get_split_frac (sd0), ==, split_frac);
+  g_assert_cmpfloat (ncm_stats_dist_get_split_frac (sd1), ==, split_frac);
+  g_assert_true (ncm_stats_dist_get_auto_kernel (sd0));
+  g_assert_true (ncm_stats_dist_get_auto_kernel (sd1));
+  g_assert_cmpfloat (ncm_stats_dist_get_over_smooth (sd0), ==, 2.5);
+  g_assert_cmpfloat (ncm_stats_dist_vkde_get_local_frac (NCM_STATS_DIST_VKDE (sd0)), ==, local_frac);
+  g_assert_true (ncm_stats_dist_get_center_shrink (sd0));
+
+  g_assert_cmpint (ncm_fit_esmcmc_walker_apes_get_cv_type (apes), ==, NCM_STATS_DIST_CV_SPLIT_NOFIT);
+  g_assert_cmpfloat (ncm_fit_esmcmc_walker_apes_get_split_frac (apes), ==, split_frac);
+
+  /* The same must hold when the method changes. */
+  ncm_fit_esmcmc_walker_apes_set_method (apes, NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE);
+  ncm_fit_esmcmc_walker_apes_peek_sds (apes, &sd0, &sd1);
+
+  g_assert_true (NCM_IS_STATS_DIST_KDE (sd0));
+  g_assert_false (NCM_IS_STATS_DIST_VKDE (sd0));
+  g_assert_cmpint (ncm_stats_dist_get_cv_type (sd0), ==, NCM_STATS_DIST_CV_SPLIT_NOFIT);
+  g_assert_cmpfloat (ncm_stats_dist_get_split_frac (sd0), ==, split_frac);
+  g_assert_true (ncm_stats_dist_get_auto_kernel (sd0));
+
+  ncm_fit_esmcmc_walker_apes_free (apes);
 }
 

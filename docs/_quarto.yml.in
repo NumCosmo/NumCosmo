@@ -27,6 +27,7 @@ project:
     - theory/sbessel_projection.qmd
     - theory/ssc.qmd
     - theory/castro_hmf.qmd
+    - theory/stats_dist.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
     - benchmarks/ccl_two_point.qmd
@@ -171,6 +172,8 @@ website:
                 text: "UltraLevin: Angular Power Spectra"
               - href: theory/csq1d.qmd
                 text: "CSQ1D Formalism"
+              - href: theory/stats_dist.qmd
+                text: "Kernel Mixture Densities"
       - section: examples/index.qmd
         contents:
           - section: "Background & Distances"

@@ -36,3 +36,4 @@ classes and methods.
 - [The Ultraspherical Spectral Solver](sbessel_ode_solver.qmd) --- the banded discretization of the spherical Bessel operator, batching over multipoles, the incremental Givens QR and conjugate panel spans.
 - [UltraLevin: Non-Limber Angular Power Spectra](sbessel_projection.qmd) --- the Levin reduction, fixed panels in x, the window over k and its exact outer integral.
 - [CSQ1D Formalism](csq1d.qmd) --- complex-structure evolution of a time-dependent oscillator.
+- [Kernel Mixture Densities](stats_dist.qmd) --- reconstructing a density from samples as a non-negative kernel mixture, the center-shrinkage covariance budget, and fitting the bandwidth and kernel tail together.

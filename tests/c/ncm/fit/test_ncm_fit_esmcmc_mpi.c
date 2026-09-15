@@ -27,6 +27,7 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include "test_ncm_fit_esmcmc_parity.h"
 
 typedef struct _TestNcmFitESMCMC
 {
@@ -46,6 +47,7 @@ void test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_parity_serial_vs_mpi (void);
+void test_ncm_fit_esmcmc_parity_apes_serial_vs_mpi (void);
 
 typedef struct _TestNcmFitEsmcmcFunc
 {
@@ -92,6 +94,7 @@ main (gint argc, gchar *argv[])
   }
 
   g_test_add_func ("/ncm/fit/esmcmc/parity/serial_vs_mpi", &test_ncm_fit_esmcmc_parity_serial_vs_mpi);
+  g_test_add_func ("/ncm/fit/esmcmc/parity/apes_serial_vs_mpi", &test_ncm_fit_esmcmc_parity_apes_serial_vs_mpi);
 
   g_test_run ();
 }
@@ -404,6 +407,24 @@ test_ncm_fit_esmcmc_parity_serial_vs_mpi (void)
     for (j = 0; j < ncols; j++)
       g_assert_cmpfloat (ncm_vector_get (row_serial, j), ==, ncm_vector_get (row_mpi, j));
   }
+
+  ncm_mset_catalog_clear (&mcat_serial);
+  ncm_mset_catalog_clear (&mcat_mpi);
+}
+
+/* APES with the production configuration, MPI evaluation against serial. The proposal is
+ * drawn on the master in both cases and each slave decides acceptance with the jump it
+ * received, so the result does not depend on which slave answers first; the two must
+ * agree to rounding on the first new ensemble. The threaded arm is checked against the
+ * same serial reference in test_ncm_fit_esmcmc (OMP lane); this binary runs with
+ * OMP_THREAD_LIMIT=1, where a threaded arm would only repeat the serial one. */
+void
+test_ncm_fit_esmcmc_parity_apes_serial_vs_mpi (void)
+{
+  NcmMSetCatalog *mcat_serial = test_ncm_fit_esmcmc_parity_apes_catalog (FALSE, FALSE);
+  NcmMSetCatalog *mcat_mpi    = test_ncm_fit_esmcmc_parity_apes_catalog (FALSE, TRUE);
+
+  test_ncm_fit_esmcmc_parity_compare (mcat_serial, mcat_mpi, 1.0e-12, 1.0e-14);
 
   ncm_mset_catalog_clear (&mcat_serial);
   ncm_mset_catalog_clear (&mcat_mpi);

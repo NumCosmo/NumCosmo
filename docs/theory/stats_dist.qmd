@@ -1,0 +1,172 @@
+---
+title: Kernel Mixture Densities
+---
+
+This page is the technical description of [[numcosmo-math|NcmStatsDist]] and its two
+subclasses, [[numcosmo-math|NcmStatsDistKDE]] and [[numcosmo-math|NcmStatsDistVKDE]].
+These reconstruct a probability density from a set of sample points and draw from the
+result. Their main use in the library is as the proposal of the APES sampler,
+[[numcosmo-math|NcmFitESMCMCWalkerAPES]], where the quality of the reconstruction sets
+the acceptance of the chain.
+
+## The interpolant
+
+For a $d$-dimensional function $g(x)$, the interpolant is
+
+$$
+s(x) = \sum_{i=1}^n \lambda_i \phi\left(|x-x_i|, \Sigma_i\right),
+\qquad x \in \mathbf{R}^d,
+$$ {#eq-interpolant}
+
+where $x_i$ are the sample points, $\Sigma_i$ sets the scale and shape of the kernel at
+$x_i$, and $\lambda_i$ is its weight. The weights are chosen so that
+
+$$
+s(x_i) = g(x_i).
+$$ {#eq-interp-conditions}
+
+Evaluating the kernels at the sample points gives the interpolation matrix $\Phi$, and
+the target values $g(x_i)$ give $G$, so that @eq-interp-conditions reads
+
+$$
+G = \lambda \Phi.
+$$ {#eq-nnls}
+
+This is solved as a non-negative linear least-squares problem [@LawsonHanson1974], which
+keeps $\lambda_i \geq 0$. The weights are then divided by their sum, making them a
+probability distribution over the kernels, and mixed with the uniform weights $1/n$ in a
+fixed proportion. Sampling draws a kernel with probability $\lambda_i$, then a point
+from that kernel. For an introduction to radial basis interpolation see [@DuToit2008].
+
+The caller supplies the target as $-2\ln g(x_i)$, which is the natural form when $g$ is
+a posterior.
+
+## Center shrinkage
+
+A kernel mixture built on the sample points is wider than the sample it came from. The
+correction implemented here is the one introduced by @West1993 for mixture
+approximations to posteriors, and used since in sequential Monte Carlo.
+
+Sampling the mixture is a two-step draw: select a kernel $I$ with probability
+$\lambda_I$, then draw a point from it. Write $\langle \cdot \rangle$ for the average
+over that selection, and let $m_I$ and $S_I$ be the center and the covariance of the
+selected kernel. The law of total covariance splits the covariance of the result $Y$
+into the covariance of the centers and the mean covariance within a kernel,
+
+$$
+\mathrm{Cov}(Y) = \mathrm{Cov}\left(m_I\right) + \left\langle S_I \right\rangle.
+$$ {#eq-total-cov}
+
+Let $\mu$ and $C$ be the mean and the covariance of the sample points. In an ordinary
+kernel density estimate the kernels sit on the sample points and each has covariance
+$h^2 C$, with $h$ the bandwidth, so a draw is $Y = x_I + \varepsilon$ with
+$\mathrm{Cov}(\varepsilon) = h^2 C$. The first term of @eq-total-cov is $C$ and the
+second $h^2 C$,
+
+$$
+\mathrm{Cov}(Y) = C + h^2 C = \left(1 + h^2\right) C,
+$$ {#eq-kde-inflation}
+
+so the mixture is wider than the sample it is built from, by a factor that grows with
+the bandwidth.
+
+Center shrinkage removes that excess by moving the centers toward $\mu$. Placing them at
+
+$$
+c_i = \mu + a \left(x_i - \mu\right), \qquad 0 < a \leq 1,
+$$ {#eq-centers}
+
+gives them covariance $a^2 C$. Writing the kernel covariance as $b^2 C$, the two terms
+of @eq-total-cov are $a^2 C$ and $b^2 C$, so the mixture reproduces $C$ when
+
+$$
+a^2 + b^2 = 1.
+$$ {#eq-budget}
+
+The centers and the kernels share one covariance budget, and $a$ trades the two against
+each other while their sum stays fixed. @West1993 takes $b = h$ directly, so that
+$a = \sqrt{1 - h^2}$ and the bandwidth is restricted to $h < 1$. The implementation here
+instead narrows the kernels by the same factor it moves the centers, $b = a h$, which
+determines both and leaves $h$ unrestricted,
+
+$$
+a = \frac{1}{\sqrt{1 + h^2}}, \qquad b = \frac{h}{\sqrt{1 + h^2}}.
+$$ {#eq-a-and-b}
+
+For $h \to 0$, $a \to 1$ and $b \to 0$: the centers stay on the sample points and this
+is the narrow-kernel limit of the usual estimate. For $h \to \infty$, $a \to 0$ and
+$b \to 1$: the centers collapse onto $\mu$ and each kernel carries the whole of $C$, so
+the mixture becomes a single kernel centered at $\mu$ with covariance $C$.
+
+### When the budget is exact
+
+$\mu$ and $C$ are the mean and the covariance of the sample points, both unweighted: the
+implementation takes $\mu$ as their arithmetic mean and $C$ from the same points with no
+weights applied. @eq-budget therefore holds exactly when the weights $\lambda_i$ are
+equal, which is the mixture prepared without interpolation. One thing makes it
+approximate: with unequal weights both terms of @eq-total-cov are $\lambda$-weighted
+while $\mu$ and $C$ are not. The weights that come out of @eq-nnls are not equal.
+
+### The general transform
+
+A fixed-bandwidth estimator with the sample covariance gives every kernel the scale
+matrix $C$, and the scalar $a$ of @eq-a-and-b is exact. In general the kernel scale
+matrices $\Sigma_i$ are not proportional to $C$ -- a fixed or robust covariance in
+[[numcosmo-math|NcmStatsDistKDE]], or the per-kernel $\Sigma_i$ of
+[[numcosmo-math|NcmStatsDistVKDE]] -- and no scalar satisfies @eq-budget as a matrix
+equation. The implementation contracts by a matrix instead. With
+
+$$
+c_i = \mu + A \left(x_i - \mu\right), \qquad
+\Sigma_i \to \hat A \Sigma_i \hat A^T, \qquad
+A = a \hat A, \quad \det \hat A = 1,
+$$ {#eq-matrix-transform}
+
+and the bandwidth in use $a h$, the two terms of @eq-total-cov are $A C A^T$ and
+$\kappa h^2 A \langle\Sigma\rangle A^T$, where $\langle\Sigma\rangle$ is the mean of
+the kernel scale matrices and $\kappa$ the kernel variance factor of the next section, so
+the budget reads
+
+$$
+A \left(C + \kappa h^2 \langle\Sigma\rangle\right) A^T = C.
+$$ {#eq-matrix-budget}
+
+With the Cholesky factors $C = U_C^T U_C$ and
+$M = C + \kappa h^2 \langle\Sigma\rangle = U_M^T U_M$ a solution is
+
+$$
+A = U_C^T U_M^{-T}, \qquad a = \det(A)^{1/d} = \left(\frac{\det C}{\det M}\right)^{1/2d},
+$$ {#eq-matrix-solution}
+
+two factorizations and one triangular solve. $\hat A$ has unit determinant, so it leaves
+every kernel normalization unchanged. For $\langle\Sigma\rangle \propto C$ the transform
+is isotropic, $A = a I$, and @eq-a-and-b is recovered; the library detects that case and
+applies the scalar.
+
+### The kernel variance factor
+
+The covariance of a kernel need not equal the scale matrix it is parameterized by. Their
+ratio $\kappa$ is $1$ for [[numcosmo-math|NcmStatsDistKernelGauss]] and $\nu/(\nu-2)$
+for [[numcosmo-math|NcmStatsDistKernelST]] with $\nu$ degrees of freedom; it is the
+factor in front of $h^2$ in @eq-matrix-budget. Center shrinkage needs a kernel with a
+finite covariance, since $\kappa$ has to exist. The Student-t kernel with $\nu \leq 2$,
+the Cauchy kernel included, has none and is refused. The sample points $x_i$ remain the
+points at which the conditions @eq-interp-conditions are imposed; only the kernels move
+and change shape.
+
+## Automatic kernel selection
+
+The bandwidth can be fitted by cross-validation, holding out part of the sample and
+maximizing the held-out likelihood of the reconstruction. The same objective can choose
+the kernel, by treating the Student-t degrees of freedom $\nu$ as a second fitted
+parameter alongside $h$: the fit runs over $(\ln h, \ln \nu)$, and $\nu \to \infty$
+recovers the Gaussian kernel, which is installed as one when the fit reaches the top of
+the range. The tail weight of the kernel then follows the tail weight of the target
+instead of being fixed by the caller.
+
+Center shrinkage is not fitted. The held-out objective is a Kullback-Leibler criterion,
+and $\mathrm{KL}(\pi \,\|\, \tilde p)$ penalizes a proposal that is too narrow far more
+than one that is too wide, so it does not see the cost that a mixture wider by
+$C + \kappa h^2 \langle\Sigma\rangle$ relative to $C$ imposes on the Metropolis-Hastings acceptance. Fitting it needs an
+objective that penalizes both directions. Shrinkage also bounds $\nu$ from below, at
+$2.5$ rather than $1$, since a kernel used with it must have a finite covariance.

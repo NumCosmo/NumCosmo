@@ -30,6 +30,7 @@ from numcosmo_py import Ncm
 from numcosmo_py.interpolation.stats_dist import (
     InterpolationMethod,
     InterpolationKernel,
+    CrossValidationMethod,
 )
 
 from .model import NcmModelGeneric, get_generic_model
@@ -55,6 +56,9 @@ class APES:
         over_smooth: float = 0.2,
         local_fraction: Optional[float] = None,
         center_shrink: bool = False,
+        cv_method: CrossValidationMethod = CrossValidationMethod.NONE,
+        split_fraction: Optional[float] = None,
+        auto_kernel: bool = False,
     ):
         """Create a new APES sampler object."""
 
@@ -129,6 +133,10 @@ class APES:
         walker.set_k_type(interpolation_kernel.genum)
         # After the kernel, so that an incompatible pair is caught immediately.
         walker.set_center_shrink(center_shrink)
+        walker.set_cv_type(cv_method.genum)
+        walker.set_auto_kernel(auto_kernel)
+        if split_fraction is not None:
+            walker.set_split_frac(split_fraction)
 
         init_sampler = Ncm.MSetTransKernGauss.new(0)
         init_sampler.set_mset(self.mset)

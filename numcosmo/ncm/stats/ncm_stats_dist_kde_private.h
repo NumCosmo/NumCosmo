@@ -40,6 +40,7 @@ typedef struct _NcmStatsDistKDEPrivate
   NcmMatrix *cov;
   NcmMatrix *cov_fixed;
   NcmMatrix *cov_decomp;
+  NcmMatrix *cov_decomp0;
   NcmMatrix *sample_matrix;
   NcmMatrix *invUsample_matrix;
   GPtrArray *invUsample_array;

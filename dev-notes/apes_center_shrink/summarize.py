@@ -5,27 +5,34 @@ Constant Break statistic can suggest where burn-in ends, then again with that cu
 that tau is measured on the converged part only. tau is flagged as unreliable until
 there are at least MIN_ITER iterations past the cut.
 """
+
 import glob
 import os
 import re
+import shutil
 import subprocess
 import sys
 
-CLI = ["python", "/home/sandro/Projects/NumCosmo/tools/numcosmo", "catalog", "analyze"]
+CLI = [shutil.which("numcosmo") or "numcosmo", "catalog", "analyze"]
 MIN_ITER = 130
 
 
-ENV = {**os.environ, "COLUMNS": "220"}   # keep rich from truncating the value column
+ENV = {**os.environ, "COLUMNS": "220"}  # keep rich from truncating the value column
 
 
 def run(f, burnin):
-    out = subprocess.run(CLI + [f, "--burnin", str(burnin)], capture_output=True,
-                         text=True, env=ENV).stdout
+    out = subprocess.run(
+        CLI + [f, "--burnin", str(burnin)], capture_output=True, text=True, env=ENV
+    ).stdout
     return "\n".join(l for l in out.splitlines() if "WARNING" not in l)
 
 
 def cells(line):
-    return [re.sub(r"\s+", " ", c).strip() for c in line.split("│") if re.sub(r"\s+", " ", c).strip()]
+    return [
+        re.sub(r"\s+", " ", c).strip()
+        for c in line.split("│")
+        if re.sub(r"\s+", " ", c).strip()
+    ]
 
 
 def grab(out, label, idx=-1):
@@ -38,13 +45,15 @@ def grab(out, label, idx=-1):
 
 
 pattern = sys.argv[1] if len(sys.argv) > 1 else "cosmo_*.fits"
-print(f"{'catalog':52s} {'chains':>6s} {'iters':>6s} {'CB':>5s} {'post':>5s} "
-      f"{'tau':>9s} {'R-1':>8s} {'ESS':>7s} {'HW':>6s}")
+print(
+    f"{'catalog':52s} {'chains':>6s} {'iters':>6s} {'CB':>5s} {'post':>5s} "
+    f"{'tau':>9s} {'R-1':>8s} {'ESS':>7s} {'HW':>6s}"
+)
 for f in sorted(glob.glob(pattern)):
     # pass 1: no burn-in, ask the Constant Break where burn-in ends
     o0 = run(f, 0)
     nit = grab(o0, "Number of Iterations")
-    cb = grab(o0, "Constant", 1)          # the suggested cut-off column
+    cb = grab(o0, "Constant", 1)  # the suggested cut-off column
     try:
         cb_i = int(cb)
     except ValueError:
@@ -61,4 +70,6 @@ for f in sorted(glob.glob(pattern)):
         flag = "" if int(post) >= MIN_ITER else " (short)"
     except ValueError:
         flag = ""
-    print(f"{f[:52]:52s} {nch:>6s} {nit:>6s} {cb:>5s} {post:>5s} {tau:>9s} {gr:>8s} {ess:>7s} {hw:>6s}{flag}")
+    print(
+        f"{f[:52]:52s} {nch:>6s} {nit:>6s} {cb:>5s} {post:>5s} {tau:>9s} {gr:>8s} {ess:>7s} {hw:>6s}{flag}"
+    )

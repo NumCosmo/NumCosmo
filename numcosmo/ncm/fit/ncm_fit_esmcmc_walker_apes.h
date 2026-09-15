@@ -102,6 +102,18 @@ gboolean ncm_fit_esmcmc_walker_apes_get_use_threads (NcmFitESMCMCWalkerAPES *ape
 
 void ncm_fit_esmcmc_walker_apes_set_center_shrink (NcmFitESMCMCWalkerAPES *apes, gboolean center_shrink);
 gboolean ncm_fit_esmcmc_walker_apes_get_center_shrink (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_defensive_frac (NcmFitESMCMCWalkerAPES *apes, const gdouble frac);
+gdouble ncm_fit_esmcmc_walker_apes_get_defensive_frac (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_defensive_scale (NcmFitESMCMCWalkerAPES *apes, const gdouble scale);
+gdouble ncm_fit_esmcmc_walker_apes_get_defensive_scale (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_defensive_nu (NcmFitESMCMCWalkerAPES *apes, const gdouble nu);
+gdouble ncm_fit_esmcmc_walker_apes_get_defensive_nu (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_cv_type (NcmFitESMCMCWalkerAPES *apes, NcmStatsDistCV cv_type);
+NcmStatsDistCV ncm_fit_esmcmc_walker_apes_get_cv_type (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_split_frac (NcmFitESMCMCWalkerAPES *apes, const gdouble split_frac);
+gdouble ncm_fit_esmcmc_walker_apes_get_split_frac (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_auto_kernel (NcmFitESMCMCWalkerAPES *apes, gboolean auto_kernel);
+gboolean ncm_fit_esmcmc_walker_apes_get_auto_kernel (NcmFitESMCMCWalkerAPES *apes);
 
 void ncm_fit_esmcmc_walker_apes_peek_sds (NcmFitESMCMCWalkerAPES *apes, NcmStatsDist **sd0, NcmStatsDist **sd1);
 

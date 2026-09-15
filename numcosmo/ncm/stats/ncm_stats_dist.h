@@ -60,9 +60,10 @@ struct _NcmStatsDistClass
   gdouble (*eval_weights_m2lnp) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
   void (*reset) (NcmStatsDist *sd);
   void (*update_centers) (NcmStatsDist *sd);
+  void (*update_kernel_norms) (NcmStatsDist *sd);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[6];
+  gpointer padding[5];
 };
 
 /**
@@ -109,7 +110,16 @@ gdouble ncm_stats_dist_get_shrink (NcmStatsDist *sd);
 
 void ncm_stats_dist_set_center_shrink (NcmStatsDist *sd, const gboolean center_shrink);
 gboolean ncm_stats_dist_get_center_shrink (NcmStatsDist *sd);
+void ncm_stats_dist_set_auto_kernel (NcmStatsDist *sd, gboolean auto_kernel);
+gboolean ncm_stats_dist_get_auto_kernel (NcmStatsDist *sd);
 gdouble ncm_stats_dist_get_center_shrink_factor (NcmStatsDist *sd);
+NcmMatrix *ncm_stats_dist_peek_center_shrink_matrix (NcmStatsDist *sd);
+void ncm_stats_dist_set_defensive_frac (NcmStatsDist *sd, const gdouble frac);
+gdouble ncm_stats_dist_get_defensive_frac (NcmStatsDist *sd);
+void ncm_stats_dist_set_defensive_scale (NcmStatsDist *sd, const gdouble scale);
+gdouble ncm_stats_dist_get_defensive_scale (NcmStatsDist *sd);
+void ncm_stats_dist_set_defensive_nu (NcmStatsDist *sd, const gdouble nu);
+gdouble ncm_stats_dist_get_defensive_nu (NcmStatsDist *sd);
 
 void ncm_stats_dist_set_print_fit (NcmStatsDist *sd, const gboolean print_fit);
 gboolean ncm_stats_dist_get_print_fit (NcmStatsDist *sd);
