@@ -112,49 +112,6 @@ class RunMCMC(RunCommonOptions):
         ),
     ] = None
 
-    shrink: Annotated[
-        Optional[float],
-        typer.Option(
-            help=(
-                "Shrink factor applied to the weights of the APES approximation. "
-                "It scales the weights towards a uniform value of 1/N, where N is the "
-                "number of samples, helping to prevent overfitting. "
-                "If None, the default APES value of 0.01 is used."
-            ),
-            min=0.0,
-            max=1.0,
-        ),
-    ] = None
-
-    random_walk_prob: Annotated[
-        float,
-        typer.Option(
-            help=(
-                r"Probability of using a random walk step in the proposal generation. "
-                r"The default value is 0.02, meaning that 2% of the proposals will be "
-                r"generated using a random walk step."
-            ),
-            min=0.0,
-            max=1.0,
-        ),
-    ] = 0.02
-
-    random_walk_scale: Annotated[
-        float,
-        typer.Option(
-            help=(
-                r"Scale factor for the random walk step used in proposal generation. "
-                r"This property defines the standard deviation of the random walk "
-                r"proposal as a fraction of the empirical standard deviation computed "
-                r"from the current half-ensemble (i.e., the half not being updated). "
-                r"The default value is 0.25, meaning the random walk step will have a "
-                r"standard deviation equal to 25% of that empirical value."
-            ),
-            min=0.01,
-            max=1.0,
-        ),
-    ] = 0.25
-
     use_interpolation: Annotated[
         bool,
         typer.Option(
@@ -228,6 +185,29 @@ class RunMCMC(RunCommonOptions):
         float,
         typer.Option(min=1.0, help="Degrees of freedom of the wide component."),
     ] = 3.0
+
+    vkde_points_per_dim: Annotated[
+        float,
+        typer.Option(
+            min=0.0,
+            help=(
+                "VKDE only: nearest neighbours per dimension for each local covariance, "
+                "k = min(n, c d). Replaces --local-fraction when positive; a small "
+                "ensemble then gives the KDE limit and a large one keeps the kernels local."
+            ),
+        ),
+    ] = 0.0
+
+    uniform_weights: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Keep uniform kernel weights instead of the NNLS fit. The bandwidth and "
+                "kernel cross-validation still run, including the methods that need the "
+                "ensemble's -2lnL."
+            ),
+        ),
+    ] = False
 
     parallel: Annotated[
         Parallelization,
@@ -391,12 +371,6 @@ class RunMCMC(RunCommonOptions):
         apes_walker.set_over_smooth(self.over_smooth)
         if self.local_fraction is not None:
             apes_walker.set_local_frac(self.local_fraction)
-        if self.shrink is not None:
-            apes_walker.set_shrink(self.shrink)
-
-        apes_walker.set_random_walk_prob(self.random_walk_prob)
-        apes_walker.set_random_walk_scale(self.random_walk_scale)
-
         apes_walker.use_interp(self.use_interpolation)
         apes_walker.set_method(self.interpolation_method.genum)
         apes_walker.set_k_type(self.interpolation_kernel.genum)
@@ -405,6 +379,8 @@ class RunMCMC(RunCommonOptions):
         apes_walker.set_defensive_frac(self.defensive_frac)
         apes_walker.set_defensive_scale(self.defensive_scale)
         apes_walker.set_defensive_nu(self.defensive_nu)
+        apes_walker.set_vkde_points_per_dim(self.vkde_points_per_dim)
+        apes_walker.set_uniform_weights(self.uniform_weights)
         apes_walker.set_cv_type(self.cv_method.genum)
         apes_walker.set_auto_kernel(self.auto_kernel)
         if self.split_fraction is not None:

@@ -40,6 +40,7 @@ typedef struct _NcmStatsDistVKDEPrivate
   NcmVector *lnnorms;
   gdouble local_frac;
   gboolean use_rot_href;
+  gdouble points_per_dim;
   NcmMemoryPool *mp_stats_vec;
   NcmMemoryPool *mp_eval_vars;
 } NcmStatsDistVKDEPrivate;

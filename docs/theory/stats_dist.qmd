@@ -34,12 +34,40 @@ $$ {#eq-nnls}
 
 This is solved as a non-negative linear least-squares problem [@LawsonHanson1974], which
 keeps $\lambda_i \geq 0$. The weights are then divided by their sum, making them a
-probability distribution over the kernels, and mixed with the uniform weights $1/n$ in a
-fixed proportion. Sampling draws a kernel with probability $\lambda_i$, then a point
-from that kernel. For an introduction to radial basis interpolation see [@DuToit2008].
+probability distribution over the kernels. Sampling draws a kernel with probability
+$\lambda_i$, then a point from that kernel. (An earlier version mixed the weights with
+the uniform $1/n$ in a fixed proportion; the mixing had no measurable effect on the
+sampler at any ensemble size and was removed.) For an introduction to radial basis interpolation see [@DuToit2008].
 
 The caller supplies the target as $-2\ln g(x_i)$, which is the natural form when $g$ is
 a posterior.
+
+## The local scale matrices
+
+[[numcosmo-math|NcmStatsDistKDE]] gives every kernel the same $\Sigma_i$: the sample
+covariance $C$, a fixed matrix, or a robust estimate. [[numcosmo-math|NcmStatsDistVKDE]]
+gives kernel $i$ its own $\Sigma_i$, the covariance of the $k$ sample points nearest to
+$x_i$, the neighbors being found in the coordinates whitened by $C$. The number $k$ is
+either a fraction of the sample (`local-frac`) or a count per dimension
+(`points-per-dim`, $k = \min(n, \lceil c\, d \rceil)$); when $k$ reaches $n$ every
+kernel has the covariance $C$ and the estimator is the KDE.
+
+The covariance is taken about the neighbors' own mean $\bar{x}_k$, not about the kernel
+center $x_i$. The alternative, the second moment $\frac{1}{k}\sum_j (x_j - x_i)(x_j -
+x_i)^T = \frac{k-1}{k} C_k + (\bar{x}_k - x_i)(\bar{x}_k - x_i)^T$, is the maximum
+likelihood Gaussian with its center fixed at $x_i$ and looks like the more natural choice
+for a kernel centered there. It was implemented and measured, and it is worse at every
+neighborhood size: on the held-out acceptance of the resulting proposal (Gaussian, banana,
+bimodal, funnel and Rosenbrock targets in 2 to 21 dimensions, 100 walkers per dimension,
+$k/n$ from 0.05 to 0.8) it loses between 10 % and a factor of 3, and on a 10-dimensional
+funnel at $k/n = 0.05$ it drops the acceptance from 0.23 to 0.001. The reason is the
+center shrinkage of the next section: the rank-one term is large for the kernels at the
+edge of the sample, so it inflates the mean kernel covariance $\langle\Sigma\rangle$ in
+@eq-matrix-budget, every center is then contracted harder, and the interior kernels,
+which the term barely changes, end up too narrow for their spacing. Without shrinkage
+the two choices agree within noise, so nothing is gained either way. The option was
+removed; this paragraph records the choice so that it is not reopened without new
+evidence.
 
 ## Center shrinkage
 

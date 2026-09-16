@@ -5,6 +5,7 @@ Builds the NcmStatsDistVKDE interpolant from an i.i.d. sample of the target
 scatter of ln(pi_tilde/pi) and the expected acceptance of the independence
 MH step  alpha = min(1, pi(y) pt(x) / (pi(x) pt(y))),  x ~ pi, y ~ pi_tilde.
 """
+
 import argparse
 import sys
 import time
@@ -86,8 +87,13 @@ def rot_h(nu, n, d):
     if nu <= 0:
         return (4.0 / (n * (d + 2.0))) ** (1.0 / (d + 4.0))
     nu = max(nu, 3.0)
-    return (16.0 * (nu - 2) ** 2 * (1 + d + nu) * (3 + d + nu)
-            / ((2 + d) * (d + nu) * (2 + d + nu) * (d + 2 * nu) * (2 + d + 2 * nu) * n)) ** (1.0 / (d + 4.0))
+    return (
+        16.0
+        * (nu - 2) ** 2
+        * (1 + d + nu)
+        * (3 + d + nu)
+        / ((2 + d) * (d + nu) * (2 + d + nu) * (d + 2 * nu) * (2 + d + 2 * nu) * n)
+    ) ** (1.0 / (d + 4.0))
 
 
 def local_scale2(sd, train):
@@ -104,13 +110,29 @@ def local_scale2(sd, train):
     return acc / nk
 
 
-def build(train, m2lnp_train, nu, h, local_frac, cv, split_frac, shrink, interp, kde=False, cshrink=False, target=None, native=False):
+def build(
+    train,
+    m2lnp_train,
+    nu,
+    h,
+    local_frac,
+    cv,
+    split_frac,
+    shrink,
+    interp,
+    kde=False,
+    cshrink=False,
+    target=None,
+    native=False,
+):
     d = train.shape[1]
     if cshrink:
         if kde:
             s2 = 1.0
         else:
-            sd0, keep0, _ = build(train, m2lnp_train, nu, h, local_frac, "none", split_frac, shrink, False)
+            sd0, keep0, _ = build(
+                train, m2lnp_train, nu, h, local_frac, "none", split_frac, shrink, False
+            )
             s2 = local_scale2(sd0, train)
         a = 1.0 / np.sqrt(1.0 + h * h * s2)
         mu = train.mean(axis=0)
@@ -128,7 +150,10 @@ def build(train, m2lnp_train, nu, h, local_frac, cv, split_frac, shrink, interp,
         sd.set_over_smooth(h)
         sd.set_local_frac(local_frac)
     sd.set_split_frac(split_frac)
-    sd.set_shrink(shrink)
+    if shrink != 0.0:
+        raise SystemExit(
+            "NcmStatsDist:shrink (weight floor) was removed on 2026-09-16; only --shrink 0 is valid"
+        )
     if native:
         sd.set_center_shrink(True)
     keep = []
@@ -147,7 +172,9 @@ def build(train, m2lnp_train, nu, h, local_frac, cv, split_frac, shrink, interp,
 
 def evaluate(sd, target, test, m2lnp_test, nprop, ncm_rng):
     d = test.shape[1]
-    m2lnq_test = np.array([sd.eval_m2lnp(Ncm.Vector.new_array(row.tolist())) for row in test])
+    m2lnq_test = np.array(
+        [sd.eval_m2lnp(Ncm.Vector.new_array(row.tolist())) for row in test]
+    )
     r_test = -0.5 * (m2lnq_test - m2lnp_test)  # ln(pt/pi) + const
     v = Ncm.Vector.new(d)
     Y = np.empty((nprop, d))
@@ -168,7 +195,11 @@ def evaluate(sd, target, test, m2lnp_test, nprop, ncm_rng):
         nz=float(nz),
         href=float(sd.get_href()),
         os=float(sd.get_over_smooth()),
-        a=float(sd.get_center_shrink_factor()) if hasattr(sd, "get_center_shrink_factor") else 1.0,
+        a=(
+            float(sd.get_center_shrink_factor())
+            if hasattr(sd, "get_center_shrink_factor")
+            else 1.0
+        ),
         nk=int(sd.get_n_kernels()),
     )
 
@@ -186,9 +217,21 @@ def main():
     p.add_argument("--split-frac", type=float, nargs="+", default=[0.5])
     p.add_argument("--shrink", type=float, nargs="+", default=[0.0])
     p.add_argument("--no-interp", action="store_true")
-    p.add_argument("--kde", action="store_true", help="global-covariance KDE instead of VKDE; h in units of the sample covariance")
-    p.add_argument("--cshrink", action="store_true", help="shrink kernel centres toward the mean, a = 1/sqrt(1+h^2 s^2) (python emulation)")
-    p.add_argument("--native-cshrink", action="store_true", help="use NcmStatsDist center-shrink property")
+    p.add_argument(
+        "--kde",
+        action="store_true",
+        help="global-covariance KDE instead of VKDE; h in units of the sample covariance",
+    )
+    p.add_argument(
+        "--cshrink",
+        action="store_true",
+        help="shrink kernel centres toward the mean, a = 1/sqrt(1+h^2 s^2) (python emulation)",
+    )
+    p.add_argument(
+        "--native-cshrink",
+        action="store_true",
+        help="use NcmStatsDist center-shrink property",
+    )
     p.add_argument("--seed", type=int, default=1)
     a = p.parse_args()
 
@@ -201,17 +244,38 @@ def main():
     m2_train = target.m2lnp(train)
     m2_test = target.m2lnp(test)
 
-    print("target,d,n,kde,cshrink,interp,cv,split,lf,nu,h,shrink,nk,os,href,a,nz,std_r,std_rY,acc,t_prep", flush=True)
+    print(
+        "target,d,n,kde,cshrink,interp,cv,split,lf,nu,h,shrink,nk,os,href,a,nz,std_r,std_rY,acc,t_prep",
+        flush=True,
+    )
     for lf in a.local_frac:
         for nu in a.nu:
             for h in a.h:
                 for sf in a.split_frac:
                     for sh in a.shrink:
                         try:
-                            sd, keep, dt = build(train, m2_train, nu, h, lf, a.cv, sf, sh, not a.no_interp, kde=a.kde, cshrink=a.cshrink, target=target, native=a.native_cshrink)
+                            sd, keep, dt = build(
+                                train,
+                                m2_train,
+                                nu,
+                                h,
+                                lf,
+                                a.cv,
+                                sf,
+                                sh,
+                                not a.no_interp,
+                                kde=a.kde,
+                                cshrink=a.cshrink,
+                                target=target,
+                                native=a.native_cshrink,
+                            )
                             r = evaluate(sd, target, test, m2_test, a.ntest, ncm_rng)
                         except Exception as e:  # noqa
-                            print(f"# FAILED nu={nu} h={h} lf={lf} sf={sf}: {e}", file=sys.stderr, flush=True)
+                            print(
+                                f"# FAILED nu={nu} h={h} lf={lf} sf={sf}: {e}",
+                                file=sys.stderr,
+                                flush=True,
+                            )
                             continue
                         print(
                             f"{a.target},{d},{a.n},{int(a.kde)},{int(a.cshrink) + 2 * int(a.native_cshrink)},{int(not a.no_interp)},{a.cv},{sf},{lf},{nu},{h},{sh},"

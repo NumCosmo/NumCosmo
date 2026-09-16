@@ -96,13 +96,13 @@ enum
   PROP_CV_TYPE,
   PROP_USE_THREADS,
   PROP_SPLIT_FRAC,
-  PROP_SHRINK,
   PROP_PRINT_FIT,
   PROP_CENTER_SHRINK,
   PROP_AUTO_KERNEL,
   PROP_DEFENSIVE_FRAC,
   PROP_DEFENSIVE_SCALE,
   PROP_DEFENSIVE_NU,
+  PROP_UNIFORM_WEIGHTS,
 };
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDist, ncm_stats_dist, G_TYPE_OBJECT)
@@ -137,7 +137,6 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   self->cv_type              = NCM_STATS_DIST_CV_LEN;
   self->use_threads          = FALSE;
   self->split_frac           = 0.0;
-  self->shrink               = 0.0;
   self->min_m2lnp            = 0.0;
   self->max_m2lnp            = 0.0;
   self->href                 = 0.0;
@@ -172,6 +171,9 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   self->f                    = NULL;
   self->f1                   = NULL;
   self->cv_m2lnp             = NULL;
+  self->cv_m2lnL_sample      = NULL;
+  self->cv_w                 = NULL;
+  self->uniform_weights      = FALSE;
   self->levmar_workz         = NULL;
   self->levmar_n             = 0;
   self->fmin                 = gsl_multimin_fminimizer_alloc (gsl_multimin_fminimizer_nmsimplex2, 1);
@@ -210,9 +212,6 @@ _ncm_stats_dist_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_SPLIT_FRAC:
       ncm_stats_dist_set_split_frac (sd, g_value_get_double (value));
       break;
-    case PROP_SHRINK:
-      ncm_stats_dist_set_shrink (sd, g_value_get_double (value));
-      break;
     case PROP_PRINT_FIT:
       ncm_stats_dist_set_print_fit (sd, g_value_get_boolean (value));
       break;
@@ -230,6 +229,9 @@ _ncm_stats_dist_set_property (GObject *object, guint prop_id, const GValue *valu
       break;
     case PROP_DEFENSIVE_NU:
       ncm_stats_dist_set_defensive_nu (sd, g_value_get_double (value));
+      break;
+    case PROP_UNIFORM_WEIGHTS:
+      ncm_stats_dist_set_uniform_weights (sd, g_value_get_boolean (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -265,9 +267,6 @@ _ncm_stats_dist_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_SPLIT_FRAC:
       g_value_set_double (value, ncm_stats_dist_get_split_frac (sd));
       break;
-    case PROP_SHRINK:
-      g_value_set_double (value, ncm_stats_dist_get_shrink (sd));
-      break;
     case PROP_PRINT_FIT:
       g_value_set_boolean (value, ncm_stats_dist_get_print_fit (sd));
       break;
@@ -285,6 +284,9 @@ _ncm_stats_dist_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_DEFENSIVE_NU:
       g_value_set_double (value, ncm_stats_dist_get_defensive_nu (sd));
+      break;
+    case PROP_UNIFORM_WEIGHTS:
+      g_value_set_boolean (value, ncm_stats_dist_get_uniform_weights (sd));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -322,6 +324,8 @@ _ncm_stats_dist_dispose (GObject *object)
   ncm_vector_clear (&self->f);
   ncm_vector_clear (&self->f1);
   ncm_vector_clear (&self->cv_m2lnp);
+  ncm_vector_clear (&self->cv_m2lnL_sample);
+  ncm_vector_clear (&self->cv_w);
 
   ncm_rng_clear (&self->rng);
 
@@ -477,14 +481,6 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
-                                   PROP_SHRINK,
-                                   g_param_spec_double ("shrink",
-                                                        NULL,
-                                                        "Shrink factor for the weights",
-                                                        0.0, 1.0, 0.01,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
                                    PROP_PRINT_FIT,
                                    g_param_spec_boolean ("print-fit",
                                                          NULL,
@@ -578,6 +574,22 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
                                                         1.0, 1.0e4, 3.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmStatsDist:uniform-weights:
+   *
+   * Whether ncm_stats_dist_prepare_interp() keeps uniform kernel weights instead of
+   * fitting them by NNLS. The sample's $-2\ln L$ is then used only by the bandwidth
+   * objectives that need it and by the outlier cut. Default: FALSE.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_UNIFORM_WEIGHTS,
+                                   g_param_spec_boolean ("uniform-weights",
+                                                         NULL,
+                                                         "Keep uniform kernel weights in prepare_interp instead of the NNLS fit",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
 
   klass->set_dim              = &_ncm_stats_dist_set_dim;
   klass->get_href             = &_ncm_stats_dist_get_href;
@@ -614,6 +626,20 @@ _ncm_stats_dist_update_centers (NcmStatsDist *sd)
 #define NCM_STATS_DIST_CENTER_NEARPD_MAXITER (200)
 
 static void _ncm_stats_dist_update_defensive (NcmStatsDist *sd);
+gdouble _ncm_stats_dist_accept (const gsl_vector *v, void *params);
+gdouble _ncm_stats_dist_loo_m2lnp (const gsl_vector *v, void *params);
+
+static inline gdouble
+_ncm_stats_dist_logaddexp (const gdouble a, const gdouble b)
+{
+  if (a == GSL_NEGINF)
+    return b;
+
+  if (b == GSL_NEGINF)
+    return a;
+
+  return GSL_MAX (a, b) + log1p (exp (-fabs (a - b)));
+}
 
 static void
 _ncm_stats_dist_cholesky_upper (NcmMatrix *U, NcmMatrix *M)
@@ -943,6 +969,145 @@ _ncm_stats_dist_m2lnp (const gsl_vector *v, void *params)
   if (self->print_fit)
     ncm_message ("# over-smooth: % 22.15g, m2lnp = % 22.15g\n",
                  self->over_smooth, m2lnp);
+
+  return m2lnp;
+}
+
+/*
+ * Held-out estimate of the independence-sampler acceptance (auto_tuning.md). With
+ * r = ln q - ln pi at the kernel points (k) and at the held-out points (j), the mean over j
+ * of E_{x' ~ q}[min (1, exp (r_j - r_{x'}))] is estimated by self-normalized importance
+ * sampling with the kernel points as draws from pi and weights proportional to exp (r_k).
+ * Returns -ln of the estimate. Needs the sample's -2ln(L) (cv_m2lnL_sample).
+ */
+gdouble
+_ncm_stats_dist_accept (const gsl_vector *v, void *params)
+{
+  NcmStatsDist *sd                 = NCM_STATS_DIST (params);
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
+  const double lnos                = gsl_vector_get (v, 0);
+  const gint nk                    = self->n_kernels;
+  const gint no                    = self->n_obs;
+  gdouble lse_k                    = GSL_NEGINF;
+  gdouble acc                      = 0.0;
+  gint i, j;
+
+  self->over_smooth = exp (lnos);
+  _ncm_stats_dist_set_href (sd, _ncm_stats_dist_calc_href (sd));
+
+  if ((self->cv_m2lnp == NULL) || (ncm_vector_len (self->cv_m2lnp) != self->n_obs))
+  {
+    ncm_vector_clear (&self->cv_m2lnp);
+    self->cv_m2lnp = ncm_vector_new (self->n_obs);
+  }
+
+  /* r_i = ln q (x_i) - ln pi (x_i) = (m2lnL_i - m2lnq_i) / 2 at every sample point. */
+  #pragma omp parallel for if (self->use_threads)
+
+  for (i = 0; i < no; i++)
+  {
+    NcmVector *x_i = g_ptr_array_index (self->sample_array, i);
+
+    ncm_vector_set (self->cv_m2lnp, i, 0.5 * (ncm_vector_get (self->cv_m2lnL_sample, i) - ncm_stats_dist_eval_m2lnp (sd, x_i)));
+  }
+
+  for (i = 0; i < nk; i++)
+    lse_k = _ncm_stats_dist_logaddexp (lse_k, ncm_vector_get (self->cv_m2lnp, i));
+
+  /* Effective sample size of the importance weights w_k = exp (r_k - lse_k): when a few
+   * kernel points carry all the weight the estimate is meaningless and, left alone, the
+   * optimizer runs to the largest bandwidth. Refuse such trials. */
+  {
+    gdouble lse2 = GSL_NEGINF;
+    gdouble ess;
+
+    for (i = 0; i < nk; i++)
+      lse2 = _ncm_stats_dist_logaddexp (lse2, 2.0 * (ncm_vector_get (self->cv_m2lnp, i) - lse_k));
+
+    ess = exp (-lse2);
+
+    if (ess < GSL_MAX (10.0, 0.01 * nk))
+    {
+      if (self->print_fit)
+        ncm_message ("# over-smooth: % 22.15g, importance ESS % 8.2f of %d: rejected\n", self->over_smooth, ess, nk);
+
+      return GSL_POSINF;
+    }
+  }
+
+  for (j = nk; j < no; j++)
+  {
+    const gdouble r_j = ncm_vector_get (self->cv_m2lnp, j);
+    gdouble a_j       = GSL_NEGINF;
+
+    for (i = 0; i < nk; i++)
+    {
+      const gdouble r_k = ncm_vector_get (self->cv_m2lnp, i);
+
+      a_j = _ncm_stats_dist_logaddexp (a_j, (r_k - lse_k) + GSL_MIN (0.0, r_j - r_k));
+    }
+
+    acc += exp (a_j);
+  }
+
+  acc /= (no - nk);
+
+  if (self->print_fit)
+    ncm_message ("# over-smooth: % 22.15g, acceptance = % 22.15g\n", self->over_smooth, acc);
+
+  return -log (acc);
+}
+
+/*
+ * Leave-one-out likelihood cross-validation, -2 sum_i ln q_{-i} (x_i): every point is a
+ * kernel and q_{-i} is the mixture with weight i zeroed and the rest rescaled.
+ */
+gdouble
+_ncm_stats_dist_loo_m2lnp (const gsl_vector *v, void *params)
+{
+  NcmStatsDist *sd                 = NCM_STATS_DIST (params);
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
+  NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
+  const double lnos                = gsl_vector_get (v, 0);
+  const gint n                     = self->n_kernels;
+  gdouble m2lnp                    = 0.0;
+  gint i;
+
+  self->over_smooth = exp (lnos);
+  _ncm_stats_dist_set_href (sd, _ncm_stats_dist_calc_href (sd));
+
+  if ((self->cv_m2lnp == NULL) || (ncm_vector_len (self->cv_m2lnp) != self->n_obs))
+  {
+    ncm_vector_clear (&self->cv_m2lnp);
+    self->cv_m2lnp = ncm_vector_new (self->n_obs);
+  }
+
+  if ((self->cv_w == NULL) || (ncm_vector_len (self->cv_w) != self->n_kernels))
+  {
+    ncm_vector_clear (&self->cv_w);
+    self->cv_w = ncm_vector_new (self->n_kernels);
+  }
+
+  ncm_vector_memcpy (self->cv_w, self->weights);
+
+  /* Serial: cv_w is modified in place, one weight at a time. */
+  for (i = 0; i < n; i++)
+  {
+    NcmVector *x_i    = g_ptr_array_index (self->sample_array, i);
+    const gdouble w_i = ncm_vector_get (self->weights, i);
+    gdouble q_m;
+
+    ncm_vector_set (self->cv_w, i, 0.0);
+    q_m = sd_class->eval_weights_m2lnp (sd, self->cv_w, x_i) + 2.0 * log1p (-w_i);
+    ncm_vector_set (self->cv_w, i, w_i);
+    ncm_vector_set (self->cv_m2lnp, i, q_m);
+  }
+
+  for (i = 0; i < n; i++)
+    m2lnp += ncm_vector_get (self->cv_m2lnp, i);
+
+  if (self->print_fit)
+    ncm_message ("# over-smooth: % 22.15g, loo m2lnp = % 22.15g\n", self->over_smooth, m2lnp);
 
   return m2lnp;
 }
@@ -1342,8 +1507,13 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
       break;
     case NCM_STATS_DIST_CV_SPLIT:
     case NCM_STATS_DIST_CV_SPLIT_NOFIT:
+    case NCM_STATS_DIST_CV_SPLIT_ACCEPT:
       self->n_obs     = self->sample_array->len;
       self->n_kernels = ceil (self->sample_array->len * self->split_frac);
+      break;
+    case NCM_STATS_DIST_CV_LOO_M2LNP:
+      self->n_obs     = self->sample_array->len;
+      self->n_kernels = self->sample_array->len;
       break;
     default: /* LCOV_EXCL_BR_LINE */
       g_assert_not_reached ();
@@ -1390,6 +1560,30 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
         _ncm_stats_dist_minimize_obj (sd, &_ncm_stats_dist_amise_kde_gauss);
       else
         _ncm_stats_dist_minimize_obj (sd, &_ncm_stats_dist_amise);
+
+      break;
+    case NCM_STATS_DIST_CV_SPLIT_ACCEPT:
+
+      if (self->cv_m2lnL_sample == NULL)
+        g_error ("_ncm_stats_dist_prepare: NCM_STATS_DIST_CV_SPLIT_ACCEPT needs the sample's -2ln(L), "
+                 "use ncm_stats_dist_prepare_interp().");
+
+      if (self->n_kernels >= self->n_obs)
+        g_error ("_ncm_stats_dist_prepare: NCM_STATS_DIST_CV_SPLIT_ACCEPT needs held-out points, "
+                 "split-frac %g leaves none of %u.", self->split_frac, self->n_obs);
+
+      if (self->auto_kernel)
+        _ncm_stats_dist_select_kernel (sd, &_ncm_stats_dist_accept);
+      else
+        _ncm_stats_dist_minimize_obj (sd, &_ncm_stats_dist_accept);
+
+      break;
+    case NCM_STATS_DIST_CV_LOO_M2LNP:
+
+      if (self->auto_kernel)
+        _ncm_stats_dist_select_kernel (sd, &_ncm_stats_dist_loo_m2lnp);
+      else
+        _ncm_stats_dist_minimize_obj (sd, &_ncm_stats_dist_loo_m2lnp);
 
       break;
     default: /* LCOV_EXCL_BR_LINE */
@@ -1643,6 +1837,16 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     if (self->n_kernels > 20000)
       g_warning ("_ncm_stats_dist_prepare_interp: very large system n = %u!", self->n_kernels);
 
+    if (self->uniform_weights)
+    {
+      /* The bandwidth (and kernel) fit already ran in _ncm_stats_dist_prepare (); the
+       * weights stay 1 / n_kernels and the NNLS fit is skipped. */
+      ncm_vector_set_all (self->weights, 1.0 / (1.0 * self->n_kernels));
+      self->rnorm = 0.0;
+
+      return;
+    }
+
     switch (self->cv_type)
     {
       case NCM_STATS_DIST_CV_SPLIT:
@@ -1702,7 +1906,9 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
       }
       break;
       case NCM_STATS_DIST_CV_SPLIT_NOFIT:
+      case NCM_STATS_DIST_CV_SPLIT_ACCEPT:
       case NCM_STATS_DIST_CV_LOO:
+      case NCM_STATS_DIST_CV_LOO_M2LNP:
       case NCM_STATS_DIST_CV_NONE:
         _ncm_stats_dist_alloc_nnls (sd, self->n_obs, self->n_kernels);
         _ncm_stats_dist_compute_IM_full (sd);
@@ -1726,8 +1932,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     }
     else
     {
-      ncm_vector_scale (self->weights, (1.0 - self->shrink) / total_weight);
-      ncm_vector_add_constant (self->weights, self->shrink / self->n_kernels);
+      ncm_vector_scale (self->weights, 1.0 / total_weight);
     }
   }
 }
@@ -1968,44 +2173,6 @@ ncm_stats_dist_get_split_frac (NcmStatsDist *sd)
 }
 
 /**
- * ncm_stats_dist_set_shrink:
- * @sd: a #NcmStatsDist
- * @shrink: the shrink factor
- *
- * Sets the shrink factor to @shrink. The shrink factor is used to shrink the weights of
- * the sample points in the interpolation. A shrink factor of 0.0 no shrinkage is applied,
- * a shrink factor of 1.0 full shrinkage is applied.
- *
- */
-void
-ncm_stats_dist_set_shrink (NcmStatsDist *sd, const gdouble shrink)
-{
-  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
-
-  g_assert_cmpfloat (shrink, >=, 0.0);
-  g_assert_cmpfloat (shrink, <=, 1.0);
-
-  self->shrink = shrink;
-}
-
-/**
- * ncm_stats_dist_get_shrink:
- * @sd: a #NcmStatsDist
- *
- * The shrink factor is used to shrink the weights of the sample points in the
- * interpolation.
- *
- * Returns: the shrink factor.
- */
-gdouble
-ncm_stats_dist_get_shrink (NcmStatsDist *sd)
-{
-  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
-
-  return self->shrink;
-}
-
-/**
  * ncm_stats_dist_set_center_shrink:
  * @sd: a #NcmStatsDist
  * @center_shrink: whether to shrink the kernel centers toward the sample mean
@@ -2104,6 +2271,36 @@ ncm_stats_dist_peek_center_shrink_matrix (NcmStatsDist *sd)
   NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->center_A;
+}
+
+/**
+ * ncm_stats_dist_set_uniform_weights:
+ * @sd: a #NcmStatsDist
+ * @uniform_weights: whether to keep uniform weights in ncm_stats_dist_prepare_interp()
+ *
+ * Sets #NcmStatsDist:uniform-weights. Takes effect at the next preparation.
+ *
+ */
+void
+ncm_stats_dist_set_uniform_weights (NcmStatsDist *sd, const gboolean uniform_weights)
+{
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
+
+  self->uniform_weights = uniform_weights;
+}
+
+/**
+ * ncm_stats_dist_get_uniform_weights:
+ * @sd: a #NcmStatsDist
+ *
+ * Returns: #NcmStatsDist:uniform-weights.
+ */
+gboolean
+ncm_stats_dist_get_uniform_weights (NcmStatsDist *sd)
+{
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
+
+  return self->uniform_weights;
 }
 
 /**
@@ -2347,9 +2544,17 @@ ncm_stats_dist_prepare (NcmStatsDist *sd)
 void
 ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
 {
-  NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
+  NcmStatsDistClass *sd_class      = NCM_STATS_DIST_GET_CLASS (sd);
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
+
+  /* The sample's -2ln(L), for the cross-validation objectives that need it
+   * (NCM_STATS_DIST_CV_SPLIT_ACCEPT); the cut branch re-enters here with the cut vector. */
+  ncm_vector_clear (&self->cv_m2lnL_sample);
+  self->cv_m2lnL_sample = ncm_vector_ref (m2lnp);
 
   sd_class->prepare_interp (sd, m2lnp);
+
+  ncm_vector_clear (&self->cv_m2lnL_sample);
 }
 
 /**

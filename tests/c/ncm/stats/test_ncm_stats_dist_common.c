@@ -37,6 +37,7 @@
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_sf_trig.h>
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_eigen.h>
 
 #include "test_ncm_stats_dist_common.h"
 
@@ -81,6 +82,9 @@ static void test_ncm_stats_dist_free (TestNcmStatsDist *test, gconstpointer pdat
 static void test_ncm_stats_dist_traps (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_invalid_stub (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_invalid_center_shrink (TestNcmStatsDist *test, gconstpointer pdata);
+static void test_ncm_stats_dist_vkde_points_per_dim (void);
+static void test_ncm_stats_dist_cv_objectives (void);
+static void test_ncm_stats_dist_invalid_cv_accept (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_split_underflowing_m2lnp (void);
 
 typedef struct _TestNcmStatsDistFunc
@@ -190,6 +194,14 @@ test_ncm_stats_dist_main (gint argc, gchar *argv[], TestNcmStatsDistMode mode)
 
     g_test_add_func ("/ncm/stats/dist/nd/vkde/gauss/split/underflowing_m2lnp",
                      &test_ncm_stats_dist_split_underflowing_m2lnp);
+    g_test_add_func ("/ncm/stats/dist/nd/vkde/gauss/points_per_dim",
+                     &test_ncm_stats_dist_vkde_points_per_dim);
+    g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/cv_objectives",
+                     &test_ncm_stats_dist_cv_objectives);
+    g_test_add ("/ncm/stats/dist/nd/kde/gauss/invalid/cv_accept_without_m2lnL/subprocess", TestNcmStatsDist, NULL,
+                &test_ncm_stats_dist_new_kde_gauss,
+                &test_ncm_stats_dist_invalid_cv_accept,
+                &test_ncm_stats_dist_free);
   }
 
   return g_test_run ();
@@ -790,6 +802,195 @@ test_ncm_stats_dist_defensive (TestNcmStatsDist *test, gconstpointer pdata)
   ncm_vector_free (far);
   ncm_stats_vec_free (sample_stats);
   ncm_mset_free (mset);
+}
+
+/* points-per-dim: the neighbor count is min (n, ceil (c d)). With c d >= n every local
+ * covariance is the whole sample's, so all kernels share one scale matrix and it equals the
+ * plain KDE's (the KDE limit); with c d < n the kernels differ. */
+static void
+test_ncm_stats_dist_vkde_points_per_dim (void)
+{
+  const guint d           = 3;
+  const guint n           = 240;
+  NcmRNG *rng             = ncm_rng_seeded_new (NULL, 20260916);
+  NcmStatsDistVKDE *vkde  = ncm_stats_dist_vkde_new (NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d)), NCM_STATS_DIST_CV_NONE);
+  NcmStatsDistVKDE *vkde2 = ncm_stats_dist_vkde_new (NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d)), NCM_STATS_DIST_CV_NONE);
+  NcmStatsDistKDE *kde    = ncm_stats_dist_kde_new (NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d)), NCM_STATS_DIST_CV_NONE);
+  NcmVector *y            = ncm_vector_new (d);
+  guint i, j;
+
+  g_assert_cmpfloat (ncm_stats_dist_vkde_get_points_per_dim (vkde), ==, 0.0);
+  /* neighbor count: fraction when c = 0, min (n, ceil (c d)) otherwise */
+  ncm_stats_dist_vkde_set_local_frac (vkde, 0.25);
+  g_assert_cmpuint (ncm_stats_dist_vkde_get_n_neighbors (vkde, n), ==, 60);
+  ncm_stats_dist_vkde_set_points_per_dim (vkde, 10.0);
+  g_assert_cmpuint (ncm_stats_dist_vkde_get_n_neighbors (vkde, n), ==, 30);
+  ncm_stats_dist_vkde_set_points_per_dim (vkde, 1000.0);
+  g_assert_cmpuint (ncm_stats_dist_vkde_get_n_neighbors (vkde, n), ==, n);
+  {
+    gdouble c;
+
+    g_object_get (G_OBJECT (vkde), "points-per-dim", &c, NULL);
+    g_assert_cmpfloat (c, ==, 1000.0);
+  }
+
+  ncm_stats_dist_vkde_set_points_per_dim (vkde2, 10.0);
+
+  for (i = 0; i < n; i++)
+  {
+    for (j = 0; j < d; j++)
+      ncm_vector_set (y, j, ncm_rng_gaussian_gen (rng, 0.0, 1.0 + j));
+
+    ncm_stats_dist_add_obs (NCM_STATS_DIST (vkde), y);
+    ncm_stats_dist_add_obs (NCM_STATS_DIST (vkde2), y);
+    ncm_stats_dist_add_obs (NCM_STATS_DIST (kde), y);
+  }
+
+  ncm_stats_dist_prepare (NCM_STATS_DIST (vkde));
+  ncm_stats_dist_prepare (NCM_STATS_DIST (vkde2));
+  ncm_stats_dist_prepare (NCM_STATS_DIST (kde));
+
+  /* KDE limit: every kernel's factor equals the KDE's global one. */
+  {
+    NcmMatrix *U_kde  = ncm_stats_dist_peek_cov_decomp (NCM_STATS_DIST (kde), 0);
+    gboolean any_diff = FALSE;
+
+    for (i = 0; i < ncm_stats_dist_get_n_kernels (NCM_STATS_DIST (vkde)); i++)
+    {
+      NcmMatrix *U_i = ncm_stats_dist_peek_cov_decomp (NCM_STATS_DIST (vkde), i);
+      guint p, q;
+
+      for (p = 0; p < d; p++)
+        for (q = p; q < d; q++)
+          ncm_assert_cmpdouble_e (ncm_matrix_get (U_i, p, q), ==, ncm_matrix_get (U_kde, p, q), 1.0e-10, 1.0e-12);
+    }
+
+    /* c d < n: local covariances differ between kernels. */
+    for (i = 1; i < ncm_stats_dist_get_n_kernels (NCM_STATS_DIST (vkde2)) && !any_diff; i++)
+      any_diff = ncm_matrix_cmp (ncm_stats_dist_peek_cov_decomp (NCM_STATS_DIST (vkde2), i), ncm_stats_dist_peek_cov_decomp (NCM_STATS_DIST (vkde2), 0), 0.0) > 1.0e-6;
+
+    g_assert_true (any_diff);
+  }
+
+  ncm_vector_free (y);
+  ncm_stats_dist_vkde_free (vkde);
+  ncm_stats_dist_vkde_free (vkde2);
+  ncm_stats_dist_kde_free (kde);
+  ncm_rng_free (rng);
+}
+
+/* The three bandwidth objectives on the same Gaussian sample: held-out -2lnq
+ * (SPLIT_NOFIT), held-out acceptance (SPLIT_ACCEPT) and leave-one-out likelihood
+ * (LOO_M2LNP) must each return a finite bandwidth inside the search range, agree within a
+ * factor of three, and leave a normalized, positive density at the sample points. */
+static void
+test_ncm_stats_dist_cv_objectives (void)
+{
+  const guint d              = 3;
+  const guint n              = 300;
+  const NcmStatsDistCV cv[3] = {NCM_STATS_DIST_CV_SPLIT_NOFIT, NCM_STATS_DIST_CV_SPLIT_ACCEPT, NCM_STATS_DIST_CV_LOO_M2LNP};
+  NcmRNG *rng                = ncm_rng_seeded_new (NULL, 20260916);
+  NcmVector *x               = ncm_vector_new (d);
+  NcmVector *m2lnL           = ncm_vector_new (n);
+  GPtrArray *sample          = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+  gdouble h[3];
+  guint i, j, c;
+
+  for (i = 0; i < n; i++)
+  {
+    NcmVector *y = ncm_vector_new (d);
+    gdouble chi2 = 0.0;
+
+    for (j = 0; j < d; j++)
+    {
+      const gdouble z = ncm_rng_ugaussian_gen (rng);
+
+      ncm_vector_set (y, j, (1.0 + j) * z);
+      chi2 += z * z;
+    }
+
+    ncm_vector_set (m2lnL, i, chi2);
+    g_ptr_array_add (sample, y);
+  }
+
+  for (c = 0; c < 3; c++)
+  {
+    NcmStatsDist *sd = NCM_STATS_DIST (ncm_stats_dist_kde_new (NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d)), cv[c]));
+
+    ncm_stats_dist_set_split_frac (sd, 0.8);
+    ncm_stats_dist_set_over_smooth (sd, 1.0);
+    ncm_stats_dist_set_uniform_weights (sd, TRUE);
+
+    for (i = 0; i < n; i++)
+      ncm_stats_dist_add_obs (sd, g_ptr_array_index (sample, i));
+
+    ncm_stats_dist_prepare_interp (sd, m2lnL);
+
+    /* uniform-weights: no NNLS, every kernel weight is 1 / n_kernels */
+    {
+      NcmVector *w = ncm_stats_dist_peek_weights (sd);
+
+      for (i = 0; i < ncm_stats_dist_get_n_kernels (sd); i++)
+        ncm_assert_cmpdouble_e (ncm_vector_get (w, i), ==, 1.0 / ncm_stats_dist_get_n_kernels (sd), 1.0e-12, 0.0);
+    }
+
+    h[c] = ncm_stats_dist_get_over_smooth (sd);
+    g_assert_true (gsl_finite (h[c]));
+    g_assert_cmpfloat (h[c], >, 0.05);
+    g_assert_cmpfloat (h[c], <, 20.0);
+
+    for (i = 0; i < 20; i++)
+    {
+      const gdouble p = ncm_stats_dist_eval (sd, g_ptr_array_index (sample, i));
+
+      g_assert_true (gsl_finite (p));
+      g_assert_cmpfloat (p, >, 0.0);
+    }
+
+    ncm_stats_dist_free (sd);
+  }
+
+  g_assert_cmpfloat (h[1] / h[0], <, 3.0);
+  g_assert_cmpfloat (h[1] / h[0], >, 1.0 / 3.0);
+  g_assert_cmpfloat (h[2] / h[0], <, 3.0);
+  g_assert_cmpfloat (h[2] / h[0], >, 1.0 / 3.0);
+
+  g_ptr_array_unref (sample);
+  ncm_vector_free (x);
+  ncm_vector_free (m2lnL);
+  ncm_rng_free (rng);
+}
+
+/* SPLIT_ACCEPT needs the sample's -2lnL: prepare () without it must be refused. */
+static void
+test_ncm_stats_dist_invalid_cv_accept (TestNcmStatsDist *test, gconstpointer pdata)
+{
+  NcmStatsDist *sd = NCM_STATS_DIST (ncm_stats_dist_kde_new (NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (2)), NCM_STATS_DIST_CV_SPLIT_ACCEPT));
+  NcmRNG *rng      = ncm_rng_seeded_new (NULL, 5);
+  guint i;
+
+  for (i = 0; i < 100; i++)
+  {
+    NcmVector *y = ncm_vector_new (2);
+
+    ncm_vector_set (y, 0, ncm_rng_ugaussian_gen (rng));
+    ncm_vector_set (y, 1, ncm_rng_ugaussian_gen (rng));
+    ncm_stats_dist_add_obs (sd, y);
+    ncm_vector_free (y);
+  }
+
+  if (g_test_subprocess ())
+  {
+    ncm_stats_dist_prepare (sd);
+
+    return;
+  }
+
+  g_test_trap_subprocess ("/ncm/stats/dist/nd/kde/gauss/invalid/cv_accept_without_m2lnL/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+
+  ncm_stats_dist_free (sd);
+  ncm_rng_free (rng);
 }
 
 static void

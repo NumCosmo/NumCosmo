@@ -49,7 +49,6 @@ typedef struct _NcmStatsDistPrivate
   NcmStatsDistCV cv_type;
   gboolean use_threads;
   gdouble split_frac;
-  gdouble shrink;
   gdouble min_m2lnp;
   gdouble max_m2lnp;
   gdouble href;
@@ -84,6 +83,9 @@ typedef struct _NcmStatsDistPrivate
   NcmVector *f;
   NcmVector *f1;
   NcmVector *cv_m2lnp;
+  NcmVector *cv_m2lnL_sample;
+  NcmVector *cv_w;
+  gboolean uniform_weights;
   gdouble *levmar_workz;
   guint levmar_n;
   gsl_multimin_fminimizer *fmin;

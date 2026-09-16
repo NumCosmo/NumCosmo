@@ -731,12 +731,20 @@
     "nick": "loo",
     "type": "Ncm.StatsDistCV"
   },
+  "NCM_STATS_DIST_CV_LOO_M2LNP": {
+    "nick": "loo-m2lnp",
+    "type": "Ncm.StatsDistCV"
+  },
   "NCM_STATS_DIST_CV_NONE": {
     "nick": "none",
     "type": "Ncm.StatsDistCV"
   },
   "NCM_STATS_DIST_CV_SPLIT": {
     "nick": "split",
+    "type": "Ncm.StatsDistCV"
+  },
+  "NCM_STATS_DIST_CV_SPLIT_ACCEPT": {
+    "nick": "split-accept",
     "type": "Ncm.StatsDistCV"
   },
   "NCM_STATS_DIST_CV_SPLIT_NOFIT": {

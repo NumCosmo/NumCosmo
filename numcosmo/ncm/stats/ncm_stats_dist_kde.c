@@ -693,7 +693,7 @@ _ncm_stats_dist_kde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVecto
 
   ncm_stats_dist_kernel_eval_unnorm_vec (pself->kernel, ev->chi2, ev->chi2);
 
-  res = ncm_vector_dot (ev->chi2, pself->weights) * exp (-(self->kernel_lnnorm + pself->d * log (pself->href)));
+  res = ncm_vector_dot (ev->chi2, weights) * exp (-(self->kernel_lnnorm + pself->d * log (pself->href)));
 
   ncm_memory_pool_return (ev_ptr);
 
@@ -736,7 +736,7 @@ _ncm_stats_dist_kde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, Nc
   {
     gdouble gamma, lambda;
 
-    ncm_stats_dist_kernel_eval_sum1_gamma_lambda (pself->kernel, ev->chi2, pself->weights, self->kernel_lnnorm, ev->lnK, &gamma, &lambda);
+    ncm_stats_dist_kernel_eval_sum1_gamma_lambda (pself->kernel, ev->chi2, weights, self->kernel_lnnorm, ev->lnK, &gamma, &lambda);
 
     ncm_memory_pool_return (ev_ptr);
 

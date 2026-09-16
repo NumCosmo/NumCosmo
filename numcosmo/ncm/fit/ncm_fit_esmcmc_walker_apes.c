@@ -99,26 +99,18 @@ enum
   PROP_METHOD,
   PROP_K_TYPE,
   PROP_OVER_SMOOTH,
-  PROP_SHRINK,
-  PROP_RANDOM_WALK_PROB,
-  PROP_RANDOM_WALK_SCALE,
   PROP_USE_INTERP,
   PROP_USE_THREADS,
   PROP_CENTER_SHRINK,
   PROP_DEFENSIVE_FRAC,
   PROP_DEFENSIVE_SCALE,
   PROP_DEFENSIVE_NU,
+  PROP_VKDE_POINTS_PER_DIM,
+  PROP_UNIFORM_WEIGHTS,
   PROP_CV_TYPE,
   PROP_SPLIT_FRAC,
   PROP_AUTO_KERNEL,
 };
-
-typedef struct _NcmFitESMCMCWalkerAPESRandomWalk
-{
-  NcmVector *std;
-  NcmVector *lb;
-  NcmVector *ub;
-} NcmFitESMCMCWalkerAPESRandomWalk;
 
 typedef struct _NcmFitESMCMCWalkerAPESPrivate
 {
@@ -139,17 +131,14 @@ typedef struct _NcmFitESMCMCWalkerAPESPrivate
   NcmFitESMCMCWalkerAPESMethod method;
   NcmFitESMCMCWalkerAPESKType k_type;
   gdouble over_smooth;
-  gdouble shrink;            /* Shrink factor for weight computation */
-  gdouble random_walk_prob;  /* Probability of random walk step */
-  gdouble random_walk_scale; /* Scale of the random walk step */
-  NcmFitESMCMCWalkerAPESRandomWalk rw0;
-  NcmFitESMCMCWalkerAPESRandomWalk rw1;
   gboolean use_interp;
   gboolean use_threads;
   gboolean center_shrink;
   gdouble defensive_frac;
   gdouble defensive_scale;
   gdouble defensive_nu;
+  gdouble vkde_points_per_dim;
+  gboolean uniform_weights;
   gdouble local_frac;
   NcmStatsDistCV cv_type;
   gdouble split_frac;
@@ -174,47 +163,40 @@ ncm_fit_esmcmc_walker_apes_init (NcmFitESMCMCWalkerAPES *apes)
 {
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
 
-  self->size              = 0;
-  self->size_2            = 0;
-  self->nparams           = 0;
-  self->a_size            = 0;
-  self->a_nparams         = 0;
-  self->mk                = -1;
-  self->m2lnp_star        = NULL;
-  self->m2lnp_cur         = NULL;
-  self->desc              = NULL;
-  self->sd0               = NULL;
-  self->sd1               = NULL;
-  self->thetastar         = g_ptr_array_new ();
-  self->m2lnL_s0          = NULL;
-  self->m2lnL_s1          = NULL;
-  self->method            = NCM_FIT_ESMCMC_WALKER_APES_METHOD_LEN;
-  self->k_type            = NCM_FIT_ESMCMC_WALKER_APES_KTYPE_LEN;
-  self->over_smooth       = 0.0;
-  self->shrink            = 0.0;
-  self->random_walk_prob  = 0.0;
-  self->random_walk_scale = 0.0;
-  self->use_interp        = FALSE;
-  self->use_threads       = FALSE;
-  self->center_shrink     = FALSE;
-  self->defensive_frac    = 0.0;
-  self->defensive_scale   = 4.0;
-  self->defensive_nu      = 3.0;
-  self->local_frac        = 0.0;
-  self->cv_type           = NCM_STATS_DIST_CV_NONE;
-  self->split_frac        = 0.0;
-  self->auto_kernel       = FALSE;
-  self->cov_type          = NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE;
-  self->cov_fixed         = NULL;
-  self->constructed       = FALSE;
-  self->exploration       = 0;
+  self->size                = 0;
+  self->size_2              = 0;
+  self->nparams             = 0;
+  self->a_size              = 0;
+  self->a_nparams           = 0;
+  self->mk                  = -1;
+  self->m2lnp_star          = NULL;
+  self->m2lnp_cur           = NULL;
+  self->desc                = NULL;
+  self->sd0                 = NULL;
+  self->sd1                 = NULL;
+  self->thetastar           = g_ptr_array_new ();
+  self->m2lnL_s0            = NULL;
+  self->m2lnL_s1            = NULL;
+  self->method              = NCM_FIT_ESMCMC_WALKER_APES_METHOD_LEN;
+  self->k_type              = NCM_FIT_ESMCMC_WALKER_APES_KTYPE_LEN;
+  self->over_smooth         = 0.0;
+  self->use_interp          = FALSE;
+  self->use_threads         = FALSE;
+  self->center_shrink       = FALSE;
+  self->defensive_frac      = 0.0;
+  self->defensive_scale     = 4.0;
+  self->defensive_nu        = 3.0;
+  self->vkde_points_per_dim = 0.0;
+  self->uniform_weights     = FALSE;
+  self->local_frac          = 0.0;
+  self->cv_type             = NCM_STATS_DIST_CV_NONE;
+  self->split_frac          = 0.0;
+  self->auto_kernel         = FALSE;
+  self->cov_type            = NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE;
+  self->cov_fixed           = NULL;
+  self->constructed         = FALSE;
+  self->exploration         = 0;
 
-  self->rw0.std = NULL;
-  self->rw0.lb  = NULL;
-  self->rw0.ub  = NULL;
-  self->rw1.std = NULL;
-  self->rw1.lb  = NULL;
-  self->rw1.ub  = NULL;
 
   g_ptr_array_set_free_func (self->thetastar, (GDestroyNotify) ncm_vector_free);
 }
@@ -237,15 +219,6 @@ _ncm_fit_esmcmc_walker_apes_set_property (GObject *object, guint prop_id, const 
     case PROP_OVER_SMOOTH:
       ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, g_value_get_double (value));
       break;
-    case PROP_SHRINK:
-      ncm_fit_esmcmc_walker_apes_set_shrink (apes, g_value_get_double (value));
-      break;
-    case PROP_RANDOM_WALK_PROB:
-      ncm_fit_esmcmc_walker_apes_set_random_walk_prob (apes, g_value_get_double (value));
-      break;
-    case PROP_RANDOM_WALK_SCALE:
-      ncm_fit_esmcmc_walker_apes_set_random_walk_scale (apes, g_value_get_double (value));
-      break;
     case PROP_USE_INTERP:
       ncm_fit_esmcmc_walker_apes_use_interp (apes, g_value_get_boolean (value));
       break;
@@ -263,6 +236,12 @@ _ncm_fit_esmcmc_walker_apes_set_property (GObject *object, guint prop_id, const 
       break;
     case PROP_DEFENSIVE_NU:
       ncm_fit_esmcmc_walker_apes_set_defensive_nu (apes, g_value_get_double (value));
+      break;
+    case PROP_VKDE_POINTS_PER_DIM:
+      ncm_fit_esmcmc_walker_apes_set_vkde_points_per_dim (apes, g_value_get_double (value));
+      break;
+    case PROP_UNIFORM_WEIGHTS:
+      ncm_fit_esmcmc_walker_apes_set_uniform_weights (apes, g_value_get_boolean (value));
       break;
     case PROP_CV_TYPE:
       ncm_fit_esmcmc_walker_apes_set_cv_type (apes, g_value_get_enum (value));
@@ -297,15 +276,6 @@ _ncm_fit_esmcmc_walker_apes_get_property (GObject *object, guint prop_id, GValue
     case PROP_OVER_SMOOTH:
       g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_over_smooth (apes));
       break;
-    case PROP_SHRINK:
-      g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_shrink (apes));
-      break;
-    case PROP_RANDOM_WALK_PROB:
-      g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_random_walk_prob (apes));
-      break;
-    case PROP_RANDOM_WALK_SCALE:
-      g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_random_walk_scale (apes));
-      break;
     case PROP_USE_INTERP:
       g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_interp (apes));
       break;
@@ -323,6 +293,12 @@ _ncm_fit_esmcmc_walker_apes_get_property (GObject *object, guint prop_id, GValue
       break;
     case PROP_DEFENSIVE_NU:
       g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_defensive_nu (apes));
+      break;
+    case PROP_VKDE_POINTS_PER_DIM:
+      g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_vkde_points_per_dim (apes));
+      break;
+    case PROP_UNIFORM_WEIGHTS:
+      g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_get_uniform_weights (apes));
       break;
     case PROP_CV_TYPE:
       g_value_set_enum (value, ncm_fit_esmcmc_walker_apes_get_cv_type (apes));
@@ -370,12 +346,6 @@ _ncm_fit_esmcmc_walker_apes_dispose (GObject *object)
   ncm_stats_dist_clear (&self->sd1);
   ncm_matrix_clear (&self->cov_fixed);
 
-  ncm_vector_clear (&self->rw0.std);
-  ncm_vector_clear (&self->rw0.lb);
-  ncm_vector_clear (&self->rw0.ub);
-  ncm_vector_clear (&self->rw1.std);
-  ncm_vector_clear (&self->rw1.lb);
-  ncm_vector_clear (&self->rw1.ub);
 
   g_clear_pointer (&self->thetastar, g_ptr_array_unref);
 
@@ -460,55 +430,6 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                                         NULL,
                                                         "Over-smooth parameter used to adjust kernel bandwidth",
                                                         1.0e-10, 1.0e10, 1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmFitESMCMCWalkerAPES:shrink:
-   *
-   * Shrink factor for weight computation. This property defines the shrink factor
-   * used in the weight computation for the APES proposal. The default value is 0.01.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_SHRINK,
-                                   g_param_spec_double ("shrink",
-                                                        NULL,
-                                                        "Shrink factor for weight computation",
-                                                        0.0, 1.0, 0.01,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmFitESMCMCWalkerAPES:random-walk-prob:
-   *
-   * Probability of random walk step. This property defines the probability of a random
-   * walk step being taken when proposing new points for the walkers. The default value
-   * is 0.02, meaning a random walk step will be taken with probability of 2%.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_RANDOM_WALK_PROB,
-                                   g_param_spec_double ("random-walk-prob",
-                                                        NULL,
-                                                        "Probability of random walk step",
-                                                        0.0001, 1.0, 0.02,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmFitESMCMCWalkerAPES:random-walk-scale:
-   *
-   * Scale factor for the random walk step used in proposal generation. This property
-   * defines the standard deviation of the random walk proposal as a fraction of the
-   * empirical standard deviation computed from the current half-ensemble (i.e., the
-   * half not being updated). The default value is 0.25, meaning the random walk step
-   * will have a standard deviation equal to 25% of that empirical value.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_RANDOM_WALK_SCALE,
-                                   g_param_spec_double ("random-walk-scale",
-                                                        NULL,
-                                                        "Scale of the random walk step",
-                                                        0.01, 1.0, 0.25,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -615,6 +536,36 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
+   * NcmFitESMCMCWalkerAPES:vkde-points-per-dim:
+   *
+   * See #NcmStatsDistVKDE:points-per-dim; ignored for the KDE method. Default: 0, i.e.
+   * #NcmFitESMCMCWalkerAPES:local-frac applies.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_VKDE_POINTS_PER_DIM,
+                                   g_param_spec_double ("vkde-points-per-dim",
+                                                        NULL,
+                                                        "Nearest neighbors per dimension for the VKDE local covariances (0: local fraction)",
+                                                        0.0, 1.0e6, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFitESMCMCWalkerAPES:uniform-weights:
+   *
+   * See #NcmStatsDist:uniform-weights: with interpolation on, keep uniform kernel weights
+   * (the bandwidth fit still runs) instead of the NNLS fit. Default: FALSE.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_UNIFORM_WEIGHTS,
+                                   g_param_spec_boolean ("uniform-weights",
+                                                         NULL,
+                                                         "Uniform kernel weights instead of the NNLS fit",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
    * NcmFitESMCMCWalkerAPES:cv-type:
    *
    * The cross-validation used to choose the over-smooth factor. With
@@ -681,8 +632,17 @@ _ncm_fit_esmcmc_walker_apes_vkde_check_sizes (NcmFitESMCMCWalker *walker)
   NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
 
-  guint cov_estimates0 = ncm_stats_dist_vkde_get_local_frac (NCM_STATS_DIST_VKDE (self->sd0)) * self->size_2;
-  guint cov_estimates1 = ncm_stats_dist_vkde_get_local_frac (NCM_STATS_DIST_VKDE (self->sd1)) * self->size_2;
+  guint cov_estimates0 = ncm_stats_dist_vkde_get_n_neighbors (NCM_STATS_DIST_VKDE (self->sd0), self->size_2);
+  guint cov_estimates1 = ncm_stats_dist_vkde_get_n_neighbors (NCM_STATS_DIST_VKDE (self->sd1), self->size_2);
+  const gdouble ppd    = ncm_stats_dist_vkde_get_points_per_dim (NCM_STATS_DIST_VKDE (self->sd0));
+
+  /* With points-per-dim set, the same count that a local covariance needs is the least
+   * the half-ensemble must have for the global one: fewer walkers than that and the run
+   * does not start. */
+  if ((ppd > 0.0) && (self->size_2 < (guint) ceil (ppd * self->nparams)))
+    g_error ("Number of walkers per block (%u) is below points-per-dim x dimension (%g x %u = %u): "
+             "not enough walkers to estimate a %u x %u covariance. Increase nwalkers or lower vkde-points-per-dim.",
+             self->size_2, ppd, self->nparams, (guint) ceil (ppd * self->nparams), self->nparams, self->nparams);
 
   if (cov_estimates0 < 2)
     g_error ("Number of walkers per block (%d) is too low for the current dimension (%d).\n"
@@ -785,9 +745,6 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
     ncm_stats_dist_set_over_smooth (self->sd0, self->over_smooth);
     ncm_stats_dist_set_over_smooth (self->sd1, self->over_smooth);
 
-    ncm_stats_dist_set_shrink (self->sd0, self->shrink);
-    ncm_stats_dist_set_shrink (self->sd1, self->shrink);
-
     ncm_stats_dist_set_cv_type (self->sd0, self->cv_type);
     ncm_stats_dist_set_cv_type (self->sd1, self->cv_type);
 
@@ -812,6 +769,8 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
     ncm_stats_dist_set_defensive_scale (self->sd1, self->defensive_scale);
     ncm_stats_dist_set_defensive_nu (self->sd0, self->defensive_nu);
     ncm_stats_dist_set_defensive_nu (self->sd1, self->defensive_nu);
+    ncm_stats_dist_set_uniform_weights (self->sd0, self->uniform_weights);
+    ncm_stats_dist_set_uniform_weights (self->sd1, self->uniform_weights);
 
     /* The objects above have just been created, so every setting that lives inside
      * them has to be applied again; otherwise changing the method or the kernel
@@ -820,6 +779,13 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
     {
       ncm_stats_dist_vkde_set_local_frac (NCM_STATS_DIST_VKDE (self->sd0), self->local_frac);
       ncm_stats_dist_vkde_set_local_frac (NCM_STATS_DIST_VKDE (self->sd1), self->local_frac);
+      _ncm_fit_esmcmc_walker_apes_vkde_check_sizes (walker);
+    }
+
+    if (self->method == NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE)
+    {
+      ncm_stats_dist_vkde_set_points_per_dim (NCM_STATS_DIST_VKDE (self->sd0), self->vkde_points_per_dim);
+      ncm_stats_dist_vkde_set_points_per_dim (NCM_STATS_DIST_VKDE (self->sd1), self->vkde_points_per_dim);
       _ncm_fit_esmcmc_walker_apes_vkde_check_sizes (walker);
     }
 
@@ -886,98 +852,14 @@ _ncm_fit_esmcmc_walker_apes_get_nparams (NcmFitESMCMCWalker *walker)
 }
 
 static void
-_ncm_fit_esmcmc_walker_apes_prepare_random_walk (NcmFitESMCMCWalker *walker, NcmStatsDist *sd, NcmFitESMCMCWalkerAPESRandomWalk *random_walk, NcmMSet *mset)
+_ncm_fit_esmcmc_walker_apes_sample (NcmStatsDist *sd, NcmMSet *mset, NcmVector *thetastar, NcmRNG *rng)
 {
-  NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
-  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
-
-  if (self->random_walk_prob > 0.0)
-  {
-    NcmMatrix *cov = ncm_stats_dist_peek_full_cov (sd);
-    guint i;
-
-    if ((random_walk->std == NULL) || (ncm_vector_len (random_walk->std) != self->nparams))
-    {
-      ncm_vector_clear (&random_walk->std);
-      ncm_vector_clear (&random_walk->lb);
-      ncm_vector_clear (&random_walk->ub);
-
-      random_walk->std = ncm_vector_new (self->nparams);
-      random_walk->lb  = ncm_vector_new (self->nparams);
-      random_walk->ub  = ncm_vector_new (self->nparams);
-    }
-
-    for (i = 0; i < self->nparams; i++)
-    {
-      const gdouble var = ncm_matrix_get (cov, i, i);
-      const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
-      const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
-
-      ncm_vector_set (random_walk->lb, i, lb);
-      ncm_vector_set (random_walk->ub, i, ub);
-
-      /*
-       * The standard deviation is the square root of the variance. If the variance is
-       * non-positive, then the standard deviation is undefined.
-       */
-      if (var <= 0.0)
-        g_error ("Invalid covariance matrix: diagonal element %d is non-positive.", i);
-
-      /*
-       * 0.25 is a scaling factor for the standard deviation. TODO: Make this a
-       * parameter.
-       */
-      ncm_vector_set (random_walk->std, i, sqrt (var) * 0.25);
-    }
-  }
-}
-
-static void
-_ncm_fit_esmcmc_walker_apes_random_walk_sample (NcmFitESMCMCWalker *walker, NcmStatsDist *sd, NcmFitESMCMCWalkerAPESRandomWalk *random_walk, const NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
-{
-  NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
-  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
-  guint i;
-
-  for (i = 0; i < self->nparams; i++)
-  {
-    const gdouble lb      = ncm_vector_fast_get (random_walk->lb, i);
-    const gdouble ub      = ncm_vector_fast_get (random_walk->ub, i);
-    const gdouble std     = ncm_vector_fast_get (random_walk->std, i);
-    const gdouble theta_i = ncm_vector_get (theta, i);
-    gdouble x;
-
-    do {
-      x = ncm_rng_gaussian_gen (rng, theta_i, std);
-    } while ((x < lb) || (x > ub));
-
-    ncm_vector_set (thetastar, i, x);
-  }
-}
-
-static void
-_ncm_fit_esmcmc_walker_apes_sample (NcmFitESMCMCWalker *walker, NcmStatsDist *sd, NcmMSet *mset, NcmFitESMCMCWalkerAPESRandomWalk *random_walk, const NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
-{
-  NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
-  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
-
-  if (self->random_walk_prob == 0.0)
-  {
-    do {
-      ncm_stats_dist_sample (sd, thetastar, rng);
-    } while (!ncm_mset_fparam_valid_bounds (mset, thetastar));
-  }
-  else
-  {
-    do {
-      if (ncm_rng_uniform01_pos_gen (rng) < self->random_walk_prob)
-        _ncm_fit_esmcmc_walker_apes_random_walk_sample (walker, sd, random_walk, theta, thetastar, rng);
-      else
-        ncm_stats_dist_sample (sd, thetastar, rng);
-
-      /* Ensure the sampled point is within bounds */
-    } while (!ncm_mset_fparam_valid_bounds (mset, thetastar));
-  }
+  /* Redraw the whole proposal until it falls inside the parameter box: the proposal
+   * density is then q(x) / Z with a Z common to every walker of the half, which cancels
+   * in the acceptance ratio. */
+  do {
+    ncm_stats_dist_sample (sd, thetastar, rng);
+  } while (!ncm_mset_fparam_valid_bounds (mset, thetastar));
 }
 
 static void
@@ -1010,14 +892,11 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
     else
       ncm_stats_dist_prepare (self->sd0);
 
-    _ncm_fit_esmcmc_walker_apes_prepare_random_walk (walker, self->sd0, &self->rw0, mset);
-
     for (i = ki; i < self->size_2; i++)
     {
-      NcmVector *theta_i     = g_ptr_array_index (theta, i);
       NcmVector *thetastar_i = g_ptr_array_index (self->thetastar, i);
 
-      _ncm_fit_esmcmc_walker_apes_sample (walker, self->sd0, mset, &self->rw0, theta_i, thetastar_i, rng);
+      _ncm_fit_esmcmc_walker_apes_sample (self->sd0, mset, thetastar_i, rng);
     }
   }
 
@@ -1043,61 +922,16 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
     else
       ncm_stats_dist_prepare (self->sd1);
 
-    _ncm_fit_esmcmc_walker_apes_prepare_random_walk (walker, self->sd1, &self->rw1, mset);
-
     for (i = self->size_2; i < kf; i++)
     {
-      NcmVector *theta_i     = g_ptr_array_index (theta, i);
       NcmVector *thetastar_i = g_ptr_array_index (self->thetastar, i);
 
-      _ncm_fit_esmcmc_walker_apes_sample (walker, self->sd1, mset, &self->rw1, theta_i, thetastar_i, rng);
+      _ncm_fit_esmcmc_walker_apes_sample (self->sd1, mset, thetastar_i, rng);
     }
   }
 
   if (self->exploration > 0)
     self->exploration--;
-}
-
-static gdouble
-_ncm_fit_esmcmc_walker_apes_transition_prob (NcmFitESMCMCWalker *walker, NcmStatsDist *sd, NcmFitESMCMCWalkerAPESRandomWalk *random_walk, const NcmVector *theta, NcmVector *thetastar)
-{
-  NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
-  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
-  gdouble m2lnp, sign;
-
-  if (self->random_walk_prob > 0.0)
-  {
-    gdouble m2lnp_sd = ncm_stats_dist_eval_m2lnp (sd, thetastar);
-    gdouble m2lnp_rw = 0.0;
-    guint i;
-
-    for (i = 0; i < self->nparams; i++)
-    {
-      const gdouble lb          = ncm_vector_fast_get (random_walk->lb, i);
-      const gdouble ub          = ncm_vector_fast_get (random_walk->ub, i);
-      const gdouble std         = ncm_vector_fast_get (random_walk->std, i);
-      const gdouble theta_i     = ncm_vector_get (theta, i);
-      const gdouble thetastar_i = ncm_vector_get (thetastar, i);
-      const gdouble ln_norm     = 0.5 * ncm_c_ln2pi () + log (std) + ncm_util_log_gaussian_integral (lb, ub, theta_i, std, &sign);
-
-      m2lnp_rw += gsl_pow_2 ((thetastar_i - theta_i) / std) + 2.0 * ln_norm;
-    }
-
-    m2lnp_rw += -2.0 * log (self->random_walk_prob);
-    m2lnp_sd += -2.0 * log1p (-self->random_walk_prob);
-
-    if (m2lnp_sd < m2lnp_rw)
-      m2lnp = m2lnp_sd - 2.0 * log1p (exp (-0.5 * (m2lnp_rw - m2lnp_sd)));
-    else
-      m2lnp = m2lnp_rw - 2.0 * log1p (exp (-0.5 * (m2lnp_sd - m2lnp_rw)));
-  }
-  else
-  {
-    m2lnp = ncm_stats_dist_eval_m2lnp (sd, thetastar);
-  }
-
-
-  return m2lnp;
 }
 
 static void
@@ -1111,8 +945,8 @@ _ncm_fit_esmcmc_walker_apes_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
 
   if (k < self->size_2)
   {
-    const gdouble m2lnapes_star = _ncm_fit_esmcmc_walker_apes_transition_prob (walker, self->sd0, &self->rw0, theta_k, thetastar);
-    const gdouble m2lnapes_cur  = _ncm_fit_esmcmc_walker_apes_transition_prob (walker, self->sd0, &self->rw0, thetastar, theta_k);
+    const gdouble m2lnapes_star = ncm_stats_dist_eval_m2lnp (self->sd0, thetastar);
+    const gdouble m2lnapes_cur  = ncm_stats_dist_eval_m2lnp (self->sd0, theta_k);
 
     g_assert (gsl_finite (m2lnapes_star) && gsl_finite (m2lnapes_cur));
 
@@ -1122,8 +956,8 @@ _ncm_fit_esmcmc_walker_apes_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
 
   if (k >= self->size_2)
   {
-    const gdouble m2lnapes_star = _ncm_fit_esmcmc_walker_apes_transition_prob (walker, self->sd1, &self->rw1, theta_k, thetastar);
-    const gdouble m2lnapes_cur  = _ncm_fit_esmcmc_walker_apes_transition_prob (walker, self->sd1, &self->rw1, thetastar, theta_k);
+    const gdouble m2lnapes_star = ncm_stats_dist_eval_m2lnp (self->sd1, thetastar);
+    const gdouble m2lnapes_cur  = ncm_stats_dist_eval_m2lnp (self->sd1, theta_k);
 
     g_assert (gsl_finite (m2lnapes_star) && gsl_finite (m2lnapes_cur));
 
@@ -1417,66 +1251,6 @@ ncm_fit_esmcmc_walker_apes_set_over_smooth (NcmFitESMCMCWalkerAPES *apes, const 
 }
 
 /**
- * ncm_fit_esmcmc_walker_apes_set_shrink:
- * @apes: a #NcmFitESMCMCWalkerAPES
- * @shrink: a double
- *
- * Sets the shrink parameter to adjust the kernel weights. The value must be between 0.0
- * and 1.0. See ncm_stats_dist_set_shrink() for more details.
- *
- */
-void
-ncm_fit_esmcmc_walker_apes_set_shrink (NcmFitESMCMCWalkerAPES *apes, const gdouble shrink)
-{
-  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
-
-  if ((shrink < 0.0) || (shrink > 1.0))
-    g_error ("ncm_fit_esmcmc_walker_apes_set_shrink: invalid shrink `%f'.", shrink);
-
-  self->shrink = shrink;
-}
-
-/**
- * ncm_fit_esmcmc_walker_apes_set_random_walk_prob:
- * @apes: a #NcmFitESMCMCWalkerAPES
- * @prob: a double
- *
- * Sets the probability of performing a random walk step. The value must be between 0.0
- * and 1.0.
- *
- */
-void
-ncm_fit_esmcmc_walker_apes_set_random_walk_prob (NcmFitESMCMCWalkerAPES *apes, const gdouble prob)
-{
-  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
-
-  if ((prob < 0.0) || (prob > 1.0))
-    g_error ("ncm_fit_esmcmc_walker_apes_set_random_walk_prob: invalid probability `%f'.", prob);
-
-  self->random_walk_prob = prob;
-}
-
-/**
- * ncm_fit_esmcmc_walker_apes_set_random_walk_scale:
- * @apes: a #NcmFitESMCMCWalkerAPES
- * @scale: a double
- *
- * Sets the scale factor for the random walk step. The value must be greater than 0.0.
- * This factor multiplies the standard deviation used in the random walk proposal.
- *
- */
-void
-ncm_fit_esmcmc_walker_apes_set_random_walk_scale (NcmFitESMCMCWalkerAPES *apes, const gdouble scale)
-{
-  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
-
-  if (scale <= 0.0)
-    g_error ("ncm_fit_esmcmc_walker_apes_set_random_walk_scale: invalid scale `%f'.", scale);
-
-  self->random_walk_scale = scale;
-}
-
-/**
  * ncm_fit_esmcmc_walker_apes_get_method:
  * @apes: a #NcmFitESMCMCWalkerAPES
  *
@@ -1522,54 +1296,6 @@ ncm_fit_esmcmc_walker_apes_get_over_smooth (NcmFitESMCMCWalkerAPES *apes)
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
 
   return self->over_smooth;
-}
-
-/**
- * ncm_fit_esmcmc_walker_apes_get_shrink:
- * @apes: a #NcmFitESMCMCWalkerAPES
- *
- * Gets the currently used shrink parameter.
- *
- * Returns: currently used shrink.
- */
-gdouble
-ncm_fit_esmcmc_walker_apes_get_shrink (NcmFitESMCMCWalkerAPES *apes)
-{
-  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
-
-  return self->shrink;
-}
-
-/**
- * ncm_fit_esmcmc_walker_apes_get_random_walk_prob:
- * @apes: a #NcmFitESMCMCWalkerAPES
- *
- * Gets the currently used random walk probability.
- *
- * Returns: currently used random walk probability.
- */
-gdouble
-ncm_fit_esmcmc_walker_apes_get_random_walk_prob (NcmFitESMCMCWalkerAPES *apes)
-{
-  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
-
-  return self->random_walk_prob;
-}
-
-/**
- * ncm_fit_esmcmc_walker_apes_get_random_walk_scale:
- * @apes: a #NcmFitESMCMCWalkerAPES
- *
- * Gets the currently used random walk scale.
- *
- * Returns: currently used random walk scale.
- */
-gdouble
-ncm_fit_esmcmc_walker_apes_get_random_walk_scale (NcmFitESMCMCWalkerAPES *apes)
-{
-  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
-
-  return self->random_walk_scale;
 }
 
 /**
@@ -1675,6 +1401,8 @@ ncm_fit_esmcmc_walker_apes_set_center_shrink (NcmFitESMCMCWalkerAPES *apes, gboo
     ncm_stats_dist_set_defensive_scale (self->sd1, self->defensive_scale);
     ncm_stats_dist_set_defensive_nu (self->sd0, self->defensive_nu);
     ncm_stats_dist_set_defensive_nu (self->sd1, self->defensive_nu);
+    ncm_stats_dist_set_uniform_weights (self->sd0, self->uniform_weights);
+    ncm_stats_dist_set_uniform_weights (self->sd1, self->uniform_weights);
   }
 }
 
@@ -1798,6 +1526,80 @@ ncm_fit_esmcmc_walker_apes_get_defensive_nu (NcmFitESMCMCWalkerAPES *apes)
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
 
   return self->defensive_nu;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_set_vkde_points_per_dim:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @points_per_dim: see #NcmStatsDistVKDE:points-per-dim
+ *
+ * Sets #NcmFitESMCMCWalkerAPES:vkde-points-per-dim, forwarded to both estimators when the
+ * method is VKDE.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_vkde_points_per_dim (NcmFitESMCMCWalkerAPES *apes, const gdouble points_per_dim)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  self->vkde_points_per_dim = points_per_dim;
+
+  if (self->constructed && (self->method == NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE))
+  {
+    ncm_stats_dist_vkde_set_points_per_dim (NCM_STATS_DIST_VKDE (self->sd0), points_per_dim);
+    ncm_stats_dist_vkde_set_points_per_dim (NCM_STATS_DIST_VKDE (self->sd1), points_per_dim);
+    _ncm_fit_esmcmc_walker_apes_vkde_check_sizes (NCM_FIT_ESMCMC_WALKER (apes));
+  }
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_get_vkde_points_per_dim:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Returns: #NcmFitESMCMCWalkerAPES:vkde-points-per-dim.
+ */
+gdouble
+ncm_fit_esmcmc_walker_apes_get_vkde_points_per_dim (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  return self->vkde_points_per_dim;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_set_uniform_weights:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @uniform_weights: see #NcmStatsDist:uniform-weights
+ *
+ * Sets #NcmFitESMCMCWalkerAPES:uniform-weights, forwarded to both estimators.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_uniform_weights (NcmFitESMCMCWalkerAPES *apes, gboolean uniform_weights)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  self->uniform_weights = uniform_weights;
+
+  if (self->constructed)
+  {
+    ncm_stats_dist_set_uniform_weights (self->sd0, uniform_weights);
+    ncm_stats_dist_set_uniform_weights (self->sd1, uniform_weights);
+  }
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_get_uniform_weights:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Returns: #NcmFitESMCMCWalkerAPES:uniform-weights.
+ */
+gboolean
+ncm_fit_esmcmc_walker_apes_get_uniform_weights (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  return self->uniform_weights;
 }
 
 /**

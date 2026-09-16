@@ -2095,7 +2095,9 @@ _ncm_fit_esmcmc_eval_mpi (NcmFitESMCMC *esmcmc, const glong i, const glong f)
     }
     else
     {
+      /* Rejected without an evaluation, and counted as offboard as in the serial path. */
       ncm_vector_set (thetastar_out_k, 0, 0.0);
+      g_array_index (self->offboard, gboolean, k) = TRUE;
     }
   }
 

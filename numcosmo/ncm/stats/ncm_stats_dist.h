@@ -82,6 +82,8 @@ typedef enum _NcmStatsDistCV /*< prefix=NCM_STATS_DIST_CV >*/
   NCM_STATS_DIST_CV_SPLIT,
   NCM_STATS_DIST_CV_SPLIT_NOFIT,
   NCM_STATS_DIST_CV_LOO,
+  NCM_STATS_DIST_CV_SPLIT_ACCEPT,
+  NCM_STATS_DIST_CV_LOO_M2LNP,
   /* < private > */
   NCM_STATS_DIST_CV_LEN, /*< skip >*/
 } NcmStatsDistCV;
@@ -105,8 +107,6 @@ gdouble ncm_stats_dist_get_over_smooth (NcmStatsDist *sd);
 void ncm_stats_dist_set_split_frac (NcmStatsDist *sd, const gdouble split_frac);
 gdouble ncm_stats_dist_get_split_frac (NcmStatsDist *sd);
 
-void ncm_stats_dist_set_shrink (NcmStatsDist *sd, const gdouble shrink);
-gdouble ncm_stats_dist_get_shrink (NcmStatsDist *sd);
 
 void ncm_stats_dist_set_center_shrink (NcmStatsDist *sd, const gboolean center_shrink);
 gboolean ncm_stats_dist_get_center_shrink (NcmStatsDist *sd);
@@ -114,6 +114,8 @@ void ncm_stats_dist_set_auto_kernel (NcmStatsDist *sd, gboolean auto_kernel);
 gboolean ncm_stats_dist_get_auto_kernel (NcmStatsDist *sd);
 gdouble ncm_stats_dist_get_center_shrink_factor (NcmStatsDist *sd);
 NcmMatrix *ncm_stats_dist_peek_center_shrink_matrix (NcmStatsDist *sd);
+void ncm_stats_dist_set_uniform_weights (NcmStatsDist *sd, const gboolean uniform_weights);
+gboolean ncm_stats_dist_get_uniform_weights (NcmStatsDist *sd);
 void ncm_stats_dist_set_defensive_frac (NcmStatsDist *sd, const gdouble frac);
 gdouble ncm_stats_dist_get_defensive_frac (NcmStatsDist *sd);
 void ncm_stats_dist_set_defensive_scale (NcmStatsDist *sd, const gdouble scale);

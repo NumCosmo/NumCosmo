@@ -3628,12 +3628,6 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         Kernel used in posterior approximation
       over-smooth -> gdouble: over-smooth
         Over-smooth parameter used to adjust kernel bandwidth
-      shrink -> gdouble: shrink
-        Shrink factor for weight computation
-      random-walk-prob -> gdouble: random-walk-prob
-        Probability of random walk step
-      random-walk-scale -> gdouble: random-walk-scale
-        Scale of the random walk step
       use-interp -> gboolean: use-interp
         Whether to use interpolation to build the posterior approximation
       use-threads -> gboolean: use-threads
@@ -3646,6 +3640,10 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         Covariance factor of the wide component
       defensive-nu -> gdouble: defensive-nu
         Degrees of freedom of the wide component
+      vkde-points-per-dim -> gdouble: vkde-points-per-dim
+        Nearest neighbors per dimension for the VKDE local covariances (0: local fraction)
+      uniform-weights -> gboolean: uniform-weights
+        Uniform kernel weights instead of the NNLS fit
       cv-type -> NcmStatsDistCV: cv-type
         Cross-validation used to choose the over-smooth factor
       split-frac -> gdouble: split-frac
@@ -3673,12 +3671,11 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         kernel_type: FitESMCMCWalkerAPESKType
         method: FitESMCMCWalkerAPESMethod
         over_smooth: float
-        random_walk_prob: float
-        random_walk_scale: float
-        shrink: float
         split_frac: float
+        uniform_weights: bool
         use_interp: bool
         use_threads: bool
+        vkde_points_per_dim: float
         nparams: int
         size: int
 
@@ -3694,12 +3691,11 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         kernel_type: FitESMCMCWalkerAPESKType = ...,
         method: FitESMCMCWalkerAPESMethod = ...,
         over_smooth: float = ...,
-        random_walk_prob: float = ...,
-        random_walk_scale: float = ...,
-        shrink: float = ...,
         split_frac: float = ...,
+        uniform_weights: bool = ...,
         use_interp: bool = ...,
         use_threads: bool = ...,
+        vkde_points_per_dim: float = ...,
         nparams: int = ...,
         size: int = ...,
     ) -> None: ...
@@ -3715,11 +3711,10 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
     def get_k_type(self) -> FitESMCMCWalkerAPESKType: ...
     def get_method(self) -> FitESMCMCWalkerAPESMethod: ...
     def get_over_smooth(self) -> float: ...
-    def get_random_walk_prob(self) -> float: ...
-    def get_random_walk_scale(self) -> float: ...
-    def get_shrink(self) -> float: ...
     def get_split_frac(self) -> float: ...
+    def get_uniform_weights(self) -> bool: ...
     def get_use_threads(self) -> bool: ...
+    def get_vkde_points_per_dim(self) -> float: ...
     def interp(self) -> bool: ...
     @classmethod
     def new(cls, nwalkers: int, nparams: int) -> FitESMCMCWalkerAPES: ...
@@ -3749,11 +3744,10 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
     def set_local_frac(self, local_frac: float) -> None: ...
     def set_method(self, method: FitESMCMCWalkerAPESMethod) -> None: ...
     def set_over_smooth(self, os: float) -> None: ...
-    def set_random_walk_prob(self, prob: float) -> None: ...
-    def set_random_walk_scale(self, scale: float) -> None: ...
-    def set_shrink(self, shrink: float) -> None: ...
     def set_split_frac(self, split_frac: float) -> None: ...
+    def set_uniform_weights(self, uniform_weights: bool) -> None: ...
     def set_use_threads(self, use_threads: bool) -> None: ...
+    def set_vkde_points_per_dim(self, points_per_dim: float) -> None: ...
     def use_interp(self, use_interp: bool) -> None: ...
 
 class FitESMCMCWalkerAPESClass(GObject.GPointer):
@@ -6775,7 +6769,7 @@ class MSetTransKernCat(MSetTransKern):
       sampling-type -> NcmMSetTransKernCatSampling: sampling-type
         Sampling method to use
       m2lnL-reltol -> gdouble: m2lnL-reltol
-        Relative tolerance for m2lnL
+        Relative tolerance within which two rows' m2lnL mark the same point
       choose-cut -> gboolean: choose-cut
         Whether to cut the catalog at the choose-percentile before choosing
       choose-percentile -> gdouble: choose-percentile
@@ -12184,8 +12178,6 @@ class StatsDist(GObject.Object):
         Whether to use OpenMP threads during computation
       split-frac -> gdouble: split-frac
         Fraction to use in the split cross-validation
-      shrink -> gdouble: shrink
-        Shrink factor for the weights
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
       center-shrink -> gboolean: center-shrink
@@ -12198,6 +12190,8 @@ class StatsDist(GObject.Object):
         Covariance factor of the wide component
       defensive-nu -> gdouble: defensive-nu
         Degrees of freedom of the wide component
+      uniform-weights -> gboolean: uniform-weights
+        Keep uniform kernel weights in prepare_interp instead of the NNLS fit
 
     Signals from GObject:
       notify (GParam)
@@ -12214,8 +12208,8 @@ class StatsDist(GObject.Object):
         kernel: StatsDistKernel
         over_smooth: float
         print_fit: bool
-        shrink: float
         split_frac: float
+        uniform_weights: bool
         use_threads: bool
 
     props: Props = ...
@@ -12231,8 +12225,8 @@ class StatsDist(GObject.Object):
         kernel: StatsDistKernel = ...,
         over_smooth: float = ...,
         print_fit: bool = ...,
-        shrink: float = ...,
         split_frac: float = ...,
+        uniform_weights: bool = ...,
         use_threads: bool = ...,
     ) -> None: ...
     def add_obs(self, y: Vector) -> None: ...
@@ -12273,8 +12267,8 @@ class StatsDist(GObject.Object):
     def get_print_fit(self) -> bool: ...
     def get_rnorm(self) -> float: ...
     def get_sample_size(self) -> int: ...
-    def get_shrink(self) -> float: ...
     def get_split_frac(self) -> float: ...
+    def get_uniform_weights(self) -> bool: ...
     def get_use_threads(self) -> bool: ...
     def kernel_choose(self, rng: RNG) -> int: ...
     def peek_center_array(self) -> list[Vector]: ...
@@ -12300,8 +12294,8 @@ class StatsDist(GObject.Object):
     def set_kernel(self, sdk: StatsDistKernel) -> None: ...
     def set_over_smooth(self, over_smooth: float) -> None: ...
     def set_print_fit(self, print_fit: bool) -> None: ...
-    def set_shrink(self, shrink: float) -> None: ...
     def set_split_frac(self, split_frac: float) -> None: ...
+    def set_uniform_weights(self, uniform_weights: bool) -> None: ...
     def set_use_threads(self, use_threads: bool) -> None: ...
 
 class StatsDist1d(GObject.Object):
@@ -12739,8 +12733,6 @@ class StatsDistKDE(StatsDist):
         Whether to use OpenMP threads during computation
       split-frac -> gdouble: split-frac
         Fraction to use in the split cross-validation
-      shrink -> gdouble: shrink
-        Shrink factor for the weights
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
       center-shrink -> gboolean: center-shrink
@@ -12753,6 +12745,8 @@ class StatsDistKDE(StatsDist):
         Covariance factor of the wide component
       defensive-nu -> gdouble: defensive-nu
         Degrees of freedom of the wide component
+      uniform-weights -> gboolean: uniform-weights
+        Keep uniform kernel weights in prepare_interp instead of the NNLS fit
 
     Signals from GObject:
       notify (GParam)
@@ -12772,8 +12766,8 @@ class StatsDistKDE(StatsDist):
         kernel: StatsDistKernel
         over_smooth: float
         print_fit: bool
-        shrink: float
         split_frac: float
+        uniform_weights: bool
         use_threads: bool
 
     props: Props = ...
@@ -12792,8 +12786,8 @@ class StatsDistKDE(StatsDist):
         kernel: StatsDistKernel = ...,
         over_smooth: float = ...,
         print_fit: bool = ...,
-        shrink: float = ...,
         split_frac: float = ...,
+        uniform_weights: bool = ...,
         use_threads: bool = ...,
     ) -> None: ...
     @staticmethod
@@ -13016,6 +13010,8 @@ class StatsDistVKDE(StatsDistKDE):
         Fraction to use in the local kernel covariance computation
       use-rot-href -> gboolean: use-rot-href
         Whether to use the href rule-of-thumb to compute the final bandwidth
+      points-per-dim -> gdouble: points-per-dim
+        Nearest neighbors per dimension for the local covariances (0: use local-frac)
 
     Properties from NcmStatsDistKDE:
       nearPD-maxiter -> guint: nearPD-maxiter
@@ -13038,8 +13034,6 @@ class StatsDistVKDE(StatsDistKDE):
         Whether to use OpenMP threads during computation
       split-frac -> gdouble: split-frac
         Fraction to use in the split cross-validation
-      shrink -> gdouble: shrink
-        Shrink factor for the weights
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
       center-shrink -> gboolean: center-shrink
@@ -13052,6 +13046,8 @@ class StatsDistVKDE(StatsDistKDE):
         Covariance factor of the wide component
       defensive-nu -> gdouble: defensive-nu
         Degrees of freedom of the wide component
+      uniform-weights -> gboolean: uniform-weights
+        Keep uniform kernel weights in prepare_interp instead of the NNLS fit
 
     Signals from GObject:
       notify (GParam)
@@ -13059,6 +13055,7 @@ class StatsDistVKDE(StatsDistKDE):
 
     class Props:
         local_frac: float
+        points_per_dim: float
         use_rot_href: bool
         cov_fixed: Matrix
         cov_type: StatsDistKDECovType
@@ -13073,8 +13070,8 @@ class StatsDistVKDE(StatsDistKDE):
         kernel: StatsDistKernel
         over_smooth: float
         print_fit: bool
-        shrink: float
         split_frac: float
+        uniform_weights: bool
         use_threads: bool
 
     props: Props = ...
@@ -13082,6 +13079,7 @@ class StatsDistVKDE(StatsDistKDE):
     def __init__(
         self,
         local_frac: float = ...,
+        points_per_dim: float = ...,
         use_rot_href: bool = ...,
         cov_fixed: Matrix = ...,
         cov_type: StatsDistKDECovType = ...,
@@ -13095,19 +13093,22 @@ class StatsDistVKDE(StatsDistKDE):
         kernel: StatsDistKernel = ...,
         over_smooth: float = ...,
         print_fit: bool = ...,
-        shrink: float = ...,
         split_frac: float = ...,
+        uniform_weights: bool = ...,
         use_threads: bool = ...,
     ) -> None: ...
     @staticmethod
     def clear(sdvkde: StatsDistVKDE) -> None: ...
     def free(self) -> None: ...
     def get_local_frac(self) -> float: ...
+    def get_n_neighbors(self, n_obs: int) -> int: ...
+    def get_points_per_dim(self) -> float: ...
     def get_use_rot_href(self) -> bool: ...
     @classmethod
     def new(cls, sdk: StatsDistKernel, CV_type: StatsDistCV) -> StatsDistVKDE: ...
     def ref(self) -> StatsDistVKDE: ...
     def set_local_frac(self, local_frac: float) -> None: ...
+    def set_points_per_dim(self, points_per_dim: float) -> None: ...
     def set_use_rot_href(self, use_rot_href: bool) -> None: ...
 
 class StatsDistVKDEClass(GObject.GPointer):
@@ -14636,8 +14637,10 @@ class StatsDist1dEPDFBw(GObject.GEnum):
 
 class StatsDistCV(GObject.GEnum):
     LOO: StatsDistCV = ...
+    LOO_M2LNP: StatsDistCV = ...
     NONE: StatsDistCV = ...
     SPLIT: StatsDistCV = ...
+    SPLIT_ACCEPT: StatsDistCV = ...
     SPLIT_NOFIT: StatsDistCV = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...

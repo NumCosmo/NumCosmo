@@ -52,6 +52,8 @@ class CrossValidationMethod(GEnum):
     NONE = Ncm.StatsDistCV.NONE
     SPLIT = Ncm.StatsDistCV.SPLIT
     SPLIT_NOFIT = Ncm.StatsDistCV.SPLIT_NOFIT
+    SPLIT_ACCEPT = Ncm.StatsDistCV.SPLIT_ACCEPT
+    LOO_M2LNP = Ncm.StatsDistCV.LOO_M2LNP
 
 
 def create_stats_dist(
