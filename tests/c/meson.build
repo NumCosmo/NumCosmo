@@ -400,6 +400,10 @@ lss_tests = [
         'sources': ['nc/lss/cluster/test_nc_cluster_pseudo_counts.c'],
     },
     {
+        'name': 'nc_cluster_richness_projection',
+        'sources': ['nc/lss/cluster/test_nc_cluster_richness_projection.c'],
+    },
+    {
         'name': 'nc_cluster_abundance',
         'sources': ['nc/lss/cluster/test_nc_cluster_abundance.c'],
     },

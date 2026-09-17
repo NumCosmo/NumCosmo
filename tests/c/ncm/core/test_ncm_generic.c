@@ -62,6 +62,7 @@ void test_ncm_pln1d_basic (void);
 
 void test_nc_data_cluster_mass_rich_basic (void);
 void test_nc_data_cluster_mass_rich_count_basic (void);
+void test_nc_cluster_richness_projection_basic (void);
 void test_nc_de_cont_basic (void);
 void test_nc_distance_basic (void);
 void test_nc_growth_func_basic (void);
@@ -154,6 +155,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/data/cluster_mass_rich_count/basic", test_nc_data_cluster_mass_rich_count_basic);
   g_test_add_func ("/nc/de_cont/basic", test_nc_de_cont_basic);
   g_test_add_func ("/nc/distance/basic", test_nc_distance_basic);
+  g_test_add_func ("/nc/cluster_richness_projection/basic", test_nc_cluster_richness_projection_basic);
   g_test_add_func ("/nc/growth_func/basic", test_nc_growth_func_basic);
   g_test_add_func ("/nc/transfer_func/basic", test_nc_transfer_func_basic);
   g_test_add_func ("/nc/galaxy/wl_obs/basic", test_nc_galaxy_wl_obs_basic);
@@ -816,6 +818,24 @@ test_nc_distance_basic (void)
   g_assert_true (NC_IS_DISTANCE (dist));
 
   NCM_TEST_FREE (nc_distance_free, dist);
+}
+
+void
+test_nc_cluster_richness_projection_basic (void)
+{
+  NcClusterRichnessProjection *crp = nc_cluster_richness_projection_new ();
+  NcClusterRichnessProjection *crp2;
+
+  g_assert_true (crp != NULL);
+  g_assert_true (NC_IS_CLUSTER_RICHNESS_PROJECTION (crp));
+
+  crp2 = nc_cluster_richness_projection_ref (crp);
+  nc_cluster_richness_projection_clear (&crp2);
+  g_assert_true (crp2 == NULL);
+
+  g_assert_true (NC_IS_CLUSTER_RICHNESS_PROJECTION (crp));
+
+  NCM_TEST_FREE (nc_cluster_richness_projection_free, crp);
 }
 
 void
