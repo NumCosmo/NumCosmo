@@ -169,6 +169,7 @@
 #include "nc/lss/cluster/nc_cluster_mass_benson_xray.h"
 #include "nc/lss/cluster/nc_cluster_mass_plcl.h"
 #include "nc/lss/cluster/nc_cluster_mass_ascaso.h"
+#include "nc/lss/cluster/nc_cluster_richness_projection.h"
 #include "nc/lss/cluster/nc_cluster_mass_selection.h"
 #include "nc/lss/cluster/nc_cluster_redshift.h"
 #include "nc/lss/cluster/nc_cluster_redshift_nodist.h"
@@ -883,6 +884,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_PLCL);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_ASCASO);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_SELECTION);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_RICHNESS_PROJECTION);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT_NODIST);
