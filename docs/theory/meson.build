@@ -14,6 +14,7 @@ src_site_theory_files = files(
     'spectral.qmd',
     'ssc.qmd',
     'castro_hmf.qmd',
+    'cluster_richness_projection.qmd',
 )
 
 if get_option('documentation')

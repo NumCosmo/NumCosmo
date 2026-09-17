@@ -1,0 +1,144 @@
+---
+title: Richness Projection
+---
+
+# Richness Projection
+
+This page derives the projection contribution to the observed cluster richness
+distribution implemented by [[numcosmo|NcClusterRichnessProjection]].
+
+## The Contaminated Likelihood
+
+The observed richness $\lambda$ of a cluster of mass $M$ at redshift $z$ is
+modelled as a two-component mixture: a clean fraction $1-f_\mathrm{proj}$ that
+follows the log-normal mass--richness relation, and a projected fraction
+$f_\mathrm{proj}$ whose richness is inflated by unassociated structure along the
+line of sight,
+$$
+P(\lambda \mid M, z) = (1-f_\mathrm{proj}) \, f_\mathrm{LN}(\lambda \mid \mu, \sigma)
+                     + f_\mathrm{proj} \, T(\lambda),
+$$
+with $\mu(M, z)$ and $\sigma(M, z)$ the location and scale of the log-normal.
+The projected term is usually written
+$$
+T(\lambda) = \frac{\tau}{\sqrt{\pi}} e^{-\tau\lambda}
+             \int_{-\infty}^{L} e^{-y^2 + \tau e^{\mu + \sqrt{2}\sigma y}} \, \mathrm{d}y,
+\qquad
+L = \frac{\ln\lambda - \mu}{\sqrt{2}\sigma}.
+$$
+
+In this form the integrand reaches $e^{-L^2 + \tau\lambda}$ at the upper limit
+and is brought back down only by the prefactor $e^{-\tau\lambda}$. For
+$\tau\lambda \sim 300$ that intermediate value is $e^{300}$, so a quadrature has
+to carry a number near the top of the double range to return one near the
+bottom.
+
+## Change of Variables
+
+Substituting $t = e^{\mu + \sqrt{2}\sigma y}$ removes the difficulty. The new
+variable is the true richness: $y$ is the standardized $\ln\lambda_\mathrm{true}$,
+so
+$$
+y = \frac{\ln t - \mu}{\sqrt{2}\sigma},
+\qquad
+\mathrm{d}y = \frac{\mathrm{d}t}{\sqrt{2}\,\sigma\,t}.
+$$
+The limits become physical, $y \to -\infty \Rightarrow t \to 0^+$ and
+$y = L \Rightarrow t = \lambda$, the $\sqrt{2}\sigma$ cancelling exactly. Both
+exponentials simplify,
+$$
+e^{-y^2} = \exp\left[-\frac{(\ln t - \mu)^2}{2\sigma^2}\right],
+\qquad
+e^{+\tau e^{\mu + \sqrt{2}\sigma y}} = e^{\tau t},
+$$
+and, since $\sqrt{\pi}\sqrt{2} = \sqrt{2\pi}$, the surviving measure is the
+log-normal density itself,
+$$
+\frac{1}{\sqrt{\pi}} \frac{1}{\sqrt{2}\,\sigma t}
+\exp\left[-\frac{(\ln t - \mu)^2}{2\sigma^2}\right]
+= f_\mathrm{LN}(t \mid \mu, \sigma).
+$$
+Pairing the prefactor with the integrand, $e^{-\tau\lambda} e^{\tau t} =
+e^{-\tau(\lambda - t)} \le 1$ for $t \le \lambda$, leaves
+$$
+T(\lambda) = \tau \int_0^{\lambda} f_\mathrm{LN}(t \mid \mu, \sigma)
+             \, e^{-\tau(\lambda - t)} \, \mathrm{d}t .
+$$
+
+## Interpretation
+
+The result is the density of a sum of independent variables,
+$$
+\lambda = \lambda_\mathrm{true} + \Delta,
+\qquad
+\lambda_\mathrm{true} \sim \mathrm{LogNormal}(\mu, \sigma),
+\qquad
+\Delta \sim \mathrm{Exp}(\tau) .
+$$
+Projection adds member galaxies, by an exponentially distributed amount of mean
+$1/\tau$. Two consequences follow. First, $T$ is normalized on its own, so the
+mixture above needs no correction factor. Second, $T \to f_\mathrm{LN}$ as
+$\tau \to \infty$, when nothing is added.
+
+## The ODE
+
+Differentiating under the integral sign, the boundary term contributes
+$\tau f_\mathrm{LN}(\lambda)$ and the $\lambda$ in the exponential reproduces
+$-\tau T$:
+$$
+\frac{\mathrm{d}T}{\mathrm{d}\lambda} = \tau \left[ f_\mathrm{LN}(\lambda) - T(\lambda) \right],
+\qquad
+T(0) = 0 .
+$$
+This is a first-order linear ODE with bounded coefficients, integrated by
+[[numcosmo-math|NcmOdeSpline]]. A single solve covers every $\lambda$ at fixed
+$(\ln M, z)$, whereas a quadrature of the original expression runs once per
+point.
+
+The class integrates in $x = \ln\lambda$, where $\lambda f_\mathrm{LN}(\lambda)$
+is the log-normal density in $\ln\lambda$ and $\lambda$ drops out of the source
+term,
+$$
+\frac{\mathrm{d}T}{\mathrm{d}x}
+= \tau \left[ \frac{1}{\sigma} \varphi\!\left(\frac{x - \mu}{\sigma}\right) - e^{x} T \right],
+\qquad
+\varphi(u) = \frac{e^{-u^2/2}}{\sqrt{2\pi}} .
+$$
+Integration starts at $x_i = \mu - 10\sigma$, and the density is reported as zero
+below that point.
+
+The initial value there is not zero. $T(x_i)$ is bounded by $\tau
+F_\mathrm{LN}(x_i)$ and by $f_\mathrm{LN}(x_i)$, each attained in one of the two
+limits of $\tau$, so the smaller of the two is correct to the $10^{-23}$ scale of
+both. Starting from $T = 0$ instead leaves the solver with no scale for its error
+test, and any absolute tolerance small enough for the tail is then rejected on
+the first step.
+
+The depth $10\sigma$ follows from the error of that initial value rather than
+from conditioning: it enters the solution as a fraction $\Phi(-n)$ of the peak,
+measured at $3.3 \times 10^{-5}$ for $n = 4$ and below $10^{-8}$ for $n \ge 8$.
+A minimum knot density is imposed on the solver output as well, since $T$ is
+$f_\mathrm{LN}$ smoothed by a kernel of width $1/\tau$ and so never varies faster
+than $\sigma$ in $x$.
+
+## Cumulative Distribution
+
+Integrating the ODE from $0$ to $\lambda$ and rearranging gives the cumulative
+in closed form in terms of the solution already available,
+$$
+\int_0^{\lambda} T(\lambda') \, \mathrm{d}\lambda'
+= F_\mathrm{LN}(\lambda) - \frac{T(\lambda)}{\tau},
+\qquad
+F_\mathrm{LN}(\lambda) = \frac{1}{2}
+  \mathrm{erfc}\!\left(\frac{\mu - \ln\lambda}{\sqrt{2}\sigma}\right),
+$$
+so a bin integral costs two spline evaluations and two $\mathrm{erfc}$ calls,
+with no second ODE and no quadrature. Taking $\lambda \to \infty$, where
+$T \to 0$ and $F_\mathrm{LN} \to 1$, confirms the normalization.
+
+The two terms cancel to leading order when $\tau\lambda \ll 1$, costing about
+$\epsilon/(\tau\lambda)$ in relative accuracy. At the bottom of the parameter
+box, $\tau = 10^{-6}$ and $\lambda = 10$, this is still of order $10^{-11}$.
+[[numcosmo|nc_cluster_richness_projection_eval_int]] additionally selects the
+$\mathrm{erfc}$ argument whose value is the small one, so the difference of
+cumulatives never subtracts two saturated values.

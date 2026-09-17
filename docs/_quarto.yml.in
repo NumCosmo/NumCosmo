@@ -25,6 +25,7 @@ project:
     - theory/spectral.qmd
     - theory/ssc.qmd
     - theory/castro_hmf.qmd
+    - theory/cluster_richness_projection.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
     - benchmarks/ccl_two_point.qmd
@@ -150,6 +151,8 @@ website:
                 text: "Weak-Lensing Surface Mass Density"
               - href: theory/castro_hmf.qmd
                 text: "Castro Halo Mass Function and Bias"
+              - href: theory/cluster_richness_projection.qmd
+                text: "Richness Projection"
               - href: theory/ssc.qmd
                 text: "Super-Sample Covariance"
           - section: "Numerical Methods"
