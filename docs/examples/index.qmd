@@ -25,6 +25,7 @@ Examples show individual API operations. For complete workflows, see
 
 - [SN Ia Fitting](data_analysis/snia.qmd) --- fitting a Type Ia supernova sample.
 - [H(z) Fitting](data_analysis/hz.qmd) --- fitting an observational Hubble-rate compilation, with Fisher and MCMC uncertainties.
+- [BAO Fitting](data_analysis/bao_sdss_dr16.qmd) --- fitting the SDSS DR16 baryon acoustic oscillation compilation.
 - [SNIa + BAO Confidence Regions](data_analysis/rg_snia_bao.qmd) --- comparing likelihood-ratio and Fisher confidence regions.
 - [Inspect Data Objects](data_analysis/inspect_data_objects.qmd) --- exploring NumCosmo data objects.
 - [Empirical PDF](intro/epdf.qmd) --- building an empirical distribution.
