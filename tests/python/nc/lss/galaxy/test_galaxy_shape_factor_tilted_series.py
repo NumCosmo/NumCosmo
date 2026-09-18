@@ -24,41 +24,29 @@
 marginal by tilting the *exact* zero-shear marginal $P_0$ with a quadratic
 statistic $T=(x,x^2,y^2)$, matching the same exact-in-$g$ moments
 ``NcGalaxyShapeFactorMomentSeries`` already computes -- see the class
-documentation and ``TILT_SERIES.md``/``tilt_series.tex`` at the repository
-root for the derivation.
+documentation for the derivation.
 
-These tests target quantities the design notes make explicit claims about
-(the closed-form Gaussian-core numbers at $|g|=0.25$, exact vanishing of
-the tilt at $g=0$, positivity, normalisation), plus the strongest
+These tests target the properties the construction actually promises --
+exact vanishing of the tilt at $g=0$, the converged solution of the moment
+conditions, the exact limit at the critical curve, positivity,
+normalisation, invariance under $g\\to1/g$ -- plus the strongest
 population-agnostic correctness check available: at $g=0$ this class *is*
 the exact zero-shear convolution, so it must agree with
-``NcGalaxyShapeFactorFixedQuad`` run at high resolution -- reusing an
+``NcGalaxyShapeFactorFixedQuad`` run at high resolution, reusing an
 existing class rather than a from-scratch reimplementation.
 
-Two departures from a literal reading of the design notes' own numbers, both
-recorded here rather than silently worked around:
+One property is worth stating up front, since two tests rest on it:
 
-* The Gaussian-core value $m=\\lambda_1 c_t$ at $|g|=0.25,N=9$ is checked
-  against ``tilt_series.tex``'s own printed $0.595680$ only loosely
-  (``rtol=3e-3``): an independent Python re-derivation of sec. 3-5's
-  algebra (not sharing a line of code with either the tex or this class)
-  agrees with this class to 6 significant figures on $0.595548$, so the
-  tex's printed value is very likely itself series/precision-limited
-  (unsurprising: sec. 8 repeatedly documents comparably small residuals as
-  "series-limited, not quadrature-limited"). $c_t$ and $c_x$ at the same
-  point match the tex exactly and are checked tightly.
 * The $\\max(\\lambda_2,\\lambda_3)<1/2\\sigma_\\nu^2$ domain guard is
   unreachable *within* the series' radius of convergence, and that is what
   the sweeps here test: an exploratory sweep over ``trunc-order`` in [1,4],
   $|g|$ up to 0.999, $\\sigma_\\nu$ up to 2.0, and adversarial
   (edge-peaked) ``NcGalaxyShapePopBeta`` populations found no triggering
-  combination. That is a statement about $|g|<1$ only. The radius of
-  convergence is exactly 1, and past it the truncated $\\lambda(g)$ is a
-  divergent sum that does cross the bound -- reached in practice by an
-  MCMC walker at high mass, where $g=\\gamma/(1-\\kappa)$ passes through
-  its pole. `test_domain_guard_holds_across_wide_sweep` tests the
-  in-radius claim; the two guard tests below cover the soft (default) and
-  fatal (``strict-domain``) responses to leaving it.
+  combination, and neither does a sweep that runs $|g|$ past 1 entirely.
+  `test_domain_guard_holds_across_wide_sweep` and
+  `test_admissible_through_and_past_the_critical_curve` test the
+  non-firing claim; the two guard tests below cover the soft (default) and
+  fatal (``strict-domain``) responses to leaving the bounds.
 """
 
 import subprocess
@@ -227,36 +215,37 @@ def test_lambda_and_w_vanish_exactly_at_g_zero():
 
 
 # ---------------------------------------------------------------------------
-# Gaussian-core values at |g|=0.25, N=9 (tilt_series.tex sec. 4.2 / 5.4).
+# The converged solution of the moment conditions at |g|=0.25.
 # ---------------------------------------------------------------------------
 
+# (c_t, c_x, m) at sigma_pop=0.4847, sigma_nu=0.1256, |g|=0.25, in the
+# trunc-order -> infinity limit: the exact solution of the tilt's own moment
+# conditions at that point. Reached to nine figures by trunc-order 15 and
+# unchanged through 25.
+#
+# These are numbers about the moment conditions, not about the variable the
+# series is ordered in -- which is what makes them a reference rather than a
+# recording of whatever the code currently prints. An independent ordering,
+# in g with the coefficients evaluated at a truncated inverse map, converges
+# to the same nine figures from the other side; the two schemes disagree at
+# every finite order and agree here.
+_CORE_G_QUARTER = (0.25308267, 0.22407326, 0.59554279)
 
-def test_gaussian_core_values_at_g_quarter():
-    """Recovers c_t, c_x, m from the *evaluated* lambda(g) via finite
-    differences of ln P - ln P_0 (a quadratic form in x,y with no other
-    g-dependence), then converts through
-    c_t=(1/Sigma0-2*lambda_2)^-1, c_x=(1/Sigma0-2*lambda_3)^-1, m=lambda_1*c_t
-    (tilt_series.tex sec. 4.2). This is an end-to-end check of the
-    evaluated lambda(g), complementary to the raw coefficient table."""
-    sigma_pop = 0.4847
-    sn = 0.1256
-    pop = _pop_gauss(sigma_pop)
-    mset = _build_mset(pop)
-    gsf = Nc.GalaxyShapeFactorTiltedSeries.new(Nc.GalaxyWLObsEllipConv.TRACE, 9)
 
-    g = complex(0.25, 0.0)
-    h = 0.01
+def _gaussian_core(gsf, pop, mset, g, sn, sigma_pop, h=0.01):
+    """Recovers (c_t, c_x, m) from the *evaluated* lambda via finite
+    differences of ln P - ln P_0, which is a quadratic form in (x,y) with no
+    other dependence on the observed ellipticity, then converts through
+    c_t=(1/Sigma0-2*lambda_2)^-1, c_x=(1/Sigma0-2*lambda_3)^-1, m=lambda_1*c_t.
+    An end-to-end route to lambda through the public API alone."""
 
     def f(e1, e2):
         R = (e1 * e1 + e2 * e2) ** 0.5
-        lnp = _eval_ln(gsf, pop, mset, g, complex(e1, e2), sn)
-        return lnp - _ln_P0_reference(pop, R, sn)
+        return _eval_ln(gsf, pop, mset, g, complex(e1, e2), sn) - _ln_P0_reference(
+            pop, R, sn
+        )
 
-    f00 = f(0.0, 0.0)
-    fp0 = f(h, 0.0)
-    fm0 = f(-h, 0.0)
-    f0p = f(0.0, h)
-
+    f00, fp0, fm0, f0p = f(0.0, 0.0), f(h, 0.0), f(-h, 0.0), f(0.0, h)
     l1 = (fp0 - fm0) / (2.0 * h)
     l2 = (fp0 + fm0 - 2.0 * f00) / (2.0 * h * h)
     l3 = (f0p - f00) / (h * h)
@@ -264,18 +253,48 @@ def test_gaussian_core_values_at_g_quarter():
     sigma0 = sigma_pop**2 + sn**2
     c_t = 1.0 / (1.0 / sigma0 - 2.0 * l2)
     c_x = 1.0 / (1.0 / sigma0 - 2.0 * l3)
-    m = l1 * c_t
+    return c_t, c_x, l1 * c_t
 
-    assert_allclose(c_t, 0.253087, rtol=2.0e-5)
-    assert_allclose(c_x, 0.224074, rtol=2.0e-5)
-    # See this file's own module docstring on the 0.02% tex/independent-
-    # re-derivation discrepancy this loose tolerance accommodates.
-    assert_allclose(m, 0.595680, rtol=3.0e-3)
+
+def test_gaussian_core_converges_to_the_exact_tilt_at_g_quarter():
+    """At high trunc-order the evaluated lambda must reproduce the exact
+    solution of the moment conditions, and the approach must be monotone in
+    the order: a truncation error that stops shrinking is the signature of a
+    wrong coefficient rather than a truncated one."""
+    sigma_pop, sn = 0.4847, 0.1256
+    pop = _pop_gauss(sigma_pop)
+    mset = _build_mset(pop)
+    g = complex(0.25, 0.0)
+
+    cores = {
+        n: _gaussian_core(
+            Nc.GalaxyShapeFactorTiltedSeries.new(Nc.GalaxyWLObsEllipConv.TRACE, n),
+            pop,
+            mset,
+            g,
+            sn,
+            sigma_pop,
+        )
+        for n in (5, 9, 15)
+    }
+
+    # Converged by 15, to the precision the finite differences support.
+    assert_allclose(cores[15], _CORE_G_QUARTER, rtol=1.0e-5)
+
+    # ... and getting there monotonically, each component at every order.
+    for a, b in ((5, 9), (9, 15)):
+        err_a = np.abs(np.array(cores[a]) - np.array(_CORE_G_QUARTER))
+        err_b = np.abs(np.array(cores[b]) - np.array(_CORE_G_QUARTER))
+        assert np.all(err_b < err_a)
+
+    # The default working order is already within a part in 1e3 of the limit.
+    assert_allclose(cores[5], _CORE_G_QUARTER, rtol=2.0e-2)
+    assert_allclose(cores[9], _CORE_G_QUARTER, rtol=2.0e-3)
 
 
 # ---------------------------------------------------------------------------
-# Parity: lambda_1 odd, lambda_2/lambda_3/W even in g (falls out of the
-# recursion's algebra, not imposed -- tilt_series.tex Remark after eq. 5.11).
+# Parity: lambda_1 odd, lambda_2/lambda_3/W even in the ordering variable
+# (falls out of the recursion's algebra, it is not imposed).
 # ---------------------------------------------------------------------------
 
 
@@ -315,13 +334,12 @@ def test_self_duality_under_g_to_one_over_g(sn, g_mag):
     Schneider & Seitz (1995, eq. 3.13), which survives the observed-plane noise
     convolution because the noise kernel is isotropic.
 
-    Evaluating the series at v(g) -- a function of the distortion
-    delta = 2g/(1+g^2) alone -- makes the MODEL obey it identically rather than
-    approximately: delta is invariant under the map, so the two evaluations
-    read the same coefficients at the same argument and can differ only by the
-    rounding in forming delta. A model evaluated at g cannot pass this at any
-    truncation order, since the only g-polynomials invariant under g -> 1/g are
-    the constants."""
+    Ordering the series in the distortion delta = 2g/(1+g^2) makes the MODEL
+    obey it identically rather than approximately: delta is invariant under the
+    map, so the two evaluations read the same coefficients at the same argument
+    and can differ only by the rounding in forming delta. A model ordered in g
+    cannot pass this at any truncation order, since the only g-polynomials
+    invariant under g -> 1/g are the constants."""
     pop = _pop_gauss(0.3)
     mset = _build_mset(pop)
     gsf = Nc.GalaxyShapeFactorTiltedSeries.new(Nc.GalaxyWLObsEllipConv.TRACE, 5)
@@ -336,6 +354,178 @@ def test_self_duality_under_g_to_one_over_g(sn, g_mag):
             rtol=1e-10,
             atol=1e-10,
         )
+
+
+# ---------------------------------------------------------------------------
+# The critical curve, |g| = 1. The shear map sends the whole unit disc to the
+# single point chi = 1 there, whatever the source ellipticity and whichever
+# ellipticity convention is in use, so the marginal is exactly the noise
+# kernel centred on (1,0) -- a closed form with no population dependence at
+# all. This is the one place the exact answer is known in closed form at
+# non-zero shear, and it is what the endpoint correction pins the target to.
+# ---------------------------------------------------------------------------
+
+
+def _exact_at_critical_curve(eps_obs, sn):
+    """P(eps_obs | |g|=1) = N(eps_obs; (1,0), sn^2), in log."""
+    d2 = (eps_obs.real - 1.0) ** 2 + eps_obs.imag**2
+    return -np.log(2.0 * np.pi * sn * sn) - 0.5 * d2 / (sn * sn)
+
+
+@pytest.mark.parametrize("trunc_order", [5, 9])
+@pytest.mark.parametrize("sigma_pop", [0.3, 0.4847])
+@pytest.mark.parametrize("sn", [0.3088, 0.4])
+def test_matches_the_exact_noise_kernel_at_the_critical_curve(
+    trunc_order, sigma_pop, sn
+):
+    """The tolerance is in nats on ln P and is loose by the standards of the
+    other tests here, because the tilt is solved perturbatively: pinning the
+    target at delta=1 does not make the solved lambda exact there. It is
+    nonetheless far tighter than an ordering leaving the target unconstrained
+    at the endpoint can reach -- such a scheme misses this same box by more
+    than a nat, and by more as the order rises rather than less.
+
+    TRACE only; TRACE_DET converges to the same limit but more slowly, and
+    gets its own test below."""
+    pop = _pop_gauss(sigma_pop)
+    mset = _build_mset(pop)
+    gsf = Nc.GalaxyShapeFactorTiltedSeries.new(
+        Nc.GalaxyWLObsEllipConv.TRACE, trunc_order
+    )
+
+    for eps_obs in (0.8 + 0.0j, 0.9 + 0.05j, 1.0 + 0.0j, 1.05 - 0.1j, 0.95 + 0.2j):
+        model = _eval_ln(gsf, pop, mset, complex(1.0, 0.0), eps_obs, sn)
+        assert_allclose(
+            model, _exact_at_critical_curve(eps_obs, sn), atol=0.25, rtol=0.0
+        )
+
+
+@pytest.mark.parametrize("sigma_pop", [0.3, 0.4847])
+@pytest.mark.parametrize("sn", [0.3088, 0.4])
+def test_critical_curve_trace_det_converges_with_trunc_order(sigma_pop, sn):
+    """TRACE_DET reaches the same closed form, but its series converges
+    markedly more slowly: at the default order it does not get there at all
+    in the narrow-population corner (see
+    `test_low_order_trace_det_at_the_critical_curve_is_caught_softly`). What
+    is testable across the board is that raising the order does converge --
+    monotonically, which a wrong endpoint value would not do."""
+    pop = _pop_gauss(sigma_pop)
+    mset = _build_mset(pop)
+    eps_list = (0.8 + 0.0j, 0.9 + 0.05j, 1.0 + 0.0j, 1.05 - 0.1j, 0.95 + 0.2j)
+
+    errs = []
+    for trunc_order in (9, 15, 21):
+        gsf = Nc.GalaxyShapeFactorTiltedSeries.new(
+            Nc.GalaxyWLObsEllipConv.TRACE_DET, trunc_order
+        )
+        errs.append(
+            max(
+                abs(
+                    _eval_ln(gsf, pop, mset, complex(1.0, 0.0), e, sn)
+                    - _exact_at_critical_curve(e, sn)
+                )
+                for e in eps_list
+            )
+        )
+
+    assert errs[0] < 1.0
+    assert errs[1] < errs[0]
+    assert errs[2] < errs[1]
+
+
+def test_low_order_trace_det_at_the_critical_curve_is_caught_softly():
+    """A known limitation, recorded rather than worked around.
+
+    Pinning the target at delta=1 fixes the target, not the solve: the
+    correction enters at a single order above the truncation, and when the
+    retained partial sum is still far from the endpoint that one coefficient
+    is large, which distorts the target just *below* delta=1. With TRACE_DET
+    on a narrow population at the default trunc-order, and noise comparable
+    to the population width, the perturbative solve then returns a lambda_2
+    above the natural-domain bound for |g| near 1.
+
+    That is what the guard is for, and the contract under test is the
+    guard's, not the series': the evaluation returns -inf rather than a
+    nonsense density, counts the occurrence, and does not abort. Raising
+    trunc-order to 9 removes the region entirely.
+
+    The triggering half runs in a subprocess, like the two guard tests
+    further down and for the same reason: the accompanying one-shot
+    g_warning would abort the parent under G_DEBUG=fatal-warnings. The
+    order-9 half trips nothing and so stays in-process."""
+    script = (
+        "from numcosmo_py import Nc, Ncm\n"
+        "Ncm.cfg_init()\n"
+        "cosmo = Nc.HICosmoDEXcdm.new()\n"
+        "dist = Nc.Distance.new(100.0)\n"
+        "hms = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.MEAN, 200.0)\n"
+        "dp = Nc.HaloDensityProfileNFW.new(hms)\n"
+        "hp = Nc.HaloPosition.new(dist)\n"
+        "smd = Nc.WLSurfaceMassDensity.new(dist)\n"
+        "pop = Nc.GalaxyShapePopGauss.new()\n"
+        "pop['sigma'] = 0.3\n"
+        "hp.prepare(cosmo)\n"
+        "mset = Ncm.MSet.empty_new()\n"
+        "[mset.set(m) for m in (cosmo, dp, hp, smd, pop)]\n"
+        "mset.set(Nc.GalaxyRedshiftPopLSSTSRD.new_y1_source())\n"
+        "mset.set(Nc.GalaxyRedshiftObsGauss.new())\n"
+        "posf = Nc.GalaxyPositionFactorFlat.new(-0.2, 0.2, -0.2, 0.2)\n"
+        "pos_data = Nc.GalaxyPositionFactorData.new(posf, mset)\n"
+        "zf = Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0)\n"
+        "z_data = Nc.GalaxyRedshiftFactorData.new(zf, mset)\n"
+        "gsf = Nc.GalaxyShapeFactorTiltedSeries.new("
+        "Nc.GalaxyWLObsEllipConv.TRACE_DET, 5)\n"
+        "data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)\n"
+        "gsf.data_set(data, 0.0, 0.0, 0.3088, 0.0, 0.0, 0.0, "
+        "Nc.WLEllipticityFrame.CELESTIAL)\n"
+        "gsf.prepare_data_array(mset, [data], True, True)\n"
+        "v = gsf.eval_ln_marginal(pop, data, 1.0, 0.0, 1.0, 0.0)\n"
+        "print(v, gsf.get_domain_error_count())\n"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, check=False
+    )
+
+    assert result.returncode == 0, result.stderr
+    value, count = result.stdout.split()
+    assert float(value) == float("-inf")
+    assert int(count) > 0
+    assert "left its sanity bounds" in result.stderr
+
+    # Nine orders clears it, at the same point -- and trips nothing, so no
+    # subprocess is needed.
+    pop = _pop_gauss(0.3)
+    mset = _build_mset(pop)
+    gsf9 = Nc.GalaxyShapeFactorTiltedSeries.new(Nc.GalaxyWLObsEllipConv.TRACE_DET, 9)
+    assert np.isfinite(
+        _eval_ln(gsf9, pop, mset, complex(1.0, 0.0), complex(1.0, 0.0), 0.3088)
+    )
+    assert gsf9.get_domain_error_count() == 0
+
+
+@pytest.mark.parametrize("sigma_pop", [0.3, 0.4847])
+def test_admissible_through_and_past_the_critical_curve(sigma_pop):
+    """Feasibility, not accuracy: the target handed to the solve must remain
+    the moment vector of some distribution all the way through |g|=1, down to
+    noise levels far below anything the series alone could tolerate there.
+
+    A target that undershoots the tangential variance at the endpoint drives
+    it negative, and a negative variance is not an inaccuracy -- it leaves the
+    moment conditions with no solution at all. The observable consequence
+    would be a non-finite ln P and a non-zero domain-error count."""
+    pop = _pop_gauss(sigma_pop)
+    mset = _build_mset(pop)
+    gsf = Nc.GalaxyShapeFactorTiltedSeries.new(Nc.GalaxyWLObsEllipConv.TRACE, 5)
+
+    for sn in (0.01, 0.024, 0.05, 0.1256, 0.3088):
+        for g_mag in np.linspace(0.5, 1.3, 17):  # straight through |g| = 1
+            for eps_obs in (0.1 + 0.05j, 0.42 - 0.28j, 0.9 + 0.0j):
+                assert np.isfinite(
+                    _eval_ln(gsf, pop, mset, complex(g_mag, 0.0), eps_obs, sn)
+                )
+
+    assert gsf.get_domain_error_count() == 0
 
 
 @pytest.mark.parametrize("sn", [0.05, 0.25])
@@ -507,8 +697,10 @@ def test_cache_invalidates_on_new_catalog_row():
 
 
 # ---------------------------------------------------------------------------
-# Domain guard (tilt_series.tex Prop. 4.4 / sec. 7): see this file's own
-# module docstring on why only the non-firing claim is tested.
+# Domain guard -- the natural domain max(lambda_2,lambda_3) < 1/(2 sigma_nu^2)
+# of the generating function, outside which the noise integral defining it
+# diverges. See this file's own module docstring on why only the non-firing
+# claim is tested.
 # ---------------------------------------------------------------------------
 
 
@@ -531,8 +723,9 @@ def test_domain_guard_holds_across_wide_sweep():
 def test_domain_guard_survives_exploratory_adversarial_sweep():
     """Best-effort search for a triggering (population, trunc-order, g,
     sigma_nu) combination -- an edge-peaked NcGalaxyShapePopBeta at low
-    trunc-order and |g| up to 0.99. None triggers, consistent with
-    V being positive-definite unconditionally (tilt_series.tex eq. 5.9)."""
+    trunc-order and |g| up to 0.99. None triggers, consistent with the
+    per-order solve matrix V = Cov_{P_0}(T) being positive-definite
+    unconditionally."""
     for alpha_p, beta_p in ((10.0, 0.5), (0.5, 10.0), (20.0, 0.2), (0.2, 20.0)):
         pop = Nc.GalaxyShapePopBeta.new()
         pop["alpha"] = alpha_p
@@ -597,7 +790,7 @@ def test_domain_guard_aborts_when_forced_via_synthetic_lambda_bound():
             check=False,
         )
         if result.returncode != 0:
-            assert "left the natural domain" in result.stderr
+            assert "left its sanity bounds" in result.stderr
             triggered = True
             break
 
@@ -674,9 +867,9 @@ def test_domain_guard_default_is_soft_and_counted():
             assert float(p_s) == 0.0
             # Two evaluations above, both out of domain.
             assert count == 2
-            assert "left the natural domain" in result.stderr
+            assert "left its sanity bounds" in result.stderr
             # Warned once per instance, not once per evaluation.
-            assert result.stderr.count("left the natural domain") == 1
+            assert result.stderr.count("left its sanity bounds") == 1
             assert "AFTERRESET 0" in result.stdout
             triggered = True
             break

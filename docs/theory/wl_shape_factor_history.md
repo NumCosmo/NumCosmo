@@ -704,3 +704,129 @@ closed-form $V=\mathrm{Cov}_{P_0}(T)$ regardless of `trunc-order`, but
 `trunc-order=1`, an out-of-bounds read of `M[2]` (manifesting as a spurious
 `det2 > 0.0` assertion failure, not a crash at the actual read). Fixed by
 flooring `n_M` at 3 unconditionally.
+
+## `NcGalaxyShapeFactorTiltedSeries`: ordered in $\delta$, with an endpoint-corrected target (2026)
+
+The class used to keep the **$g$-coefficients** of the target moments and
+evaluate them at $s_K(\delta)$, a truncated Taylor section of the inverse map
+$g(\delta)$. That made the model bounded and invariant under $g\to1/g$, which
+was the point, but it left the coefficients expressed in a variable the exact
+answer is not a function of. It is now ordered in $\delta = 2g/(1+g^2)$
+throughout: the coefficients are the $\delta$-coefficients of the same exact
+moments, and the argument is $\delta$ itself.
+
+### Why the re-expansion needs an endpoint correction
+
+Ordering in $\delta$ alone is *inadmissible*, not merely less accurate. The
+discarded tail of $C_t$ is positive term by term, so every truncation
+undershoots it; and the exact $C_t$ vanishes at $\delta=1$, where the shear
+map sends the whole unit disc to the single point $\chi=1$ and the marginal
+is exactly the noise kernel centred on $(1,0)$. The undershoot therefore
+drives $C_t$ negative near the critical curve, and a target with $C_t<0$ is
+not the moment vector of any distribution — the moment conditions then have
+no solution at all, at any order.
+
+The individual omitted coefficients are unknown; their *sum* is not, because
+the endpoint is known in closed form. In the increment convention the target
+uses, $\Delta_1\to1$, $\Delta_2\to1-M_2/2$, $\Delta_3\to-M_2/2$. Adding
+(endpoint $-$ retained sum) at the first unused order of each parity leaves
+every retained coefficient untouched and makes the truncation exact at
+$\delta=1$. This is exactly the truncation of $\Delta = E + (1-\delta^2)H$
+with $H$ truncated: telescoping that product reproduces the retained
+coefficients plus one leftover term whose coefficient is precisely the
+correction. (The commonly stated $(1-\delta^2)G(\delta)$ form applies only to
+a quantity that *vanishes* at $\delta=1$, which $\Delta_2$ and $\Delta_3$ do
+not.)
+
+The endpoint values need no branch on `ellip-conv`: at $g=1$ both the `TRACE`
+and the `TRACE_DET` maps collapse to 1 identically, whatever the source
+ellipticity.
+
+### The change of basis is folded into the shared tables
+
+The correction lands two orders above the truncation, so `trunc-order` keeps
+its meaning — the number of true moment orders — and a derived
+`solve_order = trunc_order + 2` carries the endpoint terms.
+
+`MomentSeries`' shared table build produces $g$-coefficients. Both that
+contraction and the change of basis are linear, so they commute, and the
+conversion is done **once at construction**, on the tables, rather than per
+galaxy on the contracted series. The row layout is unchanged, because
+$g(\delta)$ is odd with no constant term and the row index is the same
+function of the exponent in both variables. Two facts make this exact:
+$\delta$-coefficient $p$ of $f(g(\delta))$ depends only on $g$-coefficients
+$\le p$, so rows $0..N$ come out as the exact $\delta$-coefficients; and the
+tables stop at $N$, so the two correction slots land in an all-zero region.
+
+### What was measured
+
+Against `NcGalaxyShapeFactorFixedQuad` at a resolution verified converged
+(identical through $1600\times1024$):
+
+- **Accuracy is a trade, not a strict win.** Over a 36-point box (two
+  populations $\times$ three noise levels $\times$ six shears, worst case over
+  four observed ellipticities) the $\delta$ ordering is better in 23 cases and
+  worse in 13. The gains are at large shear on narrow populations (up to
+  $6\times$); the losses are on the wide population at large noise and large
+  shear (up to $1.5\times$ worse).
+- **At the critical curve it wins everywhere.** Against the exact
+  $\mathcal{N}(\chi;(1,0),\sigma_\nu^2)$ limit, over twelve
+  (population, $\sigma_\nu$, order) combinations, the new ordering is closer
+  in all twelve, by $1.4\times$ to $21\times$. The old ordering's error there
+  often *grew* with order; the new one's does not.
+- **Both orderings converge to the same limit.** At $|g|=0.25$ the recovered
+  Gaussian core agrees to nine significant figures between the two schemes at
+  high order, from opposite sides — which is what licenses treating those
+  numbers as a reference rather than a recording of current output. The old
+  ordering converges *faster* at that moderate shear.
+- **Cost rises $1.29\times$** on the cold per-galaxy path at the default
+  order ($5.6\to7.2\,\mu$s), and $1.16$–$1.46\times$ over trunc-order 3–15.
+  The new class at trunc-order $N$ costs what the old one cost at $N+2$,
+  which is the expected price of the two extra solve orders and nothing more.
+
+- **The order-growth pathology survives, much reduced.** On the narrow,
+  low-noise corner ($\sigma_e=0.3$, $\sigma_\nu=0.05$,
+  $|\chi_\mathrm{obs}|=0.8$, swept in $|g|$) the peak excess over the exact
+  ceiling still grows with order — $+0.7$, $+2.4$, $+4.1$, $+5.8$ nats at
+  orders 5, 9, 15, 21 — so the standing advice that raising `trunc-order`
+  can hurt near $|g|\simeq1$ still holds. Under the old ordering the same
+  sweep gave $+3.1$ nats at order 5 and then tripped the guard outright,
+  57 times at order 9 rising to 146 at order 21; the new ordering trips it
+  zero times at every order tested.
+
+### The ceiling on what this ordering can do
+
+Worth recording next to the gains, because it bounds them. $\delta$ is
+stationary in $\hat g=\min(g,1/g)$ at $\hat g=1$, so the inverse
+$\hat g(\delta)=(1-\sqrt{1-\delta^2})/\delta$ has a square-root branch
+point at $\delta=1$ — numerically, $\hat g \simeq 1-\sqrt2\sqrt{1-\delta}$
+there. $\lambda$ is analytic in $\hat g$ and therefore *not* analytic in
+$\delta$, so its $\delta$-coefficients decay only algebraically near the
+critical curve no matter how many are kept.
+
+The endpoint correction pins the *value* at $\delta=1$, which is what
+restores admissibility, but it cannot repair the approach to it. That is the
+structural reason the gains above concentrate at the endpoint itself while
+moderate-shear accuracy slightly regresses, and the reason raising
+`trunc-order` buys little near $|g|\simeq1$. Escaping it needs an exact,
+non-perturbative solve interpolated in $\hat g$ — a different construction,
+not a deeper truncation of this one.
+
+### The one regression, and it is real
+
+With `TRACE_DET`, a narrow population ($\sigma_e=0.3$), the **default**
+trunc-order 5, and noise comparable to the population width
+($\sigma_\nu\gtrsim0.31$), the solve returns $\lambda_2$ above the
+natural-domain bound for $|g|\gtrsim0.8$, and the guard fires. The old
+ordering never reached that region, because $s_K$ caps its argument near
+$0.69$ and the series is never evaluated close to $\delta=1$.
+
+This is a limitation of the perturbative solve, not of the correction or of
+the implementation: pinning the target at $\delta=1$ fixes the *target*, and
+when the retained partial sum is still far from the endpoint the single
+correction coefficient is large, which distorts the target just below
+$\delta=1$. The truncation error was checked to fall like $g^{N+1}$ for both
+conventions and all orders tested, so the retained $\delta$-coefficients are
+exact as claimed and the change of basis is not implicated. Raising
+trunc-order to 9 removes the region entirely. `TRACE` is unaffected across
+the same box.
