@@ -483,7 +483,7 @@ run (different Gaussian target, different code revision), which is what the
 ### The tuner already existed; the walker could not reach it
 
 `NCM_STATS_DIST_CV_SPLIT_NOFIT` already splits each block into kernel centres and a disjoint
-held-out set and minimises the held-out `-2 ln p~` over `ln over_smooth`, with the NNLS
+out-of-sample set and minimises the out-of-sample `-2 ln p~` over `ln over_smooth`, with the NNLS
 weights fitted afterwards at the chosen bandwidth. The APES walker hardcoded
 `NCM_STATS_DIST_CV_NONE` at all four construction sites, so none of it ever ran inside a
 chain. That is the whole reason the centre-shrinkage results needed hand-tuning.
@@ -495,7 +495,7 @@ bandwidth scans, that is the worst of the three candidates and should not be bui
 |-----------|------------------------|------------------------|-------|
 | `mean[r]`, i.e. what `CV_SPLIT_NOFIT` already does | 10 / 18 | 0.0 % | 38.2 % |
 | `Var[r]`, proposed in section 4 | 7 / 18 | 7.1 % | 92.2 % |
-| held-out importance-sampling estimate of the acceptance | 8 / 18 | 2.3 % | 29.7 % |
+| out-of-sample importance-sampling estimate of the acceptance | 8 / 18 | 2.3 % | 29.7 % |
 
 ### The kernel is a continuous parameter, not a choice
 
@@ -582,7 +582,7 @@ The fitted bandwidth follows roughly `h ~ sqrt(d)`: 2.0, 3.0, 3.9, 5.5 at `d = 1
 best hand-tuned tau without being told anything about the dimension.
 
 Cost of the tuner at `d = 100` is 52 % of wall-clock (20929 s against 13731 s), because each
-objective evaluation does a triangular solve per held-out point and kernel. That matters on
+objective evaluation does a triangular solve per out-of-sample point and kernel. That matters on
 a synthetic target and not at all on a real posterior: one Planck likelihood is 2.2 s, which
 puts the same tuner at about 1 %.
 

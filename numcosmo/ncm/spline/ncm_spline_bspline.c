@@ -328,7 +328,7 @@ _ncm_spline_bspline_fit (const gsl_vector *xv, const gsl_vector *yv, const guint
 
 /* Estimated interpolation error of @order, measured at the interval midpoints against
  * the next higher order. The samples say nothing about the function between them, so
- * the estimate is a held-out comparison -- the same principle as the knot-placement
+ * the estimate is an out-of-sample comparison -- the same principle as the knot-placement
  * criterion -- rather than a bound inferred from derivatives. */
 static gdouble
 _ncm_spline_bspline_estimate_error (const gsl_vector *xv, const gsl_vector *yv,

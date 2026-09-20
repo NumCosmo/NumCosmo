@@ -72,6 +72,7 @@ void test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_burnin (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata);
+void test_ncm_fit_esmcmc_run_markovian_id (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer pdata);
@@ -101,7 +102,7 @@ TestNcmFitEsmcmcFunc walkers[TEST_NCM_FIT_ESMCMC_NWALKERS] =
   {test_ncm_fit_esmcmc_new_apes,    "apes/kde/gauss",   GINT_TO_POINTER (5)},
 };
 
-#define TEST_NCM_FIT_ESMCMC_TESTS 8
+#define TEST_NCM_FIT_ESMCMC_TESTS 9
 TestNcmFitEsmcmcFunc tests[TEST_NCM_FIT_ESMCMC_TESTS] =
 {
   {test_ncm_fit_esmcmc_properties,            "properties",            NULL},
@@ -109,6 +110,7 @@ TestNcmFitEsmcmcFunc tests[TEST_NCM_FIT_ESMCMC_TESTS] =
   {test_ncm_fit_esmcmc_run_lre,               "run/lre",               NULL},
   {test_ncm_fit_esmcmc_run_burnin,            "run/burnin",            NULL},
   {test_ncm_fit_esmcmc_run_exploration,       "run/exploration",       NULL},
+  {test_ncm_fit_esmcmc_run_markovian_id,      "run/markovian_id",      NULL},
   {test_ncm_fit_esmcmc_run_restart_from_cat,  "run/restart_from_cat",  NULL},
   {test_ncm_fit_esmcmc_run_lre_auto_trim,     "run/lre/auto_trim",     NULL},
   {test_ncm_fit_esmcmc_run_lre_auto_trim_vol, "run/lre/auto_trim/vol", NULL},
@@ -719,6 +721,88 @@ test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata
      * noisy variance estimator's spread; 0.6 keeps the OMP-path run green and still catches
      * factor-level errors. */
     ncm_assert_cmpdouble_e (var_m2lnL, ==, (2.0 * test->dim), 0.6, 0.0);
+  }
+}
+
+/*
+ * The catalog's Markovian id: after the initial ensemble the chain starts at row nwalkers
+ * for every walker and a continuation does not move it; an APES posterior-only exploration
+ * of E iterations moves it to (E + 1) nwalkers; a clipped phase ends by itself at an
+ * ensemble boundary and the walker is Markovian afterwards.
+ */
+void
+test_ncm_fit_esmcmc_run_markovian_id (TestNcmFitESMCMC *test, gconstpointer pdata)
+{
+  NcmFitESMCMCWalker *walker = ncm_fit_esmcmc_peek_walker (test->esmcmc);
+  NcmMSetCatalog *mcat       = ncm_fit_esmcmc_peek_catalog (test->esmcmc);
+  const gint nwalkers        = ncm_mset_catalog_nchains (mcat);
+
+  ncm_fit_esmcmc_start_run (test->esmcmc);
+  ncm_fit_esmcmc_run (test->esmcmc, 4);
+  ncm_fit_esmcmc_end_run (test->esmcmc);
+
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, nwalkers);
+  g_assert_cmpuint (ncm_mset_catalog_get_markovian_burnin (mcat), ==, 1);
+  g_assert_true (ncm_fit_esmcmc_walker_is_markovian (walker));
+
+  ncm_fit_esmcmc_start_run (test->esmcmc);
+  ncm_fit_esmcmc_run (test->esmcmc, 6);
+  ncm_fit_esmcmc_end_run (test->esmcmc);
+
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, nwalkers);
+  g_assert_cmpint (ncm_mset_catalog_get_cur_id (mcat), ==, 6 * nwalkers - 1); /* run (n) = n ensembles in total */
+
+  if (NCM_IS_FIT_ESMCMC_WALKER_APES (walker))
+  {
+    NcmFitESMCMCWalkerAPES *apes = NCM_FIT_ESMCMC_WALKER_APES (walker);
+    const guint E                = 3;
+
+    ncm_fit_esmcmc_reset (test->esmcmc);
+    ncm_fit_esmcmc_walker_apes_set_exploration (apes, E);
+    ncm_fit_esmcmc_start_run (test->esmcmc);
+    ncm_fit_esmcmc_run (test->esmcmc, E + 4);
+    ncm_fit_esmcmc_end_run (test->esmcmc);
+
+    g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, (gint) (E + 1) * nwalkers);
+    g_assert_cmpuint (ncm_mset_catalog_get_markovian_burnin (mcat), ==, E + 1);
+    g_assert_false (ncm_fit_esmcmc_walker_apes_is_exploring (apes));
+
+    /* Interrupted inside the phase (1 of E iterations done) and resumed: the phase
+     * continues for the remaining E - 1 iterations, so the id ends at the same place. */
+    ncm_fit_esmcmc_reset (test->esmcmc);
+    ncm_fit_esmcmc_start_run (test->esmcmc);
+    ncm_fit_esmcmc_run (test->esmcmc, 2);
+    ncm_fit_esmcmc_end_run (test->esmcmc);
+    g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, 2 * nwalkers); /* initial + 1 exploration iteration */
+    g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), >, ncm_mset_catalog_get_cur_id (mcat));
+
+    ncm_fit_esmcmc_start_run (test->esmcmc);
+    g_assert_true (ncm_fit_esmcmc_walker_apes_is_exploring (apes));
+    ncm_fit_esmcmc_run (test->esmcmc, E + 2);
+    ncm_fit_esmcmc_end_run (test->esmcmc);
+    g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, (gint) (E + 1) * nwalkers);
+    g_assert_false (ncm_fit_esmcmc_walker_apes_is_exploring (apes));
+
+    ncm_fit_esmcmc_reset (test->esmcmc);
+    ncm_fit_esmcmc_walker_apes_set_exploration (apes, 20);
+    ncm_fit_esmcmc_walker_apes_set_exploration_qratio_floor (apes, 1.0e-3);
+    ncm_fit_esmcmc_walker_apes_set_exploration_patience (apes, 2);
+    ncm_fit_esmcmc_start_run (test->esmcmc);
+    ncm_fit_esmcmc_run (test->esmcmc, 25);
+    ncm_fit_esmcmc_end_run (test->esmcmc);
+
+    {
+      const gint id = ncm_mset_catalog_get_markovian_id (mcat);
+
+      g_assert_cmpint (id, >=, nwalkers);
+      g_assert_cmpint (id, <=, 21 * nwalkers);
+      g_assert_cmpint (id % nwalkers, ==, 0);
+    }
+    g_assert_false (ncm_fit_esmcmc_walker_apes_is_exploring (apes));
+    g_assert_true (ncm_fit_esmcmc_walker_is_markovian (walker));
+
+    ncm_fit_esmcmc_walker_apes_set_exploration (apes, 0);
+    ncm_fit_esmcmc_walker_apes_set_exploration_qratio_floor (apes, 0.0);
   }
 }
 

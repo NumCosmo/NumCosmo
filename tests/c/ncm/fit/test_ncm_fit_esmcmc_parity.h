@@ -30,7 +30,7 @@
 #include <numcosmo/numcosmo.h>
 
 /*
- * APES with the production configuration (VKDE, Gaussian kernel, held-out CV with the
+ * APES with the production configuration (VKDE, Gaussian kernel, out-of-sample CV with the
  * kernel chosen by the same objective, center shrinkage, NNLS weights) on a fixed-seed
  * 3-d MVND target: one initial ensemble plus one iteration, so that the arms can be
  * compared before the chain amplifies rounding differences. Shared by the plain and the

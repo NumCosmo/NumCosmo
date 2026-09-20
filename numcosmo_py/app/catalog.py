@@ -56,6 +56,30 @@ from .logging import AppLogging
 from ..plotting import mcat_to_catalog_data, plot_mcsamples
 from ..plotting.derived import add_derived_column
 
+TAU_FLAG_CODES = (
+    (Ncm.StatsAcorrDiag.SHORT_CHAIN, "S"),
+    (Ncm.StatsAcorrDiag.WINDOW_TRUNCATED, "W"),
+    (Ncm.StatsAcorrDiag.DRIFT, "D"),
+    (Ncm.StatsAcorrDiag.METHOD_DISAGREEMENT, "M"),
+    (Ncm.StatsAcorrDiag.ZERO_VARIANCE, "Z"),
+    (Ncm.StatsAcorrDiag.VARIANCE_SHIFT, "V"),
+)
+
+TAU_FLAG_LEGEND = (
+    "! column: S the chain is shorter than 50 tau, W no block level resolved the "
+    "correlation, D the mean moved between the halves of the run, M the two estimators "
+    "of tau disagree by more than a factor of two, Z the parameter never moved, "
+    "V the two halves of the run differ in variance by more than a factor of a hundred "
+    "(an unremoved burn-in looks like this)."
+)
+
+
+def _tau_flag_code(diag: int) -> str:
+    """One letter per condition set in an autocorrelation diagnostic."""
+    code = "".join(letter for flag, letter in TAU_FLAG_CODES if diag & flag)
+
+    return code if code else "-"
+
 
 @dataclasses.dataclass(kw_only=True)
 class AnalyzeMCMC(LoadCatalog):
@@ -185,9 +209,12 @@ class AnalyzeMCMC(LoadCatalog):
             )
             tau_vec = mcat.peek_autocorrelation_tau()
 
+            # The error of the mean is the long-run variance of the ensemble-mean series
+            # over the number of iterations, which is what Var(x) / ESS is. Nothing here
+            # assumes the chains are independent within an iteration: whatever
+            # correlation they carry is in K_eff, and so in the ESS.
             mean_sd_array = [
-                np.sqrt(fs.get_var(i) * tau_vec.get(i) / fs.nitens())
-                for i in self.indices
+                np.sqrt(fs.get_var(i) / mcat.get_ess(i)) for i in self.indices
             ]
             param_diag_matrix.append([f"{mean_sd: .6g}" for mean_sd in mean_sd_array])
 
@@ -207,6 +234,41 @@ class AnalyzeMCMC(LoadCatalog):
                 "tau", justify="left", style=val_color, vertical="middle"
             )
             param_diag_matrix.append([f"{tau_vec.get(i): .6g}" for i in self.indices])
+
+            # Conditions attached to each tau, one letter each, see TAU_FLAG_LEGEND.
+            # Anything other than "-" means the estimate is not to be read as a
+            # converged autocorrelation time.
+            diags = [mcat.get_tau_diag(i) for i in self.indices]
+            param_diag.add_column(
+                "!", justify="left", style=val_color, vertical="middle"
+            )
+            param_diag_matrix.append([_tau_flag_code(d) for d in diags])
+
+            flagged = [
+                f"{mcat.col_full_name(i)}:{_tau_flag_code(d)}"
+                for i, d in zip(self.indices, diags)
+                if d != 0
+            ]
+            tau_status_row = ["  tau status (see legend below)", "NA", "NA", "NA"]
+            tau_status_row.append(
+                "ok" if not flagged else f"{len(flagged)} flagged, worst {flagged[0]}"
+            )
+            global_diag.add_row(*tau_status_row)
+
+        if self.nchains > 1 and self.nitems >= 10:
+            # Effective number of independent chains per iteration: the variance over all
+            # rows divided by the variance of the ensemble mean. It is the number of
+            # chains when they are independent at a given iteration and one when they
+            # move together; above the number of chains it means the ensemble mean is
+            # steadier than independent chains would make it, which is what walkers held
+            # in place at different positions look like.
+            keff = [mcat.get_keff(i) for i in self.indices]
+            keff_row = ["Independent chains per iteration (K_eff)", "NA", "NA", "NA"]
+            keff_row.append(f"{min(keff):.1f} of {self.nchains}")
+            global_diag.add_row(*keff_row)
+
+            param_diag.add_column("K_eff", justify="left", style=val_color)
+            param_diag_matrix.append([f"{k:.1f}" for k in keff])
 
         if self.nchains > 1:
             # Gelman Rubin
@@ -266,10 +328,7 @@ class AnalyzeMCMC(LoadCatalog):
 
             param_diag.add_column("ESS", justify="left", style=val_color)
             param_diag_matrix.append(
-                [
-                    f"{ess_vec.get(i):.0f} {ess_vec.get(i) * self.nchains:.0f}"
-                    for i in self.indices
-                ]
+                [f"{ess_vec.get(i):.0f} {mcat.get_ess(i):.0f}" for i in self.indices]
             )
 
             # Heidelberger and Welch
@@ -313,6 +372,7 @@ class AnalyzeMCMC(LoadCatalog):
         # Add the global diagnostics to the main table
         main_table.add_row(global_diag)
         main_table.add_row(param_diag)
+        print_tau_legend = self.nitems >= 10
 
         covariance_matrix = Table(title="Covariance Matrix", expand=False)
         covariance_matrix.add_column("Parameter", justify="right", style="bold")
@@ -378,6 +438,9 @@ class AnalyzeMCMC(LoadCatalog):
             main_table.add_row(evidence_table)
 
         self.console.print(main_table)
+
+        if print_tau_legend:
+            self.console.print(TAU_FLAG_LEGEND)
 
         self.close_logging()
 

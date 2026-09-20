@@ -121,6 +121,12 @@ void ncm_fit_esmcmc_walker_apes_set_cov_robust_diag (NcmFitESMCMCWalkerAPES *ape
 void ncm_fit_esmcmc_walker_apes_set_cov_robust (NcmFitESMCMCWalkerAPES *apes);
 
 void ncm_fit_esmcmc_walker_apes_set_exploration (NcmFitESMCMCWalkerAPES *apes, guint exploration);
+guint ncm_fit_esmcmc_walker_apes_get_exploration (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_exploration_qratio_floor (NcmFitESMCMCWalkerAPES *apes, const gdouble qratio_floor);
+gdouble ncm_fit_esmcmc_walker_apes_get_exploration_qratio_floor (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_exploration_patience (NcmFitESMCMCWalkerAPES *apes, guint patience);
+guint ncm_fit_esmcmc_walker_apes_get_exploration_patience (NcmFitESMCMCWalkerAPES *apes);
+gboolean ncm_fit_esmcmc_walker_apes_is_exploring (NcmFitESMCMCWalkerAPES *apes);
 
 G_END_DECLS
 

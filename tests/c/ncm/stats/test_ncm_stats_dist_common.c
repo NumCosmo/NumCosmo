@@ -879,8 +879,8 @@ test_ncm_stats_dist_vkde_points_per_dim (void)
   ncm_rng_free (rng);
 }
 
-/* The three bandwidth objectives on the same Gaussian sample: held-out -2lnq
- * (SPLIT_NOFIT), held-out acceptance (SPLIT_ACCEPT) and leave-one-out likelihood
+/* The three bandwidth objectives on the same Gaussian sample: out-of-sample -2lnq
+ * (SPLIT_NOFIT), out-of-sample acceptance (SPLIT_ACCEPT) and leave-one-out likelihood
  * (LOO_M2LNP) must each return a finite bandwidth inside the search range, agree within a
  * factor of three, and leave a normalized, positive density at the sample points. */
 static void

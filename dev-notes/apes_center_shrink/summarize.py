@@ -27,7 +27,7 @@ def run(f, burnin):
     return "\n".join(l for l in out.splitlines() if "WARNING" not in l)
 
 
-def cells(line):
+def columns(line):
     return [
         re.sub(r"\s+", " ", c).strip()
         for c in line.split("│")
@@ -38,7 +38,7 @@ def cells(line):
 def grab(out, label, idx=-1):
     for line in out.splitlines():
         if label in line:
-            c = cells(line)
+            c = columns(line)
             if len(c) >= 2:
                 return c[idx]
     return "?"

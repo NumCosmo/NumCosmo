@@ -287,18 +287,18 @@ def _resolve_burnin_rows(mcmc_file: Path, burnin: int, tail: Optional[int]) -> i
     only the last N instead. Peeks the catalog's row/chain counts first
     (cheap: a few FITS header keys, no model-set deserialization) to convert
     iterations to rows and validate the request before the catalog is
-    actually opened.
+    actually opened. The catalog's markovian-id (first row of the Markovian
+    chain) is a floor on `burnin`: rows before it were produced by the
+    initial ensemble or by an exploration phase and are never analysed.
     """
     if tail is not None and burnin != 0:
         raise typer.BadParameter("Give at most one of --burnin and --tail.")
 
-    if burnin == 0 and tail is None:
-        return 0
-
-    nrows, nchains, _first_id = Ncm.MSetCatalog.peek_info_from_file(
-        mcmc_file.absolute().as_posix()
-    )
+    filename = mcmc_file.absolute().as_posix()
+    nrows, nchains, first_id = Ncm.MSetCatalog.peek_info_from_file(filename)
     n_iterations = nrows // nchains
+    markovian_id = Ncm.MSetCatalog.peek_markovian_id_from_file(filename)
+    markovian_iterations = -(-(markovian_id - first_id) // nchains)
 
     if tail is not None:
         if tail < 0:
@@ -306,6 +306,15 @@ def _resolve_burnin_rows(mcmc_file: Path, burnin: int, tail: Optional[int]) -> i
         burnin_iterations = max(0, n_iterations - tail)
     else:
         burnin_iterations = burnin
+
+    if markovian_iterations > burnin_iterations:
+        typer.echo(
+            f"# burn-in raised from {burnin_iterations} to {markovian_iterations} "
+            f"iteration(s): the Markovian chain of {mcmc_file.name} starts there "
+            "(initial ensemble and exploration rows are never analysed).",
+            err=True,
+        )
+        burnin_iterations = markovian_iterations
 
     if burnin_iterations > n_iterations:
         raise typer.BadParameter(

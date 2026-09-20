@@ -46,7 +46,7 @@
  *
  * Nothing else has to be set. #NcmStatsDist:over-smooth sets the bandwidth,
  * #NcmStatsDist:CV-type the cross-validation that can fit it and
- * #NcmStatsDist:split-frac the fraction held out; #NcmStatsDist:center-shrink
+ * #NcmStatsDist:split-frac the out-of-sample fraction; #NcmStatsDist:center-shrink
  * contracts the mixture so its covariance matches the sample, and
  * #NcmStatsDist:auto-kernel fits the kernel tail along with the bandwidth, which
  * requires #NCM_STATS_DIST_CV_SPLIT_NOFIT and replaces the kernel the object was built
@@ -508,7 +508,7 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
    * NcmStatsDist:auto-kernel:
    *
    * Whether the kernel is chosen together with the over-smooth factor, by the same
-   * held-out objective. Requires a cross-validation that fits the bandwidth, currently
+   * out-of-sample objective. Requires a cross-validation that fits the bandwidth, currently
    * #NCM_STATS_DIST_CV_SPLIT_NOFIT; it is ignored otherwise. The kernel is a
    * #NcmStatsDistKernelST whose degrees of freedom $\nu$ are fitted jointly with the
    * over-smooth factor, over $\nu \in [\nu_\mathrm{min}, 10^4]$, with
@@ -974,8 +974,8 @@ _ncm_stats_dist_m2lnp (const gsl_vector *v, void *params)
 }
 
 /*
- * Held-out estimate of the independence-sampler acceptance (auto_tuning.md). With
- * r = ln q - ln pi at the kernel points (k) and at the held-out points (j), the mean over j
+ * Out-of-sample estimate of the independence-sampler acceptance (auto_tuning.md). With
+ * r = ln q - ln pi at the kernel points (k) and at the out-of-sample points (j), the mean over j
  * of E_{x' ~ q}[min (1, exp (r_j - r_{x'}))] is estimated by self-normalized importance
  * sampling with the kernel points as draws from pi and weights proportional to exp (r_k).
  * Returns -ln of the estimate. Needs the sample's -2ln(L) (cv_m2lnL_sample).
@@ -1306,11 +1306,11 @@ _ncm_stats_dist_minimize_obj (NcmStatsDist *sd, gdouble (*objective) (const gsl_
 }
 
 /*
- * Chooses the kernel together with the over-smooth factor, using the same held-out
+ * Chooses the kernel together with the over-smooth factor, using the same out-of-sample
  * objective. The Student-t kernel is (1 + chi2 / nu)^(-(nu + d) / 2), which is the Cauchy
  * kernel at nu = 1 and tends to the Gaussian one as nu grows, so the kernel is not a
  * discrete choice but the single continuous parameter nu. What is fitted is therefore
- * (ln over_smooth, ln nu) jointly, by the same objective and on the same held-out points.
+ * (ln over_smooth, ln nu) jointly, by the same objective and on the same out-of-sample points.
  *
  * The range of nu is bounded on both sides. Center shrinkage needs a finite kernel
  * covariance, nu / (nu - 2), so nu > 2 there. At the other end the kernel is the Gaussian
@@ -1428,11 +1428,11 @@ _ncm_stats_dist_fit_kernel (NcmStatsDist *sd, gdouble (*objective) (const gsl_ve
 }
 
 /*
- * Center shrinkage is not fitted here; it stays the caller's choice. The held-out
+ * Center shrinkage is not fitted here; it stays the caller's choice. The out-of-sample
  * objective is a Kullback-Leibler criterion, and KL(pi || p~) penalizes a proposal that is
  * too narrow far more than one that is too wide, so it does not see the cost a mixture
  * wider by (1 + kappa h^2 s^2) imposes on the Metropolis-Hastings acceptance. Fitting it
- * needs an objective that penalizes both directions, such as the held-out acceptance
+ * needs an objective that penalizes both directions, such as the out-of-sample acceptance
  * estimate in dev-notes/apes_center_shrink/auto_tuning.md.
  */
 static void
@@ -1569,7 +1569,7 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
                  "use ncm_stats_dist_prepare_interp().");
 
       if (self->n_kernels >= self->n_obs)
-        g_error ("_ncm_stats_dist_prepare: NCM_STATS_DIST_CV_SPLIT_ACCEPT needs held-out points, "
+        g_error ("_ncm_stats_dist_prepare: NCM_STATS_DIST_CV_SPLIT_ACCEPT needs out-of-sample points, "
                  "split-frac %g leaves none of %u.", self->split_frac, self->n_obs);
 
       if (self->auto_kernel)

@@ -55,6 +55,10 @@ math_tests = [
         'sources': ['ncm/stats/test_ncm_stats_vec.c'],
     },
     {
+        'name': 'ncm_stats_acorr',
+        'sources': ['ncm/stats/test_ncm_stats_acorr.c'],
+    },
+    {
         'name': 'ncm_stats_dist1d_epdf',
         'sources': ['ncm/stats/test_ncm_stats_dist1d_epdf.c'],
     },

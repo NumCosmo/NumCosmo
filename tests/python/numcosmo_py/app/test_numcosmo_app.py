@@ -735,6 +735,60 @@ def test_run_mcmc_apes_analyze_burnin_iterations(simple_experiment):
         raise result.exception
 
 
+def test_run_mcmc_apes_analyze_markovian_floor(simple_experiment):
+    """The catalog commands never analyse rows before the catalog's markovian-id: the
+    initial ensemble is dropped with --burnin 0, and an APES exploration phase of E
+    iterations raises a smaller --burnin to E + 1 with a message."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    assert Ncm.MSetCatalog.peek_markovian_id_from_file(catalog.as_posix()) > 0
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog.as_posix(), "--burnin", "0"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert "burn-in raised from 0 to 1" in result.output
+
+    # Fresh catalog with a three-iteration posterior-only exploration phase.
+    output2 = filename.with_suffix(".expl.yaml")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--output",
+            output2.as_posix(),
+            "--exploration",
+            "3",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog2 = output2.absolute().with_suffix(".mcmc.fits")
+    _nrows, nchains, first_id = Ncm.MSetCatalog.peek_info_from_file(catalog2.as_posix())
+    assert (
+        Ncm.MSetCatalog.peek_markovian_id_from_file(catalog2.as_posix())
+        == first_id + 4 * nchains
+    )
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog2.as_posix(), "--burnin", "1"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert "burn-in raised from 1 to 4" in result.output
+
+
 def test_run_mcmc_apes_analyze_burnin_beyond_catalog_size(simple_experiment):
     """--burnin larger than the catalog's iteration count fails with a clear,
     catchable error instead of aborting the process."""
@@ -754,6 +808,25 @@ def test_run_mcmc_apes_analyze_burnin_beyond_catalog_size(simple_experiment):
     )
     assert result.exit_code != 0
     assert "exceeds catalog" in result.output
+
+
+def test_run_mcmc_apes_analyze_tail_markovian_floor(simple_experiment):
+    """--tail spanning the whole chain is still floored at the catalog's markovian-id."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog.as_posix(), "--tail", "1000"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert "burn-in raised from 0 to 1" in result.output
 
 
 def test_run_mcmc_apes_analyze_tail(simple_experiment):
@@ -986,7 +1059,18 @@ def test_catalog_visual_hw(simple_experiment, monkeypatch):
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
         app,
-        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--output",
+            output.as_posix(),
+            # The catalog commands drop the initial ensemble (markovian-id), and the
+            # Heidelberger diagnostic needs at least 10 iterations after it.
+            "--nsamples",
+            "12",
+        ],
     )
     if result.exit_code != 0:
         raise result.exception
@@ -1008,7 +1092,18 @@ def test_catalog_param_evolution(simple_experiment, monkeypatch):
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
         app,
-        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--output",
+            output.as_posix(),
+            # The catalog commands drop the initial ensemble (markovian-id), and the
+            # Heidelberger diagnostic needs at least 10 iterations after it.
+            "--nsamples",
+            "12",
+        ],
     )
     if result.exit_code != 0:
         raise result.exception

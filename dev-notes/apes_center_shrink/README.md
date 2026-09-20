@@ -49,7 +49,7 @@ Bug fixes that are independent of the feature and worth keeping regardless:
 | `summarize.py` | runs `numcosmo catalog analyze` twice per catalog, taking the burn-in cut from the Constant Break statistic, and tabulates tau / R-1 / ESS / HW |
 | `lambda_probe3.py` | NNLS-weight-weighted covariance against the true one; bias by kernel and shrink setting |
 | `lambda_sweep.py` | `r = tr(C_lambda)/tr(C)` along the bandwidth |
-| `lambda_accept4.py` | held-out one-step acceptance along h, equal weights or NNLS, shrink on or off |
+| `lambda_accept4.py` | out-of-sample one-step acceptance along h, equal weights or NNLS, shrink on or off |
 | `lambda_banana.py` | the same on the Haario banana, both weightings side by side |
 | `param_ceiling.py` | acceptance of a single fitted Gaussian, the h -> infinity limit |
 | `lambda_bimodal.py` | bimodal target: equal weights vs NNLS, plus the single-Gaussian ceiling |
@@ -128,7 +128,7 @@ is exposed on `numcosmo run mcmc apes` and on every experiment runner in
 
 `auto_tuning.md` has the design. Short version: the block that is not being updated is a
 free validation set with its `-2 ln L` already computed, so the bandwidth can be chosen by
-maximising a held-out estimate of the acceptance itself,
+maximising a out-of-sample estimate of the acceptance itself,
 
     A(h) = (1/m) sum_j sum_k w_k min(1, e^(r_j - r_k)),   w_k proportional to e^(r_k)
 
@@ -143,6 +143,6 @@ The anisotropic shrinkage matrix `A = U_C^T U_M^{-T}` is implemented (2026-09-15
 against the scalar on five targets it changes acceptance by less than one standard error.
 See `equal_weights_vs_nnls.md`, section 7.
 `bench/`: the sampler benchmark protocol (`PROTOCOL.md`), its decisions log (`DECISIONS.md`),
-`bench_a.py` (tier A, held-out acceptance) and `bench_b.py` (tier B, short chains through the
+`bench_a.py` (acceptance benchmark, out-of-sample acceptance) and `bench_b.py` (convergence benchmark, short chains through the
 CLI: fixtures, three chain states, tau and settle iteration). Tables live in
 `~/data/apes/bench/decisions/`.

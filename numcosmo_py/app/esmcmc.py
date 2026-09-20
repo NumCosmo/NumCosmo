@@ -145,7 +145,7 @@ class RunMCMC(RunCommonOptions):
         typer.Option(
             help=(
                 "Choose the interpolation kernel together with the over-smoothing "
-                "factor, by the same held-out objective. Requires --cv-method "
+                "factor, by the same out-of-sample objective. Requires --cv-method "
                 "split-nofit and overrides --interpolation-kernel."
             ),
         ),
@@ -276,11 +276,41 @@ class RunMCMC(RunCommonOptions):
         int,
         typer.Option(
             help=(
-                "Number of samples to use for the exploration phase. The exploration "
-                " phase should be discarded from the final samples."
+                "Length cap of the APES exploration phase, in iterations. With "
+                "--exploration-qratio-floor 0 the phase accepts by the posterior ratio "
+                "alone for exactly this many iterations; with a positive floor it ends "
+                "earlier, after --exploration-patience quiet iterations. The phase runs "
+                "only when the chain starts from its initial ensemble, and the catalog's "
+                "markovian-id records where it ended."
             ),
+            min=0,
         ),
     ] = 0
+
+    exploration_qratio_floor: Annotated[
+        float,
+        typer.Option(
+            help=(
+                "Floor of the proposal-density ratio q(x)/q(x') in the acceptance during "
+                "the exploration phase, so walkers where the proposal has almost no mass "
+                "can leave. 0 disables the clip; 1 uses the posterior ratio alone for "
+                "every blocked move."
+            ),
+            min=0.0,
+            max=1.0,
+        ),
+    ] = 0.0
+
+    exploration_patience: Annotated[
+        int,
+        typer.Option(
+            help=(
+                "Consecutive iterations without any clipped acceptance after which the "
+                "exploration phase ends."
+            ),
+            min=1,
+        ),
+    ] = 10
 
     skip_check: Annotated[
         bool,
@@ -396,8 +426,9 @@ class RunMCMC(RunCommonOptions):
         else:
             apes_walker.set_use_threads(False)
 
-        if self.exploration > 0:
-            apes_walker.set_exploration(self.exploration)
+        apes_walker.set_exploration(self.exploration)
+        apes_walker.set_exploration_qratio_floor(self.exploration_qratio_floor)
+        apes_walker.set_exploration_patience(self.exploration_patience)
 
         if self.functions is not None:
             esmcmc: Ncm.FitESMCMC = Ncm.FitESMCMC.new_funcs_array(

@@ -37,3 +37,4 @@ classes and methods.
 - [UltraLevin: Non-Limber Angular Power Spectra](sbessel_projection.qmd) --- the Levin reduction, fixed panels in x, the window over k and its exact outer integral.
 - [CSQ1D Formalism](csq1d.qmd) --- complex-structure evolution of a time-dependent oscillator.
 - [Kernel Mixture Densities](stats_dist.qmd) --- reconstructing a density from samples as a non-negative kernel mixture, the center-shrinkage covariance budget, and fitting the bandwidth and kernel tail together.
+- [Autocorrelation Time and Effective Sample Size](autocorrelation.qmd) --- the exact one-sample-at-a-time autocovariance accumulator, the levels of block averages that remove the ceiling a fixed lag budget puts on $\tau$, the three estimators, and what an ensemble mean does and does not see.

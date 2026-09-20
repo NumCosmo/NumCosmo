@@ -57,7 +57,7 @@ center $x_i$. The alternative, the second moment $\frac{1}{k}\sum_j (x_j - x_i)(
 x_i)^T = \frac{k-1}{k} C_k + (\bar{x}_k - x_i)(\bar{x}_k - x_i)^T$, is the maximum
 likelihood Gaussian with its center fixed at $x_i$ and looks like the more natural choice
 for a kernel centered there. It was implemented and measured, and it is worse at every
-neighborhood size: on the held-out acceptance of the resulting proposal (Gaussian, banana,
+neighborhood size: on the out-of-sample acceptance of the resulting proposal (Gaussian, banana,
 bimodal, funnel and Rosenbrock targets in 2 to 21 dimensions, 100 walkers per dimension,
 $k/n$ from 0.05 to 0.8) it loses between 10 % and a factor of 3, and on a 10-dimensional
 funnel at $k/n = 0.05$ it drops the acceptance from 0.23 to 0.001. The reason is the
@@ -185,14 +185,14 @@ and change shape.
 ## Automatic kernel selection
 
 The bandwidth can be fitted by cross-validation, holding out part of the sample and
-maximizing the held-out likelihood of the reconstruction. The same objective can choose
+maximizing the out-of-sample likelihood of the reconstruction. The same objective can choose
 the kernel, by treating the Student-t degrees of freedom $\nu$ as a second fitted
 parameter alongside $h$: the fit runs over $(\ln h, \ln \nu)$, and $\nu \to \infty$
 recovers the Gaussian kernel, which is installed as one when the fit reaches the top of
 the range. The tail weight of the kernel then follows the tail weight of the target
 instead of being fixed by the caller.
 
-Center shrinkage is not fitted. The held-out objective is a Kullback-Leibler criterion,
+Center shrinkage is not fitted. The out-of-sample objective is a Kullback-Leibler criterion,
 and $\mathrm{KL}(\pi \,\|\, \tilde p)$ penalizes a proposal that is too narrow far more
 than one that is too wide, so it does not see the cost that a mixture wider by
 $C + \kappa h^2 \langle\Sigma\rangle$ relative to $C$ imposes on the Metropolis-Hastings acceptance. Fitting it needs an
