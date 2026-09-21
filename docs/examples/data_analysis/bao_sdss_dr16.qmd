@@ -1,0 +1,511 @@
+---
+title: "Fitting BAO SDSS DR16 Data"
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+---
+
+{{< include /_functions.qmd >}}
+
+{{< include /notes/_numcosmo_py.qmd >}}
+
+## Introduction
+
+This example fits a background cosmology to baryon acoustic oscillation measurements from
+SDSS DR16 using NumCosmo. We will:
+
+1. define a cosmological model,
+2. choose which parameters are free,
+3. create a distance calculator for BAO observables,
+4. load several BAO likelihoods,
+5. build a dataset and likelihood,
+6. run the fit and inspect the covariance,
+7. optionally continue with an ensemble MCMC analysis.
+
+## Prerequisites
+
+Before running this example, make sure the `numcosmo_py`[^numcosmo_py] package is installed in your
+environment. If it is not already installed, follow the
+[installation instructions in the NumCosmo documentation](https://numcosmo.readthedocs.io/en/latest/install.html).
+
+This example uses the core NumCosmo Python bindings, together with `numpy`, `pandas` and
+`plotnine` for the figures. The optional MCMC visualization uses `getdist`, as in the
+[SN Ia fitting example](snia.qmd).
+
+## Import and Initialize
+
+First, import the required modules and initialize the NumCosmo library. The `Nc` and
+`Ncm` modules provide the core NumCosmo functionality. The call to `Ncm.cfg_init()`
+initializes the library objects.
+
+```{python}
+import numpy as np
+import pandas as pd
+from plotnine import *
+
+# These modules must be loaded before getdist to avoid its side effects
+import numcosmo_py.plotting
+import getdist
+from getdist import plots
+
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.plotting import mcat_to_catalog_data
+
+Ncm.cfg_init()
+```
+
+## Set Up the Cosmological Model
+
+We use the homogeneous and isotropic cosmological model `NcHICosmoDEXcdm`. As in the
+[H(z) example](hz.qmd), we rewrite the dark energy density parameter in terms of the
+curvature parameter.
+
+```{python}
+# Initialize the cosmological model
+cosmo = Nc.HICosmoDEXcdm()
+
+# Rewrite Omega_x in terms of Omega_k
+cosmo.omega_x2omega_k()
+```
+
+## Set Parameter Values
+
+We now assign initial values to the cosmological parameters. These values provide the
+starting point for the fit.
+
+```{python}
+cosmo["H0"] = 70.0
+cosmo["Omegab"] = 0.05
+cosmo["Omegac"] = 0.25
+cosmo["Omegak"] = 0.0
+cosmo["w"] = -1.0
+```
+
+## Choose the Free Parameters
+
+BAO measurements are ratios: they constrain $D_M/r_d$ and $D_H/r_d$, never absolute
+distances. The sound horizon at the drag epoch, $r_d$, is set by the physical densities
+$\Omega_b h^2$ and $\Omega_m h^2$, so fixing $H_0$ and $\Omega_b$ pins it and the measured
+ratios act as absolute distances. We keep $H_0$ fixed here and fit $\Omega_c$ and $w$; the
+[H(z) example](hz.qmd) leaves $H_0$ free instead, because cosmic chronometers measure
+$H(z)$ directly rather than through $r_d$.
+
+We free $w$ alongside $\Omega_c$. With a single free parameter the covariance matrix is a
+scalar and the ensemble sampler below would have nothing two-dimensional to explore.
+
+```{python}
+cosmo.props.H0_fit = False
+cosmo.props.Omegac_fit = True
+cosmo.props.w_fit = True
+```
+
+## Create the Distance Calculator
+
+BAO likelihoods depend on cosmological distance quantities. We create a `Distance`
+object prepared for calculations up to redshift $z = 3$, which covers the Lyman-$\alpha$
+samples near $z \approx 2.3$.
+
+```{python}
+# Create a distance object optimized up to redshift 3
+dist = Nc.Distance(zf=3.0)
+```
+
+## Build the Model Set
+
+We now create a model set from the cosmological model. The model set is the container
+used by NumCosmo to connect model parameters with likelihood calculations. Once the free
+parameters have been chosen, `prepare_fparam_map` builds the map from the model's
+parameters to the vector the fit actually varies.
+
+```{python}
+# Create a model set containing the cosmological model
+mset = Ncm.MSet.new_array([cosmo])
+
+# Build the free-parameter map and show the resulting configuration
+mset.prepare_fparam_map()
+mset.pretty_log()
+```
+
+`pretty_log` prints a second model below the cosmology, `NcBBN`, which the model set
+carries by default to supply the primordial helium abundance. It has no free parameters
+here and is not fitted; its presence does not mean the model set was built wrongly.
+
+## Select the BAO Samples
+
+NumCosmo provides many predefined BAO likelihoods through `Nc.DataBaoId`. The following
+cell lists every identifier available in the current installation, together with the
+number of data points and a short description.
+
+```{python}
+# List the available BAO dataset identifiers with basic metadata
+for _, member in sorted(Nc.DataBaoId.__enum_values__.items()):
+    name = member.value_name.replace("NC_DATA_BAO_", "")
+    data = Nc.data_bao_create(dist, member)
+
+    print(f"{name:40s}  n = {data.get_length():2d}  {data.get_desc()}")
+```
+
+This example uses the six SDSS DR16-era likelihoods. To use a different combination,
+replace the identifiers below by any of those printed above.
+
+```{python}
+# BAO likelihoods used in this example
+bao_samples = [
+    Nc.DataBaoId.DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE,
+    Nc.DataBaoId.DTR_DHR_SDSS_DR16_LRG_2021,
+    Nc.DataBaoId.DTR_DHR_SDSS_DR16_QSO_2021,
+    Nc.DataBaoId.EMPIRICAL_FIT_1D_SDSS_DR16_ELG_2021,
+    Nc.DataBaoId.EMPIRICAL_FIT_2D_SDSS_DR16_LYAUTO_2021,
+    Nc.DataBaoId.EMPIRICAL_FIT_2D_SDSS_DR16_LYXQSO_2021,
+]
+```
+
+## Build the Dataset and Likelihood
+
+We now create the dataset from the selected BAO likelihoods and use it to construct the
+likelihood.
+
+```{python}
+# Create a dataset holding all selected BAO likelihoods
+dset = Ncm.Dataset.new_array(
+    [Nc.data_bao_create(dist, bao_id) for bao_id in bao_samples]
+)
+
+# Create the likelihood from the dataset
+lh = Ncm.Likelihood(dataset=dset)
+```
+
+## Create and Run the Fit
+
+We now create a `Fit` object. In this example, we use the NLOpt backend with the
+`ln-neldermead` algorithm. The fit combines the likelihood, the model set, and a
+numerical differentiation method.
+
+We run it with `run_restart` rather than `run`. Nelder-Mead is a simplex method: the
+simplex contracts around a point and can stall before reaching the true minimum.
+`run_restart` re-minimizes from the previous optimum with a fresh simplex and repeats
+until an entire minimization improves $-2\ln L$ by less than a tolerance. Its arguments
+are the message level, the absolute tolerance (`1.0e-3`), the relative tolerance (`0.0`,
+i.e. unused), and two optional arguments for saving the model set to a file, left as
+`None` here.
+
+```{python}
+# Create the fit object
+fit = Ncm.Fit.factory(
+    Ncm.FitType.NLOPT,
+    "ln-neldermead",
+    lh,
+    mset,
+    Ncm.FitGradType.NUMDIFF_FORWARD,
+)
+
+# Run the fit, restarting until the minimum stops improving
+fit.run_restart(Ncm.FitRunMsgs.SIMPLE, 1.0e-3, 0.0, None, None)
+fit.log_info()
+```
+
+The `m2lnL` printed above is $-2\ln L$, and on this dataset it is not a $\chi^2$ offset by
+a constant. Three of the six likelihoods are tabulated $-2\ln p$ curves carrying their own
+normalizations, as the next section describes, so there is no Gaussian normalization to
+subtract and no $\chi^2$ per degree of freedom to read off the printed value. It is useful
+for comparing fits to this same dataset, not as a goodness-of-fit statistic.
+
+## Estimate the Covariance Matrix
+
+After finding the best-fit point, we estimate the covariance matrix for the free
+parameters.
+
+The choice of method is forced by the data. Three of the six likelihoods above are
+tabulated $-2\ln p$ curves --- `EMPIRICAL_FIT_1D_SDSS_DR16_ELG_2021` and the two
+`EMPIRICAL_FIT_2D_*` Lyman-$\alpha$ samples --- which carry no Gaussian mean vector. The
+*expected* Fisher matrix, `Ncm.Fit.fisher`, is built by differentiating that mean vector,
+so it cannot be used when any member of the dataset lacks one. `Ncm.Fit.obs_fisher`
+instead differentiates $-2\ln L$ itself and works for every likelihood here. The
+[SNIa + BAO example](rg_snia_bao.qmd) discusses the difference between the expected and
+observed information in detail.
+
+```{python}
+# Observed information: numerical Hessian of -2lnL, valid for empirical likelihoods
+fit.obs_fisher()
+
+# Print the covariance matrix
+fit.log_covar()
+```
+
+The `relative tolerance not reached` message above is expected here rather than a sign of
+failure. Three of the six likelihoods are tabulated $-2\ln p$ curves, so the numerical
+Hessian is differentiating an interpolated function whose second derivatives are poorly
+determined; the worst relative error stalls near $2.5 \times 10^{-1}$ instead of reaching
+the $10^{-5}$ target. The MCMC below estimates the same covariance by sampling instead of
+differentiation and reproduces it closely, which is what confirms the result.
+
+The small uncertainty on $w$, and its distance from $-1$, are conditional on the assumed
+$H_0$ and $\Omega_b$ through $r_d$, and should not be read as a measurement of the
+equation of state.
+
+## Compare the Best-Fit Model with the Data
+
+After the fit, the cosmological model holds the best-fit parameters, so we can plot the
+quantities the likelihood evaluates against the measurements themselves. Three of the six
+samples --- the DR12 consensus and the DR16 LRG and QSO samples --- report $D_M/r_d$ and
+$D_H/r_d$ at a given redshift, eight numbers in total. The other three are tabulated
+$-2\ln p$ curves and have no mean value to plot.
+
+Each of those three datasets stores the pair $(D_M/r_d,\, D_H/r_d)$ per redshift,
+interleaved in one vector with the redshift repeated across the pair. The curves come from
+`Dt_r` and `DH_r`, the same `Distance` methods the BAO likelihood calls, so the model and
+the data are the same dimensionless ratios by construction and no unit conversion enters.
+
+```{python}
+# | label: fig-bao-model-vs-data
+# | fig-cap: Best-fit model (line) against the eight distance-ratio measurements. Error bars are marginal $1\sigma$; the $D_M$--$D_H$ correlation within each sample is not shown.
+# | fig-cap-location: margin
+# | code-fold: true
+
+# Prepare the distance calculator with the best-fit cosmology
+dist.prepare(cosmo)
+
+# The three samples that report distance ratios directly
+ratio_samples = [
+    ("SDSS DR12", Nc.DataBaoId.DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE),
+    ("SDSS DR16 LRG", Nc.DataBaoId.DTR_DHR_SDSS_DR16_LRG_2021),
+    ("SDSS DR16 QSO", Nc.DataBaoId.DTR_DHR_SDSS_DR16_QSO_2021),
+]
+
+# Even entries are D_M/r_d, odd entries D_H/r_d; errors are the square root of the
+# covariance diagonal
+data_rows = []
+for sample_name, bao_id in ratio_samples:
+    data = Nc.data_bao_create(dist, bao_id)
+    cov = data.peek_cov()
+    z_i = data.props.z.dup_array()
+    mean_i = data.peek_mean().dup_array()
+
+    for i, (z, mean) in enumerate(zip(z_i, mean_i)):
+        sigma = np.sqrt(cov.get(i, i))
+        data_rows.append(
+            {
+                "z": z,
+                "value": mean,
+                "ymin": mean - sigma,
+                "ymax": mean + sigma,
+                "quantity": "D_M/r_d" if i % 2 == 0 else "D_H/r_d",
+                "sample": sample_name,
+            }
+        )
+
+bao_data_pd = pd.DataFrame(data_rows)
+
+# Model curves on a redshift grid covering the measurements
+z_a = np.linspace(0.05, 2.5, 200)
+bao_model_pd = pd.concat(
+    [
+        pd.DataFrame(
+            {
+                "z": z_a,
+                "value": [dist.Dt_r(cosmo, z) for z in z_a],
+                "quantity": "D_M/r_d",
+            }
+        ),
+        pd.DataFrame(
+            {
+                "z": z_a,
+                "value": [dist.DH_r(cosmo, z) for z in z_a],
+                "quantity": "D_H/r_d",
+            }
+        ),
+    ]
+)
+
+(
+    ggplot(bao_model_pd, aes("z", "value"))
+    + geom_line()
+    + geom_errorbar(
+        data=bao_data_pd,
+        mapping=aes(x="z", ymin="ymin", ymax="ymax", color="sample"),
+        inherit_aes=False,
+        width=0.05,
+    )
+    + geom_point(
+        data=bao_data_pd,
+        mapping=aes("z", "value", color="sample"),
+        inherit_aes=False,
+        size=2,
+    )
+    + facet_wrap("quantity", scales="free_y")
+    + labs(x=r"$z$", y="", color="Sample")
+    + doc_theme()
+)
+```
+
+The model tracks the measurements across the whole range. The largest single departure is
+the DR16 LRG $D_H/r_d$ point, about $2\sigma$ below the curve.
+
+::: {.callout-note}
+## Optional advanced section
+
+The next sections extend the BAO best-fit analysis with an ensemble MCMC sampler. They
+are not required for the basic BAO fit above, but they show how the same likelihood and
+model set can be reused for posterior sampling.
+:::
+
+## Configure the Initial Sampler
+
+The fit above gives the best-fit point and an approximate covariance matrix. We can also
+continue the analysis with an ensemble Markov Chain Monte Carlo sampler, which samples the
+parameter space around the best fit and provides another estimate of the uncertainties.
+
+The ensemble sampler needs an initial distribution for the walkers. Here we use a Gaussian
+transition kernel seeded with the covariance computed above, so the initial ensemble
+already has roughly the right shape.
+
+```{python}
+# Create a Gaussian transition kernel for the initial sample
+init_sampler = Ncm.MSetTransKernGauss.new(0)
+
+# Associate the sampler with the model set
+init_sampler.set_mset(mset)
+
+# Use the model-set parameter information to define the prior
+init_sampler.set_prior_from_mset()
+
+# Start the walkers from the best-fit covariance
+init_sampler.set_cov(fit.get_covar())
+```
+
+## Configure the Ensemble Walker
+
+The ensemble sampler evolves several walkers in parallel through parameter space. In
+this example, we use the APES walker, which builds proposal distributions from the
+current ensemble.
+
+```{python}
+# Number of walkers in the ensemble
+nwalkers = 300
+
+# Create the APES walker
+walker = Ncm.FitESMCMCWalkerAPES.new(nwalkers, mset.fparams_len())
+```
+
+## Create the Ensemble Sampler
+
+We now combine the fit object, the initial sampler and the ensemble walker into an
+`Ncm.FitESMCMC` object, which controls the MCMC run.
+
+Two settings are worth noting. `set_use_threads` lets the sampler evaluate the ensemble in
+parallel; the number of threads comes from OpenMP, so it follows `OMP_NUM_THREADS` and the
+machine's core count rather than any NumCosmo setting. And `set_rng` fixes the random seed:
+without it the sampler draws its own seed at `start_run`, and every render of this page
+would produce different numbers and a different posterior plot. Parallel evaluation does
+not compromise this --- the random draws are made serially, and only the likelihood
+evaluations are threaded.
+
+```{python}
+# Create the ensemble MCMC object
+esmcmc = Ncm.FitESMCMC.new(
+    fit,
+    nwalkers,
+    init_sampler,
+    walker,
+    Ncm.FitRunMsgs.NONE,
+)
+
+# Evaluate the ensemble in parallel
+esmcmc.set_use_threads(True)
+
+# Fix the seed so this page is reproducible across renders
+esmcmc.set_rng(Ncm.RNG.seeded_new("mt19937", 1234))
+```
+
+## Run the Ensemble MCMC
+
+We can now run the ensemble sampler. It initializes the chain, advances a fixed number of
+ensemble steps, and closes the run. Each step advances all `nwalkers` walkers, so 200 steps
+produce 60000 sampled points. A fixed step count keeps the cost of building this page
+predictable, but it is not a convergence criterion: the first steps are still relaxing away
+from the initial ensemble and are discarded as burn-in below.
+
+```{python}
+# Start the MCMC run
+esmcmc.start_run()
+
+# Run a fixed number of ensemble steps
+esmcmc.run(200)
+
+# Finish the MCMC run
+esmcmc.end_run()
+```
+
+## Inspect the MCMC Results
+
+Before using the chain we discard the burn-in: `trim` drops every point earlier than the
+given ensemble step, here the first 20 of 200. Its second argument is a thinning factor,
+and `1` keeps every remaining row. The mean and covariance are then computed from the
+trimmed catalog and stored in the fit object, so they print in the same format used above.
+
+```{python}
+# Access the MCMC catalog and discard the first 20 ensemble steps
+mcat = esmcmc.peek_catalog()
+mcat.trim(20, 1)
+
+# Compute the MCMC mean and covariance from the trimmed chain
+esmcmc.mean_covar()
+
+# Print the covariance estimated from the MCMC sample
+fit.log_covar()
+```
+
+These numbers agree closely with the ones above: the parameter values to within a fifth
+of a standard deviation, the uncertainties to within about 3%. That agreement indicates
+the posterior is close to Gaussian over this range. The two estimates are not the same
+quantity --- `obs_fisher` gives a quadratic approximation at the maximum, while
+`mean_covar` reports the posterior mean and width --- and they separate once the posterior
+is broad or asymmetric, as in the [H(z) example](hz.qmd).
+
+## Visualize the MCMC Posterior
+
+Finally, we can visualize the MCMC samples. The triangle plot shows the marginalized
+posterior distributions for the two fitted parameters and their joint confidence regions.
+GetDist reports `Removed no burn in` because the burn-in was already removed from the
+catalog in the previous step.
+
+```{python}
+# | label: fig-bao-mcmc-results
+# | fig-cap: MCMC posterior samples for the BAO SDSS DR16 fit.
+# | fig-cap-location: margin
+# | code-fold: true
+
+# Convert the trimmed NumCosmo catalog to a GetDist-compatible object
+cd = mcat_to_catalog_data(mcat, name="BAO SDSS DR16 fit")
+
+# Plot the marginalized and joint posterior distributions
+g = plots.get_subplot_plotter()
+g.triangle_plot(cd.to_mcsamples(), shaded=False, filled=True)
+```
+
+## Summary
+
+In this example, we fitted BAO measurements from SDSS DR16 with an XCDM background
+cosmology. The basic workflow followed the standard NumCosmo fitting structure:
+
+1. create a cosmological model,
+2. set initial parameter values,
+3. choose the free parameters,
+4. create a distance calculator,
+5. select the BAO likelihoods,
+6. build the dataset and likelihood,
+7. run the fit,
+8. estimate the covariance matrix.
+
+We then extended the same setup with an optional ensemble MCMC analysis. This second
+part reused the likelihood and model set from the best-fit calculation, configured an
+initial sampler and an ensemble walker, and used the resulting chain to estimate the
+posterior mean and covariance.
+
+In this example, $\Omega_c$ and $w$ were varied in the fit, while $H_0$ and the other
+cosmological parameters were kept fixed. The same structure can be extended to include
+additional BAO samples, other cosmological models, or more free parameters.
