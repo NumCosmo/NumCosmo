@@ -65,13 +65,29 @@ TAU_FLAG_CODES = (
     (Ncm.StatsAcorrDiag.VARIANCE_SHIFT, "V"),
 )
 
-TAU_FLAG_LEGEND = (
-    "! column: S the chain is shorter than 50 tau, W no block level resolved the "
-    "correlation, D the mean moved between the halves of the run, M the two estimators "
-    "of tau disagree by more than a factor of two, Z the parameter never moved, "
-    "V the two halves of the run differ in variance by more than a factor of a hundred "
-    "(an unremoved burn-in looks like this)."
+TAU_FLAG_MEANINGS = (
+    ("S", "chain shorter than 50 tau"),
+    ("W", "no block level resolved the correlation"),
+    ("D", "mean moved between the halves"),
+    ("M", "estimators of tau disagree by over 2x"),
+    ("Z", "parameter never moved"),
+    ("V", "halves differ in variance by over 100x (an unremoved burn-in)"),
 )
+
+
+TAU_FLAG_COLOR = "bold bright_yellow"
+
+
+def _tau_flag_legend() -> Table:
+    """The conditions the ! column reports, one row each."""
+    legend = Table(title="! column", expand=False, box=None)
+    legend.add_column(justify="center", style=TAU_FLAG_COLOR)
+    legend.add_column(justify="left")
+
+    for code, meaning in TAU_FLAG_MEANINGS:
+        legend.add_row(code, meaning)
+
+    return legend
 
 
 def _tau_flag_code(diag: int) -> str:
@@ -94,6 +110,17 @@ class AnalyzeMCMC(LoadCatalog):
             ),
         ),
     ] = False
+
+    def _cut_text(self, extra: float) -> str:
+        """Iterations still to remove, and the total that implies."""
+        return f"{extra:.0f} ({extra + self.burnin_applied:.0f})"
+
+    def _burnin_text(self) -> str:
+        """The burn-in applied, noting when the markovian-id floor raised the request."""
+        if self.burnin_raised_from is None:
+            return f"{self.burnin_applied}"
+
+        return f"{self.burnin_applied} (raised from {self.burnin_raised_from})"
 
     def __post_init__(self) -> None:
         """Analyzes the results of a MCMC run."""
@@ -120,6 +147,8 @@ class AnalyzeMCMC(LoadCatalog):
         details.add_row("Size", f"{mcat.len()}")
         details.add_row("Number of Iterations", f"{mcat.max_time()}")
         details.add_row("Number of chains", f"{self.nchains}")
+        details.add_row("Markovian chain starts", f"{self.markovian_start}")
+        details.add_row("Burn-in", self._burnin_text())
         details.add_row("Number of parameters", f"{self.fparams_len}")
         details.add_row("Number of extra columns", f"{self.nadd_vals}")
         details.add_row("Weighted", f"{mcat.weighted()}")
@@ -155,15 +184,23 @@ class AnalyzeMCMC(LoadCatalog):
 
         # Global diagnostics
 
-        global_diag = Table(
-            title="Global Convergence Diagnostics",
-            expand=False,
+        # Two tables, because these are two kinds of quantity. A diagnostic that proposes a
+        # burn-in cut fills all the columns; a summary statistic of the whole chain has no
+        # cut to suggest and no AR model behind it, and sharing one frame left 13 of 28
+        # cells reading NA.
+        summary_diag = Table(title="Chain summary", expand=False)
+        summary_diag.add_column("Quantity", justify="left", style=desc_color)
+        summary_diag.add_column("Worst parameter", justify="left", style=values_color)
+        summary_diag.add_column("Value", justify="left", style=values_color)
+
+        burnin_diag = Table(title="Suggested burn-in", expand=False)
+        burnin_diag.add_column("Diagnostic", justify="left", style=desc_color)
+        burnin_diag.add_column(
+            "Additional burn-in (total)", justify="left", style=values_color
         )
-        global_diag.add_column("Diagnostic Statistic", justify="left", style=desc_color)
-        global_diag.add_column("Suggested cut-off", justify="left", style=values_color)
-        global_diag.add_column("Worst parameter", justify="left", style=values_color)
-        global_diag.add_column("AR model order", justify="left", style=values_color)
-        global_diag.add_column("Value", justify="left", style=values_color)
+        burnin_diag.add_column("Worst parameter", justify="left", style=values_color)
+        burnin_diag.add_column("AR order", justify="left", style=values_color)
+        burnin_diag.add_column("Value", justify="left", style=values_color)
 
         param_diag = Table(title="Parameters", expand=False, show_lines=True)
         param_diag_matrix = []
@@ -220,15 +257,13 @@ class AnalyzeMCMC(LoadCatalog):
 
             # Autocorrelation Time
             tau_row = []
-            tau_row.append("Autocorrelation time (tau)")
-            tau_row.append("NA")
+            tau_row.append("tau")
             tau_row.append(
                 f"{tau_vec.get_max():.0f} "
                 f"({mcat.col_full_name(tau_vec.get_max_index())})"
             )
-            tau_row.append("NA")
             tau_row.append(f"{tau_vec.get_max():.3f}")
-            global_diag.add_row(*tau_row)
+            summary_diag.add_row(*tau_row)
 
             param_diag.add_column(
                 "tau", justify="left", style=val_color, vertical="middle"
@@ -240,7 +275,7 @@ class AnalyzeMCMC(LoadCatalog):
             # converged autocorrelation time.
             diags = [mcat.get_tau_diag(i) for i in self.indices]
             param_diag.add_column(
-                "!", justify="left", style=val_color, vertical="middle"
+                "!", justify="left", style=TAU_FLAG_COLOR, vertical="middle"
             )
             param_diag_matrix.append([_tau_flag_code(d) for d in diags])
 
@@ -249,11 +284,11 @@ class AnalyzeMCMC(LoadCatalog):
                 for i, d in zip(self.indices, diags)
                 if d != 0
             ]
-            tau_status_row = ["  tau status (see legend below)", "NA", "NA", "NA"]
+            tau_status_row = ["tau status", "NA"]
             tau_status_row.append(
                 "ok" if not flagged else f"{len(flagged)} flagged, worst {flagged[0]}"
             )
-            global_diag.add_row(*tau_status_row)
+            summary_diag.add_row(*tau_status_row)
 
         if self.nchains > 1 and self.nitems >= 10:
             # Effective number of independent chains per iteration: the variance over all
@@ -263,9 +298,9 @@ class AnalyzeMCMC(LoadCatalog):
             # steadier than independent chains would make it, which is what walkers held
             # in place at different positions look like.
             keff = [mcat.get_keff(i) for i in self.indices]
-            keff_row = ["Independent chains per iteration (K_eff)", "NA", "NA", "NA"]
+            keff_row = ["K_eff", "NA"]
             keff_row.append(f"{min(keff):.1f} of {self.nchains}")
-            global_diag.add_row(*keff_row)
+            summary_diag.add_row(*keff_row)
 
             param_diag.add_column("K_eff", justify="left", style=val_color)
             param_diag_matrix.append([f"{k:.1f}" for k in keff])
@@ -273,16 +308,15 @@ class AnalyzeMCMC(LoadCatalog):
         if self.nchains > 1:
             # Gelman Rubin
             gelman_rubin_row = []
-            gelman_rubin_row.append("Gelman-Rubin (G&B) Shrink Factor (R-1)")
+            gelman_rubin_row.append("Gelman-Rubin (R-1)")
             skf = [mcat.get_param_shrink_factor(i) - 1 for i in self.indices]
-            gelman_rubin_row.append("NA")
-            gr_worst = int(np.argmin(skf))
+            # R - 1 grows as convergence worsens, so the worst parameter is the largest.
+            gr_worst = int(np.argmax(skf))
             gelman_rubin_row.append(
                 f"{skf[gr_worst]:.3f} ({mcat.col_full_name(gr_worst)})"
             )
-            gelman_rubin_row.append("NA")
             gelman_rubin_row.append(f"{mcat.get_shrink_factor() - 1:.3f}")
-            global_diag.add_row(*gelman_rubin_row)
+            summary_diag.add_row(*gelman_rubin_row)
 
             param_diag.add_column(
                 "G&R", justify="left", style=val_color, vertical="middle"
@@ -294,12 +328,12 @@ class AnalyzeMCMC(LoadCatalog):
         cb = [self.stats.estimate_const_break(i) for i in self.indices]
         cb_worst = int(np.argmax(cb))
         const_break_row = []
-        const_break_row.append("Constant Break (CB) (iterations, points)")
-        const_break_row.append(f"{cb[cb_worst]:.0f}")
+        const_break_row.append("Constant break")
+        const_break_row.append(self._cut_text(cb[cb_worst]))
         const_break_row.append(f"{cb[cb_worst]:.0f} ({mcat.col_full_name(cb_worst)})")
         const_break_row.append("NA")
         const_break_row.append(f"{cb[cb_worst]:.0f}")
-        global_diag.add_row(*const_break_row)
+        burnin_diag.add_row(*const_break_row)
 
         param_diag.add_column("CB", justify="left", style=val_color)
         param_diag_matrix.append(
@@ -316,15 +350,15 @@ class AnalyzeMCMC(LoadCatalog):
                 ess_worst_ess,
             ) = self.stats.max_ess_time(100)
             ess_row = []
-            ess_row.append("Effective Sample Size (ESS) (ensembles, points)")
-            ess_row.append(f"{ess_best_cutoff}")
+            ess_row.append("ESS")
+            ess_row.append(self._cut_text(ess_best_cutoff))
             ess_row.append(
                 f"{ess_vec.get(ess_worst_index):.0f} "
                 f"({mcat.col_full_name(ess_worst_index)})"
             )
             ess_row.append(f"{ess_worst_order}")
             ess_row.append(f"{ess_worst_ess:.0f}")
-            global_diag.add_row(*ess_row)
+            burnin_diag.add_row(*ess_row)
 
             param_diag.add_column("ESS", justify="left", style=val_color)
             param_diag_matrix.append(
@@ -343,10 +377,10 @@ class AnalyzeMCMC(LoadCatalog):
             ) = self.stats.heidel_diag(100, hw_pvalue)
 
             hw_row = []
-            hw_row.append(f"Heidelberger and Welch p-value (>{hw_pvalue * 100.0:.1f}%)")
+            hw_row.append(f"Heidelberger-Welch (>{hw_pvalue * 100.0:.1f}%)")
 
             if hw_best_cutoff >= 0:
-                hw_row.append(f"{hw_best_cutoff}")
+                hw_row.append(self._cut_text(hw_best_cutoff))
             else:
                 hw_row.append("All parameters fail")
             hw_row.append(
@@ -355,7 +389,7 @@ class AnalyzeMCMC(LoadCatalog):
             )
             hw_row.append(f"{hw_worst_order}")
             hw_row.append(f"{(1.0 - hw_worst_pvalue) * 100.0:.1f}%")
-            global_diag.add_row(*hw_row)
+            burnin_diag.add_row(*hw_row)
 
             param_diag.add_column(
                 "H&W",
@@ -370,7 +404,8 @@ class AnalyzeMCMC(LoadCatalog):
             param_diag.add_row(*row)
 
         # Add the global diagnostics to the main table
-        main_table.add_row(global_diag)
+        main_table.add_row(summary_diag)
+        main_table.add_row(burnin_diag)
         main_table.add_row(param_diag)
         print_tau_legend = self.nitems >= 10
 
@@ -437,10 +472,10 @@ class AnalyzeMCMC(LoadCatalog):
 
             main_table.add_row(evidence_table)
 
-        self.console.print(main_table)
-
         if print_tau_legend:
-            self.console.print(TAU_FLAG_LEGEND)
+            main_table.add_row(_tau_flag_legend())
+
+        self.console.print(main_table)
 
         self.close_logging()
 
@@ -621,10 +656,8 @@ class CalibrateCatalog(LoadCatalog):
         main_table = Table(
             title="Catalog calibration information",
             caption=(
-                "APES approximation of the posterior distribution. The calibration "
-                "information shows how well the APES approximation fits the last "
-                "nwalkers sample of the MCMC chain. Too concentrated weights "
-                "indicate that the APES approximation is not a good fit."
+                "How well the APES proposal fits the last nwalkers sample. "
+                "Concentrated weights mean a poor fit."
             ),
             min_width=88,
         )
@@ -685,7 +718,7 @@ class CalibrateCatalog(LoadCatalog):
             for a in range(nvar):  # pylint: disable-msg=invalid-name
                 for b in range(a + 1, nvar):  # pylint: disable-msg=invalid-name
                     indices = np.array([a, b])
-                    print(f"# {indices}")
+                    self.console.print(f"# {indices}", markup=False)
 
                     _, axis = plt.subplots(1, 1, figsize=(16, 8))
 

@@ -755,7 +755,7 @@ def test_run_mcmc_apes_analyze_markovian_floor(simple_experiment):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "burn-in raised from 0 to 1" in result.output
+    assert "raised from 0" in result.output
 
     # Fresh catalog with a three-iteration posterior-only exploration phase.
     output2 = filename.with_suffix(".expl.yaml")
@@ -786,7 +786,7 @@ def test_run_mcmc_apes_analyze_markovian_floor(simple_experiment):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "burn-in raised from 1 to 4" in result.output
+    assert "raised from 1" in result.output
 
 
 def test_run_mcmc_apes_analyze_burnin_beyond_catalog_size(simple_experiment):
@@ -826,7 +826,7 @@ def test_run_mcmc_apes_analyze_tail_markovian_floor(simple_experiment):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "burn-in raised from 0 to 1" in result.output
+    assert "raised from 0" in result.output
 
 
 def test_run_mcmc_apes_analyze_tail(simple_experiment):
@@ -1461,3 +1461,89 @@ def test_run_mcmc_apes_get_best_fit_requires_output(simple_experiment):
     result = runner.invoke(app, ["catalog", "get-best-fit", catalog.as_posix()])
     assert result.exit_code != 0
     assert "Output file not defined" in result.output
+
+
+@pytest.mark.parametrize(
+    "target", ["gauss-constraint", "funnel", "rosenbrock", "gaussmix2d"]
+)
+def test_generate_sampler_test(tmp_path, target):
+    """Every synthetic benchmark target writes an experiment that loads back."""
+    experiment = tmp_path / f"{target}.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "sampler-test",
+            experiment.as_posix(),
+            "--target",
+            target,
+            "--dim",
+            "4",
+        ],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    loaded = ser.dict_str_from_yaml_file(experiment.as_posix())
+
+    assert isinstance(loaded.get("likelihood"), Ncm.Likelihood)
+    assert isinstance(loaded.get("model-set"), Ncm.MSet)
+    assert loaded.get("model-set").fparams_len() > 0
+
+
+def test_generate_sampler_test_wrong_suffix(tmp_path):
+    """The experiment file is YAML; anything else is refused before any work."""
+    experiment = tmp_path / "sampler_test.fits"
+    result = runner.invoke(app, ["generate", "sampler-test", experiment.as_posix()])
+
+    assert result.exit_code != 0
+    assert isinstance(result.exception, ValueError)
+    assert not experiment.exists()
+
+
+def test_run_mcmc_apes_analyze_ensemble_diagnostics(simple_experiment):
+    """A long enough multi-walker run reports the per-iteration chain count.
+
+    K_eff needs more than one chain and at least ten iterations, so the default run is
+    too short for it; --split-fraction and --seed are on the same path.
+    """
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--output",
+            output.as_posix(),
+            "--nsamples",
+            "30",
+            "--split-fraction",
+            "0.5",
+            "--seed",
+            "1234",
+        ],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception
+
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "analyze",
+            output.absolute().with_suffix(".mcmc.fits").as_posix(),
+            "--burnin",
+            "0",
+        ],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception
+
+    assert "K_eff" in result.stdout

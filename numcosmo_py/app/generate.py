@@ -372,7 +372,7 @@ class BuildPlanckRelease:
             )
 
         for path in written:
-            print(f"wrote {path}")
+            print(f"# wrote {path}")
 
 
 @dataclasses.dataclass(kw_only=True)

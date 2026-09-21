@@ -76,6 +76,7 @@ static void test_ncm_stats_dist_serialize (TestNcmStatsDist *test, gconstpointer
 static void test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_center_shrink (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_defensive (TestNcmStatsDist *test, gconstpointer pdata);
+void test_ncm_stats_dist_cv_auto_kernel (TestNcmStatsDist *test, gconstpointer pdata);
 
 static void test_ncm_stats_dist_free (TestNcmStatsDist *test, gconstpointer pdata);
 
@@ -95,7 +96,7 @@ typedef struct _TestNcmStatsDistFunc
 } TestNcmStatsDistFunc;
 
 #define TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN 4
-#define TEST_NCM_STATS_DIST_TESTS_LEN 13
+#define TEST_NCM_STATS_DIST_TESTS_LEN 14
 
 static TestNcmStatsDistFunc constructors[TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN] = {
   {"kde/gauss",           &test_ncm_stats_dist_new_kde_gauss, },
@@ -118,6 +119,7 @@ static TestNcmStatsDistFunc tests[TEST_NCM_STATS_DIST_TESTS_LEN] = {
   {"gauss/get_kernel_info",            &test_ncm_stats_dist_get_kernel_info},
   {"gauss/center_shrink",              &test_ncm_stats_dist_center_shrink},
   {"gauss/defensive",                  &test_ncm_stats_dist_defensive},
+  {"gauss/cv_auto_kernel",             &test_ncm_stats_dist_cv_auto_kernel},
 };
 
 /* The checks that assert the estimator reproduces its own distribution. In divergence
@@ -439,6 +441,7 @@ test_ncm_stats_dist_center_shrink (TestNcmStatsDist *test, gconstpointer pdata)
   NcmStatsVec *sample_stats       = ncm_stats_vec_new (test->dim, NCM_STATS_VEC_COV, FALSE);
   NcmStatsVec *test_stats         = ncm_stats_vec_new (test->dim, NCM_STATS_VEC_COV, FALSE);
   NcmVector *y                    = ncm_vector_new (test->dim);
+  NcmVector *m2lnp_v              = ncm_vector_new (test->np);
   NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
   gulong N                        = 0;
   guint i, k;
@@ -461,13 +464,17 @@ test_ncm_stats_dist_center_shrink (TestNcmStatsDist *test, gconstpointer pdata)
   }
 
   ncm_mset_param_set_vector (mset, ncm_data_gauss_cov_mvnd_peek_mean (data_mvnd));
+  ncm_data_gauss_cov_use_norma (NCM_DATA_GAUSS_COV (data_mvnd), TRUE);
 
   for (i = 0; i < test->np; i++)
   {
     NcmVector *y_i = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
+    gdouble m2lnL;
 
     ncm_stats_dist_add_obs (test->sd, y_i);
     ncm_stats_vec_append (sample_stats, y_i, FALSE);
+    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
+    ncm_vector_set (m2lnp_v, i, m2lnL);
   }
 
   /* Off: the centres are the sample points and the factor is one. */
@@ -636,10 +643,27 @@ test_ncm_stats_dist_center_shrink (TestNcmStatsDist *test, gconstpointer pdata)
     g_assert_cmpfloat (ncm_matrix_cmp_diag (cov_est, cov_sample, 1.0), <, 0.5);
   }
 
+  /* Interpolated weights with shrunken centres. The rows of the interpolation matrix are
+   * the sample points and the columns the centres, which no longer coincide: the whole
+   * block has to be built instead of half of it. */
+  {
+    GPtrArray *sample_array = ncm_stats_dist_peek_sample_array (test->sd);
+
+    ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
+
+    for (i = 0; i < sample_array->len; i++)
+    {
+      const gdouble m2lnp_i = ncm_stats_dist_eval_m2lnp (test->sd, g_ptr_array_index (sample_array, i));
+
+      g_assert_true (gsl_finite (m2lnp_i));
+    }
+  }
+
   ncm_model_mvnd_free (model_mvnd);
   ncm_data_gauss_cov_mvnd_free (data_mvnd);
   ncm_rng_free (rng);
   ncm_vector_free (y);
+  ncm_vector_free (m2lnp_v);
   ncm_stats_vec_free (sample_stats);
   ncm_stats_vec_free (test_stats);
   ncm_mset_free (mset);
@@ -788,6 +812,19 @@ test_ncm_stats_dist_defensive (TestNcmStatsDist *test, gconstpointer pdata)
     }
 
     ncm_stats_vec_free (draw_stats);
+  }
+
+  /* A second preparation reuses the wide kernel: only its tail index changes, and the
+   * density must follow. */
+  {
+    const gdouble p_nu = ncm_stats_dist_eval (test->sd, far);
+
+    ncm_stats_dist_set_defensive_nu (test->sd, 1.0);
+    ncm_stats_dist_prepare (test->sd);
+    g_assert_cmpfloat (ncm_stats_dist_get_defensive_nu (test->sd), ==, 1.0);
+    g_assert_cmpfloat (ncm_stats_dist_eval (test->sd, far), >, p_nu);
+
+    ncm_stats_dist_set_defensive_nu (test->sd, nu);
   }
 
   /* Back to zero: the plain mixture again. */
@@ -1885,5 +1922,107 @@ test_ncm_stats_dist_split_underflowing_m2lnp (void)
   ncm_rng_free (rng);
   ncm_stats_dist_free (sd);
   ncm_stats_dist_kernel_gauss_free (kernel);
+}
+
+void
+test_ncm_stats_dist_cv_auto_kernel (TestNcmStatsDist *test, gconstpointer pdata)
+{
+  NcmRNG *rng                     = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmDataGaussCovMVND *data_mvnd  = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-2, test->corr_level, 1.0, 2.0, rng);
+  NcmModelMVND *model_mvnd        = ncm_model_mvnd_new (test->dim);
+  NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
+  NcmVector *m2lnp_v              = ncm_vector_new (test->np);
+  gulong N                        = 0;
+  guint i;
+
+  if (cov_type == NCM_STATS_DIST_KDE_COV_TYPE_FIXED)
+    ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (test->sd), ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (data_mvnd)));
+
+  ncm_mset_param_set_vector (mset, ncm_data_gauss_cov_mvnd_peek_mean (data_mvnd));
+
+  for (i = 0; i < test->np; i++)
+  {
+    NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
+    gdouble m2lnL;
+
+    ncm_stats_dist_add_obs (test->sd, y);
+    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
+    ncm_vector_set (m2lnp_v, i, m2lnL);
+  }
+
+  /* With auto-kernel the bandwidth and the kernel tail index are fitted together, one
+   * objective per cross-validation. Both objectives must leave a usable estimator and
+   * report what they chose; print-fit is where that report comes out. */
+  ncm_stats_dist_set_auto_kernel (test->sd, TRUE);
+  ncm_stats_dist_set_print_fit (test->sd, TRUE);
+  g_assert_true (ncm_stats_dist_get_auto_kernel (test->sd));
+  g_assert_true (ncm_stats_dist_get_print_fit (test->sd));
+
+  {
+    const NcmStatsDistCV cv_type[] = {NCM_STATS_DIST_CV_SPLIT_ACCEPT, NCM_STATS_DIST_CV_LOO_M2LNP};
+    guint j;
+
+    for (j = 0; j < G_N_ELEMENTS (cv_type); j++)
+    {
+      ncm_stats_dist_set_cv_type (test->sd, cv_type[j]);
+      ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
+
+      g_assert_cmpfloat (ncm_stats_dist_get_over_smooth (test->sd), >, 0.0);
+      g_assert_true (gsl_finite (ncm_stats_dist_get_href (test->sd)));
+
+      for (i = 0; i < ncm_stats_dist_get_n_kernels (test->sd); i++)
+      {
+        NcmVector *x_i = g_ptr_array_index (ncm_stats_dist_peek_sample_array (test->sd), i);
+
+        g_assert_true (gsl_finite (ncm_stats_dist_eval_m2lnp (test->sd, x_i)));
+      }
+    }
+  }
+
+  ncm_stats_dist_set_print_fit (test->sd, FALSE);
+
+  /* Leave-one-out estimates its objective by Monte Carlo over antithetic pairs, which is
+   * the one place the wide defensive component is drawn from outside ncm_stats_dist_sample ().
+   */
+  ncm_stats_dist_set_auto_kernel (test->sd, FALSE);
+  ncm_stats_dist_set_defensive_frac (test->sd, 0.05);
+  ncm_stats_dist_set_cv_type (test->sd, NCM_STATS_DIST_CV_LOO);
+  ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
+
+  for (i = 0; i < ncm_stats_dist_get_n_kernels (test->sd); i++)
+  {
+    NcmVector *x_i = g_ptr_array_index (ncm_stats_dist_peek_sample_array (test->sd), i);
+
+    g_assert_true (gsl_finite (ncm_stats_dist_eval_m2lnp (test->sd, x_i)));
+  }
+
+  ncm_stats_dist_set_defensive_frac (test->sd, 0.0);
+
+  /* The rule-of-thumb bandwidth is derived for an estimator that sees the whole sample;
+   * a local one sees only its neighborhood, so asking for it rescales the bandwidth by
+   * the ratio of the two counts. */
+  if (NCM_IS_STATS_DIST_VKDE (test->sd))
+  {
+    NcmStatsDistVKDE *sdvkde = NCM_STATS_DIST_VKDE (test->sd);
+
+    g_assert_false (ncm_stats_dist_vkde_get_use_rot_href (sdvkde));
+
+    ncm_stats_dist_vkde_set_use_rot_href (sdvkde, TRUE);
+    g_assert_true (ncm_stats_dist_vkde_get_use_rot_href (sdvkde));
+
+    ncm_stats_dist_prepare_interp (test->sd, m2lnp_v);
+
+    g_assert_true (gsl_finite (ncm_stats_dist_get_href (test->sd)));
+    g_assert_cmpfloat (ncm_stats_dist_get_href (test->sd), >, 0.0);
+
+    ncm_stats_dist_vkde_set_use_rot_href (sdvkde, FALSE);
+  }
+
+  ncm_model_mvnd_free (model_mvnd);
+  ncm_data_gauss_cov_mvnd_free (data_mvnd);
+  ncm_rng_free (rng);
+  ncm_vector_free (m2lnp_v);
+  ncm_mset_free (mset);
 }
 

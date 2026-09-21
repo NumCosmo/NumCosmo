@@ -56,6 +56,8 @@ void test_ncm_mset_catalog_bestfit (TestNcmMSetCatalog *test, gconstpointer pdat
 void test_ncm_mset_catalog_percentile (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_autocorrelation (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_tau_diagnostics (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_tau_frozen_walkers (void);
+void test_ncm_mset_catalog_trim_oob_markovian (void);
 void test_ncm_mset_catalog_weighted_tau_traps (void);
 void test_ncm_mset_catalog_weighted_tau_subprocess (void);
 void test_ncm_mset_catalog_accept_ratio_array (TestNcmMSetCatalog *test, gconstpointer pdata);
@@ -162,6 +164,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/catalog/file/missing_mset/subprocess", &test_ncm_mset_catalog_file_missing_mset_subprocess);
   g_test_add_func ("/ncm/mset/catalog/weighted/tau/traps", &test_ncm_mset_catalog_weighted_tau_traps);
   g_test_add_func ("/ncm/mset/catalog/weighted/tau/subprocess", &test_ncm_mset_catalog_weighted_tau_subprocess);
+  g_test_add_func ("/ncm/mset/catalog/tau/frozen_keff", &test_ncm_mset_catalog_tau_frozen_walkers);
+  g_test_add_func ("/ncm/mset/catalog/trim_oob/markovian", &test_ncm_mset_catalog_trim_oob_markovian);
 
   g_test_add_func ("/ncm/mset/catalog/file/peek_info", &test_ncm_mset_catalog_file_peek_info);
   g_test_add_func ("/ncm/mset/catalog/file/multichain", &test_ncm_mset_catalog_file_multichain);
@@ -823,7 +827,13 @@ test_ncm_mset_catalog_tau_diagnostics (TestNcmMSetCatalog *test, gconstpointer p
 
     for (p = fpi; p < fpf; p++)
     {
-      if (ncm_mset_catalog_get_tau_diag (test->mcat, p) & NCM_STATS_ACORR_DIAG_SHORT_CHAIN)
+      /* The gate opens on any of the three conditions the catalog refuses to call a
+       * sample size, not on the chain being short alone. */
+      if (ncm_mset_catalog_get_tau_diag (test->mcat, p) &
+          (NCM_STATS_ACORR_DIAG_SHORT_CHAIN | NCM_STATS_ACORR_DIAG_ZERO_VARIANCE))
+        any_short = TRUE;
+
+      if ((nchains > 1) && (ncm_mset_catalog_get_keff (test->mcat, p) > 2.0 * nchains))
         any_short = TRUE;
 
       max_tau = GSL_MAX (max_tau, ncm_stats_acorr_get_tau (acorr, p));
@@ -1837,4 +1847,151 @@ test_ncm_mset_catalog_file_markovian_id_frozen_needs_more (void)
 }
 
 #endif /* HAVE_CFITSIO */
+
+void
+test_ncm_mset_catalog_tau_frozen_walkers (void)
+{
+  NcmRNG *rng              = ncm_rng_seeded_new (NULL, 271828);
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (2);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  const gchar *names[]     = {"m2lnL", NULL};
+  const gchar *symbols[]   = {"-2\\ln(L)", NULL};
+  const guint nchains      = 4;
+  const guint nitens       = 200;
+  NcmMSetCatalog *mcat;
+  NcmVector *row;
+  guint i, j;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = ncm_mset_catalog_new_array (mset, 1, nchains, FALSE, (gchar **) names, (gchar **) symbols);
+  row  = ncm_vector_new (ncm_mset_catalog_ncols (mcat));
+
+  /*
+   * Walkers that all but stopped moving. Unlike the perfectly frozen catalog of
+   * markovian_id/frozen_needs_more, each one still jitters, so the variance of the
+   * ensemble mean is small rather than zero and the state shows up as a K_eff far above
+   * the number of chains instead of as a refused variance. The last parameter never moves
+   * at all, which is what the report has to name.
+   */
+  for (i = 0; i < nitens; i++)
+  {
+    for (j = 0; j < nchains; j++)
+    {
+      ncm_vector_set (row, 0, ncm_rng_ugaussian_gen (rng));
+      ncm_vector_set (row, 1, 1.0 * j + 1.0e-8 * ncm_rng_ugaussian_gen (rng));
+      ncm_vector_set (row, 2, 1.0);
+
+      ncm_mset_catalog_add_from_vector (mcat, row);
+    }
+  }
+
+  ncm_mset_catalog_estimate_autocorrelation_tau (mcat, FALSE);
+
+  /* The frozen walkers are seen as a K_eff far above the number of chains: the rows vary,
+   * the ensemble mean does not. */
+  g_assert_cmpfloat (ncm_mset_catalog_get_keff (mcat, 1), >, 2.0 * nchains);
+
+  /* The parameter that never moved carries the zero-variance condition. */
+  g_assert_cmpuint (ncm_mset_catalog_get_tau_diag (mcat, 2) & NCM_STATS_ACORR_DIAG_ZERO_VARIANCE, !=, 0);
+
+  g_assert_true (ncm_mset_catalog_log_tau_diag (mcat));
+  g_assert_true (ncm_mset_catalog_tau_needs_more (mcat, NULL));
+
+  /* Resetting drops everything accumulated from the rows. */
+  ncm_mset_catalog_reset_stats (mcat);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 0);
+
+  ncm_vector_free (row);
+  ncm_mset_catalog_free (mcat);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+  ncm_rng_free (rng);
+}
+
+void
+test_ncm_mset_catalog_trim_oob_markovian (void)
+{
+  gchar *tmp_dir           = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_trim_oob_XXXXXX", NULL);
+  gchar *out_file          = g_strdup_printf ("%s/cat_oob.fits", tmp_dir);
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (TEST_CAT_DIM);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  const guint nitens       = 10;
+  const guint mark_itens   = 4;
+  NcmMSetCatalog *mcat;
+  NcmVector *x;
+  guint i, j, ndel;
+  guint oob = 0, oob_before = 0;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = ncm_mset_catalog_new (mset, 1, TEST_CAT_NCHAINS, FALSE, "m2lnL", "-2\\ln(L)", NULL);
+  ncm_mset_catalog_set_run_type (mcat, "trim-oob-run");
+
+  x = ncm_vector_new (ncm_mset_fparams_len (mset));
+
+  /*
+   * Every fifth row sits outside the parameter bounds, so rows are dropped from both
+   * sides of the Markovian id. Trimming renumbers what is left, and the id has to follow
+   * the rows it marks rather than stay at its old number.
+   */
+  for (i = 0; i < nitens * TEST_CAT_NCHAINS; i++)
+  {
+    const gboolean row_oob = (i % 5 == 0);
+    gdouble ax[1]          = { 1.0 * i };
+
+    for (j = 0; j < TEST_CAT_DIM; j++)
+      ncm_vector_set (x, j, row_oob ? 100.0 : 0.1 * j);
+
+    ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
+
+    if (row_oob)
+    {
+      oob++;
+
+      if (i < mark_itens * TEST_CAT_NCHAINS)
+        oob_before++;
+    }
+  }
+
+  ncm_mset_catalog_set_markovian_id (mcat, ncm_mset_catalog_get_first_id (mcat) + mark_itens * TEST_CAT_NCHAINS);
+
+  ndel = ncm_mset_catalog_trim_oob (mcat, out_file);
+
+  g_assert_cmpuint (ndel, ==, oob);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, nitens * TEST_CAT_NCHAINS - oob);
+
+  /* Out-of-bounds rows before the chain start are gone, so the start moves back by that many. */
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==,
+                   ncm_mset_catalog_get_first_id (mcat) + mark_itens * TEST_CAT_NCHAINS - oob_before);
+
+  /* Trimming always leaves a single chain. */
+  g_assert_cmpuint (ncm_mset_catalog_nchains (mcat), ==, 1);
+
+  ncm_vector_clear (&x);
+  ncm_mset_catalog_clear (&mcat);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+
+  {
+    GDir *dir         = g_dir_open (tmp_dir, 0, NULL);
+    const gchar *name = NULL;
+
+    while ((name = g_dir_read_name (dir)) != NULL)
+    {
+      gchar *path = g_build_filename (tmp_dir, name, NULL);
+
+      g_unlink (path);
+      g_free (path);
+    }
+
+    g_dir_close (dir);
+  }
+
+  g_rmdir (tmp_dir);
+  g_free (out_file);
+  g_free (tmp_dir);
+}
 

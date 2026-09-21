@@ -279,9 +279,9 @@ class RunMCMC(RunCommonOptions):
                 "Length cap of the APES exploration phase, in iterations. With "
                 "--exploration-qratio-floor 0 the phase accepts by the posterior ratio "
                 "alone for exactly this many iterations; with a positive floor it ends "
-                "earlier, after --exploration-patience quiet iterations. The phase runs "
-                "only when the chain starts from its initial ensemble, and the catalog's "
-                "markovian-id records where it ended."
+                "earlier, after --exploration-stop-after consecutive iterations in which "
+                "no acceptance was clipped. The phase runs only when the chain starts from "
+                "its initial ensemble, and the catalog's markovian-id records where it ended."
             ),
             min=0,
         ),
@@ -301,12 +301,12 @@ class RunMCMC(RunCommonOptions):
         ),
     ] = 0.0
 
-    exploration_patience: Annotated[
+    exploration_stop_after: Annotated[
         int,
         typer.Option(
             help=(
-                "Consecutive iterations without any clipped acceptance after which the "
-                "exploration phase ends."
+                "Consecutive iterations in which no acceptance was clipped, after which "
+                "the exploration phase ends and the clip is disarmed for the rest of the run."
             ),
             min=1,
         ),
@@ -428,7 +428,7 @@ class RunMCMC(RunCommonOptions):
 
         apes_walker.set_exploration(self.exploration)
         apes_walker.set_exploration_qratio_floor(self.exploration_qratio_floor)
-        apes_walker.set_exploration_patience(self.exploration_patience)
+        apes_walker.set_exploration_stop_after(self.exploration_stop_after)
 
         if self.functions is not None:
             esmcmc: Ncm.FitESMCMC = Ncm.FitESMCMC.new_funcs_array(

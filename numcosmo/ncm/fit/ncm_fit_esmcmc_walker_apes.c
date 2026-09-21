@@ -112,7 +112,7 @@ enum
   PROP_AUTO_KERNEL,
   PROP_EXPLORATION,
   PROP_EXPLORATION_QRATIO_FLOOR,
-  PROP_EXPLORATION_PATIENCE,
+  PROP_EXPLORATION_STOP_AFTER,
 };
 
 typedef struct _NcmFitESMCMCWalkerAPESPrivate
@@ -151,10 +151,10 @@ typedef struct _NcmFitESMCMCWalkerAPESPrivate
   gboolean constructed;
   guint exploration;                /* cap on the exploration phase, iterations; 0: no cap */
   gdouble exploration_qratio_floor; /* floor of q(x)/q(x') while exploring; 0: posterior-only acceptance */
-  guint exploration_patience;       /* iterations without a clipped acceptance that end the phase */
+  guint exploration_stop_after;     /* iterations without a clipped acceptance that end the phase */
   gboolean exploring;               /* phase armed */
   guint expl_iters;                 /* iterations elapsed in the phase */
-  guint quiet_iters;                /* consecutive iterations without a clipped acceptance */
+  guint unclipped_iters;            /* consecutive iterations in which no acceptance was clipped */
   GArray *clipped;                  /* per-walker: acceptance modified in the current iteration */
   gboolean last_markovian;          /* the last completed iteration used the exact acceptance everywhere */
 } NcmFitESMCMCWalkerAPESPrivate;
@@ -207,10 +207,10 @@ ncm_fit_esmcmc_walker_apes_init (NcmFitESMCMCWalkerAPES *apes)
   self->constructed              = FALSE;
   self->exploration              = 0;
   self->exploration_qratio_floor = 0.0;
-  self->exploration_patience     = 10;
+  self->exploration_stop_after   = 10;
   self->exploring                = FALSE;
   self->expl_iters               = 0;
-  self->quiet_iters              = 0;
+  self->unclipped_iters          = 0;
   self->clipped                  = g_array_new (FALSE, TRUE, sizeof (gboolean));
   self->last_markovian           = TRUE;
 
@@ -275,8 +275,8 @@ _ncm_fit_esmcmc_walker_apes_set_property (GObject *object, guint prop_id, const 
     case PROP_EXPLORATION_QRATIO_FLOOR:
       ncm_fit_esmcmc_walker_apes_set_exploration_qratio_floor (apes, g_value_get_double (value));
       break;
-    case PROP_EXPLORATION_PATIENCE:
-      ncm_fit_esmcmc_walker_apes_set_exploration_patience (apes, g_value_get_uint (value));
+    case PROP_EXPLORATION_STOP_AFTER:
+      ncm_fit_esmcmc_walker_apes_set_exploration_stop_after (apes, g_value_get_uint (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -341,8 +341,8 @@ _ncm_fit_esmcmc_walker_apes_get_property (GObject *object, guint prop_id, GValue
     case PROP_EXPLORATION_QRATIO_FLOOR:
       g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_exploration_qratio_floor (apes));
       break;
-    case PROP_EXPLORATION_PATIENCE:
-      g_value_set_uint (value, ncm_fit_esmcmc_walker_apes_get_exploration_patience (apes));
+    case PROP_EXPLORATION_STOP_AFTER:
+      g_value_set_uint (value, ncm_fit_esmcmc_walker_apes_get_exploration_stop_after (apes));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -660,7 +660,8 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
    * Length cap of the exploration phase, in iterations (ensemble steps). With
    * #NcmFitESMCMCWalkerAPES:exploration-qratio-floor at 0 the phase accepts by the
    * posterior ratio alone and lasts exactly this many iterations; with a positive floor it
-   * ends earlier, after #NcmFitESMCMCWalkerAPES:exploration-patience quiet iterations.
+   * ends earlier, after #NcmFitESMCMCWalkerAPES:exploration-stop-after consecutive iterations
+   * in which no acceptance was clipped.
    * 0: no cap (and, with the floor at 0, no exploration). The phase is armed only when a
    * run starts from its initial ensemble, never on a continuation, and is never re-armed
    * within a run; the catalog's #NcmMSetCatalog:markovian-id records where it ended.
@@ -694,17 +695,17 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcmFitESMCMCWalkerAPES:exploration-patience:
+   * NcmFitESMCMCWalkerAPES:exploration-stop-after:
    *
    * Number of consecutive iterations without any clipped acceptance after which the
    * exploration phase ends (the clip is disarmed for the rest of the run).
    *
    */
   g_object_class_install_property (object_class,
-                                   PROP_EXPLORATION_PATIENCE,
-                                   g_param_spec_uint ("exploration-patience",
+                                   PROP_EXPLORATION_STOP_AFTER,
+                                   g_param_spec_uint ("exploration-stop-after",
                                                       NULL,
-                                                      "Quiet iterations that end the exploration phase",
+                                                      "Consecutive iterations with no clipped acceptance that end the phase",
                                                       1, G_MAXUINT, 10,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -1141,11 +1142,11 @@ _ncm_fit_esmcmc_walker_apes_clean (NcmFitESMCMCWalker *walker, guint ki, guint k
 
     self->last_markovian = !any;
     self->expl_iters++;
-    self->quiet_iters = any ? 0 : self->quiet_iters + 1;
+    self->unclipped_iters = any ? 0 : self->unclipped_iters + 1;
 
     if ((self->exploration > 0) && (self->expl_iters >= self->exploration))
       self->exploring = FALSE;
-    else if ((self->exploration_qratio_floor > 0.0) && (self->quiet_iters >= self->exploration_patience))
+    else if ((self->exploration_qratio_floor > 0.0) && (self->unclipped_iters >= self->exploration_stop_after))
       self->exploring = FALSE;
   }
 }
@@ -1161,10 +1162,10 @@ _ncm_fit_esmcmc_walker_apes_start_run (NcmFitESMCMCWalker *walker, gboolean init
   /* The phase exists to remove the stragglers of the initial ensemble: armed only while
    * the chain has no Markovian rows (a fresh start, or a resume of an interrupted phase),
    * never once Markovian rows exist, and never re-armed within a run. */
-  self->exploring      = initial && configured && !capped_out;
-  self->expl_iters     = exploration_done;
-  self->quiet_iters    = 0;
-  self->last_markovian = TRUE;
+  self->exploring       = initial && configured && !capped_out;
+  self->expl_iters      = exploration_done;
+  self->unclipped_iters = 0;
+  self->last_markovian  = TRUE;
 
   g_array_set_size (self->clipped, 0);
   g_array_set_size (self->clipped, self->size);
@@ -1266,8 +1267,70 @@ _ncm_fit_esmcmc_walker_apes_desc (NcmFitESMCMCWalker *walker)
       break;
   }
 
-  g_clear_pointer (&self->desc, g_free);
-  self->desc = g_strdup_printf ("APES-Move:%s:%s", method, kernel);
+  {
+    /* The settings that change the proposal but are invisible in the name above: which
+     * weights the interpolation carries, how the local neighborhood of VKDE is chosen, the
+     * cross-validation of the bandwidth, and the over-smoothing. A catalog or a log naming
+     * only the structure cannot say which of two runs it came from. */
+    const gchar *cv = NULL;
+    gchar *opts;
+
+    switch (self->cv_type)
+    {
+      case NCM_STATS_DIST_CV_NONE:
+        cv = "none";
+        break;
+      case NCM_STATS_DIST_CV_SPLIT:
+        cv = "split";
+        break;
+      case NCM_STATS_DIST_CV_SPLIT_NOFIT:
+        cv = "split-nofit";
+        break;
+      case NCM_STATS_DIST_CV_LOO:
+        cv = "loo";
+        break;
+      case NCM_STATS_DIST_CV_SPLIT_ACCEPT:
+        cv = "split-accept";
+        break;
+      case NCM_STATS_DIST_CV_LOO_M2LNP:
+        cv = "loo-m2lnp";
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+
+    opts = g_strdup_printf ("os=%g:cv=%s", self->over_smooth, cv);
+
+    /* Weights are only fitted when the kernels are interpolated; without interpolation they
+     * are uniform by construction and saying so would suggest a choice was made. */
+    if (self->use_interp)
+    {
+      gchar *tmp = opts;
+
+      opts = g_strdup_printf ("%s:%s", self->uniform_weights ? "unif" : "nnls", tmp);
+      g_free (tmp);
+    }
+
+    /* The local neighborhood is a VKDE notion: points per dimension when it is positive,
+     * otherwise a fraction of the ensemble. */
+    if (self->method == NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE)
+    {
+      gchar *tmp = opts;
+
+      if (self->vkde_points_per_dim > 0.0)
+        opts = g_strdup_printf ("ppd=%g:%s", self->vkde_points_per_dim, tmp);
+      else
+        opts = g_strdup_printf ("lf=%g:%s", self->local_frac, tmp);
+
+      g_free (tmp);
+    }
+
+    g_clear_pointer (&self->desc, g_free);
+    self->desc = g_strdup_printf ("APES-Move:%s:%s:%s", method, kernel, opts);
+    g_free (opts);
+  }
+
   g_free (method);
 
   return self->desc;
@@ -2088,36 +2151,36 @@ ncm_fit_esmcmc_walker_apes_get_exploration_qratio_floor (NcmFitESMCMCWalkerAPES 
 }
 
 /**
- * ncm_fit_esmcmc_walker_apes_set_exploration_patience:
+ * ncm_fit_esmcmc_walker_apes_set_exploration_stop_after:
  * @apes: a #NcmFitESMCMCWalkerAPES
- * @patience: consecutive quiet iterations that end the exploration phase (>= 1)
+ * @stop_after: consecutive iterations with no clipped acceptance that end the exploration phase (>= 1)
  *
- * Sets #NcmFitESMCMCWalkerAPES:exploration-patience.
+ * Sets #NcmFitESMCMCWalkerAPES:exploration-stop-after.
  *
  */
 void
-ncm_fit_esmcmc_walker_apes_set_exploration_patience (NcmFitESMCMCWalkerAPES *apes, guint patience)
+ncm_fit_esmcmc_walker_apes_set_exploration_stop_after (NcmFitESMCMCWalkerAPES *apes, guint stop_after)
 {
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
 
-  if (patience == 0)
-    g_error ("ncm_fit_esmcmc_walker_apes_set_exploration_patience: patience must be at least 1.");
+  if (stop_after == 0)
+    g_error ("ncm_fit_esmcmc_walker_apes_set_exploration_stop_after: stop_after must be at least 1.");
 
-  self->exploration_patience = patience;
+  self->exploration_stop_after = stop_after;
 }
 
 /**
- * ncm_fit_esmcmc_walker_apes_get_exploration_patience:
+ * ncm_fit_esmcmc_walker_apes_get_exploration_stop_after:
  * @apes: a #NcmFitESMCMCWalkerAPES
  *
- * Returns: #NcmFitESMCMCWalkerAPES:exploration-patience.
+ * Returns: #NcmFitESMCMCWalkerAPES:exploration-stop-after.
  */
 guint
-ncm_fit_esmcmc_walker_apes_get_exploration_patience (NcmFitESMCMCWalkerAPES *apes)
+ncm_fit_esmcmc_walker_apes_get_exploration_stop_after (NcmFitESMCMCWalkerAPES *apes)
 {
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
 
-  return self->exploration_patience;
+  return self->exploration_stop_after;
 }
 
 /**

@@ -281,6 +281,24 @@ points. `numcosmo/**/tests/*.c` is different — installed helpers like the anal
 kernels — and stays. So do the generated `*_enum_types.c`: they need tests like anything
 else, and their coverage is the signal that they are missing.
 
+### Two reports, C and Python
+
+CodeCov receives two files, and the job's shell shows only one of them:
+
+* `numcosmo-coverage.info`, the C lines, captured by `lcov` from `build`, `numcosmo` and
+  `tests`.
+* `build/coverage.xml`, the Python lines of `numcosmo_py`, written by `pytest-cov`.
+
+The second is easy to miss because nothing in the workflow asks for it:
+`tests/python/meson.build` adds `--cov numcosmo_py --cov-report xml --cov-append` to every
+pytest invocation whenever `b_coverage` is set, and requires `pytest_cov` when it is. So
+configuring a coverage builddir is what turns Python coverage on, and the `py-*` lanes
+contribute twice over, to the C lines they reach through the bindings and to the Python
+lines they execute directly.
+
+`--cov-append` is why the lanes accumulate into one `coverage.xml` the way `.gcda` counters
+accumulate into the C tracefile: run them in sequence in one builddir and collect once.
+
 A lane may stop being instrumented when the lines it covers and nothing else does are
 either bought back by cheap tests or explicitly accepted, with the count and the reason
 recorded at the point of the change. Accepting is legitimate: 13 lines reachable only by
@@ -337,11 +355,31 @@ lcov --config-file .lcovrc --remove cov-full.info '*/external/*' '*/tools/*' \
      '*/tests/c/*' '*/tests/python/*' --output-file numcosmo-coverage.info
 ```
 
+Both this build and CI's are `-O0`, so the figures are comparable. Getting there took
+an explicit step on CI: conda's compiler activation injects `-O2` into `CFLAGS` and
+`CPPFLAGS`, and meson places those *after* the buildtype flags, so `-Dbuildtype=debug`
+alone left the coverage build optimized. The workflow appends `-O0 -U_FORTIFY_SOURCE` to
+both variables so the last flag wins. Keep that append if the setup line is ever touched:
+at `-O2` gcc's inlining detaches a function's line counts from its own record, which
+lcov 2.x rejects, and inlined functions vanish from the report.
+
+The Python half needs no command of its own: the lanes above write `Coverage/coverage.xml`
+as they run, because `b_coverage` put `--cov numcosmo_py --cov-append` on every pytest
+invocation. Delete it along with the stale `.gcda` before a fresh measurement, or the append
+carries the previous run's lines forward.
+
 `.gcda` counters accumulate across runs inside one builddir, so running the lanes in
 sequence and capturing once at the end is equivalent to CI's per-job tracefile merge.
-Delete stale `.gcda` (`find Coverage -name '*.gcda' -delete`) before a fresh measurement;
-editing a source file mid-run regenerates its `.gcno` and makes `lcov` fail that file with
-`stamp mismatch with notes file`.
+Delete stale `.gcda` (`find Coverage -name '*.gcda' -delete`) before a fresh measurement.
+
+Re-capture the `--initial` base after *any* source edit, and check that each `lcov` call
+succeeded. Adding a function to a test file shifts the line numbers of the ones below it,
+and merging a base captured before the edit against a capture taken after it fails with
+`(inconsistent) ... duplicate function F starts on line N but previous definition started
+on M`. `lcov` exits non-zero and writes no output file, so a merge whose status is
+discarded leaves the *previous* merge in place and the numbers come out plausible but
+stale. CI never meets this: it captures the base and runs the tests in one job, on a tree
+nobody edits in between.
 
 Run the lanes one at a time. CI gives each lane its own runner. Every `py-*` lane is a
 *single* meson test that internally spawns `pytest -n auto`, so passing several `--suite`

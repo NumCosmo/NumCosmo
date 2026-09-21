@@ -80,6 +80,11 @@ void test_ncm_fit_invalid_run (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_parity_serial_vs_threaded (void);
 void test_ncm_fit_esmcmc_parity_apes_serial_vs_threaded (void);
 void test_ncm_fit_esmcmc_apes_settings_survive_rebuild (void);
+void test_ncm_fit_esmcmc_apes_properties_forwarded (void);
+void test_ncm_fit_esmcmc_apes_desc (void);
+void test_ncm_fit_esmcmc_phase_label (void);
+void test_ncm_fit_esmcmc_phase_markovian_subprocess (void);
+void test_ncm_fit_esmcmc_phase_exploration_subprocess (void);
 
 typedef struct _TestNcmFitEsmcmcFunc
 {
@@ -172,6 +177,12 @@ test_ncm_fit_esmcmc_main (gint argc, gchar *argv[], TestNcmFitESMCMCMode mode)
     g_test_add_func ("/ncm/fit/esmcmc/parity/apes_serial_vs_threaded", &test_ncm_fit_esmcmc_parity_apes_serial_vs_threaded);
 
     g_test_add_func ("/ncm/fit/esmcmc/apes/settings_survive_rebuild", &test_ncm_fit_esmcmc_apes_settings_survive_rebuild);
+    g_test_add_func ("/ncm/fit/esmcmc/apes/properties_forwarded", &test_ncm_fit_esmcmc_apes_properties_forwarded);
+    g_test_add_func ("/ncm/fit/esmcmc/apes/desc", &test_ncm_fit_esmcmc_apes_desc);
+
+    g_test_add_func ("/ncm/fit/esmcmc/phase/label", &test_ncm_fit_esmcmc_phase_label);
+    g_test_add_func ("/ncm/fit/esmcmc/phase/markovian/subprocess", &test_ncm_fit_esmcmc_phase_markovian_subprocess);
+    g_test_add_func ("/ncm/fit/esmcmc/phase/exploration/subprocess", &test_ncm_fit_esmcmc_phase_exploration_subprocess);
   }
 
   return g_test_run ();
@@ -786,7 +797,7 @@ test_ncm_fit_esmcmc_run_markovian_id (TestNcmFitESMCMC *test, gconstpointer pdat
     ncm_fit_esmcmc_reset (test->esmcmc);
     ncm_fit_esmcmc_walker_apes_set_exploration (apes, 20);
     ncm_fit_esmcmc_walker_apes_set_exploration_qratio_floor (apes, 1.0e-3);
-    ncm_fit_esmcmc_walker_apes_set_exploration_patience (apes, 2);
+    ncm_fit_esmcmc_walker_apes_set_exploration_stop_after (apes, 2);
     ncm_fit_esmcmc_start_run (test->esmcmc);
     ncm_fit_esmcmc_run (test->esmcmc, 25);
     ncm_fit_esmcmc_end_run (test->esmcmc);
@@ -1217,5 +1228,231 @@ test_ncm_fit_esmcmc_apes_settings_survive_rebuild (void)
   g_assert_true (ncm_stats_dist_get_auto_kernel (sd0));
 
   ncm_fit_esmcmc_walker_apes_free (apes);
+}
+
+void
+test_ncm_fit_esmcmc_apes_properties_forwarded (void)
+{
+  const guint nwalkers         = 100;
+  const guint nparams          = 4;
+  NcmFitESMCMCWalkerAPES *apes = ncm_fit_esmcmc_walker_apes_new (nwalkers, nparams);
+  NcmModelMVND *model_mvnd     = ncm_model_mvnd_new (nparams);
+  NcmMSet *mset                = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmStatsDist *sd0            = NULL;
+  NcmStatsDist *sd1            = NULL;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  /* Every setter has two paths: before the estimators exist it only records the value,
+   * afterwards it must also push it down. The walker is already constructed here, so
+   * this exercises the second one, which is where a forgotten forward hides. */
+  ncm_fit_esmcmc_walker_apes_peek_sds (apes, &sd0, &sd1);
+  g_assert_nonnull (sd0);
+  g_assert_nonnull (sd1);
+
+  ncm_fit_esmcmc_walker_apes_set_defensive_frac (apes, 0.05);
+  ncm_fit_esmcmc_walker_apes_set_defensive_scale (apes, 6.0);
+  ncm_fit_esmcmc_walker_apes_set_defensive_nu (apes, 5.0);
+  ncm_fit_esmcmc_walker_apes_set_vkde_points_per_dim (apes, 12.0);
+  ncm_fit_esmcmc_walker_apes_set_uniform_weights (apes, TRUE);
+
+  g_assert_cmpfloat (ncm_fit_esmcmc_walker_apes_get_defensive_frac (apes), ==, 0.05);
+  g_assert_cmpfloat (ncm_fit_esmcmc_walker_apes_get_defensive_scale (apes), ==, 6.0);
+  g_assert_cmpfloat (ncm_fit_esmcmc_walker_apes_get_defensive_nu (apes), ==, 5.0);
+  g_assert_cmpfloat (ncm_fit_esmcmc_walker_apes_get_vkde_points_per_dim (apes), ==, 12.0);
+  g_assert_true (ncm_fit_esmcmc_walker_apes_get_uniform_weights (apes));
+
+  g_assert_cmpfloat (ncm_stats_dist_get_defensive_frac (sd0), ==, 0.05);
+  g_assert_cmpfloat (ncm_stats_dist_get_defensive_frac (sd1), ==, 0.05);
+  g_assert_cmpfloat (ncm_stats_dist_get_defensive_scale (sd0), ==, 6.0);
+  g_assert_cmpfloat (ncm_stats_dist_get_defensive_scale (sd1), ==, 6.0);
+  g_assert_cmpfloat (ncm_stats_dist_get_defensive_nu (sd0), ==, 5.0);
+  g_assert_cmpfloat (ncm_stats_dist_get_defensive_nu (sd1), ==, 5.0);
+  g_assert_cmpfloat (ncm_stats_dist_vkde_get_points_per_dim (NCM_STATS_DIST_VKDE (sd0)), ==, 12.0);
+  g_assert_cmpfloat (ncm_stats_dist_vkde_get_points_per_dim (NCM_STATS_DIST_VKDE (sd1)), ==, 12.0);
+  g_assert_true (ncm_stats_dist_get_uniform_weights (sd0));
+  g_assert_true (ncm_stats_dist_get_uniform_weights (sd1));
+
+  /* The three covariance choices. The fixed one takes the parameter scales of the mset,
+   * and must survive the rebuild that changing the kernel forces. */
+  ncm_fit_esmcmc_walker_apes_set_cov_robust_diag (apes);
+  g_assert_cmpint (ncm_stats_dist_kde_get_cov_type (NCM_STATS_DIST_KDE (sd0)), ==, NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG);
+  g_assert_cmpint (ncm_stats_dist_kde_get_cov_type (NCM_STATS_DIST_KDE (sd1)), ==, NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG);
+
+  ncm_fit_esmcmc_walker_apes_set_cov_robust (apes);
+  g_assert_cmpint (ncm_stats_dist_kde_get_cov_type (NCM_STATS_DIST_KDE (sd0)), ==, NCM_STATS_DIST_KDE_COV_TYPE_ROBUST);
+  g_assert_cmpint (ncm_stats_dist_kde_get_cov_type (NCM_STATS_DIST_KDE (sd1)), ==, NCM_STATS_DIST_KDE_COV_TYPE_ROBUST);
+
+  ncm_fit_esmcmc_walker_apes_set_cov_fixed_from_mset (apes, mset);
+  g_assert_cmpint (ncm_stats_dist_kde_get_cov_type (NCM_STATS_DIST_KDE (sd0)), ==, NCM_STATS_DIST_KDE_COV_TYPE_FIXED);
+
+  ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3);
+  ncm_fit_esmcmc_walker_apes_peek_sds (apes, &sd0, &sd1);
+
+  {
+    NcmMatrix *cov_fixed = ncm_stats_dist_kde_peek_cov_fixed (NCM_STATS_DIST_KDE (sd0));
+    guint i;
+
+    g_assert_cmpint (ncm_stats_dist_kde_get_cov_type (NCM_STATS_DIST_KDE (sd0)), ==, NCM_STATS_DIST_KDE_COV_TYPE_FIXED);
+    g_assert_nonnull (cov_fixed);
+
+    for (i = 0; i < nparams; i++)
+    {
+      const gdouble scale = ncm_mset_fparam_get_scale (mset, i);
+
+      ncm_assert_cmpdouble_e (ncm_matrix_get (cov_fixed, i, i), ==, scale * scale, 1.0e-14, 0.0);
+    }
+  }
+
+  ncm_fit_esmcmc_walker_apes_free (apes);
+  ncm_model_mvnd_free (model_mvnd);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_fit_esmcmc_apes_desc (void)
+{
+  const guint nwalkers         = 100;
+  const guint nparams          = 4;
+  NcmFitESMCMCWalkerAPES *apes = ncm_fit_esmcmc_walker_apes_new (nwalkers, nparams);
+  NcmFitESMCMCWalker *walker   = NCM_FIT_ESMCMC_WALKER (apes);
+
+  /* The description is what a catalog carries to say which proposal produced it, so every
+   * setting that changes the proposal has to show up in it. */
+  ncm_fit_esmcmc_walker_apes_set_method (apes, NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE);
+  ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS);
+  ncm_fit_esmcmc_walker_apes_use_interp (apes, TRUE);
+  ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, 1.0);
+  ncm_fit_esmcmc_walker_apes_set_uniform_weights (apes, FALSE);
+  ncm_fit_esmcmc_walker_apes_set_vkde_points_per_dim (apes, 0.0);
+  ncm_fit_esmcmc_walker_apes_set_local_frac (apes, 0.4);
+  ncm_fit_esmcmc_walker_apes_set_center_shrink (apes, FALSE);
+  ncm_fit_esmcmc_walker_apes_set_cv_type (apes, NCM_STATS_DIST_CV_NONE);
+
+  g_assert_cmpstr (ncm_fit_esmcmc_walker_desc (walker), ==,
+                   "APES-Move:Interp-VKDE:Gauss:lf=0.4:nnls:os=1:cv=none");
+
+  /* Center shrinkage, uniform weights and a neighborhood counted per dimension. */
+  ncm_fit_esmcmc_walker_apes_set_center_shrink (apes, TRUE);
+  ncm_fit_esmcmc_walker_apes_set_uniform_weights (apes, TRUE);
+  ncm_fit_esmcmc_walker_apes_set_vkde_points_per_dim (apes, 12.0);
+
+  g_assert_cmpstr (ncm_fit_esmcmc_walker_desc (walker), ==,
+                   "APES-Move:Shrink-Interp-VKDE:Gauss:ppd=12:unif:os=1:cv=none");
+
+  /* Every cross-validation has its own tag: two runs differing only there must not share
+   * a description. */
+  {
+    const NcmStatsDistCV cv_type[] = {
+      NCM_STATS_DIST_CV_SPLIT,
+      NCM_STATS_DIST_CV_SPLIT_NOFIT,
+      NCM_STATS_DIST_CV_LOO,
+      NCM_STATS_DIST_CV_SPLIT_ACCEPT,
+      NCM_STATS_DIST_CV_LOO_M2LNP,
+    };
+    const gchar *cv_tag[] = {"split", "split-nofit", "loo", "split-accept", "loo-m2lnp"};
+    guint i;
+
+    for (i = 0; i < G_N_ELEMENTS (cv_type); i++)
+    {
+      gchar *expected = g_strdup_printf ("APES-Move:Shrink-Interp-VKDE:Gauss:ppd=12:unif:os=1:cv=%s", cv_tag[i]);
+
+      ncm_fit_esmcmc_walker_apes_set_cv_type (apes, cv_type[i]);
+      g_assert_cmpstr (ncm_fit_esmcmc_walker_desc (walker), ==, expected);
+      g_free (expected);
+    }
+  }
+
+  /* Without interpolation the weights are uniform by construction, and KDE has no local
+   * neighborhood: neither may appear. */
+  ncm_fit_esmcmc_walker_apes_set_method (apes, NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE);
+  ncm_fit_esmcmc_walker_apes_use_interp (apes, FALSE);
+  ncm_fit_esmcmc_walker_apes_set_cv_type (apes, NCM_STATS_DIST_CV_NONE);
+
+  g_assert_cmpstr (ncm_fit_esmcmc_walker_desc (walker), ==,
+                   "APES-Move:Shrink-KDE:Gauss:os=1:cv=none");
+
+  ncm_fit_esmcmc_walker_apes_free (apes);
+}
+
+/* A short APES run with the messages on, used by the phase-label subprocesses below. */
+static void
+_test_ncm_fit_esmcmc_phase_run (NcmFitRunMsgs mtype, guint exploration)
+{
+  const gint dim                      = 2;
+  const gint nwalkers                 = 20;
+  NcmRNG *rng                         = ncm_rng_seeded_new (NULL, 20260921);
+  NcmDataGaussCovMVND *data_mvnd      = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 2.0e-2, 0.3, -1.0, 1.0, rng);
+  NcmModelMVND *model_mvnd            = ncm_model_mvnd_new (dim);
+  NcmDataset *dset                    = ncm_dataset_new_list (data_mvnd, NULL);
+  NcmLikelihood *lh                   = ncm_likelihood_new (dset);
+  NcmMSet *mset                       = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmMSetTransKernGauss *init_sampler = ncm_mset_trans_kern_gauss_new (0);
+  NcmRNG *esmcmc_rng                  = ncm_rng_seeded_new (NULL, 20260921);
+  NcmFitESMCMCWalkerAPES *apes;
+  NcmFit *fit;
+  NcmFitESMCMC *esmcmc;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+
+  fit  = ncm_fit_factory (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  apes = ncm_fit_esmcmc_walker_apes_new (nwalkers, ncm_mset_fparams_len (mset));
+
+  ncm_fit_esmcmc_walker_apes_set_exploration (apes, exploration);
+
+  esmcmc = ncm_fit_esmcmc_new (fit, nwalkers,
+                               NCM_MSET_TRANS_KERN (init_sampler),
+                               NCM_FIT_ESMCMC_WALKER (apes),
+                               mtype);
+
+  ncm_fit_esmcmc_set_rng (esmcmc, esmcmc_rng);
+  ncm_fit_esmcmc_set_use_threads (esmcmc, FALSE);
+
+  ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
+  ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
+  ncm_mset_trans_kern_gauss_set_cov_from_rescale (init_sampler, 1.0e-2);
+
+  ncm_fit_esmcmc_start_run (esmcmc);
+  ncm_fit_esmcmc_run (esmcmc, 3);
+  ncm_fit_esmcmc_end_run (esmcmc);
+
+  ncm_data_gauss_cov_mvnd_clear (&data_mvnd);
+  ncm_model_mvnd_clear (&model_mvnd);
+  ncm_dataset_clear (&dset);
+  ncm_likelihood_clear (&lh);
+  ncm_mset_clear (&mset);
+  ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (init_sampler));
+  ncm_fit_clear (&fit);
+  ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (apes));
+  ncm_fit_esmcmc_clear (&esmcmc);
+  ncm_rng_free (rng);
+}
+
+void
+test_ncm_fit_esmcmc_phase_markovian_subprocess (void)
+{
+  _test_ncm_fit_esmcmc_phase_run (NCM_FIT_RUN_MSGS_SIMPLE, 0);
+}
+
+void
+test_ncm_fit_esmcmc_phase_exploration_subprocess (void)
+{
+  _test_ncm_fit_esmcmc_phase_run (NCM_FIT_RUN_MSGS_FULL, 100);
+}
+
+void
+test_ncm_fit_esmcmc_phase_label (void)
+{
+  /* The rows of the exploration phase are not part of the Markovian chain, so the log has
+   * to say which of the two the acceptance ratio it is reporting belongs to. The run
+   * writes to stdout, which is why it happens in a subprocess. */
+  g_test_trap_subprocess ("/ncm/fit/esmcmc/phase/markovian/subprocess", 0, G_TEST_SUBPROCESS_INHERIT_STDOUT);
+  g_test_trap_assert_passed ();
+  g_test_trap_assert_stdout ("*phase: markovian*");
+
+  g_test_trap_subprocess ("/ncm/fit/esmcmc/phase/exploration/subprocess", 0, G_TEST_SUBPROCESS_INHERIT_STDOUT);
+  g_test_trap_assert_passed ();
+  g_test_trap_assert_stdout ("*phase: exploration*");
 }
 

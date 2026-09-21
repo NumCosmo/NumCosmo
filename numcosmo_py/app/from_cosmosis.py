@@ -25,21 +25,24 @@
 
 from typing import Optional, Annotated
 from pathlib import Path
+import importlib.util
+
 import typer
 
 from numcosmo_py import Ncm
 
-try:
-    from numcosmo_py.external.cosmosis import (
-        convert_likelihoods,
-        create_numcosmo_mapping,
-        LinearMatterPowerSpectrum,
-        NonLinearMatterPowerSpectrum,
-    )
-except ImportError:
-    COSMOSIS = False
-else:
-    COSMOSIS = True
+from numcosmo_py.external.cosmosis_types import (
+    LinearMatterPowerSpectrum,
+    NonLinearMatterPowerSpectrum,
+)
+
+# Availability is decided without importing the bridge. numcosmo_py.external.cosmosis pulls
+# in cosmosis and firecrown, and firecrown reaches crow, CLMM and healpy, so importing it
+# here would cost every invocation of the command line, not only a conversion.
+COSMOSIS = (
+    importlib.util.find_spec("cosmosis") is not None
+    and importlib.util.find_spec("firecrown") is not None
+)
 
 
 if COSMOSIS:
@@ -97,6 +100,12 @@ if COSMOSIS:
 
         if outfile is None:
             outfile = Path(inifile.stem + ".yaml")
+
+        # pylint: disable-next=import-outside-toplevel
+        from numcosmo_py.external.cosmosis import (
+            convert_likelihoods,
+            create_numcosmo_mapping,
+        )
 
         mapping = create_numcosmo_mapping(
             matter_ps=matter_ps,
