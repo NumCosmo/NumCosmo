@@ -56,6 +56,7 @@
 #include <numcosmo/ncm/integration/ncm_integral1d_ptr.h>
 #include <numcosmo/ncm/integration/ncm_integral_nd.h>
 #include <numcosmo/ncm/core/ncm_rng.h>
+#include <numcosmo/ncm/stats/ncm_stats_acorr.h>
 #include <numcosmo/ncm/stats/ncm_stats_vec.h>
 #include <numcosmo/ncm/stats/ncm_stats_dist1d.h>
 #include <numcosmo/ncm/stats/ncm_stats_dist1d_spline.h>

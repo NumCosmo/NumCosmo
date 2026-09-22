@@ -49,12 +49,14 @@
 #include <gsl/gsl_min.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+#define _NC_HICOSMO_DE_MAX_MASSNU (10)
+
 struct _NcHICosmoDEPrivate
 {
   NcmIntegral1dPtr *nu_rho;
   NcmIntegral1dPtr *nu_p;
-  NcmSpline *nu_rho_s[10];
-  NcmSpline *nu_p_s[10];
+  NcmSpline *nu_rho_s[_NC_HICOSMO_DE_MAX_MASSNU];
+  NcmSpline *nu_p_s[_NC_HICOSMO_DE_MAX_MASSNU];
   gdouble zmax;
   gsl_min_fminimizer *min;
   gboolean CCL_comp;
@@ -79,7 +81,7 @@ nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
   cosmo_de->priv->nu_rho = NULL;
   cosmo_de->priv->nu_p   = NULL;
 
-  for (i = 0; i < 10; i++)
+  for (i = 0; i < _NC_HICOSMO_DE_MAX_MASSNU; i++)
   {
     cosmo_de->priv->nu_rho_s[i] = NULL;
     cosmo_de->priv->nu_p_s[i]   = NULL;
@@ -181,6 +183,10 @@ _nc_hicosmo_de_constructed (GObject *object)
       g_error ("NcHICosmoDE: number of neutrinos masses must match the number of massive neutrino degeneracy,\n"
                " or the neutrino degeneracy vector must be of size one to use the same value for all massive neutrinos.");
 
+    if (m_len > _NC_HICOSMO_DE_MAX_MASSNU)
+      g_error ("_nc_hicosmo_de_constructed: `%s' supports at most %d massive neutrinos, %u requested.",
+               G_OBJECT_TYPE_NAME (model), _NC_HICOSMO_DE_MAX_MASSNU, m_len);
+
     if (m_len != 0)
     {
       NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (model);
@@ -214,7 +220,7 @@ _nc_hicosmo_de_dispose (GObject *object)
   ncm_integral1d_ptr_clear (&cosmo_de->priv->nu_rho);
   ncm_integral1d_ptr_clear (&cosmo_de->priv->nu_p);
 
-  for (i = 0; i < 10; i++)
+  for (i = 0; i < _NC_HICOSMO_DE_MAX_MASSNU; i++)
   {
     ncm_spline_clear (&cosmo_de->priv->nu_rho_s[i]);
     ncm_spline_clear (&cosmo_de->priv->nu_p_s[i]);
@@ -472,6 +478,12 @@ _nc_hicosmo_de_prepare (NcHICosmoDE *cosmo_de)
   if (!ncm_model_state_is_update (model))
   {
     const guint m_len = ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_M);
+
+    if ((m_len > 0) && (cosmo_de->priv->nu_rho_s[0] == NULL))
+      g_error ("_nc_hicosmo_de_prepare: the massive neutrino vectors are construction-fixed -- "
+               "`%s' must receive `massnu-length' as a construction property "
+               "(e.g. `g_object_new ()'/constructor kwarg), it cannot be resized afterwards.",
+               G_OBJECT_TYPE_NAME (model));
 
     if (m_len > 0)
     {

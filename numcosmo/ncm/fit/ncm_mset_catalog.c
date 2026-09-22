@@ -107,7 +107,8 @@ typedef struct _NcmMSetCatalogPrivate
   NcmMatrix *chain_sM;
   gsl_eigen_nonsymm_workspace *chain_sM_ws;
   gsl_vector_complex *chain_sM_ev;
-  NcmMSetCatalogTauMethod tau_method;
+  NcmStatsAcorr *acorr;
+  NcmStatsAcorrMethod tau_method;
   NcmVector *tau;
   gchar *rng_inis;
   gchar *rng_stat;
@@ -122,6 +123,8 @@ typedef struct _NcmMSetCatalogPrivate
   gint cur_id;
   gint file_first_id;
   gint file_cur_id;
+  gint markovian_id;
+  gint file_markovian_id;
   glong burnin;
 
 #ifdef HAVE_CFITSIO
@@ -154,6 +157,7 @@ enum
   PROP_WEIGHTED,
   PROP_NCHAINS,
   PROP_BURNIN,
+  PROP_MARKOVIAN_ID,
   PROP_TAU_METHOD,
   PROP_RNG,
   PROP_FILE,
@@ -214,21 +218,25 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->chain_sM     = NULL;
   self->chain_sM_ws  = NULL;
   self->chain_sM_ev  = NULL;
+  self->acorr        = NULL;
+  self->tau_method   = NCM_STATS_ACORR_METHOD_MAX;
   self->tau          = NULL;
 
-  self->rng_inis      = NULL;
-  self->rng_stat      = NULL;
-  self->sync_timer    = g_timer_new ();
-  self->cur_id        = -1; /* Represents that there are no elements in the catalog, i.e., the id of the last added row. */
-  self->first_id      = 0;  /* The element to be in the catalog will be the one with index == 0, cross catalog index */
-  self->file_cur_id   = -1; /* Represents that no elements in the catalog file, i.e., the id of the last added row. */
-  self->file_first_id = 0;  /* The element to be in the catalog file will be the one with index == 0, cross catalog index */
-  self->burnin        = 0;  /* Number of elements to ignore when reading a catalog */
-  self->file          = NULL;
-  self->mset_file     = NULL;
-  self->rtype_str     = NULL;
-  self->porder        = g_array_new (FALSE, FALSE, sizeof (gint));
-  self->quantile_ws   = NULL;
+  self->rng_inis          = NULL;
+  self->rng_stat          = NULL;
+  self->sync_timer        = g_timer_new ();
+  self->cur_id            = -1; /* Represents that there are no elements in the catalog, i.e., the id of the last added row. */
+  self->first_id          = 0;  /* The element to be in the catalog will be the one with index == 0, cross catalog index */
+  self->file_cur_id       = -1; /* Represents that no elements in the catalog file, i.e., the id of the last added row. */
+  self->file_first_id     = 0;  /* The element to be in the catalog file will be the one with index == 0, cross catalog index */
+  self->markovian_id      = 0;  /* First row of the Markovian chain, cross catalog index; effective value is max (markovian_id, first_id) */
+  self->file_markovian_id = -1; /* Value last written to the file, -1: never written */
+  self->burnin            = 0;  /* Number of elements to ignore when reading a catalog */
+  self->file              = NULL;
+  self->mset_file         = NULL;
+  self->rtype_str         = NULL;
+  self->porder            = g_array_new (FALSE, FALSE, sizeof (gint));
+  self->quantile_ws       = NULL;
 #ifdef HAVE_CFITSIO
   self->fptr = NULL;
 #endif /* HAVE_CFITSIO */
@@ -284,6 +292,9 @@ _ncm_mset_catalog_constructed_alloc_chains (NcmMSetCatalog *mcat)
     self->chain_sM_ws = gsl_eigen_nonsymm_alloc (free_params_len);
     self->chain_sM_ev = gsl_vector_complex_alloc (free_params_len);
   }
+
+  self->acorr = ncm_stats_acorr_new (total);
+  ncm_stats_acorr_set_method (self->acorr, self->tau_method);
 
   self->tau = ncm_vector_new (total);
   ncm_vector_set_all (self->tau, 1.0);
@@ -397,6 +408,9 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_BURNIN:
       ncm_mset_catalog_set_burnin (mcat, g_value_get_long (value));
       break;
+    case PROP_MARKOVIAN_ID:
+      ncm_mset_catalog_set_markovian_id (mcat, g_value_get_int (value));
+      break;
     case PROP_TAU_METHOD:
       ncm_mset_catalog_set_tau_method (mcat, g_value_get_enum (value));
       break;
@@ -484,6 +498,9 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_BURNIN:
       g_value_set_long (value, ncm_mset_catalog_get_burnin (mcat));
       break;
+    case PROP_MARKOVIAN_ID:
+      g_value_set_int (value, ncm_mset_catalog_get_markovian_id (mcat));
+      break;
     case PROP_TAU_METHOD:
       g_value_set_enum (value, ncm_mset_catalog_get_tau_method (mcat));
       break;
@@ -541,6 +558,7 @@ _ncm_mset_catalog_dispose (GObject *object)
   ncm_matrix_clear (&self->chain_sM);
   g_clear_pointer (&self->chain_sM_ws, gsl_eigen_nonsymm_free);
   g_clear_pointer (&self->chain_sM_ev, gsl_vector_complex_free);
+  ncm_stats_acorr_clear (&self->acorr);
   ncm_vector_clear (&self->tau);
   ncm_vector_clear (&self->quantile_ws);
 
@@ -658,12 +676,33 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                       0, G_MAXLONG, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmMSetCatalog:markovian-id:
+   *
+   * Id of the first row produced by a Markovian step after the last move that did not
+   * satisfy detailed balance (the initial ensemble, an exploration phase of the walker).
+   * Rows from this id on form a valid Markov chain whose initial state is the ensemble of
+   * the #NcmMSetCatalog:nchains rows before it. Same numbering as #NcmMSetCatalog:first-id
+   * and the current id; the effective value is never below the first id, and a file
+   * without the key reads as its first id (every row Markovian, the behaviour before the
+   * key existed). When a file is read with a burn-in the stored value is shifted by it,
+   * like every other row id.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_MARKOVIAN_ID,
+                                   g_param_spec_int ("markovian-id",
+                                                     NULL,
+                                                     "First row id of the Markovian chain",
+                                                     0, G_MAXINT, 0,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   g_object_class_install_property (object_class,
                                    PROP_TAU_METHOD,
                                    g_param_spec_enum ("tau-method",
                                                       NULL,
                                                       "Method used to calculate the autocorrelation time",
-                                                      NCM_TYPE_MSET_CATALOG_TAU_METHOD, NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL,
+                                                      NCM_TYPE_STATS_ACORR_METHOD, NCM_STATS_ACORR_METHOD_MAX,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
@@ -894,6 +933,60 @@ ncm_mset_catalog_peek_info_from_file (const gchar *filename, glong *nrows, guint
 
 #else
   g_error ("ncm_mset_catalog_peek_info_from_file: cannot read file without cfitsio.");
+
+#endif /* HAVE_CFITSIO */
+}
+
+/**
+ * ncm_mset_catalog_peek_markovian_id_from_file:
+ * @filename: catalog file name
+ *
+ * Reads #NcmMSetCatalog:markovian-id from the file header without loading the catalog,
+ * in the file's own row numbering. A file without the key returns its first id (every
+ * row Markovian).
+ *
+ * Returns: the id of the first row of the Markovian chain.
+ */
+gint
+ncm_mset_catalog_peek_markovian_id_from_file (const gchar *filename)
+{
+#ifdef HAVE_CFITSIO
+  fitsfile *fptr = NULL;
+  gint status    = 0;
+  gint first_id  = 0;
+  gint markid    = 0;
+
+  fits_open_file (&fptr, filename, READONLY, &status);
+  NCM_FITS_ERROR (status);
+
+  fits_movnam_hdu (fptr, BINARY_TBL, NCM_MSET_CATALOG_EXTNAME, 0, &status);
+  NCM_FITS_ERROR (status);
+
+  fits_read_key (fptr, TINT, NCM_MSET_CATALOG_FIRST_ID_LABEL, &first_id, NULL, &status);
+  NCM_FITS_ERROR (status);
+
+  fits_read_key (fptr, TINT, NCM_MSET_CATALOG_MARKOVIAN_ID_LABEL, &markid, NULL, &status);
+
+  if (status == KEY_NO_EXIST)
+  {
+    markid = first_id;
+    status = 0;
+  }
+  else
+  {
+    NCM_FITS_ERROR (status);
+  }
+
+  fits_close_file (fptr, &status);
+  NCM_FITS_ERROR (status);
+
+  return MAX (markid, first_id);
+
+#else
+  g_error ("ncm_mset_catalog_peek_markovian_id_from_file: numcosmo built without cfitsio.");
+
+  return 0;
+
 #endif /* HAVE_CFITSIO */
 }
 
@@ -1094,6 +1187,25 @@ _ncm_fits_update_key_ulong (fitsfile *fptr, gchar *keyname, gulong value, gchar 
       NCM_FITS_ERROR (status);
     }
   }
+}
+
+/*
+ * Writes the Markovian id in the file numbering (the in-memory id plus the burn-in
+ * dropped at load) when it differs from what the file holds. Returns TRUE if written.
+ */
+static gboolean
+_ncm_mset_catalog_sync_markovian_id (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+  const gint file_markid      = ncm_mset_catalog_get_markovian_id (mcat) + self->burnin;
+
+  if ((self->fptr == NULL) || self->readonly || (file_markid == self->file_markovian_id))
+    return FALSE;
+
+  _ncm_fits_update_key_int (self->fptr, NCM_MSET_CATALOG_MARKOVIAN_ID_LABEL, file_markid, "First row id of the Markovian chain.", TRUE);
+  self->file_markovian_id = file_markid;
+
+  return TRUE;
 }
 
 static void
@@ -1393,6 +1505,21 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
       status = 0;
     }
 
+    {
+      gint file_markid = self->file_first_id;
+
+      fits_read_key (self->fptr, TINT, NCM_MSET_CATALOG_MARKOVIAN_ID_LABEL, &file_markid, NULL, &status);
+
+      if (status == KEY_NO_EXIST)
+        file_markid = self->file_first_id;  /* written before the key existed: every row Markovian */
+      else
+        NCM_FITS_ERROR (status);
+
+      status = 0;
+      /* The file numbering; converted to the in-memory numbering once the burn-in is known below. */
+      self->file_markovian_id = file_markid;
+    }
+
     fits_read_key (self->fptr, TSTRING, NCM_MSET_CATALOG_RTYPE_LABEL,
                    key_text, NULL, &status);
     NCM_FITS_ERROR (status);
@@ -1465,6 +1592,10 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
     }
 
     self->file_cur_id = self->file_first_id + nrows - 1;
+
+    /* Rows before the burn-in are dropped and the ids renumbered from file_first_id, so the
+     * stored Markovian id shifts by the same amount; it is never below the first id. */
+    self->markovian_id = MAX (self->markovian_id, (gint) (self->file_markovian_id - self->burnin));
 
     if (load_from_cat)
     {
@@ -1728,6 +1859,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 
   _ncm_fits_update_key_int (self->fptr, NCM_MSET_CATALOG_FIRST_ID_LABEL, self->file_first_id, "Id of the first element.", !self->readonly);
   _ncm_fits_update_key_int (self->fptr, NCM_MSET_CATALOG_M2LNP_ID_LABEL, self->m2lnp_var,     "Id of the m2lnp variable.", !self->readonly);
+  _ncm_mset_catalog_sync_markovian_id (mcat);
 
   if (!self->readonly)
   {
@@ -2286,6 +2418,9 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
   }
 
   /*printf ("# Sync: status %d %d, %d %d\n", self->file_first_id, self->first_id, self->file_cur_id, self->cur_id);*/
+  if (_ncm_mset_catalog_sync_markovian_id (mcat))
+    need_flush = TRUE;
+
   /*printf ("# Sync: need flush %d\n", need_flush);*/
   if (need_flush)
     _ncm_mset_catalog_flush_file (mcat);
@@ -2328,6 +2463,7 @@ ncm_mset_catalog_reset_stats (NcmMSetCatalog *mcat)
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
   ncm_stats_vec_reset (self->pstats, FALSE);
+  ncm_stats_acorr_reset (self->acorr);
 
   if (self->nchains > 1)
   {
@@ -2375,6 +2511,7 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
   ncm_mset_catalog_erase_data (mcat);
 
   ncm_stats_vec_reset (self->pstats, TRUE);
+  ncm_stats_acorr_reset (self->acorr);
 
   if (self->nchains > 1)
   {
@@ -2405,7 +2542,8 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
   g_ptr_array_set_size (self->order_cat, 0);
   self->order_cat_sort = FALSE;
 
-  self->cur_id = self->first_id - 1;
+  self->cur_id       = self->first_id - 1;
+  self->markovian_id = self->first_id; /* a new chain: nothing non-Markovian yet */
 #ifdef HAVE_CFITSIO
   self->file_cur_id = self->file_first_id - 1;
   _ncm_mset_catalog_close_file (mcat);
@@ -2548,12 +2686,18 @@ ncm_mset_catalog_is_empty (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_largest_error:
  * @mcat: a #NcmMSetCatalog
  *
- * This function calculates the largest proportional error of the parameters included, i.e., $\text{lre} = \sigma_{\hat{p}}/(|\hat{p}|\sqrt{n})$
- * where $n$ represents the number of samples in the catalog, $\hat{p}$ is the estimated mean of the parameter $p$
- * and $\sigma_{\hat{p}}$ its standard deviation.
+ * This function calculates the largest proportional error of the parameters included,
+ * $\text{lre} = \sigma_{\hat{p}}/(|\hat{p}|\sqrt{n_\mathrm{eff}})$, where
+ * $n_\mathrm{eff}$ is the effective sample size of that parameter,
+ * ncm_mset_catalog_get_ess(), $\hat{p}$ is its estimated mean and $\sigma_{\hat{p}}$ its
+ * standard deviation. The effective sample size already carries both the autocorrelation
+ * in time and the correlation between chains at a given iteration, so no assumption is
+ * made about either.
  *
- * It tries to guess when $p = 0$. In this case $\sigma_{\hat{p}} \approx |\hat{p}|\sqrt{n}$. Therefore, for $n > 10$, it tests
- * if $\text{lre} \approx 1$ and, if it is the case, it returns $\text{lre} = \sigma_{\hat{p}}/\sqrt{n}$ instead.
+ * It tries to guess when $p = 0$. In this case
+ * $\sigma_{\hat{p}} \approx |\hat{p}|\sqrt{n_\mathrm{eff}}$, so for more than ten samples
+ * it tests if $\text{lre} \approx 1$ and returns
+ * $\text{lre} = \sigma_{\hat{p}}/\sqrt{n_\mathrm{eff}}$ instead.
  *
  * Returns: the largest proportional error $\text{lre}$.
  */
@@ -2563,41 +2707,23 @@ ncm_mset_catalog_largest_error (NcmMSetCatalog *mcat)
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
   guint free_params_len       = ncm_mset_fparams_len (self->mset);
   const gdouble n             = ncm_stats_vec_get_weight (self->pstats);
-  const gdouble sqrt_n        = sqrt (n);
   const gdouble fpi           = self->nadd_vals;
   const gdouble fpf           = free_params_len + self->nadd_vals;
   gdouble lerror              = 0.0;
   guint i;
 
-  if (n < 10)
+  for (i = fpi; i < fpf; i++)
   {
-    for (i = fpi; i < fpf; i++)
-    {
-      const gdouble mu = ncm_stats_vec_get_mean (self->pstats, i);
-      const gdouble sd = ncm_stats_vec_get_sd (self->pstats, i);
-      gdouble lerror_i = fabs (sd / (mu * sqrt_n));
+    const gdouble mu       = ncm_stats_vec_get_mean (self->pstats, i);
+    const gdouble sd       = ncm_stats_vec_get_sd (self->pstats, i);
+    const gdouble ess      = ncm_mset_catalog_get_ess (mcat, i);
+    const gdouble sqrt_ess = sqrt (GSL_MAX (ess, 1.0));
+    gdouble lerror_i       = fabs (sd / (mu * sqrt_ess));
 
-      lerror_i *= sqrt (ncm_vector_get (self->tau, i));
+    if ((n >= 10) && ((guint) lerror_i == 1))
+      lerror_i = fabs (sd / sqrt_ess);
 
-      lerror = GSL_MAX (lerror, lerror_i);
-    }
-  }
-  else
-  {
-    for (i = fpi; i < fpf; i++)
-    {
-      const gdouble mu     = ncm_stats_vec_get_mean (self->pstats, i);
-      const gdouble sd     = ncm_stats_vec_get_sd (self->pstats, i);
-      gdouble lerror_i     = fabs (sd / (mu * sqrt_n));
-      guint lerror_i_trunc = lerror_i;
-
-      if (lerror_i_trunc == 1)
-        lerror_i = fabs (sd / sqrt_n);
-
-      lerror_i *= sqrt (ncm_vector_get (self->tau, i));
-
-      lerror = GSL_MAX (lerror, lerror_i);
-    }
+    lerror = GSL_MAX (lerror, lerror_i);
   }
 
   return lerror;
@@ -2895,33 +3021,130 @@ ncm_mset_catalog_get_burnin (NcmMSetCatalog *mcat)
 }
 
 /**
- * ncm_mset_catalog_set_tau_method:
+ * ncm_mset_catalog_set_markovian_id:
  * @mcat: a #NcmMSetCatalog
- * @tau_method: a #NcmMSetCatalogTauMethod
+ * @markovian_id: the id of the first row of the Markovian chain
  *
- * Sets the autocorrelation time method to @tau_method.
+ * Sets #NcmMSetCatalog:markovian-id. The id can only move forward and cannot pass the row
+ * after the current one; the producer calls it after the initial ensemble and after every
+ * iteration that used a non-Markovian move.
  *
  */
 void
-ncm_mset_catalog_set_tau_method (NcmMSetCatalog *mcat, NcmMSetCatalogTauMethod tau_method)
+ncm_mset_catalog_set_markovian_id (NcmMSetCatalog *mcat, gint markovian_id)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+  const gint cur              = ncm_mset_catalog_get_markovian_id (mcat);
+
+  if (markovian_id < cur)
+    g_error ("ncm_mset_catalog_set_markovian_id: the Markovian id cannot move backwards (%d < %d).", markovian_id, cur);
+
+  if (markovian_id > self->cur_id + 1)
+    g_error ("ncm_mset_catalog_set_markovian_id: id %d is beyond the row after the current one (%d).", markovian_id, self->cur_id + 1);
+
+  self->markovian_id = markovian_id;
+}
+
+/**
+ * ncm_mset_catalog_get_markovian_id:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: #NcmMSetCatalog:markovian-id, never below #NcmMSetCatalog:first-id.
+ */
+gint
+ncm_mset_catalog_get_markovian_id (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  return MAX (self->markovian_id, self->first_id);
+}
+
+/**
+ * ncm_mset_catalog_get_markovian_burnin:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Number of complete iterations (ensemble steps) before the Markovian chain starts, i.e.
+ * the smallest burn-in that leaves only Markovian rows; 0 when every row is Markovian.
+ *
+ * Returns: the burn-in in iterations.
+ */
+guint
+ncm_mset_catalog_get_markovian_burnin (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+  const gint rows             = ncm_mset_catalog_get_markovian_id (mcat) - self->first_id;
+
+  return (rows + self->nchains - 1) / self->nchains;
+}
+
+/**
+ * ncm_mset_catalog_set_tau_method:
+ * @mcat: a #NcmMSetCatalog
+ * @tau_method: a #NcmStatsAcorrMethod
+ *
+ * Sets the estimator the autocorrelation time is computed with.
+ *
+ */
+void
+ncm_mset_catalog_set_tau_method (NcmMSetCatalog *mcat, NcmStatsAcorrMethod tau_method)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
   self->tau_method = tau_method;
+
+  /* tau-method is a G_PARAM_CONSTRUCT property, so it is set before constructed() builds
+   * the accumulator; the value is kept here and applied there. */
+  if (self->acorr != NULL)
+    ncm_stats_acorr_set_method (self->acorr, tau_method);
 }
 
 /**
  * ncm_mset_catalog_get_tau_method:
  * @mcat: a #NcmMSetCatalog
  *
- * Returns: the autocorrelation time method used by @mcat.
+ * Returns: the estimator the autocorrelation time is computed with.
  */
-NcmMSetCatalogTauMethod
+NcmStatsAcorrMethod
 ncm_mset_catalog_get_tau_method (NcmMSetCatalog *mcat)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
   return self->tau_method;
+}
+
+/*
+ * The autocorrelation accumulator forms unweighted lagged sums. A weighted catalog is
+ * therefore not fed (see _ncm_mset_catalog_post_update) and every quantity derived from
+ * the accumulator refuses rather than returning a number built from the wrong sums.
+ */
+static void
+_ncm_mset_catalog_check_unweighted (NcmMSetCatalogPrivate *self, const gchar *func)
+{
+  if (self->weighted)
+    g_error ("%s: the autocorrelation accumulator does not support weighted catalogs: it "
+             "forms unweighted lagged sums, so the autocorrelation time and the effective "
+             "sample size built from them would not describe this catalog.", func);
+}
+
+/**
+ * ncm_mset_catalog_peek_acorr:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * The autocorrelation accumulator, updated as rows are added. For a catalog with more
+ * than one chain it is fed the ensemble mean of each complete iteration, which is the
+ * series whose spectral density at zero gives the error of the reported mean; for a
+ * single chain it is fed every row.
+ *
+ * Returns: (transfer none): the #NcmStatsAcorr.
+ */
+NcmStatsAcorr *
+ncm_mset_catalog_peek_acorr (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  _ncm_mset_catalog_check_unweighted (self, G_STRFUNC);
+
+  return self->acorr;
 }
 
 static void
@@ -2943,6 +3166,8 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
 
   if (self->weighted)
   {
+    /* The accumulator is not fed here: it forms unweighted lagged sums, and everything
+     * that reads it refuses for a weighted catalog. */
     if (self->nchains > 1)
     {
       guint chain_id      = (self->cur_id + 1) % self->nchains;
@@ -2963,6 +3188,10 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
 
       ncm_stats_vec_append (pstats,        x, FALSE);
       ncm_stats_vec_append (self->e_stats, x, FALSE);
+    }
+    else
+    {
+      ncm_stats_acorr_update (self->acorr, x);
     }
 
     ncm_stats_vec_append (self->pstats, x, FALSE);
@@ -2998,6 +3227,7 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
       g_assert_cmpuint (ncm_stats_vec_nitens (self->e_stats), ==, self->nchains);
 
       ncm_stats_vec_append (self->e_mean_stats, e_mean, TRUE);
+      ncm_stats_acorr_update (self->acorr, e_mean);
       g_ptr_array_add (self->e_var_array, e_var);
 
       if (ncm_stats_vec_nitens (self->pstats) > self->nchains)
@@ -4220,7 +4450,11 @@ ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat)
  * @mcat: a #NcmMSetCatalog
  * @force_single_chain: whether to force the catalog to be treated as a single chain
  *
- * Updates the internal estimates of the integrate autocorrelation time.
+ * Updates the internal estimates of the integrated autocorrelation time, in ensemble
+ * iterations, from the accumulator the catalog keeps as rows are added.
+ *
+ * With @force_single_chain the interleaved rows are treated as one series instead, which
+ * is only meaningful for a catalog whose rows are a single chain.
  *
  */
 void
@@ -4230,68 +4464,207 @@ ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat, gboolean fo
   const guint total           = ncm_vector_len (self->tau);
   guint p;
 
-  if ((self->nchains == 1) || force_single_chain)
+  _ncm_mset_catalog_check_unweighted (self, G_STRFUNC);
+
+  if (force_single_chain && (self->nchains > 1))
   {
-    switch (self->tau_method)
+    NcmStatsAcorr *rows = ncm_stats_acorr_new (total);
+    const guint nitens  = ncm_stats_vec_nitens (self->pstats);
+    guint i;
+
+    for (i = 0; i < nitens; i++)
+      ncm_stats_acorr_update (rows, ncm_stats_vec_peek_row (self->pstats, i));
+
+    for (p = 0; p < total; p++)
+      ncm_vector_set (self->tau, p, ncm_stats_acorr_get_tau (rows, p));
+
+    ncm_stats_acorr_free (rows);
+
+    return;
+  }
+
+  for (p = 0; p < total; p++)
+    ncm_vector_set (self->tau, p, ncm_stats_acorr_get_tau (self->acorr, p));
+}
+
+/**
+ * ncm_mset_catalog_get_tau_diag:
+ * @mcat: a #NcmMSetCatalog
+ * @p: parameter id
+ *
+ * Conditions attached to the autocorrelation time of parameter @p. Anything other than
+ * %NCM_STATS_ACORR_DIAG_OK means the estimate is not to be read as converged.
+ *
+ * Returns: the #NcmStatsAcorrDiag flags.
+ */
+NcmStatsAcorrDiag
+ncm_mset_catalog_get_tau_diag (NcmMSetCatalog *mcat, guint p)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  _ncm_mset_catalog_check_unweighted (self, G_STRFUNC);
+
+  return ncm_stats_acorr_get_diag (self->acorr, p);
+}
+
+/**
+ * ncm_mset_catalog_log_tau_diag:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Logs the parameters whose autocorrelation time carries a condition, and which one. A
+ * catalog with nothing to report logs nothing.
+ *
+ * Returns: TRUE when at least one parameter is flagged.
+ */
+gboolean
+ncm_mset_catalog_log_tau_diag (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+  const guint total           = ncm_vector_len (self->tau);
+  gboolean any                = FALSE;
+  guint p;
+
+  _ncm_mset_catalog_check_unweighted (self, G_STRFUNC);
+
+  for (p = 0; p < total; p++)
+  {
+    const NcmStatsAcorrDiag diag = ncm_stats_acorr_get_diag (self->acorr, p);
+
+    if (diag != NCM_STATS_ACORR_DIAG_OK)
     {
-      case NCM_MSET_CATALOG_TAU_METHOD_ACOR:
+      gchar *diag_str = ncm_stats_acorr_diag_to_string (diag);
 
-        for (p = 0; p < total; p++)
-        {
-          const gdouble tau = ncm_stats_vec_get_autocorr_tau (self->pstats, p, 0);
+      if (!any)
+        g_message ("# NcmMSetCatalog: the autocorrelation time of the following "
+                   "parameters is not to be read as converged:\n");
 
-          ncm_vector_set (self->tau, p, tau);
-        }
+      g_message ("#   %-30s tau = % 12.4g  %s\n",
+                 ncm_mset_catalog_col_full_name (mcat, p),
+                 ncm_vector_get (self->tau, p), diag_str);
 
-        break;
-      case NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL:
-
-        for (p = 0; p < total; p++)
-        {
-          gdouble spec0;
-          guint c_order     = 0;
-          const gdouble ess = ncm_stats_vec_ar_ess (self->pstats, p, NCM_STATS_VEC_AR_AICC, &spec0, &c_order);
-
-          ncm_vector_set (self->tau, p, ncm_stats_vec_nitens (self->pstats) / ess);
-        }
-
-        break;
-      default:
-        g_assert_not_reached ();
-        break;
+      g_free (diag_str);
+      any = TRUE;
     }
   }
-  else
+
+  return any;
+}
+
+/**
+ * ncm_mset_catalog_tau_needs_more:
+ * @mcat: a #NcmMSetCatalog
+ * @required_niter: (out) (optional): iterations the reliability factor asks for
+ *
+ * Whether any free parameter carries %NCM_STATS_ACORR_DIAG_SHORT_CHAIN, that is, whether
+ * the chain is shorter than #NcmStatsAcorr:reliability-factor times its own $\tau$. That
+ * is the one condition sampling more clears on its own, and @required_niter is the length
+ * at which it does: the reliability factor times the largest $\tau$ over the free
+ * parameters.
+ *
+ * The other conditions are reported by ncm_mset_catalog_log_tau_diag() and do not ask for
+ * more sampling, because more sampling does not remove them. A burn-in still in the
+ * catalog keeps %NCM_STATS_ACORR_DIAG_VARIANCE_SHIFT and
+ * %NCM_STATS_ACORR_DIAG_DRIFT set however long the chain grows, since the early
+ * iterations stay in the first half of it; what removes those is trimming the catalog. A
+ * parameter that never moved keeps %NCM_STATS_ACORR_DIAG_ZERO_VARIANCE. Two estimators
+ * differing is a statement about the estimate and not about the length of the chain.
+ *
+ * Two conditions are refused outright, because the effective sample size they lead to is
+ * not a sample size: a free parameter whose ensemble mean has no variance
+ * (%NCM_STATS_ACORR_DIAG_ZERO_VARIANCE: the walkers did not move), and a free parameter
+ * whose $K_\mathrm{eff}$ exceeds twice the number of chains, which is what walkers frozen
+ * at distinct positions look like (the rows vary, the ensemble mean does not). Both return
+ * TRUE with @required_niter as above; #NcmFitESMCMC bounds the number of rounds.
+ *
+ * Returns: TRUE when more sampling is called for.
+ */
+gboolean
+ncm_mset_catalog_tau_needs_more (NcmMSetCatalog *mcat, guint *required_niter)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+  const guint free_params_len = ncm_mset_fparams_len (self->mset);
+  const guint fpi             = self->nadd_vals;
+  const guint fpf             = free_params_len + self->nadd_vals;
+  const gdouble factor        = ncm_stats_acorr_get_reliability_factor (self->acorr);
+  gdouble max_tau             = 1.0;
+  gboolean needs              = FALSE;
+  guint p;
+
+  _ncm_mset_catalog_check_unweighted (self, G_STRFUNC);
+
+  for (p = fpi; p < fpf; p++)
   {
-    switch (self->tau_method)
-    {
-      case NCM_MSET_CATALOG_TAU_METHOD_ACOR:
+    const NcmStatsAcorrDiag diag = ncm_stats_acorr_get_diag (self->acorr, p);
 
-        for (p = 0; p < total; p++)
-        {
-          const gdouble tau = ncm_stats_vec_get_subsample_autocorr_tau (self->pstats, p, self->nchains, 0);
+    if (diag & (NCM_STATS_ACORR_DIAG_SHORT_CHAIN | NCM_STATS_ACORR_DIAG_ZERO_VARIANCE))
+      needs = TRUE;
 
-          ncm_vector_set (self->tau, p, tau);
-        }
+    /* K_eff is estimated from niter ensemble means, so it scatters around K by
+     * ~sqrt (2 / niter); frozen walkers at distinct positions give K_eff >> K. */
+    if ((self->nchains > 1) && (ncm_mset_catalog_get_keff (mcat, p) > 2.0 * self->nchains))
+      needs = TRUE;
 
-        break;
-      case NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL:
-
-        for (p = 0; p < total; p++)
-        {
-          gdouble spec0;
-          guint c_order     = 0;
-          const gdouble ess = ncm_stats_vec_ar_ess (self->e_mean_stats, p, NCM_STATS_VEC_AR_AICC, &spec0, &c_order);
-
-          ncm_vector_set (self->tau, p, ncm_stats_vec_nitens (self->pstats) / (ess * self->nchains));
-        }
-
-        break;
-      default:
-        g_assert_not_reached ();
-        break;
-    }
+    max_tau = GSL_MAX (max_tau, ncm_stats_acorr_get_tau (self->acorr, p));
   }
+
+  if (required_niter != NULL)
+    required_niter[0] = (guint) ceil (factor * max_tau);
+
+  return needs;
+}
+
+/**
+ * ncm_mset_catalog_get_keff:
+ * @mcat: a #NcmMSetCatalog
+ * @p: parameter id
+ *
+ * Effective number of independent chains per iteration for parameter @p, the variance
+ * over all rows divided by the variance of the ensemble mean. It is the number of chains
+ * when they are independent at a given iteration, one when they move together, and above
+ * the number of chains when the ensemble mean is steadier than independent chains would
+ * make it, which is what walkers held in place at different positions look like.
+ *
+ * For a catalog with a single chain it is one.
+ *
+ * Returns: the effective number of chains.
+ */
+gdouble
+ncm_mset_catalog_get_keff (NcmMSetCatalog *mcat, guint p)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+  gdouble var_e;
+
+  _ncm_mset_catalog_check_unweighted (self, G_STRFUNC);
+
+  if (self->nchains == 1)
+    return 1.0;
+
+  var_e = ncm_stats_acorr_get_var (self->acorr, p);
+
+  if (var_e <= 0.0)
+    return 1.0;
+
+  return ncm_stats_vec_get_var (self->pstats, p) / var_e;
+}
+
+/**
+ * ncm_mset_catalog_get_ess:
+ * @mcat: a #NcmMSetCatalog
+ * @p: parameter id
+ *
+ * Effective sample size of parameter @p over the whole catalog,
+ * $K_\mathrm{eff}\,n_\mathrm{iter}/\tau$. No assumption is made about the chains being
+ * independent within an iteration: whatever correlation they carry is already in
+ * $K_\mathrm{eff}$, see ncm_mset_catalog_get_keff().
+ *
+ * Returns: the effective sample size.
+ */
+gdouble
+ncm_mset_catalog_get_ess (NcmMSetCatalog *mcat, guint p)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  return ncm_mset_catalog_get_keff (mcat, p) * ncm_stats_acorr_get_ess (self->acorr, p);
 }
 
 /**
@@ -5256,6 +5629,15 @@ ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc, const guint thin)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
+  /* This rewrites the catalog in place: the file is renamed to <file>.<n>.bak and a fresh
+   * one written, which goes around the read-only FITS handle opened by
+   * ncm_mset_catalog_new_from_file_ro(). No analysis path needs that - the numcosmo CLI
+   * resolves --burnin/--tail to a row count at read time and thins the analysis rather
+   * than the file - so a read-only catalog reaching here is a programming error. The
+   * superseded tools/mcat_analyze.c is the one caller that did it, silently destroying
+   * the catalog it was asked only to read. */
+  g_return_if_fail (!self->readonly);
+
   g_assert_cmpuint (thin, >=, 1);
   g_assert_cmpuint (tc,   >=, 0);
 
@@ -5267,6 +5649,11 @@ ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc, const guint thin)
 
     if (file != NULL)
       ncm_mset_catalog_set_file (mcat, NULL);
+
+    /* Iterations before the Markovian chain, in the old numbering; after the cut and the
+     * thinning the same rows are the first ceil ((mark_iters - tc) / thin) kept iterations. */
+    const gint mark_iters = (ncm_mset_catalog_get_markovian_id (mcat) - self->first_id + (gint) self->nchains - 1) / (gint) self->nchains;
+    const gint kept_iters = (mark_iters > (gint) tc) ? (mark_iters - (gint) tc + (gint) thin - 1) / (gint) thin : 0;
 
     ncm_mset_catalog_reset (mcat);
     ncm_mset_catalog_set_first_id (mcat, self->first_id + tc * self->nchains);
@@ -5286,6 +5673,8 @@ ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc, const guint thin)
         _ncm_mset_catalog_post_update (mcat, row_t);
       }
     }
+
+    self->markovian_id = MIN (self->first_id + kept_iters * (gint) self->nchains, self->cur_id + 1);
 
     if (file != NULL)
     {
@@ -5352,6 +5741,9 @@ ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file)
   if (file != NULL)
     ncm_mset_catalog_set_file (mcat, NULL);
 
+  const guint mark_rows = ncm_mset_catalog_get_markovian_id (mcat) - self->first_id;
+  guint kept_before     = 0;
+
   ncm_mset_catalog_reset (mcat);
   self->nchains = 1;
   ncm_mset_catalog_set_first_id (mcat, self->first_id);
@@ -5363,10 +5755,20 @@ ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file)
     NcmVector *row_t = g_ptr_array_index (rows, i);
 
     if (ncm_mset_fparam_valid_bounds_offset (self->mset, row_t, self->nadd_vals))
+    {
       _ncm_mset_catalog_post_update (mcat, row_t);
+
+      if (i < mark_rows)
+        kept_before++;
+    }
     else
+    {
       ndel++;
+    }
   }
+
+  /* Rows are renumbered: the Markovian chain starts after the kept rows that preceded it. */
+  self->markovian_id = self->first_id + kept_before;
 
   ncm_mset_catalog_set_file (mcat, out_file);
   ncm_mset_catalog_sync (mcat, TRUE);
@@ -5390,7 +5792,15 @@ void
 ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-  const gint last_t           = ncm_stats_vec_nrows (self->pstats);
+
+  /* These three rewrite the catalog in place: the file is renamed to <file>.<n>.bak and a
+   * fresh one written, which goes around the read-only FITS handle opened by
+   * ncm_mset_catalog_new_from_file_ro(). Burn-in belongs at read time - the burnin argument
+   * of the _ro constructor, or --burnin on catalog analyze and plot-corner - so a read-only
+   * catalog reaching here is a programming error, not a request. */
+  g_return_if_fail (!self->readonly);
+
+  const gint last_t = ncm_stats_vec_nrows (self->pstats);
 
   if (last_t > 0)
   {
@@ -5404,6 +5814,8 @@ ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat)
       gchar *file     = g_strdup (ncm_mset_catalog_peek_filename (mcat));
       guint t;
 
+      const gint markovian_id = ncm_mset_catalog_get_markovian_id (mcat);
+
       ncm_mset_catalog_set_file (mcat, NULL);
       ncm_mset_catalog_reset (mcat);
 
@@ -5413,6 +5825,10 @@ ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat)
 
         _ncm_mset_catalog_post_update (mcat, row_t);
       }
+
+      /* The removed rows may have been the ones the chain was to start at: the id then sits
+       * at the row after the new last one, i.e. the phase is still open. */
+      self->markovian_id = MIN (markovian_id, self->cur_id + 1);
 
       {
         guint bak_n = 0;

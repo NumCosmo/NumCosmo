@@ -54,9 +54,12 @@ struct _NcmFitESMCMCWalkerClass
   gdouble (*prob_norm) (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
   void (*clean) (NcmFitESMCMCWalker *walker, guint ki, guint kf);
   const gchar *(*desc) (NcmFitESMCMCWalker *walker);
+  void (*start_run) (NcmFitESMCMCWalker *walker, gboolean initial, guint exploration_done);
+  void (*end_run) (NcmFitESMCMCWalker *walker);
+  gboolean (*is_markovian) (NcmFitESMCMCWalker *walker);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[8];
+  gpointer padding[5];
 };
 
 NcmFitESMCMCWalker *ncm_fit_esmcmc_walker_ref (NcmFitESMCMCWalker *walker);
@@ -74,6 +77,9 @@ gdouble ncm_fit_esmcmc_walker_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta
 gdouble ncm_fit_esmcmc_walker_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
 void ncm_fit_esmcmc_walker_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf);
 const gchar *ncm_fit_esmcmc_walker_desc (NcmFitESMCMCWalker *walker);
+void ncm_fit_esmcmc_walker_start_run (NcmFitESMCMCWalker *walker, gboolean initial, guint exploration_done);
+void ncm_fit_esmcmc_walker_end_run (NcmFitESMCMCWalker *walker);
+gboolean ncm_fit_esmcmc_walker_is_markovian (NcmFitESMCMCWalker *walker);
 
 G_END_DECLS
 

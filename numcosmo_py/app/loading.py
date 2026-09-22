@@ -28,6 +28,7 @@ This module contains dataclasses and subcommands to load data from files.
 """
 
 import dataclasses
+import sys
 from typing import Optional, Annotated, cast
 
 from pathlib import Path
@@ -85,6 +86,8 @@ class LoadExperiment(AppLogging):
 
     def __post_init__(self) -> None:
         """Load the experiment file and prepare the experiment."""
+        register_firecrown()
+
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
         builders_file = self.experiment.with_suffix(".builders.yaml")
@@ -224,6 +227,39 @@ class LoadExperiment(AppLogging):
         self.close_logging()
 
 
+def register_firecrown() -> None:
+    """Register the Firecrown-NumCosmo connector in the GObject registry.
+
+    Importing the connector is what registers it, and registration is needed only to
+    deserialize a model that depends on it. The import reaches crow, CLMM and healpy, so
+    it is done here rather than when the command line starts: `numcosmo --help` and
+    every command that reads no serialized model pay nothing for it. Does nothing when
+    Firecrown is absent.
+    """
+    # The dependency chain touches the process's standard streams while it is
+    # imported: cosmosis calls faulthandler.enable(), which needs a real file
+    # descriptor. Deferring the import moved it inside whatever the caller has
+    # installed in their place, and an in-memory buffer -- what a command-line test
+    # harness uses -- has no descriptor to give. So the import runs against the
+    # process's own streams, which is where it ran when it still happened at module
+    # load.
+    stdout, stderr = sys.stdout, sys.stderr
+
+    if sys.__stdout__ is not None:
+        sys.stdout = sys.__stdout__
+
+    if sys.__stderr__ is not None:
+        sys.stderr = sys.__stderr__
+
+    try:
+        # pylint: disable-next=import-outside-toplevel,unused-import
+        import firecrown.connector.numcosmo.numcosmo  # noqa: F401
+    except ImportError:
+        pass
+    finally:
+        sys.stdout, sys.stderr = stdout, stderr
+
+
 def _catalog_indices(
     mcat: Ncm.MSetCatalog,
     total_columns: int,
@@ -275,30 +311,39 @@ class LoadedCatalog:
     total_columns: int
     nchains: int
     indices: list[int]
+    burnin: int
+    burnin_raised_from: Optional[int]
+    markovian_start: int
     full_stats: Ncm.StatsVec
     stats: Ncm.StatsVec
     nitems: int
 
 
-def _resolve_burnin_rows(mcmc_file: Path, burnin: int, tail: Optional[int]) -> int:
+def _resolve_burnin_rows(
+    mcmc_file: Path, burnin: int, tail: Optional[int]
+) -> tuple[int, int, Optional[int], int]:
     """Resolve a --burnin/--tail request (in iterations) to a row count.
 
     `burnin` discards the first N iterations (ensemble steps); `tail` keeps
     only the last N instead. Peeks the catalog's row/chain counts first
     (cheap: a few FITS header keys, no model-set deserialization) to convert
     iterations to rows and validate the request before the catalog is
-    actually opened.
+    actually opened. The catalog's markovian-id (first row of the Markovian
+    chain) is a floor on `burnin`: rows before it were produced by the
+    initial ensemble or by an exploration phase and are never analysed.
+
+    Returns the row count, the iterations it corresponds to, the value the
+    request was raised from (None when the request stood), and the iteration
+    at which the Markovian chain starts.
     """
     if tail is not None and burnin != 0:
         raise typer.BadParameter("Give at most one of --burnin and --tail.")
 
-    if burnin == 0 and tail is None:
-        return 0
-
-    nrows, nchains, _first_id = Ncm.MSetCatalog.peek_info_from_file(
-        mcmc_file.absolute().as_posix()
-    )
+    filename = mcmc_file.absolute().as_posix()
+    nrows, nchains, first_id = Ncm.MSetCatalog.peek_info_from_file(filename)
     n_iterations = nrows // nchains
+    markovian_id = Ncm.MSetCatalog.peek_markovian_id_from_file(filename)
+    markovian_iterations = -(-(markovian_id - first_id) // nchains)
 
     if tail is not None:
         if tail < 0:
@@ -307,6 +352,12 @@ def _resolve_burnin_rows(mcmc_file: Path, burnin: int, tail: Optional[int]) -> i
     else:
         burnin_iterations = burnin
 
+    raised_from = None
+
+    if markovian_iterations > burnin_iterations:
+        raised_from = burnin_iterations
+        burnin_iterations = markovian_iterations
+
     if burnin_iterations > n_iterations:
         raise typer.BadParameter(
             f"--burnin of {burnin_iterations} iteration(s) exceeds catalog "
@@ -314,7 +365,12 @@ def _resolve_burnin_rows(mcmc_file: Path, burnin: int, tail: Optional[int]) -> i
             f"({nrows} rows, {nchains} chains)."
         )
 
-    return burnin_iterations * nchains
+    return (
+        burnin_iterations * nchains,
+        burnin_iterations,
+        raised_from,
+        markovian_iterations,
+    )
 
 
 def load_catalog(
@@ -332,7 +388,11 @@ def load_catalog(
     if not mcmc_file.exists():
         raise typer.BadParameter(f"MCMC file {mcmc_file} not found.")
 
-    burnin_rows = _resolve_burnin_rows(mcmc_file, burnin, tail)
+    burnin_rows, burnin_iterations, burnin_raised_from, markovian_start = (
+        _resolve_burnin_rows(mcmc_file, burnin, tail)
+    )
+
+    register_firecrown()
 
     mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_file_ro(
         mcmc_file.absolute().as_posix(), burnin_rows
@@ -372,6 +432,9 @@ def load_catalog(
         total_columns=total_columns,
         nchains=nchains,
         indices=indices,
+        burnin=burnin_iterations,
+        burnin_raised_from=burnin_raised_from,
+        markovian_start=markovian_start,
         full_stats=full_stats,
         stats=stats,
         nitems=nitems,
@@ -467,3 +530,8 @@ class LoadCatalog(AppLogging):
         self.full_stats = loaded.full_stats
         self.stats = loaded.stats
         self.nitems = loaded.nitems
+        # the burn-in actually applied, which the markovian-id floor may have raised
+        # above the requested `burnin`
+        self.burnin_applied = loaded.burnin
+        self.burnin_raised_from = loaded.burnin_raised_from
+        self.markovian_start = loaded.markovian_start

@@ -55,6 +55,10 @@ math_tests = [
         'sources': ['ncm/stats/test_ncm_stats_vec.c'],
     },
     {
+        'name': 'ncm_stats_acorr',
+        'sources': ['ncm/stats/test_ncm_stats_acorr.c'],
+    },
+    {
         'name': 'ncm_stats_dist1d_epdf',
         'sources': ['ncm/stats/test_ncm_stats_dist1d_epdf.c'],
     },
@@ -282,6 +286,7 @@ math_tests = [
         'sources': [
             'ncm/fit/test_ncm_fit_esmcmc.c',
             'ncm/fit/test_ncm_fit_esmcmc_common.c',
+            'ncm/fit/test_ncm_fit_esmcmc_parity.c',
         ],
         'timeout': 0,
         'suite': ['c', 'omp'],
@@ -291,6 +296,7 @@ math_tests = [
         'sources': [
             'ncm/fit/test_ncm_fit_esmcmc_recovery.c',
             'ncm/fit/test_ncm_fit_esmcmc_common.c',
+            'ncm/fit/test_ncm_fit_esmcmc_parity.c',
         ],
         'timeout': 0,
         'suite': ['c-statistical', 'omp'],
@@ -645,7 +651,10 @@ if mpi_c_dep.found()
         c_tests_mpi = [
             {
                 'name': 'ncm_fit_esmcmc_mpi',
-                'sources': ['ncm/fit/test_ncm_fit_esmcmc_mpi.c'],
+                'sources': [
+                    'ncm/fit/test_ncm_fit_esmcmc_mpi.c',
+                    'ncm/fit/test_ncm_fit_esmcmc_parity.c',
+                ],
                 'timeout': 0,
             },
         ]

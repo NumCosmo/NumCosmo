@@ -345,17 +345,17 @@ $t_j = \cos(j\pi/2^k)$, whose grids nest so that going from level $k$ to $k+1$
 evaluates only the new odd nodes, and the level is doubled until the
 coefficients shared by two successive levels agree,
 $$
-\|c^{(2N)}_{0:N} - c^{(N)}\|_2^2 < \max\!\big(\tau_F^2\,\|c^{(2N)}\|_2^2,\; \epsilon_{\rm abs}^2\big).
+\|c^{(2N)}_{0:N} - c^{(N)}\|_2^2 < \max\!\big(\epsilon_F^2\,\|c^{(2N)}\|_2^2,\; \epsilon_{\rm abs}^2\big).
 \tag{8}
 $$
 The transform is a type-I DCT and the details are on the
-[Spectral Methods](spectral.qmd) page. The default $\tau_F = 10^{-8}$ is the
+[Spectral Methods](spectral.qmd) page. The default $\epsilon_F = 10^{-8}$ is the
 looser of the two solver tolerances and therefore the one that bounds the
-result; the ODE tolerance $\tau = 10^{-13}$ is well below it. Two consequences
-follow. A kernel evaluated with noise above $\tau_F$ makes Eq. (8) fail on
+result; the ODE tolerance $\epsilon_{\rm ODE} = 10^{-13}$ is well below it. Two consequences
+follow. A kernel evaluated with noise above $\epsilon_F$ makes Eq. (8) fail on
 every level, and the expansion refuses to return rather than returning a
 wrong number. And anything fitted downstream to the samples this stage produces
-cannot be asked for more than $\tau_F$;
+cannot be asked for more than $\epsilon_F$;
 [Two representations of the window](#two-representations-of-the-window)
 enforces that.
 
@@ -622,10 +622,10 @@ Both representations are fits to the same samples on the same domain, and
 either can be selected for a whole computation through
 [[numcosmo|NcXcor]]:closure-type. The default is the Chebyshev one.
 
-Cubic spline. The domain is refined by inserting midpoints where a held-out
+Cubic spline. The domain is refined by inserting midpoints where an out-of-sample
 test fails: a not-a-knot cubic spline is built from the accepted points only,
 evaluated at the candidate, and the candidate is accepted when
-$\|f - s\|_2 \le \tau_r \|f\|_2 + \tau_a\, W_{\max}$ in the norm over the
+$\|f - s\|_2 \le \epsilon_r \|f\|_2 + \epsilon_a\, W_{\max}$ in the norm over the
 block, with $W_{\max}$ the smallest of the block's per-multipole peaks. The two
 tolerances add, so the larger one decides where refinement stops. A jump is
 handled by continuing a dropped component beyond its boundary as
@@ -639,7 +639,7 @@ this is a limitation of the spline representation at non-default settings.
 Chebyshev panels. The domain is split into panels on which the whole block
 is expanded on one Chebyshev--Lobatto grid, doubling the order from 9 to at most
 33 nodes until Eq. (8) holds for every multipole, with $\epsilon_{\rm abs} =
-\tau_a W_{\max}$; a panel that does not converge at 33 is bisected and its
+\epsilon_a W_{\max}$; a panel that does not converge at 33 is bisected and its
 evaluations discarded. Three rules constrain where a panel may sit and when it
 may be accepted. First, every component boundary found by the expansion is a
 panel edge, and while a panel is fitted each component is either on or off for
@@ -656,7 +656,7 @@ fall strictly inside it, which are independent of the Lobatto nodes and sit on
 every component's scale; a panel whose first grid straddled a narrow peak
 passes Eq. (8) on two levels of a small smooth function, and is caught here
 and bisected instead. Third, the fit tolerance may not be tighter than the
-sampler's $\tau_F$, which is enforced as a fatal check: below it the samples
+sampler's $\epsilon_F$, which is enforced as a fatal check: below it the samples
 are not a smooth function of $k$ and neither representation converges.
 
 ```{python}
@@ -854,19 +854,19 @@ print(f"C_2: library {vp.get(0):.15e}   GL(40) on the same cells {ref:.15e}   re
 
 | quantity | how it is set | default |
 |---|---|---|
-| truncation order $N$ of each panel solve | adaptive QR, stopping test with floor (9) | $\tau = 10^{-13}$ |
-| Chebyshev order of the forcing on a panel | level doubling until (11) | $\tau_F = 10^{-8}$ |
+| truncation order $N$ of each panel solve | adaptive QR, stopping test with floor (9) | $\epsilon_{\rm ODE} = 10^{-13}$ |
+| Chebyshev order of the forcing on a panel | level doubling until (11) | $\epsilon_F = 10^{-8}$ |
 | panel grid in $x$ | prescribed, two knots per decade on $[10^{-4}, 10^6]$ | 21 knots |
 | partial panels at the ends | smallest half-octave sub-cell containing the piece | --- |
 | multipoles per block | prescribed by the caller | 8 |
 | domain in $k$ | expansion until $\|W\| < \epsilon W_{\rm ref}$ five times | $\epsilon = 10^{-5}$, $\alpha = 0.2$ |
 | component boundaries | same test per group of touching components | --- |
-| spline knots | held-out midpoint refinement | $\tau_r = \tau_a = 10^{-4}$ |
+| spline knots | out-of-sample midpoint refinement | $\epsilon_r = \epsilon_a = 10^{-4}$ |
 | Chebyshev panels in $k$ | bisection with order cap, cuts at boundaries, sample check | cap $2^5+1$ |
 | outer integral | exact on the common refinement | none |
 
 Two floors remain that no tolerance moves. The sampler's own accuracy
-$\tau_F$ bounds every fit made to its samples. And the result is a sum of
+$\epsilon_F$ bounds every fit made to its samples. And the result is a sum of
 per-panel boundary terms that can cancel, so the attainable relative accuracy
 is bounded by the cancellation ratio $\sum_p |I_p| / |\sum_p I_p|$ times the
 machine precision; the per-panel record exists so that this ratio can be

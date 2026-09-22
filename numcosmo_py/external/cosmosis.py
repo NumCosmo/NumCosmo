@@ -28,7 +28,6 @@ import os
 import math
 from typing import List, Dict, Tuple, Optional
 from pathlib import Path
-from enum import StrEnum, auto
 
 from cosmosis.runtime.config import Inifile
 import cosmosis.runtime.logs
@@ -49,22 +48,10 @@ except ImportError:
 from firecrown.connector.numcosmo.numcosmo import NumCosmoFactory, MappingNumCosmo
 
 from numcosmo_py import Ncm, Nc, GObject, to_camel_case
-
-
-class LinearMatterPowerSpectrum(StrEnum):
-    """Possible linear matter power spectrum models."""
-
-    NONE = auto()
-    BBKS = auto()
-    EISENSTEIN_HU = auto()
-    CLASS = auto()
-
-
-class NonLinearMatterPowerSpectrum(StrEnum):
-    """Possible non-linear matter power spectrum models."""
-
-    NONE = auto()
-    HALOFIT = auto()
+from numcosmo_py.external.cosmosis_types import (
+    LinearMatterPowerSpectrum,
+    NonLinearMatterPowerSpectrum,
+)
 
 
 def convert_parameter(p: Parameter, required_parameters: List[str]) -> Ncm.SParam:

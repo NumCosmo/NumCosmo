@@ -33,6 +33,11 @@
  * The rest of the calculation follows #NcmStatsDist and #NcmStatsDistKDE, with
  * a different covariance matrix and normalization factor per kernel.
  *
+ * With #NcmStatsDist:center-shrink enabled the shrinkage scale $s^2$ is the mean
+ * of $\mathrm{tr}(C_i \Sigma^{-1}) / d$ over the local covariances $C_i$, so that the
+ * mixture covariance matches the sample covariance $\Sigma$; the local covariances
+ * themselves are still estimated around the original sample points.
+ *
  * The caller must supply @sdk and @CV_type through ncm_stats_dist_vkde_new(),
  * @y through ncm_stats_dist_add_obs(), @split_frac through
  * ncm_stats_dist_set_split_frac(), @over_smooth through
@@ -74,6 +79,7 @@ enum
   PROP_0,
   PROP_LOCAL_FRAC,
   PROP_USE_ROT_HREF,
+  PROP_POINTS_PER_DIM,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistVKDE, ncm_stats_dist_vkde, NCM_TYPE_STATS_DIST_KDE)
@@ -139,11 +145,13 @@ ncm_stats_dist_vkde_init (NcmStatsDistVKDE *sdvkde)
 {
   NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde);
 
-  self->cov_array = g_ptr_array_new ();
-  self->lnnorms   = NULL;
+  self->cov_array  = g_ptr_array_new ();
+  self->cov_array0 = g_ptr_array_new ();
+  self->lnnorms    = NULL;
 
-  self->local_frac   = 0.0;
-  self->use_rot_href = FALSE;
+  self->local_frac     = 0.0;
+  self->points_per_dim = 0.0;
+  self->use_rot_href   = FALSE;
 
   self->mp_stats_vec = ncm_memory_pool_new (&_ncm_stats_dist_vkde_stats_vec_new, sdvkde,
                                             (GDestroyNotify) & ncm_stats_vec_free);
@@ -152,6 +160,7 @@ ncm_stats_dist_vkde_init (NcmStatsDistVKDE *sdvkde)
                                             &_ncm_stats_dist_vkde_eval_vars_free);
 
   g_ptr_array_set_free_func (self->cov_array, (GDestroyNotify) ncm_matrix_free);
+  g_ptr_array_set_free_func (self->cov_array0, (GDestroyNotify) ncm_matrix_free);
 }
 
 static void
@@ -168,6 +177,9 @@ _ncm_stats_dist_vkde_set_property (GObject *object, guint prop_id, const GValue 
       break;
     case PROP_USE_ROT_HREF:
       ncm_stats_dist_vkde_set_use_rot_href (sdvkde, g_value_get_boolean (value));
+      break;
+    case PROP_POINTS_PER_DIM:
+      ncm_stats_dist_vkde_set_points_per_dim (sdvkde, g_value_get_double (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -192,6 +204,9 @@ _ncm_stats_dist_vkde_get_property (GObject *object, guint prop_id, GValue *value
     case PROP_USE_ROT_HREF:
       g_value_set_boolean (value, ncm_stats_dist_vkde_get_use_rot_href (sdvkde));
       break;
+    case PROP_POINTS_PER_DIM:
+      g_value_set_double (value, ncm_stats_dist_vkde_get_points_per_dim (sdvkde));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -207,6 +222,7 @@ _ncm_stats_dist_vkde_dispose (GObject *object)
   ncm_vector_clear (&self->lnnorms);
 
   g_clear_pointer (&self->cov_array, g_ptr_array_unref);
+  g_clear_pointer (&self->cov_array0, g_ptr_array_unref);
 
   if (self->mp_stats_vec != NULL)
   {
@@ -238,6 +254,8 @@ static void _ncm_stats_dist_vkde_set_dim (NcmStatsDist *sd, const guint dim);
 static gdouble _ncm_stats_dist_vkde_get_href (NcmStatsDist *sd);
 static void _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array);
 static void _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM);
+static void _ncm_stats_dist_vkde_update_centers (NcmStatsDist *sd);
+static void _ncm_stats_dist_vkde_update_kernel_norms (NcmStatsDist *sd);
 static NcmMatrix *_ncm_stats_dist_vkde_peek_cov_decomp (NcmStatsDist *sd, guint i);
 static gdouble _ncm_stats_dist_vkde_get_lnnorm (NcmStatsDist *sd, guint i);
 static gdouble _ncm_stats_dist_vkde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
@@ -271,15 +289,36 @@ ncm_stats_dist_vkde_class_init (NcmStatsDistVKDEClass *klass)
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  base_class->set_dim            = &_ncm_stats_dist_vkde_set_dim;
-  base_class->get_href           = &_ncm_stats_dist_vkde_get_href;
-  base_class->prepare_kernel     = &_ncm_stats_dist_vkde_prepare_kernel;
-  base_class->compute_IM         = &_ncm_stats_dist_vkde_compute_IM;
-  base_class->peek_cov_decomp    = &_ncm_stats_dist_vkde_peek_cov_decomp;
-  base_class->get_lnnorm         = &_ncm_stats_dist_vkde_get_lnnorm;
-  base_class->eval_weights       = &_ncm_stats_dist_vkde_eval_weights;
-  base_class->eval_weights_m2lnp = &_ncm_stats_dist_vkde_eval_weights_m2lnp;
-  base_class->reset              = &_ncm_stats_dist_vkde_reset;
+  /**
+   * NcmStatsDistVKDE:points-per-dim:
+   *
+   * Number of nearest neighbors per dimension used for each local scale matrix,
+   * $k = \min(n, \lceil c\, d \rceil)$ with $c$ this value, $d$ the dimension and $n$ the
+   * sample size. It replaces #NcmStatsDistVKDE:local-frac when positive: the neighbor
+   * count follows what a $d \times d$ covariance estimate needs, so a small sample turns
+   * every local covariance into the global one (the KDE limit) while a large sample keeps
+   * the kernels local. Zero (the default) keeps the fraction of the sample.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_POINTS_PER_DIM,
+                                   g_param_spec_double ("points-per-dim",
+                                                        NULL,
+                                                        "Nearest neighbors per dimension for the local covariances (0: use local-frac)",
+                                                        0.0, 1.0e6, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  base_class->set_dim             = &_ncm_stats_dist_vkde_set_dim;
+  base_class->get_href            = &_ncm_stats_dist_vkde_get_href;
+  base_class->prepare_kernel      = &_ncm_stats_dist_vkde_prepare_kernel;
+  base_class->compute_IM          = &_ncm_stats_dist_vkde_compute_IM;
+  base_class->update_centers      = &_ncm_stats_dist_vkde_update_centers;
+  base_class->update_kernel_norms = &_ncm_stats_dist_vkde_update_kernel_norms;
+  base_class->peek_cov_decomp     = &_ncm_stats_dist_vkde_peek_cov_decomp;
+  base_class->get_lnnorm          = &_ncm_stats_dist_vkde_get_lnnorm;
+  base_class->eval_weights        = &_ncm_stats_dist_vkde_eval_weights;
+  base_class->eval_weights_m2lnp  = &_ncm_stats_dist_vkde_eval_weights_m2lnp;
+  base_class->reset               = &_ncm_stats_dist_vkde_reset;
 }
 
 static void
@@ -292,6 +331,7 @@ _ncm_stats_dist_vkde_set_dim (NcmStatsDist *sd, const guint dim)
     NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde);
 
     g_ptr_array_set_size (self->cov_array, 0);
+    g_ptr_array_set_size (self->cov_array0, 0);
   }
 }
 
@@ -300,18 +340,17 @@ _ncm_stats_dist_vkde_get_href (NcmStatsDist *sd)
 {
   NcmStatsDistVKDE *sdvkde             = NCM_STATS_DIST_VKDE (sd);
   NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde);
+  NcmStatsDistPrivate * const ppself   = ncm_stats_dist_get_instance_private (sd);
 
   if (self->use_rot_href)
   {
     /* Chain up : start */
     const gdouble href_base = NCM_STATS_DIST_CLASS (ncm_stats_dist_vkde_parent_class)->get_href (sd);
 
-    return href_base / self->local_frac;
+    return href_base * ppself->n_obs / (1.0 * ncm_stats_dist_vkde_get_n_neighbors (sdvkde, ppself->n_obs));
   }
   else
   {
-    NcmStatsDistPrivate * const ppself = ncm_stats_dist_get_instance_private (sd);
-
     return ppself->over_smooth;
   }
 }
@@ -405,7 +444,7 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
    * vector location.
    */
   {
-    const size_t k = GSL_MAX (self->local_frac * ppself->n_obs, 2);
+    const size_t k = ncm_stats_dist_vkde_get_n_neighbors (sdvkde, ppself->n_obs);
 
     #pragma omp parallel for schedule(dynamic, 1) if (ppself->use_threads)
 
@@ -444,6 +483,7 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
         {
           case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
           case NCM_STATS_DIST_KDE_COV_TYPE_FIXED:
+
             sample_cov = ncm_matrix_ref (ncm_stats_vec_peek_cov_matrix (sample, 0));
             break;
           case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
@@ -473,6 +513,42 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
       ncm_stats_vec_reset (sample, TRUE);
       ncm_memory_pool_return (sample_ptr);
     }
+
+    /*
+     * What center shrinkage needs from a variable-bandwidth estimator: the mean of the
+     * kernel scale matrices. The factors are copied before the transform is applied,
+     * since the applied ones follow the bandwidth.
+     */
+    {
+      NcmMatrix *C_decomp, *mean_cov;
+      NcmMatrix *B = ncm_matrix_new (ppself->d, ppself->d);
+      guint j;
+
+      _ncm_stats_dist_center_matrices (sd, &C_decomp, &mean_cov);
+
+      {
+        const guint cur_size = self->cov_array0->len;
+
+        g_ptr_array_set_size (self->cov_array0, ppself->n_kernels);
+
+        for (j = cur_size; j < ppself->n_kernels; j++)
+          g_ptr_array_index (self->cov_array0, j) = ncm_matrix_new (ppself->d, ppself->d);
+      }
+
+      gsl_matrix_set_zero (ncm_matrix_gsl (mean_cov));
+
+      for (j = 0; j < ppself->n_kernels; j++)
+      {
+        NcmMatrix *U_j = g_ptr_array_index (self->cov_array, j);
+
+        ncm_matrix_memcpy (g_ptr_array_index (self->cov_array0, j), U_j);
+        ncm_matrix_memcpy (B, U_j);
+        _ncm_stats_dist_zero_strict_lower (B);
+        ncm_matrix_dgemm (mean_cov, 'T', 'N', 1.0 / (1.0 * ppself->n_kernels), B, B, 1.0);
+      }
+
+      ncm_matrix_free (B);
+    }
   }
   kdtree_destroy (tree);
 }
@@ -484,7 +560,7 @@ _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
   NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde);
   NcmStatsDistPrivate * const ppself   = ncm_stats_dist_get_instance_private (sd);
 
-  if (self->local_frac * ppself->n_obs < 2)
+  if (ncm_stats_dist_vkde_get_n_neighbors (sdvkde, ppself->n_obs) < 2)
     g_error ("Too few observations.\n"
              "\tThe number of observations is too small to use the local covariance method.\n"
              "\tThe local fraction = %f times number of observations %d is less than 2.",
@@ -494,6 +570,49 @@ _ncm_stats_dist_vkde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
   /* Chain up : start */
   NCM_STATS_DIST_CLASS (ncm_stats_dist_vkde_parent_class)->prepare_kernel (sd, sample_array);
   _ncm_stats_dist_vkde_build_cov_array_kdtree (sd, sample_array);
+}
+
+static void
+_ncm_stats_dist_vkde_update_kernel_norms (NcmStatsDist *sd)
+{
+  NcmStatsDistVKDE *sdvkde             = NCM_STATS_DIST_VKDE (sd);
+  NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde);
+  NcmStatsDistPrivate * const ppself   = ncm_stats_dist_get_instance_private (sd);
+  NcmStatsDistKernel *kernel           = ncm_stats_dist_peek_kernel (sd);
+  guint i;
+
+  /*
+   * Only the normalizations depend on the kernel; the local covariances and the tree
+   * built from them do not. Recomputing just these makes swapping the kernel cheap.
+   */
+  for (i = 0; i < ppself->n_kernels; i++)
+  {
+    NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
+
+    ncm_vector_set (self->lnnorms, i, ncm_stats_dist_kernel_get_lnnorm (kernel, cov_decomp_i));
+  }
+}
+
+static void
+_ncm_stats_dist_vkde_update_centers (NcmStatsDist *sd)
+{
+  NcmStatsDistVKDE *sdvkde             = NCM_STATS_DIST_VKDE (sd);
+  NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde);
+  NcmStatsDistPrivate * const ppself   = ncm_stats_dist_get_instance_private (sd);
+  guint i;
+
+  /*
+   * The applied factors follow the current center transform, from the untransformed
+   * copies kept by prepare_kernel(). The centers themselves are read from
+   * NcmStatsDist's own center array.
+   */
+  g_assert_cmpuint (self->cov_array0->len, ==, ppself->n_kernels);
+
+  for (i = 0; i < ppself->n_kernels; i++)
+    _ncm_stats_dist_refactor_decomp (sd, g_ptr_array_index (self->cov_array0, i), g_ptr_array_index (self->cov_array, i));
+
+  if (!_ncm_stats_dist_center_transform_is_identity (sd))
+    _ncm_stats_dist_vkde_update_kernel_norms (sd);
 }
 
 static void
@@ -517,7 +636,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
     for (i = 0; i < ppself->n_kernels; i++)
     {
       NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
-      NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
+      NcmVector *theta_i      = g_ptr_array_index (ppself->center_array, i);
       gint ret;
       guint j;
 
@@ -628,7 +747,7 @@ _ncm_stats_dist_vkde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVect
     for (i = 0; i < ppself->n_kernels; i++)
     {
       NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
-      NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
+      NcmVector *theta_i      = g_ptr_array_index (ppself->center_array, i);
 
       ncm_vector_memcpy (ev->delta_x, x);
       ncm_vector_axpy (ev->delta_x, -1.0, theta_i);
@@ -650,7 +769,7 @@ _ncm_stats_dist_vkde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVect
   {
     const gdouble Ku_i = ncm_vector_fast_get (ev->chi2, i);
     const gdouble u_i  = exp (ncm_vector_fast_get (self->lnnorms, i));
-    const gdouble w_i  = ncm_vector_fast_get (ppself->weights, i);
+    const gdouble w_i  = ncm_vector_fast_get (weights, i);
 
     s += w_i * (Ku_i / u_i);
   }
@@ -677,7 +796,7 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
     for (i = 0; i < ppself->n_kernels; i++)
     {
       NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
-      NcmVector *theta_i      = g_ptr_array_index (ppself->sample_array, i);
+      NcmVector *theta_i      = g_ptr_array_index (ppself->center_array, i);
 
       ncm_vector_memcpy (ev->delta_x, x);
       ncm_vector_axpy (ev->delta_x, -1.0, theta_i);
@@ -696,7 +815,7 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
   {
     gdouble gamma, lambda;
 
-    ncm_stats_dist_kernel_eval_sum0_gamma_lambda (ppself->kernel, ev->chi2, ppself->weights, self->lnnorms, ev->lnK, &gamma, &lambda);
+    ncm_stats_dist_kernel_eval_sum0_gamma_lambda (ppself->kernel, ev->chi2, weights, self->lnnorms, ev->lnK, &gamma, &lambda);
 
     ncm_memory_pool_return (ev_ptr);
 
@@ -835,5 +954,62 @@ ncm_stats_dist_vkde_get_use_rot_href (NcmStatsDistVKDE *sdvkde)
   NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde);
 
   return self->use_rot_href;
+}
+
+/**
+ * ncm_stats_dist_vkde_set_points_per_dim:
+ * @sdvkde: a #NcmStatsDistVKDE
+ * @points_per_dim: nearest neighbors per dimension, zero to use #NcmStatsDistVKDE:local-frac
+ *
+ * Sets #NcmStatsDistVKDE:points-per-dim. Takes effect at the next preparation.
+ *
+ */
+void
+ncm_stats_dist_vkde_set_points_per_dim (NcmStatsDistVKDE *sdvkde, const gdouble points_per_dim)
+{
+  NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde);
+
+  g_assert_cmpfloat (points_per_dim, >=, 0.0);
+  self->points_per_dim = points_per_dim;
+}
+
+/**
+ * ncm_stats_dist_vkde_get_points_per_dim:
+ * @sdvkde: a #NcmStatsDistVKDE
+ *
+ * Returns: #NcmStatsDistVKDE:points-per-dim.
+ */
+gdouble
+ncm_stats_dist_vkde_get_points_per_dim (NcmStatsDistVKDE *sdvkde)
+{
+  NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde);
+
+  return self->points_per_dim;
+}
+
+/**
+ * ncm_stats_dist_vkde_get_n_neighbors:
+ * @sdvkde: a #NcmStatsDistVKDE
+ * @n_obs: sample size
+ *
+ * Number of nearest neighbors used for each local scale matrix with a sample of @n_obs
+ * points: $\min(n_\mathrm{obs}, \lceil c\, d \rceil)$ when #NcmStatsDistVKDE:points-per-dim
+ * $c$ is positive, otherwise #NcmStatsDistVKDE:local-frac times @n_obs; at least 2.
+ *
+ * Returns: the neighbor count.
+ */
+guint
+ncm_stats_dist_vkde_get_n_neighbors (NcmStatsDistVKDE *sdvkde, const guint n_obs)
+{
+  NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde);
+  const guint d                        = ncm_stats_dist_get_dim (NCM_STATS_DIST (sdvkde));
+  gdouble k;
+
+  if (self->points_per_dim > 0.0)
+    k = GSL_MIN (1.0 * n_obs, ceil (self->points_per_dim * d));
+  else
+    k = self->local_frac * n_obs;
+
+  return (guint) GSL_MAX (k, 2.0);
 }
 

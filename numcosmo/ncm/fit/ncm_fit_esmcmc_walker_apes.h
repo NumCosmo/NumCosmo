@@ -83,22 +83,35 @@ void ncm_fit_esmcmc_walker_apes_clear (NcmFitESMCMCWalkerAPES **apes);
 void ncm_fit_esmcmc_walker_apes_set_method (NcmFitESMCMCWalkerAPES *apes, NcmFitESMCMCWalkerAPESMethod method);
 void ncm_fit_esmcmc_walker_apes_set_k_type (NcmFitESMCMCWalkerAPES *apes, NcmFitESMCMCWalkerAPESKType k_type);
 void ncm_fit_esmcmc_walker_apes_set_over_smooth (NcmFitESMCMCWalkerAPES *apes, const gdouble os);
-void ncm_fit_esmcmc_walker_apes_set_shrink (NcmFitESMCMCWalkerAPES *apes, const gdouble shrink);
-void ncm_fit_esmcmc_walker_apes_set_random_walk_prob (NcmFitESMCMCWalkerAPES *apes, const gdouble prob);
-void ncm_fit_esmcmc_walker_apes_set_random_walk_scale (NcmFitESMCMCWalkerAPES *apes, const gdouble scale);
 
 NcmFitESMCMCWalkerAPESMethod ncm_fit_esmcmc_walker_apes_get_method (NcmFitESMCMCWalkerAPES *apes);
 NcmFitESMCMCWalkerAPESKType ncm_fit_esmcmc_walker_apes_get_k_type (NcmFitESMCMCWalkerAPES *apes);
 gdouble ncm_fit_esmcmc_walker_apes_get_over_smooth (NcmFitESMCMCWalkerAPES *apes);
-gdouble ncm_fit_esmcmc_walker_apes_get_shrink (NcmFitESMCMCWalkerAPES *apes);
-gdouble ncm_fit_esmcmc_walker_apes_get_random_walk_prob (NcmFitESMCMCWalkerAPES *apes);
-gdouble ncm_fit_esmcmc_walker_apes_get_random_walk_scale (NcmFitESMCMCWalkerAPES *apes);
 
 void ncm_fit_esmcmc_walker_apes_use_interp (NcmFitESMCMCWalkerAPES *apes, gboolean use_interp);
 gboolean ncm_fit_esmcmc_walker_apes_interp (NcmFitESMCMCWalkerAPES *apes);
 
 void ncm_fit_esmcmc_walker_apes_set_use_threads (NcmFitESMCMCWalkerAPES *apes, gboolean use_threads);
 gboolean ncm_fit_esmcmc_walker_apes_get_use_threads (NcmFitESMCMCWalkerAPES *apes);
+
+void ncm_fit_esmcmc_walker_apes_set_center_shrink (NcmFitESMCMCWalkerAPES *apes, gboolean center_shrink);
+gboolean ncm_fit_esmcmc_walker_apes_get_center_shrink (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_defensive_frac (NcmFitESMCMCWalkerAPES *apes, const gdouble frac);
+gdouble ncm_fit_esmcmc_walker_apes_get_defensive_frac (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_defensive_scale (NcmFitESMCMCWalkerAPES *apes, const gdouble scale);
+gdouble ncm_fit_esmcmc_walker_apes_get_defensive_scale (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_defensive_nu (NcmFitESMCMCWalkerAPES *apes, const gdouble nu);
+gdouble ncm_fit_esmcmc_walker_apes_get_defensive_nu (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_vkde_points_per_dim (NcmFitESMCMCWalkerAPES *apes, const gdouble points_per_dim);
+gdouble ncm_fit_esmcmc_walker_apes_get_vkde_points_per_dim (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_uniform_weights (NcmFitESMCMCWalkerAPES *apes, gboolean uniform_weights);
+gboolean ncm_fit_esmcmc_walker_apes_get_uniform_weights (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_cv_type (NcmFitESMCMCWalkerAPES *apes, NcmStatsDistCV cv_type);
+NcmStatsDistCV ncm_fit_esmcmc_walker_apes_get_cv_type (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_split_frac (NcmFitESMCMCWalkerAPES *apes, const gdouble split_frac);
+gdouble ncm_fit_esmcmc_walker_apes_get_split_frac (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_auto_kernel (NcmFitESMCMCWalkerAPES *apes, gboolean auto_kernel);
+gboolean ncm_fit_esmcmc_walker_apes_get_auto_kernel (NcmFitESMCMCWalkerAPES *apes);
 
 void ncm_fit_esmcmc_walker_apes_peek_sds (NcmFitESMCMCWalkerAPES *apes, NcmStatsDist **sd0, NcmStatsDist **sd1);
 
@@ -108,6 +121,12 @@ void ncm_fit_esmcmc_walker_apes_set_cov_robust_diag (NcmFitESMCMCWalkerAPES *ape
 void ncm_fit_esmcmc_walker_apes_set_cov_robust (NcmFitESMCMCWalkerAPES *apes);
 
 void ncm_fit_esmcmc_walker_apes_set_exploration (NcmFitESMCMCWalkerAPES *apes, guint exploration);
+guint ncm_fit_esmcmc_walker_apes_get_exploration (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_exploration_qratio_floor (NcmFitESMCMCWalkerAPES *apes, const gdouble qratio_floor);
+gdouble ncm_fit_esmcmc_walker_apes_get_exploration_qratio_floor (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_exploration_stop_after (NcmFitESMCMCWalkerAPES *apes, guint stop_after);
+guint ncm_fit_esmcmc_walker_apes_get_exploration_stop_after (NcmFitESMCMCWalkerAPES *apes);
+gboolean ncm_fit_esmcmc_walker_apes_is_exploring (NcmFitESMCMCWalkerAPES *apes);
 
 G_END_DECLS
 
