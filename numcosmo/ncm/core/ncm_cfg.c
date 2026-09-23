@@ -207,8 +207,8 @@
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_cgf.h"
-#include "nc/lss/galaxy/nc_galaxy_shape_factor_moment_series.h"
-#include "nc/lss/galaxy/nc_galaxy_shape_factor_tilted_series.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_gauss.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h"
@@ -933,8 +933,8 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_FIXED_QUAD);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_SERIES_LENSED);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_CGF);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_MOMENT_SERIES);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_TILTED_SERIES);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_MOMENTS_TILT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_MOMENTS_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_GAUSS_LOCAL);

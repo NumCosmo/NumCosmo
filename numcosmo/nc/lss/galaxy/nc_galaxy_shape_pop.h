@@ -106,8 +106,7 @@ struct _NcGalaxyShapePopClass
    * contract), so a caller must have run nc_galaxy_shape_pop_prepare() on
    * @data since the population's parameters last changed -- guaranteed by
    * nc_galaxy_shape_factor_update_data_pop() and the array-prepare paths
-   * that call it unconditionally per pass. Consumed by
-   * #NcGalaxyShapeFactorMomentSeries.
+   * that call it unconditionally per pass.
    */
   gdouble (*moment_2k) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
 
