@@ -171,3 +171,77 @@ def test_data_prefetch_is_inert():
     after = [gsf.eval_ln_marginal(pop, data, *p) for p in points]
 
     assert before == after
+
+
+@pytest.mark.parametrize("conv", _CONVS.values(), ids=_CONVS.keys())
+def test_is_the_matched_gaussian(conv):
+    """ln P is the normalized Gaussian of the tabulated moments, in the
+    frame rotated by -arg g, for a shear with both components."""
+    mset, pop = _build_mset(0.3)
+    gsf = Nc.GalaxyShapeFactorMomentsGauss.new(conv)
+    data, _keep = _make_data(gsf, mset, 0.1)
+    for gmod, ang in ((0.3, np.pi / 3.0), (0.8, -2.0), (0.05, 0.4)):
+        g1, g2 = gmod * np.cos(ang), gmod * np.sin(ang)
+        mu, c_t, c_x = gsf.eval_moments(pop, data, g1, g2)
+        for e1, e2 in ((0.3, 0.2), (-0.4, 0.5), (0.0, 0.0)):
+            x = np.cos(ang) * e1 + np.sin(ang) * e2
+            y = -np.sin(ang) * e1 + np.cos(ang) * e2
+            ref = (
+                -((x - mu) ** 2) / (2.0 * c_t)
+                - y * y / (2.0 * c_x)
+                - 0.5 * np.log(c_t * c_x)
+                - np.log(2.0 * np.pi)
+            )
+            assert gsf.eval_ln_marginal(pop, data, g1, g2, e1, e2) == pytest.approx(
+                ref, abs=1.0e-12
+            )
+            assert gsf.eval_marginal(pop, data, g1, g2, e1, e2) == pytest.approx(
+                np.exp(ref), rel=1.0e-12
+            )
+
+
+def test_noise_enters_additively():
+    """The table holds the source moments; each galaxy adds its own
+    sigma_nu^2 to both second moments and leaves the mean alone."""
+    mset, pop = _build_mset(0.3)
+    gsf = Nc.GalaxyShapeFactorMomentsGauss.new(Nc.GalaxyWLObsEllipConv.TRACE)
+    d1, _a = _make_data(gsf, mset, 0.05)
+    d2, _b = _make_data(gsf, mset, 0.2)
+    for g in (0.0, 0.4, 0.9):
+        m1 = gsf.eval_moments(pop, d1, g, 0.0)
+        m2 = gsf.eval_moments(pop, d2, g, 0.0)
+        assert m2[0] == m1[0]
+        assert m2[1] - m1[1] == pytest.approx(0.2**2 - 0.05**2, abs=1.0e-14)
+        assert m2[2] - m1[2] == pytest.approx(0.2**2 - 0.05**2, abs=1.0e-14)
+
+
+def test_properties_layout_and_counter():
+    """The build knobs are properties that survive a save and load; the
+    mesh covers all of [0, 1] within the degree cap, and a tighter
+    tolerance needs no lower degree; the build counter resets."""
+    gsf = Nc.GalaxyShapeFactorMomentsGauss(
+        ellip_conv=Nc.GalaxyWLObsEllipConv.TRACE, moment_tol=1.0e-8, max_degree=32
+    )
+    assert gsf.props.moment_tol == 1.0e-8
+    assert gsf.props.max_degree == 32
+    dup = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).dup_obj(gsf)
+    assert (dup.props.moment_tol, dup.props.max_degree) == (1.0e-8, 32)
+
+    mset, pop = _build_mset(0.3)
+    data, _keep = _make_data(gsf, mset, 0.1)
+    n, top, deg = gsf.peek_layout(pop, data)
+    assert top == 1.0
+    assert n == len(deg) >= 2
+    assert all(1 <= d <= 32 for d in deg)
+
+    tight = Nc.GalaxyShapeFactorMomentsGauss(
+        ellip_conv=Nc.GalaxyWLObsEllipConv.TRACE, moment_tol=1.0e-13, max_degree=32
+    )
+    d_t, _keep2 = _make_data(tight, mset, 0.1)
+    n_t, _top_t, deg_t = tight.peek_layout(pop, d_t)
+    assert n_t == n
+    assert all(a >= b for a, b in zip(deg_t, deg))
+
+    assert gsf.get_table_build_count() == 1
+    gsf.reset_table_build_count()
+    assert gsf.get_table_build_count() == 0

@@ -104,10 +104,10 @@ def _gauss_pz_spline(zp, sigma):
     return spline
 
 
-def _prepare(shape_name, profile_name, redshift_name, n_threads):
-    """Builds a fresh dataset, runs data_prepare() on @n_threads threads and
-    returns (node-config n-nodes, node-config rule-n, per-galaxy -2lnP)."""
-    n_gal = N_GAL_OF.get(shape_name, N_GAL)
+def _build(shape_name, profile_name, redshift_name, n_gal=None):
+    """Builds a fresh FIXED_NODES + auto-nodes dataset; returns (dcwlf, mset)."""
+    if n_gal is None:
+        n_gal = N_GAL_OF.get(shape_name, N_GAL)
     cosmo = Nc.HICosmoDEXcdm.new()
     dist = Nc.Distance.new(100.0)
     hms = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.MEAN, 200.0)
@@ -172,6 +172,27 @@ def _prepare(shape_name, profile_name, redshift_name, n_threads):
     dcwlf.set_auto_nodes(True)
     dcwlf.set_obs(obs)
 
+    return dcwlf, mset
+
+
+def _m2lnP(dcwlf, mset):
+    m2lnP = Ncm.Vector.new(dcwlf.peek_obs().len())
+    dcwlf.eval_m2lnP_gal(mset, m2lnP)
+    return np.array(m2lnP.dup_array())
+
+
+def _node_config(dcwlf):
+    node_config = dcwlf.props.node_config
+    n_nodes = node_config.get_variant("n-nodes")[1].unpack()
+    rule_n = node_config.get_variant("rule-n")[1].unpack()
+    return n_nodes, rule_n
+
+
+def _prepare(shape_name, profile_name, redshift_name, n_threads):
+    """Builds a fresh dataset, runs data_prepare() on @n_threads threads and
+    returns (node-config n-nodes, node-config rule-n, per-galaxy -2lnP)."""
+    dcwlf, mset = _build(shape_name, profile_name, redshift_name)
+
     Ncm.cfg_set_openmp_nthreads(n_threads)
     try:
         dcwlf.data_prepare(mset)
@@ -180,14 +201,7 @@ def _prepare(shape_name, profile_name, redshift_name, n_threads):
             int(os.environ.get("OMP_NUM_THREADS", os.cpu_count()))
         )
 
-    node_config = dcwlf.props.node_config
-    n_nodes = node_config.get_variant("n-nodes")[1].unpack()
-    rule_n = node_config.get_variant("rule-n")[1].unpack()
-
-    m2lnP = Ncm.Vector.new(n_gal)
-    dcwlf.eval_m2lnP_gal(mset, m2lnP)
-
-    return n_nodes, rule_n, np.array(m2lnP.dup_array())
+    return (*_node_config(dcwlf), _m2lnP(dcwlf, mset))
 
 
 def _combinations():
@@ -210,3 +224,71 @@ def test_parallel_data_prepare_matches_serial(shape_name, profile_name, redshift
     assert serial[1] == parallel[1]
     assert np.all(np.isfinite(serial[2]))
     np.testing.assert_array_equal(serial[2], parallel[2])
+
+
+def _reload(dcwlf):
+    """A save and load: the node configuration travels as the node-config
+    property, the per-galaxy state does not."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    return ser.from_string(ser.to_string(dcwlf, True))
+
+
+def test_node_config_replay_skips_calibration():
+    """A reloaded dataset replays the stored node grid instead of searching
+    again, and evaluates bitwise as the dataset that chose it."""
+    dcwlf, mset = _build("var-add", "nfw", "composed")
+    assert not dcwlf.is_data_prepared()
+    dcwlf.data_prepare(mset)
+    assert dcwlf.is_data_prepared()
+    assert dcwlf.get_calib_count() > 0
+    ref = _m2lnP(dcwlf, mset)
+
+    # Saving again before any prepare keeps the loaded configuration.
+    dup = _reload(_reload(dcwlf))
+    assert dup.props.node_config is not None
+    dup.data_prepare(mset)
+
+    assert dup.get_calib_count() == 0
+    assert dup.is_data_prepared()
+    assert _node_config(dup) == _node_config(dcwlf)
+    np.testing.assert_array_equal(_m2lnP(dup, mset), ref)
+
+
+def test_node_config_mismatch_recalibrates():
+    """A stored configuration made under other settings is discarded, and
+    the recalibrated dataset is the one a fresh run with those settings
+    gives."""
+    dcwlf, mset = _build("var-add", "nfw", "composed")
+    dcwlf.data_prepare(mset)
+
+    dup = _reload(dcwlf)
+    dup.set_node_reltol(1.0e-5)
+    dup.data_prepare(mset)
+    assert dup.get_calib_count() > 0
+
+    fresh, mset2 = _build("var-add", "nfw", "composed")
+    fresh.set_node_reltol(1.0e-5)
+    fresh.data_prepare(mset2)
+
+    assert _node_config(dup) == _node_config(fresh)
+    np.testing.assert_array_equal(_m2lnP(dup, mset), _m2lnP(fresh, mset2))
+    # A tighter tolerance never selects a coarser grid.
+    assert sum(_node_config(dup)[0]) >= sum(_node_config(dcwlf)[0])
+
+
+def test_node_config_cleared_and_prepared_state():
+    """Clearing node-config makes the next prepare calibrate; the prepared
+    flag follows the method: auto-nodes FIXED_NODES needs a configuration,
+    the other methods only the per-galaxy data."""
+    dcwlf, mset = _build("var-add", "nfw", "composed")
+    dcwlf.data_prepare(mset)
+
+    dup = _reload(dcwlf)
+    dup.props.node_config = None
+    assert dup.props.node_config is None
+    dup.data_prepare(mset)
+    assert dup.get_calib_count() > 0
+    np.testing.assert_array_equal(_m2lnP(dup, mset), _m2lnP(dcwlf, mset))
+
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
+    assert dcwlf.is_data_prepared()
