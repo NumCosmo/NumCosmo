@@ -292,3 +292,36 @@ def test_node_config_cleared_and_prepared_state():
 
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
     assert dcwlf.is_data_prepared()
+
+
+def test_resample_skips_eager_precomputation():
+    """The prepare() that ncm_data_resample() runs only feeds gen(): no
+    MomentsTilt table and no auto-node search is spent on it, and the next
+    prepare() rebuilds everything from the resampled catalog."""
+    dcwlf, mset = _build("moments-tilt", "nfw", "composed")
+    gsf = dcwlf.props.shape_factor
+    rng = Ncm.RNG.seeded_new(None, 20260923)
+
+    dcwlf.resample(mset, rng)
+    assert gsf.get_table_build_count() == 0
+    assert dcwlf.get_calib_count() == 0
+
+    # The uncalibrated grid that prepare used is not reported as a node
+    # configuration, so a save taken now does not replay it after a load.
+    assert not dcwlf.is_data_prepared()
+    assert dcwlf.props.node_config is None
+    dup = _reload(dcwlf)
+    dup.data_prepare(mset)
+    assert dup.get_calib_count() > 0
+
+    dcwlf.data_prepare(mset)
+    assert gsf.get_table_build_count() > 0
+    resampled = _m2lnP(dcwlf, mset)
+    assert np.all(np.isfinite(resampled))
+
+    # Same answer as a fresh dataset handed the resampled catalog.
+    fresh, mset2 = _build("moments-tilt", "nfw", "composed")
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    fresh.set_obs(ser.dup_obj(dcwlf.peek_obs()))
+    fresh.data_prepare(mset2)
+    np.testing.assert_array_equal(_m2lnP(fresh, mset2), resampled)

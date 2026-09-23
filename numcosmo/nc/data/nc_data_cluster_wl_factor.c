@@ -222,6 +222,13 @@ typedef struct _NcDataClusterWLFactorPrivate
    * an ordinary prepare(). */
   gboolean force_data_prepare;
 
+  /* TRUE while ncm_data_resample() drives prepare(), refreshed from
+   * ncm_data_is_resampling() at the top of every prepare(). That prepare()
+   * only feeds gen(), which never evaluates the marginal, so the work that
+   * exists only for evaluation -- the shape factor's data_prepare() and the
+   * auto-node search -- is skipped. */
+  gboolean resampling;
+
   /* How many NC_GALAXY_LOW_PROB substitutions happened during the LAST eval_m2lnP. Zeroed at the top of every evaluation. */
   guint low_prob_count;
 
@@ -490,8 +497,12 @@ _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
       n_nodes_i = (guint) g_array_index (self->calib_n_nodes, gint, gal_i);
       rule_n_i  = (guint) g_array_index (self->calib_rule_n, gint, gal_i);
     }
-    else if (self->auto_nodes)
+    else if (self->auto_nodes && !self->resampling)
     {
+      /* Skipped while resampling: the search would calibrate on data that
+       * resample() is about to overwrite, and the grid would be discarded
+       * with it. The global pair still builds every structure the rest of
+       * prepare() and gen() expect. */
       NcDataClusterWLFactorCalibArg calib_arg = { self->integ_z_lin, self->integ_shape_lin, s_data->z_data, s_data };
       gsl_function F                          = { &_nc_data_cluster_wl_factor_calib_pz, &calib_arg };
       gsl_function G                          = { &_nc_data_cluster_wl_factor_calib_shape, &calib_arg };
@@ -1089,6 +1100,8 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   NcDataClusterWLFactorStep steps[9];
   guint n_steps = 0;
 
+  self->resampling = ncm_data_is_resampling (data);
+
   /* Orchestrator's own direct needs only -- z_cl for the split-integration
    * logic below, halo_position+cosmo for resample()'s radius rejection. */
   nc_hicosmo_clear (&self->cosmo);
@@ -1283,8 +1296,14 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
    * time the sampler moves the halo would cost per-galaxy work for a result
    * that does not change. A subclass whose cache does depend on the current
    * point must key it by value and refresh lazily, exactly as it must anyway
-   * for resample(). */
-  if (obs_was_changed || z_changed || pop_changed || fixed_grid_changed || self->force_data_prepare)
+   * for resample().
+   *
+   * Skipped while resampling: gen() never evaluates the marginal, and
+   * resample() sets obs_changed, so the next prepare() runs this step on the
+   * fresh data anyway. Running it here would only build, eagerly, what is
+   * about to be discarded. */
+  if ((obs_was_changed || z_changed || pop_changed || fixed_grid_changed || self->force_data_prepare) &&
+      !self->resampling)
     steps[n_steps++] = &_step_shape_data_prepare;
 
   if (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES)
@@ -1372,6 +1391,18 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
     }
 
     self->force_data_prepare = FALSE;
+  }
+
+  /* A resampling prepare built the grid at the global pair without searching
+   * (see _step_fixed_nodes_grid), so the per-galaxy pairs it recorded were
+   * never calibrated. Drop them: node-config would otherwise save them as a
+   * calibration a later load replays, and is_data_prepared() would claim
+   * one. A replayed configuration is a real one and is kept. */
+  if (self->resampling && self->auto_nodes && fixed_grid_changed && !self->node_config_valid &&
+      (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES))
+  {
+    g_array_set_size (self->calib_n_nodes, 0);
+    g_array_set_size (self->calib_rule_n, 0);
   }
 
   /* One line per prepare() instead of one per galaxy. */
