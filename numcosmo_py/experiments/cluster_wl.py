@@ -304,8 +304,8 @@ DEFAULT_SHAPE_M_SIGMA = 0.08
 
 
 DEFAULT_SHAPE_SERIES_TRUNC_ORDER = 4
-DEFAULT_SHAPE_MOMENT_SERIES_TRUNC_ORDER = 5
-DEFAULT_SHAPE_TILTED_SERIES_TRUNC_ORDER = 5
+DEFAULT_SHAPE_MOMENTS_GAUSS_MOMENT_TOL = 1.0e-10
+DEFAULT_SHAPE_MOMENTS_TILT_ACCURACY_GATE = 1.0e-3
 
 
 class GalaxyShapeFactorGenBase(BaseModel):
@@ -486,27 +486,27 @@ class GalaxyShapeFactorGenFixedQuad(GalaxyShapeFactorGenBase):
         )
 
 
-class GalaxyShapeFactorGenMomentSeries(GalaxyShapeFactorGenBase):
-    """Truncated g-power-series marginal (``NcGalaxyShapeFactorMomentSeries``)."""
+class GalaxyShapeFactorGenMomentsGauss(GalaxyShapeFactorGenBase):
+    """Gaussian matched to the exact moments (``NcGalaxyShapeFactorMomentsGauss``)."""
 
-    trunc_order: Annotated[int, Field(gt=0)] = DEFAULT_SHAPE_MOMENT_SERIES_TRUNC_ORDER
+    moment_tol: Annotated[float, Field(gt=0.0)] = DEFAULT_SHAPE_MOMENTS_GAUSS_MOMENT_TOL
 
     @staticmethod
     def help_text() -> list[str]:
         """Return the help text for this scheme."""
         return [
-            "GalaxyShapeFactorGenMomentSeries",
+            "GalaxyShapeFactorGenMomentsGauss",
             f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
-            f"trunc_order={DEFAULT_SHAPE_MOMENT_SERIES_TRUNC_ORDER}",
+            f"moment_tol={DEFAULT_SHAPE_MOMENTS_GAUSS_MOMENT_TOL}",
         ]
 
     def requires_sigma(self) -> bool:
-        """MomentSeries needs only radial moments, not a Gaussian width."""
+        """The exact moments need only the population's radial marginal."""
         return False
 
     def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
-        return Nc.GalaxyShapeFactorMomentSeries.new(
-            self.ellip_conv.genum, self.trunc_order
+        return Nc.GalaxyShapeFactorMomentsGauss(
+            ellip_conv=self.ellip_conv.genum, moment_tol=self.moment_tol
         )
 
 
@@ -522,27 +522,29 @@ class GalaxyShapeFactorGenLaplace(GalaxyShapeFactorGenBase):
         return Nc.GalaxyShapeFactorLaplace.new(self.ellip_conv.genum)
 
 
-class GalaxyShapeFactorGenTiltedSeries(GalaxyShapeFactorGenBase):
-    """Exponential-tilt marginal (``NcGalaxyShapeFactorTiltedSeries``)."""
+class GalaxyShapeFactorGenMomentsTilt(GalaxyShapeFactorGenBase):
+    """Exact exponential tilt (``NcGalaxyShapeFactorMomentsTilt``)."""
 
-    trunc_order: Annotated[int, Field(gt=0)] = DEFAULT_SHAPE_TILTED_SERIES_TRUNC_ORDER
+    accuracy_gate: Annotated[float, Field(gt=0.0)] = (
+        DEFAULT_SHAPE_MOMENTS_TILT_ACCURACY_GATE
+    )
 
     @staticmethod
     def help_text() -> list[str]:
         """Return the help text for this scheme."""
         return [
-            "GalaxyShapeFactorGenTiltedSeries",
+            "GalaxyShapeFactorGenMomentsTilt",
             f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
-            f"trunc_order={DEFAULT_SHAPE_TILTED_SERIES_TRUNC_ORDER}",
+            f"accuracy_gate={DEFAULT_SHAPE_MOMENTS_TILT_ACCURACY_GATE}",
         ]
 
     def requires_sigma(self) -> bool:
-        """TiltedSeries needs only radial moments, not a Gaussian width."""
+        """The exact moments need only the population's radial marginal."""
         return False
 
     def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
-        return Nc.GalaxyShapeFactorTiltedSeries.new(
-            self.ellip_conv.genum, self.trunc_order
+        return Nc.GalaxyShapeFactorMomentsTilt(
+            ellip_conv=self.ellip_conv.genum, accuracy_gate=self.accuracy_gate
         )
 
 
@@ -552,8 +554,8 @@ GalaxyShapeFactorGenTypes = (
     | GalaxyShapeFactorGenQuad
     | GalaxyShapeFactorGenFixedQuad
     | GalaxyShapeFactorGenLaplace
-    | GalaxyShapeFactorGenMomentSeries
-    | GalaxyShapeFactorGenTiltedSeries
+    | GalaxyShapeFactorGenMomentsGauss
+    | GalaxyShapeFactorGenMomentsTilt
 )
 
 
@@ -565,8 +567,8 @@ class ShapeFactorGen(StrEnum):
     QUAD = (auto(), GalaxyShapeFactorGenQuad)
     FIXED_QUAD = (auto(), GalaxyShapeFactorGenFixedQuad)
     LAPLACE = (auto(), GalaxyShapeFactorGenLaplace)
-    MOMENT_SERIES = (auto(), GalaxyShapeFactorGenMomentSeries)
-    TILTED_SERIES = (auto(), GalaxyShapeFactorGenTiltedSeries)
+    MOMENTS_GAUSS = (auto(), GalaxyShapeFactorGenMomentsGauss)
+    MOMENTS_TILT = (auto(), GalaxyShapeFactorGenMomentsTilt)
 
     def __new__(
         cls, value: str, _model_cls: type[GalaxyShapeFactorGenTypes]

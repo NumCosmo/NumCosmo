@@ -5917,6 +5917,8 @@ class DataClusterWLFactor(NumCosmoMath.Data):
         Target relative tolerance for the per-galaxy fixed-node selection
       max-total-nodes -> guint: max-total-nodes
         Safety ceiling on the total background node count for auto-nodes selection
+      node-config -> NcmVarDict: Prepared node configuration
+        Per-galaxy calibrated redshift-quadrature configuration
 
     Properties from NcmData:
       name -> gchararray: name
@@ -5940,6 +5942,7 @@ class DataClusterWLFactor(NumCosmoMath.Data):
         len: int
         max_total_nodes: int
         n_nodes: int
+        node_config: NumCosmoMath.VarDict
         node_reltol: float
         obs: GalaxyWLObs
         position_factor: GalaxyPositionFactor
@@ -5963,6 +5966,7 @@ class DataClusterWLFactor(NumCosmoMath.Data):
         integ_method: DataClusterWLIntegMethod = ...,
         max_total_nodes: int = ...,
         n_nodes: int = ...,
+        node_config: NumCosmoMath.VarDict = ...,
         node_reltol: float = ...,
         obs: GalaxyWLObs = ...,
         position_factor: GalaxyPositionFactor = ...,
@@ -5980,11 +5984,13 @@ class DataClusterWLFactor(NumCosmoMath.Data):
     ) -> None: ...
     @staticmethod
     def clear(dcwlf: DataClusterWLFactor) -> None: ...
+    def data_prepare(self, mset: NumCosmoMath.MSet) -> None: ...
     def eval_m2lnP_gal(
         self, mset: NumCosmoMath.MSet, m2lnP_gal: NumCosmoMath.Vector
     ) -> None: ...
     def free(self) -> None: ...
     def get_auto_nodes(self) -> bool: ...
+    def get_calib_count(self) -> int: ...
     def get_integ_method(self) -> DataClusterWLIntegMethod: ...
     def get_low_prob_count(self) -> int: ...
     def get_max_total_nodes(self) -> int: ...
@@ -5992,6 +5998,7 @@ class DataClusterWLFactor(NumCosmoMath.Data):
     def get_node_reltol(self) -> float: ...
     def get_resample_flag(self) -> DataClusterWLResampleFlag: ...
     def get_rule_n(self) -> int: ...
+    def is_data_prepared(self) -> bool: ...
     @classmethod
     def new(
         cls,
@@ -9017,6 +9024,10 @@ class GalaxyShapeFactor(GObject.Object):
     def data_get(
         self, data: GalaxyShapeFactorData
     ) -> typing.Tuple[float, float, float, float, float, float]: ...
+    def data_prefetch(self, data: GalaxyShapeFactorData, stage: int) -> None: ...
+    def data_prepare(
+        self, mset: NumCosmoMath.MSet, data: GalaxyShapeFactorData, z_max: float
+    ) -> None: ...
     def data_set(
         self,
         data: GalaxyShapeFactorData,
@@ -9035,6 +9046,10 @@ class GalaxyShapeFactor(GObject.Object):
     ) -> typing.Tuple[float, float, float, float, float]: ...
     def do_data_init(
         self, mset: NumCosmoMath.MSet, data: GalaxyShapeFactorData
+    ) -> None: ...
+    def do_data_prefetch(self, data: GalaxyShapeFactorData, stage: int) -> None: ...
+    def do_data_prepare(
+        self, mset: NumCosmoMath.MSet, data: GalaxyShapeFactorData, z_max: float
     ) -> None: ...
     def do_eval_ln_marginal(
         self,
@@ -9207,6 +9222,12 @@ class GalaxyShapeFactorClass(GObject.GPointer):
         float,
     ] = ...
     get_desc: typing.Callable[[GalaxyShapeFactor], str] = ...
+    data_prepare: typing.Callable[
+        [GalaxyShapeFactor, NumCosmoMath.MSet, GalaxyShapeFactorData, float], None
+    ] = ...
+    data_prefetch: typing.Callable[
+        [GalaxyShapeFactor, GalaxyShapeFactorData, int], None
+    ] = ...
     padding: list[None] = ...
 
 class GalaxyShapeFactorData(GObject.GBoxed):
@@ -9416,20 +9437,22 @@ class GalaxyShapeFactorLaplaceClass(GObject.GPointer):
 
     parent_class: GalaxyShapeFactorClass = ...
 
-class GalaxyShapeFactorMomentSeries(GalaxyShapeFactor):
+class GalaxyShapeFactorMomentsGauss(GalaxyShapeFactor):
     r"""
     :Constructors:
 
     ::
 
-        GalaxyShapeFactorMomentSeries(**properties)
-        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv, trunc_order:int) -> NumCosmo.GalaxyShapeFactorMomentSeries
+        GalaxyShapeFactorMomentsGauss(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorMomentsGauss
 
-    Object NcGalaxyShapeFactorMomentSeries
+    Object NcGalaxyShapeFactorMomentsGauss
 
-    Properties from NcGalaxyShapeFactorMomentSeries:
-      trunc-order -> guint: Truncation order
-        Truncation order n of the g-power series
+    Properties from NcGalaxyShapeFactorMomentsGauss:
+      moment-tol -> gdouble: Moment tolerance
+        Absolute tolerance of the tabulated moments
+      max-degree -> guint: Maximum local degree
+        Largest Chebyshev degree a single panel may reach
 
     Properties from NcGalaxyShapeFactor:
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
@@ -9440,29 +9463,128 @@ class GalaxyShapeFactorMomentSeries(GalaxyShapeFactor):
     """
 
     class Props:
-        trunc_order: int
+        max_degree: int
+        moment_tol: float
         ellip_conv: GalaxyWLObsEllipConv
 
     props: Props = ...
     def __init__(
-        self, trunc_order: int = ..., ellip_conv: GalaxyWLObsEllipConv = ...
+        self,
+        max_degree: int = ...,
+        moment_tol: float = ...,
+        ellip_conv: GalaxyWLObsEllipConv = ...,
     ) -> None: ...
     @staticmethod
-    def clear(gsfms: GalaxyShapeFactorMomentSeries) -> None: ...
+    def clear(gsfmg: GalaxyShapeFactorMomentsGauss) -> None: ...
+    def eval_moments(
+        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData, g_1: float, g_2: float
+    ) -> typing.Tuple[float, float, float]: ...
+    def exact_moments(
+        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData, ghat: float
+    ) -> typing.Tuple[float, float, float]: ...
     def free(self) -> None: ...
+    def get_table_build_count(self) -> int: ...
     @classmethod
-    def new(
-        cls, ellip_conv: GalaxyWLObsEllipConv, trunc_order: int
-    ) -> GalaxyShapeFactorMomentSeries: ...
-    def ref(self) -> GalaxyShapeFactorMomentSeries: ...
+    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorMomentsGauss: ...
+    def peek_layout(
+        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData
+    ) -> typing.Tuple[int, float, list[float]]: ...
+    def ref(self) -> GalaxyShapeFactorMomentsGauss: ...
+    def reset_table_build_count(self) -> None: ...
 
-class GalaxyShapeFactorMomentSeriesClass(GObject.GPointer):
+class GalaxyShapeFactorMomentsGaussClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        GalaxyShapeFactorMomentSeriesClass()
+        GalaxyShapeFactorMomentsGaussClass()
+    """
+
+    parent_class: GalaxyShapeFactorClass = ...
+
+class GalaxyShapeFactorMomentsTilt(GalaxyShapeFactor):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorMomentsTilt(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorMomentsTilt
+
+    Object NcGalaxyShapeFactorMomentsTilt
+
+    Properties from NcGalaxyShapeFactorMomentsTilt:
+      accuracy-gate -> gdouble: Accuracy gate
+        Target |ln Z| accuracy of the interpolant
+      max-degree -> guint: Maximum local degree
+        Largest Chebyshev degree a single panel may reach
+      restrict-range -> gboolean: Restrict to the reachable range
+        Whether to build each table only over the reachable folded shear
+      strict-solve -> gboolean: Strict solve
+        Whether a Newton failure aborts instead of warning
+      tables -> NcmObjArray: Interpolation tables
+        Built interpolation tables, one NcmVector each
+      tables-stamp -> gchararray: Table provenance stamp
+        What the stored tables were built against
+
+    Properties from NcGalaxyShapeFactor:
+      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
+        Weak lensing observables ellipticity convention
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        accuracy_gate: float
+        max_degree: int
+        restrict_range: bool
+        strict_solve: bool
+        tables: NumCosmoMath.ObjArray
+        tables_stamp: str
+        ellip_conv: GalaxyWLObsEllipConv
+
+    props: Props = ...
+    def __init__(
+        self,
+        accuracy_gate: float = ...,
+        max_degree: int = ...,
+        restrict_range: bool = ...,
+        strict_solve: bool = ...,
+        tables: NumCosmoMath.ObjArray = ...,
+        tables_stamp: str = ...,
+        ellip_conv: GalaxyWLObsEllipConv = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(gsfmt: GalaxyShapeFactorMomentsTilt) -> None: ...
+    def eval_tilt(
+        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData, g_1: float, g_2: float
+    ) -> typing.Tuple[float, float, float, float]: ...
+    def exact_moments(
+        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData, ghat: float
+    ) -> typing.Tuple[float, float, float]: ...
+    def free(self) -> None: ...
+    def get_range_error_count(self) -> int: ...
+    def get_solve_error_count(self) -> int: ...
+    def get_table_build_count(self) -> int: ...
+    @classmethod
+    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorMomentsTilt: ...
+    def peek_layout(
+        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData
+    ) -> typing.Tuple[int, float, list[float]]: ...
+    def ref(self) -> GalaxyShapeFactorMomentsTilt: ...
+    def reset_range_error_count(self) -> None: ...
+    def reset_solve_error_count(self) -> None: ...
+    def reset_table_build_count(self) -> None: ...
+
+class GalaxyShapeFactorMomentsTiltClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorMomentsTiltClass()
     """
 
     parent_class: GalaxyShapeFactorClass = ...
@@ -9580,57 +9702,6 @@ class GalaxyShapeFactorSeriesLensedClass(GObject.GPointer):
     ::
 
         GalaxyShapeFactorSeriesLensedClass()
-    """
-
-    parent_class: GalaxyShapeFactorClass = ...
-
-class GalaxyShapeFactorTiltedSeries(GalaxyShapeFactor):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxyShapeFactorTiltedSeries(**properties)
-        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv, trunc_order:int) -> NumCosmo.GalaxyShapeFactorTiltedSeries
-
-    Object NcGalaxyShapeFactorTiltedSeries
-
-    Properties from NcGalaxyShapeFactorTiltedSeries:
-      trunc-order -> guint: Truncation order
-        Truncation order N of the g-power series for lambda(g)
-
-    Properties from NcGalaxyShapeFactor:
-      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
-        Weak lensing observables ellipticity convention
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        trunc_order: int
-        ellip_conv: GalaxyWLObsEllipConv
-
-    props: Props = ...
-    def __init__(
-        self, trunc_order: int = ..., ellip_conv: GalaxyWLObsEllipConv = ...
-    ) -> None: ...
-    @staticmethod
-    def clear(gsfts: GalaxyShapeFactorTiltedSeries) -> None: ...
-    def free(self) -> None: ...
-    @classmethod
-    def new(
-        cls, ellip_conv: GalaxyWLObsEllipConv, trunc_order: int
-    ) -> GalaxyShapeFactorTiltedSeries: ...
-    def ref(self) -> GalaxyShapeFactorTiltedSeries: ...
-
-class GalaxyShapeFactorTiltedSeriesClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxyShapeFactorTiltedSeriesClass()
     """
 
     parent_class: GalaxyShapeFactorClass = ...
@@ -22595,6 +22666,10 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         zl: float,
         optzs: WLSurfaceMassDensityOptzs,
     ) -> float: ...
+    @staticmethod
+    def reduced_shear_sigma_cache_prep_with_rs(
+        dp: HaloDensityProfile, R: float, r_s: float, rho_s: float
+    ) -> WLSurfaceMassDensitySigmaCache: ...
     def ref(self) -> WLSurfaceMassDensity: ...
     def shear(
         self,
@@ -26351,18 +26426,6 @@ class XcorSolverClass(GObject.GPointer):
     """
 
     parent_class: GObject.ObjectClass = ...
-
-class _GalaxyShapeFactorMomentSeriesPoly2(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        _GalaxyShapeFactorMomentSeriesPoly2()
-    """
-
-    c: float = ...
-    sz: int = ...
 
 class _HaloPositionClass(GObject.GPointer):
     r"""
