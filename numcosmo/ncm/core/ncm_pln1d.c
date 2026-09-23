@@ -27,19 +27,19 @@
 /**
  * NcmPLN1D:
  *
- * A Poisson–Lognormal 1D integrator using mode finding (GSL Lambert-W), shifted
- * Gauss–Hermite, or Laplace fallback.
+ * A Poisson-Lognormal 1D integrator using mode finding (GSL Lambert-W), shifted
+ * Gauss-Hermite, or Laplace fallback.
  *
- * Poisson–Lognormal 1D Distribution
+ * Poisson-Lognormal 1D Distribution
  *
  * Definitions
  * ===========
  *
- * The Poisson component for an integer count R ≥ 0 and rate λ > 0 is
+ * The Poisson component for an integer count $R \geq 0$ and rate $\lambda > 0$ is
  * $$
  *   P_{\rm P}(R \mid \lambda) = e^{-\lambda} \frac{\lambda^{R}}{R!}.
  * $$
- * The lognormal prior for λ is defined by
+ * The lognormal prior for $\lambda$ is defined by
  * $$
  *   P_{\rm LN}(\lambda \mid \mu, \sigma) = \frac{1}{\lambda \, \sigma \sqrt{2\pi}}
  *          \exp\!\left[-\frac{(\ln\lambda - \mu)^2}{2\sigma^2}\right],
@@ -47,7 +47,7 @@
  * where $\mu$ is the mean of $\log\lambda$ and $\sigma$ is the standard deviation of
  * $\log\lambda$.
  *
- * The Poisson–Lognormal likelihood is the integral
+ * The Poisson-Lognormal likelihood is the integral
  * $$
  *   P(R \mid \mu,\sigma) = \int_{0}^{\infty} P_{\rm P}(R\mid\lambda)\,
  *             P_{\rm LN}(\lambda\mid\mu,\sigma)\; \mathrm{d}\lambda.
@@ -343,7 +343,7 @@ ncm_pln1d_get_order (NcmPLN1D *pln)
  * @mu: log-normal location parameter (log-space mean)
  * @sigma: log-normal scale parameter (log-space standard deviation)
  *
- * Compute the mode of the Poisson–Lognormal integrand.
+ * Compute the mode of the Poisson-Lognormal integrand.
  *
  * Returns: the mode of the integrand.
  */
@@ -408,8 +408,8 @@ _ncm_pln1d_eval_laplace_lnp (gdouble R, gdouble mu, gdouble sigma)
  * @mu: log-normal mean (location parameter)
  * @sigma: log-normal standard deviation (scale parameter)
  *
- * Evaluate the cumulative Poisson–Lognormal probability by summing over a range of R values.
- * This computes: ∑_{R=R_min}^{R_max} P(R|μ,σ)
+ * Evaluate the cumulative Poisson-Lognormal probability by summing over a range of R values.
+ * This computes $\sum_{R=R_\mathrm{min}}^{R_\mathrm{max}} P(R \mid \mu, \sigma)$.
  *
  * This is more efficient than calling ncm_pln1d_eval_p repeatedly
  * as it reuses the shifted Gauss-Hermite nodes for all R values.
@@ -483,8 +483,8 @@ ncm_pln1d_eval_range_sum_lnp (NcmPLN1D *pln, guint R_min, guint R_max, gdouble m
  * @mu: log-normal mean (location parameter)
  * @sigma: log-normal standard deviation (scale parameter)
  *
- * Evaluate the cumulative Poisson–Lognormal probability by summing over a range of R values.
- * This computes: ∑_{R=R_min}^{R_max} P(R|μ,σ)
+ * Evaluate the cumulative Poisson-Lognormal probability by summing over a range of R values.
+ * This computes $\sum_{R=R_\mathrm{min}}^{R_\mathrm{max}} P(R \mid \mu, \sigma)$.
  *
  * This is the non-log version of ncm_pln1d_eval_range_sum_lnp.
  *
@@ -503,7 +503,7 @@ ncm_pln1d_eval_range_sum (NcmPLN1D *pln, guint R_min, guint R_max, gdouble mu, g
  * @mu: log-normal mean (location parameter)
  * @sigma: log-normal standard deviation (scale parameter)
  *
- * Evaluate the Poisson–Lognormal integral.
+ * Evaluate the Poisson-Lognormal integral.
  *
  * Returns: the logarithm of the integral.
  */
@@ -523,7 +523,7 @@ ncm_pln1d_eval_lnp (NcmPLN1D *pln, gdouble R, gdouble mu, gdouble sigma)
  * @mu: log-normal mean (location parameter)
  * @sigma: log-normal standard deviation (scale parameter)
  *
- * Evaluate the Poisson–Lognormal integral.
+ * Evaluate the Poisson-Lognormal integral.
  *
  * Returns: the value of the integral.
  */

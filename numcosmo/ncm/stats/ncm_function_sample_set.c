@@ -1239,7 +1239,7 @@ ncm_function_sample_set_get_absmaxF_linf_norm (NcmFunctionSampleSet *fss)
  * is useful for setting conservative tolerances that ensure even the weakest
  * component is adequately resolved in adaptive refinement algorithms.
  *
- * A component whose peak is exactly zero (e.g. a spin-2 field's ℓ=0,1
+ * A component whose peak is exactly zero (e.g. a spin-2 field's $\ell = 0, 1$
  * multipoles, which vanish identically) is excluded from the minimum: it is
  * already exactly represented by any spline through zero-valued samples and
  * needs no tolerance budget, so letting it collapse the tolerance to zero
@@ -1493,7 +1493,7 @@ ncm_function_sample_set_mark_all_old (NcmFunctionSampleSet *fss)
  * Converts the sample set to a #NcmSplineVec. This reuses cached internal arrays for
  * efficiency, which means that:
  *
- * - **The returned #NcmSplineVec is invalidated by subsequent calls** to this function
+ * - The returned #NcmSplineVec is invalidated by subsequent calls to this function
  *   or ncm_function_sample_set_to_spline_vec_old() on the same @fss object.
  * - If you need to keep multiple #NcmSplineVec objects from the same sample set, you
  *   must call ncm_spline_vec_dup() on the returned object before calling this function
@@ -1567,7 +1567,7 @@ ncm_function_sample_set_to_spline_vec (NcmFunctionSampleSet *fss, NcmSpline *bas
  * Converts only the OLD sample points to a #NcmSplineVec. This reuses cached internal
  * arrays for efficiency, which means that:
  *
- * - **The returned #NcmSplineVec is invalidated by subsequent calls** to this function
+ * - The returned #NcmSplineVec is invalidated by subsequent calls to this function
  *   or ncm_function_sample_set_to_spline_vec() on the same @fss object.
  * - If you need to keep multiple #NcmSplineVec objects from the same sample set, you
  *   must call ncm_spline_vec_dup() on the returned object before calling this function
@@ -1740,7 +1740,7 @@ ncm_function_sample_set_get_residuals (NcmFunctionSampleSet *fss)
  * @ref_spline: a higher-order #NcmSpline to measure it against
  *
  * Estimates @base_spline's interpolation error from the samples already held,
- * **without evaluating the function anywhere**: both splines are fitted to the
+ * without evaluating the function anywhere: both splines are fitted to the
  * same data and differenced at each interval's midpoint, which is where the
  * samples say least. An embedded pair, in the sense a Runge-Kutta pair is one.
  *
@@ -1816,6 +1816,7 @@ ncm_function_sample_set_estimate_residuals (NcmFunctionSampleSet *fss, NcmSpline
  * @base_spline: a #NcmSpline to use as the base spline type
  *
  * Performs a refinement pass on all NEW points. For each NEW point, this function:
+ *
  * 1. Creates a spline using OLD points only
  * 2. Evaluates the spline at the NEW point position
  * 3. Computes the error: ||f(x) - spline_f(x)||_2 <= reltol * ||f(x)||_2 + abstol

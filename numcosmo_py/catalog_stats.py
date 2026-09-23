@@ -108,17 +108,15 @@ def safe_eval_mode(sd1: Ncm.StatsDist1d, n_grid: int = 1000) -> float:
 
     `Ncm.StatsDist1d.eval_mode()` locates the mode with a GSL bracketing
     minimizer that requires the density maximum to be strictly interior to
-    `[xi, xf]`. For a skewed or prior-bounded posterior whose maximum sits at
-    the domain edge, that precondition used to fail and abort the process with
-    a fatal `g_error`, which Python cannot catch.
-
-    That case is now handled inside `ncm_stats_dist1d_eval_mode()`
-    (numcosmo/ncm/stats/ncm_stats_dist1d.c), which returns the coarse-grid
-    estimate instead of aborting. This function is kept as a redundant guard
-    for a numcosmo_py running against a native build that predates that fix.
-    It repeats `eval_mode()`'s coarse linear pre-scan at the same resolution
-    and delegates to `eval_mode()` only when the scan maximiser is strictly
-    interior and above both endpoints.
+    `[xi, xf]`; a skewed or prior-bounded posterior can put its maximum at the
+    domain edge. `ncm_stats_dist1d_eval_mode()`
+    (numcosmo/ncm/stats/ncm_stats_dist1d.c) detects that case and returns the
+    coarse-grid estimate. A native build without that check violates the
+    precondition instead and aborts the process with a fatal `g_error`, which
+    Python cannot catch, so this function stands as a redundant guard for a
+    numcosmo_py running against one. It repeats `eval_mode()`'s coarse linear
+    pre-scan at the same resolution and delegates to `eval_mode()` only when
+    the scan maximiser is strictly interior and above both endpoints.
     """
     xi = sd1.get_xi()
     xf = sd1.get_xf()

@@ -88,6 +88,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_sf_gamma.h>
 #include "external/levmar/levmar.h"
@@ -187,6 +188,7 @@ _ncm_stats_dist_kernel_st_finalize (GObject *object)
 }
 
 static gdouble _ncm_stats_dist_kernel_st_get_rot_bandwidth (NcmStatsDistKernel *sdk, const gdouble n);
+static gdouble _ncm_stats_dist_kernel_st_get_var_factor (NcmStatsDistKernel *sdk);
 static gdouble _ncm_stats_dist_kernel_st_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp);
 static gdouble _ncm_stats_dist_kernel_st_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble chi2);
 static void _ncm_stats_dist_kernel_st_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *Ku);
@@ -214,6 +216,7 @@ ncm_stats_dist_kernel_st_class_init (NcmStatsDistKernelSTClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   sdk_class->get_rot_bandwidth      = &_ncm_stats_dist_kernel_st_get_rot_bandwidth;
+  sdk_class->get_var_factor         = &_ncm_stats_dist_kernel_st_get_var_factor;
   sdk_class->get_lnnorm             = &_ncm_stats_dist_kernel_st_get_lnnorm;
   sdk_class->eval_unnorm            = &_ncm_stats_dist_kernel_st_eval_unnorm;
   sdk_class->eval_unnorm_vec        = &_ncm_stats_dist_kernel_st_eval_unnorm_vec;
@@ -235,6 +238,20 @@ _ncm_stats_dist_kernel_st_get_rot_bandwidth (NcmStatsDistKernel *sdk, const gdou
     16.0 * gsl_pow_2 (nu - 2) * (1.0 + d + nu) * (3.0 + d + nu) /
     ((2.0 + d) * (d + nu) * (2.0 + d + nu) * (d + 2.0 * nu) * (2.0 + d + 2.0 * nu) * n),
     1.0 / (d + 4.0));
+}
+
+static gdouble
+_ncm_stats_dist_kernel_st_get_var_factor (NcmStatsDistKernel *sdk)
+{
+  NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (sdk);
+  NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
+
+  /* The multivariate Student-t covariance is nu / (nu - 2) times its scale matrix;
+   * for nu <= 2 the second moment does not exist. */
+  if (self->nu <= 2.0)
+    return GSL_POSINF;
+
+  return self->nu / (self->nu - 2.0);
 }
 
 static gdouble

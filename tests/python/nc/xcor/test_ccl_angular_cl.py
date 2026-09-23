@@ -185,7 +185,7 @@ def test_angular_cl_spin2_weight_matches_the_lensing_kernel(cosmology, ccl_cosmo
         integrator=Ncm.SBesselIntegratorLevin.new(2, int(ells[-1])),
     )
     wl_nc.set_reltol(1.0e-6)
-    wl_nc.set_scaled_abstol(1.0e-6)
+    wl_nc.set_peak_epsilon(1.0e-6)
     wl_nc.set_l_limber(-1)
     wl_nc.prepare(cosmology.cosmo)
 
@@ -225,7 +225,7 @@ def test_angular_cl_convergence_kind_matches_the_cmb_lensing_kernel(
     )
     cmb_nc.props.integrator = Ncm.SBesselIntegratorLevin.new(2, int(ells[-1]))
     cmb_nc.set_reltol(1.0e-6)
-    cmb_nc.set_scaled_abstol(1.0e-6)
+    cmb_nc.set_peak_epsilon(1.0e-6)
     cmb_nc.set_l_limber(-1)
     cmb_nc.prepare(cosmology.cosmo)
 

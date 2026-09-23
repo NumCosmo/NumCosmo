@@ -64,7 +64,9 @@ def create_mset(dim: int) -> Tuple[Ncm.MSet, Ncm.ModelMVND]:
     return mset, mgc
 
 
-def create_data_object(mset: Ncm.MSet, dim: int, rng: Ncm.RNG) -> Ncm.DataGaussCovMVND:
+def create_data_object(
+    mset: Ncm.MSet, dim: int, rng: Ncm.RNG, verbose: bool = True
+) -> Ncm.DataGaussCovMVND:
     """Create a dataset with a Gaussian distribution with positivity constraint."""
     dgc = Ncm.DataGaussCovMVND.new(dim)
     mean = Ncm.Vector.new(dim)
@@ -81,8 +83,9 @@ def create_data_object(mset: Ncm.MSet, dim: int, rng: Ncm.RNG) -> Ncm.DataGaussC
     # cov50.log_vals("", "% 22.15g")
 
     dgc.set_cov_mean(mean, cov)
-    m2lnN = dgc.get_log_norma(mset)
-    print(f"# Constant normalization {m2lnN}")
+    if verbose:
+        m2lnN = dgc.get_log_norma(mset)
+        print(f"# Constant normalization {m2lnN}")
 
     return dgc
 
@@ -137,6 +140,7 @@ def run_gauss_constraint_mcmc(
     fit_first: bool = False,
     robust: bool = False,
     use_apes_interpolation: bool = True,
+    use_apes_center_shrink: bool = False,
     use_apes_threads: Optional[bool] = None,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
@@ -172,6 +176,7 @@ def run_gauss_constraint_mcmc(
         fit_first=fit_first,
         robust=robust,
         use_apes_interpolation=use_apes_interpolation,
+        use_apes_center_shrink=use_apes_center_shrink,
         use_apes_threads=use_apes_threads,
         sampler=sampler,
         interpolation_method=interpolation_method,

@@ -54,13 +54,10 @@ typedef struct _TestNcmStatsVec
 void test_ncm_stats_vec_mean_new (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_var_new (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_cov_new (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_autocorr_new (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_mean_test (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_var_test (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_cov_test (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_cov_robust_test (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_autocorr_test (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_subsample_autocorr_test (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_free (TestNcmStatsVec *test, gconstpointer pdata);
 
 void test_ncm_stats_vec_diag_heidel (TestNcmStatsVec *test, gconstpointer pdata);
@@ -198,14 +195,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_stats_vec_cov_new,
               &test_ncm_stats_vec_cov_robust_test,
               &test_ncm_stats_vec_free);
-  g_test_add ("/ncm/stats_vec/autocorr", TestNcmStatsVec, NULL,
-              &test_ncm_stats_vec_autocorr_new,
-              &test_ncm_stats_vec_autocorr_test,
-              &test_ncm_stats_vec_free);
-  g_test_add ("/ncm/stats_vec/subsample_autocorr", TestNcmStatsVec, NULL,
-              &test_ncm_stats_vec_autocorr_new,
-              &test_ncm_stats_vec_subsample_autocorr_test,
-              &test_ncm_stats_vec_free);
 
   g_test_add ("/ncm/stats_vec/mean/get_var/subprocess", TestNcmStatsVec, NULL,
               &test_ncm_stats_vec_mean_new,
@@ -300,19 +289,6 @@ test_ncm_stats_vec_cov_new (TestNcmStatsVec *test, gconstpointer pdata)
 {
   test->v_size = g_test_rand_int_range (_TEST_NCM_VECTOR_MIN_SIZE, _TEST_NCM_VECTOR_STATIC_SIZE);
   test->ntests = g_test_rand_int_range (_TEST_NCM_STATS_VEC_NTEST_MIN, _TEST_NCM_STATS_VEC_NTEST_MAX);
-  test->svec   = ncm_stats_vec_new (test->v_size, NCM_STATS_VEC_COV, TRUE);
-  test->xs     = ncm_matrix_new (test->ntests, test->v_size);
-  test->mu     = ncm_vector_new (test->v_size);
-  test->w      = ncm_vector_new (test->ntests);
-
-  g_assert_true (NCM_IS_STATS_VEC (test->svec));
-}
-
-void
-test_ncm_stats_vec_autocorr_new (TestNcmStatsVec *test, gconstpointer pdata)
-{
-  test->v_size = g_test_rand_int_range (_TEST_NCM_VECTOR_MIN_SIZE, _TEST_NCM_VECTOR_STATIC_SIZE);
-  test->ntests = g_test_rand_int_range (_TEST_NCM_STATS_VEC_NTEST_MIN, _TEST_NCM_STATS_VEC_NTEST_MAX) * 100;
   test->svec   = ncm_stats_vec_new (test->v_size, NCM_STATS_VEC_COV, TRUE);
   test->xs     = ncm_matrix_new (test->ntests, test->v_size);
   test->mu     = ncm_vector_new (test->v_size);
@@ -586,141 +562,6 @@ test_ncm_stats_vec_cov_robust_test (TestNcmStatsVec *test, gconstpointer pdata)
     ncm_matrix_free (cor_r);
   }
 
-  ncm_rng_free (rng);
-}
-
-void
-test_ncm_stats_vec_autocorr_test (TestNcmStatsVec *test, gconstpointer pdata)
-{
-  NcmRNG *rng         = ncm_rng_pool_get ("test_ncm_stats_vec");
-  const gdouble a     = 0.9 + fabs (g_test_rand_double ()) * 1.0e-2;
-  const gdouble sigma = fabs (g_test_rand_double ()) * 1.0e-1;
-  NcmVector *last     = ncm_vector_new (test->v_size);
-  guint i;
-
-  for (i = 0; i < test->v_size; i++)
-  {
-    ncm_vector_set (test->mu, i, 1.0 + fabs (g_test_rand_double ()));
-    ncm_vector_set (last, i, 0.0);
-  }
-
-  for (i = 0; i < test->ntests; i++)
-  {
-    guint j;
-
-    for (j = 0; j < test->v_size; j++)
-    {
-      const gdouble epsilon_j = ncm_vector_get (test->mu, j) + sigma * ncm_rng_ugaussian_gen (rng);
-      const gdouble x_j       = (a * ncm_vector_get (last, j) + epsilon_j);
-
-      ncm_vector_set (last, j, x_j);
-
-      ncm_stats_vec_set (test->svec, j, x_j);
-      ncm_matrix_set (test->xs, i, j, x_j);
-    }
-
-    ncm_stats_vec_update (test->svec);
-  }
-
-  for (i = 0; i < test->v_size; i++)
-  {
-    const gdouble gsl_mean = gsl_stats_mean (ncm_matrix_ptr (test->xs, 0, i), test->v_size,
-                                             test->ntests);
-    const gdouble gsl_var = gsl_stats_variance (ncm_matrix_ptr (test->xs, 0, i), test->v_size,
-                                                test->ntests);
-    const gdouble svec_mean = ncm_stats_vec_get_mean (test->svec, i);
-    const gdouble svec_var  = ncm_stats_vec_get_var (test->svec, i);
-
-    ncm_assert_cmpdouble_e (gsl_mean, ==, svec_mean, _TEST_NCM_STATS_VEC_PREC, 0.0);
-    ncm_assert_cmpdouble_e (gsl_var, ==, svec_var, _TEST_NCM_STATS_VEC_PREC, 0.0);
-
-    {
-      NcmVector *ac = ncm_stats_vec_get_autocorr (test->svec, i);
-      guint j;
-      guint tsize = GSL_MIN (10, ncm_vector_len (ac));
-
-      for (j = 0; j < tsize; j++)
-      {
-        if (ncm_vector_get (ac, j) < 0.0)
-          break;
-
-        ncm_assert_cmpdouble_e (ncm_vector_get (ac, j), ==, pow (a, j), 1.0e-1, 0.0);
-      }
-
-      ncm_vector_free (ac);
-    }
-  }
-
-  ncm_vector_free (last);
-  ncm_rng_free (rng);
-}
-
-void
-test_ncm_stats_vec_subsample_autocorr_test (TestNcmStatsVec *test, gconstpointer pdata)
-{
-  NcmRNG *rng         = ncm_rng_pool_get ("test_ncm_stats_vec");
-  const gdouble a     = 0.9 + fabs (g_test_rand_double ()) * 1.0e-2;
-  const gdouble sigma = fabs (g_test_rand_double ()) * 1.0e-1;
-  const guint nchains = g_test_rand_int_range (10, 20);
-  NcmMatrix *last     = ncm_matrix_new (nchains, test->v_size);
-  guint i;
-
-  ncm_matrix_set_zero (last);
-
-  for (i = 0; i < test->v_size; i++)
-  {
-    ncm_vector_set (test->mu, i, 1.0 + fabs (g_test_rand_double ()));
-  }
-
-  for (i = 0; i < test->ntests; i++)
-  {
-    guint j;
-    guint chain_id = i % (nchains);
-
-    for (j = 0; j < test->v_size; j++)
-    {
-      const gdouble epsilon_j = ncm_vector_get (test->mu, j) + sigma * ncm_rng_ugaussian_gen (rng);
-      const gdouble x_j       = (a * ncm_matrix_get (last, chain_id, j) + epsilon_j);
-
-      ncm_matrix_set (last, chain_id, j, x_j);
-
-      ncm_stats_vec_set (test->svec, j, x_j);
-      ncm_matrix_set (test->xs, i, j, x_j);
-    }
-
-    ncm_stats_vec_update (test->svec);
-  }
-
-  for (i = 0; i < test->v_size; i++)
-  {
-    const gdouble gsl_mean = gsl_stats_mean (ncm_matrix_ptr (test->xs, 0, i), test->v_size,
-                                             test->ntests);
-    const gdouble gsl_var = gsl_stats_variance (ncm_matrix_ptr (test->xs, 0, i), test->v_size,
-                                                test->ntests);
-    const gdouble svec_mean = ncm_stats_vec_get_mean (test->svec, i);
-    const gdouble svec_var  = ncm_stats_vec_get_var (test->svec, i);
-
-    ncm_assert_cmpdouble_e (gsl_mean, ==, svec_mean, _TEST_NCM_STATS_VEC_PREC, 0.0);
-    ncm_assert_cmpdouble_e (gsl_var, ==, svec_var, _TEST_NCM_STATS_VEC_PREC, 0.0);
-
-    {
-      NcmVector *ac = ncm_stats_vec_get_subsample_autocorr (test->svec, i, nchains);
-      guint j;
-      guint tsize = GSL_MIN (10, ncm_vector_len (ac));
-
-      for (j = 0; j < tsize; j++)
-      {
-        if (ncm_vector_get (ac, j) < 0.0)
-          break;
-
-        ncm_assert_cmpdouble_e (ncm_vector_get (ac, j), ==, pow (a, j), 1.0e-1, 0.0);
-      }
-
-      ncm_vector_free (ac);
-    }
-  }
-
-  ncm_matrix_free (last);
   ncm_rng_free (rng);
 }
 

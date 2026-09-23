@@ -1,0 +1,829 @@
+---
+title: Autocorrelation Time and Effective Sample Size
+---
+
+This page describes what [[numcosmo-math|NcmStatsAcorr]] computes, how it computes it
+one sample at a time, and how [[numcosmo-math|NcmMSetCatalog]] uses it to report the
+error of an average taken over a Markov chain Monte Carlo run.
+
+## Definitions
+
+The setting is Markov chain Monte Carlo. A sample is not drawn from the target
+distribution directly but proposed from the current state and accepted or rejected, so the
+states of the chain are correlated with one another by construction. That is what makes the
+method usable in many dimensions, where direct sampling is not available, and it is what
+this page has to account for. In NumCosmo such chains are produced by
+[[numcosmo-math|NcmFitMCMC]] and by the ensemble sampler
+[[numcosmo-math|NcmFitESMCMC]], and stored in [[numcosmo-math|NcmMSetCatalog]], one row per
+state.
+
+The purpose of the autocorrelation calculation is to determine the uncertainty of an
+average taken over such a chain. Ordinary Monte Carlo, drawing independent samples, needs
+none of it: its averages have the textbook variance, and everything below reduces to that
+case. A chain does not, because it produces one new sample per step but not one sample's
+worth of information: a step that stays close to the one before it repeats what the chain
+already holds. Asking how
+much each step adds is therefore asking how much successive samples resemble one another,
+which is what the autocovariance measures, lag by lag.
+Summed over lags it gives the factor multiplying the variance of any average taken from
+the chain, and equivalently the number of steps per independent draw.
+
+That is a statement about the rate at which the uncertainty falls as the chain grows, not
+about whether the chain is sampling the distribution it is meant to. The two are separate
+questions, and the second is what the conditions at the end of this page test.
+
+What a chain is used for is almost always an average of a function over it. With
+$\theta_t$ the state at step $t$,
+
+$$
+\bar{f} \equiv \frac{1}{n}\sum_{t=1}^{n} f(\theta_t)
+$$
+
+estimates the posterior expectation $\left\langle f\right\rangle$: a parameter when $f$
+selects one component, a derived quantity, a moment when $f$ is a power, $-2\ln L$ when it
+is the likelihood. Writing $x_t \equiv f(\theta_t)$ turns each of them into one scalar
+series, and everything below is stated for that series, which is why
+[[numcosmo-math|NcmMSetCatalog]] keeps one $\tau$ per column: each column is a different
+$f$ along the same chain.
+
+Let $x_1 \dots x_n$ be that series, successive samples from a stationary process, and write
+$$
+\mu \equiv \left\langle x_t\right\rangle,
+\qquad
+\gamma_k \equiv \left\langle(x_t - \mu)(x_{t+k} - \mu)\right\rangle,
+$$
+for its mean and its autocovariance at lag $k$, for any $t \in \{1,\ldots,n\}$. At zero lag
+the second is the variance of the sampled quantity itself,
+
+$$
+\gamma_0 = \operatorname{Var}(x_t) \equiv \sigma_x^2 ,
+$$
+
+so wherever $\gamma_0$ appears below, and $C_0$ with it, the quantity is the spread of the
+parameter, the derived quantity or the $-2\ln L$ being tracked. This page keeps the name
+$\gamma_0$, since it is the $k=0$ member of the same family as every other lag.
+
+That neither quantity carries the index $t$ is the defining characteristic of a stationary
+process: the mean is the same at every position in the series, and the covariance of two
+samples depends only on their separation $k$ and not on the position of the pair. The index
+on the right-hand side is free, and both relations are to be read as holding for every $t$.
+For a process that is not stationary the same expectations produce a $\mu_t$ and a
+$\gamma_{t,k}$, and every summary built from them below is a function of position rather
+than a single number.
+
+Only weak stationarity is used on this page: finite second moments, a mean independent of
+$t$, and a covariance depending on the lag alone. The stronger requirement, that the joint
+distribution of any set of samples be unchanged by a shift of $t$, is never needed.
+
+The process is indexed by $t \in \mathbb{Z}$, and $x_1 \dots x_n$ is a finite window of one
+of its realizations. The index set has to be unbounded for $\gamma_k$ to exist at every
+lag, which the sum over all lags below requires. Keeping the process and the window apart
+matters throughout, and the two families of quantities are named as they arise.
+
+Both requirements are testable in a finite window, and the accumulator tests them. `DRIFT`
+compares the mean of the first and of the second half of the series, which probes the
+constant mean. `VARIANCE_SHIFT` compares their variances, which probes the lag-only
+covariance at $k=0$. A chain still in its burn-in fails them, the burn-in being the part of
+a run over which neither requirement holds.
+
+The quantity to compute is $\operatorname{Var}(\bar{x})$, and it is worth being clear about
+what it measures. The chain supplies $\bar{x}$, the average of $f$ over the samples drawn;
+what is wanted is $\mu = \left\langle f\right\rangle$, its average over the distribution
+they are drawn from. Their mean squared separation is
+$\left\langle(\bar{x}-\mu)^2\right\rangle$, which is $\operatorname{Var}(\bar{x})$ itself,
+so its square root is how far the reported value sits from the one it estimates.
+
+That is a different number from $\sigma_x$. The width of the posterior is a property of the
+distribution, and no amount of sampling narrows it; $\operatorname{Var}(\bar{x})$ is the
+error in locating that distribution's mean, and it falls as the chain lengthens. Reporting
+the first where the second is meant, or the reverse, is the confusion the two symbols are
+kept apart to prevent.
+
+Correlation changes the variance of the sample mean from the usual independent-sample
+result, and stationarity is what makes that variance computable: the covariance of any two
+samples is $\gamma_{s-t}$, so the $n^2$ terms of
+$\operatorname{Var}(\bar{x}) = n^{-2}\sum_{s,t}\operatorname{Cov}(x_s,x_t)$ reduce to lag
+classes of $n-|k|$ pairs each. Exactly,
+$$
+\operatorname{Var}(\bar{x}) \equiv \left\langle\left(\bar{x}-\mu\right)^2\right\rangle
+= \frac{1}{n}\sum_{|k|<n}\left(1-\frac{|k|}{n}\right)\gamma_k,
+\qquad
+\bar{x} \equiv \frac{1}{n}\sum_{t=1}^n x_t.
+$$
+The weight $1-|k|/n$ is that pair count as a fraction of $n$: a window of $n$ samples holds
+$n-|k|$ pairs at separation $k$, against the $n$ terms each lag would contribute were the
+window unbounded. It equals one at $k=0$ and falls linearly to zero at $|k|=n$, and that
+shape is why it is called the triangular, or Bartlett, factor. It is a property of the
+window rather than of the process, and it returns below as the difference between $C_k$ and
+$\gamma_k$.
+
+When $n$ is large compared with the correlation scale, the triangular factor is nearly
+one over the lags that contribute appreciably. The variance then approaches
+$$
+\operatorname{Var}(\bar{x})
+\simeq \frac{1}{n}\sum_{k=-\infty}^{\infty}\gamma_k .
+$$
+The sum on the right is the spectral density of the process evaluated at zero frequency.
+The spectral density is the Fourier transform of the autocovariance,
+$$
+S(f) \equiv \sum_{k=-\infty}^{\infty} \gamma_k\,\mathrm{e}^{-2\pi\mathrm{i}fk},
+\qquad f \in \left[-\tfrac{1}{2}, \tfrac{1}{2}\right],
+$$
+and at $f=0$ the exponential is one, leaving the plain sum
+$$
+S(0) = \sum_{k=-\infty}^{\infty}\gamma_k ,
+$$
+also called the long-run variance. No other frequency is used anywhere below, so $S$ enters
+only through this one value, and $\operatorname{Var}(\bar{x}) \simeq S(0)/n$.
+
+That one expression covers the uncorrelated case as well. If every $\gamma_k$ with
+$k \neq 0$ vanishes then $S(0) = \gamma_0$ and the variance of the mean is the familiar
+$\gamma_0/n$. Correlation alters nothing in the expression except the numerator, so the
+entire effect of correlation on the uncertainty of such an average is the dimensionless
+ratio of the two numerators. That ratio is the integrated autocorrelation time,
+$$
+\tau \equiv \frac{S(0)}{\gamma_0}
+= 1 + 2\sum_{k=1}^{\infty}\frac{\gamma_k}{\gamma_0} .
+$$
+The second form fixes its scale: $\tau$ is one for an uncorrelated series, exceeds one when
+successive samples are positively correlated, and falls below one when they alternate in
+sign. It is called a time because the sum runs over lags, so it is measured in samples.
+
+The central relation used throughout this page is therefore
+$$
+\begin{aligned}
+\operatorname{Var}(\bar{x})
+ &= \frac{1}{n}\sum_{|k|<n}\left(1-\frac{|k|}{n}\right)\gamma_k
+ \simeq \frac{S(0)}{n}
+ = \frac{\gamma_0\tau}{n}, \\[4pt]
+n_\mathrm{eff}
+&\equiv \frac{\gamma_0}{\operatorname{Var}(\bar{x})}
+ \simeq \frac{n}{\tau},
+\qquad\text{so}\qquad
+\operatorname{Var}(\bar{x}) \simeq \frac{\gamma_0}{n_\mathrm{eff}} .
+\end{aligned}
+$$
+exact through the triangular sum and asymptotic thereafter. The last form is the
+uncorrelated result with $n$ replaced by $n_\mathrm{eff}$: $n$ correlated samples carry what
+$n_\mathrm{eff} = n/\tau$ independent ones would, one independent sample for every $\tau$
+drawn, which is also what makes $\tau$ a count of samples. Thus
+[[numcosmo-math|NcmStatsAcorr]] is fundamentally estimating $S(0)$, or equivalently $\tau$,
+from a finite correlated series. The effective sample size $n_\mathrm{eff}$ is the number of
+independent draws with variance $\gamma_0$ that would give the same uncertainty on the
+mean.
+
+### A reference process
+
+The quantities above are defined for any stationary process, and testing them, along with
+the estimators that follow, needs one whose values are all known in closed form. The
+first-order autoregressive process is that reference throughout this page,
+$$
+x_t = \phi\,x_{t-1} + e_t ,
+$$
+with $\phi \in (-1,1)$ the autoregressive coefficient and the innovations $e_t$ drawn
+independently with zero mean and variance $\sigma_e^2$, each independent of every $x_{t'}$
+with $t' < t$. Its autocovariances are $\gamma_k = \gamma_0\,\phi^{|k|}$ with
+$\gamma_0 = \sigma_e^2/(1-\phi^2)$, so summing the geometric series gives
+$$
+\tau = \frac{1+\phi}{1-\phi},
+$$
+which is the closed form the unit tests check every estimator against.
+
+### Sample autocovariances
+
+Everything above is a property of the process. None of it is known in practice, and a
+window of $n$ samples is all there is to work with. Using the sample mean $\bar{x}$, the
+autocovariance estimators stored here are
+$$
+C_k \equiv \frac{1}{n}\sum_{t=1}^{n-k}(x_t - \bar{x})(x_{t+k} - \bar{x}),
+\qquad
+\rho_k \equiv \frac{C_k}{C_0}.
+$$
+Each quantity defined above is then estimated as follows.
+
+| process quantity | what estimates it in a window |
+|---|---|
+| $\mu$ | $\bar{x}$ |
+| $\gamma_k$ | $C_k$ |
+| $\gamma_k/\gamma_0$ | $\rho_k$ |
+| $S(0)$ | no direct replacement; the three estimators given below |
+| $\tau$ | that estimate of $S(0)$, divided by $C_0$ |
+| $\operatorname{Var}(\bar{x})$ | $C_0\tau/n$, with $\tau$ from the row above |
+| $n_\mathrm{eff}$ | $n/\tau$, with the same $\tau$ |
+
+The first three rows are direct: replace an expectation over the process by an average over
+the window. The fourth is not, and the rest of the page follows from that. $S(0)$ is a sum
+over every lag, while a window supplies a finite number of lags and biased values at the
+ones it does supply. The last three rows inherit whatever is done about it, which is why a
+single choice of estimator for $S(0)$ determines the uncertainty of the mean, the effective
+sample size, and every diagnostic built on them.
+
+The two columns behave differently. The properties of the process, $\mu$, $\gamma_k$,
+$S(f)$ and $\tau$, are defined at every lag, do not depend on $n$, are the same for every
+realization, and are what a calculation is asked to deliver.
+What a window supplies, $\bar{x}$, $C_k$ and $\rho_k$, exists only for $|k| < n$, changes
+from one realization to the next, and is what the accumulator holds. Where an estimator
+stands for a process quantity the same symbol serves for both, $\tau$ in particular; which
+one is meant is fixed by whether the expression is built from $\gamma_k$ or from $C_k$.
+
+The separation has two consequences, one for each of the next two sections. An estimator
+need not have the mean of the quantity it estimates, and $C_k$ does not. And a window obeys
+constraints the process does not, so a sum over the lags of a window need not behave like
+the corresponding sum over the process.
+
+### Bias
+
+Two separate effects separate $C_k$ from $\gamma_k$. Were $\mu$ known and used in place
+of $\bar{x}$, the estimator would satisfy
+$$
+\left\langle\frac{1}{n}\sum_{t=1}^{n-k}(x_t-\mu)(x_{t+k}-\mu)\right\rangle
+= \left(1-\frac{k}{n}\right)\gamma_k
+$$
+exactly, for every $n$ and every $k$. The sum contains $n-k$ products but is divided by $n$
+rather than by $n-k$, so the triangular factor of the window returns here as the whole of
+the bias. Replacing $\mu$ by $\bar{x}$ subtracts a further amount, the same at every lag,
+$$
+\left\langle C_k\right\rangle
+= \left(1-\frac{k}{n}\right)\gamma_k - \operatorname{Var}(\bar{x}) + O(n^{-2})
+= \left(1-\frac{k}{n}\right)\gamma_k - \frac{\gamma_0\tau}{n} + O(n^{-2}) ,
+$$
+with the same $\operatorname{Var}(\bar{x})$ as above: the sample mean is itself uncertain,
+and centering on it removes a part of the variance at every lag. That shift grows with the
+correlation of the series, being proportional to $\tau$.
+
+The sample autocorrelation carries both effects and adds one more. It is a ratio of two
+random quantities, so its expectation is not the ratio of their expectations. Keeping only
+terms of order $1/n$,
+$$
+\left\langle\rho_k\right\rangle \simeq
+\frac{\left(1-k/n\right)\gamma_k/\gamma_0 - \tau/n}{1-\tau/n} ,
+$$
+and the correction from the ratio itself is of that same order, so the expression indicates
+the size and sign of the bias rather than its exact value. For an AR(1) series with
+$\phi = 0.7$ and $n = 200$ over $4\times10^5$ realizations,
+$\left\langle\rho_1\right\rangle$ measures $0.681$, against $0.688$ from the expression
+above and a process value $\gamma_1/\gamma_0 = 0.700$.
+
+### Choice of normalization
+
+Dividing by $n$ rather than by $n-k$ is deliberate.
+
+First, the sequence $C_0 \dots C_{n-1}$ is positive semi-definite: it is a valid
+autocovariance sequence. Dividing by $n-k$ removes the triangular factor but can produce a
+sequence that is not positive semi-definite. Since the estimators below sum $C_k$ over a
+range of lags, that alternative can lead to an unphysical negative estimate of the
+zero-frequency power.
+
+Second, the factor $1-k/n$ is exactly a triangular lag window applied to the estimate
+normalized by the number of available pairs,
+$$
+C_k = \left(1 - \frac{k}{n}\right)
+      \frac{1}{n-k}\sum_{t=1}^{n-k}(x_t - \bar{x})(x_{t+k} - \bar{x}) .
+$$
+Large lags are formed from fewer products and therefore have greater sampling variance;
+the triangular window progressively downweights them.
+
+Positive semi-definiteness does not mean that all available lags should be summed. In
+fact,
+$$
+\sum_{k=-(n-1)}^{n-1} C_k = \frac{1}{n}\left[\sum_{t=1}^{n}(x_t - \bar{x})\right]^2 = 0 ,
+$$
+identically, because the centered samples sum to zero. A finite-sample estimate of $S(0)$
+must therefore truncate, window, or model the autocovariance sequence. The three estimators
+below differ in how they do this.
+
+
+## Accumulating the autocovariances one sample at a time
+
+Computing $C_k$ from its definition needs the sample mean $\bar{x}$, which is not known
+until the series ends, and a second pass over the samples once it is. Both are avoided by
+accumulating sums that do not refer to $\bar{x}$, and correcting for it only when $C_k$ is
+asked for.
+
+Fix an origin $o$, held fixed as samples are appended, and measure the samples from it,
+
+$$
+y_t \equiv x_t - o .
+$$
+
+The shift is what makes the sums accumulable: they are formed about a number that is known
+from the start, rather than about a mean that is not. It changes nothing in the result,
+since $C_k$ is invariant under a common shift of every $x_t$; $o$ is a bookkeeping origin
+and not an estimate of anything.
+
+Let $L$ be the highest lag the accumulator keeps, the `max-lag` property. Its state is the
+lagged products and the running sum of the shifted samples,
+
+$$
+R_k \equiv \sum_{t=1}^{n-k} y_t\,y_{t+k}
+\quad \text{for } k = 0 \dots L,
+\qquad
+Y \equiv \sum_{t=1}^{n} y_t ,
+$$
+
+so $R_k$ is the lag-$k$ product sum taken about the origin instead of about the mean, and
+$R_0$ is the sum of squares. The accumulator also retains the first $L$ and the last $L$
+values of $y$, which give the partial sums over the head and the tail of the series,
+
+$$
+H_k \equiv \sum_{t=1}^{k} y_t,
+\qquad
+T_k \equiv \sum_{t=n-k+1}^{n} y_t,
+\qquad
+H_0 = T_0 = 0 ,
+$$
+
+that is, $H_k$ over its first $k$ samples and $T_k$ over its last $k$, both needed only for
+$k \leq L$.
+
+Appending one sample updates $R_0 \dots R_L$ and $Y$ and touches nothing else, at a cost of
+$L$ multiply-adds. Writing $\bar{y} \equiv Y/n$, the centered autocovariance is recovered
+from that state alone,
+
+$$
+n\,C_k = R_k - \bar{y}\left(2Y - T_k - H_k\right) + (n-k)\,\bar{y}^2 ,
+$$
+
+the two partial sums appearing because the lag-$k$ sum runs over $n-k$ terms, so the head
+and the tail of the series enter it asymmetrically.
+
+This is an identity, not an approximation: feeding a series one sample at a time and
+computing its autocovariances in one pass over the whole series give the same numbers to
+rounding. The unit tests assert that against an independent Fourier-transform
+implementation, [[numcosmo-math|ncm_stats_acorr_acov_fft]], which is also the path used
+when a whole series is available at once, since it costs $O(n\log n)$ instead of $O(nL)$.
+
+The origin is fixed but not permanent, and the reason it moves is conditioning. $R_k$ sums
+products of raw values, so it loses precision when $|y|$ grows much larger than the scatter
+of $y$. It is set to the first sample and moved whenever the mean wanders more than eight
+standard deviations away from it, which is what a chain entering from far outside its own
+scatter does. Moving it by $d$ is exact, by the same algebra that centers the sums:
+
+$$
+R_k \rightarrow R_k - d\left(2Y - T_k - H_k\right) + (n-k)\,d^2,
+\qquad
+Y \rightarrow Y - n\,d .
+$$
+
+## Levels of block averages
+
+A single level stores autocovariances only through lag $L$. If the correlation extends
+well beyond that range, no estimator based on those values can recover the full integrated
+autocorrelation time. Making the chain longer does not by itself solve this problem,
+because the stored lag range remains fixed.
+
+To extend the range without increasing $L$, the accumulator also follows successively
+blocked versions of the series [@Flyvbjerg1989]. At level $j$, consecutive groups of
+$b_j \equiv 2^j$ original samples are replaced by their average,
+
+$$
+x^{(j)}_r
+\equiv \frac{1}{b_j}\sum_{s=1}^{b_j}x_{(r-1)b_j+s},
+\qquad
+r=1,\ldots,\left\lfloor\frac{n}{b_j}\right\rfloor .
+$$
+
+Denote its autocovariance by $\gamma^{(j)}_k$ and its integrated autocorrelation time by
+
+$$
+\tau_j \equiv \frac{\sum_k\gamma^{(j)}_k}{\gamma^{(j)}_0} .
+$$
+
+Blocking changes both the variance and the autocorrelation time, so in general
+$\tau_j \neq \tau/b_j$. What is preserved is the zero-frequency power after converting
+from block units back to original-sample units. Since one level-$j$ sample represents
+$b_j$ original samples,
+
+$$
+S(0) = b_j \sum_k \gamma^{(j)}_k = b_j\,\gamma^{(j)}_0\,\tau_j
+\qquad \text{for every } j,
+$$
+
+provided the autocovariances are summable. Thus every level gives, in principle, an
+estimate of the same $S(0)$. Expressed as an autocorrelation time in units of the original
+samples,
+
+$$
+\tau = \frac{S(0)}{\gamma_0}
+     = \frac{b_j\,\gamma^{(j)}_0\,\tau_j}{\gamma_0} .
+$$
+
+The useful effect of blocking is that correlation becomes shorter when measured in units
+of the blocked series. Once the block size is large relative to the correlation scale,
+neighboring block averages are nearly independent and $\tau_j$ approaches one. A fixed
+lag budget can then resolve correlations that were too long at level zero.
+
+In practice the accumulator replaces the population autocovariances by the estimates
+$C^{(j)}_k$. If the chosen estimator returns $\tau_j$ from the level-$j$
+autocovariances, the corresponding estimate in original-sample units is
+
+$$
+\tau^{(j)}
+= \frac{b_j C^{(j)}_0\tau_j}{C_0} .
+$$
+
+It reports the estimate from the finest level for which
+$\tau_j \leq L/5$. This retains the most data while leaving a factor of five
+between the estimated correlation scale and the maximum stored lag. If no level satisfies
+the condition, the available lag ranges have not resolved the correlation; the estimate
+is a lower bound and carries `NCM_STATS_ACORR_DIAG_WINDOW_TRUNCATED`.
+
+Level $j$ is updated once every $b_j$ original samples. Summing over all levels, the whole
+cascade costs approximately $2L$ multiply-adds per original sample and stores
+$O(L\log n)$ numbers. With the default $L = 512$ and 24 levels, correlations extending to
+roughly $4\times10^9$ original samples are within the nominal lag coverage.
+
+The figure below shows the invariance the selection rule rests on: the long-run variance
+estimated at each level of one AR(1) series, against the value the process is built with.
+The levels that are too fine cannot resolve the whole correlation and underestimate it;
+from the level where $\tau_j$ fits the lag budget onward, the estimate agrees with the
+true value.
+
+```{python}
+#| label: fig-levels
+#| fig-cap: "Long-run variance recovered at each level of block averaging, for an AR(1) process with $\\phi = 0.995$ ($\\tau = 399$) and a lag budget of 32 per level. The horizontal line is the value of the process. The marker is the level the selection rule picks."
+#| code-fold: true
+
+import numpy as np
+import matplotlib.pyplot as plt
+from numcosmo_py import Ncm
+
+Ncm.cfg_init()
+
+phi, n, max_lag = 0.995, 400000, 32
+rng = np.random.default_rng(3)
+x = np.empty(n)
+x[0] = rng.normal()
+noise = rng.normal(size=n) * np.sqrt(1.0 - phi**2)
+for i in range(1, n):
+    x[i] = phi * x[i - 1] + noise[i]
+
+acorr = Ncm.StatsAcorr.new_full(1, max_lag, 24, Ncm.StatsAcorrMethod.MAX)
+for v in x:
+    acorr.update_var(0, float(v))
+
+tau_true = (1.0 + phi) / (1.0 - phi)
+var = acorr.get_var(0)
+levels, spec0 = [], []
+for j in range(acorr.nlevels(0)):
+    if acorr.level_nitens(0, j) < 16:
+        break
+    acov = acorr.get_acov(0, j)
+    tau_j = Ncm.StatsAcorr.tau_geyer(acov)[0]
+    levels.append(j)
+    spec0.append(2.0**j * acov.get(0) * tau_j)
+
+fig, ax = plt.subplots(figsize=(6.0, 3.6))
+ax.axhline(tau_true * var, color="0.5", ls="--", label=r"$S(0)$ of the process")
+ax.plot(levels, spec0, "o-", color="C0", label=r"level estimate")
+ax.plot(
+    acorr.get_level(0),
+    spec0[acorr.get_level(0)],
+    "s",
+    ms=12,
+    mfc="none",
+    mec="C3",
+    mew=2,
+    label="selected level",
+)
+ax.set_xlabel("level $j$ (block size $b_j=2^j$)")
+ax.set_ylabel("$S(0)$")
+ax.set_yscale("log")
+ax.legend(frameon=False)
+fig.tight_layout()
+```
+
+## Estimators
+
+Every estimator is a pure function of $C_0 \dots C_L$ and the number of samples, so running
+more than one costs nothing beyond the estimator itself.
+
+They are of two kinds. Geyer's and Sokal's rules are nonparametric: they sum the observed
+$C_k$ and differ only in where they stop, asserting nothing about the lags they leave out.
+The auto-regressive estimate introduces a model of the process, fits it to the same $C_k$,
+and evaluates $S(0)$ from the fitted model instead of from the sum. Assuming a model in
+return for a lower variance is what distinguishes it from the other two.
+
+### Auto-regressive spectral estimate
+
+This estimator assumes that the series is described by an autoregression of some finite
+order $p$ driven by uncorrelated innovations,
+
+$$
+x_t = \sum_{j=1}^{p}\phi_{p,j}\,x_{t-j} + e_t ,
+\qquad
+\left\langle e_t\,e_{t'}\right\rangle = v_p\,\delta_{t t'} .
+$$
+
+Such a process has an all-pole spectral density,
+
+$$
+S(f) = \frac{v_p}
+            {\left|1 - \sum_{j=1}^{p}\phi_{p,j}\,\mathrm{e}^{-2\pi\mathrm{i}fj}\right|^{2}} ,
+$$
+
+which at $f=0$, where every exponential is one, is the expression this estimator evaluates.
+The AR($p$) model is fitted to the autocovariances by the Levinson-Durbin recursion, which
+produces the reflection coefficients $\kappa_m$, the coefficients $\phi_{m,j}$ and the
+innovation variance $v_m$ for every order $m \le p$ in one $O(p^2)$ pass:
+
+$$
+\kappa_m = \frac{C_m - \sum_{j=1}^{m-1}\phi_{m-1,j}C_{m-j}}{v_{m-1}},
+\qquad
+\phi_{m,j} = \phi_{m-1,j} - \kappa_m\,\phi_{m-1,m-j},
+\qquad
+v_m = v_{m-1}\left(1 - \kappa_m^2\right).
+$$
+
+The order is the one minimizing a selection criterion, by default the small-sample
+corrected Akaike criterion [@Hurvich1989],
+
+$$
+\mathrm{AICc}(m) = n\log v_m + \frac{2n\,(m+1)}{n - m - 2},
+$$
+
+with the final prediction error and the uncorrected Akaike criterion also available, and a
+setting that selects nothing and takes the largest order tried. Whenever the chosen rule
+selects the largest order it was offered, the search is repeated with twice as many orders:
+a rule that picks the last candidate has not been given enough of them.
+
+and the spectral density at zero of the fitted model gives
+
+$$
+\tau = \frac{1}{C_0}\,\frac{v_p}{\left(1 - \sum_{j=1}^{p}\phi_{p,j}\right)^2}.
+$$
+
+Three assumptions come with this. The spectral density is taken to be all-pole, a form that
+represents peaks economically but reproduces zeros only at high order. The fit is required
+to be stationary, which the recursion enforces by stopping if any $|\kappa_m|$ reaches one.
+And AICc is derived from a Gaussian likelihood, so the order selection assumes that.
+
+The structural difference from the other two is that a fitted model defines $\gamma_k$ at
+every lag, including lags longer than the window. $S(0)$ then sums an extrapolated tail
+rather than a truncated one, which is where the lower variance comes from and where the
+estimator fails when the assumption does not hold: an order the criterion judges adequate
+for the bulk of the autocovariance can imply a tail that decays faster than the real one,
+with nothing in the fit to signal it. It also fits a stationary model to whatever it is
+given, and says nothing when the series is not stationary.
+
+### Geyer initial monotone positive sequence
+
+First form the raw adjacent-lag pairs
+
+$$
+\Gamma_k \equiv C_{2k} + C_{2k+1} .
+$$
+
+The algorithm stops before the first raw pair with $\Gamma_k \leq 0$. Each retained pair
+is then capped at the preceding retained value, making the retained sequence
+non-increasing [@Geyer1992]:
+
+$$
+\widetilde{\Gamma}_0 = \Gamma_0,
+\qquad
+\widetilde{\Gamma}_k
+= \min\!\left(\Gamma_k,\widetilde{\Gamma}_{k-1}\right),
+\quad 1 \leq k \leq k_\star .
+$$
+
+The resulting estimate is
+
+$$
+\tau = \frac{2\sum_{k=0}^{k_\star}\widetilde{\Gamma}_k - C_0}{C_0},
+\qquad
+k_\star \equiv \min\left(\min\left\{k : \Gamma_k \leq 0\right\} - 1,\; k_{\max}\right) ,
+$$
+
+where $k_{\max}$ is the largest $k$ for which both $C_{2k}$ and $C_{2k+1}$ are stored. The
+sum therefore ends at whichever comes first, the sequence ceasing to be positive or the
+stored lags running out. Ending on the second is the truncation that
+`NCM_STATS_ACORR_DIAG_WINDOW_TRUNCATED` reports, and the level selection of the previous
+section exists so that the level finally used does not end that way.
+
+Should the first pair already fail, $\Gamma_0 \leq 0$, the sum is empty and the expression
+above returns $-1$. An integrated autocorrelation time is not defined there, and the
+implementation reports $\tau = 1$, as it does for any estimator whose truncated sum comes
+out non-positive.
+
+For a reversible Markov chain, the paired population sequence is positive, non-increasing,
+and convex. The implementation uses positivity to choose the truncation point and enforces
+monotonicity on the retained estimates; it does not enforce convexity. These operations
+reduce the effect of noisy large-lag estimates and tend to make this the conservative
+companion of the auto-regressive estimate.
+
+### Sokal window
+
+The running estimate $\tau(M) \equiv 1 + 2\sum_{k=1}^{M}\rho_k$ is cut at the smallest window
+satisfying $M \ge c\,\tau(M)$, with $c = 5$ [@Sokal1997]. The rule assumes a non-negative
+autocorrelation function: on a sequence whose first lag is negative enough
+($\rho_1 \le -0.4$) the window closes at $M = 1$ and the estimate is $1 + 2\rho_1$, while
+milder negative lags widen the window instead; in neither case is the variance reduction
+produced by negative correlations measured. The auto-regressive and Geyer estimators can accommodate negative
+autocorrelations, although neither is generally exact for a finite sample.
+
+### Which one is reported
+
+`NCM_STATS_ACORR_METHOD_MAX`, the default, reports the larger of the auto-regressive and
+Geyer estimates and raises `NCM_STATS_ACORR_DIAG_METHOD_DISAGREEMENT` when they differ by
+more than a factor of two. On sampled AR(1) series with $n = 2\times10^4$ and
+$\tau = 9$, over eight seeds, the measured bias and scatter are
+
+| estimator | bias | scatter |
+|---|---|---|
+| auto-regressive, AICc | $+0.9\%$ | $0.29$ |
+| Geyer | $+2.7\%$ | $0.46$ |
+| Sokal | $+1.5\%$ | $0.60$ |
+| larger of the first two | $+3.0\%$ | $0.46$ |
+
+The larger of the two is about three percent conservative and keeps the tighter of the two
+scatters.
+
+That table is measured on AR(1) series, which the auto-regressive model represents exactly,
+so it shows that estimator at its best. On a process outside the model the ordering changes.
+Taking the sum of two AR(1) components, a slow one with $\phi = 0.99$ carrying a tenth of
+the variance and a fast one with $\phi = 0.5$ carrying the rest, gives $\tau = 22.6$ of
+which the slow component supplies $88\%$. Over sixty realizations of $n = 2\times10^4$,
+which is $885\,\tau$:
+
+| estimator | bias | scatter |
+|---|---|---|
+| auto-regressive, AICc | $-41\%$ | $13\%$ |
+| Geyer | $-21\%$ | $17\%$ |
+| Sokal | $-46\%$ | $12\%$ |
+
+All three understate $\tau$, the auto-regressive estimate by twice as much as Geyer, and
+none of the conditions of the next section is raised: the chain is long against the $\tau$
+being reported, which is the one that is too small. Lengthening the series does converge,
+the bias falling to $-6\%$ at $n = 2\times10^5$, but slowly, because what is being
+estimated is a small-amplitude component of a large-amplitude series. This is the situation
+a sampler with one slow direction produces, and it is the reason the default reports the
+larger of two estimators rather than the one with the smallest scatter.
+
+## Ensembles
+
+An ensemble sampler [@Goodman2010] advances $K$ walkers together, so the rows of a catalog
+are not one chain and the walkers at a given iteration are not independent. Two questions
+have to be separated: which series to measure $\tau$ on, and what the effective sample size
+of the whole catalog is.
+
+### The series to measure
+
+[[numcosmo-math|NcmMSetCatalog]] feeds the accumulator the **ensemble mean of each
+iteration**. Writing $x_{i,t}$ for the state of walker $i$ at iteration $t$, over $K$
+walkers and $n_\mathrm{iter}$ iterations, that series is
+$\bar{x}_t \equiv K^{-1}\sum_{i=1}^{K} x_{i,t}$. Its spectral density at zero, $S_{\bar{x}}(0)$, and its
+integrated autocorrelation time, $\tau_{\bar{x}} \equiv S_{\bar{x}}(0)/\operatorname{Var}(\bar{x}_t)$, are what
+the accumulator measures. The first gives the error of the reported mean, with no
+assumption about the walkers,
+
+$$
+\operatorname{Var}\left(\frac{1}{n_\mathrm{iter}}\su\bar{x}_t \bar{x}_t\right) = \frac{S_{\bar{x}}(0)}{n_\mathrm{iter}} .
+$$
+
+It is also the more sensitive series. A slow mode shared by the whole ensemble is a fixed
+fraction of the variance of a single walker, while the ensemble mean suppresses each
+walker's own fast noise by $K$ and so raises the share of the variance that the slow mode
+carries. On a synthetic ensemble of 50 walkers with a common mode of $\tau = 2000$ that
+1400 iterations have not traversed, and equal slow and fast variance, the ensemble mean
+reports $\tau = 582$ and an effective sample size of 2.4, raising
+`NCM_STATS_ACORR_DIAG_SHORT_CHAIN`; a single walker of the same run reports $\tau = 54$ and
+raises nothing.
+
+### Effective sample size of the catalog
+
+The catalog mean is also the time average of $\bar{x}_t$. Its asymptotic variance can therefore
+be written in either of two equivalent forms,
+
+$$
+\operatorname{Var}(\bar{x}_\mathrm{cat})
+= \frac{S_{\bar{x}}(0)}{n_\mathrm{iter}}
+= \frac{\operatorname{Var}(\bar{x}_t)\tau_{\bar{x}}}{n_\mathrm{iter}} .
+$$
+
+To express this uncertainty as a number of effectively independent catalog rows, define
+$K_\mathrm{eff}$ by comparing the variance of an individual row with that of the ensemble
+mean,
+
+$$
+K_\mathrm{eff} \equiv \frac{\operatorname{Var}(x_{i,t})}{\operatorname{Var}(\bar{x}_t)}
+               = \frac{K}{1 + (K-1)\bar{\rho}},
+$$
+
+where the second equality assumes equal walker variances and $\bar{\rho}$ is the mean
+correlation between two distinct walkers at the same iteration,
+
+$$
+\bar{\rho} \equiv
+\frac{1}{K(K-1)}\sum_{i \neq i'}
+\operatorname{Cor}(x_{i,t},x_{i',t}) .
+$$
+
+$K_\mathrm{eff}$ equals $K$ when the walkers are independent at a given iteration and one
+when they move together. Since an independent catalog of size $n_\mathrm{eff}$ would give
+$\operatorname{Var}(\bar{x}_\mathrm{cat}) = \operatorname{Var}(x_{i,t})/n_\mathrm{eff}$,
+equating the two expressions gives
+
+$$
+n_\mathrm{eff} = K_\mathrm{eff}\,\frac{n_\mathrm{iter}}{\tau_{\bar{x}}},
+$$
+
+which is what [[numcosmo-math|ncm_mset_catalog_get_ess]] returns and what
+[[numcosmo-math|ncm_mset_catalog_largest_error]] divides by. Replacing $K_\mathrm{eff}$ by
+$K$ assumes the walkers are independent within an iteration and, on the funnel runs where
+this was measured, overstates the effective sample size by two to three orders of
+magnitude.
+
+A value of $K_\mathrm{eff}$ above $K$ means the ensemble mean is steadier than independent
+walkers would make it. Walkers held in place at different positions look like that: their
+mean does not move, $\tau_{\bar{x}}$ is 1, and nothing in the ensemble-mean series says anything is
+wrong. That is the one failure this series cannot see, and the Gelman-Rubin shrink factor
+[@Gelman1992], built from the per-walker means and variances the catalog already keeps, is
+what sees it.
+
+## Conditions attached to an estimate
+
+Every estimate carries a set of flags, and any of them means it is not to be read as a
+converged autocorrelation time.
+
+| flag | condition | cleared by |
+|---|---|---|
+| `SHORT_CHAIN` | the series is shorter than $50\,\tau$, so $\tau$ itself is not measurable from it [@Sokal1997] | sampling more |
+| `WINDOW_TRUNCATED` | no level resolved the correlation within its lag budget; $\tau$ is a lower bound | sampling more, or a larger lag budget |
+| `DRIFT` | the means of the two halves differ by more than three standard errors | trimming |
+| `METHOD_DISAGREEMENT` | the two estimators differ by more than a factor of two | neither |
+| `VARIANCE_SHIFT` | the variances of the two halves differ by more than a factor of a hundred | trimming |
+| `ZERO_VARIANCE` | the series never moved, and $\tau = 1$ by definition | neither |
+
+`DRIFT` and `SHORT_CHAIN` are complementary: a trend small enough that $\tau$ still comes out near 1 moves the mean
+between the halves and is caught by the drift score, while a trend large enough to
+dominate the series is caught by $\tau$ growing to a sizeable fraction of the run. Neither
+catches a chain whose burn-in has not been removed: the starting excursion is then most of
+the variance of the series, so the normalized autocorrelation function is small at every
+lag and $\tau \to 1$ without any condition being raised. What that leaves is a ratio of scales
+between the two halves, and `VARIANCE_SHIFT` is that ratio. On a funnel run started far
+outside the typical set, the two halves differ by a factor of $10^7$ and the flag is set;
+on twenty stationary AR(1) series it was not set once.
+
+One limit holds across all of them: no estimator built from an autocorrelation function can
+see a mode the chain has not traversed. What these conditions do guarantee is that a chain
+still moving systematically reports a $\tau$ that grows with the run rather than one that
+saturates at a fixed lag budget.
+
+### What each condition asks for
+
+The third column above is what separates a condition a sampler can act on from one it
+cannot. `DRIFT` and `VARIANCE_SHIFT` compare the two
+halves of the run, and a burn-in left in the catalog remains in the first half of it:
+as the chain grows, the early iterations stay where they are and the two halves keep
+differing. Sampling more never clears them; removing those iterations does. `ZERO_VARIANCE`
+is a parameter that has not moved, and `METHOD_DISAGREEMENT` is a statement about the
+estimate rather than about the length of the chain.
+
+`SHORT_CHAIN` is the one condition with a finite, computable target: it clears at
+$n_\mathrm{iter} \geq 50\,\tau$, and that product is a length a sampler can run to. So
+[[numcosmo-math|ncm_fit_esmcmc_run_lre]] continues while either the requested precision is
+unmet or [[numcosmo-math|ncm_mset_catalog_tau_needs_more]] reports `SHORT_CHAIN` on a free
+parameter, and takes the larger of the two targets each round. Reaching the requested
+precision is not on its own a statement that the chain has converged, since the error it is
+computed from is built from a $\tau$ that a short chain cannot measure.
+
+The target can still recede: $\tau$ is estimated from the same chain it bounds, so a chain
+that is not settling has a $\tau$ that grows with it and a requirement that grows just as
+fast. Rounds driven by the reliability criterion alone are therefore bounded, and the run
+stops and reports that the autocorrelation time grew with the chain, which is itself the
+finding. The conditions that trimming clears are reported at the end of the run by
+[[numcosmo-math|ncm_mset_catalog_log_tau_diag]] and never hold the sampler open.
+
+### Where the estimate is usable
+
+The factor of fifty in `SHORT_CHAIN` is not a convention. Running the estimator over three
+AR(1) processes and four series lengths, three hundred realizations each, and ordering the
+results by $n/\tau$ rather than by $n$ or $\tau$ separately:
+
+| $n/\tau$ | $\tau$ | bias | scatter | flagged |
+|---|---|---|---|---|
+| 4 | 49 | $-28\%$ | $32\%$ | $100\%$ |
+| 10 | 49 | $-9\%$ | $32\%$ | $100\%$ |
+| 11 | 19 | $-6\%$ | $36\%$ | $100\%$ |
+| 26 | 19 | $+1\%$ | $33\%$ | $99\%$ |
+| 41 | 49 | $+7\%$ | $31\%$ | $87\%$ |
+| 50 | 4 | $+7\%$ | $34\%$ | $50\%$ |
+| 105 | 19 | $+7\%$ | $21\%$ | $0\%$ |
+| 125 | 4 | $+8\%$ | $25\%$ | $0\%$ |
+| 204 | 49 | $+7\%$ | $14\%$ | $0\%$ |
+| 500 | 4 | $+5\%$ | $12\%$ | $0\%$ |
+| 526 | 19 | $+5\%$ | $11\%$ | $0\%$ |
+| 2500 | 4 | $+2\%$ | $6\%$ | $0\%$ |
+
+Three readings. The bias is governed by the ratio and not by either quantity alone: rows at
+similar $n/\tau$ drawn from different processes give similar numbers. It is downward while
+the series is short, which is the $-\operatorname{Var}(\bar{x})$ term of
+$\left\langle C_k\right\rangle$ acting at every lag, and it changes sign near
+$n/\tau \simeq 20$. And the condition tracks it, every realization being flagged below
+$n/\tau \simeq 26$ and none above $n/\tau \simeq 100$; the flag and the bias share a control
+parameter, so the condition cannot be raised far from where the bias is.
+
+Above the threshold the residual bias is a few percent upward, which follows from taking
+the larger of two estimators, while the scatter of any single estimate ranges from $6\%$ to
+a third of the value. A correction for the remaining bias would be an order of magnitude
+smaller than the scatter it corrects, which is why none is applied.

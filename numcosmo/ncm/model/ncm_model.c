@@ -2764,6 +2764,7 @@ ncm_model_params_set_default_ftype (NcmModel *model)
  *
  * Gets the description of the parameter @param. The output is a GHashTable which
  * contains the following keys:
+ *
  * - "name": the name of the parameter.
  * - "symbol": the symbol of the parameter.
  * - "scale": the scale of the parameter.

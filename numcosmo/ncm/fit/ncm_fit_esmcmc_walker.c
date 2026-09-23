@@ -212,6 +212,25 @@ _ncm_fit_esmcmc_walker_desc (NcmFitESMCMCWalker *walker)
   return NULL;
 }
 
+static void
+_ncm_fit_esmcmc_walker_start_run (NcmFitESMCMCWalker *walker, gboolean initial, guint exploration_done)
+{
+  /* Nothing to prepare by default. */
+}
+
+static void
+_ncm_fit_esmcmc_walker_end_run (NcmFitESMCMCWalker *walker)
+{
+  /* Nothing to release by default. */
+}
+
+static gboolean
+_ncm_fit_esmcmc_walker_is_markovian (NcmFitESMCMCWalker *walker)
+{
+  /* A walker that does not modify the acceptance is Markovian at every iteration. */
+  return TRUE;
+}
+
 /* LCOV_EXCL_STOP */
 
 static void
@@ -239,16 +258,19 @@ ncm_fit_esmcmc_walker_class_init (NcmFitESMCMCWalkerClass *klass)
                                                       1, G_MAXUINT, 1,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->set_size    = _ncm_fit_esmcmc_walker_set_size;
-  klass->get_size    = _ncm_fit_esmcmc_walker_get_size;
-  klass->set_nparams = _ncm_fit_esmcmc_walker_set_nparams;
-  klass->get_nparams = _ncm_fit_esmcmc_walker_get_nparams;
-  klass->setup       = _ncm_fit_esmcmc_walker_setup;
-  klass->step        = _ncm_fit_esmcmc_walker_step;
-  klass->prob        = _ncm_fit_esmcmc_walker_prob;
-  klass->prob_norm   = _ncm_fit_esmcmc_walker_prob_norm;
-  klass->clean       = _ncm_fit_esmcmc_walker_clean;
-  klass->desc        = _ncm_fit_esmcmc_walker_desc;
+  klass->set_size     = _ncm_fit_esmcmc_walker_set_size;
+  klass->get_size     = _ncm_fit_esmcmc_walker_get_size;
+  klass->set_nparams  = _ncm_fit_esmcmc_walker_set_nparams;
+  klass->get_nparams  = _ncm_fit_esmcmc_walker_get_nparams;
+  klass->setup        = _ncm_fit_esmcmc_walker_setup;
+  klass->step         = _ncm_fit_esmcmc_walker_step;
+  klass->prob         = _ncm_fit_esmcmc_walker_prob;
+  klass->prob_norm    = _ncm_fit_esmcmc_walker_prob_norm;
+  klass->clean        = _ncm_fit_esmcmc_walker_clean;
+  klass->desc         = _ncm_fit_esmcmc_walker_desc;
+  klass->start_run    = &_ncm_fit_esmcmc_walker_start_run;
+  klass->end_run      = &_ncm_fit_esmcmc_walker_end_run;
+  klass->is_markovian = &_ncm_fit_esmcmc_walker_is_markovian;
 }
 
 /**
@@ -444,5 +466,55 @@ const gchar *
 ncm_fit_esmcmc_walker_desc (NcmFitESMCMCWalker *walker)
 {
   return NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->desc (walker);
+}
+
+/**
+ * ncm_fit_esmcmc_walker_start_run: (virtual start_run)
+ * @walker: a #NcmFitESMCMCWalker
+ * @initial: whether the chain has no Markovian rows yet
+ * @exploration_done: iterations of a non-Markovian phase already recorded in the catalog
+ *
+ * Called by #NcmFitESMCMC once when a run starts, before the first iteration. @initial is
+ * TRUE when the run starts from the initial ensemble, or resumes a catalog whose
+ * #NcmMSetCatalog:markovian-id lies beyond its last row, i.e. an interrupted exploration
+ * phase; the walker then resumes the phase with @exploration_done iterations already
+ * counted. @initial is FALSE when the catalog already holds Markovian rows, and the walker
+ * must not start any non-Markovian phase.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_start_run (NcmFitESMCMCWalker *walker, gboolean initial, guint exploration_done)
+{
+  NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->start_run (walker, initial, exploration_done);
+}
+
+/**
+ * ncm_fit_esmcmc_walker_end_run: (virtual end_run)
+ * @walker: a #NcmFitESMCMCWalker
+ *
+ * Called by #NcmFitESMCMC once when a run ends.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_end_run (NcmFitESMCMCWalker *walker)
+{
+  NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->end_run (walker);
+}
+
+/**
+ * ncm_fit_esmcmc_walker_is_markovian: (virtual is_markovian)
+ * @walker: a #NcmFitESMCMCWalker
+ *
+ * Whether the acceptance of the last completed iteration was the exact Metropolis-Hastings
+ * one for every walker. FALSE means some walker was moved by a rule that does not satisfy
+ * detailed balance (an exploration phase), and #NcmFitESMCMC then moves the catalog's
+ * #NcmMSetCatalog:markovian-id past that iteration.
+ *
+ * Returns: TRUE if the last iteration was Markovian.
+ */
+gboolean
+ncm_fit_esmcmc_walker_is_markovian (NcmFitESMCMCWalker *walker)
+{
+  return NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->is_markovian (walker);
 }
 

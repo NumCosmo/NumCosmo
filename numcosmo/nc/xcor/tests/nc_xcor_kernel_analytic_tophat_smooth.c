@@ -40,10 +40,10 @@
  * renormalized there in closed form.
  *
  * This sits between #NcXcorKernelAnalyticTophat and #NcXcorKernelAnalyticGauss
- * and is the more honest model of a photo-z bin than either: bin edges are
- * sharp in true redshift but the photo-z scatter smooths them, so the window is
- * flat in the middle with rounded shoulders rather than either a hard step or a
- * single bump. $\sigma \to 0$ recovers the top-hat and
+ * and matches a photo-z bin more closely than either: bin edges are sharp in
+ * true redshift but the photo-z scatter smooths them, so the window is flat in
+ * the middle with rounded shoulders rather than either a hard step or a single
+ * bump. $\sigma \to 0$ recovers the top-hat and
  * $\chi_\mathrm{u} \to \chi_\mathrm{l}$ the Gaussian, so it interpolates the two
  * stress cases the other shapes probe separately.
  *

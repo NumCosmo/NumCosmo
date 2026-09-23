@@ -13,9 +13,9 @@ NumCosmo uses the [meson](https://mesonbuild.com/) build system.
 
 The library is split into two GObject namespaces, mirrored by the directory tree:
 
-- `numcosmo/ncm/` — **NumCosmoMath**: foundation code with no cosmology
+- `numcosmo/ncm/` — NumCosmoMath: foundation code with no cosmology
   (algebra, splines, integration, statistics, the model/MSet system, fitting).
-- `numcosmo/nc/` — **NumCosmo**: cosmology models and likelihoods
+- `numcosmo/nc/` — NumCosmo: cosmology models and likelihoods
   (background, perturbations, large-scale structure, clusters, CMB, …).
 
 Each subdirectory groups a coherent family; an abstract base lives together with
@@ -24,20 +24,20 @@ its concrete subclasses. Vendored third-party code is quarantined under
 
 ## Adding a new class
 
-1. **Place the files** in the subdirectory that matches the family, under
+1. Place the files in the subdirectory that matches the family, under
    `numcosmo/ncm/<area>/` or `numcosmo/nc/<area>/`.
 
-2. **Register the sources** in `numcosmo/meson.build`. Add the `.c` to the
+2. Register the sources in `numcosmo/meson.build`. Add the `.c` to the
    `ncm_sources` (or `nc_sources`) `files()` list and the `.h` to `ncm_headers`
    (or `nc_headers`), using the subdirectory-qualified path, e.g.
    `'ncm/algebra/ncm_my_object.c'`.
 
-3. **Export through the umbrella header.** Add the header to `numcosmo/numcosmo.h`
+3. Export through the umbrella header. Add the header to `numcosmo/numcosmo.h`
    (cosmology) or `numcosmo/numcosmo-math.h` (math). These two umbrellas are the
    only supported public include surface — never document reaching into a
    subdirectory header directly.
 
-4. **Register the type** for serialization. Include the header in
+4. Register the type for serialization. Include the header in
    `numcosmo/ncm/core/ncm_cfg.c`, next to the other headers of its family, and
    register the object in `ncm_cfg_register_objects ()` with
    `ncm_cfg_register_obj (NCM_TYPE_MY_OBJECT);`. (`ncm_cfg.h` includes only what its
@@ -51,11 +51,11 @@ Tests follow their sources as a hard invariant: a class in
 
 1. Add the test under the mirrored path, prefixed `test_`: `tests/c/<ns>/<area>/`
    for C, `tests/python/<ns>/<area>/` for Python.
-2. **C tests must be registered** in `tests/c/meson.build`: add an entry giving the
+2. C tests must be registered in `tests/c/meson.build`: add an entry giving the
    test `name` and its `sources`, since each C test is built as its own executable.
    Coverage of a class's ref/free/clear methods goes in the existing
    `tests/c/ncm/core/test_ncm_generic.c` rather than in a new file.
-3. **Python tests are collected automatically** — the suites run `pytest` over
+3. Python tests are collected automatically — the suites run `pytest` over
    `tests/python/`, so a new file needs no `meson.build` entry. Selection between
    lanes is by *marker*, not by path: a file with no marker joins the default lane,
    and one belonging to a dedicated shard (`xcor`, `powspec`, `app`, `omp`,
@@ -68,15 +68,15 @@ Tests follow their sources as a hard invariant: a class in
 
 Documentation is split by purpose, and the split is intentional:
 
-- **API reference** (gi-docgen, generated from the GObject doc comments in the
+- API reference (gi-docgen, generated from the GObject doc comments in the
   `.c` files) — brief and operational. State what the class does, the defining
   relation or signature, and the key methods. Keep it short.
-- **Theoretical background** (the Quarto project under `docs/`, rendered to the
+- Theoretical background (the Quarto project under `docs/`, rendered to the
   website) — the physics, derivations, and full equations live here, in
   `docs/theory/<area>/<topic>.qmd`.
 
-When a class involves non-trivial math, **do not put the derivation in the C doc
-comment.** Put it on a theory page and link to it. The pattern is established by
+When a class involves non-trivial math, do not put the derivation in the C doc
+comment. Put it on a theory page and link to it. The pattern is established by
 `NcmCSQ1D`: see the short doc comment in
 `numcosmo/ncm/dynamics/ncm_csq1d.c` and the corresponding
 `docs/theory/csq1d.qmd`.
@@ -102,23 +102,44 @@ Comments and docs are read by people holding a large amount of the library in
 their head at once. Every phrase that has to be decoded before it can be used
 costs them. Write so a sentence can be read once, at speed.
 
-**State facts, not impressions.** Do not use evaluative or promotional wording
-for the project's own work. These are rejected by the style check:
+State facts, not impressions. Do not use evaluative or promotional wording
+for the project's own work, and do not label something as self-evident. These
+are rejected by the style check:
 
 > shipped, blow up / blows up, blowup, comfortably, blindly, genuinely,
 > decisive, safe zone, sweet spot, nets out, load-bearing, at length,
-> worth knowing, needlessly, magic, trap, story, wins big, of course
+> worth knowing, needlessly, wins big, obvious / obviously, hot loop,
+> of course, magic, trap / traps, story, honest / honestly,
+> clever / cleverly, elegant, it turns out
 
 Name the object instead of gesturing at it: not "each piece" but "the
 `chi_I` series, the Jacobian series and their product".
 
-**Placement.** A function or class doc states what the thing does and its error
+State the current behaviour, not how it got there. A comment says what the
+code does and what it guarantees. The sequence of attempts that led to it, and
+which of them failed, goes in `dev-notes/<topic>.md` or an area history
+document. These are rejected by the style check:
+
+> historically, in the past, originally, nowadays, these days, at the time,
+> the old code / path / version / implementation / way,
+> used to abort / crash / hang / fail / refuse / stall / deadlock / leak /
+> be broken / be wrong
+
+Write the invariant instead: not "the pair that used to abort", but "a pair
+with a panel-backed closure on either side". A past *interface* is sometimes
+the point — a migration note has to say which property an old serialized file
+set and what it now maps to — and "used to" and "no longer" on their own are
+not flagged, so those notes are unaffected. A measured number keeps its
+measurement: "measured at 975161 knots with the second differences never
+coming down" is a fact about the code's behaviour, not a history lesson.
+
+Placement. A function or class doc states what the thing does and its error
 modes, and stops. Derivations go on a theory page (see above). Measurement
 tables, rejected approaches, and how a bug was found go in
 `dev-notes/<topic>.md` or an area history document such as
 `docs/theory/wl_shape_factor_history.md`, with a pointer left in the code.
 
-**Do not delete these when shortening a comment.** Move them if they belong
+Do not delete these when shortening a comment. Move them if they belong
 elsewhere, but they must survive somewhere findable:
 
 - error modes: what returns NaN, what aborts, what is clamped and why
@@ -128,10 +149,10 @@ elsewhere, but they must survive somewhere findable:
 - measured accuracy envelopes, and the guidance drawn from them
 - links: `<a href="../../theory/....html">` from C, `[[numcosmo|Sym]]` from `.qmd`
 
-**Checking.** `.github/scripts/check_doc_style.sh` flags the wording above in added lines
-and reports theory-page links removed by the current branch. CI runs it on pull
-requests. It is advisory for the link report and blocking for the word list; to
-run it locally:
+Checking. `.github/scripts/check_doc_style.sh` flags both word lists above in
+added lines and reports theory-page links removed by the current branch. CI runs
+it on pull requests. It is advisory for the link report and blocking for the two
+word lists; to run it locally:
 
 ```bash
 .github/scripts/check_doc_style.sh              # check the diff against origin/master
@@ -159,18 +180,18 @@ its output as a draft and re-tidy before committing; the local `file`, `owner`,
 
 ### Adding a page
 
-A new `.qmd` has to be registered in **four** places. Miss one and it either
+A new `.qmd` has to be registered in four places. Miss one and it either
 fails to build, builds but is unreachable, or is reachable only from the
 sidebar:
 
-1. **`docs/<area>/meson.build`** — add the filename to the `files(...)` list, or
+1. `docs/<area>/meson.build` — add the filename to the `files(...)` list, or
    it is never copied into the build tree. A brand-new subdirectory also needs
    its own `meson.build` and a `subdir('<name>')` line in the parent.
-2. **`docs/_quarto.yml.in`, the render list** — the top-level list of pages to
+2. `docs/_quarto.yml.in`, the render list — the top-level list of pages to
    render (near `- tutorials/index.qmd`).
-3. **`docs/_quarto.yml.in`, the sidebar** — the `contents:` entry under the
+3. `docs/_quarto.yml.in`, the sidebar — the `contents:` entry under the
    right `section:`, with an `href:` and a short `text:` label.
-4. **The index page for its area** — `docs/tutorials/index.qmd`,
+4. The index page for its area — `docs/tutorials/index.qmd`,
    `docs/examples/index.qmd`, or `docs/theory/index.qmd`. The sidebar and the
    index are separate; adding a page to the sidebar alone leaves it off the
    landing page a reader browses.
@@ -178,9 +199,9 @@ sidebar:
 Keep the section names in 2-4 consistent: if a page needs a new section, add it
 to both the sidebar and the index.
 
-Tutorial or example? A **tutorial** walks through a complete workflow and
+Tutorial or example? A tutorial walks through a complete workflow and
 explains every step, and is read start to finish; it goes in `docs/tutorials/`.
-An **example** is a short self-contained script showing one part of the API in
+An example is a short self-contained script showing one part of the API in
 use, read as reference; it goes in `docs/examples/`.
 
 Match an existing page's front matter (`format: html` plus `ipynb`, and
@@ -205,7 +226,7 @@ from `_quarto.yml.in` by meson and is absent from a clean checkout, so the
 `{{< include /_functions.qmd >}}` directive fails to resolve, and a hand-run
 render also appends to `docs/.gitignore`.
 
-Note: when you change **only** a `.c`/`.h` doc comment (no `.qmd`/`_quarto`
+Note: when you change only a `.c`/`.h` doc comment (no `.qmd`/`_quarto`
 change), the site bundle may not re-render because the `numcosmo-site` target
 does not detect changes in the generated API reference. Force it with:
 
@@ -224,7 +245,7 @@ The `docs-artifacts` GitHub Actions job builds the site and uploads it as
 `numcosmo-site-<SHA>`, then restarts the RTD build, and RTD merely downloads
 that artifact (`docs/download_docs_site.py`).
 
-So `docs/readthedocs.org:numcosmo` **fails on every PR at first**: RTD's own
+So `docs/readthedocs.org:numcosmo` fails on every PR at first: RTD's own
 webhook fires on the push and looks for an artifact that does not exist yet. It
 goes green once `docs-artifacts` finishes and restarts it, and RTD then serves a
 per-PR preview. Judge documentation health from `docs-artifacts`, and do not
@@ -317,9 +338,9 @@ run.
 files, never the FFTW wisdom and FFTLog tables the library writes alongside
 them. Two things make an entry stale, and nothing else does:
 
-- **The release tag.** The key embeds the `datafile-release-vX.Y.Z` tag read
+- The release tag. The key embeds the `datafile-release-vX.Y.Z` tag read
   back out of the sources that name it, so bumping the tag there is enough.
-- **`DATA_CACHE_VERSION`** in `.github/workflows/build_check.yml`. Bump it for
+- `DATA_CACHE_VERSION` in `.github/workflows/build_check.yml`. Bump it for
   anything the tag does not catch — most importantly a file replaced in place
   under an unchanged tag, which the library would otherwise never re-download.
 

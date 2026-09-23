@@ -4,7 +4,7 @@
 
 At NumCosmo, we appreciate your help in identifying and reporting any vulnerabilities or security issues you may find. To report a security issue, please follow these steps:
 
-1. **Do not** disclose the issue publicly until it has been addressed by the NumCosmo team.
+1. Do not disclose the issue publicly until it has been addressed by the NumCosmo team.
 
 2. Send an email to the maintainers at [vitenti@gmail.com](mailto:vitenti@gmail.com) to report the security issue. Provide as much detail as possible, including:
 

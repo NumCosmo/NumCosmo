@@ -32,6 +32,7 @@ import typer
 
 from .. import Ncm
 from ..interpolation.stats_dist import (
+    CrossValidationMethod,
     InterpolationKernel,
     InterpolationMethod,
 )
@@ -111,55 +112,102 @@ class RunMCMC(RunCommonOptions):
         ),
     ] = None
 
-    shrink: Annotated[
-        Optional[float],
-        typer.Option(
-            help=(
-                "Shrink factor applied to the weights of the APES approximation. "
-                "It scales the weights towards a uniform value of 1/N, where N is the "
-                "number of samples, helping to prevent overfitting. "
-                "If None, the default APES value of 0.01 is used."
-            ),
-            min=0.0,
-            max=1.0,
-        ),
-    ] = None
-
-    random_walk_prob: Annotated[
-        float,
-        typer.Option(
-            help=(
-                r"Probability of using a random walk step in the proposal generation. "
-                r"The default value is 0.02, meaning that 2% of the proposals will be "
-                r"generated using a random walk step."
-            ),
-            min=0.0,
-            max=1.0,
-        ),
-    ] = 0.02
-
-    random_walk_scale: Annotated[
-        float,
-        typer.Option(
-            help=(
-                r"Scale factor for the random walk step used in proposal generation. "
-                r"This property defines the standard deviation of the random walk "
-                r"proposal as a fraction of the empirical standard deviation computed "
-                r"from the current half-ensemble (i.e., the half not being updated). "
-                r"The default value is 0.25, meaning the random walk step will have a "
-                r"standard deviation equal to 25% of that empirical value."
-            ),
-            min=0.01,
-            max=1.0,
-        ),
-    ] = 0.25
-
     use_interpolation: Annotated[
         bool,
         typer.Option(
             help="Use interpolation to compute the weights of the APES approximation.",
         ),
     ] = True
+
+    cv_method: Annotated[
+        CrossValidationMethod,
+        typer.Option(
+            help=(
+                "Cross-validation used to choose the over-smoothing factor. NONE uses "
+                "the value given by --over-smooth. SPLIT_NOFIT builds the approximation "
+                "from a fraction --split-fraction of each block and chooses the "
+                "over-smoothing factor on the remaining points of that block."
+            ),
+        ),
+    ] = CrossValidationMethod.NONE
+
+    split_fraction: Annotated[
+        Optional[float],
+        typer.Option(
+            help="Fraction of each block used as kernel centres.",
+            min=0.02,
+            max=1.0,
+        ),
+    ] = None
+
+    auto_kernel: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Choose the interpolation kernel together with the over-smoothing "
+                "factor, by the same out-of-sample objective. Requires --cv-method "
+                "split-nofit and overrides --interpolation-kernel."
+            ),
+        ),
+    ] = False
+
+    center_shrink: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Shrink the kernel centres toward the ensemble mean so that the APES "
+                "approximation has the same covariance as the ensemble. Requires a "
+                "kernel with a finite covariance, so not the Cauchy one."
+            ),
+        ),
+    ] = False
+
+    defensive_frac: Annotated[
+        float,
+        typer.Option(
+            min=0.0,
+            max=1.0,
+            help=(
+                "Weight of a wide Student-t component mixed into the APES proposal, "
+                "centered on the ensemble mean with --defensive-scale times its "
+                "covariance and --defensive-nu degrees of freedom. Keeps the proposal "
+                "density positive where the kernels leave holes. Zero disables it."
+            ),
+        ),
+    ] = 0.0
+
+    defensive_scale: Annotated[
+        float,
+        typer.Option(min=1.0e-2, help="Covariance factor of the wide component."),
+    ] = 4.0
+
+    defensive_nu: Annotated[
+        float,
+        typer.Option(min=1.0, help="Degrees of freedom of the wide component."),
+    ] = 3.0
+
+    vkde_points_per_dim: Annotated[
+        float,
+        typer.Option(
+            min=0.0,
+            help=(
+                "VKDE only: nearest neighbours per dimension for each local covariance, "
+                "k = min(n, c d). Replaces --local-fraction when positive; a small "
+                "ensemble then gives the KDE limit and a large one keeps the kernels local."
+            ),
+        ),
+    ] = 0.0
+
+    uniform_weights: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Keep uniform kernel weights instead of the NNLS fit. The bandwidth and "
+                "kernel cross-validation still run, including the methods that need the "
+                "ensemble's -2lnL."
+            ),
+        ),
+    ] = False
 
     parallel: Annotated[
         Parallelization,
@@ -228,11 +276,41 @@ class RunMCMC(RunCommonOptions):
         int,
         typer.Option(
             help=(
-                "Number of samples to use for the exploration phase. The exploration "
-                " phase should be discarded from the final samples."
+                "Length cap of the APES exploration phase, in iterations. With "
+                "--exploration-qratio-floor 0 the phase accepts by the posterior ratio "
+                "alone for exactly this many iterations; with a positive floor it ends "
+                "earlier, after --exploration-stop-after consecutive iterations in which "
+                "no acceptance was clipped. The phase runs only when the chain starts from "
+                "its initial ensemble, and the catalog's markovian-id records where it ended."
             ),
+            min=0,
         ),
     ] = 0
+
+    exploration_qratio_floor: Annotated[
+        float,
+        typer.Option(
+            help=(
+                "Floor of the proposal-density ratio q(x)/q(x') in the acceptance during "
+                "the exploration phase, so walkers where the proposal has almost no mass "
+                "can leave. 0 disables the clip; 1 uses the posterior ratio alone for "
+                "every blocked move."
+            ),
+            min=0.0,
+            max=1.0,
+        ),
+    ] = 0.0
+
+    exploration_stop_after: Annotated[
+        int,
+        typer.Option(
+            help=(
+                "Consecutive iterations in which no acceptance was clipped, after which "
+                "the exploration phase ends and the clip is disarmed for the rest of the run."
+            ),
+            min=1,
+        ),
+    ] = 10
 
     skip_check: Annotated[
         bool,
@@ -240,6 +318,18 @@ class RunMCMC(RunCommonOptions):
             help="Skip the check of the last ensemble when continuing a run.",
         ),
     ] = True
+
+    seed: Annotated[
+        Optional[int],
+        typer.Option(
+            min=0,
+            help=(
+                "Seed of the random number generator used by the sampler, including "
+                "the initial points. If not given, a seed is drawn and printed in the "
+                "log."
+            ),
+        ),
+    ] = None
 
     def __post_init__(self) -> None:
         """Run the ESMCMC algorithm."""
@@ -311,15 +401,20 @@ class RunMCMC(RunCommonOptions):
         apes_walker.set_over_smooth(self.over_smooth)
         if self.local_fraction is not None:
             apes_walker.set_local_frac(self.local_fraction)
-        if self.shrink is not None:
-            apes_walker.set_shrink(self.shrink)
-
-        apes_walker.set_random_walk_prob(self.random_walk_prob)
-        apes_walker.set_random_walk_scale(self.random_walk_scale)
-
         apes_walker.use_interp(self.use_interpolation)
         apes_walker.set_method(self.interpolation_method.genum)
         apes_walker.set_k_type(self.interpolation_kernel.genum)
+        # After the kernel, so that an incompatible pair is caught immediately.
+        apes_walker.set_center_shrink(self.center_shrink)
+        apes_walker.set_defensive_frac(self.defensive_frac)
+        apes_walker.set_defensive_scale(self.defensive_scale)
+        apes_walker.set_defensive_nu(self.defensive_nu)
+        apes_walker.set_vkde_points_per_dim(self.vkde_points_per_dim)
+        apes_walker.set_uniform_weights(self.uniform_weights)
+        apes_walker.set_cv_type(self.cv_method.genum)
+        apes_walker.set_auto_kernel(self.auto_kernel)
+        if self.split_fraction is not None:
+            apes_walker.set_split_frac(self.split_fraction)
 
         if self.parallel == Parallelization.THREADS.value:
             apes_walker.set_use_threads(True)
@@ -331,8 +426,9 @@ class RunMCMC(RunCommonOptions):
         else:
             apes_walker.set_use_threads(False)
 
-        if self.exploration > 0:
-            apes_walker.set_exploration(self.exploration)
+        apes_walker.set_exploration(self.exploration)
+        apes_walker.set_exploration_qratio_floor(self.exploration_qratio_floor)
+        apes_walker.set_exploration_stop_after(self.exploration_stop_after)
 
         if self.functions is not None:
             esmcmc: Ncm.FitESMCMC = Ncm.FitESMCMC.new_funcs_array(
@@ -360,6 +456,9 @@ class RunMCMC(RunCommonOptions):
             )
 
         esmcmc.set_skip_check(self.skip_check)
+
+        if self.seed is not None:
+            esmcmc.set_rng(Ncm.RNG.seeded_new(None, self.seed))
 
         esmcmc.start_run()
         esmcmc.run(self.nsamples)

@@ -39,7 +39,7 @@
  *
  * For the full definitions of $L_0$, $C_0$, and $\Gamma_\mathrm{eff}$, see the
  * theoretical background page (Zero-Baryon Variant section):
- * <a href="../../theory/transfer_func_eh.html">Eisenstein–Hu Transfer Function</a>.
+ * <a href="../../theory/transfer_func_eh.html">Eisenstein-Hu Transfer Function</a>.
  * Reference: [Eisenstein and Hu (1998)](https://arxiv.org/abs/astro-ph/9709112).
  */
 

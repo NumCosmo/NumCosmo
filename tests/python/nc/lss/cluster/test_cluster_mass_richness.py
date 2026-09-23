@@ -603,7 +603,7 @@ class TestPivotAccessors:
     def test_ln1pz0_ascaso(self, cluster_m_ascaso: Nc.ClusterMassAscaso) -> None:
         """Test ln1pz0 accessor for Ascaso model."""
         ln1pz0 = cluster_m_ascaso.ln1pz0()
-        # Default z0 is 0.6, so ln(1.6) ≈ 0.47
+        # Default z0 is 0.6, so ln(1.6) ~= 0.47
         assert ln1pz0 > 0.0
         assert ln1pz0 < 1.0
 

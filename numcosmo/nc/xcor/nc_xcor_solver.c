@@ -30,16 +30,16 @@
  * spectra.
  *
  * This is the "companion object" from
- * dev-notes/xcor_ultralevin_batching_plan.md §5: it lets a caller declare
+ * dev-notes/xcor_ultralevin_batching_plan.md sec. 5: it lets a caller declare
  * every kernel and every desired auto/cross Cl block up front
  * (nc_xcor_solver_register_kernel() / nc_xcor_solver_request_cl()), so a
- * future nc_xcor_solver_solve() can pick an ℓ-block tiling and build each
+ * future nc_xcor_solver_solve() can pick an $\ell$-block tiling and build each
  * distinct kernel's k-space closure exactly once per block, shared across
  * every request that needs it in that block -- instead of rebuilding it
  * once per pair, as #NcXcor's single-pair nc_xcor_compute() does today.
  *
  * This phase (registration) does no computation at all: it only records
- * which kernels and which (kernel pair, ℓ-range) blocks are wanted.
+ * which kernels and which (kernel pair, $\ell$-range) blocks are wanted.
  * nc_xcor_solver_register_kernel() is idempotent by pointer identity --
  * registering the same #NcXcorKernel instance twice returns the same id.
  *
@@ -241,7 +241,7 @@ nc_xcor_solver_register_kernel (NcXcorSolver *solver, NcXcorKernel *xclk)
  * @lmax: maximum multipole
  *
  * Declares one desired output block: the auto- or cross-Cl of the kernels
- * identified by @kernel_id_1 and @kernel_id_2, over ℓ in [@lmin, @lmax].
+ * identified by @kernel_id_1 and @kernel_id_2, over $\ell$ in [@lmin, @lmax].
  * Call once per entry in the data vector / covariance block ultimately
  * needed. Registration-only: no computation happens here.
  *
@@ -499,7 +499,7 @@ _nc_xcor_solver_guint_cmp (gconstpointer a, gconstpointer b)
  * @solver: a #NcXcorSolver
  * @default_block_size: preferred number of multipoles per block
  *
- * Tiles the union of all requested ℓ-ranges into contiguous blocks, each
+ * Tiles the union of all requested $\ell$-ranges into contiguous blocks, each
  * covering at most @default_block_size multipoles, further capped by
  * #NC_XCOR_KERNEL_MAX_ELL_BLOCK and by the smallest
  * ncm_sbessel_integrator_levin_get_ell_cache_max() among all registered
@@ -643,7 +643,7 @@ nc_xcor_solver_get_n_blocks (NcXcorSolver *solver)
  * @lmin: (out): minimum multipole of the block
  * @lmax: (out): maximum multipole of the block
  *
- * Retrieves the ℓ-range of a block planned by nc_xcor_solver_plan_blocks(),
+ * Retrieves the $\ell$-range of a block planned by nc_xcor_solver_plan_blocks(),
  * in ascending order and non-overlapping.
  *
  */
@@ -666,7 +666,7 @@ nc_xcor_solver_get_block (NcXcorSolver *solver, guint block_index, guint *lmin, 
  * using an already-built (or freshly cached) pair of integrands. Shared by
  * both the serial and block-parallel KERNEL_CUBATURE loops below; @results
  * is written at request-relative offsets that never overlap between two
- * different blocks (blocks tile disjoint ℓ-ranges), so concurrent calls
+ * different blocks (blocks tile disjoint $\ell$-ranges), so concurrent calls
  * from different blocks/threads writing into the same @results array are
  * safe as long as each call's own (@kernels, @integrands) are private to
  * its thread.
@@ -765,13 +765,13 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
  * When @xc's method has a block quadrature -- %NC_XCOR_METHOD_KERNEL_CUBATURE,
  * %NC_XCOR_METHOD_KERNEL_EXACT or %NC_XCOR_METHOD_KERNEL_GSL_BLOCK -- each distinct
  * kernel's k-space closure (nc_xcor_kernel_get_eval_vectorized()) is built
- * once per ℓ-block and shared across every request needing it in that
+ * once per $\ell$-block and shared across every request needing it in that
  * block, instead of rebuilding it once per pair the way nc_xcor_compute()
- * does -- see plan doc dev-notes/xcor_ultralevin_batching_plan.md §5-§6.
- * Different ℓ-blocks share no reusable operator state with each other (a
- * fresh #NcmSBesselIntegratorLevin ℓ-range rebuild is required regardless),
+ * does -- see plan doc dev-notes/xcor_ultralevin_batching_plan.md sec. 5-6.
+ * Different $\ell$-blocks share no reusable operator state with each other (a
+ * fresh #NcmSBesselIntegratorLevin $\ell$-range rebuild is required regardless),
  * so blocks are additionally processed in parallel across an OpenMP team
- * (plan doc §6.3). The registered kernels are *shared* by the team and are
+ * (plan doc sec. 6.3). The registered kernels are *shared* by the team and are
  * prepared against @cosmo before it starts, so they are only ever read inside
  * it; what is private to each thread is the per-block integrator and the
  * integrand cache built from it. No thread touches another's integrand or
@@ -785,7 +785,7 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
  * Every other method (%NC_XCOR_METHOD_LIMBER_Z_GSL,
  * %NC_XCOR_METHOD_LIMBER_Z_CUBATURE, %NC_XCOR_METHOD_KERNEL_GSL) has no
  * block-shared closure to reuse -- tier 1 stays untouched by design (plan
- * doc §8), and %NC_XCOR_METHOD_KERNEL_GSL fits its closure per ℓ regardless
+ * doc sec. 8), and %NC_XCOR_METHOD_KERNEL_GSL fits its closure per $\ell$ regardless
  * of pairing -- so those requests are computed directly with
  * nc_xcor_compute(), one call per request, serially, for correctness with no
  * reuse. Keeping %NC_XCOR_METHOD_KERNEL_GSL on that path is also what makes

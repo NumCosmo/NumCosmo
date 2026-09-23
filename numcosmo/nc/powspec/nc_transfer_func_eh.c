@@ -39,7 +39,7 @@
  *
  * For the full fitting formulas and parameter definitions, see the theoretical
  * background page:
- * <a href="../../theory/transfer_func_eh.html">Eisenstein–Hu Transfer Function</a>.
+ * <a href="../../theory/transfer_func_eh.html">Eisenstein-Hu Transfer Function</a>.
  * Reference: [Eisenstein and Hu (1998)](https://arxiv.org/abs/astro-ph/9709112).
  */
 

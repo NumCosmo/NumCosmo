@@ -133,7 +133,7 @@ consequences worth recording, both found only by testing against a
 brute-force/numerical cross-check rather than trusting the derivation on
 its face (see `verify-closed-form-derivations-numerically` house rule):
 
-- **The $x$-divergence threshold moved from $\alpha<1$ to $\alpha<2$.**
+- The $x$-divergence threshold moved from $\alpha<1$ to $\alpha<2$.
   $P(r)$ itself is non-divergent for $\alpha\ge1$ (why the floor could go
   back to the clean, symmetric $\alpha,\beta\ge1$, no more loosening below
   1), but the extra $x^{-1/2}$ Jacobian factor means $P(x)$ — what
@@ -143,8 +143,8 @@ its face (see `verify-closed-form-derivations-numerically` house rule):
   $\alpha=0.7$, are still exactly the ones divergent now, at
   $\alpha_\mathrm{new}=1.4$) — it only looks wider if the raw threshold
   numbers are compared without rescaling.
-- **`SeriesLensed`'s usable range shrank from $\alpha\ge1$ (practical
-  guidance) to $\alpha\ge2$ (much stronger).** `eval_p_rho2_g_series()`
+- `SeriesLensed`'s usable range shrank from $\alpha\ge1$ (practical
+  guidance) to $\alpha\ge2$ (much stronger). `eval_p_rho2_g_series()`
   needs $\sqrt{x(g)}$ unconditionally now, even at integer $\alpha$ where
   the old $x^{\alpha-1}$ term was an entire function with no singularity at
   all (e.g. $\alpha=4$ used to compose to arbitrary order with no issue).
@@ -206,15 +206,15 @@ overlap" ($d\ge R_1+R_2$, i.e. the fixed $n_\sigma$ noise-disk window misses
 the unit disc entirely), returning a fixed `1e-300` floor regardless of how
 close $d$ was to that threshold. This produced an arbitrary, discontinuous
 jump in the marginal: at `std_noise=0.03`, `R=1.239999 → R=1.240000` (an
-infinitesimal change) jumped `-2lnL` by **over 1000** for that one galaxy —
+infinitesimal change) jumped `-2lnL` by over 1000 for that one galaxy —
 a real risk for any MC-style analysis where galaxies in different
 realizations land on either side of this arbitrary, unphysical threshold
 (the true noise kernel has infinite support).
 
-**First fix attempt, wrong**: fall back to full-disc quadrature
+First fix attempt, wrong: fall back to full-disc quadrature
 (`_regen_unit_contained`) near that boundary. Looked fine at
 `std_noise=0.03` (checked, a few percent error) but failed badly at smaller
-`std_noise`: off by **~2350×** at `std_noise=0.01`, **~10^14** at
+`std_noise`: off by ~2350× at `std_noise=0.01`, ~10^14 at
 `std_noise=0.005`, at the same node count that looked fine at 0.03. The
 surviving probability there is a deep `exp(-x^2)` tail concentrated in a
 narrow sliver near the disc edge closest to the observation — narrower the
@@ -222,11 +222,11 @@ smaller `std_noise` is — and a full-disc grid with a modest, uniformly-spaced
 node count has no reason to sample near an exponentially-localized peak it
 was never aimed at.
 
-**Lesson**: validating a fix at only one parameter value is not validation,
+Lesson: validating a fix at only one parameter value is not validation,
 especially near a domain boundary or an asymptotic/tail regime. Sweep the
 actual parameter range that matters before declaring a fix good.
 
-**Correct fix**: don't switch quadrature schemes — grow the lens branch's
+Correct fix: don't switch quadrature schemes — grow the lens branch's
 own effective noise-disk radius (`R2_eff`, used only for domain
 construction, not the fixed window used for branch-selection checks) so it
 always reaches at least `NSIGMA_TAIL` (=8) sigma of noise-kernel tail depth
@@ -312,7 +312,7 @@ $\rho$-integration — a single isolated $(\rho,\theta)=(R,\phi)$ term of the
 sum crosses zero at essentially the same $g$, since the noise envelope's
 weight is concentrated right around $\rho\approx R$.
 
-**A candidate fix that didn't pan out**: reparametrizing $g=\tanh(\zeta/2)$
+A candidate fix that didn't pan out: reparametrizing $g=\tanh(\zeta/2)$
 (a "rapidity", linearizing shear composition the way it linearizes
 relativistic velocity addition). Tested at a single isolated near-disc-edge
 point ($\rho=0.99$): a real, order-of-magnitude improvement. But pushed
@@ -321,7 +321,7 @@ through the actual radial quadrature at the real crash configuration, it is
 the disc edge, but the integral's weight lives near $R$, which for this
 (and most) configurations isn't there.
 
-**The fix actually shipped**: guard $J(g)$'s sign (and NaN) directly —
+The fix actually shipped: guard $J(g)$'s sign (and NaN) directly —
 `J(g) > 0 ? J(g) : 1e-300`, a comfortably positive floor ($\log\approx-691$,
 never $-\infty$). A first attempt used a smooth window in $g$ instead
 (worried a bare clamp's slope discontinuity would defeat the caller's
@@ -348,7 +348,7 @@ order-agnostic and was applied identically to both `SeriesLensed` and the
 
 ## Noise-side `Series` derivation: bugs found during derivation
 
-- **Rotation-covariance bug**: the first version of the noise-kernel series
+- Rotation-covariance bug: the first version of the noise-kernel series
   (Step 2 in `docs/theory/wl_shape_marginalization_series.qmd`) assumed
   $f_g$ commutes with rotating $\chi_I$ (equivalently, rotating
   $\epsilon_\mathrm{obs}$ to lie on the real axis before expanding) while
@@ -360,7 +360,7 @@ order-agnostic and was applied identically to both `SeriesLensed` and the
   parameter throughout instead of rotating it away. Lesson: this is exactly
   the class of mistake that demands checking every closed-form derivation
   step against a brute-force numerical reference before trusting it.
-- **Sympy extraction bug** (TRACE/$\chi$ convention derivation): a first
+- Sympy extraction bug (TRACE/$\chi$ convention derivation): a first
   attempt used `sp.fraction()` + `Poly(den,w).degree()` to auto-detect how
   much to clear denominators by, which silently dropped the
   $\sigma_\mathrm{noise}^2$ part of a mixed $(w,\sigma^2)$ denominator for

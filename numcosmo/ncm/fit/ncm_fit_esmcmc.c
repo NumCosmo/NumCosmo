@@ -1303,9 +1303,10 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf, gboolean init)
         ncm_mset_catalog_log_current_chain_stats (self->mcat);
 
         if (!init)
-          g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%% (last update %7.4f%%), offboard ratio %7.4f%% (last update %7.4f%%).\n",
+          g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%% (last update %7.4f%%), offboard ratio %7.4f%% (last update %7.4f%%), phase: %s.\n",
                      ncm_fit_esmcmc_get_accept_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_accept_ratio_last_update (esmcmc) * 100.0,
-                     ncm_fit_esmcmc_get_offboard_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_offboard_ratio_last_update (esmcmc) * 100.0);
+                     ncm_fit_esmcmc_get_offboard_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_offboard_ratio_last_update (esmcmc) * 100.0,
+                     ncm_fit_esmcmc_walker_is_markovian (self->walker) ? "markovian" : "exploration");
 
         g_message ("# NcmFitESMCMC:last ensemble variance of -2ln(L): % 22.15g (2n = %d), min(-2ln(L)) = % 22.15g.\n",
                    e_var != NULL ? ncm_vector_get (e_var, NCM_FIT_ESMCMC_M2LNL_ID) : GSL_POSINF,
@@ -1344,9 +1345,10 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf, gboolean init)
         ncm_mset_catalog_log_current_chain_stats (self->mcat);
 
         if (!init)
-          g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%% (last update %7.4f%%), offboard ratio %7.4f%% (last update %7.4f%%).\n",
+          g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%% (last update %7.4f%%), offboard ratio %7.4f%% (last update %7.4f%%), phase: %s.\n",
                      ncm_fit_esmcmc_get_accept_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_accept_ratio_last_update (esmcmc) * 100.0,
-                     ncm_fit_esmcmc_get_offboard_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_offboard_ratio_last_update (esmcmc) * 100.0);
+                     ncm_fit_esmcmc_get_offboard_ratio (esmcmc) * 100.0, ncm_fit_esmcmc_get_offboard_ratio_last_update (esmcmc) * 100.0,
+                     ncm_fit_esmcmc_walker_is_markovian (self->walker) ? "markovian" : "exploration");
 
         g_message ("# NcmFitESMCMC:last ensemble variance of -2ln(L): % 22.15g (2n = %d), min(-2ln(L)) = % 22.15g.\n",
                    e_var != NULL ? ncm_vector_get (e_var, NCM_FIT_ESMCMC_M2LNL_ID) : GSL_POSINF,
@@ -1673,19 +1675,19 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc)
 
   len = (guint) (self->cur_sample_id + 1);
 
-  /* self->accepted is reused across the run and may hold stale TRUE from a
-   * prior trim/resume; reset explicitly since the interval init path reads
-   * it to pick redraws. */
-  {
-    guint k;
-
-    for (k = len; k < self->nwalkers; k++)
-      g_array_index (self->accepted, gboolean, k) = FALSE;
-  }
-
   ncm_mset_trans_kern_reset (self->sampler);
 
   do {
+    /* self->accepted is reused across the run and holds TRUE for every walker of the
+     * previous pass, including the ones _ncm_fit_esmcmc_check_init_points () just
+     * discarded; both init paths read it to pick redraws, so reset the tail every pass. */
+    {
+      guint k;
+
+      for (k = len; k < self->nwalkers; k++)
+        g_array_index (self->accepted, gboolean, k) = FALSE;
+    }
+
     if (self->has_mpi)
       _ncm_fit_esmcmc_gen_init_points_mpi (esmcmc, len, self->nwalkers);
     else
@@ -1695,7 +1697,22 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc)
   } while (len < self->nwalkers);
 
   _ncm_fit_esmcmc_update (esmcmc, self->cur_sample_id + 1, self->nwalkers, TRUE);
+  /* The initial ensemble is not a Markov step: the chain starts at the next row. */
+  ncm_mset_catalog_set_markovian_id (self->mcat, ncm_mset_catalog_get_cur_id (self->mcat) + 1);
   ncm_mset_catalog_sync (self->mcat, FALSE);
+}
+
+/*
+ * After an iteration: if the walker modified any acceptance (exploration), the Markovian
+ * chain starts at the first row of the next iteration.
+ */
+static void
+_ncm_fit_esmcmc_update_markovian_id (NcmFitESMCMC *esmcmc)
+{
+  NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
+
+  if (!ncm_fit_esmcmc_walker_is_markovian (self->walker))
+    ncm_mset_catalog_set_markovian_id (self->mcat, ncm_mset_catalog_get_cur_id (self->mcat) + 1);
 }
 
 static guint
@@ -1907,7 +1924,19 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
       self->started        = FALSE;
 
       ncm_fit_esmcmc_start_run (esmcmc);
+
+      return;
     }
+  }
+
+  {
+    /* No Markovian rows yet: a fresh start, or a run interrupted inside a non-Markovian
+     * phase (its id points past the last row); the walker resumes the phase with the
+     * iterations already recorded, the initial ensemble not counted. */
+    const gboolean no_markovian_rows = ncm_mset_catalog_get_markovian_id (self->mcat) > ncm_mset_catalog_get_cur_id (self->mcat);
+    const guint exploration_done     = no_markovian_rows ? MAX (ncm_mset_catalog_get_markovian_burnin (self->mcat), 1) - 1 : 0;
+
+    ncm_fit_esmcmc_walker_start_run (self->walker, init_point_task || no_markovian_rows, exploration_done);
   }
 
   if (init_point_task)
@@ -1935,10 +1964,15 @@ ncm_fit_esmcmc_end_run (NcmFitESMCMC *esmcmc)
   if (ncm_timer_task_is_running (self->nt))
     ncm_timer_task_end (self->nt);
 
+  ncm_fit_esmcmc_walker_end_run (self->walker);
   ncm_mset_catalog_sync (self->mcat, TRUE);
 
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
+  {
     ncm_mset_catalog_log_current_stats (self->mcat);
+    g_message ("# NcmFitESMCMC: Markovian chain starts at row %d (%u iteration(s) before it).\n",
+               ncm_mset_catalog_get_markovian_id (self->mcat), ncm_mset_catalog_get_markovian_burnin (self->mcat));
+  }
 
   /* Releases any object(s) register_shared() anchored for this run (not
    * just the autosave-only entries the per-worker dup's own reset(TRUE)
@@ -2095,7 +2129,9 @@ _ncm_fit_esmcmc_eval_mpi (NcmFitESMCMC *esmcmc, const glong i, const glong f)
     }
     else
     {
+      /* Rejected without an evaluation, and counted as offboard as in the serial path. */
       ncm_vector_set (thetastar_out_k, 0, 0.0);
+      g_array_index (self->offboard, gboolean, k) = TRUE;
     }
   }
 
@@ -2267,6 +2303,7 @@ _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
     ncm_fit_esmcmc_walker_clean (self->walker, ki, self->nwalkers);
 
     _ncm_fit_esmcmc_update (esmcmc, ki, self->nwalkers, FALSE);
+    _ncm_fit_esmcmc_update_markovian_id (esmcmc);
     ncm_mset_catalog_timed_sync (self->mcat, FALSE);
 
     for (i = 1; i < self->n; i++)
@@ -2282,6 +2319,7 @@ _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
       ncm_fit_esmcmc_walker_clean (self->walker, 0, self->nwalkers);
 
       _ncm_fit_esmcmc_update (esmcmc, 0, self->nwalkers, FALSE);
+      _ncm_fit_esmcmc_update_markovian_id (esmcmc);
       ncm_mset_catalog_timed_sync (self->mcat, FALSE);
     }
   }
@@ -2293,8 +2331,15 @@ _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
  * @prerun: number of pre-runs
  * @lre: least relative error
  *
- * Runs the ESMCMC algorithm until the least relative error is less than @lre.
- * It runs at least @prerun pre-runs before starting the algorithm.
+ * Runs the ESMCMC algorithm until the least relative error is less than @lre and the
+ * autocorrelation time of every free parameter is measurable from the chain itself, see
+ * ncm_mset_catalog_tau_needs_more(). It runs at least @prerun pre-runs before starting
+ * the algorithm.
+ *
+ * Reaching @lre is not on its own a statement that the chain has converged: the error it
+ * is computed from is built from an autocorrelation time, and that time is only
+ * measurable once the chain is many times longer than it. The loop therefore continues
+ * while either criterion is unmet.
  *
  */
 void
@@ -2304,6 +2349,9 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
   gdouble lerror, post_lnnorm_sd;
   const gdouble lre2 = lre * lre;
   const guint catlen = ncm_mset_catalog_len (self->mcat) / self->nwalkers;
+  gboolean needs_more;
+  guint req_niter  = 0;
+  guint tau_rounds = 0;
 
   g_assert_cmpfloat (lre, >, 0.0);
 
@@ -2323,15 +2371,24 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
   }
 
   ncm_mset_catalog_estimate_autocorrelation_tau (self->mcat, FALSE);
-  lerror = ncm_mset_catalog_largest_error (self->mcat);
+  lerror     = ncm_mset_catalog_largest_error (self->mcat);
+  needs_more = ncm_mset_catalog_tau_needs_more (self->mcat, &req_niter);
 
-  while (lerror > lre)
+  /* The autocorrelation time is estimated from the same chain it bounds, so a chain that
+   * is not settling has a tau that grows with it and a target that recedes. Rounds driven
+   * by the reliability criterion alone are bounded for that reason. */
+  while ((lerror > lre) || (needs_more && (tau_rounds < NCM_FIT_ESMCMC_LRE_MAX_TAU_ROUNDS)))
   {
     const gdouble lerror2 = lerror * lerror;
     gdouble n             = ncm_mset_catalog_len (self->mcat);
     gdouble m             = n * lerror2 / lre2;
-    guint runs            = ((m - n) > 1000.0) ? MIN (ceil ((m - n) * self->lre_step), 100000) : ceil (m - n);
     guint ti              = (self->cur_sample_id + 1) / self->nwalkers;
+    guint runs;
+
+    /* The chain has to be long enough for both criteria: the requested precision, and the
+     * length at which the autocorrelation time it is computed from becomes measurable. */
+    m    = GSL_MAX (m, req_niter * (gdouble) self->nwalkers);
+    runs = ((m - n) > 1000.0) ? MIN (ceil ((m - n) * self->lre_step), 100000) : ceil (m - n);
 
     runs = GSL_MIN (ncm_timer_task_estimate_by_time (self->nt, self->max_runs_time), runs);
     runs = GSL_MAX (runs / self->nwalkers + 1, self->min_runs);
@@ -2341,7 +2398,12 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
       gdouble glnvol;
       const gdouble lnevol = ncm_mset_catalog_get_post_lnvol (self->mcat, ncm_c_stats_1sigma (), &glnvol);
 
-      g_message ("# NcmFitESMCMC: Largest relative error %e not attained: %e\n", lre, lerror);
+      if (lerror > lre)
+        g_message ("# NcmFitESMCMC: Largest relative error %e not attained: %e\n", lre, lerror);
+      else
+        g_message ("# NcmFitESMCMC: Largest relative error %e attained: %e, the autocorrelation time is not yet measurable from %u iteration(s), %u required (round %u of %u)\n",
+                   lre, lerror, ti, req_niter, tau_rounds + 1, NCM_FIT_ESMCMC_LRE_MAX_TAU_ROUNDS);
+
       g_message ("# NcmFitESMCMC: ln (eVol) = % 22.15g; ln (gVol) = % 22.15g; lnNorm = % 22.15g\n", lnevol, glnvol, ncm_mset_catalog_get_post_lnnorm (self->mcat, &post_lnnorm_sd));
       g_message ("# NcmFitESMCMC: Running more %u runs...\n", runs);
     }
@@ -2351,14 +2413,23 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
     if (self->auto_trim)
       ncm_mset_catalog_trim_by_type (self->mcat, self->auto_trim_div, self->trim_type, self->mtype);
 
+    tau_rounds = (lerror > lre) ? 0 : (tau_rounds + 1);
+
     ncm_mset_catalog_estimate_autocorrelation_tau (self->mcat, FALSE);
-    lerror = ncm_mset_catalog_largest_error (self->mcat);
+    lerror     = ncm_mset_catalog_largest_error (self->mcat);
+    needs_more = ncm_mset_catalog_tau_needs_more (self->mcat, &req_niter);
   }
 
   if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
   {
     ncm_cfg_msg_sepa ();
     g_message ("# NcmFitESMCMC: Largest relative error %e attained: %e\n", lre, lerror);
+
+    if (needs_more)
+      g_message ("# NcmFitESMCMC: stopping with the autocorrelation time still asking for %u iteration(s): it grew with the chain over %u round(s)\n",
+                 req_niter, tau_rounds);
+
+    ncm_mset_catalog_log_tau_diag (self->mcat);
   }
 }
 

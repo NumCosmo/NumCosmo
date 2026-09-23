@@ -2,8 +2,6 @@
 title: Fixed-Node Quadrature for the Shape Likelihood
 ---
 
-# Fixed-Node Quadrature for the Shape Likelihood
-
 ::: {.callout-note}
 This page documents [[numcosmo|NcGalaxyShapeFactorFixedQuad]]: the same
 exact marginalization integral as [[numcosmo|NcGalaxyShapeFactorQuad]], but
@@ -21,10 +19,10 @@ P_\mathrm{pop}(\chi_I)\, N_2\big(\epsilon_\mathrm{obs} - f_g(\chi_I);\,
 $$
 
 is evaluated via one of two schemes, picked from
-$(\epsilon_\mathrm{obs},\sigma_\mathrm{noise})$ alone — never $g$:
+$(\epsilon_\mathrm{obs},\sigma_\mathrm{noise})$ alone --- never $g$:
 
-- **Two-panel $\psi$**, for a localized noise kernel (most galaxies).
-- **Native $\chi_I$-polar**, for a broad noise kernel — specifically when the
+- Two-panel $\psi$, for a localized noise kernel (most galaxies).
+- Native $\chi_I$-polar, for a broad noise kernel --- specifically when the
   entire unit disc lies within $N_\sigma\sigma_\mathrm{noise}$ of
   $\epsilon_\mathrm{obs}$:
   $$1+|\epsilon_\mathrm{obs}| \le N_\sigma\,\sigma_\mathrm{noise},
@@ -44,7 +42,7 @@ Same $\psi$-reparametrization [[numcosmo|NcGalaxyShapeFactorQuad]] uses:
 $\chi_L=f_h(\psi)$, $h$ the shear with $f_h(0)=\epsilon_\mathrm{obs}$
 exactly, so $\psi=0$ always maps to the noise kernel's own peak. $\psi$ is
 integrated in its own polar coordinates $(\rho,\theta)$, with $\rho$ split
-into two independent Gauss–Legendre panels, $[0,R_\sigma)$ and
+into two independent Gauss--Legendre panels, $[0,R_\sigma)$ and
 $[R_\sigma,1)$ (`n-radial` nodes each), concentrating resolution where the
 noise kernel's mass actually is. $\theta$ is equally spaced (`n-angular`
 nodes) and offset by $\phi=\arg\epsilon_\mathrm{obs}$ so a coarse grid stays
@@ -71,22 +69,22 @@ $\chi_{L0}=f_g(0)$, with $N_0$ added back once after the sum via
 $\int P_\mathrm{pop}=1$. This keeps the summed integrand finite everywhere,
 including for a [[numcosmo|NcGalaxyShapePopBeta]] population with
 $\alpha<2$, whose area density $P_\mathrm{pop}(r)/(2\pi r)$ diverges at
-$r=0$ — every domain node has some $g$ where the implied
+$r=0$ --- every domain node has some $g$ where the implied
 $\chi_I(g,\chi_L)$ is exactly $0$.
 
 ## Native $\chi_I$-polar
 
 Integrates directly in $\chi_I$'s own polar coordinates, with fixed nodes
-$\chi_I=\rho\,e^{i\theta}$ ($\rho$: Gauss–Legendre on $[0,1)$; $\theta$:
+$\chi_I=\rho\,e^{i\theta}$ ($\rho$: Gauss--Legendre on $[0,1)$; $\theta$:
 equally spaced, same $\phi$ offset as above). Because this grid is centered
 on $\chi_I=0$ itself:
 
-- **No Jacobian for the population term.** The quadrature measure's own
+- No Jacobian for the population term. The quadrature measure's own
   $\rho\,\mathrm{d}\rho$ cancels $P_\mathrm{pop}(\rho)/(2\pi\rho)$'s
-  $1/\rho$ analytically — the per-node weight is just
+  $1/\rho$ analytically --- the per-node weight is just
   $w_\rho w_\theta/(2\pi)$ times $P_\mathrm{pop}(\rho)$ directly.
-- **No puncture correction.** The noise kernel
-  $N_2(\epsilon_\mathrm{obs}-f_g(\chi_I))$ is evaluated plainly — a bounded
+- No puncture correction. The noise kernel
+  $N_2(\epsilon_\mathrm{obs}-f_g(\chi_I))$ is evaluated plainly --- a bounded
   exponential, with no singular point in this domain to protect against.
 
 ## `use-marginal-spline`: caching the marginal as a function of $g$

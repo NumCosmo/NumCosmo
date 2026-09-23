@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/core/ncm_obj_array.h>
 #include <numcosmo/ncm/fit/ncm_fit.h>
+#include <numcosmo/ncm/stats/ncm_stats_acorr.h>
 #include <numcosmo/ncm/stats/ncm_stats_vec.h>
 #include <numcosmo/ncm/stats/ncm_stats_dist1d_epdf.h>
 
@@ -61,7 +62,7 @@ typedef enum _NcmMSetCatalogSync /*< prefix=NCM_MSET_CATALOG_SYNC >*/
 /**
  * NcmMSetCatalogTrimType:
  * @NCM_MSET_CATALOG_TRIM_TYPE_ESS: trim the catalog using the maximum ess criterion.
- * @NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL: trim the catalog using the Heidelberger and Welch’s convergence diagnostic.
+ * @NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL: trim the catalog using the Heidelberger and Welch's convergence diagnostic.
  * @NCM_MSET_CATALOG_TRIM_TYPE_CK: trim the catalog using the estimate of the time where $-2\ln(L)$ stops evolving.
  * @NCM_MSET_CATALOG_TRIM_TYPE_ALL: trim the catalog using all tests above.
  *
@@ -94,28 +95,13 @@ typedef enum _NcmMSetCatalogPostNormMethod /*< prefix=NCM_MSET_CATALOG_POST_LNNO
   NCM_MSET_CATALOG_POST_LNNORM_METHOD_LEN, /*< skip >*/
 } NcmMSetCatalogPostNormMethod;
 
-/**
- * NcmMSetCatalogTauMethod:
- * @NCM_MSET_CATALOG_TAU_METHOD_ACOR: uses the autocorrelation to estimate $\tau$.
- * @NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL: uses an auto-regressive model fitting to estimate $\tau$.
- *
- * Method used to estimate the autocorrelation time $\tau$.
- *
- */
-typedef enum _NcmMSetCatalogTauMethod /*< prefix=NCM_MSET_CATALOG_TAU_METHOD >*/
-{
-  NCM_MSET_CATALOG_TAU_METHOD_ACOR = 0,
-  NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL,
-  /* < private > */
-  NCM_MSET_CATALOG_TAU_METHOD_LEN, /*< skip >*/
-} NcmMSetCatalogTauMethod;
-
 NcmMSetCatalog *ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, ...) G_GNUC_NULL_TERMINATED;
 NcmMSetCatalog *ncm_mset_catalog_new_array (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, gchar **names, gchar **symbols);
 
 NcmMSetCatalog *ncm_mset_catalog_new_from_file (const gchar *filename, glong burnin);
 NcmMSetCatalog *ncm_mset_catalog_new_from_file_ro (const gchar *filename, glong burnin);
 void ncm_mset_catalog_peek_info_from_file (const gchar *filename, glong *nrows, guint *nchains, gint *first_id);
+gint ncm_mset_catalog_peek_markovian_id_from_file (const gchar *filename);
 NcmMSetCatalog *ncm_mset_catalog_ref (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_free (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_clear (NcmMSetCatalog **mcat);
@@ -159,9 +145,13 @@ gboolean ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, 
 
 void ncm_mset_catalog_set_burnin (NcmMSetCatalog *mcat, glong burnin);
 glong ncm_mset_catalog_get_burnin (NcmMSetCatalog *mcat);
+void ncm_mset_catalog_set_markovian_id (NcmMSetCatalog *mcat, gint markovian_id);
+gint ncm_mset_catalog_get_markovian_id (NcmMSetCatalog *mcat);
+guint ncm_mset_catalog_get_markovian_burnin (NcmMSetCatalog *mcat);
 
-void ncm_mset_catalog_set_tau_method (NcmMSetCatalog *mcat, NcmMSetCatalogTauMethod tau_method);
-NcmMSetCatalogTauMethod ncm_mset_catalog_get_tau_method (NcmMSetCatalog *mcat);
+void ncm_mset_catalog_set_tau_method (NcmMSetCatalog *mcat, NcmStatsAcorrMethod tau_method);
+NcmStatsAcorrMethod ncm_mset_catalog_get_tau_method (NcmMSetCatalog *mcat);
+NcmStatsAcorr *ncm_mset_catalog_peek_acorr (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_add_from_mset (NcmMSetCatalog *mcat, NcmMSet *mset, ...) G_GNUC_NULL_TERMINATED;
 void ncm_mset_catalog_add_from_mset_array (NcmMSetCatalog *mcat, NcmMSet *mset, gdouble *ax);
@@ -201,6 +191,11 @@ void ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat, gboolean force_single_chain);
 NcmVector *ncm_mset_catalog_peek_autocorrelation_tau (NcmMSetCatalog *mcat);
+NcmStatsAcorrDiag ncm_mset_catalog_get_tau_diag (NcmMSetCatalog *mcat, guint p);
+gboolean ncm_mset_catalog_log_tau_diag (NcmMSetCatalog *mcat);
+gboolean ncm_mset_catalog_tau_needs_more (NcmMSetCatalog *mcat, guint *required_niter);
+gdouble ncm_mset_catalog_get_keff (NcmMSetCatalog *mcat, guint p);
+gdouble ncm_mset_catalog_get_ess (NcmMSetCatalog *mcat, guint p);
 gdouble ncm_mset_catalog_get_param_shrink_factor (NcmMSetCatalog *mcat, guint p);
 gdouble ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat);
 
@@ -236,6 +231,7 @@ guint ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint n
 #define NCM_MSET_CATALOG_M2LNL_SYMBOL "-2\\ln(L)"
 #define NCM_MSET_CATALOG_FIRST_ID_LABEL "FIRST_ID"
 #define NCM_MSET_CATALOG_M2LNP_ID_LABEL "M2LNP_ID"
+#define NCM_MSET_CATALOG_MARKOVIAN_ID_LABEL "MARKID"
 #define NCM_MSET_CATALOG_RNG_ALGO_LABEL "RNG_ALGO"
 #define NCM_MSET_CATALOG_RNG_SEED_LABEL "RNG_SEED"
 #define NCM_MSET_CATALOG_RNG_STAT_LABEL "RNG_STAT"

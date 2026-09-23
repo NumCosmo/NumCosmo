@@ -1625,7 +1625,7 @@ ncm_matrix_update_vector (NcmMatrix *cm, gchar NT, const gdouble alpha, NcmVecto
  * Computes the matrix - vector product $u = \alpha M v + \beta u$
  * if @NT == 'N' or $u = M^\intercal v$ if @NT == 'T'
  * and stores the result in @u. This function assumes
- * that $M$ is symmetric and it´s stored in the Upper/Lower
+ * that $M$ is symmetric and it's stored in the Upper/Lower
  * triangle if @UL == 'U'/'L'.
  */
 void

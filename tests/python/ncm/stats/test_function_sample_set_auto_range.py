@@ -155,8 +155,8 @@ def test_auto_range_gaussian_boundary_extension() -> None:
         f"{(final_x_max-center)/std:.2f}]"
     )
 
-    # Verify the final range is reasonable (should capture ~99.7% of Gaussian, i.e., ±3
-    # sigma) But not too wide (shouldn't go beyond ±5 sigma where function is truly
+    # Verify the final range is reasonable (should capture ~99.7% of Gaussian, i.e., +/-3
+    # sigma) But not too wide (shouldn't go beyond +/-5 sigma where function is truly
     # negligible)
     assert (
         final_x_min < center - 2.5 * std

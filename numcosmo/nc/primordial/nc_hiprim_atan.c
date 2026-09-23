@@ -30,6 +30,7 @@
  *
  * This object implement the arctangent modification of the power law primordial
  * spectrum inspired in the quantum equilibrium models. See:
+ *
  * - [Valentini (2010)](https://doi.org/10.1103/physrevd.82.063513)
  * - [Colin (2015)](https://arxiv.org/abs/1510.03508)
  * - [Underwood (2015)](https://arxiv.org/abs/1409.6817)

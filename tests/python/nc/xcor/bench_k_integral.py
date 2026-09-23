@@ -181,7 +181,7 @@ def sweep_case(
             "lmax": lmax,
             "closure": settings.closure.value_nick,
             "reltol": settings.reltol,
-            "scaled_abstol": settings.scaled_abstol,
+            "peak_epsilon": settings.peak_epsilon,
             "l_limber": settings.l_limber,
             "ell_batch_size": settings.ell_batch_size,
             "size_a": _closure_size(integrand_a),
@@ -379,7 +379,7 @@ def main() -> None:
     )
     parser.add_argument("--ells", nargs="*", type=int, default=cases.ELLS)
     parser.add_argument("--reltol", type=float, default=1.0e-4)
-    parser.add_argument("--scaled-abstol", type=float, default=1.0e-4)
+    parser.add_argument("--peak-epsilon", type=float, default=1.0e-4)
     parser.add_argument("--ell-batch-size", type=int, default=8)
     parser.add_argument("--repeats", type=int, default=3)
     args = parser.parse_args()
@@ -396,7 +396,7 @@ def main() -> None:
     for closure_name in args.closures:
         settings = cases.Settings(
             reltol=args.reltol,
-            scaled_abstol=args.scaled_abstol,
+            peak_epsilon=args.peak_epsilon,
             ell_batch_size=args.ell_batch_size,
             closure=CLOSURES[closure_name],
         )

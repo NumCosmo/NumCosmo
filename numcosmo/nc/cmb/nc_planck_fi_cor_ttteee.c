@@ -555,6 +555,7 @@ nc_planck_fi_cor_ttteee_add_default18_galf_priors (NcmLikelihood *lh)
  * @lh: a #NcmLikelihood
  *
  * Adds all default priors:
+ *
  * - nc_planck_fi_cor_tt_add_all_default_priors()
  * - nc_planck_fi_cor_ttteee_add_default_gal_priors()
  *
@@ -571,6 +572,7 @@ nc_planck_fi_cor_ttteee_add_all_default_priors (NcmLikelihood *lh)
  * @lh: a #NcmLikelihood
  *
  * Adds all default priors:
+ *
  * - nc_planck_fi_cor_tt_add_all_default18_priors()
  * - nc_planck_fi_cor_ttteee_add_default18_gal_priors()
  *

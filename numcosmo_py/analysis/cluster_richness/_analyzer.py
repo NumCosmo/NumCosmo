@@ -202,7 +202,7 @@ class CutAnalyzer:
 
         # Best-fit
         if self.verbose:
-            self.console.print("    [yellow]→ Running fit...[/yellow]", end="")
+            self.console.print("    [yellow]-> Running fit...[/yellow]", end="")
         dset = Ncm.Dataset.new()
         dset.append_data(data)
         likelihood = Ncm.Likelihood.new(dset)
@@ -221,13 +221,13 @@ class CutAnalyzer:
         m2lnL = fit.peek_state().get_m2lnL_curval()
 
         if self.verbose:
-            self.console.print(" [green]✓[/green]")
+            self.console.print(" [green]OK[/green]")
 
         # MCMC (if requested)
         if self.compute_mcmc:
             if self.verbose:
                 self.console.print(
-                    "    [yellow]→ Running MCMC (1000 walkers)...[/yellow]", end=""
+                    "    [yellow]-> Running MCMC (1000 walkers)...[/yellow]", end=""
                 )
             nwalkers = 1000
             init_sampler = Ncm.MSetTransKernGauss.new(0)
@@ -267,7 +267,7 @@ class CutAnalyzer:
             model_params_from_list(mcmc_median_model, np.median(rows, axis=0).tolist())
 
             if self.verbose:
-                self.console.print(" [green]✓[/green]")
+                self.console.print(" [green]OK[/green]")
         else:
             mcmc_mean_model = dup_model(bestfit_model)
             mcmc_median_model = dup_model(bestfit_model)
@@ -276,7 +276,7 @@ class CutAnalyzer:
         if self.verbose:
             self.console.print(
                 (
-                    f"    [yellow]→ Running bootstrap "
+                    f"    [yellow]-> Running bootstrap "
                     f"({self.n_bootstrap} samples)...[/yellow]"
                 ),
                 end="",
@@ -307,7 +307,7 @@ class CutAnalyzer:
         else:
             bootstrap_model = dup_model(bestfit_model)
         if self.verbose:
-            self.console.print(" [green]✓[/green]")
+            self.console.print(" [green]OK[/green]")
 
         return CutAnalysisResult(
             cut=cut,
@@ -346,7 +346,7 @@ class CutAnalyzer:
             if self.verbose:
                 self.console.print(
                     f"    Found {result.n_clusters} objects. "
-                    f"μ₀={result.bestfit['mup0']:.3f}"
+                    f"mu0={result.bestfit['mup0']:.3f}"
                 )
 
         # Display results table

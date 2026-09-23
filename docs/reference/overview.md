@@ -5,13 +5,13 @@ Title: NumCosmo Overview
 This is the generated API reference for NumCosmo. The library is split into two
 GObject namespaces; pick the one matching what you need:
 
-1. **NumCosmoMath** — [API Reference](../numcosmo-math/index.html)
+1. NumCosmoMath -- [API Reference](../numcosmo-math/index.html)
    : The math foundation, independent of cosmology: vectors and matrices,
      splines, integration and differentiation, special functions, the
      model/MSet parameter system, the fitting and MCMC tools (including the APES
      sampler), FFTLog, and HEALPix. Class names are prefixed `Ncm`.
 
-2. **NumCosmo** — [API Reference](../numcosmo/index.html)
+2. NumCosmo -- [API Reference](../numcosmo/index.html)
    : The cosmology layer built on top: background models and distances,
      perturbations, the matter power spectrum, large-scale structure, galaxy
      clusters, weak lensing, and the observational likelihoods (SNIa, BAO, CMB,

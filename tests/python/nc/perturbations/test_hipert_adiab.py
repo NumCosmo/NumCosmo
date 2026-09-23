@@ -794,8 +794,8 @@ def test_spectrum_drho_qgw(adiab_qgw: AdiabQGW) -> None:
 def test_delta_theta_qgw(k: float, w: float) -> None:
     """Test that delta_theta matches the phase of the analytical Hankel solution.
 
-    The analytical solution is phi ∝ hankel1e(alpha, -cs_k_eta), where hankel1e
-    factors out the main oscillation exp(-i·z). Therefore delta_theta (the residual
+    The analytical solution is phi proportional to hankel1e(alpha, -cs_k_eta), where hankel1e
+    factors out the main oscillation exp(-i*z). Therefore delta_theta (the residual
     phase stored by the integrator) must equal -arg(hankel1e) up to an additive
     constant. We verify this by comparing phasor differences across the ODE regime,
     for several values of k and w (equation-of-state parameter, w < 1/3).

@@ -35,7 +35,7 @@
  * of points. Users can select the desired sampling method as described in
  * #NcmMSetTransKernCatSampling.
  *
- * **Key Functionality:**
+ * Key Functionality:
  *
  * - Draws samples from a catalog of points.
  * - Allows users to choose the sampling method from #NcmMSetTransKernCatSampling.
@@ -259,8 +259,8 @@ ncm_mset_trans_kern_cat_class_init (NcmMSetTransKernCatClass *klass)
                                    PROP_M2LNL_RELTOL,
                                    g_param_spec_double ("m2lnL-reltol",
                                                         NULL,
-                                                        "Relative tolerance for m2lnL",
-                                                        GSL_DBL_EPSILON, 1.0e-3, 1.0e-7,
+                                                        "Relative tolerance within which two rows' m2lnL mark the same point",
+                                                        GSL_DBL_EPSILON, 1.0e-3, GSL_DBL_EPSILON,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_CHOOSE_CUT,
@@ -364,7 +364,9 @@ _ncm_mset_trans_kern_cat_generate_choose (NcmMSetTransKern *tkern, NcmVector *th
   }
 
   if (iter >= max_iter)
-    g_error ("_ncm_mset_trans_kern_cat_generate_choose: max_iter reached.");
+    g_error ("_ncm_mset_trans_kern_cat_generate_choose: no unused row found in %u draws: "
+             "%d of %u rows already chosen (rows whose m2lnL agree within m2lnL-reltol count as one).",
+             max_iter, g_tree_nnodes (self->m2lnL_tree), nth);
 
   ncm_rng_unlock (rng);
 }

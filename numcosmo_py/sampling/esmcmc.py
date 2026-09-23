@@ -30,6 +30,7 @@ from numcosmo_py import Ncm
 from numcosmo_py.interpolation.stats_dist import (
     InterpolationMethod,
     InterpolationKernel,
+    CrossValidationMethod,
 )
 
 
@@ -49,10 +50,19 @@ def create_esmcmc(
     fit_first: bool = False,
     robust: bool = False,
     use_apes_interpolation: bool = True,
+    use_apes_center_shrink: bool = False,
+    apes_defensive_frac: float = 0.0,
+    apes_defensive_scale: float = 4.0,
+    apes_defensive_nu: float = 3.0,
+    apes_vkde_points_per_dim: float = 0.0,
+    apes_uniform_weights: bool = False,
     use_apes_threads: Optional[bool] = None,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
+    cv_method: CrossValidationMethod = CrossValidationMethod.NONE,
+    split_fraction: Optional[float] = None,
+    auto_kernel: bool = False,
     nwalkers: int = 320,
     use_threads: bool = True,
     over_smooth: float = 1.0,
@@ -111,6 +121,17 @@ def create_esmcmc(
         walker.use_interp(use_apes_interpolation)
         walker.set_method(interpolation_method.genum)
         walker.set_k_type(interpolation_kernel.genum)
+        # After the kernel, so that an incompatible pair is caught immediately.
+        walker.set_center_shrink(use_apes_center_shrink)
+        walker.set_defensive_frac(apes_defensive_frac)
+        walker.set_defensive_scale(apes_defensive_scale)
+        walker.set_defensive_nu(apes_defensive_nu)
+        walker.set_vkde_points_per_dim(apes_vkde_points_per_dim)
+        walker.set_uniform_weights(apes_uniform_weights)
+        walker.set_cv_type(cv_method.genum)
+        walker.set_auto_kernel(auto_kernel)
+        if split_fraction is not None:
+            walker.set_split_frac(split_fraction)
         if use_apes_threads is None:
             use_apes_threads = nwalkers >= 1000
 

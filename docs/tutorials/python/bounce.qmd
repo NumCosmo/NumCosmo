@@ -21,7 +21,7 @@ two-fluid bouncing cosmologies. For entropy perturbations, see
 
 ## Defining Theoretical Models  
 
-We begin by defining a cosmological model using NumCosmo’s `numcosmo_py`[^numcosmo_py]. Additionally, we import `numpy`, `pandas` and `matplotlib`, which will be used later in the tutorial.  
+We begin by defining a cosmological model using NumCosmo's `numcosmo_py`[^numcosmo_py]. Additionally, we import `numpy`, `pandas` and `matplotlib`, which will be used later in the tutorial.  
 
 ```{python}
 import os
@@ -65,8 +65,8 @@ if not os.path.exists(fig_dir):
 
 The table below lists the parameters of the `HICosmoQGW` and `HICosmoQGRW` models.  
 
-- **`HICosmoQGW`**: A single-fluid model, where *QGW* stands for *quantum gravity with w*.  
-- **`HICosmoQGRW`**: A two-fluid model, where *QGRW* stands for *quantum gravity with radiation and w*.  
+- `HICosmoQGW`: A single-fluid model, where *QGW* stands for *quantum gravity with w*.  
+- `HICosmoQGRW`: A two-fluid model, where *QGRW* stands for *quantum gravity with radiation and w*.  
 
 ```{python}
 # | label: tbl-parameters

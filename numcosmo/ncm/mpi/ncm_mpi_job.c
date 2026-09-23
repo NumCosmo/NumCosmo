@@ -37,7 +37,7 @@
  * slave creates an instance of #NcmLikelihood, evaluating the likelihood function for
  * samples received from the master.
  *
- * The master/slave model leverages MPI. The subclass is responsible for implementing
+ * The master/slave model uses MPI. The subclass is responsible for implementing
  * virtual methods for packing/unpacking input and return objects into/from MPI buffers.
  *
  * When NumCosmo is compiled with MPI support, the rank 0 process executes normally,

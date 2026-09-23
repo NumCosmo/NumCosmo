@@ -2625,7 +2625,7 @@ ncm_mset_fparams_get_vector_offset (NcmMSet *mset, NcmVector *x, guint offset)
 }
 
 /*
- * Fires ncm_model_params_update() (hence any attached reparam's new2old)
+ * Calls ncm_model_params_update() (hence any attached reparam's new2old)
  * once for every model in @self->mid_array, after a full batch of raw
  * values has already been written into every model's own vector (by the
  * ncm_mset_param_set0() loop that always runs immediately before this).

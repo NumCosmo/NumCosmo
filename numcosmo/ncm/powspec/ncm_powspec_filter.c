@@ -1185,6 +1185,7 @@ ncm_powspec_filter_eval_dnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, con
  * @n: number of derivatives $n$
  *
  * Evaluates the derivatives of the logarithm of the filtered variance at @lnr and @z, namely:
+ *
  * - $n = 0 \rightarrow \ln \left[ \sigma(r, z)^2 \right]$,
  * - $n = 1 \rightarrow \frac{\mathrm{d}\ln \left( \sigma^2 \right)}{\mathrm{d} \ln r}$,
  * - $n = 2 \rightarrow \frac{\mathrm{d}^2 \ln \left( \sigma^2 \right)}{\mathrm{d}(\ln r)^2}$,

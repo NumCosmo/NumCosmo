@@ -26,7 +26,7 @@
 /**
  * NcDataPlanckSmica:
  *
- * Planck plik high-ℓ SMICA likelihood (TT), native reimplementation.
+ * Planck plik high-$\ell$ SMICA likelihood (TT), native reimplementation.
  *
  * An #NcmDataGauss whose data vector is the masked upper-triangular entries
  * of the observed cross-frequency bandpower covariances $\hat{R}_q$, with

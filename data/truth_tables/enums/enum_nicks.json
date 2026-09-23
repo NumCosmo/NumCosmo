@@ -419,14 +419,6 @@
     "nick": "timed",
     "type": "Ncm.MSetCatalogSync"
   },
-  "NCM_MSET_CATALOG_TAU_METHOD_ACOR": {
-    "nick": "acor",
-    "type": "Ncm.MSetCatalogTauMethod"
-  },
-  "NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL": {
-    "nick": "ar-model",
-    "type": "Ncm.MSetCatalogTauMethod"
-  },
   "NCM_MSET_CATALOG_TRIM_TYPE_ALL": {
     "nick": "all",
     "type": "Ncm.MSetCatalogTrimType"
@@ -571,6 +563,18 @@
     "nick": "tophat",
     "type": "Ncm.PowspecFilterType"
   },
+  "NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET": {
+    "nick": "dirichlet",
+    "type": "Ncm.SBesselOdeConstraint"
+  },
+  "NCM_SBESSEL_ODE_CONSTRAINT_PINNED": {
+    "nick": "pinned",
+    "type": "Ncm.SBesselOdeConstraint"
+  },
+  "NCM_SBESSEL_ODE_CONSTRAINT_TAU": {
+    "nick": "tau",
+    "type": "Ncm.SBesselOdeConstraint"
+  },
   "NCM_SERIALIZE_OPT_AUTONAME_SER": {
     "nick": "autoname-ser",
     "type": "Ncm.SerializeOpt"
@@ -703,6 +707,66 @@
     "nick": "posdef-gauss",
     "type": "Ncm.SplineRBFType"
   },
+  "NCM_STATS_ACORR_AR_CRIT_AIC": {
+    "nick": "aic",
+    "type": "Ncm.StatsAcorrARCrit"
+  },
+  "NCM_STATS_ACORR_AR_CRIT_AICC": {
+    "nick": "aicc",
+    "type": "Ncm.StatsAcorrARCrit"
+  },
+  "NCM_STATS_ACORR_AR_CRIT_FPE": {
+    "nick": "fpe",
+    "type": "Ncm.StatsAcorrARCrit"
+  },
+  "NCM_STATS_ACORR_AR_CRIT_NONE": {
+    "nick": "none",
+    "type": "Ncm.StatsAcorrARCrit"
+  },
+  "NCM_STATS_ACORR_DIAG_DRIFT": {
+    "nick": "drift",
+    "type": "Ncm.StatsAcorrDiag"
+  },
+  "NCM_STATS_ACORR_DIAG_METHOD_DISAGREEMENT": {
+    "nick": "method-disagreement",
+    "type": "Ncm.StatsAcorrDiag"
+  },
+  "NCM_STATS_ACORR_DIAG_OK": {
+    "nick": "ok",
+    "type": "Ncm.StatsAcorrDiag"
+  },
+  "NCM_STATS_ACORR_DIAG_SHORT_CHAIN": {
+    "nick": "short-chain",
+    "type": "Ncm.StatsAcorrDiag"
+  },
+  "NCM_STATS_ACORR_DIAG_VARIANCE_SHIFT": {
+    "nick": "variance-shift",
+    "type": "Ncm.StatsAcorrDiag"
+  },
+  "NCM_STATS_ACORR_DIAG_WINDOW_TRUNCATED": {
+    "nick": "window-truncated",
+    "type": "Ncm.StatsAcorrDiag"
+  },
+  "NCM_STATS_ACORR_DIAG_ZERO_VARIANCE": {
+    "nick": "zero-variance",
+    "type": "Ncm.StatsAcorrDiag"
+  },
+  "NCM_STATS_ACORR_METHOD_AR": {
+    "nick": "ar",
+    "type": "Ncm.StatsAcorrMethod"
+  },
+  "NCM_STATS_ACORR_METHOD_GEYER": {
+    "nick": "geyer",
+    "type": "Ncm.StatsAcorrMethod"
+  },
+  "NCM_STATS_ACORR_METHOD_MAX": {
+    "nick": "max",
+    "type": "Ncm.StatsAcorrMethod"
+  },
+  "NCM_STATS_ACORR_METHOD_SOKAL": {
+    "nick": "sokal",
+    "type": "Ncm.StatsAcorrMethod"
+  },
   "NCM_STATS_DIST1D_EPDF_BW_AUTO": {
     "nick": "auto",
     "type": "Ncm.StatsDist1dEPDFBw"
@@ -719,12 +783,20 @@
     "nick": "loo",
     "type": "Ncm.StatsDistCV"
   },
+  "NCM_STATS_DIST_CV_LOO_M2LNP": {
+    "nick": "loo-m2lnp",
+    "type": "Ncm.StatsDistCV"
+  },
   "NCM_STATS_DIST_CV_NONE": {
     "nick": "none",
     "type": "Ncm.StatsDistCV"
   },
   "NCM_STATS_DIST_CV_SPLIT": {
     "nick": "split",
+    "type": "Ncm.StatsDistCV"
+  },
+  "NCM_STATS_DIST_CV_SPLIT_ACCEPT": {
+    "nick": "split-accept",
     "type": "Ncm.StatsDistCV"
   },
   "NCM_STATS_DIST_CV_SPLIT_NOFIT": {
@@ -746,22 +818,6 @@
   "NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE": {
     "nick": "sample",
     "type": "Ncm.StatsDistKDECovType"
-  },
-  "NCM_STATS_VEC_AR_AIC": {
-    "nick": "aic",
-    "type": "Ncm.StatsVecARType"
-  },
-  "NCM_STATS_VEC_AR_AICC": {
-    "nick": "aicc",
-    "type": "Ncm.StatsVecARType"
-  },
-  "NCM_STATS_VEC_AR_FPE": {
-    "nick": "fpe",
-    "type": "Ncm.StatsVecARType"
-  },
-  "NCM_STATS_VEC_AR_NONE": {
-    "nick": "none",
-    "type": "Ncm.StatsVecARType"
   },
   "NCM_STATS_VEC_COV": {
     "nick": "cov",
@@ -3234,6 +3290,30 @@
   "NC_XCOR_KERNEL_CLOSURE_SPLINE": {
     "nick": "spline",
     "type": "Nc.XcorKernelClosure"
+  },
+  "NC_XCOR_KERNEL_CMB_ISW_SOURCE_THIN_SCREEN": {
+    "nick": "thin-screen",
+    "type": "Nc.XcorKernelCMBISWSource"
+  },
+  "NC_XCOR_KERNEL_CMB_ISW_SOURCE_VISIBILITY": {
+    "nick": "visibility",
+    "type": "Nc.XcorKernelCMBISWSource"
+  },
+  "NC_XCOR_KERNEL_CMB_ISW_SOURCE_VISIBILITY_REIONIZATION": {
+    "nick": "visibility-reionization",
+    "type": "Nc.XcorKernelCMBISWSource"
+  },
+  "NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN": {
+    "nick": "thin-screen",
+    "type": "Nc.XcorKernelCMBLensingSource"
+  },
+  "NC_XCOR_KERNEL_CMB_LENSING_SOURCE_VISIBILITY": {
+    "nick": "visibility",
+    "type": "Nc.XcorKernelCMBLensingSource"
+  },
+  "NC_XCOR_KERNEL_CMB_LENSING_SOURCE_VISIBILITY_REIONIZATION": {
+    "nick": "visibility-reionization",
+    "type": "Nc.XcorKernelCMBLensingSource"
   },
   "NC_XCOR_KERNEL_CMB_LENSING_SPARAM_LEN": {
     "nick": "len",

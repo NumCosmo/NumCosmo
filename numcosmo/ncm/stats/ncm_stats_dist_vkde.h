@@ -61,6 +61,11 @@ gdouble ncm_stats_dist_vkde_get_local_frac (NcmStatsDistVKDE *sdvkde);
 void ncm_stats_dist_vkde_set_use_rot_href (NcmStatsDistVKDE *sdvkde, const gboolean use_rot_href);
 gboolean ncm_stats_dist_vkde_get_use_rot_href (NcmStatsDistVKDE *sdvkde);
 
+
+void ncm_stats_dist_vkde_set_points_per_dim (NcmStatsDistVKDE *sdvkde, const gdouble points_per_dim);
+gdouble ncm_stats_dist_vkde_get_points_per_dim (NcmStatsDistVKDE *sdvkde);
+guint ncm_stats_dist_vkde_get_n_neighbors (NcmStatsDistVKDE *sdvkde, const guint n_obs);
+
 G_END_DECLS
 
 #endif /* _NCM_STATS_DIST_ND_H_ */

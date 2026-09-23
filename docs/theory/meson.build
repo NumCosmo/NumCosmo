@@ -12,8 +12,12 @@ src_site_theory_files = files(
     'halo_density_profile.qmd',
     'fftlog.qmd',
     'spectral.qmd',
+    'sbessel_ode_solver.qmd',
+    'sbessel_projection.qmd',
     'ssc.qmd',
     'castro_hmf.qmd',
+    'stats_dist.qmd',
+    'autocorrelation.qmd',
 )
 
 if get_option('documentation')

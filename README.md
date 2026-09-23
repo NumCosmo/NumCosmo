@@ -10,11 +10,11 @@ Visit [NumCosmo's website](https://numcosmo.readthedocs.io/en/latest/) for more 
 
 ## What it provides
 
-- **Cosmological observables** — background and distances ($\Lambda$CDM, wCDM, kinematic reconstructions), matter power spectra (linear and Halofit), large-scale structure, galaxy clusters, weak lensing, SNIa, BAO, CMB, and cross-correlations.
+- Cosmological observables — background and distances ($\Lambda$CDM, wCDM, kinematic reconstructions), matter power spectra (linear and Halofit), large-scale structure, galaxy clusters, weak lensing, SNIa, BAO, CMB, and cross-correlations.
 
-- **Statistical framework** — best-fit estimation, Fisher forecasts, and MCMC samplers (ESMCMC and the APES sampler), parallelized with MPI and OpenMP.
+- Statistical framework — best-fit estimation, Fisher forecasts, and MCMC samplers (ESMCMC and the APES sampler), parallelized with MPI and OpenMP.
 
-- **API documentation** — [NumCosmo](https://numcosmo.readthedocs.io/en/latest/reference/numcosmo/) (cosmology) and [NumCosmoMath](https://numcosmo.readthedocs.io/en/latest/reference/numcosmo-math/) (math foundation).
+- API documentation — [NumCosmo](https://numcosmo.readthedocs.io/en/latest/reference/numcosmo/) (cosmology) and [NumCosmoMath](https://numcosmo.readthedocs.io/en/latest/reference/numcosmo-math/) (math foundation).
 
 ## Get Started
 

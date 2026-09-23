@@ -26,9 +26,9 @@
 /**
  * NcDataPlanckCommander:
  *
- * Planck low-ℓ commander (gibbs_gauss) temperature likelihood, native port.
+ * Planck low-$\ell$ commander (gibbs_gauss) temperature likelihood, native port.
  *
- * A Gaussianized Blackwell-Rao likelihood over the low-ℓ TT band. Each theory
+ * A Gaussianized Blackwell-Rao likelihood over the low-$\ell$ TT band. Each theory
  * $D_\ell = C_\ell \ell(\ell+1)/2\pi$ (with $C_\ell$ divided by the calibration
  * $A_\mathrm{planck}^2$) is mapped through a per-$\ell$ cubic spline to a
  * Gaussianized variable $x_\ell$, and

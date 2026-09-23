@@ -38,8 +38,8 @@ G_BEGIN_DECLS
 /*
  * NcmPLN1D:
  *
- * A simple Poisson–Lognormal 1D integrator using
- * mode finding (GSL Lambert-W), shifted Gauss–Hermite,
+ * A simple Poisson-Lognormal 1D integrator using
+ * mode finding (GSL Lambert-W), shifted Gauss-Hermite,
  * or Laplace fallback.
  *
  * Fields are private.

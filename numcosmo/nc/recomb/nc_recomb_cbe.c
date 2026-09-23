@@ -149,17 +149,14 @@ _nc_recomb_cbe_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 
   _nc_recomb_prepare_tau_splines (recomb, cosmo);
 
-  recomb->v_tau_max_z = nc_cbe_thermodyn_v_tau_max_z (recomb_cbe->cbe);
-  recomb->tau_drag_z  = nc_cbe_thermodyn_z_d (recomb_cbe->cbe);
-
-  recomb->v_tau_max_lambda = -log1p (recomb->v_tau_max_z);
-  recomb->tau_drag_lambda  = -log1p (recomb->tau_drag_z);
-
-  recomb->tau_lambda = GSL_NAN;
-  recomb->tau_z      = GSL_NAN;
-
-  recomb->tau_cutoff_lambda = GSL_NAN;
-  recomb->tau_cutoff_z      = GSL_NAN;
+  /*
+   * The characteristic redshifts come from the splines above, using the same code as
+   * every other backend. CLASS publishes z_rec and z_d, but z_rec is the maximum of
+   * the visibility function per unit conformal time, whereas NcRecomb:v_tau_max_z is
+   * the maximum per unit lambda -- the two differ by about 4 in z. CLASS publishes no
+   * counterpart for tau_z or tau_cutoff_z.
+   */
+  _nc_recomb_prepare_redshifts (recomb, cosmo);
 }
 
 static gdouble

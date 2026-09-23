@@ -49,7 +49,7 @@ typedef struct _NcGalaxyPositionFactorData NcGalaxyPositionFactorData;
 /*
  * Integrand callback: the per-galaxy position density p(ra, dec | I) evaluated at the
  * galaxy's (ra, dec) stored in @data. The position is observed directly (no scatter
- * kernel, no marginalization), so there is no integration variable here — the callback
+ * kernel, no marginalization), so there is no integration variable here -- the callback
  * is evaluated at the fixed measured position.
  */
 NCM_UTIL_DECLARE_CALLBACK (NcGalaxyPositionFactorIntegrand,

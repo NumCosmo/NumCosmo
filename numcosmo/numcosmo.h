@@ -55,6 +55,7 @@
 
 /* Cosmic thermodynamics */
 #include <numcosmo/nc/recomb/nc_recomb.h>
+#include <numcosmo/nc/recomb/nc_recomb_cbe.h>
 #include <numcosmo/nc/recomb/nc_recomb_seager.h>
 #include <numcosmo/nc/reion/nc_hireion.h>
 #include <numcosmo/nc/reion/nc_hireion_camb.h>

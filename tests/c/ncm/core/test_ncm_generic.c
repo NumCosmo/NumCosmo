@@ -50,6 +50,7 @@ void test_ncm_fftlog_sbessel_j_basic (void);
 void test_ncm_fftlog_sbessel_jljm_basic (void);
 void test_ncm_bootstrap_basic (void);
 void test_ncm_stats_vec_basic (void);
+void test_ncm_stats_acorr_basic (void);
 void test_ncm_mpi_job_basic (void);
 void test_ncm_mpi_job_test_basic (void);
 void test_ncm_mpi_job_fit_basic (void);
@@ -143,6 +144,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/fftlog_sbessel_jljm/basic", test_ncm_fftlog_sbessel_jljm_basic);
   g_test_add_func ("/ncm/bootstrap/basic", test_ncm_bootstrap_basic);
   g_test_add_func ("/ncm/stats_vec/basic", test_ncm_stats_vec_basic);
+  g_test_add_func ("/ncm/stats_acorr/basic", test_ncm_stats_acorr_basic);
   g_test_add_func ("/ncm/mpi_job/basic", test_ncm_mpi_job_basic);
   g_test_add_func ("/ncm/mpi_job_test/basic", test_ncm_mpi_job_test_basic);
   g_test_add_func ("/ncm/mpi_job_fit/basic", test_ncm_mpi_job_fit_basic);
@@ -377,6 +379,24 @@ test_ncm_stats_vec_basic (void)
   g_assert_true (NCM_IS_STATS_VEC (svec));
 
   NCM_TEST_FREE (ncm_stats_vec_free, svec);
+}
+
+void
+test_ncm_stats_acorr_basic (void)
+{
+  NcmStatsAcorr *acorr = ncm_stats_acorr_new (3);
+  NcmStatsAcorr *acorr2;
+
+  g_assert_true (acorr != NULL);
+  g_assert_true (NCM_IS_STATS_ACORR (acorr));
+
+  acorr2 = ncm_stats_acorr_ref (acorr);
+  ncm_stats_acorr_clear (&acorr2);
+  g_assert_true (acorr2 == NULL);
+
+  g_assert_true (NCM_IS_STATS_ACORR (acorr));
+
+  NCM_TEST_FREE (ncm_stats_acorr_free, acorr);
 }
 
 void

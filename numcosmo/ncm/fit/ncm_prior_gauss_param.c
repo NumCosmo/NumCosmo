@@ -33,6 +33,7 @@
  * standard deviation parameters.
  *
  * Users have flexibility in specifying the parameter in various ways:
+ *
  * - Using the pair NcmModelID and the parameter pid.
  * - Providing a single NcmMSetPIndex.
  * - Supplying a string consisting of a parameter full name "model:parameter".

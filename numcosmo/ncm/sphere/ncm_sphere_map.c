@@ -2259,7 +2259,7 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
       /* Save current alm */
       memcpy (saved_alm, self->alm, sizeof (_fft_complex) * self->alm_len);
 
-      /* Synthesize: alm → map */
+      /* Synthesize: alm -> map */
       NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_alm2map_run) (smap);
 
       /* Complete synthesis with inverse FFT */
@@ -2278,7 +2278,7 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
         _fft_vec_idx (self->pvec, i) = _fft_vec_idx (original_map, i) - _fft_vec_idx (self->pvec, i);
       }
 
-      /* Transform residual → alm_correction with forward FFT */
+      /* Transform residual -> alm_correction with forward FFT */
       for (i = 0; i < self->fft_plan_r2c->len; i++)
       {
 #  ifdef HAVE_FFTW3F

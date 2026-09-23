@@ -177,6 +177,14 @@ _ncm_stats_dist_kernel_get_rot_bandwidth (NcmStatsDistKernel *sdk, const gdouble
 }
 
 static gdouble
+_ncm_stats_dist_kernel_get_var_factor (NcmStatsDistKernel *sdk)
+{
+  g_error ("method get_var_factor not implemented by %s.", G_OBJECT_TYPE_NAME (sdk));
+
+  return 0.0;
+}
+
+static gdouble
 _ncm_stats_dist_kernel_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp)
 {
   g_error ("method get_lnnorm not implemented by %s.", G_OBJECT_TYPE_NAME (sdk));
@@ -238,6 +246,7 @@ ncm_stats_dist_kernel_class_init (NcmStatsDistKernelClass *klass)
   sd_class->set_dim                = &_ncm_stats_dist_kernel_set_dim;
   sd_class->get_dim                = &_ncm_stats_dist_kernel_get_dim;
   sd_class->get_rot_bandwidth      = &_ncm_stats_dist_kernel_get_rot_bandwidth;
+  sd_class->get_var_factor         = &_ncm_stats_dist_kernel_get_var_factor;
   sd_class->get_lnnorm             = &_ncm_stats_dist_kernel_get_lnnorm;
   sd_class->eval_unnorm            = &_ncm_stats_dist_kernel_eval_unnorm;
   sd_class->eval_unnorm_vec        = &_ncm_stats_dist_kernel_eval_unnorm_vec;
@@ -331,6 +340,23 @@ gdouble
 ncm_stats_dist_kernel_get_rot_bandwidth (NcmStatsDistKernel *sdk, const gdouble n)
 {
   return NCM_STATS_DIST_KERNEL_GET_CLASS (sdk)->get_rot_bandwidth (sdk, n);
+}
+
+/**
+ * ncm_stats_dist_kernel_get_var_factor: (virtual get_var_factor)
+ * @sdk: a #NcmStatsDistKernel
+ *
+ * Computes the factor $\kappa$ relating the kernel covariance to its scale matrix
+ * $\Sigma$, that is $\mathrm{Cov} = \kappa \Sigma$. It is one for the Gaussian kernel
+ * and $\nu / (\nu - 2)$ for the Student-t kernel with $\nu$ degrees of freedom,
+ * which is infinite for $\nu \leq 2$ since such kernels have no covariance.
+ *
+ * Returns: the kernel variance factor $\kappa$.
+ */
+gdouble
+ncm_stats_dist_kernel_get_var_factor (NcmStatsDistKernel *sdk)
+{
+  return NCM_STATS_DIST_KERNEL_GET_CLASS (sdk)->get_var_factor (sdk);
 }
 
 /**

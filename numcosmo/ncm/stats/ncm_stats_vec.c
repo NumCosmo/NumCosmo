@@ -76,12 +76,12 @@
 #include "build_cfg.h"
 
 #include "ncm/stats/ncm_stats_vec.h"
+#include "ncm/stats/ncm_stats_acorr.h"
 #include "ncm/algebra/ncm_lapack.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include <fftw3.h>
 
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_blas.h>
@@ -93,7 +93,6 @@
 
 #include <math.h>
 
-#include "external/toeplitz/solvers/toeplitz.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
@@ -111,7 +110,6 @@ struct _NcmStatsVec
   GObject parent_instance;
   NcmStatsVecType t;
   NcmStatsVecUpdateFunc update;
-  NcmStatsVec *tmp;
   guint len;
   gboolean save_x;
   gdouble weight;
@@ -125,13 +123,6 @@ struct _NcmStatsVec
   NcmMatrix *real_cov;
   GPtrArray *saved_x;
   GPtrArray *q_array;
-
-  guint fft_size;
-  guint fft_plan_size;
-  gdouble *param_data;
-  fftw_complex *param_fft;
-  fftw_plan param_r2c;
-  fftw_plan param_c2r;
 };
 
 G_DEFINE_TYPE (NcmStatsVec, ncm_stats_vec, G_TYPE_OBJECT)
@@ -141,7 +132,6 @@ ncm_stats_vec_init (NcmStatsVec *svec)
 {
   svec->t       = NCM_STATS_VEC_TYPES_LEN;
   svec->update  = NULL;
-  svec->tmp     = NULL;
   svec->weight  = 0.0;
   svec->weight2 = 0.0;
   svec->bias_wt = 0.0;
@@ -163,13 +153,6 @@ ncm_stats_vec_init (NcmStatsVec *svec)
 
   svec->q_array = g_ptr_array_new ();
   g_ptr_array_set_free_func (svec->q_array, (GDestroyNotify) gsl_rstat_quantile_free);
-
-  svec->fft_size      = 0;
-  svec->fft_plan_size = 0;
-  svec->param_data    = NULL;
-  svec->param_fft     = NULL;
-  svec->param_r2c     = NULL;
-  svec->param_c2r     = NULL;
 }
 
 static void
@@ -177,7 +160,6 @@ _ncm_stats_vec_dispose (GObject *object)
 {
   NcmStatsVec *svec = NCM_STATS_VEC (object);
 
-  ncm_stats_vec_clear (&svec->tmp);
 
   ncm_vector_clear (&svec->x);
   ncm_vector_clear (&svec->mean);
@@ -201,13 +183,6 @@ _ncm_stats_vec_dispose (GObject *object)
 static void
 _ncm_stats_vec_finalize (GObject *object)
 {
-  NcmStatsVec *svec = NCM_STATS_VEC (object);
-
-  g_clear_pointer (&svec->param_fft,  fftw_free);
-  g_clear_pointer (&svec->param_data, fftw_free);
-  g_clear_pointer (&svec->param_c2r,  fftw_destroy_plan);
-  g_clear_pointer (&svec->param_r2c,  fftw_destroy_plan);
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_vec_parent_class)->finalize (object);
 }
@@ -988,394 +963,6 @@ ncm_stats_vec_get_quantile_all (NcmStatsVec *svec, guint i)
   }
 }
 
-static void
-_ncm_stats_vec_get_autocorr_alloc (NcmStatsVec *svec, guint size)
-{
-  const guint effsize      = ncm_util_fact_size (2 * size);
-  guint fftw_default_flags = ncm_cfg_get_fftw_default_flag ();
-
-  if (svec->tmp == NULL)
-    svec->tmp = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
-
-  if (!svec->save_x)
-    g_error ("_ncm_stats_vec_get_autocorr_alloc: NcmStatsVec must have saved data to calculate autocorrelation.");
-
-  if (svec->fft_size < effsize)
-  {
-    g_clear_pointer (&svec->param_fft,  fftw_free);
-    g_clear_pointer (&svec->param_data, fftw_free);
-    {
-      svec->param_fft  = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * (effsize / 2 + 1));
-      svec->param_data = (gdouble *) fftw_malloc (sizeof (gdouble) * effsize);
-    }
-    svec->fft_size = effsize;
-  }
-
-  if (svec->fft_plan_size != effsize)
-  {
-    g_clear_pointer (&svec->param_c2r, fftw_destroy_plan);
-    g_clear_pointer (&svec->param_r2c, fftw_destroy_plan);
-
-    /*g_debug ("# _ncm_stats_vec_get_autocorr_alloc: calculating wisdom %u\n", effsize);*/
-    ncm_cfg_load_fftw_wisdom ("ncm_stats_vec_autocorr_%u", effsize);
-
-    ncm_cfg_lock_plan_fftw ();
-    svec->param_r2c = fftw_plan_dft_r2c_1d (effsize, svec->param_data, svec->param_fft, fftw_default_flags | FFTW_DESTROY_INPUT);
-    svec->param_c2r = fftw_plan_dft_c2r_1d (effsize, svec->param_fft, svec->param_data, fftw_default_flags | FFTW_DESTROY_INPUT);
-    ncm_cfg_unlock_plan_fftw ();
-
-    ncm_cfg_save_fftw_wisdom ("ncm_stats_vec_autocorr_%u", effsize);
-    svec->fft_plan_size = effsize;
-    /*g_debug ("# _ncm_stats_vec_get_autocorr_alloc: calculated  wisdom %u\n", effsize);*/
-  }
-}
-
-static void
-_ncm_stats_vec_get_autocov (NcmStatsVec *svec, guint p, guint subsample, guint pad)
-{
-  guint eff_nitens = svec->nitens / subsample - pad;
-
-  g_assert_cmpuint (svec->nitens / subsample, >, pad);
-
-  if (eff_nitens == 0)
-    g_error ("_ncm_stats_vec_get_autocov: too few items to calculate.");
-
-  _ncm_stats_vec_get_autocorr_alloc (svec, eff_nitens);
-  {
-    guint i;
-    const gdouble mean = ncm_stats_vec_get_mean (svec, p);
-
-    memset (&svec->param_data[eff_nitens], 0, sizeof (gdouble) * (svec->fft_plan_size - eff_nitens));
-
-    if (subsample > 1)
-    {
-      ncm_stats_vec_reset (svec->tmp, TRUE);
-
-      for (i = 0; i < eff_nitens; i++)
-      {
-        guint j;
-        gdouble e_mean = 0.0;
-
-        for (j = 0; j < subsample; j++)
-        {
-          e_mean += ncm_vector_get (g_ptr_array_index (svec->saved_x, (i + pad) * subsample + j), p);
-        }
-
-        e_mean = e_mean / (1.0 * subsample);
-
-        svec->param_data[i] = (e_mean - mean);
-
-        ncm_stats_vec_set (svec->tmp, 0, svec->param_data[i]);
-        ncm_stats_vec_update (svec->tmp);
-      }
-    }
-    else
-    {
-      for (i = 0; i < eff_nitens; i++)
-      {
-        svec->param_data[i] = (ncm_vector_get (g_ptr_array_index (svec->saved_x, i + pad), p) - mean);
-      }
-    }
-
-    fftw_execute (svec->param_r2c);
-
-    for (i = 0; i < svec->fft_plan_size / 2 + 1; i++)
-    {
-      svec->param_fft[i] = svec->param_fft[i] * conj (svec->param_fft[i]);
-    }
-
-    fftw_execute (svec->param_c2r);
-  }
-}
-
-/**
- * ncm_stats_vec_get_autocorr:
- * @svec: a #NcmStatsVec
- * @p: parameter id
- *
- * Calculates the autocorrelation vector, the j-th element represent
- * the self-correlation with lag-j.
- *
- * The returning vector use the internal memory allocation and will
- * change with subsequent calls to ncm_stats_vec_get_autocorr().
- *
- * Returns: (transfer full): the autocorrelation vector.
- */
-NcmVector *
-ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p)
-{
-  _ncm_stats_vec_get_autocov (svec, p, 1, 0);
-  {
-    NcmVector *autocor = ncm_vector_new_data_dup (svec->param_data, svec->nitens, 1);
-
-    ncm_vector_scale (autocor, 1.0 / svec->param_data[0]);
-
-    return autocor;
-  }
-}
-
-/**
- * ncm_stats_vec_get_subsample_autocorr:
- * @svec: a #NcmStatsVec
- * @p: parameter id
- * @subsample: size of the subsample ($>0$)
- *
- * Calculates the autocorrelation vector, the j-th element represent
- * the self-correlation with lag-j using the @subsample parameter.
- *
- * The returning vector use the internal memory allocation and will
- * change with subsequent calls to ncm_stats_vec_get_autocorr().
- *
- * Returns: (transfer full): the autocorrelation vector.
- */
-NcmVector *
-ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsample)
-{
-  _ncm_stats_vec_get_autocov (svec, p, subsample, 0);
-  g_assert_cmpuint (svec->nitens, >=, subsample);
-  {
-    NcmVector *autocor = ncm_vector_new_data_dup (svec->param_data, svec->nitens / subsample, 1);
-
-    ncm_vector_scale (autocor, 1.0 / svec->param_data[0]);
-
-    return autocor;
-  }
-}
-
-/**
- * ncm_stats_vec_fit_ar_model:
- * @svec: a #NcmStatsVec
- * @p: parameter id
- * @order: max order
- * @ar_crit: a #NcmStatsVecARType
- * @rho: (inout) (nullable): the vector containing the ar(@p) model parameters
- * @pacf: (inout) (nullable):  the vector containing the partial auto-correlations
- * @ivar: (out): innovations variance
- * @c_order: (out): the actual order calculated
- *
- * If order is zero the value of floor $\left[10 log_{10}(s) \right]$, where $s$
- * is the number of points.
- *
- * Returns: TRUE if @c_order is equal to @order.
- */
-gboolean
-ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmStatsVecARType ar_crit, NcmVector **rho, NcmVector **pacf, gdouble *ivar, guint *c_order)
-{
-  _ncm_stats_vec_get_autocov (svec, p, 1, 0);
-  {
-    const gint aorder          = (order == 0) ? GSL_MIN (GSL_MAX (svec->nitens - 2, 1), floor (10 * log10 (svec->nitens))) : order;
-    NcmVector *M               = ncm_vector_new (2 * aorder + 1);
-    const gdouble dlev_tol     = 1.0e-3;
-    gboolean allocated_here[2] = {FALSE, FALSE};
-    gint i;
-
-    g_assert_cmpuint (svec->nitens, >, order + 1);
-
-    if (*rho != NULL)
-    {
-      g_assert_cmpuint (ncm_vector_len (*rho), >=, aorder);
-    }
-    else
-    {
-      *rho              = ncm_vector_new (aorder);
-      allocated_here[0] = TRUE;
-    }
-
-    if (*pacf != NULL)
-    {
-      g_assert_cmpuint (ncm_vector_len (*pacf), >=, aorder);
-    }
-    else
-    {
-      *pacf             = ncm_vector_new (aorder);
-      allocated_here[1] = TRUE;
-    }
-
-    ncm_vector_fast_set (M, aorder, svec->param_data[0]);
-
-    for (i = 0; i < aorder; i++)
-    {
-      const gdouble a_i = svec->param_data[i + 1];
-
-      ncm_vector_fast_set (M, aorder + i + 1, a_i);
-      ncm_vector_fast_set (M, aorder - i - 1, a_i);
-    }
-
-    d_lev_inner (ncm_vector_data (*rho),
-                 ncm_vector_ptr (M, aorder),
-                 aorder, svec->param_data + 1, dlev_tol, dlev_tol, 6, 0,
-                 ncm_vector_data (*pacf));
-
-    {
-      const gdouble n = svec->nitens;
-      gdouble var     = ivar[0] = ncm_stats_vec_get_var (svec, p);
-
-      switch (ar_crit)
-      {
-        case NCM_STATS_VEC_AR_NONE:
-          c_order[0] = aorder;
-
-          for (i = 0; i < aorder; i++)
-            var *= 1.0 - gsl_pow_2 (ncm_vector_get (*pacf, i));
-
-          ivar[0] = var;
-
-          break;
-        case NCM_STATS_VEC_AR_FPE:
-        {
-          gdouble crit     = var;
-          gdouble min_crit = crit;
-
-          c_order[0] = 0;
-
-          for (i = 0; i < aorder; i++)
-          {
-            const gdouble p = 1.0 + i;
-
-            var *= 1.0 - gsl_pow_2 (ncm_vector_get (*pacf, i));
-            crit = var * (n + p) / (n - p);
-
-            if (crit < min_crit)
-            {
-              c_order[0] = i + 1;
-              min_crit   = crit;
-              ivar[0]    = var;
-            }
-          }
-
-          break;
-        }
-        case NCM_STATS_VEC_AR_AIC:
-        {
-          gdouble crit     = n * log (var) + 2.0;
-          gdouble min_crit = crit;
-
-          c_order[0] = 0;
-
-          for (i = 0; i < aorder; i++)
-          {
-            const gdouble p = 1.0 + i;
-
-            var *= 1.0 - gsl_pow_2 (ncm_vector_get (*pacf, i));
-
-            crit = n * log (var) + 2.0 * (p + 1.0);
-
-            if (crit < min_crit)
-            {
-              c_order[0] = i + 1;
-              min_crit   = crit;
-              ivar[0]    = var;
-            }
-          }
-
-          break;
-        }
-        case NCM_STATS_VEC_AR_AICC:
-        {
-          gdouble crit     = n * log (var) + 2.0 * n / (n - 2.0);
-          gdouble min_crit = crit;
-
-          c_order[0] = 0;
-
-          for (i = 0; i < aorder; i++)
-          {
-            const gdouble p = 1.0 + i;
-
-            var *= 1.0 - gsl_pow_2 (ncm_vector_get (*pacf, i));
-            crit = n * log (var) + 2.0 * n * (p + 1.0) / (n - p - 2.0);
-
-            if (crit < min_crit)
-            {
-              c_order[0] = i + 1;
-              min_crit   = crit;
-              ivar[0]    = var;
-            }
-          }
-
-          break;
-        }
-        default:
-          g_assert_not_reached ();
-          break;
-      }
-
-      ivar[0] *= (n - 1.0) / (n - (c_order[0] + 1.0));
-    }
-
-    if (c_order[0] == 0)
-    {
-      if (allocated_here[0])
-        ncm_vector_clear (rho);
-
-      if (allocated_here[1])
-        ncm_vector_clear (pacf);
-    }
-    else if (c_order[0] != (guint) aorder)
-    {
-      NcmVector *c_rho  = ncm_vector_get_subvector (*rho,  0, c_order[0]);
-      NcmVector *c_pacf = ncm_vector_get_subvector (*pacf, 0, c_order[0]);
-
-      ncm_vector_clear (rho);
-      ncm_vector_clear (pacf);
-
-      *rho  = c_rho;
-      *pacf = c_pacf;
-
-      d_lev_inner (ncm_vector_data (c_rho),
-                   ncm_vector_ptr (M, aorder),
-                   c_order[0], svec->param_data + 1, dlev_tol, dlev_tol, 6, 0,
-                   ncm_vector_data (c_pacf));
-    }
-
-    ncm_vector_free (M);
-
-    return ((guint) aorder == c_order[0]);
-  }
-}
-
-/**
- * ncm_stats_vec_ar_ess:
- * @svec: a #NcmStatsVec
- * @p: parameter id
- * @ar_crit: a #NcmStatsVecARType
- * @spec0: (out): spectral density at zero
- * @c_order: (out): @ar_crit determined order
- *
- * Calculates the effective sample size for the parameter @p.
- *
- * Returns: the effective sample size.
- */
-gdouble
-ncm_stats_vec_ar_ess (NcmStatsVec *svec, guint p, NcmStatsVecARType ar_crit, gdouble *spec0, guint *c_order)
-{
-  NcmVector *rho = NULL, *pacf = NULL;
-  gdouble ivar = 0.0;
-  guint order  = 0;
-
-  g_assert_cmpuint (p, <, svec->len);
-
-  if (svec->nitens <= 1)
-    return svec->nitens;
-
-  while (ncm_stats_vec_fit_ar_model (svec, p, order, ar_crit, &rho, &pacf, &ivar, c_order) && (2 * c_order[0] + 1 < svec->nitens))
-  {
-    ncm_vector_clear (&rho);
-    ncm_vector_clear (&pacf);
-
-    order = 2 * c_order[0];
-  }
-
-  spec0[0] = ivar;
-
-  if (c_order[0] > 0)
-    spec0[0] *= 1.0 / gsl_pow_2 (1.0 - ncm_vector_sum_cpts (rho));
-
-  ncm_vector_clear (&rho);
-  ncm_vector_clear (&pacf);
-
-  return svec->nitens * ncm_stats_vec_get_var (svec, p) / spec0[0];
-}
-
 static guint
 _ncm_stats_vec_estimate_const_break_int (NcmStatsVec *svec, guint p, guint pad)
 {
@@ -1524,6 +1111,7 @@ _ncm_stats_vec_heidel_diag_pcramer (const gdouble q)
  * worst parameter at the selected index.
  *
  * See:
+ *
  * - [Heidelberger (1981)](https://doi.org/10.1145/358598.358630)
  * - [Schruben (1982)](https://doi.org/10.1287/opre.30.3.569)
  * - [Heidelberger (1983)](https://doi.org/10.1287/opre.31.6.1109)
@@ -1556,10 +1144,24 @@ ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble 
     ncm_stats_vec_append (chunk, row, FALSE);
   }
 
-  for (i = 0; i < (gint) svec->len; i++)
   {
-    ncm_stats_vec_ar_ess (chunk, i, NCM_STATS_VEC_AR_AICC, ncm_vector_ptr (spec0, i), &c_order);
-    g_array_append_val (ar_order, c_order);
+    NcmStatsAcorr *acorr = ncm_stats_acorr_new_full (svec->len,
+                                                     NCM_STATS_ACORR_DEFAULT_MAX_LAG,
+                                                     NCM_STATS_ACORR_DEFAULT_MAX_LEVELS,
+                                                     NCM_STATS_ACORR_METHOD_AR);
+
+    for (i = svec->nitens - 1; i >= half_size; i--)
+      ncm_stats_acorr_update (acorr, ncm_stats_vec_peek_row (svec, i));
+
+    for (i = 0; i < (gint) svec->len; i++)
+    {
+      c_order = ncm_stats_acorr_get_ar_order (acorr, i);
+
+      ncm_vector_set (spec0, i, ncm_stats_acorr_get_spec0 (acorr, i));
+      g_array_append_val (ar_order, c_order);
+    }
+
+    ncm_stats_acorr_free (acorr);
   }
 
   bindex[0] = -1;
@@ -1662,10 +1264,11 @@ ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble 
 NcmVector *
 ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint fi, gdouble *mean, gdouble *var)
 {
-  NcmStatsVec *chunk  = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, TRUE);
+  NcmStatsAcorr *acorr = ncm_stats_acorr_new_full (1,
+                                                   NCM_STATS_ACORR_DEFAULT_MAX_LAG,
+                                                   NCM_STATS_ACORR_DEFAULT_MAX_LEVELS,
+                                                   NCM_STATS_ACORR_METHOD_AR);
   const guint nitens  = svec->nitens - fi;
-  gdouble spec0       = 0.0;
-  guint c_order       = 0;
   gdouble cumsum      = 0.0;
   NcmVector *cumsum_v = ncm_vector_new (nitens);
   gint i, j = 0;
@@ -1683,16 +1286,13 @@ ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint 
     ncm_vector_set (cumsum_v, j, cumsum);
     j++;
 
-    ncm_stats_vec_set (chunk, 0, p_val);
-    ncm_stats_vec_update (chunk);
+    ncm_stats_acorr_update_var (acorr, 0, p_val);
   }
 
-  ncm_stats_vec_ar_ess (chunk, 0, NCM_STATS_VEC_AR_AICC, &spec0, &c_order);
+  mean[0] = ncm_stats_acorr_get_mean (acorr, 0);
+  var[0]  = ncm_stats_acorr_get_spec0 (acorr, 0) * nitens;
 
-  mean[0] = ncm_stats_vec_get_mean (chunk, 0);
-  var[0]  = spec0 * nitens;
-
-  ncm_stats_vec_clear (&chunk);
+  ncm_stats_acorr_free (acorr);
 
   return cumsum_v;
 }
@@ -1715,7 +1315,10 @@ ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint 
 NcmVector *
 ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_ess)
 {
-  NcmStatsVec *chunk  = ncm_stats_vec_new (svec->len, NCM_STATS_VEC_VAR, TRUE);
+  NcmStatsAcorr *acorr = ncm_stats_acorr_new_full (svec->len,
+                                                   NCM_STATS_ACORR_DEFAULT_MAX_LAG,
+                                                   NCM_STATS_ACORR_DEFAULT_MAX_LEVELS,
+                                                   NCM_STATS_ACORR_METHOD_AR);
   const gint size     = svec->nitens;
   const gint block    = (ntests == 0) ? ((size - 1) / 10 + 1) : ((size - 1) / (gint) ntests + 1);
   NcmVector *esss_tmp = ncm_vector_new (svec->len);
@@ -1732,7 +1335,7 @@ ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex,
   {
     NcmVector *row_i = ncm_stats_vec_peek_row (svec, i);
 
-    ncm_stats_vec_append (chunk, row_i, FALSE);
+    ncm_stats_acorr_update (acorr, row_i);
 
     if ((i == 0) || ((i % block == 0) && (j >= 99)))
     {
@@ -1743,9 +1346,10 @@ ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex,
 
       for (k = 0; k < svec->len; k++)
       {
-        gdouble spec0       = 0.0;
-        const gdouble ess   = ncm_stats_vec_ar_ess (chunk, k, NCM_STATS_VEC_AR_AICC, &spec0, &lwp_order);
+        const gdouble ess   = ncm_stats_acorr_get_ess (acorr, k);
         const gdouble c_ess = GSL_MIN (cur_size, ess);
+
+        lwp_order = ncm_stats_acorr_get_ar_order (acorr, k);
 
         ncm_vector_set (esss_tmp, k, ess);
 
@@ -1773,7 +1377,7 @@ ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex,
   wp_ess[0] = ncm_vector_get (esss, wp[0]);
 
   ncm_vector_clear (&esss_tmp);
-  ncm_stats_vec_clear (&chunk);
+  ncm_stats_acorr_free (acorr);
 
   return esss;
 }
@@ -2069,85 +1673,6 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
   ncm_vector_free (sigma_z);
 
   return cov;
-}
-
-/**
- * ncm_stats_vec_get_autocorr_tau:
- * @svec: a #NcmStatsVec
- * @p: parameter id
- * @max_lag: max lag in the computation
- *
- * Calculates the integrated autocorrelation time for the parameter @p
- * using all rows of data.
- *
- * If @max_lag is 0 or larger than the current number of items than it use
- * the current number of items as @max_lag.
- *
- * Returns: the integrated autocorrelation time of the whole data.
- */
-gdouble
-ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, const guint p, const guint max_lag)
-{
-  guint i;
-  gdouble tau          = 0.0;
-  const guint Imax_lag = (max_lag == 0) ? svec->nitens / 10 : max_lag;
-  const guint Fmax_lag = (Imax_lag > 1000) ? 1000 : Imax_lag;
-
-  _ncm_stats_vec_get_autocov (svec, p, 1, 0);
-
-  g_assert_cmpuint (Fmax_lag, >, 0);
-  g_assert_cmpuint (Fmax_lag, <, svec->nitens);
-
-  {
-    for (i = 1; i < Fmax_lag + 1; i++)
-    {
-      const gdouble rho_i = svec->param_data[i] / svec->param_data[0];
-
-      tau += rho_i;
-    }
-  }
-
-  tau = 1.0 + 2.0 * tau;
-
-  return tau;
-}
-
-/**
- * ncm_stats_vec_get_subsample_autocorr_tau:
- * @svec: a #NcmStatsVec
- * @p: parameter id
- * @subsample: size of the subsample ($>0$)
- * @max_lag: max lag in the computation
- *
- * Calculates the integrated autocorrelation time for the parameter @p
- * using the @subsample parameter.
- *
- * Returns: the integrated autocorrelation time of data with @subsample.
- */
-gdouble
-ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, const guint p, const guint subsample, const guint max_lag)
-{
-  guint i;
-  gdouble tau          = 0.0;
-  guint eff_nitens     = svec->nitens / subsample;
-  const guint Imax_lag = (max_lag == 0) ? eff_nitens / 10 : max_lag;
-  const guint Fmax_lag = (Imax_lag > 1000) ? 1000 : Imax_lag;
-
-  _ncm_stats_vec_get_autocov (svec, p, subsample, 0);
-
-  g_assert_cmpuint (Fmax_lag, >, 0);
-  g_assert_cmpuint (Fmax_lag, <, eff_nitens);
-
-  for (i = 1; i < Fmax_lag + 1; i++)
-  {
-    const gdouble rho_i = svec->param_data[i] / svec->param_data[0];
-
-    tau += rho_i;
-  }
-
-  tau = 1.0 + 2.0 * tau;
-
-  return tau;
 }
 
 /**

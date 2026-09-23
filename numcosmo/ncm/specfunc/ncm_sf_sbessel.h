@@ -28,6 +28,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/ncm/algebra/ncm_matrix.h>
 #include <numcosmo/ncm/spline/ncm_spline.h>
 
 G_BEGIN_DECLS
@@ -44,6 +45,8 @@ void ncm_sf_sbessel_array_clear (NcmSFSBesselArray **sba);
 
 void ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble *jl_x);
 GArray *ncm_sf_sbessel_array_eval1 (NcmSFSBesselArray *sba, guint ell, gdouble x);
+
+NcmMatrix *ncm_sf_sbessel_array_ref_table (NcmSFSBesselArray *sba, GArray *x, guint ell_max);
 
 gdouble ncm_sf_sbessel_jl_deriv_from_array (guint ell, gdouble x, const gdouble *jl_x);
 gdouble ncm_sf_sbessel_xjl_deriv_from_array (guint ell, gdouble x, const gdouble *jl_x);

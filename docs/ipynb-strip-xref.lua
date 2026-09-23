@@ -47,8 +47,6 @@ function Pandoc(doc)
         }
 
         if code then
-          quarto.log.output("CLONING EXEC CELL")
-
           doc.blocks[i] = pandoc.Div(
             { code },
             pandoc.Attr(

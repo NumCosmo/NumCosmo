@@ -57,7 +57,7 @@ def fixture_em() -> tuple[Nc.HIPertGW, Nc.HICosmoVexp]:
         "sigmaphi": 100.0,  # Width of the Gaussian solution for the WdW equation
         "xb": 2.0e36,  # Inverse of the scale factor at the bounce (Initial condition)
         "dphi": -9.0e-4,  # Deviation of the Gaussian solution for the WdW equation
-        "OmegaL": 1.0,  # H²(a when w=-1)/H²(a0). Basically gives the DE-dominated phase
+        "OmegaL": 1.0,  # H^2(a when w=-1)/H^2(a0). Basically gives the DE-dominated phase
         "Omegac": 1.0,  # Omega_d???
         "H0": 67.8,  # Hubble parameter today given by CMB observations
         "alphaem": 14.4,  # Amplitude of the EM gaussian coupling
