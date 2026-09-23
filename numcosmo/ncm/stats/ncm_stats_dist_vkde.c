@@ -112,6 +112,7 @@ typedef struct _NcmStatsDistVKDEEvalVars
   NcmVector *lnK;
   NcmMatrix *chi2_M;
   NcmVector *chi2_row;
+  NcmMatrix *X;
   NcmMatrix *delta_X;
   NcmVector *delta_q;
 } NcmStatsDistVKDEEvalVars;
@@ -132,6 +133,7 @@ _ncm_stats_dist_vkde_eval_vars_new (gpointer userdata)
    * that never takes that path does not carry the n_kernels columns. */
   ev->chi2_M   = NULL;
   ev->chi2_row = NULL;
+  ev->X        = NULL;
   ev->delta_X  = NULL;
   ev->delta_q  = NULL;
 
@@ -148,6 +150,7 @@ _ncm_stats_dist_vkde_eval_vars_free (gpointer userdata)
   ncm_vector_free (ev->lnK);
   ncm_matrix_clear (&ev->chi2_M);
   ncm_vector_clear (&ev->chi2_row);
+  ncm_matrix_clear (&ev->X);
   ncm_matrix_clear (&ev->delta_X);
   ncm_vector_clear (&ev->delta_q);
 
@@ -623,13 +626,7 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
       guint j;
 
       ncm_matrix_memcpy (invUsample_matrix, pself->sample_matrix);
-
-      for (j = 0; j < ppself->n_obs; j++)
-      {
-        ncm_vector_replace_data (theta_j, ncm_matrix_ptr (invUsample_matrix, j, 0));
-        ncm_vector_sub (theta_j, theta_i);
-      }
-
+      ncm_matrix_sub_row_vector (invUsample_matrix, theta_i);
       ncm_matrix_dtrsm (invUsample_matrix, 'R', 'U', 'N', 1.0, cov_decomp_i);
 
       for (j = 0; j < ppself->n_obs; j++)
@@ -806,10 +803,12 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp_vec (NcmStatsDist *sd, NcmVector *weight
     ncm_matrix_clear (&ev->chi2_M);
     ncm_vector_clear (&ev->chi2_row);
 
+    ncm_matrix_clear (&ev->X);
     ncm_matrix_clear (&ev->delta_X);
     ncm_vector_clear (&ev->delta_q);
     ev->chi2_M   = ncm_matrix_new (nt, ppself->n_kernels);
     ev->chi2_row = ncm_vector_new_data_static (ncm_matrix_ptr (ev->chi2_M, 0, 0), ppself->n_kernels, 1);
+    ev->X        = ncm_matrix_new (nt, ppself->d);
     ev->delta_X  = ncm_matrix_new (nt, ppself->d);
     ev->delta_q  = ncm_vector_new_data_static (ncm_matrix_ptr (ev->delta_X, 0, 0), ppself->d, 1);
   }
@@ -819,10 +818,14 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp_vec (NcmStatsDist *sd, NcmVector *weight
     const guint ntp = MIN (nt, np - p0);
     guint p;
 
+    /* The points of the tile, once; every kernel subtracts its own centre from them. The
+     * tile has nt rows; a last tile shorter than that leaves its trailing rows unused,
+     * and the solve on them is harmless. */
+    for (p = 0; p < ntp; p++)
+      ncm_matrix_set_row (ev->X, p, g_ptr_array_index (x_a, p0 + p));
+
     /* #pragma omp parallel if (ppself->use_threads) */
     {
-      /* The tile has nt rows; a last tile shorter than that leaves its trailing rows
-       * unused, and the solve on them is harmless. */
       NcmMatrix *delta_X = ev->delta_X;
       NcmVector *delta_q = ev->delta_q;
       guint i;
@@ -834,13 +837,8 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp_vec (NcmStatsDist *sd, NcmVector *weight
         NcmVector *theta_i      = g_ptr_array_index (ppself->center_array, i);
         guint q;
 
-        for (q = 0; q < ntp; q++)
-        {
-          ncm_vector_replace_data (delta_q, ncm_matrix_ptr (delta_X, q, 0));
-          ncm_vector_memcpy (delta_q, g_ptr_array_index (x_a, p0 + q));
-          ncm_vector_sub (delta_q, theta_i);
-        }
-
+        ncm_matrix_memcpy (delta_X, ev->X);
+        ncm_matrix_sub_row_vector (delta_X, theta_i);
         ncm_matrix_dtrsm (delta_X, 'R', 'U', 'N', 1.0, cov_decomp_i);
 
         for (q = 0; q < ntp; q++)

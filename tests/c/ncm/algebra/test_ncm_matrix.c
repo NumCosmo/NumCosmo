@@ -63,6 +63,7 @@ void test_ncm_matrix_dtrmm_dtrsm (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_dtrmv_dtrsv (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_dsyrk (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_scale_rows_cols (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_sub_row_vector (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_is_identity (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_cholesky_decomp_nearPD (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_free (TestNcmMatrix *test, gconstpointer pdata);
@@ -175,6 +176,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/matrix/scale_rows_cols", TestNcmMatrix, NULL,
               &test_ncm_matrix_new,
               &test_ncm_matrix_scale_rows_cols,
+              &test_ncm_matrix_free);
+
+  g_test_add ("/ncm/matrix/sub_row_vector", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_sub_row_vector,
               &test_ncm_matrix_free);
 
   g_test_add ("/ncm/matrix/is_identity", TestNcmMatrix, NULL,
@@ -1482,6 +1488,56 @@ test_ncm_matrix_scale_rows_cols (TestNcmMatrix *test, gconstpointer pdata)
     NCM_TEST_FREE (ncm_matrix_free, M);
     NCM_TEST_FREE (ncm_vector_free, r);
     NCM_TEST_FREE (ncm_vector_free, c);
+  }
+}
+
+void
+test_ncm_matrix_sub_row_vector (TestNcmMatrix *test, gconstpointer pdata)
+{
+  gint tests;
+
+  for (tests = 0; tests < 8; tests++)
+  {
+    const guint nrows = g_test_rand_int_range (1, 30);
+    const guint ncols = g_test_rand_int_range (1, 30);
+    NcmMatrix *M0     = ncm_matrix_new (nrows, ncols);
+    NcmMatrix *M      = ncm_matrix_new (nrows, ncols);
+    NcmVector *v      = ncm_vector_new (ncols);
+    NcmVector *v2     = ncm_vector_new (2 * ncols);
+    NcmVector *vs     = ncm_vector_get_subvector_stride (v2, 0, ncols, 2);
+    guint i, j;
+
+    for (i = 0; i < nrows; i++)
+      for (j = 0; j < ncols; j++)
+        ncm_matrix_set (M0, i, j, g_test_rand_double_range (-1.0, 1.0));
+
+    for (j = 0; j < ncols; j++)
+    {
+      ncm_vector_set (v, j, g_test_rand_double_range (-2.0, 2.0));
+      ncm_vector_set (v2, 2 * j, ncm_vector_get (v, j));
+      ncm_vector_set (v2, 2 * j + 1, 1.0e3);
+    }
+
+    ncm_matrix_memcpy (M, M0);
+    ncm_matrix_sub_row_vector (M, v);
+
+    for (i = 0; i < nrows; i++)
+      for (j = 0; j < ncols; j++)
+        g_assert_cmpfloat (ncm_matrix_get (M, i, j), ==, ncm_matrix_get (M0, i, j) - ncm_vector_get (v, j));
+
+    /* A strided vector is read through its stride. */
+    ncm_matrix_memcpy (M, M0);
+    ncm_matrix_sub_row_vector (M, vs);
+
+    for (i = 0; i < nrows; i++)
+      for (j = 0; j < ncols; j++)
+        g_assert_cmpfloat (ncm_matrix_get (M, i, j), ==, ncm_matrix_get (M0, i, j) - ncm_vector_get (v, j));
+
+    NCM_TEST_FREE (ncm_matrix_free, M0);
+    NCM_TEST_FREE (ncm_matrix_free, M);
+    NCM_TEST_FREE (ncm_vector_free, vs);
+    NCM_TEST_FREE (ncm_vector_free, v2);
+    NCM_TEST_FREE (ncm_vector_free, v);
   }
 }
 

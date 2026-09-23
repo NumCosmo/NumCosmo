@@ -171,6 +171,7 @@ void ncm_matrix_dtrsv (NcmMatrix *cm, gchar UL, gchar Trans, NcmVector *v);
 void ncm_matrix_dsyrk (NcmMatrix *cm, gchar UL, gchar Trans, const gdouble alpha, NcmMatrix *A, const gdouble beta);
 void ncm_matrix_scale_rows (NcmMatrix *cm, const NcmVector *s);
 void ncm_matrix_scale_cols (NcmMatrix *cm, const NcmVector *s);
+void ncm_matrix_sub_row_vector (NcmMatrix *cm, const NcmVector *v);
 gboolean ncm_matrix_is_identity (const NcmMatrix *cm, const gdouble tol);
 
 gint ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL);

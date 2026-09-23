@@ -1382,6 +1382,35 @@ ncm_matrix_scale_cols (NcmMatrix *cm, const NcmVector *s)
 }
 
 /**
+ * ncm_matrix_sub_row_vector:
+ * @cm: a #NcmMatrix $M$
+ * @v: a #NcmVector $v$ with one entry per column
+ *
+ * Subtracts @v from every row, $M_{ij} \leftarrow M_{ij} - v_j$: the rows of $M$ are points
+ * and $v$ a common origin.
+ *
+ */
+void
+ncm_matrix_sub_row_vector (NcmMatrix *cm, const NcmVector *v)
+{
+  const guint nrows  = ncm_matrix_nrows (cm);
+  const guint ncols  = ncm_matrix_ncols (cm);
+  const guint stride = ncm_vector_stride (v);
+  const gdouble *vd  = ncm_vector_const_data (v);
+  guint i, j;
+
+  g_assert_cmpuint (ncols, ==, ncm_vector_len (v));
+
+  for (i = 0; i < nrows; i++)
+  {
+    gdouble *row = ncm_matrix_ptr (cm, i, 0);
+
+    for (j = 0; j < ncols; j++)
+      row[j] -= vd[j * stride];
+  }
+}
+
+/**
  * ncm_matrix_is_identity:
  * @cm: a square #NcmMatrix
  * @tol: absolute tolerance
