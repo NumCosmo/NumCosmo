@@ -91,7 +91,6 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_sf_gamma.h>
-#include "external/levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #include "ncm/stats/ncm_stats_dist_kernel_private.h"
@@ -409,7 +408,6 @@ _ncm_stats_dist_kernel_st_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp
   NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
   NcmStatsDistKernelPrivate * const pself  = ncm_stats_dist_kernel_get_instance_private (sdk);
   gdouble chi_scale;
-  gint ret;
   guint i;
 
   for (i = 0; i < pself->d; i++)
@@ -419,10 +417,8 @@ _ncm_stats_dist_kernel_st_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp
     ncm_vector_set (x, i, u_i * href);
   }
 
-  /* CblasLower, CblasNoTrans => CblasUpper, CblasTrans */
-  ret = gsl_blas_dtrmv (CblasUpper, CblasTrans, CblasNonUnit,
-                        ncm_matrix_gsl (cov_decomp), ncm_vector_gsl (x));
-  NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kernel_st_sample", ret);
+  /* x <- U^T x, the lower factor L = U^T applied to a standard normal draw. */
+  ncm_matrix_dtrmv (cov_decomp, 'U', 'T', x);
 
   chi_scale = sqrt (self->nu / ncm_rng_chisq_gen (rng, self->nu));
 

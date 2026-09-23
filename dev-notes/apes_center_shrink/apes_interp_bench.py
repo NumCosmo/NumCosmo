@@ -79,7 +79,7 @@ def make_target(name, d, rng):
 CV = {
     "none": Ncm.StatsDistCV.NONE,
     "split": Ncm.StatsDistCV.SPLIT,
-    "split_nofit": Ncm.StatsDistCV.SPLIT_NOFIT,
+    "split_m2lnp": Ncm.StatsDistCV.SPLIT_M2LNP,
 }
 
 

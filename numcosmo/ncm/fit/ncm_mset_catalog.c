@@ -117,6 +117,8 @@ typedef struct _NcmMSetCatalogPrivate
   gchar *file;
   gchar *mset_file;
   gchar *rtype_str;
+  gchar *sampler_str;
+  gchar *init_sampler_str;
   GArray *porder;
   NcmVector *quantile_ws;
   gint first_id;
@@ -162,6 +164,8 @@ enum
   PROP_RNG,
   PROP_FILE,
   PROP_RUN_TYPE_STR,
+  PROP_SAMPLER,
+  PROP_INIT_SAMPLER,
   PROP_SYNC_MODE,
   PROP_SYNC_INTERVAL,
   PROP_READONLY,
@@ -235,6 +239,8 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->file              = NULL;
   self->mset_file         = NULL;
   self->rtype_str         = NULL;
+  self->sampler_str       = NULL;
+  self->init_sampler_str  = NULL;
   self->porder            = g_array_new (FALSE, FALSE, sizeof (gint));
   self->quantile_ws       = NULL;
 #ifdef HAVE_CFITSIO
@@ -423,6 +429,12 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_RUN_TYPE_STR:
       ncm_mset_catalog_set_run_type (mcat, g_value_get_string (value));
       break;
+    case PROP_SAMPLER:
+      ncm_mset_catalog_set_sampler (mcat, g_value_get_string (value));
+      break;
+    case PROP_INIT_SAMPLER:
+      ncm_mset_catalog_set_initial_sampler (mcat, g_value_get_string (value));
+      break;
     case PROP_SYNC_MODE:
       ncm_mset_catalog_set_sync_mode (mcat, g_value_get_enum (value));
       break;
@@ -513,6 +525,12 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_RUN_TYPE_STR:
       g_value_set_string (value, self->rtype_str);
       break;
+    case PROP_SAMPLER:
+      g_value_set_string (value, self->sampler_str);
+      break;
+    case PROP_INIT_SAMPLER:
+      g_value_set_string (value, self->init_sampler_str);
+      break;
     case PROP_SYNC_MODE:
       g_value_set_enum (value, self->smode);
       break;
@@ -588,6 +606,8 @@ _ncm_mset_catalog_finalize (GObject *object)
 #endif /* HAVE_CFITSIO */
 
   g_clear_pointer (&self->rtype_str, g_free);
+  g_clear_pointer (&self->sampler_str, g_free);
+  g_clear_pointer (&self->init_sampler_str, g_free);
 
   g_array_unref (self->porder);
   g_timer_destroy (self->sync_timer);
@@ -733,6 +753,37 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                         NULL,
                                                         "Run type string",
                                                         NCM_MSET_CATALOG_RTYPE_UNDEFINED,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetCatalog:sampler:
+   *
+   * A description of the sampler that filled the rows, for the record only: it is
+   * written to the file's SAMPLER header key and, at every change, to a HISTORY card,
+   * and it is never compared. A catalog may be continued with any sampler.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SAMPLER,
+                                   g_param_spec_string ("sampler",
+                                                        NULL,
+                                                        "Description of the sampler that filled the rows",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetCatalog:initial-sampler:
+   *
+   * A description of the sampler that drew the initial points, kept like
+   * #NcmMSetCatalog:sampler: the INITSMP header key and a HISTORY card, never compared.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_INIT_SAMPLER,
+                                   g_param_spec_string ("initial-sampler",
+                                                        NULL,
+                                                        "Description of the sampler that drew the initial points",
+                                                        NULL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_SYNC_INTERVAL,
@@ -1112,6 +1163,64 @@ _ncm_fits_update_key_longstr (fitsfile *fptr, gchar *keyname, gchar *value, gcha
     fits_free_memory (key_text, &status);
     NCM_FITS_ERROR (status);
   }
+}
+
+/*
+ * Records one of the informative strings: the header key @label holds the current value,
+ * a HISTORY card with the date and @what keeps every value the catalog has seen.
+ */
+static void
+_ncm_mset_catalog_write_record (fitsfile *fptr, const gchar *label, const gchar *what, const gchar *value)
+{
+  GDateTime *now = g_date_time_new_now_local ();
+  gchar *stamp   = g_date_time_format (now, "%Y-%m-%dT%H:%M:%S");
+  gchar *history = g_strdup_printf ("%s %s: %s", stamp, what, value);
+  gchar *comment = g_strdup_printf ("%s; informative only.", what);
+  gint status    = 0;
+
+  _ncm_fits_update_key_longstr (fptr, (gchar *) label, (gchar *) value, comment, TRUE);
+  fits_write_history (fptr, history, &status);
+  NCM_FITS_ERROR (status);
+
+  g_free (comment);
+  g_free (history);
+  g_free (stamp);
+  g_date_time_unref (now);
+}
+
+/*
+ * On opening a file: @field takes the file's value when loading from it or when unset;
+ * otherwise a different value in memory is recorded, never rejected.
+ */
+static void
+_ncm_mset_catalog_load_record (fitsfile *fptr, const gchar *label, const gchar *what, gchar **field,
+                               gboolean load_from_cat, gboolean readonly)
+{
+  gchar *value = NULL;
+  gint status  = 0;
+
+  fits_read_key_longstr (fptr, (gchar *) label, &value, NULL, &status);
+
+  if (status == KEY_NO_EXIST)
+    status = 0;
+
+  NCM_FITS_ERROR (status);
+
+  if (load_from_cat || (*field == NULL))
+  {
+    if (value != NULL)
+    {
+      g_clear_pointer (field, g_free);
+      *field = g_strdup (value);
+    }
+  }
+  else if (((value == NULL) || (strcmp (value, *field) != 0)) && !readonly)
+  {
+    _ncm_mset_catalog_write_record (fptr, label, what, *field);
+  }
+
+  if (value != NULL)
+    fits_free_memory (value, &status);
 }
 
 static void
@@ -1530,6 +1639,12 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
       g_error ("_ncm_mset_catalog_open_create_file: incompatible run type strings from catalog and file, catalog: `%s' file: `%s'.",
                self->rtype_str, key_text);
 
+    /* Records, not constraints: a catalog started by one sampler may be continued by another. */
+    _ncm_mset_catalog_load_record (self->fptr, NCM_MSET_CATALOG_INIT_SAMPLER_LABEL, "initial points sampler",
+                                   &self->init_sampler_str, load_from_cat, self->readonly);
+    _ncm_mset_catalog_load_record (self->fptr, NCM_MSET_CATALOG_SAMPLER_LABEL, "sampler",
+                                   &self->sampler_str, load_from_cat, self->readonly);
+
     fits_read_key (self->fptr, TINT, NCM_MSET_CATALOG_NCHAINS_LABEL,
                    &nchains, NULL, &status);
     NCM_FITS_ERROR (status);
@@ -1806,6 +1921,12 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 
     fits_update_key (self->fptr, TSTRING, NCM_MSET_CATALOG_RTYPE_LABEL, self->rtype_str, "Run type string.", &status);
     NCM_FITS_ERROR (status);
+
+    if (self->init_sampler_str != NULL)
+      _ncm_mset_catalog_write_record (self->fptr, NCM_MSET_CATALOG_INIT_SAMPLER_LABEL, "initial points sampler", self->init_sampler_str);
+
+    if (self->sampler_str != NULL)
+      _ncm_mset_catalog_write_record (self->fptr, NCM_MSET_CATALOG_SAMPLER_LABEL, "sampler", self->sampler_str);
 
     fits_update_key (self->fptr, TINT, NCM_MSET_CATALOG_NCHAINS_LABEL, &self->nchains, "Number of chains.", &status);
     NCM_FITS_ERROR (status);
@@ -3525,6 +3646,94 @@ ncm_mset_catalog_get_run_type (NcmMSetCatalog *mcat)
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
   return self->rtype_str;
+}
+
+static void
+_ncm_mset_catalog_set_record (NcmMSetCatalog *mcat, gchar **field, const gchar *label, const gchar *what, const gchar *value)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  if (value == NULL)
+  {
+    g_clear_pointer (field, g_free);
+
+    return;
+  }
+
+  if ((*field != NULL) && (strcmp (*field, value) == 0))
+    return;
+
+  g_clear_pointer (field, g_free);
+  *field = g_strdup (value);
+#ifdef HAVE_CFITSIO
+
+  if ((self->fptr != NULL) && !self->readonly)
+    _ncm_mset_catalog_write_record (self->fptr, label, what, *field);
+
+#endif /* HAVE_CFITSIO */
+}
+
+/**
+ * ncm_mset_catalog_set_sampler:
+ * @mcat: a #NcmMSetCatalog
+ * @sampler: (nullable): a description of the sampler about to fill the rows
+ *
+ * Records which sampler produces the rows, see #NcmMSetCatalog:sampler. It is written to
+ * the file when there is one and it is never checked: unlike the run type, it does not
+ * have to match what the file holds, and a catalog may be continued with another sampler.
+ *
+ */
+void
+ncm_mset_catalog_set_sampler (NcmMSetCatalog *mcat, const gchar *sampler)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  _ncm_mset_catalog_set_record (mcat, &self->sampler_str, NCM_MSET_CATALOG_SAMPLER_LABEL, "sampler", sampler);
+}
+
+/**
+ * ncm_mset_catalog_set_initial_sampler:
+ * @mcat: a #NcmMSetCatalog
+ * @sampler: (nullable): a description of the sampler that drew the initial points
+ *
+ * Records which sampler drew the initial points, see #NcmMSetCatalog:initial-sampler.
+ * Kept and written like ncm_mset_catalog_set_sampler(), and never checked.
+ *
+ */
+void
+ncm_mset_catalog_set_initial_sampler (NcmMSetCatalog *mcat, const gchar *sampler)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  _ncm_mset_catalog_set_record (mcat, &self->init_sampler_str, NCM_MSET_CATALOG_INIT_SAMPLER_LABEL, "initial points sampler", sampler);
+}
+
+/**
+ * ncm_mset_catalog_get_sampler:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: (transfer none) (nullable): the sampler description, see #NcmMSetCatalog:sampler.
+ */
+const gchar *
+ncm_mset_catalog_get_sampler (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  return self->sampler_str;
+}
+
+/**
+ * ncm_mset_catalog_get_initial_sampler:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: (transfer none) (nullable): the initial points sampler description, see #NcmMSetCatalog:initial-sampler.
+ */
+const gchar *
+ncm_mset_catalog_get_initial_sampler (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  return self->init_sampler_str;
 }
 
 /**

@@ -87,7 +87,6 @@
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_sort_vector.h>
-#include "external/levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #include "ncm/stats/ncm_stats_dist_kernel_private.h"

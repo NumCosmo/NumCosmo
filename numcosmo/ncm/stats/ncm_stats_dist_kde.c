@@ -66,7 +66,7 @@
  * The user must provide input the values: @sdk, @CV_type - ncm_stats_dist_kde_new(), @y
  * - ncm_stats_dist_add_obs(), @split_frac - ncm_stats_dist_set_split_frac(),
  * @over_smooth - ncm_stats_dist_set_over_smooth(), $v(x)$ -
- * ncm_stats_dist_prepare_interp(). To see an example of how to use this object and the
+ * ncm_stats_dist_prepare(). To see an example of how to use this object and the
  * main functions that are called within each function, check the flowchart at the end
  * of this documentation, where the order of the functions that should be called by the
  * user and some of the functions that the algorithm calls.
@@ -90,9 +90,9 @@
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_statistics_double.h>
-#include "external/levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
+#include "ncm/stats/ncm_stats_dist_kernel_gauss.h"
 #include "ncm/stats/ncm_stats_dist_kde_private.h"
 #include "ncm/stats/ncm_stats_dist_private.h"
 
@@ -140,6 +140,7 @@ _ncm_stats_dist_kde_eval_vars_free (gpointer userdata)
 
   ncm_vector_free (ev->v);
   ncm_vector_free (ev->chi2);
+  ncm_vector_free (ev->lnK);
 
   g_free (ev);
 }
@@ -263,16 +264,16 @@ _ncm_stats_dist_kde_finalize (GObject *object)
 }
 
 static void _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim);
-static void _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array);
-static void _ncm_stats_dist_kde_update_kernel_norms (NcmStatsDist *sd);
+static void _ncm_stats_dist_kde_prepare_shapes (NcmStatsDist *sd, GPtrArray *sample_array);
+static void _ncm_stats_dist_kde_prepare_kernels (NcmStatsDist *sd);
 static void _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM);
+static gdouble _ncm_stats_dist_kde_amise (NcmStatsDist *sd);
 static NcmMatrix *_ncm_stats_dist_kde_peek_cov_decomp (NcmStatsDist *sd, guint i);
 static NcmMatrix *_ncm_stats_dist_kde_peek_full_cov_decomp (NcmStatsDist *sd);
 static NcmMatrix *_ncm_stats_dist_kde_peek_full_cov (NcmStatsDist *sd);
 static gdouble _ncm_stats_dist_kde_get_lnnorm (NcmStatsDist *sd, guint i);
 static gdouble _ncm_stats_dist_kde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
 static gdouble _ncm_stats_dist_kde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
-static void _ncm_stats_dist_kde_update_centers (NcmStatsDist *sd);
 
 static void
 ncm_stats_dist_kde_class_init (NcmStatsDistKDEClass *klass)
@@ -309,16 +310,16 @@ ncm_stats_dist_kde_class_init (NcmStatsDistKDEClass *klass)
 
 
   sd_class->set_dim              = &_ncm_stats_dist_kde_set_dim;
-  sd_class->prepare_kernel       = &_ncm_stats_dist_kde_prepare_kernel;
-  sd_class->update_kernel_norms  = &_ncm_stats_dist_kde_update_kernel_norms;
+  sd_class->prepare_shapes       = &_ncm_stats_dist_kde_prepare_shapes;
+  sd_class->prepare_kernels      = &_ncm_stats_dist_kde_prepare_kernels;
   sd_class->compute_IM           = &_ncm_stats_dist_kde_compute_IM;
+  sd_class->amise                = &_ncm_stats_dist_kde_amise;
   sd_class->peek_cov_decomp      = &_ncm_stats_dist_kde_peek_cov_decomp;
   sd_class->peek_full_cov_decomp = &_ncm_stats_dist_kde_peek_full_cov_decomp;
   sd_class->peek_full_cov        = &_ncm_stats_dist_kde_peek_full_cov;
   sd_class->get_lnnorm           = &_ncm_stats_dist_kde_get_lnnorm;
   sd_class->eval_weights         = &_ncm_stats_dist_kde_eval_weights;
   sd_class->eval_weights_m2lnp   = &_ncm_stats_dist_kde_eval_weights_m2lnp;
-  sd_class->update_centers       = &_ncm_stats_dist_kde_update_centers;
 }
 
 static void
@@ -332,6 +333,7 @@ _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim)
 
     ncm_stats_vec_clear (&self->sample);
 
+    ncm_matrix_clear (&self->cov);
     ncm_matrix_clear (&self->cov_decomp);
     ncm_matrix_clear (&self->cov_decomp0);
     ncm_matrix_clear (&self->sample_matrix);
@@ -340,62 +342,19 @@ _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim)
     ncm_matrix_clear (&self->invUcenter_matrix);
     g_ptr_array_set_size (self->invUcenter_array, 0);
 
-    self->sample     = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, TRUE);
-    self->cov_decomp = ncm_matrix_new (dim, dim);
+    self->sample      = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, TRUE);
+    self->cov         = ncm_matrix_new (dim, dim);
+    self->cov_decomp  = ncm_matrix_new (dim, dim);
+    self->cov_decomp0 = ncm_matrix_new (dim, dim);
   }
 }
 
 static void
-_cholesky_decomp (NcmMatrix *cov_decomp, NcmMatrix *cov, const guint d, const guint maxiter)
-{
-  ncm_matrix_memcpy (cov_decomp, cov);
-
-  if (ncm_matrix_cholesky_decomp (cov_decomp, 'U') != 0)
-  {
-    ncm_matrix_memcpy (cov_decomp, cov);
-
-    if (ncm_matrix_nearPD (cov_decomp, 'U', TRUE, maxiter) != 0)
-    {
-      guint i;
-
-      ncm_matrix_set_zero (cov_decomp);
-
-      for (i = 0; i < d; i++)
-      {
-        ncm_matrix_set (cov_decomp, i, i, ncm_matrix_get (cov, i, i));
-      }
-
-      g_assert_cmpint (ncm_matrix_cholesky_decomp (cov_decomp, 'U'), ==, 0);
-    }
-  }
-}
-
-static void
-_save_cov (NcmStatsDistKDE *sdkde, NcmMatrix *cov)
-{
-  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
-
-  ncm_matrix_clear (&self->cov);
-  self->cov = ncm_matrix_dup (cov);
-}
-
-static void
-_ncm_stats_dist_kde_update_kernel_norms (NcmStatsDist *sd)
+_ncm_stats_dist_kde_prepare_shapes (NcmStatsDist *sd, GPtrArray *sample_array)
 {
   NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
   NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
   NcmStatsDistPrivate * const pself   = ncm_stats_dist_get_instance_private (sd);
-
-  self->kernel_lnnorm = ncm_stats_dist_kernel_get_lnnorm (pself->kernel, self->cov_decomp);
-}
-
-static void
-_ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
-{
-  NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
-  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
-  NcmStatsDistPrivate * const pself   = ncm_stats_dist_get_instance_private (sd);
-  gint ret;
   guint i;
 
   /*
@@ -421,25 +380,25 @@ _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
     {
       NcmMatrix *cov = ncm_stats_vec_peek_cov_matrix (self->sample, 0);
 
-      _cholesky_decomp (self->cov_decomp, cov, pself->d, self->nearPD_maxiter);
-      _save_cov (sdkde, cov);
+      _ncm_stats_dist_cholesky (self->cov_decomp, cov, self->nearPD_maxiter, "the sample covariance");
+      ncm_matrix_memcpy (self->cov, cov);
       break;
     }
     case NCM_STATS_DIST_KDE_COV_TYPE_FIXED:
     {
       if (self->cov_fixed == NULL)
-        g_error ("_ncm_stats_dist_kde_prepare_kernel: cov_type is FIXED but a fixed "
+        g_error ("_ncm_stats_dist_kde_prepare_shapes: cov_type is FIXED but a fixed "
                  "covariance matrix was not provided, use ncm_stats_dist_kde_set_cov_fixed to set one.");
 
-      _save_cov (sdkde, self->cov_fixed);
+      ncm_matrix_memcpy (self->cov, self->cov_fixed);
       break;
     }
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
     {
       NcmMatrix *cov = ncm_stats_vec_compute_cov_robust_diag (self->sample);
 
-      _cholesky_decomp (self->cov_decomp, cov, pself->d, self->nearPD_maxiter);
-      _save_cov (sdkde, cov);
+      _ncm_stats_dist_cholesky (self->cov_decomp, cov, self->nearPD_maxiter, "the robust diagonal covariance");
+      ncm_matrix_memcpy (self->cov, cov);
       ncm_matrix_free (cov);
 
       break;
@@ -448,8 +407,8 @@ _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
     {
       NcmMatrix *cov = ncm_stats_vec_compute_cov_robust_ogk (self->sample);
 
-      _cholesky_decomp (self->cov_decomp, cov, pself->d, self->nearPD_maxiter);
-      _save_cov (sdkde, cov);
+      _ncm_stats_dist_cholesky (self->cov_decomp, cov, self->nearPD_maxiter, "the robust covariance");
+      ncm_matrix_memcpy (self->cov, cov);
       ncm_matrix_free (cov);
     }
     break;
@@ -457,11 +416,6 @@ _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
       g_assert_not_reached ();
       break;
   }
-
-  /*
-   * Getting kernel normalization
-   */
-  _ncm_stats_dist_kde_update_kernel_norms (sd);
 
   if ((self->sample_matrix == NULL) ||
       (pself->n_obs != ncm_matrix_nrows (self->sample_matrix)) ||
@@ -488,10 +442,26 @@ _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
 
   ncm_matrix_memcpy (self->invUsample_matrix, self->sample_matrix);
 
-  ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
-                        1.0, ncm_matrix_gsl (self->cov_decomp),
-                        ncm_matrix_gsl (self->invUsample_matrix));
-  NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kde_prepare_kernel", ret);
+  ncm_matrix_dtrsm (self->invUsample_matrix, 'R', 'U', 'N', 1.0, self->cov_decomp);
+
+  if ((self->center_matrix == NULL) ||
+      (pself->n_kernels != ncm_matrix_nrows (self->center_matrix)) ||
+      (pself->d != ncm_matrix_ncols (self->center_matrix)))
+  {
+    ncm_matrix_clear (&self->center_matrix);
+    ncm_matrix_clear (&self->invUcenter_matrix);
+    self->center_matrix     = ncm_matrix_new (pself->n_kernels, pself->d);
+    self->invUcenter_matrix = ncm_matrix_new (pself->n_kernels, pself->d);
+
+    g_ptr_array_set_size (self->invUcenter_array, 0);
+
+    for (i = 0; i < pself->n_kernels; i++)
+    {
+      NcmVector *row_i = ncm_matrix_get_row (self->invUcenter_matrix, i);
+
+      g_ptr_array_add (self->invUcenter_array, row_i);
+    }
+  }
 
   /*
    * What center shrinkage needs: the factor of the sample covariance and the kernel
@@ -499,17 +469,11 @@ _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
    * The untransformed factor is kept, the applied one follows the bandwidth.
    */
   {
-    NcmMatrix *C_decomp, *mean_cov;
+    NcmMatrix *C_decomp = pself->sample_decomp;
+    NcmMatrix *mean_cov = pself->kernel_cov;
 
-    _ncm_stats_dist_center_matrices (sd, &C_decomp, &mean_cov);
-    _cholesky_decomp (C_decomp, ncm_stats_vec_peek_cov_matrix (self->sample, 0), pself->d, self->nearPD_maxiter);
+    _ncm_stats_dist_cholesky (C_decomp, ncm_stats_vec_peek_cov_matrix (self->sample, 0), self->nearPD_maxiter, "the sample covariance");
     ncm_matrix_memcpy (mean_cov, self->cov);
-
-    if ((self->cov_decomp0 == NULL) || (ncm_matrix_nrows (self->cov_decomp0) != pself->d))
-    {
-      ncm_matrix_clear (&self->cov_decomp0);
-      self->cov_decomp0 = ncm_matrix_new (pself->d, pself->d);
-    }
 
     ncm_matrix_memcpy (self->cov_decomp0, self->cov_decomp);
   }
@@ -539,7 +503,7 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
    * the sample points themselves, so the first n_kernels x n_kernels block is symmetric
    * and only half of it is worth computing.
    */
-  if (pself->center_shrink)
+  if (pself->shrink.on)
   {
     for (i = 0; i < pself->n_obs; i++)
     {
@@ -549,13 +513,7 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
       for (j = 0; j < pself->n_kernels; j++)
       {
         NcmVector *center_j = g_ptr_array_index (self->invUcenter_array, j);
-        gdouble chi2_ij     = 0.0;
-        guint k;
-
-        for (k = 0; k < pself->d; k++)
-        {
-          chi2_ij += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (center_j, k)));
-        }
+        gdouble chi2_ij     = ncm_vector_sqr_dist (row_i, center_j);
 
         ncm_matrix_set (IM, i, j, chi2_ij / href2);
       }
@@ -573,13 +531,7 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
       for (j = i + 1; j < pself->n_kernels; j++)
       {
         NcmVector *row_j = g_ptr_array_index (self->invUsample_array, j);
-        gdouble chi2_ij  = 0.0;
-        guint k;
-
-        for (k = 0; k < pself->d; k++)
-        {
-          chi2_ij += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (row_j, k)));
-        }
+        gdouble chi2_ij  = ncm_vector_sqr_dist (row_i, row_j);
 
         chi2_ij = chi2_ij / href2;
 
@@ -596,13 +548,7 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
       for (j = 0; j < pself->n_kernels; j++)
       {
         NcmVector *row_j = g_ptr_array_index (self->invUsample_array, j);
-        gdouble chi2_ij  = 0.0;
-        guint k;
-
-        for (k = 0; k < pself->d; k++)
-        {
-          chi2_ij += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (row_j, k)));
-        }
+        gdouble chi2_ij  = ncm_vector_sqr_dist (row_i, row_j);
 
         ncm_matrix_set (IM, i, j, chi2_ij / href2);
       }
@@ -618,6 +564,50 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
   }
 
   ncm_matrix_scale (IM, exp (-(self->kernel_lnnorm + pself->d * log (pself->href))));
+}
+
+/*
+ * The AMISE objective for one Gaussian bandwidth in closed form. The integral of the
+ * squared estimate is the mean of the interpolation matrix at sqrt(2) times the
+ * bandwidth (the convolution of two Gaussians); the leave-one-out cross term is the
+ * off-diagonal mean of the matrix at the bandwidth itself, which is also where the object
+ * is left. Any other kernel takes the base class's Monte Carlo estimate. NcmStatsDistVKDE
+ * inherits this; there the sqrt(2) rule is an approximation, since two kernels with
+ * different covariances do not convolve to either at sqrt(2) h -- the behaviour the
+ * closed form has always had.
+ */
+static gdouble
+_ncm_stats_dist_kde_amise (NcmStatsDist *sd)
+{
+  NcmStatsDistPrivate * const pself = ncm_stats_dist_get_instance_private (sd);
+  NcmStatsDistClass *sd_class       = NCM_STATS_DIST_GET_CLASS (sd);
+  const gdouble href                = pself->href;
+  const gdouble n                   = pself->n_kernels;
+  gdouble amise                     = 0.0;
+  guint i, j;
+
+  if (!NCM_IS_STATS_DIST_KERNEL_GAUSS (pself->kernel))
+    return _ncm_stats_dist_amise (sd);
+
+  pself->href = sqrt (2.0) * href;
+  sd_class->compute_IM (sd, pself->IM);
+
+  for (i = 0; i < pself->n_kernels; i++)
+    for (j = 0; j < pself->n_kernels; j++)
+      amise += ncm_matrix_get (pself->IM, i, j) / (n * n);
+
+  pself->href = href;
+  sd_class->compute_IM (sd, pself->IM);
+
+  for (i = 0; i < pself->n_kernels; i++)
+    for (j = 0; j < pself->n_kernels; j++)
+      if (j != i)
+        amise -= 2.0 * ncm_matrix_get (pself->IM, i, j) / (n * (n - 1.0));
+
+  if (pself->print_fit)
+    ncm_message ("# over-smooth: % 22.15g, amise = % 22.15g\n", pself->over_smooth, amise);
+
+  return amise;
 }
 
 static NcmMatrix *
@@ -667,24 +657,15 @@ _ncm_stats_dist_kde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVecto
   NcmStatsDistKDEEvalVars **ev_ptr    = ncm_memory_pool_get (self->mp_eval_vars);
   NcmStatsDistKDEEvalVars *ev         = *ev_ptr;
   gdouble res;
-  gint ret;
   guint i;
 
   ncm_vector_memcpy (ev->v, x);
-  ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
-                        ncm_matrix_gsl (self->cov_decomp), ncm_vector_gsl (ev->v));
-  NCM_TEST_GSL_RESULT ("ncm_stats_dist_nd_eval", ret);
+  ncm_matrix_dtrsv (self->cov_decomp, 'U', 'T', ev->v);
 
   for (i = 0; i < pself->n_kernels; i++)
   {
     NcmVector *row_i = g_ptr_array_index (self->invUcenter_array, i);
-    gdouble chi2_i   = 0.0;
-    guint k;
-
-    for (k = 0; k < pself->d; k++)
-    {
-      chi2_i += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (ev->v, k)));
-    }
+    gdouble chi2_i   = ncm_vector_sqr_dist (row_i, ev->v);
 
     chi2_i = chi2_i / href2;
 
@@ -709,24 +690,15 @@ _ncm_stats_dist_kde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, Nc
   const gdouble href2                 = pself->href * pself->href;
   NcmStatsDistKDEEvalVars **ev_ptr    = ncm_memory_pool_get (self->mp_eval_vars);
   NcmStatsDistKDEEvalVars *ev         = *ev_ptr;
-  gint ret;
   guint i;
 
   ncm_vector_memcpy (ev->v, x);
-  ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
-                        ncm_matrix_gsl (self->cov_decomp), ncm_vector_gsl (ev->v));
-  NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kde_eval_weights_m2lnp", ret);
+  ncm_matrix_dtrsv (self->cov_decomp, 'U', 'T', ev->v);
 
   for (i = 0; i < pself->n_kernels; i++)
   {
     NcmVector *row_i = g_ptr_array_index (self->invUcenter_array, i);
-    gdouble chi2_i   = 0.0;
-    guint k;
-
-    for (k = 0; k < pself->d; k++)
-    {
-      chi2_i += gsl_pow_2 ((ncm_vector_fast_get (row_i, k) - ncm_vector_fast_get (ev->v, k)));
-    }
+    gdouble chi2_i   = ncm_vector_sqr_dist (row_i, ev->v);
 
     chi2_i = chi2_i / href2;
 
@@ -745,53 +717,27 @@ _ncm_stats_dist_kde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, Nc
 }
 
 static void
-_ncm_stats_dist_kde_update_centers (NcmStatsDist *sd)
+_ncm_stats_dist_kde_prepare_kernels (NcmStatsDist *sd)
 {
   NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
   NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
   NcmStatsDistPrivate * const pself   = ncm_stats_dist_get_instance_private (sd);
-  gint ret;
   guint i;
 
   /*
    * The applied factor follows the current center transform; the whitened sample was
-   * built from the untransformed one in prepare_kernel() and has to follow too.
+   * built from the untransformed one in prepare_shapes() and has to follow too.
    */
   _ncm_stats_dist_refactor_decomp (sd, self->cov_decomp0, self->cov_decomp);
   ncm_matrix_memcpy (self->invUsample_matrix, self->sample_matrix);
-  ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
-                        1.0, ncm_matrix_gsl (self->cov_decomp),
-                        ncm_matrix_gsl (self->invUsample_matrix));
-  NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kde_update_centers", ret);
-  _ncm_stats_dist_kde_update_kernel_norms (sd);
-
-  if ((self->center_matrix == NULL) ||
-      (pself->n_kernels != ncm_matrix_nrows (self->center_matrix)) ||
-      (pself->d != ncm_matrix_ncols (self->center_matrix)))
-  {
-    ncm_matrix_clear (&self->center_matrix);
-    ncm_matrix_clear (&self->invUcenter_matrix);
-    self->center_matrix     = ncm_matrix_new (pself->n_kernels, pself->d);
-    self->invUcenter_matrix = ncm_matrix_new (pself->n_kernels, pself->d);
-
-    g_ptr_array_set_size (self->invUcenter_array, 0);
-
-    for (i = 0; i < pself->n_kernels; i++)
-    {
-      NcmVector *row_i = ncm_matrix_get_row (self->invUcenter_matrix, i);
-
-      g_ptr_array_add (self->invUcenter_array, row_i);
-    }
-  }
+  ncm_matrix_dtrsm (self->invUsample_matrix, 'R', 'U', 'N', 1.0, self->cov_decomp);
+  self->kernel_lnnorm = ncm_stats_dist_kernel_get_lnnorm (pself->kernel, self->cov_decomp);
 
   for (i = 0; i < pself->n_kernels; i++)
     ncm_matrix_set_row (self->center_matrix, i, g_ptr_array_index (pself->center_array, i));
 
   ncm_matrix_memcpy (self->invUcenter_matrix, self->center_matrix);
-  ret = gsl_blas_dtrsm (CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
-                        1.0, ncm_matrix_gsl (self->cov_decomp),
-                        ncm_matrix_gsl (self->invUcenter_matrix));
-  NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kde_update_centers", ret);
+  ncm_matrix_dtrsm (self->invUcenter_matrix, 'R', 'U', 'N', 1.0, self->cov_decomp);
 }
 
 /**
@@ -862,7 +808,7 @@ ncm_stats_dist_kde_clear (NcmStatsDistKDE **sdkde)
  *
  * Sets the maximum number of iterations when finding the
  * nearest positive definite covariance matrix to @maxiter. This function is implemented
- * as a property and is called in the _cholesky_decomp and in the @ncm_stats_dist_kde_prepare_kernel function.
+ * as a property and used wherever the object factors a covariance.
  *
  */
 void
@@ -903,12 +849,7 @@ ncm_stats_dist_kde_set_cov_type (NcmStatsDistKDE *sdkde, NcmStatsDistKDECovType 
   self->cov_type = cov_type;
 
   if ((self->cov_type == NCM_STATS_DIST_KDE_COV_TYPE_FIXED) && (self->cov_fixed != NULL))
-  {
-    ncm_matrix_memcpy (self->cov_decomp, self->cov_fixed);
-
-    if (ncm_matrix_cholesky_decomp (self->cov_decomp, 'U') != 0)
-      g_error ("ncm_stats_dist_kde_set_cov_fixed: matrix cov_fixed is not positive definite.");
-  }
+    _ncm_stats_dist_cholesky (self->cov_decomp, self->cov_fixed, self->nearPD_maxiter, "the fixed covariance");
 }
 
 /**
@@ -950,12 +891,7 @@ ncm_stats_dist_kde_set_cov_fixed (NcmStatsDistKDE *sdkde, NcmMatrix *cov_fixed)
   self->cov_fixed = ncm_matrix_dup (cov_fixed);
 
   if (self->cov_type == NCM_STATS_DIST_KDE_COV_TYPE_FIXED)
-  {
-    ncm_matrix_memcpy (self->cov_decomp, self->cov_fixed);
-
-    if (ncm_matrix_cholesky_decomp (self->cov_decomp, 'U') != 0)
-      g_error ("ncm_stats_dist_kde_set_cov_fixed: matrix cov_fixed is not positive definite.");
-  }
+    _ncm_stats_dist_cholesky (self->cov_decomp, self->cov_fixed, self->nearPD_maxiter, "the fixed covariance");
 }
 
 /**

@@ -215,7 +215,7 @@ def test_fit_snia_cov() -> None:
             nvar = ncols - nadd_vals
 
             k = Ncm.StatsDistKernelST.new(nvar, 1.0)
-            sd = Ncm.StatsDistVKDE.new(k, Ncm.StatsDistCV.SPLIT)
+            sd = Ncm.StatsDistVKDE.new(k, Ncm.StatsDistCV.SPLIT_M2LNP)
             sd.reset()
             m2lnL = []
             for row in last_e:
@@ -223,7 +223,7 @@ def test_fit_snia_cov() -> None:
                 sd.add_obs(row.get_subvector(nadd_vals, nvar))
 
             m2lnL_v = Ncm.Vector.new_array(m2lnL)
-            sd.prepare_interp(m2lnL_v)
+            sd.prepare(m2lnL_v)
             ovs = sd.get_over_smooth()
             walker.set_over_smooth(ovs)
             print(f"Setting over smooth to {ovs}")

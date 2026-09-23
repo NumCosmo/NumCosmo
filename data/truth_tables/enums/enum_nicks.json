@@ -99,6 +99,10 @@
     "nick": "int",
     "type": "Ncm.DataPoissonType"
   },
+  "NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO": {
+    "nick": "auto",
+    "type": "Ncm.FitESMCMCWalkerAPESKType"
+  },
   "NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY": {
     "nick": "cauchy",
     "type": "Ncm.FitESMCMCWalkerAPESKType"
@@ -791,16 +795,12 @@
     "nick": "none",
     "type": "Ncm.StatsDistCV"
   },
-  "NCM_STATS_DIST_CV_SPLIT": {
-    "nick": "split",
-    "type": "Ncm.StatsDistCV"
-  },
   "NCM_STATS_DIST_CV_SPLIT_ACCEPT": {
     "nick": "split-accept",
     "type": "Ncm.StatsDistCV"
   },
-  "NCM_STATS_DIST_CV_SPLIT_NOFIT": {
-    "nick": "split-nofit",
+  "NCM_STATS_DIST_CV_SPLIT_M2LNP": {
+    "nick": "split-m2lnp",
     "type": "Ncm.StatsDistCV"
   },
   "NCM_STATS_DIST_KDE_COV_TYPE_FIXED": {

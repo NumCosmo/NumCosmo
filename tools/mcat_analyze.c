@@ -419,7 +419,7 @@ main (gint argc, gchar *argv[])
       const gint fparams_len     = ncm_mset_fparam_len (mset);
       const gint m2lnL_i         = ncm_mset_catalog_get_m2lnp_var (mcat);
       NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_st_new (fparams_len, 1.0));
-      NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_SPLIT));
+      NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_SPLIT_M2LNP));
       NcmVector *m2lnL           = ncm_vector_new (nchains);
       gint i, j;
 
@@ -441,7 +441,7 @@ main (gint argc, gchar *argv[])
 
       ncm_stats_dist_set_over_smooth (sd, calib_start_os);
       ncm_stats_dist_set_print_fit (sd, TRUE);
-      ncm_stats_dist_prepare_interp (sd, m2lnL);
+      ncm_stats_dist_prepare (sd, m2lnL);
 
       ncm_message ("# Bestfit for VKDE:ST1 over-smooth = % 22.15g, rnorm = % 22.15g\n",
                    ncm_stats_dist_get_over_smooth (sd),

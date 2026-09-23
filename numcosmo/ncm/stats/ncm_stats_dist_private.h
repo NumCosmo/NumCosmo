@@ -29,12 +29,33 @@
 #include <glib.h>
 #include "ncm/stats/ncm_stats_dist.h"
 #include "ncm/algebra/ncm_nnls.h"
-
-#ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_multimin.h>
-#endif /* NUMCOSMO_GIR_SCAN */
+#include "ncm/core/ncm_memory_pool.h"
+#include "ncm/stats/ncm_stats_vec.h"
 
 G_BEGIN_DECLS
+
+/*
+ * Centre shrinkage (West's kernel shrinkage): the transform A with
+ * A (C + kappa h^2 Sigma-bar) A^T = C, for the sample covariance C = U_C^T U_C and the
+ * mean kernel covariance Sigma-bar, so that the mixture's covariance matches the
+ * sample's. Two stages: the basis W, W^{-1} and the eigenvalues s once per prepare
+ * (shape stage), then A, a = det(A)^{1/d} and Ahat = A / a once per bandwidth (kernel
+ * stage). Centres are m + A (x_i - m); kernel factors follow Ahat.
+ */
+typedef struct _NcmStatsDistShrink
+{
+  gboolean on;
+  NcmMatrix *A;
+  NcmMatrix *Ahat;
+  gdouble scale;
+  gboolean is_isotropic;
+  NcmVector *eigval;
+  NcmVector *diag;
+  NcmMatrix *W;
+  NcmMatrix *Winv;
+  NcmMatrix *tmp;
+  NcmLapackWS *ws;
+} NcmStatsDistShrink;
 
 typedef struct _NcmStatsDistPrivate
 {
@@ -49,56 +70,50 @@ typedef struct _NcmStatsDistPrivate
   NcmStatsDistCV cv_type;
   gboolean use_threads;
   gdouble split_frac;
-  gdouble min_m2lnp;
-  gdouble max_m2lnp;
+  gdouble m2lnL_min;
   gdouble href;
   gdouble rnorm;
-  gboolean center_shrink;
   gboolean auto_kernel;
   GPtrArray *center_array;
-  NcmVector *center_mean;
-  NcmMatrix *center_C_decomp;
-  NcmMatrix *center_mean_cov;
-  NcmMatrix *center_A;
-  NcmMatrix *center_Ahat;
-  gboolean center_Ahat_identity;
-  gdouble center_a;
+  NcmVector *sample_mean;
+  NcmMatrix *sample_decomp;
+  NcmMatrix *kernel_cov;
+  NcmStatsDistShrink shrink;
+  NcmMatrix *refactor_M;
+  NcmMatrix *refactor_B;
   gdouble defensive_frac;
   gdouble defensive_scale;
   gdouble defensive_nu;
   NcmStatsDistKernel *defensive_kernel;
   NcmMatrix *defensive_decomp;
   gdouble defensive_lnnorm;
+  NcmMemoryPool *mp_dx;
   guint n_obs;
   guint n_kernels;
-  guint alloc_n_obs;
-  guint alloc_n_kernels;
-  gboolean alloc_subs;
   guint d;
-  GArray *sampling;
   NcmNNLS *nnls;
   NcmMatrix *IM;
-  NcmMatrix *sub_IM;
-  NcmVector *sub_x;
-  NcmVector *f;
-  NcmVector *f1;
+  NcmVector *target;
+  NcmVector *ones;
   NcmVector *cv_m2lnp;
-  NcmVector *cv_m2lnL_sample;
+  GPtrArray *cv_x;
+  NcmVector *m2lnL;
   NcmVector *cv_w;
   gboolean uniform_weights;
-  gdouble *levmar_workz;
-  guint levmar_n;
-  gsl_multimin_fminimizer *fmin;
-  GArray *m2lnp_sort;
-  GArray *m2lnp;
-  NcmRNG *rng;
+  gboolean fit_weights;
+  gboolean cut_weights;
+  GArray *kernel_order;
+  GArray *kernel_density;
+  NcmVector *amise_x1;
+  NcmVector *amise_x2;
+  NcmStatsVec *amise_stats;
+  NcmRNG *amise_rng;
 } NcmStatsDistPrivate;
 
 /* Center shrinkage protocol between NcmStatsDist and its subclasses. */
-void _ncm_stats_dist_center_matrices (NcmStatsDist *sd, NcmMatrix **C_decomp, NcmMatrix **mean_cov);
 void _ncm_stats_dist_refactor_decomp (NcmStatsDist *sd, NcmMatrix *U0, NcmMatrix *U);
-gboolean _ncm_stats_dist_center_transform_is_identity (NcmStatsDist *sd);
-void _ncm_stats_dist_zero_strict_lower (NcmMatrix *U);
+void _ncm_stats_dist_cholesky (NcmMatrix *decomp, const NcmMatrix *cov, const guint maxiter, const gchar *what);
+gdouble _ncm_stats_dist_amise (NcmStatsDist *sd);
 
 G_END_DECLS
 

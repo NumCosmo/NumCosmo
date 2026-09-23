@@ -43,6 +43,7 @@ class InterpolationKernel(GEnum):
     CAUCHY = Ncm.FitESMCMCWalkerAPESKType.CAUCHY
     ST3 = Ncm.FitESMCMCWalkerAPESKType.ST3
     GAUSS = Ncm.FitESMCMCWalkerAPESKType.GAUSS
+    AUTO = Ncm.FitESMCMCWalkerAPESKType.AUTO
 
 
 class CrossValidationMethod(GEnum):
@@ -50,8 +51,7 @@ class CrossValidationMethod(GEnum):
 
     # pylint: disable=no-member
     NONE = Ncm.StatsDistCV.NONE
-    SPLIT = Ncm.StatsDistCV.SPLIT
-    SPLIT_NOFIT = Ncm.StatsDistCV.SPLIT_NOFIT
+    SPLIT_M2LNP = Ncm.StatsDistCV.SPLIT_M2LNP
     SPLIT_ACCEPT = Ncm.StatsDistCV.SPLIT_ACCEPT
     LOO_M2LNP = Ncm.StatsDistCV.LOO_M2LNP
 
@@ -82,6 +82,7 @@ def create_stats_dist(
     :param local_fraction: Local fraction.
     :param center_shrink: Shrink the kernel centres toward the sample mean so that the
         mixture covariance matches the sample covariance.
+    :param auto_kernel: Deprecated, pass ``InterpolationKernel.AUTO`` instead.
     :param verbose: Verbose output.
 
     :return: A new Ncm.StatsDist object.
@@ -94,6 +95,10 @@ def create_stats_dist(
         kernel = Ncm.StatsDistKernelST.new(dim, 3.0)
     elif interpolation_kernel == InterpolationKernel.GAUSS:
         kernel = Ncm.StatsDistKernelGauss.new(dim)
+    elif interpolation_kernel == InterpolationKernel.AUTO:
+        # Where the kernel fit starts from; the cross-validation moves it from here.
+        kernel = Ncm.StatsDistKernelST.new(dim, 10.0)
+        auto_kernel = True
     else:
         raise RuntimeError(f"Kernel {interpolation_kernel} not supported")
 
@@ -105,6 +110,12 @@ def create_stats_dist(
         sdist = Ncm.StatsDistVKDE.new(kernel, cv_method.genum)
         if local_fraction is not None:
             sdist.set_local_frac(local_fraction)
+
+    if auto_kernel and not isinstance(kernel, Ncm.StatsDistKernelST):
+        raise ValueError(
+            "auto_kernel tunes a Student-t kernel in place; use "
+            "InterpolationKernel.AUTO or a Student-t interpolation kernel."
+        )
 
     sdist.set_over_smooth(over_smooth)
     sdist.set_auto_kernel(auto_kernel)

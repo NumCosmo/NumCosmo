@@ -140,6 +140,7 @@ NCM_INLINE void ncm_vector_mul (NcmVector *cv1, const NcmVector *cv2);
 NCM_INLINE void ncm_vector_div (NcmVector *cv1, const NcmVector *cv2);
 NCM_INLINE void ncm_vector_add (NcmVector *cv1, const NcmVector *cv2);
 NCM_INLINE void ncm_vector_sub (NcmVector *cv1, const NcmVector *cv2);
+NCM_INLINE gdouble ncm_vector_sqr_dist (const NcmVector *cv1, const NcmVector *cv2);
 NCM_INLINE void ncm_vector_set_zero (NcmVector *cv);
 NCM_INLINE void ncm_vector_memcpy (NcmVector *cv1, const NcmVector *cv2);
 NCM_INLINE void ncm_vector_memcpy2 (NcmVector *cv1, const NcmVector *cv2, const guint cv1_start, const guint cv2_start, const guint size);
@@ -359,6 +360,29 @@ NCM_INLINE void
 ncm_vector_sub (NcmVector *cv1, const NcmVector *cv2)
 {
   gsl_vector_sub (ncm_vector_gsl (cv1), ncm_vector_const_gsl (cv2));
+}
+
+NCM_INLINE gdouble
+ncm_vector_sqr_dist (const NcmVector *cv1, const NcmVector *cv2)
+{
+  const guint n     = ncm_vector_len (cv1);
+  const guint s1    = ncm_vector_stride (cv1);
+  const guint s2    = ncm_vector_stride (cv2);
+  const gdouble *d1 = ncm_vector_const_data (cv1);
+  const gdouble *d2 = ncm_vector_const_data (cv2);
+  gdouble res       = 0.0;
+  guint i;
+
+  g_assert_cmpuint (n, ==, ncm_vector_len (cv2));
+
+  for (i = 0; i < n; i++)
+  {
+    const gdouble diff = d1[i * s1] - d2[i * s2];
+
+    res += diff * diff;
+  }
+
+  return res;
 }
 
 NCM_INLINE void

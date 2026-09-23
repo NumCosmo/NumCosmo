@@ -971,6 +971,43 @@ ncm_matrix_cmp_diag (const NcmMatrix *cm1, const NcmMatrix *cm2, const gdouble s
 }
 
 /**
+ * ncm_matrix_zero_triangle:
+ * @cm: a #NcmMatrix
+ * @UL: char indicating 'U'pper or 'L'ower matrix
+ *
+ * If @UL == 'U' zeroes the strict lower triangle, keeping the upper one.
+ * If @UL == 'L' zeroes the strict upper triangle, keeping the lower one.
+ *
+ * Factorizations leave the unused triangle holding whatever was there before, so a
+ * routine that reads the whole matrix needs it cleared first.
+ *
+ */
+void
+ncm_matrix_zero_triangle (NcmMatrix *cm, gchar UL)
+{
+  const guint nrows = ncm_matrix_nrows (cm);
+  const guint ncols = ncm_matrix_ncols (cm);
+  guint i, j;
+
+  if (nrows != ncols)
+    g_error ("ncm_matrix_zero_triangle: only works on a square matrix [%ux%u]", nrows, ncols);
+
+  if ((UL != 'U') && (UL != 'L'))
+    g_error ("ncm_matrix_zero_triangle: expect U or L and received %c.", UL);
+
+  for (i = 0; i < nrows; i++)
+  {
+    for (j = i + 1; j < ncols; j++)
+    {
+      if (UL == 'U')
+        ncm_matrix_set (cm, j, i, 0.0);
+      else
+        ncm_matrix_set (cm, i, j, 0.0);
+    }
+  }
+}
+
+/**
  * ncm_matrix_copy_triangle:
  * @cm: a #NcmMatrix
  * @UL: char indicating 'U'pper or 'L'ower matrix
@@ -1075,6 +1112,46 @@ _ncm_matrix_check_trans (const gchar *func_name, gchar T)
   }
 }
 
+static CBLAS_UPLO
+_ncm_matrix_check_uplo (const gchar *func_name, gchar UL)
+{
+  switch (UL)
+  {
+    case 'U':
+
+      return CblasUpper;
+
+    case 'L':
+
+      return CblasLower;
+
+    default:
+      g_error ("%s: expect U or L and received %c.", func_name, UL);
+
+      return 0;
+  }
+}
+
+static CBLAS_SIDE
+_ncm_matrix_check_side (const gchar *func_name, gchar Side)
+{
+  switch (Side)
+  {
+    case 'L':
+
+      return CblasLeft;
+
+    case 'R':
+
+      return CblasRight;
+
+    default:
+      g_error ("%s: expect L or R and received %c.", func_name, Side);
+
+      return 0;
+  }
+}
+
 /**
  * ncm_matrix_dgemm:
  * @cm: a #NcmMatrix $C$
@@ -1109,6 +1186,232 @@ ncm_matrix_dgemm (NcmMatrix *cm, gchar TransA, gchar TransB, const gdouble alpha
                ncm_matrix_data (B), ncm_matrix_tda (B),
                beta,
                ncm_matrix_data (cm), ncm_matrix_tda (cm));
+}
+
+/**
+ * ncm_matrix_dtrmm:
+ * @cm: a #NcmMatrix $B$, overwritten with the product
+ * @Side: char indicating whether $A$ acts from the 'L'eft or the 'R'ight
+ * @UL: char indicating 'U'pper or 'L'ower triangular $A$
+ * @TransA: char indicating 'T'ranspose or 'N'ot transposed $A$
+ * @alpha: $\alpha$
+ * @A: a #NcmMatrix, triangular; only its @UL triangle is read
+ *
+ * Triangular matrix product in place: @Side == 'L' computes
+ * $B \leftarrow \alpha\,\mathrm{op}(A)\,B$, @Side == 'R' computes
+ * $B \leftarrow \alpha\,B\,\mathrm{op}(A)$. The diagonal of $A$ is taken as stored.
+ * The other triangle of $A$ is never read, so a factorization that left values there
+ * needs no clearing.
+ *
+ */
+void
+ncm_matrix_dtrmm (NcmMatrix *cm, gchar Side, gchar UL, gchar TransA, const gdouble alpha, NcmMatrix *A)
+{
+  const CBLAS_SIDE cblas_Side        = _ncm_matrix_check_side ("ncm_matrix_dtrmm", Side);
+  const CBLAS_UPLO cblas_UL          = _ncm_matrix_check_uplo ("ncm_matrix_dtrmm", UL);
+  const CBLAS_TRANSPOSE cblas_TransA = _ncm_matrix_check_trans ("ncm_matrix_dtrmm", TransA);
+  const guint nrows                  = ncm_matrix_nrows (cm);
+  const guint ncols                  = ncm_matrix_ncols (cm);
+
+  g_assert_cmpuint (ncm_matrix_nrows (A), ==, ncm_matrix_ncols (A));
+  g_assert_cmpuint (ncm_matrix_nrows (A), ==, (cblas_Side == CblasLeft) ? nrows : ncols);
+
+  cblas_dtrmm (CblasRowMajor, cblas_Side, cblas_UL, cblas_TransA, CblasNonUnit, nrows, ncols,
+               alpha,
+               ncm_matrix_data (A), ncm_matrix_tda (A),
+               ncm_matrix_data (cm), ncm_matrix_tda (cm));
+}
+
+/**
+ * ncm_matrix_dtrsm:
+ * @cm: a #NcmMatrix $B$, overwritten with the solution
+ * @Side: char indicating whether $A$ acts from the 'L'eft or the 'R'ight
+ * @UL: char indicating 'U'pper or 'L'ower triangular $A$
+ * @TransA: char indicating 'T'ranspose or 'N'ot transposed $A$
+ * @alpha: $\alpha$
+ * @A: a #NcmMatrix, triangular; only its @UL triangle is read
+ *
+ * Triangular solve in place: @Side == 'L' computes
+ * $B \leftarrow \alpha\,\mathrm{op}(A)^{-1} B$, @Side == 'R' computes
+ * $B \leftarrow \alpha\,B\,\mathrm{op}(A)^{-1}$. The diagonal of $A$ is taken as stored.
+ * The other triangle of $A$ is never read, so a factorization that left values there
+ * needs no clearing.
+ *
+ */
+void
+ncm_matrix_dtrsm (NcmMatrix *cm, gchar Side, gchar UL, gchar TransA, const gdouble alpha, NcmMatrix *A)
+{
+  const CBLAS_SIDE cblas_Side        = _ncm_matrix_check_side ("ncm_matrix_dtrsm", Side);
+  const CBLAS_UPLO cblas_UL          = _ncm_matrix_check_uplo ("ncm_matrix_dtrsm", UL);
+  const CBLAS_TRANSPOSE cblas_TransA = _ncm_matrix_check_trans ("ncm_matrix_dtrsm", TransA);
+  const guint nrows                  = ncm_matrix_nrows (cm);
+  const guint ncols                  = ncm_matrix_ncols (cm);
+
+  g_assert_cmpuint (ncm_matrix_nrows (A), ==, ncm_matrix_ncols (A));
+  g_assert_cmpuint (ncm_matrix_nrows (A), ==, (cblas_Side == CblasLeft) ? nrows : ncols);
+
+  cblas_dtrsm (CblasRowMajor, cblas_Side, cblas_UL, cblas_TransA, CblasNonUnit, nrows, ncols,
+               alpha,
+               ncm_matrix_data (A), ncm_matrix_tda (A),
+               ncm_matrix_data (cm), ncm_matrix_tda (cm));
+}
+
+/**
+ * ncm_matrix_dtrmv:
+ * @cm: a #NcmMatrix $A$, triangular; only its @UL triangle is read
+ * @UL: char indicating 'U'pper or 'L'ower triangular $A$
+ * @Trans: char indicating 'T'ranspose or 'N'ot transposed $A$
+ * @v: a #NcmVector, overwritten with the product
+ *
+ * Triangular matrix-vector product in place, $v \leftarrow \mathrm{op}(A)\,v$. The
+ * diagonal of $A$ is taken as stored; the other triangle is never read.
+ *
+ */
+void
+ncm_matrix_dtrmv (NcmMatrix *cm, gchar UL, gchar Trans, NcmVector *v)
+{
+  const CBLAS_UPLO cblas_UL         = _ncm_matrix_check_uplo ("ncm_matrix_dtrmv", UL);
+  const CBLAS_TRANSPOSE cblas_Trans = _ncm_matrix_check_trans ("ncm_matrix_dtrmv", Trans);
+  const guint n                     = ncm_matrix_nrows (cm);
+
+  g_assert_cmpuint (n, ==, ncm_matrix_ncols (cm));
+  g_assert_cmpuint (n, ==, ncm_vector_len (v));
+
+  cblas_dtrmv (CblasRowMajor, cblas_UL, cblas_Trans, CblasNonUnit, n,
+               ncm_matrix_data (cm), ncm_matrix_tda (cm),
+               ncm_vector_data (v), ncm_vector_stride (v));
+}
+
+/**
+ * ncm_matrix_dtrsv:
+ * @cm: a #NcmMatrix $A$, triangular; only its @UL triangle is read
+ * @UL: char indicating 'U'pper or 'L'ower triangular $A$
+ * @Trans: char indicating 'T'ranspose or 'N'ot transposed $A$
+ * @v: a #NcmVector, overwritten with the solution
+ *
+ * Triangular solve in place, $v \leftarrow \mathrm{op}(A)^{-1} v$. The diagonal of $A$
+ * is taken as stored; the other triangle is never read.
+ *
+ */
+void
+ncm_matrix_dtrsv (NcmMatrix *cm, gchar UL, gchar Trans, NcmVector *v)
+{
+  const CBLAS_UPLO cblas_UL         = _ncm_matrix_check_uplo ("ncm_matrix_dtrsv", UL);
+  const CBLAS_TRANSPOSE cblas_Trans = _ncm_matrix_check_trans ("ncm_matrix_dtrsv", Trans);
+  const guint n                     = ncm_matrix_nrows (cm);
+
+  g_assert_cmpuint (n, ==, ncm_matrix_ncols (cm));
+  g_assert_cmpuint (n, ==, ncm_vector_len (v));
+
+  cblas_dtrsv (CblasRowMajor, cblas_UL, cblas_Trans, CblasNonUnit, n,
+               ncm_matrix_data (cm), ncm_matrix_tda (cm),
+               ncm_vector_data (v), ncm_vector_stride (v));
+}
+
+/**
+ * ncm_matrix_dsyrk:
+ * @cm: a #NcmMatrix $C$, square; only its @UL triangle is updated
+ * @UL: char indicating 'U'pper or 'L'ower triangle of $C$
+ * @Trans: char indicating 'T'ranspose or 'N'ot transposed $A$
+ * @alpha: $\alpha$
+ * @A: a #NcmMatrix $A$
+ * @beta: $\beta$
+ *
+ * Symmetric rank-$k$ update: @Trans == 'N' computes $C \leftarrow \alpha A A^\intercal + \beta C$,
+ * @Trans == 'T' computes $C \leftarrow \alpha A^\intercal A + \beta C$. Only the @UL triangle
+ * of $C$ is written; ncm_matrix_copy_triangle() fills the other one when the whole matrix
+ * is needed.
+ *
+ */
+void
+ncm_matrix_dsyrk (NcmMatrix *cm, gchar UL, gchar Trans, const gdouble alpha, NcmMatrix *A, const gdouble beta)
+{
+  const CBLAS_UPLO cblas_UL         = _ncm_matrix_check_uplo ("ncm_matrix_dsyrk", UL);
+  const CBLAS_TRANSPOSE cblas_Trans = _ncm_matrix_check_trans ("ncm_matrix_dsyrk", Trans);
+  const guint n                     = (cblas_Trans == CblasNoTrans) ? ncm_matrix_nrows (A) : ncm_matrix_ncols (A);
+  const guint k                     = (cblas_Trans == CblasNoTrans) ? ncm_matrix_ncols (A) : ncm_matrix_nrows (A);
+
+  g_assert_cmpuint (ncm_matrix_nrows (cm), ==, ncm_matrix_ncols (cm));
+  g_assert_cmpuint (ncm_matrix_nrows (cm), ==, n);
+
+  cblas_dsyrk (CblasRowMajor, cblas_UL, cblas_Trans, n, k,
+               alpha,
+               ncm_matrix_data (A), ncm_matrix_tda (A),
+               beta,
+               ncm_matrix_data (cm), ncm_matrix_tda (cm));
+}
+
+/**
+ * ncm_matrix_scale_rows:
+ * @cm: a #NcmMatrix $M$
+ * @s: a #NcmVector $s$ with one entry per row
+ *
+ * Scales each row by its entry of @s, $M \leftarrow \mathrm{diag}(s)\,M$.
+ *
+ */
+void
+ncm_matrix_scale_rows (NcmMatrix *cm, const NcmVector *s)
+{
+  const guint nrows = ncm_matrix_nrows (cm);
+  guint i;
+
+  g_assert_cmpuint (nrows, ==, ncm_vector_len (s));
+
+  for (i = 0; i < nrows; i++)
+    ncm_matrix_mul_row (cm, i, ncm_vector_get (s, i));
+}
+
+/**
+ * ncm_matrix_scale_cols:
+ * @cm: a #NcmMatrix $M$
+ * @s: a #NcmVector $s$ with one entry per column
+ *
+ * Scales each column by its entry of @s, $M \leftarrow M\,\mathrm{diag}(s)$.
+ *
+ */
+void
+ncm_matrix_scale_cols (NcmMatrix *cm, const NcmVector *s)
+{
+  const guint ncols = ncm_matrix_ncols (cm);
+  guint j;
+
+  g_assert_cmpuint (ncols, ==, ncm_vector_len (s));
+
+  for (j = 0; j < ncols; j++)
+    ncm_matrix_mul_col (cm, j, ncm_vector_get (s, j));
+}
+
+/**
+ * ncm_matrix_is_identity:
+ * @cm: a square #NcmMatrix
+ * @tol: absolute tolerance
+ *
+ * Whether every entry of @cm is within @tol of the identity matrix, $\max_{ij} |M_{ij} - \delta_{ij}| < $ @tol.
+ *
+ * Returns: TRUE if @cm is the identity to within @tol.
+ */
+gboolean
+ncm_matrix_is_identity (const NcmMatrix *cm, const gdouble tol)
+{
+  const guint nrows = ncm_matrix_nrows (cm);
+  const guint ncols = ncm_matrix_ncols (cm);
+  guint i, j;
+
+  if (nrows != ncols)
+    g_error ("ncm_matrix_is_identity: only works on a square matrix [%ux%u]", nrows, ncols);
+
+  for (i = 0; i < nrows; i++)
+  {
+    for (j = 0; j < ncols; j++)
+    {
+      const gdouble dev = fabs (ncm_matrix_get (cm, i, j) - ((i == j) ? 1.0 : 0.0));
+
+      if (!(dev < tol))
+        return FALSE;
+    }
+  }
+
+  return TRUE;
 }
 
 /**
@@ -1339,6 +1642,43 @@ ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const guin
   ncm_matrix_free (eve);
   ncm_matrix_free (R);
   ncm_matrix_free (D_S);
+
+  return ret;
+}
+
+/**
+ * ncm_matrix_cholesky_decomp_nearPD:
+ * @cm: a symmetric #NcmMatrix, read on its @UL triangle and left untouched
+ * @decomp: a #NcmMatrix of the same size, receives the factor
+ * @UL: char indicating 'U'pper or 'L'ower matrix
+ * @maxiter: nearPD iterations allowed when the plain factorization fails; 0 disables the repair
+ * @repaired: (out) (nullable): set to TRUE when the factor comes from the nearPD repair
+ *
+ * The Cholesky factor of @cm into @decomp, with one fallback: if @cm is not positive
+ * definite to rounding, the factor of the nearest positive definite matrix in the
+ * Frobenius norm (ncm_matrix_nearPD()) is returned instead and @repaired says so.
+ *
+ * Returns: 0 on success, otherwise the status of the last Cholesky decomposition attempted.
+ */
+gint
+ncm_matrix_cholesky_decomp_nearPD (const NcmMatrix *cm, NcmMatrix *decomp, gchar UL, const guint maxiter, gboolean *repaired)
+{
+  gint ret;
+
+  ncm_matrix_memcpy (decomp, cm);
+  ret = ncm_matrix_cholesky_decomp (decomp, UL);
+
+  if (repaired != NULL)
+    *repaired = FALSE;
+
+  if ((ret != 0) && (maxiter > 0))
+  {
+    ncm_matrix_memcpy (decomp, cm);
+    ret = ncm_matrix_nearPD (decomp, UL, TRUE, maxiter);
+
+    if (repaired != NULL)
+      *repaired = TRUE;
+  }
 
   return ret;
 }

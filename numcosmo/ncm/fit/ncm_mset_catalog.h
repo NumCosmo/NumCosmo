@@ -111,6 +111,8 @@ void ncm_mset_catalog_set_sync_mode (NcmMSetCatalog *mcat, NcmMSetCatalogSync sm
 void ncm_mset_catalog_set_sync_interval (NcmMSetCatalog *mcat, gdouble interval);
 void ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id);
 void ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str);
+void ncm_mset_catalog_set_sampler (NcmMSetCatalog *mcat, const gchar *sampler);
+void ncm_mset_catalog_set_initial_sampler (NcmMSetCatalog *mcat, const gchar *sampler);
 void ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng);
 void ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check);
 void ncm_mset_catalog_timed_sync (NcmMSetCatalog *mcat, gboolean check);
@@ -163,6 +165,8 @@ void ncm_mset_catalog_log_current_chain_stats (NcmMSetCatalog *mcat);
 NcmMSet *ncm_mset_catalog_get_mset (NcmMSetCatalog *mcat);
 NcmMSet *ncm_mset_catalog_peek_mset (NcmMSetCatalog *mcat);
 const gchar *ncm_mset_catalog_get_run_type (NcmMSetCatalog *mcat);
+const gchar *ncm_mset_catalog_get_sampler (NcmMSetCatalog *mcat);
+const gchar *ncm_mset_catalog_get_initial_sampler (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_set_functions_array (NcmMSetCatalog *mcat, NcmObjArray *functions);
 NcmObjArray *ncm_mset_catalog_peek_functions_array (NcmMSetCatalog *mcat);
@@ -238,6 +242,8 @@ guint ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint n
 #define NCM_MSET_CATALOG_RNG_INIS_LABEL "RNG_INIS"
 #define NCM_MSET_CATALOG_NROWS_LABEL "NAXIS2"
 #define NCM_MSET_CATALOG_RTYPE_LABEL "RTYPE"
+#define NCM_MSET_CATALOG_SAMPLER_LABEL "SAMPLER"
+#define NCM_MSET_CATALOG_INIT_SAMPLER_LABEL "INITSMP"
 #define NCM_MSET_CATALOG_NCHAINS_LABEL "NCHAINS"
 #define NCM_MSET_CATALOG_NADDVAL_LABEL "NADDVAL"
 #define NCM_MSET_CATALOG_WEIGHTED_LABEL "WEIGHTED"

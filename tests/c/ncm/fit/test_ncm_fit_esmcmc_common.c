@@ -217,10 +217,17 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
 
   ncm_fit_set_maxiter (fit, 10000000);
 
+  /* The Cauchy cases are built knob by knob: centre shrinkage is on by default and needs
+   * a kernel with a finite covariance, so it has to go off before the kernel is set. */
   switch (GPOINTER_TO_INT (pdata))
   {
     case 0:
       apes = ncm_fit_esmcmc_walker_apes_new (nwalkers, ncm_mset_fparams_len (mset));
+      ncm_fit_esmcmc_walker_apes_set_center_shrink (apes, FALSE);
+      ncm_fit_esmcmc_walker_apes_set_method (apes, NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE);
+      ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY);
+      ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, 1.0);
+      ncm_fit_esmcmc_walker_apes_use_interp (apes, TRUE);
       break;
     case 1:
       apes = ncm_fit_esmcmc_walker_apes_new_full (nwalkers, ncm_mset_fparams_len (mset),
@@ -232,8 +239,12 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
       /*test->nrun_div = 100;*/
       break;
     case 3:
-      apes = ncm_fit_esmcmc_walker_apes_new_full (nwalkers, ncm_mset_fparams_len (mset),
-                                                  NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY, 1.0, TRUE);
+      apes = ncm_fit_esmcmc_walker_apes_new (nwalkers, ncm_mset_fparams_len (mset));
+      ncm_fit_esmcmc_walker_apes_set_center_shrink (apes, FALSE);
+      ncm_fit_esmcmc_walker_apes_set_method (apes, NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE);
+      ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY);
+      ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, 1.0);
+      ncm_fit_esmcmc_walker_apes_use_interp (apes, TRUE);
       break;
     case 4:
       apes = ncm_fit_esmcmc_walker_apes_new_full (nwalkers, ncm_mset_fparams_len (mset),
@@ -872,7 +883,7 @@ test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer 
     NcmMSet *mset                     = ncm_fit_peek_mset (fit);
     NcmMSetCatalog *mcat              = ncm_fit_esmcmc_peek_catalog (test->esmcmc);
     NcmStatsDistKernel *kernel        = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (ncm_mset_fparams_len (mset)));
-    NcmStatsDist *sd                  = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_SPLIT));
+    NcmStatsDist *sd                  = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_SPLIT_M2LNP));
     NcmMSetTransKernCat *init_sampler = ncm_mset_trans_kern_cat_new (mcat, sd);
     const guint nwalkers              = ncm_mset_catalog_nchains (mcat);
     NcmFitESMCMCWalkerAPES *apes      = ncm_fit_esmcmc_walker_apes_new (nwalkers, ncm_mset_fparams_len (mset));
@@ -1189,23 +1200,26 @@ test_ncm_fit_esmcmc_apes_settings_survive_rebuild (void)
   NcmStatsDist *sd0            = NULL;
   NcmStatsDist *sd1            = NULL;
 
+  /* Away from the default kernel first, so that setting it below is a real change and
+   * forces the rebuild this test is about. */
+  ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3);
+
   ncm_fit_esmcmc_walker_apes_set_local_frac (apes, local_frac);
-  ncm_fit_esmcmc_walker_apes_set_cv_type (apes, NCM_STATS_DIST_CV_SPLIT_NOFIT);
+  ncm_fit_esmcmc_walker_apes_set_cv_type (apes, NCM_STATS_DIST_CV_SPLIT_M2LNP);
   ncm_fit_esmcmc_walker_apes_set_split_frac (apes, split_frac);
-  ncm_fit_esmcmc_walker_apes_set_auto_kernel (apes, TRUE);
   ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, 2.5);
 
   /* Changing the kernel or the method destroys and recreates both estimators. Everything
    * the caller has configured must be reapplied, otherwise it silently reverts to the
    * defaults, which is what happened to local-frac and the covariance type before.
    */
-  ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS);
+  ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO);
   ncm_fit_esmcmc_walker_apes_set_center_shrink (apes, TRUE);
 
   ncm_fit_esmcmc_walker_apes_peek_sds (apes, &sd0, &sd1);
 
-  g_assert_cmpint (ncm_stats_dist_get_cv_type (sd0), ==, NCM_STATS_DIST_CV_SPLIT_NOFIT);
-  g_assert_cmpint (ncm_stats_dist_get_cv_type (sd1), ==, NCM_STATS_DIST_CV_SPLIT_NOFIT);
+  g_assert_cmpint (ncm_stats_dist_get_cv_type (sd0), ==, NCM_STATS_DIST_CV_SPLIT_M2LNP);
+  g_assert_cmpint (ncm_stats_dist_get_cv_type (sd1), ==, NCM_STATS_DIST_CV_SPLIT_M2LNP);
   g_assert_cmpfloat (ncm_stats_dist_get_split_frac (sd0), ==, split_frac);
   g_assert_cmpfloat (ncm_stats_dist_get_split_frac (sd1), ==, split_frac);
   g_assert_true (ncm_stats_dist_get_auto_kernel (sd0));
@@ -1214,7 +1228,7 @@ test_ncm_fit_esmcmc_apes_settings_survive_rebuild (void)
   g_assert_cmpfloat (ncm_stats_dist_vkde_get_local_frac (NCM_STATS_DIST_VKDE (sd0)), ==, local_frac);
   g_assert_true (ncm_stats_dist_get_center_shrink (sd0));
 
-  g_assert_cmpint (ncm_fit_esmcmc_walker_apes_get_cv_type (apes), ==, NCM_STATS_DIST_CV_SPLIT_NOFIT);
+  g_assert_cmpint (ncm_fit_esmcmc_walker_apes_get_cv_type (apes), ==, NCM_STATS_DIST_CV_SPLIT_M2LNP);
   g_assert_cmpfloat (ncm_fit_esmcmc_walker_apes_get_split_frac (apes), ==, split_frac);
 
   /* The same must hold when the method changes. */
@@ -1223,7 +1237,7 @@ test_ncm_fit_esmcmc_apes_settings_survive_rebuild (void)
 
   g_assert_true (NCM_IS_STATS_DIST_KDE (sd0));
   g_assert_false (NCM_IS_STATS_DIST_VKDE (sd0));
-  g_assert_cmpint (ncm_stats_dist_get_cv_type (sd0), ==, NCM_STATS_DIST_CV_SPLIT_NOFIT);
+  g_assert_cmpint (ncm_stats_dist_get_cv_type (sd0), ==, NCM_STATS_DIST_CV_SPLIT_M2LNP);
   g_assert_cmpfloat (ncm_stats_dist_get_split_frac (sd0), ==, split_frac);
   g_assert_true (ncm_stats_dist_get_auto_kernel (sd0));
 
@@ -1345,13 +1359,12 @@ test_ncm_fit_esmcmc_apes_desc (void)
    * a description. */
   {
     const NcmStatsDistCV cv_type[] = {
-      NCM_STATS_DIST_CV_SPLIT,
-      NCM_STATS_DIST_CV_SPLIT_NOFIT,
+      NCM_STATS_DIST_CV_SPLIT_M2LNP,
       NCM_STATS_DIST_CV_LOO,
       NCM_STATS_DIST_CV_SPLIT_ACCEPT,
       NCM_STATS_DIST_CV_LOO_M2LNP,
     };
-    const gchar *cv_tag[] = {"split", "split-nofit", "loo", "split-accept", "loo-m2lnp"};
+    const gchar *cv_tag[] = {"split-m2lnp", "loo", "split-accept", "loo-m2lnp"};
     guint i;
 
     for (i = 0; i < G_N_ELEMENTS (cv_type); i++)
@@ -1380,8 +1393,12 @@ test_ncm_fit_esmcmc_apes_desc (void)
 static void
 _test_ncm_fit_esmcmc_phase_run (NcmFitRunMsgs mtype, guint exploration)
 {
-  const gint dim                      = 2;
-  const gint nwalkers                 = 20;
+  const gint dim = 2;
+
+  /* Enough walkers for the default points-per-dim: a block needs ceil (ppd * dim) of
+   * them to estimate a local covariance. The count is otherwise incidental here, and
+   * staying on the defaults is what makes this test cover what a user gets. */
+  const gint nwalkers                 = 50;
   NcmRNG *rng                         = ncm_rng_seeded_new (NULL, 20260921);
   NcmDataGaussCovMVND *data_mvnd      = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 2.0e-2, 0.3, -1.0, 1.0, rng);
   NcmModelMVND *model_mvnd            = ncm_model_mvnd_new (dim);

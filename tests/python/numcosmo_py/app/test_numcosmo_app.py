@@ -638,6 +638,14 @@ def test_run_mcmc_apes_init_catalog(simple_experiment):
         raise result.exception
 
 
+def _center_shrink_args(interpolation_kernel: str) -> list[str]:
+    """Centre shrinkage is on by default and needs a kernel with a covariance; the Cauchy
+    kernel has none and is refused with it on."""
+    if interpolation_kernel == InterpolationKernel.CAUCHY.value:
+        return ["--no-center-shrink"]
+    return []
+
+
 def test_run_mcmc_apes_method_kernel(
     simple_experiment, interpolation_method, interpolation_kernel
 ):
@@ -657,7 +665,8 @@ def test_run_mcmc_apes_method_kernel(
             interpolation_method,
             "--interpolation-kernel",
             interpolation_kernel,
-        ],
+        ]
+        + _center_shrink_args(interpolation_kernel),
     )
     if result.exit_code != 0:
         raise result.exception
@@ -683,7 +692,8 @@ def test_run_mcmc_apes_method_kernel_no_interp(
             "--interpolation-kernel",
             interpolation_kernel,
             "--no-use-interpolation",
-        ],
+        ]
+        + _center_shrink_args(interpolation_kernel),
     )
     if result.exit_code != 0:
         raise result.exception
