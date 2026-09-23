@@ -830,3 +830,110 @@ conventions and all orders tested, so the retained $\delta$-coefficients are
 exact as claimed and the change of basis is not implicated. Raising
 trunc-order to 9 removes the region entirely. `TRACE` is unaffected across
 the same box.
+
+## `NcGalaxyShapeFactorMomentsTilt` and `NcGalaxyShapeFactorMomentsGauss` replace the series classes (2026)
+
+The truncated-series classes `NcGalaxyShapeFactorMomentSeries` and
+`NcGalaxyShapeFactorTiltedSeries` were removed. Both approximated the same
+exact moments of the lensed, noisy marginal by a series in the shear; the
+replacements compute those moments in closed form and use them directly —
+`MomentsGauss` for a matched Gaussian, `MomentsTilt` for the exponential
+tilt, now solved exactly rather than order by order. Before the removal, the
+old classes' values at $g\le0.2$ were frozen in
+`data/truth_tables/moments/golden.json`
+(`tests/tools/make_moments_compat_fixtures.py`, written once and not meant
+to be re-run), and the new classes' tests assert against them with a
+tolerance of ten times the gap measured when they were written.
+
+### The exact tilt, solved and interpolated on a dyadic mesh
+
+The order-by-order recursion is a Taylor section of the inverse map with
+radius $\hat g\simeq0.62$. The exact solve is a damped Newton iteration at
+Chebyshev–Lobatto nodes in $\hat g=\min(|g|,1/|g|)$, interpolated on panels
+$p_j=1-2^{-j}$ whose count $K=\max(2,\mathrm{round}(\log_2 1/\sigma_\nu))$
+follows the boundary layer of $\lambda_1$ at $\hat g=1$. Worst model mass
+$|\ln Z|$ over two population widths and both conventions stays below
+$4.6\times10^{-4}$ for $\sigma_\nu$ from 0.008 to 0.31, with zero Newton
+failures, and the interpolation error against a fully refined table stays
+below $8\times10^{-5}$ in $\ln P$.
+
+Several departures from the design notes were forced by measurement:
+
+- **The degree criterion.** The notes' signed tail, weighted by the target
+  moments at the panel midpoint, measures the mass error. It cannot decide
+  resolution on its own: the exact solve satisfies
+  $\mathrm dW/\mathrm d\hat g=t\cdot\mathrm d\lambda/\mathrm d\hat g$, so
+  where $t$ barely varies across a panel the coefficients of $W$ cancel those
+  of $t\cdot\lambda$ term by term. It stopped one panel at degree 7 whose
+  worst $|\ln Z|$ was 9.3 nats. Resolution is now decided per component,
+  comparing successive refinement levels, and the signed tail — taken over
+  four representative statistic vectors, not one — only trims what is
+  already resolved, with the truncation confirmed at the panel's own nodes.
+- **The Newton acceptance** sat on the attainable residual floor (1.3 to
+  $2.4\times10^{-9}$, flat in $|\lambda|$ from 284 to 7900), so converged
+  solves were reported as failures; it is $10^{-8}$. Stopping once the
+  residual is both acceptable and no longer improving cut builds 10 to 15
+  times at the small-noise end.
+- **Warm starts** are clamped to the natural domain, and a failed solve is
+  retried from the nearest solved node before it is counted.
+
+The panels are built by `NcmSpectral`, whose Lobatto nodes, nested doubling
+and DCT match the construction above to roundoff. It visits nodes in
+descending order within a panel while the continuation needs to climb from
+$\hat g=0$, so a memo of solved nodes is primed with each panel's first
+level in ascending order; this also shares each panel's first node with the
+previous panel's last. At steady state the build is as fast as the
+hand-written one or faster.
+
+### The TRACE_DET moments
+
+The first version computed the TRACE moments under both conventions: the
+target used $\delta=2\hat g/(1+\hat g^2)$, which is the $\chi$ map. The
+normalization check could not see it. For $\epsilon$ the map is the disc
+automorphism $w=(z+\hat g)/(1+\hat g z)$, so by the mean-value property
+$\langle w\rangle=\hat g$ and $\langle w^2\rangle=\hat g^2$ over every
+source circle, and the automorphism identity with the Poisson integral gives
+$\langle|w|^2\rangle=1-(1-\hat g^2)(1-r^2)/(1-\hat g^2r^2)$:
+
+$$
+\mathrm E[x]=\hat g,\qquad
+\mathrm E[x^2]=\tfrac12(\hat g^2+\langle A\rangle)+\sigma_\nu^2,\qquad
+\mathrm E[y^2]=\tfrac12(\langle A\rangle-\hat g^2)+\sigma_\nu^2 .
+$$
+
+Checked three ways: against a two-dimensional quadrature through the
+engine's own shear map (agreement to $10^{-15}$); against the removed
+`TiltedSeries` and `MomentSeries`, whose gap to the new classes falls with
+both $g$ and truncation order, while a deliberate convention mismatch leaves
+an $O(g)$ gap that no order removes; and by $P(g)=P(1/g)$ at observed
+ellipticities with a cross component, the fold conjugating the observed
+ellipticity for $|g|>1$. Under TRACE_DET the matched Gaussian is centred on
+$\hat g$ with an isotropic covariance.
+
+### Preparing a dataset once
+
+`nc_data_cluster_wl_factor_data_prepare()` runs every per-galaxy
+precomputation and leaves it in serializable properties
+(`NcDataClusterWLFactor:node-config`, `NcGalaxyShapeFactorMomentsTilt:tables`),
+so it can be saved and reused. On HWL16a-002 (15011 galaxies, TRACE,
+auto-nodes) it takes 83 s on one thread and 12 s on sixteen, bitwise
+identical at every thread count; a dataset reloaded from it evaluates with
+no calibration and no table build. Two findings shaped it: the per-galaxy
+range step has to run before the auto-node calibration, which probes the
+shape integrand and would otherwise build full-mesh tables nothing reads
+(that halved the time), and the parallel loop runs serially until one
+galaxy has exercised every step, because several models update shared state
+lazily on the first call after a parameter change.
+
+Parallel preparation was first limited to shape factors that declared
+themselves safe for it (only the two moments classes did). An audit of every
+position, redshift and shape factor, and of the models they reach, found all
+of them safe per galaxy: the only shared writes are the models' lazy
+first-call updates (halo-position rotation, LSST-SRD constants, the
+numerically integrated profiles' splines, Cuba's settings), which the serial
+warm-up absorbs. The declaration was removed; thread safety is now part of each
+factor base class's contract, and every factor is prepared in parallel. On
+HWL16a-002, `FixedQuad`'s preparation went from 98 s on one thread to 15 s on
+sixteen and `CGF`'s from 1.0 s to 0.1 s, both bitwise identical to serial, and
+a test prepares every shape factor on one and four threads from cold models and
+requires identical results.
