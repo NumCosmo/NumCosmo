@@ -50,6 +50,15 @@
  * not live in the #NcmMSet; the models it needs (cosmology, halo position and
  * profile, surface mass density, shape population) are resolved from the mset
  * passed to each method.
+ *
+ * Thread safety: every subclass must support its per-galaxy methods being
+ * called for different galaxies from different threads at the same time,
+ * because nc_data_cluster_wl_factor_data_prepare() prepares galaxies in
+ * parallel. A per-galaxy method may write only that galaxy's own data
+ * fragment; shared instance state may change only in prepare(), which always
+ * runs alone. Models reached through the #NcmMSet that update themselves
+ * lazily on their first call after a parameter change are covered by the
+ * orchestrator, which prepares one galaxy alone before starting the rest.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -60,6 +69,7 @@
 #include "nc_enum_types.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor.h"
+#include "ncm/core/ncm_prefetch_private.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/lss/halo/nc_halo_position.h"
@@ -252,6 +262,12 @@ _nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
   /* Default: the evaluation strategy needs no additional setup. */
 }
 
+static void
+_nc_galaxy_shape_factor_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max)
+{
+  /* Default: the evaluation strategy caches nothing per galaxy. */
+}
+
 static gchar *
 _nc_galaxy_shape_factor_get_desc (NcGalaxyShapeFactor *gsf)
 {
@@ -289,6 +305,7 @@ nc_galaxy_shape_factor_class_init (NcGalaxyShapeFactorClass *klass)
 
   klass->data_init        = &_nc_galaxy_shape_factor_data_init;
   klass->prepare          = &_nc_galaxy_shape_factor_prepare;
+  klass->data_prepare     = &_nc_galaxy_shape_factor_data_prepare;
   klass->eval_marginal    = &_nc_galaxy_shape_factor_eval_marginal;
   klass->eval_ln_marginal = &_nc_galaxy_shape_factor_eval_ln_marginal;
   klass->get_desc         = &_nc_galaxy_shape_factor_get_desc;
@@ -467,6 +484,93 @@ nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
   self->pop_hash = pop_hash;
 
   klass->prepare (gsf, mset);
+}
+
+/**
+ * nc_galaxy_shape_factor_data_prepare:
+ * @gsf: a #NcGalaxyShapeFactor
+ * @mset: a #NcmMSet
+ * @data: a #NcGalaxyShapeFactorData
+ * @z_max: an upper bound on the galaxy's redshift support
+ *
+ * Per-galaxy prepare: gives the subclass the one point where @mset and @data
+ * are both in hand, so it can precompute whatever depends on the galaxy and
+ * on the models at once. Call it after
+ * nc_galaxy_shape_factor_update_data_radius(),
+ * nc_galaxy_shape_factor_update_data_optzs() and
+ * nc_galaxy_shape_factor_update_data_pop(), whose results it may read, and
+ * before anything evaluates the marginal for this galaxy -- in particular
+ * before a redshift-quadrature calibration probes it, so that the probe
+ * already sees what this establishes.
+ *
+ * This is an optimization, never a precondition: a subclass that caches here
+ * must still be able to build the same state lazily, because nothing
+ * guarantees this function ran for a given galaxy.
+ */
+void
+nc_galaxy_shape_factor_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max)
+{
+  NcGalaxyShapeFactorClass *klass = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
+
+  klass->data_prepare (gsf, mset, data, z_max);
+}
+
+/**
+ * nc_galaxy_shape_factor_data_prefetch:
+ * @gsf: a #NcGalaxyShapeFactor
+ * @data: a #NcGalaxyShapeFactorData
+ * @stage: prefetch stage, 0, 1 or 2
+ *
+ * Issues software prefetches for the memory nc_galaxy_shape_factor_eval_at_nodes()
+ * will read for @data, so a loop over galaxies can fetch the next galaxies'
+ * state while it evaluates the current one. Each galaxy's state is a chain
+ * of small heap allocations, which the hardware prefetcher cannot follow;
+ * with many galaxies it does not fit in cache, and every evaluation would
+ * otherwise wait on memory at each link of the chain.
+ *
+ * The chain is walked one link per @stage, so that no stage reads a pointer
+ * that is not already on its way into cache:
+ *
+ * - stage 0: @data itself;
+ * - stage 1: the structures @data points to, read through @data;
+ * - stage 2: the arrays those structures point to.
+ *
+ * The caller issues the stages for a galaxy on consecutive iterations, the
+ * highest stage for the galaxy evaluated next, e.g. stage 2 for galaxy i+1,
+ * stage 1 for i+2 and stage 0 for i+3 while evaluating galaxy i. Calling
+ * a stage out of order is harmless but stalls on the missing link.
+ *
+ * This only issues hints: it changes no state and has no effect on results.
+ */
+void
+nc_galaxy_shape_factor_data_prefetch (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const guint stage)
+{
+  NcGalaxyShapeFactorClass *klass = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
+
+  switch (stage)
+  {
+    case 0:
+      ncm_prefetch_span (data, sizeof (NcGalaxyShapeFactorData));
+      break;
+    case 1:
+      ncm_prefetch_span (data->cdata, sizeof (NcGalaxyShapeFactorCData));
+      break;
+    case 2:
+    {
+      const NcGalaxyShapeFactorCData *cdata = (const NcGalaxyShapeFactorCData *) data->cdata;
+
+      if (cdata != NULL)
+        ncm_prefetch_span (cdata->crit_cache_arr, cdata->crit_cache_len * sizeof (NcWLSurfaceMassDensityCritCache));
+
+      break;
+    }
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  if (klass->data_prefetch != NULL)
+    klass->data_prefetch (gsf, data, stage);
 }
 
 /**
@@ -1374,14 +1478,13 @@ nc_galaxy_shape_factor_update_data_at_nodes_sigma (NcGalaxyShapeFactor *gsf, NcG
   NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
   NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
 
-  nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (
-    self->density_profile,
-    self->cosmo,
-    cdata->radius,
-    self->z_cl,
-    self->z_cl,
-    &cdata->sigma_cache
-  );
+  /* r_s and rho_s are the ones prepare() cached at z_cl, refreshed whenever
+   * the models they depend on move, which is also when this runs. Using them
+   * saves recomputing them per galaxy and leaves the profile's lazily
+   * updated state alone, which is what lets galaxies be updated in parallel. */
+  nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep_with_rs (self->density_profile, cdata->radius,
+                                                                     self->r_s, self->rho_s,
+                                                                     &cdata->sigma_cache);
 }
 
 /**

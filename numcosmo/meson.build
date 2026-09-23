@@ -321,6 +321,7 @@ ncm_headers_nogi = files(
 )
 
 ncm_headers_internal = files(
+    'ncm/core/ncm_prefetch_private.h',
     'ncm/stats/ncm_stats_dist_kde_private.h',
     'ncm/stats/ncm_stats_dist_kernel_private.h',
     'ncm/stats/ncm_stats_dist_private.h',
