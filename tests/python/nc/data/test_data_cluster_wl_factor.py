@@ -541,6 +541,21 @@ def test_fixed_nodes_rescues_underflowing_galaxies():
     assert fixed == pytest.approx(lnint, rel=1.0e-6)
 
 
+def test_fixed_nodes_counts_a_genuine_zero():
+    """A galaxy outside the position footprint has a marginal that is exactly
+    zero, not an underflow: the log-space rescue finds a finite shape
+    likelihood but nothing to scale it by, so FIXED_NODES still substitutes
+    the fallback and counts it."""
+    outside = (0.5, 0.02, 0.60, 0.030, 0.1, 0.0, 0.1)  # footprint is |ra| <= 0.2
+    dcwlf, mset, _, _ = _build_probe_setup([outside])
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+
+    m2lnL = dcwlf.m2lnL_val(mset)
+
+    assert dcwlf.get_low_prob_count() == 1
+    assert m2lnL > 1.0e5  # the flat NC_GALAXY_LOW_PROB wall, ~1e6
+
+
 def test_low_prob_count_resets_between_methods():
     """get_low_prob_count() describes the LAST evaluation, always.
 
