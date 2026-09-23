@@ -379,7 +379,7 @@ _moments_tilt_moments (const gdouble *r, const gdouble *wr, const guint nr,
 
 /* 3x3 solve with partial pivoting: Cov(T) is positive definite in exact
  * arithmetic, but a Newton iterate far from the solution can make the
- * quadrature's version of it indefinite, and a Cholesky would simply fail
+ * quadrature's version of it indefinite, and a Cholesky would fail
  * there. */
 static gboolean
 _moments_tilt_solve3 (const gdouble *A_in, const gdouble *b_in, gdouble *x)

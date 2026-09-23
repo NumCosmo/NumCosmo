@@ -1343,7 +1343,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
      * spline, if the first calls came from many threads at once. Running
      * galaxies one at a time until one of them has exercised every step, a
      * galaxy with background support when a redshift grid is built, performs
-     * all of them. Without parallelism this loop simply covers every
+     * all of them. Without parallelism this loop covers every
      * galaxy. */
     for (gal_i = 0; gal_i < n_gal; gal_i++)
     {
