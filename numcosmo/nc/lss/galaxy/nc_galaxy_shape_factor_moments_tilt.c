@@ -1649,6 +1649,14 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
  * The inner radial cut is deliberately not used as a floor on R: no r_min
  * weighting is applied at fit time, so a galaxy selected at the fiducial
  * centre is still evaluated at whatever radius the current centre gives.
+ *
+ * The shear the table is read at is the CALIBRATED one,
+ * g = (1 + m) g_t e^{2i phi} + c (see nc_galaxy_shape_factor.c), not the bare
+ * reduced shear the two calls return, so the bound carries the galaxy's own
+ * m and c: |g| <= |1 + m| |g_t| + |c| by the triangle inequality. Leaving them
+ * out under-covers every galaxy with m > 0 by up to m |g_t|, which on real
+ * HSC data put ghat just past a dyadic panel top (0.500318 vs 0.5) and
+ * returned zero probability there.
  */
 static inline void _nc_galaxy_shape_factor_moments_tilt_peek_table (NcGalaxyShapeFactorMomentsTiltPrivate * const self,
                                                                     NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
@@ -1692,7 +1700,16 @@ _nc_galaxy_shape_factor_moments_tilt_data_prepare (NcGalaxyShapeFactor *gsf, Ncm
     g_mutex_unlock (&self->range_lock);
 
     /* A non-finite shear (kappa = 1 on the nose) bounds nothing. */
-    ghat_max = (gsl_finite (g_lo) && gsl_finite (g_hi)) ? MIN (MAX (g_lo, g_hi), 1.0) : 1.0;
+    if (gsl_finite (g_lo) && gsl_finite (g_hi))
+    {
+      const gdouble g_cal = fabs (1.0 + data->m) * MAX (g_lo, g_hi) + hypot (data->c1, data->c2);
+
+      ghat_max = MIN (g_cal, 1.0);
+    }
+    else
+    {
+      ghat_max = 1.0;
+    }
   }
 
   ldata->ghat_max    = ghat_max;

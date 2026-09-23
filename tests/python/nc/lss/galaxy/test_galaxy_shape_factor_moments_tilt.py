@@ -220,6 +220,33 @@ def test_reachable_range_and_guard():
     assert rest.get_range_error_count() == 1
 
 
+def test_range_covers_shear_calibration():
+    """The table is read at the calibrated shear (1 + m) g_t e^{2i phi} + c,
+    so the reachable range must bound that, not the bare reduced shear. At
+    this radius the bare bound sits just under the first panel top, 0.5, and
+    a 10% multiplicative bias carries the shear past it."""
+    mset, pop = _build_mset(0.4658)
+    hms = Nc.HaloDensityProfile.peek_mass_summary(mset.peek(Nc.HaloDensityProfile.id()))
+    hms.param_set_desc("log10MDelta", {"upper-bound": 15.5})
+    conv = Nc.GalaxyWLObsEllipConv.TRACE
+
+    def layout(c1, c2, m):
+        gsf = Nc.GalaxyShapeFactorMomentsTilt.new(conv)
+        d, _keep = _make_data(gsf, mset, 0.1, ra=0.042)
+        gsf.data_set(d, 0.0, 0.0, 0.1, c1, c2, m, Nc.WLEllipticityFrame.CELESTIAL)
+        gsf.prepare(mset)
+        gsf.data_prepare(mset, d, 3.0)
+        n, top, _deg = gsf.peek_layout(pop, d)
+        return n, top
+
+    assert layout(0.0, 0.0, 0.0) == (1, 0.5)
+    assert layout(0.0, 0.0, 0.1) == (2, 0.75)
+    # |c| = 1 alone can take the shear to the critical curve.
+    assert layout(0.6, 0.8, 0.0)[1] == 1.0
+    # A negative m only tightens the bound.
+    assert layout(0.0, 0.0, -0.5) == (1, 0.5)
+
+
 def test_serialized_tables():
     """Stored tables are adopted without rebuilding; a different population
     rejects them."""
