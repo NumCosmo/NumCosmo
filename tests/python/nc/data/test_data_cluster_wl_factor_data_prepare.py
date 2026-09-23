@@ -325,3 +325,25 @@ def test_resample_skips_eager_precomputation():
     fresh.set_obs(ser.dup_obj(dcwlf.peek_obs()))
     fresh.data_prepare(mset2)
     np.testing.assert_array_equal(_m2lnP(fresh, mset2), resampled)
+
+
+def test_underflowing_shape_likelihood_is_not_the_wall():
+    """|epsilon_obs| = 1.7 with a noise of 0.013 is ~1450 nats below the
+    support: the linear shape likelihood is exactly 0 at every node, its log
+    is finite. FIXED_NODES must return that log, not NC_GALAXY_LOW_PROB."""
+    dcwlf, mset = _build("moments-tilt", "nfw", "composed", n_gal=5)
+    dcwlf.set_auto_nodes(False)
+    obs = dcwlf.peek_obs()
+    obs.set("epsilon_obs_1", 4, -0.025)
+    obs.set("epsilon_obs_2", 4, -1.697)
+    obs.set("std_noise", 4, 0.013)
+    dcwlf.set_obs(obs)
+
+    fixed = _m2lnP(dcwlf, mset)
+    assert dcwlf.get_low_prob_count() == 0
+    assert np.all(np.isfinite(fixed))
+    assert 2000.0 < fixed[4] < 1.0e5
+
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
+    lnint = _m2lnP(dcwlf, mset)
+    assert fixed[4] == pytest.approx(lnint[4], rel=1.0e-4)

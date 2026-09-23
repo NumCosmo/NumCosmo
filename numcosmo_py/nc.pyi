@@ -9078,6 +9078,13 @@ class GalaxyShapeFactor(GObject.Object):
         z_nodes: NumCosmoMath.Vector,
         out: NumCosmoMath.Vector,
     ) -> None: ...
+    def eval_ln_at_nodes(
+        self,
+        mset: NumCosmoMath.MSet,
+        data: GalaxyShapeFactorData,
+        z_nodes: NumCosmoMath.Vector,
+        out: NumCosmoMath.Vector,
+    ) -> None: ...
     def eval_ln_marginal(
         self,
         pop: GalaxyShapePop,

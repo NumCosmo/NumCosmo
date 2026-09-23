@@ -1608,6 +1608,67 @@ nc_galaxy_shape_factor_eval_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, N
 }
 
 /**
+ * nc_galaxy_shape_factor_eval_ln_at_nodes:
+ * @gsf: a #NcGalaxyShapeFactor
+ * @mset: a #NcmMSet
+ * @data: a #NcGalaxyShapeFactorData
+ * @z_nodes: the z values at each quadrature node
+ * @out: a #NcmVector receiving the log shape likelihood at each node
+ *
+ * Logarithmic counterpart of nc_galaxy_shape_factor_eval_at_nodes(): writes
+ * ln P(epsilon_obs | z_j, data) at every node, through eval_ln_marginal(). It
+ * is meant for a galaxy whose linear values underflow to zero at every node,
+ * where the log values stay finite and let the caller rescale before
+ * integrating. Requires a prior call to
+ * nc_galaxy_shape_factor_prepare_data_array_at_nodes().
+ *
+ */
+void
+nc_galaxy_shape_factor_eval_ln_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, NcmVector *out)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+  NcGalaxyShapeFactorClass *klass         = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
+  NcHaloPosition *halo_position           = self->halo_position;
+  NcGalaxyShapePop *pop                   = self->pop;
+  NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
+  const gdouble z_cl                      = nc_halo_position_get_redshift (halo_position);
+  const gdouble et                        = data->epsilon_obs_1;
+  const gdouble ex                        = data->epsilon_obs_2;
+  const complex double bias               = data->c1 + I * data->c2;
+  const gdouble m                         = data->m;
+  const guint n_nodes                     = ncm_vector_len (z_nodes);
+  gboolean have_gt0_val                   = FALSE;
+  gdouble gt0_val                         = 0.0;
+  guint j;
+
+  g_assert_nonnull (pop);
+  g_assert_nonnull (cdata->crit_cache_arr);
+
+  for (j = 0; j < n_nodes; j++)
+  {
+    const gdouble z_j = ncm_vector_get (z_nodes, j);
+
+    if (z_j > z_cl)
+    {
+      const gdouble gt       = nc_wl_surface_mass_density_reduced_shear_cache (&cdata->crit_cache_arr[j], &cdata->sigma_cache);
+      const complex double g = (1.0 + m) * gt * (cdata->rot_re + I * cdata->rot_im) + bias;
+
+      ncm_vector_set (out, j, klass->eval_ln_marginal (gsf, pop, data, creal (g), cimag (g), et, ex));
+    }
+    else
+    {
+      if (!have_gt0_val)
+      {
+        gt0_val      = klass->eval_ln_marginal (gsf, pop, data, creal (bias), cimag (bias), et, ex);
+        have_gt0_val = TRUE;
+      }
+
+      ncm_vector_set (out, j, gt0_val);
+    }
+  }
+}
+
+/**
  * nc_galaxy_shape_factor_direct_estimate:
  * @gsf: a #NcGalaxyShapeFactor
  * @mset: a #NcmMSet

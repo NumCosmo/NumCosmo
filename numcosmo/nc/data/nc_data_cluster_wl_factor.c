@@ -1520,7 +1520,9 @@ _nc_data_cluster_wl_factor_eval_m2lnP_lnint (NcDataClusterWLFactor *dcwlf, NcmMS
  *
  * NON-NEGATIVE BY CONSTRUCTION, with no clamp or branch to get wrong: every
  * P(z_k) >= 0, every Gauss-Legendre weight is positive, p_a > 0 and
- * P(e_o,z) > 0 (both are probability densities), and norm > 0.
+ * P(e_o,z) > 0 (both are probability densities), and norm > 0. It can still
+ * be exactly zero when P(e_o,z) underflows at every node; the caller then
+ * redoes the galaxy in log space, see _nc_data_cluster_wl_factor_fixed_ln_rescue().
  *
  * The exact @norm enters as an overall scale rather than inside a
  * subtraction. That is the whole point: computing the foreground mass as
@@ -1558,6 +1560,52 @@ _nc_data_cluster_wl_factor_fixed_panels_integ (NcDataClusterWLFactorPrivate * co
     return 0.0;
 
   return norm * (num / mass_Q);
+}
+
+/*
+ * Galaxy @gal_i's -2 ln P_gal when the linear integral came out as zero.
+ *
+ * That happens when the shape likelihood underflows at every node -- an
+ * observed |epsilon| well past 1 with a small noise sits hundreds of nats
+ * below the support, exp() of which is exactly 0 in double -- although its
+ * logarithm is perfectly finite. The values are re-evaluated in log space
+ * and rescaled by their maximum s before the same quadrature; the quadrature
+ * is linear in them, so -2 (ln P_scaled + s) is exact, not an approximation.
+ *
+ * Only a genuine zero (no finite log value, or no P(z) mass on the grid)
+ * falls through to NC_GALAXY_LOW_PROB and is counted. Kept out of the
+ * evaluation loop: it runs only for galaxies that would otherwise hit the
+ * wall.
+ */
+G_GNUC_NO_INLINE static gdouble
+_nc_data_cluster_wl_factor_fixed_ln_rescue (NcDataClusterWLFactorPrivate * const self, NcmMSet *mset, guint gal_i,
+                                            NcGalaxyShapeFactorData *s_data, NcmVector *z_nodes, NcmVector *nodes_view,
+                                            NcmVector *shape_at_nodes, NcmVector *sub, const gdouble int_pos)
+{
+  const guint n = ncm_vector_len (nodes_view);
+  gdouble s     = GSL_NEGINF;
+  gdouble P_scaled;
+  guint k;
+
+  nc_galaxy_shape_factor_eval_ln_at_nodes (self->shape_factor, mset, s_data, z_nodes, nodes_view);
+
+  for (k = 0; k < n; k++)
+    s = MAX (s, ncm_vector_get (nodes_view, k));
+
+  if (gsl_finite (s))
+  {
+    for (k = 0; k < n; k++)
+      ncm_vector_set (nodes_view, k, exp (ncm_vector_get (nodes_view, k) - s));
+
+    P_scaled = _nc_data_cluster_wl_factor_fixed_panels_integ (self, gal_i, shape_at_nodes, sub) * int_pos;
+
+    if (P_scaled > 0.0)
+      return -2.0 * (log (P_scaled) + s);
+  }
+
+  self->low_prob_count++;
+
+  return NC_GALAXY_LOW_PROB;
 }
 
 /*
@@ -1693,14 +1741,9 @@ _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMS
     P_gal = _nc_data_cluster_wl_factor_fixed_panels_integ (self, gal_i, shape_at_nodes, sub) * int_pos;
 
     if (P_gal > 0.0)
-    {
       m2lnP_gal_i = -2.0 * log (P_gal);
-    }
     else
-    {
-      m2lnP_gal_i = NC_GALAXY_LOW_PROB;
-      self->low_prob_count++;
-    }
+      m2lnP_gal_i = _nc_data_cluster_wl_factor_fixed_ln_rescue (self, mset, gal_i, s_data, z_nodes, nodes_view, shape_at_nodes, sub, int_pos);
 
     if (!gsl_finite (m2lnP_gal_i))
     {
@@ -2574,6 +2617,11 @@ nc_data_cluster_wl_factor_get_max_total_nodes (NcDataClusterWLFactor *dcwlf)
  * the most recent likelihood evaluation, and for which the flat
  * NC_GALAXY_LOW_PROB fallback was therefore substituted in place of
  * -2ln(P_gal).
+ *
+ * Under FIXED_NODES a galaxy whose shape likelihood merely underflows to zero
+ * is re-evaluated in log space and not counted, so only a genuine zero is,
+ * such as a grid with no P(z) mass. CUBATURE integrates in linear space and
+ * still substitutes the fallback on underflow.
  *
  * Reset to zero at the start of every evaluation, so it always describes the
  * last one.
