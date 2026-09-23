@@ -782,8 +782,7 @@ _node_config_adopt (NcDataClusterWLFactorPrivate *self)
   gdouble z_cl, reltol;
   gboolean auto_nodes;
 
-  if (vd == NULL)
-    return FALSE;
+  g_assert_nonnull (vd);
 
   if (ncm_var_dict_get_string (vd, "format", &format) &&
       (g_strcmp0 (format, NC_DATA_CLUSTER_WL_FACTOR_NODE_CONFIG_FORMAT) == 0) &&
@@ -954,7 +953,14 @@ _nc_data_cluster_wl_factor_get_property (GObject *object, guint prop_id, GValue 
       g_value_set_uint (value, self->max_total_nodes);
       break;
     case PROP_NODE_CONFIG:
-      g_value_take_boxed (value, (self->calib_n_nodes->len > 0) ? _node_config_pack (self) : NULL);
+
+      /* A loaded configuration not yet adopted by a prepare is reported as
+       * is, so a load and a save without a prepare between them keep it. */
+      if (self->calib_n_nodes->len > 0)
+        g_value_take_boxed (value, _node_config_pack (self));
+      else
+        g_value_set_boxed (value, self->node_config);
+
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */

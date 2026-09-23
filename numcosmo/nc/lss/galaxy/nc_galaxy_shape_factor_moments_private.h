@@ -180,13 +180,12 @@ _nc_galaxy_shape_factor_moments_table_span (const NcGalaxyShapeFactorMomentsTabl
   return MIN (bytes, cap);
 }
 
-/* Argument of panel @j's series at @ghat, mapped to [-1, 1]. */
+/* Argument of panel @j's series at @ghat, mapped to [-1, 1]. Every panel
+ * has positive width: built tables by construction, loaded ones by the check
+ * in _nc_galaxy_shape_factor_moments_table_from_vector(). */
 static inline gdouble
 _nc_galaxy_shape_factor_moments_panel_arg (const NcGalaxyShapeFactorMomentsTable *table, const guint j, const gdouble ghat)
 {
-  if (table->width[j] <= 0.0)
-    return 0.0;
-
   return 2.0 * (ghat - table->lo[j]) / table->width[j] - 1.0;
 }
 

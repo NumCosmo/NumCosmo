@@ -564,9 +564,9 @@ nc_galaxy_shape_factor_data_prefetch (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFac
 
       break;
     }
-    default:
-      g_assert_not_reached ();
-      break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+      break;                   /* LCOV_EXCL_LINE */
   }
 
   if (klass->data_prefetch != NULL)

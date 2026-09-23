@@ -175,7 +175,7 @@
  *
  * An acceptance AT the floor is not a neutral choice: it turns converged
  * solves into reported failures, and a failed node is replaced by its
- * predecessor's lambda, which is a genuinely wrong value at that node.
+ * predecessor's lambda, which is a wrong value at that node.
  */
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NEWTON_TOL 1.0e-12
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NEWTON_OK 1.0e-8
@@ -642,8 +642,10 @@ _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
       nphi_floor = n2;
       *nphi_io   = n2;
 
+      /* Same lambda as the pass that just converged, on a finer angular
+       * rule: it cannot become infeasible. */
       if (!_moments_tilt_moments (r, wr, nr, cphi, s2phi, nphi, sn2, lam, E2, NULL, &lnZ2))
-        return FALSE;
+        return FALSE;  /* LCOV_EXCL_LINE */
 
       {
         gdouble f2 = 0.0;
@@ -713,7 +715,7 @@ _moments_tilt_panels_for_sn (const gdouble sn, gboolean *clamped)
  * gate is stated in. It cannot be used on its own to decide resolution,
  * because the exact solve satisfies dW/dghat = t . dlambda/dghat, so over a
  * panel where t barely varies the coefficients of W cancel t . lambda term
- * by term. The cancellation is real -- the mass error genuinely is small --
+ * by term. The mass error is small --
  * but it hides an unresolved lambda, and the density shape is then wrong
  * between nodes even though its mass is right. Measured on a Gaussian
  * population of width 0.4658 at sigma_nu = 0.015, the midpoint-only form
@@ -756,12 +758,7 @@ _moments_tilt_warm_start (const gdouble *g_hist, const gdouble *lam_hist, const 
 {
   guint a;
 
-  if (n_hist == 0)
-  {
-    lam[0] = lam[1] = lam[2] = 0.0;
-
-    return;
-  }
+  g_assert_cmpuint (n_hist, >=, 1);
 
   if (n_hist == 1)
   {
@@ -786,14 +783,8 @@ _moments_tilt_warm_start (const gdouble *g_hist, const gdouble *lam_hist, const 
     const gdouble x0 = g_hist[0], x1 = g_hist[1], x2 = g_hist[2];
     const gdouble d01 = x0 - x1, d02 = x0 - x2, d12 = x1 - x2;
 
-    if ((d01 == 0.0) || (d02 == 0.0) || (d12 == 0.0))
-    {
-      for (a = 0; a < 3; a++)
-        lam[a] = lam_hist[6 + a];
-
-      return;
-    }
-
+    /* The abscissae are distinct memo entries, never closer than its
+     * lookup tolerance, so none of the divisors vanishes. */
     {
       const gdouble l0 = ((ghat - x1) * (ghat - x2)) / (d01 * d02);
       const gdouble l1 = ((ghat - x0) * (ghat - x2)) / (-d01 * d12);
@@ -858,12 +849,9 @@ _moments_tilt_start_from_memo (const NcGalaxyShapeFactorMomentsMemo *memo, const
   const guint n = _nc_galaxy_shape_factor_moments_memo_len (memo);
   guint a;
 
-  if (below == NC_GALAXY_SHAPE_FACTOR_MOMENTS_MEMO_NONE)
-  {
-    lam[0] = lam[1] = lam[2] = 0.0;
-
-    return;
-  }
+  /* ghat = 0 is the first node of every build and is never solved (see
+   * _moments_tilt_node_cb()), so a node being solved always has one below. */
+  g_assert (below != NC_GALAXY_SHAPE_FACTOR_MOMENTS_MEMO_NONE);
 
   if (below + 1 < n)
   {
@@ -926,7 +914,7 @@ _moments_tilt_node_cb (gpointer user_data, const gdouble ghat, const NcGalaxySha
 
   ok = _moments_tilt_newton (b->src_r, b->src_w, b->nr, b->cphi, b->s2phi, &b->nphi_cur, b->sn2, target, lam, &W);
 
-  if (!ok && (below != NC_GALAXY_SHAPE_FACTOR_MOMENTS_MEMO_NONE))
+  if (!ok)
   {
     /* Retry from the nearest solved node below. Interpolation and
      * extrapolation buy iterations when they land well and cost a solve
@@ -1694,7 +1682,7 @@ _nc_galaxy_shape_factor_moments_tilt_data_prepare (NcGalaxyShapeFactor *gsf, Ncm
   }
   else
   {
-    gdouble g_lo, g_hi, g_box;
+    gdouble g_lo, g_hi;
 
     /* Two shear evaluations, cheap next to the table build that follows,
      * serialized because the profile copies are shared across galaxies. */
@@ -1703,12 +1691,8 @@ _nc_galaxy_shape_factor_moments_tilt_data_prepare (NcGalaxyShapeFactor *gsf, Ncm
     g_hi = fabs (nc_wl_surface_mass_density_reduced_shear (self->smd, self->dp_c_hi, self->cosmo, R_min, z_sup, self->z_cl, self->z_cl));
     g_mutex_unlock (&self->range_lock);
 
-    g_box = MAX (g_lo, g_hi);
-
-    if (!gsl_finite (g_box))
-      ghat_max = 1.0;
-    else
-      ghat_max = MIN (g_box, 1.0);
+    /* A non-finite shear (kappa = 1 on the nose) bounds nothing. */
+    ghat_max = (gsl_finite (g_lo) && gsl_finite (g_hi)) ? MIN (MAX (g_lo, g_hi), 1.0) : 1.0;
   }
 
   ldata->ghat_max    = ghat_max;
@@ -1751,10 +1735,11 @@ _nc_galaxy_shape_factor_moments_tilt_report_failures (NcGalaxyShapeFactorMoments
   if (G_UNLIKELY (self->strict_solve))
     g_error ("NcGalaxyShapeFactorMomentsTilt: the exact moment-matching Newton "
              "solve failed at %u nodes of a %u-panel table (sigma_nu=%g). The "
-             "target moments are closed form, so this means either the "
-             "population parameters do not describe a distribution on the unit "
-             "disc, or the angular resolution rule was defeated -- it is not a "
-             "reachable shear regime.",
+             "target moments are closed form, so this means the population "
+             "parameters do not describe a distribution on the unit disc, or "
+             "the population is so narrow against the noise that the moment "
+             "equations are too stiff to solve (seen for sigma_pop ~ 0.01 at "
+             "sigma_nu ~ 0.01 under TRACE_DET).",
              n_failed, n_panels, sn);
 
   if (G_UNLIKELY (g_atomic_int_compare_and_exchange (&self->solve_warned, 0, 1)))
@@ -1813,11 +1798,13 @@ _nc_galaxy_shape_factor_moments_tilt_acquire_table (NcGalaxyShapeFactorMomentsTi
   g_mutex_lock (&self->cache_lock);
   table = (NcGalaxyShapeFactorMomentsTable *) g_hash_table_lookup (self->tab_cache, &key);
 
+  /* LCOV_EXCL_START: only when another thread built the same table meanwhile. */
   if (table != NULL)
   {
     table = _nc_galaxy_shape_factor_moments_table_ref (table);
     _nc_galaxy_shape_factor_moments_table_unref (built);
   }
+  /* LCOV_EXCL_STOP */
   else
   {
     NcGalaxyShapeFactorMomentsKey *key_copy = g_new (NcGalaxyShapeFactorMomentsKey, 1);
@@ -1994,9 +1981,6 @@ static void
 _nc_galaxy_shape_factor_moments_tilt_data_prefetch (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const guint stage)
 {
   const NcGalaxyShapeFactorMomentsTiltLData *ldata = (const NcGalaxyShapeFactorMomentsTiltLData *) data->ldata;
-
-  if (ldata == NULL)
-    return;
 
   if (stage == 1)
     ncm_prefetch_span (ldata, sizeof (NcGalaxyShapeFactorMomentsTiltLData));

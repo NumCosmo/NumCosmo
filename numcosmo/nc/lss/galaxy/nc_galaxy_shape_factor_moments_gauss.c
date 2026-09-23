@@ -383,11 +383,13 @@ _nc_galaxy_shape_factor_moments_gauss_refresh_table (NcGalaxyShapeFactorMomentsG
     g_mutex_lock (&self->cache_lock);
     table = g_hash_table_lookup (self->tab_cache, &key);
 
+    /* LCOV_EXCL_START: only when another thread built the same table meanwhile. */
     if (table != NULL)
     {
       table = _nc_galaxy_shape_factor_moments_table_ref (table);
       _nc_galaxy_shape_factor_moments_table_unref (built);
     }
+    /* LCOV_EXCL_STOP */
     else
     {
       NcGalaxyShapeFactorMomentsKey *key_copy = g_new (NcGalaxyShapeFactorMomentsKey, 1);
@@ -496,9 +498,6 @@ static void
 _nc_galaxy_shape_factor_moments_gauss_data_prefetch (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const guint stage)
 {
   const NcGalaxyShapeFactorMomentsGaussLData *ldata = (const NcGalaxyShapeFactorMomentsGaussLData *) data->ldata;
-
-  if (ldata == NULL)
-    return;
 
   if (stage == 1)
     ncm_prefetch_span (ldata, sizeof (NcGalaxyShapeFactorMomentsGaussLData));

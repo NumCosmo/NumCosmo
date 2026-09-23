@@ -407,6 +407,10 @@ _nc_galaxy_shape_factor_moments_table_from_vector (NcmVector *v, NcGalaxyShapeFa
   if ((n_panels < 1) || (n_panels > NC_GALAXY_SHAPE_FACTOR_MOMENTS_MAX_PANELS))
     return FALSE;
 
+  /* The last panel starts at 1 - 2^-(n_panels - 1) and must have width. */
+  if (!((ncm_vector_get (v, 4) > 1.0 - ldexp (1.0, -(gint) (n_panels - 1))) && (ncm_vector_get (v, 4) <= 1.0)))
+    return FALSE;
+
   table           = g_new0 (NcGalaxyShapeFactorMomentsTable, 1);
   table->n_comp   = n_comp;
   table->n_panels = n_panels;
@@ -512,12 +516,15 @@ _nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *dp_copy, N
 
   /* Resolve by name: the parameter set differs per NcHaloMassSummary
    * implementation, and several have no free concentration at all. */
+  /* LCOV_EXCL_START: every NcHaloMassSummary in the library has log10MDelta. */
   if (!ncm_model_param_index_from_name (m_src, "log10MDelta", &idx, &error))
   {
     g_clear_error (&error);
 
     return FALSE;
   }
+
+  /* LCOV_EXCL_STOP */
 
   ncm_model_param_set (m_copy, idx, ncm_model_param_get_upper_bound (m_src, idx));
 
@@ -840,7 +847,10 @@ _nc_galaxy_shape_factor_moments_build (NcmSpectral *spectral, const guint n_comp
       if (worst < trunc_tol)
         break;
 
+      /* LCOV_EXCL_START: safety net; no scanned population, noise or gate
+       * has had the tail estimate under-call the truncation error. */
       m++;
+      /* LCOV_EXCL_STOP */
     }
 
     table->deg[j] = (guint8) m;
