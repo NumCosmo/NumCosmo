@@ -85,6 +85,7 @@ static void test_ncm_stats_dist_invalid_stub (TestNcmStatsDist *test, gconstpoin
 static void test_ncm_stats_dist_invalid_center_shrink (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_vkde_points_per_dim (void);
 static void test_ncm_stats_dist_cv_objectives (void);
+static void test_ncm_stats_dist_loo_batch (void);
 static void test_ncm_stats_dist_invalid_cv_accept (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_invalid_auto_kernel_gauss (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_split_underflowing_m2lnp (void);
@@ -210,6 +211,8 @@ test_ncm_stats_dist_main (gint argc, gchar *argv[], TestNcmStatsDistMode mode)
                      &test_ncm_stats_dist_vkde_points_per_dim);
     g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/cv_objectives",
                      &test_ncm_stats_dist_cv_objectives);
+    g_test_add_func ("/ncm/stats/dist/nd/vkde/st/loo_batch",
+                     &test_ncm_stats_dist_loo_batch);
     g_test_add ("/ncm/stats/dist/nd/kde/gauss/invalid/cv_accept_without_m2lnL/subprocess", TestNcmStatsDist, NULL,
                 &test_ncm_stats_dist_new_kde_gauss,
                 &test_ncm_stats_dist_invalid_cv_accept,
@@ -985,6 +988,89 @@ test_ncm_stats_dist_vkde_points_per_dim (void)
   ncm_stats_dist_vkde_free (vkde);
   ncm_stats_dist_vkde_free (vkde2);
   ncm_stats_dist_kde_free (kde);
+  ncm_rng_free (rng);
+}
+
+/* The batched leave-one-out sweep must reproduce the point-by-point one it replaces: drop
+ * one kernel's weight, evaluate that point, restore. The batch reaches the same numbers by
+ * blanking one entry of the kernel sum instead, over a sweep shared by every point. */
+static void
+test_ncm_stats_dist_loo_batch (void)
+{
+  const guint d    = 4;
+  const guint np   = 250;
+  NcmRNG *rng      = ncm_rng_seeded_new (NULL, 20260924);
+  NcmVector *m2lnL = ncm_vector_new (np);
+  GPtrArray *x_a   = g_ptr_array_new ();
+  guint t;
+
+  for (t = 0; t < 2; t++)
+  {
+    NcmStatsDistKernel *kernel = (t == 0) ?
+                                 NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_st_new (d, 3.0)) :
+                                 NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
+    NcmStatsDist *sd            = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_NONE));
+    NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
+    NcmVector *weights, *loo_weights, *ref, *batch;
+    guint i, j, n;
+
+    for (i = 0; i < np; i++)
+    {
+      NcmVector *y   = ncm_vector_new (d);
+      gdouble chi2_i = 0.0;
+
+      for (j = 0; j < d; j++)
+      {
+        const gdouble y_j = ncm_rng_gaussian_gen (rng, 0.0, 1.0);
+
+        ncm_vector_set (y, j, y_j);
+        chi2_i += y_j * y_j;
+      }
+
+      ncm_vector_set (m2lnL, i, chi2_i);
+      ncm_stats_dist_add_obs (sd, y);
+      ncm_vector_free (y);
+    }
+
+    ncm_stats_dist_prepare (sd, m2lnL);
+
+    n           = ncm_stats_dist_get_n_kernels (sd);
+    weights     = ncm_stats_dist_peek_weights (sd);
+    loo_weights = ncm_vector_dup (weights);
+    ref         = ncm_vector_new (n);
+    batch       = ncm_vector_new (n);
+
+    g_ptr_array_set_size (x_a, 0);
+
+    for (i = 0; i < n; i++)
+      g_ptr_array_add (x_a, g_ptr_array_index (ncm_stats_dist_peek_sample_array (sd), i));
+
+    for (i = 0; i < n; i++)
+    {
+      const gdouble w_i = ncm_vector_get (weights, i);
+
+      ncm_vector_set (loo_weights, i, 0.0);
+      ncm_vector_set (ref, i, sd_class->eval_weights_m2lnp (sd, loo_weights, g_ptr_array_index (x_a, i)));
+      ncm_vector_set (loo_weights, i, w_i);
+    }
+
+    sd_class->eval_weights_m2lnp_loo (sd, weights, x_a, batch);
+
+    for (i = 0; i < n; i++)
+    {
+      ncm_assert_cmpdouble_e (ncm_vector_get (batch, i), ==, ncm_vector_get (ref, i), 1.0e-12, 0.0);
+      g_assert_true (gsl_finite (ncm_vector_get (batch, i)));
+    }
+
+    ncm_vector_free (batch);
+    ncm_vector_free (ref);
+    ncm_vector_free (loo_weights);
+    ncm_stats_dist_free (sd);
+    ncm_stats_dist_kernel_free (kernel);
+  }
+
+  g_ptr_array_unref (x_a);
+  ncm_vector_free (m2lnL);
   ncm_rng_free (rng);
 }
 

@@ -1331,10 +1331,13 @@ test_ncm_mset_catalog_file_sampler_history (void)
   ncm_mset_catalog_set_m2lnp_var (mcat, 0);
   ncm_mset_catalog_set_run_type (mcat, "test-run");
   g_assert_null (ncm_mset_catalog_get_sampler (mcat));
+  g_assert_null (ncm_mset_catalog_get_sampler_options (mcat));
   g_assert_null (ncm_mset_catalog_get_initial_sampler (mcat));
   ncm_mset_catalog_set_initial_sampler (mcat, "init-a");
   ncm_mset_catalog_set_sampler (mcat, "sampler-a");
+  ncm_mset_catalog_set_sampler_options (mcat, "opt=a:other=1");
   g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "sampler-a");
+  g_assert_cmpstr (ncm_mset_catalog_get_sampler_options (mcat), ==, "opt=a:other=1");
   g_assert_cmpstr (ncm_mset_catalog_get_initial_sampler (mcat), ==, "init-a");
   ncm_mset_catalog_set_file (mcat, filename);
 
@@ -1354,20 +1357,26 @@ test_ncm_mset_catalog_file_sampler_history (void)
   /* Read back read-only. */
   mcat = ncm_mset_catalog_new_from_file_ro (filename, 0);
   g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "sampler-a");
+  g_assert_cmpstr (ncm_mset_catalog_get_sampler_options (mcat), ==, "opt=a:other=1");
   g_assert_cmpstr (ncm_mset_catalog_get_initial_sampler (mcat), ==, "init-a");
   ncm_mset_catalog_clear (&mcat);
 
-  /* Continue with another sampler: allowed, recorded, and the history grows. */
+  /* Continue with another sampler: allowed, recorded, and the history grows. The options
+   * are a record of their own, so retuning the same sampler is recorded on its own too. */
   mcat = ncm_mset_catalog_new_from_file (filename, 0);
   g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "sampler-a");
+  g_assert_cmpstr (ncm_mset_catalog_get_sampler_options (mcat), ==, "opt=a:other=1");
   g_assert_false (ncm_mset_catalog_is_empty (mcat));
   ncm_mset_catalog_set_sampler (mcat, "sampler-b");
   ncm_mset_catalog_set_sampler (mcat, "sampler-b"); /* the same again writes nothing */
+  ncm_mset_catalog_set_sampler_options (mcat, "opt=b:other=2");
+  ncm_mset_catalog_set_sampler_options (mcat, "opt=b:other=2");
   ncm_mset_catalog_sync (mcat, TRUE);
   ncm_mset_catalog_clear (&mcat);
 
   mcat = ncm_mset_catalog_new_from_file_ro (filename, 0);
   g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "sampler-b");
+  g_assert_cmpstr (ncm_mset_catalog_get_sampler_options (mcat), ==, "opt=b:other=2");
   g_assert_cmpstr (ncm_mset_catalog_get_initial_sampler (mcat), ==, "init-a");
   ncm_mset_catalog_clear (&mcat);
   g_assert_cmpuint (_test_ncm_mset_catalog_count_sampler_history (filename), ==, 3);

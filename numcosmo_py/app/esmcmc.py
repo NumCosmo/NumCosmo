@@ -117,13 +117,6 @@ class RunMCMC(RunCommonOptions):
         ),
     ] = None
 
-    use_interpolation: Annotated[
-        bool,
-        typer.Option(
-            help="Use interpolation to compute the weights of the APES approximation.",
-        ),
-    ] = True
-
     cv_method: Annotated[
         CrossValidationMethod,
         typer.Option(
@@ -406,7 +399,6 @@ class RunMCMC(RunCommonOptions):
         apes_walker.set_over_smooth(self.over_smooth)
         if self.local_fraction is not None:
             apes_walker.set_local_frac(self.local_fraction)
-        apes_walker.use_interp(self.use_interpolation)
         apes_walker.set_method(self.interpolation_method.genum)
         # Before the kernel: set_k_type rebuilds the estimators and checks that the pair
         # is compatible, while set_center_shrink only records the flag.

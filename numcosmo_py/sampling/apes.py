@@ -50,7 +50,6 @@ class APES:
         args: Tuple = (),
         verbose: bool = False,
         robust: bool = False,
-        use_interpolation: bool = True,
         interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
         interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
         over_smooth: float = 0.2,
@@ -128,7 +127,6 @@ class APES:
             walker.set_local_frac(local_fraction)
         if robust:
             walker.set_cov_robust()
-        walker.use_interp(use_interpolation)
         walker.set_method(interpolation_method.genum)
         walker.set_k_type(interpolation_kernel.genum)
         # After the kernel, so that an incompatible pair is caught immediately.

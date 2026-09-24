@@ -179,6 +179,7 @@ gint ncm_matrix_cholesky_inverse (NcmMatrix *cm, gchar UL);
 gdouble ncm_matrix_cholesky_lndet (NcmMatrix *cm);
 gint ncm_matrix_cholesky_solve (NcmMatrix *cm, NcmVector *b, gchar UL);
 gint ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL);
+void ncm_matrix_chol_chi2_cols (const NcmMatrix *cm, const NcmVector *theta, const NcmMatrix *U, NcmMatrix *work, NcmVector *chi2);
 gint ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const guint maxiter);
 gint ncm_matrix_cholesky_decomp_nearPD (const NcmMatrix *cm, NcmMatrix *decomp, gchar UL, const guint maxiter, gboolean *repaired);
 void ncm_matrix_sym_exp_cholesky (NcmMatrix *cm, gchar UL, NcmMatrix *exp_cm_dec);

@@ -49,7 +49,6 @@ def create_esmcmc(
     verbose: bool = True,
     fit_first: bool = False,
     robust: bool = False,
-    use_apes_interpolation: bool = True,
     use_apes_center_shrink: bool = False,
     apes_defensive_frac: float = 0.0,
     apes_defensive_scale: float = 4.0,
@@ -118,7 +117,6 @@ def create_esmcmc(
             walker.set_local_frac(local_fraction)
         if robust:
             walker.set_cov_robust()
-        walker.use_interp(use_apes_interpolation)
         walker.set_method(interpolation_method.genum)
         walker.set_k_type(interpolation_kernel.genum)
         # After the kernel, so that an incompatible pair is caught immediately.

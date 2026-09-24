@@ -1215,7 +1215,15 @@ _ncm_fit_esmcmc_log_ensemble_stats (NcmFitESMCMC *esmcmc)
   const gdouble cor_L_p   = ncm_stats_vec_get_cor (self->stats, 3, 4);
   const gdouble cor_q_p   = ncm_stats_vec_get_cor (self->stats, 2, 4);
 
-  g_message ("# ========== Walker[%28s] Ensemble Diagnostic Summary ==========\n", ncm_fit_esmcmc_walker_desc (self->walker));
+  {
+    const gchar *opts = ncm_fit_esmcmc_walker_opts (self->walker);
+
+    g_message ("# ========== Walker[%28s] Ensemble Diagnostic Summary ==========\n", ncm_fit_esmcmc_walker_desc (self->walker));
+
+    if (opts != NULL)
+      g_message ("#            options: %s\n", opts);
+  }
+
   g_message ("#                     minimum          40%%          80%%          90%%      maximum\n");
   g_message ("# log10 p ratio: % 12.5g % 12.5g % 12.5g % 12.5g % 12.5g\n", log10L[0], log10L[1], log10L[2], log10L[3], log10L[4]);
   g_message ("# log10 q ratio: % 12.5g % 12.5g % 12.5g % 12.5g % 12.5g\n", log10q[0], log10q[1], log10q[2], log10q[3], log10q[4]);
@@ -1787,6 +1795,7 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
   }
 
   ncm_mset_catalog_set_sampler (self->mcat, ncm_fit_esmcmc_walker_desc (self->walker));
+  ncm_mset_catalog_set_sampler_options (self->mcat, ncm_fit_esmcmc_walker_opts (self->walker));
 
   if (ncm_mset_catalog_peek_rng (self->mcat) == NULL)
   {
@@ -2076,9 +2085,14 @@ ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n)
     case NCM_FIT_RUN_MSGS_FULL:
     case NCM_FIT_RUN_MSGS_SIMPLE:
     {
+      const gchar *opts = ncm_fit_esmcmc_walker_opts (self->walker);
+
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitESMCMC: Calculating [%06d] Ensemble Sampler Markov Chain Monte Carlo runs [%s]\n",
                  self->n, ncm_fit_esmcmc_walker_desc (self->walker));
+
+      if (opts != NULL)
+        g_message ("# NcmFitESMCMC:   walker options: %s\n", opts);
     }
     break;
     case NCM_FIT_RUN_MSGS_NONE:

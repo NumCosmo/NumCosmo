@@ -105,12 +105,14 @@ def test_create_esmcmc_apes_forwards_settings(tmp_path, mvnd_likelihood):
     assert walker.get_split_frac() == 0.4
     assert walker.get_cv_type() == CrossValidationMethod.SPLIT_M2LNP.genum
 
-    # The description a catalog carries has to name the same proposal.
-    desc = walker.desc()
-    assert "Shrink-" in desc
-    assert "unif" in desc
-    assert "ppd=12" in desc
-    assert "cv=split-m2lnp" in desc
+    # The description and the options a catalog carries have to name the same proposal:
+    # the structure in the first, the tuning in the second.
+    assert "Shrink-" in walker.desc()
+
+    opts = walker.opts()
+    assert "weights=uniform" in opts
+    assert "points-per-dim=12" in opts
+    assert "cross-validation=split-m2lnp" in opts
 
 
 def test_create_esmcmc_unknown_sampler(tmp_path, mvnd_likelihood):

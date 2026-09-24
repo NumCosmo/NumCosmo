@@ -738,10 +738,10 @@ def test_run_mcmc_apes_method_kernel(
         raise result.exception
 
 
-def test_run_mcmc_apes_method_kernel_no_interp(
+def test_run_mcmc_apes_method_kernel_nnls_weights(
     simple_experiment, interpolation_method, interpolation_kernel
 ):
-    """Run a MCMC analysis using APES."""
+    """Run a MCMC analysis using APES with the NNLS weight fit instead of uniform ones."""
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
@@ -757,7 +757,7 @@ def test_run_mcmc_apes_method_kernel_no_interp(
             interpolation_method,
             "--interpolation-kernel",
             interpolation_kernel,
-            "--no-use-interpolation",
+            "--no-uniform-weights",
         ]
         + _center_shrink_args(interpolation_kernel),
     )

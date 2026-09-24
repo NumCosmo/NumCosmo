@@ -99,7 +99,6 @@ enum
   PROP_METHOD,
   PROP_K_TYPE,
   PROP_OVER_SMOOTH,
-  PROP_USE_INTERP,
   PROP_USE_THREADS,
   PROP_CENTER_SHRINK,
   PROP_DEFENSIVE_FRAC,
@@ -125,6 +124,7 @@ typedef struct _NcmFitESMCMCWalkerAPESPrivate
   NcmVector *m2lnp_star;
   NcmVector *m2lnp_cur;
   gchar *desc;
+  gchar *opts;
   NcmStatsDist *sd0;
   NcmStatsDist *sd1;
   GPtrArray *thetastar;
@@ -133,7 +133,6 @@ typedef struct _NcmFitESMCMCWalkerAPESPrivate
   NcmFitESMCMCWalkerAPESMethod method;
   NcmFitESMCMCWalkerAPESKType k_type;
   gdouble over_smooth;
-  gboolean use_interp;
   gboolean use_threads;
   gboolean center_shrink;
   gdouble defensive_frac;
@@ -180,6 +179,7 @@ ncm_fit_esmcmc_walker_apes_init (NcmFitESMCMCWalkerAPES *apes)
   self->m2lnp_star               = NULL;
   self->m2lnp_cur                = NULL;
   self->desc                     = NULL;
+  self->opts                     = NULL;
   self->sd0                      = NULL;
   self->sd1                      = NULL;
   self->thetastar                = g_ptr_array_new ();
@@ -188,7 +188,6 @@ ncm_fit_esmcmc_walker_apes_init (NcmFitESMCMCWalkerAPES *apes)
   self->method                   = NCM_FIT_ESMCMC_WALKER_APES_METHOD_LEN;
   self->k_type                   = NCM_FIT_ESMCMC_WALKER_APES_KTYPE_LEN;
   self->over_smooth              = 0.0;
-  self->use_interp               = FALSE;
   self->use_threads              = FALSE;
   self->center_shrink            = FALSE;
   self->defensive_frac           = 0.0;
@@ -232,9 +231,6 @@ _ncm_fit_esmcmc_walker_apes_set_property (GObject *object, guint prop_id, const 
       break;
     case PROP_OVER_SMOOTH:
       ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, g_value_get_double (value));
-      break;
-    case PROP_USE_INTERP:
-      ncm_fit_esmcmc_walker_apes_use_interp (apes, g_value_get_boolean (value));
       break;
     case PROP_USE_THREADS:
       ncm_fit_esmcmc_walker_apes_set_use_threads (apes, g_value_get_boolean (value));
@@ -295,9 +291,6 @@ _ncm_fit_esmcmc_walker_apes_get_property (GObject *object, guint prop_id, GValue
       break;
     case PROP_OVER_SMOOTH:
       g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_over_smooth (apes));
-      break;
-    case PROP_USE_INTERP:
-      g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_interp (apes));
       break;
     case PROP_USE_THREADS:
       g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_get_use_threads (apes));
@@ -388,6 +381,7 @@ _ncm_fit_esmcmc_walker_apes_finalize (GObject *object)
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
 
   g_clear_pointer (&self->desc, g_free);
+  g_clear_pointer (&self->opts, g_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_esmcmc_walker_apes_parent_class)->finalize (object);
@@ -406,6 +400,7 @@ static gdouble _ncm_fit_esmcmc_walker_apes_prob (NcmFitESMCMCWalker *walker, GPt
 static gdouble _ncm_fit_esmcmc_walker_apes_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
 static void _ncm_fit_esmcmc_walker_apes_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf);
 static const gchar *_ncm_fit_esmcmc_walker_apes_desc (NcmFitESMCMCWalker *walker);
+static const gchar *_ncm_fit_esmcmc_walker_apes_opts (NcmFitESMCMCWalker *walker);
 
 static void
 ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
@@ -463,23 +458,6 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                                         "Over-smooth parameter used to adjust kernel bandwidth",
                                                         1.0e-10, 1.0e10, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmFitESMCMCWalkerAPES:use-interp:
-   *
-   * Whether to use interpolation to build the posterior approximation. This property
-   * defines whether the walker will use interpolation to build the posterior
-   * approximation. The default value is TRUE, meaning interpolation will be used. If
-   * set to FALSE, the walker will not use interpolation.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_USE_INTERP,
-                                   g_param_spec_boolean ("use-interp",
-                                                         NULL,
-                                                         "Whether to use interpolation to build the posterior approximation",
-                                                         TRUE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmFitESMCMCWalkerAPES:use-threads:
@@ -698,6 +676,7 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
   walker_class->prob_norm    = &_ncm_fit_esmcmc_walker_apes_prob_norm;
   walker_class->clean        = &_ncm_fit_esmcmc_walker_apes_clean;
   walker_class->desc         = &_ncm_fit_esmcmc_walker_apes_desc;
+  walker_class->opts         = &_ncm_fit_esmcmc_walker_apes_opts;
   walker_class->start_run    = &_ncm_fit_esmcmc_walker_apes_start_run;
   walker_class->end_run      = &_ncm_fit_esmcmc_walker_apes_end_run;
   walker_class->is_markovian = &_ncm_fit_esmcmc_walker_apes_is_markovian;
@@ -994,10 +973,7 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
       ncm_stats_dist_add_obs (self->sd0, theta_i);
     }
 
-    if (self->use_interp)
-      ncm_stats_dist_prepare (self->sd0, self->m2lnL_s0);
-    else
-      ncm_stats_dist_prepare (self->sd0, NULL);
+    ncm_stats_dist_prepare (self->sd0, self->m2lnL_s0);
 
     for (i = ki; i < self->size_2; i++)
     {
@@ -1024,10 +1000,7 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
       ncm_stats_dist_add_obs (self->sd1, theta_i);
     }
 
-    if (self->use_interp)
-      ncm_stats_dist_prepare (self->sd1, self->m2lnL_s1);
-    else
-      ncm_stats_dist_prepare (self->sd1, NULL);
+    ncm_stats_dist_prepare (self->sd1, self->m2lnL_s1);
 
     for (i = self->size_2; i < kf; i++)
     {
@@ -1198,7 +1171,7 @@ _ncm_fit_esmcmc_walker_apes_is_markovian (NcmFitESMCMCWalker *walker)
   return self->last_markovian;
 }
 
-const gchar *
+static const gchar *
 _ncm_fit_esmcmc_walker_apes_desc (NcmFitESMCMCWalker *walker)
 {
   NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
@@ -1244,14 +1217,6 @@ _ncm_fit_esmcmc_walker_apes_desc (NcmFitESMCMCWalker *walker)
     g_free (tmp);
   }
 
-  if (self->use_interp)
-  {
-    gchar *tmp = method;
-
-    method = g_strdup_printf ("Interp-%s", method);
-    g_free (tmp);
-  }
-
   if (self->center_shrink)
   {
     gchar *tmp = method;
@@ -1279,70 +1244,71 @@ _ncm_fit_esmcmc_walker_apes_desc (NcmFitESMCMCWalker *walker)
       break;
   }
 
-  {
-    /* The settings that change the proposal but are invisible in the name above: which
-     * weights the interpolation carries, how the local neighborhood of VKDE is chosen, the
-     * cross-validation of the bandwidth, and the over-smoothing. A catalog or a log naming
-     * only the structure cannot say which of two runs it came from. */
-    const gchar *cv = NULL;
-    gchar *opts;
-
-    switch (self->cv_type)
-    {
-      case NCM_STATS_DIST_CV_NONE:
-        cv = "none";
-        break;
-      case NCM_STATS_DIST_CV_SPLIT_M2LNP:
-        cv = "split-m2lnp";
-        break;
-      case NCM_STATS_DIST_CV_LOO:
-        cv = "loo";
-        break;
-      case NCM_STATS_DIST_CV_SPLIT_ACCEPT:
-        cv = "split-accept";
-        break;
-      case NCM_STATS_DIST_CV_LOO_M2LNP:
-        cv = "loo-m2lnp";
-        break;
-      default:
-        g_assert_not_reached ();
-        break;
-    }
-
-    opts = g_strdup_printf ("os=%g:cv=%s", self->over_smooth, cv);
-
-    /* Weights are only fitted when the kernels are interpolated; without interpolation they
-     * are uniform by construction and saying so would suggest a choice was made. */
-    if (self->use_interp)
-    {
-      gchar *tmp = opts;
-
-      opts = g_strdup_printf ("%s:%s", self->uniform_weights ? "unif" : "nnls", tmp);
-      g_free (tmp);
-    }
-
-    /* The local neighborhood is a VKDE notion: points per dimension when it is positive,
-     * otherwise a fraction of the ensemble. */
-    if (self->method == NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE)
-    {
-      gchar *tmp = opts;
-
-      if (self->vkde_points_per_dim > 0.0)
-        opts = g_strdup_printf ("ppd=%g:%s", self->vkde_points_per_dim, tmp);
-      else
-        opts = g_strdup_printf ("lf=%g:%s", self->local_frac, tmp);
-
-      g_free (tmp);
-    }
-
-    g_clear_pointer (&self->desc, g_free);
-    self->desc = g_strdup_printf ("APES-Move:%s:%s:%s", method, kernel, opts);
-    g_free (opts);
-  }
+  g_clear_pointer (&self->desc, g_free);
+  self->desc = g_strdup_printf ("APES-Move:%s:%s", method, kernel);
 
   g_free (method);
 
   return self->desc;
+}
+
+/*
+ * The settings that change the proposal but are invisible in the name above: which weights
+ * the kernels carry, how the local neighbourhood of VKDE is chosen, the cross-validation of
+ * the bandwidth, and the over-smoothing. A catalog or a log naming only the structure cannot
+ * say which of two runs it came from.
+ */
+static const gchar *
+_ncm_fit_esmcmc_walker_apes_opts (NcmFitESMCMCWalker *walker)
+{
+  NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+  const gchar *cv                            = NULL;
+  gchar *opts;
+
+  switch (self->cv_type)
+  {
+    case NCM_STATS_DIST_CV_NONE:
+      cv = "none";
+      break;
+    case NCM_STATS_DIST_CV_SPLIT_M2LNP:
+      cv = "split-m2lnp";
+      break;
+    case NCM_STATS_DIST_CV_LOO:
+      cv = "loo";
+      break;
+    case NCM_STATS_DIST_CV_SPLIT_ACCEPT:
+      cv = "split-accept";
+      break;
+    case NCM_STATS_DIST_CV_LOO_M2LNP:
+      cv = "loo-m2lnp";
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  opts = g_strdup_printf ("weights=%s:over-smooth=%g:cross-validation=%s",
+                          self->uniform_weights ? "uniform" : "nnls", self->over_smooth, cv);
+
+  /* The local neighbourhood is a VKDE notion: points per dimension when it is positive,
+   * otherwise a fraction of the ensemble. */
+  if (self->method == NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE)
+  {
+    gchar *tmp = opts;
+
+    if (self->vkde_points_per_dim > 0.0)
+      opts = g_strdup_printf ("points-per-dim=%g:%s", self->vkde_points_per_dim, tmp);
+    else
+      opts = g_strdup_printf ("local-fraction=%g:%s", self->local_frac, tmp);
+
+    g_free (tmp);
+  }
+
+  g_clear_pointer (&self->opts, g_free);
+  self->opts = opts;
+
+  return self->opts;
 }
 
 /**
@@ -1373,18 +1339,14 @@ ncm_fit_esmcmc_walker_apes_new (guint nwalkers, guint nparams)
  * @method: a #NcmFitESMCMCWalkerAPESMethod
  * @k_type: a #NcmFitESMCMCWalkerAPESKType
  * @over_smooth: a double
- * @use_interp: a boolean
  *
- * Creates a new #NcmFitESMCMCWalkerAPES to be used with @nwalkers,
- * interpolation method @method, kernel @kernel and over-smooth parameter
- * @over_smooth. If @use_interp is TRUE computes the approximation
- * interpolating the computed likelihood values, otherwise, use standard
- * kernel density estimation.
+ * Creates a new #NcmFitESMCMCWalkerAPES to be used with @nwalkers, interpolation method
+ * @method, kernel @kernel and over-smooth parameter @over_smooth.
  *
  * Returns: (transfer full): a new #NcmFitESMCMCWalkerAPES.
  */
 NcmFitESMCMCWalkerAPES *
-ncm_fit_esmcmc_walker_apes_new_full (guint nwalkers, guint nparams, NcmFitESMCMCWalkerAPESMethod method, NcmFitESMCMCWalkerAPESKType k_type, gdouble over_smooth, gboolean use_interp)
+ncm_fit_esmcmc_walker_apes_new_full (guint nwalkers, guint nparams, NcmFitESMCMCWalkerAPESMethod method, NcmFitESMCMCWalkerAPESKType k_type, gdouble over_smooth)
 {
   NcmFitESMCMCWalkerAPES *apes = g_object_new (NCM_TYPE_FIT_ESMCMC_WALKER_APES,
                                                "size",        nwalkers,
@@ -1392,7 +1354,6 @@ ncm_fit_esmcmc_walker_apes_new_full (guint nwalkers, guint nparams, NcmFitESMCMC
                                                "method",      method,
                                                "kernel-type", k_type,
                                                "over-smooth", over_smooth,
-                                               "use-interp",  use_interp,
                                                NULL);
 
   return apes;
@@ -1553,37 +1514,6 @@ ncm_fit_esmcmc_walker_apes_get_over_smooth (NcmFitESMCMCWalkerAPES *apes)
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
 
   return self->over_smooth;
-}
-
-/**
- * ncm_fit_esmcmc_walker_apes_use_interp:
- * @apes: a #NcmFitESMCMCWalkerAPES
- * @use_interp: whether to use interpolation of the posterior
- *
- * Sets whether to use interpolation of the posterior approximation (@use_interp == TRUE)
- * or kernel density estimate (@use_interp == FALSE).
- *
- */
-void
-ncm_fit_esmcmc_walker_apes_use_interp (NcmFitESMCMCWalkerAPES *apes, gboolean use_interp)
-{
-  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
-
-  self->use_interp = use_interp;
-}
-
-/**
- * ncm_fit_esmcmc_walker_apes_interp:
- * @apes: a #NcmFitESMCMCWalkerAPES
- *
- * Returns: whether interpolation is being used for posterior approximation.
- */
-gboolean
-ncm_fit_esmcmc_walker_apes_interp (NcmFitESMCMCWalkerAPES *apes)
-{
-  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
-
-  return self->use_interp;
 }
 
 /**

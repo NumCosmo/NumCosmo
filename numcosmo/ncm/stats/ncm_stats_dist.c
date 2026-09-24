@@ -441,6 +441,34 @@ _ncm_stats_dist_eval_weights_m2lnp_vec (NcmStatsDist *sd, NcmVector *weights, GP
     ncm_vector_set (m2lnp, i, sd_class->eval_weights_m2lnp (sd, weights, g_ptr_array_index (x_a, i)));
 }
 
+/*
+ * Leave-one-out companion of the batched evaluator: point @i of @x_a is the centre of
+ * kernel @i, and the density there is wanted without that kernel. The default drops the
+ * weight of one kernel at a time and evaluates point by point; a subclass that sweeps the
+ * kernels in a batch overrides this and masks the one index instead, which is the same
+ * arithmetic over a sweep it does once for every point.
+ */
+static void
+_ncm_stats_dist_eval_weights_m2lnp_loo (NcmStatsDist *sd, NcmVector *weights, GPtrArray *x_a, NcmVector *m2lnp)
+{
+  NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
+  NcmVector *loo_weights      = ncm_vector_dup (weights);
+  guint i;
+
+  g_assert_cmpuint (ncm_vector_len (m2lnp), >=, x_a->len);
+
+  for (i = 0; i < x_a->len; i++)
+  {
+    const gdouble w_i = ncm_vector_get (weights, i);
+
+    ncm_vector_set (loo_weights, i, 0.0);
+    ncm_vector_set (m2lnp, i, sd_class->eval_weights_m2lnp (sd, loo_weights, g_ptr_array_index (x_a, i)));
+    ncm_vector_set (loo_weights, i, w_i);
+  }
+
+  ncm_vector_free (loo_weights);
+}
+
 static void
 ncm_stats_dist_class_init (NcmStatsDistClass *klass)
 {
@@ -623,6 +651,7 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
   klass->eval_weights           = &_ncm_stats_dist_eval_weights;
   klass->eval_weights_m2lnp     = &_ncm_stats_dist_eval_weights_m2lnp;
   klass->eval_weights_m2lnp_vec = &_ncm_stats_dist_eval_weights_m2lnp_vec;
+  klass->eval_weights_m2lnp_loo = &_ncm_stats_dist_eval_weights_m2lnp_loo;
   klass->reset                  = &_ncm_stats_dist_reset;
 }
 
@@ -1405,15 +1434,14 @@ _ncm_stats_dist_accept (NcmStatsDist *sd)
   gdouble acc                      = 0.0;
   gint i, j;
 
-  /* r_i = ln q (x_i) - ln pi (x_i) = (m2lnL_i - m2lnq_i) / 2 at every sample point. */
-  #pragma omp parallel for if (self->use_threads)
+  /* r_i = ln q (x_i) - ln pi (x_i) = (m2lnL_i - m2lnq_i) / 2 at every sample point. The
+   * sample points are the whole batch, so this is one call: fanning out over the scalar
+   * evaluator instead would re-sweep the kernels once per point, and the threading now
+   * lives inside the batched evaluator. */
+  ncm_stats_dist_eval_m2lnp_vec (sd, self->sample_array, self->cv_m2lnp);
 
   for (i = 0; i < no; i++)
-  {
-    NcmVector *x_i = g_ptr_array_index (self->sample_array, i);
-
-    ncm_vector_set (self->cv_m2lnp, i, 0.5 * (ncm_vector_get (self->m2lnL, i) - ncm_stats_dist_eval_m2lnp (sd, x_i)));
-  }
+    ncm_vector_set (self->cv_m2lnp, i, 0.5 * (ncm_vector_get (self->m2lnL, i) - ncm_vector_get (self->cv_m2lnp, i)));
 
   for (i = 0; i < nk; i++)
     lse_k = _ncm_stats_dist_logaddexp (lse_k, ncm_vector_get (self->cv_m2lnp, i));
@@ -1487,23 +1515,26 @@ _ncm_stats_dist_loo_m2lnp (NcmStatsDist *sd)
   gdouble m2lnp                    = 0.0;
   gint i;
 
-  ncm_vector_memcpy (self->cv_w, self->weights);
+  /*
+   * The kernel centres go in one batch. Each point drops its own kernel, which is one
+   * masked index of a sweep that is otherwise the same for all of them, so the kernels are
+   * swept once here instead of once per point.
+   */
+  g_ptr_array_set_size (self->cv_x, 0);
 
-  /* Serial: cv_w is modified in place, one weight at a time. */
   for (i = 0; i < n; i++)
-  {
-    NcmVector *x_i    = g_ptr_array_index (self->sample_array, i);
-    const gdouble w_i = ncm_vector_get (self->weights, i);
-    gdouble q_m;
+    g_ptr_array_add (self->cv_x, g_ptr_array_index (self->sample_array, i));
 
-    ncm_vector_set (self->cv_w, i, 0.0);
-    q_m = sd_class->eval_weights_m2lnp (sd, self->cv_w, x_i) + 2.0 * log1p (-w_i);
-    ncm_vector_set (self->cv_w, i, w_i);
-    ncm_vector_set (self->cv_m2lnp, i, q_m);
+  {
+    NcmVector *m2lnp_loo = ncm_vector_get_subvector (self->cv_m2lnp, 0, n);
+
+    sd_class->eval_weights_m2lnp_loo (sd, self->weights, self->cv_x, m2lnp_loo);
+    ncm_vector_free (m2lnp_loo);
   }
 
+  /* Renormalization of the weights that are left, one term per point. */
   for (i = 0; i < n; i++)
-    m2lnp += ncm_vector_get (self->cv_m2lnp, i);
+    m2lnp += ncm_vector_get (self->cv_m2lnp, i) + 2.0 * log1p (-ncm_vector_get (self->weights, i));
 
   if (self->print_fit)
     ncm_message ("# over-smooth: % 22.15g, loo m2lnp = % 22.15g\n", self->over_smooth, m2lnp);
