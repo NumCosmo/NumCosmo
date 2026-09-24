@@ -271,6 +271,78 @@ def test_serialized_tables():
     assert stale.get_table_build_count() == 1
 
 
+def test_register_shared_anchors_tables_across_dups():
+    """register_shared() anchors each built table's vector in the given
+    NcmSerialize, so it survives ser.reset(True) (autosave-only cleanup) and
+    a later dup through that same ser adopts the identical tables instead of
+    rebuilding them from a freshly-serialized copy -- the sequence
+    NcmFitESMCMC's per-worker-thread clone runs (dup, then reset(True), for
+    every worker), which for a large galaxy catalog otherwise makes
+    per-thread setup grow with the number of cached tables."""
+    mset, pop = _build_mset(0.3)
+    src = Nc.GalaxyShapeFactorMomentsTilt.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
+    src.prepare(mset)
+
+    for i in range(5):
+        sn = 0.05 + 0.05 * i
+        data, _keep = _make_data(src, mset, sn)
+        src.eval_ln_marginal(pop, data, 0.4, 0.0, 0.3, -0.2)
+
+    assert src.get_table_build_count() == 5
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    src.register_shared(ser)
+
+    ser.reset(True)
+    blob1 = ser.to_string(src, True)
+    dup1 = ser.from_string(blob1)
+
+    ser.reset(True)
+    blob2 = ser.to_string(src, True)
+    dup2 = ser.from_string(blob2)
+
+    dup1.prepare(mset)
+    dup2.prepare(mset)
+
+    # No table had to be rebuilt in either clone: the stamp matched and the
+    # tables came from the anchored (shared), not re-serialized, vectors.
+    assert dup1.get_table_build_count() == 0
+    assert dup2.get_table_build_count() == 0
+
+    for i in range(5):
+        sn = 0.05 + 0.05 * i
+        d_src, _ = _make_data(src, mset, sn)
+        d1, _ = _make_data(dup1, mset, sn)
+        d2, _ = _make_data(dup2, mset, sn)
+        ref = src.eval_ln_marginal(pop, d_src, 0.4, 0.0, 0.3, -0.2)
+        assert dup1.eval_ln_marginal(pop, d1, 0.4, 0.0, 0.3, -0.2) == ref
+        assert dup2.eval_ln_marginal(pop, d2, 0.4, 0.0, 0.3, -0.2) == ref
+
+    assert dup1.get_table_build_count() == 0
+    assert dup2.get_table_build_count() == 0
+
+
+def test_without_register_shared_tables_are_rebuilt_but_still_correct():
+    """Negative control: skipping register_shared() still adopts the
+    (deep-copied) tables correctly -- proving correctness does not depend
+    on sharing -- only the no-rebuild guarantee above does."""
+    mset, pop = _build_mset(0.3)
+    src = Nc.GalaxyShapeFactorMomentsTilt.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
+    src.prepare(mset)
+
+    data, _keep = _make_data(src, mset, 0.1)
+    ref = src.eval_ln_marginal(pop, data, 0.4, 0.0, 0.3, -0.2)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.reset(True)
+    dup = ser.from_string(ser.to_string(src, True))
+    dup.prepare(mset)
+
+    d2, _keep2 = _make_data(dup, mset, 0.1)
+    assert dup.eval_ln_marginal(pop, d2, 0.4, 0.0, 0.3, -0.2) == ref
+    assert dup.get_table_build_count() == 0
+
+
 @pytest.mark.parametrize(
     "cls",
     [Nc.GalaxyShapeFactorMomentsTilt, Nc.GalaxyShapeFactorCGF],

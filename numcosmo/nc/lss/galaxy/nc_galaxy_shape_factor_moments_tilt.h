@@ -32,6 +32,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor.h>
+#include <numcosmo/ncm/core/ncm_serialize.h>
 
 G_BEGIN_DECLS
 
@@ -51,6 +52,8 @@ guint nc_galaxy_shape_factor_moments_tilt_get_table_build_count (NcGalaxyShapeFa
 guint nc_galaxy_shape_factor_moments_tilt_get_range_error_count (NcGalaxyShapeFactorMomentsTilt *gsfmt);
 void nc_galaxy_shape_factor_moments_tilt_reset_range_error_count (NcGalaxyShapeFactorMomentsTilt *gsfmt);
 void nc_galaxy_shape_factor_moments_tilt_reset_table_build_count (NcGalaxyShapeFactorMomentsTilt *gsfmt);
+
+void nc_galaxy_shape_factor_moments_tilt_register_shared (NcGalaxyShapeFactorMomentsTilt *gsfmt, NcmSerialize *ser);
 
 void nc_galaxy_shape_factor_moments_tilt_exact_moments (NcGalaxyShapeFactorMomentsTilt *gsfmt, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble ghat, gdouble *mu, gdouble *Ex2, gdouble *Ey2);
 void nc_galaxy_shape_factor_moments_tilt_eval_tilt (NcGalaxyShapeFactorMomentsTilt *gsfmt, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, gdouble *lambda_1, gdouble *lambda_2, gdouble *lambda_3, gdouble *W);

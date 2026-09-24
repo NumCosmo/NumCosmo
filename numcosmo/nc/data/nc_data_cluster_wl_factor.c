@@ -76,6 +76,7 @@
 #include "build_cfg.h"
 
 #include "nc/data/nc_data_cluster_wl_factor.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h"
 #include "ncm/core/ncm_prefetch_private.h"
 #include "nc_enum_types.h"
 #include "nc/background/nc_hicosmo.h"
@@ -1957,6 +1958,18 @@ _nc_data_cluster_wl_factor_register_shared (NcmData *data, NcmSerialize *ser)
     ncm_serialize_set (ser, self->obs, name, FALSE);
     g_free (name);
   }
+
+  /* NcGalaxyShapeFactorMomentsTilt caches one read-only Chebyshev table per
+   * distinct (population, shape dispersion, panel count): expensive to
+   * build, cheap to reuse, and unrelated to the model parameters an
+   * ESMCMC/MC worker samples. Anchoring its tables the same way @obs is
+   * anchored above lets every worker thread's fit clone share the built
+   * tables by reference instead of each one re-serializing and rebuilding
+   * every table -- see nc_galaxy_shape_factor_moments_tilt_register_shared().
+   * Other #NcGalaxyShapeFactor implementations have no such cache and are
+   * left to the ordinary (cheap) per-thread deep copy. */
+  if (NC_IS_GALAXY_SHAPE_FACTOR_MOMENTS_TILT (self->shape_factor))
+    nc_galaxy_shape_factor_moments_tilt_register_shared (NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT (self->shape_factor), ser);
 }
 
 static void

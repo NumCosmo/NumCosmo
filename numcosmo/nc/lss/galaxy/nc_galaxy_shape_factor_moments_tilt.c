@@ -1231,6 +1231,17 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltPrivate
   NcGalaxyShapePop *pop_ref;
   gint stamp_warned;
 
+  /* Memoized PROP_TABLES payload: the same NcmVector instances survive
+   * across gets as long as @tab_cache is unchanged (@tables_generation
+   * tracks that). Registering these with an NcmSerialize (see
+   * nc_galaxy_shape_factor_moments_tilt_register_shared()) lets every
+   * ESMCMC worker thread's clone reuse the identical, read-only vectors
+   * instead of each thread re-serializing and rebuilding every table --
+   * the dominant per-thread setup cost the tables would otherwise be. */
+  NcmObjArray *shared_tables_cache;
+  guint64 shared_tables_cache_gen;
+  guint64 tables_generation;
+
   gint solve_error_count;
   gint solve_warned;
   gint table_build_count;
@@ -1358,10 +1369,13 @@ nc_galaxy_shape_factor_moments_tilt_init (NcGalaxyShapeFactorMomentsTilt *gsfmt)
   self->spectral_pool  = ncm_memory_pool_new (&_moments_tilt_spectral_alloc, NULL, &_moments_tilt_spectral_free);
   g_mutex_init (&self->cache_lock);
   g_mutex_init (&self->range_lock);
-  self->pending_tables    = NULL;
-  self->tables_stamp      = NULL;
-  self->pop_ref           = NULL;
-  self->stamp_warned      = 0;
+  self->pending_tables       = NULL;
+  self->tables_stamp         = NULL;
+  self->pop_ref              = NULL;
+  self->stamp_warned         = 0;
+  self->shared_tables_cache     = NULL;
+  self->shared_tables_cache_gen = 0;
+  self->tables_generation       = 0;
   self->solve_error_count = 0;
   self->solve_warned      = 0;
   self->table_build_count = 0;
@@ -1427,6 +1441,52 @@ _nc_galaxy_shape_factor_moments_tilt_set_property (GObject *object, guint prop_i
   }
 }
 
+/*
+ * Returns a ref of the memoized "tables" payload, rebuilding it only when
+ * @tab_cache has changed (@tables_generation) since the last build. The
+ * NcmVector instances inside are stable across calls as long as the
+ * generation does not change, which is what lets
+ * nc_galaxy_shape_factor_moments_tilt_register_shared() anchor them in an
+ * NcmSerialize: a later ncm_serialize_to_variant() of the same instance
+ * finds each vector already named and emits a cheap reference instead of
+ * re-serializing it.
+ */
+static NcmObjArray *
+_nc_galaxy_shape_factor_moments_tilt_get_shared_tables (NcGalaxyShapeFactorMomentsTiltPrivate * const self)
+{
+  NcmObjArray *oa;
+
+  g_mutex_lock (&self->cache_lock);
+
+  if ((self->shared_tables_cache == NULL) || (self->shared_tables_cache_gen != self->tables_generation))
+  {
+    NcmObjArray *built = ncm_obj_array_new ();
+    GHashTableIter iter;
+    gpointer k, v;
+
+    g_hash_table_iter_init (&iter, self->tab_cache);
+
+    while (g_hash_table_iter_next (&iter, &k, &v))
+    {
+      NcmVector *vec = _nc_galaxy_shape_factor_moments_table_to_vector ((const NcGalaxyShapeFactorMomentsKey *) k,
+                                                                        (const NcGalaxyShapeFactorMomentsTable *) v);
+
+      ncm_obj_array_add (built, G_OBJECT (vec));
+      ncm_vector_free (vec);
+    }
+
+    g_clear_pointer (&self->shared_tables_cache, ncm_obj_array_unref);
+    self->shared_tables_cache     = built;
+    self->shared_tables_cache_gen = self->tables_generation;
+  }
+
+  oa = ncm_obj_array_ref (self->shared_tables_cache);
+
+  g_mutex_unlock (&self->cache_lock);
+
+  return oa;
+}
+
 static void
 _nc_galaxy_shape_factor_moments_tilt_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
@@ -1448,25 +1508,8 @@ _nc_galaxy_shape_factor_moments_tilt_get_property (GObject *object, guint prop_i
       g_value_set_boolean (value, self->strict_solve);
       break;
     case PROP_TABLES:
-    {
-      NcmObjArray *oa = ncm_obj_array_new ();
-      GHashTableIter iter;
-      gpointer k, v;
-
-      g_hash_table_iter_init (&iter, self->tab_cache);
-
-      while (g_hash_table_iter_next (&iter, &k, &v))
-      {
-        NcmVector *vec = _nc_galaxy_shape_factor_moments_table_to_vector ((const NcGalaxyShapeFactorMomentsKey *) k,
-                                                                          (const NcGalaxyShapeFactorMomentsTable *) v);
-
-        ncm_obj_array_add (oa, G_OBJECT (vec));
-        ncm_vector_free (vec);
-      }
-
-      g_value_take_boxed (value, oa);
+      g_value_take_boxed (value, _nc_galaxy_shape_factor_moments_tilt_get_shared_tables (self));
       break;
-    }
     case PROP_TABLES_STAMP:
       g_value_take_string (value, (self->pop_ref != NULL) ? _moments_tilt_stamp (self) : NULL);
       break;
@@ -1545,6 +1588,7 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
   {
     g_hash_table_remove_all (self->tab_cache);
     self->tab_cache_hash = self->pop_hash;
+    self->tables_generation++;
   }
 
   /* Adopt whatever a load brought in, once and only if it was built for
@@ -1579,6 +1623,9 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
         adopted++;
       }
     }
+
+    if (adopted > 0)
+      self->tables_generation++;
 
     if (!match && (ncm_obj_array_len (pending) > 0) &&
         g_atomic_int_compare_and_exchange (&self->stamp_warned, 0, 1))
@@ -1829,6 +1876,7 @@ _nc_galaxy_shape_factor_moments_tilt_acquire_table (NcGalaxyShapeFactorMomentsTi
     *key_copy = key;
     g_hash_table_insert (self->tab_cache, key_copy, built);
     table = _nc_galaxy_shape_factor_moments_table_ref (built);
+    self->tables_generation++;
   }
 
   g_mutex_unlock (&self->cache_lock);
@@ -2058,6 +2106,7 @@ _nc_galaxy_shape_factor_moments_tilt_dispose (GObject *object)
   nc_galaxy_shape_pop_clear (&self->pop_ref);
   g_clear_pointer (&self->pending_tables, ncm_obj_array_unref);
   g_clear_pointer (&self->tables_stamp, g_free);
+  g_clear_pointer (&self->shared_tables_cache, ncm_obj_array_unref);
 
   if (self->spectral_pool != NULL)
   {
@@ -2403,6 +2452,59 @@ nc_galaxy_shape_factor_moments_tilt_reset_table_build_count (NcGalaxyShapeFactor
   NcGalaxyShapeFactorMomentsTiltPrivate * const self = nc_galaxy_shape_factor_moments_tilt_get_instance_private (gsfmt);
 
   g_atomic_int_set (&self->table_build_count, 0);
+}
+
+/**
+ * nc_galaxy_shape_factor_moments_tilt_register_shared:
+ * @gsfmt: a #NcGalaxyShapeFactorMomentsTilt
+ * @ser: a #NcmSerialize
+ *
+ * Anchors this instance's current table set (its "tables" property) in
+ * @ser, by the individual #NcmVector of each table, under names derived
+ * from @gsfmt's own identity.
+ *
+ * The tables are pure functions of (population, shape dispersion, panel
+ * count), read-only once built and never touched again -- see the class
+ * documentation. A later ncm_serialize_to_variant()/ncm_serialize_dup_obj()
+ * of @gsfmt through @ser therefore finds each vector already named and
+ * hands back a reference instead of re-serializing and rebuilding it, for
+ * every caller sharing @ser, including across ncm_serialize_reset(ser,
+ * TRUE) (autosave-only) which is what #NcmFitESMCMC and #NcmFitMC run
+ * between per-worker fit clones. This is the same anchoring
+ * #NcDataClusterWLFactor's own register_shared() already does for its
+ * "obs" property; without it, every worker thread's clone deep-copies
+ * every cached table, which for a large galaxy catalog dominates
+ * per-thread setup time.
+ *
+ * Registering does not itself build any table: an instance with an empty
+ * cache anchors nothing, and a later ncm_serialize_to_variant() call still
+ * has to pick up whatever tables exist by then, so callers should populate
+ * the cache (e.g. run one serial warm-up prepare) before running this.
+ *
+ * Safe to call repeatedly, including as the cache grows: re-registering
+ * under the same names is idempotent for tables already shared, and the
+ * new ones are added the same way.
+ */
+void
+nc_galaxy_shape_factor_moments_tilt_register_shared (NcGalaxyShapeFactorMomentsTilt *gsfmt, NcmSerialize *ser)
+{
+  NcGalaxyShapeFactorMomentsTiltPrivate * const self = nc_galaxy_shape_factor_moments_tilt_get_instance_private (gsfmt);
+  NcmObjArray *tables = _nc_galaxy_shape_factor_moments_tilt_get_shared_tables (self);
+  guint i;
+
+  for (i = 0; i < ncm_obj_array_len (tables); i++)
+  {
+    GObject *vec = ncm_obj_array_peek (tables, i);
+    /* NcmSerialize's named-instance syntax only accepts [A-Za-z0-9:] inside
+     * the brackets (see its is_named_regex): no "0x" prefix, no
+     * underscore. */
+    gchar *name = g_strdup_printf ("ncGsfMomentsTiltTab:%" G_GSIZE_FORMAT ":%u", (gsize) gsfmt, i);
+
+    ncm_serialize_set (ser, vec, name, TRUE);
+    g_free (name);
+  }
+
+  ncm_obj_array_unref (tables);
 }
 
 /**
