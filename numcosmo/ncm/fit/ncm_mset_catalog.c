@@ -118,6 +118,7 @@ typedef struct _NcmMSetCatalogPrivate
   gchar *mset_file;
   gchar *rtype_str;
   gchar *sampler_str;
+  gchar *sampler_opts_str;
   gchar *init_sampler_str;
   GArray *porder;
   NcmVector *quantile_ws;
@@ -165,6 +166,7 @@ enum
   PROP_FILE,
   PROP_RUN_TYPE_STR,
   PROP_SAMPLER,
+  PROP_SAMPLER_OPTS,
   PROP_INIT_SAMPLER,
   PROP_SYNC_MODE,
   PROP_SYNC_INTERVAL,
@@ -240,6 +242,7 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->mset_file         = NULL;
   self->rtype_str         = NULL;
   self->sampler_str       = NULL;
+  self->sampler_opts_str  = NULL;
   self->init_sampler_str  = NULL;
   self->porder            = g_array_new (FALSE, FALSE, sizeof (gint));
   self->quantile_ws       = NULL;
@@ -432,6 +435,9 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_SAMPLER:
       ncm_mset_catalog_set_sampler (mcat, g_value_get_string (value));
       break;
+    case PROP_SAMPLER_OPTS:
+      ncm_mset_catalog_set_sampler_options (mcat, g_value_get_string (value));
+      break;
     case PROP_INIT_SAMPLER:
       ncm_mset_catalog_set_initial_sampler (mcat, g_value_get_string (value));
       break;
@@ -528,6 +534,9 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_SAMPLER:
       g_value_set_string (value, self->sampler_str);
       break;
+    case PROP_SAMPLER_OPTS:
+      g_value_set_string (value, self->sampler_opts_str);
+      break;
     case PROP_INIT_SAMPLER:
       g_value_set_string (value, self->init_sampler_str);
       break;
@@ -607,6 +616,7 @@ _ncm_mset_catalog_finalize (GObject *object)
 
   g_clear_pointer (&self->rtype_str, g_free);
   g_clear_pointer (&self->sampler_str, g_free);
+  g_clear_pointer (&self->sampler_opts_str, g_free);
   g_clear_pointer (&self->init_sampler_str, g_free);
 
   g_array_unref (self->porder);
@@ -768,6 +778,23 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                    g_param_spec_string ("sampler",
                                                         NULL,
                                                         "Description of the sampler that filled the rows",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetCatalog:sampler-options:
+   *
+   * The sampler's tunable settings, as a colon separated list of `name=value' pairs. Kept
+   * like #NcmMSetCatalog:sampler -- the SAMPOPT header key and a HISTORY card, never
+   * compared -- and separate from it so that the structure and its tuning can be read
+   * apart: two runs of the same sampler differ here and nowhere else.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SAMPLER_OPTS,
+                                   g_param_spec_string ("sampler-options",
+                                                        NULL,
+                                                        "Tunable settings of the sampler that filled the rows",
                                                         NULL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -1644,6 +1671,8 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
                                    &self->init_sampler_str, load_from_cat, self->readonly);
     _ncm_mset_catalog_load_record (self->fptr, NCM_MSET_CATALOG_SAMPLER_LABEL, "sampler",
                                    &self->sampler_str, load_from_cat, self->readonly);
+    _ncm_mset_catalog_load_record (self->fptr, NCM_MSET_CATALOG_SAMPLER_OPTS_LABEL, "sampler options",
+                                   &self->sampler_opts_str, load_from_cat, self->readonly);
 
     fits_read_key (self->fptr, TINT, NCM_MSET_CATALOG_NCHAINS_LABEL,
                    &nchains, NULL, &status);
@@ -1927,6 +1956,9 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 
     if (self->sampler_str != NULL)
       _ncm_mset_catalog_write_record (self->fptr, NCM_MSET_CATALOG_SAMPLER_LABEL, "sampler", self->sampler_str);
+
+    if (self->sampler_opts_str != NULL)
+      _ncm_mset_catalog_write_record (self->fptr, NCM_MSET_CATALOG_SAMPLER_OPTS_LABEL, "sampler options", self->sampler_opts_str);
 
     fits_update_key (self->fptr, TINT, NCM_MSET_CATALOG_NCHAINS_LABEL, &self->nchains, "Number of chains.", &status);
     NCM_FITS_ERROR (status);
@@ -3692,6 +3724,23 @@ ncm_mset_catalog_set_sampler (NcmMSetCatalog *mcat, const gchar *sampler)
 }
 
 /**
+ * ncm_mset_catalog_set_sampler_options:
+ * @mcat: a #NcmMSetCatalog
+ * @options: (nullable): the sampler's tunable settings
+ *
+ * Records how the sampler is tuned, see #NcmMSetCatalog:sampler-options. Kept and written
+ * like ncm_mset_catalog_set_sampler(), and never checked.
+ *
+ */
+void
+ncm_mset_catalog_set_sampler_options (NcmMSetCatalog *mcat, const gchar *options)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  _ncm_mset_catalog_set_record (mcat, &self->sampler_opts_str, NCM_MSET_CATALOG_SAMPLER_OPTS_LABEL, "sampler options", options);
+}
+
+/**
  * ncm_mset_catalog_set_initial_sampler:
  * @mcat: a #NcmMSetCatalog
  * @sampler: (nullable): a description of the sampler that drew the initial points
@@ -3720,6 +3769,20 @@ ncm_mset_catalog_get_sampler (NcmMSetCatalog *mcat)
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
   return self->sampler_str;
+}
+
+/**
+ * ncm_mset_catalog_get_sampler_options:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: (transfer none) (nullable): the sampler's tunable settings, see #NcmMSetCatalog:sampler-options.
+ */
+const gchar *
+ncm_mset_catalog_get_sampler_options (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  return self->sampler_opts_str;
 }
 
 /**

@@ -145,7 +145,7 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
       gchar *apes_ser               = ncm_serialize_to_string (ser, G_OBJECT (apes), TRUE);
       NcmFitESMCMCWalkerAPES *apes0 = NCM_FIT_ESMCMC_WALKER_APES (ncm_serialize_from_string (ser, apes_ser));
 
-      g_assert_true (ncm_fit_esmcmc_walker_apes_interp (apes)     == ncm_fit_esmcmc_walker_apes_interp (apes0));
+      g_assert_true (ncm_fit_esmcmc_walker_apes_get_uniform_weights (apes) == ncm_fit_esmcmc_walker_apes_get_uniform_weights (apes0));
       g_assert_true (ncm_fit_esmcmc_walker_apes_get_method (apes) == ncm_fit_esmcmc_walker_apes_get_method (apes0));
       g_assert_true (ncm_fit_esmcmc_walker_apes_get_k_type (apes) == ncm_fit_esmcmc_walker_apes_get_k_type (apes0));
 

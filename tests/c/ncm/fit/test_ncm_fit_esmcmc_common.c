@@ -227,15 +227,14 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
       ncm_fit_esmcmc_walker_apes_set_method (apes, NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE);
       ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY);
       ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, 1.0);
-      ncm_fit_esmcmc_walker_apes_use_interp (apes, TRUE);
       break;
     case 1:
       apes = ncm_fit_esmcmc_walker_apes_new_full (nwalkers, ncm_mset_fparams_len (mset),
-                                                  NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3, 1.0, TRUE);
+                                                  NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3, 1.0);
       break;
     case 2:
       apes = ncm_fit_esmcmc_walker_apes_new_full (nwalkers, ncm_mset_fparams_len (mset),
-                                                  NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS, 1.0, TRUE);
+                                                  NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS, 1.0);
       /*test->nrun_div = 100;*/
       break;
     case 3:
@@ -244,15 +243,14 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
       ncm_fit_esmcmc_walker_apes_set_method (apes, NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE);
       ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY);
       ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, 1.0);
-      ncm_fit_esmcmc_walker_apes_use_interp (apes, TRUE);
       break;
     case 4:
       apes = ncm_fit_esmcmc_walker_apes_new_full (nwalkers, ncm_mset_fparams_len (mset),
-                                                  NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3, 1.0, TRUE);
+                                                  NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3, 1.0);
       break;
     case 5:
       apes = ncm_fit_esmcmc_walker_apes_new_full (nwalkers, ncm_mset_fparams_len (mset),
-                                                  NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS, 1.0, TRUE);
+                                                  NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS, 1.0);
       test->nrun_div = 100;
       break;
     default:
@@ -280,7 +278,7 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
       gchar *apes_ser               = ncm_serialize_to_string (ser, G_OBJECT (apes), TRUE);
       NcmFitESMCMCWalkerAPES *apes0 = NCM_FIT_ESMCMC_WALKER_APES (ncm_serialize_from_string (ser, apes_ser));
 
-      g_assert_true (ncm_fit_esmcmc_walker_apes_interp (apes)     == ncm_fit_esmcmc_walker_apes_interp (apes0));
+      g_assert_true (ncm_fit_esmcmc_walker_apes_get_uniform_weights (apes) == ncm_fit_esmcmc_walker_apes_get_uniform_weights (apes0));
       g_assert_true (ncm_fit_esmcmc_walker_apes_get_method (apes) == ncm_fit_esmcmc_walker_apes_get_method (apes0));
       g_assert_true (ncm_fit_esmcmc_walker_apes_get_k_type (apes) == ncm_fit_esmcmc_walker_apes_get_k_type (apes0));
 
@@ -1332,11 +1330,11 @@ test_ncm_fit_esmcmc_apes_desc (void)
   NcmFitESMCMCWalkerAPES *apes = ncm_fit_esmcmc_walker_apes_new (nwalkers, nparams);
   NcmFitESMCMCWalker *walker   = NCM_FIT_ESMCMC_WALKER (apes);
 
-  /* The description is what a catalog carries to say which proposal produced it, so every
-   * setting that changes the proposal has to show up in it. */
+  /* The description names the structure of the proposal and the options its tuning, and a
+   * catalog carries both: every setting that changes the proposal has to show up in one of
+   * them. */
   ncm_fit_esmcmc_walker_apes_set_method (apes, NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE);
   ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS);
-  ncm_fit_esmcmc_walker_apes_use_interp (apes, TRUE);
   ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, 1.0);
   ncm_fit_esmcmc_walker_apes_set_uniform_weights (apes, FALSE);
   ncm_fit_esmcmc_walker_apes_set_vkde_points_per_dim (apes, 0.0);
@@ -1344,16 +1342,19 @@ test_ncm_fit_esmcmc_apes_desc (void)
   ncm_fit_esmcmc_walker_apes_set_center_shrink (apes, FALSE);
   ncm_fit_esmcmc_walker_apes_set_cv_type (apes, NCM_STATS_DIST_CV_NONE);
 
-  g_assert_cmpstr (ncm_fit_esmcmc_walker_desc (walker), ==,
-                   "APES-Move:Interp-VKDE:Gauss:lf=0.4:nnls:os=1:cv=none");
+  g_assert_cmpstr (ncm_fit_esmcmc_walker_desc (walker), ==, "APES-Move:VKDE:Gauss");
+  g_assert_cmpstr (ncm_fit_esmcmc_walker_opts (walker), ==,
+                   "local-fraction=0.4:weights=nnls:over-smooth=1:cross-validation=none");
 
-  /* Center shrinkage, uniform weights and a neighborhood counted per dimension. */
+  /* Centre shrinkage is structure and shows in the description; uniform weights and a
+   * neighbourhood counted per dimension are tuning and show in the options. */
   ncm_fit_esmcmc_walker_apes_set_center_shrink (apes, TRUE);
   ncm_fit_esmcmc_walker_apes_set_uniform_weights (apes, TRUE);
   ncm_fit_esmcmc_walker_apes_set_vkde_points_per_dim (apes, 12.0);
 
-  g_assert_cmpstr (ncm_fit_esmcmc_walker_desc (walker), ==,
-                   "APES-Move:Shrink-Interp-VKDE:Gauss:ppd=12:unif:os=1:cv=none");
+  g_assert_cmpstr (ncm_fit_esmcmc_walker_desc (walker), ==, "APES-Move:Shrink-VKDE:Gauss");
+  g_assert_cmpstr (ncm_fit_esmcmc_walker_opts (walker), ==,
+                   "points-per-dim=12:weights=uniform:over-smooth=1:cross-validation=none");
 
   /* Every cross-validation has its own tag: two runs differing only there must not share
    * a description. */
@@ -1369,22 +1370,22 @@ test_ncm_fit_esmcmc_apes_desc (void)
 
     for (i = 0; i < G_N_ELEMENTS (cv_type); i++)
     {
-      gchar *expected = g_strdup_printf ("APES-Move:Shrink-Interp-VKDE:Gauss:ppd=12:unif:os=1:cv=%s", cv_tag[i]);
+      gchar *expected = g_strdup_printf ("points-per-dim=12:weights=uniform:over-smooth=1:cross-validation=%s", cv_tag[i]);
 
       ncm_fit_esmcmc_walker_apes_set_cv_type (apes, cv_type[i]);
-      g_assert_cmpstr (ncm_fit_esmcmc_walker_desc (walker), ==, expected);
+      g_assert_cmpstr (ncm_fit_esmcmc_walker_desc (walker), ==, "APES-Move:Shrink-VKDE:Gauss");
+      g_assert_cmpstr (ncm_fit_esmcmc_walker_opts (walker), ==, expected);
       g_free (expected);
     }
   }
 
-  /* Without interpolation the weights are uniform by construction, and KDE has no local
-   * neighborhood: neither may appear. */
+  /* KDE has no local neighbourhood, so neither of its two spellings may appear. */
   ncm_fit_esmcmc_walker_apes_set_method (apes, NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE);
-  ncm_fit_esmcmc_walker_apes_use_interp (apes, FALSE);
   ncm_fit_esmcmc_walker_apes_set_cv_type (apes, NCM_STATS_DIST_CV_NONE);
 
-  g_assert_cmpstr (ncm_fit_esmcmc_walker_desc (walker), ==,
-                   "APES-Move:Shrink-KDE:Gauss:os=1:cv=none");
+  g_assert_cmpstr (ncm_fit_esmcmc_walker_desc (walker), ==, "APES-Move:Shrink-KDE:Gauss");
+  g_assert_cmpstr (ncm_fit_esmcmc_walker_opts (walker), ==,
+                   "weights=uniform:over-smooth=1:cross-validation=none");
 
   ncm_fit_esmcmc_walker_apes_free (apes);
 }
