@@ -511,3 +511,157 @@ accuracy (up to 600% error on unrelated cases).
 
 See `docs/theory/wl_shape_marginalization_fixed_quad.qmd` for the shipped
 design.
+
+## `NcGalaxyShapeFactor`/`NcDataClusterWLFactor`: cache-invalidation bugs from pkey hashes (2026-07)
+
+The Factor classes detect model changes with hashes built from
+`ncm_model_state_get_pkey ()` values, by design, instead of `NcmModelCtrl`. Six staleness
+bugs came out of that during the `galaxy-sd-calculators` work. Each was reproduced with a
+minimal script against the real object before it was fixed, and each became a regression
+test in `tests/python/nc/data/test_data_cluster_wl_factor_parity.py` or
+`tests/python/nc/lss/galaxy/test_galaxy_shape_factor_cache_consistency.py`.
+
+**Facts about the pkey that the bugs depend on.** The pkey of a model reflects only that
+model's own parameters. It does not recurse into submodels
+(`ncm_model_add_submodel`/`ncm_model_peek_submodel`); only `ncm_model_ctrl_update ()` does.
+It is one counter per object, so it bumps when any parameter of the model changes. Plain
+GObject properties bump nothing. The `ncm_model_param_set` family bumps it even when the
+value assigned equals the current one.
+
+**1. A submodel's parameter.** `optzs_hash` in `nc_galaxy_shape_factor.c` combined the
+pkeys of `cosmo`, `density_profile` and `surface_mass_density`. The mass lives on
+`NcHaloMassSummary`, a submodel of `NcHaloDensityProfile`
+(`nc_halo_density_profile_peek_mass_summary`). Changing the mass bumped the mass
+summary's pkey every time; the profile's own pkey bumped only the first few times, as a
+side effect of `nc_halo_density_profile_r_s_rho_s`'s lazy recompute, and then stayed
+constant for any mass value already visited. After one `resample ()` plus refit cycle the
+likelihood stayed at whatever mass had last triggered the recompute. Found by a test that
+asserts `m2lnL` changes when the mass changes and prints the raw pkeys at each step. Fix:
+hash the submodel's own pkey directly.
+
+**2. A model the block reads but the hash omits.** The same `optzs_hash` left out
+`halo_position`, although the refresh block reads `z_cl` from it and uses it for
+`lens_ctx`, `r_s` and `rho_s`. No submodel involved: the hash under-covered what the
+guarded block reads. The audit that finds this greps the block body for every
+`ncm_mset_peek` and model getter, not only the function's arguments.
+
+**3. Over-invalidation from a borrowed flag.** In the `FIXED_NODES` port
+(`nc_data_cluster_wl_factor.c`), `fixed_grid_changed` was first derived from
+`radius_changed`, itself a hash over `halo_position` and `cosmo`. That hash bumps on any
+`halo_position` parameter, so a miscentering model moving RA and Dec rebuilt the
+per-galaxy quadrature grid on every fit iteration although the grid depends on `z_cl`
+alone. Fix: a dedicated scalar sentinel `fixed_nodes_zcl`, seeded with `GSL_NAN`, the same
+device the legacy `NcDataClusterWL` already had for the same reason. Sandro found this one
+in review.
+
+**4. A cache that no model hash can see.** `sigma_cache` was gated on
+`radius_changed || optzs_changed`. Switching `integ-method` from `LNINT` to `FIXED_NODES`
+in the middle of a run, with no change to the mset, raises neither flag, because the
+`LNINT` path had kept both hashes current. Whether a given consumer has ever computed its
+cache is not a property of the source model. Fix: a per-consumer sentinel, as in 3.
+
+**5. A grid sized from properties.** The grid was sized from `n_nodes` and `rule_n`,
+orchestrator properties rather than model parameters. Changing them bumps no pkey, so the
+grid went stale and a size-mismatched subvector reached
+`ncm_integral_fixed_integ_vec_mult`, corrupting the heap. Fix: last-seen values with zero
+forcing the first rebuild, independent of any model pkey.
+
+**6. A flag read after its reset.** `self->obs_changed` was read in five `*_changed`
+computations a few lines after `prepare ()` had set it to `FALSE` in the same function, so
+the `obs_changed ||` term was dead in all five. It stayed invisible there because each
+hash field starts at 0 and a real hash differs from 0, so the first evaluation was caught
+anyway. It was visible for the new `fixed_grid_changed`, whose comparisons (`z_cl`,
+`n_nodes`, `rule_n`) all matched their last-seen values after a `set_obs ()` catalog swap
+touched no model: every galaxy came out at `NC_GALAXY_LOW_PROB`. This bug predates the
+`FIXED_NODES` work. Fix: capture the flag in a local before the reset and read the local.
+The audit here is about when a mutable flag is reset relative to each read, not whether
+it is read.
+
+**The probe that catches staleness.** Set parameter A, read the hash or `m2lnL`; set A to
+a value not yet seen, read again and expect a change; set A back to the first value and
+expect a change again. The return to a visited value is the step that exposes bugs 1 and
+2; a test that only moves to new values passes with them present.
+
+**A test-harness caution.** Because `param_set` bumps the pkey unconditionally, a
+regression test that keeps one model instance and re-sets every knob at every step makes
+every consumer's hash change at every step, and reported bugs 1 and 2 as passing until it
+was changed to touch only the knobs that differ from the previous configuration
+(`_set_config` against `prev_config` in the cache-consistency test). In a fit or MCMC only
+the varied models are touched, so this concerns test harnesses only (Sandro, 2026-07-05).
+
+**Open.** NumCosmo has no per-parameter change detection: a consumer that depends on one
+parameter of a model either accepts over-invalidation from the whole-model pkey or keeps a
+last-seen copy of that parameter. A general structure for this is part of the planned
+snapshot/calculator protocol (`dev-notes/snapshot_calc_protocol.md`), not something to
+build per call site.
+
+## Cross-check against the legacy classes (2026-07-16)
+
+Scope agreed with Sandro: the legacy `nc_galaxy_sd_shape_*`, `nc_galaxy_sd_obs_redshift_*`
+and `nc_galaxy_position_*` classes provide an oracle only for the variance-add shape
+approximation (`VarAdd`, `GaussGlobal` or per-galaxy `GaussLocal` sigma), the `Composed`
+and `Spline` redshift schemes, and the `Flat` position. The schemes without a legacy
+oracle (`Quad`, `SeriesLensed`, `FixedQuad`, `Laplace`; the Beta population) were excluded
+from this pass and are validated elsewhere in this document. `NcGalaxyRedshiftFactorSpec`
+(legacy `NcGalaxySDObsRedshiftSpec`, fixed redshift) has no new-side equivalent and was
+not implemented.
+
+Before this pass one combination had been checked at the orchestrator level
+(`NcDataClusterWLFactor` against `NcDataClusterWL`): VarAdd+GaussGlobal x Composed x Flat.
+Added:
+
+- `tests/python/nc/lss/galaxy/test_galaxy_redshift_factor_spline_legacy_parity.py`:
+  bit parity between `NcGalaxyRedshiftFactorSpline` and legacy `NcGalaxySDObsRedshiftPz`
+  (same `-2 log(y + 1e-5)` inverse-CDF transform, same `NcmStatsDist1dSpline` with
+  reltol 1e-5, same `nc_galaxy_wl_obs_{peek,set}_pz` slot; the only difference is when
+  the lazy distribution is built). This corrects the docstring of
+  `test_galaxy_redshift_factor_spline.py`, which claimed no legacy class shares the math.
+- `test_resample_matches_legacy` in `test_data_cluster_wl_factor_parity.py`: same-seed
+  `resample ()` on both engines, raw regenerated columns compared bit for bit; every
+  earlier resample test compared new against new.
+- `tests/python/nc/data/test_data_cluster_wl_factor_parity_combinations.py`:
+  orchestrator-level parity for `(GaussGlobal, Spline)`, `(GaussLocal, Spline)`,
+  `(GaussLocal, Composed)`, each with `m2lnL_val` at three masses, per-galaxy breakdown,
+  `FIXED_NODES` against the legacy default, and resample parity, with nonzero
+  multiplicative and additive calibration bias on every galaxy. `shape = global` is
+  bit-exact; `shape = local` uses rtol 1e-8 on `epsilon_obs` (bisection against Newton).
+
+Result: all pass, no product bug. Two fixture-side facts: a synthetic p(z) spline whose
+domain is much wider than its peak (25 sigma) aborts inside `ncm_ode_spline_prepare` when
+`NcmStatsDist1dSpline` builds its inverse CDF, so size the domain from `zp +/- 6 sigma`;
+and a galaxy whose `zp - 6 sigma` lands exactly on `z_cl` puts the adaptive integrator's
+lower bound on the shear step and `ncm_integral1d_eval_lnint` fails for `GaussLocal`
+(legacy `hsm_gauss.c` nudges `z_cl` by `1 + GSL_DBL_EPSILON` for the same reason).
+
+Real-data check the same day (student's HWL16a-002 catalog, 15011 galaxies): the
+"different best fits between the two infrastructures" were `SeriesLensed + GaussLocal +
+Spline` against the legacy variance-add approximation, a method difference (+0.0225 dex,
+matching the documented `SeriesLensed` correction). On the same catalog `VarAdd` equals
+legacy to the last digit on one realization and on 150 of 150 row-paired MC realizations,
+and a full posterior comparison with the Stretch walker (16 walkers x 3200 steps) agreed
+in mean to 0.45 sigma of the standard error and in quantiles to 0.001-0.006 dex against a
+0.11 dex posterior width. A KS test on the raw autocorrelated samples reports p = 0.00027
+and is not meaningful; the autocorrelation-corrected comparison is.
+
+## Mass-recovery sweep at N = 200 realizations per cell (2026-07)
+
+Driven by `numcosmo run mc` (`Ncm.FitMC`) rather than a custom harness: an experiment
+YAML and a fiducial model set per (method, std_noise, true_mass) cell, `--nmc 200`, a
+cell-unique seed, called unconditionally so the native `.mc.fits` resume handles
+restarts. 216 cells: 9 masses from 1e14 to 3e15, 8 `std_noise` values from 0.03 to 0.3,
+three methods (`VarAdd`, `SeriesLensed`, legacy `NcDataClusterWL`), `FIXED_NODES` with 20
+nodes and rule 5, 8000 galaxies; no crash in 43,200 realizations. Exclusion: recovered
+`log10M` within 0.01 of the lower bound (0.13 % of realizations at this catalog size).
+
+- `VarAdd` equals legacy in 67 of 72 cells to 15 significant figures in the mean
+  recovered `log10M`; the other five differ at the 1e-6 to 1e-4 dex level (optimizer
+  tolerance).
+- At `std_noise = 0.30`, averaged over the nine masses, `VarAdd` and legacy are biased by
+  about -24.7 % in mass and `SeriesLensed` by about -3.2 %; at `std_noise = 0.03` all three
+  agree at -1.1 to -1.3 %.
+
+Two facts about `Ncm.FitMC` from this run: the per-realization resample step is always
+serialized (`#pragma omp critical(resample_phase)`), and `resample ()` costs 0.15-0.22 s
+per call at 8000 galaxies in the high-mass cells, so for cheap methods the wall time is
+set by that serial floor, not by the thread count; and its `--nthreads` flag has no effect
+above 1, the concurrency is `OMP_NUM_THREADS`.
