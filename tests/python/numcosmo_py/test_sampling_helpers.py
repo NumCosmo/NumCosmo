@@ -79,7 +79,7 @@ def test_create_esmcmc_apes_forwards_settings(tmp_path, mvnd_likelihood):
         nwalkers=50,
         interpolation_method=InterpolationMethod.VKDE,
         interpolation_kernel=InterpolationKernel.GAUSS,
-        cv_method=CrossValidationMethod.SPLIT_NOFIT,
+        cv_method=CrossValidationMethod.SPLIT_M2LNP,
         use_apes_center_shrink=True,
         apes_defensive_frac=0.05,
         apes_defensive_scale=6.0,
@@ -103,14 +103,14 @@ def test_create_esmcmc_apes_forwards_settings(tmp_path, mvnd_likelihood):
     assert walker.get_uniform_weights()
     assert walker.get_auto_kernel()
     assert walker.get_split_frac() == 0.4
-    assert walker.get_cv_type() == CrossValidationMethod.SPLIT_NOFIT.genum
+    assert walker.get_cv_type() == CrossValidationMethod.SPLIT_M2LNP.genum
 
     # The description a catalog carries has to name the same proposal.
     desc = walker.desc()
     assert "Shrink-" in desc
     assert "unif" in desc
     assert "ppd=12" in desc
-    assert "cv=split-nofit" in desc
+    assert "cv=split-m2lnp" in desc
 
 
 def test_create_esmcmc_unknown_sampler(tmp_path, mvnd_likelihood):
@@ -148,7 +148,7 @@ def test_apes_wrapper_runs_from_an_initial_sample(tmp_path, monkeypatch):
         over_smooth=1.0,
         local_fraction=0.5,
         center_shrink=True,
-        cv_method=CrossValidationMethod.SPLIT_NOFIT,
+        cv_method=CrossValidationMethod.SPLIT_M2LNP,
         split_fraction=0.4,
         auto_kernel=False,
     )

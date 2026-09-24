@@ -109,7 +109,6 @@ enum
   PROP_UNIFORM_WEIGHTS,
   PROP_CV_TYPE,
   PROP_SPLIT_FRAC,
-  PROP_AUTO_KERNEL,
   PROP_EXPLORATION,
   PROP_EXPLORATION_QRATIO_FLOOR,
   PROP_EXPLORATION_STOP_AFTER,
@@ -145,7 +144,6 @@ typedef struct _NcmFitESMCMCWalkerAPESPrivate
   gdouble local_frac;
   NcmStatsDistCV cv_type;
   gdouble split_frac;
-  gboolean auto_kernel;
   NcmStatsDistKDECovType cov_type;
   NcmMatrix *cov_fixed;
   gboolean constructed;
@@ -201,7 +199,6 @@ ncm_fit_esmcmc_walker_apes_init (NcmFitESMCMCWalkerAPES *apes)
   self->local_frac               = 0.0;
   self->cv_type                  = NCM_STATS_DIST_CV_NONE;
   self->split_frac               = 0.0;
-  self->auto_kernel              = FALSE;
   self->cov_type                 = NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE;
   self->cov_fixed                = NULL;
   self->constructed              = FALSE;
@@ -266,9 +263,6 @@ _ncm_fit_esmcmc_walker_apes_set_property (GObject *object, guint prop_id, const 
     case PROP_SPLIT_FRAC:
       ncm_fit_esmcmc_walker_apes_set_split_frac (apes, g_value_get_double (value));
       break;
-    case PROP_AUTO_KERNEL:
-      ncm_fit_esmcmc_walker_apes_set_auto_kernel (apes, g_value_get_boolean (value));
-      break;
     case PROP_EXPLORATION:
       ncm_fit_esmcmc_walker_apes_set_exploration (apes, g_value_get_uint (value));
       break;
@@ -331,9 +325,6 @@ _ncm_fit_esmcmc_walker_apes_get_property (GObject *object, guint prop_id, GValue
       break;
     case PROP_SPLIT_FRAC:
       g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_split_frac (apes));
-      break;
-    case PROP_AUTO_KERNEL:
-      g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_get_auto_kernel (apes));
       break;
     case PROP_EXPLORATION:
       g_value_set_uint (value, ncm_fit_esmcmc_walker_apes_get_exploration (apes));
@@ -448,15 +439,16 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
    * NcmFitESMCMCWalkerAPES:k-type:
    *
    * Kernel used in posterior approximation. This property can be set to one of the
-   * #NcmFitESMCMCWalkerAPESKType values. The default value is
-   * #NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY.
+   * #NcmFitESMCMCWalkerAPESKType values. The default,
+   * #NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO, fits the kernel together with the bandwidth
+   * and so needs a #NcmFitESMCMCWalkerAPES:cv-type that fits it.
    */
   g_object_class_install_property (object_class,
                                    PROP_K_TYPE,
                                    g_param_spec_enum ("kernel-type",
                                                       NULL,
                                                       "Kernel used in posterior approximation",
-                                                      NCM_TYPE_FIT_ESMCMC_WALKER_APES_KTYPE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY,
+                                                      NCM_TYPE_FIT_ESMCMC_WALKER_APES_KTYPE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -514,12 +506,10 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
    * of the half-ensemble it is built from for any value of
    * #NcmFitESMCMCWalkerAPES:over-smooth. See #NcmStatsDist:center-shrink.
    *
-   * Shrinkage moves the optimal bandwidth: it pays off with
-   * #NcmFitESMCMCWalkerAPES:over-smooth around 2 and a Gaussian or Student-t (3
-   * degrees of freedom) kernel, where on a 10-dimensional Gaussian target it raised
-   * the acceptance from 0.12 to 0.31 and lowered the autocorrelation time from 15
-   * to 6, while with the default Cauchy kernel and #NcmFitESMCMCWalkerAPES:over-smooth
-   * equal to 1 it lowers the acceptance. It is therefore off by default.
+   * On by default. The gain grows with dimension: on a Gaussian target at 5200
+   * walkers it leaves the autocorrelation time at 18 against 60 to 78 without it, and
+   * the acceptance at 0.14 against 0.005. It needs a kernel with a finite covariance,
+   * so not the Cauchy one.
    *
    */
   g_object_class_install_property (object_class,
@@ -527,7 +517,7 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                    g_param_spec_boolean ("center-shrink",
                                                          NULL,
                                                          "Whether to shrink the kernel centres toward the ensemble mean",
-                                                         FALSE,
+                                                         TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -578,8 +568,9 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
   /**
    * NcmFitESMCMCWalkerAPES:vkde-points-per-dim:
    *
-   * See #NcmStatsDistVKDE:points-per-dim; ignored for the KDE method. Default: 0, i.e.
-   * #NcmFitESMCMCWalkerAPES:local-frac applies.
+   * See #NcmStatsDistVKDE:points-per-dim; ignored for the KDE method. Default: 12.
+   * Values around 25 do about as well, so roughly 12 to 25 is the useful range; 0
+   * falls back to #NcmFitESMCMCWalkerAPES:local-frac.
    *
    */
   g_object_class_install_property (object_class,
@@ -587,14 +578,17 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                    g_param_spec_double ("vkde-points-per-dim",
                                                         NULL,
                                                         "Nearest neighbors per dimension for the VKDE local covariances (0: local fraction)",
-                                                        0.0, 1.0e6, 0.0,
+                                                        0.0, 1.0e6, 12.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmFitESMCMCWalkerAPES:uniform-weights:
    *
    * See #NcmStatsDist:uniform-weights: with interpolation on, keep uniform kernel weights
-   * (the bandwidth fit still runs) instead of the NNLS fit. Default: FALSE.
+   * (the bandwidth fit still runs) instead of the NNLS fit. On by default: it costs a few
+   * per cent of autocorrelation time and removes the NNLS solve, which is serial and
+   * quadratic in the walker count and so caps how many walkers a high-dimensional
+   * problem can afford.
    *
    */
   g_object_class_install_property (object_class,
@@ -602,17 +596,18 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                    g_param_spec_boolean ("uniform-weights",
                                                          NULL,
                                                          "Uniform kernel weights instead of the NNLS fit",
-                                                         FALSE,
+                                                         TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmFitESMCMCWalkerAPES:cv-type:
    *
    * The cross-validation used to choose the over-smooth factor. With
-   * #NCM_STATS_DIST_CV_SPLIT_NOFIT the approximation is built from a fraction
+   * #NCM_STATS_DIST_CV_SPLIT_M2LNP the approximation is built from a fraction
    * #NcmFitESMCMCWalkerAPES:split-frac of the block and the over-smooth factor is
    * chosen on the remaining points, which are an independent sample from the same
-   * block. The default, #NCM_STATS_DIST_CV_NONE, uses the over-smooth factor as given.
+   * block. This is the default; #NCM_STATS_DIST_CV_NONE uses the over-smooth factor as
+   * given.
    *
    */
   g_object_class_install_property (object_class,
@@ -620,14 +615,14 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                    g_param_spec_enum ("cv-type",
                                                       NULL,
                                                       "Cross-validation used to choose the over-smooth factor",
-                                                      NCM_TYPE_STATS_DIST_CV, NCM_STATS_DIST_CV_NONE,
+                                                      NCM_TYPE_STATS_DIST_CV, NCM_STATS_DIST_CV_SPLIT_M2LNP,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmFitESMCMCWalkerAPES:split-frac:
    *
    * The fraction of the block used as kernel centres when the cross-validation
-   * splits the sample. Zero, the default, keeps whatever #NcmStatsDist uses.
+   * splits the sample. Default: 0.8. Zero keeps whatever #NcmStatsDist uses.
    *
    */
   g_object_class_install_property (object_class,
@@ -635,24 +630,8 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                    g_param_spec_double ("split-frac",
                                                         NULL,
                                                         "Fraction of the block used as kernel centres",
-                                                        0.0, 1.0, 0.0,
+                                                        0.0, 1.0, 0.8,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmFitESMCMCWalkerAPES:auto-kernel:
-   *
-   * Whether the kernel is chosen together with the over-smooth factor, see
-   * #NcmStatsDist:auto-kernel. Requires a #NcmFitESMCMCWalkerAPES:cv-type that fits the
-   * bandwidth and overrides #NcmFitESMCMCWalkerAPES:kernel-type.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_AUTO_KERNEL,
-                                   g_param_spec_boolean ("auto-kernel",
-                                                         NULL,
-                                                         "Whether to choose the kernel with the bandwidth",
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmFitESMCMCWalkerAPES:exploration:
@@ -754,15 +733,39 @@ _ncm_fit_esmcmc_walker_apes_vkde_check_sizes (NcmFitESMCMCWalker *walker)
 }
 
 /* Centre shrinkage matches the covariance of the approximation to the ensemble
- * covariance, which the Cauchy kernel does not have. Refuse the combination where
- * the user sets it rather than silently producing a mismatched proposal. */
+ * covariance, which the Cauchy kernel does not have. Refuse the combination rather than
+ * silently producing a mismatched proposal, or silently dropping a default the caller
+ * may be relying on. Since shrinkage is on by default, selecting the Cauchy kernel means
+ * turning shrinkage off first. */
 static void
 _ncm_fit_esmcmc_walker_apes_check_center_shrink (NcmFitESMCMCWalkerAPESPrivate * const self)
 {
   if (self->center_shrink && (self->k_type == NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY))
-    g_error ("ncm_fit_esmcmc_walker_apes: center-shrink requires a kernel with a finite "
-             "covariance, which the Cauchy kernel does not have. Use the ST3 or GAUSS "
-             "kernel type, or disable center-shrink.");
+    g_error ("Centre shrinkage is on (the default) and the Cauchy kernel has no covariance for it to match.\n"
+             "\tShrinkage makes the proposal reproduce the ensemble covariance, which Cauchy does not define: "
+             "use the ST3 or GAUSS kernel, or turn centre shrinkage off before setting the kernel type.");
+}
+
+/* Only the cross-validations that fit the bandwidth can fit the kernel with it; under any
+ * other the kernel would silently stay at its unfitted seed. */
+static void
+_ncm_fit_esmcmc_walker_apes_check_auto_kernel (NcmFitESMCMCWalkerAPESPrivate * const self)
+{
+  if (self->k_type != NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO)
+    return;
+
+  switch (self->cv_type)
+  {
+    case NCM_STATS_DIST_CV_SPLIT_M2LNP:
+    case NCM_STATS_DIST_CV_SPLIT_ACCEPT:
+    case NCM_STATS_DIST_CV_LOO_M2LNP:
+      break;
+    default:
+      g_error ("Kernel selection is set to auto but the cross-validation does not fit the bandwidth.\n"
+               "\tAuto chooses the kernel by the same out-of-sample objective that fits the bandwidth: "
+               "use one that fits it, split-m2lnp for instance, or name a kernel instead of auto.");
+      break;
+  }
 }
 
 static void
@@ -812,6 +815,11 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
         case NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS:
           kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (self->nparams));
           break;
+        case NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO:
+          /* Where the kernel fit starts from, so the estimator is built at the point the
+           * cross-validation will move away from rather than at an unrelated one. */
+          kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_st_new (self->nparams, 10.0));
+          break;
         default:
           g_assert_not_reached ();
           break;
@@ -852,13 +860,14 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
       ncm_stats_dist_set_split_frac (self->sd1, self->split_frac);
     }
 
-    ncm_stats_dist_set_auto_kernel (self->sd0, self->auto_kernel);
-    ncm_stats_dist_set_auto_kernel (self->sd1, self->auto_kernel);
+    ncm_stats_dist_set_auto_kernel (self->sd0, self->k_type == NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO);
+    ncm_stats_dist_set_auto_kernel (self->sd1, self->k_type == NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO);
 
     ncm_stats_dist_set_use_threads (self->sd0, self->use_threads);
     ncm_stats_dist_set_use_threads (self->sd1, self->use_threads);
 
     _ncm_fit_esmcmc_walker_apes_check_center_shrink (self);
+    _ncm_fit_esmcmc_walker_apes_check_auto_kernel (self);
     ncm_stats_dist_set_center_shrink (self->sd0, self->center_shrink);
     ncm_stats_dist_set_center_shrink (self->sd1, self->center_shrink);
     ncm_stats_dist_set_defensive_frac (self->sd0, self->defensive_frac);
@@ -986,9 +995,9 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
     }
 
     if (self->use_interp)
-      ncm_stats_dist_prepare_interp (self->sd0, self->m2lnL_s0);
+      ncm_stats_dist_prepare (self->sd0, self->m2lnL_s0);
     else
-      ncm_stats_dist_prepare (self->sd0);
+      ncm_stats_dist_prepare (self->sd0, NULL);
 
     for (i = ki; i < self->size_2; i++)
     {
@@ -1016,9 +1025,9 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
     }
 
     if (self->use_interp)
-      ncm_stats_dist_prepare_interp (self->sd1, self->m2lnL_s1);
+      ncm_stats_dist_prepare (self->sd1, self->m2lnL_s1);
     else
-      ncm_stats_dist_prepare (self->sd1);
+      ncm_stats_dist_prepare (self->sd1, NULL);
 
     for (i = self->size_2; i < kf; i++)
     {
@@ -1262,6 +1271,9 @@ _ncm_fit_esmcmc_walker_apes_desc (NcmFitESMCMCWalker *walker)
     case NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS:
       kernel = "Gauss";
       break;
+    case NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO:
+      kernel = "Auto";
+      break;
     default:
       g_assert_not_reached ();
       break;
@@ -1280,11 +1292,8 @@ _ncm_fit_esmcmc_walker_apes_desc (NcmFitESMCMCWalker *walker)
       case NCM_STATS_DIST_CV_NONE:
         cv = "none";
         break;
-      case NCM_STATS_DIST_CV_SPLIT:
-        cv = "split";
-        break;
-      case NCM_STATS_DIST_CV_SPLIT_NOFIT:
-        cv = "split-nofit";
+      case NCM_STATS_DIST_CV_SPLIT_M2LNP:
+        cv = "split-m2lnp";
         break;
       case NCM_STATS_DIST_CV_LOO:
         cv = "loo";
@@ -1937,19 +1946,19 @@ ncm_fit_esmcmc_walker_apes_get_split_frac (NcmFitESMCMCWalkerAPES *apes)
  * Sets whether the kernel is chosen together with the over-smooth factor, see
  * #NcmFitESMCMCWalkerAPES:auto-kernel.
  *
+ * Deprecated: 0.24.0: set #NcmFitESMCMCWalkerAPES:kernel-type to
+ * #NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO instead. Turning it off here leaves the Gaussian
+ * kernel, since the previous choice is not recorded anywhere.
  */
 void
 ncm_fit_esmcmc_walker_apes_set_auto_kernel (NcmFitESMCMCWalkerAPES *apes, gboolean auto_kernel)
 {
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
 
-  self->auto_kernel = auto_kernel;
-
-  if (self->constructed)
-  {
-    ncm_stats_dist_set_auto_kernel (self->sd0, self->auto_kernel);
-    ncm_stats_dist_set_auto_kernel (self->sd1, self->auto_kernel);
-  }
+  if (auto_kernel)
+    ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO);
+  else if (self->k_type == NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO)
+    ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS);
 }
 
 /**
@@ -1957,13 +1966,15 @@ ncm_fit_esmcmc_walker_apes_set_auto_kernel (NcmFitESMCMCWalkerAPES *apes, gboole
  * @apes: a #NcmFitESMCMCWalkerAPES
  *
  * Returns: whether the kernel is chosen together with the over-smooth factor.
+ *
+ * Deprecated: 0.24.0: read #NcmFitESMCMCWalkerAPES:kernel-type instead.
  */
 gboolean
 ncm_fit_esmcmc_walker_apes_get_auto_kernel (NcmFitESMCMCWalkerAPES *apes)
 {
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
 
-  return self->auto_kernel;
+  return self->k_type == NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO;
 }
 
 /**

@@ -53,13 +53,16 @@ test_ncm_fit_esmcmc_parity_apes_catalog (gboolean use_threads, gboolean use_mpi)
   fit  = ncm_fit_factory (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
   apes = ncm_fit_esmcmc_walker_apes_new (nwalkers, ncm_mset_fparams_len (mset));
 
-  ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS);
+  /* Set every knob the comparison depends on, so the fixture measures one fixed
+   * configuration and does not follow the defaults when they move. */
+  ncm_fit_esmcmc_walker_apes_set_method (apes, NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE);
+  ncm_fit_esmcmc_walker_apes_set_k_type (apes, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO);
   ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, 1.0);
-  ncm_fit_esmcmc_walker_apes_set_local_frac (apes, 0.4);
+  ncm_fit_esmcmc_walker_apes_set_vkde_points_per_dim (apes, 12.0);
+  ncm_fit_esmcmc_walker_apes_set_uniform_weights (apes, TRUE);
   ncm_fit_esmcmc_walker_apes_set_center_shrink (apes, TRUE);
-  ncm_fit_esmcmc_walker_apes_set_cv_type (apes, NCM_STATS_DIST_CV_SPLIT_NOFIT);
+  ncm_fit_esmcmc_walker_apes_set_cv_type (apes, NCM_STATS_DIST_CV_SPLIT_M2LNP);
   ncm_fit_esmcmc_walker_apes_set_split_frac (apes, 0.8);
-  ncm_fit_esmcmc_walker_apes_set_auto_kernel (apes, TRUE);
   ncm_fit_esmcmc_walker_apes_set_use_threads (apes, use_threads);
 
   esmcmc = ncm_fit_esmcmc_new (fit,

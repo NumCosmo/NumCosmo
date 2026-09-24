@@ -420,7 +420,7 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
       last_row = row_i;
     }
 
-    ncm_stats_dist_prepare_interp (self->sd, m2lnp);
+    ncm_stats_dist_prepare (self->sd, m2lnp);
     ncm_vector_free (m2lnp);
 
     self->sd_prep = TRUE;
@@ -482,7 +482,7 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
       last_row = row_i;
     }
 
-    ncm_stats_dist_prepare (self->sd);
+    ncm_stats_dist_prepare (self->sd, NULL);
     self->sd_prep = TRUE;
   }
 

@@ -68,6 +68,7 @@ void test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer 
 
 #ifdef HAVE_CFITSIO
 void test_ncm_mset_catalog_file_hdu0_roundtrip (void);
+void test_ncm_mset_catalog_file_sampler_history (void);
 void test_ncm_mset_catalog_file_functions_array_roundtrip (void);
 void test_ncm_mset_catalog_file_hdu0_legacy_object_format (void);
 void test_ncm_mset_catalog_file_legacy_fallback (void);
@@ -157,6 +158,7 @@ main (gint argc, gchar *argv[])
 
 #ifdef HAVE_CFITSIO
   g_test_add_func ("/ncm/mset/catalog/file/hdu0_roundtrip", &test_ncm_mset_catalog_file_hdu0_roundtrip);
+  g_test_add_func ("/ncm/mset/catalog/file/sampler_history", &test_ncm_mset_catalog_file_sampler_history);
   g_test_add_func ("/ncm/mset/catalog/file/functions_array_roundtrip", &test_ncm_mset_catalog_file_functions_array_roundtrip);
   g_test_add_func ("/ncm/mset/catalog/file/hdu0_legacy_object_format", &test_ncm_mset_catalog_file_hdu0_legacy_object_format);
   g_test_add_func ("/ncm/mset/catalog/file/legacy_fallback", &test_ncm_mset_catalog_file_legacy_fallback);
@@ -1271,6 +1273,110 @@ test_ncm_mset_catalog_file_hdu0_roundtrip (void)
 
   g_free (filename);
   g_free (mset_sidecar);
+  g_free (tmp_dir);
+}
+
+/* Counts the HISTORY cards of the table HDU that mention the sampler. */
+static guint
+_test_ncm_mset_catalog_count_sampler_history (const gchar *filename)
+{
+  fitsfile *fptr = NULL;
+  gint status    = 0;
+  gint hdutype   = 0;
+  gint nkeys     = 0;
+  guint count    = 0;
+  gint i;
+
+  fits_open_file (&fptr, filename, READONLY, &status);
+  g_assert_cmpint (status, ==, 0);
+  fits_movabs_hdu (fptr, 2, &hdutype, &status);
+  g_assert_cmpint (status, ==, 0);
+  fits_get_hdrspace (fptr, &nkeys, NULL, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  for (i = 1; i <= nkeys; i++)
+  {
+    gchar card[FLEN_CARD];
+
+    fits_read_record (fptr, i, card, &status);
+    g_assert_cmpint (status, ==, 0);
+
+    if (g_str_has_prefix (card, "HISTORY") && (strstr (card, " sampler: ") != NULL))
+      count++;
+  }
+
+  fits_close_file (fptr, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  return count;
+}
+
+/*
+ * The sampler is a record, not a constraint: it persists, it may change on a non-empty
+ * catalog, and every change leaves a HISTORY card.
+ */
+void
+test_ncm_mset_catalog_file_sampler_history (void)
+{
+  gchar *tmp_dir           = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_sampler_XXXXXX", NULL);
+  gchar *filename          = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (2);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmMSetCatalog *mcat;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE, "m2lnL", "-2\\ln(L)", NULL);
+  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
+  ncm_mset_catalog_set_run_type (mcat, "test-run");
+  g_assert_null (ncm_mset_catalog_get_sampler (mcat));
+  g_assert_null (ncm_mset_catalog_get_initial_sampler (mcat));
+  ncm_mset_catalog_set_initial_sampler (mcat, "init-a");
+  ncm_mset_catalog_set_sampler (mcat, "sampler-a");
+  g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "sampler-a");
+  g_assert_cmpstr (ncm_mset_catalog_get_initial_sampler (mcat), ==, "init-a");
+  ncm_mset_catalog_set_file (mcat, filename);
+
+  {
+    NcmVector *x  = ncm_vector_new (ncm_mset_fparams_len (mset));
+    gdouble ax[1] = { 1.0 };
+
+    ncm_mset_fparams_get_vector (mset, x);
+    ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
+    ncm_mset_catalog_sync (mcat, TRUE);
+    ncm_vector_clear (&x);
+  }
+
+  ncm_mset_catalog_clear (&mcat);
+  g_assert_cmpuint (_test_ncm_mset_catalog_count_sampler_history (filename), ==, 2);
+
+  /* Read back read-only. */
+  mcat = ncm_mset_catalog_new_from_file_ro (filename, 0);
+  g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "sampler-a");
+  g_assert_cmpstr (ncm_mset_catalog_get_initial_sampler (mcat), ==, "init-a");
+  ncm_mset_catalog_clear (&mcat);
+
+  /* Continue with another sampler: allowed, recorded, and the history grows. */
+  mcat = ncm_mset_catalog_new_from_file (filename, 0);
+  g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "sampler-a");
+  g_assert_false (ncm_mset_catalog_is_empty (mcat));
+  ncm_mset_catalog_set_sampler (mcat, "sampler-b");
+  ncm_mset_catalog_set_sampler (mcat, "sampler-b"); /* the same again writes nothing */
+  ncm_mset_catalog_sync (mcat, TRUE);
+  ncm_mset_catalog_clear (&mcat);
+
+  mcat = ncm_mset_catalog_new_from_file_ro (filename, 0);
+  g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "sampler-b");
+  g_assert_cmpstr (ncm_mset_catalog_get_initial_sampler (mcat), ==, "init-a");
+  ncm_mset_catalog_clear (&mcat);
+  g_assert_cmpuint (_test_ncm_mset_catalog_count_sampler_history (filename), ==, 3);
+
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+  g_free (filename);
   g_free (tmp_dir);
 }
 
