@@ -51,9 +51,10 @@
  * exact and differ only in numerical strategy and cost, and all three support
  * bootstrap resampling.
  *
- * There is no OpenMP parallelism, including in the auto-nodes calibration.
- * Adding it requires per-thread duplication of the integrator and integrand
- * state, which prepare() currently shares and mutates.
+ * nc_data_cluster_wl_factor_data_prepare() precomputes the galaxies in
+ * parallel with OpenMP (thread count from `OMP_NUM_THREADS`), including the
+ * auto-nodes calibration, whatever the factors are; the per-cycle prepare()
+ * of a fit, which runs inside the sampler's own threads, stays serial.
  *
  * No `r_min`/`r_max` weighting is applied at fit time, because applying it
  * biases the mass estimate.
@@ -75,6 +76,7 @@
 #include "build_cfg.h"
 
 #include "nc/data/nc_data_cluster_wl_factor.h"
+#include "ncm/core/ncm_prefetch_private.h"
 #include "nc_enum_types.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/lss/halo/nc_halo_position.h"
@@ -85,7 +87,16 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
+#ifdef _OPENMP
+#include <omp.h>
+#endif /* _OPENMP */
 #endif /* NUMCOSMO_GIR_SCAN */
+
+/* The auto-node calibration statistics are shared by every galaxy, and
+ * nc_data_cluster_wl_factor_data_prepare() may update galaxies in parallel.
+ * Taken once per calibration, next to a search that costs thousands of
+ * integrand evaluations, so it is never contended in practice. */
+G_LOCK_DEFINE_STATIC (calib_stats);
 
 /* Fallback -2lnP for a non-positive fixed-nodes P_gal. */
 #define NC_GALAXY_LOW_PROB 1.0e6
@@ -204,6 +215,20 @@ typedef struct _NcDataClusterWLFactorPrivate
   gdouble node_reltol;
   guint max_total_nodes;
 
+  /* Set by nc_data_cluster_wl_factor_data_prepare() to force the heavy
+   * per-galaxy steps to run in the next prepare() cycle even when the
+   * staleness gates would have skipped them, and cleared once they have.
+   * That is the difference between the eager precomputation entry point and
+   * an ordinary prepare(). */
+  gboolean force_data_prepare;
+
+  /* TRUE while ncm_data_resample() drives prepare(), refreshed from
+   * ncm_data_is_resampling() at the top of every prepare(). That prepare()
+   * only feeds gen(), which never evaluates the marginal, so the work that
+   * exists only for evaluation -- the shape factor's data_prepare() and the
+   * auto-node search -- is skipped. */
+  gboolean resampling;
+
   /* How many NC_GALAXY_LOW_PROB substitutions happened during the LAST eval_m2lnP. Zeroed at the top of every evaluation. */
   guint low_prob_count;
 
@@ -211,6 +236,23 @@ typedef struct _NcDataClusterWLFactorPrivate
    * failed to reach node_reltol, and the worst relative error among them. */
   guint calib_unconverged;
   gdouble calib_worst_relerr;
+
+  /* How many calibration searches have run since the object was created.
+   * The search is the expensive half of the auto-nodes path -- a reference
+   * grid of ~1100 evaluations of each probe, plus the probes of the search
+   * itself -- so this is the measure of whether a prepared configuration is
+   * actually being reused: a run that reuses one leaves this at zero. */
+  guint calib_count;
+
+  /* The configuration the calibration chose, per galaxy, and the one a load
+   * brought in. Only the chosen (n_nodes, rule_n) pair is carried: the grid
+   * itself is a cheap deterministic function of that pair, rebuilt through
+   * the same make_fixed_nodes() path that is authoritative anyway, while
+   * NcmIntegralFixed is a plain struct that cannot be serialized at all. */
+  GArray *calib_n_nodes; /* element type: gint */
+  GArray *calib_rule_n;  /* element type: gint */
+  NcmVarDict *node_config;
+  gboolean node_config_valid;
 
   /* Per-galaxy fixed-node grid: index i pairs with shape_data's element i.
    * fixed_bg_nodes[i] is NULL when galaxy i's redshift support lies entirely
@@ -345,6 +387,7 @@ enum
   PROP_AUTO_NODES,
   PROP_NODE_RELTOL,
   PROP_MAX_TOTAL_NODES,
+  PROP_NODE_CONFIG,
 };
 
 struct _NcDataClusterWLFactor
@@ -439,8 +482,27 @@ _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
     const gdouble bg_lo = MAX (z_lo, self->z_cl);
     NcmVector *z_nodes_bg;
 
-    if (self->auto_nodes)
+    if (self->auto_nodes && self->node_config_valid)
     {
+      /* Replay the configuration a previous run chose, skipping the search
+       * that chose it. The grid is then rebuilt by exactly the same call as
+       * the non-replayed path, so the two give the same answer at the same
+       * pair.
+       *
+       * The pair is a tuning choice, not a result: calibrate() probes
+       * P(z) and P(eps_obs|z) at the current model point, so a stored pair
+       * is exactly reproducible only there. Reusing it nearby is deliberate
+       * -- and steadier than recalibrating, since the selection is discrete
+       * and a grid flip steps the marginal by up to node_reltol. */
+      n_nodes_i = (guint) g_array_index (self->calib_n_nodes, gint, gal_i);
+      rule_n_i  = (guint) g_array_index (self->calib_rule_n, gint, gal_i);
+    }
+    else if (self->auto_nodes && !self->resampling)
+    {
+      /* Skipped while resampling: the search would calibrate on data that
+       * resample() is about to overwrite, and the grid would be discarded
+       * with it. The global pair still builds every structure the rest of
+       * prepare() and gen() expect. */
       NcDataClusterWLFactorCalibArg calib_arg = { self->integ_z_lin, self->integ_shape_lin, s_data->z_data, s_data };
       gsl_function F                          = { &_nc_data_cluster_wl_factor_calib_pz, &calib_arg };
       gsl_function G                          = { &_nc_data_cluster_wl_factor_calib_shape, &calib_arg };
@@ -448,14 +510,26 @@ _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
       gdouble relerr                          = 0.0;
       NcmIntegralFixed *cal                   = ncm_integral_fixed_calibrate (&F, &G, bg_lo, z_hi, self->node_reltol, exact_bg_norm, self->max_total_nodes, &n_nodes_i, &rule_n_i, &relerr);
 
-      /* Accumulate rather than warn: summarised once per prepare() below. */
-      if (relerr > self->node_reltol)
-      {
-        self->calib_unconverged++;
-        self->calib_worst_relerr = MAX (self->calib_worst_relerr, relerr);
-      }
-
       ncm_integral_fixed_free (cal);
+
+      /* Accumulate rather than warn: summarised once per prepare() below. */
+      G_LOCK (calib_stats);
+      {
+        if (relerr > self->node_reltol)
+        {
+          self->calib_unconverged++;
+          self->calib_worst_relerr = MAX (self->calib_worst_relerr, relerr);
+        }
+
+        self->calib_count++;
+      }
+      G_UNLOCK (calib_stats);
+    }
+
+    if (self->auto_nodes)
+    {
+      g_array_index (self->calib_n_nodes, gint, gal_i) = (gint) n_nodes_i;
+      g_array_index (self->calib_rule_n, gint, gal_i)  = (gint) rule_n_i;
     }
 
     n_total_i  = (n_nodes_i - 1) * rule_n_i;
@@ -519,6 +593,24 @@ _step_fixed_nodes_sigma (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGa
   nc_galaxy_shape_factor_update_data_at_nodes_sigma (self->shape_factor, s_data);
 }
 
+/* Hands the shape factor the one point where the mset and this galaxy's data
+ * are both available, so a scheme that caches something depending on both can
+ * build it here instead of lazily on the hot path. Runs after the
+ * radius/optzs/pop updates it may read, and BEFORE the fixed-node grid: the
+ * auto-node calibration probes the shape integrand, and a scheme whose tables
+ * depend on what this step establishes must have it in place by then, or the
+ * probe builds tables the likelihood never reads. z_hi bounds the galaxy's
+ * redshift support under every integration method. */
+static void
+_step_shape_data_prepare (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGalaxyShapeFactorData *s_data, guint gal_i)
+{
+  gdouble z_lo, z_hi;
+
+  nc_galaxy_redshift_factor_get_integ_lim (self->redshift_factor, mset, s_data->z_data, &z_lo, &z_hi);
+
+  nc_galaxy_shape_factor_data_prepare (self->shape_factor, mset, s_data, z_hi);
+}
+
 /* fixed_bg_nodes has no GDestroyNotify (NcmIntegralFixed is not NULL-safe to
  * free, and entries are legitimately NULL for foreground-only galaxies), so
  * both disposal and grid-rebuild resizing must free non-NULL entries by hand
@@ -545,6 +637,11 @@ _fixed_bg_nodes_free_entries (GPtrArray *fixed_bg_nodes)
 static void
 _fixed_nodes_grid_reset (NcDataClusterWLFactorPrivate *self)
 {
+  g_array_set_size (self->calib_n_nodes, 0);
+  g_array_set_size (self->calib_rule_n, 0);
+  g_array_set_size (self->calib_n_nodes, self->shape_data->len);
+  g_array_set_size (self->calib_rule_n, self->shape_data->len);
+
   _fixed_bg_nodes_free_entries (self->fixed_bg_nodes);
   g_ptr_array_set_size (self->fixed_bg_nodes, 0);
   g_ptr_array_set_size (self->fixed_bg_nodes, self->shape_data->len);
@@ -604,6 +701,18 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->max_total_nodes = 2000;
   self->low_prob_count  = 0;
 
+  self->force_data_prepare = FALSE;
+
+  self->calib_count = 0;
+
+  self->calib_n_nodes = g_array_new (FALSE, FALSE, sizeof (gint));
+
+  self->calib_rule_n = g_array_new (FALSE, FALSE, sizeof (gint));
+
+  self->node_config = NULL;
+
+  self->node_config_valid = FALSE;
+
   /* No destroy-func on fixed_bg_nodes: entries are nullable (NcmIntegralFixed
    * is not NULL-safe to free), so clearing/resizing this array is handled
    * manually with an explicit NULL check -- see _fixed_nodes_grid_reset().
@@ -634,6 +743,96 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->cub_err   = NULL;
 
   self->constructed = FALSE;
+}
+
+/*
+ * ---- The prepared node configuration ----
+ *
+ * What survives a save is the auto-nodes SEARCH's outcome, one
+ * (n_nodes, rule_n) pair per galaxy, not the grid. The search is what costs:
+ * a reference grid of about 1100 evaluations of each of the two probes,
+ * plus the probes of the bracket-and-bisect over three rule orders. Rebuilding
+ * the grid at a known pair is a single pass.
+ *
+ * The stamp is made of values, not of the parameter-key counters the
+ * in-process staleness checks use, because those are per-process and mean
+ * nothing after a load. A mismatch recalibrates, which is always correct.
+ */
+#define NC_DATA_CLUSTER_WL_FACTOR_NODE_CONFIG_FORMAT "cluster-wl-nodes-v1"
+
+static NcmVarDict *
+_node_config_pack (NcDataClusterWLFactorPrivate *self)
+{
+  NcmVarDict *vd = ncm_var_dict_new ();
+
+  ncm_var_dict_set_string (vd, "format", NC_DATA_CLUSTER_WL_FACTOR_NODE_CONFIG_FORMAT);
+  ncm_var_dict_set_int (vd, "len", (gint) self->calib_n_nodes->len);
+  ncm_var_dict_set_int_array (vd, "n-nodes", self->calib_n_nodes);
+  ncm_var_dict_set_int_array (vd, "rule-n", self->calib_rule_n);
+  ncm_var_dict_set_double (vd, "z-cl", self->z_cl);
+  ncm_var_dict_set_boolean (vd, "auto-nodes", self->auto_nodes);
+  ncm_var_dict_set_double (vd, "node-reltol", self->node_reltol);
+  ncm_var_dict_set_int (vd, "max-total-nodes", (gint) self->max_total_nodes);
+  ncm_var_dict_set_int (vd, "n-nodes-global", (gint) self->n_nodes);
+  ncm_var_dict_set_int (vd, "rule-n-global", (gint) self->rule_n);
+
+  return vd;
+}
+
+/* Accepts the stored configuration only if every input it depends on is the
+ * one it was produced under. Anything else is refused and recalibrated. */
+static gboolean
+_node_config_adopt (NcDataClusterWLFactorPrivate *self)
+{
+  NcmVarDict *vd      = self->node_config;
+  GArray *n_nodes_arr = NULL;
+  GArray *rule_n_arr  = NULL;
+  gchar *format       = NULL;
+  gboolean ok         = FALSE;
+  gint len, max_total, n_glob, r_glob;
+  gdouble z_cl, reltol;
+  gboolean auto_nodes;
+
+  g_assert_nonnull (vd);
+
+  if (ncm_var_dict_get_string (vd, "format", &format) &&
+      (g_strcmp0 (format, NC_DATA_CLUSTER_WL_FACTOR_NODE_CONFIG_FORMAT) == 0) &&
+      ncm_var_dict_get_int (vd, "len", &len) &&
+      ((guint) len == self->shape_data->len) &&
+      ncm_var_dict_get_double (vd, "z-cl", &z_cl) && (z_cl == self->z_cl) &&
+      ncm_var_dict_get_boolean (vd, "auto-nodes", &auto_nodes) && (auto_nodes == self->auto_nodes) &&
+      ncm_var_dict_get_double (vd, "node-reltol", &reltol) && (reltol == self->node_reltol) &&
+      ncm_var_dict_get_int (vd, "max-total-nodes", &max_total) && ((guint) max_total == self->max_total_nodes) &&
+      ncm_var_dict_get_int (vd, "n-nodes-global", &n_glob) && ((guint) n_glob == self->n_nodes) &&
+      ncm_var_dict_get_int (vd, "rule-n-global", &r_glob) && ((guint) r_glob == self->rule_n) &&
+      ncm_var_dict_get_int_array (vd, "n-nodes", &n_nodes_arr) &&
+      ncm_var_dict_get_int_array (vd, "rule-n", &rule_n_arr) &&
+      ((guint) len == n_nodes_arr->len) && ((guint) len == rule_n_arr->len))
+  {
+    g_array_set_size (self->calib_n_nodes, 0);
+    g_array_set_size (self->calib_rule_n, 0);
+    g_array_append_vals (self->calib_n_nodes, n_nodes_arr->data, n_nodes_arr->len);
+    g_array_append_vals (self->calib_rule_n, rule_n_arr->data, rule_n_arr->len);
+    ok = TRUE;
+  }
+
+  g_free (format);
+
+  if (n_nodes_arr != NULL)
+    g_array_unref (n_nodes_arr);
+
+  if (rule_n_arr != NULL)
+    g_array_unref (rule_n_arr);
+
+  if (!ok)
+    g_warning ("nc_data_cluster_wl_factor: the stored node configuration does "
+               "not match this dataset or these settings, so it was discarded "
+               "and the auto-node calibration will run again. Results are "
+               "unaffected; only the time the calibration costs is.");
+
+  ncm_var_dict_clear (&self->node_config);
+
+  return ok;
 }
 
 static void
@@ -691,6 +890,18 @@ _nc_data_cluster_wl_factor_set_property (GObject *object, guint prop_id, const G
     case PROP_MAX_TOTAL_NODES:
       nc_data_cluster_wl_factor_set_max_total_nodes (dcwlf, g_value_get_uint (value));
       break;
+    case PROP_NODE_CONFIG:
+    {
+      NcmVarDict *vd = g_value_get_boxed (value);
+
+      ncm_var_dict_clear (&self->node_config);
+
+      if (vd != NULL)
+        self->node_config = ncm_var_dict_ref (vd);
+
+      self->node_config_valid = FALSE;
+      break;
+    }
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -752,6 +963,16 @@ _nc_data_cluster_wl_factor_get_property (GObject *object, guint prop_id, GValue 
     case PROP_MAX_TOTAL_NODES:
       g_value_set_uint (value, self->max_total_nodes);
       break;
+    case PROP_NODE_CONFIG:
+
+      /* A loaded configuration not yet adopted by a prepare is reported as
+       * is, so a load and a save without a prepare between them keep it. */
+      if (self->calib_n_nodes->len > 0)
+        g_value_take_boxed (value, _node_config_pack (self));
+      else
+        g_value_set_boxed (value, self->node_config);
+
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -763,6 +984,10 @@ _nc_data_cluster_wl_factor_dispose (GObject *object)
 {
   NcDataClusterWLFactor *dcwlf              = NC_DATA_CLUSTER_WL_FACTOR (object);
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  g_clear_pointer (&self->calib_n_nodes, g_array_unref);
+  g_clear_pointer (&self->calib_rule_n, g_array_unref);
+  ncm_var_dict_clear (&self->node_config);
 
   nc_galaxy_wl_obs_clear (&self->obs);
   nc_galaxy_position_factor_clear (&self->position_factor);
@@ -872,8 +1097,10 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
   GError *error                             = NULL;
   gboolean pos_changed, z_changed, radius_changed, optzs_changed, crit_changed, pop_changed, fixed_grid_changed;
-  NcDataClusterWLFactorStep steps[8];
+  NcDataClusterWLFactorStep steps[9];
   guint n_steps = 0;
+
+  self->resampling = ncm_data_is_resampling (data);
 
   /* Orchestrator's own direct needs only -- z_cl for the split-integration
    * logic below, halo_position+cosmo for resample()'s radius rejection. */
@@ -1010,12 +1237,18 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   self->shape_crit_hash   = nc_galaxy_shape_factor_get_crit_hash (self->shape_factor);
   self->shape_pop_hash    = nc_galaxy_shape_factor_get_pop_hash (self->shape_factor);
 
-  if (!pos_changed && !z_changed && !radius_changed && !optzs_changed && !crit_changed && !pop_changed && !fixed_grid_changed)
+  if (!pos_changed && !z_changed && !radius_changed && !optzs_changed && !crit_changed && !pop_changed && !fixed_grid_changed &&
+      !self->force_data_prepare)
     return;  /* nothing to do this cycle */
 
   if ((self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) && fixed_grid_changed)
   {
     _fixed_nodes_grid_reset (self);
+
+    /* A stored configuration is validated here, where z_cl and the galaxy
+     * count are both known, and consumed by the grid step below. */
+    self->node_config_valid = (self->node_config != NULL) && _node_config_adopt (self);
+
     self->fixed_nodes_zcl                  = self->z_cl;
     self->fixed_nodes_n_nodes_seen         = self->n_nodes;
     self->fixed_nodes_rule_n_seen          = self->rule_n;
@@ -1054,6 +1287,25 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   if (pop_changed)
     steps[n_steps++] = &_step_shape_pop;
 
+  /* After radius/optzs/pop, whose results it reads, and before the
+   * fixed-node grid, whose auto-node calibration probes the shape integrand
+   * and must see what this step establishes (see _step_shape_data_prepare).
+   * Deliberately NOT gated on radius_changed or optzs_changed: what a
+   * subclass precomputes here is meant to hold over the whole parameter box
+   * (that is what makes it worth precomputing at all), so re-running it every
+   * time the sampler moves the halo would cost per-galaxy work for a result
+   * that does not change. A subclass whose cache does depend on the current
+   * point must key it by value and refresh lazily, exactly as it must anyway
+   * for resample().
+   *
+   * Skipped while resampling: gen() never evaluates the marginal, and
+   * resample() sets obs_changed, so the next prepare() runs this step on the
+   * fresh data anyway. Running it here would only build, eagerly, what is
+   * about to be discarded. */
+  if ((obs_was_changed || z_changed || pop_changed || fixed_grid_changed || self->force_data_prepare) &&
+      !self->resampling)
+    steps[n_steps++] = &_step_shape_data_prepare;
+
   if (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES)
   {
     if (fixed_grid_changed)
@@ -1074,20 +1326,83 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
       steps[n_steps++] = &_step_fixed_nodes_sigma;
   }
 
+
   {
+    const guint n_gal       = self->shape_data->len;
+    const gboolean parallel = self->force_data_prepare;
     guint gal_i;
 
     self->calib_unconverged  = 0;
     self->calib_worst_relerr = 0.0;
 
-    for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
+    /* Serial first. Several models the factors reach update shared state
+     * lazily on the first call after their parameters change -- the halo
+     * position's rotation, the redshift population's derived constants, the
+     * numerically integrated density profiles' splines, Cuba's settings --
+     * and those writes would race, or in the profile's case corrupt a shared
+     * spline, if the first calls came from many threads at once. Running
+     * galaxies one at a time until one of them has exercised every step, a
+     * galaxy with background support when a redshift grid is built, performs
+     * all of them. Without parallelism this loop covers every
+     * galaxy. */
+    for (gal_i = 0; gal_i < n_gal; gal_i++)
     {
       NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_i);
       guint j;
 
       for (j = 0; j < n_steps; j++)
         steps[j](self, mset, s_data, gal_i);
+
+      if (parallel &&
+          ((self->integ_method != NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) ||
+           (g_array_index (self->n_total_per_galaxy, guint, gal_i) > 0)))
+      {
+        gal_i++;
+        break;
+      }
     }
+
+    /* Then the rest in parallel, only from nc_data_cluster_wl_factor_data_prepare().
+     * Every position, redshift and shape factor supports this: their
+     * per-galaxy methods write only the galaxy's own data (see the thread
+     * safety note of #NcGalaxyShapeFactor and its siblings). The per-cycle
+     * prepare() of a fit stays serial: it runs inside the sampler's own
+     * threads, and nested regions would only add overhead.
+     * Each galaxy writes only its own slots of the per-galaxy arrays, sized
+     * before this loop, and the shared calibration statistics are locked. */
+    if (parallel && (gal_i < n_gal))
+    {
+      const gint first = (gint) gal_i;
+      const gint last  = (gint) n_gal;
+      gint k;
+
+#ifdef _OPENMP
+      #pragma omp parallel for schedule(dynamic, 1) if (!omp_in_parallel ())
+#endif /* _OPENMP */
+
+      for (k = first; k < last; k++)
+      {
+        NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, k);
+        guint j;
+
+        for (j = 0; j < n_steps; j++)
+          steps[j](self, mset, s_data, (guint) k);
+      }
+    }
+
+    self->force_data_prepare = FALSE;
+  }
+
+  /* A resampling prepare built the grid at the global pair without searching
+   * (see _step_fixed_nodes_grid), so the per-galaxy pairs it recorded were
+   * never calibrated. Drop them: node-config would otherwise save them as a
+   * calibration a later load replays, and is_data_prepared() would claim
+   * one. A replayed configuration is a real one and is kept. */
+  if (self->resampling && self->auto_nodes && fixed_grid_changed && !self->node_config_valid &&
+      (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES))
+  {
+    g_array_set_size (self->calib_n_nodes, 0);
+    g_array_set_size (self->calib_rule_n, 0);
   }
 
   /* One line per prepare() instead of one per galaxy. */
@@ -1205,7 +1520,9 @@ _nc_data_cluster_wl_factor_eval_m2lnP_lnint (NcDataClusterWLFactor *dcwlf, NcmMS
  *
  * NON-NEGATIVE BY CONSTRUCTION, with no clamp or branch to get wrong: every
  * P(z_k) >= 0, every Gauss-Legendre weight is positive, p_a > 0 and
- * P(e_o,z) > 0 (both are probability densities), and norm > 0.
+ * P(e_o,z) > 0 (both are probability densities), and norm > 0. It can still
+ * be exactly zero when P(e_o,z) underflows at every node; the caller then
+ * redoes the galaxy in log space, see _nc_data_cluster_wl_factor_fixed_ln_rescue().
  *
  * The exact @norm enters as an overall scale rather than inside a
  * subtraction. That is the whole point: computing the foreground mass as
@@ -1245,6 +1562,88 @@ _nc_data_cluster_wl_factor_fixed_panels_integ (NcDataClusterWLFactorPrivate * co
   return norm * (num / mass_Q);
 }
 
+/*
+ * Galaxy @gal_i's -2 ln P_gal when the linear integral came out as zero.
+ *
+ * That happens when the shape likelihood underflows at every node -- an
+ * observed |epsilon| well past 1 with a small noise sits hundreds of nats
+ * below the support, exp() of which is exactly 0 in double -- although its
+ * logarithm is perfectly finite. The values are re-evaluated in log space
+ * and rescaled by their maximum s before the same quadrature; the quadrature
+ * is linear in them, so -2 (ln P_scaled + s) is exact, not an approximation.
+ *
+ * Only a genuine zero (no finite log value, or no P(z) mass on the grid)
+ * falls through to NC_GALAXY_LOW_PROB and is counted. Kept out of the
+ * evaluation loop: it runs only for galaxies that would otherwise hit the
+ * wall.
+ */
+G_GNUC_NO_INLINE static gdouble
+_nc_data_cluster_wl_factor_fixed_ln_rescue (NcDataClusterWLFactorPrivate * const self, NcmMSet *mset, guint gal_i,
+                                            NcGalaxyShapeFactorData *s_data, NcmVector *z_nodes, NcmVector *nodes_view,
+                                            NcmVector *shape_at_nodes, NcmVector *sub, const gdouble int_pos)
+{
+  const guint n = ncm_vector_len (nodes_view);
+  gdouble s     = GSL_NEGINF;
+  gdouble P_scaled;
+  guint k;
+
+  nc_galaxy_shape_factor_eval_ln_at_nodes (self->shape_factor, mset, s_data, z_nodes, nodes_view);
+
+  for (k = 0; k < n; k++)
+    s = MAX (s, ncm_vector_get (nodes_view, k));
+
+  if (gsl_finite (s))
+  {
+    for (k = 0; k < n; k++)
+      ncm_vector_set (nodes_view, k, exp (ncm_vector_get (nodes_view, k) - s));
+
+    P_scaled = _nc_data_cluster_wl_factor_fixed_panels_integ (self, gal_i, shape_at_nodes, sub) * int_pos;
+
+    if (P_scaled > 0.0)
+      return -2.0 * (log (P_scaled) + s);
+  }
+
+  self->low_prob_count++;
+
+  return NC_GALAXY_LOW_PROB;
+}
+
+/*
+ * Prefetch stage @stage of galaxy @gal_i's evaluation state: its shape-factor
+ * data (through nc_galaxy_shape_factor_data_prefetch()) and the orchestrator's
+ * own per-galaxy objects, the z-node vector and the background quadrature.
+ * Stage 0 fetches the objects whose addresses sit in the per-galaxy pointer
+ * arrays; stage 1 their data arrays and the structures they point to, read
+ * through what stage 0 fetched; stage 2 the shape factor's deepest level.
+ * See _nc_data_cluster_wl_factor_eval_m2lnP_fixed() for the schedule.
+ */
+static inline void
+_nc_data_cluster_wl_factor_prefetch_galaxy (NcDataClusterWLFactorPrivate * const self, const guint gal_i, const guint stage)
+{
+  NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_i);
+
+  nc_galaxy_shape_factor_data_prefetch (self->shape_factor, s_data, stage);
+
+  if (stage == 0)
+  {
+    ncm_prefetch_span (g_ptr_array_index (self->z_nodes_per_galaxy, gal_i), sizeof (NcmVector));
+    ncm_prefetch_span (g_ptr_array_index (self->fixed_bg_nodes, gal_i), sizeof (NcmIntegralFixed));
+  }
+  else if (stage == 1)
+  {
+    NcmVector *z_nodes        = g_ptr_array_index (self->z_nodes_per_galaxy, gal_i);
+    NcmIntegralFixed *bg_intf = g_ptr_array_index (self->fixed_bg_nodes, gal_i);
+
+    ncm_prefetch_span (s_data->pos_data, sizeof (NcGalaxyPositionFactorData));
+
+    if (z_nodes != NULL)
+      ncm_prefetch_span (ncm_vector_data (z_nodes), ncm_vector_len (z_nodes) * sizeof (gdouble));
+
+    if (bg_intf != NULL)
+      ncm_prefetch_span (bg_intf->int_nodes, (bg_intf->n_nodes - 1) * bg_intf->rule_n * sizeof (gdouble));
+  }
+}
+
 static gdouble
 _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
@@ -1255,27 +1654,63 @@ _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMS
   const guint n_iter                        = use_bootstrap ? ncm_bootstrap_get_bsize (bstrap) : self->shape_data->len;
   guint max_n_total                         = 0;
   NcmVector *shape_at_nodes;
+  NcmVector **nodes_views;
+  NcmVector **subs;
   gdouble result = 0.0;
   guint gal_i, i;
 
   /* Per-galaxy node counts can differ under auto-nodes (and are all equal
    * to the global (n_nodes-1)*rule_n otherwise): size the reusable shape
-   * buffer to the largest, then take a per-galaxy leading subvector below.
-   * Built once per call, not once per galaxy, to avoid a GObject
-   * alloc/dispose per galaxy (ncm_vector_get_subvector is a full
-   * g_object_new). */
+   * buffer to the largest, then take per-galaxy views of it below.
+   *
+   * The views are cached per node count, for this call only: built the
+   * first time a count is met and reused by every later galaxy with the
+   * same count, so a call allocates one pair per DISTINCT count instead of
+   * one pair per galaxy (ncm_vector_get_subvector is a full g_object_new).
+   * They cannot live on the instance: a dataset shared between walker
+   * threads runs this function concurrently. */
   for (gal_i = 0; gal_i < self->n_total_per_galaxy->len; gal_i++)
     max_n_total = MAX (max_n_total, g_array_index (self->n_total_per_galaxy, guint, gal_i));
 
   shape_at_nodes       = ncm_vector_new (max_n_total + 1);
+  nodes_views          = g_new0 (NcmVector *, max_n_total + 1);
+  subs                 = g_new0 (NcmVector *, max_n_total + 1);
   self->low_prob_count = 0;
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
 
+  /* Each galaxy's state is a chain of small heap allocations that, over a
+   * whole catalog, does not fit in cache; evaluating a galaxy would wait on
+   * memory at every link. The chain is prefetched one link per iteration,
+   * ahead of use: while galaxy i is evaluated, stage 2 is issued for i+1,
+   * stage 1 for i+2 and stage 0 for i+3, so each stage only follows
+   * pointers its predecessor already brought in. Prefetches change no
+   * state; the result is bitwise the same with or without them. The warm-up
+   * issues the stages the first iterations would have missed. */
+#define PREFETCH_GAL(k) (use_bootstrap ? ncm_bootstrap_get (bstrap, (k)) : (k))
+
+  for (i = 0; (i < 3) && (i < n_iter); i++)
+    _nc_data_cluster_wl_factor_prefetch_galaxy (self, PREFETCH_GAL (i), 0);
+
+  for (i = 0; (i < 2) && (i < n_iter); i++)
+    _nc_data_cluster_wl_factor_prefetch_galaxy (self, PREFETCH_GAL (i), 1);
+
+  if (n_iter > 0)
+    _nc_data_cluster_wl_factor_prefetch_galaxy (self, PREFETCH_GAL (0), 2);
+
   for (i = 0; i < n_iter; i++)
   {
     gal_i = use_bootstrap ? ncm_bootstrap_get (bstrap, i) : i;
+
+    if (i + 3 < n_iter)
+      _nc_data_cluster_wl_factor_prefetch_galaxy (self, PREFETCH_GAL (i + 3), 0);
+
+    if (i + 2 < n_iter)
+      _nc_data_cluster_wl_factor_prefetch_galaxy (self, PREFETCH_GAL (i + 2), 1);
+
+    if (i + 1 < n_iter)
+      _nc_data_cluster_wl_factor_prefetch_galaxy (self, PREFETCH_GAL (i + 1), 2);
 
     NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_i);
     NcmVector *z_nodes              = (NcmVector *) g_ptr_array_index (self->z_nodes_per_galaxy, gal_i);
@@ -1288,29 +1723,27 @@ _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMS
      * n_total_i+1) view, distinct from @sub's [1, n_total_i) view used only
      * by _fixed_panels_integ below. Both are non-owning views of the same
      * underlying buffer, safe to hold simultaneously. */
-    NcmVector *nodes_view = (n_total_i < max_n_total) ? ncm_vector_get_subvector (shape_at_nodes, 0, n_total_i + 1) : shape_at_nodes;
-    NcmVector *sub        = (n_total_i > 0) ? ncm_vector_get_subvector (shape_at_nodes, 1, n_total_i) : NULL;
+    NcmVector *nodes_view, *sub;
     gdouble P_gal, m2lnP_gal_i;
+
+    if (n_total_i == max_n_total)
+      nodes_view = shape_at_nodes;
+    else if ((nodes_view = nodes_views[n_total_i]) == NULL)
+      nodes_view = nodes_views[n_total_i] = ncm_vector_get_subvector (shape_at_nodes, 0, n_total_i + 1);
+
+    if (n_total_i == 0)
+      sub = NULL;
+    else if ((sub = subs[n_total_i]) == NULL)
+      sub = subs[n_total_i] = ncm_vector_get_subvector (shape_at_nodes, 1, n_total_i);
 
     nc_galaxy_shape_factor_eval_at_nodes (self->shape_factor, mset, s_data, z_nodes, nodes_view);
 
     P_gal = _nc_data_cluster_wl_factor_fixed_panels_integ (self, gal_i, shape_at_nodes, sub) * int_pos;
 
     if (P_gal > 0.0)
-    {
       m2lnP_gal_i = -2.0 * log (P_gal);
-    }
     else
-    {
-      m2lnP_gal_i = NC_GALAXY_LOW_PROB;
-      self->low_prob_count++;
-    }
-
-    if (nodes_view != shape_at_nodes)
-      ncm_vector_free (nodes_view);
-
-    if (sub != NULL)
-      ncm_vector_free (sub);
+      m2lnP_gal_i = _nc_data_cluster_wl_factor_fixed_ln_rescue (self, mset, gal_i, s_data, z_nodes, nodes_view, shape_at_nodes, sub, int_pos);
 
     if (!gsl_finite (m2lnP_gal_i))
     {
@@ -1328,6 +1761,16 @@ _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMS
     result += m2lnP_gal_i;
   }
 
+#undef PREFETCH_GAL
+
+  for (i = 0; i <= max_n_total; i++)
+  {
+    ncm_vector_clear (&nodes_views[i]);
+    ncm_vector_clear (&subs[i]);
+  }
+
+  g_free (nodes_views);
+  g_free (subs);
   ncm_vector_free (shape_at_nodes);
 
   return result;
@@ -1742,6 +2185,31 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
                                                       2, G_MAXUINT, 2000,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcDataClusterWLFactor:node-config:
+   *
+   * The per-galaxy redshift-quadrature configuration the auto-node
+   * calibration chose, as an #NcmVarDict carrying one
+   * $(n_\mathrm{nodes}, \mathrm{rule}_n)$ pair per galaxy together with
+   * what it was produced under.
+   *
+   * The calibration is a search, and that search is the expensive half of
+   * the auto-nodes path; rebuilding a grid at a known pair is not. Carrying
+   * the pairs lets nc_data_cluster_wl_factor_data_prepare() be run once,
+   * saved, and reused by later analyses at no cost. It is accepted only when
+   * the galaxy count, the cluster redshift and every node setting match what
+   * it was built under; otherwise it is discarded and the calibration runs
+   * again, which changes nothing but the time taken.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_NODE_CONFIG,
+                                   g_param_spec_boxed ("node-config",
+                                                       "Prepared node configuration",
+                                                       "Per-galaxy calibrated redshift-quadrature configuration",
+                                                       NCM_TYPE_VAR_DICT,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   data_class->bootstrap       = TRUE;
   data_class->resample        = &_nc_data_cluster_wl_factor_resample;
   data_class->m2lnL_val       = &_nc_data_cluster_wl_factor_m2lnL_val;
@@ -2150,6 +2618,11 @@ nc_data_cluster_wl_factor_get_max_total_nodes (NcDataClusterWLFactor *dcwlf)
  * NC_GALAXY_LOW_PROB fallback was therefore substituted in place of
  * -2ln(P_gal).
  *
+ * Under FIXED_NODES a galaxy whose shape likelihood merely underflows to zero
+ * is re-evaluated in log space and not counted, so only a genuine zero is,
+ * such as a grid with no P(z) mass. CUBATURE integrates in linear space and
+ * still substitutes the fallback on underflow.
+ *
  * Reset to zero at the start of every evaluation, so it always describes the
  * last one.
  *
@@ -2161,6 +2634,87 @@ nc_data_cluster_wl_factor_get_low_prob_count (NcDataClusterWLFactor *dcwlf)
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   return self->low_prob_count;
+}
+
+/**
+ * nc_data_cluster_wl_factor_data_prepare:
+ * @dcwlf: a #NcDataClusterWLFactor
+ * @mset: a #NcmMSet
+ *
+ * Runs every per-galaxy precomputation this dataset needs, whether or not
+ * the usual staleness checks would have considered it necessary: the
+ * redshift quadrature grid including the auto-node calibration, and whatever
+ * the shape factor builds per galaxy through
+ * nc_galaxy_shape_factor_data_prepare().
+ *
+ * The results live in properties, so serializing this object afterwards
+ * carries them. That is the point of the function: the work can be paid once,
+ * saved, and reused by later analyses instead of being repeated by each one.
+ * See #NcDataClusterWLFactor:node-config, and
+ * #NcGalaxyShapeFactorMomentsTilt:tables for a shape factor that does the
+ * same with its interpolation tables.
+ *
+ * Galaxies are prepared in parallel with OpenMP whatever the position,
+ * redshift and shape factors are, with the thread count taken from
+ * `OMP_NUM_THREADS`. The result does not depend on the thread count. Called
+ * from inside an existing parallel region, it runs serially.
+ *
+ * Calling it is never required for correctness. Everything it builds is also
+ * built on demand, so an analysis that skips it gets the same answers and
+ * only pays more for them.
+ *
+ */
+void
+nc_data_cluster_wl_factor_data_prepare (NcDataClusterWLFactor *dcwlf, NcmMSet *mset)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  self->force_data_prepare = TRUE;
+
+  ncm_data_prepare (NCM_DATA (dcwlf), mset);
+}
+
+/**
+ * nc_data_cluster_wl_factor_is_data_prepared:
+ * @dcwlf: a #NcDataClusterWLFactor
+ *
+ * Whether the per-galaxy precomputation is currently in hand, either because
+ * nc_data_cluster_wl_factor_data_prepare() ran or because it was restored
+ * from a saved object.
+ *
+ * Returns: %TRUE when the per-galaxy state is present
+ */
+gboolean
+nc_data_cluster_wl_factor_is_data_prepared (NcDataClusterWLFactor *dcwlf)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  if (self->shape_data->len == 0)
+    return FALSE;
+
+  if ((self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) && self->auto_nodes)
+    return self->calib_n_nodes->len == self->shape_data->len;
+
+  return TRUE;
+}
+
+/**
+ * nc_data_cluster_wl_factor_get_calib_count:
+ * @dcwlf: a #NcDataClusterWLFactor
+ *
+ * How many auto-node calibration searches have run since this object was
+ * created. The search is the expensive half of the auto-nodes path, so this
+ * is what says whether a prepared configuration is being reused: a run that
+ * reuses one leaves it at zero.
+ *
+ * Returns: the running count of calibration searches
+ */
+guint
+nc_data_cluster_wl_factor_get_calib_count (NcDataClusterWLFactor *dcwlf)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  return self->calib_count;
 }
 
 /**

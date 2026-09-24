@@ -92,6 +92,7 @@ void _nc_galaxy_shape_pop_gauss_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData
 static void _nc_galaxy_shape_pop_gauss_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static gdouble _nc_galaxy_shape_pop_gauss_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static gdouble _nc_galaxy_shape_pop_gauss_exponent_at_origin (NcGalaxyShapePop *gsp);
+gdouble _nc_galaxy_shape_pop_gauss_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
 void _nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
                                                       const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 
@@ -130,6 +131,7 @@ nc_galaxy_shape_pop_gauss_class_init (NcGalaxyShapePopGaussClass *klass)
   gsp_class->e_rms                = &_nc_galaxy_shape_pop_gauss_e_rms;
   gsp_class->exponent_at_origin   = &_nc_galaxy_shape_pop_gauss_exponent_at_origin;
   gsp_class->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series;
+  gsp_class->moment_2k            = &_nc_galaxy_shape_pop_gauss_moment_2k;
 }
 
 #define VECTOR (NCM_MODEL (gsp))
@@ -239,6 +241,39 @@ static gdouble
 _nc_galaxy_shape_pop_gauss_exponent_at_origin (NcGalaxyShapePop *gsp)
 {
   return 1.0;
+}
+
+/* M_2k = <r^2k> = (2sigma^2)^k k! P(k+1,a)/(1-e^-a), a=inv_2sigma2, in its
+ * elementary (integer-k) form: P(k+1,a) = 1 - e^-a sum_{j=0}^k a^j/j!, and
+ * (2sigma^2)^k k! = 1/term_k where term_j=a^j/j! (term_k is exactly what the
+ * loop below leaves in @term at exit). No incomplete-gamma special function
+ * needed for this integer-order case -- verified against
+ * gsl_sf_gamma_inc_P() to machine precision. Uses the already-resolved
+ * @data->ldata, matching eval_p()'s own read contract. */
+gdouble
+_nc_galaxy_shape_pop_gauss_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k)
+{
+  if (k == 0)
+  {
+    return 1.0;
+  }
+  else
+  {
+    NcGalaxyShapePopGaussLData *ldata = (NcGalaxyShapePopGaussLData *) data->ldata;
+    const gdouble a                   = ldata->inv_2sigma2;
+    const gdouble exp_ma              = exp (-a);
+    gdouble term                      = 1.0; /* a^j/j!, j=0 */
+    gdouble sum                       = 1.0;
+    guint j;
+
+    for (j = 1; j <= k; j++)
+    {
+      term *= a / j;
+      sum  += term;
+    }
+
+    return (1.0 - exp_ma * sum) / (term * (1.0 - exp_ma));
+  }
 }
 
 /* P(x) = norm*exp(-x/2sigma^2) (eval_p()'s own full, normalized form): scale

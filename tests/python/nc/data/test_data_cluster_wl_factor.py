@@ -436,7 +436,8 @@ _HEALTHY_GALAXIES = [
 
 # One galaxy whose observed ellipticity is flatly incompatible with any model
 # prediction at this noise level, so its marginal underflows to exactly 0 in
-# double precision and the NC_GALAXY_LOW_PROB fallback is substituted.
+# double precision: CUBATURE substitutes the NC_GALAXY_LOW_PROB fallback,
+# FIXED_NODES rescues it in log space.
 _UNDERFLOWING_GALAXY = (0.03, 0.02, 0.60, 0.030, 0.9, 0.0, 0.01)
 
 
@@ -505,23 +506,53 @@ def test_low_prob_count_zero_on_healthy_eval(integ_method):
     assert m2lnL < 1.0e5  # nowhere near the 1e6 flat fallback
 
 
-@pytest.mark.parametrize(
-    "integ_method",
-    [Nc.DataClusterWLIntegMethod.FIXED_NODES, Nc.DataClusterWLIntegMethod.CUBATURE],
-)
-def test_low_prob_count_counts_underflowing_galaxies(integ_method):
+def test_low_prob_count_counts_underflowing_galaxies():
     """When a galaxy's marginal really does evaluate non-positive -- here by
     honest floating-point underflow, an ellipticity no model can produce at
-    this noise level -- the flat fallback is substituted AND counted.
+    this noise level -- CUBATURE, which integrates in linear space,
+    substitutes the flat fallback AND counts it.
 
-    LNINT is excluded on purpose: it does not substitute, it skips the galaxy
-    and stores NaN (see test_low_prob_count_resets_between_methods)."""
+    FIXED_NODES rescues the same galaxy in log space instead (see
+    test_fixed_nodes_rescues_underflowing_galaxies). LNINT is excluded on
+    purpose: it does not substitute, it skips the galaxy and stores NaN (see
+    test_low_prob_count_resets_between_methods)."""
     dcwlf, mset, _, _ = _build_probe_setup([_UNDERFLOWING_GALAXY], sigma_int=1.0e-2)
-    dcwlf.set_integ_method(integ_method)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CUBATURE)
 
     m2lnL = dcwlf.m2lnL_val(mset)
 
     assert dcwlf.get_low_prob_count() >= 1
+    assert m2lnL > 1.0e5  # the flat NC_GALAXY_LOW_PROB wall, ~1e6
+
+
+def test_fixed_nodes_rescues_underflowing_galaxies():
+    """The shape likelihood of that galaxy is exactly 0 at every node, but its
+    log is finite: FIXED_NODES redoes the galaxy in log space and returns the
+    same -2 ln P as the log-domain LNINT, without counting a substitution."""
+    dcwlf, mset, _, _ = _build_probe_setup([_UNDERFLOWING_GALAXY], sigma_int=1.0e-2)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    fixed = dcwlf.m2lnL_val(mset)
+    assert dcwlf.get_low_prob_count() == 0
+
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
+    lnint = dcwlf.m2lnL_val(mset)
+
+    assert fixed < 1.0e5
+    assert fixed == pytest.approx(lnint, rel=1.0e-6)
+
+
+def test_fixed_nodes_counts_a_genuine_zero():
+    """A galaxy outside the position footprint has a marginal that is exactly
+    zero, not an underflow: the log-space rescue finds a finite shape
+    likelihood but nothing to scale it by, so FIXED_NODES still substitutes
+    the fallback and counts it."""
+    outside = (0.5, 0.02, 0.60, 0.030, 0.1, 0.0, 0.1)  # footprint is |ra| <= 0.2
+    dcwlf, mset, _, _ = _build_probe_setup([outside])
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+
+    m2lnL = dcwlf.m2lnL_val(mset)
+
+    assert dcwlf.get_low_prob_count() == 1
     assert m2lnL > 1.0e5  # the flat NC_GALAXY_LOW_PROB wall, ~1e6
 
 
@@ -531,19 +562,24 @@ def test_low_prob_count_resets_between_methods():
     LNINT never substitutes NC_GALAXY_LOW_PROB, so its answer is legitimately
     zero -- but it must still clear the counter, or it would keep reporting a
     stale count left behind by an earlier FIXED_NODES/CUBATURE evaluation on
-    the same object."""
+    the same object. FIXED_NODES, which rescues this galaxy, must clear it
+    too."""
     dcwlf, mset, _, _ = _build_probe_setup([_UNDERFLOWING_GALAXY], sigma_int=1.0e-2)
 
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CUBATURE)
-    dcwlf.m2lnL_val(mset)
-    assert dcwlf.get_low_prob_count() >= 1  # counter is now dirty
+    for method in (
+        Nc.DataClusterWLIntegMethod.LNINT,
+        Nc.DataClusterWLIntegMethod.FIXED_NODES,
+    ):
+        dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CUBATURE)
+        dcwlf.m2lnL_val(mset)
+        assert dcwlf.get_low_prob_count() >= 1  # counter is now dirty
 
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
-    dcwlf.m2lnL_val(mset)
-    assert dcwlf.get_low_prob_count() == 0
+        dcwlf.set_integ_method(method)
+        dcwlf.m2lnL_val(mset)
+        assert dcwlf.get_low_prob_count() == 0
 
     # And back again, so the reset is not a one-way latch.
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CUBATURE)
     dcwlf.m2lnL_val(mset)
     assert dcwlf.get_low_prob_count() >= 1
 

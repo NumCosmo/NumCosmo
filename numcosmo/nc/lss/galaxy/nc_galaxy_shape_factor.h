@@ -114,8 +114,27 @@ struct _NcGalaxyShapeFactorClass
    * to append and chain to the parent. */
   gchar *(*get_desc) (NcGalaxyShapeFactor *gsf);
 
+  /* Per-galaxy precomputation, called once per galaxy by the orchestrator
+   * after the radius, optzs and population updates and BEFORE any redshift
+   * quadrature is built, so that whatever it establishes is already in
+   * place when the auto-node calibration probes the shape integrand.
+   * @z_max bounds the galaxy's redshift support. The default is a no-op: a
+   * subclass needs this only when it caches something that depends on the
+   * galaxy AND on the models in @mset, which neither eval_marginal (no mset)
+   * nor prepare (no data) can compute. Whatever it builds must also be
+   * reachable lazily from eval_marginal, since nothing guarantees this ran. */
+  void (*data_prepare) (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max);
+
+  /* Prefetch hint for the subclass-owned per-galaxy state (@data->ldata and
+   * whatever it points to), called by nc_galaxy_shape_factor_data_prefetch()
+   * one stage at a time -- see there for what each stage may assume is
+   * already cached. Must only issue prefetches and read pointers the
+   * previous stage fetched; it must not change any state. NULL (the
+   * default) prefetches nothing. */
+  void (*data_prefetch) (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const guint stage);
+
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[13];
+  gpointer padding[11];
 };
 
 /*
@@ -173,6 +192,8 @@ gboolean nc_galaxy_shape_factor_check_obs (NcGalaxyShapeFactor *gsf, NcGalaxyWLO
 gchar *nc_galaxy_shape_factor_get_desc (NcGalaxyShapeFactor *gsf);
 
 void nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset);
+void nc_galaxy_shape_factor_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max);
+void nc_galaxy_shape_factor_data_prefetch (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const guint stage);
 guint64 nc_galaxy_shape_factor_get_radius_hash (NcGalaxyShapeFactor *gsf);
 guint64 nc_galaxy_shape_factor_get_optzs_hash (NcGalaxyShapeFactor *gsf);
 guint64 nc_galaxy_shape_factor_get_crit_hash (NcGalaxyShapeFactor *gsf);
@@ -196,6 +217,7 @@ NcGalaxyShapeFactorIntegrand *nc_galaxy_shape_factor_integ (NcGalaxyShapeFactor 
 gboolean nc_galaxy_shape_factor_prepare_data_array (NcGalaxyShapeFactor *gsf, NcmMSet *mset, GPtrArray *data_array, gboolean update_radius, gboolean update_optzs);
 gboolean nc_galaxy_shape_factor_prepare_data_array_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, GPtrArray *data_array, const GPtrArray *z_nodes_per_galaxy, gboolean update_radius, gboolean update_crit, gboolean update_sigma);
 void nc_galaxy_shape_factor_eval_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, NcmVector *out);
+void nc_galaxy_shape_factor_eval_ln_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, NcmVector *out);
 void nc_galaxy_shape_factor_direct_estimate (NcGalaxyShapeFactor *gsf, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
 
 gdouble nc_galaxy_shape_factor_eval_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);

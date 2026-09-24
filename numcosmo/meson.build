@@ -323,6 +323,7 @@ ncm_headers_nogi = files(
 )
 
 ncm_headers_internal = files(
+    'ncm/core/ncm_prefetch_private.h',
     'ncm/stats/ncm_stats_dist_kde_private.h',
     'ncm/stats/ncm_stats_dist_kernel_private.h',
     'ncm/stats/ncm_stats_dist_private.h',
@@ -385,6 +386,8 @@ nc_headers = files(
     'nc/lss/galaxy/nc_galaxy_shape_factor_laplace.h',
     'nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.h',
     'nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_moments_gauss.h',
     'nc/lss/galaxy/nc_galaxy_shape_intrinsic_mode.h',
     'nc/lss/galaxy/nc_galaxy_shape_pop.h',
     'nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h',
@@ -611,6 +614,9 @@ nc_sources = files(
     'nc/lss/galaxy/nc_galaxy_shape_factor_laplace.c',
     'nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.c',
     'nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.c',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_moments_private.c',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.c',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_moments_gauss.c',
     'nc/lss/galaxy/nc_galaxy_shape_intrinsic_mode.c',
     'nc/lss/galaxy/nc_galaxy_shape_pop.c',
     'nc/lss/galaxy/nc_galaxy_shape_pop_gauss.c',
