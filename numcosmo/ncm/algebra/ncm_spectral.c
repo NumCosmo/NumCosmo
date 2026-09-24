@@ -92,6 +92,7 @@ struct _NcmSpectral
   /* Legacy fields (backward compatibility) */
   guint cheb_N_cached;     /* Cached N value */
   gdouble *cheb_f_vals;    /* Cached function values array */
+  gdouble *cheb_c_vals;    /* Cached coefficient output array the plan is bound to */
   gdouble *cheb_cos_vals;  /* Cached cosine values at Chebyshev nodes */
   fftw_plan cheb_plan_r2r; /* Cached FFTW plan */
 };
@@ -121,6 +122,7 @@ ncm_spectral_init (NcmSpectral *spectral)
 
   spectral->cheb_N_cached = 0;
   spectral->cheb_f_vals   = NULL;
+  spectral->cheb_c_vals   = NULL;
   spectral->cheb_cos_vals = NULL;
   spectral->cheb_plan_r2r = NULL;
 }
@@ -147,6 +149,7 @@ ncm_spectral_finalize (GObject *object)
 
   g_clear_pointer (&spectral->cheb_plan_r2r, fftw_destroy_plan);
   g_clear_pointer (&spectral->cheb_f_vals, fftw_free);
+  g_clear_pointer (&spectral->cheb_c_vals, fftw_free);
   g_clear_pointer (&spectral->cheb_cos_vals, g_free);
 
   G_OBJECT_CLASS (ncm_spectral_parent_class)->finalize (object);
@@ -848,8 +851,11 @@ ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gd
       spectral->cheb_cos_vals = NULL;
     }
 
+    g_clear_pointer (&spectral->cheb_c_vals, fftw_free);
+
     /* Allocate new resources */
     spectral->cheb_f_vals   = fftw_malloc (sizeof (gdouble) * N);
+    spectral->cheb_c_vals   = fftw_malloc (sizeof (gdouble) * N);
     spectral->cheb_cos_vals = g_new (gdouble, N);
 
     /* Precompute cosine values at Chebyshev nodes */
@@ -861,10 +867,11 @@ ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gd
         spectral->cheb_cos_vals[i] = cos (pi_Nm1 * i);
     }
 
-    /* Create new FFTW plan */
+    /* Plan on owned fftw_malloc buffers only: executing on the caller's array
+     * would violate FFTW's new-array alignment requirement. */
     ncm_cfg_load_fftw_wisdom ("ncm_spectral");
     ncm_cfg_lock_plan_fftw ();
-    spectral->cheb_plan_r2r = fftw_plan_r2r_1d (N, spectral->cheb_f_vals, (gdouble *) (*coeffs)->data,
+    spectral->cheb_plan_r2r = fftw_plan_r2r_1d (N, spectral->cheb_f_vals, spectral->cheb_c_vals,
                                                 FFTW_REDFT00, ncm_cfg_get_fftw_default_flag ());
     ncm_cfg_unlock_plan_fftw ();
     ncm_cfg_save_fftw_wisdom ("ncm_spectral");
@@ -886,7 +893,8 @@ ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gd
   }
 
   /* Execute FFTW plan */
-  fftw_execute_r2r (spectral->cheb_plan_r2r, spectral->cheb_f_vals, (gdouble *) (*coeffs)->data);
+  fftw_execute (spectral->cheb_plan_r2r);
+  memcpy ((*coeffs)->data, spectral->cheb_c_vals, sizeof (gdouble) * N);
 
   /* Normalize coefficients */
   {
