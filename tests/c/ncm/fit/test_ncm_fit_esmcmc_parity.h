@@ -31,7 +31,8 @@
 
 /*
  * APES with the production configuration (VKDE, Gaussian kernel, out-of-sample CV with the
- * kernel chosen by the same objective, center shrinkage, NNLS weights) on a fixed-seed
+ * kernel chosen by the same objective, centre shrinkage, uniform weights, 12 points per
+ * dimension) on a fixed-seed
  * 3-d MVND target: one initial ensemble plus one iteration, so that the arms can be
  * compared before the chain amplifies rounding differences. Shared by the plain and the
  * MPI test binaries so that every parallel mode is measured against the same serial run.

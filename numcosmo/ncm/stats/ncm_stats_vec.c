@@ -1613,10 +1613,7 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
   }
 
   {
-    gint ret;
-
-    ret = gsl_blas_dgemm (CblasNoTrans, CblasTrans, 1.0, ncm_matrix_gsl (E), ncm_matrix_gsl (y), 0.0, ncm_matrix_gsl (z));
-    NCM_TEST_GSL_RESULT ("ncm_stats_vec_compute_cov_robust_ogk", ret);
+    ncm_matrix_dgemm (z, 'N', 'T', 1.0, E, y, 0.0);
 
     for (i = 0; i < svec->len; i++)
     {
@@ -1656,12 +1653,9 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
     }
   }
 
-  {
-    gint ret;
-
-    ret = gsl_blas_dsyrk (CblasUpper, CblasTrans, 1.0, ncm_matrix_gsl (E), 0.0, ncm_matrix_gsl (cov));
-    NCM_TEST_GSL_RESULT ("ncm_stats_vec_compute_cov_robust_ogk", ret);
-  }
+  /* dsyrk writes one triangle; the caller gets a full covariance matrix. */
+  ncm_matrix_dsyrk (cov, 'U', 'T', 1.0, E, 0.0);
+  ncm_matrix_copy_triangle (cov, 'U');
 
   g_array_unref (data);
   g_array_unref (work);

@@ -47,31 +47,31 @@ struct _NcmStatsDistClass
   GObjectClass parent_class;
 
   void (*set_dim) (NcmStatsDist *sd, const guint dim);
-  gdouble (*get_href) (NcmStatsDist *sd);
-  void (*prepare_kernel) (NcmStatsDist *sd, GPtrArray *sample_array);
-  void (*prepare) (NcmStatsDist *sd);
-  void (*prepare_interp) (NcmStatsDist *sd, NcmVector *m2lnp);
+  gdouble (*bandwidth) (NcmStatsDist *sd);
+  void (*prepare_shapes) (NcmStatsDist *sd, GPtrArray *sample_array);
+  void (*prepare_kernels) (NcmStatsDist *sd);
   void (*compute_IM) (NcmStatsDist *sd, NcmMatrix *IM);
+  gdouble (*amise) (NcmStatsDist *sd);
   NcmMatrix *(*peek_cov_decomp) (NcmStatsDist *sd, guint i);
   NcmMatrix *(*peek_full_cov_decomp) (NcmStatsDist *sd);
   NcmMatrix *(*peek_full_cov) (NcmStatsDist *sd);
   gdouble (*get_lnnorm) (NcmStatsDist *sd, guint i);
   gdouble (*eval_weights) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
   gdouble (*eval_weights_m2lnp) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
+  void (*eval_weights_m2lnp_vec) (NcmStatsDist *sd, NcmVector *weights, GPtrArray *x_a, NcmVector *m2lnp);
   void (*reset) (NcmStatsDist *sd);
-  void (*update_centers) (NcmStatsDist *sd);
-  void (*update_kernel_norms) (NcmStatsDist *sd);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[5];
+  gpointer padding[6];
 };
 
 /**
  * NcmStatsDistCV:
- * @NCM_STATS_DIST_CV_NONE: No cross validation
- * @NCM_STATS_DIST_CV_SPLIT: Sample split cross validation
- * @NCM_STATS_DIST_CV_SPLIT_NOFIT: Sample split cross validation without fitting
- * @NCM_STATS_DIST_CV_LOO: Leave-one-out cross validation
+ * @NCM_STATS_DIST_CV_NONE: no cross validation, the rule-of-thumb bandwidth
+ * @NCM_STATS_DIST_CV_SPLIT_M2LNP: sample split, bandwidth by the out-of-sample density
+ * @NCM_STATS_DIST_CV_LOO: leave-one-out, bandwidth by the AMISE estimate
+ * @NCM_STATS_DIST_CV_SPLIT_ACCEPT: sample split, bandwidth by the out-of-sample acceptance estimate
+ * @NCM_STATS_DIST_CV_LOO_M2LNP: leave-one-out, bandwidth by the leave-one-out density
  *
  * Cross-validation method to be applied.
  *
@@ -79,8 +79,7 @@ struct _NcmStatsDistClass
 typedef enum _NcmStatsDistCV /*< prefix=NCM_STATS_DIST_CV >*/
 {
   NCM_STATS_DIST_CV_NONE,
-  NCM_STATS_DIST_CV_SPLIT,
-  NCM_STATS_DIST_CV_SPLIT_NOFIT,
+  NCM_STATS_DIST_CV_SPLIT_M2LNP,
   NCM_STATS_DIST_CV_LOO,
   NCM_STATS_DIST_CV_SPLIT_ACCEPT,
   NCM_STATS_DIST_CV_LOO_M2LNP,
@@ -132,12 +131,12 @@ NcmStatsDistCV ncm_stats_dist_get_cv_type (NcmStatsDist *sd);
 void ncm_stats_dist_set_use_threads (NcmStatsDist *sd, const gboolean use_threads);
 gboolean ncm_stats_dist_get_use_threads (NcmStatsDist *sd);
 
-void ncm_stats_dist_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array);
-void ncm_stats_dist_prepare (NcmStatsDist *sd);
-void ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp);
+void ncm_stats_dist_prepare_shapes (NcmStatsDist *sd, GPtrArray *sample_array);
+void ncm_stats_dist_prepare (NcmStatsDist *sd, NcmVector *m2lnL);
 
 gdouble ncm_stats_dist_eval (NcmStatsDist *sd, NcmVector *x);
 gdouble ncm_stats_dist_eval_m2lnp (NcmStatsDist *sd, NcmVector *x);
+void ncm_stats_dist_eval_m2lnp_vec (NcmStatsDist *sd, GPtrArray *x_a, NcmVector *m2lnp);
 
 guint ncm_stats_dist_kernel_choose (NcmStatsDist *sd, NcmRNG *rng);
 void ncm_stats_dist_sample (NcmStatsDist *sd, NcmVector *x, NcmRNG *rng);

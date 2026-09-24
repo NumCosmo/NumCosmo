@@ -161,8 +161,18 @@ void ncm_matrix_clear (NcmMatrix **cm);
 void ncm_matrix_const_free (const NcmMatrix *cm);
 
 void ncm_matrix_copy_triangle (NcmMatrix *cm, gchar UL);
+void ncm_matrix_zero_triangle (NcmMatrix *cm, gchar UL);
 void ncm_matrix_dsymm (NcmMatrix *cm, gchar UL, const gdouble alpha, NcmMatrix *A, NcmMatrix *B, const gdouble beta);
 void ncm_matrix_dgemm (NcmMatrix *cm, gchar TransA, gchar TransB, const gdouble alpha, NcmMatrix *A, NcmMatrix *B, const gdouble beta);
+void ncm_matrix_dtrmm (NcmMatrix *cm, gchar Side, gchar UL, gchar TransA, const gdouble alpha, NcmMatrix *A);
+void ncm_matrix_dtrsm (NcmMatrix *cm, gchar Side, gchar UL, gchar TransA, const gdouble alpha, NcmMatrix *A);
+void ncm_matrix_dtrmv (NcmMatrix *cm, gchar UL, gchar Trans, NcmVector *v);
+void ncm_matrix_dtrsv (NcmMatrix *cm, gchar UL, gchar Trans, NcmVector *v);
+void ncm_matrix_dsyrk (NcmMatrix *cm, gchar UL, gchar Trans, const gdouble alpha, NcmMatrix *A, const gdouble beta);
+void ncm_matrix_scale_rows (NcmMatrix *cm, const NcmVector *s);
+void ncm_matrix_scale_cols (NcmMatrix *cm, const NcmVector *s);
+void ncm_matrix_sub_row_vector (NcmMatrix *cm, const NcmVector *v);
+gboolean ncm_matrix_is_identity (const NcmMatrix *cm, const gdouble tol);
 
 gint ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL);
 gint ncm_matrix_cholesky_inverse (NcmMatrix *cm, gchar UL);
@@ -170,6 +180,7 @@ gdouble ncm_matrix_cholesky_lndet (NcmMatrix *cm);
 gint ncm_matrix_cholesky_solve (NcmMatrix *cm, NcmVector *b, gchar UL);
 gint ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL);
 gint ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const guint maxiter);
+gint ncm_matrix_cholesky_decomp_nearPD (const NcmMatrix *cm, NcmMatrix *decomp, gchar UL, const guint maxiter, gboolean *repaired);
 void ncm_matrix_sym_exp_cholesky (NcmMatrix *cm, gchar UL, NcmMatrix *exp_cm_dec);
 void ncm_matrix_sym_posdef_log (NcmMatrix *cm, gchar UL, NcmMatrix *ln_cm);
 void ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero, NcmMatrix *sym);

@@ -92,9 +92,14 @@ class RunMCMC(RunCommonOptions):
     interpolation_kernel: Annotated[
         InterpolationKernel,
         typer.Option(
-            help="Interpolation kernel to use.",
+            help=(
+                "Interpolation kernel to use. AUTO, the default, fits the kernel "
+                "together with the over-smoothing factor by the same out-of-sample "
+                "objective, and so needs a --cv-method that fits it. Cauchy has no "
+                "finite covariance and cannot be combined with --center-shrink."
+            ),
         ),
-    ] = InterpolationKernel.CAUCHY
+    ] = InterpolationKernel.AUTO
 
     over_smooth: Annotated[
         float,
@@ -124,32 +129,29 @@ class RunMCMC(RunCommonOptions):
         typer.Option(
             help=(
                 "Cross-validation used to choose the over-smoothing factor. NONE uses "
-                "the value given by --over-smooth. SPLIT_NOFIT builds the approximation "
+                "the value given by --over-smooth. SPLIT_M2LNP builds the approximation "
                 "from a fraction --split-fraction of each block and chooses the "
                 "over-smoothing factor on the remaining points of that block."
             ),
         ),
-    ] = CrossValidationMethod.NONE
+    ] = CrossValidationMethod.SPLIT_M2LNP
 
     split_fraction: Annotated[
         Optional[float],
         typer.Option(
-            help="Fraction of each block used as kernel centres.",
+            help="Fraction of each block used as kernel centres. Default: 0.8.",
             min=0.02,
             max=1.0,
         ),
     ] = None
 
     auto_kernel: Annotated[
-        bool,
+        Optional[bool],
         typer.Option(
-            help=(
-                "Choose the interpolation kernel together with the over-smoothing "
-                "factor, by the same out-of-sample objective. Requires --cv-method "
-                "split-nofit and overrides --interpolation-kernel."
-            ),
+            hidden=True,
+            help="Deprecated: use --interpolation-kernel auto.",
         ),
-    ] = False
+    ] = None
 
     center_shrink: Annotated[
         bool,
@@ -160,7 +162,7 @@ class RunMCMC(RunCommonOptions):
                 "kernel with a finite covariance, so not the Cauchy one."
             ),
         ),
-    ] = False
+    ] = True
 
     defensive_frac: Annotated[
         float,
@@ -193,10 +195,12 @@ class RunMCMC(RunCommonOptions):
             help=(
                 "VKDE only: nearest neighbours per dimension for each local covariance, "
                 "k = min(n, c d). Replaces --local-fraction when positive; a small "
-                "ensemble then gives the KDE limit and a large one keeps the kernels local."
+                "ensemble then gives the KDE limit and a large one keeps the kernels "
+                "local. Around 25 does about as well as the default, so roughly 12 to "
+                "25 is the useful range. Needs at least 2 x c x d walkers."
             ),
         ),
-    ] = 0.0
+    ] = 12.0
 
     uniform_weights: Annotated[
         bool,
@@ -204,10 +208,11 @@ class RunMCMC(RunCommonOptions):
             help=(
                 "Keep uniform kernel weights instead of the NNLS fit. The bandwidth and "
                 "kernel cross-validation still run, including the methods that need the "
-                "ensemble's -2lnL."
+                "ensemble's -2lnL. Costs a few per cent of autocorrelation time and "
+                "removes the NNLS solve, which is serial and quadratic in the walker count."
             ),
         ),
-    ] = False
+    ] = True
 
     parallel: Annotated[
         Parallelization,
@@ -403,16 +408,18 @@ class RunMCMC(RunCommonOptions):
             apes_walker.set_local_frac(self.local_fraction)
         apes_walker.use_interp(self.use_interpolation)
         apes_walker.set_method(self.interpolation_method.genum)
-        apes_walker.set_k_type(self.interpolation_kernel.genum)
-        # After the kernel, so that an incompatible pair is caught immediately.
+        # Before the kernel: set_k_type rebuilds the estimators and checks that the pair
+        # is compatible, while set_center_shrink only records the flag.
         apes_walker.set_center_shrink(self.center_shrink)
+        apes_walker.set_k_type(self.interpolation_kernel.genum)
         apes_walker.set_defensive_frac(self.defensive_frac)
         apes_walker.set_defensive_scale(self.defensive_scale)
         apes_walker.set_defensive_nu(self.defensive_nu)
         apes_walker.set_vkde_points_per_dim(self.vkde_points_per_dim)
         apes_walker.set_uniform_weights(self.uniform_weights)
         apes_walker.set_cv_type(self.cv_method.genum)
-        apes_walker.set_auto_kernel(self.auto_kernel)
+        if self.auto_kernel is not None:
+            apes_walker.set_auto_kernel(self.auto_kernel)
         if self.split_fraction is not None:
             apes_walker.set_split_frac(self.split_fraction)
 

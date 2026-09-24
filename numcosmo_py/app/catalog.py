@@ -144,6 +144,8 @@ class AnalyzeMCMC(LoadCatalog):
         details.add_column(justify="right", style=values_color)
 
         details.add_row("Run type", mcat.get_run_type())
+        details.add_row("Initial sampler", mcat.get_initial_sampler() or "not recorded")
+        details.add_row("Sampler", mcat.get_sampler() or "not recorded")
         details.add_row("Size", f"{mcat.len()}")
         details.add_row("Number of Iterations", f"{mcat.max_time()}")
         details.add_row("Number of chains", f"{self.nchains}")
@@ -501,9 +503,13 @@ class CalibrateCatalog(LoadCatalog):
     interpolation_kernel: Annotated[
         InterpolationKernel,
         typer.Option(
-            help="Interpolation kernel to use.",
+            help=(
+                "Interpolation kernel to use. AUTO, the default, fits the kernel "
+                "together with the over-smoothing factor and needs a --cv-method that "
+                "fits it. Cauchy cannot be combined with --center-shrink."
+            ),
         ),
-    ] = InterpolationKernel.CAUCHY
+    ] = InterpolationKernel.AUTO
 
     cv_method: Annotated[
         CrossValidationMethod,
@@ -512,11 +518,11 @@ class CalibrateCatalog(LoadCatalog):
                 "Cross-validation method to use. If NONE, no cross-validation is "
                 "used and only weights information is printed. If SPLIT, the sample "
                 "is split into two parts, one for training and the other for testing. "
-                "If SPLIT_NOFIT, the sample is split into two parts, one for training "
+                "If SPLIT_M2LNP, the sample is split into two parts, one for training "
                 "and the other for testing, but equal weights are used for both parts."
             ),
         ),
-    ] = CrossValidationMethod.SPLIT_NOFIT
+    ] = CrossValidationMethod.SPLIT_M2LNP
 
     over_smooth: Annotated[
         float,
@@ -552,11 +558,8 @@ class CalibrateCatalog(LoadCatalog):
     auto_kernel: Annotated[
         bool,
         typer.Option(
-            help=(
-                "Choose the interpolation kernel together with the over-smoothing "
-                "factor. Requires --cv-method split-nofit and overrides "
-                "--interpolation-kernel."
-            ),
+            hidden=True,
+            help="Deprecated: use --interpolation-kernel auto.",
         ),
     ] = False
 
@@ -569,7 +572,7 @@ class CalibrateCatalog(LoadCatalog):
                 "kernel with a finite covariance, so not the Cauchy one."
             ),
         ),
-    ] = False
+    ] = True
 
     ntries: Annotated[
         int,
@@ -647,7 +650,7 @@ class CalibrateCatalog(LoadCatalog):
 
         m2lnL_v = Ncm.Vector.new_array(m2lnL)
         if self.interpolate:
-            sdist.prepare_interp(m2lnL_v)
+            sdist.prepare(m2lnL_v)
         else:
             sdist.prepare()
 

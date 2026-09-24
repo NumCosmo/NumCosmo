@@ -1040,6 +1040,17 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  */
 
 /**
+ * ncm_vector_sqr_dist:
+ * @cv1: a constant #NcmVector
+ * @cv2: a constant #NcmVector
+ *
+ * Computes the squared Euclidean distance between the two vectors,
+ * $\sum_i (\mathrm{cv1}_i - \mathrm{cv2}_i)^2$. The two vectors must have the same length.
+ *
+ * Returns: the squared distance.
+ */
+
+/**
  * ncm_vector_set_zero:
  * @cv: a #NcmVector
  *

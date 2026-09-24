@@ -61,6 +61,10 @@ typedef enum _NcmFitESMCMCWalkerAPESMethod /*< prefix=NCM_FIT_ESMCMC_WALKER_APES
  * @NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY: Cauchy kernel.
  * @NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3: Student-t kernel with $\nu=3$.
  * @NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS: Gaussian kernel.
+ * @NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO: Student-t kernel whose degrees of freedom are
+ * fitted together with the bandwidth, by the same out-of-sample objective; the Gaussian
+ * kernel at the upper bound. Needs a #NcmFitESMCMCWalkerAPES:cv-type that fits the
+ * bandwidth.
  *
  * Kernel used to build the approximate posterior.
  *
@@ -70,6 +74,7 @@ typedef enum _NcmFitESMCMCWalkerAPESKType /*< enum,underscore_name=NCM_FIT_ESMCM
   NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY = 0,
   NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3,
   NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS,
+  NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO,
   /* < private > */
   NCM_FIT_ESMCMC_WALKER_APES_KTYPE_LEN, /*< skip >*/
 } NcmFitESMCMCWalkerAPESKType;

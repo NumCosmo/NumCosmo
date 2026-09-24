@@ -730,6 +730,54 @@ test_ncm_vector_operations (TestNcmVector *test, gconstpointer pdata)
     ncm_vector_clear (&cv2);
   }
 
+  {
+    NcmVector *cv2 = ncm_vector_dup (v);
+    gdouble ref    = 0.0;
+
+    g_assert_cmpfloat (ncm_vector_sqr_dist (v, cv2), ==, 0.0);
+
+    for (i = 0; i < v_size; i++)
+    {
+      gdouble diff;
+
+      ncm_vector_addto (cv2, i, g_test_rand_double_range (-1.0, 1.0));
+      diff = ncm_vector_get (v, i) - ncm_vector_get (cv2, i);
+      ref += diff * diff;
+    }
+
+    ncm_assert_cmpdouble_e (ncm_vector_sqr_dist (v, cv2), ==, ref, 1.0e-13, 0.0);
+    ncm_assert_cmpdouble_e (ncm_vector_sqr_dist (cv2, v), ==, ref, 1.0e-13, 0.0);
+
+    /* Strided views: the stride of each argument is honoured separately. */
+    if (v_size >= 4)
+    {
+      const guint half = v_size / 2;
+      NcmVector *s1    = ncm_vector_get_subvector_stride (v, 0, half, 2);
+      NcmVector *s2    = ncm_vector_get_subvector_stride (cv2, 0, half, 2);
+      NcmVector *c2    = ncm_vector_get_subvector (cv2, 0, half);
+      gdouble ref_s    = 0.0;
+      gdouble ref_m    = 0.0;
+
+      for (i = 0; i < half; i++)
+      {
+        const gdouble diff_s = ncm_vector_get (v, 2 * i) - ncm_vector_get (cv2, 2 * i);
+        const gdouble diff_m = ncm_vector_get (v, 2 * i) - ncm_vector_get (cv2, i);
+
+        ref_s += diff_s * diff_s;
+        ref_m += diff_m * diff_m;
+      }
+
+      ncm_assert_cmpdouble_e (ncm_vector_sqr_dist (s1, s2), ==, ref_s, 1.0e-13, 0.0);
+      ncm_assert_cmpdouble_e (ncm_vector_sqr_dist (s1, c2), ==, ref_m, 1.0e-13, 0.0);
+
+      ncm_vector_clear (&s1);
+      ncm_vector_clear (&s2);
+      ncm_vector_clear (&c2);
+    }
+
+    ncm_vector_clear (&cv2);
+  }
+
   ncm_vector_clear (&cv);
 }
 

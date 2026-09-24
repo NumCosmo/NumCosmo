@@ -77,7 +77,6 @@
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_sort_vector.h>
-#include "external/levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #include "ncm/stats/ncm_stats_dist_kernel_private.h"
@@ -344,7 +343,6 @@ static void
 _ncm_stats_dist_kernel_gauss_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *x, NcmRNG *rng)
 {
   NcmStatsDistKernelPrivate * const pself = ncm_stats_dist_kernel_get_instance_private (sdk);
-  gint ret;
   guint i;
 
   for (i = 0; i < pself->d; i++)
@@ -354,10 +352,8 @@ _ncm_stats_dist_kernel_gauss_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_dec
     ncm_vector_set (x, i, u_i * href);
   }
 
-  /* CblasLower, CblasNoTrans => CblasUpper, CblasTrans */
-  ret = gsl_blas_dtrmv (CblasUpper, CblasTrans, CblasNonUnit,
-                        ncm_matrix_gsl (cov_decomp), ncm_vector_gsl (x));
-  NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kernel_gauss_sample", ret);
+  /* x <- U^T x, the lower factor L = U^T applied to a standard normal draw. */
+  ncm_matrix_dtrmv (cov_decomp, 'U', 'T', x);
 
   ncm_vector_add (x, mu);
 }

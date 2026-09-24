@@ -1671,6 +1671,8 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc)
   else if ((guint) (self->cur_sample_id + 1) > self->nwalkers)
     g_error ("_ncm_fit_esmcmc_gen_init_points: initial points already generated.");
 
+  ncm_mset_catalog_set_initial_sampler (self->mcat, ncm_mset_trans_kern_get_name (self->sampler));
+
   ncm_mset_catalog_set_sync_mode (self->mcat, NCM_MSET_CATALOG_SYNC_DISABLE);
 
   len = (guint) (self->cur_sample_id + 1);
@@ -1783,6 +1785,8 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
     case NCM_FIT_RUN_MSGS_NONE:
       break;
   }
+
+  ncm_mset_catalog_set_sampler (self->mcat, ncm_fit_esmcmc_walker_desc (self->walker));
 
   if (ncm_mset_catalog_peek_rng (self->mcat) == NULL)
   {
