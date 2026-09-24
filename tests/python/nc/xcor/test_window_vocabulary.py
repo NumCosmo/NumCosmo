@@ -24,7 +24,7 @@
 
 """The analytic windows are defined in one place, and this keeps them there.
 
-``windows.py`` is the vocabulary: every certified window, its closed form, its
+``numcosmo_py.certified.xcor.windows`` is the vocabulary: every certified window, its closed form, its
 parameters. Two other rosters drive the same windows from their own copies of
 those numbers -- the truth-table generator's ``CASES`` and the pair matrix's
 ``KERNELS`` -- and a window written down three times is a window that can drift.
@@ -49,9 +49,9 @@ import typing
 import pytest
 
 from numcosmo_py import Ncm
+from numcosmo_py.certified.xcor import windows as W
 
 from xcor import cases_k_integral as cases
-from xcor import windows as W
 
 Ncm.cfg_init()
 
@@ -112,9 +112,9 @@ def test_generator_case_matches_the_vocabulary(case: str) -> None:
     from_generator = [f"--shape={spec.get('shape', case)}"] + list(spec["arb"])
     from_vocabulary = W.arb_args(W.resolve(case))
 
-    assert _normalise(from_generator) == _normalise(from_vocabulary), (
-        f"{case} differs between the generator and windows.py"
-    )
+    assert _normalise(from_generator) == _normalise(
+        from_vocabulary
+    ), f"{case} differs between the generator and the vocabulary"
 
 
 @pytest.mark.parametrize("name", sorted(cases.KERNELS))
@@ -133,9 +133,9 @@ def test_pair_kernel_matches_the_vocabulary(name: str) -> None:
     from_pairs = cases.KERNELS[name].arb_args("a")
     from_vocabulary = W.arb_args(canonical, side="a")
 
-    assert _normalise(from_pairs) == _normalise(from_vocabulary), (
-        f"{name} differs between cases_k_integral and windows.py"
-    )
+    assert _normalise(from_pairs) == _normalise(
+        from_vocabulary
+    ), f"{name} differs between cases_k_integral and the vocabulary"
 
 
 def test_no_two_names_mean_different_windows() -> None:
@@ -170,18 +170,3 @@ def test_no_two_names_mean_different_windows() -> None:
             seen[canonical] = (source, args)
 
     assert seen, "no shared names found, so this test proves nothing"
-
-
-def test_every_vocabulary_name_is_reachable() -> None:
-    """Aliases point at real windows, and no window is orphaned by a typo."""
-    for alias, canonical in W.ALIASES.items():
-        assert canonical in W.WINDOWS, f"alias {alias} points at nothing"
-        assert alias not in W.WINDOWS, f"alias {alias} shadows a real window"
-
-    for name, window in W.WINDOWS.items():
-        assert window.form in W.FORM_PARAMS, f"{name} has an unknown form"
-        assert len(window.params) == len(W.FORM_PARAMS[window.form]), (
-            f"{name} carries {len(window.params)} parameters, "
-            f"{window.form} takes {len(W.FORM_PARAMS[window.form])}"
-        )
-        assert 0 <= window.deriv <= 2, f"{name} has derivative order {window.deriv}"

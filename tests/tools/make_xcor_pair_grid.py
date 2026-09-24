@@ -57,6 +57,7 @@ from __future__ import annotations
 import argparse
 import concurrent.futures
 import gzip
+import importlib.util
 import json
 import pathlib
 import sys
@@ -64,13 +65,20 @@ import tempfile
 import time
 
 HERE = pathlib.Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent / "python" / "nc" / "xcor"))
 
-import windows as W  # noqa: E402  pylint: disable=wrong-import-position
+# The vocabulary is loaded by path rather than imported through numcosmo_py, whose
+# import loads the library: this generator needs FLINT and Python alone.
+_SPEC = importlib.util.spec_from_file_location(
+    "windows", HERE.parent.parent / "numcosmo_py" / "certified" / "xcor" / "windows.py"
+)
+W = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(W)
 
 import make_xcor_window_truth_table as base  # noqa: E402  pylint: disable=wrong-import-position
 
-OUTPUT = HERE.parent.parent / "data" / "truth_tables" / "xcor" / "xcor_pair_grid.json.gz"
+OUTPUT = (
+    HERE.parent.parent / "data" / "truth_tables" / "xcor" / "xcor_pair_grid.json.gz"
+)
 
 CONVENTION = (
     "value[case][i_ell][i_k] = int W(chi) j_ell^(d)(kvals[i_ell][i_k] chi) dchi, "

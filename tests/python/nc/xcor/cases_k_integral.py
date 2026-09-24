@@ -407,7 +407,7 @@ KERNELS: typing.Final[dict[str, KernelSpec]] = {
         # a cross a 3x2pt analysis actually computes rather than a constructed one.
         # Names match the cases of the same parameters in the window truth table.
         # The equal-variance top-hat partners of the SRD Gaussians. Parameters are
-        # the vocabulary's (tests/python/nc/xcor/windows.py) and
+        # the vocabulary's (numcosmo_py.certified.xcor.windows) and
         # test_window_vocabulary.py checks that they stay so -- they are typed here
         # a second time only because this roster does not yet derive from it.
         KernelSpec(
@@ -707,9 +707,7 @@ PAIRS: typing.Final[list[PairSpec]] = [
     PairSpec(
         "R7", "power_exp_rsd", "gauss_high", "j_ell'' x j_ell, skewed x narrow (X8)"
     ),
-    PairSpec(
-        "R8", "lensing_rsd", "gauss_mid", "j_ell'' x j_ell, broad x narrow (X6)"
-    ),
+    PairSpec("R8", "lensing_rsd", "gauss_mid", "j_ell'' x j_ell, broad x narrow (X6)"),
     PairSpec(
         "R9",
         "multi_disjoint_rsd",

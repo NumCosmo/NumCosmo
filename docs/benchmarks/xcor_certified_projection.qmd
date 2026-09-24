@@ -136,7 +136,7 @@ FORMS = {
     "multi": (Nc.XcorKernelAnalyticMulti, "Multi-bump"),
 }
 
-# Keyed by case, in the shared vocabulary of tests/python/nc/xcor/windows.py.
+# Keyed by case, in the shared vocabulary of numcosmo_py.certified.xcor.windows.
 LABELS = {
     "gauss_mid": "Gaussian, $\\chi_0 = 1500$",
     "gauss_near": "Gaussian, SRD Y10 lens 0",
