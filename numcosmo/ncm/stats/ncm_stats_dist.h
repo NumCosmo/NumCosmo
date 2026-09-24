@@ -59,10 +59,11 @@ struct _NcmStatsDistClass
   gdouble (*eval_weights) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
   gdouble (*eval_weights_m2lnp) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
   void (*eval_weights_m2lnp_vec) (NcmStatsDist *sd, NcmVector *weights, GPtrArray *x_a, NcmVector *m2lnp);
+  void (*eval_weights_m2lnp_loo) (NcmStatsDist *sd, NcmVector *weights, GPtrArray *x_a, NcmVector *m2lnp);
   void (*reset) (NcmStatsDist *sd);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[6];
+  gpointer padding[5];
 };
 
 /**

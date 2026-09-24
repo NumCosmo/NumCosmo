@@ -117,6 +117,7 @@ typedef struct _NcmStatsDistKDEEvalVars
   NcmVector *v;
   NcmVector *chi2;
   NcmVector *lnK;
+  NcmVector *lnc;
 } NcmStatsDistKDEEvalVars;
 
 static gpointer
@@ -129,6 +130,7 @@ _ncm_stats_dist_kde_eval_vars_new (gpointer userdata)
   ev->v    = ncm_vector_new (ppself->d);
   ev->chi2 = ncm_vector_new (ppself->n_kernels);
   ev->lnK  = ncm_vector_new (ppself->n_kernels);
+  ev->lnc  = ncm_vector_new (ppself->n_kernels);
 
   return ev;
 }
@@ -141,6 +143,7 @@ _ncm_stats_dist_kde_eval_vars_free (gpointer userdata)
   ncm_vector_free (ev->v);
   ncm_vector_free (ev->chi2);
   ncm_vector_free (ev->lnK);
+  ncm_vector_free (ev->lnc);
 
   g_free (ev);
 }
@@ -555,11 +558,16 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
     }
   }
 
-  for (i = 0; i < pself->n_obs; i++)
   {
-    NcmVector *row_i = ncm_matrix_get_row (IM, i);
+    /* One view moved along the rows, rather than a vector allocated for each of them. */
+    NcmVector *row_i = ncm_vector_new_data_static (ncm_matrix_ptr (IM, 0, 0), ncm_matrix_ncols (IM), 1);
 
-    ncm_stats_dist_kernel_eval_unnorm_vec (pself->kernel, row_i, row_i);
+    for (i = 0; i < pself->n_obs; i++)
+    {
+      ncm_vector_replace_data (row_i, ncm_matrix_ptr (IM, i, 0));
+      ncm_stats_dist_kernel_eval_unnorm_vec (pself->kernel, row_i, row_i);
+    }
+
     ncm_vector_free (row_i);
   }
 
@@ -708,7 +716,10 @@ _ncm_stats_dist_kde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, Nc
   {
     gdouble gamma, lambda;
 
-    ncm_stats_dist_kernel_eval_sum1_gamma_lambda (pself->kernel, ev->chi2, weights, self->kernel_lnnorm, ev->lnK, &gamma, &lambda);
+    for (i = 0; i < pself->n_kernels; i++)
+      ncm_vector_fast_set (ev->lnc, i, log (ncm_vector_get (weights, i)) - self->kernel_lnnorm);
+
+    ncm_stats_dist_kernel_eval_gamma_lambda (pself->kernel, ev->chi2, ev->lnc, ev->lnK, &gamma, &lambda);
 
     ncm_memory_pool_return (ev_ptr);
 

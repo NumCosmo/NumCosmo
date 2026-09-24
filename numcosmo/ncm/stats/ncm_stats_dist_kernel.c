@@ -206,15 +206,9 @@ _ncm_stats_dist_kernel_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2
 }
 
 static void
-_ncm_stats_dist_kernel_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
+_ncm_stats_dist_kernel_eval_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *lnc, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
 {
-  g_error ("method eval_sum0_gamma_lambda not implemented by %s.", G_OBJECT_TYPE_NAME (sdk));
-}
-
-static void
-_ncm_stats_dist_kernel_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
-{
-  g_error ("method eval_sum1_gamma_lambda not implemented by %s.", G_OBJECT_TYPE_NAME (sdk));
+  g_error ("method eval_gamma_lambda not implemented by %s.", G_OBJECT_TYPE_NAME (sdk));
 }
 
 static void
@@ -242,16 +236,15 @@ ncm_stats_dist_kernel_class_init (NcmStatsDistKernelClass *klass)
                                                       1, G_MAXUINT, 2,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  sd_class->set_dim                = &_ncm_stats_dist_kernel_set_dim;
-  sd_class->get_dim                = &_ncm_stats_dist_kernel_get_dim;
-  sd_class->get_rot_bandwidth      = &_ncm_stats_dist_kernel_get_rot_bandwidth;
-  sd_class->get_var_factor         = &_ncm_stats_dist_kernel_get_var_factor;
-  sd_class->get_lnnorm             = &_ncm_stats_dist_kernel_get_lnnorm;
-  sd_class->eval_unnorm            = &_ncm_stats_dist_kernel_eval_unnorm;
-  sd_class->eval_unnorm_vec        = &_ncm_stats_dist_kernel_eval_unnorm_vec;
-  sd_class->eval_sum0_gamma_lambda = &_ncm_stats_dist_kernel_eval_sum0_gamma_lambda;
-  sd_class->eval_sum1_gamma_lambda = &_ncm_stats_dist_kernel_eval_sum1_gamma_lambda;
-  sd_class->sample                 = &_ncm_stats_dist_kernel_sample;
+  sd_class->set_dim           = &_ncm_stats_dist_kernel_set_dim;
+  sd_class->get_dim           = &_ncm_stats_dist_kernel_get_dim;
+  sd_class->get_rot_bandwidth = &_ncm_stats_dist_kernel_get_rot_bandwidth;
+  sd_class->get_var_factor    = &_ncm_stats_dist_kernel_get_var_factor;
+  sd_class->get_lnnorm        = &_ncm_stats_dist_kernel_get_lnnorm;
+  sd_class->eval_unnorm       = &_ncm_stats_dist_kernel_eval_unnorm;
+  sd_class->eval_unnorm_vec   = &_ncm_stats_dist_kernel_eval_unnorm_vec;
+  sd_class->eval_gamma_lambda = &_ncm_stats_dist_kernel_eval_gamma_lambda;
+  sd_class->sample            = &_ncm_stats_dist_kernel_sample;
 }
 
 static void
@@ -405,49 +398,29 @@ ncm_stats_dist_kernel_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2,
 }
 
 /**
- * ncm_stats_dist_kernel_eval_sum0_gamma_lambda: (virtual eval_sum0_gamma_lambda)
+ * ncm_stats_dist_kernel_eval_gamma_lambda: (virtual eval_gamma_lambda)
  * @sdk: a #NcmStatsDistKernel
  * @chi2: a #NcmVector
- * @weights: a #NcmVector
- * @lnnorms: a #NcmVector
+ * @lnc: a #NcmVector holding $\ln (w_i / u_i)$, one entry per kernel
  * @lnK: a #NcmVector to store the logarithm of the kernels
  * @gamma: (out): $\gamma$
  * @lambda: (out): $\lambda$
  *
  * Computes the weighted sum of kernels at $\chi^2=$@chi2 (the density estimator function),
  * $$ e^\gamma (1+\lambda) = \sum_i w_i\bar{K} (\chi^2_i) / u_i,$$
- * where $\gamma = \ln(w_a\bar{K} (\chi^2_a) / u_a)$ and $a$ labels
- * is the largest term of the sum. This function shall be used when
- * each kernel has a different normalization factor.
+ * where $\gamma = \ln(w_a\bar{K} (\chi^2_a) / u_a)$ and $a$ labels the largest term of
+ * the sum.
+ *
+ * The weight and the normalization enter only through their ratio, so @lnc carries the
+ * combination $\ln w_i - \ln u_i$ already formed. The caller builds it once per batch of
+ * points instead of once per (point, kernel) pair, and a shared normalization is just the
+ * same $u$ in every entry.
  *
  */
 void
-ncm_stats_dist_kernel_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
+ncm_stats_dist_kernel_eval_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *lnc, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
 {
-  NCM_STATS_DIST_KERNEL_GET_CLASS (sdk)->eval_sum0_gamma_lambda (sdk, chi2, weights, lnnorms, lnK, gamma, lambda);
-}
-
-/**
- * ncm_stats_dist_kernel_eval_sum1_gamma_lambda: (virtual eval_sum1_gamma_lambda)
- * @sdk: a #NcmStatsDistKernel
- * @chi2: a #NcmVector
- * @weights: a #NcmVector
- * @lnnorm: a double
- * @lnK: a #NcmVector to store the logarithm of the kernels
- * @gamma: (out): $\gamma$
- * @lambda: (out): $\lambda$
- *
- * Computes the weighted sum of kernels at $\chi^2=$@chi2 (the density estimator function),
- * $$ e^\gamma (1+\lambda) = \sum_i w_i\bar{K} (\chi^2_i) / u,$$
- * where $\gamma = \ln(w_a\bar{K} (\chi^2_a) / u)$ and $a$ labels
- * is the largest term of the sum. This function shall be used when
- * all the kernels have the same normalization factor.
- *
- */
-void
-ncm_stats_dist_kernel_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
-{
-  NCM_STATS_DIST_KERNEL_GET_CLASS (sdk)->eval_sum1_gamma_lambda (sdk, chi2, weights, lnnorm, lnK, gamma, lambda);
+  NCM_STATS_DIST_KERNEL_GET_CLASS (sdk)->eval_gamma_lambda (sdk, chi2, lnc, lnK, gamma, lambda);
 }
 
 /**

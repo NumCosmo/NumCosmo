@@ -326,6 +326,8 @@ test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdat
   NcmVector *chi2        = ncm_vector_new (n);
   NcmVector *lnnorms_vec = ncm_vector_new (n);
   NcmVector *lnK         = ncm_vector_new (n);
+  NcmVector *lnc0        = ncm_vector_new (n);
+  NcmVector *lnc1        = ncm_vector_new (n);
   GArray *t_array0       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *t_array1       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   const gdouble kappa    = -0.5 * (test->nu + test->dim);
@@ -346,21 +348,32 @@ test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdat
   }
 
 
+  /* Arm 0 gives every kernel its own normalization, arm 1 the one shared constant. Both
+   * reach the kernel sum as log (w_i) minus that normalization, so the reference forms
+   * the same combination in the same order and the comparison stays exact to 1e-15. */
+  for (i = 0; i < n; i++)
+  {
+    const gdouble lnw_i = log (ncm_vector_fast_get (weights, i));
+
+    ncm_vector_set (lnc0, i, lnw_i - ncm_vector_fast_get (lnnorms_vec, i));
+    ncm_vector_set (lnc1, i, lnw_i - lnnorm);
+  }
+
   for (i = 0; i < n; i++)
   {
     const gdouble chi2_i = ncm_vector_fast_get (chi2, i);
-    const gdouble w_i    = ncm_vector_fast_get (weights, i);
-    const gdouble lnu_i  = ncm_vector_fast_get (lnnorms_vec, i);
+    const gdouble lnc_i0 = ncm_vector_get (lnc0, i);
+    const gdouble lnc_i1 = ncm_vector_get (lnc1, i);
 
     switch (test->kernel_type)
     {
       case NCM_STATS_DIST_KERNEL_TYPE_GAUSS:
-        lnt_i0 = -0.5 * chi2_i - lnu_i + log (w_i);
-        lnt_i1 = -0.5 * chi2_i + log (w_i);
+        lnt_i0 = -0.5 * chi2_i + lnc_i0;
+        lnt_i1 = -0.5 * chi2_i + lnc_i1;
         break;
       case NCM_STATS_DIST_KERNEL_TYPE_ST3:
-        lnt_i0 = kappa * log1p (chi2_i / test->nu) - lnu_i + log (w_i);
-        lnt_i1 = kappa * log1p (chi2_i / test->nu) + log (w_i);
+        lnt_i0 = kappa * log1p (chi2_i / test->nu) + lnc_i0;
+        lnt_i1 = kappa * log1p (chi2_i / test->nu) + lnc_i1;
         break;
       default:
         g_assert_not_reached ();
@@ -383,8 +396,8 @@ test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdat
     g_array_insert_val (t_array1, i, lnt_i1);
   }
 
-  ncm_stats_dist_kernel_eval_sum0_gamma_lambda (test->kernel, chi2, weights, lnnorms_vec, lnK, &gamma0, &lambda0);
-  ncm_stats_dist_kernel_eval_sum1_gamma_lambda (test->kernel, chi2, weights, lnnorm, lnK, &gamma1, &lambda1);
+  ncm_stats_dist_kernel_eval_gamma_lambda (test->kernel, chi2, lnc0, lnK, &gamma0, &lambda0);
+  ncm_stats_dist_kernel_eval_gamma_lambda (test->kernel, chi2, lnc1, lnK, &gamma1, &lambda1);
 
   for (i = 0; i < i_max0; i++)
   {
@@ -395,7 +408,7 @@ test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdat
   for (i = 0; i < i_max1; i++)
   {
     lambda_test1 += exp (g_array_index (t_array1, gdouble, i) - lnt_max1);
-    ncm_assert_cmpdouble_e (g_array_index (t_array1, gdouble, i) - lnnorm, <, gamma1, 1.0e-15, 0.0);
+    ncm_assert_cmpdouble_e (g_array_index (t_array1, gdouble, i), <, gamma1, 1.0e-15, 0.0);
   }
 
   for (i = i_max0 + 1; i < n; i++)
@@ -407,22 +420,24 @@ test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdat
   for (i = i_max1 + 1; i < n; i++)
   {
     lambda_test1 += exp (g_array_index (t_array1, gdouble, i) - lnt_max1);
-    ncm_assert_cmpdouble_e (g_array_index (t_array1, gdouble, i) - lnnorm, <, gamma1, 1.0e-15, 0.0);
+    ncm_assert_cmpdouble_e (g_array_index (t_array1, gdouble, i), <, gamma1, 1.0e-15, 0.0);
   }
 
   ncm_assert_cmpdouble_e (lnt_max0, ==, gamma0, 1.0e-15, 0.0);
-  ncm_assert_cmpdouble_e (lnt_max1 - lnnorm, ==, gamma1, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (lnt_max1, ==, gamma1, 1.0e-15, 0.0);
 
   ncm_assert_cmpdouble_e (lambda_test0, ==, lambda0, 1.0e-15, 0.0);
   ncm_assert_cmpdouble_e (lambda_test1, ==, lambda1, 1.0e-15, 0.0);
 
   ncm_assert_cmpdouble_e (lambda_test0 + exp (lnt_max0), ==, lambda0 + exp (gamma0), 1.0e-15, 0.0);
-  ncm_assert_cmpdouble_e (lambda_test1 + exp (lnt_max1 - lnnorm), ==, lambda1 + exp (gamma1), 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (lambda_test1 + exp (lnt_max1), ==, lambda1 + exp (gamma1), 1.0e-15, 0.0);
 
   ncm_vector_free (weights);
   ncm_vector_free (chi2);
   ncm_vector_free (lnnorms_vec);
   ncm_vector_free (lnK);
+  ncm_vector_free (lnc0);
+  ncm_vector_free (lnc1);
   g_clear_pointer (&t_array0, g_array_unref);
   g_clear_pointer (&t_array1, g_array_unref);
 }
