@@ -60,6 +60,9 @@ import typing
 import numpy as np
 
 from numcosmo_py import Nc, Ncm
+from numcosmo_py.certified.xcor import kernels
+from numcosmo_py.certified.xcor import windows as W
+from numcosmo_py.certified.xcor.kernels import make_cosmo_bits
 
 # The multipoles. Log-ish and weighted low, because that is where cancellation
 # lives; ell = 2 is not decoration.
@@ -131,528 +134,88 @@ class Settings:
 
 @dataclasses.dataclass(frozen=True)
 class KernelSpec:
-    """One analytic window, as data: what to build and what it stresses.
+    """One window of the pair matrix: its vocabulary name and what it stresses.
 
-    ``shape`` and ``params`` are the window itself, kept as plain data because
-    two independent implementations are driven from them -- the library, via
-    ``builder``, and the Arb reference generator, via its command line. A
-    window defined twice is a window that can drift.
+    The window itself is the vocabulary's (:mod:`numcosmo_py.certified.xcor.windows`),
+    which the library kernel and the Arb generator are both driven from; this roster
+    adds only the reason each window is in the matrix.
     """
 
     name: str
-    builder: typing.Callable[..., Nc.XcorKernelRadial]
     stresses: str
-    shape: str = ""
-    params: typing.Mapping[str, typing.Any] = dataclasses.field(default_factory=dict)
+
+    def build(
+        self, dist: Nc.Distance, ps: Ncm.Powspec, sbi: Ncm.SBesselIntegrator
+    ) -> Nc.XcorKernelRadial:
+        """Construct this window's kernel, not yet prepared."""
+        return kernels.build_kernel(self.name, dist, ps, sbi)
 
     def arb_args(self, side: str) -> list[str]:
         """This window as arguments to ``nc_xcor_kquad_arb``."""
-        out = [f"--{side}:shape={self.shape}"]
-
-        for key, value in self.params.items():
-            if isinstance(value, (list, tuple)):
-                value = ",".join(repr(float(v)) for v in value)
-
-            out.append(f"--{side}:{key}={value}")
-
-        return out
-
-
-def _gauss(chi_mean: float, chi_sigma: float, n_sigma: float = 4.0):
-    def build(dist, ps, sbi):
-        return Nc.XcorKernelAnalyticGauss.new_full(
-            dist, ps, chi_mean, chi_sigma, n_sigma, sbi
-        )
-
-    return build
-
-
-def _tophat(chi_lower: float, chi_upper: float):
-    def build(dist, ps, sbi):
-        return Nc.XcorKernelAnalyticTophat.new_full(dist, ps, chi_lower, chi_upper, sbi)
-
-    return build
-
-
-def _tophat_smooth(
-    chi_lower: float, chi_upper: float, chi_sigma: float, n_sigma: float
-):
-    def build(dist, ps, sbi):
-        return Nc.XcorKernelAnalyticTophatSmooth.new_full(
-            dist, ps, chi_lower, chi_upper, chi_sigma, n_sigma, sbi
-        )
-
-    return build
-
-
-def _student_t(chi_mean: float, chi_scale: float, nu: float, n_scale: float):
-    def build(dist, ps, sbi):
-        return Nc.XcorKernelAnalyticStudentT.new_full(
-            dist, ps, chi_mean, chi_scale, nu, n_scale, sbi
-        )
-
-    return build
-
-
-def _power_exp(
-    chi_scale: float, alpha: float, beta: float, chi_lower: float, chi_upper: float
-):
-    def build(dist, ps, sbi):
-        return Nc.XcorKernelAnalyticPowerExp.new_full(
-            dist, ps, chi_scale, alpha, beta, chi_lower, chi_upper, sbi
-        )
-
-    return build
-
-
-def _lensing(chi_lower: float, chi_source_lower: float, chi_source_upper: float):
-    def build(dist, ps, sbi):
-        return Nc.XcorKernelAnalyticLensing.new_full(
-            dist, ps, chi_lower, chi_source_lower, chi_source_upper, sbi
-        )
-
-    return build
-
-
-def _multi(
-    means: list[float], sigmas: list[float], weights: list[float], n_sigma: float
-):
-    def build(dist, ps, sbi):
-        return Nc.XcorKernelAnalyticMulti.new_full(
-            dist,
-            ps,
-            Ncm.Vector.new_array(means),
-            Ncm.Vector.new_array(sigmas),
-            Ncm.Vector.new_array(weights),
-            n_sigma,
-            sbi,
-        )
-
-    return build
-
-
-def _gauss_kdep(
-    chi_mean: float,
-    chi_sigma: float,
-    n_sigma: float,
-    amplitude: float,
-    k_transition: float,
-    chi_ref: float,
-):
-    def build(dist, ps, sbi):
-        return Nc.XcorKernelAnalyticGauss(
-            dist=dist,
-            powspec=ps,
-            chi_mean=chi_mean,
-            chi_sigma=chi_sigma,
-            n_sigma=n_sigma,
-            integrator=sbi,
-            scale_dependence=Nc.XcorKernelRadialKDepGrowth.new(
-                amplitude, k_transition, chi_ref
-            ),
-        )
-
-    return build
-
-
-def _deriv(cls, bessel_deriv: int, **props):
-    """Any certified window, weighted by a Bessel derivative.
-
-    ``bessel-deriv`` lives on #NcXcorKernelRadial, so every analytic shape carries
-    it and the weight varies independently of the window -- which is the point: the
-    RSD term of NcXcorKernelGal is a component of order 2, but its window is a
-    spline over a sampled dn/dz and cannot be certified to 1e-10. Putting the same
-    weight on a closed-form window gives a certified C_ell for the j_ell'' path, on
-    every shape rather than on one.
-
-    Construct-only, hence keyword construction rather than ``new_full``.
-    """
-
-    def build(dist, ps, sbi):
-        return cls(
-            dist=dist, powspec=ps, integrator=sbi, bessel_deriv=bessel_deriv, **props
-        )
-
-    return build
+        return W.arb_args(self.name, side=side)
 
 
 KERNELS: typing.Final[dict[str, KernelSpec]] = {
     spec.name: spec
     for spec in (
-        KernelSpec(
-            "gauss_mid",
-            _gauss(1500.0, 300.0),
-            "baseline",
-            "gauss",
-            {"chi-mean": 1500.0, "chi-sigma": 300.0, "n-sigma": 4.0},
-        ),
-        KernelSpec(
-            "gauss_thin",
-            _gauss(1500.0, 50.0),
-            "thin bin",
-            "gauss",
-            {"chi-mean": 1500.0, "chi-sigma": 50.0, "n-sigma": 4.0},
-        ),
-        KernelSpec(
-            "gauss_thin_shift",
-            _gauss(1650.0, 50.0),
-            "thin bin, displaced",
-            "gauss",
-            {"chi-mean": 1650.0, "chi-sigma": 50.0, "n-sigma": 4.0},
-        ),
-        # `gauss_over`, not `gauss_near`: this window overlaps gauss_mid rather
-        # than sitting nearer than it, and `gauss_near` is the SRD Y10 lens bin at
-        # 1095 Mpc in the shared vocabulary. The two names meant two different
-        # windows in two rosters until this rename; test_window_vocabulary.py is
-        # what keeps it that way.
-        KernelSpec(
-            "gauss_over",
-            _gauss(1800.0, 300.0),
-            "overlapping bin",
-            "gauss",
-            {"chi-mean": 1800.0, "chi-sigma": 300.0, "n-sigma": 4.0},
-        ),
-        KernelSpec(
-            "gauss_low",
-            _gauss(600.0, 100.0),
-            "near bin",
-            "gauss",
-            {"chi-mean": 600.0, "chi-sigma": 100.0, "n-sigma": 4.0},
-        ),
-        KernelSpec(
-            "gauss_high",
-            _gauss(3500.0, 150.0),
-            "far bin",
-            "gauss",
-            {"chi-mean": 3500.0, "chi-sigma": 150.0, "n-sigma": 4.0},
-        ),
-        KernelSpec(
-            "tophat",
-            _tophat(500.0, 2500.0),
-            "hard edges, 2000 Mpc wide",
-            "tophat",
-            {"chi-lower": 500.0, "chi-upper": 2500.0},
-        ),
+        KernelSpec("gauss_mid", "baseline"),
+        KernelSpec("gauss_thin", "thin bin"),
+        KernelSpec("gauss_thin_shift", "thin bin, displaced"),
+        # Overlaps gauss_mid rather than sitting nearer than it; `gauss_near` is
+        # the SRD Y10 lens bin at 1095 Mpc.
+        KernelSpec("gauss_over", "overlapping bin"),
+        KernelSpec("gauss_low", "near bin"),
+        KernelSpec("gauss_high", "far bin"),
+        KernelSpec("tophat", "hard edges, 2000 Mpc wide"),
         # The regime the Chebyshev closure exists for. On a shell this narrow
         # the adaptive spline closure's accuracy is capped by peak-epsilon at
         # the library's own documented floor, where it sits at ~2e-5 while the
         # spectral closure reaches machine zero. No case built from wide bins
         # reaches it.
+        KernelSpec("shell_narrow", "56 Mpc hard shell"),
+        KernelSpec("shell_wide", "400 Mpc hard shell"),
+        KernelSpec("tophat_smooth", "a real tomographic bin"),
+        KernelSpec("student_t", "power-law tail"),
+        KernelSpec("multi_disjoint", "disconnected support"),
+        KernelSpec("power_exp", "skewed and broad"),
+        KernelSpec("lensing", "broad, smoothed source"),
+        # The equal-variance top-hat partners of the SRD Gaussians.
         KernelSpec(
-            "shell_narrow",
-            _tophat(1000.0, 1056.0),
-            "56 Mpc hard shell",
-            "tophat",
-            {"chi-lower": 1000.0, "chi-upper": 1056.0},
+            "tophat_near", "hard edges at the SRD Y10 lens 0 centre and variance"
         ),
         KernelSpec(
-            "shell_wide",
-            _tophat(1100.0, 1500.0),
-            "400 Mpc hard shell",
-            "tophat",
-            {"chi-lower": 1100.0, "chi-upper": 1500.0},
+            "tophat_far", "hard edges at the SRD Y10 lens 9 centre and variance"
         ),
-        KernelSpec(
-            "tophat_smooth",
-            _tophat_smooth(1000.0, 2000.0, 150.0, 6.0),
-            "a real tomographic bin",
-            "tophat_smooth",
-            {
-                "chi-lower": 1000.0,
-                "chi-upper": 2000.0,
-                "chi-sigma": 150.0,
-                "n-sigma": 6.0,
-            },
-        ),
-        KernelSpec(
-            "student_t",
-            _student_t(1500.0, 200.0, 2.0, 6.0),
-            "power-law tail",
-            "student_t",
-            {"chi-mean": 1500.0, "chi-scale": 200.0, "nu": 2.0, "n-scale": 6.0},
-        ),
-        KernelSpec(
-            "multi_disjoint",
-            _multi([600.0, 2600.0], [100.0, 150.0], [1.0, 1.0], 4.0),
-            "disconnected support",
-            "multi",
-            {
-                "mu": [600.0, 2600.0],
-                "sigma": [100.0, 150.0],
-                "weight": [1.0, 1.0],
-                "n-sigma": 4.0,
-            },
-        ),
-        KernelSpec(
-            "power_exp",
-            _power_exp(1200.0, 2.0, 1.5, 50.0, 4000.0),
-            "skewed and broad",
-            "power_exp",
-            {
-                "chi-scale": 1200.0,
-                "alpha": 2.0,
-                "beta": 1.5,
-                "chi-lower": 50.0,
-                "chi-upper": 4000.0,
-            },
-        ),
-        KernelSpec(
-            "lensing",
-            _lensing(50.0, 2000.0, 3000.0),
-            "broad, smoothed source",
-            "lensing",
-            {"chi-lower": 50.0, "chi-source-lower": 2000.0, "chi-source-upper": 3000.0},
-        ),
+        KernelSpec("tophat_broad", "hard edges at the source-bin centre and variance"),
         # The SRD's own locations and widths, so the far-separated regime below is
         # a cross a 3x2pt analysis actually computes rather than a constructed one.
-        # Names match the cases of the same parameters in the window truth table.
-        # The equal-variance top-hat partners of the SRD Gaussians. Parameters are
-        # the vocabulary's (numcosmo_py.certified.xcor.windows) and
-        # test_window_vocabulary.py checks that they stay so -- they are typed here
-        # a second time only because this roster does not yet derive from it.
-        KernelSpec(
-            "tophat_near",
-            _tophat(780.0, 1410.0),
-            "hard edges at the SRD Y10 lens 0 centre and variance",
-            "tophat",
-            {"chi-lower": 780.0, "chi-upper": 1410.0},
-        ),
-        KernelSpec(
-            "tophat_far",
-            _tophat(3514.0, 4086.0),
-            "hard edges at the SRD Y10 lens 9 centre and variance",
-            "tophat",
-            {"chi-lower": 3514.0, "chi-upper": 4086.0},
-        ),
-        KernelSpec(
-            "tophat_broad",
-            _tophat(3282.0, 5758.0),
-            "hard edges at the source-bin centre and variance",
-            "tophat",
-            {"chi-lower": 3282.0, "chi-upper": 5758.0},
-        ),
-        KernelSpec(
-            "srd_lens0",
-            _gauss(1095.0, 182.0),
-            "LSST-SRD Y10 lens bin 0",
-            "gauss",
-            {"chi-mean": 1095.0, "chi-sigma": 182.0, "n-sigma": 4.0},
-        ),
-        KernelSpec(
-            "srd_lens9",
-            _gauss(3800.0, 165.0),
-            "LSST-SRD Y10 lens bin 9: sigma/chi = 0.043",
-            "gauss",
-            {"chi-mean": 3800.0, "chi-sigma": 165.0, "n-sigma": 4.0},
-        ),
+        KernelSpec("srd_lens0", "LSST-SRD Y10 lens bin 0"),
+        KernelSpec("srd_lens9", "LSST-SRD Y10 lens bin 9: sigma/chi = 0.043"),
         # A source bin is not a lens bin, and the difference is the shape rather
         # than the width: measured on the SRD's own dn/dz in chi, the Y10 lens bins
         # are Gaussian to skew 0.05, while Y1 source bin 4 reaches skew 0.82. This
         # is a skewed window at that location and width in round numbers, not a fit
         # to the bin -- the roster has to span the regimes in forms Arb certifies
         # exactly, not track a survey's dn/dz through its data releases.
+        KernelSpec("srd_source4", "skewed window at source-bin location and width"),
+        # Bessel-derivative weights. The RSD term of NcXcorKernelGal is a component
+        # of order 2, but its window is a spline over a sampled dn/dz and cannot be
+        # certified to 1e-10; the same weight on closed-form windows gives certified
+        # C_ell for the j_ell'' path, on every shape rather than on one.
+        KernelSpec("srd_lens9_rsd", "j_ell'' on the SRD's thinnest bin"),
+        KernelSpec("gauss_rsd", "j_ell'' weight: the redshift-space term"),
         KernelSpec(
-            "srd_source4",
-            _power_exp(2400.0, 6.0, 2.0, 3500.0, 7200.0),
-            "skewed window at source-bin location and width",
-            "power_exp",
-            {
-                "chi-scale": 2400.0,
-                "alpha": 6.0,
-                "beta": 2.0,
-                "chi-lower": 3500.0,
-                "chi-upper": 7200.0,
-            },
+            "gauss_deriv1", "j_ell' weight: first order, the control for the second"
         ),
-        KernelSpec(
-            "srd_lens9_rsd",
-            _deriv(
-                Nc.XcorKernelAnalyticGauss,
-                2,
-                chi_mean=3800.0,
-                chi_sigma=165.0,
-                n_sigma=4.0,
-            ),
-            "j_ell'' on the SRD's thinnest bin",
-            "gauss",
-            {
-                "chi-mean": 3800.0,
-                "chi-sigma": 165.0,
-                "n-sigma": 4.0,
-                "bessel-deriv": 2,
-            },
-        ),
-        KernelSpec(
-            "gauss_rsd",
-            _deriv(
-                Nc.XcorKernelAnalyticGauss,
-                2,
-                chi_mean=1500.0,
-                chi_sigma=300.0,
-                n_sigma=4.0,
-            ),
-            "j_ell'' weight: the redshift-space term",
-            "gauss",
-            {
-                "chi-mean": 1500.0,
-                "chi-sigma": 300.0,
-                "n-sigma": 4.0,
-                "bessel-deriv": 2,
-            },
-        ),
-        KernelSpec(
-            "gauss_deriv1",
-            _deriv(
-                Nc.XcorKernelAnalyticGauss,
-                1,
-                chi_mean=1500.0,
-                chi_sigma=300.0,
-                n_sigma=4.0,
-            ),
-            "j_ell' weight: first order, the control for the second",
-            "gauss",
-            {
-                "chi-mean": 1500.0,
-                "chi-sigma": 300.0,
-                "n-sigma": 4.0,
-                "bessel-deriv": 1,
-            },
-        ),
-        KernelSpec(
-            "tophat_rsd",
-            _deriv(Nc.XcorKernelAnalyticTophat, 2, chi_lower=500.0, chi_upper=2500.0),
-            "j_ell'' on hard edges",
-            "tophat",
-            {"chi-lower": 500.0, "chi-upper": 2500.0, "bessel-deriv": 2},
-        ),
-        KernelSpec(
-            "tophat_smooth_rsd",
-            _deriv(
-                Nc.XcorKernelAnalyticTophatSmooth,
-                2,
-                chi_lower=1000.0,
-                chi_upper=2000.0,
-                chi_sigma=150.0,
-                n_sigma=6.0,
-            ),
-            "j_ell'' on a smoothed edge",
-            "tophat_smooth",
-            {
-                "chi-lower": 1000.0,
-                "chi-upper": 2000.0,
-                "chi-sigma": 150.0,
-                "n-sigma": 6.0,
-                "bessel-deriv": 2,
-            },
-        ),
-        KernelSpec(
-            "student_t_rsd",
-            _deriv(
-                Nc.XcorKernelAnalyticStudentT,
-                2,
-                chi_mean=1500.0,
-                chi_scale=200.0,
-                nu=2.0,
-                n_scale=6.0,
-            ),
-            "j_ell'' on a power-law tail",
-            "student_t",
-            {
-                "chi-mean": 1500.0,
-                "chi-scale": 200.0,
-                "nu": 2.0,
-                "n-scale": 6.0,
-                "bessel-deriv": 2,
-            },
-        ),
-        KernelSpec(
-            "power_exp_rsd",
-            _deriv(
-                Nc.XcorKernelAnalyticPowerExp,
-                2,
-                chi_scale=1200.0,
-                alpha=2.0,
-                beta=1.5,
-                chi_lower=50.0,
-                chi_upper=4000.0,
-            ),
-            "j_ell'' on a skewed, broad window",
-            "power_exp",
-            {
-                "chi-scale": 1200.0,
-                "alpha": 2.0,
-                "beta": 1.5,
-                "chi-lower": 50.0,
-                "chi-upper": 4000.0,
-                "bessel-deriv": 2,
-            },
-        ),
-        KernelSpec(
-            "lensing_rsd",
-            _deriv(
-                Nc.XcorKernelAnalyticLensing,
-                2,
-                chi_lower=50.0,
-                chi_source_lower=2000.0,
-                chi_source_upper=3000.0,
-            ),
-            "j_ell'' on a broad, smoothed source",
-            "lensing",
-            {
-                "chi-lower": 50.0,
-                "chi-source-lower": 2000.0,
-                "chi-source-upper": 3000.0,
-                "bessel-deriv": 2,
-            },
-        ),
-        KernelSpec(
-            "multi_disjoint_rsd",
-            _deriv(
-                Nc.XcorKernelAnalyticMulti,
-                2,
-                chi_mean=Ncm.Vector.new_array([600.0, 2600.0]),
-                chi_sigma=Ncm.Vector.new_array([100.0, 150.0]),
-                weight=Ncm.Vector.new_array([1.0, 1.0]),
-                n_sigma=4.0,
-            ),
-            "j_ell'' on disconnected support",
-            "multi",
-            {
-                "mu": [600.0, 2600.0],
-                "sigma": [100.0, 150.0],
-                "weight": [1.0, 1.0],
-                "n-sigma": 4.0,
-                "bessel-deriv": 2,
-            },
-        ),
-        KernelSpec(
-            "shell_wide_rsd",
-            _deriv(Nc.XcorKernelAnalyticTophat, 2, chi_lower=1100.0, chi_upper=1500.0),
-            "j_ell'' on a wide hard shell",
-            "tophat",
-            {"chi-lower": 1100.0, "chi-upper": 1500.0, "bessel-deriv": 2},
-        ),
-        KernelSpec(
-            "shell_narrow_rsd",
-            _deriv(Nc.XcorKernelAnalyticTophat, 2, chi_lower=1000.0, chi_upper=1056.0),
-            "j_ell'' on a narrow hard shell",
-            "tophat",
-            {"chi-lower": 1000.0, "chi-upper": 1056.0, "bessel-deriv": 2},
-        ),
-        KernelSpec(
-            "kdep",
-            _gauss_kdep(1500.0, 300.0, 4.0, 0.3, 0.05, 3000.0),
-            "non-separable W: sqrt(P) no longer factors out",
-            "gauss",
-            {
-                "chi-mean": 1500.0,
-                "chi-sigma": 300.0,
-                "n-sigma": 4.0,
-                "kdep-amplitude": 0.3,
-                "kdep-k-transition": 0.05,
-                "kdep-chi-ref": 3000.0,
-            },
-        ),
+        KernelSpec("tophat_rsd", "j_ell'' on hard edges"),
+        KernelSpec("tophat_smooth_rsd", "j_ell'' on a smoothed edge"),
+        KernelSpec("student_t_rsd", "j_ell'' on a power-law tail"),
+        KernelSpec("power_exp_rsd", "j_ell'' on a skewed, broad window"),
+        KernelSpec("lensing_rsd", "j_ell'' on a broad, smoothed source"),
+        KernelSpec("multi_disjoint_rsd", "j_ell'' on disconnected support"),
+        KernelSpec("shell_wide_rsd", "j_ell'' on a wide hard shell"),
+        KernelSpec("shell_narrow_rsd", "j_ell'' on a narrow hard shell"),
+        KernelSpec("kdep", "non-separable W: sqrt(P) no longer factors out"),
     )
 }
 
@@ -768,27 +331,6 @@ PAIRS: typing.Final[list[PairSpec]] = [
 PAIRS_BY_CASE: typing.Final[dict[str, PairSpec]] = {p.case: p for p in PAIRS}
 
 
-def make_cosmo_bits() -> tuple[Nc.HICosmo, Nc.Distance, Ncm.Powspec]:
-    """A cosmology, a distance, and a closed-form power spectrum.
-
-    ``NcmPowspecAnalytic`` rather than a transfer-function spline: sqrt(P) sits
-    *inside* the function the closure fits, so a splined P would put its own
-    interpolation error under everything measured here, and it has no closed
-    form for a reference to reproduce. BBKS is the look-alike because it is
-    already nothing but a fitting formula -- elementary, hence exactly
-    reproducible in extended precision, and it keeps the ln^2 k tail that a
-    rational form loses.
-    """
-    cosmo = Nc.HICosmoDEXcdm.new()
-    dist = Nc.Distance.new(5.0)
-    dist.prepare(cosmo)
-    ps = Ncm.PowspecAnalytic.new(
-        Ncm.PowspecAnalyticShape.BBKS, Ncm.PowspecAnalyticGrowth.LCDM
-    )
-
-    return cosmo, dist, ps
-
-
 def build_kernel(
     name: str,
     cosmo: Nc.HICosmo,
@@ -808,7 +350,7 @@ def build_kernel(
     not reentrant, so a shared one corrupts memory across concurrent blocks --
     but disables that reuse entirely.
     """
-    kernel = KERNELS[name].builder(
+    kernel = KERNELS[name].build(
         dist, ps, sbi if sbi is not None else Ncm.SBesselIntegratorLevin.new(0, 8)
     )
     kernel.set_l_limber(settings.l_limber)

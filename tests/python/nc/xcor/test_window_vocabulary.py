@@ -24,16 +24,11 @@
 
 """The analytic windows are defined in one place, and this keeps them there.
 
-``numcosmo_py.certified.xcor.windows`` is the vocabulary: every certified window, its closed form, its
-parameters. Two other rosters drive the same windows from their own copies of
-those numbers -- the truth-table generator's ``CASES`` and the pair matrix's
-``KERNELS`` -- and a window written down three times is a window that can drift.
-
-It already did. Before the vocabulary existed, ``gauss_near`` named
-:math:`(\\chi_0, \\sigma) = (1095, 182)` in the truth table and
-:math:`(1800, 300)` in the pair matrix: the same name, two different windows,
-both appearing in committed data. These tests are what makes that a failure
-rather than a discovery.
+``numcosmo_py.certified.xcor.windows`` is the vocabulary: every certified window,
+its closed form, its parameters. The pair matrix's ``KERNELS`` is built from it; the
+truth-table generator's ``CASES`` still carries its own copy of the numbers, and a
+window written down twice is a window that can drift, as ``gauss_near`` once did
+between two rosters. These tests make that a failure rather than a discovery.
 
 They compare the *generator command line* each roster produces, because that is
 what actually determines which window got certified -- not a docstring, and not
@@ -115,27 +110,6 @@ def test_generator_case_matches_the_vocabulary(case: str) -> None:
     assert _normalise(from_generator) == _normalise(
         from_vocabulary
     ), f"{case} differs between the generator and the vocabulary"
-
-
-@pytest.mark.parametrize("name", sorted(cases.KERNELS))
-def test_pair_kernel_matches_the_vocabulary(name: str) -> None:
-    """Every pair-matrix kernel selects the window the vocabulary says it does.
-
-    Names the vocabulary does not know are skipped rather than failed: the pair
-    matrix may legitimately carry a window that has no certified table yet, and
-    this test is about agreement, not about coverage.
-    """
-    try:
-        canonical = W.resolve(name)
-    except KeyError:
-        pytest.skip(f"{name} is not in the vocabulary")
-
-    from_pairs = cases.KERNELS[name].arb_args("a")
-    from_vocabulary = W.arb_args(canonical, side="a")
-
-    assert _normalise(from_pairs) == _normalise(
-        from_vocabulary
-    ), f"{name} differs between cases_k_integral and the vocabulary"
 
 
 def test_no_two_names_mean_different_windows() -> None:
