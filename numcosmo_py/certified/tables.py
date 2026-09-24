@@ -327,7 +327,8 @@ def groups(table: Ncm.VarDict) -> dict[str, tuple[dict, Table]]:
         if key.startswith(CELLS_PREFIX):
             found, catalog = table.get_object(key, ser)
             assert found
-            meta = var_dict_to_dict(catalog.peek_meta())
+            found_meta = catalog.peek_meta()
+            meta = var_dict_to_dict(found_meta) if found_meta is not None else {}
             out[key[len(CELLS_PREFIX) :]] = (meta, catalog_to_table(catalog))
 
     return out
