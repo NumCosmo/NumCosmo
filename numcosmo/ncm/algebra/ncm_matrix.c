@@ -1563,6 +1563,105 @@ ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL)
 }
 
 /**
+ * ncm_matrix_chol_chi2_cols:
+ * @cm: a #NcmMatrix $X$, $d \times n_p$, holding one point per column
+ * @theta: a #NcmVector $\theta$ of length $d$, the common centre
+ * @U: a $d \times d$ #NcmMatrix, upper triangular; only its upper triangle is read
+ * @work: a $d \times n_b$ #NcmMatrix, scratch, overwritten
+ * @chi2: a #NcmVector with at least $n_p$ entries, whose first $n_p$ are filled
+ *
+ * Squared Mahalanobis distance of every column of @cm from @theta, under the covariance
+ * $C = U^\intercal U$ given by its upper Cholesky factor @U,
+ * $$\chi^2_p = (x_p - \theta)^\intercal C^{-1} (x_p - \theta),$$
+ * computed as $y_p = (x_p - \theta) U^{-1}$ and $\chi^2_p = |y_p|^2$ without forming the
+ * solution: the triangular solve and the norm are fused in one pass over the points.
+ *
+ * Points are columns, not rows, so that the innermost loop runs over points and is
+ * contiguous. The solve is column oriented in the coordinate index, which is the only
+ * direction carrying a dependency; the points themselves are independent.
+ *
+ * The columns are processed in blocks of $n_b$, the column count of @work, so that the
+ * block being solved stays in cache; @work is the only scratch used and is owned by the
+ * caller, which is what lets several threads share @cm and @U.
+ *
+ * The diagonal of @U is taken as stored and its lower triangle is never read, so a
+ * factorization that left values there needs no clearing.
+ *
+ * @cm, @U, @work and @chi2 must be four distinct objects: the loops are written on the
+ * assumption that none of them overlaps another.
+ *
+ */
+void
+ncm_matrix_chol_chi2_cols (const NcmMatrix *cm, const NcmVector *theta, const NcmMatrix *U, NcmMatrix *work, NcmVector *chi2)
+{
+  const guint d               = ncm_matrix_nrows (cm);
+  const guint np              = ncm_matrix_ncols (cm);
+  const guint nb              = ncm_matrix_ncols (work);
+  const guint tda_X           = ncm_matrix_tda (cm);
+  const guint tda_U           = ncm_matrix_tda (U);
+  const guint tda_W           = ncm_matrix_tda (work);
+  const guint s_theta         = ncm_vector_stride (theta);
+  const gdouble * restrict Xd = ncm_matrix_const_data (cm);
+  const gdouble * restrict Ud = ncm_matrix_const_data (U);
+  const gdouble * restrict td = ncm_vector_const_data (theta);
+  gdouble * restrict Wd       = ncm_matrix_data (work);
+  gdouble * restrict c2d      = ncm_vector_data (chi2);
+  guint p0;
+
+  g_assert_cmpuint (ncm_matrix_nrows (U), ==, d);
+  g_assert_cmpuint (ncm_matrix_ncols (U), ==, d);
+  g_assert_cmpuint (ncm_matrix_nrows (work), ==, d);
+  g_assert_cmpuint (ncm_vector_len (theta), ==, d);
+  g_assert_cmpuint (ncm_vector_len (chi2), >=, np);
+  g_assert_cmpuint (ncm_vector_stride (chi2), ==, 1);
+  g_assert_cmpuint (nb, >, 0);
+
+  for (p0 = 0; p0 < np; p0 += nb)
+  {
+    const guint nbp       = MIN (nb, np - p0);
+    gdouble * restrict c2 = &c2d[p0];
+    guint p, j, k;
+
+    for (j = 0; j < d; j++)
+    {
+      const gdouble theta_j        = td[j * s_theta];
+      const gdouble * restrict X_j = &Xd[j * tda_X + p0];
+      gdouble * restrict W_j       = &Wd[j * tda_W];
+
+      for (p = 0; p < nbp; p++)
+        W_j[p] = X_j[p] - theta_j;
+    }
+
+    for (p = 0; p < nbp; p++)
+      c2[p] = 0.0;
+
+    for (j = 0; j < d; j++)
+    {
+      const gdouble inv_U_jj       = 1.0 / Ud[j * tda_U + j];
+      const gdouble * restrict U_j = &Ud[j * tda_U];
+      gdouble * restrict W_j       = &Wd[j * tda_W];
+
+      for (p = 0; p < nbp; p++)
+      {
+        const gdouble y_jp = W_j[p] * inv_U_jj;
+
+        W_j[p] = y_jp;
+        c2[p] += y_jp * y_jp;
+      }
+
+      for (k = j + 1; k < d; k++)
+      {
+        const gdouble U_jk     = U_j[k];
+        gdouble * restrict W_k = &Wd[k * tda_W];
+
+        for (p = 0; p < nbp; p++)
+          W_k[p] -= U_jk * W_j[p];
+      }
+    }
+  }
+}
+
+/**
  * ncm_matrix_nearPD:
  * @cm: a #NcmMatrix
  * @UL: char indicating 'U'pper or 'L'ower matrix

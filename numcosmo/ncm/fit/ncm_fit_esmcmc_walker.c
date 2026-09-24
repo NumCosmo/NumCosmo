@@ -212,6 +212,13 @@ _ncm_fit_esmcmc_walker_desc (NcmFitESMCMCWalker *walker)
   return NULL;
 }
 
+/* A walker with nothing to tune reports no options, which is not a missing method. */
+static const gchar *
+_ncm_fit_esmcmc_walker_opts (NcmFitESMCMCWalker *walker)
+{
+  return NULL;
+}
+
 static void
 _ncm_fit_esmcmc_walker_start_run (NcmFitESMCMCWalker *walker, gboolean initial, guint exploration_done)
 {
@@ -268,6 +275,7 @@ ncm_fit_esmcmc_walker_class_init (NcmFitESMCMCWalkerClass *klass)
   klass->prob_norm    = _ncm_fit_esmcmc_walker_prob_norm;
   klass->clean        = _ncm_fit_esmcmc_walker_clean;
   klass->desc         = _ncm_fit_esmcmc_walker_desc;
+  klass->opts         = _ncm_fit_esmcmc_walker_opts;
   klass->start_run    = &_ncm_fit_esmcmc_walker_start_run;
   klass->end_run      = &_ncm_fit_esmcmc_walker_end_run;
   klass->is_markovian = &_ncm_fit_esmcmc_walker_is_markovian;
@@ -466,6 +474,22 @@ const gchar *
 ncm_fit_esmcmc_walker_desc (NcmFitESMCMCWalker *walker)
 {
   return NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->desc (walker);
+}
+
+/**
+ * ncm_fit_esmcmc_walker_opts: (virtual opts)
+ * @walker: a #NcmFitESMCMCWalker
+ *
+ * The walker's tunable settings as a colon separated list of `name=value' pairs, the
+ * companion of ncm_fit_esmcmc_walker_desc(), which names the structure alone. Two runs of
+ * the same walker differ here and nowhere else, so a catalog records both.
+ *
+ * Returns: (transfer none) (nullable): the options, or %NULL when the walker has none.
+ */
+const gchar *
+ncm_fit_esmcmc_walker_opts (NcmFitESMCMCWalker *walker)
+{
+  return NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->opts (walker);
 }
 
 /**

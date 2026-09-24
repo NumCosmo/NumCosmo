@@ -64,6 +64,7 @@ void test_ncm_matrix_dtrmv_dtrsv (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_dsyrk (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_scale_rows_cols (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_sub_row_vector (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_chol_chi2_cols (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_is_identity (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_cholesky_decomp_nearPD (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_free (TestNcmMatrix *test, gconstpointer pdata);
@@ -181,6 +182,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/matrix/sub_row_vector", TestNcmMatrix, NULL,
               &test_ncm_matrix_new,
               &test_ncm_matrix_sub_row_vector,
+              &test_ncm_matrix_free);
+
+  g_test_add ("/ncm/matrix/chol_chi2_cols", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_chol_chi2_cols,
               &test_ncm_matrix_free);
 
   g_test_add ("/ncm/matrix/is_identity", TestNcmMatrix, NULL,
@@ -1539,6 +1545,142 @@ test_ncm_matrix_sub_row_vector (TestNcmMatrix *test, gconstpointer pdata)
     NCM_TEST_FREE (ncm_vector_free, v2);
     NCM_TEST_FREE (ncm_vector_free, v);
   }
+}
+
+void
+test_ncm_matrix_chol_chi2_cols (TestNcmMatrix *test, gconstpointer pdata)
+{
+  const guint d_a[4]  = { 1, 3, 8, 50 };
+  const guint np_a[3] = { 1, 7, 256 };
+  const guint nb_a[4] = { 1, 7, 32, 256 };
+  NcmRNG *rng         = ncm_rng_seeded_new (NULL, 20260923);
+  guint i_d, i_np, i_nb;
+
+  for (i_d = 0; i_d < 4; i_d++)
+  {
+    const guint d    = d_a[i_d];
+    NcmMatrix *cov   = ncm_matrix_new (d, d);
+    NcmMatrix *U     = ncm_matrix_new (d, d);
+    NcmVector *mu    = ncm_vector_new (d);
+    NcmVector *theta = ncm_vector_new (d);
+    guint i, j;
+
+    /* @mu scales the covariance, so it is an input here; a large correlation level keeps
+     * the factor well conditioned up to d = 50, where a small one is singular. */
+    ncm_vector_set_all (mu, 1.0);
+    ncm_matrix_fill_rand_cov2 (cov, mu, 0.1, 2.0, 10.0, rng);
+    ncm_matrix_memcpy (U, cov);
+    g_assert_cmpint (ncm_matrix_cholesky_decomp (U, 'U'), ==, 0);
+
+    /* Only the upper triangle may be read: the lower one is filled with garbage. */
+    for (i = 1; i < d; i++)
+      for (j = 0; j < i; j++)
+        ncm_matrix_set (U, i, j, 1.0e10 * ncm_rng_uniform_gen (rng, -1.0, 1.0));
+
+    for (j = 0; j < d; j++)
+      ncm_vector_set (theta, j, ncm_rng_uniform_gen (rng, -2.0, 2.0));
+
+    for (i_np = 0; i_np < 3; i_np++)
+    {
+      const guint np  = np_a[i_np];
+      NcmMatrix *X    = ncm_matrix_new (d, np);
+      NcmMatrix *Xr   = ncm_matrix_new (np, d);
+      NcmVector *ref  = ncm_vector_new (np);
+      NcmVector *chi2 = ncm_vector_new (np);
+      NcmVector *dq   = ncm_vector_new_data_static (ncm_matrix_ptr (Xr, 0, 0), d, 1);
+      guint p;
+
+      for (p = 0; p < np; p++)
+        for (j = 0; j < d; j++)
+        {
+          const gdouble x_pj = ncm_rng_uniform_gen (rng, -3.0, 3.0);
+
+          ncm_matrix_set (X, j, p, x_pj);
+          ncm_matrix_set (Xr, p, j, x_pj);
+        }
+
+      /* Reference: the sequence the VKDE evaluator used, on points as rows. */
+      ncm_matrix_sub_row_vector (Xr, theta);
+      ncm_matrix_dtrsm (Xr, 'R', 'U', 'N', 1.0, U);
+
+      for (p = 0; p < np; p++)
+      {
+        ncm_vector_replace_data (dq, ncm_matrix_ptr (Xr, p, 0));
+        ncm_vector_set (ref, p, ncm_vector_dot (dq, dq));
+      }
+
+      for (i_nb = 0; i_nb < 4; i_nb++)
+      {
+        NcmMatrix *work = ncm_matrix_new (d, nb_a[i_nb]);
+
+        ncm_vector_set_all (chi2, -1.0);
+        ncm_matrix_chol_chi2_cols (X, theta, U, work, chi2);
+
+        for (p = 0; p < np; p++)
+          ncm_assert_cmpdouble_e (ncm_vector_get (chi2, p), ==, ncm_vector_get (ref, p), 1.0e-13, 0.0);
+
+        NCM_TEST_FREE (ncm_matrix_free, work);
+      }
+
+      /* A strided centre is read through its stride. */
+      {
+        NcmMatrix *work = ncm_matrix_new (d, 32);
+        NcmVector *t2   = ncm_vector_new (2 * d);
+        NcmVector *ts   = ncm_vector_get_subvector_stride (t2, 0, d, 2);
+
+        for (j = 0; j < d; j++)
+        {
+          ncm_vector_set (t2, 2 * j, ncm_vector_get (theta, j));
+          ncm_vector_set (t2, 2 * j + 1, 1.0e3);
+        }
+
+        ncm_vector_set_all (chi2, -1.0);
+        ncm_matrix_chol_chi2_cols (X, ts, U, work, chi2);
+
+        for (p = 0; p < np; p++)
+          ncm_assert_cmpdouble_e (ncm_vector_get (chi2, p), ==, ncm_vector_get (ref, p), 1.0e-13, 0.0);
+
+        NCM_TEST_FREE (ncm_vector_free, ts);
+        NCM_TEST_FREE (ncm_vector_free, t2);
+        NCM_TEST_FREE (ncm_matrix_free, work);
+      }
+
+      /* Submatrix inputs, whose row stride exceeds the column count. */
+      {
+        NcmMatrix *Xb = ncm_matrix_new (d + 2, np + 3);
+        NcmMatrix *Xs = ncm_matrix_get_submatrix (Xb, 0, 0, d, np);
+        NcmMatrix *Wb = ncm_matrix_new (d + 2, 32 + 5);
+        NcmMatrix *Ws = ncm_matrix_get_submatrix (Wb, 0, 0, d, 32);
+
+        ncm_matrix_set_all (Xb, 1.0e10);
+        ncm_matrix_memcpy (Xs, X);
+
+        ncm_vector_set_all (chi2, -1.0);
+        ncm_matrix_chol_chi2_cols (Xs, theta, U, Ws, chi2);
+
+        for (p = 0; p < np; p++)
+          ncm_assert_cmpdouble_e (ncm_vector_get (chi2, p), ==, ncm_vector_get (ref, p), 1.0e-13, 0.0);
+
+        NCM_TEST_FREE (ncm_matrix_free, Ws);
+        NCM_TEST_FREE (ncm_matrix_free, Wb);
+        NCM_TEST_FREE (ncm_matrix_free, Xs);
+        NCM_TEST_FREE (ncm_matrix_free, Xb);
+      }
+
+      NCM_TEST_FREE (ncm_vector_free, dq);
+      NCM_TEST_FREE (ncm_vector_free, chi2);
+      NCM_TEST_FREE (ncm_vector_free, ref);
+      NCM_TEST_FREE (ncm_matrix_free, Xr);
+      NCM_TEST_FREE (ncm_matrix_free, X);
+    }
+
+    NCM_TEST_FREE (ncm_vector_free, theta);
+    NCM_TEST_FREE (ncm_vector_free, mu);
+    NCM_TEST_FREE (ncm_matrix_free, U);
+    NCM_TEST_FREE (ncm_matrix_free, cov);
+  }
+
+  ncm_rng_free (rng);
 }
 
 void

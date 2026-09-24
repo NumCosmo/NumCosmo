@@ -80,7 +80,7 @@ typedef enum _NcmFitESMCMCWalkerAPESKType /*< enum,underscore_name=NCM_FIT_ESMCM
 } NcmFitESMCMCWalkerAPESKType;
 
 NcmFitESMCMCWalkerAPES *ncm_fit_esmcmc_walker_apes_new (guint nwalkers, guint nparams);
-NcmFitESMCMCWalkerAPES *ncm_fit_esmcmc_walker_apes_new_full (guint nwalkers, guint nparams, NcmFitESMCMCWalkerAPESMethod method, NcmFitESMCMCWalkerAPESKType k_type, gdouble over_smooth, gboolean use_interp);
+NcmFitESMCMCWalkerAPES *ncm_fit_esmcmc_walker_apes_new_full (guint nwalkers, guint nparams, NcmFitESMCMCWalkerAPESMethod method, NcmFitESMCMCWalkerAPESKType k_type, gdouble over_smooth);
 NcmFitESMCMCWalkerAPES *ncm_fit_esmcmc_walker_apes_ref (NcmFitESMCMCWalkerAPES *apes);
 void ncm_fit_esmcmc_walker_apes_free (NcmFitESMCMCWalkerAPES *apes);
 void ncm_fit_esmcmc_walker_apes_clear (NcmFitESMCMCWalkerAPES **apes);
@@ -92,9 +92,6 @@ void ncm_fit_esmcmc_walker_apes_set_over_smooth (NcmFitESMCMCWalkerAPES *apes, c
 NcmFitESMCMCWalkerAPESMethod ncm_fit_esmcmc_walker_apes_get_method (NcmFitESMCMCWalkerAPES *apes);
 NcmFitESMCMCWalkerAPESKType ncm_fit_esmcmc_walker_apes_get_k_type (NcmFitESMCMCWalkerAPES *apes);
 gdouble ncm_fit_esmcmc_walker_apes_get_over_smooth (NcmFitESMCMCWalkerAPES *apes);
-
-void ncm_fit_esmcmc_walker_apes_use_interp (NcmFitESMCMCWalkerAPES *apes, gboolean use_interp);
-gboolean ncm_fit_esmcmc_walker_apes_interp (NcmFitESMCMCWalkerAPES *apes);
 
 void ncm_fit_esmcmc_walker_apes_set_use_threads (NcmFitESMCMCWalkerAPES *apes, gboolean use_threads);
 gboolean ncm_fit_esmcmc_walker_apes_get_use_threads (NcmFitESMCMCWalkerAPES *apes);

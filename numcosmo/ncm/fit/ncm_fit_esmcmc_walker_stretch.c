@@ -69,6 +69,7 @@ struct _NcmFitESMCMCWalkerStretch
   GArray *numbers;
   gboolean multi;
   gchar *desc;
+  gchar *opts;
 };
 
 G_DEFINE_TYPE (NcmFitESMCMCWalkerStretch, ncm_fit_esmcmc_walker_stretch, NCM_TYPE_FIT_ESMCMC_WALKER)
@@ -88,6 +89,7 @@ ncm_fit_esmcmc_walker_stretch_init (NcmFitESMCMCWalkerStretch *stretch)
   stretch->numbers  = g_array_new (TRUE, TRUE, sizeof (guint));
   stretch->multi    = FALSE;
   stretch->desc     = NULL;
+  stretch->opts     = NULL;
 }
 
 static void
@@ -147,6 +149,7 @@ _ncm_fit_esmcmc_walker_stretch_dispose (GObject *object)
   g_clear_pointer (&stretch->numbers, g_array_unref);
 
   g_clear_pointer (&stretch->desc, g_free);
+  g_clear_pointer (&stretch->opts, g_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_esmcmc_walker_stretch_parent_class)->dispose (object);
@@ -169,6 +172,7 @@ static gdouble _ncm_fit_esmcmc_walker_stretch_prob (NcmFitESMCMCWalker *walker, 
 static gdouble _ncm_fit_esmcmc_walker_stretch_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
 static void _ncm_fit_esmcmc_walker_stretch_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf);
 static const gchar *_ncm_fit_esmcmc_walker_stretch_desc (NcmFitESMCMCWalker *walker);
+static const gchar *_ncm_fit_esmcmc_walker_stretch_opts (NcmFitESMCMCWalker *walker);
 
 static void
 ncm_fit_esmcmc_walker_stretch_class_init (NcmFitESMCMCWalkerStretchClass *klass)
@@ -206,6 +210,7 @@ ncm_fit_esmcmc_walker_stretch_class_init (NcmFitESMCMCWalkerStretchClass *klass)
   walker_class->prob_norm   = &_ncm_fit_esmcmc_walker_stretch_prob_norm;
   walker_class->clean       = &_ncm_fit_esmcmc_walker_stretch_clean;
   walker_class->desc        = &_ncm_fit_esmcmc_walker_stretch_desc;
+  walker_class->opts        = &_ncm_fit_esmcmc_walker_stretch_opts;
 }
 
 static void
@@ -506,9 +511,22 @@ _ncm_fit_esmcmc_walker_stretch_desc (NcmFitESMCMCWalker *walker)
 
   g_clear_pointer (&stretch->desc, g_free);
 
-  stretch->desc = g_strdup_printf ("Stretch-Move%s", stretch->multi ? "[multi-strecth]" : "");
+  stretch->desc = g_strdup ("Stretch-Move");
 
   return stretch->desc;
+}
+
+/* The one setting that changes the proposal without changing its structure. */
+static const gchar *
+_ncm_fit_esmcmc_walker_stretch_opts (NcmFitESMCMCWalker *walker)
+{
+  NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
+
+  g_clear_pointer (&stretch->opts, g_free);
+
+  stretch->opts = g_strdup_printf ("multi-stretch=%s", stretch->multi ? "yes" : "no");
+
+  return stretch->opts;
 }
 
 /**

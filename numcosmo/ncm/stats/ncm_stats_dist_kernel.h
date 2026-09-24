@@ -48,8 +48,7 @@ G_DECLARE_DERIVABLE_TYPE (NcmStatsDistKernel, ncm_stats_dist_kernel, NCM, STATS_
  * @get_lnnorm: Gets the log of the normalization constant of the kernel.
  * @eval_unnorm: Evaluates the unnormalized kernel at a given chi2.
  * @eval_unnorm_vec: Evaluates the unnormalized kernel at a given chi2 vector.
- * @eval_sum0_gamma_lambda: Evaluates the kernels sum0, gamma and lambda at a given chi2 vector.
- * @eval_sum1_gamma_lambda: Evaluates the kernels sum1, gamma and lambda at a given chi2 vector.
+ * @eval_gamma_lambda: Evaluates gamma and lambda at a given chi2 vector.
  * @sample: Samples the kernel.
  *
  * The virtual function table for #NcmStatsDistKernel.
@@ -66,13 +65,12 @@ struct _NcmStatsDistKernelClass
   gdouble (*get_lnnorm) (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp);
   gdouble (*eval_unnorm) (NcmStatsDistKernel *sdk, const gdouble chi2);
   void (*eval_unnorm_vec) (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *Ku);
-  void (*eval_sum0_gamma_lambda) (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, NcmVector *lnK, gdouble *gamma, gdouble *lambda);
-  void (*eval_sum1_gamma_lambda) (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, NcmVector *lnK, gdouble *gamma, gdouble *lambda);
+  void (*eval_gamma_lambda) (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *lnc, NcmVector *lnK, gdouble *gamma, gdouble *lambda);
   void (*sample) (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *y, NcmRNG *rng);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   /* <private> */
-  gpointer padding[8];
+  gpointer padding[9];
 };
 
 NcmStatsDistKernel *ncm_stats_dist_kernel_ref (NcmStatsDistKernel *sdk);
@@ -87,8 +85,7 @@ gdouble ncm_stats_dist_kernel_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *co
 
 gdouble ncm_stats_dist_kernel_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble chi2);
 void ncm_stats_dist_kernel_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *Ku);
-void ncm_stats_dist_kernel_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, NcmVector *lnK, gdouble *gamma, gdouble *lambda);
-void ncm_stats_dist_kernel_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, NcmVector *lnK, gdouble *gamma, gdouble *lambda);
+void ncm_stats_dist_kernel_eval_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *lnc, NcmVector *lnK, gdouble *gamma, gdouble *lambda);
 
 void ncm_stats_dist_kernel_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *y, NcmRNG *rng);
 

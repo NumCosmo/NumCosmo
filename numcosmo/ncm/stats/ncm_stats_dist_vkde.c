@@ -105,16 +105,37 @@ _ncm_stats_dist_vkde_stats_vec_new (gpointer userdata)
   return sample;
 }
 
+/*
+ * Points per block inside ncm_matrix_chol_chi2_cols(). The block is the only scratch the
+ * solve touches repeatedly, so it is sized to stay in cache: at d = 50 a block of 32 is
+ * 12.8 kB against the 100 kB a whole tile would need. Measured flat between 16 and 64.
+ */
+#define _NCM_STATS_DIST_VKDE_CHI2_BLOCK (32)
+
+/*
+ * The scratch one thread of the batched evaluator owns: the triangular solve's block, the
+ * chi2 of one kernel over the whole tile, a view of one point's row of chi2_M, and the
+ * kernel sum's workspace. Everything else the tile loop touches is either shared and read
+ * only -- the points, the covariance factors, the centres, lnc -- or written at indices no
+ * two threads share.
+ */
+typedef struct _NcmStatsDistVKDEEvalTile
+{
+  NcmMatrix *work;
+  NcmVector *chi2_tile;
+  NcmVector *chi2_row;
+  NcmVector *lnK;
+  NcmVector *lnc;
+} NcmStatsDistVKDEEvalTile;
+
 typedef struct _NcmStatsDistVKDEEvalVars
 {
   NcmVector *delta_x;
   NcmVector *chi2;
   NcmVector *lnK;
+  NcmVector *lnc;
   NcmMatrix *chi2_M;
-  NcmVector *chi2_row;
   NcmMatrix *X;
-  NcmMatrix *delta_X;
-  NcmVector *delta_q;
 } NcmStatsDistVKDEEvalVars;
 
 static gpointer
@@ -128,14 +149,12 @@ _ncm_stats_dist_vkde_eval_vars_new (gpointer userdata)
   ev->delta_x = ncm_vector_new (ppself->d);
   ev->chi2    = ncm_vector_new (ppself->n_kernels);
   ev->lnK     = ncm_vector_new (ppself->n_kernels);
+  ev->lnc     = ncm_vector_new (ppself->n_kernels);
 
   /* Only the batched evaluator needs the tile, so it is built on first use: a thread
    * that never takes that path does not carry the n_kernels columns. */
-  ev->chi2_M   = NULL;
-  ev->chi2_row = NULL;
-  ev->X        = NULL;
-  ev->delta_X  = NULL;
-  ev->delta_q  = NULL;
+  ev->chi2_M = NULL;
+  ev->X      = NULL;
 
   return ev;
 }
@@ -148,13 +167,69 @@ _ncm_stats_dist_vkde_eval_vars_free (gpointer userdata)
   ncm_vector_free (ev->delta_x);
   ncm_vector_free (ev->chi2);
   ncm_vector_free (ev->lnK);
+  ncm_vector_free (ev->lnc);
   ncm_matrix_clear (&ev->chi2_M);
-  ncm_vector_clear (&ev->chi2_row);
   ncm_matrix_clear (&ev->X);
-  ncm_matrix_clear (&ev->delta_X);
-  ncm_vector_clear (&ev->delta_q);
 
   g_free (ev);
+}
+
+static void _ncm_stats_dist_vkde_eval_tile_prepare (NcmStatsDistVKDEEvalTile *tl, NcmMatrix *chi2_M, const guint nt, const guint n_kernels);
+
+static gpointer
+_ncm_stats_dist_vkde_eval_tile_new (gpointer userdata)
+{
+  NcmStatsDist *sd                   = NCM_STATS_DIST (userdata);
+  NcmStatsDistPrivate * const ppself = ncm_stats_dist_get_instance_private (sd);
+  NcmStatsDistVKDEEvalTile *tl       = g_new0 (NcmStatsDistVKDEEvalTile, 1);
+
+  tl->work = ncm_matrix_new (ppself->d, _NCM_STATS_DIST_VKDE_CHI2_BLOCK);
+  tl->lnK  = ncm_vector_new (ppself->n_kernels);
+
+  /* Only the leave-one-out sweep writes to this: it needs to blank one entry per point,
+   * and the shared one belongs to every thread at once. */
+  tl->lnc = ncm_vector_new (ppself->n_kernels);
+
+  /* Both of these depend on the tile height, which is a property of the batch rather
+   * than of the object, so they are sized on first use and whenever it changes. */
+  tl->chi2_tile = NULL;
+  tl->chi2_row  = NULL;
+
+  return tl;
+}
+
+/*
+ * Sizes the two pieces that follow the batch rather than the object. Called by whichever
+ * thread holds this scratch, so it needs no locking of its own.
+ */
+static void
+_ncm_stats_dist_vkde_eval_tile_prepare (NcmStatsDistVKDEEvalTile *tl, NcmMatrix *chi2_M, const guint nt, const guint n_kernels)
+{
+  /* Grow only: @nt is whatever this sweep needs -- the tile width for the evaluators, the
+   * whole sample for compute_IM -- and the two alternate, so shrinking would reallocate on
+   * every switch. The solve fills the first @nt entries and ignores the rest. */
+  if ((tl->chi2_tile == NULL) || (ncm_vector_len (tl->chi2_tile) < nt))
+  {
+    ncm_vector_clear (&tl->chi2_tile);
+    tl->chi2_tile = ncm_vector_new (nt);
+  }
+
+  if (tl->chi2_row == NULL)
+    tl->chi2_row = ncm_vector_new_data_static (ncm_matrix_ptr (chi2_M, 0, 0), n_kernels, 1);
+}
+
+static void
+_ncm_stats_dist_vkde_eval_tile_free (gpointer userdata)
+{
+  NcmStatsDistVKDEEvalTile *tl = (NcmStatsDistVKDEEvalTile *) userdata;
+
+  ncm_matrix_clear (&tl->work);
+  ncm_vector_clear (&tl->lnK);
+  ncm_vector_clear (&tl->lnc);
+  ncm_vector_clear (&tl->chi2_tile);
+  ncm_vector_clear (&tl->chi2_row);
+
+  g_free (tl);
 }
 
 static void
@@ -162,11 +237,10 @@ ncm_stats_dist_vkde_init (NcmStatsDistVKDE *sdvkde)
 {
   NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde);
 
-  self->cov_array    = g_ptr_array_new ();
-  self->cov_array0   = g_ptr_array_new ();
-  self->lnnorms      = NULL;
-  self->IM_delta     = NULL;
-  self->IM_delta_row = NULL;
+  self->cov_array  = g_ptr_array_new ();
+  self->cov_array0 = g_ptr_array_new ();
+  self->lnnorms    = NULL;
+  self->sample_T   = NULL;
 
   self->local_frac     = 0.0;
   self->points_per_dim = 0.0;
@@ -177,6 +251,8 @@ ncm_stats_dist_vkde_init (NcmStatsDistVKDE *sdvkde)
 
   self->mp_eval_vars = ncm_memory_pool_new (&_ncm_stats_dist_vkde_eval_vars_new, sdvkde,
                                             &_ncm_stats_dist_vkde_eval_vars_free);
+  self->mp_eval_tile = ncm_memory_pool_new (&_ncm_stats_dist_vkde_eval_tile_new, sdvkde,
+                                            &_ncm_stats_dist_vkde_eval_tile_free);
 
   g_ptr_array_set_free_func (self->cov_array, (GDestroyNotify) ncm_matrix_free);
   g_ptr_array_set_free_func (self->cov_array0, (GDestroyNotify) ncm_matrix_free);
@@ -239,8 +315,7 @@ _ncm_stats_dist_vkde_dispose (GObject *object)
   NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde);
 
   ncm_vector_clear (&self->lnnorms);
-  ncm_matrix_clear (&self->IM_delta);
-  ncm_vector_clear (&self->IM_delta_row);
+  ncm_matrix_clear (&self->sample_T);
 
   g_clear_pointer (&self->cov_array, g_ptr_array_unref);
   g_clear_pointer (&self->cov_array0, g_ptr_array_unref);
@@ -255,6 +330,12 @@ _ncm_stats_dist_vkde_dispose (GObject *object)
   {
     ncm_memory_pool_free (self->mp_eval_vars, TRUE);
     self->mp_eval_vars = NULL;
+  }
+
+  if (self->mp_eval_tile != NULL)
+  {
+    ncm_memory_pool_free (self->mp_eval_tile, TRUE);
+    self->mp_eval_tile = NULL;
   }
 
   /* Chain up : end */
@@ -281,6 +362,7 @@ static gdouble _ncm_stats_dist_vkde_get_lnnorm (NcmStatsDist *sd, guint i);
 static gdouble _ncm_stats_dist_vkde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
 static gdouble _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
 static void _ncm_stats_dist_vkde_eval_weights_m2lnp_vec (NcmStatsDist *sd, NcmVector *weights, GPtrArray *x_a, NcmVector *m2lnp);
+static void _ncm_stats_dist_vkde_eval_weights_m2lnp_loo (NcmStatsDist *sd, NcmVector *weights, GPtrArray *x_a, NcmVector *m2lnp);
 static void _ncm_stats_dist_vkde_reset (NcmStatsDist *sd);
 
 static void
@@ -339,6 +421,7 @@ ncm_stats_dist_vkde_class_init (NcmStatsDistVKDEClass *klass)
   base_class->eval_weights           = &_ncm_stats_dist_vkde_eval_weights;
   base_class->eval_weights_m2lnp     = &_ncm_stats_dist_vkde_eval_weights_m2lnp;
   base_class->eval_weights_m2lnp_vec = &_ncm_stats_dist_vkde_eval_weights_m2lnp_vec;
+  base_class->eval_weights_m2lnp_loo = &_ncm_stats_dist_vkde_eval_weights_m2lnp_loo;
   base_class->reset                  = &_ncm_stats_dist_vkde_reset;
 }
 
@@ -353,8 +436,7 @@ _ncm_stats_dist_vkde_set_dim (NcmStatsDist *sd, const guint dim)
 
     g_ptr_array_set_size (self->cov_array, 0);
     g_ptr_array_set_size (self->cov_array0, 0);
-    ncm_matrix_clear (&self->IM_delta);
-    ncm_vector_clear (&self->IM_delta_row);
+    ncm_matrix_clear (&self->sample_T);
   }
 }
 
@@ -416,15 +498,14 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
     self->lnnorms = ncm_vector_new (ppself->n_kernels);
 
     ncm_memory_pool_empty (self->mp_eval_vars, TRUE);
+    ncm_memory_pool_empty (self->mp_eval_tile, TRUE);
   }
 
-  /* Scratch for compute_IM: the sample, centred and whitened one kernel at a time. */
-  if ((self->IM_delta == NULL) || (ncm_matrix_nrows (self->IM_delta) != ppself->n_obs))
+  /* The sample for compute_IM, one point per column, which is the layout its solve wants. */
+  if ((self->sample_T == NULL) || (ncm_matrix_ncols (self->sample_T) != ppself->n_obs))
   {
-    ncm_matrix_clear (&self->IM_delta);
-    ncm_vector_clear (&self->IM_delta_row);
-    self->IM_delta     = ncm_matrix_new (ppself->n_obs, ppself->d);
-    self->IM_delta_row = ncm_vector_new_data_static (ncm_matrix_ptr (self->IM_delta, 0, 0), ppself->d, 1);
+    ncm_matrix_clear (&self->sample_T);
+    self->sample_T = ncm_matrix_new (ppself->d, ppself->n_obs);
   }
 
   /*
@@ -613,44 +694,59 @@ _ncm_stats_dist_vkde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
 
   guint i;
 
-  /* #pragma omp parallel if (ppself->use_threads) */
-  {
-    NcmMatrix *invUsample_matrix = self->IM_delta;
-    NcmVector *theta_j           = self->IM_delta_row;
+  /* The sample once, one point per column: every kernel reads it and none writes it. */
+  ncm_matrix_transpose_memcpy (self->sample_T, pself->sample_matrix);
 
-    /* #pragma omp for schedule(static) */
-    for (i = 0; i < ppself->n_kernels; i++)
+  #pragma omp parallel if (ppself->use_threads)
+  {
+    NcmStatsDistVKDEEvalTile **tl_ptr = ncm_memory_pool_get (self->mp_eval_tile);
+    NcmStatsDistVKDEEvalTile *tl      = *tl_ptr;
+    guint k;
+
+    _ncm_stats_dist_vkde_eval_tile_prepare (tl, IM, ppself->n_obs, ppself->n_kernels);
+
+    #pragma omp for schedule (static)
+
+    for (k = 0; k < ppself->n_kernels; k++)
     {
-      NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
-      NcmVector *theta_i      = g_ptr_array_index (ppself->center_array, i);
+      NcmMatrix *cov_decomp_k = g_ptr_array_index (self->cov_array, k);
+      NcmVector *theta_k      = g_ptr_array_index (ppself->center_array, k);
       guint j;
 
-      ncm_matrix_memcpy (invUsample_matrix, pself->sample_matrix);
-      ncm_matrix_sub_row_vector (invUsample_matrix, theta_i);
-      ncm_matrix_dtrsm (invUsample_matrix, 'R', 'U', 'N', 1.0, cov_decomp_i);
+      ncm_matrix_chol_chi2_cols (self->sample_T, theta_k, cov_decomp_k, tl->work, tl->chi2_tile);
 
       for (j = 0; j < ppself->n_obs; j++)
-      {
-        ncm_vector_replace_data (theta_j, ncm_matrix_ptr (invUsample_matrix, j, 0));
-        ncm_matrix_set (IM, j, i, ncm_vector_dot (theta_j, theta_j) * one_href2);
-      }
+        ncm_matrix_set (IM, j, k, ncm_vector_fast_get (tl->chi2_tile, j) * one_href2);
     }
+
+    ncm_memory_pool_return (tl_ptr);
   }
 
   {
     const gdouble lnnorm_href = ppself->d * log (ppself->href);
 
-    /* #pragma omp parallel for if (ppself->use_threads) */
-
-    for (i = 0; i < ppself->n_obs; i++)
+    /* Rows are independent, and the row view comes from the pool rather than being
+     * allocated per row as it was. */
+    #pragma omp parallel if (ppself->use_threads)
     {
-      NcmVector *row_i = ncm_matrix_get_row (IM, i);
+      NcmStatsDistVKDEEvalTile **tl_ptr = ncm_memory_pool_get (self->mp_eval_tile);
+      NcmStatsDistVKDEEvalTile *tl      = *tl_ptr;
+      guint r;
 
-      ncm_stats_dist_kernel_eval_unnorm_vec (ppself->kernel, row_i, row_i);
-      ncm_vector_free (row_i);
+      _ncm_stats_dist_vkde_eval_tile_prepare (tl, IM, ppself->n_obs, ppself->n_kernels);
+
+      #pragma omp for schedule (static)
+
+      for (r = 0; r < ppself->n_obs; r++)
+      {
+        ncm_vector_replace_data (tl->chi2_row, ncm_matrix_ptr (IM, r, 0));
+        ncm_stats_dist_kernel_eval_unnorm_vec (ppself->kernel, tl->chi2_row, tl->chi2_row);
+      }
+
+      ncm_memory_pool_return (tl_ptr);
     }
 
-    /* #pragma omp parallel for if (ppself->use_threads) */
+    #pragma omp parallel for schedule (static) if (ppself->use_threads)
 
     for (i = 0; i < ppself->n_kernels; i++)
     {
@@ -706,6 +802,9 @@ _ncm_stats_dist_vkde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVect
       ncm_vector_memcpy (ev->delta_x, x);
       ncm_vector_axpy (ev->delta_x, -1.0, theta_i);
 
+      /* One point against one kernel: a triangular solve through BLAS beats the fused
+       * sweep here, which has no points to vectorize over and pays d divisions per
+       * kernel. Measured at d = 20 and d = 50; the fused form is 1.3x and 2.2x slower. */
       ncm_matrix_dtrsv (cov_decomp_i, 'U', 'T', ev->delta_x);
 
       {
@@ -753,6 +852,9 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
       ncm_vector_memcpy (ev->delta_x, x);
       ncm_vector_axpy (ev->delta_x, -1.0, theta_i);
 
+      /* One point against one kernel: a triangular solve through BLAS beats the fused
+       * sweep here, which has no points to vectorize over and pays d divisions per
+       * kernel. Measured at d = 20 and d = 50; the fused form is 1.3x and 2.2x slower. */
       ncm_matrix_dtrsv (cov_decomp_i, 'U', 'T', ev->delta_x);
 
       {
@@ -766,7 +868,10 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
   {
     gdouble gamma, lambda;
 
-    ncm_stats_dist_kernel_eval_sum0_gamma_lambda (ppself->kernel, ev->chi2, weights, self->lnnorms, ev->lnK, &gamma, &lambda);
+    for (i = 0; i < ppself->n_kernels; i++)
+      ncm_vector_fast_set (ev->lnc, i, log (ncm_vector_get (weights, i)) - ncm_vector_get (self->lnnorms, i));
+
+    ncm_stats_dist_kernel_eval_gamma_lambda (ppself->kernel, ev->chi2, ev->lnc, ev->lnK, &gamma, &lambda);
 
     ncm_memory_pool_return (ev_ptr);
 
@@ -784,8 +889,13 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
  */
 #define _NCM_STATS_DIST_VKDE_EVAL_TILE (256)
 
+/*
+ * The two batched evaluators differ only in whether a point drops its own kernel, so they
+ * are the same sweep with one index of the kernel sum blanked. @loo selects that, and then
+ * point i of @x_a is the centre of kernel i.
+ */
 static void
-_ncm_stats_dist_vkde_eval_weights_m2lnp_vec (NcmStatsDist *sd, NcmVector *weights, GPtrArray *x_a, NcmVector *m2lnp)
+_ncm_stats_dist_vkde_eval_tiles (NcmStatsDist *sd, NcmVector *weights, GPtrArray *x_a, NcmVector *m2lnp, const gboolean loo)
 {
   NcmStatsDistVKDE *sdvkde             = NCM_STATS_DIST_VKDE (sd);
   NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde);
@@ -798,21 +908,31 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp_vec (NcmStatsDist *sd, NcmVector *weight
 
   NcmStatsDistVKDEEvalVars **ev_ptr = ncm_memory_pool_get (self->mp_eval_vars);
   NcmStatsDistVKDEEvalVars *ev      = *ev_ptr;
+  guint nt_X;
   guint p0;
 
   if ((ev->chi2_M == NULL) || (ncm_matrix_col_len (ev->chi2_M) < nt))
   {
     ncm_matrix_clear (&ev->chi2_M);
-    ncm_vector_clear (&ev->chi2_row);
-
     ncm_matrix_clear (&ev->X);
-    ncm_matrix_clear (&ev->delta_X);
-    ncm_vector_clear (&ev->delta_q);
-    ev->chi2_M   = ncm_matrix_new (nt, ppself->n_kernels);
-    ev->chi2_row = ncm_vector_new_data_static (ncm_matrix_ptr (ev->chi2_M, 0, 0), ppself->n_kernels, 1);
-    ev->X        = ncm_matrix_new (nt, ppself->d);
-    ev->delta_X  = ncm_matrix_new (nt, ppself->d);
-    ev->delta_q  = ncm_vector_new_data_static (ncm_matrix_ptr (ev->delta_X, 0, 0), ppself->d, 1);
+    ev->chi2_M = ncm_matrix_new (nt, ppself->n_kernels);
+    ev->X      = ncm_matrix_new (ppself->d, nt);
+
+    /* A short last tile leaves trailing columns untouched; they are solved with the rest
+     * and their results discarded, so they only need to be finite. */
+    ncm_matrix_set_zero (ev->X);
+  }
+
+  nt_X = ncm_matrix_ncols (ev->X);
+
+  /* The weight and the normalization reach the kernel sum only as log (w_i) - lnnorm_i,
+   * and neither changes across the batch: forming it here costs n_kernels logarithms for
+   * the whole call instead of one per (point, kernel) pair. */
+  {
+    guint i;
+
+    for (i = 0; i < ppself->n_kernels; i++)
+      ncm_vector_fast_set (ev->lnc, i, log (ncm_vector_get (weights, i)) - ncm_vector_get (self->lnnorms, i));
   }
 
   for (p0 = 0; p0 < np; p0 += nt)
@@ -820,49 +940,89 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp_vec (NcmStatsDist *sd, NcmVector *weight
     const guint ntp = MIN (nt, np - p0);
     guint p;
 
-    /* The points of the tile, once; every kernel subtracts its own centre from them. The
-     * tile has nt rows; the last one is shorter by less than n_tiles rows, and the solve
-     * on its unused trailing rows is harmless. */
+    /* The points of the tile, once, one per column: the solve below runs over points in
+     * its innermost loop, so they have to be the contiguous direction. */
     for (p = 0; p < ntp; p++)
-      ncm_matrix_set_row (ev->X, p, g_ptr_array_index (x_a, p0 + p));
+      ncm_matrix_set_col (ev->X, p, g_ptr_array_index (x_a, p0 + p));
 
-    /* #pragma omp parallel if (ppself->use_threads) */
+    /* One scratch per thread for the whole tile, taken once. The two loops share it: the
+     * barrier that closes the first has every column of chi2_M written before the second
+     * reads a row of it. A static schedule also gives each thread a contiguous span of
+     * columns, so the rows they write share a cache line only at the span boundaries. */
+    #pragma omp parallel if (ppself->use_threads)
     {
-      NcmMatrix *delta_X = ev->delta_X;
-      NcmVector *delta_q = ev->delta_q;
-      guint i;
+      NcmStatsDistVKDEEvalTile **tl_ptr = ncm_memory_pool_get (self->mp_eval_tile);
+      NcmStatsDistVKDEEvalTile *tl      = *tl_ptr;
+      guint i, q;
 
-      /* #pragma omp for schedule(static) */
+      _ncm_stats_dist_vkde_eval_tile_prepare (tl, ev->chi2_M, nt_X, ppself->n_kernels);
+
+      if (loo)
+        ncm_vector_memcpy (tl->lnc, ev->lnc);
+
+      #pragma omp for schedule (static)
+
       for (i = 0; i < ppself->n_kernels; i++)
       {
         NcmMatrix *cov_decomp_i = g_ptr_array_index (self->cov_array, i);
         NcmVector *theta_i      = g_ptr_array_index (ppself->center_array, i);
-        guint q;
+        guint r;
 
-        ncm_matrix_memcpy (delta_X, ev->X);
-        ncm_matrix_sub_row_vector (delta_X, theta_i);
-        ncm_matrix_dtrsm (delta_X, 'R', 'U', 'N', 1.0, cov_decomp_i);
+        ncm_matrix_chol_chi2_cols (ev->X, theta_i, cov_decomp_i, tl->work, tl->chi2_tile);
 
-        for (q = 0; q < ntp; q++)
-        {
-          ncm_vector_replace_data (delta_q, ncm_matrix_ptr (delta_X, q, 0));
-          ncm_matrix_set (ev->chi2_M, q, i, ncm_vector_dot (delta_q, delta_q) * one_href2);
-        }
+        for (r = 0; r < ntp; r++)
+          ncm_matrix_set (ev->chi2_M, r, i, ncm_vector_fast_get (tl->chi2_tile, r) * one_href2);
       }
-    }
 
-    for (p = 0; p < ntp; p++)
-    {
-      gdouble gamma, lambda;
+      /* One log-sum-exp per point over its own row of chi2_M, into its own entry of m2lnp. */
+      #pragma omp for schedule (static)
 
-      ncm_vector_replace_data (ev->chi2_row, ncm_matrix_ptr (ev->chi2_M, p, 0));
+      for (q = 0; q < ntp; q++)
+      {
+        const guint pq   = p0 + q;
+        NcmVector *lnc_q = loo ? tl->lnc : ev->lnc;
+        gdouble lnc_pq   = 0.0;
+        gdouble gamma, lambda;
 
-      ncm_stats_dist_kernel_eval_sum0_gamma_lambda (ppself->kernel, ev->chi2_row, weights, self->lnnorms, ev->lnK, &gamma, &lambda);
-      ncm_vector_set (m2lnp, p0 + p, -2.0 * (gamma + log1p (lambda) - lnnorm_href));
+        /* Dropping kernel pq is blanking its entry: the weight enters only through
+         * log (w_pq), and a zero weight is what the point-by-point version sets. */
+        if (loo)
+        {
+          lnc_pq = ncm_vector_fast_get (lnc_q, pq);
+          ncm_vector_fast_set (lnc_q, pq, GSL_NEGINF);
+        }
+
+        ncm_vector_replace_data (tl->chi2_row, ncm_matrix_ptr (ev->chi2_M, q, 0));
+
+        ncm_stats_dist_kernel_eval_gamma_lambda (ppself->kernel, tl->chi2_row, lnc_q, tl->lnK, &gamma, &lambda);
+        ncm_vector_set (m2lnp, pq, -2.0 * (gamma + log1p (lambda) - lnnorm_href));
+
+        if (loo)
+          ncm_vector_fast_set (lnc_q, pq, lnc_pq);
+      }
+
+      ncm_memory_pool_return (tl_ptr);
     }
   }
 
   ncm_memory_pool_return (ev_ptr);
+}
+
+static void
+_ncm_stats_dist_vkde_eval_weights_m2lnp_vec (NcmStatsDist *sd, NcmVector *weights, GPtrArray *x_a, NcmVector *m2lnp)
+{
+  _ncm_stats_dist_vkde_eval_tiles (sd, weights, x_a, m2lnp, FALSE);
+}
+
+static void
+_ncm_stats_dist_vkde_eval_weights_m2lnp_loo (NcmStatsDist *sd, NcmVector *weights, GPtrArray *x_a, NcmVector *m2lnp)
+{
+  NcmStatsDistPrivate * const ppself = ncm_stats_dist_get_instance_private (sd);
+
+  /* Point i drops kernel i, so there has to be a kernel for every point. */
+  g_assert_cmpuint (x_a->len, ==, ppself->n_kernels);
+
+  _ncm_stats_dist_vkde_eval_tiles (sd, weights, x_a, m2lnp, TRUE);
 }
 
 static void

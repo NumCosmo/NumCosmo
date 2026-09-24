@@ -90,6 +90,24 @@ def _tau_flag_legend() -> Table:
     return legend
 
 
+def _sampler_options(options: Optional[str]) -> List[tuple[str, str]]:
+    """The sampler options as (name, value) pairs, in the order the sampler wrote them.
+
+    The sampler writes them as a colon separated list of ``name=value``; anything that
+    does not parse is kept whole under an empty name rather than dropped, so a sampler
+    this version does not know about still shows what it recorded.
+    """
+    if not options:
+        return []
+
+    pairs = []
+    for item in options.split(":"):
+        name, sep, value = item.partition("=")
+        pairs.append((name, value) if sep else ("", item))
+
+    return pairs
+
+
 def _tau_flag_code(diag: int) -> str:
     """One letter per condition set in an autocorrelation diagnostic."""
     code = "".join(letter for flag, letter in TAU_FLAG_CODES if diag & flag)
@@ -146,6 +164,10 @@ class AnalyzeMCMC(LoadCatalog):
         details.add_row("Run type", mcat.get_run_type())
         details.add_row("Initial sampler", mcat.get_initial_sampler() or "not recorded")
         details.add_row("Sampler", mcat.get_sampler() or "not recorded")
+        # The sampler's own tunables, one row each: two runs of the same sampler differ
+        # here and nowhere else, so a single joined string would hide what changed.
+        for name, value in _sampler_options(mcat.get_sampler_options()):
+            details.add_row(f"  {name}", value)
         details.add_row("Size", f"{mcat.len()}")
         details.add_row("Number of Iterations", f"{mcat.max_time()}")
         details.add_row("Number of chains", f"{self.nchains}")
