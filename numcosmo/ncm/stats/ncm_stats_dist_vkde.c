@@ -775,13 +775,14 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, N
 }
 
 /*
- * Points per sweep over the kernels. Each covariance factor is then read once per tile
- * instead of once per point, which is where the gain comes from: on a 2600-kernel,
- * d = 50 ensemble the speedup saturates by 256 points (4.2x against one point at a
- * time), and the chi2 tile is 5 MB rather than the 103 MB a full 5200-point batch
- * would need.
+ * Largest number of points per sweep over the kernels. Each covariance factor is then
+ * read once per tile instead of once per point, which is where the gain comes from: on a
+ * 2600-kernel, d = 50 ensemble the speedup saturates by 256 points (4.2x against one
+ * point at a time), and the chi2 tile is 5 MB rather than the 103 MB a full 5200-point
+ * batch would need. The batch is cut into equal tiles no larger than this, so that no
+ * tile is left nearly empty.
  */
-#define _NCM_STATS_DIST_VKDE_EVAL_TILE (25600)
+#define _NCM_STATS_DIST_VKDE_EVAL_TILE (256)
 
 static void
 _ncm_stats_dist_vkde_eval_weights_m2lnp_vec (NcmStatsDist *sd, NcmVector *weights, GPtrArray *x_a, NcmVector *m2lnp)
@@ -792,7 +793,8 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp_vec (NcmStatsDist *sd, NcmVector *weight
   const gdouble one_href2              = 1.0 / (ppself->href * ppself->href);
   const gdouble lnnorm_href            = ppself->d * log (ppself->href);
   const guint np                       = x_a->len;
-  const guint nt                       = MIN (np, _NCM_STATS_DIST_VKDE_EVAL_TILE);
+  const guint n_tiles                  = MAX (1u, (np + _NCM_STATS_DIST_VKDE_EVAL_TILE - 1) / _NCM_STATS_DIST_VKDE_EVAL_TILE);
+  const guint nt                       = (np + n_tiles - 1) / n_tiles;
 
   NcmStatsDistVKDEEvalVars **ev_ptr = ncm_memory_pool_get (self->mp_eval_vars);
   NcmStatsDistVKDEEvalVars *ev      = *ev_ptr;
@@ -819,8 +821,8 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp_vec (NcmStatsDist *sd, NcmVector *weight
     guint p;
 
     /* The points of the tile, once; every kernel subtracts its own centre from them. The
-     * tile has nt rows; a last tile shorter than that leaves its trailing rows unused,
-     * and the solve on them is harmless. */
+     * tile has nt rows; the last one is shorter by less than n_tiles rows, and the solve
+     * on its unused trailing rows is harmless. */
     for (p = 0; p < ntp; p++)
       ncm_matrix_set_row (ev->X, p, g_ptr_array_index (x_a, p0 + p));
 
