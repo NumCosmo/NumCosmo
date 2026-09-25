@@ -71,6 +71,10 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_laurent_series.c'],
     },
     {
+        'name': 'ncm_spectral',
+        'sources': ['ncm/algebra/test_ncm_spectral.c'],
+    },
+    {
         'name': 'ncm_matrix',
         'sources': ['ncm/algebra/test_ncm_matrix.c'],
     },

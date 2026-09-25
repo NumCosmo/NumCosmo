@@ -251,7 +251,7 @@ permanently out of reach rather than trying to resolve through it.
 A fixed grid cannot resolve a population much narrower than its node
 spacing ($\sigma_\mathrm{pop}\lesssim0.05$, or a sharply concentrated Beta
 population). Tried `ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted`
-(adaptive weighted Chebyshev quadrature, used elsewhere in the project) as a
+(an adaptive weighted Chebyshev quadrature, since removed) as a
 possible fix: it fails identically to the plain fixed grid (converges
 confidently to an answer wrong by dozens of orders of magnitude), because
 it's *passive* refinement (doubles resolution once its own coefficients

@@ -44,8 +44,7 @@ a_{N-1} = \frac{\tilde a_{N-1}}{2(N-1)},
 \qquad
 a_k = \frac{\tilde a_k}{N-1}\;\;(0 < k < N-1),
 $$
-the half-weight on the endpoints being the usual Clenshaw--Curtis rule for the Lobatto
-grid. This fixed-order transform is
+the endpoint terms of the DCT-I on the Lobatto grid being halved. This fixed-order transform is
 [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs]].
 
 ## Adaptive Refinement
@@ -87,7 +86,7 @@ and for a sharply varying $f$ it can exhaust the order budget.
 The maximum order (`max-order`) is not a second stopping condition. It bounds the size
 of the sample and transform buffers; Eq. (2) is what must end the refinement. Falling
 out of the loop at `max-order` therefore means the coefficients on hand are
-unconverged, and the four entry points differ only in what they do about that.
+unconverged, and the three entry points differ only in what they do about that.
 
 - [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive]] takes
   $\varepsilon_\mathrm{rel}$ alone and treats reaching `max-order` as fatal. That is
@@ -104,12 +103,6 @@ unconverged, and the four entry points differ only in what they do about that.
   how such a caller learns to subdivide, or to take a different route entirely. Its use
   in [UltraLevin](../specfunc/sbessel_projection.qmd) is to decide whether a fixed cell can be
   fitted directly, the alternative being to refit on a moving interval.
-- [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted]] is never
-  fatal, for a reason particular to it. Its integrand carries the $\sqrt{1-t^2}$ weight
-  of the Clenshaw--Curtis rule below, whose own Chebyshev coefficients decay only as
-  $k^{-2}$, so Eq. (2) is unreachable for any $F$ and the refinement always runs to
-  `max-order`. The quantity that variant exists for --- the single coefficient $b_0$ ---
-  converges long before the coefficient vector does.
 
 ### Batch Expansions
 
@@ -135,25 +128,23 @@ function of its own rather than a flag on the batch one.
 
 ## Spectral Integration
 
-A weighted variant expands $F(x(t))\,\sqrt{1-t^2}\,h$ with $h = (b-a)/2$, taking
-advantage of the fact that at the Lobatto nodes the weight is $\sqrt{1-t_j^2} =
-\sin(j\pi/2^{k})$. Writing this weighted function as $\sum_k b_k T_k(t)$ and using the
-orthogonality relation
+Integrating Eq. (1) term by term with
 $$
-\int_{-1}^{1} \frac{T_k(t)}{\sqrt{1-t^2}}\,\mathrm{d}t = \pi\,\delta_{k,0},
+\int_{-1}^{1} T_k(t)\,\mathrm{d}t =
+\begin{cases}
+\dfrac{2}{1-k^2}, & k \text{ even},\\[4pt]
+0, & k \text{ odd},
+\end{cases}
 $$
-the definite integral collapses to a single coefficient,
+gives
 $$
-\int_a^b F(x)\,\mathrm{d}x = \pi\,b_0,
+\int_a^b f(x)\,\mathrm{d}x = \frac{b-a}{2}\sum_{k\ \mathrm{even}} \frac{2\,a_k}{1-k^2}.
 $$
-which is Clenshaw--Curtis quadrature [@Trefethen2008]. The same weighted coefficients
-give weighted inner products: if $G$ has standard Chebyshev coefficients $d_k$, then
-$$
-\int_a^b F(x)\,G(x)\,\mathrm{d}x
-= \pi\,b_0 d_0 + \frac{\pi}{2}\sum_{k\ge 1} b_k d_k,
-$$
-so a product integral costs one weighted transform of $F$ and one standard transform of
-$G$. This is [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted]].
+With the coefficients of the Lobatto transform this is Clenshaw--Curtis quadrature
+[@Trefethen2008], which converges as fast as the coefficients decay. It is
+[[numcosmo-math|ncm_spectral_chebyshev_integrate]]. The integral of a product $f g$ is
+that of the expansion of $f g$ itself; when one evaluation gives both factors, the
+batch expansion fits them together.
 
 ## Evaluation
 
@@ -286,8 +277,7 @@ methods are:
 - coefficients: [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs]],
   [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive]],
   [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive_full]],
-  [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive_try]],
-  [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted]]
+  [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive_try]]
 - batch coefficients:
   [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_batch_adaptive]],
   [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap]]
@@ -295,6 +285,7 @@ methods are:
   [[numcosmo-math|ncm_spectral_chebyshev_eval_x]],
   [[numcosmo-math|ncm_spectral_chebyshev_deriv]],
   [[numcosmo-math|ncm_spectral_chebyshev_deriv_x]]
+- integration: [[numcosmo-math|ncm_spectral_chebyshev_integrate]]
 - rebasing: [[numcosmo-math|ncm_spectral_chebyshev_rebase]]
 - ultraspherical conversions:
   [[numcosmo-math|ncm_spectral_chebT_to_gegenbauer_alpha1]],
