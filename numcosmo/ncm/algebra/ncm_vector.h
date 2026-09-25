@@ -45,14 +45,13 @@ G_DECLARE_FINAL_TYPE (NcmVector, ncm_vector, NCM, VECTOR, GObject)
 
 /**
  * NcmVectorInternal:
- * @NCM_VECTOR_SLICE: Uses [g_slice_*](https://developer.gnome.org/glib/stable/glib-Memory-Slices.html) family functions from [Glib](https://developer.gnome.org/glib/) to alloc and free memory segments.
- * @NCM_VECTOR_GSL_VECTOR: Uses [gsl_vector](https://www.gnu.org/software/gsl/doc/html/vectors.html#vectors) from [GSL](https://www.gnu.org/software/gsl/) as the base object.
- * @NCM_VECTOR_MALLOC: Uses [malloc](https://en.wikipedia.org/wiki/C_dynamic_memory_allocation) for memory allocation and free functions.
- * @NCM_VECTOR_ARRAY: Uses [g_array](https://developer.gnome.org/glib/stable/glib-Arrays.html) from [Glib](https://developer.gnome.org/glib/) as base.
- * @NCM_VECTOR_DERIVED: Uses another #NcmVector (for example, if it is getting a subvector from a #NcmVector).
+ * @NCM_VECTOR_SLICE: data allocated with g_slice_alloc()
+ * @NCM_VECTOR_GSL_VECTOR: data of a #gsl_vector
+ * @NCM_VECTOR_MALLOC: data allocated with malloc() or fftw_alloc_real()
+ * @NCM_VECTOR_ARRAY: data of a #GArray
+ * @NCM_VECTOR_DERIVED: data owned by another object, such as the vector of a subvector
  *
- * This enumerator is only used internally. Only by developers.
- *
+ * Origin of the data of a #NcmVector, used internally.
  */
 typedef enum _NcmVectorInternal /*< prefix=NCM_VECTOR >*/
 {
@@ -73,6 +72,16 @@ struct _NcmVector
   NcmVectorInternal type;
 };
 
+/**
+ * NcmVectorCompFunc:
+ * @v_i: the component $v_i$
+ * @i: its index
+ * @user_data: user data
+ *
+ * Function of a vector component, see ncm_vector_log_vals_func().
+ *
+ * Returns: the value.
+ */
 typedef gdouble (*NcmVectorCompFunc) (gdouble v_i, guint i, gpointer user_data);
 
 #define NCM_N2VECTOR(v) ((NcmVector *) ((v)->content))
