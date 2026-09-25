@@ -646,7 +646,11 @@ Two settings keep the comparison to the method itself. CCL is built in
 `CCLParams` precision knobs, which tune CCL's internal background and $P(k)$
 splines, are not used. What remains on CCL's side belongs to the method: the
 window arrives as a table it Akima-splines, and FKEM resamples that spline onto
-its own grid. Both densities are stated below.
+its own grid. Both densities are stated below. The table carries two zero samples
+beyond each end of the support: CCL's Limber path treats a kernel as zero outside
+its table, but FKEM resamples the table with a linear spline that extrapolates
+its end segments, so a table that stops at the support hands FKEM a different
+window (a top-hat continued as a constant down to `fkem_chi_min`).
 
 ```{python}
 # | code-fold: true
@@ -658,6 +662,28 @@ import pyccl
 FKEM_NCHI = 4096
 FKEM_CHI_MIN = 1.0e-6
 TRACER_NCHI = 2048
+# spacing of the zero samples beyond the support, as a fraction of its upper edge
+TRACER_PAD = 1.0e-9
+
+
+def ccl_tracer(ccl_cosmo, kernel, deriv):
+    """A CCL tracer carrying one window as a zero-padded table, and the table's last chi.
+
+    FKEM re-reads the table and resamples it with a linear spline that extrapolates
+    the end segments over its whole log grid, so two zero samples beyond each end
+    keep the window zero outside its support, as CCL's Limber path already takes it.
+    """
+    lo, hi = kernel.get_comp_support(0)
+    chi = np.linspace(lo, hi, TRACER_NCHI)
+    w = np.array([kernel.eval_W_comp(0, c) for c in chi])
+    e = TRACER_PAD * hi
+    below = [lo - 2.0 * e, lo - e] if lo - 2.0 * e > 0.0 else []
+    chi = np.concatenate([below, chi, [hi + e, hi + 2.0 * e]])
+    w = np.concatenate([np.zeros(len(below)), w, np.zeros(2)])
+    trc = pyccl.Tracer()
+    trc.add_tracer(ccl_cosmo, kernel=(chi, w), der_bessel=deriv)
+
+    return trc, chi[-1]
 
 
 def ccl_calculator():
@@ -726,11 +752,7 @@ def fkem_ilk(ccl_cosmo, kernel, ell, deriv=0, nchi=None):
     and chi_min are whatever the call passed. A mismatch returns ``(None, None)``
     rather than an error.
     """
-    lo, hi = kernel.get_comp_support(0)
-    chi = np.linspace(lo, hi, TRACER_NCHI)
-    w = np.array([kernel.eval_W_comp(0, c) for c in chi])
-    trc = pyccl.Tracer()
-    trc.add_tracer(ccl_cosmo, kernel=(chi, w), der_bessel=deriv)
+    trc, chi_max = ccl_tracer(ccl_cosmo, kernel, deriv)
 
     psp = ccl_cosmo.get_linear_power()
     with warnings.catch_warnings():
@@ -751,7 +773,7 @@ def fkem_ilk(ccl_cosmo, kernel, ell, deriv=0, nchi=None):
         trc._trc[0],
         FKEM_NCHI if nchi is None else nchi,
         FKEM_CHI_MIN,
-        chi.max(),
+        chi_max,
         ell,
         ccl_cosmo,
     )
@@ -1157,12 +1179,12 @@ far tail, where the product is already eight orders below its maximum and
 contributes nothing. On this pair FKEM is correct.
 
 **Separated bins, 1.1 and 3.8 Gpc.** The turning points are a factor of 3.5
-apart, the product peaks between them where both factors are deep in their own
-tails, and FKEM's product sits three to four orders *above* the certified one
-across that whole band. Same method, same multipole; only the separation changed.
-
-That is the answer to when a method fails here, and it is not "on hard cases":
-it is whenever the pair's integrand is built out of tails rather than peaks.
+apart and the product peaks between them, where both factors are deep in their
+own tails. FKEM's product still follows the certified one through the band that
+carries the spectrum, and leaves it only above $k \approx 0.15$ Mpc$^{-1}$, where
+the product is six orders below its maximum. Same method, same multipole; only the
+separation changed, and at this multipole it costs FKEM little. The $C_\ell$ table
+below shows where it does cost: at $\ell = 10$.
 
 Read the upper panel at the dotted lines. Each window's projection peaks at its
 own turning point, and the two are a factor of 3.5 apart in $k$. At the near
@@ -1181,10 +1203,10 @@ The lower panel is what that costs. The product carries its weight in a band
 where each factor is orders below its own maximum -- so the pair spectrum is
 built entirely out of the part of each kernel that a method is least likely to
 represent well. Where FKEM's curve in the upper panel stops oscillating and
-becomes a smooth power law, its product in the lower panel departs from the
-certified one by orders of magnitude, and the deviation does not shrink when its
-resampling density is raised: an FFTLog on a logarithmic grid cannot resolve an
-oscillation whose period keeps shrinking, so it fits through it.
+becomes a smooth power law, its product in the lower panel falls away from the
+certified one: an FFTLog on a logarithmic grid cannot resolve an oscillation whose
+period keeps shrinking, so it fits through it. On this pair that happens only
+where the product no longer contributes.
 
 **The same figure states our own limit, which is a different one.** UltraLevin
 represents the oscillation -- that is what the certified markers in the upper
@@ -1286,12 +1308,7 @@ def fkem_cls(grid, ells):
     tracers = []
 
     for kernel in pair_kernels(grid):
-        lo, hi = kernel.get_comp_support(0)
-        chi = np.linspace(lo, hi, TRACER_NCHI)
-        w = np.array([kernel.eval_W_comp(0, c) for c in chi])
-        trc = pyccl.Tracer()
-        trc.add_tracer(ccl_cosmo, kernel=(chi, w), der_bessel=kernel.get_comp_bessel_deriv(0))
-        tracers.append(trc)
+        tracers.append(ccl_tracer(ccl_cosmo, kernel, kernel.get_comp_bessel_deriv(0))[0])
 
     psp = ccl_cosmo.get_linear_power()
 
@@ -1377,35 +1394,31 @@ Against certified values at $\ell = 10$, as a fraction of each rung's own scale:
 
 | separation ratio | UltraLevin | FKEM |
 |---|---|---|
-| 1.4, adjacent | 2.3e-10 | 2.8e-05 |
-| 2.3, apart | 2.6e-07 | 1.2e+03 |
-| 3.5, separated | 1.1e-04 | 4.6e+05 |
+| 1.4, adjacent | 2.3e-10 | 7.4e-06 |
+| 2.3, apart | 2.6e-07 | 2.0e-01 |
+| 3.5, separated | 1.1e-04 | 4.8e-01 |
 
-Both degrade as the bins separate, which is the cancellation the integrand panels
-show. UltraLevin moves through six orders while FKEM moves through ten, and
-crosses unity -- an error larger than the spectrum itself -- between the first and
-second rung.
+Both degrade as the bins separate. UltraLevin moves through six orders and FKEM
+through five, and FKEM reaches order one of the pair's scale by the second rung.
 
-**On adjacent bins both are usable.** FKEM's $2.8\times10^{-5}$ is the ordinary
-case, which is why it serves most of a 3x2pt data vector; UltraLevin is five
+**On adjacent bins both are usable.** FKEM's $7.4\times10^{-6}$ is the ordinary
+case, which is why it serves most of a 3x2pt data vector; UltraLevin is four
 orders better on the same pair.
 
-**One rung out, at a turning-point ratio of 2.3, FKEM is wrong by a thousand
-times the pair's own scale** while UltraLevin is at $3\times10^{-7}$. Nothing
-changed but the separation. That is the consequence the integrand panels predict:
-the product moved off both peaks into the tails, and the tails are what FKEM
-smooths.
+**One rung out, at a turning-point ratio of 2.3, FKEM is off by a fifth of the
+pair's own scale at $\ell = 10$** while UltraLevin is at $3\times10^{-7}$. Nothing
+changed but the separation. At $\ell = 50$ the same rung costs FKEM
+$6\times10^{-8}$, so the failure is a low-multipole one.
 
-**At the widest separation both methods fail, for different reasons.**
-UltraLevin sits at $1\times10^{-4}$ of the pair's scale at $\ell = 10$ and
-$3\times10^{-2}$ at $\ell = 50$. That is not a solver failure: the certified
-$C_\ell$ at $\ell = 50$ is $2.8\times10^{-21}$, nine orders below the rung's own
-scale, so the pair's spectrum at that multipole is below what double precision
-can represent once the oscillating panel sums have cancelled. UltraLevin's error
-is the cancellation floor. FKEM's is $2\times10^{5}$ of scale at the same
-multipole, seven orders above that floor, because it is not integrating the right
-integrand. A method can be limited by arithmetic or by representation, and only a
-certificate separates the two.
+**At the widest separation, $\ell = 50$ turns the ranking over.** The certified
+$C_\ell$ there is $2.8\times10^{-21}$, nine orders below the rung's own scale.
+UltraLevin returns $-2.2\times10^{-13}$, $3\times10^{-2}$ of that scale: the
+oscillating panel sums of the Levin solve cancel, and their rounding is what is
+left. FKEM, summing differently in the same double precision, is at
+$1.1\times10^{-5}$ of scale. So that floor belongs to our method, not to double
+precision, and FKEM is the better of the two on this cell. At $\ell = 10$ on the
+same rung the order is back: UltraLevin $1.1\times10^{-4}$, FKEM $0.48$. Only a
+certificate shows which of the two is right on which cell.
 
 Deviations are fractions of each rung's own scale -- its largest $|C_\ell|$ --
 not pointwise relative errors: a separated pair's spectrum crosses zero, and a
@@ -1472,12 +1485,7 @@ def fkem_call(grid):
     tracers = []
 
     for kernel in pair_kernels(grid):
-        lo, hi = kernel.get_comp_support(0)
-        chi = np.linspace(lo, hi, TRACER_NCHI)
-        w = np.array([kernel.eval_W_comp(0, c) for c in chi])
-        trc = pyccl.Tracer()
-        trc.add_tracer(ccl_cosmo, kernel=(chi, w), der_bessel=kernel.get_comp_bessel_deriv(0))
-        tracers.append(trc)
+        tracers.append(ccl_tracer(ccl_cosmo, kernel, kernel.get_comp_bessel_deriv(0))[0])
 
     psp = ccl_cosmo.get_linear_power()
     ells = np.arange(TIMING_LMIN, TIMING_LMAX + 1, dtype=float)
@@ -1556,9 +1564,9 @@ A block's truncation order is set by its hardest multipole, the replay of stored
 rotations and the convergence check scale with the number of multipoles in the
 block, and the batched solves have specialised kernels only up to 32 lanes. FKEM is four times
 cheaper per multipole at these settings. The accuracy that buys is in the table
-above: on the adjacent rung the two methods differ by five orders of magnitude
-against the certificate, and on the other two rungs FKEM's error exceeds the
-spectrum itself.
+above: on the adjacent rung the two methods differ by four orders of magnitude
+against the certificate, and on the other two rungs FKEM is off by 0.2 and 0.5 of
+the pair's scale at $\ell = 10$.
 
 Where a warm solve spends its time, from a profile of the adjacent rung at
 B = 8: half in replaying stored factorisations and back-substituting, one
