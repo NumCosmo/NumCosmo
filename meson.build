@@ -892,7 +892,12 @@ configure_file(
 # Installing data and examples files:
 #######################################################################################
 
-install_subdir('data', install_dir: numcosmo_pkgdatadir)
+# Results measured against the certified tables are source-tree records, not data.
+install_subdir(
+  'data',
+  install_dir: numcosmo_pkgdatadir,
+  exclude_directories: ['certified_results'],
+)
 install_subdir('examples', install_dir: numcosmo_pkgdatadir)
 
 #######################################################################################
