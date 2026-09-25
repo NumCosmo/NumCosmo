@@ -41,6 +41,7 @@ multipole's peak for a radial integral, the pair's scale for C_ell); ``dev_scale
 import ctypes
 import datetime
 import hashlib
+import json
 import os
 import pathlib
 import platform
@@ -128,6 +129,53 @@ def _git(tree: pathlib.Path, *args: str) -> str:
         return ""
 
 
+def _library_build(libraries: list[str], source: pathlib.Path) -> dict[str, typing.Any]:
+    """Describe the libnumcosmo this process loaded, and how stale it may be.
+
+    The source tree's commit says nothing about a binary built earlier; the library's
+    own modification time, its build directory's compiler and options, and the date of
+    the tree's last change to the C sources do.
+    """
+    out: dict[str, typing.Any] = {}
+    lib = next((path for path in libraries if "libnumcosmo" in path), "")
+
+    if not lib:
+        return out
+
+    path = pathlib.Path(lib)
+    out["env_libnumcosmo"] = lib
+    out["env_libnumcosmo_mtime"] = datetime.datetime.fromtimestamp(
+        path.stat().st_mtime, datetime.timezone.utc
+    ).isoformat()
+    out["env_numcosmo_last_c_commit_date"] = _git(
+        source, "log", "-1", "--format=%cI", "--", "numcosmo"
+    )
+
+    for build in path.parents:
+        info = build / "meson-info"
+
+        if info.is_dir():
+            options = {
+                o["name"]: o["value"]
+                for o in json.loads(
+                    (info / "intro-buildoptions.json").read_text(encoding="utf-8")
+                )
+            }
+            compilers = json.loads(
+                (info / "intro-compilers.json").read_text(encoding="utf-8")
+            )
+            c_comp = compilers.get("host", {}).get("c", {})
+            out["env_libnumcosmo_build_dir"] = str(build)
+            out["env_libnumcosmo_buildtype"] = str(options.get("buildtype", ""))
+            out["env_libnumcosmo_c_args"] = " ".join(options.get("c_args", []))
+            out["env_libnumcosmo_compiler"] = (
+                f"{c_comp.get('id', '')} {c_comp.get('version', '')}".strip()
+            )
+            break
+
+    return out
+
+
 def environment() -> dict[str, typing.Any]:
     """Capture the environment of this process, for a campaign's metadata.
 
@@ -153,6 +201,8 @@ def environment() -> dict[str, typing.Any]:
             _git(source, "status", "--porcelain", "--untracked-files=no")
         ),
     }
+
+    env.update(_library_build(libraries, source))
 
     for name in THREAD_VARIABLES:
         env[f"env_{name}"] = os.environ.get(name, "")
