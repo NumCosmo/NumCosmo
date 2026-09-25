@@ -521,11 +521,13 @@ the window is exactly zero beyond it, which is what lets two codes be asked for
 the same integral.
 
 The lower panel of every comparison below reports the deviation as a fraction of
-the multipole's own peak, not as a relative error. The shared helper the other
-benchmark pages use, `nc_cmp.CompareFunc1d`, reports $\Delta P/P$, and that
-measure cannot be used here: the probed grid reaches $|I_\ell| = 10^{-22}$ below
-the turning point, where a relative error is arbitrarily large and says nothing
-about the solve.
+the multipole's own peak, and the tables add the error relative to each certified
+value. They answer different questions. The peak-scaled figure says what an error
+is worth against the spectrum: the probed grid reaches $|I_\ell| = 10^{-22}$ below
+the turning point, where no error matters to $C_\ell$. The relative figure says
+whether the cell itself was computed, and it is well defined at every cell because
+every value is certified, with a radius far below it. A method can be small against
+the peak and still wrong at the cell, and only the second figure shows it.
 
 ```{python}
 # | label: fig-certified-projection
@@ -899,7 +901,7 @@ compute them. Every deviation quoted below is taken only where FKEM has a
 value.
 
 ```{python}
-# | tbl-cap: Worst deviation from the certified values, in units of the peak
+# | tbl-cap: Worst deviation from the certified values, as a fraction of the peak and relative to each certified value
 # | code-fold: true
 
 rows = []
@@ -914,8 +916,8 @@ for shape in CASES:
 
     kernel = build(shape, table0)
 
-    ul = np.abs(library_ilk(kernel, ELL, k_cert) - i_cert) / peak
-    row = [name, f"{ul.max():.1e}"]
+    ul = np.abs(library_ilk(kernel, ELL, k_cert) - i_cert)
+    row = [name, f"{ul.max() / peak:.1e} / {(ul / np.abs(i_cert)).max():.1e}"]
 
     for nchi in (2048, 8192):
         i_fkem, covered, _ = fkem_on_certified(
@@ -926,12 +928,20 @@ for shape in CASES:
             row += ["--", "--"]
             continue
 
-        dev = (np.abs(i_fkem - i_cert) / peak)[covered]
-        row += [f"{dev.max():.1e}", f"{int(covered.sum())}/{covered.size}"]
+        dev = np.abs(i_fkem - i_cert)[covered]
+        rel = (dev / np.abs(i_cert[covered])).max()
+        row += [f"{dev.max() / peak:.1e} / {rel:.1e}", f"{int(covered.sum())}/{covered.size}"]
 
     rows.append(row)
 
-header = ["window", "UltraLevin", "FKEM 2048", "modes", "FKEM 8192", "modes"]
+header = [
+    "window",
+    "UltraLevin, peak / rel.",
+    "FKEM 2048, peak / rel.",
+    "modes",
+    "FKEM 8192, peak / rel.",
+    "modes",
+]
 table = [
     "| " + " | ".join(header) + " |",
     "|" + "---|" * len(header),
@@ -1209,14 +1219,16 @@ period keeps shrinking, so it fits through it. On this pair that happens only
 where the product no longer contributes.
 
 **The same figure states our own limit, which is a different one.** UltraLevin
-represents the oscillation -- that is what the certified markers in the upper
-panel establish -- but the accuracy it can deliver on the *product* is bounded by
-cancellation, not by representation: the panel integrals the Levin solve sums
-cancel heavily in the tail, so the attainable relative accuracy there is the
-cancellation ratio times the machine epsilon. A method fails here for one of two
-reasons, and they are worth keeping apart: FKEM because it does not describe the
-oscillatory tail, ours because summing an oscillating series in double precision
-eventually loses digits to cancellation however well each term is known.
+represents the oscillation of each projection -- that is what the certified markers
+in the upper panel establish -- but on the *product* it has a floor. On the
+separated pairs of the $C_\ell$ table its error at $\ell = 50$ stays at the same
+fraction of the pair's scale whether `reltol` and `peak-epsilon` are $10^{-6}$ or
+$10^{-8}$, and the inner integrator's `cheb-reltol` from $10^{-8}$ to $10^{-12}$
+does not move it either. Every floor in the chain is set against a peak (the fit's
+`peak-epsilon`, the domain's `adaptive-epsilon`), so a cell far below the pair's
+scale is resolved only to a fraction of that scale; which floor sets this one has
+not been established yet. The spectrum section below shows the cells where that floor is larger than
+the value itself.
 
 ## What it costs in the spectrum
 
@@ -1339,9 +1351,8 @@ for name, case in LADDER:
 
     # Each rung's own scale: the largest certified |C_ell| it carries, or the
     # largest the library returns where no certificate exists yet. Deviations are
-    # measured against that rather than pointwise, because a separated pair's
-    # C_ell crosses zero and a relative error at a near-null is arbitrarily large
-    # while saying nothing -- the same reason the projection panels scale by peak.
+    # given against that scale and relative to each certified value: the first is
+    # what an error costs the spectrum, the second whether the cell was computed.
     values = ultralevin_cls(grid, grid["ells"])
     fkem_values = fkem_cls(grid, grid["ells"])
     truths = {
@@ -1366,7 +1377,9 @@ for name, case in LADDER:
                 f"{ul_cl: .3e}",
                 "--" if truth is None else f"{truth: .3e}",
                 "--" if truth is None else f"{abs(ul_cl - truth) / scale:.1e}",
+                "--" if truth is None else f"{abs(ul_cl - truth) / abs(truth):.1e}",
                 "--" if truth is None else f"{abs(fk_cl - truth) / scale:.1e}",
+                "--" if truth is None else f"{abs(fk_cl - truth) / abs(truth):.1e}",
                 f"{abs(fk_cl - ul_cl) / scale:.1e}",
             ]
         )
@@ -1377,7 +1390,9 @@ header = [
     "C_ell (UltraLevin)",
     "C_ell (certified)",
     "UltraLevin dev.",
+    "UltraLevin rel.",
     "FKEM dev.",
+    "FKEM rel.",
     "FKEM vs UltraLevin",
 ]
 table = [
@@ -1410,20 +1425,30 @@ pair's own scale at $\ell = 10$** while UltraLevin is at $3\times10^{-7}$. Nothi
 changed but the separation. At $\ell = 50$ the same rung costs FKEM
 $6\times10^{-8}$, so the failure is a low-multipole one.
 
-**At the widest separation, $\ell = 50$ turns the ranking over.** The certified
-$C_\ell$ there is $2.8\times10^{-21}$, nine orders below the rung's own scale.
-UltraLevin returns $-2.2\times10^{-13}$, $3\times10^{-2}$ of that scale: the
-oscillating panel sums of the Levin solve cancel, and their rounding is what is
-left. FKEM, summing differently in the same double precision, is at
-$1.1\times10^{-5}$ of scale. So that floor belongs to our method, not to double
-precision, and FKEM is the better of the two on this cell. At $\ell = 10$ on the
-same rung the order is back: UltraLevin $1.1\times10^{-4}$, FKEM $0.48$. Only a
-certificate shows which of the two is right on which cell.
+**At $\ell = 50$ the relative columns tell what the scaled ones hide.** On the
+apart rung the certified $C_{50}$ is $-6.2\times10^{-15}$, five millionths of the
+rung's scale. UltraLevin returns $+4.3\times10^{-14}$: $4\times10^{-5}$ of scale,
+but 7.9 times the value and of the wrong sign, and tightening `reltol` and
+`peak-epsilon` from $10^{-6}$ to $10^{-8}$ leaves it unchanged. FKEM is within $1.2\times10^{-2}$ of
+the value, and stays within 1 to 3 per cent across table densities of 2048 and
+8192, resampling grids up to 32768 and edge ramps from $10^{-9}$ to $10^{-3}$ of the
+support. On this cell FKEM computes the value and UltraLevin does not.
+
+On the separated rung the certified $C_{50}$ is $-2.8\times10^{-21}$, zero to
+about eleven digits of the integrand it cancels out of. Neither code computes it:
+UltraLevin is $7.9\times10^{7}$ times the value, at the same floor as above, and
+FKEM $3\times10^{4}$ times, with its answer moving over four orders of magnitude
+and changing sign as its own grid and edge settings change. That cell ranks
+neither method. At $\ell = 10$ on the same two rungs the order is the other way:
+UltraLevin $2.6\times10^{-7}$ and $1.1\times10^{-4}$, FKEM $0.20$ and $0.48$,
+relative and scaled alike since $\ell = 10$ carries each rung's scale.
 
 Deviations are fractions of each rung's own scale -- its largest $|C_\ell|$ --
-not pointwise relative errors: a separated pair's spectrum crosses zero, and a
-relative error at a near-null is arbitrarily large while saying nothing. The last
-column compares the two codes to each other and involves no certified value. Read
+and, beside them, errors relative to each certified value. A separated pair's
+spectrum falls by orders of magnitude between its multipoles, so the two can
+disagree by as much: an error far below the rung's scale can still be larger than
+the cell itself. The last column compares the two codes to each other and involves
+no certified value. Read
 the certified columns: two codes agreeing says less than either code's distance
 from a proven value.
 
