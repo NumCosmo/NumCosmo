@@ -130,6 +130,9 @@ NcmVarDict *_test_ncm_var_dict_to_from_yaml_file (NcmVarDict *vd);
 void test_ncm_var_dict_traps (TestNcmVarDict *test, gconstpointer pdata);
 void test_ncm_var_dict_invalid_set (TestNcmVarDict *test, gconstpointer pdata);
 
+void test_ncm_obj_dict_keys_replace (void);
+void test_ncm_var_dict_keys_replace (void);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -337,6 +340,9 @@ main (gint argc, gchar *argv[])
               &test_ncm_var_dict_new,
               &test_ncm_var_dict_invalid_set,
               &test_ncm_var_dict_free);
+
+  g_test_add_func ("/ncm/obj_dict/keys_replace", &test_ncm_obj_dict_keys_replace);
+  g_test_add_func ("/ncm/var_dict/keys_replace", &test_ncm_var_dict_keys_replace);
 
   g_test_run ();
 }
@@ -1735,5 +1741,93 @@ test_ncm_var_dict_invalid_set (TestNcmVarDict *test, gconstpointer pdata)
   NcmVarDict *vd = test->vd;
 
   ncm_var_dict_set_string (vd, NULL, NULL);
+}
+
+void
+test_ncm_obj_dict_keys_replace (void)
+{
+  NcmObjDictStr *ods = ncm_obj_dict_str_new ();
+  NcmObjDictInt *odi = ncm_obj_dict_int_new ();
+  NcmVector *v1      = ncm_vector_new (1);
+  NcmVector *v2      = ncm_vector_new (2);
+
+  /* A second value under the same key replaces the first */
+  ncm_obj_dict_str_add (ods, "a", G_OBJECT (v1));
+  ncm_obj_dict_str_add (ods, "a", G_OBJECT (v2));
+  ncm_obj_dict_str_set (ods, "b", G_OBJECT (v1));
+  g_assert_cmpuint (ncm_obj_dict_str_len (ods), ==, 2);
+  g_assert_true (ncm_obj_dict_str_peek (ods, "a") == G_OBJECT (v2));
+  g_assert_null (ncm_obj_dict_str_peek (ods, "c"));
+  g_assert_null (ncm_obj_dict_str_get (ods, "c"));
+
+  {
+    GStrv keys = ncm_obj_dict_str_keys (ods);
+
+    g_assert_cmpuint (g_strv_length (keys), ==, 2);
+    g_assert_true (g_strv_contains ((const gchar * const *) keys, "a"));
+    g_assert_true (g_strv_contains ((const gchar * const *) keys, "b"));
+    g_free (keys);
+  }
+
+  ncm_obj_dict_int_add (odi, 7, G_OBJECT (v1));
+  ncm_obj_dict_int_set (odi, 7, G_OBJECT (v2));
+  ncm_obj_dict_int_add (odi, -3, G_OBJECT (v1));
+  g_assert_cmpuint (ncm_obj_dict_int_len (odi), ==, 2);
+  g_assert_true (ncm_obj_dict_int_peek (odi, 7) == G_OBJECT (v2));
+  g_assert_null (ncm_obj_dict_int_peek (odi, 8));
+
+  {
+    GArray *keys = ncm_obj_dict_int_keys (odi);
+    gint sum     = 0;
+    guint i;
+
+    g_assert_cmpuint (keys->len, ==, 2);
+
+    for (i = 0; i < keys->len; i++)
+      sum += g_array_index (keys, gint, i);
+
+    g_assert_cmpint (sum, ==, 4);
+    g_array_unref (keys);
+  }
+
+  ncm_obj_dict_str_unref (ods);
+  ncm_obj_dict_int_clear (&odi);
+  g_assert_null (odi);
+  ncm_vector_free (v1);
+  ncm_vector_free (v2);
+}
+
+void
+test_ncm_var_dict_keys_replace (void)
+{
+  NcmVarDict *vd = ncm_var_dict_new ();
+  gdouble d;
+  gint i;
+
+  ncm_var_dict_set_int (vd, "x", 3);
+  ncm_var_dict_set_double (vd, "x", 2.5);
+  ncm_var_dict_set_boolean (vd, "y", TRUE);
+
+  g_assert_cmpuint (ncm_var_dict_len (vd), ==, 2);
+  g_assert_true (ncm_var_dict_get_double (vd, "x", &d));
+  g_assert_cmpfloat (d, ==, 2.5);
+
+  /* A missing key leaves the output untouched */
+  i = 11;
+  g_assert_false (ncm_var_dict_get_int (vd, "z", &i));
+  g_assert_cmpint (i, ==, 11);
+  g_assert_false (ncm_var_dict_has_key (vd, "z"));
+
+  {
+    GStrv keys = ncm_var_dict_keys (vd);
+
+    g_assert_cmpuint (g_strv_length (keys), ==, 2);
+    g_assert_true (g_strv_contains ((const gchar * const *) keys, "x"));
+    g_assert_true (g_strv_contains ((const gchar * const *) keys, "y"));
+    g_free (keys);
+  }
+
+  ncm_var_dict_clear (&vd);
+  g_assert_null (vd);
 }
 

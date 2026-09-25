@@ -33,6 +33,14 @@ math_tests = [
         'sources': ['ncm/core/test_ncm_iset.c'],
     },
     {
+        'name': 'ncm_timer',
+        'sources': ['ncm/core/test_ncm_timer.c'],
+    },
+    {
+        'name': 'ncm_rng',
+        'sources': ['ncm/core/test_ncm_rng.c'],
+    },
+    {
         'name': 'ncm_catalog',
         'sources': ['ncm/data/test_ncm_catalog.c'],
     },
