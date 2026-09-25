@@ -38,17 +38,6 @@ import numpy as np
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.certified import results, tables
 from numcosmo_py.certified.xcor import kernels
-from numcosmo_py.certified.xcor import windows as W
-
-
-def _window(meta: dict) -> W.Window:
-    """Return the window a table group's metadata defines."""
-    params = tuple(
-        tuple(meta[name]) if isinstance(meta[name], list) else meta[name]
-        for name in W.FORM_PARAMS[meta["form"]]
-    )
-
-    return W.Window(meta["form"], params, "")
 
 
 def _integrate(
@@ -148,7 +137,7 @@ def radial(
     for name, (gmeta, cells) in tables.groups(table).items():
         # a window table carries the order for the whole table, a pair grid per window
         deriv = int(gmeta["deriv"])
-        kernel = kernels.build_kernel(_window(gmeta), dist, ps)
+        kernel = kernels.build_kernel(kernels.window_from_meta(gmeta), dist, ps)
         kernel.set_l_limber(-1)
         kernel.prepare(cosmo)
         ells = np.asarray(cells["ell"], dtype=np.int64)

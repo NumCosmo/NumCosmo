@@ -45,6 +45,21 @@ FORM_CLASSES: typing.Final[dict[str, typing.Any]] = {
 }
 
 
+def window_from_meta(meta: dict) -> W.Window:
+    """Return the window a certified table group's metadata defines.
+
+    :param meta: a group's metadata from :func:`numcosmo_py.certified.tables.groups`,
+        naming the form, each parameter by its vocabulary name, and ``deriv``.
+    :return: the window, with that derivative order.
+    """
+    params = tuple(
+        tuple(meta[name]) if isinstance(meta[name], list) else meta[name]
+        for name in W.FORM_PARAMS[meta["form"]]
+    )
+
+    return W.Window(meta["form"], params, "", int(meta.get("deriv", 0)))
+
+
 def make_cosmo_bits() -> tuple[Nc.HICosmo, Nc.Distance, Ncm.Powspec]:
     """Return a cosmology, a prepared distance, and a closed-form power spectrum.
 
