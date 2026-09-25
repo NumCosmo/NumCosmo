@@ -55,6 +55,8 @@ from numpy.testing import assert_allclose
 from gi.repository import GLib
 
 from numcosmo_py import Nc, Ncm
+from numcosmo_py.certified.xcor import kernels
+from numcosmo_py.certified.xcor import windows as W
 
 Ncm.cfg_init()
 
@@ -123,34 +125,14 @@ def _shape_of(entry, case: str) -> str:
 
 
 def _make_kernel(shape, dist, ps, sbi, ctor):
-    """Build one analytic kernel from the constructor arguments in the table."""
-    match shape:
-        case "gauss":
-            return Nc.XcorKernelAnalyticGauss.new_full(dist, ps, *ctor, sbi)
-        case "tophat":
-            return Nc.XcorKernelAnalyticTophat.new_full(dist, ps, *ctor, sbi)
-        case "tophat_smooth":
-            return Nc.XcorKernelAnalyticTophatSmooth.new_full(dist, ps, *ctor, sbi)
-        case "student_t":
-            return Nc.XcorKernelAnalyticStudentT.new_full(dist, ps, *ctor, sbi)
-        case "power_exp":
-            return Nc.XcorKernelAnalyticPowerExp.new_full(dist, ps, *ctor, sbi)
-        case "lensing":
-            return Nc.XcorKernelAnalyticLensing.new_full(dist, ps, *ctor, sbi)
-        case "multi":
-            mu, sigma, weight, n_sigma = ctor
+    """Build one analytic kernel from the constructor arguments in the table.
 
-            return Nc.XcorKernelAnalyticMulti.new_full(
-                dist,
-                ps,
-                Ncm.Vector.new_array(mu),
-                Ncm.Vector.new_array(sigma),
-                Ncm.Vector.new_array(weight),
-                n_sigma,
-                sbi,
-            )
-        case _:
-            raise ValueError(f"truth table names an unknown shape {shape!r}")
+    From the table's own ``ctor`` rather than the vocabulary entry of the same name:
+    what was certified is what the table records.
+    """
+    params = tuple(tuple(p) if isinstance(p, list) else p for p in ctor)
+
+    return kernels.build_kernel(W.Window(shape, params, ""), dist, ps, sbi)
 
 
 @pytest.fixture(name="truth_table", scope="module")
@@ -166,19 +148,10 @@ def fixture_truth_table() -> dict:
 def fixture_cosmo_bits() -> tuple:
     """A prepared distance and a power spectrum, both constructor filler.
 
-    The analytic windows are closed forms in chi alone: neither object reaches
-    the value this test compares. They are built here rather than through
-    ``Cosmology.default()`` because that imports the FFTW wisdom file, which
-    costs more than every assertion in this file put together.
+    Built directly rather than through ``Cosmology.default()``, which imports the
+    FFTW wisdom file at a cost larger than every assertion in this file.
     """
-    cosmo = Nc.HICosmoDEXcdm.new()
-    dist = Nc.Distance.new(5.0)
-    dist.prepare(cosmo)
-    ps = Ncm.PowspecAnalytic.new(
-        Ncm.PowspecAnalyticShape.BBKS, Ncm.PowspecAnalyticGrowth.LCDM
-    )
-
-    return cosmo, dist, ps
+    return kernels.make_cosmo_bits()
 
 
 def test_table_is_certified_far_below_the_tolerance(truth_table: dict) -> None:
@@ -222,7 +195,11 @@ def test_radial_integral_matches_arb(
     entry = truth_table["shapes"][shape]
 
     kernel = _make_kernel(
-        _shape_of(entry, shape), dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
+        _shape_of(entry, shape),
+        dist,
+        ps,
+        Ncm.SBesselIntegratorLevin.new(0, 8),
+        entry["ctor"],
     )
     kernel.set_l_limber(-1)
     kernel.prepare(cosmo)
@@ -326,7 +303,9 @@ def test_deriv_table_is_certified_far_below_the_tolerance(
             default=0.0,
         )
 
-        assert worst < target, f"deriv {deriv}, ell = {ell} certified only to {worst:.2e}"
+        assert (
+            worst < target
+        ), f"deriv {deriv}, ell = {ell} certified only to {worst:.2e}"
 
 
 @pytest.mark.parametrize("n_block", [1, 8])
@@ -354,7 +333,11 @@ def test_radial_integral_deriv_matches_arb(
     entry = table["shapes"][shape]
 
     kernel = _make_kernel(
-        _shape_of(entry, shape), dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
+        _shape_of(entry, shape),
+        dist,
+        ps,
+        Ncm.SBesselIntegratorLevin.new(0, 8),
+        entry["ctor"],
     )
     kernel.set_l_limber(-1)
     kernel.prepare(cosmo)
@@ -428,7 +411,11 @@ def test_radial_integral_matches_arb_with_tau_constraint(
     entry = truth_table["shapes"][shape]
 
     kernel = _make_kernel(
-        _shape_of(entry, shape), dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
+        _shape_of(entry, shape),
+        dist,
+        ps,
+        Ncm.SBesselIntegratorLevin.new(0, 8),
+        entry["ctor"],
     )
     kernel.set_l_limber(-1)
     kernel.prepare(cosmo)
@@ -488,7 +475,11 @@ def test_radial_integral_batched_matches_arb_with_tau_constraint(
     n_block = 8
 
     kernel = _make_kernel(
-        _shape_of(entry, shape), dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
+        _shape_of(entry, shape),
+        dist,
+        ps,
+        Ncm.SBesselIntegratorLevin.new(0, 8),
+        entry["ctor"],
     )
     kernel.set_l_limber(-1)
     kernel.prepare(cosmo)
@@ -602,7 +593,11 @@ def test_chebyshev_closure_matches_arb(
 
     for index, ell in enumerate(truth_table["ells"]):
         kernel = _make_kernel(
-            _shape_of(entry, shape), dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
+            _shape_of(entry, shape),
+            dist,
+            ps,
+            Ncm.SBesselIntegratorLevin.new(0, 8),
+            entry["ctor"],
         )
         kernel.set_l_limber(-1)
         kernel.set_property("reltol", 1.0e-6)
