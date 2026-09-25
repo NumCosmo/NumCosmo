@@ -46,6 +46,7 @@ import os
 import pathlib
 import platform
 import re
+import site
 import socket
 import subprocess
 import sys
@@ -176,6 +177,38 @@ def _library_build(libraries: list[str], source: pathlib.Path) -> dict[str, typi
     return out
 
 
+PYTHON_MODULES: typing.Final[tuple[str, ...]] = (
+    "numpy",
+    "scipy",
+    "astropy",
+    "gi",
+    "pylevin",
+    "pyccl",
+)
+
+
+def _python_modules() -> dict[str, typing.Any]:
+    """Record where the modules a campaign depends on were imported from.
+
+    A per-user site directory (``~/.local/lib/pythonX.Y``) is searched ahead of an
+    environment's own site-packages and can shadow it with an editable install; the
+    file of each module says which one was used.
+    """
+    out: dict[str, typing.Any] = {
+        "env_user_site_enabled": bool(site.ENABLE_USER_SITE),
+        "env_user_site": site.getusersitepackages() if site.ENABLE_USER_SITE else "",
+    }
+
+    for name in PYTHON_MODULES:
+        module = sys.modules.get(name)
+
+        if module is not None:
+            out[f"env_module_{name}"] = str(getattr(module, "__file__", ""))
+            out[f"env_module_{name}_version"] = str(getattr(module, "__version__", ""))
+
+    return out
+
+
 def environment() -> dict[str, typing.Any]:
     """Capture the environment of this process, for a campaign's metadata.
 
@@ -203,6 +236,7 @@ def environment() -> dict[str, typing.Any]:
     }
 
     env.update(_library_build(libraries, source))
+    env.update(_python_modules())
 
     for name in THREAD_VARIABLES:
         env[f"env_{name}"] = os.environ.get(name, "")
