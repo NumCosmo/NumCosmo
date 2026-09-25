@@ -45,6 +45,14 @@
  * the tool usable in the deep sub-band regime, where a fixed-precision
  * reference returns a plausible wrong number instead of reporting failure.
  *
+ * --explicit-support takes the gauss or student_t support from --chi-lower and
+ * --chi-upper instead of mean -/+ n widths, so an integral defined on given limits
+ * is certified on exactly those doubles. --unnormalized prints the integral of
+ * the unnormalized window, with its own radius, instead of dividing by the
+ * normalization; the `rational` shape is chi^2 / (1 + ((chi - mean)/scale)^2)^3
+ * on [--chi-lower, --chi-upper], the integrand of
+ * ncm_sbessel_integrator_integrate_rational ().
+ *
  * Emits TSV on stdout: shape ell k value radius prec.
  *
  * Build (standalone):
@@ -63,6 +71,7 @@ main (int argc, char **argv)
   double target    = 1.0e-25;
   slong prec_max   = 8192;
   int support_only = 0;
+  int unnormalized = 0;
   long ell         = 2;
   double k;
   int i;
@@ -175,6 +184,14 @@ main (int argc, char **argv)
     {
       window_mode = 1;
     }
+    else if (strcmp (a, "--explicit-support") == 0)
+    {
+      p.explicit_support = 1;
+    }
+    else if (strcmp (a, "--unnormalized") == 0)
+    {
+      unnormalized = 1;
+    }
     else
     {
       fprintf (stderr, "unknown argument '%s'\n", a);
@@ -267,7 +284,12 @@ main (int argc, char **argv)
       acb_init (res);
       acb_init (val);
       prec = certified (res, &p, target, prec_max);
-      acb_div (val, res, nrm, prec);
+
+      if (unnormalized)
+        acb_set (val, res);
+      else
+        acb_div (val, res, nrm, prec);
+
       s = arb_get_str (acb_realref (val), 30, ARB_STR_NO_RADIUS);
       printf ("%s\t%ld\t%.17g\t%s\t%.4e\t%ld\n",
               shape_names[p.shape], p.ell, k, s,
