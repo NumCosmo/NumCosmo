@@ -210,6 +210,15 @@ static void test_ncm_serialize_invalid_from_string_mnames (TestNcmSerialize *tes
 static void test_ncm_serialize_invalid_from_string_samename (TestNcmSerialize *test, gconstpointer pdata);
 static void test_ncm_serialize_invalid_from_string_wrongorder (TestNcmSerialize *test, gconstpointer pdata);
 
+void test_ncm_serialize_set_taken_subprocess (void);
+void test_ncm_serialize_instances (void);
+void test_ncm_serialize_is_named (void);
+void test_ncm_serialize_shorthand (void);
+void test_ncm_serialize_dup_shared (void);
+void test_ncm_serialize_key_file (void);
+void test_ncm_serialize_set_property (void);
+void test_ncm_serialize_global (void);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -301,6 +310,15 @@ main (gint argc, gchar *argv[])
               &test_ncm_serialize_new,
               &test_ncm_serialize_invalid_from_string_wrongorder,
               &test_ncm_serialize_free);
+
+  g_test_add_func ("/ncm/serialize/api/instances", &test_ncm_serialize_instances);
+  g_test_add_func ("/ncm/serialize/api/is_named", &test_ncm_serialize_is_named);
+  g_test_add_func ("/ncm/serialize/api/shorthand", &test_ncm_serialize_shorthand);
+  g_test_add_func ("/ncm/serialize/api/dup_shared", &test_ncm_serialize_dup_shared);
+  g_test_add_func ("/ncm/serialize/api/key_file", &test_ncm_serialize_key_file);
+  g_test_add_func ("/ncm/serialize/api/set_property", &test_ncm_serialize_set_property);
+  g_test_add_func ("/ncm/serialize/api/global", &test_ncm_serialize_global);
+  g_test_add_func ("/ncm/serialize/api/set_taken/subprocess", &test_ncm_serialize_set_taken_subprocess);
 
   g_test_run ();
 }
@@ -852,5 +870,281 @@ test_ncm_serialize_invalid_from_string_wrongorder (TestNcmSerialize *test, gcons
                                             "'y' : <('NcmVector[T0]', {'values':<[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]>})>}");
 
   NCM_TEST_FREE (g_object_unref, obj);
+}
+
+#define TEST_SPLINE_SHARED                                                        \
+        "NcmSplineCubicNotaknot{'length':<6>, "                                   \
+        "'x' : <('NcmVector[V]', {'values':<[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]>})>, " \
+        "'y' : <('NcmVector[V]', @a{sv} {})>}"
+
+void
+test_ncm_serialize_instances (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmVector *v      = ncm_vector_new (3);
+  NcmVector *w      = ncm_vector_new (3);
+
+  g_assert_false (ncm_serialize_contain_instance (ser, v));
+  g_assert_null (ncm_serialize_peek_by_name (ser, "v"));
+
+  ncm_serialize_set (ser, v, "v", FALSE);
+  ncm_serialize_set (ser, v, "v", FALSE); /* the same object again is accepted */
+  g_assert_true (ncm_serialize_contain_instance (ser, v));
+  g_assert_true (ncm_serialize_contain_name (ser, "v"));
+  g_assert_cmpuint (ncm_serialize_count_instances (ser), ==, 1);
+  g_assert_true (ncm_serialize_peek_by_name (ser, "v") == (gpointer) v);
+  g_assert_cmpstr (ncm_serialize_peek_name (ser, v), ==, "v");
+
+  {
+    gpointer obj = ncm_serialize_get_by_name (ser, "v");
+
+    g_assert_true (obj == (gpointer) v);
+    g_object_unref (obj);
+  }
+
+  /* A named instance is serialized by name only */
+  {
+    gchar *str = ncm_serialize_to_string (ser, G_OBJECT (v), FALSE);
+
+    g_assert_cmpstr (str, ==, "NcmVector[v]");
+    g_free (str);
+  }
+
+  ncm_serialize_set (ser, w, "v", TRUE);
+  g_assert_true (ncm_serialize_peek_by_name (ser, "v") == (gpointer) w);
+
+  ncm_serialize_unset (ser, w);
+  ncm_serialize_unset (ser, w); /* not present: does nothing */
+  g_assert_false (ncm_serialize_contain_name (ser, "v"));
+
+  ncm_vector_free (v);
+  ncm_vector_free (w);
+  ncm_serialize_free (ser);
+
+  /* Another object under a taken name, without overwrite */
+  g_test_trap_subprocess ("/ncm/serialize/api/set_taken/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+}
+
+void
+test_ncm_serialize_set_taken_subprocess (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmVector *v      = ncm_vector_new (3);
+  NcmVector *w      = ncm_vector_new (3);
+
+  ncm_serialize_set (ser, v, "v", FALSE);
+  ncm_serialize_set (ser, w, "v", FALSE);
+}
+
+void
+test_ncm_serialize_is_named (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  gchar *name       = NULL;
+
+  g_assert_true (ncm_serialize_is_named (ser, "NcmVector[abc]{'values':<[1.0]>}", &name));
+  g_assert_cmpstr (name, ==, "abc");
+  g_clear_pointer (&name, g_free);
+
+  g_assert_true (ncm_serialize_is_named (ser, "('NcmVector[x1]', @a{sv} {})", &name));
+  g_assert_cmpstr (name, ==, "x1");
+  g_clear_pointer (&name, g_free);
+
+  g_assert_false (ncm_serialize_is_named (ser, "NcmVector{'values':<[1.0]>}", &name));
+  g_assert_null (name);
+
+  /* The name is optional */
+  g_assert_true (ncm_serialize_is_named (ser, "NcmVector[abc]", NULL));
+  g_assert_false (ncm_serialize_is_named (ser, "NcmVector", NULL));
+
+  ncm_serialize_free (ser);
+}
+
+void
+test_ncm_serialize_shorthand (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GObject *obj      = ncm_serialize_from_string (ser, "NcmVector{'values':<[1.0, 2.5]>}");
+  gchar *short_str  = ncm_serialize_to_string (ser, obj, FALSE);
+  gchar *var_str    = ncm_serialize_to_string (ser, obj, TRUE);
+
+  /* Both forms read back to the same serialization */
+  {
+    GObject *obj_s = ncm_serialize_from_string (ser, short_str);
+    GObject *obj_v = ncm_serialize_from_string (ser, var_str);
+    gchar *s1      = ncm_serialize_to_string (ser, obj_s, TRUE);
+    gchar *s2      = ncm_serialize_to_string (ser, obj_v, TRUE);
+
+    g_assert_cmpstr (s1, ==, var_str);
+    g_assert_cmpstr (s2, ==, var_str);
+    g_assert_true (g_str_has_prefix (short_str, "NcmVector{"));
+
+    g_free (s1);
+    g_free (s2);
+    g_object_unref (obj_s);
+    g_object_unref (obj_v);
+  }
+
+  /* A NULL object property converts to NULL */
+  {
+    GValue val = G_VALUE_INIT;
+
+    g_value_init (&val, G_TYPE_OBJECT);
+    g_assert_null (ncm_serialize_gvalue_to_gvariant (ser, &val));
+    g_value_unset (&val);
+  }
+
+  g_free (short_str);
+  g_free (var_str);
+  g_object_unref (obj);
+  ncm_serialize_free (ser);
+}
+
+void
+test_ncm_serialize_dup_shared (void)
+{
+  NcmSerialize *ser_load = ncm_serialize_new (NCM_SERIALIZE_OPT_AUTOSAVE_SER);
+  NcmSpline *s           = NCM_SPLINE (ncm_serialize_from_string (ser_load, TEST_SPLINE_SHARED));
+
+  g_assert_true (ncm_spline_peek_xv (s) == ncm_spline_peek_yv (s));
+  ncm_serialize_free (ser_load);
+
+  /* With NCM_SERIALIZE_OPT_CLEAN_DUP the shared vector stays shared in the copy */
+  {
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSpline *dup    = NCM_SPLINE (ncm_serialize_dup_obj (ser, G_OBJECT (s)));
+
+    g_assert_true (ncm_spline_peek_xv (dup) == ncm_spline_peek_yv (dup));
+    g_assert_true (ncm_spline_peek_xv (dup) != ncm_spline_peek_xv (s));
+    g_assert_cmpuint (ncm_serialize_count_saved_serializations (ser), >, 0);
+
+    ncm_serialize_reset (ser, FALSE);
+    g_assert_cmpuint (ncm_serialize_count_saved_serializations (ser), ==, 0);
+    g_assert_cmpuint (ncm_serialize_count_instances (ser), ==, 0);
+
+    ncm_spline_free (dup);
+    ncm_serialize_free (ser);
+  }
+
+  /* Without options it is copied twice */
+  {
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+    NcmSpline *dup    = NCM_SPLINE (ncm_serialize_dup_obj (ser, G_OBJECT (s)));
+
+    g_assert_true (ncm_spline_peek_xv (dup) != ncm_spline_peek_yv (dup));
+    g_assert_cmpfloat (ncm_vector_get (ncm_spline_peek_yv (dup), 3), ==, 4.0);
+
+    ncm_spline_free (dup);
+    ncm_serialize_free (ser);
+  }
+
+  /* An array holding one object twice */
+  {
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmObjArray *oa   = ncm_obj_array_new ();
+    NcmObjArray *dup;
+
+    ncm_obj_array_add (oa, G_OBJECT (s));
+    ncm_obj_array_add (oa, G_OBJECT (s));
+    dup = ncm_serialize_dup_array (ser, oa);
+
+    g_assert_cmpuint (ncm_obj_array_len (dup), ==, 2);
+    g_assert_true (ncm_obj_array_peek (dup, 0) == ncm_obj_array_peek (dup, 1));
+    g_assert_true (ncm_obj_array_peek (dup, 0) != G_OBJECT (s));
+
+    ncm_obj_array_unref (dup);
+    ncm_obj_array_unref (oa);
+    ncm_serialize_free (ser);
+  }
+
+  ncm_spline_free (s);
+}
+
+void
+test_ncm_serialize_key_file (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmObjArray *oa   = ncm_obj_array_new ();
+  gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_serialize_XXXXXX", NULL);
+  gchar *filename   = g_build_filename (tmp_dir, "oa.ini", NULL);
+  NcmVector *v      = ncm_vector_new (2);
+  NcmObjArray *oa_load;
+
+  ncm_vector_set (v, 0, 1.5);
+  ncm_vector_set (v, 1, -2.0);
+  ncm_obj_array_add (oa, G_OBJECT (v));
+
+  ncm_serialize_array_to_key_file (ser, oa, filename, TRUE);
+  oa_load = ncm_serialize_array_from_key_file (ser, filename);
+
+  g_assert_cmpuint (ncm_obj_array_len (oa_load), ==, 1);
+  g_assert_cmpfloat (ncm_vector_get (NCM_VECTOR (ncm_obj_array_peek (oa_load, 0)), 1), ==, -2.0);
+
+  {
+    GKeyFile *kf = g_key_file_new ();
+
+    g_assert_true (g_key_file_load_from_file (kf, filename, G_KEY_FILE_NONE, NULL));
+    g_assert_true (g_key_file_has_group (kf, "NcmObjArray"));
+    g_assert_true (g_key_file_has_key (kf, NCM_SERIALIZE_OBJECT_ARRAY_POS_STR ":0", NCM_SERIALIZE_OBJECT_ARRAY_OBJ_NAME_STR, NULL));
+    g_key_file_unref (kf);
+  }
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+  g_free (filename);
+  g_free (tmp_dir);
+  ncm_obj_array_unref (oa_load);
+  ncm_obj_array_unref (oa);
+  ncm_vector_free (v);
+  ncm_serialize_free (ser);
+}
+
+void
+test_ncm_serialize_set_property (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmRNG *rng       = ncm_rng_new (NULL);
+  gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_serialize_XXXXXX", NULL);
+  gchar *filename   = g_build_filename (tmp_dir, "props.ini", NULL);
+
+  ncm_serialize_set_property (ser, G_OBJECT (rng), "{'seed':<uint64 1234>}");
+  g_assert_cmpuint (ncm_rng_get_seed (rng), ==, 1234);
+
+  /* A file without groups is read as the group `Precision Parameters' */
+  g_assert_true (g_file_set_contents (filename, "seed=uint64 99\n", -1, NULL));
+  ncm_serialize_set_property_from_key_file (ser, G_OBJECT (rng), filename);
+  g_assert_cmpuint (ncm_rng_get_seed (rng), ==, 99);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+  g_free (filename);
+  g_free (tmp_dir);
+  ncm_rng_free (rng);
+  ncm_serialize_free (ser);
+}
+
+void
+test_ncm_serialize_global (void)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  NcmVector *v      = ncm_vector_new (1);
+
+  {
+    NcmSerialize *ser2 = ncm_serialize_global ();
+
+    g_assert_true (ser == ser2);
+    ncm_serialize_free (ser2);
+  }
+
+  ncm_serialize_global_set (v, "global_v", FALSE);
+  g_assert_true (ncm_serialize_global_contain_instance (v));
+  g_assert_true (ncm_serialize_global_contain_name ("global_v"));
+  g_assert_true (ncm_serialize_contain_name (ser, "global_v"));
+  ncm_serialize_global_unset (v);
+  g_assert_false (ncm_serialize_global_contain_name ("global_v"));
+
+  ncm_vector_free (v);
+  ncm_serialize_free (ser);
 }
 
