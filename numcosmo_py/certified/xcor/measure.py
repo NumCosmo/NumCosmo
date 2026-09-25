@@ -23,9 +23,11 @@
 
 """NumCosmo measured against its own certified xcor references.
 
-:func:`radial` computes the radial integral of every cell of a certified window table
-with ``NcmSBesselIntegratorLevin``, the way ``test_xcor_window_truth_table.py`` does,
-and returns the measurements as a :class:`~numcosmo_py.certified.results.Campaign`.
+:func:`radial` computes the radial integral of every cell of a certified window
+table or pair grid with ``NcmSBesselIntegratorLevin``, the way
+``test_xcor_window_truth_table.py`` does; :func:`cl` computes C_ell of every cell of
+``xcor_kquad`` with ``NcXcor``, the way ``test_k_integral.py`` does. Both return a
+:class:`~numcosmo_py.certified.results.Campaign`.
 """
 
 import pathlib
@@ -33,7 +35,7 @@ import typing
 
 import numpy as np
 
-from numcosmo_py import Ncm
+from numcosmo_py import Nc, Ncm
 from numcosmo_py.certified import results, tables
 from numcosmo_py.certified.xcor import kernels
 from numcosmo_py.certified.xcor import windows as W
@@ -130,12 +132,9 @@ def radial(
     :return: the campaign, not yet written.
     """
     table = tables.read(table_path)
-    meta = tables.metadata(table)
-    deriv = int(meta["bessel_deriv"])
     scales = peaks(peak_table)
     config: dict[str, typing.Any] = {
         "integrator": "NcmSBesselIntegratorLevin",
-        "bessel_deriv": deriv,
         "scale": "peak of the window and multipole",
         "scale_table": peak_name,
     }
@@ -147,6 +146,8 @@ def radial(
     cosmo, dist, ps = kernels.make_cosmo_bits()
 
     for name, (gmeta, cells) in tables.groups(table).items():
+        # a window table carries the order for the whole table, a pair grid per window
+        deriv = int(gmeta["deriv"])
         kernel = kernels.build_kernel(_window(gmeta), dist, ps)
         kernel.set_l_limber(-1)
         kernel.prepare(cosmo)
@@ -162,7 +163,117 @@ def radial(
                 "radius": np.asarray(cells["radius"]),
                 "measured": _integrate(kernel, ells, ks, deriv, reltol),
                 "scale": np.array([scales[(name, int(e))] for e in ells]),
+                "bessel_deriv": np.full(len(ells), deriv),
             },
         )
+
+    return campaign
+
+
+CLOSURES: typing.Final[dict[str, typing.Any]] = {
+    "spline": Nc.XcorKernelClosure.SPLINE,
+    "chebyshev": Nc.XcorKernelClosure.CHEBYSHEV,
+}
+
+
+def _library_cl(
+    pair: dict, bits: tuple, closure: str, tol: float, ells: np.ndarray
+) -> np.ndarray:
+    """Return NcXcor's C_ell of one pair at each multipole, one per batch."""
+    cosmo, dist, ps = bits
+
+    def build(name):
+        kernel = kernels.build_kernel(name, dist, ps)
+        kernel.set_l_limber(-1)
+        kernel.set_property("reltol", tol)
+        kernel.set_property("peak-epsilon", tol)
+        kernel.prepare(cosmo)
+        return kernel
+
+    kernel_a = build(pair["kernel_a"])
+    kernel_b = kernel_a if pair["isauto"] else build(pair["kernel_b"])
+    xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
+    xcor.set_closure_type(CLOSURES[closure])
+    xcor.set_ell_batch_size(1)
+    xcor.set_reltol(tol)
+    xcor.prepare(cosmo)
+    vp = Ncm.Vector.new(1)
+    out = np.empty(len(ells))
+
+    for i, ell in enumerate(ells):
+        xcor.compute(kernel_a, kernel_b, cosmo, int(ell), int(ell), vp)
+        out[i] = vp.get(0)
+
+    return out
+
+
+def cl(
+    table_path: pathlib.Path,
+    code_version: str,
+    closures: typing.Sequence[str] = ("spline", "chebyshev"),
+    tolerances: typing.Sequence[float] = (1.0e-3, 1.0e-4, 1.0e-5, 1.0e-6),
+) -> results.Campaign:
+    """Measure NumCosmo's C_ell against the certified ``xcor_kquad`` table.
+
+    ``NcXcor`` with ``KERNEL_EXACT``, one multipole per batch and ``l_limber = -1``, as
+    ``test_k_integral.py`` computes it; the kernels' ``reltol`` and ``peak-epsilon``
+    and the solver's ``reltol`` all take the ladder's tolerance. The deviation is
+    scaled by each pair's largest certified |C_ell| over its multipoles.
+
+    :param table_path: ``xcor_kquad`` in the :mod:`numcosmo_py.certified.tables` layout.
+    :param code_version: the NumCosmo commit or version being measured.
+    :param closures: the closure types to measure, by name.
+    :param tolerances: the tolerance ladder.
+    :return: the campaign, not yet written; closure (0 spline, 1 chebyshev) and
+        tolerance are per-row columns.
+    """
+    table = tables.read(table_path)
+    campaign = results.Campaign(
+        table_path,
+        "numcosmo",
+        code_version,
+        {
+            "solver": "NcXcor KERNEL_EXACT",
+            "ell_batch_size": 1,
+            "l_limber": -1,
+            "scale": "largest certified |C_ell| of the pair",
+            "closure_codes": "0 spline, 1 chebyshev",
+        },
+    )
+    cosmo, dist, ps = kernels.make_cosmo_bits()
+
+    for name, (pair, cells) in tables.groups(table).items():
+        ells = np.asarray(cells["ell"], dtype=np.int64)
+        reference = np.asarray(cells["value"])
+        scale = float(np.max(np.abs(reference)))
+        rows: dict[str, list] = {
+            key: []
+            for key in (
+                "ell",
+                "reference",
+                "radius",
+                "measured",
+                "scale",
+                "closure",
+                "tol",
+            )
+        }
+
+        for code, closure in enumerate(("spline", "chebyshev")):
+            if closure not in closures:
+                continue
+
+            for tol in tolerances:
+                rows["ell"] += list(ells)
+                rows["reference"] += list(reference)
+                rows["radius"] += list(np.asarray(cells["radius"]))
+                rows["measured"] += list(
+                    _library_cl(pair, (cosmo, dist, ps), closure, tol, ells)
+                )
+                rows["scale"] += [scale] * len(ells)
+                rows["closure"] += [code] * len(ells)
+                rows["tol"] += [tol] * len(ells)
+
+        campaign.add(name, {key: np.asarray(v) for key, v in rows.items()})
 
     return campaign
