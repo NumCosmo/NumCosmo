@@ -487,6 +487,35 @@ test_ncm_util_fact_size (void)
 
   g_assert_cmpuint (ncm_util_fact_size (11), ==, 12);
   g_assert_cmpuint (ncm_util_fact_size (49), ==, 49);
+  g_assert_cmpuint (ncm_util_fact_size (26), ==, 27);
+  g_assert_cmpuint (ncm_util_fact_size (0), ==, 1);
+  g_assert_cmpuint (ncm_util_fact_size (1), ==, 1);
+
+  /* n_f is the smallest: the 7-smooth numbers, built as products 2^a 3^b 5^c 7^d */
+  {
+    const gulong nmax = 6000;
+    gboolean *smooth  = g_new0 (gboolean, nmax + 1);
+    gulong p2, p3, p5, p7;
+
+    for (p2 = 1; p2 <= nmax; p2 *= 2)
+      for (p3 = p2; p3 <= nmax; p3 *= 3)
+        for (p5 = p3; p5 <= nmax; p5 *= 5)
+          for (p7 = p5; p7 <= nmax; p7 *= 7)
+            smooth[p7] = TRUE;
+
+    for (n = 1; n <= 5000; n++)
+    {
+      const gulong nf = ncm_util_fact_size (n);
+      gulong k;
+
+      g_assert_true (smooth[nf]);
+
+      for (k = n; k < nf; k++)
+        g_assert_false (smooth[k]);
+    }
+
+    g_free (smooth);
+  }
 }
 
 void

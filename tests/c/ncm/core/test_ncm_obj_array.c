@@ -133,6 +133,108 @@ void test_ncm_var_dict_invalid_set (TestNcmVarDict *test, gconstpointer pdata);
 void test_ncm_obj_dict_keys_replace (void);
 void test_ncm_var_dict_keys_replace (void);
 
+/* An integer is read as a double; any other mismatch aborts */
+static void
+test_ncm_var_dict_types (void)
+{
+  const gchar *getters[] = {"string", "int", "double", "boolean", "int_array", "double_array", "boolean_array"};
+  NcmVarDict *vd         = ncm_var_dict_new ();
+  gdouble d              = 0.0;
+  guint i;
+
+  ncm_var_dict_set_int (vd, "n", 7);
+  g_assert_true (ncm_var_dict_get_double (vd, "n", &d));
+  g_assert_cmpfloat (d, ==, 7.0);
+  ncm_var_dict_unref (vd);
+
+  for (i = 0; i < G_N_ELEMENTS (getters); i++)
+  {
+    gchar *path = g_strdup_printf ("/ncm/var_dict/types/%s/subprocess", getters[i]);
+
+    g_test_trap_subprocess (path, 0, 0);
+    g_test_trap_assert_failed ();
+    g_test_trap_assert_stderr ("*has type*");
+    g_free (path);
+  }
+}
+
+/* A dictionary whose "k" holds a type none of the getters above accept for it */
+static NcmVarDict *
+_var_dict_wrong_type (const gchar *getter)
+{
+  NcmVarDict *vd = ncm_var_dict_new ();
+
+  if (g_str_equal (getter, "string"))
+    ncm_var_dict_set_int (vd, "k", 1);
+  else
+    ncm_var_dict_set_string (vd, "k", "x");
+
+  return vd;
+}
+
+static void
+test_ncm_var_dict_types_string_subprocess (void)
+{
+  NcmVarDict *vd = _var_dict_wrong_type ("string");
+  gchar *out     = NULL;
+
+  ncm_var_dict_get_string (vd, "k", &out);
+}
+
+static void
+test_ncm_var_dict_types_int_subprocess (void)
+{
+  NcmVarDict *vd = _var_dict_wrong_type ("int");
+  gint out;
+
+  ncm_var_dict_get_int (vd, "k", &out);
+}
+
+static void
+test_ncm_var_dict_types_double_subprocess (void)
+{
+  NcmVarDict *vd = _var_dict_wrong_type ("double");
+  gdouble out;
+
+  ncm_var_dict_get_double (vd, "k", &out);
+}
+
+static void
+test_ncm_var_dict_types_boolean_subprocess (void)
+{
+  NcmVarDict *vd = _var_dict_wrong_type ("boolean");
+  gboolean out;
+
+  ncm_var_dict_get_boolean (vd, "k", &out);
+}
+
+static void
+test_ncm_var_dict_types_int_array_subprocess (void)
+{
+  NcmVarDict *vd = _var_dict_wrong_type ("int_array");
+  GArray *out    = NULL;
+
+  ncm_var_dict_get_int_array (vd, "k", &out);
+}
+
+static void
+test_ncm_var_dict_types_double_array_subprocess (void)
+{
+  NcmVarDict *vd = _var_dict_wrong_type ("double_array");
+  GArray *out    = NULL;
+
+  ncm_var_dict_get_double_array (vd, "k", &out);
+}
+
+static void
+test_ncm_var_dict_types_boolean_array_subprocess (void)
+{
+  NcmVarDict *vd = _var_dict_wrong_type ("boolean_array");
+  GArray *out    = NULL;
+
+  ncm_var_dict_get_boolean_array (vd, "k", &out);
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -343,6 +445,14 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/ncm/obj_dict/keys_replace", &test_ncm_obj_dict_keys_replace);
   g_test_add_func ("/ncm/var_dict/keys_replace", &test_ncm_var_dict_keys_replace);
+  g_test_add_func ("/ncm/var_dict/types", &test_ncm_var_dict_types);
+  g_test_add_func ("/ncm/var_dict/types/string/subprocess", &test_ncm_var_dict_types_string_subprocess);
+  g_test_add_func ("/ncm/var_dict/types/int/subprocess", &test_ncm_var_dict_types_int_subprocess);
+  g_test_add_func ("/ncm/var_dict/types/double/subprocess", &test_ncm_var_dict_types_double_subprocess);
+  g_test_add_func ("/ncm/var_dict/types/boolean/subprocess", &test_ncm_var_dict_types_boolean_subprocess);
+  g_test_add_func ("/ncm/var_dict/types/int_array/subprocess", &test_ncm_var_dict_types_int_array_subprocess);
+  g_test_add_func ("/ncm/var_dict/types/double_array/subprocess", &test_ncm_var_dict_types_double_array_subprocess);
+  g_test_add_func ("/ncm/var_dict/types/boolean_array/subprocess", &test_ncm_var_dict_types_boolean_array_subprocess);
 
   g_test_run ();
 }

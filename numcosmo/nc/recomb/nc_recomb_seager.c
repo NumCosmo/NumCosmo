@@ -1066,7 +1066,7 @@ nc_recomb_seager_Tm_dx (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const g
   const gdouble T4 = gsl_pow_4 (T);
   const gdouble H  = nc_hicosmo_H (cosmo, x - 1.0) / ncm_c_kpc ();
 
-  const gdouble f1 = (8.0 * ncm_c_thomson_cs () * ncm_c_AR () * T4 / (3.0 * ncm_c_c () * ncm_c_mass_e ())) / (H * x);
+  const gdouble f1 = (8.0 * ncm_c_thomson_cs () * ncm_c_blackbody_energy_density () * T4 / (3.0 * ncm_c_c () * ncm_c_mass_e ())) / (H * x);
 
   const gdouble Xe  = XHII + XHeII;
   const gdouble XHe = nc_hicosmo_XHe (cosmo);
@@ -1084,7 +1084,7 @@ nc_recomb_seager_Tm_dx_grad (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, co
   const gdouble T  = T0 * x;
   const gdouble H  = nc_hicosmo_H (cosmo, x - 1.0) / ncm_c_kpc ();
   const gdouble T4 = gsl_pow_4 (T);
-  const gdouble f1 = (8.0 * ncm_c_thomson_cs () * ncm_c_AR () * T4 / (3.0 * ncm_c_c () * ncm_c_mass_e ())) / (H * x);
+  const gdouble f1 = (8.0 * ncm_c_thomson_cs () * ncm_c_blackbody_energy_density () * T4 / (3.0 * ncm_c_c () * ncm_c_mass_e ())) / (H * x);
 
   const gdouble Xe  = XHII + XHeII;
   const gdouble XHe = nc_hicosmo_XHe (cosmo);

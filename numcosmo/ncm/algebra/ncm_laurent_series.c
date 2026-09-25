@@ -878,27 +878,78 @@ ncm_laurent_series_tps_pow (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS 
  * = 2\pi \sum_h c_h\,e^{-z} I_{|h|}(z)\,e^{ih\phi}$$
  * from the Jacobi-Anger expansion, for a real $c(\theta)$, that is $c_{-h} = \bar c_h$: only the
  * powers $h \ge 0$ are read, as $c_0 I_0 + 2 \sum_{h \ge 1} I_h\,\mathrm{Re}(c_h e^{ih\phi})$.
- * Powers $h \ge n_{I_k}$ are not included.
+ * Powers $h \ge n_{I_k}$ are not included. It is ncm_laurent_series_jacobi_anger_accumulate()
+ * followed by ncm_laurent_series_jacobi_anger_eval().
  *
  * Returns: the integral.
  */
 gdouble
 ncm_laurent_series_jacobi_anger_reduce (const NcmLaurentSeries *cm, gdouble phi, const gdouble *Ik, gint n_Ik)
 {
-  gdouble term;
+  NcmComplex *H = g_new0 (NcmComplex, MAX (n_Ik, 1));
+  gdouble res;
+
+  ncm_laurent_series_jacobi_anger_accumulate (cm, Ik, n_Ik, 1.0, H);
+  res = ncm_laurent_series_jacobi_anger_eval (H, n_Ik, phi);
+
+  g_free (H);
+
+  return res;
+}
+
+/**
+ * ncm_laurent_series_jacobi_anger_accumulate: (skip)
+ * @cm: a #NcmLaurentSeries $c(\theta) = \sum_h c_h e^{ih\theta}$
+ * @Ik: (array length=n_Ik): $e^{-z} I_k(z)$ for $k = 0, \dots, n_{I_k} - 1$
+ * @n_Ik: length of @Ik and @H, at least one
+ * @scale: the factor $s$
+ * @H: (array length=n_Ik): the harmonics $H_k$
+ *
+ * Adds to @H the $\phi$-independent part of ncm_laurent_series_jacobi_anger_reduce(),
+ * $H_0 \mathrel{+}= s\,\mathrm{Re}(c_0)\,I_0$ and $H_k \mathrel{+}= s\,I_k\,c_k$ for
+ * $1 \le k < n_{I_k}$, under the same assumption of a real $c(\theta)$. Summing over several
+ * series, for example over quadrature nodes, and then calling
+ * ncm_laurent_series_jacobi_anger_eval() gives the sum of their integrals, with $\phi$ applied
+ * once.
+ */
+void
+ncm_laurent_series_jacobi_anger_accumulate (const NcmLaurentSeries *cm, const gdouble *Ik, gint n_Ik, gdouble scale, NcmComplex *H)
+{
   gint k;
 
   g_assert_cmpint (n_Ik, >, 0);
 
-  term = creal (ncm_laurent_series_get (cm, 0)) * Ik[0];
+  H[0] += scale * creal (ncm_laurent_series_get (cm, 0)) * Ik[0];
 
   for (k = 1; k < n_Ik; k++)
   {
-    NcmComplex v = ncm_laurent_series_get (cm, k);
+    const NcmComplex v = ncm_laurent_series_get (cm, k);
 
     if (v != 0.0)
-      term += 2.0 * Ik[k] * creal (v * cexp (I * k * phi));
+      H[k] += scale * Ik[k] * v;
   }
+}
+
+/**
+ * ncm_laurent_series_jacobi_anger_eval: (skip)
+ * @H: (array length=n_H): the harmonics $H_k$ of ncm_laurent_series_jacobi_anger_accumulate()
+ * @n_H: length of @H, at least one
+ * @phi: the phase $\phi$
+ *
+ * Returns: $2\pi\left[\mathrm{Re}(H_0) + 2\sum_{k=1}^{n_H - 1} \mathrm{Re}(H_k e^{ik\phi})\right]$.
+ */
+gdouble
+ncm_laurent_series_jacobi_anger_eval (const NcmComplex *H, gint n_H, gdouble phi)
+{
+  gdouble term;
+  gint k;
+
+  g_assert_cmpint (n_H, >, 0);
+
+  term = creal (H[0]);
+
+  for (k = 1; k < n_H; k++)
+    term += 2.0 * creal (H[k] * cexp (I * k * phi));
 
   return 2.0 * M_PI * term;
 }

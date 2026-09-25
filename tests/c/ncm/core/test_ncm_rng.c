@@ -33,6 +33,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <gsl/gsl_sf_erf.h>
+#include <gsl/gsl_rng.h>
 
 #define TEST_RNG_SEED 123456
 #define TEST_RNG_NDRAWS 100000
@@ -349,6 +350,48 @@ test_ncm_rng_traps (void)
   g_test_trap_assert_failed ();
 }
 
+/* Changing the algorithm keeps the seed; NULL selects the GSL default */
+static void
+test_ncm_rng_set_algo (void)
+{
+  NcmRNG *rng   = ncm_rng_new ("mt19937");
+  NcmRNG *fresh = ncm_rng_new ("ranlxd2");
+  guint i;
+
+  ncm_rng_set_seed (rng, 1234);
+  ncm_rng_set_algo (rng, "ranlxd2");
+  ncm_rng_set_seed (fresh, 1234);
+
+  g_assert_cmpstr (ncm_rng_get_algo (rng), ==, "ranlxd2");
+  g_assert_cmpuint (ncm_rng_get_seed (rng), ==, 1234);
+
+  for (i = 0; i < 10; i++)
+    g_assert_cmpfloat (ncm_rng_uniform01_gen (rng), ==, ncm_rng_uniform01_gen (fresh));
+
+  ncm_rng_set_algo (rng, NULL);
+  g_assert_cmpstr (ncm_rng_get_algo (rng), ==, gsl_rng_default->name);
+  g_assert_cmpuint (ncm_rng_get_seed (rng), ==, 1234);
+
+  ncm_rng_free (rng);
+  ncm_rng_free (fresh);
+}
+
+/* The used-seed table keeps the whole seed */
+static void
+test_ncm_rng_check_seed_width (void)
+{
+  NcmRNG *rng       = ncm_rng_new (NULL);
+  const gulong seed = 987654321UL;
+
+  ncm_rng_set_seed (rng, seed);
+  g_assert_false (ncm_rng_check_seed (rng, seed));
+
+  if (sizeof (gulong) > 4)
+    g_assert_true (ncm_rng_check_seed (rng, seed + (((gulong) 1) << 32)));
+
+  ncm_rng_free (rng);
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -359,6 +402,8 @@ main (gint argc, gchar *argv[])
   g_test_set_nonfatal_assertions ();
 
   g_test_add_func ("/ncm/rng/seed_state", &test_ncm_rng_seed_state);
+  g_test_add_func ("/ncm/rng/set_algo", &test_ncm_rng_set_algo);
+  g_test_add_func ("/ncm/rng/check_seed_width", &test_ncm_rng_check_seed_width);
   g_test_add_func ("/ncm/rng/pool", &test_ncm_rng_pool);
   g_test_add_func ("/ncm/rng/distributions", &test_ncm_rng_distributions);
   g_test_add_func ("/ncm/rng/uniform_ranges", &test_ncm_rng_uniform_ranges);

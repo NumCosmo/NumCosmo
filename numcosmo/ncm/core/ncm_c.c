@@ -434,16 +434,6 @@ ncm_c_class_init (NcmCClass *klass)
  */
 
 /**
- * ncm_c_AR:
- *
- * Derived from CODATA 2022 values.
- *
- * Returns: the radiation constant $a = 4\sigma_\mathrm{SB}/c
- * \,\left[\mathrm{J}\,\mathrm{m}^{-3}\,\mathrm{K}^{-4}\right]$, the same as
- * ncm_c_blackbody_energy_density().
- */
-
-/**
  * ncm_c_c2:
  *
  * Derived from CODATA 2022 values.
@@ -868,8 +858,9 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * NIST Atomic Spectra Database.
  *
- * The arithmetic mean of the ionization wavenumbers of the H-I $2p\,{}^2\\!P_{1/2}$ and
- * $2p\,{}^2\\!P_{3/2}$ states , i.e., $k_{2p\,{}^2\\!P_\mathrm{mean}} = (k_{2p\,{}^2\\!P_{1/2}} + k_{2p\,{}^2\\!P_{3/2}}) / 2$,
+ * The mean of the ionization wavenumbers of the H-I $2p\,{}^2\\!P_{1/2}$ and
+ * $2p\,{}^2\\!P_{3/2}$ states weighted by the statistical weights $g = 2J + 1$, 2 and 4,
+ * $k_{2p\,{}^2\\!P_\mathrm{mean}} = (k_{2p\,{}^2\\!P_{1/2}} + 2 k_{2p\,{}^2\\!P_{3/2}}) / 3$,
  * see ncm_c_HI_Lyman_wn_2p_2Pmean().
  *
  * Returns: Hydrogen states $2p\,{}^2\\!P_{1/2}$ and $2p\,{}^2\\!P_{3/2}$ mean ionization wavenumber, $k_{2p\,{}^2\\!P_\mathrm{mean}} \,\left[\mathrm{m}^{-1}\right]$.
@@ -969,8 +960,12 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * NIST Atomic Spectra Database.
  *
- * Mean Lyman emission wavenumber for the $2p\,{}^2\\!P_{1/2}$ and $2p\,{}^2\\!P_{3/2}$
- * states, $k_{2p\,{}^2\\!P_{mean}^\mathrm{Ly}} = (k_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly} + k_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly}) / 2$.
+ * Mean Lyman emission wavenumber of the $2p\,{}^2\\!P_{1/2}$ and $2p\,{}^2\\!P_{3/2}$ states,
+ * weighted by the statistical weights $g = 2J + 1$, 2 and 4, of the two fine-structure levels,
+ * $$k_{2p\,{}^2\\!P_\mathrm{mean}}^\mathrm{Ly} = \frac{k_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly} + 2 k_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly}}{3}.$$
+ * This is the Lyman-$\alpha$ wavenumber of RECFAST (Seager, Sasselov and Scott 1999), which
+ * #NcRecombSeager uses through ncm_c_HI_Lyman_wl3_8pi_2p_2Pmean(); the unweighted mean differs
+ * by $7.4\times10^{-7}$.
  *
  * Returns: $k_{2p\,{}^2\\!P_{mean}}^\mathrm{Ly} \,\left[\mathrm{m}^{-1}\right]$.
  */
@@ -1405,8 +1400,10 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * NIST Atomic Spectra Database.
  *
- * Mean Lyman emission wavenumber for the $2p\,{}^3\\!P_{*}$, i.e.,
+ * Unweighted mean Lyman emission wavenumber of the $2p\,{}^3\\!P_{0,1,2}$ states,
  * $k_{2p\,{}^3\\!P_\mathrm{mean}}^\mathrm{Ly} = \left(k_{2p\,{}^3\\!P_{0}}^\mathrm{Ly} + k_{2p\,{}^3\\!P_{1}}^\mathrm{Ly} + k_{2p\,{}^3\\!P_{2}}^\mathrm{Ly}\right) / 3$.
+ * This is the triplet wavenumber of RECFAST, which #NcRecombSeager uses; the mean
+ * weighted by the statistical weights $2J + 1$ differs by $1.4\times10^{-6}$.
  * See ncm_c_HeI_Lyman_wn_2p_3P0(), ncm_c_HeI_Lyman_wn_2p_3P1() and ncm_c_HeI_Lyman_wn_2p_3P2().
  *
  * Returns: $k_{2p\,{}^3\\!P_\mathrm{mean}}^\mathrm{Ly} \,\left[\mathrm{m}^{-1}\right]$.
@@ -1916,6 +1913,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * The blackbody energy density divided by $T^4$,
  * $$\frac{\rho_\mathrm{BB}}{T^4} = \frac{8\pi^5 k_\mathrm{B}^4}{15 h^3 c^3} = \frac{4\sigma_\mathrm{SB}}{c}.$$
+ *
+ * This is the radiation constant $a$.
  *
  * Returns: $\rho_\mathrm{BB}/T^4 \,\left[\mathrm{J}\,\mathrm{m}^{-3}\,\mathrm{K}^{-4}\right]$.
  */

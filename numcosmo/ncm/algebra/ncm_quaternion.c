@@ -25,24 +25,20 @@
 /**
  * NcmQuaternion:
  *
- * Quaternions algebra, three-vectors and mapping to matrix.
+ * Quaternions and three-vectors, for rotations in three dimensions.
  *
- * A quaternion is a four-dimensional vector that can be used to represent rotations in
- * three-dimensional space. The three-dimensional space is represented by the
- * three-dimensional subspace of the quaternions that have zero real part.
+ * A quaternion $q = s + \vec v$ has a scalar part $s$ and a vector part $\vec v$; a
+ * three-vector, #NcmTriVec, is a quaternion with $s = 0$. The conjugate is
+ * $q^\dagger = s - \vec v$, and the norm is $|q| = \sqrt{s^2 + \vec v\cdot\vec v}$. A unit
+ * quaternion $q = \cos(\theta/2) + \sin(\theta/2)\,\hat n$ rotates a vector by the angle
+ * $\theta$ about $\hat n$, counterclockwise seen from the tip of $\hat n$, as
+ * $\vec u \to q\,\vec u\,q^\dagger$.
  *
- * This object also implements three-dimensional vectors and the mapping of quaternions
- * to rotation matrices.
- *
- * The conjugate of a quaternion is the quaternion with the same real part and the
- * imaginary part negated, that is, if $q = s + \vec{v}$, then the conjugate of $q$ is
- * $q^\dagger = s - \vec{v}$.
- *
- * The norm of a quaternion is the square root of the sum of the squares of its components.
- * The norm of a quaternion is always a positive real number.
- *
- *
- *
+ * The spherical coordinates of a vector are
+ * $(r\sin\theta\cos\phi, r\sin\theta\sin\phi, r\cos\theta)$, with the polar angle $\theta$ from
+ * the z-axis and the azimuth $\phi$ from the x-axis. The astronomical ones are
+ * $(r\cos\delta\cos\alpha, r\cos\delta\sin\alpha, r\sin\delta)$, with the declination $\delta$
+ * from the xy-plane (the equator) and the right ascension $\alpha$ from the x-axis.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -59,13 +55,15 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+static void _ncm_quaternion_set_zy (NcmQuaternion *q, NcmTriVec *v, const gdouble beta);
+
 G_DEFINE_BOXED_TYPE (NcmQuaternion, ncm_quaternion, ncm_quaternion_dup, ncm_quaternion_free)
 G_DEFINE_BOXED_TYPE (NcmTriVec, ncm_trivec, ncm_trivec_dup, ncm_trivec_free)
 
 /**
  * ncm_trivec_new: (constructor)
  *
- * Creates a new empty #NcmTriVec.
+ * Creates a zero #NcmTriVec.
  *
  * Returns: (transfer full): a new #NcmTriVec.
  */
@@ -79,11 +77,9 @@ ncm_trivec_new (void)
 
 /**
  * ncm_trivec_new_full: (constructor)
- * @c: (array fixed-size=3) (element-type double): components
+ * @c: (array fixed-size=3) (element-type double): the components
  *
- * Creates a new #NcmTriVec with the given components.
- *
- * Returns: (transfer full): the new #NcmTriVec.
+ * Returns: (transfer full): a new #NcmTriVec.
  */
 NcmTriVec *
 ncm_trivec_new_full (const gdouble c[3])
@@ -97,13 +93,11 @@ ncm_trivec_new_full (const gdouble c[3])
 
 /**
  * ncm_trivec_new_full_c: (constructor)
- * @x: x-component
- * @y: y-component
- * @z: z-component
+ * @x: the x component
+ * @y: the y component
+ * @z: the z component
  *
- * Creates a new #NcmTriVec with the given components.
- *
- * Returns: (transfer full): the new #NcmTriVec.
+ * Returns: (transfer full): a new #NcmTriVec.
  */
 NcmTriVec *
 ncm_trivec_new_full_c (const gdouble x, const gdouble y, const gdouble z)
@@ -121,14 +115,11 @@ ncm_trivec_new_full_c (const gdouble x, const gdouble y, const gdouble z)
  * ncm_trivec_new_sphere: (constructor)
  * @r: the radius
  * @theta: the polar angle
- * @phi: the azimuthal angle
+ * @phi: the azimuth
  *
- * Creates a new #NcmTriVec with the given spherical coordinates. The spherical
- * coordinates are the radius, the polar angle and the azimuthal angle. The polar angle
- * is the angle between the vector and the z-axis, and the azimuthal angle is the angle
- * between the projection of the vector in the xy-plane and the x-axis.
+ * Creates the vector with the given spherical coordinates, see ncm_trivec_set_spherical_coord().
  *
- * Returns: (transfer full): the new #NcmTriVec.
+ * Returns: (transfer full): a new #NcmTriVec.
  */
 NcmTriVec *
 ncm_trivec_new_sphere (gdouble r, gdouble theta, gdouble phi)
@@ -143,16 +134,12 @@ ncm_trivec_new_sphere (gdouble r, gdouble theta, gdouble phi)
 /**
  * ncm_trivec_new_astro_coord: (constructor)
  * @r: the radius
- * @delta: the declination
- * @alpha: the right ascension
+ * @delta: the declination, in radians
+ * @alpha: the right ascension, in radians
  *
- * Creates a new #NcmTriVec with the given astronomical coordinates. The astronomical
- * coordinates are the declination and the right ascension. The declination is the angle
- * between the vector and the celestial equator, and the right ascension is the angle
- * between the projection of the vector in the celestial equator and the vernal equinox.
- * The angles are in radians.
+ * Creates the vector with the given astronomical coordinates, see ncm_trivec_set_astro_coord().
  *
- * Returns: (transfer full): the new #NcmTriVec.
+ * Returns: (transfer full): a new #NcmTriVec.
  */
 NcmTriVec *
 ncm_trivec_new_astro_coord (gdouble r, gdouble delta, gdouble alpha)
@@ -167,16 +154,12 @@ ncm_trivec_new_astro_coord (gdouble r, gdouble delta, gdouble alpha)
 /**
  * ncm_trivec_new_astro_ra_dec: (constructor)
  * @r: the radius
- * @ra: the right ascension
- * @dec: the declination
+ * @ra: the right ascension, in degrees
+ * @dec: the declination, in degrees
  *
- * Creates a new #NcmTriVec with the given astronomical coordinates. The astronomical
- * coordinates are the declination and the right ascension. The declination is the angle
- * between the vector and the celestial equator, and the right ascension is the angle
- * between the projection of the vector in the celestial equator and the vernal equinox.
- * The angles are in degrees.
+ * Creates the vector with the given astronomical coordinates, see ncm_trivec_set_astro_ra_dec().
  *
- * Returns: (transfer full): the new #NcmTriVec.
+ * Returns: (transfer full): a new #NcmTriVec.
  */
 NcmTriVec *
 ncm_trivec_new_astro_ra_dec (gdouble r, gdouble ra, gdouble dec)
@@ -192,9 +175,7 @@ ncm_trivec_new_astro_ra_dec (gdouble r, gdouble ra, gdouble dec)
  * ncm_trivec_dup:
  * @v: a #NcmTriVec
  *
- * Duplicates a #NcmTriVec.
- *
- * Returns: (transfer full): a new #NcmTriVec.
+ * Returns: (transfer full): a copy of @v.
  */
 NcmTriVec *
 ncm_trivec_dup (NcmTriVec *v)
@@ -210,8 +191,7 @@ ncm_trivec_dup (NcmTriVec *v)
  * ncm_trivec_free:
  * @v: a #NcmTriVec
  *
- * Frees a #NcmTriVec.
- *
+ * Frees @v.
  */
 void
 ncm_trivec_free (NcmTriVec *v)
@@ -224,8 +204,7 @@ ncm_trivec_free (NcmTriVec *v)
  * @dest: a #NcmTriVec
  * @orig: a #NcmTriVec
  *
- * Copies a #NcmTriVec.
- *
+ * Copies @orig into @dest.
  */
 void
 ncm_trivec_memcpy (NcmTriVec *dest, const NcmTriVec *orig)
@@ -237,8 +216,7 @@ ncm_trivec_memcpy (NcmTriVec *dest, const NcmTriVec *orig)
  * ncm_trivec_set_0:
  * @v: a #NcmTriVec
  *
- * Sets a #NcmTriVec to zero.
- *
+ * Sets @v to zero.
  */
 void
 ncm_trivec_set_0 (NcmTriVec *v)
@@ -249,10 +227,9 @@ ncm_trivec_set_0 (NcmTriVec *v)
 /**
  * ncm_trivec_scale:
  * @v: a #NcmTriVec
- * @scale: scaling factor
+ * @scale: the factor
  *
- * Scale a #NcmTriVec.
- *
+ * Multiplies @v by @scale.
  */
 void
 ncm_trivec_scale (NcmTriVec *v, const gdouble scale)
@@ -266,9 +243,7 @@ ncm_trivec_scale (NcmTriVec *v, const gdouble scale)
  * ncm_trivec_norm:
  * @v: a #NcmTriVec
  *
- * Calculates the norm of a #NcmTriVec.
- *
- * Returns: the norm of @v.
+ * Returns: $|\vec v|$.
  */
 gdouble
 ncm_trivec_norm (NcmTriVec *v)
@@ -281,9 +256,7 @@ ncm_trivec_norm (NcmTriVec *v)
  * @v1: a #NcmTriVec
  * @v2: a #NcmTriVec
  *
- * Calculates the dot product of two #NcmTriVec.
- *
- * Returns: the dot product of @v1 and @v2.
+ * Returns: $\vec v_1\cdot\vec v_2$.
  */
 gdouble
 ncm_trivec_dot (const NcmTriVec *v1, const NcmTriVec *v2)
@@ -295,8 +268,7 @@ ncm_trivec_dot (const NcmTriVec *v1, const NcmTriVec *v2)
  * ncm_trivec_normalize:
  * @v: a #NcmTriVec
  *
- * Normalize a #NcmTriVec.
- *
+ * Divides @v by its norm.
  */
 void
 ncm_trivec_normalize (NcmTriVec *v)
@@ -308,9 +280,7 @@ ncm_trivec_normalize (NcmTriVec *v)
  * ncm_trivec_get_phi:
  * @v: a #NcmTriVec
  *
- * Gets the azimuthal angle of a #NcmTriVec.
- *
- * Returns: the azimuthal angle of @v.
+ * Returns: the azimuth $\phi \in (-\pi, \pi]$ of @v.
  */
 gdouble
 ncm_trivec_get_phi (NcmTriVec *v)
@@ -323,16 +293,9 @@ ncm_trivec_get_phi (NcmTriVec *v)
  * @v: a #NcmTriVec
  * @r: the radius
  * @theta: the polar angle
- * @phi: the azimuthal angle
+ * @phi: the azimuth
  *
- * Sets the spherical coordinates of a #NcmTriVec. The spherical coordinates are the radius,
- * the polar angle and the azimuthal angle. The polar angle is the angle between the vector
- * and the z-axis, and the azimuthal angle is the angle between the projection of the vector
- * in the xy-plane and the x-axis.
- *
- * The vector is defined as:
- * $$\vec{v} = (r \sin(\theta) \cos(\phi), r \sin(\theta) \sin(\phi), r \cos(\theta)).$$
- *
+ * Sets @v to $(r\sin\theta\cos\phi, r\sin\theta\sin\phi, r\cos\theta)$.
  */
 void
 ncm_trivec_set_spherical_coord (NcmTriVec *v, gdouble r, gdouble theta, gdouble phi)
@@ -347,10 +310,9 @@ ncm_trivec_set_spherical_coord (NcmTriVec *v, gdouble r, gdouble theta, gdouble 
  * @v: a #NcmTriVec
  * @r: (out): the radius
  * @theta: (out): the polar angle
- * @phi: (out): the azimuthal angle
+ * @phi: (out): the azimuth
  *
- * Computes the spherical coordinates of a #NcmTriVec.
- *
+ * Computes the spherical coordinates of @v, with $\theta \in [0, \pi]$ and $\phi \in (-\pi, \pi]$.
  */
 void
 ncm_trivec_get_spherical_coord (NcmTriVec *v, gdouble *r, gdouble *theta, gdouble *phi)
@@ -366,13 +328,10 @@ ncm_trivec_get_spherical_coord (NcmTriVec *v, gdouble *r, gdouble *theta, gdoubl
  * ncm_trivec_set_astro_coord:
  * @v: a #NcmTriVec
  * @r: the radius
- * @delta: the declination
- * @alpha: the right ascension
+ * @delta: the declination, in radians
+ * @alpha: the right ascension, in radians
  *
- * Sets the astronomical coordinates of a #NcmTriVec. The astronomical coordinates are
- * the declination and the right ascension. The vector is defined as:
- * $$\vec{v} = (\cos(\delta) \cos(\alpha), \cos(\delta) \sin(\alpha), \sin(\delta)).$$
- *
+ * Sets @v to $(r\cos\delta\cos\alpha, r\cos\delta\sin\alpha, r\sin\delta)$.
  */
 void
 ncm_trivec_set_astro_coord (NcmTriVec *v, gdouble r, gdouble delta, gdouble alpha)
@@ -386,12 +345,11 @@ ncm_trivec_set_astro_coord (NcmTriVec *v, gdouble r, gdouble delta, gdouble alph
  * ncm_trivec_get_astro_coord:
  * @v: a #NcmTriVec
  * @r: (out): the radius
- * @delta: (out): the declination
- * @alpha: (out): the right ascension
+ * @delta: (out): the declination, in radians
+ * @alpha: (out): the right ascension, in radians
  *
- * Computes the astronomical coordinates of a #NcmTriVec.
- * See ncm_trivec_set_astro_coord() for details.
- *
+ * Computes the astronomical coordinates of @v, with $\delta \in [-\pi/2, \pi/2]$ and
+ * $\alpha \in (-\pi, \pi]$.
  */
 void
 ncm_trivec_get_astro_coord (NcmTriVec *v, gdouble *r, gdouble *delta, gdouble *alpha)
@@ -407,14 +365,10 @@ ncm_trivec_get_astro_coord (NcmTriVec *v, gdouble *r, gdouble *delta, gdouble *a
  * ncm_trivec_set_astro_ra_dec:
  * @v: a #NcmTriVec
  * @r: the radius
- * @ra: the right ascension (in degrees)
- * @dec: the declination (in degrees)
+ * @ra: the right ascension, in degrees
+ * @dec: the declination, in degrees
  *
- * Sets the astronomical coordinates of a #NcmTriVec. The astronomical coordinates are
- * the declination and the right ascension. The declination is the angle between the vector
- * and the z-axis, and the right ascension is the angle between the projection of the vector
- * in the xy-plane and the x-axis. The declination and the right ascension are given in degrees.
- *
+ * Same as ncm_trivec_set_astro_coord() with the angles in degrees.
  */
 void
 ncm_trivec_set_astro_ra_dec (NcmTriVec *v, gdouble r, gdouble ra, gdouble dec)
@@ -429,12 +383,10 @@ ncm_trivec_set_astro_ra_dec (NcmTriVec *v, gdouble r, gdouble ra, gdouble dec)
  * ncm_trivec_get_astro_ra_dec:
  * @v: a #NcmTriVec
  * @r: (out): the radius
- * @ra: (out): the right ascension (in degrees)
- * @dec: (out): the declination (in degrees)
+ * @ra: (out): the right ascension, in degrees
+ * @dec: (out): the declination, in degrees
  *
- * Computes the astronomical coordinates of a #NcmTriVec.
- * See ncm_trivec_set_astro_ra_dec() for details.
- *
+ * Same as ncm_trivec_get_astro_coord() with the angles in degrees.
  */
 void
 ncm_trivec_get_astro_ra_dec (NcmTriVec *v, gdouble *r, gdouble *ra, gdouble *dec)
@@ -450,7 +402,7 @@ ncm_trivec_get_astro_ra_dec (NcmTriVec *v, gdouble *r, gdouble *ra, gdouble *dec
 /**
  * ncm_quaternion_new: (constructor)
  *
- * Creates a new empty #NcmQuaternion.
+ * Creates a zero #NcmQuaternion.
  *
  * Returns: (transfer full): a new #NcmQuaternion.
  */
@@ -466,7 +418,7 @@ ncm_quaternion_new (void)
  * ncm_quaternion_new_from_vector: (constructor)
  * @v: a #NcmTriVec
  *
- * Creates a new #NcmQuaternion from a #NcmTriVec.
+ * Creates the quaternion $0 + \vec v$.
  *
  * Returns: (transfer full): a new #NcmQuaternion.
  */
@@ -483,13 +435,13 @@ ncm_quaternion_new_from_vector (NcmTriVec *v)
 
 /**
  * ncm_quaternion_new_from_data: (constructor)
- * @x: the x-component
- * @y: the y-component
- * @z: the z-component
- * @theta: the angle
+ * @x: the x component of the axis
+ * @y: the y component of the axis
+ * @z: the z component of the axis
+ * @theta: the rotation angle
  *
- * Creates a new #NcmQuaternion from the given components.
- * See ncm_quaternion_set_from_data() for details.
+ * Creates the rotation by @theta about the axis $(x, y, z)$, see
+ * ncm_quaternion_set_from_data().
  *
  * Returns: (transfer full): a new #NcmQuaternion.
  */
@@ -498,14 +450,7 @@ ncm_quaternion_new_from_data (gdouble x, gdouble y, gdouble z, gdouble theta)
 {
   NcmQuaternion *q = ncm_quaternion_new ();
 
-  theta    /= 2.0;
-  q->v.c[0] = x;
-  q->v.c[1] = y;
-  q->v.c[2] = z;
-
-  ncm_trivec_normalize (&q->v);
-  ncm_trivec_scale (&q->v, sin (theta));
-  q->s = cos (theta);
+  ncm_quaternion_set_from_data (q, x, y, z, theta);
 
   return q;
 }
@@ -514,9 +459,7 @@ ncm_quaternion_new_from_data (gdouble x, gdouble y, gdouble z, gdouble theta)
  * ncm_quaternion_dup:
  * @q: a #NcmQuaternion
  *
- * Duplicates a #NcmQuaternion.
- *
- * Returns: (transfer full): a new #NcmQuaternion.
+ * Returns: (transfer full): a copy of @q.
  */
 NcmQuaternion *
 ncm_quaternion_dup (NcmQuaternion *q)
@@ -532,8 +475,7 @@ ncm_quaternion_dup (NcmQuaternion *q)
  * ncm_quaternion_free:
  * @q: a #NcmQuaternion
  *
- * Frees a #NcmQuaternion.
- *
+ * Frees @q.
  */
 void
 ncm_quaternion_free (NcmQuaternion *q)
@@ -546,8 +488,7 @@ ncm_quaternion_free (NcmQuaternion *q)
  * @dest: a #NcmQuaternion
  * @orig: a #NcmQuaternion
  *
- * Copies a #NcmQuaternion.
- *
+ * Copies @orig into @dest.
  */
 void
 ncm_quaternion_memcpy (NcmQuaternion *dest, const NcmQuaternion *orig)
@@ -558,17 +499,13 @@ ncm_quaternion_memcpy (NcmQuaternion *dest, const NcmQuaternion *orig)
 /**
  * ncm_quaternion_set_from_data:
  * @q: a #NcmQuaternion
- * @x: the x-component
- * @y: the y-component
- * @z: the z-component
- * @theta: the angle
+ * @x: the x component of the axis
+ * @y: the y component of the axis
+ * @z: the z component of the axis
+ * @theta: the rotation angle
  *
- * Sets the components of a #NcmQuaternion.
- * The components are the components of a three-dimensional vector and the angle
- * of rotation, the three-dimensional vector is normalized. The final
- * form of the quaternion is:
- * $$q = \cos(\theta/2) + \sin(\theta/2) \hat{v}.$$
- *
+ * Sets @q to the unit quaternion $\cos(\theta/2) + \sin(\theta/2)\,\hat n$, the rotation by
+ * @theta about $\hat n = (x, y, z)/|(x, y, z)|$. Aborts if the axis is zero.
  */
 void
 ncm_quaternion_set_from_data (NcmQuaternion *q, gdouble x, gdouble y, gdouble z, gdouble theta)
@@ -578,6 +515,7 @@ ncm_quaternion_set_from_data (NcmQuaternion *q, gdouble x, gdouble y, gdouble z,
   q->v.c[1] = y;
   q->v.c[2] = z;
 
+  g_assert_cmpfloat (ncm_trivec_norm (&q->v), >, 0.0);
   ncm_trivec_normalize (&q->v);
   ncm_trivec_scale (&q->v, sin (theta));
 
@@ -588,8 +526,7 @@ ncm_quaternion_set_from_data (NcmQuaternion *q, gdouble x, gdouble y, gdouble z,
  * ncm_quaternion_set_I:
  * @q: a #NcmQuaternion
  *
- * Sets a #NcmQuaternion to the identity.
- *
+ * Sets @q to the identity, $1 + \vec 0$.
  */
 void
 ncm_quaternion_set_I (NcmQuaternion *q)
@@ -602,8 +539,7 @@ ncm_quaternion_set_I (NcmQuaternion *q)
  * ncm_quaternion_set_0:
  * @q: a #NcmQuaternion
  *
- * Sets a #NcmQuaternion to zero.
- *
+ * Sets @q to zero.
  */
 void
 ncm_quaternion_set_0 (NcmQuaternion *q)
@@ -616,9 +552,7 @@ ncm_quaternion_set_0 (NcmQuaternion *q)
  * ncm_quaternion_norm:
  * @q: a #NcmQuaternion
  *
- * Calculates the norm of a #NcmQuaternion.
- *
- * Returns: the norm of @q.
+ * Returns: $|q|$.
  */
 gdouble
 ncm_quaternion_norm (NcmQuaternion *q)
@@ -631,32 +565,31 @@ ncm_quaternion_norm (NcmQuaternion *q)
  * @q: a #NcmQuaternion
  * @rng: a #NcmRNG
  *
- * Sets a #NcmQuaternion to a random value, using the given #NcmRNG.
- * The components of the three-dimensional vector are uniformly distributed
- * in the interval [-1, 1] and the angle is uniformly distributed in the
- * interval [0, 2*pi].
- *
- * It represents a random rotation in three-dimensional space.
- *
+ * Sets @q to a uniformly distributed rotation: four independent standard Gaussians,
+ * normalized, give a point uniform on the unit sphere of quaternions.
  */
 void
 ncm_quaternion_set_random (NcmQuaternion *q, NcmRNG *rng)
 {
   ncm_rng_lock (rng);
-  ncm_quaternion_set_from_data (q,
-                                -1.0 + 2.0 * ncm_rng_uniform01_pos_gen (rng),
-                                -1.0 + 2.0 * ncm_rng_uniform01_pos_gen (rng),
-                                -1.0 + 2.0 * ncm_rng_uniform01_pos_gen (rng),
-                                2.0 * M_PI * ncm_rng_uniform01_gen (rng));
+
+  do {
+    q->s      = ncm_rng_gaussian_gen (rng, 0.0, 1.0);
+    q->v.c[0] = ncm_rng_gaussian_gen (rng, 0.0, 1.0);
+    q->v.c[1] = ncm_rng_gaussian_gen (rng, 0.0, 1.0);
+    q->v.c[2] = ncm_rng_gaussian_gen (rng, 0.0, 1.0);
+  } while (ncm_quaternion_norm (q) == 0.0);
+
   ncm_rng_unlock (rng);
+
+  ncm_quaternion_normalize (q);
 }
 
 /**
  * ncm_quaternion_normalize:
  * @q: a #NcmQuaternion
  *
- * Normalize a #NcmQuaternion.
- *
+ * Divides @q by its norm.
  */
 void
 ncm_quaternion_normalize (NcmQuaternion *q)
@@ -673,8 +606,7 @@ ncm_quaternion_normalize (NcmQuaternion *q)
  * ncm_quaternion_conjugate:
  * @q: a #NcmQuaternion
  *
- * Conjugate a #NcmQuaternion. That is, the vector part is negated.
- *
+ * Sets @q to $q^\dagger$.
  */
 void
 ncm_quaternion_conjugate (NcmQuaternion *q)
@@ -686,11 +618,9 @@ ncm_quaternion_conjugate (NcmQuaternion *q)
  * ncm_quaternion_mul:
  * @q: a #NcmQuaternion
  * @u: a #NcmQuaternion
- * @res: a #NcmQuaternion
+ * @res: a #NcmQuaternion, not @q or @u
  *
- * Computes the product of two #NcmQuaternion $r=qu$ where $q$ and $u$ are
- * @q and @u, respectively, and $r$ is @res.
- *
+ * Sets @res to $q\,u$.
  */
 void
 ncm_quaternion_mul (NcmQuaternion *q, NcmQuaternion *u, NcmQuaternion *res)
@@ -706,9 +636,7 @@ ncm_quaternion_mul (NcmQuaternion *q, NcmQuaternion *u, NcmQuaternion *res)
  * @q: a #NcmQuaternion
  * @u: a #NcmQuaternion
  *
- * Computes the product of two #NcmQuaternion and stores the result in @q.
- * That is, @q = @u * @q, where @u and @q are @u and @q, respectively.
- *
+ * Sets @q to $u\,q$.
  */
 void
 ncm_quaternion_lmul (NcmQuaternion *q, NcmQuaternion *u)
@@ -724,9 +652,7 @@ ncm_quaternion_lmul (NcmQuaternion *q, NcmQuaternion *u)
  * @q: a #NcmQuaternion
  * @u: a #NcmQuaternion
  *
- * Computes the product of two #NcmQuaternion and stores the result in @q.
- * That is, @q = @q * @u, where @q and @u are @q and @u, respectively.
- *
+ * Sets @q to $q\,u$.
  */
 void
 ncm_quaternion_rmul (NcmQuaternion *q, NcmQuaternion *u)
@@ -741,12 +667,9 @@ ncm_quaternion_rmul (NcmQuaternion *q, NcmQuaternion *u)
  * ncm_quaternion_conjugate_q_mul:
  * @q: a #NcmQuaternion
  * @u: a #NcmQuaternion
- * @res: a #NcmQuaternion
+ * @res: a #NcmQuaternion, not @q or @u
  *
- * Computes the product of two #NcmQuaternion and stores the result in @res.
- * The first #NcmQuaternion is conjugated before the multiplication.
- * That is, $r = q^\dagger u$ where $q$ and $u$ are @q and @u, respectively, and $r$ is @res.
- *
+ * Sets @res to $q^\dagger u$.
  */
 void
 ncm_quaternion_conjugate_q_mul (NcmQuaternion *q, NcmQuaternion *u, NcmQuaternion *res)
@@ -761,13 +684,9 @@ ncm_quaternion_conjugate_q_mul (NcmQuaternion *q, NcmQuaternion *u, NcmQuaternio
  * ncm_quaternion_conjugate_u_mul:
  * @q: a #NcmQuaternion
  * @u: a #NcmQuaternion
- * @res: a #NcmQuaternion
+ * @res: a #NcmQuaternion, not @q or @u
  *
- * Computes the product of two #NcmQuaternion and stores the result in @res.
- * The second #NcmQuaternion is conjugated before the multiplication.
- * The result is $r = q u^\dagger$, where $q$ and $u$ are @q and @u, respectively,
- * and $r$ is @res. The conjugation is done by negating the vector part of @u.
- *
+ * Sets @res to $q\,u^\dagger$.
  */
 void
 ncm_quaternion_conjugate_u_mul (NcmQuaternion *q, NcmQuaternion *u, NcmQuaternion *res)
@@ -783,9 +702,8 @@ ncm_quaternion_conjugate_u_mul (NcmQuaternion *q, NcmQuaternion *u, NcmQuaternio
  * @q: a #NcmQuaternion
  * @v: a #NcmTriVec
  *
- * Computes the rotation of a #NcmTriVec by a #NcmQuaternion.
- * The rotation is done by the formula $v' = q v q^\dagger$.
- *
+ * Sets @v to $q\,\vec v\,q^\dagger$, its rotation by the unit quaternion @q. For a quaternion
+ * that is not unit the result is also scaled by $|q|^2$.
  */
 void
 ncm_quaternion_rotate (NcmQuaternion *q, NcmTriVec *v)
@@ -806,8 +724,7 @@ ncm_quaternion_rotate (NcmQuaternion *q, NcmTriVec *v)
  * @q: a #NcmQuaternion
  * @v: a #NcmTriVec
  *
- * Computes the inverse rotation of a #NcmTriVec by a #NcmQuaternion.
- *
+ * Sets @v to $q^\dagger\,\vec v\,q$, the inverse of ncm_quaternion_rotate() for a unit @q.
  */
 void
 ncm_quaternion_inv_rotate (NcmQuaternion *q, NcmTriVec *v)
@@ -828,65 +745,17 @@ ncm_quaternion_inv_rotate (NcmQuaternion *q, NcmTriVec *v)
  * @q: a #NcmQuaternion
  * @v: a #NcmTriVec
  *
- * Sets @q to the rotation that rotates the given #NcmTriVec to the x-axis. It finds
- * first the quaternion that rotates the given vector to the xz-plane and then the
- * quaternion that rotates the vector to the x-axis. Finally, it multiplies the two
- * quaternions and stores the result in @q.
- *
+ * Sets @q to the unit quaternion that takes the direction of @v to the x-axis: a rotation
+ * about the z-axis into the xz-plane followed by one about the y-axis. For a zero @v, @q is the
+ * identity.
  */
 void
 ncm_quaternion_set_to_rotate_to_x (NcmQuaternion *q, NcmTriVec *v)
 {
-  NcmQuaternion t1       = NCM_QUATERNION_INIT_I;
-  NcmQuaternion t2       = NCM_QUATERNION_INIT_I;
-  const gdouble vx       = v->c[0];
-  const gdouble vy       = v->c[1];
-  const gdouble vz       = v->c[2];
-  const gdouble norma_xy = hypot (vx, vy);
-  const gdouble norma    = hypot (vz, norma_xy);
+  const gdouble rho = hypot (v->c[0], v->c[1]);
 
-  if (norma > 0.0)
-  {
-    /*
-     * Find the quaternion that rotates the vector to the xz-plane. Skip if the vector
-     * is already in the xz-plane or if has no component in the xy-plane.
-     */
-    const gdouble nx = vx / norma_xy;
-    const gdouble ny = vy / norma_xy;
-    const gdouble ux = norma_xy / norma;
-    const gdouble uz = vz / norma;
-
-    if ((norma_xy > 0.0) && (ny != 0.0))
-    {
-      /*
-       * To avoid division by zero, we use the following formula to find the quaternion
-       * that rotates the vector to the xz-plane:
-       */
-      if ((fabs (ny) < 0.1) && (nx > 0.0))
-        t1.v.c[2] = -ny / (1.0 + sqrt (1.0 - ny * ny));
-      else
-        t1.v.c[2] = -(1.0 - nx) / ny;
-    }
-
-    /*
-     * Find the quaternion that rotates the vector to the x-axis. Skip if the vector is
-     * already in the x-axis.
-     */
-    if (uz != 0.0)
-    {
-      /*
-       * To avoid division by zero, we use the following formula to find the quaternion
-       * that rotates the vector to the x-axis:
-       */
-      if ((fabs (uz) < 0.1) && (ux > 0.0))
-        t2.v.c[1] = uz / (1.0 + sqrt (1.0 - uz * uz));
-      else
-        t2.v.c[1] = (1.0 - ux) / uz;
-    }
-  }
-
-  ncm_quaternion_mul (&t2, &t1, q);
-  ncm_quaternion_normalize (q);
+  /* Rotation about y by atan2 (v_z, rho), which takes (rho, 0, v_z) to the x-axis */
+  _ncm_quaternion_set_zy (q, v, atan2 (v->c[2], rho));
 }
 
 /**
@@ -894,64 +763,46 @@ ncm_quaternion_set_to_rotate_to_x (NcmQuaternion *q, NcmTriVec *v)
  * @q: a #NcmQuaternion
  * @v: a #NcmTriVec
  *
- * Sets @q to the rotation that rotates the given #NcmTriVec to the z-axis. It finds
- * first the quaternion that rotates the given vector to the xz-plane and then the
- * quaternion that rotates the vector to the z-axis. Finally, it multiplies the two
- * quaternions and stores the result in @q.
- *
+ * Sets @q to the unit quaternion that takes the direction of @v to the z-axis: a rotation
+ * about the z-axis into the xz-plane followed by one about the y-axis, so no rotation is added
+ * about the final axis. For a zero @v, @q is the identity.
  */
 void
 ncm_quaternion_set_to_rotate_to_z (NcmQuaternion *q, NcmTriVec *v)
 {
-  NcmQuaternion t1       = NCM_QUATERNION_INIT_I;
-  NcmQuaternion t2       = NCM_QUATERNION_INIT_I;
-  const gdouble vx       = v->c[0];
-  const gdouble vy       = v->c[1];
-  const gdouble vz       = v->c[2];
-  const gdouble norma_xy = hypot (vx, vy);
-  const gdouble norma    = hypot (vz, norma_xy);
+  const gdouble rho = hypot (v->c[0], v->c[1]);
 
-  if (norma > 0.0)
+  /* Rotation about y by -atan2 (rho, v_z), which takes (rho, 0, v_z) to the z-axis */
+  _ncm_quaternion_set_zy (q, v, -atan2 (rho, v->c[2]));
+}
+
+/*
+ * Sets q to R_y (beta) R_z (-phi), with phi the azimuth of v: the rotation about z takes v
+ * into the xz-plane with x >= 0, the one about y by beta then to the target axis. On the
+ * z-axis phi is 0, and the zero vector gives the identity.
+ */
+static void
+_ncm_quaternion_set_zy (NcmQuaternion *q, NcmTriVec *v, const gdouble beta)
+{
+  NcmQuaternion t_z = NCM_QUATERNION_INIT_I;
+  NcmQuaternion t_y = NCM_QUATERNION_INIT_I;
+
+  if (ncm_trivec_norm (v) == 0.0)
   {
-    /*
-     * Find the quaternion that rotates the vector to the xz-plane. Skip if the vector
-     * is already in the xz-plane or if has no component in the xy-plane.
-     */
-    const gdouble nx = vx / norma_xy;
-    const gdouble ny = vy / norma_xy;
-    const gdouble ux = norma_xy / norma;
-    const gdouble uz = vz / norma;
+    ncm_quaternion_set_I (q);
 
-    if ((norma_xy > 0.0) && (ny != 0.0))
-    {
-      /*
-       * To avoid division by zero, we use the following formula to find the quaternion
-       * that rotates the vector to the xz-plane:
-       */
-      if ((fabs (ny) < 0.1) && (nx > 0.0))
-        t1.v.c[2] = -ny / (1.0 + sqrt (1.0 - ny * ny));
-      else
-        t1.v.c[2] = -(1.0 - nx) / ny;
-    }
-
-    /*
-     * Find the quaternion that rotates the vector to the z-axis. Skip if the vector is
-     * already in the z-axis.
-     */
-    if (ux != 0.0)
-    {
-      /*
-       * To avoid division by zero, we use the following formula to find the quaternion
-       * that rotates the vector to the z-axis:
-       */
-      if ((fabs (ux) < 0.1) && (uz > 0.0))
-        t2.v.c[1] = -ux / (1.0 + sqrt (1.0 - ux * ux));
-      else
-        t2.v.c[1] = -(1.0 - uz) / ux;
-    }
+    return;
   }
 
-  ncm_quaternion_mul (&t2, &t1, q);
-  ncm_quaternion_normalize (q);
+  {
+    const gdouble phi = atan2 (v->c[1], v->c[0]);
+
+    t_z.s      = cos (0.5 * phi);
+    t_z.v.c[2] = -sin (0.5 * phi);
+    t_y.s      = cos (0.5 * beta);
+    t_y.v.c[1] = sin (0.5 * beta);
+  }
+
+  ncm_quaternion_mul (&t_y, &t_z, q);
 }
 

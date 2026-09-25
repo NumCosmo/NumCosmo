@@ -158,7 +158,7 @@ gboolean ncm_serialize_global_contain_name (const gchar *name);
 guint ncm_serialize_global_count_instances (void);
 guint ncm_serialize_global_count_saved_serializations (void);
 gpointer ncm_serialize_global_get_by_name (const gchar *name);
-gchar *ncm_serialize_global_global_peek_name (gpointer obj);
+gchar *ncm_serialize_global_peek_name (gpointer obj);
 void ncm_serialize_global_set (gpointer obj, const gchar *name, gboolean overwrite);
 void ncm_serialize_global_unset (gpointer obj);
 void ncm_serialize_global_remove_ser (gpointer obj);

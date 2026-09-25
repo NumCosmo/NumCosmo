@@ -46,6 +46,8 @@
 #include "ncm/core/ncm_util.h"
 #include "ncm/stats/ncm_stats_vec.h"
 
+#include <math.h>
+
 enum
 {
   PROP_0,
@@ -322,6 +324,41 @@ _ncm_timer_dhms_to_string (GString *s, guint elap_day, guint elap_hour, guint el
     default:
       g_string_printf (s, "%02u days, %02u:%02u:"NCM_TIMER_SEC_FORMAT, elap_day, elap_hour, elap_min, elap_sec);
       break;
+  }
+}
+
+/* Formats @t seconds, or "unknown" when it is not finite */
+static void
+_ncm_timer_sec_to_string (GString *s, const gdouble t)
+{
+  guint day, hour, min;
+  gdouble sec;
+
+  if (!isfinite (t))
+  {
+    g_string_assign (s, "unknown");
+
+    return;
+  }
+
+  _ncm_timer_sec_to_dhms (t, &day, &hour, &min, &sec);
+  _ncm_timer_dhms_to_string (s, day, hour, min, sec);
+}
+
+/* Mean time per item and its standard error, NAN while they are undefined: the mean
+ * needs one completed item and the standard error two updates */
+static void
+_ncm_timer_task_mean_sigma (NcmTimer *nt, gdouble *mean_time, gdouble *sigma_time)
+{
+  if (nt->task_pos == 0)
+  {
+    *mean_time  = NAN;
+    *sigma_time = NAN;
+  }
+  else
+  {
+    *mean_time  = ncm_stats_vec_get_mean (nt->time_stats, 0);
+    *sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
   }
 }
 
@@ -683,6 +720,8 @@ ncm_timer_task_elapsed_str (NcmTimer *nt)
  *
  * Formats the mean time per item with its standard error. Aborts if no task is
  * running.
+ * A value is "unknown" until it is defined: the mean after the first completed item,
+ * the standard error after the second update.
  *
  * Returns: (transfer none): the formatted string.
  */
@@ -691,16 +730,11 @@ ncm_timer_task_mean_time_str (NcmTimer *nt)
 {
   g_assert (nt->task_len != 0);
   {
-    guint day, hour, min;
-    gdouble sec;
-    gdouble mean_time  = ncm_timer_task_mean_time (nt);
-    gdouble sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
+    gdouble mean_time, sigma_time;
 
-    _ncm_timer_sec_to_dhms (mean_time, &day, &hour, &min, &sec);
-    _ncm_timer_dhms_to_string (nt->msg_tmp1, day, hour, min, sec);
-
-    _ncm_timer_sec_to_dhms (sigma_time, &day, &hour, &min, &sec);
-    _ncm_timer_dhms_to_string (nt->msg_tmp2, day, hour, min, sec);
+    _ncm_timer_task_mean_sigma (nt, &mean_time, &sigma_time);
+    _ncm_timer_sec_to_string (nt->msg_tmp1, mean_time);
+    _ncm_timer_sec_to_string (nt->msg_tmp2, sigma_time);
 
     g_string_printf (nt->msg,
                      "# Task:%s, mean time: %s +/- %s",
@@ -716,6 +750,8 @@ ncm_timer_task_mean_time_str (NcmTimer *nt)
  *
  * Formats ncm_timer_task_time_left() with its standard error. Aborts if no task is
  * running.
+ * A value is "unknown" until it is defined: the mean after the first completed item,
+ * the standard error after the second update.
  *
  * Returns: (transfer none): the formatted string.
  */
@@ -724,19 +760,12 @@ ncm_timer_task_time_left_str (NcmTimer *nt)
 {
   g_assert (nt->task_len != 0);
   {
-    guint day, hour, min;
-    gdouble sec;
-    const gdouble mean_time       = ncm_stats_vec_get_mean (nt->time_stats, 0);
-    const gdouble sigma_time      = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
-    const guint task_left         = nt->task_len - nt->task_pos;
-    const gdouble mean_time_left  = mean_time * task_left;
-    const gdouble sigma_time_left = sigma_time * task_left;
+    const guint task_left = nt->task_len - nt->task_pos;
+    gdouble mean_time, sigma_time;
 
-    _ncm_timer_sec_to_dhms (mean_time_left, &day, &hour, &min, &sec);
-    _ncm_timer_dhms_to_string (nt->msg_tmp1, day, hour, min, sec);
-
-    _ncm_timer_sec_to_dhms (sigma_time_left, &day, &hour, &min, &sec);
-    _ncm_timer_dhms_to_string (nt->msg_tmp2, day, hour, min, sec);
+    _ncm_timer_task_mean_sigma (nt, &mean_time, &sigma_time);
+    _ncm_timer_sec_to_string (nt->msg_tmp1, mean_time * task_left);
+    _ncm_timer_sec_to_string (nt->msg_tmp2, sigma_time * task_left);
 
     g_string_printf (nt->msg,
                      "# Task:%s, time left: %s +/- %s",
@@ -780,33 +809,38 @@ ncm_timer_task_start_datetime_str (NcmTimer *nt)
  *
  * Formats the local date and time at which the task is estimated to end, with the
  * standard error of the time left.
+ * A value is "unknown" until it is defined: the mean after the first completed item,
+ * the standard error after the second update.
  *
  * Returns: (transfer none): the formatted string.
  */
 const gchar *
 ncm_timer_task_end_datetime_str (NcmTimer *nt)
 {
-  GDateTime *dt_now             = g_date_time_new_now_local ();
-  const gdouble mean_time       = ncm_stats_vec_get_mean (nt->time_stats, 0);
-  const gdouble sigma_time      = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
-  const guint task_left         = nt->task_len - nt->task_pos;
-  const gdouble mean_time_left  = mean_time * task_left;
-  const gdouble sigma_time_left = sigma_time * task_left;
-  GDateTime *dt_end             = g_date_time_add_seconds (dt_now, mean_time_left);
-  gchar *end_str                = g_date_time_format (dt_end, "%a %b %d %Y, %T");
-  guint day, hour, min;
-  gdouble sec;
+  const guint task_left = nt->task_len - nt->task_pos;
+  gdouble mean_time, sigma_time;
 
-  _ncm_timer_sec_to_dhms (sigma_time_left, &day, &hour, &min, &sec);
-  _ncm_timer_dhms_to_string (nt->msg_tmp1, day, hour, min, sec);
+  _ncm_timer_task_mean_sigma (nt, &mean_time, &sigma_time);
+  _ncm_timer_sec_to_string (nt->msg_tmp1, sigma_time * task_left);
 
-  g_string_printf (nt->msg,
-                   "# Task:%s, estimated to end at: %s +/- %s",
-                   nt->name, end_str, nt->msg_tmp1->str);
+  if (isfinite (mean_time))
+  {
+    GDateTime *dt_now = g_date_time_new_now_local ();
+    GDateTime *dt_end = g_date_time_add_seconds (dt_now, mean_time * task_left);
+    gchar *end_str    = g_date_time_format (dt_end, "%a %b %d %Y, %T");
 
-  g_date_time_unref (dt_now);
-  g_date_time_unref (dt_end);
-  g_free (end_str);
+    g_string_printf (nt->msg,
+                     "# Task:%s, estimated to end at: %s +/- %s",
+                     nt->name, end_str, nt->msg_tmp1->str);
+
+    g_date_time_unref (dt_now);
+    g_date_time_unref (dt_end);
+    g_free (end_str);
+  }
+  else
+  {
+    g_string_printf (nt->msg, "# Task:%s, estimated to end at: unknown", nt->name);
+  }
 
   return nt->msg->str;
 }

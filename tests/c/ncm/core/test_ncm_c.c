@@ -98,8 +98,12 @@ test_ncm_c_derived (void)
   ncm_assert_cmpdouble_e (ncm_c_hbar (), ==, h / (2.0 * M_PI), 1.0e-9, 0.0);
   ncm_assert_cmpdouble_e (ncm_c_Ry (), ==, h * c * ncm_c_Rinf (), 1.0e-12, 0.0);
   ncm_assert_cmpdouble_e (ncm_c_electric_constant () * ncm_c_magnetic_constant () * c * c, ==, 1.0, 1.0e-15, 0.0);
+  /* The H-I 2p mean is weighted by the statistical weights 2J + 1 = 2, 4 */
+  ncm_assert_cmpdouble_e (ncm_c_HI_Lyman_wn_2p_2Pmean (), ==, (ncm_c_HI_Lyman_wn_2p_2P0_5 () + 2.0 * ncm_c_HI_Lyman_wn_2p_2P3_5 ()) / 3.0, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (ncm_c_HI_ion_wn_2p_2Pmean (), ==, (ncm_c_HI_ion_wn_2p_2P0_5 () + 2.0 * ncm_c_HI_ion_wn_2p_2P3_5 ()) / 3.0, 1.0e-15, 0.0);
+  /* RECFAST's Lyman-alpha wavenumber, L_H_alpha */
+  ncm_assert_cmpdouble_e (ncm_c_HI_Lyman_wn_2p_2Pmean (), ==, 8.225916453e6, 2.0e-8, 0.0);
   ncm_assert_cmpdouble_e (ncm_c_blackbody_energy_density (), ==, 8.0 * gsl_pow_5 (M_PI) * gsl_pow_4 (kb) / (15.0 * gsl_pow_3 (h * c)), 1.0e-9, 0.0);
-  g_assert_cmpfloat (ncm_c_AR (), ==, ncm_c_blackbody_energy_density ());
 
   /* Thermal wavelength and wavenumber are inverses */
   ncm_assert_cmpdouble_e (ncm_c_thermal_wl_e () * ncm_c_thermal_wn_e (), ==, 1.0, 1.0e-15, 0.0);

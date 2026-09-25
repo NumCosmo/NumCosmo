@@ -895,6 +895,11 @@ test_ncm_serialize_instances (void)
   g_assert_true (ncm_serialize_peek_by_name (ser, "v") == (gpointer) v);
   g_assert_cmpstr (ncm_serialize_peek_name (ser, v), ==, "v");
 
+  /* The same through the global serializer */
+  ncm_serialize_global_set (w, "w_global", FALSE);
+  g_assert_cmpstr (ncm_serialize_global_peek_name (w), ==, "w_global");
+  ncm_serialize_global_unset (w);
+
   {
     gpointer obj = ncm_serialize_get_by_name (ser, "v");
 

@@ -321,7 +321,6 @@ ncm_headers = files(
 
 ncm_headers_nogi = files(
     'ncm/algebra/ncm_flapack.h',
-    'ncm/algebra/ncm_gsl_blas_types.h',
 )
 
 ncm_headers_internal = files(

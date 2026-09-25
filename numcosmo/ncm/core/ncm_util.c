@@ -1043,52 +1043,30 @@ ncm_util_function_params (const gchar *func, gdouble **x, guint *len)
 
 /**
  * ncm_util_fact_size:
- * @n: a positive integer
+ * @n: the minimum size
  *
- * Computes an integer $n_f \geq n$ whose prime factors are 2, 3, 5 and 7, a size for
- * which FFTW is efficient. $n_f$ is built by dividing out these factors and
- * incrementing when none divides, so it is not always the smallest such integer.
+ * Computes the smallest integer $n_f \geq \max(n, 1)$ whose only prime factors are 2, 3,
+ * 5 and 7, a size for which FFTW is efficient.
  *
  * Returns: $n_f$.
  */
 gulong
 ncm_util_fact_size (const gulong n)
 {
-  if (n == 1)
+  const gulong primes[] = {2, 3, 5, 7};
+  gulong nf;
+
+  for (nf = MAX (n, 1); ; nf++)
   {
-    return 0;
-  }
-  else
-  {
-    const gulong r2 = n % 2;
-    const gulong r3 = n % 3;
-    const gulong r5 = n % 5;
-    const gulong r7 = n % 7;
-    gulong m        = 1;
+    gulong r = nf;
+    guint i;
 
-    if (r2 == 0)
-      m *= 2;
+    for (i = 0; i < G_N_ELEMENTS (primes); i++)
+      while (r % primes[i] == 0)
+        r /= primes[i];
 
-    if (r3 == 0)
-      m *= 3;
-
-    if (r5 == 0)
-      m *= 5;
-
-    if (r7 == 0)
-      m *= 7;
-
-    if (m != 1)
-    {
-      if (n / m == 1)
-        return m;
-      else
-        return m * ncm_util_fact_size (n / m);
-    }
-    else
-    {
-      return ncm_util_fact_size (n + 1);
-    }
+    if (r == 1)
+      return nf;
   }
 }
 

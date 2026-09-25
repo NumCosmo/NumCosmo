@@ -597,6 +597,20 @@ ncm_var_dict_peek (NcmVarDict *vd, const gchar *key)
   return g_hash_table_lookup ((GHashTable *) vd, key);
 }
 
+/* The value under @key, or NULL; aborts if it is not of @type */
+static GVariant *
+_ncm_var_dict_peek_type (NcmVarDict *vd, const gchar *key, const GVariantType *type, const gchar *func)
+{
+  GVariant *v = ncm_var_dict_peek (vd, key);
+
+  if ((v != NULL) && !g_variant_is_of_type (v, type))
+    g_error ("%s: the value under `%s' has type `%s', not `%.*s'.", func, key,
+             g_variant_get_type_string (v), (gint) g_variant_type_get_string_length (type),
+             g_variant_type_peek_string (type));
+
+  return v;
+}
+
 /**
  * ncm_var_dict_set_string:
  * @vd: a #NcmVarDict
@@ -865,14 +879,15 @@ ncm_var_dict_has_key (NcmVarDict *vd, const gchar *key)
  * @key: the key
  * @value: (out) (transfer full): the string
  *
- * Gets the string under @key. @value is set only when @key is present.
+ * Gets the string under @key. @value is set only when @key is present. Aborts if the value
+ * under @key has another type.
  *
  * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_string (NcmVarDict *vd, const gchar *key, gchar **value)
 {
-  GVariant *v = ncm_var_dict_peek (vd, key);
+  GVariant *v = _ncm_var_dict_peek_type (vd, key, G_VARIANT_TYPE_STRING, "ncm_var_dict_get_string");
 
   if (v != NULL)
   {
@@ -890,14 +905,15 @@ ncm_var_dict_get_string (NcmVarDict *vd, const gchar *key, gchar **value)
  * @key: the key
  * @value: (out): the integer
  *
- * Gets the integer under @key. @value is set only when @key is present.
+ * Gets the integer under @key. @value is set only when @key is present. Aborts if the value
+ * under @key has another type.
  *
  * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_int (NcmVarDict *vd, const gchar *key, gint *value)
 {
-  GVariant *v = ncm_var_dict_peek (vd, key);
+  GVariant *v = _ncm_var_dict_peek_type (vd, key, G_VARIANT_TYPE_INT32, "ncm_var_dict_get_int");
 
   if (v != NULL)
   {
@@ -915,7 +931,8 @@ ncm_var_dict_get_int (NcmVarDict *vd, const gchar *key, gint *value)
  * @key: the key
  * @value: (out): the double
  *
- * Gets the double under @key. @value is set only when @key is present.
+ * Gets the double under @key; an integer is converted. @value is set only when @key is
+ * present. Aborts if the value under @key has another type.
  *
  * Returns: whether @key is present.
  */
@@ -924,14 +941,15 @@ ncm_var_dict_get_double (NcmVarDict *vd, const gchar *key, gdouble *value)
 {
   GVariant *v = ncm_var_dict_peek (vd, key);
 
-  if (v != NULL)
-  {
-    *value = g_variant_get_double (v);
+  if (v == NULL)
+    return FALSE;
 
-    return TRUE;
-  }
+  if (g_variant_is_of_type (v, G_VARIANT_TYPE_INT32))
+    *value = g_variant_get_int32 (v);
+  else
+    *value = g_variant_get_double (_ncm_var_dict_peek_type (vd, key, G_VARIANT_TYPE_DOUBLE, "ncm_var_dict_get_double"));
 
-  return FALSE;
+  return TRUE;
 }
 
 /**
@@ -940,14 +958,15 @@ ncm_var_dict_get_double (NcmVarDict *vd, const gchar *key, gdouble *value)
  * @key: the key
  * @value: (out): the boolean
  *
- * Gets the boolean under @key. @value is set only when @key is present.
+ * Gets the boolean under @key. @value is set only when @key is present. Aborts if the value
+ * under @key has another type.
  *
  * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_boolean (NcmVarDict *vd, const gchar *key, gboolean *value)
 {
-  GVariant *v = ncm_var_dict_peek (vd, key);
+  GVariant *v = _ncm_var_dict_peek_type (vd, key, G_VARIANT_TYPE_BOOLEAN, "ncm_var_dict_get_boolean");
 
   if (v != NULL)
   {
@@ -966,14 +985,14 @@ ncm_var_dict_get_boolean (NcmVarDict *vd, const gchar *key, gboolean *value)
  * @value: (out) (transfer full) (element-type int): the array of integers
  *
  * Copies the array of integers under @key to a new #GArray. @value is set only when @key
- * is present.
+ * is present. Aborts if the value under @key has another type.
  *
  * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_int_array (NcmVarDict *vd, const gchar *key, GArray **value)
 {
-  GVariant *v = ncm_var_dict_peek (vd, key);
+  GVariant *v = _ncm_var_dict_peek_type (vd, key, G_VARIANT_TYPE ("ai"), "ncm_var_dict_get_int_array");
 
   if (v != NULL)
   {
@@ -997,14 +1016,14 @@ ncm_var_dict_get_int_array (NcmVarDict *vd, const gchar *key, GArray **value)
  * @value: (out) (transfer full) (element-type double): the array of doubles
  *
  * Copies the array of doubles under @key to a new #GArray. @value is set only when @key
- * is present.
+ * is present. Aborts if the value under @key has another type.
  *
  * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_double_array (NcmVarDict *vd, const gchar *key, GArray **value)
 {
-  GVariant *v = ncm_var_dict_peek (vd, key);
+  GVariant *v = _ncm_var_dict_peek_type (vd, key, G_VARIANT_TYPE ("ad"), "ncm_var_dict_get_double_array");
 
   if (v != NULL)
   {
@@ -1028,14 +1047,14 @@ ncm_var_dict_get_double_array (NcmVarDict *vd, const gchar *key, GArray **value)
  * @value: (out) (transfer full) (element-type boolean): the array of booleans
  *
  * Copies the array of booleans under @key to a new #GArray. @value is set only when @key
- * is present.
+ * is present. Aborts if the value under @key has another type.
  *
  * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_boolean_array (NcmVarDict *vd, const gchar *key, GArray **value)
 {
-  GVariant *v = ncm_var_dict_peek (vd, key);
+  GVariant *v = _ncm_var_dict_peek_type (vd, key, G_VARIANT_TYPE ("ab"), "ncm_var_dict_get_boolean_array");
 
   if (v != NULL)
   {

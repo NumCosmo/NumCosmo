@@ -195,6 +195,42 @@ test_ncm_timer_traps (void)
   g_test_trap_assert_failed ();
 }
 
+/* Estimates print "unknown" until defined, never nan */
+static void
+test_ncm_timer_str_undefined (void)
+{
+  NcmTimer *nt = ncm_timer_new ();
+  guint n;
+
+  ncm_timer_task_start (nt, 10);
+
+  for (n = 0; n < 3; n++)
+  {
+    const gchar *strs[3];
+    guint k;
+
+    strs[0] = g_strdup (ncm_timer_task_mean_time_str (nt));
+    strs[1] = g_strdup (ncm_timer_task_time_left_str (nt));
+    strs[2] = g_strdup (ncm_timer_task_end_datetime_str (nt));
+
+    for (k = 0; k < 3; k++)
+    {
+      g_assert_null (g_strstr_len (strs[k], -1, "nan"));
+
+      if (n == 0)
+        g_assert_nonnull (g_strstr_len (strs[k], -1, "unknown"));
+      else if (n == 2)
+        g_assert_null (g_strstr_len (strs[k], -1, "unknown"));
+
+      g_free ((gchar *) strs[k]);
+    }
+
+    ncm_timer_task_increment (nt);
+  }
+
+  ncm_timer_free (nt);
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -204,6 +240,7 @@ main (gint argc, gchar *argv[])
 
   g_test_set_nonfatal_assertions ();
 
+  g_test_add_func ("/ncm/timer/str_undefined", &test_ncm_timer_str_undefined);
   g_test_add_func ("/ncm/timer/elapsed", &test_ncm_timer_elapsed);
   g_test_add_func ("/ncm/timer/task", &test_ncm_timer_task);
   g_test_add_func ("/ncm/timer/task_estimates", &test_ncm_timer_task_estimates);

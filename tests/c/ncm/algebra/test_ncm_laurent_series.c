@@ -830,6 +830,38 @@ test_tps_pow_laurent_coefficients (void)
   ncm_laurent_series_tps_unref (one);
 }
 
+/* Accumulating several series and evaluating once is the sum of their reductions */
+static void
+test_jacobi_anger_accumulate_eval (void)
+{
+  const gdouble Ik[4]   = {0.9, 0.4, 0.15, 0.03};
+  const gdouble phis[3] = {0.0, 0.7, -2.1};
+  NcmLaurentSeries *a   = ncm_laurent_series_new (-3, 3);
+  NcmLaurentSeries *b   = ncm_laurent_series_new (0, 2);
+  NcmComplex H[4]       = {0.0, 0.0, 0.0, 0.0};
+  guint i;
+
+  ncm_laurent_series_set (a, 0, 1.5);
+  ncm_laurent_series_set (a, 1, 0.3 - 0.2 * I);
+  ncm_laurent_series_set (a, 3, -0.1 + 0.4 * I);
+  ncm_laurent_series_set (b, 0, -0.7);
+  ncm_laurent_series_set (b, 2, 0.25 * I);
+
+  ncm_laurent_series_jacobi_anger_accumulate (a, Ik, 4, 2.0, H);
+  ncm_laurent_series_jacobi_anger_accumulate (b, Ik, 4, -0.5, H);
+
+  for (i = 0; i < 3; i++)
+  {
+    const gdouble expected = 2.0 * ncm_laurent_series_jacobi_anger_reduce (a, phis[i], Ik, 4) -
+                             0.5 * ncm_laurent_series_jacobi_anger_reduce (b, phis[i], Ik, 4);
+
+    g_assert_cmpfloat (fabs (ncm_laurent_series_jacobi_anger_eval (H, 4, phis[i]) - expected), <, 1.0e-14);
+  }
+
+  ncm_laurent_series_free (a);
+  ncm_laurent_series_free (b);
+}
+
 static void
 test_invalid_arguments_abort (void)
 {
@@ -912,6 +944,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/laurent_series/conj_hand_computed", &test_conj_hand_computed);
   g_test_add_func ("/ncm/laurent_series/eval_hand_computed", &test_eval_hand_computed);
   g_test_add_func ("/ncm/laurent_series/jacobi_anger_matches_direct_integration", &test_jacobi_anger_matches_direct_integration);
+  g_test_add_func ("/ncm/laurent_series/jacobi_anger_accumulate_eval", &test_jacobi_anger_accumulate_eval);
   g_test_add_func ("/ncm/laurent_series/chi_taylor_matches_python_reference", &test_chi_taylor_matches_python_reference);
   g_test_add_func ("/ncm/laurent_series/introspectable_api_matches_native", &test_introspectable_api_matches_native);
   g_test_add_func ("/ncm/laurent_series/copy_is_independent", &test_copy_is_independent);

@@ -78,6 +78,8 @@ NcmLaurentSeries *ncm_laurent_series_conj (const NcmLaurentSeries *a);
 
 void ncm_laurent_series_eval_ptr (const NcmLaurentSeries *a, const NcmComplex *w, NcmComplex *out);
 gdouble ncm_laurent_series_jacobi_anger_reduce (const NcmLaurentSeries *cm, gdouble phi, const gdouble *Ik, gint n_Ik);
+void ncm_laurent_series_jacobi_anger_accumulate (const NcmLaurentSeries *cm, const gdouble *Ik, gint n_Ik, gdouble scale, NcmComplex *H);
+gdouble ncm_laurent_series_jacobi_anger_eval (const NcmComplex *H, gint n_H, gdouble phi);
 NcmComplex ncm_laurent_series_get (const NcmLaurentSeries *a, gint h);
 
 void ncm_laurent_series_set (NcmLaurentSeries *a, gint h, NcmComplex val);

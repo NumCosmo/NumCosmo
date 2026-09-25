@@ -51,8 +51,6 @@
 
 typedef struct _NcmRNGPrivate
 {
-  /*< private >*/
-  GObject parent_instance;
   gsl_rng *r;
   gulong seed_val;
   gboolean seed_set;
@@ -74,6 +72,9 @@ enum
   PROP_STATE,
   PROP_SEED,
 };
+
+/* Seeds are hash-table keys held in a pointer */
+G_STATIC_ASSERT (sizeof (gulong) <= sizeof (gpointer));
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmRNG, ncm_rng, G_TYPE_OBJECT)
 G_DEFINE_BOXED_TYPE (NcmRNGDiscrete, ncm_rng_discrete, ncm_rng_discrete_copy, ncm_rng_discrete_free)
@@ -416,12 +417,12 @@ ncm_rng_get_state (NcmRNG *rng)
 /**
  * ncm_rng_set_algo:
  * @rng: a #NcmRNG
- * @algo: algorithm name
+ * @algo: (nullable): algorithm name
  *
  * Sets the GSL algorithm, one of the
- * [GSL generators](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-generator-algorithms). Replacing the
- * algorithm allocates a new generator with the GSL default seed. Aborts if @algo is
- * not a GSL algorithm.
+ * [GSL generators](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-generator-algorithms), or the GSL
+ * default for %NULL. Replacing the algorithm allocates a new generator seeded with the current
+ * seed. Aborts if @algo is not a GSL algorithm.
  */
 void
 ncm_rng_set_algo (NcmRNG *rng, const gchar *algo)
@@ -460,10 +461,13 @@ ncm_rng_set_algo (NcmRNG *rng, const gchar *algo)
   {
     self->r = gsl_rng_alloc (type);
   }
-  else if (strcmp (gsl_rng_name (self->r), algo) != 0)
+  else if (strcmp (gsl_rng_name (self->r), type->name) != 0)
   {
     gsl_rng_free (self->r);
     self->r = gsl_rng_alloc (type);
+
+    if (self->seed_set)
+      gsl_rng_set (self->r, self->seed_val);
   }
 }
 
@@ -502,8 +506,7 @@ gboolean
 ncm_rng_check_seed (NcmRNG *rng, gulong seed)
 {
   NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);
-  gint seed_int          = seed;
-  gpointer b             = g_hash_table_lookup (rng_class->seed_hash, GINT_TO_POINTER (seed_int));
+  gpointer b             = g_hash_table_lookup (rng_class->seed_hash, (gpointer) (guintptr) seed);
 
   return GPOINTER_TO_INT (b) == 0;
 }
@@ -525,10 +528,9 @@ ncm_rng_set_seed (NcmRNG *rng, gulong seed)
   if (self->r != NULL)
   {
     NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);
-    gint seed_int          = seed;
 
     gsl_rng_set (self->r, seed);
-    g_hash_table_insert (rng_class->seed_hash, GINT_TO_POINTER (seed_int), GINT_TO_POINTER (1));
+    g_hash_table_insert (rng_class->seed_hash, (gpointer) (guintptr) seed, GINT_TO_POINTER (1));
     self->seed_set = TRUE;
   }
 }

@@ -141,8 +141,8 @@ ncm_func_eval_set_max_threads (gint mt)
  *
  * Splits [@i, @f) into @nworkers contiguous ranges, the first one also taking
  * the remainder, and calls @lfunc with @data on each range in the pool. Returns
- * after all calls finish. Runs a single serial call if the pool has zero
- * threads. Requires @f - @i > @nworkers > 0.
+ * after all calls finish. Uses at most @f - @i workers, and runs a single serial
+ * call if the pool has zero threads. Requires @f > @i and @nworkers > 0.
  */
 void
 ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data, guint nworkers)
@@ -155,12 +155,12 @@ ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointe
   g_mutex_init (&ctrl.update);
   g_cond_init (&ctrl.finish);
 
-  g_assert_cmpuint (f, >, i);
-  g_assert_cmpuint (f - i, >, nworkers);
+  g_assert_cmpint (f, >, i);
   g_assert_cmpuint (nworkers, >, 0);
 
-  delta = (f - i) / nworkers;
-  res   = (f - i) % nworkers;
+  nworkers = MIN (nworkers, (gulong) (f - i));
+  delta    = (f - i) / nworkers;
+  res      = (f - i) % nworkers;
 
   if ((g_thread_pool_get_max_threads (_function_thread_pool) == 0) || (delta == 0))
   {
@@ -206,16 +206,18 @@ ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointe
  * @f: one past the last index
  * @data: user data
  *
- * Calls ncm_func_eval_threaded_loop_nw() with one worker per pool thread.
+ * Calls ncm_func_eval_threaded_loop_nw() with one worker per pool thread, one per
+ * processor for an unlimited pool, and serially for a pool of zero threads.
  */
 void
 ncm_func_eval_threaded_loop (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data)
 {
   ncm_func_eval_get_pool ();
   {
-    guint nthreads = g_thread_pool_get_max_threads (_function_thread_pool);
+    const gint max_threads = g_thread_pool_get_max_threads (_function_thread_pool);
+    const guint nworkers   = (max_threads > 0) ? (guint) max_threads : ((max_threads < 0) ? g_get_num_processors () : 1);
 
-    ncm_func_eval_threaded_loop_nw (lfunc, i, f, data, nthreads);
+    ncm_func_eval_threaded_loop_nw (lfunc, i, f, data, nworkers);
   }
 }
 
