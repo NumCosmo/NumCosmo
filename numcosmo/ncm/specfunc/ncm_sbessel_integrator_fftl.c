@@ -123,7 +123,7 @@ _ncm_sbessel_integrator_fftl_dispose (GObject *object)
   NcmSBesselIntegratorFFTL *sbilf = NCM_SBESSEL_INTEGRATOR_FFTL (object);
   guint i;
 
-  g_clear_pointer (&sbilf->plan_forward, fftw_destroy_plan);
+  g_clear_pointer (&sbilf->plan_forward, ncm_cfg_fftw_plan_destroy);
   g_clear_pointer (&sbilf->f_samp, fftw_free);
   g_clear_pointer (&sbilf->f_fft, fftw_free);
   g_clear_pointer (&sbilf->jl_arr, g_free);
@@ -544,9 +544,6 @@ _ncm_sbessel_integrator_fftl_set_ell_range (NcmSBesselIntegrator *sbi, guint ell
   /* Call parent to update ell_min/ell_max */
   NCM_SBESSEL_INTEGRATOR_CLASS (ncm_sbessel_integrator_fftl_parent_class)->set_ell_range (sbi, ell_min, ell_max);
 
-  /* Load FFTW wisdom */
-  ncm_cfg_load_fftw_wisdom ("ncm_sbessel_integrator_fftl");
-
   /* Reallocate arrays if ell_max changed */
   if (ell_max != sbilf->ell_max_alloc)
   {
@@ -672,8 +669,7 @@ _ncm_sbessel_integrator_fftl_integrate_fft (NcmSBesselIntegratorFFTL *sbilf, con
   /* Reallocate arrays if needed */
   if (data->Ny != sbilf->Ny)
   {
-    if (sbilf->plan_forward != NULL)
-      fftw_destroy_plan (sbilf->plan_forward);
+    g_clear_pointer (&sbilf->plan_forward, ncm_cfg_fftw_plan_destroy);
 
     if (sbilf->f_samp != NULL)
       fftw_free (sbilf->f_samp);
@@ -685,11 +681,12 @@ _ncm_sbessel_integrator_fftl_integrate_fft (NcmSBesselIntegratorFFTL *sbilf, con
     sbilf->f_samp = fftw_malloc (sizeof (gdouble) * data->Ny);
     sbilf->f_fft  = fftw_malloc (sizeof (fftw_complex) * (data->Ny / 2 + 1));
 
-    ncm_cfg_load_fftw_wisdom ("ncm_sbessel_integrator_fftl");
-    ncm_cfg_lock_plan_fftw ();
-    sbilf->plan_forward = fftw_plan_dft_r2c_1d (data->Ny, sbilf->f_samp, sbilf->f_fft, ncm_cfg_get_fftw_default_flag ());
-    ncm_cfg_unlock_plan_fftw ();
-    ncm_cfg_save_fftw_wisdom ("ncm_sbessel_integrator_fftl");
+    {
+      const gboolean first = ncm_cfg_fftw_plan_begin ("ncm_sbessel_integrator_fftl_r2c_%u", data->Ny);
+
+      sbilf->plan_forward = fftw_plan_dft_r2c_1d (data->Ny, sbilf->f_samp, sbilf->f_fft, ncm_cfg_get_fftw_default_flag ());
+      ncm_cfg_fftw_plan_end (first);
+    }
   }
 
   /* Sample function on grid */

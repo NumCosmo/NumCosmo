@@ -293,8 +293,8 @@ _ncm_fftlog_free_all (NcmFftlog *fftlog)
   g_clear_pointer (&self->CmYm, fftw_free);
   g_clear_pointer (&self->Gr, fftw_free);
 
-  g_clear_pointer (&self->p_Fk2Cm, fftw_destroy_plan);
-  g_clear_pointer (&self->p_CmYm2Gr, fftw_destroy_plan);
+  g_clear_pointer (&self->p_Fk2Cm, ncm_cfg_fftw_plan_destroy);
+  g_clear_pointer (&self->p_CmYm2Gr, ncm_cfg_fftw_plan_destroy);
 
   ncm_vector_clear (&self->lnr_vec);
 
@@ -758,6 +758,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
   if ((n_new != self->N) || (n_new + 2 * (gint) self->pad != self->Nf))
   {
     guint fftw_default_flags = ncm_cfg_get_fftw_default_flag ();
+    gboolean first_plan;
     gint i;
 
     self->N    = n_new;
@@ -776,9 +777,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
 
     self->lnr_vec = ncm_vector_new (self->N);
 
-    ncm_cfg_load_fftw_wisdom ("ncm_fftlog_%s", NCM_FFTLOG_GET_CLASS (fftlog)->name);
-
-    ncm_cfg_lock_plan_fftw ();
+    first_plan = ncm_cfg_fftw_plan_begin ("ncm_fftlog_dft_1d_%d", self->Nf);
 
     self->p_Fk2Cm   = fftw_plan_dft_1d (self->Nf, self->Fk,   self->Cm, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
     self->p_CmYm2Gr = fftw_plan_dft_1d (self->Nf, self->CmYm, self->Gr, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
@@ -794,9 +793,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
       g_ptr_array_add (self->Ym, Ym_i);
     }
 
-    ncm_cfg_unlock_plan_fftw ();
-
-    ncm_cfg_save_fftw_wisdom ("ncm_fftlog_%s", NCM_FFTLOG_GET_CLASS (fftlog)->name);
+    ncm_cfg_fftw_plan_end (first_plan);
 
     ncm_fftlog_reset (fftlog);
   }

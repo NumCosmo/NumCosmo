@@ -146,7 +146,7 @@ ncm_spectral_finalize (GObject *object)
   g_clear_pointer (&spectral->batch_f_vals_tmp, fftw_free);
   g_clear_pointer (&spectral->batch_coeffs_work, fftw_free);
 
-  g_clear_pointer (&spectral->cheb_plan_r2r, fftw_destroy_plan);
+  g_clear_pointer (&spectral->cheb_plan_r2r, ncm_cfg_fftw_plan_destroy);
   g_clear_pointer (&spectral->cheb_f_vals, fftw_free);
   g_clear_pointer (&spectral->cheb_c_vals, fftw_free);
   g_clear_pointer (&spectral->cheb_cos_vals, g_free);
@@ -317,7 +317,7 @@ ncm_spectral_set_max_order (NcmSpectral *spectral, guint max_order)
       spectral->f_vals      = fftw_malloc (sizeof (gdouble) * N_max);
       spectral->f_vals_tmp  = fftw_malloc (sizeof (gdouble) * N_max);
       spectral->coeffs_work = fftw_malloc (sizeof (gdouble) * N_max);
-      spectral->fftw_plans  = g_ptr_array_new_with_free_func ((GDestroyNotify) fftw_destroy_plan);
+      spectral->fftw_plans  = g_ptr_array_new_with_free_func (ncm_cfg_fftw_plan_destroy);
       spectral->cos_arrays  = g_ptr_array_new_with_free_func (g_free);
     }
   }
@@ -340,14 +340,6 @@ ncm_spectral_get_max_order (NcmSpectral *spectral)
 static void _ncm_spectral_prepare_plan_for_k (NcmSpectral *spectral, guint k);
 static void _ncm_spectral_normalize_coeffs (gdouble *coeffs_work, GArray *coeffs, guint N);
 
-/*
- * Levels k already planned in this process, guarded by the FFTW plan lock. FFTW keeps
- * its wisdom in memory, so only the first plan of a size loads and saves the wisdom
- * file; saving it was measured at a quarter of a solver run.
- */
-static guint64 _ncm_spectral_planned_k_mask       = 0;
-static guint64 _ncm_spectral_batch_planned_k_mask = 0;
-
 /* Buffers and plans for n_comp components; the plans depend on n_comp */
 static void
 _ncm_spectral_batch_prepare_buffers (NcmSpectral *spectral, guint n_comp)
@@ -366,7 +358,7 @@ _ncm_spectral_batch_prepare_buffers (NcmSpectral *spectral, guint n_comp)
   spectral->batch_f_vals      = fftw_malloc (sizeof (gdouble) * N_max * n_comp);
   spectral->batch_f_vals_tmp  = fftw_malloc (sizeof (gdouble) * N_max * n_comp);
   spectral->batch_coeffs_work = fftw_malloc (sizeof (gdouble) * N_max * n_comp);
-  spectral->batch_fftw_plans  = g_ptr_array_new_with_free_func ((GDestroyNotify) fftw_destroy_plan);
+  spectral->batch_fftw_plans  = g_ptr_array_new_with_free_func (ncm_cfg_fftw_plan_destroy);
 }
 
 /* One DCT-I plan over the n_comp interleaved components, each a stride-n_comp vector */
@@ -389,31 +381,20 @@ _ncm_spectral_batch_prepare_plan_for_k (NcmSpectral *spectral, guint k)
   {
     const fftw_r2r_kind kind[] = { FFTW_REDFT00 };
     const gint n[]             = { (gint) N };
-    const guint64 k_bit        = (k < 64) ? (G_GUINT64_CONSTANT (1) << k) : 0;
-    gboolean first_of_size;
+    gboolean first;
     fftw_plan plan;
 
     memcpy (spectral->batch_f_vals_tmp, spectral->batch_f_vals,
             sizeof (gdouble) * N * n_comp);
 
-    ncm_cfg_lock_plan_fftw ();
-
-    first_of_size = (k_bit == 0) || ((_ncm_spectral_batch_planned_k_mask & k_bit) == 0);
-
-    if (first_of_size)
-      ncm_cfg_load_fftw_wisdom ("ncm_spectral");
+    first = ncm_cfg_fftw_plan_begin ("ncm_spectral_batch_redft00_%u_%u", N, n_comp);
 
     plan = fftw_plan_many_r2r (1, n, (gint) n_comp,
                                spectral->batch_f_vals, NULL, (gint) n_comp, 1,
                                spectral->batch_coeffs_work, NULL, (gint) n_comp, 1,
                                kind, ncm_cfg_get_fftw_default_flag ());
 
-    _ncm_spectral_batch_planned_k_mask |= k_bit;
-
-    ncm_cfg_unlock_plan_fftw ();
-
-    if (first_of_size)
-      ncm_cfg_save_fftw_wisdom ("ncm_spectral");
+    ncm_cfg_fftw_plan_end (first);
 
     memcpy (spectral->batch_f_vals, spectral->batch_f_vals_tmp,
             sizeof (gdouble) * N * n_comp);
@@ -768,11 +749,7 @@ ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gd
   if (spectral->cheb_N_cached != N)
   {
     /* Clean up old resources */
-    if (spectral->cheb_plan_r2r != NULL)
-    {
-      fftw_destroy_plan (spectral->cheb_plan_r2r);
-      spectral->cheb_plan_r2r = NULL;
-    }
+    g_clear_pointer (&spectral->cheb_plan_r2r, ncm_cfg_fftw_plan_destroy);
 
     if (spectral->cheb_f_vals != NULL)
     {
@@ -804,12 +781,13 @@ ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gd
 
     /* Planned and executed on owned buffers: FFTW's new-array execution requires the
      * alignment of the planned arrays, which a caller's array need not have */
-    ncm_cfg_load_fftw_wisdom ("ncm_spectral");
-    ncm_cfg_lock_plan_fftw ();
-    spectral->cheb_plan_r2r = fftw_plan_r2r_1d (N, spectral->cheb_f_vals, spectral->cheb_c_vals,
-                                                FFTW_REDFT00, ncm_cfg_get_fftw_default_flag ());
-    ncm_cfg_unlock_plan_fftw ();
-    ncm_cfg_save_fftw_wisdom ("ncm_spectral");
+    {
+      const gboolean first = ncm_cfg_fftw_plan_begin ("ncm_spectral_redft00_%u", N);
+
+      spectral->cheb_plan_r2r = fftw_plan_r2r_1d (N, spectral->cheb_f_vals, spectral->cheb_c_vals,
+                                                  FFTW_REDFT00, ncm_cfg_get_fftw_default_flag ());
+      ncm_cfg_fftw_plan_end (first);
+    }
 
     spectral->cheb_N_cached = N;
   }
@@ -862,17 +840,12 @@ _ncm_spectral_prepare_plan_for_k (NcmSpectral *spectral, guint k)
 
   /* Create out-of-place FFTW plan */
   {
-    const guint64 k_bit = (k < 64) ? (G_GUINT64_CONSTANT (1) << k) : 0;
-    gboolean first_of_size;
+    gboolean first;
     fftw_plan plan;
 
     memcpy (spectral->f_vals_tmp, spectral->f_vals, sizeof (gdouble) * N);
 
-    ncm_cfg_lock_plan_fftw ();
-    first_of_size = (k_bit == 0) || ((_ncm_spectral_planned_k_mask & k_bit) == 0);
-
-    if (first_of_size)
-      ncm_cfg_load_fftw_wisdom ("ncm_spectral");
+    first = ncm_cfg_fftw_plan_begin ("ncm_spectral_redft00_%u", N);
 
     plan = fftw_plan_r2r_1d (N,
                              spectral->f_vals,
@@ -880,11 +853,7 @@ _ncm_spectral_prepare_plan_for_k (NcmSpectral *spectral, guint k)
                              FFTW_REDFT00,
                              ncm_cfg_get_fftw_default_flag ());
 
-    _ncm_spectral_planned_k_mask |= k_bit;
-    ncm_cfg_unlock_plan_fftw ();
-
-    if (first_of_size)
-      ncm_cfg_save_fftw_wisdom ("ncm_spectral");
+    ncm_cfg_fftw_plan_end (first);
 
     memcpy (spectral->f_vals, spectral->f_vals_tmp, sizeof (gdouble) * N);
 

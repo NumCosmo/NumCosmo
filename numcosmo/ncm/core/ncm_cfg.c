@@ -470,9 +470,9 @@ _ncm_cfg_exit (void)
  * Initializes the library; it must be called before any other NumCosmo function, and
  * later calls return immediately. It
  *
- * - sets the default FFTW planner flag from `NCM_FFTW_PLANNER` and
- *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(), and FFTW's
- *   planner time limit to 10 s;
+ * - sets the default FFTW planner flag and time limit from `NCM_FFTW_PLANNER` and
+ *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(); the time
+ *   limit is 10 s when `NCM_FFTW_PLANNER_TIMELIMIT` is not set;
  * - creates the directory `~/.numcosmo`, see ncm_cfg_get_fullpath();
  * - sets the Cuba library core counts to zero;
  * - turns the GSL error handler off, see ncm_cfg_enable_gsl_err_handler();
@@ -584,9 +584,9 @@ _ncm_cfg_mpi_launched (void)
  * Initializes the library; it must be called before any other NumCosmo function, and
  * later calls return immediately. It
  *
- * - sets the default FFTW planner flag from `NCM_FFTW_PLANNER` and
- *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(), and FFTW's
- *   planner time limit to 10 s;
+ * - sets the default FFTW planner flag and time limit from `NCM_FFTW_PLANNER` and
+ *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(); the time
+ *   limit is 10 s when `NCM_FFTW_PLANNER_TIMELIMIT` is not set;
  * - creates the directory `~/.numcosmo`, see ncm_cfg_get_fullpath();
  * - sets the Cuba library core counts to zero;
  * - turns the GSL error handler off, see ncm_cfg_enable_gsl_err_handler();
@@ -608,7 +608,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   if (numcosmo_init)
     return;
 
-  ncm_cfg_set_fftw_default_from_env_str (NUMCOSMO_FFTW_PLAN, -1.0, NULL);
+  ncm_cfg_set_fftw_default_from_env_str (NUMCOSMO_FFTW_PLAN, 10.0, NULL);
 
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
@@ -629,11 +629,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 #endif
 
   gsl_err = gsl_set_error_handler_off ();
-
-  fftw_set_timelimit (10.0);
-#ifdef HAVE_FFTW3F
-  fftwf_set_timelimit (10.0);
-#endif /* HAVE_FFTW3F */
 
   _log_stream     = stdout;
   _log_stream_err = stderr;
@@ -1400,6 +1395,15 @@ _ncm_cfg_log_message_logger (const gchar *log_domain, GLogLevelFlags log_level, 
     container->logger (message);
 }
 
+/* Errors and criticals reach the logger whatever ncm_cfg_logfile() says */
+static void
+_ncm_cfg_log_error_logger (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
+{
+  NcmCfgLoggerFuncContainer *container = (NcmCfgLoggerFuncContainer *) user_data;
+
+  container->logger (message);
+}
+
 /**
  * ncm_cfg_set_log_handler:
  * @logger: (scope notified): a logger function
@@ -1420,8 +1424,8 @@ ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
  * ncm_cfg_set_error_log_handler:
  * @logger: (scope notified): a logger function
  *
- * Sends the error and critical log messages to @logger. Like the other log messages,
- * they are passed only while ncm_cfg_logfile() is on.
+ * Sends the error and critical log messages to @logger, also while ncm_cfg_logfile() is
+ * off.
  */
 void
 ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger)
@@ -1430,7 +1434,7 @@ ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger)
 
   container.logger = logger;
 
-  _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_message_logger, &container);
+  _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_error_logger, &container);
 }
 
 /**
@@ -1934,8 +1938,8 @@ ncm_cfg_enum_get_value (GType enum_type, guint n)
  * @enum_type: an enumeration #GType
  * @header: header string
  *
- * Prints to standard output a table of the values, names and nicks of @enum_type, for
- * the values 0, 1, 2, ... up to the first missing one.
+ * Prints to standard output a table of the values, names and nicks of every member of
+ * @enum_type, in declaration order.
  */
 void
 ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
@@ -1951,8 +1955,9 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
 
   enum_class = g_type_class_ref (enum_type);
 
-  while ((snia = g_enum_get_value (enum_class, i++)) != NULL)
+  for (i = 0; i < (gint) enum_class->n_values; i++)
   {
+    snia         = &enum_class->values[i];
     name_max_len = GSL_MAX (name_max_len, (gint) strlen (snia->value_name));
     nick_max_len = GSL_MAX (nick_max_len, (gint) strlen (snia->value_nick));
   }
@@ -1966,10 +1971,10 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
 
   printf ("#\n");
   printf ("# Id | %-*s | %-*s |\n", name_max_len, "Name", nick_max_len, "Nick");
-  i = 0;
 
-  while ((snia = g_enum_get_value (enum_class, i++)) != NULL)
+  for (i = 0; i < (gint) enum_class->n_values; i++)
   {
+    snia = &enum_class->values[i];
     printf ("# %02d | %-*s | %-*s |\n", snia->value, name_max_len, snia->value_name, nick_max_len, snia->value_nick);
   }
 
@@ -1989,9 +1994,8 @@ G_LOCK_DEFINE_STATIC (fftw_saveload_lock);
 G_LOCK_DEFINE_STATIC (fftw_plan_lock);
 
 /*
- * Both functions use one file per MPI rank regardless of @filename. FFTW's wisdom is
- * global and cumulative, so it is loaded once per process and saved only when it
- * changed. Protected by fftw_saveload_lock.
+ * One wisdom file per MPI rank. FFTW's wisdom is global and cumulative, so it is loaded
+ * once per process and saved only when it changed. Protected by fftw_saveload_lock.
  */
 static gboolean _wisdom_loaded_d = FALSE;
 static gboolean _wisdom_loaded_f = FALSE;
@@ -2020,31 +2024,142 @@ ncm_cfg_unlock_plan_fftw (void)
   G_UNLOCK (fftw_plan_lock);
 }
 
+static void _ncm_cfg_load_fftw_wisdom (void);
+static void _ncm_cfg_save_fftw_wisdom (void);
+
+G_LOCK_DEFINE_STATIC (fftw_keys_lock);
+
+static GHashTable *_fftw_planned_keys = NULL;
+
 /**
- * ncm_cfg_load_fftw_wisdom:
- * @filename: a printf format string
- * @...: arguments for @filename
+ * ncm_cfg_fftw_plan_begin: (skip)
+ * @key: a printf format string naming what is planned
+ * @...: arguments for @key
  *
- * Imports the FFTW wisdom of this MPI rank, once per process. @filename is ignored: the
- * wisdom is always read from `~/.numcosmo/ncm_cfg_wisdom_rank<rank>.fftw3` (and
- * `.fftw3f`). Does nothing when the default flag is FFTW_ESTIMATE, which uses no
- * wisdom. Thread-safe.
+ * Starts creating FFTW plans: loads the FFTW wisdom of this MPI rank, once per process, from
+ * `~/.numcosmo/ncm_cfg_wisdom_rank<rank>.fftw3` (and `.fftw3f`), and takes the
+ * planning lock, see ncm_cfg_lock_plan_fftw(). @key identifies the plans: the caller and
+ * everything that makes a plan different, such as the transform sizes and kinds and the
+ * number of transforms; the current default planner flag is added to it. It only tells
+ * whether the process planned the same before, and the wisdom file is the same for every
+ * key. Pass the return value to ncm_cfg_fftw_plan_end().
  *
- * Returns: whether wisdom was imported now or in an earlier call.
+ * Returns: whether @key is planned for the first time in this process.
  */
 gboolean
-ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
+ncm_cfg_fftw_plan_begin (const gchar *key, ...)
+{
+  gchar *key_str;
+  gboolean first;
+  va_list ap;
+
+  {
+    gchar *site_key;
+
+    va_start (ap, key);
+    site_key = g_strdup_vprintf (key, ap);
+    va_end (ap);
+
+    /* A new planner flag plans anew, so it is part of the key */
+    key_str = g_strdup_printf ("%s|%s", site_key, ncm_cfg_get_fftw_default_flag_str ());
+    g_free (site_key);
+  }
+
+  _ncm_cfg_load_fftw_wisdom ();
+
+  G_LOCK (fftw_keys_lock);
+
+  if (_fftw_planned_keys == NULL)
+    _fftw_planned_keys = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+
+  first = !g_hash_table_contains (_fftw_planned_keys, key_str);
+
+  if (first)
+    g_hash_table_add (_fftw_planned_keys, key_str);
+  else
+    g_free (key_str);
+
+  G_UNLOCK (fftw_keys_lock);
+
+  ncm_cfg_lock_plan_fftw ();
+
+  return first;
+}
+
+/**
+ * ncm_cfg_fftw_plan_end: (skip)
+ * @first: the value returned by ncm_cfg_fftw_plan_begin()
+ *
+ * Releases the planning lock and, when @first is %TRUE, rewrites the wisdom file if the
+ * wisdom changed. A key planned before adds no wisdom, so its save, which exports the whole
+ * wisdom to compare it, is skipped. Wisdom is neither loaded nor saved under FFTW_ESTIMATE.
+ */
+void
+ncm_cfg_fftw_plan_end (gboolean first)
+{
+  ncm_cfg_unlock_plan_fftw ();
+
+  if (first)
+    _ncm_cfg_save_fftw_wisdom ();
+}
+
+/**
+ * ncm_cfg_fftw_plan_destroy: (skip)
+ * @plan: (nullable): a double-precision FFTW plan
+ *
+ * Destroys @plan holding the planning lock, see ncm_cfg_lock_plan_fftw(): FFTW's plan
+ * destruction is not thread-safe either. Does nothing for %NULL, so it can be the free
+ * function of a #GPtrArray of plans.
+ */
+void
+ncm_cfg_fftw_plan_destroy (gpointer plan)
+{
+  if (plan == NULL)
+    return;
+
+  ncm_cfg_lock_plan_fftw ();
+  fftw_destroy_plan (plan);
+  ncm_cfg_unlock_plan_fftw ();
+}
+
+/**
+ * ncm_cfg_fftwf_plan_destroy: (skip)
+ * @plan: (nullable): a single-precision FFTW plan
+ *
+ * Same as ncm_cfg_fftw_plan_destroy() for single precision. Aborts if NumCosmo was built
+ * without single-precision FFTW.
+ */
+void
+ncm_cfg_fftwf_plan_destroy (gpointer plan)
+{
+  if (plan == NULL)
+    return;
+
+#ifdef HAVE_FFTW3F
+  ncm_cfg_lock_plan_fftw ();
+  fftwf_destroy_plan (plan);
+  ncm_cfg_unlock_plan_fftw ();
+#else /* HAVE_FFTW3F */
+  g_error ("ncm_cfg_fftwf_plan_destroy: NumCosmo was built without single-precision FFTW.");
+#endif /* HAVE_FFTW3F */
+}
+
+/*
+ * Imports the FFTW wisdom of this MPI rank, once per process, from
+ * ~/.numcosmo/ncm_cfg_wisdom_rank<rank>.fftw3 (and .fftw3f). Does nothing under
+ * FFTW_ESTIMATE, which uses no wisdom. Thread-safe.
+ */
+static void
+_ncm_cfg_load_fftw_wisdom (void)
 {
   gchar *file, *file_ext;
   gchar *full_filename;
-  va_list ap;
-  gboolean ret = FALSE;
 
   g_assert (numcosmo_init);
 
   /* FFTW_ESTIMATE neither consumes nor produces useful wisdom; skip the file I/O. */
   if (ncm_cfg_get_fftw_default_flag () == FFTW_ESTIMATE)
-    return FALSE;
+    return;
 
   G_LOCK (fftw_saveload_lock);
 
@@ -2055,15 +2170,10 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
      * teach it nothing new. */
     G_UNLOCK (fftw_saveload_lock);
 
-    return TRUE;
+    return;
   }
 
-  va_start (ap, filename);
-  file = g_strdup_vprintf (filename, ap);
-  va_end (ap);
-
-  g_free (file);
-  file = g_strdup_printf ("ncm_cfg_wisdom_rank%d", _mpi_ctrl.rank); /* overwrite, unifying wisdom */
+  file = g_strdup_printf ("ncm_cfg_wisdom_rank%d", _mpi_ctrl.rank);
 
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
@@ -2071,10 +2181,7 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   if (!_wisdom_loaded_d)
   {
     if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
-    {
       fftw_import_wisdom_from_filename (full_filename);
-      ret = TRUE;
-    }
 
     _wisdom_loaded_d = TRUE;
   }
@@ -2089,10 +2196,7 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   if (!_wisdom_loaded_f)
   {
     if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
-    {
       fftwf_import_wisdom_from_filename (full_filename);
-      ret = TRUE;
-    }
 
     _wisdom_loaded_f = TRUE;
   }
@@ -2106,43 +2210,27 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   g_free (full_filename);
 
   G_UNLOCK (fftw_saveload_lock);
-
-  return ret;
 }
 
-/**
- * ncm_cfg_save_fftw_wisdom:
- * @filename: a printf format string
- * @...: arguments for @filename
- *
- * Writes the FFTW wisdom of this MPI rank to the file read by
- * ncm_cfg_load_fftw_wisdom(); @filename is ignored. The file is rewritten only if the
- * wisdom changed since the last save. Does nothing when the default flag is
- * FFTW_ESTIMATE. Thread-safe.
- *
- * Returns: %FALSE for FFTW_ESTIMATE, %TRUE otherwise.
+/*
+ * Writes the FFTW wisdom of this MPI rank to the file _ncm_cfg_load_fftw_wisdom() reads,
+ * only if it changed since the last save. Does nothing under FFTW_ESTIMATE. Thread-safe.
  */
-gboolean
-ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
+static void
+_ncm_cfg_save_fftw_wisdom (void)
 {
   gchar *file, *file_ext;
   gchar *full_filename;
-  va_list ap;
 
   g_assert (numcosmo_init);
 
   /* FFTW_ESTIMATE neither consumes nor produces useful wisdom; skip the file I/O. */
   if (ncm_cfg_get_fftw_default_flag () == FFTW_ESTIMATE)
-    return FALSE;
+    return;
 
   G_LOCK (fftw_saveload_lock);
 
-  va_start (ap, filename);
-  file = g_strdup_vprintf (filename, ap);
-  va_end (ap);
-
-  g_free (file);
-  file = g_strdup_printf ("ncm_cfg_wisdom_rank%d", _mpi_ctrl.rank); /* overwrite, unifying wisdom */
+  file = g_strdup_printf ("ncm_cfg_wisdom_rank%d", _mpi_ctrl.rank);
 
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
@@ -2219,8 +2307,6 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   g_free (full_filename);
 
   G_UNLOCK (fftw_saveload_lock);
-
-  return TRUE;
 }
 
 /**

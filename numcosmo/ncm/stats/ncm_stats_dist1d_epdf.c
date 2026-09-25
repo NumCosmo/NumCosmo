@@ -242,8 +242,8 @@ ncm_stats_dist1d_epdf_finalize (GObject *object)
 {
   NcmStatsDist1dEPDF *epdf1d = NCM_STATS_DIST1D_EPDF (object);
 
-  g_clear_pointer (&epdf1d->fft_data_to_tilde, fftw_destroy_plan);
-  g_clear_pointer (&epdf1d->fft_tilde_to_est, fftw_destroy_plan);
+  g_clear_pointer (&epdf1d->fft_data_to_tilde, ncm_cfg_fftw_plan_destroy);
+  g_clear_pointer (&epdf1d->fft_tilde_to_est, ncm_cfg_fftw_plan_destroy);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist1d_epdf_parent_class)->finalize (object);
@@ -486,20 +486,19 @@ _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
 
     {
       G_LOCK_DEFINE_STATIC (prepare_fft_lock);
+
+      gboolean first;
+
       G_LOCK (prepare_fft_lock);
 
-      ncm_cfg_load_fftw_wisdom ("ncm_stats_dist1d_wisdown");
-
-      ncm_cfg_lock_plan_fftw ();
+      first = ncm_cfg_fftw_plan_begin ("ncm_stats_dist1d_epdf_redft10_01_%u", nbins);
 
       epdf1d->fft_data_to_tilde = fftw_plan_r2r_1d (nbins, ncm_vector_data (epdf1d->p_data), ncm_vector_data (epdf1d->p_tilde),
                                                     FFTW_REDFT10, fftw_default_flags | FFTW_DESTROY_INPUT);
       epdf1d->fft_tilde_to_est = fftw_plan_r2r_1d (nbins, ncm_vector_data (epdf1d->p_tilde), ncm_vector_data (epdf1d->p_est),
                                                    FFTW_REDFT01, fftw_default_flags | FFTW_DESTROY_INPUT);
 
-      ncm_cfg_unlock_plan_fftw ();
-
-      ncm_cfg_save_fftw_wisdom ("ncm_stats_dist1d_wisdown");
+      ncm_cfg_fftw_plan_end (first);
 
       G_UNLOCK (prepare_fft_lock);
     }

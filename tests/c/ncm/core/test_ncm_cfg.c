@@ -29,6 +29,7 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include <fftw3.h>
 
 #include <math.h>
 #include <glib.h>
@@ -58,6 +59,146 @@ void test_ncm_cfg_paths (void);
 void test_ncm_cfg_data_filename (void);
 void test_ncm_cfg_array_variant (void);
 void test_ncm_cfg_version (void);
+
+static void
+_test_ncm_cfg_error_logger (const gchar *message)
+{
+  printf ("CAUGHT: %s\n", message);
+  fflush (stdout);
+}
+
+/* The error logger receives criticals also while ncm_cfg_logfile() is off */
+static void
+test_ncm_cfg_error_log_handler (void)
+{
+  g_test_trap_subprocess ("/ncm/cfg/error_log_handler/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stdout ("*CAUGHT: a critical with the log off*");
+}
+
+static void
+test_ncm_cfg_error_log_handler_subprocess (void)
+{
+  ncm_cfg_set_error_log_handler (&_test_ncm_cfg_error_logger);
+  ncm_cfg_logfile (FALSE);
+  g_log ("NUMCOSMO", G_LOG_LEVEL_CRITICAL, "a critical with the log off");
+}
+
+/* Every member is printed, also values that are negative or after a gap */
+static void
+test_ncm_cfg_enum_print_all_gaps (void)
+{
+  g_test_trap_subprocess ("/ncm/cfg/enum_print_all_gaps/subprocess", 0, 0);
+  g_test_trap_assert_passed ();
+  g_test_trap_assert_stdout ("*TEST_GAP_NEG*TEST_GAP_FIVE*");
+}
+
+static void
+test_ncm_cfg_enum_print_all_gaps_subprocess (void)
+{
+  static const GEnumValue values[] = {
+    {-1, "TEST_GAP_NEG", "neg"},
+    {5, "TEST_GAP_FIVE", "five"},
+    {0, NULL, NULL}
+  };
+  GType type = g_enum_register_static ("TestNcmCfgGapEnum", values);
+
+  ncm_cfg_enum_print_all (type, "Gap enum");
+}
+
+/* A key is new once per process and per planner flag */
+static void
+test_ncm_cfg_fftw_plan_begin_end (void)
+{
+  GError *error = NULL;
+  gboolean first;
+
+  ncm_cfg_set_fftw_default_flag_str ("estimate", 10.0, &error);
+  g_assert_no_error (error);
+
+  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 7);
+  ncm_cfg_fftw_plan_end (first);
+  g_assert_true (first);
+
+  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 7);
+  ncm_cfg_fftw_plan_end (first);
+  g_assert_false (first);
+
+  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 8);
+  ncm_cfg_fftw_plan_end (first);
+  g_assert_true (first);
+
+  ncm_cfg_set_fftw_default_flag_str ("measure", 10.0, &error);
+  g_assert_no_error (error);
+
+  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 7);
+  ncm_cfg_fftw_plan_end (first);
+  g_assert_true (first);
+
+  ncm_cfg_set_fftw_default_flag_str ("estimate", 10.0, &error);
+  g_assert_no_error (error);
+}
+
+/* Without NCM_FFTW_PLANNER_TIMELIMIT the limit in effect, and reported, is 10 s */
+static void
+test_ncm_cfg_fftw_timelimit_default (void)
+{
+  g_unsetenv ("NCM_FFTW_PLANNER");
+  g_unsetenv ("NCM_FFTW_PLANNER_TIMELIMIT");
+  g_test_trap_subprocess ("/ncm/cfg/fftw_timelimit_default/subprocess", 0, 0);
+  g_test_trap_assert_passed ();
+}
+
+static void
+test_ncm_cfg_fftw_timelimit_default_subprocess (void)
+{
+  g_assert_cmpfloat (ncm_cfg_get_fftw_timelimit (), ==, 10.0);
+}
+
+static gpointer
+_test_ncm_cfg_fftw_plan_worker (gpointer data)
+{
+  const guint id = GPOINTER_TO_UINT (data);
+  gdouble *in    = fftw_alloc_real (64);
+  gdouble *out   = fftw_alloc_real (64);
+  guint i;
+
+  for (i = 0; i < 50; i++)
+  {
+    const guint n        = 8 + ((id + i) % 7) * 8;
+    const gboolean first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_threads_redft00_%u", n);
+    fftw_plan plan       = fftw_plan_r2r_1d (n, in, out, FFTW_REDFT00, ncm_cfg_get_fftw_default_flag ());
+
+    ncm_cfg_fftw_plan_end (first);
+    ncm_cfg_fftw_plan_destroy (plan);
+  }
+
+  fftw_free (in);
+  fftw_free (out);
+
+  return NULL;
+}
+
+/* Planning and destroying from several threads goes through the planning lock */
+static void
+test_ncm_cfg_fftw_plan_destroy (void)
+{
+  GThread *threads[4];
+  GError *error = NULL;
+  guint i;
+
+  ncm_cfg_fftw_plan_destroy (NULL);
+  ncm_cfg_fftwf_plan_destroy (NULL);
+
+  ncm_cfg_set_fftw_default_flag_str ("estimate", 10.0, &error);
+  g_assert_no_error (error);
+
+  for (i = 0; i < G_N_ELEMENTS (threads); i++)
+    threads[i] = g_thread_new ("fftw-plan", &_test_ncm_cfg_fftw_plan_worker, GUINT_TO_POINTER (i));
+
+  for (i = 0; i < G_N_ELEMENTS (threads); i++)
+    g_thread_join (threads[i]);
+}
 
 gint
 main (gint argc, gchar *argv[])
@@ -96,6 +237,14 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/cfg/string_ww", &test_ncm_cfg_string_ww);
   g_test_add_func ("/ncm/cfg/command_line", &test_ncm_cfg_command_line);
   g_test_add_func ("/ncm/cfg/enum", &test_ncm_cfg_enum);
+  g_test_add_func ("/ncm/cfg/fftw_plan_begin_end", &test_ncm_cfg_fftw_plan_begin_end);
+  g_test_add_func ("/ncm/cfg/fftw_plan_destroy", &test_ncm_cfg_fftw_plan_destroy);
+  g_test_add_func ("/ncm/cfg/fftw_timelimit_default", &test_ncm_cfg_fftw_timelimit_default);
+  g_test_add_func ("/ncm/cfg/fftw_timelimit_default/subprocess", &test_ncm_cfg_fftw_timelimit_default_subprocess);
+  g_test_add_func ("/ncm/cfg/enum_print_all_gaps", &test_ncm_cfg_enum_print_all_gaps);
+  g_test_add_func ("/ncm/cfg/enum_print_all_gaps/subprocess", &test_ncm_cfg_enum_print_all_gaps_subprocess);
+  g_test_add_func ("/ncm/cfg/error_log_handler", &test_ncm_cfg_error_log_handler);
+  g_test_add_func ("/ncm/cfg/error_log_handler/subprocess", &test_ncm_cfg_error_log_handler_subprocess);
   g_test_add_func ("/ncm/cfg/keyfile", &test_ncm_cfg_keyfile);
   g_test_add_func ("/ncm/cfg/paths", &test_ncm_cfg_paths);
   g_test_add_func ("/ncm/cfg/data_filename", &test_ncm_cfg_data_filename);

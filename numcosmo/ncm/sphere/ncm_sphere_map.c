@@ -209,11 +209,11 @@ ncm_sphere_map_init (NcmSphereMap *smap)
   self->fft_plan_c2r      = g_ptr_array_new ();
 #ifdef HAVE_FFTW3
 #  ifdef HAVE_FFTW3F
-  g_ptr_array_set_free_func (self->fft_plan_r2c, (GDestroyNotify) fftwf_destroy_plan);
-  g_ptr_array_set_free_func (self->fft_plan_c2r, (GDestroyNotify) fftwf_destroy_plan);
+  g_ptr_array_set_free_func (self->fft_plan_r2c, ncm_cfg_fftwf_plan_destroy);
+  g_ptr_array_set_free_func (self->fft_plan_c2r, ncm_cfg_fftwf_plan_destroy);
 #  else
-  g_ptr_array_set_free_func (self->fft_plan_r2c, (GDestroyNotify) fftw_destroy_plan);
-  g_ptr_array_set_free_func (self->fft_plan_c2r, (GDestroyNotify) fftw_destroy_plan);
+  g_ptr_array_set_free_func (self->fft_plan_r2c, ncm_cfg_fftw_plan_destroy);
+  g_ptr_array_set_free_func (self->fft_plan_c2r, ncm_cfg_fftw_plan_destroy);
 #  endif
 #endif
   self->alm          = NULL;
@@ -1990,16 +1990,15 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
     const gint64 npix      = ncm_sphere_map_get_npix (smap);
     const gint64 nring_cap = ncm_sphere_map_get_nrings_cap (smap);
     gpointer temp_pix      = _fft_vec_alloc (self->npix);
+    gboolean first;
     gint r_i;
-
-    ncm_cfg_load_fftw_wisdom ("ncm_sphere_map_nside_%ld", ncm_sphere_map_get_nside (smap));
 #  ifdef HAVE_FFTW3F
 
     _fft_vec_set_zero_complex (self->fft_pvec, npix);
 
     _fft_vec_memcpy (temp_pix, self->pvec, self->npix);
 
-    ncm_cfg_lock_plan_fftw ();
+    first = ncm_cfg_fftw_plan_begin ("ncm_sphere_map_rings_%ld", ncm_sphere_map_get_nside (smap));
 
     for (r_i = 0; r_i < nring_cap; r_i++)
     {
@@ -2057,7 +2056,7 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
     }
     fflush (stdout);
 
-    ncm_cfg_unlock_plan_fftw ();
+    ncm_cfg_fftw_plan_end (first);
 
 #  else
 
@@ -2065,7 +2064,7 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
 
     _fft_vec_memcpy (temp_pix, self->pvec, self->npix);
 
-    ncm_cfg_lock_plan_fftw ();
+    first = ncm_cfg_fftw_plan_begin ("ncm_sphere_map_rings_%ld", ncm_sphere_map_get_nside (smap));
 
     for (r_i = 0; r_i < nring_cap; r_i++)
     {
@@ -2119,14 +2118,12 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
       g_ptr_array_add (self->fft_plan_c2r, plan_c2r);
     }
 
-    ncm_cfg_unlock_plan_fftw ();
+    ncm_cfg_fftw_plan_end (first);
 
 #  endif
 
     _fft_vec_memcpy (self->pvec, temp_pix, self->npix);
     _fft_vec_free (temp_pix);
-
-    ncm_cfg_save_fftw_wisdom ("ncm_sphere_map_nside_%ld", ncm_sphere_map_get_nside (smap));
   }
 
 #endif
