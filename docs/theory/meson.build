@@ -17,6 +17,7 @@ src_site_theory_files = files(
     'ssc.qmd',
     'castro_hmf.qmd',
     'stats_dist.qmd',
+    'poisson_lognormal.qmd',
     'autocorrelation.qmd',
 )
 

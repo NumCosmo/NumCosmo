@@ -49,6 +49,7 @@
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_sf_hyperg.h>
+#include <gsl/gsl_sf_lambert.h>
 
 #include <cvode/cvode.h>
 #include <fftw3.h>
@@ -488,6 +489,47 @@ ncm_util_sinhx_m_xcoshx_x3 (const gdouble x)
     return ncm_util_sinh3 (x) / 6.0 - gsl_pow_2 (ncm_util_sinh1 (x)) / (sqrt (1.0 + shx * shx) + 1.0);
   else
     return (shx - x * sqrt (1.0 + shx * shx)) / gsl_pow_3 (x);
+}
+
+/**
+ * ncm_util_lambert_W0_ln:
+ * @ln_y: the logarithm $\ln y$
+ *
+ * Computes the principal branch $W_0(y)$ of the Lambert $W$ function from $\ln y$,
+ * so that $y$ may exceed the double range. Uses gsl_sf_lambert_W0() for
+ * $\ln y < \ln(\mathrm{DBL\_MAX}) - 1$, otherwise Newton's method on
+ * $W + \ln W = \ln y$. Aborts if Newton's method does not converge.
+ *
+ * Returns: $W_0(y)$.
+ */
+gdouble
+ncm_util_lambert_W0_ln (const gdouble ln_y)
+{
+  /* gsl_sf_lambert_W0() fails as y approaches DBL_MAX */
+  if (ln_y < GSL_LOG_DBL_MAX - 1.0)
+  {
+    return gsl_sf_lambert_W0 (exp (ln_y));
+  }
+  else
+  {
+    const guint max_iter = 100;
+    gdouble W            = ln_y - log (ln_y);
+    guint i;
+
+    for (i = 0; i < max_iter; i++)
+    {
+      const gdouble dW = (W + log (W) - ln_y) / (1.0 + 1.0 / W);
+
+      W -= dW;
+
+      if (fabs (dW) <= GSL_DBL_EPSILON * W)
+        return W;
+    }
+
+    g_error ("ncm_util_lambert_W0_ln: Newton's method did not converge for ln_y = %g.", ln_y);
+
+    return GSL_NAN;
+  }
 }
 
 /**

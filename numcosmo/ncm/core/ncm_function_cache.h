@@ -38,11 +38,11 @@ G_DECLARE_FINAL_TYPE (NcmFunctionCache, ncm_function_cache, NCM, FUNCTION_CACHE,
 
 /**
  * NcmFunctionCacheSearchType:
- * @NCM_FUNCTION_CACHE_SEARCH_BOTH: Searches both directions.
- * @NCM_FUNCTION_CACHE_SEARCH_GT: Searches cache upwards.
- * @NCM_FUNCTION_CACHE_SEARCH_LT: Searches cache downwards.
+ * @NCM_FUNCTION_CACHE_SEARCH_BOTH: either side of $x$
+ * @NCM_FUNCTION_CACHE_SEARCH_GT: at or above $x$
+ * @NCM_FUNCTION_CACHE_SEARCH_LT: at or below $x$
  *
- * Cache search direction.
+ * Side of $x$ on which ncm_function_cache_get_near() searches.
  */
 typedef enum _NcmFunctionCacheSearchType /*< prefix=NCM_FUNCTION_CACHE_SEARCH >*/
 {

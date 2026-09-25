@@ -27,69 +27,21 @@
 /**
  * NcmPLN1D:
  *
- * A Poisson-Lognormal 1D integrator using mode finding (GSL Lambert-W), shifted
- * Gauss-Hermite, or Laplace fallback.
+ * Poisson-Lognormal probability of an integer count.
  *
- * Poisson-Lognormal 1D Distribution
+ * Evaluates
+ * $$
+ *   P(R \mid \mu, \sigma) = \int_0^\infty e^{-\lambda} \frac{\lambda^R}{R!}
+ *   \frac{1}{\lambda \sigma \sqrt{2\pi}}
+ *   \exp\left[-\frac{(\ln\lambda - \mu)^2}{2\sigma^2}\right] \mathrm{d}\lambda,
+ * $$
+ * where $\mu$ and $\sigma$ are the mean and standard deviation of $\ln\lambda$. For
+ * $\sigma > 10^{-4}$ it uses Gauss-Hermite quadrature with nodes centered on the mode of
+ * the integrand and scaled to the width of its peak, otherwise the Laplace approximation
+ * about the mode.
  *
- * Definitions
- * ===========
- *
- * The Poisson component for an integer count $R \geq 0$ and rate $\lambda > 0$ is
- * $$
- *   P_{\rm P}(R \mid \lambda) = e^{-\lambda} \frac{\lambda^{R}}{R!}.
- * $$
- * The lognormal prior for $\lambda$ is defined by
- * $$
- *   P_{\rm LN}(\lambda \mid \mu, \sigma) = \frac{1}{\lambda \, \sigma \sqrt{2\pi}}
- *          \exp\!\left[-\frac{(\ln\lambda - \mu)^2}{2\sigma^2}\right],
- * $$
- * where $\mu$ is the mean of $\log\lambda$ and $\sigma$ is the standard deviation of
- * $\log\lambda$.
- *
- * The Poisson-Lognormal likelihood is the integral
- * $$
- *   P(R \mid \mu,\sigma) = \int_{0}^{\infty} P_{\rm P}(R\mid\lambda)\,
- *             P_{\rm LN}(\lambda\mid\mu,\sigma)\; \mathrm{d}\lambda.
- * $$
- *
- * Change of Variables
- * ===================
- *
- * We rewrite $\lambda$ using the substitution
- * $$
- *   \lambda = e^{\sigma x},
- * $$
- * where  $x \in (-\infty,\infty)$ becomes the integration variable.
- *
- * The Jacobian is
- * $$
- *   \mathrm{d}\lambda = \sigma\, e^{\sigma x}\, \mathrm{d}x.
- * $$
- * Applying this change of variables and simplifying yields the integrand
- * $$
- *   I(x; R, \mu, \sigma) = -\frac{R^2\sigma^2}{2} + u R \sigma
- *                        - \left(x - u\right)^2 - e^{\sigma x},
- * $$
- * where $u = \mu/\sigma + R\sigma$. Thus,
- * $$
- *   P(R\mid\mu,\sigma)= \int_{-\infty}^{\infty}
- *   \frac{\exp(I(x;R,\mu,\sigma))}{\sqrt{2\pi}\, R!}\, \mathrm{d}x.
- * $$
- *
- * Integrand Mode Finding
- * ======================
- *
- * To find the mode of the integrand, we set the derivative of I with respect to x to zero:
- * $$
- *   \frac{\mathrm{d}}{\mathrm{d}x}I(x;R,\mu,\sigma) = 0.
- * $$
- * Solving for x gives
- * $$
- *   x = u - \frac{W_0(\sigma^2 \exp(\sigma u))}{\sigma},
- * $$
- * Here, $W_0$ is the principal branch of the Lambert $W$ function.
- *
+ * See <a href="../../theory/poisson_lognormal.html">Poisson-Lognormal Distribution</a>
+ * for the derivation.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -99,6 +51,7 @@
 
 #include "ncm/core/ncm_pln1d.h"
 #include "ncm/core/ncm_c.h"
+#include "ncm/core/ncm_util.h"
 #include "external/lintegrate/logadd.c"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -227,22 +180,22 @@ ncm_pln1d_class_init (NcmPLN1DClass *klass)
   /**
    * NcmPLN1D:gh-order:
    *
-   * The Gauss-Hermite order to be used in the integration.
-   *
+   * Number of Gauss-Hermite nodes.
    */
   g_object_class_install_property (object_class,
                                    PROP_GH_ORDER,
                                    g_param_spec_uint ("gh-order",
                                                       "Gauss-Hermite order",
                                                       "Order of the Gauss-Hermite quadrature to be used in the integration",
-                                                      0, G_MAXUINT, 60,
+                                                      1, G_MAXUINT, 60,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
  * ncm_pln1d_new:
+ * @gh_order: number of Gauss-Hermite nodes
  *
- * Creates a new #NcmPLN1D object.
+ * Creates a new #NcmPLN1D.
  *
  * Returns: a new #NcmPLN1D.
  */
@@ -260,7 +213,7 @@ ncm_pln1d_new (guint gh_order)
  * ncm_pln1d_ref:
  * @pln1d: a #NcmPLN1D
  *
- * Increase the reference of @pln1d by one.
+ * Increases the reference count of @pln1d by one.
  *
  * Returns: (transfer full): @pln1d.
  */
@@ -274,8 +227,7 @@ ncm_pln1d_ref (NcmPLN1D *pln1d)
  * ncm_pln1d_free:
  * @pln1d: a #NcmPLN1D
  *
- * Decrease the reference count of @pln1d by one.
- *
+ * Decreases the reference count of @pln1d by one.
  */
 void
 ncm_pln1d_free (NcmPLN1D *pln1d)
@@ -287,8 +239,7 @@ ncm_pln1d_free (NcmPLN1D *pln1d)
  * ncm_pln1d_clear:
  * @pln1d: a #NcmPLN1D
  *
- * Decrease the reference count of @pln1d by one, and sets the pointer *@pln1d to NULL.
- *
+ * Decreases the reference count of *@pln1d by one and sets *@pln1d to %NULL.
  */
 void
 ncm_pln1d_clear (NcmPLN1D **pln1d)
@@ -296,7 +247,13 @@ ncm_pln1d_clear (NcmPLN1D **pln1d)
   g_clear_object (pln1d);
 }
 
-/* Configuration */
+/**
+ * ncm_pln1d_set_order:
+ * @pln: a #NcmPLN1D
+ * @gh_order: number of Gauss-Hermite nodes
+ *
+ * Sets the number of Gauss-Hermite nodes, which must be positive.
+ */
 void
 ncm_pln1d_set_order (NcmPLN1D *pln, guint gh_order)
 {
@@ -323,12 +280,19 @@ ncm_pln1d_set_order (NcmPLN1D *pln, guint gh_order)
 
   self->ln_weights = g_new (gdouble, gh_order);
 
+  /* Logarithm of the weights times e^{y^2/2}, the Gauss-Hermite weight function */
   for (guint i = 0; i < gh_order; i++)
-    self->ln_weights[i] = log (self->weights[i]);
+    self->ln_weights[i] = log (self->weights[i]) + 0.5 * gsl_pow_2 (self->nodes[i]);
 
   self->gh_order = gh_order;
 }
 
+/**
+ * ncm_pln1d_get_order:
+ * @pln: a #NcmPLN1D
+ *
+ * Returns: the number of Gauss-Hermite nodes.
+ */
 guint
 ncm_pln1d_get_order (NcmPLN1D *pln)
 {
@@ -339,29 +303,23 @@ ncm_pln1d_get_order (NcmPLN1D *pln)
 
 /**
  * ncm_pln1d_mode:
- * @R: Poisson rate parameter
- * @mu: log-normal location parameter (log-space mean)
- * @sigma: log-normal scale parameter (log-space standard deviation)
+ * @R: count
+ * @mu: mean of $\ln\lambda$
+ * @sigma: standard deviation of $\ln\lambda$
  *
- * Compute the mode of the Poisson-Lognormal integrand.
+ * Computes the mode of the Poisson-Lognormal integrand in the variable
+ * $x = \ln(\lambda)/\sigma$.
  *
- * Returns: the mode of the integrand.
+ * Returns: the mode $z$.
  */
 double
 ncm_pln1d_mode (gdouble R, gdouble mu, gdouble sigma)
 {
-  const gdouble s2 = sigma * sigma;
-  const gdouble u  = mu / sigma + R * sigma;
-  const gdouble y  = s2 * exp (sigma * u);
-  const gdouble W  = gsl_sf_lambert_W0 (y);
+  const gdouble u    = mu / sigma + R * sigma;
+  const gdouble ln_y = 2.0 * log (sigma) + sigma * u;
+  const gdouble W    = ncm_util_lambert_W0_ln (ln_y);
 
   return u - W / sigma;
-}
-
-static inline gdouble
-_ncm_pln1d_log_integrand0 (gdouble x, gdouble u, gdouble sigma)
-{
-  return u * x - exp (sigma * x);
 }
 
 static gdouble
@@ -371,21 +329,23 @@ _ncm_pln1d_eval_gh_lnp (NcmPLN1D *pln, gdouble R, gdouble mu, gdouble sigma)
   const guint n                = self->gh_order;
   const gdouble z              = ncm_pln1d_mode (R, mu, sigma);
   const gdouble u              = mu / sigma + R * sigma;
-  const gdouble ln_scale       = -0.5 * (gsl_pow_2 (mu / sigma) + z * z) - lgamma (R + 1.0);
-  const gdouble ln_2pi         = ncm_c_ln2pi ();
+  const gdouble zmu            = z - u;
+  const gdouble scale          = 1.0 / sqrt (1.0 - sigma * zmu);
+  const gdouble ln_const       = log (scale) + R * mu + 0.5 * gsl_pow_2 (R * sigma) - lgamma (R + 1.0) - 0.5 * ncm_c_ln2pi ();
   gdouble ln_sum               = -INFINITY;
   guint i;
 
+  /* Nodes at x = z + scale y, with scale the width of the peak of I(x) */
   for (i = 0; i < n; i++)
   {
     const gdouble y    = self->nodes[i];
-    const gdouble ln_w = self->ln_weights[i];
-    const gdouble logf = _ncm_pln1d_log_integrand0 (y + z, u, sigma) - y * z;
+    const gdouble t    = zmu + scale * y;
+    const gdouble logf = self->ln_weights[i] - 0.5 * t * t - exp (sigma * (z + scale * y));
 
-    ln_sum = logaddexp (ln_sum, ln_w + logf);
+    ln_sum = logaddexp (ln_sum, logf);
   }
 
-  return ln_sum + ln_scale - 0.5 * ln_2pi;
+  return ln_sum + ln_const;
 }
 
 static gdouble
@@ -403,74 +363,26 @@ _ncm_pln1d_eval_laplace_lnp (gdouble R, gdouble mu, gdouble sigma)
 /**
  * ncm_pln1d_eval_range_sum_lnp:
  * @pln: a #NcmPLN1D
- * @R_min: minimum Poisson rate parameter (inclusive)
- * @R_max: maximum Poisson rate parameter (inclusive)
- * @mu: log-normal mean (location parameter)
- * @sigma: log-normal standard deviation (scale parameter)
+ * @R_min: smallest count
+ * @R_max: largest count
+ * @mu: mean of $\ln\lambda$
+ * @sigma: standard deviation of $\ln\lambda$
  *
- * Evaluate the cumulative Poisson-Lognormal probability by summing over a range of R values.
- * This computes $\sum_{R=R_\mathrm{min}}^{R_\mathrm{max}} P(R \mid \mu, \sigma)$.
+ * Computes $\ln\sum_{R=R_\mathrm{min}}^{R_\mathrm{max}} P(R \mid \mu, \sigma)$, with
+ * $R_\mathrm{min} \leq R_\mathrm{max}$.
  *
- * This is more efficient than calling ncm_pln1d_eval_p repeatedly
- * as it reuses the shifted Gauss-Hermite nodes for all R values.
- *
- * The shift point z is computed using the central R value to ensure
- * good accuracy across the range.
- *
- * Returns: the logarithm of the cumulative probability.
+ * Returns: the logarithm of the summed probability.
  */
 gdouble
 ncm_pln1d_eval_range_sum_lnp (NcmPLN1D *pln, guint R_min, guint R_max, gdouble mu, gdouble sigma)
 {
-  NcmPLN1DPrivate * const self = ncm_pln1d_get_instance_private (pln);
-  const guint n                = self->gh_order;
-  const gdouble ln_2pi         = ncm_c_ln2pi ();
-  gdouble ln_sum               = -INFINITY;
+  gdouble ln_sum = -INFINITY;
+  guint R;
 
   g_assert_cmpuint (R_min, <=, R_max);
 
-  if (sigma > 1.0e-4)
-  {
-    /* Use Gauss-Hermite quadrature with a single shift point for the range */
-    /* Compute z using the central R value for better accuracy across range */
-    const gdouble R_central = 0.5 * (R_min + R_max);
-    const gdouble z         = ncm_pln1d_mode (R_central, mu, sigma);
-    const gdouble u_base    = mu / sigma;
-
-    for (guint j = R_min; j <= R_max; j++)
-    {
-      const gdouble R        = (gdouble) j;
-      const gdouble u        = u_base + R * sigma;
-      const gdouble ln_scale = -0.5 * (gsl_pow_2 (u_base) + z * z) - lgamma (R + 1.0);
-      gdouble ln_R_sum       = -INFINITY;
-
-      for (guint i = 0; i < n; i++)
-      {
-        const gdouble y    = self->nodes[i];
-        const gdouble ln_w = self->ln_weights[i];
-        const gdouble logf = _ncm_pln1d_log_integrand0 (y + z, u, sigma) - y * z;
-
-        ln_R_sum = logaddexp (ln_R_sum, ln_w + logf);
-      }
-
-      {
-        const gdouble p_R = ln_R_sum + ln_scale - 0.5 * ln_2pi;
-
-        ln_sum = logaddexp (ln_sum, p_R);
-      }
-    }
-  }
-  else
-  {
-    /* Use Laplace approximation for small sigma */
-    for (guint j = R_min; j <= R_max; j++)
-    {
-      const gdouble R   = (gdouble) j;
-      const gdouble p_R = _ncm_pln1d_eval_laplace_lnp (R, mu, sigma);
-
-      ln_sum = logaddexp (ln_sum, p_R);
-    }
-  }
+  for (R = R_min; R <= R_max; R++)
+    ln_sum = logaddexp (ln_sum, ncm_pln1d_eval_lnp (pln, R, mu, sigma));
 
   return ln_sum;
 }
@@ -478,17 +390,14 @@ ncm_pln1d_eval_range_sum_lnp (NcmPLN1D *pln, guint R_min, guint R_max, gdouble m
 /**
  * ncm_pln1d_eval_range_sum:
  * @pln: a #NcmPLN1D
- * @R_min: minimum Poisson rate parameter (inclusive)
- * @R_max: maximum Poisson rate parameter (inclusive)
- * @mu: log-normal mean (location parameter)
- * @sigma: log-normal standard deviation (scale parameter)
+ * @R_min: smallest count
+ * @R_max: largest count
+ * @mu: mean of $\ln\lambda$
+ * @sigma: standard deviation of $\ln\lambda$
  *
- * Evaluate the cumulative Poisson-Lognormal probability by summing over a range of R values.
- * This computes $\sum_{R=R_\mathrm{min}}^{R_\mathrm{max}} P(R \mid \mu, \sigma)$.
+ * Exponential of ncm_pln1d_eval_range_sum_lnp().
  *
- * This is the non-log version of ncm_pln1d_eval_range_sum_lnp.
- *
- * Returns: the cumulative probability.
+ * Returns: the summed probability.
  */
 gdouble
 ncm_pln1d_eval_range_sum (NcmPLN1D *pln, guint R_min, guint R_max, gdouble mu, gdouble sigma)
@@ -499,13 +408,13 @@ ncm_pln1d_eval_range_sum (NcmPLN1D *pln, guint R_min, guint R_max, gdouble mu, g
 /**
  * ncm_pln1d_eval_lnp:
  * @pln: a #NcmPLN1D
- * @R: Poisson rate parameter
- * @mu: log-normal mean (location parameter)
- * @sigma: log-normal standard deviation (scale parameter)
+ * @R: count
+ * @mu: mean of $\ln\lambda$
+ * @sigma: standard deviation of $\ln\lambda$
  *
- * Evaluate the Poisson-Lognormal integral.
+ * Computes $\ln P(R \mid \mu, \sigma)$.
  *
- * Returns: the logarithm of the integral.
+ * Returns: the logarithm of the probability.
  */
 gdouble
 ncm_pln1d_eval_lnp (NcmPLN1D *pln, gdouble R, gdouble mu, gdouble sigma)
@@ -519,13 +428,13 @@ ncm_pln1d_eval_lnp (NcmPLN1D *pln, gdouble R, gdouble mu, gdouble sigma)
 /**
  * ncm_pln1d_eval_p:
  * @pln: a #NcmPLN1D
- * @R: Poisson rate parameter
- * @mu: log-normal mean (location parameter)
- * @sigma: log-normal standard deviation (scale parameter)
+ * @R: count
+ * @mu: mean of $\ln\lambda$
+ * @sigma: standard deviation of $\ln\lambda$
  *
- * Evaluate the Poisson-Lognormal integral.
+ * Exponential of ncm_pln1d_eval_lnp().
  *
- * Returns: the value of the integral.
+ * Returns: the probability.
  */
 gdouble
 ncm_pln1d_eval_p (NcmPLN1D *pln, gdouble R, gdouble mu, gdouble sigma)

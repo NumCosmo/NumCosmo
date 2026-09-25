@@ -57,6 +57,7 @@ gdouble ncm_util_sinh1 (const gdouble x) G_GNUC_CONST;
 gdouble ncm_util_sinh3 (const gdouble x) G_GNUC_CONST;
 
 gdouble ncm_util_sinhx_m_xcoshx_x3 (const gdouble x) G_GNUC_CONST;
+gdouble ncm_util_lambert_W0_ln (const gdouble ln_y) G_GNUC_CONST;
 
 void ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const gdouble A, gdouble *rho1, gdouble *theta1);
 

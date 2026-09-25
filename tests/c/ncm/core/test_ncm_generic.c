@@ -60,6 +60,8 @@ void test_ncm_spline_bspline_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
 void test_ncm_powspec_analytic_basic (void);
 void test_ncm_pln1d_basic (void);
+void test_ncm_function_cache_basic (void);
+void test_ncm_iset_basic (void);
 
 void test_nc_data_cluster_mass_rich_basic (void);
 void test_nc_data_cluster_mass_rich_count_basic (void);
@@ -152,6 +154,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
   g_test_add_func ("/ncm/powspec_analytic/basic", test_ncm_powspec_analytic_basic);
   g_test_add_func ("/ncm/pln1d/basic", test_ncm_pln1d_basic);
+  g_test_add_func ("/ncm/function_cache/basic", test_ncm_function_cache_basic);
+  g_test_add_func ("/ncm/iset/basic", test_ncm_iset_basic);
 
   g_test_add_func ("/nc/data/cluster_mass_rich/basic", test_nc_data_cluster_mass_rich_basic);
   g_test_add_func ("/nc/data/cluster_mass_rich_count/basic", test_nc_data_cluster_mass_rich_count_basic);
@@ -747,6 +751,40 @@ test_ncm_pln1d_basic (void)
   g_assert_true (NCM_IS_PLN1D (pln1d));
 
   NCM_TEST_FREE (ncm_pln1d_free, pln1d);
+}
+
+void
+test_ncm_function_cache_basic (void)
+{
+  NcmFunctionCache *cache = ncm_function_cache_new (1, 0.0, 1.0e-7);
+  NcmFunctionCache *cache2;
+
+  g_assert_true (NCM_IS_FUNCTION_CACHE (cache));
+
+  cache2 = ncm_function_cache_ref (cache);
+  ncm_function_cache_clear (&cache2);
+  g_assert_true (cache2 == NULL);
+
+  g_assert_true (NCM_IS_FUNCTION_CACHE (cache));
+
+  NCM_TEST_FREE (ncm_function_cache_free, cache);
+}
+
+void
+test_ncm_iset_basic (void)
+{
+  NcmISet *iset = ncm_iset_new (5);
+  NcmISet *iset2;
+
+  g_assert_true (NCM_IS_ISET (iset));
+
+  iset2 = ncm_iset_ref (iset);
+  ncm_iset_clear (&iset2);
+  g_assert_true (iset2 == NULL);
+
+  g_assert_true (NCM_IS_ISET (iset));
+
+  NCM_TEST_FREE (ncm_iset_free, iset);
 }
 
 void

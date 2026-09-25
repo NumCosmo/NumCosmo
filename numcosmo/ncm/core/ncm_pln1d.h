@@ -35,15 +35,6 @@ G_BEGIN_DECLS
 
 #define NCM_TYPE_PLN1D (ncm_pln1d_get_type ())
 
-/*
- * NcmPLN1D:
- *
- * A simple Poisson-Lognormal 1D integrator using
- * mode finding (GSL Lambert-W), shifted Gauss-Hermite,
- * or Laplace fallback.
- *
- * Fields are private.
- */
 G_DECLARE_FINAL_TYPE (NcmPLN1D, ncm_pln1d, NCM, PLN1D, GObject)
 
 /* Constructors and references */

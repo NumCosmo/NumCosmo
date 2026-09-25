@@ -33,6 +33,7 @@
 #include <glib-object.h>
 
 #include <gsl/gsl_cdf.h>
+#include <gsl/gsl_sf_lambert.h>
 
 void test_ncm_util_projected_radius (void);
 void test_ncm_util_complex (void);
@@ -40,6 +41,7 @@ void test_ncm_util_gaussian_int (void);
 void test_ncm_util_gaussian_int_rng_two_sides (void);
 void test_ncm_util_gaussian_int_rng_one_side (void);
 void test_ncm_util_gaussian_int_nonunit (void);
+void test_ncm_util_lambert_W0_ln (void);
 
 int
 main (int argc, char *argv[])
@@ -56,6 +58,7 @@ main (int argc, char *argv[])
   g_test_add_func ("/ncm/util/gaussian_integral/rng/two_sides", test_ncm_util_gaussian_int_rng_two_sides);
   g_test_add_func ("/ncm/util/gaussian_integral/rng/one_side", test_ncm_util_gaussian_int_rng_one_side);
   g_test_add_func ("/ncm/util/gaussian_integral/nonunit", test_ncm_util_gaussian_int_nonunit);
+  g_test_add_func ("/ncm/util/lambert_W0_ln", test_ncm_util_lambert_W0_ln);
 
   g_test_run ();
 }
@@ -308,5 +311,26 @@ test_ncm_util_gaussian_int_nonunit (void)
     ncm_assert_cmpdouble_e (ncm_util_log_gaussian_integral (xl, xu, mu, sigma, &sign), ==, log (fabs (unit)), logtol, 0.0);
     g_assert_cmpfloat (sign, ==, GSL_SIGN (unit));
   }
+}
+
+void
+test_ncm_util_lambert_W0_ln (void)
+{
+  const gdouble ln_y[] = {-30.0, -1.0, 0.0, 1.0, 10.0, 300.0, 700.0, 709.0, 709.78, 710.0, 1.0e3, 1.0e5, 1.0e10, 1.0e300};
+  guint i;
+
+  /* W e^W = y, written as W + ln(W) = ln(y) for y > 0 */
+  for (i = 0; i < G_N_ELEMENTS (ln_y); i++)
+  {
+    const gdouble W = ncm_util_lambert_W0_ln (ln_y[i]);
+
+    ncm_assert_cmpdouble_e (W + log (W), ==, ln_y[i], 1.0e-15, 1.0e-14);
+  }
+
+  /* Continuity at GSL_LOG_DBL_MAX - 1, where Newton's method takes over */
+  ncm_assert_cmpdouble_e (ncm_util_lambert_W0_ln (nextafter (GSL_LOG_DBL_MAX - 1.0, 0.0)), ==,
+                          ncm_util_lambert_W0_ln (GSL_LOG_DBL_MAX - 1.0), 1.0e-14, 0.0);
+
+  ncm_assert_cmpdouble_e (ncm_util_lambert_W0_ln (0.0), ==, gsl_sf_lambert_W0 (1.0), 1.0e-15, 0.0);
 }
 

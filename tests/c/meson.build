@@ -21,6 +21,18 @@ math_tests = [
         'sources': ['ncm/core/test_ncm_dtuple.c'],
     },
     {
+        'name': 'ncm_pln1d',
+        'sources': ['ncm/core/test_ncm_pln1d.c'],
+    },
+    {
+        'name': 'ncm_function_cache',
+        'sources': ['ncm/core/test_ncm_function_cache.c'],
+    },
+    {
+        'name': 'ncm_iset',
+        'sources': ['ncm/core/test_ncm_iset.c'],
+    },
+    {
         'name': 'ncm_catalog',
         'sources': ['ncm/data/test_ncm_catalog.c'],
     },
