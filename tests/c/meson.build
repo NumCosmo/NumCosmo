@@ -41,6 +41,10 @@ math_tests = [
         'sources': ['ncm/core/test_ncm_rng.c'],
     },
     {
+        'name': 'ncm_c',
+        'sources': ['ncm/core/test_ncm_c.c'],
+    },
+    {
         'name': 'ncm_catalog',
         'sources': ['ncm/data/test_ncm_catalog.c'],
     },
