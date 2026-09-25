@@ -42,7 +42,7 @@
  *
  * For the full derivation, discretization, and padding scheme, see the
  * theoretical background page:
- * <a href="../../theory/fftlog.html">FFTLog</a>.
+ * <a href="../../theory/ncm/fftlog/fftlog.html">FFTLog</a>.
  * Reference: [Hamilton (2000)](https://arxiv.org/abs/astro-ph/9905191).
  */
 

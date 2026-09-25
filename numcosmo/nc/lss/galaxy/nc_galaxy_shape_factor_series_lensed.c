@@ -46,7 +46,7 @@
  *
  * The expanded term's coefficients scale with $1/\sigma_\mathrm{pop}^2$, and
  * $\sigma_\mathrm{pop}$ is a population parameter this project constrains away
- * from very small values. See docs/theory/wl_shape_factor_history.md for why
+ * from very small values. See docs/theory/nc/lss/galaxy/wl_shape_factor_history.md for why
  * this matters relative to expanding the noise kernel instead.
  *
  * The angular integral uses Jacobi--Anger reduction. The radial integral uses
@@ -69,7 +69,7 @@
  * evaluation outside the disk of convergence rather than truncation error.
  * $\alpha,\beta>1$ has no such restriction.
  *
- * See <a href="../../theory/wl_shape_marginalization_series.html">A Small-Shear
+ * See <a href="../../theory/nc/lss/galaxy/wl_shape_marginalization_series.html">A Small-Shear
  * Series Marginalization for the Shape Likelihood</a> and
  * `dev-notes/wl_shape_series_marginalization_derivation.py` sections 9-11 for
  * the derivation and its verification.

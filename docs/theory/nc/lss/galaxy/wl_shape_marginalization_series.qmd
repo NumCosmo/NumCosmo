@@ -30,7 +30,7 @@ the map's own $g$-series and the Jacobi--Anger $\theta$-integral.
 Every formula below is checked against sympy, a brute-force numerical
 integral, or a C implementation (see
 `dev-notes/wl_shape_series_marginalization_derivation.py`). See
-`docs/theory/wl_shape_factor_history.md` for the design history behind these
+`docs/theory/nc/lss/galaxy/wl_shape_factor_history.md` for the design history behind these
 choices.
 :::
 
@@ -498,7 +498,7 @@ no finite differences anywhere. This matters because extracting the
 population-side Taylor coefficients via fixed-step central differences is
 numerically unstable at high order ($h^n$ cancellation, unrelated to the
 true series' own convergence --- see
-`docs/theory/wl_shape_factor_history.md`).
+`docs/theory/nc/lss/galaxy/wl_shape_factor_history.md`).
 
 - TRACE_DET ($\epsilon$): $\chi_I=(\chi_L-g)/(1-g\chi_L)$ is holomorphic
   in $\chi_L$, so $\mathrm{Jac}=|f'(\chi_L,-g)|^2$ and both series are closed
@@ -609,7 +609,7 @@ The floor keeps $\log J$ finite ($\approx-691$ rather than $-\infty$), so no
 $\infty-\infty=\mathrm{NaN}$ arises downstream. The guard does not depend on
 the truncation order, unlike a fixed $g$-window, because the crossing point
 depends on both $N$ and $(R,\phi,\sigma_\mathrm{noise})$. See
-`docs/theory/wl_shape_factor_history.md` for how this was found, the
+`docs/theory/nc/lss/galaxy/wl_shape_factor_history.md` for how this was found, the
 reparametrization that was tried and did not help, and the triggering
 configuration.
 
@@ -646,7 +646,7 @@ configuration.
 ## API Reference
 
 - Noise-side scheme: see [A Compact, Arbitrary-Order Engine](#sec-compact)
-  and `docs/theory/wl_shape_factor_history.md` (C implementation removed)
+  and `docs/theory/nc/lss/galaxy/wl_shape_factor_history.md` (C implementation removed)
 - Lensed-frame (population-side) scheme: [[numcosmo|NcGalaxyShapeFactorSeriesLensed]],
   [[numcosmo|NcmLaurentSeries]]
 - Related schemes: [[numcosmo|NcGalaxyShapeFactorVarAdd]],

@@ -102,7 +102,7 @@ unconverged, and the four entry points differ only in what they do about that.
   flag whether the tolerance was met rather than failing. It is for a caller that has a
   fallback, and for which not converging is information: not converging on a panel is
   how such a caller learns to subdivide, or to take a different route entirely. Its use
-  in [UltraLevin](sbessel_projection.qmd) is to decide whether a fixed cell can be
+  in [UltraLevin](../specfunc/sbessel_projection.qmd) is to decide whether a fixed cell can be
   fitted directly, the alternative being to refit on a moving interval.
 - [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted]] is never
   fatal, for a reason particular to it. Its integrand carries the $\sqrt{1-t^2}$ weight

@@ -37,7 +37,7 @@
  * which reduces to the full-sky $S_{ij} = C^{ij}_0 / 4\pi$ for the trivial mask
  * $C^{\rm mask}_\ell = 4\pi \delta_{\ell 0}$, the default here, also available
  * as nc_xcor_ssc_sij_mask_cl_fullsky(). See
- * <a href="../../theory/ssc.html">Super-sample covariance</a> for the
+ * <a href="../../theory/nc/xcor/ssc.html">Super-sample covariance</a> for the
  * derivation and the accuracy study.
  *
  * The mask spectrum does not depend on cosmology, so it is supplied once, by

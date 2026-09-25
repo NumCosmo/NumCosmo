@@ -14,7 +14,7 @@ vocabulary); the reduced-shear transforms live in
 [[numcosmo|NcWLEllipticityFrame]] and the surrounding `nc_wl_ellipticity`
 functions. The reduced shear itself comes from
 [[numcosmo|NcWLSurfaceMassDensity]] (see
-[Weak-Lensing Surface Mass Density](wl_surface_mass_density.qmd)) and the lens
+[Weak-Lensing Surface Mass Density](../wl/wl_surface_mass_density.qmd)) and the lens
 geometry from [[numcosmo|NcHaloPosition]].
 
 ## Complex Ellipticity and the Two Conventions

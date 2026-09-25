@@ -34,7 +34,7 @@
  * own `_trace`/`_trace_det` split.
  *
  * Both conventions have closed forms in $g$ (no finite differences
- * anywhere) -- see docs/theory/wl_shape_marginalization_series.qmd and
+ * anywhere) -- see docs/theory/nc/lss/galaxy/wl_shape_marginalization_series.qmd and
  * `dev-notes/wl_shape_series_marginalization_derivation.py` sections 10-11
  * (verify_chi_closed_form_pieces, verify_eps_closed_form_pieces) for the
  * derivation and symbolic/numeric verification these two classes mirror:

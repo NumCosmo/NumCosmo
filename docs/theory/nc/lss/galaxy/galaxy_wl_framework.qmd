@@ -8,11 +8,11 @@ vocabulary shared by every piece, how they nest into a pipeline, and how a
 single galaxy's data flows through it. It does not derive any physics ---
 the shape forward model lives on the
 [Weak-Lensing Ellipticity](wl_ellipticity.qmd) page, the projected mass on
-[Weak-Lensing Surface Mass Density](wl_surface_mass_density.qmd) --- this page
+[Weak-Lensing Surface Mass Density](../wl/wl_surface_mass_density.qmd) --- this page
 is about the *shape* of the code, so that those physics pages (and the
 classes themselves) are easier to place. To see the framework used end to
 end, generating a mock catalog, see the
-[Simulating a Weak-Lensing Galaxy Catalog](../tutorials/python/galaxy_wl_mock.qmd)
+[Simulating a Weak-Lensing Galaxy Catalog](../../../../tutorials/python/galaxy_wl_mock.qmd)
 tutorial.
 
 ## Three Kinds of Object
@@ -86,7 +86,7 @@ Where a calculator role has more than one implementation strategy, they are
 friends are schemes of [[math|NcmPowspec]]. The scheme name is appended
 after the role (`Factor` + `Composed`), never a numerical-method name.
 
-## The Fixed Pipeline: Z $\Rightarrow$ P $\Rightarrow$ S
+## The Fixed Pipeline: Z $\Rightarrow$ P $\Rightarrow$ S {#sec-fixed-pipeline}
 
 A galaxy observation nests three factors in a fixed order --- redshift, then
 position, then shape --- because each later stage conditions on the earlier
@@ -216,7 +216,7 @@ separate "simulation mode" struct. This is deliberate: it guarantees the
 mock generator and the likelihood agree on every convention (frame, sign,
 calibration order) by construction, since they are, quite literally, the same
 code evaluated in different directions. The
-[Simulating a Weak-Lensing Galaxy Catalog](../tutorials/python/galaxy_wl_mock.qmd)
+[Simulating a Weak-Lensing Galaxy Catalog](../../../../tutorials/python/galaxy_wl_mock.qmd)
 tutorial exercises exactly this: the same [[numcosmo|NcGalaxyShapeFactorVarAdd]] instance
 first generates a catalog with `gen`, then evaluates its own likelihood
 factor for it with `integ`.

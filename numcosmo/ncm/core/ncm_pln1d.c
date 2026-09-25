@@ -40,7 +40,7 @@
  * the integrand and scaled to the width of its peak, otherwise the Laplace approximation
  * about the mode.
  *
- * See <a href="../../theory/poisson_lognormal.html">Poisson-Lognormal Distribution</a>
+ * See <a href="../../theory/ncm/core/poisson_lognormal.html">Poisson-Lognormal Distribution</a>
  * for the derivation.
  */
 

@@ -30,7 +30,7 @@ substitution ``NcGalaxyShapeFactorQuad`` already uses) and expands the
 POPULATION in `g` instead, whose coefficients scale with
 ``1/sigma_pop^2`` -- a population/prior parameter this project already
 hard-constrains away from being pathologically small. See
-docs/theory/wl_shape_marginalization_series.qmd and
+docs/theory/nc/lss/galaxy/wl_shape_marginalization_series.qmd and
 dev-notes/wl_shape_series_marginalization_derivation.py (sections 9-11) for
 the derivation and symbolic/numeric verification this class mirrors.
 

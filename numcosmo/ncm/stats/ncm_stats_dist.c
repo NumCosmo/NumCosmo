@@ -31,7 +31,7 @@
  * Represents a distribution as a mixture of radial-basis kernels placed on a set of
  * sample points, evaluates it and draws from it. The theory, and what the shrinkage
  * and kernel-selection options do, are on the <a
- * href="../../theory/stats_dist.html">Kernel Mixture Densities</a> page.
+ * href="../../theory/ncm/stats/stats_dist.html">Kernel Mixture Densities</a> page.
  *
  * This is an abstract class. #NcmStatsDistKDE gives all kernels a common bandwidth,
  * #NcmStatsDistVKDE lets it vary between sample points; both build the interpolation

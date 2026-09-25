@@ -48,7 +48,7 @@
  * exactly nc_distance_comoving(); the Limber expression above is in Mpc, reached by
  * multiplying by $R_{H0} = c/H_0$ from nc_hicosmo_RH_Mpc().
  *
- * See <a href="../../theory/sbessel_projection.html">UltraLevin: Non-Limber
+ * See <a href="../../theory/ncm/specfunc/sbessel_projection.html">UltraLevin: Non-Limber
  * Angular Power Spectra</a> for how the non-Limber form is evaluated: the
  * Levin reduction of the radial integral, the two representations of
  * $W_\ell(k)$, and the exact outer integral over $k$.

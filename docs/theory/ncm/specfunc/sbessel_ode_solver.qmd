@@ -81,7 +81,7 @@ $$
 $$
 The unknown is expanded in Chebyshev polynomials, $u = \sum_n a_n T_n(t)$, while the
 equation is imposed in the ultraspherical (Gegenbauer) basis $C^{(2)}_n$ of the
-[Spectral Methods](spectral.qmd) page, following @Olver2013. That involves two separate
+[Spectral Methods](../algebra/spectral.qmd) page, following @Olver2013. That involves two separate
 steps, and it helps to keep them apart.
 
 The first is that differentiation raises the basis. From $\mathrm{d}T_n/\mathrm{d}t =
@@ -104,7 +104,7 @@ That conversion is itself a banded matrix acting on coefficients, obtained by co
 $T_n = \tfrac12(C^{(1)}_n - C^{(1)}_{n-2})$ with $C^{(1)}_n = (C^{(2)}_n -
 C^{(2)}_{n-2})/(n+1)$. It is an exact change of basis rather than a projection: both
 bases describe the same polynomial and nothing is discarded. It is the row labelled
-*identity* in the operator table of the [Spectral Methods](spectral.qmd) page: the
+*identity* in the operator table of the [Spectral Methods](../algebra/spectral.qmd) page: the
 identity as a map on functions, not the identity matrix, because its input and output
 coefficients are read in different bases.
 

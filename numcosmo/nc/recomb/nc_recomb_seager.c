@@ -44,7 +44,7 @@
  *
  * For the full evolution equations, Boltzmann factors, and rate definitions, see the
  * theoretical background page:
- * <a href="../../theory/recombination.html">Cosmic Recombination</a>.
+ * <a href="../../theory/nc/recomb/recombination.html">Cosmic Recombination</a>.
  */
 
 #ifdef HAVE_CONFIG_H

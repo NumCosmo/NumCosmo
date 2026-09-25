@@ -27,7 +27,7 @@ dimensionless. [[numcosmo|NcDistance]] calls the same quantity $D_c$ and returns
 units of the Hubble radius, which is the unit the kernel components use as well, with
 $k$ in $R_{H0}^{-1}$; multiplying by $R_{H0} = c/H_0$ in Mpc, from
 [[numcosmo|nc_hicosmo_RH_Mpc]], gives the dimensionful pair, which is what the Limber
-path uses. See [Cosmological Distances](distances.qmd).
+path uses. See [Cosmological Distances](../../nc/background/distances.qmd).
 
 The pipeline has two stages with a clean interface between them. The inner stage
 computes, for one kernel and one $k$, the integral
@@ -349,7 +349,7 @@ $$
 \tag{8}
 $$
 The transform is a type-I DCT and the details are on the
-[Spectral Methods](spectral.qmd) page. The default $\epsilon_F = 10^{-8}$ is the
+[Spectral Methods](../algebra/spectral.qmd) page. The default $\epsilon_F = 10^{-8}$ is the
 looser of the two solver tolerances and therefore the one that bounds the
 result; the ODE tolerance $\epsilon_{\rm ODE} = 10^{-13}$ is well below it. Two consequences
 follow. A kernel evaluated with noise above $\epsilon_F$ makes Eq. (8) fail on

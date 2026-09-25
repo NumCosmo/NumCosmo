@@ -41,7 +41,7 @@
  * The mass function this bias is attached to must use a #NcMultiplicityFuncCastro,
  * since the correction coefficients were fitted alongside that multiplicity function.
  *
- * See the <a href="../../theory/castro_hmf.html">Castro Halo Mass Function and Bias</a>
+ * See the <a href="../../theory/nc/lss/halo/castro_hmf.html">Castro Halo Mass Function and Bias</a>
  * theory page, and [Castro et al. (2024)](https://arxiv.org/abs/2409.01877).
  *
  */

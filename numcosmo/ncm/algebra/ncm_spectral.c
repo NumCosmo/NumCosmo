@@ -36,7 +36,7 @@
  *
  * For the node placement, coefficient normalization, integration and operator
  * formulas, see the theoretical background page:
- * <a href="../../theory/spectral.html">Spectral Methods</a>.
+ * <a href="../../theory/ncm/algebra/spectral.html">Spectral Methods</a>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -807,7 +807,7 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
  *
  * Computes @order Chebyshev coefficients of $f(x)$ on $[a,b]$ at fixed resolution,
  * sampling @F at the Chebyshev-Lobatto nodes and applying FFTW DCT-I. See the
- * <a href="../../theory/spectral.html">Spectral Methods</a> page for the node
+ * <a href="../../theory/ncm/algebra/spectral.html">Spectral Methods</a> page for the node
  * placement and coefficient normalization.
  *
  * If @coeffs points to NULL, allocates a new GArray of size @order. If @coeffs points
@@ -1268,7 +1268,7 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
  * coefficients converge to @tol. Only the new odd nodes are evaluated at each
  * refinement. Reaching `max-order` without converging is a fatal error:
  * `max-order` bounds memory, it is not an alternative stopping condition. See
- * the <a href="../../theory/spectral.html">Spectral Methods</a> page for the
+ * the <a href="../../theory/ncm/algebra/spectral.html">Spectral Methods</a> page for the
  * nested grids and convergence criterion.
  *
  * If @coeffs points to NULL, allocates a new GArray. If @coeffs points to an existing
@@ -1383,7 +1383,7 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive_try (NcmSpectral *spectral, NcmSp
  * the expansion into a Clenshaw-Curtis quadrature: $\int_a^b F(x)\,dx = \pi\,$
  * coeffs[0], and weighted inner products $\int_a^b F(x)G(x)\,dx$ follow from
  * these coefficients and the standard coefficients of $G$. See the
- * <a href="../../theory/spectral.html">Spectral Methods</a> page for the
+ * <a href="../../theory/ncm/algebra/spectral.html">Spectral Methods</a> page for the
  * derivation.
  *
  * Unlike ncm_spectral_compute_chebyshev_coeffs_adaptive(), reaching
@@ -1417,7 +1417,7 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted (NcmSpectral *spectral, 
  *
  * Converts Chebyshev $T_n$ coefficients to Gegenbauer $C^{(1)}_n$ coefficients
  * ($\alpha=1$), where $C^{(1)}_n = U_n$. See the
- * <a href="../../theory/spectral.html">Spectral Methods</a> page for the
+ * <a href="../../theory/ncm/algebra/spectral.html">Spectral Methods</a> page for the
  * conversion relation.
  *
  * If @g points to NULL, allocates a new GArray with same size as @c. If @g points to an
@@ -1470,7 +1470,7 @@ ncm_spectral_chebT_to_gegenbauer_alpha1 (GArray *c, GArray **g)
  *
  * Converts Chebyshev $T_n$ coefficients to Gegenbauer $C^{(2)}_k$ coefficients
  * ($\alpha=2$) via the basis-projection formula. See the
- * <a href="../../theory/spectral.html">Spectral Methods</a> page for the
+ * <a href="../../theory/ncm/algebra/spectral.html">Spectral Methods</a> page for the
  * formula.
  *
  * If @g points to NULL, allocates a new GArray with same size as @c. If @g points to an
@@ -1861,7 +1861,7 @@ ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble t)
  * The variable t should be in the interval [-1, 1]. To evaluate at a point x in
  * [a, b], use ncm_spectral_gegenbauer_alpha2_eval_x() or first convert x to t
  * using ncm_spectral_x_to_t(). See the
- * <a href="../../theory/spectral.html">Spectral Methods</a> page for the
+ * <a href="../../theory/ncm/algebra/spectral.html">Spectral Methods</a> page for the
  * $C^{(2)}_n$ recurrence.
  *
  * Returns: the value of $\sum_{n=0}^{N-1} c_n C^{(2)}_n(t)$
@@ -1941,7 +1941,7 @@ ncm_spectral_gegenbauer_alpha2_eval (GArray *c, gdouble t)
  * endpoints to avoid cancellation. The variable t should be in the interval
  * [-1, 1]. To evaluate at a point x in [a, b], use ncm_spectral_chebyshev_eval_x()
  * or first convert x to t using ncm_spectral_x_to_t(). See the
- * <a href="../../theory/spectral.html">Spectral Methods</a> page for details.
+ * <a href="../../theory/ncm/algebra/spectral.html">Spectral Methods</a> page for details.
  *
  * Returns: the value of the Chebyshev expansion at t
  */
@@ -2049,7 +2049,7 @@ ncm_spectral_chebyshev_eval (GArray *a, gdouble t)
  * Evaluates the first derivative of a Chebyshev expansion at $t$ using a fused
  * backward recurrence and Clenshaw algorithm, without explicitly forming the
  * derivative series. See the
- * <a href="../../theory/spectral.html">Spectral Methods</a> page for the
+ * <a href="../../theory/ncm/algebra/spectral.html">Spectral Methods</a> page for the
  * derivative-coefficient relations.
  *
  * Returns: the value of the derivative at $t$

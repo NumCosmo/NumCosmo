@@ -52,7 +52,7 @@
  * gives $\tau = 1$; $\tau$ is capped at the number of samples, since a longer correlation
  * is not measurable from the series. None of these abort.
  *
- * See <a href="../../theory/autocorrelation.html">Autocorrelation Time and Effective
+ * See <a href="../../theory/ncm/stats/autocorrelation.html">Autocorrelation Time and Effective
  * Sample Size</a> for the definitions, the identity the accumulator updates, the
  * level-selection rule and the meaning of each condition.
  *
@@ -821,7 +821,7 @@ _ncm_stats_acorr_ar_fit_full (NcmVector *acov, const gdouble n, NcmStatsAcorrARC
  * Integrated autocorrelation time from an auto-regressive fit of @acov by the
  * Levinson-Durbin recursion, the order chosen by @crit, as $\tau = S(0) / C_0$ with $S(0)$
  * the spectral density of the fitted model at zero frequency. See
- * <a href="../../theory/autocorrelation.html">Autocorrelation Time and Effective Sample
+ * <a href="../../theory/ncm/stats/autocorrelation.html">Autocorrelation Time and Effective Sample
  * Size</a>.
  *
  * Returns: $\tau$, capped at @nitens.

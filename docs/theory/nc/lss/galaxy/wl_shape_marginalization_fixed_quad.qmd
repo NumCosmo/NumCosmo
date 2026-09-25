@@ -6,7 +6,7 @@ title: Fixed-Node Quadrature for the Shape Likelihood
 This page documents [[numcosmo|NcGalaxyShapeFactorFixedQuad]]: the same
 exact marginalization integral as [[numcosmo|NcGalaxyShapeFactorQuad]], but
 evaluated with fixed node counts instead of adaptive Divonne cubature. See
-`docs/theory/wl_shape_factor_history.md` for the design history behind this
+`docs/theory/nc/lss/galaxy/wl_shape_factor_history.md` for the design history behind this
 class.
 :::
 

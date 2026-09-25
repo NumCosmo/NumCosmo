@@ -33,7 +33,7 @@
  * variable) whose coefficients are #NcmLaurentSeries. Generic
  * complex-analysis machinery with no physics content of its own, used and
  * independently tested by `nc_wl_ellipticity_series.c` (see
- * docs/theory/wl_shape_marginalization_series.qmd for the physics context
+ * docs/theory/nc/lss/galaxy/wl_shape_marginalization_series.qmd for the physics context
  * and derivation).
  *
  * Two calling conventions for operations on a complex value (matching

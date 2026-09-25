@@ -349,7 +349,7 @@ order-agnostic and was applied identically to both `SeriesLensed` and the
 ## Noise-side `Series` derivation: bugs found during derivation
 
 - Rotation-covariance bug: the first version of the noise-kernel series
-  (Step 2 in `docs/theory/wl_shape_marginalization_series.qmd`) assumed
+  (Step 2 in `docs/theory/nc/lss/galaxy/wl_shape_marginalization_series.qmd`) assumed
   $f_g$ commutes with rotating $\chi_I$ (equivalently, rotating
   $\epsilon_\mathrm{obs}$ to lie on the real axis before expanding) while
   keeping $g$ real and fixed. It does not — full rotation covariance
@@ -509,7 +509,7 @@ Jacobian cancel the reparametrization's) was tried and rejected: it neither
 fixes the boundary regime cleanly nor preserves the small-noise regime's
 accuracy (up to 600% error on unrelated cases).
 
-See `docs/theory/wl_shape_marginalization_fixed_quad.qmd` for the shipped
+See `docs/theory/nc/lss/galaxy/wl_shape_marginalization_fixed_quad.qmd` for the shipped
 design.
 
 ## `NcGalaxyShapeFactor`/`NcDataClusterWLFactor`: cache-invalidation bugs from pkey hashes (2026-07)

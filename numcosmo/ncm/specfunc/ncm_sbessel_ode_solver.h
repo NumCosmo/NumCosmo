@@ -71,7 +71,7 @@ typedef gdouble (*NcmSBesselOdeSolverF) (gpointer user_data, gdouble x);
  * panel whose oscillation count falls below its tau threshold: with the pins at the
  * peak of the homogeneous spectrum it costs less than Dirichlet data and is at least as
  * accurate. See the <a
- * href="../../theory/sbessel_ode_solver.html">Ultraspherical Spectral Solver</a> page.
+ * href="../../theory/ncm/specfunc/sbessel_ode_solver.html">Ultraspherical Spectral Solver</a> page.
  */
 typedef enum _NcmSBesselOdeConstraint /*< enum,underscore_name=NCM_SBESSEL_ODE_CONSTRAINT,prefix=NCM_SBESSEL_ODE_CONSTRAINT >*/
 {

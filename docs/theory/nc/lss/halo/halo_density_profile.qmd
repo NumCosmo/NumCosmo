@@ -9,7 +9,7 @@ Hernquist). It covers the common parametrization shared by all profiles, the
 projected (two-dimensional) quantities derived from them, and the closed-form
 expressions provided by each family. The projected quantities feed directly into
 the weak-lensing observables of
-[Weak-Lensing Surface Mass Density](wl_surface_mass_density.qmd).
+[Weak-Lensing Surface Mass Density](../wl/wl_surface_mass_density.qmd).
 
 ## Dimensionless Profile
 

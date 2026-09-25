@@ -49,9 +49,9 @@
  * ncm_sbessel_ode_solver_reconfigure_operator() moves an existing operator to another
  * interval and multipole range, keeping its allocated storage.
  *
- * See <a href="../../theory/sbessel_ode_solver.html">The Ultraspherical Spectral
+ * See <a href="../../theory/ncm/specfunc/sbessel_ode_solver.html">The Ultraspherical Spectral
  * Solver</a> for the discretization, the truncation floor and the singular panel
- * spans, and <a href="../../theory/spectral.html">Spectral Methods</a> for the
+ * spans, and <a href="../../theory/ncm/algebra/spectral.html">Spectral Methods</a> for the
  * ultraspherical primitives the operator is assembled from.
  *
  */

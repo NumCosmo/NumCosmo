@@ -50,7 +50,7 @@
  * For high multipoles, vector cubature evaluates the integrand and all requested
  * spherical Bessel functions together.
  *
- * See <a href="../../theory/sbessel_projection.html">UltraLevin: Non-Limber
+ * See <a href="../../theory/ncm/specfunc/sbessel_projection.html">UltraLevin: Non-Limber
  * Angular Power Spectra</a> for the derivation, the fixed panel grid in $x$,
  * and the conjugate-point condition on a panel's span.
  *
