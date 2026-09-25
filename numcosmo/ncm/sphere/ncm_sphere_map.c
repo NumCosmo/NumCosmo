@@ -41,6 +41,7 @@
 #include "ncm/specfunc/ncm_sf_spherical_harmonics.h"
 #include "ncm/core/ncm_timer.h"
 #include "ncm/core/ncm_util.h"
+#include "ncm/algebra/ncm_complex.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_c.h"
 #include "ncm/core/ncm_timer.h"

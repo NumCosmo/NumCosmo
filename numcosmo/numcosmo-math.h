@@ -175,6 +175,7 @@
 #include <numcosmo/ncm/fit/ncm_lh_ratio1d.h>
 #include <numcosmo/ncm/fit/ncm_lh_ratio2d.h>
 #include <numcosmo/ncm/algebra/ncm_quaternion.h>
+#include <numcosmo/ncm/algebra/ncm_complex.h>
 
 /* Utilities */
 #include <numcosmo/ncm/specfunc/ncm_binsplit.h>

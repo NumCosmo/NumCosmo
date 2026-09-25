@@ -40,6 +40,7 @@
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_rng.h"
 #include "ncm/core/ncm_memory_pool.h"
+#include "ncm/algebra/ncm_complex.h"
 #include "ncm/mpi/ncm_mpi_job.h"
 #include "ncm/mpi/ncm_mpi_job_test.h"
 #include "ncm/mpi/ncm_mpi_job_fit.h"

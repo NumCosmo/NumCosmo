@@ -71,6 +71,10 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_matrix.c'],
     },
     {
+        'name': 'ncm_complex',
+        'sources': ['ncm/algebra/test_ncm_complex.c'],
+    },
+    {
         'name': 'ncm_stats_vec',
         'sources': ['ncm/stats/test_ncm_stats_vec.c'],
     },

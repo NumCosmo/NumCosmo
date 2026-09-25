@@ -28,6 +28,7 @@
 
 #include <glib-object.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
+#include <numcosmo/ncm/algebra/ncm_complex.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>

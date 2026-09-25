@@ -29,6 +29,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/core/ncm_util.h>
+#include <numcosmo/ncm/algebra/ncm_complex.h>
 
 G_BEGIN_DECLS
 
