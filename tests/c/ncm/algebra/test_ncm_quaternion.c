@@ -53,6 +53,7 @@ void test_ncm_trivec_get_spherical_coord (void);
 
 void test_ncm_trivec_set_astro_coord (void);
 void test_ncm_trivec_get_astro_coord (void);
+void test_ncm_trivec_coord_near_poles (void);
 
 void test_ncm_trivec_set_astro_ra_dec (void);
 void test_ncm_trivec_get_astro_ra_dec (void);
@@ -123,6 +124,7 @@ main (int argc, char *argv[])
 
   g_test_add_func ("/ncm/trivec/set_astro_coord", test_ncm_trivec_set_astro_coord);
   g_test_add_func ("/ncm/trivec/get_astro_coord", test_ncm_trivec_get_astro_coord);
+  g_test_add_func ("/ncm/trivec/coord_near_poles", test_ncm_trivec_coord_near_poles);
 
   g_test_add_func ("/ncm/trivec/set_astro_ra_dec", test_ncm_trivec_set_astro_ra_dec);
   g_test_add_func ("/ncm/trivec/get_astro_ra_dec", test_ncm_trivec_get_astro_ra_dec);
@@ -503,6 +505,19 @@ test_ncm_trivec_set_spherical_coord (void)
   }
 }
 
+/* The angles returned for v rebuild v, component by component, to a few ulp of |v|; frees w */
+static void
+_assert_rebuilds (NcmTriVec *v, NcmTriVec *w)
+{
+  const gdouble norm = ncm_trivec_norm (v);
+  guint k;
+
+  for (k = 0; k < 3; k++)
+    g_assert_cmpfloat (fabs (w->c[k] - v->c[k]), <, 1.0e-15 * norm);
+
+  ncm_trivec_free (w);
+}
+
 void
 test_ncm_trivec_get_spherical_coord (void)
 {
@@ -520,8 +535,8 @@ test_ncm_trivec_get_spherical_coord (void)
     ncm_trivec_get_spherical_coord (v, &r, &theta, &phi);
 
     ncm_assert_cmpdouble_e (r, ==, ncm_trivec_norm (v), reltol, abstol);
-    ncm_assert_cmpdouble_e (theta, ==, acos (v->c[2] / r), reltol, abstol);
     ncm_assert_cmpdouble_e (phi, ==, ncm_trivec_get_phi (v), reltol, abstol);
+    _assert_rebuilds (v, ncm_trivec_new_sphere (r, theta, phi));
 
     ncm_trivec_free (v);
   }
@@ -568,8 +583,8 @@ test_ncm_trivec_get_astro_coord (void)
     ncm_trivec_get_astro_coord (v, &r, &delta, &alpha);
 
     ncm_assert_cmpdouble_e (r, ==, ncm_trivec_norm (v), reltol, abstol);
-    ncm_assert_cmpdouble_e (delta, ==, asin (v->c[2] / r), reltol, abstol);
     ncm_assert_cmpdouble_e (alpha, ==, ncm_trivec_get_phi (v), reltol, abstol);
+    _assert_rebuilds (v, ncm_trivec_new_astro_coord (r, delta, alpha));
 
     ncm_trivec_free (v);
   }
@@ -616,8 +631,8 @@ test_ncm_trivec_get_astro_ra_dec (void)
     ncm_trivec_get_astro_ra_dec (v, &r, &ra, &dec);
 
     ncm_assert_cmpdouble_e (r, ==, ncm_trivec_norm (v), reltol, abstol);
-    ncm_assert_cmpdouble_e (dec, ==, asin (v->c[2] / r) * 180.0 / M_PI, reltol, abstol);
     ncm_assert_cmpdouble_e (ra, ==, ncm_trivec_get_phi (v) * 180.0 / M_PI, reltol, abstol);
+    _assert_rebuilds (v, ncm_trivec_new_astro_ra_dec (r, ra, dec));
 
     ncm_trivec_free (v);
   }
@@ -1486,5 +1501,43 @@ test_ncm_quaternion_set_random_uniform (void)
 
   ncm_quaternion_free (q);
   ncm_rng_free (rng);
+}
+
+/* Near the poles the angles keep full precision: acos (z / r) and asin (z / r) lose it as
+ * epsilon / theta there */
+void
+test_ncm_trivec_coord_near_poles (void)
+{
+  const gdouble thetas[] = {1.0e-8, 1.0e-6, 1.0e-4, 1.0e-2, M_PI - 1.0e-6};
+  const gdouble eps[]    = {1.0e-8, 1.0e-6};
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (thetas); i++)
+  {
+    NcmTriVec *v = ncm_trivec_new_sphere (2.5, thetas[i], 0.7);
+    gdouble r, theta, phi;
+
+    ncm_trivec_get_spherical_coord (v, &r, &theta, &phi);
+    g_assert_cmpfloat (fabs (theta / thetas[i] - 1.0), <, 4.0e-16);
+    g_assert_cmpfloat (fabs (phi - 0.7), <, 4.0e-16);
+
+    ncm_trivec_free (v);
+  }
+
+  for (i = 0; i < G_N_ELEMENTS (eps); i++)
+  {
+    NcmTriVec *vn = ncm_trivec_new_astro_coord (1.0, M_PI_2 - eps[i], 0.3);
+    NcmTriVec *vs = ncm_trivec_new_astro_coord (1.0, -M_PI_2 + eps[i], 0.3);
+    gdouble r, delta, alpha;
+
+    ncm_trivec_get_astro_coord (vn, &r, &delta, &alpha);
+    g_assert_cmpfloat (fabs (delta - (M_PI_2 - eps[i])), <, 4.0e-16);
+
+    ncm_trivec_get_astro_coord (vs, &r, &delta, &alpha);
+    g_assert_cmpfloat (fabs (delta - (-M_PI_2 + eps[i])), <, 4.0e-16);
+
+    ncm_trivec_free (vn);
+    ncm_trivec_free (vs);
+  }
 }
 

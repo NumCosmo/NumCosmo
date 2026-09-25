@@ -319,8 +319,9 @@ ncm_trivec_get_spherical_coord (NcmTriVec *v, gdouble *r, gdouble *theta, gdoubl
 {
   const gdouble norm = ncm_trivec_norm (v);
 
+  /* atan2 keeps full precision near the poles, where acos (z / r) does not */
   r[0]     = norm;
-  theta[0] = acos (v->c[2] / norm);
+  theta[0] = atan2 (hypot (v->c[0], v->c[1]), v->c[2]);
   phi[0]   = ncm_trivec_get_phi (v);
 }
 
@@ -356,8 +357,9 @@ ncm_trivec_get_astro_coord (NcmTriVec *v, gdouble *r, gdouble *delta, gdouble *a
 {
   const gdouble norm = ncm_trivec_norm (v);
 
+  /* atan2 keeps full precision near the poles, where asin (z / r) does not */
   r[0]     = norm;
-  delta[0] = asin (v->c[2] / norm);
+  delta[0] = atan2 (v->c[2], hypot (v->c[0], v->c[1]));
   alpha[0] = atan2 (v->c[1], v->c[0]);
 }
 
