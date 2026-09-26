@@ -30,9 +30,15 @@
  *
  * Numerical integration helpers.
  *
- * This module provides functions to perform numerical integration. It uses GSL library
- * to perform the integration.
- *
+ * - ncm_integral_locked_a_b() and ncm_integral_locked_a_inf(): adaptive quadrature of
+ *   GSL with a workspace taken from a thread-safe pool, see ncm_integral_get_workspace();
+ * - ncm_integral_cached_0_x() and ncm_integral_cached_x_inf(): integrals from $0$ or to
+ *   $\infty$ that reuse the value cached in a #NcmFunctionCache at the nearest limit;
+ * - ncm_integrate_2dim(), ncm_integrate_2dim_divonne() and ncm_integrate_3dim_divonne():
+ *   integrals over rectangles and boxes with the Cuhre and Divonne algorithms of the Cuba
+ *   library, which report failure by their return value;
+ * - #NcmIntegralFixed: Gauss-Legendre rules on uniform panels, with a weight evaluated
+ *   once at the nodes and reused for several integrands.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -66,13 +72,11 @@ _integral_ws_free (gpointer p)
 /**
  * ncm_integral_get_workspace: (skip)
  *
- * This function provides a workspace to be used by numerical integration
- * functions of GSL. It keeps a internal pool of workspaces and allocate a
- * new one if the function is called and the pool is empty. It is designed
- * to be used in a multi-thread environment. The workspace must be unlocked
- * in order to return to the pool. This must be done using the #ncm_memory_pool_return.
+ * Takes a GSL integration workspace of %NCM_INTEGRAL_PARTITION subintervals from a
+ * thread-safe pool, allocating one when the pool is empty. It must be given back with
+ * ncm_memory_pool_return().
  *
- * Returns: a pointer to #gsl_integration_workspace structure.
+ * Returns: a pointer to the workspace pointer.
  */
 gsl_integration_workspace **
 ncm_integral_get_workspace ()
@@ -93,18 +97,18 @@ ncm_integral_get_workspace ()
 
 /**
  * ncm_integral_locked_a_b: (skip)
- * @F: a gsl_function wich is the integrand.
- * @a: lower integration limit.
- * @b: upper integration limit.
- * @abstol: absolute tolerance.
- * @reltol: relative tolerance.
- * @result: a pointer to a gdouble in which the function stores the result.
- * @error: a pointer to a gdouble in which the function stores the estimated error.
+ * @F: the integrand
+ * @a: the lower limit
+ * @b: the upper limit
+ * @abstol: the absolute tolerance
+ * @reltol: the relative tolerance
+ * @result: (out): the integral
+ * @error: (out): the error estimate
  *
- * This function uses a workspace from the pool and gsl_integration_qag function to perform
- * the numerical integration in the [a, b] interval.
+ * Integrates @F over [@a, @b] with gsl_integration_qag(), the 61-point rule and a pooled
+ * workspace; a GSL failure other than %GSL_EROUND aborts.
  *
- * Returns: the error code returned by gsl_integration_qag.
+ * Returns: the GSL status.
  */
 gint
 ncm_integral_locked_a_b (gsl_function *F, gdouble a, gdouble b, gdouble abstol, gdouble reltol, gdouble *result, gdouble *error)
@@ -115,24 +119,24 @@ ncm_integral_locked_a_b (gsl_function *F, gdouble a, gdouble b, gdouble abstol, 
   ncm_memory_pool_return (w);
 
   if ((error_code != GSL_SUCCESS) && (error_code != GSL_EROUND))
-    *result = GSL_POSINF;
+    g_error ("ncm_integral_locked_a_b: %s", gsl_strerror (error_code));
 
   return error_code;
 }
 
 /**
  * ncm_integral_locked_a_inf: (skip)
- * @F: a gsl_function which is the integrand.
- * @a: lower integration limit.
- * @abstol: absolute tolerance.
- * @reltol: relative tolerance.
- * @result: a pointer to a gdouble in which the function stores the result.
- * @error: a pointer to a gdouble in which the function stores the estimated error.
+ * @F: the integrand
+ * @a: the lower limit
+ * @abstol: the absolute tolerance
+ * @reltol: the relative tolerance
+ * @result: (out): the integral
+ * @error: (out): the error estimate
  *
- * This function uses a workspace from the pool and gsl_integration_qagiu function to perform
- * the numerical integration in the $[a, \infty]$ interval.
+ * Integrates @F over $[a, \infty)$ with gsl_integration_qagiu() and a pooled workspace;
+ * a GSL failure other than %GSL_EROUND aborts.
  *
- * Returns: the error code returned by gsl_integration_qagiu.
+ * Returns: the GSL status.
  */
 gint
 ncm_integral_locked_a_inf (gsl_function *F, gdouble a, gdouble abstol, gdouble reltol, gdouble *result, gdouble *error)
@@ -143,27 +147,23 @@ ncm_integral_locked_a_inf (gsl_function *F, gdouble a, gdouble abstol, gdouble r
   ncm_memory_pool_return (w);
 
   if ((error_code != GSL_SUCCESS) && (error_code != GSL_EROUND))
-  {
     g_error ("ncm_integral_locked_a_inf: %s", gsl_strerror (error_code));
-    *result = GSL_POSINF;
-  }
 
   return error_code;
 }
 
 /**
  * ncm_integral_cached_0_x: (skip)
- * @cache: a pointer to #NcmFunctionCache.
- * @F: a gsl_function wich is the integrand.
- * @x: upper integration limit.
- * @result: a pointer to a gdouble in which the function stores the result.
- * @error: a pointer to a gdouble in which the function stores the estimated error.
+ * @cache: the cache of previous integrals
+ * @F: the integrand
+ * @x: the upper limit
+ * @result: (out): the integral
+ * @error: (out): the error estimate of the last segment integrated
  *
- * This function searches for the nearest x_near value previously chosen as the upper integration limit
- * and perform the integration at [x_near, x] interval. This result is summed to that obtained at [0, x_near]
- * and then it is saved in the cache.
+ * Computes $\int_0^x F$ as the cached integral up to the nearest cached limit $x_n$ plus
+ * $\int_{x_n}^x F$, with the tolerances of @cache, and caches the result at @x.
  *
- * Returns: the error code returned by gsl_integration_qag.
+ * Returns: the GSL status.
  */
 gint
 ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error)
@@ -180,7 +180,7 @@ ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble x, gd
     }
     else
     {
-      error_code = ncm_integral_locked_a_b (F, x_found, x, 0.0, NCM_INTEGRAL_ERROR, result, error);
+      error_code = ncm_integral_locked_a_b (F, x_found, x, ncm_function_cache_get_abstol (cache), ncm_function_cache_get_reltol (cache), result, error);
       *result   += ncm_vector_get (p_result, 0);
       ncm_function_cache_insert (cache, x, *result);
     }
@@ -189,7 +189,7 @@ ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble x, gd
   }
   else
   {
-    error_code = ncm_integral_locked_a_b (F, 0.0, x, 0.0, NCM_INTEGRAL_ERROR, result, error);
+    error_code = ncm_integral_locked_a_b (F, 0.0, x, ncm_function_cache_get_abstol (cache), ncm_function_cache_get_reltol (cache), result, error);
     ncm_function_cache_insert (cache, x, *result);
   }
 
@@ -198,17 +198,16 @@ ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble x, gd
 
 /**
  * ncm_integral_cached_x_inf: (skip)
- * @cache: a pointer to #NcmFunctionCache.
- * @F: a gsl_function wich is the integrand.
- * @x: lower integration limit.
- * @result: a pointer to a gdouble in which the function stores the result.
- * @error: a pointer to a gdouble in which the function stores the estimated error.
+ * @cache: the cache of previous integrals
+ * @F: the integrand
+ * @x: the lower limit
+ * @result: (out): the integral
+ * @error: (out): the error estimate of the last segment integrated
  *
- * This function searchs for the nearest x_near value previously chosed as the lower integration limit
- * and perform the integration at $[x, x_{near}]$ interval. This result is summed to that
- * obtained at $[x_{near}, \infty]$ and then it is saved in the cache.
+ * Computes $\int_x^\infty F$ as the cached integral from the nearest cached limit $x_n$
+ * plus $\int_x^{x_n} F$, with the tolerances of @cache, and caches the result at @x.
  *
- * Returns: the error code returned by gsl_integration_qagiu.
+ * Returns: the GSL status.
  */
 gint
 ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error)
@@ -250,7 +249,6 @@ typedef struct _iCLIntegrand2dim
   gdouble yi;
   gdouble yf;
   gint ldxgiven;
-  NcmIntegralPeakfinder p;
 } iCLIntegrand2dim;
 
 static gint
@@ -265,50 +263,22 @@ _integrand_2dim (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble
   return 0;
 }
 
-static void
-_peakfinder_2dim (const gint *ndim, const gdouble b[], gint *n, gdouble x[], void *userdata)
-{
-  iCLIntegrand2dim *iinteg = (iCLIntegrand2dim *) userdata;
-  gint i;
-  gdouble newb[4];
-
-  newb[0] = iinteg->xi + (iinteg->xf - iinteg->xi) * b[0];
-  newb[1] = iinteg->xi + (iinteg->xf - iinteg->xi) * b[1];
-  newb[2] = iinteg->yi + (iinteg->yf - iinteg->yi) * b[2];
-  newb[3] = iinteg->yi + (iinteg->yf - iinteg->yi) * b[3];
-
-  /*printf ("bounds: %.5g %.5g %.5g %.5g\n", b[0], b[1], b[2], b[3]); */
-  /*printf ("new bounds: %.5g %.5g %.5g %.5g\n", newb[0], newb[1], newb[2], newb[3]); */
-
-  iinteg->p (ndim, newb, n, x, iinteg->integ->userdata);
-
-  /*printf ("real minimo: %.15g, %.15g\n", x[0], x[1]); */
-  for (i = 0; i < *n; i++)
-  {
-    x[i * iinteg->ldxgiven + 0] = (x[i * iinteg->ldxgiven + 0] - iinteg->xi) / (iinteg->xf - iinteg->xi);
-    x[i * iinteg->ldxgiven + 1] = (x[i * iinteg->ldxgiven + 1] - iinteg->yi) / (iinteg->yf - iinteg->yi);
-  }
-
-  /*printf ("minimo: %.15g, %.15g\n", x[0], x[1]); */
-}
-
 /**
  * ncm_integrate_2dim:
- * @integ: a pointer to #NcmIntegrand2dim.
- * @xi: gbouble which is the lower integration limit of variable x.
- * @yi: gbouble which is the lower integration limit of variable y.
- * @xf: gbouble which is the upper integration limit of variable x.
- * @yf: gbouble which is the upper integration limit of variable y.
- * @epsrel: relative error
- * @epsabs: absolute error
- * @result: a pointer to a gdouble in which the function stores the result.
- * @error: a pointer to a gdouble in which the function stores the estimated error.
+ * @integ: the integrand
+ * @xi: the lower limit in $x$
+ * @yi: the lower limit in $y$
+ * @xf: the upper limit in $x$
+ * @yf: the upper limit in $y$
+ * @epsrel: the relative tolerance
+ * @epsabs: the absolute tolerance
+ * @result: (out): the integral
+ * @error: (out): the error estimate
  *
- * This function computes the integral of the function @integ->f over the
- * interval [xi, xf] and [yi, yf] using the Cuhre algorithm from the Cuba
- * library.
+ * Integrates over [@xi, @xf] by [@yi, @yf] with the Cuhre algorithm of Cuba, at most
+ * $10^7$ evaluations, warning when they are exhausted.
  *
- * Returns: whether the integration was successful.
+ * Returns: whether Cuba reached the tolerance.
  */
 gboolean
 ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error)
@@ -317,7 +287,7 @@ ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf,
   const gint mineval      = 1;
   const gint maxeval      = 10000000;
   const gint key          = 11; /* 13 points rule */
-  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, 0, NULL};
+  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, 0};
   gint nregions, neval, fail;
   gdouble prob;
 
@@ -368,78 +338,24 @@ _integrand_3dim (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble
 }
 
 /**
- * ncm_integrate_3dim:
- * @integ: a pointer to #NcmIntegrand3dim.
- * @xi: gbouble which is the lower integration limit of variable x.
- * @yi: gbouble which is the lower integration limit of variable y.
- * @zi: gbouble which is the lower integration limit of variable z.
- * @xf: gbouble which is the upper integration limit of variable x.
- * @yf: gbouble which is the upper integration limit of variable y.
- * @zf: gbouble which is the upper integration limit of variable z.
- * @epsrel: relative error
- * @epsabs: absolute error
- * @result: a pointer to a gdouble in which the function stores the result.
- * @error: a pointer to a gdouble in which the function stores the estimated error.
- *
- * This function computes the integral of the function @integ->f over the
- * interval [xi, xf] and [yi, yf] and [zi, zf] using the Cuhre algorithm from the Cuba
- * library.
- *
- * Returns: whether the integration was successful.
- */
-gboolean
-ncm_integrate_3dim (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error)
-{
-  gboolean ret            = FALSE;
-  const gint mineval      = 1;
-  const gint maxeval      = 10000000;
-  const gint key          = 11; /* 11 points rule */
-  iCLIntegrand3dim iinteg = {integ, xi, xf, yi, yf, zi, zf, 0};
-  gint nregions, neval, fail;
-  gdouble prob;
-
-#ifdef HAVE_LIBCUBA_3_1
-  Cuhre (3, 1, &_integrand_3dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
-#elif defined (HAVE_LIBCUBA_3_3)
-  Cuhre (3, 1, &_integrand_3dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
-#elif defined (HAVE_LIBCUBA_4_0)
-  Cuhre (3, 1, &_integrand_3dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, NULL, &nregions, &neval, &fail, result, error, &prob);
-#else
-  Cuhre (3, 1, &_integrand_3dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, &nregions, &neval, &fail, result, error, &prob);
-#endif /* HAVE_LIBCUBA_3_1 */
-
-  if (neval >= maxeval)
-    g_warning ("ncm_integrate_3dim: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
-
-  *result *= (xf - xi) * (yf - yi) * (zf - zi);
-  *error  *= (xf - xi) * (yf - yi) * (zf - zi);
-
-  ret = (fail == 0);
-
-  return ret;
-}
-
-/**
  * ncm_integrate_2dim_divonne:
- * @integ: a pointer to #NcmIntegrand2dim
- * @xi: gbouble which is the lower integration limit of variable x.
- * @yi: gbouble which is the lower integration limit of variable y.
- * @xf: gbouble which is the upper integration limit of variable x.
- * @yf: gbouble which is the upper integration limit of variable y.
- * @epsrel: relative error
- * @epsabs: absolute error
- * @ngiven: number of peaks
- * @ldxgiven: the leading dimension of xgiven, i.e. the offset between one
- * point and the next in memory (ref. libcuba documentation)
- * @xgiven: list of points where the integrand might have peaks (ref. libcuba documentation)
- * @result: a pointer to a gdouble in which the function stores the result.
- * @error: a pointer to a gdouble in which the function stores the estimated error.
+ * @integ: the integrand
+ * @xi: the lower limit in $x$
+ * @yi: the lower limit in $y$
+ * @xf: the upper limit in $x$
+ * @yf: the upper limit in $y$
+ * @epsrel: the relative tolerance
+ * @epsabs: the absolute tolerance
+ * @ngiven: the number of points in @xgiven
+ * @ldxgiven: the offset between consecutive points in @xgiven
+ * @xgiven: the points where the integrand may peak
+ * @result: (out): the integral
+ * @error: (out): the error estimate
  *
- * This function computes the integral of the function @integ->f over the
- * interval [xi, xf] and [yi, yf] using the Divonne algorithm from the Cuba
- * library.
+ * Integrates over [@xi, @xf] by [@yi, @yf] with the Divonne algorithm of Cuba, at most
+ * $10^7$ evaluations; aborts when Cuba is older than 4.0.
  *
- * Returns: whether the integration was successful.
+ * Returns: whether Cuba reached the tolerance.
  */
 gboolean
 ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error)
@@ -458,24 +374,26 @@ ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdo
   const gdouble mindeviation = 0.25;
   const gint nextra          = 0;
   peakfinder_t peakfinder    = NULL;
-  gint i;
-
-  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, ldxgiven, NULL};
-  gint nregions, neval, fail;
+  iCLIntegrand2dim iinteg    = {integ, xi, xf, yi, yf, ldxgiven};
+  gdouble *xgiven_u;
+  gint nregions, neval, fail, i;
   gdouble prob;
 
-  /*printf ("xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]); */
+  /* The points rescaled to the unit square, leaving the caller's array unchanged */
+  xgiven_u = g_memdup2 (xgiven, sizeof (gdouble) * ngiven * ldxgiven);
+
   for (i = 0; i < ngiven; i++)
   {
-    xgiven[i * ldxgiven + 0] = (xgiven[i * ldxgiven + 0] - xi) / (xf - xi);
-    xgiven[i * ldxgiven + 1] = (xgiven[i * ldxgiven + 1] - yi) / (yf - yi);
-    /*printf ("conv xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]); */
+    xgiven_u[i * ldxgiven + 0] = (xgiven[i * ldxgiven + 0] - xi) / (xf - xi);
+    xgiven_u[i * ldxgiven + 1] = (xgiven[i * ldxgiven + 1] - yi) / (yf - yi);
   }
 
 #ifdef HAVE_LIBCUBA_4_0
   Divonne (2, 1, &_integrand_2dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border,
-           maxchisq, mindeviation, ngiven, ldxgiven, xgiven, nextra, peakfinder, NULL, NULL, &nregions, &neval, &fail,
+           maxchisq, mindeviation, ngiven, ldxgiven, xgiven_u, nextra, peakfinder, NULL, NULL, &nregions, &neval, &fail,
            result, error, &prob);
+
+  g_free (xgiven_u);
 
   if (neval >= maxeval)
     g_warning ("ncm_integrate_2dim_divonne: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
@@ -488,6 +406,7 @@ ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdo
   return ret;
 
 #else
+  g_free (xgiven_u);
   g_error ("ncm_integrate_2dim_divonne: Needs libcuba > 4.0.");
 
   return FALSE;
@@ -496,155 +415,26 @@ ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdo
 }
 
 /**
- * ncm_integrate_2dim_divonne_peakfinder:
- * @integ: a pointer to #NcmIntegrand2dim
- * @xi: gbouble which is the lower integration limit of variable x.
- * @yi: gbouble which is the lower integration limit of variable y.
- * @xf: gbouble which is the upper integration limit of variable x.
- * @yf: gbouble which is the upper integration limit of variable y.
- * @epsrel: relative error
- * @epsabs: absolute error
- * @ngiven: number of peaks
- * @ldxgiven: the leading dimension of xgiven, i.e. the offset between one
- * point and the next in memory (ref. libcuba documentation)
- * @xgiven: list of points where the integrand might have peaks (ref. libcuba documentation)
- * @nextra: the maximum number of extra points the peakfinder will return.
- * @peakfinder: (scope call): a #NcmIntegralPeakfinder
- * @result: a pointer to a gdouble in which the function stores the result.
- * @error: a pointer to a gdouble in which the function stores the estimated error.
- *
- * This function computes the integral of the function @integ->f over the
- * interval [xi, xf] and [yi, yf] using the Divonne algorithm from the Cuba
- * library. It uses a peakfinder to find the peaks of the integrand and improve
- * the integration of concentrated functions.
- *
- * Returns: whether the integration was successful.
- */
-gboolean
-ncm_integrate_2dim_divonne_peakfinder (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], const gint nextra, NcmIntegralPeakfinder peakfinder, gdouble *result, gdouble *error)
-{
-  gboolean ret              = FALSE;
-  const gint nvec           = 1;
-  const gint seed           = 0;
-  const gint mineval        = 1;
-  const gint maxeval        = 100000000;
-  const gint key1           = 13; /* 13 points rule */
-  const gint key2           = 13;
-  const gint key3           = 1;
-  const int maxpass         = 10;
-  const double border       = 0.0;
-  const double maxchisq     = 0.10;
-  const double mindeviation = 0.25;
-
-  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, ldxgiven, peakfinder};
-  gint nregions, neval, fail;
-  gdouble prob;
-  gint i;
-
-  /*printf ("xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]); */
-  for (i = 0; i < ngiven; i++)
-  {
-    xgiven[i * ldxgiven + 0] = (xgiven[i * ldxgiven + 0] - xi) / (xf - xi);
-    xgiven[i * ldxgiven + 1] = (xgiven[i * ldxgiven + 1] - yi) / (yf - yi);
-  }
-
-  /*printf ("xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]); */
-/*printf ("chamando divonne\n"); */
-#ifdef HAVE_LIBCUBA_4_0
-  Divonne (2, 1, &_integrand_2dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border,
-           maxchisq, mindeviation, ngiven, ldxgiven, xgiven, nextra, _peakfinder_2dim, NULL, NULL, &nregions, &neval, &fail,
-           result, error, &prob);
-#else
-  g_error ("ncm_integrate_2dim_divonne: Needs libcuba > 4.0.");
-#endif /*HAVE_LIBCUBA_4_0 */
-
-  if (neval >= maxeval)
-    g_warning ("ncm_integrate_2dim_divonne_peakfinder: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
-
-  *result *= (xf - xi) * (yf - yi);
-  *error  *= (xf - xi) * (yf - yi);
-
-  ret = (fail == 0);
-
-  return ret;
-}
-
-/**
- * ncm_integrate_2dim_vegas:
- * @integ: a pointer to #NcmIntegrand2dim
- * @xi: gbouble which is the lower integration limit of variable x.
- * @yi: gbouble which is the lower integration limit of variable y.
- * @xf: gbouble which is the upper integration limit of variable x.
- * @yf: gbouble which is the upper integration limit of variable y.
- * @epsrel: relative error
- * @epsabs: absolute error
- * @nstart: number of samples to start the first round of integration with.
- * @result: a pointer to a gdouble in which the function stores the result.
- * @error: a pointer to a gdouble in which the function stores the estimated error.
- *
- * This function computes the integral of the function @integ->f over the
- * interval [xi, xf] and [yi, yf] using the Vegas algorithm from the Cuba
- * library.
- *
- * Returns: whether the integration was successful.
- */
-gboolean
-ncm_integrate_2dim_vegas (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint nstart, gdouble *result, gdouble *error)
-{
-  gboolean ret         = FALSE;
-  const gint nvec      = 1;
-  const gint seed      = 0;
-  const gint mineval   = 1;
-  const gint maxeval   = 10000;
-  const gint nincrease = 500;
-  const int nbatch     = 1000;
-  const int gridno     = 0;
-
-  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, 0, NULL};
-  gint neval, fail;
-  gdouble prob;
-
-#ifdef HAVE_LIBCUBA_4_0
-  Vegas (2, 1, &_integrand_2dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval,
-         nstart, nincrease, nbatch, gridno, NULL, NULL, &neval, &fail, result, error, &prob);
-#else
-  g_error ("ncm_integrate_2dim_vegas: Needs libcuba > 4.0.");
-#endif /*HAVE_LIBCUBA_4_0 */
-
-  if (neval >= maxeval)
-    g_warning ("ncm_integrate_2dim_vegas: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
-
-  *result *= (xf - xi) * (yf - yi);
-  *error  *= (xf - xi) * (yf - yi);
-
-  ret = (fail == 0);
-
-  return ret;
-}
-
-/**
  * ncm_integrate_3dim_divonne:
- * @integ: a pointer to #NcmIntegrand3dim
- * @xi: gbouble which is the lower integration limit of variable x.
- * @yi: gbouble which is the lower integration limit of variable y.
- * @zi: gbouble which is the lower integration limit of variable z.
- * @xf: gbouble which is the upper integration limit of variable x.
- * @yf: gbouble which is the upper integration limit of variable y.
- * @zf: gbouble which is the upper integration limit of variable z.
- * @epsrel: relative error
- * @epsabs: absolute error
- * @ngiven: number of peaks
- * @ldxgiven: the leading dimension of xgiven, i.e. the offset between one
- * point and the next in memory (ref. libcuba documentation)
- * @xgiven: list of points where the integrand might have peaks (ref. libcuba documentation)
- * @result: a pointer to a gdouble in which the function stores the result.
- * @error: a pointer to a gdouble in which the function stores the estimated error.
+ * @integ: the integrand
+ * @xi: the lower limit in $x$
+ * @yi: the lower limit in $y$
+ * @zi: the lower limit in $z$
+ * @xf: the upper limit in $x$
+ * @yf: the upper limit in $y$
+ * @zf: the upper limit in $z$
+ * @epsrel: the relative tolerance
+ * @epsabs: the absolute tolerance
+ * @ngiven: the number of points in @xgiven
+ * @ldxgiven: the offset between consecutive points in @xgiven
+ * @xgiven: the points where the integrand may peak
+ * @result: (out): the integral
+ * @error: (out): the error estimate
  *
- * This function computes the integral of the function @integ->f over the
- * interval [xi, xf] and [yi, yf] and [zi, zf] using the Divonne algorithm from the Cuba
- * library.
+ * Integrates over the box [@xi, @xf] by [@yi, @yf] by [@zi, @zf] with the Divonne
+ * algorithm of Cuba, with no evaluation limit; aborts when Cuba is older than 4.0.
  *
- * Returns: whether the integration was successful.
+ * Returns: whether Cuba reached the tolerance.
  */
 gboolean
 ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error)
@@ -665,21 +455,27 @@ ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdo
   peakfinder_t peakfinder   = NULL;
 
   iCLIntegrand3dim iinteg = {integ, xi, xf, yi, yf, zi, zf, ldxgiven};
+  gdouble *xgiven_u;
   gint nregions, neval, fail, i;
   gdouble prob;
 
+  /* The points rescaled to the unit box, leaving the caller's array unchanged */
+  xgiven_u = g_memdup2 (xgiven, sizeof (gdouble) * ngiven * ldxgiven);
+
   for (i = 0; i < ngiven; i++)
   {
-    xgiven[i * ldxgiven + 0] = (xgiven[i * ldxgiven + 0] - xi) / (xf - xi);
-    xgiven[i * ldxgiven + 1] = (xgiven[i * ldxgiven + 1] - yi) / (yf - yi);
-    xgiven[i * ldxgiven + 2] = (xgiven[i * ldxgiven + 2] - zi) / (zf - zi);
+    xgiven_u[i * ldxgiven + 0] = (xgiven[i * ldxgiven + 0] - xi) / (xf - xi);
+    xgiven_u[i * ldxgiven + 1] = (xgiven[i * ldxgiven + 1] - yi) / (yf - yi);
+    xgiven_u[i * ldxgiven + 2] = (xgiven[i * ldxgiven + 2] - zi) / (zf - zi);
   }
 
 #ifdef HAVE_LIBCUBA_4_0
   Divonne (3, 1, &_integrand_3dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border,
-           maxchisq, mindeviation, ngiven, ldxgiven, xgiven, nextra, peakfinder, NULL, NULL, &nregions, &neval, &fail,
+           maxchisq, mindeviation, ngiven, ldxgiven, xgiven_u, nextra, peakfinder, NULL, NULL, &nregions, &neval, &fail,
            result, error, &prob);
+  g_free (xgiven_u);
 #else
+  g_free (xgiven_u);
   g_error ("ncm_integrate_3dim_divonne: Needs libcuba > 4.0.");
 #endif /*HAVE_LIBCUBA_4_0 */
 
@@ -695,73 +491,16 @@ ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdo
 }
 
 /**
- * ncm_integrate_3dim_vegas:
- * @integ: a pointer to #NcmIntegrand3dim
- * @xi: gbouble which is the lower integration limit of variable x.
- * @yi: gbouble which is the lower integration limit of variable y.
- * @zi: gbouble which is the lower integration limit of variable z.
- * @xf: gbouble which is the upper integration limit of variable x.
- * @yf: gbouble which is the upper integration limit of variable y.
- * @zf: gbouble which is the upper integration limit of variable z.
- * @epsrel: relative error
- * @epsabs: absolute error
- * @nstart: number of samples to start the first round of integration with.
- * @result: a pointer to a gdouble in which the function stores the result.
- * @error: a pointer to a gdouble in which the function stores the estimated error.
- *
- * This function computes the integral of the function @integ->f over the
- * interval [xi, xf] and [yi, yf] and [zi, zf] using the Vegas algorithm from the Cuba
- * library.
- *
- * Returns: whether the integration was successful.
- */
-gboolean
-ncm_integrate_3dim_vegas (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, const gint nstart, gdouble *result, gdouble *error)
-{
-  gboolean ret         = FALSE;
-  const gint nvec      = 1;
-  const gint seed      = 0;
-  const gint mineval   = 1;
-  const gint maxeval   = G_MAXINT;
-  const gint nincrease = 500;
-  const int nbatch     = 1000;
-  const int gridno     = 0;
-
-  iCLIntegrand3dim iinteg = {integ, xi, xf, yi, yf, zi, zf, 0};
-  gint neval, fail;
-  gdouble prob;
-
-#ifdef HAVE_LIBCUBA_4_0
-  Vegas (3, 1, &_integrand_3dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval,
-         nstart, nincrease, nbatch, gridno, NULL, NULL, &neval, &fail, result, error, &prob);
-#else
-  g_error ("ncm_integrate_3dim_vegas: Needs libcuba > 4.0.");
-#endif /*HAVE_LIBCUBA_4_0 */
-
-  if (neval >= maxeval)
-    g_warning ("ncm_integrate_3dim_vegas: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
-
-  *result *= (xf - xi) * (yf - yi) * (zf - zi);
-  *error  *= (xf - xi) * (yf - yi) * (zf - zi);
-
-  ret = (fail == 0);
-
-  return ret;
-}
-
-/**
  * ncm_integral_fixed_new: (skip)
- * @n_nodes: number of nodes in the full interval.
- * @rule_n: order of the Gauss-Legendre integration rule to be applied in each interval.
- * @xl: the interval lower limit.
- * @xu: the interval upper limit.
+ * @n_nodes: the number of panel edges, at least 2
+ * @rule_n: the number of Gauss-Legendre points per panel
+ * @xl: the lower limit
+ * @xu: the upper limit
  *
- * This function prepares the #NcmIntegralFixed with a grid
- * with n_nodes - 1 intervals beteween xl and xu. In each interval it uses
- * a fixed order (rule_n) Gauss-Legendre integration rule to determine the
- * interval inner points. This results in a grid with (n_nodes - 1) * rule_n points.
+ * Creates a #NcmIntegralFixed with @n_nodes - 1 equal panels on [@xl, @xu] and an
+ * @rule_n-point Gauss-Legendre rule in each, $(n_\mathrm{nodes} - 1)\,r$ nodes in all.
  *
- * Returns: a pointer to the newly created #NcmIntegralFixed structure.
+ * Returns: a new #NcmIntegralFixed, to be freed with ncm_integral_fixed_free().
  */
 NcmIntegralFixed *
 ncm_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu)
@@ -781,10 +520,9 @@ ncm_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu)
 
 /**
  * ncm_integral_fixed_free:
- * @intf: a pointer to #NcmIntegralFixed.
+ * @intf: a #NcmIntegralFixed
  *
- * This function frees the memory associated to #NcmIntegralFixed.
- *
+ * Frees @intf.
  */
 void
 ncm_integral_fixed_free (NcmIntegralFixed *intf)
@@ -796,13 +534,11 @@ ncm_integral_fixed_free (NcmIntegralFixed *intf)
 
 /**
  * ncm_integral_fixed_calc_nodes: (skip)
- * @intf: a pointer to #NcmIntegralFixed.
- * @F: a pointer to a gsl_function.
+ * @intf: a #NcmIntegralFixed
+ * @F: the weight
  *
- * This function calculates the nodes of the #NcmIntegralFixed.
- * It uses the Gauss-Legendre integration rule to determine the
- * interval inner points.
- *
+ * Stores the weight @F times the Gauss-Legendre weight at every node, for the integrals
+ * of @intf.
  */
 void
 ncm_integral_fixed_calc_nodes (NcmIntegralFixed *intf, gsl_function *F)
@@ -850,12 +586,9 @@ ncm_integral_fixed_calc_nodes (NcmIntegralFixed *intf, gsl_function *F)
 
 /**
  * ncm_integral_fixed_nodes_eval:
- * @intf: a pointer to #NcmIntegralFixed.
+ * @intf: a #NcmIntegralFixed
  *
- * This function evaluates the integral of the function @integ->f over the
- * interval [xi, xf] using the nodes calculated by #ncm_integral_fixed_calc_nodes.
- *
- * Returns: the integral of the function @integ->f over the interval [xi, xf].
+ * Returns: the integral of the weight $F$ stored by ncm_integral_fixed_calc_nodes().
  */
 gdouble
 ncm_integral_fixed_nodes_eval (NcmIntegralFixed *intf)
@@ -873,16 +606,11 @@ ncm_integral_fixed_nodes_eval (NcmIntegralFixed *intf)
 
 /**
  * ncm_integral_fixed_integ_mult: (skip)
- * @intf: a pointer to #NcmIntegralFixed.
- * @F: a pointer to gsl_function.
+ * @intf: a #NcmIntegralFixed
+ * @F: the function multiplying the weight
  *
- * This function evaluates the integral of the function @integ->f over the
- * interval [xi, xf] using the nodes calculated by #ncm_integral_fixed_calc_nodes.
- * It uses the Gauss-Legendre integration rule to determine the
- * interval inner points. This function multiplies the integrand by the
- * function @F.
- *
- * Returns: the integral of the function @integ->f times @F over the interval [xi, xf].
+ * Returns: $\int F_w(x)\,F(x)\,\mathrm{d}x$, where $F_w$ is the weight stored by
+ * ncm_integral_fixed_calc_nodes().
  */
 gdouble
 ncm_integral_fixed_integ_mult (NcmIntegralFixed *intf, gsl_function *F)
@@ -932,146 +660,13 @@ ncm_integral_fixed_integ_mult (NcmIntegralFixed *intf, gsl_function *F)
 }
 
 /**
- * ncm_integral_fixed_integ_posdef_mult: (skip)
- * @intf: a pointer to #NcmIntegralFixed
- * @F: a pointer to gsl_function
- * @max: maximum value of the integration interval
- * @reltol: relative tolerance
- *
- * This function computes the integral of the function @integ->f over the
- * interval starting at @max and going to the left using the nodes calculated
- * by #ncm_integral_fixed_calc_nodes. It uses the Gauss-Legendre integration
- * rule to determine the interval inner points. This function multiplies the
- * integrand by the function @F. It stops when the relative error is less than
- * @reltol.
- *
- * Returns: the integral of the function @integ->f times @F over the interval [max, xf].
- */
-gdouble
-ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, gdouble max, gdouble reltol)
-{
-  const gulong r2         = intf->rule_n / 2;
-  const gboolean odd_rule = intf->rule_n & 1;
-  const gdouble delta_x   = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
-  const glong mnode       = max / delta_x;
-  gdouble res             = 0.0;
-  glong i, j, k = 0;
-
-  g_assert (mnode < (glong) intf->n_nodes);
-
-  if (odd_rule)
-  {
-    for (i = mnode; i < (glong) (intf->n_nodes - 1); i++)
-    {
-      const gdouble x0      = intf->xl + delta_x * i;
-      const gdouble x1      = x0 + delta_x;
-      const gdouble x1px0_2 = (x1 + x0) / 2.0;
-      const gdouble x1mx0_2 = (x1 - x0) / 2.0;
-      gdouble part          = 0.0;
-
-      k = i * intf->rule_n;
-
-      for (j = 1; j < (glong) (r2 + 1); j++)
-        part += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-
-      part += GSL_FN_EVAL (F, x1px0_2) * intf->int_nodes[k++];
-
-      for (j = 1; j < (glong) (r2 + 1); j++)
-        part += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-
-      res += part;
-
-      if (fabs (part / res) < reltol)
-        break;
-    }
-
-    for (i = mnode - 1; i >= 0; i--)
-    {
-      const gdouble x0      = intf->xl + delta_x * i;
-      const gdouble x1      = x0 + delta_x;
-      const gdouble x1px0_2 = (x1 + x0) / 2.0;
-      const gdouble x1mx0_2 = (x1 - x0) / 2.0;
-      gdouble part          = 0.0;
-
-      k = i * intf->rule_n;
-
-      for (j = 1; j < (glong) (r2 + 1); j++)
-        part += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-
-      part += GSL_FN_EVAL (F, x1px0_2) * intf->int_nodes[k++];
-
-      for (j = 1; j < (glong) (r2 + 1); j++)
-        part += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-
-      res += part;
-
-      if (fabs (part / res) < reltol)
-        break;
-    }
-  }
-  else
-  {
-    for (i = mnode; i < (glong) (intf->n_nodes - 1); i++)
-    {
-      const gdouble x0      = intf->xl + delta_x * i;
-      const gdouble x1      = x0 + delta_x;
-      const gdouble x1px0_2 = (x1 + x0) / 2.0;
-      const gdouble x1mx0_2 = (x1 - x0) / 2.0;
-      gdouble part          = 0.0;
-
-      k = i * intf->rule_n;
-
-      for (j = 0; j < (glong) r2; j++)
-        part += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-
-      for (j = 0; j < (glong) r2; j++)
-        part += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-
-      res += part;
-
-      if (fabs (part / res) < reltol)
-        break;
-    }
-
-    for (i = mnode - 1; i >= 0; i--)
-    {
-      const gdouble x0      = intf->xl + delta_x * i;
-      const gdouble x1      = x0 + delta_x;
-      const gdouble x1px0_2 = (x1 + x0) / 2.0;
-      const gdouble x1mx0_2 = (x1 - x0) / 2.0;
-      gdouble part          = 0.0;
-
-      k = i * intf->rule_n;
-
-      for (j = 0; j < (glong) r2; j++)
-        part += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-
-      for (j = 0; j < (glong) r2; j++)
-        part += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-
-      res += part;
-
-      if (fabs (part / res) < reltol)
-        break;
-    }
-  }
-
-  return res * delta_x * 0.5;
-}
-
-/**
  * ncm_integral_fixed_integ_vec_mult:
- * @intf: a pointer to #NcmIntegralFixed whose nodes have been populated by
- *   #ncm_integral_fixed_calc_nodes.
- * @f_at_nodes: a #NcmVector of length `(n_nodes - 1) * rule_n` holding the
- *   integrand values evaluated at the abscissae returned by
- *   #ncm_integral_fixed_get_nodes.
+ * @intf: a #NcmIntegralFixed with the weight stored by ncm_integral_fixed_calc_nodes()
+ * @f_at_nodes: the values of $G$ at the nodes of ncm_integral_fixed_get_nodes()
  *
- * Computes the integral $\int F(x) G(x) \mathrm{d}x$ as the dot product of the
- * stored quadrature-weighted nodes (which already contain $w_k F(x_k)$) with
- * @f_at_nodes (the externally evaluated $G(x_k)$), scaled by `delta_x / 2`.
+ * Same as ncm_integral_fixed_integ_mult() with $G$ given at the nodes.
  *
- * Returns: the value of the integral.
+ * Returns: $\int F_w(x)\,G(x)\,\mathrm{d}x$.
  */
 gdouble
 ncm_integral_fixed_integ_vec_mult (NcmIntegralFixed *intf, const NcmVector *f_at_nodes)
@@ -1092,11 +687,11 @@ ncm_integral_fixed_integ_vec_mult (NcmIntegralFixed *intf, const NcmVector *f_at
 
 /**
  * ncm_integral_fixed_get_nodes:
- * @intf: a pointer to #NcmIntegralFixed.
- * @nodes (out): a #NcmVector of length `(n_nodes - 1) * rule_n` to receive the node abscissae.
+ * @intf: a #NcmIntegralFixed
+ * @nodes: the output vector, of length $(n_\mathrm{nodes} - 1)\,r$
  *
- * Fills @nodes with the canonical node abscissae used by
- * #ncm_integral_fixed_calc_nodes, in the same iteration order.
+ * Computes the nodes into @nodes, in the order of the weights stored by
+ * ncm_integral_fixed_calc_nodes().
  */
 void
 ncm_integral_fixed_get_nodes (NcmIntegralFixed *intf, NcmVector *nodes)
@@ -1173,60 +768,46 @@ _ncm_integral_fixed_calib_try (gsl_function *F, gsl_function *G, gdouble xl, gdo
 
 /**
  * ncm_integral_fixed_calibrate: (skip)
- * @F: a pointer to a gsl_function, the integration weight (baked into the nodes).
- * @G: a pointer to a gsl_function, the slowly-varying factor probed at the nodes.
- * @xl: the interval lower limit.
- * @xu: the interval upper limit.
- * @reltol: target relative tolerance.
- * @exact_F_integ: the exact value of $\int F \mathrm{d}x$ over [@xl, @xu] for the
- *   missed-mass guard, or %GSL_NAN to fall back to the reference's own
- *   $\int F \mathrm{d}x$.
- * @max_total_nodes: ceiling on the total node count $(n_\mathrm{nodes}-1)\,r$.
- * @n_nodes_out: (out): receives the selected number of nodes.
- * @rule_n_out: (out): receives the selected Gauss-Legendre rule order.
- * @relerr_out: (out) (nullable): receives the relative error actually achieved,
- *   which is <= @reltol on success and the best found otherwise. Pass %NULL to
- *   keep the built-in per-call warning; pass non-%NULL to silence it and take
- *   responsibility for reporting. Callers that calibrate in a loop should do the
- *   latter and report once, not once per element.
+ * @F: the weight, stored at the nodes
+ * @G: the function multiplying the weight
+ * @xl: the lower limit
+ * @xu: the upper limit
+ * @reltol: the relative tolerance
+ * @exact_F_integ: the exact $\int F$ over [@xl, @xu], or %GSL_NAN
+ * @max_total_nodes: the maximum total number of nodes $(n_\mathrm{nodes} - 1)\,r$
+ * @n_nodes_out: (out): the number of panel edges chosen
+ * @rule_n_out: (out): the number of Gauss-Legendre points per panel chosen
+ * @relerr_out: (out) (nullable): the relative error in $\int F\,G$ reached
  *
- * Searches the $(n_\mathrm{nodes}, \mathrm{rule}_n)$ configuration space for the
- * fixed Gauss-Legendre rule of minimal *total* node count whose estimate of
- * $\int F(x) G(x) \mathrm{d}x$ over [@xl, @xu] matches a high-resolution
- * reference (n_nodes = 1000, rule_n = 7) to within @reltol. The selected
- * configuration must additionally reproduce $\int F \mathrm{d}x$ (via
- * #ncm_integral_fixed_nodes_eval) to within @reltol -- this catches an @F feature
- * narrower than the reference panel width, where the $F\,G$ test alone could
- * false-pass because both reference and trial straddle it. The guard baseline is
- * @exact_F_integ when finite, otherwise the reference's own $\int F$.
+ * Chooses the #NcmIntegralFixed with the fewest total nodes, among rules of 3, 5 and 7
+ * points, whose $\int F\,G$ agrees with a reference to @reltol and whose $\int F$ agrees
+ * to @reltol with @exact_F_integ, or with the reference's own $\int F$ when
+ * @exact_F_integ is not finite. The second test catches features of @F narrower than a
+ * panel, which both integrals of $F\,G$ could miss. The reference uses 7-point panels,
+ * $10\,\mathrm{reltol}^{-0.3}$ of them, from 96 to 2048. For each rule the panel count
+ * is bracketed by growing it geometrically and then found by bisection, assuming the
+ * error decreases with it.
  *
- * For each candidate @rule_n the threshold $n_\mathrm{nodes}$ is bracketed by
- * geometric growth and then pinned exactly by bisection (assuming convergence is
- * monotone in $n_\mathrm{nodes}$), so the returned configuration is the true
- * minimal-total rule rather than a geometric overshoot.
+ * When no configuration within @max_total_nodes meets @reltol, the one with the smallest
+ * error in $\int F\,G$ is used and, if @relerr_out is %NULL, a warning is emitted.
+ * @relerr_out receives the error of the configuration returned, relative to the
+ * reference.
  *
- * If no configuration within @max_total_nodes meets the tolerance, the
- * configuration with the smallest $F\,G$ error seen is used and a warning is
- * emitted.
- *
- * Returns: (transfer full): a newly allocated #NcmIntegralFixed at the selected
- * configuration, with @F already baked into its nodes (see
- * #ncm_integral_fixed_calc_nodes).
+ * Returns: (transfer full): a new #NcmIntegralFixed with @F stored, see
+ * ncm_integral_fixed_calc_nodes().
  */
 NcmIntegralFixed *
 ncm_integral_fixed_calibrate (gsl_function *F, gsl_function *G, gdouble xl, gdouble xu, gdouble reltol, gdouble exact_F_integ, gulong max_total_nodes, guint *n_nodes_out, guint *rule_n_out, gdouble *relerr_out)
 {
-  /* Reference resolution scaled to the target tolerance. A fixed Gauss-Legendre
-   * rule resolves a piecewise-smooth weight at ~4th order, so panels growing as
-   * reltol^(-1/4) keep the reference comfortably more accurate than @reltol while
-   * staying just fine enough to exceed the selected configs (which themselves
-   * grow as the tolerance tightens) - avoiding the cost of a fixed
-   * ultra-high-resolution grid for loose tolerances. Clamped to a sane range. */
+  /* Reference panels growing as reltol^(-0.3), faster than the ~4th-order convergence
+   * of a piecewise-smooth weight, so the reference stays finer than any configuration
+   * that passes */
   const gulong ref_n_nodes      = (gulong) CLAMP ((glong) (10.0 * pow (reltol, -0.3) + 0.5), 96, 2048);
   const gulong ref_rule_n       = 7;
   const guint rule_candidates[] = { 3, 5, 7 };
   gdouble I_ref, denom_I, guard_mass;
   gulong best_n_nodes = 0, best_rule_n = 0, best_total = 0;
+  gdouble best_err = GSL_POSINF;
   gulong fb_n_nodes = 0, fb_rule_n = 0;
   gdouble fb_err     = GSL_POSINF;
   gboolean converged = FALSE;
@@ -1262,6 +843,7 @@ ncm_integral_fixed_calibrate (gsl_function *F, gsl_function *G, gdouble xl, gdou
     gulong n_nodes         = 2;
     gulong last_fail       = 0; /* largest n_nodes seen to fail (0 = none) */
     gulong hi              = 0; /* a passing n_nodes that brackets the threshold (0 = none) */
+    gdouble hi_err         = GSL_POSINF;
     gdouble err_I;
 
     if (n_ceil < 2)
@@ -1284,7 +866,8 @@ ncm_integral_fixed_calibrate (gsl_function *F, gsl_function *G, gdouble xl, gdou
 
       if (ok)
       {
-        hi = n_try;
+        hi     = n_try;
+        hi_err = err_I;
         break;
       }
 
@@ -1312,9 +895,14 @@ ncm_integral_fixed_calibrate (gsl_function *F, gsl_function *G, gdouble xl, gdou
         const gulong mid = lo + (hi - lo) / 2;
 
         if (_ncm_integral_fixed_calib_try (F, G, xl, xu, mid, rule_n, reltol, I_ref, denom_I, guard_mass, &err_I))
-          hi = mid;
+        {
+          hi     = mid;
+          hi_err = err_I;
+        }
         else
+        {
           lo = mid;
+        }
 
         if (err_I < fb_err)
         {
@@ -1333,6 +921,7 @@ ncm_integral_fixed_calibrate (gsl_function *F, gsl_function *G, gdouble xl, gdou
         best_n_nodes = hi;
         best_rule_n  = rule_n;
         best_total   = total;
+        best_err     = hi_err;
         converged    = TRUE;
       }
     }
@@ -1353,7 +942,7 @@ ncm_integral_fixed_calibrate (gsl_function *F, gsl_function *G, gdouble xl, gdou
   }
 
   if (relerr_out != NULL)
-    *relerr_out = converged ? reltol : fb_err;
+    *relerr_out = converged ? best_err : fb_err;
 
   if (n_nodes_out != NULL)
     *n_nodes_out = (guint) best_n_nodes;

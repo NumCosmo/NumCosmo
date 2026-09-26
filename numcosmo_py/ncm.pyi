@@ -222,9 +222,7 @@ def integrate_2dim(
     yf: float,
     epsrel: float,
     epsabs: float,
-    result: float,
-    error: float,
-) -> bool: ...
+) -> typing.Tuple[bool, float, float]: ...
 def integrate_2dim_divonne(
     integ: Integrand2dim,
     xi: float,
@@ -236,50 +234,7 @@ def integrate_2dim_divonne(
     ngiven: int,
     ldxgiven: int,
     xgiven: float,
-    result: float,
-    error: float,
-) -> bool: ...
-def integrate_2dim_divonne_peakfinder(
-    integ: Integrand2dim,
-    xi: float,
-    yi: float,
-    xf: float,
-    yf: float,
-    epsrel: float,
-    epsabs: float,
-    ngiven: int,
-    ldxgiven: int,
-    xgiven: float,
-    nextra: int,
-    peakfinder: typing.Callable[[int, float, int, float, None], None],
-    result: float,
-    error: float,
-) -> bool: ...
-def integrate_2dim_vegas(
-    integ: Integrand2dim,
-    xi: float,
-    yi: float,
-    xf: float,
-    yf: float,
-    epsrel: float,
-    epsabs: float,
-    nstart: int,
-    result: float,
-    error: float,
-) -> bool: ...
-def integrate_3dim(
-    integ: Integrand3dim,
-    xi: float,
-    yi: float,
-    zi: float,
-    xf: float,
-    yf: float,
-    zf: float,
-    epsrel: float,
-    epsabs: float,
-    result: float,
-    error: float,
-) -> bool: ...
+) -> typing.Tuple[bool, float, float]: ...
 def integrate_3dim_divonne(
     integ: Integrand3dim,
     xi: float,
@@ -293,23 +248,7 @@ def integrate_3dim_divonne(
     ngiven: int,
     ldxgiven: int,
     xgiven: float,
-    result: float,
-    error: float,
-) -> bool: ...
-def integrate_3dim_vegas(
-    integ: Integrand3dim,
-    xi: float,
-    yi: float,
-    zi: float,
-    xf: float,
-    yf: float,
-    zf: float,
-    epsrel: float,
-    epsabs: float,
-    nstart: int,
-    result: float,
-    error: float,
-) -> bool: ...
+) -> typing.Tuple[bool, float, float]: ...
 def lapack_dgeev(
     jobvl: int,
     jobvr: int,
@@ -5141,7 +5080,7 @@ class Integral1d(GObject.Object):
 
     Properties from NcmIntegral1d:
       partition -> guint: partition
-        Integral maximum partititon
+        Integral maximum partition
       rule -> guint: rule
         Integration rule
       reltol -> gdouble: reltol
@@ -5230,7 +5169,7 @@ class Integral1dPtr(Integral1d):
 
     Properties from NcmIntegral1d:
       partition -> guint: partition
-        Integral maximum partititon
+        Integral maximum partition
       rule -> guint: rule
         Integration rule
       reltol -> gdouble: reltol
