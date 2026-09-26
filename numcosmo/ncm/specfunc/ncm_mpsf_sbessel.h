@@ -37,27 +37,8 @@
 
 G_BEGIN_DECLS
 
-typedef struct _NcmMpsfSBesselRecur NcmMpsfSBesselRecur;
-
-/**
- * NcmMpsfSBesselRecur:
- *
- * Multi-precision spherical Bessel function recursion structure.
- * This structure holds the state for computing spherical Bessel functions
- * using high-precision MPFR arithmetic with recursion relations.
- */
-struct _NcmMpsfSBesselRecur
-{
-  /*< private >*/
-  guint32 prec;
-  gint32 l;
-  mpq_t q;
-  mpfr_t x;
-  mpfr_t jl[2];
-  mpfr_t temp;
-};
-
 void ncm_mpsf_sbessel (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd);
+
 void ncm_mpsf_sbessel_d (gulong l, gdouble x, mpfr_ptr res, mp_rnd_t rnd);
 void ncm_mpsf_sbessel_free_cache (void);
 

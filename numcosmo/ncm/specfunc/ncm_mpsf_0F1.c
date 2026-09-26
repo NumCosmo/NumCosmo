@@ -25,8 +25,12 @@
 /**
  * NcmMpsf0F1:
  *
- * Multiple precision implementation of the hypergeometric 0F1.
+ * Arbitrary-precision confluent hypergeometric limit function ${}_0F_1$.
  *
+ * Computes ${}_0F_1(b; x) = \sum_{n=0}^\infty x^n / [(b)_n\, n!]$ from its Taylor series
+ * by binary splitting, see #NcmBinSplit, summing until the next term is below the
+ * precision of the result. The splitting buffers come from a thread-safe pool, released
+ * by ncm_mpsf_0F1_free_cache().
  */
 
 #ifdef HAVE_CONFIG_H
@@ -73,7 +77,7 @@ _besselj_bs_free (gpointer p)
   mpz_clear (bs_data->xd);
   mpz_clear (bs_data->tmp);
   g_slice_free (_binsplit_0F1, bs_data);
-  /* Note: NcmBinSplit structure itself is managed by the memory pool */
+  ncm_binsplit_free (bs);
 }
 
 static NcmMemoryPool *__mp = NULL;
@@ -83,10 +87,10 @@ G_LOCK_DEFINE_STATIC (__create_lock);
 /**
  * _ncm_mpsf_0F1_get_bs: (skip)
  *
- * Returns a pointer to a NcmBinSplit structure to be used in the
- * computation of the hypergeometric function ${}_0F_1(b;x)$.
+ * Takes a #NcmBinSplit for the ${}_0F_1$ series from the pool; it must be given back
+ * with ncm_memory_pool_return().
  *
- * Returns: a pointer to a NcmBinSplit structure to be used in the computation of the hypergeometric function ${}_0F_1(b;x)$.
+ * Returns: a pointer to the #NcmBinSplit pointer.
  */
 NcmBinSplit **
 _ncm_mpsf_0F1_get_bs (void)
@@ -137,8 +141,10 @@ NCM_BINSPLIT_DECL (binsplit_0F1_taylor_q, v, u, n, data)
 #define _BINSPLIT_FUNC_A NCM_BINSPLIT_DENC_NULL
 
 #include "ncm/specfunc/ncm_binsplit_eval.c"
-#undef _x
+#undef _xn_bd
+#undef _xd
 #undef _b
+#undef _tmp
 
 static void
 _taylor_0F1 (mpq_t b, mpq_t x, mpfr_ptr res, mp_rnd_t rnd)
@@ -163,12 +169,12 @@ _taylor_0F1 (mpq_t b, mpq_t x, mpfr_ptr res, mp_rnd_t rnd)
 
 /**
  * ncm_mpsf_0F1_q: (skip)
- * @b: ${}_0F_1$ hypergeometric parameters as a rational number $b = q_b$
- * @q: argument as a rational number $x = q_x$
- * @res: mpfr variable containing the result ${}_0F_1(b;x)$
- * @rnd: mpfr rounding mode
+ * @b: the parameter $b$
+ * @q: the argument $x$
+ * @res: the output, at its own precision
+ * @rnd: the rounding mode
  *
- * Computes the Hypergeometric function ${}_0F_1(b;x)$.
+ * Computes ${}_0F_1(b; x)$ into @res.
  */
 void
 ncm_mpsf_0F1_q (mpq_t b, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
@@ -178,12 +184,13 @@ ncm_mpsf_0F1_q (mpq_t b, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 
 /**
  * ncm_mpsf_0F1_d: (skip)
- * @b: ${}_0F_1$ hypergeometric parameters $b$
- * @x: argument $x$
- * @res: mpfr variable containing the result ${}_0F_1(b;x)$
- * @rnd: mpfr rounding mode
+ * @b: the parameter $b$
+ * @x: the argument $x$
+ * @res: the output, at its own precision
+ * @rnd: the rounding mode
  *
- * Computes the Hypergeometric function ${}_0F_1(b;x)$.
+ * Same as ncm_mpsf_0F1_q() with @b and @x converted to rationals that agree with them to
+ * $10^{-15}$, see ncm_rational_coarse_double().
  */
 void
 ncm_mpsf_0F1_d (gdouble b, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
@@ -201,12 +208,12 @@ ncm_mpsf_0F1_d (gdouble b, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
 
 /**
  * ncm_sf_0F1: (skip)
- * @b: ${}_0F_1$ hypergeometric parameters $b$
- * @x: argument $x$
+ * @b: the parameter $b$
+ * @x: the argument $x$
  *
- * Computes the Hypergeometric function ${}_0F_1(b;x)$.
+ * Same as ncm_mpsf_0F1_d() at 53 bits, rounded to nearest.
  *
- * Returns: the value of ${}_0F_1(b;x)$.
+ * Returns: ${}_0F_1(b; x)$.
  */
 gdouble
 ncm_sf_0F1 (gdouble b, gdouble x)
@@ -224,8 +231,7 @@ ncm_sf_0F1 (gdouble b, gdouble x)
 /**
  * ncm_mpsf_0F1_free_cache:
  *
- * Frees all buffers created to compute ncm_mpsf_0F1.
- *
+ * Frees the pool of splitting buffers of the ${}_0F_1$ functions.
  */
 void
 ncm_mpsf_0F1_free_cache (void)

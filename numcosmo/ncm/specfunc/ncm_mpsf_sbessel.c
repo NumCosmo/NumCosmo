@@ -25,14 +25,14 @@
 /**
  * NcmMpsfSBessel:
  *
- * Multiple precision spherical bessel implementation.
+ * Arbitrary-precision spherical Bessel functions $j_\ell(x)$.
  *
- * Implementation of multiple precision spherical Bessel functions using the GNU MPFR
- * library. This module utilizes binary splitting to compute the functions, employing
- * both the Taylor series and asymptotic expansion methods. It ensures high precision,
- * making it suitable for accurate computations in scenarios involving spherical Bessel
- * functions.
- *
+ * For $|x| < \ell$, $j_\ell(x) = x^\ell / (2\ell + 1)!!$ times its Taylor series in
+ * $-x^2/2$, summed by binary splitting (see #NcmBinSplit) until the next term is below
+ * the precision of the result. For $|x| \ge \ell$, the finite closed form
+ * $j_\ell(x) = [\sin(x - \ell\pi/2) P_\ell(x) + \cos(x - \ell\pi/2) Q_\ell(x)] / x$,
+ * whose polynomials in $1/x$ are summed exactly. The splitting buffers come from a
+ * thread-safe pool, released by ncm_mpsf_sbessel_free_cache().
  */
 
 #ifdef HAVE_CONFIG_H
@@ -79,7 +79,7 @@ _besselj_bs_free (gpointer p)
   mpfr_clear (bs_data->sin);
   mpfr_clear (bs_data->cos);
   g_slice_free (_binsplit_spherical_bessel, bs_data);
-  /* Note: NcmBinSplit structure itself is managed by the memory pool */
+  ncm_binsplit_free (bs);
 }
 
 G_LOCK_DEFINE_STATIC (__create_lock);
@@ -132,7 +132,7 @@ NCM_BINSPLIT_DECL (binsplit_spherical_bessel_taylor_q, v, u, n, data)
 #include "ncm/specfunc/ncm_binsplit_eval.c"
 #undef _mq2_2
 
-/* Assymptotic expansion 4F1 */
+/* The polynomials P_l and Q_l of the finite closed form (sincos 0 and 1) */
 
 #define NC_BINSPLIT_EVAL_NAME binsplit_spherical_bessel_assympt
 #define _mq2_2 (((_binsplit_spherical_bessel *) data)->mq2_2)
@@ -187,11 +187,7 @@ _taylor_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
   mpq_neg (data->mq2_2, data->mq2_2);
   mpq_div_2exp (data->mq2_2, data->mq2_2, 1);
 
-  /*mpfr_printf ("# Taylor %ld %Qd | %Qd\n", l, q, data->mq2_2); */
-
   ncm_binsplit_eval_prec (bs, binsplit_spherical_bessel_taylor, 10, mpfr_get_prec (res));
-
-  /*mpfr_printf ("# Taylor %ld %Qd | %Zd %Zd\n", l, q, bs->T, bs->Q); */
 
   mpfr_set_q (res, q, rnd);
   mpfr_pow_ui (res, res, l, rnd);
@@ -282,13 +278,12 @@ _assympt_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 
 /**
  * ncm_mpsf_sbessel: (skip)
- * @l: $\ell$ Spherical Bessel $j_\ell$ parameters as a rational number $\ell = q_\ell$
- * @q: argument as a rational number $x = q_x$
- * @res: mpfr variable containing the result $j_\ell(x)$
- * @rnd: mpfr rounding mode
+ * @l: the order $\ell$
+ * @q: the argument $x$
+ * @res: the output, at its own precision
+ * @rnd: the rounding mode
  *
- * Computes the Spherical Bessel function $j_\ell(x)$.
- *
+ * Computes $j_\ell(x)$ into @res, see #NcmMpsfSBessel.
  */
 void
 ncm_mpsf_sbessel (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
@@ -313,12 +308,13 @@ ncm_mpsf_sbessel (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 
 /**
  * ncm_mpsf_sbessel_d: (skip)
- * @l: $\ell$ Spherical Bessel $j_\ell$ parameters
- * @x: function argument $x$
- * @res: mpfr variable containing the result $j_\ell(x)$
- * @rnd: mpfr rounding mode
+ * @l: the order $\ell$
+ * @x: the argument $x$
+ * @res: the output, at its own precision
+ * @rnd: the rounding mode
  *
- * Computes the Spherical Bessel function $j_\ell(x)$.
+ * Same as ncm_mpsf_sbessel() with @x converted to a rational that agrees with it to
+ * $10^{-15}$, see ncm_rational_coarse_double().
  */
 void
 ncm_mpsf_sbessel_d (gulong l, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
@@ -334,9 +330,7 @@ ncm_mpsf_sbessel_d (gulong l, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
 /**
  * ncm_mpsf_sbessel_free_cache:
  *
- * Frees all buffers created to compute
- * ncm_mpsf_sbessel functions.
- *
+ * Frees the pool of splitting buffers of the spherical Bessel functions.
  */
 void
 ncm_mpsf_sbessel_free_cache (void)

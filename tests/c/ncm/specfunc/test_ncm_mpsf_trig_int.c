@@ -42,6 +42,8 @@ void test_ncm_mpsf_trig_int_sin_cmp_gsl (TestNcmMPSFSTrigInt *test, gconstpointe
 
 void test_ncm_mpsf_trig_int_traps (TestNcmMPSFSTrigInt *test, gconstpointer pdata);
 void test_ncm_mpsf_trig_int_invalid_st (TestNcmMPSFSTrigInt *test, gconstpointer pdata);
+void test_ncm_mpsf_trig_int_odd (void);
+void test_ncm_mpsf_trig_int_threads (void);
 
 #define NTOT 100
 #define XMAX 25.0
@@ -71,7 +73,12 @@ main (gint argc, gchar *argv[])
               &test_ncm_mpsf_trig_int_invalid_st,
               &test_ncm_mpsf_trig_int_free);
 
+  g_test_add_func ("/ncm/sf/trig_int/odd", &test_ncm_mpsf_trig_int_odd);
+  g_test_add_func ("/ncm/sf/trig_int/threads", &test_ncm_mpsf_trig_int_threads);
+
   g_test_run ();
+
+  ncm_mpsf_sin_int_free_cache ();
 }
 
 void
@@ -110,5 +117,78 @@ void
 test_ncm_mpsf_trig_int_invalid_st (TestNcmMPSFSTrigInt *test, gconstpointer pdata)
 {
   g_assert_not_reached ();
+}
+
+/* Si(-x) = -Si(x) exactly, on both branches: x = 1e3 and 5e4 take the asymptotic
+ * series at 53 bits, the others the Taylor series. */
+void
+test_ncm_mpsf_trig_int_odd (void)
+{
+  const gdouble xs[] = {0.25, 3.0, 17.5, 1.0e3, 5.0e4};
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (xs); i++)
+  {
+    g_assert_cmpfloat (ncm_sf_sin_int (-xs[i]), ==, -ncm_sf_sin_int (xs[i]));
+    ncm_assert_cmpdouble_e (ncm_sf_sin_int (-xs[i]), ==, -gsl_sf_Si (xs[i]), 1.0e-7, 0.0);
+  }
+}
+
+#define TRIG_NTHREADS 4
+#define TRIG_NX 64
+
+typedef struct _TrigWorker
+{
+  gdouble res[TRIG_NX];
+} TrigWorker;
+
+static gdouble
+_trig_x (guint i)
+{
+  return 0.5 + 60.0 * i / (TRIG_NX - 1.0);
+}
+
+static gpointer
+_trig_worker (gpointer data)
+{
+  TrigWorker *w = (TrigWorker *) data;
+  guint i;
+
+  for (i = 0; i < TRIG_NX; i++)
+  {
+    MPFR_DECL_INIT (res, 128);
+
+    mpq_t q;
+
+    mpq_init (q);
+    ncm_rational_coarse_double (_trig_x (i), q);
+    ncm_mpsf_sin_int_mpfr (q, res, MPFR_RNDN);
+    w->res[i] = mpfr_get_d (res, MPFR_RNDN);
+    mpq_clear (q);
+  }
+
+  return NULL;
+}
+
+/* Concurrent evaluations give the serial results bit for bit. */
+void
+test_ncm_mpsf_trig_int_threads (void)
+{
+  TrigWorker serial;
+  TrigWorker workers[TRIG_NTHREADS];
+  GThread *threads[TRIG_NTHREADS];
+  guint t, i;
+
+  _trig_worker (&serial);
+
+  for (t = 0; t < TRIG_NTHREADS; t++)
+    threads[t] = g_thread_new ("trig-int", &_trig_worker, &workers[t]);
+
+  for (t = 0; t < TRIG_NTHREADS; t++)
+    g_thread_join (threads[t]);
+
+  for (t = 0; t < TRIG_NTHREADS; t++)
+    for (i = 0; i < TRIG_NX; i++)
+      g_assert_cmpfloat (workers[t].res[i], ==, serial.res[i]);
 }
 
