@@ -25,8 +25,19 @@
 /**
  * NcmSpline:
  *
- * Base class for spline interpolation.
+ * Abstract base class of the one-dimensional interpolating splines.
  *
+ * A spline holds the knots $x_i$, in increasing order, and the values $y_i$, both as
+ * #NcmVector, and must be prepared, see ncm_spline_prepare(), before it is evaluated. The
+ * subclasses define the interpolant: #NcmSplineCubicNotaknot, #NcmSplineCubicD2,
+ * #NcmSplineGsl and others.
+ *
+ * Evaluation does no range check. Outside $[x_0, x_{n-1}]$ the native cubic splines
+ * extrapolate the boundary polynomial, which can be wrong by orders of magnitude, while
+ * #NcmSplineGsl returns NaN. Callers whose abscissa is not known to lie inside must check it.
+ *
+ * The index of the interval containing $x$ comes from a table of uniform buckets built by
+ * ncm_spline_prepare(), or, when enabled, from a GSL accelerator, see ncm_spline_acc().
  */
 
 #ifdef HAVE_CONFIG_H
@@ -42,12 +53,11 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_integration.h>
+#include <gsl/gsl_errno.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct _NcmSplinePrivate
 {
-  /*< private >*/
-  GObject parent_instance;
   gsize len;
   NcmVector *xv;
   NcmVector *yv;
@@ -73,7 +83,6 @@ enum
   PROP_LEN,
   PROP_X,
   PROP_Y,
-  PROP_ACC,
 };
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmSpline, ncm_spline, G_TYPE_OBJECT)
@@ -161,9 +170,6 @@ _ncm_spline_set_property (GObject *object, guint prop_id, const GValue *value, G
 
       break;
     }
-    case PROP_ACC:
-      ncm_spline_acc (s, g_value_get_boolean (value));
-      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -188,9 +194,6 @@ _ncm_spline_get_property (GObject *object, guint prop_id, GValue *value, GParamS
       break;
     case PROP_Y:
       g_value_set_object (value, self->yv);
-      break;
-    case PROP_ACC:
-      g_value_set_boolean (value, self->acc != NULL ? TRUE : FALSE);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -244,8 +247,7 @@ ncm_spline_class_init (NcmSplineClass *klass)
   /**
    * NcmSpline:length:
    *
-   * The spline length (total number of knots).
-   *
+   * The number of knots.
    */
   g_object_class_install_property (object_class,
                                    PROP_LEN,
@@ -258,8 +260,7 @@ ncm_spline_class_init (NcmSplineClass *klass)
   /**
    * NcmSpline:x:
    *
-   * #NcmVector with the spline knots.
-   *
+   * The knot vector.
    */
   g_object_class_install_property (object_class,
                                    PROP_X,
@@ -272,8 +273,7 @@ ncm_spline_class_init (NcmSplineClass *klass)
   /**
    * NcmSpline:y:
    *
-   * #NcmVector with the spline values.
-   *
+   * The value vector.
    */
   g_object_class_install_property (object_class,
                                    PROP_Y,
@@ -301,9 +301,7 @@ ncm_spline_class_init (NcmSplineClass *klass)
  * ncm_spline_copy_empty:
  * @s: a constant #NcmSpline
  *
- * This function copies the spline @s into an initialized empty #NcmSpline of a specific type.
- *
- * Returns: (transfer full): a #NcmSpline
+ * Returns: (transfer full): a new, empty spline of the type of @s.
  */
 NcmSpline *
 ncm_spline_copy_empty (const NcmSpline *s)
@@ -315,10 +313,9 @@ ncm_spline_copy_empty (const NcmSpline *s)
  * ncm_spline_copy:
  * @s: a constant #NcmSpline
  *
- * This function copies the two #NcmVector of the spline @s into those two
- * #NcmVector of a new #NcmSpline.
+ * Copies @s, with copies of its knot and value vectors, and prepares the copy.
  *
- * Returns: (transfer full): a #NcmSpline
+ * Returns: (transfer full): a new #NcmSpline.
  */
 NcmSpline *
 ncm_spline_copy (const NcmSpline *s)
@@ -344,15 +341,13 @@ ncm_spline_copy (const NcmSpline *s)
 /**
  * ncm_spline_new:
  * @s: a constant #NcmSpline
- * @xv: #NcmVector of knots
- * @yv: #NcmVector of the values of the function, to be interpolated, computed at @xv
- * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it
+ * @xv: the knots
+ * @yv: the values at @xv
+ * @init: whether to prepare the new spline
  *
- * This function returns a new #NcmSpline, where the knots of this new spline are given
- * in the #NcmVector @xv and the values of the function, at those knots, to be interpolated are
- * given in the #NcmVector @yv.
+ * Creates a spline of the type of @s with @xv and @yv, see ncm_spline_set().
  *
- * Returns: (transfer full): a new #NcmSpline
+ * Returns: (transfer full): a new #NcmSpline.
  */
 NcmSpline *
 ncm_spline_new (const NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
@@ -367,15 +362,13 @@ ncm_spline_new (const NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
 /**
  * ncm_spline_new_array:
  * @s: a constant #NcmSpline
- * @x: (element-type double): GArray of knots
- * @y: (element-type double): GArray of the values of the function, to be interpolated, computed at @x
- * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it
+ * @x: (element-type double): the knots
+ * @y: (element-type double): the values at @x
+ * @init: whether to prepare the new spline
  *
- * This function returns a new #NcmSpline, where the knots of this new spline are given
- * in the GArray @x and the values of the function, at those knots, to be interpolated are
- * given in the GArray @y.
+ * Same as ncm_spline_new() with the knots and values in arrays; the vectors share their data.
  *
- * Returns: (transfer full): a new #NcmSpline
+ * Returns: (transfer full): a new #NcmSpline.
  */
 NcmSpline *
 ncm_spline_new_array (const NcmSpline *s, GArray *x, GArray *y, gboolean init)
@@ -390,16 +383,15 @@ ncm_spline_new_array (const NcmSpline *s, GArray *x, GArray *y, gboolean init)
 /**
  * ncm_spline_new_data:
  * @s: a constant #NcmSpline
- * @x: array of knots
- * @y: array of the values of the function, to be interpolated, computed at @x
+ * @x: the knots
+ * @y: the values at @x
  * @len: length of @x and @y
- * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it
+ * @init: whether to prepare the new spline
  *
- * This function returns a new #NcmSpline, where the knots of this new spline are given
- * in the array @x and the values of the function, at those knots, to be interpolated are
- * given in the array @y.
+ * Same as ncm_spline_new() with the knots and values in C arrays, which are used in place,
+ * not copied, and must outlive the spline.
  *
- * Returns: (transfer full): a new #NcmSpline
+ * Returns: (transfer full): a new #NcmSpline.
  */
 NcmSpline *
 ncm_spline_new_data (const NcmSpline *s, gdouble *x, gdouble *y, gsize len, gboolean init)
@@ -414,14 +406,14 @@ ncm_spline_new_data (const NcmSpline *s, gdouble *x, gdouble *y, gsize len, gboo
 /**
  * ncm_spline_set:
  * @s: a #NcmSpline
- * @xv: #NcmVector of knots
- * @yv: #NcmVector of the values of the function, to be interpolated, computed at @xv
- * @init: TRUE to prepare @s or FALSE to not prepare it
+ * @xv: the knots
+ * @yv: the values at @xv
+ * @init: whether to prepare @s
  *
- * This function sets both @xv and @yv vectors to @s.
- * The two vectors must have the same length.
+ * Sets the knot and value vectors of @s, keeping references to them. Aborts if their
+ * lengths differ or are below ncm_spline_min_size().
  *
- * Returns: (transfer none): a #NcmSpline
+ * Returns: (transfer none): @s.
  */
 NcmSpline *
 ncm_spline_set (NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
@@ -491,7 +483,7 @@ ncm_spline_set (NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
  *
  * Increases the reference count of @s by one.
  *
- * Returns: (transfer full): @s
+ * Returns: (transfer full): @s.
  */
 NcmSpline *
 ncm_spline_ref (NcmSpline *s)
@@ -503,8 +495,7 @@ ncm_spline_ref (NcmSpline *s)
  * ncm_spline_free:
  * @s: a #NcmSpline
  *
- * Atomically decrements the reference count of @s by one. If the reference count drops to 0,
- * all memory allocated by @s is released.
+ * Decreases the reference count of @s by one.
  */
 void
 ncm_spline_free (NcmSpline *s)
@@ -516,8 +507,7 @@ ncm_spline_free (NcmSpline *s)
  * ncm_spline_clear:
  * @s: a #NcmSpline
  *
- * Atomically decrements the reference count of @s by one. If the reference count drops to 0,
- * all memory allocated by @s is released. The pointer is set to NULL.
+ * If *@s is not %NULL, decreases its reference count by one and sets *@s to %NULL.
  */
 void
 ncm_spline_clear (NcmSpline **s)
@@ -528,16 +518,11 @@ ncm_spline_clear (NcmSpline **s)
 /**
  * ncm_spline_acc:
  * @s: a #NcmSpline
- * @enable: a boolean
+ * @enable: whether to use a GSL accelerator
  *
- * Enables or disables spline accelerator. Note that, if
- * enabled, the spline becomes non-reentrant. In other words,
- * if @enable is TRUE, the spline evaluation is not thread safe.
- * Therefore, it should not be called concomitantly by two different threads.
- *
- * Warning: the accelerator must be reset if the spline's size changes, otherwise,
- * it can access an out-of-bound index.
- *
+ * Enables or disables the GSL accelerator, which caches the last interval found. With it,
+ * the evaluation modifies @s and must not run in two threads at once. The choice takes effect
+ * at the next ncm_spline_prepare().
  */
 void
 ncm_spline_acc (NcmSpline *s, gboolean enable)
@@ -560,10 +545,7 @@ ncm_spline_acc (NcmSpline *s, gboolean enable)
  * ncm_spline_peek_acc: (skip)
  * @s: a #NcmSpline
  *
- * This function returns the spline accelerator if it is enabled.
- * Otherwise, it returns NULL.
- *
- * Returns: (transfer none): a #gsl_interp_accel
+ * Returns: (transfer none) (nullable): the GSL accelerator, or %NULL if disabled.
  */
 gsl_interp_accel *
 ncm_spline_peek_acc (NcmSpline *s)
@@ -576,13 +558,10 @@ ncm_spline_peek_acc (NcmSpline *s)
 /**
  * ncm_spline_set_len:
  * @s: a #NcmSpline
- * @len: number of knots in the spline
+ * @len: the number of knots
  *
- * This function sets @len as the length of the spline,
- * it allocates the necessary #NcmVector. If it is already
- * allocated with different length it frees the current vectors
- * and allocates new ones.
- *
+ * Replaces the knot and value vectors by new ones of length @len when it differs from the
+ * current length.
  */
 void
 ncm_spline_set_len (NcmSpline *s, guint len)
@@ -607,9 +586,7 @@ ncm_spline_set_len (NcmSpline *s, guint len)
  * ncm_spline_get_len:
  * @s: a #NcmSpline
  *
- * This function gets the length of the spline.
- *
- * Returns: spline's size.
+ * Returns: the number of knots.
  */
 guint
 ncm_spline_get_len (NcmSpline *s)
@@ -622,11 +599,10 @@ ncm_spline_get_len (NcmSpline *s)
 /**
  * ncm_spline_set_xv:
  * @s: a #NcmSpline
- * @xv: #NcmVector of knots
- * @init: TRUE to prepare @s or FALSE to not prepare it
+ * @xv: the knots
+ * @init: whether to prepare @s
  *
- * This function sets @xv as the knot vector of the spline.
- *
+ * Replaces the knot vector, see ncm_spline_set().
  */
 void
 ncm_spline_set_xv (NcmSpline *s, NcmVector *xv, gboolean init)
@@ -639,12 +615,10 @@ ncm_spline_set_xv (NcmSpline *s, NcmVector *xv, gboolean init)
 /**
  * ncm_spline_set_yv:
  * @s: a #NcmSpline
- * @yv: #NcmVector of the values of the function to be interpolated
- * @init: TRUE to prepare @s or FALSE to not prepare it
+ * @yv: the values at the knots
+ * @init: whether to prepare @s
  *
- * This function sets @yv as the function values vector. This #NcmVector @yv
- * comprises the function values computed at the knots of the spline.
- *
+ * Replaces the value vector, see ncm_spline_set().
  */
 void
 ncm_spline_set_yv (NcmSpline *s, NcmVector *yv, gboolean init)
@@ -657,13 +631,11 @@ ncm_spline_set_yv (NcmSpline *s, NcmVector *yv, gboolean init)
 /**
  * ncm_spline_set_array:
  * @s: a #NcmSpline
- * @x: (element-type double): GArray of knots
- * @y: (element-type double): GArray of the values of the function, to be interpolated, computed at @x
- * @init: TRUE to prepare @s or FALSE to not prepare it
+ * @x: (element-type double): the knots
+ * @y: (element-type double): the values at @x
+ * @init: whether to prepare @s
  *
- * This function sets @x as the knot vector and @y as the function values vector
- * of the spline.
- *
+ * Same as ncm_spline_set() with the knots and values in arrays; the vectors share their data.
  */
 void
 ncm_spline_set_array (NcmSpline *s, GArray *x, GArray *y, gboolean init)
@@ -679,14 +651,13 @@ ncm_spline_set_array (NcmSpline *s, GArray *x, GArray *y, gboolean init)
 /**
  * ncm_spline_set_data_static:
  * @s: a #NcmSpline
- * @x: array of knots
- * @y: array of the values of the function, to be interpolated, computed at @x
+ * @x: the knots
+ * @y: the values at @x
  * @len: length of @x and @y
- * @init: TRUE to prepare @s or FALSE to not prepare it
+ * @init: whether to prepare @s
  *
- * This function sets @x as the knot vector and @y as the function values vector
- * of the spline.
- *
+ * Same as ncm_spline_set() with the knots and values in C arrays, which are used in place,
+ * not copied, and must outlive the spline.
  */
 void
 ncm_spline_set_data_static (NcmSpline *s, gdouble *x, gdouble *y, gsize len, gboolean init)
@@ -703,9 +674,7 @@ ncm_spline_set_data_static (NcmSpline *s, gdouble *x, gdouble *y, gsize len, gbo
  * ncm_spline_get_xv:
  * @s: a #NcmSpline
  *
- * This function returns the @s #NcmVector of knots.
- *
- * Returns: (transfer full): a #NcmVector
+ * Returns: (transfer full): the knot vector, %NULL before it is set.
  */
 NcmVector *
 ncm_spline_get_xv (NcmSpline *s)
@@ -722,9 +691,7 @@ ncm_spline_get_xv (NcmSpline *s)
  * ncm_spline_get_yv:
  * @s: a #NcmSpline
  *
- * This function returns the @s #NcmVector of the values of the function to be interpolated.
- *
- * Returns: (transfer full): a #NcmVector
+ * Returns: (transfer full): the value vector, %NULL before it is set.
  */
 NcmVector *
 ncm_spline_get_yv (NcmSpline *s)
@@ -741,9 +708,7 @@ ncm_spline_get_yv (NcmSpline *s)
  * ncm_spline_peek_xv:
  * @s: a #NcmSpline
  *
- * This function returns the @s #NcmVector of knots.
- *
- * Returns: (transfer none): a #NcmVector
+ * Returns: (transfer none): the knot vector, %NULL before it is set.
  */
 NcmVector *
 ncm_spline_peek_xv (NcmSpline *s)
@@ -757,9 +722,7 @@ ncm_spline_peek_xv (NcmSpline *s)
  * ncm_spline_peek_yv:
  * @s: a #NcmSpline
  *
- * This function returns the @s #NcmVector of the values of the function to be interpolated.
- *
- * Returns: (transfer none): a #NcmVector
+ * Returns: (transfer none): the value vector, %NULL before it is set.
  */
 NcmVector *
 ncm_spline_peek_yv (NcmSpline *s)
@@ -772,11 +735,10 @@ ncm_spline_peek_yv (NcmSpline *s)
 /**
  * ncm_spline_get_bounds:
  * @s: a #NcmSpline
- * @lb: (out): spline lower bound
- * @ub: (out): spline upper bound
+ * @lb: (out): the first knot
+ * @ub: (out): the last knot
  *
- * This function returns the lower and upper bound of @s.
- *
+ * Gets the interval spanned by the knots.
  */
 void
 ncm_spline_get_bounds (NcmSpline *s, gdouble *lb, gdouble *ub)
@@ -793,9 +755,7 @@ ncm_spline_get_bounds (NcmSpline *s, gdouble *lb, gdouble *ub)
  * ncm_spline_is_init:
  * @s: a #NcmSpline
  *
- * This function returns TRUE if @s is initialized or FALSE otherwise.
- *
- * Returns: TRUE if @s is initialized or FALSE otherwise.
+ * Returns: whether @s was prepared since its creation.
  */
 gboolean
 ncm_spline_is_init (NcmSpline *s)
@@ -809,10 +769,9 @@ ncm_spline_is_init (NcmSpline *s)
  * ncm_spline_prepare:
  * @s: a #NcmSpline
  *
- * This function prepares the spline @s such that one can evaluate it (#ncm_spline_eval), as well as
- * to compute its first and second derivatives (#ncm_spline_eval_deriv, #ncm_spline_eval_deriv2)
- * and integration (#ncm_spline_eval_integ).
- *
+ * Computes the interpolant from the knots and values, and the table of buckets used to find
+ * intervals, see ncm_spline_post_prepare(). Required before evaluation, and after any change
+ * of the knots or values.
  */
 void
 ncm_spline_prepare (NcmSpline *s)
@@ -833,16 +792,9 @@ static guint _ncm_spline_get_index_stride (const NcmSpline *s, const gdouble x);
  * ncm_spline_post_prepare:
  * @s: a #NcmSpline
  *
- * Computes lookup buckets for the spline @s to enable efficient evaluations
- * using #ncm_spline_eval. This function is always called by #ncm_spline_prepare()
- * after all necessary preparations are completed.
- *
- * It exists separately because some objects (e.g., #NcmSpline2d) prepare the
- * spline without calling #ncm_spline_prepare(). These objects must explicitly
- * invoke this function to perform the required post-processing.
- *
- * For normal use, this function should never be called directly.
- *
+ * Builds the table of uniform buckets used to find the interval of $x$, and chooses the
+ * search according to the stride of the knots and the accelerator. ncm_spline_prepare() calls
+ * it; objects that prepare a spline by other means, such as #NcmSpline2d, must call it too.
  */
 void
 ncm_spline_post_prepare (NcmSpline *s)
@@ -898,9 +850,8 @@ ncm_spline_post_prepare (NcmSpline *s)
  * ncm_spline_prepare_base:
  * @s: a #NcmSpline
  *
- * This function computes the second derivatives of @s and it is used to prepare a
- * bi-dimensional spline.
- *
+ * Computes the coefficients a two-dimensional spline needs from @s, for a cubic spline
+ * its second derivatives, without the rest of ncm_spline_prepare().
  */
 
 void
@@ -913,17 +864,12 @@ ncm_spline_prepare_base (NcmSpline *s)
 /**
  * ncm_spline_eval:
  * @s: a constant #NcmSpline
- * @x: x-coordinate value
+ * @x: the point
  *
- * Evaluates the spline at @x. This is one of the hottest functions in the
- * library and performs no range check: outside [x[0], x[n-1]] it silently
- * extrapolates, evaluating the boundary interval's polynomial at a @x it was
- * never fitted to. A cubic extrapolated even slightly past a knot can be off
- * by orders of magnitude with no diagnostic, so callers whose domain is not
- * statically known must clamp or check @x themselves against the first and
- * last entries of ncm_spline_peek_xv().
+ * Evaluates the interpolant at @x, with no range check; see #NcmSpline for the behaviour
+ * outside the knots.
  *
- * Returns: The interpolated value of a function computed at @x.
+ * Returns: the interpolated value at @x.
  */
 
 gdouble
@@ -947,17 +893,13 @@ _ncm_spline_eval_idx_not_implemented (const NcmSpline *s, const gdouble x, const
 /**
  * ncm_spline_eval_idx:
  * @s: a constant #NcmSpline
- * @x: x-coordinate value
- * @i: index of the lower knot
+ * @x: the point
+ * @i: index of the interval, $x_i \le x < x_{i+1}$
  *
- * Evaluates the spline at @x using the provided index @i. This function
- * is useful when multiple splines share the same x vector and the index
- * is already known, avoiding redundant binary searches.
+ * Same as ncm_spline_eval() with the interval given, for splines that share their knots.
+ * Aborts for a type that does not implement it.
  *
- * The index @i should correspond to the interval containing @x, i.e.,
- * x[i] <= x < x[i+1].
- *
- * Returns: The interpolated value of a function computed at @x.
+ * Returns: the interpolated value at @x.
  */
 
 gdouble
@@ -969,10 +911,9 @@ ncm_spline_eval_idx (const NcmSpline *s, const gdouble x, const gsize i)
 /**
  * ncm_spline_eval_deriv:
  * @s: a constant #NcmSpline
- * @x: x-coordinate value
+ * @x: the point
  *
- *
- * Returns: The derivative of an interpolated function computed at @x.
+ * Returns: the first derivative of the interpolant at @x.
  */
 
 gdouble
@@ -996,17 +937,13 @@ _ncm_spline_deriv_idx_not_implemented (const NcmSpline *s, const gdouble x, cons
 /**
  * ncm_spline_eval_deriv_idx:
  * @s: a constant #NcmSpline
- * @x: x-coordinate value
- * @i: index of the lower knot
+ * @x: the point
+ * @i: index of the interval, $x_i \le x < x_{i+1}$
  *
- * Evaluates the derivative of the spline at @x using the provided index @i.
- * This function is useful when multiple splines share the same x vector and
- * the index is already known, avoiding redundant binary searches.
+ * Same as ncm_spline_eval_deriv() with the interval given. Aborts for a type that does not
+ * implement it.
  *
- * The index @i should correspond to the interval containing @x, i.e.,
- * x[i] <= x < x[i+1].
- *
- * Returns: The derivative of an interpolated function computed at @x.
+ * Returns: the first derivative of the interpolant at @x.
  */
 
 gdouble
@@ -1018,10 +955,9 @@ ncm_spline_eval_deriv_idx (const NcmSpline *s, const gdouble x, const gsize i)
 /**
  * ncm_spline_eval_deriv2:
  * @s: a constant #NcmSpline
- * @x: x-coordinate value
+ * @x: the point
  *
- *
- * Returns: The second derivative of an interpolated function computed at @x.
+ * Returns: the second derivative of the interpolant at @x.
  */
 
 gdouble
@@ -1033,10 +969,9 @@ ncm_spline_eval_deriv2 (const NcmSpline *s, const gdouble x)
 /**
  * ncm_spline_eval_deriv_nmax:
  * @s: a constant #NcmSpline
- * @x: x-coordinate value
+ * @x: the point
  *
- *
- * Returns: The highest non null derivative of an interpolated function computed at @x.
+ * Returns: the highest nonzero derivative of the interpolant at @x, the third for a cubic.
  */
 
 gdouble
@@ -1048,16 +983,20 @@ ncm_spline_eval_deriv_nmax (const NcmSpline *s, const gdouble x)
 /**
  * ncm_spline_eval_integ:
  * @s: a constant #NcmSpline
- * @x0: lower integration limit
- * @x1: upper integration limit
+ * @x0: the lower limit
+ * @x1: the upper limit
  *
+ * Limits in decreasing order give minus the integral over the reversed interval.
  *
- * Returns: The numerical integral of an interpolated function over the range [@x0, @x1].
+ * Returns: $\int_{x_0}^{x_1} s(x)\,\mathrm{d}x$ of the interpolant $s$.
  */
 
 gdouble
 ncm_spline_eval_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
 {
+  if (x1 < x0)
+    return -NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->integ (s, x1, x0);
+
   return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->integ (s, x0, x1);
 }
 
@@ -1076,25 +1015,23 @@ _ncm_spline_integ_idx_not_implemented (const NcmSpline *s, const gdouble xi, con
 /**
  * ncm_spline_eval_integ_idx:
  * @s: a constant #NcmSpline
- * @xi: lower integration limit
- * @i: index of the lower knot for @xi
- * @xf: upper integration limit
- * @f: index of the lower knot for @xf
+ * @xi: the lower limit
+ * @i: index of the interval of @xi
+ * @xf: the upper limit
+ * @f: index of the interval of @xf
  *
- * Evaluates the integral of the spline from @xi to @xf using the provided
- * indices @i and @f. This function is useful when multiple splines share
- * the same x vector and the indices are already known, avoiding redundant
- * binary searches.
+ * Same as ncm_spline_eval_integ() with the intervals given. Aborts for a type that does not
+ * implement it.
  *
- * The indices should correspond to the intervals containing the limits, i.e.,
- * x[@i] <= @xi < x[@i+1] and x[@f] <= @xf < x[@f+1].
- *
- * Returns: The numerical integral of an interpolated function over the range [@xi, @xf].
+ * Returns: $\int_{x_i}^{x_f} s(x)\,\mathrm{d}x$.
  */
 
 gdouble
 ncm_spline_eval_integ_idx (const NcmSpline *s, const gdouble xi, const gsize i, const gdouble xf, const gsize f)
 {
+  if (xf < xi)
+    return -NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->integ_idx (s, xf, f, xi, i);
+
   return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->integ_idx (s, xi, i, xf, f);
 }
 
@@ -1102,8 +1039,7 @@ ncm_spline_eval_integ_idx (const NcmSpline *s, const gdouble xi, const gsize i, 
  * ncm_spline_is_empty:
  * @s: a constant #NcmSpline
  *
- *
- * Returns: TRUE If @s is empty or FALSE otherwise.
+ * Returns: whether @s has no knots and values set.
  */
 
 gboolean
@@ -1118,8 +1054,7 @@ ncm_spline_is_empty (const NcmSpline *s)
  * ncm_spline_min_size:
  * @s: a constant #NcmSpline
  *
- *
- * Returns: Minimum number of knots required.
+ * Returns: the minimum number of knots of the type of @s.
  */
 
 gsize
@@ -1250,10 +1185,11 @@ _ncm_spline_get_index_stride (const NcmSpline *s, const gdouble x)
 /**
  * ncm_spline_get_index:
  * @s: a constant #NcmSpline
- * @x: a value of the abscissa axis
+ * @x: the point
  *
+ * Finds the interval of @x, clamped to the first and last intervals outside the knots.
  *
- * Returns: The index of the lower knot of the interval @x belongs to.
+ * Returns: the index $i$ with $x_i \le x < x_{i+1}$.
  */
 guint
 ncm_spline_get_index (const NcmSpline *s, const gdouble x)
@@ -1267,13 +1203,11 @@ ncm_spline_get_index (const NcmSpline *s, const gdouble x)
  * ncm_spline_curvature_density:
  * @s: a #NcmSpline
  * @ctype: a #NcmSplineCurvatureType
- * @x: a value of the abscissa axis
+ * @x: the point
  *
- * Evaluates the curvature density $c(x)$ of the interpolated function at @x,
- * as selected by @ctype (see #NcmSplineCurvatureType). The spline must be
- * prepared.
+ * Evaluates the curvature density $c(x)$ selected by @ctype. @s must be prepared.
  *
- * Returns: the curvature density $c(@x)$.
+ * Returns: $c(x)$.
  */
 gdouble
 ncm_spline_curvature_density (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble x)
@@ -1298,6 +1232,51 @@ ncm_spline_curvature_density (NcmSpline *s, NcmSplineCurvatureType ctype, const 
   }
 }
 
+/* Relative accuracy of the curvature integrals, reached on each knot interval */
+#define NCM_SPLINE_CURVATURE_RELTOL (1.0e-10)
+
+/*
+ * Integrates F over [xi, xf] one knot interval of s at a time, where the curvature density,
+ * and so the integrand, is smooth; over the whole range its kinks at the knots would limit
+ * the accuracy. Aborts if an interval fails to converge.
+ */
+static gdouble
+_ncm_spline_integ_by_knots (NcmSpline *s, gsl_function *F, const gdouble xi, const gdouble xf, const gchar *func)
+{
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  NcmVector *xv                 = ncm_spline_peek_xv (s);
+  const guint len               = ncm_vector_len (xv);
+  gdouble a                     = xi;
+  gdouble total                 = 0.0;
+  guint i                       = 0;
+
+  while (a < xf)
+  {
+    gdouble b = xf;
+    gdouble result, error;
+    gint status;
+
+    while ((i < len) && (ncm_vector_get (xv, i) <= a))
+      i++;
+
+    if ((i < len) && (ncm_vector_get (xv, i) < xf))
+      b = ncm_vector_get (xv, i);
+
+    status = gsl_integration_qag (F, a, b, 0.0, NCM_SPLINE_CURVATURE_RELTOL, NCM_INTEGRAL_PARTITION, 6, *w, &result, &error);
+
+    if (status != GSL_SUCCESS)
+      g_error ("%s: the integral over [%.15g, %.15g] did not reach the relative tolerance %.1e: %s.",
+               func, a, b, NCM_SPLINE_CURVATURE_RELTOL, gsl_strerror (status));
+
+    total += result;
+    a      = b;
+  }
+
+  ncm_memory_pool_return (w);
+
+  return total;
+}
+
 typedef struct _NcmSplineCurvatureArg
 {
   NcmSpline *s;
@@ -1318,25 +1297,25 @@ _ncm_spline_curvature_lp_integrand (gdouble x, gpointer data)
  * ncm_spline_curvature_lp_norm:
  * @s: a #NcmSpline
  * @ctype: a #NcmSplineCurvatureType
- * @p: the norm order $p > 0$
- * @xi: the lower integration limit
- * @xf: the upper integration limit
+ * @p: the order $p > 0$
+ * @xi: the lower limit
+ * @xf: the upper limit
  *
- * Computes the domain-normalized $L_p$ norm of the curvature density $c(x)$
- * (selected by @ctype) over the interval [@xi, @xf],
+ * Computes the $L_p$ norm of the curvature density normalized by the interval,
  * $$N_p = \left(\frac{1}{x_f - x_i}\int_{x_i}^{x_f} |c(x)|^p\,\mathrm{d}x\right)^{1/p}.$$
- * The case @p = 2 yields the root-mean-square curvature; as $p \to \infty$ the
- * result approaches ncm_spline_curvature_max(). The spline must be prepared.
+ * $p = 2$ gives the root-mean-square curvature, and $p \to \infty$ tends to
+ * ncm_spline_curvature_max(). The integral is computed on each knot interval, where $c(x)$ is
+ * smooth, to a relative accuracy of $10^{-10}$; aborts if an interval does not converge. @s must
+ * be prepared.
  *
- * Returns: the curvature $L_p$ norm $N_p$.
+ * Returns: $N_p$.
  */
 gdouble
 ncm_spline_curvature_lp_norm (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble p, const gdouble xi, const gdouble xf)
 {
-  gsl_integration_workspace **w = ncm_integral_get_workspace ();
-  NcmSplineCurvatureArg arg     = {s, ctype, p};
+  NcmSplineCurvatureArg arg = {s, ctype, p};
   gsl_function F;
-  gdouble result, error;
+  gdouble result;
 
   g_assert_cmpfloat (p, >, 0.0);
   g_assert_cmpfloat (xf, >, xi);
@@ -1344,9 +1323,7 @@ ncm_spline_curvature_lp_norm (NcmSpline *s, NcmSplineCurvatureType ctype, const 
   F.function = &_ncm_spline_curvature_lp_integrand;
   F.params   = &arg;
 
-  gsl_integration_qag (&F, xi, xf, 1.0e-9, 0.0, NCM_INTEGRAL_PARTITION, 6, *w, &result, &error);
-
-  ncm_memory_pool_return (w);
+  result = _ncm_spline_integ_by_knots (s, &F, xi, xf, "ncm_spline_curvature_lp_norm");
 
   return pow (result / (xf - xi), 1.0 / p);
 }
@@ -1381,29 +1358,25 @@ _ncm_spline_curvature_weight_integrand (gdouble x, gpointer data)
  * ncm_spline_curvature_weighted_lp_norm:
  * @s: a #NcmSpline
  * @ctype: a #NcmSplineCurvatureType
- * @p: the norm order $p > 0$
- * @weight: a #NcmSpline holding the non-negative weight density $W(x)$
- * @xi: the lower integration limit
- * @xf: the upper integration limit
+ * @p: the order $p > 0$
+ * @weight: a #NcmSpline with the weight $W(x) \ge 0$
+ * @xi: the lower limit
+ * @xf: the upper limit
  *
- * Computes the weight-normalized $L_p$ norm of the curvature density $c(x)$
- * (selected by @ctype) over the interval [@xi, @xf],
- * $$N_p = \left(\frac{\int_{x_i}^{x_f} W(x)\,|c(x)|^p\,\mathrm{d}x}{\int_{x_i}^{x_f} W(x)\,\mathrm{d}x}\right)^{1/p}.$$
- * A constant @weight recovers ncm_spline_curvature_lp_norm(). The weight encodes
- * where curvature is penalized (large $W$) versus tolerated (small $W$), turning
- * the global curvature functional into a local one. @weight must share the
- * abscissa of @s and be non-negative with a positive integral over [@xi, @xf];
- * both splines must be prepared.
+ * Computes the $L_p$ norm of the curvature density weighted by $W$,
+ * $$N_p = \left(\frac{\int_{x_i}^{x_f} W(x)\,|c(x)|^p\,\mathrm{d}x}{\int_{x_i}^{x_f} W(x)\,\mathrm{d}x}\right)^{1/p},$$
+ * which is ncm_spline_curvature_lp_norm() for a constant $W$. Both integrals are computed on each
+ * knot interval of @s to a relative accuracy of $10^{-10}$; aborts if an interval does not
+ * converge. Both splines must be prepared, and $\int W$ must be positive; aborts otherwise.
  *
- * Returns: the weighted curvature $L_p$ norm $N_p$.
+ * Returns: $N_p$.
  */
 gdouble
 ncm_spline_curvature_weighted_lp_norm (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble p, NcmSpline *weight, const gdouble xi, const gdouble xf)
 {
-  gsl_integration_workspace **w     = ncm_integral_get_workspace ();
   NcmSplineCurvatureWeightedArg arg = {s, weight, ctype, p};
   gsl_function F;
-  gdouble num, wnorm, error;
+  gdouble num, wnorm;
 
   g_assert_cmpfloat (p, >, 0.0);
   g_assert_cmpfloat (xf, >, xi);
@@ -1411,12 +1384,10 @@ ncm_spline_curvature_weighted_lp_norm (NcmSpline *s, NcmSplineCurvatureType ctyp
   F.params = &arg;
 
   F.function = &_ncm_spline_curvature_weighted_lp_integrand;
-  gsl_integration_qag (&F, xi, xf, 1.0e-9, 0.0, NCM_INTEGRAL_PARTITION, 6, *w, &num, &error);
+  num        = _ncm_spline_integ_by_knots (s, &F, xi, xf, "ncm_spline_curvature_weighted_lp_norm");
 
   F.function = &_ncm_spline_curvature_weight_integrand;
-  gsl_integration_qag (&F, xi, xf, 1.0e-9, 0.0, NCM_INTEGRAL_PARTITION, 6, *w, &wnorm, &error);
-
-  ncm_memory_pool_return (w);
+  wnorm      = _ncm_spline_integ_by_knots (s, &F, xi, xf, "ncm_spline_curvature_weighted_lp_norm");
 
   g_assert_cmpfloat (wnorm, >, 0.0);
 
@@ -1430,13 +1401,10 @@ ncm_spline_curvature_weighted_lp_norm (NcmSpline *s, NcmSplineCurvatureType ctyp
  * @xi: the lower limit
  * @xf: the upper limit
  *
- * Computes the maximum absolute curvature density $\|c\|_\infty = \max_{x}
- * |c(x)|$ over [@xi, @xf] (the $p \to \infty$ limit of
- * ncm_spline_curvature_lp_norm()). The extremum is searched over the spline
- * knots inside the interval and a refining grid; intended as a diagnostic
- * rather than for use inside a likelihood. The spline must be prepared.
+ * Estimates $\max_x |c(x)|$ over [@xi, @xf] from the knots inside the interval and a uniform
+ * grid of $20 n$ points, for $n$ knots. @s must be prepared.
  *
- * Returns: the maximum absolute curvature density.
+ * Returns: the estimated maximum of $|c(x)|$.
  */
 gdouble
 ncm_spline_curvature_max (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble xi, const gdouble xf)

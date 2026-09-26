@@ -27,6 +27,7 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include <gsl/gsl_errno.h>
 
 #include <glib.h>
 #include <gsl/gsl_poly.h>
@@ -241,6 +242,271 @@ _test_ncm_spline_add_tests (void ( *tnew ) (TestNcmSpline *test, gconstpointer p
   }
 }
 
+/* Not-a-knot reproduces a cubic exactly, also where it extrapolates the boundary cubics */
+static void
+test_ncm_spline_cubic_notaknot_extrapolates (void)
+{
+  NcmVector *xv = ncm_vector_new (11);
+  NcmVector *yv = ncm_vector_new (11);
+  NcmSpline *s;
+  const gdouble xs[] = {-0.3, 0.37, 1.2};
+  guint i;
+
+  for (i = 0; i < 11; i++)
+  {
+    const gdouble x = 0.1 * i;
+
+    ncm_vector_set (xv, i, x);
+    ncm_vector_set (yv, i, x * x * x - 2.0 * x);
+  }
+
+  s = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
+
+  for (i = 0; i < G_N_ELEMENTS (xs); i++)
+  {
+    const gdouble x = xs[i];
+
+    g_assert_cmpfloat (fabs (ncm_spline_eval (s, x) - (x * x * x - 2.0 * x)), <, 2.0e-14);
+    g_assert_cmpfloat (fabs (ncm_spline_eval_deriv (s, x) - (3.0 * x * x - 2.0)), <, 2.0e-13);
+  }
+
+  ncm_spline_free (s);
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+}
+
+/* With the GSL error handler off, NcmSplineGsl returns NaN outside the knots */
+static void
+test_ncm_spline_gsl_domain_nan (void)
+{
+  NcmVector *xv = ncm_vector_new (11);
+  NcmVector *yv = ncm_vector_new (11);
+  NcmSpline *s;
+  guint i;
+
+  for (i = 0; i < 11; i++)
+  {
+    ncm_vector_set (xv, i, 0.1 * i);
+    ncm_vector_set (yv, i, 0.01 * i * i);
+  }
+
+  s = NCM_SPLINE (ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_CSPLINE, xv, yv, TRUE));
+
+  gsl_set_error_handler_off ();
+  g_assert_true (isnan (ncm_spline_eval (s, 1.05)));
+  g_assert_true (isnan (ncm_spline_eval (s, -0.05)));
+  g_assert_true (isnan (ncm_spline_eval_integ (s, -0.1, 0.5)));
+  ncm_cfg_enable_gsl_err_handler ();
+
+  ncm_spline_free (s);
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+}
+
+/* Reversed limits give minus the integral, for every spline type */
+static void
+test_ncm_spline_integ_reversed (void)
+{
+  NcmVector *xv = ncm_vector_new (11);
+  NcmVector *yv = ncm_vector_new (11);
+  NcmSpline *splines[2];
+  guint i;
+
+  for (i = 0; i < 11; i++)
+  {
+    ncm_vector_set (xv, i, 0.1 * i);
+    ncm_vector_set (yv, i, 0.01 * i * i);
+  }
+
+  splines[0] = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
+  splines[1] = NCM_SPLINE (ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_CSPLINE, xv, yv, TRUE));
+
+  for (i = 0; i < G_N_ELEMENTS (splines); i++)
+  {
+    const gdouble fwd = ncm_spline_eval_integ (splines[i], 0.15, 0.85);
+
+    g_assert_cmpfloat (ncm_spline_eval_integ (splines[i], 0.85, 0.15), ==, -fwd);
+    g_assert_cmpfloat (ncm_spline_eval_integ (splines[i], 0.18, 0.12), ==, -ncm_spline_eval_integ (splines[i], 0.12, 0.18));
+  }
+
+  {
+    const gsize ia = ncm_spline_get_index (splines[0], 0.15);
+    const gsize ib = ncm_spline_get_index (splines[0], 0.85);
+
+    g_assert_cmpfloat (ncm_spline_eval_integ_idx (splines[0], 0.85, ib, 0.15, ia), ==,
+                       -ncm_spline_eval_integ_idx (splines[0], 0.15, ia, 0.85, ib));
+  }
+
+  ncm_spline_free (splines[0]);
+  ncm_spline_free (splines[1]);
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+}
+
+static NcmSpline *
+_test_ncm_spline_cube (gdouble scale)
+{
+  NcmVector *xv = ncm_vector_new (11);
+  NcmVector *yv = ncm_vector_new (11);
+  NcmSpline *s;
+  guint i;
+
+  for (i = 0; i < 11; i++)
+  {
+    const gdouble x = 0.1 * i;
+
+    ncm_vector_set (xv, i, x);
+    ncm_vector_set (yv, i, scale * x * x * x);
+  }
+
+  s = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+
+  return s;
+}
+
+/* Not-a-knot reproduces x^3, so c(x) = 6x and N_p = (6^p / (p + 1))^(1/p) on [0, 1], at any scale */
+static void
+test_ncm_spline_curvature_norms (void)
+{
+  const gdouble ps[]    = {0.5, 1.0, 2.0};
+  const gdouble scale[] = {1.0, 1.0e-9};
+  guint i, j;
+
+  for (j = 0; j < G_N_ELEMENTS (scale); j++)
+  {
+    NcmSpline *s = _test_ncm_spline_cube (scale[j]);
+    NcmSpline *w = _test_ncm_spline_cube (0.0);
+
+    ncm_vector_set_all (ncm_spline_peek_yv (w), 2.0);
+    ncm_spline_prepare (w);
+
+    for (i = 0; i < G_N_ELEMENTS (ps); i++)
+    {
+      const gdouble p     = ps[i];
+      const gdouble exact = scale[j] * pow (pow (6.0, p) / (p + 1.0), 1.0 / p);
+      const gdouble n_p   = ncm_spline_curvature_lp_norm (s, NCM_SPLINE_CURVATURE_D2, p, 0.0, 1.0);
+      const gdouble n_w   = ncm_spline_curvature_weighted_lp_norm (s, NCM_SPLINE_CURVATURE_D2, p, w, 0.0, 1.0);
+
+      g_assert_cmpfloat (fabs (n_p / exact - 1.0), <, 1.0e-13);
+      g_assert_cmpfloat (fabs (n_w / exact - 1.0), <, 1.0e-13);
+    }
+
+    ncm_spline_free (s);
+    ncm_spline_free (w);
+  }
+}
+
+static void
+test_ncm_spline_notaknot_repeated_knot (void)
+{
+  g_test_trap_subprocess ("/ncm/spline_cubic_notaknot/repeated_knot/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*strictly increasing*");
+}
+
+static void
+test_ncm_spline_notaknot_repeated_knot_subprocess (void)
+{
+  NcmVector *xv = ncm_vector_new (8);
+  NcmVector *yv = ncm_vector_new (8);
+  guint i;
+
+  for (i = 0; i < 8; i++)
+  {
+    ncm_vector_set (xv, i, (i == 0) ? 0.0 : 0.1 * (i - 1));
+    ncm_vector_set (yv, i, 1.0 * i);
+  }
+
+  ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE);
+}
+
+/* After ncm_spline_cubic_d2_set_d2 the spline reproduces x^3 from its values and second derivatives */
+static void
+test_ncm_spline_cubic_d2_set_d2 (void)
+{
+  NcmVector *xv  = ncm_vector_new (11);
+  NcmVector *yv  = ncm_vector_new (11);
+  NcmVector *d2v = ncm_vector_new (11);
+  NcmSplineCubicD2 *scd2;
+  guint i;
+
+  for (i = 0; i < 11; i++)
+  {
+    const gdouble x = 0.1 * i;
+
+    ncm_vector_set (xv, i, x);
+    ncm_vector_set (yv, i, x * x);
+    ncm_vector_set (d2v, i, 2.0);
+  }
+
+  scd2 = ncm_spline_cubic_d2_new (xv, yv, d2v, TRUE);
+
+  for (i = 0; i < 11; i++)
+  {
+    const gdouble x = 0.1 * i;
+
+    ncm_vector_set (yv, i, x * x * x);
+    ncm_vector_set (d2v, i, 6.0 * x);
+  }
+
+  ncm_spline_cubic_d2_set_d2 (scd2, d2v, TRUE);
+
+  for (i = 0; i < 10; i++)
+  {
+    const gdouble x = 0.1 * i + 0.05;
+
+    g_assert_cmpfloat (fabs (ncm_spline_eval (NCM_SPLINE (scd2), x) - x * x * x), <, 1.0e-15);
+  }
+
+  ncm_spline_free (NCM_SPLINE (scd2));
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+  ncm_vector_free (d2v);
+}
+
+static void
+test_ncm_spline_invalid_d2_len (void)
+{
+  g_test_trap_subprocess ("/ncm/spline_cubic_d2/invalid_d2_len/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+}
+
+static void
+test_ncm_spline_invalid_d2_len_subprocess (void)
+{
+  NcmVector *xv  = ncm_vector_new (5);
+  NcmVector *yv  = ncm_vector_new (5);
+  NcmVector *d2v = ncm_vector_new (4);
+  NcmSplineCubicD2 *scd2;
+
+  ncm_vector_set_all (yv, 1.0);
+  ncm_vector_set_all (d2v, 0.0);
+  ncm_vector_set (xv, 0, 0.0);
+  ncm_vector_set (xv, 1, 1.0);
+  ncm_vector_set (xv, 2, 2.0);
+  ncm_vector_set (xv, 3, 3.0);
+  ncm_vector_set (xv, 4, 4.0);
+
+  scd2 = ncm_spline_cubic_d2_new (xv, yv, yv, FALSE);
+  ncm_spline_cubic_d2_set_d2 (scd2, d2v, FALSE);
+}
+
+static void
+test_ncm_spline_gsl_unsupported_type (void)
+{
+  g_test_trap_subprocess ("/ncm/spline_gsl/unsupported_type/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*not one of NcmSplineGslType*");
+}
+
+static void
+test_ncm_spline_gsl_unsupported_type_subprocess (void)
+{
+  ncm_spline_gsl_new (gsl_interp_steffen);
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -257,6 +523,17 @@ main (gint argc, gchar *argv[])
   _test_ncm_spline_add_tests (&test_ncm_spline_gsl_linear_new_empty,
                               &test_ncm_spline_free_empty,
                               "spline_gsl/linear");
+  g_test_add_func ("/ncm/spline_cubic_notaknot/extrapolates", &test_ncm_spline_cubic_notaknot_extrapolates);
+  g_test_add_func ("/ncm/spline_gsl/domain_nan", &test_ncm_spline_gsl_domain_nan);
+  g_test_add_func ("/ncm/spline/integ_reversed", &test_ncm_spline_integ_reversed);
+  g_test_add_func ("/ncm/spline/curvature_norms", &test_ncm_spline_curvature_norms);
+  g_test_add_func ("/ncm/spline_cubic_notaknot/repeated_knot", &test_ncm_spline_notaknot_repeated_knot);
+  g_test_add_func ("/ncm/spline_cubic_notaknot/repeated_knot/subprocess", &test_ncm_spline_notaknot_repeated_knot_subprocess);
+  g_test_add_func ("/ncm/spline_cubic_d2/set_d2", &test_ncm_spline_cubic_d2_set_d2);
+  g_test_add_func ("/ncm/spline_cubic_d2/invalid_d2_len", &test_ncm_spline_invalid_d2_len);
+  g_test_add_func ("/ncm/spline_cubic_d2/invalid_d2_len/subprocess", &test_ncm_spline_invalid_d2_len_subprocess);
+  g_test_add_func ("/ncm/spline_gsl/unsupported_type", &test_ncm_spline_gsl_unsupported_type);
+  g_test_add_func ("/ncm/spline_gsl/unsupported_type/subprocess", &test_ncm_spline_gsl_unsupported_type_subprocess);
   g_test_run ();
 }
 

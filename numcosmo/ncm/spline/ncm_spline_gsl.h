@@ -38,14 +38,14 @@ G_DECLARE_FINAL_TYPE (NcmSplineGsl, ncm_spline_gsl, NCM, SPLINE_GSL, NcmSpline)
 
 /**
  * NcmSplineGslType:
- * @NCM_SPLINE_GSL_LINEAR: Uses [gsl_interp_linear](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_linear) interpolation method.
- * @NCM_SPLINE_GSL_POLYNOMIAL: Uses [gsl_interp_polynomial](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_polynomial) interpolation method.
- * @NCM_SPLINE_GSL_CSPLINE: Uses [gsl_interp_cspline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_cspline) interpolation method.
- * @NCM_SPLINE_GSL_CSPLINE_PERIODIC: Uses [gsl_interp_cspline_periodic](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_cspline_periodic) interpolation method.
- * @NCM_SPLINE_GSL_AKIMA: Uses [gsl_interp_akima](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_akima) interpolation method.
- * @NCM_SPLINE_GSL_AKIMA_PERIODIC: Uses [gsl_interp_akima_periodic](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_akima_periodic) interpolation method.
+ * @NCM_SPLINE_GSL_LINEAR: [linear interpolation](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_linear)
+ * @NCM_SPLINE_GSL_POLYNOMIAL: [polynomial interpolation](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_polynomial) through all knots
+ * @NCM_SPLINE_GSL_CSPLINE: [natural cubic spline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_cspline)
+ * @NCM_SPLINE_GSL_CSPLINE_PERIODIC: [periodic cubic spline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_cspline_periodic)
+ * @NCM_SPLINE_GSL_AKIMA: [Akima spline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_akima)
+ * @NCM_SPLINE_GSL_AKIMA_PERIODIC: [periodic Akima spline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_akima_periodic)
  *
- * Enumeration to choose which [GSL interpolation method](https://www.gnu.org/software/gsl/doc/html/interp.html#interpolation) as backend to be used by the object. It can be used with the function ncm_spline_gsl_new_by_id() when a new #NcmSplineGsl is created.
+ * GSL interpolation methods of #NcmSplineGsl.
  */
 typedef enum _NcmSplineGslType /*< prefix=NCM_SPLINE_GSL >*/
 {
