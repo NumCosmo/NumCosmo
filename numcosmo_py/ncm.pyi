@@ -8127,7 +8127,7 @@ class OdeSpline(GObject.Object):
       spline -> NcmSpline: spline
         Spline algorithm to be used
       stop-hnil -> gboolean: stop-hnil
-        Whether treat hnil as error
+        Whether a stalled step aborts
       auto-abstol -> gboolean: auto-abstol
         Automatic abstol
       ini-step -> gdouble: ini-step
@@ -11389,7 +11389,7 @@ class Spline2d(GObject.Object):
         self,
         x: float,
         y: Vector,
-        order: typing.Optional[typing.Sequence[int]],
+        order: typing.Sequence[int],
         res: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> None: ...
     def do_int_dx(self, xl: float, xu: float, y: float) -> float: ...
@@ -11402,7 +11402,7 @@ class Spline2d(GObject.Object):
         self,
         x: float,
         y: Vector,
-        order: typing.Optional[typing.Sequence[int]],
+        order: typing.Sequence[int],
         res: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> None: ...
     def free(self) -> None: ...
@@ -11483,36 +11483,6 @@ class Spline2dBicubic(Spline2d):
         y_vector: Vector = ...,
         z_matrix: Matrix = ...,
     ) -> None: ...
-    @staticmethod
-    def bi(sc: SplineCubic, xv: Vector, yv: Vector, i: int) -> float: ...
-    @staticmethod
-    def bi_bip1(
-        sc: SplineCubic, xv: Vector, yv: Vector, i: int, b_i: float, b_ip1: float
-    ) -> None: ...
-    @staticmethod
-    def eval_poly(sa: Spline2dBicubicCoeffs, x: float, y: float) -> float: ...
-    @staticmethod
-    def fij_to_aij(
-        sf: Spline2dBicubicCoeffs, dx: float, dy: float, sa: Spline2dBicubicCoeffs
-    ) -> None: ...
-    @staticmethod
-    def integ_dx_coeffs(
-        aij: Spline2dBicubicCoeffs, dy: float, coeffs: float
-    ) -> None: ...
-    @staticmethod
-    def integ_dy_coeffs(
-        aij: Spline2dBicubicCoeffs, dx: float, coeffs: float
-    ) -> None: ...
-    @staticmethod
-    def integ_eval2d(
-        aij: Spline2dBicubicCoeffs,
-        x0: float,
-        xl: float,
-        xu: float,
-        y0: float,
-        yl: float,
-        yu: float,
-    ) -> float: ...
     @classmethod
     def new(cls, s: Spline) -> Spline2dBicubic: ...
     @classmethod
@@ -11569,7 +11539,7 @@ class Spline2dClass(GObject.GPointer):
             Spline2d,
             float,
             Vector,
-            typing.Optional[typing.Sequence[int]],
+            typing.Sequence[int],
             typing.Sequence[float] | npt.NDArray[np.float64],
         ],
         None,

@@ -26,11 +26,15 @@
 /**
  * NcmOdeSpline:
  *
- * Automatic generation of splines from ODE solvers.
+ * Spline of the solution of a first-order ODE.
  *
- * This class defines an object that integrates an ODE and generates a spline from the
- * solution.
- *
+ * Integrates $\mathrm{d}y/\mathrm{d}x = f(y, x)$ from $y(x_i) = y_i$ toward increasing $x$
+ * with CVODE (Adams method, order at most 3) and sets #NcmOdeSpline:spline to the steps
+ * taken, prepared; a step closer than %NCM_ODE_SPLINE_MIN_STEP, relative to $|x|$, to the
+ * previous knot is not kept, except the last one at #NcmOdeSpline:xf, which replaces it.
+ * The integration stops at #NcmOdeSpline:xf or, when
+ * #NcmOdeSpline:yf is finite, where $y$ reaches #NcmOdeSpline:yf or stops changing between
+ * steps. A CVODE failure aborts.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -46,6 +50,13 @@
 #include <sunnonlinsol/sunnonlinsol_fixedpoint.h>
 #include <gsl/gsl_linalg.h>
 #endif /* NUMCOSMO_GIR_SCAN */
+
+/* A failed SUNDIALS call leaves no usable spline, so it aborts */
+#define _NCM_ODE_SPLINE_CHECK(chk, name, val)                                       \
+        G_STMT_START {                                                              \
+          if (!ncm_util_cvode_check_flag (chk, name, val))                          \
+          g_error ("ncm_ode_spline: %s failed, the ODE was not integrated.", name); \
+        } G_STMT_END
 
 typedef struct _NcmOdeSplinePrivate
 {
@@ -63,14 +74,11 @@ typedef struct _NcmOdeSplinePrivate
   gdouble reltol;
   gdouble abstol;
   NcmOdeSplineDydx dydx;
-  gboolean s_init;
   gboolean cvode_init;
-  gboolean hnil;
   gboolean stop_hnil;
   gboolean auto_abstol;
   gdouble ini_step;
   guint min_subdivisions;
-  NcmModelCtrl *ctrl;
   NcmSpline *spline;
 } NcmOdeSplinePrivate;
 
@@ -127,16 +135,13 @@ ncm_ode_spline_init (NcmOdeSpline *os)
   self->reltol           = 0.0;
   self->abstol           = 0.0;
   self->dydx             = NULL;
-  self->s_init           = FALSE;
-  self->hnil             = FALSE;
   self->stop_hnil        = FALSE;
   self->auto_abstol      = FALSE;
   self->ini_step         = 0.0;
   self->min_subdivisions = 0;
-  self->ctrl             = ncm_model_ctrl_new (NULL);
 
   self->NLS = SUNNonlinSol_FixedPoint (self->y, 0, self->sunctx);
-  NCM_CVODE_CHECK (self->NLS, "SUNNonlinSol_FixedPoint", 0, );
+  _NCM_ODE_SPLINE_CHECK (self->NLS, "SUNNonlinSol_FixedPoint", 0);
 }
 
 static void
@@ -253,7 +258,6 @@ _ncm_ode_spline_dispose (GObject *object)
   ncm_spline_clear (&self->spline);
   g_clear_pointer (&self->x_array, g_array_unref);
   g_clear_pointer (&self->y_array, g_array_unref);
-  ncm_model_ctrl_clear (&self->ctrl);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_ode_spline_parent_class)->dispose (object);
@@ -302,8 +306,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:reltol:
    *
-   * Integrator's relative tolerance.
-   *
+   * The relative tolerance of the integration.
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
@@ -316,8 +319,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:abstol:
    *
-   * Integrator's absolute tolerance.
-   *
+   * The absolute tolerance of the integration.
    */
   g_object_class_install_property (object_class,
                                    PROP_ABSTOL,
@@ -330,8 +332,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:xi:
    *
-   * The initial point to integrate the ode.
-   *
+   * The initial point $x_i$.
    */
   g_object_class_install_property (object_class,
                                    PROP_XI,
@@ -344,8 +345,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:xf:
    *
-   * The final point to integrate the ode.
-   *
+   * The final point $x_f$, unused when #NcmOdeSpline:yf is finite.
    */
   g_object_class_install_property (object_class,
                                    PROP_XF,
@@ -358,8 +358,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:yi:
    *
-   * The initial value of the function to be evaluated.
-   *
+   * The initial value $y_i = y(x_i)$.
    */
   g_object_class_install_property (object_class,
                                    PROP_YI,
@@ -372,8 +371,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:yf:
    *
-   * The final value of the function to be evaluated.
-   *
+   * The value of $y$ at which the integration stops, not set (NaN) by default.
    */
   g_object_class_install_property (object_class,
                                    PROP_YF,
@@ -386,8 +384,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:dydx:
    *
-   * A pointer to the dydx function, a.k.a. the Jacobian.
-   *
+   * The right-hand side $f(y, x)$, a #NcmOdeSplineDydx.
    */
   g_object_class_install_property (object_class,
                                    PROP_DYDX,
@@ -399,8 +396,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:spline:
    *
-   * The spline algorithm to be used.
-   *
+   * The spline set to the solution.
    */
   g_object_class_install_property (object_class,
                                    PROP_SPLINE,
@@ -413,22 +409,22 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:stop-hnil:
    *
-   * Whether treat hnil as error.
-   *
+   * Whether a step that does not advance $x$, the step size having underflowed, aborts;
+   * when %FALSE the integration stops there instead.
    */
   g_object_class_install_property (object_class,
                                    PROP_STOP_HNIL,
                                    g_param_spec_boolean ("stop-hnil",
                                                          NULL,
-                                                         "Whether treat hnil as error",
+                                                         "Whether a stalled step aborts",
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmOdeSpline:auto-abstol:
    *
-   * Boolean to set whether or not the absolute tolerance is going to be estimated internally by the ode integrator.
-   *
+   * Whether ncm_ode_spline_prepare() sets #NcmOdeSpline:abstol to
+   * $|f(y_i, x_i)|\,\mathrm{reltol}\,$%NCM_ODE_SPLINE_MIN_STEP.
    */
   g_object_class_install_property (object_class,
                                    PROP_AUTO_ABSTOL,
@@ -441,8 +437,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:ini-step:
    *
-   * The integration initial step size.
-   *
+   * The initial step size, or zero to let CVODE choose it.
    */
   g_object_class_install_property (object_class,
                                    PROP_INI_STEP,
@@ -455,11 +450,8 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:min-subdivisions:
    *
-   * Minimum number of subdivisions of the integration interval. When set to a value
-   * greater than zero, the integrator will enforce a maximum step size of
-   * (xf - xi) / min_subdivisions. This guarantees at least min_subdivisions points
-   * in the resulting spline. Default is 0 (no enforcement).
-   *
+   * The minimum number of steps. When positive and #NcmOdeSpline:yf is not set, the
+   * step size is at most $(x_f - x_i)$ divided by it; zero sets no limit.
    */
   g_object_class_install_property (object_class,
                                    PROP_MIN_SUBDIVISIONS,
@@ -483,12 +475,12 @@ _ncm_ode_spline_f (sunrealtype x, N_Vector y, N_Vector ydot, gpointer f_data)
 
 /**
  * ncm_ode_spline_new:
- * @s: a #NcmSpline
- * @dydx: (scope notified): a #NcmOdeSplineDydx
+ * @s: the spline set to the solution
+ * @dydx: (scope notified): the right-hand side
  *
- * This function creates a new #NcmOdeSpline.
+ * Creates a #NcmOdeSpline; the interval and the initial value are set afterwards.
  *
- * Returns: a new #NcmOdeSpline.
+ * Returns: (transfer full): a new #NcmOdeSpline.
  */
 NcmOdeSpline *
 ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx)
@@ -503,15 +495,15 @@ ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx)
 
 /**
  * ncm_ode_spline_new_full:
- * @s: a #NcmSpline
- * @dydx: (scope notified): a #NcmOdeSplineDydx
- * @yi: initial value of the function to be evaluated
- * @xi: initial point to integrate the edo
- * @xf: final point to integrate the edo
+ * @s: the spline set to the solution
+ * @dydx: (scope notified): the right-hand side
+ * @yi: the initial value
+ * @xi: the initial point
+ * @xf: the final point
  *
- * This function creates a new #NcmOdeSpline setting all its members.
+ * Creates a #NcmOdeSpline on [@xi, @xf] with $y(x_i) = y_i$.
  *
- * Returns: a new #NcmOdeSpline.
+ * Returns: (transfer full): a new #NcmOdeSpline.
  */
 NcmOdeSpline *
 ncm_ode_spline_new_full (NcmSpline *s, NcmOdeSplineDydx dydx, gdouble yi, gdouble xi, gdouble xf)
@@ -538,45 +530,73 @@ _ncm_ode_spline_yf_root (sunrealtype lambda, N_Vector y, sunrealtype *gout, gpoi
   return 0;
 }
 
+/*
+ * Checks one CVODE step: a non-finite solution aborts, and a step that does not advance x
+ * aborts or, without stop-hnil, ends the integration (returns TRUE). With a non-finite
+ * right-hand side CVODE can accept steps whose size shrinks until x stops moving, which
+ * in single-step mode never reaches the step limit.
+ */
+static gboolean
+_ncm_ode_spline_step_stalls (NcmOdeSplinePrivate * const self, const gdouble x, gdouble *x_last)
+{
+  if (!gsl_finite (NV_Ith_S (self->y, 0)))
+    g_error ("ncm_ode_spline_prepare: non-finite solution at x = % 22.15g.", x);
+
+  if (x <= *x_last)
+  {
+    if (self->stop_hnil)
+      g_error ("ncm_ode_spline_prepare: the step size underflowed at x = % 22.15g.", x);
+
+    return TRUE;
+  }
+
+  *x_last = x;
+
+  return FALSE;
+}
+
 /**
  * ncm_ode_spline_prepare:
  * @os: a #NcmOdeSpline
- * @userdata: (nullable): ode additional parameters
+ * @userdata: (nullable): the user data passed to the right-hand side
  *
- * This function prepares the #NcmOdeSpline @os and fills its internal #NcmSpline with the evaluated ode's solution.
+ * Integrates the ODE and sets and prepares #NcmOdeSpline:spline, see #NcmOdeSpline.
+ * Aborts when $y_i = 0$ with a zero absolute tolerance and #NcmOdeSpline:auto-abstol off,
+ * or when $f(y_i, x_i)$ is not finite.
  */
 void
 ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
 {
   NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
   NcmOdeSplineDydxData f_data      = {os, userdata};
-  gdouble x, x0;
+  gdouble x, x0, x_last;
   gint flag;
 
   NV_Ith_S (self->y, 0) = self->yi;
 
   if (self->auto_abstol)
     self->abstol = fabs (self->dydx (NV_Ith_S (self->y, 0), self->xi, userdata) * self->reltol * NCM_ODE_SPLINE_MIN_STEP);
-  else if ((self->yi == 0.0) && (self->abstol == 0.0))
+
+  if ((self->yi == 0.0) && (self->abstol == 0.0))
     g_error ("ncm_ode_spline_prepare: cannot integrate system where y_ini == 0.0 and abstol == 0.0.");
 
   if (!self->cvode_init)
   {
     flag = CVodeInit (self->cvode, &_ncm_ode_spline_f, self->xi, self->y);
-    NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
+    _NCM_ODE_SPLINE_CHECK (&flag, "CVodeInit", 1);
 
     flag = CVodeSetNonlinearSolver (self->cvode, self->NLS);
-    NCM_CVODE_CHECK (&flag, "CVodeSetNonlinearSolver", 1, );
+    _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSetNonlinearSolver", 1);
 
     self->cvode_init = TRUE;
   }
   else
   {
     flag = CVodeReInit (self->cvode, self->xi, self->y);
-    NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
+    _NCM_ODE_SPLINE_CHECK (&flag, "CVodeReInit", 1);
 
     flag = CVodeSetNonlinearSolver (self->cvode, self->NLS);
-    NCM_CVODE_CHECK (&flag, "CVodeSetNonlinearSolver", 1, );
+    _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSetNonlinearSolver", 1);
   }
 
   g_array_set_size (self->x_array, 0);
@@ -586,31 +606,32 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   g_array_append_val (self->y_array, NV_Ith_S (self->y, 0));
 
   flag = CVodeSStolerances (self->cvode, self->reltol, self->abstol);
-  NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
+  _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSStolerances", 1);
 
   flag = CVodeSetMaxNumSteps (self->cvode, 100000);
-  NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
+  _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSetMaxNumSteps", 1);
 
-  /* Optionally guarantee a minimum number of subdivisions */
-  if (self->min_subdivisions > 0)
+  /* The step limit needs xf, so it applies only when stopping there */
+  if ((self->min_subdivisions > 0) && !gsl_finite (self->yf))
   {
     flag = CVodeSetMaxStep (self->cvode, (self->xf - self->xi) / self->min_subdivisions);
-    NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, );
+    _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSetMaxStep", 1);
   }
 
   flag = CVodeSetMaxOrd (self->cvode, 3); /* Cubic splines */
-  NCM_CVODE_CHECK (&flag, "CVodeSetMaxOrd", 1, );
+  _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSetMaxOrd", 1);
 
   flag = CVodeSetUserData (self->cvode, &f_data);
-  NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
+  _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSetUserData", 1);
 
   if (self->ini_step > 0.0)
   {
     flag = CVodeSetInitStep (self->cvode, self->ini_step);
-    NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
+    _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSetInitStep", 1);
   }
 
-  x0 = self->xi;
+  x0     = self->xi;
+  x_last = self->xi;
 
   if (!gsl_finite (self->dydx (NV_Ith_S (self->y, 0), x0, f_data.userdata)))
     g_error ("ncm_ode_spline_prepare: not finite integrand at (% 22.15g, % 22.15g; % 22.15g).",
@@ -623,28 +644,31 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
     g_assert (gsl_finite (self->xf));
 
     flag = CVodeSetStopTime (self->cvode, self->xf);
-    NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
+    _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSetStopTime", 1);
 
-    self->hnil = FALSE;
+    /* A root function left by an earlier preparation with yf set */
+    flag = CVodeRootInit (self->cvode, 0, NULL);
+    _NCM_ODE_SPLINE_CHECK (&flag, "CVodeRootInit", 1);
 
     while (TRUE)
     {
       flag = CVode (self->cvode, self->xf, self->y, &x, CV_ONE_STEP);
-      NCM_CVODE_CHECK (&flag, "ncm_ode_spline_prepare[CVode]", 1, );
+      _NCM_ODE_SPLINE_CHECK (&flag, "ncm_ode_spline_prepare[CVode]", 1);
 
-      if (G_UNLIKELY (self->hnil))
-      {
-        if (self->stop_hnil)
-          g_error ("ncm_ode_spline_prepare: cannot integrate function %d.", flag);
-        else
-          break;
-      }
+      if (_ncm_ode_spline_step_stalls (self, x, &x_last))
+        break;
 
       if (x > x0 + fabs (x0) * NCM_ODE_SPLINE_MIN_STEP)
       {
         g_array_append_val (self->x_array, x);
         g_array_append_val (self->y_array, NV_Ith_S (self->y, 0));
         x0 = x;
+      }
+      else if ((x == self->xf) && (self->x_array->len > 1))
+      {
+        /* The spline ends at xf: the last step replaces the knot too close to it */
+        g_array_index (self->x_array, gdouble, self->x_array->len - 1) = x;
+        g_array_index (self->y_array, gdouble, self->y_array->len - 1) = NV_Ith_S (self->y, 0);
       }
 
       if (x == self->xf)
@@ -653,26 +677,20 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   }
   else
   {
-    const gdouble xf = (self->xi != 0.0) ? self->xi * 2.0 : 1.0;
+    /* In single-step mode the target only sets the direction, toward increasing x */
+    const gdouble xf = self->xi + GSL_MAX (fabs (self->xi), 1.0);
     gdouble last_y   = GSL_NEGINF;
 
     flag = CVodeRootInit (self->cvode, 1, &_ncm_ode_spline_yf_root);
-    NCM_CVODE_CHECK (&flag, "CVodeRootInit", 1, );
-
-    self->hnil = FALSE;
+    _NCM_ODE_SPLINE_CHECK (&flag, "CVodeRootInit", 1);
 
     while (TRUE)
     {
       flag = CVode (self->cvode, xf, self->y, &x, CV_ONE_STEP);
-      NCM_CVODE_CHECK (&flag, "ncm_ode_spline_prepare[CVode]", 1, );
+      _NCM_ODE_SPLINE_CHECK (&flag, "ncm_ode_spline_prepare[CVode]", 1);
 
-      if (G_UNLIKELY (self->hnil))
-      {
-        if (self->stop_hnil)
-          g_error ("ncm_ode_spline_prepare: cannot integrate function %d.", flag);
-        else
-          break;
-      }
+      if (_ncm_ode_spline_step_stalls (self, x, &x_last))
+        break;
 
       if (x > x0 + fabs (x0) * NCM_ODE_SPLINE_MIN_STEP)
       {
@@ -695,7 +713,6 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   }
 
   ncm_spline_set_array (self->spline, self->x_array, self->y_array, TRUE);
-  self->s_init = TRUE;
 }
 
 /**
@@ -714,8 +731,7 @@ ncm_ode_spline_free (NcmOdeSpline *os)
  * ncm_ode_spline_clear:
  * @os: a #NcmOdeSpline
  *
- * Atomically decrements the reference count of @os by one. If the reference count drops to 0, all memory allocated by @os is released. The pointer is set to NULL.
- *
+ * If *@os is not %NULL, decreases its reference count by one and sets *@os to %NULL.
  */
 void
 ncm_ode_spline_clear (NcmOdeSpline **os)
@@ -726,12 +742,12 @@ ncm_ode_spline_clear (NcmOdeSpline **os)
 /**
  * ncm_ode_spline_set_interval:
  * @os: a #NcmOdeSpline
- * @yi: initial value of the function to be evaluated
- * @xi: initial point to integrate the edo
- * @xf: final point to integrate the edo
+ * @yi: the initial value
+ * @xi: the initial point
+ * @xf: the final point
  *
- * This function sets @os interval [@xi, @xf] and its initial value @yi in order to integrate the ode.
- *
+ * Sets #NcmOdeSpline:yi, #NcmOdeSpline:xi and #NcmOdeSpline:xf; @xf must be larger than
+ * @xi.
  */
 void
 ncm_ode_spline_set_interval (NcmOdeSpline *os, gdouble yi, gdouble xi, gdouble xf)
@@ -746,10 +762,9 @@ ncm_ode_spline_set_interval (NcmOdeSpline *os, gdouble yi, gdouble xi, gdouble x
 /**
  * ncm_ode_spline_set_reltol:
  * @os: a #NcmOdeSpline
- * @reltol: relative tolerance of the ode integrator
+ * @reltol: the relative tolerance
  *
- * This functions sets the relative tolerance, @reltol, of the edo integrator.
- *
+ * Sets #NcmOdeSpline:reltol.
  */
 void
 ncm_ode_spline_set_reltol (NcmOdeSpline *os, gdouble reltol)
@@ -762,10 +777,9 @@ ncm_ode_spline_set_reltol (NcmOdeSpline *os, gdouble reltol)
 /**
  * ncm_ode_spline_set_abstol:
  * @os: a #NcmOdeSpline
- * @abstol: absolute tolerance of the ode integrator
+ * @abstol: the absolute tolerance
  *
- * This functions sets the absolute tolerance, @abstol, of the edo integrator.
- *
+ * Sets #NcmOdeSpline:abstol.
  */
 void
 ncm_ode_spline_set_abstol (NcmOdeSpline *os, gdouble abstol)
@@ -778,10 +792,9 @@ ncm_ode_spline_set_abstol (NcmOdeSpline *os, gdouble abstol)
 /**
  * ncm_ode_spline_set_xi:
  * @os: a #NcmOdeSpline
- * @xi: initial point to integrate the edo
+ * @xi: the initial point
  *
- * This function sets the initial point, @xi, to integrate the edo.
- *
+ * Sets #NcmOdeSpline:xi.
  */
 void
 ncm_ode_spline_set_xi (NcmOdeSpline *os, gdouble xi)
@@ -794,11 +807,9 @@ ncm_ode_spline_set_xi (NcmOdeSpline *os, gdouble xi)
 /**
  * ncm_ode_spline_set_xf:
  * @os: a #NcmOdeSpline
- * @xf: final point to integrate the edo
+ * @xf: the final point
  *
- * This function sets the final point, @xf, to integrate the edo.
- * Note that if @yf is also set, @yf will take precedence.
- *
+ * Sets #NcmOdeSpline:xf; warns when #NcmOdeSpline:yf is finite, since it takes precedence.
  */
 void
 ncm_ode_spline_set_xf (NcmOdeSpline *os, gdouble xf)
@@ -814,10 +825,9 @@ ncm_ode_spline_set_xf (NcmOdeSpline *os, gdouble xf)
 /**
  * ncm_ode_spline_set_yi:
  * @os: a #NcmOdeSpline
- * @yi: initial value of the function to be evaluated
+ * @yi: the initial value
  *
- * This function sets the initial value of the function to be evaluated.
- *
+ * Sets #NcmOdeSpline:yi.
  */
 void
 ncm_ode_spline_set_yi (NcmOdeSpline *os, gdouble yi)
@@ -830,12 +840,10 @@ ncm_ode_spline_set_yi (NcmOdeSpline *os, gdouble yi)
 /**
  * ncm_ode_spline_set_yf:
  * @os: a #NcmOdeSpline
- * @yf: final value of the function to be evaluated
+ * @yf: the value of $y$ at which the integration stops
  *
- * This function sets the final value of the function to be evaluated. When @yf is
- * reached, the edo's integration is stopped. Note that if @xf is also set, @yf will
- * take precedence.
- *
+ * Sets #NcmOdeSpline:yf, which takes precedence over #NcmOdeSpline:xf; warns when
+ * #NcmOdeSpline:xf is finite. NaN restores stopping at #NcmOdeSpline:xf.
  */
 void
 ncm_ode_spline_set_yf (NcmOdeSpline *os, gdouble yf)
@@ -844,19 +852,16 @@ ncm_ode_spline_set_yf (NcmOdeSpline *os, gdouble yf)
 
   self->yf = yf;
 
-  if (gsl_finite (self->xf))
+  if (gsl_finite (yf) && gsl_finite (self->xf))
     g_warning ("ncm_ode_spline_set_yf: setting yf when xf was also set, yf will take precedence.");
 }
 
 /**
  * ncm_ode_spline_auto_abstol:
  * @os: a #NcmOdeSpline
- * @on: Whether to turn on the auto-abstol
+ * @on: whether to set the absolute tolerance automatically
  *
- * If @on is TRUE, the object uses the value of $\mathrm{d}y_i$ to estimate the
- * abstol as $T_\mathrm{abs} = \dot{y}_i \mathrm{d}t_m T_\mathrm{rel}$,
- * where $T_\mathrm{rel}$ is the relative tolerance and $\mathrm{d}t_m$ is the
- * minimum time step #NCM_ODE_SPLINE_MIN_STEP. Useful when computing integrals as ODEs.
+ * Sets #NcmOdeSpline:auto-abstol, used for integrals written as ODEs.
  */
 void
 ncm_ode_spline_auto_abstol (NcmOdeSpline *os, gboolean on)
@@ -869,12 +874,9 @@ ncm_ode_spline_auto_abstol (NcmOdeSpline *os, gboolean on)
 /**
  * ncm_ode_spline_set_ini_step:
  * @os: a #NcmOdeSpline
- * @ini_step: the initial step
+ * @ini_step: the initial step size
  *
- * Sets a guess for the initial step size. If @ini_step is
- * zero it uses the automatic determination based on the
- * tolerances.
- *
+ * Sets #NcmOdeSpline:ini-step.
  */
 void
 ncm_ode_spline_set_ini_step (NcmOdeSpline *os, gdouble ini_step)
@@ -888,9 +890,9 @@ ncm_ode_spline_set_ini_step (NcmOdeSpline *os, gdouble ini_step)
  * ncm_ode_spline_get_ini_step:
  * @os: a #NcmOdeSpline
  *
- * Gets the current guess for the initial step size.
+ * Gets #NcmOdeSpline:ini-step.
  *
- * Returns: the current value of the initial guess (zero means disabled).
+ * Returns: the initial step size, zero when CVODE chooses it.
  */
 gdouble
 ncm_ode_spline_get_ini_step (NcmOdeSpline *os)
@@ -903,14 +905,9 @@ ncm_ode_spline_get_ini_step (NcmOdeSpline *os)
 /**
  * ncm_ode_spline_set_min_subdivisions:
  * @os: a #NcmOdeSpline
- * @min_subdivisions: minimum number of subdivisions
+ * @min_subdivisions: the minimum number of steps
  *
- * Sets the minimum number of subdivisions for the integration interval.
- * When set to a value greater than zero, the integrator will cap the
- * maximum step size at (xf - xi) / min_subdivisions, guaranteeing at
- * least min_subdivisions points in the resulting spline. Set to 0 to
- * disable (default behavior).
- *
+ * Sets #NcmOdeSpline:min-subdivisions.
  */
 void
 ncm_ode_spline_set_min_subdivisions (NcmOdeSpline *os, guint min_subdivisions)
@@ -924,9 +921,9 @@ ncm_ode_spline_set_min_subdivisions (NcmOdeSpline *os, guint min_subdivisions)
  * ncm_ode_spline_get_min_subdivisions:
  * @os: a #NcmOdeSpline
  *
- * Gets the current minimum number of subdivisions setting.
+ * Gets #NcmOdeSpline:min-subdivisions.
  *
- * Returns: the minimum number of subdivisions (zero means disabled).
+ * Returns: the minimum number of steps, zero for no limit.
  */
 guint
 ncm_ode_spline_get_min_subdivisions (NcmOdeSpline *os)
@@ -940,9 +937,10 @@ ncm_ode_spline_get_min_subdivisions (NcmOdeSpline *os)
  * ncm_ode_spline_get_yf_attained:
  * @os: a #NcmOdeSpline
  *
- * Gets the last value of the function attained during the integration.
+ * Gets the value of $y$ where the last ncm_ode_spline_prepare() with #NcmOdeSpline:yf
+ * finite stopped.
  *
- * Returns: the last value of the function attained during the integration.
+ * Returns: the last value of $y$, NaN before any such preparation.
  */
 gdouble
 ncm_ode_spline_get_yf_attained (NcmOdeSpline *os)
@@ -956,9 +954,9 @@ ncm_ode_spline_get_yf_attained (NcmOdeSpline *os)
  * ncm_ode_spline_peek_spline:
  * @os: a #NcmOdeSpline
  *
- * Peeks at the last prepared spline.
+ * Gets #NcmOdeSpline:spline.
  *
- * Returns: (transfer none): the last prepared spline.
+ * Returns: (transfer none): the spline set to the solution.
  */
 NcmSpline *
 ncm_ode_spline_peek_spline (NcmOdeSpline *os)

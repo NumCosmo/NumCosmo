@@ -38,6 +38,16 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmOdeSpline, ncm_ode_spline, NCM, ODE_SPLINE, GObject)
 
+/**
+ * NcmOdeSplineDydx:
+ * @y: the value of $y$
+ * @x: the point
+ * @userdata: user data
+ *
+ * The right-hand side of the ODE of #NcmOdeSpline.
+ *
+ * Returns: $f(y, x) = \mathrm{d}y/\mathrm{d}x$.
+ */
 typedef gdouble (*NcmOdeSplineDydx) (gdouble y, gdouble x, gpointer userdata);
 
 NcmOdeSpline *ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx);
@@ -66,8 +76,25 @@ gdouble ncm_ode_spline_get_yf_attained (NcmOdeSpline *os);
 
 NcmSpline *ncm_ode_spline_peek_spline (NcmOdeSpline *os);
 
+/**
+ * NCM_ODE_SPLINE_DEFAULT_RELTOL:
+ *
+ * Default #NcmOdeSpline:reltol.
+ */
 #define NCM_ODE_SPLINE_DEFAULT_RELTOL (GSL_DBL_EPSILON)
+
+/**
+ * NCM_ODE_SPLINE_DEFAULT_ABSTOL:
+ *
+ * Default #NcmOdeSpline:abstol.
+ */
 #define NCM_ODE_SPLINE_DEFAULT_ABSTOL (0.0)
+
+/**
+ * NCM_ODE_SPLINE_MIN_STEP:
+ *
+ * Smallest relative spacing between knots kept by #NcmOdeSpline.
+ */
 #define NCM_ODE_SPLINE_MIN_STEP (1.0e-10)
 
 G_END_DECLS

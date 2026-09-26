@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Unit tests for NumCosmo power-spectra."""
+"""Tests on NcmPowspecSpline2d."""
 
 import pytest
 
@@ -34,6 +34,8 @@ from numcosmo_py.helper import duplicate_via_serialization
 from numcosmo_py.helper import npa_to_seq
 
 Ncm.cfg_init()
+
+pytestmark = pytest.mark.powspec
 
 
 def _f(z, k):
