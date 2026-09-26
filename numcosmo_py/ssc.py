@@ -115,59 +115,24 @@ precision. Below `1e-6` there is nothing left to buy at any price --
 `NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON`. The `1e-7` and `1e-8` columns in the
 tables above are measurements of that, not options.
 
-Keep `peak_epsilon` away from `reltol` --- on this path
---------------------------------------------------------
+Quadrature
+----------
 
-This section is about `KERNEL_CUBATURE`, which is what `SSCSijCalculator` builds
-below. The hazard needs an *adaptive outer rule*, so it does not apply to
-`KERNEL_EXACT`: that method integrates the closure's own knot panels with GL(5),
-carries no outer tolerance, and has no refinement that can run out of levels.
-`NcXcorSSCSij`, the varying path, defaults to `KERNEL_EXACT` and is therefore
-free of everything below --- equal values would be safe there, merely dearer.
+Both this module and `NcXcorSSCSij`, the varying path, integrate over $k$ with
+`KERNEL_EXACT`: GL(5) on each panel of the kernels' Chebyshev closures, with no
+outer tolerance and no adaptive refinement. The panel edges are integration
+limits, which matters because the slope of $W(k)$ is continuous across an edge
+only to the closure's accuracy, set by `peak_epsilon`. `KERNEL_CUBATURE`
+integrates over the whole range as if $W$ were smooth; on well-separated bins,
+whose cross integral cancels to $10^{-7}$ of $\int |k^3 W_i W_j|$, it must
+resolve those breaks and its p-adaptive rule fails.
 
-`peak_epsilon` must not equal the outer $k$-integral's `reltol`. The p-adaptive
-`g_error` in `ncm_integral_nd_eval` ("p-adaptive methods report failure when
-they run out of Clenshaw-Curtis levels") is not monotonic in `peak_epsilon`:
-it peaks at that one coincidence and nowhere near it. Generating the
-configuration that first hit it (15 knots, cap, 3000 deg$^2$, $w = -0.8$, with
-`reltol = 1e-6`) at each floor:
-
-=====================  ====  ====  ====  ====  ====  ====  ====
-`peak_epsilon`        1e-4  1e-5  3e-6  1e-6  3e-7  1e-7  1e-8
-=====================  ====  ====  ====  ====  ====  ====  ====
-p-adaptive failures       0     0     0     1     0     0     0
-=====================  ====  ====  ====  ====  ====  ====  ====
-
-The refinement stops exactly at the level the outer rule is trying to resolve,
-so the non-smoothness it leaves behind sits precisely at `pcubature`'s
-convergence threshold; a factor of three either way breaks the tie. This is the
-mismatch `_nc_xcor_check_kernel_tolerance` describes, but that guard compares
-`reltol` against the *Levin* tolerances, not against `peak_epsilon`, so it
-does not catch it.
-
-So the offset from `reltol` is deliberate, and it is taken in the cheap
-direction: `DEFAULT_PEAK_EPSILON = 1e-5` against `DEFAULT_RELTOL = 1e-6`.
-Moving the other way, to `1e-7`, would clear the coincidence just as well but
-cost 1.9x per rebuild for accuracy that is already unusable. Do not "tidy" the
-two constants to the same value.
-
-The C-side counterpart must move with it. `NcXcorSSCSij` carries its own
-`NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON` (`nc_xcor_ssc_sij.c`) and pushes it onto
-the kernels it builds, so it is what the varying path actually uses --- not this
-constant. The two are kept equal on purpose: `create_ssc_sij_calculator()`
-promises that a fixed and a varying run "differ only in whether $S_{ij}$ follows
-the cosmology, not in how it is computed", and comment 15 of the covariance
-paper is precisely the comparison between them. Changing one alone silently
-breaks that.
-
-That promise is already imperfect on an axis the constants cannot fix: this path
-builds its `NcXcor` with `KERNEL_CUBATURE` while `NcXcorSSCSij` defaults to
-`KERNEL_EXACT`, so the two differ in quadrature as well as in whether $S_{ij}$
-varies. Worth settling before the comparison is quoted again.
-
-The failure is not fatal in any case: it falls back to h-adaptive subdivision,
-which is what let the affected run finish. The offset removes the retry rather
-than the crash.
+`DEFAULT_PEAK_EPSILON = 1e-5` stays equal to
+`NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON` (`nc_xcor_ssc_sij.c`), which the varying
+path pushes onto the kernels it builds: `create_ssc_sij_calculator()` promises
+that a fixed and a varying run differ only in whether $S_{ij}$ follows the
+cosmology, and comment 15 of the covariance paper is that comparison. Changing
+one alone breaks it.
 
 `adaptive_epsilon` was verified not to bind at any of these settings, and
 `reltol` is inert while `peak_epsilon` binds.
@@ -196,21 +161,15 @@ ProgressCallback = Callable[[int, int, float, str], None]
 #: section 1.3, not `ell_cache_max`.
 DEFAULT_BLOCK_SIZE = 8
 
-#: Relative tolerance for the `U_i(k)` spline and the outer `k` integral. Not the
-#: knob that limits accuracy (see `DEFAULT_PEAK_EPSILON`), and it cannot be
-#: tightened much *on this path*: at `1e-7` the p-adaptive cubature runs out of
-#: Clenshaw-Curtis levels on the cross integrand for `l > 0` and aborts. That
-#: ceiling belongs to `KERNEL_CUBATURE`, not to `KERNEL_EXACT`.
+#: Relative tolerance of the `U_i(k)` closures. Not the knob that limits accuracy
+#: (see `DEFAULT_PEAK_EPSILON`).
 DEFAULT_RELTOL = 1.0e-6
 
-#: Absolute floor for the adaptive refinement of the `U_i(k)` spline. One order
+#: Absolute floor for the adaptive refinement of the `U_i(k)` closures. One order
 #: tighter than #NcXcorKernel's own `1e-4` default, and the knob that limits
-#: off-diagonal accuracy -- see the module docstring. Deliberately offset from
-#: `DEFAULT_RELTOL`: making the two equal is the one setting that trips the
-#: p-adaptive cubature used here (`KERNEL_EXACT` is immune, having no adaptive
-#: outer step), and the offset is taken upwards because tightening costs
-#: ~2x per rebuild when `--vary-fitting-sij` puts S on the likelihood's critical
-#: path, for accuracy already far below anything a forecast reports.
+#: off-diagonal accuracy -- see the module docstring. Not tighter, because that
+#: costs ~2x per rebuild when `--vary-fitting-sij` puts S on the likelihood's
+#: critical path, for accuracy already far below anything a forecast reports.
 #:
 #: Must be kept equal to `NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON`
 #: (`nc_xcor_ssc_sij.c`), which is what the varying path actually uses.
@@ -358,9 +317,9 @@ class SijCalculator:
             Eisenstein--Hu transfer function over `k` in `[1e-6, 1e3]` 1/Mpc.
         :param dist: Distance object; defaults to `Nc.Distance.new(3.0)`.
         :param block_size: Multipole block size for #NcXcorSolver.
-        :param reltol: Relative tolerance for the kernel spline and the outer
-            `k` integral. Cannot go below the integrator's `cheb-reltol`
-            (`1e-8` by default), which caps the achievable precision.
+        :param reltol: Relative tolerance of the kernel closures. Cannot go
+            below the integrator's `cheb-reltol` (`1e-8` by default), which
+            caps the achievable precision.
         :param peak_epsilon: Absolute floor for the adaptive refinement of the
             `U_i(k)` spline. **This, not `reltol`, is what limits the accuracy
             of the off-diagonal `S_ij`** --- see the module docstring.
@@ -405,7 +364,7 @@ class SijCalculator:
             kernel.set_reltol(reltol)
             kernel.set_peak_epsilon(peak_epsilon)
 
-        self.xcor = Nc.Xcor.new(dist, powspec, Nc.XcorMethod.KERNEL_CUBATURE)
+        self.xcor = Nc.Xcor.new(dist, powspec, Nc.XcorMethod.KERNEL_EXACT)
         self.xcor.set_reltol(reltol)
 
     @property
