@@ -25,32 +25,28 @@
 /**
  * NcmSplineBSpline:
  *
- * Interpolating B-spline of arbitrary order.
+ * Interpolating B-spline of order 2 to %NCM_SPLINE_BSPLINE_MAX_ORDER.
  *
- * Interpolates the sample points with a B-spline of the requested order (degree
- * `order - 1`), using the not-a-knot-like knot placement of gsl_bspline_init_interp()
- * and a banded collocation solve, so preparation is $O(n)$ in the number of points.
+ * Interpolates the values at the knots of #NcmSpline with one control point per knot,
+ * B-spline knots placed by gsl_bspline_init_interp(), and a banded collocation solve, so
+ * preparation costs $O(n)$. Outside the knots, the value, the derivatives and the
+ * integral extrapolate the edge polynomial.
  *
- * The motivation is accuracy on data supplied as a fixed table. A cubic spline is only
- * $C^2$ and its interpolation error stalls well above machine precision no matter how
- * densely the table is sampled; higher orders do not. Measured maximum interpolation
- * error for a smooth function on a uniform grid:
+ * A cubic spline is $C^2$ and its interpolation error stays well above machine precision
+ * at any sample density; higher orders reach it. Maximum error at the interval midpoints
+ * for a Gaussian of mean $1200$ and standard deviation $300$ sampled uniformly on
+ * $[0, 2400]$:
  *
  * |samples|degree 3 |degree 5 |degree 7 |degree 9 |
  * |------:|--------:|--------:|--------:|--------:|
  * |    100|  3.4e-07|  1.2e-09|  2.8e-11|  5.2e-13|
- * |    500|  5.2e-10|  6.6e-14|  4.4e-16|  5.6e-16|
- * |   2000|  2.0e-12|  5.6e-16|  5.6e-16|  7.8e-16|
+ * |    500|  5.2e-10|  6.6e-14|  6.7e-16|  6.7e-16|
+ * |   2000|  2.0e-12|  4.4e-16|  4.4e-16|  4.4e-16|
  *
- * Hence the default order of %NCM_SPLINE_BSPLINE_DEFAULT_ORDER and the cap at
- * %NCM_SPLINE_BSPLINE_MAX_ORDER.
- *
- * On a prepared spline, ncm_spline_eval() is safe to call concurrently: it evaluates
- * the basis with stack scratch and touches no shared mutable state. The derivative and
- * integral entry points go through the GSL workspace, whose scratch is per instance,
- * and therefore serialize on an internal lock. Preparing concurrently with any
+ * On a prepared spline, ncm_spline_eval() may be called concurrently: it uses stack
+ * scratch and reads only state fixed by preparation. The derivatives and the integral use
+ * the GSL workspace and serialize on an internal lock. Preparing concurrently with any
  * evaluation is not supported, as for every #NcmSpline.
- *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -63,6 +59,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_bspline.h>
+#include <gsl/gsl_integration.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
@@ -75,6 +72,7 @@ struct _NcmSplineBSpline
   gsl_vector *c;  /* control points */
   gsl_matrix *XB; /* banded collocation matrix, reused across prepares */
   gsl_vector_uint *piv;
+  gsl_integration_glfixed_table *gl; /* exact for the edge polynomials, see _integ */
   guint order;
   gsize alloc_len; /* length the workspace was allocated for */
   gdouble reltol;  /* > 0 selects the order automatically */
@@ -101,6 +99,7 @@ ncm_spline_bspline_init (NcmSplineBSpline *sbs)
   sbs->c            = NULL;
   sbs->XB           = NULL;
   sbs->piv          = NULL;
+  sbs->gl           = NULL;
   sbs->order        = 0;
   sbs->alloc_len    = 0;
   sbs->reltol       = 0.0;
@@ -118,6 +117,7 @@ _ncm_spline_bspline_free_workspace (NcmSplineBSpline *sbs)
   g_clear_pointer (&sbs->c, gsl_vector_free);
   g_clear_pointer (&sbs->XB, gsl_matrix_free);
   g_clear_pointer (&sbs->piv, gsl_vector_uint_free);
+  g_clear_pointer (&sbs->gl, gsl_integration_glfixed_table_free);
   sbs->alloc_len = 0;
 }
 
@@ -187,7 +187,6 @@ static void _ncm_spline_bspline_reset (NcmSpline *s);
 static void _ncm_spline_bspline_prepare (NcmSpline *s);
 static gsize _ncm_spline_bspline_min_size (const NcmSpline *s);
 static gdouble _ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x);
-static gdouble _ncm_spline_bspline_eval_idx (const NcmSpline *s, const gdouble x, const gsize i);
 static gdouble _ncm_spline_bspline_deriv (const NcmSpline *s, const gdouble x);
 static gdouble _ncm_spline_bspline_deriv2 (const NcmSpline *s, const gdouble x);
 static gdouble _ncm_spline_bspline_deriv_nmax (const NcmSpline *s, const gdouble x);
@@ -207,9 +206,7 @@ ncm_spline_bspline_class_init (NcmSplineBSplineClass *klass)
   /**
    * NcmSplineBSpline:order:
    *
-   * B-spline order; the polynomial degree is one less. Order 4 reproduces a cubic
-   * spline. See the table in the class description for the accuracy this buys.
-   *
+   * The B-spline order, the polynomial degree plus one.
    */
   g_object_class_install_property (object_class,
                                    PROP_ORDER,
@@ -223,11 +220,14 @@ ncm_spline_bspline_class_init (NcmSplineBSplineClass *klass)
   /**
    * NcmSplineBSpline:reltol:
    *
-   * When positive, the order is chosen automatically: the lowest order whose estimated
-   * interpolation error meets $\max(\mathrm{reltol}\,\|y\|_\infty, \mathrm{abstol})$
-   * is used, and preparation fails if no supported order reaches it. Zero (the default)
-   * keeps the explicitly requested #NcmSplineBSpline:order.
+   * The relative interpolation error requested, or zero to use #NcmSplineBSpline:order.
    *
+   * When positive, preparation sets #NcmSplineBSpline:order to the lowest even order from
+   * $4$ whose estimated error is at most $\max(\mathrm{reltol}\,(y_\mathrm{max} -
+   * y_\mathrm{min}), \mathrm{abstol})$, and aborts if none is. The error of order $m$
+   * is estimated as the largest difference from order $m + 2$ at the interval midpoints;
+   * %NCM_SPLINE_BSPLINE_MAX_ORDER, which has no higher order to compare with, is given
+   * the estimate of the order below it.
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
@@ -240,9 +240,8 @@ ncm_spline_bspline_class_init (NcmSplineBSplineClass *klass)
   /**
    * NcmSplineBSpline:abstol:
    *
-   * Absolute floor for the automatic order selection, ignored when
-   * #NcmSplineBSpline:reltol is zero.
-   *
+   * The absolute interpolation error requested, see #NcmSplineBSpline:reltol; unused
+   * when #NcmSplineBSpline:reltol is zero.
    */
   g_object_class_install_property (object_class,
                                    PROP_ABSTOL,
@@ -255,7 +254,6 @@ ncm_spline_bspline_class_init (NcmSplineBSplineClass *klass)
   s_class->name         = &_ncm_spline_bspline_name;
   s_class->reset        = &_ncm_spline_bspline_reset;
   s_class->prepare      = &_ncm_spline_bspline_prepare;
-  s_class->eval_idx     = &_ncm_spline_bspline_eval_idx;
   s_class->prepare_base = NULL;
   s_class->min_size     = &_ncm_spline_bspline_min_size;
   s_class->eval         = &_ncm_spline_bspline_eval;
@@ -297,12 +295,12 @@ _ncm_spline_bspline_reset (NcmSpline *s)
   sbs->c   = gsl_vector_alloc (s_len);
   sbs->XB  = gsl_matrix_alloc (s_len, 3 * (sbs->order - 1) + 1);
   sbs->piv = gsl_vector_uint_alloc (s_len);
+  sbs->gl  = gsl_integration_glfixed_table_alloc ((sbs->order + 1) / 2);
 
   sbs->alloc_len = s_len;
 }
 
-/* Fit one order into the caller's workspace. Returns FALSE when the linear algebra
- * fails, which for an interpolation problem means the order is not usable here. */
+/* Fits @order into the given workspace; FALSE when GSL fails. */
 static gboolean
 _ncm_spline_bspline_fit (const gsl_vector *xv, const gsl_vector *yv, const guint order,
                          gsl_bspline_workspace *w, gsl_matrix *XB, gsl_vector_uint *piv,
@@ -326,10 +324,8 @@ _ncm_spline_bspline_fit (const gsl_vector *xv, const gsl_vector *yv, const guint
   return TRUE;
 }
 
-/* Estimated interpolation error of @order, measured at the interval midpoints against
- * the next higher order. The samples say nothing about the function between them, so
- * the estimate is an out-of-sample comparison -- the same principle as the knot-placement
- * criterion -- rather than a bound inferred from derivatives. */
+/* Largest difference between the @order and @ref_order fits at the interval midpoints,
+ * or +inf when either fit fails. */
 static gdouble
 _ncm_spline_bspline_estimate_error (const gsl_vector *xv, const gsl_vector *yv,
                                     const guint order, const guint ref_order)
@@ -379,9 +375,8 @@ _ncm_spline_bspline_estimate_error (const gsl_vector *xv, const gsl_vector *yv,
   return worst;
 }
 
-/* Lowest order meeting the requested tolerance. Errors out when none does: the samples
- * simply do not support the request, and silently returning a worse answer would hide
- * the one fact the caller needs. */
+/* Sets the lowest even order meeting the tolerance, see #NcmSplineBSpline:reltol; aborts
+ * when none does. */
 static void
 _ncm_spline_bspline_select_order (NcmSplineBSpline *sbs, const gsl_vector *xv, const gsl_vector *yv)
 {
@@ -402,12 +397,8 @@ _ncm_spline_bspline_select_order (NcmSplineBSpline *sbs, const gsl_vector *xv, c
     if (order + 2 <= NCM_SPLINE_BSPLINE_MAX_ORDER)
       err = _ncm_spline_bspline_estimate_error (xv, yv, order, order + 2);
     else
-      /* The highest order has no higher reference to be measured against. Comparing it
-       * with itself would report a zero error and accept it unconditionally, which is
-       * the silent-floor failure this selection exists to prevent. Reuse the previous
-       * difference instead: it is an overestimate for this order, so the worst case is
-       * refusing a request that was marginally attainable, never accepting one that
-       * was not. */
+      /* No higher order to compare with: reuse the previous order's estimate, an
+       * overestimate for this one. */
       err = best_err;
 
     if (err < best_err)
@@ -444,8 +435,7 @@ _ncm_spline_bspline_prepare (NcmSpline *s)
   if (sbs->reltol > 0.0)
     _ncm_spline_bspline_select_order (sbs, &xv.vector, &yv.vector);
 
-  /* ncm_spline_prepare() does not call reset(), so a prepare that follows a change of
-   * order -- which discards the order-specific workspace -- must rebuild it here. */
+  /* ncm_spline_prepare() does not call reset(), and a change of order frees the workspace */
   if ((sbs->w == NULL) || (sbs->alloc_len != s_len))
     _ncm_spline_bspline_reset (s);
 
@@ -459,19 +449,13 @@ _ncm_spline_bspline_min_size (const NcmSpline *s)
 {
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
 
-  /* Interpolation needs at least as many samples as there are basis functions in a
-   * single span, i.e. the order. */
   return sbs->order;
 }
 
 /*
- * The gsl_bspline_calc* family writes scratch (deltal, deltar, B, dB, icache) into the
- * per-instance workspace, so it cannot run concurrently. Evaluation is the one
- * performance-critical path
- * -- kernel integrands call it from OpenMP loops on shared splines -- so it is computed
- * here with de Boor's recursion (PPPACK bsplvb, the same algorithm GSL runs) on stack
- * scratch, reading only state that preparation froze. The derivative and integral
- * entry points stay on GSL and serialize on the instance lock instead.
+ * gsl_bspline_calc() writes scratch into the workspace, so evaluation runs de Boor's
+ * recursion (PPPACK bsplvb, as in GSL) on stack scratch instead, for concurrent callers
+ * such as the xcor kernel integrands.
  */
 static gdouble
 _ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x)
@@ -544,19 +528,6 @@ _ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x)
   }
 }
 
-/*
- * @i is a hint, letting callers that already know the interval skip a binary
- * search. The evaluation locates the span itself and takes no index, so the
- * hint is dropped and this is a plain evaluation -- correct, but carrying none
- * of the saving the fast path exists for. Callers that lean on it, such as
- * ncm_spline_vec_eval() over a shared abscissa, pay full lookup per component.
- */
-static gdouble
-_ncm_spline_bspline_eval_idx (const NcmSpline *s, const gdouble x, const gsize i)
-{
-  return _ncm_spline_bspline_eval (s, x);
-}
-
 static gdouble
 _ncm_spline_bspline_deriv (const NcmSpline *s, const gdouble x)
 {
@@ -589,7 +560,7 @@ _ncm_spline_bspline_deriv_nmax (const NcmSpline *s, const gdouble x)
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
   gdouble res           = 0.0;
 
-  /* Highest derivative that is not identically zero: the degree, order - 1. */
+  /* The derivative of order equal to the degree */
   g_mutex_lock (&sbs->lock);
   gsl_bspline_calc_deriv (x, sbs->c, sbs->order - 1, &res, sbs->w);
   g_mutex_unlock (&sbs->lock);
@@ -597,15 +568,55 @@ _ncm_spline_bspline_deriv_nmax (const NcmSpline *s, const gdouble x)
   return res;
 }
 
+/* Integral of the edge polynomial over [a, b], outside the knots: Gauss-Legendre with
+ * (order + 1) / 2 points is exact for its degree, order - 1. */
+static gdouble
+_ncm_spline_bspline_integ_extrap (const NcmSpline *s, const gdouble a, const gdouble b)
+{
+  NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
+  gdouble res           = 0.0;
+  gsize i;
+
+  for (i = 0; i < sbs->gl->n; i++)
+  {
+    gdouble xi, wi;
+
+    gsl_integration_glfixed_point (a, b, i, &xi, &wi, sbs->gl);
+    res += wi * _ncm_spline_bspline_eval (s, xi);
+  }
+
+  return res;
+}
+
+/* gsl_bspline_calc_integ() clamps the limits to the knots, so the parts outside them are
+ * integrated here, consistently with the extrapolation of _eval. Called with x0 <= x1. */
 static gdouble
 _ncm_spline_bspline_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
 {
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
+  const gdouble *t      = sbs->w->knots->data;
+  const gdouble t_lo    = t[sbs->order - 1];
+  const gdouble t_hi    = t[sbs->alloc_len];
+  const gdouble lo      = GSL_MAX (x0, t_lo);
+  const gdouble hi      = GSL_MIN (x1, t_hi);
   gdouble res           = 0.0;
 
-  g_mutex_lock (&sbs->lock);
-  gsl_bspline_calc_integ (x0, x1, sbs->c, &res, sbs->w);
-  g_mutex_unlock (&sbs->lock);
+  if (x0 < t_lo)
+    res += _ncm_spline_bspline_integ_extrap (s, x0, GSL_MIN (x1, t_lo));
+
+  if (x1 > t_hi)
+    res += _ncm_spline_bspline_integ_extrap (s, GSL_MAX (x0, t_hi), x1);
+
+  if (lo < hi)
+  {
+    gdouble inner = 0.0;
+
+    g_mutex_lock (&sbs->lock);
+    gsl_bspline_calc_integ (lo, hi, sbs->c, &inner, sbs->w);
+    g_mutex_unlock (&sbs->lock);
+
+    res += inner;
+  }
 
   return res;
 }
@@ -615,12 +626,16 @@ _ncm_spline_bspline_copy_empty (const NcmSpline *s)
 {
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
 
-  return NCM_SPLINE (ncm_spline_bspline_new (sbs->order));
+  return NCM_SPLINE (g_object_new (NCM_TYPE_SPLINE_BSPLINE,
+                                   "order", sbs->order,
+                                   "reltol", sbs->reltol,
+                                   "abstol", sbs->abstol,
+                                   NULL));
 }
 
 /**
  * ncm_spline_bspline_new:
- * @order: B-spline order, i.e. polynomial degree plus one
+ * @order: the B-spline order
  *
  * Creates an empty interpolating B-spline of order @order.
  *
@@ -636,9 +651,9 @@ ncm_spline_bspline_new (guint order)
 
 /**
  * ncm_spline_bspline_new_full:
- * @order: B-spline order, i.e. polynomial degree plus one
- * @xv: #NcmVector of knots
- * @yv: #NcmVector of the values of the function to be interpolated
+ * @order: the B-spline order
+ * @xv: the knots
+ * @yv: the values at @xv
  * @init: whether to prepare the spline
  *
  * Creates an interpolating B-spline of order @order over (@xv, @yv).
@@ -658,9 +673,10 @@ ncm_spline_bspline_new_full (guint order, NcmVector *xv, NcmVector *yv, gboolean
 /**
  * ncm_spline_bspline_set_order:
  * @sbs: a #NcmSplineBSpline
- * @order: B-spline order, i.e. polynomial degree plus one
+ * @order: the B-spline order
  *
- * Sets the B-spline order. The spline must be prepared again afterwards.
+ * Sets #NcmSplineBSpline:order, from $2$ to %NCM_SPLINE_BSPLINE_MAX_ORDER. The spline
+ * must be prepared again afterwards.
  */
 void
 ncm_spline_bspline_set_order (NcmSplineBSpline *sbs, guint order)
@@ -673,19 +689,18 @@ ncm_spline_bspline_set_order (NcmSplineBSpline *sbs, guint order)
 
   sbs->order = order;
 
-  /* The workspace is order-specific, so it must be rebuilt even at unchanged length. */
+  /* The workspace depends on the order */
   _ncm_spline_bspline_free_workspace (sbs);
   g_clear_pointer (&sbs->inst_name, g_free);
 }
 
 /**
  * ncm_spline_bspline_new_tol:
- * @reltol: requested relative interpolation error
- * @abstol: absolute floor
+ * @reltol: the relative interpolation error requested
+ * @abstol: the absolute interpolation error requested
  *
- * Creates an empty B-spline that chooses its own order: on preparation the lowest order
- * whose estimated interpolation error meets the tolerance is used, and preparation
- * fails loudly if the samples supplied cannot support the request.
+ * Creates an empty B-spline that sets its order on preparation, see
+ * #NcmSplineBSpline:reltol.
  *
  * Returns: (transfer full): a new #NcmSplineBSpline.
  */
@@ -702,12 +717,10 @@ ncm_spline_bspline_new_tol (gdouble reltol, gdouble abstol)
  * ncm_spline_bspline_get_achieved_error:
  * @sbs: a #NcmSplineBSpline
  *
- * Estimated interpolation error of the prepared spline, when the order was selected
- * automatically. This is the quantity that bounds the accuracy of anything computed
- * from the spline, so a caller integrating it can combine this with the integral's own
- * cancellation ratio to predict the error it will see.
+ * Gets the estimated interpolation error of the order chosen on preparation, see
+ * #NcmSplineBSpline:reltol.
  *
- * Returns: the estimated error, or zero when the order was set manually.
+ * Returns: the estimated error, or zero when #NcmSplineBSpline:reltol is zero.
  */
 gdouble
 ncm_spline_bspline_get_achieved_error (NcmSplineBSpline *sbs)
@@ -718,6 +731,8 @@ ncm_spline_bspline_get_achieved_error (NcmSplineBSpline *sbs)
 /**
  * ncm_spline_bspline_get_order:
  * @sbs: a #NcmSplineBSpline
+ *
+ * Gets #NcmSplineBSpline:order.
  *
  * Returns: the B-spline order.
  */

@@ -47,16 +47,14 @@ gdouble ncm_spline_bspline_get_achieved_error (NcmSplineBSpline *sbs);
 /**
  * NCM_SPLINE_BSPLINE_DEFAULT_ORDER:
  *
- * Default B-spline order (degree 7). Degree 3 cannot reach machine precision at any
- * sample density; degree 9 and above gain nothing and lose conditioning.
+ * Default B-spline order, degree 7; see #NcmSplineBSpline for the measured errors.
  */
 #define NCM_SPLINE_BSPLINE_DEFAULT_ORDER (8)
 
 /**
  * NCM_SPLINE_BSPLINE_MAX_ORDER:
  *
- * Largest supported order. Above this the interpolation matrix conditioning costs more
- * than the extra order gains.
+ * Largest B-spline order supported.
  */
 #define NCM_SPLINE_BSPLINE_MAX_ORDER (10)
 

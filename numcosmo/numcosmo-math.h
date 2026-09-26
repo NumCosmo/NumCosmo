@@ -73,13 +73,11 @@
 #include <numcosmo/ncm/algebra/ncm_lapack.h>
 #include <numcosmo/ncm/spline/ncm_spline.h>
 #include <numcosmo/ncm/spline/ncm_spline_func.h>
-#include <numcosmo/ncm/spline/ncm_spline_func_test.h>
 #include <numcosmo/ncm/spline/ncm_spline_bspline.h>
 #include <numcosmo/ncm/spline/ncm_spline_gsl.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic_notaknot.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic_d2.h>
-#include <numcosmo/ncm/spline/ncm_spline_rbf.h>
 #include <numcosmo/ncm/spline/ncm_spline_vec.h>
 #include <numcosmo/ncm/stats/ncm_function_sample_set.h>
 #include <numcosmo/ncm/spline/ncm_spline2d.h>

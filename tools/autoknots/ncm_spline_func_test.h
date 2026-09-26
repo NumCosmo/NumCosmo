@@ -26,11 +26,7 @@
 #ifndef _NCM_SPLINE_FUNC_TEST_H_
 #define _NCM_SPLINE_FUNC_TEST_H_
 
-#include <glib.h>
-#include <glib-object.h>
-#include <numcosmo/build_cfg.h>
-#include <numcosmo/ncm/algebra/ncm_matrix.h>
-#include <numcosmo/ncm/spline/ncm_spline_func.h>
+#include <numcosmo/numcosmo.h>
 
 G_BEGIN_DECLS
 
@@ -44,7 +40,6 @@ G_DECLARE_FINAL_TYPE (NcmSplineFuncTest, ncm_spline_func_test, NCM, SPLINE_FUNC_
  * @NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL_POS: polynomial interpolation with positive values.
  * @NCM_SPLINE_FUNC_TEST_TYPE_COSINE: cosine series.
  * @NCM_SPLINE_FUNC_TEST_TYPE_EXP_SINC: exponential and sinc function.
- * @NCM_SPLINE_FUNC_TEST_TYPE_RBF: RBF interpolation.
  * @NCM_SPLINE_FUNC_TEST_TYPE_USER: user supplied function.
  *
  * Enum to choose which base function to be used in the test suite.
@@ -55,7 +50,6 @@ typedef enum _NcmSplineFuncTestType /*< prefix=NCM_SPLINE_FUNC_TEST_TYPE >*/
   NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL_POS,
   NCM_SPLINE_FUNC_TEST_TYPE_COSINE,
   NCM_SPLINE_FUNC_TEST_TYPE_EXP_SINC,
-  NCM_SPLINE_FUNC_TEST_TYPE_RBF,
   NCM_SPLINE_FUNC_TEST_TYPE_USER,
 } NcmSplineFuncTestType;
 
@@ -73,6 +67,12 @@ typedef enum _NcmSplineFuncTestTypePDF /*< prefix=NCM_SPLINE_FUNC_TEST_TYPE_PDF 
   NCM_SPLINE_FUNC_TEST_TYPE_PDF_FLAT,
   NCM_SPLINE_FUNC_TEST_TYPE_PDF_NORMAL,
 } NcmSplineFuncTestTypePDF;
+
+#define NCM_TYPE_SPLINE_FUNC_TEST_TYPE (ncm_spline_func_test_type_get_type ())
+#define NCM_TYPE_SPLINE_FUNC_TEST_TYPE_PDF (ncm_spline_func_test_type_pdf_get_type ())
+
+GType ncm_spline_func_test_type_get_type (void);
+GType ncm_spline_func_test_type_pdf_get_type (void);
 
 NcmSplineFuncTest *ncm_spline_func_test_new (void);
 NcmSplineFuncTest *ncm_spline_func_test_ref (NcmSplineFuncTest *sft);

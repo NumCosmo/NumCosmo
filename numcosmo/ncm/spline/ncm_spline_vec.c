@@ -27,19 +27,14 @@
 /**
  * NcmSplineVec:
  *
- * A vector-valued spline function $\vec{F}(x): \mathbb{R} \to \mathbb{R}^n$.
+ * Vector-valued function $\vec{F}(x)$ whose components are splines on the same knots.
  *
- * This class represents a vector-valued function where each component is
- * interpolated by a spline sharing the same x-vector. The key optimization
- * is that a single binary search (via ncm_spline_get_index()) is performed,
- * followed by direct evaluation of all components using the index-based
- * methods (*_idx()).
- *
- * The object can be constructed from:
- *
- * - An x-vector and a matrix where each row is a component y-vector
- * - An x-vector and a GPtrArray of y-vectors
- *
+ * Each component is an empty copy of #NcmSplineVec:spline, see ncm_spline_copy_empty(),
+ * holding the shared knot vector and its own values; both vectors are referenced, not
+ * copied. The evaluation functions locate the interval once, with ncm_spline_get_index()
+ * on the first component, and pass it to ncm_spline_eval_idx(),
+ * ncm_spline_eval_deriv_idx() or ncm_spline_eval_integ_idx(). A #NcmSplineVec has at
+ * least one component.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -155,8 +150,7 @@ ncm_spline_vec_class_init (NcmSplineVecClass *klass)
   /**
    * NcmSplineVec:spline:
    *
-   * The base spline type used to create component splines.
-   *
+   * The spline copied for each component.
    */
   g_object_class_install_property (object_class,
                                    PROP_SPLINE,
@@ -169,8 +163,7 @@ ncm_spline_vec_class_init (NcmSplineVecClass *klass)
   /**
    * NcmSplineVec:len:
    *
-   * The number of component splines (dimension of the vector function).
-   *
+   * The number of components.
    */
   g_object_class_install_property (object_class,
                                    PROP_LEN,
@@ -183,16 +176,14 @@ ncm_spline_vec_class_init (NcmSplineVecClass *klass)
 
 /**
  * ncm_spline_vec_new:
- * @s: a #NcmSpline
- * @xv: a #NcmVector containing the x-coordinates
- * @ym: a #NcmMatrix where each row is a y-vector for a component
- * @init: whether to initialize the splines immediately
+ * @s: the spline copied for each component
+ * @xv: the knots
+ * @ym: the values at @xv, one row per component
+ * @init: whether to prepare the splines
  *
- * Creates a new #NcmSplineVec from a matrix of y-values. Each row of @ym
- * corresponds to one component of the vector function. All components share
- * the same x-vector @xv.
+ * Creates a #NcmSplineVec with one component per row of @ym, see ncm_spline_vec_set().
  *
- * Returns: (transfer full): a new #NcmSplineVec
+ * Returns: (transfer full): a new #NcmSplineVec.
  */
 NcmSplineVec *
 ncm_spline_vec_new (const NcmSpline *s, NcmVector *xv, NcmMatrix *ym, const gboolean init)
@@ -208,16 +199,15 @@ ncm_spline_vec_new (const NcmSpline *s, NcmVector *xv, NcmMatrix *ym, const gboo
 
 /**
  * ncm_spline_vec_new_gpa:
- * @s: a #NcmSpline
- * @xv: a #NcmVector containing the x-coordinates
- * @yv: (element-type NcmVector): a #GPtrArray of #NcmVector containing the y-coordinates for each component
- * @init: whether to initialize the splines immediately
+ * @s: the spline copied for each component
+ * @xv: the knots
+ * @yv: (element-type NcmVector): the values at @xv, one vector per component
+ * @init: whether to prepare the splines
  *
- * Creates a new #NcmSplineVec from a #GPtrArray of y-vectors. Each element
- * of @yv corresponds to one component of the vector function. All components
- * share the same x-vector @xv.
+ * Creates a #NcmSplineVec with one component per element of @yv, see
+ * ncm_spline_vec_set_gpa().
  *
- * Returns: (transfer full): a new #NcmSplineVec
+ * Returns: (transfer full): a new #NcmSplineVec.
  */
 NcmSplineVec *
 ncm_spline_vec_new_gpa (const NcmSpline *s, NcmVector *xv, GPtrArray *yv, const gboolean init)
@@ -235,9 +225,9 @@ ncm_spline_vec_new_gpa (const NcmSpline *s, NcmVector *xv, GPtrArray *yv, const 
  * ncm_spline_vec_ref:
  * @sv: a #NcmSplineVec
  *
- * Increases the reference count of @sv atomically.
+ * Increases the reference count of @sv by one.
  *
- * Returns: (transfer full): @sv
+ * Returns: (transfer full): @sv.
  */
 NcmSplineVec *
 ncm_spline_vec_ref (NcmSplineVec *sv)
@@ -249,8 +239,7 @@ ncm_spline_vec_ref (NcmSplineVec *sv)
  * ncm_spline_vec_free:
  * @sv: a #NcmSplineVec
  *
- * Atomically decrements the reference count of @sv by one. If the reference
- * count drops to 0, all memory allocated by @sv is released.
+ * Decreases the reference count of @sv by one.
  */
 void
 ncm_spline_vec_free (NcmSplineVec *sv)
@@ -262,9 +251,7 @@ ncm_spline_vec_free (NcmSplineVec *sv)
  * ncm_spline_vec_clear:
  * @sv: a #NcmSplineVec
  *
- * Atomically decrements the reference count of @sv by one. If the reference
- * count drops to 0, all memory allocated by @sv is released. Sets the pointer
- * to NULL.
+ * If *@sv is not %NULL, decreases its reference count by one and sets *@sv to %NULL.
  */
 void
 ncm_spline_vec_clear (NcmSplineVec **sv)
@@ -275,12 +262,13 @@ ncm_spline_vec_clear (NcmSplineVec **sv)
 /**
  * ncm_spline_vec_set:
  * @sv: a #NcmSplineVec
- * @xv: a #NcmVector containing the x-coordinates
- * @ym: a #NcmMatrix where each row is a y-vector for a component
- * @init: whether to initialize the splines immediately
+ * @xv: the knots
+ * @ym: the values at @xv, one row per component
+ * @init: whether to prepare the splines
  *
- * Sets the data for @sv from a matrix. Each row of @ym corresponds to one
- * component of the vector function.
+ * Replaces the components of @sv by one per row of @ym, all on the knots @xv. The
+ * components reference @xv and views of the rows of @ym. The number of columns of @ym
+ * must equal the length of @xv, and @ym must have at least one row.
  */
 void
 ncm_spline_vec_set (NcmSplineVec *sv, NcmVector *xv, NcmMatrix *ym, gboolean init)
@@ -291,12 +279,13 @@ ncm_spline_vec_set (NcmSplineVec *sv, NcmVector *xv, NcmMatrix *ym, gboolean ini
 
   g_assert_cmpuint (ncm_vector_len (xv), ==, ncols);
 
-  /* Clear existing splines */
+  if (nrows == 0)
+    g_error ("ncm_spline_vec_set: the matrix has no rows, so there are no components.");
+
   g_ptr_array_set_size (sv->spline_array, 0);
   sv->len  = nrows;
   sv->init = FALSE;
 
-  /* Create a spline for each row */
   for (i = 0; i < nrows; i++)
   {
     NcmSpline *s_i  = ncm_spline_copy_empty (sv->base_spline);
@@ -315,12 +304,13 @@ ncm_spline_vec_set (NcmSplineVec *sv, NcmVector *xv, NcmMatrix *ym, gboolean ini
 /**
  * ncm_spline_vec_set_gpa:
  * @sv: a #NcmSplineVec
- * @xv: a #NcmVector containing the x-coordinates
- * @yv: (element-type NcmVector): a #GPtrArray of #NcmVector containing the y-coordinates for each component
- * @init: whether to initialize the splines immediately
+ * @xv: the knots
+ * @yv: (element-type NcmVector): the values at @xv, one vector per component
+ * @init: whether to prepare the splines
  *
- * Sets the data for @sv from a #GPtrArray of y-vectors. Each element of @yv
- * corresponds to one component of the vector function.
+ * Replaces the components of @sv by one per element of @yv, all on the knots @xv. The
+ * components reference @xv and the elements of @yv, each of which must have the length
+ * of @xv; @yv must not be empty.
  */
 void
 ncm_spline_vec_set_gpa (NcmSplineVec *sv, NcmVector *xv, GPtrArray *yv, gboolean init)
@@ -328,12 +318,13 @@ ncm_spline_vec_set_gpa (NcmSplineVec *sv, NcmVector *xv, GPtrArray *yv, gboolean
   const guint len = yv->len;
   guint i;
 
-  /* Clear existing splines */
+  if (len == 0)
+    g_error ("ncm_spline_vec_set_gpa: the array is empty, so there are no components.");
+
   g_ptr_array_set_size (sv->spline_array, 0);
   sv->len  = len;
   sv->init = FALSE;
 
-  /* Create a spline for each y-vector */
   for (i = 0; i < len; i++)
   {
     NcmSpline *s_i  = ncm_spline_copy_empty (sv->base_spline);
@@ -354,7 +345,7 @@ ncm_spline_vec_set_gpa (NcmSplineVec *sv, NcmVector *xv, GPtrArray *yv, gboolean
  * ncm_spline_vec_prepare:
  * @sv: a #NcmSplineVec
  *
- * Prepares all component splines for evaluation.
+ * Prepares every component.
  */
 void
 ncm_spline_vec_prepare (NcmSplineVec *sv)
@@ -375,7 +366,9 @@ ncm_spline_vec_prepare (NcmSplineVec *sv)
  * ncm_spline_vec_is_init:
  * @sv: a #NcmSplineVec
  *
- * Returns: whether the spline vector is initialized
+ * Gets whether @sv was prepared since its components were last set.
+ *
+ * Returns: %TRUE if @sv is prepared.
  */
 gboolean
 ncm_spline_vec_is_init (NcmSplineVec *sv)
@@ -387,7 +380,9 @@ ncm_spline_vec_is_init (NcmSplineVec *sv)
  * ncm_spline_vec_get_len:
  * @sv: a #NcmSplineVec
  *
- * Returns: the number of component splines
+ * Gets #NcmSplineVec:len.
+ *
+ * Returns: the number of components.
  */
 guint
 ncm_spline_vec_get_len (NcmSplineVec *sv)
@@ -399,10 +394,9 @@ ncm_spline_vec_get_len (NcmSplineVec *sv)
  * ncm_spline_vec_get_nknots:
  * @sv: a #NcmSplineVec
  *
- * Gets the number of knot points (x-values) in the spline. All component
- * splines share the same x-vector, so this returns the length of that vector.
+ * Gets the number of knots. @sv must be prepared and have at least one component.
  *
- * Returns: the number of knot points
+ * Returns: the number of knots.
  */
 guint
 ncm_spline_vec_get_nknots (NcmSplineVec *sv)
@@ -416,11 +410,11 @@ ncm_spline_vec_get_nknots (NcmSplineVec *sv)
 /**
  * ncm_spline_vec_peek_spline:
  * @sv: a #NcmSplineVec
- * @i: component index
+ * @i: the component index
  *
- * Gets the @i-th component spline without increasing its reference count.
+ * Gets the component @i.
  *
- * Returns: (transfer none): the @i-th component spline
+ * Returns: (transfer none): the spline of component @i.
  */
 NcmSpline *
 ncm_spline_vec_peek_spline (NcmSplineVec *sv, guint i)
@@ -433,14 +427,10 @@ ncm_spline_vec_peek_spline (NcmSplineVec *sv, guint i)
 /**
  * ncm_spline_vec_eval:
  * @sv: a #NcmSplineVec
- * @x: x-coordinate
- * @res: a #NcmVector to store the result
+ * @x: the point
+ * @res: the output vector, of length #NcmSplineVec:len
  *
- * Evaluates the vector function at @x. The key optimization is that a single
- * binary search is performed via ncm_spline_get_index(), then all components
- * are evaluated using ncm_spline_eval_idx().
- *
- * The vector @res must have length equal to the number of components.
+ * Computes $\vec{F}(x)$ into @res.
  */
 void
 ncm_spline_vec_eval (NcmSplineVec *sv, const gdouble x, NcmVector *res)
@@ -463,14 +453,10 @@ ncm_spline_vec_eval (NcmSplineVec *sv, const gdouble x, NcmVector *res)
 /**
  * ncm_spline_vec_deriv:
  * @sv: a #NcmSplineVec
- * @x: x-coordinate
- * @res: a #NcmVector to store the result
+ * @x: the point
+ * @res: the output vector, of length #NcmSplineVec:len
  *
- * Evaluates the derivative of the vector function at @x. Uses a single
- * binary search followed by index-based derivative evaluation for all
- * components.
- *
- * The vector @res must have length equal to the number of components.
+ * Computes $\mathrm{d}\vec{F}/\mathrm{d}x$ at @x into @res.
  */
 void
 ncm_spline_vec_deriv (NcmSplineVec *sv, const gdouble x, NcmVector *res)
@@ -493,15 +479,11 @@ ncm_spline_vec_deriv (NcmSplineVec *sv, const gdouble x, NcmVector *res)
 /**
  * ncm_spline_vec_integ:
  * @sv: a #NcmSplineVec
- * @xi: initial x-coordinate
- * @xf: final x-coordinate
- * @res: a #NcmVector to store the result
+ * @xi: the lower limit
+ * @xf: the upper limit
+ * @res: the output vector, of length #NcmSplineVec:len
  *
- * Evaluates the integral of the vector function from @xi to @xf. Uses index
- * lookups for both endpoints followed by index-based integration for all
- * components.
- *
- * The vector @res must have length equal to the number of components.
+ * Computes $\int_{x_i}^{x_f}\vec{F}(x)\,\mathrm{d}x$ into @res.
  */
 void
 ncm_spline_vec_integ (NcmSplineVec *sv, const gdouble xi, const gdouble xf, NcmVector *res)
@@ -526,12 +508,11 @@ ncm_spline_vec_integ (NcmSplineVec *sv, const gdouble xi, const gdouble xf, NcmV
 /**
  * ncm_spline_vec_eval_array:
  * @sv: a #NcmSplineVec
- * @x: x-coordinate
- * @res: (out callee-allocates) (element-type gdouble): result array
+ * @x: the point
+ * @res: (out callee-allocates) (element-type gdouble): the output array
  *
- * Evaluates the vector function at @x and stores the result in @res.
- * If *@res is %NULL, a new #GArray is created. Otherwise, the existing array
- * is reused.
+ * Computes $\vec{F}(x)$ into *@res, resized to #NcmSplineVec:len; a new #GArray is
+ * created when *@res is %NULL.
  */
 void
 ncm_spline_vec_eval_array (NcmSplineVec *sv, const gdouble x, GArray **res)
@@ -558,12 +539,11 @@ ncm_spline_vec_eval_array (NcmSplineVec *sv, const gdouble x, GArray **res)
 /**
  * ncm_spline_vec_deriv_array:
  * @sv: a #NcmSplineVec
- * @x: x-coordinate
- * @res: (out callee-allocates) (element-type gdouble): result array
+ * @x: the point
+ * @res: (out callee-allocates) (element-type gdouble): the output array
  *
- * Evaluates the derivative of the vector function at @x and stores the result
- * in @res. If *@res is %NULL, a new #GArray is created. Otherwise, the
- * existing array is reused.
+ * Computes $\mathrm{d}\vec{F}/\mathrm{d}x$ at @x into *@res, resized to
+ * #NcmSplineVec:len; a new #GArray is created when *@res is %NULL.
  */
 void
 ncm_spline_vec_deriv_array (NcmSplineVec *sv, const gdouble x, GArray **res)
@@ -590,13 +570,12 @@ ncm_spline_vec_deriv_array (NcmSplineVec *sv, const gdouble x, GArray **res)
 /**
  * ncm_spline_vec_integ_array:
  * @sv: a #NcmSplineVec
- * @xi: initial x-coordinate
- * @xf: final x-coordinate
- * @res: (out callee-allocates) (element-type gdouble): result array
+ * @xi: the lower limit
+ * @xf: the upper limit
+ * @res: (out callee-allocates) (element-type gdouble): the output array
  *
- * Evaluates the integral of the vector function from @xi to @xf and stores
- * the result in @res. If *@res is %NULL, a new #GArray is created.
- * Otherwise, the existing array is reused.
+ * Computes $\int_{x_i}^{x_f}\vec{F}(x)\,\mathrm{d}x$ into *@res, resized to
+ * #NcmSplineVec:len; a new #GArray is created when *@res is %NULL.
  */
 void
 ncm_spline_vec_integ_array (NcmSplineVec *sv, const gdouble xi, const gdouble xf, GArray **res)

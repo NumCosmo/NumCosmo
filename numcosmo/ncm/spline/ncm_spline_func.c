@@ -26,70 +26,40 @@
 /**
  * NcmSplineFunc:
  *
- * Automatic generation of the knots for a spline.
+ * Knot placement for a #NcmSpline interpolating a function.
  *
- * This function implements 4 different methods to automatically determine
- * the #NcmVector of knots, $\mathbf{x}$, of a #NcmSpline given a relative error between the function $f$
- * to be interpolated and the spline result $\hat{f}$.
+ * ncm_spline_set_func() and ncm_spline_set_func_scale() place the knots adaptively, and
+ * ncm_spline_set_func_grid() on a fixed grid, according to #NcmSplineFuncType.
  *
- * All available methods start with $n_0$ knots, $\mathbf{x}_0$, distributed  across [@xi, @xf], including both limiting points.
- * The value of $n_0$ depends on the chosen interpolation method given by @s, e.g., #NcmSplineCubicNotaknot has $n_0 = 6$.
+ * The adaptive types, %NCM_SPLINE_FUNCTION_SPLINE, %NCM_SPLINE_FUNCTION_SPLINE_LNKNOT and
+ * %NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT, implement AutoKnots, [Vitenti et al.
+ * (2025)](https://doi.org/10.1016/j.ascom.2025.100970), with the notation used there. They
+ * start from $\max(m, 3)$ knots uniform in $x$, $\ln x$ or $\sinh^{-1} x$, where $m$ is
+ * ncm_spline_min_size(). Each round visits every interval $[x_i, x_{i+1}]$ not yet
+ * accepted, evaluates $f$ at its midpoint $\overline{x}_i$ in the same variable and
+ * inserts $\overline{x}_i$ as a knot. Both new intervals are accepted when
+ * $$|f(\overline{x}_i) - \hat{f}(\overline{x}_i)| \le \delta\,(|f(\overline{x}_i)| +
+ * \varepsilon) \quad\text{and}\quad |\widetilde{\mathcal{I}}_i - \hat{\mathcal{I}}_i| \le
+ * \delta\,(|\widetilde{\mathcal{I}}_i| + \varepsilon\,h_i),$$
+ * where $\hat{f}$ is the spline on the knots of the previous round, $\hat{\mathcal{I}}_i$
+ * its integral over the interval, $\widetilde{\mathcal{I}}_i$ the integral of the
+ * quadratic through the three points (Simpson's rule for %NCM_SPLINE_FUNCTION_SPLINE),
+ * $h_i = x_{i+1} - x_i$, $\delta$ the relative tolerance and $\varepsilon$ the scale (zero
+ * for ncm_spline_set_func()). The rounds end when a round accepts every interval it
+ * visits. For %NCM_SPLINE_FUNCTION_SPLINE, the intervals with $h_i$ larger than the mean
+ * plus `refine_ns` standard deviations are then reopened and the rounds resumed, `refine`
+ * times, see ncm_spline_set_func_scale(); ncm_spline_set_func() uses one pass with one
+ * standard deviation.
  *
- * The function $f$ is first interpolated at the $\mathbf{x}_0$ knots, producing the interpolated function $\hat{f}_0$.
- * Next, the existing $n_0 - 1$ bins, $\Delta \mathbf{x}_0 = \mathbf{x}_0^{i+1} - \mathbf{x}_0^{i}$, are divided in half and
- * test points are placed at those positions, $\overline{\mathbf{x}}_0 = \frac{\mathbf{x}_0^{i+1} + \mathbf{x}_0^{i}}{2}$.
- * The following tests are done for each one of the bins $\Delta \mathbf{x}_0$ separately:
- * \begin{equation*}
- *   \left| \frac{ \hat{f}_0(\overline{\mathbf{x}}_0) - f(\overline{\mathbf{x}}_0)}{f(\overline{\mathbf{x}}_0)} \right| < \mathrm{rel \\_ error}
- * \end{equation*}
- * and
- * \begin{equation*}
- *   \left| \frac{ \int_{\Delta \mathbf{x}_0} \hat{f}_0  - \int_{\Delta \mathbf{x}_0} f }{ \int_{\Delta \mathbf{x}_0} f } \right| < \mathrm{rel \\_ error}.
- * \end{equation*}
- * Where $\int_{\Delta \mathbf{x}_0} f$ is the integral of the input function $f$ evaluated using [Simpson's rule](https://en.wikipedia.org/wiki/Simpson%27s_rule)
- *\begin{equation*}
- * \int_{\Delta \mathbf{x}_0} f = \frac{\Delta \mathbf{x}_0}{6} \left[ f \left( \mathbf{x}_0^{i} \right) + 4 f \left( \overline{\mathbf{x}}_0 \right) + f \left( \mathbf{x}_0^{i+1} \right) \right]
- *\end{equation*}
- *
- * and the interpolated function $\hat{f}_0$ is integrated by applying ncm_spline_eval_integ().
- * If any bin passes those relations then, its associated test point $\overline{\mathbf{x}}_0$ together with both knots,
- * are defined as a good representation of the function $f$ and this specific bin does not need to be refined anymore.
- * If not, then $\mathbf{x}_0 \cup \overline{\mathbf{x}}_0$ is splitted once again into two more symmetric test points around $\overline{\mathbf{x}}_0$.
- * A new set of knots is defined, $\mathbf{x}_1 = \mathbf{x}_0 \cup \overline{\mathbf{x}}_0$.
- * The ones which did not pass the tests define another set of test points $\overline{\mathbf{x}}_1$ that lie between the $\mathbf{x}_0\cup \overline{\mathbf{x}}_0$.
- * The new set of knots $\mathbf{x}_1$ are used to create a new interpolated function $\hat{f}_1$, always in the full range [@xi, @xf].
- * The same tests are performed as before, but now with $\hat{f}_1(\overline{\mathbf{x}}_1)$, $f(\overline{\mathbf{x}}_1)$
- * and the integral now has limits $\Delta \mathbf{x}_1 = \Delta \mathbf{x}_0/2$, but only for those bins that did not pass the previous test.
- * Therefore, the tests are always applied on three knots at a time.
- * This procedure is repeated until the desired accuracy is met across the whole range [@xi, @xf]. Note that it will most probably create a inhomogeneous set of knots.
- *
- *
+ * The adaptive types stop with a warning when the number of knots exceeds `max_nodes`,
+ * unlimited when zero, and abort when an interval becomes shorter than
+ * %NCM_SPLINE_KNOT_DIFF_TOL relative to its midpoint, which indicates a discontinuity.
  *
  * <inlinegraphic fileref="spline_func_knots_evolution.png" format="PNG" scale="98" align="right"/>
  *
- *
- * The figure shows a schematically evolution of the methodology for choosing the knots.
- * It starts with 6 knots, $\mathbf{x}_0$ (black filled circles in the first line), used to create the interpolated function $\hat{f}_0$.
- * The $\overline{\mathbf{x}}_0$ test points are created (blue squares in the second line) and the first tests are performed in each one of the five bins.
- * In this example, only the first and the fourth bins did not pass both tests.
- * One new set of knots is created, $\mathbf{x}_1 = \mathbf{x}_0 \cup \overline{\mathbf{x}}_0$ (second line) and their new test points,
- * $\overline{\mathbf{x}}_1$ (red diamonds in the third line).
- * Note that $\overline{\mathbf{x}}_1$ are only placed in the middle of the previously bins that did not pass the tests.
- * The tests are done 4 times, one for each bin with a red diamond at it center,
- * with width $\Delta \mathbf{x}_1 = \Delta \mathbf{x}_0/2$. Again, only two of them passed the tests.
- * One new set of knots is created $\mathbf{x}_2 = \mathbf{x}_1 \cup \overline{\mathbf{x}}_1$ (third line) and their new test points,
- * $\overline{\mathbf{x}}_2$ (black vertical ticks in the fourth line).
- * The tests are done 4 times more, one for each bin with a black vertical tick at it center, with width $\Delta \mathbf{x}_2 = \Delta \mathbf{x}_1/2$.
- *
- * In this schematic example, the final set of knots is given by the last line
- * $\mathbf{x} = \mathbf{x}_3 = \mathbf{x}_2 \cup \overline{\mathbf{x}}_2$, with 19 knots in total,
- * also showing that the final distribution is not homogeneous.
- * It is important to note that in all steps the interpolated function is created with all its knots:
- * $\mathbf{x}_0 \rightarrow \hat{f}_0$, $\mathbf{x}_1 \rightarrow \hat{f}_1$, $\mathbf{x}_2 \rightarrow \hat{f}_2$, $\mathbf{x}_3 \rightarrow \hat{f}_3$.
- * It is also worth noting that, in the description and example above, it was assumed a linear distribution of knots in each step,
- * but there are other options listed at #NcmSplineFuncType.
- *
- *
+ * The figure shows three rounds of %NCM_SPLINE_FUNCTION_SPLINE, from $6$ knots (first
+ * line) to $19$ (last line); the markers on each line are the midpoints tested in that
+ * round, placed only in the intervals that failed the previous one.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -101,10 +71,6 @@
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_util.h"
 #include "ncm/stats/ncm_stats_vec.h"
-
-#ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_poly.h>
-#endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct
 {
@@ -131,124 +97,9 @@ typedef struct
 #define BIVEC_LIST_OK(dlist) (((_BIVec *) (dlist)->data)->ok)
 
 static void
-_test_and_eval_interior_4 (GList *nodes, gsl_function *F, const gdouble yinterp1, const gdouble yinterp2, const gdouble rel_error, const gdouble f_scale, gboolean ok)
-{
-  gint i;
-
-  GList *wnodes[3];
-  gdouble poly3_dd[4];
-  gdouble poly3_x[4];
-  gdouble poly3_y[4];
-  gdouble step, sub_step;
-  gboolean go_ok = FALSE;
-
-  poly3_x[0] = BIVEC_LIST_X (nodes);
-  poly3_x[3] = BIVEC_LIST_X (nodes->next);
-  poly3_y[0] = BIVEC_LIST_Y (nodes);
-  poly3_y[3] = BIVEC_LIST_Y (nodes->next);
-
-  step       = (poly3_x[3] - poly3_x[0]) / 3.0;
-  sub_step   = step / 3.0;
-  poly3_x[1] = poly3_x[0] + step;
-  poly3_x[2] = poly3_x[1] + step;
-  poly3_y[1] = GSL_FN_EVAL (F, poly3_x[1]);
-  poly3_y[2] = GSL_FN_EVAL (F, poly3_x[2]);
-
-  BIVEC_LIST_INSERT_BEFORE (nodes, nodes->next, poly3_x[2], poly3_y[2]);
-  BIVEC_LIST_INSERT_BEFORE (nodes, nodes->next, poly3_x[1], poly3_y[1]);
-
-  gsl_poly_dd_init (poly3_dd, poly3_x, poly3_y, 4);
-
-  if ((fabs (poly3_y[1] - yinterp1) < ((fabs (poly3_y[1]) + f_scale) * rel_error)) &&
-      (fabs (poly3_y[2] - yinterp2) < ((fabs (poly3_y[2]) + f_scale) * rel_error)))
-  {
-    if (ok || ((sub_step / poly3_x[0]) < NCM_SPLINE_KNOT_DIFF_TOL))
-      return;
-    else
-      go_ok = TRUE;
-  }
-
-  wnodes[0] = nodes;
-  wnodes[1] = wnodes[0]->next;
-  wnodes[2] = wnodes[1]->next;
-
-  for (i = 0; i < 3; i++)
-  {
-    gdouble try_yinterp1, try_yinterp2;
-
-    try_yinterp1 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + sub_step);
-    try_yinterp2 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + 2.0 * sub_step);
-    _test_and_eval_interior_4 (wnodes[i], F, try_yinterp1, try_yinterp2, rel_error, f_scale, go_ok);
-  }
-}
-
-static void
 _BIVec_free (gpointer mem)
 {
   g_slice_free (_BIVec, mem);
-}
-
-static void
-ncm_spline_new_function_4 (NcmSpline *s, gsl_function *F, const gdouble xi, const gdouble xf, gsize max_nodes, const gdouble rel_error, const gdouble f_scale)
-{
-  gdouble poly3_dd[4];
-  gdouble poly3_x[4];
-  gdouble poly3_y[4];
-  GList *nodes     = NULL;
-  GList *wnodes[3] = {NULL, NULL, NULL};
-  gint i;
-  gdouble step     = (xf - xi) / 3.0;
-  gdouble sub_step = step / 3.0;
-  GArray *x_array;
-  GArray *y_array;
-  gsize n_elem;
-
-  max_nodes = (max_nodes <= 0) ? G_MAXUINT64 : max_nodes;
-  g_assert_cmpfloat (f_scale, >=, 0.0);
-
-  for (i = 0; i < 4; i++)
-  {
-    poly3_x[i] = xi + i * step;
-    poly3_y[i] = GSL_FN_EVAL (F, poly3_x[i]);
-    BIVEC_LIST_APPEND (nodes, poly3_x[i], poly3_y[i]);
-  }
-
-  gsl_poly_dd_init (poly3_dd, poly3_x, poly3_y, 4);
-
-  wnodes[0] = nodes;
-  wnodes[1] = wnodes[0]->next;
-  wnodes[2] = wnodes[1]->next;
-
-  for (i = 0; i < 3; i++)
-  {
-    gdouble yinterp1, yinterp2;
-
-    yinterp1 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + sub_step);
-    yinterp2 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + 2.0 * sub_step);
-
-    _test_and_eval_interior_4 (wnodes[i], F, yinterp1, yinterp2, rel_error, f_scale, FALSE);
-  }
-
-  n_elem  = g_list_length (nodes);
-  x_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), n_elem);
-  y_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), n_elem);
-
-  wnodes[0] = nodes;
-
-  do {
-    g_array_append_val (x_array, BIVEC_LIST_X (nodes));
-    g_array_append_val (y_array, BIVEC_LIST_Y (nodes));
-    nodes = nodes->next;
-  } while (nodes != NULL);
-
-  g_list_free_full (wnodes[0], _BIVec_free);
-
-  ncm_spline_set_array (s, x_array, y_array, TRUE);
-
-  g_array_unref (x_array);
-  g_array_unref (y_array);
-
-  return;
 }
 
 static void
@@ -377,7 +228,7 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
 
     if (x_array->len > max_nodes)
     {
-      g_warning ("ncm_spline_new_function_spline: cannot archive requested precision with at most %zu nodes", max_nodes);
+      g_warning ("ncm_spline_new_function_spline: cannot achieve requested precision with at most %zu nodes", max_nodes);
       break;
     }
 
@@ -542,7 +393,7 @@ ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, const gdou
 
     if (x_array->len > max_nodes)
     {
-      g_warning ("ncm_spline_new_function_spline: cannot archive requested precision with at most %zu nodes", max_nodes);
+      g_warning ("ncm_spline_new_function_spline: cannot achieve requested precision with at most %zu nodes", max_nodes);
       break;
     }
 
@@ -695,14 +546,15 @@ ncm_spline_new_function_spline_sinhknot (NcmSpline *s, gsl_function *F, const gd
 /**
  * ncm_spline_set_func: (skip)
  * @s: a #NcmSpline
- * @ftype: a #NcmSplineFuncType
- * @F: function to be approximated by spline functions
- * @xi: lower knot
- * @xf: upper knot
- * @max_nodes: maximum number of knots
- * @rel_error: relative error between the function to be interpolated and the spline result
+ * @ftype: a #NcmSplineFuncType, one of the adaptive types
+ * @F: the function
+ * @xi: the lower limit
+ * @xf: the upper limit
+ * @max_nodes: the maximum number of knots
+ * @rel_error: the relative tolerance
  *
- * This function automatically determines the knots of @s in the interval [@xi, @xf] given a @ftype and @rel_error.
+ * Places the knots of @s on [@xi, @xf] adaptively and prepares it, see #NcmSplineFunc,
+ * with scale zero and one refinement pass.
  */
 void
 ncm_spline_set_func (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, const gdouble xi, const gdouble xf, gsize max_nodes, const gdouble rel_error)
@@ -711,9 +563,6 @@ ncm_spline_set_func (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, con
 
   switch (ftype)
   {
-    case NCM_SPLINE_FUNCTION_4POINTS:
-      ncm_spline_new_function_4 (s, F, xi, xf, max_nodes, rel_error, 0.0);
-      break;
     case NCM_SPLINE_FUNCTION_SPLINE:
       ncm_spline_new_function_spline (s, F, xi, xf, max_nodes, rel_error, 0.0, 1, 1.0);
       break;
@@ -733,17 +582,19 @@ ncm_spline_set_func (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, con
 /**
  * ncm_spline_set_func_scale: (skip)
  * @s: a #NcmSpline
- * @ftype: a #NcmSplineFuncType
- * @F: function to be approximated by spline functions
- * @xi: lower knot
- * @xf: upper knot
- * @max_nodes: maximum number of knots
- * @rel_error: relative error between the function to be interpolated and the spline result
- * @scale: scale of function, it is used to compute the absolute tolerance abstol = f_scale * rel_error
- * @refine: if TRUE sample additional points to check if there are regions not satisfying the required tolerance
- * @refine_ns: number of standard-deviation used to refine the grid
+ * @ftype: a #NcmSplineFuncType, one of the adaptive types
+ * @F: the function
+ * @xi: the lower limit
+ * @xf: the upper limit
+ * @max_nodes: the maximum number of knots
+ * @rel_error: the relative tolerance
+ * @scale: the scale of the function values
+ * @refine: the number of refinement passes
+ * @refine_ns: the number of standard deviations above the mean spacing
  *
- * This function automatically determines the knots of @s in the interval [@xi, @xf] given a @ftype and @rel_error.
+ * Places the knots of @s on [@xi, @xf] adaptively and prepares it, see #NcmSplineFunc;
+ * the absolute tolerance is @rel_error times @scale. @refine and @refine_ns are used only
+ * by %NCM_SPLINE_FUNCTION_SPLINE.
  */
 void
 ncm_spline_set_func_scale (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, const gdouble xi, const gdouble xf, gsize max_nodes, const gdouble rel_error, const gdouble scale, const gint refine, gdouble refine_ns)
@@ -752,9 +603,6 @@ ncm_spline_set_func_scale (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *
 
   switch (ftype)
   {
-    case NCM_SPLINE_FUNCTION_4POINTS:
-      ncm_spline_new_function_4 (s, F, xi, xf, max_nodes, rel_error, scale);
-      break;
     case NCM_SPLINE_FUNCTION_SPLINE:
       ncm_spline_new_function_spline (s, F, xi, xf, max_nodes, rel_error, scale, refine, refine_ns);
       break;
@@ -773,18 +621,16 @@ ncm_spline_set_func_scale (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *
 
 /**
  * ncm_spline_set_func1:
- * @s: a #NcmSpline.
- * @ftype: a #NcmSplineFuncType
- * @F: (scope call): function to be approximated by spline functions
- * @obj: (allow-none): GObject used by the function @F
- * @xi: lower knot
- * @xf: upper knot
- * @max_nodes: maximum number of knots
- * @rel_error: relative error between the function to be interpolated and the spline result
+ * @s: a #NcmSpline
+ * @ftype: a #NcmSplineFuncType, one of the adaptive types
+ * @F: (scope call): the function
+ * @obj: (allow-none): the object passed to @F
+ * @xi: the lower limit
+ * @xf: the upper limit
+ * @max_nodes: the maximum number of knots
+ * @rel_error: the relative tolerance
  *
- * This function automatically determines the knots of @s in the interval [@xi, @xf] given a @ftype and @rel_error.
- *
- *
+ * Same as ncm_spline_set_func(), for a #NcmSplineFuncF.
  */
 void
 ncm_spline_set_func1 (NcmSpline *s, NcmSplineFuncType ftype, NcmSplineFuncF F, GObject *obj, gdouble xi, gdouble xf, gsize max_nodes, gdouble rel_error)
@@ -855,15 +701,16 @@ _ncm_spline_new_function_grid_log (NcmSpline *s, gsl_function *F, const gdouble 
 /**
  * ncm_spline_set_func_grid: (skip)
  * @s: a #NcmSpline
- * @ftype: a #NcmSplineFuncType: must be either #NCM_SPLINE_FUNC_GRID_LINEAR or #NCM_SPLINE_FUNC_GRID_LOG
- * @F: function to be interpolated
- * @xi: lower knot
- * @xf: upper knot
- * @nnodes: number of knots including both limits knots [@xi, @xf]
+ * @ftype: a #NcmSplineFuncType, %NCM_SPLINE_FUNC_GRID_LINEAR or %NCM_SPLINE_FUNC_GRID_LOG
+ * @F: the function
+ * @xi: the lower limit
+ * @xf: the upper limit
+ * @nnodes: the number of knots
  *
- * This function fills the spline @s with the function @F values
- * in a uniform grid within the range [@xi, @xf] and a total of @nnodes knots.
- *
+ * Sets @s to @nnodes knots uniform on [@xi, @xf] in $x$ or in $\ln x$, both limits
+ * included, and prepares it. @nnodes must be larger than ncm_spline_min_size() and
+ * smaller than %NCM_SPLINE_FUNC_DEFAULT_MAX_NODES; %NCM_SPLINE_FUNC_GRID_LOG requires
+ * @xi > 0.
  */
 void
 ncm_spline_set_func_grid (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, const gdouble xi, const gdouble xf, gsize nnodes)
@@ -890,21 +737,15 @@ ncm_spline_set_func_grid (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F
 
 /**
  * ncm_spline_set_func_grid1:
- * @s: a #NcmSpline.
- * @ftype: a #NcmSplineFuncType: must be either #NCM_SPLINE_FUNC_GRID_LINEAR or #NCM_SPLINE_FUNC_GRID_LOG
- * @F: (scope call): function to be interpolated
- * @obj: (allow-none): GObject used by the function @F
- * @xi: lower knot
- * @xf: upper knot
- * @nnodes: number of knots including both limits knots [@xi, @xf]
+ * @s: a #NcmSpline
+ * @ftype: a #NcmSplineFuncType, %NCM_SPLINE_FUNC_GRID_LINEAR or %NCM_SPLINE_FUNC_GRID_LOG
+ * @F: (scope call): the function
+ * @obj: (allow-none): the object passed to @F
+ * @xi: the lower limit
+ * @xf: the upper limit
+ * @nnodes: the number of knots
  *
- * This function fills the spline @s with the function @F values
- * in a uniform grid within the range [@xi, @xf] and a total of @nnodes knots.
- *
- * The difference between #ncm_spline_set_func_grid is how the user function is passed.
- * Here, it uses a #NcmSplineFuncF function and it parameters are allocated in the object @obj.
- * This function is more suitable to be used within Python.
- *
+ * Same as ncm_spline_set_func_grid(), for a #NcmSplineFuncF.
  */
 void
 ncm_spline_set_func_grid1 (NcmSpline *s, NcmSplineFuncType ftype, NcmSplineFuncF F, GObject *obj, gdouble xi, gdouble xf, gsize nnodes)

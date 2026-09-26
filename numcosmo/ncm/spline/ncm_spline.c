@@ -229,9 +229,9 @@ _ncm_spline_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);
 }
 
-static gdouble _ncm_spline_eval_idx_not_implemented (const NcmSpline *s, const gdouble x, const gsize i);
-static gdouble _ncm_spline_deriv_idx_not_implemented (const NcmSpline *s, const gdouble x, const gsize i);
-static gdouble _ncm_spline_integ_idx_not_implemented (const NcmSpline *s, const gdouble xi, const gsize i, const gdouble xf, const gsize f);
+static gdouble _ncm_spline_eval_idx_default (const NcmSpline *s, const gdouble x, const gsize i);
+static gdouble _ncm_spline_deriv_idx_default (const NcmSpline *s, const gdouble x, const gsize i);
+static gdouble _ncm_spline_integ_idx_default (const NcmSpline *s, const gdouble xi, const gsize i, const gdouble xf, const gsize f);
 
 static void
 ncm_spline_class_init (NcmSplineClass *klass)
@@ -292,9 +292,9 @@ ncm_spline_class_init (NcmSplineClass *klass)
   klass->deriv        = NULL;
   klass->deriv2       = NULL;
   klass->integ        = NULL;
-  klass->eval_idx     = &_ncm_spline_eval_idx_not_implemented;
-  klass->deriv_idx    = &_ncm_spline_deriv_idx_not_implemented;
-  klass->integ_idx    = &_ncm_spline_integ_idx_not_implemented;
+  klass->eval_idx     = &_ncm_spline_eval_idx_default;
+  klass->deriv_idx    = &_ncm_spline_deriv_idx_default;
+  klass->integ_idx    = &_ncm_spline_integ_idx_default;
 }
 
 /**
@@ -878,17 +878,12 @@ ncm_spline_eval (const NcmSpline *s, const gdouble x)
   return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->eval (s, x);
 }
 
-/* LCOV_EXCL_START */
-
+/* The interval index is a hint: without a type-specific use, evaluate without it */
 static gdouble
-_ncm_spline_eval_idx_not_implemented (const NcmSpline *s, const gdouble x, const gsize i)
+_ncm_spline_eval_idx_default (const NcmSpline *s, const gdouble x, const gsize i)
 {
-  g_error ("ncm_spline_eval_idx: method not implemented for spline type `%s'", G_OBJECT_TYPE_NAME (s));
-
-  return 0.0;
+  return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->eval (s, x);
 }
-
-/* LCOV_EXCL_STOP */
 
 /**
  * ncm_spline_eval_idx:
@@ -897,7 +892,7 @@ _ncm_spline_eval_idx_not_implemented (const NcmSpline *s, const gdouble x, const
  * @i: index of the interval, $x_i \le x < x_{i+1}$
  *
  * Same as ncm_spline_eval() with the interval given, for splines that share their knots.
- * Aborts for a type that does not implement it.
+ * A type that does not use the interval evaluates without it.
  *
  * Returns: the interpolated value at @x.
  */
@@ -922,17 +917,11 @@ ncm_spline_eval_deriv (const NcmSpline *s, const gdouble x)
   return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->deriv (s, x);
 }
 
-/* LCOV_EXCL_START */
-
 static gdouble
-_ncm_spline_deriv_idx_not_implemented (const NcmSpline *s, const gdouble x, const gsize i)
+_ncm_spline_deriv_idx_default (const NcmSpline *s, const gdouble x, const gsize i)
 {
-  g_error ("ncm_spline_eval_deriv_idx: method not implemented for spline type `%s'", G_OBJECT_TYPE_NAME (s));
-
-  return 0.0;
+  return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->deriv (s, x);
 }
-
-/* LCOV_EXCL_STOP */
 
 /**
  * ncm_spline_eval_deriv_idx:
@@ -940,8 +929,8 @@ _ncm_spline_deriv_idx_not_implemented (const NcmSpline *s, const gdouble x, cons
  * @x: the point
  * @i: index of the interval, $x_i \le x < x_{i+1}$
  *
- * Same as ncm_spline_eval_deriv() with the interval given. Aborts for a type that does not
- * implement it.
+ * Same as ncm_spline_eval_deriv() with the interval given. A type that does not use the
+ * interval evaluates without it.
  *
  * Returns: the first derivative of the interpolant at @x.
  */
@@ -1000,17 +989,11 @@ ncm_spline_eval_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
   return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->integ (s, x0, x1);
 }
 
-/* LCOV_EXCL_START */
-
 static gdouble
-_ncm_spline_integ_idx_not_implemented (const NcmSpline *s, const gdouble xi, const gsize i, const gdouble xf, const gsize f)
+_ncm_spline_integ_idx_default (const NcmSpline *s, const gdouble xi, const gsize i, const gdouble xf, const gsize f)
 {
-  g_error ("ncm_spline_eval_integ_idx: method not implemented for spline type `%s'", G_OBJECT_TYPE_NAME (s));
-
-  return 0.0;
+  return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->integ (s, xi, xf);
 }
-
-/* LCOV_EXCL_STOP */
 
 /**
  * ncm_spline_eval_integ_idx:
@@ -1020,8 +1003,8 @@ _ncm_spline_integ_idx_not_implemented (const NcmSpline *s, const gdouble xi, con
  * @xf: the upper limit
  * @f: index of the interval of @xf
  *
- * Same as ncm_spline_eval_integ() with the intervals given. Aborts for a type that does not
- * implement it.
+ * Same as ncm_spline_eval_integ() with the intervals given. A type that does not use the
+ * intervals integrates without them.
  *
  * Returns: $\int_{x_i}^{x_f} s(x)\,\mathrm{d}x$.
  */

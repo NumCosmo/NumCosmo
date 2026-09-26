@@ -54,9 +54,7 @@
  *   \end{equation*}
  *   The user provides the amplitudes $A_i$ and the frequencies $\nu_i$.
  *
- * - #NCM_SPLINE_FUNC_TEST_TYPE_RBF: it is similar to the polynomial, but now it applies a RBF interpolation upon a given set of points.
- *
- * For both interpolated base functions, polynomial and RBF, all ordinate
+ * For the polynomial base functions, all ordinate
  * points $y$ can be drawn from a flat or a normal (gaussian) distribution.
  * The abscissa points $x$ are always drawn from a flat distribution,
  * and its limiting points are fixed at #NcmSplineFuncTest:xi and #NcmSplineFuncTest:xf.
@@ -82,7 +80,7 @@
  *
  * <emphasis>Built in functions parameters:</emphasis>
  *
- * * For the two interpolation methods, polynomial and RBF, the provided parameters are the ordinate points $y$.
+ * * For the polynomial base functions, the provided parameters are the ordinate points $y$.
  *
  * * For the cosine summation method, the provided parameters are the amplitude and the frequency, alternating in that order.
  *   If someone wants to perform a sum of two cosine functions, must provide a matrix with four rows: $A_0$, $\nu_0$, $A_1$ and $\nu_1$, for example.
@@ -93,398 +91,58 @@
  * </note>
  *
  *
- * # One grid examples # {#grid-ex}
- *
- * To perform one grid statistics, it is needed to place ncm_spline_func_test_set_one_grid_stats() after preparing it (ncm_spline_func_test_prepare()).
- * Two examples are shown below together with their results.
- *
- * ## Example: 7th degree polynomial interpolation. # {#7th-ex}
- * |[<!-- language="C" -->
- * #include <numcosmo/numcosmo.h>
- *
- * int
- * main (void)
- * {
- *   guint npar = 8, seed = 1, ngrid = 100000;
- *
- *   gdouble rel_error = 1.e-10, scale = 1.0, mean = 0.0, sigma = 1.0;
- *
- *   NcmSplineFuncTest *sft = ncm_spline_func_test_new ();
- *
- *   ncm_spline_func_test_set_seed (sft, seed);
- *
- *   ncm_spline_func_test_set_ngrid (sft, ngrid);
- *
- *   ncm_spline_func_test_set_scale (sft, scale);
- *
- *   ncm_spline_func_test_set_rel_error (sft, rel_error);
- *
- *   ncm_spline_func_test_set_params_info_all (sft, npar, mean, sigma);
- *
- *   ncm_spline_func_test_prepare (sft, NCM_SPLINE_FUNCTION_SPLINE, NCM_SPLINE_FUNC_TEST_TYPE_PDF_NORMAL);
- *
- *   ncm_spline_func_test_set_one_grid_stats (sft);
- *
- *   ncm_spline_func_test_log_vals_one_grid_stats (sft);
- *
- *   ncm_spline_func_test_save_grid_functions_to_txt (sft, "functions.txt");
- *
- *   ncm_spline_func_test_save_knots_to_txt (sft, "knots.txt");
- *
- *   ncm_spline_func_test_unref (sft);
- *
- *   return 0;
- * }
- * ]|
- *
- * The function ncm_spline_func_test_set_params_info_all() creates the 8 rows matrix,
- * "#NcmSplineFuncTest:par-info", the number of ordinate points $y$ (consequently 8 abscissa $x$), and two columns.
- * The first column is $\mu=0$ and the second $\sigma = 1$ with
- * the same value for all parameters (rows) to be used by the gaussian PDF.
- *
- * The function ncm_spline_func_test_prepare() sets the [NcmSplineFunc](numcosmo-NcmSplineFunc.html) method
- * used, [NCM_SPLINE_FUNCTION_SPLINE](numcosmo-NcmSplineFunc.html), and also sets the PDF, #NCM_SPLINE_FUNC_TEST_TYPE_PDF_NORMAL.
- *
- * The functions ncm_spline_func_test_save_grid_functions_to_txt() and ncm_spline_func_test_save_knots_to_txt()
- * create the ascii files "functions.txt", with all the information about the functions at all grid,
- * and "knots.txt", which saves [NcmSplineFunc](numcosmo-NcmSplineFunc.html)'s knots.
- *
- * The function ncm_spline_func_test_log_vals_one_grid_stats() prints
- * the statistics evaluated by ncm_spline_func_test_set_one_grid_stats().
- * In the above example it displays:
- * <informalexample>
- *   <programlisting>
- *
- * ##### Grid statistics  #####
- *
- * NcmSplineFunc number of knots = 3847
- *
- * (ncm) diff. = -7.377e-13 +/- 2.582e-11 (abs. max. diff. = 2.917e-10) | outliers =  0.00 %
- * (lin) diff. = -3.826e-13 +/- 3.091e-11 (abs. max. diff. = 1.211e-09) | outliers =  0.09 %
- *
- *   </programlisting>
- * </informalexample>
- *
- * * "NcmSplineFunc number of knots = 3847": is self explanatory.
- * * "diff." first value (-7.377e-13 and -3.826e-13): it is the [mean signed difference](https://en.wikipedia.org/wiki/Mean_signed_deviation)
- *   between the base and approximated functions, $f(x)$ and $\hat{f}(x)$.
- *   The signed difference is defined as $\Delta f(x)= f(x) - \hat{f}(x)$. Therefore its mean value through all grid knots should
- *   be as close to zero as possible, regardless of the required tolerance.
- * * "diff." second value (2.582e-11 and 3.091e-11): it is the [standard deviation](https://en.wikipedia.org/wiki/Standard_deviation)
- *   of $\Delta f(x)$. This value is related to the required tolerance.
- *   If $\Delta f(x)$ distribution is assumed to be normal, which is not, we have $5\sigma \approx 10^{-10}$, the required #NcmSplineFuncTest:rel-error in this example.
- * * "abs. max. diff.": it is the maximum absolute difference between the entire grid knots, $|\Delta f(x)|_{\mathrm{max}}$.
- *   In this example, it appears that "ncm" has a higher value than the required tolerance,
- *   but in fact it is not true, because @scale is not zero.
- * * "outliers": it is defined as the knots in the linear grid that did not passed the criteria given by Eq. \eqref{eq:condition}.
- *   It is given in percentage of the number of knots (#NcmSplineFuncTest:ngrid).
- *
- *
- * ## Example: cosine summation with 50 terms.
- * |[<!-- language="C" -->
- * #include <numcosmo/numcosmo.h>
- *
- * int
- * main (void)
- * {
- *   NcmVector *c           = ncm_vector_new (50);
- *   NcmMatrix *params      = ncm_matrix_new (50, 2);
- *   NcmSplineFuncTest *sft = ncm_spline_func_test_new ();
- *
- *   ncm_vector_set_all (c, -5.0);
- *   ncm_matrix_set_col (params, 0, c);
- *   ncm_vector_set_all (c, +5.0);
- *   ncm_matrix_set_col (params, 1, c);
- *
- *   ncm_matrix_set (params, 0, 0, 100.); // Sets the first
- *   ncm_matrix_set (params, 0, 1, 100.); // amplitude fixed: A_0 = 100.
- *   ncm_matrix_set (params, 1, 0, 0.);   // Sets the first
- *   ncm_matrix_set (params, 1, 1, 0.);   // frequency fixed: \nu_0 = 0.
- *
- *   ncm_spline_func_test_set_type (sft, NCM_SPLINE_FUNC_TEST_TYPE_COSINE);
- *
- *   ncm_spline_func_test_set_params_info (sft, params);
- *
- *   ncm_spline_func_test_set_ngrid (sft, 1000000);
- *
- *   ncm_spline_func_test_set_seed (sft, 73649);
- *
- *   ncm_spline_func_test_prepare (sft, NCM_SPLINE_FUNCTION_4POINTS, NCM_SPLINE_FUNC_TEST_TYPE_PDF_FLAT);
- *
- *   ncm_spline_func_test_set_one_grid_stats (sft);
- *
- *   ncm_spline_func_test_log_vals_one_grid_stats (sft);
- *
- *   ncm_vector_free (c);
- *   ncm_matrix_free (params);
- *   ncm_spline_func_test_unref (sft);
- *
- *   return 0;
- * }
- * ]|
- *
- * In this example the user created a matrix with 50 parameters, 25 amplitudes and 25 frequencies.
- * But note that the first amplitude is fixed to $A_0 = 100$ and the first frequency to $\nu_0 = 0$.
- * Therefore, creating a base function with some kind of oscilatory behaviour added to a constant factor,
- * \begin{equation*}
- *  f(x) = A_0 + \sum_{i=1}^{49} A_i \cos \left( 2 \pi \, \nu_i \, x  \right) \,\,\, ,
- * \end{equation*}
- * with $A_i$ and $\nu_i$ drawn from a flat PDF between the values [-5, 5].
- * Below is shown the output from ncm_spline_func_test_log_vals_one_grid_stats()
- * <informalexample>
- *   <programlisting>
- *
- * ##### Grid statistics  #####
- *
- * NcmSplineFunc number of knots = 7318
- *
- * (ncm) diff. =  2.050e-13 +/- 3.565e-12 (abs. max. diff. = 5.193e-11) | outliers =  0.00 %
- * (lin) diff. = -1.088e-14 +/- 2.517e-12 (abs. max. diff. = 7.323e-11) | outliers =  0.00 %
- *
- *   </programlisting>
- * </informalexample>
- *
- * Those statistics are remarkably better than the required tolerance given by Eq. \eqref{eq:condition}.
- * In this case we have the default values, $\mathrm{rel \\_ error} = 10^{-8}$ and $\mathrm{scale} = 0$.
- * The result condition is around $|f(x)| \times \mathrm{rel \\_ error} \approx 10^{-6}$.
- * Note that both maximum absolute error are given by $|\Delta f(x)|_{\mathrm{max}} \approx 10^{-10}$, four orders of magnitude better than expected.
- * This fact is due to the [NcmSplineFunc](numcosmo-NcmSplineFunc.html) method applied in this example, #NCM_SPLINE_FUNCTION_4POINTS.
- * It is a much more conservative approach compared to #NCM_SPLINE_FUNCTION_SPLINE, applied in the previous example.
- *
- * # Monte Carlo examples # {#mc-ex}
- *
- * To perform a Monte Carlo statistics it is needed to place ncm_spline_func_test_monte_carlo_and_save_to_txt()
- * or ncm_spline_func_test_monte_carlo() after preparing it (ncm_spline_func_test_prepare()).
- *
- * Two examples are shown below, together with their results.
- *
- * ## Example: 5th degree polynomial interpolation with 1 million realizations.
- *
- * |[<!-- language="C" -->
- * #include <numcosmo/numcosmo.h>
- *
- * int
- * main (void)
- * {
- *   guint npar = 6, nsim = 1000000;
- *
- *   NcmSplineFuncTest *sft = ncm_spline_func_test_new ();
- *
- *   ncm_spline_func_test_set_params_info_all (sft, npar, -10.0, 10.0);
- *
- *   ncm_spline_func_test_set_scale (sft, 1.0);
- *
- *   ncm_spline_func_test_set_ngrid (sft, 10000);
- *
- *   ncm_spline_func_test_prepare (sft, NCM_SPLINE_FUNCTION_SPLINE, NCM_SPLINE_FUNC_TEST_TYPE_PDF_FLAT);
- *
- *   ncm_spline_func_test_monte_carlo_and_save_to_txt (sft, nsim, "mc.txt");
- *
- *   ncm_spline_func_test_log_vals_mc_stats (sft);
- *
- *   ncm_spline_func_test_unref (sft);
- *
- *   return 0;
- * }
- * ]|
- *
- * The function ncm_spline_func_test_monte_carlo_and_save_to_txt() creats the ascii file "mc.txt".
- * It saves the same statistics as printed by the function ncm_spline_func_test_log_vals_one_grid_stats () for each realization.
- * Therefore it is going to be quite a big file. In this example it has 165 megabytes.
- * That is the reason why it is not allowed to save all the grids informations and also because the file is filled on the fly.
- *
- * Below is shown the output of ncm_spline_func_test_log_vals_mc_stats():
- * <informalexample>
- *   <programlisting>
- *
- * ####  Monte Carlo statistics for 1000000 simulations  ####
- *
- *  * NcmSplineFunc number of knots:   750.58 +/-   114.83
- *
- *  * Ncm clean grid (%): 97.59
- *  * Lin clean grid (%): 27.78
- *
- *  * Ncm outliers (%):  0.03 +/-  0.24
- *  * Lin outliers (%):  0.25 +/-  0.56
- *
- *  * Ncm diff. : 1.624e-07 +/- 6.353e-06
- *  * Lin diff. : 7.880e-09 +/- 2.385e-07
- *
- *  * Ncm abs. max. diff. : 3.891e-05 +/- 9.496e-03
- *  * Lin abs. max. diff. : 5.886e-06 +/- 1.099e-03
- *
- *   </programlisting>
- * </informalexample>
- *
- * First, we need to define two different statistics, "one grid" and "Monte Carlo".
- * The mean value for each will be represented by $\overline{X}$ and $\langle X \rangle$, respectively.
- * The standard deviation $\sigma$ is applied to the Monte Carlo realizations.
- *
- * * "NcmSplineFunc number of knots:" $\langle \mathrm{spline \\_ length}  \rangle \pm  \sigma \left( \mathrm{spline \\_ length} \right)$.
- * * "clean grid (%):" it is the proportion of the grids realizations with no outliers at all.
- * * "outliers (%):" $\Big \langle \mathrm{outlier} \Big  \rangle \pm  \sigma \left( \mathrm{outlier} \right)$.
- * * "diff.:" $\Big \langle \overline{\Delta f(x)} \Big \rangle \pm  \sigma \left( \overline{\Delta f(x)} \right)$.
- * * "abs. max. diff.:" $\Big \langle |\Delta f(x)|_{\mathrm{max}} \Big \rangle \pm  \sigma \left( |\Delta f(x)|_{\mathrm{max}} \right)$.
- *
- * Note that that the "clean grid" shows a much better result for [NcmSplineFunc](numcosmo-NcmSplineFunc.html) over the linear grid.
- * Also "outliers" shows the same trend but not at the same level.
- * Nevertheless, the "diff." and "abs. max. diff." seems to contradict both of them.
- * To check this apparent contradiction, it is needed to look into the "mc.txt" file, which should show that the ~2% "non-clean"
- * [NcmSplineFunc](numcosmo-NcmSplineFunc.html) $\hat{f}(x)$ should have outliers with high values, probably indicating some issue with those functions.
- *
- * ## Example: user supplied function with 100 thousand realizations.
- *
- * |[<!-- language="C" -->
- * #include <numcosmo/numcosmo.h>
- *
- * gdouble
- * f_user (gdouble x, gpointer pin)
- * {
- *   NcmSplineFuncTest *sft = NCM_SPLINE_FUNC_TEST (pin);
- *
- *   NcmVector *params = ncm_spline_func_test_peek_current_params (sft);
- *
- *   gdouble p1 = ncm_vector_fast_get (params, 0);
- *   gdouble p2 = ncm_vector_fast_get (params, 1);
- *
- *   return exp (sin (p1 * x)) * sin (x) * sin (x) + p2;
- * }
- *
- * int
- * main (void)
- * {
- *   gsl_function F;
- *
- *   NcmSplineFuncTest *sft = ncm_spline_func_test_new ();
- *
- *   ncm_spline_func_test_set_type (sft, NCM_SPLINE_FUNC_TEST_TYPE_USER);
- *
- *   ncm_spline_func_test_set_rel_error (sft, 1.e-10);
- *   ncm_spline_func_test_set_scale (sft, 10.0);
- *   ncm_spline_func_test_set_out_threshold (sft, 10.0);
- *
- *   ncm_spline_func_test_set_xi (sft, -0.5);
- *   ncm_spline_func_test_set_xf (sft, +0.5);
- *
- *   ncm_spline_func_test_set_params_info_all (sft, 2, 0., 10.);
- *
- *   F.function = &f_user;
- *   F.params   = sft;
- *
- *   ncm_spline_func_test_set_user_gsl_function (sft, &F);
- *
- *   ncm_spline_func_test_prepare (sft, NCM_SPLINE_FUNCTION_SPLINE, NCM_SPLINE_FUNC_TEST_TYPE_PDF_NORMAL);
- *
- *   ncm_spline_func_test_monte_carlo (sft, 100000);
- *
- *   ncm_spline_func_test_log_vals_mc_stats (sft);
- *
- *   ncm_spline_func_test_unref (sft);
- *
- *   return 0;
- * }
- * ]|
- *
- * The user function "f_user" has two parameters, $p_1$ and $p_2$, and is given by
- * \begin{equation*}
- *  f(x) = \exp \left[ \sin(p_1 \, x)  \right] \sin^{2}(x) + p_2 \,\, .
- * \end{equation*}
- * Unlike the previous example, the Monte Carlo statistic is not saved in a file.
- * Instead, it is used the ncm_spline_func_test_monte_carlo() function.
- * This procedure has a faster execution time, but the drawback is information lost.
- * The function ncm_spline_func_test_set_out_threshold() saves information only
- * for the functions with outilers above 10\% of the threshold given in Eq. \eqref{eq:condition}.
- *
- * Below is shown the output of ncm_spline_func_test_log_vals_mc_stats():
- * <informalexample>
- *   <programlisting>
- *
- * ####  Monte Carlo statistics for 100000 simulations  ####
- *
- *  * NcmSplineFunc number of knots:   581.23 +/-   331.82
- *
- *  * Ncm clean grid (%): 79.74
- *  * Lin clean grid (%): 91.69
- *
- *  * Ncm outliers (%):  0.24 +/-  0.68
- *  * Lin outliers (%):  0.01 +/-  0.03
- *
- *  * Ncm diff. : -8.430e-10 +/- 6.675e-09
- *  * Lin diff. : -1.745e-12 +/- 5.589e-11
- *
- *  * Ncm abs. max. diff. : 3.114e-08 +/- 8.864e-06
- *  * Lin abs. max. diff. : 8.927e-10 +/- 6.938e-10
- *
- *   </programlisting>
- * </informalexample>
- *
- * The results shows a better approximation by the linear grid
- * compared to the [NcmSplineFunc](numcosmo-NcmSplineFunc.html) method.
- * In order to try to understand this behaviour, the user should look into the files
- * created by ncm_spline_func_test_set_out_threshold(), but note that "Ncm abs. max. diff." has mean
- * near the desired tolerance. In this case we have an absolute error
- * $\left( |f(x)| + 10 \right) \mathrm{rel \\_ error} \approx 10^{-9} \rightarrow 10^{-8}$, which is
- * around the "Ncm abs. max. diff.". Around 10 grids have outliers greater than 10\%.
- *
- * If, instead, it is applied the method #NCM_SPLINE_FUNCTION_4POINTS, as was found previously,
- * the result is more robust compared to #NCM_SPLINE_FUNCTION_SPLINE. Applying the 4POINTS,
- * we got no grids with outliers, as can be seem below:
- * <informalexample>
- *   <programlisting>
- *
- * ####  Monte Carlo statistics for 100000 simulations  ####
- *
- *  * NcmSplineFunc number of knots:  4173.34 +/-  2363.36
- *
- *  * Ncm clean grid (%): 100.00
- *  * Lin clean grid (%): 100.00
- *
- *  * Ncm outliers (%):  0.00 +/-  0.00
- *  * Lin outliers (%):  0.00 +/-  0.00
- *
- *  * Ncm diff. : 2.707e-14 +/- 3.753e-13
- *  * Lin diff. : -9.547e-16 +/- 1.582e-14
- *
- *  * Ncm abs. max. diff. : 4.948e-12 +/- 7.645e-12
- *  * Lin abs. max. diff. : 9.834e-14 +/- 7.774e-14
- *
- *   </programlisting>
- * </informalexample>
- * It is highly advisable to apply a scale for this method.
- * Its high precision can produce a crash while crossing the abscissa.
- *
- * Note that both Monte Carlo examples can have slightly different results for
- * any given run, due to the fact that the @seed is created internally.
- *
- * <note>
- *   <para>
- * The examples above are stress tests, with some not so commom functions, but even then,
- * the results from NcmSplineFunc are quite remarkable.
- *   </para>
- * </note>
- *
+ * autoknots_stress.c runs the Monte Carlo from the command line; the tests of Vitenti et al.
+ * (2025), https://doi.org/10.1016/j.ascom.2025.100970, use the built-in base functions.
  */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include "build_cfg.h"
 
-#include "ncm/spline/ncm_spline_func_test.h"
-#include "ncm/spline/ncm_spline_func.h"
-#include "ncm/spline/ncm_spline.h"
-#include "ncm/spline/ncm_spline_gsl.h"
-#include "ncm/spline/ncm_spline_rbf.h"
-#include "ncm/core/ncm_util.h"
-#include "ncm/core/ncm_rng.h"
-#include "ncm/algebra/ncm_vector.h"
-#include "ncm/algebra/ncm_matrix.h"
-#include "ncm/spline/ncm_spline_cubic_notaknot.h"
-#include "ncm/stats/ncm_stats_vec.h"
+#include "ncm_spline_func_test.h"
 #include <gsl/gsl_sort_vector.h>
 #include <gsl/gsl_sf_trig.h>
-#include "ncm_enum_types.h"
-#include "ncm/core/ncm_cfg.h"
+
+GType
+ncm_spline_func_test_type_get_type (void)
+{
+  static gsize id = 0;
+
+  if (g_once_init_enter (&id))
+  {
+    static const GEnumValue values[] = {
+      {NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL,     "NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL",     "polynomial"},
+      {NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL_POS, "NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL_POS", "polynomial-pos"},
+      {NCM_SPLINE_FUNC_TEST_TYPE_COSINE,         "NCM_SPLINE_FUNC_TEST_TYPE_COSINE",         "cosine"},
+      {NCM_SPLINE_FUNC_TEST_TYPE_EXP_SINC,       "NCM_SPLINE_FUNC_TEST_TYPE_EXP_SINC",       "exp-sinc"},
+      {NCM_SPLINE_FUNC_TEST_TYPE_USER,           "NCM_SPLINE_FUNC_TEST_TYPE_USER",           "user"},
+      {0, NULL, NULL}
+    };
+
+    g_once_init_leave (&id, g_enum_register_static ("NcmSplineFuncTestType", values));
+  }
+
+  return id;
+}
+
+GType
+ncm_spline_func_test_type_pdf_get_type (void)
+{
+  static gsize id = 0;
+
+  if (g_once_init_enter (&id))
+  {
+    static const GEnumValue values[] = {
+      {NCM_SPLINE_FUNC_TEST_TYPE_PDF_FLAT,   "NCM_SPLINE_FUNC_TEST_TYPE_PDF_FLAT",   "flat"},
+      {NCM_SPLINE_FUNC_TEST_TYPE_PDF_NORMAL, "NCM_SPLINE_FUNC_TEST_TYPE_PDF_NORMAL", "normal"},
+      {0, NULL, NULL}
+    };
+
+    g_once_init_leave (&id, g_enum_register_static ("NcmSplineFuncTestTypePDF", values));
+  }
+
+  return id;
+}
 
 typedef struct _NcmSplineFuncTestPrivate
 {
@@ -731,12 +389,6 @@ _ncm_spline_func_test_dispose (GObject *object)
     NcmSpline *pol = NCM_SPLINE (self->F.params);
 
     ncm_spline_clear (&pol);
-  }
-  else if (self->type == NCM_SPLINE_FUNC_TEST_TYPE_RBF)
-  {
-    NcmSplineRBF *rbf = NCM_SPLINE_RBF (self->F.params);
-
-    ncm_spline_rbf_clear (&rbf);
   }
 
   ncm_spline_clear (&self->ncm);
@@ -1494,10 +1146,6 @@ ncm_spline_func_test_prepare (NcmSplineFuncTest *sft, NcmSplineFuncType ftype, N
       self->F.function = &_ncm_spline_func_test_gsl_eval_exp_sinc;
       self->F.params   = self->params;
       break;
-    case NCM_SPLINE_FUNC_TEST_TYPE_RBF:
-      self->F.function = &_ncm_spline_func_test_gsl_eval_spl;
-      self->F.params   = ncm_spline_rbf_new (NCM_SPLINE_RBF_TYPE_GAUSS);
-      break;
     case NCM_SPLINE_FUNC_TEST_TYPE_USER:
       g_assert_nonnull (self->F.function);
       break;
@@ -1621,7 +1269,7 @@ ncm_spline_func_test_monte_carlo (NcmSplineFuncTest *sft, guint nsim)
       g_free (f1);
       g_free (f2);
 
-      if ((self->type == NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL) || (self->type == NCM_SPLINE_FUNC_TEST_TYPE_RBF))
+      if (self->type == NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL)
       {
         gchar *f3 = g_strdup_printf ("%s.%u", "interpolated_points_with_outlier_above_threshold", ncount + 1);
 
@@ -1716,7 +1364,7 @@ ncm_spline_func_test_monte_carlo_and_save_to_txt (NcmSplineFuncTest *sft, guint 
       g_free (f1);
       g_free (f2);
 
-      if ((self->type == NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL) || (self->type == NCM_SPLINE_FUNC_TEST_TYPE_RBF))
+      if (self->type == NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL)
       {
         gchar *f3 = g_strdup_printf ("%s.%u", "interpolated_points_with_outlier_above_threshold", ncount + 1);
 
@@ -2180,9 +1828,6 @@ _ncm_spline_func_test_prepare_to_loop (NcmSplineFuncTestPrivate *self)
       break;
     case NCM_SPLINE_FUNC_TEST_TYPE_EXP_SINC:
       _ncm_spline_func_test_drawn_params (self);
-      break;
-    case NCM_SPLINE_FUNC_TEST_TYPE_RBF:
-      _ncm_spline_func_test_prepare_spl (self);
       break;
     case NCM_SPLINE_FUNC_TEST_TYPE_USER:
       _ncm_spline_func_test_drawn_params (self);
