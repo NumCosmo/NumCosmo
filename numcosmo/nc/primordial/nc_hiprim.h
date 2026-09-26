@@ -62,6 +62,7 @@ typedef enum /*< flags,underscore_name=NC_HIPRIM_IMPL,prefix=NC_HIPRIM_IMPL >*/
 } NcHIPrimImpl;
 
 typedef gdouble (*NcHIPrimFunc1) (NcHIPrim *prim, gdouble lnk);
+typedef void (*NcHIPrimLnkRange) (NcHIPrim *prim, gdouble *lnk_min, gdouble *lnk_max);
 
 struct _NcHIPrimClass
 {
@@ -70,6 +71,7 @@ struct _NcHIPrimClass
   NcHIPrimFunc1 lnSA_powspec_lnk;
   NcHIPrimFunc1 lnT_powspec_lnk;
   gdouble (*testee) (NcHIPrim *prim, gdouble x);
+  NcHIPrimLnkRange lnk_range;
 };
 
 struct _NcHIPrim
@@ -93,6 +95,8 @@ void nc_hiprim_log_all_models (GType parent);
 void nc_hiprim_set_k_pivot (NcHIPrim *prim, gdouble k_pivot);
 gdouble nc_hiprim_get_k_pivot (NcHIPrim *prim);
 gdouble nc_hiprim_get_lnk_pivot (NcHIPrim *prim);
+
+void nc_hiprim_get_lnk_range (NcHIPrim *prim, gdouble *lnk_min, gdouble *lnk_max);
 
 NCM_INLINE gdouble nc_hiprim_lnSA_powspec_lnk (NcHIPrim *prim, const gdouble lnk);
 NCM_INLINE gdouble nc_hiprim_lnT_powspec_lnk (NcHIPrim *prim, const gdouble lnk);

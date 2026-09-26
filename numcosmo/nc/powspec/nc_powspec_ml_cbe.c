@@ -26,11 +26,16 @@
 /**
  * NcPowspecMLCBE:
  *
- * Linear matter power spectrum from CLASS backend.
+ * Linear matter power spectrum from CLASS.
  *
- * Provides the linear matter power spectrum using the
- * [CLASS](https://lesgourg.github.io/class_public/class.html) backend #NcCBE.
- *
+ * Computes the linear matter power spectrum with the
+ * [CLASS](https://lesgourg.github.io/class_public/class.html) backend #NcCBE, up to
+ * #NcPowspecMLCBE:intern-k-max. Outside the range CLASS computed, $P$ is the
+ * Eisenstein-Hu spectrum, see #NcTransferFuncEH, times the ratio $r = P_\mathrm{CLASS} /
+ * P_\mathrm{EH}$ continued as a power law in $k$ from the nearest edge $k_e$,
+ * $$P(k, z) = r(k_e, z) \left(\frac{k}{k_e}\right)^{\beta(z)} P_\mathrm{EH}(k, z),$$
+ * where $\beta$ is the mean slope of $\ln r$ over the decade of computed modes next to
+ * $k_e$, or over the whole computed range when it spans less than a decade.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -58,6 +63,8 @@ typedef struct _NcPowspecMLCBEPrivate
   NcmSpline2d *lnPk;
   NcPowspecML *eh;
   gdouble intern_k_min;
+  gdouble calc_k_min;
+  gdouble calc_k_max;
   gdouble intern_k_max;
 } NcPowspecMLCBEPrivate;
 
@@ -79,6 +86,8 @@ nc_powspec_ml_cbe_init (NcPowspecMLCBE *ps_cbe)
   self->lnPk         = NULL;
   self->eh           = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
   self->intern_k_min = 0.0;
+  self->calc_k_min   = 0.0;
+  self->calc_k_max   = 0.0;
   self->intern_k_max = 0.0;
 
   nc_transfer_func_free (tf);
@@ -204,7 +213,7 @@ nc_powspec_ml_cbe_class_init (NcPowspecMLCBEClass *klass)
   /**
    * NcPowspecMLCBE:intern-k-min:
    *
-   * Class minimum mode $k$.
+   * The smallest mode $k$ requested from CLASS, in $\mathrm{Mpc}^{-1}$.
    *
    */
   g_object_class_install_property (object_class,
@@ -218,7 +227,7 @@ nc_powspec_ml_cbe_class_init (NcPowspecMLCBEClass *klass)
   /**
    * NcPowspecMLCBE:intern-k-max:
    *
-   * Class maximum mode $k$.
+   * The largest mode $k$ computed by CLASS, in $\mathrm{Mpc}^{-1}$.
    *
    */
   g_object_class_install_property (object_class,
@@ -247,6 +256,7 @@ _nc_powspec_ml_cbe_prepare (NcmPowspec *powspec, NcmModel *model)
 
   nc_cbe_set_calc_transfer (self->cbe, TRUE);
   nc_cbe_set_max_matter_pk_z (self->cbe, ncm_powspec_get_zf (powspec));
+
   nc_cbe_set_max_matter_pk_k (self->cbe, self->intern_k_max);
 
   nc_cbe_prepare_if_needed (self->cbe, cosmo);
@@ -255,7 +265,38 @@ _nc_powspec_ml_cbe_prepare (NcmPowspec *powspec, NcmModel *model)
 
   self->lnPk = nc_cbe_get_matter_ps (self->cbe);
 
+  /* The range CLASS computed, from its grid; intern_k_min/max are the range requested */
+  {
+    NcmVector *lnk_v = ncm_spline2d_peek_xv (self->lnPk);
+
+    self->calc_k_min = exp (ncm_vector_get (lnk_v, 0));
+    self->calc_k_max = exp (ncm_vector_get (lnk_v, ncm_vector_len (lnk_v) - 1));
+  }
+
   ncm_powspec_prepare_if_needed (NCM_POWSPEC (self->eh), model);
+}
+
+/*
+ * The edge k_e nearest to k and the point k_1 one decade inside the computed range from
+ * it, clamped to the other edge, over which the slope of ln r = ln P_CLASS - ln P_EH is
+ * measured.
+ */
+static void
+_nc_powspec_ml_cbe_match_points (NcPowspecMLCBEPrivate * const self, const gdouble k, gdouble *lnk_e, gdouble *lnk_1)
+{
+  const gdouble lnk_min = log (self->calc_k_min);
+  const gdouble lnk_max = log (self->calc_k_max);
+
+  if (k < self->calc_k_min)
+  {
+    *lnk_e = lnk_min;
+    *lnk_1 = GSL_MIN_DBL (lnk_min + M_LN10, lnk_max);
+  }
+  else
+  {
+    *lnk_e = lnk_max;
+    *lnk_1 = GSL_MAX_DBL (lnk_max - M_LN10, lnk_min);
+  }
 }
 
 static gdouble
@@ -264,19 +305,19 @@ _nc_powspec_ml_cbe_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, 
   NcPowspecMLCBE *ps_cbe             = NC_POWSPEC_ML_CBE (powspec);
   NcPowspecMLCBEPrivate * const self = nc_powspec_ml_cbe_get_instance_private (ps_cbe);
 
-  if (k < self->intern_k_min)
+  if ((k < self->calc_k_min) || (k > self->calc_k_max))
   {
-    const gdouble lnkmin = log (self->intern_k_min);
-    const gdouble match  = exp (ncm_spline2d_eval (self->lnPk, lnkmin, z)) / ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, self->intern_k_min);
+    NcmPowspec *eh = NCM_POWSPEC (self->eh);
+    gdouble lnk_e, lnk_1;
 
-    return match * ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, k);
-  }
-  else if (k > self->intern_k_max)
-  {
-    const gdouble lnkmax = log (self->intern_k_max);
-    const gdouble match  = exp (ncm_spline2d_eval (self->lnPk, lnkmax, z)) / ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, self->intern_k_max);
+    _nc_powspec_ml_cbe_match_points (self, k, &lnk_e, &lnk_1);
+    {
+      const gdouble lnr_e = ncm_spline2d_eval (self->lnPk, lnk_e, z) - log (ncm_powspec_eval (eh, model, z, exp (lnk_e)));
+      const gdouble lnr_1 = ncm_spline2d_eval (self->lnPk, lnk_1, z) - log (ncm_powspec_eval (eh, model, z, exp (lnk_1)));
+      const gdouble beta  = (lnr_e - lnr_1) / (lnk_e - lnk_1);
 
-    return match * ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, k);
+      return exp (lnr_e + beta * (log (k) - lnk_e)) * ncm_powspec_eval (eh, model, z, k);
+    }
   }
   else
   {
@@ -290,19 +331,29 @@ _nc_powspec_ml_cbe_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble 
   NcPowspecMLCBE *ps_cbe             = NC_POWSPEC_ML_CBE (powspec);
   NcPowspecMLCBEPrivate * const self = nc_powspec_ml_cbe_get_instance_private (ps_cbe);
 
-  if (k < self->intern_k_min)
+  if ((k < self->calc_k_min) || (k > self->calc_k_max))
   {
-    const gdouble lnkmin = log (self->intern_k_min);
-    const gdouble match  = exp (ncm_spline2d_eval (self->lnPk, lnkmin, z)) / ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, self->intern_k_min);
+    NcmPowspec *eh = NCM_POWSPEC (self->eh);
+    gdouble lnk_e, lnk_1;
 
-    return match * ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, k) * ncm_spline2d_deriv_dzdy (self->lnPk, lnkmin, z);
-  }
-  else if (k > self->intern_k_max)
-  {
-    const gdouble lnkmax = log (self->intern_k_max);
-    const gdouble match  = exp (ncm_spline2d_eval (self->lnPk, lnkmax, z)) / ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, self->intern_k_max);
+    _nc_powspec_ml_cbe_match_points (self, k, &lnk_e, &lnk_1);
+    {
+      const gdouble k_e       = exp (lnk_e);
+      const gdouble k_1       = exp (lnk_1);
+      const gdouble Peh_e     = ncm_powspec_eval (eh, model, z, k_e);
+      const gdouble Peh_1     = ncm_powspec_eval (eh, model, z, k_1);
+      const gdouble Peh       = ncm_powspec_eval (eh, model, z, k);
+      const gdouble lnr_e     = ncm_spline2d_eval (self->lnPk, lnk_e, z) - log (Peh_e);
+      const gdouble lnr_1     = ncm_spline2d_eval (self->lnPk, lnk_1, z) - log (Peh_1);
+      const gdouble dlnr_e_dz = ncm_spline2d_deriv_dzdy (self->lnPk, lnk_e, z) - ncm_powspec_deriv_z (eh, model, z, k_e) / Peh_e;
+      const gdouble dlnr_1_dz = ncm_spline2d_deriv_dzdy (self->lnPk, lnk_1, z) - ncm_powspec_deriv_z (eh, model, z, k_1) / Peh_1;
+      const gdouble beta      = (lnr_e - lnr_1) / (lnk_e - lnk_1);
+      const gdouble dbeta_dz  = (dlnr_e_dz - dlnr_1_dz) / (lnk_e - lnk_1);
+      const gdouble dlnk      = log (k) - lnk_e;
+      const gdouble Pk        = exp (lnr_e + beta * dlnk) * Peh;
 
-    return match * ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, k) * ncm_spline2d_deriv_dzdy (self->lnPk, lnkmax, z);
+      return Pk * (dlnr_e_dz + dbeta_dz * dlnk + ncm_powspec_deriv_z (eh, model, z, k) / Peh);
+    }
   }
   else
   {
@@ -388,13 +439,11 @@ nc_powspec_ml_cbe_peek_cbe (NcPowspecMLCBE *ps_cbe)
 }
 
 /**
- * nc_powspec_ml_cbe_set_intern_k_min :
+ * nc_powspec_ml_cbe_set_intern_k_min:
  * @ps_cbe: a #NcPowspecMLCBE
- * @k_min: the minimum $k$ computed by CLASS
+ * @k_min: the smallest $k$ requested from CLASS
  *
- * Sets the minimum mode value $k$ computed by CLASS.
- * Values outside of these value will be extrapolated
- * using Eisenstein-Hu fitting function (see #NcTransferFuncEH).
+ * Sets #NcPowspecMLCBE:intern-k-min.
  *
  */
 void
@@ -409,13 +458,12 @@ nc_powspec_ml_cbe_set_intern_k_min (NcPowspecMLCBE *ps_cbe, const gdouble k_min)
 }
 
 /**
- * nc_powspec_ml_cbe_set_intern_k_max :
+ * nc_powspec_ml_cbe_set_intern_k_max:
  * @ps_cbe: a #NcPowspecMLCBE
- * @k_max: the maximum $k$ computed by CLASS
+ * @k_max: the largest $k$ computed by CLASS
  *
- * Sets the maximum mode value $k$ computed by CLASS.
- * Values outside of these value will be extrapolated using
- * using Eisenstein-Hu fitting function (see #NcTransferFuncEH).
+ * Sets #NcPowspecMLCBE:intern-k-max; the spectrum is extrapolated beyond it, see
+ * #NcPowspecMLCBE.
  *
  */
 void

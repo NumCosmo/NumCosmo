@@ -53,6 +53,8 @@ void test_nc_powspec_corr3d (TestNcPowspec *test, gconstpointer pdata);
 
 void test_nc_powspec_free (TestNcPowspec *test, gconstpointer pdata);
 
+void test_nc_powspec_ml_cbe_extrapolation (void);
+
 typedef struct _TestNcPowspecFunc
 {
   void (*func) (TestNcPowspec *, gconstpointer);
@@ -111,6 +113,10 @@ main (gint argc, gchar *argv[])
       g_free (test_path);
     }
   }
+
+#ifndef POWSPEC_SPLIT_TRANSFER
+  g_test_add_func ("/nc/powspec/ml/cbe/extrapolation", &test_nc_powspec_ml_cbe_extrapolation);
+#endif
 
   g_test_run ();
 }
@@ -352,5 +358,78 @@ test_nc_powspec_free (TestNcPowspec *test, gconstpointer pdata)
 {
   NCM_TEST_FREE (ncm_powspec_free, test->ps);
   NCM_TEST_FREE (ncm_model_free, test->model);
+}
+
+/*
+ * Outside the range CLASS computed, P / P_EH continues as a power law from the nearest edge,
+ * with the mean slope of ln (P / P_EH) over the decade of computed modes next to it: P is
+ * continuous at the edges, ln (P / P_EH) is linear in ln k beyond them, and the derivative
+ * in z is that of the extrapolated P.
+ */
+void
+test_nc_powspec_ml_cbe_extrapolation (void)
+{
+  NcHIReion *reion   = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim     = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
+  NcmModel *model    = NCM_MODEL (cosmo);
+  NcPowspecMLCBE *ps = nc_powspec_ml_cbe_new ();
+  NcmPowspec *cbe    = NCM_POWSPEC (ps);
+  NcTransferFunc *tf = nc_transfer_func_eh_new ();
+  NcmPowspec *eh     = NCM_POWSPEC (nc_powspec_ml_transfer_new (tf));
+  NcmSpline2d *lnPk;
+  NcmVector *lnk_v;
+  gdouble lnk_edge[2];
+  guint e, i;
+
+  ncm_powspec_set_kmax (cbe, 1.0e3);
+  ncm_powspec_set_kmax (eh, 1.0e3);
+  ncm_powspec_prepare (cbe, model);
+  ncm_powspec_prepare (eh, model);
+
+  lnPk        = nc_cbe_get_matter_ps (nc_powspec_ml_cbe_peek_cbe (ps));
+  lnk_v       = ncm_spline2d_peek_xv (lnPk);
+  lnk_edge[0] = ncm_vector_get (lnk_v, 0);
+  lnk_edge[1] = ncm_vector_get (lnk_v, ncm_vector_len (lnk_v) - 1);
+
+  for (e = 0; e < 2; e++)
+  {
+    const gdouble lnk_e = lnk_edge[e];
+    const gdouble lnk_1 = lnk_e + ((e == 0) ? M_LN10 : -M_LN10);
+    const gdouble out   = (e == 0) ? -1.0 : 1.0;
+
+    for (i = 0; i < 3; i++)
+    {
+      const gdouble z     = 0.1 + 0.75 * i;
+      const gdouble lnr_e = ncm_spline2d_eval (lnPk, lnk_e, z) - log (ncm_powspec_eval (eh, model, z, exp (lnk_e)));
+      const gdouble lnr_1 = ncm_spline2d_eval (lnPk, lnk_1, z) - log (ncm_powspec_eval (eh, model, z, exp (lnk_1)));
+      const gdouble beta  = (lnr_e - lnr_1) / (lnk_e - lnk_1);
+      guint j;
+
+      ncm_assert_cmpdouble_e (ncm_powspec_eval (cbe, model, z, exp (lnk_e + out * 1.0e-10)), ==,
+                              ncm_powspec_eval (cbe, model, z, exp (lnk_e - out * 1.0e-10)), 1.0e-8, 0.0);
+
+      for (j = 1; j <= 4; j++)
+      {
+        const gdouble lnk  = lnk_e + out * 0.5 * j * M_LN10;
+        const gdouble k    = exp (lnk);
+        const gdouble P    = ncm_powspec_eval (cbe, model, z, k);
+        const gdouble lnr  = log (P) - log (ncm_powspec_eval (eh, model, z, k));
+        const gdouble dz   = 1.0e-4;
+        const gdouble fd_z = (ncm_powspec_eval (cbe, model, z + dz, k) - ncm_powspec_eval (cbe, model, z - dz, k)) / (2.0 * dz);
+
+        ncm_assert_cmpdouble_e (lnr, ==, lnr_e + beta * (lnk - lnk_e), 1.0e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (ncm_powspec_deriv_z (cbe, model, z, k), ==, fd_z, 1.0e-7, 0.0);
+      }
+    }
+  }
+
+  ncm_spline2d_free (lnPk);
+  ncm_powspec_free (eh);
+  nc_transfer_func_free (tf);
+  nc_powspec_ml_free (NC_POWSPEC_ML (ps));
+  ncm_model_free (NCM_MODEL (cosmo));
+  ncm_model_free (NCM_MODEL (reion));
+  ncm_model_free (NCM_MODEL (prim));
 }
 
