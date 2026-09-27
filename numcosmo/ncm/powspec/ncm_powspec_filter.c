@@ -535,6 +535,9 @@ ncm_powspec_filter_set_type (NcmPowspecFilter *psf, NcmPowspecFilterType type)
     }
 
     ncm_fftlog_set_padding (psf->fftlog, 1.0);
+    /* k^2 P(k) does not vanish at the ends of the table; zeros there ring at R near the
+     * inverse ends and never converge. */
+    ncm_fftlog_use_smooth_padding (psf->fftlog, TRUE);
     ncm_fftlog_set_nderivs (psf->fftlog, psf->nderivs);
 
     ncm_powspec_filter_set_best_lnr0 (psf);

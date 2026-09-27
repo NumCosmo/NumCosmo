@@ -936,6 +936,9 @@ _ncm_powspec_var_tophat_R_integ (gpointer user_data, gdouble lnk, gdouble weight
  * Where, $W_{TH}(t)$ is the top-hat filter in Fourier space,
  * $$W_{TH}(t) = \frac{3}{t^3} \left( \sin t - t \cos t  \right) = \frac{3}{t} j_{1}(t),$$
  * and $j_1(t)$ is the first order spherical Bessel function of the first kind.
+ * The integral covers the table only, $k$ in $[k_\mathrm{min}, k_\mathrm{max}]$, so for
+ * $R$ within a few e-foldings of $1/k_\mathrm{max}$ it differs from #NcmPowspecFilter, which
+ * continues the table into its padding.
  * This function is recommended for a small set of $z$ and $R$ values.
  * For a wide range of values it is best to apply #NcmPowspecFilter, instead.
  *

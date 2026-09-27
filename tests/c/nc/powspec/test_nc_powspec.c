@@ -284,9 +284,13 @@ test_nc_powspec_filter_tophat (TestNcPowspec *test, gconstpointer pdata)
   g_assert_cmpfloat (kmin, >, 0.0);
   g_assert_cmpfloat (kmin, <, kmax);
 
+  /* ncm_powspec_var_tophat_R integrates the table only, while the filter continues it
+   * beyond both ends; at R = 1 / k_max the continuation carries 16% of sigma^2
+   * (Eisenstein-Hu) and at R = 1 / k_min 1% (BBKS), while two decades inside the two agree
+   * to 1e-9. Compare there. */
   {
-    const gdouble r_min = ncm_powspec_filter_get_r_min (psf);
-    const gdouble r_max = ncm_powspec_filter_get_r_max (psf);
+    const gdouble r_min = 100.0 * ncm_powspec_filter_get_r_min (psf);
+    const gdouble r_max = ncm_powspec_filter_get_r_max (psf) / 100.0;
     gint i, j;
 
     for (i = 0; i < 10; i++)
@@ -295,7 +299,7 @@ test_nc_powspec_filter_tophat (TestNcPowspec *test, gconstpointer pdata)
 
       for (j = 0; j < 10; j++)
       {
-        const gdouble lnR    = log (r_min) + log (r_max / r_min) / (100.0 - 1.0) * j;
+        const gdouble lnR    = log (r_min) + log (r_max / r_min) / (10.0 - 1.0) * j;
         const gdouble R      = exp (lnR);
         const gdouble var0   = ncm_powspec_var_tophat_R (test->ps, test->model, reltol, z, R);
         const gdouble sigma0 = ncm_powspec_sigma_tophat_R (test->ps, test->model, reltol, z, R);
