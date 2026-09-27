@@ -43,13 +43,17 @@ typedef struct _TestNcmSFSphericalHarmonics
 
 /*
  * Errors are scaled by the peak of |Y_l^m| over l at fixed m: relative errors are
- * meaningless at the zeros. The angles stay 0.01 away from the poles, where the step in m
- * after skipped orders loses accuracy (under review).
+ * meaningless at the zeros. The angles stay 0.01 away from the poles, where GSL computes
+ * sin(theta) as sqrt(1 - x^2) and loses accuracy; the poles are tested against a long
+ * double reference in test_ncm_sf_spherical_harmonics_poles().
  */
 #ifndef TEST_TOL
 #define TEST_TOL (1.0e-11)
 #endif
 #define TEST_THETA_MIN (0.01)
+
+/* Position of (l, m) in a table ordered by m, then l */
+#define TEST_IDX(lmax, l, m) ((l) + ((1 + 2 * (lmax) - (m)) * (m)) / 2)
 
 static gdouble _test_max_err = 0.0;
 
@@ -66,6 +70,7 @@ static void test_ncm_sf_spherical_harmonics_array_rec2 (TestNcmSFSphericalHarmon
 static void test_ncm_sf_spherical_harmonics_array_rec4 (TestNcmSFSphericalHarmonics *test, gconstpointer pdata);
 static void test_ncm_sf_spherical_harmonics_array_recn (TestNcmSFSphericalHarmonics *test, gconstpointer pdata);
 
+static void test_ncm_sf_spherical_harmonics_poles (TestNcmSFSphericalHarmonics *test, gconstpointer pdata);
 static void test_ncm_sf_spherical_harmonics_lmax (TestNcmSFSphericalHarmonics *test, gconstpointer pdata);
 
 static void test_ncm_sf_spherical_harmonics_traps (TestNcmSFSphericalHarmonics *test, gconstpointer pdata);
@@ -112,6 +117,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/sf/spherical_harmonics/array/recn", TestNcmSFSphericalHarmonics, NULL,
               &test_ncm_sf_spherical_harmonics_new,
               &test_ncm_sf_spherical_harmonics_array_recn,
+              &test_ncm_sf_spherical_harmonics_free);
+
+  g_test_add ("/ncm/sf/spherical_harmonics/poles", TestNcmSFSphericalHarmonics, NULL,
+              &test_ncm_sf_spherical_harmonics_new,
+              &test_ncm_sf_spherical_harmonics_poles,
               &test_ncm_sf_spherical_harmonics_free);
 
   g_test_add ("/ncm/sf/spherical_harmonics/lmax", TestNcmSFSphericalHarmonics, NULL,
@@ -793,6 +803,95 @@ test_ncm_sf_spherical_harmonics_array_recn (TestNcmSFSphericalHarmonics *test, g
   g_free (theta);
 
   ncm_sf_spherical_harmonics_Y_array_free (sphaYa);
+}
+
+/*
+ * Near the poles against the diagonal and upward recursion in long double, whose range
+ * needs no rescaling at lmax = 1024, with x and sin(theta) taken in long double from the
+ * same theta. Errors are scaled by the largest |Y_l^m| at the angle; measured at most
+ * 1.3e-11. The rows reached after skipped orders are accurate only at that scale.
+ */
+static void
+test_ncm_sf_spherical_harmonics_poles (TestNcmSFSphericalHarmonics *test, gconstpointer pdata)
+{
+  const gdouble theta_a[]         = {1.0e-5, 1.0e-4, 1.0e-3, 1.0e-2};
+  const gint lmax                 = 1024;
+  const gsize size                = (gsize) (lmax + 1) * (lmax + 2) / 2;
+  NcmSFSphericalHarmonics *spha   = ncm_sf_spherical_harmonics_new (lmax);
+  NcmSFSphericalHarmonicsY *sphaY = ncm_sf_spherical_harmonics_Y_new (spha, NCM_SF_SPHERICAL_HARMONICS_DEFAULT_ABSTOL);
+  long double *ref                = g_new (long double, size);
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (theta_a); i++)
+  {
+    const long double x = cosl ((long double) theta_a[i]);
+    const long double s = sinl ((long double) theta_a[i]);
+    long double Ymm     = 0.5L / sqrtl (3.141592653589793238462643383279502884L);
+    long double peak    = 0.0L;
+    gint l, m;
+
+    for (m = 0; m <= lmax; m++)
+    {
+      long double Y0, Y1;
+
+      if (m > 0)
+        Ymm = -sqrtl ((2.0L * m + 1.0L) / (2.0L * m)) * s * Ymm;
+
+      Y0                         = Ymm;
+      Y1                         = x * sqrtl (2.0L * m + 3.0L) * Ymm;
+      ref[TEST_IDX (lmax, m, m)] = Y0;
+
+      if (m < lmax)
+        ref[TEST_IDX (lmax, m + 1, m)] = Y1;
+
+      for (l = m + 2; l <= lmax; l++)
+      {
+        const long double l2m2 = (long double) l * l - (long double) m * m;
+        const long double a    = sqrtl ((4.0L * l * l - 1.0L) / l2m2);
+        const long double b    = sqrtl ((2.0L * l + 1.0L) * ((long double) (l - 1) * (l - 1) - (long double) m * m) / ((2.0L * l - 3.0L) * l2m2));
+        const long double Y2   = a * x * Y1 - b * Y0;
+
+        Y0                         = Y1;
+        Y1                         = Y2;
+        ref[TEST_IDX (lmax, l, m)] = Y2;
+      }
+    }
+
+    for (l = 0; l < (gint) size; l++)
+      peak = fmaxl (peak, fabsl (ref[l]));
+
+    ncm_sf_spherical_harmonics_start_rec (spha, sphaY, theta_a[i]);
+
+    while (TRUE)
+    {
+      m = ncm_sf_spherical_harmonics_Y_get_m (sphaY);
+
+      while (TRUE)
+      {
+        const gdouble Ylm = ncm_sf_spherical_harmonics_Y_get_lm (sphaY);
+
+        l = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
+        g_assert_cmpfloat ((gdouble) (fabsl (Ylm - ref[TEST_IDX (lmax, l, m)]) / peak), <, 1.0e-10);
+
+        if (l >= lmax)
+          break;
+
+        ncm_sf_spherical_harmonics_Y_next_l (sphaY);
+      }
+
+      if (m >= lmax)
+        break;
+
+      ncm_sf_spherical_harmonics_Y_next_m (sphaY);
+
+      if (ncm_sf_spherical_harmonics_Y_get_l (sphaY) > lmax)
+        break;
+    }
+  }
+
+  g_free (ref);
+  ncm_sf_spherical_harmonics_Y_free (sphaY);
+  ncm_sf_spherical_harmonics_free (spha);
 }
 
 /* Walks every (l, m) up to lmax at theta, in the order of the recursion */

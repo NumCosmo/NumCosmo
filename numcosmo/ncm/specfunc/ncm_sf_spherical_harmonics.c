@@ -48,6 +48,11 @@
  * ncm_sf_spherical_harmonics_Y_get_l() after it. The seeds of the recursion in $l$ are
  * stored scaled by $10^{280}$, which keeps $\bar{Y}_m^m \propto \sin^m\theta$
  * representable at large $m$.
+ *
+ * The errors are small relative to the largest $|\bar{Y}_l^m|$ at the angle, as in any
+ * recursion in $\cos\theta$. Near the poles, the step to $m + 1$ after skipped orders
+ * subtracts nearly equal seeds, so the rows it reaches, whose values are tiny, are
+ * accurate only at that global scale and not relative to their own peak.
  */
 
 #ifdef HAVE_CONFIG_H
