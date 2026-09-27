@@ -74,9 +74,10 @@ Because the algorithm assumes the decomposed function is periodic, it is worth
 extending the interval in $\ln k$ with padding intervals
 $\left[\ln k_0 - \frac{L_T}{2},\ \ln k_0 - \frac{L}{2}\right)$ and
 $\left(\ln k_0 + \frac{L}{2},\ \ln k_0 + \frac{L_T}{2}\right]$, where the total
-period $L_T$ is set by the final number of knots, $N_f = N(1 + \mathrm{padding})$.
-The $N$ fundamental knots are equally distributed, and $N \times \mathrm{padding}$
-knots are placed in the two symmetric padding intervals.
+period $L_T$ is set by the final number of knots, about $N(1 + \mathrm{padding})$.
+The $N$ fundamental knots are equally distributed, and about $N \times \mathrm{padding}$
+knots are placed in the two symmetric padding intervals; the exact split is given in the
+section on the size below.
 
 By default the padding holds zeros. When $F$ does not vanish at an end of the
 interval this puts a step into the periodic input, and the transform rings at $r$
@@ -93,13 +94,62 @@ side, so the two ends never meet and the taper does not move when a fractional p
 rounds to a different period at each size. The periodic input is then continuous with its first
 derivative at each end of the interval, where the continuation matches the value and
 log-slope of $F$ but not its higher derivatives, and smooth elsewhere; the transform
-converges as $N^{-3}$ over the whole grid. The result within a few e-foldings of
+converges as about $N^{-3}$ over the whole grid, down to a roundoff floor: for the
+Eisenstein--Hu case below the change per doubling of $N$ is $8.1 \times 10^{-10}$,
+$5.7 \times 10^{-11}$ and $1.2 \times 10^{-11}$ from 1000 to 8000 knots. The result within a few e-foldings of
 $1/k_\mathrm{max}$ or $1/k_\mathrm{min}$ depends on the continuation, which is an
 extrapolation of $F$ beyond its interval: for the $\sigma^2(R)$ of an
 Eisenstein--Hu spectrum tabulated on $[10^{-6}, 10^3]$ (padding one, 6000 knots), the
 power-law continuation is off the spectrum's own extension by $3.1 \times 10^{-4}$ of the
 peak at $R = 1/k_\mathrm{max}$, $2.5 \times 10^{-8}$ at $10/k_\mathrm{max}$ and
 $1.2 \times 10^{-9}$ at $100/k_\mathrm{max}$.
+
+### Reach of the continuation
+
+Beyond $0.8\,h$ from each end the padded input is zero, so the transform computes the
+integral of $F$ continued over at most $0.8\,h$ e-folds past each end of the table, and
+leaves out the rest. What that costs depends on how fast $F k$, the integrand in $\ln k$,
+falls beyond the ends:
+
+- For $F = k^2 P(k) / (2\pi^2)$ of a physical spectrum, $F k$ falls as $k^{3 + n_s}$
+  below $k_\mathrm{min}$, so the low-$k$ part left out is negligible. Above
+  $k_\mathrm{max}$, $F k$ is nearly flat ($\propto k^{n_s - 1}$ up to logarithms) and the
+  kernel's own decay, $t^{-4}$ for the top-hat, makes the part left out negligible except
+  within a few e-foldings of $1/k_\mathrm{max}$, as in the Eisenstein--Hu figures above.
+- For an input whose $F k$ falls slowly beyond an end, the missing part is felt over the
+  whole grid and grows toward that edge. For the top-hat window and $F \propto k^{-0.6}$
+  on $[10^{-10}, 10^{3}]$ with padding one ($F k \propto k^{0.4}$ below $k_\mathrm{min}$),
+  $G$ is off the power law continued to $k = 0$ by $6 \times 10^{-6}$ at
+  $k_\mathrm{min} r = 10^{-9}$, $2.4 \times 10^{-4}$ at $10^{-5}$ and $1.5 \times 10^{-3}$
+  at $10^{-3}$.
+
+Any reference for such an input is itself an extrapolation of the table. When an
+application needs it further, the levers are, in order of cost:
+
+1. **A longer padding.** The taper scales with $h = pL/2$, so a larger padding fraction
+   carries the continuation proportionally further, at the price of more knots.
+2. **A wider table.** Tabulating $P(k)$ beyond the range of interest removes the
+   extrapolation from the result altogether.
+3. **The taper placement.** The window $[0.4\,h, 0.8\,h]$ is set in
+   `_ncm_fftlog_add_smooth_padding()`. A later, narrower taper keeps more of a slow tail:
+   with $[0.65\,h, 0.95\,h]$, the Gaussian window and $F \propto k^{-1/2}$ on
+   $[10^{-8}, 10^3]$ are off $\Gamma(1/4) / (2\sqrt{r})$ by $2.3 \times 10^{-4}$ at
+   $k_\mathrm{min} r = 10^{-3}$ instead of $8.5 \times 10^{-4}$. Its sharper step has a
+   slower spectral decay, which the output at small $r$ amplifies as $r^{-(1+b)}$ under a
+   positive bias: for the Gaussian window, $F = 1$, $L = 10$, padding $0.3$ and $b = 1.8$,
+   the second derivative at the smallest $r$ is still off by $2.3 \times 10^{-4}$ of its
+   peak at 20000 knots, and a calibration to $10^{-7}$ does not converge. The end of the
+   taper must also stay inside the rounded padding, which is at least $0.95\,h$ for the
+   sizes a calibration visits (measured for $p = 0.3$ and $1$, $N \ge 100$).
+4. **Letting the two ends overlap.** Continuing each end past the middle of the padding,
+   blended with the other, reaches furthest ($6.8 \times 10^{-5}$ in the example of
+   lever 3), but the blend then holds values of $f = F k^{-b}$ from both ends, whose
+   $k^b$ differ by $e^{b L_T}$. It is safe only without a bias, and it moves with the
+   rounded period of a fractional padding.
+
+The tests `/ncm/fftlog/smooth_padding/negative_slope` and
+`/ncm/fftlog/smooth_padding/refine_stable` measure the reach and the stability under
+refinement; a change to the continuation should keep both.
 
 ## Bias
 
@@ -109,7 +159,7 @@ padding. An $F$ that grows into a padding (for the variance of a power law
 $P \propto k^n$, $F \propto k^{n+2}$ grows below $k_\mathrm{min}$ when $n < -2$)
 sets a floor far above double precision: for the top-hat window and
 $F \propto k^{-0.6}$ over 13 decades, the change from $N$ to $1.2N$ knots stalls at
-$6 \times 10^{-5}$ of the peak. With a bias $b$
+$2.4 \times 10^{-6}$ of the peak. With a bias $b$
 ([[numcosmo-math|ncm_fftlog_set_bias]]) the series is of $f(k) = F(k) k^{-b}$
 instead,
 $$
@@ -120,7 +170,7 @@ $$
 and each $\ln r$ derivative brings down $-(1 + b + 2\pi i n / L_T)$. $G$ is the same for
 any $b$; the padding holds $f$, and the smooth continuation, fitted to $f$, gives the
 same padded $F$. For a power law $F \propto k^b$, $f$ is constant; with the bias chosen as
-below, $b = -0.40$, the example above converges to $10^{-11}$ at 9600 knots.
+below, $b = -0.40$, the example above converges to $10^{-11}$ at 8000 knots.
 
 The coefficients exist only where $t^b K(t)$ is integrable: $-1 < b < 3$ for the
 top-hat window, whose square falls as $t^{-4}$, and $b > -1$ for the Gaussian. Within
@@ -130,14 +180,20 @@ $e^{-(b_\mathrm{max} - b) L_T}$ at the other, and a positive bias multiplies the
 roundoff of the output at small $r$ by $r^{-(1+b)}$.
 [[numcosmo-math|ncm_fftlog_get_best_bias]] therefore keeps $b = 0$ when $F$ decays
 into both paddings, otherwise takes the value closest to zero between the log-slopes of
-$F$ at the two ends, and keeps it $\ln(1/\epsilon)/L_T$ inside the range.
+$F$ at the two ends (their midpoint when $F$ grows at both ends), and keeps it
+$\ln(1/\epsilon)/L_T$ inside the range.
 
 ## Size
 
-For efficiency, the final number of points $N_f$ is replaced by the smallest
-$N_f^\prime \ge N_f$ that factorizes as
-$N_f^\prime = N^\prime(1 + \mathrm{padding}) = 2^a 3^b 5^c 7^d$, with $a,b,c,d$
-non-negative integers.
+For efficiency, the requested $N(1 + p)$, with $p$ the padding fraction, is replaced by
+the smallest $N_f^\prime \ge N(1 + p)$ that factorizes as $2^a 3^b 5^c 7^d$, with
+$a,b,c,d$ non-negative integers. Each side then takes
+$N_\mathrm{pad} = \lfloor N_f^\prime p / (2(1 + p)) \rfloor$ knots and the interval the
+remaining $N^\prime = N_f^\prime - 2 N_\mathrm{pad}$, so the padding fraction actually used,
+and with it $L_T = L N_f^\prime / N^\prime$, changes slightly with the size: for $p = 0.3$
+and $L = 10$ around 3000 knots, $L_T$ is below $L(1 + p)$ by $1.7$ to
+$6.2 \times 10^{-3}$. The taper of the smooth padding is placed on the nominal padding
+$p L / 2$ so that it does not move with this rounding.
 
 ## Usage
 

@@ -68,7 +68,6 @@
 #include <fftw3.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-#define fftw_alloc_real(n) (double *) fftw_malloc (sizeof (double) * (n))
 #define fftw_alloc_complex(n) (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * (n))
 
 typedef struct _NcmFftlogPrivate
@@ -176,8 +175,6 @@ ncm_fftlog_init (NcmFftlog *fftlog)
   self->p_CmYm2Gr = NULL;
   g_ptr_array_set_free_func (self->Ym, (GDestroyNotify) fftw_free);
 }
-
-#define ncm_fftlog_array_pos(fftlog, array)
 
 static void
 _ncm_fftlog_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -447,7 +444,8 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
   /**
    * NcmFftlog:no-ringing:
    *
-   * True to use the no-ringing adjustment of $\ln(r_0)$ and False otherwise.
+   * Whether to shift the output grid by less than one knot so that the kernel coefficient
+   * of the Nyquist mode is real, see ncm_fftlog_set_noring().
    *
    */
   g_object_class_install_property (object_class,
@@ -904,7 +902,7 @@ ncm_fftlog_get_padding (NcmFftlog *fftlog)
 /**
  * ncm_fftlog_set_noring:
  * @fftlog: a #NcmFftlog
- * @active: whether to use the no-ringing adjustment of $\ln(r_0)$
+ * @active: whether to use the no-ringing shift of the output grid
  *
  * Sets whether to use Hamilton's low-ringing adjustment, which moves $\ln r_0$ by less
  * than one knot so that the kernel coefficient of the Nyquist mode is real. It applies
@@ -927,7 +925,7 @@ ncm_fftlog_set_noring (NcmFftlog *fftlog, gboolean active)
  * ncm_fftlog_get_noring:
  * @fftlog: a #NcmFftlog
  *
- * Returns: whether the no-ringing adjustment of $\ln r_0$ is active
+ * Returns: whether the no-ringing shift of the output grid is active
  */
 gboolean
 ncm_fftlog_get_noring (NcmFftlog *fftlog)
@@ -1082,10 +1080,10 @@ ncm_fftlog_use_eval_interval (NcmFftlog *fftlog, gboolean use_eval_interval)
  * does not move when a fractional padding rounds to a slightly different period at each
  * size. The periodic input is then continuous with its first derivative at each end of the
  * interval, where the continuation matches the value and log-slope of $F$ but not its
- * higher derivatives, and smooth elsewhere; the transform converges as $N^{-3}$ over the
- * whole output grid. The continuation is fitted in log space, so $F$ must be positive at
- * the four knots nearest each end. The fitted slopes are kept, see
- * ncm_fftlog_get_end_slopes().
+ * higher derivatives, and smooth elsewhere; the transform converges as about $N^{-3}$
+ * over the whole output grid, down to a roundoff floor. The continuation is fitted in log
+ * space, so $F$ must be positive at the four knots nearest each end. The fitted slopes are
+ * kept, see ncm_fftlog_get_end_slopes().
  *
  * The result within a few e-foldings of $1/k_\mathrm{max}$ or $1/k_\mathrm{min}$ depends
  * on the continuation, which is an extrapolation of the input beyond its interval, and a
@@ -1094,6 +1092,12 @@ ncm_fftlog_use_eval_interval (NcmFftlog *fftlog, gboolean use_eval_interval)
  * integral, see ncm_fftlog_get_best_bias(); without a bias a padding fraction of one puts
  * it at $e^{-2L}$. A fractional padding rounds $L_T$ differently at each size, which moves
  * that floor with $N$ where no bias suppresses it.
+ *
+ * Beyond $0.8\,h$ from each end the padded input is zero, so $G(r)$ leaves out the integral
+ * of $F$ past that point. For $k^2 P(k)$ of a physical spectrum this is negligible; for an
+ * input whose $F k$ falls slowly beyond an end it is felt over the whole grid and grows
+ * toward that edge. The theory page (section "Reach of the continuation") gives the
+ * figures and the ways to carry the continuation further.
  *
  */
 void
@@ -1757,11 +1761,11 @@ ncm_fftlog_eval_output (NcmFftlog *fftlog, guint nderiv, const gdouble lnr)
  * @reltol: relative tolerance
  *
  * Increases the number of knots by 20% at a time until $G(r)$ and its derivatives change
- * by less than @reltol, relative to each component's peak, from one size to the next.
- * Each step computes one transform; the next size is checked against #NcmFftlog:max-n
- * before anything is allocated, and the calibration aborts if it would pass it first. A
- * component that is zero at both sizes counts as converged, and a non-finite transform
- * aborts. Leaves @fftlog evaluated at the final size.
+ * by less than @reltol, relative to the value plus the component's peak, from one size to
+ * the next. Each step computes one transform; the next size is checked against
+ * #NcmFftlog:max-n before anything is allocated, and the calibration aborts if it would
+ * pass it first. A component that is zero at both sizes counts as converged, and a
+ * non-finite transform aborts. Leaves @fftlog evaluated at the final size.
  *
  */
 void
@@ -1858,11 +1862,11 @@ ncm_fftlog_calibrate_size_gsl (NcmFftlog *fftlog, gsl_function *Fk, const gdoubl
  * @reltol: relative tolerance
  *
  * Increases the number of knots by 20% at a time until $G(r)$ and its derivatives change
- * by less than @reltol, relative to each component's peak, from one size to the next.
- * Each step computes one transform; the next size is checked against #NcmFftlog:max-n
- * before anything is allocated, and the calibration aborts if it would pass it first. A
- * component that is zero at both sizes counts as converged, and a non-finite transform
- * aborts. Leaves @fftlog evaluated at the final size.
+ * by less than @reltol, relative to the value plus the component's peak, from one size to
+ * the next. Each step computes one transform; the next size is checked against
+ * #NcmFftlog:max-n before anything is allocated, and the calibration aborts if it would
+ * pass it first. A component that is zero at both sizes counts as converged, and a
+ * non-finite transform aborts. Leaves @fftlog evaluated at the final size.
  *
  */
 void

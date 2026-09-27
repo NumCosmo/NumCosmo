@@ -141,7 +141,7 @@ _ncm_fftlog_gausswin2_get_bias_range (NcmFftlog *fftlog, gdouble *bias_min, gdou
  * ncm_fftlog_gausswin2_new:
  * @lnr0: output center $\ln(r_0)$
  * @lnk0: input center $\ln(k_0)$
- * @Lk: input/output interval size
+ * @Lk: length $L$ of the fundamental interval in $\ln k$, see #NcmFftlog:Lk
  * @N: number of knots
  *
  * Creates a new fftlog Gaussian window squared object.

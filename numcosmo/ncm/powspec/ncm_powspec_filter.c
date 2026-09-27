@@ -53,7 +53,10 @@
  *
  * The transform runs over the $k$ range of the power spectrum, continued beyond it by
  * ncm_fftlog_use_smooth_padding(), with the bias that ncm_fftlog_get_best_bias() chooses
- * from the log-slopes of $k^2 P(k, z)$ at the ends of the table.
+ * from the log-slopes of $k^2 P(k, z)$ at the ends of the table. Within a few e-foldings
+ * of $R = 1/k_\mathrm{max}$ and $R = 1/k_\mathrm{min}$ the result depends on that
+ * continuation, an extrapolation of the table; ncm_powspec_filter_get_r_min() and
+ * ncm_powspec_filter_get_r_max() return the whole grid, those edges included.
  *
  */
 

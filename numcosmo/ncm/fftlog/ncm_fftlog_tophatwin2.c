@@ -148,7 +148,7 @@ _ncm_fftlog_tophatwin2_get_bias_range (NcmFftlog *fftlog, gdouble *bias_min, gdo
  * ncm_fftlog_tophatwin2_new:
  * @lnr0: output center $\ln(r_0)$
  * @lnk0: input center $\ln(k_0)$
- * @Lk: input/output interval size
+ * @Lk: length $L$ of the fundamental interval in $\ln k$, see #NcmFftlog:Lk
  * @N: number of knots
  *
  * Creates a new fftlog top hat window squared object.

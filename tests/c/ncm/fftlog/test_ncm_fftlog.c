@@ -970,8 +970,8 @@ _test_sqrt_k (const gdouble k, gpointer user_data)
  * end where F decays, so G(r) follows the infinite-range law G ~ r^-(s+1) towards the
  * inverse of that end, where zeros in the padding are off by the truncation of the
  * table (3e-4 for the tophat at k_min r = 1e-3). Checked at k_min r from 1e-5 to 1e-3
- * through the log-derivative, which needs no normalisation; measured 4e-8 (tophat) and
- * 1e-7 (Gaussian), the periodic images of the padded input. */
+ * through the log-derivative, which needs no normalisation; measured 6.2e-10 (tophat) and
+ * 4.4e-10 (Gaussian) with the tapered padding. */
 void
 test_ncm_fftlog_smooth_padding_power_law (void)
 {
@@ -1003,7 +1003,7 @@ test_ncm_fftlog_smooth_padding_power_law (void)
       const gdouble G1     = ncm_fftlog_eval_output (fftlog, 1, lnr);
       const gdouble dlnGdr = G1 / G0;
 
-      ncm_assert_cmpdouble_e (dlnGdr, ==, -(s + 1.0), 1.0e-6, 0.0);
+      ncm_assert_cmpdouble_e (dlnGdr, ==, -(s + 1.0), 1.0e-8, 0.0);
     }
 
     ncm_fftlog_free (fftlog);
@@ -1485,7 +1485,7 @@ _test_bias_power_law_fftlog (gboolean tophat, gdouble *s)
  * The case of test_bias_castro.py: F = k^-0.6 over 13 decades. Unbiased, F grows about
  * e^25 across the table and its padding, and the change from N to 1.2N stalls at 6e-5 of
  * the peak (roundoff). With the bias of ncm_fftlog_get_best_bias() the padded function is
- * nearly flat; measured calibrations to 1e-9 at 2160 knots and to 1e-11 at 9600.
+ * nearly flat; measured calibrations to 1e-9 at 2160 knots and to 1e-11 at 8000.
  */
 void
 test_ncm_fftlog_bias_power_law_converges (void)
