@@ -39,9 +39,9 @@ G_BEGIN_DECLS
  * @chi: $\chi$
  * @k: wavenumber $k$
  *
- * The function $F(\chi, k)$ of #NcmSBesselIntegrator.
+ * The radial kernel $K(\chi, k)$ of #NcmSBesselIntegrator.
  *
- * Returns: $F(\chi, k)$
+ * Returns: $K(\chi, k)$
  */
 typedef gdouble (*NcmSBesselIntegratorF) (gpointer user_data, gdouble chi, gdouble k);
 

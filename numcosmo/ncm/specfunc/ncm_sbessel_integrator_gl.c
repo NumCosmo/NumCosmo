@@ -238,7 +238,7 @@ ncm_sbessel_integrator_gl_class_init (NcmSBesselIntegratorGLClass *klass)
   parent_class->integrate     = &_ncm_sbessel_integrator_gl_integrate;
 }
 
-/* Integrand in x = k chi: F(x/k, k) j_ell(x) / k */
+/* Integrand in x = k chi: F(x) j_ell(x), with F(x) = K(x/k, k) / k */
 static gdouble
 _ncm_sbessel_integrator_gl_integrand (gdouble x, gpointer user_data)
 {

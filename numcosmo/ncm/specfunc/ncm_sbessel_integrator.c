@@ -30,7 +30,7 @@
  *
  * Computes
  * $$
- * I_\ell(k) = \int_a^b F(\chi, k)\, j_\ell(k\chi)\, \mathrm{d}\chi
+ * I_\ell(k) = \int_a^b K(\chi, k)\, j_\ell(k\chi)\, \mathrm{d}\chi
  * $$
  * for every multipole in #NcmSBesselIntegrator:ell-range at once, with
  * ncm_sbessel_integrator_integrate(), or for a single one with
@@ -247,7 +247,7 @@ _ncm_sbessel_integrator_check_result (NcmSBesselIntegrator *sbi, NcmVector *resu
   NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
   const guint n_ell                 = self->ell_max - self->ell_min + 1;
 
-  if (ncm_vector_len (result) != n_ell)
+  if (ncm_vector_len (result) < n_ell)
     g_error ("ncm_sbessel_integrator: result has length %u, the multipole range [%u, %u] needs %u.",
              ncm_vector_len (result), self->ell_min, self->ell_max, n_ell);
 }
@@ -325,7 +325,7 @@ ncm_sbessel_integrator_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, 
 /**
  * ncm_sbessel_integrator_integrate_ell: (virtual integrate_ell)
  * @sbi: a #NcmSBesselIntegrator
- * @F: (scope call) (closure user_data): the function $F(\chi, k)$
+ * @F: (scope call) (closure user_data): the radial kernel $K(\chi, k)$
  * @a: lower limit
  * @b: upper limit
  * @k: wavenumber $k$
@@ -351,7 +351,7 @@ ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselInteg
 /**
  * ncm_sbessel_integrator_integrate: (virtual integrate)
  * @sbi: a #NcmSBesselIntegrator
- * @F: (scope call) (closure user_data): the function $F(\chi, k)$
+ * @F: (scope call) (closure user_data): the radial kernel $K(\chi, k)$
  * @a: lower limit
  * @b: upper limit
  * @k: wavenumber $k$
@@ -359,8 +359,8 @@ ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselInteg
  * @user_data: (nullable): user data passed to @F
  *
  * Computes $I_\ell(k)$ for every multipole in #NcmSBesselIntegrator:ell-range, storing
- * $I_{\ell_\mathrm{min}+i}(k)$ in element $i$ of @result, whose length must be
- * $\ell_\mathrm{max} - \ell_\mathrm{min} + 1$.
+ * $I_{\ell_\mathrm{min}+i}(k)$ in element $i$ of @result, whose length must be at least
+ * $\ell_\mathrm{max} - \ell_\mathrm{min} + 1$; later elements are left untouched.
  */
 void
 ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data)
@@ -372,7 +372,7 @@ ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegrato
 /**
  * ncm_sbessel_integrator_integrate_deriv: (virtual integrate_deriv)
  * @sbi: a #NcmSBesselIntegrator
- * @F: (scope call) (closure user_data): the function $F(\chi, k)$
+ * @F: (scope call) (closure user_data): the radial kernel $K(\chi, k)$
  * @a: lower limit
  * @b: upper limit
  * @k: wavenumber $k$
@@ -423,7 +423,7 @@ _ncm_sbessel_integrator_gaussian_func (gpointer user_data, gdouble chi, gdouble 
  * @k: wavenumber $k$
  * @ell: multipole $\ell \geq 0$
  *
- * ncm_sbessel_integrator_integrate_ell() with $F = e^{-(\chi - \chi_c)^2 / (2\sigma^2)}$,
+ * ncm_sbessel_integrator_integrate_ell() with $K = e^{-(\chi - \chi_c)^2 / (2\sigma^2)}$,
  * the shape of the Gaussian truth tables, evaluated in C to avoid callback overhead.
  *
  * Returns: $I_\ell(k)$
@@ -485,7 +485,7 @@ _ncm_sbessel_integrator_rational_func (gpointer user_data, gdouble chi, gdouble 
  * @ell: multipole $\ell \geq 0$
  *
  * ncm_sbessel_integrator_integrate_ell() with
- * $F = \chi^2 / [1 + (\chi - \chi_c)^2 / \sigma^2]^3$, the shape of the rational truth
+ * $K = \chi^2 / [1 + (\chi - \chi_c)^2 / \sigma^2]^3$, the shape of the rational truth
  * tables, evaluated in C to avoid callback overhead.
  *
  * Returns: $I_\ell(k)$
