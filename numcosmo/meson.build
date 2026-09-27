@@ -861,7 +861,6 @@ libnumcosmo_dep_list = [
     mpi_c_dep,
     cfitsio_dep,
     fftw3_dep,
-    fftw3f_dep,
     gio_dep,
     glib_dep,
     gmp_dep,

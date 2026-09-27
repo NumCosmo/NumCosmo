@@ -188,7 +188,6 @@ test_ncm_cfg_fftw_plan_destroy (void)
   guint i;
 
   ncm_cfg_fftw_plan_destroy (NULL);
-  ncm_cfg_fftwf_plan_destroy (NULL);
 
   ncm_cfg_set_fftw_default_flag_str ("estimate", 10.0, &error);
   g_assert_no_error (error);

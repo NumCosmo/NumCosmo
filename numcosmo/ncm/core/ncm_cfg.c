@@ -1992,9 +1992,7 @@ G_LOCK_DEFINE_STATIC (fftw_plan_lock);
  * once per process and saved only when it changed. Protected by fftw_saveload_lock.
  */
 static gboolean _wisdom_loaded_d = FALSE;
-static gboolean _wisdom_loaded_f = FALSE;
 static gchar *_wisdom_saved_d    = NULL;
-static gchar *_wisdom_saved_f    = NULL;
 
 /**
  * ncm_cfg_lock_plan_fftw:
@@ -2031,7 +2029,7 @@ static GHashTable *_fftw_planned_keys = NULL;
  * @...: arguments for @key
  *
  * Starts creating FFTW plans: loads the FFTW wisdom of this MPI rank, once per process, from
- * `~/.numcosmo/ncm_cfg_wisdom_rank<rank>.fftw3` (and `.fftw3f`), and takes the
+ * `~/.numcosmo/ncm_cfg_wisdom_rank<rank>.fftw3`, and takes the
  * planning lock, see ncm_cfg_lock_plan_fftw(). @key identifies the plans: the caller and
  * everything that makes a plan different, such as the transform sizes and kinds and the
  * number of transforms; the current default planner flag is added to it. It only tells
@@ -2116,31 +2114,9 @@ ncm_cfg_fftw_plan_destroy (gpointer plan)
   ncm_cfg_unlock_plan_fftw ();
 }
 
-/**
- * ncm_cfg_fftwf_plan_destroy: (skip)
- * @plan: (nullable): a single-precision FFTW plan
- *
- * Same as ncm_cfg_fftw_plan_destroy() for single precision. Aborts if NumCosmo was built
- * without single-precision FFTW.
- */
-void
-ncm_cfg_fftwf_plan_destroy (gpointer plan)
-{
-  if (plan == NULL)
-    return;
-
-#ifdef HAVE_FFTW3F
-  ncm_cfg_lock_plan_fftw ();
-  fftwf_destroy_plan (plan);
-  ncm_cfg_unlock_plan_fftw ();
-#else /* HAVE_FFTW3F */
-  g_error ("ncm_cfg_fftwf_plan_destroy: NumCosmo was built without single-precision FFTW.");
-#endif /* HAVE_FFTW3F */
-}
-
 /*
  * Imports the FFTW wisdom of this MPI rank, once per process, from
- * ~/.numcosmo/ncm_cfg_wisdom_rank<rank>.fftw3 (and .fftw3f). Does nothing under
+ * ~/.numcosmo/ncm_cfg_wisdom_rank<rank>.fftw3. Does nothing under
  * FFTW_ESTIMATE, which uses no wisdom. Thread-safe.
  */
 static void
@@ -2157,7 +2133,7 @@ _ncm_cfg_load_fftw_wisdom (void)
 
   G_LOCK (fftw_saveload_lock);
 
-  if (_wisdom_loaded_d && _wisdom_loaded_f)
+  if (_wisdom_loaded_d)
   {
     /* Already loaded once this process -- FFTW's wisdom registry is
      * global and cumulative, so re-parsing the same file again would
@@ -2179,25 +2155,6 @@ _ncm_cfg_load_fftw_wisdom (void)
 
     _wisdom_loaded_d = TRUE;
   }
-
-#ifdef HAVE_FFTW3F
-  g_free (file_ext);
-  g_free (full_filename);
-
-  file_ext      = g_strdup_printf ("%s.fftw3f", file);
-  full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
-
-  if (!_wisdom_loaded_f)
-  {
-    if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
-      fftwf_import_wisdom_from_filename (full_filename);
-
-    _wisdom_loaded_f = TRUE;
-  }
-
-#else
-  _wisdom_loaded_f = TRUE; /* no single-precision FFTW3 build, nothing to load */
-#endif
 
   g_free (file);
   g_free (file_ext);
@@ -2258,43 +2215,6 @@ _ncm_cfg_save_fftw_wisdom (void)
     }
   }
 
-#ifdef HAVE_FFTW3F
-  g_free (file_ext);
-  g_free (full_filename);
-
-  file_ext      = g_strdup_printf ("%s.fftw3f", file);
-  full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
-
-  {
-    char *wisdom_str = fftwf_export_wisdom_to_string ();
-
-    if (wisdom_str != NULL)
-    {
-      if ((_wisdom_saved_f != NULL) && g_str_equal (_wisdom_saved_f, wisdom_str))
-      {
-        /* Nothing learned since the last save -- skip the rewrite. */
-        g_free (wisdom_str);
-      }
-      else
-      {
-        gssize len  = strlen (wisdom_str);
-        gboolean OK = FALSE;
-
-#if GLIB_CHECK_VERSION (2, 66, 0)
-        OK = g_file_set_contents_full (full_filename, wisdom_str, len,
-                                       G_FILE_SET_CONTENTS_CONSISTENT,
-                                       0666, NULL);
-#else /* GLIB_CHECK_VERSION (2, 66, 0) */
-        OK = g_file_set_contents (full_filename, wisdom_str, len, NULL);
-#endif /* GLIB_CHECK_VERSION (2, 66, 0) */
-
-        g_assert (OK);
-        g_free (_wisdom_saved_f);
-        _wisdom_saved_f = wisdom_str; /* keep as the new comparison baseline */
-      }
-    }
-  }
-#endif
 
   g_free (file);
   g_free (file_ext);
@@ -2561,9 +2481,6 @@ ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout, GError **error
   __fftw_timelimit     = timeout;
 
   fftw_set_timelimit (timeout);
-#ifdef HAVE_FFTW3F
-  fftwf_set_timelimit (timeout);
-#endif /* HAVE_FFTW3F */
 }
 
 /**

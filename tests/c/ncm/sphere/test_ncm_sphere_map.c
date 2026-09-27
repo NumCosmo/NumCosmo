@@ -31,6 +31,7 @@
 #include <math.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <glib/gstdio.h>
 
 typedef struct _TestNcmSphereMap
 {
@@ -52,6 +53,7 @@ void test_ncm_sphere_map_traps (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_invalid_nside (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_order_roundtrip (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_cap_centres (void);
+void test_ncm_sphere_map_fits_roundtrip (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_invalid_pixel (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_invalid_negative_pixel (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_invalid_ring (TestNcmSphereMap *test, gconstpointer pdata);
@@ -109,6 +111,13 @@ main (gint argc, gchar *argv[])
               &test_ncm_sphere_map_free);
 
   g_test_add_func ("/ncm/sphere_map/cap_centres", &test_ncm_sphere_map_cap_centres);
+
+#ifdef HAVE_CFITSIO
+  g_test_add ("/ncm/sphere_map/fits_roundtrip", TestNcmSphereMap, NULL,
+              &test_ncm_sphere_map_new,
+              &test_ncm_sphere_map_fits_roundtrip,
+              &test_ncm_sphere_map_free);
+#endif /* HAVE_CFITSIO */
 
   g_test_add ("/ncm/sphere_map/invalid/pixel/subprocess", TestNcmSphereMap, NULL,
               &test_ncm_sphere_map_new,
@@ -490,5 +499,49 @@ test_ncm_sphere_map_cap_centres (void)
 
   ncm_trivec_free (vec);
   ncm_sphere_map_free (smap);
+}
+
+/* Save and load return the map bit by bit, with its ordering and coordinate system: the
+ * column was single precision and changed every pixel by up to 6e-8. */
+void
+test_ncm_sphere_map_fits_roundtrip (TestNcmSphereMap *test, gconstpointer pdata)
+{
+  NcmRNG *rng       = ncm_rng_seeded_new (NULL, 5);
+  const gint64 npix = ncm_sphere_map_get_npix (test->pix);
+  GArray *map       = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), npix);
+  gchar *dir        = g_dir_make_tmp ("ncm_sphere_map_XXXXXX", NULL);
+  gchar *file       = g_build_filename (dir, "map.fits", NULL);
+  NcmSphereMap *back;
+  gint64 i;
+
+  for (i = 0; i < npix; i++)
+  {
+    const gdouble v = ncm_rng_gaussian_gen (rng, 0.0, 1.0);
+
+    g_array_append_val (map, v);
+  }
+
+  ncm_sphere_map_set_map (test->pix, map);
+  ncm_sphere_map_set_order (test->pix, NCM_SPHERE_MAP_ORDER_NEST);
+  ncm_sphere_map_set_coordsys (test->pix, NCM_SPHERE_MAP_COORD_SYS_GALACTIC);
+  ncm_sphere_map_save_fits (test->pix, file, NULL, TRUE);
+
+  back = ncm_sphere_map_new (1);
+  ncm_sphere_map_load_fits (back, file, NULL);
+
+  g_assert_cmpint (ncm_sphere_map_get_nside (back), ==, ncm_sphere_map_get_nside (test->pix));
+  g_assert_cmpint (ncm_sphere_map_get_order (back), ==, NCM_SPHERE_MAP_ORDER_NEST);
+  g_assert_cmpint (ncm_sphere_map_get_coordsys (back), ==, NCM_SPHERE_MAP_COORD_SYS_GALACTIC);
+
+  for (i = 0; i < npix; i++)
+    g_assert_cmpfloat (ncm_sphere_map_get_pix (back, i), ==, ncm_sphere_map_get_pix (test->pix, i));
+
+  ncm_sphere_map_free (back);
+  g_unlink (file);
+  g_rmdir (dir);
+  g_free (file);
+  g_free (dir);
+  g_array_unref (map);
+  ncm_rng_free (rng);
 }
 

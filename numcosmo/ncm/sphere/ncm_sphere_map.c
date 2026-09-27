@@ -58,8 +58,6 @@
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm_enum_types.h"
 
-#undef HAVE_FFTW3F
-
 /*#define _NCM_SPHERE_MAP_MEASURE 1*/
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -67,29 +65,9 @@
 #include <fitsio.h>
 #endif /* HAVE_CFITSIO */
 
-#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* HAVE_FFTW3 */
 #endif /* NUMCOSMO_GIR_SCAN */
 
-#ifndef HAVE_FFTW3_ALLOC
-#define fftwf_alloc_real(n) (double *) fftwf_malloc (sizeof (double) * (n))
-#define fftwf_alloc_complex(n) (fftwf_complex *) fftwf_malloc (sizeof (fftw_complex) * (n))
-#endif /* HAVE_FFTW3_ALLOC */
-
-/*#undef HAVE_FFTW3F*/
-
-#ifdef HAVE_FFTW3F
-#  define _fft_vec_alloc fftwf_alloc_real
-#  define _fft_real gfloat
-#  define _fft_complex complex float
-#  define _fft_vec_alloc_complex fftwf_alloc_complex
-#  define _fft_vec_free  fftwf_free
-#  define _fft_vec_set_zero(v, s) memset ((v), 0, sizeof (gfloat) * (s))
-#  define _fft_vec_set_zero_complex(v, s) memset ((v), 0, sizeof (_fft_complex) * (s))
-#  define _fft_vec_memcpy(dest, orig, s) memcpy ((dest), (orig), sizeof (gfloat) * (s))
-#  define _fft_vec_ptr(v, i) (&((gfloat *) (v))[i])
-#elif defined (HAVE_FFTW3)
 #  define _fft_vec_alloc fftw_alloc_real
 #  define _fft_real gdouble
 #  define _fft_complex complex double
@@ -99,17 +77,6 @@
 #  define _fft_vec_set_zero_complex(v, s) memset ((v), 0, sizeof (_fft_complex) * (s))
 #  define _fft_vec_memcpy(dest, orig, s) memcpy ((dest), (orig), sizeof (gdouble) * (s))
 #  define _fft_vec_ptr(v, i) (&((gdouble *) (v))[i])
-#else
-#  define _fft_real gdouble
-#  define _fft_complex complex double
-#  define _fft_vec_alloc_complex(N) g_new (_fft_complex, (N))
-#  define _fft_vec_alloc(N) g_new (gdouble, (N))
-#  define _fft_vec_free  g_free
-#  define _fft_vec_set_zero(v, s) memset ((v), 0, sizeof (gdouble) * (s))
-#  define _fft_vec_set_zero_complex(v, s) memset ((v), 0, sizeof (_fft_complex) * (s))
-#  define _fft_vec_memcpy(dest, orig, s) memcpy ((dest), (orig), sizeof (gdouble) * (s))
-#  define _fft_vec_ptr(v, i) (&((gdouble *) (v))[i])
-#endif
 #define _fft_vec_idx(v, i) (*_fft_vec_ptr (v, i))
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -219,15 +186,8 @@ ncm_sphere_map_init (NcmSphereMap *smap)
   self->fft_pvec          = NULL;
   self->fft_plan_r2c      = g_ptr_array_new ();
   self->fft_plan_c2r      = g_ptr_array_new ();
-#ifdef HAVE_FFTW3
-#  ifdef HAVE_FFTW3F
-  g_ptr_array_set_free_func (self->fft_plan_r2c, ncm_cfg_fftwf_plan_destroy);
-  g_ptr_array_set_free_func (self->fft_plan_c2r, ncm_cfg_fftwf_plan_destroy);
-#  else
   g_ptr_array_set_free_func (self->fft_plan_r2c, ncm_cfg_fftw_plan_destroy);
   g_ptr_array_set_free_func (self->fft_plan_c2r, ncm_cfg_fftw_plan_destroy);
-#  endif
-#endif
   self->alm          = NULL;
   self->alm_len      = 0;
   self->lmax         = 0;
@@ -546,13 +506,7 @@ ncm_sphere_map_set_nside (NcmSphereMap *smap, gint64 nside)
     self->block_ring_size   = 0;
     self->last_sing_ring    = 0;
 
-#ifdef HAVE_FFTW3
-#  ifdef HAVE_FFTW3F
-    g_clear_pointer (&self->fft_pvec, (GDestroyNotify) fftwf_free);
-#  else
     g_clear_pointer (&self->fft_pvec, (GDestroyNotify) fftw_free);
-#  endif
-#endif
 
     g_ptr_array_set_size (self->fft_plan_r2c, 0);
     g_ptr_array_set_size (self->fft_plan_c2r, 0);
@@ -574,13 +528,7 @@ ncm_sphere_map_set_nside (NcmSphereMap *smap, gint64 nside)
 
       _fft_vec_set_zero (self->pvec, self->npix);
 
-#ifdef HAVE_FFTW3
-#  ifdef HAVE_FFTW3F
-      self->fft_pvec = fftwf_alloc_complex (self->npix);
-#  else
       self->fft_pvec = fftw_alloc_complex (self->npix);
-#  endif
-#endif
 
       g_assert_cmpint (2 * self->cap_size + self->middle_size, ==, self->npix);
 
@@ -1634,9 +1582,14 @@ ncm_sphere_map_add_to_ang (NcmSphereMap *smap, const gdouble theta, const gdoubl
  * ncm_sphere_map_load_fits:
  * @smap: a #NcmSphereMap
  * @fits_file: fits filename
- * @signal_name: (allow-none): signal column name in @fits_file
+ * @signal_name: (allow-none): signal column name in @fits_file, %NULL for the first column
  *
- * Loads a #NcmSphereMap from a fits file.
+ * Loads a full-sky map in the HEALPix FITS format: a binary table in the first extension
+ * with the map in one column, any number of pixels per row, and the keys NSIDE, ORDERING
+ * (RING if missing, with a warning) and COORDSYS (celestial if missing, with a warning).
+ * The nside, ordering and coordinate system of @smap are set from the file. A PIXTYPE other
+ * than HEALPIX, a partial-sky map (INDXSCHM = EXPLICIT) or a column whose size does not
+ * match NSIDE abort.
  *
  */
 void
@@ -1647,11 +1600,13 @@ ncm_sphere_map_load_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
   gchar comment[FLEN_COMMENT];
   gchar ordering[FLEN_VALUE];
   gchar coordsys[FLEN_VALUE];
-  gint status, hdutype, anynul;
-  glong nside, nfields, naxis2;
-  gint signal_i      = 0;
-  const gchar *sname = signal_name != NULL ?  signal_name : NCM_SPHERE_MAP_DEFAULT_SIGNAL;
+  gchar value[FLEN_VALUE];
+  gint status, hdutype, anynul, typecode;
+  glong nside, naxis2, repeat, width;
+  gint signal_i = 1;
   fitsfile *fptr;
+
+  G_STATIC_ASSERT (sizeof (_fft_real) == sizeof (gdouble));
 
   status = 0;
 
@@ -1664,41 +1619,59 @@ ncm_sphere_map_load_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
   if (hdutype != BINARY_TBL)
     g_error ("ncm_sphere_map_load_fits: `%s' is not a binary table.", fits_file);
 
+  if (fits_read_key (fptr, TSTRING, "PIXTYPE", value, comment, &status) == 0)
+  {
+    if (strncmp (value, "HEALPIX", 7) != 0)
+      g_error ("ncm_sphere_map_load_fits: `%s' has PIXTYPE `%s', not HEALPIX.", fits_file, value);
+  }
+  else
+  {
+    status = 0;
+  }
+
+  if (fits_read_key (fptr, TSTRING, "INDXSCHM", value, comment, &status) == 0)
+  {
+    if (strncmp (value, "EXPLICIT", 8) == 0)
+      g_error ("ncm_sphere_map_load_fits: `%s' is a partial-sky map (INDXSCHM = EXPLICIT), which is not supported.", fits_file);
+  }
+  else
+  {
+    status = 0;
+  }
+
   fits_read_key_lng (fptr, "NSIDE", &nside, comment, &status);
   NCM_FITS_ERROR (status);
 
-  g_assert_cmpint (nside, >, 0);
+  if (nside <= 0)
+    g_error ("ncm_sphere_map_load_fits: `%s' has NSIDE = %ld.", fits_file, nside);
+
   ncm_sphere_map_set_nside (smap, nside);
-
-  fits_read_key_lng (fptr, "TFIELDS", &nfields, comment, &status);
-  NCM_FITS_ERROR (status);
-
-  g_assert_cmpint (nfields, >, 0);
 
   fits_read_key_lng (fptr, "NAXIS2", &naxis2, comment, &status);
   NCM_FITS_ERROR (status);
 
-  g_assert_cmpint (naxis2, ==, ncm_sphere_map_get_npix (smap));
-
-  if (fits_get_colnum (fptr, CASESEN, (gchar *) sname, &signal_i, &status))
+  if ((signal_name != NULL) && fits_get_colnum (fptr, CASESEN, (gchar *) signal_name, &signal_i, &status))
     g_error ("ncm_sphere_map_load_fits: signal column named `%s' not found in `%s'.",
-             sname, fits_file);
+             signal_name, fits_file);
 
-#ifdef HAVE_FFTW3F
-  fits_read_col_flt (fptr, signal_i, 1, 1, naxis2, NCM_SPHERE_MAP_HEALPIX_NULLVAL,
+  fits_get_coltype (fptr, signal_i, &typecode, &repeat, &width, &status);
+  NCM_FITS_ERROR (status);
+
+  /* HEALPix writers store several pixels per row (healpy: 1024); cfitsio reads the
+   * elements in order across the rows. */
+  if (naxis2 * repeat != self->npix)
+    g_error ("ncm_sphere_map_load_fits: column %d of `%s' holds %ld values (%ld rows of %ld), "
+             "a map of nside %ld has %" G_GINT64_FORMAT " pixels.",
+             signal_i, fits_file, naxis2 * repeat, naxis2, repeat, nside, self->npix);
+
+  fits_read_col_dbl (fptr, signal_i, 1, 1, self->npix, NCM_SPHERE_MAP_HEALPIX_NULLVAL,
                      _fft_vec_ptr (self->pvec, 0), &anynul, &status);
-#elif defined (HAVE_FFTW3)
-  fits_read_col_dbl (fptr, signal_i, 1, 1, naxis2, NCM_SPHERE_MAP_HEALPIX_NULLVAL,
-                     _fft_vec_ptr (self->pvec, 0), &anynul, &status);
-#else
-  fits_read_col_flt (fptr, signal_i, 1, 1, naxis2, NCM_SPHERE_MAP_HEALPIX_NULLVAL,
-                     _fft_vec_ptr (self->pvec, 0), &anynul, &status);
-#endif
   NCM_FITS_ERROR (status);
 
   if (fits_read_key (fptr, TSTRING, "ORDERING", ordering, comment, &status))
   {
     g_warning ("ncm_sphere_map_load_fits: Could not find ORDERING in the fits file, assuming RING.");
+    g_strlcpy (ordering, "RING", FLEN_VALUE);
     status = 0;
   }
 
@@ -1737,10 +1710,14 @@ ncm_sphere_map_load_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
  * ncm_sphere_map_save_fits:
  * @smap: a #NcmSphereMap
  * @fits_file: fits filename
- * @signal_name: (allow-none): signal column name in @fits_file
+ * @signal_name: (allow-none): signal column name in @fits_file, %NULL for
+ *   %NCM_SPHERE_MAP_DEFAULT_SIGNAL
  * @overwrite: whether to overwrite @fits_file if it exists
  *
- * Saves a #NcmSphereMap to a fits file.
+ * Saves @smap in the HEALPix FITS format read by ncm_sphere_map_load_fits() and healpy:
+ * a binary table with one double-precision value per row, in the current ordering, and
+ * the keys PIXTYPE, ORDERING, NSIDE, FIRSTPIX, LASTPIX, INDXSCHM and COORDSYS. The values
+ * are written in double precision, so a save and load returns the map unchanged.
  *
  */
 void
@@ -1750,7 +1727,7 @@ ncm_sphere_map_save_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   const gchar *sname               = signal_name != NULL ?  signal_name : NCM_SPHERE_MAP_DEFAULT_SIGNAL;
   const gchar *ttype[]             = { sname };
-  const gchar *tform[]             = { "1E" };
+  const gchar *tform[]             = { "1D" };
   const gint64 npix                = ncm_sphere_map_get_npix (smap);
   const gchar extname[]            = "BINTABLE";
   fitsfile *fptr;
@@ -1763,6 +1740,10 @@ ncm_sphere_map_save_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
   NCM_FITS_ERROR (status);
 
   fits_create_tbl (fptr, BINARY_TBL, npix, 1, (gchar **) ttype, (gchar **) tform, NULL, extname, &status);
+  NCM_FITS_ERROR (status);
+
+  fits_write_key (fptr, TSTRING, "PIXTYPE", (gchar *) "HEALPIX",
+                  "HEALPIX pixelisation", &status);
   NCM_FITS_ERROR (status);
 
   {
@@ -1796,12 +1777,6 @@ ncm_sphere_map_save_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
   }
 
   {
-    fits_write_key (fptr, TSTRING, "INDXSCHM", (gchar *) "IMPLICIT",
-                    "Indexing: IMPLICIT or EXPLICIT", &status);
-    NCM_FITS_ERROR (status);
-  }
-
-  {
     glong nside = ncm_sphere_map_get_nside (smap);
 
     fits_write_key (fptr, TLONG, "NSIDE", &nside,
@@ -1814,7 +1789,7 @@ ncm_sphere_map_save_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
     gchar *coordsys  = g_strdup_printf ("%c       ", coordsys_c);
 
     fits_write_key (fptr, TSTRING, "COORDSYS", coordsys,
-                    "Pixalization coordinate system", &status);
+                    "Pixelization coordinate system", &status);
     NCM_FITS_ERROR (status);
 
     fits_write_comment (fptr,
@@ -1824,16 +1799,10 @@ ncm_sphere_map_save_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
     g_free (coordsys);
   }
 
-#ifdef HAVE_FFTW3F
-  fits_write_col (fptr, TFLOAT, 1, 1, 1, npix, _fft_vec_ptr (self->pvec, 0), &status);
-  NCM_FITS_ERROR (status);
-#elif defined (HAVE_FFTW3)
+  G_STATIC_ASSERT (sizeof (_fft_real) == sizeof (gdouble));
+
   fits_write_col (fptr, TDOUBLE, 1, 1, 1, npix, _fft_vec_ptr (self->pvec, 0), &status);
   NCM_FITS_ERROR (status);
-#else
-  fits_write_col (fptr, TFLOAT, 1, 1, 1, npix, _fft_vec_ptr (self->pvec, 0), &status);
-  NCM_FITS_ERROR (status);
-#endif
 
 
   fits_close_file (fptr, &status);
@@ -1854,11 +1823,13 @@ _ncm_sphere_map_radec_to_ang (const gdouble RA, const gdouble DEC, gdouble *thet
  * ncm_sphere_map_load_from_fits_catalog:
  * @smap: a #NcmSphereMap
  * @fits_file: fits filename
- * @RA: RA column name in @fits_file
- * @DEC: DEC column name in @fits_file
- * @S: (allow-none): Signal column name in @fits_file
+ * @RA: right ascension column name in @fits_file (degrees)
+ * @DEC: declination column name in @fits_file (degrees)
+ * @S: (allow-none): signal column name in @fits_file, %NULL to count objects
  *
- * Loads a #NcmSphereMap from a fits catalog.
+ * Adds the objects of a catalog, a binary table in the first extension of @fits_file, to
+ * the pixels of @smap that contain them: each object adds its signal, or one when @S is
+ * %NULL. The map is not cleared first, see ncm_sphere_map_clear_pixels().
  *
  */
 void
@@ -1883,19 +1854,19 @@ ncm_sphere_map_load_from_fits_catalog (NcmSphereMap *smap, const gchar *fits_fil
   NCM_FITS_ERROR (status);
 
   if (hdutype != BINARY_TBL)
-    g_error ("ncm_sphere_map_load_fits: `%s' is not a binary table.", fits_file);
+    g_error ("ncm_sphere_map_load_from_fits_catalog: `%s' is not a binary table.", fits_file);
 
   if (fits_get_colnum (fptr, CASESEN, (gchar *) RA, &RA_col, &status))
-    g_error ("ncm_sphere_map_load_fits: RA column named `%s' not found in `%s'.",
+    g_error ("ncm_sphere_map_load_from_fits_catalog: RA column named `%s' not found in `%s'.",
              RA, fits_file);
 
   if (fits_get_colnum (fptr, CASESEN, (gchar *) DEC, &DEC_col, &status))
-    g_error ("ncm_sphere_map_load_fits: DEC column named `%s' not found in `%s'.",
+    g_error ("ncm_sphere_map_load_from_fits_catalog: DEC column named `%s' not found in `%s'.",
              DEC, fits_file);
 
   if (S != NULL)
     if (fits_get_colnum (fptr, CASESEN, (gchar *) S, &S_col, &status))
-      g_error ("ncm_sphere_map_load_fits: Signal column named `%s' not found in `%s'.",
+      g_error ("ncm_sphere_map_load_from_fits_catalog: Signal column named `%s' not found in `%s'.",
                S, fits_file);
 
 
@@ -1957,7 +1928,6 @@ ncm_sphere_map_load_from_fits_catalog (NcmSphereMap *smap, const gchar *fits_fil
 static void
 _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
 {
-#ifdef HAVE_FFTW3
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   guint fftw_default_flags         = ncm_cfg_get_fftw_default_flag ();
 
@@ -1968,73 +1938,6 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
     gpointer temp_pix      = _fft_vec_alloc (self->npix);
     gboolean first;
     gint r_i;
-#  ifdef HAVE_FFTW3F
-
-    _fft_vec_set_zero_complex (self->fft_pvec, npix);
-
-    _fft_vec_memcpy (temp_pix, self->pvec, self->npix);
-
-    first = ncm_cfg_fftw_plan_begin ("ncm_sphere_map_rings_%ld", ncm_sphere_map_get_nside (smap));
-
-    for (r_i = 0; r_i < nring_cap; r_i++)
-    {
-      const gint ring_size       = ncm_sphere_map_get_ring_size (smap, r_i);
-      const gint64 ring_fi_north = ncm_sphere_map_get_ring_first_index (smap, r_i);
-      const gint64 ring_fi_south = ncm_sphere_map_get_ring_first_index (smap, ncm_sphere_map_get_nrings (smap) - r_i - 1);
-      const gint64 dist          = ring_fi_south - ring_fi_north;
-      gfloat *pvec               = self->pvec;
-      complex float *fft_pvec    = self->fft_pvec;
-
-      fftwf_plan plan_r2c = fftwf_plan_many_dft_r2c (1, &ring_size, 2,
-                                                     &pvec[ring_fi_north], NULL,
-                                                     1, dist,
-                                                     &fft_pvec[ring_fi_north], NULL,
-                                                     1, dist,
-                                                     fftw_default_flags | FFTW_PRESERVE_INPUT);
-
-      fftwf_plan plan_c2r = fftwf_plan_many_dft_c2r (1, &ring_size, 2,
-                                                     &fft_pvec[ring_fi_north], NULL,
-                                                     1, dist,
-                                                     &pvec[ring_fi_north], NULL,
-                                                     1, dist,
-                                                     fftw_default_flags | FFTW_DESTROY_INPUT);
-
-      /*printf ("Preparing plan for %ld and %ld size %d | npix %ld | %p\n", ring_fi_north, ring_fi_south, ring_size, self->npix, plan_r2c);*/
-      g_ptr_array_add (self->fft_plan_r2c, plan_r2c);
-      g_ptr_array_add (self->fft_plan_c2r, plan_c2r);
-    }
-
-    {
-      const gint ring_size     = self->middle_rings_size;
-      const gint nrings_middle = ncm_sphere_map_get_nrings_middle (smap);
-      const gint cap_size      = ncm_sphere_map_get_cap_size (smap);
-
-      gfloat *pvec            = self->pvec;
-      complex float *fft_pvec = self->fft_pvec;
-
-      fftwf_plan plan_r2c = fftwf_plan_many_dft_r2c (1, &ring_size, nrings_middle,
-                                                     &pvec[cap_size], NULL,
-                                                     1, ring_size,
-                                                     &fft_pvec[cap_size], NULL,
-                                                     1, ring_size,
-                                                     fftw_default_flags | FFTW_PRESERVE_INPUT);
-
-      fftwf_plan plan_c2r = fftwf_plan_many_dft_c2r (1, &ring_size, nrings_middle,
-                                                     &fft_pvec[cap_size], NULL,
-                                                     1, ring_size,
-                                                     &pvec[cap_size], NULL,
-                                                     1, ring_size,
-                                                     fftw_default_flags | FFTW_DESTROY_INPUT);
-
-      /*printf ("Preparing plan for %d and %d x %d | npix %ld | %p\n", cap_size, nrings_middle, ring_size, self->npix, plan_r2c);*/
-      g_ptr_array_add (self->fft_plan_r2c, plan_r2c);
-      g_ptr_array_add (self->fft_plan_c2r, plan_c2r);
-    }
-    fflush (stdout);
-
-    ncm_cfg_fftw_plan_end (first);
-
-#  else
 
     _fft_vec_set_zero_complex (self->fft_pvec, npix);
 
@@ -2096,18 +1999,13 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
 
     ncm_cfg_fftw_plan_end (first);
 
-#  endif
 
     _fft_vec_memcpy (self->pvec, temp_pix, self->npix);
     _fft_vec_free (temp_pix);
   }
-
-#endif
 }
 
-#ifdef HAVE_FFTW3
 #include "ncm/sphere/ncm_sphere_map_block.c"
-#endif
 
 static void
 _ncm_sphere_map_map2alm_calc_Cl (NcmSphereMap *smap)
@@ -2160,7 +2058,6 @@ _ncm_sphere_map_map2alm_calc_Cl (NcmSphereMap *smap)
 void
 ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
 {
-#ifdef HAVE_FFTW3
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   guint i;
 
@@ -2190,11 +2087,7 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
 
   for (i = 0; i < self->fft_plan_r2c->len; i++)
   {
-#  ifdef HAVE_FFTW3F
-    fftwf_execute (g_ptr_array_index (self->fft_plan_r2c, i));
-#  else
     fftw_execute (g_ptr_array_index (self->fft_plan_r2c, i));
-#endif
   }
 
 #ifdef _NCM_SPHERE_MAP_MEASURE
@@ -2239,11 +2132,7 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
       /* Complete synthesis with inverse FFT */
       for (i = 0; i < self->fft_plan_c2r->len; i++)
       {
-#  ifdef HAVE_FFTW3F
-        fftwf_execute (g_ptr_array_index (self->fft_plan_c2r, i));
-#  else
         fftw_execute (g_ptr_array_index (self->fft_plan_c2r, i));
-#endif
       }
 
       /* Compute residual: original_map - synthesized_map */
@@ -2255,11 +2144,7 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
       /* Transform residual -> alm_correction with forward FFT */
       for (i = 0; i < self->fft_plan_r2c->len; i++)
       {
-#  ifdef HAVE_FFTW3F
-        fftwf_execute (g_ptr_array_index (self->fft_plan_r2c, i));
-#  else
         fftw_execute (g_ptr_array_index (self->fft_plan_r2c, i));
-#endif
       }
 
       /* Compute correction alms from residual */
@@ -2285,10 +2170,6 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
   }
 
   _ncm_sphere_map_map2alm_calc_Cl (smap);
-
-#else
-  g_error ("ncm_sphere_map_prepare_alm: no fftw3 support, to use this function recompile NumCosmo with fftw.");
-#endif
 }
 
 /**
@@ -2529,7 +2410,6 @@ ncm_sphere_map_set_Cls (NcmSphereMap *smap, NcmVector *Cls)
 void
 ncm_sphere_map_alm2map (NcmSphereMap *smap)
 {
-#ifdef HAVE_FFTW3
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   guint i;
 
@@ -2576,20 +2456,12 @@ ncm_sphere_map_alm2map (NcmSphereMap *smap)
 
   for (i = 0; i < self->fft_plan_c2r->len; i++)
   {
-#  ifdef HAVE_FFTW3F
-    fftwf_execute (g_ptr_array_index (self->fft_plan_c2r, i));
-#  else
     fftw_execute (g_ptr_array_index (self->fft_plan_c2r, i));
-#endif
   }
 
 #ifdef _NCM_SPHERE_MAP_MEASURE
   printf ("# Peforming ffts, elapsed % 22.15g\n", ncm_timer_elapsed (self->t));
 #endif /* _NCM_SPHERE_MAP_MEASURE */
-
-#else
-  g_error ("ncm_sphere_map_pix_alm2map: no fftw3 support, to use this function recompile NumCosmo with fftw.");
-#endif
 }
 
 static gdouble

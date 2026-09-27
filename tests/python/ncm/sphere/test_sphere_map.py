@@ -990,9 +990,40 @@ class TestFitsIO:
         smap_load = Ncm.SphereMap.new(nside)
         smap_load.load_fits(fits_file, None)
 
-        # Compare maps
+        # Written in double precision: the round trip is exact (a single-precision column changed it by 6e-8)
         loaded_map = np.array([smap_load.get_pix(i) for i in range(npix)])
-        assert_allclose(loaded_map, test_map, rtol=1e-6, atol=1e-8)
+        assert_array_equal(loaded_map, test_map)
+
+    @pytest.mark.parametrize("nest", [False, True])
+    def test_load_healpy_fits(
+        self, nside: int, random_seed: int, tmp_path: Any, nest: bool
+    ) -> None:
+        """A map written by healpy, 1024 pixels per row, loads unchanged."""
+        rng = np.random.default_rng(random_seed)
+        test_map = rng.standard_normal(healpy.nside2npix(nside))
+        fits_file = str(tmp_path / "healpy_map.fits")
+        healpy.write_map(fits_file, test_map, nest=nest, dtype=np.float64)
+
+        smap = Ncm.SphereMap.new(nside)
+        smap.load_fits(fits_file, None)
+
+        expected = Ncm.SphereMapOrder.NEST if nest else Ncm.SphereMapOrder.RING
+        assert smap.get_order() == expected
+        loaded = np.array([smap.get_pix(i) for i in range(smap.get_npix())])
+        assert_array_equal(loaded, test_map)
+
+    def test_healpy_reads_saved_fits(
+        self, nside: int, random_seed: int, tmp_path: Any
+    ) -> None:
+        """healpy reads a saved map at full precision."""
+        rng = np.random.default_rng(random_seed)
+        test_map = rng.standard_normal(healpy.nside2npix(nside))
+        fits_file = str(tmp_path / "ncm_map.fits")
+        smap = Ncm.SphereMap.new(nside)
+        smap.set_map(test_map.tolist())
+        smap.save_fits(fits_file, None, True)
+
+        assert_array_equal(healpy.read_map(fits_file, dtype=np.float64), test_map)
 
     def test_save_and_load_fits_with_custom_signal_name(
         self, nside: int, random_seed: int, tmp_path: Any
@@ -1017,7 +1048,7 @@ class TestFitsIO:
 
         # Compare maps
         loaded_map = np.array([smap_load.get_pix(i) for i in range(npix)])
-        assert_allclose(loaded_map, test_map, rtol=1e-6, atol=1e-8)
+        assert_array_equal(loaded_map, test_map)
 
     def test_save_fits_overwrite(
         self, nside: int, random_seed: int, tmp_path: Any
@@ -1048,7 +1079,7 @@ class TestFitsIO:
         smap_load.load_fits(fits_file, None)
 
         loaded_map = np.array([smap_load.get_pix(i) for i in range(npix)])
-        assert_allclose(loaded_map, test_map2, rtol=1e-6, atol=1e-8)
+        assert_array_equal(loaded_map, test_map2)
         # Ensure it's not the first map
         assert not np.allclose(loaded_map, test_map1, rtol=1e-3)
 
@@ -1081,7 +1112,7 @@ class TestFitsIO:
 
         # Verify data was preserved
         loaded_map = np.array([smap_load.get_pix(i) for i in range(npix)])
-        assert_allclose(loaded_map, test_map, rtol=1e-6, atol=1e-8)
+        assert_array_equal(loaded_map, test_map)
 
     def test_fits_roundtrip_with_alm(
         self, nside: int, random_seed: int, tmp_path: Any
@@ -1397,3 +1428,60 @@ class TestCrossSpectrum:
 if __name__ == "__main__":
     # Run tests with: python test_py_sphere_map.py
     pytest.main([__file__, "-v"])
+
+
+def _write_fits(path: str, values: np.ndarray, **keys: Any) -> None:
+    """Write a one-column binary table with the given header keys."""
+    from astropy.io import fits  # pylint: disable=import-outside-toplevel
+
+    table = fits.BinTableHDU.from_columns(
+        fits.ColDefs([fits.Column(name="SIGNAL", format="D", array=values)])
+    )
+    for key, value in keys.items():
+        table.header[key] = value
+    fits.HDUList([fits.PrimaryHDU(), table]).writeto(path, overwrite=True)
+
+
+def _load_in_subprocess(path: str) -> "subprocess.CompletedProcess[str]":
+    """Load a map in a separate process, since a rejected file aborts."""
+    import subprocess  # pylint: disable=import-outside-toplevel
+    import sys  # pylint: disable=import-outside-toplevel
+
+    code = (
+        "from numcosmo_py import Ncm; Ncm.cfg_init(); "
+        f"s = Ncm.SphereMap.new(4); s.load_fits({path!r}, None); print(s.get_order().value_nick)"
+    )
+    return subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=False
+    )
+
+
+def test_load_fits_without_ordering(tmp_path: Any) -> None:
+    """A file without ORDERING loads as RING; it used to abort on an unset buffer."""
+    path = str(tmp_path / "noorder.fits")
+    _write_fits(path, np.arange(192.0), NSIDE=4)
+
+    result = _load_in_subprocess(path)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "ring"
+    assert "assuming RING" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "keys, npix, message",
+    [
+        ({"NSIDE": 4, "INDXSCHM": "EXPLICIT"}, 192, "partial-sky map"),
+        ({"NSIDE": 4, "PIXTYPE": "CAR"}, 192, "not HEALPIX"),
+        ({"NSIDE": 4}, 100, "holds 100 values"),
+    ],
+)
+def test_load_fits_rejects(
+    tmp_path: Any, keys: dict[str, Any], npix: int, message: str
+) -> None:
+    """Partial-sky maps, other pixelizations and a wrong size abort with a message."""
+    path = str(tmp_path / "bad.fits")
+    _write_fits(path, np.arange(float(npix)), ORDERING="RING", **keys)
+
+    result = _load_in_subprocess(path)
+    assert result.returncode != 0
+    assert message in result.stderr

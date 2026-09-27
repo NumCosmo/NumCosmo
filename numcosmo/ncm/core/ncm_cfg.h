@@ -94,7 +94,6 @@ void ncm_cfg_unlock_plan_fftw (void);
 gboolean ncm_cfg_fftw_plan_begin (const gchar *key, ...) G_GNUC_PRINTF (1, 2);
 void ncm_cfg_fftw_plan_end (gboolean first);
 void ncm_cfg_fftw_plan_destroy (gpointer plan);
-void ncm_cfg_fftwf_plan_destroy (gpointer plan);
 gboolean ncm_cfg_exists (const gchar *filename, ...);
 
 void ncm_cfg_set_logfile (gchar *filename);
