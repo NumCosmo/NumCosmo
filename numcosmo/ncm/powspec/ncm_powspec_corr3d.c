@@ -639,10 +639,9 @@ ncm_powspec_corr3d_set_lnr0 (NcmPowspecCorr3d *psc, gdouble lnr0)
  * ncm_powspec_corr3d_set_best_lnr0:
  * @psc: a #NcmPowspecCorr3d
  *
- * Sets the value of $\ln(r_0)$ which gives the best results for
- * the transformation based on the current value of $\ln(k_0)$,
- * this is based in the rule of thumb $\mathrm{max}_{x^*}(j_l)$
- * where $ x^* \approx l + 1$ (see ncm_fftlog_sbessel_j_set_best_lnr0()).
+ * Sets the transform over the $k$ range of the power spectrum with $k_0 r_0 = 1$, so the
+ * output grid is $r \in [1/k_\mathrm{max}, 1/k_\mathrm{min}]$; for the monopole kernel
+ * $j_0$ this is the choice of ncm_fftlog_sbessel_j_set_best_lnr0().
  *
  */
 void

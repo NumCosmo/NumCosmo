@@ -140,6 +140,7 @@ void test_ncm_fftlog_bias_tophatwin2_truth (void);
 void test_ncm_fftlog_bias_gausswin2_truth (void);
 void test_ncm_fftlog_bias_power_law_converges (void);
 void test_ncm_fftlog_bias_sbessel_j_truth (void);
+void test_ncm_fftlog_sbessel_j_best_lnr0 (void);
 void test_ncm_fftlog_bias_best (void);
 void test_ncm_fftlog_bias_traps (void);
 void test_ncm_fftlog_bias_invalid_range (void);
@@ -253,6 +254,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/fftlog/bias/gausswin2/truth", test_ncm_fftlog_bias_gausswin2_truth);
   g_test_add_func ("/ncm/fftlog/bias/power_law_converges", test_ncm_fftlog_bias_power_law_converges);
   g_test_add_func ("/ncm/fftlog/bias/sbessel_j/truth", test_ncm_fftlog_bias_sbessel_j_truth);
+  g_test_add_func ("/ncm/fftlog/sbessel_j/best_lnr0", test_ncm_fftlog_sbessel_j_best_lnr0);
   g_test_add_func ("/ncm/fftlog/bias/best", test_ncm_fftlog_bias_best);
   g_test_add_func ("/ncm/fftlog/bias/traps", test_ncm_fftlog_bias_traps);
   g_test_add_func ("/ncm/fftlog/bias/invalid/range/subprocess", test_ncm_fftlog_bias_invalid_range);
@@ -1655,5 +1657,86 @@ test_ncm_fftlog_bias_invalid_end_slopes (void)
 
   ncm_fftlog_eval_by_function (fftlog, &_test_gauss_k3, NULL);
   ncm_fftlog_get_end_slopes (fftlog, &s_min, &s_max);
+}
+
+static gdouble
+_test_power_m05 (const gdouble k, gpointer user_data)
+{
+  return 1.0 / sqrt (k);
+}
+
+/*
+ * set_best_lnr0() puts k0 r0 at the first maximum x* of j_l (mpmath, 20 digits), and so the
+ * output grid on the r the input determines: for F = k^(-1/2) on [1e-4, 1e4] and l = 10,
+ * 91.9% of the grid is within 1e-6 of r^(-1/2) sqrt(pi) 2^(-3/2) Gamma(21/4) / Gamma(25/4)
+ * (the earlier rule, balancing the kernel's size at the ends of the t range, kept 77.8%).
+ */
+void
+test_ncm_fftlog_sbessel_j_best_lnr0 (void)
+{
+  const guint ell_a[]  = {1, 2, 5, 10, 50, 200};
+  const gdouble xs_a[] = {
+    2.0815759778181006105, 3.3420936573656941588, 6.7564563302041293231,
+    12.143204100943153341, 53.420758806667608602, 205.19128656443803093
+  };
+  guint j;
+
+  for (j = 0; j < G_N_ELEMENTS (ell_a); j++)
+  {
+    NcmFftlogSBesselJ *fftlog_jl = ncm_fftlog_sbessel_j_new (ell_a[j], 0.0, 0.3, 20.0, 100);
+    NcmFftlog *fftlog            = NCM_FFTLOG (fftlog_jl);
+
+    ncm_fftlog_sbessel_j_set_best_lnr0 (fftlog_jl);
+    ncm_assert_cmpdouble_e (exp (ncm_fftlog_get_lnr0 (fftlog) + 0.3), ==, xs_a[j], 1.0e-13, 0.0);
+
+    ncm_fftlog_set_lnr0 (fftlog, -0.7);
+    ncm_fftlog_sbessel_j_set_best_lnk0 (fftlog_jl);
+    ncm_assert_cmpdouble_e (exp (ncm_fftlog_get_lnk0 (fftlog) - 0.7), ==, xs_a[j], 1.0e-13, 0.0);
+
+    ncm_fftlog_free (fftlog);
+  }
+
+  {
+    NcmFftlogSBesselJ *fftlog_jl = ncm_fftlog_sbessel_j_new (0, 0.0, 0.3, 20.0, 100);
+
+    ncm_fftlog_sbessel_j_set_best_lnr0 (fftlog_jl);
+    g_assert_cmpfloat (ncm_fftlog_get_lnr0 (NCM_FFTLOG (fftlog_jl)), ==, -0.3);
+    ncm_fftlog_free (NCM_FFTLOG (fftlog_jl));
+  }
+
+  {
+    const guint ell              = 10;
+    const gdouble lnk0           = 0.0;
+    const gdouble Lk             = log (1.0e8);
+    const gdouble Y              = sqrt (M_PI) * pow (2.0, -1.5) * exp (lgamma (5.25) - lgamma (6.25));
+    NcmFftlogSBesselJ *fftlog_jl = ncm_fftlog_sbessel_j_new (ell, 0.0, lnk0, Lk, 4000);
+    NcmFftlog *fftlog            = NCM_FFTLOG (fftlog_jl);
+    NcmVector *lnr, *Gr;
+    guint i, good = 0;
+
+    ncm_fftlog_sbessel_j_set_best_lnr0 (fftlog_jl);
+    ncm_fftlog_set_padding (fftlog, 1.0);
+    ncm_fftlog_use_smooth_padding (fftlog, TRUE);
+    ncm_fftlog_eval_by_function (fftlog, &_test_power_m05, NULL);
+    ncm_fftlog_set_bias (fftlog, ncm_fftlog_get_best_bias (fftlog));
+    ncm_fftlog_eval_by_function (fftlog, &_test_power_m05, NULL);
+
+    lnr = ncm_fftlog_get_vector_lnr (fftlog);
+    Gr  = ncm_fftlog_get_vector_Gr (fftlog, 0);
+
+    for (i = 0; i < ncm_vector_len (Gr); i++)
+    {
+      const gdouble truth = Y * exp (-0.5 * ncm_vector_get (lnr, i));
+
+      if (fabs (ncm_vector_get (Gr, i) / truth - 1.0) < 1.0e-6)
+        good++;
+    }
+
+    g_assert_cmpfloat (good, >, 0.9 * ncm_vector_len (Gr));
+
+    ncm_vector_free (lnr);
+    ncm_vector_free (Gr);
+    ncm_fftlog_free (fftlog);
+  }
 }
 
