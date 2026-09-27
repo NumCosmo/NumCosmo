@@ -730,8 +730,8 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
   /**
    * NcmSBesselIntegratorLevin:ell-cache-max:
    *
-   * Highest multipole whose $j_\ell$ is tabulated at the knots; the knot values of higher
-   * multipoles are computed at each call.
+   * Highest multipole whose $j_\ell$ is tabulated at the knots. A multipole range reaching
+   * above it aborts.
    */
   g_object_class_install_property (object_class,
                                    PROP_ELL_CACHE_MAX,
@@ -945,7 +945,6 @@ static void
 _ncm_sbessel_integrator_levin_prepare_ell_cache (NcmSBesselIntegratorLevin *sbilv)
 {
   const guint n_ell = sbilv->ell_cache_max + 1;
-  guint i;
 
   g_assert_cmpuint (sbilv->ell_cache_max, <, G_MAXUINT / 2);
 
@@ -960,8 +959,6 @@ _ncm_sbessel_integrator_levin_prepare_ell_cache (NcmSBesselIntegratorLevin *sbil
    * unit; only the turning-point knot's row belongs to this instance. */
   sbilv->jl_base      = ncm_sf_sbessel_array_ref_table (sbilv->sba, sbilv->base_knots, sbilv->ell_cache_max);
   sbilv->jl_split_row = g_new (gdouble, n_ell);
-
-  (void) i;
 }
 
 /*
@@ -1094,7 +1091,8 @@ _ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin
   }
 }
 
-/* Wrapper function that transforms K(chi, k) -> f(x) = K(x/k, k)/k */
+/* Change of variable x = k chi: _wrapper_func returns the weighted forcing
+ * x F(x) = chi K(chi, k), _wrapper_func_plain returns F(x) = K(x/k, k)/k. */
 typedef struct _NcmSBesselIntegratorLevinWrapper
 {
   NcmSBesselIntegratorF K;
@@ -1113,7 +1111,6 @@ _ncm_sbessel_integrator_levin_wrapper_func (gpointer data, gdouble x)
   return chi * K_val;
 }
 
-/* Same change of variable without the chi weight: samples F(x) = K(x/k, k)/k. */
 static gdouble
 _ncm_sbessel_integrator_levin_wrapper_func_plain (gpointer data, gdouble x)
 {
@@ -1205,21 +1202,11 @@ _ncm_sbessel_integrator_levin_build_rhs (NcmSBesselIntegratorLevin *sbilv, gdoub
   _ncm_sbessel_integrator_levin_build_rhs_from_gegen (sbilv);
 }
 
-/**
- * _ncm_sbessel_integrator_levin_compute_rhs:
- * @sbilv: a #NcmSBesselIntegratorLevin
- * @spectral: spectral methods object
- * @F: integrand function K(chi, k)
- * @a: lower integration bound in x-space
- * @b: upper integration bound in x-space
- * @k: wave number parameter
- * @user_data: user data for integrand
- *
- * Computes the RHS for the Levin ODE by:
- *
- * 1. Computing Chebyshev coefficients for f(x) = K(x/k, k)/k
- * 2. Converting to Gegenbauer C^(2) basis
- * 3. Setting up RHS with homogeneous boundary conditions
+/*
+ * The forcing of the panel ODE on [a, b] (in x): an adaptive Chebyshev fit of the
+ * weighted forcing x F(x) for deriv == 0, of F(x) itself for the derivative weights,
+ * turned into the C^(2) right-hand side by _ncm_sbessel_integrator_levin_build_rhs(),
+ * with two leading zero rows for the constraint.
  */
 static void
 _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv,
@@ -1341,10 +1328,11 @@ _ncm_sbessel_integrator_levin_get_panel_resources (NcmSBesselIntegratorLevin *sb
 
 /*
  * A panel's contribution to ell's result is
- * b_p * j_ell(b_p) * u'(b_p) - a_p * j_ell(a_p) * u'(a_p). When j_ell has
- * underflowed to zero at both endpoints for every ell in the batch, the
- * contribution is exactly zero whatever the solve would produce, so the panel
- * can be skipped without building or solving anything.
+ * b_p * j_ell(b_p) * u'(b_p) - a_p * j_ell(a_p) * u'(a_p). When j_ell is zero at both
+ * endpoints for every ell in the batch -- NcmSFSBesselArray returns zero for the orders
+ * below its threshold, 1e-100 by default -- the contribution is zero whatever the solve
+ * would produce, so the panel is skipped without building or solving anything; what is
+ * dropped is at most of order 1e-100 times the forcing.
  */
 static gboolean
 _ncm_sbessel_integrator_levin_panel_is_null (const gdouble *j_a_p, const gdouble *j_b_p,
@@ -1470,16 +1458,13 @@ _ncm_sbessel_integrator_levin_solve_rhs_and_accumulate (NcmSBesselIntegratorLevi
   if (sbilv->deriv > 0)
     _ncm_sbessel_integrator_levin_boundary_data (sbilv, a_p, b_p, a_p, b_p, &bd);
 
-  /* Dirichlet data makes u vanish at both ends, so the u term of W drops and only the
-   * derivatives are needed. The tau constraint leaves u nonzero there, and the general
-   * functional -- the same one the extended cells below use -- is required. */
+  /* Only Dirichlet data makes u vanish at both ends, so that the u term of W drops and
+   * the derivatives alone are needed. Every other constraint needs the general
+   * functional -- the one the extended cells below use -- with the u term kept. The
+   * order check and the guard judge the tau constraint alone. */
   const NcmSBesselOdeConstraint constraint = ncm_sbessel_ode_operator_get_constraint (operator);
   const gboolean is_tau                    = constraint == NCM_SBESSEL_ODE_CONSTRAINT_TAU;
-
-  /* Only Dirichlet data makes u vanish at the ends; every other constraint needs the
-   * general functional, with the u term kept. The order check and the guard judge the
-   * tau constraint alone. */
-  gboolean use_values = constraint != NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET;
+  gboolean use_values                      = constraint != NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET;
 
   if (is_tau && !_ncm_sbessel_integrator_levin_tau_constraint_order_ok (sbilv, operator, a_p, b_p, ell_max))
   {
@@ -1530,9 +1515,12 @@ _ncm_sbessel_integrator_levin_solve_rhs_and_accumulate (NcmSBesselIntegratorLevi
 
   sbilv->n_panel_solves++;
 
+  /* A tau operator solved with Dirichlet data is a fallback, counted above; the
+   * locked-eligible count is for panels resting on another constraint. */
   if (use_values && is_tau)
     sbilv->n_tau_solves++;
-  else if ((sbilv->tau_constraint_min_osc > 0.0) &&
+  else if (!is_tau &&
+           (sbilv->tau_constraint_min_osc > 0.0) &&
            (_ncm_sbessel_integrator_levin_osc (a_p, b_p, ell_max) > sbilv->tau_constraint_min_osc) &&
            _ncm_sbessel_integrator_levin_tau_constraint_order_ok (sbilv, operator, a_p, b_p, ell_max))
     sbilv->n_locked_eligible_solves++;
@@ -1755,6 +1743,9 @@ _ncm_sbessel_integrator_levin_truncated_func (gpointer data, gdouble x)
 /* Doublings above the piece's own order allowed to the dead-edge fit before giving up. */
 #define NCM_SBESSEL_LEVIN_DEAD_EDGE_MAX_LEVEL 12
 
+/* Offset of the second junction probe back inside the piece, as a fraction of the
+ * extension's width: the forcing must be dead at the junction and just inside it. The
+ * callback is never evaluated in the extension itself. */
 #define NCM_SBESSEL_LEVIN_DEAD_PROBE_FRACTION (1.0 / 64.0)
 
 /* A cached Dirichlet edge cell stores ~2 span / pi columns; above this many it is
@@ -2066,27 +2057,11 @@ _ncm_sbessel_integrator_levin_integrate_extended_panel (NcmSBesselIntegratorLevi
   return TRUE;
 }
 
-/**
- * _ncm_sbessel_integrator_levin_integrate_panel:
- * @sbilv: a #NcmSBesselIntegratorLevin
- * @a_p_idx: knot index for left endpoint (-1 if not on a knot)
- * @b_p_idx: knot index for right endpoint (-1 if not on a knot)
- * @a_p: lower bound of panel
- * @b_p: upper bound of panel
- * @spectral: spectral methods object
- * @F: integrand function
- * @ell_min: minimum multipole
- * @ell_max: maximum multipole
- * @result_data: array to accumulate results
- * @user_data: user data for integrand
- *
- * High-level wrapper that integrates a single panel by:
- *
- * 1. Acquiring panel resources (j_ell arrays and operator)
- * 2. Solving the Levin ODE and accumulating results
- *
- * This orchestrator function provides a clean interface for panel integration
- * while keeping the underlying implementation modular for testing and reuse.
+/*
+ * Integrates one panel [a_p, b_p] and adds its contributions to result_data. A knot index
+ * of -1 marks a moving endpoint, whose j_ell and operator are computed here. With
+ * rhs_ready the right-hand side already in sbilv->rhs is solved, as left by a rejected
+ * edge cell; otherwise the forcing is fitted on the panel first.
  */
 static void
 _ncm_sbessel_integrator_levin_integrate_panel (NcmSBesselIntegratorLevin *sbilv,
@@ -2279,10 +2254,8 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
   }
   else
   {
-    /* No paneling: integrate over full range [x_min, x_max]
-     * Note: For single panel mode without knots, we use ode_operator directly
-     * rather than temp operators. This is handled by passing -1 for both indices
-     * but requires special handling in get_panel_resources. */
+    /* No knot inside [x_min, x_max], or no grid at all: one panel over the whole range, on
+     * ode_operator reconfigured for it at every call. */
     const gdouble *j_a_p, *j_b_p;
     NcmSBesselOdeOperator *op;
 
@@ -2654,9 +2627,9 @@ _ncm_sbessel_integrator_levin_reprepare (NcmSBesselIntegratorLevin *sbilv)
 
 /*
  * Returns TRUE when the last tau-constraint solve on @op admitted homogeneous content.
- * The smooth member is u_p ~ yF / (x^2 - nu^2), so its coefficients are bounded by
- * max|yF| / min(x^2 - nu^2); @cheb holds the Chebyshev coefficients of F on the
- * panel, so b * sum|c_k| bounds max|yF|.
+ * The smooth member is u_p ~ x F / (x^2 - nu^2), so its coefficients are bounded by
+ * max|x F| / min(x^2 - nu^2); @cheb holds the Chebyshev coefficients of F on the
+ * panel, so b * sum|c_k| bounds max|x F|.
  */
 static gboolean
 _ncm_sbessel_integrator_levin_tau_constraint_blew_up (NcmSBesselIntegratorLevin *sbilv, NcmSBesselOdeOperator *op, GArray *cheb, gdouble a, gdouble b, guint ell_min, guint ell_max)
@@ -2858,7 +2831,9 @@ ncm_sbessel_integrator_levin_get_n_tau_solves (NcmSBesselIntegratorLevin *sbilv)
  * Number of Dirichlet panel solves on a panel the constraint rule admits, whose
  * forcing would have passed the order check. A fallback is not recorded on the panel
  * operator, so this counts a panel whose resting constraint came from a different
- * block range rather than one lost to an earlier k.
+ * block range rather than one lost to an earlier k. Tau solves the order check or the
+ * guard sends back to Dirichlet data are counted by
+ * ncm_sbessel_integrator_levin_get_n_constraint_fallbacks() instead.
  *
  * Returns: the locked-eligible solve count.
  */
@@ -2867,11 +2842,6 @@ ncm_sbessel_integrator_levin_get_n_locked_eligible_solves (NcmSBesselIntegratorL
 {
   return sbilv->n_locked_eligible_solves;
 }
-
-/*
- * Applies the per-panel constraint rule to an operator that has just been given the
- * bounds [a, b] for multipoles up to ell_max. No-op when the rule is disabled.
- */
 
 /* Oscillation count of the panel above the block's highest turning point. */
 static gdouble
@@ -2883,6 +2853,10 @@ _ncm_sbessel_integrator_levin_osc (gdouble a, gdouble b, guint ell_max)
   return (span > 0.0) ? 2.0 * span / M_PI : 0.0;
 }
 
+/*
+ * Applies the per-panel constraint rule to an operator that has just been given the
+ * bounds [a, b] for multipoles up to ell_max. No-op when the rule is disabled.
+ */
 static void
 _ncm_sbessel_integrator_levin_apply_constraint (NcmSBesselIntegratorLevin *sbilv, NcmSBesselOdeOperator *op, gdouble a, gdouble b, guint ell_max)
 {

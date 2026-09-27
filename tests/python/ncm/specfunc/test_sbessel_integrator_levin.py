@@ -1278,6 +1278,22 @@ class TestTurningKnot:
         on, _, _ = self._run(20, 1.05)
         assert np.array_equal(on, off)
 
+    @pytest.mark.parametrize("ell", [500, 1000])
+    def test_fallbacks_are_not_locked_eligible(self, ell: int) -> None:
+        """A guard fallback is counted once, as a fallback.
+
+        Without the knot the straddling panel's tau solve is refused and redone with
+        Dirichlet data. With a single block no panel rests on another block's constraint,
+        so the locked-eligible count stays at zero; it used to count the fallback again.
+        """
+        sbi = Ncm.SBesselIntegratorLevin.new(ell, ell + 7)
+        sbi.set_turning_knot_margin(0.0)
+        result = Ncm.Vector.new(8)
+        sbi.integrate(self._forcing, self.A, self.B, self.K, result)
+
+        assert sbi.get_n_constraint_fallbacks() > 0
+        assert sbi.get_n_locked_eligible_solves() == 0
+
     def test_rule_off_disables_the_knot(self) -> None:
         """The insertion is gated on the same oscillation count as the rule."""
         sbi = Ncm.SBesselIntegratorLevin.new(1000, 1007)
