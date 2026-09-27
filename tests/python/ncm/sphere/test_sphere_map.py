@@ -96,6 +96,33 @@ class TestBasicProperties:
         assert ncm_middle_size == expected_middle_size
 
 
+@pytest.mark.parametrize("nside", [1, 2, 4])
+def test_small_nside_indexing(nside: int) -> None:
+    """Index conversions and ring geometry match healpy at the smallest nside.
+
+    nside = 1 has no polar-cap rings, the one case where the ring formulas never take the
+    cap branches; the fixture's nside values start at 8.
+    """
+    smap = Ncm.SphereMap.new(nside)
+    npix = healpy.nside2npix(nside)
+    idx = np.arange(npix)
+
+    assert smap.get_npix() == npix
+    assert_array_equal(
+        [smap.nest2ring(int(i)) for i in idx], healpy.nest2ring(nside, idx)
+    )
+    assert_array_equal(
+        [smap.ring2nest(int(i)) for i in idx], healpy.ring2nest(nside, idx)
+    )
+
+    theta, phi = healpy.pix2ang(nside, idx, nest=False)
+    first = [smap.get_ring_first_index(r) for r in range(smap.get_nrings())]
+    sizes = [smap.get_ring_size(r) for r in range(smap.get_nrings())]
+    assert sum(sizes) == npix
+    for r, (f, n) in enumerate(zip(first, sizes)):
+        assert np.all(theta[f : f + n] == theta[f]), f"ring {r} is not iso-latitude"
+
+
 class TestPixelIndexing:
     """Test pixel indexing conversions match healpy."""
 

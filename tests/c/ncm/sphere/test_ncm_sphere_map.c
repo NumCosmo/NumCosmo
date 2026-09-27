@@ -50,6 +50,10 @@ void test_ncm_sphere_map_properties (TestNcmSphereMap *test, gconstpointer pdata
 
 void test_ncm_sphere_map_traps (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_invalid_nside (TestNcmSphereMap *test, gconstpointer pdata);
+void test_ncm_sphere_map_order_roundtrip (TestNcmSphereMap *test, gconstpointer pdata);
+void test_ncm_sphere_map_invalid_pixel (TestNcmSphereMap *test, gconstpointer pdata);
+void test_ncm_sphere_map_invalid_negative_pixel (TestNcmSphereMap *test, gconstpointer pdata);
+void test_ncm_sphere_map_invalid_ring (TestNcmSphereMap *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -98,6 +102,24 @@ main (gint argc, gchar *argv[])
               &test_ncm_sphere_map_invalid_nside,
               &test_ncm_sphere_map_free);
 
+  g_test_add ("/ncm/sphere_map/order_roundtrip", TestNcmSphereMap, NULL,
+              &test_ncm_sphere_map_new,
+              &test_ncm_sphere_map_order_roundtrip,
+              &test_ncm_sphere_map_free);
+
+  g_test_add ("/ncm/sphere_map/invalid/pixel/subprocess", TestNcmSphereMap, NULL,
+              &test_ncm_sphere_map_new,
+              &test_ncm_sphere_map_invalid_pixel,
+              &test_ncm_sphere_map_free);
+  g_test_add ("/ncm/sphere_map/invalid/negative_pixel/subprocess", TestNcmSphereMap, NULL,
+              &test_ncm_sphere_map_new,
+              &test_ncm_sphere_map_invalid_negative_pixel,
+              &test_ncm_sphere_map_free);
+  g_test_add ("/ncm/sphere_map/invalid/ring/subprocess", TestNcmSphereMap, NULL,
+              &test_ncm_sphere_map_new,
+              &test_ncm_sphere_map_invalid_ring,
+              &test_ncm_sphere_map_free);
+
   g_test_run ();
 }
 
@@ -130,13 +152,13 @@ test_ncm_sphere_map_sanity (TestNcmSphereMap *test, gconstpointer pdata)
                    2.0 * ncm_sphere_map_get_cap_size (test->pix),
                    ==,
                    ncm_sphere_map_get_npix (test->pix)
-                  );
+  );
 
   g_assert_cmpint (ncm_sphere_map_get_nrings_middle (test->pix) +
                    2.0 * ncm_sphere_map_get_nrings_cap (test->pix),
                    ==,
                    ncm_sphere_map_get_nrings (test->pix)
-                  );
+  );
 
   {
     gint64 r_i;
@@ -361,11 +383,74 @@ test_ncm_sphere_map_traps (TestNcmSphereMap *test, gconstpointer pdata)
 {
   g_test_trap_subprocess ("/ncm/sphere_map/invalid/nside/subprocess", 0, 0);
   g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*nside must be zero or a power of two*");
+
+  g_test_trap_subprocess ("/ncm/sphere_map/invalid/pixel/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*ncm_sphere_map_nest2ring: pixel index 49152 out of range [0, 49152)*");
+
+  g_test_trap_subprocess ("/ncm/sphere_map/invalid/negative_pixel/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*ncm_sphere_map_ring2nest: pixel index -1 out of range*");
+
+  g_test_trap_subprocess ("/ncm/sphere_map/invalid/ring/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*ncm_sphere_map_get_ring_size: ring index 255 out of range [0, 255)*");
 }
 
 void
 test_ncm_sphere_map_invalid_nside (TestNcmSphereMap *test, gconstpointer pdata)
 {
   ncm_sphere_map_set_nside (test->pix, (1 << g_test_rand_int_range (1, 8)) + 1);
+}
+
+/* A change of ordering and back gives the same map bit by bit: the copy went through a
+ * gfloat and rounded every pixel at 6e-8. */
+void
+test_ncm_sphere_map_order_roundtrip (TestNcmSphereMap *test, gconstpointer pdata)
+{
+  NcmRNG *rng       = ncm_rng_seeded_new (NULL, 11);
+  const gint64 npix = ncm_sphere_map_get_npix (test->pix);
+  GArray *map       = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), npix);
+  gint64 i;
+
+  for (i = 0; i < npix; i++)
+  {
+    const gdouble v = 1.0 + 1.0e-3 * ncm_rng_uniform01_gen (rng);
+
+    g_array_append_val (map, v);
+  }
+
+  ncm_sphere_map_set_map (test->pix, map);
+  ncm_sphere_map_set_order (test->pix, NCM_SPHERE_MAP_ORDER_NEST);
+
+  for (i = 0; i < npix; i++)
+    g_assert_cmpfloat (ncm_sphere_map_get_pix (test->pix, ncm_sphere_map_ring2nest (test->pix, i)), ==, g_array_index (map, gdouble, i));
+
+  ncm_sphere_map_set_order (test->pix, NCM_SPHERE_MAP_ORDER_RING);
+
+  for (i = 0; i < npix; i++)
+    g_assert_cmpfloat (ncm_sphere_map_get_pix (test->pix, i), ==, g_array_index (map, gdouble, i));
+
+  g_array_unref (map);
+  ncm_rng_free (rng);
+}
+
+void
+test_ncm_sphere_map_invalid_pixel (TestNcmSphereMap *test, gconstpointer pdata)
+{
+  ncm_sphere_map_nest2ring (test->pix, ncm_sphere_map_get_npix (test->pix));
+}
+
+void
+test_ncm_sphere_map_invalid_negative_pixel (TestNcmSphereMap *test, gconstpointer pdata)
+{
+  ncm_sphere_map_ring2nest (test->pix, -1);
+}
+
+void
+test_ncm_sphere_map_invalid_ring (TestNcmSphereMap *test, gconstpointer pdata)
+{
+  ncm_sphere_map_get_ring_size (test->pix, ncm_sphere_map_get_nrings (test->pix));
 }
 
