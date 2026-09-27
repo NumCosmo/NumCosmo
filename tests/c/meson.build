@@ -53,6 +53,10 @@ math_tests = [
         'sources': ['ncm/sphere/test_ncm_sky_footprint.c'],
     },
     {
+        'name': 'ncm_sphere_nn',
+        'sources': ['ncm/sphere/test_ncm_sphere_nn.c'],
+    },
+    {
         'name': 'ncm_fftlog',
         'sources': ['ncm/fftlog/test_ncm_fftlog.c'],
         'priority': 2,

@@ -29,13 +29,6 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/ncm/algebra/ncm_quaternion.h>
-#include <numcosmo/ncm/spline/ncm_spline.h>
-
-#ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_vector_float.h>
-#include <complex.h>
-#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
