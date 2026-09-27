@@ -95,7 +95,6 @@
 #include "ncm/fit/ncm_prior_flat_param.h"
 #include "ncm/fit/ncm_prior_flat_func.h"
 #include "ncm/specfunc/ncm_sbessel_integrator.h"
-#include "ncm/specfunc/ncm_sbessel_integrator_fftl.h"
 #include "ncm/specfunc/ncm_sbessel_integrator_gl.h"
 #include "ncm/specfunc/ncm_sbessel_integrator_levin.h"
 #include "ncm/specfunc/ncm_sbessel_ode_solver.h"
@@ -740,7 +739,6 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_SPECTRAL);
 
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_GL);
-  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_FFTL);
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN);
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_ODE_SOLVER);
 

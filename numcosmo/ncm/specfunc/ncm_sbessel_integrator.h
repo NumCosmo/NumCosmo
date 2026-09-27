@@ -36,13 +36,12 @@ G_BEGIN_DECLS
 /**
  * NcmSBesselIntegratorF:
  * @user_data: (closure): user data
- * @chi: the value at which to evaluate the function
- * @k: the wave number parameter
+ * @chi: $\chi$
+ * @k: wavenumber $k$
  *
- * Function to be integrated with spherical Bessel functions.
- * Computes K(chi, k) for the integral $\int K(\chi,k)\,j_\ell(k\chi)\,\mathrm{d}\chi$.
+ * The function $F(\chi, k)$ of #NcmSBesselIntegrator.
  *
- * Returns: the function value at @chi with parameter @k
+ * Returns: $F(\chi, k)$
  */
 typedef gdouble (*NcmSBesselIntegratorF) (gpointer user_data, gdouble chi, gdouble k);
 
@@ -70,7 +69,6 @@ void ncm_sbessel_integrator_clear (NcmSBesselIntegrator **sbi);
 
 void ncm_sbessel_integrator_get_ell_range (NcmSBesselIntegrator *sbi, guint *ell_min, guint *ell_max);
 void ncm_sbessel_integrator_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max);
-
 
 gdouble ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, gint ell, gpointer user_data);
 void ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data);

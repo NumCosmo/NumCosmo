@@ -182,6 +182,10 @@ math_tests = [
         'sources': ['ncm/specfunc/test_ncm_sf_sbessel.c'],
     },
     {
+        'name': 'ncm_sbessel_integrator',
+        'sources': ['ncm/specfunc/test_ncm_sbessel_integrator.c'],
+    },
+    {
         'name': 'ncm_mpsf_sbessel',
         'sources': ['ncm/specfunc/test_ncm_mpsf_sbessel.c'],
     },

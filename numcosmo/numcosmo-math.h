@@ -96,7 +96,6 @@
 #include <numcosmo/ncm/specfunc/ncm_mpsf_sbessel.h>
 #include <numcosmo/ncm/specfunc/ncm_sf_sbessel.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_integrator.h>
-#include <numcosmo/ncm/specfunc/ncm_sbessel_integrator_fftl.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_integrator_gl.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_integrator_levin.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_ode_solver.h>
