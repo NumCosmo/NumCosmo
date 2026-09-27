@@ -50,8 +50,8 @@ struct _NcmFftlogClass
   const gchar *name;
 
   void (*compute_Ym) (NcmFftlog *fftlog, gpointer Ym_0);
-  /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[16];
+  /* Padding to allow adding up to 17 more virtual functions without breaking ABI. */
+  gpointer padding[17];
 };
 
 typedef gdouble (*NcmFftlogFunc) (const gdouble x, gpointer user_data);
@@ -89,8 +89,6 @@ void ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk);
 
 void ncm_fftlog_use_eval_interval (NcmFftlog *fftlog, gboolean use_eval_interval);
 void ncm_fftlog_use_smooth_padding (NcmFftlog *fftlog, gboolean use_smooth_padding);
-void ncm_fftlog_set_smooth_padding_scale (NcmFftlog *fftlog, gdouble log10sc);
-gdouble ncm_fftlog_get_smooth_padding_scale (NcmFftlog *fftlog);
 
 void ncm_fftlog_set_eval_r_min (NcmFftlog *fftlog, const gdouble eval_r_min);
 void ncm_fftlog_set_eval_r_max (NcmFftlog *fftlog, const gdouble eval_r_max);

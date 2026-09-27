@@ -255,7 +255,6 @@ _ncm_powspec_sphere_proj_adjust_fftlog_array (NcmPowspecSphereProj *psp, guint e
         NcmFftlogSBesselJLJM *jljm = ncm_fftlog_sbessel_jljm_new (ell, 0, log (w), self->lnr0, self->lnk0, self->Lk, 100);
 
         ncm_fftlog_use_smooth_padding (NCM_FFTLOG (jljm), TRUE);
-        ncm_fftlog_set_smooth_padding_scale (NCM_FFTLOG (jljm), -180.0);
         /*ncm_fftlog_set_padding (NCM_FFTLOG (jljm), 0.0); */
         ncm_fftlog_sbessel_jljm_set_best_lnr0 (jljm);
         g_ptr_array_add (fftlog_w, jljm);
@@ -275,7 +274,6 @@ _ncm_powspec_sphere_proj_adjust_fftlog_array (NcmPowspecSphereProj *psp, guint e
           NcmFftlogSBesselJLJM *jljm = ncm_fftlog_sbessel_jljm_new (ell, 0, log (w), self->lnr0, self->lnk0, self->Lk, 100);
 
           ncm_fftlog_use_smooth_padding (NCM_FFTLOG (jljm), TRUE);
-          ncm_fftlog_set_smooth_padding_scale (NCM_FFTLOG (jljm), -180.0);
 
           /*ncm_fftlog_set_padding (NCM_FFTLOG (jljm), 0.0); */
 
@@ -302,7 +300,6 @@ _ncm_powspec_sphere_proj_adjust_fftlog_array (NcmPowspecSphereProj *psp, guint e
           NcmFftlogSBesselJLJM *jljm = ncm_fftlog_sbessel_jljm_new (ell, 0, log (w), self->lnr0, self->lnk0, self->Lk, 100);
 
           ncm_fftlog_use_smooth_padding (NCM_FFTLOG (jljm), TRUE);
-          ncm_fftlog_set_smooth_padding_scale (NCM_FFTLOG (jljm), -180.0);
 
           /*ncm_fftlog_set_padding (NCM_FFTLOG (jljm), 0.0); */
 

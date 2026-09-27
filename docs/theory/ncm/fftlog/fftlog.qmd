@@ -71,12 +71,32 @@ a $1/2$ weight; using only the lower end point avoids that complication.
 ## Padding and Knot Count
 
 Because the algorithm assumes the decomposed function is periodic, it is worth
-extending the interval in $\ln k$ so that $F(k) \equiv 0$ in
+extending the interval in $\ln k$ with padding intervals
 $\left[\ln k_0 - \frac{L_T}{2},\ \ln k_0 - \frac{L}{2}\right)$ and
 $\left(\ln k_0 + \frac{L}{2},\ \ln k_0 + \frac{L_T}{2}\right]$, where the total
 period $L_T$ is set by the final number of knots, $N_f = N(1 + \mathrm{padding})$.
 The $N$ fundamental knots are equally distributed, and $N \times \mathrm{padding}$
 knots are placed in the two symmetric padding intervals.
+
+By default the padding holds zeros. When $F$ does not vanish at an end of the
+interval this puts a step into the periodic input, and the transform rings at $r$
+near the inverse of that end at a level that falls only as $1/N$, so a calibration
+of $N$ on the whole output grid never converges. With
+[[numcosmo-math|ncm_fftlog_use_smooth_padding]] the padding continues the input
+instead: each end is continued by its power law, with the value and log-slope of
+$F$ at the end taken from a cubic through the four nearest knots and anchored at
+the end itself, so that the continuation does not move with the knots; an end where
+$F k$ would grow along the continuation is cut by a Gaussian in $\ln k$ of width the
+inverse of that log-slope; and the two
+continuations are joined by a $C^\infty$ partition of unity that switches over the
+middle fifth of the padding. The periodic input is then smooth everywhere and the
+transform converges as $N^{-3}$ over the whole grid. The result within a few e-foldings of
+$1/k_\mathrm{max}$ or $1/k_\mathrm{min}$ depends on the continuation, which is an
+extrapolation of $F$ beyond its interval: for the $\sigma^2(R)$ of an
+Eisenstein--Hu spectrum tabulated up to $k_\mathrm{max} = 10^3$, the power-law
+continuation is off the analytic tail by $1.6 \times 10^{-4}$ of the peak at
+$R = 1/k_\mathrm{max}$, $2 \times 10^{-8}$ at $10/k_\mathrm{max}$ and
+$3 \times 10^{-12}$ at $100/k_\mathrm{max}$.
 
 For efficiency, the final number of points $N_f$ is replaced by the smallest
 $N_f^\prime \ge N_f$ that factorizes as
@@ -85,10 +105,10 @@ non-negative integers.
 
 ## Usage
 
-The user provides $\ln k_0$, $\ln r_0$, $L$, the padding percentage, $N$, and the
-function $F(k)$. The function can be supplied either as a `gsl_function` ---
-evaluated at the fundamental-interval knots and set to zero in the padding
-intervals --- or as a vector of values computed at each $\ln k$ knot.
+The user provides $\ln k_0$, $\ln r_0$, $L$, the padding fraction, $N$, and the
+function $F(k)$. The function can be supplied either as a `gsl_function`,
+evaluated at the fundamental-interval knots, or as a vector of values computed at
+each $\ln k$ knot; the padding is filled as described above.
 
 The kernel-dependent coefficients $Y_n$ are provided by the concrete
 implementations, e.g. [[numcosmo-math|NcmFftlogTophatwin2]] and

@@ -2547,7 +2547,7 @@ class Fftlog(GObject.Object):
       max-n -> guint: max-n
         Maximum number of knots
       padding -> gdouble: padding
-        Padding percentage
+        Padding fraction
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
@@ -2555,9 +2555,7 @@ class Fftlog(GObject.Object):
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
-        Whether to use a smooth padding
-      smooth-padding-scale -> gdouble: smooth-padding-scale
-        Log10 of the smoothing scale
+        Whether the padding continues the input smoothly
       eval-r-min -> gdouble: eval-r-min
         Evaluation r_min
       eval-r-max -> gdouble: eval-r-max
@@ -2579,7 +2577,6 @@ class Fftlog(GObject.Object):
         nderivs: int
         no_ringing: bool
         padding: float
-        smooth_padding_scale: float
         use_eval_int: bool
         use_smooth_padding: bool
 
@@ -2597,7 +2594,6 @@ class Fftlog(GObject.Object):
         nderivs: int = ...,
         no_ringing: bool = ...,
         padding: float = ...,
-        smooth_padding_scale: float = ...,
         use_eval_int: bool = ...,
         use_smooth_padding: bool = ...,
     ) -> None: ...
@@ -2630,7 +2626,6 @@ class Fftlog(GObject.Object):
     def get_norma(self) -> float: ...
     def get_padding(self) -> float: ...
     def get_size(self) -> int: ...
-    def get_smooth_padding_scale(self) -> float: ...
     def get_vector_Gr(self, nderiv: int) -> Vector: ...
     def get_vector_lnr(self) -> Vector: ...
     def peek_name(self) -> str: ...
@@ -2649,7 +2644,6 @@ class Fftlog(GObject.Object):
     def set_noring(self, active: bool) -> None: ...
     def set_padding(self, pad_p: float) -> None: ...
     def set_size(self, n: int) -> None: ...
-    def set_smooth_padding_scale(self, log10sc: float) -> None: ...
     def use_eval_interval(self, use_eval_interval: bool) -> None: ...
     def use_smooth_padding(self, use_smooth_padding: bool) -> None: ...
 
@@ -2692,7 +2686,7 @@ class FftlogGausswin2(Fftlog):
       max-n -> guint: max-n
         Maximum number of knots
       padding -> gdouble: padding
-        Padding percentage
+        Padding fraction
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
@@ -2700,9 +2694,7 @@ class FftlogGausswin2(Fftlog):
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
-        Whether to use a smooth padding
-      smooth-padding-scale -> gdouble: smooth-padding-scale
-        Log10 of the smoothing scale
+        Whether the padding continues the input smoothly
       eval-r-min -> gdouble: eval-r-min
         Evaluation r_min
       eval-r-max -> gdouble: eval-r-max
@@ -2724,7 +2716,6 @@ class FftlogGausswin2(Fftlog):
         nderivs: int
         no_ringing: bool
         padding: float
-        smooth_padding_scale: float
         use_eval_int: bool
         use_smooth_padding: bool
 
@@ -2741,7 +2732,6 @@ class FftlogGausswin2(Fftlog):
         nderivs: int = ...,
         no_ringing: bool = ...,
         padding: float = ...,
-        smooth_padding_scale: float = ...,
         use_eval_int: bool = ...,
         use_smooth_padding: bool = ...,
     ) -> None: ...
@@ -2790,7 +2780,7 @@ class FftlogSBesselJ(Fftlog):
       max-n -> guint: max-n
         Maximum number of knots
       padding -> gdouble: padding
-        Padding percentage
+        Padding fraction
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
@@ -2798,9 +2788,7 @@ class FftlogSBesselJ(Fftlog):
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
-        Whether to use a smooth padding
-      smooth-padding-scale -> gdouble: smooth-padding-scale
-        Log10 of the smoothing scale
+        Whether the padding continues the input smoothly
       eval-r-min -> gdouble: eval-r-min
         Evaluation r_min
       eval-r-max -> gdouble: eval-r-max
@@ -2824,7 +2812,6 @@ class FftlogSBesselJ(Fftlog):
         nderivs: int
         no_ringing: bool
         padding: float
-        smooth_padding_scale: float
         use_eval_int: bool
         use_smooth_padding: bool
 
@@ -2843,7 +2830,6 @@ class FftlogSBesselJ(Fftlog):
         nderivs: int = ...,
         no_ringing: bool = ...,
         padding: float = ...,
-        smooth_padding_scale: float = ...,
         use_eval_int: bool = ...,
         use_smooth_padding: bool = ...,
     ) -> None: ...
@@ -2902,7 +2888,7 @@ class FftlogSBesselJLJM(Fftlog):
       max-n -> guint: max-n
         Maximum number of knots
       padding -> gdouble: padding
-        Padding percentage
+        Padding fraction
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
@@ -2910,9 +2896,7 @@ class FftlogSBesselJLJM(Fftlog):
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
-        Whether to use a smooth padding
-      smooth-padding-scale -> gdouble: smooth-padding-scale
-        Log10 of the smoothing scale
+        Whether the padding continues the input smoothly
       eval-r-min -> gdouble: eval-r-min
         Evaluation r_min
       eval-r-max -> gdouble: eval-r-max
@@ -2937,7 +2921,6 @@ class FftlogSBesselJLJM(Fftlog):
         nderivs: int
         no_ringing: bool
         padding: float
-        smooth_padding_scale: float
         use_eval_int: bool
         use_smooth_padding: bool
 
@@ -2957,7 +2940,6 @@ class FftlogSBesselJLJM(Fftlog):
         nderivs: int = ...,
         no_ringing: bool = ...,
         padding: float = ...,
-        smooth_padding_scale: float = ...,
         use_eval_int: bool = ...,
         use_smooth_padding: bool = ...,
     ) -> None: ...
@@ -3019,7 +3001,7 @@ class FftlogTophatwin2(Fftlog):
       max-n -> guint: max-n
         Maximum number of knots
       padding -> gdouble: padding
-        Padding percentage
+        Padding fraction
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
@@ -3027,9 +3009,7 @@ class FftlogTophatwin2(Fftlog):
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
-        Whether to use a smooth padding
-      smooth-padding-scale -> gdouble: smooth-padding-scale
-        Log10 of the smoothing scale
+        Whether the padding continues the input smoothly
       eval-r-min -> gdouble: eval-r-min
         Evaluation r_min
       eval-r-max -> gdouble: eval-r-max
@@ -3051,7 +3031,6 @@ class FftlogTophatwin2(Fftlog):
         nderivs: int
         no_ringing: bool
         padding: float
-        smooth_padding_scale: float
         use_eval_int: bool
         use_smooth_padding: bool
 
@@ -3068,7 +3047,6 @@ class FftlogTophatwin2(Fftlog):
         nderivs: int = ...,
         no_ringing: bool = ...,
         padding: float = ...,
-        smooth_padding_scale: float = ...,
         use_eval_int: bool = ...,
         use_smooth_padding: bool = ...,
     ) -> None: ...

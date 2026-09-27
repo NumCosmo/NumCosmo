@@ -76,6 +76,13 @@ void test_ncm_fftlog_gausswin2_traps (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_sbessel_j_traps (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_sbessel_jljm_traps (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_invalid_st (TestNcmFftlog *test, gconstpointer pdata);
+void test_ncm_fftlog_invalid_length (TestNcmFftlog *test, gconstpointer pdata);
+void test_ncm_fftlog_tophatwin2_truth (void);
+void test_ncm_fftlog_get_Ym_keeps_eval (void);
+void test_ncm_fftlog_smooth_padding_traps (void);
+void test_ncm_fftlog_invalid_smooth_padding (void);
+void test_ncm_fftlog_smooth_padding_power_law (void);
+void test_ncm_fftlog_odd_full_size (void);
 
 typedef struct _TestCases
 {
@@ -161,6 +168,10 @@ main (gint argc, gchar *argv[])
 
 #endif /* HAVE_ACB_H */
 
+  g_test_add ("/ncm/fftlog/tophatwin2/invalid/length/subprocess", TestNcmFftlog, NULL,
+              &test_ncm_fftlog_tophatwin2_new,
+              &test_ncm_fftlog_invalid_length,
+              &test_ncm_fftlog_free);
   g_test_add ("/ncm/fftlog/tophatwin2/invalid/st/subprocess", TestNcmFftlog, NULL,
               &test_ncm_fftlog_tophatwin2_new,
               &test_ncm_fftlog_invalid_st,
@@ -177,6 +188,13 @@ main (gint argc, gchar *argv[])
               &test_ncm_fftlog_sbessel_jljm_new,
               &test_ncm_fftlog_invalid_st,
               &test_ncm_fftlog_free);
+
+  g_test_add_func ("/ncm/fftlog/tophatwin2/truth", test_ncm_fftlog_tophatwin2_truth);
+  g_test_add_func ("/ncm/fftlog/get_Ym_keeps_eval", test_ncm_fftlog_get_Ym_keeps_eval);
+  g_test_add_func ("/ncm/fftlog/smooth_padding/traps", test_ncm_fftlog_smooth_padding_traps);
+  g_test_add_func ("/ncm/fftlog/smooth_padding/invalid/subprocess", test_ncm_fftlog_invalid_smooth_padding);
+  g_test_add_func ("/ncm/fftlog/smooth_padding/power_law", test_ncm_fftlog_smooth_padding_power_law);
+  g_test_add_func ("/ncm/fftlog/odd_full_size", test_ncm_fftlog_odd_full_size);
 
   g_test_run ();
 }
@@ -522,9 +540,6 @@ test_ncm_fftlog_setget (TestNcmFftlog *test, gconstpointer pdata)
     g_assert_true (use_eval_interval);
   }
 
-  ncm_fftlog_set_smooth_padding_scale (fftlog, 0.1);
-  ncm_assert_cmpdouble_e (ncm_fftlog_get_smooth_padding_scale (fftlog), ==, 0.1, 1.0e-15, 0.0);
-
   ncm_fftlog_use_smooth_padding (fftlog, TRUE);
   {
     gboolean use_smooth_padding;
@@ -667,16 +682,18 @@ test_ncm_fftlog_eval_calibrate_fail (TestNcmFftlog *test, gconstpointer pdata)
   {
     NcmFftlog *fftlog = test->fftlog;
 
+    /* 1e-14 is out of reach within 100 knots: the calibration must abort, not return
+     * a result short of the requested accuracy. */
     ncm_fftlog_set_max_size (fftlog, 100);
 
-    ncm_fftlog_calibrate_size (fftlog, test->Fk.function, test->Fk.params, 1.0e-1);
+    ncm_fftlog_calibrate_size (fftlog, test->Fk.function, test->Fk.params, 1.0e-14);
 
     return; /* LCOV_EXCL_LINE */
   }
 
   g_test_trap_subprocess (NULL, 0, 0);
-  g_test_trap_assert_passed ();
-  g_test_trap_assert_stdout ("*maximum number of knots reached. Requested precision*");
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*maximum number of knots (100) was reached*");
 }
 
 void
@@ -810,7 +827,6 @@ test_ncm_fftlog_eval_smooth_padding (TestNcmFftlog *test, gconstpointer pdata)
   NcmVector *lnr;
   guint len;
 
-  ncm_fftlog_set_smooth_padding_scale (fftlog, 1.0e-4);
   ncm_fftlog_use_smooth_padding (fftlog, TRUE);
   ncm_fftlog_eval_by_function (fftlog, test->Fk.function, test->Fk.params);
   ncm_fftlog_prepare_splines (fftlog);
@@ -825,6 +841,11 @@ test_ncm_fftlog_tophatwin2_traps (TestNcmFftlog *test, gconstpointer pdata)
 {
   g_test_trap_subprocess ("/ncm/fftlog/tophatwin2/invalid/st/subprocess", 0, 0);
   g_test_trap_assert_failed ();
+
+  /* A non-positive period makes the knot spacing L / N meaningless */
+  g_test_trap_subprocess ("/ncm/fftlog/tophatwin2/invalid/length/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*period must be positive*");
 }
 
 void
@@ -852,5 +873,193 @@ void
 test_ncm_fftlog_invalid_st (TestNcmFftlog *test, gconstpointer pdata)
 {
   g_assert_not_reached ();
+}
+
+void
+test_ncm_fftlog_invalid_length (TestNcmFftlog *test, gconstpointer pdata)
+{
+  ncm_fftlog_set_length (test->fftlog, 0.0);
+}
+
+static gdouble
+_test_gauss_k3 (const gdouble k, gpointer user_data)
+{
+  return gsl_pow_3 (k) * exp (-k * k);
+}
+
+/*
+ * G(r) = int F(k) W(kr)^2 dk for F = k^3 exp(-k^2), which vanishes at both ends of the
+ * grid, at exact knots (no-ringing off, so ln r = n L / N'). Truth from mpmath at 30
+ * digits; error measured at most 5.8e-15 of the peak.
+ */
+void
+test_ncm_fftlog_tophatwin2_truth (void)
+{
+  const gint pos[]      = {-40, -10, 0, 10, 30};
+  const gdouble truth[] = {
+    0.49966783048136725739, 0.46163609991915580706, 0.34271556221491577223,
+    0.11109960959342109508, 0.00071932026187923236137
+  };
+  NcmFftlog *fftlog = NCM_FFTLOG (ncm_fftlog_tophatwin2_new (0.0, 0.0, 20.0, 250));
+  NcmVector *Gr;
+  gdouble peak;
+  guint i, N_2;
+
+  ncm_fftlog_set_noring (fftlog, FALSE);
+  ncm_fftlog_eval_by_function (fftlog, &_test_gauss_k3, NULL);
+
+  g_assert_cmpuint (ncm_fftlog_get_size (fftlog), ==, 250);
+  N_2  = ncm_fftlog_get_size (fftlog) / 2;
+  Gr   = ncm_fftlog_get_vector_Gr (fftlog, 0);
+  peak = ncm_vector_get_max (Gr);
+
+  for (i = 0; i < G_N_ELEMENTS (pos); i++)
+    g_assert_cmpfloat (fabs (ncm_vector_get (Gr, N_2 + pos[i]) - truth[i]), <, 5.0e-14 * peak);
+
+  ncm_vector_free (Gr);
+  ncm_fftlog_free (fftlog);
+}
+
+/* ncm_fftlog_get_Ym() writes into the transform's own buffer; the next evaluation must
+ * not use it as if it were still prepared. */
+void
+test_ncm_fftlog_get_Ym_keeps_eval (void)
+{
+  NcmFftlog *fftlog = NCM_FFTLOG (ncm_fftlog_tophatwin2_new (1.0, -0.5, 20.0, 250));
+  NcmVector *before, *after;
+  guint size, i;
+
+  ncm_fftlog_eval_by_function (fftlog, &_test_gauss_k3, NULL);
+  before = ncm_vector_dup (ncm_fftlog_peek_output_vector (fftlog, 0));
+
+  ncm_fftlog_get_Ym (fftlog, &size);
+  g_assert_cmpuint (size, ==, 2 * ncm_fftlog_get_full_size (fftlog));
+
+  ncm_fftlog_eval_by_function (fftlog, &_test_gauss_k3, NULL);
+  after = ncm_fftlog_peek_output_vector (fftlog, 0);
+
+  for (i = 0; i < ncm_vector_len (before); i++)
+    g_assert_cmpfloat (ncm_vector_get (after, i), ==, ncm_vector_get (before, i));
+
+  ncm_vector_free (before);
+  ncm_fftlog_free (fftlog);
+}
+
+void
+test_ncm_fftlog_smooth_padding_traps (void)
+{
+  g_test_trap_subprocess ("/ncm/fftlog/smooth_padding/invalid/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*smooth padding needs F > 0*");
+}
+
+static gdouble
+_test_negative_edge (const gdouble k, gpointer user_data)
+{
+  return -gsl_pow_3 (k) * exp (-k * k);
+}
+
+/* The power-law continuation is fitted to log F: F <= 0 at an end used to give NaN. */
+void
+test_ncm_fftlog_invalid_smooth_padding (void)
+{
+  NcmFftlog *fftlog = NCM_FFTLOG (ncm_fftlog_tophatwin2_new (0.0, 0.0, 20.0, 250));
+
+  ncm_fftlog_use_smooth_padding (fftlog, TRUE);
+  ncm_fftlog_eval_by_function (fftlog, &_test_negative_edge, NULL);
+}
+
+static gdouble
+_test_sqrt_k (const gdouble k, gpointer user_data)
+{
+  return sqrt (k);
+}
+
+/* For F = k^s the smooth padding continues the table with the exact power law at the
+ * end where F decays, so G(r) follows the infinite-range law G ~ r^-(s+1) towards the
+ * inverse of that end, where zeros in the padding are off by the truncation of the
+ * table (3e-4 for the tophat at k_min r = 1e-3). Checked at k_min r from 1e-5 to 1e-3
+ * through the log-derivative, which needs no normalisation; measured 4e-8 (tophat) and
+ * 1e-7 (Gaussian), the periodic images of the padded input. */
+void
+test_ncm_fftlog_smooth_padding_power_law (void)
+{
+  const gdouble lnk_min = log (1.0e-8);
+  const gdouble lnk_max = log (1.0e3);
+  const gdouble lnk0    = 0.5 * (lnk_min + lnk_max);
+  const gdouble s       = 0.5;
+  NcmFftlog *fftlogs[2] = {
+    NCM_FFTLOG (ncm_fftlog_tophatwin2_new (-lnk0, lnk0, lnk_max - lnk_min, 1000)),
+    NCM_FFTLOG (ncm_fftlog_gausswin2_new (-lnk0, lnk0, lnk_max - lnk_min, 1000)),
+  };
+  guint w;
+
+  for (w = 0; w < 2; w++)
+  {
+    NcmFftlog *fftlog = fftlogs[w];
+    gint i;
+
+    ncm_fftlog_set_padding (fftlog, 1.0);
+    ncm_fftlog_set_nderivs (fftlog, 1);
+    ncm_fftlog_use_smooth_padding (fftlog, TRUE);
+    ncm_fftlog_eval_by_function (fftlog, &_test_sqrt_k, NULL);
+    ncm_fftlog_prepare_splines (fftlog);
+
+    for (i = 0; i <= 20; i++)
+    {
+      const gdouble lnr    = log (1.0e3) + i * log (1.0e2) / 20.0;
+      const gdouble G0     = ncm_fftlog_eval_output (fftlog, 0, lnr);
+      const gdouble G1     = ncm_fftlog_eval_output (fftlog, 1, lnr);
+      const gdouble dlnGdr = G1 / G0;
+
+      ncm_assert_cmpdouble_e (dlnGdr, ==, -(s + 1.0), 1.0e-6, 0.0);
+    }
+
+    ncm_fftlog_free (fftlog);
+  }
+}
+
+static gdouble
+_test_k3_gauss (const gdouble k, gpointer user_data)
+{
+  return gsl_pow_3 (k) * exp (-k * k);
+}
+
+/* The knots sit at (i - Nf_2) L / N on both sides of the transform, which cancels in the
+ * phase only for an even full size; an odd one used to shift the output by one knot
+ * (5e-3 at N = 1000). Compare an odd full size (padding 1.187 gives 2187) with an even
+ * one (1.25 gives 2250) for an input that vanishes at both ends; both periods are over
+ * twice the interval, so the periodic images of the input stay below 1e-11. */
+void
+test_ncm_fftlog_odd_full_size (void)
+{
+  const gdouble lnk_min = log (1.0e-3);
+  const gdouble lnk_max = log (1.0e2);
+  const gdouble lnk0    = 0.5 * (lnk_min + lnk_max);
+  NcmFftlog *odd        = NCM_FFTLOG (ncm_fftlog_tophatwin2_new (-lnk0, lnk0, lnk_max - lnk_min, 1000));
+  NcmFftlog *even       = NCM_FFTLOG (ncm_fftlog_tophatwin2_new (-lnk0, lnk0, lnk_max - lnk_min, 1000));
+  gint i;
+
+  ncm_fftlog_set_padding (odd, 1.187);
+  ncm_fftlog_set_padding (even, 1.25);
+  g_assert_cmpint (ncm_fftlog_get_full_size (odd) % 2, ==, 1);
+  g_assert_cmpint (ncm_fftlog_get_full_size (even) % 2, ==, 0);
+
+  ncm_fftlog_eval_by_function (odd, &_test_k3_gauss, NULL);
+  ncm_fftlog_eval_by_function (even, &_test_k3_gauss, NULL);
+  ncm_fftlog_prepare_splines (odd);
+  ncm_fftlog_prepare_splines (even);
+
+  for (i = 0; i <= 20; i++)
+  {
+    const gdouble lnr    = log (0.1) + i * log (1.0e2) / 20.0;
+    const gdouble G_odd  = ncm_fftlog_eval_output (odd, 0, lnr);
+    const gdouble G_even = ncm_fftlog_eval_output (even, 0, lnr);
+
+    ncm_assert_cmpdouble_e (G_odd, ==, G_even, 1.0e-6, 0.0);
+  }
+
+  ncm_fftlog_free (odd);
+  ncm_fftlog_free (even);
 }
 
