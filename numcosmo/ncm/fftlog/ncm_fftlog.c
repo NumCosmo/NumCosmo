@@ -1072,23 +1072,28 @@ ncm_fftlog_use_eval_interval (NcmFftlog *fftlog, gboolean use_eval_interval)
  * function the transform expands, $f = F k^{-b}$ with the bias of ncm_fftlog_set_bias().
  * The continuation is the power law of each end, with the value and log-slope of $f$
  * there taken from a cubic through the four nearest knots, anchored at the end itself so
- * that it does not move with the knots. Where $F k$, the integrand in $\ln k$, would grow along the continuation, the
- * power law is cut by a Gaussian in $\ln k$ of width the inverse of that log-slope, so
- * that the padding never holds much more integral than the interval does. The two
- * continuations are joined by a $C^\infty$ partition of unity that
- * switches over the middle fifth of the padding, so each side keeps its own continuation
- * over two fifths of the padding. The periodic input is then continuous with its first
- * derivative at each end of the interval, where the continuation matches the value and
- * log-slope of $F$ but not its higher derivatives, and smooth elsewhere; the transform
- * converges as $N^{-3}$ over the whole output grid. The continuation is fitted
- * in log space, so $F$ must be positive at the four knots nearest each end. The fitted
- * slopes are kept, see ncm_fftlog_get_end_slopes().
+ * that it does not move with the knots. Where $F k$, the integrand in $\ln k$, would grow
+ * along the continuation, the power law is cut by a Gaussian in $\ln k$ of width the
+ * inverse of that log-slope, so that the padding never holds much more integral than the
+ * interval does. Each continuation is then tapered to zero by a $C^\infty$ step over
+ * $[0.4\,h, 0.8\,h]$ from its own end, with $h = pL/2$ the nominal padding of each side,
+ * so the two ends never meet: a mixture of them would carry values of $f$ from both ends,
+ * whose $k^b$ differ by $e^{b L_T}$. The taper sits at a fixed distance in $\ln k$, so it
+ * does not move when a fractional padding rounds to a slightly different period at each
+ * size. The periodic input is then continuous with its first derivative at each end of the
+ * interval, where the continuation matches the value and log-slope of $F$ but not its
+ * higher derivatives, and smooth elsewhere; the transform converges as $N^{-3}$ over the
+ * whole output grid. The continuation is fitted in log space, so $F$ must be positive at
+ * the four knots nearest each end. The fitted slopes are kept, see
+ * ncm_fftlog_get_end_slopes().
  *
  * The result within a few e-foldings of $1/k_\mathrm{max}$ or $1/k_\mathrm{min}$ depends
- * on the continuation, which is an extrapolation of the input beyond its interval. Far
- * below the peak of the output, the periodic images of the padded input set a floor of
- * order $e^{-L_T} \int F \, \mathrm{d}k$; a padding fraction of one puts it at
- * $e^{-2L}$ times that integral.
+ * on the continuation, which is an extrapolation of the input beyond its interval, and a
+ * longer padding carries it further. Far below the peak of the output, the periodic images
+ * of the padded input set a floor of order $e^{-(b - b_\mathrm{min}) L_T}$ times its
+ * integral, see ncm_fftlog_get_best_bias(); without a bias a padding fraction of one puts
+ * it at $e^{-2L}$. A fractional padding rounds $L_T$ differently at each size, which moves
+ * that floor with $N$ where no bias suppresses it.
  *
  */
 void
@@ -1417,14 +1422,16 @@ ncm_fftlog_get_best_bias (NcmFftlog *fftlog)
 
 static void _ncm_fftlog_end_power_law (const gdouble u[4], const gdouble lnF[4], gdouble *A, gdouble *s);
 static gdouble _ncm_fftlog_continuation (const gdouble A, const gdouble s, const gdouble sigma, const gdouble u);
+static gdouble _ncm_fftlog_taper (const gdouble x, const gdouble x0, const gdouble dx);
 static gdouble _ncm_fftlog_smooth_step (const gdouble t);
 
 /* Fills the padding with the continuation described in ncm_fftlog_use_smooth_padding().
- * The padding is one stretch of 2 pad slots in the periodic array, running from just
- * above ln k_max (slot pad + N) around the wrap to just below ln k_min (slot pad - 1);
- * t is the position along it in ln k, from 0 to 1, and the partition switches over its
- * middle fifth. Measuring t in ln k, not in slots, keeps the partition where it is when
- * the grid is refined: an index ratio moves it by O(1/N) and so does the result. */
+ * The pad slots above the interval (pad + N onwards) continue the upper end, the pad
+ * slots below it (0 to pad - 1) the lower end. Each continuation is tapered to zero at a
+ * fixed distance in ln k from its own end, set by the nominal padding p L / 2, so it does
+ * not move when the grid is refined; the rounded padding pad L / N changes with N, and a
+ * partition placed in it moved the result by that change. The two never overlap: a blend
+ * of the two ends mixes values of f = F k^(-b) whose k^b differ by e^(b L_T). */
 static void
 _ncm_fftlog_add_smooth_padding (NcmFftlog *fftlog)
 {
@@ -1433,7 +1440,16 @@ _ncm_fftlog_add_smooth_padding (NcmFftlog *fftlog)
   const gdouble lnk_min         = self->lnk0 - 0.5 * self->Lk;
   const gdouble lnk_first       = self->lnk0 - self->N_2 * self->Lk_N;
   const gdouble lnk_last        = self->lnk0 + (self->N - 1 - self->N_2) * self->Lk_N;
-  const gint stretch            = 2 * self->pad;
+
+  /* The taper runs over [0.4, 0.8] of the nominal padding h = p L / 2 on each side. The
+   * rounded padding is at least 0.95 h for the sizes a calibration visits (N >= 100, p =
+   * 0.3 the worst measured), so it holds the taper and nothing moves with N; a shorter
+   * one shrinks the taper to fit. A later or narrower taper keeps more of a slow tail but
+   * converges slowly at small r under a positive bias. */
+  const gdouble half_pad = 0.5 * self->pad_p * self->Lk;
+  const gdouble fit      = (self->pad > 0) ? GSL_MIN (1.0, self->pad * self->Lk_N / (0.8 * half_pad)) : 1.0;
+  const gdouble taper_x0 = 0.4 * half_pad * fit;
+  const gdouble taper_dx = 0.4 * half_pad * fit;
   gdouble u_hi[4], lnF_hi[4], u_lo[4], lnF_lo[4];
   gdouble A_hi, s_hi, A_lo, s_lo;
   gint i;
@@ -1465,19 +1481,13 @@ _ncm_fftlog_add_smooth_padding (NcmFftlog *fftlog)
   self->end_slope_max = s_hi + self->bias;
   self->end_slope_min = self->bias - s_lo;
 
-  for (i = 0; i < stretch; i++)
+  for (i = 0; i < (gint) self->pad; i++)
   {
     const gdouble x_hi = lnk_last + (i + 1) * self->Lk_N - lnk_max;
-    const gdouble x_lo = lnk_min - (lnk_first - (stretch - i) * self->Lk_N);
-    const gdouble t    = x_hi / (stretch * self->Lk_N); /* x_hi + x_lo = stretch Lk_N */
-    const gdouble w    = _ncm_fftlog_smooth_step ((t - 0.4) / 0.2);
-    const gdouble F_i  = (1.0 - w) * _ncm_fftlog_continuation (A_hi, s_hi, s_hi + 1.0 + self->bias, x_hi)
-                         + w * _ncm_fftlog_continuation (A_lo, s_lo, s_lo - 1.0 - self->bias, x_lo);
+    const gdouble x_lo = lnk_min - (lnk_first - (i + 1) * self->Lk_N);
 
-    if (i < (gint) self->pad)
-      self->Fk[self->pad + self->N + i] = F_i;
-    else
-      self->Fk[i - self->pad] = F_i;
+    self->Fk[self->pad + self->N + i] = _ncm_fftlog_continuation (A_hi, s_hi, s_hi + 1.0 + self->bias, x_hi) * _ncm_fftlog_taper (x_hi, taper_x0, taper_dx);
+    self->Fk[self->pad - 1 - i]       = _ncm_fftlog_continuation (A_lo, s_lo, s_lo - 1.0 - self->bias, x_lo) * _ncm_fftlog_taper (x_lo, taper_x0, taper_dx);
   }
 }
 
@@ -1507,6 +1517,13 @@ _ncm_fftlog_continuation (const gdouble A, const gdouble s, const gdouble sigma,
   const gdouble su = sigma * u;
 
   return exp (A + s * u - ((sigma > 0.0) ? 0.5 * su * su : 0.0));
+}
+
+/* One up to x0, zero beyond x0 + dx, C-infinity in between. */
+static gdouble
+_ncm_fftlog_taper (const gdouble x, const gdouble x0, const gdouble dx)
+{
+  return 1.0 - _ncm_fftlog_smooth_step ((x - x0) / dx);
 }
 
 /* C-infinity step from 0 at t <= 0 to 1 at t >= 1, all derivatives zero at both ends. */

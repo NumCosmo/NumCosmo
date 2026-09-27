@@ -129,10 +129,11 @@ void test_ncm_fftlog_invalid_st (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_invalid_length (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_tophatwin2_truth (void);
 void test_ncm_fftlog_smooth_padding_negative_slope (void);
-void test_ncm_fftlog_smooth_padding_blend_converges (void);
+void test_ncm_fftlog_smooth_padding_refine_stable (void);
 void test_ncm_fftlog_calibrate_zero (void);
 void test_ncm_fftlog_calibrate_max_n_traps (void);
 void test_ncm_fftlog_calibrate_max_n_subprocess (void);
+void test_ncm_fftlog_calibrate_short_padding_subprocess (void);
 void test_ncm_fftlog_get_Ym_keeps_eval (void);
 void test_ncm_fftlog_smooth_padding_traps (void);
 void test_ncm_fftlog_invalid_smooth_padding (void);
@@ -256,10 +257,11 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/ncm/fftlog/tophatwin2/truth", test_ncm_fftlog_tophatwin2_truth);
   g_test_add_func ("/ncm/fftlog/smooth_padding/negative_slope", test_ncm_fftlog_smooth_padding_negative_slope);
-  g_test_add_func ("/ncm/fftlog/smooth_padding/blend_converges", test_ncm_fftlog_smooth_padding_blend_converges);
+  g_test_add_func ("/ncm/fftlog/smooth_padding/refine_stable", test_ncm_fftlog_smooth_padding_refine_stable);
   g_test_add_func ("/ncm/fftlog/calibrate/zero", test_ncm_fftlog_calibrate_zero);
   g_test_add_func ("/ncm/fftlog/calibrate/max_n/traps", test_ncm_fftlog_calibrate_max_n_traps);
   g_test_add_func ("/ncm/fftlog/calibrate/max_n/subprocess", test_ncm_fftlog_calibrate_max_n_subprocess);
+  g_test_add_func ("/ncm/fftlog/calibrate/short_padding/subprocess", test_ncm_fftlog_calibrate_short_padding_subprocess);
   g_test_add_func ("/ncm/fftlog/get_Ym_keeps_eval", test_ncm_fftlog_get_Ym_keeps_eval);
   g_test_add_func ("/ncm/fftlog/smooth_padding/traps", test_ncm_fftlog_smooth_padding_traps);
   g_test_add_func ("/ncm/fftlog/smooth_padding/invalid/subprocess", test_ncm_fftlog_invalid_smooth_padding);
@@ -1148,8 +1150,9 @@ _test_power (const gdouble k, gpointer user_data)
 /*
  * Gaussian window with F = k^(-1/2) on [1e-8, 1e3]: G(r) = Gamma(1/4) / (2 sqrt(r)). F grows
  * below k_min while F k decays, so the low-k continuation must keep that tail: cutting it on
- * the slope of F, not of F k, lost 1.2e-3 at r = 1e3 and 1.2e-2 at 1e5. Measured with the
- * slope of F k: 6.8e-6 and 6.8e-5, the rest being the tail beyond the padding.
+ * the slope of F, not of F k, loses 1.2e-3 at r = 1e3 and 1.2e-2 at 1e5. Measured with the
+ * slope of F k: 8.5e-5 and 8.5e-4, the tail beyond the taper at 0.4-0.8 of the padding (the
+ * former blend of the two ends reached further, 6.8e-6 and 6.8e-5, but moved with N).
  */
 void
 test_ncm_fftlog_smooth_padding_negative_slope (void)
@@ -1157,7 +1160,7 @@ test_ncm_fftlog_smooth_padding_negative_slope (void)
   gdouble s             = -0.5;
   NcmFftlog *fftlog     = NCM_FFTLOG (ncm_fftlog_gausswin2_new (-0.5 * log (1.0e-5), 0.5 * log (1.0e-5), log (1.0e11), 2000));
   const gdouble r_a[]   = {1.0e3, 1.0e5};
-  const gdouble tol_a[] = {2.0e-5, 2.0e-4};
+  const gdouble tol_a[] = {2.0e-4, 2.0e-3};
   guint i;
 
   ncm_fftlog_set_noring (fftlog, FALSE);
@@ -1177,11 +1180,16 @@ test_ncm_fftlog_smooth_padding_negative_slope (void)
 
 /*
  * A constant input continued into the padding: the result must not move as the grid is
- * refined. With the partition placed by slot index it moved by 2.3e-7, 1.2e-7, 5.8e-8 per
- * doubling of N (first order); placed in ln k it is stable to 1e-17.
+ * refined. With the continuation placed by slot index it moved by 2.3e-7, 1.2e-7, 5.8e-8 per
+ * doubling of N (first order); placed in ln k it is stable to 1e-17. A fractional padding
+ * rounds to a period L_T that changes with N (12.9973 at 3000 knots, 12.9983 at 4524 for
+ * p = 0.3, L = 10): the former blend of the two ends, which mixes values whose k^b differ by
+ * e^(b L_T), moved by 5.7e-2 of the peak between them with the bias of
+ * ncm_fftlog_get_best_bias(); the tapered ends move by 2.5e-8, the roundoff of that bias at
+ * the smallest r.
  */
 void
-test_ncm_fftlog_smooth_padding_blend_converges (void)
+test_ncm_fftlog_smooth_padding_refine_stable (void)
 {
   gdouble s    = 0.0;
   gdouble prev = 0.0;
@@ -1204,6 +1212,55 @@ test_ncm_fftlog_smooth_padding_blend_converges (void)
 
     prev = y;
     ncm_fftlog_free (fftlog);
+  }
+
+  {
+    const guint N_a[] = {3000, 4524};
+    NcmVector *Gr[2];
+    NcmFftlog *fftlog[2];
+    NcmVector *lnr;
+    gdouble bias = 0.0, peak;
+    guint j, i;
+
+    s = 0.0;
+
+    for (j = 0; j < 2; j++)
+    {
+      fftlog[j] = NCM_FFTLOG (ncm_fftlog_gausswin2_new (0.0, 0.0, 10.0, N_a[j]));
+      ncm_fftlog_set_padding (fftlog[j], 0.3);
+      ncm_fftlog_set_noring (fftlog[j], FALSE);
+      ncm_fftlog_use_smooth_padding (fftlog[j], TRUE);
+
+      if (j == 0)
+      {
+        ncm_fftlog_eval_by_function (fftlog[j], &_test_power, &s);
+        bias = ncm_fftlog_get_best_bias (fftlog[j]);
+      }
+
+      ncm_fftlog_set_bias (fftlog[j], bias);
+      ncm_fftlog_eval_by_function (fftlog[j], &_test_power, &s);
+      ncm_fftlog_prepare_splines (fftlog[j]);
+      Gr[j] = ncm_fftlog_get_vector_Gr (fftlog[j], 0);
+    }
+
+    g_assert_cmpfloat (ncm_fftlog_get_full_length (fftlog[0]), !=, ncm_fftlog_get_full_length (fftlog[1]));
+    peak = ncm_vector_get_max (Gr[1]);
+    lnr  = ncm_fftlog_get_vector_lnr (fftlog[0]);
+
+    for (i = 0; i < ncm_vector_len (Gr[0]); i++)
+    {
+      const gdouble G = ncm_fftlog_eval_output (fftlog[1], 0, ncm_vector_get (lnr, i));
+
+      g_assert_cmpfloat (fabs (ncm_vector_get (Gr[0], i) - G), <, 1.0e-7 * peak);
+    }
+
+    ncm_vector_free (lnr);
+
+    for (j = 0; j < 2; j++)
+    {
+      ncm_vector_free (Gr[j]);
+      ncm_fftlog_free (fftlog[j]);
+    }
   }
 }
 
@@ -1240,6 +1297,26 @@ test_ncm_fftlog_calibrate_max_n_traps (void)
   g_test_trap_subprocess ("/ncm/fftlog/calibrate/max_n/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*exceeds the maximum (100)*");
+
+  /* F = 1 with a padding of 0.3: the periodic image, e^(-L_T) = 2e-6 of the peak without a
+   * bias, moves with the rounded period, and the calibration once stopped at 3770 knots on
+   * a chance agreement. It must reach neither 1e-10 nor a false stop by 20000 knots. */
+  g_test_trap_subprocess ("/ncm/fftlog/calibrate/short_padding/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*exceeds the maximum (20000)*");
+}
+
+void
+test_ncm_fftlog_calibrate_short_padding_subprocess (void)
+{
+  NcmFftlog *fftlog = NCM_FFTLOG (ncm_fftlog_gausswin2_new (0.0, 0.0, 10.0, 100));
+  gdouble s         = 0.0;
+
+  ncm_fftlog_set_padding (fftlog, 0.3);
+  ncm_fftlog_set_noring (fftlog, FALSE);
+  ncm_fftlog_use_smooth_padding (fftlog, TRUE);
+  ncm_fftlog_set_max_size (fftlog, 20000);
+  ncm_fftlog_calibrate_size (fftlog, &_test_power, &s, 1.0e-10);
 }
 
 /* Starting at the maximum, the first growth step already passes it: the calibration must

@@ -382,7 +382,8 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
   /**
    * NcmPowspecFilter:max-k-knots:
    *
-   * The maximum number of knots in the k direction.
+   * The maximum number of knots in the k direction; ncm_powspec_filter_prepare() aborts if
+   * the calibration would need more (see ncm_fftlog_calibrate_size_gsl()).
    */
   g_object_class_install_property (object_class,
                                    PROP_MAX_K_KNOTS,
@@ -395,7 +396,9 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
   /**
    * NcmPowspecFilter:max-z-knots:
    *
-   * The maximum number of knots in the redshift direction.
+   * The maximum number of knots in the redshift direction, zero for no limit;
+   * ncm_powspec_filter_prepare() aborts if the grid would need more to reach
+   * #NcmPowspecFilter:reltol-z.
    */
   g_object_class_install_property (object_class,
                                    PROP_MAX_Z_KNOTS,
@@ -671,10 +674,16 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
       Fdummy_z.function = &_ncm_powspec_filter_dummy_z;
       Fdummy_z.params   = &arg;
 
-      ncm_spline_set_func (dummy_z, NCM_SPLINE_FUNCTION_SPLINE, &Fdummy_z, psf->zi, psf->zf, 0, psf->reltol_z);
+      ncm_spline_set_func (dummy_z, NCM_SPLINE_FUNCTION_SPLINE, &Fdummy_z, psf->zi, psf->zf, psf->max_z_knots, psf->reltol_z);
 
       z_vec = ncm_spline_get_xv (dummy_z);
       N_z   = ncm_vector_len (z_vec);
+
+      /* The spline stops with a warning past its limit; the filter must not go on with a
+       * grid that missed reltol-z. */
+      if ((psf->max_z_knots > 0) && (N_z > psf->max_z_knots))
+        g_error ("ncm_powspec_filter_prepare: the redshift grid needs more than %u knots (max-z-knots) "
+                 "to reach the relative tolerance %e (reltol-z).", psf->max_z_knots, psf->reltol_z);
 
       ncm_spline_clear (&dummy_z);
     }

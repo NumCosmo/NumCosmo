@@ -54,6 +54,8 @@ void test_nc_powspec_corr3d (TestNcPowspec *test, gconstpointer pdata);
 void test_nc_powspec_free (TestNcPowspec *test, gconstpointer pdata);
 
 void test_nc_powspec_ml_cbe_extrapolation (void);
+void test_nc_powspec_filter_max_z_knots_traps (void);
+void test_nc_powspec_filter_max_z_knots_subprocess (void);
 
 typedef struct _TestNcPowspecFunc
 {
@@ -116,6 +118,10 @@ main (gint argc, gchar *argv[])
 
 #ifndef POWSPEC_SPLIT_TRANSFER
   g_test_add_func ("/nc/powspec/ml/cbe/extrapolation", &test_nc_powspec_ml_cbe_extrapolation);
+
+  /* Eisenstein-Hu only for speed: the filter stops at its redshift grid. */
+  g_test_add_func ("/nc/powspec/filter/max_z_knots/traps", &test_nc_powspec_filter_max_z_knots_traps);
+  g_test_add_func ("/nc/powspec/filter/max_z_knots/subprocess", &test_nc_powspec_filter_max_z_knots_subprocess);
 #endif
 
   g_test_run ();
@@ -435,5 +441,34 @@ test_nc_powspec_ml_cbe_extrapolation (void)
   ncm_model_free (NCM_MODEL (cosmo));
   ncm_model_free (NCM_MODEL (reion));
   ncm_model_free (NCM_MODEL (prim));
+}
+
+/* max-z-knots was never passed to the redshift spline, which then grew to 335 knots with a
+ * limit of 10; now the prepare aborts before using a grid that missed reltol-z. */
+void
+test_nc_powspec_filter_max_z_knots_traps (void)
+{
+  g_test_trap_subprocess ("/nc/powspec/filter/max_z_knots/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*needs more than 10 knots (max-z-knots)*");
+}
+
+void
+test_nc_powspec_filter_max_z_knots_subprocess (void)
+{
+  NcHIReion *reion      = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim        = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo      = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
+  NcTransferFunc *tf    = NC_TRANSFER_FUNC (ncm_serialize_global_from_string ("NcTransferFuncEH"));
+  NcPowspecML *ps_ml    = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+  NcmPowspecFilter *psf = ncm_powspec_filter_new (NCM_POWSPEC (ps_ml), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
+
+  /* The redshift spline warns when it stops at its limit; only the filter's abort after it
+   * is under test. */
+  g_log_set_always_fatal (G_LOG_FATAL_MASK);
+
+  ncm_powspec_filter_set_max_z_knots (psf, 10);
+  ncm_powspec_filter_set_reltol_z (psf, 1.0e-8);
+  ncm_powspec_filter_prepare (psf, NCM_MODEL (cosmo));
 }
 
