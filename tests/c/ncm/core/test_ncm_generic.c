@@ -46,7 +46,6 @@ void test_ncm_sbessel_ode_solver_basic (void);
 void test_ncm_sbessel_integrator_gl_basic (void);
 void test_ncm_sbessel_integrator_levin_basic (void);
 void test_ncm_fftlog_sbessel_j_basic (void);
-void test_ncm_fftlog_sbessel_jljm_basic (void);
 void test_ncm_bootstrap_basic (void);
 void test_ncm_stats_vec_basic (void);
 void test_ncm_stats_acorr_basic (void);
@@ -139,7 +138,6 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sbessel_integrator_gl/basic", test_ncm_sbessel_integrator_gl_basic);
   g_test_add_func ("/ncm/sbessel_integrator_levin/basic", test_ncm_sbessel_integrator_levin_basic);
   g_test_add_func ("/ncm/fftlog_sbessel_j/basic", test_ncm_fftlog_sbessel_j_basic);
-  g_test_add_func ("/ncm/fftlog_sbessel_jljm/basic", test_ncm_fftlog_sbessel_jljm_basic);
   g_test_add_func ("/ncm/bootstrap/basic", test_ncm_bootstrap_basic);
   g_test_add_func ("/ncm/stats_vec/basic", test_ncm_stats_vec_basic);
   g_test_add_func ("/ncm/stats_acorr/basic", test_ncm_stats_acorr_basic);
@@ -305,24 +303,6 @@ test_ncm_fftlog_sbessel_j_basic (void)
   g_assert_true (NCM_IS_FFTLOG_SBESSEL_J (fftlog_jl));
 
   NCM_TEST_FREE (ncm_fftlog_free, NCM_FFTLOG (fftlog_jl));
-}
-
-void
-test_ncm_fftlog_sbessel_jljm_basic (void)
-{
-  NcmFftlogSBesselJLJM *fftlog_jljm = ncm_fftlog_sbessel_jljm_new (2, 0, 0.0, 0.0, 0.0, 1.0, 128);
-  NcmFftlog *fftlog_jljm2;
-
-  g_assert_true (fftlog_jljm != NULL);
-  g_assert_true (NCM_IS_FFTLOG_SBESSEL_JLJM (fftlog_jljm));
-
-  fftlog_jljm2 = ncm_fftlog_ref (NCM_FFTLOG (fftlog_jljm));
-  ncm_fftlog_clear (&fftlog_jljm2);
-  g_assert_true (fftlog_jljm2 == NULL);
-
-  g_assert_true (NCM_IS_FFTLOG_SBESSEL_JLJM (fftlog_jljm));
-
-  NCM_TEST_FREE (ncm_fftlog_free, NCM_FFTLOG (fftlog_jljm));
 }
 
 void

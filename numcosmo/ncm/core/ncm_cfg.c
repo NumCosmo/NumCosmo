@@ -62,7 +62,6 @@
 #include "ncm/core/ncm_pln1d.h"
 #include "ncm/powspec/ncm_powspec_corr3d.h"
 #include "ncm/powspec/ncm_powspec_filter.h"
-#include "ncm/powspec/ncm_powspec_sphere_proj.h"
 #include "ncm/powspec/ncm_powspec_spline2d.h"
 #include "ncm/powspec/tests/ncm_powspec_analytic.h"
 #include "ncm/powspec/ncm_powspec.h"
@@ -99,7 +98,6 @@
 #include "ncm/specfunc/ncm_sbessel_integrator_levin.h"
 #include "ncm/specfunc/ncm_sbessel_ode_solver.h"
 #include "ncm/fftlog/ncm_fftlog_sbessel_j.h"
-#include "ncm/fftlog/ncm_fftlog_sbessel_jljm.h"
 #include "ncm/algebra/ncm_spectral.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/bbn/nc_bbn.h"
@@ -745,7 +743,6 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPLINE2D);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
-  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPHERE_PROJ);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_ANALYTIC);
 
@@ -790,7 +787,6 @@ ncm_cfg_register_objects (void)
 
 
   ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_J);
-  ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_JLJM);
 
   ncm_cfg_register_obj (NCM_TYPE_DATA);
 

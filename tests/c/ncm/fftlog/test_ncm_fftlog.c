@@ -88,9 +88,7 @@ typedef struct _TestNcmFftlogK
 {
   gsl_function Fk;
   gdouble lnr;
-  gdouble w;
   guint ell;
-  guint m;
   guint ntests;
 } TestNcmFftlogK;
 
@@ -108,7 +106,6 @@ void test_ncm_fftlog_tophatwin2_new (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_gausswin2_new (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_sbessel_j_bias0_5_new (TestNcmFftlog *test, gconstpointer pdata);
-void test_ncm_fftlog_sbessel_jljm_new (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_free (TestNcmFftlog *test, gconstpointer pdata);
 
 void test_ncm_fftlog_setget (TestNcmFftlog *test, gconstpointer pdata);
@@ -124,7 +121,6 @@ void test_ncm_fftlog_eval_smooth_padding (TestNcmFftlog *test, gconstpointer pda
 void test_ncm_fftlog_tophatwin2_traps (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_gausswin2_traps (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_sbessel_j_traps (TestNcmFftlog *test, gconstpointer pdata);
-void test_ncm_fftlog_sbessel_jljm_traps (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_invalid_st (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_invalid_length (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_tophatwin2_truth (void);
@@ -174,9 +170,6 @@ TestCases fixtures[] = {
   {"gausswin2", &test_ncm_fftlog_gausswin2_new},
   {"sbessel_j", &test_ncm_fftlog_sbessel_j_new},
   {"sbessel_j_bias0_5", &test_ncm_fftlog_sbessel_j_bias0_5_new},
-#ifdef HAVE_ACB_H
-  {"sbessel_jljm", &test_ncm_fftlog_sbessel_jljm_new},
-#endif /* HAVE_ACB_H */
 };
 
 #define NUMINT_RELTOL1 1.0e-3
@@ -225,14 +218,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_fftlog_sbessel_j_traps,
               &test_ncm_fftlog_free);
 
-#ifdef HAVE_ACB_H
-
-  g_test_add ("/ncm/fftlog/sbessel_jljm/traps", TestNcmFftlog, NULL,
-              &test_ncm_fftlog_sbessel_jljm_new,
-              &test_ncm_fftlog_sbessel_jljm_traps,
-              &test_ncm_fftlog_free);
-
-#endif /* HAVE_ACB_H */
 
   g_test_add ("/ncm/fftlog/tophatwin2/invalid/length/subprocess", TestNcmFftlog, NULL,
               &test_ncm_fftlog_tophatwin2_new,
@@ -248,10 +233,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_fftlog_free);
   g_test_add ("/ncm/fftlog/sbessel_j/invalid/st/subprocess", TestNcmFftlog, NULL,
               &test_ncm_fftlog_sbessel_j_new,
-              &test_ncm_fftlog_invalid_st,
-              &test_ncm_fftlog_free);
-  g_test_add ("/ncm/fftlog/sbessel_jljm/invalid/st/subprocess", TestNcmFftlog, NULL,
-              &test_ncm_fftlog_sbessel_jljm_new,
               &test_ncm_fftlog_invalid_st,
               &test_ncm_fftlog_free);
 
@@ -325,20 +306,6 @@ _test_ncm_fftlog_sbessel_j (gdouble lnk, gpointer user_data)
   const gdouble k      = exp (lnk);
 
   return GSL_FN_EVAL (&args->Fk, k) * k * ncm_sf_sbessel (args->ell, kr);
-}
-
-static gdouble
-_test_ncm_fftlog_sbessel_jljm (gdouble lnk, gpointer user_data)
-{
-  TestNcmFftlogK *args = (TestNcmFftlogK *) user_data;
-  const gdouble kr     = exp (lnk + args->lnr);
-  const gdouble k      = exp (lnk);
-
-/*
- *  printf ("% 22.15g % 22.15g\n", k,
- *       GSL_FN_EVAL (&args->Fk, k) * k * ncm_sf_sbessel (args->ell, kr * args->w) * ncm_sf_sbessel (args->m, kr / args->w));
- */
-  return GSL_FN_EVAL (&args->Fk, k) * k * ncm_sf_sbessel (args->ell, kr * args->w) * ncm_sf_sbessel (args->m, kr / args->w);
 }
 
 void
@@ -494,53 +461,6 @@ test_ncm_fftlog_sbessel_j_bias0_5_new (TestNcmFftlog *test, gconstpointer pdata)
   g_assert_true (fftlog != NULL);
   g_assert_true (NCM_IS_FFTLOG (fftlog));
   g_assert_true (NCM_IS_FFTLOG_SBESSEL_J (fftlog));
-}
-
-void
-test_ncm_fftlog_sbessel_jljm_new (TestNcmFftlog *test, gconstpointer pdata)
-{
-  const guint N          = 1 * g_test_rand_int_range  (7800, 8000);
-  const guint ell        = 2;  /* g_test_rand_int_range  (0, 10); */
-  const gint dell        = -1; /* ell > 1 ? g_test_rand_int_range  (-2, 2) : g_test_rand_int_range  (-ell, ell + 2); */
-  const gdouble lnw      = 1.0 / 4.0 * log (g_test_rand_double_range (0.9, 1.0));
-  NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_sbessel_jljm_new (ell, dell, lnw, 0.0, 0.0, 20.0, N));
-  TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
-  TestNcmFftlogPlaw *arg = g_new (TestNcmFftlogPlaw, 1);
-  gdouble Lk             = g_test_rand_double_range (log (1.0e+6), log (1.0e+7));
-
-  test->fftlog       = fftlog;
-  test->Fk.function  = &_test_ncm_fftlog_plaw;
-  test->Fk.params    = arg;
-  test->KFk.function = &_test_ncm_fftlog_sbessel_jljm;
-  test->KFk.params   = argK;
-  test->argK         = argK;
-
-  test->lnk_i = g_test_rand_double_range (log (1.0e-6), log (1.0e-4));
-  test->lnk_f = test->lnk_i + Lk;
-
-  test->ntests = NTESTS;
-
-  arg->lnA = g_test_rand_double_range (log (1.0e-10), log (1.0e-9));
-  arg->ns  = g_test_rand_double_range (0.92, 0.98);
-
-  argK->lnr = 0.0;
-  argK->Fk  = test->Fk;
-  argK->ell = ell;
-  argK->m   = ell + dell;
-  argK->w   = exp (lnw);
-
-  /*printf ("# %u %u % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", ell, N, Lk, argK->w, gsl_pow_4 (argK->w), exp (test->lnk_i), exp (test->lnk_f));*/
-
-  ncm_fftlog_set_lnk0 (fftlog, +0.5 * (test->lnk_i + test->lnk_f));
-  ncm_fftlog_set_length (fftlog, Lk);
-  /*ncm_fftlog_set_lnr0 (fftlog, -0.5 * (test->lnk_i + test->lnk_f) + 3.0); */
-  ncm_fftlog_sbessel_jljm_set_best_lnr0 (NCM_FFTLOG_SBESSEL_JLJM (fftlog));
-  ncm_fftlog_sbessel_jljm_set_best_lnk0 (NCM_FFTLOG_SBESSEL_JLJM (fftlog));
-
-
-  g_assert_true (fftlog != NULL);
-  g_assert_true (NCM_IS_FFTLOG (fftlog));
-  g_assert_true (NCM_IS_FFTLOG_SBESSEL_JLJM (fftlog));
 }
 
 void
@@ -937,13 +857,6 @@ void
 test_ncm_fftlog_sbessel_j_traps (TestNcmFftlog *test, gconstpointer pdata)
 {
   g_test_trap_subprocess ("/ncm/fftlog/sbessel_j/invalid/st/subprocess", 0, 0);
-  g_test_trap_assert_failed ();
-}
-
-void
-test_ncm_fftlog_sbessel_jljm_traps (TestNcmFftlog *test, gconstpointer pdata)
-{
-  g_test_trap_subprocess ("/ncm/fftlog/sbessel_jljm/invalid/st/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 }
 

@@ -87,7 +87,6 @@
 #include <numcosmo/ncm/powspec/ncm_powspec_corr3d.h>
 #include <numcosmo/ncm/powspec/ncm_powspec_filter.h>
 #include <numcosmo/ncm/powspec/tests/ncm_powspec_analytic.h>
-#include <numcosmo/ncm/powspec/ncm_powspec_sphere_proj.h>
 #include <numcosmo/ncm/powspec/ncm_powspec_spline2d.h>
 #include <numcosmo/ncm/powspec/ncm_powspec.h>
 #include <numcosmo/ncm/dynamics/ncm_csq1d.h>
@@ -103,7 +102,6 @@
 #include <numcosmo/ncm/specfunc/ncm_mpsf_0F1.h>
 #include <numcosmo/ncm/fftlog/ncm_fftlog.h>
 #include <numcosmo/ncm/fftlog/ncm_fftlog_sbessel_j.h>
-#include <numcosmo/ncm/fftlog/ncm_fftlog_sbessel_jljm.h>
 #include <numcosmo/ncm/fftlog/ncm_fftlog_tophatwin2.h>
 #include <numcosmo/ncm/fftlog/ncm_fftlog_gausswin2.h>
 #include <numcosmo/ncm/model/ncm_sparam.h>
