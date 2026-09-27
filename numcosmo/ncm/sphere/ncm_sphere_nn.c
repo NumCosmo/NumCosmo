@@ -239,7 +239,7 @@ ncm_sphere_nn_get (NcmSphereNN *snn, const gint64 i, gdouble *r, gdouble *theta,
 
   coord  = self->tree->coord_table[i];
   *r     = sqrt (coord[0] * coord[0] + coord[1] * coord[1] + coord[2] * coord[2]);
-  *theta = acos (coord[2] / *r);
+  *theta = atan2 (hypot (coord[0], coord[1]), coord[2]); /* acos (z / r) loses precision near the poles */
   *phi   = atan2 (coord[1], coord[0]);
 }
 

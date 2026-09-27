@@ -51,6 +51,7 @@ void test_ncm_sphere_map_properties (TestNcmSphereMap *test, gconstpointer pdata
 void test_ncm_sphere_map_traps (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_invalid_nside (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_order_roundtrip (TestNcmSphereMap *test, gconstpointer pdata);
+void test_ncm_sphere_map_cap_centres (void);
 void test_ncm_sphere_map_invalid_pixel (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_invalid_negative_pixel (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_invalid_ring (TestNcmSphereMap *test, gconstpointer pdata);
@@ -106,6 +107,8 @@ main (gint argc, gchar *argv[])
               &test_ncm_sphere_map_new,
               &test_ncm_sphere_map_order_roundtrip,
               &test_ncm_sphere_map_free);
+
+  g_test_add_func ("/ncm/sphere_map/cap_centres", &test_ncm_sphere_map_cap_centres);
 
   g_test_add ("/ncm/sphere_map/invalid/pixel/subprocess", TestNcmSphereMap, NULL,
               &test_ncm_sphere_map_new,
@@ -452,5 +455,40 @@ void
 test_ncm_sphere_map_invalid_ring (TestNcmSphereMap *test, gconstpointer pdata)
 {
   ncm_sphere_map_get_ring_size (test->pix, ncm_sphere_map_get_nrings (test->pix));
+}
+
+/*
+ * The first pixel of each polar-cap ring t (1 to nside - 1) sits at
+ * theta = 2 asin (t / (sqrt(6) nside)) in the north and pi minus that in the south. The
+ * centres came from acos (1 - t^2 / (3 nside^2)) and sqrt (1 - z^2), which lose precision
+ * as nside^2 (3.6e-12 at nside 256, 5.8e-11 at 1024); both are now at rounding level.
+ */
+void
+test_ncm_sphere_map_cap_centres (void)
+{
+  const gint64 nside = 256;
+  NcmSphereMap *smap = ncm_sphere_map_new (nside);
+  NcmTriVec *vec     = ncm_trivec_new ();
+  gint64 t;
+
+  for (t = 1; t < nside; t++)
+  {
+    const gdouble theta_n = 2.0 * asin (t / (sqrt (6.0) * nside));
+    const gint64 north    = ncm_sphere_map_get_ring_first_index (smap, t - 1);
+    const gint64 south    = ncm_sphere_map_get_ring_first_index (smap, ncm_sphere_map_get_nrings (smap) - t);
+    gdouble theta, phi;
+
+    ncm_sphere_map_pix2ang_ring (smap, north, &theta, &phi);
+    ncm_assert_cmpdouble_e (theta, ==, theta_n, 1.0e-15, 0.0);
+
+    ncm_sphere_map_pix2ang_ring (smap, south, &theta, &phi);
+    ncm_assert_cmpdouble_e (theta, ==, M_PI - theta_n, 1.0e-15, 0.0);
+
+    ncm_sphere_map_pix2vec_ring (smap, north, vec);
+    ncm_assert_cmpdouble_e (hypot (vec->c[0], vec->c[1]), ==, sin (theta_n), 1.0e-15, 0.0);
+  }
+
+  ncm_trivec_free (vec);
+  ncm_sphere_map_free (smap);
 }
 

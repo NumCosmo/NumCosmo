@@ -1161,193 +1161,57 @@ ncm_sphere_map_ring2nest (NcmSphereMap *smap, const gint64 ring_index)
   return nest_index;
 }
 
-static void
-_t_p_w_to_theta_phi (const gint64 nside, const gint tm1, const gint pm1, const gint w, gdouble *theta, gdouble *phi)
-{
-  const gint64 t = tm1 + 1;
-  const gint64 p = pm1 + 1;
-
-  if (t < nside)
-  {
-    *theta = acos ((1.0 - t * t * 1.0 / (3.0 * nside * nside)));
-    *phi   = (p - 0.5) * M_PI_2 / (1.0 * w);
-  }
-  else if (t > 3 * nside)
-  {
-    gint tt = 4 * nside - t;
-
-    *theta = acos (-(1.0 - tt * tt * 1.0 / (3.0 * nside * nside)));
-    *phi   = (p - 0.5) * M_PI_2 / (1.0 * w);
-  }
-  else
-  {
-    *theta = acos ((2.0 * nside - t) * 2.0 / (3.0 * nside));
-    *phi   = (p - ((t - nside) % 2 + 1.0) * 0.5) * M_PI_2 / (1.0 * w);
-  }
-}
-
-static void
-_t_p_w_to_vector (const gint64 nside, const gint tm1, const gint pm1, const gint w, NcmTriVec *vec)
-{
-  const gint64 t = tm1 + 1;
-  const gint64 p = pm1 + 1;
-  gdouble phi, z, sin_theta;
-
-  if (t < nside)
-  {
-    phi = (p - 0.5) * M_PI_2 / (1.0 * w);
-    z   = (1.0 - t * t * 1.0 / (3.0 * nside * nside));
-  }
-  else if (t > 3 * nside)
-  {
-    const gint tt = 4 * nside - t;
-
-    phi = (p - 0.5) * M_PI_2 / (1.0 * w);
-    z   = -(1.0 - tt * tt * 1.0 / (3.0 * nside * nside));
-  }
-  else
-  {
-    phi = (p - ((t - nside) % 2 + 1.0) * 0.5) * M_PI_2 / (1.0 * w);
-    z   = (2.0 * nside - t) * 2.0 / (3.0 * nside);
-  }
-
-  sin_theta = sqrt (1.0 - z * z);
-  vec->c[0] = sin_theta * cos (phi);
-  vec->c[1] = sin_theta * sin (phi);
-  vec->c[2] = z;
-}
+static void _ncm_sphere_map_nest_to_tpw (NcmSphereMapPrivate * const self, const gint64 nest_index, gint64 *t, gint64 *p, gint64 *w);
+static void _ncm_sphere_map_ring_to_tpw (NcmSphereMapPrivate * const self, const gint64 ring_index, gint64 *t, gint64 *p, gint64 *w);
+static void _ncm_sphere_map_tpw_to_centre (const gint64 nside, const gint64 t0, const gint64 p0, const gint64 w, gdouble *z, gdouble *sin_theta, gdouble *phi);
 
 /**
  * ncm_sphere_map_pix2ang_nest:
  * @smap: a #NcmSphereMap
  * @nest_index: a pixel index in NESTED ordering
- * @theta: (out): the polar angle of the pixel
- * @phi: (out): the azimuthal angle of the pixel
+ * @theta: (out): the polar angle of the pixel centre, in $[0, \pi]$ (radians)
+ * @phi: (out): the azimuth of the pixel centre, in $[0, 2\pi)$ (radians)
  *
- * Converts a pixel index from NESTED to spherical coordinates and
- * returns the angles @theta and @phi.
+ * Gets the centre of the pixel @nest_index. The polar angle is measured from the north
+ * pole.
  *
  */
 void
 ncm_sphere_map_pix2ang_nest (NcmSphereMap *smap, const gint64 nest_index, gdouble *theta, gdouble *phi)
 {
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
-  gint64 f, h, v;            /* Face number, horizontal coordinate, vertical coordinate */
-  gint64 t, p, s, pad, w, l; /* theta, phi, shift, padding, width, local index          */
-  gint64 x, y;
-  gint64 hf;
+  gint64 t, p, w;
+  gdouble z, sin_theta;
 
   _ncm_sphere_map_check_index (nest_index, self->npix, G_STRFUNC, "pixel");
+  _ncm_sphere_map_nest_to_tpw (self, nest_index, &t, &p, &w);
+  _ncm_sphere_map_tpw_to_centre (self->nside, t, p, w, &z, &sin_theta, phi);
 
-  f = nest_index / self->face_size;
-  l = nest_index % self->face_size;
-
-  NCM_SPHERE_MAP_INT_TO_XY (l, x, y);
-
-  h = self->nside - 1 - y;
-  v = 2 * self->nside - 2 - y - x;
-
-  switch (f / 4)
-  {
-    case 0:
-      t = v;
-
-      if (t < (self->nside - 1))
-      {
-        w   = (t + 1);
-        s   = 0;
-        pad = 0;
-        hf  = f % 4;
-      }
-      else
-      {
-        w   = self->nside;
-        s   = (t - (self->nside - 1)) / 2;
-        pad = 0;
-        hf  = f % 4;
-      }
-
-      break;
-    case 1:
-      t   = v + self->nside;
-      w   = self->nside;
-      s   = (t - (self->nside - 1)) / 2;
-      pad = 0;
-      hf  = f % 4;
-      break;
-    case 2:
-      t = v + 2 * self->nside;
-
-      if (v < self->nside)
-      {
-        w   = self->nside;
-        s   = (t - (self->nside - 1)) / 2;
-        pad = 0;
-        hf  = f % 4 + 1;
-      }
-      else
-      {
-        w   = 4 * self->nside - t - 1;
-        s   = w;
-        pad = (t - 3 * self->nside + 1);
-        hf  = f % 4 + 1;
-      }
-
-      break;
-    default:
-      g_assert_not_reached ();
-      break;
-  }
-
-  p = (h + hf * w - s - pad);
-
-  if (p < 0)
-    p += 4 * w;
-
-  _t_p_w_to_theta_phi (self->nside, t, p, w, theta, phi);
+  *theta = atan2 (sin_theta, z);
 }
 
 /**
  * ncm_sphere_map_pix2ang_ring:
  * @smap: a #NcmSphereMap
  * @ring_index: a pixel index in RING ordering
- * @theta: (out): the polar angle of the pixel
- * @phi: (out): the azimuthal angle of the pixel
+ * @theta: (out): the polar angle of the pixel centre, in $[0, \pi]$ (radians)
+ * @phi: (out): the azimuth of the pixel centre, in $[0, 2\pi)$ (radians)
  *
- * Converts a pixel index from RING to spherical coordinates and
- * returns the angles @theta and @phi.
+ * Gets the centre of the pixel @ring_index, see ncm_sphere_map_pix2ang_nest().
  *
  */
 void
 ncm_sphere_map_pix2ang_ring (NcmSphereMap *smap, const gint64 ring_index, gdouble *theta, gdouble *phi)
 {
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
-  gint64 t, p, w, l; /* theta, phi, shift, padding, width, local index */
+  gint64 t, p, w;
+  gdouble z, sin_theta;
 
   _ncm_sphere_map_check_index (ring_index, self->npix, G_STRFUNC, "pixel");
+  _ncm_sphere_map_ring_to_tpw (self, ring_index, &t, &p, &w);
+  _ncm_sphere_map_tpw_to_centre (self->nside, t, p, w, &z, &sin_theta, phi);
 
-  if (ring_index < self->cap_size)
-  {
-    t = (sqrt (1 + 2 * ring_index) - 1) / 2;
-    w = (t + 1);
-    p = ring_index - 2 * (_l_pow_2 (t + 1) - t - 1);
-  }
-  else if (ring_index < (self->npix - self->cap_size))
-  {
-    l = ring_index - self->cap_size;
-    w = self->nside;
-    t = (gint64) (l / self->middle_rings_size) + (self->nside - 1);
-    p = l % self->middle_rings_size;
-  }
-  else
-  {
-    l = ring_index - self->npix + self->cap_size;
-    t = 4 * self->nside - (1 + sqrt (4 * _l_pow_2 (self->nside) - 4 * self->nside + 1 - 2 * l)) / 2;
-    w = 4 * self->nside - t - 1;
-    p = l - (4 * self->nside * (t - 3 * self->nside + 1) - 2 * _l_pow_2 (t - 3 * self->nside + 1) + 2 * (t - 3 * self->nside) + 2 - 4 * self->nside);
-  }
-
-  _t_p_w_to_theta_phi (self->nside, t, p, w, theta, phi);
+  *theta = atan2 (sin_theta, z);
 }
 
 /**
@@ -1356,39 +1220,23 @@ ncm_sphere_map_pix2ang_ring (NcmSphereMap *smap, const gint64 ring_index, gdoubl
  * @ring_index: a pixel index in RING ordering
  * @vec: a #NcmTriVec
  *
- * Converts a pixel index from RING to a unit vector.
+ * Sets @vec to the unit vector of the centre of the pixel @ring_index.
  *
  */
 void
 ncm_sphere_map_pix2vec_ring (NcmSphereMap *smap, gint64 ring_index, NcmTriVec *vec)
 {
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
-  gint64 t, p, w, l; /* theta, phi, shift, padding, width, local index */
+  gint64 t, p, w;
+  gdouble z, sin_theta, phi;
 
   _ncm_sphere_map_check_index (ring_index, self->npix, G_STRFUNC, "pixel");
+  _ncm_sphere_map_ring_to_tpw (self, ring_index, &t, &p, &w);
+  _ncm_sphere_map_tpw_to_centre (self->nside, t, p, w, &z, &sin_theta, &phi);
 
-  if (ring_index < self->cap_size)
-  {
-    t = (sqrt (1 + 2 * ring_index) - 1) / 2;
-    w = (t + 1);
-    p = ring_index - 2 * (_l_pow_2 (t + 1) - t - 1);
-  }
-  else if (ring_index < (self->npix - self->cap_size))
-  {
-    l = ring_index - self->cap_size;
-    w = self->nside;
-    t = (gint64) (l / self->middle_rings_size) + (self->nside - 1);
-    p = l % self->middle_rings_size;
-  }
-  else
-  {
-    l = ring_index - self->npix + self->cap_size;
-    t = 4 * self->nside - (1 + sqrt (4 * _l_pow_2 (self->nside) - 4 * self->nside + 1 - 2 * l)) / 2;
-    w = 4 * self->nside - t - 1;
-    p = l - (4 * self->nside * (t - 3 * self->nside + 1) - 2 * _l_pow_2 (t - 3 * self->nside + 1) + 2 * (t - 3 * self->nside) + 2 - 4 * self->nside);
-  }
-
-  _t_p_w_to_vector (self->nside, t, p, w, vec);
+  vec->c[0] = sin_theta * cos (phi);
+  vec->c[1] = sin_theta * sin (phi);
+  vec->c[2] = z;
 }
 
 /**
@@ -1397,22 +1245,33 @@ ncm_sphere_map_pix2vec_ring (NcmSphereMap *smap, gint64 ring_index, NcmTriVec *v
  * @nest_index: a pixel index in NESTED ordering
  * @vec: a #NcmTriVec
  *
- * Converts a pixel index from NESTED to a unit vector.
+ * Sets @vec to the unit vector of the centre of the pixel @nest_index.
  *
  */
 void
 ncm_sphere_map_pix2vec_nest (NcmSphereMap *smap, gint64 nest_index, NcmTriVec *vec)
 {
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
-  gint64 f, h, v;            /* Face number, horizontal coordinate, vertical coordinate */
-  gint64 t, p, s, pad, w, l; /* theta, phi, shift, padding, width, local index          */
-  gint64 x, y;
-  gint64 hf;
+  gint64 t, p, w;
+  gdouble z, sin_theta, phi;
 
   _ncm_sphere_map_check_index (nest_index, self->npix, G_STRFUNC, "pixel");
+  _ncm_sphere_map_nest_to_tpw (self, nest_index, &t, &p, &w);
+  _ncm_sphere_map_tpw_to_centre (self->nside, t, p, w, &z, &sin_theta, &phi);
 
-  f = nest_index / self->face_size;
-  l = nest_index % self->face_size;
+  vec->c[0] = sin_theta * cos (phi);
+  vec->c[1] = sin_theta * sin (phi);
+  vec->c[2] = z;
+}
+
+/* Ring t (from 0 at the north pole), position p in the ring (from 0) and the ring's
+ * pixels per face w of a NESTED pixel. */
+static void
+_ncm_sphere_map_nest_to_tpw (NcmSphereMapPrivate * const self, const gint64 nest_index, gint64 *t_out, gint64 *p_out, gint64 *w_out)
+{
+  const gint64 f = nest_index / self->face_size; /* Face number */
+  const gint64 l = nest_index % self->face_size; /* Index within the face */
+  gint64 h, v, t, p, s, pad, w, x, y, hf;        /* Horizontal and vertical coordinates, shift, padding */
 
   NCM_SPHERE_MAP_INT_TO_XY (l, x, y);
 
@@ -1422,23 +1281,11 @@ ncm_sphere_map_pix2vec_nest (NcmSphereMap *smap, gint64 nest_index, NcmTriVec *v
   switch (f / 4)
   {
     case 0:
-      t = v;
-
-      if (t < (self->nside - 1))
-      {
-        w   = (t + 1);
-        s   = 0;
-        pad = 0;
-        hf  = f % 4;
-      }
-      else
-      {
-        w   = self->nside;
-        s   = (t - (self->nside - 1)) / 2;
-        pad = 0;
-        hf  = f % 4;
-      }
-
+      t   = v;
+      w   = (t < (self->nside - 1)) ? (t + 1) : self->nside;
+      s   = (t < (self->nside - 1)) ? 0 : (t - (self->nside - 1)) / 2;
+      pad = 0;
+      hf  = f % 4;
       break;
     case 1:
       t   = v + self->nside;
@@ -1455,16 +1302,15 @@ ncm_sphere_map_pix2vec_nest (NcmSphereMap *smap, gint64 nest_index, NcmTriVec *v
         w   = self->nside;
         s   = (t - (self->nside - 1)) / 2;
         pad = 0;
-        hf  = f % 4 + 1;
       }
       else
       {
         w   = 4 * self->nside - t - 1;
         s   = w;
         pad = (t - 3 * self->nside + 1);
-        hf  = f % 4 + 1;
       }
 
+      hf = f % 4 + 1;
       break;
     default:
       g_assert_not_reached ();
@@ -1476,7 +1322,66 @@ ncm_sphere_map_pix2vec_nest (NcmSphereMap *smap, gint64 nest_index, NcmTriVec *v
   if (p < 0)
     p += 4 * w;
 
-  _t_p_w_to_vector (self->nside, t, p, w, vec);
+  *t_out = t;
+  *p_out = p;
+  *w_out = w;
+}
+
+/* Ring t, position p and pixels per face w of a RING pixel, see
+ * _ncm_sphere_map_nest_to_tpw(). */
+static void
+_ncm_sphere_map_ring_to_tpw (NcmSphereMapPrivate * const self, const gint64 ring_index, gint64 *t, gint64 *p, gint64 *w)
+{
+  if (ring_index < self->cap_size)
+  {
+    *t = (sqrt (1 + 2 * ring_index) - 1) / 2;
+    *w = (*t + 1);
+    *p = ring_index - 2 * (_l_pow_2 (*t + 1) - *t - 1);
+  }
+  else if (ring_index < (self->npix - self->cap_size))
+  {
+    const gint64 l = ring_index - self->cap_size;
+
+    *w = self->nside;
+    *t = (gint64) (l / self->middle_rings_size) + (self->nside - 1);
+    *p = l % self->middle_rings_size;
+  }
+  else
+  {
+    const gint64 l = ring_index - self->npix + self->cap_size;
+
+    *t = 4 * self->nside - (1 + sqrt (4 * _l_pow_2 (self->nside) - 4 * self->nside + 1 - 2 * l)) / 2;
+    *w = 4 * self->nside - *t - 1;
+    *p = l - (4 * self->nside * (*t - 3 * self->nside + 1) - 2 * _l_pow_2 (*t - 3 * self->nside + 1) + 2 * (*t - 3 * self->nside) + 2 - 4 * self->nside);
+  }
+}
+
+/* Centre of the pixel (t, p, w): z = cos(theta), sin(theta) and phi. In the polar caps
+ * 1 - |z| = t'^2 / (3 nside^2) is exact from the ring index t' (from 1 at the pole), so
+ * sin(theta) = sqrt((1 - |z|)(1 + |z|)) keeps full precision; 1 - z^2 from z loses it as
+ * nside^2 (5.5e-11 at nside 1024), and so does acos (z). */
+static void
+_ncm_sphere_map_tpw_to_centre (const gint64 nside, const gint64 t0, const gint64 p0, const gint64 w, gdouble *z, gdouble *sin_theta, gdouble *phi)
+{
+  const gint64 t = t0 + 1;
+  const gint64 p = p0 + 1;
+
+  if ((t < nside) || (t > 3 * nside))
+  {
+    const gint64 tc     = (t < nside) ? t : 4 * nside - t;
+    const gdouble onemz = tc * tc / (3.0 * nside * nside);
+    const gdouble abs_z = 1.0 - onemz;
+
+    *z         = (t < nside) ? abs_z : -abs_z;
+    *sin_theta = sqrt (onemz * (1.0 + abs_z));
+    *phi       = (p - 0.5) * M_PI_2 / (1.0 * w);
+  }
+  else
+  {
+    *z         = (2.0 * nside - t) * 2.0 / (3.0 * nside);
+    *sin_theta = sqrt ((1.0 - *z) * (1.0 + *z));
+    *phi       = (p - ((t - nside) % 2 + 1.0) * 0.5) * M_PI_2 / (1.0 * w);
+  }
 }
 
 static void
@@ -1563,8 +1468,6 @@ _ncm_sphere_map_zphi2pix_ring (NcmSphereMap *smap, const gdouble z, const gdoubl
     const gdouble tp  = tt - (gint64) (tt);
     const gdouble tmp = self->nside * sqrt (3.0 * onemz2 / (1.0 + abs_z));
 
-    ;
-
     const gint64 jp = (gint64) (tp * tmp);
     const gint64 jm = (gint64) ((1.0 - tp) * tmp);
 
@@ -1581,11 +1484,11 @@ _ncm_sphere_map_zphi2pix_ring (NcmSphereMap *smap, const gdouble z, const gdoubl
 /**
  * ncm_sphere_map_ang2pix_nest:
  * @smap: a #NcmSphereMap
- * @theta: a polar angle
- * @phi: an azimuthal angle
+ * @theta: a polar angle, from the north pole (radians)
+ * @phi: an azimuth (radians), any value, taken modulo $2\pi$
  * @nest_index: (out): the pixel index in NESTED ordering
  *
- * Converts spherical coordinates to a pixel index in NESTED ordering.
+ * Gets the NESTED index of the pixel that contains the direction (@theta, @phi).
  *
  */
 void
@@ -1602,11 +1505,11 @@ ncm_sphere_map_ang2pix_nest (NcmSphereMap *smap, const gdouble theta, const gdou
 /**
  * ncm_sphere_map_ang2pix_ring:
  * @smap: a #NcmSphereMap
- * @theta: a polar angle
- * @phi: an azimuthal angle
+ * @theta: a polar angle, from the north pole (radians)
+ * @phi: an azimuth (radians), any value, taken modulo $2\pi$
  * @ring_index: (out): the pixel index in RING ordering
  *
- * Converts spherical coordinates to a pixel index in RING ordering.
+ * Gets the RING index of the pixel that contains the direction (@theta, @phi).
  *
  */
 void
@@ -1626,17 +1529,19 @@ ncm_sphere_map_ang2pix_ring (NcmSphereMap *smap, const gdouble theta, const gdou
  * @vec: a #NcmTriVec
  * @ring_index: (out): the pixel index in RING ordering
  *
- * Converts a unit vector to a pixel index in RING ordering.
+ * Gets the RING index of the pixel that contains the direction of @vec, any non-zero
+ * vector.
  *
  */
 void
 ncm_sphere_map_vec2pix_ring (NcmSphereMap *smap, NcmTriVec *vec, gint64 *ring_index)
 {
-  const gdouble norm = ncm_trivec_norm (vec);
-  const gdouble z    = vec->c[2] / norm;
-  const gdouble phi  = ncm_trivec_get_phi (vec);
+  const gdouble norm    = ncm_trivec_norm (vec);
+  const gdouble z       = vec->c[2] / norm;
+  const gdouble sin_the = hypot (vec->c[0], vec->c[1]) / norm; /* 1 - z^2 would cancel near the poles */
+  const gdouble phi     = ncm_trivec_get_phi (vec);
 
-  _ncm_sphere_map_zphi2pix_ring (smap, z, 1.0 - gsl_pow_2 (z), phi, ring_index);
+  _ncm_sphere_map_zphi2pix_ring (smap, z, gsl_pow_2 (sin_the), phi, ring_index);
 }
 
 /**
@@ -1645,17 +1550,19 @@ ncm_sphere_map_vec2pix_ring (NcmSphereMap *smap, NcmTriVec *vec, gint64 *ring_in
  * @vec: a #NcmTriVec
  * @nest_index: (out): the pixel index in NESTED ordering
  *
- * Converts a unit vector to a pixel index in NESTED ordering.
+ * Gets the NESTED index of the pixel that contains the direction of @vec, any non-zero
+ * vector.
  *
  */
 void
 ncm_sphere_map_vec2pix_nest (NcmSphereMap *smap, NcmTriVec *vec, gint64 *nest_index)
 {
-  const gdouble norm = ncm_trivec_norm (vec);
-  const gdouble z    = vec->c[2] / norm;
-  const gdouble phi  = ncm_trivec_get_phi (vec);
+  const gdouble norm    = ncm_trivec_norm (vec);
+  const gdouble z       = vec->c[2] / norm;
+  const gdouble sin_the = hypot (vec->c[0], vec->c[1]) / norm; /* 1 - z^2 would cancel near the poles */
+  const gdouble phi     = ncm_trivec_get_phi (vec);
 
-  _ncm_sphere_map_zphi2pix_nest (smap, z, 1.0 - gsl_pow_2 (z), phi, nest_index);
+  _ncm_sphere_map_zphi2pix_nest (smap, z, gsl_pow_2 (sin_the), phi, nest_index);
 }
 
 /**
@@ -1664,7 +1571,8 @@ ncm_sphere_map_vec2pix_nest (NcmSphereMap *smap, NcmTriVec *vec, gint64 *nest_in
  * @vec: a #NcmTriVec
  * @s: signal
  *
- * Adds @s to the signal at the pixel corresponding to @vec.
+ * Adds @s to the pixel of @smap, in its current ordering, that contains the direction
+ * of @vec.
  *
  */
 void
@@ -1696,7 +1604,8 @@ ncm_sphere_map_add_to_vec (NcmSphereMap *smap, NcmTriVec *vec, const gdouble s)
  * @phi: $\phi$
  * @s: signal
  *
- * Adds @s to the signal at the pixel corresponding to @theta and @phi.
+ * Adds @s to the pixel of @smap, in its current ordering, that contains the direction
+ * (@theta, @phi), see ncm_sphere_map_ang2pix_ring().
  *
  */
 void

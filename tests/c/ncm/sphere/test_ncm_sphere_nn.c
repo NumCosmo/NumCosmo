@@ -52,6 +52,7 @@ void test_ncm_sphere_nn_brute_force (TestNcmSphereNN *test, gconstpointer pdata)
 void test_ncm_sphere_nn_searches_agree (TestNcmSphereNN *test, gconstpointer pdata);
 void test_ncm_sphere_nn_rebuild (TestNcmSphereNN *test, gconstpointer pdata);
 void test_ncm_sphere_nn_repeated (TestNcmSphereNN *test, gconstpointer pdata);
+void test_ncm_sphere_nn_get_near_pole (void);
 void test_ncm_sphere_nn_dump (void);
 void test_ncm_sphere_nn_dump_subprocess (void);
 
@@ -83,6 +84,7 @@ main (gint argc, gchar *argv[])
 
   g_test_add ("/ncm/sphere_nn/repeated", TestNcmSphereNN, NULL,
               &test_ncm_sphere_nn_new, &test_ncm_sphere_nn_repeated, &test_ncm_sphere_nn_free);
+  g_test_add_func ("/ncm/sphere_nn/get_near_pole", &test_ncm_sphere_nn_get_near_pole);
   g_test_add_func ("/ncm/sphere_nn/dump", &test_ncm_sphere_nn_dump);
   g_test_add_func ("/ncm/sphere_nn/dump/subprocess", &test_ncm_sphere_nn_dump_subprocess);
   g_test_add_func ("/ncm/sphere_nn/traps", &test_ncm_sphere_nn_traps);
@@ -463,5 +465,28 @@ test_ncm_sphere_nn_invalid_lengths (void)
   g_array_set_size (b, 2);
 
   ncm_sphere_nn_insert_array (snn, a, a, b);
+}
+
+/* The polar angle of a stored point comes back at full precision near the poles:
+ * acos (z / r) lost it as 1 / theta^2 (4.1e-8 at theta = 1e-5, 4.0e-4 at 1e-7). */
+void
+test_ncm_sphere_nn_get_near_pole (void)
+{
+  NcmSphereNN *snn        = ncm_sphere_nn_new ();
+  const gdouble theta_a[] = {1.0e-3, 1.0e-5, 1.0e-7, M_PI - 1.0e-7};
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (theta_a); i++)
+    ncm_sphere_nn_insert (snn, 1.0, theta_a[i], 0.3);
+
+  for (i = 0; i < G_N_ELEMENTS (theta_a); i++)
+  {
+    gdouble r, theta, phi;
+
+    ncm_sphere_nn_get (snn, i, &r, &theta, &phi);
+    ncm_assert_cmpdouble_e (theta, ==, theta_a[i], 1.0e-15, 0.0);
+  }
+
+  ncm_sphere_nn_free (snn);
 }
 
