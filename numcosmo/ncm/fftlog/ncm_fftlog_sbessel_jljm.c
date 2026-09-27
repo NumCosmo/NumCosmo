@@ -29,10 +29,12 @@
  *
  * Logarithm fast fourier transform for the base kernel for angular projections.
  *
- * This object computes the function (see #NcmFftlog) $$Y_n = \int_0^\infty
- * t^{\frac{2\pi i n}{L}} K(t) dt,$$ where the kernel are the product of spherical
- * bessel function of the first kind $K(t) = t^q j_{\ell}(t r) j_{\ell+\delta\ell}(t /
- * r)$, where $\delta\ell = m - l$.
+ * This object computes the coefficients (see #NcmFftlog) $$Y_n = \int_0^\infty
+ * t^{b + \frac{2\pi i n}{L_T}} K(t) dt,$$ where the kernel is the product of spherical
+ * Bessel functions of the first kind $K(t) = j_{\ell}(t w) j_{\ell+\delta\ell}(t / w)$,
+ * where $\delta\ell = m - \ell$. The coefficients are written for any bias $b$
+ * (#NcmFftlog:bias), but no range is declared for it, so only $b = 0$ is accepted until
+ * they are checked against a reference.
  *
  */
 
@@ -86,7 +88,6 @@ typedef struct _NcmFftlogSBesselJLJMPrivate
 {
   gint ell;
   gint dell;
-  gdouble q;
   gdouble lnw;
   gdouble w;
   SUNContext sunctx;
@@ -543,7 +544,7 @@ _ncm_fftlog_sbessel_jljm_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   NcmVector *Ym_v_cache                    = NULL;
   gint Nf_cached                           = 0;
   gint Nf_cached_2                         = 0;
-  acb_t two, onehalf, twopi_Lt, Lt, a_n, A_n, B_n, C_n, D_n, E_n, F_n, N_n, w4, x, q, lnw, res, pi;
+  acb_t two, onehalf, twopi_Lt, Lt, a_n, A_n, B_n, C_n, D_n, E_n, F_n, N_n, w4, x, bias, lnw, res, pi;
   gint i, i_ini = 0, i_size = Nf;
   glong prec_sf;
 
@@ -604,12 +605,12 @@ _ncm_fftlog_sbessel_jljm_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   acb_init (N_n);
   acb_init (w4);
   acb_init (x);
-  acb_init (q);
+  acb_init (bias);
   acb_init (lnw);
   acb_init (res);
 
   acb_set_d (Lt,  ncm_fftlog_get_full_length (fftlog));
-  acb_set_d (q,   self->q);
+  acb_set_d (bias, ncm_fftlog_get_bias (fftlog));
   acb_set_d (lnw, self->lnw);
 
   acb_const_pi (pi, maxprec);
@@ -637,7 +638,7 @@ _ncm_fftlog_sbessel_jljm_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 
     if (FALSE)
     {
-      acb_set (A_n, q);                        /* A_n = q */
+      acb_set (A_n, bias);                     /* A_n = bias */
       acb_add (A_n, A_n, a_n, prec);           /* A_n = A_n + a_n */
       acb_add_ui (A_n, A_n, 1, prec);          /* A_n = A_n + 1 */
       acb_add_si (A_n, A_n, self->ell,  prec); /* A_n = A_n + ell */
@@ -693,23 +694,23 @@ _ncm_fftlog_sbessel_jljm_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
       acb_set (A_n, onehalf);                 /* A_n = 1 / 2 */
       acb_add_si (A_n, A_n, self->ell, prec); /* A_n = A_n + ell */
 
-      acb_add (B_n, a_n, q, prec);    /* B_n = a_n + q */
+      acb_add (B_n, a_n, bias, prec); /* B_n = a_n + bias */
       acb_sub_ui (B_n, B_n, 1, prec); /* B_n = B_n - 1 */
 
-      acb_add (C_n, a_n, q, prec);                                 /* C_n = a_n + q */
+      acb_add (C_n, a_n, bias, prec);                              /* C_n = a_n + bias */
       acb_add_si (C_n, C_n, 2 * self->ell + self->dell + 1, prec); /* C_n = C_n + 2ell + dell + 1 */
       acb_div_ui (C_n, C_n, 2, prec);                              /* C_n = C_n / 2 */
 
       acb_conj (D_n, C_n);            /* D_n = C_n^* */
-      acb_sub (D_n, D_n, q, prec);    /* D_n = D_n - q */
+      acb_sub (D_n, D_n, bias, prec); /* D_n = D_n - bias */
       acb_add_ui (D_n, D_n, 1, prec); /* D_n = D_n + 1 */
 
       acb_neg (N_n, a_n);                      /* N_n = -a_n */
       acb_add_si (N_n, N_n, self->dell, prec); /* N_n = N_n + dell */
-      acb_sub (N_n, N_n, q, prec);             /* N_n = N_n - q */
+      acb_sub (N_n, N_n, bias, prec);          /* N_n = N_n - bias */
       acb_div_ui (N_n, N_n, 2, prec);          /* N_n = N_n / 2 */
 
-      acb_add (E_n, a_n, q, prec);                    /* E_n = a_n + q */
+      acb_add (E_n, a_n, bias, prec);                 /* E_n = a_n + bias */
       acb_set (F_n, E_n);                             /* F_n = E_n */
       acb_sub_ui (E_n, E_n, 2, prec);                 /* E_n = E_n - 2 */
       acb_add_si (F_n, F_n, 2 * self->ell + 1, prec); /* F_n = F_n + 2 ell + 1 */
@@ -766,28 +767,6 @@ _ncm_fftlog_sbessel_jljm_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
     }
 
     Ym_base[i] = ncm_acb_get_complex (res);
-
-/*
- *   printf ("%d %d %d %u %ld % 22.15g % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g | % 22.15g % 22.15g | % 22.15g % 22.15g | % 22.15g % 22.15g | % 22.15g % 22.15g | % 22.15g % 22.15g % 22.15g % 22.15g\n",
- *           phys_i, self->ell, self->dell,
- *           prec, prec_sf,
- *           self->q, self->w, gsl_pow_4 (self->w),
- *           ncm_fftlog_get_full_length (fftlog),
- *           creal (Ym_base[i]), cimag (Ym_base[i]),
- *           creal (ncm_acb_get_complex (N_n)),
- *           cimag (ncm_acb_get_complex (N_n)),
- *           creal (ncm_acb_get_complex (A_n)),
- *           cimag (ncm_acb_get_complex (A_n)),
- *           creal (ncm_acb_get_complex (B_n)),
- *           cimag (ncm_acb_get_complex (B_n)),
- *           creal (ncm_acb_get_complex (x)),
- *           cimag (ncm_acb_get_complex (x)),
- *           creal (ncm_acb_get_complex (C_n)),
- *           cimag (ncm_acb_get_complex (C_n)),
- *           creal (ncm_acb_get_complex (D_n)),
- *           cimag (ncm_acb_get_complex (D_n))
- *           );
- */
   }
 
   acb_clear (pi);
@@ -805,7 +784,7 @@ _ncm_fftlog_sbessel_jljm_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   acb_clear (N_n);
   acb_clear (w4);
   acb_clear (x);
-  acb_clear (q);
+  acb_clear (bias);
   acb_clear (lnw);
   acb_clear (res);
 
@@ -933,42 +912,6 @@ ncm_fftlog_sbessel_jljm_get_dell (NcmFftlogSBesselJLJM *fftlog_jljm)
   NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
 
   return self->dell;
-}
-
-/**
- * ncm_fftlog_sbessel_jljm_set_q:
- * @fftlog_jljm: a #NcmFftlogSBesselJLJM
- * @q: Spherical Bessel power factor $q$
- *
- * Sets @q as the Spherical Bessel power $q$.
- *
- */
-void
-ncm_fftlog_sbessel_jljm_set_q (NcmFftlogSBesselJLJM *fftlog_jljm, const gdouble q)
-{
-  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
-
-  if (self->q != q)
-  {
-    NcmFftlog *fftlog = NCM_FFTLOG (fftlog_jljm);
-
-    self->q = q;
-    ncm_fftlog_reset (fftlog);
-  }
-}
-
-/**
- * ncm_fftlog_sbessel_jljm_get_q:
- * @fftlog_jljm: a #NcmFftlogSBesselJLJM
- *
- * Returns: the current Spherical Bessel power $q$.
- */
-gdouble
-ncm_fftlog_sbessel_jljm_get_q (NcmFftlogSBesselJLJM *fftlog_jljm)
-{
-  NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
-
-  return self->q;
 }
 
 /**

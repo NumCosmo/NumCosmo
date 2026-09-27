@@ -68,7 +68,7 @@ to the same value. We therefore include only the lower end point
 $\ln(k_0) - L/2$ for even $N$. The original FFTLog paper includes both points with
 a $1/2$ weight; using only the lower end point avoids that complication.
 
-## Padding and Knot Count
+## Padding
 
 Because the algorithm assumes the decomposed function is periodic, it is worth
 extending the interval in $\ln k$ with padding intervals
@@ -89,14 +89,49 @@ the end itself, so that the continuation does not move with the knots; an end wh
 $F k$ would grow along the continuation is cut by a Gaussian in $\ln k$ of width the
 inverse of that log-slope; and the two
 continuations are joined by a $C^\infty$ partition of unity that switches over the
-middle fifth of the padding. The periodic input is then smooth everywhere and the
-transform converges as $N^{-3}$ over the whole grid. The result within a few e-foldings of
+middle fifth of the padding. The periodic input is then continuous with its first
+derivative at each end of the interval, where the continuation matches the value and
+log-slope of $F$ but not its higher derivatives, and smooth elsewhere; the transform
+converges as $N^{-3}$ over the whole grid. The result within a few e-foldings of
 $1/k_\mathrm{max}$ or $1/k_\mathrm{min}$ depends on the continuation, which is an
 extrapolation of $F$ beyond its interval: for the $\sigma^2(R)$ of an
 Eisenstein--Hu spectrum tabulated up to $k_\mathrm{max} = 10^3$, the power-law
 continuation is off the analytic tail by $1.6 \times 10^{-4}$ of the peak at
 $R = 1/k_\mathrm{max}$, $2 \times 10^{-8}$ at $10/k_\mathrm{max}$ and
 $3 \times 10^{-12}$ at $100/k_\mathrm{max}$.
+
+## Bias
+
+The transform represents $F$ by its Fourier series in $\ln k$, and its roundoff
+scales with the dynamic range of what it represents, over the interval and the
+padding. An $F$ that grows into a padding (for the variance of a power law
+$P \propto k^n$, $F \propto k^{n+2}$ grows below $k_\mathrm{min}$ when $n < -2$)
+sets a floor far above double precision: for the top-hat window and
+$F \propto k^{-0.6}$ over 13 decades, the change from $N$ to $1.2N$ knots stalls at
+$6 \times 10^{-5}$ of the peak. With a bias $b$
+([[numcosmo-math|ncm_fftlog_set_bias]]) the series is of $f(k) = F(k) k^{-b}$
+instead,
+$$
+G(r) = r^{-b} \int_0^\infty f(k)\,(kr)^b K(kr)\,\mathrm{d}k,
+\qquad
+Y_n = \int_0^\infty t^{\,b + \frac{2\pi i n}{L_T}} K(t)\,\mathrm{d}t,
+$$
+and each $\ln r$ derivative brings down $-(1 + b + 2\pi i n / L_T)$. $G$ is the same for
+any $b$; the padding holds $f$, and the smooth continuation, fitted to $f$, gives the
+same padded $F$. For a power law $F \propto k^b$, $f$ is constant; with the bias chosen as
+below, $b = -0.40$, the example above converges to $10^{-11}$ at 9600 knots.
+
+The coefficients exist only where $t^b K(t)$ is integrable: $-1 < b < 3$ for the
+top-hat window, whose square falls as $t^{-4}$, and $b > -1$ for the Gaussian. Within
+that range the bias moves two floors. The periodic image of the input one period away
+enters with weight $e^{-(b - b_\mathrm{min}) L_T}$ at one end of the range and
+$e^{-(b_\mathrm{max} - b) L_T}$ at the other, and a positive bias multiplies the
+roundoff of the output at small $r$ by $r^{-(1+b)}$.
+[[numcosmo-math|ncm_fftlog_get_best_bias]] therefore keeps $b = 0$ when $F$ decays
+into both paddings, otherwise takes the value closest to zero between the log-slopes of
+$F$ at the two ends, and keeps it $\ln(1/\epsilon)/L_T$ inside the range.
+
+## Size
 
 For efficiency, the final number of points $N_f$ is replaced by the smallest
 $N_f^\prime \ge N_f$ that factorizes as
@@ -121,7 +156,8 @@ methods are:
 
 - setup: [[numcosmo-math|ncm_fftlog_set_lnk0]],
   [[numcosmo-math|ncm_fftlog_set_lnr0]], [[numcosmo-math|ncm_fftlog_set_length]],
-  [[numcosmo-math|ncm_fftlog_set_padding]], [[numcosmo-math|ncm_fftlog_set_size]]
+  [[numcosmo-math|ncm_fftlog_set_padding]], [[numcosmo-math|ncm_fftlog_set_size]],
+  [[numcosmo-math|ncm_fftlog_set_bias]], [[numcosmo-math|ncm_fftlog_get_best_bias]]
 - evaluation: [[numcosmo-math|ncm_fftlog_eval_by_gsl_function]],
   [[numcosmo-math|ncm_fftlog_eval_by_vector]],
   [[numcosmo-math|ncm_fftlog_get_lnk_vector]]

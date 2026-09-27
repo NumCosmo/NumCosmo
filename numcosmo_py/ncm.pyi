@@ -2560,6 +2560,8 @@ class Fftlog(GObject.Object):
         Evaluation r_min
       eval-r-max -> gdouble: eval-r-max
         Evaluation r_max
+      bias -> gdouble: bias
+        Bias
 
     Signals from GObject:
       notify (GParam)
@@ -2568,6 +2570,7 @@ class Fftlog(GObject.Object):
     class Props:
         Lk: float
         N: int
+        bias: float
         eval_r_max: float
         eval_r_min: float
         lnk0: float
@@ -2586,6 +2589,7 @@ class Fftlog(GObject.Object):
         self,
         Lk: float = ...,
         N: int = ...,
+        bias: float = ...,
         eval_r_max: float = ...,
         eval_r_min: float = ...,
         lnk0: float = ...,
@@ -2603,6 +2607,7 @@ class Fftlog(GObject.Object):
     @staticmethod
     def clear(fftlog: Fftlog) -> None: ...
     def do_compute_Ym(self, Ym_0: None) -> None: ...
+    def do_get_bias_range(self) -> typing.Tuple[float, float]: ...
     def eval_by_function(
         self, Fk: typing.Callable[..., float], *user_data: typing.Any
     ) -> None: ...
@@ -2611,6 +2616,10 @@ class Fftlog(GObject.Object):
     def free(self) -> None: ...
     def get_Ym(self) -> list[float]: ...
     def get_array_index(self, phys_i: int) -> int: ...
+    def get_best_bias(self) -> float: ...
+    def get_bias(self) -> float: ...
+    def get_bias_range(self) -> typing.Tuple[float, float]: ...
+    def get_end_slopes(self) -> typing.Tuple[float, float]: ...
     def get_eval_r_max(self) -> float: ...
     def get_eval_r_min(self) -> float: ...
     def get_full_length(self) -> float: ...
@@ -2634,6 +2643,7 @@ class Fftlog(GObject.Object):
     def prepare_splines(self) -> None: ...
     def ref(self) -> Fftlog: ...
     def reset(self) -> None: ...
+    def set_bias(self, bias: float) -> None: ...
     def set_eval_r_max(self, eval_r_max: float) -> None: ...
     def set_eval_r_min(self, eval_r_min: float) -> None: ...
     def set_length(self, Lk: float) -> None: ...
@@ -2659,6 +2669,7 @@ class FftlogClass(GObject.GPointer):
     parent_class: GObject.ObjectClass = ...
     name: str = ...
     compute_Ym: typing.Callable[[Fftlog, None], None] = ...
+    get_bias_range: typing.Callable[[Fftlog], typing.Tuple[float, float]] = ...
     padding: list[None] = ...
 
 class FftlogGausswin2(Fftlog):
@@ -2699,6 +2710,8 @@ class FftlogGausswin2(Fftlog):
         Evaluation r_min
       eval-r-max -> gdouble: eval-r-max
         Evaluation r_max
+      bias -> gdouble: bias
+        Bias
 
     Signals from GObject:
       notify (GParam)
@@ -2707,6 +2720,7 @@ class FftlogGausswin2(Fftlog):
     class Props:
         Lk: float
         N: int
+        bias: float
         eval_r_max: float
         eval_r_min: float
         lnk0: float
@@ -2724,6 +2738,7 @@ class FftlogGausswin2(Fftlog):
         self,
         Lk: float = ...,
         N: int = ...,
+        bias: float = ...,
         eval_r_max: float = ...,
         eval_r_min: float = ...,
         lnk0: float = ...,
@@ -2763,8 +2778,6 @@ class FftlogSBesselJ(Fftlog):
     Properties from NcmFftlogSBesselJ:
       ell -> guint: ell
         Spherical Bessel integer order
-      q -> gdouble: q
-        Spherical Bessel power
 
     Properties from NcmFftlog:
       nderivs -> guint: nderivs
@@ -2793,6 +2806,8 @@ class FftlogSBesselJ(Fftlog):
         Evaluation r_min
       eval-r-max -> gdouble: eval-r-max
         Evaluation r_max
+      bias -> gdouble: bias
+        Bias
 
     Signals from GObject:
       notify (GParam)
@@ -2800,9 +2815,9 @@ class FftlogSBesselJ(Fftlog):
 
     class Props:
         ell: int
-        q: float
         Lk: float
         N: int
+        bias: float
         eval_r_max: float
         eval_r_min: float
         lnk0: float
@@ -2819,9 +2834,9 @@ class FftlogSBesselJ(Fftlog):
     def __init__(
         self,
         ell: int = ...,
-        q: float = ...,
         Lk: float = ...,
         N: int = ...,
+        bias: float = ...,
         eval_r_max: float = ...,
         eval_r_min: float = ...,
         lnk0: float = ...,
@@ -2834,7 +2849,6 @@ class FftlogSBesselJ(Fftlog):
         use_smooth_padding: bool = ...,
     ) -> None: ...
     def get_ell(self) -> int: ...
-    def get_q(self) -> float: ...
     @classmethod
     def new(
         cls, ell: int, lnr0: float, lnk0: float, Lk: float, N: int
@@ -2842,7 +2856,6 @@ class FftlogSBesselJ(Fftlog):
     def set_best_lnk0(self) -> None: ...
     def set_best_lnr0(self) -> None: ...
     def set_ell(self, ell: int) -> None: ...
-    def set_q(self, q: float) -> None: ...
 
 class FftlogSBesselJClass(GObject.GPointer):
     r"""
@@ -2901,6 +2914,8 @@ class FftlogSBesselJLJM(Fftlog):
         Evaluation r_min
       eval-r-max -> gdouble: eval-r-max
         Evaluation r_max
+      bias -> gdouble: bias
+        Bias
 
     Signals from GObject:
       notify (GParam)
@@ -2912,6 +2927,7 @@ class FftlogSBesselJLJM(Fftlog):
         lnw: float
         Lk: float
         N: int
+        bias: float
         eval_r_max: float
         eval_r_min: float
         lnk0: float
@@ -2932,6 +2948,7 @@ class FftlogSBesselJLJM(Fftlog):
         lnw: float = ...,
         Lk: float = ...,
         N: int = ...,
+        bias: float = ...,
         eval_r_max: float = ...,
         eval_r_min: float = ...,
         lnk0: float = ...,
@@ -2946,7 +2963,6 @@ class FftlogSBesselJLJM(Fftlog):
     def get_dell(self) -> int: ...
     def get_ell(self) -> int: ...
     def get_lnw(self) -> float: ...
-    def get_q(self) -> float: ...
     @classmethod
     def new(
         cls,
@@ -2963,7 +2979,6 @@ class FftlogSBesselJLJM(Fftlog):
     def set_dell(self, dell: int) -> None: ...
     def set_ell(self, ell: int) -> None: ...
     def set_lnw(self, lnw: float) -> None: ...
-    def set_q(self, q: float) -> None: ...
 
 class FftlogSBesselJLJMClass(GObject.GPointer):
     r"""
@@ -3014,6 +3029,8 @@ class FftlogTophatwin2(Fftlog):
         Evaluation r_min
       eval-r-max -> gdouble: eval-r-max
         Evaluation r_max
+      bias -> gdouble: bias
+        Bias
 
     Signals from GObject:
       notify (GParam)
@@ -3022,6 +3039,7 @@ class FftlogTophatwin2(Fftlog):
     class Props:
         Lk: float
         N: int
+        bias: float
         eval_r_max: float
         eval_r_min: float
         lnk0: float
@@ -3039,6 +3057,7 @@ class FftlogTophatwin2(Fftlog):
         self,
         Lk: float = ...,
         N: int = ...,
+        bias: float = ...,
         eval_r_max: float = ...,
         eval_r_min: float = ...,
         lnk0: float = ...,
@@ -8579,7 +8598,10 @@ class PowspecFilter(GObject.Object):
     def eval_var_lnr(self, z: float, lnr: float) -> float: ...
     def free(self) -> None: ...
     def get_filter_type(self) -> PowspecFilterType: ...
+    def get_max_k_knots(self) -> int: ...
+    def get_max_z_knots(self) -> int: ...
     def get_nderivs(self) -> int: ...
+    def get_nknots(self) -> typing.Tuple[int, int]: ...
     def get_r_max(self) -> float: ...
     def get_r_min(self) -> float: ...
     def get_reltol(self) -> float: ...
@@ -8595,6 +8617,8 @@ class PowspecFilter(GObject.Object):
     def require_zi(self, zi: float) -> None: ...
     def set_best_lnr0(self) -> None: ...
     def set_lnr0(self, lnr0: float) -> None: ...
+    def set_max_k_knots(self, max_k_knots: int) -> None: ...
+    def set_max_z_knots(self, max_z_knots: int) -> None: ...
     def set_nderivs(self, nderivs: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_reltol_z(self, reltol_z: float) -> None: ...

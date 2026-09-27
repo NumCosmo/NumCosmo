@@ -39,16 +39,12 @@
  * Logarithm fast fourier transform for a kernel given by the spatial correlation
  * function multipoles.
  *
- * This object computes the function (see #NcmFftlog)
- * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L}} K(t) dt,$$
- * where the kernel are the spherical Bessel function
- * of the first kind multiplied by a power law,
- *
- * \begin{equation}\label{eq:kerneljl}
- * K(t) = t^q j_{\ell}(t).
- * \end{equation}
- *
- * Note that the spherical Bessel function's order, $\ell$ (#NcmFftlogSBesselJ:ell), must be an integer number.
+ * This object computes the coefficients (see #NcmFftlog)
+ * $$Y_n = \int_0^\infty t^{A_n} j_\ell(t)\,\mathrm{d}t, \qquad A_n = b + \frac{2\pi i n}{L_T},$$
+ * with $b$ the bias (#NcmFftlog:bias), $L_T$ the full period and $j_\ell$ the spherical
+ * Bessel function of the first kind, of integer order $\ell$ (#NcmFftlogSBesselJ:ell).
+ * The integral converges for $-\ell - 1 < b < 1$ and is
+ * $$Y_n = \sqrt{\pi}\, 2^{A_n - 1} \frac{\Gamma\left(\frac{1 + \ell + A_n}{2}\right)}{\Gamma\left(\frac{2 + \ell - A_n}{2}\right)}.$$
  *
  * The spatial correlation function multipoles, $\xi_{\ell}^{(n)}(r)$, can be defined as
  * (see [Matsubara (2004)](https://arxiv.org/abs/astro-ph/0408349) [[arXiv](https://arxiv.org/abs/astro-ph/0408349)])
@@ -56,42 +52,11 @@
  * \begin{equation}\label{eq:xi_multipoles}
  * \xi_{\ell}^{(n)}(r) = \frac{(-1)^{n+\ell}}{r^{2n-\ell}} \int_{0}^{\infty} \frac{\mathrm{d} k}{2\pi^2} \frac{k^2}{k^{2n-\ell}} j_{\ell}(kr) P(k) \,\, .
  * \end{equation}
- * Where, $P(k)$ is the power spectrum (see #NcmPowspec).
- *
- * The multipoles integral can be written in the following format
- *
- * \begin{equation*}
- * \xi_{\ell}^{(n)}(r) = \frac{(-1)^{n+\ell}}{r^2} \int_{0}^{\infty} \mathrm{d}k \, (kr)^{2-2n+\ell} \, j_{\ell}(kr) P(k) \,\, .
- * \end{equation*}
- *
- * The object #NcmFftlogSBesselJ can be used to evaluate the above integral in several ways.
- * For example, the integral can be evaluated by defining the function (see #NcmFftlog for more information)
- * \begin{equation*}
- * F(k) = k^{2-2n+\ell} \, P(k)
- * \end{equation*}
- * and the kernel
- * \begin{equation*}
- * K(t) = j_{\ell}(t) \,\, .
- * \end{equation*}
- * Where, $t=kr$ and $r^{(2-2n+\ell)}$ was taken out of the integral.
- * Comparing this kernel with the one defined in Eq. \eqref{eq:kerneljl}, we have $q=0$.
- *
- * But instead, one might choose another format for the function,
- * \begin{equation*}
- * F(k) = k^{\ell} \, P(k)
- * \end{equation*}
- * and the kernel
- * \begin{equation*}
- * K(t) = t^{2-2n} \, j_{\ell}(t) \,\, ,
- * \end{equation*}
- * which evaluates the same integral, but now with $q=2-2n$, and
- * in this case, the term $r^{\ell}$ was the one taken out of the integral.
- * Therefore, the parameter $q$ is the power of the wavenumber $k$ times the distance $r$, $t=kr$,
- * included to the kernel with the spherical Bessel function.
- * Hereafter, it will be referred to as "spherical Bessel power" (#NcmFftlogSBesselJ:q).
- *
- * In general, $q=0$ is an accurate and fast choice to make, but it is interesting to
- * perform tests to evaluate which kernel format fits best for each type of integral.
+ * Where, $P(k)$ is the power spectrum (see #NcmPowspec). The integral in it is the
+ * transform of $F(k) = k^{2 - 2n + \ell} P(k) / (2\pi^2)$ with this kernel. The bias does
+ * not change the result: it only chooses which function, $F(k) k^{-b}$, the discrete
+ * transform represents; ncm_fftlog_get_best_bias() chooses one from the log-slopes of $F$
+ * at the ends of the interval.
  *
  * The #NcmPowspecCorr3d object already evaluates Eq. \eqref{eq:xi_multipoles}
  * for the case of the monopole, $n=\ell=0$, with support for redshift evolution.
@@ -127,14 +92,12 @@
 typedef struct _NcmFftlogSBesselJPrivate
 {
   guint ell;
-  gdouble q;
 } NcmFftlogSBesselJPrivate;
 
 enum
 {
   PROP_0,
   PROP_ELL,
-  PROP_Q,
   PROP_SIZE,
 };
 
@@ -151,7 +114,6 @@ ncm_fftlog_sbessel_j_init (NcmFftlogSBesselJ *fftlog_jl)
   NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
 
   self->ell = 0;
-  self->q   = 0.0;
 }
 
 static void
@@ -165,9 +127,6 @@ _ncm_fftlog_sbessel_j_set_property (GObject *object, guint prop_id, const GValue
   {
     case PROP_ELL:
       ncm_fftlog_sbessel_j_set_ell (fftlog_jl, g_value_get_uint (value));
-      break;
-    case PROP_Q:
-      ncm_fftlog_sbessel_j_set_q (fftlog_jl, g_value_get_double (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -187,9 +146,6 @@ _ncm_fftlog_sbessel_j_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_ELL:
       g_value_set_uint (value, ncm_fftlog_sbessel_j_get_ell (fftlog_jl));
       break;
-    case PROP_Q:
-      g_value_set_double (value, ncm_fftlog_sbessel_j_get_q (fftlog_jl));
-      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -204,6 +160,7 @@ _ncm_fftlog_sbessel_j_finalize (GObject *object)
 }
 
 static void _ncm_fftlog_sbessel_j_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0);
+static void _ncm_fftlog_sbessel_j_get_bias_range (NcmFftlog *fftlog, gdouble *bias_min, gdouble *bias_max);
 
 static void
 ncm_fftlog_sbessel_j_class_init (NcmFftlogSBesselJClass *klass)
@@ -229,25 +186,13 @@ ncm_fftlog_sbessel_j_class_init (NcmFftlogSBesselJClass *klass)
                                                       0, G_MAXUINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  /**
-   * NcmFftlogSBesselJ:q:
-   *
-   * The spherical Bessel power, i.e., the power of the variable $t=kr$,
-   * included to the kernel $K(t)$ multiplying the spherical Bessel function.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_Q,
-                                   g_param_spec_double ("q",
-                                                        NULL,
-                                                        "Spherical Bessel power",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  fftlog_class->name       = "sbessel_j";
-  fftlog_class->compute_Ym = &_ncm_fftlog_sbessel_j_compute_Ym;
+  fftlog_class->name           = "sbessel_j";
+  fftlog_class->compute_Ym     = &_ncm_fftlog_sbessel_j_compute_Ym;
+  fftlog_class->get_bias_range = &_ncm_fftlog_sbessel_j_get_bias_range;
 }
 
+/* At b = 1/2 the two Gamma arguments are complex conjugates, so the ratio is the phase
+ * exp (2 i arg Gamma) and one lngamma per mode is enough. */
 static void
 _ncm_fftlog_sbessel_j_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
@@ -256,58 +201,56 @@ _ncm_fftlog_sbessel_j_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 
   const gdouble pi_sqrt  = sqrt (M_PI);
   const gdouble twopi_Lt = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
+  const gdouble bias     = ncm_fftlog_get_bias (fftlog);
   const gint Nf          = ncm_fftlog_get_full_size (fftlog);
 
   fftw_complex *Ym_base = (fftw_complex *) Ym_0;
   gint i;
 
-  if (self->q == 0.5)
+  if (bias == 0.5)
   {
     for (i = 0; i < Nf; i++)
     {
       const gint phys_i             = ncm_fftlog_get_mode_index (fftlog, i);
-      const complex double a        = twopi_Lt * phys_i * I;
-      const complex double A        = a + 0.5;
+      const complex double A        = twopi_Lt * phys_i * I + 0.5;
       const complex double xup      = 0.5 * (1.0 + 1.0 * self->ell + A);
       const complex double two_x_m1 = cpow (2.0, A - 1.0);
-      complex double U;
-
       gsl_sf_result lngamma_rho_up, lngamma_theta_up;
 
       gsl_sf_lngamma_complex_e (creal (xup), cimag (xup), &lngamma_rho_up, &lngamma_theta_up);
 
-      U = cexp (2.0 * I * lngamma_theta_up.val);
-
-      Ym_base[i] = pi_sqrt * two_x_m1 * U;
+      Ym_base[i] = pi_sqrt * two_x_m1 * cexp (2.0 * I * lngamma_theta_up.val);
     }
   }
   else
   {
-    const gdouble q = self->q;
-
     for (i = 0; i < Nf; i++)
     {
       const gint phys_i             = ncm_fftlog_get_mode_index (fftlog, i);
-      const complex double a        = twopi_Lt * phys_i * I;
-      const complex double A        = a + q;
+      const complex double A        = twopi_Lt * phys_i * I + bias;
       const complex double xup      = 0.5 * (1.0 + 1.0 * self->ell + A);
       const complex double xdw      = 0.5 * (2.0 + 1.0 * self->ell - A);
       const complex double two_x_m1 = cpow (2.0, A - 1.0);
-      complex double U;
-
       gsl_sf_result lngamma_rho_up, lngamma_theta_up;
       gsl_sf_result lngamma_rho_dw, lngamma_theta_dw;
 
       gsl_sf_lngamma_complex_e (creal (xup), cimag (xup), &lngamma_rho_up, &lngamma_theta_up);
       gsl_sf_lngamma_complex_e (creal (xdw), cimag (xdw), &lngamma_rho_dw, &lngamma_theta_dw);
 
-      U = cexp ((lngamma_rho_up.val - lngamma_rho_dw.val) + I * (lngamma_theta_up.val - lngamma_theta_dw.val));
-
-      /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g\n", lngamma_rho_up.val, lngamma_rho_dw.val, lngamma_theta_up.val, lngamma_theta_dw.val);*/
-
-      Ym_base[i] = pi_sqrt * two_x_m1 * U;
+      Ym_base[i] = pi_sqrt * two_x_m1 * cexp ((lngamma_rho_up.val - lngamma_rho_dw.val) + I * (lngamma_theta_up.val - lngamma_theta_dw.val));
     }
   }
+}
+
+/* t^b j_l(t) goes as t^(b + l) at t -> 0 and oscillates as t^(b - 1) at t -> infinity. */
+static void
+_ncm_fftlog_sbessel_j_get_bias_range (NcmFftlog *fftlog, gdouble *bias_min, gdouble *bias_max)
+{
+  NcmFftlogSBesselJ *fftlog_jl          = NCM_FFTLOG_SBESSEL_J (fftlog);
+  NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
+
+  *bias_min = -1.0 - self->ell;
+  *bias_max = 1.0;
 }
 
 /**
@@ -370,42 +313,6 @@ ncm_fftlog_sbessel_j_get_ell (NcmFftlogSBesselJ *fftlog_jl)
   NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
 
   return self->ell;
-}
-
-/**
- * ncm_fftlog_sbessel_j_set_q:
- * @fftlog_jl: a #NcmFftlogSBesselJ
- * @q: Spherical Bessel power factor $q$
- *
- * Sets @q as the Spherical Bessel power.
- *
- */
-void
-ncm_fftlog_sbessel_j_set_q (NcmFftlogSBesselJ *fftlog_jl, const gdouble q)
-{
-  NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
-
-  if (self->q != q)
-  {
-    NcmFftlog *fftlog = NCM_FFTLOG (fftlog_jl);
-
-    self->q = q;
-    ncm_fftlog_reset (fftlog);
-  }
-}
-
-/**
- * ncm_fftlog_sbessel_j_get_q:
- * @fftlog_jl: a #NcmFftlogSBesselJ
- *
- * Returns: the current Spherical Bessel power $q$.
- */
-gdouble
-ncm_fftlog_sbessel_j_get_q (NcmFftlogSBesselJ *fftlog_jl)
-{
-  NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
-
-  return self->q;
 }
 
 /**

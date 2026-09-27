@@ -40,12 +40,15 @@
  * window function.
  *
  *
- * This object computes the function (see #NcmFftlog)
- * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L}} K(t) dt,$$
- * where the kernel is the square of the Gaussian window function $K(t) = W(t)^2$,
+ * This object computes the coefficients (see #NcmFftlog)
+ * $$Y_n = \int_0^\infty t^{A_n} K(t)\,\mathrm{d}t, \qquad A_n = b + \frac{2\pi i n}{L_T},$$
+ * with $b$ the bias (#NcmFftlog:bias) and $L_T$ the full period, where the kernel is the
+ * square of the Gaussian window function $K(t) = W(t)^2$,
  * \begin{equation}
  * W(t) = \exp \left( \frac{-t^2}{2} \right).
  * \end{equation}
+ * The integral converges for $b > -1$ and is
+ * $Y_n = \Gamma\left(\frac{1 + A_n}{2}\right) / 2$.
  *
  */
 
@@ -60,7 +63,6 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_result.h>
 #include <gsl/gsl_sf_gamma.h>
-#include <gsl/gsl_sf_trig.h>
 #include <gsl/gsl_math.h>
 #include <complex.h>
 #include <fftw3.h>
@@ -87,6 +89,7 @@ _ncm_fftlog_gausswin2_finalize (GObject *object)
 }
 
 static void _ncm_fftlog_gausswin2_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0);
+static void _ncm_fftlog_gausswin2_get_bias_range (NcmFftlog *fftlog, gdouble *bias_min, gdouble *bias_max);
 
 static void
 ncm_fftlog_gausswin2_class_init (NcmFftlogGausswin2Class *klass)
@@ -96,14 +99,16 @@ ncm_fftlog_gausswin2_class_init (NcmFftlogGausswin2Class *klass)
 
   object_class->finalize = &_ncm_fftlog_gausswin2_finalize;
 
-  fftlog_class->name       = "gaussian_window_2";
-  fftlog_class->compute_Ym = &_ncm_fftlog_gausswin2_compute_Ym;
+  fftlog_class->name           = "gaussian_window_2";
+  fftlog_class->compute_Ym     = &_ncm_fftlog_gausswin2_compute_Ym;
+  fftlog_class->get_bias_range = &_ncm_fftlog_gausswin2_get_bias_range;
 }
 
 static void
 _ncm_fftlog_gausswin2_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
   const gdouble twopi_Lt = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
+  const gdouble bias     = ncm_fftlog_get_bias (fftlog);
   const gint Nf          = ncm_fftlog_get_full_size (fftlog);
 
   fftw_complex *Ym_base = (fftw_complex *) Ym_0;
@@ -113,7 +118,7 @@ _ncm_fftlog_gausswin2_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   {
     const gint phys_i            = ncm_fftlog_get_mode_index (fftlog, i);
     const complex double a       = twopi_Lt * phys_i * I;
-    const complex double A       = a + 0.0 /*fftlog->nu*/;
+    const complex double A       = a + bias;
     const complex double onepA_2 = 0.5 * (1.0 + A);
     complex double U;
     gsl_sf_result lngamma_rho, lngamma_theta;
@@ -123,6 +128,13 @@ _ncm_fftlog_gausswin2_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 
     Ym_base[i] = U;
   }
+}
+
+static void
+_ncm_fftlog_gausswin2_get_bias_range (NcmFftlog *fftlog, gdouble *bias_min, gdouble *bias_max)
+{
+  *bias_min = -1.0;
+  *bias_max = GSL_POSINF;
 }
 
 /**

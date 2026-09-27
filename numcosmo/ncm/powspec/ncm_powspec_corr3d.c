@@ -183,7 +183,6 @@ _ncm_powspec_corr3d_constructed (GObject *object)
 
     ncm_fftlog_clear (&psc->fftlog);
     psc->fftlog = NCM_FFTLOG (ncm_fftlog_sbessel_j_new (0, psc->lnr0, psc->lnk0, psc->Lk, 100));
-    /*ncm_fftlog_sbessel_j_set_q (NCM_FFTLOG_SBESSEL_J (psc->fftlog), 0.5);*/
 
     ncm_fftlog_set_padding (psc->fftlog, 1.0);
     ncm_fftlog_set_nderivs (psc->fftlog, 0);
