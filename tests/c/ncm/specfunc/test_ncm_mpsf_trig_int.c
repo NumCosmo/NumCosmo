@@ -161,7 +161,7 @@ _trig_worker (gpointer data)
     mpq_t q;
 
     mpq_init (q);
-    ncm_rational_coarse_double (_trig_x (i), q);
+    mpq_set_d (q, _trig_x (i));
     ncm_mpsf_sin_int_mpfr (q, res, MPFR_RNDN);
     w->res[i] = mpfr_get_d (res, MPFR_RNDN);
     mpq_clear (q);

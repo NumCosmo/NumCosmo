@@ -189,8 +189,7 @@ ncm_mpsf_0F1_q (mpq_t b, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
  * @res: the output, at its own precision
  * @rnd: the rounding mode
  *
- * Same as ncm_mpsf_0F1_q() with @b and @x converted to rationals that agree with them to
- * $10^{-15}$, see ncm_rational_coarse_double().
+ * Same as ncm_mpsf_0F1_q() with @b and @x converted exactly to rationals.
  */
 void
 ncm_mpsf_0F1_d (gdouble b, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
@@ -199,8 +198,8 @@ ncm_mpsf_0F1_d (gdouble b, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
 
   mpq_init (xq);
   mpq_init (bq);
-  ncm_rational_coarse_double (b, bq);
-  ncm_rational_coarse_double (x, xq);
+  mpq_set_d (bq, b);
+  mpq_set_d (xq, x);
   ncm_mpsf_0F1_q (bq, xq, res, rnd);
   mpq_clear (xq);
   mpq_clear (bq);

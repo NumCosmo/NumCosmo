@@ -32,8 +32,6 @@
 #include <numcosmo/ncm/algebra/ncm_vector.h>
 #include <numcosmo/ncm/core/ncm_c.h>
 
-#include <gsl/gsl_sf_legendre.h>
-
 G_BEGIN_DECLS
 
 #define NCM_TYPE_SF_SPHERICAL_HARMONICS             (ncm_sf_spherical_harmonics_get_type ())
@@ -42,16 +40,15 @@ G_DECLARE_FINAL_TYPE (NcmSFSphericalHarmonics, ncm_sf_spherical_harmonics, NCM, 
 
 typedef struct _NcmSFSphericalHarmonicsK NcmSFSphericalHarmonicsK;
 typedef struct _NcmSFSphericalHarmonicsY NcmSFSphericalHarmonicsY;
-typedef struct _NcmSFSphericalHarmonicsP NcmSFSphericalHarmonicsP;
 typedef struct _NcmSFSphericalHarmonicsYArray NcmSFSphericalHarmonicsYArray;
 
 /**
  * NcmSFSphericalHarmonicsK:
- * @l: $K_l$
- * @lp1: $K_{l+1}$
+ * @l: $K^l_{lm}$
+ * @lp1: $K^{l+1}_{lm}$
  *
- * Recurrence coefficients.
- *
+ * Coefficients of the step $\bar{Y}_{l+2}^m = K^{l+1}_{lm}\,x\,\bar{Y}_{l+1}^m -
+ * K^l_{lm}\,\bar{Y}_l^m$.
  */
 struct _NcmSFSphericalHarmonicsK
 {
@@ -67,26 +64,24 @@ struct _NcmSFSphericalHarmonics
   GArray *sqrt_n;
   GArray *sqrtm1_n;
   GPtrArray *K_array;
-  gint Klm_m;
 };
 
 /**
  * NcmSFSphericalHarmonicsY:
- * @x: $x$
- * @sqrt1mx2: $\sqrt{1-x^2}$
- * @l: $l$
- * @l0: $l_0$
- * @m: $m$
- * @Klm: #NcmSFSphericalHarmonicsK pointer
- * @Pl0m: $P_{l_0}^m$
- * @Pl0p1m: $P_{l_0+1}^m$
- * @Plm: $P_{l}^m$
- * @Plp1m: $P_{l+1}^m$
- * @spha: pointer to parent #NcmSFSphericalHarmonics
+ * @x: $x = \cos\theta$
+ * @sqrt1mx2: $\sin\theta$
+ * @l: current order $l$
+ * @l0: order $l_0$ of the seeds
+ * @m: current $m$
+ * @Klm: coefficients of the next step
+ * @Pl0m: seed $\bar{Y}_{l_0}^m$, scaled by $10^{280}$
+ * @Pl0p1m: seed $\bar{Y}_{l_0+1}^m$, scaled by $10^{280}$
+ * @Plm: $\bar{Y}_l^m$
+ * @Plp1m: $\bar{Y}_{l+1}^m$
+ * @spha: the #NcmSFSphericalHarmonics
  * @abstol: absolute tolerance
  *
- * Recurrence boxed object.
- *
+ * State of the recursion at one angle; see #NcmSFSphericalHarmonics.
  */
 struct _NcmSFSphericalHarmonicsY
 {
@@ -105,28 +100,6 @@ struct _NcmSFSphericalHarmonicsY
 };
 
 /**
- * NcmSFSphericalHarmonicsP:
- * @x: $x$
- * @sqrt1mx2: $\sqrt{1-x^2}$
- * @l0m: $P_{l_0}^m$
- * @l0p1m: $P_{l_0+1}^m$
- * @lm: $P_{l}^m$
- * @lp1m: $P_{l+1}^m$
- *
- * Boxed P values.
- *
- */
-struct _NcmSFSphericalHarmonicsP
-{
-  gdouble x;
-  gdouble sqrt1mx2;
-  gdouble l0m;
-  gdouble l0p1m;
-  gdouble lm;
-  gdouble lp1m;
-};
-
-/**
  * NCM_SF_SPHERICAL_HARMONICS_MAX_LEN:
  *
  * Maximum number of angles held by a #NcmSFSphericalHarmonicsYArray.
@@ -135,20 +108,20 @@ struct _NcmSFSphericalHarmonicsP
 
 /**
  * NcmSFSphericalHarmonicsYArray:
- * @l: $l$
- * @l0: $l_0$
- * @m: $m$
+ * @l: current order $l$
+ * @l0: order $l_0$ of the seeds
+ * @m: current $m$
  * @len: number of angles
- * @x: array of $x$
- * @sqrt1mx2: array of $\sqrt{1-x^2}$
- * @Yl0m: array of $Y_{l_0}^m$
- * @Ylm: array of $Y_{l}^m$
- * @Klm: #NcmSFSphericalHarmonicsK pointer
- * @spha: pointer to parent #NcmSFSphericalHarmonics
+ * @x: $x_i = \cos\theta_i$
+ * @sqrt1mx2: $\sin\theta_i$
+ * @Yl0m: seeds $\bar{Y}_{l_0}^m(x_i)$ and $\bar{Y}_{l_0+1}^m(x_i)$, scaled by $10^{280}$
+ * @Ylm: $\bar{Y}_l^m(x_i)$ and $\bar{Y}_{l+1}^m(x_i)$
+ * @Klm: coefficients of the next step
+ * @spha: the #NcmSFSphericalHarmonics
  * @abstol: absolute tolerance
  *
- * Recurrence array boxed object.
- *
+ * State of the recursion at several angles; see #NcmSFSphericalHarmonics. @Yl0m and
+ * @Ylm are indexed with NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX().
  */
 struct _NcmSFSphericalHarmonicsYArray
 {
@@ -226,17 +199,16 @@ NCM_INLINE NcmSFSphericalHarmonicsK *ncm_sf_spherical_harmonics_get_Klm (NcmSFSp
 /**
  * NCM_SF_SPHERICAL_HARMONICS_ARRAY_DEFAULT_ABSTOL:
  *
- * Default absolute tolerance for #NcmSFSphericalHarmonicsYArray. Smaller than the
- * scalar default since the array advances only when every angle is below tolerance.
+ * Default absolute tolerance for #NcmSFSphericalHarmonicsYArray.
  */
 #define NCM_SF_SPHERICAL_HARMONICS_ARRAY_DEFAULT_ABSTOL (1.0e-40)
 
-/* Internal rescaling: the $l_0$ seeds are stored divided by this factor and the
- * reported values multiplied by it, extending the representable range of
- * $\bar{Y}_l^m$ at large $m$. Undefined at the end of the inline section. */
+/* The l_0 seeds are stored divided by this factor and the reported values multiplied by
+ * it, keeping Y_m^m representable at large m. Undefined at the end of the inline
+ * section. */
 #define NCM_SF_SPHERICAL_HARMONICS_EPS (1.0e-280)
 
-/* When set, a tolerance-driven advance in $l$ also moves the $l_0$ seeds. */
+/* When set, skipping orders in next_m also moves the l_0 seeds past them. */
 #define NCM_SF_SPHERICAL_HARMONICS_LATERAL_MOVE 1
 
 /**
@@ -353,15 +325,13 @@ ncm_sf_spherical_harmonics_Y_next_m (NcmSFSphericalHarmonicsY *sphaY)
   }
   else
   {
-    const gdouble sqrt1mx2 = sphaY->sqrt1mx2;
-    const gdouble x        = sphaY->x;
-    const gint l0          = sphaY->l0;
-    const gint twol0       = 2 * l0;
-    const gint m           = sphaY->m;
-    const gint l0mm        = l0 - m;
-    const gint l0pm        = l0 + m;
-    const gdouble Pl0m     = sphaY->Pl0m;
-    const gdouble Pl0p1m   = sphaY->Pl0p1m;
+    const gint l0        = sphaY->l0;
+    const gint twol0     = 2 * l0;
+    const gint m         = sphaY->m;
+    const gint l0mm      = l0 - m;
+    const gint l0pm      = l0 + m;
+    const gdouble Pl0m   = sphaY->Pl0m;
+    const gdouble Pl0p1m = sphaY->Pl0p1m;
 
     const gdouble Llp1 = _SN (twol0 + 1) * _SN (l0mm + 1)   * _SNM1 (twol0 + 3) * _SNM1 (l0mm);
     const gdouble Ll   = _SN (l0pm + 1)  * _SNM1 (l0mm);
@@ -381,7 +351,6 @@ ncm_sf_spherical_harmonics_Y_next_m (NcmSFSphericalHarmonicsY *sphaY)
 
   sphaY->Klm = ncm_sf_spherical_harmonics_get_Klm (spha, sphaY->l, sphaY->m);
 
-  /*printf ("#(%6d, %6d)[% 22.15g]:", spha->l0, spha->m, fabs (spha->Plm));*/
   if (fabs (sphaY->Plm) < sphaY->abstol)
   {
     const gint lmax = ncm_sf_spherical_harmonics_get_lmax (spha);
@@ -396,8 +365,6 @@ ncm_sf_spherical_harmonics_Y_next_m (NcmSFSphericalHarmonicsY *sphaY)
 
       sphaY->l ++;
       sphaY->Klm ++;
-
-      /*printf (".");*/
     } while ((fabs (Pl0m *NCM_SF_SPHERICAL_HARMONICS_EPS) < sphaY->abstol) && (sphaY->l <= lmax));
 
     sphaY->Plm   = Pl0m *NCM_SF_SPHERICAL_HARMONICS_EPS;
@@ -408,8 +375,6 @@ ncm_sf_spherical_harmonics_Y_next_m (NcmSFSphericalHarmonicsY *sphaY)
     sphaY->Pl0p1m = Pl0p1m;
 #endif /* NCM_SF_SPHERICAL_HARMONICS_LATERAL_MOVE */
   }
-
-  /*printf ("\n");*/
 }
 
 NCM_INLINE gdouble
@@ -622,11 +587,6 @@ ncm_sf_spherical_harmonics_Y_array_next_m (NcmSFSphericalHarmonicsYArray *sphaYa
       sphaYa->Yl0m[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 0, len)] = (Llp1     *Pl0p1m - Ll *x *Pl0m) / sqrt1mx2;
       sphaYa->Yl0m[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 1, len)] = (Mlp1 *x *Pl0p1m - Ml     *Pl0m) / sqrt1mx2;
 
-/*
- *     printf ("[%d] <%6d %6d> % 22.15g % 22.15g % e == % 22.15g | % 22.15g % 22.15g % e == % 22.15g \n", i, l0, m,
- *             Llp1     * Pl0p1m, Ll * x * Pl0m, Llp1     * Pl0p1m /( Ll * x * Pl0m) - 1.0, sphaYa->Yl0m[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 0, len)],
- *             Mlp1 * x * Pl0p1m, Ml     * Pl0m, Mlp1 * x * Pl0p1m / (Ml     * Pl0m) - 1.0, sphaYa->Yl0m[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 1, len)]);
- */
       sphaYa->Ylm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 0, len)] = sphaYa->Yl0m[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 0, len)]   * NCM_SF_SPHERICAL_HARMONICS_EPS;
       sphaYa->Ylm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 1, len)] = sphaYa->Yl0m[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 1, len)] * NCM_SF_SPHERICAL_HARMONICS_EPS;
     }

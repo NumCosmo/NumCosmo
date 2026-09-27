@@ -313,8 +313,7 @@ ncm_mpsf_sbessel (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
  * @res: the output, at its own precision
  * @rnd: the rounding mode
  *
- * Same as ncm_mpsf_sbessel() with @x converted to a rational that agrees with it to
- * $10^{-15}$, see ncm_rational_coarse_double().
+ * Same as ncm_mpsf_sbessel() with @x converted exactly to a rational.
  */
 void
 ncm_mpsf_sbessel_d (gulong l, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
@@ -322,7 +321,7 @@ ncm_mpsf_sbessel_d (gulong l, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
   mpq_t q;
 
   mpq_init (q);
-  ncm_rational_coarse_double (x, q);
+  mpq_set_d (q, x);
   ncm_mpsf_sbessel (l, q, res, rnd);
   mpq_clear (q);
 }

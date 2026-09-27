@@ -343,8 +343,8 @@ ncm_mpsf_sin_int_free_cache (void)
  * ncm_sf_sin_int:
  * @x: the argument $x$
  *
- * Same as ncm_mpsf_sin_int_mpfr() at 53 bits, rounded to nearest, with @x converted to a
- * rational that agrees with it to $10^{-15}$, see ncm_rational_coarse_double().
+ * Same as ncm_mpsf_sin_int_mpfr() at 53 bits, rounded to nearest, with @x converted
+ * exactly to a rational.
  *
  * Returns: $\mathrm{Si}(x)$.
  */
@@ -358,7 +358,7 @@ ncm_sf_sin_int (gdouble x)
 
   mpq_init (xq);
 
-  ncm_rational_coarse_double (x, xq);
+  mpq_set_d (xq, x);
   ncm_mpsf_sin_int_mpfr (xq, res, GMP_RNDN);
   mpq_clear (xq);
 
