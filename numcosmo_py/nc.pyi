@@ -11065,7 +11065,7 @@ class HICosmoDEReparamCMB(NumCosmoMath.Reparam):
       length -> guint: length
         System's length
       params-desc -> NcmObjDictInt: params-desc
-        News parameter descriptions
+        New parameter descriptions
       compat-type -> gchararray: compat-type
         Compatible type
 
@@ -11114,7 +11114,7 @@ class HICosmoDEReparamOk(NumCosmoMath.Reparam):
       length -> guint: length
         System's length
       params-desc -> NcmObjDictInt: params-desc
-        News parameter descriptions
+        New parameter descriptions
       compat-type -> gchararray: compat-type
         Compatible type
 
@@ -16239,7 +16239,7 @@ class HIReionCambReparamTau(NumCosmoMath.Reparam):
       length -> guint: length
         System's length
       params-desc -> NcmObjDictInt: params-desc
-        News parameter descriptions
+        New parameter descriptions
       compat-type -> gchararray: compat-type
         Compatible type
 
