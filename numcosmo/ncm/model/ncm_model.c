@@ -75,15 +75,9 @@ typedef struct _NcmModelPrivate
   gdouble *params_ptr;
   gboolean constructed;
 
-  /*
-   * Weak backpointer to the host this instance is currently attached to as
-   * a submodel, or unset if it isn't anyone's submodel right now. Set in
-   * _ncm_model_add_submodel() at attach time, cleared there when a
-   * submodel is replaced at the same slot position, and cleared here (via
-   * g_weak_ref_clear()) at dispose. Any future submodel detach/remove API
-   * must clear the departing submodel's host_wr the same way the REPLACE
-   * branch does, or a stale backpointer can outlive the actual attachment.
-   */
+  /* Weak reference to the host this model is a submodel of, set once by
+   * _ncm_model_add_submodel(); submodels are fixed at construction and never
+   * replaced or detached, so it changes only when the host is freed. */
   GWeakRef host_wr;
 } NcmModelPrivate;
 
@@ -3483,9 +3477,8 @@ ncm_model_orig_param_get_by_name (NcmModel *model, const gchar *param_name, GErr
  * ncm_model_type_is_submodel:
  * @model_type: a GType
  *
- * Tests if @model_type is a submodel of other model class.
- *
- * Returns: TRUE if @model_type is a submodel of other model class.
+ * Returns: whether the class of @model_type is declared a submodel type
+ * (NcmModelClass is_submodel)
  */
 gboolean
 ncm_model_type_is_submodel (GType model_type)
@@ -3528,9 +3521,8 @@ ncm_model_type_main_model (GType model_type)
  * ncm_model_is_submodel:
  * @model: a #NcmModel
  *
- * Tests if @model is a submodel of other model class.
- *
- * Returns: TRUE if @model is a submodel of other model class.
+ * Returns: whether the class of @model is declared a submodel type (NcmModelClass
+ * is_submodel)
  */
 gboolean
 ncm_model_is_submodel (NcmModel *model)
@@ -3558,8 +3550,10 @@ ncm_model_main_model (NcmModel *model)
  * @model: a #NcmModel
  * @submodel: a #NcmModel
  *
- * Adds the @submodel to the @model submodels.
- *
+ * Attaches @submodel to @model. Only valid while @model is being constructed (through
+ * its submodel slot properties); aborts afterwards, when @submodel already belongs to
+ * another host, and when @model already has a submodel with the model id of @submodel.
+ * An override must chain up.
  */
 void
 ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
@@ -3590,12 +3584,9 @@ _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
     NcmModel *current_host = g_weak_ref_get (&submodel_self->host_wr);
 
     if ((current_host != NULL) && (current_host != model))
-    {
-      g_object_unref (current_host);
       g_error ("_ncm_model_add_submodel: `%s' is already attached to a `%s' host -- a submodel "
                "can only ever belong to one host for its lifetime.",
-               G_OBJECT_TYPE_NAME (submodel), G_OBJECT_TYPE_NAME (model));
-    }
+               G_OBJECT_TYPE_NAME (submodel), G_OBJECT_TYPE_NAME (current_host));
 
     g_clear_object (&current_host);
   }
@@ -3620,9 +3611,7 @@ _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
  * ncm_model_get_submodel_len:
  * @model: a #NcmModel
  *
- * Gets the number of submodels set in @model.
- *
- * Returns: the number of submodels set in @model.
+ * Returns: the number of submodels of @model
  */
 guint
 ncm_model_get_submodel_len (NcmModel *model)
@@ -3637,9 +3626,7 @@ ncm_model_get_submodel_len (NcmModel *model)
  * @model: a #NcmModel
  * @i: submodel position
  *
- * Gets the @i-th submodel.
- *
- * Returns: (transfer none): a #NcmModel.
+ * Returns: (transfer none): the submodel at position @i
  */
 NcmModel *
 ncm_model_peek_submodel (NcmModel *model, guint i)
@@ -3656,9 +3643,8 @@ ncm_model_peek_submodel (NcmModel *model, guint i)
  * @model: a #NcmModel
  * @mid: a #NcmModelID
  *
- * Gets the submodel if type #NcmModelID @mid.
- *
- * Returns: (transfer none): a #NcmModel.
+ * Returns: (transfer none) (nullable): the submodel with model id @mid, %NULL when
+ * there is none
  */
 NcmModel *
 ncm_model_peek_submodel_by_mid (NcmModel *model, NcmModelID mid)
@@ -3714,9 +3700,7 @@ ncm_model_peek_host (NcmModel *submodel)
  * @model: a #NcmModel
  * @mid: a #NcmModelID
  *
- * Gets the submodel type #NcmModelID @mid position.
- *
- * Returns: the @mid position or -1 if not found.
+ * Returns: the position of the submodel with model id @mid, -1 when there is none
  */
 gint
 ncm_model_peek_submodel_pos_by_mid (NcmModel *model, NcmModelID mid)
@@ -3743,34 +3727,16 @@ ncm_model_peek_submodel_pos_by_mid (NcmModel *model, NcmModelID mid)
  * ncm_model___getitem__:
  * @model: a #NcmModel
  * @param: parameter name
- * @error: a GError
+ * @error: a #GError
  *
- * Gets the parameter by name.
+ * Same as ncm_model_param_get_by_name().
  *
- * Returns: parameter value
+ * Returns: the parameter value
  */
 gdouble
-ncm_model___getitem__ (NcmModel *model, gchar *param, GError **error)
+ncm_model___getitem__ (NcmModel *model, const gchar *param, GError **error)
 {
-  g_return_val_if_fail (error == NULL || *error == NULL, GSL_NAN);
-  {
-    NcmModel *target;
-    guint i;
-    gboolean exists = ncm_model_param_index_from_name_full (model, param, &target, &i, error);
-
-    if (!exists)
-    {
-      NCM_UTIL_ON_ERROR_RETURN (error, , GSL_NAN);
-
-      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
-                                  "Parameter named: %s does not exist in %s",
-                                  param, G_OBJECT_TYPE_NAME (model));
-
-      return GSL_NAN;
-    }
-
-    return ncm_model_param_get (target, i);
-  }
+  return ncm_model_param_get_by_name (model, param, error);
 }
 
 /**
@@ -3778,32 +3744,13 @@ ncm_model___getitem__ (NcmModel *model, gchar *param, GError **error)
  * @model: a #NcmModel
  * @param: parameter name
  * @val: parameter value
- * @error: a pointer for GError
+ * @error: a #GError
  *
- * Sets the parameter by name.
- *
+ * Same as ncm_model_param_set_by_name().
  */
 void
-ncm_model___setitem__ (NcmModel *model, gchar *param, gdouble val, GError **error)
+ncm_model___setitem__ (NcmModel *model, const gchar *param, gdouble val, GError **error)
 {
-  g_return_if_fail (error == NULL || *error == NULL);
-  {
-    NcmModel *target;
-    guint i;
-    gboolean exists = ncm_model_param_index_from_name_full (model, param, &target, &i, error);
-
-    if (!exists)
-    {
-      NCM_UTIL_ON_ERROR_RETURN (error, , );
-
-      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
-                                  "Parameter named: %s does not exist in %s",
-                                  param, G_OBJECT_TYPE_NAME (model));
-
-      return;
-    }
-
-    ncm_model_param_set (target, i, val);
-  }
+  ncm_model_param_set_by_name (model, param, val, error);
 }
 

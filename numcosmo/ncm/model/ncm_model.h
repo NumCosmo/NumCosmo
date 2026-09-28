@@ -249,8 +249,8 @@ gboolean ncm_model_type_is_submodel (GType model_type);
 NcmModelID ncm_model_type_main_model (GType model_type);
 
 /* pygobject dict */
-gdouble ncm_model___getitem__ (NcmModel *model, gchar *param, GError **error);
-void ncm_model___setitem__ (NcmModel *model, gchar *param, gdouble val, GError **error);
+gdouble ncm_model___getitem__ (NcmModel *model, const gchar *param, GError **error);
+void ncm_model___setitem__ (NcmModel *model, const gchar *param, gdouble val, GError **error);
 
 #define NCM_MODEL_CLASS_IMPL_ALL ((guint64) (~((guint64) 0)))
 #define NCM_MODEL_OPT2IMPL(opt) (((guint64) 1) << ((guint64) (opt)))

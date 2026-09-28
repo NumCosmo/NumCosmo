@@ -367,8 +367,8 @@ test_ncm_model_peek_host_cross_host_subprocess (void)
 
   /* cosmo_a is still alive (held above), so reion's host backpointer is
    * live and points elsewhere -- attaching the same slotted-type submodel
-   * instance to a second host must be rejected, not silently reassigned. */
-  cosmo_b = NC_HICOSMO (nc_hicosmo_lcdm_new_full (reion, NULL, NULL));
+   * instance to a second host, here of another type, must be rejected. */
+  cosmo_b = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, NULL, NULL));
 
   nc_hicosmo_free (cosmo_a);
   nc_hicosmo_free (cosmo_b);
@@ -380,5 +380,6 @@ test_ncm_model_peek_host_cross_host_traps (void)
 {
   g_test_trap_subprocess ("/ncm/model/peek_host/cross_host/subprocess", 0, 0);
   g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*already attached to a `NcHICosmoLCDM' host*");
 }
 
