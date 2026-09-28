@@ -246,6 +246,10 @@ math_tests = [
         'sources': ['ncm/model/test_ncm_mset_func.c'],
     },
     {
+        'name': 'ncm_model_builder',
+        'sources': ['ncm/model/test_ncm_model_builder.c'],
+    },
+    {
         'name': 'ncm_mset_catalog',
         'sources': ['ncm/fit/test_ncm_mset_catalog.c'],
         'priority': 1,
