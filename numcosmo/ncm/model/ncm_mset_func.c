@@ -96,17 +96,24 @@ ncm_mset_func_init (NcmMSetFunc *func)
   self->diff    = ncm_diff_new ();
 }
 
+static gchar *_ncm_mset_func_shortest_double (const gdouble x);
+
 /*
  * _ncm_mset_func_update_unames:
  * @func: a #NcmMSetFunc
  *
- * (Re)builds the unique name/symbol from the bound evaluation point @eval_x.
- * The unique name is what identifies a function column in a #NcmMSetCatalog, so
- * it must encode @eval_x; otherwise several functions sharing the same base name
- * (e.g. a single function evaluated over a redshift grid, all named "wDE_z")
- * produce colliding column names and the catalog cannot be reopened. Both
- * ncm_mset_func_set_eval_x() and the "eval-x" property (restored on
- * deserialization) route through here.
+ * Rebuilds the unique name and symbol from the evaluation point @eval_x. The unique
+ * name is the column name of the function in a #NcmMSetCatalog, so two evaluation
+ * points must never give the same name. Otherwise a function evaluated over a
+ * redshift grid, all named "wDE_z", would produce repeated column names.
+ *
+ * Each component is written in the shortest form that reads back to the same double.
+ * The symbol lists the components separated by commas, as in f(1.5,-2e-05). The
+ * name maps each character one to one, '-' to 'm' and '.' to 'p', drops the '+' of
+ * the exponent and separates the components by '_', as in f_1p5_m2em05.
+ *
+ * Both ncm_mset_func_set_eval_x() and the "eval-x" property, restored on
+ * deserialization, call this function.
  */
 static void
 _ncm_mset_func_update_unames (NcmMSetFunc *func)
@@ -120,33 +127,79 @@ _ncm_mset_func_update_unames (NcmMSetFunc *func)
     return;
 
   {
-    const gchar *name   = ncm_mset_func_peek_name (func);
-    const gchar *symbol = ncm_mset_func_peek_symbol (func);
-    const guint len     = ncm_vector_len (self->eval_x);
-    GString *args_s     = g_string_new ("(");
-    gchar *args;
+    const guint len    = ncm_vector_len (self->eval_x);
+    GString *usymbol_s = g_string_new (ncm_mset_func_peek_symbol (func));
+    GString *uname_s   = g_string_new (ncm_mset_func_peek_name (func));
     guint i;
 
+    g_string_append_c (usymbol_s, '(');
+
     for (i = 0; i < len; i++)
-      g_string_append_printf (args_s, "%.15g", ncm_vector_get (self->eval_x, i));
-
-    g_string_append (args_s, ")");
-    args = g_string_free (args_s, FALSE);
-
-    self->usymbol = g_strjoin (NULL, symbol, args, NULL);
-
     {
-      GRegex *reg  = g_regex_new ("[^0-9]+", 0, 0, NULL);
-      gchar *nargs = g_regex_replace_literal (reg, args, -1, 0, "_", 0, NULL);
+      gchar *x_s = _ncm_mset_func_shortest_double (ncm_vector_get (self->eval_x, i));
+      gchar *c;
 
-      self->uname = g_strjoin (NULL, name, nargs, NULL);
+      if (i > 0)
+        g_string_append_c (usymbol_s, ',');
 
-      g_free (nargs);
-      g_regex_unref (reg);
+      g_string_append (usymbol_s, x_s);
+      g_string_append_c (uname_s, '_');
+
+      for (c = x_s; *c != '\0'; c++)
+      {
+        switch (*c)
+        {
+          case '-':
+            g_string_append_c (uname_s, 'm');
+            break;
+          case '.':
+            g_string_append_c (uname_s, 'p');
+            break;
+          case '+':
+            break;
+          default:
+            g_string_append_c (uname_s, *c);
+            break;
+        }
+      }
+
+      g_free (x_s);
     }
 
-    g_free (args);
+    g_string_append_c (usymbol_s, ')');
+
+    self->usymbol = g_string_free (usymbol_s, FALSE);
+    self->uname   = g_string_free (uname_s, FALSE);
   }
+}
+
+/*
+ * _ncm_mset_func_shortest_double:
+ * @x: a double
+ *
+ * Writes @x with the fewest significant digits, from 15 to 17, that read back to
+ * the same double. The output does not depend on the locale.
+ *
+ * Returns: (transfer full): the string.
+ */
+static gchar *
+_ncm_mset_func_shortest_double (const gdouble x)
+{
+  static const gchar *formats[] = {"%.15g", "%.16g"};
+  gchar buf[G_ASCII_DTOSTR_BUF_SIZE];
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (formats); i++)
+  {
+    g_ascii_formatd (buf, G_ASCII_DTOSTR_BUF_SIZE, formats[i], x);
+
+    if (g_ascii_strtod (buf, NULL) == x)
+      return g_strdup (buf);
+  }
+
+  g_ascii_formatd (buf, G_ASCII_DTOSTR_BUF_SIZE, "%.17g", x);
+
+  return g_strdup (buf);
 }
 
 static void
@@ -675,6 +728,8 @@ ncm_mset_func_set_meta (NcmMSetFunc *func, const gchar *name, const gchar *symbo
 
   self->nvar = nvar;
   self->dim  = dim;
+
+  _ncm_mset_func_update_unames (func);
 }
 
 /**
