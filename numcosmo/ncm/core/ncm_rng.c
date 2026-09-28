@@ -54,6 +54,7 @@ typedef struct _NcmRNGPrivate
   gsl_rng *r;
   gulong seed_val;
   gboolean seed_set;
+  gboolean state_set;
   GMutex lock;
 } NcmRNGPrivate;
 
@@ -84,9 +85,10 @@ ncm_rng_init (NcmRNG *rng)
 {
   NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
 
-  self->r        = NULL;
-  self->seed_val = 0;
-  self->seed_set = FALSE;
+  self->r         = NULL;
+  self->seed_val  = 0;
+  self->seed_set  = FALSE;
+  self->state_set = FALSE;
 
   g_mutex_init (&self->lock);
 }
@@ -100,8 +102,25 @@ _ncm_rng_constructed (GObject *object)
     NcmRNG *rng                = NCM_RNG (object);
     NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
 
-    if (!self->seed_set)
+    if (!self->seed_set && !self->state_set)
       ncm_rng_set_seed (rng, gsl_rng_default_seed);
+  }
+}
+
+/* Records @seed as the generator's seed and as used in the process. */
+static void
+_ncm_rng_record_seed (NcmRNG *rng, gulong seed)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  self->seed_val = seed;
+
+  if (self->r != NULL)
+  {
+    NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);
+
+    g_hash_table_insert (rng_class->seed_hash, (gpointer) (guintptr) seed, GINT_TO_POINTER (1));
+    self->seed_set = TRUE;
   }
 }
 
@@ -118,11 +137,27 @@ _ncm_rng_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       ncm_rng_set_algo (rng, g_value_get_string (value));
       break;
     case PROP_STATE:
+    {
+      NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
       ncm_rng_set_state (rng, g_value_get_string (value));
+      self->state_set = TRUE;
       break;
+    }
     case PROP_SEED:
-      ncm_rng_set_seed (rng, g_value_get_ulong (value));
+    {
+      /* A state set through the property wins over the seed: the seed is
+       * recorded, so that a deserialized generator resumes its stream.
+       */
+      NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+      if (self->state_set)
+        _ncm_rng_record_seed (rng, g_value_get_ulong (value));
+      else
+        ncm_rng_set_seed (rng, g_value_get_ulong (value));
+
       break;
+    }
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -200,7 +235,7 @@ ncm_rng_class_init (NcmRNGClass *klass)
                                    PROP_SEED,
                                    g_param_spec_ulong ("seed",
                                                        NULL,
-                                                       "Algorithm seed",
+                                                       "Algorithm seed; only recorded when a state was set",
                                                        0, G_MAXULONG, 0,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -523,16 +558,10 @@ ncm_rng_set_seed (NcmRNG *rng, gulong seed)
 {
   NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
 
-  self->seed_val = seed;
+  _ncm_rng_record_seed (rng, seed);
 
   if (self->r != NULL)
-  {
-    NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);
-
     gsl_rng_set (self->r, seed);
-    g_hash_table_insert (rng_class->seed_hash, (gpointer) (guintptr) seed, GINT_TO_POINTER (1));
-    self->seed_set = TRUE;
-  }
 }
 
 /**

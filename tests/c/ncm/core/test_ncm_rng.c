@@ -91,6 +91,84 @@ test_ncm_rng_seed_state (void)
 }
 
 static void
+test_ncm_rng_property_order (void)
+{
+  NcmRNG *rng = ncm_rng_seeded_new ("mt19937", TEST_RNG_SEED + 1);
+  gdouble draws[5];
+  gchar *state;
+  guint i;
+
+  for (i = 0; i < 3; i++)
+    ncm_rng_uniform01_gen (rng);
+
+  state = ncm_rng_get_state (rng);
+
+  for (i = 0; i < 5; i++)
+    draws[i] = ncm_rng_uniform01_gen (rng);
+
+  /* state then seed: the state is resumed and the seed recorded */
+  {
+    NcmRNG *rng2 = g_object_new (NCM_TYPE_RNG, "algorithm", "mt19937", "state", state, "seed", (gulong) (TEST_RNG_SEED + 1), NULL);
+
+    g_assert_cmpuint (ncm_rng_get_seed (rng2), ==, TEST_RNG_SEED + 1);
+
+    for (i = 0; i < 5; i++)
+      g_assert_cmpfloat (ncm_rng_uniform01_gen (rng2), ==, draws[i]);
+
+    ncm_rng_free (rng2);
+  }
+
+  /* seed then state: the state still wins */
+  {
+    NcmRNG *rng2 = g_object_new (NCM_TYPE_RNG, "algorithm", "mt19937", "seed", (gulong) (TEST_RNG_SEED + 1), "state", state, NULL);
+
+    g_assert_cmpuint (ncm_rng_get_seed (rng2), ==, TEST_RNG_SEED + 1);
+
+    for (i = 0; i < 5; i++)
+      g_assert_cmpfloat (ncm_rng_uniform01_gen (rng2), ==, draws[i]);
+
+    ncm_rng_free (rng2);
+  }
+
+  /* state alone: construction does not reseed it */
+  {
+    NcmRNG *rng2 = g_object_new (NCM_TYPE_RNG, "algorithm", "mt19937", "state", state, NULL);
+
+    for (i = 0; i < 5; i++)
+      g_assert_cmpfloat (ncm_rng_uniform01_gen (rng2), ==, draws[i]);
+
+    /* the API call reseeds regardless of the state */
+    ncm_rng_set_seed (rng2, TEST_RNG_SEED + 1);
+    {
+      NcmRNG *fresh = ncm_rng_seeded_new ("mt19937", TEST_RNG_SEED + 1);
+
+      for (i = 0; i < 5; i++)
+        g_assert_cmpfloat (ncm_rng_uniform01_gen (rng2), ==, ncm_rng_uniform01_gen (fresh));
+
+      ncm_rng_free (fresh);
+    }
+    ncm_rng_free (rng2);
+  }
+
+  /* serialization resumes the stream and keeps the seed */
+  {
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+    NcmRNG *rng2      = NCM_RNG (ncm_serialize_dup_obj (ser, G_OBJECT (rng)));
+
+    g_assert_cmpuint (ncm_rng_get_seed (rng2), ==, TEST_RNG_SEED + 1);
+
+    for (i = 0; i < 5; i++)
+      g_assert_cmpfloat (ncm_rng_uniform01_gen (rng2), ==, ncm_rng_uniform01_gen (rng));
+
+    ncm_rng_free (rng2);
+    ncm_serialize_free (ser);
+  }
+
+  g_free (state);
+  ncm_rng_free (rng);
+}
+
+static void
 test_ncm_rng_pool (void)
 {
   NcmRNG *rng_a  = ncm_rng_pool_get ("test_ncm_rng_pool_a");
@@ -402,6 +480,7 @@ main (gint argc, gchar *argv[])
   g_test_set_nonfatal_assertions ();
 
   g_test_add_func ("/ncm/rng/seed_state", &test_ncm_rng_seed_state);
+  g_test_add_func ("/ncm/rng/property_order", &test_ncm_rng_property_order);
   g_test_add_func ("/ncm/rng/set_algo", &test_ncm_rng_set_algo);
   g_test_add_func ("/ncm/rng/check_seed_width", &test_ncm_rng_check_seed_width);
   g_test_add_func ("/ncm/rng/pool", &test_ncm_rng_pool);
