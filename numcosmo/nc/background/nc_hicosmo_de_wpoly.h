@@ -78,6 +78,7 @@ NcHICosmoDEWPoly *nc_hicosmo_de_wpoly_new (gsize ncoeffs, const gdouble z_f);
 gdouble nc_hicosmo_de_wpoly_get_z_f (NcHICosmoDEWPoly *wpoly);
 guint nc_hicosmo_de_wpoly_get_ncoeffs (NcHICosmoDEWPoly *wpoly);
 gdouble nc_hicosmo_de_wpoly_dw_dz (NcHICosmoDEWPoly *wpoly, const gdouble z);
+GArray *nc_hicosmo_de_wpoly_turning_points (NcHICosmoDEWPoly *wpoly);
 
 G_END_DECLS
 

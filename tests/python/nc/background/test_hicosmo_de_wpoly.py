@@ -175,3 +175,90 @@ def test_serialization() -> None:
     for z in np.linspace(0.0, 3.0, 7):
         assert cosmo2.w_de(z) == cosmo.w_de(z)
         assert cosmo2.E2Omega_de(z) == cosmo.E2Omega_de(z)
+
+
+def coeffs_from_roots(
+    roots_z: list[float], pairs: list[tuple[float, float]], sign: float = 1.0
+) -> np.ndarray:
+    """Legendre coefficients of w + 1 whose dw/dz has the given real roots.
+
+    ``pairs`` are (b, s) complex-conjugate root pairs of dw/dz in z, which add
+    no turning point.
+    """
+    P = np.polynomial.polynomial
+    x_roots = [2.0 * z / Z_F - 1.0 for z in roots_z]
+    p = np.array([sign])
+    for xr in x_roots:
+        p = P.polymul(p, np.array([-xr, 1.0]))
+    for b, s in pairs:
+        xb, xs = 2.0 * b / Z_F - 1.0, 2.0 * s / Z_F
+        p = P.polymul(p, np.array([xb * xb + xs * xs, -2.0 * xb, 1.0]))
+    dw_leg = L.poly2leg(p)
+    return L.legint(dw_leg) * 0.5 * Z_F
+
+
+@pytest.mark.parametrize(
+    "roots_z,pairs",
+    [
+        ([], []),
+        ([0.5], []),
+        ([0.3, 1.2], []),
+        ([0.2, 0.9, 2.0], []),
+        ([0.5], [(1.5, 0.2)]),
+        ([0.3, 1.2], [(0.8, 0.05), (2.0, 0.4)]),
+        ([0.1, 0.15, 2.2], [(1.0, 0.01)]),
+    ],
+)
+def test_turning_points_constructed(
+    roots_z: list[float], pairs: list[tuple[float, float]]
+) -> None:
+    """Prescribed real roots of dw/dz are recovered; complex pairs add none."""
+    coeffs = coeffs_from_roots(roots_z, pairs)
+    cosmo = Nc.HICosmoDEWPoly.new(ncoeffs=len(coeffs), z_f=Z_F)
+    set_coeffs(cosmo, coeffs)
+
+    tp = cosmo.turning_points()
+    assert len(tp) == len(roots_z)
+    assert_allclose(tp, sorted(roots_z), rtol=1.0e-10, atol=1.0e-12)
+    for z in tp:
+        assert cosmo.dw_dz(z) == pytest.approx(0.0, abs=1.0e-10)
+
+
+def test_turning_points_outside_range() -> None:
+    """Roots of dw/dz outside (0, z_f) are not turning points."""
+    coeffs = coeffs_from_roots([-0.5, 0.7, 3.0], [])
+    cosmo = Nc.HICosmoDEWPoly.new(ncoeffs=len(coeffs), z_f=Z_F)
+    set_coeffs(cosmo, coeffs)
+    tp = cosmo.turning_points()
+    assert len(tp) == 1
+    assert tp[0] == pytest.approx(0.7)
+
+
+def test_turning_points_degenerate() -> None:
+    """LambdaCDM, constant and linear w have no turning points."""
+    cosmo = Nc.HICosmoDEWPoly.new(ncoeffs=8, z_f=Z_F)
+    assert len(cosmo.turning_points()) == 0
+    set_coeffs(cosmo, np.array([0.3]))
+    assert len(cosmo.turning_points()) == 0
+    set_coeffs(cosmo, np.array([0.3, -0.2]))
+    assert len(cosmo.turning_points()) == 0
+    # w quadratic: dw/dz linear, one root
+    set_coeffs(cosmo, np.array([0.0, 0.0, 0.1]))
+    tp = cosmo.turning_points()
+    assert len(tp) == 1
+    assert tp[0] == pytest.approx(0.5 * Z_F)
+
+
+@pytest.mark.parametrize("ncoeffs", [8, 51])
+def test_turning_points_random(rng: np.random.Generator, ncoeffs: int) -> None:
+    """Random series agree with numpy's Legendre root finder."""
+    for _ in range(20):
+        coeffs = rng.standard_normal(ncoeffs)
+        cosmo = Nc.HICosmoDEWPoly.new(ncoeffs=ncoeffs, z_f=Z_F)
+        set_coeffs(cosmo, coeffs)
+        r = L.legroots(L.legder(coeffs))
+        real = r[np.abs(r.imag) < 1.0e-8].real
+        ref = np.sort(0.5 * Z_F * (real[(real > -1.0) & (real < 1.0)] + 1.0))
+        tp = np.array(cosmo.turning_points())
+        assert len(tp) == len(ref)
+        assert_allclose(tp, ref, rtol=1.0e-8, atol=1.0e-10)

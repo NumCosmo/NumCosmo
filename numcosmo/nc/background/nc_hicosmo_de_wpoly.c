@@ -49,6 +49,8 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_sf_legendre.h>
 #include <gsl/gsl_integration.h>
+#include <gsl/gsl_eigen.h>
+#include <gsl/gsl_sort.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcHICosmoDEWPolyPrivate
@@ -448,5 +450,115 @@ nc_hicosmo_de_wpoly_dw_dz (NcHICosmoDEWPoly *wpoly, const gdouble z)
     return _nc_hicosmo_de_wpoly_dw1 (wpoly, z);
   else
     return 0.0;
+}
+
+/**
+ * nc_hicosmo_de_wpoly_turning_points:
+ * @wpoly: a #NcHICosmoDEWPoly
+ *
+ * Finds the turning points of $w(z)$ inside $(0, z_f)$: the real roots of
+ * $\mathrm{d}w/\mathrm{d}z$, from the eigenvalues of the Legendre comrade matrix
+ * of the derivative series. An eigenvalue counts as real when its imaginary part
+ * is below $10^{-8}$; a repeated root is then reported twice or not at all.
+ *
+ * Returns: (element-type gdouble) (transfer container): the turning points in increasing $z$, possibly empty
+ */
+GArray *
+nc_hicosmo_de_wpoly_turning_points (NcHICosmoDEWPoly *wpoly)
+{
+  NcHICosmoDEWPolyPrivate * const self = wpoly->priv;
+  NcmModel *model                      = NCM_MODEL (wpoly);
+  GArray *tp                           = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  const guint nc                       = self->ncoeffs;
+  gdouble *c                           = g_new (gdouble, nc);
+  gdouble *d                           = g_new0 (gdouble, nc);
+  guint nd, j;
+
+  for (j = 0; j < nc; j++)
+    c[j] = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_WPOLY_A, j);
+
+  /* Legendre series of dw/dx, x = 2z/z_f - 1, degree nc - 2. */
+  for (j = nc - 1; j >= 1; j--)
+  {
+    d[j - 1] = (2.0 * j - 1.0) * c[j];
+
+    if (j >= 2)
+      c[j - 2] += c[j];
+  }
+
+  nd = nc - 1;
+
+  while ((nd > 0) && (d[nd - 1] == 0.0))
+    nd--;
+
+  if (nd == 2)
+  {
+    const gdouble x = -d[0] / d[1];
+
+    if ((x > -1.0) && (x < 1.0))
+    {
+      const gdouble z = 0.5 * self->z_f * (x + 1.0);
+
+      g_array_append_val (tp, z);
+    }
+  }
+  else if (nd > 2)
+  {
+    /* Comrade matrix of the derivative series, symmetrized as in numpy's
+     * legcompanion; the last column carries the coefficients.
+     */
+    const guint n                   = nd - 1;
+    gsl_matrix *mat                 = gsl_matrix_calloc (n, n);
+    gsl_vector_complex *eval        = gsl_vector_complex_alloc (n);
+    gsl_eigen_nonsymm_workspace *ws = gsl_eigen_nonsymm_alloc (n);
+    gdouble *scl                    = g_new (gdouble, n);
+    guint i;
+
+    for (i = 0; i < n; i++)
+      scl[i] = 1.0 / sqrt (2.0 * i + 1.0);
+
+    for (i = 0; i + 1 < n; i++)
+    {
+      const gdouble v = (i + 1.0) * scl[i] * scl[i + 1];
+
+      gsl_matrix_set (mat, i, i + 1, v);
+      gsl_matrix_set (mat, i + 1, i, v);
+    }
+
+    for (i = 0; i < n; i++)
+    {
+      const gdouble v = gsl_matrix_get (mat, i, n - 1) - (d[i] / d[n]) * (scl[i] / scl[n - 1]) * (n / (2.0 * n - 1.0));
+
+      gsl_matrix_set (mat, i, n - 1, v);
+    }
+
+    gsl_eigen_nonsymm (mat, eval, ws);
+
+    for (i = 0; i < n; i++)
+    {
+      const gsl_complex r = gsl_vector_complex_get (eval, i);
+      const gdouble x     = GSL_REAL (r);
+
+      if ((fabs (GSL_IMAG (r)) < 1.0e-8) && (x > -1.0) && (x < 1.0))
+      {
+        const gdouble z = 0.5 * self->z_f * (x + 1.0);
+
+        g_array_append_val (tp, z);
+      }
+    }
+
+    if (tp->len > 1)
+      gsl_sort ((gdouble *) tp->data, 1, tp->len);
+
+    g_free (scl);
+    gsl_eigen_nonsymm_free (ws);
+    gsl_vector_complex_free (eval);
+    gsl_matrix_free (mat);
+  }
+
+  g_free (c);
+  g_free (d);
+
+  return tp;
 }
 
