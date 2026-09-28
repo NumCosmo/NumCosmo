@@ -87,6 +87,7 @@
 #include <numcosmo/nc/background/nc_hicosmo_de_jbp.h>
 #include <numcosmo/nc/background/nc_hicosmo_de_xcdm.h>
 #include <numcosmo/nc/background/nc_hicosmo_de_wpoly.h>
+#include <numcosmo/nc/background/nc_hicosmo_de_wpoly_library.h>
 #include <numcosmo/nc/background/nc_hicosmo_de_wspline.h>
 #include <numcosmo/nc/background/nc_hicosmo_lcdm.h>
 #include <numcosmo/nc/background/nc_hicosmo_qconst.h>

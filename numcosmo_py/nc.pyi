@@ -11869,6 +11869,86 @@ class HICosmoDEWPolyClass(GObject.GPointer):
 
     parent_class: HICosmoDEClass = ...
 
+class HICosmoDEWPolyLibrary(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        HICosmoDEWPolyLibrary(**properties)
+        new(seed:int, degree:int, z_f:float, n_per_class:int) -> NumCosmo.HICosmoDEWPolyLibrary
+
+    Object NcHICosmoDEWPolyLibrary
+
+    Properties from NcHICosmoDEWPolyLibrary:
+      seed -> gulong: seed
+        master seed of the coefficient stream
+      degree -> guint: degree
+        degree of dw/dz
+      zf -> gdouble: zf
+        final redshift
+      n-per-class -> guint: n-per-class
+        fiducials per class
+      max-class -> guint: max-class
+        largest number of turning points kept
+      a-max -> gdouble: a-max
+        upper end of the uniform amplitude
+      density-bins -> guint: density-bins
+        bins per axis of the turning-point density estimate
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        a_max: float
+        degree: int
+        density_bins: int
+        max_class: int
+        n_per_class: int
+        seed: int
+        zf: float
+
+    props: Props = ...
+    def __init__(
+        self,
+        a_max: float = ...,
+        degree: int = ...,
+        density_bins: int = ...,
+        max_class: int = ...,
+        n_per_class: int = ...,
+        seed: int = ...,
+        zf: float = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(lib: HICosmoDEWPolyLibrary) -> None: ...
+    def free(self) -> None: ...
+    def get_amplitude(self, m: int, i: int) -> float: ...
+    def get_draw_index(self, m: int, i: int) -> int: ...
+    def get_fiducial(self, m: int, i: int) -> HICosmoDEWPoly: ...
+    def get_max_class(self) -> int: ...
+    def get_n_draws(self) -> int: ...
+    def len(self, m: int) -> int: ...
+    @classmethod
+    def new(
+        cls, seed: int, degree: int, z_f: float, n_per_class: int
+    ) -> HICosmoDEWPolyLibrary: ...
+    def peek_coeffs(self, m: int, i: int) -> NumCosmoMath.Vector: ...
+    def peek_turning_points(self, m: int, i: int) -> list[float]: ...
+    def prepare(self) -> None: ...
+    def ref(self) -> HICosmoDEWPolyLibrary: ...
+
+class HICosmoDEWPolyLibraryClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HICosmoDEWPolyLibraryClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
 class HICosmoDEWPolyPrivate(GObject.GPointer): ...
 
 class HICosmoDEWSpline(HICosmoDE):
