@@ -616,10 +616,12 @@ _mset_func_numdiff_fparams_1_val (NcmVector *x_v, gpointer userdata)
  * @func: a #NcmMSetFunc
  * @mset: a #NcmMSet
  * @x: (array): function arguments
- * @out: (out) (transfer full): function gradient
+ * @out: (inout) (allow-none) (transfer full): function gradient
  *
- * Computes the gradient of @func at @x and stores the result in @out.
- * This function is only valid if @func is a scalar function.
+ * Computes the gradient of the scalar function @func at @x with respect to the free
+ * parameters of @mset and stores it in @out. If *@out is %NULL, a new #NcmVector
+ * is allocated; otherwise *@out must have one component per free parameter and is
+ * overwritten.
  *
  */
 void
@@ -654,6 +656,7 @@ ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdouble *
     ncm_vector_set_array (*out, grad_a);
   }
 
+  ncm_vector_free (x_v);
   g_array_unref (x_a);
   g_array_unref (grad_a);
 }

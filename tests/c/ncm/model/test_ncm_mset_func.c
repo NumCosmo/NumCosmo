@@ -81,7 +81,51 @@ test_mset_func_sum_new (const guint nvar)
   return func;
 }
 
+/*
+ * A concrete NcmMSetFunc of the free parameters: f = sum_i (i + 1) p_i^2.
+ */
+
+#define TEST_TYPE_MSET_FUNC_FPARAMS (test_mset_func_fparams_get_type ())
+G_DECLARE_FINAL_TYPE (TestMSetFuncFParams, test_mset_func_fparams, TEST, MSET_FUNC_FPARAMS, NcmMSetFunc)
+
+struct _TestMSetFuncFParams
+{
+  NcmMSetFunc parent_instance;
+};
+
+G_DEFINE_TYPE (TestMSetFuncFParams, test_mset_func_fparams, NCM_TYPE_MSET_FUNC)
+
+static void
+test_mset_func_fparams_init (TestMSetFuncFParams *fp)
+{
+}
+
+static void
+_test_mset_func_fparams_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  const guint fparam_len = ncm_mset_fparam_len (mset);
+  guint i;
+
+  res[0] = 0.0;
+
+  for (i = 0; i < fparam_len; i++)
+  {
+    const gdouble p_i = ncm_mset_fparam_get (mset, i);
+
+    res[0] += (i + 1.0) * p_i * p_i;
+  }
+}
+
+static void
+test_mset_func_fparams_class_init (TestMSetFuncFParamsClass *klass)
+{
+  NcmMSetFuncClass *func_class = NCM_MSET_FUNC_CLASS (klass);
+
+  func_class->eval = &_test_mset_func_fparams_eval;
+}
+
 void test_ncm_mset_func_unames (void);
+void test_ncm_mset_func_numdiff_fparams (void);
 void test_ncm_mset_func_unames_set_meta (void);
 
 gint
@@ -93,6 +137,7 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/ncm/mset_func/unames", &test_ncm_mset_func_unames);
   g_test_add_func ("/ncm/mset_func/unames/set_meta", &test_ncm_mset_func_unames_set_meta);
+  g_test_add_func ("/ncm/mset_func/numdiff_fparams", &test_ncm_mset_func_numdiff_fparams);
 
   g_test_run ();
 }
@@ -168,5 +213,55 @@ test_ncm_mset_func_unames_set_meta (void)
   g_assert_cmpstr (ncm_mset_func_peek_usymbol (func), ==, "g(2.5)");
 
   ncm_mset_func_free (func);
+}
+
+void
+test_ncm_mset_func_numdiff_fparams (void)
+{
+  NcmModelRosenbrock *mrb = ncm_model_rosenbrock_new ();
+  NcmMSet *mset           = ncm_mset_new (mrb, NULL, NULL);
+  NcmMSetFunc *func       = g_object_new (TEST_TYPE_MSET_FUNC_FPARAMS, NULL);
+  const gdouble p[2]      = {1.5, -0.5};
+  NcmVector *grad         = NULL;
+  NcmVector *grad_data    = NULL;
+  NcmVector *grad_in;
+  guint i;
+
+  ncm_mset_func_set_meta (func, "f", "f", "Test", "Weighted sum of squares", 0, 1);
+
+  ncm_model_param_set (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X1, p[0]);
+  ncm_model_param_set (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X2, p[1]);
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+  g_assert_cmpuint (ncm_mset_fparam_len (mset), ==, 2);
+
+  /* A NULL *out allocates a new vector. */
+  ncm_mset_func_numdiff_fparams (func, mset, NULL, &grad);
+  g_assert_nonnull (grad);
+  g_assert_cmpuint (ncm_vector_len (grad), ==, 2);
+
+  for (i = 0; i < 2; i++)
+    ncm_assert_cmpdouble_e (ncm_vector_get (grad, i), ==, 2.0 * (i + 1.0) * p[i], 1.0e-12, 0.0);
+
+  /* The free parameters are restored. */
+  for (i = 0; i < 2; i++)
+    g_assert_cmpfloat (ncm_mset_fparam_get (mset, i), ==, p[i]);
+
+  /* A non-NULL *out is overwritten in place. */
+  grad_data = ncm_vector_new (2);
+  grad_in   = grad_data;
+  ncm_vector_set_all (grad_data, -7.0);
+
+  ncm_mset_func_numdiff_fparams (func, mset, NULL, &grad_data);
+  g_assert_true (grad_data == grad_in);
+
+  for (i = 0; i < 2; i++)
+    g_assert_cmpfloat (ncm_vector_get (grad_data, i), ==, ncm_vector_get (grad, i));
+
+  ncm_vector_free (grad);
+  ncm_vector_free (grad_data);
+  ncm_mset_func_free (func);
+  ncm_mset_free (mset);
+  ncm_model_rosenbrock_free (mrb);
 }
 
