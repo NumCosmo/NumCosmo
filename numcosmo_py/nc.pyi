@@ -181,6 +181,8 @@ HICOSMO_DE_DEFAULT_OMEGA_X: float = 0.7
 HICOSMO_DE_DEFAULT_T_GAMMA0: float = 2.7245
 HICOSMO_DE_JBP_DEFAULT_W0: float = 1.0
 HICOSMO_DE_JBP_DEFAULT_W1: float = 0.0
+HICOSMO_DE_WPOLY_DEFAULT_A: float = 0.0
+HICOSMO_DE_WPOLY_DEFAULT_A_LEN: int = 8
 HICOSMO_DE_WSPLINE_DEFAULT_AS_DRAG: float = 0.035
 HICOSMO_DE_WSPLINE_DEFAULT_W0: float = 1.0
 HICOSMO_DE_WSPLINE_N: int = 5
@@ -11651,6 +11653,222 @@ class HICosmoDEReparamOkClass(GObject.GPointer):
     """
 
     parent_class: NumCosmoMath.ReparamClass = ...
+
+class HICosmoDEWPoly(HICosmoDE):
+    r"""
+    :Constructors:
+
+    ::
+
+        HICosmoDEWPoly(**properties)
+        new(ncoeffs:int, z_f:float) -> NumCosmo.HICosmoDEWPoly
+
+    Object NcHICosmoDEWPoly
+
+    Properties from NcHICosmoDEWPoly:
+      zf -> gdouble: zf
+        final redshift
+      a -> NcmVector: a
+        a
+      a-length -> guint: a-length
+        a:length
+      a-fit -> GVariant: a-fit
+        a:fit
+
+    Properties from NcHICosmoDE:
+      CCL-comp -> gboolean: CCL-comp
+        Whether to use CCL compatible mode
+      H0 -> gdouble: H0
+        H_0
+      Omegac -> gdouble: Omegac
+        \Omega_{c0}
+      Omegax -> gdouble: Omegax
+        \Omega_{x0}
+      Tgamma0 -> gdouble: Tgamma0
+        T_{\gamma0}
+      ENnu -> gdouble: ENnu
+        N_\nu
+      Omegab -> gdouble: Omegab
+        \Omega_{b0}
+      massnu -> NcmVector: massnu
+        m_\nu
+      Tnu -> NcmVector: Tnu
+        T_{\nu0}
+      munu -> NcmVector: munu
+        \mu_{\nu}
+      gnu -> NcmVector: gnu
+        g_{\nu}
+      massnu-length -> guint: massnu-length
+        m_\nu:length
+      Tnu-length -> guint: Tnu-length
+        T_{\nu0}:length
+      munu-length -> guint: munu-length
+        \mu_{\nu}:length
+      gnu-length -> guint: gnu-length
+        g_{\nu}:length
+      H0-fit -> gboolean: H0-fit
+        H_0:fit
+      Omegac-fit -> gboolean: Omegac-fit
+        \Omega_{c0}:fit
+      Omegax-fit -> gboolean: Omegax-fit
+        \Omega_{x0}:fit
+      Tgamma0-fit -> gboolean: Tgamma0-fit
+        T_{\gamma0}:fit
+      ENnu-fit -> gboolean: ENnu-fit
+        N_\nu:fit
+      Omegab-fit -> gboolean: Omegab-fit
+        \Omega_{b0}:fit
+      massnu-fit -> GVariant: massnu-fit
+        m_\nu:fit
+      Tnu-fit -> GVariant: Tnu-fit
+        T_{\nu0}:fit
+      munu-fit -> GVariant: munu-fit
+        \mu_{\nu}:fit
+      gnu-fit -> GVariant: gnu-fit
+        g_{\nu}:fit
+
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Removed: ignored, Yp now comes from the bbn submodel
+      Yp-fit -> gboolean: Yp-fit
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+      bbn -> NcBBN: bbn
+        bbn
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        a: NumCosmoMath.Vector
+        a_fit: GLib.Variant
+        a_length: int
+        zf: float
+        CCL_comp: bool
+        ENnu: float
+        ENnu_fit: bool
+        H0: float
+        H0_fit: bool
+        Omegab: float
+        Omegab_fit: bool
+        Omegac: float
+        Omegac_fit: bool
+        Omegax: float
+        Omegax_fit: bool
+        Tgamma0: float
+        Tgamma0_fit: bool
+        Tnu: NumCosmoMath.Vector
+        Tnu_fit: GLib.Variant
+        Tnu_length: int
+        gnu: NumCosmoMath.Vector
+        gnu_fit: GLib.Variant
+        gnu_length: int
+        massnu: NumCosmoMath.Vector
+        massnu_fit: GLib.Variant
+        massnu_length: int
+        munu: NumCosmoMath.Vector
+        munu_fit: GLib.Variant
+        munu_length: int
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: typing.Optional[NumCosmoMath.Reparam]
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+        Yp: float
+        Yp_fit: bool
+        bbn: BBN
+        prim: HIPrim
+        reion: HIReion
+
+    props: Props = ...
+    parent_instance: HICosmoDE = ...
+    priv: HICosmoDEWPolyPrivate = ...
+    def __init__(
+        self,
+        a: NumCosmoMath.Vector = ...,
+        a_fit: GLib.Variant = ...,
+        a_length: int = ...,
+        zf: float = ...,
+        CCL_comp: bool = ...,
+        ENnu: float = ...,
+        ENnu_fit: bool = ...,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegab: float = ...,
+        Omegab_fit: bool = ...,
+        Omegac: float = ...,
+        Omegac_fit: bool = ...,
+        Omegax: float = ...,
+        Omegax_fit: bool = ...,
+        Tgamma0: float = ...,
+        Tgamma0_fit: bool = ...,
+        Tnu: NumCosmoMath.Vector = ...,
+        Tnu_fit: GLib.Variant = ...,
+        Tnu_length: int = ...,
+        gnu: NumCosmoMath.Vector = ...,
+        gnu_fit: GLib.Variant = ...,
+        gnu_length: int = ...,
+        massnu: NumCosmoMath.Vector = ...,
+        massnu_fit: GLib.Variant = ...,
+        massnu_length: int = ...,
+        munu: NumCosmoMath.Vector = ...,
+        munu_fit: GLib.Variant = ...,
+        munu_length: int = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
+        bbn: BBN = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def dw_dz(self, z: float) -> float: ...
+    def get_ncoeffs(self) -> int: ...
+    def get_z_f(self) -> float: ...
+    @classmethod
+    def new(cls, ncoeffs: int, z_f: float) -> HICosmoDEWPoly: ...
+
+class HICosmoDEWPolyClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HICosmoDEWPolyClass()
+    """
+
+    parent_class: HICosmoDEClass = ...
+
+class HICosmoDEWPolyPrivate(GObject.GPointer): ...
 
 class HICosmoDEWSpline(HICosmoDE):
     r"""
@@ -27686,6 +27904,20 @@ class HICosmoDEVParams(GObject.GEnum):
     M: HICosmoDEVParams = ...
     MU: HICosmoDEVParams = ...
     T: HICosmoDEVParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class HICosmoDEWPolyVParams(GObject.GEnum):
+    A: HICosmoDEWPolyVParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

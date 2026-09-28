@@ -118,6 +118,7 @@
 #include "nc/background/nc_hicosmo_qrbf.h"
 #include "nc/background/nc_hicosmo_lcdm.h"
 #include "nc/background/nc_hicosmo_de_xcdm.h"
+#include "nc/background/nc_hicosmo_de_wpoly.h"
 #include "nc/background/nc_hicosmo_de_wspline.h"
 #include "nc/background/nc_hicosmo_de_cpl.h"
 #include "nc/background/nc_hicosmo_de_jbp.h"
@@ -887,6 +888,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QRBF);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_LCDM);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_WPOLY);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_WSPLINE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_CPL);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_JBP);
