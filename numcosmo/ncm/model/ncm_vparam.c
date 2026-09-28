@@ -26,11 +26,9 @@
 /**
  * NcmVParam:
  *
- * Properties of a vector-like parameter.
- *
- * This object comprises the necessary properties to define a vector parameter. It is
- * used by #NcmModel to store the description of the vector model parameters.
- *
+ * Description of a vector model parameter: one #NcmSParam per component, each a copy
+ * of NcmVParam:default-sparam named `name_i` with symbol `{symbol}_i` until changed.
+ * #NcmModel keeps one for each vector parameter.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -47,7 +45,6 @@ enum
   PROP_0,
   PROP_DEFAULT_SPARAM,
   PROP_DEFAULT_LEN,
-  PROP_LEN,
 };
 
 struct _NcmVParam
@@ -147,6 +144,11 @@ ncm_vparam_class_init (NcmVParamClass *klass)
   object_class->dispose      = _ncm_vparam_dispose;
   object_class->finalize     = _ncm_vparam_finalize;
 
+  /**
+   * NcmVParam:default-sparam:
+   *
+   * The #NcmSParam each new component copies.
+   */
   g_object_class_install_property (object_class,
                                    PROP_DEFAULT_SPARAM,
                                    g_param_spec_object  ("default-sparam",
@@ -155,6 +157,11 @@ ncm_vparam_class_init (NcmVParamClass *klass)
                                                          NCM_TYPE_SPARAM,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmVParam:default-len:
+   *
+   * The number of components at construction; reads back the current length.
+   */
   g_object_class_install_property (object_class,
                                    PROP_DEFAULT_LEN,
                                    g_param_spec_uint  ("default-len",
@@ -166,13 +173,10 @@ ncm_vparam_class_init (NcmVParamClass *klass)
 
 /**
  * ncm_vparam_new:
- * @len: vector length.
- * @default_param: a #NcmSParam.
+ * @len: vector length
+ * @default_param: a #NcmSParam
  *
- * This function allocates memory for a new #NcmVParam object and sets its properties to the values from
- * the input arguments. @len provides the number of components.
- *
- * Returns: A new #NcmVParam.
+ * Returns: (transfer full): a new #NcmVParam with @len copies of @default_param
  */
 NcmVParam *
 ncm_vparam_new (guint len, NcmSParam *default_param)
@@ -188,25 +192,19 @@ ncm_vparam_new (guint len, NcmSParam *default_param)
 
 /**
  * ncm_vparam_full_new:
- * @len: vector length.
- * @name: #NcmSParam:name.
- * @symbol: #NcmSParam:symbol.
- * @lower_bound: value of #NcmSParam:lower-bound.
- * @upper_bound: value of #NcmSParam:upper-bound.
- * @scale: value of #NcmSParam:scale.
- * @abstol: value of #NcmSParam:absolute-tolerance.
- * @default_val: value of #NcmSParam:default-value.
- * @ftype: a #NcmParamType.
+ * @len: vector length
+ * @name: #NcmSParam:name
+ * @symbol: #NcmSParam:symbol
+ * @lower_bound: value of #NcmSParam:lower-bound
+ * @upper_bound: value of #NcmSParam:upper-bound
+ * @scale: value of #NcmSParam:scale
+ * @abstol: value of #NcmSParam:absolute-tolerance
+ * @default_val: value of #NcmSParam:default-value
+ * @ftype: a #NcmParamType
  *
- * This function allocates memory for a new #NcmVParam object and sets its properties to the values from
- * the input arguments.
+ * Same as ncm_vparam_new() with the default #NcmSParam built by ncm_sparam_new().
  *
- * The @name parameter is restricted to the interval [@lower_bound, @upper_bound].
- * @scale is an initial step for the statistical algorithms.
- * @abstol is the absolute error tolerance of the parameter.
- * @ftype indicates if the parameter will be fitted or not.
- *
- * Returns: A new #NcmVParam.
+ * Returns: (transfer full): a new #NcmVParam
  */
 NcmVParam *
 ncm_vparam_full_new (guint len, const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
@@ -221,7 +219,7 @@ ncm_vparam_full_new (guint len, const gchar *name, const gchar *symbol, gdouble 
 
 /**
  * ncm_vparam_ref:
- * @vparam: a #NcmVParam.
+ * @vparam: a #NcmVParam
  *
  * Increases the reference count of @vparam by one.
  *
@@ -235,11 +233,10 @@ ncm_vparam_ref (NcmVParam *vparam)
 
 /**
  * ncm_vparam_copy:
- * @vparam: a #NcmVParam.
+ * @vparam: a #NcmVParam
  *
- * Duplicates the #NcmVParam object setting the same values of the original propertities.
- *
- * Returns: (transfer full): A new #NcmVParam.
+ * Returns: (transfer full): a new #NcmVParam with copies of the default and of every
+ * component of @vparam
  */
 NcmVParam *
 ncm_vparam_copy (NcmVParam *vparam)
@@ -265,11 +262,10 @@ ncm_vparam_copy (NcmVParam *vparam)
 
 /**
  * ncm_vparam_free:
- * @vparam: a #NcmVParam.
+ * @vparam: a #NcmVParam
  *
  * Atomically decrements the reference count of @vparam by one. If the reference count drops to 0,
  * all memory allocated by @vparam is released.
- *
  */
 void
 ncm_vparam_free (NcmVParam *vparam)
@@ -279,11 +275,9 @@ ncm_vparam_free (NcmVParam *vparam)
 
 /**
  * ncm_vparam_clear:
- * @vparam: a #NcmVParam.
+ * @vparam: a #NcmVParam
  *
- * Atomically decrements the reference count of @vparam by one. If the reference count drops to 0,
- * all memory allocated by @vparam is released.
- *
+ * If *@vparam is not %NULL, decrements its reference count and sets *@vparam to %NULL.
  */
 void
 ncm_vparam_clear (NcmVParam **vparam)
@@ -293,11 +287,11 @@ ncm_vparam_clear (NcmVParam **vparam)
 
 /**
  * ncm_vparam_set_len:
- * @vparam: a #NcmVParam.
- * @len: lenght of the #NcmVParam.
+ * @vparam: a #NcmVParam
+ * @len: number of components
  *
- * Sets the length of @vparam to @len.
- *
+ * Sets the number of components to @len; new components copy
+ * NcmVParam:default-sparam, and components past @len are dropped.
  */
 void
 ncm_vparam_set_len (NcmVParam *vparam, guint len)
@@ -324,9 +318,9 @@ ncm_vparam_set_len (NcmVParam *vparam, guint len)
 
 /**
  * ncm_vparam_get_len:
- * @vparam: a #NcmVParam.
+ * @vparam: a #NcmVParam
  *
- * Returns: The length of @vparam.
+ * Returns: the number of components of @vparam
  */
 guint
 ncm_vparam_get_len (NcmVParam *vparam)
@@ -336,40 +330,41 @@ ncm_vparam_get_len (NcmVParam *vparam)
 
 /**
  * ncm_vparam_set_sparam:
- * @vparam: a #NcmVParam.
- * @n: vector index.
- * @spn: a #NcmSParam.
+ * @vparam: a #NcmVParam
+ * @n: vector index
+ * @spn: a #NcmSParam
  *
- * Sets the #NcmSParam associated with the @n-th component of #NcmVParam.
- *
+ * Sets component @n to @spn, taking a reference to it.
  */
 void
 ncm_vparam_set_sparam (NcmVParam *vparam, guint n, NcmSParam *spn)
 {
+  NcmSParam *old;
+
   g_assert (n < vparam->len);
-  ncm_sparam_free (g_ptr_array_index (vparam->sparam, n));
-  g_ptr_array_index (vparam->sparam, n) = spn;
-  ncm_sparam_ref (spn);
+
+  old                                   = g_ptr_array_index (vparam->sparam, n);
+  g_ptr_array_index (vparam->sparam, n) = ncm_sparam_ref (spn);
+  ncm_sparam_free (old);
 }
 
 /**
  * ncm_vparam_set_sparam_full:
- * @vparam: a #NcmVParam.
- * @n: vector index.
- * @name: #NcmSParam:name.
- * @symbol: #NcmSParam:symbol.
- * @lower_bound: value of #NcmSParam:lower-bound.
- * @upper_bound: value of #NcmSParam:upper-bound.
- * @scale: value of #NcmSParam:scale.
- * @abstol: value of #NcmSParam:absolute-tolerance.
- * @default_val: value of #NcmSParam:default-value.
- * @ftype: a #NcmParamType.
+ * @vparam: a #NcmVParam
+ * @n: vector index
+ * @name: #NcmSParam:name
+ * @symbol: #NcmSParam:symbol
+ * @lower_bound: value of #NcmSParam:lower-bound
+ * @upper_bound: value of #NcmSParam:upper-bound
+ * @scale: value of #NcmSParam:scale
+ * @abstol: value of #NcmSParam:absolute-tolerance
+ * @default_val: value of #NcmSParam:default-value
+ * @ftype: a #NcmParamType
  *
- * This function sets the properties of the @n-th @vparam component.
- *
+ * Sets component @n to a new #NcmSParam built by ncm_sparam_new().
  */
 void
-ncm_vparam_set_sparam_full (NcmVParam *vparam, guint n, gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
+ncm_vparam_set_sparam_full (NcmVParam *vparam, guint n, const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
 {
   NcmSParam *spn = ncm_sparam_new (name, symbol, lower_bound, upper_bound, scale, abstol, default_val, ftype);
 
@@ -380,12 +375,10 @@ ncm_vparam_set_sparam_full (NcmVParam *vparam, guint n, gchar *name, gchar *symb
 
 /**
  * ncm_vparam_peek_sparam:
- * @vparam: a #NcmVParam.
- * @n: vector index.
+ * @vparam: a #NcmVParam
+ * @n: vector index
  *
- * This function does not increment the reference count of #NcmSParam.
- *
- * Returns: (transfer none): A #NcmSParam, which is the @n-th component of @vparam.
+ * Returns: (transfer none): component @n of @vparam
  */
 NcmSParam *
 ncm_vparam_peek_sparam (const NcmVParam *vparam, guint n)
@@ -395,12 +388,10 @@ ncm_vparam_peek_sparam (const NcmVParam *vparam, guint n)
 
 /**
  * ncm_vparam_get_sparam:
- * @vparam: a #NcmVParam.
- * @n: vector index.
+ * @vparam: a #NcmVParam
+ * @n: vector index
  *
- * This function returns the @n-th component of @vparam increasing its reference count.
- *
- * Returns: (transfer full): A #NcmSParam.
+ * Returns: (transfer full): component @n of @vparam
  */
 NcmSParam *
 ncm_vparam_get_sparam (NcmVParam *vparam, guint n)
@@ -414,9 +405,9 @@ ncm_vparam_get_sparam (NcmVParam *vparam, guint n)
 
 /**
  * ncm_vparam_set_lower_bound:
- * @vparam: a #NcmVParam.
- * @n: vector index.
- * @lb: value of #NcmSParam:lower-bound.
+ * @vparam: a #NcmVParam
+ * @n: vector index
+ * @lb: value of #NcmSParam:lower-bound
  *
  * Sets the value @lb to the #NcmSParam:lower-bound property of the @n-th component of @vparam.
  */
@@ -430,9 +421,9 @@ ncm_vparam_set_lower_bound (NcmVParam *vparam, guint n, const gdouble lb)
 
 /**
  * ncm_vparam_set_upper_bound:
- * @vparam: a #NcmVParam.
- * @n: vector index.
- * @ub: value of #NcmSParam:upper-bound.
+ * @vparam: a #NcmVParam
+ * @n: vector index
+ * @ub: value of #NcmSParam:upper-bound
  *
  * Sets the value @ub to the #NcmSParam:upper-bound property of the @n-th component of @vparam.
  */
@@ -446,9 +437,9 @@ ncm_vparam_set_upper_bound (NcmVParam *vparam, guint n, const gdouble ub)
 
 /**
  * ncm_vparam_set_scale:
- * @vparam: a #NcmVParam.
- * @n: vector index.
- * @scale: value of #NcmSParam:scale.
+ * @vparam: a #NcmVParam
+ * @n: vector index
+ * @scale: value of #NcmSParam:scale
  *
  * Sets the value @scale to the #NcmSParam:scale property of the @n-th component of @vparam.
  */
@@ -462,9 +453,9 @@ ncm_vparam_set_scale (NcmVParam *vparam, guint n, const gdouble scale)
 
 /**
  * ncm_vparam_set_absolute_tolerance:
- * @vparam: a #NcmVParam.
- * @n: vector index.
- * @abstol: value of #NcmSParam:absolute-tolerance.
+ * @vparam: a #NcmVParam
+ * @n: vector index
+ * @abstol: value of #NcmSParam:absolute-tolerance
  *
  * Sets the value @abstol to the #NcmSParam:absolute-tolerance property of the @n-th component of @vparam.
  */
@@ -478,9 +469,9 @@ ncm_vparam_set_absolute_tolerance (NcmVParam *vparam, guint n, const gdouble abs
 
 /**
  * ncm_vparam_set_default_value:
- * @vparam: a #NcmVParam.
- * @n: vector index.
- * @default_val: value of #NcmSParam:default-value.
+ * @vparam: a #NcmVParam
+ * @n: vector index
+ * @default_val: value of #NcmSParam:default-value
  *
  * Sets the value @default_val to the #NcmSParam:default-value property of the @n-th component of @vparam.
  */
@@ -494,9 +485,9 @@ ncm_vparam_set_default_value (NcmVParam *vparam, guint n, const gdouble default_
 
 /**
  * ncm_vparam_set_fit_type:
- * @vparam: a #NcmVParam.
- * @n: vector index.
- * @ftype: a #NcmParamType.
+ * @vparam: a #NcmVParam
+ * @n: vector index
+ * @ftype: a #NcmParamType
  *
  * Sets @ftype to the #NcmSParam:fit-type property of the @n-th component of @vparam.
  */
@@ -505,12 +496,12 @@ ncm_vparam_set_fit_type (NcmVParam *vparam, guint n, const NcmParamType ftype)
 {
   NcmSParam *sp = ncm_vparam_peek_sparam (vparam, n);
 
-  ncm_sparam_set_default_value (sp, ftype);
+  ncm_sparam_set_fit_type (sp, ftype);
 }
 
 /**
  * ncm_vparam_name:
- * @vparam: a #NcmVParam.
+ * @vparam: a #NcmVParam
  *
  * Gets the @vparam base name.
  *
@@ -524,7 +515,7 @@ ncm_vparam_name (const NcmVParam *vparam)
 
 /**
  * ncm_vparam_symbol:
- * @vparam: a #NcmVParam.
+ * @vparam: a #NcmVParam
  *
  * Gets the @vparam base symbol.
  *
@@ -538,10 +529,10 @@ ncm_vparam_symbol (const NcmVParam *vparam)
 
 /**
  * ncm_vparam_get_lower_bound:
- * @vparam: a #NcmVParam.
- * @n: vector index.
+ * @vparam: a #NcmVParam
+ * @n: vector index
  *
- * Returns: The value of #NcmSParam:lower-bound property of the @n-th component of @vparam.
+ * Returns: The value of #NcmSParam:lower-bound property of the @n-th component of @vparam
  */
 gdouble
 ncm_vparam_get_lower_bound (const NcmVParam *vparam, guint n)
@@ -553,10 +544,10 @@ ncm_vparam_get_lower_bound (const NcmVParam *vparam, guint n)
 
 /**
  * ncm_vparam_get_upper_bound:
- * @vparam: a #NcmVParam.
- * @n: vector index.
+ * @vparam: a #NcmVParam
+ * @n: vector index
  *
- * Returns: The value of #NcmSParam:upper-bound property of the @n-th component of @vparam.
+ * Returns: The value of #NcmSParam:upper-bound property of the @n-th component of @vparam
  */
 gdouble
 ncm_vparam_get_upper_bound (const NcmVParam *vparam, guint n)
@@ -568,10 +559,10 @@ ncm_vparam_get_upper_bound (const NcmVParam *vparam, guint n)
 
 /**
  * ncm_vparam_get_scale:
- * @vparam: a #NcmVParam.
- * @n: vector index.
+ * @vparam: a #NcmVParam
+ * @n: vector index
  *
- * Returns: The value of #NcmSParam:scale property of the @n-th component of @vparam.
+ * Returns: The value of #NcmSParam:scale property of the @n-th component of @vparam
  */
 gdouble
 ncm_vparam_get_scale (const NcmVParam *vparam, guint n)
@@ -583,10 +574,10 @@ ncm_vparam_get_scale (const NcmVParam *vparam, guint n)
 
 /**
  * ncm_vparam_get_absolute_tolerance:
- * @vparam: a #NcmVParam.
- * @n: vector index.
+ * @vparam: a #NcmVParam
+ * @n: vector index
  *
- * Returns: The value of #NcmSParam:absolute-tolerance property of the @n-th component of @vparam.
+ * Returns: The value of #NcmSParam:absolute-tolerance property of the @n-th component of @vparam
  */
 gdouble
 ncm_vparam_get_absolute_tolerance (const NcmVParam *vparam, guint n)
@@ -598,10 +589,10 @@ ncm_vparam_get_absolute_tolerance (const NcmVParam *vparam, guint n)
 
 /**
  * ncm_vparam_get_default_value:
- * @vparam: a #NcmVParam.
- * @n: vector index.
+ * @vparam: a #NcmVParam
+ * @n: vector index
  *
- * Returns: The value of #NcmSParam:default-value property of the @n-th component of @vparam.
+ * Returns: The value of #NcmSParam:default-value property of the @n-th component of @vparam
  */
 gdouble
 ncm_vparam_get_default_value (const NcmVParam *vparam, guint n)
@@ -613,10 +604,10 @@ ncm_vparam_get_default_value (const NcmVParam *vparam, guint n)
 
 /**
  * ncm_vparam_get_fit_type:
- * @vparam: a #NcmVParam.
- * @n: vector index.
+ * @vparam: a #NcmVParam
+ * @n: vector index
  *
- * Returns: The value of #NcmSParam:fit-type property of the @n-th component of @vparam.
+ * Returns: The value of #NcmSParam:fit-type property of the @n-th component of @vparam
  */
 NcmParamType
 ncm_vparam_get_fit_type (const NcmVParam *vparam, guint n)
@@ -628,9 +619,11 @@ ncm_vparam_get_fit_type (const NcmVParam *vparam, guint n)
 
 /**
  * ncm_vparam_len:
- * @vparam: a #NcmVParam.
+ * @vparam: a #NcmVParam
  *
- * Returns: The length of @vparam.
+ * Same as ncm_vparam_get_len().
+ *
+ * Returns: the number of components of @vparam
  */
 guint
 ncm_vparam_len (const NcmVParam *vparam)

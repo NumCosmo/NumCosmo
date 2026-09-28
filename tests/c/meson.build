@@ -13,6 +13,10 @@ math_tests = [
         'sources': ['ncm/model/test_ncm_sparam.c'],
     },
     {
+        'name': 'ncm_vparam',
+        'sources': ['ncm/model/test_ncm_vparam.c'],
+    },
+    {
         'name': 'ncm_diff',
         'sources': ['ncm/integration/test_ncm_diff.c'],
     },

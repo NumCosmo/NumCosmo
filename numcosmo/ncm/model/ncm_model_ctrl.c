@@ -25,13 +25,15 @@
 /**
  * NcmModelCtrl:
  *
- * Control object for testing updates on model status.
+ * Records the state of a #NcmModel, so a calculation that depends on it can tell
+ * whether it changed.
  *
- * This object is employed to manage the status of a #NcmModel. It serves the purpose of
- * checking whether the model has been updated since the last call to
- * ncm_model_ctrl_update(). Calculation objects dependent on the model can utilize this
- * object to determine if updates are necessary.
- *
+ * The state is the model object, held through a weak reference, and its parameter key
+ * (ncm_model_state_get_pkey()); each submodel is recorded by its own #NcmModelCtrl.
+ * ncm_model_ctrl_update() compares the recorded state with a model and records the
+ * model's; ncm_model_ctrl_model_last_update() and
+ * ncm_model_ctrl_submodel_last_update() then tell which parts changed. A different
+ * object, or a submodel object seen for the first time, counts as changed.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -90,14 +92,12 @@ ncm_model_ctrl_dispose (GObject *object)
 static void
 ncm_model_ctrl_finalize (GObject *object)
 {
-  /*NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);*/
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_ctrl_parent_class)->finalize (object);
 }
 
 static void
-ncm_model_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_ncm_model_ctrl_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);
 
@@ -115,7 +115,7 @@ ncm_model_set_property (GObject *object, guint prop_id, const GValue *value, GPa
 }
 
 static void
-ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_ncm_model_ctrl_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);
 
@@ -137,13 +137,16 @@ ncm_model_ctrl_class_init (NcmModelCtrlClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  /*GObjectClass* parent_class = G_OBJECT_CLASS (klass); */
-
-  object_class->set_property = ncm_model_set_property;
-  object_class->get_property = ncm_model_get_property;
+  object_class->set_property = _ncm_model_ctrl_set_property;
+  object_class->get_property = _ncm_model_ctrl_get_property;
   object_class->dispose      = ncm_model_ctrl_dispose;
   object_class->finalize     = ncm_model_ctrl_finalize;
 
+  /**
+   * NcmModelCtrl:model:
+   *
+   * The model whose state is recorded, held through a weak reference.
+   */
   g_object_class_install_property (object_class,
                                    PROP_MODEL,
                                    g_param_spec_object ("model",
@@ -155,11 +158,12 @@ ncm_model_ctrl_class_init (NcmModelCtrlClass *klass)
 
 /**
  * ncm_model_ctrl_new:
- * @model: (allow-none): a #NcmModel or %NULL
+ * @model: (allow-none): a #NcmModel
  *
- * Creates a new #NcmModelCtrl object.
+ * Creates a #NcmModelCtrl recording the state of @model, or empty when @model is
+ * %NULL.
  *
- * Returns: (transfer full): a #NcmModelCtrl
+ * Returns: (transfer full): a new #NcmModelCtrl
  */
 NcmModelCtrl *
 ncm_model_ctrl_new (NcmModel *model)
@@ -176,7 +180,6 @@ ncm_model_ctrl_new (NcmModel *model)
  *
  * Decreases the reference count of @ctrl. If the reference count
  * reaches zero, @ctrl is freed.
- *
  */
 void
 ncm_model_ctrl_free (NcmModelCtrl *ctrl)
@@ -188,10 +191,7 @@ ncm_model_ctrl_free (NcmModelCtrl *ctrl)
  * ncm_model_ctrl_clear:
  * @ctrl: a #NcmModelCtrl
  *
- * Checks if *@ctrl is not %NULL, and if so, decreases the reference count
- * of @ctrl. If the reference count reaches zero, @ctrl is freed. The
- * pointer to @ctrl is set to %NULL.
- *
+ * If *@ctrl is not %NULL, decrements its reference count and sets *@ctrl to %NULL.
  */
 void
 ncm_model_ctrl_clear (NcmModelCtrl **ctrl)
@@ -199,83 +199,23 @@ ncm_model_ctrl_clear (NcmModelCtrl **ctrl)
   g_clear_object (ctrl);
 }
 
+static gboolean _ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model, const gboolean check_pkey);
+
 /**
  * ncm_model_ctrl_update:
  * @ctrl: a #NcmModelCtrl
  * @model: a #NcmModel
  *
- * Compares the model inside @ctrl with @model and updates the status of
- * @ctrl. If the model inside @ctrl differs from @model, @ctrl is
- * updated, and TRUE is returned. Otherwise, FALSE is returned.
+ * Compares the state recorded in @ctrl with @model and records the state of @model.
+ * The model changed when it is another object or its pkey differs, and each submodel
+ * likewise; a submodel without a recorded state also counts as changed.
  *
- * If the model is the same but the model's pkey is different, @ctrl is
- * updated, and TRUE is returned. Otherwise, FALSE is returned.
- *
- * Submodels inside @model are also analyzed similarly, and @ctrl is
- * updated if necessary. If any submodel is updated, TRUE is returned.
- * Otherwise, FALSE is returned.
- *
- * Returns: TRUE if @ctrl was updated.
+ * Returns: %TRUE if @model or any submodel changed
  */
 gboolean
 ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model)
 {
-  NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
-  guint64 pkey         = ncm_model_state_get_pkey (model);
-  gboolean up          = FALSE;
-
-  ctrl->last_update = FALSE;
-
-  if (ctrl_model != model)
-  {
-    ncm_model_ctrl_set_model (ctrl, model);
-    ctrl->last_update = TRUE;
-  }
-  else if (ctrl->pkey != pkey)
-  {
-    ctrl->pkey        = pkey;
-    ctrl->last_update = TRUE;
-  }
-
-  up = up || ctrl->last_update;
-
-  {
-    const guint n = ncm_model_get_submodel_len (model);
-    guint i;
-
-    g_array_set_size (ctrl->submodel_last_update, n);
-
-    for (i = 0; i < n; i++)
-    {
-      NcmModel *submodel = ncm_model_peek_submodel (model, i);
-
-      g_array_index (ctrl->submodel_last_update, gboolean, i) = FALSE;
-
-      if (i >= ctrl->submodel_ctrl->len)
-      {
-        NcmModelCtrl *sub_ctrl = ncm_model_ctrl_new (submodel);
-
-        g_ptr_array_add (ctrl->submodel_ctrl, sub_ctrl);
-
-        g_array_index (ctrl->submodel_last_update, gboolean, i) = TRUE;
-      }
-      else
-      {
-        NcmModelCtrl *sub_ctrl = g_ptr_array_index (ctrl->submodel_ctrl, i);
-
-        if (ncm_model_ctrl_update (sub_ctrl, submodel))
-          g_array_index (ctrl->submodel_last_update, gboolean, i) = TRUE;
-      }
-
-      up = up || g_array_index (ctrl->submodel_last_update, gboolean, i);
-    }
-
-    g_ptr_array_set_size (ctrl->submodel_ctrl, n);
-  }
-
-  ncm_model_clear (&ctrl_model);
-
-  return up;
+  return _ncm_model_ctrl_update (ctrl, model, TRUE);
 }
 
 /**
@@ -283,60 +223,65 @@ ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model)
  * @ctrl: a #NcmModelCtrl
  * @model: a #NcmModel
  *
- * Same as ncm_model_ctrl_update(), but only checks if the model objects
- * are the same. The pkey is not checked.
+ * Same as ncm_model_ctrl_update(), comparing only the objects and not the pkeys.
  *
- * Returns: TRUE if @ctrl was updated.
+ * Returns: %TRUE if @model or any submodel is another object
  */
 gboolean
 ncm_model_ctrl_model_update (NcmModelCtrl *ctrl, NcmModel *model)
 {
+  return _ncm_model_ctrl_update (ctrl, model, FALSE);
+}
+
+static gboolean
+_ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model, const gboolean check_pkey)
+{
   NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
-  gboolean up          = FALSE;
+  const guint64 pkey   = ncm_model_state_get_pkey (model);
+  const guint n        = ncm_model_get_submodel_len (model);
+  gboolean up;
+  guint i;
 
   ctrl->last_update = FALSE;
 
+  /* The submodel ctrls are compared below, not reset with the main model, so a
+   * submodel that is another object is reported as changed. */
   if (ctrl_model != model)
   {
-    ncm_model_ctrl_set_model (ctrl, model);
+    g_weak_ref_set (&ctrl->model_wr, model);
+    ctrl->pkey        = pkey;
+    ctrl->last_update = TRUE;
+  }
+  else if (check_pkey && (ctrl->pkey != pkey))
+  {
+    ctrl->pkey        = pkey;
     ctrl->last_update = TRUE;
   }
 
-  up = up || ctrl->last_update;
+  up = ctrl->last_update;
 
+  g_array_set_size (ctrl->submodel_last_update, n);
+
+  for (i = 0; i < n; i++)
   {
-    const guint n = ncm_model_get_submodel_len (model);
-    guint i;
+    NcmModel *submodel = ncm_model_peek_submodel (model, i);
+    gboolean sub_up;
 
-    g_array_set_size (ctrl->submodel_last_update, n);
-
-    for (i = 0; i < n; i++)
+    if (i >= ctrl->submodel_ctrl->len)
     {
-      NcmModel *submodel = ncm_model_peek_submodel (model, i);
-
-      g_array_index (ctrl->submodel_last_update, gboolean, i) = FALSE;
-
-      if (i >= ctrl->submodel_ctrl->len)
-      {
-        NcmModelCtrl *sub_ctrl = ncm_model_ctrl_new (submodel);
-
-        g_ptr_array_add (ctrl->submodel_ctrl, sub_ctrl);
-
-        g_array_index (ctrl->submodel_last_update, gboolean, i) = TRUE;
-      }
-      else
-      {
-        NcmModelCtrl *sub_ctrl = g_ptr_array_index (ctrl->submodel_ctrl, i);
-
-        if (ncm_model_ctrl_model_update (sub_ctrl, submodel))
-          g_array_index (ctrl->submodel_last_update, gboolean, i) = TRUE;
-      }
-
-      up = up || g_array_index (ctrl->submodel_last_update, gboolean, i);
+      g_ptr_array_add (ctrl->submodel_ctrl, ncm_model_ctrl_new (submodel));
+      sub_up = TRUE;
+    }
+    else
+    {
+      sub_up = _ncm_model_ctrl_update (g_ptr_array_index (ctrl->submodel_ctrl, i), submodel, check_pkey);
     }
 
-    g_ptr_array_set_size (ctrl->submodel_ctrl, n);
+    g_array_index (ctrl->submodel_last_update, gboolean, i) = sub_up;
+    up                                                      = up || sub_up;
   }
+
+  g_ptr_array_set_size (ctrl->submodel_ctrl, n);
 
   ncm_model_clear (&ctrl_model);
 
@@ -347,9 +292,8 @@ ncm_model_ctrl_model_update (NcmModelCtrl *ctrl, NcmModel *model)
  * ncm_model_ctrl_get_model:
  * @ctrl: a #NcmModelCtrl
  *
- * Gets the current model inside @ctrl.
- *
- * Returns: (transfer full): a #NcmModel
+ * Returns: (transfer full) (nullable): the recorded model, %NULL when @ctrl is empty or
+ * the model was freed
  */
 NcmModel *
 ncm_model_ctrl_get_model (NcmModelCtrl *ctrl)
@@ -361,10 +305,8 @@ ncm_model_ctrl_get_model (NcmModelCtrl *ctrl)
  * ncm_model_ctrl_model_last_update:
  * @ctrl: a #NcmModelCtrl
  *
- * Checks if the main model was updated during the last call to
- * ncm_model_ctrl_update().
- *
- * Returns: TRUE if the main model was updated.
+ * Returns: whether the main model changed in the last ncm_model_ctrl_update() or
+ * ncm_model_ctrl_model_update()
  */
 gboolean
 ncm_model_ctrl_model_last_update (NcmModelCtrl *ctrl)
@@ -375,12 +317,11 @@ ncm_model_ctrl_model_last_update (NcmModelCtrl *ctrl)
 /**
  * ncm_model_ctrl_model_has_submodel:
  * @ctrl: a #NcmModelCtrl
- * @mid: a @NcmModelID
+ * @mid: a #NcmModelID
  *
- * Checks if there is a submode inside ctrl model, it is an
- * error to call this function in an empty @ctrl.
+ * Aborts when @ctrl is empty.
  *
- * Returns: TRUE if there is a submodel with @mid inside the ctrl model.
+ * Returns: whether the recorded model has a submodel with @mid
  */
 gboolean
 ncm_model_ctrl_model_has_submodel (NcmModelCtrl *ctrl, NcmModelID mid)
@@ -410,12 +351,13 @@ ncm_model_ctrl_model_has_submodel (NcmModelCtrl *ctrl, NcmModelID mid)
 /**
  * ncm_model_ctrl_submodel_last_update:
  * @ctrl: a #NcmModelCtrl
- * @mid: a @NcmModelID
+ * @mid: a #NcmModelID
  *
- * Checks if the submodel @mid was updated during the last call to
- * ncm_model_ctrl_update().
+ * Aborts when @ctrl is empty, when the recorded model has no submodel @mid, and when
+ * no update recorded it.
  *
- * Returns: TRUE if the submodel with @mid inside the ctrl model was updated.
+ * Returns: whether the submodel @mid changed in the last ncm_model_ctrl_update() or
+ * ncm_model_ctrl_model_update()
  */
 gboolean
 ncm_model_ctrl_submodel_last_update (NcmModelCtrl *ctrl, NcmModelID mid)
@@ -440,7 +382,7 @@ ncm_model_ctrl_submodel_last_update (NcmModelCtrl *ctrl, NcmModelID mid)
 
     if ((guint) pos >= ctrl->submodel_last_update->len)
       g_error ("ncm_model_ctrl_submodel_last_update: submodel `%s' not found in ctrl object.\n"
-               "ncm_model_ctrl_update() must always be called before ncm_model_ctrl_model_last_update_submodel().",
+               "ncm_model_ctrl_update() must be called before ncm_model_ctrl_submodel_last_update().",
                ncm_mset_get_ns_by_id (mid));
 
     up = up || g_array_index (ctrl->submodel_last_update, gboolean, pos);
@@ -456,9 +398,10 @@ ncm_model_ctrl_submodel_last_update (NcmModelCtrl *ctrl, NcmModelID mid)
  * @ctrl: a #NcmModelCtrl
  * @model: a #NcmModel
  *
- * Sets the model inside @ctrl to @model.
+ * Records the state of @model, with its submodels, without setting the flags of
+ * ncm_model_ctrl_model_last_update() and ncm_model_ctrl_submodel_last_update().
  *
- * Returns: TRUE if @ctrl was updated.
+ * Returns: %TRUE if @model or any submodel is another object than the one recorded
  */
 gboolean
 ncm_model_ctrl_set_model (NcmModelCtrl *ctrl, NcmModel *model)
@@ -511,9 +454,7 @@ ncm_model_ctrl_set_model (NcmModelCtrl *ctrl, NcmModel *model)
  * @ctrl: a #NcmModelCtrl
  * @model: a #NcmModel
  *
- * Checks if the model inside @ctrl is the same as @model.
- *
- * Returns: TRUE if @model is the same as the model inside @ctrl.
+ * Returns: whether @model is the recorded model
  */
 gboolean
 ncm_model_ctrl_has_model (NcmModelCtrl *ctrl, NcmModel *model)
@@ -530,9 +471,7 @@ ncm_model_ctrl_has_model (NcmModelCtrl *ctrl, NcmModel *model)
  * ncm_model_ctrl_force_update:
  * @ctrl: a #NcmModelCtrl
  *
- * Forces an update on @ctrl. In practice, this function clears the
- * model inside @ctrl and all submodels.
- *
+ * Empties @ctrl, so the next ncm_model_ctrl_update() reports a change.
  */
 void
 ncm_model_ctrl_force_update (NcmModelCtrl *ctrl)
@@ -540,7 +479,5 @@ ncm_model_ctrl_force_update (NcmModelCtrl *ctrl)
   g_weak_ref_set (&ctrl->model_wr, NULL);
   g_ptr_array_set_size (ctrl->submodel_ctrl, 0);
   g_array_set_size (ctrl->submodel_last_update, 0);
-
-  return;
 }
 

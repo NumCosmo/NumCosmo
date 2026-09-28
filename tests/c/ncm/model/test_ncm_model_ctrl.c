@@ -47,6 +47,7 @@ void test_ncm_model_ctrl_model_update (TestNcmModelCtrl *test, gconstpointer pda
 void test_ncm_model_ctrl_update (TestNcmModelCtrl *test, gconstpointer pdata);
 void test_ncm_model_ctrl_submodel_update (TestNcmModelCtrl *test, gconstpointer pdata);
 
+void test_ncm_model_ctrl_switch (TestNcmModelCtrl *test, gconstpointer pdata);
 void test_ncm_model_ctrl_traps (TestNcmModelCtrl *test, gconstpointer pdata);
 void test_ncm_model_ctrl_invalid_submodel_last_update (TestNcmModelCtrl *test, gconstpointer pdata);
 
@@ -77,6 +78,10 @@ main (gint argc, gchar *argv[])
               &test_ncm_model_ctrl_submodel_update,
               &test_ncm_model_ctrl_free);
 
+  g_test_add ("/ncm/model_ctrl/switch", TestNcmModelCtrl, NULL,
+              &test_ncm_model_ctrl_new,
+              &test_ncm_model_ctrl_switch,
+              &test_ncm_model_ctrl_free);
   g_test_add ("/ncm/model_ctrl/traps", TestNcmModelCtrl, NULL,
               &test_ncm_model_ctrl_new,
               &test_ncm_model_ctrl_traps,
@@ -213,21 +218,14 @@ test_ncm_model_ctrl_submodel_update (TestNcmModelCtrl *test, gconstpointer pdata
    * already-constructed NcHICosmo anymore. What remains fully testable:
    * has_submodel() reflecting the construction-time attachment, and each
    * submodel's own param changes being detected independently of the host's
-   * and of each other.
-   *
-   * Note: on this very first call, ctrl_model != model triggers
-   * ncm_model_ctrl_update()'s internal ncm_model_ctrl_set_model() call,
-   * which itself creates and fully syncs the per-submodel sub-controllers
-   * (pre-existing behaviour of ncm_model_ctrl_update(), not specific to
-   * construction-time attachment) -- so submodel_last_update() is FALSE
-   * right after this first call, even though has_submodel() is already
-   * TRUE. */
+   * and of each other. The first update sees every submodel for the first
+   * time, so it reports each one as changed. */
   g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (ncm_model_ctrl_model_has_submodel (test->ctrl, nc_hiprim_id ()));
   g_assert_true (ncm_model_ctrl_model_has_submodel (test->ctrl, nc_hireion_id ()));
-  g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
-  g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
+  g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
+  g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
 
   g_assert_true (!ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
@@ -274,6 +272,48 @@ test_ncm_model_ctrl_submodel_update (TestNcmModelCtrl *test, gconstpointer pdata
   g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
   g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
+}
+
+/* Switching to another host, whose submodels are other objects, reports them as
+ * changed; ncm_model_ctrl_model_update() ignores parameter changes but not objects. */
+void
+test_ncm_model_ctrl_switch (TestNcmModelCtrl *test, gconstpointer pdata)
+{
+  NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim   = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcmModel *other  = NCM_MODEL (nc_hicosmo_lcdm_new_full (reion, prim, NULL));
+
+  nc_hireion_free (reion);
+  nc_hiprim_free (prim);
+
+  g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
+  g_assert_true (!ncm_model_ctrl_update (test->ctrl, test->model));
+
+  g_assert_true (ncm_model_ctrl_update (test->ctrl, other));
+  g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
+  g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
+  g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
+
+  g_assert_true (!ncm_model_ctrl_update (test->ctrl, other));
+  g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
+
+  ncm_model_orig_param_set (ncm_model_peek_submodel_by_mid (other, nc_hiprim_id ()), 0, 3.1);
+  g_assert_true (!ncm_model_ctrl_model_update (test->ctrl, other));
+  g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
+
+  g_assert_true (ncm_model_ctrl_model_update (test->ctrl, test->model));
+  g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
+  g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
+
+  /* set_model records the state without raising the flags. */
+  g_assert_true (ncm_model_ctrl_set_model (test->ctrl, other));
+  g_assert_true (!ncm_model_ctrl_update (test->ctrl, other));
+
+  ncm_model_ctrl_force_update (test->ctrl);
+  g_assert_true (ncm_model_ctrl_update (test->ctrl, other));
+  g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
+
+  NCM_TEST_FREE (ncm_model_free, other);
 }
 
 void
