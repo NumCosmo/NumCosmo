@@ -25,10 +25,14 @@
 /**
  * NcmReparam:
  *
- * Abstract class for model reparametrization.
+ * Abstract class for a reparametrization of a #NcmModel.
  *
- * #NcmReparam is an abstract class for model reparametrization.
- *
+ * A reparametrization holds a new parameter vector of NcmReparam:length components
+ * and converts between it and the model's original parameters (ncm_reparam_old2new()
+ * and ncm_reparam_new2old()). Each new parameter may carry its own #NcmSParam
+ * description (ncm_reparam_set_param_desc()), found by name with
+ * ncm_reparam_index_from_name(); the names are unique. A reparametrization applies
+ * to models of NcmReparam:compat-type (see ncm_model_set_reparam()).
  */
 
 #ifdef HAVE_CONFIG_H
@@ -43,14 +47,8 @@
 #include "ncm/algebra/ncm_vector.h"
 #include "ncm/core/ncm_obj_array.h"
 
-#ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_blas.h>
-#endif /* NUMCOSMO_GIR_SCAN */
-
 typedef struct _NcmReparamPrivate
 {
-  /*< private >*/
-  GObject parent_instance;
   guint length;
   NcmVector *new_params;
   NcmObjDictInt *sparams;
@@ -105,6 +103,8 @@ _ncm_reparam_get_property (GObject *object, guint prop_id, GValue *value, GParam
   }
 }
 
+static void _ncm_reparam_index_names (NcmReparam *reparam);
+
 static void
 _ncm_reparam_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
@@ -121,6 +121,11 @@ _ncm_reparam_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_PARAMS_DESC:
       ncm_obj_dict_int_clear (&self->sparams);
       self->sparams = g_value_dup_boxed (value);
+
+      if (self->sparams == NULL)
+        self->sparams = ncm_obj_dict_int_new ();
+
+      _ncm_reparam_index_names (reparam);
       break;
     case PROP_COMPAT_TYPE:
       self->compat_type = g_type_from_name (g_value_get_string (value));
@@ -133,6 +138,31 @@ _ncm_reparam_set_property (GObject *object, guint prop_id, const GValue *value, 
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
   }
+}
+
+/* Rebuilds the name to index table from the descriptions; the names must be unique. */
+static void
+_ncm_reparam_index_names (NcmReparam *reparam)
+{
+  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
+  GArray *keys                   = ncm_obj_dict_int_keys (self->sparams);
+  guint k;
+
+  g_hash_table_remove_all (self->sparams_name_id);
+
+  for (k = 0; k < keys->len; k++)
+  {
+    const gint i      = g_array_index (keys, gint, k);
+    NcmSParam *sp     = NCM_SPARAM (ncm_obj_dict_int_peek (self->sparams, i));
+    const gchar *name = ncm_sparam_name (sp);
+
+    if (g_hash_table_contains (self->sparams_name_id, name))
+      g_error ("_ncm_reparam_index_names: the name `%s' describes more than one parameter.", name);
+
+    g_hash_table_insert (self->sparams_name_id, g_strdup (name), GINT_TO_POINTER (i));
+  }
+
+  g_array_unref (keys);
 }
 
 static void
@@ -174,6 +204,11 @@ ncm_reparam_class_init (NcmReparamClass *klass)
   object_class->constructed  = &_ncm_reparam_constructed;
   object_class->finalize     = &_ncm_reparam_finalize;
 
+  /**
+   * NcmReparam:length:
+   *
+   * The number of new parameters; must match the length of the model it is set on.
+   */
   g_object_class_install_property (object_class,
                                    PROP_LEN,
                                    g_param_spec_uint ("length",
@@ -182,13 +217,24 @@ ncm_reparam_class_init (NcmReparamClass *klass)
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmReparam:params-desc:
+   *
+   * The descriptions of the new parameters, #NcmSParam keyed by index.
+   */
   g_object_class_install_property (object_class,
                                    PROP_PARAMS_DESC,
                                    g_param_spec_boxed ("params-desc",
                                                        NULL,
-                                                       "News parameter descriptions",
+                                                       "New parameter descriptions",
                                                        NCM_TYPE_OBJ_DICT_INT,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmReparam:compat-type:
+   *
+   * The name of the #GType of the models this reparametrization applies to.
+   */
   g_object_class_install_property (object_class,
                                    PROP_COMPAT_TYPE,
                                    g_param_spec_string ("compat-type",
@@ -207,7 +253,7 @@ ncm_reparam_class_init (NcmReparamClass *klass)
  *
  * Increases the reference count of @reparam by one.
  *
- * Returns: (transfer full): the passed #NcmReparam.
+ * Returns: (transfer full): @reparam
  */
 NcmReparam *
 ncm_reparam_ref (NcmReparam *reparam)
@@ -221,7 +267,6 @@ ncm_reparam_ref (NcmReparam *reparam)
  *
  * Decreases the reference count of @reparam by one. If the reference count
  * reaches zero, the #NcmReparam is freed.
- *
  */
 void
 ncm_reparam_free (NcmReparam *reparam)
@@ -233,9 +278,7 @@ ncm_reparam_free (NcmReparam *reparam)
  * ncm_reparam_clear:
  * @reparam: a #NcmReparam
  *
- * If *@reparam is not NULL, unrefs it and sets *@reparam to NULL.
- * If *@reparam is NULL, does nothing.
- *
+ * If *@reparam is not %NULL, decrements its reference count and sets *@reparam to %NULL.
  */
 void
 ncm_reparam_clear (NcmReparam **reparam)
@@ -248,8 +291,7 @@ ncm_reparam_clear (NcmReparam **reparam)
  * @reparam: a #NcmReparam
  * @compat_type: a #GType
  *
- * Sets the compatible #GType for this reparametrization.
- *
+ * Sets NcmReparam:compat-type to @compat_type.
  */
 void
 ncm_reparam_set_compat_type (NcmReparam *reparam, GType compat_type)
@@ -263,9 +305,7 @@ ncm_reparam_set_compat_type (NcmReparam *reparam, GType compat_type)
  * ncm_reparam_get_compat_type:
  * @reparam: a #NcmReparam
  *
- * Gets the compatible #GType for this reparametrization.
- *
- * Returns: the compatible #GType for this reparametrization.
+ * Returns: the #GType of NcmReparam:compat-type
  */
 GType
 ncm_reparam_get_compat_type (NcmReparam *reparam)
@@ -280,9 +320,7 @@ ncm_reparam_get_compat_type (NcmReparam *reparam)
  * @reparam: a #NcmReparam
  * @model: a #NcmModel
  *
- * Using the values set in the original parametrization update the
- * values of the new parametrization.
- *
+ * Sets the new parameters from the original parameters of @model.
  */
 void
 ncm_reparam_old2new (NcmReparam *reparam, NcmModel *model)
@@ -295,9 +333,7 @@ ncm_reparam_old2new (NcmReparam *reparam, NcmModel *model)
  * @reparam: a #NcmReparam
  * @model: a #NcmModel
  *
- * Using the values set in the new parametrization update the
- * values of the original parametrization.
- *
+ * Sets the original parameters of @model from the new parameters.
  */
 void
 ncm_reparam_new2old (NcmReparam *reparam, NcmModel *model)
@@ -308,26 +344,38 @@ ncm_reparam_new2old (NcmReparam *reparam, NcmModel *model)
 /**
  * ncm_reparam_set_param_desc:
  * @reparam: a #NcmReparam
- * @i: index of the changed parameter.
- * @sp: #NcmSParam describing the new parameter.
+ * @i: index of the new parameter
+ * @sp: its description
  *
- * Change the @i-th parameter description using @sp.
- *
+ * Sets the description of the new parameter @i to @sp. Aborts when another
+ * parameter already has the name of @sp.
  */
 void
 ncm_reparam_set_param_desc (NcmReparam *reparam, guint i, NcmSParam *sp)
 {
   NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
-  NcmSParam *old_sp              = NCM_SPARAM (ncm_obj_dict_int_peek (self->sparams, i));
+  NcmSParam *old_sp;
+  gpointer other;
 
-  g_assert (i < self->length);
+  g_assert_cmpuint (i, <, self->length);
+
+  if (g_hash_table_lookup_extended (self->sparams_name_id, ncm_sparam_name (sp), NULL, &other) &&
+      ((guint) GPOINTER_TO_INT (other) != i))
+    g_error ("ncm_reparam_set_param_desc: the name `%s' already describes parameter %d.",
+             ncm_sparam_name (sp), GPOINTER_TO_INT (other));
+
+  old_sp = NCM_SPARAM (ncm_obj_dict_int_peek (self->sparams, i));
 
   if (old_sp != NULL)
-    g_assert (g_hash_table_remove (self->sparams_name_id, ncm_sparam_name (old_sp)));
+  {
+    const gboolean removed = g_hash_table_remove (self->sparams_name_id, ncm_sparam_name (old_sp));
+
+    g_assert_true (removed);
+  }
 
   g_hash_table_insert (self->sparams_name_id,
                        g_strdup (ncm_sparam_name (sp)),
-                       GUINT_TO_POINTER (i));
+                       GINT_TO_POINTER (i));
 
   ncm_obj_dict_int_add (self->sparams, i, G_OBJECT (sp));
 }
@@ -335,11 +383,10 @@ ncm_reparam_set_param_desc (NcmReparam *reparam, guint i, NcmSParam *sp)
 /**
  * ncm_reparam_peek_param_desc:
  * @reparam: a #NcmReparam
- * @i: index of the changed parameter.
+ * @i: index of the new parameter
  *
- * Peeks the @i-th parameter description.
- *
- * Returns: (transfer none): The @i-th parameter description.
+ * Returns: (transfer none) (nullable): the description of the new parameter @i, %NULL
+ * when it has none
  */
 NcmSParam *
 ncm_reparam_peek_param_desc (NcmReparam *reparam, guint i)
@@ -361,11 +408,10 @@ ncm_reparam_peek_param_desc (NcmReparam *reparam, guint i)
 /**
  * ncm_reparam_get_param_desc:
  * @reparam: a #NcmReparam
- * @i: index of the changed parameter.
+ * @i: index of the new parameter
  *
- * Gets the @i-th parameter description.
- *
- * Returns: (transfer full): The @i-th parameter description.
+ * Returns: (transfer full) (nullable): the description of the new parameter @i, %NULL
+ * when it has none
  */
 NcmSParam *
 ncm_reparam_get_param_desc (NcmReparam *reparam, guint i)
@@ -387,18 +433,17 @@ ncm_reparam_get_param_desc (NcmReparam *reparam, guint i)
 /**
  * ncm_reparam_set_param_desc_full:
  * @reparam: a #NcmReparam
- * @i: index of the changed parameter.
- * @name: #NcmSParam:name.
- * @symbol: #NcmSParam:symbol.
- * @lower_bound: value of #NcmSParam:lower-bound.
- * @upper_bound: value of #NcmSParam:upper-bound.
- * @scale: value of #NcmSParam:scale.
- * @abstol: value of #NcmSParam:absolute-tolerance.
- * @default_val: value of #NcmSParam:default-value.
- * @ftype: a #NcmParamType.
+ * @i: index of the new parameter
+ * @name: #NcmSParam:name
+ * @symbol: #NcmSParam:symbol
+ * @lower_bound: value of #NcmSParam:lower-bound
+ * @upper_bound: value of #NcmSParam:upper-bound
+ * @scale: value of #NcmSParam:scale
+ * @abstol: value of #NcmSParam:absolute-tolerance
+ * @default_val: value of #NcmSParam:default-value
+ * @ftype: a #NcmParamType
  *
- * Change the @i-th parameter description using the given values.
- *
+ * Same as ncm_reparam_set_param_desc() with a description built by ncm_sparam_new().
  */
 void
 ncm_reparam_set_param_desc_full (NcmReparam *reparam, guint i, const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
@@ -413,14 +458,14 @@ ncm_reparam_set_param_desc_full (NcmReparam *reparam, guint i, const gchar *name
 
 /**
  * ncm_reparam_index_from_name:
- * @reparam: a #NcmReparam.
- * @param_name: parameter name.
- * @i: (out): parameter index.
+ * @reparam: a #NcmReparam
+ * @param_name: parameter name
+ * @i: (out): parameter index
  *
- * Looks for a parameter named @param_name and returns TRUE if found. If found
- * puts at @i its index.
+ * Looks for the new parameter whose description is named @param_name, and sets @i to
+ * its index, or to %G_MAXUINT when there is none.
  *
- * Returns: whenever the parameter is found.
+ * Returns: whether the parameter was found
  */
 gboolean
 ncm_reparam_index_from_name (NcmReparam *reparam, const gchar *param_name, guint *i)
@@ -429,10 +474,7 @@ ncm_reparam_index_from_name (NcmReparam *reparam, const gchar *param_name, guint
   gpointer param_id;
   gboolean found = g_hash_table_lookup_extended (self->sparams_name_id, param_name, NULL, &param_id);
 
-  if (found)
-    *i = GPOINTER_TO_UINT (param_id);
-  else
-    *i = -1;  /* Yes, I known. */
+  *i = found ? (guint) GPOINTER_TO_INT (param_id) : G_MAXUINT;
 
   return found;
 }
@@ -441,8 +483,7 @@ ncm_reparam_index_from_name (NcmReparam *reparam, const gchar *param_name, guint
  * ncm_reparam_get_length:
  * @reparam: a #NcmReparam
  *
- * Gets the number of parameters.
- *
+ * Returns: NcmReparam:length, the number of new parameters
  */
 guint
 ncm_reparam_get_length (NcmReparam *reparam)
@@ -454,15 +495,12 @@ ncm_reparam_get_length (NcmReparam *reparam)
 
 /**
  * ncm_reparam_peek_params:
- * @reparam: a #NcmReparam.
+ * @reparam: a #NcmReparam
  *
- * Gets the #NcmVector containing the new parameters. This vector is owned by
- * the #NcmReparam and should not be freed. This method is used by #NcmModel
- * and subclasses to get the new parameters and should not be used by the
- * user. The pointer returned by this method is guaranteed to be valid until
- * the destruction of the #NcmReparam.
+ * For #NcmModel and the subclasses: the vector is owned by @reparam and valid for its
+ * lifetime.
  *
- * Returns: (transfer none): a #NcmVector containing the new parameters.
+ * Returns: (transfer none): the new parameters
  */
 NcmVector *
 ncm_reparam_peek_params (NcmReparam *reparam)

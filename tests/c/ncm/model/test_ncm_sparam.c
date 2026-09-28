@@ -46,6 +46,7 @@ void test_ncm_sparam_setget_scale (TestNcmSparam *test, gconstpointer pdata);
 void test_ncm_sparam_setget_abstol (TestNcmSparam *test, gconstpointer pdata);
 void test_ncm_sparam_setget_default_value (TestNcmSparam *test, gconstpointer pdata);
 
+void test_ncm_sparam_strings_copy (TestNcmSparam *test, gconstpointer pdata);
 void test_ncm_sparam_traps (TestNcmSparam *test, gconstpointer pdata);
 void test_ncm_sparam_invalid_lower_bound (TestNcmSparam *test, gconstpointer pdata);
 void test_ncm_sparam_invalid_upper_bound (TestNcmSparam *test, gconstpointer pdata);
@@ -83,6 +84,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/sparam/setget/default_value", TestNcmSparam, NULL,
               &test_ncm_sparam_new,
               &test_ncm_sparam_setget_default_value,
+              &test_ncm_sparam_free);
+
+  g_test_add ("/ncm/sparam/strings_copy", TestNcmSparam, NULL,
+              &test_ncm_sparam_new,
+              &test_ncm_sparam_strings_copy,
               &test_ncm_sparam_free);
 
   g_test_add ("/ncm/sparam/traps", TestNcmSparam, NULL,
@@ -149,6 +155,45 @@ test_ncm_sparam_new (TestNcmSparam *test, gconstpointer pdata)
   ncm_assert_cmpdouble (ncm_sparam_get_upper_bound (p), ==, upper_bound);
   ncm_assert_cmpdouble (ncm_sparam_get_scale (p), ==, scale);
   ncm_assert_cmpdouble (ncm_sparam_get_absolute_tolerance (p), ==, abstol);
+}
+
+/* The symbol can be set again after construction; take_* replace the strings; a copy
+ * carries every property; a new NcmSParam without a scale has scale 1. */
+void
+test_ncm_sparam_strings_copy (TestNcmSparam *test, gconstpointer pdata)
+{
+  NcmSParam *p = test->p;
+  NcmSParam *c, *d;
+  gchar *symbol;
+
+  g_object_set (p, "symbol", "t3", NULL);
+  g_object_set (p, "symbol", "t4", NULL);
+  g_object_get (p, "symbol", &symbol, NULL);
+  g_assert_cmpstr (symbol, ==, "t4");
+  g_free (symbol);
+
+  ncm_sparam_take_name (p, g_strdup ("t5"));
+  ncm_sparam_take_symbol (p, g_strdup ("t6"));
+  g_assert_cmpstr (ncm_sparam_name (p), ==, "t5");
+  g_assert_cmpstr (ncm_sparam_symbol (p), ==, "t6");
+
+  ncm_sparam_set_fit_type (p, NCM_PARAM_TYPE_FREE);
+  c = ncm_sparam_copy (p);
+  g_assert_true (c != p);
+  g_assert_cmpstr (ncm_sparam_name (c), ==, "t5");
+  g_assert_cmpstr (ncm_sparam_symbol (c), ==, "t6");
+  g_assert_cmpfloat (ncm_sparam_get_lower_bound (c), ==, ncm_sparam_get_lower_bound (p));
+  g_assert_cmpfloat (ncm_sparam_get_upper_bound (c), ==, ncm_sparam_get_upper_bound (p));
+  g_assert_cmpfloat (ncm_sparam_get_scale (c), ==, ncm_sparam_get_scale (p));
+  g_assert_cmpfloat (ncm_sparam_get_absolute_tolerance (c), ==, ncm_sparam_get_absolute_tolerance (p));
+  g_assert_cmpfloat (ncm_sparam_get_default_value (c), ==, ncm_sparam_get_default_value (p));
+  g_assert_cmpint (ncm_sparam_get_fit_type (c), ==, NCM_PARAM_TYPE_FREE);
+  ncm_sparam_free (c);
+
+  d = g_object_new (NCM_TYPE_SPARAM, "name", "d", NULL);
+  g_assert_cmpfloat (ncm_sparam_get_scale (d), ==, 1.0);
+  g_assert_cmpfloat (ncm_sparam_get_absolute_tolerance (d), ==, 0.0);
+  ncm_sparam_free (d);
 }
 
 void

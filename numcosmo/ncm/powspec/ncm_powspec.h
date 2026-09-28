@@ -52,8 +52,8 @@ struct _NcmPowspecClass
   void (*get_nknots) (NcmPowspec *powspec, guint *Nz, guint *Nk);
   NcmSpline2d *(*get_spline_2d) (NcmPowspec *powspec, NcmModel *model);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[12];
+  /* Padding to allow adding up to 11 more virtual functions without breaking ABI. */
+  gpointer padding[11];
 };
 
 NcmPowspec *ncm_powspec_ref (NcmPowspec *powspec);

@@ -63,7 +63,9 @@ def create_mset(
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     if os.path.exists(progress_file):
-        mset = Ncm.MSet.load(progress_file, ser)
+        loaded = Ncm.MSet.load(progress_file, ser)
+        assert loaded is not None
+        mset = loaded
     else:
         mset = Ncm.MSet.empty_new()
 

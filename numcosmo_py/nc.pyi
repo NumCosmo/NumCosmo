@@ -534,7 +534,7 @@ class BBN(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -544,7 +544,7 @@ class BBN(NumCosmoMath.Model):
     parent_instance: NumCosmoMath.Model = ...
     def __init__(
         self,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -631,7 +631,7 @@ class BBNParametrized(BBN):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -642,7 +642,7 @@ class BBNParametrized(BBN):
         self,
         Yp: float = ...,
         Yp_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -710,7 +710,7 @@ class BBNParthenope(BBN):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -720,7 +720,7 @@ class BBNParthenope(BBN):
     def __init__(
         self,
         table: BBNParthenopeTable = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -1815,7 +1815,7 @@ class ClusterMass(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -1825,7 +1825,7 @@ class ClusterMass(NumCosmoMath.Model):
     parent_instance: NumCosmoMath.Model = ...
     def __init__(
         self,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -2079,7 +2079,7 @@ class ClusterMassAscaso(ClusterMassRichness):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -2107,7 +2107,7 @@ class ClusterMassAscaso(ClusterMassRichness):
         lnRichness_min: float = ...,
         sample_full_dist: bool = ...,
         z0: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -2200,7 +2200,7 @@ class ClusterMassBenson(ClusterMass):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -2226,7 +2226,7 @@ class ClusterMassBenson(ClusterMass):
         signif_obs_max: float = ...,
         signif_obs_min: float = ...,
         z0: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -2357,7 +2357,7 @@ class ClusterMassBensonXRay(ClusterMassBenson):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -2395,7 +2395,7 @@ class ClusterMassBensonXRay(ClusterMassBenson):
         signif_obs_max: float = ...,
         signif_obs_min: float = ...,
         z0: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -2601,7 +2601,7 @@ class ClusterMassExt(ClusterMassRichness):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -2631,7 +2631,7 @@ class ClusterMassExt(ClusterMassRichness):
         lnRichness_min: float = ...,
         sample_full_dist: bool = ...,
         z0: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -2706,7 +2706,7 @@ class ClusterMassLnnormal(ClusterMass):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -2724,7 +2724,7 @@ class ClusterMassLnnormal(ClusterMass):
         lnMobs_min: float = ...,
         sigma: float = ...,
         sigma_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -2787,7 +2787,7 @@ class ClusterMassNodist(ClusterMass):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -2798,7 +2798,7 @@ class ClusterMassNodist(ClusterMass):
         self,
         lnM_max: float = ...,
         lnM_min: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -2900,7 +2900,7 @@ class ClusterMassPlCL(ClusterMass):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -2928,7 +2928,7 @@ class ClusterMassPlCL(ClusterMass):
         sigma_l_fit: bool = ...,
         sigma_sz: float = ...,
         sigma_sz_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -3026,7 +3026,7 @@ class ClusterMassRichness(ClusterMass):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -3043,7 +3043,7 @@ class ClusterMassRichness(ClusterMass):
         lnRichness_min: float = ...,
         sample_full_dist: bool = ...,
         z0: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -3187,7 +3187,7 @@ class ClusterMassSelection(ClusterMass):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -3218,7 +3218,7 @@ class ClusterMassSelection(ClusterMass):
         sigmap2: float = ...,
         sigmap2_fit: bool = ...,
         z0: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -3325,7 +3325,7 @@ class ClusterMassVanderlinde(ClusterMass):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -3351,7 +3351,7 @@ class ClusterMassVanderlinde(ClusterMass):
         signif_obs_max: float = ...,
         signif_obs_min: float = ...,
         z0: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -3415,7 +3415,7 @@ class ClusterPhotozGauss(ClusterRedshift):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -3430,7 +3430,7 @@ class ClusterPhotozGauss(ClusterRedshift):
         self,
         pz_max: float = ...,
         pz_min: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -3508,7 +3508,7 @@ class ClusterPhotozGaussGlobal(ClusterRedshift):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -3526,7 +3526,7 @@ class ClusterPhotozGaussGlobal(ClusterRedshift):
         sigma0_fit: bool = ...,
         z_bias: float = ...,
         z_bias_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -3621,7 +3621,7 @@ class ClusterPseudoCounts(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -3644,7 +3644,7 @@ class ClusterPseudoCounts(NumCosmoMath.Model):
         sigma_Mcut_fit: bool = ...,
         zmin: float = ...,
         zmin_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -3751,7 +3751,7 @@ class ClusterRedshift(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -3761,7 +3761,7 @@ class ClusterRedshift(NumCosmoMath.Model):
     parent_instance: NumCosmoMath.Model = ...
     def __init__(
         self,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -3948,7 +3948,7 @@ class ClusterRedshiftNodist(ClusterRedshift):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -3959,7 +3959,7 @@ class ClusterRedshiftNodist(ClusterRedshift):
         self,
         z_max: float = ...,
         z_min: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -7657,7 +7657,7 @@ class GalaxyHOD(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -7668,7 +7668,7 @@ class GalaxyHOD(NumCosmoMath.Model):
     def __init__(
         self,
         stochastic_central: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -7777,7 +7777,7 @@ class GalaxyHODZheng07(GalaxyHOD):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -7797,7 +7797,7 @@ class GalaxyHODZheng07(GalaxyHOD):
         sigmalogM: float = ...,
         sigmalogM_fit: bool = ...,
         stochastic_central: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -8373,7 +8373,7 @@ class GalaxyRedshiftObs(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -8383,7 +8383,7 @@ class GalaxyRedshiftObs(NumCosmoMath.Model):
     parent_instance: NumCosmoMath.Model = ...
     def __init__(
         self,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -8508,7 +8508,7 @@ class GalaxyRedshiftObsGauss(GalaxyRedshiftObs):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -8517,7 +8517,7 @@ class GalaxyRedshiftObsGauss(GalaxyRedshiftObs):
     props: Props = ...
     def __init__(
         self,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -8582,7 +8582,7 @@ class GalaxyRedshiftObsSel(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -8592,7 +8592,7 @@ class GalaxyRedshiftObsSel(NumCosmoMath.Model):
     parent_instance: NumCosmoMath.Model = ...
     def __init__(
         self,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -8671,7 +8671,7 @@ class GalaxyRedshiftObsSelGauss(GalaxyRedshiftObsSel):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -8682,7 +8682,7 @@ class GalaxyRedshiftObsSelGauss(GalaxyRedshiftObsSel):
         self,
         sigma0: float = ...,
         sigma0_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -8748,7 +8748,7 @@ class GalaxyRedshiftPop(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -8759,7 +8759,7 @@ class GalaxyRedshiftPop(NumCosmoMath.Model):
     def __init__(
         self,
         lim: NumCosmoMath.DTuple2 = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -8867,7 +8867,7 @@ class GalaxyRedshiftPopLSSTSRD(GalaxyRedshiftPop):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -8883,7 +8883,7 @@ class GalaxyRedshiftPopLSSTSRD(GalaxyRedshiftPop):
         z0: float = ...,
         z0_fit: bool = ...,
         lim: NumCosmoMath.DTuple2 = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -9614,7 +9614,7 @@ class GalaxyShapePop(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -9624,7 +9624,7 @@ class GalaxyShapePop(NumCosmoMath.Model):
     parent_instance: NumCosmoMath.Model = ...
     def __init__(
         self,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -9728,7 +9728,7 @@ class GalaxyShapePopBeta(GalaxyShapePop):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -9741,7 +9741,7 @@ class GalaxyShapePopBeta(GalaxyShapePop):
         alpha_fit: bool = ...,
         beta: float = ...,
         beta_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -9878,7 +9878,7 @@ class GalaxyShapePopGauss(GalaxyShapePop):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -9889,7 +9889,7 @@ class GalaxyShapePopGauss(GalaxyShapePop):
         self,
         sigma: float = ...,
         sigma_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -9951,7 +9951,7 @@ class GalaxyShapePopGaussLocal(GalaxyShapePop):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -9960,7 +9960,7 @@ class GalaxyShapePopGaussLocal(GalaxyShapePop):
     props: Props = ...
     def __init__(
         self,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -10200,7 +10200,7 @@ class HICosmo(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -10228,7 +10228,7 @@ class HICosmo(NumCosmoMath.Model):
         bbn: BBN = ...,
         prim: HIPrim = ...,
         reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -10534,7 +10534,7 @@ class HICosmoDE(HICosmo):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -10580,7 +10580,7 @@ class HICosmoDE(HICosmo):
         bbn: BBN = ...,
         prim: HIPrim = ...,
         reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -10756,7 +10756,7 @@ class HICosmoDECpl(HICosmoDE):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -10805,7 +10805,7 @@ class HICosmoDECpl(HICosmoDE):
         bbn: BBN = ...,
         prim: HIPrim = ...,
         reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -10974,7 +10974,7 @@ class HICosmoDEJbp(HICosmoDE):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -11023,7 +11023,7 @@ class HICosmoDEJbp(HICosmoDE):
         bbn: BBN = ...,
         prim: HIPrim = ...,
         reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -11065,7 +11065,7 @@ class HICosmoDEReparamCMB(NumCosmoMath.Reparam):
       length -> guint: length
         System's length
       params-desc -> NcmObjDictInt: params-desc
-        News parameter descriptions
+        New parameter descriptions
       compat-type -> gchararray: compat-type
         Compatible type
 
@@ -11114,7 +11114,7 @@ class HICosmoDEReparamOk(NumCosmoMath.Reparam):
       length -> guint: length
         System's length
       params-desc -> NcmObjDictInt: params-desc
-        News parameter descriptions
+        New parameter descriptions
       compat-type -> gchararray: compat-type
         Compatible type
 
@@ -11297,7 +11297,7 @@ class HICosmoDEWSpline(HICosmoDE):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -11349,7 +11349,7 @@ class HICosmoDEWSpline(HICosmoDE):
         bbn: BBN = ...,
         prim: HIPrim = ...,
         reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -11516,7 +11516,7 @@ class HICosmoDEXcdm(HICosmoDE):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -11563,7 +11563,7 @@ class HICosmoDEXcdm(HICosmoDE):
         bbn: BBN = ...,
         prim: HIPrim = ...,
         reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -11707,7 +11707,7 @@ class HICosmoLCDM(HICosmo):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -11739,7 +11739,7 @@ class HICosmoLCDM(HICosmo):
         bbn: BBN = ...,
         prim: HIPrim = ...,
         reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -11854,7 +11854,7 @@ class HICosmoQConst(HICosmo):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -11886,7 +11886,7 @@ class HICosmoQConst(HICosmo):
         bbn: BBN = ...,
         prim: HIPrim = ...,
         reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -11988,7 +11988,7 @@ class HICosmoQGRW(HICosmo, HIPertIAdiab, HIPertIGW, HIPertITwoFluids):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -12021,7 +12021,7 @@ class HICosmoQGRW(HICosmo, HIPertIAdiab, HIPertIGW, HIPertITwoFluids):
         bbn: BBN = ...,
         prim: HIPrim = ...,
         reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -12117,7 +12117,7 @@ class HICosmoQGW(HICosmo, HIPertIAdiab):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -12146,7 +12146,7 @@ class HICosmoQGW(HICosmo, HIPertIAdiab):
         bbn: BBN = ...,
         prim: HIPrim = ...,
         reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -12262,7 +12262,7 @@ class HICosmoQLinear(HICosmo):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -12296,7 +12296,7 @@ class HICosmoQLinear(HICosmo):
         bbn: BBN = ...,
         prim: HIPrim = ...,
         reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -12415,7 +12415,7 @@ class HICosmoQRBF(HICosmo):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -12451,7 +12451,7 @@ class HICosmoQRBF(HICosmo):
         bbn: BBN = ...,
         prim: HIPrim = ...,
         reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -12620,7 +12620,7 @@ class HICosmoQSpline(HICosmo):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -12658,7 +12658,7 @@ class HICosmoQSpline(HICosmo):
         bbn: BBN = ...,
         prim: HIPrim = ...,
         reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -12745,7 +12745,7 @@ class HICosmoQSplineContPrior(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -12760,7 +12760,7 @@ class HICosmoQSplineContPrior(NumCosmoMath.Model):
         lnsigma: NumCosmoMath.Vector = ...,
         lnsigma_fit: GLib.Variant = ...,
         lnsigma_length: int = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -12904,7 +12904,7 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -12945,7 +12945,7 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
         bbn: BBN = ...,
         prim: HIPrim = ...,
         reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -15032,7 +15032,7 @@ class HIPrim(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -15045,7 +15045,7 @@ class HIPrim(NumCosmoMath.Model):
     def __init__(
         self,
         k_pivot: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -15167,7 +15167,7 @@ class HIPrimAtan(HIPrim):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -15193,7 +15193,7 @@ class HIPrimAtan(HIPrim):
         n_T: float = ...,
         n_T_fit: bool = ...,
         k_pivot: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -15294,7 +15294,7 @@ class HIPrimBPL(HIPrim):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -15317,7 +15317,7 @@ class HIPrimBPL(HIPrim):
         n_T: float = ...,
         n_T_fit: bool = ...,
         k_pivot: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -15439,7 +15439,7 @@ class HIPrimExpc(HIPrim):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -15464,7 +15464,7 @@ class HIPrimExpc(HIPrim):
         n_T: float = ...,
         n_T_fit: bool = ...,
         k_pivot: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -15553,7 +15553,7 @@ class HIPrimPowerLaw(HIPrim):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -15572,7 +15572,7 @@ class HIPrimPowerLaw(HIPrim):
         n_T: float = ...,
         n_T_fit: bool = ...,
         k_pivot: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -15684,7 +15684,7 @@ class HIPrimSBPL(HIPrim):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -15710,7 +15710,7 @@ class HIPrimSBPL(HIPrim):
         n_T: float = ...,
         n_T_fit: bool = ...,
         k_pivot: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -15814,7 +15814,7 @@ class HIPrimTwoFluids(HIPrim):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -15838,7 +15838,7 @@ class HIPrimTwoFluids(HIPrim):
         n_T_fit: bool = ...,
         use_default_calib: bool = ...,
         k_pivot: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -16074,7 +16074,7 @@ class HIReion(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -16086,7 +16086,7 @@ class HIReion(NumCosmoMath.Model):
     def __init__(
         self,
         prec: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -16174,7 +16174,7 @@ class HIReionCamb(HIReion):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -16201,7 +16201,7 @@ class HIReionCamb(HIReion):
         z_re: float = ...,
         z_re_fit: bool = ...,
         prec: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -16239,7 +16239,7 @@ class HIReionCambReparamTau(NumCosmoMath.Reparam):
       length -> guint: length
         System's length
       params-desc -> NcmObjDictInt: params-desc
-        News parameter descriptions
+        New parameter descriptions
       compat-type -> gchararray: compat-type
         Compatible type
 
@@ -16819,7 +16819,7 @@ class HaloCMBhattacharya13(HaloMassSummary):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -16834,7 +16834,7 @@ class HaloCMBhattacharya13(HaloMassSummary):
         mass_function: HaloMassFunction = ...,
         Delta: float = ...,
         mass_def: HaloMassSummaryMassDef = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -16921,7 +16921,7 @@ class HaloCMDiemer15(HaloMassSummary):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -16935,7 +16935,7 @@ class HaloCMDiemer15(HaloMassSummary):
         mass_function: HaloMassFunction = ...,
         Delta: float = ...,
         mass_def: HaloMassSummaryMassDef = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -17015,7 +17015,7 @@ class HaloCMDuffy08(HaloMassSummary):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -17028,7 +17028,7 @@ class HaloCMDuffy08(HaloMassSummary):
         log10MDelta_fit: bool = ...,
         Delta: float = ...,
         mass_def: HaloMassSummaryMassDef = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -17106,7 +17106,7 @@ class HaloCMDutton14(HaloMassSummary):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -17119,7 +17119,7 @@ class HaloCMDutton14(HaloMassSummary):
         log10MDelta_fit: bool = ...,
         Delta: float = ...,
         mass_def: HaloMassSummaryMassDef = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -17197,7 +17197,7 @@ class HaloCMKlypin11(HaloMassSummary):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -17210,7 +17210,7 @@ class HaloCMKlypin11(HaloMassSummary):
         log10MDelta_fit: bool = ...,
         Delta: float = ...,
         mass_def: HaloMassSummaryMassDef = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -17294,7 +17294,7 @@ class HaloCMParam(HaloMassSummary):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -17309,7 +17309,7 @@ class HaloCMParam(HaloMassSummary):
         log10MDelta_fit: bool = ...,
         Delta: float = ...,
         mass_def: HaloMassSummaryMassDef = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -17390,7 +17390,7 @@ class HaloCMPrada12(HaloMassSummary):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -17404,7 +17404,7 @@ class HaloCMPrada12(HaloMassSummary):
         mass_function: HaloMassFunction = ...,
         Delta: float = ...,
         mass_def: HaloMassSummaryMassDef = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -17685,7 +17685,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -17700,7 +17700,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
         lnXi: float = ...,
         mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -17854,7 +17854,7 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -17876,7 +17876,7 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         lnXi: float = ...,
         mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -17955,7 +17955,7 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -17971,7 +17971,7 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         lnXi: float = ...,
         mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -18042,7 +18042,7 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -18056,7 +18056,7 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
         lnXi: float = ...,
         mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -18127,7 +18127,7 @@ class HaloDensityProfileNFW(HaloDensityProfile):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -18141,7 +18141,7 @@ class HaloDensityProfileNFW(HaloDensityProfile):
         lnXi: float = ...,
         mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -18329,7 +18329,7 @@ class HaloMassSummary(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -18341,7 +18341,7 @@ class HaloMassSummary(NumCosmoMath.Model):
         self,
         Delta: float = ...,
         mass_def: HaloMassSummaryMassDef = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -18442,7 +18442,7 @@ class HaloPosition(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -18458,7 +18458,7 @@ class HaloPosition(NumCosmoMath.Model):
         ra_fit: bool = ...,
         z: float = ...,
         z_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -19416,7 +19416,7 @@ class PlanckFI(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -19427,7 +19427,7 @@ class PlanckFI(NumCosmoMath.Model):
     version: int = ...
     def __init__(
         self,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -19617,7 +19617,7 @@ class PlanckFICorTT(PlanckFI):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -19667,7 +19667,7 @@ class PlanckFICorTT(PlanckFI):
         ps_A_217_217_fit: bool = ...,
         xi_sz_cib: float = ...,
         xi_sz_cib_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -20405,7 +20405,7 @@ class PlanckFICorTTTEEE(PlanckFICorTT):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -20629,7 +20629,7 @@ class PlanckFICorTTTEEE(PlanckFICorTT):
         ps_A_217_217_fit: bool = ...,
         xi_sz_cib: float = ...,
         xi_sz_cib_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -21488,7 +21488,7 @@ class ReducedShearCalib(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -21498,7 +21498,7 @@ class ReducedShearCalib(NumCosmoMath.Model):
     parent_instance: NumCosmoMath.Model = ...
     def __init__(
         self,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -21590,7 +21590,7 @@ class ReducedShearCalibWtg(ReducedShearCalib):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -21607,7 +21607,7 @@ class ReducedShearCalibWtg(ReducedShearCalib):
         mslope_fit: bool = ...,
         xp: float = ...,
         xp_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -21713,7 +21713,7 @@ class ReducedShearClusterMass(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -21742,7 +21742,7 @@ class ReducedShearClusterMass(NumCosmoMath.Model):
         sigma_fit: bool = ...,
         xp: float = ...,
         xp_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -21875,7 +21875,7 @@ class SNIADistCov(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -21913,7 +21913,7 @@ class SNIADistCov(NumCosmoMath.Model):
         mu: NumCosmoMath.Vector = ...,
         mu_fit: GLib.Variant = ...,
         mu_length: int = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -22393,7 +22393,7 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -22411,7 +22411,7 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         distance: Distance = ...,
         pcc: float = ...,
         pcc_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -23077,7 +23077,7 @@ class XcorKernel(NumCosmoMath.Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -23101,7 +23101,7 @@ class XcorKernel(NumCosmoMath.Model):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -23287,7 +23287,7 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -23315,7 +23315,7 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -23457,7 +23457,7 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -23485,7 +23485,7 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -23629,7 +23629,7 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -23658,7 +23658,7 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -23810,7 +23810,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -23840,7 +23840,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -23989,7 +23989,7 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -24018,7 +24018,7 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -24161,7 +24161,7 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -24188,7 +24188,7 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -24330,7 +24330,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -24359,7 +24359,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -24494,7 +24494,7 @@ class XcorKernelCMBISW(XcorKernel):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -24520,7 +24520,7 @@ class XcorKernelCMBISW(XcorKernel):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -24646,7 +24646,7 @@ class XcorKernelCMBLensing(XcorKernel):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -24672,7 +24672,7 @@ class XcorKernelCMBLensing(XcorKernel):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -24804,7 +24804,7 @@ class XcorKernelCluster(XcorKernel):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -24828,7 +24828,7 @@ class XcorKernelCluster(XcorKernel):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -24938,7 +24938,7 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -24963,7 +24963,7 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -25207,7 +25207,7 @@ class XcorKernelGal(XcorKernel):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -25242,7 +25242,7 @@ class XcorKernelGal(XcorKernel):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -25430,7 +25430,7 @@ class XcorKernelRadial(XcorKernel):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -25456,7 +25456,7 @@ class XcorKernelRadial(XcorKernel):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -25702,7 +25702,7 @@ class XcorKernelTable(XcorKernelRadial):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -25733,7 +25733,7 @@ class XcorKernelTable(XcorKernelRadial):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -25883,7 +25883,7 @@ class XcorKernelWeakLensing(XcorKernel):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -25909,7 +25909,7 @@ class XcorKernelWeakLensing(XcorKernel):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
@@ -26026,7 +26026,7 @@ class XcorKerneltSZ(XcorKernel):
         name: str
         nick: str
         params_types: list[None]
-        reparam: NumCosmoMath.Reparam
+        reparam: typing.Optional[NumCosmoMath.Reparam]
         scalar_params_len: int
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
@@ -26051,7 +26051,7 @@ class XcorKerneltSZ(XcorKernel):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         track_fit_residual: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...

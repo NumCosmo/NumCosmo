@@ -40,9 +40,9 @@ G_DECLARE_FINAL_TYPE (NcmModelFunnel, ncm_model_funnel, NCM, MODEL_FUNNEL, NcmMo
 
 /**
  * NcmModelFunnelSParams:
- * @NCM_MODEL_FUNNEL_NU: $\nu$
+ * @NCM_MODEL_FUNNEL_NU: $\nu$, the logarithm of the variance of the $x_i$
  *
- * Funnel model parameters.
+ * Scalar parameters of #NcmModelFunnel.
  *
  */
 typedef enum _NcmModelFunnelSParams /*< prefix=NCM_MODEL_FUNNEL >*/
@@ -54,9 +54,9 @@ typedef enum _NcmModelFunnelSParams /*< prefix=NCM_MODEL_FUNNEL >*/
 
 /**
  * NcmModelFunnelVParams:
- * @NCM_MODEL_FUNNEL_X: $x$
+ * @NCM_MODEL_FUNNEL_X: $x$, the variables whose spread is set by $\nu$
  *
- * Funnel model parameters.
+ * Vector parameters of #NcmModelFunnel.
  *
  */
 typedef enum _NcmModelFunnelVParams /*< prefix=NCM_MODEL_FUNNEL >*/

@@ -13,6 +13,14 @@ math_tests = [
         'sources': ['ncm/model/test_ncm_sparam.c'],
     },
     {
+        'name': 'ncm_vparam',
+        'sources': ['ncm/model/test_ncm_vparam.c'],
+    },
+    {
+        'name': 'ncm_reparam',
+        'sources': ['ncm/model/test_ncm_reparam.c'],
+    },
+    {
         'name': 'ncm_diff',
         'sources': ['ncm/integration/test_ncm_diff.c'],
     },
@@ -55,6 +63,22 @@ math_tests = [
     {
         'name': 'ncm_sphere_nn',
         'sources': ['ncm/sphere/test_ncm_sphere_nn.c'],
+    },
+    {
+        'name': 'ncm_powspec',
+        'sources': ['ncm/powspec/test_ncm_powspec.c'],
+    },
+    {
+        'name': 'ncm_powspec_spline2d',
+        'sources': ['ncm/powspec/test_ncm_powspec_spline2d.c'],
+    },
+    {
+        'name': 'ncm_powspec_corr3d',
+        'sources': ['ncm/powspec/test_ncm_powspec_corr3d.c'],
+    },
+    {
+        'name': 'ncm_powspec_filter',
+        'sources': ['ncm/powspec/test_ncm_powspec_filter.c'],
     },
     {
         'name': 'ncm_fftlog',
@@ -216,6 +240,18 @@ math_tests = [
     {
         'name': 'ncm_mset',
         'sources': ['ncm/model/test_ncm_mset.c'],
+    },
+    {
+        'name': 'ncm_mset_func',
+        'sources': ['ncm/model/test_ncm_mset_func.c'],
+    },
+    {
+        'name': 'ncm_model_builder',
+        'sources': ['ncm/model/test_ncm_model_builder.c'],
+    },
+    {
+        'name': 'ncm_model_toys',
+        'sources': ['ncm/model/test_ncm_model_toys.c'],
     },
     {
         'name': 'ncm_mset_catalog',
