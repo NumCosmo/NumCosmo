@@ -49,6 +49,10 @@ void test_ncm_data_gauss_cov_test_bootstrap_resample (TestNcmDataGaussCovTest *t
 void test_ncm_data_gauss_cov_test_bootstrap_resample_norm (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 void test_ncm_data_gauss_cov_test_bulk_resample (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 void test_ncm_data_gauss_cov_compute_cov (TestNcmDataGaussCovTest *test, gconstpointer pdata);
+void test_ncm_data_gauss_cov_test_replace_cov (TestNcmDataGaussCovTest *test, gconstpointer pdata);
+void test_ncm_data_gauss_cov_test_resize (TestNcmDataGaussCovTest *test, gconstpointer pdata);
+void test_ncm_data_gauss_cov_test_norma_bootstrap (TestNcmDataGaussCovTest *test, gconstpointer pdata);
+void test_ncm_data_gauss_cov_test_errors (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 
 void test_ncm_data_gauss_cov_mvnd_new (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 void test_ncm_data_gauss_cov_mvnd_free (TestNcmDataGaussCovTest *test, gconstpointer pdata);
@@ -97,6 +101,22 @@ main (gint argc, gchar *argv[])
               &test_ncm_data_gauss_cov_compute_cov,
               &test_ncm_data_gauss_cov_test_free);
 
+  g_test_add ("/ncm/data_gauss_cov/test/replace_cov", TestNcmDataGaussCovTest, NULL,
+              &test_ncm_data_gauss_cov_test_new,
+              &test_ncm_data_gauss_cov_test_replace_cov,
+              &test_ncm_data_gauss_cov_test_free);
+  g_test_add ("/ncm/data_gauss_cov/test/resize", TestNcmDataGaussCovTest, NULL,
+              &test_ncm_data_gauss_cov_test_new,
+              &test_ncm_data_gauss_cov_test_resize,
+              &test_ncm_data_gauss_cov_test_free);
+  g_test_add ("/ncm/data_gauss_cov/test/norma_bootstrap", TestNcmDataGaussCovTest, NULL,
+              &test_ncm_data_gauss_cov_test_new,
+              &test_ncm_data_gauss_cov_test_norma_bootstrap,
+              &test_ncm_data_gauss_cov_test_free);
+  g_test_add ("/ncm/data_gauss_cov/test/errors", TestNcmDataGaussCovTest, NULL,
+              &test_ncm_data_gauss_cov_test_new,
+              &test_ncm_data_gauss_cov_test_errors,
+              &test_ncm_data_gauss_cov_test_free);
   g_test_add ("/ncm/data_gauss_cov/mvnd/sanity", TestNcmDataGaussCovTest, NULL,
               &test_ncm_data_gauss_cov_mvnd_new,
               &test_ncm_data_gauss_cov_mvnd_sanity,
@@ -268,7 +288,7 @@ test_ncm_data_gauss_cov_test_bad_cov (TestNcmDataGaussCovTest *test, gconstpoint
   }
 
   g_test_trap_subprocess (NULL, 0, 0);
-  g_test_trap_assert_stderr ("*_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]*");
+  g_test_trap_assert_stderr ("*the covariance is not positive definite*");
   g_test_trap_assert_failed ();
 }
 
@@ -511,5 +531,154 @@ test_ncm_data_gauss_cov_compute_cov (TestNcmDataGaussCovTest *test, gconstpointe
   }
 
   ncm_mset_clear (&mset);
+}
+
+/* Sets the data to the mean plus one in every component, with the identity covariance. */
+static void
+_test_unit_residual (NcmDataGaussCov *gauss)
+{
+  const guint np = ncm_data_gauss_cov_get_size (gauss);
+  NcmVector *y   = ncm_vector_new (np);
+  NcmMatrix *cov = ncm_matrix_new (np, np);
+
+  ncm_data_gauss_cov_test_mean_func (gauss, NULL, y);
+  ncm_vector_add_constant (y, 1.0);
+  ncm_data_gauss_cov_replace_mean (gauss, y);
+
+  ncm_matrix_set_identity (cov);
+  ncm_data_gauss_cov_set_cov (gauss, cov);
+  ncm_data_set_init (NCM_DATA (gauss), TRUE);
+
+  ncm_vector_free (y);
+  ncm_matrix_free (cov);
+}
+
+void
+test_ncm_data_gauss_cov_test_replace_cov (TestNcmDataGaussCovTest *test, gconstpointer pdata)
+{
+  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (test->data);
+  const guint np         = ncm_data_gauss_cov_get_size (gauss);
+  NcmVector *f           = ncm_vector_new (np);
+  NcmMatrix *cov         = ncm_matrix_new (np, np);
+  gdouble m2lnL;
+
+  _test_unit_residual (gauss);
+
+  ncm_data_m2lnL_val (test->data, NULL, &m2lnL);
+  g_assert_cmpfloat (m2lnL, ==, np);
+
+  /* Replacing the covariance invalidates its Cholesky factor. */
+  ncm_matrix_set_identity (cov);
+  ncm_matrix_scale (cov, 0.25);
+  ncm_data_gauss_cov_set_cov (gauss, cov);
+
+  ncm_data_m2lnL_val (test->data, NULL, &m2lnL);
+  ncm_data_leastsquares_f (test->data, NULL, f);
+  g_assert_cmpfloat (m2lnL, ==, 4.0 * np);
+  g_assert_cmpfloat (ncm_vector_dot (f, f), ==, 4.0 * np);
+
+  /* So does setting the property. */
+  ncm_matrix_set_identity (cov);
+  g_object_set (gauss, "cov", cov, NULL);
+
+  ncm_data_m2lnL_val (test->data, NULL, &m2lnL);
+  g_assert_cmpfloat (m2lnL, ==, np);
+
+  ncm_vector_free (f);
+  ncm_matrix_free (cov);
+}
+
+void
+test_ncm_data_gauss_cov_test_resize (TestNcmDataGaussCovTest *test, gconstpointer pdata)
+{
+  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (test->data);
+  NcmRNG *rng            = ncm_rng_seeded_new (NULL, 1);
+  const guint np         = ncm_data_gauss_cov_get_size (gauss);
+  gdouble m2lnL;
+
+  ncm_data_resample (test->data, NULL, rng);
+
+  /* A new size frees the factor; resampling rebuilds it. */
+  ncm_data_gauss_cov_set_size (gauss, np + 2);
+  ncm_data_gauss_cov_test_gen_cov (test->gcov_test);
+  ncm_data_resample (test->data, NULL, rng);
+  ncm_data_m2lnL_val (test->data, NULL, &m2lnL);
+  g_assert_true (gsl_finite (m2lnL));
+
+  ncm_rng_free (rng);
+}
+
+void
+test_ncm_data_gauss_cov_test_norma_bootstrap (TestNcmDataGaussCovTest *test, gconstpointer pdata)
+{
+  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (test->data);
+  const guint np         = ncm_data_gauss_cov_get_size (gauss);
+  NcmVector *y           = ncm_vector_new (np);
+  NcmMatrix *cov         = ncm_matrix_new (np, np);
+  NcmRNG *rng            = ncm_rng_seeded_new (NULL, 1);
+  gdouble m2lnL;
+
+  /* Zero residual and unit covariance: only the normalization remains. */
+  ncm_data_gauss_cov_test_mean_func (gauss, NULL, y);
+  ncm_data_gauss_cov_replace_mean (gauss, y);
+  ncm_matrix_set_identity (cov);
+  ncm_data_gauss_cov_set_cov (gauss, cov);
+  ncm_data_set_init (test->data, TRUE);
+  ncm_data_gauss_cov_use_norma (gauss, TRUE);
+
+  ncm_data_m2lnL_val (test->data, NULL, &m2lnL);
+  g_assert_cmpfloat (m2lnL, ==, np * ncm_c_ln2pi ());
+
+  /* With a bootstrap of 3 draws there are 3 Gaussian terms. */
+  ncm_data_bootstrap_create (test->data);
+  ncm_bootstrap_set_bsize (ncm_data_peek_bootstrap (test->data), 3);
+  ncm_data_bootstrap_resample (test->data, rng);
+
+  ncm_data_m2lnL_val (test->data, NULL, &m2lnL);
+  g_assert_cmpfloat (m2lnL, ==, 3 * ncm_c_ln2pi ());
+
+  ncm_vector_free (y);
+  ncm_matrix_free (cov);
+  ncm_rng_free (rng);
+}
+
+void
+test_ncm_data_gauss_cov_test_errors (TestNcmDataGaussCovTest *test, gconstpointer pdata)
+{
+  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (test->data);
+  const guint np         = ncm_data_gauss_cov_get_size (gauss);
+
+  if (g_test_subprocess ())
+  {
+    const gchar *which = g_getenv ("TEST_NCM_DATA_GAUSS_COV_ERROR");
+
+    if (g_strcmp0 (which, "set_cov") == 0)
+    {
+      NcmMatrix *cov = ncm_matrix_new (np + 1, np + 1);
+
+      ncm_data_gauss_cov_set_cov (gauss, cov);
+    }
+    else
+    {
+      NcmMatrix *resample = ncm_matrix_new (2, np + 1);
+      NcmRNG *rng         = ncm_rng_seeded_new (NULL, 1);
+
+      ncm_data_gauss_cov_bulk_resample (gauss, NULL, resample, rng);
+    }
+
+    return; /* LCOV_EXCL_LINE */
+  }
+
+  g_setenv ("TEST_NCM_DATA_GAUSS_COV_ERROR", "set_cov", TRUE);
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*but the covariance is*");
+
+  g_setenv ("TEST_NCM_DATA_GAUSS_COV_ERROR", "bulk", TRUE);
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*ncm_data_gauss_cov_bulk_resample: data*");
+
+  g_unsetenv ("TEST_NCM_DATA_GAUSS_COV_ERROR");
 }
 
