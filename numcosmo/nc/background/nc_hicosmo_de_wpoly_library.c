@@ -35,7 +35,8 @@
  * #NcHICosmoDEWPolyLibrary:max-class are discarded. For $m \ge 1$ a draw is accepted
  * with the probability that makes the ordered turning points uniform on $[0, z_f]$:
  * the ratio of the target density to the draw density, the latter estimated on a first
- * pass by a histogram with #NcHICosmoDEWPolyLibrary:density-bins bins per axis. Every
+ * pass by a histogram with #NcHICosmoDEWPolyLibrary:density-bins bins per axis and
+ * #NcHICosmoDEWPolyLibrary:density-draws-per-cell draws per cell on average. Every
  * class collects #NcHICosmoDEWPolyLibrary:n-per-class fiducials. An accepted $w + 1$ is
  * rescaled so that its largest excursion between consecutive stationary points
  * ($0$, the turning points, $z_f$) equals an amplitude drawn uniformly on
@@ -79,6 +80,7 @@ struct _NcHICosmoDEWPolyLibrary
   guint max_class;
   gdouble a_max;
   guint density_bins;
+  guint density_draws;
   gboolean prepared;
   gulong n_draws;
   NcHICosmoDEWPoly *work;
@@ -97,6 +99,7 @@ enum
   PROP_MAX_CLASS,
   PROP_A_MAX,
   PROP_DENSITY_BINS,
+  PROP_DENSITY_DRAWS,
 };
 
 static void
@@ -111,17 +114,18 @@ _nc_hicosmo_de_wpoly_library_fiducial_clear (gpointer data)
 static void
 nc_hicosmo_de_wpoly_library_init (NcHICosmoDEWPolyLibrary *lib)
 {
-  lib->seed         = 0;
-  lib->degree       = 0;
-  lib->z_f          = 0.0;
-  lib->n_per_class  = 0;
-  lib->max_class    = 0;
-  lib->a_max        = 0.0;
-  lib->density_bins = 0;
-  lib->prepared     = FALSE;
-  lib->n_draws      = 0;
-  lib->work         = NULL;
-  lib->classes      = g_ptr_array_new_with_free_func ((GDestroyNotify) g_array_unref);
+  lib->seed          = 0;
+  lib->degree        = 0;
+  lib->z_f           = 0.0;
+  lib->n_per_class   = 0;
+  lib->max_class     = 0;
+  lib->a_max         = 0.0;
+  lib->density_bins  = 0;
+  lib->density_draws = 0;
+  lib->prepared      = FALSE;
+  lib->n_draws       = 0;
+  lib->work          = NULL;
+  lib->classes       = g_ptr_array_new_with_free_func ((GDestroyNotify) g_array_unref);
 }
 
 static void
@@ -151,6 +155,9 @@ _nc_hicosmo_de_wpoly_library_set_property (GObject *object, guint prop_id, const
       break;
     case PROP_DENSITY_BINS:
       lib->density_bins = g_value_get_uint (value);
+      break;
+    case PROP_DENSITY_DRAWS:
+      lib->density_draws = g_value_get_uint (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -185,6 +192,9 @@ _nc_hicosmo_de_wpoly_library_get_property (GObject *object, guint prop_id, GValu
       break;
     case PROP_DENSITY_BINS:
       g_value_set_uint (value, lib->density_bins);
+      break;
+    case PROP_DENSITY_DRAWS:
+      g_value_set_uint (value, lib->density_draws);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -286,6 +296,26 @@ nc_hicosmo_de_wpoly_library_class_init (NcHICosmoDEWPolyLibraryClass *klass)
                                                       "bins per axis of the turning-point density estimate",
                                                       1, 255, 10,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_DENSITY_DRAWS,
+                                   g_param_spec_uint ("density-draws-per-cell",
+                                                      NULL,
+                                                      "first-pass draws per cell of the density estimate, on average",
+                                                      1, G_MAXUINT, 50,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
+
+/* Number of ordered cells of the class-@m histogram: C(bins + m - 1, m). */
+static gulong
+_nc_hicosmo_de_wpoly_library_n_cells (NcHICosmoDEWPolyLibrary *lib, guint m)
+{
+  gulong n = 1;
+  guint i;
+
+  for (i = 1; i <= m; i++)
+    n = n * (lib->density_bins + i - 1) / i;
+
+  return n;
 }
 
 /*
@@ -397,7 +427,8 @@ _nc_hicosmo_de_wpoly_library_cell_target (guint64 key, guint m)
  *
  * Generates the library. A first pass over the coefficient stream estimates the
  * turning-point density per class until every class with $m \ge 1$ has
- * #NcHICosmoDEWPolyLibrary:n-per-class draws in it; a second pass over the same
+ * #NcHICosmoDEWPolyLibrary:density-draws-per-cell draws per histogram cell on
+ * average; a second pass over the same
  * stream accepts draws to the uniform target until every class is full, then
  * normalizes, draws amplitudes and shuffles. Does nothing when already prepared.
  */
@@ -438,9 +469,15 @@ nc_hicosmo_de_wpoly_library_prepare (NcHICosmoDEWPolyLibrary *lib)
         *key = _nc_hicosmo_de_wpoly_library_cell (lib, tp);
 
         if (g_hash_table_lookup_extended (hist[m], key, NULL, &val))
+        {
+          /* the table keeps its own key */
           g_hash_table_insert (hist[m], key, GSIZE_TO_POINTER (GPOINTER_TO_SIZE (val) + 1));
+          g_free (key);
+        }
         else
+        {
           g_hash_table_insert (hist[m], key, GSIZE_TO_POINTER (1));
+        }
 
         class_count[m]++;
       }
@@ -450,7 +487,7 @@ nc_hicosmo_de_wpoly_library_prepare (NcHICosmoDEWPolyLibrary *lib)
       done = TRUE;
 
       for (m = 1; m <= lib->max_class; m++)
-        done = done && (class_count[m] >= lib->n_per_class);
+        done = done && (class_count[m] >= lib->density_draws * _nc_hicosmo_de_wpoly_library_n_cells (lib, m));
     } while (!done);
 
     ncm_rng_free (rng);
