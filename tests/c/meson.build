@@ -61,6 +61,10 @@ math_tests = [
         'sources': ['ncm/powspec/test_ncm_powspec.c'],
     },
     {
+        'name': 'ncm_powspec_spline2d',
+        'sources': ['ncm/powspec/test_ncm_powspec_spline2d.c'],
+    },
+    {
         'name': 'ncm_fftlog',
         'sources': ['ncm/fftlog/test_ncm_fftlog.c'],
         'priority': 2,
