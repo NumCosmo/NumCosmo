@@ -55,7 +55,13 @@ test_ncm_timer_elapsed (void)
   g_assert_cmpuint (hour, ==, 0);
   g_assert_cmpuint (min, ==, 0);
   g_assert_cmpfloat (sec, ==, elapsed);
-  g_assert_true (g_str_has_prefix (ncm_timer_elapsed_dhms_str (nt), "00:00:00.00"));
+  {
+    /* From the measured time: a 2 ms sleep can last more than 10 ms on a busy machine */
+    gchar *expected = g_strdup_printf ("00:00:" NCM_TIMER_SEC_FORMAT, elapsed);
+
+    g_assert_cmpstr (ncm_timer_elapsed_dhms_str (nt), ==, expected);
+    g_free (expected);
+  }
 
   ncm_timer_continue (nt);
   g_usleep (2000);

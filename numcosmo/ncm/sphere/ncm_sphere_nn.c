@@ -411,8 +411,9 @@ static void
 _ncm_sphere_nn_check_search (NcmSphereNNPrivate * const self, const gint64 k, const gchar *func)
 {
   if (self->n_built != (gint64) self->tree->count)
-    g_error ("%s: %zu points inserted but the tree was built with %" G_GINT64_FORMAT "; "
-             "call ncm_sphere_nn_rebuild() after inserting.", func, self->tree->count, self->n_built);
+    g_error ("%s: %zu points inserted but the tree was built with "
+             "%" G_GINT64_FORMAT "; call ncm_sphere_nn_rebuild() after inserting.",
+             func, self->tree->count, self->n_built);
 
   if ((k < 1) || (k > (gint64) self->tree->count) || (k > G_MAXINT))
     g_error ("%s: k = %" G_GINT64_FORMAT " is out of range, the tree holds %zu points.", func, k, self->tree->count);

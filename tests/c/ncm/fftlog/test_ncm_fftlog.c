@@ -1390,7 +1390,8 @@ test_ncm_fftlog_bias_gausswin2_truth (void)
       {
         const gdouble truth = _test_gauss_k3_gausswin2 (nd, ncm_vector_get (lnr, i));
 
-        g_assert_cmpfloat (fabs (ncm_vector_get (Gr, i) - truth), <, 1.0e-13 * peak);
+        /* Measured: 5.5e-14 peak on x86-64 Linux, 2.4e-13 peak on macOS arm64 */
+        g_assert_cmpfloat (fabs (ncm_vector_get (Gr, i) - truth), <, 5.0e-13 * peak);
       }
 
       ncm_vector_free (Gr);

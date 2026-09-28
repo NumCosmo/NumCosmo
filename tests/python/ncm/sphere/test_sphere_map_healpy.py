@@ -26,8 +26,8 @@
 
 The tests of NcmSphereMap are in C (``tests/c/ncm/sphere/test_ncm_sphere_map.c``),
 against frozen healpy tables made by ``tests/tools/make_sphere_healpy_truth_table.py``.
-These few compare with the live healpy instead, so a change of convention in healpy, or a
-break in the Python bindings, shows here.
+These few compare with the live healpy instead, so a change of convention in healpy,
+or a break in the Python bindings, shows here.
 """
 
 from typing import Any
@@ -36,15 +36,19 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
-pytest.importorskip("healpy")
-# flake8: noqa: E402
-# pylint: disable=wrong-import-position
-
-import healpy
-
 from numcosmo_py import Ncm
 
-pytestmark = [pytest.mark.sphere_map]
+try:
+    import healpy
+except ImportError:
+    healpy = None
+
+# Skipped at run time, not at collection: this file is the whole sphere_map shard, and a
+# shard with nothing collected makes pytest exit with status 5, which fails the lane.
+pytestmark = [
+    pytest.mark.sphere_map,
+    pytest.mark.skipif(healpy is None, reason="healpy is not installed"),
+]
 
 Ncm.cfg_init()
 
@@ -145,7 +149,7 @@ def test_map2alm_and_cl(iter_n: int) -> None:
 
 
 def test_alm2map() -> None:
-    """alm2map of random coefficients at lmax 4 nside, past the rings' Nyquist frequency."""
+    """alm2map of random coefficients at lmax 4 nside, past the ring Nyquist limit."""
     lmax = 4 * NSIDE
     rng = np.random.default_rng(7)
     n = healpy.Alm.getsize(lmax)

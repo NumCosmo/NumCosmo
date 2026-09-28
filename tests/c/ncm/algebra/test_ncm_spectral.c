@@ -632,23 +632,29 @@ test_ncm_spectral_eval_deriv (void)
 {
   GArray *c = _pattern_new (30);
   const gdouble a   = -2.0, b = 1.5;
-  gdouble err_f     = 0.0, err_df = 0.0, err_x = 0.0;
+  gdouble err_f     = 0.0, err_df = 0.0, err_x = 0.0, scale_x = 0.0;
   guint i;
 
   for (i = 0; i < G_N_ELEMENTS (test_t); i++)
   {
-    const gdouble t = test_t[i];
-    const gdouble x = ncm_spectral_t_to_x (a, b, t);
+    const gdouble t     = test_t[i];
+    const gdouble x     = ncm_spectral_t_to_x (a, b, t);
+    const gdouble f_x   = ncm_spectral_chebyshev_eval (c, ncm_spectral_x_to_t (a, b, x));
+    const gdouble df_dx = ncm_spectral_chebyshev_deriv (c, ncm_spectral_x_to_t (a, b, x)) * 2.0 / (b - a);
 
-    err_f  = MAX (err_f, fabs (ncm_spectral_chebyshev_eval (c, t) - _sum (c, _T, t)));
-    err_df = MAX (err_df, fabs (ncm_spectral_chebyshev_deriv (c, t) - _sum (c, _dT, t)));
-    err_x  = MAX (err_x, fabs (ncm_spectral_chebyshev_eval_x (c, a, b, x) - ncm_spectral_chebyshev_eval (c, ncm_spectral_x_to_t (a, b, x))));
-    err_x  = MAX (err_x, fabs (ncm_spectral_chebyshev_deriv_x (c, a, b, x) - 2.0 / (b - a) * ncm_spectral_chebyshev_deriv (c, ncm_spectral_x_to_t (a, b, x))));
+    err_f   = MAX (err_f, fabs (ncm_spectral_chebyshev_eval (c, t) - _sum (c, _T, t)));
+    err_df  = MAX (err_df, fabs (ncm_spectral_chebyshev_deriv (c, t) - _sum (c, _dT, t)));
+    err_x   = MAX (err_x, fabs (ncm_spectral_chebyshev_eval_x (c, a, b, x) - f_x));
+    err_x   = MAX (err_x, fabs (ncm_spectral_chebyshev_deriv_x (c, a, b, x) - df_dx));
+    scale_x = MAX (scale_x, MAX (fabs (f_x), fabs (df_dx)));
   }
 
   _assert_small (err_f, 1.0e-14);
   _assert_small (err_df, 5.0e-13);
-  _assert_small (err_x, 1.0e-15);
+
+  /* The same computation on both sides, so the two agree to rounding; exactly on x86-64,
+   * within 1.02e-15 on macOS arm64, where the compiler may fuse x_to_t differently. */
+  _assert_small (err_x, 8.0 * GSL_DBL_EPSILON * scale_x);
 
   g_array_set_size (c, 1);
   g_assert_cmpfloat (ncm_spectral_chebyshev_eval (c, 0.3), ==, g_array_index (c, gdouble, 0));
