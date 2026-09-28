@@ -57,6 +57,9 @@ void test_ncm_mset_unslotted_submodel_attach (void);
 void test_ncm_mset_unslotted_submodel_attach_subprocess (void);
 void test_ncm_mset_load_unslotted_submodel_group (void);
 void test_ncm_mset_two_level_submodel_slots (void);
+void test_ncm_mset_peek_by_name_unknown (void);
+void test_ncm_mset_remove_host (void);
+void test_ncm_mset_split_full_name (void);
 
 void test_ncm_mset_traps (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_invalid_get (TestNcmMSet *test, gconstpointer pdata);
@@ -114,6 +117,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/submodel/unslotted_attach/subprocess", &test_ncm_mset_unslotted_submodel_attach_subprocess);
   g_test_add_func ("/ncm/mset/load/unslotted_submodel_group", &test_ncm_mset_load_unslotted_submodel_group);
   g_test_add_func ("/ncm/mset/submodel/two_level_slots", &test_ncm_mset_two_level_submodel_slots);
+  g_test_add_func ("/ncm/mset/peek_by_name/unknown", &test_ncm_mset_peek_by_name_unknown);
+  g_test_add_func ("/ncm/mset/remove/host", &test_ncm_mset_remove_host);
+  g_test_add_func ("/ncm/mset/split_full_name", &test_ncm_mset_split_full_name);
 
   g_test_add ("/ncm/mset/traps", TestNcmMSet, NULL,
               &test_ncm_mset_new,
@@ -1043,5 +1049,103 @@ test_ncm_mset_invalid_stack (TestNcmMSet *test, gconstpointer pdata)
   ncm_mset_push (test->mset, NCM_MODEL (cosmo), NULL);
 
   nc_hicosmo_free (NC_HICOSMO (cosmo));
+}
+
+/* An unregistered namespace gives no model, with or without a stack position, even when
+ * namespace id -1 plus that position is the id of a model in the set. */
+void
+test_ncm_mset_peek_by_name_unknown (void)
+{
+  NcmModel *mvnd = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmMSet *mset  = ncm_mset_new (mvnd, NULL, NULL);
+  const gint id  = ncm_model_mvnd_id ();
+  gchar *name    = g_strdup_printf ("NoSuchModel:%d", id + 1);
+  GError *error  = NULL;
+
+  g_assert_true (ncm_mset_peek_by_name (mset, "NcmModelMVND", NULL) == mvnd);
+  g_assert_null (ncm_mset_peek_by_name (mset, "NoSuchModel", NULL));
+  g_assert_null (ncm_mset_peek_by_name (mset, name, NULL));
+
+  g_assert_null (ncm_mset_fetch_by_name (mset, name, &error));
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_NOT_SET);
+  g_clear_error (&error);
+
+  g_free (name);
+  ncm_mset_free (mset);
+  ncm_model_free (mvnd);
+}
+
+/* Removing a host removes its submodels; the set then matches its serialized copy. */
+void
+test_ncm_mset_remove_host (void)
+{
+  NcHIReion *reion     = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim       = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcmModel *cosmo      = NCM_MODEL (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
+  NcmModel *mvnd       = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmMSet *mset        = ncm_mset_new (cosmo, NULL, mvnd, NULL);
+  NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  const guint mvnd_len = ncm_model_len (mvnd);
+  NcmMSet *dup;
+
+  g_assert_nonnull (ncm_mset_peek (mset, nc_hiprim_id ()));
+  g_assert_cmpuint (ncm_mset_total_len (mset), >, mvnd_len);
+
+  ncm_mset_remove (mset, nc_hicosmo_id ());
+
+  g_assert_null (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  g_assert_null (ncm_mset_peek (mset, nc_hiprim_id ()));
+  g_assert_null (ncm_mset_peek (mset, nc_hireion_id ()));
+  g_assert_cmpuint (ncm_mset_nmodels (mset), ==, 1);
+  g_assert_cmpuint (ncm_mset_total_len (mset), ==, mvnd_len);
+
+  dup = ncm_mset_dup (mset, ser);
+  g_assert_cmpuint (ncm_mset_nmodels (dup), ==, 1);
+  g_assert_cmpuint (ncm_mset_total_len (dup), ==, mvnd_len);
+
+  ncm_mset_free (dup);
+  ncm_serialize_free (ser);
+  ncm_mset_free (mset);
+  ncm_model_free (mvnd);
+  ncm_model_free (cosmo);
+  nc_hiprim_free (prim);
+  nc_hireion_free (reion);
+}
+
+/* Full names split with and without a stack position; a stack position out of range is
+ * an error that leaves the outputs unset. */
+void
+test_ncm_mset_split_full_name (void)
+{
+  gchar *ns       = NULL;
+  gchar *pname    = NULL;
+  guint stackpos  = 99;
+  GError *error   = NULL;
+  gchar *too_high = g_strdup_printf ("NcHICosmo:%d:H0", NCM_MSET_MAX_STACKSIZE);
+
+  g_assert_true (ncm_mset_split_full_name ("NcHICosmo:H0", &ns, &stackpos, &pname, &error));
+  g_assert_no_error (error);
+  g_assert_cmpstr (ns, ==, "NcHICosmo");
+  g_assert_cmpstr (pname, ==, "H0");
+  g_assert_cmpuint (stackpos, ==, 0);
+  g_clear_pointer (&ns, g_free);
+  g_clear_pointer (&pname, g_free);
+
+  g_assert_true (ncm_mset_split_full_name ("NcHICosmo:2:Omegac", &ns, &stackpos, &pname, &error));
+  g_assert_cmpuint (stackpos, ==, 2);
+  g_assert_cmpstr (pname, ==, "Omegac");
+  g_clear_pointer (&ns, g_free);
+  g_clear_pointer (&pname, g_free);
+
+  g_assert_false (ncm_mset_split_full_name ("not a name", &ns, &stackpos, &pname, &error));
+  g_assert_no_error (error);
+
+  g_assert_false (ncm_mset_split_full_name (too_high, &ns, &stackpos, &pname, &error));
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID);
+  g_assert_null (ns);
+  g_assert_null (pname);
+  g_clear_error (&error);
+
+  g_free (too_high);
 }
 

@@ -477,7 +477,7 @@ def test_mset_split_full_name_invalid_stackpos() -> None:
     with pytest.raises(
         GLib.Error,
         match=re.escape(
-            rf"ncm-mset-error: ncm_mset_param_split_full_name: "
+            rf"ncm-mset-error: ncm_mset_split_full_name: "
             rf"invalid stackpos number (132344 >= 1000). "
             rf"({int(Ncm.MSetError.FULLNAME_INVALID)})"
         ),

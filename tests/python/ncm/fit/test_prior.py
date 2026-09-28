@@ -147,7 +147,7 @@ def test_py_prior_gauss_param_new_name_invalid_stackpos() -> None:
     with pytest.raises(
         GLib.Error,
         match=re.compile(
-            rf"^ncm-mset-error: ncm_mset_param_split_full_name: invalid stackpos "
+            rf"^ncm-mset-error: ncm_mset_split_full_name: invalid stackpos "
             rf"number \(2301 \>\= 1000\). "
             rf"\({int(Ncm.MSetError.FULLNAME_INVALID)}\)$",
             re.DOTALL,
@@ -302,7 +302,7 @@ def test_py_prior_flat_param_new_name_invalid_stackpos() -> None:
     with pytest.raises(
         GLib.Error,
         match=re.compile(
-            rf"^ncm-mset-error: ncm_mset_param_split_full_name: invalid stackpos "
+            rf"^ncm-mset-error: ncm_mset_split_full_name: invalid stackpos "
             rf"number \(2300 \>\= 1000\). "
             rf"\({int(Ncm.MSetError.FULLNAME_INVALID)}\)$",
             re.DOTALL,

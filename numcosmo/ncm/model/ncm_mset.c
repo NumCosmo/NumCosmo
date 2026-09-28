@@ -45,6 +45,8 @@
  * Non-stackable models use ncm_mset_set(). Existing models at a selected
  * position are replaced.
  *
+ * A model enters the set with its submodels, each at stack position 0 of its own model
+ * id, and ncm_mset_remove() removes them with it.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -72,8 +74,6 @@ G_DEFINE_QUARK (ncm-mset-error, ncm_mset_error)
 /* *INDENT-ON* */
 typedef struct _NcmMSetPrivate
 {
-  /*< private >*/
-  GObject parent_instance;
   NcmObjArray *model_array;
   GHashTable *mid_item_hash;
   GHashTable *model_item_hash;
@@ -142,8 +142,6 @@ ncm_mset_init (NcmMSet *mset)
 
   g_ptr_array_set_free_func (self->model_array, (GDestroyNotify) _ncm_mset_item_free);
   g_ptr_array_set_free_func (self->fullname_parray, g_free);
-
-/* self->fpi_array[i] = g_array_sized_new (FALSE, TRUE, sizeof (gint), 10); */
 
   self->valid_map = FALSE;
   self->total_len = 0;
@@ -275,9 +273,6 @@ _ncm_mset_dispose (GObject *object)
 static void
 _ncm_mset_finalize (GObject *object)
 {
-  /* NcmMSet *mset               = NCM_MSET (object); */
-  /* NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset); */
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_parent_class)->finalize (object);
 }
@@ -292,12 +287,23 @@ ncm_mset_class_init (NcmMSetClass *klass)
   object_class->dispose      = &_ncm_mset_dispose;
   object_class->finalize     = &_ncm_mset_finalize;
 
+  /**
+   * NcmMSet:valid-map:
+   *
+   * Whether the free-parameter map is prepared (see ncm_mset_prepare_fparam_map());
+   * setting it to %TRUE prepares it.
+   */
   g_object_class_install_property (object_class,
                                    PROP_VALID_MAP,
                                    g_param_spec_boolean ("valid-map", NULL, "Valid properties map",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmMSet:model-array:
+   *
+   * The models of the set, without the submodels, which come with their hosts.
+   */
   g_object_class_install_property (object_class,
                                    PROP_MARRAY,
                                    g_param_spec_boxed ("model-array",
@@ -305,6 +311,12 @@ ncm_mset_class_init (NcmMSetClass *klass)
                                                        "NcmModel array",
                                                        NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSet:fmap:
+   *
+   * The free-parameter map, as full parameter names (see ncm_mset_set_fmap()).
+   */
   g_object_class_install_property (object_class,
                                    PROP_FMAP,
                                    g_param_spec_boxed ("fmap",
@@ -389,7 +401,7 @@ G_LOCK_DEFINE_STATIC (last_model_id);
  * @main_model_id: main model id, use -1 if this is a main model
  *
  * Register a model class in the #NcmMSet. This function must be used once and only
- * once in the model class definition. Any subclasse of the model class will inherit
+ * once in the model class definition. Any subclass of the model class will inherit
  * the model id. The same compilation unit must call the macro
  * NCM_MSET_MODEL_REGISTER_ID() for each model class that will be used in the #NcmMSet.
  * It should also include NCM_MSET_MODEL_DECLARE_ID() in the header file.
@@ -415,7 +427,16 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
     NcmMSetModelDesc *model_desc    = NULL;
     guint id;
 
+    if (ns == NULL)
+      g_error ("ncm_mset_model_register_id: Cannot register model without a namespace.");
+
+    if (desc == NULL)
+      g_error ("ncm_mset_model_register_id: Cannot register model without a description.");
+
     G_LOCK (last_model_id);
+
+    if (g_hash_table_lookup (mset_class->ns_table, ns) != NULL)
+      g_error ("ncm_mset_model_register_id: Model namespace <%s> already registered.", ns);
 
     model_class->can_stack = can_stack;
 
@@ -433,13 +454,6 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
 
     model_desc       = &g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, id);
     model_desc->init = TRUE;
-
-    if (ns == NULL)
-      g_error ("ncm_mset_model_register_id: Cannot register model without a namespace.");
-
-    if (desc == NULL)
-      g_error ("ncm_mset_model_register_id: Cannot register model without a description.");
-
     model_desc->ns   = g_strdup (ns);
     model_desc->desc = g_strdup (desc);
 
@@ -447,9 +461,6 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
       model_desc->long_desc = g_strdup (long_desc);
     else
       model_desc->long_desc = NULL;
-
-    if (g_hash_table_lookup (mset_class->ns_table, ns) != NULL)
-      g_error ("ncm_mset_model_register_id: Model namespace <%s> already registered.", ns);
 
     g_hash_table_insert (mset_class->ns_table, model_desc->ns, GINT_TO_POINTER (model_class->model_id));
 
@@ -474,11 +485,13 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
  * @pname: (out) (transfer full): parameter name
  * @error: a #GError
  *
- * Splits the @fullname into @model_ns, @stackpos_id and @pname. The @fullname
- * should be specified with the parameter full name "model:parameter_name"
- * or "model:stackposition:parameter_name".
+ * Splits @fullname, of the form "model:parameter_name" or
+ * "model:stackposition:parameter_name", into @model_ns, @stackpos_id and @pname. A
+ * @fullname of another form returns %FALSE without an error; a stack position of
+ * %NCM_MSET_MAX_STACKSIZE or more sets @error. On %FALSE, @model_ns and @pname are not
+ * set.
  *
- * Returns: %TRUE if the @fullname is valid, %FALSE otherwise.
+ * Returns: whether @fullname was split
  */
 gboolean
 ncm_mset_split_full_name (const gchar *fullname, gchar **model_ns, guint *stackpos_id, gchar **pname, GError **error)
@@ -488,7 +501,6 @@ ncm_mset_split_full_name (const gchar *fullname, gchar **model_ns, guint *stackp
     NcmMSetClass * const klass = g_type_class_ref (NCM_TYPE_MSET);
     GMatchInfo *match_info     = NULL;
     gboolean ret               = FALSE;
-
 
     if (g_regex_match (klass->fullname_regex, fullname, 0, &match_info))
     {
@@ -510,11 +522,13 @@ ncm_mset_split_full_name (const gchar *fullname, gchar **model_ns, guint *stackp
         if ((*endptr != '\0') || (*stackpos_id >= NCM_MSET_MAX_STACKSIZE))
         {
           ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
-                                      "ncm_mset_param_split_full_name: invalid stackpos number (%s >= %d).",
+                                      "ncm_mset_split_full_name: invalid stackpos number (%s >= %d).",
                                       stackpos_s, NCM_MSET_MAX_STACKSIZE);
-          g_free (*model_ns);
-          g_free (*pname);
+          g_clear_pointer (model_ns, g_free);
+          g_clear_pointer (pname, g_free);
           g_free (stackpos_s);
+          g_match_info_free (match_info);
+          g_type_class_unref (klass);
 
           return FALSE;
         }
@@ -594,7 +608,6 @@ ncm_mset_newv (gpointer model0, va_list ap, GError **error)
     NcmMSet *mset   = ncm_mset_empty_new ();
     NcmModel *model = NULL;
 
-
     g_assert (model0 != NULL);
     g_assert (NCM_IS_MODEL (model0));
 
@@ -648,7 +661,7 @@ ncm_mset_new_array (GPtrArray *model_array, GError **error)
  *
  * Increases the reference count of @mset by one.
  *
- * Returns: (transfer full): a new #NcmMSet
+ * Returns: (transfer full): @mset
  */
 NcmMSet *
 ncm_mset_ref (NcmMSet *mset)
@@ -726,10 +739,7 @@ ncm_mset_free (NcmMSet *mset)
  * ncm_mset_clear:
  * @mset: a #NcmMSet
  *
- * If *@mse is not NULL, decreases the reference count of @mset by one. If the
- * reference count drops to 0, all memory allocated by @mset is released and *@mset is
- * set to NULL.
- *
+ * If *@mset is not %NULL, decrements its reference count and sets *@mset to %NULL.
  */
 void
 ncm_mset_clear (NcmMSet **mset)
@@ -742,9 +752,8 @@ ncm_mset_clear (NcmMSet **mset)
  * @mset: a #NcmMSet
  * @mid: a #NcmModelID
  *
- * Peeks a #NcmModel from the #NcmMSet using the model id @mid.
- *
- * Returns: (transfer none): a #NcmModel with the model id @mid
+ * Returns: (transfer none) (nullable): the model with model id @mid, %NULL when there
+ * is none
  */
 NcmModel *
 ncm_mset_peek (NcmMSet *mset, NcmModelID mid)
@@ -778,7 +787,6 @@ ncm_mset_fetch (NcmMSet *mset, NcmModelID mid, GError **error)
     ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_NOT_SET,
                                 "ncm_mset_fetch: model with id %d not found.", mid);
 
-
   return model;
 }
 
@@ -791,7 +799,8 @@ ncm_mset_fetch (NcmMSet *mset, NcmModelID mid, GError **error)
  * Peeks a #NcmModel from the #NcmMSet using the model id @base_mid and stack position
  * @stackpos_id. This function is useful when the model is stackable.
  *
- * Returns: (transfer none): a #NcmModel with the model id @base_mid + @stackpos_id
+ * Returns: (transfer none) (nullable): the model with model id @base_mid + @stackpos_id,
+ * %NULL when there is none
  */
 NcmModel *
 ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint stackpos_id)
@@ -808,7 +817,8 @@ ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint stackpos_id)
  *
  * Gets a #NcmModel from the #NcmMSet using the model id @mid.
  *
- * Returns: (transfer full): a #NcmModel with the model id @mid.
+ * Returns: (transfer full) (nullable): the model with model id @mid, %NULL when there
+ * is none
  */
 NcmModel *
 ncm_mset_get (NcmMSet *mset, NcmModelID mid)
@@ -852,17 +862,19 @@ ncm_mset_peek_array_pos (NcmMSet *mset, guint i)
  * Peeks a #NcmModel from the #NcmMSet using the model namespace @name.
  * The name may be specified with the parameter full name "model:stackposition".
  * If the stack position is not specified, the first model with the model namespace
- * @name will be returned.
+ * @name will be returned. An unregistered namespace gives %NULL.
  *
- * Returns: (transfer none): a #NcmModel with the model namespace @name.
+ * Returns: (transfer none) (nullable): the model with the model namespace @name, %NULL
+ * when there is none
  */
 NcmModel *
 ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name, GError **error)
 {
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
   {
-    gchar **ns_stackpos = g_strsplit (name, ":", 2);
-    NcmModel *model     = NULL;
+    gchar **ns_stackpos   = g_strsplit (name, ":", 2);
+    const NcmModelID base = ncm_mset_get_id_by_ns (ns_stackpos[0]);
+    NcmModel *model       = NULL;
 
     if (ns_stackpos[1] != NULL)
     {
@@ -882,11 +894,13 @@ ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name, GError **error)
         return NULL;
       }
 
-      model = ncm_mset_peek_pos (mset, ncm_mset_get_id_by_ns (ns_stackpos[0]), stackpos_id);
+      /* An unregistered namespace is -1, which plus a stack position is another id. */
+      if (base >= 0)
+        model = ncm_mset_peek_pos (mset, base, stackpos_id);
     }
-    else
+    else if (base >= 0)
     {
-      model = ncm_mset_peek (mset, ncm_mset_get_id_by_ns (name));
+      model = ncm_mset_peek (mset, base);
     }
 
     g_strfreev (ns_stackpos);
@@ -950,8 +964,7 @@ ncm_mset_get_mid_array_pos (NcmMSet *mset, guint i)
  * @mset: a #NcmMSet
  * @mid: a #NcmModelID
  *
- * Removes a #NcmModel from the #NcmMSet using the model id @mid.
- *
+ * Removes the model with model id @mid, and with it its submodels, from @mset.
  */
 void
 ncm_mset_remove (NcmMSet *mset, NcmModelID mid)
@@ -961,6 +974,10 @@ ncm_mset_remove (NcmMSet *mset, NcmModelID mid)
 
   if (item != NULL)
   {
+    NcmModel *model = ncm_model_ref (item->model);
+    gboolean removed;
+    guint i;
+
     self->total_len -= item->added_total_params;
     self->valid_map  = FALSE;
 
@@ -969,7 +986,21 @@ ncm_mset_remove (NcmMSet *mset, NcmModelID mid)
     if (!item->dup)
       g_hash_table_remove (self->model_item_hash, item->model);
 
-    g_assert (g_ptr_array_remove (self->model_array, item));
+    removed = g_ptr_array_remove (self->model_array, item);
+    g_assert_true (removed);
+
+    /* The submodels entered with the host, at stack position 0; a stacked host of the
+     * same type may have replaced them there, and those stay. */
+    for (i = 0; i < ncm_model_get_submodel_len (model); i++)
+    {
+      NcmModel *submodel    = ncm_model_peek_submodel (model, i);
+      const NcmModelID smid = ncm_model_id (submodel);
+
+      if (ncm_mset_peek (mset, smid) == submodel)
+        ncm_mset_remove (mset, smid);
+    }
+
+    ncm_model_free (model);
   }
 }
 

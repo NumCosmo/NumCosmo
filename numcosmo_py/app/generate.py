@@ -315,6 +315,7 @@ class GeneratePlanck:
             assert isinstance(dist, Nc.Distance)
             add_snia_likelihood(dataset, mset, dist, self.include_snia)
             cosmo = mset.peek(Nc.HICosmo.id())
+            assert isinstance(cosmo, Nc.HICosmo)
             cosmo.set_property("w_fit", True)
 
         if self.include_des_y3_S8_prior:
