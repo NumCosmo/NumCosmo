@@ -82,7 +82,8 @@ test_mset_func_sum_new (const guint nvar)
 }
 
 /*
- * A concrete NcmMSetFunc of the free parameters: f = sum_i (i + 1) p_i^2.
+ * A concrete NcmMSetFunc of the free parameters and its arguments:
+ * f = prod_j x_j sum_i (i + 1) p_i^2.
  */
 
 #define TEST_TYPE_MSET_FUNC_FPARAMS (test_mset_func_fparams_get_type ())
@@ -104,6 +105,7 @@ static void
 _test_mset_func_fparams_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
   const guint fparam_len = ncm_mset_fparam_len (mset);
+  const guint nvar       = ncm_mset_func_get_nvar (func);
   guint i;
 
   res[0] = 0.0;
@@ -114,6 +116,9 @@ _test_mset_func_fparams_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x
 
     res[0] += (i + 1.0) * p_i * p_i;
   }
+
+  for (i = 0; i < nvar; i++)
+    res[0] *= x[i];
 }
 
 static void
@@ -124,9 +129,81 @@ test_mset_func_fparams_class_init (TestMSetFuncFParamsClass *klass)
   func_class->eval = &_test_mset_func_fparams_eval;
 }
 
+/*
+ * A concrete NcmMSetFunc1: its values are sum_j x_j + k for k = 0, ..., dim - 1.
+ */
+
+#define TEST_TYPE_MSET_FUNC1_SUM (test_mset_func1_sum_get_type ())
+G_DECLARE_FINAL_TYPE (TestMSetFunc1Sum, test_mset_func1_sum, TEST, MSET_FUNC1_SUM, NcmMSetFunc1)
+
+struct _TestMSetFunc1Sum
+{
+  NcmMSetFunc1 parent_instance;
+  guint nret;
+};
+
+G_DEFINE_TYPE (TestMSetFunc1Sum, test_mset_func1_sum, NCM_TYPE_MSET_FUNC1)
+
+static void
+test_mset_func1_sum_init (TestMSetFunc1Sum *f1s)
+{
+  f1s->nret = 0;
+}
+
+static GArray *
+_test_mset_func1_sum_eval1 (NcmMSetFunc1 *f1, NcmMSet *mset, GArray *x)
+{
+  TestMSetFunc1Sum *f1s = TEST_MSET_FUNC1_SUM (f1);
+  GArray *res           = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), f1s->nret);
+  gdouble sum           = 0.0;
+  guint i;
+
+  for (i = 0; i < x->len; i++)
+    sum += g_array_index (x, gdouble, i);
+
+  for (i = 0; i < f1s->nret; i++)
+  {
+    const gdouble v = sum + i;
+
+    g_array_append_val (res, v);
+  }
+
+  return res;
+}
+
+static void
+test_mset_func1_sum_class_init (TestMSetFunc1SumClass *klass)
+{
+  NcmMSetFunc1Class *func1_class = NCM_MSET_FUNC1_CLASS (klass);
+
+  func1_class->eval1 = &_test_mset_func1_sum_eval1;
+}
+
+static NcmMSetFunc *
+test_mset_func1_sum_new (const guint nvar, const guint dim, const guint nret)
+{
+  TestMSetFunc1Sum *f1s = g_object_new (TEST_TYPE_MSET_FUNC1_SUM, NULL);
+  NcmMSetFunc *func     = NCM_MSET_FUNC (f1s);
+
+  f1s->nret = nret;
+  ncm_mset_func_set_meta (func, "f", "f", "Test", "Shifted sums of the arguments", nvar, dim);
+
+  return func;
+}
+
 void test_ncm_mset_func_unames (void);
 void test_ncm_mset_func_numdiff_fparams (void);
+void test_ncm_mset_func_numdiff_fparams_eval_x (void);
+void test_ncm_mset_func_eval_args (void);
+void test_ncm_mset_func_eval_no_args (void);
+void test_ncm_mset_func_eval_no_args_subprocess (void);
 void test_ncm_mset_func_unames_set_meta (void);
+void test_ncm_mset_func_eval_array (void);
+void test_ncm_mset_func_eval_array_bad_len (void);
+void test_ncm_mset_func_eval_array_bad_len_subprocess (void);
+void test_ncm_mset_func1_eval (void);
+void test_ncm_mset_func1_bad_dim (void);
+void test_ncm_mset_func1_bad_dim_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -138,6 +215,16 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset_func/unames", &test_ncm_mset_func_unames);
   g_test_add_func ("/ncm/mset_func/unames/set_meta", &test_ncm_mset_func_unames_set_meta);
   g_test_add_func ("/ncm/mset_func/numdiff_fparams", &test_ncm_mset_func_numdiff_fparams);
+  g_test_add_func ("/ncm/mset_func/numdiff_fparams/eval_x", &test_ncm_mset_func_numdiff_fparams_eval_x);
+  g_test_add_func ("/ncm/mset_func/eval/args", &test_ncm_mset_func_eval_args);
+  g_test_add_func ("/ncm/mset_func/eval/no_args", &test_ncm_mset_func_eval_no_args);
+  g_test_add_func ("/ncm/mset_func/eval/no_args/subprocess", &test_ncm_mset_func_eval_no_args_subprocess);
+  g_test_add_func ("/ncm/mset_func/eval_array", &test_ncm_mset_func_eval_array);
+  g_test_add_func ("/ncm/mset_func/eval_array/bad_len", &test_ncm_mset_func_eval_array_bad_len);
+  g_test_add_func ("/ncm/mset_func/eval_array/bad_len/subprocess", &test_ncm_mset_func_eval_array_bad_len_subprocess);
+  g_test_add_func ("/ncm/mset_func1/eval", &test_ncm_mset_func1_eval);
+  g_test_add_func ("/ncm/mset_func1/bad_dim", &test_ncm_mset_func1_bad_dim);
+  g_test_add_func ("/ncm/mset_func1/bad_dim/subprocess", &test_ncm_mset_func1_bad_dim_subprocess);
 
   g_test_run ();
 }
@@ -263,5 +350,236 @@ test_ncm_mset_func_numdiff_fparams (void)
   ncm_mset_func_free (func);
   ncm_mset_free (mset);
   ncm_model_rosenbrock_free (mrb);
+}
+
+void
+test_ncm_mset_func_numdiff_fparams_eval_x (void)
+{
+  NcmModelRosenbrock *mrb = ncm_model_rosenbrock_new ();
+  NcmMSet *mset           = ncm_mset_new (mrb, NULL, NULL);
+  NcmMSetFunc *func       = g_object_new (TEST_TYPE_MSET_FUNC_FPARAMS, NULL);
+  const gdouble p[2]      = {1.5, -0.5};
+  gdouble eval_x          = 3.0;
+  gdouble x               = 5.0;
+  NcmVector *grad         = NULL;
+  guint i;
+
+  ncm_mset_func_set_meta (func, "f", "f", "Test", "Scaled weighted sum of squares", 1, 1);
+  ncm_mset_func_set_eval_x (func, &eval_x, 1);
+
+  ncm_model_param_set (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X1, p[0]);
+  ncm_model_param_set (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X2, p[1]);
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  /* A NULL x differentiates at the evaluation point. */
+  ncm_mset_func_numdiff_fparams (func, mset, NULL, &grad);
+
+  for (i = 0; i < 2; i++)
+    ncm_assert_cmpdouble_e (ncm_vector_get (grad, i), ==, eval_x * 2.0 * (i + 1.0) * p[i], 1.0e-12, 0.0);
+
+  /* An explicit x wins over the evaluation point. */
+  ncm_mset_func_numdiff_fparams (func, mset, &x, &grad);
+
+  for (i = 0; i < 2; i++)
+    ncm_assert_cmpdouble_e (ncm_vector_get (grad, i), ==, x * 2.0 * (i + 1.0) * p[i], 1.0e-12, 0.0);
+
+  ncm_vector_free (grad);
+  ncm_mset_func_free (func);
+  ncm_mset_free (mset);
+  ncm_model_rosenbrock_free (mrb);
+}
+
+void
+test_ncm_mset_func_eval_args (void)
+{
+  NcmMSet *mset       = ncm_mset_empty_new ();
+  NcmMSetFunc *func2  = test_mset_func_sum_new (2);
+  NcmMSetFunc *func1  = test_mset_func_sum_new (1);
+  NcmMSetFunc *func0  = test_mset_func_sum_new (0);
+  gdouble eval_x2[2]  = {1.0, 2.0};
+  gdouble x2[2]       = {5.0, 6.0};
+  gdouble eval_x1     = 2.0;
+  gdouble x_v_data[3] = {1.0, 4.0, 8.0};
+  NcmVector *x_v      = ncm_vector_new_data_static (x_v_data, 3, 1);
+  NcmVector *res_v    = ncm_vector_new (3);
+  gdouble res;
+  guint i;
+
+  /* Without an evaluation point an explicit x is used. */
+  ncm_mset_func_eval (func2, mset, x2, &res);
+  g_assert_cmpfloat (res, ==, 11.0);
+  g_assert_cmpfloat (ncm_mset_func_eval_nvar (func2, mset, x2), ==, 11.0);
+
+  /* With one, a NULL x uses it and an explicit x wins. */
+  ncm_mset_func_set_eval_x (func2, eval_x2, 2);
+
+  ncm_mset_func_eval (func2, mset, NULL, &res);
+  g_assert_cmpfloat (res, ==, 3.0);
+  g_assert_cmpfloat (ncm_mset_func_eval_nvar (func2, mset, NULL), ==, 3.0);
+  g_assert_cmpfloat (ncm_mset_func_eval0 (func2, mset), ==, 3.0);
+
+  ncm_mset_func_eval (func2, mset, x2, &res);
+  g_assert_cmpfloat (res, ==, 11.0);
+  g_assert_cmpfloat (ncm_mset_func_eval_nvar (func2, mset, x2), ==, 11.0);
+
+  /* eval1 and eval_vector always use their arguments. */
+  ncm_mset_func_set_eval_x (func1, &eval_x1, 1);
+  g_assert_cmpfloat (ncm_mset_func_eval0 (func1, mset), ==, 2.0);
+  g_assert_cmpfloat (ncm_mset_func_eval1 (func1, mset, 7.0), ==, 7.0);
+
+  ncm_mset_func_eval_vector (func1, mset, x_v, res_v);
+
+  for (i = 0; i < 3; i++)
+    g_assert_cmpfloat (ncm_vector_get (res_v, i), ==, x_v_data[i]);
+
+  /* A function without variables takes no arguments. */
+  g_assert_cmpfloat (ncm_mset_func_eval0 (func0, mset), ==, 0.0);
+  g_assert_cmpfloat (ncm_mset_func_eval_nvar (func0, mset, NULL), ==, 0.0);
+
+  ncm_vector_free (x_v);
+  ncm_vector_free (res_v);
+  ncm_mset_func_free (func0);
+  ncm_mset_func_free (func1);
+  ncm_mset_func_free (func2);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_mset_func_eval_no_args (void)
+{
+  g_test_trap_subprocess ("/ncm/mset_func/eval/no_args/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*function `f' takes 1 variable(s), but it was called without arguments and no evaluation point is set*");
+}
+
+void
+test_ncm_mset_func_eval_no_args_subprocess (void)
+{
+  NcmMSet *mset     = ncm_mset_empty_new ();
+  NcmMSetFunc *func = test_mset_func_sum_new (1);
+
+  ncm_mset_func_eval0 (func, mset);
+
+  ncm_mset_func_free (func);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_mset_func_eval_array (void)
+{
+  NcmMSet *mset      = ncm_mset_empty_new ();
+  NcmMSetFunc *func2 = test_mset_func_sum_new (2);
+  NcmMSetFunc *func0 = test_mset_func_sum_new (0);
+  gdouble eval_x2[2] = {1.0, 2.0};
+  gdouble x2_data[2] = {5.0, 6.0};
+  GArray *x2         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *res;
+
+  g_array_append_vals (x2, x2_data, 2);
+
+  res = ncm_mset_func_eval_array (func2, mset, x2);
+  g_assert_cmpuint (res->len, ==, 1);
+  g_assert_cmpfloat (g_array_index (res, gdouble, 0), ==, 11.0);
+  g_array_unref (res);
+
+  ncm_mset_func_set_eval_x (func2, eval_x2, 2);
+
+  res = ncm_mset_func_eval_array (func2, mset, NULL);
+  g_assert_cmpfloat (g_array_index (res, gdouble, 0), ==, 3.0);
+  g_array_unref (res);
+
+  res = ncm_mset_func_eval_array (func2, mset, x2);
+  g_assert_cmpfloat (g_array_index (res, gdouble, 0), ==, 11.0);
+  g_array_unref (res);
+
+  res = ncm_mset_func_eval_array (func0, mset, NULL);
+  g_assert_cmpuint (res->len, ==, 1);
+  g_assert_cmpfloat (g_array_index (res, gdouble, 0), ==, 0.0);
+  g_array_unref (res);
+
+  g_array_unref (x2);
+  ncm_mset_func_free (func0);
+  ncm_mset_func_free (func2);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_mset_func_eval_array_bad_len (void)
+{
+  g_test_trap_subprocess ("/ncm/mset_func/eval_array/bad_len/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*function `f' takes 2 variable(s), but 1 argument(s) were given*");
+}
+
+void
+test_ncm_mset_func_eval_array_bad_len_subprocess (void)
+{
+  NcmMSet *mset     = ncm_mset_empty_new ();
+  NcmMSetFunc *func = test_mset_func_sum_new (2);
+  GArray *x         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  const gdouble x0  = 1.0;
+
+  g_array_append_val (x, x0);
+  g_array_unref (ncm_mset_func_eval_array (func, mset, x));
+
+  g_array_unref (x);
+  ncm_mset_func_free (func);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_mset_func1_eval (void)
+{
+  NcmMSet *mset      = ncm_mset_empty_new ();
+  NcmMSetFunc *func  = test_mset_func1_sum_new (2, 3, 3);
+  NcmMSetFunc *func1 = test_mset_func1_sum_new (1, 1, 1);
+  gdouble x[2]       = {1.0, 2.0};
+  gdouble eval_x[2]  = {10.0, 20.0};
+  gdouble res[3];
+  GArray *res_a;
+  guint i;
+
+  g_assert_true (NCM_IS_MSET_FUNC1 (func));
+
+  ncm_mset_func_eval (func, mset, x, res);
+
+  for (i = 0; i < 3; i++)
+    g_assert_cmpfloat (res[i], ==, 3.0 + i);
+
+  ncm_mset_func_set_eval_x (func, eval_x, 2);
+  res_a = ncm_mset_func_eval_array (func, mset, NULL);
+  g_assert_cmpuint (res_a->len, ==, 3);
+
+  for (i = 0; i < 3; i++)
+    g_assert_cmpfloat (g_array_index (res_a, gdouble, i), ==, 30.0 + i);
+
+  g_array_unref (res_a);
+
+  g_assert_cmpfloat (ncm_mset_func_eval1 (func1, mset, 6.0), ==, 6.0);
+
+  ncm_mset_func_free (func1);
+  ncm_mset_func_free (func);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_mset_func1_bad_dim (void)
+{
+  g_test_trap_subprocess ("/ncm/mset_func1/bad_dim/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*function `f' has dimension 2, but eval1 returned 1 value(s)*");
+}
+
+void
+test_ncm_mset_func1_bad_dim_subprocess (void)
+{
+  NcmMSet *mset     = ncm_mset_empty_new ();
+  NcmMSetFunc *func = test_mset_func1_sum_new (0, 2, 1);
+
+  g_array_unref (ncm_mset_func_eval_array (func, mset, NULL));
+
+  ncm_mset_func_free (func);
+  ncm_mset_free (mset);
 }
 

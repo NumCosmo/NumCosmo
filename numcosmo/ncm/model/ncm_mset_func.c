@@ -387,42 +387,72 @@ ncm_mset_func_array_new (void)
   return g_ptr_array_new_with_free_func ((GDestroyNotify) & ncm_mset_func_free);
 }
 
+static const gdouble *_ncm_mset_func_get_x (NcmMSetFunc *func, const gdouble *x);
+
 /**
  * ncm_mset_func_eval: (virtual eval)
  * @func: a #NcmMSetFunc
  * @mset: a #NcmMSet
- * @x: (array) (element-type double): function arguments
+ * @x: (array) (element-type double) (allow-none): function arguments
  * @res: (array) (element-type double): function values
  *
- * Evaluate the function @func at @x and store the result in @res.
+ * Evaluates @func at @x and stores its values in @res. If @x is %NULL, @func is
+ * evaluated at the point set by ncm_mset_func_set_eval_x(); a function without
+ * variables takes no arguments.
+ *
+ * @res must hold ncm_mset_func_get_dim() values. From language bindings @res is an
+ * input array, so the values do not reach the caller; there, evaluate scalar
+ * functions with ncm_mset_func_eval0(), ncm_mset_func_eval_nvar() or
+ * ncm_mset_func_eval1().
  *
  */
 void
 ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, gdouble *x, gdouble *res)
 {
+  NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, _ncm_mset_func_get_x (func, x), res);
+}
+
+/**
+ * ncm_mset_func_eval_array:
+ * @func: a #NcmMSetFunc
+ * @mset: a #NcmMSet
+ * @x: (array) (element-type double) (allow-none): function arguments
+ *
+ * Evaluates @func at @x and returns its values. If @x is %NULL, @func is evaluated
+ * at the point set by ncm_mset_func_set_eval_x(); a function without variables
+ * takes no arguments. This is ncm_mset_func_eval() for language bindings, where
+ * the values of ncm_mset_func_eval() do not reach the caller.
+ *
+ * Returns: (array) (element-type double) (transfer full): the
+ * ncm_mset_func_get_dim() values of @func.
+ */
+GArray *
+ncm_mset_func_eval_array (NcmMSetFunc *func, NcmMSet *mset, GArray *x)
+{
   NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+  GArray *res                     = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), self->dim);
 
-  if (self->eval_x != NULL)
-  {
-    if (x != NULL)
-      g_warning ("ncm_mset_func_eval: function called with arguments while an eval x was already used, ignoring argument.");
+  if ((x != NULL) && (x->len != self->nvar))
+    g_error ("ncm_mset_func_eval_array: function `%s' takes %u variable(s), but %u argument(s) were given.",
+             ncm_mset_func_peek_name (func), self->nvar, x->len);
 
-    NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, ncm_vector_data (self->eval_x), res);
-  }
-  else
-  {
-    NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, x, res);
-  }
+  g_array_set_size (res, self->dim);
+  NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset,
+                                        _ncm_mset_func_get_x (func, (x != NULL) ? &g_array_index (x, gdouble, 0) : NULL),
+                                        &g_array_index (res, gdouble, 0));
+
+  return res;
 }
 
 /**
  * ncm_mset_func_eval_nvar:
  * @func: a #NcmMSetFunc
  * @mset: a #NcmMSet
- * @x: function arguments
+ * @x: (array) (element-type double) (allow-none): function arguments
  *
- * Evaluate the function @func at @x and return the result. This
- * function is only valid if @func is a scalar function.
+ * Evaluates the scalar function @func at @x and returns its value. If @x is %NULL,
+ * @func is evaluated at the point set by ncm_mset_func_set_eval_x(); a function
+ * without variables takes no arguments.
  *
  * Returns: function value.
  */
@@ -431,7 +461,7 @@ ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x)
 {
   gdouble res;
 
-  NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, x, &res);
+  NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, _ncm_mset_func_get_x (func, x), &res);
 
   return res;
 }
@@ -441,22 +471,15 @@ ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x)
  * @func: a #NcmMSetFunc
  * @mset: a #NcmMSet
  *
- * Evaluate the function @func and return the result. This
- * function is only valid if @func is a scalar function.
- * The function's arguments are either none, if the function is constant,
- * or the arguments passed to ncm_mset_func_set_eval_x().
+ * Evaluates the scalar function @func and returns its value. The arguments are the
+ * point set by ncm_mset_func_set_eval_x(), or none if @func has no variables.
  *
  * Returns: function value.
  */
 gdouble
 ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset)
 {
-  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
-  gdouble res;
-
-  NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, (self->eval_x != NULL) ? ncm_vector_data (self->eval_x) : NULL, &res);
-
-  return res;
+  return ncm_mset_func_eval_nvar (func, mset, NULL);
 }
 
 /**
@@ -465,8 +488,8 @@ ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset)
  * @mset: a #NcmMSet
  * @x: function argument
  *
- * Evaluate the function @func at @x and return the result. This
- * function is only valid if @func is a scalar function.
+ * Evaluates the scalar function of one variable @func at @x and returns its value.
+ * The point set by ncm_mset_func_set_eval_x(), if any, is not used.
  *
  * Returns: function value.
  */
@@ -480,6 +503,36 @@ ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x)
   return res;
 }
 
+/*
+ * _ncm_mset_func_get_x:
+ * @func: a #NcmMSetFunc
+ * @x: (nullable): function arguments
+ *
+ * Chooses the arguments of an evaluation. An explicit @x always wins; a %NULL
+ * @x means the evaluation point set by ncm_mset_func_set_eval_x(). A function
+ * without variables takes no arguments.
+ *
+ * Returns: the arguments to pass to the eval virtual function.
+ */
+static const gdouble *
+_ncm_mset_func_get_x (NcmMSetFunc *func, const gdouble *x)
+{
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  if (x != NULL)
+    return x;
+  else if (self->eval_x != NULL)
+    return ncm_vector_data (self->eval_x);
+  else if (self->nvar == 0)
+    return NULL;
+
+  g_error ("ncm_mset_func: function `%s' takes %u variable(s), "
+           "but it was called without arguments and no evaluation point is set.",
+           ncm_mset_func_peek_name (func), self->nvar);
+
+  return NULL;
+}
+
 /**
  * ncm_mset_func_eval_vector:
  * @func: a #NcmMSetFunc
@@ -487,8 +540,9 @@ ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x)
  * @x_v: function arguments in a #NcmVector
  * @res_v: a #NcmVector to store the function values
  *
- * Compute the function @func at @x_v and store the result in @res_v. This function is
- * only valid if @func is a vectorial function.
+ * Evaluates the scalar function of one variable @func at each component of @x_v and
+ * stores the values in the matching components of @res_v. The point set by
+ * ncm_mset_func_set_eval_x(), if any, is not used.
  *
  */
 void
@@ -615,7 +669,7 @@ _mset_func_numdiff_fparams_1_val (NcmVector *x_v, gpointer userdata)
  * ncm_mset_func_numdiff_fparams:
  * @func: a #NcmMSetFunc
  * @mset: a #NcmMSet
- * @x: (array): function arguments
+ * @x: (array) (element-type double) (allow-none): function arguments
  * @out: (inout) (allow-none) (transfer full): function gradient
  *
  * Computes the gradient of the scalar function @func at @x with respect to the free
