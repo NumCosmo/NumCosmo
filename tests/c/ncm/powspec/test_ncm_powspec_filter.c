@@ -219,7 +219,15 @@ test_ncm_powspec_filter_eval_forms (void)
     ncm_assert_cmpdouble_e (ncm_powspec_filter_eval_dlnvar_dr (psf, 0.0, lnr), ==, dvar / var / r, 1.0e-14, 0.0);
     ncm_assert_cmpdouble_e (ncm_powspec_filter_eval_dnlnvar_dlnrn (psf, 0.0, lnr, 0), ==, log (var), 1.0e-14, 0.0);
     ncm_assert_cmpdouble_e (ncm_powspec_filter_eval_dnlnvar_dlnrn (psf, 0.0, lnr, 1), ==, dvar / var, 1.0e-14, 0.0);
-    ncm_assert_cmpdouble_e (ncm_powspec_filter_eval_dnlnvar_dlnrn (psf, 0.0, lnr, 2), ==, d2var / var - gsl_pow_2 (dvar / var), 1.0e-12, 0.0);
+
+    /* For a power law the second log-derivative is a near-zero difference of two terms
+     * of order (n + 3)^2; the floor is scaled by them, since compilers that fuse the
+     * multiply-subtract differ by one rounding of the terms (2e-16 measured on macOS). */
+    {
+      const gdouble terms = fabs (d2var / var) + gsl_pow_2 (dvar / var);
+
+      ncm_assert_cmpdouble_e (ncm_powspec_filter_eval_dnlnvar_dlnrn (psf, 0.0, lnr, 2), ==, d2var / var - gsl_pow_2 (dvar / var), 1.0e-12, 1.0e-14 * terms);
+    }
   }
 
   ncm_assert_cmpdouble_e (ncm_powspec_filter_volume_rm3 (psf), ==, 4.0 * M_PI / 3.0, 1.0e-15, 0.0);

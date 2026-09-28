@@ -101,24 +101,88 @@ test_mset_func_fparams_init (TestMSetFuncFParams *fp)
 {
 }
 
-static void
-_test_mset_func_fparams_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
+/* The value of the function, shared by the model evaluation and the direct NcmDiff call. */
+static gdouble
+_test_fparams_value (NcmVector *p, const gdouble *x, const guint nvar)
 {
-  const guint fparam_len = ncm_mset_fparam_len (mset);
-  const guint nvar       = ncm_mset_func_get_nvar (func);
+  gdouble res = 0.0;
   guint i;
 
-  res[0] = 0.0;
-
-  for (i = 0; i < fparam_len; i++)
+  for (i = 0; i < ncm_vector_len (p); i++)
   {
-    const gdouble p_i = ncm_mset_fparam_get (mset, i);
+    const gdouble p_i = ncm_vector_get (p, i);
 
-    res[0] += (i + 1.0) * p_i * p_i;
+    res += (i + 1.0) * p_i * p_i;
   }
 
   for (i = 0; i < nvar; i++)
-    res[0] *= x[i];
+    res *= x[i];
+
+  return res;
+}
+
+static void
+_test_mset_func_fparams_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  NcmVector *p = ncm_vector_new (ncm_mset_fparam_len (mset));
+
+  ncm_mset_fparams_get_vector (mset, p);
+  res[0] = _test_fparams_value (p, x, ncm_mset_func_get_nvar (func));
+
+  ncm_vector_free (p);
+}
+
+typedef struct _TestFParamsArg
+{
+  const gdouble *x;
+  guint nvar;
+} TestFParamsArg;
+
+static gdouble
+_test_fparams_diff_f (NcmVector *p, gpointer user_data)
+{
+  TestFParamsArg *arg = user_data;
+
+  return _test_fparams_value (p, arg->x, arg->nvar);
+}
+
+/*
+ * numdiff_fparams is NcmDiff over the free parameters: it must return exactly what a
+ * default NcmDiff gives for the same function, and the error of that result against the
+ * exact gradient must be within NcmDiff's own estimate. The accuracy of NcmDiff itself
+ * depends on the platform and is tested with NcmDiff.
+ */
+static void
+_test_numdiff_check (NcmVector *grad, const gdouble *p, const guint len, const gdouble *x, const guint nvar)
+{
+  NcmDiff *diff      = ncm_diff_new ();
+  GArray *p_a        = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  TestFParamsArg arg = {x, nvar};
+  GArray *Eerr       = NULL;
+  GArray *direct;
+  gdouble scale = 1.0;
+  guint i;
+
+  g_array_append_vals (p_a, p, len);
+  direct = ncm_diff_rf_d1_N_to_1 (diff, p_a, _test_fparams_diff_f, &arg, &Eerr);
+
+  for (i = 0; i < nvar; i++)
+    scale *= x[i];
+
+  g_assert_cmpuint (ncm_vector_len (grad), ==, len);
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble exact = scale * 2.0 * (i + 1.0) * p[i];
+
+    g_assert_cmpfloat (ncm_vector_get (grad, i), ==, g_array_index (direct, gdouble, i));
+    g_assert_cmpfloat (fabs (g_array_index (direct, gdouble, i) - exact), <=, g_array_index (Eerr, gdouble, i));
+  }
+
+  g_array_unref (direct);
+  g_array_unref (Eerr);
+  g_array_unref (p_a);
+  ncm_diff_free (diff);
 }
 
 static void
@@ -404,8 +468,7 @@ test_ncm_mset_func_numdiff_fparams (void)
   g_assert_nonnull (grad);
   g_assert_cmpuint (ncm_vector_len (grad), ==, 2);
 
-  for (i = 0; i < 2; i++)
-    ncm_assert_cmpdouble_e (ncm_vector_get (grad, i), ==, 2.0 * (i + 1.0) * p[i], 1.0e-12, 0.0);
+  _test_numdiff_check (grad, p, 2, NULL, 0);
 
   /* The free parameters are restored. */
   for (i = 0; i < 2; i++)
@@ -439,7 +502,6 @@ test_ncm_mset_func_numdiff_fparams_eval_x (void)
   gdouble eval_x          = 3.0;
   gdouble x               = 5.0;
   NcmVector *grad         = NULL;
-  guint i;
 
   ncm_mset_func_set_meta (func, "f", "f", "Test", "Scaled weighted sum of squares", 1, 1);
   ncm_mset_func_set_eval_x (func, &eval_x, 1);
@@ -451,15 +513,11 @@ test_ncm_mset_func_numdiff_fparams_eval_x (void)
 
   /* A NULL x differentiates at the evaluation point. */
   ncm_mset_func_numdiff_fparams (func, mset, NULL, &grad);
-
-  for (i = 0; i < 2; i++)
-    ncm_assert_cmpdouble_e (ncm_vector_get (grad, i), ==, eval_x * 2.0 * (i + 1.0) * p[i], 1.0e-12, 0.0);
+  _test_numdiff_check (grad, p, 2, &eval_x, 1);
 
   /* An explicit x wins over the evaluation point. */
   ncm_mset_func_numdiff_fparams (func, mset, &x, &grad);
-
-  for (i = 0; i < 2; i++)
-    ncm_assert_cmpdouble_e (ncm_vector_get (grad, i), ==, x * 2.0 * (i + 1.0) * p[i], 1.0e-12, 0.0);
+  _test_numdiff_check (grad, p, 2, &x, 1);
 
   ncm_vector_free (grad);
   ncm_mset_func_free (func);
