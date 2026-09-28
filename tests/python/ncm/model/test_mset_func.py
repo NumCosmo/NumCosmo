@@ -136,6 +136,21 @@ def test_eval_array_function_list() -> None:
     assert func.eval_array(mset, [2.0]) == [cosmo.H(2.0)]
 
 
+def test_func_list_select_elements_outlive_array() -> None:
+    """Elements of select stay valid after the returned array is released."""
+    Nc.HICosmoDEXcdm()
+    selected = list(Ncm.MSetFuncList.select("NcHICosmo", 1, 1))
+    junk = [bytes(1000) for _ in range(2000)]
+    del junk
+
+    assert len(selected) > 0
+    for fdata in selected:
+        assert fdata.ns.startswith("NcHICosmo")
+        assert fdata.nvar == 1
+        assert fdata.dim == 1
+        assert Ncm.MSetFuncList.has_full_name(f"{fdata.ns}:{fdata.name}")
+
+
 if __name__ == "__main__":
     test_eval_x_uname_is_unique()
     test_eval_x_uname_survives_serialization()

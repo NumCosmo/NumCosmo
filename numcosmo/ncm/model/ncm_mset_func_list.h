@@ -34,6 +34,7 @@
 G_BEGIN_DECLS
 
 #define NCM_TYPE_MSET_FUNC_LIST (ncm_mset_func_list_get_type ())
+#define NCM_TYPE_MSET_FUNC_LIST_STRUCT (ncm_mset_func_list_struct_get_type ())
 
 G_DECLARE_DERIVABLE_TYPE (NcmMSetFuncList, ncm_mset_func_list, NCM, MSET_FUNC_LIST, NcmMSetFunc)
 
@@ -75,11 +76,20 @@ typedef struct _NcmMSetFuncListStruct
   guint pos;
 } NcmMSetFuncListStruct;
 
+GType ncm_mset_func_list_struct_get_type (void) G_GNUC_CONST;
+
+NcmMSetFuncListStruct *ncm_mset_func_list_struct_copy (const NcmMSetFuncListStruct *fdata);
+void ncm_mset_func_list_struct_free (NcmMSetFuncListStruct *fdata);
+
 void ncm_mset_func_list_register (const gchar *name, const gchar *symbol, const gchar *ns, const gchar *desc, GType obj_type, NcmMSetFuncListN func, guint nvar, guint dim);
 GArray *ncm_mset_func_list_select (const gchar *ns, gint nvar, gint dim);
 
 NcmMSetFuncList *ncm_mset_func_list_new (const gchar *full_name, GObject *obj);
 NcmMSetFuncList *ncm_mset_func_list_new_ns_name (const gchar *ns, const gchar *name, GObject *obj);
+NcmMSetFuncList *ncm_mset_func_list_ref (NcmMSetFuncList *flist);
+
+void ncm_mset_func_list_free (NcmMSetFuncList *flist);
+void ncm_mset_func_list_clear (NcmMSetFuncList **flist);
 
 gboolean ncm_mset_func_list_has_ns_name (const gchar *ns, const gchar *name);
 gboolean ncm_mset_func_list_has_full_name (const gchar *full_name);

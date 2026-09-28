@@ -191,6 +191,45 @@ test_mset_func1_sum_new (const guint nvar, const guint dim, const guint nret)
   return func;
 }
 
+/*
+ * Functions registered in NcmMSetFuncList for the tests.
+ */
+
+static void
+_test_flist_plus_one (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  res[0] = x[0] + 1.0;
+}
+
+static void
+_test_flist_const (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  res[0] = 2.0;
+}
+
+static void
+_test_flist_vec_len (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  res[0] = ncm_vector_len (NCM_VECTOR (ncm_mset_func_list_peek_obj (flist)));
+}
+
+static void
+test_flist_register (void)
+{
+  static gsize registered = 0;
+
+  if (g_once_init_enter (&registered))
+  {
+    ncm_mset_func_list_register ("plus_one", "f_1", "TestFList", "x + 1", G_TYPE_NONE, _test_flist_plus_one, 1, 1);
+    ncm_mset_func_list_register ("twice", "t_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
+    ncm_mset_func_list_register ("twice", "t_B", "TestFListB", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
+    ncm_mset_func_list_register ("only_a", "o_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
+    ncm_mset_func_list_register ("vec_len", "l", "TestFListObj", "Vector length", NCM_TYPE_VECTOR, _test_flist_vec_len, 0, 1);
+
+    g_once_init_leave (&registered, 1);
+  }
+}
+
 void test_ncm_mset_func_unames (void);
 void test_ncm_mset_func_numdiff_fparams (void);
 void test_ncm_mset_func_numdiff_fparams_eval_x (void);
@@ -212,6 +251,17 @@ void test_ncm_mset_func_not_scalar_eval0_subprocess (void);
 void test_ncm_mset_func_not_scalar_eval1_subprocess (void);
 void test_ncm_mset_func_not_scalar_eval_vector_subprocess (void);
 void test_ncm_mset_func_eval_vector_bad_len_subprocess (void);
+void test_ncm_mset_func_list_new (void);
+void test_ncm_mset_func_list_lookup (void);
+void test_ncm_mset_func_list_object (void);
+void test_ncm_mset_func_list_select (void);
+void test_ncm_mset_func_list_errors (void);
+void test_ncm_mset_func_list_ambiguous_subprocess (void);
+void test_ncm_mset_func_list_missing_subprocess (void);
+void test_ncm_mset_func_list_no_full_name_subprocess (void);
+void test_ncm_mset_func_list_bad_full_name_subprocess (void);
+void test_ncm_mset_func_list_wrong_obj_subprocess (void);
+void test_ncm_mset_func_list_no_obj_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -241,6 +291,17 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset_func/not_scalar/eval1/subprocess", &test_ncm_mset_func_not_scalar_eval1_subprocess);
   g_test_add_func ("/ncm/mset_func/not_scalar/eval_vector/subprocess", &test_ncm_mset_func_not_scalar_eval_vector_subprocess);
   g_test_add_func ("/ncm/mset_func/eval_vector/bad_len/subprocess", &test_ncm_mset_func_eval_vector_bad_len_subprocess);
+  g_test_add_func ("/ncm/mset_func_list/new", &test_ncm_mset_func_list_new);
+  g_test_add_func ("/ncm/mset_func_list/lookup", &test_ncm_mset_func_list_lookup);
+  g_test_add_func ("/ncm/mset_func_list/object", &test_ncm_mset_func_list_object);
+  g_test_add_func ("/ncm/mset_func_list/select", &test_ncm_mset_func_list_select);
+  g_test_add_func ("/ncm/mset_func_list/errors", &test_ncm_mset_func_list_errors);
+  g_test_add_func ("/ncm/mset_func_list/errors/ambiguous/subprocess", &test_ncm_mset_func_list_ambiguous_subprocess);
+  g_test_add_func ("/ncm/mset_func_list/errors/missing/subprocess", &test_ncm_mset_func_list_missing_subprocess);
+  g_test_add_func ("/ncm/mset_func_list/errors/no_full_name/subprocess", &test_ncm_mset_func_list_no_full_name_subprocess);
+  g_test_add_func ("/ncm/mset_func_list/errors/bad_full_name/subprocess", &test_ncm_mset_func_list_bad_full_name_subprocess);
+  g_test_add_func ("/ncm/mset_func_list/errors/wrong_obj/subprocess", &test_ncm_mset_func_list_wrong_obj_subprocess);
+  g_test_add_func ("/ncm/mset_func_list/errors/no_obj/subprocess", &test_ncm_mset_func_list_no_obj_subprocess);
 
   g_test_run ();
 }
@@ -742,5 +803,216 @@ test_ncm_mset_func_eval_vector_bad_len_subprocess (void)
   ncm_vector_free (res_v);
   ncm_mset_func_free (func);
   ncm_mset_free (mset);
+}
+
+void
+test_ncm_mset_func_list_new (void)
+{
+  NcmMSet *mset = ncm_mset_empty_new ();
+  NcmMSetFuncList *flist;
+  NcmMSetFuncList *flist_ref;
+  gchar *full_name;
+
+  test_flist_register ();
+
+  flist = ncm_mset_func_list_new ("TestFList:plus_one", NULL);
+
+  g_assert_cmpstr (ncm_mset_func_peek_name (NCM_MSET_FUNC (flist)), ==, "plus_one");
+  g_assert_cmpstr (ncm_mset_func_peek_symbol (NCM_MSET_FUNC (flist)), ==, "f_1");
+  g_assert_cmpstr (ncm_mset_func_peek_ns (NCM_MSET_FUNC (flist)), ==, "TestFList");
+  g_assert_cmpstr (ncm_mset_func_peek_desc (NCM_MSET_FUNC (flist)), ==, "x + 1");
+  g_assert_cmpuint (ncm_mset_func_get_nvar (NCM_MSET_FUNC (flist)), ==, 1);
+  g_assert_cmpuint (ncm_mset_func_get_dim (NCM_MSET_FUNC (flist)), ==, 1);
+  g_assert_cmpfloat (ncm_mset_func_eval1 (NCM_MSET_FUNC (flist), mset, 2.5), ==, 3.5);
+
+  g_object_get (flist, "full-name", &full_name, NULL);
+  g_assert_cmpstr (full_name, ==, "TestFList:plus_one");
+  g_free (full_name);
+
+  flist_ref = ncm_mset_func_list_ref (flist);
+  g_assert_true (flist_ref == flist);
+  ncm_mset_func_list_free (flist_ref);
+
+  ncm_mset_func_list_clear (&flist);
+  g_assert_null (flist);
+  ncm_mset_func_list_clear (&flist);
+
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_mset_func_list_lookup (void)
+{
+  NcmMSetFuncList *flist;
+
+  test_flist_register ();
+
+  /* The full name needs the exact namespace. */
+  g_assert_true (ncm_mset_func_list_has_full_name ("TestFListA:twice"));
+  g_assert_false (ncm_mset_func_list_has_full_name ("TestFList:twice"));
+  g_assert_false (ncm_mset_func_list_has_full_name ("TestFList:no_such"));
+  g_assert_false (ncm_mset_func_list_has_full_name ("NoSuchNamespace:twice"));
+
+  /* The exact namespace wins. */
+  g_assert_true (ncm_mset_func_list_has_ns_name ("TestFList", "plus_one"));
+  flist = ncm_mset_func_list_new_ns_name ("TestFList", "plus_one", NULL);
+  g_assert_cmpstr (ncm_mset_func_peek_ns (NCM_MSET_FUNC (flist)), ==, "TestFList");
+  ncm_mset_func_list_free (flist);
+
+  /* A prefix finds a name held by a single namespace. */
+  g_assert_true (ncm_mset_func_list_has_ns_name ("TestFList", "only_a"));
+  flist = ncm_mset_func_list_new_ns_name ("TestFList", "only_a", NULL);
+  g_assert_cmpstr (ncm_mset_func_peek_ns (NCM_MSET_FUNC (flist)), ==, "TestFListA");
+  ncm_mset_func_list_free (flist);
+
+  /* The full namespace resolves a name held by several. */
+  flist = ncm_mset_func_list_new_ns_name ("TestFListB", "twice", NULL);
+  g_assert_cmpstr (ncm_mset_func_peek_symbol (NCM_MSET_FUNC (flist)), ==, "t_B");
+  ncm_mset_func_list_free (flist);
+
+  g_assert_false (ncm_mset_func_list_has_ns_name ("TestFList", "no_such"));
+}
+
+void
+test_ncm_mset_func_list_object (void)
+{
+  NcmMSet *mset = ncm_mset_empty_new ();
+  NcmVector *v3 = ncm_vector_new (3);
+  NcmVector *v5 = ncm_vector_new (5);
+  NcmMSetFuncList *flist;
+
+  test_flist_register ();
+
+  flist = ncm_mset_func_list_new ("TestFListObj:vec_len", G_OBJECT (v3));
+  g_assert_true (ncm_mset_func_list_peek_obj (flist) == G_OBJECT (v3));
+  g_assert_cmpfloat (ncm_mset_func_eval0 (NCM_MSET_FUNC (flist), mset), ==, 3.0);
+
+  /* Replacing the object releases the previous one. */
+  g_object_set (flist, "object", v5, NULL);
+  g_assert_cmpuint (G_OBJECT (v3)->ref_count, ==, 1);
+  g_assert_cmpfloat (ncm_mset_func_eval0 (NCM_MSET_FUNC (flist), mset), ==, 5.0);
+
+  ncm_mset_func_list_free (flist);
+  g_assert_cmpuint (G_OBJECT (v5)->ref_count, ==, 1);
+
+  ncm_vector_free (v3);
+  ncm_vector_free (v5);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_mset_func_list_select (void)
+{
+  GArray *all;
+  GArray *sel;
+  NcmMSetFuncListStruct *copy;
+
+  test_flist_register ();
+
+  sel = ncm_mset_func_list_select ("TestFList", -1, -1);
+  g_assert_cmpuint (sel->len, ==, 5);
+  g_array_unref (sel);
+
+  sel = ncm_mset_func_list_select ("TestFList", 1, -1);
+  g_assert_cmpuint (sel->len, ==, 1);
+  g_assert_cmpstr (g_array_index (sel, NcmMSetFuncListStruct, 0).name, ==, "plus_one");
+  g_assert_cmpstr (g_array_index (sel, NcmMSetFuncListStruct, 0).ns, ==, "TestFList");
+
+  copy = ncm_mset_func_list_struct_copy (&g_array_index (sel, NcmMSetFuncListStruct, 0));
+  g_array_unref (sel);
+  g_assert_cmpstr (copy->name, ==, "plus_one");
+  g_assert_cmpuint (copy->nvar, ==, 1);
+  ncm_mset_func_list_struct_free (copy);
+
+  sel = ncm_mset_func_list_select ("TestFListA", 0, 1);
+  g_assert_cmpuint (sel->len, ==, 2);
+  g_array_unref (sel);
+
+  sel = ncm_mset_func_list_select ("TestFList", -1, 2);
+  g_assert_cmpuint (sel->len, ==, 0);
+  g_array_unref (sel);
+
+  /* A NULL namespace selects every namespace. */
+  all = ncm_mset_func_list_select (NULL, -1, -1);
+  sel = ncm_mset_func_list_select ("TestFList", -1, -1);
+  g_assert_cmpuint (all->len, >=, sel->len);
+
+  g_array_unref (sel);
+  g_array_unref (all);
+
+  g_assert_true (G_TYPE_IS_BOXED (NCM_TYPE_MSET_FUNC_LIST_STRUCT));
+}
+
+void
+test_ncm_mset_func_list_errors (void)
+{
+  g_test_trap_subprocess ("/ncm/mset_func_list/errors/ambiguous/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*function `twice' is ambiguous under namespace `TestFList', found in `TestFListA', `TestFListB'*");
+
+  g_test_trap_subprocess ("/ncm/mset_func_list/errors/missing/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*function `no_such' not found in namespace `TestFList' nor in any namespace starting with it*");
+
+  g_test_trap_subprocess ("/ncm/mset_func_list/errors/no_full_name/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*needs the full name `namespace:name' of a registered function*");
+
+  g_test_trap_subprocess ("/ncm/mset_func_list/errors/bad_full_name/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*invalid full name `plus_one', expected `namespace:name'*");
+
+  g_test_trap_subprocess ("/ncm/mset_func_list/errors/wrong_obj/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*function `TestFListObj:vec_len' requires an object of type `NcmVector', but got a `NcmMatrix'*");
+
+  g_test_trap_subprocess ("/ncm/mset_func_list/errors/no_obj/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*function `TestFListObj:vec_len' requires an object of type `NcmVector'*");
+}
+
+void
+test_ncm_mset_func_list_ambiguous_subprocess (void)
+{
+  test_flist_register ();
+  ncm_mset_func_list_free (ncm_mset_func_list_new_ns_name ("TestFList", "twice", NULL));
+}
+
+void
+test_ncm_mset_func_list_missing_subprocess (void)
+{
+  test_flist_register ();
+  ncm_mset_func_list_free (ncm_mset_func_list_new_ns_name ("TestFList", "no_such", NULL));
+}
+
+void
+test_ncm_mset_func_list_no_full_name_subprocess (void)
+{
+  test_flist_register ();
+  g_object_unref (g_object_new (NCM_TYPE_MSET_FUNC_LIST, NULL));
+}
+
+void
+test_ncm_mset_func_list_bad_full_name_subprocess (void)
+{
+  test_flist_register ();
+  ncm_mset_func_list_free (ncm_mset_func_list_new ("plus_one", NULL));
+}
+
+void
+test_ncm_mset_func_list_wrong_obj_subprocess (void)
+{
+  NcmMatrix *m = ncm_matrix_new (2, 2);
+
+  test_flist_register ();
+  ncm_mset_func_list_free (ncm_mset_func_list_new ("TestFListObj:vec_len", G_OBJECT (m)));
+  ncm_matrix_free (m);
+}
+
+void
+test_ncm_mset_func_list_no_obj_subprocess (void)
+{
+  test_flist_register ();
+  ncm_mset_func_list_free (ncm_mset_func_list_new ("TestFListObj:vec_len", NULL));
 }
 
