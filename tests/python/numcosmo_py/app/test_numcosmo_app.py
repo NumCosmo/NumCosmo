@@ -686,20 +686,21 @@ def test_run_mcmc_apes_deprecated_auto_kernel(simple_experiment):
     """The hidden --auto-kernel flag still reaches the walker with a Student-t kernel."""
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
-    result = runner.invoke(
-        app,
-        [
-            "run",
-            "mcmc",
-            "apes",
-            filename.as_posix(),
-            "--output",
-            output.as_posix(),
-            "--interpolation-kernel",
-            InterpolationKernel.ST3.value,
-            "--auto-kernel",
-        ],
-    )
+    with pytest.warns(DeprecationWarning, match="set_auto_kernel is deprecated"):
+        result = runner.invoke(
+            app,
+            [
+                "run",
+                "mcmc",
+                "apes",
+                filename.as_posix(),
+                "--output",
+                output.as_posix(),
+                "--interpolation-kernel",
+                InterpolationKernel.ST3.value,
+                "--auto-kernel",
+            ],
+        )
     if result.exit_code != 0:
         raise result.exception
 

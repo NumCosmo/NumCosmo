@@ -39,16 +39,6 @@ GType ncm_laurent_series_get_type (void) G_GNUC_CONST;
 
 typedef struct _NcmLaurentSeries NcmLaurentSeries;
 
-/**
- * NcmLaurentSeries:
- * @hmin: lowest power $h_\mathrm{min}$
- * @hmax: highest power $h_\mathrm{max}$
- * @c_cap: allocated length of @c, at least $h_\mathrm{max} - h_\mathrm{min} + 1$
- * @c: the coefficients $c_{h_\mathrm{min}}, \dots, c_{h_\mathrm{max}}$
- * @ref_count: the reference count
- *
- * A Laurent polynomial, see the class documentation in ncm_laurent_series.c.
- */
 struct _NcmLaurentSeries
 {
   gint hmin;

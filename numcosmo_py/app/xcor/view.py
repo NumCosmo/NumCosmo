@@ -620,5 +620,6 @@ class ViewKernel(XcorKernelCommon):
             plt.show()
         else:
             print("  [OK] Plot generated (not displayed)")
+            plt.close(fig)
 
         print()

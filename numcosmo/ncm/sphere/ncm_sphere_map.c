@@ -1945,7 +1945,7 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
 
     _fft_vec_memcpy (temp_pix, self->pvec, self->npix);
 
-    first = ncm_cfg_fftw_plan_begin ("ncm_sphere_map_rings_%ld", ncm_sphere_map_get_nside (smap));
+    first = ncm_cfg_fftw_plan_begin ("ncm_sphere_map_rings_%" G_GINT64_FORMAT, ncm_sphere_map_get_nside (smap));
 
     for (r_i = 0; r_i < nring_cap; r_i++)
     {

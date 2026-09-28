@@ -25,6 +25,11 @@
 
 /**
  * NcmLaurentSeries:
+ * @hmin: lowest power $h_\mathrm{min}$
+ * @hmax: highest power $h_\mathrm{max}$
+ * @c_cap: allocated length of @c, at least $h_\mathrm{max} - h_\mathrm{min} + 1$
+ * @c: the coefficients $c_{h_\mathrm{min}}, \dots, c_{h_\mathrm{max}}$
+ * @ref_count: the reference count
  *
  * Laurent polynomial with complex coefficients,
  * $$a(w) = \sum_{h = h_\mathrm{min}}^{h_\mathrm{max}} c_h w^h.$$

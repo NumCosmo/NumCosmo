@@ -44,8 +44,8 @@ void ncm_pln1d_free (NcmPLN1D *pln1d);
 void ncm_pln1d_clear (NcmPLN1D **pln1d);
 
 /* Configuration */
-void ncm_pln1d_set_order (NcmPLN1D *pln1d, guint gh_order);
-guint ncm_pln1d_get_order (NcmPLN1D *pln1d);
+void ncm_pln1d_set_order (NcmPLN1D *pln, guint gh_order);
+guint ncm_pln1d_get_order (NcmPLN1D *pln);
 
 gdouble ncm_pln1d_mode (gdouble R, gdouble mu, gdouble sigma);
 gdouble ncm_pln1d_eval_p (NcmPLN1D *pln, gdouble R, gdouble mu, gdouble sigma);
