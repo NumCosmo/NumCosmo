@@ -233,8 +233,8 @@ void ncm_model_param_set_abstol (NcmModel *model, guint n, const gdouble abstol)
 void ncm_model_param_set_ftype (NcmModel *model, guint n, const NcmParamType ptype);
 void ncm_model_params_set_default_ftype (NcmModel *model);
 
-GHashTable *ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error);
-void ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GError **error);
+GHashTable *ncm_model_param_get_desc (NcmModel *model, const gchar *param, GError **error);
+void ncm_model_param_set_desc (NcmModel *model, const gchar *param, GHashTable *desc, GError **error);
 
 gboolean ncm_model_is_submodel (NcmModel *model);
 NcmModelID ncm_model_main_model (NcmModel *model);

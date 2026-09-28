@@ -7105,7 +7105,7 @@ class Model(GObject.Object):
         name: str
         nick: str
         params_types: list[None]
-        reparam: Reparam
+        reparam: typing.Optional[Reparam]
         scalar_params_len: int
         sparam_array: ObjDictInt
         submodel_array: ObjArray
@@ -7115,7 +7115,7 @@ class Model(GObject.Object):
     parent_instance: GObject.Object = ...
     def __init__(
         self,
-        reparam: Reparam = ...,
+        reparam: typing.Optional[Reparam] = ...,
         sparam_array: ObjDictInt = ...,
         submodel_array: ObjArray = ...,
     ) -> None: ...
@@ -7164,7 +7164,7 @@ class Model(GObject.Object):
     def orig_params_peek_vector(self) -> Vector: ...
     def orig_params_update(self) -> None: ...
     def orig_vparam_get(self, n: int, i: int) -> float: ...
-    def orig_vparam_get_vector(self, n: int) -> Vector: ...
+    def orig_vparam_get_vector(self, n: int) -> typing.Optional[Vector]: ...
     def orig_vparam_set(self, n: int, i: int, val: float) -> None: ...
     def orig_vparam_set_vector(self, n: int, val: Vector) -> None: ...
     def param_finite(self, i: int) -> bool: ...
@@ -7207,13 +7207,13 @@ class Model(GObject.Object):
     def params_valid(self) -> bool: ...
     def params_valid_bounds(self) -> bool: ...
     def peek_host(self) -> typing.Optional[Model]: ...
-    def peek_reparam(self) -> Reparam: ...
+    def peek_reparam(self) -> typing.Optional[Reparam]: ...
     def peek_submodel(self, i: int) -> Model: ...
     def peek_submodel_by_mid(self, mid: int) -> Model: ...
     def peek_submodel_pos_by_mid(self, mid: int) -> int: ...
     def ref(self) -> Model: ...
     def set_name_nick(self, name: str, nick: str) -> None: ...
-    def set_reparam(self, reparam: Reparam) -> None: ...
+    def set_reparam(self, reparam: typing.Optional[Reparam] = None) -> None: ...
     def set_sparam(
         self,
         sparam_id: int,
@@ -7536,7 +7536,7 @@ class ModelFunnel(Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: Reparam
+        reparam: typing.Optional[Reparam]
         scalar_params_len: int
         sparam_array: ObjDictInt
         submodel_array: ObjArray
@@ -7550,7 +7550,7 @@ class ModelFunnel(Model):
         x: Vector = ...,
         x_fit: GLib.Variant = ...,
         x_length: int = ...,
-        reparam: Reparam = ...,
+        reparam: typing.Optional[Reparam] = ...,
         sparam_array: ObjDictInt = ...,
         submodel_array: ObjArray = ...,
     ) -> None: ...
@@ -7628,7 +7628,7 @@ class ModelMVND(Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: Reparam
+        reparam: typing.Optional[Reparam]
         scalar_params_len: int
         sparam_array: ObjDictInt
         submodel_array: ObjArray
@@ -7641,7 +7641,7 @@ class ModelMVND(Model):
         mu: Vector = ...,
         mu_fit: GLib.Variant = ...,
         mu_length: int = ...,
-        reparam: Reparam = ...,
+        reparam: typing.Optional[Reparam] = ...,
         sparam_array: ObjDictInt = ...,
         submodel_array: ObjArray = ...,
     ) -> None: ...
@@ -7720,7 +7720,7 @@ class ModelRosenbrock(Model):
         name: str
         nick: str
         params_types: list[None]
-        reparam: Reparam
+        reparam: typing.Optional[Reparam]
         scalar_params_len: int
         sparam_array: ObjDictInt
         submodel_array: ObjArray
@@ -7733,7 +7733,7 @@ class ModelRosenbrock(Model):
         x1_fit: bool = ...,
         x2: float = ...,
         x2_fit: bool = ...,
-        reparam: Reparam = ...,
+        reparam: typing.Optional[Reparam] = ...,
         sparam_array: ObjDictInt = ...,
         submodel_array: ObjArray = ...,
     ) -> None: ...

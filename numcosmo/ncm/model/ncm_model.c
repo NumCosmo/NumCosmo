@@ -25,12 +25,22 @@
 /**
  * NcmModel:
  *
- * Abstract class for implementing models.
+ * Abstract class for a model: a vector of parameters with their descriptions.
  *
- * Stores numerical model parameters and provides the interface used by
- * statistical analyses. Subclasses register their model type and may be
- * combined in an #NcmMSet.
+ * A subclass declares, in its class initialization, scalar parameters
+ * (ncm_model_class_set_sparam()) and vector parameters (ncm_model_class_set_vparam()),
+ * which become the properties `name` and `name-fit` for a scalar, and `name`,
+ * `name-length` and `name-fit` for a vector; the parameters are laid out scalars first,
+ * then each vector (ncm_model_vparam_index()). Every parameter starts FIXED;
+ * ncm_model_params_set_default_ftype() applies the fit types of the descriptions.
+ * Submodels are attached at construction, through the slots declared with
+ * ncm_model_class_set_submodel().
  *
+ * A #NcmReparam, once set (ncm_model_set_reparam()), defines the current parameters:
+ * the ncm_model_param_*() functions read and write them and the ncm_model_orig_param_*()
+ * functions the original ones, kept in step on every update. Every change of the
+ * parameters increments the pkey (ncm_model_state_get_pkey()) that #NcmModelCtrl
+ * compares. Models are combined in an #NcmMSet by their registered model id.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -47,8 +57,6 @@
 
 typedef struct _NcmModelPrivate
 {
-  /*< private >*/
-  GObject parent_instance;
   NcmReparam *reparam;
   NcmObjArray *sparams;
   NcmVector *params;
@@ -212,12 +220,13 @@ _ncm_model_set_sparams_from_dict (NcmModel *model, NcmObjDictInt *modified_spara
 
     while (g_hash_table_iter_next (&iter, (gpointer *) &key, (gpointer *) &value))
     {
-      const guint n         = *key;
-      NcmSParam *current_sp = g_ptr_array_index (self->sparams, n);
+      const guint n = *key;
+      NcmSParam *current_sp;
 
       if (n >= self->total_len)
         g_error ("_ncm_model_set_sparams_from_dict: parameter %u is out of range (0-%u)", n, self->total_len - 1);
 
+      current_sp = g_ptr_array_index (self->sparams, n);
       g_assert_nonnull (current_sp);
 
       g_hash_table_remove (self->sparams_name_id, ncm_sparam_name (current_sp));
@@ -227,18 +236,6 @@ _ncm_model_set_sparams_from_dict (NcmModel *model, NcmObjDictInt *modified_spara
       g_ptr_array_index (self->sparams, n)               = ncm_sparam_copy (value);
       g_hash_table_insert (self->sparams_name_id, g_strdup (ncm_sparam_name (value)), GUINT_TO_POINTER (n));
     }
-  }
-}
-
-static void
-_ncm_model_sparams_remove_reparam (NcmModel *model)
-{
-  NcmModelPrivate * const self = ncm_model_get_instance_private (model);
-
-  if (self->reparam != NULL)
-  {
-    ncm_reparam_clear (&self->reparam);
-    self->p = ncm_vector_ref (self->params);
   }
 }
 
@@ -461,6 +458,11 @@ ncm_model_class_init (NcmModelClass *klass)
   klass->parent_submodel_slot_len = 0;
   klass->submodel_slot            = NULL;
 
+  /**
+   * NcmModel:name:
+   *
+   * The name of the model class.
+   */
   g_object_class_install_property (object_class,
                                    PROP_NAME,
                                    g_param_spec_string ("name",
@@ -468,6 +470,12 @@ ncm_model_class_init (NcmModelClass *klass)
                                                         "Model's name",
                                                         NULL,
                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmModel:nick:
+   *
+   * The nickname of the model class.
+   */
   g_object_class_install_property (object_class,
                                    PROP_NICK,
                                    g_param_spec_string ("nick",
@@ -476,6 +484,11 @@ ncm_model_class_init (NcmModelClass *klass)
                                                         NULL,
                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmModel:scalar-params-len:
+   *
+   * The number of scalar parameters.
+   */
   g_object_class_install_property (object_class,
                                    PROP_SPARAMS_LEN,
                                    g_param_spec_uint ("scalar-params-len",
@@ -483,6 +496,12 @@ ncm_model_class_init (NcmModelClass *klass)
                                                       "Number of scalar parameters",
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmModel:vector-params-len:
+   *
+   * The number of vector parameters (not their lengths).
+   */
   g_object_class_install_property (object_class,
                                    PROP_VPARAMS_LEN,
                                    g_param_spec_uint ("vector-params-len",
@@ -491,6 +510,11 @@ ncm_model_class_init (NcmModelClass *klass)
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmModel:implementation:
+   *
+   * The implementation flags of the model class, see ncm_model_check_impl_flag().
+   */
   g_object_class_install_property (object_class,
                                    PROP_IMPLEMENTATION,
                                    g_param_spec_uint64  ("implementation",
@@ -499,6 +523,11 @@ ncm_model_class_init (NcmModelClass *klass)
                                                          0, G_MAXUINT64, 0,
                                                          G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmModel:params-types:
+   *
+   * The #NcmParamType of each parameter.
+   */
   g_object_class_install_property (object_class,
                                    PROP_PTYPES,
                                    g_param_spec_boxed  ("params-types",
@@ -507,6 +536,12 @@ ncm_model_class_init (NcmModelClass *klass)
                                                         G_TYPE_ARRAY,
                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmModel:sparam-array:
+   *
+   * The parameter descriptions that differ from the class ones, #NcmSParam keyed by
+   * parameter index.
+   */
   g_object_class_install_property (object_class,
                                    PROP_SPARAM_ARRAY,
                                    g_param_spec_boxed ("sparam-array",
@@ -514,6 +549,12 @@ ncm_model_class_init (NcmModelClass *klass)
                                                        "NcmModel array of NcmSParam",
                                                        NCM_TYPE_OBJ_DICT_INT,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmModel:reparam:
+   *
+   * The reparametrization, see ncm_model_set_reparam().
+   */
   g_object_class_install_property (object_class,
                                    PROP_REPARAM,
                                    g_param_spec_object  ("reparam",
@@ -522,6 +563,11 @@ ncm_model_class_init (NcmModelClass *klass)
                                                          NCM_TYPE_REPARAM,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmModel:submodel-array:
+   *
+   * The submodels, attached at construction.
+   */
   g_object_class_install_property (object_class,
                                    PROP_SUBMODEL_ARRAY,
                                    g_param_spec_boxed ("submodel-array",
@@ -533,15 +579,11 @@ ncm_model_class_init (NcmModelClass *klass)
 }
 
 /*
- * ncm_model_class_get_property:
- * @object: a GObject descending from NcmModel
- * @prop_id: the gobject property id
- * @value: a GValue
- * @pspec: a GParamSpec
- *
- * get_property function, it should be used only when implementing NcmModels
- * in binded languages.
- *
+ * The get_property of every model with parameters, installed by
+ * ncm_model_class_add_params(): the property ids of a class are its own
+ * non-parameter properties, then its scalar parameters, vector parameters, vector
+ * lengths, scalar fit types, vector fit types and submodel slots, each block past the
+ * parent class's.
  */
 static void
 ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
@@ -619,15 +661,8 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
 }
 
 /*
- * ncm_model_class_set_property:
- * @object: a GObject descending from NcmModel
- * @prop_id: the gobject property id
- * @value: a GValue
- * @pspec: a GParamSpec
- *
- * get_property function, it should be used only when implementing NcmModels
- * in binded languages.
- *
+ * The set_property of every model with parameters, with the property ids laid out as
+ * in ncm_model_class_get_property().
  */
 static void
 ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -641,8 +676,6 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
   const guint sparam_fit_id    = vparam_len_id - model_class->vparam_len        + model_class->parent_sparam_len;
   const guint vparam_fit_id    = sparam_fit_id - model_class->sparam_len        + model_class->parent_vparam_len;
   const guint submodel_slot_id = vparam_fit_id - model_class->vparam_len        + model_class->parent_submodel_slot_len;
-
-  /*printf ("[%u %u] [%u %u] [%u %u] [%u %u] [%u %u] [%u %u]\n", prop_id, model_class->nonparam_prop_len, sparam_id, model_class->sparam_len, vparam_id, model_class->vparam_len, vparam_len_id, model_class->vparam_len, sparam_fit_id, model_class->sparam_len, vparam_fit_id, model_class->vparam_len);*/
 
   if ((prop_id < model_class->nonparam_prop_len) && model_class->set_property)
   {
@@ -667,18 +700,18 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
   }
   else if (vparam_len_id < model_class->vparam_len)
   {
-    NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
-    guint psize                = g_value_get_uint (value);
+    NcmModelClass *inst_class = NCM_MODEL_GET_CLASS (model);
+    guint psize               = g_value_get_uint (value);
 
     if (self->vparam_len->len == 0)
     {
-      g_array_set_size (self->vparam_len, model_class->vparam_len);
-      g_array_set_size (self->vparam_pos, model_class->vparam_len);
+      g_array_set_size (self->vparam_len, inst_class->vparam_len);
+      g_array_set_size (self->vparam_pos, inst_class->vparam_len);
     }
     else
     {
-      g_assert_cmpuint (self->vparam_len->len, ==, model_class->vparam_len);
-      g_assert_cmpuint (self->vparam_pos->len, ==, model_class->vparam_len);
+      g_assert_cmpuint (self->vparam_len->len, ==, inst_class->vparam_len);
+      g_assert_cmpuint (self->vparam_pos->len, ==, inst_class->vparam_len);
     }
 
     g_array_index (self->vparam_len, guint, vparam_len_id) = psize;
@@ -767,13 +800,13 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
 /**
  * ncm_model_class_add_params:
  * @model_class: a #NcmModelClass
- * @sparam_len: number of scalar paramters
- * @vparam_len: number of vector parameters
- * @nonparam_prop_len: number of properties
+ * @sparam_len: number of scalar parameters the class adds
+ * @vparam_len: number of vector parameters the class adds
+ * @nonparam_prop_len: the class's own property count, including PROP_0
  *
- * Class function to be used when implementing NcmModels, it defines the number
- * of scalar and vector parameters and the number of properties of the model.
- *
+ * For the class initialization of a model: adds @sparam_len scalar and @vparam_len
+ * vector parameters to those of the parent class and installs the property dispatchers
+ * (see ncm_model_class_check_params_info()).
  */
 void
 ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint vparam_len, guint nonparam_prop_len)
@@ -837,17 +870,16 @@ ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint 
 /**
  * ncm_model_class_set_name_nick:
  * @model_class: a #NcmModelClass
- * @name: name and/or very short description of the model
+ * @name: name or short description of the model
  * @nick: model nickname
  *
- * Attributes @name and @nick, respectively, as the name and nickname of the model.
- *
+ * Sets the name and nickname of the model class; a subclass replaces those it
+ * inherits.
  */
 void
 ncm_model_class_set_name_nick (NcmModelClass *model_class, const gchar *name, const gchar *nick)
 {
-  /*g_clear_pointer (&model_class->name, g_free);*/
-  /*g_clear_pointer (&model_class->nick, g_free);*/
+  /* The inherited strings belong to the parent class. */
   model_class->name = g_strdup (name);
   model_class->nick = g_strdup (nick);
 }
@@ -858,8 +890,8 @@ ncm_model_class_set_name_nick (NcmModelClass *model_class, const gchar *name, co
  * @sparam_id: id of the scalar parameter
  * @sparam: a #NcmSParam
  *
- * Sets the @sparam as the @sparam_id-th scalar parameter of the model.
- *
+ * Sets @sparam as the scalar parameter @sparam_id of the class and installs its
+ * `name` and `name-fit` properties.
  */
 void
 ncm_model_class_set_sparam_obj (NcmModelClass *model_class, guint sparam_id, NcmSParam *sparam)
@@ -869,14 +901,14 @@ ncm_model_class_set_sparam_obj (NcmModelClass *model_class, guint sparam_id, Ncm
   const guint prop_fit_id    = prop_id + (model_class->sparam_len - model_class->parent_sparam_len) + 2 * (model_class->vparam_len - model_class->parent_vparam_len);
 
   if (sparam_id >= model_class->sparam_len)
-    g_error ("ncm_model_class_set_sparam: cannot set parameter `%s` in model ``%s''. "
-             "Parameter id %u is out of range (0-%u)",
-             ncm_sparam_name (sparam), model_class->name, sparam_id + 1, model_class->sparam_len);
+    g_error ("ncm_model_class_set_sparam_obj: cannot set parameter `%s' in model `%s': "
+             "id %u is out of range (0-%u).",
+             ncm_sparam_name (sparam), model_class->name, sparam_id, model_class->sparam_len - 1);
 
   g_assert_cmpint (prop_id, >, 0);
 
   if (g_ptr_array_index (model_class->sparam, sparam_id) != NULL)
-    g_error ("Scalar Parameter: %u is already set.", sparam_id);
+    g_error ("ncm_model_class_set_sparam_obj: scalar parameter %u is already set.", sparam_id);
 
   g_ptr_array_index (model_class->sparam, sparam_id) = ncm_sparam_ref (sparam);
 
@@ -906,8 +938,8 @@ ncm_model_class_set_sparam_obj (NcmModelClass *model_class, guint sparam_id, Ncm
  * @vparam_id: id of the vector parameter
  * @vparam: a #NcmVParam
  *
- * Sets the @vparam as the @vparam_id-th vector parameter of the model.
- *
+ * Sets @vparam as the vector parameter @vparam_id of the class and installs its
+ * `name`, `name-length` and `name-fit` properties.
  */
 void
 ncm_model_class_set_vparam_obj (NcmModelClass *model_class, guint vparam_id, NcmVParam *vparam)
@@ -918,15 +950,15 @@ ncm_model_class_set_vparam_obj (NcmModelClass *model_class, guint vparam_id, Ncm
   const guint prop_fit_id    = prop_len_id + (model_class->vparam_len - model_class->parent_vparam_len) + (model_class->sparam_len - model_class->parent_sparam_len);
 
   if (vparam_id >= model_class->vparam_len)
-    g_error ("ncm_model_class_set_vparam: setting parameter %u-th of %u (%s) parameters declared for model ``%s''.",
-             vparam_id + 1, model_class->vparam_len, ncm_vparam_name (vparam), model_class->name);
+    g_error ("ncm_model_class_set_vparam_obj: cannot set parameter `%s' in model `%s': "
+             "id %u is out of range (0-%u).",
+             ncm_vparam_name (vparam), model_class->name, vparam_id, model_class->vparam_len - 1);
 
   g_assert (prop_id > 0);
   g_assert (prop_len_id > 0);
-  /*g_assert_cmpuint (default_length, >, 0);*/
 
   if (g_ptr_array_index (model_class->vparam, vparam_id) != NULL)
-    g_error ("Vector Parameter: %u is already set.", vparam_id);
+    g_error ("ncm_model_class_set_vparam_obj: vector parameter %u is already set.", vparam_id);
 
   g_ptr_array_index (model_class->vparam, vparam_id) = ncm_vparam_ref (vparam);
   g_object_class_install_property (object_class, prop_id,
@@ -962,7 +994,7 @@ ncm_model_class_set_vparam_obj (NcmModelClass *model_class, guint vparam_id, Ncm
  * @model_class: a #NcmModelClass
  * @sparam_id: id of the scalar parameter
  * @symbol: symbol of the scalar parameter
- * @name: name of the sacalar parameter
+ * @name: name of the scalar parameter
  * @lower_bound: lower-bound value
  * @upper_bound: upper-bound value
  * @scale: parameter scale
@@ -970,9 +1002,7 @@ ncm_model_class_set_vparam_obj (NcmModelClass *model_class, guint vparam_id, Ncm
  * @default_value: default value
  * @ppt: a #NcmParamType
  *
- * Helper function to set a scalar parameter. It creates a #NcmSParam object
- * and calls ncm_model_class_set_sparam_obj().
- *
+ * Same as ncm_model_class_set_sparam_obj() with a #NcmSParam built by ncm_sparam_new().
  */
 void
 ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt)
@@ -998,9 +1028,8 @@ ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, const g
  * @default_value: default value
  * @ppt: a #NcmParamType
  *
- * Helper function to set a vector parameter. It creates a #NcmVParam object
- * and calls ncm_model_class_set_vparam_obj().
- *
+ * Same as ncm_model_class_set_vparam_obj() with a #NcmVParam built by
+ * ncm_vparam_full_new().
  */
 void
 ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint default_length, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt)
@@ -1022,7 +1051,6 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
  * from the parent class. Submodels can only be attached at construction time,
  * through the slots declared with ncm_model_class_set_submodel(). It must be
  * called after ncm_model_class_add_params().
- *
  */
 void
 ncm_model_class_add_submodels (NcmModelClass *model_class, guint submodel_slot_len)
@@ -1071,7 +1099,6 @@ ncm_model_class_add_submodels (NcmModelClass *model_class, guint submodel_slot_l
  * Sets the @submodel_slot_id-th submodel slot of the model. The slot is
  * exposed as a construct-only, type-checked object property named @name. The
  * submodel is therefore part of the model's structure, fixed at construction.
- *
  */
 void
 ncm_model_class_set_submodel (NcmModelClass *model_class, guint submodel_slot_id, const gchar *name, const gchar *symbol, GType submodel_type)
@@ -1111,10 +1138,10 @@ ncm_model_class_set_submodel (NcmModelClass *model_class, guint submodel_slot_id
  * ncm_model_class_check_params_info:
  * @model_class: a #NcmModelClass
  *
- * Class function to be used when implementing NcmModels, it checks if the
- * parameters information is correctly set. It must be called after all
- * parameters are set during the class initialization.
- *
+ * For the end of the class initialization of a model: aborts when a declared
+ * parameter was not set, when the class replaced the property dispatchers
+ * installed by ncm_model_class_add_params(), or when it has properties of its own
+ * but no NcmModelClass set_property/get_property.
  */
 void
 ncm_model_class_check_params_info (NcmModelClass *model_class)
@@ -1128,17 +1155,13 @@ ncm_model_class_check_params_info (NcmModelClass *model_class)
   for (i = 0; i < model_class->sparam_len; i++)
   {
     if (g_ptr_array_index (model_class->sparam, i) == NULL)
-      g_error ("Class (%s) didn't initialized scalar parameter %lu/%u", model_class->name ? model_class->name : "no-name", i + 1, model_class->sparam_len);
-
-    /* g_debug ("Model[%s][%s] id %lu\n", model_class->name, ((NcmSParam *)g_ptr_array_index (model_class->params_info, i))->name, i); */
+      g_error ("Class (%s) did not set scalar parameter %lu/%u", model_class->name ? model_class->name : "no-name", i + 1, model_class->sparam_len);
   }
 
   for (i = 0; i < model_class->vparam_len; i++)
   {
     if (g_ptr_array_index (model_class->vparam, i) == NULL)
-      g_error ("Class (%s) didn't initialized vector parameter %lu/%u", model_class->name ? model_class->name : "no-name", i + 1, model_class->vparam_len);
-
-    /* g_debug ("Model[%s][%s] id %lu\n", model_class->name, ((NcmSParam *)g_ptr_array_index (model_class->params_info, i))->name, i); */
+      g_error ("Class (%s) did not set vector parameter %lu/%u", model_class->name ? model_class->name : "no-name", i + 1, model_class->vparam_len);
   }
 
   {
@@ -1169,9 +1192,8 @@ ncm_model_class_check_params_info (NcmModelClass *model_class)
  * @opt1: first option
  * @...: other options, must end with -1
  *
- * Class function to be used when implementing NcmModels, it defines the
- * implementation options of the model.
- *
+ * For the class initialization of a model: adds the implementation options
+ * @opt1, ... to the class's implementation flags.
  */
 void
 ncm_model_class_add_impl_opts (NcmModelClass *model_class, gint opt1, ...)
@@ -1196,9 +1218,8 @@ ncm_model_class_add_impl_opts (NcmModelClass *model_class, gint opt1, ...)
  * @model_class: a #NcmModelClass
  * @flag: implementation flag
  *
- * Class function to be used when implementing NcmModels, it defines the
- * implementation flags of the model.
- *
+ * For the class initialization of a model: adds @flag to the class's
+ * implementation flags.
  */
 void
 ncm_model_class_add_impl_flag (NcmModelClass *model_class, guint64 flag)
@@ -1213,7 +1234,7 @@ ncm_model_class_add_impl_flag (NcmModelClass *model_class, guint64 flag)
  *
  * Duplicates @model by serializing and deserializing it.
  *
- * Returns: (transfer full): a duplicate of @model.
+ * Returns: (transfer full): a duplicate of @model
  */
 NcmModel *
 ncm_model_dup (NcmModel *model, NcmSerialize *ser)
@@ -1227,7 +1248,7 @@ ncm_model_dup (NcmModel *model, NcmSerialize *ser)
  *
  * Increments the reference count of @model by one.
  *
- * Returns: (transfer full): the same @model.
+ * Returns: (transfer full): @model
  */
 NcmModel *
 ncm_model_ref (NcmModel *model)
@@ -1241,7 +1262,6 @@ ncm_model_ref (NcmModel *model)
  *
  * Atomically decrements the reference count of @model by one. If the reference count drops to 0,
  * all memory allocated by @model is released.
- *
  */
 void
 ncm_model_free (NcmModel *model)
@@ -1253,9 +1273,7 @@ ncm_model_free (NcmModel *model)
  * ncm_model_clear:
  * @model: a #NcmModel
  *
- * Atomically decrements the reference count of @model by one. If the reference count drops to 0,
- * all memory allocated by @model is released. Set pointer to NULL.
- *
+ * If *@model is not %NULL, decrements its reference count and sets *@model to %NULL.
  */
 void
 ncm_model_clear (NcmModel **model)
@@ -1363,11 +1381,13 @@ _ncm_model_reparam_resize (NcmReparam *reparam, guint length, gchar **reason)
 /**
  * ncm_model_set_reparam:
  * @model: a #NcmModel
- * @reparam: a #NcmReparam
+ * @reparam: (allow-none): a #NcmReparam
  * @error: a #GError
  *
- * Sets the reparametrization of @model to @reparam.
- *
+ * Sets the reparametrization of @model to @reparam and computes its parameters from the
+ * original ones. A reparametrization for another length is rebuilt at the model's
+ * length when it carries nothing but descriptions of existing parameters. It cannot be
+ * removed: %NULL does nothing on a model without one and aborts on a model with one.
  */
 void
 ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
@@ -1431,9 +1451,10 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
 
     ncm_reparam_clear (&resized);
   }
-  else
+  else if (self->reparam != NULL)
   {
-    _ncm_model_sparams_remove_reparam (model);
+    g_error ("ncm_model_set_reparam: model `%s' already has a reparametrization, which cannot be removed.",
+             G_OBJECT_TYPE_NAME (model));
   }
 }
 
@@ -1442,9 +1463,8 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
  * @model1: a #NcmModel
  * @model2: a #NcmModel
  *
- * Compares if model1 and model2 are the same, with same dimension and
- * reparametrization.
- *
+ * Returns: whether @model1 and @model2 are of the same type and length and either both
+ * have no reparametrization or both have one of the same type
  */
 gboolean
 ncm_model_is_equal (NcmModel *model1, NcmModel *model2)
@@ -1458,43 +1478,21 @@ ncm_model_is_equal (NcmModel *model1, NcmModel *model2)
   if (self1->total_len != self2->total_len)
     return FALSE;
 
-  if (self1->reparam)
-  {
-    if (self2->reparam == NULL)
-      return FALSE;
+  if ((self1->reparam == NULL) != (self2->reparam == NULL))
+    return FALSE;
 
-    if (G_OBJECT_TYPE (self1->reparam) != G_OBJECT_TYPE (self2->reparam))
-      return FALSE;
-  }
+  if ((self1->reparam != NULL) && (G_OBJECT_TYPE (self1->reparam) != G_OBJECT_TYPE (self2->reparam)))
+    return FALSE;
 
   return TRUE;
-}
-
-/**
- * ncm_model_get_reparam:
- * @model: a #NcmModel
- *
- * Gets the reparametrization of @model or NULL if it does not have one.
- *
- * Returns: (transfer full): the reparametrization of @model or NULL if it does not have one.
- */
-NcmReparam *
-ncm_model_get_reparam (NcmModel *model)
-{
-  NcmReparam *reparam;
-
-  g_object_get (model, "reparam", &reparam, NULL);
-  g_assert (NCM_IS_REPARAM (reparam));
-
-  return reparam;
 }
 
 /**
  * ncm_model_params_set_default:
  * @model: a #NcmModel
  *
- * Sets the models parameters to their default values.
- *
+ * Sets every parameter to the default value of its description; a new parameter of a
+ * reparametrization without a description of its own takes the original's.
  */
 void
 ncm_model_params_set_default (NcmModel *model)
@@ -1516,8 +1514,8 @@ ncm_model_params_set_default (NcmModel *model)
  * ncm_model_params_save_as_default:
  * @model: a #NcmModel
  *
- * Saves the current parameters as the default values.
- *
+ * Saves the current parameters as the default values of their descriptions, with the
+ * same fallback as ncm_model_params_set_default().
  */
 void
 ncm_model_params_save_as_default (NcmModel *model)
@@ -1542,8 +1540,8 @@ ncm_model_params_save_as_default (NcmModel *model)
  * @model: a #NcmModel
  * @model_dest: a #NcmModel
  *
- * Copies the parameters of @model to @model_dest.
- *
+ * Copies the parameters of @model to @model_dest; the two must be equal in the sense of
+ * ncm_model_is_equal().
  */
 void
 ncm_model_params_copyto (NcmModel *model, NcmModel *model_dest)
@@ -1630,8 +1628,8 @@ ncm_model_params_set_vector (NcmModel *model, NcmVector *v)
  * @model: a #NcmModel
  * @model_src: a #NcmModel
  *
- * Sets all parameters of @model to the values of @model_src.
- *
+ * Sets the parameters of @model to those of @model_src; the two must be equal in the
+ * sense of ncm_model_is_equal().
  */
 void
 ncm_model_params_set_model (NcmModel *model, NcmModel *model_src)
@@ -1729,9 +1727,7 @@ ncm_model_params_get_all (NcmModel *model)
  * ncm_model_params_valid:
  * @model: a #NcmModel
  *
- * Check whenever the parameters are valid.
- *
- * Returns: TRUE if the parameter are valid.
+ * Returns: whether the parameters are valid for the model (NcmModelClass valid)
  */
 gboolean
 ncm_model_params_valid (NcmModel *model)
@@ -1745,9 +1741,7 @@ ncm_model_params_valid (NcmModel *model)
  * ncm_model_params_valid_bounds:
  * @model: a #NcmModel
  *
- * Check whenever the parameters respect the bounds.
- *
- * Returns: if the parameter respect the bounds.
+ * Returns: whether every parameter is within its bounds
  */
 gboolean
 ncm_model_params_valid_bounds (NcmModel *model)
@@ -1787,10 +1781,9 @@ ncm_model_id (NcmModel *model)
  * @model_type: a GType
  * @error: a #GError
  *
- * Gets the model id of a model type. It is an error to call this function
- * with a type that is not a subclass of #NcmModel.
+ * Gets the model id of @model_type; a type that is not a #NcmModel is an error.
  *
- * Returns: The model id of @model_type.
+ * Returns: the model id of @model_type, or -1 on error
  */
 NcmModelID
 ncm_model_id_by_type (GType model_type, GError **error)
@@ -1804,7 +1797,7 @@ ncm_model_id_by_type (GType model_type, GError **error)
                                 g_type_name (model_type),
                                 g_type_name (NCM_TYPE_MODEL));
 
-    return 0;
+    return -1;
   }
   else
   {
@@ -1858,10 +1851,7 @@ ncm_model_check_impl_opt (NcmModel *model, gint opt)
  * @opt1: first implementation option
  * @...: implementation options, must end with -1
  *
- * Checks if the model implements all the @opt1, @opt2, ... options.
- * The last argument must be -1.
- *
- * Returns: TRUE if the model implements all the @opt1, @opt2, ... options.
+ * Returns: whether the model implements every option @opt1, ... (the list ends with -1)
  */
 gboolean
 ncm_model_check_impl_opts (NcmModel *model, gint opt1, ...)
@@ -2062,7 +2052,7 @@ ncm_model_nick (NcmModel *model)
  *
  * Peeks the current reparametrization of @model.
  *
- * Returns: (transfer none): the current reparametrization of @model or NULL if it does not have one.
+ * Returns: (transfer none) (nullable): the reparametrization of @model, %NULL when it has none
  */
 NcmReparam *
 ncm_model_peek_reparam (NcmModel *model)
@@ -2077,37 +2067,31 @@ ncm_model_peek_reparam (NcmModel *model)
  * @model: a #NcmModel
  * @i: parameter index
  *
- * Check if the @i-th parameter is finite.
- *
- * Returns: whether the @i-th parameter is finite.
+ * Returns: whether parameter @i is finite
  */
 gboolean
 ncm_model_param_finite (NcmModel *model, guint i)
 {
   NcmModelPrivate * const self = ncm_model_get_instance_private (model);
-  NcmVector *params            = self->reparam ? ncm_reparam_peek_params (self->reparam) : self->params;
 
-  return gsl_finite (ncm_vector_get (params, i));
+  return gsl_finite (ncm_vector_get (self->p, i));
 }
 
 /**
  * ncm_model_params_finite:
  * @model: a #NcmModel
  *
- * Check if all parameters are finite.
- *
- * Returns: whether all parameters are finite.
+ * Returns: whether every parameter is finite
  */
-
 gboolean
 ncm_model_params_finite (NcmModel *model)
 {
   NcmModelPrivate * const self = ncm_model_get_instance_private (model);
   guint i;
 
-  for (i = 0; i < ncm_model_len (model); i++)
+  for (i = 0; i < self->total_len; i++)
   {
-    if (!gsl_finite (ncm_vector_fast_get (self->params, i)))
+    if (!gsl_finite (ncm_vector_get (self->p, i)))
       return FALSE;
   }
 
@@ -2118,11 +2102,9 @@ ncm_model_params_finite (NcmModel *model)
  * ncm_model_params_update:
  * @model: a #NcmModel
  *
- * Force the parameters to the update its internal flags and
- * update the original parameters if necessary.
- *
+ * Marks the parameters as changed (increments the pkey) and, under a
+ * reparametrization, computes the original parameters from the new ones.
  */
-
 void
 ncm_model_params_update (NcmModel *model)
 {
@@ -2138,9 +2120,8 @@ ncm_model_params_update (NcmModel *model)
  * ncm_model_orig_params_update:
  * @model: a #NcmModel
  *
- * Update the new parameters. It causes an error to call this
- * function with a model without reparametrization.
- *
+ * Marks the parameters as changed (increments the pkey) and, under a
+ * reparametrization, computes the new parameters from the original ones.
  */
 void
 ncm_model_orig_params_update (NcmModel *model)
@@ -2280,13 +2261,7 @@ ncm_model_param_set (NcmModel *model, guint n, gdouble val)
 void
 ncm_model_param_set_default (NcmModel *model, guint n)
 {
-  NcmModelPrivate * const self = ncm_model_get_instance_private (model);
-  gboolean is_original;
-
-  ncm_model_param_set (model, n, ncm_sparam_get_default_value (_ncm_model_param_peek_desc (model, n, &is_original)));
-
-  if (is_original)
-    g_array_index (self->sparam_modified, gboolean, n) = TRUE;
+  ncm_model_param_set (model, n, ncm_sparam_get_default_value (_ncm_model_param_peek_desc (model, n, NULL)));
 }
 
 static NcmSParam *
@@ -2383,14 +2358,13 @@ ncm_model_orig_param_get (NcmModel *model, guint n)
 }
 
 /**
- * ncm_model_vparam_set:
+ * ncm_model_orig_vparam_set:
  * @model: a #NcmModel
  * @n: a vector parameter index
  * @i: a vector component index
  * @val: a double
  *
- * Sets the @i-th component of the @n-th vector parameter of @model to @val.
- *
+ * Sets component @i of the original vector parameter @n to @val.
  */
 void
 ncm_model_orig_vparam_set (NcmModel *model, guint n, guint i, gdouble val)
@@ -2404,14 +2378,12 @@ ncm_model_orig_vparam_set (NcmModel *model, guint n, guint i, gdouble val)
 }
 
 /**
- * ncm_model_vparam_get:
+ * ncm_model_orig_vparam_get:
  * @model: a #NcmModel
  * @n: a vector parameter index
  * @i: a vector component index
  *
- * Gets the @i-th component of the @n-th vector parameter of @model.
- *
- * Returns: the @i-th component of the @n-th vector parameter of @model.
+ * Returns: component @i of the original vector parameter @n
  */
 gdouble
 ncm_model_orig_vparam_get (NcmModel *model, guint n, guint i)
@@ -2427,14 +2399,17 @@ ncm_model_orig_vparam_get (NcmModel *model, guint n, guint i)
  * @n: a vector parameter index
  * @val: a #NcmVector
  *
- * Sets the @n-th vector parameter of @model to @val.
- * The size of @val must be equal to the length of the @n-th vector parameter.
- *
+ * Sets the original vector parameter @n to @val; aborts when the length of @val is not
+ * that of the vector parameter.
  */
 void
 ncm_model_orig_vparam_set_vector (NcmModel *model, guint n, NcmVector *val)
 {
   NcmModelPrivate * const self = ncm_model_get_instance_private (model);
+
+  if (ncm_vector_len (val) != ncm_model_vparam_len (model, n))
+    g_error ("ncm_model_orig_vparam_set_vector: the vector has %u elements but the vector parameter %u has %u.",
+             ncm_vector_len (val), n, ncm_model_vparam_len (model, n));
 
   ncm_vector_memcpy2 (self->params, val,
                       ncm_model_vparam_index (model, n, 0), 0,
@@ -2447,9 +2422,8 @@ ncm_model_orig_vparam_set_vector (NcmModel *model, guint n, NcmVector *val)
  * @model: a #NcmModel
  * @n: a vector parameter index
  *
- * Gets the @n-th vector parameter of @model.
- *
- * Returns: (transfer full): the @n-th vector parameter of @model.
+ * Returns: (transfer full) (nullable): a copy of the original vector parameter @n, %NULL
+ * when its length is zero
  */
 NcmVector *
 ncm_model_orig_vparam_get_vector (NcmModel *model, guint n)
@@ -2476,7 +2450,7 @@ ncm_model_orig_vparam_get_vector (NcmModel *model, guint n)
 /**
  * ncm_model_orig_param_get_scale:
  * @model: a #NcmModel
- * @n: parameter index.
+ * @n: parameter index
  *
  * Gets the scale of the original @n-th parameter.
  *
@@ -2527,7 +2501,7 @@ ncm_model_orig_param_get_upper_bound (NcmModel *model, guint n)
 /**
  * ncm_model_orig_param_get_abstol:
  * @model: a #NcmModel
- * @n: parameter index.
+ * @n: parameter index
  *
  * Gets the absolute tolerance of the original @n-th parameter.
  *
@@ -2544,7 +2518,7 @@ ncm_model_orig_param_get_abstol (NcmModel *model, guint n)
 /**
  * ncm_model_param_get_scale:
  * @model: a #NcmModel
- * @n: parameter index.
+ * @n: parameter index
  *
  * Gets the scale of the @n-th parameter.
  *
@@ -2595,7 +2569,7 @@ ncm_model_param_get_upper_bound (NcmModel *model, guint n)
 /**
  * ncm_model_param_get_abstol:
  * @model: a #NcmModel
- * @n: parameter index.
+ * @n: parameter index
  *
  * Gets the absolute tolerance of the @n-th parameter.
  *
@@ -2678,7 +2652,7 @@ ncm_model_param_set_lower_bound (NcmModel *model, guint n, const gdouble lb)
  * @n: parameter index
  * @ub: upper-bound value
  *
- * Sets @ub as the lower-bound value of the @n-th parameter.
+ * Sets @ub as the upper-bound value of the @n-th parameter.
  *
  */
 void
@@ -2756,28 +2730,30 @@ ncm_model_params_set_default_ftype (NcmModel *model)
   }
 }
 
+static void
+_ncm_model_gvalue_free (gpointer data)
+{
+  GValue *value = data;
+
+  g_value_unset (value);
+  g_free (value);
+}
+
 /**
  * ncm_model_param_get_desc:
  * @model: a #NcmModel
  * @param: parameter name
  * @error: a #GError
  *
- * Gets the description of the parameter @param. The output is a GHashTable which
- * contains the following keys:
+ * Gets the description of the parameter @param (found as in
+ * ncm_model_param_index_from_name_full()), with the keys "name" and "symbol" (strings),
+ * "scale", "lower-bound", "upper-bound", "abstol" and "value" (doubles) and "fit"
+ * (boolean).
  *
- * - "name": the name of the parameter.
- * - "symbol": the symbol of the parameter.
- * - "scale": the scale of the parameter.
- * - "lower-bound": the lower bound of the parameter.
- * - "upper-bound": the upper bound of the parameter.
- * - "abstol": the absolute tolerance of the parameter.
- * - "fit": whether the parameter is a fitting parameter.
- * - "value": the current value of the parameter.
- *
- * Returns: (transfer full) (element-type utf8 GValue): the description of the parameter @param.
+ * Returns: (transfer full) (element-type utf8 GValue): the description of @param
  */
 GHashTable *
-ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
+ncm_model_param_get_desc (NcmModel *model, const gchar *param, GError **error)
 {
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
 
@@ -2798,13 +2774,13 @@ ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
     }
     else
     {
-      GHashTable *desc = g_hash_table_new (g_str_hash, g_str_equal);
+      GHashTable *desc = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, _ncm_model_gvalue_free);
 
       {
         GValue *value = g_new0 (GValue, 1);
 
         g_value_init (value, G_TYPE_STRING);
-        g_value_set_static_string (value, ncm_model_param_name (target, i));
+        g_value_set_string (value, ncm_model_param_name (target, i));
         g_hash_table_insert (desc, g_strdup ("name"), value);
       }
 
@@ -2812,7 +2788,7 @@ ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
         GValue *value = g_new0 (GValue, 1);
 
         g_value_init (value, G_TYPE_STRING);
-        g_value_set_static_string (value, ncm_model_param_symbol (target, i));
+        g_value_set_string (value, ncm_model_param_symbol (target, i));
         g_hash_table_insert (desc, g_strdup ("symbol"), value);
       }
 
@@ -2876,23 +2852,13 @@ ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
  * @desc: (element-type utf8 GValue): a GHashTable
  * @error: a #GError pointer
  *
- * Sets the description of the parameter @param. The input is a GHashTable which
- * may contain the following keys:
- *
- * - "name": the name of the parameter.
- * - "symbol": the symbol of the parameter.
- * - "scale": the scale of the parameter.
- * - "lower-bound": the lower bound of the parameter.
- * - "upper-bound": the upper bound of the parameter.
- * - "abstol": the absolute tolerance of the parameter.
- * - "fit": whether the parameter is a fitting parameter.
- * - "value": the current value of the parameter.
- *
- * Other keys are ignored.
- *
+ * Sets, for the parameter @param (found as in ncm_model_param_index_from_name_full()),
+ * the entries of @desc among "scale", "lower-bound", "upper-bound", "abstol" and "value"
+ * (doubles) and "fit" (boolean). Any other key, or a value of the wrong type, sets
+ * @error and stops; the entries applied before it stay applied.
  */
 void
-ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GError **error)
+ncm_model_param_set_desc (NcmModel *model, const gchar *param, GHashTable *desc, GError **error)
 {
   g_return_if_fail (error == NULL || *error == NULL);
 
@@ -2913,7 +2879,6 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
 
       return;
     }
-
 
     g_hash_table_iter_init (&iter, desc);
 
@@ -3007,12 +2972,14 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
 
       ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_KEY,
                                   "ncm_model_param_set_desc: invalid key `%s'.", k);
+
+      return;
     }
   }
 }
 
 /**
- * ncm_model_orig_param_get_name:
+ * ncm_model_orig_param_name:
  * @model: a #NcmModel
  * @n: parameter index
  *
@@ -3027,7 +2994,7 @@ ncm_model_orig_param_name (NcmModel *model, guint n)
 }
 
 /**
- * ncm_model_param_get_name:
+ * ncm_model_param_name:
  * @model: a #NcmModel
  * @n: parameter index
  *
@@ -3042,7 +3009,7 @@ ncm_model_param_name (NcmModel *model, guint n)
 }
 
 /**
- * ncm_model_orig_param_get_symbol:
+ * ncm_model_orig_param_symbol:
  * @model: a #NcmModel
  * @n: parameter index
  *
@@ -3084,7 +3051,7 @@ ncm_model_param_names (NcmModel *model)
 }
 
 /**
- * ncm_model_param_get_symbol:
+ * ncm_model_param_symbol:
  * @model: a #NcmModel
  * @n: parameter index
  *
@@ -3108,10 +3075,10 @@ ncm_model_param_symbol (NcmModel *model, guint n)
  * @param_name: parameter name
  * @i: (out): parameter index
  *
- * Looks for parameter named @param_name in the original parameters of @model
- * and puts its index in @i and returns TRUE if found.
+ * Looks for the original parameter named @param_name and sets @i to its index, or to
+ * %G_MAXUINT when there is none.
  *
- * Returns: whether the parameter @param_name is found in the @model.
+ * Returns: whether the parameter was found
  */
 gboolean
 ncm_model_orig_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i)
@@ -3120,10 +3087,7 @@ ncm_model_orig_param_index_from_name (NcmModel *model, const gchar *param_name, 
   gpointer param_id;
   gboolean found = g_hash_table_lookup_extended (self->sparams_name_id, param_name, NULL, &param_id);
 
-  if (found)
-    *i = GPOINTER_TO_UINT (param_id);
-  else
-    *i = -1;  /* Yup, I know. */
+  *i = found ? GPOINTER_TO_UINT (param_id) : G_MAXUINT;
 
   return found;
 }
@@ -3135,10 +3099,12 @@ ncm_model_orig_param_index_from_name (NcmModel *model, const gchar *param_name, 
  * @i: (out): parameter index
  * @error: a #GError
  *
- * Looks for parameter named @param_name in @model and puts its index in @i
- * and returns TRUE if found.
+ * Looks for the parameter named @param_name among the current parameters and sets @i to
+ * its index. A name of the reparametrization is found first; an original name is found
+ * only when the reparametrization does not describe that parameter, and otherwise sets
+ * %NCM_MODEL_ERROR_PARAM_CHANGED.
  *
- * Returns: whether the parameter @param_name is found in the @model.
+ * Returns: whether the parameter was found
  */
 gboolean
 ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i, GError **error)
@@ -3318,21 +3284,35 @@ ncm_model_param_index_from_name_full (NcmModel *model, const gchar *param_name, 
         guint n_matches              = 0;
         guint j;
 
+        GError *sub_error = NULL;
+
+        /* A submodel whose reparametrization renamed the parameter answers with an
+         * error, which is reported when no submodel has the name. */
         for (j = 0; j < self->submodel_array->len; j++)
         {
           NcmModel *submodel = g_ptr_array_index (self->submodel_array, j);
+          GError *this_error = NULL;
           guint sub_i;
 
-          if (ncm_model_param_index_from_name (submodel, param_name, &sub_i, NULL))
+          if (ncm_model_param_index_from_name (submodel, param_name, &sub_i, &this_error))
           {
             found_in = submodel;
             found_i  = sub_i;
             n_matches++;
           }
+          else if ((this_error != NULL) && (sub_error == NULL))
+          {
+            sub_error = this_error;
+          }
+          else
+          {
+            g_clear_error (&this_error);
+          }
         }
 
         if (n_matches == 1)
         {
+          g_clear_error (&sub_error);
           *target = found_in;
           *i      = found_i;
 
@@ -3340,6 +3320,7 @@ ncm_model_param_index_from_name_full (NcmModel *model, const gchar *param_name, 
         }
         else if (n_matches > 1)
         {
+          g_clear_error (&sub_error);
           ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_AMBIGUOUS,
                                       "ncm_model_param_index_from_name_full: parameter `%s' is ambiguous -- "
                                       "present in %u attached submodels of `%s'; use the qualified "
@@ -3348,11 +3329,15 @@ ncm_model_param_index_from_name_full (NcmModel *model, const gchar *param_name, 
 
           return FALSE;
         }
+        else if (sub_error != NULL)
+        {
+          ncm_util_forward_or_call_error (error, sub_error, "ncm_model_param_index_from_name_full: ");
+
+          return FALSE;
+        }
         else
         {
-          /* Not found anywhere -- leave @error unset so callers can
-           * report it with their own message, exactly as they already
-           * do for the plain (no-submodel) not-found case. */
+          /* Not found anywhere: @error stays unset, as for the plain not-found case. */
           return FALSE;
         }
       }
