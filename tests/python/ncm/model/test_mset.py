@@ -478,7 +478,8 @@ def test_mset_split_full_name_invalid_stackpos() -> None:
         GLib.Error,
         match=re.escape(
             rf"ncm-mset-error: ncm_mset_split_full_name: "
-            rf"invalid stackpos number (132344 >= 1000). "
+            rf"invalid stack position `132344' in `NcHICosmo:132344:w', "
+            rf"expected a number below 1000. "
             rf"({int(Ncm.MSetError.FULLNAME_INVALID)})"
         ),
     ):
@@ -506,7 +507,9 @@ def test_mset_peek_by_name_invalid_stackpos() -> None:
         GLib.Error,
         match=re.escape(
             rf"ncm-mset-error: ncm_mset_peek_by_name: "
-            rf"invalid stackpos number (sadd). ({int(Ncm.MSetError.NAMESPACE_INVALID)})"
+            rf"invalid stack position `sadd' in `NcmModelMVND:sadd', "
+            rf"expected decimal digits below 1000. "
+            rf"({int(Ncm.MSetError.NAMESPACE_INVALID)})"
         ),
     ):
         _ = mset.peek_by_name("NcmModelMVND:sadd")
@@ -681,8 +684,8 @@ def test_mset_setitem_invalid_mid() -> None:
     with pytest.raises(
         GLib.Error,
         match=re.compile(
-            rf"^ncm-mset-error: ncm_mset___setitem__: model id mismatch, "
-            rf"expected -1, got 2000. "
+            rf"^ncm-mset-error: ncm_mset___setitem__: the key is model id -1 "
+            rf"but `NcmModelFunnel' has model id 2000. "
             rf"\({int(Ncm.MSetError.MODEL_ID_MISMATCH)}\)$",
             re.DOTALL,
         ),
@@ -699,8 +702,9 @@ def test_mset_setitem_mid_mismatch() -> None:
     with pytest.raises(
         GLib.Error,
         match=re.compile(
-            rf"^ncm-mset-error: ncm_mset___setitem__: model id mismatch, "
-            rf"expected {Ncm.ModelRosenbrock.id()}, got {Ncm.ModelFunnel.id()}. "
+            rf"^ncm-mset-error: ncm_mset___setitem__: the key is model id "
+            rf"{Ncm.ModelRosenbrock.id()} but `NcmModelFunnel' has model id "
+            rf"{Ncm.ModelFunnel.id()}. "
             rf"\({int(Ncm.MSetError.MODEL_ID_MISMATCH)}\)$",
             re.DOTALL,
         ),
@@ -717,7 +721,8 @@ def test_mset_setitem_invalid_arg() -> None:
     with pytest.raises(
         GLib.Error,
         match=re.compile(
-            rf"^ncm-mset-error: ncm_mset___setitem__: invalid argument type. "
+            rf"^ncm-mset-error: ncm_mset___setitem__: the key must be an integer "
+            rf"model id or a model name, got a `.+'. "
             rf"\({int(Ncm.MSetError.MODEL_INVALID_ID)}\)$",
             re.DOTALL,
         ),
@@ -752,8 +757,8 @@ def test_mset_setitem_invalid_ns_stackpos() -> None:
     with pytest.raises(
         GLib.Error,
         match=re.compile(
-            rf"^ncm-mset-error: ncm_mset___setitem__: invalid namespace "
-            rf"`NcmModelBla:zaa2'. "
+            rf"^ncm-mset-error: ncm_mset___setitem__: invalid stack position in "
+            rf"`NcmModelBla:zaa2', expected decimal digits below 1000. "
             rf"\({int(Ncm.MSetError.NAMESPACE_INVALID)}\)$",
             re.DOTALL,
         ),
@@ -789,7 +794,8 @@ def test_mset_getitem_invalid_ns_stackpos() -> None:
         GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset___getitem__: ncm_mset_fetch_by_name: "
-            rf"ncm_mset_peek_by_name: invalid stackpos number \(zaa2\). "
+            rf"ncm_mset_peek_by_name: invalid stack position `zaa2' in "
+            rf"`NcmModelBla:zaa2', expected decimal digits below 1000. "
             rf"\({int(Ncm.MSetError.NAMESPACE_INVALID)}\)$",
             re.DOTALL,
         ),

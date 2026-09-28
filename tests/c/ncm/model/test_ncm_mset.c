@@ -71,6 +71,7 @@ void test_ncm_mset_params_pretty_print (void);
 void test_ncm_mset_fparam_lookups (void);
 void test_ncm_mset_saveload_fmap (void);
 void test_ncm_mset_load_twice_same_ser (void);
+void test_ncm_mset_getsetitem (void);
 void test_ncm_mset_fparam_get_fpi_range (void);
 void test_ncm_mset_fparam_get_fpi_range_subprocess (void);
 void test_ncm_mset_ns_by_negative_id_subprocess (void);
@@ -140,6 +141,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/fparam/lookups", &test_ncm_mset_fparam_lookups);
   g_test_add_func ("/ncm/mset/saveload/fmap", &test_ncm_mset_saveload_fmap);
   g_test_add_func ("/ncm/mset/load/twice_same_ser", &test_ncm_mset_load_twice_same_ser);
+  g_test_add_func ("/ncm/mset/getsetitem", &test_ncm_mset_getsetitem);
   g_test_add_func ("/ncm/mset/fparam/get_fpi_range", &test_ncm_mset_fparam_get_fpi_range);
   g_test_add_func ("/ncm/mset/fparam/get_fpi_range/subprocess", &test_ncm_mset_fparam_get_fpi_range_subprocess);
   g_test_add_func ("/ncm/mset/ns_by_negative_id/subprocess", &test_ncm_mset_ns_by_negative_id_subprocess);
@@ -1516,5 +1518,89 @@ test_ncm_mset_load_twice_same_ser (void)
   ncm_model_free (cosmo);
   nc_hiprim_free (prim);
   nc_hireion_free (reion);
+}
+
+static void
+_test_ncm_mset_value_int (GValue *v, const gint i)
+{
+  g_value_init (v, G_TYPE_INT);
+  g_value_set_int (v, i);
+}
+
+static void
+_test_ncm_mset_value_str (GValue *v, const gchar *str)
+{
+  g_value_init (v, G_TYPE_STRING);
+  g_value_set_string (v, str);
+}
+
+/* __getitem__ and __setitem__ by integer id, stack position included, and by name;
+ * invalid stack positions are errors on both. */
+void
+test_ncm_mset_getsetitem (void)
+{
+  NcDistance *dist    = nc_distance_new (3.0);
+  NcHaloPosition *h0  = nc_halo_position_new (dist);
+  NcHaloPosition *h1  = nc_halo_position_new (dist);
+  NcHaloPosition *h2  = nc_halo_position_new (dist);
+  NcmModel *mvnd      = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmMSet *mset       = ncm_mset_empty_new ();
+  const NcmModelID id = ncm_model_id (NCM_MODEL (h0));
+  const gchar *bad[]  = {"NcHaloPosition:", "NcHaloPosition:+1", "NcHaloPosition:1x", "NcHaloPosition:1000"};
+  GError *error       = NULL;
+  GValue v            = G_VALUE_INIT;
+  guint i;
+
+  _test_ncm_mset_value_int (&v, id);
+  ncm_mset___setitem__ (mset, &v, NCM_MODEL (h0), &error);
+  g_assert_no_error (error);
+  g_value_unset (&v);
+
+  _test_ncm_mset_value_int (&v, id + 2);
+  ncm_mset___setitem__ (mset, &v, NCM_MODEL (h2), &error);
+  g_assert_no_error (error);
+  g_assert_true (ncm_mset___getitem__ (mset, &v, &error) == NCM_MODEL (h2));
+  g_value_unset (&v);
+
+  _test_ncm_mset_value_str (&v, "NcHaloPosition:01");
+  ncm_mset___setitem__ (mset, &v, NCM_MODEL (h1), &error);
+  g_assert_no_error (error);
+  g_assert_true (ncm_mset___getitem__ (mset, &v, &error) == NCM_MODEL (h1));
+  g_value_unset (&v);
+  g_assert_true (ncm_mset_peek_pos (mset, id, 1) == NCM_MODEL (h1));
+  g_assert_true (ncm_mset_peek_by_name (mset, "NcHaloPosition", NULL) == NCM_MODEL (h0));
+
+  for (i = 0; i < G_N_ELEMENTS (bad); i++)
+  {
+    _test_ncm_mset_value_str (&v, bad[i]);
+
+    ncm_mset___setitem__ (mset, &v, NCM_MODEL (h1), &error);
+    g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_INVALID);
+    g_clear_error (&error);
+
+    g_assert_null (ncm_mset___getitem__ (mset, &v, &error));
+    g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_INVALID);
+    g_clear_error (&error);
+
+    g_value_unset (&v);
+  }
+
+  /* The positions set before are untouched by the rejected names. */
+  g_assert_true (ncm_mset_peek_pos (mset, id, 0) == NCM_MODEL (h0));
+  g_assert_true (ncm_mset_peek_pos (mset, id, 1) == NCM_MODEL (h1));
+  g_assert_true (ncm_mset_peek_pos (mset, id, 2) == NCM_MODEL (h2));
+
+  _test_ncm_mset_value_int (&v, id + 1);
+  ncm_mset___setitem__ (mset, &v, mvnd, &error);
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_ID_MISMATCH);
+  g_clear_error (&error);
+  g_value_unset (&v);
+
+  ncm_mset_free (mset);
+  ncm_model_free (mvnd);
+  nc_halo_position_free (h0);
+  nc_halo_position_free (h1);
+  nc_halo_position_free (h2);
+  nc_distance_free (dist);
 }
 

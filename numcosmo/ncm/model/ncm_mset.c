@@ -531,8 +531,9 @@ ncm_mset_split_full_name (const gchar *fullname, gchar **model_ns, guint *stackp
         if ((*endptr != '\0') || (*stackpos_id >= NCM_MSET_MAX_STACKSIZE))
         {
           ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
-                                      "ncm_mset_split_full_name: invalid stackpos number (%s >= %d).",
-                                      stackpos_s, NCM_MSET_MAX_STACKSIZE);
+                                      "ncm_mset_split_full_name: invalid stack position `%s' in `%s', "
+                                      "expected a number below %d.",
+                                      stackpos_s, fullname, NCM_MSET_MAX_STACKSIZE);
           g_clear_pointer (model_ns, g_free);
           g_clear_pointer (pname, g_free);
           g_free (stackpos_s);
@@ -862,16 +863,46 @@ ncm_mset_peek_array_pos (NcmMSet *mset, guint i)
   return ((NcmMSetItem *) g_ptr_array_index (self->model_array, i))->model;
 }
 
+/*
+ * A stack position in a name: decimal digits only (leading zeros allowed, as
+ * ncm_mset_fparam_full_name() writes them), below NCM_MSET_MAX_STACKSIZE. An empty
+ * string, a sign or any other character is invalid.
+ */
+static gboolean
+_ncm_mset_parse_stackpos (const gchar *str, guint *stackpos)
+{
+  guint64 pos = 0;
+  const gchar *c;
+
+  if (*str == '\0')
+    return FALSE;
+
+  for (c = str; *c != '\0'; c++)
+  {
+    if (!g_ascii_isdigit (*c))
+      return FALSE;
+
+    pos = 10 * pos + (guint64) (*c - '0');
+
+    if (pos >= NCM_MSET_MAX_STACKSIZE)
+      return FALSE;
+  }
+
+  *stackpos = (guint) pos;
+
+  return TRUE;
+}
+
 /**
  * ncm_mset_peek_by_name:
  * @mset: a #NcmMSet
  * @name: model namespace
  * @error: a #GError
  *
- * Peeks a #NcmModel from the #NcmMSet using the model namespace @name.
- * The name may be specified with the parameter full name "model:stackposition".
- * If the stack position is not specified, the first model with the model namespace
- * @name will be returned. An unregistered namespace gives %NULL.
+ * Peeks the model named @name, a model namespace optionally followed by ":" and a stack
+ * position ("NcHICosmo", "NcHaloPosition:2"); without a position it is position 0. A
+ * position that is empty, not decimal digits or not below %NCM_MSET_MAX_STACKSIZE sets
+ * @error; an unregistered namespace gives %NULL.
  *
  * Returns: (transfer none) (nullable): the model with the model namespace @name, %NULL
  * when there is none
@@ -887,16 +918,14 @@ ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name, GError **error)
 
     if (ns_stackpos[1] != NULL)
     {
-      gchar *endptr     = NULL;
       guint stackpos_id = 0;
 
-      stackpos_id = g_ascii_strtoll (ns_stackpos[1], &endptr, 10);
-
-      if ((*endptr != '\0') || (stackpos_id >= NCM_MSET_MAX_STACKSIZE))
+      if (!_ncm_mset_parse_stackpos (ns_stackpos[1], &stackpos_id))
       {
         ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_INVALID,
-                                    "ncm_mset_peek_by_name: invalid stackpos number (%s).",
-                                    ns_stackpos[1]);
+                                    "ncm_mset_peek_by_name: invalid stack position `%s' in `%s', "
+                                    "expected decimal digits below %d.",
+                                    ns_stackpos[1], name, NCM_MSET_MAX_STACKSIZE);
 
         g_strfreev (ns_stackpos);
 
@@ -4321,12 +4350,11 @@ _ncm_mset_load_intern (NcmMSet *mset, const gchar *filename, NcmSerialize *ser, 
  * @model_id: a #GValue
  * @error: a #GError
  *
- * Gets the model with the id @model_id.
- * This method is used to implement the Python __getitem__ method.
- * The parameter @model_id is a #GValue which can be an integer
- * containing the model id or a string containing the model namespace.
+ * The Python `mset[key]`: @model_id is an integer model id, stack position included
+ * (NCM_MSET_MID()), or a name as in ncm_mset_peek_by_name(). A model not in @mset, an
+ * invalid name or another type of @model_id sets @error.
  *
- * Returns: (transfer none): the model with the id @model_id.
+ * Returns: (transfer none): the model
  */
 NcmModel *
 ncm_mset___getitem__ (NcmMSet *mset, GValue *model_id, GError **error)
@@ -4354,7 +4382,8 @@ ncm_mset___getitem__ (NcmMSet *mset, GValue *model_id, GError **error)
   else
   {
     ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_INVALID_ID,
-                                "ncm_mset___getitem__: invalid argument type.");
+                                "ncm_mset___getitem__: the key must be an integer model id or a "
+                                "model name, got a `%s'.", G_VALUE_TYPE_NAME (model_id));
 
     return NULL;
   }
@@ -4367,11 +4396,11 @@ ncm_mset___getitem__ (NcmMSet *mset, GValue *model_id, GError **error)
  * @model: a #NcmModel
  * @error: a #GError
  *
- * Sets the model with the id @model_id to @model.
- * This method is used to implement the Python __setitem__ method.
- * The parameter @model_id is a #GValue which can be an integer
- * containing the model id or a string containing the model namespace.
- *
+ * The Python `mset[key] = model`: sets @model at the position @model_id gives, an integer
+ * model id with the stack position included (NCM_MSET_MID()) or a name as in
+ * ncm_mset_peek_by_name(), as ncm_mset_set_pos() does. The base id must be that of
+ * @model; an invalid name, an unregistered namespace or another type of @model_id sets
+ * @error.
  */
 void
 ncm_mset___setitem__ (NcmMSet *mset, GValue *model_id, NcmModel *model, GError **error)
@@ -4383,7 +4412,19 @@ ncm_mset___setitem__ (NcmMSet *mset, GValue *model_id, NcmModel *model, GError *
 
   if (G_VALUE_HOLDS_INT (model_id))
   {
-    mid = g_value_get_int (model_id);
+    const gint id = g_value_get_int (model_id);
+
+    /* A model id carries the stack position (NCM_MSET_MID()); a negative one is left
+     * whole and reported as a mismatch below. */
+    if (id >= 0)
+    {
+      stackpos = id % NCM_MSET_MAX_STACKSIZE;
+      mid      = id - stackpos;
+    }
+    else
+    {
+      mid = id;
+    }
   }
   else if (G_VALUE_HOLDS_STRING (model_id))
   {
@@ -4391,24 +4432,14 @@ ncm_mset___setitem__ (NcmMSet *mset, GValue *model_id, NcmModel *model, GError *
     gchar **ns_stackpos = g_strsplit (ns, ":", 2);
     guint nelem         = g_strv_length (ns_stackpos);
 
-    if (nelem == 1)
+    if ((nelem > 1) && !_ncm_mset_parse_stackpos (ns_stackpos[1], &stackpos))
     {
-      stackpos = 0;
-    }
-    else
-    {
-      gchar *endptr = NULL;
+      ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_INVALID,
+                                  "ncm_mset___setitem__: invalid stack position in `%s', "
+                                  "expected decimal digits below %d.", ns, NCM_MSET_MAX_STACKSIZE);
+      g_strfreev (ns_stackpos);
 
-      stackpos = g_ascii_strtoll (ns_stackpos[1], &endptr, 10);
-
-      if (*endptr != '\0')
-      {
-        ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_INVALID,
-                                    "ncm_mset___setitem__: invalid namespace `%s'.", ns);
-        g_strfreev (ns_stackpos);
-
-        return;
-      }
+      return;
     }
 
     mid = ncm_mset_get_id_by_ns (ns_stackpos[0]);
@@ -4426,7 +4457,8 @@ ncm_mset___setitem__ (NcmMSet *mset, GValue *model_id, NcmModel *model, GError *
   else
   {
     ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_INVALID_ID,
-                                "ncm_mset___setitem__: invalid argument type.");
+                                "ncm_mset___setitem__: the key must be an integer model id or a "
+                                "model name, got a `%s'.", G_VALUE_TYPE_NAME (model_id));
 
     return;
   }
@@ -4434,8 +4466,8 @@ ncm_mset___setitem__ (NcmMSet *mset, GValue *model_id, NcmModel *model, GError *
   if (ncm_model_id (model) != mid)
   {
     ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_ID_MISMATCH,
-                                "ncm_mset___setitem__: model id mismatch, expected %d, got %d.",
-                                mid, ncm_model_id (model));
+                                "ncm_mset___setitem__: the key is model id %d but `%s' has model id %d.",
+                                mid, G_OBJECT_TYPE_NAME (model), ncm_model_id (model));
 
     return;
   }
