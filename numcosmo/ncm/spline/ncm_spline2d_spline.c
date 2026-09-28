@@ -300,8 +300,6 @@ _ncm_spline2d_spline_eval (NcmSpline2d *s2d, gdouble x, gdouble y)
   return ncm_spline_eval (s2ds->s_ver, y);
 }
 
-/* LCOV_EXCL_START */
-
 /* The spline in y through the rows at x, shared with _eval */
 static NcmSpline *
 _ncm_spline2d_spline_peek_ver (NcmSpline2d *s2d, const gdouble x)
