@@ -57,6 +57,9 @@ void test_ncm_sphere_map_fits_roundtrip (TestNcmSphereMap *test, gconstpointer p
 void test_ncm_sphere_map_invalid_pixel (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_invalid_negative_pixel (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_invalid_ring (TestNcmSphereMap *test, gconstpointer pdata);
+void test_ncm_sphere_map_invalid_lmax_zero (TestNcmSphereMap *test, gconstpointer pdata);
+void test_ncm_sphere_map_invalid_alm_index (TestNcmSphereMap *test, gconstpointer pdata);
+void test_ncm_sphere_map_invalid_cross (TestNcmSphereMap *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -130,6 +133,18 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/sphere_map/invalid/ring/subprocess", TestNcmSphereMap, NULL,
               &test_ncm_sphere_map_new,
               &test_ncm_sphere_map_invalid_ring,
+              &test_ncm_sphere_map_free);
+  g_test_add ("/ncm/sphere_map/invalid/lmax_zero/subprocess", TestNcmSphereMap, NULL,
+              &test_ncm_sphere_map_new,
+              &test_ncm_sphere_map_invalid_lmax_zero,
+              &test_ncm_sphere_map_free);
+  g_test_add ("/ncm/sphere_map/invalid/alm_index/subprocess", TestNcmSphereMap, NULL,
+              &test_ncm_sphere_map_new,
+              &test_ncm_sphere_map_invalid_alm_index,
+              &test_ncm_sphere_map_free);
+  g_test_add ("/ncm/sphere_map/invalid/cross/subprocess", TestNcmSphereMap, NULL,
+              &test_ncm_sphere_map_new,
+              &test_ncm_sphere_map_invalid_cross,
               &test_ncm_sphere_map_free);
 
   g_test_run ();
@@ -408,6 +423,19 @@ test_ncm_sphere_map_traps (TestNcmSphereMap *test, gconstpointer pdata)
   g_test_trap_subprocess ("/ncm/sphere_map/invalid/ring/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*ncm_sphere_map_get_ring_size: ring index 255 out of range [0, 255)*");
+
+  /* A zero lmax used to warn and leave the previous coefficients in place. */
+  g_test_trap_subprocess ("/ncm/sphere_map/invalid/lmax_zero/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*ncm_sphere_map_prepare_alm: lmax is zero*");
+
+  g_test_trap_subprocess ("/ncm/sphere_map/invalid/alm_index/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*ncm_sphere_map_get_alm: (l, m) = (11, 0) out of range, lmax = 10*");
+
+  g_test_trap_subprocess ("/ncm/sphere_map/invalid/cross/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the maps differ in lmax (10, 12)*");
 }
 
 void
@@ -543,5 +571,30 @@ test_ncm_sphere_map_fits_roundtrip (TestNcmSphereMap *test, gconstpointer pdata)
   g_free (dir);
   g_array_unref (map);
   ncm_rng_free (rng);
+}
+
+void
+test_ncm_sphere_map_invalid_lmax_zero (TestNcmSphereMap *test, gconstpointer pdata)
+{
+  ncm_sphere_map_prepare_alm (test->pix);
+}
+
+void
+test_ncm_sphere_map_invalid_alm_index (TestNcmSphereMap *test, gconstpointer pdata)
+{
+  gdouble re, im;
+
+  ncm_sphere_map_set_lmax (test->pix, 10);
+  ncm_sphere_map_get_alm (test->pix, 11, 0, &re, &im);
+}
+
+void
+test_ncm_sphere_map_invalid_cross (TestNcmSphereMap *test, gconstpointer pdata)
+{
+  NcmSphereMap *other = ncm_sphere_map_new (ncm_sphere_map_get_nside (test->pix));
+
+  ncm_sphere_map_set_lmax (test->pix, 10);
+  ncm_sphere_map_set_lmax (other, 12);
+  ncm_sphere_map_compute_cross_Cl (test->pix, other);
 }
 

@@ -53,12 +53,9 @@
 #include "ncm/algebra/ncm_complex.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_c.h"
-#include "ncm/core/ncm_timer.h"
 #include "ncm/spline/ncm_spline_func.h"
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm_enum_types.h"
-
-/*#define _NCM_SPHERE_MAP_MEASURE 1*/
 
 #ifndef NUMCOSMO_GIR_SCAN
 #ifdef HAVE_CFITSIO
@@ -131,7 +128,6 @@ typedef struct _NcmSphereMapPrivate
   NcmVector *alm_v;
   NcmVector *Cl;
   gboolean has_Cls;
-  NcmTimer *t;
   NcmSFSphericalHarmonics *spha;
   GPtrArray *sphaY_array;
   GPtrArray *sphaYa_array;
@@ -194,7 +190,6 @@ ncm_sphere_map_init (NcmSphereMap *smap)
   self->iter         = 0;
   self->Cl           = NULL;
   self->has_Cls      = FALSE;
-  self->t            = ncm_timer_new ();
   self->spha         = ncm_sf_spherical_harmonics_new (1 << 12);
   self->sphaY_array  = g_ptr_array_new ();
   self->sphaYa_array = g_ptr_array_new ();
@@ -274,7 +269,6 @@ _ncm_sphere_map_dispose (GObject *object)
   g_clear_pointer (&self->alm,  _fft_vec_free);
   ncm_vector_clear (&self->Cl);
 
-  ncm_timer_clear (&self->t);
   ncm_sf_spherical_harmonics_clear (&self->spha);
 
   /* Chain up : end */
@@ -457,6 +451,13 @@ _ncm_sphere_map_check_index (const gint64 index, const gint64 size, const gchar 
 {
   if ((index < 0) || (index >= size))
     g_error ("%s: %s index %" G_GINT64_FORMAT " out of range [0, %" G_GINT64_FORMAT ").", func, what, index, size);
+}
+
+static void
+_ncm_sphere_map_check_lm (NcmSphereMapPrivate * const self, const guint l, const guint m, const gchar *func)
+{
+  if ((self->lmax == 0) || (l > self->lmax) || (m > l))
+    g_error ("%s: (l, m) = (%u, %u) out of range, lmax = %u and m <= l.", func, l, m, self->lmax);
 }
 
 static void
@@ -2050,9 +2051,16 @@ _ncm_sphere_map_map2alm_calc_Cl (NcmSphereMap *smap)
  * ncm_sphere_map_prepare_alm:
  * @smap: a #NcmSphereMap
  *
- * Calculates the $a_{\ell{}m}$ from the map @smap, using $\ell_\mathrm{max}$
- * set by ncm_sphere_map_set_lmax(). If $\ell_\mathrm{max} = 0$
- * nothing is done.
+ * Calculates the $a_{\ell m}$ of the map of @smap up to $\ell_\mathrm{max}$, set by
+ * ncm_sphere_map_set_lmax(), and from them the $C_\ell$ (ncm_sphere_map_get_Cl()). The
+ * map is put in RING order first, and stays in it.
+ *
+ * The transform integrates the map as HEALPix does without ring weights: the ring FFTs
+ * times $Y_{\ell m}$ summed with the pixel area $4\pi/N_\mathrm{pix}$ as the quadrature
+ * weight (healpy's `use_weights=False`). Each of the #NcmSphereMap:iter iterations adds
+ * the transform of the residual between the map and the synthesis of the current
+ * $a_{\ell m}$, as healpy's `iter` does; the result agrees with healpy's map2alm to
+ * $10^{-14}$ of the largest coefficient.
  *
  */
 void
@@ -2062,45 +2070,20 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
   guint i;
 
   if (self->lmax == 0)
-  {
-    g_warning ("ncm_sphere_map_prepare_alm: lmax equal to zero, returning...");
+    g_error ("ncm_sphere_map_prepare_alm: lmax is zero, set it with ncm_sphere_map_set_lmax() first.");
 
-    return;
-  }
-
-#ifdef _NCM_SPHERE_MAP_MEASURE
-  printf ("# Optimization control NC=%d STEP=%d CM=%d\n", NCM_SPHERE_MAP_BLOCK_NC, NCM_SPHERE_MAP_BLOCK_STEP, NCM_SPHERE_MAP_BLOCK_CM);
-  printf ("# Preparing ffts!\n");
-  fflush (stdout);
-  ncm_timer_start (self->t);
-#endif /* _NCM_SPHERE_MAP_MEASURE */
   _ncm_sphere_map_prepare_fft (smap);
 
   ncm_sphere_map_set_order (smap, NCM_SPHERE_MAP_ORDER_RING);
 
-#ifdef _NCM_SPHERE_MAP_MEASURE
-  printf ("# preparing fft plans, elapsed % 22.15g\n", ncm_timer_elapsed (self->t));
-  printf ("# Performing ffts!\n");
-  fflush (stdout);
-  ncm_timer_start (self->t);
-#endif /* _NCM_SPHERE_MAP_MEASURE */
 
   for (i = 0; i < self->fft_plan_r2c->len; i++)
   {
     fftw_execute (g_ptr_array_index (self->fft_plan_r2c, i));
   }
 
-#ifdef _NCM_SPHERE_MAP_MEASURE
-  printf ("# Performing ffts, elapsed % 22.15g\n", ncm_timer_elapsed (self->t));
-  printf ("# Transforming rings\n");
-  fflush (stdout);
-  ncm_timer_start (self->t);
-#endif /* _NCM_SPHERE_MAP_MEASURE */
 
   NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_map2alm_run) (smap);
-#ifdef _NCM_SPHERE_MAP_MEASURE
-  printf ("# %ld rings transformed, elapsed % 22.15g\n", ncm_sphere_map_get_nrings (smap), ncm_timer_elapsed (self->t));
-#endif /* _NCM_SPHERE_MAP_MEASURE */
 
   /* Iterative refinement if iter > 0 */
   if (self->iter > 0)
@@ -2112,17 +2095,9 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
     /* Save original map */
     _fft_vec_memcpy (original_map, self->pvec, self->npix);
 
-#ifdef _NCM_SPHERE_MAP_MEASURE
-    printf ("# Performing %u iterations\n", self->iter);
-    fflush (stdout);
-#endif /* _NCM_SPHERE_MAP_MEASURE */
 
     for (iter_i = 0; iter_i < self->iter; iter_i++)
     {
-#ifdef _NCM_SPHERE_MAP_MEASURE
-      ncm_timer_start (self->t);
-#endif /* _NCM_SPHERE_MAP_MEASURE */
-
       /* Save current alm */
       memcpy (saved_alm, self->alm, sizeof (_fft_complex) * self->alm_len);
 
@@ -2155,10 +2130,6 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
       {
         self->alm[i] += saved_alm[i];
       }
-
-#ifdef _NCM_SPHERE_MAP_MEASURE
-      printf ("# Iteration %u completed, elapsed % 22.15g\n", iter_i + 1, ncm_timer_elapsed (self->t));
-#endif /* _NCM_SPHERE_MAP_MEASURE */
     }
 
     /* Restore original map */
@@ -2176,7 +2147,8 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
  * ncm_sphere_map_update_Cl:
  * @smap: a #NcmSphereMap
  *
- * Updates the values of $C_\ell$ based on the current $a_{lm}$.
+ * Recomputes the $C_\ell$ from the current $a_{\ell m}$, for instance after
+ * ncm_sphere_map_set_alm().
  *
  */
 void
@@ -2207,10 +2179,12 @@ ncm_sphere_map_compute_cross_Cl (NcmSphereMap *smap1, NcmSphereMap *smap2)
   guint m, l, lm_index = 0;
   NcmVector *cross_Cl;
 
-  g_assert (self1->lmax == self2->lmax);
-  g_assert (self1->nside == self2->nside);
-  g_assert (self1->alm != NULL);
-  g_assert (self2->alm != NULL);
+  if ((self1->lmax != self2->lmax) || (self1->nside != self2->nside))
+    g_error ("ncm_sphere_map_compute_cross_Cl: the maps differ in lmax (%u, %u) or nside (%" G_GINT64_FORMAT ", %" G_GINT64_FORMAT ").",
+             self1->lmax, self2->lmax, self1->nside, self2->nside);
+
+  if ((self1->alm == NULL) || (self2->alm == NULL))
+    g_error ("ncm_sphere_map_compute_cross_Cl: lmax is zero, set it and call ncm_sphere_map_prepare_alm() first.");
 
   cross_Cl = ncm_vector_new (self1->lmax + 1);
   ncm_vector_set_zero (cross_Cl);
@@ -2257,23 +2231,25 @@ ncm_sphere_map_compute_cross_Cl (NcmSphereMap *smap1, NcmSphereMap *smap2)
 /**
  * ncm_sphere_map_get_alm:
  * @smap: a #NcmSphereMap
- * @l: value of $l < \ell_\mathrm{max}$
- * @m: value of $m \leq l$.
- * @Re_alm: (out): real part of $a_{lm}$
- * @Im_alm: (out): imaginary part of $a_{lm}$
+ * @l: value of $\ell \le \ell_\mathrm{max}$
+ * @m: value of $m \le \ell$
+ * @Re_alm: (out): real part of $a_{\ell m}$
+ * @Im_alm: (out): imaginary part of $a_{\ell m}$
  *
- * Gets the value of $a_{lm}$ previously calculated by
- * ncm_sphere_map_prepare_alm().
+ * Gets $a_{\ell m}$, as computed by ncm_sphere_map_prepare_alm() or set by
+ * ncm_sphere_map_set_alm(). The coefficients of negative $m$ follow from the real map,
+ * $a_{\ell, -m} = (-1)^m a_{\ell m}^*$.
  *
  */
 void
 ncm_sphere_map_get_alm (NcmSphereMap *smap, guint l, guint m, gdouble *Re_alm, gdouble *Im_alm)
 {
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
-  gint lm_index                    = NCM_SPHERE_MAP_ALM_INDEX (self->lmax, l, m);
+  gint lm_index;
 
-  /*Re_alm[0] = ncm_vector_fast_get (self->alm, lm_index + 0);*/
-  /*Im_alm[0] = ncm_vector_fast_get (self->alm, lm_index + 1);*/
+  _ncm_sphere_map_check_lm (self, l, m, G_STRFUNC);
+  lm_index = NCM_SPHERE_MAP_ALM_INDEX (self->lmax, l, m);
+
   Re_alm[0] = creal (self->alm[lm_index]);
   Im_alm[0] = cimag (self->alm[lm_index]);
 }
@@ -2281,19 +2257,22 @@ ncm_sphere_map_get_alm (NcmSphereMap *smap, guint l, guint m, gdouble *Re_alm, g
 /**
  * ncm_sphere_map_set_alm:
  * @smap: a #NcmSphereMap
- * @l: value of $l < \ell_\mathrm{max}$
- * @m: value of $m \leq l$.
- * @Re_alm: real part of $a_{lm}$
- * @Im_alm: imaginary part of $a_{lm}$
+ * @l: value of $\ell \le \ell_\mathrm{max}$
+ * @m: value of $m \le \ell$
+ * @Re_alm: real part of $a_{\ell m}$
+ * @Im_alm: imaginary part of $a_{\ell m}$
  *
- * Sets the value of $a_{lm}$.
+ * Sets $a_{\ell m}$. The $C_\ell$ are not updated, see ncm_sphere_map_update_Cl().
  *
  */
 void
 ncm_sphere_map_set_alm (NcmSphereMap *smap, guint l, guint m, gdouble Re_alm, gdouble Im_alm)
 {
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
-  gint lm_index                    = NCM_SPHERE_MAP_ALM_INDEX (self->lmax, l, m);
+  gint lm_index;
+
+  _ncm_sphere_map_check_lm (self, l, m, G_STRFUNC);
+  lm_index = NCM_SPHERE_MAP_ALM_INDEX (self->lmax, l, m);
 
   self->alm[lm_index] = Re_alm + I * Im_alm;
 }
@@ -2301,16 +2280,19 @@ ncm_sphere_map_set_alm (NcmSphereMap *smap, guint l, guint m, gdouble Re_alm, gd
 /**
  * ncm_sphere_map_get_Cl:
  * @smap: a #NcmSphereMap
- * @l: value of $l < \ell_\mathrm{max}$
+ * @l: value of $\ell \le \ell_\mathrm{max}$
  *
- * Gets the value of $C_{\ell}$ previously calculated by
- * ncm_sphere_map_prepare_alm().
+ * Gets $C_\ell$ as computed by the last ncm_sphere_map_prepare_alm() or
+ * ncm_sphere_map_update_Cl(), or set by ncm_sphere_map_set_Cls().
  *
+ * Returns: $C_\ell = \frac{1}{2\ell + 1} \sum_{m=-\ell}^{\ell} |a_{\ell m}|^2$
  */
 gdouble
 ncm_sphere_map_get_Cl (NcmSphereMap *smap, guint l)
 {
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
+
+  _ncm_sphere_map_check_lm (self, l, 0, G_STRFUNC);
 
   return ncm_vector_fast_get (self->Cl, l);
 }
@@ -2420,48 +2402,21 @@ ncm_sphere_map_alm2map (NcmSphereMap *smap)
   g_assert_cmpuint (self->nside, >, 0);
 
   if (self->lmax == 0)
-  {
-    g_warning ("ncm_sphere_map_prepare_alm: lmax equal to zero, returning...");
+    g_error ("ncm_sphere_map_alm2map: lmax is zero, set it with ncm_sphere_map_set_lmax() first.");
 
-    return;
-  }
-
-#ifdef _NCM_SPHERE_MAP_MEASURE
-  printf ("# Preparing ffts!\n");
-  fflush (stdout);
-  ncm_timer_start (self->t);
-#endif /* _NCM_SPHERE_MAP_MEASURE */
 
   _ncm_sphere_map_prepare_fft (smap);
 
   self->order = NCM_SPHERE_MAP_ORDER_RING;
 
-#ifdef _NCM_SPHERE_MAP_MEASURE
-  printf ("# preparing fft plans, elapsed % 22.15g\n", ncm_timer_elapsed (self->t));
-  printf ("# Transforming rings\n");
-  fflush (stdout);
-  ncm_timer_start (self->t);
-#endif /* _NCM_SPHERE_MAP_MEASURE */
 
   NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_alm2map_run) (smap);
-#ifdef _NCM_SPHERE_MAP_MEASURE
-  printf ("# %ld rings transformed, elapsed % 22.15g\n", ncm_sphere_map_get_nrings (smap), ncm_timer_elapsed (self->t));
-#endif /* _NCM_SPHERE_MAP_MEASURE */
 
-#ifdef _NCM_SPHERE_MAP_MEASURE
-  printf ("# Peforming ffts!\n");
-  fflush (stdout);
-  ncm_timer_start (self->t);
-#endif /* _NCM_SPHERE_MAP_MEASURE */
 
   for (i = 0; i < self->fft_plan_c2r->len; i++)
   {
     fftw_execute (g_ptr_array_index (self->fft_plan_c2r, i));
   }
-
-#ifdef _NCM_SPHERE_MAP_MEASURE
-  printf ("# Peforming ffts, elapsed % 22.15g\n", ncm_timer_elapsed (self->t));
-#endif /* _NCM_SPHERE_MAP_MEASURE */
 }
 
 static gdouble
