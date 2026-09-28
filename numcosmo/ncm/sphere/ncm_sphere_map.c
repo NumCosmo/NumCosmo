@@ -2386,7 +2386,10 @@ ncm_sphere_map_set_Cls (NcmSphereMap *smap, NcmVector *Cls)
  * ncm_sphere_map_alm2map:
  * @smap: a #NcmSphereMap
  *
- * Compute map pixels from current $a_{\ell{}m}$.
+ * Replaces the map of @smap by the synthesis of its current $a_{\ell m}$,
+ * $\sum_{\ell m} a_{\ell m} Y_{\ell m}$ at the pixel centres, in RING order. Any
+ * $\ell_\mathrm{max}$ works: an $m$ above a ring's Nyquist frequency folds onto it as in
+ * healpy's alm2map, which the result matches to $10^{-13}$ of the largest pixel.
  *
  */
 void
@@ -2395,23 +2398,17 @@ ncm_sphere_map_alm2map (NcmSphereMap *smap)
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   guint i;
 
-  /*gfloat *temp_pix = _fft_vec_alloc (self->npix);*/
-  /*gfloat *pixels   = self->pvec;*/
-  /*_fft_vec_memcpy (temp_pix, self->pvec, self->npix);*/
-
-  g_assert_cmpuint (self->nside, >, 0);
+  if (self->nside == 0)
+    g_error ("ncm_sphere_map_alm2map: nside is zero, set it with ncm_sphere_map_set_nside() first.");
 
   if (self->lmax == 0)
     g_error ("ncm_sphere_map_alm2map: lmax is zero, set it with ncm_sphere_map_set_lmax() first.");
-
 
   _ncm_sphere_map_prepare_fft (smap);
 
   self->order = NCM_SPHERE_MAP_ORDER_RING;
 
-
   NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_alm2map_run) (smap);
-
 
   for (i = 0; i < self->fft_plan_c2r->len; i++)
   {

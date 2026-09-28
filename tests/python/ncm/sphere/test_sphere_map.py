@@ -452,6 +452,34 @@ class TestSphericalHarmonics:
         hp_map = healpy.alm2map(hp_alm, nside, lmax=lmax)
         assert_allclose(ncm_map, hp_map, rtol=1e-10)
 
+    @pytest.mark.parametrize("lmax_factor", [(2, 0), (3, -1), (4, 0)])
+    def test_alm2map_random_matches_healpy(
+        self, nside: int, lmax_factor: tuple[int, int]
+    ) -> None:
+        """Random a_lm synthesize as healpy's alm2map, also past 3 nside - 1.
+
+        At lmax > 3 nside - 1 the m above a ring's Nyquist frequency fold onto it;
+        measured at most 1.7e-13 of the largest pixel (nside 64, lmax 256).
+        """
+        lmax = lmax_factor[0] * nside + lmax_factor[1]
+        rng = np.random.default_rng(nside * 1000 + lmax)
+        n = healpy.Alm.getsize(lmax)
+        alm = rng.standard_normal(n) + 1j * rng.standard_normal(n)
+        alm[: lmax + 1] = alm[: lmax + 1].real
+
+        smap = Ncm.SphereMap.new(nside)
+        smap.set_lmax(lmax)
+        for m in range(lmax + 1):
+            for ell in range(m, lmax + 1):
+                a = alm[healpy.Alm.getidx(lmax, ell, m)]
+                smap.set_alm(ell, m, a.real, a.imag)
+        smap.alm2map()
+
+        ncm_map = np.array([smap.get_pix(i) for i in range(smap.get_npix())])
+        hp_map = healpy.alm2map(alm, nside, lmax=lmax)
+        assert smap.get_order() == Ncm.SphereMapOrder.RING
+        assert np.max(np.abs(ncm_map - hp_map)) < 1.0e-12 * np.max(np.abs(hp_map))
+
     def test_alm2map_dipole(self, smap: Ncm.SphereMap, nside: int) -> None:
         """Test alm2map with dipole (l=1) only."""
         lmax = max(1, nside)  # Need at least lmax=1
