@@ -26,23 +26,25 @@
 /**
  * NcmMSetFunc:
  *
- * Abstract class for arbitrary MSet functions.
+ * Abstract class for functions of the models in a #NcmMSet.
  *
- * This abstract class provides a framework for functions that operate on any model
- * in a #NcmMSet and additional extra variables. It establishes methods to
- * inquire about the function's expectations and characteristics.
+ * A function may also take variables besides the models, for instance a redshift,
+ * and may return several values. ncm_mset_func_get_nvar() gives the number of
+ * variables and ncm_mset_func_get_dim() the number of values; a function with one
+ * value is scalar (see ncm_mset_func_is_scalar()).
  *
- * The functions implemented by subclasses may depend on any model specified by
- * #NcmMSet and may incorporate extra variables. The method
- * `ncm_mset_func_get_nvar()` retrieves the count of extra variables expected
- * by the function, and `ncm_mset_func_get_dim()` returns the number of values
- * returned by the function.
+ * ncm_mset_func_set_eval_x() binds the variables to an evaluation point. The
+ * function then becomes constant and its unique name and symbol, which label its
+ * column in a #NcmMSetCatalog, encode that point. Every evaluation follows one
+ * rule: explicit arguments always win, and %NULL arguments mean the evaluation
+ * point. ncm_mset_func_eval1() and ncm_mset_func_eval_vector() always take their
+ * arguments.
  *
- * Functions can be categorized as scalar or vectorial. A scalar function returns
- * a single value, while a vectorial function returns an array of values. The
- * method `ncm_mset_func_is_scalar()` returns %TRUE if the function is scalar.
- *
- *
+ * ncm_mset_func_eval() and ncm_mset_func_eval_array() return every value; the
+ * scalar evaluations ncm_mset_func_eval0(), ncm_mset_func_eval_nvar() and
+ * ncm_mset_func_eval1() abort for a function with more than one value.
+ * Subclasses implement the eval virtual function; in language bindings, subclass
+ * #NcmMSetFunc1 instead.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -63,8 +65,6 @@ enum
 
 typedef struct _NcmMSetFuncPrivate
 {
-  /*< private >*/
-  GObject parent_instance;
   guint nvar;
   guint dim;
   NcmVector *eval_x;
@@ -219,14 +219,25 @@ _ncm_mset_func_set_property (GObject *object, guint prop_id, const GValue *value
       self->dim = g_value_get_uint (value);
       break;
     case PROP_EVAL_X:
-      ncm_vector_clear (&self->eval_x);
-      self->eval_x = g_value_dup_object (value);
+    {
+      NcmVector *eval_x = g_value_get_object (value);
 
-      /* Drop stale unique name/symbol; they are rebuilt lazily (peek_uname /
-       * peek_usymbol) once the base name/symbol are available. */
-      g_clear_pointer (&self->uname,   g_free);
-      g_clear_pointer (&self->usymbol, g_free);
+      if (eval_x == NULL)
+      {
+        ncm_vector_clear (&self->eval_x);
+        _ncm_mset_func_update_unames (func);
+      }
+      else
+      {
+        /* The copy is contiguous, @eval_x may have a stride. */
+        NcmVector *eval_x_c = ncm_vector_dup (eval_x);
+
+        ncm_mset_func_set_eval_x (func, ncm_vector_data (eval_x_c), ncm_vector_len (eval_x_c));
+        ncm_vector_free (eval_x_c);
+      }
+
       break;
+    }
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -301,6 +312,11 @@ ncm_mset_func_class_init (NcmMSetFuncClass *klass)
   object_class->dispose      = &_ncm_mset_func_dispose;
   object_class->finalize     = &_ncm_mset_func_finalize;
 
+  /**
+   * NcmMSetFunc:nvariables:
+   *
+   * The number of variables the function takes besides the models.
+   */
   g_object_class_install_property (object_class,
                                    PROP_NVAR,
                                    g_param_spec_uint ("nvariables",
@@ -308,6 +324,12 @@ ncm_mset_func_class_init (NcmMSetFuncClass *klass)
                                                       "Number of variables",
                                                       0, G_MAXUINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetFunc:dimension:
+   *
+   * The number of values the function returns.
+   */
   g_object_class_install_property (object_class,
                                    PROP_DIM,
                                    g_param_spec_uint ("dimension",
@@ -315,6 +337,13 @@ ncm_mset_func_class_init (NcmMSetFuncClass *klass)
                                                       "Function dimension",
                                                       0, G_MAXUINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetFunc:eval-x:
+   *
+   * The evaluation point set by ncm_mset_func_set_eval_x(), or %NULL. Setting it
+   * copies the vector, which must have #NcmMSetFunc:nvariables components.
+   */
   g_object_class_install_property (object_class,
                                    PROP_EVAL_X,
                                    g_param_spec_object ("eval-x",
@@ -459,7 +488,12 @@ ncm_mset_func_eval_array (NcmMSetFunc *func, NcmMSet *mset, GArray *x)
 gdouble
 ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x)
 {
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
   gdouble res;
+
+  if (self->dim != 1)
+    g_error ("ncm_mset_func_eval_nvar: function `%s' has dimension %u, but only scalar functions return a single value.",
+             ncm_mset_func_peek_name (func), self->dim);
 
   NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, _ncm_mset_func_get_x (func, x), &res);
 
@@ -488,15 +522,22 @@ ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset)
  * @mset: a #NcmMSet
  * @x: function argument
  *
- * Evaluates the scalar function of one variable @func at @x and returns its value.
- * The point set by ncm_mset_func_set_eval_x(), if any, is not used.
+ * Evaluates the scalar function @func at @x and returns its value. @func takes at
+ * most one variable; a function without variables ignores @x. The point set by
+ * ncm_mset_func_set_eval_x(), if any, is not used.
  *
  * Returns: function value.
  */
 gdouble
 ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x)
 {
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
   gdouble res;
+
+  if ((self->dim != 1) || (self->nvar > 1))
+    g_error ("ncm_mset_func_eval1: function `%s' takes %u variable(s) and has dimension %u, "
+             "but only scalar functions of at most one variable are evaluated here.",
+             ncm_mset_func_peek_name (func), self->nvar, self->dim);
 
   NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, &x, &res);
 
@@ -540,15 +581,26 @@ _ncm_mset_func_get_x (NcmMSetFunc *func, const gdouble *x)
  * @x_v: function arguments in a #NcmVector
  * @res_v: a #NcmVector to store the function values
  *
- * Evaluates the scalar function of one variable @func at each component of @x_v and
- * stores the values in the matching components of @res_v. The point set by
+ * Evaluates the scalar function @func at each component of @x_v and stores the
+ * values in the matching components of @res_v. @func takes at most one variable; a
+ * function without variables ignores @x_v. The point set by
  * ncm_mset_func_set_eval_x(), if any, is not used.
  *
  */
 void
 ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, NcmVector *res_v)
 {
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
   guint i;
+
+  if ((self->dim != 1) || (self->nvar > 1))
+    g_error ("ncm_mset_func_eval_vector: function `%s' takes %u variable(s) and has dimension %u, "
+             "but only scalar functions of at most one variable are evaluated here.",
+             ncm_mset_func_peek_name (func), self->nvar, self->dim);
+
+  if (ncm_vector_len (res_v) != ncm_vector_len (x_v))
+    g_error ("ncm_mset_func_eval_vector: %u argument(s) but room for %u value(s).",
+             ncm_vector_len (x_v), ncm_vector_len (res_v));
 
   for (i = 0; i < ncm_vector_len (x_v); i++)
   {
@@ -562,22 +614,27 @@ ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, Ncm
  * @x: (in) (array length=len): function arguments
  * @len: length of @x
  *
- * Sets the function's arguments to @x. Once this function is called, the
- * function's arguments are fixed and @func becomes a constant function.
+ * Sets the evaluation point of @func to a copy of @x. Evaluations without
+ * arguments use it, @func becomes constant (see ncm_mset_func_is_const()) and its
+ * unique name and symbol encode it.
  *
  */
 void
-ncm_mset_func_set_eval_x (NcmMSetFunc *func, gdouble *x, guint len)
+ncm_mset_func_set_eval_x (NcmMSetFunc *func, const gdouble *x, guint len)
 {
   NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
 
+  if (len != self->nvar)
+    g_error ("ncm_mset_func_set_eval_x: function `%s' takes %u variable(s), but the evaluation point has %u.",
+             ncm_mset_func_peek_name (func), self->nvar, len);
+
   ncm_vector_clear (&self->eval_x);
 
-  g_assert_cmpuint (self->nvar, ==, len);
-
-  self->eval_x = ncm_vector_new_data_dup (x, self->nvar, 1);
-
-  ncm_mset_func_peek_desc (func);
+  if (len > 0)
+  {
+    self->eval_x = ncm_vector_new (len);
+    memcpy (ncm_vector_data (self->eval_x), x, len * sizeof (gdouble));
+  }
 
   _ncm_mset_func_update_unames (func);
 }

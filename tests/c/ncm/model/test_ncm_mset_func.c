@@ -204,6 +204,14 @@ void test_ncm_mset_func_eval_array_bad_len_subprocess (void);
 void test_ncm_mset_func1_eval (void);
 void test_ncm_mset_func1_bad_dim (void);
 void test_ncm_mset_func1_bad_dim_subprocess (void);
+void test_ncm_mset_func_eval_x_prop (void);
+void test_ncm_mset_func_eval_x_bad_len (void);
+void test_ncm_mset_func_eval_x_bad_len_subprocess (void);
+void test_ncm_mset_func_not_scalar (void);
+void test_ncm_mset_func_not_scalar_eval0_subprocess (void);
+void test_ncm_mset_func_not_scalar_eval1_subprocess (void);
+void test_ncm_mset_func_not_scalar_eval_vector_subprocess (void);
+void test_ncm_mset_func_eval_vector_bad_len_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -225,6 +233,14 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset_func1/eval", &test_ncm_mset_func1_eval);
   g_test_add_func ("/ncm/mset_func1/bad_dim", &test_ncm_mset_func1_bad_dim);
   g_test_add_func ("/ncm/mset_func1/bad_dim/subprocess", &test_ncm_mset_func1_bad_dim_subprocess);
+  g_test_add_func ("/ncm/mset_func/eval_x/prop", &test_ncm_mset_func_eval_x_prop);
+  g_test_add_func ("/ncm/mset_func/eval_x/bad_len", &test_ncm_mset_func_eval_x_bad_len);
+  g_test_add_func ("/ncm/mset_func/eval_x/bad_len/subprocess", &test_ncm_mset_func_eval_x_bad_len_subprocess);
+  g_test_add_func ("/ncm/mset_func/not_scalar", &test_ncm_mset_func_not_scalar);
+  g_test_add_func ("/ncm/mset_func/not_scalar/eval0/subprocess", &test_ncm_mset_func_not_scalar_eval0_subprocess);
+  g_test_add_func ("/ncm/mset_func/not_scalar/eval1/subprocess", &test_ncm_mset_func_not_scalar_eval1_subprocess);
+  g_test_add_func ("/ncm/mset_func/not_scalar/eval_vector/subprocess", &test_ncm_mset_func_not_scalar_eval_vector_subprocess);
+  g_test_add_func ("/ncm/mset_func/eval_vector/bad_len/subprocess", &test_ncm_mset_func_eval_vector_bad_len_subprocess);
 
   g_test_run ();
 }
@@ -579,6 +595,151 @@ test_ncm_mset_func1_bad_dim_subprocess (void)
 
   g_array_unref (ncm_mset_func_eval_array (func, mset, NULL));
 
+  ncm_mset_func_free (func);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_mset_func_eval_x_prop (void)
+{
+  NcmMSet *mset     = ncm_mset_empty_new ();
+  NcmMSetFunc *func = test_mset_func_sum_new (2);
+  NcmMatrix *m      = ncm_matrix_new (2, 2);
+  NcmVector *col;
+  NcmVector *eval_x;
+
+  /* A strided column: its components are 1 and 2, the row holds 1 and 9. */
+  ncm_matrix_set (m, 0, 0, 1.0);
+  ncm_matrix_set (m, 1, 0, 2.0);
+  ncm_matrix_set (m, 0, 1, 9.0);
+  ncm_matrix_set (m, 1, 1, 9.0);
+  col = ncm_matrix_get_col (m, 0);
+  g_assert_cmpuint (ncm_vector_stride (col), ==, 2);
+
+  g_object_set (func, "eval-x", col, NULL);
+
+  g_assert_true (ncm_mset_func_is_const (func));
+  g_assert_cmpfloat (ncm_mset_func_eval0 (func, mset), ==, 3.0);
+  g_assert_cmpstr (ncm_mset_func_peek_uname (func), ==, "f_1_2");
+
+  /* The function holds a copy. */
+  ncm_vector_set (col, 0, 5.0);
+  g_assert_cmpfloat (ncm_mset_func_eval0 (func, mset), ==, 3.0);
+  g_assert_cmpstr (ncm_mset_func_peek_uname (func), ==, "f_1_2");
+
+  g_object_get (func, "eval-x", &eval_x, NULL);
+  g_assert_true (eval_x != col);
+  g_assert_cmpuint (ncm_vector_len (eval_x), ==, 2);
+  g_assert_cmpfloat (ncm_vector_get (eval_x, 0), ==, 1.0);
+  g_assert_cmpfloat (ncm_vector_get (eval_x, 1), ==, 2.0);
+  ncm_vector_free (eval_x);
+
+  /* NULL clears the evaluation point. */
+  g_object_set (func, "eval-x", NULL, NULL);
+  g_assert_false (ncm_mset_func_is_const (func));
+  g_assert_cmpstr (ncm_mset_func_peek_uname (func), ==, "f");
+
+  ncm_vector_free (col);
+  ncm_matrix_free (m);
+  ncm_mset_func_free (func);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_mset_func_eval_x_bad_len (void)
+{
+  g_test_trap_subprocess ("/ncm/mset_func/eval_x/bad_len/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*function `f' takes 2 variable(s), but the evaluation point has 3*");
+}
+
+void
+test_ncm_mset_func_eval_x_bad_len_subprocess (void)
+{
+  NcmMSetFunc *func = test_mset_func_sum_new (2);
+  NcmVector *x      = ncm_vector_new (3);
+
+  ncm_vector_set_all (x, 1.0);
+  g_object_set (func, "eval-x", x, NULL);
+
+  ncm_vector_free (x);
+  ncm_mset_func_free (func);
+}
+
+void
+test_ncm_mset_func_not_scalar (void)
+{
+  g_test_trap_subprocess ("/ncm/mset_func/not_scalar/eval0/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*function `f' has dimension 2, but only scalar functions return a single value*");
+
+  g_test_trap_subprocess ("/ncm/mset_func/not_scalar/eval1/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*function `f' takes 1 variable(s) and has dimension 2*");
+
+  g_test_trap_subprocess ("/ncm/mset_func/not_scalar/eval_vector/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*function `f' takes 1 variable(s) and has dimension 2*");
+
+  g_test_trap_subprocess ("/ncm/mset_func/eval_vector/bad_len/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*3 argument(s) but room for 2 value(s)*");
+}
+
+void
+test_ncm_mset_func_not_scalar_eval0_subprocess (void)
+{
+  NcmMSet *mset     = ncm_mset_empty_new ();
+  NcmMSetFunc *func = test_mset_func1_sum_new (0, 2, 2);
+
+  ncm_mset_func_eval0 (func, mset);
+
+  ncm_mset_func_free (func);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_mset_func_not_scalar_eval1_subprocess (void)
+{
+  NcmMSet *mset     = ncm_mset_empty_new ();
+  NcmMSetFunc *func = test_mset_func1_sum_new (1, 2, 2);
+
+  ncm_mset_func_eval1 (func, mset, 1.0);
+
+  ncm_mset_func_free (func);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_mset_func_not_scalar_eval_vector_subprocess (void)
+{
+  NcmMSet *mset     = ncm_mset_empty_new ();
+  NcmMSetFunc *func = test_mset_func1_sum_new (1, 2, 2);
+  NcmVector *x_v    = ncm_vector_new (2);
+  NcmVector *res_v  = ncm_vector_new (2);
+
+  ncm_vector_set_all (x_v, 1.0);
+  ncm_mset_func_eval_vector (func, mset, x_v, res_v);
+
+  ncm_vector_free (x_v);
+  ncm_vector_free (res_v);
+  ncm_mset_func_free (func);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_mset_func_eval_vector_bad_len_subprocess (void)
+{
+  NcmMSet *mset     = ncm_mset_empty_new ();
+  NcmMSetFunc *func = test_mset_func_sum_new (1);
+  NcmVector *x_v    = ncm_vector_new (3);
+  NcmVector *res_v  = ncm_vector_new (2);
+
+  ncm_vector_set_all (x_v, 1.0);
+  ncm_mset_func_eval_vector (func, mset, x_v, res_v);
+
+  ncm_vector_free (x_v);
+  ncm_vector_free (res_v);
   ncm_mset_func_free (func);
   ncm_mset_free (mset);
 }
