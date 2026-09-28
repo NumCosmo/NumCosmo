@@ -218,6 +218,8 @@ void test_ncm_serialize_dup_shared (void);
 void test_ncm_serialize_key_file (void);
 void test_ncm_serialize_set_property (void);
 void test_ncm_serialize_global (void);
+void test_ncm_serialize_remove_ser (void);
+void test_ncm_serialize_named_no_autosave (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -318,6 +320,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/serialize/api/key_file", &test_ncm_serialize_key_file);
   g_test_add_func ("/ncm/serialize/api/set_property", &test_ncm_serialize_set_property);
   g_test_add_func ("/ncm/serialize/api/global", &test_ncm_serialize_global);
+  g_test_add_func ("/ncm/serialize/api/remove_ser", &test_ncm_serialize_remove_ser);
+  g_test_add_func ("/ncm/serialize/api/named_no_autosave", &test_ncm_serialize_named_no_autosave);
   g_test_add_func ("/ncm/serialize/api/set_taken/subprocess", &test_ncm_serialize_set_taken_subprocess);
 
   g_test_run ();
@@ -1150,6 +1154,42 @@ test_ncm_serialize_global (void)
   g_assert_false (ncm_serialize_global_contain_name ("global_v"));
 
   ncm_vector_free (v);
+  ncm_serialize_free (ser);
+}
+
+/* Removing a saved serialization forgets it; the name it was saved under is removed from
+ * both tables (valgrind: no read of the freed name). */
+void
+test_ncm_serialize_remove_ser (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmVector *v      = ncm_vector_new (3);
+  GVariant *var;
+
+  ncm_vector_set_all (v, 1.5);
+  var = ncm_serialize_to_variant (ser, G_OBJECT (v));
+  g_variant_unref (var);
+  g_assert_cmpuint (ncm_serialize_count_saved_serializations (ser), ==, 1);
+
+  ncm_serialize_remove_ser (ser, v);
+  g_assert_cmpuint (ncm_serialize_count_saved_serializations (ser), ==, 0);
+
+  ncm_vector_free (v);
+  ncm_serialize_free (ser);
+}
+
+/* A named object read by a serializer without NCM_SERIALIZE_OPT_AUTOSAVE_SER is built and
+ * not registered (valgrind: its name is not leaked). */
+void
+test_ncm_serialize_named_no_autosave (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GObject *obj      = ncm_serialize_from_string (ser, "('NcmModelMVND[S0]', {'dim':<2>})");
+
+  g_assert_true (NCM_IS_MODEL_MVND (obj));
+  g_assert_false (ncm_serialize_contain_name (ser, "S0"));
+
+  g_object_unref (obj);
   ncm_serialize_free (ser);
 }
 

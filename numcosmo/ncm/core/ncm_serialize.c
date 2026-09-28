@@ -558,8 +558,9 @@ ncm_serialize_remove_ser (NcmSerialize *ser, gpointer obj)
 
   if (g_hash_table_lookup_extended (ser->saved_ptr_name, obj, NULL, (gpointer *) &saved_name))
   {
-    g_hash_table_remove (ser->saved_ptr_name, obj);
+    /* saved_name is the value freed by the second removal. */
     g_hash_table_remove (ser->saved_name_ser, saved_name);
+    g_hash_table_remove (ser->saved_ptr_name, obj);
   }
 }
 
@@ -2391,10 +2392,9 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
   }
 
   if ((name != NULL) && (ser->opts & NCM_SERIALIZE_OPT_AUTOSAVE_SER))
-  {
     ncm_serialize_set (ser, obj, name, FALSE);
-    g_free (name);
-  }
+
+  g_free (name);
 
   return obj;
 }

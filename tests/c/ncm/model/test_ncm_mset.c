@@ -33,6 +33,7 @@
 #include <string.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <glib/gstdio.h>
 
 typedef struct _TestNcmMSet
 {
@@ -68,6 +69,8 @@ void test_ncm_mset_set_fmap_update_models (void);
 void test_ncm_mset_max_model_nick (void);
 void test_ncm_mset_params_pretty_print (void);
 void test_ncm_mset_fparam_lookups (void);
+void test_ncm_mset_saveload_fmap (void);
+void test_ncm_mset_load_twice_same_ser (void);
 void test_ncm_mset_fparam_get_fpi_range (void);
 void test_ncm_mset_fparam_get_fpi_range_subprocess (void);
 void test_ncm_mset_ns_by_negative_id_subprocess (void);
@@ -135,6 +138,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/max_model_nick", &test_ncm_mset_max_model_nick);
   g_test_add_func ("/ncm/mset/params_pretty_print", &test_ncm_mset_params_pretty_print);
   g_test_add_func ("/ncm/mset/fparam/lookups", &test_ncm_mset_fparam_lookups);
+  g_test_add_func ("/ncm/mset/saveload/fmap", &test_ncm_mset_saveload_fmap);
+  g_test_add_func ("/ncm/mset/load/twice_same_ser", &test_ncm_mset_load_twice_same_ser);
   g_test_add_func ("/ncm/mset/fparam/get_fpi_range", &test_ncm_mset_fparam_get_fpi_range);
   g_test_add_func ("/ncm/mset/fparam/get_fpi_range/subprocess", &test_ncm_mset_fparam_get_fpi_range_subprocess);
   g_test_add_func ("/ncm/mset/ns_by_negative_id/subprocess", &test_ncm_mset_ns_by_negative_id_subprocess);
@@ -1410,5 +1415,106 @@ test_ncm_mset_fparam_get_fpi_range_subprocess (void)
 
   ncm_mset_prepare_fparam_map (mset);
   ncm_mset_fparam_get_fpi (mset, ncm_model_mvnd_id (), 2);
+}
+
+/* A map set in its own order survives save and load; a file without the fmap key, the
+ * format before it, gets the map prepared from the fit types. */
+void
+test_ncm_mset_saveload_fmap (void)
+{
+  NcmModel *a         = NCM_MODEL (ncm_model_mvnd_new (3));
+  NcmMSet *mset       = ncm_mset_new (a, NULL, NULL);
+  NcmSerialize *ser   = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  const gchar *fmap[] = {"NcmModelMVND:mu_2", "NcmModelMVND:mu_0", NULL};
+  gchar *filename     = NULL;
+  gint fd             = g_file_open_tmp ("test_ncm_mset_fmap_XXXXXX.mset", &filename, NULL);
+  NcmMSet *loaded;
+
+  g_assert_cmpint (fd, >=, 0);
+  g_close (fd, NULL);
+
+  ncm_mset_set_fmap (mset, fmap, TRUE, NULL);
+
+  {
+    NcmSerialize *ser_save = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+
+    ncm_mset_save (mset, ser_save, filename, TRUE, NULL);
+    ncm_serialize_free (ser_save);
+  }
+
+  loaded = ncm_mset_load (filename, ser, NULL);
+  g_assert_true (ncm_mset_fparam_map_valid (loaded));
+  g_assert_cmpuint (ncm_mset_fparams_len (loaded), ==, 2);
+  g_assert_cmpstr (ncm_mset_fparam_full_name (loaded, 0), ==, "NcmModelMVND:mu_2");
+  g_assert_cmpstr (ncm_mset_fparam_full_name (loaded, 1), ==, "NcmModelMVND:mu_0");
+  ncm_mset_free (loaded);
+
+  {
+    GKeyFile *kf = g_key_file_new ();
+
+    g_assert_true (g_key_file_load_from_file (kf, filename, G_KEY_FILE_NONE, NULL));
+    g_assert_true (g_key_file_remove_key (kf, "NcmMSet", "fmap", NULL));
+    g_assert_true (g_key_file_save_to_file (kf, filename, NULL));
+    g_key_file_free (kf);
+  }
+
+  loaded = ncm_mset_load (filename, ser, NULL);
+  g_assert_true (ncm_mset_fparam_map_valid (loaded));
+  g_assert_cmpuint (ncm_mset_fparams_len (loaded), ==, 2);
+  g_assert_cmpstr (ncm_mset_fparam_full_name (loaded, 0), ==, "NcmModelMVND:mu_0");
+  g_assert_cmpstr (ncm_mset_fparam_full_name (loaded, 1), ==, "NcmModelMVND:mu_2");
+  ncm_mset_free (loaded);
+
+  g_unlink (filename);
+  g_free (filename);
+  ncm_serialize_free (ser);
+  ncm_mset_free (mset);
+  ncm_model_free (a);
+}
+
+/* Loading leaves no submodel names in the serializer, so a second load with the same
+ * serializer works (one without NCM_SERIALIZE_OPT_AUTOSAVE_SER, which would keep the
+ * names of the models it builds). */
+void
+test_ncm_mset_load_twice_same_ser (void)
+{
+  NcHIReion *reion  = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim    = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcmModel *cosmo   = NCM_MODEL (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
+  NcmMSet *mset     = ncm_mset_new (cosmo, NULL, NULL);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  gchar *filename   = NULL;
+  gint fd           = g_file_open_tmp ("test_ncm_mset_twice_XXXXXX.mset", &filename, NULL);
+  guint i;
+
+  g_assert_cmpint (fd, >=, 0);
+  g_close (fd, NULL);
+
+  {
+    NcmSerialize *ser_save = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+
+    ncm_mset_save (mset, ser_save, filename, FALSE, NULL);
+    ncm_serialize_free (ser_save);
+  }
+
+  for (i = 0; i < 2; i++)
+  {
+    GError *error   = NULL;
+    NcmMSet *loaded = ncm_mset_load (filename, ser, &error);
+
+    g_assert_no_error (error);
+    g_assert_cmpuint (ncm_mset_nmodels (loaded), ==, ncm_mset_nmodels (mset));
+    g_assert_nonnull (ncm_mset_peek (loaded, nc_hiprim_id ()));
+    g_assert_false (ncm_serialize_contain_name (ser, "NcHIPrim"));
+    ncm_mset_free (loaded);
+  }
+
+  g_unlink (filename);
+  g_free (filename);
+  ncm_serialize_free (ser);
+  ncm_mset_free (mset);
+  ncm_model_free (cosmo);
+  nc_hiprim_free (prim);
+  nc_hireion_free (reion);
 }
 
