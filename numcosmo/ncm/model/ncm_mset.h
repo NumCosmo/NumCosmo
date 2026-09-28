@@ -285,7 +285,6 @@ gdouble ncm_mset_fparam_get_abstol (NcmMSet *mset, guint n);
 void ncm_mset_fparam_set_scale (NcmMSet *mset, guint n, gdouble scale);
 gboolean ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta);
 gboolean ncm_mset_fparam_valid_bounds_offset (NcmMSet *mset, NcmVector *theta, guint offset);
-gboolean ncm_mset_fparam_validate_all (NcmMSet *mset, NcmVector *theta);
 
 gdouble ncm_mset_fparam_get (NcmMSet *mset, guint n);
 void ncm_mset_fparam_set (NcmMSet *mset, guint n, const gdouble x);

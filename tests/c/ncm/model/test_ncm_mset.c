@@ -48,7 +48,6 @@ void test_ncm_mset_setpeek (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_setpospeek (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_pushpeek (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_fparams (TestNcmMSet *test, gconstpointer pdata);
-void test_ncm_mset_fparams_validate_all (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_shallow_copy (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata);
@@ -68,6 +67,9 @@ void test_ncm_mset_ns_by_negative_id (void);
 void test_ncm_mset_set_fmap_update_models (void);
 void test_ncm_mset_max_model_nick (void);
 void test_ncm_mset_params_pretty_print (void);
+void test_ncm_mset_fparam_lookups (void);
+void test_ncm_mset_fparam_get_fpi_range (void);
+void test_ncm_mset_fparam_get_fpi_range_subprocess (void);
 void test_ncm_mset_ns_by_negative_id_subprocess (void);
 
 void test_ncm_mset_traps (TestNcmMSet *test, gconstpointer pdata);
@@ -101,11 +103,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_fparams,
               &test_ncm_mset_free);
 
-  g_test_add ("/ncm/mset/fparams/validate_all", TestNcmMSet, NULL,
-              &test_ncm_mset_new,
-              &test_ncm_mset_fparams_validate_all,
-              &test_ncm_mset_free);
-
   g_test_add ("/ncm/mset/dup", TestNcmMSet, NULL,
               &test_ncm_mset_new,
               &test_ncm_mset_dup,
@@ -137,6 +134,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/set_fmap/update_models", &test_ncm_mset_set_fmap_update_models);
   g_test_add_func ("/ncm/mset/max_model_nick", &test_ncm_mset_max_model_nick);
   g_test_add_func ("/ncm/mset/params_pretty_print", &test_ncm_mset_params_pretty_print);
+  g_test_add_func ("/ncm/mset/fparam/lookups", &test_ncm_mset_fparam_lookups);
+  g_test_add_func ("/ncm/mset/fparam/get_fpi_range", &test_ncm_mset_fparam_get_fpi_range);
+  g_test_add_func ("/ncm/mset/fparam/get_fpi_range/subprocess", &test_ncm_mset_fparam_get_fpi_range_subprocess);
   g_test_add_func ("/ncm/mset/ns_by_negative_id/subprocess", &test_ncm_mset_ns_by_negative_id_subprocess);
 
   g_test_add ("/ncm/mset/traps", TestNcmMSet, NULL,
@@ -359,32 +359,6 @@ test_ncm_mset_fparams (TestNcmMSet *test, gconstpointer pdata)
 
   nc_cluster_mass_free (mass);
   nc_cluster_mass_free (benson);
-}
-
-void
-test_ncm_mset_fparams_validate_all (TestNcmMSet *test, gconstpointer pdata)
-{
-  test_ncm_mset_fparams (test, pdata);
-
-  ncm_mset_fparam_set (test->mset, 0, 1.0);
-  ncm_mset_param_set_all_ftype (test->mset, NCM_PARAM_TYPE_FREE);
-  ncm_mset_prepare_fparam_map (test->mset);
-
-  {
-    const gint ntests     = 100000;
-    const gint fparam_len = ncm_mset_fparam_len (test->mset);
-    NcmVector *theta      = ncm_vector_new (fparam_len);
-    gint i;
-
-    ncm_mset_fparams_get_vector (test->mset, theta);
-
-    for (i = 0; i < ntests; i++)
-    {
-      g_assert_true (ncm_mset_fparam_validate_all (test->mset, theta));
-    }
-
-    ncm_vector_free (theta);
-  }
 }
 
 void
@@ -1352,5 +1326,89 @@ test_ncm_mset_params_pretty_print (void)
   fclose (out);
   ncm_mset_free (mset);
   ncm_model_free (a);
+}
+
+/* Free parameters by index, by name and by full name, with two stacked models sharing
+ * parameter names. */
+void
+test_ncm_mset_fparam_lookups (void)
+{
+  NcDistance *dist    = nc_distance_new (3.0);
+  NcHaloPosition *hp0 = nc_halo_position_new (dist);
+  NcHaloPosition *hp1 = nc_halo_position_new (dist);
+  NcmMSet *mset       = ncm_mset_empty_new ();
+  const NcmModelID id = ncm_model_id (NCM_MODEL (hp0));
+  GError *error       = NULL;
+  const NcmMSetPIndex *pi;
+  NcmMSetPIndex *pif;
+  guint ra;
+
+  ncm_mset_push (mset, NCM_MODEL (hp0), NULL);
+  ncm_mset_push (mset, NCM_MODEL (hp1), NULL);
+  g_assert_true (ncm_model_orig_param_index_from_name (NCM_MODEL (hp0), "ra", &ra));
+
+  ncm_model_param_set_ftype (NCM_MODEL (hp0), ra, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set_ftype (NCM_MODEL (hp1), ra, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+  g_assert_cmpuint (ncm_mset_fparams_len (mset), ==, 2);
+  g_assert_cmpuint (ncm_mset_fparam_len (mset), ==, 2);
+
+  ncm_mset_fparam_set (mset, 1, 12.5);
+  g_assert_cmpfloat (ncm_mset_fparam_get (mset, 1), ==, 12.5);
+  g_assert_cmpfloat (ncm_model_param_get (NCM_MODEL (hp1), ra), ==, 12.5);
+  g_assert_cmpstr (ncm_mset_fparam_full_name (mset, 1), ==, "NcHaloPosition:01:ra");
+
+  g_assert_null (ncm_mset_fparam_get_pi_by_name (mset, "ra", &error));
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_PARAM_NAME_AMBIGUOUS);
+  g_clear_error (&error);
+
+  pi = ncm_mset_fparam_get_pi_by_name (mset, "NcHaloPosition:01:ra", &error);
+  g_assert_no_error (error);
+  g_assert_cmpint (pi->mid, ==, id + 1);
+  g_assert_null (ncm_mset_fparam_get_pi_by_name (mset, "nope", &error));
+  g_assert_no_error (error);
+
+  pif = ncm_mset_param_get_by_full_name (mset, "NcHaloPosition:1:ra", &error);
+  g_assert_no_error (error);
+  g_assert_cmpint (pif->mid, ==, id + 1);
+  g_assert_cmpuint (pif->pid, ==, ra);
+  ncm_mset_pindex_free (pif);
+
+  pif = ncm_mset_param_get_by_full_name (mset, "NcHaloPosition:0", &error);
+  g_assert_no_error (error);
+  g_assert_cmpint (pif->mid, ==, id);
+  g_assert_cmpuint (pif->pid, ==, 0);
+  ncm_mset_pindex_free (pif);
+
+  g_assert_null (ncm_mset_param_get_by_full_name (mset, "NcHaloPosition:5:ra", &error));
+  g_assert_no_error (error);
+  g_assert_null (ncm_mset_param_get_by_full_name (mset, "NcHaloPosition:nope", &error));
+  g_assert_no_error (error);
+  g_assert_null (ncm_mset_param_get_by_full_name (mset, "NoSuchModel:ra", &error));
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_NOT_FOUND);
+  g_clear_error (&error);
+
+  ncm_mset_free (mset);
+  nc_halo_position_free (hp0);
+  nc_halo_position_free (hp1);
+  nc_distance_free (dist);
+}
+
+void
+test_ncm_mset_fparam_get_fpi_range (void)
+{
+  g_test_trap_subprocess ("/ncm/mset/fparam/get_fpi_range/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*parameter 2 is out of range*");
+}
+
+void
+test_ncm_mset_fparam_get_fpi_range_subprocess (void)
+{
+  NcmModel *a   = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmMSet *mset = ncm_mset_new (a, NULL, NULL);
+
+  ncm_mset_prepare_fparam_map (mset);
+  ncm_mset_fparam_get_fpi (mset, ncm_model_mvnd_id (), 2);
 }
 

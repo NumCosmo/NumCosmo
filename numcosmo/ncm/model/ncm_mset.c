@@ -48,6 +48,17 @@
  * A model enters the set with its submodels, each at stack position 0 of its own model
  * id, and ncm_mset_remove() removes them with it; a stackable model therefore cannot
  * carry submodels. Stack positions run from 0 to %NCM_MSET_MAX_STACKSIZE - 1.
+ *
+ * Fits and samplers see the parameters through the free-parameter map, the ordered list
+ * of the free parameters: ncm_mset_fparams_len() is its length and
+ * ncm_mset_fparams_set_vector() writes into it in order. The map is a snapshot, built by
+ * ncm_mset_prepare_fparam_map() from the fit types of the models or by
+ * ncm_mset_set_fmap() from a list of names, and it is respected until it is renewed by
+ * one of these or by the ncm_mset_param_set_*ftype() functions. A fit type changed
+ * directly on a model (ncm_model_param_set_ftype()) does not change the map, which still
+ * reports valid; renew it before the next run. The two directions keep map and fit types
+ * in step: ncm_mset_prepare_fparam_map() makes the map follow the fit types, and
+ * ncm_mset_param_set_ftype_from_fmap() makes the fit types follow the map.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -85,7 +96,6 @@ typedef struct _NcmMSetPrivate
   gboolean valid_map;
   guint total_len;
   guint fparam_len;
-  NcmVector *temp_fparams;
 } NcmMSetPrivate;
 
 typedef struct _NcmMSetItem
@@ -264,8 +274,6 @@ _ncm_mset_dispose (GObject *object)
   g_clear_pointer (&self->fullname_parray, g_ptr_array_unref);
   g_clear_pointer (&self->pi_array, g_array_unref);
   g_clear_pointer (&self->mid_array, g_array_unref);
-
-  ncm_vector_clear (&self->temp_fparams);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_parent_class)->dispose (object);
@@ -1390,9 +1398,8 @@ ncm_mset_get_type_by_id (NcmModelID id)
  * ncm_mset_prepare_fparam_map:
  * @mset: a #NcmMSet
  *
- * Computes the free parameters map for @mset. This function must be
- * called before any other function that uses the free parameters map.
- *
+ * Builds the free-parameter map of @mset from the fit types of its models, in model
+ * order. The map is a snapshot, respected until it is renewed (see #NcmMSet).
  */
 void
 ncm_mset_prepare_fparam_map (NcmMSet *mset)
@@ -1445,11 +1452,6 @@ ncm_mset_prepare_fparam_map (NcmMSet *mset)
 
   g_ptr_array_set_size (self->fullname_parray, self->fparam_len);
 
-  ncm_vector_clear (&self->temp_fparams);
-
-  if (self->fparam_len > 0)
-    self->temp_fparams = ncm_vector_new (self->fparam_len);
-
   self->valid_map = TRUE;
 }
 
@@ -1476,9 +1478,10 @@ ncm_mset_fparam_map_valid (NcmMSet *mset)
  * @update_models: a boolean
  * @error: a #GError
  *
- * Sets the free parameters map of @mset to the parameters named in @fmap (full names,
+ * Sets the free-parameter map of @mset to the parameters named in @fmap (full names,
  * see ncm_mset_param_get_by_full_name()), in that order, as an alternative to
- * ncm_mset_prepare_fparam_map(). An unknown or repeated name sets @error and leaves the
+ * ncm_mset_prepare_fparam_map(); the map is a snapshot, respected until it is renewed
+ * (see #NcmMSet), and may differ from the fit types of the models. An unknown or repeated name sets @error and leaves the
  * previous map in place. With @update_models, the fit types of the models follow the
  * map (ncm_mset_param_set_ftype_from_fmap()).
  *
@@ -1586,11 +1589,6 @@ ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_mod
     g_ptr_array_set_size (self->fullname_parray, 0);
     g_ptr_array_set_size (self->fullname_parray, self->fparam_len);
 
-    ncm_vector_clear (&self->temp_fparams);
-
-    if (self->fparam_len > 0)
-      self->temp_fparams = ncm_vector_new (self->fparam_len);
-
     self->valid_map = TRUE;
 
     if (update_models)
@@ -1650,9 +1648,8 @@ ncm_mset_total_len (NcmMSet *mset)
  * ncm_mset_fparam_len:
  * @mset: a #NcmMSet
  *
- * Gets the number of free parameters in @mset.
- *
- * Returns: Number of free parameters in @mset.
+ * Returns: the length of the last free-parameter map, 0 before the first; unlike
+ * ncm_mset_fparams_len(), it does not require a valid map
  */
 guint
 ncm_mset_fparam_len (NcmMSet *mset)
@@ -2705,6 +2702,7 @@ ncm_mset_fparams_get_vector_offset (NcmMSet *mset, NcmVector *x, guint offset)
  * about to change later in the same batch. mid_array's own order is sorted
  * by class-registration id, unrelated to the host/submodel relationship,
  * so this can't be relied on without the explicit two-pass split below.
+ * A submodel of a submodel has no order relative to its host.
  */
 static void
 _ncm_mset_fparams_update_models (NcmMSet *mset)
@@ -2761,9 +2759,8 @@ ncm_mset_fparams_set_vector (NcmMSet *mset, const NcmVector *x)
  * @x: a #NcmVector
  * @offset: starting index
  *
- * Set the free parameters of @mset using the values of @x starting
- * at @offset.
- *
+ * Sets the free parameters of @mset from the components of @x starting at @offset; @x
+ * must have ncm_mset_fparams_len() + @offset components.
  */
 void
 ncm_mset_fparams_set_vector_offset (NcmMSet *mset, const NcmVector *x, guint offset)
@@ -2788,9 +2785,7 @@ ncm_mset_fparams_set_vector_offset (NcmMSet *mset, const NcmVector *x, guint off
  *
  * Sets the free parameters of @mset using the values of @x.
  * The size of @x must be equal to the number of free parameters
- * in @mset ncm_mset_fparams_len(). Otherwise the behaviour is
- * undefined.
- *
+ * in @mset, ncm_mset_fparams_len(); it is not checked.
  */
 void
 ncm_mset_fparams_set_array (NcmMSet *mset, const gdouble *x)
@@ -2810,8 +2805,8 @@ ncm_mset_fparams_set_array (NcmMSet *mset, const gdouble *x)
 
 /**
  * ncm_mset_fparams_set_gsl_vector: (skip)
- * @mset: a #NcmMSet.
- * @x: a #gsl_vector.
+ * @mset: a #NcmMSet
+ * @x: a #gsl_vector
  *
  * Sets the free parameters of @mset using the values of @x.
  * The size of @x must be equal to the number of free parameters
@@ -2838,9 +2833,7 @@ ncm_mset_fparams_set_gsl_vector (NcmMSet *mset, const gsl_vector *x)
  * ncm_mset_fparams_len:
  * @mset: a #NcmMSet
  *
- * Gets the number of free parameters in @mset.
- *
- * Returns: the number of free parameters in @mset.
+ * Returns: the number of free parameters; aborts when the map is not valid
  */
 guint
 ncm_mset_fparams_len (NcmMSet *mset)
@@ -2922,7 +2915,7 @@ ncm_mset_fparam_full_name (NcmMSet *mset, guint n)
   else
   {
     NcmMSetPIndex pi        = g_array_index (self->pi_array, NcmMSetPIndex, n);
-    const gchar *model_ns   = ncm_mset_get_ns_by_id (pi.mid); /* ncm_model_nick (ncm_mset_peek (mset, pi.mid));*/
+    const gchar *model_ns   = ncm_mset_get_ns_by_id (pi.mid);
     const gchar *pname      = ncm_mset_param_name (mset, pi.mid, pi.pid);
     const guint stackpos_id = pi.mid % NCM_MSET_MAX_STACKSIZE;
 
@@ -2943,12 +2936,12 @@ ncm_mset_fparam_full_name (NcmMSet *mset, guint n)
  * @fullname: param's full name
  * @error: a #GError
  *
- * Gets the #NcmMSetPIndex of the parameter identified by @fullname.
- * The @fullname must be in the form "model:stackpos:param_name" when
- * the model has a stack or "model:param_name" when the model has no
- * stack.
+ * Gets the #NcmMSetPIndex of the parameter identified by @fullname, of the form
+ * "model:param" or "model:stackpos:param", where "param" is a parameter name or index.
+ * A malformed name or an unregistered namespace sets @error; a model not in @mset or a
+ * parameter it does not have gives %NULL without an error.
  *
- * Returns: (transfer full): the #NcmMSetPIndex of the parameter identified by @fullname.
+ * Returns: (transfer full) (nullable): the #NcmMSetPIndex, or %NULL
  */
 NcmMSetPIndex *
 ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname, GError **error)
@@ -3234,33 +3227,6 @@ ncm_mset_fparam_valid_bounds_offset (NcmMSet *mset, NcmVector *theta, guint offs
 }
 
 /**
- * ncm_mset_fparam_validate_all:
- * @mset: a #NcmMSet
- * @theta: free parameters vector
- *
- * Checks if the values of @theta respect all requirements.
- *
- * Returns: whether @theta contain values respecting all requirements.
- */
-gboolean
-ncm_mset_fparam_validate_all (NcmMSet *mset, NcmVector *theta)
-{
-  NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
-  gboolean valid;
-
-  g_assert (self->valid_map);
-  g_assert_cmpuint (ncm_vector_len (theta), ==, self->fparam_len);
-
-  ncm_mset_fparams_get_vector (mset, self->temp_fparams);
-  ncm_mset_fparams_set_vector (mset, theta);
-
-  valid = ncm_mset_params_valid (mset) && ncm_mset_params_valid_bounds (mset);
-  ncm_mset_fparams_set_vector (mset, self->temp_fparams);
-
-  return valid;
-}
-
-/**
  * ncm_mset_fparam_get:
  * @mset: a #NcmMSet
  * @n: free parameter index
@@ -3300,7 +3266,7 @@ ncm_mset_fparam_set (NcmMSet *mset, guint n, const gdouble x)
   {
     const NcmMSetPIndex pi = g_array_index (self->pi_array, NcmMSetPIndex, n);
 
-    return ncm_mset_param_set (mset, pi.mid, pi.pid, x);
+    ncm_mset_param_set (mset, pi.mid, pi.pid, x);
   }
 }
 
@@ -3329,24 +3295,30 @@ ncm_mset_fparam_get_pi (NcmMSet *mset, guint n)
  * @mid: a #NcmModelID
  * @pid: parameter id
  *
- * Gets the free parameter index of the parameter @pid in the model @mid.
+ * Gets the free parameter index of the parameter @pid of the model @mid; aborts when the
+ * map is not valid, when @mid is not in @mset or when @pid is not below its length. A
+ * loop needing it calls it once, outside.
  *
- * Returns: the free parameter index of the parameter @pid in the model @mid.
+ * Returns: the free parameter index, or -1 when the parameter is not free
  */
 gint
 ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid)
 {
   NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
+  GArray *fpi_array;
 
   g_assert (self->valid_map);
 
-  {
-    GArray *fpi_array = g_hash_table_lookup (self->fpi_hash, GINT_TO_POINTER (mid));
+  fpi_array = g_hash_table_lookup (self->fpi_hash, GINT_TO_POINTER (mid));
 
-    g_assert (fpi_array != NULL);
+  if ((fpi_array == NULL) || (ncm_mset_peek (mset, mid) == NULL))
+    g_error ("ncm_mset_fparam_get_fpi: model id %d is not in the set.", mid);
 
-    return g_array_index (fpi_array, gint, pid);
-  }
+  if (pid >= fpi_array->len)
+    g_error ("ncm_mset_fparam_get_fpi: parameter %u is out of range, model id %d has %u.",
+             pid, mid, fpi_array->len);
+
+  return g_array_index (fpi_array, gint, pid);
 }
 
 /**
@@ -3355,10 +3327,12 @@ ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid)
  * @name: parameter name
  * @error: a #GError
  *
- * Gets the #NcmMSetPIndex of the parameter identified by @name.
- * The name can be the parameter name or the full name.
+ * Gets the #NcmMSetPIndex of the free parameter named @name, a parameter name or a full
+ * name (ncm_mset_fparam_full_name()). A parameter name shared by several free
+ * parameters sets @error.
  *
- * Returns: (transfer none): the #NcmMSetPIndex of the parameter identified by @name.
+ * Returns: (transfer none) (nullable): the #NcmMSetPIndex, or %NULL when no free
+ * parameter has that name
  */
 const NcmMSetPIndex *
 ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name, GError **error)
