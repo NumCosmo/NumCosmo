@@ -69,6 +69,10 @@ math_tests = [
         'sources': ['ncm/powspec/test_ncm_powspec_corr3d.c'],
     },
     {
+        'name': 'ncm_powspec_filter',
+        'sources': ['ncm/powspec/test_ncm_powspec_filter.c'],
+    },
+    {
         'name': 'ncm_fftlog',
         'sources': ['ncm/fftlog/test_ncm_fftlog.c'],
         'priority': 2,
