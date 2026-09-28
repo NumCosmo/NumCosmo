@@ -15,7 +15,7 @@ format-links: [ipynb]
 
 Builds a mock weak-lensing galaxy catalog from the position, redshift, and
 shape factor calculators described in
-[The Galaxy Population & Weak-Lensing Framework](../../theory/galaxy_wl_framework.qmd).
+[The Galaxy Population & Weak-Lensing Framework](../../theory/nc/lss/galaxy/galaxy_wl_framework.qmd).
 Read that page first for the vocabulary used here: `Factor`, `Pop`, `Obs`,
 and the per-galaxy `Data`.
 
@@ -91,7 +91,7 @@ Each factor's `data_new` allocates the per-galaxy fragment for that factor.
 The shape factor's fragment is built *from* the position and redshift
 fragments, since the shape likelihood needs the projected radius (from
 `ra`/`dec`) and the source redshift `z` (see the framework page's
-[Z $\Rightarrow$ P $\Rightarrow$ S pipeline](../../theory/galaxy_wl_framework.qmd#the-fixed-pipeline-z-p-s)) ---
+[Z $\Rightarrow$ P $\Rightarrow$ S pipeline](../../theory/nc/lss/galaxy/galaxy_wl_framework.qmd#sec-fixed-pipeline)) ---
 this one call is the whole "orchestration" this tutorial needs to do by hand:
 
 ```{python}
@@ -141,7 +141,7 @@ inputs (`std_noise`, `c1`, `c2`, `m` --- these stay plain scalars on the shape
 factor's data, not a pluggable model, for now), draw the shape, and write the
 three fragments into their row. `gen` is the same code path `integ` uses
 below for the likelihood --- see
-[Generation and Likelihood Share One Engine](../../theory/galaxy_wl_framework.qmd#generation-and-likelihood-share-one-engine).
+[Generation and Likelihood Share One Engine](../../theory/nc/lss/galaxy/galaxy_wl_framework.qmd#generation-and-likelihood-share-one-engine).
 
 ```{python}
 rng = Ncm.RNG.seeded_new(None, 123)
@@ -217,7 +217,7 @@ each factor's `gen` and writing the results into a shared
 [[numcosmo|NcGalaxyWLObs]], read a row back to confirm the round trip, and
 evaluated the shape factor's own likelihood integrand for the very galaxies
 it had just generated. See
-[The Galaxy Population & Weak-Lensing Framework](../../theory/galaxy_wl_framework.qmd)
+[The Galaxy Population & Weak-Lensing Framework](../../theory/nc/lss/galaxy/galaxy_wl_framework.qmd)
 for why the pieces are shaped this way.
 
 ## API Reference {#sec-api}

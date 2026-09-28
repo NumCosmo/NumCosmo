@@ -93,6 +93,10 @@ def _load_integ_parity_golden() -> np.ndarray:
 # (eps_int_1, eps_int_2, eps_obs_1, eps_obs_2) tuples per row. Stored as a
 # flat (len(_CONVS) * len(_GALAXIES) * 50, 4) matrix, blocked by ellip_conv
 # (matching _CONVS order), then by galaxy (matching _GALAXIES order).
+# The eps_obs columns were regenerated from the current engine (2026-09-25)
+# after ncm_trivec_get_spherical_coord() moved from acos to atan2 and
+# ncm_quaternion_set_to_rotate_to_z() to atan2 half-angles: they moved by at
+# most 1.8e-12 absolute; the eps_int columns are unchanged.
 _GEN_PARITY_GOLDEN_FILE = (
     "truth_tables/wl/nc_galaxy_shape_factor_var_add_gen_parity.bin"
 )

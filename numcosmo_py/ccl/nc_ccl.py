@@ -134,6 +134,9 @@ def create_nc_obj(
     psf = None
     if ps_ml:
         psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)
+        # The filter's default is 1e-3, relative to the peak of sigma^2 over R. sigma_R
+        # is compared with CCL at prec relative to its value, so ask a tenth of prec.
+        psf.set_reltol(0.1 * prec)
         psf.set_best_lnr0()
 
     # pylint: enable=protected-access

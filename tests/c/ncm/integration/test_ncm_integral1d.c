@@ -58,6 +58,8 @@ void test_ncm_integral1d_m2_x2_lnint (TestNcmIntegral1d *test, gconstpointer pda
 void test_ncm_integral1d_traps (TestNcmIntegral1d *test, gconstpointer pdata);
 void test_ncm_integral1d_invalid_test (TestNcmIntegral1d *test, gconstpointer pdata);
 
+void test_ncm_integral1d_ptr_userfree (void);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -119,6 +121,8 @@ main (gint argc, gchar *argv[])
               &test_ncm_integral1d_new_sinx,
               &test_ncm_integral1d_invalid_test,
               &test_ncm_integral1d_free);
+
+  g_test_add_func ("/ncm/integral1d/ptr/userfree", &test_ncm_integral1d_ptr_userfree);
 
   g_test_run ();
 }
@@ -241,7 +245,27 @@ test_ncm_integral1d_sinx_hermite_p (TestNcmIntegral1d *test, gconstpointer pdata
   NCM_INTEGRAL1D_TESTCMP (0.76017345053314040280597007337L);
 
   result = ncm_integral1d_eval_gauss_hermite1_r_p (test->int1d, 3.0 / 4.0, &err);
-  NCM_INTEGRAL1D_TESTCMP (0.99069139051646674889119598685L);
+  NCM_INTEGRAL1D_TESTCMP (1.22134007873615394248082439369L);
+
+  /* At r = 1 the scaled variants are the unscaled ones, error estimate included */
+  {
+    gdouble err_r, res_r;
+
+    result = ncm_integral1d_eval_gauss_hermite_p (test->int1d, &err);
+    res_r  = ncm_integral1d_eval_gauss_hermite_r_p (test->int1d, 1.0, &err_r);
+    g_assert_cmpfloat (res_r, ==, result);
+    g_assert_cmpfloat (err_r, ==, err);
+
+    result = ncm_integral1d_eval_gauss_hermite1_p (test->int1d, &err);
+    res_r  = ncm_integral1d_eval_gauss_hermite1_r_p (test->int1d, 1.0, &err_r);
+    g_assert_cmpfloat (res_r, ==, result);
+    g_assert_cmpfloat (err_r, ==, err);
+
+    result = ncm_integral1d_eval_gauss_hermite (test->int1d, &err);
+    res_r  = ncm_integral1d_eval_gauss_hermite_mur (test->int1d, 1.0, 0.0, &err_r);
+    ncm_assert_cmpdouble_e (res_r, ==, result, 1.0e-15, 1.0e-15);
+    ncm_assert_cmpdouble_e (err_r, ==, err, 1.0e-12, 1.0e-20);
+  }
 }
 
 void
@@ -312,7 +336,7 @@ test_ncm_integral1d_x5_2_sinx_hermite_p (TestNcmIntegral1d *test, gconstpointer 
   NCM_INTEGRAL1D_TESTCMP (1.94952102958065012896733613706L);
 
   result = ncm_integral1d_eval_gauss_hermite1_r_p (test->int1d, 3.0 / 4.0, &err);
-  NCM_INTEGRAL1D_TESTCMP (2.84228407966796943455719401910L);
+  NCM_INTEGRAL1D_TESTCMP (3.18676089898276761069534117638L);
 }
 
 void
@@ -369,5 +393,28 @@ void
 test_ncm_integral1d_invalid_test (TestNcmIntegral1d *test, gconstpointer pdata)
 {
   g_assert_not_reached ();
+}
+
+static void
+_test_count_free (gpointer data)
+{
+  (*(guint *) data)++;
+}
+
+/* userfree frees the user data when it is replaced and on finalization. */
+void
+test_ncm_integral1d_ptr_userfree (void)
+{
+  guint n_free_a              = 0;
+  guint n_free_b              = 0;
+  NcmIntegral1dPtr *int1d_ptr = ncm_integral1d_ptr_new (&test_sin, &_test_count_free);
+
+  ncm_integral1d_ptr_set_userdata (int1d_ptr, &n_free_a);
+  ncm_integral1d_ptr_set_userdata (int1d_ptr, &n_free_b);
+  g_assert_cmpuint (n_free_a, ==, 1);
+  g_assert_cmpuint (n_free_b, ==, 0);
+
+  ncm_integral1d_ptr_free (int1d_ptr);
+  g_assert_cmpuint (n_free_b, ==, 1);
 }
 

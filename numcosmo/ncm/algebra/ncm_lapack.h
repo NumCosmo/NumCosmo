@@ -36,6 +36,13 @@ G_BEGIN_DECLS
 
 typedef struct _NcmLapackWS NcmLapackWS;
 
+/**
+ * NcmLapackWS:
+ * @work: the double workspace
+ * @iwork: the integer workspace
+ *
+ * Workspace of the LAPACK wrappers, grown as needed; see ncm_lapack_ws_new().
+ */
 struct _NcmLapackWS
 {
   GArray *work;
@@ -80,6 +87,13 @@ gint ncm_lapack_dggglm_run (GArray *ws, NcmMatrix *L, NcmMatrix *X, NcmVector *p
 gint ncm_lapack_dgels (gchar trans, const gint m, const gint n, const gint nrhs, gdouble *a, const gint lda, gdouble *b, const gint ldb, double *work, const gint lwork);
 gint ncm_lapack_dgelsd (const gint m, const gint n, const gint nrhs, gdouble *a, const gint lda, gdouble *b, const gint ldb, gdouble *s, gdouble *rcond, gint *rank, NcmLapackWS *ws);
 
+/**
+ * NCM_LAPACK_CHECK_INFO:
+ * @func: the name of the LAPACK routine
+ * @info: its return value
+ *
+ * Aborts with @info if it is nonzero.
+ */
 #define NCM_LAPACK_CHECK_INFO(func, info) G_STMT_START { if ((info) != 0) g_error ("# NcmLapack[%s] error %4d", func, (info)); } G_STMT_END
 
 G_END_DECLS

@@ -1,3 +1,17 @@
+/*
+ * Template of a binary-splitting evaluator, see #NcmBinSplit. Define, then include:
+ *
+ * - NC_BINSPLIT_EVAL_NAME: the name of the generated #NcmBinSplitEval;
+ * - _BINSPLIT_FUNC_P, _BINSPLIT_FUNC_Q, _BINSPLIT_FUNC_A, _BINSPLIT_FUNC_B: each a macro
+ *   (res, x, n, userdata) setting the mpz_t res to x times p(n), q(n), a(n) or b(n);
+ * - _HAS_FUNC_B when b is not identically one, otherwise define _BINSPLIT_FUNC_B as
+ *   NCM_BINSPLIT_DENC_NULL.
+ *
+ * The generated function sets its #NcmBinSplit to the sum over [n1, n2): directly below
+ * five terms, otherwise by splitting the range in half. All the macros are undefined at
+ * the end.
+ */
+
 #ifndef NC_BINSPLIT_EVAL_NAME
 #error "To include binsplit_eval.c you must define NC_BINSPLIT_EVAL_NAME"
 #endif
@@ -14,7 +28,6 @@ NC_BINSPLIT_EVAL_NAME (NcmBinSplit *bs, gulong n1, gulong n2)
   bs->n1 = n1;
   bs->n2 = n2;
 
-  /*printf ("# nd [%lu %lu) %lu %d\n", n1, n2, nd, nd < 5); */
   if (nd < 5)
   {
     _BINSPLIT_FUNC_P (bs->P, NCM_BINSPLIT_ONE, n1, bs->userdata);
@@ -154,8 +167,6 @@ NC_BINSPLIT_EVAL_NAME (NcmBinSplit *bs, gulong n1, gulong n2)
 
     mpz_add (bs->T, bs->temp1, bs->temp2);
   }
-
-/*  mpfr_printf ("# NUC %.15g %Zd/(%Zd %Zd)\n", ncm_binsplit_get_d (bs, GMP_RNDD), bs->T, bs->Q, bs->B); */
 }
 
 #undef NC_BINSPLIT_EVAL_NAME

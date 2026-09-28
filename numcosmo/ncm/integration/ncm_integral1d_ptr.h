@@ -37,6 +37,16 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmIntegral1dPtr, ncm_integral1d_ptr, NCM, INTEGRAL1D_PTR, NcmIntegral1d)
 
+/**
+ * NcmIntegral1dPtrF:
+ * @userdata: the user data
+ * @x: the point
+ * @w: the variable $\alpha$ of the change of variables, or 1, see #NcmIntegral1d
+ *
+ * The integrand of #NcmIntegral1dPtr.
+ *
+ * Returns: $F(x)$.
+ */
 typedef gdouble (*NcmIntegral1dPtrF) (gpointer userdata, const gdouble x, const gdouble w);
 
 NcmIntegral1dPtr *ncm_integral1d_ptr_new (NcmIntegral1dPtrF F, GDestroyNotify userfree);

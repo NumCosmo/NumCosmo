@@ -1191,10 +1191,17 @@ class TestTauConstraintRule:
         forcing = self._gaussian(width_fraction)
         dirichlet, _ = self._integrate(forcing, 0.0)
         tau, fallbacks = self._integrate(forcing, 200.0)
+        # The integral of |F j_l|, with |j_l(x)| <= 1/x here: the results are far below
+        # it (by e^-144 at width fraction 30), so they are compared on this scale. The
+        # fallback solves the Dirichlet system again, so the two agree to rounding:
+        # exactly on x86-64 Linux, within 7e-16 of the scale on macOS arm64.
+        x0 = 0.5 * (self.A + self.B)
+        width = (self.B - self.A) / width_fraction
+        scale = 1.0e-16 * width * np.sqrt(2.0 * np.pi) / x0
 
         assert fallbacks > 0
         assert np.all(np.isfinite(tau))
-        assert_allclose(tau, dirichlet, rtol=1.0e-10)
+        assert_allclose(tau, dirichlet, rtol=0.0, atol=1.0e-14 * scale)
 
     def test_rule_off_never_falls_back(self) -> None:
         """With the rule off every panel is Dirichlet and nothing is counted."""
@@ -1277,6 +1284,22 @@ class TestTurningKnot:
         off, _, _ = self._run(20, 0.0)
         on, _, _ = self._run(20, 1.05)
         assert np.array_equal(on, off)
+
+    @pytest.mark.parametrize("ell", [500, 1000])
+    def test_fallbacks_are_not_locked_eligible(self, ell: int) -> None:
+        """A guard fallback is counted once, as a fallback.
+
+        Without the knot the straddling panel's tau solve is refused and redone with
+        Dirichlet data. With a single block no panel rests on another block's constraint,
+        so the locked-eligible count stays at zero; it used to count the fallback again.
+        """
+        sbi = Ncm.SBesselIntegratorLevin.new(ell, ell + 7)
+        sbi.set_turning_knot_margin(0.0)
+        result = Ncm.Vector.new(8)
+        sbi.integrate(self._forcing, self.A, self.B, self.K, result)
+
+        assert sbi.get_n_constraint_fallbacks() > 0
+        assert sbi.get_n_locked_eligible_solves() == 0
 
     def test_rule_off_disables_the_knot(self) -> None:
         """The insertion is gated on the same oscillation count as the rule."""

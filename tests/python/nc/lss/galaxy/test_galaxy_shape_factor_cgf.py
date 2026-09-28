@@ -58,7 +58,7 @@ _CONVS = [Nc.GalaxyWLObsEllipConv.TRACE, Nc.GalaxyWLObsEllipConv.TRACE_DET]
 
 
 def _shear_map(ellip_conv, g, chi):
-    """Weak-branch forward shear map (see docs/theory/wl_ellipticity.qmd)."""
+    """Weak-branch forward shear map (see docs/theory/nc/lss/galaxy/wl_ellipticity.qmd)."""
     if ellip_conv == Nc.GalaxyWLObsEllipConv.TRACE:
         denom = 1 + abs(g) ** 2 + 2 * (g * np.conj(chi)).real
         return (chi + g * (g * np.conj(chi) + 2)) / denom

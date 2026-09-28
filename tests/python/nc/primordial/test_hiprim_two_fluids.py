@@ -72,6 +72,24 @@ def test_default_calib_loading_actual(two_fluids):
     assert two_fluids.get_use_default_calib() is True
 
 
+def test_lnk_range(two_fluids):
+    """The range is the table's lnk knots shifted by lnk0."""
+    lnk = np.log(np.geomspace(1.0e-5, 1.0e1, 100))
+    lnw = np.linspace(-1.0, 1.0, 10)
+    lnk_v, lnw_v = np.meshgrid(lnk, lnw)
+    lnPk2d = Ncm.Spline2dBicubic(
+        spline=Ncm.SplineCubicNotaknot.new(),
+        x_vector=Ncm.Vector.new_array(lnk),
+        y_vector=Ncm.Vector.new_array(lnw),
+        z_matrix=Ncm.Matrix.new_array((2.0 * lnk_v + lnw_v).flatten(), len(lnk)),
+    )
+    two_fluids.set_lnk_lnw_spline(lnPk2d)
+    two_fluids.props.lnk0 = 0.5
+
+    lnk_min, lnk_max = two_fluids.get_lnk_range()
+    assert_allclose([lnk_min, lnk_max], [lnk[0] + 0.5, lnk[-1] + 0.5], rtol=1.0e-15)
+
+
 def test_set_lnk_lnw_spline_init(two_fluids):
     """Test NcHIPrimTwoFluids set_lnk_lnw_spline."""
     lnk = np.log(np.geomspace(1.0e-5, 1.0e1, 1000))

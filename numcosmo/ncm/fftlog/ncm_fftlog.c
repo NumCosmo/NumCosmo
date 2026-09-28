@@ -27,7 +27,7 @@
 /**
  * NcmFftlog:
  *
- * Abstract class for implementing logarithm fast fourier transform.
+ * Base class for FFTLog transforms.
  *
  * This class computes the Fast Fourier Transform of a function assumed to be a
  * periodic sequence of logarithmically spaced points, following the FFTLog
@@ -40,9 +40,14 @@
  * are provided by the concrete implementations (e.g. #NcmFftlogTophatwin2,
  * #NcmFftlogGausswin2).
  *
+ * With a bias $b$ (#NcmFftlog:bias) the expansion is of $F(k) k^{-b}$ instead, and
+ * the kernel becomes $(kr)^b K(kr)$. The result is the same $G(r)$; the bias only
+ * chooses which function the discrete transform represents, see
+ * ncm_fftlog_set_bias().
+ *
  * For the full derivation, discretization, and padding scheme, see the
  * theoretical background page:
- * <a href="../../theory/fftlog.html">FFTLog</a>.
+ * <a href="../../theory/ncm/fftlog/fftlog.html">FFTLog</a>.
  * Reference: [Hamilton (2000)](https://arxiv.org/abs/astro-ph/9905191).
  */
 
@@ -63,7 +68,6 @@
 #include <fftw3.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-#define fftw_alloc_real(n) (double *) fftw_malloc (sizeof (double) * (n))
 #define fftw_alloc_complex(n) (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * (n))
 
 typedef struct _NcmFftlogPrivate
@@ -78,12 +82,15 @@ typedef struct _NcmFftlogPrivate
   guint pad;
   gdouble lnk0;
   gdouble lnr0;
+  gdouble lnr0_grid;
   gdouble eval_r_min;
   gdouble eval_r_max;
   gdouble Lk;
   gdouble Lk_N;
   gdouble pad_p;
-  gdouble smooth_padding_scale;
+  gdouble bias;
+  gdouble end_slope_min;
+  gdouble end_slope_max;
   gboolean smooth_padding;
   gboolean use_eval_int;
   gboolean noring;
@@ -116,9 +123,9 @@ enum
   PROP_NAME,
   PROP_USE_EVAL_INT,
   PROP_SMOOTH_PADDING,
-  PROP_SMOOTH_PADDING_SCALE,
   PROP_EVAL_R_MIN,
   PROP_EVAL_R_MAX,
+  PROP_BIAS,
 };
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmFftlog, ncm_fftlog, G_TYPE_OBJECT)
@@ -128,26 +135,29 @@ ncm_fftlog_init (NcmFftlog *fftlog)
 {
   NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
 
-  self->lnr0                 = 0.0;
-  self->use_eval_int         = FALSE;
-  self->smooth_padding       = FALSE;
-  self->smooth_padding_scale = 0.0;
-  self->eval_r_min           = 0.0;
-  self->eval_r_max           = 0.0;
-  self->lnk0                 = 0.0;
-  self->Lk                   = 0.0;
-  self->Lk_N                 = 0.0;
-  self->pad_p                = 0.0;
-  self->Nr                   = 0;
-  self->N                    = 0;
-  self->N_2                  = 0;
-  self->Nf                   = 0;
-  self->Nf_2                 = 0;
-  self->max_n                = 0;
-  self->pad                  = 0;
-  self->noring               = FALSE;
-  self->prepared             = FALSE;
-  self->evaluated            = FALSE;
+  self->lnr0           = 0.0;
+  self->lnr0_grid      = 0.0;
+  self->use_eval_int   = FALSE;
+  self->smooth_padding = FALSE;
+  self->eval_r_min     = 0.0;
+  self->eval_r_max     = 0.0;
+  self->lnk0           = 0.0;
+  self->Lk             = 0.0;
+  self->Lk_N           = 0.0;
+  self->pad_p          = 0.0;
+  self->bias           = 0.0;
+  self->end_slope_min  = GSL_NAN;
+  self->end_slope_max  = GSL_NAN;
+  self->Nr             = 0;
+  self->N              = 0;
+  self->N_2            = 0;
+  self->Nf             = 0;
+  self->Nf_2           = 0;
+  self->max_n          = 0;
+  self->pad            = 0;
+  self->noring         = FALSE;
+  self->prepared       = FALSE;
+  self->evaluated      = FALSE;
 
   self->lnr_vec = NULL;
   self->Gr_vec  = g_ptr_array_new ();
@@ -165,8 +175,6 @@ ncm_fftlog_init (NcmFftlog *fftlog)
   self->p_CmYm2Gr = NULL;
   g_ptr_array_set_free_func (self->Ym, (GDestroyNotify) fftw_free);
 }
-
-#define ncm_fftlog_array_pos(fftlog, array)
 
 static void
 _ncm_fftlog_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -210,14 +218,14 @@ _ncm_fftlog_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_SMOOTH_PADDING:
       ncm_fftlog_use_smooth_padding (fftlog, g_value_get_boolean (value));
       break;
-    case PROP_SMOOTH_PADDING_SCALE:
-      ncm_fftlog_set_smooth_padding_scale (fftlog, g_value_get_double (value));
-      break;
     case PROP_EVAL_R_MIN:
       ncm_fftlog_set_eval_r_min (fftlog, g_value_get_double (value));
       break;
     case PROP_EVAL_R_MAX:
       ncm_fftlog_set_eval_r_max (fftlog, g_value_get_double (value));
+      break;
+    case PROP_BIAS:
+      ncm_fftlog_set_bias (fftlog, g_value_get_double (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -268,14 +276,14 @@ _ncm_fftlog_get_property (GObject *object, guint prop_id, GValue *value, GParamS
     case PROP_SMOOTH_PADDING:
       g_value_set_boolean (value, self->smooth_padding);
       break;
-    case PROP_SMOOTH_PADDING_SCALE:
-      g_value_set_double (value, ncm_fftlog_get_smooth_padding_scale (fftlog));
-      break;
     case PROP_EVAL_R_MIN:
       g_value_set_double (value, ncm_fftlog_get_eval_r_min (fftlog));
       break;
     case PROP_EVAL_R_MAX:
       g_value_set_double (value, ncm_fftlog_get_eval_r_max (fftlog));
+      break;
+    case PROP_BIAS:
+      g_value_set_double (value, ncm_fftlog_get_bias (fftlog));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -293,8 +301,8 @@ _ncm_fftlog_free_all (NcmFftlog *fftlog)
   g_clear_pointer (&self->CmYm, fftw_free);
   g_clear_pointer (&self->Gr, fftw_free);
 
-  g_clear_pointer (&self->p_Fk2Cm, fftw_destroy_plan);
-  g_clear_pointer (&self->p_CmYm2Gr, fftw_destroy_plan);
+  g_clear_pointer (&self->p_Fk2Cm, ncm_cfg_fftw_plan_destroy);
+  g_clear_pointer (&self->p_CmYm2Gr, ncm_cfg_fftw_plan_destroy);
 
   ncm_vector_clear (&self->lnr_vec);
 
@@ -320,6 +328,8 @@ _ncm_fftlog_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_fftlog_parent_class)->finalize (object);
 }
 
+static void _ncm_fftlog_get_bias_range_none (NcmFftlog *fftlog, gdouble *bias_min, gdouble *bias_max);
+
 static void
 ncm_fftlog_class_init (NcmFftlogClass *klass)
 {
@@ -328,6 +338,8 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
   object_class->set_property = &_ncm_fftlog_set_property;
   object_class->get_property = &_ncm_fftlog_get_property;
   object_class->finalize     = &_ncm_fftlog_finalize;
+
+  klass->get_bias_range = &_ncm_fftlog_get_bias_range_none;
 
   /**
    * NcmFftlog:nderivs:
@@ -346,7 +358,7 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
   /**
    * NcmFftlog:lnr0:
    *
-   * The Center value for $\ln(r)$.
+   * Center $\ln r_0$ of the output grid.
    *
    */
   g_object_class_install_property (object_class,
@@ -360,7 +372,7 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
   /**
    * NcmFftlog:lnk0:
    *
-   * The Center value for $\ln(k)$.
+   * Center $\ln k_0$ of the input grid.
    *
    */
   g_object_class_install_property (object_class,
@@ -374,7 +386,7 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
   /**
    * NcmFftlog:Lk:
    *
-   * The function $F(k)$'s period in natural logarithm base.
+   * Length $L > 0$ of the fundamental interval in $\ln k$, the period of $F$.
    *
    */
   g_object_class_install_property (object_class,
@@ -382,7 +394,7 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                    g_param_spec_double ("Lk",
                                                         NULL,
                                                         "Function log-period",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.0,
+                                                        G_MINDOUBLE, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -417,21 +429,23 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
   /**
    * NcmFftlog:padding:
    *
-   * The padding percentage of the number of knots $N$.
+   * Padding as a fraction of the number of knots $N$: the transform uses
+   * $N_f = N(1 + \mathrm{padding})$ points, the extra ones split between the two ends.
    *
    */
   g_object_class_install_property (object_class,
                                    PROP_PAD,
                                    g_param_spec_double ("padding",
                                                         NULL,
-                                                        "Padding percentage",
+                                                        "Padding fraction",
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmFftlog:no-ringing:
    *
-   * True to use the no-ringing adjustment of $\ln(r_0)$ and False otherwise.
+   * Whether to shift the output grid by less than one knot so that the kernel coefficient
+   * of the Nyquist mode is real, see ncm_fftlog_set_noring().
    *
    */
   g_object_class_install_property (object_class,
@@ -473,29 +487,16 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
   /**
    * NcmFftlog:use-smooth-padding:
    *
-   * Whether to use a smooth padding
+   * Whether the padding continues the input smoothly, see
+   * ncm_fftlog_use_smooth_padding().
    */
   g_object_class_install_property (object_class,
                                    PROP_SMOOTH_PADDING,
                                    g_param_spec_boolean ("use-smooth-padding",
                                                          NULL,
-                                                         "Whether to use a smooth padding",
+                                                         "Whether the padding continues the input smoothly",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmFftlog:smooth-padding-scale:
-   *
-   * Log10 of the smoothing scale.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_SMOOTH_PADDING_SCALE,
-                                   g_param_spec_double ("smooth-padding-scale",
-                                                        NULL,
-                                                        "Log10 of the smoothing scale",
-                                                        -G_MAXDOUBLE, +G_MAXDOUBLE, -200.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmFftlog:eval-r-min:
@@ -524,6 +525,28 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                         "Evaluation r_max",
                                                         0.0, G_MAXDOUBLE, G_MAXDOUBLE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFftlog:bias:
+   *
+   * The bias $b$: the transform expands $F(k) k^{-b}$, see ncm_fftlog_set_bias().
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_BIAS,
+                                   g_param_spec_double ("bias",
+                                                        NULL,
+                                                        "Bias",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
+
+/* A kernel that does not declare its range supports no bias. */
+static void
+_ncm_fftlog_get_bias_range_none (NcmFftlog *fftlog, gdouble *bias_min, gdouble *bias_max)
+{
+  *bias_min = 0.0;
+  *bias_max = 0.0;
 }
 
 /**
@@ -557,9 +580,7 @@ ncm_fftlog_free (NcmFftlog *fftlog)
  * ncm_fftlog_clear:
  * @fftlog: a #NcmFftlog
  *
- * If @fftlog is different from NULL, decreases the reference count of
- * @fftlog by one and sets @fftlog to NULL.
- *
+ * If *@fftlog is not NULL, decreases its reference count by one and sets *@fftlog to NULL.
  */
 void
 ncm_fftlog_clear (NcmFftlog **fftlog)
@@ -571,9 +592,7 @@ ncm_fftlog_clear (NcmFftlog **fftlog)
  * ncm_fftlog_peek_name:
  * @fftlog: a #NcmFftlog
  *
- * This function peeks the @fftlog's associated name.
- *
- * Returns: (transfer none): The internal string describing #NcmFftlog.
+ * Returns: (transfer none): the #NcmFftlog:name, used for the FFTW wisdom
  */
 const gchar *
 ncm_fftlog_peek_name (NcmFftlog *fftlog)
@@ -685,7 +704,9 @@ ncm_fftlog_set_lnr0 (NcmFftlog *fftlog, const gdouble lnr0)
  * ncm_fftlog_get_lnr0:
  * @fftlog: a #NcmFftlog
  *
- * Gets the center of the transform output.
+ * Gets the requested center of the transform output. With the no-ringing adjustment
+ * (ncm_fftlog_set_noring()) the output grid is centred up to one knot away from it, see
+ * ncm_fftlog_get_vector_lnr().
  *
  * Returns: the output center $\ln(r_0)$.
  */
@@ -736,28 +757,38 @@ ncm_fftlog_get_lnk0 (NcmFftlog *fftlog)
 /**
  * ncm_fftlog_set_size:
  * @fftlog: a #NcmFftlog
- * @n: number of knots
+ * @n: number of knots $N$
  *
- * Sets the number of knots $N_f^\prime$ where the integrated function is evaluated,
- * given the input number of knots @n, plus padding.
+ * Sets the size of the transform from @n knots: the full size $N_f^\prime$ is the
+ * smallest $2^a 3^b 5^c 7^d \geq N(1 + \mathrm{padding})$, and the fundamental interval
+ * keeps $N^\prime = N_f^\prime - 2 N_\mathrm{pad}$ of them, the rest being padding.
  *
  */
+
+/* The fundamental and padding knot counts set_size() gives @n knots, without allocating. */
+static void
+_ncm_fftlog_size_for (NcmFftlogPrivate * const self, guint n, gint *n_new, guint *pad)
+{
+  const gint nt = ncm_util_fact_size ((gint) (n * (1.0 + self->pad_p)));
+
+  *pad   = nt * self->pad_p * 0.5 / (1.0 + self->pad_p);
+  *n_new = nt - 2 * (gint) * pad;
+}
+
 void
 ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
 {
   NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
-  gint nt                       = n * (1.0 + self->pad_p);
   gint n_new;
 
   self->Nr = n;
 
-  nt        = ncm_util_fact_size (nt);
-  self->pad = nt * self->pad_p * 0.5 / (1.0 + self->pad_p);
-  n_new     = nt - 2 * self->pad;
+  _ncm_fftlog_size_for (self, n, &n_new, &self->pad);
 
   if ((n_new != self->N) || (n_new + 2 * (gint) self->pad != self->Nf))
   {
     guint fftw_default_flags = ncm_cfg_get_fftw_default_flag ();
+    gboolean first_plan;
     gint i;
 
     self->N    = n_new;
@@ -776,9 +807,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
 
     self->lnr_vec = ncm_vector_new (self->N);
 
-    ncm_cfg_load_fftw_wisdom ("ncm_fftlog_%s", NCM_FFTLOG_GET_CLASS (fftlog)->name);
-
-    ncm_cfg_lock_plan_fftw ();
+    first_plan = ncm_cfg_fftw_plan_begin ("ncm_fftlog_dft_1d_%d", self->Nf);
 
     self->p_Fk2Cm   = fftw_plan_dft_1d (self->Nf, self->Fk,   self->Cm, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
     self->p_CmYm2Gr = fftw_plan_dft_1d (self->Nf, self->CmYm, self->Gr, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
@@ -794,9 +823,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
       g_ptr_array_add (self->Ym, Ym_i);
     }
 
-    ncm_cfg_unlock_plan_fftw ();
-
-    ncm_cfg_save_fftw_wisdom ("ncm_fftlog_%s", NCM_FFTLOG_GET_CLASS (fftlog)->name);
+    ncm_cfg_fftw_plan_end (first_plan);
 
     ncm_fftlog_reset (fftlog);
   }
@@ -824,6 +851,7 @@ ncm_fftlog_set_max_size (NcmFftlog *fftlog, guint max_n)
  *
  * Gets the maximum number of knots in the fundamental interval.
  *
+ * Returns: the #NcmFftlog:max-n
  */
 guint
 ncm_fftlog_get_max_size (NcmFftlog *fftlog)
@@ -836,9 +864,9 @@ ncm_fftlog_get_max_size (NcmFftlog *fftlog)
 /**
  * ncm_fftlog_set_padding:
  * @fftlog: a #NcmFftlog
- * @pad_p: padding percentage
+ * @pad_p: padding fraction
  *
- * Sets the size of the padding in percentage of the interval.
+ * Sets #NcmFftlog:padding.
  *
  */
 void
@@ -861,9 +889,7 @@ ncm_fftlog_set_padding (NcmFftlog *fftlog, gdouble pad_p)
  * ncm_fftlog_get_padding:
  * @fftlog: a #NcmFftlog
  *
- * Gets the padding percentage.
- *
- * Returns: the padding percentage.
+ * Returns: the #NcmFftlog:padding fraction
  */
 gdouble
 ncm_fftlog_get_padding (NcmFftlog *fftlog)
@@ -876,9 +902,11 @@ ncm_fftlog_get_padding (NcmFftlog *fftlog)
 /**
  * ncm_fftlog_set_noring:
  * @fftlog: a #NcmFftlog
- * @active: whether to use the no-ringing adjustment of $\ln(r_0)$
+ * @active: whether to use the no-ringing shift of the output grid
  *
- * Sets whether to use the no-ringing adjustment of $\ln(r_0)$.
+ * Sets whether to use Hamilton's low-ringing adjustment, which moves $\ln r_0$ by less
+ * than one knot so that the kernel coefficient of the Nyquist mode is real. It applies
+ * only when ncm_fftlog_get_full_size() is even, since an odd size has no Nyquist mode.
  *
  */
 void
@@ -897,8 +925,7 @@ ncm_fftlog_set_noring (NcmFftlog *fftlog, gboolean active)
  * ncm_fftlog_get_noring:
  * @fftlog: a #NcmFftlog
  *
- *
- * Returns: whether no-ringing condition is activated.
+ * Returns: whether the no-ringing shift of the output grid is active
  */
 gboolean
 ncm_fftlog_get_noring (NcmFftlog *fftlog)
@@ -921,6 +948,9 @@ ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk)
 {
   NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
 
+  if (!(Lk > 0.0))
+    g_error ("ncm_fftlog_set_length: the period must be positive, got %g.", Lk);
+
   if (self->Lk != Lk)
   {
     self->Lk   = Lk;
@@ -930,9 +960,73 @@ ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk)
 }
 
 /**
+ * ncm_fftlog_set_bias:
+ * @fftlog: a #NcmFftlog
+ * @bias: the bias $b$
+ *
+ * Sets the bias $b$. The transform then expands $f(k) = F(k) k^{-b}$ and uses the kernel
+ * $(kr)^b K(kr)$, so that
+ * \begin{equation*}
+ * G(r) = r^{-b} \int_0^\infty f(k)\,(kr)^b K(kr)\,\mathrm{d}k
+ * \end{equation*}
+ * is the same function for any $b$. The coefficients become
+ * $Y_n = \int_0^\infty t^{b + 2\pi i n / L_T} K(t)\,\mathrm{d}t$, which exist only for
+ * $b$ inside the range of ncm_fftlog_get_bias_range(); the evaluation aborts otherwise.
+ *
+ * What the bias changes is the discrete representation: the padding holds $f$, not
+ * $F$, and the roundoff of the transform scales with the dynamic range of $f$ over the
+ * interval and padding. A bias close to the log-slope of $F$ at the ends keeps $f$ from
+ * growing into the padding; for a power law $F \propto k^b$ it makes $f$ constant.
+ *
+ */
+void
+ncm_fftlog_set_bias (NcmFftlog *fftlog, const gdouble bias)
+{
+  NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
+
+  if (self->bias != bias)
+  {
+    self->bias = bias;
+    ncm_fftlog_reset (fftlog);
+  }
+}
+
+/**
+ * ncm_fftlog_get_bias:
+ * @fftlog: a #NcmFftlog
+ *
+ * Returns: the bias $b$, see ncm_fftlog_set_bias()
+ */
+gdouble
+ncm_fftlog_get_bias (NcmFftlog *fftlog)
+{
+  NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
+
+  return self->bias;
+}
+
+/**
+ * ncm_fftlog_get_bias_range:
+ * @fftlog: a #NcmFftlog
+ * @bias_min: (out): lower end of the range
+ * @bias_max: (out): upper end of the range
+ *
+ * Gets the open range $(b_\mathrm{min}, b_\mathrm{max})$ of biases for which the kernel
+ * coefficients exist, set by the behaviour of $t^b K(t)$ at $t \to 0$ and $t \to \infty$.
+ * A kernel that supports no bias returns $b_\mathrm{min} = b_\mathrm{max} = 0$, and then
+ * only $b = 0$ is accepted.
+ *
+ */
+void
+ncm_fftlog_get_bias_range (NcmFftlog *fftlog, gdouble *bias_min, gdouble *bias_max)
+{
+  NCM_FFTLOG_GET_CLASS (fftlog)->get_bias_range (fftlog, bias_min, bias_max);
+}
+
+/**
  * ncm_fftlog_use_eval_interval:
  * @fftlog: a #NcmFftlog
- * @use_eval_interval: a gboolean
+ * @use_eval_interval: whether to restrict the output
  *
  * Sets whether to use a restricted evaluation interval $[r_\mathrm{min}, r_\mathrm{max}]$.
  * See ncm_fftlog_set_eval_r_min() and ncm_fftlog_set_eval_r_max().
@@ -968,11 +1062,42 @@ ncm_fftlog_use_eval_interval (NcmFftlog *fftlog, gboolean use_eval_interval)
 /**
  * ncm_fftlog_use_smooth_padding:
  * @fftlog: a #NcmFftlog
- * @use_smooth_padding: a gboolean
+ * @use_smooth_padding: whether to pad smoothly
  *
- * Sets whether to use pad the fft using a power-law continuation of the
- * input function which is continuous at the border and drops to a scale
- * determined by ncm_fftlog_set_smooth_padding_scale().
+ * Sets whether the padding continues the input instead of holding zeros. Zeros put a
+ * step at each end of the interval, and the transform of a step rings at $r$ near the
+ * inverse of that end at a level that falls only as $1/N$. The padding continues the
+ * function the transform expands, $f = F k^{-b}$ with the bias of ncm_fftlog_set_bias().
+ * The continuation is the power law of each end, with the value and log-slope of $f$
+ * there taken from a cubic through the four nearest knots, anchored at the end itself so
+ * that it does not move with the knots. Where $F k$, the integrand in $\ln k$, would grow
+ * along the continuation, the power law is cut by a Gaussian in $\ln k$ of width the
+ * inverse of that log-slope, so that the padding never holds much more integral than the
+ * interval does. Each continuation is then tapered to zero by a $C^\infty$ step over
+ * $[0.4\,h, 0.8\,h]$ from its own end, with $h = pL/2$ the nominal padding of each side,
+ * so the two ends never meet: a mixture of them would carry values of $f$ from both ends,
+ * whose $k^b$ differ by $e^{b L_T}$. The taper sits at a fixed distance in $\ln k$, so it
+ * does not move when a fractional padding rounds to a slightly different period at each
+ * size. The periodic input is then continuous with its first derivative at each end of the
+ * interval, where the continuation matches the value and log-slope of $F$ but not its
+ * higher derivatives, and smooth elsewhere; the transform converges as about $N^{-3}$
+ * over the whole output grid, down to a roundoff floor. The continuation is fitted in log
+ * space, so $F$ must be positive at the four knots nearest each end. The fitted slopes are
+ * kept, see ncm_fftlog_get_end_slopes().
+ *
+ * The result within a few e-foldings of $1/k_\mathrm{max}$ or $1/k_\mathrm{min}$ depends
+ * on the continuation, which is an extrapolation of the input beyond its interval, and a
+ * longer padding carries it further. Far below the peak of the output, the periodic images
+ * of the padded input set a floor of order $e^{-(b - b_\mathrm{min}) L_T}$ times its
+ * integral, see ncm_fftlog_get_best_bias(); without a bias a padding fraction of one puts
+ * it at $e^{-2L}$. A fractional padding rounds $L_T$ differently at each size, which moves
+ * that floor with $N$ where no bias suppresses it.
+ *
+ * Beyond $0.8\,h$ from each end the padded input is zero, so $G(r)$ leaves out the integral
+ * of $F$ past that point. For $k^2 P(k)$ of a physical spectrum this is negligible; for an
+ * input whose $F k$ falls slowly beyond an end it is felt over the whole grid and grows
+ * toward that edge. The theory page (section "Reach of the continuation") gives the
+ * figures and the ways to carry the continuation further.
  *
  */
 void
@@ -985,45 +1110,11 @@ ncm_fftlog_use_smooth_padding (NcmFftlog *fftlog, gboolean use_smooth_padding)
 }
 
 /**
- * ncm_fftlog_set_smooth_padding_scale:
- * @fftlog: a #NcmFftlog
- * @log10sc: a gdouble containing the $\log_{10}(s)$ of the smoothing scale $s$
- *
- * Sets the value of the smoothing scale $s$ which is used if ncm_fftlog_use_smooth_padding()
- * is turned on.
- *
- */
-void
-ncm_fftlog_set_smooth_padding_scale (NcmFftlog *fftlog, gdouble log10sc)
-{
-  NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
-
-  self->smooth_padding_scale = log10sc;
-  self->evaluated            = FALSE;
-}
-
-/**
- * ncm_fftlog_get_smooth_padding_scale:
- * @fftlog: a #NcmFftlog
- *
- * Gets the log10 of the current value of the smoothing scale $s$.
- *
- * Returns: $\log_{10}(s)$.
- */
-gdouble
-ncm_fftlog_get_smooth_padding_scale (NcmFftlog *fftlog)
-{
-  NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
-
-  return self->smooth_padding_scale;
-}
-
-/**
  * ncm_fftlog_set_eval_r_min:
  * @fftlog: a #NcmFftlog
  * @eval_r_min: the value of $r_\mathrm{min}$
  *
- * Sets $r_\mathrm{min}$ to @r_min.
+ * Sets $r_\mathrm{min}$ to @eval_r_min.
  *
  */
 void
@@ -1040,7 +1131,7 @@ ncm_fftlog_set_eval_r_min (NcmFftlog *fftlog, const gdouble eval_r_min)
  * @fftlog: a #NcmFftlog
  * @eval_r_max: the value of $r_\mathrm{max}$
  *
- * Sets $r_\mathrm{max}$ to @r_max.
+ * Sets $r_\mathrm{max}$ to @eval_r_max.
  *
  */
 void
@@ -1080,6 +1171,8 @@ ncm_fftlog_get_eval_r_max (NcmFftlog *fftlog)
   return self->eval_r_max;
 }
 
+static void _ncm_fftlog_check_bias (NcmFftlog *fftlog);
+
 static void
 _ncm_fftlog_eval (NcmFftlog *fftlog)
 {
@@ -1094,27 +1187,31 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
     const gdouble Lt       = ncm_fftlog_get_full_length (fftlog);
     const gdouble twopi_Lt = 2.0 * M_PI / Lt;
     fftw_complex *Ym_0     = g_ptr_array_index (self->Ym, 0);
-    gdouble lnr0k0         = self->lnk0 + self->lnr0;
+
+    /* Knots sit at (i - Nf_2) Lk_N on both sides, so the two offsets cancel only when
+     * 2 Nf_2 = Nf. For an odd Nf one knot is left over and enters the phase here. */
+    gdouble lnr0k0 = self->lnk0 + self->lnr0 + (self->Nf - 2 * self->Nf_2) * self->Lk_N;
+    gdouble shift  = 0.0;
     fftw_complex *Ym_ndm1;
 
+    _ncm_fftlog_check_bias (fftlog);
     NCM_FFTLOG_GET_CLASS (fftlog)->compute_Ym (fftlog, Ym_0);
 
-    if (self->noring)
+    /* Hamilton's low-ringing condition sets the phase of the Nyquist mode, which only an
+     * even Nf has. theta does not depend on ln r0, so one step makes M an integer. */
+    if (self->noring && ((self->Nf % 2) == 0))
     {
-      gint i;
+      const gdouble theta = carg (Ym_0[self->Nf / 2]);
+      const gdouble M     = (self->Nf / Lt) * lnr0k0 - theta / M_PI;
+      const gdouble dM    = M - (glong) M;
 
-      for (i = 0; i < 5; i++)
-      {
-        fftw_complex YNf_2_0 = Ym_0[self->Nf / 2];
-        const gdouble theta  = carg (YNf_2_0);
-        const gdouble M      = (self->Nf / Lt) * lnr0k0 - theta / M_PI;
-        const glong M_round  = M;
-        const gdouble dM     = M - M_round;
-
-        lnr0k0     -= (Lt / self->Nf) * dM;
-        self->lnr0 -= (Lt / self->Nf) * dM;
-      }
+      shift   = -(Lt / self->Nf) * dM;
+      lnr0k0 += shift;
     }
+
+    /* The shift applies to the grid, never to the requested ln r0: otherwise each new size
+     * shifts from the last one and the grid depends on the sizes visited before. */
+    self->lnr0_grid = self->lnr0 + shift;
 
     for (i = 0; i < self->Nf; i++)
     {
@@ -1125,11 +1222,13 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
 
       Ym_ndm1 = Ym_0;
 
+      /* G(r) is r^(-1 - b) times the sum over the modes r^(-a), so each derivative in
+       * ln r brings down -(1 + b + a). */
       for (nd = 1; nd <= self->nderivs; nd++)
       {
         fftw_complex *Ym_nd = g_ptr_array_index (self->Ym, nd);
 
-        Ym_nd[i] = -(1.0 + a) * Ym_ndm1[i];
+        Ym_nd[i] = -(1.0 + self->bias + a) * Ym_ndm1[i];
         Ym_ndm1  = Ym_nd;
       }
     }
@@ -1152,7 +1251,7 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
   for (i = 0; i < self->N; i++)
   {
     const gint phys_i = i - self->N_2;
-    const gdouble lnr = self->lnr0 + phys_i * self->Lk_N;
+    const gdouble lnr = self->lnr0_grid + phys_i * self->Lk_N;
 
     ncm_vector_set (self->lnr_vec, i, lnr);
   }
@@ -1163,21 +1262,22 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
     NcmVector *Gr_nd    = g_ptr_array_index (self->Gr_vec, nd);
     fftw_complex *Ym_nd = g_ptr_array_index (self->Ym, nd);
 
+    /* For real F and a real kernel C_m Y_m is conjugate symmetric, so the transform is
+     * real; the Nyquist entry of an even Nf is already real, since both factors are. No
+     * entry is altered: making one member of a +-m pair real drops half of that mode's
+     * sine part. */
     for (i = 0; i < self->Nf; i++)
     {
       self->CmYm[i] = self->Cm[i] * Ym_nd[i];
     }
-
-    self->CmYm[self->Nf_2]     = creal (self->CmYm[self->Nf_2]);
-    self->CmYm[self->Nf_2 + 1] = creal (self->CmYm[self->Nf_2 + 1]);
 
     fftw_execute (self->p_CmYm2Gr);
 
     for (i = 0; i < self->N; i++)
     {
       const gdouble lnr     = ncm_vector_get (self->lnr_vec, i);
-      const gdouble rm1     = exp (-lnr);
-      const gdouble Gr_nd_i = creal (self->Gr[i + self->pad]) * rm1 / norma;
+      const gdouble rm1mb   = exp (-(1.0 + self->bias) * lnr);
+      const gdouble Gr_nd_i = creal (self->Gr[i + self->pad]) * rm1mb / norma;
 
       ncm_vector_set (Gr_nd, i, Gr_nd_i);
     }
@@ -1186,14 +1286,34 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
   self->evaluated = TRUE;
 }
 
+static void
+_ncm_fftlog_check_bias (NcmFftlog *fftlog)
+{
+  NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
+  gdouble bias_min, bias_max;
+
+  if (self->bias == 0.0)
+    return;
+
+  ncm_fftlog_get_bias_range (fftlog, &bias_min, &bias_max);
+
+  if ((bias_min == bias_max) || !((self->bias > bias_min) && (self->bias < bias_max)))
+    g_error ("ncm_fftlog: the kernel of `%s' has coefficients only for a bias in (%g, %g), got %g.",
+             G_OBJECT_TYPE_NAME (fftlog), bias_min, bias_max, self->bias);
+}
+
 /**
  * ncm_fftlog_get_Ym:
  * @fftlog: a #NcmFftlog
  * @size: (out): return size
  *
- * Computes the $Y_m$ vector.
+ * Computes the kernel coefficients $Y_m$ at the current bias, before the phase factor of
+ * the grid centres, as interleaved real and imaginary parts of the
+ * ncm_fftlog_get_full_size() modes.
+ * They are computed into the buffer the transform uses, so the next evaluation prepares
+ * its own copy again.
  *
- * Returns: (transfer none) (array length=size): $Y_m$.
+ * Returns: (transfer none) (array length=size): $Y_m$
  */
 gdouble *
 ncm_fftlog_get_Ym (NcmFftlog *fftlog, guint *size)
@@ -1202,7 +1322,9 @@ ncm_fftlog_get_Ym (NcmFftlog *fftlog, guint *size)
 
   fftw_complex *Ym_0 = g_ptr_array_index (self->Ym, 0);
 
+  _ncm_fftlog_check_bias (fftlog);
   NCM_FFTLOG_GET_CLASS (fftlog)->compute_Ym (fftlog, Ym_0);
+  self->prepared = FALSE;
 
   size[0] = ncm_fftlog_get_full_size (fftlog) * 2;
 
@@ -1212,9 +1334,9 @@ ncm_fftlog_get_Ym (NcmFftlog *fftlog, guint *size)
 /**
  * ncm_fftlog_get_lnk_vector:
  * @fftlog: a #NcmFftlog
- * @lnk: a #NcmVector
+ * @lnk: output, of length ncm_fftlog_get_size()
  *
- * Computes the $\ln k$ vector.
+ * Fills @lnk with the knots $\ln k_m$ of the fundamental interval.
  *
  */
 void
@@ -1234,48 +1356,204 @@ ncm_fftlog_get_lnk_vector (NcmFftlog *fftlog, NcmVector *lnk)
   }
 }
 
+/**
+ * ncm_fftlog_get_end_slopes:
+ * @fftlog: a #NcmFftlog
+ * @slope_min: (out): $\mathrm{d}\ln F / \mathrm{d}\ln k$ at $\ln k_0 - L/2$
+ * @slope_max: (out): $\mathrm{d}\ln F / \mathrm{d}\ln k$ at $\ln k_0 + L/2$
+ *
+ * Gets the log-slopes of $F$ at the two ends of the interval, as the smooth padding
+ * fitted them in the last evaluation (see ncm_fftlog_use_smooth_padding()). They are
+ * slopes of $F$, not of $F k^{-b}$, so they do not depend on the bias. The evaluation
+ * must have used the smooth padding.
+ *
+ */
+void
+ncm_fftlog_get_end_slopes (NcmFftlog *fftlog, gdouble *slope_min, gdouble *slope_max)
+{
+  NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
+
+  if (!self->evaluated || !self->smooth_padding)
+    g_error ("ncm_fftlog_get_end_slopes: the slopes come from the last evaluation with the smooth padding.");
+
+  *slope_min = self->end_slope_min;
+  *slope_max = self->end_slope_max;
+}
+
+/**
+ * ncm_fftlog_get_best_bias:
+ * @fftlog: a #NcmFftlog
+ *
+ * Chooses a bias from the end slopes of the last evaluation, see
+ * ncm_fftlog_get_end_slopes(). With $s_\mathrm{min}$ and $s_\mathrm{max}$ the slopes at
+ * $k_\mathrm{min}$ and $k_\mathrm{max}$, $f = F k^{-b}$ grows into neither padding when
+ * $s_\mathrm{max} \le b \le s_\mathrm{min}$; the choice is the $b$ closest to zero in
+ * that interval, so an input that already decays at both ends keeps $b = 0$, and a power
+ * law $F \propto k^s$ gets $b = s$. When the interval is empty, $F$ grows at both ends
+ * and the choice is its midpoint, which splits the growth between them.
+ *
+ * The periodic image of the input one period $L_T$ away enters with a weight
+ * $e^{-(b - b_\mathrm{min}) L_T}$ at one end of ncm_fftlog_get_bias_range() and
+ * $e^{-(b_\mathrm{max} - b) L_T}$ at the other, so the choice is then kept
+ * $\ln(1/\epsilon) / L_T$ inside the range, with $\epsilon$ the double precision
+ * epsilon, where both weights are below roundoff. A range narrower than that gives its
+ * midpoint, and a kernel that supports no bias gives zero.
+ *
+ * Returns: the bias
+ */
+gdouble
+ncm_fftlog_get_best_bias (NcmFftlog *fftlog)
+{
+  const gdouble margin = -log (GSL_DBL_EPSILON) / ncm_fftlog_get_full_length (fftlog);
+  gdouble slope_min, slope_max, bias_min, bias_max, bias;
+
+  ncm_fftlog_get_end_slopes (fftlog, &slope_min, &slope_max);
+  ncm_fftlog_get_bias_range (fftlog, &bias_min, &bias_max);
+
+  if (bias_min == bias_max)
+    return 0.0;
+
+  if (slope_max <= slope_min)
+    bias = GSL_MIN (GSL_MAX (0.0, slope_max), slope_min);
+  else
+    bias = 0.5 * (slope_min + slope_max);
+
+  if (bias_max - bias_min <= 2.0 * margin)
+    return 0.5 * (bias_min + bias_max);
+
+  return GSL_MIN (GSL_MAX (bias, bias_min + margin), bias_max - margin);
+}
+
+static void _ncm_fftlog_end_power_law (const gdouble u[4], const gdouble lnF[4], gdouble *A, gdouble *s);
+static gdouble _ncm_fftlog_continuation (const gdouble A, const gdouble s, const gdouble sigma, const gdouble u);
+static gdouble _ncm_fftlog_taper (const gdouble x, const gdouble x0, const gdouble dx);
+static gdouble _ncm_fftlog_smooth_step (const gdouble t);
+
+/* Fills the padding with the continuation described in ncm_fftlog_use_smooth_padding().
+ * The pad slots above the interval (pad + N onwards) continue the upper end, the pad
+ * slots below it (0 to pad - 1) the lower end. Each continuation is tapered to zero at a
+ * fixed distance in ln k from its own end, set by the nominal padding p L / 2, so it does
+ * not move when the grid is refined; the rounded padding pad L / N changes with N, and a
+ * partition placed in it moved the result by that change. The two never overlap: a blend
+ * of the two ends mixes values of f = F k^(-b) whose k^b differ by e^(b L_T). */
 static void
 _ncm_fftlog_add_smooth_padding (NcmFftlog *fftlog)
 {
   NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
-  gint size                     = 3;
-  gdouble dd1[3], xa1[3], ya1[3];
-  gdouble dd2[3], xa2[3], ya2[3];
+  const gdouble lnk_max         = self->lnk0 + 0.5 * self->Lk;
+  const gdouble lnk_min         = self->lnk0 - 0.5 * self->Lk;
+  const gdouble lnk_first       = self->lnk0 - self->N_2 * self->Lk_N;
+  const gdouble lnk_last        = self->lnk0 + (self->N - 1 - self->N_2) * self->Lk_N;
+
+  /* The taper runs over [0.4, 0.8] of the nominal padding h = p L / 2 on each side. The
+   * rounded padding is at least 0.95 h for the sizes a calibration visits (N >= 100, p =
+   * 0.3 the worst measured), so it holds the taper and nothing moves with N; a shorter
+   * one shrinks the taper to fit. A later or narrower taper keeps more of a slow tail but
+   * converges slowly at small r under a positive bias. */
+  const gdouble half_pad = 0.5 * self->pad_p * self->Lk;
+  const gdouble fit      = (self->pad > 0) ? GSL_MIN (1.0, self->pad * self->Lk_N / (0.8 * half_pad)) : 1.0;
+  const gdouble taper_x0 = 0.4 * half_pad * fit;
+  const gdouble taper_dx = 0.4 * half_pad * fit;
+  gdouble u_hi[4], lnF_hi[4], u_lo[4], lnF_lo[4];
+  gdouble A_hi, s_hi, A_lo, s_lo;
   gint i;
 
-  for (i = 0; i < size; i++)
-  {
-    xa1[i] = log1p (self->pad + 1.0 * i);
-    ya1[i] = log (creal (self->Fk[self->pad + i]));
+  g_assert_cmpint (self->N, >=, 4);
 
-    xa2[i] = log1p (self->pad + self->N + 1.0 * i - size);
-    ya2[i] = log (creal (self->Fk[self->pad + self->N - size + i]));
+  /* u is the distance from the end along ln k, negative at the knots, positive in the
+   * padding. */
+  for (i = 0; i < 4; i++)
+  {
+    const gdouble F_hi = creal (self->Fk[self->pad + self->N - 4 + i]);
+    const gdouble F_lo = creal (self->Fk[self->pad + i]);
+
+    if (!(F_hi > 0.0) || !(F_lo > 0.0))
+      g_error ("ncm_fftlog: smooth padding needs F > 0 at the four knots nearest each end of the interval, got %g and %g.", F_lo, F_hi);
+
+    u_hi[i]   = lnk_last - (3 - i) * self->Lk_N - lnk_max;
+    lnF_hi[i] = log (F_hi);
+
+    u_lo[i]   = lnk_min - (lnk_first + i * self->Lk_N);
+    lnF_lo[i] = log (F_lo);
   }
 
-  xa1[2] = 0.0;
-  ya1[2] = self->smooth_padding_scale * M_LN10;
+  _ncm_fftlog_end_power_law (u_hi, lnF_hi, &A_hi, &s_hi);
+  _ncm_fftlog_end_power_law (u_lo, lnF_lo, &A_lo, &s_lo);
 
-  xa2[0] = log1p (2.0 * self->pad + self->N - 1.0);
-  ya2[0] = self->smooth_padding_scale * M_LN10;
-
-  gsl_poly_dd_init (dd1, xa1, ya1, size);
-  gsl_poly_dd_init (dd2, xa2, ya2, size);
+  /* The knots hold f = F k^(-b): its slope in u is that of F less b above the interval
+   * and plus b below it, where u runs down in ln k. */
+  self->end_slope_max = s_hi + self->bias;
+  self->end_slope_min = self->bias - s_lo;
 
   for (i = 0; i < (gint) self->pad; i++)
   {
-    self->Fk[i]                       = exp (gsl_poly_dd_eval (dd1, xa1, size, log1p (1.0 * i)));
-    self->Fk[self->pad + self->N + i] = exp (gsl_poly_dd_eval (dd2, xa2, size, log1p (self->pad + self->N + i)));
+    const gdouble x_hi = lnk_last + (i + 1) * self->Lk_N - lnk_max;
+    const gdouble x_lo = lnk_min - (lnk_first - (i + 1) * self->Lk_N);
 
-    /*printf ("%8d % 22.15g %8d % 22.15g\n", i, creal (self->Fk[i]), self->pad + self->N + i, creal (self->Fk[self->pad + self->N + i]));*/
+    self->Fk[self->pad + self->N + i] = _ncm_fftlog_continuation (A_hi, s_hi, s_hi + 1.0 + self->bias, x_hi) * _ncm_fftlog_taper (x_hi, taper_x0, taper_dx);
+    self->Fk[self->pad - 1 - i]       = _ncm_fftlog_continuation (A_lo, s_lo, s_lo - 1.0 - self->bias, x_lo) * _ncm_fftlog_taper (x_lo, taper_x0, taper_dx);
+  }
+}
+
+/* Value A and log-slope s of ln F at u = 0 from the cubic through four (u, ln F) knots. */
+static void
+_ncm_fftlog_end_power_law (const gdouble u[4], const gdouble lnF[4], gdouble *A, gdouble *s)
+{
+  gdouble dd[4], c[4], w[4];
+
+  gsl_poly_dd_init (dd, u, lnF, 4);
+  gsl_poly_dd_taylor (c, 0.0, dd, u, 4, w);
+
+  *A = c[0];
+  *s = c[1];
+}
+
+/* The power law exp (A + s u) at distance u > 0 beyond an end, cut by a Gaussian in ln k
+ * of width 1 / sigma when sigma > 0. The knots hold f = F k^(-b) and s is its log-slope
+ * in u; sigma is that of F k = f k^(1 + b), what the transform integrates in ln k:
+ * s + 1 + b above the interval, where ln k = ln k_max + u, and s - 1 - b below it, where
+ * ln k = ln k_min - u. It does not depend on b. A cut on the growth of f alone lets F k
+ * grow for several e-foldings and its periodic image floods the output far below its
+ * peak; one on s below the interval also cuts tails where f grows but F k decays. */
+static gdouble
+_ncm_fftlog_continuation (const gdouble A, const gdouble s, const gdouble sigma, const gdouble u)
+{
+  const gdouble su = sigma * u;
+
+  return exp (A + s * u - ((sigma > 0.0) ? 0.5 * su * su : 0.0));
+}
+
+/* One up to x0, zero beyond x0 + dx, C-infinity in between. */
+static gdouble
+_ncm_fftlog_taper (const gdouble x, const gdouble x0, const gdouble dx)
+{
+  return 1.0 - _ncm_fftlog_smooth_step ((x - x0) / dx);
+}
+
+/* C-infinity step from 0 at t <= 0 to 1 at t >= 1, all derivatives zero at both ends. */
+static gdouble
+_ncm_fftlog_smooth_step (const gdouble t)
+{
+  if (t <= 0.0)
+    return 0.0;
+
+  if (t >= 1.0)
+    return 1.0;
+
+  {
+    const gdouble a = exp (-1.0 / t);
+    const gdouble b = exp (-1.0 / (1.0 - t));
+
+    return a / (a + b);
   }
 }
 
 /**
  * ncm_fftlog_eval_by_vector:
  * @fftlog: a #NcmFftlog
- * @Fk: a #NcmVector
+ * @Fk: values of $F$ at the knots $\ln k_m$, see ncm_fftlog_get_lnk_vector()
  *
- * @Fk is a vector which contains the values of the function at each knot $\ln k_m$.
+ * Computes the transform from the values of $F$ at the knots.
  *
  */
 void
@@ -1290,7 +1568,10 @@ ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk)
 
   for (i = 0; i < self->N; i++)
   {
-    self->Fk[self->pad + i] = ncm_vector_get (Fk, i);
+    const gint phys_i   = i - self->N_2;
+    const gdouble lnk_i = self->lnk0 + self->Lk_N * phys_i;
+
+    self->Fk[self->pad + i] = ncm_vector_get (Fk, i) * exp (-self->bias * lnk_i);
   }
 
   if (self->smooth_padding)
@@ -1322,7 +1603,7 @@ ncm_fftlog_eval_by_gsl_function (NcmFftlog *fftlog, gsl_function *Fk)
     const gdouble k_i   = exp (lnk_i);
     const gdouble Fk_i  = GSL_FN_EVAL (Fk, k_i);
 
-    self->Fk[self->pad + i] = Fk_i;
+    self->Fk[self->pad + i] = Fk_i * exp (-self->bias * lnk_i);
   }
 
   if (self->smooth_padding)
@@ -1402,7 +1683,7 @@ ncm_fftlog_prepare_splines (NcmFftlog *fftlog)
  *
  * Gets the vector of the $\ln r$ knots.
  *
- * Returns: (transfer full):
+ * Returns: (transfer full): the $\ln r$ knots
  */
 NcmVector *
 ncm_fftlog_get_vector_lnr (NcmFftlog *fftlog)
@@ -1465,7 +1746,7 @@ ncm_fftlog_peek_spline_Gr (NcmFftlog *fftlog, guint nderiv)
  * Evaluates the function $G(r)$, or the @nderiv-th derivative,
  * at the point @lnr.
  *
- * Returns: $\frac{\mathrm{d}^nG(r)}{\mathrm{d}\ln r}$ value computed at @lnr.
+ * Returns: $\mathrm{d}^n G / (\mathrm{d}\ln r)^n$ at @lnr, with $n$ = @nderiv
  */
 gdouble
 ncm_fftlog_eval_output (NcmFftlog *fftlog, guint nderiv, const gdouble lnr)
@@ -1479,77 +1760,98 @@ ncm_fftlog_eval_output (NcmFftlog *fftlog, guint nderiv, const gdouble lnr)
  * @Fk: Fk function pointer
  * @reltol: relative tolerance
  *
- * Increases the original (input) number of knots until the $G(r)$ splines reach
- * the required precision @reltol.
+ * Increases the number of knots by 20% at a time until $G(r)$ and its derivatives change
+ * by less than @reltol, relative to the value plus the component's peak, from one size to
+ * the next. Each step computes one transform; the next size is checked against
+ * #NcmFftlog:max-n before anything is allocated, and the calibration aborts if it would
+ * pass it first. A component that is zero at both sizes counts as converged, and a
+ * non-finite transform aborts. Leaves @fftlog evaluated at the final size.
  *
  */
 void
 ncm_fftlog_calibrate_size_gsl (NcmFftlog *fftlog, gsl_function *Fk, const gdouble reltol)
 {
   NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
-  NcmSpline **s                 = g_new0 (NcmSpline *, self->nderivs + 1);
-  gdouble lreltol               = 0.0;
-  NcmVector *eval_lnr_vec;
-  guint nd, size;
+  NcmSpline **prev              = g_new0 (NcmSpline *, self->nderivs + 1);
+  gdouble err                   = GSL_NAN; /* Change at the last step, NaN before the first */
 
   ncm_fftlog_eval_by_gsl_function (fftlog, Fk);
   ncm_fftlog_prepare_splines (fftlog);
 
-  for (nd = 0; nd <= self->nderivs; nd++)
+  while (TRUE)
   {
-    s[nd] = ncm_spline_ref (g_ptr_array_index (self->Gr_s, nd));
-  }
+    const gint N_prev = self->N;
+    gint N_next       = N_prev;
+    guint n_req       = N_prev;
+    guint pad_next, nd, i, size, n_try;
+    NcmVector *lnr;
 
-  /*printf ("# Initial size %u [%u].\n", self->N, self->pad);*/
-  ncm_fftlog_set_size (fftlog, self->N * 1.2);
-  /*printf ("# Trying size %u [%u].\n", self->N, self->pad);*/
-  ncm_fftlog_eval_by_gsl_function (fftlog, Fk);
-  ncm_fftlog_prepare_splines (fftlog);
-
-  eval_lnr_vec = ncm_spline_get_xv (g_ptr_array_index (self->Gr_s, 0));
-  size         = ncm_spline_get_len (g_ptr_array_index (self->Gr_s, 0));
-
-  for (nd = 0; nd <= self->nderivs; nd++)
-  {
-    NcmVector *eval_Gr_vec_nd = ncm_spline_get_yv (g_ptr_array_index (self->Gr_s, nd));
-    gdouble absmin, absmax;
-    guint i /*, i_max = 0*/;
-
-    ncm_vector_get_absminmax (eval_Gr_vec_nd, &absmin, &absmax);
-
-    /*printf ("# Testing component %u [% 20.15g, % 20.15g].\n", nd, absmin, absmax);*/
-    for (i = 0; i < size; i++)
+    /* Grow by 20%; the factorable full size can round back to the same N, so grow further
+     * until it moves. The limit is checked on the size before anything is allocated. */
+    for (n_try = 1; N_next <= N_prev; n_try++)
     {
-      const gdouble lnr_i     = ncm_vector_get (eval_lnr_vec, i);
-      const gdouble lnG_i     = ncm_vector_get (eval_Gr_vec_nd, i);
-      const gdouble lnS_i     = ncm_spline_eval (s[nd], lnr_i);
-      const gdouble lreltol_i = fabs ((lnG_i - lnS_i) / (fabs (lnG_i) + absmax));
-
-      /*printf ("% 20.15g % 20.15e % 20.15e % 20.15e | % 20.15e % 20.15e\n", lnr_i, exp (lnr_i), lnG_i, lnS_i, lreltol_i, fabs ((lnG_i - lnS_i) / fabs (lnG_i)));*/
-      if (lreltol_i > lreltol)
-        lreltol = lreltol_i;
-
-      /*i_max   = i;*/
+      n_req = (guint) ceil (N_prev * pow (1.2, n_try));
+      _ncm_fftlog_size_for (self, n_req, &N_next, &pad_next);
     }
 
-    ncm_spline_clear (&s[nd]);
-    ncm_vector_free (eval_Gr_vec_nd);
-    /*printf ("# Largest error up to component %u is [%u] %e.\n", nd, i_max, lreltol); fflush (stdout);*/
+    if ((N_next > (gint) self->max_n) && isnan (err))
+      g_error ("ncm_fftlog_calibrate_size_gsl: the next size, %d knots, exceeds the maximum (%u) "
+               "before any comparison; the requested relative accuracy is %e.",
+               N_next, self->max_n, reltol);
+    else if (N_next > (gint) self->max_n)
+      g_error ("ncm_fftlog_calibrate_size_gsl: the next size, %d knots, exceeds the maximum (%u) "
+               "before the requested relative accuracy %e was reached; the last change was %e.",
+               N_next, self->max_n, reltol, err);
+
+    /* Keep the current splines: set_size() replaces them when the size changes. */
+    for (nd = 0; nd <= self->nderivs; nd++)
+      prev[nd] = ncm_spline_ref (g_ptr_array_index (self->Gr_s, nd));
+
+    ncm_fftlog_set_size (fftlog, n_req);
+    ncm_fftlog_eval_by_gsl_function (fftlog, Fk);
+    ncm_fftlog_prepare_splines (fftlog);
+
+    /* Largest difference between the two sizes on the new knots, relative to the value
+     * plus the component's peak. A component zero at both sizes has not changed. */
+    lnr  = ncm_spline_get_xv (g_ptr_array_index (self->Gr_s, 0));
+    size = ncm_spline_get_len (g_ptr_array_index (self->Gr_s, 0));
+    err  = 0.0;
+
+    for (nd = 0; nd <= self->nderivs; nd++)
+    {
+      NcmVector *Gr = ncm_spline_get_yv (g_ptr_array_index (self->Gr_s, nd));
+      gdouble absmin, absmax;
+
+      ncm_vector_get_absminmax (Gr, &absmin, &absmax);
+
+      for (i = 0; i < size; i++)
+      {
+        const gdouble G_new  = ncm_vector_get (Gr, i);
+        const gdouble G_prev = ncm_spline_eval (prev[nd], ncm_vector_get (lnr, i));
+        const gdouble scale  = fabs (G_new) + absmax;
+
+        if (!isfinite (G_new) || !isfinite (G_prev))
+          g_error ("ncm_fftlog_calibrate_size_gsl: the transform is not finite (component %u, "
+                   "ln r = %g, %g at %d knots and %g before).",
+                   nd, ncm_vector_get (lnr, i), G_new, self->N, G_prev);
+
+        if (scale > 0.0)
+          err = GSL_MAX (err, fabs (G_new - G_prev) / scale);
+        else if (G_prev != 0.0)
+          err = GSL_MAX (err, 1.0);
+      }
+
+      ncm_spline_clear (&prev[nd]);
+      ncm_vector_free (Gr);
+    }
+
+    ncm_vector_free (lnr);
+
+    if (err <= reltol)
+      break;
   }
 
-  ncm_vector_free (eval_lnr_vec);
-  g_clear_pointer (&s, g_free);
-
-  if (self->N > (gint) self->max_n)
-  {
-    g_message ("# ncm_fftlog_calibrate_size_gsl: maximum number of knots reached. "
-               "Requested precision %e, achieved precision %e.\n", reltol, lreltol);
-
-    return;
-  }
-
-  if (lreltol > reltol)
-    ncm_fftlog_calibrate_size_gsl (fftlog, Fk, reltol);
+  g_free (prev);
 }
 
 /**
@@ -1559,8 +1861,12 @@ ncm_fftlog_calibrate_size_gsl (NcmFftlog *fftlog, gsl_function *Fk, const gdoubl
  * @user_data: @Fk user data
  * @reltol: relative tolerance
  *
- * Increases the original (input) number of knots until the $G(r)$ splines reach
- * the required precision @reltol.
+ * Increases the number of knots by 20% at a time until $G(r)$ and its derivatives change
+ * by less than @reltol, relative to the value plus the component's peak, from one size to
+ * the next. Each step computes one transform; the next size is checked against
+ * #NcmFftlog:max-n before anything is allocated, and the calibration aborts if it would
+ * pass it first. A component that is zero at both sizes counts as converged, and a
+ * non-finite transform aborts. Leaves @fftlog evaluated at the final size.
  *
  */
 void
@@ -1611,10 +1917,9 @@ ncm_fftlog_get_full_size (NcmFftlog *fftlog)
  * ncm_fftlog_get_norma:
  * @fftlog: a #NcmFftlog
  *
- * Gets the number of knots $N_f^\prime$ where the integrated function is evaluated
- * plus padding.
+ * Gets the normalization of the discrete transform, the full size $N_f^\prime$.
  *
- * Returns: the total number of knots $N_f^\prime$ (double).
+ * Returns: $N_f^\prime$ as a double
  */
 gdouble
 ncm_fftlog_get_norma (NcmFftlog *fftlog)
@@ -1659,10 +1964,10 @@ ncm_fftlog_get_full_length (NcmFftlog *fftlog)
  * @fftlog: a #NcmFftlog
  * @i: index
  *
- * Gets the index of the mode @i of the Fourier decomposition. This index corresponds
- * to the label $n$ in Eq. \eqref{eq:Gr_decomp}.
+ * Gets the mode $n$ held in slot @i of the FFT array: $n = i$ up to $N_f^\prime/2$ and
+ * $n = i - N_f^\prime$ above, the $n$ of the decomposition on the theory page.
  *
- * Returns: the index of the mode
+ * Returns: the mode $n$
  */
 gint
 ncm_fftlog_get_mode_index (NcmFftlog *fftlog, gint i)
@@ -1677,10 +1982,10 @@ ncm_fftlog_get_mode_index (NcmFftlog *fftlog, gint i)
  * @fftlog: a #NcmFftlog
  * @phys_i: index
  *
- * Gets the array index @i of the Fourier decomposition. This index corresponds the position
- * in the fft array of the element $n$ in Eq. \eqref{eq:Gr_decomp}.
+ * Gets the slot of the FFT array holding mode @phys_i, the inverse of
+ * ncm_fftlog_get_mode_index().
  *
- * Returns: the array index corresponding to @phys_i
+ * Returns: the array index of mode @phys_i
  */
 gint
 ncm_fftlog_get_array_index (NcmFftlog *fftlog, gint phys_i)
@@ -1695,10 +2000,10 @@ ncm_fftlog_get_array_index (NcmFftlog *fftlog, gint phys_i)
  * @fftlog: a #NcmFftlog
  * @nderiv: derivative number
  *
- * Peeks the output vector respective to $G(r)$, @nderiv = 0, or
- * its @comp-th derivative with respect to $\ln r$.
+ * Peeks the output vector of $G(r)$, @nderiv = 0, or of its @nderiv-th derivative with
+ * respect to $\ln r$.
  *
- * Returns: (transfer none): the output vector $G(r)$ or its @comp-th derivative.
+ * Returns: (transfer none): the output vector
  */
 NcmVector *
 ncm_fftlog_peek_output_vector (NcmFftlog *fftlog, guint nderiv)

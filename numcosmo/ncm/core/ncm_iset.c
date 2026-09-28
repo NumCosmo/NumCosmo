@@ -26,11 +26,10 @@
 /**
  * NcmISet:
  *
- * Index set object.
+ * Set of indexes in $[0, n)$, where $n$ is `NcmISet:max-index`.
  *
- * #NcmISet is an object that stores a set of indexes. It is used to store the indexes
- * of the components of a vector or matrix that are being used in a calculation.
- *
+ * Selects components of vectors and matrices of size $n$. Functions that read or
+ * write components visit the indexes in ascending order.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -202,9 +201,9 @@ _ncm_iset_set_max_size (NcmISet *iset, guint n)
  * ncm_iset_new:
  * @n: maximum index
  *
- * Creates a new #NcmISet object.
+ * Creates a new empty #NcmISet for indexes in $[0, n)$.
  *
- * Returns: a new #NcmISet.
+ * Returns: (transfer full): a new #NcmISet.
  */
 NcmISet *
 ncm_iset_new (guint n)
@@ -220,7 +219,7 @@ ncm_iset_new (guint n)
  * ncm_iset_ref:
  * @iset: a #NcmISet
  *
- * Increase the reference of @iset by one.
+ * Increases the reference count of @iset by one.
  *
  * Returns: (transfer full): @iset.
  */
@@ -234,8 +233,7 @@ ncm_iset_ref (NcmISet *iset)
  * ncm_iset_free:
  * @iset: a #NcmISet
  *
- * Decrease the reference count of @iset by one.
- *
+ * Decreases the reference count of @iset by one.
  */
 void
 ncm_iset_free (NcmISet *iset)
@@ -247,9 +245,7 @@ ncm_iset_free (NcmISet *iset)
  * ncm_iset_clear:
  * @iset: a #NcmISet
  *
- * Decrease the reference count of @iset by one, and sets the pointer *@iset to
- * NULL.
- *
+ * Decreases the reference count of *@iset by one and sets *@iset to %NULL.
  */
 void
 ncm_iset_clear (NcmISet **iset)
@@ -257,6 +253,12 @@ ncm_iset_clear (NcmISet **iset)
   g_clear_object (iset);
 }
 
+/**
+ * ncm_iset_get_max_size:
+ * @iset: a #NcmISet
+ *
+ * Returns: the maximum index $n$ of @iset.
+ */
 guint
 ncm_iset_get_max_size (NcmISet *iset)
 {
@@ -268,12 +270,11 @@ ncm_iset_get_max_size (NcmISet *iset)
 /**
  * ncm_iset_add_range:
  * @iset: a #NcmISet
- * @ii: initial index $i_i$
- * @fi: final index $i_f$
+ * @ii: first index $i_i$
+ * @fi: one past the last index $i_f$
  *
- * Adds the interval $(i_i, i_f]$ to the set.
- * Note that $i_f$ is not included.
- *
+ * Adds the indexes in $[i_i, i_f)$ to @iset. Unlike ncm_iset_add(), it does not
+ * check whether an index is already present.
  */
 void
 ncm_iset_add_range (NcmISet *iset, gint ii, gint fi)
@@ -292,10 +293,9 @@ ncm_iset_add_range (NcmISet *iset, gint ii, gint fi)
 /**
  * ncm_iset_add:
  * @iset: a #NcmISet
- * @i: index $i$
+ * @i: an index
  *
- * Adds the index $i$ to the set.
- *
+ * Adds @i to @iset. Aborts if @i is already present.
  */
 void
 ncm_iset_add (NcmISet *iset, gint i)
@@ -312,10 +312,9 @@ ncm_iset_add (NcmISet *iset, gint i)
 /**
  * ncm_iset_del:
  * @iset: a #NcmISet
- * @i: index $i$
+ * @i: an index
  *
- * Removes the index $i$ from the set.
- *
+ * Removes @i from @iset. Aborts if @i is not present.
  */
 void
 ncm_iset_del (NcmISet *iset, gint i)
@@ -332,8 +331,7 @@ ncm_iset_del (NcmISet *iset, gint i)
  * ncm_iset_reset:
  * @iset: a #NcmISet
  *
- * Removes all indexes from the set.
- *
+ * Removes all indexes from @iset.
  */
 void
 ncm_iset_reset (NcmISet *iset)
@@ -365,12 +363,12 @@ _ncm_iset_sort (NcmISet *iset)
 }
 
 /**
- * ncm_iset_memcpy:
+ * ncm_iset_copy:
  * @iset: a #NcmISet
  * @target: a #NcmISet
  *
- * Copy the set @iset over @target.
- *
+ * Replaces the indexes of @target by those of @iset. Both must have the same
+ * maximum index.
  */
 void
 ncm_iset_copy (NcmISet *iset, NcmISet *target)
@@ -412,10 +410,13 @@ ncm_iset_get_len (NcmISet *iset)
  * ncm_iset_get_vector_max:
  * @iset: a #NcmISet
  * @v: a #NcmVector
- * @max_i: (out): Maximum component index
+ * @max_i: (out): the index of the maximum
  *
- * Finds the maximum component of the vector @v.
+ * Finds the largest $v_i$ with $i$ in @iset. @v must have at least $n$
+ * components, $n$ the maximum index of @iset. If @iset is empty, @max_i is set
+ * to $-1$.
  *
+ * Returns: the largest $v_i$, or $-\infty$ if @iset is empty.
  */
 gdouble
 ncm_iset_get_vector_max (NcmISet *iset, NcmVector *v, gint *max_i)
@@ -450,12 +451,11 @@ ncm_iset_get_vector_max (NcmISet *iset, NcmVector *v, gint *max_i)
  * ncm_iset_get_subvector:
  * @iset: a #NcmISet
  * @v: a #NcmVector
- * @v_dup: a #NcmVector
+ * @v_dup: (nullable): a #NcmVector
  *
- * Construct a continuous vector $s$ using the values from @v
- * and the indexes in @iset. If @v_dup is not null use
- * this vector to build the subvector, otherwise, allocates
- * a new vector.
+ * Builds the vector $s$ of the components $v_i$ with $i$ in @iset. The length of
+ * @v must be the maximum index of @iset. If @v_dup is given, $s$ is a view of its
+ * first components; otherwise it is a new vector.
  *
  * Returns: (transfer full): the vector $s$.
  */
@@ -500,15 +500,15 @@ ncm_iset_get_subvector (NcmISet *iset, NcmVector *v, NcmVector *v_dup)
 /**
  * ncm_iset_get_subarray: (skip)
  * @iset: a #NcmISet
- * @a: a GArray
- * @a_dup: a GArray
+ * @a: a #GArray
+ * @a_dup: (nullable): a #GArray
  *
- * Construct a continuous array using the values from @a
- * and the indexes in @iset. If @a_dup is not null use
- * this array to build the subarray, otherwise, allocates
- * a new array.
+ * Builds the array of the elements of @a with index in @iset. The length of @a
+ * must be the maximum index of @iset. If @a_dup is given, the elements are
+ * written to its first positions and a new reference to @a_dup is returned;
+ * otherwise a new array of the set's length is returned.
  *
- * Returns: (transfer full): the subarray.
+ * Returns: (transfer full): the array.
  */
 GArray *
 ncm_iset_get_subarray (NcmISet *iset, GArray *a, GArray *a_dup)
@@ -526,11 +526,12 @@ ncm_iset_get_subarray (NcmISet *iset, GArray *a, GArray *a_dup)
   {
     g_assert_cmpuint (nsub, <=, a_dup->len);
     g_assert_cmpuint (esize, ==, g_array_get_element_size (a_dup));
-    sub = a_dup;
+    sub = g_array_ref (a_dup);
   }
   else
   {
-    sub = g_array_new (FALSE, FALSE, esize);
+    sub = g_array_sized_new (FALSE, FALSE, esize, nsub);
+    g_array_set_size (sub, nsub);
   }
 
   _ncm_iset_sort (iset);
@@ -554,12 +555,11 @@ ncm_iset_get_subarray (NcmISet *iset, GArray *a, GArray *a_dup)
  * ncm_iset_get_submatrix:
  * @iset: a #NcmISet
  * @M: a #NcmMatrix
- * @M_dup: a #NcmMatrix
+ * @M_dup: (nullable): a #NcmMatrix
  *
- * Construct a continuous matrix square $S$ using the values
- * from the square matrix @M and the indexes in @iset. If
- * @M_dup is not null use this matrix to build the submatrix,
- * otherwise, allocates a new matrix.
+ * Builds the square matrix $S$ of the elements $M_{ij}$ with $i$ and $j$ in @iset.
+ * @M must be $n \times n$, with $n$ the maximum index of @iset. If @M_dup is given,
+ * $S$ is a view of its leading block; otherwise it is a new matrix.
  *
  * Returns: (transfer full): the matrix $S$.
  */
@@ -619,12 +619,12 @@ ncm_iset_get_submatrix (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
  * ncm_iset_get_submatrix_cols:
  * @iset: a #NcmISet
  * @M: a #NcmMatrix
- * @M_dup: a #NcmMatrix
+ * @M_dup: (nullable): a #NcmMatrix
  *
- * Construct a continuous matrix rectangular $S$ using the columns
- * from the rectangular matrix @M and the indexes in @iset. If
- * @M_dup is not null use this matrix to build the submatrix,
- * otherwise, allocates a new matrix.
+ * Builds the matrix $S$ of the columns $j$ of @M with $j$ in @iset. @M must have
+ * as many columns as the maximum index of @iset. If @M_dup is given, it must have
+ * the shape of @M and $S$ is a view of its leading columns; otherwise $S$ is a new
+ * matrix.
  *
  * Returns: (transfer full): the matrix $S$.
  */
@@ -679,14 +679,10 @@ ncm_iset_get_submatrix_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
  * ncm_iset_get_submatrix_colmajor_cols:
  * @iset: a #NcmISet
  * @M: a #NcmMatrix
- * @M_dup: a #NcmMatrix
+ * @M_dup: (nullable): a #NcmMatrix
  *
- * Construct a continuous matrix rectangular $S$ using the columns
- * from the rectangular matrix @M and the indexes in @iset. If
- * @M_dup is not null use this matrix to build the submatrix,
- * otherwise, allocates a new matrix. It writes the columns in $S$
- * using a colmajor memory scheme. This is useful when using
- * the output matrix into Lapack routines.
+ * Same as ncm_iset_get_submatrix_cols(), but writes $S$ in column-major order,
+ * the layout LAPACK expects.
  *
  * Returns: (transfer full): the matrix $S$.
  */
@@ -741,15 +737,13 @@ ncm_iset_get_submatrix_colmajor_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_
 /**
  * ncm_iset_get_sym_submatrix:
  * @iset: a #NcmISet
- * @UL: char indicating 'U'pper or 'L'ower matrix
+ * @UL: 'U' or 'L'
  * @M: a #NcmMatrix
- * @M_dup: a #NcmMatrix
+ * @M_dup: (nullable): a #NcmMatrix
  *
- * Construct a continuous symmetric matrix $S$ using the values
- * from @M and the indexes in @iset. If @M_dup is not null use
- * this matrix to build the submatrix, otherwise, allocates
- * a new matrix. If @UL == 'U'/'L' only the Upper/Lower triangle
- * will be copied.
+ * Same as ncm_iset_get_submatrix() for a symmetric @M, but reads and writes only
+ * the upper (@UL = 'U') or lower (@UL = 'L') triangle. If @M_dup is given, it must
+ * have the shape of @M.
  *
  * Returns: (transfer full): the matrix $S$.
  */
@@ -844,10 +838,10 @@ ncm_iset_get_sym_submatrix (NcmISet *iset, gchar UL, NcmMatrix *M, NcmMatrix *M_
  * @iset: a #NcmISet
  * @out: a #NcmISet
  * @v: a #NcmVector
- * @tol: a double $t$
+ * @tol: the threshold $t$
  *
- * Gets the subset (@out) of @iset where $v_i < t$.
- *
+ * Sets @out to the indexes $i$ of @iset with $v_i < t$. @out must have the same
+ * maximum index as @iset.
  */
 void
 ncm_iset_get_subset_vec_lt (NcmISet *iset, NcmISet *out, NcmVector *v, const gdouble tol)
@@ -879,8 +873,8 @@ ncm_iset_get_subset_vec_lt (NcmISet *iset, NcmISet *out, NcmVector *v, const gdo
  * @iset: a #NcmISet
  * @target: a #NcmISet
  *
- * Removes indexes of @iset from @target.
- *
+ * Removes the indexes of @iset from @target. Aborts if one of them is not in
+ * @target.
  */
 void
 ncm_iset_remove_subset (NcmISet *iset, NcmISet *target)
@@ -908,13 +902,13 @@ ncm_iset_remove_subset (NcmISet *iset, NcmISet *target)
  * @iset: a #NcmISet
  * @target: a #NcmISet
  * @v: a #NcmVector
- * @max_remove: maximum number of indexes to be removed
+ * @max_remove: maximum number of indexes to remove
  *
- * Removes indexes of @iset from @target based on the values on @v.
- * The first @max_remove indexes from @target matching the smallest
- * components of @v are removed.
+ * Removes from @target the @max_remove indexes $i$ of @iset with the smallest
+ * $v_i$, or all indexes of @iset if it has at most @max_remove of them.
+ * @max_remove must be positive.
  *
- * Returns: number of indexes removed
+ * Returns: the number of indexes removed.
  */
 guint
 ncm_iset_remove_smallest_subset (NcmISet *iset, NcmISet *target, NcmVector *v, guint max_remove)
@@ -982,13 +976,14 @@ ncm_iset_remove_smallest_subset (NcmISet *iset, NcmISet *target, NcmVector *v, g
  * ncm_iset_add_largest_subset:
  * @iset: a #NcmISet
  * @v: a #NcmVector
- * @min: a double $\mu$
- * @add_frac: fraction of indexes to be added
+ * @min: the threshold $\mu$
+ * @add_frac: fraction of candidates to add
  *
- * Adds indexes to @iset using the largest values of @v
- * satisfying $v_i > \mu$ where $i \in $ complement of @iset.
+ * The candidates are the $k$ indexes $i$ not in @iset with $v_i > \mu$. Adds the
+ * $\min(k, \max(\lfloor k f \rfloor, 1))$ candidates with the largest $v_i$, where
+ * $f \in (0, 1]$ is @add_frac. The length of @v must be the maximum index of @iset.
  *
- * Returns: number of indexes added.
+ * Returns: the number of indexes added.
  */
 guint
 ncm_iset_add_largest_subset (NcmISet *iset, NcmVector *v, const gdouble min, const gdouble add_frac)
@@ -1031,7 +1026,6 @@ ncm_iset_add_largest_subset (NcmISet *iset, NcmVector *v, const gdouble min, con
 
       if (v_j > min)
       {
-        /*ncm_message ("Adding to cmplm %d % .2e\n", j, v_j);*/
         ncm_vector_set (v_cmplm, k, v_j);
         g_array_index (self->atmp, gint, k) = j;
         k++;
@@ -1048,7 +1042,6 @@ ncm_iset_add_largest_subset (NcmISet *iset, NcmVector *v, const gdouble min, con
 
     if (v_j > min)
     {
-      /*ncm_message ("Adding to cmplm %d % .2e\n", j, v_j);*/
       ncm_vector_set (v_cmplm, k, v_j);
       g_array_index (self->atmp, gint, k) = j;
       k++;
@@ -1057,7 +1050,6 @@ ncm_iset_add_largest_subset (NcmISet *iset, NcmVector *v, const gdouble min, con
 
   adds = MIN (k, MAX (k * add_frac, 1));
 
-  /*ncm_vector_log_vals (v_cmplm, "v_cmplm: ", "% .2e", TRUE);*/
 
   if (adds > 0)
   {
@@ -1082,8 +1074,8 @@ ncm_iset_add_largest_subset (NcmISet *iset, NcmVector *v, const gdouble min, con
  * @iset: a #NcmISet
  * @cmplm: a #NcmISet
  *
- * Sets @cmplm as the complement of @iset.
- *
+ * Sets @cmplm to the complement of @iset in $[0, n)$. Both must have the same
+ * maximum index $n$.
  */
 void
 ncm_iset_set_complement (NcmISet *iset, NcmISet *cmplm)
@@ -1118,13 +1110,14 @@ ncm_iset_set_complement (NcmISet *iset, NcmISet *cmplm)
  * @iset: a #NcmISet
  * @u: a #NcmVector
  * @v: a #NcmVector
- * @v_dup: a #NcmVector
+ * @v_dup: (nullable): a #NcmVector
  *
- * Computes the inverse of the relative difference between
- * vectors @u and @v, namely: $$\left(\frac{u_i - v_i}{u_i}\right)^{-1},$$
- * for indexes $i \in $ @iset.
+ * Builds the vector of $u_i / (u_i - v_i)$, the inverse relative difference, for
+ * $i$ in @iset. The lengths of @u, @v and @v_dup must be the maximum index of
+ * @iset. If @v_dup is given, the result is a view of its first components;
+ * otherwise it is a new vector.
  *
- * Returns: (transfer full): the subset
+ * Returns: (transfer full): the vector of inverse relative differences.
  */
 NcmVector *
 ncm_iset_get_vector_inv_cmp (NcmISet *iset, NcmVector *u, NcmVector *v, NcmVector *v_dup)
@@ -1173,8 +1166,8 @@ ncm_iset_get_vector_inv_cmp (NcmISet *iset, NcmVector *u, NcmVector *v, NcmVecto
  * @v: a #NcmVector
  * @sub: a #NcmVector
  *
- * Copies the components from @sub to the indexes @iset
- * in @v.
+ * Sets $v_{i_j}$ to $s_j$, where $i_j$ is the $j$-th index of @iset and $s$ is
+ * @sub. Inverse of ncm_iset_get_subvector().
  */
 void
 ncm_iset_set_subvector (NcmISet *iset, NcmVector *v, NcmVector *sub)
@@ -1207,8 +1200,7 @@ ncm_iset_set_subvector (NcmISet *iset, NcmVector *v, NcmVector *sub)
  * @iset: a #NcmISet
  * @prefix: a string
  *
- * Logs the indexes on @iset with prefix @prefix.
- *
+ * Logs the indexes of @iset, preceded by @prefix.
  */
 void
 ncm_iset_log_vals (NcmISet *iset, const gchar *prefix)

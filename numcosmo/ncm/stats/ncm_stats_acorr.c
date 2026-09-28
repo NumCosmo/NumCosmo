@@ -52,7 +52,7 @@
  * gives $\tau = 1$; $\tau$ is capped at the number of samples, since a longer correlation
  * is not measurable from the series. None of these abort.
  *
- * See <a href="../../theory/autocorrelation.html">Autocorrelation Time and Effective
+ * See <a href="../../theory/ncm/stats/autocorrelation.html">Autocorrelation Time and Effective
  * Sample Size</a> for the definitions, the identity the accumulator updates, the
  * level-selection rule and the meaning of each condition.
  *
@@ -821,7 +821,7 @@ _ncm_stats_acorr_ar_fit_full (NcmVector *acov, const gdouble n, NcmStatsAcorrARC
  * Integrated autocorrelation time from an auto-regressive fit of @acov by the
  * Levinson-Durbin recursion, the order chosen by @crit, as $\tau = S(0) / C_0$ with $S(0)$
  * the spectral density of the fitted model at zero frequency. See
- * <a href="../../theory/autocorrelation.html">Autocorrelation Time and Effective Sample
+ * <a href="../../theory/ncm/stats/autocorrelation.html">Autocorrelation Time and Effective Sample
  * Size</a>.
  *
  * Returns: $\tau$, capped at @nitens.
@@ -1058,12 +1058,13 @@ ncm_stats_acorr_acov_fft (NcmVector *series, guint max_lag)
 
   memset (&data[n], 0, sizeof (gdouble) * (effsize - n));
 
-  ncm_cfg_load_fftw_wisdom ("ncm_stats_acorr_%u", effsize);
-  ncm_cfg_lock_plan_fftw ();
-  r2c = fftw_plan_dft_r2c_1d (effsize, data, fft, fftw_default_flags | FFTW_DESTROY_INPUT);
-  c2r = fftw_plan_dft_c2r_1d (effsize, fft, data, fftw_default_flags | FFTW_DESTROY_INPUT);
-  ncm_cfg_unlock_plan_fftw ();
-  ncm_cfg_save_fftw_wisdom ("ncm_stats_acorr_%u", effsize);
+  {
+    const gboolean first = ncm_cfg_fftw_plan_begin ("ncm_stats_acorr_r2c_c2r_%u", effsize);
+
+    r2c = fftw_plan_dft_r2c_1d (effsize, data, fft, fftw_default_flags | FFTW_DESTROY_INPUT);
+    c2r = fftw_plan_dft_c2r_1d (effsize, fft, data, fftw_default_flags | FFTW_DESTROY_INPUT);
+    ncm_cfg_fftw_plan_end (first);
+  }
 
   for (i = 0; i < n; i++)
     data[i] = ncm_vector_get (series, i) - mean;
@@ -1080,10 +1081,8 @@ ncm_stats_acorr_acov_fft (NcmVector *series, guint max_lag)
   for (i = 0; i <= nlag; i++)
     ncm_vector_set (acov, i, data[i] / (1.0 * effsize * n));
 
-  ncm_cfg_lock_plan_fftw ();
-  fftw_destroy_plan (r2c);
-  fftw_destroy_plan (c2r);
-  ncm_cfg_unlock_plan_fftw ();
+  ncm_cfg_fftw_plan_destroy (r2c);
+  ncm_cfg_fftw_plan_destroy (c2r);
 
   fftw_free (fft);
   fftw_free (data);

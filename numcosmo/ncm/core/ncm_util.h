@@ -57,6 +57,7 @@ gdouble ncm_util_sinh1 (const gdouble x) G_GNUC_CONST;
 gdouble ncm_util_sinh3 (const gdouble x) G_GNUC_CONST;
 
 gdouble ncm_util_sinhx_m_xcoshx_x3 (const gdouble x) G_GNUC_CONST;
+gdouble ncm_util_lambert_W0_ln (const gdouble ln_y) G_GNUC_CONST;
 
 void ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const gdouble A, gdouble *rho1, gdouble *theta1);
 
@@ -86,6 +87,14 @@ void ncm_util_set_or_call_error (GError **error, GQuark domain, gint code, const
 void ncm_util_forward_or_call_error (GError **error, GError *local_error, const gchar *format, ...);
 
 
+/**
+ * NCM_UTIL_ON_ERROR_RETURN:
+ * @error: a #GError location
+ * @body: statements
+ * @value: the return value
+ *
+ * If *@error is set, runs @body and returns @value.
+ */
 #define NCM_UTIL_ON_ERROR_RETURN(error, body, value) \
         G_STMT_START {                               \
           if ((error != NULL) && (*error) != NULL)   \
@@ -95,6 +104,17 @@ void ncm_util_forward_or_call_error (GError **error, GError *local_error, const 
           }                                          \
         } G_STMT_END
 
+/**
+ * NCM_UTIL_ON_ERROR_FORWARD:
+ * @error: a #GError location
+ * @body: statements
+ * @value: the return value
+ * @prefix: a printf format string
+ * @...: arguments for @prefix
+ *
+ * If *@error is set, adds the formatted @prefix to its message, runs @body and returns
+ * @value.
+ */
 #define NCM_UTIL_ON_ERROR_FORWARD(error, body, value, prefix, ...) \
         G_STMT_START {                                             \
           if ((error != NULL) && (*error) != NULL)                 \
@@ -104,38 +124,6 @@ void ncm_util_forward_or_call_error (GError **error, GError *local_error, const 
             return value;                                          \
           }                                                        \
         } G_STMT_END
-
-#ifndef NUMCOSMO_GIR_SCAN
-typedef complex double NcmComplex;
-#else /* NUMCOSMO_GIR_SCAN */
-typedef struct _NcmComplexShouldNeverAppear NcmComplex;
-#endif /* NUMCOSMO_GIR_SCAN */
-
-GType ncm_complex_get_type (void) G_GNUC_CONST;
-
-NcmComplex *ncm_complex_new (void);
-NcmComplex *ncm_complex_dup (NcmComplex *c);
-void ncm_complex_free (NcmComplex *c);
-void ncm_complex_clear (NcmComplex **c);
-
-NCM_INLINE void ncm_complex_set (NcmComplex *c, const gdouble a, const gdouble b);
-NCM_INLINE void ncm_complex_set_zero (NcmComplex *c);
-
-NCM_INLINE gdouble ncm_complex_Re (const NcmComplex *c);
-NCM_INLINE gdouble ncm_complex_Im (const NcmComplex *c);
-NCM_INLINE gdouble ncm_complex_Abs (const NcmComplex *c);
-
-#ifndef NUMCOSMO_GIR_SCAN
-NCM_INLINE void ncm_complex_set_c (NcmComplex *c, const complex double z);
-NCM_INLINE complex double ncm_complex_c (const NcmComplex *c);
-
-#endif /* NUMCOSMO_GIR_SCAN */
-
-NCM_INLINE void ncm_complex_res_add_mul_real (NcmComplex * restrict c1, const NcmComplex * restrict c2, const gdouble v);
-NCM_INLINE void ncm_complex_res_add_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2, const NcmComplex * restrict c3);
-
-NCM_INLINE void ncm_complex_mul_real (NcmComplex *c, const gdouble v);
-NCM_INLINE void ncm_complex_res_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2);
 
 NCM_INLINE gdouble ncm_util_smooth_trans (gdouble f0, gdouble f1, gdouble z0, gdouble dz, gdouble z);
 NCM_INLINE void ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble z, gdouble *theta0, gdouble *theta1);
@@ -148,8 +136,22 @@ NCM_INLINE gdouble ncm_util_projected_radius (gdouble theta, gdouble d);
 
 #define ncm_acb_get_complex(z) (arf_get_d (arb_midref (acb_realref (z)), ARF_RND_NEAR) + I * arf_get_d (arb_midref (acb_imagref (z)), ARF_RND_NEAR))
 
+/**
+ * ncm_util_exp10:
+ * @x: a double
+ *
+ * Evaluates to $10^x$.
+ */
 #define ncm_util_exp10(x) (exp ((x) * M_LN10))
 
+/**
+ * NCM_GARRAY_MEMCPY:
+ * @dest: a #GArray
+ * @src: a #GArray
+ *
+ * Copies the elements of @src to @dest, which must have the same length and element
+ * size.
+ */
 #define NCM_GARRAY_MEMCPY(dest, src)                                                              \
         G_STMT_START {                                                                            \
           g_assert_cmpuint ((src)->len, ==, (dest)->len);                                         \
@@ -157,6 +159,13 @@ NCM_INLINE gdouble ncm_util_projected_radius (gdouble theta, gdouble d);
           memcpy ((dest)->data, (src)->data, (src)->len * g_array_get_element_size (src));        \
         } G_STMT_END
 
+/**
+ * NCM_GARRAY_DUP:
+ * @dest: a #GArray variable
+ * @src: a #GArray
+ *
+ * Sets @dest to a new #GArray with a copy of the elements of @src.
+ */
 #define NCM_GARRAY_DUP(dest, src)                                                              \
         G_STMT_START {                                                                         \
           dest = g_array_sized_new (FALSE, FALSE, g_array_get_element_size (src), (src)->len); \
@@ -164,6 +173,15 @@ NCM_INLINE gdouble ncm_util_projected_radius (gdouble theta, gdouble d);
           memcpy ((dest)->data, (src)->data, (src)->len * g_array_get_element_size (src));     \
         } G_STMT_END
 
+/**
+ * ncm_assert_cmpdouble:
+ * @n1: a double
+ * @cmp: a comparison operator
+ * @n2: a double
+ *
+ * Test assertion on ncm_cmp() (@n1, @n2) @cmp 0, with relative tolerance
+ * %GSL_DBL_EPSILON and no absolute tolerance.
+ */
 #define ncm_assert_cmpdouble(n1, cmp, n2)                                                                  \
         do {                                                                                               \
           if (ncm_cmp ((n1), (n2), GSL_DBL_EPSILON, 0.0) cmp 0); else                                      \
@@ -171,6 +189,16 @@ NCM_INLINE gdouble ncm_util_projected_radius (gdouble theta, gdouble d);
                                             #n1 " " #cmp " " #n2, (n1), #cmp, (n2), GSL_DBL_EPSILON, 0.0); \
         } while (0)
 
+/**
+ * ncm_assert_cmpdouble_e:
+ * @n1: a double
+ * @cmp: a comparison operator
+ * @n2: a double
+ * @epsilon: relative tolerance
+ * @abstol: absolute tolerance
+ *
+ * Test assertion on ncm_cmp() (@n1, @n2, @epsilon, @abstol) @cmp 0.
+ */
 #define ncm_assert_cmpdouble_e(n1, cmp, n2, epsilon, abstol)                                              \
         do {                                                                                              \
           if (ncm_cmp ((n1), (n2), (epsilon), (abstol)) cmp 0); else                                      \
@@ -178,15 +206,22 @@ NCM_INLINE gdouble ncm_util_projected_radius (gdouble theta, gdouble d);
                                             #n1 " " #cmp " " #n2, (n1), #cmp, (n2), (epsilon), (abstol)); \
         } while (0)
 
+/**
+ * NCM_TEST_GSL_RESULT:
+ * @func: the name of the GSL function
+ * @ret: its return code
+ *
+ * Aborts with the GSL error message if @ret is not %GSL_SUCCESS.
+ */
 #define NCM_TEST_GSL_RESULT(func, ret) \
         if (ret != GSL_SUCCESS) g_error ("%s: %s", func, gsl_strerror (ret))
 
-#define NCM_COMPLEX_ZERO (0.0)
-#define NCM_COMPLEX(p) ((NcmComplex *) (p))
-#define NCM_COMPLEX_PTR(p) ((NcmComplex **) (p))
-#define NCM_COMPLEX_INIT(z) (z)
-#define NCM_COMPLEX_INIT_REAL(z) (z)
-
+/**
+ * ncm_g_string_clear:
+ * @s: a #GString location
+ *
+ * If *@s is not %NULL, frees it and sets *@s to %NULL.
+ */
 #define ncm_g_string_clear(s)                      \
         G_STMT_START                               \
         if (*(s) != NULL)                          \
@@ -195,10 +230,23 @@ NCM_INLINE gdouble ncm_util_projected_radius (gdouble theta, gdouble d);
         }                                          \
         G_STMT_END
 
+/**
+ * NCM_UNUSED:
+ * @x: a variable
+ *
+ * Marks @x as unused.
+ */
 #define NCM_UNUSED(x) (void) (x)
 
 void _ncm_util_set_destroyed (gpointer b);
 
+/**
+ * NCM_TEST_FREE:
+ * @cmd: a function that releases @obj
+ * @obj: a #GObject
+ *
+ * Test assertion that calling @cmd on @obj finalizes it.
+ */
 #define NCM_TEST_FREE(cmd, obj)                                                                         \
         G_STMT_START {                                                                                  \
           gboolean destroyed = FALSE;                                                                   \
@@ -207,6 +255,12 @@ void _ncm_util_set_destroyed (gpointer b);
           g_assert (destroyed);                                                                         \
         } G_STMT_END
 
+/**
+ * NCM_TEST_FAIL:
+ * @cmd: statements
+ *
+ * Test assertion that running @cmd in a subprocess aborts.
+ */
 #define NCM_TEST_FAIL(cmd)                       \
         G_STMT_START {                           \
           if (g_test_subprocess ())              \
@@ -221,6 +275,12 @@ void _ncm_util_set_destroyed (gpointer b);
           }                                      \
         } G_STMT_END
 
+/**
+ * NCM_TEST_PASS:
+ * @cmd: statements
+ *
+ * Test assertion that running @cmd in a subprocess succeeds.
+ */
 #define NCM_TEST_PASS(cmd)                       \
         G_STMT_START {                           \
           if (g_test_subprocess ())              \
@@ -236,6 +296,15 @@ void _ncm_util_set_destroyed (gpointer b);
         } G_STMT_END
 
 
+/**
+ * NCM_CVODE_CHECK:
+ * @chk: the value returned by a SUNDIALS function
+ * @name: the name of that function
+ * @val: the kind of value, see ncm_util_cvode_check_flag()
+ * @ret: the return value
+ *
+ * Returns @ret if ncm_util_cvode_check_flag() reports a failure.
+ */
 #define NCM_CVODE_CHECK(chk, name, val, ret)               \
         G_STMT_START {                                     \
           if (!ncm_util_cvode_check_flag (chk, name, val)) \
@@ -248,19 +317,27 @@ void _ncm_util_set_destroyed (gpointer b);
 /* Simple Callback macros */
 
 /**
- * NCM_UTIL_DECLARE_CALLBACK:
- * @CallBack: The name of the callback structure in camel case
- * @CALL_BACK: The name of the callback function in uppercase
- * @callback: The name of the callback function in lowercase
- * @ret: The return type of the callback function
- * @args_decl: The declaration of the arguments of the callback function
+ * NCM_UTIL_CALLBACK_ARGS:
+ * @...: arguments
  *
- * This macro declares a callback structure and the functions to handle it. You must use
- * NCM_UTIL_CALLBACK_ARGS to declare the arguments of the callback function.
- * The argument @arg_decl can be empty.
- *
+ * Writes the extra arguments of NCM_UTIL_DECLARE_CALLBACK() and
+ * NCM_UTIL_DEFINE_CALLBACK() with a leading comma, or nothing if empty.
  */
 #define NCM_UTIL_CALLBACK_ARGS(...) , ## __VA_ARGS__
+
+/**
+ * NCM_UTIL_DECLARE_CALLBACK:
+ * @CallBack: the callback type name, in camel case
+ * @CALL_BACK: the cast macro name, in upper case
+ * @callback: the function prefix, in lower case
+ * @ret: the return type of the callback function
+ * @args_decl: the declaration of the extra arguments of the callback function
+ *
+ * Declares the boxed callback type @CallBack, holding a function, its data and the
+ * functions that free, copy and prepare the data, and the functions named @callback
+ * followed by _new, _copy, _free, _eval and _prepare. @args_decl is written with
+ * NCM_UTIL_CALLBACK_ARGS() and may be empty.
+ */
 #define NCM_UTIL_DECLARE_CALLBACK(CallBack, CALL_BACK, callback, ret, args_decl)         \
         typedef struct _ ## CallBack CallBack;                                           \
         G_GNUC_UNUSED static inline CallBack *CALL_BACK (gpointer callback_ptr) {        \
@@ -292,17 +369,15 @@ void _ncm_util_set_destroyed (gpointer b);
 
 /**
  * NCM_UTIL_DEFINE_CALLBACK:
- * @CallBack: The name of the callback structure in camel case
- * @CALL_BACK: The name of the callback function in uppercase
- * @callback: The name of the callback function in lowercase
- * @ret: The return type of the callback function
- * @args_decl: The declaration of the arguments of the callback function
- * @args: The arguments of the callback function
+ * @CallBack: the callback type name, in camel case
+ * @CALL_BACK: the cast macro name, in upper case
+ * @callback: the function prefix, in lower case
+ * @ret: the return type of the callback function
+ * @args_decl: the declaration of the extra arguments of the callback function
+ * @args: the extra arguments, as passed to the callback function
  *
- * This macro defines the functions to handle the callback structure. You must use
- * NCM_UTIL_CALLBACK_ARGS to declare both the arguments declaration of the callback
- * function and the arguments of the function. They can be empty.
- *
+ * Defines the type and functions declared by NCM_UTIL_DECLARE_CALLBACK(). @args_decl and
+ * @args are written with NCM_UTIL_CALLBACK_ARGS() and may be empty.
  */
 #define NCM_UTIL_DEFINE_CALLBACK(CallBack, CALL_BACK, callback, ret, args_decl, args)                               \
         G_DEFINE_BOXED_TYPE (CallBack, callback, callback ## _copy, callback ## _free)                              \
@@ -498,78 +573,6 @@ NCM_INLINE gdouble
 ncm_util_projected_radius (gdouble theta, gdouble d)
 {
   return d * sin (theta);
-}
-
-/* NcmComplex methods */
-
-NCM_INLINE void
-ncm_complex_set (NcmComplex *c, const gdouble a, const gdouble b)
-{
-  *c = a + I * b;
-}
-
-NCM_INLINE void
-ncm_complex_set_zero (NcmComplex *c)
-{
-  *c = 0.0;
-}
-
-NCM_INLINE gdouble
-ncm_complex_Re (const NcmComplex *c)
-{
-  return creal (*c);
-}
-
-NCM_INLINE gdouble
-ncm_complex_Im (const NcmComplex *c)
-{
-  return cimag (*c);
-}
-
-NCM_INLINE gdouble
-ncm_complex_Abs (const NcmComplex *c)
-{
-  return cabs (*c);
-}
-
-#ifndef NUMCOSMO_GIR_SCAN
-
-NCM_INLINE void
-ncm_complex_set_c (NcmComplex *c, const complex double z)
-{
-  *c = z;
-}
-
-NCM_INLINE complex double
-ncm_complex_c (const NcmComplex *c)
-{
-  return *c;
-}
-
-#endif /* NUMCOSMO_GIR_SCAN */
-
-NCM_INLINE void
-ncm_complex_res_add_mul_real (NcmComplex * restrict c1, const NcmComplex * restrict c2, const gdouble v)
-{
-  *c1 += (*c2) * v;
-}
-
-NCM_INLINE void
-ncm_complex_res_add_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2, const NcmComplex * restrict c3)
-{
-  *c1 += (*c2) * (*c3);
-}
-
-NCM_INLINE void
-ncm_complex_mul_real (NcmComplex *c, const gdouble v)
-{
-  *c *= v;
-}
-
-NCM_INLINE void
-ncm_complex_res_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2)
-{
-  *c1 *= *c2;
 }
 
 G_END_DECLS

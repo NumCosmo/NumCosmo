@@ -46,7 +46,7 @@
  *
  * For derivations, complete equations of motion, and mode-function formulas,
  * see the theoretical background page:
- * <a href="../../theory/csq1d.html">CSQ1D Formalism</a>.
+ * <a href="../../theory/ncm/dynamics/csq1d.html">CSQ1D Formalism</a>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -3159,7 +3159,7 @@ _ncm_csq1d_eval_state (NcmCSQ1D *csq1d, const gdouble t, NcmCSQ1DState *state)
  *
  * For the full phase and residual-phase equations, including the numerically
  * stable form used internally, see
- * <a href="../../theory/csq1d.html">CSQ1D Formalism</a>.
+ * <a href="../../theory/ncm/dynamics/csq1d.html">CSQ1D Formalism</a>.
  *
  * Note: You must call ncm_csq1d_prepare_phase_splines() before using this function,
  * or it will throw an error.

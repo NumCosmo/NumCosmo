@@ -25,39 +25,29 @@
 
 /**
  * NcmLaurentSeries:
+ * @hmin: lowest power $h_\mathrm{min}$
+ * @hmax: highest power $h_\mathrm{max}$
+ * @c_cap: allocated length of @c, at least $h_\mathrm{max} - h_\mathrm{min} + 1$
+ * @c: the coefficients $c_{h_\mathrm{min}}, \dots, c_{h_\mathrm{max}}$
+ * @ref_count: the reference count
  *
- * Complex Laurent-polynomial arithmetic (add/scale/convolve/conjugate) plus
- * the Jacobi-Anger reduction of a truncated Fourier series against a
- * von-Mises-shaped kernel to scaled modified Bessel functions, and
- * #NcmLaurentSeriesTPS, a truncated power series (in a second, formal
- * variable) whose coefficients are #NcmLaurentSeries. Generic
- * complex-analysis machinery with no physics content of its own, used and
- * independently tested by `nc_wl_ellipticity_series.c` (see
- * docs/theory/wl_shape_marginalization_series.qmd for the physics context
- * and derivation).
+ * Laurent polynomial with complex coefficients,
+ * $$a(w) = \sum_{h = h_\mathrm{min}}^{h_\mathrm{max}} c_h w^h.$$
  *
- * Two calling conventions for operations on a complex value (matching
- * nc_wl_ellipticity.h's own convention): the plain name takes/returns
- * #NcmComplex by value -- fast, used internally, `(skip)`-ed from
- * introspection since C99 complex types are not GObject-introspectable --
- * and the `_ptr`-suffixed function takes/returns it by pointer, which is
- * introspectable and usable from Python. Functions with no complex-valued
- * parameter at all (e.g. add/conv/conj, jacobi_anger_reduce) have only one,
- * fully introspectable, form.
+ * Supports sums, scaling, products, the conjugation $a(w) \to \overline{a(1/\bar w)}$, which is
+ * $\overline{a(w)}$ on the unit circle, evaluation, and the Jacobi-Anger reduction of
+ * ncm_laurent_series_jacobi_anger_reduce(). #NcmLaurentSeriesTPS is a truncated power
+ * series in a second variable $g$ whose coefficients are Laurent polynomials. They are used
+ * by the weak-lensing shape series, see <a
+ * href="../../theory/nc/lss/galaxy/wl_shape_marginalization_series.html">A Small-Shear Series
+ * Marginalization for the Shape Likelihood</a>.
  *
- * Every #NcmLaurentSeries is independently heap-allocated: callers own
- * whatever they create and must free it themselves (or track a short-lived
- * batch, e.g. a #GPtrArray with ncm_laurent_series_free() as its free
- * function, freed in one sweep at the end of a computation).
- *
- * For performance-critical loops that would otherwise allocate and free many of these per
- * call, ncm_laurent_series_reset() plus the `_into`-suffixed counterparts
- * of add/conv/scale/conj/new_single write into a caller-supplied,
- * already-allocated #NcmLaurentSeries instead of allocating a new one
- * (grow-only, so a reused instance never reallocates once it reaches its
- * steady-state size) -- #NcmLaurentSeriesTPS's own coefficients and
- * ncm_laurent_series_tps_conv()'s private scratch are exactly such
- * long-lived, reused instances.
+ * Functions taking or returning a complex value by value are skipped by introspection;
+ * their `_ptr` variants pass it by pointer and write a result into an #NcmComplex the
+ * caller provides. The `_into` variants write into an existing series, resized by
+ * ncm_laurent_series_reset() without shrinking its buffer, instead of allocating one;
+ * their output must not alias an input. The boxed copy of both types is a new reference
+ * sharing the data; ncm_laurent_series_copy() makes an independent copy.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -76,19 +66,20 @@ G_DEFINE_BOXED_TYPE (NcmLaurentSeries, ncm_laurent_series, ncm_laurent_series_re
 
 /**
  * ncm_laurent_series_new:
- * @hmin: lowest harmonic
- * @hmax: highest harmonic
+ * @hmin: lowest power
+ * @hmax: highest power, at least @hmin
  *
- * Creates a new zero-initialized #NcmLaurentSeries with harmonics
- * $h\in[hmin,hmax]$.
+ * Creates a series with every coefficient of $w^{h_\mathrm{min}}, \dots, w^{h_\mathrm{max}}$ zero.
  *
- * Returns: (transfer full): a new #NcmLaurentSeries
+ * Returns: (transfer full): a new #NcmLaurentSeries.
  */
 NcmLaurentSeries *
 ncm_laurent_series_new (gint hmin, gint hmax)
 {
   NcmLaurentSeries *a = g_new (NcmLaurentSeries, 1);
   gint n              = hmax - hmin + 1;
+
+  g_assert_cmpint (hmin, <=, hmax);
 
   a->hmin  = hmin;
   a->hmax  = hmax;
@@ -102,20 +93,18 @@ ncm_laurent_series_new (gint hmin, gint hmax)
 /**
  * ncm_laurent_series_reset: (skip)
  * @a: a #NcmLaurentSeries
- * @hmin: new lowest harmonic
- * @hmax: new highest harmonic
+ * @hmin: new lowest power
+ * @hmax: new highest power, at least @hmin
  *
- * Resizes @a in place to harmonics $h\in[hmin,hmax]$, zeroing every
- * coefficient. Grow-only: reuses @a's existing buffer (no allocation) when
- * it is already big enough, reallocates bigger otherwise -- never shrinks
- * the underlying allocation. Lets a performance-critical loop reuse one #NcmLaurentSeries
- * across many calls instead of allocating fresh every time (see
- * nc_galaxy_shape_factor_series_lensed.c).
+ * Resizes @a to the powers @hmin to @hmax and sets every coefficient to zero. The buffer is
+ * reallocated only when it is too small, so a reused series stops allocating.
  */
 void
 ncm_laurent_series_reset (NcmLaurentSeries *a, gint hmin, gint hmax)
 {
   gint n = hmax - hmin + 1;
+
+  g_assert_cmpint (hmin, <=, hmax);
 
   if (n > a->c_cap)
   {
@@ -133,7 +122,7 @@ ncm_laurent_series_reset (NcmLaurentSeries *a, gint hmin, gint hmax)
  * ncm_laurent_series_copy:
  * @a: a #NcmLaurentSeries
  *
- * Returns: (transfer full): a new, independent copy of @a
+ * Returns: (transfer full): an independent copy of @a.
  */
 NcmLaurentSeries *
 ncm_laurent_series_copy (const NcmLaurentSeries *a)
@@ -152,10 +141,9 @@ ncm_laurent_series_copy (const NcmLaurentSeries *a)
  * ncm_laurent_series_ref:
  * @a: a #NcmLaurentSeries
  *
- * Increases the reference count of @a by one -- also this boxed type's
- * "copy" function (see the header's own comment on why).
+ * Increases the reference count of @a by one; this is also the boxed copy function.
  *
- * Returns: (transfer full): @a
+ * Returns: (transfer full): @a.
  */
 NcmLaurentSeries *
 ncm_laurent_series_ref (NcmLaurentSeries *a)
@@ -169,8 +157,7 @@ ncm_laurent_series_ref (NcmLaurentSeries *a)
  * ncm_laurent_series_free:
  * @a: a #NcmLaurentSeries
  *
- * Decreases the reference count of @a by one, freeing it once the count
- * reaches zero.
+ * Decreases the reference count of @a by one.
  */
 void
 ncm_laurent_series_free (NcmLaurentSeries *a)
@@ -186,7 +173,7 @@ ncm_laurent_series_free (NcmLaurentSeries *a)
  * ncm_laurent_series_clear:
  * @a: a #NcmLaurentSeries
  *
- * Frees *@a and sets it to %NULL.
+ * If *@a is not %NULL, decreases its reference count by one and sets *@a to %NULL.
  */
 void
 ncm_laurent_series_clear (NcmLaurentSeries **a)
@@ -202,7 +189,7 @@ ncm_laurent_series_clear (NcmLaurentSeries **a)
  * ncm_laurent_series_get_hmin:
  * @a: a #NcmLaurentSeries
  *
- * Returns: @a's lowest harmonic
+ * Returns: the lowest power $h_\mathrm{min}$.
  */
 gint
 ncm_laurent_series_get_hmin (const NcmLaurentSeries *a)
@@ -214,7 +201,7 @@ ncm_laurent_series_get_hmin (const NcmLaurentSeries *a)
  * ncm_laurent_series_get_hmax:
  * @a: a #NcmLaurentSeries
  *
- * Returns: @a's highest harmonic
+ * Returns: the highest power $h_\mathrm{max}$.
  */
 gint
 ncm_laurent_series_get_hmax (const NcmLaurentSeries *a)
@@ -224,12 +211,12 @@ ncm_laurent_series_get_hmax (const NcmLaurentSeries *a)
 
 /**
  * ncm_laurent_series_new_single: (skip)
- * @h: the single nonzero harmonic
- * @val: its coefficient
+ * @h: the power
+ * @val: the coefficient
  *
- * Creates a new #NcmLaurentSeries with a single nonzero term $val\cdot w^h$.
+ * Creates the series $\mathrm{val}\,w^h$.
  *
- * Returns: (transfer full): the new series
+ * Returns: (transfer full): a new #NcmLaurentSeries.
  */
 NcmLaurentSeries *
 ncm_laurent_series_new_single (gint h, NcmComplex val)
@@ -243,12 +230,11 @@ ncm_laurent_series_new_single (gint h, NcmComplex val)
 
 /**
  * ncm_laurent_series_set_single_into: (skip)
- * @out: a #NcmLaurentSeries, resized in place
- * @h: the single nonzero harmonic
- * @val: its coefficient
+ * @out: a #NcmLaurentSeries
+ * @h: the power
+ * @val: the coefficient
  *
- * Reuse counterpart of ncm_laurent_series_new_single(): resets @out to
- * $[h,h]$ and sets its one coefficient, instead of allocating.
+ * Sets @out to $\mathrm{val}\,w^h$, as ncm_laurent_series_new_single() without allocating.
  */
 void
 ncm_laurent_series_set_single_into (NcmLaurentSeries *out, gint h, NcmComplex val)
@@ -260,9 +246,9 @@ ncm_laurent_series_set_single_into (NcmLaurentSeries *out, gint h, NcmComplex va
 /**
  * ncm_laurent_series_get: (skip)
  * @a: a #NcmLaurentSeries
- * @h: the harmonic to query
+ * @h: the power
  *
- * Returns: the coefficient of $w^h$ in @a, or 0 if $h$ is outside @a's range
+ * Returns: the coefficient $c_h$, zero outside $[h_\mathrm{min}, h_\mathrm{max}]$.
  */
 NcmComplex
 ncm_laurent_series_get (const NcmLaurentSeries *a, gint h)
@@ -276,8 +262,10 @@ ncm_laurent_series_get (const NcmLaurentSeries *a, gint h)
 /**
  * ncm_laurent_series_set: (skip)
  * @a: a #NcmLaurentSeries
- * @h: the harmonic to set, must already be within @a's $[hmin,hmax]$ range
- * @val: the new coefficient of $w^h$
+ * @h: the power
+ * @val: the coefficient
+ *
+ * Sets $c_h$ to @val. Aborts if $h$ is outside $[h_\mathrm{min}, h_\mathrm{max}]$.
  */
 void
 ncm_laurent_series_set (NcmLaurentSeries *a, gint h, NcmComplex val)
@@ -291,9 +279,10 @@ ncm_laurent_series_set (NcmLaurentSeries *a, gint h, NcmComplex val)
 /**
  * ncm_laurent_series_get_ptr:
  * @a: a #NcmLaurentSeries
- * @h: the harmonic to query
- * @out: output #NcmComplex, the coefficient of $w^h$, or 0 if $h$ is
- * outside @a's range
+ * @h: the power
+ * @out: the coefficient $c_h$
+ *
+ * Same as ncm_laurent_series_get().
  */
 void
 ncm_laurent_series_get_ptr (const NcmLaurentSeries *a, gint h, NcmComplex *out)
@@ -304,8 +293,10 @@ ncm_laurent_series_get_ptr (const NcmLaurentSeries *a, gint h, NcmComplex *out)
 /**
  * ncm_laurent_series_set_ptr:
  * @a: a #NcmLaurentSeries
- * @h: the harmonic to set, must already be within @a's $[hmin,hmax]$ range
- * @val: the new coefficient of $w^h$
+ * @h: the power
+ * @val: the coefficient
+ *
+ * Same as ncm_laurent_series_set().
  */
 void
 ncm_laurent_series_set_ptr (NcmLaurentSeries *a, gint h, const NcmComplex *val)
@@ -317,9 +308,9 @@ ncm_laurent_series_set_ptr (NcmLaurentSeries *a, gint h, const NcmComplex *val)
  * ncm_laurent_series_add:
  * @a: a #NcmLaurentSeries
  * @b: a #NcmLaurentSeries
- * @sb: scale factor applied to @b
+ * @sb: factor $s_b$
  *
- * Returns: (transfer full): a new series equal to $a+sb\cdot b$
+ * Returns: (transfer full): a new series equal to $a + s_b b$, over the union of the two ranges.
  */
 NcmLaurentSeries *
 ncm_laurent_series_add (const NcmLaurentSeries *a, const NcmLaurentSeries *b, gdouble sb)
@@ -340,13 +331,12 @@ ncm_laurent_series_add (const NcmLaurentSeries *a, const NcmLaurentSeries *b, gd
 
 /**
  * ncm_laurent_series_add_into: (skip)
- * @out: a #NcmLaurentSeries, resized in place, must not alias @a or @b
+ * @out: a #NcmLaurentSeries
  * @a: a #NcmLaurentSeries
  * @b: a #NcmLaurentSeries
- * @sb: scale factor applied to @b
+ * @sb: factor $s_b$
  *
- * Reuse counterpart of ncm_laurent_series_add(): writes $a+sb\cdot b$ into
- * @out instead of allocating a new series.
+ * Sets @out to $a + s_b b$, as ncm_laurent_series_add() without allocating.
  */
 void
 ncm_laurent_series_add_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, const NcmLaurentSeries *b, gdouble sb)
@@ -367,9 +357,9 @@ ncm_laurent_series_add_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, c
 /**
  * ncm_laurent_series_scale: (skip)
  * @a: a #NcmLaurentSeries
- * @s: scale factor
+ * @s: the factor
  *
- * Returns: (transfer full): a new series equal to $s\cdot a$
+ * Returns: (transfer full): a new series equal to $s\,a$.
  */
 NcmLaurentSeries *
 ncm_laurent_series_scale (const NcmLaurentSeries *a, NcmComplex s)
@@ -385,12 +375,11 @@ ncm_laurent_series_scale (const NcmLaurentSeries *a, NcmComplex s)
 
 /**
  * ncm_laurent_series_scale_into: (skip)
- * @out: a #NcmLaurentSeries, resized in place, must not alias @a
+ * @out: a #NcmLaurentSeries
  * @a: a #NcmLaurentSeries
- * @s: scale factor
+ * @s: the factor
  *
- * Reuse counterpart of ncm_laurent_series_scale(): writes $s\cdot a$ into
- * @out instead of allocating a new series.
+ * Sets @out to $s\,a$, as ncm_laurent_series_scale() without allocating.
  */
 void
 ncm_laurent_series_scale_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, NcmComplex s)
@@ -406,9 +395,11 @@ ncm_laurent_series_scale_into (NcmLaurentSeries *out, const NcmLaurentSeries *a,
 /**
  * ncm_laurent_series_scale_ptr:
  * @a: a #NcmLaurentSeries
- * @s: scale factor
+ * @s: the factor
  *
- * Returns: (transfer full): a new series equal to $s\cdot a$
+ * Same as ncm_laurent_series_scale().
+ *
+ * Returns: (transfer full): a new series equal to $s\,a$.
  */
 NcmLaurentSeries *
 ncm_laurent_series_scale_ptr (const NcmLaurentSeries *a, const NcmComplex *s)
@@ -421,8 +412,8 @@ ncm_laurent_series_scale_ptr (const NcmLaurentSeries *a, const NcmComplex *s)
  * @a: a #NcmLaurentSeries
  * @b: a #NcmLaurentSeries
  *
- * Returns: (transfer full): the new series equal to the Laurent-polynomial
- * product $a\cdot b$
+ * Returns: (transfer full): a new series equal to the product $a\,b$, with powers from
+ * $h_{a,\mathrm{min}} + h_{b,\mathrm{min}}$ to $h_{a,\mathrm{max}} + h_{b,\mathrm{max}}$.
  */
 NcmLaurentSeries *
 ncm_laurent_series_conv (const NcmLaurentSeries *a, const NcmLaurentSeries *b)
@@ -448,13 +439,11 @@ ncm_laurent_series_conv (const NcmLaurentSeries *a, const NcmLaurentSeries *b)
 
 /**
  * ncm_laurent_series_conv_into: (skip)
- * @out: a #NcmLaurentSeries, resized in place, must not alias @a or @b
+ * @out: a #NcmLaurentSeries
  * @a: a #NcmLaurentSeries
  * @b: a #NcmLaurentSeries
  *
- * Reuse counterpart of ncm_laurent_series_conv(): writes the
- * Laurent-polynomial product $a\cdot b$ into @out instead of allocating a
- * new series.
+ * Sets @out to $a\,b$, as ncm_laurent_series_conv() without allocating.
  */
 void
 ncm_laurent_series_conv_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, const NcmLaurentSeries *b)
@@ -481,9 +470,8 @@ ncm_laurent_series_conv_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, 
  * ncm_laurent_series_conj:
  * @a: a #NcmLaurentSeries
  *
- * Returns: (transfer full): the new series equal to $\overline{a(1/w)}$,
- * i.e. the harmonic-by-harmonic complex conjugate (harmonic $h$'s
- * coefficient becomes harmonic $-h$'s, conjugated)
+ * Returns: (transfer full): a new series equal to $\overline{a(1/\bar w)} = \sum_h \bar c_h w^{-h}$,
+ * which is $\overline{a(w)}$ for $|w| = 1$.
  */
 NcmLaurentSeries *
 ncm_laurent_series_conj (const NcmLaurentSeries *a)
@@ -499,11 +487,10 @@ ncm_laurent_series_conj (const NcmLaurentSeries *a)
 
 /**
  * ncm_laurent_series_conj_into: (skip)
- * @out: a #NcmLaurentSeries, resized in place, must not alias @a
+ * @out: a #NcmLaurentSeries
  * @a: a #NcmLaurentSeries
  *
- * Reuse counterpart of ncm_laurent_series_conj(): writes
- * $\overline{a(1/w)}$ into @out instead of allocating a new series.
+ * Sets @out to $\overline{a(1/\bar w)}$, as ncm_laurent_series_conj() without allocating.
  */
 void
 ncm_laurent_series_conj_into (NcmLaurentSeries *out, const NcmLaurentSeries *a)
@@ -519,9 +506,9 @@ ncm_laurent_series_conj_into (NcmLaurentSeries *out, const NcmLaurentSeries *a)
 /**
  * ncm_laurent_series_eval: (skip)
  * @a: a #NcmLaurentSeries
- * @w: the point to evaluate at
+ * @w: the point $w$
  *
- * Returns: $a(w)=\sum_{h=hmin}^{hmax} c_h w^h$
+ * Returns: $a(w)$.
  */
 NcmComplex
 ncm_laurent_series_eval (const NcmLaurentSeries *a, NcmComplex w)
@@ -529,10 +516,7 @@ ncm_laurent_series_eval (const NcmLaurentSeries *a, NcmComplex w)
   NcmComplex result = 0.0;
   gint h;
 
-  /* Horner over the *shifted*, all-non-negative exponents h-hmin (a plain
-   * Laurent range can start negative, where Horner's scheme doesn't apply
-   * directly); multiplying the shifted result by w^hmin at the end recovers
-   * sum_h c_h w^h exactly. */
+  /* Horner's scheme on the powers h - hmin >= 0, then the factor w^hmin */
   for (h = a->hmax; h >= a->hmin; h--)
     result = result * w + ncm_laurent_series_get (a, h);
 
@@ -542,8 +526,10 @@ ncm_laurent_series_eval (const NcmLaurentSeries *a, NcmComplex w)
 /**
  * ncm_laurent_series_eval_ptr:
  * @a: a #NcmLaurentSeries
- * @w: the point to evaluate at
- * @out: (out): $a(w)$
+ * @w: the point $w$
+ * @out: $a(w)$
+ *
+ * Same as ncm_laurent_series_eval().
  */
 void
 ncm_laurent_series_eval_ptr (const NcmLaurentSeries *a, const NcmComplex *w, NcmComplex *out)
@@ -551,11 +537,19 @@ ncm_laurent_series_eval_ptr (const NcmLaurentSeries *a, const NcmComplex *w, Ncm
   ncm_complex_set_c (out, ncm_laurent_series_eval (a, ncm_complex_c (w)));
 }
 
-/* @coeffs: owned directly, length order+1
- * @conv_acc: private ping-pong scratch for ncm_laurent_series_tps_conv()
- * when this TPS is the @out of a conv() call -- see that function's own
- * comment for why exactly two suffice regardless of order
- * @conv_term: private scratch for ncm_laurent_series_tps_conv() */
+/**
+ * NcmLaurentSeriesTPS:
+ *
+ * Truncated power series of order $N$ in $g$ with Laurent polynomial coefficients,
+ * $$\sum_{n=0}^{N} L_n(w)\,g^n \mod g^{N+1}.$$
+ *
+ * The order is fixed by ncm_laurent_series_tps_new(). Products are truncated at order $N$,
+ * and every operation requires its operands and output to have the same order. The object is
+ * meant to be kept and refilled; ncm_laurent_series_tps_conv() uses scratch owned by its
+ * output, so a reused output does not allocate.
+ */
+
+/* conv_acc and conv_term: scratch of ncm_laurent_series_tps_conv() when this series is its @out */
 struct _NcmLaurentSeriesTPS
 {
   GPtrArray *coeffs;
@@ -568,15 +562,11 @@ G_DEFINE_BOXED_TYPE (NcmLaurentSeriesTPS, ncm_laurent_series_tps, ncm_laurent_se
 
 /**
  * ncm_laurent_series_tps_new:
- * @order: the truncation order $N$
+ * @order: the order $N$
  *
- * Creates a new #NcmLaurentSeriesTPS of order @order ($N+1$ zero
- * coefficients, each an independently owned #NcmLaurentSeries) plus its own
- * private conv() scratch. Order is immutable for the object's whole life --
- * meant to be constructed once and refilled many times (see
- * nc_wl_ellipticity_series.c), not a short-lived per-call temporary.
+ * Creates a series of order @order with every coefficient zero.
  *
- * Returns: (transfer full): a new #NcmLaurentSeriesTPS
+ * Returns: (transfer full): a new #NcmLaurentSeriesTPS.
  */
 NcmLaurentSeriesTPS *
 ncm_laurent_series_tps_new (guint order)
@@ -602,13 +592,10 @@ ncm_laurent_series_tps_new (guint order)
  * ncm_laurent_series_tps_ref:
  * @tps: a #NcmLaurentSeriesTPS
  *
- * Increases the reference count of @tps by one. This is the boxed type's
- * "copy" function: it shares the same underlying storage rather than
- * deep-copying it (matching #NcGalaxyShapeFactorData and related types), so later
- * mutations through any reference (e.g. the owning evaluator's own compute
- * step) are visible through every other outstanding reference.
+ * Increases the reference count of @tps by one; this is also the boxed copy function, so a
+ * copy shares the coefficients.
  *
- * Returns: (transfer full): @tps
+ * Returns: (transfer full): @tps.
  */
 NcmLaurentSeriesTPS *
 ncm_laurent_series_tps_ref (NcmLaurentSeriesTPS *tps)
@@ -622,8 +609,7 @@ ncm_laurent_series_tps_ref (NcmLaurentSeriesTPS *tps)
  * ncm_laurent_series_tps_unref:
  * @tps: a #NcmLaurentSeriesTPS
  *
- * Decreases the reference count of @tps by one, freeing it once the count
- * reaches zero.
+ * Decreases the reference count of @tps by one.
  */
 void
 ncm_laurent_series_tps_unref (NcmLaurentSeriesTPS *tps)
@@ -642,7 +628,7 @@ ncm_laurent_series_tps_unref (NcmLaurentSeriesTPS *tps)
  * ncm_laurent_series_tps_clear:
  * @tps: a #NcmLaurentSeriesTPS
  *
- * Unrefs *@tps and sets it to %NULL.
+ * If *@tps is not %NULL, decreases its reference count by one and sets *@tps to %NULL.
  */
 void
 ncm_laurent_series_tps_clear (NcmLaurentSeriesTPS **tps)
@@ -658,7 +644,7 @@ ncm_laurent_series_tps_clear (NcmLaurentSeriesTPS **tps)
  * ncm_laurent_series_tps_order:
  * @tps: a #NcmLaurentSeriesTPS
  *
- * Returns: @tps's order $N$ (number of coefficients minus one)
+ * Returns: the order $N$.
  */
 guint
 ncm_laurent_series_tps_order (const NcmLaurentSeriesTPS *tps)
@@ -669,9 +655,9 @@ ncm_laurent_series_tps_order (const NcmLaurentSeriesTPS *tps)
 /**
  * ncm_laurent_series_tps_get:
  * @tps: a #NcmLaurentSeriesTPS
- * @n: the coefficient index, $0\le n\le$ @tps's order
+ * @n: index, at most the order
  *
- * Returns: (transfer none): @tps's coefficient of $g^n$
+ * Returns: (transfer none): the coefficient $L_n$.
  */
 NcmLaurentSeries *
 ncm_laurent_series_tps_get (const NcmLaurentSeriesTPS *tps, guint n)
@@ -683,20 +669,11 @@ ncm_laurent_series_tps_get (const NcmLaurentSeriesTPS *tps, guint n)
 
 /**
  * ncm_laurent_series_tps_conv:
- * @out: a #NcmLaurentSeriesTPS, same order as @a and @b, must not alias either
+ * @out: a #NcmLaurentSeriesTPS of the same order, not aliasing the inputs
  * @a: a #NcmLaurentSeriesTPS
- * @b: a #NcmLaurentSeriesTPS, same order as @a
+ * @b: a #NcmLaurentSeriesTPS
  *
- * Truncated Cauchy product $out_m=\sum_{k=0}^m a_k b_{m-k}$ for
- * $m=0..N$ -- truncated at the shared order $N$, not extended to
- * $\deg(a)+\deg(b)$ (this is a truncated power series, not a polynomial
- * ring element). The inner fold only ever needs two non-aliasing
- * accumulator buffers (ncm_laurent_series_add_into() forbids @out aliasing
- * an input, so the running sum alternates between them: at step $k$, the
- * accumulator from step $k-2$ is already fully consumed and free to reuse
- * for step $k$'s result) plus one transient product buffer -- three fixed
- * buffers regardless of order, drawn from @out's own private
- * @conv_acc/@conv_term rather than any external pool.
+ * Sets $\mathrm{out}_m = \sum_{k=0}^{m} a_k\,b_{m-k}$ for $m \le N$, the product truncated at order $N$.
  */
 void
 ncm_laurent_series_tps_conv (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, const NcmLaurentSeriesTPS *b)
@@ -729,12 +706,10 @@ ncm_laurent_series_tps_conv (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS
 
 /**
  * ncm_laurent_series_tps_conj:
- * @out: a #NcmLaurentSeriesTPS, same order as @a, must not alias @a
+ * @out: a #NcmLaurentSeriesTPS of the same order, not aliasing the inputs
  * @a: a #NcmLaurentSeriesTPS
  *
- * Harmonic-by-harmonic conjugate of every coefficient of @a (see
- * ncm_laurent_series_conj_into()), term by term in $g$. Writes straight
- * into @out's existing slots, no scratch #NcmLaurentSeries needed.
+ * Sets each coefficient of @out to the conjugate, ncm_laurent_series_conj(), of that of @a.
  */
 void
 ncm_laurent_series_tps_conj (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a)
@@ -750,13 +725,12 @@ ncm_laurent_series_tps_conj (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS
 
 /**
  * ncm_laurent_series_tps_add:
- * @out: a #NcmLaurentSeriesTPS, same order as @a and @b, must not alias either
+ * @out: a #NcmLaurentSeriesTPS of the same order, not aliasing the inputs
  * @a: a #NcmLaurentSeriesTPS
- * @b: a #NcmLaurentSeriesTPS, same order as @a
- * @sb: scale factor applied to @b
+ * @b: a #NcmLaurentSeriesTPS
+ * @sb: factor $s_b$
  *
- * Term-by-term $out_m=a_m+sb\cdot b_m$. Writes straight into @out's
- * existing slots, no scratch #NcmLaurentSeries needed.
+ * Sets $\mathrm{out}_m = a_m + s_b b_m$.
  */
 void
 ncm_laurent_series_tps_add (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, const NcmLaurentSeriesTPS *b, gdouble sb)
@@ -773,12 +747,11 @@ ncm_laurent_series_tps_add (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS 
 
 /**
  * ncm_laurent_series_tps_scale: (skip)
- * @out: a #NcmLaurentSeriesTPS, same order as @a, must not alias @a
+ * @out: a #NcmLaurentSeriesTPS of the same order, not aliasing the inputs
  * @a: a #NcmLaurentSeriesTPS
- * @s: scale factor
+ * @s: the factor
  *
- * Term-by-term $out_m=s\cdot a_m$. Writes straight into @out's existing
- * slots, no scratch #NcmLaurentSeries needed.
+ * Sets $\mathrm{out}_m = s\,a_m$.
  */
 void
 ncm_laurent_series_tps_scale (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, NcmComplex s)
@@ -795,10 +768,10 @@ ncm_laurent_series_tps_scale (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTP
 /**
  * ncm_laurent_series_tps_eval: (skip)
  * @tps: a #NcmLaurentSeriesTPS
- * @w: the coefficients' own formal variable, evaluated at this point
- * @g: the truncation variable, evaluated at this point
+ * @w: the point $w$
+ * @g: the point $g$
  *
- * Returns: $\mathrm{tps}(w,g)=\sum_{n=0}^N L_n(w)\,g^n$
+ * Returns: $\sum_{n=0}^{N} L_n(w)\,g^n$.
  */
 NcmComplex
 ncm_laurent_series_tps_eval (const NcmLaurentSeriesTPS *tps, NcmComplex w, NcmComplex g)
@@ -816,9 +789,11 @@ ncm_laurent_series_tps_eval (const NcmLaurentSeriesTPS *tps, NcmComplex w, NcmCo
 /**
  * ncm_laurent_series_tps_eval_ptr:
  * @tps: a #NcmLaurentSeriesTPS
- * @w: the coefficients' own formal variable, evaluated at this point
- * @g: the truncation variable, evaluated at this point
- * @out: (out): $\mathrm{tps}(w,g)$
+ * @w: the point $w$
+ * @g: the point $g$
+ * @out: the value
+ *
+ * Same as ncm_laurent_series_tps_eval().
  */
 void
 ncm_laurent_series_tps_eval_ptr (const NcmLaurentSeriesTPS *tps, const NcmComplex *w, const NcmComplex *g, NcmComplex *out)
@@ -826,18 +801,19 @@ ncm_laurent_series_tps_eval_ptr (const NcmLaurentSeriesTPS *tps, const NcmComple
   ncm_complex_set_c (out, ncm_laurent_series_tps_eval (tps, ncm_complex_c (w), ncm_complex_c (g)));
 }
 
-/* See this function's own header doc comment for the recursion. @u holds
- * a/a_0-1's own coefficients (u_0=0, left untouched: fresh
- * NcmLaurentSeriesTPS start zero-initialized); @c is built up
- * self-referentially (c_n depends on c_0..c_{n-1}) before the final a_0^p
- * rescale into @out. The inner fold (for fixed n, summing k=1..n) needs
- * the same ping-pong-plus-term scratch as ncm_laurent_series_tps_conv()'s
- * own fold and for the same reason (add_into forbids @out aliasing an
- * input) -- three fixed scalar buffers, allocated fresh here since
- * @a/@out aren't (yet) part of a persistent, repeatedly-evaluated object
- * the way nc_wl_ellipticity_series.c's evaluators are (matching
- * NcGalaxyShapePopGauss's own eval_p_rho2_g_series, which is in exactly
- * the same position). */
+/**
+ * ncm_laurent_series_tps_pow:
+ * @out: a #NcmLaurentSeriesTPS of the same order, not aliasing the inputs
+ * @a: a #NcmLaurentSeriesTPS
+ * @p: the exponent
+ *
+ * Sets @out to $a(g)^p \mod g^{N+1}$ for a real @p. With $a = a_0 (1 + u)$ and $u(0) = 0$,
+ * the coefficients of $(1 + u)^p = \sum_n c_n g^n$ follow from $(1 + u) F' = p\,u' F$,
+ * $$c_0 = 1, \qquad n\,c_n = \sum_{k=1}^{n} \left[k p - (n - k)\right] u_k\,c_{n-k},$$
+ * and $\mathrm{out} = a_0^p \sum_n c_n g^n$, with the principal branch of $a_0^p$.
+ *
+ * $L_0$ must be the constant $a_0 \ne 0$, with the single power $w^0$; aborts otherwise.
+ */
 void
 ncm_laurent_series_tps_pow (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, gdouble p)
 {
@@ -851,8 +827,15 @@ ncm_laurent_series_tps_pow (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS 
 
   g_assert_cmpuint (ncm_laurent_series_tps_order (out), ==, order);
 
-  a0 = ncm_laurent_series_get (ncm_laurent_series_tps_get (a, 0), 0);
-  g_assert (a0 != 0.0);
+  {
+    const NcmLaurentSeries *L0 = ncm_laurent_series_tps_get (a, 0);
+
+    g_assert_cmpint (ncm_laurent_series_get_hmin (L0), ==, 0);
+    g_assert_cmpint (ncm_laurent_series_get_hmax (L0), ==, 0);
+
+    a0 = ncm_laurent_series_get (L0, 0);
+    g_assert (a0 != 0.0);
+  }
 
   for (n = 1; n <= order; n++)
     ncm_laurent_series_scale_into (ncm_laurent_series_tps_get (u, n), ncm_laurent_series_tps_get (a, n), 1.0 / a0);
@@ -890,36 +873,88 @@ ncm_laurent_series_tps_pow (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS 
 
 /**
  * ncm_laurent_series_jacobi_anger_reduce:
- * @cm: a #NcmLaurentSeries
- * @phi: the kernel's own phase offset
- * @Ik: (array length=n_Ik) (element-type gdouble): scaled Bessel values
- * $\exp(-z)I_h(z)$ for $h=0..n\_Ik-1$
- * @n_Ik: length of @Ik
+ * @cm: a #NcmLaurentSeries $c(\theta) = \sum_h c_h e^{ih\theta}$
+ * @phi: the phase $\phi$
+ * @Ik: (array length=n_Ik) (element-type gdouble): $e^{-z} I_k(z)$ for $k = 0, \dots, n_{I_k} - 1$
+ * @n_Ik: length of @Ik, at least one
  *
- * Exact reduction of
- * $\int_0^{2\pi} cm(\theta)\exp(z(\cos(\theta-\phi)-1))\,d\theta$
- * via the Jacobi-Anger identity, given @cm's own harmonic content and
- * precomputed scaled Bessel values -- no numerical quadrature over $\theta$
- * at all. Verified against direct numerical theta-integration
- * (test_ncm_laurent_series.c); note this includes the overall $2\pi$ factor
- * from the $\theta$-integral itself, so the return value is meaningful on
- * its own without relying on a caller-side normalization to supply it.
+ * Computes
+ * $$\int_0^{2\pi} c(\theta)\,e^{z[\cos(\theta - \phi) - 1]}\,\mathrm{d}\theta
+ * = 2\pi \sum_h c_h\,e^{-z} I_{|h|}(z)\,e^{ih\phi}$$
+ * from the Jacobi-Anger expansion, for a real $c(\theta)$, that is $c_{-h} = \bar c_h$: only the
+ * powers $h \ge 0$ are read, as $c_0 I_0 + 2 \sum_{h \ge 1} I_h\,\mathrm{Re}(c_h e^{ih\phi})$.
+ * Powers $h \ge n_{I_k}$ are not included. It is ncm_laurent_series_jacobi_anger_accumulate()
+ * followed by ncm_laurent_series_jacobi_anger_eval().
  *
- * Returns: the reduced value
+ * Returns: the integral.
  */
 gdouble
 ncm_laurent_series_jacobi_anger_reduce (const NcmLaurentSeries *cm, gdouble phi, const gdouble *Ik, gint n_Ik)
 {
-  gdouble term = creal (ncm_laurent_series_get (cm, 0)) * Ik[0];
+  NcmComplex *H = g_new0 (NcmComplex, MAX (n_Ik, 1));
+  gdouble res;
+
+  ncm_laurent_series_jacobi_anger_accumulate (cm, Ik, n_Ik, 1.0, H);
+  res = ncm_laurent_series_jacobi_anger_eval (H, n_Ik, phi);
+
+  g_free (H);
+
+  return res;
+}
+
+/**
+ * ncm_laurent_series_jacobi_anger_accumulate: (skip)
+ * @cm: a #NcmLaurentSeries $c(\theta) = \sum_h c_h e^{ih\theta}$
+ * @Ik: (array length=n_Ik): $e^{-z} I_k(z)$ for $k = 0, \dots, n_{I_k} - 1$
+ * @n_Ik: length of @Ik and @H, at least one
+ * @scale: the factor $s$
+ * @H: (array length=n_Ik): the harmonics $H_k$
+ *
+ * Adds to @H the $\phi$-independent part of ncm_laurent_series_jacobi_anger_reduce(),
+ * $H_0 \mathrel{+}= s\,\mathrm{Re}(c_0)\,I_0$ and $H_k \mathrel{+}= s\,I_k\,c_k$ for
+ * $1 \le k < n_{I_k}$, under the same assumption of a real $c(\theta)$. Summing over several
+ * series, for example over quadrature nodes, and then calling
+ * ncm_laurent_series_jacobi_anger_eval() gives the sum of their integrals, with $\phi$ applied
+ * once.
+ */
+void
+ncm_laurent_series_jacobi_anger_accumulate (const NcmLaurentSeries *cm, const gdouble *Ik, gint n_Ik, gdouble scale, NcmComplex *H)
+{
   gint k;
+
+  g_assert_cmpint (n_Ik, >, 0);
+
+  H[0] += scale * creal (ncm_laurent_series_get (cm, 0)) * Ik[0];
 
   for (k = 1; k < n_Ik; k++)
   {
-    NcmComplex v = ncm_laurent_series_get (cm, k);
+    const NcmComplex v = ncm_laurent_series_get (cm, k);
 
     if (v != 0.0)
-      term += 2.0 * Ik[k] * creal (v * cexp (I * k * phi));
+      H[k] += scale * Ik[k] * v;
   }
+}
+
+/**
+ * ncm_laurent_series_jacobi_anger_eval: (skip)
+ * @H: (array length=n_H): the harmonics $H_k$ of ncm_laurent_series_jacobi_anger_accumulate()
+ * @n_H: length of @H, at least one
+ * @phi: the phase $\phi$
+ *
+ * Returns: $2\pi\left[\mathrm{Re}(H_0) + 2\sum_{k=1}^{n_H - 1} \mathrm{Re}(H_k e^{ik\phi})\right]$.
+ */
+gdouble
+ncm_laurent_series_jacobi_anger_eval (const NcmComplex *H, gint n_H, gdouble phi)
+{
+  gdouble term;
+  gint k;
+
+  g_assert_cmpint (n_H, >, 0);
+
+  term = creal (H[0]);
+
+  for (k = 1; k < n_H; k++)
+    term += 2.0 * creal (H[k] * cexp (I * k * phi));
 
   return 2.0 * M_PI * term;
 }

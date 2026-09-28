@@ -73,16 +73,17 @@ Documentation is split by purpose, and the split is intentional:
   relation or signature, and the key methods. Keep it short.
 - Theoretical background (the Quarto project under `docs/`, rendered to the
   website) — the physics, derivations, and full equations live here, in
-  `docs/theory/<area>/<topic>.qmd`.
+  `docs/theory/<ns>/<area>/<topic>.qmd`, mirroring the `numcosmo/<ns>/<area>/`
+  of the class it documents.
 
 When a class involves non-trivial math, do not put the derivation in the C doc
 comment. Put it on a theory page and link to it. The pattern is established by
 `NcmCSQ1D`: see the short doc comment in
 `numcosmo/ncm/dynamics/ncm_csq1d.c` and the corresponding
-`docs/theory/csq1d.qmd`.
+`docs/theory/ncm/dynamics/csq1d.qmd`.
 
 - From the C doc comment, link to the theory page with a plain anchor, e.g.
-  `<a href="../../theory/csq1d.html">CSQ1D Formalism</a>`.
+  `<a href="../../theory/ncm/dynamics/csq1d.html">CSQ1D Formalism</a>`.
 - From the theory page, link back to the API with wiki-style symbol references:
   `[[numcosmo-math|NcmCSQ1D]]`, `[[numcosmo|NcDistance]]`,
   `[[numcosmo-math|ncm_csq1d_prepare]]`. Unresolved references degrade to plain
@@ -137,7 +138,7 @@ Placement. A function or class doc states what the thing does and its error
 modes, and stops. Derivations go on a theory page (see above). Measurement
 tables, rejected approaches, and how a bug was found go in
 `dev-notes/<topic>.md` or an area history document such as
-`docs/theory/wl_shape_factor_history.md`, with a pointer left in the code.
+`docs/theory/nc/lss/galaxy/wl_shape_factor_history.md`, with a pointer left in the code.
 
 Do not delete these when shortening a comment. Move them if they belong
 elsewhere, but they must survive somewhere findable:

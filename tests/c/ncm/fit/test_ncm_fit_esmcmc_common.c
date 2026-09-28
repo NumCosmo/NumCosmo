@@ -525,11 +525,31 @@ test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
   ncm_fit_esmcmc_set_auto_trim (test->esmcmc, FALSE);
 
   /* Exercise start_run()'s FULL-only log branch once, then reset to NONE to
-   * avoid overhead on the actual (possibly retried) run. */
-  ncm_fit_esmcmc_set_mtype (test->esmcmc, NCM_FIT_RUN_MSGS_FULL);
-  ncm_fit_esmcmc_start_run (test->esmcmc);
-  ncm_fit_esmcmc_end_run (test->esmcmc);
-  ncm_fit_esmcmc_set_mtype (test->esmcmc, NCM_FIT_RUN_MSGS_NONE);
+   * avoid overhead on the actual (possibly retried) run. The log goes to a
+   * temporary file: on stdout it would break the TAP stream. */
+  {
+    FILE *log = tmpfile ();
+    gchar *text;
+    glong len;
+
+    g_assert_nonnull (log);
+    ncm_cfg_set_logstream (log);
+    ncm_fit_esmcmc_set_mtype (test->esmcmc, NCM_FIT_RUN_MSGS_FULL);
+    ncm_fit_esmcmc_start_run (test->esmcmc);
+    ncm_fit_esmcmc_end_run (test->esmcmc);
+    ncm_fit_esmcmc_set_mtype (test->esmcmc, NCM_FIT_RUN_MSGS_NONE);
+    ncm_cfg_set_logstream (stdout);
+
+    fflush (log);
+    len = ftell (log);
+    g_assert_cmpint (len, >, 0);
+    text = g_malloc0 (len + 1);
+    rewind (log);
+    g_assert_cmpuint (fread (text, 1, len, log), ==, (gsize) len);
+    g_assert_nonnull (strstr (text, "Starting Ensemble Sampler Markov Chain Monte Carlo"));
+    g_free (text);
+    fclose (log);
+  }
 
   ncm_fit_esmcmc_start_run (test->esmcmc);
   ncm_fit_esmcmc_run (test->esmcmc, run);

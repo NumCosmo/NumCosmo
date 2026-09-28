@@ -25,12 +25,10 @@
 /**
  * NcmMemoryPool:
  *
- * Generic memory pool.
+ * Thread-safe pool of reusable objects.
  *
- * Allocates objects with a user-provided function, retains them for reuse, and
- * releases them with the corresponding free function. Pool operations are
- * thread-safe.
- *
+ * Objects are allocated with a user-provided function, kept for reuse, and
+ * released with the corresponding free function.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -42,14 +40,15 @@
 
 /**
  * ncm_memory_pool_new: (skip)
- * @mp_alloc: a #NcmMemoryPoolAlloc, function used to alloc memory.
- * @userdata: userdata pointer for @mp_alloc function.
- * @mp_free: function used to free memory alloced by mp_alloc.
+ * @mp_alloc: allocation function
+ * @userdata: user data
+ * @mp_free: (nullable): free function
  *
- * Creates a pool that allocates objects with @mp_alloc and reuses returned
- * objects. Objects must be returned with ncm_memory_pool_return().
+ * Creates a pool that allocates objects with @mp_alloc (called with
+ * @userdata), reuses returned objects and frees them with @mp_free. Objects
+ * must be returned with ncm_memory_pool_return().
  *
- * Returns: the memory pool #NcmMemoryPool
+ * Returns: a new #NcmMemoryPool.
  */
 NcmMemoryPool *
 ncm_memory_pool_new (NcmMemoryPoolAlloc mp_alloc, gpointer userdata, GDestroyNotify mp_free)
@@ -70,8 +69,8 @@ ncm_memory_pool_new (NcmMemoryPoolAlloc mp_alloc, gpointer userdata, GDestroyNot
 
 /**
  * ncm_memory_pool_empty:
- * @mp: a #NcmMemoryPool, memory pool to be emptied
- * @free_slices: if true and the pool was built with a free function, free the slices
+ * @mp: a #NcmMemoryPool
+ * @free_slices: whether to free the pooled objects
  *
  * Removes every slice from @mp. The memory each slice points to is released
  * with the pool's free function only when @free_slices is %TRUE and such a
@@ -112,14 +111,13 @@ ncm_memory_pool_empty (NcmMemoryPool *mp, gboolean free_slices)
 
 /**
  * ncm_memory_pool_free:
- * @mp: a #NcmMemoryPool, memory pool to be freed
- * @free_slices: if true and the pool was built with a free function, free the slices
+ * @mp: a #NcmMemoryPool
+ * @free_slices: whether to free the pooled objects
  *
  * Frees @mp. The memory each slice points to is released with the pool's free
  * function only when @free_slices is %TRUE and such a function was given to
  * ncm_memory_pool_new(). Blocks until all slices currently checked out have
  * been returned.
- *
  */
 void
 ncm_memory_pool_free (NcmMemoryPool *mp, gboolean free_slices)
@@ -155,11 +153,9 @@ ncm_memory_pool_free (NcmMemoryPool *mp, gboolean free_slices)
 /**
  * ncm_memory_pool_set_min_size:
  * @mp: a #NcmMemoryPool
- * @n: minimun number of slices contained in mp
+ * @n: minimum number of slices
  *
- * if n grater than number of slices then allocate new slices until
- * n == slices.
- *
+ * Allocates slices until @mp holds at least @n.
  */
 void
 ncm_memory_pool_set_min_size (NcmMemoryPool *mp, gsize n)
@@ -181,12 +177,11 @@ ncm_memory_pool_set_min_size (NcmMemoryPool *mp, gsize n)
 
 /**
  * ncm_memory_pool_add:
- * @mp: a #NcmMemoryPool.
- * @p: a pointer to an object compatible with the pool.
+ * @mp: a #NcmMemoryPool
+ * @p: an object
  *
- * Adds an already allocated pointer @p to the pool. It will be freed with
- * #NcmMemoryPool->free during the pool destruction.
- *
+ * Adds @p, allocated as by the pool's allocation function, to @mp. The pool
+ * owns @p under the same rules as the objects it allocates.
  */
 void
 ncm_memory_pool_add (NcmMemoryPool *mp, gpointer p)
@@ -207,12 +202,9 @@ ncm_memory_pool_add (NcmMemoryPool *mp, gpointer p)
  * ncm_memory_pool_get:
  * @mp: a #NcmMemoryPool
  *
- * Search in the pool for a non used slice
- * and return the first finded. If none
- * allocate a new one add to the pool and
- * return it.
+ * Checks out the first unused slice, allocating a new one if all are in use.
  *
- * Returns: (transfer full): a pointer to an unused #NcmMemoryPoolSlice
+ * Returns: (transfer full): a #NcmMemoryPoolSlice, to be given back with ncm_memory_pool_return().
  */
 gpointer
 ncm_memory_pool_get (NcmMemoryPool *mp)
@@ -252,9 +244,9 @@ ncm_memory_pool_get (NcmMemoryPool *mp)
 
 /**
  * ncm_memory_pool_return:
- * @p: slice to be returned to the pool
+ * @p: a #NcmMemoryPoolSlice
  *
- * Put the slice pointed by slice back to the pool.
+ * Returns @p, obtained from ncm_memory_pool_get(), to its pool.
  */
 void
 ncm_memory_pool_return (gpointer p)

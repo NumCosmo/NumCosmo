@@ -1,0 +1,6 @@
+subdir('algebra')
+subdir('core')
+subdir('dynamics')
+subdir('fftlog')
+subdir('specfunc')
+subdir('stats')

@@ -32,9 +32,22 @@
  * $[\mathrm{ra}_\mathrm{min}, \mathrm{ra}_\mathrm{max}] \times
  * [\mathrm{dec}_\mathrm{min}, \mathrm{dec}_\mathrm{max}]$ (degrees). Positions
  * are sampled uniformly on the sphere patch: right ascension uniform in its
- * range and declination uniform in $\sin(\mathrm{dec})$. The position density is
- * the corresponding normalized distribution, proportional to
- * $\cos(\mathrm{dec})$ inside the rectangle.
+ * range and declination uniform in $\sin(\mathrm{dec})$. The area is
+ * $\Delta\mathrm{ra}\,[\sin(\mathrm{dec}_\mathrm{max}) - \sin(\mathrm{dec}_\mathrm{min})]$,
+ * with $\Delta\mathrm{ra}$ in radians, and the density of ncm_sky_footprint_density() is
+ * \begin{equation*}
+ * p(\mathrm{ra}, \mathrm{dec}) = \frac{\cos(\mathrm{dec})}{\Delta\mathrm{ra}\,
+ * \frac{180}{\pi}\left[\sin(\mathrm{dec}_\mathrm{max}) - \sin(\mathrm{dec}_\mathrm{min})\right]}
+ * \end{equation*}
+ * inside the rectangle, with $\Delta\mathrm{ra}$ in degrees.
+ *
+ * The limits must satisfy $-90 \le \mathrm{dec}_\mathrm{min} < \mathrm{dec}_\mathrm{max} \le 90$
+ * and $0 < \mathrm{ra}_\mathrm{max} - \mathrm{ra}_\mathrm{min} \le 360$; other values
+ * abort. Right ascension is compared as given, without wrapping at 0 or 360 degrees: a
+ * patch across $\mathrm{ra} = 0$ is set with a negative $\mathrm{ra}_\mathrm{min}$ (or
+ * $\mathrm{ra}_\mathrm{max} > 360$), and positions must use the same convention. A limit
+ * that is not given, at construction or later as %NULL, spans the whole sphere in that
+ * coordinate: $[0, 360]$ in right ascension and $[-90, 90]$ in declination.
  *
  */
 
@@ -103,9 +116,10 @@ _ncm_sky_footprint_rectangular_set_property (GObject *object, guint prop_id, con
       NcmDTuple2 *ra_lim = g_value_get_boxed (value);
 
       if (ra_lim == NULL)
-        g_error ("_ncm_sky_footprint_rectangular_set_property: ra_lim is NULL.");
+        ncm_sky_footprint_rectangular_set_ra_lim (rect, 0.0, 360.0);
+      else
+        ncm_sky_footprint_rectangular_set_ra_lim (rect, ra_lim->elements[0], ra_lim->elements[1]);
 
-      ncm_sky_footprint_rectangular_set_ra_lim (rect, ra_lim->elements[0], ra_lim->elements[1]);
       break;
     }
     case PROP_DEC_LIM:
@@ -113,9 +127,10 @@ _ncm_sky_footprint_rectangular_set_property (GObject *object, guint prop_id, con
       NcmDTuple2 *dec_lim = g_value_get_boxed (value);
 
       if (dec_lim == NULL)
-        g_error ("_ncm_sky_footprint_rectangular_set_property: dec_lim is NULL.");
+        ncm_sky_footprint_rectangular_set_dec_lim (rect, -90.0, 90.0);
+      else
+        ncm_sky_footprint_rectangular_set_dec_lim (rect, dec_lim->elements[0], dec_lim->elements[1]);
 
-      ncm_sky_footprint_rectangular_set_dec_lim (rect, dec_lim->elements[0], dec_lim->elements[1]);
       break;
     }
     default:                                                      /* LCOV_EXCL_LINE */
@@ -171,7 +186,7 @@ ncm_sky_footprint_rectangular_class_init (NcmSkyFootprintRectangularClass *klass
   /**
    * NcmSkyFootprintRectangular:ra-lim:
    *
-   * The right ascension limits (min, max) in degrees.
+   * The right ascension limits (min, max) in degrees; %NULL, the default, is $[0, 360]$.
    *
    */
   g_object_class_install_property (object_class,
@@ -180,12 +195,12 @@ ncm_sky_footprint_rectangular_class_init (NcmSkyFootprintRectangularClass *klass
                                                        "RA limits",
                                                        "Right ascension limits (min, max) in degrees",
                                                        NCM_TYPE_DTUPLE2,
-                                                       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS));
 
   /**
    * NcmSkyFootprintRectangular:dec-lim:
    *
-   * The declination limits (min, max) in degrees.
+   * The declination limits (min, max) in degrees; %NULL, the default, is $[-90, 90]$.
    *
    */
   g_object_class_install_property (object_class,
@@ -194,7 +209,7 @@ ncm_sky_footprint_rectangular_class_init (NcmSkyFootprintRectangularClass *klass
                                                        "DEC limits",
                                                        "Declination limits (min, max) in degrees",
                                                        NCM_TYPE_DTUPLE2,
-                                                       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS));
 
   footprint_class->gen_ra_dec = &_ncm_sky_footprint_rectangular_gen_ra_dec;
   footprint_class->contains   = &_ncm_sky_footprint_rectangular_contains;
@@ -326,7 +341,8 @@ ncm_sky_footprint_rectangular_clear (NcmSkyFootprintRectangular **rect)
  * @ra_min: minimum right ascension (degrees)
  * @ra_max: maximum right ascension (degrees)
  *
- * Sets the right ascension limits of @rect.
+ * Sets the right ascension limits of @rect; the span must be positive and at most 360
+ * degrees, see #NcmSkyFootprintRectangular.
  *
  */
 void
@@ -334,7 +350,8 @@ ncm_sky_footprint_rectangular_set_ra_lim (NcmSkyFootprintRectangular *rect, cons
 {
   NcmSkyFootprintRectangularPrivate * const self = ncm_sky_footprint_rectangular_get_instance_private (rect);
 
-  g_assert_cmpfloat (ra_min, <, ra_max);
+  if (!((ra_max > ra_min) && (ra_max - ra_min <= 360.0)))
+    g_error ("ncm_sky_footprint_rectangular_set_ra_lim: the right ascension span must be in (0, 360] degrees, got [%g, %g].", ra_min, ra_max);
 
   self->ra_min  = ra_min;
   self->ra_max  = ra_max;
@@ -368,7 +385,8 @@ ncm_sky_footprint_rectangular_get_ra_lim (NcmSkyFootprintRectangular *rect, gdou
  * @dec_min: minimum declination (degrees)
  * @dec_max: maximum declination (degrees)
  *
- * Sets the declination limits of @rect.
+ * Sets the declination limits of @rect, which must satisfy
+ * $-90 \le$ @dec_min $<$ @dec_max $\le 90$.
  *
  */
 void
@@ -376,7 +394,8 @@ ncm_sky_footprint_rectangular_set_dec_lim (NcmSkyFootprintRectangular *rect, con
 {
   NcmSkyFootprintRectangularPrivate * const self = ncm_sky_footprint_rectangular_get_instance_private (rect);
 
-  g_assert_cmpfloat (dec_min, <, dec_max);
+  if (!((dec_min >= -90.0) && (dec_min < dec_max) && (dec_max <= 90.0)))
+    g_error ("ncm_sky_footprint_rectangular_set_dec_lim: the declination limits must satisfy -90 <= min < max <= 90, got [%g, %g].", dec_min, dec_max);
 
   self->dec_min     = dec_min;
   self->dec_max     = dec_max;

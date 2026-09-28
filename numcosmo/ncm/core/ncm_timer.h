@@ -81,6 +81,11 @@ void ncm_timer_task_log_start_datetime (NcmTimer *nt);
 void ncm_timer_task_log_cur_datetime (NcmTimer *nt);
 void ncm_timer_task_log_end_datetime (NcmTimer *nt);
 
+/**
+ * NCM_TIMER_SEC_FORMAT:
+ *
+ * printf format of the seconds in the #NcmTimer strings.
+ */
 #define NCM_TIMER_SEC_FORMAT "%07.4f"
 
 G_END_DECLS

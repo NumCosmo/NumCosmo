@@ -44,10 +44,8 @@ void test_ncm_sphere_nn (void);
 void test_ncm_timer_basic (void);
 void test_ncm_sbessel_ode_solver_basic (void);
 void test_ncm_sbessel_integrator_gl_basic (void);
-void test_ncm_sbessel_integrator_fftl_basic (void);
 void test_ncm_sbessel_integrator_levin_basic (void);
 void test_ncm_fftlog_sbessel_j_basic (void);
-void test_ncm_fftlog_sbessel_jljm_basic (void);
 void test_ncm_bootstrap_basic (void);
 void test_ncm_stats_vec_basic (void);
 void test_ncm_stats_acorr_basic (void);
@@ -60,6 +58,8 @@ void test_ncm_spline_bspline_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
 void test_ncm_powspec_analytic_basic (void);
 void test_ncm_pln1d_basic (void);
+void test_ncm_function_cache_basic (void);
+void test_ncm_iset_basic (void);
 
 void test_nc_data_cluster_mass_rich_basic (void);
 void test_nc_data_cluster_mass_rich_count_basic (void);
@@ -138,10 +138,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/timer/basic", test_ncm_timer_basic);
   g_test_add_func ("/ncm/sbessel_ode_solver/basic", test_ncm_sbessel_ode_solver_basic);
   g_test_add_func ("/ncm/sbessel_integrator_gl/basic", test_ncm_sbessel_integrator_gl_basic);
-  g_test_add_func ("/ncm/sbessel_integrator_fftl/basic", test_ncm_sbessel_integrator_fftl_basic);
   g_test_add_func ("/ncm/sbessel_integrator_levin/basic", test_ncm_sbessel_integrator_levin_basic);
   g_test_add_func ("/ncm/fftlog_sbessel_j/basic", test_ncm_fftlog_sbessel_j_basic);
-  g_test_add_func ("/ncm/fftlog_sbessel_jljm/basic", test_ncm_fftlog_sbessel_jljm_basic);
   g_test_add_func ("/ncm/bootstrap/basic", test_ncm_bootstrap_basic);
   g_test_add_func ("/ncm/stats_vec/basic", test_ncm_stats_vec_basic);
   g_test_add_func ("/ncm/stats_acorr/basic", test_ncm_stats_acorr_basic);
@@ -154,6 +152,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
   g_test_add_func ("/ncm/powspec_analytic/basic", test_ncm_powspec_analytic_basic);
   g_test_add_func ("/ncm/pln1d/basic", test_ncm_pln1d_basic);
+  g_test_add_func ("/ncm/function_cache/basic", test_ncm_function_cache_basic);
+  g_test_add_func ("/ncm/iset/basic", test_ncm_iset_basic);
 
   g_test_add_func ("/nc/data/cluster_mass_rich/basic", test_nc_data_cluster_mass_rich_basic);
   g_test_add_func ("/nc/data/cluster_mass_rich_count/basic", test_nc_data_cluster_mass_rich_count_basic);
@@ -274,24 +274,6 @@ test_ncm_sbessel_integrator_gl_basic (void)
 }
 
 void
-test_ncm_sbessel_integrator_fftl_basic (void)
-{
-  NcmSBesselIntegratorFFTL *sbilf = ncm_sbessel_integrator_fftl_new (0, 10);
-  NcmSBesselIntegratorFFTL *sbilf2;
-
-  g_assert_true (sbilf != NULL);
-  g_assert_true (NCM_IS_SBESSEL_INTEGRATOR_FFTL (sbilf));
-
-  sbilf2 = ncm_sbessel_integrator_fftl_ref (sbilf);
-  ncm_sbessel_integrator_fftl_clear (&sbilf2);
-  g_assert_true (sbilf2 == NULL);
-
-  g_assert_true (NCM_IS_SBESSEL_INTEGRATOR_FFTL (sbilf));
-
-  NCM_TEST_FREE (ncm_sbessel_integrator_fftl_free, sbilf);
-}
-
-void
 test_ncm_sbessel_integrator_levin_basic (void)
 {
   NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new (0, 10);
@@ -325,24 +307,6 @@ test_ncm_fftlog_sbessel_j_basic (void)
   g_assert_true (NCM_IS_FFTLOG_SBESSEL_J (fftlog_jl));
 
   NCM_TEST_FREE (ncm_fftlog_free, NCM_FFTLOG (fftlog_jl));
-}
-
-void
-test_ncm_fftlog_sbessel_jljm_basic (void)
-{
-  NcmFftlogSBesselJLJM *fftlog_jljm = ncm_fftlog_sbessel_jljm_new (2, 0, 0.0, 0.0, 0.0, 1.0, 128);
-  NcmFftlog *fftlog_jljm2;
-
-  g_assert_true (fftlog_jljm != NULL);
-  g_assert_true (NCM_IS_FFTLOG_SBESSEL_JLJM (fftlog_jljm));
-
-  fftlog_jljm2 = ncm_fftlog_ref (NCM_FFTLOG (fftlog_jljm));
-  ncm_fftlog_clear (&fftlog_jljm2);
-  g_assert_true (fftlog_jljm2 == NULL);
-
-  g_assert_true (NCM_IS_FFTLOG_SBESSEL_JLJM (fftlog_jljm));
-
-  NCM_TEST_FREE (ncm_fftlog_free, NCM_FFTLOG (fftlog_jljm));
 }
 
 void
@@ -751,6 +715,40 @@ test_ncm_pln1d_basic (void)
   g_assert_true (NCM_IS_PLN1D (pln1d));
 
   NCM_TEST_FREE (ncm_pln1d_free, pln1d);
+}
+
+void
+test_ncm_function_cache_basic (void)
+{
+  NcmFunctionCache *cache = ncm_function_cache_new (1, 0.0, 1.0e-7);
+  NcmFunctionCache *cache2;
+
+  g_assert_true (NCM_IS_FUNCTION_CACHE (cache));
+
+  cache2 = ncm_function_cache_ref (cache);
+  ncm_function_cache_clear (&cache2);
+  g_assert_true (cache2 == NULL);
+
+  g_assert_true (NCM_IS_FUNCTION_CACHE (cache));
+
+  NCM_TEST_FREE (ncm_function_cache_free, cache);
+}
+
+void
+test_ncm_iset_basic (void)
+{
+  NcmISet *iset = ncm_iset_new (5);
+  NcmISet *iset2;
+
+  g_assert_true (NCM_IS_ISET (iset));
+
+  iset2 = ncm_iset_ref (iset);
+  ncm_iset_clear (&iset2);
+  g_assert_true (iset2 == NULL);
+
+  g_assert_true (NCM_IS_ISET (iset));
+
+  NCM_TEST_FREE (ncm_iset_free, iset);
 }
 
 void

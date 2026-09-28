@@ -623,10 +623,6 @@
     "nick": "geometric",
     "type": "Ncm.SplineCurvatureType"
   },
-  "NCM_SPLINE_FUNCTION_4POINTS": {
-    "nick": "function-4points",
-    "type": "Ncm.SplineFuncType"
-  },
   "NCM_SPLINE_FUNCTION_SPLINE": {
     "nick": "function-spline",
     "type": "Ncm.SplineFuncType"
@@ -646,38 +642,6 @@
   "NCM_SPLINE_FUNC_GRID_LOG": {
     "nick": "func-grid-log",
     "type": "Ncm.SplineFuncType"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_COSINE": {
-    "nick": "cosine",
-    "type": "Ncm.SplineFuncTestType"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_EXP_SINC": {
-    "nick": "exp-sinc",
-    "type": "Ncm.SplineFuncTestType"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_PDF_FLAT": {
-    "nick": "flat",
-    "type": "Ncm.SplineFuncTestTypePDF"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_PDF_NORMAL": {
-    "nick": "normal",
-    "type": "Ncm.SplineFuncTestTypePDF"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL": {
-    "nick": "polynomial",
-    "type": "Ncm.SplineFuncTestType"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL_POS": {
-    "nick": "polynomial-pos",
-    "type": "Ncm.SplineFuncTestType"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_RBF": {
-    "nick": "rbf",
-    "type": "Ncm.SplineFuncTestType"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_USER": {
-    "nick": "user",
-    "type": "Ncm.SplineFuncTestType"
   },
   "NCM_SPLINE_GSL_AKIMA": {
     "nick": "akima",
@@ -702,14 +666,6 @@
   "NCM_SPLINE_GSL_POLYNOMIAL": {
     "nick": "polynomial",
     "type": "Ncm.SplineGslType"
-  },
-  "NCM_SPLINE_RBF_TYPE_GAUSS": {
-    "nick": "gauss",
-    "type": "Ncm.SplineRBFType"
-  },
-  "NCM_SPLINE_RBF_TYPE_POSDEF_GAUSS": {
-    "nick": "posdef-gauss",
-    "type": "Ncm.SplineRBFType"
   },
   "NCM_STATS_ACORR_AR_CRIT_AIC": {
     "nick": "aic",

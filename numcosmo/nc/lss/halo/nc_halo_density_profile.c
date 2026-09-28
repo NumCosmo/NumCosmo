@@ -49,7 +49,7 @@
  *
  * For the parametrization, the projected quantities, and the closed-form
  * expressions of each profile family, see the theoretical background page:
- * <a href="../../theory/halo_density_profile.html">Halo Density Profiles</a>.
+ * <a href="../../theory/nc/lss/halo/halo_density_profile.html">Halo Density Profiles</a>.
  */
 
 #ifdef HAVE_CONFIG_H

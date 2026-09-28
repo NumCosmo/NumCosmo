@@ -40,7 +40,7 @@
  *
  * For the full set of definitions, conventions, and the
  * dimensionless-to-physical conversion, see
- * <a href="../../theory/distances.html">Cosmological Distances</a>.
+ * <a href="../../theory/nc/background/distances.html">Cosmological Distances</a>.
  *
  * The cross-correlation code (#NcXcor and the UltraLevin integrator) writes the
  * comoving distance as $\chi$, the symbol used in that part of the literature. It is

@@ -176,7 +176,7 @@ nc_powspec_ml_class_init (NcPowspecMLClass *klass)
   /**
    * NcPowspecML:kmax:
    *
-   * The maximum mode (wave-number) value to compute $P(k,z)$.
+   * The largest mode $k$, in $\mathrm{Mpc}^{-1}$, at which $P(k, z)$ is computed.
    */
   g_object_class_install_property (object_class,
                                    PROP_KMAX,

@@ -46,7 +46,7 @@
  *
  * The expanded term's coefficients scale with $1/\sigma_\mathrm{pop}^2$, and
  * $\sigma_\mathrm{pop}$ is a population parameter this project constrains away
- * from very small values. See docs/theory/wl_shape_factor_history.md for why
+ * from very small values. See docs/theory/nc/lss/galaxy/wl_shape_factor_history.md for why
  * this matters relative to expanding the noise kernel instead.
  *
  * The angular integral uses Jacobi--Anger reduction. The radial integral uses
@@ -69,7 +69,7 @@
  * evaluation outside the disk of convergence rather than truncation error.
  * $\alpha,\beta>1$ has no such restriction.
  *
- * See <a href="../../theory/wl_shape_marginalization_series.html">A Small-Shear
+ * See <a href="../../theory/nc/lss/galaxy/wl_shape_marginalization_series.html">A Small-Shear
  * Series Marginalization for the Shape Likelihood</a> and
  * `dev-notes/wl_shape_series_marginalization_derivation.py` sections 9-11 for
  * the derivation and its verification.
@@ -358,11 +358,8 @@ _nc_galaxy_shape_factor_series_lensed_ws_free (gpointer p)
  * Fills ldata->H[m][k] with the phi-independent Jacobi-Anger harmonic
  * content of J[0..order] at fixed (ldata->R,sig2,sigma_pop): a fixed
  * Gauss-Legendre pass over rho in a window around the envelope's peak at
- * rho=R. This is ncm_laurent_series_jacobi_anger_reduce()'s own sum
- *   Re(c_0)*Ik[0] + sum_{k=1}^{maxk} 2*Ik[k]*Re(c_k*exp(i*k*phi))
- * with the exp(i*k*phi) factor -- the only place phi enters -- pulled out
- * of the rho-node sum: H[m][k] accumulates prefactor*Ik[k]*c_k (k>=1) or
- * prefactor*Re(c_0)*Ik[0] (k=0); phi is applied afterward by _finalize_J.
+ * rho=R, accumulated by ncm_laurent_series_jacobi_anger_accumulate(); phi is
+ * applied afterward by _finalize_J.
  *
  * maxk (the harmonic degree F[m] actually populates) is a structural
  * property of trunc_order and the ellipticity convention alone -- every
@@ -460,20 +457,7 @@ _compute_H (NcGalaxyShapeFactorSeriesLensedPrivate * const self, NcGalaxyShapePo
       Ik[k] = gsl_sf_bessel_In_scaled (k, z);
 
     for (m = 0; m <= order; m++)
-    {
-      complex double *Hm   = &ldata->H[m * h_stride];
-      NcmLaurentSeries *Fm = ncm_laurent_series_tps_get (ws->F, m);
-
-      Hm[0] += prefactor * creal (ncm_laurent_series_get (Fm, 0)) * Ik[0];
-
-      for (k = 1; k <= maxk; k++)
-      {
-        complex double v = ncm_laurent_series_get (Fm, k);
-
-        if (v != 0.0)
-          Hm[k] += prefactor * Ik[k] * v;
-      }
-    }
+      ncm_laurent_series_jacobi_anger_accumulate (ncm_laurent_series_tps_get (ws->F, m), Ik, maxk + 1, prefactor, &ldata->H[m * h_stride]);
 
     g_free (Ik);
   }
@@ -481,12 +465,7 @@ _compute_H (NcGalaxyShapeFactorSeriesLensedPrivate * const self, NcGalaxyShapePo
   ncm_memory_pool_return (ws_ptr);
 }
 
-/* Cheap per-call finalization: applies the phi-dependent trig-polynomial
- * evaluation ncm_laurent_series_jacobi_anger_reduce() would have done
- * per-rho-node, but against the already-rho-summed harmonics in ldata->H:
- * J[m] = 2*pi*(Re(H[m][0]) + sum_k 2*Re(H[m][k]*exp(i*k*phi))), an
- * O(order*maxk) trig-polynomial evaluation instead of the full
- * Bessel/Laurent-series recomputation. */
+/* Applies phi to the rho-summed harmonics in ldata->H, O(order maxk) */
 static void
 _finalize_J (NcGalaxyShapeFactorSeriesLensedData *ldata, guint order, gdouble phi)
 {
@@ -494,16 +473,7 @@ _finalize_J (NcGalaxyShapeFactorSeriesLensedData *ldata, guint order, gdouble ph
   guint m;
 
   for (m = 0; m <= order; m++)
-  {
-    const complex double *Hm = &ldata->H[m * h_stride];
-    gdouble term             = creal (Hm[0]);
-    guint k;
-
-    for (k = 1; k <= ldata->maxk; k++)
-      term += 2.0 * creal (Hm[k] * cexp (I * (gdouble) k * phi));
-
-    ldata->J[m] = 2.0 * M_PI * term;
-  }
+    ldata->J[m] = ncm_laurent_series_jacobi_anger_eval (&ldata->H[m * h_stride], ldata->maxk + 1, phi);
 }
 
 /* Refreshes the eps cache (R,phi_eps) when epsilon_obs itself changed. */
