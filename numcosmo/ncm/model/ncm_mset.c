@@ -46,7 +46,8 @@
  * position are replaced.
  *
  * A model enters the set with its submodels, each at stack position 0 of its own model
- * id, and ncm_mset_remove() removes them with it.
+ * id, and ncm_mset_remove() removes them with it; a stackable model therefore cannot
+ * carry submodels. Stack positions run from 0 to %NCM_MSET_MAX_STACKSIZE - 1.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -1044,20 +1045,12 @@ ncm_mset_push (NcmMSet *mset, NcmModel *model, GError **error)
     NcmModelID base_mid         = ncm_model_id (model);
     guint stackpos_id           = 0;
 
-    while (TRUE)
-    {
-      NcmModelID mid = base_mid + stackpos_id;
-
-      if (g_hash_table_lookup (self->mid_item_hash, GINT_TO_POINTER (mid)) == NULL)
-      {
-        ncm_mset_set_pos (mset, model, stackpos_id, error);
-        NCM_UTIL_ON_ERROR_RETURN (error, , );
-
-        break;
-      }
-
+    while (g_hash_table_lookup (self->mid_item_hash, GINT_TO_POINTER (base_mid + stackpos_id)) != NULL)
       stackpos_id++;
-    }
+
+    /* A full stack gives stackpos_id = NCM_MSET_MAX_STACKSIZE, which set_pos rejects. */
+    ncm_mset_set_pos (mset, model, stackpos_id, error);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
   }
 }
 
@@ -1076,8 +1069,7 @@ static void _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stac
  * If @stackpos_id is 0, it will be added to the first position.
  *
  * If the @model is not stackable, it will raise an error if @stackpos_id is
- * different from 0.
- *
+ * different from 0; a @stackpos_id of %NCM_MSET_MAX_STACKSIZE or more is an error.
  */
 void
 ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id, GError **error)
@@ -1085,6 +1077,15 @@ ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id, GError **er
   NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
 
   g_return_if_fail (error == NULL || *error == NULL);
+
+  if (stackpos_id >= NCM_MSET_MAX_STACKSIZE)
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_INVALID_ID,
+                                "ncm_mset_set_pos: stack position %u of `%s' is not below %d.",
+                                stackpos_id, G_OBJECT_TYPE_NAME (model), NCM_MSET_MAX_STACKSIZE);
+
+    return;
+  }
 
   if (model_class->is_submodel)
   {
@@ -1123,7 +1124,7 @@ _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id, GEr
       ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_NOT_STACKABLE,
                                   "ncm_mset_set_pos: cannot stack object in position %u NcmMSet, type `%s' is not stackable.",
                                   stackpos_id, G_OBJECT_TYPE_NAME (model));
-      g_slice_free (NcmMSetItem, item);
+      _ncm_mset_item_free (item);
 
       return;
     }
@@ -1183,9 +1184,8 @@ _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id, GEr
  * @mset: a #NcmMSet
  * @model: a #NcmModel
  *
- * Tests whether a #NcmModel exists in the #NcmMSet.
- *
- * Returns: TRUE if @model exists in @mset, FALSE otherwise.
+ * Returns: whether @mset has a model with the model id of @model at stack position 0,
+ * whether or not it is @model itself
  */
 gboolean
 ncm_mset_exists (NcmMSet *mset, NcmModel *model)
@@ -1204,10 +1204,8 @@ ncm_mset_exists (NcmMSet *mset, NcmModel *model)
  * @model: a #NcmModel
  * @stackpos_id: stack position
  *
- * Checks whether a #NcmModel with the same id as @model and stack position
- * @stackpos_id exists in the #NcmMSet.
- *
- * Returns: TRUE if @model exists in @mset, FALSE otherwise.
+ * Returns: whether @mset has a model with the model id of @model at stack position
+ * @stackpos_id, whether or not it is @model itself
  */
 gboolean
 ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id)
@@ -1299,27 +1297,17 @@ ncm_mset_cmp_all (NcmMSet *mset0, NcmMSet *mset1)
  * ncm_mset_get_id_by_type:
  * @model_type: a #GType
  *
- * Gets the model id for a model type in the GObject type system.
+ * Gets the model id of @model_type, which a subclass inherits from the registered
+ * class; @model_type must be a #NcmModel.
  *
- * Returns: the model id for @model_type, or -1 if @model_type is not a #NcmModel.
+ * Returns: the model id for @model_type, or -1 if no class it descends from is registered
  */
 NcmModelID
 ncm_mset_get_id_by_type (GType model_type)
 {
   g_assert (g_type_is_a (model_type, NCM_TYPE_MODEL));
-  {
-    NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
-    const gchar *ns          = g_type_name (model_type);
-    gpointer model_id;
-    gboolean has = g_hash_table_lookup_extended (mset_class->ns_table, ns, NULL, &model_id);
 
-    g_type_class_unref (mset_class);
-
-    if (has)
-      return GPOINTER_TO_INT (model_id);
-    else
-      return -1;
-  }
+  return ncm_model_id_by_type (model_type, NULL);
 }
 
 /**
@@ -1347,48 +1335,54 @@ ncm_mset_get_id_by_ns (const gchar *ns)
 
 /**
  * ncm_mset_get_ns_by_id:
- * @id: namespace id
+ * @id: a model id, non-negative
  *
- * Returns: (transfer none): namespace for @id
+ * Returns: (transfer none): the namespace of the model class of @id
  */
 const gchar *
 ncm_mset_get_ns_by_id (NcmModelID id)
 {
-  NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
-  guint base_mid           = id / NCM_MSET_MAX_STACKSIZE;
-
-  g_assert_cmpint (base_mid, <, mset_class->model_desc_array->len);
+  g_assert_cmpint (id, >=, 0);
   {
-    const gchar *ns = g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, base_mid).ns;
+    NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
+    guint base_mid           = id / NCM_MSET_MAX_STACKSIZE;
 
-    g_type_class_unref (mset_class);
+    g_assert_cmpint (base_mid, <, mset_class->model_desc_array->len);
+    {
+      const gchar *ns = g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, base_mid).ns;
 
-    return ns;
+      g_type_class_unref (mset_class);
+
+      return ns;
+    }
   }
 }
 
 /**
  * ncm_mset_get_type_by_id:
- * @id: namespace id
+ * @id: a model id, non-negative
  *
- * Returns: GType of model @id
+ * Returns: the #GType of the registered model class of @id
  */
 GType
 ncm_mset_get_type_by_id (NcmModelID id)
 {
-  NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
-  guint base_mid           = id / NCM_MSET_MAX_STACKSIZE;
-
-  g_assert_cmpint (base_mid, <, mset_class->model_desc_array->len);
+  g_assert_cmpint (id, >=, 0);
   {
-    const gchar *ns = g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, base_mid).ns;
-    GType t         = g_type_from_name (ns);
+    NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
+    guint base_mid           = id / NCM_MSET_MAX_STACKSIZE;
 
-    g_type_class_unref (mset_class);
+    g_assert_cmpint (base_mid, <, mset_class->model_desc_array->len);
+    {
+      const gchar *ns = g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, base_mid).ns;
+      GType t         = g_type_from_name (ns);
 
-    g_assert_cmpint (t, !=, 0);
+      g_type_class_unref (mset_class);
 
-    return t;
+      g_assert_cmpint (t, !=, 0);
+
+      return t;
+    }
   }
 }
 
@@ -1482,10 +1476,11 @@ ncm_mset_fparam_map_valid (NcmMSet *mset)
  * @update_models: a boolean
  * @error: a #GError
  *
- * Sets the free parameters map for @mset. This function must be called
- * before any other function that uses the free parameters map. The @fmap
- * array must be zero-terminated and contain the full names of the free
- * parameters in @mset.
+ * Sets the free parameters map of @mset to the parameters named in @fmap (full names,
+ * see ncm_mset_param_get_by_full_name()), in that order, as an alternative to
+ * ncm_mset_prepare_fparam_map(). An unknown or repeated name sets @error and leaves the
+ * previous map in place. With @update_models, the fit types of the models follow the
+ * map (ncm_mset_param_set_ftype_from_fmap()).
  *
  */
 void
@@ -1495,18 +1490,52 @@ ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_mod
   g_assert (fmap != NULL);
   {
     NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
-    guint len                   = g_strv_length ((gchar **) fmap);
+    const guint len             = g_strv_length ((gchar **) fmap);
+    GArray *pis                 = g_array_sized_new (FALSE, FALSE, sizeof (NcmMSetPIndex), len);
     guint i;
+
+    /* Every name is resolved and checked before the map changes, so an error leaves the
+     * previous map in place. */
+    for (i = 0; i < len; i++)
+    {
+      NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (mset, fmap[i], error);
+      guint j;
+
+      NCM_UTIL_ON_ERROR_RETURN (error, g_array_unref (pis), );
+
+      if (pi == NULL)
+      {
+        ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_NOT_FOUND,
+                                    "ncm_mset_set_fmap: cannot set fmap, invalid param `%s'.", fmap[i]);
+        g_array_unref (pis);
+
+        return;
+      }
+
+      for (j = 0; j < pis->len; j++)
+      {
+        const NcmMSetPIndex *pj = &g_array_index (pis, NcmMSetPIndex, j);
+
+        if ((pj->mid == pi->mid) && (pj->pid == pi->pid))
+        {
+          ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
+                                      "ncm_mset_set_fmap: cannot set fmap, param `%s' appears twice.", fmap[i]);
+          ncm_mset_pindex_free (pi);
+          g_array_unref (pis);
+
+          return;
+        }
+      }
+
+      g_array_append_val (pis, *pi);
+      ncm_mset_pindex_free (pi);
+    }
 
     for (i = 0; i < self->model_array->len; i++)
     {
       NcmMSetItem *item = g_ptr_array_index (self->model_array, i);
 
-      if (item->dup)
-      {
-        continue;
-      }
-      else
+      if (!item->dup)
       {
         GArray *fpi_array = g_hash_table_lookup (self->fpi_hash, GINT_TO_POINTER (item->mid));
         gint pid;
@@ -1520,33 +1549,48 @@ ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_mod
 
     self->fparam_len = len;
     g_array_set_size (self->pi_array, 0);
-    g_ptr_array_set_size (self->fullname_parray, 0);
+    g_array_append_vals (self->pi_array, pis->data, len);
 
     for (i = 0; i < len; i++)
     {
-      NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (mset, fmap[i], error);
+      const NcmMSetPIndex *pi = &g_array_index (pis, NcmMSetPIndex, i);
+      GArray *fpi_array       = g_hash_table_lookup (self->fpi_hash, GINT_TO_POINTER (pi->mid));
 
-      NCM_UTIL_ON_ERROR_RETURN (error, , );
-
-      if (pi == NULL)
-      {
-        ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_NOT_FOUND,
-                                    "ncm_mset_set_fmap: cannot set fmap, invalid param `%s'.", fmap[i]);
-
-        return;
-      }
-      else
-      {
-        GArray *fpi_array = g_hash_table_lookup (self->fpi_hash, GINT_TO_POINTER (pi->mid));
-
-        g_array_append_val (self->pi_array, *pi);
-        g_array_index (fpi_array, gint, pi->pid) = i;
-      }
-
-      ncm_mset_pindex_free (pi);
+      g_array_index (fpi_array, gint, pi->pid) = i;
     }
 
+    /* The models with a free parameter, in the order of the model array, as in
+     * ncm_mset_prepare_fparam_map(): the fparams setters update these. */
+    g_array_set_size (self->mid_array, 0);
+
+    for (i = 0; i < self->model_array->len; i++)
+    {
+      NcmMSetItem *item = g_ptr_array_index (self->model_array, i);
+      guint k;
+
+      if (item->dup)
+        continue;
+
+      for (k = 0; k < len; k++)
+      {
+        if (g_array_index (pis, NcmMSetPIndex, k).mid == item->mid)
+        {
+          g_array_append_val (self->mid_array, item->mid);
+          break;
+        }
+      }
+    }
+
+    g_array_unref (pis);
+
+    g_ptr_array_set_size (self->fullname_parray, 0);
     g_ptr_array_set_size (self->fullname_parray, self->fparam_len);
+
+    ncm_vector_clear (&self->temp_fparams);
+
+    if (self->fparam_len > 0)
+      self->temp_fparams = ncm_vector_new (self->fparam_len);
+
     self->valid_map = TRUE;
 
     if (update_models)
@@ -1558,11 +1602,8 @@ ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_mod
  * ncm_mset_get_fmap:
  * @mset: a #NcmMSet
  *
- * Gets the free parameters map for @mset. The returned array must be
- * freed with g_strfreev. It contains the full names of the free
- * parameters in @mset.
- *
- * Returns: (transfer full) (array zero-terminated=1) (element-type utf8): an array of strings
+ * Returns: (transfer full) (array zero-terminated=1) (element-type utf8) (nullable): the full
+ * names of the free parameters, in map order, or %NULL when the map is not valid
  */
 gchar **
 ncm_mset_get_fmap (NcmMSet *mset)

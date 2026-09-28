@@ -60,6 +60,12 @@ void test_ncm_mset_two_level_submodel_slots (void);
 void test_ncm_mset_peek_by_name_unknown (void);
 void test_ncm_mset_remove_host (void);
 void test_ncm_mset_split_full_name (void);
+void test_ncm_mset_set_fmap_updates_models (void);
+void test_ncm_mset_set_fmap_invalid (void);
+void test_ncm_mset_stack_bound (void);
+void test_ncm_mset_id_lookups (void);
+void test_ncm_mset_ns_by_negative_id (void);
+void test_ncm_mset_ns_by_negative_id_subprocess (void);
 
 void test_ncm_mset_traps (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_invalid_get (TestNcmMSet *test, gconstpointer pdata);
@@ -120,6 +126,12 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/peek_by_name/unknown", &test_ncm_mset_peek_by_name_unknown);
   g_test_add_func ("/ncm/mset/remove/host", &test_ncm_mset_remove_host);
   g_test_add_func ("/ncm/mset/split_full_name", &test_ncm_mset_split_full_name);
+  g_test_add_func ("/ncm/mset/set_fmap/updates_models", &test_ncm_mset_set_fmap_updates_models);
+  g_test_add_func ("/ncm/mset/set_fmap/invalid", &test_ncm_mset_set_fmap_invalid);
+  g_test_add_func ("/ncm/mset/stack_bound", &test_ncm_mset_stack_bound);
+  g_test_add_func ("/ncm/mset/id_lookups", &test_ncm_mset_id_lookups);
+  g_test_add_func ("/ncm/mset/ns_by_negative_id", &test_ncm_mset_ns_by_negative_id);
+  g_test_add_func ("/ncm/mset/ns_by_negative_id/subprocess", &test_ncm_mset_ns_by_negative_id_subprocess);
 
   g_test_add ("/ncm/mset/traps", TestNcmMSet, NULL,
               &test_ncm_mset_new,
@@ -1147,5 +1159,126 @@ test_ncm_mset_split_full_name (void)
   g_clear_error (&error);
 
   g_free (too_high);
+}
+
+/* After set_fmap moves the free parameter to another model, setting the free
+ * parameters updates that model (its pkey changes). */
+void
+test_ncm_mset_set_fmap_updates_models (void)
+{
+  NcmModel *a         = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmModel *b         = NCM_MODEL (ncm_model_rosenbrock_new ());
+  NcmMSet *mset       = ncm_mset_new (a, NULL, b, NULL);
+  NcmVector *x        = ncm_vector_new (1);
+  const gchar *fmap[] = {"NcmModelRosenbrock:x1", NULL};
+  gchar **got;
+  guint64 pkey;
+
+  ncm_model_param_set_ftype (a, 0, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+  g_assert_cmpuint (ncm_mset_fparams_len (mset), ==, 1);
+
+  ncm_mset_set_fmap (mset, fmap, FALSE, NULL);
+  got = ncm_mset_get_fmap (mset);
+  g_assert_cmpstr (got[0], ==, "NcmModelRosenbrock:x1");
+  g_assert_null (got[1]);
+  g_strfreev (got);
+
+  pkey = ncm_model_state_get_pkey (b);
+  ncm_vector_set (x, 0, 1.25);
+  ncm_mset_fparams_set_vector (mset, x);
+  g_assert_cmpfloat (ncm_model_param_get (b, 0), ==, 1.25);
+  g_assert_cmpuint (ncm_model_state_get_pkey (b), !=, pkey);
+
+  ncm_vector_free (x);
+  ncm_mset_free (mset);
+  ncm_model_free (a);
+  ncm_model_free (b);
+}
+
+/* An unknown or repeated name is an error that leaves the previous map in place. */
+void
+test_ncm_mset_set_fmap_invalid (void)
+{
+  NcmModel *a          = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmMSet *mset        = ncm_mset_new (a, NULL, NULL);
+  const gchar *good[]  = {"NcmModelMVND:mu_0", NULL};
+  const gchar *bad[]   = {"NcmModelMVND:mu_1", "NcmModelMVND:nope", NULL};
+  const gchar *twice[] = {"NcmModelMVND:mu_1", "NcmModelMVND:mu_1", NULL};
+  GError *error        = NULL;
+
+  ncm_mset_set_fmap (mset, good, FALSE, &error);
+  g_assert_no_error (error);
+
+  ncm_mset_set_fmap (mset, bad, FALSE, &error);
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_NOT_FOUND);
+  g_clear_error (&error);
+
+  ncm_mset_set_fmap (mset, twice, FALSE, &error);
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID);
+  g_clear_error (&error);
+
+  g_assert_true (ncm_mset_fparam_map_valid (mset));
+  g_assert_cmpuint (ncm_mset_fparams_len (mset), ==, 1);
+  g_assert_cmpstr (ncm_mset_fparam_full_name (mset, 0), ==, "NcmModelMVND:mu_0");
+  g_assert_cmpint (ncm_mset_fparam_get_fpi (mset, ncm_model_mvnd_id (), 0), ==, 0);
+  g_assert_cmpint (ncm_mset_fparam_get_fpi (mset, ncm_model_mvnd_id (), 1), ==, -1);
+
+  ncm_mset_free (mset);
+  ncm_model_free (a);
+}
+
+/* A stack position of NCM_MSET_MAX_STACKSIZE is rejected (it is the next class's
+ * id); a non-stackable model at position 1 is rejected without keeping a reference. */
+void
+test_ncm_mset_stack_bound (void)
+{
+  NcDistance *dist   = nc_distance_new (3.0);
+  NcHaloPosition *hp = nc_halo_position_new (dist);
+  NcmModel *mvnd     = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmMSet *mset      = ncm_mset_empty_new ();
+  GError *error      = NULL;
+
+  ncm_mset_set_pos (mset, NCM_MODEL (hp), NCM_MSET_MAX_STACKSIZE - 1, &error);
+  g_assert_no_error (error);
+
+  ncm_mset_set_pos (mset, NCM_MODEL (hp), NCM_MSET_MAX_STACKSIZE, &error);
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_INVALID_ID);
+  g_clear_error (&error);
+  g_assert_null (ncm_mset_peek (mset, ncm_model_id (NCM_MODEL (hp)) + NCM_MSET_MAX_STACKSIZE));
+
+  ncm_mset_set_pos (mset, mvnd, 1, &error);
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_NOT_STACKABLE);
+  g_clear_error (&error);
+  g_assert_cmpuint (G_OBJECT (mvnd)->ref_count, ==, 1);
+
+  ncm_mset_free (mset);
+  ncm_model_free (mvnd);
+  nc_halo_position_free (hp);
+  nc_distance_free (dist);
+}
+
+/* get_id_by_type finds a subclass of a registered class; ns and type by id agree. */
+void
+test_ncm_mset_id_lookups (void)
+{
+  g_assert_cmpint (ncm_mset_get_id_by_type (NC_TYPE_HICOSMO_DE_XCDM), ==, nc_hicosmo_id ());
+  g_assert_cmpint (ncm_mset_get_id_by_type (NC_TYPE_HICOSMO), ==, nc_hicosmo_id ());
+  g_assert_cmpint (ncm_mset_get_id_by_ns ("NcHICosmo"), ==, nc_hicosmo_id ());
+  g_assert_cmpstr (ncm_mset_get_ns_by_id (nc_hicosmo_id () + 1), ==, "NcHICosmo");
+  g_assert_true (ncm_mset_get_type_by_id (nc_hicosmo_id ()) == NC_TYPE_HICOSMO);
+}
+
+void
+test_ncm_mset_ns_by_negative_id (void)
+{
+  g_test_trap_subprocess ("/ncm/mset/ns_by_negative_id/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+}
+
+void
+test_ncm_mset_ns_by_negative_id_subprocess (void)
+{
+  ncm_mset_get_ns_by_id (-1);
 }
 
