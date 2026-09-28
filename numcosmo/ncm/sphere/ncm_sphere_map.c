@@ -871,7 +871,8 @@ ncm_sphere_map_set_lmax (NcmSphereMap *smap, guint lmax)
   {
     g_clear_pointer (&self->alm,  _fft_vec_free);
     ncm_vector_clear (&self->Cl);
-    self->lmax = lmax;
+    self->lmax    = lmax;
+    self->has_Cls = FALSE; /* The C_l are zero until computed or set again */
 
     if (self->lmax > 0)
     {
@@ -2300,15 +2301,18 @@ ncm_sphere_map_get_Cl (NcmSphereMap *smap, guint l)
 /**
  * ncm_sphere_map_get_pix:
  * @smap: a #NcmSphereMap
- * @i: pixel index
+ * @i: pixel index, in the current ordering of @smap
  *
- * Gets the value of pixel index by @i.
+ * Gets the value of the pixel @i.
  *
+ * Returns: the value of the pixel @i.
  */
 gdouble
-ncm_sphere_map_get_pix (NcmSphereMap *smap, guint i)
+ncm_sphere_map_get_pix (NcmSphereMap *smap, const gint64 i)
 {
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
+
+  _ncm_sphere_map_check_index (i, self->npix, G_STRFUNC, "pixel");
 
   return _fft_vec_idx (self->pvec, i);
 }
@@ -2326,7 +2330,7 @@ void
 ncm_sphere_map_add_noise (NcmSphereMap *smap, const gdouble sd, NcmRNG *rng)
 {
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
-  guint i;
+  gint64 i;
 
   ncm_rng_lock (rng);
 
@@ -2345,16 +2349,20 @@ ncm_sphere_map_add_noise (NcmSphereMap *smap, const gdouble sd, NcmRNG *rng)
  * @smap: a #NcmSphereMap
  * @map: (array) (element-type gdouble): pixels
  *
- * Set map pixels to @map using current ordering.
+ * Sets the pixels of @smap to @map, in the current ordering; @map must hold
+ * ncm_sphere_map_get_npix() values.
  *
  */
 void
 ncm_sphere_map_set_map (NcmSphereMap *smap, GArray *map)
 {
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
-  guint i;
+  gint64 i;
 
-  g_assert_cmpuint (map->len, ==, self->npix);
+  if ((gint64) map->len != self->npix)
+    g_error ("ncm_sphere_map_set_map: the array has %u values, the map %" G_GINT64_FORMAT " pixels.", map->len, self->npix);
+
+  g_assert_cmpuint (g_array_get_element_size (map), ==, sizeof (gdouble));
 
   for (i = 0; i < self->npix; i++)
   {
@@ -2365,9 +2373,10 @@ ncm_sphere_map_set_map (NcmSphereMap *smap, GArray *map)
 /**
  * ncm_sphere_map_set_Cls:
  * @smap: a #NcmSphereMap
- * @Cls: a #NcmVector containing the $C_\ell$
+ * @Cls: a #NcmVector with the $C_\ell$ for $\ell = 0, \dots, \ell_\mathrm{max}$ (or more)
  *
- * Set map $C_l$s.
+ * Sets the $C_\ell$ of @smap used by ncm_sphere_map_get_Cl() and
+ * ncm_sphere_map_calc_Ctheta(); the map and the $a_{\ell m}$ are not changed.
  *
  */
 void
@@ -2375,7 +2384,12 @@ ncm_sphere_map_set_Cls (NcmSphereMap *smap, NcmVector *Cls)
 {
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
 
-  g_assert_cmpint (self->lmax, >, 0);
+  if (self->lmax == 0)
+    g_error ("ncm_sphere_map_set_Cls: lmax is zero, set it with ncm_sphere_map_set_lmax() first.");
+
+  if (ncm_vector_len (Cls) < self->lmax + 1)
+    g_error ("ncm_sphere_map_set_Cls: the vector has %u values, lmax = %u needs %u.",
+             ncm_vector_len (Cls), self->lmax, self->lmax + 1);
 
   ncm_vector_memcpy2 (self->Cl, Cls, 0, 0, self->lmax + 1);
 
@@ -2445,10 +2459,13 @@ _ncm_sphere_map_calc_Ctheta_theta (const gdouble theta, gpointer userdata)
 /**
  * ncm_sphere_map_calc_Ctheta:
  * @smap: a #NcmSphereMap
- * @reltol: required tolerance for $C(\theta)$
+ * @reltol: relative tolerance of the spline for $C(\theta)$
  *
- * Computes the two-point correlation function $C(\theta)$ from
- * the precomputed $C_\ell$.
+ * Computes the angular two-point correlation function
+ * $$C(\theta) = \sum_{\ell=0}^{\ell_\mathrm{max}} \frac{2\ell + 1}{4\pi} C_\ell P_\ell(\cos\theta)$$
+ * from the current $C_\ell$ (ncm_sphere_map_prepare_alm(), ncm_sphere_map_update_Cl() or
+ * ncm_sphere_map_set_Cls()), as a spline on $\theta \in [0, \pi]$ with knots added until
+ * it reproduces the sum to @reltol.
  *
  * Returns: (transfer full): the $C(\theta)$ spline.
  */
@@ -2459,7 +2476,7 @@ ncm_sphere_map_calc_Ctheta (NcmSphereMap *smap, const gdouble reltol)
 
   if (!self->has_Cls)
   {
-    g_error ("ncm_sphere_map_calc_Ctheta: object does not contain Cls.");
+    g_error ("ncm_sphere_map_calc_Ctheta: no C_l, compute them with ncm_sphere_map_prepare_alm() or set them with ncm_sphere_map_set_Cls().");
 
     return NULL;
   }
