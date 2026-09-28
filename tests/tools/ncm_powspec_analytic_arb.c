@@ -40,6 +40,10 @@
  *
  * Emits TSV on stdout: shape growth k z value radius prec.
  *
+ * With --integrals it emits instead the integrals of P over [k_lo, k_hi] that
+ * ncm_powspec.c computes (see integral_certified below), one row per case:
+ * kind ell z1 z2 s1 s2 value radius prec.
+ *
  * Build (standalone, when meson has not been told about FLINT):
  *   gcc -O2 -o powspec_arb ncm_powspec_analytic_arb.c \
  *       $(pkg-config --cflags --libs flint) -lm
@@ -59,6 +63,17 @@
 #else
 #include <flint/arb.h>
 #include <flint/arb_hypgeom.h>
+#endif
+#include "sph_bessel_arb.h"
+
+#if defined (__has_include )
+#if __has_include (<flint/acb_calc.h>)
+#include <flint/acb_calc.h>
+#else
+#include <acb_calc.h>
+#endif
+#else
+#include <flint/acb_calc.h>
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -359,6 +374,392 @@ powspec_certified (arb_t res, const Par *p, double k, double z, double target_re
   exit (1);
 }
 
+/*
+ * Integrals of P over [k_lo, k_hi], as ncm_powspec.c defines them:
+ *
+ *   var    sigma_R^2 (z) = 1/(2 pi^2) INT k^2 P(k, z) W^2 (k R) dk,  W (x) = 3 j_1 (x) / x
+ *   xi     xi (r, z)     = 1/(2 pi^2) INT k^2 P(k, z) j_0 (k r) dk
+ *   sproj  C_ell         = 2/pi INT k^2 sqrt (P(k, z_1) P(k, z_2)) j_ell (k xi_1) j_ell (k xi_2) dk
+ *
+ * s1 is R, r or xi_1, and s2 is xi_2. P(k, z) = P(k, 0) D(z)^2 with D > 0, so
+ * each integral is taken over P(k, 0) and multiplied by D(z)^2 or
+ * D(z_1) D(z_2). The radius covers [k_lo, k_hi] and nothing outside it.
+ */
+typedef enum
+{
+  INTEG_VAR = 0,
+  INTEG_XI,
+  INTEG_SPROJ,
+} Integ;
+
+typedef struct
+{
+  const Par *p;
+  Integ integ;
+  long ell;
+  double z1;
+  double z2;
+  double s1;
+  double s2;
+} IntegPar;
+
+/* Panel width in oscillation periods of the integrand. */
+#define K_PANEL_PERIODS 4.0
+
+/* A k^n_s T(k)^2 on a ball of k with Re k > 0, where every branch cut below is
+ * avoided except that of sqrt (M), which is checked when @analytic is set. */
+static void
+powspec0_acb (acb_t res, const Par *p, const acb_t k, int analytic, slong prec)
+{
+  acb_t q, t, u, M, T2;
+
+  acb_init (q);
+  acb_init (t);
+  acb_init (u);
+  acb_init (M);
+  acb_init (T2);
+
+  acb_set_d (t, p->k_eq);
+  acb_div (q, k, t, prec);
+
+  switch (p->shape)
+  {
+    case SHAPE_POWER_LAW:
+      acb_one (T2);
+      break;
+
+    case SHAPE_BBKS:
+      acb_set_d (M, BBKS_C5 * BBKS_C5 * BBKS_C5 * BBKS_C5);
+      acb_mul (M, M, q, prec);
+      acb_set_d (t, BBKS_C4 * BBKS_C4 * BBKS_C4);
+      acb_add (M, M, t, prec);
+      acb_mul (M, M, q, prec);
+      acb_set_d (t, BBKS_C3 * BBKS_C3);
+      acb_add (M, M, t, prec);
+      acb_mul (M, M, q, prec);
+      acb_set_d (t, BBKS_C2);
+      acb_add (M, M, t, prec);
+      acb_mul (M, M, q, prec);
+      acb_add_si (M, M, 1, prec);
+
+      acb_set_d (t, BBKS_C1);
+      acb_mul (u, q, t, prec);
+      acb_log1p (T2, u, prec);
+      acb_div (T2, T2, u, prec);
+      acb_sqr (T2, T2, prec);
+
+      /* T^2 = (log1p (u) / u)^2 / sqrt (M) */
+      acb_sqrt_analytic (M, M, analytic, prec);
+      acb_div (T2, T2, M, prec);
+      break;
+
+    case SHAPE_RATIONAL:
+      acb_sqr (t, q, prec);
+      acb_add_si (t, t, 1, prec);
+      acb_sqr (t, t, prec);
+      acb_inv (T2, t, prec);
+      break;
+
+    default:
+      fprintf (stderr, "powspec0_acb: bad shape\n");
+      exit (1);
+  }
+
+  acb_set_d (t, p->n_s);
+  acb_pow_analytic (res, k, t, analytic, prec);
+  acb_mul (res, res, T2, prec);
+  acb_set_d (t, p->amplitude);
+  acb_mul (res, res, t, prec);
+
+  acb_clear (q);
+  acb_clear (t);
+  acb_clear (u);
+  acb_clear (M);
+  acb_clear (T2);
+}
+
+/*
+ * W (x) = 3 j_1 (x) / x. Near the origin it is the entire 0F1 (; 5/2; -x^2/4);
+ * away from it, the quotient, with the same switch as sph_bessel().
+ */
+static void
+tophat_acb (acb_t res, const acb_t x, slong prec)
+{
+  acb_t nu, t;
+  arb_t ax;
+  arf_t lb;
+  int far;
+
+  arb_init (ax);
+  arf_init (lb);
+  acb_abs (ax, x, prec);
+  arb_get_lbound_arf (lb, ax, prec);
+  far = arf_cmp_d (lb, 4.0) > 0;
+  arb_clear (ax);
+  arf_clear (lb);
+
+  acb_init (nu);
+  acb_init (t);
+
+  if (far)
+  {
+    sph_bessel (t, x, 1, prec);
+    acb_div (t, t, x, prec);
+    acb_mul_si (res, t, 3, prec);
+  }
+  else
+  {
+    acb_set_si (nu, 5);
+    acb_div_si (nu, nu, 2, prec);
+    acb_sqr (t, x, prec);
+    acb_div_si (t, t, -4, prec);
+    acb_hypgeom_0f1 (res, nu, t, 0, prec);
+  }
+
+  acb_clear (nu);
+  acb_clear (t);
+}
+
+/* k^2 P(k, 0) times the kernel of @param. Every cut of the integrand lies on
+ * Re k <= 0, so a ball reaching there is not holomorphic. */
+static int
+integ_integrand (acb_ptr out, const acb_t k, void *param, slong order, slong prec)
+{
+  IntegPar *ip       = (IntegPar *) param;
+  const int analytic = (order != 0);
+  acb_t P, x, K, t;
+
+  if (analytic && !arb_is_positive (acb_realref (k)))
+  {
+    acb_indeterminate (out);
+
+    return 0;
+  }
+
+  acb_init (P);
+  acb_init (x);
+  acb_init (K);
+  acb_init (t);
+
+  powspec0_acb (P, ip->p, k, analytic, prec);
+
+  acb_set_d (t, ip->s1);
+  acb_mul (x, k, t, prec);
+
+  switch (ip->integ)
+  {
+    case INTEG_VAR:
+      tophat_acb (K, x, prec);
+      acb_sqr (K, K, prec);
+      break;
+
+    case INTEG_XI:
+      sph_bessel (K, x, 0, prec);
+      break;
+
+    case INTEG_SPROJ:
+      sph_bessel (K, x, ip->ell, prec);
+      acb_set_d (t, ip->s2);
+      acb_mul (x, k, t, prec);
+      sph_bessel (t, x, ip->ell, prec);
+      acb_mul (K, K, t, prec);
+      break;
+
+    default:
+      fprintf (stderr, "integ_integrand: bad integral\n");
+      exit (1);
+  }
+
+  acb_sqr (t, k, prec);
+  acb_mul (t, t, P, prec);
+  acb_mul (out, t, K, prec);
+
+  acb_clear (P);
+  acb_clear (x);
+  acb_clear (K);
+  acb_clear (t);
+
+  return 0;
+}
+
+/* The right edge of the panel starting at @lo: an octave, but never more than
+ * K_PANEL_PERIODS oscillations of the kernel, whose period in k is 2 pi / @s. */
+static double
+integ_next_edge (double lo, double k_hi, double s)
+{
+  const double by_octave = 2.0 * lo;
+  const double by_phase  = lo + K_PANEL_PERIODS * 2.0 * M_PI / s;
+  const double hi        = by_octave < by_phase ? by_octave : by_phase;
+
+  return hi > k_hi ? k_hi : hi;
+}
+
+/* D(z) / D(0). */
+static void
+growth_norm (arb_t res, const Par *p, double zd, slong prec)
+{
+  arb_t a, one, Dn;
+
+  arb_init (a);
+  arb_init (one);
+  arb_init (Dn);
+
+  arb_one (one);
+  arb_set_d (a, 1.0 + zd);
+  arb_inv (a, a, prec);
+  growth_raw (res, p, a, prec);
+  growth_raw (Dn, p, one, prec);
+  arb_div (res, res, Dn, prec);
+
+  arb_clear (a);
+  arb_clear (one);
+  arb_clear (Dn);
+}
+
+/*
+ * The integral of @ip over [@k_lo, @k_hi], recomputed at doubling precision
+ * until its relative radius is below @target_rel. Returns the precision that
+ * succeeded.
+ */
+static slong
+integral_certified (arb_t res, IntegPar *ip, double k_lo, double k_hi, double target_rel)
+{
+  const double s = (ip->integ == INTEG_VAR) ? 2.0 * ip->s1 :
+                   (ip->integ == INTEG_SPROJ) ? ip->s1 + ip->s2 : ip->s1;
+  acb_calc_integrate_opt_t opt;
+  acb_t A, B, panel, sum;
+  arb_t f, t;
+  mag_t tol;
+  slong prec;
+
+  acb_init (A);
+  acb_init (B);
+  acb_init (panel);
+  acb_init (sum);
+  arb_init (f);
+  arb_init (t);
+  mag_init (tol);
+  acb_calc_integrate_opt_init (opt);
+
+  for (prec = 128; prec <= 4096; prec *= 2)
+  {
+    double lo = k_lo;
+    double r, m;
+
+    acb_zero (sum);
+    mag_set_ui_2exp_si (tol, 1, -prec / 2);
+
+    while (lo < k_hi)
+    {
+      const double hi = integ_next_edge (lo, k_hi, s);
+
+      acb_set_d (A, lo);
+      acb_set_d (B, hi);
+      acb_calc_integrate (panel, integ_integrand, ip, A, B, prec / 2, tol, opt, prec);
+      acb_add (sum, sum, panel, prec);
+      lo = hi;
+    }
+
+    switch (ip->integ)
+    {
+      case INTEG_VAR:
+      case INTEG_XI:
+        arb_const_pi (f, prec);
+        arb_sqr (f, f, prec);
+        arb_mul_2exp_si (f, f, 1);
+        arb_inv (f, f, prec); /* 1 / (2 pi^2) */
+        growth_norm (t, ip->p, ip->z1, prec);
+        arb_sqr (t, t, prec);
+        break;
+
+      case INTEG_SPROJ:
+        arb_const_pi (f, prec);
+        arb_inv (f, f, prec);
+        arb_mul_2exp_si (f, f, 1); /* 2 / pi */
+        growth_norm (t, ip->p, ip->z1, prec);
+        growth_norm (res, ip->p, ip->z2, prec);
+        arb_mul (t, t, res, prec);
+        break;
+
+      default:
+        fprintf (stderr, "integral_certified: bad integral\n");
+        exit (1);
+    }
+
+    arb_mul (f, f, t, prec);
+    arb_mul (res, acb_realref (sum), f, prec);
+
+    if (!arb_is_finite (res))
+      continue;
+
+    r = mag_get_d (arb_radref (res));
+    m = arf_get_d (arb_midref (res), ARF_RND_NEAR);
+
+    if ((m != 0.0) && (r / fabs (m) < target_rel))
+      break;
+  }
+
+  acb_clear (A);
+  acb_clear (B);
+  acb_clear (panel);
+  acb_clear (sum);
+  arb_clear (f);
+  arb_clear (t);
+  mag_clear (tol);
+
+  if (prec > 4096)
+  {
+    fprintf (stderr, "integral_certified: did not reach %g for kind %d s1=%g\n", target_rel, (int) ip->integ, ip->s1);
+    exit (1);
+  }
+
+  return prec;
+}
+
+static const char *integ_name[] = { "var", "xi", "sproj" };
+
+static void
+print_integrals (const Par *p, double k_lo, double k_hi, double target_rel)
+{
+  const IntegPar cases[] = {
+    { p, INTEG_VAR,   0,  0.0, 0.0,   0.1,  0.0 },
+    { p, INTEG_VAR,   0,  0.0, 0.0,   1.0,  0.0 },
+    { p, INTEG_VAR,   0,  0.0, 0.0,   8.0,  0.0 },
+    { p, INTEG_VAR,   0,  0.0, 0.0,  50.0,  0.0 },
+    { p, INTEG_VAR,   0,  1.0, 1.0,   8.0,  0.0 },
+    { p, INTEG_XI,    0,  0.0, 0.0,   1.0,  0.0 },
+    { p, INTEG_XI,    0,  0.0, 0.0,  10.0,  0.0 },
+    { p, INTEG_XI,    0,  0.0, 0.0, 100.0,  0.0 },
+    { p, INTEG_SPROJ, 0,  0.5, 1.0,  50.0, 80.0 },
+    { p, INTEG_SPROJ, 20, 0.5, 1.0,  50.0, 80.0 },
+  };
+  const int n = (int) (sizeof (cases) / sizeof (cases[0]));
+  int i;
+
+  printf ("# k_lo=%.17g k_hi=%.17g\n", k_lo, k_hi);
+  printf ("# kind\tell\tz1\tz2\ts1\ts2\tvalue\tradius\tprec\n");
+
+  for (i = 0; i < n; i++)
+  {
+    IntegPar ip = cases[i];
+    arb_t res;
+    slong prec;
+    char *s;
+
+    arb_init (res);
+    prec = integral_certified (res, &ip, k_lo, k_hi, target_rel);
+    s    = arb_get_str (res, 30, ARB_STR_NO_RADIUS);
+
+    printf ("%s\t%ld\t%.17g\t%.17g\t%.17g\t%.17g\t%s\t%.6e\t%ld\n",
+            integ_name[ip.integ], ip.ell, ip.z1, ip.z2, ip.s1, ip.s2, s,
+            mag_get_d (arb_radref (res)), (long) prec);
+    fflush (stdout);
+
+    flint_free (s);
+    arb_clear (res);
+  }
+}
+
 static Shape
 parse_shape (const char *s)
 {
@@ -405,6 +806,8 @@ main (int argc, char **argv)
   int n_k     = 61;
   double zs[] = { 0.0, 0.1, 0.5, 1.0, 3.0, 10.0, 20.0 };
   int n_z     = (int) (sizeof (zs) / sizeof (zs[0]));
+  double k_lo      = 1.0e-6, k_hi = 1.0e2;
+  int integrals = 0;
   int i, j;
 
   for (i = 1; i < argc; i++)
@@ -445,6 +848,18 @@ main (int argc, char **argv)
     {
       n_k = atoi (argv[i] + 6);
     }
+    else if (strcmp (argv[i], "--integrals") == 0)
+    {
+      integrals = 1;
+    }
+    else if (strncmp (argv[i], "--k-lo=", 7) == 0)
+    {
+      k_lo = atof (argv[i] + 7);
+    }
+    else if (strncmp (argv[i], "--k-hi=", 7) == 0)
+    {
+      k_hi = atof (argv[i] + 7);
+    }
     else if (strncmp (argv[i], "--target-rel=", 13) == 0)
     {
       target_rel = atof (argv[i] + 13);
@@ -454,6 +869,20 @@ main (int argc, char **argv)
       fprintf (stderr, "unknown argument '%s'\n", argv[i]);
       exit (1);
     }
+  }
+
+  if (integrals)
+  {
+    if (p.bao_amplitude != 0.0)
+    {
+      fprintf (stderr, "--integrals takes B(k) = 1 only\n");
+      exit (1);
+    }
+
+    print_integrals (&p, k_lo, k_hi, target_rel);
+    flint_cleanup ();
+
+    return 0;
   }
 
   printf ("# shape\tgrowth\tk\tz\tvalue\tradius\tprec\n");

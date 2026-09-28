@@ -57,6 +57,10 @@ math_tests = [
         'sources': ['ncm/sphere/test_ncm_sphere_nn.c'],
     },
     {
+        'name': 'ncm_powspec',
+        'sources': ['ncm/powspec/test_ncm_powspec.c'],
+    },
+    {
         'name': 'ncm_fftlog',
         'sources': ['ncm/fftlog/test_ncm_fftlog.c'],
         'priority': 2,
