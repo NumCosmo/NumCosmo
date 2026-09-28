@@ -65,6 +65,9 @@ void test_ncm_mset_set_fmap_invalid (void);
 void test_ncm_mset_stack_bound (void);
 void test_ncm_mset_id_lookups (void);
 void test_ncm_mset_ns_by_negative_id (void);
+void test_ncm_mset_set_fmap_update_models (void);
+void test_ncm_mset_max_model_nick (void);
+void test_ncm_mset_params_pretty_print (void);
 void test_ncm_mset_ns_by_negative_id_subprocess (void);
 
 void test_ncm_mset_traps (TestNcmMSet *test, gconstpointer pdata);
@@ -131,6 +134,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/stack_bound", &test_ncm_mset_stack_bound);
   g_test_add_func ("/ncm/mset/id_lookups", &test_ncm_mset_id_lookups);
   g_test_add_func ("/ncm/mset/ns_by_negative_id", &test_ncm_mset_ns_by_negative_id);
+  g_test_add_func ("/ncm/mset/set_fmap/update_models", &test_ncm_mset_set_fmap_update_models);
+  g_test_add_func ("/ncm/mset/max_model_nick", &test_ncm_mset_max_model_nick);
+  g_test_add_func ("/ncm/mset/params_pretty_print", &test_ncm_mset_params_pretty_print);
   g_test_add_func ("/ncm/mset/ns_by_negative_id/subprocess", &test_ncm_mset_ns_by_negative_id_subprocess);
 
   g_test_add ("/ncm/mset/traps", TestNcmMSet, NULL,
@@ -1280,5 +1286,71 @@ void
 test_ncm_mset_ns_by_negative_id_subprocess (void)
 {
   ncm_mset_get_ns_by_id (-1);
+}
+
+/* With update_models, the fit types follow the map and the map keeps its order. */
+void
+test_ncm_mset_set_fmap_update_models (void)
+{
+  NcmModel *a         = NCM_MODEL (ncm_model_mvnd_new (3));
+  NcmMSet *mset       = ncm_mset_new (a, NULL, NULL);
+  const gchar *fmap[] = {"NcmModelMVND:mu_2", "NcmModelMVND:mu_1", NULL};
+
+  ncm_model_param_set_ftype (a, 0, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  ncm_mset_set_fmap (mset, fmap, TRUE, NULL);
+
+  g_assert_cmpuint (ncm_mset_fparams_len (mset), ==, 2);
+  g_assert_cmpstr (ncm_mset_fparam_full_name (mset, 0), ==, "NcmModelMVND:mu_2");
+  g_assert_cmpstr (ncm_mset_fparam_full_name (mset, 1), ==, "NcmModelMVND:mu_1");
+  g_assert_cmpint (ncm_model_param_get_ftype (a, 0), ==, NCM_PARAM_TYPE_FIXED);
+  g_assert_cmpint (ncm_model_param_get_ftype (a, 1), ==, NCM_PARAM_TYPE_FREE);
+  g_assert_cmpint (ncm_model_param_get_ftype (a, 2), ==, NCM_PARAM_TYPE_FREE);
+
+  ncm_mset_free (mset);
+  ncm_model_free (a);
+}
+
+/* Models without parameters count: NcBBNParthenope, a submodel of the cosmology. */
+void
+test_ncm_mset_max_model_nick (void)
+{
+  NcmModel *cosmo = NCM_MODEL (nc_hicosmo_de_xcdm_new ());
+  NcmMSet *mset   = ncm_mset_new (cosmo, NULL, NULL);
+  guint longest   = 0;
+  guint i;
+
+  for (i = 0; i < ncm_mset_nmodels (mset); i++)
+    longest = GSL_MAX (longest, strlen (ncm_model_nick (ncm_mset_peek_array_pos (mset, i))));
+
+  g_assert_nonnull (ncm_mset_peek (mset, nc_bbn_id ()));
+  g_assert_cmpuint (ncm_model_len (ncm_mset_peek (mset, nc_bbn_id ())), ==, 0);
+  g_assert_cmpuint (ncm_mset_max_model_nick (mset), ==, longest);
+
+  ncm_mset_free (mset);
+  ncm_model_free (cosmo);
+}
+
+/* The line after the header starts with the model nick. */
+void
+test_ncm_mset_params_pretty_print (void)
+{
+  NcmModel *a   = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmMSet *mset = ncm_mset_new (a, NULL, NULL);
+  FILE *out     = tmpfile ();
+  gchar line[256];
+
+  ncm_mset_params_pretty_print (mset, out, "a header");
+  rewind (out);
+
+  g_assert_nonnull (fgets (line, sizeof (line), out));
+  g_assert_cmpstr (line, ==, "# a header\n");
+  g_assert_nonnull (fgets (line, sizeof (line), out));
+  g_assert_true (g_str_has_prefix (line, ncm_model_nick (a)));
+
+  fclose (out);
+  ncm_mset_free (mset);
+  ncm_model_free (a);
 }
 

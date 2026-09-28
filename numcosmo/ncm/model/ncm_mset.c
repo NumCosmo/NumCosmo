@@ -1731,10 +1731,8 @@ ncm_mset_max_fparam_name (NcmMSet *mset)
  * ncm_mset_max_model_nick:
  * @mset: a #NcmMSet
  *
- * Gets the maximum length of the model nick in @mset.
- * This function is useful to print the models in a pretty way.
- *
- * Returns: Maximum length of the model nick in @mset.
+ * Returns: the length of the longest model nick in @mset, models without parameters
+ * included; for aligning printed output
  */
 guint
 ncm_mset_max_model_nick (NcmMSet *mset)
@@ -1747,21 +1745,8 @@ ncm_mset_max_model_nick (NcmMSet *mset)
   {
     NcmMSetItem *item = g_ptr_array_index (self->model_array, i);
 
-    if (item->dup)
-    {
-      continue;
-    }
-    else
-    {
-      gint pid;
-
-      for (pid = 0; pid < item->added_total_params; pid++)
-      {
-        const gchar *nick = ncm_model_nick (item->model);
-
-        nick_size = GSL_MAX (nick_size, strlen (nick));
-      }
-    }
+    if (!item->dup)
+      nick_size = GSL_MAX (nick_size, strlen (ncm_model_nick (item->model)));
   }
 
   return nick_size;
@@ -1787,10 +1772,9 @@ ncm_mset_nmodels (NcmMSet *mset)
  * ncm_mset_pretty_log:
  * @mset: a #NcmMSet
  *
- * This function prints the contents of @mset. It prints the model
- * nick and parameters' names and their values indicating if they are
- * fixed or free.
- *
+ * Logs every model with its parameters and values, marking a parameter FREE when the
+ * free-parameter map has it; a map not prepared again after a fit type changed shows the
+ * old state (ncm_mset_params_pretty_print() uses the fit types).
  */
 void
 ncm_mset_pretty_log (NcmMSet *mset)
@@ -1834,12 +1818,12 @@ ncm_mset_pretty_log (NcmMSet *mset)
 /**
  * ncm_mset_params_pretty_print:
  * @mset: a #NcmMSet
- * @out: name of the file
- * @header: pointer to the command line
+ * @out: a file handle
+ * @header: (nullable): a line of text, or %NULL
  *
- * This function print the command line (first line, commented), the model nick and parameters' names (second line, commented)
- * and their values indicating if they are fixed or free.
- *
+ * Prints @header as a comment line, then one line per parameter with the model nick, the
+ * parameter name, FREE or FIXED from its fit type (ncm_model_param_get_ftype()) and its
+ * value.
  */
 void
 ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, const gchar *header)
@@ -1850,7 +1834,7 @@ ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, const gchar *header)
   guint i;
 
   if (header != NULL)
-    fprintf (out, "# %s\n ", header);
+    fprintf (out, "# %s\n", header);
   else
     fprintf (out, "#\n");
 
@@ -2026,9 +2010,7 @@ ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar)
  * ncm_mset_params_valid:
  * @mset: a #NcmMSet
  *
- * Check whenever all models in @mset have valid parameters.
- *
- * Returns: If TRUE all models have valid parameters.
+ * Returns: whether the parameters of every model are valid (ncm_model_params_valid())
  */
 gboolean
 ncm_mset_params_valid (NcmMSet *mset)
@@ -2053,9 +2035,7 @@ ncm_mset_params_valid (NcmMSet *mset)
  * ncm_mset_params_valid_bounds:
  * @mset: a #NcmMSet
  *
- * Check whenever the parameters respect the bounds.
- *
- * Returns: If TRUE the parameter respect the bounds.
+ * Returns: whether every parameter of every model is within its bounds
  */
 gboolean
 ncm_mset_params_valid_bounds (NcmMSet *mset)
@@ -2082,10 +2062,8 @@ ncm_mset_params_valid_bounds (NcmMSet *mset)
  * @mset1: a #NcmMSet
  * @cmp_model: whether to compare if the models correspond to the same objects
  *
- * Compares @mset0 and @mset1 and returns TRUE if both contains the same models types.
- * If @cmp_model is TRUE compare also if the models correspond to the same objects types.
- *
- * Returns: TRUE if @mset0 == @mset1.
+ * Returns: whether @mset0 and @mset1 have models with the same model ids in the same order,
+ * and, with @cmp_model, models equal in the sense of ncm_model_is_equal()
  */
 gboolean
 ncm_mset_cmp (NcmMSet *mset0, NcmMSet *mset1, gboolean cmp_model)
@@ -2119,6 +2097,8 @@ ncm_mset_cmp (NcmMSet *mset0, NcmMSet *mset1, gboolean cmp_model)
  * @pid: parameter id
  * @x: the value to set
  *
+ * The model @mid must be in @mset; it is not checked.
+ *
  * Sets the value of the parameter @pid in the model @mid to @x.
  * This function does not update the model parameters. It is useful
  * when the parameters are being updated in a loop and the model
@@ -2138,6 +2118,8 @@ ncm_mset_param_set0 (NcmMSet *mset, NcmModelID mid, guint pid, const gdouble x)
  * @pid: parameter id
  * @x: the value to set
  *
+ * The model @mid must be in @mset; it is not checked.
+ *
  * Sets the value of the parameter @pid in the model @mid to @x.
  * This function updates the model parameters.
  *
@@ -2154,6 +2136,8 @@ ncm_mset_param_set (NcmMSet *mset, NcmModelID mid, guint pid, const gdouble x)
  * @mid: model id
  * @pid: parameter id
  *
+ * The model @mid must be in @mset; it is not checked.
+ *
  * Gets the value of the parameter @pid in the model @mid.
  *
  * Returns: the value of the parameter @pid in the model @mid.
@@ -2169,6 +2153,8 @@ ncm_mset_param_get (NcmMSet *mset, NcmModelID mid, guint pid)
  * @mset: a #NcmMSet
  * @mid: model id
  * @pid: parameter id
+ *
+ * The model @mid must be in @mset; it is not checked.
  *
  * Gets the value of the original parameter @pid in the model @mid.
  * That is the value of the parameter before any reparametrization.
@@ -2187,6 +2173,8 @@ ncm_mset_orig_param_get (NcmMSet *mset, NcmModelID mid, guint pid)
  * @mid: model id
  * @pid: parameter id
  *
+ * The model @mid must be in @mset; it is not checked.
+ *
  * Gets the name of the parameter @pid in the model @mid.
  *
  * Returns: the name of the parameter @pid in the model @mid.
@@ -2202,6 +2190,8 @@ ncm_mset_param_name (NcmMSet *mset, NcmModelID mid, guint pid)
  * @mset: a #NcmMSet
  * @mid: model id
  * @pid: parameter id
+ *
+ * The model @mid must be in @mset; it is not checked.
  *
  * Gets the symbol of the parameter @pid in the model @mid. The
  * parameter symbol is a string that represents the parameter
@@ -2220,6 +2210,8 @@ ncm_mset_param_symbol (NcmMSet *mset, NcmModelID mid, guint pid)
  * @mset: a #NcmMSet
  * @mid: model id
  * @pid: parameter id
+ *
+ * The model @mid must be in @mset; it is not checked.
  *
  * Gets the scale of the parameter @pid in the model @mid.
  * This scale is a value that is used as a starting guess
@@ -2241,6 +2233,8 @@ ncm_mset_param_get_scale (NcmMSet *mset, NcmModelID mid, guint pid)
  * @pid: parameter id
  * @scale: new scale
  *
+ * The model @mid must be in @mset; it is not checked.
+ *
  * Sets the scale of the parameter @pid in the model @mid to @scale.
  * This scale is a value that is used as a starting guess
  * for the variation of the parameter in a statistical
@@ -2259,6 +2253,8 @@ ncm_mset_param_set_scale (NcmMSet *mset, NcmModelID mid, guint pid, gdouble scal
  * @mid: model id
  * @pid: parameter id
  *
+ * The model @mid must be in @mset; it is not checked.
+ *
  * Gets the lower bound of the parameter @pid in the model @mid.
  *
  * Returns: the lower bound of the parameter @pid in the model @mid.
@@ -2275,6 +2271,8 @@ ncm_mset_param_get_lower_bound (NcmMSet *mset, NcmModelID mid, guint pid)
  * @mid: model id
  * @pid: parameter id
  *
+ * The model @mid must be in @mset; it is not checked.
+ *
  * Gets the upper bound of the parameter @pid in the model @mid.
  *
  * Returns: the upper bound of the parameter @pid in the model @mid.
@@ -2290,6 +2288,8 @@ ncm_mset_param_get_upper_bound (NcmMSet *mset, NcmModelID mid, guint pid)
  * @mset: a #NcmMSet
  * @mid: model id
  * @pid: parameter id
+ *
+ * The model @mid must be in @mset; it is not checked.
  *
  * Gets the absolute tolerance of the parameter @pid in the model @mid.
  *
@@ -2442,15 +2442,18 @@ ncm_mset_param_set_all_but_mid_ftype (NcmMSet *mset, NcmModelID mid, NcmParamTyp
  * ncm_mset_param_set_ftype_from_fmap:
  * @mset: a #NcmMSet
  *
- * Set all parameters of all models inside @mset in order
- * to reflect the current fmap.
- *
+ * Sets the fit type of every parameter to FREE when the free-parameter map has it and to
+ * FIXED otherwise; the map, in its order, stays as it is. Aborts when the map is not
+ * valid.
  */
 void
 ncm_mset_param_set_ftype_from_fmap (NcmMSet *mset)
 {
   NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
   guint i;
+
+  if (!self->valid_map)
+    g_error ("ncm_mset_param_set_ftype_from_fmap: the free-parameter map is not valid.");
 
   for (i = 0; i < self->model_array->len; i++)
   {
@@ -2467,17 +2470,10 @@ ncm_mset_param_set_ftype_from_fmap (NcmMSet *mset)
       gint pid;
 
       for (pid = 0; pid < item->added_total_params; pid++)
-      {
-        if (g_array_index (fpi_array, gint, pid) == -1)
-          continue;
-
-        ncm_model_param_set_ftype (item->model, pid, NCM_PARAM_TYPE_FREE);
-      }
+        ncm_model_param_set_ftype (item->model, pid,
+                                   (g_array_index (fpi_array, gint, pid) >= 0) ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
     }
   }
-
-  if (self->valid_map)
-    ncm_mset_prepare_fparam_map (mset);
 }
 
 /**
@@ -2584,9 +2580,10 @@ ncm_mset_param_set_mset (NcmMSet *mset_dest, NcmMSet *mset_src)
  * @pid: parameter id
  * @error: a #GError
  *
- * Gets the type #NcmParamType of the parameter @pid in the model @mid.
+ * Gets the fit type of the parameter @pid of the model @mid; a model not in @mset sets
+ * @error.
  *
- * Returns: the type #NcmParamType of the parameter @pid in the model @mid.
+ * Returns: the #NcmParamType of the parameter, or -1 on error
  */
 NcmParamType
 ncm_mset_param_get_ftype (NcmMSet *mset, NcmModelID mid, guint pid, GError **error)
