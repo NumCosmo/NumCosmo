@@ -71,7 +71,7 @@ MSET_INIT_MARRAY: int = 32
 MSET_MAX_STACKSIZE: int = 1000
 ODE_SPLINE_DEFAULT_ABSTOL: float = 0.0
 ODE_SPLINE_MIN_STEP: float = 0.0
-POWSPEC_CORR3D_DEFAULT_SIZE: int = 200
+POWSPEC_CORR3D_DEFAULT_SIZE: int = 100
 POWSPEC_FILTER_DEFAULT_SIZE: int = 200
 SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER: int = 2
 SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_RELTOL: float = 0.0
@@ -8376,8 +8376,8 @@ class PowspecCorr3d(GObject.Object):
     def get_reltol_z(self) -> float: ...
     @classmethod
     def new(cls, ps: Powspec) -> PowspecCorr3d: ...
-    def prepare(self, model: Model) -> None: ...
-    def prepare_if_needed(self, model: Model) -> None: ...
+    def prepare(self, model: typing.Optional[Model] = None) -> None: ...
+    def prepare_if_needed(self, model: typing.Optional[Model] = None) -> None: ...
     def ref(self) -> PowspecCorr3d: ...
     def set_best_lnr0(self) -> None: ...
     def set_lnr0(self, lnr0: float) -> None: ...
@@ -8395,7 +8395,7 @@ class PowspecCorr3dClass(GObject.GPointer):
         PowspecCorr3dClass()
     """
 
-    parent_class: PowspecClass = ...
+    parent_class: GObject.ObjectClass = ...
 
 class PowspecFilter(GObject.Object):
     r"""
@@ -8527,7 +8527,7 @@ class PowspecSpline2d(Powspec):
 
     Properties from NcmPowspecSpline2d:
       spline2d -> NcmSpline2d: spline2d
-        Spline2d representing the values of the power-spectrum
+        Spline2d of ln P on (z, ln k)
 
     Properties from NcmPowspec:
       zi -> gdouble: zi

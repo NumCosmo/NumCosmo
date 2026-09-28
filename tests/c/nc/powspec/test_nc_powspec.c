@@ -340,25 +340,33 @@ test_nc_powspec_corr3d (TestNcPowspec *test, gconstpointer pdata)
   g_assert_cmpfloat (kmin, >, 0.0);
   g_assert_cmpfloat (kmin, <, kmax);
 
+  /* From r = 100 / kmax up, where the continuation past the table, which the grid
+   * includes and the quadrature does not, contributes little; relative to the peak of
+   * |xi|, at the smallest r of the grid, since xi crosses zero. */
   {
-    const gdouble r_min = ncm_powspec_corr3d_get_r_min (psc);
+    const gdouble r_min = GSL_MAX (100.0 / kmax, ncm_powspec_corr3d_get_r_min (psc));
     const gdouble r_max = ncm_powspec_corr3d_get_r_max (psc);
+    gdouble max_diff    = 0.0;
     gint i, j;
 
     for (i = 0; i < 10; i++)
     {
-      const gdouble z = zi + (zf - zi) / (100.0 - 1.0) * i;
+      const gdouble z    = zi + (zf - zi) / (100.0 - 1.0) * i;
+      const gdouble peak = fabs (ncm_powspec_corr3d_eval_xi (psc, z, ncm_powspec_corr3d_get_r_min (psc)));
 
       for (j = 0; j < 10; j++)
       {
         const gdouble lnR = log (r_min) + log (r_max / r_min) / (100.0 - 1.0) * j;
         const gdouble R   = exp (lnR);
         const gdouble xi0 = ncm_powspec_corr3d (test->ps, test->model, reltol, z, R);
-        const gdouble xi1 = ncm_powspec_corr3d_eval_xi_lnr (psc, z, lnR);
+        const gdouble xi1 = ncm_powspec_corr3d_eval_xi (psc, z, R);
 
-        ncm_assert_cmpdouble_e (xi0, ==, xi1, reltol * 10.0, 0.0);
+        max_diff = GSL_MAX (max_diff, fabs (xi0 - xi1) / peak);
+        ncm_assert_cmpdouble_e (xi0, ==, xi1, 0.0, reltol * peak);
       }
     }
+
+    g_test_message ("corr3d max |diff| / peak = %e", max_diff);
   }
   ncm_powspec_corr3d_free (psc);
 }
