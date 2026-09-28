@@ -26,10 +26,12 @@
 /**
  * NcmModelRosenbrock:
  *
- * Multivariate Normal Distribution mean model.
+ * Parameters of the Rosenbrock distribution.
  *
- * Multivariate Normal distribution model of the mean.
- *
+ * The model holds the two parameters $x_1$ and $x_2$ of the Rosenbrock
+ * distribution, whose likelihood, implemented by #NcmDataRosenbrock, is
+ * $$-2\ln L = \frac{100 (x_2 - x_1^2)^2 + (1 - x_1)^2}{10}.$$
+ * Its curved, narrow ridge makes it a standard test of minimizers and samplers.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -39,77 +41,22 @@
 
 #include "ncm/model/ncm_model_rosenbrock.h"
 
-#ifndef NUMCOSMO_GIR_SCAN
-#endif /* NUMCOSMO_GIR_SCAN */
-
 enum
 {
   PROP_0,
   PROP_SIZE,
 };
 
-typedef struct _NcmModelRosenbrockPrivate
-{
-  gint place_holder;
-} NcmModelRosenbrockPrivate;
-
 struct _NcmModelRosenbrock
 {
   NcmModel parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmModelRosenbrock, ncm_model_rosenbrock, NCM_TYPE_MODEL)
+G_DEFINE_TYPE (NcmModelRosenbrock, ncm_model_rosenbrock, NCM_TYPE_MODEL)
 
 static void
 ncm_model_rosenbrock_init (NcmModelRosenbrock *model_rosenbrock)
 {
-  NcmModelRosenbrockPrivate * const self = ncm_model_rosenbrock_get_instance_private (model_rosenbrock);
-
-  self->place_holder = 0;
-}
-
-static void
-_ncm_model_rosenbrock_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  /*NcmModelRosenbrock *model_rosenbrock = NCM_MODEL_ROSENBROCK (object);*/
-  g_return_if_fail (NCM_IS_MODEL_ROSENBROCK (object));
-
-  switch (prop_id)
-  {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
-  }
-}
-
-static void
-_ncm_model_rosenbrock_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  /*NcmModelRosenbrock *model_rosenbrock = NCM_MODEL_ROSENBROCK (object);*/
-  g_return_if_fail (NCM_IS_MODEL_ROSENBROCK (object));
-
-  switch (prop_id)
-  {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
-  }
-}
-
-static void
-_ncm_model_rosenbrock_dispose (GObject *object)
-{
-  /*NcmModelRosenbrock *model_rosenbrock = NCM_MODEL_ROSENBROCK (object);*/
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_model_rosenbrock_parent_class)->dispose (object);
-}
-
-static void
-_ncm_model_rosenbrock_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_model_rosenbrock_parent_class)->finalize (object);
 }
 
 NCM_MSET_MODEL_REGISTER_ID (ncm_model_rosenbrock, NCM_TYPE_MODEL_ROSENBROCK);
@@ -117,21 +64,14 @@ NCM_MSET_MODEL_REGISTER_ID (ncm_model_rosenbrock, NCM_TYPE_MODEL_ROSENBROCK);
 static void
 ncm_model_rosenbrock_class_init (NcmModelRosenbrockClass *klass)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property = &_ncm_model_rosenbrock_set_property;
-  model_class->get_property = &_ncm_model_rosenbrock_get_property;
-
-  object_class->dispose  = &_ncm_model_rosenbrock_dispose;
-  object_class->finalize = &_ncm_model_rosenbrock_finalize;
-
-  ncm_model_class_set_name_nick (model_class, "MRB", "NcmModelRosenbrock");
+  ncm_model_class_set_name_nick (model_class, "Rosenbrock distribution", "Rosenbrock");
   ncm_model_class_add_params (model_class, NNCM_MODEL_ROSENBROCK_SPARAM_LEN, 0, PROP_SIZE);
 
   ncm_mset_model_register_id (model_class,
                               "NcmModelRosenbrock",
-                              "MRB",
+                              "Rosenbrock distribution",
                               NULL,
                               FALSE,
                               NCM_MSET_MODEL_MAIN);
@@ -178,7 +118,8 @@ ncm_model_rosenbrock_ref (NcmModelRosenbrock *mrb)
  * ncm_model_rosenbrock_free:
  * @mrb: a #NcmModelRosenbrock
  *
- * Decreases the reference count of @mrb by one.
+ * Decreases the reference count of @mrb by one. If the reference count reaches
+ * zero, @mrb is freed.
  *
  */
 void
@@ -191,8 +132,8 @@ ncm_model_rosenbrock_free (NcmModelRosenbrock *mrb)
  * ncm_model_rosenbrock_clear:
  * @mrb: a #NcmModelRosenbrock
  *
- * If @mrb is different from NULL, decreases the reference count of
- * @mrb by one and sets @mrb to NULL.
+ * If *@mrb is not %NULL, decreases the reference count of *@mrb by one and sets
+ * *@mrb to %NULL.
  *
  */
 void

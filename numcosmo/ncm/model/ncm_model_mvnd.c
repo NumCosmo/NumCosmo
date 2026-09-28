@@ -26,10 +26,12 @@
 /**
  * NcmModelMVND:
  *
- * Multivariate Normal Distribution mean model.
+ * Mean of a multivariate normal distribution.
  *
- * Multivariate Normal distribution model of the mean.
- *
+ * The model holds the vector parameter $\mu$, the mean of a multivariate normal
+ * distribution of dimension #NcmModelMVND:dim, whose likelihood is implemented by
+ * #NcmDataGaussCovMVND. The length of $\mu$ (the "mu-length" property) must equal
+ * the dimension; ncm_model_mvnd_new() sets both.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -38,9 +40,6 @@
 #include "build_cfg.h"
 
 #include "ncm/model/ncm_model_mvnd.h"
-
-#ifndef NUMCOSMO_GIR_SCAN
-#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -122,10 +121,20 @@ _ncm_model_mvnd_dispose (GObject *object)
 }
 
 static void
-_ncm_model_mvnd_finalize (GObject *object)
+_ncm_model_mvnd_constructed (GObject *object)
 {
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_model_mvnd_parent_class)->finalize (object);
+  /* Chain up : start */
+  G_OBJECT_CLASS (ncm_model_mvnd_parent_class)->constructed (object);
+  {
+    NcmModelMVND *model_mvnd         = NCM_MODEL_MVND (object);
+    NcmModelMVNDPrivate * const self = ncm_model_mvnd_get_instance_private (model_mvnd);
+    const guint mu_len               = ncm_model_vparam_len (NCM_MODEL (model_mvnd), NCM_MODEL_MVND_MEAN);
+
+    if (mu_len != (guint) self->dim)
+      g_error ("_ncm_model_mvnd_constructed: dimension %d differs from the mean length %u; "
+               "set both `dim' and `mu-length', or use ncm_model_mvnd_new().",
+               self->dim, mu_len);
+  }
 }
 
 NCM_MSET_MODEL_REGISTER_ID (ncm_model_mvnd, NCM_TYPE_MODEL_MVND);
@@ -139,15 +148,15 @@ ncm_model_mvnd_class_init (NcmModelMVNDClass *klass)
   model_class->set_property = &_ncm_model_mvnd_set_property;
   model_class->get_property = &_ncm_model_mvnd_get_property;
 
-  object_class->dispose  = &_ncm_model_mvnd_dispose;
-  object_class->finalize = &_ncm_model_mvnd_finalize;
+  object_class->constructed = &_ncm_model_mvnd_constructed;
+  object_class->dispose     = &_ncm_model_mvnd_dispose;
 
-  ncm_model_class_set_name_nick (model_class, "MVND", "NcmModelMVND");
+  ncm_model_class_set_name_nick (model_class, "Multivariate normal mean", "MVND");
   ncm_model_class_add_params (model_class, 0, NNCM_MODEL_MVND_VPARAM_LEN, PROP_SIZE);
 
   ncm_mset_model_register_id (model_class,
                               "NcmModelMVND",
-                              "MVND",
+                              "Multivariate normal distribution mean",
                               NULL,
                               FALSE,
                               NCM_MSET_MODEL_MAIN);
@@ -157,6 +166,11 @@ ncm_model_mvnd_class_init (NcmModelMVNDClass *klass)
 
   ncm_model_class_check_params_info (model_class);
 
+  /**
+   * NcmModelMVND:dim:
+   *
+   * The dimension of the distribution; it must equal the "mu-length" property.
+   */
   g_object_class_install_property (object_class,
                                    PROP_DIM,
                                    g_param_spec_uint ("dim",
@@ -203,7 +217,8 @@ ncm_model_mvnd_ref (NcmModelMVND *model_mvnd)
  * ncm_model_mvnd_free:
  * @model_mvnd: a #NcmModelMVND
  *
- * Decreases the reference count of @model_mvnd by one.
+ * Decreases the reference count of @model_mvnd by one. If the reference count
+ * reaches zero, @model_mvnd is freed.
  *
  */
 void
@@ -216,8 +231,8 @@ ncm_model_mvnd_free (NcmModelMVND *model_mvnd)
  * ncm_model_mvnd_clear:
  * @model_mvnd: a #NcmModelMVND
  *
- * If @model_mvnd is different from NULL, decreases the reference count of
- * @model_mvnd by one and sets @model_mvnd to NULL.
+ * If *@model_mvnd is not %NULL, decreases the reference count of *@model_mvnd by
+ * one and sets *@model_mvnd to %NULL.
  *
  */
 void
@@ -231,13 +246,18 @@ ncm_model_mvnd_clear (NcmModelMVND **model_mvnd)
  * @model_mvnd: a #NcmModelMVND
  * @y: a #NcmVector
  *
- * Copies into @y the mean vector.
+ * Copies the mean vector $\mu$ into @y, which must have #NcmModelMVND:dim
+ * components.
  *
  */
 void
 ncm_model_mvnd_mean (NcmModelMVND *model_mvnd, NcmVector *y)
 {
   NcmModelMVNDPrivate * const self = ncm_model_mvnd_get_instance_private (model_mvnd);
+
+  if (ncm_vector_len (y) != (guint) self->dim)
+    g_error ("ncm_model_mvnd_mean: the mean has %d components, but the vector has %u.",
+             self->dim, ncm_vector_len (y));
 
   if (self->mu == NULL)
   {

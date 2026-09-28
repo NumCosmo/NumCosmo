@@ -1184,7 +1184,7 @@ void
 test_ncm_serialize_named_no_autosave (void)
 {
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  GObject *obj      = ncm_serialize_from_string (ser, "('NcmModelMVND[S0]', {'dim':<2>})");
+  GObject *obj      = ncm_serialize_from_string (ser, "('NcmModelMVND[S0]', {'dim':<uint32 2>, 'mu-length':<uint32 2>})");
 
   g_assert_true (NCM_IS_MODEL_MVND (obj));
   g_assert_false (ncm_serialize_contain_name (ser, "S0"));
