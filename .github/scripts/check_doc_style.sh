@@ -133,7 +133,7 @@ fi
 # --------------------------------------------------------- terminology check
 # Renamed 2026-09-06. These files carry no legitimate use of the old words, so
 # the check is exact rather than heuristic; see the notation section of
-# docs/theory/sbessel_ode_solver.qmd.
+# docs/theory/ncm/specfunc/sbessel_ode_solver.qmd.
 #
 #   closure  -> constraint   in the sbessel solver/integrator and their tests
 #   xi       -> chi          in nc/xcor
@@ -160,10 +160,16 @@ term_scan () {
   fi
 }
 
+# GI annotations ((closure user_data)) are stripped before matching, so they never count.
 hits=$(term_scan '[Cc]losure|CLOSURE' \
   ':(glob)numcosmo/ncm/specfunc/ncm_sbessel_*' \
   ':(glob)tests/python/ncm/specfunc/test_sbessel_*' \
-  ':(glob)docs/theory/sbessel_ode_solver.qmd')
+  ':(glob)docs/theory/ncm/specfunc/sbessel_ode_solver.qmd' \
+  | while IFS= read -r line; do
+      if printf '%s\n' "$line" | sed -E 's/\(closure [A-Za-z_]+\)//g' | grep -qE '[Cc]losure|CLOSURE'; then
+        printf '%s\n' "$line"
+      fi
+    done)
 hits="$hits
 $(term_scan '\bxi\b|\bxi_[a-z_]+\b|\\xi' ':(glob)numcosmo/nc/xcor/*')"
 

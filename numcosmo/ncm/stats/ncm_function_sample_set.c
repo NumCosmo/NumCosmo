@@ -1490,14 +1490,11 @@ ncm_function_sample_set_mark_all_old (NcmFunctionSampleSet *fss)
  * @fss: a #NcmFunctionSampleSet
  * @base_spline: a #NcmSpline to use as the base spline type
  *
- * Converts the sample set to a #NcmSplineVec. This reuses cached internal arrays for
- * efficiency, which means that:
- *
- * - The returned #NcmSplineVec is invalidated by subsequent calls to this function
- *   or ncm_function_sample_set_to_spline_vec_old() on the same @fss object.
- * - If you need to keep multiple #NcmSplineVec objects from the same sample set, you
- *   must call ncm_spline_vec_dup() on the returned object before calling this function
- *   again.
+ * Converts the sample set to a #NcmSplineVec. Its knots and values are views of arrays
+ * cached in @fss, not copies. The next call to this function or to
+ * ncm_function_sample_set_to_spline_vec_old() on @fss overwrites those arrays, and
+ * reallocates them when the number of points grows, so the returned object must not be
+ * used after such a call. Freeing @fss does not affect it.
  *
  * The sample set itself is not modified and can continue to be used for further
  * refinement.
@@ -1564,14 +1561,10 @@ ncm_function_sample_set_to_spline_vec (NcmFunctionSampleSet *fss, NcmSpline *bas
  * @fss: a #NcmFunctionSampleSet
  * @base_spline: a #NcmSpline to use as the base spline type
  *
- * Converts only the OLD sample points to a #NcmSplineVec. This reuses cached internal
- * arrays for efficiency, which means that:
- *
- * - The returned #NcmSplineVec is invalidated by subsequent calls to this function
- *   or ncm_function_sample_set_to_spline_vec() on the same @fss object.
- * - If you need to keep multiple #NcmSplineVec objects from the same sample set, you
- *   must call ncm_spline_vec_dup() on the returned object before calling this function
- *   again.
+ * Converts only the OLD sample points to a #NcmSplineVec. Its knots and values share the
+ * cached arrays of @fss as in ncm_function_sample_set_to_spline_vec(), with the same
+ * restriction: the returned object must not be used after the next call to either
+ * function on @fss.
  *
  * This creates arrays from the samples where new_point is FALSE. The sample set is not
  * modified. This is useful for building a spline to test against NEW points during

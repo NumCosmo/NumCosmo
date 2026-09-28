@@ -98,7 +98,9 @@ def _build_psf(slope: float, amplitude: float) -> Ncm.PowspecFilter:
     ps.prepare()
 
     psf = Ncm.PowspecFilter.new(ps, Ncm.PowspecFilterType.TOPHAT)
-    psf.set_reltol(1.0e-9)
+    # The synthetic k^n table spans 13 decades; in double precision the transform
+    # converges to no better than ~2e-8 of its peak for slope -0.2 (F ~ k^-0.6).
+    psf.set_reltol(1.0e-7)
     psf.set_best_lnr0()
     return psf
 

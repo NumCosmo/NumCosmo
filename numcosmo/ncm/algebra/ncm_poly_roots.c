@@ -26,28 +26,18 @@
 /**
  * NcmPolyRoots:
  *
- * Real roots of low-degree (2-4) polynomials, via bracket-and-bisect on the
- * derivative chain rather than a general eigenvalue-based solver.
+ * Real roots of polynomials of degree two to four.
  *
- * A real root of a degree-$n$ polynomial can only hide inside one of the
- * monotonic intervals bounded by its own derivative's real roots (Rolle's
- * theorem), so recursing one derivative at a time down to a quadratic
- * (closed-form, numerically safe -- no cancellation-prone quartic/cubic
- * formula is ever used) turns "find every real root" into a handful of
- * polynomial *evaluations* (Horner, $O(\text{degree})$ flops each) plus a
- * safeguarded Newton/bisection per bracket -- never a matrix decomposition.
+ * The real roots of a polynomial are separated by the real roots of its derivative, so each
+ * degree brackets its roots between those of its derivative and the Cauchy bound
+ * $1 + \max_i |a_i/a_n|$, and refines each bracket by a safeguarded Newton-bisection. The
+ * quadratic uses the closed form. Only real roots are computed, with polynomial evaluations
+ * and no eigenvalue problem, unlike gsl_poly_complex_solve().
  *
- * Needing only real roots, this is 1.6-1.8x faster in a performance-critical loop than
- * `gsl_poly_complex_solve()`'s general eigenvalue-based approach (full
- * complex root set, balancing, Hessenberg reduction, QR iteration). See
- * `nc_galaxy_shape_intrinsic_mode.c` for the physics context this is used
- * in.
- *
- * Each degree has its own hardcoded (not looped-over-a-runtime-degree)
- * evaluator: these are meant for hot inner loops (called up to ~100 times
- * per bracket), so every polynomial evaluation is unrolled straight-line
- * arithmetic rather than depending on the degree being known at compile
- * time for the optimizer to specialize.
+ * A root in a bracket is located to $10^{-13}(1 + |x|)$, an absolute accuracy near zero, so a
+ * root much smaller than one has a larger relative error. A root of multiplicity $m$ is
+ * determined only to about $\epsilon^{1/m}$, as for any method; a double root at a critical
+ * point is returned once, and one where the polynomial only nearly touches zero may be missed.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -225,17 +215,15 @@ _ncm_poly_bracket_and_collect4 (const gdouble *a, const gdouble *crit, gint n_cr
 
 /**
  * ncm_poly_roots_real_quadratic:
- * @a: (array fixed-size=3): ascending coefficients $a_0+a_1x+a_2x^2$, $a_2\neq0$
- * @roots: (out caller-allocates) (array fixed-size=2): the real roots found
+ * @a: (array fixed-size=3): the coefficients of $a_0 + a_1 x + a_2 x^2$
+ * @roots: (out caller-allocates) (array fixed-size=2): the real roots
  *
- * Real roots of a genuine quadratic ($a_2\neq0$ required -- callers with a
- * possibly-degenerate leading coefficient should check for that themselves,
- * or use ncm_poly_roots_real_quartic_or_lower() further down the chain).
- * Uses the numerically stable form of the quadratic formula (computing the
- * larger root directly, the other via the product-of-roots identity) to
- * avoid cancellation.
+ * Computes the real roots of the quadratic, with $a_2 \ne 0$, from
+ * $q = -(a_1 + \operatorname{sgn}(a_1)\sqrt{a_1^2 - 4 a_2 a_0})/2$ as $q/a_2$ and $a_0/q$, which
+ * avoids cancellation. A double root is returned twice, except the double root zero of
+ * $a_2 x^2$, returned once.
  *
- * Returns: the number of real roots found (0, 1, or 2)
+ * Returns: the number of real roots, 0, 1 or 2.
  */
 gint
 ncm_poly_roots_real_quadratic (const gdouble a[3], gdouble roots[2])
@@ -266,13 +254,12 @@ ncm_poly_roots_real_quadratic (const gdouble a[3], gdouble roots[2])
 
 /**
  * ncm_poly_roots_real_cubic:
- * @a: (array fixed-size=4): ascending coefficients $a_0+a_1x+\dots+a_3x^3$, $a_3\neq0$
- * @roots: (out caller-allocates) (array fixed-size=3): the real roots found
+ * @a: (array fixed-size=4): the coefficients of $a_0 + a_1 x + \dots + a_3 x^3$
+ * @roots: (out caller-allocates) (array fixed-size=3): the real roots, in increasing order
  *
- * Real roots of a genuine cubic ($a_3\neq0$ required), via bracket-and-
- * bisect on its derivative's (quadratic) real roots -- see #NcmPolyRoots.
+ * Computes the real roots of the cubic, with $a_3 \ne 0$, see #NcmPolyRoots.
  *
- * Returns: the number of real roots found (1, 2, or 3)
+ * Returns: the number of real roots, 1, 2 or 3.
  */
 gint
 ncm_poly_roots_real_cubic (const gdouble a[4], gdouble roots[3])
@@ -294,13 +281,12 @@ ncm_poly_roots_real_cubic (const gdouble a[4], gdouble roots[3])
 
 /**
  * ncm_poly_roots_real_quartic:
- * @a: (array fixed-size=5): ascending coefficients $a_0+a_1x+\dots+a_4x^4$, $a_4\neq0$
- * @roots: (out caller-allocates) (array fixed-size=4): the real roots found
+ * @a: (array fixed-size=5): the coefficients of $a_0 + a_1 x + \dots + a_4 x^4$
+ * @roots: (out caller-allocates) (array fixed-size=4): the real roots, in increasing order
  *
- * Real roots of a genuine quartic ($a_4\neq0$ required), via bracket-and-
- * bisect on its derivative's (cubic) real roots -- see #NcmPolyRoots.
+ * Computes the real roots of the quartic, with $a_4 \ne 0$, see #NcmPolyRoots.
  *
- * Returns: the number of real roots found (0, 1, 2, 3, or 4)
+ * Returns: the number of real roots, 0 to 4.
  */
 gint
 ncm_poly_roots_real_quartic (const gdouble a[5], gdouble roots[4])
@@ -326,17 +312,14 @@ ncm_poly_roots_real_quartic (const gdouble a[5], gdouble roots[4])
 
 /**
  * ncm_poly_roots_real_quartic_or_lower:
- * @a: (array fixed-size=5): ascending coefficients $a_0+a_1x+\dots+a_4x^4$
- * @roots: (out caller-allocates) (array fixed-size=4): the real roots found
+ * @a: (array fixed-size=5): the coefficients of $a_0 + a_1 x + \dots + a_4 x^4$
+ * @roots: (out caller-allocates) (array fixed-size=4): the real roots
  *
- * Same as ncm_poly_roots_real_quartic(), but safe to call with a leading
- * coefficient that turns out to be (numerically) zero: trims from $a_4$
- * downward, relative to the scale of all five coefficients together, and
- * dispatches to whichever degree is actually genuine. A polynomial with all
- * five coefficients indistinguishable from zero returns 0 roots rather than
- * dividing by zero.
+ * As ncm_poly_roots_real_quartic(), after dropping the leading coefficients with
+ * $|a_i| \le 10^{-14} \sum_j |a_j|$, so the degree may be lower. When every coefficient is
+ * dropped, no root is returned.
  *
- * Returns: the number of real roots found (0 to 4)
+ * Returns: the number of real roots, 0 to 4.
  */
 gint
 ncm_poly_roots_real_quartic_or_lower (const gdouble a[5], gdouble roots[4])

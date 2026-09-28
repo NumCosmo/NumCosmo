@@ -26,23 +26,25 @@
 /**
  * NcmSerialize:
  *
- * Serialization, deserialization and duplication object.
+ * Serialization, deserialization and duplication of #GObject instances.
  *
- * This object provides serialization, deserialization and duplication of objects. The
- * serialization process is based on the GObject object system.
+ * An object is serialized as a #GVariant of type #NCM_SERIALIZE_OBJECT_TYPE, `(sa{sv})`:
+ * its type name and a dictionary of its read-write properties. Object-valued properties
+ * are serialized recursively. The same content can be written as GVariant text, as the
+ * shorthand `TypeName{'prop': <value>, ...}`, as binary #GVariant data, or as YAML.
+ * Arrays and dictionaries of objects (#NcmObjArray, #NcmObjDictStr, #NcmObjDictInt) and
+ * #NcmVarDict have their own functions.
  *
- * Serialization is the process of converting an object into a stream of bytes to store the object
- * or transmit it to memory, a database, or a file. Its main purpose is to save the state of an object
- * in order to be able to recreate it when needed. The reverse process is called deserialization.
+ * A serializer keeps a table of named instances. An object in that table, or one
+ * serialized earlier with a name, is written as `TypeName[name]` without its properties.
+ * Deserializing `TypeName[name]` returns the instance of that name when the table has one.
+ * With #NCM_SERIALIZE_OPT_AUTONAME_SER each newly serialized object is named `S<n>`, and
+ * with #NCM_SERIALIZE_OPT_AUTOSAVE_SER each named object deserialized is added to the
+ * table. Together (#NCM_SERIALIZE_OPT_CLEAN_DUP) they make ncm_serialize_dup_obj() keep
+ * an object shared by several properties shared in the copy.
  *
- * One support for serialized data GVariant.
- * The GVariant is a type-safe, reference counted, immutable, and memory-efficient container for arbitrary data.
- * It is a generic container that can hold any type of data, including basic types such as integers and floating
- * point numbers, strings, and byte arrays, as well as more complex types such as tuples, dictionaries, and variants.
- * The GVariant type system is designed to be extensible, so that new types can be added in the future.
- * A serialized GVariant object can be stored in binary or text format.
- *
- *
+ * ncm_serialize_global() returns a process-wide serializer without options, and the
+ * ncm_serialize_global functions use it.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -186,8 +188,7 @@ ncm_serialize_class_init (NcmSerializeClass *klass)
   /**
    * NcmSerialize:options:
    *
-   * Serialization options.
-   *
+   * The #NcmSerializeOpt flags.
    */
   g_object_class_install_property (object_class,
                                    PROP_OPTS,
@@ -200,11 +201,11 @@ ncm_serialize_class_init (NcmSerializeClass *klass)
 
 /**
  * ncm_serialize_new:
- * @sopt: a set of options from #NcmSerializeOpt.
+ * @sopt: the options
  *
- * Creates a new #NcmSerialize object.
+ * Creates a new #NcmSerialize.
  *
- * Returns: a new #NcmSerialize.
+ * Returns: (transfer full): a new #NcmSerialize.
  */
 NcmSerialize *
 ncm_serialize_new (NcmSerializeOpt sopt)
@@ -218,7 +219,7 @@ ncm_serialize_new (NcmSerializeOpt sopt)
 
 /**
  * ncm_serialize_ref:
- * @ser: a #NcmSerialize.
+ * @ser: a #NcmSerialize
  *
  * Increases the reference count of @ser by one.
  *
@@ -232,10 +233,9 @@ ncm_serialize_ref (NcmSerialize *ser)
 
 /**
  * ncm_serialize_free:
- * @ser: a #NcmSerialize.
+ * @ser: a #NcmSerialize
  *
  * Decreases the reference count of @ser by one.
- *
  */
 void
 ncm_serialize_free (NcmSerialize *ser)
@@ -245,10 +245,9 @@ ncm_serialize_free (NcmSerialize *ser)
 
 /**
  * ncm_serialize_unref:
- * @ser: a #NcmSerialize.
+ * @ser: a #NcmSerialize
  *
  * Same as ncm_serialize_free().
- *
  */
 void
 ncm_serialize_unref (NcmSerialize *ser)
@@ -258,10 +257,9 @@ ncm_serialize_unref (NcmSerialize *ser)
 
 /**
  * ncm_serialize_clear:
- * @ser: a #NcmSerialize.
+ * @ser: a #NcmSerialize
  *
- * Decreases the reference count of *@ser by one, and sets *@ser to NULL.
- *
+ * Decreases the reference count of *@ser by one and sets *@ser to %NULL.
  */
 void
 ncm_serialize_clear (NcmSerialize **ser)
@@ -288,12 +286,10 @@ _ncm_serialize_reset_remove_autosaved_name_val (gpointer key, gpointer value, gp
 /**
  * ncm_serialize_reset:
  * @ser: a #NcmSerialize
- * @autosave_only: a boolean
+ * @autosave_only: whether to remove only the objects named `S<n>`
  *
- * Releases all objects in @ser and erase all serialized
- * objects. If @autosave_only is TRUE it will release only
- * autosaved objects.
- *
+ * Empties the table of named instances and the saved serializations, see
+ * ncm_serialize_clear_instances(), and restarts the automatic names at `S0`.
  */
 void
 ncm_serialize_reset (NcmSerialize *ser, gboolean autosave_only)
@@ -321,11 +317,9 @@ ncm_serialize_reset (NcmSerialize *ser, gboolean autosave_only)
 /**
  * ncm_serialize_clear_instances:
  * @ser: a #NcmSerialize
- * @autosave_only: a boolean
+ * @autosave_only: whether to remove only the objects named `S<n>`
  *
- * Releases all objects in @ser. If @autosave_only is TRUE
- * it will release only autosaved objects.
- *
+ * Removes the named instances, releasing the references @ser holds.
  */
 void
 ncm_serialize_clear_instances (NcmSerialize *ser, gboolean autosave_only)
@@ -348,10 +342,9 @@ ncm_serialize_clear_instances (NcmSerialize *ser, gboolean autosave_only)
 
 /**
  * ncm_serialize_log_stats:
- * @ser: a #NcmSerialize.
+ * @ser: a #NcmSerialize
  *
- * Releases all objects in @ser.
- *
+ * Logs the sizes of the tables of @ser.
  */
 void
 ncm_serialize_log_stats (NcmSerialize *ser)
@@ -365,12 +358,12 @@ ncm_serialize_log_stats (NcmSerialize *ser)
 
 /**
  * ncm_serialize_contain_instance:
- * @ser: a #NcmSerialize.
- * @obj: (type GObject): a GObject.
+ * @ser: a #NcmSerialize
+ * @obj: (type GObject): a #GObject
  *
- * Checks if the GObject instance @obj is contained in @ser.
  *
- * Returns: if @obj is already in @ser.
+ *
+ * Returns: whether @obj is a named instance of @ser.
  */
 gboolean
 ncm_serialize_contain_instance (NcmSerialize *ser, gpointer obj)
@@ -382,12 +375,12 @@ ncm_serialize_contain_instance (NcmSerialize *ser, gpointer obj)
 
 /**
  * ncm_serialize_contain_name:
- * @ser: a #NcmSerialize.
- * @name: an instance name.
+ * @ser: a #NcmSerialize
+ * @name: an instance name
  *
- * Checks if there is an instance named @name in @ser.
  *
- * Returns: if there is instance named @name in @ser.
+ *
+ * Returns: whether @ser has an instance named @name.
  */
 gboolean
 ncm_serialize_contain_name (NcmSerialize *ser, const gchar *name)
@@ -399,11 +392,11 @@ ncm_serialize_contain_name (NcmSerialize *ser, const gchar *name)
 
 /**
  * ncm_serialize_count_instances:
- * @ser: a #NcmSerialize.
+ * @ser: a #NcmSerialize
  *
- * Counts the number of instances registered in @ser.
  *
- * Returns: the number of instances in @ser.
+ *
+ * Returns: the number of named instances.
  */
 guint
 ncm_serialize_count_instances (NcmSerialize *ser)
@@ -413,11 +406,11 @@ ncm_serialize_count_instances (NcmSerialize *ser)
 
 /**
  * ncm_serialize_count_saved_serializations:
- * @ser: a #NcmSerialize.
+ * @ser: a #NcmSerialize
  *
- * Counts the number of instances registered in @ser.
  *
- * Returns: the number of instances in @ser.
+ *
+ * Returns: the number of saved serializations, the objects serialized with a name.
  */
 guint
 ncm_serialize_count_saved_serializations (NcmSerialize *ser)
@@ -427,12 +420,12 @@ ncm_serialize_count_saved_serializations (NcmSerialize *ser)
 
 /**
  * ncm_serialize_peek_by_name:
- * @ser: a #NcmSerialize.
- * @name: an instance name.
+ * @ser: a #NcmSerialize
+ * @name: an instance name
  *
- * Peeks the instance @name or null if there isn't a instance named @name.
  *
- * Returns: (transfer none) (type GObject): Gets the instance named @name or NULL.
+ *
+ * Returns: (transfer none) (type GObject) (nullable): the instance named @name, or %NULL.
  */
 gpointer
 ncm_serialize_peek_by_name (NcmSerialize *ser, const gchar *name)
@@ -444,12 +437,12 @@ ncm_serialize_peek_by_name (NcmSerialize *ser, const gchar *name)
 
 /**
  * ncm_serialize_get_by_name:
- * @ser: a #NcmSerialize.
- * @name: an instance name.
+ * @ser: a #NcmSerialize
+ * @name: an instance name
  *
- * Gets a new reference for the instance @name or null if there isn't a instance named @name.
  *
- * Returns: (transfer full) (type GObject): Gets the instance named @name or NULL.
+ *
+ * Returns: (transfer full) (type GObject) (nullable): the instance named @name, or %NULL.
  */
 gpointer
 ncm_serialize_get_by_name (NcmSerialize *ser, const gchar *name)
@@ -467,11 +460,10 @@ ncm_serialize_get_by_name (NcmSerialize *ser, const gchar *name)
 
 /**
  * ncm_serialize_peek_name:
- * @ser: a #NcmSerialize.
- * @obj: (type GObject): a GObject.
+ * @ser: a #NcmSerialize
+ * @obj: (type GObject): a #GObject
  *
- * Gets the named associated to the instance @obj, it is an error to call this function
- * when the @obj is not contained in @ser.
+ * Aborts if @obj is not a named instance of @ser.
  *
  * Returns: (transfer none): the name of @obj.
  */
@@ -494,13 +486,13 @@ ncm_serialize_peek_name (NcmSerialize *ser, gpointer obj)
 
 /**
  * ncm_serialize_set:
- * @ser: a #NcmSerialize.
- * @obj: (type GObject): a GObject.
- * @name: the @obj name.
- * @overwrite: whether to overwrite if there is already an object named @name.
+ * @ser: a #NcmSerialize
+ * @obj: (type GObject): a #GObject
+ * @name: the name
+ * @overwrite: whether to replace an instance already named @name
  *
- * Adds the object @obj to @ser using @name.
- *
+ * Adds @obj to the named instances under @name, holding a reference to it. Aborts if
+ * another instance has @name and @overwrite is %FALSE.
  */
 void
 ncm_serialize_set (NcmSerialize *ser, gpointer obj, const gchar *name, gboolean overwrite)
@@ -535,12 +527,10 @@ ncm_serialize_set (NcmSerialize *ser, gpointer obj, const gchar *name, gboolean 
 
 /**
  * ncm_serialize_unset:
- * @ser: a #NcmSerialize.
- * @obj: (type GObject): a GObject.
+ * @ser: a #NcmSerialize
+ * @obj: (type GObject): a #GObject
  *
- * Removes the object @obj to @ser using @name, it does nothing
- * if the instance @obj is not present in @ser.
- *
+ * Removes @obj from the named instances. Does nothing if @obj is not one.
  */
 void
 ncm_serialize_unset (NcmSerialize *ser, gpointer obj)
@@ -556,12 +546,10 @@ ncm_serialize_unset (NcmSerialize *ser, gpointer obj)
 
 /**
  * ncm_serialize_remove_ser:
- * @ser: a #NcmSerialize.
- * @obj: (type GObject): a GObject.
+ * @ser: a #NcmSerialize
+ * @obj: (type GObject): a #GObject
  *
- * Removes the object @obj to @ser using @name, it does nothing
- * if the instance @obj is not present in @ser.
- *
+ * Removes the saved serialization of @obj, if any.
  */
 void
 ncm_serialize_remove_ser (NcmSerialize *ser, gpointer obj)
@@ -588,7 +576,6 @@ _ncm_serialize_save_ser (NcmSerialize *ser, gchar *name, gpointer obj, GVariant 
   if (g_hash_table_lookup_extended (ser->saved_ptr_name, obj, NULL, NULL))
     g_error ("_ncm_serialize_save_ser: instance already saved.");
 
-  /*printf ("Saving: ``%s'' <=> %s\n", name, g_variant_print (ser_var, TRUE)); */
 
   g_hash_table_insert (ser->saved_ptr_name,
                        g_object_ref (obj), g_strdup (name));
@@ -598,14 +585,14 @@ _ncm_serialize_save_ser (NcmSerialize *ser, gchar *name, gpointer obj, GVariant 
 
 /**
  * ncm_serialize_is_named:
- * @ser: a #NcmSerialize.
- * @serobj: serialized object.
- * @name: (allow-none) (out) (transfer full): object name.
+ * @ser: a #NcmSerialize
+ * @serobj: a serialized object
+ * @name: (allow-none) (out) (transfer full): the name
  *
- * Checks if @serobj is a named serialized object, if so sets its name in @name
- * and returns TRUE.
+ * Parses @serobj, as GVariant text or the shorthand of ncm_serialize_from_string(), and
+ * checks whether it has the form `TypeName[name]`. Aborts if @serobj cannot be parsed.
  *
- * Returns: whether @serobj is a named serialized object.
+ * Returns: whether @serobj is named.
  */
 gboolean
 ncm_serialize_is_named (NcmSerialize *ser, const gchar *serobj, gchar **name)
@@ -639,7 +626,8 @@ ncm_serialize_is_named (NcmSerialize *ser, const gchar *serobj, gchar **name)
              serobj);
   }
 
-  *name = NULL;
+  if (name != NULL)
+    *name = NULL;
 
   if (g_regex_match (ser->is_named_regex, obj_name_str, 0, &match_info))
   {
@@ -657,12 +645,12 @@ ncm_serialize_is_named (NcmSerialize *ser, const gchar *serobj, gchar **name)
 
 /**
  * ncm_serialize_set_property:
- * @ser: a #NcmSerialize.
- * @obj: a GObject.
- * @prop_str: a string containing the parameters to set.
+ * @ser: a #NcmSerialize
+ * @obj: a #GObject
+ * @prop_str: a GVariant text of type `a{sv}`
  *
- * Deserialize the set of object properties in @params and sets the @obj.
- *
+ * Sets the properties of @obj from @prop_str, deserializing object-valued properties.
+ * Aborts if @prop_str cannot be parsed.
  */
 void
 ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_str)
@@ -725,12 +713,13 @@ ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_s
 
 /**
  * ncm_serialize_set_property_from_key_file:
- * @ser: a #NcmSerialize.
- * @obj: a GObject.
- * @prop_file: a GKeyFile file containing the parameters to set.
+ * @ser: a #NcmSerialize
+ * @obj: a #GObject
+ * @prop_file: a key file name
  *
- * Deserializes the set of object properties in @prop_file and sets the @obj.
- *
+ * Sets the properties of @obj from the keys of the group `Precision Parameters` of
+ * @prop_file, each value written as GVariant text. A file without groups is read as that
+ * group. Aborts if the file cannot be read.
  */
 void
 ncm_serialize_set_property_from_key_file (NcmSerialize *ser, GObject *obj, const gchar *prop_file)
@@ -804,12 +793,12 @@ ncm_serialize_set_property_from_key_file (NcmSerialize *ser, GObject *obj, const
 
 /**
  * ncm_serialize_from_variant:
- * @ser: a #NcmSerialize.
- * @var_obj: A GVariant containing the serialized version of the object.
+ * @ser: a #NcmSerialize
+ * @var_obj: a #GVariant of type #NCM_SERIALIZE_OBJECT_TYPE
  *
- * Deserialize and returns the newly created object.
+ * Deserializes an object, see ncm_serialize_from_name_params().
  *
- * Returns: (transfer full): A new GObject.
+ * Returns: (transfer full): the object.
  */
 GObject *
 ncm_serialize_from_variant (NcmSerialize *ser, GVariant *var_obj)
@@ -831,10 +820,10 @@ ncm_serialize_from_variant (NcmSerialize *ser, GVariant *var_obj)
 
 /**
  * ncm_serialize_array_from_variant:
- * @ser: a #NcmSerialize.
- * @var: a GVariant containing an array of objects.
+ * @ser: a #NcmSerialize
+ * @var: a #GVariant of type #NCM_SERIALIZE_OBJECT_ARRAY_TYPE
  *
- * Creates a new #NcmObjArray from a GVariant.
+ * Deserializes an array of objects.
  *
  * Returns: (transfer full): a new #NcmObjArray.
  */
@@ -863,9 +852,9 @@ ncm_serialize_array_from_variant (NcmSerialize *ser, GVariant *var)
 /**
  * ncm_serialize_dict_str_from_variant:
  * @ser: a #NcmSerialize
- * @var: a GVariant containing a dictionary of string keys
+ * @var: a #GVariant of type #NCM_SERIALIZE_OBJECT_DICT_STR_TYPE
  *
- * Creates a new #NcmObjDictStr from a GVariant.
+ * Deserializes a dictionary of objects with string keys.
  *
  * Returns: (transfer full): a new #NcmObjDictStr.
  */
@@ -900,9 +889,9 @@ ncm_serialize_dict_str_from_variant (NcmSerialize *ser, GVariant *var)
 /**
  * ncm_serialize_dict_int_from_variant:
  * @ser: a #NcmSerialize
- * @var: a GVariant containing a dictionary of integers keys
+ * @var: a #GVariant of type #NCM_SERIALIZE_OBJECT_DICT_INT_TYPE
  *
- * Creates a new #NcmObjDictInt from a GVariant.
+ * Deserializes a dictionary of objects with integer keys.
  *
  * Returns: (transfer full): a new #NcmObjDictInt.
  */
@@ -937,11 +926,11 @@ ncm_serialize_dict_int_from_variant (NcmSerialize *ser, GVariant *var)
 /**
  * ncm_serialize_var_dict_from_variant:
  * @ser: a #NcmSerialize
- * @var: a GVariant containing a dictionary of string and variants
+ * @var: a #GVariant of type #NCM_SERIALIZE_VAR_DICT_TYPE
  *
- * Creates a new #NcmVarDict from a GVariant.
+ * Deserializes a #NcmVarDict; each value is stored with ncm_var_dict_set_variant().
  *
- * Returns: (transfer full): a new #NcmObjDictStr.
+ * Returns: (transfer full): a new #NcmVarDict.
  */
 NcmVarDict *
 ncm_serialize_var_dict_from_variant (NcmSerialize *ser, GVariant *var)
@@ -972,12 +961,15 @@ ncm_serialize_var_dict_from_variant (NcmSerialize *ser, GVariant *var)
 
 /**
  * ncm_serialize_from_string:
- * @ser: a #NcmSerialize.
- * @obj_ser: String containing the serialized version of the object.
+ * @ser: a #NcmSerialize
+ * @obj_ser: a serialized object
  *
- * Parses the serialized and returns the newly created object.
+ * Deserializes @obj_ser, written either as GVariant text of type
+ * #NCM_SERIALIZE_OBJECT_TYPE or as the shorthand `TypeName{'prop': <value>, ...}`, where
+ * the properties are optional and `TypeName` may be `TypeName[name]`. Aborts if @obj_ser
+ * has neither form.
  *
- * Returns: (transfer full): A new GObject.
+ * Returns: (transfer full): the object.
  */
 GObject *
 ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
@@ -1463,11 +1455,11 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
 /**
  * ncm_serialize_from_yaml:
  * @ser: a #NcmSerialize
- * @yaml_obj: string containing the serialized version of the object in YAML format
+ * @yaml_obj: a YAML string
  *
- * Parses the serialized string in @yaml_obj and returns the newly created object.
+ * Deserializes an object from YAML, in the form written by ncm_serialize_to_yaml().
  *
- * Returns: (transfer full): A new GObject.
+ * Returns: (transfer full): the object.
  */
 GObject *
 ncm_serialize_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
@@ -1543,11 +1535,11 @@ _ncm_serialize_array_from_yaml_node (NcmSerialize *ser, struct fy_node *root)
 /**
  * ncm_serialize_array_from_yaml:
  * @ser: a #NcmSerialize
- * @yaml_obj: string containing the serialized version of the object in YAML format
+ * @yaml_obj: a YAML string
  *
- * Parses the serialized string in @yaml_obj and returns an array of newly created objects.
+ * Deserializes an array of objects from YAML, in the form written by ncm_serialize_array_to_yaml().
  *
- * Returns: (transfer full): A new #NcmObjArray.
+ * Returns: (transfer full): a new #NcmObjArray.
  */
 NcmObjArray *
 ncm_serialize_array_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
@@ -1576,12 +1568,11 @@ ncm_serialize_array_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 /**
  * ncm_serialize_dict_str_from_yaml:
  * @ser: a #NcmSerialize
- * @yaml_obj: string containing the serialized version of the object in YAML format
+ * @yaml_obj: a YAML string
  *
- * Parses the serialized string in @yaml_obj and returns a #NcmObjDictStr containing
- * the object names as keys and the serialized objects as values.
+ * Deserializes a dictionary of objects with string keys from YAML, in the form written by ncm_serialize_dict_str_to_yaml().
  *
- * Returns: (transfer full): A new #NcmObjDictStr.
+ * Returns: (transfer full): a new #NcmObjDictStr.
  */
 NcmObjDictStr *
 ncm_serialize_dict_str_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
@@ -1633,12 +1624,11 @@ ncm_serialize_dict_str_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 /**
  * ncm_serialize_dict_int_from_yaml:
  * @ser: a #NcmSerialize
- * @yaml_obj: string containing the serialized version of the object in YAML format
+ * @yaml_obj: a YAML string
  *
- * Parses the serialized string in @yaml_obj and returns a #NcmObjDictInt containing
- * the object names as keys and the serialized objects as values.
+ * Deserializes a dictionary of objects with integer keys from YAML, in the form written by ncm_serialize_dict_int_to_yaml().
  *
- * Returns: (transfer full): A new #NcmObjDictInt.
+ * Returns: (transfer full): a new #NcmObjDictInt.
  */
 NcmObjDictInt *
 ncm_serialize_dict_int_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
@@ -1697,12 +1687,11 @@ ncm_serialize_dict_int_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 /**
  * ncm_serialize_var_dict_from_yaml:
  * @ser: a #NcmSerialize
- * @yaml_obj: string containing the serialized version of the #NcmVarDict in YAML format
+ * @yaml_obj: a YAML string
  *
- * Parses the serialized string in @yaml_obj and returns a #NcmVarDict containing
- * the object names as keys and the serialized objects as values.
+ * Deserializes a #NcmVarDict from YAML, in the form written by ncm_serialize_var_dict_to_yaml().
  *
- * Returns: (transfer full): A new #NcmVarDict.
+ * Returns: (transfer full): a new #NcmVarDict.
  */
 NcmVarDict *
 ncm_serialize_var_dict_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
@@ -1790,11 +1779,12 @@ ncm_serialize_var_dict_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 /**
  * ncm_serialize_from_file:
  * @ser: a #NcmSerialize
- * @filename: File containing the serialized version of the object
+ * @filename: a file name
  *
- * Parses the serialized string in @filename and returns the newly created object.
+ * Same as ncm_serialize_from_string() with the contents of @filename. Aborts if the file
+ * cannot be read.
  *
- * Returns: (transfer full): A new GObject.
+ * Returns: (transfer full): the object.
  */
 GObject *
 ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename)
@@ -1821,12 +1811,13 @@ ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename)
 
 /**
  * ncm_serialize_from_binfile:
- * @ser: a #NcmSerialize.
- * @filename: File containing the binary serialized version of the object.
+ * @ser: a #NcmSerialize
+ * @filename: a file name
  *
- * Parses the serialized binary data in @filename and returns the newly created object.
+ * Deserializes an object from the binary #GVariant data written by
+ * ncm_serialize_to_binfile(). Aborts if the file cannot be read.
  *
- * Returns: (transfer full): A new GObject.
+ * Returns: (transfer full): the object.
  */
 GObject *
 ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename)
@@ -1864,13 +1855,12 @@ ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename)
 /**
  * ncm_serialize_var_dict_from_variant_file:
  * @ser: a #NcmSerialize
- * @filename: File containing the serialized version of the #NcmVarDict
- * @binary: Whether the file contains binary data or not
+ * @filename: a file name
+ * @binary: whether the file holds binary #GVariant data
  *
- * Parses the serialized string in @filename and returns a #NcmVarDict containing
- * the object names as keys and the serialized objects as values.
+ * Deserializes a #NcmVarDict from the file written by ncm_serialize_var_dict_to_variant_file().
  *
- * Returns: (transfer full): A new #NcmVarDict.
+ * Returns: (transfer full): a new #NcmVarDict.
  */
 NcmVarDict *
 ncm_serialize_var_dict_from_variant_file (NcmSerialize *ser, const gchar *filename, gboolean binary)
@@ -1926,11 +1916,11 @@ ncm_serialize_var_dict_from_variant_file (NcmSerialize *ser, const gchar *filena
 /**
  * ncm_serialize_from_yaml_file:
  * @ser: a #NcmSerialize
- * @filename: File containing the serialized version of the object in YAML format
+ * @filename: a file name
  *
- * Parses the YAML in @filename and returns the newly created object.
+ * Same as ncm_serialize_from_yaml() with the contents of @filename.
  *
- * Returns: (transfer full): A new GObject.
+ * Returns: (transfer full): the object.
  */
 GObject *
 ncm_serialize_from_yaml_file (NcmSerialize *ser, const gchar *filename)
@@ -1958,9 +1948,10 @@ ncm_serialize_from_yaml_file (NcmSerialize *ser, const gchar *filename)
 /**
  * ncm_serialize_array_from_key_file:
  * @ser: a #NcmSerialize
- * @filename: oa filename
+ * @filename: a file name
  *
- * Loads a #NcmObjArray from a file using a #NcmSerialize and a #GKeyFile.
+ * Deserializes an array of objects from the key file written by
+ * ncm_serialize_array_to_key_file().
  *
  * Returns: (transfer full): a new #NcmObjArray.
  */
@@ -2069,11 +2060,11 @@ ncm_serialize_array_from_key_file (NcmSerialize *ser, const gchar *filename)
 /**
  * ncm_serialize_array_from_yaml_file:
  * @ser: a #NcmSerialize
- * @filename: File containing the serialized version of the object in YAML format
+ * @filename: a file name
  *
- * Parses the YAML in @filename and returns an array of newly created objects.
+ * Same as ncm_serialize_array_from_yaml() with the contents of @filename.
  *
- * Returns: (transfer full): A new #NcmObjArray.
+ * Returns: (transfer full): a new #NcmObjArray.
  */
 NcmObjArray *
 ncm_serialize_array_from_yaml_file (NcmSerialize *ser, const gchar *filename)
@@ -2101,11 +2092,11 @@ ncm_serialize_array_from_yaml_file (NcmSerialize *ser, const gchar *filename)
 /**
  * ncm_serialize_dict_str_from_yaml_file:
  * @ser: a #NcmSerialize
- * @filename: File containing the serialized version of the object in YAML format
+ * @filename: a file name
  *
- * Parses the YAML in @filename and returns a #NcmObjDictStr containing
+ * Same as ncm_serialize_dict_str_from_yaml() with the contents of @filename.
  *
- * Returns: (transfer full): A new #NcmObjDictStr.
+ * Returns: (transfer full): a new #NcmObjDictStr.
  */
 NcmObjDictStr *
 ncm_serialize_dict_str_from_yaml_file (NcmSerialize *ser, const gchar *filename)
@@ -2133,11 +2124,11 @@ ncm_serialize_dict_str_from_yaml_file (NcmSerialize *ser, const gchar *filename)
 /**
  * ncm_serialize_dict_int_from_yaml_file:
  * @ser: a #NcmSerialize
- * @filename: File containing the serialized version of the object in YAML format
+ * @filename: a file name
  *
- * Parses the YAML in @filename and returns a #NcmObjDictInt containing
+ * Same as ncm_serialize_dict_int_from_yaml() with the contents of @filename.
  *
- * Returns: (transfer full): A new #NcmObjDictInt.
+ * Returns: (transfer full): a new #NcmObjDictInt.
  */
 NcmObjDictInt *
 ncm_serialize_dict_int_from_yaml_file (NcmSerialize *ser, const gchar *filename)
@@ -2165,12 +2156,11 @@ ncm_serialize_dict_int_from_yaml_file (NcmSerialize *ser, const gchar *filename)
 /**
  * ncm_serialize_var_dict_from_yaml_file:
  * @ser: a #NcmSerialize
- * @filename: File containing the serialized version of the #NcmVarDict in YAML format
+ * @filename: a file name
  *
- * Parses the YAML in @filename and returns a #NcmVarDict containing
- * the element names as keys and their values.
+ * Same as ncm_serialize_var_dict_from_yaml() with the contents of @filename.
  *
- * Returns: (transfer full): A new #NcmVarDict.
+ * Returns: (transfer full): a new #NcmVarDict.
  */
 NcmVarDict *
 ncm_serialize_var_dict_from_yaml_file (NcmSerialize *ser, const gchar *filename)
@@ -2197,13 +2187,16 @@ ncm_serialize_var_dict_from_yaml_file (NcmSerialize *ser, const gchar *filename)
 
 /**
  * ncm_serialize_from_name_params:
- * @ser: a #NcmSerialize.
- * @obj_name: string containing the object name.
- * @params: a GVariant containing the object parameters.
+ * @ser: a #NcmSerialize
+ * @obj_name: `TypeName` or `TypeName[name]`
+ * @params: (nullable): a #GVariant of type `a{sv}` with the properties
  *
- * Parses the serialized parameters and returns the newly created object using them.
+ * Creates an object of type `TypeName` with the properties in @params. For `TypeName[name]`,
+ * the named instance is returned if @ser has one; giving @params as well then aborts.
+ * With #NCM_SERIALIZE_OPT_AUTOSAVE_SER a new named object is added to the named
+ * instances. Aborts if `TypeName` is not a registered type.
  *
- * Returns: (transfer full): A new GObject.
+ * Returns: (transfer full): the object.
  */
 GObject *
 ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVariant *params)
@@ -2231,12 +2224,6 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
   g_match_info_free (match_info);
 
   if (name != NULL)
-/*
- *   if (g_hash_table_lookup (ser->saved_name_ser, name) != NULL)
- *     g_error ("ncm_serialize_from_name_params: deserializing object named `%s' but it is present in the list of saved serializations.",
- *              name);
- *   else
- */
     if (ncm_serialize_contain_name (ser, name))
       obj = ncm_serialize_get_by_name (ser, name);
 
@@ -2548,12 +2535,13 @@ _ncm_serialize_gtype_to_gvariant_type (GType t)
 
 /**
  * ncm_serialize_gvalue_to_gvariant:
- * @ser: a #NcmSerialize.
- * @val: a GValue.
+ * @ser: a #NcmSerialize
+ * @val: a #GValue
  *
- * Converts a GValue to a GVariant.
+ * Converts @val to a #GVariant, serializing objects with ncm_serialize_to_variant().
+ * Aborts for a type it cannot convert.
  *
- * Returns: (transfer full): A GVariant conversion of @val.
+ * Returns: (transfer full) (nullable): the #GVariant, or %NULL for a %NULL object.
  */
 GVariant *
 ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
@@ -2666,12 +2654,15 @@ ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
 
 /**
  * ncm_serialize_to_variant:
- * @ser: a #NcmSerialize.
- * @obj: a GObject.
+ * @ser: a #NcmSerialize
+ * @obj: a #GObject
  *
- * Serialize the @obj to a GVariant representation.
+ * Serializes @obj. A named instance, or an object serialized earlier with a name, is
+ * written as `TypeName[name]` without properties. Otherwise every read-write property is
+ * serialized; with #NCM_SERIALIZE_OPT_AUTONAME_SER the object is named `S<n>` and its
+ * serialization saved.
  *
- * Returns: (transfer full): A GVariant dictionary describing the @obj.
+ * Returns: (transfer full): a #GVariant of type #NCM_SERIALIZE_OBJECT_TYPE.
  */
 GVariant *
 ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
@@ -2685,7 +2676,6 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
     gchar *ni_name = ncm_serialize_peek_name (ser, obj);
     gchar *fname   = g_strdup_printf ("%s[%s]", obj_name, ni_name);
 
-    /*printf ("# Found instance %p at ptr_name %s.\n", obj, fname);*/
     ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, fname, NULL));
     g_free (fname);
   }
@@ -2693,7 +2683,6 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
   {
     gchar *fname = g_strdup_printf ("%s[%s]", obj_name, saved_name);
 
-    /*printf ("# Found instance %p at saved_ptr_name %s.\n", obj, fname);*/
     ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, fname, NULL));
     g_free (fname);
   }
@@ -2777,9 +2766,9 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
  * @ser: a #NcmSerialize
  * @oa: a #NcmObjArray
  *
- * Serializes a #NcmObjArray to a GVariant.
+ * Serializes @oa, each object as ncm_serialize_to_variant().
  *
- * Returns: (transfer full): the serialized GVariant.
+ * Returns: (transfer full): the #GVariant.
  */
 GVariant *
 ncm_serialize_array_to_variant (NcmSerialize *ser, NcmObjArray *oa)
@@ -2810,9 +2799,9 @@ ncm_serialize_array_to_variant (NcmSerialize *ser, NcmObjArray *oa)
  * @ser: a #NcmSerialize
  * @ods: a #NcmObjDictStr
  *
- * Serializes a #NcmObjDictStr to a GVariant.
+ * Serializes @ods, each object as ncm_serialize_to_variant().
  *
- * Returns: (transfer full): the serialized GVariant.
+ * Returns: (transfer full): the #GVariant.
  */
 GVariant *
 ncm_serialize_dict_str_to_variant (NcmSerialize *ser, NcmObjDictStr *ods)
@@ -2848,10 +2837,9 @@ ncm_serialize_dict_str_to_variant (NcmSerialize *ser, NcmObjDictStr *ods)
  * ncm_serialize_dict_str_to_binfile:
  * @ser: a #NcmSerialize
  * @ods: a #NcmObjDictStr
- * @filename: File where to save the serialized version of the dictionary
+ * @filename: a file name
  *
- * Serializes @ods and saves the binary in @filename.
- *
+ * Writes @ods to @filename as binary #GVariant data.
  */
 void
 ncm_serialize_dict_str_to_binfile (NcmSerialize *ser, NcmObjDictStr *ods, const gchar *filename)
@@ -2872,11 +2860,12 @@ ncm_serialize_dict_str_to_binfile (NcmSerialize *ser, NcmObjDictStr *ods, const 
 /**
  * ncm_serialize_dict_str_from_binfile:
  * @ser: a #NcmSerialize
- * @filename: File containing the binary serialized version of the dictionary
+ * @filename: a file name
  *
- * Parses the serialized binary data in @filename and returns the newly created #NcmObjDictStr.
+ * Deserializes a #NcmObjDictStr from the binary #GVariant data written by
+ * ncm_serialize_dict_str_to_binfile().
  *
- * Returns: (transfer full): A new #NcmObjDictStr.
+ * Returns: (transfer full): a new #NcmObjDictStr.
  */
 NcmObjDictStr *
 ncm_serialize_dict_str_from_binfile (NcmSerialize *ser, const gchar *filename)
@@ -2922,9 +2911,9 @@ ncm_serialize_dict_str_from_binfile (NcmSerialize *ser, const gchar *filename)
  * @ser: a #NcmSerialize
  * @odi: a #NcmObjDictInt
  *
- * Serializes a #NcmObjDictInt to a GVariant.
+ * Serializes @odi, each object as ncm_serialize_to_variant().
  *
- * Returns: (transfer full): the serialized GVariant.
+ * Returns: (transfer full): the #GVariant.
  */
 GVariant *
 ncm_serialize_dict_int_to_variant (NcmSerialize *ser, NcmObjDictInt *odi)
@@ -2961,9 +2950,9 @@ ncm_serialize_dict_int_to_variant (NcmSerialize *ser, NcmObjDictInt *odi)
  * @ser: a #NcmSerialize
  * @vd: a #NcmVarDict
  *
- * Serializes a #NcmVarDict to a GVariant.
+ * Serializes @vd, each object as ncm_serialize_to_variant().
  *
- * Returns: (transfer full): the serialized GVariant.
+ * Returns: (transfer full): the #GVariant.
  */
 GVariant *
 ncm_serialize_var_dict_to_variant (NcmSerialize *ser, NcmVarDict *vd)
@@ -2997,11 +2986,11 @@ static struct fy_node *_ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy
 /**
  * ncm_serialize_variant_to_yaml:
  * @ser: a #NcmSerialize
- * @var_obj: a GObject serialized to a GVariant
+ * @var_obj: a #GVariant of type #NCM_SERIALIZE_OBJECT_TYPE
  *
- * Converts a GObject serialized to a GVariant to a YAML string.
+ * Converts a serialized object to YAML.
  *
- * Returns: A pointer to the YAML string representation of the @var_obj.
+ * Returns: (transfer full): the YAML string.
  */
 gchar *
 ncm_serialize_variant_to_yaml (NcmSerialize *ser, GVariant *var_obj)
@@ -3212,13 +3201,14 @@ _ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVarian
 
 /**
  * ncm_serialize_to_string:
- * @ser: a #NcmSerialize.
- * @obj: a GObject.
- * @valid_variant: whether to use a valid GVariant representation.
+ * @ser: a #NcmSerialize
+ * @obj: a #GObject
+ * @valid_variant: whether to write GVariant text
  *
- * Serialize the object @obj to a string.
+ * Serializes @obj as GVariant text or, if @valid_variant is %FALSE, as the shorthand read
+ * by ncm_serialize_from_string().
  *
- * Returns: (transfer full): A string containing the serialized version of @obj.
+ * Returns: (transfer full): the serialized string.
  */
 gchar *
 ncm_serialize_to_string (NcmSerialize *ser, GObject *obj, gboolean valid_variant)
@@ -3261,11 +3251,11 @@ ncm_serialize_to_string (NcmSerialize *ser, GObject *obj, gboolean valid_variant
 /**
  * ncm_serialize_to_yaml:
  * @ser: a #NcmSerialize
- * @obj: a GObject
+ * @obj: a #GObject
  *
- * Serialize the object @obj to a YAML string.
+ * Serializes @obj to YAML.
  *
- * Returns: (transfer full): A YAML string containing the serialized version of @obj.
+ * Returns: (transfer full): the YAML string.
  */
 gchar *
 ncm_serialize_to_yaml (NcmSerialize *ser, GObject *obj)
@@ -3283,9 +3273,9 @@ ncm_serialize_to_yaml (NcmSerialize *ser, GObject *obj)
  * @ser: a #NcmSerialize
  * @oa: a #NcmObjArray
  *
- * Serialize the #NcmObjArray @oa to a YAML string.
+ * Serializes @oa to YAML.
  *
- * Returns: (transfer full): A YAML string containing the serialized version of @oa.
+ * Returns: (transfer full): the YAML string.
  */
 gchar *
 ncm_serialize_array_to_yaml (NcmSerialize *ser, NcmObjArray *oa)
@@ -3318,9 +3308,9 @@ ncm_serialize_array_to_yaml (NcmSerialize *ser, NcmObjArray *oa)
  * @ser: a #NcmSerialize
  * @ods: a #NcmObjDictStr
  *
- * Serialize the #NcmObjDictStr @ods to a YAML string.
+ * Serializes @ods to YAML.
  *
- * Returns: (transfer full): A YAML string containing the serialized version of @ods.
+ * Returns: (transfer full): the YAML string.
  */
 gchar *
 ncm_serialize_dict_str_to_yaml (NcmSerialize *ser, NcmObjDictStr *ods)
@@ -3358,9 +3348,9 @@ ncm_serialize_dict_str_to_yaml (NcmSerialize *ser, NcmObjDictStr *ods)
  * @ser: a #NcmSerialize
  * @odi: a #NcmObjDictInt
  *
- * Serialize the #NcmObjDictInt @odi to a YAML string.
+ * Serializes @odi to YAML.
  *
- * Returns: (transfer full): A YAML string containing the serialized version of @odi.
+ * Returns: (transfer full): the YAML string.
  */
 gchar *
 ncm_serialize_dict_int_to_yaml (NcmSerialize *ser, NcmObjDictInt *odi)
@@ -3398,9 +3388,9 @@ ncm_serialize_dict_int_to_yaml (NcmSerialize *ser, NcmObjDictInt *odi)
  * @ser: a #NcmSerialize
  * @dict: a #NcmVarDict
  *
- * Serialize the #NcmVarDict @dict to a YAML string.
+ * Serializes @dict to YAML.
  *
- * Returns: (transfer full): A YAML string containing the serialized version of @dict.
+ * Returns: (transfer full): the YAML string.
  */
 gchar *
 ncm_serialize_var_dict_to_yaml (NcmSerialize *ser, NcmVarDict *dict)
@@ -3460,11 +3450,10 @@ ncm_serialize_var_dict_to_yaml (NcmSerialize *ser, NcmVarDict *dict)
 /**
  * ncm_serialize_to_file:
  * @ser: a #NcmSerialize
- * @obj: a GObject
- * @filename: File where to save the serialized version of the object
+ * @obj: a #GObject
+ * @filename: a file name
  *
- * Serializes @obj and saves the string in @filename.
- *
+ * Writes @obj to @filename as GVariant text. Aborts if the file cannot be written.
  */
 void
 ncm_serialize_to_file (NcmSerialize *ser, GObject *obj, const gchar *filename)
@@ -3485,11 +3474,10 @@ ncm_serialize_to_file (NcmSerialize *ser, GObject *obj, const gchar *filename)
 /**
  * ncm_serialize_to_binfile:
  * @ser: a #NcmSerialize
- * @obj: a GObject
- * @filename: File where to save the serialized version of the object
+ * @obj: a #GObject
+ * @filename: a file name
  *
- * Serializes @obj and saves the binary in @filename.
- *
+ * Writes @obj to @filename as binary #GVariant data. Aborts if the file cannot be written.
  */
 void
 ncm_serialize_to_binfile (NcmSerialize *ser, GObject *obj, const gchar *filename)
@@ -3511,11 +3499,10 @@ ncm_serialize_to_binfile (NcmSerialize *ser, GObject *obj, const gchar *filename
  * ncm_serialize_var_dict_to_variant_file:
  * @ser: a #NcmSerialize
  * @vd: a #NcmVarDict
- * @filename: File where to save the serialized version of the object
- * @binary: whether to save the variant in binary format
+ * @filename: a file name
+ * @binary: whether to write binary #GVariant data
  *
- * Serializes @vd and saves the variant string in @filename.
- *
+ * Writes @vd to @filename as binary #GVariant data or GVariant text.
  */
 void
 ncm_serialize_var_dict_to_variant_file (NcmSerialize *ser, NcmVarDict *vd, const gchar *filename, gboolean binary)
@@ -3549,11 +3536,10 @@ ncm_serialize_var_dict_to_variant_file (NcmSerialize *ser, NcmVarDict *vd, const
 /**
  * ncm_serialize_to_yaml_file:
  * @ser: a #NcmSerialize
- * @obj: a GObject
- * @filename: File where to save the serialized version of the object
+ * @obj: a #GObject
+ * @filename: a file name
  *
- * Serializes @obj and saves the YAML string in @filename.
- *
+ * Writes ncm_serialize_to_yaml() to @filename.
  */
 void
 ncm_serialize_to_yaml_file (NcmSerialize *ser, GObject *obj, const gchar *filename)
@@ -3575,11 +3561,12 @@ ncm_serialize_to_yaml_file (NcmSerialize *ser, GObject *obj, const gchar *filena
  * ncm_serialize_array_to_key_file:
  * @ser: a #NcmSerialize
  * @oa: a #NcmObjArray
- * @filename: oa filename
- * @save_comment: whether to save comments
+ * @filename: a file name
+ * @save_comment: whether to add the property descriptions as comments
  *
- * Saves a #NcmObjArray to a file using a #NcmSerialize and a #GKeyFile.
- *
+ * Writes @oa to @filename as a key file: a group `NcmObjArray` with the key `empty`, and
+ * for each element a group `ARRAY:ELEMENT:<i>` with the type name under `OBJECT:NAME`
+ * and one key per property, as GVariant text.
  */
 void
 ncm_serialize_array_to_key_file (NcmSerialize *ser, NcmObjArray *oa, const gchar *filename, gboolean save_comment)
@@ -3683,10 +3670,9 @@ ncm_serialize_array_to_key_file (NcmSerialize *ser, NcmObjArray *oa, const gchar
  * ncm_serialize_array_to_yaml_file:
  * @ser: a #NcmSerialize
  * @oa: a #NcmObjArray
- * @filename: oa filename
+ * @filename: a file name
  *
- * Saves a #NcmObjArray to a file using a #NcmSerialize and a YAML string.
- *
+ * Writes ncm_serialize_array_to_yaml() to @filename.
  */
 void
 ncm_serialize_array_to_yaml_file (NcmSerialize *ser, NcmObjArray *oa, const gchar *filename)
@@ -3708,10 +3694,9 @@ ncm_serialize_array_to_yaml_file (NcmSerialize *ser, NcmObjArray *oa, const gcha
  * ncm_serialize_dict_str_to_yaml_file:
  * @ser: a #NcmSerialize
  * @ods: a #NcmObjDictStr
- * @filename: ods filename
+ * @filename: a file name
  *
- * Saves a #NcmObjDictStr to a file using a #NcmSerialize and a YAML string.
- *
+ * Writes ncm_serialize_dict_str_to_yaml() to @filename.
  */
 void
 ncm_serialize_dict_str_to_yaml_file (NcmSerialize *ser, NcmObjDictStr *ods, const gchar *filename)
@@ -3733,10 +3718,9 @@ ncm_serialize_dict_str_to_yaml_file (NcmSerialize *ser, NcmObjDictStr *ods, cons
  * ncm_serialize_dict_int_to_yaml_file:
  * @ser: a #NcmSerialize
  * @odi: a #NcmObjDictInt
- * @filename: odi filename
+ * @filename: a file name
  *
- * Saves a #NcmObjDictInt to a file using a #NcmSerialize and a YAML string.
- *
+ * Writes ncm_serialize_dict_int_to_yaml() to @filename.
  */
 void
 ncm_serialize_dict_int_to_yaml_file (NcmSerialize *ser, NcmObjDictInt *odi, const gchar *filename)
@@ -3758,11 +3742,9 @@ ncm_serialize_dict_int_to_yaml_file (NcmSerialize *ser, NcmObjDictInt *odi, cons
  * ncm_serialize_var_dict_to_yaml_file:
  * @ser: a #NcmSerialize
  * @vd: a #NcmVarDict
- * @filename: vd filename
+ * @filename: a file name
  *
- * Saves a #NcmVarDict to a file using a #NcmSerialize and a YAML string.
- *
- *
+ * Writes ncm_serialize_var_dict_to_yaml() to @filename.
  */
 void
 ncm_serialize_var_dict_to_yaml_file (NcmSerialize *ser, NcmVarDict *vd, const gchar *filename)
@@ -3782,12 +3764,15 @@ ncm_serialize_var_dict_to_yaml_file (NcmSerialize *ser, NcmVarDict *vd, const gc
 
 /**
  * ncm_serialize_dup_obj:
- * @ser: a #NcmSerialize.
- * @obj: a GObject.
+ * @ser: a #NcmSerialize
+ * @obj: a #GObject
  *
- * Duplicates @obj by serializing and deserializing a new object.
+ * Duplicates @obj by serializing and deserializing it with @ser. Named instances of @ser
+ * are reused, not copied. With #NCM_SERIALIZE_OPT_CLEAN_DUP an object shared inside
+ * @obj stays shared in the copy; the automatic names then remain in @ser, so call
+ * ncm_serialize_reset() before using @ser for another copy.
  *
- * Returns: (transfer full): A duplicate of @obj.
+ * Returns: (transfer full): the copy.
  */
 GObject *
 ncm_serialize_dup_obj (NcmSerialize *ser, GObject *obj)
@@ -3805,7 +3790,7 @@ ncm_serialize_dup_obj (NcmSerialize *ser, GObject *obj)
  * @ser: a #NcmSerialize
  * @oa: a #NcmObjArray
  *
- * Duplicates a #NcmObjArray, all objects are duplicated.
+ * Duplicates @oa as ncm_serialize_dup_obj() does for each element.
  *
  * Returns: (transfer full): a new #NcmObjArray.
  */
@@ -3826,9 +3811,9 @@ static NcmSerialize *_global_ser = NULL;
 /**
  * ncm_serialize_global:
  *
- * Gets the global serialization object, instantiates it if necessary.
+ * Returns the process-wide serializer, created without options on first use.
  *
- * Returns: (transfer full): The global #NcmSerialize.
+ * Returns: (transfer full): the global #NcmSerialize.
  */
 NcmSerialize *
 ncm_serialize_global (void)
@@ -3844,11 +3829,9 @@ ncm_serialize_global (void)
 
 /**
  * ncm_serialize_global_reset:
- * @autosave_only: a boolean
+ * @autosave_only: whether to remove only the objects named `S<n>`
  *
- * Releases all objects in global #NcmSerialize and erase
- * all serialized objects.
- *
+ * Same as ncm_serialize_reset() with the serializer of ncm_serialize_global().
  */
 void
 ncm_serialize_global_reset (gboolean autosave_only)
@@ -3861,10 +3844,9 @@ ncm_serialize_global_reset (gboolean autosave_only)
 
 /**
  * ncm_serialize_global_clear_instances:
- * @autosave_only: a boolean
+ * @autosave_only: whether to remove only the objects named `S<n>`
  *
- * Releases all objects in global #NcmSerialize.
- *
+ * Same as ncm_serialize_clear_instances() with the serializer of ncm_serialize_global().
  */
 void
 ncm_serialize_global_clear_instances (gboolean autosave_only)
@@ -3878,8 +3860,7 @@ ncm_serialize_global_clear_instances (gboolean autosave_only)
 /**
  * ncm_serialize_global_log_stats:
  *
- * Releases all objects in global #NcmSerialize.
- *
+ * Same as ncm_serialize_log_stats() with the serializer of ncm_serialize_global().
  */
 void
 ncm_serialize_global_log_stats (void)
@@ -3892,11 +3873,11 @@ ncm_serialize_global_log_stats (void)
 
 /**
  * ncm_serialize_global_contain_instance:
- * @obj: (type GObject): a GObject.
+ * @obj: (type GObject): a #GObject
  *
- * Global version of ncm_serialize_contain_instance().
+ * Same as ncm_serialize_contain_instance() with the serializer of ncm_serialize_global().
  *
- * Returns: if @obj is already in @ser.
+ * Returns: whether @obj is a named instance.
  */
 gboolean
 ncm_serialize_global_contain_instance (gpointer obj)
@@ -3911,11 +3892,11 @@ ncm_serialize_global_contain_instance (gpointer obj)
 
 /**
  * ncm_serialize_global_contain_name:
- * @name: an instance name.
+ * @name: an instance name
  *
- * Global version of ncm_serialize_contain_name().
+ * Same as ncm_serialize_contain_name() with the serializer of ncm_serialize_global().
  *
- * Returns: if there is instance named @name in @ser.
+ * Returns: whether there is an instance named @name.
  */
 gboolean
 ncm_serialize_global_contain_name (const gchar *name)
@@ -3931,9 +3912,9 @@ ncm_serialize_global_contain_name (const gchar *name)
 /**
  * ncm_serialize_global_count_instances:
  *
- * Global version of ncm_serialize_count_instances().
+ * Same as ncm_serialize_count_instances() with the serializer of ncm_serialize_global().
  *
- * Returns: the number of instances in @ser.
+ * Returns: the number of named instances.
  */
 guint
 ncm_serialize_global_count_instances (void)
@@ -3949,9 +3930,9 @@ ncm_serialize_global_count_instances (void)
 /**
  * ncm_serialize_global_count_saved_serializations:
  *
- * Global version of ncm_serialize_count_saved_serializations().
+ * Same as ncm_serialize_count_saved_serializations() with the serializer of ncm_serialize_global().
  *
- * Returns: the number of instances in @ser.
+ * Returns: the number of saved serializations.
  */
 guint
 ncm_serialize_global_count_saved_serializations (void)
@@ -3966,11 +3947,11 @@ ncm_serialize_global_count_saved_serializations (void)
 
 /**
  * ncm_serialize_global_get_by_name:
- * @name: an instance name.
+ * @name: an instance name
  *
- * Global version of ncm_serialize_get_by_name().
+ * Same as ncm_serialize_get_by_name() with the serializer of ncm_serialize_global().
  *
- * Returns: (transfer full) (type GObject): Gets the instance named @name or NULL.
+ * Returns: (transfer full) (type GObject) (nullable): the instance named @name, or %NULL.
  */
 gpointer
 ncm_serialize_global_get_by_name (const gchar *name)
@@ -3985,9 +3966,9 @@ ncm_serialize_global_get_by_name (const gchar *name)
 
 /**
  * ncm_serialize_global_peek_name:
- * @obj: (type GObject): a GObject.
+ * @obj: (type GObject): a #GObject
  *
- * Global version of ncm_serialize_peek_name().
+ * Same as ncm_serialize_peek_name() with the serializer of ncm_serialize_global().
  *
  * Returns: (transfer none): the name of @obj.
  */
@@ -4004,12 +3985,11 @@ ncm_serialize_global_peek_name (gpointer obj)
 
 /**
  * ncm_serialize_global_set:
- * @obj: (type GObject): a GObject.
- * @name: the @obj name.
- * @overwrite: whether to overwrite if there is already an object named @name.
+ * @obj: (type GObject): a #GObject
+ * @name: the name
+ * @overwrite: whether to replace an instance already named @name
  *
- * Global version of ncm_serialize_set().
- *
+ * Same as ncm_serialize_set() with the serializer of ncm_serialize_global().
  */
 void
 ncm_serialize_global_set (gpointer obj, const gchar *name, gboolean overwrite)
@@ -4022,10 +4002,9 @@ ncm_serialize_global_set (gpointer obj, const gchar *name, gboolean overwrite)
 
 /**
  * ncm_serialize_global_unset:
- * @obj: (type GObject): a GObject.
+ * @obj: (type GObject): a #GObject
  *
- * Global version of ncm_serialize_unset().
- *
+ * Same as ncm_serialize_unset() with the serializer of ncm_serialize_global().
  */
 void
 ncm_serialize_global_unset (gpointer obj)
@@ -4038,10 +4017,9 @@ ncm_serialize_global_unset (gpointer obj)
 
 /**
  * ncm_serialize_global_remove_ser:
- * @obj: (type GObject): a GObject.
+ * @obj: (type GObject): a #GObject
  *
- * Global version of ncm_serialize_remove_ser().
- *
+ * Same as ncm_serialize_remove_ser() with the serializer of ncm_serialize_global().
  */
 void
 ncm_serialize_global_remove_ser (gpointer obj)
@@ -4054,12 +4032,12 @@ ncm_serialize_global_remove_ser (gpointer obj)
 
 /**
  * ncm_serialize_global_is_named:
- * @serobj: serialized object.
- * @name: (out) (transfer full): object name.
+ * @serobj: a serialized object
+ * @name: (allow-none) (out) (transfer full): the name
  *
- * Global version of ncm_serialize_is_named().
+ * Same as ncm_serialize_is_named() with the serializer of ncm_serialize_global().
  *
- * Returns: whether @serobj is a named serialized object.
+ * Returns: whether @serobj is named.
  */
 gboolean
 ncm_serialize_global_is_named (const gchar *serobj, gchar **name)
@@ -4074,11 +4052,10 @@ ncm_serialize_global_is_named (const gchar *serobj, gchar **name)
 
 /**
  * ncm_serialize_global_set_property:
- * @obj: a GObject.
- * @prop_str: a string containing the parameters to set.
+ * @obj: a #GObject
+ * @prop_str: a GVariant text of type `a{sv}`
  *
- * Global version of ncm_serialize_set_property().
- *
+ * Same as ncm_serialize_set_property() with the serializer of ncm_serialize_global().
  */
 void
 ncm_serialize_global_set_property (GObject *obj, const gchar *prop_str)
@@ -4091,11 +4068,10 @@ ncm_serialize_global_set_property (GObject *obj, const gchar *prop_str)
 
 /**
  * ncm_serialize_global_set_property_from_key_file:
- * @obj: a GObject.
- * @prop_file: a #GKeyFile containing the parameters to set.
+ * @obj: a #GObject
+ * @prop_file: a key file name
  *
- * Global version of ncm_serialize_set_property().
- *
+ * Same as ncm_serialize_set_property_from_key_file() with the serializer of ncm_serialize_global().
  */
 void
 ncm_serialize_global_set_property_from_key_file (GObject *obj, const gchar *prop_file)
@@ -4108,11 +4084,11 @@ ncm_serialize_global_set_property_from_key_file (GObject *obj, const gchar *prop
 
 /**
  * ncm_serialize_global_from_variant:
- * @var_obj: A GVariant containing the serialized version of the object.
+ * @var_obj: a #GVariant of type #NCM_SERIALIZE_OBJECT_TYPE
  *
- * Global version of ncm_serialize_from_variant().
+ * Same as ncm_serialize_from_variant() with the serializer of ncm_serialize_global().
  *
- * Returns: (transfer full): a new GObject deserialized from @var_obj.
+ * Returns: (transfer full): the object.
  */
 GObject *
 ncm_serialize_global_from_variant (GVariant *var_obj)
@@ -4128,11 +4104,11 @@ ncm_serialize_global_from_variant (GVariant *var_obj)
 
 /**
  * ncm_serialize_global_from_string:
- * @obj_ser: String containing the serialized version of the object.
+ * @obj_ser: a serialized object
  *
- * Global version of ncm_serialize_from_string().
+ * Same as ncm_serialize_from_string() with the serializer of ncm_serialize_global().
  *
- * Returns: (transfer full): A new GObject.
+ * Returns: (transfer full): the object.
  */
 GObject *
 ncm_serialize_global_from_string (const gchar *obj_ser)
@@ -4147,11 +4123,11 @@ ncm_serialize_global_from_string (const gchar *obj_ser)
 
 /**
  * ncm_serialize_global_from_yaml:
- * @yaml_obj: a string containing the serialized version of the object in YAML format
+ * @yaml_obj: a YAML string
  *
- * Global version of ncm_serialize_from_yaml().
+ * Same as ncm_serialize_from_yaml() with the serializer of ncm_serialize_global().
  *
- * Returns: (transfer full): A new GObject.
+ * Returns: (transfer full): the object.
  */
 GObject *
 ncm_serialize_global_from_yaml (const gchar *yaml_obj)
@@ -4166,11 +4142,11 @@ ncm_serialize_global_from_yaml (const gchar *yaml_obj)
 
 /**
  * ncm_serialize_global_from_file:
- * @filename: File containing the serialized version of the object.
+ * @filename: a file name
  *
- * Global version of ncm_serialize_from_file().
+ * Same as ncm_serialize_from_file() with the serializer of ncm_serialize_global().
  *
- * Returns: (transfer full): A new GObject.
+ * Returns: (transfer full): the object.
  */
 GObject *
 ncm_serialize_global_from_file (const gchar *filename)
@@ -4185,11 +4161,11 @@ ncm_serialize_global_from_file (const gchar *filename)
 
 /**
  * ncm_serialize_global_from_binfile:
- * @filename: File containing the serialized version of the object.
+ * @filename: a file name
  *
- * Global version of ncm_serialize_from_binfile().
+ * Same as ncm_serialize_from_binfile() with the serializer of ncm_serialize_global().
  *
- * Returns: (transfer full): A new GObject.
+ * Returns: (transfer full): the object.
  */
 GObject *
 ncm_serialize_global_from_binfile (const gchar *filename)
@@ -4204,11 +4180,11 @@ ncm_serialize_global_from_binfile (const gchar *filename)
 
 /**
  * ncm_serialize_global_from_yaml_file:
- * @filename: File containing the serialized version of the object.
+ * @filename: a file name
  *
- * Global version of ncm_serialize_from_yaml_file().
+ * Same as ncm_serialize_from_yaml_file() with the serializer of ncm_serialize_global().
  *
- * Returns: (transfer full): A new GObject.
+ * Returns: (transfer full): the object.
  */
 GObject *
 ncm_serialize_global_from_yaml_file (const gchar *filename)
@@ -4223,12 +4199,12 @@ ncm_serialize_global_from_yaml_file (const gchar *filename)
 
 /**
  * ncm_serialize_global_from_name_params:
- * @obj_name: string containing the object name.
- * @params: a GVariant containing the object parameters.
+ * @obj_name: `TypeName` or `TypeName[name]`
+ * @params: (nullable): a #GVariant of type `a{sv}` with the properties
  *
- * Global version of ncm_serialize_from_name_params().
+ * Same as ncm_serialize_from_name_params() with the serializer of ncm_serialize_global().
  *
- * Returns: (transfer full): A new GObject.
+ * Returns: (transfer full): the object.
  */
 GObject *
 ncm_serialize_global_from_name_params (const gchar *obj_name, GVariant *params)
@@ -4243,11 +4219,11 @@ ncm_serialize_global_from_name_params (const gchar *obj_name, GVariant *params)
 
 /**
  * ncm_serialize_global_gvalue_to_gvariant:
- * @val: a GValue.
+ * @val: a #GValue
  *
- * Global version of ncm_serialize_gvalue_to_gvariant().
+ * Same as ncm_serialize_gvalue_to_gvariant() with the serializer of ncm_serialize_global().
  *
- * Returns: (transfer full): A GVariant conversion of @val.
+ * Returns: (transfer full) (nullable): the #GVariant, or %NULL for a %NULL object.
  */
 GVariant *
 ncm_serialize_global_gvalue_to_gvariant (GValue *val)
@@ -4262,11 +4238,11 @@ ncm_serialize_global_gvalue_to_gvariant (GValue *val)
 
 /**
  * ncm_serialize_global_to_variant:
- * @obj: a GObject.
+ * @obj: a #GObject
  *
- * Global version of ncm_serialize_to_variant().
+ * Same as ncm_serialize_to_variant() with the serializer of ncm_serialize_global().
  *
- * Returns: (transfer full): A GVariant dictionary describing the @obj.
+ * Returns: (transfer full): a #GVariant of type #NCM_SERIALIZE_OBJECT_TYPE.
  */
 GVariant *
 ncm_serialize_global_to_variant (GObject *obj)
@@ -4281,12 +4257,12 @@ ncm_serialize_global_to_variant (GObject *obj)
 
 /**
  * ncm_serialize_global_to_string:
- * @obj: a GObject.
- * @valid_variant: whether to use a valid GVariant representation.
+ * @obj: a #GObject
+ * @valid_variant: whether to write GVariant text
  *
- * Global version of ncm_serialize_to_string().
+ * Same as ncm_serialize_to_string() with the serializer of ncm_serialize_global().
  *
- * Returns: (transfer full): A string containing the serialized version of @obj.
+ * Returns: (transfer full): the serialized string.
  */
 gchar *
 ncm_serialize_global_to_string (GObject *obj, gboolean valid_variant)
@@ -4301,11 +4277,11 @@ ncm_serialize_global_to_string (GObject *obj, gboolean valid_variant)
 
 /**
  * ncm_serialize_global_to_yaml:
- * @obj: a GObject
+ * @obj: a #GObject
  *
- * Global version of ncm_serialize_to_yaml().
+ * Same as ncm_serialize_to_yaml() with the serializer of ncm_serialize_global().
  *
- * Returns: (transfer full): A string containing the serialized version of @obj.
+ * Returns: (transfer full): the YAML string.
  */
 gchar *
 ncm_serialize_global_to_yaml (GObject *obj)
@@ -4320,11 +4296,10 @@ ncm_serialize_global_to_yaml (GObject *obj)
 
 /**
  * ncm_serialize_global_to_file:
- * @obj: a GObject.
- * @filename: File where to save the serialized version of the object
+ * @obj: a #GObject
+ * @filename: a file name
  *
- * Global version of ncm_serialize_to_file().
- *
+ * Same as ncm_serialize_to_file() with the serializer of ncm_serialize_global().
  */
 void
 ncm_serialize_global_to_file (GObject *obj, const gchar *filename)
@@ -4337,11 +4312,10 @@ ncm_serialize_global_to_file (GObject *obj, const gchar *filename)
 
 /**
  * ncm_serialize_global_to_binfile:
- * @obj: a GObject.
- * @filename: File where to save the serialized version of the object
+ * @obj: a #GObject
+ * @filename: a file name
  *
- * Global version of ncm_serialize_to_binfile().
- *
+ * Same as ncm_serialize_to_binfile() with the serializer of ncm_serialize_global().
  */
 void
 ncm_serialize_global_to_binfile (GObject *obj, const gchar *filename)
@@ -4354,11 +4328,10 @@ ncm_serialize_global_to_binfile (GObject *obj, const gchar *filename)
 
 /**
  * ncm_serialize_global_to_yaml_file:
- * @obj: a GObject.
- * @filename: File where to save the serialized version of the object
+ * @obj: a #GObject
+ * @filename: a file name
  *
- * Global version of ncm_serialize_to_yaml_file().
- *
+ * Same as ncm_serialize_to_yaml_file() with the serializer of ncm_serialize_global().
  */
 void
 ncm_serialize_global_to_yaml_file (GObject *obj, const gchar *filename)
@@ -4371,11 +4344,11 @@ ncm_serialize_global_to_yaml_file (GObject *obj, const gchar *filename)
 
 /**
  * ncm_serialize_global_dup_obj:
- * @obj: a GObject.
+ * @obj: a #GObject
  *
- * Global version of ncm_serialize_dup_obj().
+ * Same as ncm_serialize_dup_obj() with the serializer of ncm_serialize_global().
  *
- * Returns: (transfer full): A duplicate of @obj.
+ * Returns: (transfer full): the copy.
  */
 GObject *
 ncm_serialize_global_dup_obj (GObject *obj)
@@ -4392,12 +4365,11 @@ ncm_serialize_global_dup_obj (GObject *obj)
 
 /**
  * ncm_serialize_global_variant_to_yaml:
- * @var_obj: a GObject serialized to a GVariant
+ * @var_obj: a #GVariant of type #NCM_SERIALIZE_OBJECT_TYPE
  *
- * Global version of ncm_serialize_variant_to_yaml().
- * Converts a GObject serialized to a GVariant to a YAML string.
+ * Same as ncm_serialize_variant_to_yaml() with the serializer of ncm_serialize_global().
  *
- * Returns: A pointer to the YAML string representation of the @var_obj.
+ * Returns: (transfer full): the YAML string.
  */
 gchar *
 ncm_serialize_global_variant_to_yaml (GVariant *var_obj)

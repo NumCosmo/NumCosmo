@@ -26,53 +26,23 @@
 /**
  * NcmIntegralND:
  *
- * N-dimensional integration object.
+ * Abstract class for integrals of vector-valued functions over hyperrectangles.
  *
- * This object is used to perform n-dimensional integration of a function using
- * different methods.
+ * Computes $\int F(\vec{x})\,\mathrm{d}^n x$ for $F: \mathbb{R}^n \to \mathbb{R}^m$ over the
+ * box between two corners, with the adaptive cubature library of S. G. Johnson
+ * (https://github.com/stevengj/cubature). A subclass implements the integrand, a
+ * #NcmIntegralNDF, and the dimensions $(n, m)$, a #NcmIntegralNDGetDimensions; the macros
+ * %NCM_INTEGRAL_ND_DEFINE_TYPE and %NCM_INTEGRAL_ND_DEFINE_TYPE_WITH_FREE define such a
+ * subclass with a user-data field.
  *
- * The integration can be performed using the cubature library. The cubature
- * library is a library for adaptive multidimensional integration. The original
- * code can be found at https://github.com/stevengj/cubature.
- *
- * To use this object, the user must initialize a child object that implements
- * two functions: get_dimensions and integrand. To do so, the user must
- * first define these two functions as the prototypes described
- * in ncm_integral_nd.h. The get dimensions function should return the
- * dimension of the arguments to be integrated and the function dimension.
- * For instance, if the integrand is given by $F(x,y) = x + y$, the get
- * dimensions function must return $(2,1)$, such that it will compute
- * \begin{align}
- * \int \int F(x, y) dxdy
- * ,\end{align}
- * returning a scalar for the integral evaluated in the given intervals.
- *
- * This object can also be used with multi-dimensional functions that return
- * an array instead of a scalar. Considering the integrand
- * $F(x,y,z) = [x^2, y+z ]$, the get dimensions method should return $(3,2)$
- * and the object will compute the integral
- * \begin{align}
- * \int \int \int F(x,y,z) dxdy = [\frac{yzx^3}{3}, frac{x(y^2+z^2)}{2}]
- * \end{align}
- * for the given intervals.
- *
- * Having the functions, the user must instantiate an object of the type
- * #NcmIntegralNDClass defined with these functions. To do so, one must call the macro
- * #NCM_INTEGRAL_ND_DEFINE_TYPE to define the new object type, which
- * will later be instantiable. Examples of how to define the objects
- * containing the integrand can be found in the test folder under
- * test\textunderscore ncm\textunderscore integral\textunderscore nd.c.
- * For an example of the Python implementation of the integrand in a class,
- * check test\textunderscore py\textunderscore integralnd.py in the same folder.
- * This object cannot be used without the child object containing the cited functions.
- *
- * After defining the child class with the necessary functions,
- * the user may use the integration object with the preferred method
- * from the cubature library.
- *
- * The user may provide the input values for: @rel_tol - ncm_integral_nd_set_reltol(), @abs_tol - ncm_integral_nd_set_abstol(),
- * @integ_method - ncm_integral_nd_set_method(), @max_eval - ncm_integral_nd_set_maxeval(), @error - ncm_integral_nd_set_error().
- * If these functions are not called, default parameters are chosen.
+ * #NcmIntegralND:method selects the h-adaptive or the p-adaptive algorithm, each with a
+ * scalar or a vectorized integrand, and #NcmIntegralND:error how the error of a
+ * vector-valued integral is measured. The integration stops when the error meets
+ * #NcmIntegralND:reltol or #NcmIntegralND:abstol; reaching #NcmIntegralND:maxeval
+ * evaluations before that aborts. When the p-adaptive algorithm fails it is retried with the h-adaptive one,
+ * with at most %NCM_INTEGRAL_ND_RETRY_MAXEVAL evaluations when #NcmIntegralND:maxeval is
+ * zero; a failure of that retry, or of the h-adaptive algorithm, aborts. The buffers
+ * passed to the integrand belong to the object, so evaluation is not reentrant.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -128,7 +98,7 @@ ncm_integral_nd_init (NcmIntegralND *intnd)
   self->reltol  = 0.0;
   self->abstol  = 0.0;
 
-  /* These are dummy vectors to be used in the integrand function */
+  /* Views over the cubature buffers, repointed at each integrand call */
   self->x_vec    = ncm_vector_new_data_static ((gdouble *) 1, 1, 1);
   self->fval_vec = ncm_vector_new_data_static ((gdouble *) 1, 1, 1);
 }
@@ -218,6 +188,11 @@ ncm_integral_nd_class_init (NcmIntegralNDClass *klass)
   object_class->get_property = &ncm_integral_nd_get_property;
   object_class->finalize     = &ncm_integral_nd_finalize;
 
+  /**
+   * NcmIntegralND:method:
+   *
+   * The cubature algorithm, see #NcmIntegralNDMethod.
+   */
   g_object_class_install_property (object_class,
                                    PROP_METHOD,
                                    g_param_spec_enum ("method",
@@ -227,6 +202,11 @@ ncm_integral_nd_class_init (NcmIntegralNDClass *klass)
                                                       NCM_INTEGRAL_ND_METHOD_CUBATURE_H,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmIntegralND:error:
+   *
+   * How the error of a vector-valued integral is measured, see #NcmIntegralNDError.
+   */
   g_object_class_install_property (object_class,
                                    PROP_ERROR,
                                    g_param_spec_enum ("error",
@@ -236,6 +216,11 @@ ncm_integral_nd_class_init (NcmIntegralNDClass *klass)
                                                       NCM_INTEGRAL_ND_ERROR_INDIVIDUAL,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmIntegralND:maxeval:
+   *
+   * The maximum number of integrand evaluations, or zero for no limit.
+   */
   g_object_class_install_property (object_class,
                                    PROP_MAXEVAL,
                                    g_param_spec_uint ("maxeval",
@@ -244,6 +229,11 @@ ncm_integral_nd_class_init (NcmIntegralNDClass *klass)
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmIntegralND:reltol:
+   *
+   * The relative tolerance.
+   */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
                                    g_param_spec_double ("reltol",
@@ -251,6 +241,12 @@ ncm_integral_nd_class_init (NcmIntegralNDClass *klass)
                                                         "Integral relative tolerance",
                                                         0.0, 1.0, NCM_INTEGRAL_ND_DEFAULT_RELTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmIntegralND:abstol:
+   *
+   * The absolute tolerance.
+   */
   g_object_class_install_property (object_class,
                                    PROP_ABSTOL,
                                    g_param_spec_double ("abstol",
@@ -298,7 +294,6 @@ ncm_integral_nd_ref (NcmIntegralND *intnd)
  * @intnd: a #NcmIntegralND
  *
  * Decreases the reference count of @intnd by one.
- *
  */
 void
 ncm_integral_nd_free (NcmIntegralND *intnd)
@@ -310,9 +305,7 @@ ncm_integral_nd_free (NcmIntegralND *intnd)
  * ncm_integral_nd_clear:
  * @intnd: a #NcmIntegralND
  *
- * If *@intnd is different from NULL, decreases the reference
- * count of *@intnd by one and sets *@intnd to NULL.
- *
+ * If *@intnd is not %NULL, decreases its reference count by one and sets *@intnd to %NULL.
  */
 void
 ncm_integral_nd_clear (NcmIntegralND **intnd)
@@ -325,8 +318,7 @@ ncm_integral_nd_clear (NcmIntegralND **intnd)
  * @intnd: a #NcmIntegralND
  * @method: a #NcmIntegralNDMethod
  *
- * Sets the integration method to use.
- *
+ * Sets #NcmIntegralND:method.
  */
 void
 ncm_integral_nd_set_method (NcmIntegralND *intnd, NcmIntegralNDMethod method)
@@ -341,8 +333,7 @@ ncm_integral_nd_set_method (NcmIntegralND *intnd, NcmIntegralNDMethod method)
  * @intnd: a #NcmIntegralND
  * @error: a #NcmIntegralNDError
  *
- * Sets the error measure to use.
- *
+ * Sets #NcmIntegralND:error.
  */
 void
 ncm_integral_nd_set_error (NcmIntegralND *intnd, NcmIntegralNDError error)
@@ -355,10 +346,9 @@ ncm_integral_nd_set_error (NcmIntegralND *intnd, NcmIntegralNDError error)
 /**
  * ncm_integral_nd_set_maxeval:
  * @intnd: a #NcmIntegralND
- * @maxeval: maximum number of function evaluations
+ * @maxeval: the maximum number of integrand evaluations
  *
- * Sets the maximum number of function evaluations to use.
- * Zero means unlimited.
+ * Sets #NcmIntegralND:maxeval.
  */
 void
 ncm_integral_nd_set_maxeval (NcmIntegralND *intnd, guint maxeval)
@@ -371,10 +361,9 @@ ncm_integral_nd_set_maxeval (NcmIntegralND *intnd, guint maxeval)
 /**
  * ncm_integral_nd_set_reltol:
  * @intnd: a #NcmIntegralND
- * @reltol: relative tolerance
+ * @reltol: the relative tolerance
  *
- * Sets the relative tolerance @reltol to use.
- *
+ * Sets #NcmIntegralND:reltol.
  */
 void
 ncm_integral_nd_set_reltol (NcmIntegralND *intnd, gdouble reltol)
@@ -387,10 +376,9 @@ ncm_integral_nd_set_reltol (NcmIntegralND *intnd, gdouble reltol)
 /**
  * ncm_integral_nd_set_abstol:
  * @intnd: a #NcmIntegralND
- * @abstol: absolute tolerance
+ * @abstol: the absolute tolerance
  *
- * Sets the absolute tolerance @reltol to use.
- *
+ * Sets #NcmIntegralND:abstol.
  */
 void
 ncm_integral_nd_set_abstol (NcmIntegralND *intnd, gdouble abstol)
@@ -404,7 +392,9 @@ ncm_integral_nd_set_abstol (NcmIntegralND *intnd, gdouble abstol)
  * ncm_integral_nd_get_method:
  * @intnd: a #NcmIntegralND
  *
- * Returns: the integration method used.
+ * Gets #NcmIntegralND:method.
+ *
+ * Returns: the cubature algorithm.
  */
 NcmIntegralNDMethod
 ncm_integral_nd_get_method (NcmIntegralND *intnd)
@@ -418,7 +408,9 @@ ncm_integral_nd_get_method (NcmIntegralND *intnd)
  * ncm_integral_nd_get_error:
  * @intnd: a #NcmIntegralND
  *
- * Returns: the error measure used.
+ * Gets #NcmIntegralND:error.
+ *
+ * Returns: the error measure.
  */
 NcmIntegralNDError
 ncm_integral_nd_get_error (NcmIntegralND *intnd)
@@ -432,7 +424,9 @@ ncm_integral_nd_get_error (NcmIntegralND *intnd)
  * ncm_integral_nd_get_maxeval:
  * @intnd: a #NcmIntegralND
  *
- * Returns: the maximum number of function evaluations used.
+ * Gets #NcmIntegralND:maxeval.
+ *
+ * Returns: the maximum number of integrand evaluations.
  */
 guint
 ncm_integral_nd_get_maxeval (NcmIntegralND *intnd)
@@ -446,7 +440,9 @@ ncm_integral_nd_get_maxeval (NcmIntegralND *intnd)
  * ncm_integral_nd_get_reltol:
  * @intnd: a #NcmIntegralND
  *
- * Returns: the relative tolerance used.
+ * Gets #NcmIntegralND:reltol.
+ *
+ * Returns: the relative tolerance.
  */
 gdouble
 ncm_integral_nd_get_reltol (NcmIntegralND *intnd)
@@ -460,7 +456,9 @@ ncm_integral_nd_get_reltol (NcmIntegralND *intnd)
  * ncm_integral_nd_get_abstol:
  * @intnd: a #NcmIntegralND
  *
- * Returns: the absolute tolerance used.
+ * Gets #NcmIntegralND:abstol.
+ *
+ * Returns: the absolute tolerance.
  */
 gdouble
 ncm_integral_nd_get_abstol (NcmIntegralND *intnd)
@@ -520,13 +518,19 @@ _ncm_integral_nd_method_name (NcmIntegralNDMethod method)
   }
 }
 
-/*
- * Evaluation budget for the h-adaptive retry when the caller asked for an
- * unlimited one. Large enough that a merely awkward integrand still converges,
- * small enough that a hopeless one fails in seconds instead of exhausting
- * memory.
- */
+/* Evaluations of the h-adaptive retry when maxeval is zero: unlimited, h-adaptive
+ * subdivision never reports failure and grows until memory is exhausted. */
 #define NCM_INTEGRAL_ND_RETRY_MAXEVAL (10000000)
+
+/* The convergence test of cubature, applied to the final result: cubature returns
+ * success also when it stops at maxeval without converging */
+static gboolean
+_ncm_integral_nd_converged (unsigned fdim, const double *val_v, const double *err_v, double reqAbsError, double reqRelError, error_norm norm)
+#define ERR(j) err_v[j]
+#define VAL(j) val_v[j]
+#include "external/misc/converged.h"
+#undef ERR
+#undef VAL
 
 static gboolean
 _ncm_integral_nd_method_is_p (NcmIntegralNDMethod method)
@@ -543,11 +547,7 @@ _ncm_integral_nd_method_h_of_p (NcmIntegralNDMethod method)
          NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V;
 }
 
-/*
- * Runs one cubature method. Split out of ncm_integral_nd_eval so the same
- * integral can be attempted with a second method without duplicating the
- * dispatch.
- */
+/* Runs one cubature method */
 static gint
 _ncm_integral_nd_run (NcmIntegralND *intnd, NcmIntegralNDMethod method, guint maxeval, guint dim, guint fdim, gint error, const NcmVector *xi, const NcmVector *xf, NcmVector *res, NcmVector *err)
 {
@@ -631,13 +631,13 @@ _ncm_integral_nd_run (NcmIntegralND *intnd, NcmIntegralNDMethod method, guint ma
 /**
  * ncm_integral_nd_eval:
  * @intnd: a #NcmIntegralND
- * @xi: a #NcmVector containing the inferior integration limit $x_i$
- * @xf: a #NcmVector containing the superior integration limit $x_f$
- * @res: a #NcmVector containing the result of the integration
- * @err: a #NcmVector containing the error of the integration
+ * @xi: the lower corner, of length $n$
+ * @xf: the upper corner, of length $n$
+ * @res: the output integral, of length $m$
+ * @err: the output error estimate, of length $m$
  *
- * Evaluated the integral $I_F(x_i, x_f) = \int_{x_i}^{x_f}F(x)\mathrm{d}x$.
- *
+ * Computes $\int_{\vec{x}_i}^{\vec{x}_f} F(\vec{x})\,\mathrm{d}^n x$ into @res, see
+ * #NcmIntegralND.
  */
 void
 ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector *xf, NcmVector *res, NcmVector *err)
@@ -681,20 +681,9 @@ ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector
 
   ret = _ncm_integral_nd_run (intnd, self->method, self->maxeval, dim, fdim, error, xi, xf, res, err);
 
-  /*
-   * A p-adaptive failure means the integrand could not carry the requested
-   * tolerance, not that the integral is ill-posed: the method runs out of
-   * Clenshaw-Curtis levels while refining a global rule. h-adaptive
-   * subdivision converges on exactly that kind of integrand, so retry there
-   * instead of aborting, which would otherwise kill a running chain over an
-   * integrand that is merely awkward on part of its domain.
-   *
-   * The retry must be given a finite budget. h-adaptive subdivision never
-   * reports "cannot converge": with maxeval unlimited it keeps bisecting and
-   * growing its region heap until the process dies, turning a clean abort into
-   * an out-of-memory crash. Bounding it lets the retry fail cleanly and reach
-   * the diagnostic below.
-   */
+  /* A p-adaptive failure (Clenshaw-Curtis levels exhausted) is retried h-adaptively,
+   * which converges on integrands smooth only in parts of the domain, with a finite
+   * budget, see NCM_INTEGRAL_ND_RETRY_MAXEVAL. */
   if ((ret != 0) && _ncm_integral_nd_method_is_p (self->method))
   {
     const NcmIntegralNDMethod fallback = _ncm_integral_nd_method_h_of_p (self->method);
@@ -707,6 +696,13 @@ ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector
 
     ret = _ncm_integral_nd_run (intnd, fallback, retry_maxeval, dim, fdim, error, xi, xf, res, err);
   }
+
+  if ((ret == 0) && !_ncm_integral_nd_converged (fdim, ncm_vector_data (res), ncm_vector_data (err),
+                                                 self->abstol, self->reltol, (fdim <= 1) ? ERROR_INDIVIDUAL : error))
+    g_error ("ncm_integral_nd_eval: %s on %s stopped at maxeval %u without reaching reltol %.17g "
+             "or abstol %.17g.",
+             _ncm_integral_nd_method_name (self->method), G_OBJECT_TYPE_NAME (intnd),
+             self->maxeval, self->reltol, self->abstol);
 
   if (ret != 0)
   {

@@ -22,13 +22,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Independent tests for NcmLaurentSeries, deliberately with no reference to
- * the weak-lensing problem this was extracted from -- pure complex
- * Laurent-polynomial arithmetic and the Jacobi-Anger reduction to scaled
- * Bessel functions, cross-checked here against direct numerical
- * theta-integration (trustworthy for correctness) and against hand-computed
- * small cases. Also exercises the introspectable (NcmComplex-based) API
- * directly, confirming it agrees with the native (`_c`-suffixed) one. */
+/* Tests of NcmLaurentSeries and NcmLaurentSeriesTPS against hand-computed cases,
+ * direct summation and direct theta integration. */
 
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
@@ -698,6 +693,245 @@ test_tps_pow_matches_sympy_reference (void)
   ncm_laurent_series_tps_unref (out);
 }
 
+/* Fills tps with a series whose coefficients have several powers of w, L_0 constant. */
+static void
+_fill_tps_laurent (NcmLaurentSeriesTPS *tps, complex double a0)
+{
+  const guint order = ncm_laurent_series_tps_order (tps);
+  guint n;
+
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (tps, 0), 0, a0);
+
+  for (n = 1; n <= order; n++)
+  {
+    NcmLaurentSeries *L = ncm_laurent_series_tps_get (tps, n);
+
+    ncm_laurent_series_reset (L, -(gint) n, (gint) n);
+    ncm_laurent_series_set (L, -(gint) n, 0.3 / n - 0.2 * I);
+    ncm_laurent_series_set (L, 0, 0.5 + 0.1 * n * I);
+    ncm_laurent_series_set (L, (gint) n, -0.4 + 0.7 * I / n);
+  }
+}
+
+static gdouble
+_tps_max_diff (const NcmLaurentSeriesTPS *a, const NcmLaurentSeriesTPS *b)
+{
+  const guint order = ncm_laurent_series_tps_order (a);
+  gdouble d         = 0.0;
+  guint n;
+
+  for (n = 0; n <= order; n++)
+  {
+    const NcmLaurentSeries *La = ncm_laurent_series_tps_get (a, n);
+    const NcmLaurentSeries *Lb = ncm_laurent_series_tps_get (b, n);
+    const gint hmin            = MIN (ncm_laurent_series_get_hmin (La), ncm_laurent_series_get_hmin (Lb));
+    const gint hmax            = MAX (ncm_laurent_series_get_hmax (La), ncm_laurent_series_get_hmax (Lb));
+    gint h;
+
+    for (h = hmin; h <= hmax; h++)
+      d = MAX (d, cabs (ncm_laurent_series_get (La, h) - ncm_laurent_series_get (Lb, h)));
+  }
+
+  return d;
+}
+
+static void
+test_conj_off_unit_circle (void)
+{
+  NcmLaurentSeries *a = ncm_laurent_series_new (-2, 1);
+  NcmLaurentSeries *ab;
+  const complex double w = 2.0 - I;
+
+  ncm_laurent_series_set (a, -2, 0.5 - I);
+  ncm_laurent_series_set (a, -1, 3.0 * I);
+  ncm_laurent_series_set (a, 0, 1.0 + 2.0 * I);
+  ncm_laurent_series_set (a, 1, -0.5);
+
+  ab = ncm_laurent_series_conj (a);
+
+  g_assert_cmpfloat (cabs (ncm_laurent_series_eval (ab, w) - conj (ncm_laurent_series_eval (a, 1.0 / conj (w)))), <, 1.0e-13);
+  g_assert_cmpfloat (cabs (ncm_laurent_series_eval (ab, w) - conj (ncm_laurent_series_eval (a, w))), >, 1.0);
+
+  ncm_laurent_series_free (a);
+  ncm_laurent_series_free (ab);
+}
+
+static void
+test_add_disjoint_ranges (void)
+{
+  NcmLaurentSeries *a = ncm_laurent_series_new (-3, -2);
+  NcmLaurentSeries *b = ncm_laurent_series_new (2, 3);
+  NcmLaurentSeries *s;
+  gint h;
+
+  ncm_laurent_series_set (a, -3, 1.0 + I);
+  ncm_laurent_series_set (a, -2, 2.0);
+  ncm_laurent_series_set (b, 2, -I);
+  ncm_laurent_series_set (b, 3, 4.0);
+
+  s = ncm_laurent_series_add (a, b, -2.0);
+
+  g_assert_cmpint (ncm_laurent_series_get_hmin (s), ==, -3);
+  g_assert_cmpint (ncm_laurent_series_get_hmax (s), ==, 3);
+
+  for (h = -4; h <= 4; h++)
+  {
+    const complex double expected = ncm_laurent_series_get (a, h) - 2.0 * ncm_laurent_series_get (b, h);
+
+    g_assert_cmpfloat (cabs (ncm_laurent_series_get (s, h) - expected), ==, 0.0);
+  }
+
+  g_assert_cmpfloat (cabs (ncm_laurent_series_get (a, 0)), ==, 0.0);
+  g_assert_cmpfloat (cabs (ncm_laurent_series_get (b, -10)), ==, 0.0);
+
+  ncm_laurent_series_free (a);
+  ncm_laurent_series_free (b);
+  ncm_laurent_series_free (s);
+}
+
+/* p = 2 against a*a, p = -1 against 1/a, and (a^(1/2))^2 against a, with Laurent coefficients and a complex a0. */
+static void
+test_tps_pow_laurent_coefficients (void)
+{
+  const guint order           = 4;
+  const complex double a0s[3] = {2.0, -1.5 + 0.5 * I, 0.3 - 0.8 * I};
+  NcmLaurentSeriesTPS *a      = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeriesTPS *pw     = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeriesTPS *ref    = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeriesTPS *one    = ncm_laurent_series_tps_new (order);
+  guint i, n;
+
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (one, 0), 0, 1.0);
+
+  for (n = 1; n <= order; n++)
+    ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (one, n), 0, 0.0);
+
+  for (i = 0; i < 3; i++)
+  {
+    _fill_tps_laurent (a, a0s[i]);
+
+    ncm_laurent_series_tps_pow (pw, a, 2.0);
+    ncm_laurent_series_tps_conv (ref, a, a);
+    g_assert_cmpfloat (_tps_max_diff (pw, ref), <, 1.0e-14);
+
+    ncm_laurent_series_tps_pow (pw, a, -1.0);
+    ncm_laurent_series_tps_conv (ref, pw, a);
+    g_assert_cmpfloat (_tps_max_diff (ref, one), <, 1.0e-14);
+
+    ncm_laurent_series_tps_pow (pw, a, 0.5);
+    ncm_laurent_series_tps_conv (ref, pw, pw);
+    g_assert_cmpfloat (_tps_max_diff (ref, a), <, 1.0e-14);
+    g_assert_cmpfloat (creal (ncm_laurent_series_get (ncm_laurent_series_tps_get (pw, 0), 0)), >, 0.0);
+  }
+
+  ncm_laurent_series_tps_unref (a);
+  ncm_laurent_series_tps_unref (pw);
+  ncm_laurent_series_tps_unref (ref);
+  ncm_laurent_series_tps_unref (one);
+}
+
+/* Accumulating several series and evaluating once is the sum of their reductions */
+static void
+test_jacobi_anger_accumulate_eval (void)
+{
+  const gdouble Ik[4]   = {0.9, 0.4, 0.15, 0.03};
+  const gdouble phis[3] = {0.0, 0.7, -2.1};
+  NcmLaurentSeries *a   = ncm_laurent_series_new (-3, 3);
+  NcmLaurentSeries *b   = ncm_laurent_series_new (0, 2);
+  NcmComplex H[4]       = {0.0, 0.0, 0.0, 0.0};
+  guint i;
+
+  ncm_laurent_series_set (a, 0, 1.5);
+  ncm_laurent_series_set (a, 1, 0.3 - 0.2 * I);
+  ncm_laurent_series_set (a, 3, -0.1 + 0.4 * I);
+  ncm_laurent_series_set (b, 0, -0.7);
+  ncm_laurent_series_set (b, 2, 0.25 * I);
+
+  ncm_laurent_series_jacobi_anger_accumulate (a, Ik, 4, 2.0, H);
+  ncm_laurent_series_jacobi_anger_accumulate (b, Ik, 4, -0.5, H);
+
+  for (i = 0; i < 3; i++)
+  {
+    const gdouble expected = 2.0 * ncm_laurent_series_jacobi_anger_reduce (a, phis[i], Ik, 4) -
+                             0.5 * ncm_laurent_series_jacobi_anger_reduce (b, phis[i], Ik, 4);
+
+    g_assert_cmpfloat (fabs (ncm_laurent_series_jacobi_anger_eval (H, 4, phis[i]) - expected), <, 1.0e-14);
+  }
+
+  ncm_laurent_series_free (a);
+  ncm_laurent_series_free (b);
+}
+
+static void
+test_invalid_arguments_abort (void)
+{
+  const gchar *cases[] = {"new_hmax_below_hmin", "reset_hmax_below_hmin", "jacobi_anger_no_Ik", "tps_pow_l0_not_constant", "tps_pow_a0_zero"};
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (cases); i++)
+  {
+    gchar *path = g_strdup_printf ("/ncm/laurent_series/invalid/%s/subprocess", cases[i]);
+
+    g_test_trap_subprocess (path, 0, 0);
+    g_test_trap_assert_failed ();
+    g_free (path);
+  }
+}
+
+static void
+test_invalid_new_hmax_below_hmin_subprocess (void)
+{
+  ncm_laurent_series_free (ncm_laurent_series_new (2, 1));
+}
+
+static void
+test_invalid_reset_hmax_below_hmin_subprocess (void)
+{
+  NcmLaurentSeries *a = ncm_laurent_series_new (0, 3);
+
+  ncm_laurent_series_reset (a, 1, 0);
+  ncm_laurent_series_free (a);
+}
+
+static void
+test_invalid_jacobi_anger_no_Ik_subprocess (void)
+{
+  NcmLaurentSeries *cm = ncm_laurent_series_new_single (0, 1.0);
+  const gdouble Ik[1]  = {1.0};
+
+  ncm_laurent_series_jacobi_anger_reduce (cm, 0.0, Ik, 0);
+  ncm_laurent_series_free (cm);
+}
+
+static void
+test_invalid_tps_pow_l0_not_constant_subprocess (void)
+{
+  NcmLaurentSeriesTPS *a   = ncm_laurent_series_tps_new (1);
+  NcmLaurentSeriesTPS *out = ncm_laurent_series_tps_new (1);
+  NcmLaurentSeries *L0     = ncm_laurent_series_tps_get (a, 0);
+
+  ncm_laurent_series_reset (L0, 0, 1);
+  ncm_laurent_series_set (L0, 0, 1.0);
+  ncm_laurent_series_set (L0, 1, 0.5);
+  ncm_laurent_series_tps_pow (out, a, 0.5);
+
+  ncm_laurent_series_tps_unref (a);
+  ncm_laurent_series_tps_unref (out);
+}
+
+static void
+test_invalid_tps_pow_a0_zero_subprocess (void)
+{
+  NcmLaurentSeriesTPS *a   = ncm_laurent_series_tps_new (1);
+  NcmLaurentSeriesTPS *out = ncm_laurent_series_tps_new (1);
+
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (a, 0), 0, 0.0);
+  ncm_laurent_series_tps_pow (out, a, 0.5);
+
+  ncm_laurent_series_tps_unref (a);
+  ncm_laurent_series_tps_unref (out);
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -710,6 +944,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/laurent_series/conj_hand_computed", &test_conj_hand_computed);
   g_test_add_func ("/ncm/laurent_series/eval_hand_computed", &test_eval_hand_computed);
   g_test_add_func ("/ncm/laurent_series/jacobi_anger_matches_direct_integration", &test_jacobi_anger_matches_direct_integration);
+  g_test_add_func ("/ncm/laurent_series/jacobi_anger_accumulate_eval", &test_jacobi_anger_accumulate_eval);
   g_test_add_func ("/ncm/laurent_series/chi_taylor_matches_python_reference", &test_chi_taylor_matches_python_reference);
   g_test_add_func ("/ncm/laurent_series/introspectable_api_matches_native", &test_introspectable_api_matches_native);
   g_test_add_func ("/ncm/laurent_series/copy_is_independent", &test_copy_is_independent);
@@ -721,6 +956,16 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/laurent_series/tps_conj_add_scale_match_scalar_ops", &test_tps_conj_add_scale_match_scalar_ops);
   g_test_add_func ("/ncm/laurent_series/tps_eval_hand_computed", &test_tps_eval_hand_computed);
   g_test_add_func ("/ncm/laurent_series/tps_pow_matches_sympy_reference", &test_tps_pow_matches_sympy_reference);
+  g_test_add_func ("/ncm/laurent_series/conj_off_unit_circle", &test_conj_off_unit_circle);
+  g_test_add_func ("/ncm/laurent_series/add_disjoint_ranges", &test_add_disjoint_ranges);
+  g_test_add_func ("/ncm/laurent_series/tps_pow_laurent_coefficients", &test_tps_pow_laurent_coefficients);
+  g_test_add_func ("/ncm/laurent_series/invalid/arguments_abort", &test_invalid_arguments_abort);
+  g_test_add_func ("/ncm/laurent_series/invalid/new_hmax_below_hmin/subprocess", &test_invalid_new_hmax_below_hmin_subprocess);
+  g_test_add_func ("/ncm/laurent_series/invalid/reset_hmax_below_hmin/subprocess", &test_invalid_reset_hmax_below_hmin_subprocess);
+  g_test_add_func ("/ncm/laurent_series/invalid/jacobi_anger_no_Ik/subprocess", &test_invalid_jacobi_anger_no_Ik_subprocess);
+  g_test_add_func ("/ncm/laurent_series/invalid/tps_pow_l0_not_constant/subprocess", &test_invalid_tps_pow_l0_not_constant_subprocess);
+  g_test_add_func ("/ncm/laurent_series/invalid/tps_pow_a0_zero/subprocess", &test_invalid_tps_pow_a0_zero_subprocess);
 
   return g_test_run ();
 }
+

@@ -53,6 +53,7 @@ void test_ncm_trivec_get_spherical_coord (void);
 
 void test_ncm_trivec_set_astro_coord (void);
 void test_ncm_trivec_get_astro_coord (void);
+void test_ncm_trivec_coord_near_poles (void);
 
 void test_ncm_trivec_set_astro_ra_dec (void);
 void test_ncm_trivec_get_astro_ra_dec (void);
@@ -65,6 +66,9 @@ void test_ncm_quaternion_dup (void);
 void test_ncm_quaternion_memcpy (void);
 void test_ncm_quaternion_set_from_data (void);
 void test_ncm_quaternion_set_random (void);
+void test_ncm_quaternion_set_random_uniform (void);
+void test_ncm_quaternion_set_from_data_zero_axis (void);
+void test_ncm_quaternion_set_from_data_zero_axis_subprocess (void);
 void test_ncm_quaternion_set_I (void);
 void test_ncm_quaternion_set_0 (void);
 
@@ -87,6 +91,8 @@ void test_ncm_quaternion_rotate_inverse (void);
 
 void test_ncm_quaternion_set_to_rotate_to_x (void);
 void test_ncm_quaternion_set_to_rotate_to_z (void);
+void test_ncm_quaternion_set_to_rotate_edge_cases (void);
+void test_ncm_quaternion_set_to_rotate_convention (void);
 
 int
 main (int argc, char *argv[])
@@ -118,6 +124,7 @@ main (int argc, char *argv[])
 
   g_test_add_func ("/ncm/trivec/set_astro_coord", test_ncm_trivec_set_astro_coord);
   g_test_add_func ("/ncm/trivec/get_astro_coord", test_ncm_trivec_get_astro_coord);
+  g_test_add_func ("/ncm/trivec/coord_near_poles", test_ncm_trivec_coord_near_poles);
 
   g_test_add_func ("/ncm/trivec/set_astro_ra_dec", test_ncm_trivec_set_astro_ra_dec);
   g_test_add_func ("/ncm/trivec/get_astro_ra_dec", test_ncm_trivec_get_astro_ra_dec);
@@ -130,6 +137,9 @@ main (int argc, char *argv[])
   g_test_add_func ("/ncm/quaternion/memcpy", test_ncm_quaternion_memcpy);
   g_test_add_func ("/ncm/quaternion/set_from_data", test_ncm_quaternion_set_from_data);
   g_test_add_func ("/ncm/quaternion/set_random", test_ncm_quaternion_set_random);
+  g_test_add_func ("/ncm/quaternion/set_random/uniform", test_ncm_quaternion_set_random_uniform);
+  g_test_add_func ("/ncm/quaternion/set_from_data/zero_axis", test_ncm_quaternion_set_from_data_zero_axis);
+  g_test_add_func ("/ncm/quaternion/set_from_data/zero_axis/subprocess", test_ncm_quaternion_set_from_data_zero_axis_subprocess);
   g_test_add_func ("/ncm/quaternion/set_I", test_ncm_quaternion_set_I);
   g_test_add_func ("/ncm/quaternion/set_0", test_ncm_quaternion_set_0);
 
@@ -152,6 +162,8 @@ main (int argc, char *argv[])
 
   g_test_add_func ("/ncm/quaternion/set_to_rotate_to_x", test_ncm_quaternion_set_to_rotate_to_x);
   g_test_add_func ("/ncm/quaternion/set_to_rotate_to_z", test_ncm_quaternion_set_to_rotate_to_z);
+  g_test_add_func ("/ncm/quaternion/set_to_rotate/edge_cases", test_ncm_quaternion_set_to_rotate_edge_cases);
+  g_test_add_func ("/ncm/quaternion/set_to_rotate/convention", test_ncm_quaternion_set_to_rotate_convention);
 
   g_test_run ();
 }
@@ -493,6 +505,19 @@ test_ncm_trivec_set_spherical_coord (void)
   }
 }
 
+/* The angles returned for v rebuild v, component by component, to a few ulp of |v|; frees w */
+static void
+_assert_rebuilds (NcmTriVec *v, NcmTriVec *w)
+{
+  const gdouble norm = ncm_trivec_norm (v);
+  guint k;
+
+  for (k = 0; k < 3; k++)
+    g_assert_cmpfloat (fabs (w->c[k] - v->c[k]), <, 1.0e-15 * norm);
+
+  ncm_trivec_free (w);
+}
+
 void
 test_ncm_trivec_get_spherical_coord (void)
 {
@@ -510,8 +535,8 @@ test_ncm_trivec_get_spherical_coord (void)
     ncm_trivec_get_spherical_coord (v, &r, &theta, &phi);
 
     ncm_assert_cmpdouble_e (r, ==, ncm_trivec_norm (v), reltol, abstol);
-    ncm_assert_cmpdouble_e (theta, ==, acos (v->c[2] / r), reltol, abstol);
     ncm_assert_cmpdouble_e (phi, ==, ncm_trivec_get_phi (v), reltol, abstol);
+    _assert_rebuilds (v, ncm_trivec_new_sphere (r, theta, phi));
 
     ncm_trivec_free (v);
   }
@@ -558,8 +583,8 @@ test_ncm_trivec_get_astro_coord (void)
     ncm_trivec_get_astro_coord (v, &r, &delta, &alpha);
 
     ncm_assert_cmpdouble_e (r, ==, ncm_trivec_norm (v), reltol, abstol);
-    ncm_assert_cmpdouble_e (delta, ==, asin (v->c[2] / r), reltol, abstol);
     ncm_assert_cmpdouble_e (alpha, ==, ncm_trivec_get_phi (v), reltol, abstol);
+    _assert_rebuilds (v, ncm_trivec_new_astro_coord (r, delta, alpha));
 
     ncm_trivec_free (v);
   }
@@ -606,8 +631,8 @@ test_ncm_trivec_get_astro_ra_dec (void)
     ncm_trivec_get_astro_ra_dec (v, &r, &ra, &dec);
 
     ncm_assert_cmpdouble_e (r, ==, ncm_trivec_norm (v), reltol, abstol);
-    ncm_assert_cmpdouble_e (dec, ==, asin (v->c[2] / r) * 180.0 / M_PI, reltol, abstol);
     ncm_assert_cmpdouble_e (ra, ==, ncm_trivec_get_phi (v) * 180.0 / M_PI, reltol, abstol);
+    _assert_rebuilds (v, ncm_trivec_new_astro_ra_dec (r, ra, dec));
 
     ncm_trivec_free (v);
   }
@@ -1336,6 +1361,183 @@ test_ncm_quaternion_set_to_rotate_to_z (void)
     ncm_trivec_free (w);
     ncm_trivec_free (u);
     ncm_quaternion_free (q);
+  }
+}
+
+void
+test_ncm_quaternion_set_from_data_zero_axis (void)
+{
+  /* Assertions are non-fatal in this binary, so the child reports the failure without aborting */
+  g_test_trap_subprocess ("/ncm/quaternion/set_from_data/zero_axis/subprocess", 0, 0);
+  g_test_trap_assert_stderr ("*assertion failed (ncm_trivec_norm (&q->v) > 0.0)*");
+}
+
+void
+test_ncm_quaternion_set_from_data_zero_axis_subprocess (void)
+{
+  NcmQuaternion *q = ncm_quaternion_new ();
+
+  ncm_quaternion_set_from_data (q, 0.0, 0.0, 0.0, 1.0);
+}
+
+/* Axes, antiparallel vectors, vectors in the xz-plane and components far below the others */
+void
+test_ncm_quaternion_set_to_rotate_edge_cases (void)
+{
+  const gdouble cases[][3] = {
+    {1.0, 0.0, 0.0}, {-1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, -1.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 0.0, -1.0},
+    {-1.0, 1.0e-20, 0.0}, {-1.0, -1.0e-300, 0.0}, {-1.0, 0.0, 1.0e-20}, {1.0e-20, 0.0, -1.0},
+    {0.0, 1.0e-300, -1.0}, {-3.0, 4.0, 0.0}, {-1.0, -1.0e-17, 1.0e-17}, {1.0e-300, 1.0e-300, 1.0e-300}
+  };
+  guint axis, i, k;
+
+  for (axis = 0; axis < 2; axis++)
+  {
+    for (i = 0; i < G_N_ELEMENTS (cases); i++)
+    {
+      NcmTriVec *v     = ncm_trivec_new_full (cases[i]);
+      NcmTriVec *u     = ncm_trivec_new_full (cases[i]);
+      NcmQuaternion *q = ncm_quaternion_new ();
+      const gdouble r  = ncm_trivec_norm (v);
+      const guint t    = (axis == 0) ? 0 : 2;
+
+      if (axis == 0)
+        ncm_quaternion_set_to_rotate_to_x (q, v);
+      else
+        ncm_quaternion_set_to_rotate_to_z (q, v);
+
+      g_assert_cmpfloat (fabs (ncm_quaternion_norm (q) - 1.0), <, 1.0e-15);
+      ncm_quaternion_rotate (q, u);
+
+      for (k = 0; k < 3; k++)
+        g_assert_cmpfloat (fabs (u->c[k] - ((k == t) ? r : 0.0)), <, 1.0e-15 * r);
+
+      ncm_trivec_free (v);
+      ncm_trivec_free (u);
+      ncm_quaternion_free (q);
+    }
+  }
+
+  {
+    NcmTriVec *v     = ncm_trivec_new ();
+    NcmQuaternion *q = ncm_quaternion_new ();
+
+    ncm_quaternion_set_to_rotate_to_z (q, v);
+    g_assert_cmpfloat (q->s, ==, 1.0);
+    g_assert_cmpfloat (ncm_trivec_norm (&q->v), ==, 0.0);
+
+    ncm_trivec_free (v);
+    ncm_quaternion_free (q);
+  }
+}
+
+/* No rotation is added about the final axis: the azimuthal direction of v goes to +y */
+void
+test_ncm_quaternion_set_to_rotate_convention (void)
+{
+  gint i;
+
+  for (i = 0; i < NTESTS; i++)
+  {
+    NcmTriVec *v = ncm_trivec_new_full_c (g_test_rand_double_range (-100.0, 100.0),
+                                          g_test_rand_double_range (-100.0, 100.0),
+                                          g_test_rand_double_range (-100.0, 100.0));
+    const gdouble phi = ncm_trivec_get_phi (v);
+    NcmTriVec *e_phi  = ncm_trivec_new_full_c (-sin (phi), cos (phi), 0.0);
+    NcmTriVec *e_z    = ncm_trivec_new ();
+    NcmQuaternion *q  = ncm_quaternion_new ();
+
+    ncm_quaternion_set_to_rotate_to_x (q, v);
+    ncm_trivec_memcpy (e_z, e_phi);
+    ncm_quaternion_rotate (q, e_z);
+    g_assert_cmpfloat (fabs (e_z->c[1] - 1.0), <, 1.0e-15);
+
+    ncm_quaternion_set_to_rotate_to_z (q, v);
+    ncm_trivec_memcpy (e_z, e_phi);
+    ncm_quaternion_rotate (q, e_z);
+    g_assert_cmpfloat (fabs (e_z->c[1] - 1.0), <, 1.0e-15);
+
+    ncm_trivec_free (v);
+    ncm_trivec_free (e_phi);
+    ncm_trivec_free (e_z);
+    ncm_quaternion_free (q);
+  }
+}
+
+/* A uniform rotation is a uniform point on the unit sphere of quaternions: E[q_a q_b] = delta_ab / 4,
+ * so E[cos w] = 2 E[s^2] - 1 = -1/2 for the rotation angle w. The standard error of each
+ * moment is at most 1/(4 sqrt(N)); the test allows five of them. */
+void
+test_ncm_quaternion_set_random_uniform (void)
+{
+  NcmRNG *rng      = ncm_rng_seeded_new (NULL, 2718);
+  NcmQuaternion *q = ncm_quaternion_new ();
+  const guint N    = 40000;
+  gdouble m[4][4]  = {
+    {
+      0.0
+    }
+  };
+  guint i, a, b;
+
+  for (i = 0; i < N; i++)
+  {
+    gdouble c[4];
+
+    ncm_quaternion_set_random (q, rng);
+    c[0] = q->s;
+    c[1] = q->v.c[0];
+    c[2] = q->v.c[1];
+    c[3] = q->v.c[2];
+
+    for (a = 0; a < 4; a++)
+      for (b = 0; b < 4; b++)
+        m[a][b] += c[a] * c[b] / N;
+  }
+
+  for (a = 0; a < 4; a++)
+    for (b = 0; b < 4; b++)
+      g_assert_cmpfloat (fabs (m[a][b] - ((a == b) ? 0.25 : 0.0)), <, 5.0 * 0.25 / sqrt (N));
+
+  ncm_quaternion_free (q);
+  ncm_rng_free (rng);
+}
+
+/* Near the poles the angles keep full precision: acos (z / r) and asin (z / r) lose it as
+ * epsilon / theta there */
+void
+test_ncm_trivec_coord_near_poles (void)
+{
+  const gdouble thetas[] = {1.0e-8, 1.0e-6, 1.0e-4, 1.0e-2, M_PI - 1.0e-6};
+  const gdouble eps[]    = {1.0e-8, 1.0e-6};
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (thetas); i++)
+  {
+    NcmTriVec *v = ncm_trivec_new_sphere (2.5, thetas[i], 0.7);
+    gdouble r, theta, phi;
+
+    ncm_trivec_get_spherical_coord (v, &r, &theta, &phi);
+    g_assert_cmpfloat (fabs (theta / thetas[i] - 1.0), <, 4.0e-16);
+    g_assert_cmpfloat (fabs (phi - 0.7), <, 4.0e-16);
+
+    ncm_trivec_free (v);
+  }
+
+  for (i = 0; i < G_N_ELEMENTS (eps); i++)
+  {
+    NcmTriVec *vn = ncm_trivec_new_astro_coord (1.0, M_PI_2 - eps[i], 0.3);
+    NcmTriVec *vs = ncm_trivec_new_astro_coord (1.0, -M_PI_2 + eps[i], 0.3);
+    gdouble r, delta, alpha;
+
+    ncm_trivec_get_astro_coord (vn, &r, &delta, &alpha);
+    g_assert_cmpfloat (fabs (delta - (M_PI_2 - eps[i])), <, 4.0e-16);
+
+    ncm_trivec_get_astro_coord (vs, &r, &delta, &alpha);
+    g_assert_cmpfloat (fabs (delta - (-M_PI_2 + eps[i])), <, 4.0e-16);
+
+    ncm_trivec_free (vn);
+    ncm_trivec_free (vs);
   }
 }
 

@@ -44,7 +44,6 @@
 #include "ncm/integration/ncm_integral1d.h"
 #include "ncm/integration/ncm_integral1d_ptr.h"
 #include "ncm/core/ncm_util.h"
-#include "ncm/spline/ncm_spline_rbf.h"
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/spline/ncm_spline_gsl.h"
 #include "ncm/spline/ncm_spline_func.h"

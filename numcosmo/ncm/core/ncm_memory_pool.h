@@ -52,9 +52,9 @@ typedef struct _NcmMemoryPoolSlice NcmMemoryPoolSlice;
 
 /**
  * NcmMemoryPoolSlice:
- * @p: Pointer to the actual slice.
- * @in_use: Boolean determining if the slice is in use.
- * @mp: A back pointer to the pool.
+ * @p: the pooled object
+ * @in_use: whether the slice is checked out
+ * @mp: the owning pool
  */
 struct _NcmMemoryPoolSlice
 {

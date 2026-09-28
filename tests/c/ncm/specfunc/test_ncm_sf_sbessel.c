@@ -42,6 +42,12 @@ void test_ncm_sf_sbessel_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata);
 void test_ncm_sf_sbessel_taylor_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata);
 void test_ncm_sf_sbessel_spline_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata);
 void test_ncm_sf_sbessel_deriv_from_array_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata);
+void test_ncm_sf_sbessel_exact_argument (TestNcmSFSBessel *test, gconstpointer pdata);
+void test_ncm_sf_sbessel_array_cmp_mp (TestNcmSFSBessel *test, gconstpointer pdata);
+void test_ncm_sf_sbessel_array_cutoff (TestNcmSFSBessel *test, gconstpointer pdata);
+void test_ncm_sf_sbessel_array_large_x (TestNcmSFSBessel *test, gconstpointer pdata);
+void test_ncm_sf_sbessel_array_negative (TestNcmSFSBessel *test, gconstpointer pdata);
+void test_ncm_sf_sbessel_array_table (TestNcmSFSBessel *test, gconstpointer pdata);
 
 void test_ncm_sf_sbessel_traps (TestNcmSFSBessel *test, gconstpointer pdata);
 void test_ncm_sf_sbessel_invalid_st (TestNcmSFSBessel *test, gconstpointer pdata);
@@ -79,6 +85,36 @@ main (gint argc, gchar *argv[])
               &test_ncm_sf_sbessel_deriv_from_array_cmp_gsl,
               &test_ncm_sf_sbessel_free);
 
+  g_test_add ("/ncm/sf/sbessel/exact_argument", TestNcmSFSBessel, NULL,
+              &test_ncm_sf_sbessel_new,
+              &test_ncm_sf_sbessel_exact_argument,
+              &test_ncm_sf_sbessel_free);
+
+  g_test_add ("/ncm/sf/sbessel/array/cmp/mp", TestNcmSFSBessel, NULL,
+              &test_ncm_sf_sbessel_new,
+              &test_ncm_sf_sbessel_array_cmp_mp,
+              &test_ncm_sf_sbessel_free);
+
+  g_test_add ("/ncm/sf/sbessel/array/cutoff", TestNcmSFSBessel, NULL,
+              &test_ncm_sf_sbessel_new,
+              &test_ncm_sf_sbessel_array_cutoff,
+              &test_ncm_sf_sbessel_free);
+
+  g_test_add ("/ncm/sf/sbessel/array/large_x", TestNcmSFSBessel, NULL,
+              &test_ncm_sf_sbessel_new,
+              &test_ncm_sf_sbessel_array_large_x,
+              &test_ncm_sf_sbessel_free);
+
+  g_test_add ("/ncm/sf/sbessel/array/negative", TestNcmSFSBessel, NULL,
+              &test_ncm_sf_sbessel_new,
+              &test_ncm_sf_sbessel_array_negative,
+              &test_ncm_sf_sbessel_free);
+
+  g_test_add ("/ncm/sf/sbessel/array/table", TestNcmSFSBessel, NULL,
+              &test_ncm_sf_sbessel_new,
+              &test_ncm_sf_sbessel_array_table,
+              &test_ncm_sf_sbessel_free);
+
   g_test_add ("/ncm/sf/sbessel/traps", TestNcmSFSBessel, NULL,
               &test_ncm_sf_sbessel_new,
               &test_ncm_sf_sbessel_traps,
@@ -110,18 +146,18 @@ test_ncm_sf_sbessel_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata)
 
   for (j = 0; j <= L; j++)
   {
-    if (j == 0)
-      ncm_assert_cmpdouble_e (ncm_sf_sbessel (j, 0.0), ==, 1.0, 1.0e-7, 0.0);
-    else
-      ncm_assert_cmpdouble_e (ncm_sf_sbessel (j, 0.0), ==, 0.0, 1.0e-7, 0.0);
+    g_assert_cmpfloat (ncm_sf_sbessel (j, 0.0), ==, (j == 0) ? 1.0 : 0.0);
 
     for (i = 0; i < NTOT; i++)
     {
       const gdouble x      = j * 1.0 * pow (10.0, 0.0 + XMAX / (NTOT - 1.0) * i);
       const gdouble ncm_jl = ncm_sf_sbessel (j, x);
       const gdouble gsl_jl = gsl_sf_bessel_jl (j, x);
+      const gdouble env    = (x < j) ? fabs (gsl_jl) : GSL_MAX (fabs (gsl_jl), 1.0 / x);
 
-      ncm_assert_cmpdouble_e (ncm_jl, ==, gsl_jl, 1.0e-7, 0.0);
+      /* Scaled by the envelope, not the value, which vanishes at the zeros; measured 4.3e-13 */
+      if (x > 0.0)
+        g_assert_cmpfloat (fabs (ncm_jl - gsl_jl), <=, 5.0e-12 * env);
     }
   }
 }
@@ -131,7 +167,6 @@ _gsl_sf_bessel_jl (const gdouble x, gpointer user_data)
 {
   guint *j = (guint *) user_data;
 
-  /*printf ("%u % 22.15g % 22.15g % 22.15g\n", j[0], x, gsl_sf_bessel_jl (j[0], x), gsl_sf_bessel_jl (j[0], x) / x);*/
 
   return gsl_sf_bessel_jl (j[0], x);
 }
@@ -229,6 +264,232 @@ test_ncm_sf_sbessel_deriv_from_array_cmp_gsl (TestNcmSFSBessel *test, gconstpoin
 
   g_free (jl_x);
   ncm_sf_sbessel_array_free (sba);
+}
+
+/*
+ * The argument is taken exactly. Truth from mpmath at 60 digits; errors scaled by the
+ * oscillation amplitude 1/x, the second point sits at a zero. The first is where the old
+ * continued-fraction conversion truncated x, off by 1.7e-12 of the amplitude.
+ */
+void
+test_ncm_sf_sbessel_exact_argument (TestNcmSFSBessel *test, gconstpointer pdata)
+{
+  const guint l_a[]       = {78, 67, 1000};
+  const gdouble x_a[]     = {7445.477961962307, 569.3348020587918, 1234.56789};
+  const gdouble truth_a[] = {-4.189145352754247670805325e-5, -6.266742084230278044156579e-9, -4.367534182255071180371313e-4};
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (l_a); i++)
+    g_assert_cmpfloat (fabs (ncm_sf_sbessel (l_a[i], x_a[i]) - truth_a[i]), <=, 2.0 * GSL_DBL_EPSILON / x_a[i]);
+}
+
+/*
+ * Error of an array value against the multiple precision j_l(x), scaled by the envelope:
+ * |j_l(x)| below the turning point, where it decays monotonically, and the oscillation
+ * amplitude 1/x above it.
+ */
+static gdouble
+_test_array_err (guint l, gdouble x, gdouble jl)
+{
+  const gdouble truth = ncm_sf_sbessel (l, x);
+  const gdouble env   = (fabs (x) < l) ? fabs (truth) : GSL_MAX (fabs (truth), 1.0 / fabs (x));
+
+  return fabs (jl - truth) / env;
+}
+
+void
+test_ncm_sf_sbessel_array_cmp_mp (TestNcmSFSBessel *test, gconstpointer pdata)
+{
+  /* Every branch: Taylor below 2.4e-4, Steed/Barnett up to lmax + 1, upward above */
+  const gdouble x_a[] = {
+    1.0e-5, 2.3e-4, 2.5e-4, 1.0e-3, 0.1, 1.0, 7.3, 30.0, 99.5, 101.5,
+    300.0, 999.0, 1001.5, 1500.0, 1999.0, 2001.5, 5.0e3, 2.0e4, 1.0e6
+  };
+  const guint l_a[]      = {0, 1, 2, 3, 5, 10, 50, 100, 200, 500, 1000, 1500, 1990, 2000};
+  const guint lmax       = 2000;
+  NcmSFSBesselArray *sba = ncm_sf_sbessel_array_new_full (lmax, 1.0e-100);
+  gdouble *jl_x          = g_new (gdouble, lmax + 1);
+  guint i, j;
+
+  for (i = 0; i < G_N_ELEMENTS (x_a); i++)
+  {
+    const gdouble x = x_a[i];
+    const guint cut = ncm_sf_sbessel_array_eval_ell_cutoff (sba, x);
+
+    ncm_sf_sbessel_array_eval (sba, lmax, x, jl_x);
+
+    for (j = 0; j < G_N_ELEMENTS (l_a); j++)
+    {
+      /* Measured at most 1.5e-13 */
+      if (l_a[j] <= cut)
+        g_assert_cmpfloat (_test_array_err (l_a[j], x, jl_x[l_a[j]]), <, 1.0e-12);
+    }
+  }
+
+  ncm_sf_sbessel_array_eval (sba, lmax, 0.0, jl_x);
+  g_assert_cmpfloat (jl_x[0], ==, 1.0);
+
+  for (j = 1; j <= lmax; j++)
+    g_assert_cmpfloat (jl_x[j], ==, 0.0);
+
+  g_free (jl_x);
+  ncm_sf_sbessel_array_free (sba);
+}
+
+void
+test_ncm_sf_sbessel_array_cutoff (TestNcmSFSBessel *test, gconstpointer pdata)
+{
+  const gdouble thr_a[] = {1.0e-300, 1.0e-100, 1.0e-30, 1.0e-10};
+  const gdouble x_a[]   = {0.01, 0.3, 1.0, 3.7, 10.0, 55.5, 200.0, 777.0, 1500.0, 2500.0};
+  const guint lmax      = 3000;
+  gdouble *jl_x         = g_new (gdouble, lmax + 1);
+  guint i, j, l;
+
+  for (i = 0; i < G_N_ELEMENTS (thr_a); i++)
+  {
+    NcmSFSBesselArray *sba = ncm_sf_sbessel_array_new_full (lmax, thr_a[i]);
+
+    for (j = 0; j < G_N_ELEMENTS (x_a); j++)
+    {
+      const gdouble x = x_a[j];
+      const guint cut = ncm_sf_sbessel_array_eval_ell_cutoff (sba, x);
+
+      /* Nothing is cut at this x */
+      if (cut >= lmax)
+        continue;
+
+      ncm_sf_sbessel_array_eval (sba, lmax, x, jl_x);
+
+      /* The orders above the cutoff are zero and below the threshold */
+      for (l = cut + 1; l <= GSL_MIN (cut + 5, lmax); l++)
+      {
+        g_assert_cmpfloat (jl_x[l], ==, 0.0);
+        g_assert_cmpfloat (fabs (ncm_sf_sbessel (l, x)), <=, thr_a[i]);
+      }
+
+      /*
+       * The cutoff is not far above the crossing: the old estimate started the recursion
+       * where |j_l| was 1e-211 times the threshold and overflowed. Measured at least 1e-4.
+       */
+      g_assert_cmpfloat (fabs (ncm_sf_sbessel (cut, x)), >, 1.0e-6 * thr_a[i]);
+    }
+
+    ncm_sf_sbessel_array_free (sba);
+  }
+
+  g_free (jl_x);
+}
+
+void
+test_ncm_sf_sbessel_array_large_x (TestNcmSFSBessel *test, gconstpointer pdata)
+{
+  /* Default lmax and threshold: these returned inf and NaN before the Debye cutoff */
+  const gdouble x_a[]    = {2640.0, 3000.0, 5000.0, 9000.0};
+  NcmSFSBesselArray *sba = ncm_sf_sbessel_array_new ();
+  const guint lmax       = ncm_sf_sbessel_array_get_lmax (sba);
+  gdouble *jl_x          = g_new (gdouble, lmax + 1);
+  guint i, l;
+
+  for (i = 0; i < G_N_ELEMENTS (x_a); i++)
+  {
+    const gdouble x = x_a[i];
+
+    ncm_sf_sbessel_array_eval (sba, lmax, x, jl_x);
+
+    for (l = 0; l <= lmax; l++)
+      g_assert_true (gsl_finite (jl_x[l]));
+
+    g_assert_cmpfloat (_test_array_err (0, x, jl_x[0]), <, 1.0e-12);
+    g_assert_cmpfloat (_test_array_err ((guint) x, x, jl_x[(guint) x]), <, 1.0e-12);
+  }
+
+  g_free (jl_x);
+  ncm_sf_sbessel_array_free (sba);
+}
+
+void
+test_ncm_sf_sbessel_array_negative (TestNcmSFSBessel *test, gconstpointer pdata)
+{
+  const gdouble x_a[]    = {1.0e-4, 0.5, 3.0, 30.0, 1500.0};
+  const guint lmax       = 2000;
+  NcmSFSBesselArray *sba = ncm_sf_sbessel_array_new_full (lmax, 1.0e-100);
+  gdouble *jl_p          = g_new (gdouble, lmax + 1);
+  gdouble *jl_m          = g_new (gdouble, lmax + 1);
+  guint i, l;
+
+  for (i = 0; i < G_N_ELEMENTS (x_a); i++)
+  {
+    const gdouble x = x_a[i];
+
+    g_assert_cmpuint (ncm_sf_sbessel_array_eval_ell_cutoff (sba, -x), ==, ncm_sf_sbessel_array_eval_ell_cutoff (sba, x));
+
+    ncm_sf_sbessel_array_eval (sba, lmax, x, jl_p);
+    ncm_sf_sbessel_array_eval (sba, lmax, -x, jl_m);
+
+    for (l = 0; l <= lmax; l++)
+      g_assert_cmpfloat (jl_m[l], ==, (l % 2 == 0) ? jl_p[l] : -jl_p[l]);
+
+    g_assert_cmpfloat (_test_array_err (1, -x, jl_m[1]), <, 1.0e-12);
+  }
+
+  g_free (jl_p);
+  g_free (jl_m);
+  ncm_sf_sbessel_array_free (sba);
+}
+
+void
+test_ncm_sf_sbessel_array_table (TestNcmSFSBessel *test, gconstpointer pdata)
+{
+  const gdouble x_a[]      = {0.5, 3.0, 40.0, 700.0};
+  const guint ell_max      = 300;
+  NcmSFSBesselArray *sba   = ncm_sf_sbessel_array_new_full (1000, 1.0e-100);
+  NcmSFSBesselArray *sba_t = ncm_sf_sbessel_array_new_full (1000, 1.0e-10);
+  GArray *x                = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *x_copy           = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  gdouble *jl_x            = g_new (gdouble, ell_max + 1);
+  NcmMatrix *table, *same, *other_thr, *other_ell;
+  guint i, l;
+
+  g_array_append_vals (x, x_a, G_N_ELEMENTS (x_a));
+  g_array_append_vals (x_copy, x_a, G_N_ELEMENTS (x_a));
+
+  table = ncm_sf_sbessel_array_ref_table (sba, x, ell_max);
+  g_assert_cmpuint (ncm_matrix_nrows (table), ==, x->len);
+  g_assert_cmpuint (ncm_matrix_ncols (table), ==, ell_max + 1);
+
+  for (i = 0; i < x->len; i++)
+  {
+    ncm_sf_sbessel_array_eval (sba, ell_max, x_a[i], jl_x);
+
+    for (l = 0; l <= ell_max; l++)
+      g_assert_cmpfloat (ncm_matrix_get (table, i, l), ==, jl_x[l]);
+  }
+
+  /* Keyed on the values of the abscissae, not on the array */
+  same = ncm_sf_sbessel_array_ref_table (sba, x_copy, ell_max);
+  g_assert_true (same == table);
+
+  /* The threshold changes the rows, so it is part of the key */
+  other_thr = ncm_sf_sbessel_array_ref_table (sba_t, x, ell_max);
+  g_assert_true (other_thr != table);
+
+  ncm_sf_sbessel_array_eval (sba_t, ell_max, x_a[0], jl_x);
+
+  for (l = 0; l <= ell_max; l++)
+    g_assert_cmpfloat (ncm_matrix_get (other_thr, 0, l), ==, jl_x[l]);
+
+  other_ell = ncm_sf_sbessel_array_ref_table (sba, x, ell_max - 1);
+  g_assert_true (other_ell != table);
+
+  ncm_matrix_free (table);
+  ncm_matrix_free (same);
+  ncm_matrix_free (other_thr);
+  ncm_matrix_free (other_ell);
+  g_array_unref (x);
+  g_array_unref (x_copy);
+  g_free (jl_x);
+  ncm_sf_sbessel_array_free (sba);
+  ncm_sf_sbessel_array_free (sba_t);
 }
 
 void

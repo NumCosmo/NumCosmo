@@ -126,6 +126,18 @@ test_nc_hiprim_impl (TestNcHIPrim *test, gconstpointer pdata)
   g_assert_true (ncm_model_check_impl_opt (NCM_MODEL (test->prim), NC_HIPRIM_IMPL_lnT_powspec_lnk));
 }
 
+/* The power law is defined for every k, so it keeps the unbounded default range. */
+static void
+test_nc_hiprim_lnk_range (TestNcHIPrim *test, gconstpointer pdata)
+{
+  gdouble lnk_min, lnk_max;
+
+  nc_hiprim_get_lnk_range (test->prim, &lnk_min, &lnk_max);
+
+  g_assert_cmpfloat (lnk_min, ==, -G_MAXDOUBLE);
+  g_assert_cmpfloat (lnk_max, ==, G_MAXDOUBLE);
+}
+
 static void
 test_nc_hiprim_serialize (TestNcHIPrim *test, gconstpointer pdata)
 {
@@ -159,6 +171,8 @@ main (gint argc, gchar *argv[])
               &test_nc_hiprim_new, &test_nc_hiprim_amplitudes, &test_nc_hiprim_free);
   g_test_add ("/nc/hiprim/power_law/impl", TestNcHIPrim, NULL,
               &test_nc_hiprim_new, &test_nc_hiprim_impl, &test_nc_hiprim_free);
+  g_test_add ("/nc/hiprim/power_law/lnk_range", TestNcHIPrim, NULL,
+              &test_nc_hiprim_new, &test_nc_hiprim_lnk_range, &test_nc_hiprim_free);
   g_test_add ("/nc/hiprim/power_law/serialize", TestNcHIPrim, NULL,
               &test_nc_hiprim_new, &test_nc_hiprim_serialize, &test_nc_hiprim_free);
 

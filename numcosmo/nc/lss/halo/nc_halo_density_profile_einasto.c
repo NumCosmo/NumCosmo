@@ -39,7 +39,7 @@
  *
  * For the closed-form spherical mass and references, see the theoretical
  * background page:
- * <a href="../../theory/halo_density_profile.html">Halo Density Profiles</a>.
+ * <a href="../../theory/nc/lss/halo/halo_density_profile.html">Halo Density Profiles</a>.
  */
 
 #ifdef HAVE_CONFIG_H

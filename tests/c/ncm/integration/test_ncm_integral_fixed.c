@@ -325,6 +325,21 @@ test_ncm_integral_fixed_calibrate (void)
 
   ncm_assert_cmpdouble_e (I_sel, ==, I_truth, 10.0 * reltol, 0.0);
 
+  /* The reported error is that of the selected config against calibrate's own
+   * reference, 7-point panels numbering 10 reltol^-0.3 clamped to [96, 2048]. */
+  {
+    const gulong n_ref       = (gulong) CLAMP ((glong) (10.0 * pow (reltol, -0.3) + 0.5), 96, 2048);
+    NcmIntegralFixed *ref_in = ncm_integral_fixed_new (n_ref, 7, xl, xu);
+    gdouble I_ref_in;
+
+    ncm_integral_fixed_calc_nodes (ref_in, &F);
+    I_ref_in = ncm_integral_fixed_integ_mult (ref_in, &G);
+    ncm_integral_fixed_free (ref_in);
+
+    ncm_assert_cmpdouble_e (relerr, ==, fabs (I_sel - I_ref_in) / fabs (I_ref_in), 1.0e-12, 0.0);
+    g_assert_cmpfloat (relerr, <, reltol);
+  }
+
   /* Missed-mass guard: INT F at the selected config matches the analytic mass. */
   mass_sel = ncm_integral_fixed_nodes_eval (intf);
   ncm_assert_cmpdouble_e (mass_sel, ==, exact_F, 10.0 * reltol, 0.0);

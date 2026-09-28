@@ -27,11 +27,13 @@
 /**
  * NcmTimer:
  *
- * A timer with ETA support.
+ * Wall-clock timer with progress tracking for a task of a known number of items.
  *
- * Tracks elapsed time for a timer and a sequence of tasks, with elapsed-time
- * and calendar-time output and ETA estimates.
- *
+ * A task is started with ncm_timer_task_start() and advanced with
+ * ncm_timer_task_increment() or ncm_timer_task_accumulate(). The time per item is
+ * accumulated to give the mean time per item, the time left and the estimated end
+ * time. Functions returning a string return a buffer owned by the timer, which the
+ * next call to any of them overwrites.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -43,6 +45,8 @@
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_util.h"
 #include "ncm/stats/ncm_stats_vec.h"
+
+#include <math.h>
 
 enum
 {
@@ -174,8 +178,7 @@ ncm_timer_class_init (NcmTimerClass *klass)
   /**
    * NcmTimer:name:
    *
-   * The timer's name.
-   *
+   * The name used in the task messages.
    */
   g_object_class_install_property (object_class,
                                    PROP_NAME,
@@ -188,8 +191,7 @@ ncm_timer_class_init (NcmTimerClass *klass)
   /**
    * NcmTimer:task-len:
    *
-   * The length of the current task.
-   *
+   * The number of items of the running task, zero if no task is running.
    */
   g_object_class_install_property (object_class,
                                    PROP_TASK_LEN,
@@ -202,8 +204,7 @@ ncm_timer_class_init (NcmTimerClass *klass)
   /**
    * NcmTimer:task-pos:
    *
-   * The Position of the current task, varying from [0, #NcmTimer:task-len - 1]
-   *
+   * The number of completed items of the task, in [0, `NcmTimer:task-len`].
    */
   g_object_class_install_property (object_class,
                                    PROP_TASK_POS,
@@ -217,7 +218,7 @@ ncm_timer_class_init (NcmTimerClass *klass)
 /**
  * ncm_timer_new:
  *
- * This function creates a new #NcmTimer.
+ * Creates a new #NcmTimer.
  *
  * Returns: (transfer full): a new #NcmTimer.
  */
@@ -235,7 +236,6 @@ ncm_timer_new (void)
  *
  * Increases the reference count of @nt by one.
  *
- *
  * Returns: (transfer full): @nt.
  */
 NcmTimer *
@@ -249,7 +249,6 @@ ncm_timer_ref (NcmTimer *nt)
  * @nt: a #NcmTimer
  *
  * Decreases the reference count of @nt by one.
- *
  */
 void
 ncm_timer_free (NcmTimer *nt)
@@ -261,8 +260,7 @@ ncm_timer_free (NcmTimer *nt)
  * ncm_timer_clear:
  * @nt: a #NcmTimer
  *
- * Decreases the reference count of *@nt by one and sets *@nt to NULL.
- *
+ * Decreases the reference count of *@nt by one and sets *@nt to %NULL.
  */
 void
 ncm_timer_clear (NcmTimer **nt)
@@ -273,10 +271,9 @@ ncm_timer_clear (NcmTimer **nt)
 /**
  * ncm_timer_set_name:
  * @nt: a #NcmTimer
- * @name: a string
+ * @name: the name
  *
- * This functions set the named @name to the @nt #NcmTimer.
- *
+ * Sets the name of @nt, used in the task messages.
  */
 void
 ncm_timer_set_name (NcmTimer *nt, const gchar *name)
@@ -291,13 +288,8 @@ ncm_timer_set_name (NcmTimer *nt, const gchar *name)
  * ncm_timer_elapsed:
  * @nt: a #NcmTimer
  *
- * If @nt timer has been started but not stopped, obtains the time since the timer was started.
- * If timer has been stopped, obtains the elapsed time between the time it was started and the time it was stopped.
- * The return value is the number of seconds elapsed, including any fractional part.
- * This function applies [g_timer_elapsed()](https://developer.gnome.org/glib/stable/glib-Timers.html#g-timer-elapsed)
- * from [Glib](https://developer.gnome.org/glib/).
- *
- * Returns: seconds elapsed as a floating point value, including any fractional part.
+ * Returns: the seconds elapsed since @nt was started, up to the moment it was
+ * stopped if it is stopped.
  */
 gdouble
 ncm_timer_elapsed (NcmTimer *nt)
@@ -335,17 +327,50 @@ _ncm_timer_dhms_to_string (GString *s, guint elap_day, guint elap_hour, guint el
   }
 }
 
+/* Formats @t seconds, or "unknown" when it is not finite */
+static void
+_ncm_timer_sec_to_string (GString *s, const gdouble t)
+{
+  guint day, hour, min;
+  gdouble sec;
+
+  if (!isfinite (t))
+  {
+    g_string_assign (s, "unknown");
+
+    return;
+  }
+
+  _ncm_timer_sec_to_dhms (t, &day, &hour, &min, &sec);
+  _ncm_timer_dhms_to_string (s, day, hour, min, sec);
+}
+
+/* Mean time per item and its standard error, NAN while they are undefined: the mean
+ * needs one completed item and the standard error two updates */
+static void
+_ncm_timer_task_mean_sigma (NcmTimer *nt, gdouble *mean_time, gdouble *sigma_time)
+{
+  if (nt->task_pos == 0)
+  {
+    *mean_time  = NAN;
+    *sigma_time = NAN;
+  }
+  else
+  {
+    *mean_time  = ncm_stats_vec_get_mean (nt->time_stats, 0);
+    *sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
+  }
+}
+
 /**
  * ncm_timer_elapsed_dhms:
  * @nt: a #NcmTimer
- * @elap_day: (out): elapsed days
- * @elap_hour: (out): elapsed hours
- * @elap_min: (out): elapsed minutes
- * @elap_sec: (out): elapsed seconds
+ * @elap_day: (out): days
+ * @elap_hour: (out): hours
+ * @elap_min: (out): minutes
+ * @elap_sec: (out): seconds
  *
- * The this function returns the same information as above, but now the format is in days, hours, minutes and seconds.
- * Those information are passed by the variables @elap_day, @elap_hour, @elap_min and @elap_sec, respectively.
- *
+ * Splits ncm_timer_elapsed() into days, hours, minutes and seconds.
  */
 void
 ncm_timer_elapsed_dhms (NcmTimer *nt, guint *elap_day, guint *elap_hour, guint *elap_min, gdouble *elap_sec)
@@ -359,9 +384,9 @@ ncm_timer_elapsed_dhms (NcmTimer *nt, guint *elap_day, guint *elap_hour, guint *
  * ncm_timer_elapsed_dhms_str:
  * @nt: a #NcmTimer
  *
- * Similar as the function above, but now the resulted time elapsed is returned in a string format.
+ * Formats ncm_timer_elapsed() as "[D days, ]HH:MM:SS.ssss".
  *
- * Returns: (transfer none): a string.
+ * Returns: (transfer none): the formatted string.
  */
 gchar *
 ncm_timer_elapsed_dhms_str (NcmTimer *nt)
@@ -379,8 +404,7 @@ ncm_timer_elapsed_dhms_str (NcmTimer *nt)
  * ncm_timer_start:
  * @nt: a #NcmTimer
  *
- * This function starts @nt timer. @nt must not have a task running.
- *
+ * Starts @nt, resetting the elapsed time. Aborts if a task is running.
  */
 void
 ncm_timer_start (NcmTimer *nt)
@@ -395,8 +419,7 @@ ncm_timer_start (NcmTimer *nt)
  * ncm_timer_stop:
  * @nt: a #NcmTimer
  *
- * This function stop @nt timer. @nt must not have a task running.
- *
+ * Stops @nt. Aborts if a task is running.
  */
 void
 ncm_timer_stop (NcmTimer *nt)
@@ -411,8 +434,7 @@ ncm_timer_stop (NcmTimer *nt)
  * ncm_timer_continue:
  * @nt: a #NcmTimer
  *
- * This function continues @nt timer. @nt must not have a task running.
- *
+ * Resumes @nt after ncm_timer_stop(). Aborts if a task is running.
  */
 void
 ncm_timer_continue (NcmTimer *nt)
@@ -426,12 +448,10 @@ ncm_timer_continue (NcmTimer *nt)
 /**
  * ncm_timer_task_start:
  * @nt: a #NcmTimer
- * @task_len: number of task
+ * @task_len: number of items
  *
- * This function starts a task at @nt with lenght @task_len.
- * @nt must not have a task already assigned to it.
- * @task_len must be bigger than 0, @task_len>0.
- *
+ * Starts a task of @task_len items and restarts the timer. Aborts if a task is
+ * running or if @task_len is zero.
  */
 void
 ncm_timer_task_start (NcmTimer *nt, guint task_len)
@@ -440,7 +460,7 @@ ncm_timer_task_start (NcmTimer *nt, guint task_len)
     g_error ("ncm_timer_task_start: cannot start a new task during a task, call task_end first.");
 
   if (task_len == 0)
-    g_error ("ncm_timer_task_start: cannot start task with 0 itens.");
+    g_error ("ncm_timer_task_start: cannot start task with 0 items.");
 
   ncm_timer_start (nt);
   nt->task_len      = task_len;
@@ -454,9 +474,8 @@ ncm_timer_task_start (NcmTimer *nt, guint task_len)
  * ncm_timer_task_increment:
  * @nt: a #NcmTimer
  *
- * This function increment @nt task by one.
- * The final task ID must be greater than the task length defined by ncm_timer_task_start ().
- *
+ * Marks one item as completed, recording the time since the previous item. Aborts
+ * if no task is running or if the task is already complete.
  */
 void
 ncm_timer_task_increment (NcmTimer *nt)
@@ -479,10 +498,11 @@ ncm_timer_task_increment (NcmTimer *nt)
 /**
  * ncm_timer_task_accumulate:
  * @nt: a #NcmTimer
- * @nitens: number of itens to include in the task
+ * @nitens: number of items
  *
- * This function takes a task already created and divids it in @nitens.
- * The number of @nitens must not exceed the length of the original task.
+ * Marks @nitens items as completed, recording the time since the previous update
+ * divided by @nitens as the time of each. Aborts if no task is running or if this
+ * passes the end of the task.
  */
 void
 ncm_timer_task_accumulate (NcmTimer *nt, guint nitens)
@@ -507,10 +527,9 @@ ncm_timer_task_accumulate (NcmTimer *nt, guint nitens)
  * ncm_timer_task_completed:
  * @nt: a #NcmTimer
  *
- * This function returns the number of tasks already completed.
- * The @nt task length must be greater than 0.
+ * Aborts if no task is running.
  *
- * Returns: the number of tasks already completed.
+ * Returns: the number of completed items.
  */
 guint
 ncm_timer_task_completed (NcmTimer *nt)
@@ -525,9 +544,8 @@ ncm_timer_task_completed (NcmTimer *nt)
  * @nt: a #NcmTimer
  * @sec: time in seconds
  *
- * This function estimate how many task points would take @sec seconds.
- *
- * Returns: the estimated number of points.
+ * Returns: the number of items that take @sec seconds at the mean time per item,
+ * rounded up.
  */
 guint
 ncm_timer_task_estimate_by_time (NcmTimer *nt, gdouble sec)
@@ -539,9 +557,7 @@ ncm_timer_task_estimate_by_time (NcmTimer *nt, gdouble sec)
  * ncm_timer_task_pause:
  * @nt: a #NcmTimer
  *
- * This function pauses a @nt task.
- * The @nt task length must be greater than 0.
- *
+ * Stops the timer during a task. Aborts if no task is running.
  */
 void
 ncm_timer_task_pause (NcmTimer *nt)
@@ -554,9 +570,7 @@ ncm_timer_task_pause (NcmTimer *nt)
  * ncm_timer_task_continue:
  * @nt: a #NcmTimer
  *
- * This function resumes a @nt task.
- * The @nt task length must be greater than 0.
- *
+ * Resumes the timer after ncm_timer_task_pause(). Aborts if no task is running.
  */
 void
 ncm_timer_task_continue (NcmTimer *nt)
@@ -568,11 +582,9 @@ ncm_timer_task_continue (NcmTimer *nt)
 /**
  * ncm_timer_task_add_tasks:
  * @nt: a #NcmTimer
- * @ptasks: number of taks to be added
+ * @ptasks: number of items
  *
- * This function adds @ptasks to @nt.
- * The @nt task length must be greater than 0.
- *
+ * Adds @ptasks items to the running task. Aborts if no task is running.
  */
 void
 ncm_timer_task_add_tasks (NcmTimer *nt, guint ptasks)
@@ -585,8 +597,7 @@ ncm_timer_task_add_tasks (NcmTimer *nt, guint ptasks)
  * ncm_timer_task_is_running:
  * @nt: a #NcmTimer
  *
- * This functions verify if @nt has a task already running.
- *
+ * Returns: whether a task is running.
  */
 gboolean
 ncm_timer_task_is_running (NcmTimer *nt)
@@ -598,10 +609,9 @@ ncm_timer_task_is_running (NcmTimer *nt)
  * ncm_timer_task_has_ended:
  * @nt: a #NcmTimer
  *
- * This function verifies if @nt task has ended.
- * The @nt task length must be greater than 0.
+ * Aborts if no task is running.
  *
- * Returns: TRUE if the task has ended, FALSE otherwise.
+ * Returns: whether all items of the task are completed.
  */
 gboolean
 ncm_timer_task_has_ended (NcmTimer *nt)
@@ -618,10 +628,9 @@ ncm_timer_task_has_ended (NcmTimer *nt)
  * ncm_timer_task_end:
  * @nt: a #NcmTimer
  *
- * This function ends @nt task.
- * The @nt task length must be greater than 0.
+ * Ends the running task. Aborts if no task is running.
  *
- * Returns: TRUE if the task is finished, FALSE otherwise.
+ * Returns: whether all items of the task were completed.
  */
 gboolean
 ncm_timer_task_end (NcmTimer *nt)
@@ -640,9 +649,10 @@ ncm_timer_task_end (NcmTimer *nt)
  * ncm_timer_elapsed_since_last_log:
  * @nt: a #NcmTimer
  *
- * This function returns the elapsed time since the last log.
+ * The ncm_timer_task_log functions record the time of the last completed item as
+ * the time of the log.
  *
- * Returns: elapsed time since the last log.
+ * Returns: the seconds elapsed since the last log.
  */
 gdouble
 ncm_timer_elapsed_since_last_log (NcmTimer *nt)
@@ -654,9 +664,7 @@ ncm_timer_elapsed_since_last_log (NcmTimer *nt)
  * ncm_timer_task_mean_time:
  * @nt: a #NcmTimer
  *
- * This function returns the mean time between all @nt task.
- *
- * Returns: @nt tasks mean time.
+ * Returns: the mean time per completed item, in seconds.
  */
 gdouble
 ncm_timer_task_mean_time (NcmTimer *nt)
@@ -668,9 +676,7 @@ ncm_timer_task_mean_time (NcmTimer *nt)
  * ncm_timer_task_time_left:
  * @nt: a #NcmTimer
  *
- * This function calculates the time for the remaining tasks of @nt.
- *
- * Returns: tasks time left.
+ * Returns: the mean time per item times the number of items left, in seconds.
  */
 gdouble
 ncm_timer_task_time_left (NcmTimer *nt)
@@ -685,11 +691,10 @@ ncm_timer_task_time_left (NcmTimer *nt)
  * ncm_timer_task_elapsed_str:
  * @nt: a #NcmTimer
  *
- * This function returns a string wiht the time needed
- * to complete the tasks until the program reaches it.
- * The @nt task length must be greater than 0.
+ * Formats the number of completed items and the elapsed time. Aborts if no task is
+ * running.
  *
- * Returns: (transfer none): a string.
+ * Returns: (transfer none): the formatted string.
  */
 const gchar *
 ncm_timer_task_elapsed_str (NcmTimer *nt)
@@ -713,25 +718,23 @@ ncm_timer_task_elapsed_str (NcmTimer *nt)
  * ncm_timer_task_mean_time_str:
  * @nt: a #NcmTimer
  *
- * This function returns astring with the average time to go through each task.
+ * Formats the mean time per item with its standard error. Aborts if no task is
+ * running.
+ * A value is "unknown" until it is defined: the mean after the first completed item,
+ * the standard error after the second update.
  *
- * Returns: (transfer none): a string.
+ * Returns: (transfer none): the formatted string.
  */
 const gchar *
 ncm_timer_task_mean_time_str (NcmTimer *nt)
 {
   g_assert (nt->task_len != 0);
   {
-    guint day, hour, min;
-    gdouble sec;
-    gdouble mean_time  = ncm_timer_task_mean_time (nt);
-    gdouble sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
+    gdouble mean_time, sigma_time;
 
-    _ncm_timer_sec_to_dhms (mean_time, &day, &hour, &min, &sec);
-    _ncm_timer_dhms_to_string (nt->msg_tmp1, day, hour, min, sec);
-
-    _ncm_timer_sec_to_dhms (sigma_time, &day, &hour, &min, &sec);
-    _ncm_timer_dhms_to_string (nt->msg_tmp2, day, hour, min, sec);
+    _ncm_timer_task_mean_sigma (nt, &mean_time, &sigma_time);
+    _ncm_timer_sec_to_string (nt->msg_tmp1, mean_time);
+    _ncm_timer_sec_to_string (nt->msg_tmp2, sigma_time);
 
     g_string_printf (nt->msg,
                      "# Task:%s, mean time: %s +/- %s",
@@ -745,28 +748,24 @@ ncm_timer_task_mean_time_str (NcmTimer *nt)
  * ncm_timer_task_time_left_str:
  * @nt: a #NcmTimer
  *
- * This function returns a string with the time left to execute the remaining tasks.
+ * Formats ncm_timer_task_time_left() with its standard error. Aborts if no task is
+ * running.
+ * A value is "unknown" until it is defined: the mean after the first completed item,
+ * the standard error after the second update.
  *
- * Returns: (transfer none): a string.
+ * Returns: (transfer none): the formatted string.
  */
 const gchar *
 ncm_timer_task_time_left_str (NcmTimer *nt)
 {
   g_assert (nt->task_len != 0);
   {
-    guint day, hour, min;
-    gdouble sec;
-    const gdouble mean_time       = ncm_stats_vec_get_mean (nt->time_stats, 0);
-    const gdouble sigma_time      = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
-    const guint task_left         = nt->task_len - nt->task_pos;
-    const gdouble mean_time_left  = mean_time * task_left;
-    const gdouble sigma_time_left = sigma_time * task_left;
+    const guint task_left = nt->task_len - nt->task_pos;
+    gdouble mean_time, sigma_time;
 
-    _ncm_timer_sec_to_dhms (mean_time_left, &day, &hour, &min, &sec);
-    _ncm_timer_dhms_to_string (nt->msg_tmp1, day, hour, min, sec);
-
-    _ncm_timer_sec_to_dhms (sigma_time_left, &day, &hour, &min, &sec);
-    _ncm_timer_dhms_to_string (nt->msg_tmp2, day, hour, min, sec);
+    _ncm_timer_task_mean_sigma (nt, &mean_time, &sigma_time);
+    _ncm_timer_sec_to_string (nt->msg_tmp1, mean_time * task_left);
+    _ncm_timer_sec_to_string (nt->msg_tmp2, sigma_time * task_left);
 
     g_string_printf (nt->msg,
                      "# Task:%s, time left: %s +/- %s",
@@ -780,9 +779,10 @@ ncm_timer_task_time_left_str (NcmTimer *nt)
  * ncm_timer_task_start_datetime_str:
  * @nt: a #NcmTimer
  *
- * This function returns a string wiht the start time of the @nt task in date plus time format.
+ * Formats the local date and time now minus ncm_timer_elapsed(), which is the
+ * start of the timer if it was never stopped.
  *
- * Returns: (transfer none): a string.
+ * Returns: (transfer none): the formatted string.
  */
 const gchar *
 ncm_timer_task_start_datetime_str (NcmTimer *nt)
@@ -807,34 +807,40 @@ ncm_timer_task_start_datetime_str (NcmTimer *nt)
  * ncm_timer_task_end_datetime_str:
  * @nt: a #NcmTimer
  *
- * This function returns a string with the end time of the @nt task in date plus time format.
+ * Formats the local date and time at which the task is estimated to end, with the
+ * standard error of the time left.
+ * A value is "unknown" until it is defined: the mean after the first completed item,
+ * the standard error after the second update.
  *
- * Returns: (transfer none): a string.
+ * Returns: (transfer none): the formatted string.
  */
 const gchar *
 ncm_timer_task_end_datetime_str (NcmTimer *nt)
 {
-  GDateTime *dt_now             = g_date_time_new_now_local ();
-  const gdouble mean_time       = ncm_stats_vec_get_mean (nt->time_stats, 0);
-  const gdouble sigma_time      = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
-  const guint task_left         = nt->task_len - nt->task_pos;
-  const gdouble mean_time_left  = mean_time * task_left;
-  const gdouble sigma_time_left = sigma_time * task_left;
-  GDateTime *dt_end             = g_date_time_add_seconds (dt_now, mean_time_left);
-  gchar *end_str                = g_date_time_format (dt_end, "%a %b %d %Y, %T");
-  guint day, hour, min;
-  gdouble sec;
+  const guint task_left = nt->task_len - nt->task_pos;
+  gdouble mean_time, sigma_time;
 
-  _ncm_timer_sec_to_dhms (sigma_time_left, &day, &hour, &min, &sec);
-  _ncm_timer_dhms_to_string (nt->msg_tmp1, day, hour, min, sec);
+  _ncm_timer_task_mean_sigma (nt, &mean_time, &sigma_time);
+  _ncm_timer_sec_to_string (nt->msg_tmp1, sigma_time * task_left);
 
-  g_string_printf (nt->msg,
-                   "# Task:%s, estimated to end at: %s +/- %s",
-                   nt->name, end_str, nt->msg_tmp1->str);
+  if (isfinite (mean_time))
+  {
+    GDateTime *dt_now = g_date_time_new_now_local ();
+    GDateTime *dt_end = g_date_time_add_seconds (dt_now, mean_time * task_left);
+    gchar *end_str    = g_date_time_format (dt_end, "%a %b %d %Y, %T");
 
-  g_date_time_unref (dt_now);
-  g_date_time_unref (dt_end);
-  g_free (end_str);
+    g_string_printf (nt->msg,
+                     "# Task:%s, estimated to end at: %s +/- %s",
+                     nt->name, end_str, nt->msg_tmp1->str);
+
+    g_date_time_unref (dt_now);
+    g_date_time_unref (dt_end);
+    g_free (end_str);
+  }
+  else
+  {
+    g_string_printf (nt->msg, "# Task:%s, estimated to end at: unknown", nt->name);
+  }
 
   return nt->msg->str;
 }
@@ -843,9 +849,9 @@ ncm_timer_task_end_datetime_str (NcmTimer *nt)
  * ncm_timer_task_cur_datetime_str:
  * @nt: a #NcmTimer
  *
- * This function returns a string with the current time of the @nt task in date plus time format.
+ * Formats the current local date and time.
  *
- * Returns: (transfer none): a string.
+ * Returns: (transfer none): the formatted string.
  */
 const gchar *
 ncm_timer_task_cur_datetime_str (NcmTimer *nt)
@@ -867,8 +873,7 @@ ncm_timer_task_cur_datetime_str (NcmTimer *nt)
  * ncm_timer_task_log_elapsed:
  * @nt: a #NcmTimer
  *
- * This function log the time elapsed through all @nt's tasks.
- *
+ * Logs ncm_timer_task_elapsed_str().
  */
 void
 ncm_timer_task_log_elapsed (NcmTimer *nt)
@@ -881,8 +886,7 @@ ncm_timer_task_log_elapsed (NcmTimer *nt)
  * ncm_timer_task_log_mean_time:
  * @nt: a #NcmTimer
  *
- * This function log the mean time elapsed of each of the @nt tasks.
- *
+ * Logs ncm_timer_task_mean_time_str().
  */
 void
 ncm_timer_task_log_mean_time (NcmTimer *nt)
@@ -895,8 +899,7 @@ ncm_timer_task_log_mean_time (NcmTimer *nt)
  * ncm_timer_task_log_time_left:
  * @nt: a #NcmTimer
  *
- * This function log the time left of the @nt's remaining tasks.
- *
+ * Logs ncm_timer_task_time_left_str().
  */
 void
 ncm_timer_task_log_time_left (NcmTimer *nt)
@@ -909,8 +912,7 @@ ncm_timer_task_log_time_left (NcmTimer *nt)
  * ncm_timer_task_log_start_datetime:
  * @nt: a #NcmTimer
  *
- * This function log the start time of the @nt's tasks in date plus time format.
- *
+ * Logs ncm_timer_task_start_datetime_str().
  */
 void
 ncm_timer_task_log_start_datetime (NcmTimer *nt)
@@ -923,8 +925,7 @@ ncm_timer_task_log_start_datetime (NcmTimer *nt)
  * ncm_timer_task_log_cur_datetime:
  * @nt: a #NcmTimer
  *
- * This function log the current time of the @nt's tasks in date plus time format.
- *
+ * Logs ncm_timer_task_cur_datetime_str().
  */
 void
 ncm_timer_task_log_cur_datetime (NcmTimer *nt)
@@ -937,8 +938,7 @@ ncm_timer_task_log_cur_datetime (NcmTimer *nt)
  * ncm_timer_task_log_end_datetime:
  * @nt: a #NcmTimer
  *
- * This function log the end time of the @nt's tasks in date plus time format.
- *
+ * Logs ncm_timer_task_end_datetime_str().
  */
 void
 ncm_timer_task_log_end_datetime (NcmTimer *nt)

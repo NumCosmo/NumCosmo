@@ -560,7 +560,7 @@ _trace_theta_hat_rot (const gdouble rho, const gdouble lam,
         /* t=tan(theta_B/4), where theta_B is the Weierstrass-substitution
          * variable from the symbolic derivation. The angle wanted is
          * theta_B/2, not theta_B: 2*atan(t)+branch*pi, not
-         * 4*atan(t)+branch*2pi. See docs/theory/wl_shape_factor_history.md
+         * 4*atan(t)+branch*2pi. See docs/theory/nc/lss/galaxy/wl_shape_factor_history.md
          * for the factor-of-2 error this guards against. */
         const gdouble theta_rot = 2.0 * atan (zr) + branch * M_PI;
         const gdouble D2        = _trace_D2_only (rho, theta_rot, g_rot, 0.0, chiOr_r, chiOr_i);

@@ -1,0 +1,5 @@
+subdir('background')
+subdir('lss')
+subdir('powspec')
+subdir('recomb')
+subdir('xcor')

@@ -48,7 +48,7 @@ struct _NcmSkyFootprintClass
   gdouble (*density) (NcmSkyFootprint *footprint, const gdouble ra, const gdouble dec);
   gdouble (*ln_density) (NcmSkyFootprint *footprint, const gdouble ra, const gdouble dec);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
+  /* Padding to allow adding up to 13 more virtual functions without breaking ABI. */
   gpointer padding[13];
 };
 

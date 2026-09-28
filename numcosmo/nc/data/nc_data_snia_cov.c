@@ -4102,9 +4102,9 @@ nc_data_snia_cov_apply_filter_sh0es_z (NcDataSNIACov *snia_cov, const gdouble z_
       }
 
       ncm_matrix_free (ncm_iset_get_submatrix (is, self->cov_mbc_mbc, selff->cov_mbc_mbc));
-      ncm_iset_get_subarray (is, self->is_calib, selff->is_calib);
-      ncm_iset_get_subarray (is, self->used_in_sh0es, selff->used_in_sh0es);
-      ncm_iset_get_subarray (is, self->dataset, selff->dataset);
+      g_array_unref (ncm_iset_get_subarray (is, self->is_calib, selff->is_calib));
+      g_array_unref (ncm_iset_get_subarray (is, self->used_in_sh0es, selff->used_in_sh0es));
+      g_array_unref (ncm_iset_get_subarray (is, self->dataset, selff->dataset));
     }
   }
 

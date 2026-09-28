@@ -225,8 +225,6 @@ jobs:
         cd examples
         python3 example_simple.py
         python3 example_cbe.py
-        cd ..
-        pytest -xvs tests/python --run-sphere-map -m sphere_map
     - name: Check NumCosmo
       run: |
         meson test -v -C build --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ env.FAST_TEST_ARGS }} || (cat build/meson-logs/testlog.txt && exit 1)

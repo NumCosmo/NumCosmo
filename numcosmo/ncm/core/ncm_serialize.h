@@ -40,13 +40,12 @@ G_DECLARE_FINAL_TYPE (NcmSerialize, ncm_serialize, NCM, SERIALIZE, GObject)
 
 /**
  * NcmSerializeOpt:
- * @NCM_SERIALIZE_OPT_NONE: Use default serialization.
- * @NCM_SERIALIZE_OPT_AUTOSAVE_SER: Whether to automatically include named deserialized objects in the named instances.
- * @NCM_SERIALIZE_OPT_AUTONAME_SER: Whether to automatically name objects on serialization.
- * @NCM_SERIALIZE_OPT_CLEAN_DUP: Combination of NCM_SERIALIZE_OPT_AUTOSAVE_SER and NCM_SERIALIZE_OPT_AUTONAME_SER
+ * @NCM_SERIALIZE_OPT_NONE: no option
+ * @NCM_SERIALIZE_OPT_AUTOSAVE_SER: add each named object deserialized to the named instances
+ * @NCM_SERIALIZE_OPT_AUTONAME_SER: name each newly serialized object `S<n>`
+ * @NCM_SERIALIZE_OPT_CLEAN_DUP: both, which keeps shared objects shared in ncm_serialize_dup_obj()
  *
- * Options for serialization.
- *
+ * Options of #NcmSerialize.
  */
 typedef enum _NcmSerializeOpt /*< prefix=NCM_SERIALIZE_OPT >*/
 {
@@ -159,7 +158,7 @@ gboolean ncm_serialize_global_contain_name (const gchar *name);
 guint ncm_serialize_global_count_instances (void);
 guint ncm_serialize_global_count_saved_serializations (void);
 gpointer ncm_serialize_global_get_by_name (const gchar *name);
-gchar *ncm_serialize_global_global_peek_name (gpointer obj);
+gchar *ncm_serialize_global_peek_name (gpointer obj);
 void ncm_serialize_global_set (gpointer obj, const gchar *name, gboolean overwrite);
 void ncm_serialize_global_unset (gpointer obj);
 void ncm_serialize_global_remove_ser (gpointer obj);
@@ -186,29 +185,113 @@ GObject *ncm_serialize_global_dup_obj (GObject *obj);
 gchar *ncm_serialize_global_variant_to_yaml (GVariant *var_obj);
 
 
-/* Serialization macros */
+/* Serialization macros; NCM_SERIALIZE_VECTOR_TYPE and NCM_SERIALIZE_MATRIX_TYPE are also
+ * written out in ncm_vector.c and ncm_matrix.c */
 
-/*
- * NCM_SERIALIZE_VECTOR_TYPE and NCM_SERIALIZE_MATRIX_TYPE are
- * also hardcoded in numcosmo/ncm/algebra/ncm_matrix.c and numcosmo/ncm/algebra/ncm_vector.c.
+/**
+ * NCM_SERIALIZE_PROPERTY_TYPE:
+ *
+ * GVariant type string of one serialized property, a name and a value: `{sv}`.
  */
 #define NCM_SERIALIZE_PROPERTY_TYPE "{sv}"
+
+/**
+ * NCM_SERIALIZE_PROPERTIES_TYPE:
+ *
+ * GVariant type string of the properties of a serialized object: `a{sv}`.
+ */
 #define NCM_SERIALIZE_PROPERTIES_TYPE "a"NCM_SERIALIZE_PROPERTY_TYPE
+
+/**
+ * NCM_SERIALIZE_OBJECT_TYPE:
+ *
+ * GVariant type string of a serialized object, its type name and properties: `(sa{sv})`.
+ */
 #define NCM_SERIALIZE_OBJECT_TYPE "(s"NCM_SERIALIZE_PROPERTIES_TYPE ")"
+
+/**
+ * NCM_SERIALIZE_OBJECT_FORMAT:
+ *
+ * g_variant_new() format string building a #NCM_SERIALIZE_OBJECT_TYPE from a type name and
+ * a #GVariant of properties.
+ */
 #define NCM_SERIALIZE_OBJECT_FORMAT "(s@"NCM_SERIALIZE_PROPERTIES_TYPE ")"
 
+/**
+ * NCM_SERIALIZE_OBJECT_ARRAY_TYPE:
+ *
+ * GVariant type string of a serialized #NcmObjArray.
+ */
 #define NCM_SERIALIZE_OBJECT_ARRAY_TYPE "a"NCM_SERIALIZE_OBJECT_TYPE
+
+/**
+ * NCM_SERIALIZE_OBJECT_ARRAY_POS_STR:
+ *
+ * Prefix of the key-file groups of the elements written by ncm_serialize_array_to_key_file().
+ */
 #define NCM_SERIALIZE_OBJECT_ARRAY_POS_STR "ARRAY:ELEMENT"
+
+/**
+ * NCM_SERIALIZE_OBJECT_ARRAY_OBJ_NAME_STR:
+ *
+ * Key holding the type name of an element in ncm_serialize_array_to_key_file().
+ */
 #define NCM_SERIALIZE_OBJECT_ARRAY_OBJ_NAME_STR "OBJECT:NAME"
 
+/**
+ * NCM_SERIALIZE_OBJECT_DICT_STR_TYPE:
+ *
+ * GVariant type string of a serialized #NcmObjDictStr.
+ */
 #define NCM_SERIALIZE_OBJECT_DICT_STR_TYPE "a{s"NCM_SERIALIZE_OBJECT_TYPE "}"
+
+/**
+ * NCM_SERIALIZE_OBJECT_DICT_INT_TYPE:
+ *
+ * GVariant type string of a serialized #NcmObjDictInt.
+ */
 #define NCM_SERIALIZE_OBJECT_DICT_INT_TYPE "a{i"NCM_SERIALIZE_OBJECT_TYPE "}"
+
+/**
+ * NCM_SERIALIZE_VAR_DICT_TYPE:
+ *
+ * GVariant type string of a serialized #NcmVarDict.
+ */
 #define NCM_SERIALIZE_VAR_DICT_TYPE "a{sv}"
 
+/**
+ * NCM_SERIALIZE_VECTOR_TYPE:
+ *
+ * GVariant type string of a serialized #NcmVector.
+ */
 #define NCM_SERIALIZE_VECTOR_TYPE "ad"
+
+/**
+ * NCM_SERIALIZE_MATRIX_TYPE:
+ *
+ * GVariant type string of a serialized #NcmMatrix.
+ */
 #define NCM_SERIALIZE_MATRIX_TYPE "aad"
+
+/**
+ * NCM_SERIALIZE_STRV_TYPE:
+ *
+ * GVariant type string of a serialized string array.
+ */
 #define NCM_SERIALIZE_STRV_TYPE "as"
+
+/**
+ * NCM_SERIALIZE_AUTOSAVE_NAME:
+ *
+ * Prefix of the names given with #NCM_SERIALIZE_OPT_AUTONAME_SER.
+ */
 #define NCM_SERIALIZE_AUTOSAVE_NAME "S"
+
+/**
+ * NCM_SERIALIZE_AUTOSAVE_NFORMAT:
+ *
+ * printf format of the number that follows #NCM_SERIALIZE_AUTOSAVE_NAME.
+ */
 #define NCM_SERIALIZE_AUTOSAVE_NFORMAT "%u"
 
 G_END_DECLS

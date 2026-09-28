@@ -268,23 +268,38 @@ def test_zi_zf_require_is_a_ratchet() -> None:
 
 
 def test_lnr0_moves_the_output_range() -> None:
-    """Re-centring the output shifts the r range it can be evaluated on."""
-    psf = _power_law_filter(-1.5, Ncm.PowspecFilterType.TOPHAT, 1)
+    """Re-centring the output shifts the r range it can be evaluated on.
 
+    Before a prepare the range is the estimate ln r0 -+ L/2; after it, the grid's own
+    ends, which the no-ringing shift moves by less than one knot from that estimate.
+    """
+    cosmo = Nc.HICosmoLCDM.new()
+    psf = _power_law_filter(-1.5, Ncm.PowspecFilterType.TOPHAT, 1)
+    ps = psf.peek_powspec()
+    L = np.log(ps.get_kmax() / ps.get_kmin())
+    lnr0 = psf.props.lnr0
     r_min_before, r_max_before = psf.get_r_min(), psf.get_r_max()
     assert 0.0 < r_min_before < r_max_before
 
-    psf.set_lnr0(psf.props.lnr0 + np.log(10.0))
-
-    assert psf.props.lnr0 == pytest.approx(
-        np.log(10.0) + np.log(r_min_before * r_max_before) / 2.0, rel=1.0e-6
+    psf.set_lnr0(lnr0 + np.log(10.0))
+    assert psf.props.lnr0 == lnr0 + np.log(10.0)
+    assert np.log(psf.get_r_min()) == pytest.approx(
+        psf.props.lnr0 - L / 2.0, rel=1.0e-14
     )
-    assert psf.get_r_min() == pytest.approx(10.0 * r_min_before, rel=1.0e-10)
-    assert psf.get_r_max() == pytest.approx(10.0 * r_max_before, rel=1.0e-10)
+    assert np.log(psf.get_r_max()) == pytest.approx(
+        psf.props.lnr0 + L / 2.0, rel=1.0e-14
+    )
+
+    psf.prepare(cosmo)
+    n_k, _ = psf.get_nknots()
+    assert abs(np.log(psf.get_r_min() / (10.0 * r_min_before))) < L / n_k
+    assert abs(np.log(psf.get_r_max() / (10.0 * r_max_before))) < L / n_k
 
     # set_best_lnr0 puts it back on the range the spectrum actually supports.
     psf.set_best_lnr0()
-    assert psf.get_r_min() == pytest.approx(r_min_before, rel=1.0e-10)
+    psf.prepare(cosmo)
+    assert psf.get_r_min() == pytest.approx(r_min_before, rel=1.0e-12)
+    assert psf.get_r_max() == pytest.approx(r_max_before, rel=1.0e-12)
 
 
 @pytest.mark.parametrize("ftype", FILTER_TYPES)
@@ -305,3 +320,67 @@ def test_raw_derivatives_match_log_derivatives(ftype: Ncm.PowspecFilterType) -> 
         assert d2var / var - (dvar / var) ** 2 == pytest.approx(
             psf.eval_dnlnvar_dlnrn(0.0, x, 2), rel=1.0e-12
         )
+
+
+def _eh_filter(reltol: float) -> tuple[Ncm.PowspecFilter, Nc.HICosmo]:
+    """A tophat filter over an Eisenstein-Hu spectrum, prepared at ``reltol``."""
+    cosmo = Nc.HICosmoDEXcdm(prim=Nc.HIPrimPowerLaw.new(), reion=Nc.HIReionCamb.new())
+    ps = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH.new())
+    psf = Ncm.PowspecFilter.new(ps, Ncm.PowspecFilterType.TOPHAT)
+    psf.set_reltol(reltol)
+    psf.set_best_lnr0()
+    psf.prepare(cosmo)
+    return psf, cosmo
+
+
+def test_set_reltol_recalibrates() -> None:
+    """Tightening the tolerance after a prepare calibrates again at the next prepare.
+
+    The setter used to store the value only, so the second prepare kept the coarse grid.
+    """
+    lnr = np.log(8.0)
+    psf, cosmo = _eh_filter(1.0e-2)
+    coarse = psf.eval_lnvar_lnr(0.0, lnr)
+    n_k_coarse, _ = psf.get_nknots()
+
+    psf.set_reltol(1.0e-8)
+    psf.prepare(cosmo)
+    tightened = psf.eval_lnvar_lnr(0.0, lnr)
+    n_k_tight, _ = psf.get_nknots()
+
+    fresh, _ = _eh_filter(1.0e-8)
+
+    assert n_k_tight > n_k_coarse
+    assert (n_k_tight, psf.get_nknots()[1]) == fresh.get_nknots()
+    assert tightened != coarse
+    assert tightened == fresh.eval_lnvar_lnr(0.0, lnr)
+
+
+def test_knot_limits_round_trip_and_nknots_before_prepare() -> None:
+    """The knot limits read back, and no grid is reported before the first prepare."""
+    ps = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH.new())
+    psf = Ncm.PowspecFilter.new(ps, Ncm.PowspecFilterType.TOPHAT)
+
+    assert psf.get_nknots() == (0, 0)
+
+    psf.set_max_k_knots(12345)
+    psf.set_max_z_knots(321)
+    assert psf.get_max_k_knots() == 12345
+    assert psf.get_max_z_knots() == 321
+    assert psf.props.max_k_knots == 12345
+
+
+def test_r_range_is_the_calibrated_grid() -> None:
+    """After a prepare r_min and r_max are the grid's end knots, not ln r0 +- L/2.
+
+    The knots span (N_k - 1) L / N_k in ln r; the estimate from ln r0 spans L, one spacing
+    more, and ignores the no-ringing shift. Halofit brackets its root search with these.
+    """
+    psf, _ = _eh_filter(1.0e-6)
+    ps = psf.peek_powspec()
+    L = np.log(ps.get_kmax() / ps.get_kmin())
+    n_k, _ = psf.get_nknots()
+
+    span = np.log(psf.get_r_max() / psf.get_r_min())
+
+    assert span == pytest.approx((n_k - 1) * L / n_k, rel=1.0e-12)

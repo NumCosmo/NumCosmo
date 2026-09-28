@@ -71,6 +71,14 @@ void test_ncm_matrix_free (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_submatrix (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_serialization (TestNcmMatrix *test, gconstpointer pdata);
 
+void test_ncm_matrix_api_dsymm (void);
+void test_ncm_matrix_api_cholesky (void);
+void test_ncm_matrix_api_cor (void);
+void test_ncm_matrix_api_transpose_memcpy (void);
+void test_ncm_matrix_api_variant_empty (void);
+void test_ncm_matrix_api_fast_get_tda (void);
+void test_ncm_matrix_api_nearPD (void);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -208,6 +216,14 @@ main (gint argc, gchar *argv[])
               &test_ncm_matrix_new,
               &test_ncm_matrix_serialization,
               &test_ncm_matrix_free);
+
+  g_test_add_func ("/ncm/matrix/api/dsymm", &test_ncm_matrix_api_dsymm);
+  g_test_add_func ("/ncm/matrix/api/cholesky", &test_ncm_matrix_api_cholesky);
+  g_test_add_func ("/ncm/matrix/api/cor", &test_ncm_matrix_api_cor);
+  g_test_add_func ("/ncm/matrix/api/transpose_memcpy", &test_ncm_matrix_api_transpose_memcpy);
+  g_test_add_func ("/ncm/matrix/api/variant_empty", &test_ncm_matrix_api_variant_empty);
+  g_test_add_func ("/ncm/matrix/api/fast_get_tda", &test_ncm_matrix_api_fast_get_tda);
+  g_test_add_func ("/ncm/matrix/api/nearPD", &test_ncm_matrix_api_nearPD);
 
   g_test_run ();
 }
@@ -1819,5 +1835,233 @@ test_ncm_matrix_free (TestNcmMatrix *test, gconstpointer pdata)
 
   if (test->d != NULL)
     g_free (test->d);
+}
+
+/* A symmetric positive definite 3x3 matrix */
+static NcmMatrix *
+_test_matrix_spd (void)
+{
+  NcmMatrix *A = ncm_matrix_new (3, 3);
+
+  ncm_matrix_set_from_data (A, (gdouble[]) {4.0, 1.0, 0.5, 1.0, 3.0, 0.2, 0.5, 0.2, 2.0});
+
+  return A;
+}
+
+static gdouble
+_test_matrix_det3 (NcmMatrix *A)
+{
+#define a(i, j) ncm_matrix_get (A, i, j)
+
+  return a (0, 0) * (a (1, 1) * a (2, 2) - a (1, 2) * a (2, 1))
+         - a (0, 1) * (a (1, 0) * a (2, 2) - a (1, 2) * a (2, 0))
+         + a (0, 2) * (a (1, 0) * a (2, 1) - a (1, 1) * a (2, 0));
+
+#undef a
+}
+
+void
+test_ncm_matrix_api_dsymm (void)
+{
+  NcmMatrix *A  = _test_matrix_spd ();
+  NcmMatrix *Au = ncm_matrix_dup (A);
+  NcmMatrix *B  = ncm_matrix_new (3, 3);
+  NcmMatrix *C1 = ncm_matrix_new (3, 3);
+  NcmMatrix *C2 = ncm_matrix_new (3, 3);
+  guint i, j;
+
+  ncm_matrix_set_from_data (B, (gdouble[]) {1.0, 2.0, 3.0, -1.0, 0.5, 2.0, 0.0, 1.0, -2.0});
+
+  /* Only the upper triangle is read: garbage below the diagonal changes nothing */
+  ncm_matrix_set (Au, 1, 0, 100.0);
+  ncm_matrix_set (Au, 2, 0, -100.0);
+  ncm_matrix_set (Au, 2, 1, 50.0);
+
+  ncm_matrix_set_zero (C1);
+  ncm_matrix_dsymm (C1, 'U', 2.0, Au, B, 0.0);
+  ncm_matrix_dgemm (C2, 'N', 'N', 2.0, A, B, 0.0);
+
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++)
+      ncm_assert_cmpdouble_e (ncm_matrix_get (C1, i, j), ==, ncm_matrix_get (C2, i, j), 1.0e-15, 1.0e-15);
+
+  ncm_matrix_free (A);
+  ncm_matrix_free (Au);
+  ncm_matrix_free (B);
+  ncm_matrix_free (C1);
+  ncm_matrix_free (C2);
+}
+
+void
+test_ncm_matrix_api_cholesky (void)
+{
+  NcmMatrix *A     = _test_matrix_spd ();
+  NcmMatrix *L     = ncm_matrix_dup (A);
+  NcmMatrix *Ainv  = NULL;
+  NcmVector *b     = ncm_vector_new (3);
+  NcmVector *b2    = ncm_vector_new (3);
+  NcmVector *x     = ncm_vector_new (3);
+  const gdouble d3 = _test_matrix_det3 (A);
+  guint i, j;
+
+  ncm_vector_set_data (b, (gdouble[]) {1.0, -2.0, 0.5}, 3);
+  ncm_vector_memcpy (b2, b);
+
+  g_assert_cmpint (ncm_matrix_cholesky_decomp (L, 'U'), ==, 0);
+  ncm_assert_cmpdouble_e (ncm_matrix_cholesky_lndet (L), ==, log (d3), 1.0e-14, 0.0);
+
+  /* Solve with the factor, and in one call from the original matrix */
+  g_assert_cmpint (ncm_matrix_cholesky_solve2 (L, b2, 'U'), ==, 0);
+  {
+    NcmMatrix *A2 = ncm_matrix_dup (A);
+
+    g_assert_cmpint (ncm_matrix_cholesky_solve (A2, b, 'U'), ==, 0);
+    ncm_matrix_free (A2);
+  }
+
+  ncm_matrix_update_vector (A, 'N', 1.0, b, 0.0, x);
+  ncm_assert_cmpdouble_e (ncm_vector_get (x, 1), ==, -2.0, 1.0e-14, 0.0);
+
+  for (i = 0; i < 3; i++)
+    ncm_assert_cmpdouble_e (ncm_vector_get (b2, i), ==, ncm_vector_get (b, i), 1.0e-14, 0.0);
+
+  /* The inverse from the factor */
+  Ainv = ncm_matrix_dup (L);
+  g_assert_cmpint (ncm_matrix_cholesky_inverse (Ainv, 'U'), ==, 0);
+  ncm_matrix_copy_triangle (Ainv, 'U');
+  {
+    NcmMatrix *AAinv = ncm_matrix_new (3, 3);
+
+    ncm_matrix_dgemm (AAinv, 'N', 'N', 1.0, A, Ainv, 0.0);
+    g_assert_true (ncm_matrix_is_identity (AAinv, 1.0e-14));
+    ncm_matrix_free (AAinv);
+  }
+
+  NCM_UNUSED (j);
+
+  ncm_matrix_free (A);
+  ncm_matrix_free (L);
+  ncm_matrix_free (Ainv);
+  ncm_vector_free (b);
+  ncm_vector_free (b2);
+  ncm_vector_free (x);
+}
+
+void
+test_ncm_matrix_api_cor (void)
+{
+  NcmMatrix *cov = _test_matrix_spd ();
+  NcmMatrix *cor = ncm_matrix_cov_dup_cor (cov);
+  NcmRNG *rng    = ncm_rng_seeded_new (NULL, 123);
+  NcmMatrix *R   = ncm_matrix_new (5, 5);
+  guint i, j;
+
+  for (i = 0; i < 3; i++)
+  {
+    ncm_assert_cmpdouble_e (ncm_matrix_get (cor, i, i), ==, 1.0, 1.0e-15, 0.0);
+
+    for (j = 0; j < 3; j++)
+      ncm_assert_cmpdouble_e (ncm_matrix_get (cor, i, j), ==, ncm_matrix_get (cov, i, j) / sqrt (ncm_matrix_get (cov, i, i) * ncm_matrix_get (cov, j, j)), 1.0e-15, 0.0);
+  }
+
+  /* In place */
+  ncm_matrix_cov2cor (cov, cov);
+  g_assert_cmpfloat (ncm_matrix_cmp (cov, cor, 0.0), <, 1.0e-15);
+
+  /* A random correlation matrix: unit diagonal, symmetric, positive definite */
+  ncm_matrix_fill_rand_cor (R, 0.5, rng);
+
+  for (i = 0; i < 5; i++)
+  {
+    g_assert_cmpfloat (ncm_matrix_get (R, i, i), ==, 1.0);
+
+    for (j = 0; j < 5; j++)
+    {
+      g_assert_cmpfloat (ncm_matrix_get (R, i, j), ==, ncm_matrix_get (R, j, i));
+      g_assert_cmpfloat (fabs (ncm_matrix_get (R, i, j)), <=, 1.0);
+    }
+  }
+
+  g_assert_cmpint (ncm_matrix_cholesky_decomp (R, 'U'), ==, 0);
+
+  ncm_matrix_free (cov);
+  ncm_matrix_free (cor);
+  ncm_matrix_free (R);
+  ncm_rng_free (rng);
+}
+
+void
+test_ncm_matrix_api_transpose_memcpy (void)
+{
+  NcmMatrix *A  = ncm_matrix_new (2, 3);
+  NcmMatrix *At = ncm_matrix_new (3, 2);
+  NcmMatrix *B  = ncm_matrix_new (2, 3);
+
+  ncm_matrix_set_from_data (A, (gdouble[]) {1.0, 2.0, 3.0, 4.0, 5.0, 6.0});
+  ncm_matrix_transpose_memcpy (At, A);
+  g_assert_cmpfloat (ncm_matrix_get (At, 2, 1), ==, 6.0);
+  g_assert_cmpfloat (ncm_matrix_get (At, 0, 1), ==, 4.0);
+
+  /* cmp_diag reads only the diagonal */
+  ncm_matrix_memcpy (B, A);
+  ncm_matrix_set (B, 0, 2, 100.0);
+  g_assert_cmpfloat (ncm_matrix_cmp_diag (A, B, 0.0), ==, 0.0);
+  g_assert_cmpfloat (ncm_matrix_cmp (A, B, 0.0), >, 0.0);
+
+  ncm_matrix_free (A);
+  ncm_matrix_free (At);
+  ncm_matrix_free (B);
+}
+
+void
+test_ncm_matrix_api_variant_empty (void)
+{
+  NcmMatrix *A  = _test_matrix_spd ();
+  GVariant *var = ncm_matrix_get_variant (A);
+  NcmMatrix *B  = ncm_matrix_new_variant (var);
+
+  g_assert_cmpuint (ncm_matrix_nrows (B), ==, 3);
+  g_assert_cmpuint (ncm_matrix_ncols (B), ==, 3);
+  g_assert_cmpfloat (ncm_matrix_cmp (A, B, 0.0), ==, 0.0);
+
+  g_variant_unref (var);
+  ncm_matrix_free (A);
+  ncm_matrix_free (B);
+}
+
+void
+test_ncm_matrix_api_fast_get_tda (void)
+{
+  gdouble d[]  = {1.0, 2.0, -1.0, 3.0, 4.0, -1.0};
+  NcmMatrix *A = ncm_matrix_new_data_static_tda (d, 2, 2, 3);
+
+  /* Element (i, j) is at i tda + j */
+  g_assert_cmpuint (ncm_matrix_tda (A), ==, 3);
+  g_assert_cmpfloat (ncm_matrix_fast_get (A, 1 * 3 + 1), ==, 4.0);
+  g_assert_cmpfloat (ncm_matrix_get (A, 1, 0), ==, 3.0);
+  g_assert_cmpuint (ncm_matrix_size (A), ==, 4);
+
+  ncm_matrix_free (A);
+}
+
+void
+test_ncm_matrix_api_nearPD (void)
+{
+  NcmMatrix *A = ncm_matrix_new (3, 3);
+  NcmMatrix *L = ncm_matrix_new (3, 3);
+  gboolean repaired;
+
+  /* Symmetric but indefinite */
+  ncm_matrix_set_from_data (A, (gdouble[]) {1.0, 0.9, 0.9, 0.9, 1.0, -0.9, 0.9, -0.9, 1.0});
+
+  g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (A, L, 'U', 0, &repaired), !=, 0);
+  g_assert_false (repaired);
+
+  g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (A, L, 'U', 100, &repaired), ==, 0);
+  g_assert_true (repaired);
+  g_assert_cmpfloat (ncm_matrix_get (A, 1, 2), ==, -0.9); /* left unchanged */
+
+  ncm_matrix_free (A);
+  ncm_matrix_free (L);
 }
 

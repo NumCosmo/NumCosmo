@@ -56,7 +56,7 @@ Cross-correlations
 Primordial and bouncing cosmology
 : Primordial power spectra from inflationary and bouncing models, built on the
   complex-structure mode evolver [[numcosmo-math|NcmCSQ1D]]
-  (see [CSQ1D Formalism](theory/csq1d.qmd)).
+  (see [CSQ1D Formalism](theory/ncm/dynamics/csq1d.qmd)).
 
 ## Statistical framework
 

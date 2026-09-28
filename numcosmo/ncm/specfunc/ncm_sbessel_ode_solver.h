@@ -40,12 +40,12 @@ G_BEGIN_DECLS
  * @user_data: user-provided data pointer passed through from the caller
  * @x: evaluation point in the physical domain (not the mapped Chebyshev domain)
  *
- * Callback function type for the forcing term $f(x)$ in the spherical Bessel ODE in
- * Riccati-Bessel form $u = x\,w$, whose right-hand side is $x f(x)$. The function is
- * evaluated at physical coordinates $x \in [a,b]$ and returns $f(x)$ itself, not the
+ * Callback function type for the forcing $F(x)$ of the spherical Bessel ODE in
+ * Riccati-Bessel form $u = x\,w$, whose right-hand side is $x F(x)$. The function is
+ * evaluated at physical coordinates $x \in [a,b]$ and returns $F(x)$ itself, not the
  * right-hand side.
  *
- * Returns: the value $f(x)$ at the given point @x
+ * Returns: the value $F(x)$ at the given point @x
  */
 typedef gdouble (*NcmSBesselOdeSolverF) (gpointer user_data, gdouble x);
 
@@ -60,10 +60,11 @@ typedef gdouble (*NcmSBesselOdeSolverF) (gpointer user_data, gdouble x);
  * Which two linear conditions close the two-point problem. Truncating the expansion at
  * $N$ Chebyshev coefficients and keeping the first $N-2$ rows of the discretized
  * equation leaves $N$ unknowns against $N-2$ equations, so two conditions have to be
- * added; the solution family they choose from is the same in all three cases, since the
- * homogeneous solutions $x j_\ell$ and $x y_\ell$ span a two-parameter space. The Levin boundary functional
- * is invariant under that choice, so the constraint decides which member of the family
- * has to be represented, not what the panel integral is.
+ * added; under the tau constraint the truncation itself supplies them. The solution
+ * family they choose from is the same in all three cases, since the homogeneous
+ * solutions $x j_\ell$ and $x y_\ell$ span a two-parameter space. The Levin boundary
+ * functional is invariant under that choice, so the constraint decides which member of
+ * the family has to be represented, not what the panel integral is.
  *
  * Dirichlet is the default and is valid everywhere. Tau is cheap where the panel holds
  * many more oscillations than the forcing needs coefficients, and invalid otherwise.
@@ -71,7 +72,7 @@ typedef gdouble (*NcmSBesselOdeSolverF) (gpointer user_data, gdouble x);
  * panel whose oscillation count falls below its tau threshold: with the pins at the
  * peak of the homogeneous spectrum it costs less than Dirichlet data and is at least as
  * accurate. See the <a
- * href="../../theory/sbessel_ode_solver.html">Ultraspherical Spectral Solver</a> page.
+ * href="../../theory/ncm/specfunc/sbessel_ode_solver.html">Ultraspherical Spectral Solver</a> page.
  */
 typedef enum _NcmSBesselOdeConstraint /*< enum,underscore_name=NCM_SBESSEL_ODE_CONSTRAINT,prefix=NCM_SBESSEL_ODE_CONSTRAINT >*/
 {
@@ -93,7 +94,7 @@ typedef enum _NcmSBesselOdeConstraint /*< enum,underscore_name=NCM_SBESSEL_ODE_C
  *
  * - Problem parameters: interval endpoints, multipole range, and tolerance
  * - Discretized system: banded matrix representation and right-hand side storage
- * - Factorization state: adaptive QR decomposition and spectral truncation order
+ * - Factorization state: incremental Givens QR and spectral truncation order
  *
  * Operators are created from a #NcmSBesselOdeSolver via
  * ncm_sbessel_ode_solver_create_operator() and managed via reference counting. Once
@@ -142,7 +143,6 @@ NcmSBesselOdeOperator *ncm_sbessel_ode_operator_ref (NcmSBesselOdeOperator *op);
 void ncm_sbessel_ode_operator_unref (NcmSBesselOdeOperator *op);
 void ncm_sbessel_ode_operator_clear (NcmSBesselOdeOperator **op);
 
-
 void ncm_sbessel_ode_operator_get_interval (NcmSBesselOdeOperator *op, gdouble *a, gdouble *b);
 void ncm_sbessel_ode_operator_get_ell_range (NcmSBesselOdeOperator *op, gint *ell_min, gint *ell_max);
 gdouble ncm_sbessel_ode_operator_get_tolerance (NcmSBesselOdeOperator *op);
@@ -163,7 +163,6 @@ gsize ncm_sbessel_ode_operator_get_operator_size (NcmSBesselOdeOperator *op);
 void ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray **solution, gsize *solution_len);
 void ncm_sbessel_ode_operator_solve_endpoints (NcmSBesselOdeOperator *op, GArray *rhs, GArray **endpoints);
 void ncm_sbessel_ode_operator_solve_values (NcmSBesselOdeOperator *op, GArray *rhs, gdouble x0, gdouble x1, GArray **values);
-
 
 G_END_DECLS
 

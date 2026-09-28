@@ -59,6 +59,8 @@ void test_ncm_spline2d_eval_integ_dxdy (TestNcmSpline2d *test, gconstpointer pda
 void test_ncm_spline2d_eval_integ_x_y_xy_spline (TestNcmSpline2d *test, gconstpointer pdata);
 void test_ncm_spline2d_free_empty (TestNcmSpline2d *test, gconstpointer pdata);
 
+void test_ncm_spline2d_reproduce (gconstpointer pdata);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -211,6 +213,10 @@ main (gint argc, gchar *argv[])
               &test_ncm_spline2d_eval_integ_dxdy,
               &test_ncm_spline2d_free_empty);
 
+  g_test_add_data_func ("/ncm/spline2d_bicubic/notaknot/reproduce", GINT_TO_POINTER (0), &test_ncm_spline2d_reproduce);
+  g_test_add_data_func ("/ncm/spline2d_spline/notaknot/reproduce", GINT_TO_POINTER (1), &test_ncm_spline2d_reproduce);
+  g_test_add_data_func ("/ncm/spline2d_gsl/cspline/reproduce", GINT_TO_POINTER (2), &test_ncm_spline2d_reproduce);
+
   g_test_run ();
 }
 
@@ -358,7 +364,7 @@ F_func (gdouble x, gdouble y, gpointer p)
           (12.0 +  11.0 * x +  10.0 * x2 +  9.0 * x3) * y +
           (8.0 + 7.0 * x + 6.0 * x2 + 5.0 * x3) * y2 +
           (4.0 + 3.0 * x + 2.0 * x2 + x3) * y3
-         ) * cos (x * y * 0.01) * exp (0.001 * x * y);
+  ) * cos (x * y * 0.01) * exp (0.001 * x * y);
 }
 
 static gdouble
@@ -1507,5 +1513,145 @@ test_ncm_spline2d_eval_integ_x_y_xy_spline (TestNcmSpline2d *test, gconstpointer
     NCM_TEST_FREE (ncm_vector_free, yv);
     NCM_TEST_FREE (ncm_matrix_free, zm);
   }
+}
+
+/* A product of cubics is reproduced by the not-a-knot types, inside and outside the knots
+ * (measured: values 7e-13 absolute, derivatives 9e-13 relative), and a bilinear function
+ * by the natural GSL type. */
+static gdouble
+_rp_p (const gdouble x, const gint t)
+{
+  return (t == 2) ? 1.0 + 2.0 * x : x * x * x - 2.0 * x;
+}
+
+static gdouble
+_rp_q (const gdouble y, const gint t)
+{
+  return (t == 2) ? 3.0 - y : y * y * y + y * y;
+}
+
+static gdouble
+_rp_dp (const gdouble x, const gint t)
+{
+  return (t == 2) ? 2.0 : 3.0 * x * x - 2.0;
+}
+
+static gdouble
+_rp_dq (const gdouble y, const gint t)
+{
+  return (t == 2) ? -1.0 : 3.0 * y * y + 2.0 * y;
+}
+
+static gdouble
+_rp_Ip (const gdouble a, const gdouble b, const gint t)
+{
+  return (t == 2) ? (b - a) + (b * b - a * a) : (gsl_pow_4 (b) - gsl_pow_4 (a)) / 4.0 - (b * b - a * a);
+}
+
+static gdouble
+_rp_Iq (const gdouble a, const gdouble b, const gint t)
+{
+  return (t == 2) ? 3.0 * (b - a) - 0.5 * (b * b - a * a) : (gsl_pow_4 (b) - gsl_pow_4 (a)) / 4.0 + (gsl_pow_3 (b) - gsl_pow_3 (a)) / 3.0;
+}
+
+void
+test_ncm_spline2d_reproduce (gconstpointer pdata)
+{
+  const gint t           = GPOINTER_TO_INT (pdata);
+  const gdouble pts[][2] = {
+    {
+      0.37, 1.21
+    }, {
+      0.91, 0.13
+    }, {
+      1.3, 2.4
+    }, {
+      -0.2, -0.3
+    }
+  };
+  const guint npts = (t == 2) ? 2 : G_N_ELEMENTS (pts);
+  NcmVector *xv    = ncm_vector_new (12);
+  NcmVector *yv    = ncm_vector_new (9);
+  NcmMatrix *zm    = ncm_matrix_new (9, 12);
+  NcmSpline2d *s2d;
+  guint i, j;
+
+  if (t == 0)
+  {
+    s2d = ncm_spline2d_bicubic_notaknot_new ();
+  }
+  else if (t == 1)
+  {
+    NcmSpline *s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+
+    s2d = ncm_spline2d_spline_new (s);
+    ncm_spline_free (s);
+  }
+  else
+  {
+    s2d = ncm_spline2d_gsl_natural_new ();
+  }
+
+  for (j = 0; j < 12; j++)
+    ncm_vector_set (xv, j, j / 11.0);
+
+  for (i = 0; i < 9; i++)
+    ncm_vector_set (yv, i, 2.0 * i / 8.0);
+
+  for (i = 0; i < 9; i++)
+    for (j = 0; j < 12; j++)
+      ncm_matrix_set (zm, i, j, _rp_p (ncm_vector_get (xv, j), t) * _rp_q (ncm_vector_get (yv, i), t));
+
+  /* Unprepared: evaluation prepares it */
+  ncm_spline2d_set (s2d, xv, yv, zm, FALSE);
+
+  for (i = 0; i < npts; i++)
+  {
+    const gdouble x = pts[i][0];
+    const gdouble y = pts[i][1];
+
+    ncm_assert_cmpdouble_e (ncm_spline2d_eval (s2d, x, y), ==, _rp_p (x, t) * _rp_q (y, t), 0.0, 1.0e-11);
+
+    {
+      ncm_assert_cmpdouble_e (ncm_spline2d_deriv_dzdx (s2d, x, y), ==, _rp_dp (x, t) * _rp_q (y, t), 1.0e-11, 1.0e-13);
+      ncm_assert_cmpdouble_e (ncm_spline2d_deriv_dzdy (s2d, x, y), ==, _rp_p (x, t) * _rp_dq (y, t), 1.0e-11, 1.0e-13);
+      ncm_assert_cmpdouble_e (ncm_spline2d_deriv_d2zdxy (s2d, x, y), ==, _rp_dp (x, t) * _rp_dq (y, t), 1.0e-11, 1.0e-13);
+    }
+  }
+
+  ncm_assert_cmpdouble_e (ncm_spline2d_integ_dx (s2d, 0.1, 0.8, 1.3), ==, _rp_Ip (0.1, 0.8, t) * _rp_q (1.3, t), 0.0, 1.0e-13);
+  ncm_assert_cmpdouble_e (ncm_spline2d_integ_dy (s2d, 0.4, 0.2, 1.7), ==, _rp_p (0.4, t) * _rp_Iq (0.2, 1.7, t), 0.0, 1.0e-13);
+  ncm_assert_cmpdouble_e (ncm_spline2d_integ_dxdy (s2d, 0.1, 0.8, 0.2, 1.7), ==, _rp_Ip (0.1, 0.8, t) * _rp_Iq (0.2, 1.7, t), 0.0, 1.0e-13);
+
+  /* Reversed limits change the sign */
+  g_assert_cmpfloat (ncm_spline2d_integ_dx (s2d, 0.8, 0.1, 1.3), ==, -ncm_spline2d_integ_dx (s2d, 0.1, 0.8, 1.3));
+  g_assert_cmpfloat (ncm_spline2d_integ_dy (s2d, 0.4, 1.7, 0.2), ==, -ncm_spline2d_integ_dy (s2d, 0.4, 0.2, 1.7));
+  g_assert_cmpfloat (ncm_spline2d_integ_dxdy (s2d, 0.8, 0.1, 0.2, 1.7), ==, -ncm_spline2d_integ_dxdy (s2d, 0.1, 0.8, 0.2, 1.7));
+  g_assert_cmpfloat (ncm_spline2d_integ_dxdy (s2d, 0.8, 0.1, 1.7, 0.2), ==, ncm_spline2d_integ_dxdy (s2d, 0.1, 0.8, 0.2, 1.7));
+
+  /* eval_vec_y agrees with eval, also above the last knot in y */
+  {
+    const gdouble ys[] = {1.21, 2.4, 0.13, -0.3};
+    const size_t ord[] = {3, 2, 0, 1};
+    NcmVector *y_v     = ncm_vector_new_data_static ((gdouble *) ys, 4, 1);
+    GArray *order      = g_array_new (FALSE, FALSE, sizeof (size_t));
+    GArray *res        = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+    g_array_append_vals (order, ord, 4);
+    g_array_set_size (res, 4);
+    ncm_spline2d_eval_vec_y (s2d, 0.37, y_v, order, res);
+
+    for (i = 0; i < 4; i++)
+      ncm_assert_cmpdouble_e (g_array_index (res, gdouble, i), ==, ncm_spline2d_eval (s2d, 0.37, ys[i]), 1.0e-14, 1.0e-14);
+
+    g_array_unref (order);
+    g_array_unref (res);
+    ncm_vector_free (y_v);
+  }
+
+  ncm_spline2d_free (s2d);
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+  ncm_matrix_free (zm);
 }
 

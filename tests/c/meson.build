@@ -21,12 +21,40 @@ math_tests = [
         'sources': ['ncm/core/test_ncm_dtuple.c'],
     },
     {
+        'name': 'ncm_pln1d',
+        'sources': ['ncm/core/test_ncm_pln1d.c'],
+    },
+    {
+        'name': 'ncm_function_cache',
+        'sources': ['ncm/core/test_ncm_function_cache.c'],
+    },
+    {
+        'name': 'ncm_iset',
+        'sources': ['ncm/core/test_ncm_iset.c'],
+    },
+    {
+        'name': 'ncm_timer',
+        'sources': ['ncm/core/test_ncm_timer.c'],
+    },
+    {
+        'name': 'ncm_rng',
+        'sources': ['ncm/core/test_ncm_rng.c'],
+    },
+    {
+        'name': 'ncm_c',
+        'sources': ['ncm/core/test_ncm_c.c'],
+    },
+    {
         'name': 'ncm_catalog',
         'sources': ['ncm/data/test_ncm_catalog.c'],
     },
     {
         'name': 'ncm_sky_footprint',
         'sources': ['ncm/sphere/test_ncm_sky_footprint.c'],
+    },
+    {
+        'name': 'ncm_sphere_nn',
+        'sources': ['ncm/sphere/test_ncm_sphere_nn.c'],
     },
     {
         'name': 'ncm_fftlog',
@@ -47,8 +75,24 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_laurent_series.c'],
     },
     {
+        'name': 'ncm_spectral',
+        'sources': ['ncm/algebra/test_ncm_spectral.c'],
+    },
+    {
+        'name': 'ncm_nnls',
+        'sources': ['ncm/algebra/test_ncm_nnls.c'],
+    },
+    {
         'name': 'ncm_matrix',
         'sources': ['ncm/algebra/test_ncm_matrix.c'],
+    },
+    {
+        'name': 'ncm_complex',
+        'sources': ['ncm/algebra/test_ncm_complex.c'],
+    },
+    {
+        'name': 'ncm_lapack',
+        'sources': ['ncm/algebra/test_ncm_lapack.c'],
     },
     {
         'name': 'ncm_stats_vec',
@@ -101,6 +145,14 @@ math_tests = [
         'name': 'ncm_spline_vec',
         'sources': ['ncm/spline/test_ncm_spline_vec.c'],
     },
+    {
+        'name': 'ncm_spline_func',
+        'sources': ['ncm/spline/test_ncm_spline_func.c'],
+    },
+    {
+        'name': 'ncm_spline_bspline',
+        'sources': ['ncm/spline/test_ncm_spline_bspline.c'],
+    },
     # Bit-exact agreement between serial and concurrent evaluation of one shared
     # prepared NcmSplineBSpline: its GSL workspace is per-call scratch, so this is
     # the regression test for evaluating it from parallel kernel integrands.
@@ -112,6 +164,10 @@ math_tests = [
     {
         'name': 'ncm_ode_spline',
         'sources': ['ncm/spline/test_ncm_ode_spline.c'],
+    },
+    {
+        'name': 'ncm_integrate',
+        'sources': ['ncm/integration/test_ncm_integrate.c'],
     },
     {
         'name': 'ncm_integral1d',
@@ -128,6 +184,14 @@ math_tests = [
     {
         'name': 'ncm_sf_sbessel',
         'sources': ['ncm/specfunc/test_ncm_sf_sbessel.c'],
+    },
+    {
+        'name': 'ncm_sbessel_integrator',
+        'sources': ['ncm/specfunc/test_ncm_sbessel_integrator.c'],
+    },
+    {
+        'name': 'ncm_mpsf_sbessel',
+        'sources': ['ncm/specfunc/test_ncm_mpsf_sbessel.c'],
     },
     {
         'name': 'ncm_mpsf_0F1',

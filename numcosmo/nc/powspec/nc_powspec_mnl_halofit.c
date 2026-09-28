@@ -548,6 +548,10 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit *pshf, NcmModel *model)
   ncm_powspec_filter_set_zi (self->psml_gauss, ncm_powspec_get_zi (NCM_POWSPEC (pshf)));
   ncm_powspec_filter_set_zf (self->psml_gauss, self->zmaxnl);
 
+  /* The variance and its two log-derivatives enter the halofit parameters directly, so
+   * the filter is calibrated to the precision requested here, not to its own default. */
+  ncm_powspec_filter_set_reltol (self->psml_gauss, self->reltol);
+
   ncm_powspec_filter_set_best_lnr0 (self->psml_gauss);
   ncm_powspec_filter_prepare_if_needed (self->psml_gauss, model);
 

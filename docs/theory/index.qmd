@@ -8,33 +8,34 @@ classes and methods.
 
 ## Background & Thermal History
 
-- [Cosmological Distances](distances.qmd) --- comoving, transverse, luminosity, and angular diameter distances.
-- [Cosmic Recombination](recombination.qmd) --- Saha equilibrium, the Seager solver, optical depth and visibility.
+- [Cosmological Distances](nc/background/distances.qmd) --- comoving, transverse, luminosity, and angular diameter distances.
+- [Cosmic Recombination](nc/recomb/recombination.qmd) --- Saha equilibrium, the Seager solver, optical depth and visibility.
 
 ## Linear Theory & Power Spectrum
 
-- [Eisenstein--Hu Transfer Function](transfer_func_eh.qmd) --- the EH (1998) fitting formula, with and without baryons.
+- [Eisenstein--Hu Transfer Function](nc/powspec/transfer_func_eh.qmd) --- the EH (1998) fitting formula, with and without baryons.
 
 ## Clusters & Weak Lensing
 
-- [Halo Density Profiles](halo_density_profile.qmd) --- NFW, Einasto, and Hernquist profiles and their projected quantities.
-- [Weak-Lensing Surface Mass Density](wl_surface_mass_density.qmd) --- projected surface density, convergence, and shear.
-- [Castro Halo Mass Function and Bias](castro_hmf.qmd) --- the non-universal $f(\sigma)$ calibrations and the linear bias fitted alongside them.
-- [Super-Sample Covariance](ssc.qmd) --- the $S_{ij}$ matrix of long-wavelength modes, and its role in the cluster number-count likelihood.
+- [Halo Density Profiles](nc/lss/halo/halo_density_profile.qmd) --- NFW, Einasto, and Hernquist profiles and their projected quantities.
+- [Weak-Lensing Surface Mass Density](nc/lss/wl/wl_surface_mass_density.qmd) --- projected surface density, convergence, and shear.
+- [Castro Halo Mass Function and Bias](nc/lss/halo/castro_hmf.qmd) --- the non-universal $f(\sigma)$ calibrations and the linear bias fitted alongside them.
+- [Super-Sample Covariance](nc/xcor/ssc.qmd) --- the $S_{ij}$ matrix of long-wavelength modes, and its role in the cluster number-count likelihood.
 
 ## Galaxy Population & Weak Lensing
 
-- [Galaxy Population & WL Framework](galaxy_wl_framework.qmd) --- the Pop/Obs/ObsSel/Factor vocabulary, the fixed Z$\Rightarrow$P$\Rightarrow$S pipeline, and the per-galaxy data/cache idiom shared by every calculator.
-- [Galaxy Shapes and Ellipticity Frames](wl_ellipticity.qmd) --- the shape forward model, ellipticity conventions, and the celestial/Euclidean handedness frames.
-- [A Small-Shear Series Marginalization for the Shape Likelihood](wl_shape_marginalization_series.qmd) --- in-progress derivation of a Bessel-series marginalization scheme for the large-noise, small-$g$ regime.
-- [Fixed-Node Lens-Domain Quadrature for the Shape Likelihood](wl_shape_marginalization_fixed_quad.qmd) --- a fast, series-free alternative: fixed-node quadrature over the noise-disk/unit-disc intersection in the lensed frame.
+- [Galaxy Population & WL Framework](nc/lss/galaxy/galaxy_wl_framework.qmd) --- the Pop/Obs/ObsSel/Factor vocabulary, the fixed Z$\Rightarrow$P$\Rightarrow$S pipeline, and the per-galaxy data/cache idiom shared by every calculator.
+- [Galaxy Shapes and Ellipticity Frames](nc/lss/galaxy/wl_ellipticity.qmd) --- the shape forward model, ellipticity conventions, and the celestial/Euclidean handedness frames.
+- [A Small-Shear Series Marginalization for the Shape Likelihood](nc/lss/galaxy/wl_shape_marginalization_series.qmd) --- in-progress derivation of a Bessel-series marginalization scheme for the large-noise, small-$g$ regime.
+- [Fixed-Node Lens-Domain Quadrature for the Shape Likelihood](nc/lss/galaxy/wl_shape_marginalization_fixed_quad.qmd) --- a fast, series-free alternative: fixed-node quadrature over the noise-disk/unit-disc intersection in the lensed frame.
 
 ## Numerical Methods
 
-- [FFTLog](fftlog.qmd) --- logarithmic fast Fourier transform.
-- [Spectral Methods](spectral.qmd) --- Chebyshev approximation, Clenshaw--Curtis integration, and ultraspherical operators.
-- [The Ultraspherical Spectral Solver](sbessel_ode_solver.qmd) --- the banded discretization of the spherical Bessel operator, batching over multipoles, the incremental Givens QR and conjugate panel spans.
-- [UltraLevin: Non-Limber Angular Power Spectra](sbessel_projection.qmd) --- the Levin reduction, fixed panels in x, the window over k and its exact outer integral.
-- [CSQ1D Formalism](csq1d.qmd) --- complex-structure evolution of a time-dependent oscillator.
-- [Kernel Mixture Densities](stats_dist.qmd) --- reconstructing a density from samples as a non-negative kernel mixture, the center-shrinkage covariance budget, and fitting the bandwidth and kernel tail together.
-- [Autocorrelation Time and Effective Sample Size](autocorrelation.qmd) --- the exact one-sample-at-a-time autocovariance accumulator, the levels of block averages that remove the ceiling a fixed lag budget puts on $\tau$, the three estimators, and what an ensemble mean does and does not see.
+- [FFTLog](ncm/fftlog/fftlog.qmd) --- logarithmic fast Fourier transform.
+- [Spectral Methods](ncm/algebra/spectral.qmd) --- Chebyshev approximation, Clenshaw--Curtis integration, and ultraspherical operators.
+- [The Ultraspherical Spectral Solver](ncm/specfunc/sbessel_ode_solver.qmd) --- the banded discretization of the spherical Bessel operator, batching over multipoles, the incremental Givens QR and conjugate panel spans.
+- [UltraLevin: Non-Limber Angular Power Spectra](ncm/specfunc/sbessel_projection.qmd) --- the Levin reduction, fixed panels in x, the window over k and its exact outer integral.
+- [CSQ1D Formalism](ncm/dynamics/csq1d.qmd) --- complex-structure evolution of a time-dependent oscillator.
+- [Kernel Mixture Densities](ncm/stats/stats_dist.qmd) --- reconstructing a density from samples as a non-negative kernel mixture, the center-shrinkage covariance budget, and fitting the bandwidth and kernel tail together.
+- [Poisson-Lognormal Distribution](ncm/core/poisson_lognormal.qmd) --- the change of variables, the mode through the Lambert $W$ function, the Gauss-Hermite rule centered on the mode and scaled to the width of the peak and the Laplace approximation used for small $\sigma$.
+- [Autocorrelation Time and Effective Sample Size](ncm/stats/autocorrelation.qmd) --- the exact one-sample-at-a-time autocovariance accumulator, the levels of block averages that remove the ceiling a fixed lag budget puts on $\tau$, the three estimators, and what an ensemble mean does and does not see.

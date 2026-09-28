@@ -86,6 +86,11 @@ NcmPowspecFilterType ncm_powspec_filter_get_filter_type (NcmPowspecFilter *psf);
 
 gdouble ncm_powspec_filter_get_reltol (NcmPowspecFilter *psf);
 gdouble ncm_powspec_filter_get_reltol_z (NcmPowspecFilter *psf);
+void ncm_powspec_filter_set_max_k_knots (NcmPowspecFilter *psf, guint max_k_knots);
+guint ncm_powspec_filter_get_max_k_knots (NcmPowspecFilter *psf);
+void ncm_powspec_filter_set_max_z_knots (NcmPowspecFilter *psf, guint max_z_knots);
+guint ncm_powspec_filter_get_max_z_knots (NcmPowspecFilter *psf);
+void ncm_powspec_filter_get_nknots (NcmPowspecFilter *psf, guint *N_k, guint *N_z);
 
 gdouble ncm_powspec_filter_get_r_min (NcmPowspecFilter *psf);
 gdouble ncm_powspec_filter_get_r_max (NcmPowspecFilter *psf);
