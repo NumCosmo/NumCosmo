@@ -37,9 +37,9 @@
  * are exact, in the sense that feeding a series one sample at a time and computing its
  * autocovariances in one pass over the whole series give the same numbers to rounding.
  *
- * Three estimators turn $C_k$ into $\tau$ — an auto-regressive spectral estimate with the
- * order chosen by AICc, Geyer's initial monotone positive sequence, and Sokal's
- * self-consistent window — selected by #NcmStatsAcorr:method. They are pure functions of
+ * Three estimators turn $C_k$ into $\tau$: an auto-regressive spectral estimate with the
+ * order chosen by #NcmStatsAcorr:ar-criterion, Geyer's initial monotone positive sequence,
+ * and Sokal's self-consistent window, selected by #NcmStatsAcorr:method. They are pure functions of
  * $C_k$, and %NCM_STATS_ACORR_METHOD_MAX reports the largest and flags a disagreement. The
  * level whose blocks resolve the correlation within the available lags is selected
  * automatically, which is what removes the ceiling a fixed maximum lag would otherwise put
@@ -48,9 +48,17 @@
  *
  * Error modes: a series with no variance never moved, so its correlation time is unbounded
  * and $\tau$ is reported at its cap, the number of samples, with
- * %NCM_STATS_ACORR_DIAG_ZERO_VARIANCE, which makes the effective sample size one; an estimator whose truncated sum is not positive
- * gives $\tau = 1$; $\tau$ is capped at the number of samples, since a longer correlation
- * is not measurable from the series. None of these abort.
+ * %NCM_STATS_ACORR_DIAG_ZERO_VARIANCE, which makes the effective sample size one; an
+ * estimator whose truncated sum is not positive gives $\tau = 1$; $\tau$ is capped at the
+ * number of samples, since a longer correlation is not measurable from the series. None of
+ * these abort.
+ *
+ * The drift and variance-shift conditions compare the two halves of the block values of the
+ * coarsest level holding at least 16 of them, as far as the first #NcmStatsAcorr:max-lag of
+ * those values. They cover the whole series while that level holds at most
+ * #NcmStatsAcorr:max-lag values, which with the default lags and levels is up to
+ * $2^{23}\times 512 \approx 4\times 10^9$ samples; with a smaller #NcmStatsAcorr:max-levels
+ * they may cover only the start of the series.
  *
  * See <a href="../../theory/ncm/stats/autocorrelation.html">Autocorrelation Time and Effective
  * Sample Size</a> for the definitions, the identity the accumulator updates, the
@@ -922,8 +930,8 @@ ncm_stats_acorr_ar_fit (NcmVector *acov, guint64 nitens, NcmStatsAcorrARCrit cri
  * sequence: the lag pairs $\Gamma_k = C_{2k} + C_{2k+1}$ are summed while they stay
  * positive, after being made non-increasing.
  *
- * The estimate is conservative for a reversible chain: its expectation is not below the
- * true $\tau$, which is what makes it the companion of the auto-regressive estimate in
+ * For a reversible chain the estimate asymptotically does not fall below the true $\tau$
+ * (Geyer 1992), which is what makes it the companion of the auto-regressive estimate in
  * %NCM_STATS_ACORR_METHOD_MAX.
  *
  * Returns: $\tau$.
@@ -1358,7 +1366,6 @@ ncm_stats_acorr_ref (NcmStatsAcorr *acorr)
  * @acorr: a #NcmStatsAcorr
  *
  * Decreases the reference count of @acorr by one.
- *
  */
 void
 ncm_stats_acorr_free (NcmStatsAcorr *acorr)
@@ -1370,9 +1377,7 @@ ncm_stats_acorr_free (NcmStatsAcorr *acorr)
  * ncm_stats_acorr_clear:
  * @acorr: a #NcmStatsAcorr
  *
- * If *@acorr is different from NULL, decreases the reference count of *@acorr by one
- * and sets *@acorr to NULL.
- *
+ * Decreases the reference count of *@acorr by one and sets *@acorr to %NULL.
  */
 void
 ncm_stats_acorr_clear (NcmStatsAcorr **acorr)
@@ -1756,7 +1761,8 @@ ncm_stats_acorr_get_tau (NcmStatsAcorr *acorr, guint p)
  *
  * Integrated autocorrelation time of series @p by @method, at the level selected for
  * #NcmStatsAcorr:method. Lets one estimator be compared with another without changing
- * the object's configuration.
+ * the object's configuration. A series with no variance gives the cap, the number of
+ * samples, as ncm_stats_acorr_get_tau() does.
  *
  * Returns: $\tau$.
  */
@@ -1775,7 +1781,7 @@ ncm_stats_acorr_get_tau_method (NcmStatsAcorr *acorr, guint p, NcmStatsAcorrMeth
   _ncm_stats_acorr_prepare (acorr, p);
 
   if (var->var <= 0.0)
-    return 1.0;
+    return var->tau;
 
   lev  = g_ptr_array_index (var->levels, var->level);
   nlag = (lev->n - 1 < self->max_lag) ? (guint) (lev->n - 1) : self->max_lag;
@@ -1979,7 +1985,7 @@ ncm_stats_acorr_get_window (NcmStatsAcorr *acorr, guint p)
  * @acorr: a #NcmStatsAcorr
  * @p: series index
  *
- * Returns: the auto-regressive order AICc selected for series @p.
+ * Returns: the auto-regressive order selected by #NcmStatsAcorr:ar-criterion for series @p.
  */
 guint
 ncm_stats_acorr_get_ar_order (NcmStatsAcorr *acorr, guint p)
@@ -2085,7 +2091,7 @@ ncm_stats_acorr_level_nitens (NcmStatsAcorr *acorr, guint p, guint level)
  *
  * Auto-regressive fit of series @p at the level its estimate was taken from, returning
  * what the fit is made of rather than the $\tau$ built from it. See
- * ncm_stats_acorr_ar_fit().
+ * ncm_stats_acorr_ar_fit(). Aborts if series @p has fewer than two samples.
  *
  * Returns: TRUE when the selected order is not zero.
  */
@@ -2117,7 +2123,7 @@ ncm_stats_acorr_get_ar_fit (NcmStatsAcorr *acorr, guint p, NcmVector **phi, NcmV
  *
  * Autocovariances of series @p at level @level, $C_0 \dots C_L$ with
  * $L = \min(\mathrm{max\text{-}lag}, n_\mathrm{level}-1)$, normalized by the number of
- * block values of that level.
+ * block values of that level. Aborts if the level holds fewer than two values.
  *
  * Returns: (transfer full): the autocovariances.
  */

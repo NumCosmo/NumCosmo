@@ -752,7 +752,7 @@ converged autocorrelation time.
 | `DRIFT` | the means of the two halves differ by more than three standard errors | trimming |
 | `METHOD_DISAGREEMENT` | the two estimators differ by more than a factor of two | neither |
 | `VARIANCE_SHIFT` | the variances of the two halves differ by more than a factor of a hundred | trimming |
-| `ZERO_VARIANCE` | the series never moved, and $\tau = 1$ by definition | neither |
+| `ZERO_VARIANCE` | the series never moved; $\tau$ is unbounded and reported at its cap, the number of samples | neither |
 
 `DRIFT` and `SHORT_CHAIN` are complementary: a trend small enough that $\tau$ still comes out near 1 moves the mean
 between the halves and is caught by the drift score, while a trend large enough to
