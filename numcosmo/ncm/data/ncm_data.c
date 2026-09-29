@@ -887,16 +887,23 @@ ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f)
  * @m2lnL: (out): a #double
  *
  * Calculates the value of $-2\ln(L)$, where $L$ represents the likelihood of
- * the data given the models in @mset. The result is stored in @m2lnL.
+ * the data given the models in @mset. The result is stored in @m2lnL. With a
+ * bootstrap enabled, aborts if the bootstrap has no realization.
  *
  */
 void
 ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
+  NcmDataPrivate * const self = ncm_data_get_instance_private (data);
+
   ncm_data_prepare (data, mset);
 
   if (NCM_DATA_GET_CLASS (data)->m2lnL_val == NULL)
     g_error ("ncm_data_m2lnL_val: The data (%s) does not implement m2lnL_val.",
+             ncm_data_peek_desc (data));
+
+  if ((self->bstrap != NULL) && !ncm_bootstrap_is_init (self->bstrap))
+    g_error ("ncm_data_m2lnL_val: data `%s': the bootstrap has no realization, call ncm_data_bootstrap_resample() first.",
              ncm_data_peek_desc (data));
 
   NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, m2lnL);

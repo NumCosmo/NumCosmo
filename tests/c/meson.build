@@ -147,6 +147,10 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_lapack.c'],
     },
     {
+        'name': 'ncm_bootstrap',
+        'sources': ['ncm/stats/test_ncm_bootstrap.c'],
+    },
+    {
         'name': 'ncm_stats_vec',
         'sources': ['ncm/stats/test_ncm_stats_vec.c'],
     },
