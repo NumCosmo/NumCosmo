@@ -35,6 +35,7 @@
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_cdf.h>
+#include <gsl/gsl_linalg.h>
 #include <gsl/gsl_sf_trig.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_eigen.h>
@@ -93,6 +94,8 @@ static void test_ncm_stats_dist_split_drop_far_points (void);
 static void test_ncm_stats_dist_split_too_few_kernels (void);
 static void test_ncm_stats_dist_accept_rejected_start (void);
 static void test_ncm_stats_dist_accept_rejected_everywhere (void);
+static void test_ncm_stats_dist_kde_lscv_shrink (void);
+static void test_ncm_stats_dist_kde_cov_fixed_reprepare (void);
 static void test_ncm_stats_dist_print_fit (void);
 static void test_ncm_stats_dist_kde_cov_fixed_nearPD (void);
 
@@ -212,6 +215,10 @@ test_ncm_stats_dist_main (gint argc, gchar *argv[], TestNcmStatsDistMode mode)
                      &test_ncm_stats_dist_accept_rejected_start);
     g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/accept/rejected_everywhere",
                      &test_ncm_stats_dist_accept_rejected_everywhere);
+    g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/lscv_shrink",
+                     &test_ncm_stats_dist_kde_lscv_shrink);
+    g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/cov_fixed/reprepare",
+                     &test_ncm_stats_dist_kde_cov_fixed_reprepare);
     g_test_add_func ("/ncm/stats/dist/nd/print_fit",
                      &test_ncm_stats_dist_print_fit);
     g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/cov_fixed/nearPD",
@@ -2334,6 +2341,157 @@ test_ncm_stats_dist_accept_rejected_everywhere (void)
   g_test_trap_assert_stderr ("*the bandwidth objective is not finite at any of 21 over-smooth values*8 kernel centers*");
 }
 
+/* A correlated Gaussian sample of n points in d dimensions. */
+static NcmStatsDist *
+_test_ncm_stats_dist_kde_gauss_new (const guint d, const guint n, const NcmStatsDistCV cv, GPtrArray *sample)
+{
+  NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
+  NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, cv));
+  NcmRNG *rng                = ncm_rng_seeded_new (NULL, 20260930);
+  guint i, j;
+
+  for (i = 0; i < n; i++)
+  {
+    NcmVector *y = ncm_vector_new (d);
+    gdouble z0   = 0.0;
+
+    for (j = 0; j < d; j++)
+    {
+      const gdouble z = ncm_rng_ugaussian_gen (rng);
+
+      ncm_vector_set (y, j, (1.0 + j) * z + 0.5 * z0);
+      z0 = z;
+    }
+
+    ncm_stats_dist_add_obs (sd, y);
+
+    if (sample != NULL)
+      g_ptr_array_add (sample, ncm_vector_dup (y));
+
+    ncm_vector_free (y);
+  }
+
+  ncm_rng_free (rng);
+  ncm_stats_dist_kernel_free (kernel);
+
+  return sd;
+}
+
+/* ln N (x - y; 0, s^2 Sigma) with Sigma = U^T U, through GSL. */
+static gdouble
+_test_gauss_lnpdf (NcmVector *x, NcmVector *y, gsl_matrix *L, const gdouble s, gsl_vector *work, gsl_vector *diff)
+{
+  const guint d    = diff->size;
+  gsl_vector *zero = gsl_vector_calloc (d);
+  gsl_matrix *Ls   = gsl_matrix_alloc (d, d);
+  gdouble res;
+  guint k;
+
+  for (k = 0; k < d; k++)
+    gsl_vector_set (diff, k, ncm_vector_get (x, k) - ncm_vector_get (y, k));
+
+  gsl_matrix_memcpy (Ls, L);
+  gsl_matrix_scale (Ls, s);
+  gsl_ran_multivariate_gaussian_log_pdf (diff, zero, Ls, &res, work);
+
+  gsl_vector_free (zero);
+  gsl_matrix_free (Ls);
+
+  return res;
+}
+
+static void
+test_ncm_stats_dist_kde_lscv_shrink (void)
+{
+  /*
+   * The closed-form least-squares cross-validation of the Gaussian KDE, at the prepared
+   * bandwidth, against GSL: the integral of the squared mixture is the mean of
+   * N (c_i - c_j; 0, 2 h^2 Sigma) over center pairs, the cross term the mean of
+   * N (x_i - c_j; 0, h^2 Sigma) over i != j. Under center shrinkage the centers are not
+   * the sample points.
+   */
+  const guint d               = 3;
+  const guint n               = 120;
+  GPtrArray *sample           = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+  NcmStatsDist *sd            = _test_ncm_stats_dist_kde_gauss_new (d, n, NCM_STATS_DIST_CV_LOO, sample);
+  NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
+  gsl_matrix *L               = gsl_matrix_alloc (d, d);
+  gsl_vector *work            = gsl_vector_alloc (d);
+  gsl_vector *diff            = gsl_vector_alloc (d);
+  gdouble int_q2              = 0.0;
+  gdouble cross               = 0.0;
+  guint i, j, p, q;
+
+  ncm_stats_dist_set_center_shrink (sd, TRUE);
+  ncm_stats_dist_prepare (sd, NULL);
+  g_assert_cmpfloat (ncm_stats_dist_get_center_shrink_factor (sd), <, 1.0);
+
+  {
+    NcmMatrix *U       = ncm_stats_dist_peek_cov_decomp (sd, 0);
+    GPtrArray *centers = ncm_stats_dist_peek_center_array (sd);
+    const gdouble h    = ncm_stats_dist_get_href (sd);
+
+    /* L = U^T, the lower factor GSL takes. */
+    for (p = 0; p < d; p++)
+      for (q = 0; q < d; q++)
+        gsl_matrix_set (L, p, q, (q <= p) ? ncm_matrix_get (U, q, p) : 0.0);
+
+    for (i = 0; i < n; i++)
+    {
+      for (j = 0; j < n; j++)
+      {
+        int_q2 += exp (_test_gauss_lnpdf (g_ptr_array_index (centers, i), g_ptr_array_index (centers, j), L, sqrt (2.0) * h, work, diff));
+
+        if (i != j)
+          cross += exp (_test_gauss_lnpdf (g_ptr_array_index (sample, i), g_ptr_array_index (centers, j), L, h, work, diff));
+      }
+    }
+
+    int_q2 /= n * n;
+    cross  /= n * (n - 1.0);
+  }
+
+  ncm_assert_cmpdouble_e (sd_class->amise (sd), ==, int_q2 - 2.0 * cross, 1.0e-10, 0.0);
+
+  gsl_matrix_free (L);
+  gsl_vector_free (work);
+  gsl_vector_free (diff);
+  g_ptr_array_unref (sample);
+  ncm_stats_dist_free (sd);
+}
+
+static void
+test_ncm_stats_dist_kde_cov_fixed_reprepare (void)
+{
+  /* A fixed covariance not proportional to the sample's makes the shrinkage anisotropic;
+   * preparing again on the same sample must give the same kernels. */
+  const guint d    = 3;
+  NcmStatsDist *sd = _test_ncm_stats_dist_kde_gauss_new (d, 300, NCM_STATS_DIST_CV_NONE, NULL);
+  NcmMatrix *F     = ncm_matrix_new (d, d);
+  NcmMatrix *U1;
+  guint p, q;
+
+  for (p = 0; p < d; p++)
+    for (q = 0; q < d; q++)
+      ncm_matrix_set (F, p, q, (p == q) ? 1.0 : 0.3);
+
+  ncm_stats_dist_kde_set_cov_type (NCM_STATS_DIST_KDE (sd), NCM_STATS_DIST_KDE_COV_TYPE_FIXED);
+  ncm_stats_dist_kde_set_cov_fixed (NCM_STATS_DIST_KDE (sd), F);
+  ncm_stats_dist_set_center_shrink (sd, TRUE);
+
+  ncm_stats_dist_prepare (sd, NULL);
+  U1 = ncm_matrix_dup (ncm_stats_dist_peek_cov_decomp (sd, 0));
+  ncm_stats_dist_prepare (sd, NULL);
+
+  for (p = 0; p < d; p++)
+    for (q = p; q < d; q++)
+      g_assert_cmpfloat (ncm_matrix_get (ncm_stats_dist_peek_cov_decomp (sd, 0), p, q), ==, ncm_matrix_get (U1, p, q));
+
+  ncm_matrix_free (U1);
+  ncm_matrix_free (F);
+  ncm_stats_dist_free (sd);
+}
+
 static void
 _test_ncm_stats_dist_count_fit_message (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
@@ -2422,13 +2580,14 @@ test_ncm_stats_dist_kde_cov_fixed_nearPD (void)
    * warning, both when it is set and when the covariance type is switched to FIXED with
    * one already in place. The repaired factor is usable: the density evaluates.
    */
-  const guint d          = 2;
-  const guint n          = 100;
-  NcmStatsDistKDE *sdkde = ncm_stats_dist_kde_new (NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d)), NCM_STATS_DIST_CV_NONE);
-  NcmStatsDist *sd       = NCM_STATS_DIST (sdkde);
-  NcmMatrix *cov         = ncm_matrix_new (d, d);
-  NcmRNG *rng            = ncm_rng_seeded_new (NULL, 20260925);
-  NcmVector *x           = ncm_vector_new (d);
+  const guint d              = 2;
+  const guint n              = 100;
+  NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
+  NcmStatsDistKDE *sdkde     = ncm_stats_dist_kde_new (kernel, NCM_STATS_DIST_CV_NONE);
+  NcmStatsDist *sd           = NCM_STATS_DIST (sdkde);
+  NcmMatrix *cov             = ncm_matrix_new (d, d);
+  NcmRNG *rng                = ncm_rng_seeded_new (NULL, 20260925);
+  NcmVector *x               = ncm_vector_new (d);
   guint i, j;
 
   ncm_matrix_set (cov, 0, 0, 1.0);
@@ -2475,6 +2634,7 @@ test_ncm_stats_dist_kde_cov_fixed_nearPD (void)
   ncm_rng_free (rng);
   ncm_matrix_free (cov);
   ncm_stats_dist_free (sd);
+  ncm_stats_dist_kernel_free (kernel);
 }
 
 void

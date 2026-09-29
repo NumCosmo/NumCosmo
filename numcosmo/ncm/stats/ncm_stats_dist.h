@@ -62,8 +62,8 @@ struct _NcmStatsDistClass
   void (*eval_weights_m2lnp_loo) (NcmStatsDist *sd, NcmVector *weights, GPtrArray *x_a, NcmVector *m2lnp);
   void (*reset) (NcmStatsDist *sd);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[5];
+  /* Padding to allow adding up to 3 more virtual functions without breaking ABI. */
+  gpointer padding[3];
 };
 
 /**

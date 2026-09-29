@@ -201,7 +201,15 @@ points as draws from the target, weighted by $q/\pi$; at a kernel point $q$ is t
 without that point's own kernel, since the importance identity requires $q$ independent of
 the draw. A trial whose importance weights concentrate on a few points is rejected, and a
 fit that starts among rejected trials first searches the over-smooth range for an accepted
-one. The same objective can choose the kernel, by treating the Student-t degrees of
+one.
+
+For a Gaussian kernel, [[numcosmo-math|NcmStatsDistKDE]] evaluates the least-squares
+cross-validation in closed form. Two Gaussian kernels with scale matrix $h^2 \Sigma$
+convolve to a Gaussian with $2 h^2 \Sigma$, so with equal weights the integral of the
+squared mixture is the mean over the kernel centers of the mixture at bandwidth
+$\sqrt{2} h$. [[numcosmo-math|NcmStatsDistVKDE]] uses the same expression with each
+kernel's own scale matrix doubled; kernels with different $\Sigma_i$ convolve to
+$h^2 (\Sigma_i + \Sigma_j)$ instead, so there it is an approximation. The same objective can choose the kernel, by treating the Student-t degrees of
 freedom $\nu$ as a second fitted parameter alongside $h$: the fit runs over
 $(\ln h, \ln \nu)$ with $\nu \leq 10^4$. The kernel stays a Student-t at the upper
 bound, where its log-density differs from the Gaussian kernel's by about

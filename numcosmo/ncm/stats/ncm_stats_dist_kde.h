@@ -47,18 +47,18 @@ struct _NcmStatsDistKDEClass
   /*< private >*/
   NcmStatsDistClass parent_class;
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[7];
+  /* Padding to allow adding up to 18 more virtual functions without breaking ABI. */
+  gpointer padding[18];
 };
 
 /**
  * NcmStatsDistKDECovType:
- * @NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE: Use sample covariance.
- * @NCM_STATS_DIST_KDE_COV_TYPE_FIXED: Use a fixed covariance matrix.
- * @NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG: Use an 1D robust estimator to build a diagonal covariance.
- * @NCM_STATS_DIST_KDE_COV_TYPE_ROBUST: Use the OGK method to build a covariance.
+ * @NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE: the sample covariance
+ * @NCM_STATS_DIST_KDE_COV_TYPE_FIXED: the matrix #NcmStatsDistKDE:cov-fixed
+ * @NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG: a diagonal of the squared Qn scale estimates
+ * @NCM_STATS_DIST_KDE_COV_TYPE_ROBUST: the orthogonalized Gnanadesikan-Kettenring robust covariance
  *
- * Selects the covariance type to use in the kernel interpolation.
+ * The scale matrix shared by the kernels of #NcmStatsDistKDE.
  *
  */
 typedef enum _NcmStatsDistKDECovType /*< prefix=NCM_STATS_DIST_KDE_COV_TYPE >*/

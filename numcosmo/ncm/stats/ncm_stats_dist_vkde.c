@@ -44,10 +44,6 @@
  * ncm_stats_dist_set_over_smooth(), @local_frac through
  * ncm_stats_dist_vkde_set_local_frac(), and $v(x)$ through
  * ncm_stats_dist_prepare().
- *
- * The flowchart below gives the call order.
- *
- * ![vkde_sketch](vkde.png)
  */
 
 #ifdef HAVE_CONFIG_H

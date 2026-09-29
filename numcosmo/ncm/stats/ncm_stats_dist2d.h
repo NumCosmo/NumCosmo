@@ -58,7 +58,7 @@ struct _NcmStatsDist2dClass
   gdouble (*inv_cond) (NcmStatsDist2d *sd2, const gdouble u, const gdouble xy);
   void (*prepare) (NcmStatsDist2d *sd2);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
+  /* Padding to allow adding up to 8 more virtual functions without breaking ABI. */
   gpointer padding[8];
 };
 
