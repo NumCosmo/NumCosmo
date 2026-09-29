@@ -70,7 +70,7 @@ struct _NcmStatsDistClass
  * NcmStatsDistCV:
  * @NCM_STATS_DIST_CV_NONE: no cross validation, the rule-of-thumb bandwidth
  * @NCM_STATS_DIST_CV_SPLIT_M2LNP: sample split, bandwidth by the out-of-sample density
- * @NCM_STATS_DIST_CV_LOO: leave-one-out, bandwidth by the AMISE estimate
+ * @NCM_STATS_DIST_CV_LOO: leave-one-out, bandwidth by least-squares cross-validation of the integrated squared error
  * @NCM_STATS_DIST_CV_SPLIT_ACCEPT: sample split, bandwidth by the out-of-sample acceptance estimate
  * @NCM_STATS_DIST_CV_LOO_M2LNP: leave-one-out, bandwidth by the leave-one-out density
  *

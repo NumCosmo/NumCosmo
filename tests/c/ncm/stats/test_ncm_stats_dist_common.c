@@ -91,6 +91,8 @@ static void test_ncm_stats_dist_invalid_auto_kernel_gauss (TestNcmStatsDist *tes
 static void test_ncm_stats_dist_split_underflowing_m2lnp (void);
 static void test_ncm_stats_dist_split_drop_far_points (void);
 static void test_ncm_stats_dist_split_too_few_kernels (void);
+static void test_ncm_stats_dist_accept_rejected_start (void);
+static void test_ncm_stats_dist_accept_rejected_everywhere (void);
 static void test_ncm_stats_dist_print_fit (void);
 static void test_ncm_stats_dist_kde_cov_fixed_nearPD (void);
 
@@ -206,6 +208,10 @@ test_ncm_stats_dist_main (gint argc, gchar *argv[], TestNcmStatsDistMode mode)
                      &test_ncm_stats_dist_split_drop_far_points);
     g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/split/too_few_kernels",
                      &test_ncm_stats_dist_split_too_few_kernels);
+    g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/accept/rejected_start",
+                     &test_ncm_stats_dist_accept_rejected_start);
+    g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/accept/rejected_everywhere",
+                     &test_ncm_stats_dist_accept_rejected_everywhere);
     g_test_add_func ("/ncm/stats/dist/nd/print_fit",
                      &test_ncm_stats_dist_print_fit);
     g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/cov_fixed/nearPD",
@@ -1132,7 +1138,8 @@ test_ncm_stats_dist_cv_objectives (void)
 
   for (c = 0; c < 3; c++)
   {
-    NcmStatsDist *sd = NCM_STATS_DIST (ncm_stats_dist_kde_new (NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d)), cv[c]));
+    NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
+    NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, cv[c]));
 
     ncm_stats_dist_set_split_frac (sd, 0.8);
     ncm_stats_dist_set_over_smooth (sd, 1.0);
@@ -1165,6 +1172,7 @@ test_ncm_stats_dist_cv_objectives (void)
     }
 
     ncm_stats_dist_free (sd);
+    ncm_stats_dist_kernel_free (kernel);
   }
 
   g_assert_cmpfloat (h[1] / h[0], <, 3.0);
@@ -2229,6 +2237,96 @@ test_ncm_stats_dist_split_too_few_kernels (void)
   g_test_trap_subprocess (NULL, 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*the sample is too small: 3 kernel centers in dimension 3*");
+}
+
+/*
+ * A sample of n points in d dimensions and its -2lnL: standard normal, or Student-t with
+ * nu degrees of freedom when nu > 0.
+ */
+static NcmStatsDist *
+_test_ncm_stats_dist_accept_new (const guint d, const guint n, const gdouble nu, const gdouble over_smooth, NcmVector **m2lnL)
+{
+  NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
+  NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, NCM_STATS_DIST_CV_SPLIT_ACCEPT));
+  NcmRNG *rng                = ncm_rng_seeded_new (NULL, 20260929);
+  NcmVector *y               = ncm_vector_new (d);
+  guint i, j;
+
+  ncm_stats_dist_set_split_frac (sd, 0.8);
+  ncm_stats_dist_set_over_smooth (sd, over_smooth);
+  ncm_stats_dist_set_uniform_weights (sd, TRUE);
+  *m2lnL = ncm_vector_new (n);
+
+  for (i = 0; i < n; i++)
+  {
+    const gdouble scale = (nu > 0.0) ? sqrt (nu / ncm_rng_chisq_gen (rng, nu)) : 1.0;
+    gdouble chi2        = 0.0;
+
+    for (j = 0; j < d; j++)
+    {
+      const gdouble z = scale * ncm_rng_ugaussian_gen (rng);
+
+      ncm_vector_set (y, j, z);
+      chi2 += z * z;
+    }
+
+    ncm_vector_set (*m2lnL, i, (nu > 0.0) ? (nu + d) * log1p (chi2 / nu) : chi2);
+    ncm_stats_dist_add_obs (sd, y);
+  }
+
+  ncm_vector_free (y);
+  ncm_rng_free (rng);
+  ncm_stats_dist_kernel_free (kernel);
+
+  return sd;
+}
+
+static void
+test_ncm_stats_dist_accept_rejected_start (void)
+{
+  /*
+   * For this Gaussian sample in d = 10 the acceptance objective rejects every trial at
+   * over-smooth 1 and above (importance ESS below its floor). BOBYQA started there stops at
+   * once; the linear search must bring both fits to the same accepted minimum.
+   */
+  const gdouble start[2] = {1.0, 20.0};
+  gdouble os[2];
+  guint k;
+
+  for (k = 0; k < 2; k++)
+  {
+    NcmVector *m2lnL;
+    NcmStatsDist *sd = _test_ncm_stats_dist_accept_new (10, 600, 0.0, start[k], &m2lnL);
+
+    ncm_stats_dist_prepare (sd, m2lnL);
+    os[k] = ncm_stats_dist_get_over_smooth (sd);
+
+    ncm_vector_free (m2lnL);
+    ncm_stats_dist_free (sd);
+  }
+
+  g_assert_cmpfloat (fabs (os[0] - start[0]), >, 0.1);
+  ncm_assert_cmpdouble_e (os[0], ==, os[1], 1.0e-2, 0.0);
+}
+
+static void
+test_ncm_stats_dist_accept_rejected_everywhere (void)
+{
+  /* 8 kernel centres: the importance ESS never reaches its floor of 10, so every trial is
+   * rejected and the fit must abort instead of keeping its start. */
+  if (g_test_subprocess ())
+  {
+    NcmVector *m2lnL;
+    NcmStatsDist *sd = _test_ncm_stats_dist_accept_new (2, 10, 0.0, 1.0, &m2lnL);
+
+    ncm_stats_dist_prepare (sd, m2lnL);
+
+    return;
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the bandwidth objective is not finite at any of 21 over-smooth values*8 kernel centers*");
 }
 
 static void
