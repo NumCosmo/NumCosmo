@@ -77,6 +77,10 @@ math_tests = [
         'sources': ['ncm/data/test_ncm_data_poisson.c'],
     },
     {
+        'name': 'ncm_data_dist',
+        'sources': ['ncm/data/test_ncm_data_dist.c'],
+    },
+    {
         'name': 'ncm_sky_footprint',
         'sources': ['ncm/sphere/test_ncm_sky_footprint.c'],
     },
