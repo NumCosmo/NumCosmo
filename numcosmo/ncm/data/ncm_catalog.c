@@ -101,7 +101,7 @@ ncm_catalog_init (NcmCatalog *catalog)
   self->meta         = NULL;
 }
 
-static void _ncm_catalog_set_data (NcmCatalogPrivate *self, NcmMatrix *data);
+static void _ncm_catalog_set_data (NcmCatalog *catalog, NcmMatrix *data);
 
 static void
 _ncm_catalog_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -112,7 +112,7 @@ _ncm_catalog_set_property (GObject *object, guint prop_id, const GValue *value, 
   switch (prop_id)
   {
     case PROP_DATA:
-      _ncm_catalog_set_data (self, g_value_get_object (value));
+      _ncm_catalog_set_data (catalog, g_value_get_object (value));
       break;
     case PROP_COLUMNS:
       g_assert_null (self->columns);
@@ -183,7 +183,9 @@ _ncm_catalog_constructed (GObject *object)
     NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
     guint i;
 
-    g_assert_nonnull (self->columns);
+    if (self->columns == NULL)
+      g_error ("_ncm_catalog_constructed: a %s needs its column names.", G_OBJECT_TYPE_NAME (object));
+
     self->ncols = g_strv_length (self->columns);
 
     for (i = 0; i < self->ncols; i++)
@@ -193,8 +195,9 @@ _ncm_catalog_constructed (GObject *object)
 
       *index = i;
 
-      g_assert (col != NULL);
-      g_assert (!g_hash_table_contains (self->columns_hash, col));
+      if (g_hash_table_contains (self->columns_hash, col))
+        g_error ("_ncm_catalog_constructed: column `%s' appears more than once.", col);
+
       g_hash_table_insert (self->columns_hash, g_strdup (col), index);
     }
 
@@ -206,10 +209,16 @@ _ncm_catalog_constructed (GObject *object)
     }
     else
     {
-      g_assert_cmpuint (self->col_types->len, ==, self->ncols);
+      if (self->col_types->len != self->ncols)
+        g_error ("_ncm_catalog_constructed: %u column types for %u columns.", self->col_types->len, self->ncols);
 
       for (i = 0; i < self->ncols; i++)
-        g_assert_cmpuint (g_array_index (self->col_types, guint32, i), <, NCM_CATALOG_COL_TYPE_LEN);
+      {
+        const guint32 t = g_array_index (self->col_types, guint32, i);
+
+        if (t >= NCM_CATALOG_COL_TYPE_LEN)
+          g_error ("_ncm_catalog_constructed: column `%s' has the invalid type %u.", self->columns[i], t);
+      }
     }
 
     if (self->data == NULL)
@@ -237,13 +246,6 @@ _ncm_catalog_dispose (GObject *object)
 }
 
 static void
-_ncm_catalog_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_catalog_parent_class)->finalize (object);
-}
-
-static void
 ncm_catalog_class_init (NcmCatalogClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -252,12 +254,12 @@ ncm_catalog_class_init (NcmCatalogClass *klass)
   object_class->get_property = &_ncm_catalog_get_property;
   object_class->constructed  = &_ncm_catalog_constructed;
   object_class->dispose      = &_ncm_catalog_dispose;
-  object_class->finalize     = &_ncm_catalog_finalize;
 
   /**
    * NcmCatalog:data:
    *
-   * The catalog data matrix (rows are entries, columns are named fields).
+   * The catalog data matrix (rows are entries, columns are named fields). Setting it
+   * replaces the data and the number of rows; it must have one column per name.
    *
    */
   g_object_class_install_property (object_class,
@@ -330,15 +332,29 @@ ncm_catalog_class_init (NcmCatalogClass *klass)
 }
 
 static void
-_ncm_catalog_set_data (NcmCatalogPrivate *self, NcmMatrix *data)
+_ncm_catalog_set_data (NcmCatalog *catalog, NcmMatrix *data)
 {
-  ncm_matrix_clear (&self->data);
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
 
-  if (data != NULL)
+  if (data == NULL)
   {
-    self->data = ncm_matrix_ref (data);
-    self->len  = ncm_matrix_nrows (self->data);
+    /* Unset during construction: constructed allocates the zero matrix. */
+    if (self->data != NULL)
+      g_error ("_ncm_catalog_set_data: the data matrix of a catalog cannot be unset.");
+
+    return;
   }
+
+  /* During construction the columns are set only in constructed, so the size is
+   * checked there against ncols; afterwards it is checked here. */
+  if ((self->ncols > 0) && (ncm_matrix_ncols (data) != self->ncols))
+    g_error ("_ncm_catalog_set_data: the catalog has %u columns, but the matrix has %u.",
+             self->ncols, ncm_matrix_ncols (data));
+
+  ncm_matrix_ref (data);
+  ncm_matrix_clear (&self->data);
+  self->data = data;
+  self->len  = ncm_matrix_nrows (self->data);
 }
 
 /**
@@ -420,7 +436,8 @@ ncm_catalog_ref (NcmCatalog *catalog)
  * ncm_catalog_free:
  * @catalog: a #NcmCatalog
  *
- * Decreases the reference count of @catalog by one.
+ * Decreases the reference count of @catalog by one. If the reference count
+ * reaches zero, @catalog is freed.
  *
  */
 void
@@ -515,6 +532,38 @@ ncm_catalog_get_col_type (NcmCatalog *catalog, const gchar *col, GError **error)
   return g_array_index (self->col_types, guint32, *j);
 }
 
+/*
+ * Finds the column @col and checks the row @i; on failure sets @error (or aborts when
+ * @error is %NULL) and returns %FALSE.
+ */
+static gboolean
+_ncm_catalog_locate (NcmCatalog *catalog, const gchar *col, const guint i, guint *j, GError **error)
+{
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
+  guint *jp                      = g_hash_table_lookup (self->columns_hash, col);
+
+  if (jp == NULL)
+  {
+    ncm_util_set_or_call_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND,
+                                "Column '%s' not found.", col);
+
+    return FALSE;
+  }
+
+  if (i >= ncm_matrix_nrows (self->data))
+  {
+    ncm_util_set_or_call_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_ROW_OUT_OF_RANGE,
+                                "Row %u of column '%s' requested, but the catalog has %u rows.",
+                                i, col, ncm_matrix_nrows (self->data));
+
+    return FALSE;
+  }
+
+  *j = *jp;
+
+  return TRUE;
+}
+
 /**
  * ncm_catalog_set:
  * @catalog: a #NcmCatalog
@@ -523,26 +572,18 @@ ncm_catalog_get_col_type (NcmCatalog *catalog, const gchar *col, GError **error)
  * @val: the value to set
  * @error: a #GError for error reporting
  *
- * Sets the value at row @i and column @col.
+ * Sets the value at row @i and column @col. An unknown column or a row index not
+ * smaller than ncm_catalog_len() sets @error.
  *
  */
 void
 ncm_catalog_set (NcmCatalog *catalog, const gchar *col, const guint i, gdouble val, GError **error)
 {
   NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
-  guint *j;
+  guint j;
 
-  j = g_hash_table_lookup (self->columns_hash, col);
-
-  if (j == NULL)
-  {
-    ncm_util_set_or_call_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND,
-                                "Column '%s' not found.", col);
-
-    return;
-  }
-
-  ncm_matrix_set (self->data, i, *j, val);
+  if (_ncm_catalog_locate (catalog, col, i, &j, error))
+    ncm_matrix_set (self->data, i, j, val);
 }
 
 /**
@@ -552,7 +593,8 @@ ncm_catalog_set (NcmCatalog *catalog, const gchar *col, const guint i, gdouble v
  * @i: a row index
  * @error: a #GError for error reporting
  *
- * Gets the value at row @i and column @col.
+ * Gets the value at row @i and column @col. An unknown column or a row index not
+ * smaller than ncm_catalog_len() sets @error and returns NaN.
  *
  * Returns: the value at row @i and column @col.
  */
@@ -560,19 +602,12 @@ gdouble
 ncm_catalog_get (NcmCatalog *catalog, const gchar *col, const guint i, GError **error)
 {
   NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
-  guint *j;
+  guint j;
 
-  j = g_hash_table_lookup (self->columns_hash, col);
-
-  if (j == NULL)
-  {
-    ncm_util_set_or_call_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND,
-                                "Column '%s' not found.", col);
-
+  if (!_ncm_catalog_locate (catalog, col, i, &j, error))
     return GSL_NAN;
-  }
 
-  return ncm_matrix_get (self->data, i, *j);
+  return ncm_matrix_get (self->data, i, j);
 }
 
 /**
@@ -600,14 +635,20 @@ ncm_catalog_set_int (NcmCatalog *catalog, const gchar *col, const guint i, gint6
  * @i: a row index
  * @error: a #GError for error reporting
  *
- * Gets the integer value at row @i and column @col.
+ * Gets the integer value at row @i and column @col; on error it returns 0.
  *
  * Returns: the value at row @i and column @col as a #gint64.
  */
 gint64
 ncm_catalog_get_int (NcmCatalog *catalog, const gchar *col, const guint i, GError **error)
 {
-  return (gint64) ncm_catalog_get (catalog, col, i, error);
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
+  guint j;
+
+  if (!_ncm_catalog_locate (catalog, col, i, &j, error))
+    return 0;
+
+  return (gint64) ncm_matrix_get (self->data, i, j);
 }
 
 /**
@@ -635,14 +676,20 @@ ncm_catalog_set_bool (NcmCatalog *catalog, const gchar *col, const guint i, gboo
  * @i: a row index
  * @error: a #GError for error reporting
  *
- * Gets the boolean value at row @i and column @col.
+ * Gets the boolean value at row @i and column @col; on error it returns %FALSE.
  *
  * Returns: the value at row @i and column @col as a #gboolean.
  */
 gboolean
 ncm_catalog_get_bool (NcmCatalog *catalog, const gchar *col, const guint i, GError **error)
 {
-  return ncm_catalog_get (catalog, col, i, error) != 0.0;
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
+  guint j;
+
+  if (!_ncm_catalog_locate (catalog, col, i, &j, error))
+    return FALSE;
+
+  return ncm_matrix_get (self->data, i, j) != 0.0;
 }
 
 /**

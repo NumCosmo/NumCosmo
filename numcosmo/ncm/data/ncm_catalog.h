@@ -74,6 +74,7 @@ typedef enum _NcmCatalogColType /*< prefix=NCM_CATALOG_COL_TYPE >*/
 /**
  * NcmCatalogError:
  * @NCM_CATALOG_ERROR_COLUMN_NOT_FOUND: The column was not found.
+ * @NCM_CATALOG_ERROR_ROW_OUT_OF_RANGE: The row index is not smaller than the number of rows.
  *
  * Error codes returned by the #NcmCatalog class.
  *
@@ -81,6 +82,7 @@ typedef enum _NcmCatalogColType /*< prefix=NCM_CATALOG_COL_TYPE >*/
 typedef enum _NcmCatalogError /*< enum,prefix=NCM_CATALOG_ERROR >*/
 {
   NCM_CATALOG_ERROR_COLUMN_NOT_FOUND,
+  NCM_CATALOG_ERROR_ROW_OUT_OF_RANGE,
 } NcmCatalogError;
 
 GQuark ncm_catalog_error_quark (void);
