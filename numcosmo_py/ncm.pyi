@@ -12608,7 +12608,7 @@ class StatsDistKernelST(StatsDistKernel):
 
     Properties from NcmStatsDistKernelST:
       nu -> gdouble: nu
-        nu value of the function
+        Degrees of freedom
 
     Properties from NcmStatsDistKernel:
       dimension -> guint: dimension
