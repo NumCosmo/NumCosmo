@@ -9236,7 +9236,7 @@ class RNG(GObject.Object):
       state -> gchararray: state
         Algorithm state
       seed -> gulong: seed
-        Algorithm seed
+        Algorithm seed; only recorded when a state was set
 
     Signals from GObject:
       notify (GParam)
