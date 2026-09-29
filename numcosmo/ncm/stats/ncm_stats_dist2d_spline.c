@@ -26,10 +26,12 @@
 /**
  * NcmStatsDist2dSpline:
  *
- * Two-dimensional probability distribution based on a spline
+ * Two-dimensional distribution with $-2\ln p(x, y)$ given by a spline.
  *
- * Reconstruction of an arbitrary two-dimensional probability distribution based on a spline.
- *
+ * The support is the knot range of the #NcmStatsDist2dSpline:m2lnp spline, and the density
+ * $p(x, y) = e^{-m_2(x, y)/2}$ is not normalized. Only ncm_stats_dist2d_eval_m2lnp(),
+ * ncm_stats_dist2d_eval_pdf() and the bounds are implemented; the cumulative distribution,
+ * the marginals and the conditional quantiles abort.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -43,8 +45,6 @@ enum
 {
   PROP_0,
   PROP_M2LNP,
-  PROP_MARGINAL_X,
-  PROP_SIZE,
 };
 
 struct _NcmStatsDist2dSpline
@@ -52,9 +52,6 @@ struct _NcmStatsDist2dSpline
   /*< private >*/
   NcmStatsDist2d parent_instance;
   NcmSpline2d *m2lnp;
-  gboolean marginal_x;
-  gdouble norma;
-  gdouble m2lnnorma;
 };
 
 G_DEFINE_TYPE (NcmStatsDist2dSpline, ncm_stats_dist2d_spline, NCM_TYPE_STATS_DIST2D)
@@ -62,10 +59,7 @@ G_DEFINE_TYPE (NcmStatsDist2dSpline, ncm_stats_dist2d_spline, NCM_TYPE_STATS_DIS
 static void
 ncm_stats_dist2d_spline_init (NcmStatsDist2dSpline *sd2s)
 {
-  sd2s->m2lnp      = NULL;
-  sd2s->marginal_x = FALSE;
-  sd2s->norma      = 1.0;
-  sd2s->m2lnnorma  = 0.0;
+  sd2s->m2lnp = NULL;
 }
 
 static void
@@ -80,9 +74,6 @@ _ncm_stats_dist2d_spline_set_property (GObject *object, guint prop_id, const GVa
     case PROP_M2LNP:
       ncm_spline2d_clear (&sd2s->m2lnp);
       sd2s->m2lnp = g_value_dup_object (value);
-      break;
-    case PROP_MARGINAL_X:
-      sd2s->marginal_x = g_value_get_boolean (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -102,9 +93,6 @@ _ncm_stats_dist2d_spline_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_M2LNP:
       g_value_set_object (value, sd2s->m2lnp);
       break;
-    case PROP_MARGINAL_X:
-      g_value_set_boolean (value, sd2s->marginal_x);
-      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -122,22 +110,10 @@ _ncm_stats_dist2d_spline_dispose (GObject *object)
   G_OBJECT_CLASS (ncm_stats_dist2d_spline_parent_class)->dispose (object);
 }
 
-static void
-_ncm_stats_dist2d_spline_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_stats_dist2d_spline_parent_class)->finalize (object);
-}
-
 static void _ncm_stats_dist2d_spline_xbounds (NcmStatsDist2d *sd2, gdouble *xi, gdouble *xf);
 static void _ncm_stats_dist2d_spline_ybounds (NcmStatsDist2d *sd2, gdouble *yi, gdouble *yf);
 static gdouble _ncm_stats_dist2d_spline_pdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y);
 static gdouble _ncm_stats_dist2d_spline_m2lnp (NcmStatsDist2d *sd2, const gdouble x, const gdouble y);
-static gdouble _ncm_stats_dist2d_spline_cdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y);
-static gdouble _ncm_stats_dist2d_spline_marginal_pdf (NcmStatsDist2d *sd2, const gdouble xy);
-static gdouble _ncm_stats_dist2d_spline_marginal_cdf (NcmStatsDist2d *sd2, const gdouble xy);
-static gdouble _ncm_stats_dist2d_spline_marginal_inv_cdf (NcmStatsDist2d *sd2, const gdouble u);
-static gdouble _ncm_stats_dist2d_spline_inv_cond (NcmStatsDist2d *sd2, const gdouble u, const gdouble xy);
 static void _ncm_stats_dist2d_spline_prepare (NcmStatsDist2d *sd2);
 
 static void
@@ -149,33 +125,20 @@ ncm_stats_dist2d_spline_class_init (NcmStatsDist2dSplineClass *klass)
   object_class->set_property = &_ncm_stats_dist2d_spline_set_property;
   object_class->get_property = &_ncm_stats_dist2d_spline_get_property;
   object_class->dispose      = &_ncm_stats_dist2d_spline_dispose;
-  object_class->finalize     = &_ncm_stats_dist2d_spline_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_M2LNP,
                                    g_param_spec_object ("m2lnp",
                                                         NULL,
-                                                        "m2lnp",
+                                                        "Spline of -2 ln p",
                                                         NCM_TYPE_SPLINE2D,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_MARGINAL_X,
-                                   g_param_spec_boolean ("marginal-x",
-                                                         NULL,
-                                                         "Compute marginal with respect to x if True, and y if False.",
-                                                         TRUE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  sd2_class->xbounds          = &_ncm_stats_dist2d_spline_xbounds;
-  sd2_class->ybounds          = &_ncm_stats_dist2d_spline_ybounds;
-  sd2_class->pdf              = &_ncm_stats_dist2d_spline_pdf;
-  sd2_class->m2lnp            = &_ncm_stats_dist2d_spline_m2lnp;
-  sd2_class->cdf              = &_ncm_stats_dist2d_spline_cdf;
-  sd2_class->marginal_pdf     = &_ncm_stats_dist2d_spline_marginal_pdf;
-  sd2_class->marginal_cdf     = &_ncm_stats_dist2d_spline_marginal_cdf;
-  sd2_class->marginal_inv_cdf = &_ncm_stats_dist2d_spline_marginal_inv_cdf;
-  sd2_class->inv_cond         = &_ncm_stats_dist2d_spline_inv_cond;
-  sd2_class->prepare          = &_ncm_stats_dist2d_spline_prepare;
+  sd2_class->xbounds = &_ncm_stats_dist2d_spline_xbounds;
+  sd2_class->ybounds = &_ncm_stats_dist2d_spline_ybounds;
+  sd2_class->pdf     = &_ncm_stats_dist2d_spline_pdf;
+  sd2_class->m2lnp   = &_ncm_stats_dist2d_spline_m2lnp;
+  sd2_class->prepare = &_ncm_stats_dist2d_spline_prepare;
 }
 
 static void
@@ -183,10 +146,9 @@ _ncm_stats_dist2d_spline_xbounds (NcmStatsDist2d *sd2, gdouble *xi, gdouble *xf)
 {
   NcmStatsDist2dSpline *sd2s = NCM_STATS_DIST2D_SPLINE (sd2);
   NcmVector *xv              = ncm_spline2d_peek_xv (sd2s->m2lnp);
-  const gint len             = ncm_vector_len (xv);
 
   *xi = ncm_vector_get (xv, 0);
-  *xf = ncm_vector_get (xv, len - 1);
+  *xf = ncm_vector_get (xv, ncm_vector_len (xv) - 1);
 }
 
 static void
@@ -194,10 +156,9 @@ _ncm_stats_dist2d_spline_ybounds (NcmStatsDist2d *sd2, gdouble *yi, gdouble *yf)
 {
   NcmStatsDist2dSpline *sd2s = NCM_STATS_DIST2D_SPLINE (sd2);
   NcmVector *yv              = ncm_spline2d_peek_yv (sd2s->m2lnp);
-  const gint len             = ncm_vector_len (yv);
 
   *yi = ncm_vector_get (yv, 0);
-  *yf = ncm_vector_get (yv, len - 1);
+  *yf = ncm_vector_get (yv, ncm_vector_len (yv) - 1);
 }
 
 static gdouble
@@ -205,68 +166,13 @@ _ncm_stats_dist2d_spline_m2lnp (NcmStatsDist2d *sd2, const gdouble x, const gdou
 {
   NcmStatsDist2dSpline *sd2s = NCM_STATS_DIST2D_SPLINE (sd2);
 
-  return ncm_spline2d_eval (sd2s->m2lnp, x, y) - sd2s->m2lnnorma;
+  return ncm_spline2d_eval (sd2s->m2lnp, x, y);
 }
 
 static gdouble
 _ncm_stats_dist2d_spline_pdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y)
 {
-  NcmStatsDist2dSpline *sd2s = NCM_STATS_DIST2D_SPLINE (sd2);
-  const gdouble m2lnp        = _ncm_stats_dist2d_spline_m2lnp (sd2, x, y);
-
-  return exp (-0.5 * (m2lnp - sd2s->m2lnnorma));
-}
-
-static gdouble
-_ncm_stats_dist2d_spline_cdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y)
-{
-  NcmStatsDist2dSpline *sd2s = NCM_STATS_DIST2D_SPLINE (sd2);
-  gdouble xi, yi, xf, yf;
-
-  _ncm_stats_dist2d_spline_xbounds (sd2, &xi, &xf);
-  _ncm_stats_dist2d_spline_ybounds (sd2, &yi, &yf);
-
-  return ncm_spline2d_integ_dxdy (sd2s->m2lnp, xi, x, yi, y);
-}
-
-static gdouble
-_ncm_stats_dist2d_spline_marginal_pdf (NcmStatsDist2d *sd2, const gdouble xy)
-{
-  NcmStatsDist2dSpline *sd2s = NCM_STATS_DIST2D_SPLINE (sd2);
-
-  NCM_UNUSED (sd2s);
-
-  return 0.0;
-}
-
-static gdouble
-_ncm_stats_dist2d_spline_marginal_cdf (NcmStatsDist2d *sd2, const gdouble xy)
-{
-  NcmStatsDist2dSpline *sd2s = NCM_STATS_DIST2D_SPLINE (sd2);
-
-  NCM_UNUSED (sd2s);
-
-  return 0.0;
-}
-
-static gdouble
-_ncm_stats_dist2d_spline_marginal_inv_cdf (NcmStatsDist2d *sd2, const gdouble u)
-{
-  NcmStatsDist2dSpline *sd2s = NCM_STATS_DIST2D_SPLINE (sd2);
-
-  NCM_UNUSED (sd2s);
-
-  return 0.0;
-}
-
-static gdouble
-_ncm_stats_dist2d_spline_inv_cond (NcmStatsDist2d *sd2, const gdouble u, const gdouble xy)
-{
-  NcmStatsDist2dSpline *sd2s = NCM_STATS_DIST2D_SPLINE (sd2);
-
-  NCM_UNUSED (sd2s);
-
-  return 0.0;
+  return exp (-0.5 * _ncm_stats_dist2d_spline_m2lnp (sd2, x, y));
 }
 
 static void
@@ -274,27 +180,20 @@ _ncm_stats_dist2d_spline_prepare (NcmStatsDist2d *sd2)
 {
   NcmStatsDist2dSpline *sd2s = NCM_STATS_DIST2D_SPLINE (sd2);
 
+  if (sd2s->m2lnp == NULL)
+    g_error ("_ncm_stats_dist2d_spline_prepare: no m2lnp spline set.");
+
   ncm_spline2d_prepare (sd2s->m2lnp);
-
-  {
-    gdouble xi, yi, xf, yf;
-
-    _ncm_stats_dist2d_spline_xbounds (sd2, &xi, &xf);
-    _ncm_stats_dist2d_spline_ybounds (sd2, &yi, &yf);
-
-    sd2s->norma     = 1.0; /*ncm_spline2d_integ_dxdy (sd2s->m2lnp, xi, xf, yi, yf); */
-    sd2s->m2lnnorma = 0.0; /*-2.0 * log (sd2s->norma); */
-  }
 }
 
 /**
  * ncm_stats_dist2d_spline_new:
- * @m2lnp: a #NcmSpline2d
+ * @m2lnp: a #NcmSpline2d of $-2\ln p(x, y)$
  *
- * Returns a new #NcmStatsDist2dSpline where @m2lnp, $-2\ln(p(x, y))$, is a #NcmSpline2d, where $p(x, y)$
- * is the probability density function.
+ * Creates a new #NcmStatsDist2dSpline with #NcmStatsDist2dSpline:m2lnp set to @m2lnp;
+ * ncm_stats_dist2d_prepare() prepares @m2lnp.
  *
- * Returns: a new #NcmStatsDist2dSpline
+ * Returns: (transfer full): a new #NcmStatsDist2dSpline
  */
 NcmStatsDist2dSpline *
 ncm_stats_dist2d_spline_new (NcmSpline2d *m2lnp)
