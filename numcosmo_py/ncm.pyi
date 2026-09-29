@@ -12657,9 +12657,9 @@ class StatsDistVKDE(StatsDistKDE):
 
     Properties from NcmStatsDistVKDE:
       local-frac -> gdouble: local-frac
-        Fraction to use in the local kernel covariance computation
+        Fraction of the sample used as neighbors of each local covariance
       use-rot-href -> gboolean: use-rot-href
-        Whether to use the href rule-of-thumb to compute the final bandwidth
+        Whether the bandwidth is the rule of thumb times over-smooth and n / k
       points-per-dim -> gdouble: points-per-dim
         Nearest neighbors per dimension for the local covariances (0: use local-frac)
 

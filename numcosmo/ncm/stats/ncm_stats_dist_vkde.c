@@ -24,26 +24,25 @@
  */
 
 /**
- * NcmStatsDistVKDE
+ * NcmStatsDistVKDE:
  *
- * Variable-bandwidth kernel estimator for #NcmStatsDist.
+ * Kernel mixture with one scale matrix per kernel.
  *
- * Uses one covariance matrix per sample point, computed in
- * ncm_stats_dist_prepare_shapes() from the @local_frac nearest sample points.
- * The rest of the calculation follows #NcmStatsDist and #NcmStatsDistKDE, with
- * a different covariance matrix and normalization factor per kernel.
+ * Implements #NcmStatsDist with the scale matrix of kernel $i$ the covariance of the $k$
+ * sample points nearest to the point that carries it, found in the coordinates whitened
+ * by the global scale matrix of #NcmStatsDistKDE and taken about those neighbors' own
+ * mean. The neighbors come from the whole sample, including the points a split
+ * cross-validation holds out. #NcmStatsDistVKDE:points-per-dim or #NcmStatsDistVKDE:local-frac sets $k$
+ * (ncm_stats_dist_vkde_get_n_neighbors()); $k \leq d$ aborts at prepare. The local
+ * estimator follows #NcmStatsDistKDE:cov-type, with #NCM_STATS_DIST_KDE_COV_TYPE_FIXED
+ * taking the neighbors' sample covariance. The bandwidth is #NcmStatsDist:over-smooth
+ * itself or, with #NcmStatsDistVKDE:use-rot-href, the rule-of-thumb bandwidth times
+ * $n / k$. Center shrinkage uses the mean of the local scale matrices.
  *
- * With #NcmStatsDist:center-shrink enabled the shrinkage scale $s^2$ is the mean
- * of $\mathrm{tr}(C_i \Sigma^{-1}) / d$ over the local covariances $C_i$, so that the
- * mixture covariance matches the sample covariance $\Sigma$; the local covariances
- * themselves are still estimated around the original sample points.
+ * The estimator, the choice of local covariance, the shrinkage and the objectives are
+ * described on the <a href="../../theory/ncm/stats/stats_dist.html">Kernel Mixture
+ * Densities</a> page.
  *
- * The caller must supply @sdk and @CV_type through ncm_stats_dist_vkde_new(),
- * @y through ncm_stats_dist_add_obs(), @split_frac through
- * ncm_stats_dist_set_split_frac(), @over_smooth through
- * ncm_stats_dist_set_over_smooth(), @local_frac through
- * ncm_stats_dist_vkde_set_local_frac(), and $v(x)$ through
- * ncm_stats_dist_prepare().
  */
 
 #ifdef HAVE_CONFIG_H
@@ -259,7 +258,7 @@ _ncm_stats_dist_vkde_set_property (GObject *object, guint prop_id, const GValue 
 {
   NcmStatsDistVKDE *sdvkde = NCM_STATS_DIST_VKDE (object);
 
-  /*g_return_if_fail (NCM_IS_STATS_DIST (object));*/
+  g_return_if_fail (NCM_IS_STATS_DIST_VKDE (object));
 
   switch (prop_id)
   {
@@ -282,8 +281,6 @@ static void
 _ncm_stats_dist_vkde_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmStatsDistVKDE *sdvkde = NCM_STATS_DIST_VKDE (object);
-
-  /*NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde);*/
 
   g_return_if_fail (NCM_IS_STATS_DIST_VKDE (object));
 
@@ -338,16 +335,6 @@ _ncm_stats_dist_vkde_dispose (GObject *object)
   G_OBJECT_CLASS (ncm_stats_dist_vkde_parent_class)->dispose (object);
 }
 
-static void
-_ncm_stats_dist_vkde_finalize (GObject *object)
-{
-  /* NcmStatsDistVKDE *sdvkde             = NCM_STATS_DIST_VKDE (object); */
-  /* NcmStatsDistVKDEPrivate * const self = ncm_stats_dist_vkde_get_instance_private (sdvkde); */
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_stats_dist_vkde_parent_class)->finalize (object);
-}
-
 static void _ncm_stats_dist_vkde_set_dim (NcmStatsDist *sd, const guint dim);
 static gdouble _ncm_stats_dist_vkde_bandwidth (NcmStatsDist *sd);
 static void _ncm_stats_dist_vkde_prepare_shapes (NcmStatsDist *sd, GPtrArray *sample_array);
@@ -359,7 +346,6 @@ static gdouble _ncm_stats_dist_vkde_eval_weights (NcmStatsDist *sd, NcmVector *w
 static gdouble _ncm_stats_dist_vkde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
 static void _ncm_stats_dist_vkde_eval_weights_m2lnp_vec (NcmStatsDist *sd, NcmVector *weights, GPtrArray *x_a, NcmVector *m2lnp);
 static void _ncm_stats_dist_vkde_eval_weights_m2lnp_loo (NcmStatsDist *sd, NcmVector *weights, GPtrArray *x_a, NcmVector *m2lnp);
-static void _ncm_stats_dist_vkde_reset (NcmStatsDist *sd);
 
 static void
 ncm_stats_dist_vkde_class_init (NcmStatsDistVKDEClass *klass)
@@ -370,21 +356,36 @@ ncm_stats_dist_vkde_class_init (NcmStatsDistVKDEClass *klass)
   object_class->set_property = &_ncm_stats_dist_vkde_set_property;
   object_class->get_property = &_ncm_stats_dist_vkde_get_property;
   object_class->dispose      = &_ncm_stats_dist_vkde_dispose;
-  object_class->finalize     = &_ncm_stats_dist_vkde_finalize;
 
+  /**
+   * NcmStatsDistVKDE:local-frac:
+   *
+   * Fraction $f$ of the sample used as the neighbors of each local scale matrix,
+   * $k = \lfloor f n \rfloor$ (at least 2), when #NcmStatsDistVKDE:points-per-dim is zero.
+   * Default: 0.05.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_LOCAL_FRAC,
                                    g_param_spec_double ("local-frac",
                                                         NULL,
-                                                        "Fraction to use in the local kernel covariance computation",
+                                                        "Fraction of the sample used as neighbors of each local covariance",
                                                         0.001, 1.0, 0.05,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmStatsDistVKDE:use-rot-href:
+   *
+   * Whether the bandwidth is the rule-of-thumb one times #NcmStatsDist:over-smooth and
+   * $n / k$, with $k$ the neighbor count, instead of #NcmStatsDist:over-smooth itself.
+   * Default: FALSE.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_USE_ROT_HREF,
                                    g_param_spec_boolean ("use-rot-href",
                                                          NULL,
-                                                         "Whether to use the href rule-of-thumb to compute the final bandwidth",
+                                                         "Whether the bandwidth is the rule of thumb times over-smooth and n / k",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -418,7 +419,6 @@ ncm_stats_dist_vkde_class_init (NcmStatsDistVKDEClass *klass)
   base_class->eval_weights_m2lnp     = &_ncm_stats_dist_vkde_eval_weights_m2lnp;
   base_class->eval_weights_m2lnp_vec = &_ncm_stats_dist_vkde_eval_weights_m2lnp_vec;
   base_class->eval_weights_m2lnp_loo = &_ncm_stats_dist_vkde_eval_weights_m2lnp_loo;
-  base_class->reset                  = &_ncm_stats_dist_vkde_reset;
 }
 
 static void
@@ -464,9 +464,7 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
   NcmStatsDistKDEPrivate * const pself = ncm_stats_dist_kde_get_instance_private (NCM_STATS_DIST_KDE (sd));
   NcmStatsDistPrivate * const ppself   = ncm_stats_dist_get_instance_private (sd);
 
-  /*
-   * Creates a near tree object and add all transformed vectors.
-   */
+  /* A k-d tree of the whitened sample, every observation. */
   struct kdtree *tree = kdtree_init (ppself->d);
   guint i;
 
@@ -476,18 +474,11 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
   {
     NcmVector *invUtheta_i = g_ptr_array_index (pself->invUsample_array, i);
 
-    /*
-     * Inserting the transformed vector in the tree, saving also the index.
-     */
     kdtree_insert (tree, ncm_vector_data (invUtheta_i));
   }
 
   kdtree_rebuild (tree);
 
-  /*
-   * Checking allocation of the norm vector and
-   * covariance array.
-   */
   if ((self->lnnorms == NULL) || (ncm_vector_len (self->lnnorms) != ppself->n_kernels))
   {
     ncm_vector_clear (&self->lnnorms);
@@ -504,9 +495,6 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
     self->sample_T = ncm_matrix_new (ppself->d, ppself->n_obs);
   }
 
-  /*
-   * Checking allocation of the covariance array.
-   */
   {
     guint cur_size = self->cov_array->len;
 
@@ -521,15 +509,9 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
     }
   }
 
-  /*
-   * Lets find the k nearest neighbors of each vector in the
-   * sample and use them to define the local covariance at each
-   * vector location.
-   */
+  /* The local scale matrix of each kernel from its k nearest neighbors. */
   {
     const size_t k = ncm_stats_dist_vkde_get_n_neighbors (sdvkde, ppself->n_obs);
-
-    /* #pragma omp parallel for schedule(static) if (ppself->use_threads) */
 
     for (i = 0; i < ppself->n_kernels; i++)
     {
@@ -537,9 +519,6 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
       NcmStatsVec **sample_ptr = ncm_memory_pool_get (self->mp_stats_vec);
       NcmStatsVec *sample      = *sample_ptr;
       rb_knn_list_table_t *table;
-
-      /*gint tid = omp_get_thread_num(); */
-      /*printf("Hello world from omp thread %d\n", tid); */
 
       table = kdtree_knn_search (tree, ncm_vector_data (invUtheta_i), k);
       {
@@ -556,9 +535,6 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
       }
       rb_knn_list_destroy (table);
 
-      /*
-       * Saving the covariance for each vector.
-       */
       {
         NcmMatrix *sample_cov = NULL;
 
@@ -570,10 +546,10 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
             sample_cov = ncm_matrix_ref (ncm_stats_vec_peek_cov_matrix (sample, 0));
             break;
           case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
-            sample_cov = ncm_stats_vec_compute_cov_robust_diag (sample); /* */
+            sample_cov = ncm_stats_vec_compute_cov_robust_diag (sample);
             break;
           case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST:
-            sample_cov = ncm_stats_vec_compute_cov_robust_ogk (sample); /* */
+            sample_cov = ncm_stats_vec_compute_cov_robust_ogk (sample);
             break;
           default:
             g_assert_not_reached ();
@@ -1021,22 +997,14 @@ _ncm_stats_dist_vkde_eval_weights_m2lnp_loo (NcmStatsDist *sd, NcmVector *weight
   _ncm_stats_dist_vkde_eval_tiles (sd, weights, x_a, m2lnp, TRUE);
 }
 
-static void
-_ncm_stats_dist_vkde_reset (NcmStatsDist *sd)
-{
-  /* Chain up : end */
-  NCM_STATS_DIST_CLASS (ncm_stats_dist_vkde_parent_class)->reset (sd);
-}
-
 /**
  * ncm_stats_dist_vkde_new:
  * @sdk: a #NcmStatsDistKernel
  * @CV_type: a #NcmStatsDistCV
  *
- * Creates a new #NcmStatsDistVKDE object using @sdk as
- * kernel and @CV_type as cross-validation method.
+ * Creates a new #NcmStatsDistVKDE with kernel @sdk and cross-validation @CV_type.
  *
- * Returns: (transfer full): the newly created #NcmStatsDistVKDE object.
+ * Returns: (transfer full): a new #NcmStatsDistVKDE.
  */
 NcmStatsDistVKDE *
 ncm_stats_dist_vkde_new (NcmStatsDistKernel *sdk, NcmStatsDistCV CV_type)
@@ -1092,11 +1060,9 @@ ncm_stats_dist_vkde_clear (NcmStatsDistVKDE **sdvkde)
 /**
  * ncm_stats_dist_vkde_set_local_frac:
  * @sdvkde: a #NcmStatsDistVKDE
- * @local_frac: the over-smooth factor
+ * @local_frac: fraction of the sample used as neighbors, in $[0.001, 1]$
  *
- * Sets local kernel fraction to @local_frac. This fraction
- * defines the amount of closest points from each sample point
- * that will be used to compute the covariance matrix of each point.
+ * Sets #NcmStatsDistVKDE:local-frac. Takes effect at the next preparation.
  *
  */
 void
@@ -1114,7 +1080,7 @@ ncm_stats_dist_vkde_set_local_frac (NcmStatsDistVKDE *sdvkde, const gdouble loca
  * ncm_stats_dist_vkde_get_local_frac:
  * @sdvkde: a #NcmStatsDistVKDE
  *
- * Returns: a double @local_frac, the local kernel fraction.
+ * Returns: #NcmStatsDistVKDE:local-frac.
  */
 gdouble
 ncm_stats_dist_vkde_get_local_frac (NcmStatsDistVKDE *sdvkde)
@@ -1127,9 +1093,9 @@ ncm_stats_dist_vkde_get_local_frac (NcmStatsDistVKDE *sdvkde)
 /**
  * ncm_stats_dist_vkde_set_use_rot_href:
  * @sdvkde: a #NcmStatsDistVKDE
- * @use_rot_href: whether to use the rule of thumb bandwidth
+ * @use_rot_href: whether to use the rule-of-thumb bandwidth
  *
- * Sets whether to use the rule of thumb bandwidth for the
+ * Sets #NcmStatsDistVKDE:use-rot-href. Takes effect at the next preparation.
  *
  */
 void
@@ -1144,7 +1110,7 @@ ncm_stats_dist_vkde_set_use_rot_href (NcmStatsDistVKDE *sdvkde, const gboolean u
  * ncm_stats_dist_vkde_get_use_rot_href:
  * @sdvkde: a #NcmStatsDistVKDE
  *
- * Returns: whether to use the rule of thumb bandwidth.
+ * Returns: #NcmStatsDistVKDE:use-rot-href.
  */
 gboolean
 ncm_stats_dist_vkde_get_use_rot_href (NcmStatsDistVKDE *sdvkde)
@@ -1192,7 +1158,8 @@ ncm_stats_dist_vkde_get_points_per_dim (NcmStatsDistVKDE *sdvkde)
  *
  * Number of nearest neighbors used for each local scale matrix with a sample of @n_obs
  * points: $\min(n_\mathrm{obs}, \lceil c\, d \rceil)$ when #NcmStatsDistVKDE:points-per-dim
- * $c$ is positive, otherwise #NcmStatsDistVKDE:local-frac times @n_obs; at least 2.
+ * $c$ is positive, otherwise $\lfloor f\, n_\mathrm{obs} \rfloor$ with $f$ #NcmStatsDistVKDE:local-frac;
+ * at least 2.
  *
  * Returns: the neighbor count.
  */

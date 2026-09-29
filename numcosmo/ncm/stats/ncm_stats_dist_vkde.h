@@ -68,5 +68,5 @@ guint ncm_stats_dist_vkde_get_n_neighbors (NcmStatsDistVKDE *sdvkde, const guint
 
 G_END_DECLS
 
-#endif /* _NCM_STATS_DIST_ND_H_ */
+#endif /* _NCM_STATS_DIST_VKDE_H_ */
 

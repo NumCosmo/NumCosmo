@@ -50,7 +50,9 @@ gives kernel $i$ its own $\Sigma_i$, the covariance of the $k$ sample points nea
 $x_i$, the neighbors being found in the coordinates whitened by $C$. The number $k$ is
 either a fraction of the sample (`local-frac`) or a count per dimension
 (`points-per-dim`, $k = \min(n, \lceil c\, d \rceil)$); when $k$ reaches $n$ every
-kernel has the covariance $C$ and the estimator is the KDE.
+kernel has the covariance $C$ and the estimator is the KDE. Its bandwidth is the over-smooth value
+itself, or, with `use-rot-href`, the kernel rule of thumb times the over-smooth value and
+$n/k$.
 
 The covariance is taken about the neighbors' own mean $\bar{x}_k$, not about the kernel
 center $x_i$. The alternative, the second moment $\frac{1}{k}\sum_j (x_j - x_i)(x_j -
