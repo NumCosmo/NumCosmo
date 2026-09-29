@@ -151,6 +151,7 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   self->refactor_M          = NULL;
   self->refactor_B          = NULL;
   self->defensive_frac      = 0.0;
+  self->defensive_eps       = 0.0;
   self->defensive_scale     = 4.0;
   self->defensive_nu        = 3.0;
   self->defensive_kernel    = NULL;
@@ -1023,6 +1024,10 @@ _ncm_stats_dist_update_defensive (NcmStatsDist *sd)
 {
   NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
+  /* Evaluation and sampling read the fraction applied here, so that a new
+   * defensive-frac takes effect with the kernel it needs, at the next prepare. */
+  self->defensive_eps = self->defensive_frac;
+
   if (self->defensive_frac <= 0.0)
     return;
 
@@ -1800,7 +1805,7 @@ _ncm_stats_dist_sample2 (NcmStatsDist *sd, NcmVector *x1, NcmVector *x2, NcmRNG 
   NcmMatrix *cov_U_i               = ncm_stats_dist_peek_cov_decomp (sd, o_i);
 
   /* Each point takes the wide component independently with probability epsilon. */
-  if ((self->defensive_frac > 0.0) && (ncm_rng_uniform_gen (rng, 0.0, 1.0) < self->defensive_frac))
+  if ((self->defensive_eps > 0.0) && (ncm_rng_uniform_gen (rng, 0.0, 1.0) < self->defensive_eps))
     ncm_stats_dist_kernel_sample (self->defensive_kernel, self->defensive_decomp, 1.0, self->sample_mean, x1, rng);
   else
     ncm_stats_dist_kernel_sample (self->kernel, cov_U_i, self->href, x_i, x1, rng);
@@ -1811,7 +1816,7 @@ _ncm_stats_dist_sample2 (NcmStatsDist *sd, NcmVector *x1, NcmVector *x2, NcmRNG 
     NcmVector *x_j     = g_ptr_array_index (self->center_array, o_j);
     NcmMatrix *cov_U_j = ncm_stats_dist_peek_cov_decomp (sd, o_j);
 
-    if ((self->defensive_frac > 0.0) && (ncm_rng_uniform_gen (rng, 0.0, 1.0) < self->defensive_frac))
+    if ((self->defensive_eps > 0.0) && (ncm_rng_uniform_gen (rng, 0.0, 1.0) < self->defensive_eps))
       ncm_stats_dist_kernel_sample (self->defensive_kernel, self->defensive_decomp, 1.0, self->sample_mean, x2, rng);
     else
       ncm_stats_dist_kernel_sample (self->kernel, cov_U_j, self->href, x_j, x2, rng);
@@ -2007,9 +2012,8 @@ ncm_stats_dist_clear (NcmStatsDist **sd)
  * @sd: a #NcmStatsDist
  * @sdk: a #NcmStatsDistKernel
  *
- * Sets the kernel to be used in the interpolation.
- * The different types of kernels are: the gaussian kernel and the student-t kernel,
- * which are under the file names ncm_stats_dist_kernel_gauss.c and ncm_stats_dist_kernel_st.c.
+ * Sets the kernel of the mixture, #NcmStatsDistKernelGauss or #NcmStatsDistKernelST,
+ * and the dimension to the kernel's.
  */
 void
 ncm_stats_dist_set_kernel (NcmStatsDist *sd, NcmStatsDistKernel *sdk)
@@ -2026,9 +2030,7 @@ ncm_stats_dist_set_kernel (NcmStatsDist *sd, NcmStatsDistKernel *sdk)
  * ncm_stats_dist_peek_kernel:
  * @sd: a #NcmStatsDist
  *
- * Gets the kernel to be used in the interpolation.
- *
- * Returns: (transfer none): current #NcmStatsDistKernel used.
+ * Returns: (transfer none): the #NcmStatsDistKernel of the mixture.
  */
 NcmStatsDistKernel *
 ncm_stats_dist_peek_kernel (NcmStatsDist *sd)
@@ -2042,9 +2044,7 @@ ncm_stats_dist_peek_kernel (NcmStatsDist *sd)
  * ncm_stats_dist_get_kernel:
  * @sd: a #NcmStatsDist
  *
- * Gets the kernel to be used in the interpolation.
- *
- * Returns: (transfer full): current #NcmStatsDistKernel used.
+ * Returns: (transfer full): the #NcmStatsDistKernel of the mixture.
  */
 NcmStatsDistKernel *
 ncm_stats_dist_get_kernel (NcmStatsDist *sd)
@@ -2058,7 +2058,7 @@ ncm_stats_dist_get_kernel (NcmStatsDist *sd)
  * ncm_stats_dist_get_dim:
  * @sd: a #NcmStatsDist
  *
- * Returns: an int d, the dimension of the sample space, which is the same dimension of the used kernel.
+ * Returns: the dimension $d$ of the sample space, the kernel's.
  */
 guint
 ncm_stats_dist_get_dim (NcmStatsDist *sd)
@@ -2072,10 +2072,8 @@ ncm_stats_dist_get_dim (NcmStatsDist *sd)
  * ncm_stats_dist_get_sample_size:
  * @sd: a #NcmStatsDist
  *
- * After the prepare call, this function returns the size of the sample used in the
- * interpolation.
- *
- * Returns: the size of the sample used.
+ * Returns: the number of sample points used by the last ncm_stats_dist_prepare(), after
+ * it dropped the points whose density underflows; zero before the first.
  */
 guint
 ncm_stats_dist_get_sample_size (NcmStatsDist *sd)
@@ -2089,10 +2087,9 @@ ncm_stats_dist_get_sample_size (NcmStatsDist *sd)
  * ncm_stats_dist_get_n_kernels:
  * @sd: a #NcmStatsDist
  *
- * After the prepare call, this function returns the number of kernels used in the
- * interpolation.
- *
- * Returns: the number of kernels used.
+ * Returns: the number of kernels of the last ncm_stats_dist_prepare(): all the sample
+ * points, or the first $\lceil f n \rceil$ of them with a split cross-validation
+ * (#NcmStatsDist:split-frac).
  */
 guint
 ncm_stats_dist_get_n_kernels (NcmStatsDist *sd)
@@ -2113,7 +2110,7 @@ ncm_stats_dist_get_n_kernels (NcmStatsDist *sd)
  * ncm_stats_dist_get_center_shrink_factor(), which is one unless
  * #NcmStatsDist:center-shrink is set. It is zero before the first preparation.
  *
- * Returns: a double h, the currently used @href.
+ * Returns: the bandwidth applied to the kernels.
  */
 gdouble
 ncm_stats_dist_get_href (NcmStatsDist *sd)
@@ -2128,7 +2125,8 @@ ncm_stats_dist_get_href (NcmStatsDist *sd)
  * @sd: a #NcmStatsDist
  * @over_smooth: the over-smooth factor
  *
- * Sets the over-smooth factor to @over_smooth.
+ * Sets #NcmStatsDist:over-smooth. With a cross-validation it is the starting point of
+ * the fit.
  *
  */
 void
@@ -2143,7 +2141,8 @@ ncm_stats_dist_set_over_smooth (NcmStatsDist *sd, const gdouble over_smooth)
  * ncm_stats_dist_get_over_smooth:
  * @sd: a #NcmStatsDist
  *
- * Returns: a double os, the over-smooth factor.
+ * Returns: #NcmStatsDist:over-smooth, the fitted value after a preparation with a
+ * cross-validation.
  */
 gdouble
 ncm_stats_dist_get_over_smooth (NcmStatsDist *sd)
@@ -2156,12 +2155,10 @@ ncm_stats_dist_get_over_smooth (NcmStatsDist *sd)
 /**
  * ncm_stats_dist_set_split_frac:
  * @sd: a #NcmStatsDist
- * @split_frac: the over-smooth factor
+ * @split_frac: fraction of the sample used as kernel centers, in $[0.01, 1]$
  *
- * Sets cross-correlation split fraction to @split_frac.
- * This method shall be used when the cv_type is the cv_split.
- * The split fraction determines the fraction of sample points
- * that will be left out to use the cross validation method.
+ * Sets #NcmStatsDist:split-frac, read by the split cross-validations. A fraction that
+ * leaves no out-of-sample point aborts at the next ncm_stats_dist_prepare().
  *
  */
 void
@@ -2179,7 +2176,7 @@ ncm_stats_dist_set_split_frac (NcmStatsDist *sd, const gdouble split_frac)
  * ncm_stats_dist_get_split_frac:
  * @sd: a #NcmStatsDist
  *
- * Returns: a double @split_frac, the cross-correlation split fraction.
+ * Returns: #NcmStatsDist:split-frac.
  */
 gdouble
 ncm_stats_dist_get_split_frac (NcmStatsDist *sd)
@@ -2195,7 +2192,7 @@ ncm_stats_dist_get_split_frac (NcmStatsDist *sd)
  * @center_shrink: whether to shrink the kernel centers toward the sample mean
  *
  * Enables or disables center shrinkage, see the class description. Takes effect
- * at the next call to ncm_stats_dist_prepare() or ncm_stats_dist_prepare().
+ * at the next call to ncm_stats_dist_prepare().
  *
  */
 void
@@ -2325,7 +2322,8 @@ ncm_stats_dist_get_uniform_weights (NcmStatsDist *sd)
  * @sd: a #NcmStatsDist
  * @frac: weight of the wide component, in $[0, 1]$
  *
- * Sets #NcmStatsDist:defensive-frac. Takes effect at the next preparation.
+ * Sets #NcmStatsDist:defensive-frac. Takes effect at the next preparation: until then
+ * evaluation and sampling use the fraction of the last one.
  *
  */
 void
@@ -2355,7 +2353,7 @@ ncm_stats_dist_get_defensive_frac (NcmStatsDist *sd)
 /**
  * ncm_stats_dist_set_defensive_scale:
  * @sd: a #NcmStatsDist
- * @scale: covariance factor of the wide component
+ * @scale: factor multiplying the sample covariance in the wide component's scale matrix
  *
  * Sets #NcmStatsDist:defensive-scale. Takes effect at the next preparation.
  *
@@ -2417,9 +2415,9 @@ ncm_stats_dist_get_defensive_nu (NcmStatsDist *sd)
 /**
  * ncm_stats_dist_set_print_fit:
  * @sd: a #NcmStatsDist
- * @print_fit: a boolean
+ * @print_fit: whether to print the fit
  *
- * Whether to print steps during the fitting process.
+ * Sets #NcmStatsDist:print-fit.
  *
  */
 void
@@ -2434,7 +2432,7 @@ ncm_stats_dist_set_print_fit (NcmStatsDist *sd, const gboolean print_fit)
  * ncm_stats_dist_get_print_fit:
  * @sd: a #NcmStatsDist
  *
- * Returns: Whether it is going to print steps during the fitting process.
+ * Returns: #NcmStatsDist:print-fit.
  */
 gboolean
 ncm_stats_dist_get_print_fit (NcmStatsDist *sd)
@@ -2449,12 +2447,9 @@ ncm_stats_dist_get_print_fit (NcmStatsDist *sd)
  * @sd: a #NcmStatsDist
  * @cv_type: a #NcmStatsDistCV
  *
- * Sets the cross-validation method to @cv_type.
- * If the selected method is none, all the sample points
- * will be used to compute the interpolation. If the cv_type is the cv_split,
- * a split fraction of the points are randomly excluded and the interpolation
- * is computed to a best fit of the remaining sample points,
- * which leads to a more point independent interpolation.
+ * Sets #NcmStatsDist:CV-type, the objective that fits the bandwidth at the next
+ * ncm_stats_dist_prepare(). With #NCM_STATS_DIST_CV_NONE the bandwidth is the
+ * rule-of-thumb one times #NcmStatsDist:over-smooth.
  *
  */
 void
@@ -2469,7 +2464,7 @@ ncm_stats_dist_set_cv_type (NcmStatsDist *sd, const NcmStatsDistCV cv_type)
  * ncm_stats_dist_get_cv_type:
  * @sd: a #NcmStatsDist
  *
- * Returns: a string @cv_type, current cross-validation method used.
+ * Returns: #NcmStatsDist:CV-type.
  */
 NcmStatsDistCV
 ncm_stats_dist_get_cv_type (NcmStatsDist *sd)
@@ -2484,7 +2479,7 @@ ncm_stats_dist_get_cv_type (NcmStatsDist *sd)
  * @sd: a #NcmStatsDist
  * @use_threads: whether to use threads
  *
- * Sets whether to use OpenMP threads during the computation.
+ * Sets #NcmStatsDist:use-threads.
  *
  */
 void
@@ -2499,7 +2494,7 @@ ncm_stats_dist_set_use_threads (NcmStatsDist *sd, const gboolean use_threads)
  * ncm_stats_dist_get_use_threads:
  * @sd: a #NcmStatsDist
  *
- * Returns: whether to use OpenMP threads during the computation.
+ * Returns: #NcmStatsDist:use-threads.
  */
 gboolean
 ncm_stats_dist_get_use_threads (NcmStatsDist *sd)
@@ -2515,9 +2510,10 @@ ncm_stats_dist_get_use_threads (NcmStatsDist *sd)
  * @sample_array: (element-type NcmVector): an array of #NcmVector
  *
  * Runs the first stage of a prepare alone: the per-kernel covariance structures the
- * subclass builds from the sample, before any bandwidth is applied. For inspecting those
- * structures; ncm_stats_dist_prepare() runs it as part of the whole pipeline, and only
- * after that is the object ready for ncm_stats_dist_eval().
+ * subclass builds from the sample, before any bandwidth is applied, over the kernel count
+ * of the last ncm_stats_dist_prepare(). For inspecting those structures;
+ * ncm_stats_dist_prepare() runs it as part of the whole pipeline, and only after that is
+ * the object ready for ncm_stats_dist_eval().
  *
  * This virtual method has no default implementation.
  */
@@ -2571,13 +2567,13 @@ _ncm_stats_dist_defensive_mix (NcmStatsDist *sd, NcmVector *x, const gdouble m2l
 {
   NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
-  if (self->defensive_frac <= 0.0)
+  if (self->defensive_eps <= 0.0)
     return m2lnp;
 
   {
     /* -2 ln [(1 - eps) p + eps K], summed in the log to keep the far tail. */
-    const gdouble a = log1p (-self->defensive_frac) - 0.5 * m2lnp;
-    const gdouble b = log (self->defensive_frac) - 0.5 * _ncm_stats_dist_defensive_m2lnK (sd, x);
+    const gdouble a = log1p (-self->defensive_eps) - 0.5 * m2lnp;
+    const gdouble b = log (self->defensive_eps) - 0.5 * _ncm_stats_dist_defensive_m2lnK (sd, x);
     const gdouble m = GSL_MAX (a, b);
 
     return -2.0 * (m + log (exp (a - m) + exp (b - m)));
@@ -2608,8 +2604,8 @@ _ncm_stats_dist_defensive_m2lnK (NcmStatsDist *sd, NcmVector *x)
  * @sd: a #NcmStatsDist
  * @x: a #NcmVector
  *
- * Evaluate the distribution at $\vec{x}=$@x. The method ncm_stats_dist_eval_m2lnp()
- * can be used to avoid underflow.
+ * Evaluates the density at $\vec{x} = $ @x. Use ncm_stats_dist_eval_m2lnp() where it
+ * may underflow.
  *
  * Returns: $P(\vec{x})$.
  */
@@ -2620,10 +2616,10 @@ ncm_stats_dist_eval (NcmStatsDist *sd, NcmVector *x)
   NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
   const gdouble p                  = sd_class->eval_weights (sd, self->weights, x);
 
-  if (self->defensive_frac <= 0.0)
+  if (self->defensive_eps <= 0.0)
     return p;
 
-  return (1.0 - self->defensive_frac) * p + self->defensive_frac * exp (-0.5 * _ncm_stats_dist_defensive_m2lnK (sd, x));
+  return (1.0 - self->defensive_eps) * p + self->defensive_eps * exp (-0.5 * _ncm_stats_dist_defensive_m2lnK (sd, x));
 }
 
 /**
@@ -2631,11 +2627,10 @@ ncm_stats_dist_eval (NcmStatsDist *sd, NcmVector *x)
  * @sd: a #NcmStatsDist
  * @x: a #NcmVector
  *
- * Evaluate the distribution at $\vec{x}=$@x. This method is more
- * stable than ncm_stats_dist_eval() since it avoids underflows
- * and overflows.
+ * Evaluates $-2\ln P(\vec{x})$ at $\vec{x} = $ @x, summing the kernels in the
+ * logarithm so that it does not underflow.
  *
- * Returns: $P(\vec{x})$.
+ * Returns: $-2\ln P(\vec{x})$.
  */
 gdouble
 ncm_stats_dist_eval_m2lnp (NcmStatsDist *sd, NcmVector *x)
@@ -2669,7 +2664,7 @@ ncm_stats_dist_eval_m2lnp_vec (NcmStatsDist *sd, GPtrArray *x_a, NcmVector *m2ln
 
   sd_class->eval_weights_m2lnp_vec (sd, self->weights, x_a, m2lnp);
 
-  if (self->defensive_frac <= 0.0)
+  if (self->defensive_eps <= 0.0)
     return;
 
   for (i = 0; i < x_a->len; i++)
@@ -2685,9 +2680,9 @@ ncm_stats_dist_eval_m2lnp_vec (NcmStatsDist *sd, GPtrArray *x_a, NcmVector *m2ln
  * @sd: a #NcmStatsDist
  * @rng: a #NcmRNG
  *
- * Using the pseudo-random number generator @rng chooses
- * a random kernel based on the computed weights.
+ * Draws a kernel index with probability equal to its weight.
  *
+ * Returns: the kernel index, in $[0, n_\mathrm{kernels})$.
  */
 guint
 ncm_stats_dist_kernel_choose (NcmStatsDist *sd, NcmRNG *rng)
@@ -2738,8 +2733,8 @@ ncm_stats_dist_kernel_choose (NcmStatsDist *sd, NcmRNG *rng)
  * @x: a #NcmVector
  * @rng: a #NcmRNG
  *
- * Using the pseudo-random number generator @rng generates a
- * point from the distribution and copy it to @x.
+ * Draws a point from the mixture, including the wide component of
+ * #NcmStatsDist:defensive-frac, and stores it in @x.
  *
  */
 void
@@ -2747,7 +2742,7 @@ ncm_stats_dist_sample (NcmStatsDist *sd, NcmVector *x, NcmRNG *rng)
 {
   NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
-  if ((self->defensive_frac > 0.0) && (ncm_rng_uniform_gen (rng, 0.0, 1.0) < self->defensive_frac))
+  if ((self->defensive_eps > 0.0) && (ncm_rng_uniform_gen (rng, 0.0, 1.0) < self->defensive_eps))
   {
     ncm_stats_dist_kernel_sample (self->defensive_kernel, self->defensive_decomp, 1.0, self->sample_mean, x, rng);
 
@@ -2767,11 +2762,12 @@ ncm_stats_dist_sample (NcmStatsDist *sd, NcmVector *x, NcmRNG *rng)
  * ncm_stats_dist_get_rnorm:
  * @sd: a #NcmStatsDist
  *
- * Gets the value of the last $\chi^2$ fit obtained
- * when computing the interpolation through
- * ncm_stats_dist_prepare().
+ * Gets the squared residual $|M w - 1|^2$ of the last non-negative least-squares weight
+ * fit, with $M$ the interpolation matrix whose rows are divided by the target density
+ * and $w$ the weights before normalization. Zero when the last
+ * ncm_stats_dist_prepare() did not fit the weights.
  *
- * Returns: a double, the value of the $\chi^2$.
+ * Returns: the squared residual of the weight fit.
  */
 gdouble
 ncm_stats_dist_get_rnorm (NcmStatsDist *sd)
@@ -2786,23 +2782,23 @@ ncm_stats_dist_get_rnorm (NcmStatsDist *sd)
  * @sd: a #NcmStatsDist
  * @y: a #NcmVector
  *
- * Adds a new point @y to the sample with weight 1.0.
- * This function must be called to insert an initial sample into the object, so the interpolation can be computed.
+ * Adds a copy of @y to the sample, which the next ncm_stats_dist_prepare() uses.
  *
  */
 void
-ncm_stats_dist_add_obs (NcmStatsDist *sd, NcmVector *x)
+ncm_stats_dist_add_obs (NcmStatsDist *sd, NcmVector *y)
 {
   NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
-  g_ptr_array_add (self->sample_array, ncm_vector_dup (x));
+  g_ptr_array_add (self->sample_array, ncm_vector_dup (y));
 }
 
 /**
  * ncm_stats_dist_peek_sample_array:
  * @sd: a #NcmStatsDist
  *
- * Returns: (transfer none) (element-type NcmVector): current sample array.
+ * Returns: (transfer none) (element-type NcmVector): the sample points; after a
+ * preparation, those it kept.
  */
 GPtrArray *
 ncm_stats_dist_peek_sample_array (NcmStatsDist *sd)
@@ -2817,8 +2813,8 @@ ncm_stats_dist_peek_sample_array (NcmStatsDist *sd)
  * @sd: a #NcmStatsDist
  *
  * Gets the kernel centers $c_i$ used in the last preparation, one per kernel. They
- * coincide with the first #NcmStatsDist:N sample points unless center shrinkage is
- * enabled, see the class description.
+ * coincide with the first ncm_stats_dist_get_n_kernels() sample points unless center
+ * shrinkage is enabled, see the class description.
  *
  * Returns: (transfer none) (element-type NcmVector): current center array.
  */
@@ -2835,9 +2831,11 @@ ncm_stats_dist_peek_center_array (NcmStatsDist *sd)
  * @sd: a #NcmStatsDist
  * @i: kernel index
  *
- * Gets the covariance matrix associated with the @i-th kernel.
+ * Gets the upper-triangular Cholesky factor $U_i$ of the scale matrix
+ * $\Sigma_i = U_i^T U_i$ of kernel @i, as applied in the last preparation. The kernel
+ * covariance is $\kappa h^2 \Sigma_i$, with $h$ from ncm_stats_dist_get_href().
  *
- * Returns: (transfer none): Cholesky decomposition of the @i-th covariance matrix.
+ * Returns: (transfer none): the factor $U_i$.
  */
 NcmMatrix *
 ncm_stats_dist_peek_cov_decomp (NcmStatsDist *sd, guint i)
@@ -2851,10 +2849,10 @@ ncm_stats_dist_peek_cov_decomp (NcmStatsDist *sd, guint i)
  * ncm_stats_dist_peek_full_cov_decomp: (virtual peek_full_cov_decomp)
  * @sd: a #NcmStatsDist
  *
- * Gets the full covariance matrix decomposition. This is a the Cholesky decomposition
- * of the covariance matrix of the whole sample.
+ * Gets the upper-triangular Cholesky factor of the subclass's global scale matrix,
+ * ncm_stats_dist_peek_full_cov(), as applied in the last preparation.
  *
- * Returns: (transfer none): full covariance matrix decomposition.
+ * Returns: (transfer none): the Cholesky factor.
  */
 NcmMatrix *
 ncm_stats_dist_peek_full_cov_decomp (NcmStatsDist *sd)
@@ -2868,9 +2866,10 @@ ncm_stats_dist_peek_full_cov_decomp (NcmStatsDist *sd)
  * ncm_stats_dist_peek_full_cov: (virtual peek_full_cov)
  * @sd: a #NcmStatsDist
  *
- * Gets the full covariance matrix of the whole sample.
+ * Gets the subclass's global scale matrix: for #NcmStatsDistKDE the scale matrix shared
+ * by all kernels (the sample, fixed or robust covariance).
  *
- * Returns: (transfer none): full covariance matrix.
+ * Returns: (transfer none): the global scale matrix.
  */
 NcmMatrix *
 ncm_stats_dist_peek_full_cov (NcmStatsDist *sd)
@@ -2885,9 +2884,10 @@ ncm_stats_dist_peek_full_cov (NcmStatsDist *sd)
  * @sd: a #NcmStatsDist
  * @i: kernel index
  *
- * Gets the logarithm of the @i-th kernel normalization.
+ * Gets the logarithm of the normalization $N_i$ of kernel @i at the applied bandwidth,
+ * $K_i(x) = \bar{K}(\chi^2) / N_i$, see #NcmStatsDistKernel.
  *
- * Returns: $\ln (N_i)$.
+ * Returns: $\ln N_i$.
  */
 gdouble
 ncm_stats_dist_get_lnnorm (NcmStatsDist *sd, guint i)
@@ -2901,7 +2901,7 @@ ncm_stats_dist_get_lnnorm (NcmStatsDist *sd, guint i)
  * ncm_stats_dist_peek_weights:
  * @sd: a #NcmStatsDist
  *
- * Returns: (transfer none): current kernel weights vector.
+ * Returns: (transfer none): the kernel weights, summing to one.
  */
 NcmVector *
 ncm_stats_dist_peek_weights (NcmStatsDist *sd)
@@ -2915,7 +2915,7 @@ ncm_stats_dist_peek_weights (NcmStatsDist *sd)
  * ncm_stats_dist_reset: (virtual reset)
  * @sd: a #NcmStatsDist
  *
- * Reset the object discarding all added points.
+ * Discards all sample points added so far.
  *
  */
 void
@@ -2931,11 +2931,12 @@ ncm_stats_dist_reset (NcmStatsDist *sd)
  * @sd: a #NcmStatsDist
  * @i: kernel index
  * @y_i: (out callee-allocates) (transfer full): kernel location
- * @cov_i: (out callee-allocates) (transfer full): kernel covariance U
- * @n_i: (out): kernel normalization
+ * @cov_i: (out callee-allocates) (transfer full): kernel scale matrix $h^2 \Sigma_i$
+ * @n_i: (out): kernel normalization $N_i$
  * @w_i: (out): kernel weight
  *
- * Return all information about the @i-th kernel.
+ * Gets kernel @i: its center, its scale matrix at the applied bandwidth (the covariance
+ * is $\kappa$ times it), its normalization and its weight.
  *
  */
 void

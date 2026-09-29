@@ -82,6 +82,7 @@ typedef struct _NcmStatsDistPrivate
   NcmMatrix *refactor_M;
   NcmMatrix *refactor_B;
   gdouble defensive_frac;
+  gdouble defensive_eps;
   gdouble defensive_scale;
   gdouble defensive_nu;
   NcmStatsDistKernel *defensive_kernel;

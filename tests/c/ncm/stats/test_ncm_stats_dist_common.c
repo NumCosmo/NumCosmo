@@ -834,6 +834,11 @@ test_ncm_stats_dist_defensive (TestNcmStatsDist *test, gconstpointer pdata)
   g_assert_cmpfloat (ncm_stats_dist_get_defensive_scale (test->sd), ==, scale);
   g_assert_cmpfloat (ncm_stats_dist_get_defensive_nu (test->sd), ==, nu);
 
+  /* Until the next prepare the object is the one prepared with eps = 0; the wide
+   * kernel does not exist yet (evaluating it segfaulted). */
+  g_assert_cmpfloat (ncm_stats_dist_eval (test->sd, far), ==, p0_far);
+  ncm_stats_dist_sample (test->sd, y, rng);
+
   ncm_stats_dist_prepare (test->sd, NULL);
 
   /* q = (1 - eps) p + eps K, against an independent evaluation of K. */
