@@ -19,6 +19,10 @@
     "nick": "column-not-found",
     "type": "Ncm.CatalogError"
   },
+  "NCM_CATALOG_ERROR_ROW_OUT_OF_RANGE": {
+    "nick": "row-out-of-range",
+    "type": "Ncm.CatalogError"
+  },
   "NCM_CFG_ERROR_INVALID_FFTW_FLAG": {
     "nick": "flag",
     "type": "Ncm.CfgError"

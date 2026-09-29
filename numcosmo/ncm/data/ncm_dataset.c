@@ -26,14 +26,19 @@
 /**
  * NcmDataset:
  *
- * A set of NcmData objects.
+ * A set of statistically independent #NcmData.
  *
- * The purpose of this class is to define a collection of #NcmData objects. These
- * objects serve as containers for #NcmData intended for use within the NumCosmo
- * library. Each individual #NcmData object is responsible for defining a distinct
- * data likelihood function. It is essential to note that all #NcmData objects are
- * designed to be entirely statistically independent of each other.
+ * A #NcmDataset holds the #NcmData of an analysis. They are statistically
+ * independent: $-2\ln L$, the Fisher matrix and the bias vector of the set are the
+ * sums of those of its members, and the least-squares and mean vectors are their
+ * concatenation.
  *
+ * Every evaluation prepares all the #NcmData before evaluating any of them. Members
+ * that share a resource, as the CMB likelihoods share a Boltzmann solver, state what
+ * they need from it in their prepare, so each is evaluated with the requirements of
+ * the whole set.
+ *
+ * The set can also be bootstrapped, see #NcmDatasetBStrapType.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -146,13 +151,6 @@ ncm_dataset_dispose (GObject *object)
 }
 
 static void
-ncm_dataset_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_dataset_parent_class)->finalize (object);
-}
-
-static void
 ncm_dataset_class_init (NcmDatasetClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -160,10 +158,9 @@ ncm_dataset_class_init (NcmDatasetClass *klass)
   object_class->set_property = &ncm_dataset_set_property;
   object_class->get_property = &ncm_dataset_get_property;
   object_class->dispose      = &ncm_dataset_dispose;
-  object_class->finalize     = &ncm_dataset_finalize;
 
   /**
-   * NcmData:bootstrap-type:
+   * NcmDataset:bootstrap-type:
    *
    * Bootstrap method to be used.
    *
@@ -177,7 +174,7 @@ ncm_dataset_class_init (NcmDatasetClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcmData:data-array:
+   * NcmDataset:data-array:
    *
    * The #NcmData array.
    *
@@ -196,7 +193,7 @@ ncm_dataset_class_init (NcmDatasetClass *klass)
  *
  * Creates a new empty #NcmDataset object.
  *
- * Returns: a new #NcmDataset.
+ * Returns: (transfer full): a new #NcmDataset.
  */
 NcmDataset *
 ncm_dataset_new (void)
@@ -211,10 +208,9 @@ ncm_dataset_new (void)
  * @data0: first #NcmData to be added.
  * @...: a NULL ended list of #NcmData
  *
- * Creates a new #NcmDataset object and adds a NULL ended list
- * of #NcmData.
+ * Creates a new #NcmDataset object and adds a %NULL-terminated list of #NcmData.
  *
- * Returns: a new #NcmDataset.
+ * Returns: (transfer full): a new #NcmDataset.
  */
 NcmDataset *
 ncm_dataset_new_list (gpointer data0, ...)
@@ -246,7 +242,7 @@ ncm_dataset_new_list (gpointer data0, ...)
  *
  * Creates a new #NcmDataset object and adds @len #NcmData from @data_array.
  *
- * Returns: a new #NcmDataset.
+ * Returns: (transfer full): a new #NcmDataset.
  */
 NcmDataset *
 ncm_dataset_new_array (NcmData **data_array, guint len)
@@ -264,7 +260,7 @@ ncm_dataset_new_array (NcmData **data_array, guint len)
 
 /**
  * ncm_dataset_ref:
- * @dset: pointer to type defined by #NcmDataset
+ * @dset: a #NcmDataset
  *
  * Increases the reference count of @dset by one.
  *
@@ -314,11 +310,12 @@ ncm_dataset_dup (NcmDataset *dset, NcmSerialize *ser)
 
 /**
  * ncm_dataset_copy:
- * @dset: pointer to type defined by #NcmDataset
+ * @dset: a #NcmDataset
  *
- * Duplicates the object getting a reference of its content.
+ * Creates a new #NcmDataset holding the same #NcmData as @dset, which are shared,
+ * not duplicated, and the same bootstrap type.
  *
- * Returns: (transfer full): the duplicate of @dset, new container.
+ * Returns: (transfer full): the copy of @dset.
  */
 NcmDataset *
 ncm_dataset_copy (NcmDataset *dset)
@@ -333,12 +330,15 @@ ncm_dataset_copy (NcmDataset *dset)
     ncm_obj_array_add (dset_dup->oa, G_OBJECT (data));
   }
 
+  dset_dup->bstype = dset->bstype;
+  _ncm_dataset_update_bstrap (dset_dup);
+
   return dset_dup;
 }
 
 /**
  * ncm_dataset_append_data:
- * @dset: pointer to type defined by #NcmDataset
+ * @dset: a #NcmDataset
  * @data: #NcmData object to be appended to #NcmDataset
  *
  * Appends @data to @dset.
@@ -362,7 +362,7 @@ ncm_dataset_append_data (NcmDataset *dset, NcmData *data)
 
 /**
  * ncm_dataset_get_n:
- * @dset: pointer to type defined by #NcmDataset
+ * @dset: a #NcmDataset
  *
  * Calculates the total number of data set points.
  *
@@ -386,7 +386,7 @@ ncm_dataset_get_n (NcmDataset *dset)
 
 /**
  * ncm_dataset_get_dof:
- * @dset: pointer to type defined by #NcmDataset
+ * @dset: a #NcmDataset
  *
  * Calculate the total degrees of freedom associated with all #NcmData
  * objects.
@@ -411,7 +411,7 @@ ncm_dataset_get_dof (NcmDataset *dset)
 
 /**
  * ncm_dataset_all_init:
- * @dset: pointer to type defined by #NcmDataset
+ * @dset: a #NcmDataset
  *
  * Checks whenever all #NcmData in @dset are initiated.
  *
@@ -435,7 +435,7 @@ ncm_dataset_all_init (NcmDataset *dset)
 
 /**
  * ncm_dataset_get_length:
- * @dset: pointer to type defined by #NcmDataset
+ * @dset: a #NcmDataset
  *
  * Number of different #NcmData in @dset.
  *
@@ -449,7 +449,7 @@ ncm_dataset_get_length (NcmDataset *dset)
 
 /**
  * ncm_dataset_get_data:
- * @dset: pointer to type defined by #NcmDataset
+ * @dset: a #NcmDataset
  * @n: the #NcmData index.
  *
  * Gets the @n-th #NcmData in @dset and increases its reference count by one.
@@ -553,9 +553,10 @@ ncm_dataset_get_data_array (NcmDataset *dset)
 
 /**
  * ncm_dataset_free:
- * @dset: pointer to type defined by #NcmDataset
+ * @dset: a #NcmDataset
  *
- * Decreases the reference count of @dset by one.
+ * Decreases the reference count of @dset by one. If the reference count reaches
+ * zero, @dset is freed.
  */
 void
 ncm_dataset_free (NcmDataset *dset)
@@ -565,9 +566,10 @@ ncm_dataset_free (NcmDataset *dset)
 
 /**
  * ncm_dataset_clear:
- * @dset: pointer to type defined by #NcmDataset
+ * @dset: a #NcmDataset
  *
- * Decreases the reference count of *@dset by one, and sets *@dset to NULL.
+ * If *@dset is not %NULL, decreases the reference count of *@dset by one and sets
+ * *@dset to %NULL.
  */
 void
 ncm_dataset_clear (NcmDataset **dset)
@@ -576,6 +578,7 @@ ncm_dataset_clear (NcmDataset **dset)
 }
 
 static void _ncm_dataset_prepare_all (NcmDataset *dset, NcmMSet *mset);
+static void _ncm_dataset_check_fisher_matrix (NcmMatrix **IM, const guint fparams_len);
 
 /**
  * ncm_dataset_resample:
@@ -840,13 +843,12 @@ ncm_dataset_has_m2lnL_val (NcmDataset *dset)
 
 /**
  * ncm_dataset_data_leastsquares_f:
- * @dset: a #NcmLikelihood.
+ * @dset: a #NcmDataset
  * @mset: a #NcmMSet.
  * @f: a #NcmVector.
  *
- * Computes the leastsquares vector f for the data @data.
- * The vector @f must be allocated with the correct size.
- * The vector @f is filled with the values of the leastsquares vector f.
+ * Computes the least-squares vector of @dset, concatenating those of its #NcmData,
+ * into @f, which must have ncm_dataset_get_n() components.
  *
  */
 
@@ -882,7 +884,7 @@ ncm_dataset_leastsquares_f (NcmDataset *dset, NcmMSet *mset, NcmVector *f)
 
     if (!NCM_DATA_GET_CLASS (data)->leastsquares_f)
     {
-      g_error ("ncm_dataset_leastsquares_f: %s dont implement leastsquares vector f", G_OBJECT_TYPE_NAME (data));
+      g_error ("ncm_dataset_leastsquares_f: data `%s' does not implement leastsquares_f.", ncm_data_peek_desc (data));
     }
     else
     {
@@ -898,12 +900,12 @@ ncm_dataset_leastsquares_f (NcmDataset *dset, NcmMSet *mset, NcmVector *f)
 
 /**
  * ncm_dataset_m2lnL_val:
- * @dset: a #NcmLikelihood.
+ * @dset: a #NcmDataset
  * @mset: a #NcmMSet.
  * @m2lnL: (out): a pointer to a double.
  *
- * Computes the value of the m2lnL for the data @data.
- * The value of the m2lnL is stored in @m2lnL.
+ * Computes $-2\ln L$ of @dset, the sum of those of its #NcmData, and stores it in
+ * @m2lnL. Every #NcmData is prepared before any is evaluated.
  *
  */
 void
@@ -921,7 +923,7 @@ ncm_dataset_m2lnL_val (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL)
 
     if (!NCM_DATA_GET_CLASS (data)->m2lnL_val)
     {
-      g_error ("ncm_dataset_m2lnL_val: %s dont implement m2lnL", G_OBJECT_TYPE_NAME (data));
+      g_error ("ncm_dataset_m2lnL_val: data `%s' does not implement m2lnL_val.", ncm_data_peek_desc (data));
     }
     else
     {
@@ -937,7 +939,7 @@ ncm_dataset_m2lnL_val (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL)
 
 /**
  * ncm_dataset_m2lnL_vec:
- * @dset: a #NcmLikelihood.
+ * @dset: a #NcmDataset
  * @mset: a #NcmMSet.
  * @m2lnL_v: a #NcmVector
  *
@@ -960,7 +962,7 @@ ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v)
 
     if (!NCM_DATA_GET_CLASS (data)->m2lnL_val)
     {
-      g_error ("ncm_dataset_m2lnL_val: %s dont implement m2lnL", G_OBJECT_TYPE_NAME (data));
+      g_error ("ncm_dataset_m2lnL_val: data `%s' does not implement m2lnL_val.", ncm_data_peek_desc (data));
     }
     else
     {
@@ -976,12 +978,13 @@ ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v)
 
 /**
  * ncm_dataset_m2lnL_i_val:
- * @dset: a #NcmLikelihood
+ * @dset: a #NcmDataset
  * @mset: a #NcmMSet
  * @i: an integer
  * @m2lnL_i: (out): a pointer to a double
  *
- * Get the value of the @i-th data in the dataset.
+ * Computes $-2\ln L$ of the @i-th #NcmData in @dset; every #NcmData is prepared
+ * first.
  *
  */
 void
@@ -997,7 +1000,7 @@ ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2ln
     NcmData *data = ncm_dataset_peek_data (dset, i);
 
     if (!NCM_DATA_GET_CLASS (data)->m2lnL_val)
-      g_error ("ncm_dataset_m2lnL_val: %s dont implement m2lnL", G_OBJECT_TYPE_NAME (data));
+      g_error ("ncm_dataset_m2lnL_val: data `%s' does not implement m2lnL_val.", ncm_data_peek_desc (data));
     else
       NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, m2lnL_i);
   }
@@ -1035,8 +1038,9 @@ ncm_dataset_has_mean_vector (NcmDataset *dset)
  * @mset: a #NcmMSet
  * @mu: a #NcmVector
  *
- * Calculates the mean vector @f concatenating the individual ones from each
- * #NcmData in @dset.
+ * Calculates the mean vector @mu, of ncm_dataset_get_n() components, concatenating
+ * the individual ones from each #NcmData in @dset. Every #NcmData is prepared before
+ * any mean is evaluated, see ncm_dataset_m2lnL_val().
  *
  */
 void
@@ -1046,7 +1050,11 @@ ncm_dataset_mean_vector (NcmDataset *dset, NcmMSet *mset, NcmVector *mu)
   guint pos           = 0;
   guint i;
 
-  g_assert_cmpuint (ncm_vector_len (mu), ==, total_n);
+  if (ncm_vector_len (mu) != total_n)
+    g_error ("ncm_dataset_mean_vector: the dataset has %u points, but the vector has %u.",
+             total_n, ncm_vector_len (mu));
+
+  _ncm_dataset_prepare_all (dset, mset);
 
   for (i = 0; i < dset->oa->len; i++)
   {
@@ -1064,34 +1072,44 @@ ncm_dataset_mean_vector (NcmDataset *dset, NcmMSet *mset, NcmVector *mu)
  * ncm_dataset_fisher_matrix:
  * @dset: a #NcmDataset
  * @mset: a #NcmMSet
- * @IM: (out) (transfer full): The fisher matrix
+ * @IM: (inout) (allow-none) (transfer full): the Fisher matrix
  *
- * Calculates the Fisher-information matrix @I adding the individual ones from each
- * #NcmData in @dset. If the #NcmMatrix pointer in *@IM is NULL a new #NcmMatrix will
- * be allocated otherwise *@IM will be used.
+ * Calculates the Fisher-information matrix of @dset, the sum of those of its
+ * #NcmData, see ncm_data_fisher_matrix(). If *@IM is %NULL a new matrix is
+ * allocated, otherwise *@IM must be a square matrix of the number of free parameters
+ * and is overwritten. Without free parameters *@IM is freed and set to %NULL. Every
+ * #NcmData is prepared before any is evaluated, see ncm_dataset_m2lnL_val().
  *
  */
 void
 ncm_dataset_fisher_matrix (NcmDataset *dset, NcmMSet *mset, NcmMatrix **IM)
 {
   const guint fparams_len = ncm_mset_fparams_len (mset);
-  NcmMatrix *IM0          = ncm_matrix_new (fparams_len, fparams_len);
-  guint i;
 
-  *IM = ncm_matrix_new (fparams_len, fparams_len);
-
-  ncm_matrix_set_zero (*IM);
-
-  for (i = 0; i < dset->oa->len; i++)
+  if (fparams_len == 0)
   {
-    NcmData *data = ncm_dataset_peek_data (dset, i);
-
-    ncm_data_fisher_matrix (data, mset, &IM0);
-
-    ncm_matrix_add (*IM, IM0);
+    ncm_matrix_clear (IM);
   }
+  else
+  {
+    NcmMatrix *IM0 = NULL;
+    guint i;
 
-  ncm_matrix_free (IM0);
+    _ncm_dataset_check_fisher_matrix (IM, fparams_len);
+    ncm_matrix_set_zero (*IM);
+
+    _ncm_dataset_prepare_all (dset, mset);
+
+    for (i = 0; i < dset->oa->len; i++)
+    {
+      NcmData *data = ncm_dataset_peek_data (dset, i);
+
+      ncm_data_fisher_matrix (data, mset, &IM0);
+      ncm_matrix_add (*IM, IM0);
+    }
+
+    ncm_matrix_clear (&IM0);
+  }
 }
 
 /**
@@ -1099,44 +1117,79 @@ ncm_dataset_fisher_matrix (NcmDataset *dset, NcmMSet *mset, NcmMatrix **IM)
  * @dset: a #NcmDataset
  * @mset: a #NcmMSet
  * @f_true: a #NcmVector
- * @IM: (out) (transfer full): The fisher matrix
- * @delta_theta: (out) (transfer full): The bias vector
+ * @IM: (inout) (allow-none) (transfer full): the Fisher matrix
+ * @delta_theta: (inout) (allow-none) (transfer full): the parameter shift vector
  *
- * Calculates the Fisher-information matrix @IM and and the bias vector @delta_theta
- * adding the individual ones from each #NcmData in @dset.
+ * Calculates the Fisher-information matrix, as ncm_dataset_fisher_matrix(), and the
+ * parameter shift @delta_theta obtained when the true mean is @f_true, of
+ * ncm_dataset_get_n() components, adding those of each #NcmData in @dset, see
+ * ncm_data_fisher_matrix_bias(). *@delta_theta is allocated when %NULL and
+ * overwritten otherwise; without free parameters both are freed and set to %NULL.
  *
  */
 void
 ncm_dataset_fisher_matrix_bias (NcmDataset *dset, NcmMSet *mset, NcmVector *f_true, NcmMatrix **IM, NcmVector **delta_theta)
 {
   const guint fparams_len = ncm_mset_fparams_len (mset);
-  NcmMatrix *IM0          = ncm_matrix_new (fparams_len, fparams_len);
-  NcmVector *delta_theta0 = ncm_vector_new (fparams_len);
-  guint pos               = 0;
-  guint i;
+  const guint total_n     = ncm_dataset_get_n (dset);
 
-  *IM          = ncm_matrix_new (fparams_len, fparams_len);
-  *delta_theta = ncm_vector_new (fparams_len);
+  if (ncm_vector_len (f_true) != total_n)
+    g_error ("ncm_dataset_fisher_matrix_bias: the dataset has %u points, but f_true has %u.",
+             total_n, ncm_vector_len (f_true));
 
-  ncm_matrix_set_zero (*IM);
-  ncm_vector_set_zero (*delta_theta);
-
-  for (i = 0; i < dset->oa->len; i++)
+  if (fparams_len == 0)
   {
-    NcmData *data = ncm_dataset_peek_data (dset, i);
-    guint n       = ncm_data_get_length (data);
-
-    ncm_vector_get_subvector2 (dset->ls_f, f_true, pos, n);
-
-    ncm_data_fisher_matrix_bias (data, mset, dset->ls_f, &IM0, &delta_theta0);
-
-    ncm_matrix_add (*IM, IM0);
-    ncm_vector_add (*delta_theta, delta_theta0);
-
-    pos += n;
+    ncm_matrix_clear (IM);
+    ncm_vector_clear (delta_theta);
   }
+  else
+  {
+    NcmMatrix *IM0          = NULL;
+    NcmVector *delta_theta0 = NULL;
+    guint pos               = 0;
+    guint i;
 
-  ncm_matrix_free (IM0);
-  ncm_vector_free (delta_theta0);
+    _ncm_dataset_check_fisher_matrix (IM, fparams_len);
+
+    if (*delta_theta == NULL)
+      *delta_theta = ncm_vector_new (fparams_len);
+    else if (ncm_vector_len (*delta_theta) != fparams_len)
+      g_error ("ncm_dataset_fisher_matrix_bias: the bias vector has %u components, "
+               "but there are %u free parameters.",
+               ncm_vector_len (*delta_theta), fparams_len);
+
+    ncm_matrix_set_zero (*IM);
+    ncm_vector_set_zero (*delta_theta);
+
+    _ncm_dataset_prepare_all (dset, mset);
+
+    for (i = 0; i < dset->oa->len; i++)
+    {
+      NcmData *data = ncm_dataset_peek_data (dset, i);
+      guint n       = ncm_data_get_length (data);
+
+      ncm_vector_get_subvector2 (dset->ls_f, f_true, pos, n);
+
+      ncm_data_fisher_matrix_bias (data, mset, dset->ls_f, &IM0, &delta_theta0);
+      ncm_matrix_add (*IM, IM0);
+      ncm_vector_add (*delta_theta, delta_theta0);
+      pos += n;
+    }
+
+    ncm_matrix_clear (&IM0);
+    ncm_vector_clear (&delta_theta0);
+  }
+}
+
+/* Allocates *IM, or checks that the matrix passed in is fparams_len x fparams_len. */
+static void
+_ncm_dataset_check_fisher_matrix (NcmMatrix **IM, const guint fparams_len)
+{
+  if (*IM == NULL)
+    *IM = ncm_matrix_new (fparams_len, fparams_len);
+  else if ((ncm_matrix_nrows (*IM) != fparams_len) || (ncm_matrix_ncols (*IM) != fparams_len))
+    g_error ("ncm_dataset_fisher_matrix: the Fisher matrix passed in is %u x %u, "
+             "but there are %u free parameters.",
+             ncm_matrix_nrows (*IM), ncm_matrix_ncols (*IM), fparams_len);
 }
 

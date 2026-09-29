@@ -26,10 +26,14 @@
 /**
  * NcmDataFunnel:
  *
- * Funnel distribution.
+ * Likelihood of Neal's funnel distribution.
  *
- * This object implements a funnel distribution.
- *
+ * Evaluates, for the parameters $\nu$ and $x_1, \dots, x_n$ of the #NcmModelFunnel
+ * in the #NcmMSet, the density of $\nu \sim N(0, 3^2)$, $x_i \mid \nu \sim N(0,
+ * e^{\nu})$ without its constant normalization:
+ * $$-2\ln L = n\nu + (\nu/3)^2 + \sum_i x_i^2 e^{-\nu}.$$
+ * It is a standard test of samplers; its length and degrees of freedom are a nominal
+ * 10.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -44,23 +48,16 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-typedef struct _NcmDataFunnelPrivate
-{
-  gint unused;
-} NcmDataFunnelPrivate;
-
 struct _NcmDataFunnel
 {
   NcmData parent_instance;
-  NcmDataFunnelPrivate *priv;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmDataFunnel, ncm_data_funnel, NCM_TYPE_DATA)
+G_DEFINE_TYPE (NcmDataFunnel, ncm_data_funnel, NCM_TYPE_DATA)
 
 static void
 ncm_data_funnel_init (NcmDataFunnel *dfu)
 {
-  dfu->priv = ncm_data_funnel_get_instance_private (dfu);
 }
 
 static void
@@ -70,13 +67,6 @@ ncm_data_funnel_constructed (GObject *object)
   G_OBJECT_CLASS (ncm_data_funnel_parent_class)->constructed (object);
 
   ncm_data_set_init (NCM_DATA (object), TRUE);
-}
-
-static void
-ncm_data_funnel_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_data_funnel_parent_class)->finalize (object);
 }
 
 static guint _ncm_data_funnel_get_length (NcmData *data);
@@ -90,13 +80,14 @@ ncm_data_funnel_class_init (NcmDataFunnelClass *klass)
   NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
 
   object_class->constructed = ncm_data_funnel_constructed;
-  object_class->finalize    = ncm_data_funnel_finalize;
 
   data_class->get_length = &_ncm_data_funnel_get_length;
   data_class->get_dof    = &_ncm_data_funnel_get_dof;
   data_class->m2lnL_val  = &_ncm_data_funnel_m2lnL_val;
 }
 
+/* These likelihoods are analytic and have no data points; 10 is a nominal count,
+ * which fits report as the degrees of freedom. */
 static guint
 _ncm_data_funnel_get_length (NcmData *data)
 {
@@ -119,14 +110,12 @@ _ncm_data_funnel_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   const guint x_0_i      = ncm_model_vparam_index (NCM_MODEL (mrb), NCM_MODEL_FUNNEL_X, 0);
   guint i;
 
-  /*printf ("nu: % 22.15g\n", nu);*/
   m2lnL[0] = x_len * nu + gsl_pow_2 (nu / 3.0);
 
   for (i = 0; i < x_len; i++)
   {
     const gdouble x_i = ncm_model_param_get (NCM_MODEL (mrb), x_0_i + i);
 
-    /*printf ("x[%d] = % 22.15g\n", i, x_i);*/
     m2lnL[0] += gsl_pow_2 (x_i / sigma_nu);
   }
 }
@@ -136,7 +125,7 @@ _ncm_data_funnel_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
  *
  * Creates a new Funnel data.
  *
- * Returns: the newly created object.
+ * Returns: (transfer full): the newly created object.
  */
 NcmDataFunnel *
 ncm_data_funnel_new (void)
@@ -165,7 +154,8 @@ ncm_data_funnel_ref (NcmDataFunnel *dfu)
  * ncm_data_funnel_free:
  * @dfu: a #NcmDataFunnel
  *
- * Decreases the reference count of @dfu by one.
+ * Decreases the reference count of @dfu by one. If the reference count reaches
+ * zero, @dfu is freed.
  *
  */
 void
@@ -178,8 +168,8 @@ ncm_data_funnel_free (NcmDataFunnel *dfu)
  * ncm_data_funnel_clear:
  * @dfu: a #NcmDataFunnel
  *
- * If @dfu is different from NULL, decreases the reference count of
- * @dfu by one and sets @dfu to NULL.
+ * If *@dfu is not %NULL, decreases the reference count of *@dfu by one and sets
+ * *@dfu to %NULL.
  *
  */
 void
