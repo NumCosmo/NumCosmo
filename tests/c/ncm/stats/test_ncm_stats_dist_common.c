@@ -90,6 +90,7 @@ static void test_ncm_stats_dist_invalid_cv_accept (TestNcmStatsDist *test, gcons
 static void test_ncm_stats_dist_invalid_auto_kernel_gauss (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_split_underflowing_m2lnp (void);
 static void test_ncm_stats_dist_split_drop_far_points (void);
+static void test_ncm_stats_dist_split_too_few_kernels (void);
 static void test_ncm_stats_dist_print_fit (void);
 static void test_ncm_stats_dist_kde_cov_fixed_nearPD (void);
 
@@ -203,6 +204,8 @@ test_ncm_stats_dist_main (gint argc, gchar *argv[], TestNcmStatsDistMode mode)
                      &test_ncm_stats_dist_split_underflowing_m2lnp);
     g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/split/drop_far_points",
                      &test_ncm_stats_dist_split_drop_far_points);
+    g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/split/too_few_kernels",
+                     &test_ncm_stats_dist_split_too_few_kernels);
     g_test_add_func ("/ncm/stats/dist/nd/print_fit",
                      &test_ncm_stats_dist_print_fit);
     g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/cov_fixed/nearPD",
@@ -232,7 +235,7 @@ test_ncm_stats_dist_main (gint argc, gchar *argv[], TestNcmStatsDistMode mode)
 
 /* Mechanics mode sizing. The interpolation fits dominate and their cost grows with the
  * sample, so this is what makes the difference; the guard the library applies is
- * n_obs > dim, which these clear by a wide margin. */
+ * n_kernels > dim, which these clear by a wide margin. */
 #define TESTMULT_MECHANICS 80
 #define NTESTS_MECHANICS 20
 #define SAMPLING_NTESTS_MECHANICS 10000
@@ -532,20 +535,24 @@ test_ncm_stats_dist_center_shrink (TestNcmStatsDist *test, gconstpointer pdata)
     const gdouble href      = ncm_stats_dist_get_href (test->sd);
     const gdouble kappa     = ncm_stats_dist_kernel_get_var_factor (test->kernel);
 
+    g_assert_cmpuint (ncm_stats_dist_get_n_kernels (test->sd), ==, test->np);
+    /* a = det(A)^(1/d) with every diagonal entry (r + kappa h^2 s)^(-1/2) <= r^(-1/2). */
     g_assert_cmpfloat (a, >, 0.0);
-    g_assert_cmpfloat (a, <, 1.0);
+    g_assert_cmpfloat (a, <=, sqrt (test->np / (test->np - 1.0)) * (1.0 + 1.0e-14));
     g_assert_true (gsl_finite (kappa));
 
     /*
      * Center shrinkage contracts the centers by the matrix A and the kernel scale
-     * matrices by Ahat = A / a, with det Ahat = 1, so that the mixture covariance equals
-     * the sample covariance C exactly:
+     * matrices by Ahat = A / a, with det Ahat = 1, so that the covariance of the
+     * equal-weight mixture equals the unbiased sample covariance C exactly:
      *
-     *   A C A^T + kappa href^2 <Sigma'> = C,
+     *   Cov_n (c_i) + kappa href^2 <Sigma'> = C,
      *
-     * where href = a h is the applied bandwidth and <Sigma'> the mean of the applied
-     * kernel scale matrices U_i'^T U_i'. Everything on the left is public. For the fixed
-     * bandwidth estimator with the sample covariance the transform is isotropic, A = a I.
+     * where Cov_n is the covariance of the centers normalized by n (the mixture's own),
+     * href = a h is the applied bandwidth and <Sigma'> the mean of the applied kernel
+     * scale matrices U_i'^T U_i'. Everything on the left is public. For the fixed
+     * bandwidth estimator with the sample covariance the transform is isotropic, A = a I
+     * with a = (r + kappa h^2)^(-1/2), r = (n - 1) / n.
      */
     {
       const guint d         = test->dim;
@@ -554,7 +561,6 @@ test_ncm_stats_dist_center_shrink (TestNcmStatsDist *test, gconstpointer pdata)
       NcmMatrix *C          = ncm_stats_vec_peek_cov_matrix (sample_stats, 0);
       NcmMatrix *mean_cov   = ncm_matrix_new (d, d);
       NcmMatrix *B          = ncm_matrix_new (d, d);
-      NcmMatrix *AC         = ncm_matrix_new (d, d);
       NcmMatrix *lhs        = ncm_matrix_new (d, d);
       gdouble max_C         = 0.0;
       gdouble max_dev       = 0.0;
@@ -578,10 +584,18 @@ test_ncm_stats_dist_center_shrink (TestNcmStatsDist *test, gconstpointer pdata)
         ncm_matrix_dgemm (mean_cov, 'T', 'N', 1.0 / (1.0 * n_kernels), B, B, 1.0);
       }
 
-      /* lhs = A C A^T + kappa href^2 <Sigma'> */
-      ncm_matrix_dgemm (AC, 'N', 'N', 1.0, A, C, 0.0);
-      ncm_matrix_dgemm (lhs, 'N', 'T', 1.0, AC, A, 0.0);
-      ncm_matrix_add_mul (lhs, kappa * href * href, mean_cov);
+      /* lhs = Cov_n (c_i) + kappa href^2 <Sigma'> */
+      {
+        NcmStatsVec *center_stats = ncm_stats_vec_new (d, NCM_STATS_VEC_COV, FALSE);
+
+        for (j = 0; j < n_kernels; j++)
+          ncm_stats_vec_append (center_stats, g_ptr_array_index (center_array, j), FALSE);
+
+        ncm_matrix_memcpy (lhs, ncm_stats_vec_peek_cov_matrix (center_stats, 0));
+        ncm_matrix_scale (lhs, (n_kernels - 1.0) / n_kernels);
+        ncm_matrix_add_mul (lhs, kappa * href * href, mean_cov);
+        ncm_stats_vec_free (center_stats);
+      }
 
       for (p = 0; p < d; p++)
       {
@@ -592,12 +606,12 @@ test_ncm_stats_dist_center_shrink (TestNcmStatsDist *test, gconstpointer pdata)
         }
       }
 
-      g_assert_cmpfloat (max_dev, <, 1.0e-8 * max_C);
+      g_assert_cmpfloat (max_dev, <, 1.0e-12 * max_C);
 
       /* det(A)^(1/d) is the reported scalar; for KDE with the sample covariance A = a I. */
       if (!NCM_IS_STATS_DIST_VKDE (test->sd) && (cov_type == NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE))
       {
-        ncm_assert_cmpdouble_e (a, ==, 1.0 / sqrt (1.0 + kappa * href * href / (a * a)), 1.0e-10, 0.0);
+        ncm_assert_cmpdouble_e (a, ==, 1.0 / sqrt ((n_kernels - 1.0) / n_kernels + kappa * href * href / (a * a)), 1.0e-10, 0.0);
 
         for (p = 0; p < d; p++)
           for (q = 0; q < d; q++)
@@ -627,7 +641,6 @@ test_ncm_stats_dist_center_shrink (TestNcmStatsDist *test, gconstpointer pdata)
 
       ncm_matrix_free (mean_cov);
       ncm_matrix_free (B);
-      ncm_matrix_free (AC);
       ncm_matrix_free (lhs);
     }
 
@@ -761,7 +774,7 @@ test_ncm_stats_dist_defensive (TestNcmStatsDist *test, gconstpointer pdata)
   const gdouble scale            = 3.0;
   const gdouble nu               = 4.0;
   gulong N                       = 0;
-  gdouble p0_far, p_far, m2lnp_far;
+  gdouble p0_far, p_far, m2lnp_far, K_far = 0.0;
   guint i, k;
 
   if (GPOINTER_TO_INT (pdata) == NCM_STATS_DIST_KDE_COV_TYPE_FIXED)
@@ -847,6 +860,10 @@ test_ncm_stats_dist_defensive (TestNcmStatsDist *test, gconstpointer pdata)
       m2lnq = ncm_stats_dist_eval_m2lnp (test->sd, x_i);
 
       ncm_assert_cmpdouble_e (q, ==, (1.0 - eps) * p + eps * K, 1.0e-10, 0.0);
+
+      if (i == 9)
+        K_far = K;
+
       ncm_assert_cmpdouble_e (m2lnq, ==, -2.0 * log (q), 1.0e-10, 0.0);
     }
 
@@ -855,12 +872,17 @@ test_ncm_stats_dist_defensive (TestNcmStatsDist *test, gconstpointer pdata)
     ncm_stats_dist_kernel_st_free (kst);
   }
 
-  /* Far from the sample the wide component dominates and the density is positive. */
+  /* Far from the sample the density keeps the floor eps K. The mixture alone can still be
+   * larger there: Student-t kernels, or local covariances wider than c C along that
+   * direction, have tails the wide component need not dominate. A Gaussian kernel's does. */
   p_far     = ncm_stats_dist_eval (test->sd, far);
   m2lnp_far = ncm_stats_dist_eval_m2lnp (test->sd, far);
   g_assert_true (gsl_finite (m2lnp_far));
-  g_assert_cmpfloat (p_far, >, 0.0);
-  g_assert_cmpfloat (p_far, >, p0_far);
+  g_assert_cmpfloat (K_far, >, 0.0);
+  ncm_assert_cmpdouble_e (p_far, >=, eps * K_far, 1.0e-10, 0.0);
+
+  if (NCM_IS_STATS_DIST_KERNEL_GAUSS (test->kernel))
+    g_assert_cmpfloat (p_far, >, p0_far);
 
   /* Draws: roughly eps of them come from the wide component, seen as a heavier tail in
    * the Mahalanobis distance; every draw is finite and the mean stays near the sample mean. */
@@ -2084,26 +2106,28 @@ test_ncm_stats_dist_split_underflowing_m2lnp (void)
 }
 
 static void
-test_ncm_stats_dist_split_drop_far_points (void)
+_test_ncm_stats_dist_split_drop_far_points (const gdouble split_frac)
 {
   /*
    * The other branch of the split: at least half the kernel centres are within
    * NCM_STATS_DIST_M2LNL_RANGE of the best point, so the observations beyond it leave the
    * sample and everything is built from what remains. Here the far points are the last
    * tenth, outside the kernel block, and the sample must shrink to the kept nine tenths.
+   * The half is of the kernel centres, not of the sample: with split_frac below 0.5 the
+   * weight fit must still run.
    */
-  const guint d      = 3;
-  const guint n      = 400;
-  const guint n_far  = 40;
-  const guint n_keep = n - n_far;
-  NcmStatsDist *sd   = NCM_STATS_DIST (ncm_stats_dist_kde_new (NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d)),
-                                                               NCM_STATS_DIST_CV_SPLIT_M2LNP));
-  NcmRNG *rng       = ncm_rng_seeded_new (NULL, 20260923);
-  NcmVector *m2lnL  = ncm_vector_new (n);
-  GPtrArray *sample = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+  const guint d              = 3;
+  const guint n              = 400;
+  const guint n_far          = 40;
+  const guint n_keep         = n - n_far;
+  NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
+  NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, NCM_STATS_DIST_CV_SPLIT_M2LNP));
+  NcmRNG *rng                = ncm_rng_seeded_new (NULL, 20260923);
+  NcmVector *m2lnL           = ncm_vector_new (n);
+  GPtrArray *sample          = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
   guint i, j;
 
-  ncm_stats_dist_set_split_frac (sd, 0.5);
+  ncm_stats_dist_set_split_frac (sd, split_frac);
   ncm_stats_dist_set_over_smooth (sd, 1.0);
   ncm_stats_dist_set_uniform_weights (sd, FALSE);
 
@@ -2128,8 +2152,15 @@ test_ncm_stats_dist_split_drop_far_points (void)
   ncm_stats_dist_prepare (sd, m2lnL);
 
   g_assert_cmpuint (ncm_stats_dist_get_sample_size (sd), ==, n_keep);
-  g_assert_cmpuint (ncm_stats_dist_get_n_kernels (sd), ==, (guint) ceil (0.5 * n_keep));
+  g_assert_cmpuint (ncm_stats_dist_get_n_kernels (sd), ==, (guint) ceil (split_frac * n_keep));
   g_assert_cmpuint (ncm_vector_len (ncm_stats_dist_peek_weights (sd)), ==, ncm_stats_dist_get_n_kernels (sd));
+
+  /* The weight fit ran: the weights are not the uniform ones. */
+  {
+    NcmVector *w = ncm_stats_dist_peek_weights (sd);
+
+    g_assert_cmpfloat (ncm_vector_get_max (w), >, 2.0 * ncm_vector_get_min (w));
+  }
 
   {
     GPtrArray *kept = ncm_stats_dist_peek_sample_array (sd);
@@ -2153,6 +2184,51 @@ test_ncm_stats_dist_split_drop_far_points (void)
   ncm_vector_free (m2lnL);
   ncm_rng_free (rng);
   ncm_stats_dist_free (sd);
+  ncm_stats_dist_kernel_free (kernel);
+}
+
+static void
+test_ncm_stats_dist_split_drop_far_points (void)
+{
+  _test_ncm_stats_dist_split_drop_far_points (0.5);
+  _test_ncm_stats_dist_split_drop_far_points (0.3);
+}
+
+static void
+test_ncm_stats_dist_split_too_few_kernels (void)
+{
+  /* The sample covariance comes from the kernel centres: 3 of 10 points in 3 dimensions. */
+  if (g_test_subprocess ())
+  {
+    const guint d              = 3;
+    const guint n              = 10;
+    NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
+    NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, NCM_STATS_DIST_CV_SPLIT_M2LNP));
+    NcmRNG *rng                = ncm_rng_seeded_new (NULL, 20260929);
+    guint i, j;
+
+    ncm_stats_dist_set_split_frac (sd, 0.3);
+
+    for (i = 0; i < n; i++)
+    {
+      NcmVector *y = ncm_vector_new (d);
+
+      for (j = 0; j < d; j++)
+        ncm_vector_set (y, j, ncm_rng_ugaussian_gen (rng));
+
+      ncm_stats_dist_add_obs (sd, y);
+      ncm_vector_free (y);
+    }
+
+    ncm_stats_dist_kernel_free (kernel);
+    ncm_stats_dist_prepare (sd, NULL);
+
+    return;
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the sample is too small: 3 kernel centers in dimension 3*");
 }
 
 static void

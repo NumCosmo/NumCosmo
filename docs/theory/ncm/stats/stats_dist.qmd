@@ -101,7 +101,7 @@ the bandwidth.
 Center shrinkage removes that excess by moving the centers toward $\mu$. Placing them at
 
 $$
-c_i = \mu + a \left(x_i - \mu\right), \qquad 0 < a \leq 1,
+c_i = \mu + a \left(x_i - \mu\right), \qquad a > 0,
 $$ {#eq-centers}
 
 gives them covariance $a^2 C$. Writing the kernel covariance as $b^2 C$, the two terms
@@ -128,20 +128,24 @@ the mixture becomes a single kernel centered at $\mu$ with covariance $C$.
 
 ### When the budget is exact
 
-$\mu$ and $C$ are the mean and the covariance of the sample points, both unweighted: the
-implementation takes $\mu$ as their arithmetic mean and $C$ from the same points with no
-weights applied. @eq-budget therefore holds exactly when the weights $\lambda_i$ are
-equal, which is the mixture prepared without interpolation. One thing makes it
-approximate: with unequal weights both terms of @eq-total-cov are $\lambda$-weighted
-while $\mu$ and $C$ are not. The weights that come out of @eq-nnls are not equal.
+$\mu$ and $C$ are the mean and the covariance of the $n$ sample points that carry the
+kernels, both unweighted: $\mu$ is their arithmetic mean and $C$ their unbiased sample
+covariance, normalized by $n - 1$. With equal weights the covariance of the centers,
+normalized by $n$, is then $r a^2 C$ with $r = (n - 1)/n$, and the implementation
+includes that factor, $a^2 r + b^2 = 1$ (@eq-matrix-budget below). The budget therefore
+holds exactly when the weights $\lambda_i$ are equal, which is the mixture prepared
+without interpolation, the default. As $h \to 0$, $a \to \sqrt{n/(n - 1)}$, slightly
+above one: the centers alone then carry $C$. With unequal weights both terms of
+@eq-total-cov are $\lambda$-weighted while $\mu$ and $C$ are not, and the budget is
+approximate. The weights that come out of @eq-nnls are not equal.
 
 ### The general transform
 
 A fixed-bandwidth estimator with the sample covariance gives every kernel the scale
-matrix $C$, and the scalar $a$ of @eq-a-and-b is exact. In general the kernel scale
-matrices $\Sigma_i$ are not proportional to $C$ -- a fixed or robust covariance in
+matrix $C$, and a scalar $a$ as in @eq-a-and-b suffices. In general the kernel scale
+matrices $\Sigma_i$ are not proportional to $C$ (a fixed or robust covariance in
 [[numcosmo-math|NcmStatsDistKDE]], or the per-kernel $\Sigma_i$ of
-[[numcosmo-math|NcmStatsDistVKDE]] -- and no scalar satisfies @eq-budget as a matrix
+[[numcosmo-math|NcmStatsDistVKDE]]), and no scalar satisfies @eq-budget as a matrix
 equation. The implementation contracts by a matrix instead. With
 
 $$
@@ -150,26 +154,31 @@ c_i = \mu + A \left(x_i - \mu\right), \qquad
 A = a \hat A, \quad \det \hat A = 1,
 $$ {#eq-matrix-transform}
 
-and the bandwidth in use $a h$, the two terms of @eq-total-cov are $A C A^T$ and
+and the bandwidth in use $a h$, the two terms of @eq-total-cov are $r A C A^T$ and
 $\kappa h^2 A \langle\Sigma\rangle A^T$, where $\langle\Sigma\rangle$ is the mean of
 the kernel scale matrices and $\kappa$ the kernel variance factor of the next section, so
 the budget reads
 
 $$
-A \left(C + \kappa h^2 \langle\Sigma\rangle\right) A^T = C.
+A \left(r C + \kappa h^2 \langle\Sigma\rangle\right) A^T = C, \qquad r = \frac{n - 1}{n}.
 $$ {#eq-matrix-budget}
 
-With the Cholesky factors $C = U_C^T U_C$ and
-$M = C + \kappa h^2 \langle\Sigma\rangle = U_M^T U_M$ a solution is
+With $C = L L^T$ and the eigendecomposition
+$L^{-1} \langle\Sigma\rangle L^{-T} = V \mathrm{diag}(s) V^T$, a solution is
 
 $$
-A = U_C^T U_M^{-T}, \qquad a = \det(A)^{1/d} = \left(\frac{\det C}{\det M}\right)^{1/2d},
+A = L V \mathrm{diag}\left[\left(r + \kappa h^2 s_p\right)^{-1/2}\right] V^T L^{-1},
+\qquad a = \det(A)^{1/d} = \prod_{p=1}^d \left(r + \kappa h^2 s_p\right)^{-1/(2d)}.
 $$ {#eq-matrix-solution}
 
-two factorizations and one triangular solve. $\hat A$ has unit determinant, so it leaves
-every kernel normalization unchanged. For $\langle\Sigma\rangle \propto C$ the transform
-is isotropic, $A = a I$, and @eq-a-and-b is recovered; the library detects that case and
-applies the scalar.
+$L$, $V$ and $s$ depend only on the sample, so they are computed once per preparation;
+a new bandwidth only changes the $d$ diagonal entries. Since $s_p \geq 0$ the diagonal is
+never singular, and $A$ does not depend on the choice of the factor $L$ (the Cholesky
+construction $A = U_C^T U_M^{-T}$, with $M = r C + \kappa h^2 \langle\Sigma\rangle$,
+also solves @eq-matrix-budget but changes with the order of the parameters). $\hat A$
+has unit determinant, so it leaves every kernel normalization unchanged. For $\langle\Sigma\rangle \propto C$ the transform
+is isotropic, $A = a I$ with $a = (r + \kappa h^2)^{-1/2}$, which is @eq-a-and-b up to
+$r$; the library detects that case and applies the scalar.
 
 ### The kernel variance factor
 

@@ -816,8 +816,8 @@ static guint _ncm_stats_dist_n_kernels (NcmStatsDist *sd, const guint n);
 
 /*
  * Step 1 of a prepare: trim, split, guard, and (re)make everything sized by n_obs or
- * n_kernels -- this is the only place that does. Reads the sample's -2lnL from
- * m2lnL when the caller gave one.
+ * n_kernels; this is the only place that does. Reads the sample's -2lnL from m2lnL
+ * when the caller gave one.
  */
 static void
 _ncm_stats_dist_split (NcmStatsDist *sd)
@@ -853,7 +853,7 @@ _ncm_stats_dist_split (NcmStatsDist *sd)
       }
     }
 
-    if (n_cut < 0.5 * n)
+    if (n_cut < 0.5 * n_kern)
     {
       /*
        * Fewer than half the kernels are within NCM_STATS_DIST_M2LNL_RANGE of the best
@@ -868,8 +868,8 @@ _ncm_stats_dist_split (NcmStatsDist *sd)
     {
       /*
        * At least half the kernels are within range. The observations beyond it leave the
-       * sample -- as kernels and as cross-validation points -- and everything is built
-       * from what remains.
+       * sample, as kernels and as cross-validation points, and everything is built from
+       * what remains.
        */
       if (n_keep < n)
       {
@@ -910,8 +910,10 @@ _ncm_stats_dist_split (NcmStatsDist *sd)
     g_error ("_ncm_stats_dist_prepare: a sample split needs out-of-sample points, "
              "split-frac %g leaves none of %u.", self->split_frac, self->n_obs);
 
-  if (self->n_obs <= self->d)
-    g_error ("_ncm_stats_dist_prepare: the sample is too small.");
+  /* The sample covariance comes from the kernel centers alone. */
+  if (self->n_kernels <= self->d)
+    g_error ("_ncm_stats_dist_prepare: the sample is too small: %u kernel centers in dimension %u, "
+             "a covariance needs more than %u.", self->n_kernels, self->d, self->d);
 
   if ((self->cv_type == NCM_STATS_DIST_CV_SPLIT_ACCEPT) && (self->m2lnL == NULL))
     g_error ("_ncm_stats_dist_prepare: NCM_STATS_DIST_CV_SPLIT_ACCEPT needs the sample's -2ln(L).");
@@ -1045,18 +1047,21 @@ _ncm_stats_dist_update_defensive (NcmStatsDist *sd)
  * G = L^{-1} <Sigma> L^{-T} = V diag(s) V^T, the transform that matches the mixture
  * covariance to C is
  *
- *   A = L V diag[(1 + kappa h^2 s)^{-1/2}] V^T L^{-1},
+ *   A = L V diag[(r + kappa h^2 s)^{-1/2}] V^T L^{-1},  r = (n - 1) / n,
  *
- * so V and s, and with them L V and its inverse, depend only on C and <Sigma> -- both
+ * with n the number of kernel centers: C is the unbiased sample covariance, while the
+ * centers of an equal-weight mixture have covariance r A C A^T.
+ *
+ * so V and s, and with them L V and its inverse, depend only on C and <Sigma>, both
  * fixed by prepare_shapes(). Only the d diagonal entries follow the bandwidth and the
  * kernel, which _ncm_stats_dist_set_href() then updates.
  *
  * Two properties come with this form. <Sigma> is positive semi-definite, so every
- * s >= 0 and 1 + kappa h^2 s >= 1: the diagonal can never be singular and there is
- * nothing to rescue. And A comes out independent of which factor of C is used -- send
- * L -> L Q for orthogonal Q and the Qs cancel -- where the Cholesky-only construction
- * A = U_C^T U_M^{-T} does not: Cholesky does not commute with permutation, so that one
- * changed with the order of the parameters.
+ * s >= 0 and r + kappa h^2 s >= r > 0: the diagonal can never be singular and there is
+ * nothing to rescue. And A does not depend on which factor of C is used (L -> L Q for
+ * orthogonal Q cancels), whereas the Cholesky-only construction A = U_C^T U_M^{-T}
+ * changes with the order of the parameters, since Cholesky does not commute with
+ * permutation.
  */
 static void
 _ncm_stats_dist_shrink_prepare_shapes (NcmStatsDistShrink *shrink, NcmMatrix *UC, NcmMatrix *kernel_cov)
@@ -1141,13 +1146,14 @@ _ncm_stats_dist_fit_bandwidth (NcmStatsDist *sd)
 /*
  * Sets the bandwidth and recomputes the kernel centers. With center shrinkage the
  * centers are c_i = mu + A (x_i - mu) and the kernel scale matrices Ahat Sigma_i Ahat^T,
- * where A = a Ahat, det Ahat = 1, and A solves A (C + kappa h^2 <Sigma>) A^T = C for the
- * sample covariance C = U_C^T U_C and the mean kernel scale matrix <Sigma>, both handed
- * over by the subclass in prepare_shapes(). The bandwidth stored and applied is a h.
+ * where A = a Ahat, det Ahat = 1, and A solves A (r C + kappa h^2 <Sigma>) A^T = C for the
+ * unbiased sample covariance C = U_C^T U_C of the n kernel centers, r = (n - 1) / n, and
+ * the mean kernel scale matrix <Sigma>, both handed over by the subclass in
+ * prepare_shapes(). The bandwidth stored and applied is a h.
  * Without center shrinkage A is the identity. Every place that changes href must go
  * through here so that centers, factors and bandwidth stay consistent.
  */
-static void _ncm_stats_dist_shrink_prepare_kernels (NcmStatsDistShrink *shrink, const gdouble kappa, const gdouble h);
+static void _ncm_stats_dist_shrink_prepare_kernels (NcmStatsDistShrink *shrink, const gdouble r, const gdouble kappa, const gdouble h);
 
 static void
 _ncm_stats_dist_set_href (NcmStatsDist *sd, const gdouble href)
@@ -1170,7 +1176,7 @@ _ncm_stats_dist_set_href (NcmStatsDist *sd, const gdouble href)
                G_OBJECT_TYPE_NAME (self->kernel));
   }
 
-  _ncm_stats_dist_shrink_prepare_kernels (&self->shrink, kappa, href);
+  _ncm_stats_dist_shrink_prepare_kernels (&self->shrink, (self->n_kernels - 1.0) / self->n_kernels, kappa, href);
   self->href = self->shrink.scale * href;
 
   if (self->shrink.on)
@@ -1201,13 +1207,13 @@ _ncm_stats_dist_set_href (NcmStatsDist *sd, const gdouble href)
 }
 
 /*
- * The kernel stage of the shrinkage: from the basis and the bandwidth, A, its scale
- * a = det(A)^{1/d} and Ahat = A / a. Off, or with a basis that leaves A the identity to
+ * The kernel stage of the shrinkage: from the basis, r = (n - 1) / n and the bandwidth,
+ * A, its scale a = det(A)^{1/d} and Ahat = A / a. Off, or with a basis that leaves A the identity to
  * rounding, the transform is the identity and is_isotropic says so, which lets the
  * subclasses skip refactoring their kernels.
  */
 static void
-_ncm_stats_dist_shrink_prepare_kernels (NcmStatsDistShrink *shrink, const gdouble kappa, const gdouble h)
+_ncm_stats_dist_shrink_prepare_kernels (NcmStatsDistShrink *shrink, const gdouble r, const gdouble kappa, const gdouble h)
 {
   const guint d = ncm_matrix_nrows (shrink->A);
 
@@ -1228,7 +1234,7 @@ _ncm_stats_dist_shrink_prepare_kernels (NcmStatsDistShrink *shrink, const gdoubl
 
     for (p = 0; p < d; p++)
     {
-      const gdouble den = 1.0 + lambda * ncm_vector_get (shrink->eigval, p);
+      const gdouble den = r + lambda * ncm_vector_get (shrink->eigval, p);
 
       ncm_vector_set (shrink->diag, p, 1.0 / sqrt (den));
       lnden += log (den);
