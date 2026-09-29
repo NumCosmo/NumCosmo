@@ -45,6 +45,7 @@ void test_ncm_fit_state_sanity (TestNcmFitState *test, gconstpointer pdata);
 void test_ncm_fit_state_serialize (TestNcmFitState *test, gconstpointer pdata);
 
 void test_ncm_fit_state_set_ls (TestNcmFitState *test, gconstpointer pdata);
+void test_ncm_fit_state_set_ls_values (TestNcmFitState *test, gconstpointer pdata);
 
 void test_ncm_fit_state_fparam_len (TestNcmFitState *test, gconstpointer pdata);
 void test_ncm_fit_state_data_len (TestNcmFitState *test, gconstpointer pdata);
@@ -92,6 +93,11 @@ main (int argc, char *argv[])
   g_test_add ("/ncm/fit_state/serialize", TestNcmFitState, NULL,
               &test_ncm_fit_state_new,
               &test_ncm_fit_state_serialize,
+              &test_ncm_fit_state_free);
+
+  g_test_add ("/ncm/fit_state/set_ls/values", TestNcmFitState, NULL,
+              &test_ncm_fit_state_new,
+              &test_ncm_fit_state_set_ls_values,
               &test_ncm_fit_state_free);
 
   g_test_add ("/ncm/fit_state/set_ls", TestNcmFitState, NULL,
@@ -289,6 +295,49 @@ test_ncm_fit_state_serialize (TestNcmFitState *test, gconstpointer pdata)
 
   ncm_fit_state_free (dup_fit_state);
   ncm_serialize_free (ser);
+}
+
+void
+test_ncm_fit_state_set_ls_values (TestNcmFitState *test, gconstpointer pdata)
+{
+  /*
+   * -2 ln L is f.f and its precision |2 J^T f| / f.f, with J the Jacobian of the same
+   * call: the second call, with another J, must not use the first one.
+   */
+  const guint data_len   = 5;
+  const guint fparam_len = 2;
+  NcmVector *f           = ncm_vector_new (data_len);
+  NcmMatrix *J1          = ncm_matrix_new (data_len, fparam_len);
+  NcmMatrix *J2          = ncm_matrix_new (data_len, fparam_len);
+  gdouble f2             = 0.0;
+  gdouble g0             = 0.0;
+  gdouble g1             = 0.0;
+  guint i;
+
+  ncm_fit_state_set_all (test->fit_state, data_len, fparam_len, data_len - fparam_len, TRUE);
+
+  for (i = 0; i < data_len; i++)
+  {
+    ncm_vector_set (f, i, 0.5 + i);
+    ncm_matrix_set (J1, i, 0, 1.0);
+    ncm_matrix_set (J1, i, 1, 0.0);
+    ncm_matrix_set (J2, i, 0, 0.1 * i);
+    ncm_matrix_set (J2, i, 1, -0.2 * i * i);
+
+    f2 += gsl_pow_2 (0.5 + i);
+    g0 += 2.0 * 0.1 * i * (0.5 + i);
+    g1 += 2.0 * (-0.2 * i * i) * (0.5 + i);
+  }
+
+  ncm_fit_state_set_ls (test->fit_state, f, J1);
+  ncm_fit_state_set_ls (test->fit_state, f, J2);
+
+  ncm_assert_cmpdouble_e (ncm_fit_state_get_m2lnL_curval (test->fit_state), ==, f2, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (ncm_fit_state_get_m2lnL_prec (test->fit_state), ==, sqrt (g0 * g0 + g1 * g1) / f2, 1.0e-14, 0.0);
+
+  ncm_vector_free (f);
+  ncm_matrix_free (J1);
+  ncm_matrix_free (J2);
 }
 
 void

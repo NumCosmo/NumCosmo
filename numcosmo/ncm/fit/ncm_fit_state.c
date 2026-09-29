@@ -26,9 +26,12 @@
 /**
  * NcmFitState:
  *
- * State of a NcmFit object.
+ * State of a #NcmFit.
  *
- * Object that stores the state of a NcmFit object.
+ * Holds what a #NcmFit run leaves behind: the free parameters, $-2\ln L$ and its
+ * precision, the iteration and evaluation counts, the elapsed time, the Hessian and the
+ * covariance, and for least-squares fits the residual vector $f$ and its Jacobian $J$.
+ * The #NcmFit implementations fill it; the setters are for them.
  *
  */
 
@@ -455,13 +458,14 @@ ncm_fit_state_reset (NcmFitState *fstate)
 /**
  * ncm_fit_state_set_ls:
  * @fstate: a #NcmFitState
- * @f: a #NcmVector
- * @J: a #NcmMatrix
+ * @f: the residual #NcmVector, of length #NcmFitState:data-len
+ * @J: its Jacobian #NcmMatrix, #NcmFitState:data-len by #NcmFitState:fparam-len
  *
- * Sets the least squares data of @fstate.
+ * Sets the least-squares state of @fstate: copies @f and @J, sets $-2\ln L = f\cdot f$,
+ * its gradient $2 J^T f$, and the precision $|2 J^T f| / |f\cdot f|$ (the gradient norm
+ * itself when $|f\cdot f| \leq 10^{-3}$). @fstate must be a least-squares state.
  *
- * This method is used by #NcmFit implementations to set the precision of the parameters.
- * It should not be used by the user.
+ * This method is used by #NcmFit implementations. It should not be used by the user.
  *
  */
 void
@@ -469,20 +473,20 @@ ncm_fit_state_set_ls (NcmFitState *fstate, NcmVector *f, NcmMatrix *J)
 {
   g_assert (fstate->is_least_squares);
 
-  fstate->m2lnL_curval = ncm_vector_dnrm2 (f);
-
   ncm_vector_memcpy (fstate->ls_f, f);
+  ncm_matrix_memcpy (fstate->ls_J, J);
+
+  /* -2 ln L = f.f, and its gradient 2 J^T f from the Jacobian just set. */
+  fstate->m2lnL_curval = ncm_vector_dot (fstate->ls_f, fstate->ls_f);
 
   gsl_blas_dgemv (CblasTrans, 2.0, ncm_matrix_gsl (fstate->ls_J),
                   ncm_vector_gsl (fstate->ls_f), 0.0,
                   ncm_vector_gsl (fstate->dm2lnL));
 
-  fstate->m2lnL_prec = sqrt (ncm_vector_dnrm2 (fstate->dm2lnL));
+  fstate->m2lnL_prec = ncm_vector_dnrm2 (fstate->dm2lnL);
 
   if (fabs (fstate->m2lnL_curval) > 1.0e-3)
     fstate->m2lnL_prec = fabs (fstate->m2lnL_prec / fstate->m2lnL_curval);
-
-  ncm_matrix_memcpy (fstate->ls_J, J);
 }
 
 /**
