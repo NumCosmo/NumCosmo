@@ -64,6 +64,7 @@ class CatalogData:
     bestfit: np.ndarray | None
     params_names: list[str]
     params_symbols: list[str]
+    ranges: dict[str, tuple[float, float]] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
         """Post initialization.
@@ -75,6 +76,7 @@ class CatalogData:
         assert len(self.params_names) == len(self.params_symbols)
         assert len(self.params_names) == self.rows.shape[1]
         assert self.bestfit is None or (len(self.bestfit) == self.rows.shape[1])
+        assert set(self.ranges).issubset(self.params_names)
 
     def asinh_transform(self, indices: npt.NDArray[np.int64]) -> None:
         """Apply an asinh transformation to the catalog data."""
@@ -126,6 +128,7 @@ class CatalogData:
                 labels=self.params_symbols,
                 label=self.name,
                 weights=self.weights,
+                ranges=self.ranges,
             )
 
         assert self.rows.shape[0] % self.nchains == 0
@@ -142,6 +145,7 @@ class CatalogData:
                 if self.weights is not None
                 else None
             ),
+            ranges=self.ranges,
         )
 
 
@@ -204,6 +208,22 @@ def mcat_to_catalog_data(
 
     bestfit = np.array(mcat.get_bestfit_row().dup_array())[indices_array]
 
+    # The hard prior bounds of every fitted parameter, keyed by the column name getdist
+    # will know it as. Without these getdist has no way to tell a prior wall from ordinary
+    # data: its kernel spreads mass across the edge, the density is pulled down there, and a
+    # posterior that is flat up to its bound is rendered as a peak away from it. Columns
+    # before the parameters are derived quantities and carry no bound.
+    mset = mcat.peek_mset()
+    nadd = mcat.nadd_vals()
+    ranges: dict[str, tuple[float, float]] = {}
+    for i in indices_array:
+        fpi = int(i) - nadd
+        if fpi >= 0:
+            ranges[mcat.col_name(int(i))] = (
+                mset.fparam_get_lower_bound(fpi),
+                mset.fparam_get_upper_bound(fpi),
+            )
+
     return CatalogData(
         name=name,
         nchains=nchains,
@@ -213,6 +233,7 @@ def mcat_to_catalog_data(
         bestfit=bestfit,
         params_names=param_names,
         params_symbols=param_symbols,
+        ranges=ranges,
     )
 
 
