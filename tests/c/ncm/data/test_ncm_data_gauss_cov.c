@@ -58,6 +58,9 @@ void test_ncm_data_gauss_cov_mvnd_new (TestNcmDataGaussCovTest *test, gconstpoin
 void test_ncm_data_gauss_cov_mvnd_free (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 void test_ncm_data_gauss_cov_mvnd_sanity (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 void test_ncm_data_gauss_cov_mvnd_log (TestNcmDataGaussCovTest *test, gconstpointer pdata);
+void test_ncm_data_gauss_cov_mvnd_replace (TestNcmDataGaussCovTest *test, gconstpointer pdata);
+void test_ncm_data_gauss_cov_mvnd_gen (TestNcmDataGaussCovTest *test, gconstpointer pdata);
+void test_ncm_data_gauss_cov_mvnd_errors (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -122,6 +125,18 @@ main (gint argc, gchar *argv[])
               &test_ncm_data_gauss_cov_mvnd_sanity,
               &test_ncm_data_gauss_cov_mvnd_free);
 
+  g_test_add ("/ncm/data_gauss_cov/mvnd/replace", TestNcmDataGaussCovTest, NULL,
+              &test_ncm_data_gauss_cov_mvnd_new,
+              &test_ncm_data_gauss_cov_mvnd_replace,
+              &test_ncm_data_gauss_cov_mvnd_free);
+  g_test_add ("/ncm/data_gauss_cov/mvnd/gen", TestNcmDataGaussCovTest, NULL,
+              &test_ncm_data_gauss_cov_mvnd_new,
+              &test_ncm_data_gauss_cov_mvnd_gen,
+              &test_ncm_data_gauss_cov_mvnd_free);
+  g_test_add ("/ncm/data_gauss_cov/mvnd/errors", TestNcmDataGaussCovTest, NULL,
+              &test_ncm_data_gauss_cov_mvnd_new,
+              &test_ncm_data_gauss_cov_mvnd_errors,
+              &test_ncm_data_gauss_cov_mvnd_free);
   g_test_add ("/ncm/data_gauss_cov/mvnd/log", TestNcmDataGaussCovTest, NULL,
               &test_ncm_data_gauss_cov_mvnd_new,
               &test_ncm_data_gauss_cov_mvnd_log,
@@ -680,5 +695,104 @@ test_ncm_data_gauss_cov_test_errors (TestNcmDataGaussCovTest *test, gconstpointe
   g_test_trap_assert_stderr ("*ncm_data_gauss_cov_bulk_resample: data*");
 
   g_unsetenv ("TEST_NCM_DATA_GAUSS_COV_ERROR");
+}
+
+void
+test_ncm_data_gauss_cov_mvnd_replace (TestNcmDataGaussCovTest *test, gconstpointer pdata)
+{
+  NcmMSet *mset  = ncm_mset_new (NCM_MODEL (test->model), NULL, NULL);
+  NcmRNG *rng    = ncm_rng_seeded_new (NULL, 1);
+  const guint np = ncm_data_gauss_cov_get_size (NCM_DATA_GAUSS_COV (test->gcov_mvnd));
+  NcmVector *y   = ncm_vector_new (np);
+  NcmMatrix *cov = ncm_matrix_new (np, np);
+  gdouble m2lnL, m2lnL_fresh;
+
+  ncm_data_gauss_cov_use_norma (NCM_DATA_GAUSS_COV (test->gcov_mvnd), FALSE);
+  ncm_data_m2lnL_val (test->data, mset, &m2lnL);
+
+  /* set_cov_mean after an evaluation: the model mean is zero, so -2lnL = y^T C^-1 y. */
+  ncm_vector_set_all (y, 1.0);
+  ncm_matrix_set_identity (cov);
+  ncm_matrix_scale (cov, 0.25);
+  ncm_data_gauss_cov_mvnd_set_cov_mean (test->gcov_mvnd, y, cov);
+  ncm_data_m2lnL_val (test->data, mset, &m2lnL);
+  g_assert_cmpfloat (m2lnL, ==, 4.0 * np);
+
+  /* gen_cov_mean after an evaluation agrees with fresh data holding the same values. */
+  ncm_data_gauss_cov_mvnd_gen_cov_mean (test->gcov_mvnd, 1.0e-2, 5.0e-2, 20.0, 1.0, 2.0, rng);
+  ncm_data_m2lnL_val (test->data, mset, &m2lnL);
+  {
+    NcmDataGaussCovMVND *fresh = ncm_data_gauss_cov_mvnd_new (np);
+    NcmDataGaussCov *gcov      = NCM_DATA_GAUSS_COV (test->gcov_mvnd);
+
+    ncm_data_gauss_cov_use_norma (NCM_DATA_GAUSS_COV (fresh), FALSE);
+    ncm_data_gauss_cov_mvnd_set_cov_mean (fresh, ncm_data_gauss_cov_peek_mean (gcov), ncm_data_gauss_cov_peek_cov (gcov));
+    ncm_data_m2lnL_val (NCM_DATA (fresh), mset, &m2lnL_fresh);
+    g_assert_cmpfloat (m2lnL, ==, m2lnL_fresh);
+
+    ncm_data_gauss_cov_mvnd_free (fresh);
+  }
+
+  ncm_vector_free (y);
+  ncm_matrix_free (cov);
+  ncm_rng_free (rng);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_data_gauss_cov_mvnd_gen (TestNcmDataGaussCovTest *test, gconstpointer pdata)
+{
+  NcmMSet *mset = ncm_mset_new (NCM_MODEL (test->model), NULL, NULL);
+  NcmRNG *rng   = ncm_rng_seeded_new (NULL, 1);
+  gulong N;
+
+  /* Without a bound, one realization is drawn. */
+  ncm_data_gauss_cov_mvnd_gen (test->gcov_mvnd, mset, NULL, NULL, rng, &N);
+  g_assert_cmpuint (N, ==, 1);
+
+  ncm_rng_free (rng);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_data_gauss_cov_mvnd_errors (TestNcmDataGaussCovTest *test, gconstpointer pdata)
+{
+  const guint np = ncm_data_gauss_cov_get_size (NCM_DATA_GAUSS_COV (test->gcov_mvnd));
+
+  if (g_test_subprocess ())
+  {
+    const gchar *which = g_getenv ("TEST_NCM_DATA_GAUSS_COV_MVND_ERROR");
+
+    if (g_strcmp0 (which, "set_cov_mean") == 0)
+    {
+      NcmVector *y   = ncm_vector_new (np + 1);
+      NcmMatrix *cov = ncm_matrix_new (np + 1, np + 1);
+
+      ncm_data_gauss_cov_mvnd_set_cov_mean (test->gcov_mvnd, y, cov);
+    }
+    else
+    {
+      NcmMSet *mset    = ncm_mset_new (NCM_MODEL (test->model), NULL, NULL);
+      NcmVector *lower = ncm_vector_new (np - 1);
+      NcmVector *upper = ncm_vector_new (np);
+      NcmRNG *rng      = ncm_rng_seeded_new (NULL, 1);
+
+      ncm_data_gauss_cov_mvnd_stats_vec (test->gcov_mvnd, mset, 10, 10, lower, upper, FALSE, rng);
+    }
+
+    return; /* LCOV_EXCL_LINE */
+  }
+
+  g_setenv ("TEST_NCM_DATA_GAUSS_COV_MVND_ERROR", "set_cov_mean", TRUE);
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the data has 5 points, but the mean has 6*");
+
+  g_setenv ("TEST_NCM_DATA_GAUSS_COV_MVND_ERROR", "stats_vec", TRUE);
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the data has dimension 5, but the bounds have 4 and 5*");
+
+  g_unsetenv ("TEST_NCM_DATA_GAUSS_COV_MVND_ERROR");
 }
 
