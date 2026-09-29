@@ -201,6 +201,10 @@ math_tests = [
         'sources': ['ncm/stats/test_ncm_stats_dist_kernel.c'],
     },
     {
+        'name': 'ncm_function_sample_set',
+        'sources': ['ncm/stats/test_ncm_function_sample_set.c'],
+    },
+    {
         'name': 'ncm_spline',
         'sources': ['ncm/spline/test_ncm_spline.c'],
         'priority': 3,
