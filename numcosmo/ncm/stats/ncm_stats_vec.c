@@ -101,7 +101,6 @@ enum
   PROP_LEN,
   PROP_TYPE,
   PROP_SAVE_X,
-  PROP_SIZE,
 };
 
 struct _NcmStatsVec
@@ -122,6 +121,8 @@ struct _NcmStatsVec
   NcmMatrix *cov;
   NcmMatrix *real_cov;
   GPtrArray *saved_x;
+  GArray *saved_w;
+  NcmVector *x_contiguous;
   GPtrArray *q_array;
 };
 
@@ -136,12 +137,6 @@ ncm_stats_vec_init (NcmStatsVec *svec)
   svec->weight2 = 0.0;
   svec->bias_wt = 0.0;
 
-/*
- * Increment calculation
- *  svec->mean_inc = 0.0;
- *  svec->var_inc  = 0.0;
- *  svec->cov_inc  = 0.0;
- */
   svec->nitens   = 0;
   svec->x        = NULL;
   svec->mean     = NULL;
@@ -149,7 +144,10 @@ ncm_stats_vec_init (NcmStatsVec *svec)
   svec->cov      = NULL;
   svec->real_cov = NULL;
   svec->saved_x  = NULL;
+  svec->saved_w  = NULL;
   svec->save_x   = FALSE;
+
+  svec->x_contiguous = NULL;
 
   svec->q_array = g_ptr_array_new ();
   g_ptr_array_set_free_func (svec->q_array, (GDestroyNotify) gsl_rstat_quantile_free);
@@ -160,8 +158,8 @@ _ncm_stats_vec_dispose (GObject *object)
 {
   NcmStatsVec *svec = NCM_STATS_VEC (object);
 
-
   ncm_vector_clear (&svec->x);
+  ncm_vector_clear (&svec->x_contiguous);
   ncm_vector_clear (&svec->mean);
   ncm_vector_clear (&svec->var);
   ncm_matrix_clear (&svec->cov);
@@ -174,17 +172,12 @@ _ncm_stats_vec_dispose (GObject *object)
     svec->save_x  = FALSE;
   }
 
+  g_clear_pointer (&svec->saved_w, g_array_unref);
+
   g_clear_pointer (&svec->q_array, g_ptr_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_vec_parent_class)->dispose (object);
-}
-
-static void
-_ncm_stats_vec_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_stats_vec_parent_class)->finalize (object);
 }
 
 static void _ncm_stats_vec_update_from_vec_weight_cov (NcmStatsVec *svec, const gdouble w, NcmVector *x);
@@ -206,8 +199,11 @@ _ncm_stats_vec_constructed (GObject *object)
     {
       g_assert (svec->saved_x == NULL);
       svec->saved_x = g_ptr_array_new ();
+      svec->saved_w = g_array_new (FALSE, FALSE, sizeof (gdouble));
       g_ptr_array_set_free_func (svec->saved_x, (GDestroyNotify) ncm_vector_free);
     }
+
+    svec->x_contiguous = ncm_vector_new (svec->len);
 
     switch (svec->t)
     {
@@ -306,7 +302,6 @@ ncm_stats_vec_class_init (NcmStatsVecClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->dispose      = &_ncm_stats_vec_dispose;
-  object_class->finalize     = &_ncm_stats_vec_finalize;
   object_class->constructed  = &_ncm_stats_vec_constructed;
   object_class->set_property = &_ncm_stats_vec_set_property;
   object_class->get_property = &_ncm_stats_vec_get_property;
@@ -357,10 +352,11 @@ ncm_stats_vec_class_init (NcmStatsVecClass *klass)
 /**
  * ncm_stats_vec_new:
  * @len: number of random variables
- * @t: type of statistics to be calculated
- * @save_x: whenever to save each vector x
+ * @t: statistics to compute
+ * @save_x: whether to save each added vector
  *
- * Creates a new #NcmStatsVec.
+ * Creates a new #NcmStatsVec, see #NcmStatsVec:length, #NcmStatsVec:type and
+ * #NcmStatsVec:save-x.
  *
  * Returns: (transfer full): a new #NcmStatsVec.
  */
@@ -380,7 +376,7 @@ ncm_stats_vec_new (guint len, NcmStatsVecType t, gboolean save_x)
  * ncm_stats_vec_ref:
  * @svec: a #NcmStatsVec
  *
- * Increase the reference of @svec by one.
+ * Increases the reference count of @svec by one.
  *
  * Returns: (transfer full): @svec.
  */
@@ -394,8 +390,7 @@ ncm_stats_vec_ref (NcmStatsVec *svec)
  * ncm_stats_vec_free:
  * @svec: a #NcmStatsVec
  *
- * Decrease the reference count of @svec by one.
- *
+ * Decreases the reference count of @svec by one.
  */
 void
 ncm_stats_vec_free (NcmStatsVec *svec)
@@ -407,9 +402,7 @@ ncm_stats_vec_free (NcmStatsVec *svec)
  * ncm_stats_vec_clear:
  * @svec: a #NcmStatsVec
  *
- * Decrease the reference count of @svec by one, and sets the pointer *svec to
- * NULL.
- *
+ * Decreases the reference count of *@svec by one and sets *@svec to %NULL.
  */
 void
 ncm_stats_vec_clear (NcmStatsVec **svec)
@@ -420,11 +413,13 @@ ncm_stats_vec_clear (NcmStatsVec **svec)
 /**
  * ncm_stats_vec_reset:
  * @svec: a #NcmStatsVec
- * @rm_saved: a boolean
+ * @rm_saved: whether to remove the saved rows
  *
- * Reset all data in @svec. If @rm_saved is TRUE and @svec has
- * saved data, it will be also removed from the object.
- *
+ * Restarts the statistics, the quantiles and ncm_stats_vec_nitens(). With #NcmStatsVec:save-x
+ * and @rm_saved %TRUE the saved rows are removed too. With @rm_saved %FALSE they are kept and
+ * later rows are saved after them, at their absolute positions, so the rows
+ * $[0, \mathrm{nitens})$, which ncm_stats_vec_peek_row(), ncm_stats_vec_get_param_at() and the
+ * row-based diagnostics read, are then not the rows in the statistics.
  */
 void
 ncm_stats_vec_reset (NcmStatsVec *svec, gboolean rm_saved)
@@ -436,6 +431,7 @@ ncm_stats_vec_reset (NcmStatsVec *svec, gboolean rm_saved)
     svec->saved_x = g_ptr_array_new ();
     g_ptr_array_set_free_func (svec->saved_x, (GDestroyNotify) ncm_vector_free);
     g_ptr_array_set_size (svec->saved_x, 0);
+    g_array_set_size (svec->saved_w, 0);
   }
 
   svec->weight  = 0.0;
@@ -458,6 +454,7 @@ ncm_stats_vec_reset (NcmStatsVec *svec, gboolean rm_saved)
     case NCM_STATS_VEC_MEAN:
       g_assert (svec->x != NULL);
       ncm_vector_set_zero (svec->x);
+      ncm_vector_set_zero (svec->mean);
       break;
     default:
       g_assert_not_reached ();
@@ -620,14 +617,42 @@ _ncm_stats_vec_update_from_vec_weight_mean (NcmStatsVec *svec, const gdouble w, 
   }
 }
 
+/* The input as a contiguous vector: @x itself, or its copy in x_contiguous when it is strided */
+static NcmVector *
+_ncm_stats_vec_contiguous (NcmStatsVec *svec, NcmVector *x)
+{
+  if (ncm_vector_len (x) != svec->len)
+    g_error ("ncm_stats_vec: vector of length %u added to a NcmStatsVec of length %u.", ncm_vector_len (x), svec->len);
+
+  if (ncm_vector_stride (x) == 1)
+    return x;
+
+  ncm_vector_memcpy (svec->x_contiguous, x);
+
+  return svec->x_contiguous;
+}
+
+static void
+_ncm_stats_vec_save (NcmStatsVec *svec, NcmVector *x, const gdouble w, gboolean dup, const guint pos)
+{
+  NcmVector *v = dup ? ncm_vector_dup (x) : ncm_vector_ref (x);
+
+  g_ptr_array_insert (svec->saved_x, (pos == G_MAXUINT) ? -1 : (gint) pos, v);
+
+  if (pos == G_MAXUINT)
+    g_array_append_val (svec->saved_w, w);
+  else
+    g_array_insert_val (svec->saved_w, pos, w);
+}
+
 /**
  * ncm_stats_vec_update_weight:
  * @svec: a #NcmStatsVec
- * @w: The statistical weight
+ * @w: weight, non-negative
  *
- * Updates the statistics using @svec->x set in @svec and @weight, then reset
- * @svec->x to zero.
- *
+ * Adds the current vector, set by ncm_stats_vec_set(), with weight @w, then sets the
+ * current vector to zero. A zero weight counts in ncm_stats_vec_nitens() but changes no
+ * statistic.
  */
 void
 ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
@@ -635,11 +660,7 @@ ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
   svec->update (svec, w, svec->x);
 
   if (svec->save_x)
-  {
-    NcmVector *v = ncm_vector_dup (svec->x);
-
-    g_ptr_array_add (svec->saved_x, v);
-  }
+    _ncm_stats_vec_save (svec, svec->x, w, TRUE, G_MAXUINT);
 
   ncm_vector_set_zero (svec->x);
 }
@@ -647,79 +668,48 @@ ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
 /**
  * ncm_stats_vec_append_weight:
  * @svec: a #NcmStatsVec
- * @x: a #NcmVector to be added
- * @w: the weight of @x
- * @dup: a boolean
+ * @x: vector of length #NcmStatsVec:length, of any stride
+ * @w: weight, non-negative
+ * @dup: whether to save a copy of @x instead of a reference
  *
- * Appends and updates the statistics using weight @w for the vector @x #NcmVector of same
- * size #NcmStatsVec:length and with continuous allocation. i.e., NcmVector:stride == 1.
- *
- * If @svec was created with save_x TRUE, the paramenter @dup determines if the vector
- * @x will be duplicated or if just a reference for @x will be saved.
- *
+ * Adds @x with weight @w and, with #NcmStatsVec:save-x, saves it as the last row. Aborts if
+ * the length of @x differs from #NcmStatsVec:length.
  */
 void
 ncm_stats_vec_append_weight (NcmStatsVec *svec, NcmVector *x, gdouble w, gboolean dup)
 {
-  svec->update (svec, w, x);
+  svec->update (svec, w, _ncm_stats_vec_contiguous (svec, x));
 
   if (svec->save_x)
-  {
-    if (dup)
-      g_ptr_array_add (svec->saved_x, ncm_vector_dup (x));
-    else
-      g_ptr_array_add (svec->saved_x, ncm_vector_ref (x));
-  }
+    _ncm_stats_vec_save (svec, x, w, dup, G_MAXUINT);
 }
 
 /**
  * ncm_stats_vec_prepend_weight:
  * @svec: a #NcmStatsVec
- * @x: a #NcmVector to be added
- * @w: the weight of @x
- * @dup: a boolean
+ * @x: vector of length #NcmStatsVec:length, of any stride
+ * @w: weight, non-negative
+ * @dup: whether to save a copy of @x instead of a reference
  *
- * Prepends and updates the statistics using the vector @x and weight @w.
- * It assumes that #NcmVector is of same size #NcmStatsVec:length and
- * with continuous allocation. i.e., NcmVector:stride == 1.
- *
- * If @svec was created with save_x TRUE, the paramenter @dup determines if the vector
- * will be duplicated or if just a reference for @x will be saved.
- *
+ * Adds @x with weight @w and, with #NcmStatsVec:save-x, saves it as the first row. Aborts
+ * if the length of @x differs from #NcmStatsVec:length.
  */
 void
 ncm_stats_vec_prepend_weight (NcmStatsVec *svec, NcmVector *x, gdouble w, gboolean dup)
 {
-  svec->update (svec, w, x);
+  svec->update (svec, w, _ncm_stats_vec_contiguous (svec, x));
 
   if (svec->save_x)
-  {
-    const guint cp_len  = 1;
-    const guint old_len = svec->saved_x->len;
-    const guint new_len = old_len + cp_len;
-
-    g_ptr_array_set_size (svec->saved_x, new_len);
-    memmove (&svec->saved_x->pdata[cp_len], svec->saved_x->pdata, sizeof (gpointer) * old_len);
-
-    if (dup)
-      g_ptr_array_index (svec->saved_x, 0) = ncm_vector_dup (x);
-    else
-      g_ptr_array_index (svec->saved_x, 0) = ncm_vector_ref (x);
-  }
+    _ncm_stats_vec_save (svec, x, w, dup, 0);
 }
 
 /**
  * ncm_stats_vec_append:
  * @svec: a #NcmStatsVec
- * @x: a #NcmVector to be added
- * @dup: a boolean
+ * @x: vector of length #NcmStatsVec:length, of any stride
+ * @dup: whether to save a copy of @x instead of a reference
  *
- * Appends and updates the statistics using weight 1.0 for the vector @x #NcmVector of same
- * size #NcmStatsVec:length and with continuous allocation. i.e., NcmVector:stride == 1.
- *
- * If @svec was created with save_x TRUE, the paramenter @dup determines if the vector
- * @x will be duplicated or if just a reference for @x will be saved.
- *
+ * ncm_stats_vec_append_weight() with weight 1.
  */
 void
 ncm_stats_vec_append (NcmStatsVec *svec, NcmVector *x, gboolean dup)
@@ -730,16 +720,10 @@ ncm_stats_vec_append (NcmStatsVec *svec, NcmVector *x, gboolean dup)
 /**
  * ncm_stats_vec_prepend:
  * @svec: a #NcmStatsVec
- * @x: a #NcmVector to be added
- * @dup: a boolean
+ * @x: vector of length #NcmStatsVec:length, of any stride
+ * @dup: whether to save a copy of @x instead of a reference
  *
- * Prepends and updates the statistics using the vector @x and weight 1.0.
- * It assumes that #NcmVector is of same size #NcmStatsVec:length and
- * with continuous allocation. i.e., NcmVector:stride == 1.
- *
- * If @svec was created with save_x TRUE, the paramenter @dup determines if the vector
- * will be duplicated or if just a reference for @x will be saved.
- *
+ * ncm_stats_vec_prepend_weight() with weight 1.
  */
 void
 ncm_stats_vec_prepend (NcmStatsVec *svec, NcmVector *x, gboolean dup)
@@ -750,17 +734,10 @@ ncm_stats_vec_prepend (NcmStatsVec *svec, NcmVector *x, gboolean dup)
 /**
  * ncm_stats_vec_append_data:
  * @svec: a #NcmStatsVec
- * @data: (element-type NcmVector): a #GPtrArray containing #NcmVector s to be added
- * @dup: a boolean
+ * @data: (element-type NcmVector): vectors of length #NcmStatsVec:length
+ * @dup: whether to save copies of the vectors instead of references
  *
- * Appends and updates the statistics using the data contained in @data and weight == 1.0.
- * It assumes that each element of @data is a #NcmVector of same size #NcmStatsVec:length and
- * with continuous allocation. i.e., NcmVector:stride == 1.
- *
- * If @svec was created with save_x TRUE, the paramenter @dup determines if the vectors
- * from @data will be duplicated or if just a reference for the current vectors in @data
- * will be saved.
- *
+ * Calls ncm_stats_vec_append() on each element of @data, in order.
  */
 void
 ncm_stats_vec_append_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
@@ -771,73 +748,48 @@ ncm_stats_vec_append_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
   {
     NcmVector *x = g_ptr_array_index (data, i);
 
-    svec->update (svec, 1.0, x);
+    svec->update (svec, 1.0, _ncm_stats_vec_contiguous (svec, x));
 
     if (svec->save_x)
-    {
-      if (dup)
-        g_ptr_array_add (svec->saved_x, ncm_vector_dup (x));
-      else
-        g_ptr_array_add (svec->saved_x, ncm_vector_ref (x));
-    }
+      _ncm_stats_vec_save (svec, x, 1.0, dup, G_MAXUINT);
   }
 }
 
 /**
  * ncm_stats_vec_prepend_data:
  * @svec: a #NcmStatsVec
- * @data: (element-type NcmVector): a #GPtrArray containing #NcmVector s to be added
- * @dup: a boolean
+ * @data: (element-type NcmVector): vectors of length #NcmStatsVec:length
+ * @dup: whether to save copies of the vectors instead of references
  *
- * Prepends and updates the statistics using the data contained in @data and weight == 1.0.
- * It assumes that each element of @data is a #NcmVector of same size #NcmStatsVec:length and
- * with continuous allocation. i.e., NcmVector:stride == 1.
- *
- * If @svec was created with save_x TRUE, the paramenter @dup determines if the vectors
- * from @data will be duplicated or if just a reference for the current vectors in @data
- * will be saved.
- *
+ * Adds the elements of @data with weight 1 and, with #NcmStatsVec:save-x, saves them before
+ * the existing rows in the order of @data.
  */
 void
 ncm_stats_vec_prepend_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
 {
   guint i;
 
-  if (svec->save_x)
-  {
-    const guint cp_len  = data->len;
-    const guint old_len = svec->saved_x->len;
-    const guint new_len = old_len + cp_len;
-
-    g_ptr_array_set_size (svec->saved_x, new_len);
-    memmove (&svec->saved_x->pdata[cp_len], svec->saved_x->pdata, sizeof (gpointer) * old_len);
-  }
-
   for (i = 0; i < data->len; i++)
   {
     NcmVector *x = g_ptr_array_index (data, i);
 
-    svec->update (svec, 1.0, x);
+    svec->update (svec, 1.0, _ncm_stats_vec_contiguous (svec, x));
 
     if (svec->save_x)
-    {
-      if (dup)
-        g_ptr_array_index (svec->saved_x, i) = ncm_vector_dup (x);
-      else
-        g_ptr_array_index (svec->saved_x, i) = ncm_vector_ref (x);
-    }
+      _ncm_stats_vec_save (svec, x, 1.0, dup, i);
   }
 }
 
 /**
  * ncm_stats_vec_enable_quantile:
  * @svec: a #NcmStatsVec
- * @p: double $\in (0, 1)$
+ * @p: probability, in $(0, 1)$
  *
- * Enables quantile calculation, it will calculate the $p$
- * quantile. Warning, it does not support weighted samples, the results
- * will ignores the weights.
- *
+ * Enables the running estimate of the $p$ quantile of each variable, together with the
+ * $p/2$ and $(1 + p)/2$ quantiles, by the P-squared algorithm of GSL. The quantiles ignore
+ * the weights, except that rows of zero weight are left out. On a non-empty @svec the
+ * saved rows are replayed; without #NcmStatsVec:save-x the earlier rows are left out, with
+ * a warning.
  */
 void
 ncm_stats_vec_enable_quantile (NcmStatsVec *svec, gdouble p)
@@ -874,9 +826,13 @@ ncm_stats_vec_enable_quantile (NcmStatsVec *svec, gdouble p)
         NcmVector *x = g_ptr_array_index (svec->saved_x, i);
         guint j;
 
+        /* As in the updates, a row of zero weight does not enter the quantiles */
+        if (g_array_index (svec->saved_w, gdouble, i) == 0.0)
+          continue;
+
         for (j = 0; j < svec->len; j++)
         {
-          const gdouble x_j                   = ncm_vector_fast_get (x, j);
+          const gdouble x_j                   = ncm_vector_get (x, j);
           gsl_rstat_quantile_workspace *qws_j = g_ptr_array_index (svec->q_array, j);
 
           gsl_rstat_quantile_add (x_j, qws_j);
@@ -890,8 +846,7 @@ ncm_stats_vec_enable_quantile (NcmStatsVec *svec, gdouble p)
  * ncm_stats_vec_disable_quantile:
  * @svec: a #NcmStatsVec
  *
- * Disables quantile calculation.
- *
+ * Disables the quantile estimates.
  */
 void
 ncm_stats_vec_disable_quantile (NcmStatsVec *svec)
@@ -1002,18 +957,10 @@ _ncm_stats_vec_estimate_const_break_int (NcmStatsVec *svec, guint p, guint pad)
 
     cutoff = ceil (sqrt (gsl_cdf_chisq_Qinv (1.0 / n, 1.0)));
 
-    /*printf ("# c0[%5u] % 22.15g % 22.15g % 22.15g\n", pad, t0, sqrt (gsl_cdf_chisq_Qinv (1.0 / n, 1.0)), sqrt (gsl_cdf_chisq_Pinv (1.0 / n, 1.0)));*/
     for (i = 0; i < n; i++)
     {
       NcmVector *row_i = ncm_stats_vec_peek_row (svec, i + pad);
 
-/*
- *     printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g | % 22.15f\n",
- *             ncm_vector_get (row_i, p), t0, ncm_vector_get (row_i, p) - t0, sqrt (ncm_matrix_get (cov, 0, 0)),
- *             stats.sigma_ols, stats.sigma_mad, stats.sigma_rob, stats.sigma,
- *             (ncm_vector_get (row_i, p) - t0) / stats.sigma_rob
- *             );
- */
       if (fabs ((ncm_vector_get (row_i, p) - t0) / stats.sigma_rob) < cutoff)
         break;
     }
@@ -1035,9 +982,10 @@ _ncm_stats_vec_estimate_const_break_int (NcmStatsVec *svec, guint p, guint pad)
  *
  * Estimates the mean $\mu$ and standard deviation $\sigma$ of parameter @p
  * with robust regression and returns the first index $t_0$ within
- * $\alpha\sigma$ of $\mu$, where $\alpha$ satisfies
- * $$ \int_\alpha^\infty\chi_1(X)\mathrm{d}X = 1/N,$$
- * and $N$ is the size of the sample.
+ * $\alpha\sigma$ of $\mu$, where $\alpha$ is $\sqrt{x}$ rounded up, with $x$ the value
+ * exceeded with probability $1/N$ by a $\chi^2_1$ variable, and $N$ the size of the sample.
+ * The robust regression is repeated on the rows after each cut until no row is cut.
+ * Requires #NcmStatsVec:save-x.
  *
  * Returns: $t_0$
  */
@@ -1098,17 +1046,21 @@ _ncm_stats_vec_heidel_diag_pcramer (const gdouble q)
  * @bindex: (out): index of the best p-values
  * @wp: (out): worst parameter index
  * @wp_order: (out): worst parameter AR fit order
- * @wp_pvalue: (out): worst parameter p-value
+ * @wp_pvalue: (out): value of the worst parameter
  *
  * Applies the Heidelberger--Welch convergence diagnostic with @ntests
  * sequential Schruben tests. Uses 10 tests when @ntests is zero and a
  * p-value of $0.05$ when @pvalue is zero.
  *
- * Sets @bindex to the smallest index at which every parameter's p-value is
- * below $1 -$ @pvalue, and to -1 when no index qualifies. The returned vector
- * contains the p-values at @bindex, or for the full sample when no index
- * qualifies. @wp, @wp_order, and @wp_pvalue identify the
- * worst parameter at the selected index.
+ * Each test applies the Cramér-von Mises statistic of the Brownian bridge of the rows from
+ * a starting index to the last, with the spectral density at zero estimated by an AR fit
+ * to the second half of the rows. The values reported are the Cramér-von Mises
+ * cumulative distribution at the statistic, that is one minus the p-values. Sets @bindex
+ * to the smallest starting index at which every value is at most $1 -$ @pvalue, and to -1
+ * when no index qualifies. The returned vector contains the values at @bindex, or for the
+ * full sample when no index qualifies; @wp, @wp_order and @wp_pvalue identify the
+ * parameter with the largest value there, its AR order and its value. Requires
+ * #NcmStatsVec:save-x and at least 10 rows.
  *
  * See:
  *
@@ -1116,7 +1068,7 @@ _ncm_stats_vec_heidel_diag_pcramer (const gdouble q)
  * - [Schruben (1982)](https://doi.org/10.1287/opre.30.3.569)
  * - [Heidelberger (1983)](https://doi.org/10.1287/opre.31.6.1109)
  *
- * Returns: (transfer full): a #NcmVector containing the best p-values.
+ * Returns: (transfer full): the Cramér-von Mises cumulative distribution values.
  */
 NcmVector *
 ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble pvalue, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_pvalue)
@@ -1254,12 +1206,12 @@ ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble 
  * @mean: (out): mean
  * @var: (out): test's variance
  *
- * Computes the empirical cumulative, mean, and variance used by
- * ncm_stats_vec_heidel_diag().
+ * Computes, for variable @p and the rows from the last down to @fi, the cumulative sums in
+ * that order, their mean and the variance used by ncm_stats_vec_heidel_diag().
  *
  * See ncm_stats_vec_heidel_diag().
  *
- * Returns: (transfer full): a #NcmVector containing the empirical cumulative distribution.
+ * Returns: (transfer full): the cumulative sums.
  */
 NcmVector *
 ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint fi, gdouble *mean, gdouble *var)
@@ -1306,9 +1258,9 @@ ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint 
  * @wp_order: (out): worst parameter AR fit order
  * @wp_ess: (out): worst parameter ESS
  *
- * Calculates the time $t_m$ that maximizes the Effective Sample Size (ESS).
- * The variable @ntests control the number of divisions where the ESS
- * will be calculated, if it is zero the default 10 tests will be used.
+ * Finds the starting row that maximizes the smallest effective sample size (ESS) over the
+ * variables, computed from that row to the last with an AR fit, testing @ntests starting
+ * rows (10 when @ntests is zero). Requires #NcmStatsVec:save-x and at least 10 rows.
  *
  * Returns: (transfer full): a #NcmVector containing the best ess.
  */
@@ -1386,9 +1338,9 @@ ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex,
  * ncm_stats_vec_dup_saved_x:
  * @svec: a #NcmStatsVec
  *
- * Creates a copy of the internal saved_x array.
+ * Creates a new array with references to the saved rows.
  *
- * Returns: (transfer full) (element-type NcmVector): a copy of the saved x array or NULL if it was not saved.
+ * Returns: (transfer full) (element-type NcmVector) (nullable): the saved rows, or %NULL without #NcmStatsVec:save-x.
  */
 GPtrArray *
 ncm_stats_vec_dup_saved_x (NcmStatsVec *svec)
@@ -1422,11 +1374,10 @@ ncm_stats_vec_dup_saved_x (NcmStatsVec *svec)
  * ncm_stats_vec_compute_cov_robust_diag:
  * @svec: a #NcmStatsVec
  *
- * Compute the covariance using the saved data applying a
- * a robust scale estimator for each degree of freedom.
+ * Estimates the variance of each variable from the saved rows as the square of the Qn
+ * scale estimator of Rousseeuw and Croux. Requires #NcmStatsVec:save-x and at least 4 rows.
  *
- *
- * Returns: (transfer full): A diagonal #NcmMatrix $D$ containing the estimated variances.
+ * Returns: (transfer full): a diagonal matrix of the variances.
  */
 NcmMatrix *
 ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec)
@@ -1485,13 +1436,11 @@ ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec)
  * ncm_stats_vec_compute_cov_robust_ogk:
  * @svec: a #NcmStatsVec
  *
- * Compute the covariance matrix employing the Orthogonalized Gnanadesikan-Kettenring (OGK)
- * method. This method utilizes saved data and incorporates a robust scale estimator
- * for each degree of freedom. The OGK method provides a robust and efficient approach
- * to compute covariance, ensuring reliable estimates even in the presence of outliers
- * or skewed distributions.
+ * Estimates the covariance from the saved rows by the orthogonalized
+ * Gnanadesikan-Kettenring (OGK) method of Maronna and Zamar (2002), with the Qn scale
+ * estimator. Requires #NcmStatsVec:save-x and at least 4 rows.
  *
- * Returns: (transfer full): A diagonal #NcmMatrix $V$ containing the estimated covariance.
+ * Returns: (transfer full): the covariance matrix.
  */
 NcmMatrix *
 ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
@@ -1508,11 +1457,11 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
   guint a, i;
 
   if (svec->nitens < 4)
-    g_error ("ncm_stats_vec_compute_cov_robust_diag: too few points to estimate the covariance [%d].",
+    g_error ("ncm_stats_vec_compute_cov_robust_ogk: too few points to estimate the covariance [%d].",
              svec->nitens);
 
   if (!svec->save_x)
-    g_error ("ncm_stats_vec_compute_cov_robust_diag: This algorithm requires the saved data into the object.");
+    g_error ("ncm_stats_vec_compute_cov_robust_ogk: This algorithm requires the saved data into the object.");
 
   g_array_set_size (data, svec->nitens);
   g_array_set_size (work, svec->nitens * 3);
@@ -1673,9 +1622,9 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
  * ncm_stats_vec_peek_x:
  * @svec: a #NcmStatsVec
  *
- * Returns the vector containing the current value of the random variables.
+ * Gets the current vector, the one ncm_stats_vec_update() adds.
  *
- * Returns: (transfer none): the random variables vector.
+ * Returns: (transfer none): the current vector.
  */
 NcmVector *
 ncm_stats_vec_peek_x (NcmStatsVec *svec)
@@ -1689,8 +1638,7 @@ ncm_stats_vec_peek_x (NcmStatsVec *svec)
  * @i: a variable index
  * @x_i: the value of the @i-th variable
  *
- * Sets the value of the current @i-th random variable to @x_i.
- *
+ * Sets the @i-th element of the current vector to @x_i.
  */
 void
 ncm_stats_vec_set (NcmStatsVec *svec, guint i, gdouble x_i)
@@ -1703,9 +1651,7 @@ ncm_stats_vec_set (NcmStatsVec *svec, guint i, gdouble x_i)
  * @svec: a #NcmStatsVec
  * @i: a variable index
  *
- * Returns the value of the current @i-th random variable.
- *
- * Returns: @i-th random variable.
+ * Returns: the @i-th element of the current vector.
  */
 gdouble
 ncm_stats_vec_get (NcmStatsVec *svec, guint i)
@@ -1715,10 +1661,9 @@ ncm_stats_vec_get (NcmStatsVec *svec, guint i)
 
 /**
  * ncm_stats_vec_update:
- * @svec: a #NcmStatsVec.
+ * @svec: a #NcmStatsVec
  *
- * Same as ncm_stats_vec_update_weight() assuming weight equal to one.
- *
+ * ncm_stats_vec_update_weight() with weight 1.
  */
 void
 ncm_stats_vec_update (NcmStatsVec *svec)
@@ -1728,11 +1673,9 @@ ncm_stats_vec_update (NcmStatsVec *svec)
 
 /**
  * ncm_stats_vec_len:
- * @svec: a #NcmStatsVec.
+ * @svec: a #NcmStatsVec
  *
- * Gets @svec length.
- *
- * Returns: number of variables in @svec.
+ * Returns: the number of variables.
  */
 guint
 ncm_stats_vec_len (NcmStatsVec *svec)
@@ -1745,9 +1688,7 @@ ncm_stats_vec_len (NcmStatsVec *svec)
  * @svec: a #NcmStatsVec
  * @i: a variable index
  *
- * Return the current value of the variable mean, i.e., $\bar{x}_n$.
- *
- * Returns: $\bar{x}_n$.
+ * Returns: the weighted mean $\bar{x}_n$ of the @i-th variable.
  */
 gdouble
 ncm_stats_vec_get_mean (NcmStatsVec *svec, guint i)
@@ -1760,9 +1701,10 @@ ncm_stats_vec_get_mean (NcmStatsVec *svec, guint i)
  * @svec: a #NcmStatsVec
  * @i: a variable index
  *
- * Return the current value of the variable variance, i.e., $Var_n$.
+ * Gets the bias-corrected weighted variance $V_n$ of the @i-th variable; NaN with a single
+ * row. Requires #NCM_STATS_VEC_VAR or #NCM_STATS_VEC_COV.
  *
- * Returns: $Var_n$.
+ * Returns: $V_n$.
  */
 gdouble
 ncm_stats_vec_get_var (NcmStatsVec *svec, guint i)
@@ -1777,10 +1719,7 @@ ncm_stats_vec_get_var (NcmStatsVec *svec, guint i)
  * @svec: a #NcmStatsVec
  * @i: a variable index
  *
- * Return the current value of the variable standard deviation,
- * i.e., $\sigma_n \equiv sqrt (Var_n)$.
- *
- * Returns: $\sigma_n$
+ * Returns: the standard deviation $\sqrt{V_n}$ of the @i-th variable.
  */
 gdouble
 ncm_stats_vec_get_sd (NcmStatsVec *svec, guint i)
@@ -1794,10 +1733,10 @@ ncm_stats_vec_get_sd (NcmStatsVec *svec, guint i)
  * @i: a variable index
  * @j: a variable index
  *
- * Return the current value of the variance between the @i-th and the @j-th
- * variables, i.e., $Cov_{ij}$.
+ * Gets the bias-corrected weighted covariance of the @i-th and @j-th variables. Requires
+ * #NCM_STATS_VEC_COV.
  *
- * Returns: $Cov_{ij}$.
+ * Returns: $\mathrm{Cov}_{ij}$.
  */
 gdouble
 ncm_stats_vec_get_cov (NcmStatsVec *svec, guint i, guint j)
@@ -1816,10 +1755,7 @@ ncm_stats_vec_get_cov (NcmStatsVec *svec, guint i, guint j)
  * @i: a variable index
  * @j: a variable index
  *
- * Return the current value of the correlation between the @i-th and the @j-th
- * variables, i.e., $$Cor_{ij} \equiv \frac{Cov_{ij}}{\sigma_i\sigma_j}.$$
- *
- * Returns: $Cor_{ij}$.
+ * Returns: the correlation $\mathrm{Cov}_{ij}/(\sigma_i\sigma_j)$ of the @i-th and @j-th variables.
  */
 gdouble
 ncm_stats_vec_get_cor (NcmStatsVec *svec, guint i, guint j)
@@ -1834,10 +1770,7 @@ ncm_stats_vec_get_cor (NcmStatsVec *svec, guint i, guint j)
  * ncm_stats_vec_get_weight:
  * @svec: a #NcmStatsVec
  *
- * Return the current value of the weight, for non-weighted means this is simply
- * the number of elements.
- *
- * Returns: $W_n$.
+ * Returns: the total weight $W_n$; the number of rows when every weight is 1.
  */
 gdouble
 ncm_stats_vec_get_weight (NcmStatsVec *svec)
@@ -1848,11 +1781,10 @@ ncm_stats_vec_get_weight (NcmStatsVec *svec)
 /**
  * ncm_stats_vec_get_mean_vector:
  * @svec: a #NcmStatsVec
- * @mean: a #NcmVector
- * @offset: first parameter index
+ * @x: vector of length at least #NcmStatsVec:length minus @offset
+ * @offset: first variable index
  *
- * Copy the current value of the means to the vector @mean starting from parameter @offset.
- *
+ * Copies the means of the variables from @offset on to @x.
  */
 void
 ncm_stats_vec_get_mean_vector (NcmStatsVec *svec, NcmVector *x, guint offset)
@@ -1866,9 +1798,7 @@ ncm_stats_vec_get_mean_vector (NcmStatsVec *svec, NcmVector *x, guint offset)
  * ncm_stats_vec_peek_mean:
  * @svec: a #NcmStatsVec
  *
- * Gets the local mean vector.
- *
- * Returns: (transfer none): the internal mean #NcmVector.
+ * Returns: (transfer none): the vector of the means, updated in place by further rows.
  */
 NcmVector *
 ncm_stats_vec_peek_mean (NcmStatsVec *svec)
@@ -1879,12 +1809,11 @@ ncm_stats_vec_peek_mean (NcmStatsVec *svec)
 /**
  * ncm_stats_vec_get_cov_matrix:
  * @svec: a #NcmStatsVec
- * @m: a #NcmMatrix
- * @offset: first parameter index
+ * @m: square matrix of order #NcmStatsVec:length minus @offset
+ * @offset: first variable index
  *
- * Copy the current value of the correlation between the variables to the
- * matrix @m starting from paramenter @offset.
- *
+ * Copies the covariance of the variables from @offset on to @m. Aborts unless @svec
+ * was created with #NCM_STATS_VEC_COV.
  */
 void
 ncm_stats_vec_get_cov_matrix (NcmStatsVec *svec, NcmMatrix *m, guint offset)
@@ -1893,6 +1822,9 @@ ncm_stats_vec_get_cov_matrix (NcmStatsVec *svec, NcmMatrix *m, guint offset)
 
   g_assert (m != NULL);
   g_assert_cmpint (offset, <, svec->len);
+
+  if (svec->t != NCM_STATS_VEC_COV)
+    g_error ("ncm_stats_vec_get_cov_matrix: the NcmStatsVec does not compute the covariance, create it with NCM_STATS_VEC_COV.");
 
   if (offset > 0)
   {
@@ -1917,11 +1849,10 @@ ncm_stats_vec_get_cov_matrix (NcmStatsVec *svec, NcmMatrix *m, guint offset)
  * @svec: a #NcmStatsVec
  * @offset: first parameter index
  *
- * Gets the internal covariance matrix starting from paramenter @offset.
- * This is the internal matrix of @svec and can change with further
- * additions to @svec. It is not guaranteed to be valid after new additions.
+ * Fills an internal matrix with ncm_stats_vec_get_cov_matrix() and returns it; the matrix
+ * is overwritten by the next call and is not updated by further rows.
  *
- * Returns: (transfer none): the covariance matrix.
+ * Returns: (transfer none): the covariance matrix of the variables from @offset on.
  */
 NcmMatrix *
 ncm_stats_vec_peek_cov_matrix (NcmStatsVec *svec, guint offset)
@@ -1952,8 +1883,8 @@ ncm_stats_vec_peek_cov_matrix (NcmStatsVec *svec, guint offset)
  * ncm_stats_vec_nrows:
  * @svec: a #NcmStatsVec
  *
- * Gets the number of saved rows, this function fails if the object
- * was not created with save_x == TRUE;
+ * Gets the number of saved rows, including rows kept by ncm_stats_vec_reset() with
+ * @rm_saved %FALSE. Requires #NcmStatsVec:save-x.
  *
  * Returns: the number of saved rows.
  */
@@ -1969,9 +1900,7 @@ ncm_stats_vec_nrows (NcmStatsVec *svec)
  * ncm_stats_vec_nitens:
  * @svec: a #NcmStatsVec
  *
- * Gets the number of items added to the object;
- *
- * Returns: the number of items added.
+ * Returns: the number of rows added since the last reset, zero-weight rows included.
  */
 guint
 ncm_stats_vec_nitens (NcmStatsVec *svec)
@@ -1982,12 +1911,12 @@ ncm_stats_vec_nitens (NcmStatsVec *svec)
 /**
  * ncm_stats_vec_peek_row:
  * @svec: a #NcmStatsVec
- * @i: the row's index
+ * @i: position of the saved row
  *
- * The i-th data row used in the statistics, this function fails if the object
- * was not created with save_x == TRUE;
+ * Gets the saved row at position @i, counting every saved row; see ncm_stats_vec_reset() for
+ * rows kept across a reset. Requires #NcmStatsVec:save-x.
  *
- * Returns: (transfer none): the i-th data row.
+ * Returns: (transfer none): the saved row at position @i.
  */
 NcmVector *
 ncm_stats_vec_peek_row (NcmStatsVec *svec, guint i)
@@ -2001,13 +1930,13 @@ ncm_stats_vec_peek_row (NcmStatsVec *svec, guint i)
 /**
  * ncm_stats_vec_get_param_at:
  * @svec: a #NcmStatsVec
- * @i: the row's index
- * @p: the parameter's index
+ * @i: position of the saved row
+ * @p: element index
  *
- * Gets the p-th parameter in the i-th data row used in the statistics, this
- * function fails if the object was not created with save_x == TRUE;
+ * Gets element @p of the saved row at position @i, see ncm_stats_vec_peek_row(); @i must be
+ * below ncm_stats_vec_nitens(). Requires #NcmStatsVec:save-x.
  *
- * Returns: the parameter value.
+ * Returns: the element.
  */
 gdouble
 ncm_stats_vec_get_param_at (NcmStatsVec *svec, guint i, guint p)
