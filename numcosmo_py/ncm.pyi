@@ -8671,15 +8671,15 @@ class PriorFlat(Prior):
 
     Properties from NcmPriorFlat:
       x-low -> gdouble: x-low
-        lower limit
+        Lower limit
       x-upp -> gdouble: x-upp
-        upper limit
+        Upper limit
       scale -> gdouble: scale
-        border scale
+        Width of the walls
       h0 -> gdouble: h0
-        Cut magnitude
+        Height of the walls
       variable -> gdouble: variable
-        variable
+        Argument of the mean function
 
     Properties from NcmMSetFunc:
       nvariables -> guint: nvariables
@@ -8762,15 +8762,15 @@ class PriorFlatFunc(PriorFlat):
 
     Properties from NcmPriorFlat:
       x-low -> gdouble: x-low
-        lower limit
+        Lower limit
       x-upp -> gdouble: x-upp
-        upper limit
+        Upper limit
       scale -> gdouble: scale
-        border scale
+        Width of the walls
       h0 -> gdouble: h0
-        Cut magnitude
+        Height of the walls
       variable -> gdouble: variable
-        variable
+        Argument of the mean function
 
     Properties from NcmMSetFunc:
       nvariables -> guint: nvariables
@@ -8855,15 +8855,15 @@ class PriorFlatParam(PriorFlat):
 
     Properties from NcmPriorFlat:
       x-low -> gdouble: x-low
-        lower limit
+        Lower limit
       x-upp -> gdouble: x-upp
-        upper limit
+        Upper limit
       scale -> gdouble: scale
-        border scale
+        Width of the walls
       h0 -> gdouble: h0
-        Cut magnitude
+        Height of the walls
       variable -> gdouble: variable
-        variable
+        Argument of the mean function
 
     Properties from NcmMSetFunc:
       nvariables -> guint: nvariables
@@ -8947,11 +8947,11 @@ class PriorGauss(Prior):
 
     Properties from NcmPriorGauss:
       mu -> gdouble: mu
-        mean
+        Mean
       sigma -> gdouble: sigma
-        standard deviation
+        Standard deviation
       variable -> gdouble: variable
-        variable
+        Argument of the mean function
 
     Properties from NcmMSetFunc:
       nvariables -> guint: nvariables
@@ -9026,11 +9026,11 @@ class PriorGaussFunc(PriorGauss):
 
     Properties from NcmPriorGauss:
       mu -> gdouble: mu
-        mean
+        Mean
       sigma -> gdouble: sigma
-        standard deviation
+        Standard deviation
       variable -> gdouble: variable
-        variable
+        Argument of the mean function
 
     Properties from NcmMSetFunc:
       nvariables -> guint: nvariables
@@ -9106,11 +9106,11 @@ class PriorGaussParam(PriorGauss):
 
     Properties from NcmPriorGauss:
       mu -> gdouble: mu
-        mean
+        Mean
       sigma -> gdouble: sigma
-        standard deviation
+        Standard deviation
       variable -> gdouble: variable
-        variable
+        Argument of the mean function
 
     Properties from NcmMSetFunc:
       nvariables -> guint: nvariables

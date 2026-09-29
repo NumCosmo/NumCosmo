@@ -413,6 +413,10 @@ math_tests = [
         'timeout': 0,
     },
     {
+        'name': 'ncm_prior',
+        'sources': ['ncm/fit/test_ncm_prior.c'],
+    },
+    {
         'name': 'ncm_fit_state',
         'sources': ['ncm/fit/test_ncm_fit_state.c'],
     },

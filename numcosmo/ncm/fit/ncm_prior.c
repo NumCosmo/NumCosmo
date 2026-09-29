@@ -28,15 +28,15 @@
  *
  * Base class for prior distributions.
  *
- * This object defines a base class for priors used by NcmLikelihood. These objects
- * describe various prior distributions applicable to parameters or any derived
- * quantity. Two types of priors are supported:
+ * This object defines a base class for priors used by #NcmLikelihood. These objects
+ * describe prior distributions applicable to parameters or any derived quantity. A
+ * prior returns one of two quantities, see ncm_prior_is_m2lnL():
  *
- * 1. Priors returning $-2\ln(L_\mathrm{prior})$
- * 2. Priors returning $f$ such that $-2\ln(P_\mathrm{prior}) = f^2$
+ * 1. $-2\ln P$, added to $-2\ln L$ as it is;
+ * 2. $f$ such that $-2\ln P = f^2$, added to $-2\ln L$ as $f^2$.
  *
- * The second type is essential when conducting least-squares based analysis but
- * can also be used in any other type of analysis.
+ * The second form is also a least-squares residual, so those priors can be used by the
+ * least-squares fits as well as by any other analysis.
  *
  */
 
@@ -66,21 +66,11 @@ _ncm_prior_constructed (GObject *object)
 }
 
 static void
-_ncm_prior_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_prior_parent_class)->finalize (object);
-}
-
-static void
 ncm_prior_class_init (NcmPriorClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  /* NcmMSetFuncClass *func_class = NCM_MSET_FUNC_CLASS (klass); */
-
   object_class->constructed = &_ncm_prior_constructed;
-  object_class->finalize    = &_ncm_prior_finalize;
 
   klass->is_m2lnL = FALSE;
 }
@@ -129,8 +119,8 @@ ncm_prior_clear (NcmPrior **prior)
  * ncm_prior_is_m2lnL:
  * @prior: a #NcmPrior
  *
- * Returns: TRUE if the prior calculates $-2\ln(L_\mathrm{prior})$ and FALSE
- * if it returns $f$ such that $-2\ln(L_\mathrm{prior}) = f^2$.
+ * Returns: TRUE if the prior returns $-2\ln P$ and FALSE if it returns $f$ such that
+ * $-2\ln P = f^2$.
  */
 gboolean
 ncm_prior_is_m2lnL (NcmPrior *prior)
