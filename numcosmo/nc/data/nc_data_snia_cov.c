@@ -290,8 +290,6 @@ typedef struct _NcDataSNIACovPrivate
   NcmVector *cov_packed;
   NcmMatrix *cov_full;
   NcmVector *cov_full_diag;
-  NcmMatrix *inv_cov_mm;
-  NcmMatrix *inv_cov_mm_LU;
   gboolean has_complete_cov;
   NcDataSNIACovResample resample_type;
   guint cov_full_state;
@@ -414,9 +412,6 @@ nc_data_snia_cov_init (NcDataSNIACov *snia_cov)
   self->cov_full_diag = NULL;
   self->cov_packed    = NULL;
 
-  self->inv_cov_mm    = NULL;
-  self->inv_cov_mm_LU = NULL;
-
   self->has_complete_cov = FALSE;
   self->cov_full_state   = NC_DATA_SNIA_COV_PREP_TO_NOTHING;
   self->has_true_wc      = FALSE;
@@ -527,8 +522,15 @@ nc_data_snia_cov_set_property (GObject *object, guint prop_id, const GValue *val
       break;
     }
     case PROP_COV_FULL:
-      nc_data_snia_cov_set_cov_full (snia_cov, g_value_get_object (value));
+    {
+      NcmMatrix *cov_full = g_value_get_object (value);
+
+      /* Version 2 has no light-curve covariance; a cov-full from an older serialization is ignored. */
+      if ((cov_full != NULL) && (self->cat_version < 2))
+        nc_data_snia_cov_set_cov_full (snia_cov, cov_full);
+
       break;
+    }
     case PROP_HAS_COMPLETE_COV:
       self->has_complete_cov = g_value_get_boolean (value);
       break;
@@ -821,6 +823,13 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
                                                          "Whether the SNIa was used in SH0ES",
                                                          G_VARIANT_TYPE ("au"), NULL,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataSNIACov:cov-full:
+   *
+   * The light-curve covariance of magnitude, width and colour, a $3n \times 3n$ matrix
+   * for $n$ supernovae; %NULL for catalog version 2, which ignores a value set here.
+   */
   g_object_class_install_property (object_class,
                                    PROP_COV_FULL,
                                    g_param_spec_object ("cov-full",
@@ -991,6 +1000,8 @@ static void _nc_data_snia_cov_diag_to_full_cov (NcDataSNIACov *snia_cov,
                                                 NcmVector     *diag_mag_colour,
                                                 NcmVector     *diag_width_colour);
 static void _nc_data_snia_cov_save_cov_lowertri (NcDataSNIACov *snia_cov);
+static void _nc_data_snia_cov_alloc_cov_full (NcDataSNIACov *snia_cov);
+static void _nc_data_snia_cov_free_cov_full (NcDataSNIACov *snia_cov);
 
 static void
 _nc_data_snia_cov_load_catalog (NcDataSNIACov *snia_cov)
@@ -1080,9 +1091,7 @@ _nc_data_snia_cov_load_catalog (NcDataSNIACov *snia_cov)
 
   /* Setting everything to zero */
   ncm_matrix_set_zero (self->cov_mbc_mbc);
-  ncm_matrix_set_zero (self->cov_full);
-  ncm_vector_set_zero (self->cov_full_diag);
-  ncm_vector_set_zero (self->cov_packed);
+  _nc_data_snia_cov_free_cov_full (snia_cov);
 
   if (self->cat_version == 0)
   {
@@ -1226,7 +1235,9 @@ _nc_data_snia_cov_load_catalog (NcDataSNIACov *snia_cov)
   NCM_FITS_ERROR (status);
 
   _NC_DATA_SNIA_COV_SET_DATA_INIT_ALL;
-  nc_data_snia_cov_set_cov_full (snia_cov, self->cov_full);
+
+  if (self->cov_full != NULL)
+    nc_data_snia_cov_set_cov_full (snia_cov, self->cov_full);
 
   self->catalog_backend = TRUE;
 }
@@ -1451,13 +1462,8 @@ _nc_data_snia_cov_set_size (NcmDataGaussCov *gauss, guint mu_len)
       ncm_vector_clear (&self->cov_width_ampl);
       ncm_vector_clear (&self->cov_colour_ampl);
 
-      ncm_vector_clear (&self->cov_packed);
       ncm_matrix_clear (&self->cov_mbc_mbc);
-      ncm_vector_clear (&self->cov_full_diag);
-      ncm_matrix_clear (&self->cov_full);
-
-      ncm_matrix_clear (&self->inv_cov_mm_LU);
-      ncm_matrix_clear (&self->inv_cov_mm);
+      _nc_data_snia_cov_free_cov_full (snia_cov);
 
       g_clear_pointer (&self->is_calib, g_array_unref);
       g_clear_pointer (&self->used_in_sh0es, g_array_unref);
@@ -1538,13 +1544,7 @@ _nc_data_snia_cov_set_size (NcmDataGaussCov *gauss, guint mu_len)
       self->cov_width_ampl   = ncm_vector_new (mu_len);
       self->cov_colour_ampl  = ncm_vector_new (mu_len);
 
-      self->cov_full_diag = ncm_vector_new (3 * mu_len);
-      self->cov_mbc_mbc   = ncm_matrix_new (mu_len, mu_len);
-      self->cov_full      = ncm_matrix_new (3 * mu_len, 3 * mu_len);
-      self->cov_packed    = ncm_vector_new (self->uppertri_len * NC_DATA_SNIA_COV_ORDER_LENGTH);
-
-      self->inv_cov_mm    = ncm_matrix_new (mu_len, mu_len);
-      self->inv_cov_mm_LU = ncm_matrix_new (mu_len, mu_len);
+      self->cov_mbc_mbc = ncm_matrix_new (mu_len, mu_len);
 
       self->is_calib      = g_array_sized_new (FALSE, TRUE, sizeof (guint32), mu_len);
       self->used_in_sh0es = g_array_sized_new (FALSE, TRUE, sizeof (guint32), mu_len);
@@ -1819,16 +1819,17 @@ nc_data_snia_cov_get_resample_type (NcDataSNIACov *snia_cov)
  * nc_data_snia_cov_peek_cov_full:
  * @snia_cov: a #NcDataSNIACov
  *
- * Gets the cov_full #NcmMatrix.
+ * Gets the light-curve covariance, see #NcDataSNIACov:cov-full.
  *
- * Returns: (transfer none): the cov_full #NcmMatrix
+ * Returns: (transfer none) (nullable): the light-curve covariance #NcmMatrix, or %NULL
+ * when the catalog has none
  */
 NcmMatrix *
 nc_data_snia_cov_peek_cov_full (NcDataSNIACov *snia_cov)
 {
   NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
-  if (self->mu_len > 0)
+  if (self->cov_full != NULL)
     _nc_data_snia_cov_restore_full_cov (snia_cov);
 
   return self->cov_full;
@@ -1838,9 +1839,10 @@ nc_data_snia_cov_peek_cov_full (NcDataSNIACov *snia_cov)
  * nc_data_snia_cov_peek_cov_packed:
  * @snia_cov: a #NcDataSNIACov
  *
- * Gets the packed version of the full covariance.
+ * Gets the packed version of the light-curve covariance.
  *
- * Returns: (transfer none): an #NcmVector containing the packed covariance matrix.
+ * Returns: (transfer none) (nullable): an #NcmVector containing the packed covariance
+ * matrix, or %NULL when the catalog has no light-curve covariance
  */
 NcmVector *
 nc_data_snia_cov_peek_cov_packed (NcDataSNIACov *snia_cov)
@@ -2283,11 +2285,11 @@ nc_data_snia_cov_set_used_in_sh0es (NcDataSNIACov *snia_cov, GArray *used_in_sh0
 /**
  * nc_data_snia_cov_set_cov_full:
  * @snia_cov: a #NcDataSNIACov
- * @cov_full: the full covariance #NcmMatrix
+ * @cov_full: the light-curve covariance #NcmMatrix
  *
- * Sets the full covariance for the system, the size of @cov_full,
- * must match the system size.
- *
+ * Copies @cov_full into the light-curve covariance, see #NcDataSNIACov:cov-full, and
+ * packs it for #NcSNIADistCov. When #NcDataSNIACov:has-complete-cov is set, a @cov_full
+ * that is not positive definite is a fatal error.
  */
 void
 nc_data_snia_cov_set_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov_full)
@@ -2302,6 +2304,7 @@ nc_data_snia_cov_set_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov_full)
     g_assert_cmpuint (ncm_matrix_nrows (cov_full), ==, tmu_len);
     g_assert_cmpuint (ncm_matrix_ncols (cov_full), ==, tmu_len);
 
+    _nc_data_snia_cov_alloc_cov_full (snia_cov);
     ncm_matrix_memcpy (self->cov_full, cov_full);
   }
 
@@ -2340,31 +2343,13 @@ nc_data_snia_cov_set_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov_full)
 
   _nc_data_snia_cov_save_cov_lowertri (snia_cov);
 
+  /* Positive-definiteness check; the diagonal and lower triangle saved above keep the matrix. */
   if (self->has_complete_cov)
   {
-    gint ret;
-
-    ret = ncm_matrix_cholesky_decomp (self->cov_full, 'U');
+    gint ret = ncm_matrix_cholesky_decomp (self->cov_full, 'U');
 
     if (ret != 0)
       g_error ("nc_data_snia_cov_set_cov_full[ncm_matrix_cholesky_decomp]: %d.", ret);
-
-    ret = ncm_matrix_cholesky_inverse (self->cov_full, 'U');
-
-    if (ret != 0)
-      g_error ("nc_data_snia_cov_set_cov_full[ncm_matrix_cholesky_inverse]: %d.", ret);
-
-    ncm_matrix_set_zero (self->inv_cov_mm);
-
-    for (i = 0; i < mu_len; i++)
-    {
-      for (j = i; j < mu_len; j++)
-      {
-        const gdouble inv_cov_full_ij = ncm_matrix_get (self->cov_full, i, j);
-
-        ncm_matrix_set (self->inv_cov_mm, i, j, inv_cov_full_ij);
-      }
-    }
   }
 
   _NC_DATA_SNIA_COV_SET_DATA_INIT_V01 (COV_FULL);
@@ -2435,8 +2420,7 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
 
   /* Setting everything to zero */
   ncm_matrix_set_zero (self->cov_mbc_mbc);
-  ncm_matrix_set_zero (self->cov_full);
-  ncm_vector_set_zero (self->cov_packed);
+  _nc_data_snia_cov_free_cov_full (snia_cov);
 
   if (!g_key_file_has_key (snia_keyfile,
                            NC_DATA_SNIA_COV_DATA_GROUP,
@@ -2643,6 +2627,7 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
     g_free (datafile);
   }
 
+  if (self->cov_full != NULL)
   {
     const guint mu_len  = self->mu_len;
     const guint tmu_len = 3 * mu_len;
@@ -2662,9 +2647,10 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
         ncm_matrix_set (self->cov_full, j, i, cov_ij);
       }
     }
+
+    nc_data_snia_cov_set_cov_full (snia_cov, self->cov_full);
   }
 
-  nc_data_snia_cov_set_cov_full (snia_cov, self->cov_full);
   _NC_DATA_SNIA_COV_SET_DATA_INIT_ALL;
   ncm_matrix_clear (&cov);
   g_key_file_free (snia_keyfile);
@@ -3036,6 +3022,40 @@ _nc_data_snia_cov_load_matrix (const gchar *filename, NcmMatrix *data)
   g_array_free (array, TRUE);
 }
 
+/* Allocates the light-curve covariance buffers, zeroed, if they do not exist. */
+static void
+_nc_data_snia_cov_alloc_cov_full (NcDataSNIACov *snia_cov)
+{
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
+
+  if (self->cov_full == NULL)
+  {
+    const guint tmu_len = 3 * self->mu_len;
+
+    g_assert_cmpuint (self->mu_len, >, 0);
+
+    self->cov_full      = ncm_matrix_new0 (tmu_len, tmu_len);
+    self->cov_full_diag = ncm_vector_new (tmu_len);
+    self->cov_packed    = ncm_vector_new (self->uppertri_len * NC_DATA_SNIA_COV_ORDER_LENGTH);
+
+    ncm_vector_set_zero (self->cov_full_diag);
+    ncm_vector_set_zero (self->cov_packed);
+    self->cov_full_state = NC_DATA_SNIA_COV_PREP_TO_NOTHING;
+  }
+}
+
+/* Frees the light-curve covariance buffers; the next write allocates them again. */
+static void
+_nc_data_snia_cov_free_cov_full (NcDataSNIACov *snia_cov)
+{
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
+
+  ncm_matrix_clear (&self->cov_full);
+  ncm_vector_clear (&self->cov_full_diag);
+  ncm_vector_clear (&self->cov_packed);
+  self->cov_full_state = NC_DATA_SNIA_COV_PREP_TO_NOTHING;
+}
+
 static void
 _nc_data_snia_cov_diag_to_full_cov (NcDataSNIACov *snia_cov,
                                     NcmVector     *sigma_mag,
@@ -3048,6 +3068,8 @@ _nc_data_snia_cov_diag_to_full_cov (NcDataSNIACov *snia_cov,
   NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   const guint mu_len                = self->mu_len;
   guint i;
+
+  _nc_data_snia_cov_alloc_cov_full (snia_cov);
 
   for (i = 0; i < mu_len; i++)
   {
@@ -3076,8 +3098,11 @@ _nc_data_snia_cov_matrix_to_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov, g
 {
   NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   const guint mu_len                = self->mu_len;
-  NcmMatrix *subcov                 = ncm_matrix_get_submatrix (self->cov_full, i * mu_len, j * mu_len, mu_len, mu_len);
+  NcmMatrix *subcov;
 
+  _nc_data_snia_cov_alloc_cov_full (snia_cov);
+
+  subcov = ncm_matrix_get_submatrix (self->cov_full, i * mu_len, j * mu_len, mu_len, mu_len);
   ncm_matrix_add_mul (subcov, 1.0, cov);
   ncm_matrix_clear (&subcov);
 }
@@ -3484,6 +3509,9 @@ _nc_data_snia_cov_prep_to_resample (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov
     g_error ("_nc_data_snia_cov_prep_to_resample: cannot prepare to resample, empty catalog %d or it hasn't a complete covariance %d.\n",
              mu_len == 0, !self->has_complete_cov);
 
+  if (self->cov_full == NULL)
+    g_error ("_nc_data_snia_cov_prep_to_resample: catalog version %u has no light-curve covariance.", self->cat_version);
+
   g_clear_pointer (&self->catalog_file, g_free);
   self->catalog_backend = FALSE;
 
@@ -3519,6 +3547,9 @@ _nc_data_snia_cov_prep_to_estimate (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov
   if ((mu_len == 0) || !self->has_complete_cov)
     g_error ("_nc_data_snia_cov_prep_to_estimate: cannot prepare to estimate, empty catalog %d or it hasn't a complete covariance %d.\n",
              mu_len == 0, !self->has_complete_cov);
+
+  if (self->cov_full == NULL)
+    g_error ("_nc_data_snia_cov_prep_to_estimate: catalog version %u has no light-curve covariance.", self->cat_version);
 
   for (i = 0; i < mu_len; i++)
   {
