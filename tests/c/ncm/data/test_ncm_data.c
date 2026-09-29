@@ -323,7 +323,8 @@ test_ncm_data_fisher (TestNcmData *test, gconstpointer pdata)
   ncm_matrix_set_all (IM, -7.0);
   ncm_data_fisher_matrix (test->data, test->mset, &IM);
   g_assert_true (IM == IM_in);
-  g_assert_cmpfloat (ncm_matrix_get (IM, 0, 1), ==, ncm_matrix_get (IM, 1, 0));
+  /* Symmetric up to the summation order of the BLAS product. */
+  ncm_assert_cmpdouble_e (ncm_matrix_get (IM, 0, 1), ==, ncm_matrix_get (IM, 1, 0), 1.0e-14, 0.0);
   g_assert_cmpfloat (ncm_matrix_get (IM, 0, 0), >, 0.0);
 
   ncm_matrix_free (IM);

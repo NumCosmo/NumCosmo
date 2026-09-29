@@ -568,6 +568,28 @@ _test_unit_residual (NcmDataGaussCov *gauss)
   ncm_matrix_free (cov);
 }
 
+/* The sum of the squared residuals mean - y, computed here. The residuals are
+ * (m + 1) - m, which is 1 only up to the rounding of m, a cosine; the library sums
+ * the same squares in another order (BLAS), so the two agree to rounding only. */
+static gdouble
+_test_residual_ss (NcmDataGaussCov *gauss)
+{
+  const guint np = ncm_data_gauss_cov_get_size (gauss);
+  NcmVector *mu  = ncm_vector_new (np);
+  NcmVector *y   = ncm_data_gauss_cov_peek_mean (gauss);
+  gdouble ss     = 0.0;
+  guint i;
+
+  ncm_data_gauss_cov_test_mean_func (gauss, NULL, mu);
+
+  for (i = 0; i < np; i++)
+    ss += gsl_pow_2 (ncm_vector_get (mu, i) - ncm_vector_get (y, i));
+
+  ncm_vector_free (mu);
+
+  return ss;
+}
+
 void
 test_ncm_data_gauss_cov_test_replace_cov (TestNcmDataGaussCovTest *test, gconstpointer pdata)
 {
@@ -575,12 +597,14 @@ test_ncm_data_gauss_cov_test_replace_cov (TestNcmDataGaussCovTest *test, gconstp
   const guint np         = ncm_data_gauss_cov_get_size (gauss);
   NcmVector *f           = ncm_vector_new (np);
   NcmMatrix *cov         = ncm_matrix_new (np, np);
-  gdouble m2lnL;
+  gdouble m2lnL, ss;
 
   _test_unit_residual (gauss);
+  ss = _test_residual_ss (gauss);
 
+  /* A stale factor would be off by a factor of 4; rounding is below 1e-15. */
   ncm_data_m2lnL_val (test->data, NULL, &m2lnL);
-  g_assert_cmpfloat (m2lnL, ==, np);
+  ncm_assert_cmpdouble_e (m2lnL, ==, ss, 1.0e-13, 0.0);
 
   /* Replacing the covariance invalidates its Cholesky factor. */
   ncm_matrix_set_identity (cov);
@@ -589,15 +613,15 @@ test_ncm_data_gauss_cov_test_replace_cov (TestNcmDataGaussCovTest *test, gconstp
 
   ncm_data_m2lnL_val (test->data, NULL, &m2lnL);
   ncm_data_leastsquares_f (test->data, NULL, f);
-  g_assert_cmpfloat (m2lnL, ==, 4.0 * np);
-  g_assert_cmpfloat (ncm_vector_dot (f, f), ==, 4.0 * np);
+  ncm_assert_cmpdouble_e (m2lnL, ==, 4.0 * ss, 1.0e-13, 0.0);
+  ncm_assert_cmpdouble_e (ncm_vector_dot (f, f), ==, 4.0 * ss, 1.0e-13, 0.0);
 
   /* So does setting the property. */
   ncm_matrix_set_identity (cov);
   g_object_set (gauss, "cov", cov, NULL);
 
   ncm_data_m2lnL_val (test->data, NULL, &m2lnL);
-  g_assert_cmpfloat (m2lnL, ==, np);
+  ncm_assert_cmpdouble_e (m2lnL, ==, ss, 1.0e-13, 0.0);
 
   ncm_vector_free (f);
   ncm_matrix_free (cov);
