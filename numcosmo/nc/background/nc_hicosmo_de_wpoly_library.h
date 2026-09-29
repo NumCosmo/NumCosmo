@@ -37,22 +37,22 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcHICosmoDEWPolyLibrary, nc_hicosmo_de_wpoly_library, NC, HICOSMO_DE_WPOLY_LIBRARY, GObject)
 
-NcHICosmoDEWPolyLibrary *nc_hicosmo_de_wpoly_library_new (gulong seed, guint degree, const gdouble z_f, guint n_per_class);
+NcHICosmoDEWPolyLibrary *nc_hicosmo_de_wpoly_library_new (gulong seed, guint degree, const gdouble z_f, guint n_fiducials);
 NcHICosmoDEWPolyLibrary *nc_hicosmo_de_wpoly_library_ref (NcHICosmoDEWPolyLibrary *lib);
 void nc_hicosmo_de_wpoly_library_free (NcHICosmoDEWPolyLibrary *lib);
 void nc_hicosmo_de_wpoly_library_clear (NcHICosmoDEWPolyLibrary **lib);
 
 void nc_hicosmo_de_wpoly_library_prepare (NcHICosmoDEWPolyLibrary *lib);
 
-guint nc_hicosmo_de_wpoly_library_get_max_class (NcHICosmoDEWPolyLibrary *lib);
-guint nc_hicosmo_de_wpoly_library_len (NcHICosmoDEWPolyLibrary *lib, guint m);
+guint nc_hicosmo_de_wpoly_library_get_max_turning_points (NcHICosmoDEWPolyLibrary *lib);
+guint nc_hicosmo_de_wpoly_library_len (NcHICosmoDEWPolyLibrary *lib, guint n_tp);
 gulong nc_hicosmo_de_wpoly_library_get_n_draws (NcHICosmoDEWPolyLibrary *lib);
 
-gulong nc_hicosmo_de_wpoly_library_get_draw_index (NcHICosmoDEWPolyLibrary *lib, guint m, guint i);
-gdouble nc_hicosmo_de_wpoly_library_get_amplitude (NcHICosmoDEWPolyLibrary *lib, guint m, guint i);
-GArray *nc_hicosmo_de_wpoly_library_peek_turning_points (NcHICosmoDEWPolyLibrary *lib, guint m, guint i);
-NcmVector *nc_hicosmo_de_wpoly_library_peek_coeffs (NcHICosmoDEWPolyLibrary *lib, guint m, guint i);
-NcHICosmoDEWPoly *nc_hicosmo_de_wpoly_library_get_fiducial (NcHICosmoDEWPolyLibrary *lib, guint m, guint i);
+gulong nc_hicosmo_de_wpoly_library_get_draw_index (NcHICosmoDEWPolyLibrary *lib, guint n_tp, guint i);
+gdouble nc_hicosmo_de_wpoly_library_get_amplitude (NcHICosmoDEWPolyLibrary *lib, guint n_tp, guint i);
+GArray *nc_hicosmo_de_wpoly_library_peek_turning_points (NcHICosmoDEWPolyLibrary *lib, guint n_tp, guint i);
+NcmVector *nc_hicosmo_de_wpoly_library_peek_coeffs (NcHICosmoDEWPolyLibrary *lib, guint n_tp, guint i);
+NcHICosmoDEWPoly *nc_hicosmo_de_wpoly_library_get_fiducial (NcHICosmoDEWPolyLibrary *lib, guint n_tp, guint i);
 
 G_END_DECLS
 

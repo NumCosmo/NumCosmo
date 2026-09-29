@@ -33,27 +33,27 @@ from numcosmo_py import Ncm, Nc
 Ncm.cfg_init()
 
 Z_F = 2.33
-N_PER_CLASS = 40
+N_FIDUCIALS = 40
 
 
 @pytest.fixture(name="lib", scope="module")
 def fixture_lib() -> Nc.HICosmoDEWPolyLibrary:
     """A small library."""
     return Nc.HICosmoDEWPolyLibrary.new(
-        seed=7, degree=6, z_f=Z_F, n_per_class=N_PER_CLASS
+        seed=7, degree=6, z_f=Z_F, n_fiducials=N_FIDUCIALS
     )
 
 
 def test_sizes(lib: Nc.HICosmoDEWPolyLibrary) -> None:
-    """Every class holds n_per_class fiducials."""
-    assert lib.get_max_class() == 3
+    """Every number of turning points has n_fiducials fiducials."""
+    assert lib.get_max_turning_points() == 3
     for m in range(4):
-        assert lib.len(m) == N_PER_CLASS
-    assert lib.get_n_draws() > 4 * N_PER_CLASS
+        assert lib.len(m) == N_FIDUCIALS
+    assert lib.get_n_draws() > 4 * N_FIDUCIALS
 
 
-def test_class_and_positions(lib: Nc.HICosmoDEWPolyLibrary) -> None:
-    """The stored class and turning points match a recount on the fiducial."""
+def test_count_and_positions(lib: Nc.HICosmoDEWPolyLibrary) -> None:
+    """The stored count and positions of turning points match a recount on the fiducial."""
     for m in range(4):
         for i in range(lib.len(m)):
             cosmo = lib.get_fiducial(m, i)
@@ -84,9 +84,9 @@ def test_amplitude_and_mean(lib: Nc.HICosmoDEWPolyLibrary) -> None:
 
 def test_reproducible() -> None:
     """The same seed gives the same draw indices and coefficients."""
-    lib1 = Nc.HICosmoDEWPolyLibrary.new(seed=11, degree=6, z_f=Z_F, n_per_class=10)
-    lib2 = Nc.HICosmoDEWPolyLibrary.new(seed=11, degree=6, z_f=Z_F, n_per_class=10)
-    lib3 = Nc.HICosmoDEWPolyLibrary.new(seed=12, degree=6, z_f=Z_F, n_per_class=10)
+    lib1 = Nc.HICosmoDEWPolyLibrary.new(seed=11, degree=6, z_f=Z_F, n_fiducials=10)
+    lib2 = Nc.HICosmoDEWPolyLibrary.new(seed=11, degree=6, z_f=Z_F, n_fiducials=10)
+    lib3 = Nc.HICosmoDEWPolyLibrary.new(seed=12, degree=6, z_f=Z_F, n_fiducials=10)
     for m in range(4):
         for i in range(10):
             assert lib1.get_draw_index(m, i) == lib2.get_draw_index(m, i)
@@ -101,12 +101,12 @@ def test_reproducible() -> None:
 
 
 def test_prefix_is_stable() -> None:
-    """Draw indices are a property of the stream, not of n_per_class."""
-    small = Nc.HICosmoDEWPolyLibrary.new(seed=3, degree=6, z_f=Z_F, n_per_class=10)
-    large = Nc.HICosmoDEWPolyLibrary.new(seed=3, degree=6, z_f=Z_F, n_per_class=30)
+    """Draw indices are a property of the stream, not of n_fiducials."""
+    small = Nc.HICosmoDEWPolyLibrary.new(seed=3, degree=6, z_f=Z_F, n_fiducials=10)
+    large = Nc.HICosmoDEWPolyLibrary.new(seed=3, degree=6, z_f=Z_F, n_fiducials=30)
     small_draws = {(m, small.get_draw_index(m, i)) for m in range(4) for i in range(10)}
     large_draws = {(m, large.get_draw_index(m, i)) for m in range(4) for i in range(30)}
-    # class 0 accepts every draw, so its first 10 draws are shared
+    # every monotonic draw is accepted, so the first 10 of them are shared
     small0 = sorted(d for m, d in small_draws if m == 0)
     large0 = sorted(d for m, d in large_draws if m == 0)
     assert small0 == large0[:10]
@@ -115,9 +115,9 @@ def test_prefix_is_stable() -> None:
 def test_properties() -> None:
     """Construct-only properties are kept and serialization round trips."""
     lib = Nc.HICosmoDEWPolyLibrary(
-        seed=5, degree=4, zf=1.5, n_per_class=5, max_class=2, a_max=0.2
+        seed=5, degree=4, zf=1.5, n_fiducials=5, max_turning_points=2, a_max=0.2
     )
-    assert lib.get_max_class() == 2
+    assert lib.get_max_turning_points() == 2
     for m in range(3):
         assert lib.len(m) == 5
         for i in range(5):

@@ -25,24 +25,25 @@
 /**
  * NcHICosmoDEWPolyLibrary:
  *
- * Library of fiducial $w(z)$ models classified by their number of turning points.
+ * Library of fiducial $w(z)$ models grouped by their number of turning points.
  *
  * Draws $\mathrm{d}w/\mathrm{d}z$ as a degree-$d$ Legendre series on $[0, z_f]$ with
  * independent standard Gaussian coefficients in the orthonormal basis, from an
  * #NcmRNG seeded with #NcHICosmoDEWPolyLibrary:seed, and integrates it to a zero-mean
- * $w + 1$. Each draw is classified by its number of turning points $m$
+ * $w + 1$. Each draw is counted by its number of turning points $m$
  * (nc_hicosmo_de_wpoly_turning_points()); draws with $m$ above
- * #NcHICosmoDEWPolyLibrary:max-class are discarded. For $m \ge 1$ a draw is accepted
- * with the probability that makes the ordered turning points uniform on $[0, z_f]$:
- * the ratio of the target density to the draw density, the latter estimated on a first
- * pass by a histogram with #NcHICosmoDEWPolyLibrary:density-bins bins per axis and
- * #NcHICosmoDEWPolyLibrary:density-draws-per-cell draws per cell on average. Every
- * class collects #NcHICosmoDEWPolyLibrary:n-per-class fiducials. An accepted $w + 1$ is
- * rescaled so that its largest excursion between consecutive stationary points
- * ($0$, the turning points, $z_f$) equals an amplitude drawn uniformly on
- * $[0, $ #NcHICosmoDEWPolyLibrary:a-max $]$, and each class is shuffled. Acceptance,
- * amplitude and shuffle use a second #NcmRNG seeded with seed + 1, so the coefficient
- * stream is the same in both passes and a fiducial is fixed by its draw index.
+ * #NcHICosmoDEWPolyLibrary:max-turning-points are discarded. For $m \ge 1$ a draw is
+ * accepted with the probability that makes the ordered turning points uniform on
+ * $[0, z_f]$: the ratio of the target density to the draw density, the latter estimated
+ * on a first pass by a histogram with #NcHICosmoDEWPolyLibrary:density-bins bins per
+ * axis and #NcHICosmoDEWPolyLibrary:density-draws-per-cell draws per cell on average.
+ * For every $m$ from $0$ to the maximum the library collects
+ * #NcHICosmoDEWPolyLibrary:n-fiducials fiducials. An accepted $w + 1$ is rescaled so that
+ * its largest excursion between consecutive stationary points ($0$, the turning points,
+ * $z_f$) equals an amplitude drawn uniformly on $[0, $ #NcHICosmoDEWPolyLibrary:a-max $]$,
+ * and the fiducials with the same $m$ are shuffled. Acceptance, amplitude and shuffle use
+ * a second #NcmRNG seeded with seed + 1, so the coefficient stream is the same in both
+ * passes and a fiducial is fixed by its draw index.
  *
  * Accessors prepare the library on first use.
  *
@@ -76,15 +77,15 @@ struct _NcHICosmoDEWPolyLibrary
   gulong seed;
   guint degree;
   gdouble z_f;
-  guint n_per_class;
-  guint max_class;
+  guint n_fiducials;
+  guint max_tp;
   gdouble a_max;
   guint density_bins;
   guint density_draws;
   gboolean prepared;
   gulong n_draws;
   NcHICosmoDEWPoly *work;
-  GPtrArray *classes; /* GArray of NcHICosmoDEWPolyLibraryFiducial per class */
+  GPtrArray *by_tp; /* GArray of NcHICosmoDEWPolyLibraryFiducial per number of turning points */
 };
 
 G_DEFINE_TYPE (NcHICosmoDEWPolyLibrary, nc_hicosmo_de_wpoly_library, G_TYPE_OBJECT)
@@ -95,8 +96,8 @@ enum
   PROP_SEED,
   PROP_DEGREE,
   PROP_Z_F,
-  PROP_N_PER_CLASS,
-  PROP_MAX_CLASS,
+  PROP_N_FIDUCIALS,
+  PROP_MAX_TP,
   PROP_A_MAX,
   PROP_DENSITY_BINS,
   PROP_DENSITY_DRAWS,
@@ -117,15 +118,15 @@ nc_hicosmo_de_wpoly_library_init (NcHICosmoDEWPolyLibrary *lib)
   lib->seed          = 0;
   lib->degree        = 0;
   lib->z_f           = 0.0;
-  lib->n_per_class   = 0;
-  lib->max_class     = 0;
+  lib->n_fiducials   = 0;
+  lib->max_tp        = 0;
   lib->a_max         = 0.0;
   lib->density_bins  = 0;
   lib->density_draws = 0;
   lib->prepared      = FALSE;
   lib->n_draws       = 0;
   lib->work          = NULL;
-  lib->classes       = g_ptr_array_new_with_free_func ((GDestroyNotify) g_array_unref);
+  lib->by_tp         = g_ptr_array_new_with_free_func ((GDestroyNotify) g_array_unref);
 }
 
 static void
@@ -144,11 +145,11 @@ _nc_hicosmo_de_wpoly_library_set_property (GObject *object, guint prop_id, const
     case PROP_Z_F:
       lib->z_f = g_value_get_double (value);
       break;
-    case PROP_N_PER_CLASS:
-      lib->n_per_class = g_value_get_uint (value);
+    case PROP_N_FIDUCIALS:
+      lib->n_fiducials = g_value_get_uint (value);
       break;
-    case PROP_MAX_CLASS:
-      lib->max_class = g_value_get_uint (value);
+    case PROP_MAX_TP:
+      lib->max_tp = g_value_get_uint (value);
       break;
     case PROP_A_MAX:
       lib->a_max = g_value_get_double (value);
@@ -181,11 +182,11 @@ _nc_hicosmo_de_wpoly_library_get_property (GObject *object, guint prop_id, GValu
     case PROP_Z_F:
       g_value_set_double (value, lib->z_f);
       break;
-    case PROP_N_PER_CLASS:
-      g_value_set_uint (value, lib->n_per_class);
+    case PROP_N_FIDUCIALS:
+      g_value_set_uint (value, lib->n_fiducials);
       break;
-    case PROP_MAX_CLASS:
-      g_value_set_uint (value, lib->max_class);
+    case PROP_MAX_TP:
+      g_value_set_uint (value, lib->max_tp);
       break;
     case PROP_A_MAX:
       g_value_set_double (value, lib->a_max);
@@ -211,16 +212,16 @@ _nc_hicosmo_de_wpoly_library_constructed (GObject *object)
     NcHICosmoDEWPolyLibrary *lib = NC_HICOSMO_DE_WPOLY_LIBRARY (object);
     guint m;
 
-    g_assert_cmpuint (lib->max_class, <=, 4);
+    g_assert_cmpuint (lib->max_tp, <=, 4);
 
     lib->work = nc_hicosmo_de_wpoly_new (lib->degree + 2, lib->z_f);
 
-    for (m = 0; m <= lib->max_class; m++)
+    for (m = 0; m <= lib->max_tp; m++)
     {
       GArray *fids = g_array_new (FALSE, FALSE, sizeof (NcHICosmoDEWPolyLibraryFiducial));
 
       g_array_set_clear_func (fids, _nc_hicosmo_de_wpoly_library_fiducial_clear);
-      g_ptr_array_add (lib->classes, fids);
+      g_ptr_array_add (lib->by_tp, fids);
     }
   }
 }
@@ -231,7 +232,7 @@ _nc_hicosmo_de_wpoly_library_dispose (GObject *object)
   NcHICosmoDEWPolyLibrary *lib = NC_HICOSMO_DE_WPOLY_LIBRARY (object);
 
   g_clear_object (&lib->work);
-  g_clear_pointer (&lib->classes, g_ptr_array_unref);
+  g_clear_pointer (&lib->by_tp, g_ptr_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_de_wpoly_library_parent_class)->dispose (object);
@@ -269,15 +270,15 @@ nc_hicosmo_de_wpoly_library_class_init (NcHICosmoDEWPolyLibraryClass *klass)
                                                         1.0e-3, 1.0e10, 2.33,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_N_PER_CLASS,
-                                   g_param_spec_uint ("n-per-class",
+                                   PROP_N_FIDUCIALS,
+                                   g_param_spec_uint ("n-fiducials",
                                                       NULL,
-                                                      "fiducials per class",
+                                                      "fiducials per number of turning points",
                                                       1, G_MAXUINT, 1000,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_MAX_CLASS,
-                                   g_param_spec_uint ("max-class",
+                                   PROP_MAX_TP,
+                                   g_param_spec_uint ("max-turning-points",
                                                       NULL,
                                                       "largest number of turning points kept",
                                                       0, 4, 3,
@@ -305,7 +306,7 @@ nc_hicosmo_de_wpoly_library_class_init (NcHICosmoDEWPolyLibraryClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
-/* Number of ordered cells of the class-@m histogram: C(bins + m - 1, m). */
+/* Number of ordered cells of the histogram for @m turning points: C(bins + m - 1, m). */
 static gulong
 _nc_hicosmo_de_wpoly_library_n_cells (NcHICosmoDEWPolyLibrary *lib, guint m)
 {
@@ -426,29 +427,29 @@ _nc_hicosmo_de_wpoly_library_cell_target (guint64 key, guint m)
  * @lib: a #NcHICosmoDEWPolyLibrary
  *
  * Generates the library. A first pass over the coefficient stream estimates the
- * turning-point density per class until every class with $m \ge 1$ has
+ * turning-point density for each $m \ge 1$ until it has
  * #NcHICosmoDEWPolyLibrary:density-draws-per-cell draws per histogram cell on
- * average; a second pass over the same
- * stream accepts draws to the uniform target until every class is full, then
+ * average; a second pass over the same stream accepts draws to the uniform target
+ * until every $m$ has its fiducials, then
  * normalizes, draws amplitudes and shuffles. Does nothing when already prepared.
  */
 void
 nc_hicosmo_de_wpoly_library_prepare (NcHICosmoDEWPolyLibrary *lib)
 {
-  const guint nc      = lib->degree + 2;
-  NcmVector *coeffs   = ncm_vector_new (nc);
-  GHashTable **hist   = g_new0 (GHashTable *, lib->max_class + 1);
-  gdouble *max_ratio  = g_new0 (gdouble, lib->max_class + 1);
-  gulong *class_count = g_new0 (gulong, lib->max_class + 1);
+  const guint nc     = lib->degree + 2;
+  NcmVector *coeffs  = ncm_vector_new (nc);
+  GHashTable **hist  = g_new0 (GHashTable *, lib->max_tp + 1);
+  gdouble *max_ratio = g_new0 (gdouble, lib->max_tp + 1);
+  gulong *n_draws_tp = g_new0 (gulong, lib->max_tp + 1);
   guint m;
 
   if (lib->prepared)
     return;
 
-  for (m = 0; m <= lib->max_class; m++)
+  for (m = 0; m <= lib->max_tp; m++)
     hist[m] = g_hash_table_new (g_int64_hash, g_int64_equal);
 
-  /* Pass 1: histogram of the ordered turning-point bins per class. */
+  /* Pass 1: histogram of the ordered turning-point bins for each m. */
   {
     NcmRNG *rng = ncm_rng_seeded_new (NULL, lib->seed);
     gboolean done;
@@ -461,7 +462,7 @@ nc_hicosmo_de_wpoly_library_prepare (NcHICosmoDEWPolyLibrary *lib)
       tp = nc_hicosmo_de_wpoly_turning_points (lib->work);
       m  = tp->len;
 
-      if ((m >= 1) && (m <= lib->max_class))
+      if ((m >= 1) && (m <= lib->max_tp))
       {
         guint64 *key = g_new (guint64, 1);
         gpointer val;
@@ -479,22 +480,22 @@ nc_hicosmo_de_wpoly_library_prepare (NcHICosmoDEWPolyLibrary *lib)
           g_hash_table_insert (hist[m], key, GSIZE_TO_POINTER (1));
         }
 
-        class_count[m]++;
+        n_draws_tp[m]++;
       }
 
       g_array_unref (tp);
 
       done = TRUE;
 
-      for (m = 1; m <= lib->max_class; m++)
-        done = done && (class_count[m] >= lib->density_draws * _nc_hicosmo_de_wpoly_library_n_cells (lib, m));
+      for (m = 1; m <= lib->max_tp; m++)
+        done = done && (n_draws_tp[m] >= lib->density_draws * _nc_hicosmo_de_wpoly_library_n_cells (lib, m));
     } while (!done);
 
     ncm_rng_free (rng);
   }
 
-  /* Acceptance scale per class: the largest target / density ratio over populated cells. */
-  for (m = 1; m <= lib->max_class; m++)
+  /* Acceptance scale for each m: the largest target / density ratio over populated cells. */
+  for (m = 1; m <= lib->max_tp; m++)
   {
     GHashTableIter iter;
     gpointer key, val;
@@ -503,7 +504,7 @@ nc_hicosmo_de_wpoly_library_prepare (NcHICosmoDEWPolyLibrary *lib)
 
     while (g_hash_table_iter_next (&iter, &key, &val))
     {
-      const gdouble ratio = _nc_hicosmo_de_wpoly_library_cell_target (*(guint64 *) key, m) * class_count[m] / GPOINTER_TO_SIZE (val);
+      const gdouble ratio = _nc_hicosmo_de_wpoly_library_cell_target (*(guint64 *) key, m) * n_draws_tp[m] / GPOINTER_TO_SIZE (val);
 
       max_ratio[m] = GSL_MAX (max_ratio[m], ratio);
     }
@@ -526,7 +527,7 @@ nc_hicosmo_de_wpoly_library_prepare (NcHICosmoDEWPolyLibrary *lib)
       m  = tp->len;
       draw++;
 
-      if ((m > lib->max_class) || (((GArray *) g_ptr_array_index (lib->classes, m))->len >= lib->n_per_class))
+      if ((m > lib->max_tp) || (((GArray *) g_ptr_array_index (lib->by_tp, m))->len >= lib->n_fiducials))
       {
         accept = FALSE;
       }
@@ -539,7 +540,7 @@ nc_hicosmo_de_wpoly_library_prepare (NcHICosmoDEWPolyLibrary *lib)
         const guint64 key = _nc_hicosmo_de_wpoly_library_cell (lib, tp);
         gpointer val      = g_hash_table_lookup (hist[m], &key);
         const gdouble q   = (val == NULL) ? 1.0 : (gdouble) GPOINTER_TO_SIZE (val);
-        const gdouble p   = _nc_hicosmo_de_wpoly_library_cell_target (key, m) * class_count[m] / q / max_ratio[m];
+        const gdouble p   = _nc_hicosmo_de_wpoly_library_cell_target (key, m) * n_draws_tp[m] / q / max_ratio[m];
 
         accept = ncm_rng_uniform01_gen (rng_acc) < p;
       }
@@ -558,7 +559,7 @@ nc_hicosmo_de_wpoly_library_prepare (NcHICosmoDEWPolyLibrary *lib)
         fid.coeffs         = ncm_vector_dup (coeffs);
         ncm_vector_scale (fid.coeffs, A / exc);
 
-        g_array_append_val ((GArray *) g_ptr_array_index (lib->classes, m), fid);
+        g_array_append_val ((GArray *) g_ptr_array_index (lib->by_tp, m), fid);
       }
       else
       {
@@ -567,16 +568,16 @@ nc_hicosmo_de_wpoly_library_prepare (NcHICosmoDEWPolyLibrary *lib)
 
       done = TRUE;
 
-      for (m = 0; m <= lib->max_class; m++)
-        done = done && (((GArray *) g_ptr_array_index (lib->classes, m))->len >= lib->n_per_class);
+      for (m = 0; m <= lib->max_tp; m++)
+        done = done && (((GArray *) g_ptr_array_index (lib->by_tp, m))->len >= lib->n_fiducials);
     } while (!done);
 
     lib->n_draws = draw;
 
-    /* Shuffle each class. */
-    for (m = 0; m <= lib->max_class; m++)
+    /* Shuffle the fiducials with the same m. */
+    for (m = 0; m <= lib->max_tp; m++)
     {
-      GArray *fids = g_ptr_array_index (lib->classes, m);
+      GArray *fids = g_ptr_array_index (lib->by_tp, m);
       guint i;
 
       for (i = fids->len - 1; i > 0; i--)
@@ -593,7 +594,7 @@ nc_hicosmo_de_wpoly_library_prepare (NcHICosmoDEWPolyLibrary *lib)
     ncm_rng_free (rng_acc);
   }
 
-  for (m = 0; m <= lib->max_class; m++)
+  for (m = 0; m <= lib->max_tp; m++)
   {
     GHashTableIter iter;
     gpointer key, val;
@@ -608,21 +609,21 @@ nc_hicosmo_de_wpoly_library_prepare (NcHICosmoDEWPolyLibrary *lib)
 
   g_free (hist);
   g_free (max_ratio);
-  g_free (class_count);
+  g_free (n_draws_tp);
   ncm_vector_free (coeffs);
 
   lib->prepared = TRUE;
 }
 
 static NcHICosmoDEWPolyLibraryFiducial *
-_nc_hicosmo_de_wpoly_library_peek (NcHICosmoDEWPolyLibrary *lib, guint m, guint i)
+_nc_hicosmo_de_wpoly_library_peek (NcHICosmoDEWPolyLibrary *lib, guint n_tp, guint i)
 {
   GArray *fids;
 
   nc_hicosmo_de_wpoly_library_prepare (lib);
 
-  g_assert_cmpuint (m, <=, lib->max_class);
-  fids = g_ptr_array_index (lib->classes, m);
+  g_assert_cmpuint (n_tp, <=, lib->max_tp);
+  fids = g_ptr_array_index (lib->by_tp, n_tp);
   g_assert_cmpuint (i, <, fids->len);
 
   return &g_array_index (fids, NcHICosmoDEWPolyLibraryFiducial, i);
@@ -633,21 +634,21 @@ _nc_hicosmo_de_wpoly_library_peek (NcHICosmoDEWPolyLibrary *lib, guint m, guint 
  * @seed: master seed
  * @degree: degree $d$ of $\mathrm{d}w/\mathrm{d}z$
  * @z_f: final redshift $z_f$
- * @n_per_class: fiducials per class
+ * @n_fiducials: fiducials per number of turning points
  *
- * Creates a library with the default #NcHICosmoDEWPolyLibrary:max-class,
+ * Creates a library with the default #NcHICosmoDEWPolyLibrary:max-turning-points,
  * #NcHICosmoDEWPolyLibrary:a-max and #NcHICosmoDEWPolyLibrary:density-bins.
  *
  * Returns: a new #NcHICosmoDEWPolyLibrary
  */
 NcHICosmoDEWPolyLibrary *
-nc_hicosmo_de_wpoly_library_new (gulong seed, guint degree, const gdouble z_f, guint n_per_class)
+nc_hicosmo_de_wpoly_library_new (gulong seed, guint degree, const gdouble z_f, guint n_fiducials)
 {
   return g_object_new (NC_TYPE_HICOSMO_DE_WPOLY_LIBRARY,
                        "seed", seed,
                        "degree", degree,
                        "zf", z_f,
-                       "n-per-class", n_per_class,
+                       "n-fiducials", n_fiducials,
                        NULL);
 }
 
@@ -688,31 +689,31 @@ nc_hicosmo_de_wpoly_library_clear (NcHICosmoDEWPolyLibrary **lib)
 }
 
 /**
- * nc_hicosmo_de_wpoly_library_get_max_class:
+ * nc_hicosmo_de_wpoly_library_get_max_turning_points:
  * @lib: a #NcHICosmoDEWPolyLibrary
  *
  * Returns: the largest number of turning points kept
  */
 guint
-nc_hicosmo_de_wpoly_library_get_max_class (NcHICosmoDEWPolyLibrary *lib)
+nc_hicosmo_de_wpoly_library_get_max_turning_points (NcHICosmoDEWPolyLibrary *lib)
 {
-  return lib->max_class;
+  return lib->max_tp;
 }
 
 /**
  * nc_hicosmo_de_wpoly_library_len:
  * @lib: a #NcHICosmoDEWPolyLibrary
- * @m: number of turning points
+ * @n_tp: number of turning points
  *
- * Returns: the number of fiducials in class @m
+ * Returns: the number of fiducials with @n_tp turning points
  */
 guint
-nc_hicosmo_de_wpoly_library_len (NcHICosmoDEWPolyLibrary *lib, guint m)
+nc_hicosmo_de_wpoly_library_len (NcHICosmoDEWPolyLibrary *lib, guint n_tp)
 {
   nc_hicosmo_de_wpoly_library_prepare (lib);
-  g_assert_cmpuint (m, <=, lib->max_class);
+  g_assert_cmpuint (n_tp, <=, lib->max_tp);
 
-  return ((GArray *) g_ptr_array_index (lib->classes, m))->len;
+  return ((GArray *) g_ptr_array_index (lib->by_tp, n_tp))->len;
 }
 
 /**
@@ -732,64 +733,64 @@ nc_hicosmo_de_wpoly_library_get_n_draws (NcHICosmoDEWPolyLibrary *lib)
 /**
  * nc_hicosmo_de_wpoly_library_get_draw_index:
  * @lib: a #NcHICosmoDEWPolyLibrary
- * @m: number of turning points
- * @i: index in the class
+ * @n_tp: number of turning points
+ * @i: index among the fiducials with @n_tp turning points
  *
  * Returns: the 1-based index of the fiducial in the coefficient stream
  */
 gulong
-nc_hicosmo_de_wpoly_library_get_draw_index (NcHICosmoDEWPolyLibrary *lib, guint m, guint i)
+nc_hicosmo_de_wpoly_library_get_draw_index (NcHICosmoDEWPolyLibrary *lib, guint n_tp, guint i)
 {
-  return _nc_hicosmo_de_wpoly_library_peek (lib, m, i)->draw;
+  return _nc_hicosmo_de_wpoly_library_peek (lib, n_tp, i)->draw;
 }
 
 /**
  * nc_hicosmo_de_wpoly_library_get_amplitude:
  * @lib: a #NcHICosmoDEWPolyLibrary
- * @m: number of turning points
- * @i: index in the class
+ * @n_tp: number of turning points
+ * @i: index among the fiducials with @n_tp turning points
  *
  * Returns: the largest excursion of $w$ between consecutive stationary points
  */
 gdouble
-nc_hicosmo_de_wpoly_library_get_amplitude (NcHICosmoDEWPolyLibrary *lib, guint m, guint i)
+nc_hicosmo_de_wpoly_library_get_amplitude (NcHICosmoDEWPolyLibrary *lib, guint n_tp, guint i)
 {
-  return _nc_hicosmo_de_wpoly_library_peek (lib, m, i)->amplitude;
+  return _nc_hicosmo_de_wpoly_library_peek (lib, n_tp, i)->amplitude;
 }
 
 /**
  * nc_hicosmo_de_wpoly_library_peek_turning_points:
  * @lib: a #NcHICosmoDEWPolyLibrary
- * @m: number of turning points
- * @i: index in the class
+ * @n_tp: number of turning points
+ * @i: index among the fiducials with @n_tp turning points
  *
  * Returns: (element-type gdouble) (transfer none): the turning points in increasing $z$
  */
 GArray *
-nc_hicosmo_de_wpoly_library_peek_turning_points (NcHICosmoDEWPolyLibrary *lib, guint m, guint i)
+nc_hicosmo_de_wpoly_library_peek_turning_points (NcHICosmoDEWPolyLibrary *lib, guint n_tp, guint i)
 {
-  return _nc_hicosmo_de_wpoly_library_peek (lib, m, i)->turning_points;
+  return _nc_hicosmo_de_wpoly_library_peek (lib, n_tp, i)->turning_points;
 }
 
 /**
  * nc_hicosmo_de_wpoly_library_peek_coeffs:
  * @lib: a #NcHICosmoDEWPolyLibrary
- * @m: number of turning points
- * @i: index in the class
+ * @n_tp: number of turning points
+ * @i: index among the fiducials with @n_tp turning points
  *
  * Returns: (transfer none): the Legendre coefficients of $w + 1$, $a_0 = 0$
  */
 NcmVector *
-nc_hicosmo_de_wpoly_library_peek_coeffs (NcHICosmoDEWPolyLibrary *lib, guint m, guint i)
+nc_hicosmo_de_wpoly_library_peek_coeffs (NcHICosmoDEWPolyLibrary *lib, guint n_tp, guint i)
 {
-  return _nc_hicosmo_de_wpoly_library_peek (lib, m, i)->coeffs;
+  return _nc_hicosmo_de_wpoly_library_peek (lib, n_tp, i)->coeffs;
 }
 
 /**
  * nc_hicosmo_de_wpoly_library_get_fiducial:
  * @lib: a #NcHICosmoDEWPolyLibrary
- * @m: number of turning points
- * @i: index in the class
+ * @n_tp: number of turning points
+ * @i: index among the fiducials with @n_tp turning points
  *
  * Creates a #NcHICosmoDEWPoly carrying the fiducial, with the other cosmological
  * parameters at their defaults.
@@ -797,9 +798,9 @@ nc_hicosmo_de_wpoly_library_peek_coeffs (NcHICosmoDEWPolyLibrary *lib, guint m, 
  * Returns: (transfer full): a new #NcHICosmoDEWPoly
  */
 NcHICosmoDEWPoly *
-nc_hicosmo_de_wpoly_library_get_fiducial (NcHICosmoDEWPolyLibrary *lib, guint m, guint i)
+nc_hicosmo_de_wpoly_library_get_fiducial (NcHICosmoDEWPolyLibrary *lib, guint n_tp, guint i)
 {
-  NcHICosmoDEWPolyLibraryFiducial *fid = _nc_hicosmo_de_wpoly_library_peek (lib, m, i);
+  NcHICosmoDEWPolyLibraryFiducial *fid = _nc_hicosmo_de_wpoly_library_peek (lib, n_tp, i);
   NcHICosmoDEWPoly *cosmo              = nc_hicosmo_de_wpoly_new (lib->degree + 2, lib->z_f);
 
   ncm_model_orig_vparam_set_vector (NCM_MODEL (cosmo), NC_HICOSMO_DE_WPOLY_A, fid->coeffs);
