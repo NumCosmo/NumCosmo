@@ -243,6 +243,9 @@ _ncm_fit_levmar_reset (NcmFit *fit)
       }
 
       fit_levmar->data_len = ncm_fit_state_get_data_len (fstate);
+
+      /* The workspace is sized by both lengths. */
+      g_clear_pointer (&fit_levmar->workz, g_free);
       ncm_fit_levmar_set_algo (fit_levmar, fit_levmar->algo);
     }
   }
@@ -653,7 +656,10 @@ void
 ncm_fit_levmar_set_algo (NcmFitLevmar *fit_levmar, NcmFitLevmarAlgos algo)
 {
   if (fit_levmar->algo != algo)
+  {
     g_clear_pointer (&fit_levmar->workz, g_free);
+    fit_levmar->algo = algo;
+  }
 
   if (fit_levmar->workz == NULL)
   {

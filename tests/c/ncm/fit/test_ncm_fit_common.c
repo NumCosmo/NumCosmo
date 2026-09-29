@@ -47,6 +47,8 @@ void test_ncm_fit_ls_f_J (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_params_set_get (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_simple (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_dof (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_levmar_set_algo (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_full (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_grad_forward (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_grad_accurate (TestNcmFit *test, gconstpointer pdata);
@@ -156,6 +158,8 @@ typedef struct _TestNcmFitCase
 static const TestNcmFitCase test_ncm_fit_cases[] = {
   { "/run",                    &test_ncm_fit_new, &test_ncm_fit_run },
   { "/run/simple",             &test_ncm_fit_new, &test_ncm_fit_run_simple },
+  { "/dof",                    &test_ncm_fit_new, &test_ncm_fit_dof },
+  { "/levmar_set_algo",        &test_ncm_fit_new, &test_ncm_fit_levmar_set_algo },
   { "/run/full",               &test_ncm_fit_new, &test_ncm_fit_run_full },
   { "/set_get",                &test_ncm_fit_new, &test_ncm_fit_set_get },
   { "/log_info",               &test_ncm_fit_new, &test_ncm_fit_log_info },
@@ -466,6 +470,49 @@ test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata)
        */
     }
   }
+}
+
+void
+test_ncm_fit_dof (TestNcmFit *test, gconstpointer pdata)
+{
+  /* Each prior adds one degree of freedom, and a run (which resets the state) keeps it. */
+  NcmFit *fit            = test->fit;
+  NcmMSet *mset          = ncm_fit_peek_mset (fit);
+  NcmLikelihood *lh      = ncm_fit_peek_likelihood (fit);
+  NcmModel *model        = NCM_MODEL (ncm_mset_peek (mset, ncm_model_mvnd_id ()));
+  NcmPriorGaussParam *p0 = ncm_prior_gauss_param_new (model, 0, 0.0, 10.0);
+  NcmPriorGaussParam *p1 = ncm_prior_gauss_param_new (model, 0, 0.5, 20.0);
+  gint dof;
+
+  ncm_likelihood_priors_take (lh, NCM_PRIOR (p0));
+  ncm_likelihood_priors_take (lh, NCM_PRIOR (p1));
+  ncm_fit_reset (fit);
+
+  dof = ncm_dataset_get_dof (ncm_likelihood_peek_dataset (lh)) + 2 - (gint) ncm_mset_fparam_len (mset);
+
+  g_assert_cmpint (ncm_fit_state_get_dof (ncm_fit_peek_state (fit)), ==, dof);
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  g_assert_cmpint (ncm_fit_state_get_dof (ncm_fit_peek_state (fit)), ==, dof);
+}
+
+void
+test_ncm_fit_levmar_set_algo (TestNcmFit *test, gconstpointer pdata)
+{
+  /* Levmar only: ncm_fit_levmar_set_algo() switches the algorithm, and the fit still runs. */
+  NcmFit *fit = test->fit;
+  NcmFitLevmarAlgos algo, other;
+
+  if (!NCM_IS_FIT_LEVMAR (fit))
+    return;
+
+  g_object_get (fit, "algorithm", &algo, NULL);
+  other = (algo == NCM_FIT_LEVMAR_DIF) ? NCM_FIT_LEVMAR_DER : NCM_FIT_LEVMAR_DIF;
+
+  ncm_fit_levmar_set_algo (NCM_FIT_LEVMAR (fit), other);
+  g_object_get (fit, "algorithm", &algo, NULL);
+  g_assert_cmpint (algo, ==, other);
+
+  g_assert_true (ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE));
 }
 
 void
