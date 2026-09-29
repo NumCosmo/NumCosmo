@@ -413,6 +413,10 @@ math_tests = [
         'timeout': 0,
     },
     {
+        'name': 'ncm_likelihood',
+        'sources': ['ncm/fit/test_ncm_likelihood.c'],
+    },
+    {
         'name': 'ncm_prior',
         'sources': ['ncm/fit/test_ncm_prior.c'],
     },
