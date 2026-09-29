@@ -39,6 +39,7 @@ G_DECLARE_FINAL_TYPE (NcmStatsDist1dSpline, ncm_stats_dist1d_spline, NCM, STATS_
 
 
 NcmStatsDist1dSpline *ncm_stats_dist1d_spline_new (NcmSpline * m2lnp);
+NcmStatsDist1dSpline *ncm_stats_dist1d_spline_new_from_density (NcmSpline *p);
 
 G_END_DECLS
 

@@ -163,6 +163,10 @@ math_tests = [
         'sources': ['ncm/stats/test_ncm_stats_dist1d.c'],
     },
     {
+        'name': 'ncm_stats_dist1d_spline',
+        'sources': ['ncm/stats/test_ncm_stats_dist1d_spline.c'],
+    },
+    {
         'name': 'ncm_stats_dist1d_epdf',
         'sources': ['ncm/stats/test_ncm_stats_dist1d_epdf.c'],
     },

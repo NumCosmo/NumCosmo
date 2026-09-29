@@ -12172,14 +12172,15 @@ class StatsDist1dSpline(StatsDist1d):
 
         StatsDist1dSpline(**properties)
         new(m2lnp:NumCosmoMath.Spline) -> NumCosmoMath.StatsDist1dSpline
+        new_from_density(p:NumCosmoMath.Spline) -> NumCosmoMath.StatsDist1dSpline
 
     Object NcmStatsDist1dSpline
 
     Properties from NcmStatsDist1dSpline:
       m2lnp -> NcmSpline: m2lnp
-        m2lnp
-      tail-sigma -> gdouble: tail-sigma
-        Tail sigma
+        Spline of -2 ln p
+      density -> NcmSpline: density
+        Spline of the density p
 
     Properties from NcmStatsDist1d:
       xi -> gdouble: xi
@@ -12200,8 +12201,8 @@ class StatsDist1dSpline(StatsDist1d):
     """
 
     class Props:
+        density: Spline
         m2lnp: Spline
-        tail_sigma: float
         abstol: float
         compute_cdf: bool
         norma: float
@@ -12212,8 +12213,8 @@ class StatsDist1dSpline(StatsDist1d):
     props: Props = ...
     def __init__(
         self,
+        density: Spline = ...,
         m2lnp: Spline = ...,
-        tail_sigma: float = ...,
         abstol: float = ...,
         compute_cdf: bool = ...,
         reltol: float = ...,
@@ -12222,6 +12223,8 @@ class StatsDist1dSpline(StatsDist1d):
     ) -> None: ...
     @classmethod
     def new(cls, m2lnp: Spline) -> StatsDist1dSpline: ...
+    @classmethod
+    def new_from_density(cls, p: Spline) -> StatsDist1dSpline: ...
 
 class StatsDist1dSplineClass(GObject.GPointer):
     r"""

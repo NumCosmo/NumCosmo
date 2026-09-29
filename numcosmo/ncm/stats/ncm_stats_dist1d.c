@@ -711,7 +711,8 @@ _ncm_stats_dist1d_m2lnp (gdouble x, gpointer p)
  * Locates the maximum of the density: the minimum of $-2\ln p$ on 1000 equally spaced
  * points, refined by Brent's method between the two neighbouring grid points to a relative
  * tolerance $\sqrt{\mathrm{reltol}}$ and the absolute tolerance #NcmStatsDist1d:abstol.
- * The grid point is returned when it is $x_i$ or $x_f$, or when a neighbour has zero density.
+ * When the two best grid points tie, Brent's method refines between them. The grid point is
+ * returned when it is $x_i$ or $x_f$, or when a neighbour has zero density.
  * Warns if the refinement stops before its tolerance.
  *
  * Returns: the mode.
@@ -767,8 +768,28 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
     const gdouble f_x0 = ncm_stats_dist1d_eval_m2lnp (sd1, x0);
     const gdouble f_x1 = ncm_stats_dist1d_eval_m2lnp (sd1, x1);
 
-    if (!(gsl_finite (f_x0) && gsl_finite (f_x1)) || (fmin >= f_x0) || (fmin >= f_x1))
+    if (!(gsl_finite (f_x0) && gsl_finite (f_x1)))
       return x;
+
+    /* A tie with the right neighbour (a mode between two grid points) brackets between them */
+    if (f_x1 == fmin)
+    {
+      const gdouble x_mid = x + 0.5 * dx;
+
+      if (!(ncm_stats_dist1d_eval_m2lnp (sd1, x_mid) < fmin))
+        return x;
+
+      x0 = x;
+      x1 = x + dx;
+      x  = x_mid;
+    }
+    else if ((fmin >= f_x0) || (fmin >= f_x1))
+    {
+      return x;
+    }
+
+    last_x0 = x0;
+    last_x1 = x1;
   }
 
   iter = 0;
