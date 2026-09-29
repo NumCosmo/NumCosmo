@@ -11993,9 +11993,7 @@ class StatsDist1d(GObject.Object):
       reltol -> gdouble: reltol
         relative tolerance
       abstol -> gdouble: abstol
-        Absolute tolerance on the random variables
-      max-prob -> gdouble: max-prob
-        Maximal probability considered
+        Absolute tolerance on the location of the mode
       compute-cdf -> gboolean: compute-cdf
         Whether to compute CDF and inverse CDF
 
@@ -12006,7 +12004,6 @@ class StatsDist1d(GObject.Object):
     class Props:
         abstol: float
         compute_cdf: bool
-        max_prob: float
         norma: float
         reltol: float
         xf: float
@@ -12018,7 +12015,6 @@ class StatsDist1d(GObject.Object):
         self,
         abstol: float = ...,
         compute_cdf: bool = ...,
-        max_prob: float = ...,
         reltol: float = ...,
         xf: float = ...,
         xi: float = ...,
@@ -12100,9 +12096,7 @@ class StatsDist1dEPDF(StatsDist1d):
       reltol -> gdouble: reltol
         relative tolerance
       abstol -> gdouble: abstol
-        Absolute tolerance on the random variables
-      max-prob -> gdouble: max-prob
-        Maximal probability considered
+        Absolute tolerance on the location of the mode
       compute-cdf -> gboolean: compute-cdf
         Whether to compute CDF and inverse CDF
 
@@ -12119,7 +12113,6 @@ class StatsDist1dEPDF(StatsDist1d):
         sd_min_scale: float
         abstol: float
         compute_cdf: bool
-        max_prob: float
         norma: float
         reltol: float
         xf: float
@@ -12135,7 +12128,6 @@ class StatsDist1dEPDF(StatsDist1d):
         sd_min_scale: float = ...,
         abstol: float = ...,
         compute_cdf: bool = ...,
-        max_prob: float = ...,
         reltol: float = ...,
         xf: float = ...,
         xi: float = ...,
@@ -12199,9 +12191,7 @@ class StatsDist1dSpline(StatsDist1d):
       reltol -> gdouble: reltol
         relative tolerance
       abstol -> gdouble: abstol
-        Absolute tolerance on the random variables
-      max-prob -> gdouble: max-prob
-        Maximal probability considered
+        Absolute tolerance on the location of the mode
       compute-cdf -> gboolean: compute-cdf
         Whether to compute CDF and inverse CDF
 
@@ -12214,7 +12204,6 @@ class StatsDist1dSpline(StatsDist1d):
         tail_sigma: float
         abstol: float
         compute_cdf: bool
-        max_prob: float
         norma: float
         reltol: float
         xf: float
@@ -12227,7 +12216,6 @@ class StatsDist1dSpline(StatsDist1d):
         tail_sigma: float = ...,
         abstol: float = ...,
         compute_cdf: bool = ...,
-        max_prob: float = ...,
         reltol: float = ...,
         xf: float = ...,
         xi: float = ...,
@@ -14228,6 +14216,7 @@ class SplineGslType(GObject.GEnum):
     CSPLINE_PERIODIC: SplineGslType = ...
     LINEAR: SplineGslType = ...
     POLYNOMIAL: SplineGslType = ...
+    STEFFEN: SplineGslType = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

@@ -26,8 +26,16 @@
 /**
  * NcmStatsDist1d:
  *
- * Base class for one-dimensional probability distributions.
+ * Base class for one-dimensional probability distributions on $[x_i, x_f]$.
  *
+ * A subclass provides the density $p(x)$, which need not be normalized, and $-2\ln p(x)$.
+ * With #NcmStatsDist1d:compute-cdf, ncm_stats_dist1d_prepare() integrates the cumulative
+ * distribution as an ODE to #NcmStatsDist1d:reltol, in at least 1000 steps, and in units of
+ * $p(x_\mathrm{mode})\,(x_f - x_i)$, so its accuracy depends neither on the scale of $p$ nor
+ * on that of $x$. The inverse is a Steffen spline through the same knots with $x$ and the
+ * probability swapped; it is monotone and stays in $[x_i, x_f]$. Setting $x_i = x_f$ gives a point mass at
+ * $x_i$. The mode search uses an internal minimizer, so one object must not be used from
+ * several threads at once.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -37,6 +45,7 @@
 
 #include "ncm/stats/ncm_stats_dist1d.h"
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline_gsl.h"
 #include "ncm/core/ncm_cfg.h"
 
 enum
@@ -47,45 +56,38 @@ enum
   PROP_NORMA,
   PROP_RELTOL,
   PROP_ABSTOL,
-  PROP_MAX_PROB,
   PROP_COMPUTE_CDF,
-  PROP_SIZE,
 };
 
 typedef struct _NcmStatsDist1dPrivate
 {
-  /*< private >*/
-  GObject parent_instance;
   gdouble xi;
   gdouble xf;
   gdouble norma;
+  gdouble p_mode;
+  gdouble cdf_norma;
   gdouble reltol;
   gdouble abstol;
-  gdouble max_prob;
   gboolean compute_cdf;
-  NcmOdeSpline *inv_cdf;
+  NcmSpline *inv_cdf;
+  GArray *inv_u;
+  GArray *inv_x;
   NcmOdeSpline *pdf;
   gsl_min_fminimizer *fmin;
 } NcmStatsDist1dPrivate;
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDist1d, ncm_stats_dist1d, G_TYPE_OBJECT)
 
-static gdouble
-_ncm_stats_dist1d_inv_cdf_dydx (gdouble y, gdouble x, gpointer userdata)
-{
-  NcmStatsDist1d *sd1         = NCM_STATS_DIST1D (userdata);
-  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
-
-  return self->norma / (NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, y) * gsl_pow_2 (cosh (x)));
-}
+/* The CDF integration steps are at most (xf - xi) / NCM_STATS_DIST1D_MIN_SUBDIVISIONS, so no feature wider than that is stepped over */
+#define NCM_STATS_DIST1D_MIN_SUBDIVISIONS 1000
 
 static gdouble
 _ncm_stats_dist1d_pdf_dydx (gdouble y, gdouble x, gpointer userdata)
 {
-  NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (userdata);
+  NcmStatsDist1d *sd1         = NCM_STATS_DIST1D (userdata);
+  NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
 
-  /*printf ("B % 20.15g % 20.15g % 20.15g\n", x, y, ncm_stats_dist1d_eval_p (sd1, x));*/
-  return NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, x);
+  return NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, x) / self->p_mode / (self->xf - self->xi);
 }
 
 static void
@@ -93,25 +95,23 @@ ncm_stats_dist1d_init (NcmStatsDist1d *sd1)
 {
   NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
   NcmSpline *s1               = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-  NcmSpline *s2               = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-  NcmSpline *s3               = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
   self->xi          = 0.0;
   self->xf          = 0.0;
   self->norma       = 0.0;
+  self->p_mode      = 1.0;
+  self->cdf_norma   = 1.0;
   self->reltol      = 0.0;
-  self->max_prob    = 0.0;
-  self->inv_cdf     = ncm_ode_spline_new (s1, _ncm_stats_dist1d_inv_cdf_dydx);
-  self->pdf         = ncm_ode_spline_new (s3, _ncm_stats_dist1d_pdf_dydx);
+  self->inv_cdf     = NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_steffen));
+  self->inv_u       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->inv_x       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->pdf         = ncm_ode_spline_new (s1, _ncm_stats_dist1d_pdf_dydx);
   self->fmin        = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
   self->compute_cdf = FALSE;
 
-  /* hnil is not an error in this case */
-  /*self->inv_pdf->stop_hnil = FALSE;*/
+  ncm_ode_spline_set_min_subdivisions (self->pdf, NCM_STATS_DIST1D_MIN_SUBDIVISIONS);
 
   ncm_spline_free (s1);
-  ncm_spline_free (s2);
-  ncm_spline_free (s3);
 }
 
 static void
@@ -120,8 +120,10 @@ ncm_stats_dist1d_dispose (GObject *object)
   NcmStatsDist1d *sd1         = NCM_STATS_DIST1D (object);
   NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
 
-  ncm_ode_spline_clear (&self->inv_cdf);
+  ncm_spline_clear (&self->inv_cdf);
   ncm_ode_spline_clear (&self->pdf);
+  g_clear_pointer (&self->inv_u, g_array_unref);
+  g_clear_pointer (&self->inv_x, g_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist1d_parent_class)->dispose (object);
@@ -161,9 +163,6 @@ ncm_stats_dist1d_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_ABSTOL:
       self->abstol = g_value_get_double (value);
       break;
-    case PROP_MAX_PROB:
-      self->max_prob = g_value_get_double (value);
-      break;
     case PROP_COMPUTE_CDF:
       ncm_stats_dist1d_set_compute_cdf (sd1, g_value_get_boolean (value));
       break;
@@ -198,9 +197,6 @@ ncm_stats_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_ABSTOL:
       g_value_set_double (value, self->abstol);
       break;
-    case PROP_MAX_PROB:
-      g_value_set_double (value, self->max_prob);
-      break;
     case PROP_COMPUTE_CDF:
       g_value_set_boolean (value, ncm_stats_dist1d_get_compute_cdf (sd1));
       break;
@@ -210,6 +206,12 @@ ncm_stats_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
       break;                                                      /* LCOV_EXCL_LINE */
   }
 }
+
+static gdouble _ncm_stats_dist1d_p_not_implemented (NcmStatsDist1d *sd1, gdouble x);
+static gdouble _ncm_stats_dist1d_m2lnp_not_implemented (NcmStatsDist1d *sd1, gdouble x);
+static gdouble _ncm_stats_dist1d_get_current_h_not_implemented (NcmStatsDist1d *sd1);
+
+static void _ncm_stats_dist1d_prepare_inv_cdf (NcmStatsDist1dPrivate *self);
 
 static void
 ncm_stats_dist1d_class_init (NcmStatsDist1dClass *klass)
@@ -256,15 +258,8 @@ ncm_stats_dist1d_class_init (NcmStatsDist1dClass *klass)
                                    PROP_ABSTOL,
                                    g_param_spec_double ("abstol",
                                                         NULL,
-                                                        "Absolute tolerance on the random variables",
+                                                        "Absolute tolerance on the location of the mode",
                                                         0.0, G_MAXDOUBLE, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_MAX_PROB,
-                                   g_param_spec_double ("max-prob",
-                                                        NULL,
-                                                        "Maximal probability considered",
-                                                        0.0, 1.0, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_COMPUTE_CDF,
@@ -274,9 +269,34 @@ ncm_stats_dist1d_class_init (NcmStatsDist1dClass *klass)
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->p             = NULL;
+  klass->p             = &_ncm_stats_dist1d_p_not_implemented;
+  klass->m2lnp         = &_ncm_stats_dist1d_m2lnp_not_implemented;
   klass->prepare       = NULL;
-  klass->get_current_h = NULL;
+  klass->get_current_h = &_ncm_stats_dist1d_get_current_h_not_implemented;
+}
+
+static gdouble
+_ncm_stats_dist1d_p_not_implemented (NcmStatsDist1d *sd1, gdouble x)
+{
+  g_error ("_ncm_stats_dist1d_p: `%s' does not implement p.", G_OBJECT_TYPE_NAME (sd1));
+
+  return 0.0;
+}
+
+static gdouble
+_ncm_stats_dist1d_m2lnp_not_implemented (NcmStatsDist1d *sd1, gdouble x)
+{
+  g_error ("_ncm_stats_dist1d_m2lnp: `%s' does not implement m2lnp.", G_OBJECT_TYPE_NAME (sd1));
+
+  return 0.0;
+}
+
+static gdouble
+_ncm_stats_dist1d_get_current_h_not_implemented (NcmStatsDist1d *sd1)
+{
+  g_error ("_ncm_stats_dist1d_get_current_h: `%s' does not implement get_current_h.", G_OBJECT_TYPE_NAME (sd1));
+
+  return 0.0;
 }
 
 /**
@@ -298,7 +318,6 @@ ncm_stats_dist1d_ref (NcmStatsDist1d *sd1)
  * @sd1: a #NcmStatsDist1d
  *
  * Decreases the reference count of @sd1.
- *
  */
 void
 ncm_stats_dist1d_free (NcmStatsDist1d *sd1)
@@ -310,8 +329,7 @@ ncm_stats_dist1d_free (NcmStatsDist1d *sd1)
  * ncm_stats_dist1d_clear:
  * @sd1: a #NcmStatsDist1d
  *
- * Decreases the reference count of *@sd1 and sets the pointer *@sd1 to NULL.
- *
+ * Decreases the reference count of *@sd1 and sets the pointer *@sd1 to %NULL.
  */
 void
 ncm_stats_dist1d_clear (NcmStatsDist1d **sd1)
@@ -323,7 +341,10 @@ ncm_stats_dist1d_clear (NcmStatsDist1d **sd1)
  * ncm_stats_dist1d_prepare:
  * @sd1: a #NcmStatsDist1d
  *
- * Prepares the object for calculations.
+ * Calls the subclass prepare and then, when $x_i \neq x_f$ and #NcmStatsDist1d:compute-cdf is
+ * %TRUE, locates the mode, integrates the cumulative distribution and the normalization, and
+ * builds the inverse. Must be called after changing $x_i$, $x_f$ or the density. Aborts if
+ * $x_f < x_i$ or if the density at the mode is not positive and finite.
  */
 void
 ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
@@ -334,38 +355,95 @@ ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
   if (sd1_class->prepare != NULL)
     sd1_class->prepare (sd1);
 
+  if (self->xf < self->xi)
+    g_error ("ncm_stats_dist1d_prepare: `%s' has xf = % 22.15g below xi = % 22.15g.",
+             G_OBJECT_TYPE_NAME (sd1), self->xf, self->xi);
+
+  self->p_mode    = 1.0;
+  self->cdf_norma = 1.0;
+  self->norma     = 1.0;
+
   if (G_LIKELY (self->xi != self->xf) && self->compute_cdf)
   {
-    ncm_ode_spline_set_reltol (self->inv_cdf, self->reltol);
+    /* The CDF is integrated in units of p(mode) (xf - xi), so its tolerances depend neither on the scale of p nor on that of x */
+    self->p_mode = sd1_class->p (sd1, ncm_stats_dist1d_eval_mode (sd1));
+
+    if (!(gsl_finite (self->p_mode) && (self->p_mode > 0.0)))
+      g_error ("ncm_stats_dist1d_prepare: `%s' has density % 22.15g at its mode.",
+               G_OBJECT_TYPE_NAME (sd1), self->p_mode);
+
     ncm_ode_spline_set_reltol (self->pdf, self->reltol);
-
-    ncm_ode_spline_set_abstol (self->inv_cdf, self->abstol);
-    ncm_ode_spline_set_abstol (self->pdf, GSL_DBL_EPSILON * 10.0); /* Avoid too much accuracy problems. */
-
-    ncm_ode_spline_set_xi (self->inv_cdf, 0.0);
-    ncm_ode_spline_set_yi (self->inv_cdf, self->xi);
-    ncm_ode_spline_set_yf (self->inv_cdf, self->xf);
-
+    ncm_ode_spline_set_abstol (self->pdf, GSL_DBL_EPSILON * 10.0);
     ncm_ode_spline_set_interval (self->pdf, 0.0, self->xi, self->xf);
 
-    self->norma = 1.0;
     ncm_ode_spline_prepare (self->pdf, sd1);
-    self->norma = ncm_spline_eval (ncm_ode_spline_peek_spline (self->pdf), self->xf);
+    self->cdf_norma = ncm_spline_eval (ncm_ode_spline_peek_spline (self->pdf), self->xf);
+    self->norma     = self->cdf_norma * self->p_mode * (self->xf - self->xi);
 
-    ncm_ode_spline_prepare (self->inv_cdf, sd1);
+    _ncm_stats_dist1d_prepare_inv_cdf (self);
   }
-  else
+}
+
+/*
+ * The inverse interpolates the CDF knots with x and u swapped. A run of knots with the
+ * same u (zero density) keeps its first knot and, at the next representable u, its last,
+ * so a u above the run starts at the end of the zero-density interval.
+ */
+static void
+_ncm_stats_dist1d_prepare_inv_cdf (NcmStatsDist1dPrivate *self)
+{
+  NcmSpline *cdf    = ncm_ode_spline_peek_spline (self->pdf);
+  NcmVector *xv     = ncm_spline_peek_xv (cdf);
+  NcmVector *yv     = ncm_spline_peek_yv (cdf);
+  const guint len   = ncm_vector_len (xv);
+  gdouble last_u    = -1.0;
+  gdouble run_end_x = 0.0;
+  gboolean in_run   = FALSE;
+  guint i;
+
+  g_array_set_size (self->inv_u, 0);
+  g_array_set_size (self->inv_x, 0);
+
+  for (i = 0; i < len; i++)
   {
-    self->norma = 1.0;
+    const gdouble u_i = (i + 1 == len) ? 1.0 : GSL_MIN (ncm_vector_get (yv, i) / self->cdf_norma, 1.0);
+    const gdouble x_i = ncm_vector_get (xv, i);
+
+    if (u_i > last_u)
+    {
+      if (in_run)
+      {
+        const gdouble u_end = nextafter (last_u, 2.0);
+
+        if (u_end < u_i)
+        {
+          g_array_append_val (self->inv_u, u_end);
+          g_array_append_val (self->inv_x, run_end_x);
+        }
+
+        in_run = FALSE;
+      }
+
+      g_array_append_val (self->inv_u, u_i);
+      g_array_append_val (self->inv_x, x_i);
+      last_u = u_i;
+    }
+    else
+    {
+      run_end_x = x_i;
+      in_run    = TRUE;
+    }
   }
+
+  ncm_spline_set_array (self->inv_cdf, self->inv_u, self->inv_x, TRUE);
 }
 
 /**
  * ncm_stats_dist1d_set_xi:
  * @sd1: a #NcmStatsDist1d
- * @xi: a double
+ * @xi: lower bound $x_i$
  *
- * Sets the lower bound of the distribution $x_i$.
+ * Sets #NcmStatsDist1d:xi.
  */
 void
 ncm_stats_dist1d_set_xi (NcmStatsDist1d *sd1, gdouble xi)
@@ -378,9 +456,9 @@ ncm_stats_dist1d_set_xi (NcmStatsDist1d *sd1, gdouble xi)
 /**
  * ncm_stats_dist1d_set_xf:
  * @sd1: a #NcmStatsDist1d
- * @xf: a double
+ * @xf: upper bound $x_f$
  *
- * Sets the upper bound of the distribution $x_f$.
+ * Sets #NcmStatsDist1d:xf.
  */
 void
 ncm_stats_dist1d_set_xf (NcmStatsDist1d *sd1, gdouble xf)
@@ -394,7 +472,7 @@ ncm_stats_dist1d_set_xf (NcmStatsDist1d *sd1, gdouble xf)
  * ncm_stats_dist1d_get_xi:
  * @sd1: a #NcmStatsDist1d
  *
- * Returns: the lower bound of the distribution $x_i$.
+ * Returns: the lower bound $x_i$.
  */
 gdouble
 ncm_stats_dist1d_get_xi (NcmStatsDist1d *sd1)
@@ -408,7 +486,7 @@ ncm_stats_dist1d_get_xi (NcmStatsDist1d *sd1)
  * ncm_stats_dist1d_get_xf:
  * @sd1: a #NcmStatsDist1d
  *
- * Returns: the upper bound of the distribution $x_f$.
+ * Returns: the upper bound $x_f$.
  */
 gdouble
 ncm_stats_dist1d_get_xf (NcmStatsDist1d *sd1)
@@ -422,7 +500,10 @@ ncm_stats_dist1d_get_xf (NcmStatsDist1d *sd1)
  * ncm_stats_dist1d_get_current_h: (virtual get_current_h)
  * @sd1: a #NcmStatsDist1d
  *
- * Returns: the current value of the bandwidth h.
+ * Gets the kernel bandwidth of a kernel density estimate. Aborts for a subclass that
+ * does not implement it.
+ *
+ * Returns: the current bandwidth $h$.
  */
 gdouble
 ncm_stats_dist1d_get_current_h (NcmStatsDist1d *sd1)
@@ -435,10 +516,10 @@ ncm_stats_dist1d_get_current_h (NcmStatsDist1d *sd1)
 /**
  * ncm_stats_dist1d_set_compute_cdf:
  * @sd1: a #NcmStatsDist1d
- * @compute_cdf: a boolean
+ * @compute_cdf: whether to compute the cumulative distribution
  *
- * Enable/Disable the computation of the CDF and inverse CDF
- * whenever @compute_cdf is TRUE/FALSE.
+ * Sets #NcmStatsDist1d:compute-cdf. Without it ncm_stats_dist1d_prepare() computes neither
+ * the normalization nor the cumulative distribution and its inverse.
  */
 void
 ncm_stats_dist1d_set_compute_cdf (NcmStatsDist1d *sd1, gboolean compute_cdf)
@@ -452,7 +533,7 @@ ncm_stats_dist1d_set_compute_cdf (NcmStatsDist1d *sd1, gboolean compute_cdf)
  * ncm_stats_dist1d_get_compute_cdf:
  * @sd1: a #NcmStatsDist1d
  *
- * Returns: If the @sd1 is computing the CDF and inverse CDF.
+ * Returns: %TRUE if @sd1 computes the cumulative distribution and its inverse.
  */
 gboolean
 ncm_stats_dist1d_get_compute_cdf (NcmStatsDist1d *sd1)
@@ -467,9 +548,10 @@ ncm_stats_dist1d_get_compute_cdf (NcmStatsDist1d *sd1)
  * @sd1: a #NcmStatsDist1d
  * @x: random variable value
  *
- * Calculates the value of the probability density at @x.
+ * Evaluates the density at @x divided by the normalization. Without
+ * #NcmStatsDist1d:compute-cdf the normalization is 1 and the density is not normalized.
  *
- * Returns: the value of the probability density at @x.
+ * Returns: the density $p(x)$.
  */
 gdouble
 ncm_stats_dist1d_eval_p (NcmStatsDist1d *sd1, gdouble x)
@@ -487,11 +569,10 @@ ncm_stats_dist1d_eval_p (NcmStatsDist1d *sd1, gdouble x)
  * @sd1: a #NcmStatsDist1d
  * @x: random variable value
  *
- * Calculates the value of the $-2\ln(p(x))$ for the probability density.
- * It can be unnormalized, the norma can be retrieved using
- * ncm_stats_dist1d_eval_norma().
+ * Evaluates $-2\ln p(x)$ of the density as given by the subclass, without the
+ * normalization, see ncm_stats_dist1d_eval_norma().
  *
- * Returns: the value of $-2\ln(p(x))$.
+ * Returns: $-2\ln p(x)$.
  */
 gdouble
 ncm_stats_dist1d_eval_m2lnp (NcmStatsDist1d *sd1, gdouble x)
@@ -499,7 +580,7 @@ ncm_stats_dist1d_eval_m2lnp (NcmStatsDist1d *sd1, gdouble x)
   NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
 
   if (G_UNLIKELY (self->xi == self->xf))
-    return self->xi == x ? 0.0 : GSL_NEGINF;
+    return self->xi == x ? 0.0 : GSL_POSINF;
 
   return NCM_STATS_DIST1D_GET_CLASS (sd1)->m2lnp (sd1, x);
 }
@@ -507,11 +588,12 @@ ncm_stats_dist1d_eval_m2lnp (NcmStatsDist1d *sd1, gdouble x)
 /**
  * ncm_stats_dist1d_eval_pdf:
  * @sd1: a #NcmStatsDist1d
- * @x: random variable value
+ * @x: random variable value, in $[x_i, x_f]$
  *
- * Calculates the value of the probability of the interval [x_i, @x].
+ * Evaluates the cumulative distribution $\int_{x_i}^x p(x^\prime)\,\mathrm{d}x^\prime$.
+ * Requires #NcmStatsDist1d:compute-cdf; @x is not checked.
  *
- * Returns: the value of the probability of the interval [x_i, @x].
+ * Returns: the probability of $[x_i, x]$.
  */
 gdouble
 ncm_stats_dist1d_eval_pdf (NcmStatsDist1d *sd1, gdouble x)
@@ -521,17 +603,17 @@ ncm_stats_dist1d_eval_pdf (NcmStatsDist1d *sd1, gdouble x)
   if (G_UNLIKELY (self->xi == self->xf))
     return self->xi <= x ? 1.0 : 0.0;
 
-  return ncm_spline_eval (ncm_ode_spline_peek_spline (self->pdf), x) / self->norma;
+  return ncm_spline_eval (ncm_ode_spline_peek_spline (self->pdf), x) / self->cdf_norma;
 }
 
 /**
  * ncm_stats_dist1d_eval_norma:
  * @sd1: a #NcmStatsDist1d
  *
- * Calculates the norma of the distribution. If the probability
- * density is already normalized it will return 1.0.
+ * Gets the integral of the subclass density over $[x_i, x_f]$, computed by
+ * ncm_stats_dist1d_prepare(); 1 without #NcmStatsDist1d:compute-cdf.
  *
- * Returns: the value distribution normalization.
+ * Returns: the normalization.
  */
 gdouble
 ncm_stats_dist1d_eval_norma (NcmStatsDist1d *sd1)
@@ -547,12 +629,13 @@ ncm_stats_dist1d_eval_norma (NcmStatsDist1d *sd1)
 /**
  * ncm_stats_dist1d_eval_inv_pdf:
  * @sd1: a #NcmStatsDist1d
- * @u: a number between [0, 1]
+ * @u: probability, in $[0, 1]$
  *
- * Calculates the value of the random variable $x$ for which the cumulative
- * distribution satisfy $\int_{x_i}^x\mathrm{d}x^\prime p(x^\prime) = u$.
+ * Evaluates the inverse of the cumulative distribution, the $x$ with
+ * $\int_{x_i}^x p(x^\prime)\,\mathrm{d}x^\prime = u$. Returns $x_i$ for $u \leq 0$ and $x_f$ for
+ * $u \geq 1$. Requires #NcmStatsDist1d:compute-cdf.
  *
- * Returns: the value of x.
+ * Returns: the quantile $x$.
  */
 gdouble
 ncm_stats_dist1d_eval_inv_pdf (NcmStatsDist1d *sd1, const gdouble u)
@@ -566,18 +649,19 @@ ncm_stats_dist1d_eval_inv_pdf (NcmStatsDist1d *sd1, const gdouble u)
   else if (G_UNLIKELY (u >= 1.0))
     return self->xf;
   else
-    return ncm_spline_eval (ncm_ode_spline_peek_spline (self->inv_cdf), atanh (u));
+    return ncm_spline_eval (self->inv_cdf, u);
 }
 
 /**
  * ncm_stats_dist1d_eval_inv_pdf_tail:
  * @sd1: a #NcmStatsDist1d
- * @v: a number between [0, 1]
+ * @v: probability, in $[0, 1]$
  *
- * Calculates the value of the random variable $x$ for which the cumulative
- * distribution satisfy $\int_{x}^{x_f}\mathrm{d}x^\prime p(x^\prime) = v$.
+ * Evaluates the $x$ with $\int_x^{x_f} p(x^\prime)\,\mathrm{d}x^\prime = v$, that is
+ * ncm_stats_dist1d_eval_inv_pdf() at $1 - v$, so @v below $\epsilon$ is not resolved.
+ * Returns $x_f$ for $v \leq 0$ and $x_i$ for $v \geq 1$. Requires #NcmStatsDist1d:compute-cdf.
  *
- * Returns: the value of x.
+ * Returns: the quantile $x$.
  */
 gdouble
 ncm_stats_dist1d_eval_inv_pdf_tail (NcmStatsDist1d *sd1, const gdouble v)
@@ -585,23 +669,13 @@ ncm_stats_dist1d_eval_inv_pdf_tail (NcmStatsDist1d *sd1, const gdouble v)
   NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
 
   if (G_UNLIKELY (self->xi == self->xf))
-  {
     return self->xi;
-  }
   else if (G_UNLIKELY (v <= 0.0))
-  {
     return self->xf;
-  }
   else if (G_UNLIKELY (v >= 1.0))
-  {
     return self->xi;
-  }
   else
-  {
-    const gdouble atan_1mv = 0.5 * (M_LN2 + log1p (-0.5 * v) - log (v));
-
-    return ncm_spline_eval (ncm_ode_spline_peek_spline (self->inv_cdf), atan_1mv);
-  }
+    return ncm_spline_eval (self->inv_cdf, 1.0 - v);
 }
 
 /**
@@ -609,9 +683,10 @@ ncm_stats_dist1d_eval_inv_pdf_tail (NcmStatsDist1d *sd1, const gdouble v)
  * @sd1: a #NcmStatsDist1d
  * @rng: a #NcmRNG
  *
- * Generates a realization of the probability distribution.
+ * Draws a value from the distribution by inverting the cumulative distribution at a
+ * uniform deviate. Requires #NcmStatsDist1d:compute-cdf.
  *
- * Returns: the value of the probability of the interval [x_i, @x].
+ * Returns: the drawn value.
  */
 gdouble
 ncm_stats_dist1d_gen (NcmStatsDist1d *sd1, NcmRNG *rng)
@@ -633,9 +708,13 @@ _ncm_stats_dist1d_m2lnp (gdouble x, gpointer p)
  * ncm_stats_dist1d_eval_mode:
  * @sd1: a #NcmStatsDist1d
  *
- * Calculates the mode of the distribution.
+ * Locates the maximum of the density: the minimum of $-2\ln p$ on 1000 equally spaced
+ * points, refined by Brent's method between the two neighbouring grid points to a relative
+ * tolerance $\sqrt{\mathrm{reltol}}$ and the absolute tolerance #NcmStatsDist1d:abstol.
+ * The grid point is returned when it is $x_i$ or $x_f$, or when a neighbour has zero density.
+ * Warns if the refinement stops before its tolerance.
  *
- * Returns: the mode of the probability distribution.
+ * Returns: the mode.
  */
 gdouble
 ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
@@ -644,12 +723,11 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
   const gdouble reltol        = sqrt (self->reltol);
   const gint max_iter         = 1000000;
   const gint linear_search    = 1000;
-  gdouble x0                  = self->xi;
-  gdouble x1                  = self->xf;
+  const gdouble dx            = (self->xf - self->xi) / (linear_search - 1.0);
   gdouble x                   = 0.5 * (self->xf + self->xi);
-  gdouble last_x0             = x0;
-  gdouble last_x1             = x1;
+  gint k_min                  = -1;
   gint iter                   = 0;
+  gdouble x0, x1, last_x0, last_x1;
   gsl_function F;
   gdouble fmin;
   gint status;
@@ -665,30 +743,31 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
 
   for (iter = 0; iter < linear_search; iter++)
   {
-    const gdouble x_try = self->xi + (self->xf - self->xi) / (linear_search - 1.0) * iter;
+    const gdouble x_try = self->xi + dx * iter;
     const gdouble f_try = ncm_stats_dist1d_eval_m2lnp (sd1, x_try);
 
     if (f_try < fmin)
     {
-      fmin = f_try;
-      x    = x_try;
+      fmin  = f_try;
+      x     = x_try;
+      k_min = iter;
     }
   }
 
+  if ((k_min <= 0) || (k_min >= linear_search - 1))
+    return x;
+
+  /* Brent refines inside the grid neighbours of the minimum, and needs f(x) finite and below both */
+  x0      = self->xi + dx * (k_min - 1);
+  x1      = self->xi + dx * (k_min + 1);
+  last_x0 = x0;
+  last_x1 = x1;
+
   {
-    /*
-     * gsl_min_fminimizer_set requires a proper bracket: f(x) must be
-     * strictly less than f(x0) and f(x1). For a skewed or prior-bounded
-     * distribution whose true maximum sits at (or numerically at) a domain
-     * edge, the coarse scan above finds x at (or immediately next to) x0 or
-     * x1, and this precondition fails, which would otherwise abort through
-     * NCM_TEST_GSL_RESULT's fatal g_error below. Detect that case here and
-     * return the coarse-grid estimate directly instead.
-     */
     const gdouble f_x0 = ncm_stats_dist1d_eval_m2lnp (sd1, x0);
     const gdouble f_x1 = ncm_stats_dist1d_eval_m2lnp (sd1, x1);
 
-    if ((fmin >= f_x0) || (fmin >= f_x1))
+    if (!(gsl_finite (f_x0) && gsl_finite (f_x1)) || (fmin >= f_x0) || (fmin >= f_x1))
       return x;
   }
 
@@ -702,7 +781,7 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
     status = gsl_min_fminimizer_iterate (self->fmin);
 
     if (status)
-      g_error ("ncm_stats_dist1d_mode: Cannot find minimum (%s)", gsl_strerror (status));  /* LCOV_EXCL_LINE */
+      g_error ("ncm_stats_dist1d_eval_mode: cannot find the minimum (%s)", gsl_strerror (status));  /* LCOV_EXCL_LINE */
 
     x  = gsl_min_fminimizer_x_minimum (self->fmin);
     x0 = gsl_min_fminimizer_x_lower (self->fmin);

@@ -44,6 +44,7 @@ G_DECLARE_FINAL_TYPE (NcmSplineGsl, ncm_spline_gsl, NCM, SPLINE_GSL, NcmSpline)
  * @NCM_SPLINE_GSL_CSPLINE_PERIODIC: [periodic cubic spline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_cspline_periodic)
  * @NCM_SPLINE_GSL_AKIMA: [Akima spline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_akima)
  * @NCM_SPLINE_GSL_AKIMA_PERIODIC: [periodic Akima spline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_akima_periodic)
+ * @NCM_SPLINE_GSL_STEFFEN: [Steffen spline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_steffen), monotone between knots
  *
  * GSL interpolation methods of #NcmSplineGsl.
  */
@@ -55,6 +56,7 @@ typedef enum _NcmSplineGslType /*< prefix=NCM_SPLINE_GSL >*/
   NCM_SPLINE_GSL_CSPLINE_PERIODIC,
   NCM_SPLINE_GSL_AKIMA,
   NCM_SPLINE_GSL_AKIMA_PERIODIC,
+  NCM_SPLINE_GSL_STEFFEN,
   /* < private > */
   NCM_SPLINE_GSL_TYPES_LEN, /*< skip >*/
 } NcmSplineGslType;

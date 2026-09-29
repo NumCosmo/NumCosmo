@@ -267,16 +267,18 @@ _ncm_spline_gsl_deriv_nmax (const NcmSpline *s, const gdouble x)
     return gsl_interp_eval_deriv (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), x, s_acc);
   }
   else if ((sg->type == gsl_interp_cspline) || (sg->type == gsl_interp_cspline_periodic) ||
-           (sg->type == gsl_interp_akima) || (sg->type == gsl_interp_akima_periodic))
+           (sg->type == gsl_interp_akima) || (sg->type == gsl_interp_akima_periodic) ||
+           (sg->type == gsl_interp_steffen))
   {
-    const guint knot_i        = ncm_spline_get_index (s, x);
-    const gdouble x_i         = ncm_vector_get (s_xv, knot_i);
-    const gdouble x_ip1       = ncm_vector_get (s_xv, knot_i + 1);
-    const gdouble dx          = x_ip1 - x_i;
-    gdouble two_c_i           = gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), x_i, s_acc);
-    gdouble two_c_i_p_6d_i_dx = gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), x_ip1, s_acc);
+    /* The second derivative of Akima and Steffen splines jumps at the knots, so both points lie in the interval of x */
+    const guint knot_i  = ncm_spline_get_index (s, x);
+    const gdouble x_i   = ncm_vector_get (s_xv, knot_i);
+    const gdouble x_ip1 = ncm_vector_get (s_xv, knot_i + 1);
+    const gdouble x_mid = 0.5 * (x_i + x_ip1);
+    const gdouble d2_i  = gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), x_i, s_acc);
+    const gdouble d2_m  = gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), x_mid, s_acc);
 
-    return (two_c_i_p_6d_i_dx - two_c_i) / dx;
+    return (d2_m - d2_i) / (x_mid - x_i);
   }
   else
   {
@@ -451,6 +453,9 @@ ncm_spline_gsl_set_type_by_id (NcmSplineGsl *sg, NcmSplineGslType type_id)
       break;
     case NCM_SPLINE_GSL_AKIMA_PERIODIC:
       ncm_spline_gsl_set_type (sg, gsl_interp_akima_periodic);
+      break;
+    case NCM_SPLINE_GSL_STEFFEN:
+      ncm_spline_gsl_set_type (sg, gsl_interp_steffen);
       break;
     default:
       g_assert_not_reached ();
