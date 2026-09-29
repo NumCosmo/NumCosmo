@@ -26,10 +26,18 @@
 /**
  * NcmDataPoisson:
  *
- * Abstract class for implementing poisson distributed data.
+ * Abstract class for binned Poisson data.
  *
- * Class for implementing Poisson distributed data.
+ * The data are the counts $N_i$ in #NcmDataPoisson:n-bins bins, with edges
+ * #NcmDataPoisson:bin-edges, each drawn from a Poisson distribution of mean
+ * $\lambda_i$. Subclasses implement the mean_func virtual method, which returns
+ * $\lambda_i$ for bin $i$ given the models in a #NcmMSet; ncm_data_poisson_get_bin_range()
+ * gives the edges of the bin.
  *
+ * $-2\ln L$ is the Poisson deviance, relative to the saturated model $\lambda_i = N_i$:
+ * $$-2\ln L = -2\sum_i \left[N_i \ln(\lambda_i/N_i) - \lambda_i + N_i\right],$$
+ * with the term $2\lambda_i$ for an empty bin. The least-squares vector holds the square
+ * roots of the terms, and the Fisher matrix uses the variance $\lambda_i$.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -51,17 +59,14 @@ enum
   PROP_0,
   PROP_NBINS,
   PROP_MEANS,
-  PROP_KNOTS,
+  PROP_BIN_EDGES,
   PROP_SIZE,
 };
 
 typedef struct _NcmDataPoissonPrivate
 {
-  /* < private > */
-  NcmData parent_instance;
   gsl_histogram *h;
   NcmVector *means;
-  NcmVector *log_Nfac;
   guint nbins;
 } NcmDataPoissonPrivate;
 
@@ -72,20 +77,12 @@ ncm_data_poisson_init (NcmDataPoisson *poisson)
 {
   NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
 
-  self->nbins    = 0;
-  self->h        = NULL;
-  self->means    = NULL;
-  self->log_Nfac = NULL;
+  self->nbins = 0;
+  self->h     = NULL;
+  self->means = NULL;
 }
 
-static void
-_ncm_data_poisson_constructed (GObject *object)
-{
-  /* Chain up : start */
-  G_OBJECT_CLASS (ncm_data_poisson_parent_class)->constructed (object);
-  {
-  }
-}
+static void _ncm_data_poisson_set_edges (NcmDataPoisson *poisson, NcmVector *edges);
 
 static void
 ncm_data_poisson_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -101,8 +98,28 @@ ncm_data_poisson_set_property (GObject *object, guint prop_id, const GValue *val
       ncm_data_poisson_set_size (poisson, g_value_get_uint (value));
       break;
     case PROP_MEANS:
-      ncm_vector_memcpy (self->means, g_value_get_object (value));
+    {
+      NcmVector *counts = g_value_get_object (value);
+
+      if (counts == NULL)
+        break;
+
+      if (ncm_vector_len (counts) != self->nbins)
+        g_error ("ncm_data_poisson_set_property: data `%s' has %u bins, but the counts have %u components.",
+                 ncm_data_peek_desc (NCM_DATA (poisson)), self->nbins, ncm_vector_len (counts));
+
+      ncm_vector_memcpy (self->means, counts);
       break;
+    }
+    case PROP_BIN_EDGES:
+    {
+      NcmVector *edges = g_value_get_object (value);
+
+      if (edges != NULL)
+        _ncm_data_poisson_set_edges (poisson, edges);
+
+      break;
+    }
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -125,6 +142,9 @@ ncm_data_poisson_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_MEANS:
       g_value_set_object (value, self->means);
       break;
+    case PROP_BIN_EDGES:
+      g_value_take_object (value, (self->h != NULL) ? ncm_data_poisson_get_bin_edges (poisson) : NULL);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -142,17 +162,7 @@ ncm_data_poisson_dispose (GObject *object)
   G_OBJECT_CLASS (ncm_data_poisson_parent_class)->dispose (object);
 }
 
-static void
-ncm_data_poisson_finalize (GObject *object)
-{
-  /* NcmDataPoisson *poisson = NCM_DATA_POISSON (object); */
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_data_poisson_parent_class)->finalize (object);
-}
-
 static guint _ncm_data_poisson_get_length (NcmData *data);
-static void _ncm_data_poisson_begin (NcmData *data);
 static void _ncm_data_poisson_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 static void _ncm_data_poisson_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static void _ncm_data_poisson_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v);
@@ -169,13 +179,16 @@ ncm_data_poisson_class_init (NcmDataPoissonClass *klass)
   NcmDataPoissonClass *poisson_class = NCM_DATA_POISSON_CLASS (klass);
   NcmDataClass *data_class           = NCM_DATA_CLASS (klass);
 
-  object_class->constructed  = &_ncm_data_poisson_constructed;
   object_class->set_property = &ncm_data_poisson_set_property;
   object_class->get_property = &ncm_data_poisson_get_property;
+  object_class->dispose      = &ncm_data_poisson_dispose;
 
-  object_class->dispose  = &ncm_data_poisson_dispose;
-  object_class->finalize = &ncm_data_poisson_finalize;
-
+  /**
+   * NcmDataPoisson:n-bins:
+   *
+   * The number of bins; changing it reallocates the data, sets the edges to
+   * $0, 1, \dots, n$ and marks the data not initialized.
+   */
   g_object_class_install_property (object_class,
                                    PROP_NBINS,
                                    g_param_spec_uint ("n-bins",
@@ -184,6 +197,11 @@ ncm_data_poisson_class_init (NcmDataPoissonClass *klass)
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmDataPoisson:mean:
+   *
+   * The counts $N_i$ in each bin.
+   */
   g_object_class_install_property (object_class,
                                    PROP_MEANS,
                                    g_param_spec_object ("mean",
@@ -192,9 +210,21 @@ ncm_data_poisson_class_init (NcmDataPoissonClass *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmDataPoisson:bin-edges:
+   *
+   * The $n + 1$ bin edges, in increasing order.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_BIN_EDGES,
+                                   g_param_spec_object ("bin-edges",
+                                                        NULL,
+                                                        "Bin edges",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   data_class->bootstrap  = TRUE;
   data_class->get_length = &_ncm_data_poisson_get_length;
-  data_class->begin      = &_ncm_data_poisson_begin;
 
   data_class->resample       = &_ncm_data_poisson_resample;
   data_class->m2lnL_val      = &_ncm_data_poisson_m2lnL_val;
@@ -215,21 +245,6 @@ _ncm_data_poisson_get_length (NcmData *data)
   NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
 
   return self->nbins;
-}
-
-static void
-_ncm_data_poisson_begin (NcmData *data)
-{
-  NcmDataPoisson *poisson            = NCM_DATA_POISSON (data);
-  NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
-  guint i;
-
-  for (i = 0; i < self->h->n; i++)
-  {
-    const gdouble N_i = gsl_histogram_get (self->h, i);
-
-    ncm_vector_fast_set (self->log_Nfac, i, lgamma (N_i + 1.0));
-  }
 }
 
 static void
@@ -306,7 +321,8 @@ _ncm_data_poisson_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
   guint i;
 
   if (ncm_data_bootstrap_enabled (data))
-    g_error ("NcmDataPoisson: does not support bootstrap with least squares");
+    g_error ("_ncm_data_poisson_leastsquares_f: data `%s': bootstrap is not supported with least squares.",
+             ncm_data_peek_desc (data));
 
   for (i = 0; i < self->h->n; i++)
   {
@@ -326,7 +342,9 @@ _ncm_data_poisson_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu)
   NcmDataPoissonClass *poisson_class = NCM_DATA_POISSON_GET_CLASS (poisson);
   guint i;
 
-  g_assert_cmpuint (ncm_vector_len (mu), ==, self->h->n);
+  if (ncm_vector_len (mu) != self->h->n)
+    g_error ("_ncm_data_poisson_mean_vector: data `%s' has %u bins, but the vector has %u components.",
+             ncm_data_peek_desc (data), (guint) self->h->n, ncm_vector_len (mu));
 
   for (i = 0; i < self->h->n; i++)
   {
@@ -343,9 +361,8 @@ _ncm_data_poisson_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
   guint i;
 
   if (ncm_data_bootstrap_enabled (data))
-    g_error ("NcmDataPoisson: does not support bootstrap fisher matrix");
-
-  g_assert_cmpuint (ncm_matrix_ncols (H), ==, self->h->n);
+    g_error ("_ncm_data_poisson_inv_cov_UH: data `%s': bootstrap is not supported with the Fisher matrix.",
+             ncm_data_peek_desc (data));
 
   for (i = 0; i < self->h->n; i++)
   {
@@ -364,9 +381,8 @@ _ncm_data_poisson_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f)
   guint i;
 
   if (ncm_data_bootstrap_enabled (data))
-    g_error ("NcmDataPoisson: does not support bootstrap fisher matrix");
-
-  g_assert_cmpuint (ncm_vector_len (f), ==, self->h->n);
+    g_error ("_ncm_data_poisson_inv_cov_Uf: data `%s': bootstrap is not supported with the Fisher matrix.",
+             ncm_data_peek_desc (data));
 
   for (i = 0; i < self->h->n; i++)
   {
@@ -385,7 +401,6 @@ _ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint nbins)
   if (nbins != self->nbins)
   {
     self->nbins = 0;
-    ncm_vector_clear (&self->log_Nfac);
 
     if (self->h != NULL)
     {
@@ -400,10 +415,13 @@ _ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint nbins)
     {
       NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
 
-      self->nbins    = nbins;
-      self->log_Nfac = ncm_vector_new (self->nbins);
-      self->h        = gsl_histogram_alloc (self->nbins);
-      self->means    = ncm_vector_new_data_static (self->h->bin, self->h->n, 1);
+      self->nbins = nbins;
+      self->h     = gsl_histogram_alloc (self->nbins);
+      self->means = ncm_vector_new_data_static (self->h->bin, self->h->n, 1);
+
+      /* gsl_histogram_alloc leaves the ranges undefined. */
+      gsl_histogram_set_ranges_uniform (self->h, 0.0, self->nbins);
+      gsl_histogram_reset (self->h);
 
       if (ncm_data_bootstrap_enabled (data))
       {
@@ -424,13 +442,50 @@ _ncm_data_poisson_get_size (NcmDataPoisson *poisson)
   return self->nbins;
 }
 
+/*
+ * Sets the bin edges from @edges, which must have n-bins + 1 increasing components.
+ */
+static void
+_ncm_data_poisson_set_edges (NcmDataPoisson *poisson, NcmVector *edges)
+{
+  NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
+  const guint len                    = ncm_vector_len (edges);
+  guint i;
+
+  if (len != self->nbins + 1)
+    g_error ("ncm_data_poisson: data `%s' has %u bins, but %u bin edges were given (expected %u).",
+             ncm_data_peek_desc (NCM_DATA (poisson)), self->nbins, len, self->nbins + 1);
+
+  for (i = 0; i + 1 < len; i++)
+  {
+    if (!(ncm_vector_get (edges, i) < ncm_vector_get (edges, i + 1)))
+      g_error ("ncm_data_poisson: data `%s': the bin edges must be increasing, but edge %u is %g and edge %u is %g.",
+               ncm_data_peek_desc (NCM_DATA (poisson)), i, ncm_vector_get (edges, i), i + 1, ncm_vector_get (edges, i + 1));
+  }
+
+  for (i = 0; i < len; i++)
+    self->h->range[i] = ncm_vector_get (edges, i);
+}
+
+/* Resizes to ncm_vector_len (@nodes) - 1 bins, which must be at least one. */
+static void
+_ncm_data_poisson_resize_from_nodes (NcmDataPoisson *poisson, NcmVector *nodes, const gchar *func)
+{
+  if (ncm_vector_len (nodes) < 2)
+    g_error ("%s: data `%s': at least two bin edges are needed, but %u were given.",
+             func, ncm_data_peek_desc (NCM_DATA (poisson)), ncm_vector_len (nodes));
+
+  ncm_data_poisson_set_size (poisson, ncm_vector_len (nodes) - 1);
+}
+
 /**
  * ncm_data_poisson_init_from_vector:
  * @poisson: a #NcmDataPoisson
- * @nodes: bins edges
+ * @nodes: bin edges
  * @N: counts in each bin
  *
- * Initializes a #NcmDataPoisson from a vector of bin edges and a vector of counts.
+ * Sets the bins to those with edges @nodes and the counts to @N, which must have one
+ * component less than @nodes, and marks the data initialized.
  *
  */
 void
@@ -439,17 +494,15 @@ ncm_data_poisson_init_from_vector (NcmDataPoisson *poisson, NcmVector *nodes, Nc
   NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
   guint i;
 
-  ncm_data_poisson_set_size (poisson, ncm_vector_len (nodes) - 1);
+  if (ncm_vector_len (nodes) != ncm_vector_len (N) + 1)
+    g_error ("ncm_data_poisson_init_from_vector: data `%s': %u bin edges for %u counts, expected %u.",
+             ncm_data_peek_desc (NCM_DATA (poisson)), ncm_vector_len (nodes), ncm_vector_len (N), ncm_vector_len (N) + 1);
 
-  g_assert_cmpuint (ncm_vector_len (nodes), ==, ncm_vector_len (N) + 1);
-
-  self->h->range[0] = ncm_vector_get (nodes, 0);
+  _ncm_data_poisson_resize_from_nodes (poisson, nodes, "ncm_data_poisson_init_from_vector");
+  _ncm_data_poisson_set_edges (poisson, nodes);
 
   for (i = 0; i < ncm_vector_len (N); i++)
-  {
-    self->h->range[i + 1] = ncm_vector_get (nodes, i + 1);
-    self->h->bin[i]       = ncm_vector_get (N, i);
-  }
+    self->h->bin[i] = ncm_vector_get (N, i);
 
   ncm_data_set_init (NCM_DATA (poisson), TRUE);
 }
@@ -457,10 +510,11 @@ ncm_data_poisson_init_from_vector (NcmDataPoisson *poisson, NcmVector *nodes, Nc
 /**
  * ncm_data_poisson_init_from_binning:
  * @poisson: a #NcmDataPoisson
- * @nodes: bins edges
+ * @nodes: bin edges
  * @x: data to be binned
  *
- * Initializes a #NcmDataPoisson from a vector of bin edges and a vector of data to be binned.
+ * Sets the bins to those with edges @nodes, counts the values in @x that fall in each
+ * bin (values outside the edges are ignored) and marks the data initialized.
  *
  */
 void
@@ -469,14 +523,9 @@ ncm_data_poisson_init_from_binning (NcmDataPoisson *poisson, NcmVector *nodes, N
   NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
   guint i;
 
-  ncm_data_poisson_set_size (poisson, ncm_vector_len (nodes) - 1);
-
-  if (ncm_vector_stride (nodes) == 1)
-    gsl_histogram_set_ranges (self->h, ncm_vector_data (nodes), ncm_vector_len (nodes));
-  else
-    for (i = 0; i < ncm_vector_len (nodes); i++)
-      self->h->range[i] = ncm_vector_get (nodes, i);
-
+  _ncm_data_poisson_resize_from_nodes (poisson, nodes, "ncm_data_poisson_init_from_binning");
+  _ncm_data_poisson_set_edges (poisson, nodes);
+  gsl_histogram_reset (self->h);
 
   for (i = 0; i < ncm_vector_len (x); i++)
     gsl_histogram_increment (self->h, ncm_vector_get (x, i));
@@ -487,24 +536,19 @@ ncm_data_poisson_init_from_binning (NcmDataPoisson *poisson, NcmVector *nodes, N
 /**
  * ncm_data_poisson_init_zero:
  * @poisson: a #NcmDataPoisson
- * @nodes: a #NcmVector
+ * @nodes: bin edges
  *
- * Initializes a #NcmDataPoisson with zero counts.
+ * Sets the bins to those with edges @nodes, with zero counts, and marks the data
+ * initialized.
  *
  */
 void
 ncm_data_poisson_init_zero (NcmDataPoisson *poisson, NcmVector *nodes)
 {
   NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
-  guint i;
 
-  ncm_data_poisson_set_size (poisson, ncm_vector_len (nodes) - 1);
-
-  self->h->range[0] = ncm_vector_get (nodes, 0);
-
-  for (i = 0; i < self->h->n; i++)
-    self->h->range[i + 1] = ncm_vector_get (nodes, i + 1);
-
+  _ncm_data_poisson_resize_from_nodes (poisson, nodes, "ncm_data_poisson_init_zero");
+  _ncm_data_poisson_set_edges (poisson, nodes);
   gsl_histogram_reset (self->h);
 
   ncm_data_set_init (NCM_DATA (poisson), TRUE);
@@ -569,9 +613,9 @@ ncm_data_poisson_get_sum (NcmDataPoisson *poisson)
  * ncm_data_poisson_get_hist_vals:
  * @poisson: a #NcmDataPoisson
  *
- * Gets the vector containing the bins values.
+ * Gets the counts $N_i$ in each bin.
  *
- * Returns: (transfer full): vector containing the bins values.
+ * Returns: (transfer full): a new vector with the counts.
  */
 NcmVector *
 ncm_data_poisson_get_hist_vals (NcmDataPoisson *poisson)
@@ -595,9 +639,9 @@ ncm_data_poisson_get_hist_vals (NcmDataPoisson *poisson)
  * @poisson: a #NcmDataPoisson
  * @mset: a #NcmMSet
  *
- * Gets the vector containing the bins values.
+ * Computes the mean $\lambda_i$ of each bin given the models in @mset.
  *
- * Returns: (transfer full): vector containing the bins values.
+ * Returns: (transfer full): the means $\lambda_i$.
  */
 NcmVector *
 ncm_data_poisson_get_hist_means (NcmDataPoisson *poisson, NcmMSet *mset)
@@ -617,5 +661,54 @@ ncm_data_poisson_get_hist_means (NcmDataPoisson *poisson, NcmMSet *mset)
   }
 
   return v;
+}
+
+/**
+ * ncm_data_poisson_get_bin_edges:
+ * @poisson: a #NcmDataPoisson
+ *
+ * Gets the n-bins + 1 bin edges.
+ *
+ * Returns: (transfer full): a new vector with the bin edges.
+ */
+NcmVector *
+ncm_data_poisson_get_bin_edges (NcmDataPoisson *poisson)
+{
+  NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
+  NcmVector *edges;
+  guint i;
+
+  if (self->h == NULL)
+    g_error ("ncm_data_poisson_get_bin_edges: data `%s' has no bins.", ncm_data_peek_desc (NCM_DATA (poisson)));
+
+  edges = ncm_vector_new (self->nbins + 1);
+
+  for (i = 0; i <= self->nbins; i++)
+    ncm_vector_set (edges, i, self->h->range[i]);
+
+  return edges;
+}
+
+/**
+ * ncm_data_poisson_get_bin_range:
+ * @poisson: a #NcmDataPoisson
+ * @i: bin index
+ * @lower: (out): lower edge of bin @i
+ * @upper: (out): upper edge of bin @i
+ *
+ * Gets the edges of bin @i, for use in mean_func.
+ *
+ */
+void
+ncm_data_poisson_get_bin_range (NcmDataPoisson *poisson, const guint i, gdouble *lower, gdouble *upper)
+{
+  NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
+
+  if (i >= self->nbins)
+    g_error ("ncm_data_poisson_get_bin_range: data `%s' has %u bins, bin %u requested.",
+             ncm_data_peek_desc (NCM_DATA (poisson)), self->nbins, i);
+
+  *lower = self->h->range[i];
+  *upper = self->h->range[i + 1];
 }
 

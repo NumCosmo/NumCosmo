@@ -2179,6 +2179,8 @@ class DataPoisson(Data):
         Number of bins
       mean -> NcmVector: mean
         Data mean
+      bin-edges -> NcmVector: bin-edges
+        Bin edges
 
     Properties from NcmData:
       name -> gchararray: name
@@ -2197,6 +2199,7 @@ class DataPoisson(Data):
     """
 
     class Props:
+        bin_edges: Vector
         mean: Vector
         n_bins: int
         bootstrap: Bootstrap
@@ -2209,6 +2212,7 @@ class DataPoisson(Data):
     parent_instance: Data = ...
     def __init__(
         self,
+        bin_edges: Vector = ...,
         mean: Vector = ...,
         n_bins: int = ...,
         bootstrap: Bootstrap = ...,
@@ -2219,6 +2223,8 @@ class DataPoisson(Data):
     def do_get_size(self) -> int: ...
     def do_mean_func(self, mset: MSet, n: int) -> float: ...
     def do_set_size(self, nbins: int) -> None: ...
+    def get_bin_edges(self) -> Vector: ...
+    def get_bin_range(self, i: int) -> typing.Tuple[float, float]: ...
     def get_hist_means(self, mset: MSet) -> Vector: ...
     def get_hist_vals(self) -> Vector: ...
     def get_size(self) -> int: ...
