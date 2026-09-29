@@ -58,6 +58,11 @@ static void test_ncm_stats_dist1d_epdf_free (TestNcmStatsDist1dEPDF *test, gcons
 static void test_ncm_stats_dist1d_epdf_mode_boundary (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
 
 static void test_ncm_stats_dist1d_epdf_traps (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
+static void test_ncm_stats_dist1d_epdf_bw_regression (void);
+static void test_ncm_stats_dist1d_epdf_bw_gauss_amise (void);
+static void test_ncm_stats_dist1d_epdf_bounds (void);
+static void test_ncm_stats_dist1d_epdf_empty_subprocess (void);
+static void test_ncm_stats_dist1d_epdf_empty (void);
 static void test_ncm_stats_dist1d_epdf_invalid_neg_weight (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
 static void test_ncm_stats_dist1d_epdf_invalid_infinite_obs (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
 
@@ -70,6 +75,12 @@ main (gint argc, gchar *argv[])
   ncm_cfg_enable_gsl_err_handler ();
 
   g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/stats_dist1d/epdf/bw_regression", &test_ncm_stats_dist1d_epdf_bw_regression);
+  g_test_add_func ("/ncm/stats_dist1d/epdf/bw_gauss_amise", &test_ncm_stats_dist1d_epdf_bw_gauss_amise);
+  g_test_add_func ("/ncm/stats_dist1d/epdf/bounds", &test_ncm_stats_dist1d_epdf_bounds);
+  g_test_add_func ("/ncm/stats_dist1d/epdf/empty", &test_ncm_stats_dist1d_epdf_empty);
+  g_test_add_func ("/ncm/stats_dist1d/epdf/empty/subprocess", &test_ncm_stats_dist1d_epdf_empty_subprocess);
 
   g_test_add ("/ncm/stats_dist1d/epdf/gauss", TestNcmStatsDist1dEPDF, NULL,
               &test_ncm_stats_dist1d_epdf_new,
@@ -646,5 +657,138 @@ static void
 test_ncm_stats_dist1d_epdf_invalid_infinite_obs (TestNcmStatsDist1dEPDF *test, gconstpointer pdata)
 {
   ncm_stats_dist1d_epdf_add_obs_weight (test->sd1, GSL_POSINF, 1.0);
+}
+
+/* Draws n values of one of the regression shapes */
+static void
+_test_epdf_fill (NcmStatsDist1dEPDF *epdf, guint shape, guint n, NcmRNG *rng)
+{
+  guint i;
+
+  for (i = 0; i < n; i++)
+  {
+    switch (shape)
+    {
+      case 0: /* weighted unit Gaussian */
+        ncm_stats_dist1d_epdf_add_obs_weight (epdf, ncm_rng_gaussian_gen (rng, 0.0, 1.0), ncm_rng_uniform_gen (rng, 0.5, 2.0));
+        break;
+      case 1: /* claw of Marron and Wand */
+      {
+        const gdouble u = ncm_rng_uniform01_gen (rng);
+        const guint k   = (u < 0.5) ? 0 : 1 + GSL_MIN ((guint) ((u - 0.5) * 10.0), 4);
+
+        ncm_stats_dist1d_epdf_add_obs (epdf, (k == 0) ? ncm_rng_gaussian_gen (rng, 0.0, 1.0) : ncm_rng_gaussian_gen (rng, 0.5 * (k - 1) - 1.0, 0.1));
+        break;
+      }
+      case 2: /* unit exponential */
+        ncm_stats_dist1d_epdf_add_obs (epdf, ncm_rng_exponential_gen (rng, 1.0));
+        break;
+      case 3: /* uniform on [2, 5] */
+        ncm_stats_dist1d_epdf_add_obs (epdf, ncm_rng_uniform_gen (rng, 2.0, 5.0));
+        break;
+      default: /* arcsine, Beta (1/2, 1/2) */
+        ncm_stats_dist1d_epdf_add_obs (epdf, ncm_rng_beta_gen (rng, 0.5, 0.5));
+        break;
+    }
+  }
+}
+
+/*
+ * Regression values of the automatic bandwidth, 20000 observations per shape, merging at
+ * sd-min-scale 1e-3 while they are added (max-obs 1000). Compared to 1e-12 rather than bit
+ * for bit: FFTW may pick another algorithm on another machine.
+ */
+static void
+test_ncm_stats_dist1d_epdf_bw_regression (void)
+{
+  const gdouble h_ref[5] = {0.16568181535100246, 0.14716458563415075, 0.12453004358786544, 0.11489972618980605, 0.02824853152261754};
+  guint shape;
+
+  for (shape = 0; shape < 5; shape++)
+  {
+    NcmRNG *rng              = ncm_rng_seeded_new (NULL, 1234);
+    NcmStatsDist1dEPDF *epdf = ncm_stats_dist1d_epdf_new_full (1000, NCM_STATS_DIST1D_EPDF_BW_AUTO, 0.1, 1.0e-3);
+
+    _test_epdf_fill (epdf, shape, 20000, rng);
+    ncm_stats_dist1d_set_compute_cdf (NCM_STATS_DIST1D (epdf), FALSE);
+    ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (epdf));
+
+    g_test_message ("shape %u: h = %.17g", shape, ncm_stats_dist1d_get_current_h (NCM_STATS_DIST1D (epdf)));
+    ncm_assert_cmpdouble_e (ncm_stats_dist1d_get_current_h (NCM_STATS_DIST1D (epdf)), ==, h_ref[shape], 1.0e-12, 0.0);
+
+    ncm_stats_dist1d_epdf_free (epdf);
+    ncm_rng_free (rng);
+  }
+}
+
+/* Unit Gaussian, N = 1e5: the automatic bandwidth against (4 / (3 N))^(1/5), measured 1.007 to 1.015 */
+static void
+test_ncm_stats_dist1d_epdf_bw_gauss_amise (void)
+{
+  const guint N         = 100000;
+  const gdouble h_amise = pow (4.0 / (3.0 * N), 0.2);
+  guint seed;
+
+  for (seed = 1; seed <= 3; seed++)
+  {
+    NcmRNG *rng              = ncm_rng_seeded_new (NULL, seed);
+    NcmStatsDist1dEPDF *epdf = ncm_stats_dist1d_epdf_new_full (2 * N, NCM_STATS_DIST1D_EPDF_BW_AUTO, 0.1, 1.0e-6);
+    guint i;
+
+    for (i = 0; i < N; i++)
+      ncm_stats_dist1d_epdf_add_obs (epdf, ncm_rng_gaussian_gen (rng, 0.0, 1.0));
+
+    ncm_stats_dist1d_set_compute_cdf (NCM_STATS_DIST1D (epdf), FALSE);
+    ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (epdf));
+    g_test_message ("seed %u: h / h_AMISE = %.4f", seed, ncm_stats_dist1d_get_current_h (NCM_STATS_DIST1D (epdf)) / h_amise);
+    ncm_assert_cmpdouble_e (ncm_stats_dist1d_get_current_h (NCM_STATS_DIST1D (epdf)) / h_amise, ==, 1.0, 0.0, 0.05);
+
+    ncm_stats_dist1d_epdf_free (epdf);
+    ncm_rng_free (rng);
+  }
+}
+
+/* Moving a bound after a prepare changes the support and the automatic bandwidth */
+static void
+test_ncm_stats_dist1d_epdf_bounds (void)
+{
+  NcmRNG *rng              = ncm_rng_seeded_new (NULL, 1);
+  NcmStatsDist1dEPDF *epdf = ncm_stats_dist1d_epdf_new (1.0e-3);
+  NcmStatsDist1d *sd1      = NCM_STATS_DIST1D (epdf);
+  gdouble h0;
+
+  _test_epdf_fill (epdf, 3, 5000, rng);
+  ncm_stats_dist1d_prepare (sd1);
+  h0 = ncm_stats_dist1d_get_current_h (sd1);
+
+  ncm_stats_dist1d_epdf_set_min (epdf, 0.0);
+  ncm_stats_dist1d_epdf_set_max (epdf, 7.0);
+  ncm_stats_dist1d_prepare (sd1);
+
+  g_assert_cmpfloat (ncm_stats_dist1d_get_xi (sd1), ==, 0.0);
+  g_assert_cmpfloat (ncm_stats_dist1d_get_xf (sd1), ==, 7.0);
+  g_assert_cmpfloat (ncm_stats_dist1d_get_current_h (sd1), !=, h0);
+
+  ncm_stats_dist1d_epdf_reset (epdf);
+  g_assert_cmpuint (ncm_stats_dist1d_epdf_get_bw_type (epdf), ==, NCM_STATS_DIST1D_EPDF_BW_AUTO);
+
+  ncm_stats_dist1d_epdf_free (epdf);
+  ncm_rng_free (rng);
+}
+
+static void
+test_ncm_stats_dist1d_epdf_empty_subprocess (void)
+{
+  NcmStatsDist1dEPDF *epdf = ncm_stats_dist1d_epdf_new (1.0e-3);
+
+  ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (epdf));
+}
+
+static void
+test_ncm_stats_dist1d_epdf_empty (void)
+{
+  g_test_trap_subprocess ("/ncm/stats_dist1d/epdf/empty/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*no observations*");
 }
 

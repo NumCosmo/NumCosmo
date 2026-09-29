@@ -12074,7 +12074,7 @@ class StatsDist1dEPDF(StatsDist1d):
 
     Properties from NcmStatsDist1dEPDF:
       max-obs -> guint: max-obs
-        Maximum observations before compacting
+        Number of added observations that triggers a merge
       n-obs -> guint: n-obs
         Number of observations
       bandwidth -> NcmStatsDist1dEPDFBw: bandwidth
@@ -12082,9 +12082,7 @@ class StatsDist1dEPDF(StatsDist1d):
       h-fixed -> gdouble: h-fixed
         Fixed bandwidth
       sd-min-scale -> gdouble: sd-min-scale
-        Percentage of the standard deviation to use as minimum distance
-      outliers-threshold -> gdouble: outliers-threshold
-        How many sigmas to consider an outlier
+        Merging distance in units of the standard deviation
 
     Properties from NcmStatsDist1d:
       xi -> gdouble: xi
@@ -12109,7 +12107,6 @@ class StatsDist1dEPDF(StatsDist1d):
         h_fixed: float
         max_obs: int
         n_obs: int
-        outliers_threshold: float
         sd_min_scale: float
         abstol: float
         compute_cdf: bool
@@ -12124,7 +12121,6 @@ class StatsDist1dEPDF(StatsDist1d):
         bandwidth: StatsDist1dEPDFBw = ...,
         h_fixed: float = ...,
         max_obs: int = ...,
-        outliers_threshold: float = ...,
         sd_min_scale: float = ...,
         abstol: float = ...,
         compute_cdf: bool = ...,
