@@ -11846,15 +11846,15 @@ class StatsDist(GObject.Object):
       kernel -> NcmStatsDistKernel: kernel
         Interpolating kernel
       N -> guint: N
-        sample size
+        Sample size
       over-smooth -> gdouble: over-smooth
-        Over-smooth distribution
+        Factor multiplying the rule-of-thumb bandwidth
       CV-type -> NcmStatsDistCV: CV-type
         Cross-validation method
       use-threads -> gboolean: use-threads
         Whether to use OpenMP threads during computation
       split-frac -> gdouble: split-frac
-        Fraction to use in the split cross-validation
+        Fraction of the sample used as kernel centers by the split cross-validations
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
       center-shrink -> gboolean: center-shrink
@@ -12383,15 +12383,15 @@ class StatsDistKDE(StatsDist):
       kernel -> NcmStatsDistKernel: kernel
         Interpolating kernel
       N -> guint: N
-        sample size
+        Sample size
       over-smooth -> gdouble: over-smooth
-        Over-smooth distribution
+        Factor multiplying the rule-of-thumb bandwidth
       CV-type -> NcmStatsDistCV: CV-type
         Cross-validation method
       use-threads -> gboolean: use-threads
         Whether to use OpenMP threads during computation
       split-frac -> gdouble: split-frac
-        Fraction to use in the split cross-validation
+        Fraction of the sample used as kernel centers by the split cross-validations
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
       center-shrink -> gboolean: center-shrink
@@ -12675,15 +12675,15 @@ class StatsDistVKDE(StatsDistKDE):
       kernel -> NcmStatsDistKernel: kernel
         Interpolating kernel
       N -> guint: N
-        sample size
+        Sample size
       over-smooth -> gdouble: over-smooth
-        Over-smooth distribution
+        Factor multiplying the rule-of-thumb bandwidth
       CV-type -> NcmStatsDistCV: CV-type
         Cross-validation method
       use-threads -> gboolean: use-threads
         Whether to use OpenMP threads during computation
       split-frac -> gdouble: split-frac
-        Fraction to use in the split cross-validation
+        Fraction of the sample used as kernel centers by the split cross-validations
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
       center-shrink -> gboolean: center-shrink

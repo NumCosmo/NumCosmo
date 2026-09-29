@@ -184,13 +184,15 @@ and change shape.
 
 ## Automatic kernel selection
 
-The bandwidth can be fitted by cross-validation, holding out part of the sample and
-maximizing the out-of-sample likelihood of the reconstruction. The same objective can choose
-the kernel, by treating the Student-t degrees of freedom $\nu$ as a second fitted
-parameter alongside $h$: the fit runs over $(\ln h, \ln \nu)$, and $\nu \to \infty$
-recovers the Gaussian kernel, which is installed as one when the fit reaches the top of
-the range. The tail weight of the kernel then follows the tail weight of the target
-instead of being fixed by the caller.
+The bandwidth can be fitted by cross-validation, by one of four objectives: the
+out-of-sample density or the out-of-sample acceptance estimate of a sample split, the
+leave-one-out density, or an estimate of the asymptotic mean integrated squared error
+(AMISE). The same objective can choose the kernel, by treating the Student-t degrees of
+freedom $\nu$ as a second fitted parameter alongside $h$: the fit runs over
+$(\ln h, \ln \nu)$ with $\nu \leq 10^4$. The kernel stays a Student-t at the upper
+bound, where its log-density differs from the Gaussian kernel's by about
+$[(\chi^2 - d)^2 - 2d] / (4\nu)$. The tail weight of the kernel then follows the tail
+weight of the target instead of being fixed by the caller.
 
 Center shrinkage is not fitted. The out-of-sample objective is a Kullback-Leibler criterion,
 and $\mathrm{KL}(\pi \,\|\, \tilde p)$ penalizes a proposal that is too narrow far more

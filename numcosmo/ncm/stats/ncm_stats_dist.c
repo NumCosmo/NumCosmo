@@ -187,7 +187,7 @@ _ncm_stats_dist_set_property (GObject *object, guint prop_id, const GValue *valu
 {
   NcmStatsDist *sd = NCM_STATS_DIST (object);
 
-  /*g_return_if_fail (NCM_IS_STATS_DIST (object));*/
+  g_return_if_fail (NCM_IS_STATS_DIST (object));
 
   switch (prop_id)
   {
@@ -342,13 +342,6 @@ _ncm_stats_dist_dispose (GObject *object)
   G_OBJECT_CLASS (ncm_stats_dist_parent_class)->dispose (object);
 }
 
-static void
-_ncm_stats_dist_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_stats_dist_parent_class)->finalize (object);
-}
-
 static void _ncm_stats_dist_set_dim (NcmStatsDist *sd, const guint dim);
 
 /* LCOV_EXCL_START these should be overwritten and never executed */
@@ -477,8 +470,13 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
   object_class->set_property = &_ncm_stats_dist_set_property;
   object_class->get_property = &_ncm_stats_dist_get_property;
   object_class->dispose      = &_ncm_stats_dist_dispose;
-  object_class->finalize     = &_ncm_stats_dist_finalize;
 
+  /**
+   * NcmStatsDist:kernel:
+   *
+   * The #NcmStatsDistKernel of the mixture.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_KERNEL,
                                    g_param_spec_object ("kernel",
@@ -486,22 +484,46 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
                                                         "Interpolating kernel",
                                                         NCM_TYPE_STATS_DIST_KERNEL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmStatsDist:N:
+   *
+   * Number of sample points held, ncm_stats_dist_get_sample_size().
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_SAMPLE_SIZE,
                                    g_param_spec_uint ("N",
                                                       NULL,
-                                                      "sample size",
+                                                      "Sample size",
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmStatsDist:over-smooth:
+   *
+   * Factor multiplying the kernel rule-of-thumb bandwidth,
+   * ncm_stats_dist_kernel_get_rot_bandwidth(). A cross-validation other than
+   * #NCM_STATS_DIST_CV_NONE fits it in $[10^{-2}, 20]$, starting from the current
+   * value. #NcmStatsDistVKDE uses it as the bandwidth itself unless
+   * #NcmStatsDistVKDE:use-rot-href is set. Default: 1.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_OVER_SMOOTH,
                                    g_param_spec_double ("over-smooth",
                                                         NULL,
-                                                        "Over-smooth distribution",
+                                                        "Factor multiplying the rule-of-thumb bandwidth",
                                                         1.0e-5, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmStatsDist:CV-type:
+   *
+   * The #NcmStatsDistCV that fits the bandwidth at ncm_stats_dist_prepare().
+   * Default: #NCM_STATS_DIST_CV_NONE.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_CV_TYPE,
                                    g_param_spec_enum ("CV-type",
@@ -510,6 +532,13 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
                                                       NCM_TYPE_STATS_DIST_CV, NCM_STATS_DIST_CV_NONE,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmStatsDist:use-threads:
+   *
+   * Whether #NcmStatsDistVKDE runs its OpenMP loops in parallel; the other classes do
+   * not read it. Default: FALSE.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_USE_THREADS,
                                    g_param_spec_boolean ("use-threads",
@@ -518,14 +547,30 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmStatsDist:split-frac:
+   *
+   * Fraction $f$ of the sample used as kernel centers by the split cross-validations,
+   * #NCM_STATS_DIST_CV_SPLIT_M2LNP and #NCM_STATS_DIST_CV_SPLIT_ACCEPT: the first
+   * $\lceil f n \rceil$ points, in the order they were added, are the centers and the
+   * others score the bandwidth. Default: 0.5.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_SPLIT_FRAC,
                                    g_param_spec_double ("split-frac",
                                                         NULL,
-                                                        "Fraction to use in the split cross-validation",
+                                                        "Fraction of the sample used as kernel centers by the split cross-validations",
                                                         0.10, 0.95, 0.5,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmStatsDist:print-fit:
+   *
+   * Whether the bandwidth fit prints its progress to the standard output.
+   * Default: FALSE.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_PRINT_FIT,
                                    g_param_spec_boolean ("print-fit",
@@ -554,14 +599,15 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
    * NcmStatsDist:auto-kernel:
    *
    * Whether the kernel is chosen together with the over-smooth factor, by the same
-   * out-of-sample objective. Requires a cross-validation that fits the bandwidth, currently
-   * #NCM_STATS_DIST_CV_SPLIT_M2LNP; it is ignored otherwise. The kernel is a
-   * #NcmStatsDistKernelST the object was built with -- any other kernel is refused at
-   * prepare -- whose degrees of freedom $\nu$ are fitted in place, jointly with the
+   * objective. It applies to every #NcmStatsDist:CV-type except
+   * #NCM_STATS_DIST_CV_NONE, which fits nothing. The kernel must be the
+   * #NcmStatsDistKernelST the object was built with; any other kernel aborts at
+   * prepare. Its degrees of freedom $\nu$ are fitted in place, jointly with the
    * over-smooth factor, over $\nu \in [\nu_\mathrm{min}, 10^4]$, with
    * $\nu_\mathrm{min} = 2.5$ when #NcmStatsDist:center-shrink is set and $1$
-   * otherwise; at the upper bound the kernel is Gaussian to $10^{-4}$. See the class
-   * description. Default: FALSE.
+   * otherwise. At $\nu = 10^4$ the log-density differs from the Gaussian kernel's by
+   * about $[(\chi^2 - d)^2 - 2d] / (4\nu)$: over the central 99.8% of $\chi^2$, from
+   * $2 \times 10^{-3}$ at $d = 1$ to $6 \times 10^{-2}$ at $d = 100$. Default: FALSE.
    *
    */
   g_object_class_install_property (object_class,
@@ -576,9 +622,10 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
    * NcmStatsDist:defensive-frac:
    *
    * Weight $\epsilon$ of a wide Student-t component mixed into the proposal,
-   * $q = (1 - \epsilon)\, q_\mathrm{mixture} + \epsilon\, t_\nu(\mu, c\,C)$, with $\mu$
-   * and $C$ the sample mean and covariance, $c$ #NcmStatsDist:defensive-scale and $\nu$
-   * #NcmStatsDist:defensive-nu. It bounds the proposal density from below where the
+   * $q = (1 - \epsilon)\, q_\mathrm{mixture} + \epsilon\, t_\nu(\mu, c\,C)$, the
+   * Student-t density with location $\mu$ and scale matrix $c\,C$, where $\mu$ and $C$
+   * are the sample mean and covariance, $c$ is #NcmStatsDist:defensive-scale and $\nu$
+   * is #NcmStatsDist:defensive-nu. It bounds the proposal density from below where the
    * kernels leave holes, so that a walker there can still move. Zero disables it and
    * leaves every evaluation and draw unchanged. Default: 0.
    *
@@ -594,8 +641,8 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
   /**
    * NcmStatsDist:defensive-scale:
    *
-   * Factor $c$ multiplying the sample covariance in the wide component of
-   * #NcmStatsDist:defensive-frac. Default: 4.
+   * Factor $c$ multiplying the sample covariance in the scale matrix of the wide
+   * component of #NcmStatsDist:defensive-frac. Default: 4.
    *
    */
   g_object_class_install_property (object_class,
