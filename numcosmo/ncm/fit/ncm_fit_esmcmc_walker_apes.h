@@ -42,10 +42,10 @@ G_DECLARE_FINAL_TYPE (NcmFitESMCMCWalkerAPES, ncm_fit_esmcmc_walker_apes, NCM, F
 
 /**
  * NcmFitESMCMCWalkerAPESMethod:
- * @NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE: Fixed kernel estimation.
- * @NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE: Variable kernel estimation.
+ * @NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE: #NcmStatsDistKDE, one kernel covariance
+ * @NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE: #NcmStatsDistVKDE, a local covariance per kernel
  *
- * Posterior estimation method.
+ * Estimator of the approximate posterior.
  *
  */
 typedef enum _NcmFitESMCMCWalkerAPESMethod /*< prefix=NCM_FIT_ESMCMC_WALKER_APES_METHOD >*/
@@ -58,9 +58,9 @@ typedef enum _NcmFitESMCMCWalkerAPESMethod /*< prefix=NCM_FIT_ESMCMC_WALKER_APES
 
 /**
  * NcmFitESMCMCWalkerAPESKType:
- * @NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY: Cauchy kernel.
- * @NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3: Student-t kernel with $\nu=3$.
- * @NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS: Gaussian kernel.
+ * @NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY: Cauchy kernel
+ * @NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3: Student-t kernel with $\nu = 3$
+ * @NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS: Gaussian kernel
  * @NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO: Student-t kernel whose degrees of freedom are
  * fitted together with the bandwidth, by the same out-of-sample objective; the Gaussian
  * kernel at the upper bound. Needs a #NcmFitESMCMCWalkerAPES:cv-type that fits the

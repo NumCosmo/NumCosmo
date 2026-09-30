@@ -1,5 +1,4 @@
 src_site_images_files = files(
-    'apes.png',
     'favicon_numcosmo.png',
     'numcosmo.png',
     'numcosmo_logo.png',

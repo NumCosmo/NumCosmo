@@ -3470,7 +3470,7 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
       use-threads -> gboolean: use-threads
         Whether to use threads when building the posterior approximation
       center-shrink -> gboolean: center-shrink
-        Whether to shrink the kernel centres toward the ensemble mean
+        Whether to shrink the kernel centers toward the ensemble mean
       defensive-frac -> gdouble: defensive-frac
         Weight of the wide Student-t component in the proposal
       defensive-scale -> gdouble: defensive-scale
@@ -3484,7 +3484,7 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
       cv-type -> NcmStatsDistCV: cv-type
         Cross-validation used to choose the over-smooth factor
       split-frac -> gdouble: split-frac
-        Fraction of the block used as kernel centres
+        Fraction of the block used as kernel centers
       exploration -> guint: exploration
         Exploration phase length cap in iterations
       exploration-qratio-floor -> gdouble: exploration-qratio-floor
