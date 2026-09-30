@@ -30,6 +30,7 @@
 #include <numcosmo/numcosmo.h>
 #include <math.h>
 #include <gsl/gsl_sf_bessel.h>
+#include <gsl/gsl_sf_trig.h>
 #include <glib.h>
 #include <glib-object.h>
 
@@ -141,6 +142,17 @@ test_ncm_csq1d_prepare_aborts_subprocess (void)
     b = _test_ncm_csq1d_bessel_prepared_new (NCM_CSQ1D_INITIAL_CONDITION_TYPE_NONADIABATIC2);
     ncm_csq1d_prepare (NCM_CSQ1D (b), NULL);
   }
+  else if (g_strcmp0 (which, "ad_hoc_before") == 0)
+  {
+    NcmCSQ1DState *s0 = ncm_csq1d_state_new ();
+    NcmCSQ1DState *s1 = ncm_csq1d_state_new ();
+
+    b = _test_ncm_csq1d_bessel_prepared_new (NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC);
+    ncm_csq1d_compute_adiab (NCM_CSQ1D (b), NULL, -200.0, s0, NULL, NULL);
+    ncm_csq1d_set_init_cond (NCM_CSQ1D (b), NULL, NCM_CSQ1D_EVOL_STATE_ADIABATIC, s0);
+    ncm_csq1d_prepare (NCM_CSQ1D (b), NULL);
+    ncm_csq1d_eval_at (NCM_CSQ1D (b), NULL, -300.0, s1);
+  }
   else if (g_strcmp0 (which, "init_adiab") == 0)
   {
     /* At t = -2 the adiabatic alpha is -1.74, beyond the default threshold 1. */
@@ -166,6 +178,7 @@ test_ncm_csq1d_prepare_aborts (void)
   _test_ncm_csq1d_trap_abort ("ad_hoc", "*initial conditions must be set*");
   _test_ncm_csq1d_trap_abort ("nonadiab2", "*not implemented*");
   _test_ncm_csq1d_trap_abort ("init_adiab", "*is not a valid adiabatic time*");
+  _test_ncm_csq1d_trap_abort ("ad_hoc_before", "*is before the initial conditions*");
 }
 
 /* The phase of the exact positive-frequency mode, -arg H^(1)_a (-k t), for t < 0. */
@@ -290,6 +303,152 @@ test_ncm_csq1d_phase_hankel (void)
 
     ncm_csq1d_free (csq1d);
   }
+}
+
+/*
+ * The exact state of the Bessel system at t < 0, from the positive-frequency mode
+ * phi = C u^(-a) H^(1)_a (k u), u = -t, normalized by the Wronskian (|C|^2 = pi / 4),
+ * with P_phi = C k u^(1 + a) H^(1)_(a + 1) (k u): J11 = 2 |phi|^2, J22 = 2 |P_phi|^2,
+ * J12 = 2 Re (phi P_phi^*), and alpha = -asinh J12, gamma = ln (J22 / cosh alpha).
+ */
+static void
+_test_bessel_exact_state (const gdouble a, const gdouble k, const gdouble t, NcmCSQ1DState *state)
+{
+  const gdouble u     = -t;
+  const gdouble x     = k * u;
+  const gdouble Ja    = gsl_sf_bessel_Jnu (a, x);
+  const gdouble Ya    = gsl_sf_bessel_Ynu (a, x);
+  const gdouble Ja1   = gsl_sf_bessel_Jnu (a + 1.0, x);
+  const gdouble Ya1   = gsl_sf_bessel_Ynu (a + 1.0, x);
+  const gdouble J12   = 0.5 * M_PI * x * (Ja * Ja1 + Ya * Ya1);
+  const gdouble J22   = 0.5 * M_PI * k * k * pow (u, 2.0 + 2.0 * a) * (Ja1 * Ja1 + Ya1 * Ya1);
+  const gdouble alpha = -asinh (J12);
+
+  ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_ORIG, t, alpha, log (J22) - gsl_sf_lncosh (alpha));
+}
+
+/*
+ * Relative error of the complex structure of @s against @r: J11 and J22 relative to
+ * themselves, J12 relative to sqrt (J11 J22) = sqrt (1 + J12^2). In strongly squeezed
+ * states a small relative error is a large hyperbolic distance, so the distance is not
+ * the accuracy measure there.
+ */
+static gdouble
+_test_J_relerr (NcmCSQ1DState *s, NcmCSQ1DState *r)
+{
+  gdouble s11, s12, s22, r11, r12, r22;
+
+  ncm_csq1d_state_get_J (s, &s11, &s12, &s22);
+  ncm_csq1d_state_get_J (r, &r11, &r12, &r22);
+
+  return GSL_MAX (GSL_MAX (fabs (s11 / r11 - 1.0), fabs (s22 / r22 - 1.0)), fabs (s12 - r12) / sqrt (r11 * r22));
+}
+
+/* Largest error of the evolved complex structure over the evolution times. */
+static gdouble
+_test_evolution_error (NcmCSQ1D *csq1d, const gdouble a, const gdouble k)
+{
+  NcmCSQ1DState *s_evol  = ncm_csq1d_state_new ();
+  NcmCSQ1DState *s_exact = ncm_csq1d_state_new ();
+  GArray *t_a            = ncm_csq1d_get_time_array (csq1d, NULL);
+  gdouble err            = 0.0;
+  guint i;
+
+  for (i = 0; i < t_a->len; i++)
+  {
+    const gdouble t = g_array_index (t_a, gdouble, i);
+
+    ncm_csq1d_eval_at (csq1d, NULL, t, s_evol);
+    _test_bessel_exact_state (a, k, t, s_exact);
+    err = GSL_MAX (err, _test_J_relerr (s_evol, s_exact));
+  }
+
+  g_array_unref (t_a);
+  ncm_csq1d_state_free (s_evol);
+  ncm_csq1d_state_free (s_exact);
+
+  return err;
+}
+
+static void
+test_ncm_csq1d_evolution_hankel (void)
+{
+  /*
+   * From the fourth and second order adiabatic vacua the evolved state follows the exact
+   * Bessel state down to t = -1e-3, deep in the non-adiabatic regime, within the accuracy
+   * the vacuum was set at.
+   */
+  TestCSQ1DBessel *b4 = test_csq1d_bessel_new (2.0, 1.0, TRUE);
+  TestCSQ1DBessel *b2 = test_csq1d_bessel_new (2.0, 1.0, TRUE);
+  NcmCSQ1D *c4        = NCM_CSQ1D (b4);
+  NcmCSQ1D *c2        = NCM_CSQ1D (b2);
+
+  ncm_csq1d_set_ti (c4, -1.0e4);
+  ncm_csq1d_set_tf (c4, -1.0e-3);
+  ncm_csq1d_set_reltol (c4, 1.0e-10);
+  ncm_csq1d_set_abstol (c4, 0.0);
+  ncm_csq1d_set_save_evol (c4, TRUE);
+  ncm_csq1d_set_initial_condition_type (c4, NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4);
+  ncm_csq1d_set_vacuum_max_time (c4, -10.0);
+  ncm_csq1d_set_vacuum_reltol (c4, 1.0e-8);
+  ncm_csq1d_prepare (c4, NULL);
+
+  ncm_csq1d_set_ti (c2, -1.0e5);
+  ncm_csq1d_set_tf (c2, -1.0e-3);
+  ncm_csq1d_set_reltol (c2, 1.0e-10);
+  ncm_csq1d_set_abstol (c2, 0.0);
+  ncm_csq1d_set_save_evol (c2, TRUE);
+  ncm_csq1d_set_initial_condition_type (c2, NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2);
+  ncm_csq1d_set_vacuum_max_time (c2, -1.0);
+  ncm_csq1d_set_vacuum_reltol (c2, 1.0e-3);
+  ncm_csq1d_prepare (c2, NULL);
+
+  /* Measured 2.4e-8 and 2.5e-8. */
+  g_assert_cmpfloat (_test_evolution_error (c4, 2.0, 1.0), <, 3.0e-7);
+  g_assert_cmpfloat (_test_evolution_error (c2, 2.0, 1.0), <, 3.0e-7);
+
+  ncm_csq1d_free (c4);
+  ncm_csq1d_free (c2);
+}
+
+static void
+test_ncm_csq1d_evolution_ad_hoc (void)
+{
+  /*
+   * Ad hoc conditions equal to the adiabatic vacuum, at the vacuum time, give the same
+   * solution as the adiabatic vacuum; eval_at reads the evolution from the time of the
+   * conditions on.
+   */
+  TestCSQ1DBessel *ba = _test_ncm_csq1d_bessel_prepared_new (NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4);
+  TestCSQ1DBessel *bh = _test_ncm_csq1d_bessel_prepared_new (NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC);
+  NcmCSQ1D *ca        = NCM_CSQ1D (ba);
+  NcmCSQ1D *ch        = NCM_CSQ1D (bh);
+  NcmCSQ1DState *s0   = ncm_csq1d_state_new ();
+  NcmCSQ1DState *sa   = ncm_csq1d_state_new ();
+  NcmCSQ1DState *sh   = ncm_csq1d_state_new ();
+  const gdouble ts[]  = {-100.0, -10.0, -1.0, -0.2, -1.0e-2};
+  gdouble t_v;
+  guint i;
+
+  ncm_csq1d_prepare (ca, NULL);
+  g_assert_true (ncm_csq1d_find_adiab_time_limit (ca, NULL, -1.0e4, -10.0, 1.0e-8, &t_v));
+
+  ncm_csq1d_compute_adiab (ca, NULL, t_v, s0, NULL, NULL);
+  ncm_csq1d_set_init_cond (ch, NULL, NCM_CSQ1D_EVOL_STATE_ADIABATIC, s0);
+  ncm_csq1d_prepare (ch, NULL);
+
+  for (i = 0; i < G_N_ELEMENTS (ts); i++)
+  {
+    ncm_csq1d_eval_at (ca, NULL, ts[i], sa);
+    ncm_csq1d_eval_at (ch, NULL, ts[i], sh);
+    g_assert_cmpfloat (_test_J_relerr (sh, sa), <, 1.0e-14);
+  }
+
+  ncm_csq1d_state_free (s0);
+  ncm_csq1d_state_free (sa);
+  ncm_csq1d_state_free (sh);
+  ncm_csq1d_free (ca);
+  ncm_csq1d_free (ch);
 }
 
 static void
@@ -552,6 +711,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/csq1d/defaults", &test_ncm_csq1d_defaults);
   g_test_add_func ("/ncm/csq1d/properties", &test_ncm_csq1d_properties);
   g_test_add_func ("/ncm/csq1d/phase/hankel", &test_ncm_csq1d_phase_hankel);
+  g_test_add_func ("/ncm/csq1d/evolution/hankel", &test_ncm_csq1d_evolution_hankel);
+  g_test_add_func ("/ncm/csq1d/evolution/ad_hoc", &test_ncm_csq1d_evolution_ad_hoc);
   g_test_add_func ("/ncm/csq1d/prepare/aborts", &test_ncm_csq1d_prepare_aborts);
   g_test_add_func ("/ncm/csq1d/prepare/aborts/subprocess", &test_ncm_csq1d_prepare_aborts_subprocess);
   g_test_add_func ("/ncm/csq1d/state/maps", &test_ncm_csq1d_state_maps);

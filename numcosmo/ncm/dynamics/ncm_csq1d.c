@@ -2617,9 +2617,12 @@ ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
 /**
  * ncm_csq1d_get_time_array:
  * @csq1d: a #NcmCSQ1D
- * @smallest_t: (out) (allow-none): the smallest absolute value of $t$ in the array
+ * @smallest_t: (out) (nullable): the smallest absolute value of $t$ in the array
  *
- * Returns: (transfer full) (element-type gdouble): the time array of the computed steps.
+ * The times of the saved evolution: its start, then the integration steps at least
+ * $10^{-5}$ apart in relative $\operatorname{asinh} t$, and $t_f$.
+ *
+ * Returns: (transfer full) (element-type gdouble): the times of the saved evolution.
  */
 GArray *
 ncm_csq1d_get_time_array (NcmCSQ1D *csq1d, gdouble *smallest_t)
@@ -3324,17 +3327,35 @@ ncm_csq1d_eval_delta_theta_at (NcmCSQ1D *csq1d, const gdouble t)
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
- * Computes the system state at $t$, the result is stored in the state object
- * in the frame NCM_CSQ1D_FRAME_ORIG. Use ncm_csq1d_change_frame() to change the frame.
+ * Evaluates the solution at @t in #NCM_CSQ1D_FRAME_ORIG, see
+ * ncm_csq1d_eval_at_frame() for the rules.
  *
  * Returns: (transfer none): the @state object with the result.
  */
+
+/* Whether the solution at t is the evolved one: from the start of the evolution with ad
+ * hoc conditions, before which there is no solution, and after the vacuum time with an
+ * adiabatic vacuum, before which the solution is the adiabatic state. */
+static gboolean
+_ncm_csq1d_is_evolved_at (NcmCSQ1DPrivate * const self, const gdouble t)
+{
+  if (self->initial_condition_type == NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC)
+  {
+    if (t < self->t_ode_ini)
+      g_error ("ncm_csq1d_eval_at: time % 22.15g is before the initial conditions at % 22.15g.", t, self->t_ode_ini);
+
+    return TRUE;
+  }
+
+  return t > self->vacuum_final_time;
+}
+
 NcmCSQ1DState *
 ncm_csq1d_eval_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  if (t > self->vacuum_final_time)
+  if (_ncm_csq1d_is_evolved_at (self, t))
     _ncm_csq1d_eval_state (csq1d, t, state);
   else
     ncm_csq1d_compute_adiab_frame (csq1d, model, NCM_CSQ1D_FRAME_ORIG, t, state, NULL, NULL);
@@ -3350,8 +3371,10 @@ ncm_csq1d_eval_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DSt
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
- * Computes the system state at $t$, the result is stored in the state object
- * in the frame @frame.
+ * Evaluates the solution at @t in @frame: from the saved evolution after the vacuum time
+ * with an adiabatic vacuum, from ncm_csq1d_compute_adiab_frame() up to it; with ad hoc
+ * conditions, from the saved evolution, aborting before the time of the conditions,
+ * where there is no solution. Needs ncm_csq1d_prepare().
  *
  * Returns: (transfer none): the @state object with the result.
  */
@@ -3360,7 +3383,7 @@ ncm_csq1d_eval_at_frame (NcmCSQ1D *csq1d, NcmModel *model, const NcmCSQ1DFrame f
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  if (t > self->vacuum_final_time)
+  if (_ncm_csq1d_is_evolved_at (self, t))
   {
     _ncm_csq1d_eval_state (csq1d, t, state);
     ncm_csq1d_change_frame (csq1d, model, state, frame);

@@ -169,99 +169,6 @@ def test_initial_conditions_adiabatic():
         assert_allclose(abs(Pphi), abs(theo_Pphi), rtol=1.0e-6)
 
 
-def test_evolution():
-    """Test initial conditions of NcmCSQ1D."""
-    bs = BesselTest(alpha=2.0)
-    bs.set_k(1.0)
-    bs.set_ti(-1.0e4)
-    bs.set_tf(-1.0e-3)
-    state = Ncm.CSQ1DState.new()
-
-    bs.set_save_evol(True)
-    bs.set_reltol(1.0e-10)
-    bs.set_abstol(0.0)
-    bs.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
-    bs.set_vacuum_max_time(-1.0e1)
-    bs.set_vacuum_reltol(1.0e-8)
-    bs.prepare(None)
-
-    t_a, _smaller_abst = bs.get_time_array()
-
-    for t in t_a:
-        state = bs.eval_at(None, t, state)
-        phi_vec, Pphi_vec = state.get_phi_Pphi()
-
-        phi = phi_vec[0] + 1.0j * phi_vec[1]
-        Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
-
-        kt = bs.get_k() * t
-        hfnormm = 0.5 * math.sqrt(math.pi) * (-t) ** (-bs.alpha)
-        hfnormp = 0.5 * math.sqrt(math.pi) * (-t) ** (+bs.alpha)
-
-        # Analytical solution for phi and Pphi
-        theo_phi = hfnormm * hankel1e(bs.alpha, kt)
-        theo_Pphi = kt * hfnormp * hankel1e(1.0 + bs.alpha, kt)
-
-        # Compare with analytical solution
-        assert_allclose(abs(phi), abs(theo_phi), rtol=1.0e-7)
-        assert_allclose(abs(Pphi), abs(theo_Pphi), rtol=1.0e-7)
-
-        J11, J12, J22 = state.get_J()
-
-        assert_allclose(J11, 2.0 * abs(phi) ** 2, atol=1.0e-7)
-        assert_allclose(J22, 2.0 * abs(Pphi) ** 2, atol=1.0e-7)
-        assert_allclose(J12, (2.0 * phi * Pphi.conjugate()).real, atol=1.0e-7)
-
-
-def test_evolution_adiabatic2():
-    """Test initial conditions of NcmCSQ1D."""
-    bs = BesselTest(alpha=2.0)
-    bs.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC2)
-    bs.set_k(1.0)
-    bs.set_ti(-1.0e5)
-    bs.set_tf(-1.0e-3)
-    bs.set_vacuum_max_time(-1.0e0)
-    bs.set_vacuum_reltol(1.0e-3)
-    state = Ncm.CSQ1DState.new()
-
-    limit_found, t_adiab = bs.find_adiab_time_limit(None, -1.0e5, -1.0e0, 1.0e-3)
-
-    assert limit_found
-
-    bs.set_save_evol(True)
-    bs.set_reltol(1.0e-10)
-    bs.set_abstol(0.0)
-    bs.set_init_cond_adiab(None, t_adiab)
-    bs.prepare(None)
-
-    t_a, _smaller_abst = bs.get_time_array()
-
-    for t in t_a:
-        state = bs.eval_at(None, t, state)
-        phi_vec, Pphi_vec = state.get_phi_Pphi()
-
-        phi = phi_vec[0] + 1.0j * phi_vec[1]
-        Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
-
-        kt = bs.get_k() * t
-        hfnormm = 0.5 * math.sqrt(math.pi) * (-t) ** (-bs.alpha)
-        hfnormp = 0.5 * math.sqrt(math.pi) * (-t) ** (+bs.alpha)
-
-        # Analytical solution for phi and Pphi
-        theo_phi = hfnormm * hankel1e(bs.alpha, kt)
-        theo_Pphi = kt * hfnormp * hankel1e(1.0 + bs.alpha, kt)
-
-        # Compare with analytical solution
-        assert_allclose(abs(phi), abs(theo_phi), rtol=1.0e-7)
-        assert_allclose(abs(Pphi), abs(theo_Pphi), rtol=1.0e-7)
-
-        J11, J12, J22 = state.get_J()
-
-        assert_allclose(J11, 2.0 * abs(phi) ** 2, atol=1.0e-7)
-        assert_allclose(J22, 2.0 * abs(Pphi) ** 2, atol=1.0e-7)
-        assert_allclose(J12, (2.0 * phi * Pphi.conjugate()).real, atol=1.0e-7)
-
-
 def test_eval_int_nu_override():
     """Test that an overridden eval_int_nu is used in place of the ODE spline."""
     bs = BesselTestWithIntNu(alpha=2.0)
@@ -507,8 +414,6 @@ def test_nonadiab_evol():
 if __name__ == "__main__":
     test_initial_conditions_time()
     test_initial_conditions_adiabatic()
-    test_evolution()
-    test_evolution_adiabatic2()
     for frame0 in [Ncm.CSQ1DFrame.ORIG, Ncm.CSQ1DFrame.ADIAB1, Ncm.CSQ1DFrame.ADIAB2]:
         test_evolution_frame(frame0)
     test_change_frame_orig_adiab1()
