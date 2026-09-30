@@ -1634,7 +1634,8 @@ ncm_fit_covar_cor (NcmFit *fit, NcmModelID mid1, guint pid1, NcmModelID mid2, gu
   return ncm_fit_covar_fparam_cov (fit, fpi1, fpi2) / (ncm_fit_covar_fparam_sd (fit, fpi1) * ncm_fit_covar_fparam_sd (fit, fpi2));
 }
 
-gboolean
+/* A fit with no free parameters only evaluates -2 ln L. */
+static gboolean
 _ncm_fit_run_empty (NcmFit *fit, NcmFitRunMsgs mtype)
 {
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
@@ -1663,7 +1664,8 @@ _ncm_fit_run_empty (NcmFit *fit, NcmFitRunMsgs mtype)
  * ncm_fit_reset:
  * @fit: a #NcmFit
  *
- * Resets the fit.
+ * Resets the state of @fit to the current dimensions of its likelihood and free
+ * parameters. ncm_fit_run() calls it.
  *
  */
 void
@@ -1677,9 +1679,12 @@ ncm_fit_reset (NcmFit *fit)
  * @fit: a #NcmFit
  * @mtype: a #NcmFitRunMsgs
  *
- * Computes the minimization.
+ * Resets @fit and minimizes $-2\ln L$ from the current parameters, leaving the result
+ * in the #NcmFitState and the parameters at the minimum found. With no free parameters
+ * it only evaluates $-2\ln L$. A non-finite $-2\ln L$ at the starting point gives a
+ * warning and returns FALSE.
  *
- * Returns: TRUE if the minimization went through.
+ * Returns: TRUE if the minimization converged.
  */
 gboolean
 ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
@@ -1732,11 +1737,13 @@ ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
  * @save_mset: (nullable): the #NcmMSet used to save progress
  * @mset_file: (nullable): the file name to save progress
  *
- * Re-runs the fit until the difference between fits are less
- * than the required tolerance, i.e.,
- * $$ m2lnL_{i-1} - m2lnL_i < \mathrm{abstol} + \mathrm{reltol}\vert m2lnL_{i-1}\vert. $$
+ * Runs the fit repeatedly, each run starting where the last one stopped, until the
+ * improvement of $-2\ln L$ is below the tolerance,
+ * $$ (-2\ln L)_{i-1} - (-2\ln L)_i < \mathrm{abstol} + \mathrm{reltol}\,\vert(-2\ln L)_{i-1}\vert. $$
+ * After each run the parameters are copied to @save_mset (when given) and, when
+ * @mset_file is given, saved there.
  *
- * Returns: TRUE if the minimization went through.
+ * Returns: TRUE if the last minimization converged.
  */
 gboolean
 ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, const gdouble reltol, NcmMSet *save_mset, const gchar *mset_file)
@@ -1761,6 +1768,7 @@ ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, con
     ncm_fit_state_set_is_best_fit (self->fstate, TRUE);
 
     ncm_fit_log_end (fit);
+    ncm_serialize_free (ser);
 
     return run_ok;
   }
@@ -1828,10 +1836,10 @@ ncm_fit_get_desc (NcmFit *fit)
  * @end_update: (scope notified) (nullable): a #NcmFitUpdateChange
  *
  *
- * Sets the logger functions. The @writer function is called to write the
- * messages to the log. The @updater function is called to update the
- * parameters. The @start_update is called before the minimization starts and
- * the @end_update is called after the minimization ends.
+ * Sets the logger functions. @writer receives every message. With
+ * #NCM_FIT_RUN_MSGS_SIMPLE, @updater is called at each step with the number of
+ * function evaluations (the default prints a dot), and @start_update and @end_update
+ * open and close that progress line.
  *
  */
 void
@@ -1853,7 +1861,7 @@ ncm_fit_set_logger (NcmFit *fit, NcmFitWriter writer, NcmFitUpdater updater, Ncm
  * ncm_fit_log_start:
  * @fit: a #NcmFit
  *
- * This function prints in the log the initial state.
+ * Logs the solver and the differentiation method at the start of a run.
  *
  */
 void
@@ -1879,7 +1887,7 @@ ncm_fit_log_start (NcmFit *fit)
  * @strerror: error message
  * @...: arguments
  *
- * This function prints in the log the error message.
+ * Logs a solver error, formatted from @strerror and the arguments.
  *
  */
 void
@@ -1914,7 +1922,7 @@ ncm_fit_log_step_error (NcmFit *fit, const gchar *strerror, ...)
  * ncm_fit_log_end:
  * @fit: a #NcmFit
  *
- * This function prints in the log the precision with which the best-fit was found.
+ * Logs the precision reached by the run and the final state.
  *
  */
 void
@@ -1943,7 +1951,8 @@ ncm_fit_log_end (NcmFit *fit)
  * ncm_fit_log_state:
  * @fit: a #NcmFit
  *
- * This function prints in the log the current state.
+ * Logs the current state: elapsed time, counts, degrees of freedom, $-2\ln L$ with its
+ * terms, and the free parameters.
  *
  */
 void
@@ -1964,9 +1973,9 @@ ncm_fit_log_state (NcmFit *fit)
     elap_min  = elap_min % 60;
     elap_hour =  elap_hour % 24;
     _ncm_fit_message (fit, "#  Elapsed time: %02lu days, %02lu:%02lu:%010.7f\n", elap_day, elap_hour, elap_min, elap_sec);
-    _ncm_fit_message (fit, "#  iteration            [%06d]\n", ncm_fit_state_get_niter (self->fstate));
-    _ncm_fit_message (fit, "#  function evaluations [%06d]\n", ncm_fit_state_get_func_eval (self->fstate));
-    _ncm_fit_message (fit, "#  gradient evaluations [%06d]\n", ncm_fit_state_get_grad_eval (self->fstate));
+    _ncm_fit_message (fit, "#  iteration            [%06u]\n", ncm_fit_state_get_niter (self->fstate));
+    _ncm_fit_message (fit, "#  function evaluations [%06u]\n", ncm_fit_state_get_func_eval (self->fstate));
+    _ncm_fit_message (fit, "#  gradient evaluations [%06u]\n", ncm_fit_state_get_grad_eval (self->fstate));
     _ncm_fit_message (fit, "#  degrees of freedom   [%06d]\n", ncm_fit_state_get_dof (self->fstate));
 
     if (m2lnL_v != NULL)
@@ -2000,7 +2009,8 @@ ncm_fit_log_state (NcmFit *fit)
  * ncm_fit_log_step:
  * @fit: a #NcmFit
  *
- * This function prints in the log one step of the minimization.
+ * Logs one step of the minimization: the full state with #NCM_FIT_RUN_MSGS_FULL, the
+ * progress updater with #NCM_FIT_RUN_MSGS_SIMPLE.
  *
  */
 void
@@ -2056,11 +2066,9 @@ ncm_fit_log_covar (NcmFit *fit)
 /**
  * ncm_fit_data_m2lnL_val:
  * @fit: a #NcmFit
- * @data_m2lnL: (out): minus two times the logarithm base e of the likelihood.
+ * @data_m2lnL: (out): $-2\ln L$ of the data
  *
- * This function computes minus two times the logarithm base e of the likelihood
- * using only the data set and not considering any prior. The result is set
- * on @data_m2lnL.
+ * Computes $-2\ln L$ of the dataset alone, without the priors.
  *
  */
 void
@@ -2075,11 +2083,9 @@ ncm_fit_data_m2lnL_val (NcmFit *fit, gdouble *data_m2lnL)
 /**
  * ncm_fit_priors_m2lnL_val:
  * @fit: a #NcmFit
- * @priors_m2lnL: (out): minus two times the logarithm base e of the likelihood.
+ * @priors_m2lnL: (out): $-2\ln P$ of the priors
  *
- * This function computes minus two times the logarithm base e of the likelihood
- * using the data set and taking into account the assumed priors. The result is
- * set on @priors_m2lnL.
+ * Computes $-2\ln P$ of the priors alone, see ncm_likelihood_priors_m2lnL_val().
  *
  */
 void
@@ -2093,9 +2099,10 @@ ncm_fit_priors_m2lnL_val (NcmFit *fit, gdouble *priors_m2lnL)
 /**
  * ncm_fit_m2lnL_val:
  * @fit: a #NcmFit
- * @m2lnL: (out): minus two times the logarithm base e of the likelihood.
+ * @m2lnL: (out): $-2\ln L$
  *
- * Computes minus two times the logarithm base e of the likelihood.
+ * Computes $-2\ln L$ of the likelihood, data and priors, and counts one function
+ * evaluation in the state.
  *
  */
 void
