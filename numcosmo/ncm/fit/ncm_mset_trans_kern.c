@@ -26,18 +26,13 @@
 /**
  * NcmMSetTransKern:
  *
- * Abstract Class for a transition kernel and prior.
+ * Abstract proposal distribution over the free parameters of a #NcmMSet.
  *
- * This object defines the abstract class for a transition kernel and prior. It serves
- * as the base class for all transition kernels and priors, with two main purposes:
- *
- * - To define the interface for all transition kernels for use in the NcmFitMCMC
- *   object.
- * - To define the interface for all priors, generating random parameter vectors with
- *   multivariate parameters.
- *
- * Notably, it acts as a prior sampler for NcmFitESMCMC, generating the initial
- * population's first set of random parameter vectors.
+ * A kernel draws a point $\theta^\star$ given the current point $\theta$
+ * (ncm_mset_trans_kern_generate()) and evaluates the density $q(\theta^\star|\theta)$
+ * (ncm_mset_trans_kern_pdf()). #NcmFitMCMC uses it for its proposals. With a fixed
+ * center (ncm_mset_trans_kern_set_prior()) it serves as a prior sampler, e.g. for the
+ * initial points of #NcmFitESMCMC (ncm_mset_trans_kern_prior_sample()).
  *
  */
 
@@ -58,7 +53,6 @@ enum
 typedef struct _NcmMSetTransKernPrivate
 {
   /*< private >*/
-  GObject parent_instance;
   NcmMSet *mset;
   NcmVector *theta;
 } NcmMSetTransKernPrivate;
@@ -133,6 +127,10 @@ ncm_mset_trans_kern_get_property (GObject *object, guint prop_id, GValue *value,
 }
 
 static void _ncm_mset_trans_kern_reset (NcmMSetTransKern *tkern);
+static void _ncm_mset_trans_kern_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset);
+static void _ncm_mset_trans_kern_generate (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng);
+static gdouble _ncm_mset_trans_kern_pdf (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar);
+static const gchar *_ncm_mset_trans_kern_get_name (NcmMSetTransKern *tkern);
 
 static void
 ncm_mset_trans_kern_class_init (NcmMSetTransKernClass *klass)
@@ -154,15 +152,44 @@ ncm_mset_trans_kern_class_init (NcmMSetTransKernClass *klass)
                                                         NCM_TYPE_MSET,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  tkern_class->bernoulli_scheme = FALSE;
-  tkern_class->set_mset         = NULL;
-  tkern_class->generate         = NULL;
-  tkern_class->reset            = &_ncm_mset_trans_kern_reset;
+  tkern_class->set_mset = &_ncm_mset_trans_kern_set_mset;
+  tkern_class->generate = &_ncm_mset_trans_kern_generate;
+  tkern_class->pdf      = &_ncm_mset_trans_kern_pdf;
+  tkern_class->reset    = &_ncm_mset_trans_kern_reset;
+  tkern_class->get_name = &_ncm_mset_trans_kern_get_name;
 }
 
 static void
 _ncm_mset_trans_kern_reset (NcmMSetTransKern *tkern)
 {
+}
+
+static void
+_ncm_mset_trans_kern_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
+{
+  g_error ("method set_mset not implemented by %s.", G_OBJECT_TYPE_NAME (tkern));
+}
+
+static void
+_ncm_mset_trans_kern_generate (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
+{
+  g_error ("method generate not implemented by %s.", G_OBJECT_TYPE_NAME (tkern));
+}
+
+static gdouble
+_ncm_mset_trans_kern_pdf (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar)
+{
+  g_error ("method pdf not implemented by %s.", G_OBJECT_TYPE_NAME (tkern));
+
+  return 0.0;
+}
+
+static const gchar *
+_ncm_mset_trans_kern_get_name (NcmMSetTransKern *tkern)
+{
+  g_error ("method get_name not implemented by %s.", G_OBJECT_TYPE_NAME (tkern));
+
+  return NULL;
 }
 
 /**
@@ -183,7 +210,7 @@ ncm_mset_trans_kern_ref (NcmMSetTransKern *tkern)
  * ncm_mset_trans_kern_free:
  * @tkern: a #NcmMSetTransKern.
  *
- * Increases the reference count of @tkern.
+ * Decreases the reference count of @tkern.
  *
  */
 void
@@ -249,10 +276,10 @@ ncm_mset_trans_kern_peek_mset (NcmMSetTransKern *tkern)
 /**
  * ncm_mset_trans_kern_set_prior:
  * @tkern: a #NcmMSetTransKern.
- * @theta: a #NcmMSet.
+ * @theta: a #NcmVector of free-parameter values
  *
- * Sets the @theta as the prior mean. This allows the transition kernel to
- * be used as a prior sampler.
+ * Makes @theta the fixed center of the kernel, so that ncm_mset_trans_kern_prior_sample()
+ * and ncm_mset_trans_kern_prior_pdf() use it as a prior.
  *
  */
 void
@@ -310,9 +337,9 @@ ncm_mset_trans_kern_generate (NcmMSetTransKern *tkern, NcmVector *theta, NcmVect
  * @theta: current point.
  * @thetastar: try point.
  *
- * Computes the value of the kernel at (@theta, @thetastar).
+ * Computes the density $q(\theta^\star|\theta)$ of the kernel.
  *
- * Returns: the value of the kernel at (@theta, @thetastar).
+ * Returns: the density of @thetastar given @theta
  */
 gdouble
 ncm_mset_trans_kern_pdf (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar)
@@ -370,11 +397,11 @@ ncm_mset_trans_kern_prior_sample (NcmMSetTransKern *tkern, NcmVector *thetastar,
  * @tkern: a #NcmMSetTransKern.
  * @thetastar: try point.
  *
- * Computes the value of the kernel at (@ktern->theta, @thetastar).
- * To use as a prior one must call the ncm_mset_trans_kern_set_prior()
- * or ncm_mset_trans_kern_set_prior_from_mset() first.
+ * Computes the density of the kernel at @thetastar about the center set by
+ * ncm_mset_trans_kern_set_prior() or ncm_mset_trans_kern_set_prior_from_mset(),
+ * which must be called first.
  *
- * Returns: the value of the kernel at (@ktern->theta, @thetastar).
+ * Returns: the density at @thetastar
  */
 gdouble
 ncm_mset_trans_kern_prior_pdf (NcmMSetTransKern *tkern, NcmVector *thetastar)

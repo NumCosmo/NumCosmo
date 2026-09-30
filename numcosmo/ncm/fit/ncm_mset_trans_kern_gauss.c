@@ -26,34 +26,14 @@
 /**
  * NcmMSetTransKernGauss:
  *
- * A multivariate gaussian sampler.
+ * Multivariate Gaussian proposals centered on the current point.
  *
- * This object subclasses NcmMSetTransKern and implements a multivariate gaussian
- * sampler.
- *
- * Implementation of a multivariate Gaussian sampler, providing a straightforward
- * method for generating random parameter vectors with multivariate parameters. This
- * sampler generates vectors with a normal distribution. The covariance of parameters
- * can be configured directly using ncm_mset_trans_kern_gauss_set_cov() or by
- * specifying individual standard deviations as parameter scales, assuming zero
- * correlation.
- *
- * Key Functionality:
- *
- * - Generates random parameter vectors with multivariate parameters.
- * - Utilizes a multivariate Gaussian distribution for sampling.
- * - Allows direct setting of covariance using ncm_mset_trans_kern_gauss_set_cov().
- * - Supports alternative methods:
- *    - Using ncm_mset_trans_kern_gauss_set_cov_from_scale() sets covariance using
- *      the scale property of parameters as standard deviation with zero correlation.
- *    - Using ncm_mset_trans_kern_gauss_set_cov_from_rescale() sets covariance using
- *      the scale property of parameters times @epsilon as standard deviation with zero
- *      correlation.
- *
- * This implementation is particularly useful when a Gaussian sampling approach is
- * required for generating random parameter vectors with multivariate parameters,
- * offering flexibility in specifying covariance through direct settings or individual
- * standard deviations.
+ * The covariance is set directly (ncm_mset_trans_kern_gauss_set_cov()) or from the
+ * free-parameter scales as standard deviations, without correlation
+ * (ncm_mset_trans_kern_gauss_set_cov_from_scale() and
+ * ncm_mset_trans_kern_gauss_set_cov_from_rescale()); it must be positive definite.
+ * The kernel is symmetric. A proposal may fall outside the parameter bounds; the
+ * sampler rejects it, and ncm_mset_trans_kern_prior_sample() draws again.
  *
  */
 
@@ -280,7 +260,8 @@ _ncm_mset_trans_kern_gauss_get_name (NcmMSetTransKern *tkern)
  * ncm_mset_trans_kern_gauss_new:
  * @len: Number of variables
  *
- * New NcmMSetTransKern gauss for @len multivariate gaussian.
+ * Creates a #NcmMSetTransKernGauss for @len parameters; ncm_mset_trans_kern_set_mset()
+ * sets it to the number of free parameters.
  *
  * Returns: (transfer full): a new #NcmMSetTransKernGauss.
  *
@@ -390,9 +371,9 @@ ncm_mset_trans_kern_gauss_set_cov_variant (NcmMSetTransKernGauss *tkerng, GVaria
 /**
  * ncm_mset_trans_kern_gauss_set_cov_data:
  * @tkerng: a #NcmMSetTransKernGauss.
- * @cov: a #GVariant.
+ * @cov: the covariance, as a row-major array of $n \times n$ doubles
  *
- * Sets the covariance given by the double array @cov.
+ * Sets the covariance to @cov.
  *
  */
 void
@@ -406,7 +387,7 @@ ncm_mset_trans_kern_gauss_set_cov_data (NcmMSetTransKernGauss *tkerng, gdouble *
   ret = ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
 
   if (ret != 0)
-    g_error ("ncm_mset_trans_kern_gauss_set_cov_variant[ncm_matrix_cholesky_decomp]: %d.", ret);
+    g_error ("ncm_mset_trans_kern_gauss_set_cov_data[ncm_matrix_cholesky_decomp]: %d.", ret);
 
   tkerng->init = TRUE;
 }
@@ -495,7 +476,7 @@ ncm_mset_trans_kern_gauss_set_cov_from_rescale (NcmMSetTransKernGauss *tkerng, c
   ret = ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
 
   if (ret != 0)
-    g_error ("ncm_mset_trans_kern_gauss_set_cov_from_scale[ncm_matrix_cholesky_decomp]: %d.", ret);
+    g_error ("ncm_mset_trans_kern_gauss_set_cov_from_rescale[ncm_matrix_cholesky_decomp]: %d.", ret);
 
   tkerng->init = TRUE;
 }
