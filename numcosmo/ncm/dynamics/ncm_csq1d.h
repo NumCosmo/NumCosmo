@@ -64,17 +64,13 @@ struct _NcmCSQ1DClass
 
 /**
  * NcmCSQ1DEvolState:
- * @NCM_CSQ1D_EVOL_STATE_INVALID: Invalid state
- * @NCM_CSQ1D_EVOL_STATE_ADIABATIC: Adiabatic state variables $(\alpha,\, \delta\gamma)$
- * @NCM_CSQ1D_EVOL_STATE_UP: $(\chi,\, U_+)$ state variables
- * @NCM_CSQ1D_EVOL_STATE_UM: $(\chi,\, U_-)$ state variables
+ * @NCM_CSQ1D_EVOL_STATE_INVALID: no evolution variables set
+ * @NCM_CSQ1D_EVOL_STATE_ADIABATIC: $(\alpha, \delta\gamma)$ in #NCM_CSQ1D_FRAME_ADIAB1
+ * @NCM_CSQ1D_EVOL_STATE_UP: $(\chi, U_+)$ in #NCM_CSQ1D_FRAME_ORIG
+ * @NCM_CSQ1D_EVOL_STATE_UM: $(\chi, U_-)$ in #NCM_CSQ1D_FRAME_ORIG
  *
- * Variables describing the system evolution state. The state @NCM_CSQ1D_EVOL_STATE_ADIABATIC
- * is used to describe the adiabatic evolution of the system, this state use the frame
- * #NCM_CSQ1D_FRAME_ADIAB1 with the variables $(\alpha,\, \delta\gamma)$ to compute the evolution.
- * The state @NCM_CSQ1D_EVOL_STATE_UP and @NCM_CSQ1D_EVOL_STATE_UM are used to describe the
- * non-adiabatic evolution of the system, these states use the frame #NCM_CSQ1D_FRAME_ORIG with
- * the variables $(\chi,\, U_+)$ and $(\chi,\, U_-)$ to compute the evolution, respectively.
+ * The variables the evolution is integrated in. The evolution switches between them
+ * with the adiabatic threshold, see ncm_csq1d_set_adiab_threshold().
  *
  */
 typedef enum _NcmCSQ1DEvolState /*< prefix=NCM_CSQ1D_EVOL_STATE >*/
@@ -87,20 +83,14 @@ typedef enum _NcmCSQ1DEvolState /*< prefix=NCM_CSQ1D_EVOL_STATE >*/
 
 /**
  * NcmCSQ1DInitialStateType:
- * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC: Ad-hoc initial condition
- * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2: Second order adiabatic vacuum
- * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4: Fourth order adiabatic vacuum
- * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_NONADIABATIC2: Second order non-adiabatic vacuum
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC: conditions set with ncm_csq1d_set_init_cond()
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2: adiabatic vacuum from the second order expansion
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4: adiabatic vacuum from the fourth order expansion
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_NONADIABATIC2: second order non-adiabatic vacuum; ncm_csq1d_prepare() does not implement it and aborts
  *
- * Initial conditions for the system. The initial condition
- * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC is used to set an arbitrary initial
- * condition. The initial conditions @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2,
- * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4 and
- * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_NONADIABATIC2 are used to set the initial
- * conditions for the adiabatic and non-adiabatic vacuum initial conditions.
- *
- * If the initial condition is set to @NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC
- * the initial condition must be set using the function family ncm_csq1d_set_init_cond*.
+ * How ncm_csq1d_prepare() sets the initial conditions. The type also selects the order of
+ * ncm_csq1d_compute_adiab(): second order for
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2, fourth order otherwise.
  *
  */
 typedef enum _NcmCSQ1DInitialStateType /*< enum,underscore_name=NCM_CSQ1D_INITIAL_CONDITION_TYPE,prefix=NCM_CSQ1D_INITIAL_CONDITION_TYPE >*/

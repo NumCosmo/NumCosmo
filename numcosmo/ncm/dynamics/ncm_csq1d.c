@@ -57,7 +57,6 @@
 #include <complex.h>
 
 #include "ncm/dynamics/ncm_csq1d.h"
-#include "ncm/model/ncm_model_ctrl.h"
 #include "ncm/spline/ncm_ode_spline.h"
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/integration/ncm_diff.h"
@@ -114,7 +113,6 @@ typedef struct _NcmCSQ1DPrivate
   gdouble adiab_threshold;
   gdouble prop_threshold;
   gboolean save_evol;
-  NcmModelCtrl *ctrl;
   gpointer cvode;
   gpointer cvode_Up;
   gpointer cvode_Um;
@@ -190,7 +188,6 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
   self->adiab_threshold = 0.0;
   self->prop_threshold  = 0.0;
   self->save_evol       = FALSE;
-  self->ctrl            = ncm_model_ctrl_new (NULL);
 
   self->cvode           = NULL;
   self->cvode_init      = FALSE;
@@ -285,7 +282,6 @@ _ncm_csq1d_dispose (GObject *object)
   NcmCSQ1D *csq1d              = NCM_CSQ1D (object);
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  ncm_model_ctrl_clear (&self->ctrl);
   ncm_spline_clear (&self->alpha_s);
   ncm_spline_clear (&self->dgamma_s);
   ncm_spline_clear (&self->gamma_s);
@@ -1189,7 +1185,7 @@ ncm_csq1d_clear (NcmCSQ1D **csq1d)
  * @csq1d: a #NcmCSQ1D
  * @reltol: relative tolerance
  *
- * Sets the relative tolerance to @reltol.
+ * Sets the relative tolerance of the integrations, the evolution and the phase splines.
  *
  */
 void
@@ -1198,10 +1194,7 @@ ncm_csq1d_set_reltol (NcmCSQ1D *csq1d, const gdouble reltol)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   if (self->reltol != reltol)
-  {
     self->reltol = reltol;
-    ncm_model_ctrl_force_update (self->ctrl);
-  }
 }
 
 /**
@@ -1209,7 +1202,7 @@ ncm_csq1d_set_reltol (NcmCSQ1D *csq1d, const gdouble reltol)
  * @csq1d: a #NcmCSQ1D
  * @abstol: absolute tolerance
  *
- * Sets the absolute tolerance to @abstol.
+ * Sets the absolute tolerance of the integrations.
  *
  */
 void
@@ -1218,19 +1211,17 @@ ncm_csq1d_set_abstol (NcmCSQ1D *csq1d, const gdouble abstol)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   if (self->abstol != abstol)
-  {
     self->abstol = abstol;
 
-    ncm_model_ctrl_force_update (self->ctrl);
-  }
 }
 
 /**
  * ncm_csq1d_set_ti:
  * @csq1d: a #NcmCSQ1D
- * @ti: mode $t_i$
+ * @ti: initial time $t_i$
  *
- * Sets the initial time $t_i$ to @ti.
+ * Sets the initial time $t_i$. Changing it discards initial conditions set with
+ * ncm_csq1d_set_init_cond().
  *
  */
 void
@@ -1242,16 +1233,15 @@ ncm_csq1d_set_ti (NcmCSQ1D *csq1d, const gdouble ti)
   {
     self->ti            = ti;
     self->init_cond_set = FALSE;
-    ncm_model_ctrl_force_update (self->ctrl);
   }
 }
 
 /**
  * ncm_csq1d_set_tf:
  * @csq1d: a #NcmCSQ1D
- * @tf: mode $t_f$
+ * @tf: final time $t_f$
  *
- * Sets the initial time $t_f$ to @tf.
+ * Sets the final time $t_f$.
  *
  */
 void
@@ -1260,18 +1250,20 @@ ncm_csq1d_set_tf (NcmCSQ1D *csq1d, const gdouble tf)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   if (self->tf != tf)
-  {
     self->tf = tf;
-    ncm_model_ctrl_force_update (self->ctrl);
-  }
 }
 
 /**
  * ncm_csq1d_set_adiab_threshold:
  * @csq1d: a #NcmCSQ1D
- * @adiab_threshold: mode $A_t$
+ * @adiab_threshold: adiabatic threshold $A_t$
  *
- * Sets the adiabatic threshold $A_t$.
+ * Sets the adiabatic threshold $A_t$. The evolution uses the adiabatic variables
+ * $(\alpha, \delta\gamma)$ until both $\vert\alpha\vert$ and $\vert\delta\gamma\vert$
+ * exceed $A_t$, then $(\chi, U_+)$ when $\delta\gamma > 0$ and $(\chi, U_-)$ otherwise,
+ * and returns to the adiabatic variables when both $\vert\chi\vert$ and
+ * $\vert\delta\gamma\vert$ fall below $A_t$. ncm_csq1d_set_init_cond_adiab() refuses
+ * times where $\vert\alpha\vert$ or $\vert\delta\gamma\vert$ exceeds $A_t$.
  *
  */
 void
@@ -1280,18 +1272,17 @@ ncm_csq1d_set_adiab_threshold (NcmCSQ1D *csq1d, const gdouble adiab_threshold)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   if (self->adiab_threshold != adiab_threshold)
-  {
-    ncm_model_ctrl_force_update (self->ctrl);
     self->adiab_threshold = adiab_threshold;
-  }
 }
 
 /**
  * ncm_csq1d_set_prop_threshold:
  * @csq1d: a #NcmCSQ1D
- * @prop_threshold: mode $P_t$
+ * @prop_threshold: propagator threshold $P_t$
  *
- * Sets the propagator threshold $P_t$.
+ * Sets the propagator threshold $P_t$: ncm_csq1d_prepare_prop() records, as
+ * ncm_csq1d_get_tf_prop(), the time where the square of the first-order part of the
+ * propagator reaches $P_t$. It is read when ncm_csq1d_prepare_prop() is called.
  *
  */
 void
@@ -1305,22 +1296,18 @@ ncm_csq1d_set_prop_threshold (NcmCSQ1D *csq1d, const gdouble prop_threshold)
 /**
  * ncm_csq1d_set_save_evol:
  * @csq1d: a #NcmCSQ1D
- * @save: whether to save all evolution
+ * @save: whether to save the evolution
  *
- * If true saves all evolution to be evaluated later through ncm_csq1d_eval_at() and
+ * Whether ncm_csq1d_prepare() keeps the evolution in splines for ncm_csq1d_eval_at() and
  * related methods.
  *
  */
 void
-ncm_csq1d_set_save_evol (NcmCSQ1D *csq1d, gboolean save_evol)
+ncm_csq1d_set_save_evol (NcmCSQ1D *csq1d, const gboolean save)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  if (self->save_evol != save_evol)
-  {
-    ncm_model_ctrl_force_update (self->ctrl);
-    self->save_evol = save_evol;
-  }
+  self->save_evol = save;
 }
 
 /**
@@ -1330,10 +1317,12 @@ ncm_csq1d_set_save_evol (NcmCSQ1D *csq1d, gboolean save_evol)
  * @evol_state: a #NcmCSQ1DEvolState
  * @initial_state: a #NcmCSQ1DState
  *
- * Sets the values of the initial conditions to @initial_state.
- * Depending on the value of @evol_state, the initial conditions
- * are set in the adiabatic frame 1 if @evol_state is #NCM_CSQ1D_EVOL_STATE_ADIABATIC,
- * or in the original frame when using the $U_+$ or $U_-$ parametrization.
+ * Sets the initial conditions of the evolution to @initial_state, at its time, and the
+ * variables the evolution starts in: $(\alpha, \delta\gamma)$ in
+ * #NCM_CSQ1D_FRAME_ADIAB1 for #NCM_CSQ1D_EVOL_STATE_ADIABATIC, $(\chi, U_\pm)$ in
+ * #NCM_CSQ1D_FRAME_ORIG for #NCM_CSQ1D_EVOL_STATE_UP and #NCM_CSQ1D_EVOL_STATE_UM.
+ * @initial_state is changed to that frame. Used by ncm_csq1d_prepare() with
+ * #NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC.
  *
  */
 void
@@ -1372,8 +1361,11 @@ ncm_csq1d_set_init_cond (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DEvolState evo
  * @model: (nullable): a #NcmModel
  * @ti: initial time $t_i$
  *
- * Sets the values of the initial conditions at $t_i$.
- * This method also updates the value of $t_i$.
+ * Sets the initial conditions to the adiabatic vacuum at @ti, computed by
+ * ncm_csq1d_compute_adiab(), and starts the evolution there in the adiabatic variables.
+ * It aborts when $\vert\alpha\vert$ or $\vert\delta\gamma\vert$ exceeds the adiabatic
+ * threshold at @ti, see ncm_csq1d_set_adiab_threshold(). The property
+ * #NcmCSQ1D:ti is not changed.
  *
  */
 void
@@ -1396,9 +1388,8 @@ ncm_csq1d_set_init_cond_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t
  * @csq1d: a #NcmCSQ1D
  * @initial_condition_type: the vacuum type
  *
- * Sets the initial condition type to @initial_condition_type. The initial condition
- * type is used to determine the initial state state when preparing the object using
- * ncm_csq1d_prepare().
+ * Sets how ncm_csq1d_prepare() sets the initial conditions, see
+ * #NcmCSQ1DInitialStateType. It also selects the order of ncm_csq1d_compute_adiab().
  *
  */
 void
@@ -1407,10 +1398,7 @@ ncm_csq1d_set_initial_condition_type (NcmCSQ1D *csq1d, NcmCSQ1DInitialStateType 
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   if (self->initial_condition_type != initial_condition_type)
-  {
-    ncm_model_ctrl_force_update (self->ctrl);
     self->initial_condition_type = initial_condition_type;
-  }
 }
 
 /**
@@ -1418,9 +1406,8 @@ ncm_csq1d_set_initial_condition_type (NcmCSQ1D *csq1d, NcmCSQ1DInitialStateType 
  * @csq1d: a #NcmCSQ1D
  * @vacuum_reltol: relative tolerance
  *
- * Sets the relative tolerance for the vacuum definition. This tolerance
- * is used to determine the vacuum state when preparing the object using
- * ncm_csq1d_prepare().
+ * Sets the relative accuracy the adiabatic expansion must reach where
+ * ncm_csq1d_prepare() sets the adiabatic vacuum, see ncm_csq1d_find_adiab_time_limit().
  *
  */
 void
@@ -1429,10 +1416,7 @@ ncm_csq1d_set_vacuum_reltol (NcmCSQ1D *csq1d, const gdouble vacuum_reltol)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   if (self->vacuum_reltol != vacuum_reltol)
-  {
-    ncm_model_ctrl_force_update (self->ctrl);
     self->vacuum_reltol = vacuum_reltol;
-  }
 }
 
 /**
@@ -1440,9 +1424,8 @@ ncm_csq1d_set_vacuum_reltol (NcmCSQ1D *csq1d, const gdouble vacuum_reltol)
  * @csq1d: a #NcmCSQ1D
  * @vacuum_max_time: maximum time
  *
- * Sets the maximum time for the vacuum search. This time is used
- * to determine the vacuum state when preparing the object using
- * ncm_csq1d_prepare().
+ * Sets the latest time at which ncm_csq1d_prepare() may set the adiabatic vacuum; the
+ * search runs from $t_i$ to @vacuum_max_time.
  *
  */
 void
@@ -1451,10 +1434,7 @@ ncm_csq1d_set_vacuum_max_time (NcmCSQ1D *csq1d, const gdouble vacuum_max_time)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   if (self->vacuum_max_time != vacuum_max_time)
-  {
-    ncm_model_ctrl_force_update (self->ctrl);
     self->vacuum_max_time = vacuum_max_time;
-  }
 }
 
 /**
@@ -1475,7 +1455,7 @@ ncm_csq1d_get_reltol (NcmCSQ1D *csq1d)
  * ncm_csq1d_get_abstol:
  * @csq1d: a #NcmCSQ1D
  *
- * Returns: the absolute tolerance to @abstol.
+ * Returns: the absolute tolerance.
  */
 gdouble
 ncm_csq1d_get_abstol (NcmCSQ1D *csq1d)
@@ -1503,7 +1483,7 @@ ncm_csq1d_get_ti (NcmCSQ1D *csq1d)
  * ncm_csq1d_get_tf:
  * @csq1d: a #NcmCSQ1D
  *
- * Returns: the initial time $t_f$.
+ * Returns: the final time $t_f$.
  */
 gdouble
 ncm_csq1d_get_tf (NcmCSQ1D *csq1d)
@@ -1573,7 +1553,7 @@ ncm_csq1d_get_initial_condition_type (NcmCSQ1D *csq1d)
  * ncm_csq1d_get_vacuum_reltol:
  * @csq1d: a #NcmCSQ1D
  *
- * Returns: the relative tolerance for the vacuum definition.
+ * Returns: the relative accuracy required from the adiabatic vacuum.
  */
 gdouble
 ncm_csq1d_get_vacuum_reltol (NcmCSQ1D *csq1d)
@@ -1587,7 +1567,7 @@ ncm_csq1d_get_vacuum_reltol (NcmCSQ1D *csq1d)
  * ncm_csq1d_get_vacuum_max_time:
  * @csq1d: a #NcmCSQ1D
  *
- * Returns: the maximum time for the vacuum search.
+ * Returns: the latest time at which the vacuum may be set.
  */
 gdouble
 ncm_csq1d_get_vacuum_max_time (NcmCSQ1D *csq1d)
@@ -2483,14 +2463,15 @@ ncm_csq1d_prepare_phase_splines (NcmCSQ1D *csq1d, NcmModel *model)
  * @csq1d: a #NcmCSQ1D
  * @model: (nullable): a #NcmModel
  *
- * Prepares the object using @model. It integrates the system from the initial time to
- * the final time. If the #NcmCSQ1DInitialStateType is set to
- * #NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC, the initial conditions must be set using
- * ncm_csq1d_set_init_cond(). Otherwise, the initial conditions are automatically set
- * using the chosen method. See ncm_csq1d_set_initial_condition_type().
- *
- * The initial conditions based on the vacuum are controlled by the parameters
- * ncm_csq1d_set_vacuum_reltol() and ncm_csq1d_set_vacuum_max_time().
+ * Sets the initial conditions and integrates the system to $t_f$, according to the
+ * #NcmCSQ1DInitialStateType. With #NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC the
+ * conditions of ncm_csq1d_set_init_cond() are used. With the adiabatic types
+ * ncm_csq1d_find_adiab_time_limit() places the vacuum between $t_i$ and the vacuum
+ * maximum time, at the vacuum relative tolerance, and the system is integrated from
+ * there; when $t_f$ comes first nothing is integrated and ncm_csq1d_eval_at() uses the
+ * adiabatic expansion. The virtual method is called first,
+ * for the subclass to prepare its own state. Every call recomputes the solution and
+ * discards the phase splines of ncm_csq1d_prepare_phase_splines().
  *
  */
 void

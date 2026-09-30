@@ -35,6 +35,139 @@
 #include "test_ncm_csq1d_bessel.h"
 
 static void
+test_ncm_csq1d_properties (void)
+{
+  /* Construction defaults, then every setter against its getter and property. */
+  TestCSQ1DBessel *b = test_csq1d_bessel_new (2.0, 1.0, TRUE);
+  NcmCSQ1D *csq1d    = NCM_CSQ1D (b);
+  gdouble d;
+  gboolean save;
+  NcmCSQ1DInitialStateType ict;
+
+  g_assert_cmpfloat (ncm_csq1d_get_reltol (csq1d), ==, NCM_DEFAULT_PRECISION);
+  g_assert_cmpfloat (ncm_csq1d_get_abstol (csq1d), ==, 0.0);
+  g_assert_cmpfloat (ncm_csq1d_get_ti (csq1d), ==, 0.0);
+  g_assert_cmpfloat (ncm_csq1d_get_tf (csq1d), ==, 1.0);
+  g_assert_cmpfloat (ncm_csq1d_get_adiab_threshold (csq1d), ==, 1.0);
+  g_assert_cmpfloat (ncm_csq1d_get_prop_threshold (csq1d), ==, 0.1);
+  g_assert_true (ncm_csq1d_get_save_evol (csq1d));
+  g_assert_cmpint (ncm_csq1d_get_initial_condition_type (csq1d), ==, NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC);
+  g_assert_cmpfloat (ncm_csq1d_get_vacuum_reltol (csq1d), ==, 1.0e-5);
+  g_assert_cmpfloat (ncm_csq1d_get_vacuum_max_time (csq1d), ==, 1.0);
+
+  ncm_csq1d_set_reltol (csq1d, 1.0e-6);
+  ncm_csq1d_set_abstol (csq1d, 1.0e-7);
+  ncm_csq1d_set_ti (csq1d, -100.0);
+  ncm_csq1d_set_tf (csq1d, -1.0e-3);
+  ncm_csq1d_set_adiab_threshold (csq1d, 1.0e-3);
+  ncm_csq1d_set_prop_threshold (csq1d, 2.0e-3);
+  ncm_csq1d_set_save_evol (csq1d, FALSE);
+  ncm_csq1d_set_initial_condition_type (csq1d, NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2);
+  ncm_csq1d_set_vacuum_reltol (csq1d, 1.0e-8);
+  ncm_csq1d_set_vacuum_max_time (csq1d, -10.0);
+
+  g_assert_cmpfloat (ncm_csq1d_get_reltol (csq1d), ==, 1.0e-6);
+  g_assert_cmpfloat (ncm_csq1d_get_abstol (csq1d), ==, 1.0e-7);
+  g_assert_cmpfloat (ncm_csq1d_get_ti (csq1d), ==, -100.0);
+  g_assert_cmpfloat (ncm_csq1d_get_tf (csq1d), ==, -1.0e-3);
+  g_assert_cmpfloat (ncm_csq1d_get_adiab_threshold (csq1d), ==, 1.0e-3);
+  g_assert_cmpfloat (ncm_csq1d_get_prop_threshold (csq1d), ==, 2.0e-3);
+  g_assert_false (ncm_csq1d_get_save_evol (csq1d));
+  g_assert_cmpint (ncm_csq1d_get_initial_condition_type (csq1d), ==, NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2);
+  g_assert_cmpfloat (ncm_csq1d_get_vacuum_reltol (csq1d), ==, 1.0e-8);
+  g_assert_cmpfloat (ncm_csq1d_get_vacuum_max_time (csq1d), ==, -10.0);
+
+  g_object_get (csq1d, "reltol", &d, NULL);
+  g_assert_cmpfloat (d, ==, 1.0e-6);
+  g_object_get (csq1d, "abstol", &d, NULL);
+  g_assert_cmpfloat (d, ==, 1.0e-7);
+  g_object_get (csq1d, "ti", &d, NULL);
+  g_assert_cmpfloat (d, ==, -100.0);
+  g_object_get (csq1d, "tf", &d, NULL);
+  g_assert_cmpfloat (d, ==, -1.0e-3);
+  g_object_get (csq1d, "adiab-threshold", &d, NULL);
+  g_assert_cmpfloat (d, ==, 1.0e-3);
+  g_object_get (csq1d, "prop-threshold", &d, NULL);
+  g_assert_cmpfloat (d, ==, 2.0e-3);
+  g_object_get (csq1d, "save-evol", &save, NULL);
+  g_assert_false (save);
+  g_object_get (csq1d, "vacuum-type", &ict, NULL);
+  g_assert_cmpint (ict, ==, NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2);
+  g_object_get (csq1d, "vacuum-reltol", &d, NULL);
+  g_assert_cmpfloat (d, ==, 1.0e-8);
+  g_object_get (csq1d, "vacuum-max-time", &d, NULL);
+  g_assert_cmpfloat (d, ==, -10.0);
+
+  g_object_set (csq1d, "vacuum-type", NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4, "save-evol", TRUE, NULL);
+  g_assert_cmpint (ncm_csq1d_get_initial_condition_type (csq1d), ==, NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4);
+  g_assert_true (ncm_csq1d_get_save_evol (csq1d));
+
+  ncm_csq1d_free (csq1d);
+}
+
+/* The Bessel system prepared at t in [-1e4, -1e-3] with the vacuum set before -10. */
+static TestCSQ1DBessel *
+_test_ncm_csq1d_bessel_prepared_new (NcmCSQ1DInitialStateType ict)
+{
+  TestCSQ1DBessel *b = test_csq1d_bessel_new (2.0, 1.0, TRUE);
+  NcmCSQ1D *csq1d    = NCM_CSQ1D (b);
+
+  ncm_csq1d_set_ti (csq1d, -1.0e4);
+  ncm_csq1d_set_tf (csq1d, -1.0e-3);
+  ncm_csq1d_set_reltol (csq1d, 1.0e-10);
+  ncm_csq1d_set_abstol (csq1d, 0.0);
+  ncm_csq1d_set_save_evol (csq1d, TRUE);
+  ncm_csq1d_set_initial_condition_type (csq1d, ict);
+  ncm_csq1d_set_vacuum_max_time (csq1d, -10.0);
+  ncm_csq1d_set_vacuum_reltol (csq1d, 1.0e-8);
+
+  return b;
+}
+
+static void
+test_ncm_csq1d_prepare_aborts_subprocess (void)
+{
+  const gchar *which = g_getenv ("TEST_NCM_CSQ1D_ABORT");
+  TestCSQ1DBessel *b;
+
+  if (g_strcmp0 (which, "ad_hoc") == 0)
+  {
+    b = _test_ncm_csq1d_bessel_prepared_new (NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC);
+    ncm_csq1d_prepare (NCM_CSQ1D (b), NULL);
+  }
+  else if (g_strcmp0 (which, "nonadiab2") == 0)
+  {
+    b = _test_ncm_csq1d_bessel_prepared_new (NCM_CSQ1D_INITIAL_CONDITION_TYPE_NONADIABATIC2);
+    ncm_csq1d_prepare (NCM_CSQ1D (b), NULL);
+  }
+  else if (g_strcmp0 (which, "init_adiab") == 0)
+  {
+    /* At t = -2 the adiabatic alpha is -1.74, beyond the default threshold 1. */
+    b = _test_ncm_csq1d_bessel_prepared_new (NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4);
+    ncm_csq1d_set_init_cond_adiab (NCM_CSQ1D (b), NULL, -2.0);
+  }
+}
+
+static void
+_test_ncm_csq1d_trap_abort (const gchar *which, const gchar *message)
+{
+  g_setenv ("TEST_NCM_CSQ1D_ABORT", which, TRUE);
+  g_test_trap_subprocess ("/ncm/csq1d/prepare/aborts/subprocess", 0, G_TEST_SUBPROCESS_DEFAULT);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr (message);
+  g_unsetenv ("TEST_NCM_CSQ1D_ABORT");
+}
+
+static void
+test_ncm_csq1d_prepare_aborts (void)
+{
+  /* The documented refusals of ncm_csq1d_prepare() and ncm_csq1d_set_init_cond_adiab(). */
+  _test_ncm_csq1d_trap_abort ("ad_hoc", "*initial conditions must be set*");
+  _test_ncm_csq1d_trap_abort ("nonadiab2", "*not implemented*");
+  _test_ncm_csq1d_trap_abort ("init_adiab", "*is not a valid adiabatic time*");
+}
+
+static void
 test_ncm_csq1d_defaults (void)
 {
   /*
@@ -151,6 +284,20 @@ test_ncm_csq1d_state_maps (void)
     /* phi is real and positive. */
     g_assert_cmpfloat (phi[1], ==, 0.0);
     g_assert_cmpfloat (phi[0], >, 0.0);
+
+    /* Half-plane x = chi e^-U+, ln y = -U+; disc x = chi / (1 + (e^U+ + e^U-) / 2),
+     * y = -(e^U+ - e^U-) / 2 / (1 + (e^U+ + e^U-) / 2). */
+    {
+      gdouble x, lny, y;
+
+      ncm_csq1d_state_get_poincare_half_plane (s, &x, &lny);
+      ncm_assert_cmpdouble_e (x, ==, chi * exp (-Up), 1.0e-14, 1.0e-15);
+      ncm_assert_cmpdouble_e (lny, ==, -Up, 1.0e-14, 1.0e-15);
+
+      ncm_csq1d_state_get_poincare_disc (s, &x, &y);
+      ncm_assert_cmpdouble_e (x, ==, chi / (1.0 + 0.5 * (exp (Up) + exp (Um))), 1.0e-14, 1.0e-15);
+      ncm_assert_cmpdouble_e (y, ==, -0.5 * (exp (Up) - exp (Um)) / (1.0 + 0.5 * (exp (Up) + exp (Um))), 1.0e-14, 1.0e-15);
+    }
   }
 
   ncm_csq1d_state_free (s);
@@ -234,11 +381,12 @@ test_ncm_csq1d_state_distance_exact (void)
 static void
 test_ncm_csq1d_state_circle (void)
 {
-  /* The circle of radius r around a point lies at distance r from it; the angle 0
-   * moves alpha by r at fixed gamma. */
-  const gdouble radii[] = {1.0e-3, 0.3, 2.0};
+  /* The circle of radius r around a point lies at distance r from it, for any angle;
+   * the angle 0 moves alpha by r at fixed gamma. */
+  const gdouble radii[] = {1.0e-4, 1.0e-3, 0.3, 2.0, 30.0, 1.0e4};
   NcmCSQ1DState *s      = ncm_csq1d_state_new ();
   NcmCSQ1DState *c      = ncm_csq1d_state_new ();
+  gdouble max_err       = 0.0;
   guint i, j, l;
 
   for (i = 0; i < G_N_ELEMENTS (_test_ag); i++)
@@ -254,14 +402,16 @@ test_ncm_csq1d_state_circle (void)
       ncm_assert_cmpdouble_e (a, ==, _test_ag[i][0] + radii[j], 1.0e-13, 1.0e-15);
       ncm_assert_cmpdouble_e (g, ==, _test_ag[i][1], 1.0e-14, 1.0e-15);
 
-      for (l = 0; l < 12; l++)
+      for (l = 0; l < 25; l++)
       {
-        ncm_csq1d_state_get_circle (s, radii[j], 2.0 * M_PI * l / 12.0, c);
-        /* Measured 3.6e-12, at the smallest radius. */
-        ncm_assert_cmpdouble_e (ncm_csq1d_state_compute_distance (s, c), ==, radii[j], 3.0e-11, 0.0);
+        ncm_csq1d_state_get_circle (s, radii[j], -4.0 * M_PI + 8.0 * M_PI * l / 24.0 + 0.1, c);
+        max_err = GSL_MAX (max_err, fabs (ncm_csq1d_state_compute_distance (s, c) / radii[j] - 1.0));
       }
     }
   }
+
+  /* Measured 5.5e-11, at the smallest radius, over r in [1e-4, 1e4]. */
+  g_assert_cmpfloat (max_err, <, 5.0e-10);
 
   ncm_csq1d_state_free (s);
   ncm_csq1d_state_free (c);
@@ -275,6 +425,9 @@ main (gint argc, gchar *argv[])
   ncm_cfg_enable_gsl_err_handler ();
 
   g_test_add_func ("/ncm/csq1d/defaults", &test_ncm_csq1d_defaults);
+  g_test_add_func ("/ncm/csq1d/properties", &test_ncm_csq1d_properties);
+  g_test_add_func ("/ncm/csq1d/prepare/aborts", &test_ncm_csq1d_prepare_aborts);
+  g_test_add_func ("/ncm/csq1d/prepare/aborts/subprocess", &test_ncm_csq1d_prepare_aborts_subprocess);
   g_test_add_func ("/ncm/csq1d/state/maps", &test_ncm_csq1d_state_maps);
   g_test_add_func ("/ncm/csq1d/state/distance", &test_ncm_csq1d_state_distance);
   g_test_add_func ("/ncm/csq1d/state/distance/exact", &test_ncm_csq1d_state_distance_exact);
