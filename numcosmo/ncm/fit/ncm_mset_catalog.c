@@ -5855,13 +5855,17 @@ ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_p
 /**
  * ncm_mset_catalog_trim:
  * @mcat: a #NcmMSetCatalog
- * @tc: time divisor $t_c$
- * @thin: thinning factor
+ * @tc: number of iterations to drop
+ * @thin: thinning factor, at least one
  *
- * Drops all points in the catalog such that $t < t_c$ and skips
- * every @thin-1 rows, creating a thinner catalog.
- * This function trims the first $t_c \times n_\mathrm{chains}$
- * points from the catalog. Creates a backup of the original file.
+ * Drops the first @tc iterations, the first $t_c n_\mathrm{chains}$ rows, and keeps one
+ * iteration in every @thin of the rest, all chains of it. The first id moves forward by
+ * $t_c n_\mathrm{chains}$ and the markovian id follows the rows it pointed to. The catalog
+ * must hold complete ensembles and must not be read-only.
+ *
+ * When a file is attached it is renamed to `<file>.<n>.bak`, with the first free $n$,
+ * and the trimmed catalog is written to a new file under the original name. Nothing is
+ * done when @tc is zero and @thin is one.
  *
  */
 void
@@ -5946,9 +5950,9 @@ ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc, const guint thin)
 /**
  * ncm_mset_catalog_trim_p:
  * @mcat: a #NcmMSetCatalog
- * @p: percentage of the trim
+ * @p: fraction of the iterations to drop, in $(0, 1)$
  *
- * Drops all points in the catalog such that the first @p percent of the catalog is dropped.
+ * Drops the first fraction @p of the iterations with ncm_mset_catalog_trim().
  *
  */
 void
@@ -5965,10 +5969,12 @@ ncm_mset_catalog_trim_p (NcmMSetCatalog *mcat, const gdouble p)
  * @mcat: a #NcmMSetCatalog
  * @out_file: output filename
  *
- * Remove all points that are outside the bounds defined by
- * the catalog mset file. The catalog will always have a
- * single chain after the trimming. The result is saved to @out_file.
+ * Removes the rows whose free parameters lie outside the bounds of the #NcmMSet of the
+ * catalog. The catalog is renumbered as a single chain from the same first id, with the
+ * markovian id after the kept rows that preceded it, and written to @out_file; the file
+ * attached before is left as it was.
  *
+ * Returns: the number of rows removed.
  */
 guint
 ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file)
@@ -6023,9 +6029,13 @@ ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file)
  * ncm_mset_catalog_remove_last_ensemble:
  * @mcat: a #NcmMSetCatalog
  *
- * Removes the last ensemble point in the catalog, i.e.,
- * removes the last 'number of chains' points of the
- * catalog. Creates a backup of the original file.
+ * Removes the last ensemble, the last $n_\mathrm{chains}$ rows, or the rows of the last
+ * incomplete ensemble when there is one. The markovian id moves back to the row after
+ * the new last one when it pointed past it. An empty catalog warns and is left as it is;
+ * a read-only one is refused.
+ *
+ * When a file is attached it is renamed to `<file>.<n>.bak`, with the first free $n$,
+ * and the catalog is written to a new file under the original name.
  *
  */
 void
@@ -6070,6 +6080,7 @@ ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat)
        * at the row after the new last one, i.e. the phase is still open. */
       self->markovian_id = MIN (markovian_id, self->cur_id + 1);
 
+      if (file != NULL)
       {
         guint bak_n = 0;
 
@@ -6104,17 +6115,17 @@ ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat)
 /**
  * ncm_mset_catalog_calc_max_ess_time:
  * @mcat: a #NcmMSetCatalog
- * @ntests: number of tests
- * @max_ess: (out): the maximum effective sample size (ESS)
+ * @ntests: number of starting times tested, 10 when zero
+ * @max_ess: (out) (optional): the smallest effective sample size over the columns at $t_m$
  * @mtype: #NcmFitRunMsgs log level
  *
- * Calculates the time $t_m$ that maximizes the ESS for all
- * elements of the catalog. If the number of chains in the catalog is larger
- * than one, it considers the whole catalog otherwise it considers the ensemble
- * means. The variable @ntests control the number of divisions where the ESS
- * will be calculated, if it is zero the default 10 tests will be used.
+ * The starting time $t_m$ that maximizes the smallest effective sample size (ESS) over
+ * the columns, see ncm_stats_vec_max_ess_time(). A catalog with one chain is read row
+ * by row; one with several chains is read through the ensemble means, so $t_m$ is in
+ * iterations. Fewer than ten rows (ensembles) give no estimate: $t_m$ is zero and
+ * @max_ess zero.
  *
- * Returns: The lowest time $t_m$.
+ * Returns: the starting time $t_m$.
  */
 guint
 ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, const guint ntests, gdouble *max_ess, NcmFitRunMsgs mtype)
@@ -6136,9 +6147,13 @@ ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, const guint ntests, gd
 
   if (last_t < 10)
   {
-    ncm_message ("# NcmMSetCatalog: Catalog too small.\n");
+    if (mtype > NCM_FIT_RUN_MSGS_NONE)
+      ncm_message ("# NcmMSetCatalog: Catalog too small.\n");
 
-    return last_t;
+    if (max_ess != NULL)
+      *max_ess = 0.0;
+
+    return 0;
   }
 
   esss = ncm_stats_vec_max_ess_time (pstats, ntests, &bindex, &wp, &wp_order, &wp_ess);
@@ -6188,19 +6203,18 @@ _fonempval (gdouble v_i, guint i, gpointer user_data)
 /**
  * ncm_mset_catalog_calc_heidel_diag:
  * @mcat: a #NcmMSetCatalog
- * @ntests: number of tests
+ * @ntests: number of starting times tested, 10 when zero
  * @pvalue: the required Schruben test p-value
  * @mtype: #NcmFitRunMsgs log level
  *
- * Applies the Heidelberger and Welch's convergence diagnostic to the catalog,
- * see ncm_stats_vec_heidel_diag() for mode details. If the number of chains in
- * the catalog is larger than one, it considers the whole catalog otherwise it
- * considers the ensemble means. The variable @ntests control the number of
- * divisions where the test will be applied, if it is zero the default 10 tests
- * will be used.
+ * Applies the Heidelberger and Welch convergence diagnostic, see
+ * ncm_stats_vec_heidel_diag(). A catalog with one chain is read row by row; one with
+ * several chains is read through the ensemble means, so the time is in iterations. When
+ * @pvalue is zero the required p-value is $1 - 0.95^{1/n}$, $n$ the number of free
+ * parameters, so that all $n$ pass together with probability 0.95.
  *
- * Returns: The lowest time $t_m$ where all parameters pass the test with @pvalue or zero
- * if all tests fail.
+ * Returns: the smallest starting time at which every column passes, or zero when none
+ * does or the catalog has fewer than ten rows (ensembles).
  */
 guint
 ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, const gdouble pvalue, NcmFitRunMsgs mtype)
@@ -6210,23 +6224,23 @@ ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, con
   const gdouble pvalue_lef    = (pvalue == 0.0) ? NCM_STATS_VEC_HEIDEL_PVAL_COR (0.05, ncm_mset_fparams_len (self->mset)) : pvalue;
   gint bindex                 = 0;
   guint wp = 0, wp_order = 0;
-  gdouble wp_pvalue = 0.0;
+  gdouble wp_pvalue  = 0.0;
+  const guint last_t = ncm_stats_vec_nrows (pstats);
   NcmVector *pvals;
 
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
   {
-    const guint last_t = ncm_stats_vec_nrows (pstats);
-
     ncm_cfg_msg_sepa ();
     ncm_message ("# NcmMSetCatalog: Applying the Heidelberger and Welch's convergence diagnostic from chain %d => 0 using %u blocks:\n",
                  last_t, ntests);
+  }
 
-    if (last_t < 10)
-    {
+  if (last_t < 10)
+  {
+    if (mtype > NCM_FIT_RUN_MSGS_NONE)
       ncm_message ("# NcmMSetCatalog: Catalog too small.\n");
 
-      return last_t;
-    }
+    return 0;
   }
 
   pvals = ncm_stats_vec_heidel_diag (pstats, ntests, pvalue_lef, &bindex, &wp, &wp_order, &wp_pvalue);
@@ -6259,20 +6273,22 @@ ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, con
     ncm_vector_log_vals_func (pvals, "# NcmMSetCatalog: - pvalues:                  ", "%5.2f%%", &_fonempval, NULL);
   }
 
+  ncm_vector_free (pvals);
+
   return (bindex >= 0) ? bindex : 0;
 }
 
 /**
  * ncm_mset_catalog_calc_const_break:
  * @mcat: a #NcmMSetCatalog
- * @p: param id
+ * @p: column index
  * @mtype: #NcmFitRunMsgs log level
  *
- * Fits the model:
- * $$f(t) = c_0 + \theta_r(t-t_0)\left[c_1(t-t_0) + c_2\frac{(t-t_0)^2}{2}\right].$$
- * to estimate the time $t_0$ where the chain stops evolving.
+ * The time $t_0$ from which column @p stays near its robust mean, see
+ * ncm_stats_vec_estimate_const_break(). A catalog with one chain is read row by row;
+ * one with several chains is read through the ensemble means, so $t_0$ is in iterations.
  *
- * Returns: $t_0$.
+ * Returns: $t_0$, rounded up.
  */
 guint
 ncm_mset_catalog_calc_const_break (NcmMSetCatalog *mcat, guint p, NcmFitRunMsgs mtype)
@@ -6305,13 +6321,14 @@ ncm_mset_catalog_calc_const_break (NcmMSetCatalog *mcat, guint p, NcmFitRunMsgs 
 /**
  * ncm_mset_catalog_trim_by_type:
  * @mcat: a #NcmMSetCatalog
- * @ntests: number of tests
- * @trim_type: the trimming type to apply #NcmMSetCatalogTrimType
+ * @ntests: number of starting times tested, 10 when zero
+ * @trim_type: the criteria, a #NcmMSetCatalogTrimType
  * @mtype: #NcmFitRunMsgs log level
  *
- * Calculates the time $t_m$ that satisfies all trimming options
- * in @trim_type. Then drops all elements of the catalog and drops
- * all points $t < t_m$.
+ * Trims the catalog with ncm_mset_catalog_trim() at the largest of the times given by
+ * the criteria in @trim_type: ncm_mset_catalog_calc_max_ess_time(),
+ * ncm_mset_catalog_calc_heidel_diag() with the default p-value, and
+ * ncm_mset_catalog_calc_const_break() on the $-2\ln(L)$ column.
  *
  */
 void
@@ -6397,15 +6414,16 @@ _ess_res_cmp (gconstpointer a, gconstpointer b)
 /**
  * ncm_mset_catalog_max_ess_time_by_chain:
  * @mcat: a #NcmMSetCatalog
- * @ntests: number of tests
- * @max_ess: (out): the maximum effective sample size (ESS)
+ * @ntests: number of starting times tested, 10 when zero
+ * @max_ess: (out) (optional): the smallest effective sample size of the worst chain
  * @mtype: #NcmFitRunMsgs log level
  *
- * Calculates the time $t_m$ that maximizes the ESS for each chain of the catalog.
- * The variable @ntests control the number of divisions where the ESS
- * will be calculated, if it is zero the default 10 tests will be used.
+ * Applies ncm_stats_vec_max_ess_time() to each chain on its own. The worst chain is the
+ * one with the latest starting time, and its time and ESS are returned. A catalog with
+ * one chain is passed to ncm_mset_catalog_calc_max_ess_time(). Fewer than ten iterations
+ * give zero, and @max_ess zero.
  *
- * Returns: The lowest time $t_m$.
+ * Returns: the latest of the per-chain starting times, in iterations.
  */
 guint
 ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests, gdouble *max_ess, NcmFitRunMsgs mtype)
@@ -6422,7 +6440,20 @@ ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests
     guint twp = 0, twp_order = 0;
     gdouble twp_ess = 0.0;
     guint i, ti = 0;
-    GArray *res_a = g_array_new (FALSE, FALSE, sizeof (NcmMSetCatalogESSRes));
+    GArray *res_a;
+
+    if (ncm_mset_catalog_max_time (mcat) < 10)
+    {
+      if (mtype > NCM_FIT_RUN_MSGS_NONE)
+        ncm_message ("# NcmMSetCatalog: Catalog too small.\n");
+
+      if (max_ess != NULL)
+        max_ess[0] = 0.0;
+
+      return 0;
+    }
+
+    res_a = g_array_new (FALSE, FALSE, sizeof (NcmMSetCatalogESSRes));
 
     if (mtype > NCM_FIT_RUN_MSGS_NONE)
     {
@@ -6505,7 +6536,8 @@ ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests
       ncm_message ("# NcmMSetCatalog: - worst parameter ESS:      %-.2f\n", twp_ess);
     }
 
-    max_ess[0] = twp_ess;
+    if (max_ess != NULL)
+      max_ess[0] = twp_ess;
 
     return tbindex;
   }
@@ -6514,35 +6546,45 @@ ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests
 /**
  * ncm_mset_catalog_heidel_diag_by_chain:
  * @mcat: a #NcmMSetCatalog
- * @ntests: number of tests
- * @pvalue: required p-value
- * @wp_pvalue: (out): worst parameter p-value
+ * @ntests: number of starting times tested, 10 when zero
+ * @pvalue: required p-value, the default of ncm_mset_catalog_calc_heidel_diag() when zero
+ * @wp_pvalue: (out) (optional): the worst value of the worst chain
  * @mtype: #NcmFitRunMsgs log level
  *
- * Calculates the lowest time $t_m$ where all chains satisfy the Heidelberger
- * and Welch's convergence diagnostic. The variable @ntests control the number
- * of divisions where the test will be calculated, if it is zero the default
- * 10 tests will be used.
+ * Applies ncm_stats_vec_heidel_diag() to each chain on its own. The worst chain is one
+ * that passes from no starting time, the one with the largest value among those, or
+ * else the one with the latest starting time; @wp_pvalue is its largest Cramér-von Mises
+ * cumulative distribution value, one minus its p-value. Fewer than ten iterations give
+ * zero, and @wp_pvalue zero.
  *
- * Returns: The lowest time $t_m$.
+ * Returns: the smallest time from which every chain passes, in iterations, or zero when
+ * a chain passes from none.
  */
 guint
 ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests, const gdouble pvalue, gdouble *wp_pvalue, NcmFitRunMsgs mtype)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
-  if (self->nchains == 1)
-  {
-    return ncm_mset_catalog_calc_heidel_diag (mcat, ntests, pvalue, mtype);
-  }
-  else
   {
     const gdouble pvalue_lef = (pvalue == 0.0) ? NCM_STATS_VEC_HEIDEL_PVAL_COR (0.05, ncm_mset_fparams_len (self->mset)) : pvalue;
     gint tbindex             = -1;
     guint twp = 0, twp_order = 0;
     gdouble twp_pvalue = 0.0;
     guint i, ti = 0;
-    GArray *res_a = g_array_new (FALSE, FALSE, sizeof (NcmMSetCatalogESSRes));
+    GArray *res_a;
+
+    if (ncm_mset_catalog_max_time (mcat) < 10)
+    {
+      if (mtype > NCM_FIT_RUN_MSGS_NONE)
+        ncm_message ("# NcmMSetCatalog: Catalog too small.\n");
+
+      if (wp_pvalue != NULL)
+        wp_pvalue[0] = 0.0;
+
+      return 0;
+    }
+
+    res_a = g_array_new (FALSE, FALSE, sizeof (NcmMSetCatalogESSRes));
 
     if (mtype > NCM_FIT_RUN_MSGS_NONE)
     {
@@ -6555,7 +6597,7 @@ ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests,
       gint bindex = 0;
       guint wp = 0, wp_order = 0;
       gdouble lwp_pvalue  = 0.0;
-      NcmStatsVec *pstats = g_ptr_array_index (self->chain_pstats, i);
+      NcmStatsVec *pstats = (self->nchains == 1) ? self->pstats : g_ptr_array_index (self->chain_pstats, i);
       NcmVector *pvals    = ncm_stats_vec_heidel_diag (pstats, ntests, pvalue_lef, &bindex, &wp, &wp_order, &lwp_pvalue);
       guint size          = ncm_stats_vec_nitens (pstats);
 
@@ -6622,7 +6664,7 @@ ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests,
 
     if (mtype > NCM_FIT_RUN_MSGS_NONE)
     {
-      guint size = ncm_stats_vec_nitens (g_ptr_array_index (self->chain_pstats, ti));
+      guint size = ncm_stats_vec_nitens ((self->nchains == 1) ? self->pstats : g_ptr_array_index (self->chain_pstats, ti));
 
       ncm_cfg_msg_sepa ();
       ncm_message ("# NcmMSetCatalog: - Worst chain:\n");
@@ -6647,9 +6689,10 @@ ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests,
       ncm_message ("# NcmMSetCatalog: - worst parameter pvalue:   %6.2f%%\n", (1.0 - twp_pvalue) * 100.0);
     }
 
-    wp_pvalue[0] = twp_pvalue;
+    if (wp_pvalue != NULL)
+      wp_pvalue[0] = twp_pvalue;
 
-    return tbindex;
+    return (tbindex >= 0) ? tbindex : 0;
   }
 }
 

@@ -72,6 +72,10 @@ void test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer 
 void test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_ci_single (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_param_pdf (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_trim_by_type_short (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_heidel (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_heidel_by_chain_fail (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_remove_last_ensemble (TestNcmMSetCatalog *test, gconstpointer pdata);
 
 #ifdef HAVE_CFITSIO
 void test_ncm_mset_catalog_file_hdu0_roundtrip (void);
@@ -140,6 +144,10 @@ TestNcmMSetCatalogTests tests[] =
   {"distrib/short", test_ncm_mset_catalog_distrib_short},
   {"ci/single", test_ncm_mset_catalog_ci_single},
   {"param_pdf", test_ncm_mset_catalog_param_pdf},
+  {"trim_by_type/short", test_ncm_mset_catalog_trim_by_type_short},
+  {"heidel", test_ncm_mset_catalog_heidel},
+  {"heidel/by_chain/fail", test_ncm_mset_catalog_heidel_by_chain_fail},
+  {"remove_last_ensemble", test_ncm_mset_catalog_remove_last_ensemble},
   {NULL, NULL}
 };
 
@@ -2400,5 +2408,70 @@ test_ncm_mset_catalog_param_pdf (TestNcmMSetCatalog *test, gconstpointer pdata)
   g_test_assert_expected_messages ();
 
   g_free (p0);
+}
+
+void
+test_ncm_mset_catalog_trim_by_type_short (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  /* Below ten iterations there is no estimate to trim at, and the catalog is kept whole. */
+  guint max_ess_time;
+  gdouble max_ess = 1.0;
+
+  _test_ncm_mset_catalog_add_ensembles (test, 5);
+
+  max_ess_time = ncm_mset_catalog_calc_max_ess_time (test->mcat, 0, &max_ess, NCM_FIT_RUN_MSGS_NONE);
+  g_assert_cmpuint (max_ess_time, ==, 0);
+  g_assert_cmpfloat (max_ess, ==, 0.0);
+  g_assert_cmpuint (ncm_mset_catalog_calc_heidel_diag (test->mcat, 0, 0.0, NCM_FIT_RUN_MSGS_NONE), ==, 0);
+
+  ncm_mset_catalog_trim_by_type (test->mcat, 0, NCM_MSET_CATALOG_TRIM_TYPE_ESS | NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL, NCM_FIT_RUN_MSGS_NONE);
+  g_assert_cmpuint (ncm_mset_catalog_len (test->mcat), ==, 5 * ncm_mset_catalog_nchains (test->mcat));
+}
+
+void
+test_ncm_mset_catalog_heidel (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  /* With a required p-value of 1e-6 independent rows pass from the start in every chain:
+   * a column misses with probability 1e-6. */
+  gdouble wp_pvalue = 1.0;
+
+  _test_ncm_mset_catalog_add_ensembles (test, 200);
+
+  g_assert_cmpuint (ncm_mset_catalog_calc_heidel_diag (test->mcat, 0, 1.0e-6, NCM_FIT_RUN_MSGS_NONE), ==, 0);
+  g_assert_cmpuint (ncm_mset_catalog_heidel_diag_by_chain (test->mcat, 0, 1.0e-6, &wp_pvalue, NCM_FIT_RUN_MSGS_NONE), ==, 0);
+  g_assert_cmpfloat (wp_pvalue, <=, 1.0 - 1.0e-6);
+}
+
+void
+test_ncm_mset_catalog_heidel_by_chain_fail (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  /* With a required p-value of 1 - 1e-6 no chain passes from any starting point, which
+   * gives zero, and the worst value is the one that missed. */
+  gdouble wp_pvalue = 0.0;
+
+  _test_ncm_mset_catalog_add_ensembles (test, 200);
+
+  g_assert_cmpuint (ncm_mset_catalog_heidel_diag_by_chain (test->mcat, 0, 1.0 - 1.0e-6, &wp_pvalue, NCM_FIT_RUN_MSGS_NONE), ==, 0);
+  g_assert_cmpfloat (wp_pvalue, >, 1.0e-6);
+  g_assert_cmpfloat (wp_pvalue, <=, 1.0);
+}
+
+void
+test_ncm_mset_catalog_remove_last_ensemble (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  /* A catalog without a file drops its last ensemble and keeps the rest unchanged. */
+  const guint nchains = ncm_mset_catalog_nchains (test->mcat);
+  NcmVector *first;
+
+  _test_ncm_mset_catalog_add_ensembles (test, 3);
+  first = ncm_vector_dup (ncm_mset_catalog_peek_row (test->mcat, 0));
+
+  ncm_mset_catalog_remove_last_ensemble (test->mcat);
+
+  g_assert_cmpuint (ncm_mset_catalog_len (test->mcat), ==, 2 * nchains);
+  g_assert_null (ncm_mset_catalog_peek_filename (test->mcat));
+  g_assert_true (ncm_vector_cmp2 (first, ncm_mset_catalog_peek_row (test->mcat, 0), 0.0, 0.0) == 0);
+
+  ncm_vector_free (first);
 }
 
