@@ -26,14 +26,24 @@
 /**
  * NcmFitESMCMC:
  *
- * Ensemble sampler Markov Chain Monte Carlo analysis.
+ * Ensemble sampler of the posterior of the free parameters of a #NcmFit.
  *
- * #NcmFitESMCMC is a class that implements the Ensemble sampler Markov Chain
- * Monte Carlo analysis. The object requires a #NcmFit object to be set before
- * running the analysis. The initial points are sampled from a #NcmMSetTransKern
- * object. The walkers are defined by a #NcmFitESMCMCWalker object.
+ * An ensemble of #NcmFitESMCMC:nwalkers walkers (an even number) moves in two halves,
+ * each walker by the move of the #NcmFitESMCMCWalker (APES by default), accepted as the
+ * walker's acceptance ratio says. A proposal outside the parameter bounds, at invalid
+ * parameters or with a non-finite $-2\ln L$ is rejected. The initial ensemble is drawn
+ * from the #NcmFitESMCMC:sampler kernel used as a prior
+ * (ncm_mset_trans_kern_prior_sample()), redrawing walkers with a non-finite $-2\ln L$.
  *
- * The #NcmFitESMCMC object can be run in parallel using MPI.
+ * The chain is a #NcmMSetCatalog with one chain per walker: each iteration adds
+ * #NcmFitESMCMC:nwalkers rows ($-2\ln L$, the functions of
+ * #NcmFitESMCMC:function-array, the free parameters). A run is started with
+ * ncm_fit_esmcmc_start_run(), extended with ncm_fit_esmcmc_run(),
+ * ncm_fit_esmcmc_run_lre() or ncm_fit_esmcmc_run_burnin() and closed with
+ * ncm_fit_esmcmc_end_run(); with a data file it continues from the last saved
+ * iteration, after checking the last ensemble. The walkers' likelihoods are evaluated
+ * in OpenMP threads (#NcmFitESMCMC:use-threads), each with its own copy of the fit, or
+ * over MPI when #NcmFitESMCMC:use-mpi is set and slaves are available.
  *
  */
 
@@ -773,13 +783,14 @@ _ncm_fit_esmcmc_set_fit_obj (NcmFitESMCMC *esmcmc, NcmFit *fit)
  * ncm_fit_esmcmc_new:
  * @fit: a #NcmFit
  * @nwalkers: number of walkers
- * @sampler: inital points sampler #NcmMSetTransKern
+ * @sampler: #NcmMSetTransKern sampling the initial ensemble
  * @walker: (allow-none): a #NcmFitESMCMCWalker
  * @mtype: a #NcmFitRunMsgs
  *
- * Creates a new #NcmFitESMCMC object using the given parameters.
+ * Creates a #NcmFitESMCMC sampling the posterior of @fit with @nwalkers walkers moved by
+ * @walker (%NULL selects #NcmFitESMCMCWalkerAPES).
  *
- * Returns: (transfer full): the newly created #NcmFitESMCMC object.
+ * Returns: (transfer full): a new #NcmFitESMCMC.
  */
 NcmFitESMCMC *
 ncm_fit_esmcmc_new (NcmFit *fit, guint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype)
@@ -799,16 +810,15 @@ ncm_fit_esmcmc_new (NcmFit *fit, guint nwalkers, NcmMSetTransKern *sampler, NcmF
  * ncm_fit_esmcmc_new_funcs_array:
  * @fit: a #NcmFit
  * @nwalkers: number of walkers
- * @sampler: inital points sampler #NcmMSetTransKern
+ * @sampler: #NcmMSetTransKern sampling the initial ensemble
  * @walker: (allow-none): a #NcmFitESMCMCWalker
  * @mtype: a #NcmFitRunMsgs
- * @funcs_array: a #NcmObjArray of scalar functions to include in the catalog.
+ * @funcs_array: a #NcmObjArray of scalar constant #NcmMSetFunc
  *
- * Creates a new #NcmFitESMCMC object using the given parameters.
- * The @funcs_array is used to compute extra columns in the catalog.
- * The functions must be scalar and constant.
+ * Creates a #NcmFitESMCMC as ncm_fit_esmcmc_new(), with one more catalog column per
+ * function of @funcs_array, evaluated at each walker's position.
  *
- * Returns: (transfer full): the newly created #NcmFitESMCMC object.
+ * Returns: (transfer full): a new #NcmFitESMCMC.
  */
 NcmFitESMCMC *
 ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, guint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype, NcmObjArray *funcs_array)
@@ -829,9 +839,9 @@ ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, guint nwalkers, NcmMSetTransKern *s
  * ncm_fit_esmcmc_ref:
  * @esmcmc: a #NcmFitESMCMC
  *
- * Increases the reference count of @esmcmc by one.
+ * Increases the reference count of @esmcmc.
  *
- * Returns: (transfer full): the same @esmcmc object.
+ * Returns: (transfer full): @esmcmc
  */
 NcmFitESMCMC *
 ncm_fit_esmcmc_ref (NcmFitESMCMC *esmcmc)
@@ -843,8 +853,7 @@ ncm_fit_esmcmc_ref (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_free:
  * @esmcmc: a #NcmFitESMCMC
  *
- * Decreases the reference count of @esmcmc by one. If the reference
- * count reaches zero, all memory allocated by the object is released.
+ * Decreases the reference count of @esmcmc.
  *
  */
 void
@@ -857,9 +866,7 @@ ncm_fit_esmcmc_free (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_clear:
  * @esmcmc: a #NcmFitESMCMC
  *
- * Decreases the reference count of @esmcmc by one. If the reference
- * count reaches zero, all memory allocated by the object is released.
- * The @esmcmc pointer is set to %NULL.
+ * Decreases the reference count of *@esmcmc and sets it to %NULL.
  *
  */
 void
@@ -871,9 +878,10 @@ ncm_fit_esmcmc_clear (NcmFitESMCMC **esmcmc)
 /**
  * ncm_fit_esmcmc_set_data_file:
  * @esmcmc: a #NcmFitESMCMC
- * @filename: a filename.
+ * @filename: a file name
  *
- * Sets the data file to use for the chains catalog.
+ * Makes @filename the file of the catalog of @esmcmc (ncm_mset_catalog_set_file()).
+ * Changing the file of a running catalog aborts.
  *
  */
 void
@@ -881,6 +889,8 @@ ncm_fit_esmcmc_set_data_file (NcmFitESMCMC *esmcmc, const gchar *filename)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
   const gchar *cur_filename        = ncm_mset_catalog_peek_filename (self->mcat);
+
+  g_assert_nonnull (filename);
 
   if (self->started && (cur_filename != NULL))
     g_error ("ncm_fit_esmcmc_set_data_file: Cannot change data file during a run, call ncm_fit_esmcmc_end_run() first.");
@@ -912,11 +922,11 @@ ncm_fit_esmcmc_set_mtype (NcmFitESMCMC *esmcmc, NcmFitRunMsgs mtype)
 }
 
 /**
- * ncm_fit_esmcmc_set_trans_kern:
+ * ncm_fit_esmcmc_set_sampler:
  * @esmcmc: a #NcmFitESMCMC
- * @tkern: a #NcmMSetTransKern.
+ * @tkern: a #NcmMSetTransKern
  *
- * Sets the transition kernel to use.
+ * Makes @tkern the sampler of the initial ensemble.
  *
  */
 void
@@ -966,12 +976,9 @@ ncm_fit_esmcmc_get_use_threads (NcmFitESMCMC *esmcmc)
  * @esmcmc: a #NcmFitESMCMC
  * @use_mpi: whether to prefer MPI
  *
- * If @use_mpi is TRUE then the parallelization will be accomplished
- * using MPI if any slaves are available. If no slaves are available
- * then it falls back to threads.
- *
- * Note that parallelization will only occur if threads are enabled via
- * ncm_fit_esmcmc_set_use_threads().
+ * Sets whether the likelihoods are evaluated over MPI. With @use_mpi and MPI slaves
+ * available the slaves evaluate them, whatever #NcmFitESMCMC:use-threads says; without
+ * slaves the evaluation uses threads or runs serially.
  *
  */
 void
@@ -990,7 +997,8 @@ ncm_fit_esmcmc_use_mpi (NcmFitESMCMC *esmcmc, gboolean use_mpi)
  * @esmcmc: a #NcmFitESMCMC
  * @rng: a #NcmRNG
  *
- * Sets the random number generator to use.
+ * Makes @rng the random number generator of the catalog of @esmcmc. Calling it during a
+ * run aborts; a run started without one creates one with a random seed.
  *
  */
 void
@@ -1007,10 +1015,10 @@ ncm_fit_esmcmc_set_rng (NcmFitESMCMC *esmcmc, NcmRNG *rng)
 /**
  * ncm_fit_esmcmc_set_auto_trim:
  * @esmcmc: a #NcmFitESMCMC
- * @enable: a boolean
+ * @enable: whether to trim
  *
- * If @enable is TRUE turns on the auto-trimming when performing a
- * run_lre.
+ * Sets whether ncm_fit_esmcmc_run_lre() and ncm_fit_esmcmc_run_burnin() trim the
+ * catalog (ncm_mset_catalog_trim_by_type()) between their runs.
  *
  */
 void
@@ -1024,9 +1032,10 @@ ncm_fit_esmcmc_set_auto_trim (NcmFitESMCMC *esmcmc, gboolean enable)
 /**
  * ncm_fit_esmcmc_set_auto_trim_div:
  * @esmcmc: a #NcmFitESMCMC
- * @div: a unsigned integer
+ * @div: number of tests
  *
- * Sets the divisor for the auto trim tests.
+ * Sets the number of tests of the automatic trimming, see
+ * ncm_mset_catalog_trim_by_type().
  *
  */
 void
@@ -1042,7 +1051,7 @@ ncm_fit_esmcmc_set_auto_trim_div (NcmFitESMCMC *esmcmc, guint div)
  * @esmcmc: a #NcmFitESMCMC
  * @ttype: a #NcmMSetCatalogTrimType
  *
- * Sets the trim type.
+ * Sets the tests of the automatic trimming.
  *
  */
 void
@@ -1058,9 +1067,10 @@ ncm_fit_esmcmc_set_auto_trim_type (NcmFitESMCMC *esmcmc, NcmMSetCatalogTrimType 
 /**
  * ncm_fit_esmcmc_set_min_runs:
  * @esmcmc: a #NcmFitESMCMC
- * @min_runs: a unsigned integer
+ * @min_runs: number of iterations
  *
- * Sets the minimum number of runs between tests.
+ * Sets the minimum number of iterations between the convergence tests of
+ * ncm_fit_esmcmc_run_lre().
  *
  */
 void
@@ -1075,9 +1085,9 @@ ncm_fit_esmcmc_set_min_runs (NcmFitESMCMC *esmcmc, guint min_runs)
 /**
  * ncm_fit_esmcmc_set_max_runs_time:
  * @esmcmc: a #NcmFitESMCMC
- * @max_runs_time: a unsigned integer
+ * @max_runs_time: time in seconds, at least one
  *
- * Sets the maximum time for the runs between tests.
+ * Sets the maximum time between the convergence tests of ncm_fit_esmcmc_run_lre().
  *
  */
 void
@@ -1208,7 +1218,7 @@ ncm_fit_esmcmc_get_offboard_ratio_last_update (NcmFitESMCMC *esmcmc)
   return offboard_ratio;
 }
 
-void
+static void
 _ncm_fit_esmcmc_log_ensemble_stats (NcmFitESMCMC *esmcmc)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
@@ -1218,9 +1228,10 @@ _ncm_fit_esmcmc_log_ensemble_stats (NcmFitESMCMC *esmcmc)
   const gdouble *log10p   = ncm_stats_vec_get_quantile_all (self->stats, 4);
   const gdouble *prob     = ncm_stats_vec_get_quantile_all (self->stats, 5);
   const gdouble prob_mean = ncm_stats_vec_get_mean (self->stats, 5);
-  const gdouble cor_q_L   = ncm_stats_vec_get_cor (self->stats, 2, 3);
-  const gdouble cor_L_p   = ncm_stats_vec_get_cor (self->stats, 3, 4);
-  const gdouble cor_q_p   = ncm_stats_vec_get_cor (self->stats, 2, 4);
+  /* Rows 2, 3 and 4 of the statistics: posterior ratio p, proposal ratio q, acceptance a. */
+  const gdouble cor_p_q = ncm_stats_vec_get_cor (self->stats, 2, 3);
+  const gdouble cor_q_a = ncm_stats_vec_get_cor (self->stats, 3, 4);
+  const gdouble cor_p_a = ncm_stats_vec_get_cor (self->stats, 2, 4);
 
   {
     const gchar *opts = ncm_fit_esmcmc_walker_opts (self->walker);
@@ -1238,12 +1249,12 @@ _ncm_fit_esmcmc_log_ensemble_stats (NcmFitESMCMC *esmcmc)
   g_message ("# accept. prob:  % 12.5g % 12.5g % 12.5g % 12.5g % 12.5g\n", prob[0], prob[1], prob[2], prob[3], prob[4]);
   g_message ("# ======================================================================================\n");
   g_message ("#                mean accept.    cor(q, p)     cor(q, a)     cor(p, a)\n");
-  g_message ("#                % 12.5g % 12.5g % 12.5g % 12.5g\n", prob_mean, cor_q_L, cor_q_p, cor_L_p);
+  g_message ("#                % 12.5g % 12.5g % 12.5g % 12.5g\n", prob_mean, cor_p_q, cor_q_a, cor_p_a);
   g_message ("# a = acceptance, p = posterior, q = proposal\n");
   g_message ("# ======================================================================================\n");
 }
 
-void
+static void
 _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf, gboolean init)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
@@ -1753,8 +1764,10 @@ _ncm_fit_esmcmc_real_nthreads (NcmFitESMCMCPrivate * const self)
  * ncm_fit_esmcmc_start_run:
  * @esmcmc: a #NcmFitESMCMC
  *
- * Starts the run. This method should be called before any other
- * run related method.
+ * Starts a run: creates a random number generator if the catalog has none, reads the
+ * last iteration of the catalog, checking it unless #NcmFitESMCMC:skip-check is set (a
+ * corrupted last ensemble is removed), or generates the initial ensemble. Starting a
+ * running @esmcmc aborts.
  *
  */
 void
@@ -1849,7 +1862,7 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
   }
   else if (mcat_cur_id < self->cur_sample_id)
   {
-    g_error ("ncm_fit_esmcmc_start_run: Unknown error cur_id < cur_sample_id [%d < %d].",
+    g_error ("ncm_fit_esmcmc_start_run: the catalog has fewer rows than the run [%d < %d].",
              mcat_cur_id, self->cur_sample_id);
   }
 
@@ -1994,10 +2007,7 @@ ncm_fit_esmcmc_end_run (NcmFitESMCMC *esmcmc)
                ncm_mset_catalog_get_markovian_id (self->mcat), ncm_mset_catalog_get_markovian_burnin (self->mcat));
   }
 
-  /* Releases any object(s) register_shared() anchored for this run (not
-   * just the autosave-only entries the per-worker dup's own reset(TRUE)
-   * calls leave alone), so a long-lived esmcmc reused across many runs
-   * doesn't keep a stale shared object alive between them. */
+  /* Releases the objects ncm_dataset_register_shared() kept for this run. */
   ncm_serialize_reset (self->ser, FALSE);
 
   self->started = FALSE;
@@ -2007,7 +2017,7 @@ ncm_fit_esmcmc_end_run (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_reset:
  * @esmcmc: a #NcmFitESMCMC
  *
- * Resets the run.
+ * Erases the chain: the catalog is emptied and the acceptance counts reset.
  *
  */
 void
@@ -2057,10 +2067,10 @@ static void _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc);
 /**
  * ncm_fit_esmcmc_run:
  * @esmcmc: a #NcmFitESMCMC
- * @n: total number of realizations to run
+ * @n: total number of iterations
  *
- * Runs the Monte Carlo until it reaches the @n-th realization. Note that
- * if the first_id is non-zero it will run @n - first_id realizations.
+ * Extends the chain until it holds @n iterations (ensembles), counting the initial
+ * ensemble and those already in the catalog. It requires a started run.
  *
  */
 void
@@ -2535,7 +2545,8 @@ ncm_fit_esmcmc_run_burnin (NcmFitESMCMC *esmcmc, guint prerun, guint ntimes)
  * ncm_fit_esmcmc_mean_covar:
  * @esmcmc: a #NcmFitESMCMC
  *
- * Calculates the mean and covariance of the generated catalog.
+ * Stores the mean and covariance of the chain as the parameters and covariance of the
+ * #NcmFitState of the fit, and sets the model set of the catalog to the mean.
  *
  */
 void
@@ -2558,9 +2569,8 @@ ncm_fit_esmcmc_mean_covar (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_peek_ser:
  * @esmcmc: a #NcmFitESMCMC
  *
- * Peeks the internal #NcmSerialize object from @esmcmc.
- *
- * Returns: (transfer none): the internal #NcmSerialize object.
+ * Returns: (transfer none): the #NcmSerialize @esmcmc uses to copy the fit for each
+ *   thread or MPI slave
  */
 NcmSerialize *
 ncm_fit_esmcmc_peek_ser (NcmFitESMCMC *esmcmc)
@@ -2574,9 +2584,7 @@ ncm_fit_esmcmc_peek_ser (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_get_catalog:
  * @esmcmc: a #NcmFitESMCMC
  *
- * Gets the generated catalog of @esmcmc.
- *
- * Returns: (transfer full): the generated catalog.
+ * Returns: (transfer full): the catalog of @esmcmc
  */
 NcmMSetCatalog *
 ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc)
@@ -2590,9 +2598,7 @@ ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_peek_catalog:
  * @esmcmc: a #NcmFitESMCMC
  *
- * Gets the generated catalog of @esmcmc.
- *
- * Returns: (transfer none): the generated catalog.
+ * Returns: (transfer none): the catalog of @esmcmc
  */
 NcmMSetCatalog *
 ncm_fit_esmcmc_peek_catalog (NcmFitESMCMC *esmcmc)
@@ -2606,9 +2612,7 @@ ncm_fit_esmcmc_peek_catalog (NcmFitESMCMC *esmcmc)
  * ncm_fit_esmcmc_peek_fit:
  * @esmcmc: a #NcmFitESMCMC
  *
- * Gets the #NcmFit object used by the sampler.
- *
- * Returns: (transfer none): the #NcmFit object.
+ * Returns: (transfer none): the #NcmFit of @esmcmc
  */
 NcmFit *
 ncm_fit_esmcmc_peek_fit (NcmFitESMCMC *esmcmc)
@@ -2757,16 +2761,14 @@ _ncm_fit_esmcmc_validate_mpi (NcmFitESMCMC *esmcmc, const glong i, const glong f
 /**
  * ncm_fit_esmcmc_validate:
  * @esmcmc: a #NcmFitESMCMC
- * @pi: initial position
- * @pf: final position
+ * @pi: first row
+ * @pf: one past the last row, or zero for the end of the catalog
  *
- * Recalculates the value of $-2\ln(L)$ and compares with the values found in the
- * catalog. This function is particularly useful to check if any problem occurred during
- * a multithread evaluation of the likelihood.
+ * Recomputes $-2\ln L$ at the rows @pi to @pf - 1 of the catalog and compares it with the
+ * stored value, to relative precision $10^{-3}$; ncm_fit_esmcmc_start_run() uses it to
+ * check the last ensemble of a continued catalog.
  *
- * Choosing @pf == 0 performs the validation from  @pi to the end.
- *
- * Returns: Whether the validation was TRUE or FALSE.
+ * Returns: whether every row agrees
  */
 gboolean
 ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf)
