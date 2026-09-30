@@ -206,7 +206,10 @@ def mcat_to_catalog_data(
     param_symbols: list[str] = list(mcat.col_symb(int(i)) for i in indices_array)
     param_names: list[str] = list(mcat.col_name(int(i)) for i in indices_array)
 
-    bestfit = np.array(mcat.get_bestfit_row().dup_array())[indices_array]
+    bestfit_row = mcat.get_bestfit_row()
+    if bestfit_row is None:
+        raise ValueError("The catalog is empty, it has no best-fit row.")
+    bestfit = np.array(bestfit_row.dup_array())[indices_array]
 
     # The hard prior bounds of every fitted parameter, keyed by the column name getdist
     # will know it as. Without these getdist has no way to tell a prior wall from ordinary

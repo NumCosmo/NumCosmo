@@ -1226,6 +1226,8 @@ class DerivedQuantityError(LoadCatalog):
             epdf.prepare()
 
         bestfit_row = mcat.get_bestfit_row()
+        if bestfit_row is None:
+            raise RuntimeError("The catalog is empty, it has no best-fit row.")
         bf_values = {
             name: bestfit_row.get(pindex) for name, pindex in var_pindex.items()
         }
@@ -1261,9 +1263,10 @@ class GetBestFit(LoadCatalog):
         """Get best-fit parameters."""
         super().__post_init__()
 
-        best_fit = np.array(self.mcat.get_bestfit_row().dup_array(), dtype=np.float64)[
-            self.nadd_vals :
-        ]
+        bestfit_row = self.mcat.get_bestfit_row()
+        if bestfit_row is None:
+            raise RuntimeError("The catalog is empty, it has no best-fit row.")
+        best_fit = np.array(bestfit_row.dup_array(), dtype=np.float64)[self.nadd_vals :]
         self.mset.fparams_set_array(best_fit)
 
         if self.output is None:
