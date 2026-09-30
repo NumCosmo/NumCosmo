@@ -893,9 +893,15 @@ if mpi_c_dep.found()
                 nranks = [2]
             endif
 
+            # OpenMPI refuses more ranks than cores, and CI runners have two. The
+            # ranks mostly wait on each other, so oversubscribing costs nothing;
+            # the first variable is read by OpenMPI 5 (PRRTE), the second by 4.
+            # MPICH ignores both and never refuses.
             mpi_test_env = [
                 'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
                 'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
+                'PRTE_MCA_rmaps_default_mapping_policy=:oversubscribe',
+                'OMPI_MCA_rmaps_base_oversubscribe=1',
             ]
             foreach k, v : omp_vars_serial
                 mpi_test_env += '@0@=@1@'.format(k, v)

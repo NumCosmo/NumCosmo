@@ -924,18 +924,18 @@ ncm_fit_esmcmc_set_mtype (NcmFitESMCMC *esmcmc, NcmFitRunMsgs mtype)
 /**
  * ncm_fit_esmcmc_set_sampler:
  * @esmcmc: a #NcmFitESMCMC
- * @tkern: a #NcmMSetTransKern
+ * @sampler: a #NcmMSetTransKern
  *
- * Makes @tkern the sampler of the initial ensemble.
+ * Makes @sampler the sampler of the initial ensemble.
  *
  */
 void
-ncm_fit_esmcmc_set_sampler (NcmFitESMCMC *esmcmc, NcmMSetTransKern *tkern)
+ncm_fit_esmcmc_set_sampler (NcmFitESMCMC *esmcmc, NcmMSetTransKern *sampler)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
 
   ncm_mset_trans_kern_clear (&self->sampler);
-  self->sampler = ncm_mset_trans_kern_ref (tkern);
+  self->sampler = ncm_mset_trans_kern_ref (sampler);
 }
 
 /**

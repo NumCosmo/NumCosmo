@@ -4207,7 +4207,7 @@ _ncm_csq1d_evolve_prop_vector (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *
  * @state: a #NcmCSQ1DState to store the result
  *
  * Propagates @initial_state with the propagator of ncm_csq1d_prepare_prop() to @t, in
- * @frame: #NCM_CSQ1D_FRAME_ORIG, #NCM_CSQ1D_FRAME_NONADIAB1 or
+ * the frame @frame, one of #NCM_CSQ1D_FRAME_ORIG, #NCM_CSQ1D_FRAME_NONADIAB1 or
  * #NCM_CSQ1D_FRAME_NONADIAB2. @initial_state must be in #NCM_CSQ1D_FRAME_NONADIAB1 at
  * the initial time of the propagator, or the call aborts. The state is carried to the
  * frame of the propagator, multiplied by $R(t)$ and carried to @frame; results in the

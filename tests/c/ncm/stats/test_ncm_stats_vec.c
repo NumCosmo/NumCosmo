@@ -522,7 +522,7 @@ test_ncm_stats_vec_cov_robust_test (TestNcmStatsVec *test, gconstpointer pdata)
     ncm_stats_vec_update (test->svec);
   }
 
-  for (i = 0; i < (gint) (test->ntests * 0.2); i++)
+  for (i = 0; i < (guint) (test->ntests * 0.2); i++)
   {
     gdouble x_0 = 0.0;
     guint j;

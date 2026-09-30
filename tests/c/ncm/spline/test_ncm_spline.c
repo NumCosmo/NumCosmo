@@ -192,7 +192,7 @@ TestNcmSplineFunc _test_ncm_spline_traps[] = {
   {&test_ncm_spline_invalid_x_array,          "/array/invalid/x/subprocess"},
   {&test_ncm_spline_invalid_y_array,          "/array/invalid/y/subprocess"},
   {&test_ncm_spline_invalid_xy_array,         "/array/invalid/xy/subprocess"},
-  {NULL}
+  {NULL, NULL}
 };
 
 TestNcmSplineFunc _test_ncm_spline_tests[] = {
@@ -218,7 +218,7 @@ TestNcmSplineFunc _test_ncm_spline_tests[] = {
   {&test_ncm_spline_get_index_acc_stride2, "/get_index/acc/stride2"},
   {&test_ncm_spline_get_index_acc_stride5, "/get_index/acc/stride5"},
   {&test_ncm_spline_traps,                 "/traps"},
-  {NULL}
+  {NULL, NULL}
 };
 
 void

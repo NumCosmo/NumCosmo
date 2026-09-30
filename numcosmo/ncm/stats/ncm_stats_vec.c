@@ -1781,17 +1781,17 @@ ncm_stats_vec_get_weight (NcmStatsVec *svec)
 /**
  * ncm_stats_vec_get_mean_vector:
  * @svec: a #NcmStatsVec
- * @x: vector of length at least #NcmStatsVec:length minus @offset
+ * @mean: vector of length at least #NcmStatsVec:length minus @offset
  * @offset: first variable index
  *
- * Copies the means of the variables from @offset on to @x.
+ * Copies the means of the variables from @offset on to @mean.
  */
 void
-ncm_stats_vec_get_mean_vector (NcmStatsVec *svec, NcmVector *x, guint offset)
+ncm_stats_vec_get_mean_vector (NcmStatsVec *svec, NcmVector *mean, guint offset)
 {
-  g_assert (x != NULL);
+  g_assert (mean != NULL);
   g_assert_cmpint (offset, <, svec->len);
-  ncm_vector_memcpy2 (x, svec->mean, 0, offset, svec->len - offset);
+  ncm_vector_memcpy2 (mean, svec->mean, 0, offset, svec->len - offset);
 }
 
 /**

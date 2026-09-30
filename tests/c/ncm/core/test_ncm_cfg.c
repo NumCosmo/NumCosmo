@@ -476,7 +476,7 @@ test_ncm_cfg_keyfile (void)
     {"x", 0, 0, G_OPTION_ARG_DOUBLE, &x, "A double", NULL},
     {"name", 0, 0, G_OPTION_ARG_STRING, &name, "A string", NULL},
     {"list", 0, 0, G_OPTION_ARG_STRING_ARRAY, &list, "A list", NULL},
-    {NULL},
+    { NULL, 0, 0, 0, NULL, NULL, NULL },
   };
   GKeyFile *kfile = g_key_file_new ();
   gchar *argv[16];

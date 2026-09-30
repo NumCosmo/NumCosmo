@@ -147,7 +147,7 @@ ncm_func_eval_set_max_threads (gint mt)
 void
 ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data, guint nworkers)
 {
-  NcmFuncEvalCtrl ctrl = {0, {NULL}, {NULL}, };
+  NcmFuncEvalCtrl ctrl = {0};
   guint delta, res;
 
   ncm_func_eval_get_pool ();
@@ -237,7 +237,7 @@ ncm_func_eval_threaded_loop (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer d
 void
 ncm_func_eval_threaded_loop_full (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data)
 {
-  NcmFuncEvalCtrl ctrl = {0, {NULL}, {NULL}, };
+  NcmFuncEvalCtrl ctrl = {0};
 
   ncm_func_eval_get_pool ();
   g_mutex_init (&ctrl.update);
