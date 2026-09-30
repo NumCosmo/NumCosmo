@@ -844,6 +844,9 @@ if mpi_c_dep.found()
             {
                 'name': 'ncm_mpi_job',
                 'sources': ['ncm/mpi/test_ncm_mpi_job.c'],
+                # Three ranks give two workers: fewer inputs than workers, and workers
+                # returning out of order.
+                'nranks': [2, 3],
             },
         ]
         foreach c_test_mpi : c_tests_mpi
@@ -865,13 +868,12 @@ if mpi_c_dep.found()
                 suite = ['c', 'mpi']
             endif
 
-            mpiexec_args = (
-                [
-                    '-n', '2',
-                    executable_test.full_path(),
-                ]
-                + test_seed_args
-            )
+            if c_test_mpi.has_key('nranks')
+                nranks = c_test_mpi['nranks']
+            else
+                nranks = [2]
+            endif
+
             mpi_test_env = [
                 'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
                 'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
@@ -879,16 +881,25 @@ if mpi_c_dep.found()
             foreach k, v : omp_vars_serial
                 mpi_test_env += '@0@=@1@'.format(k, v)
             endforeach
-            test(
-                c_test_mpi['name'],
-                mpiexec,
-                args: mpiexec_args,
-                depends: [executable_test],
-                timeout: timeout,
-                env: mpi_test_env,
-                protocol: 'tap',
-                suite: suite,
-            )
+            foreach n : nranks
+                mpiexec_args = (
+                    [
+                        '-n', n.to_string(),
+                        executable_test.full_path(),
+                    ]
+                    + test_seed_args
+                )
+                test(
+                    (n == 2) ? c_test_mpi['name'] : '@0@_n@1@'.format(c_test_mpi['name'], n),
+                    mpiexec,
+                    args: mpiexec_args,
+                    depends: [executable_test],
+                    timeout: timeout,
+                    env: mpi_test_env,
+                    protocol: 'tap',
+                    suite: suite,
+                )
+            endforeach
         endforeach
     endif
 endif
