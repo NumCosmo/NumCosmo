@@ -670,8 +670,14 @@ _test_epdf_fill (NcmStatsDist1dEPDF *epdf, guint shape, guint n, NcmRNG *rng)
     switch (shape)
     {
       case 0: /* weighted unit Gaussian */
-        ncm_stats_dist1d_epdf_add_obs_weight (epdf, ncm_rng_gaussian_gen (rng, 0.0, 1.0), ncm_rng_uniform_gen (rng, 0.5, 2.0));
+      {
+        /* Drawn in sequence: C leaves the order of argument evaluation unspecified */
+        const gdouble w = ncm_rng_uniform_gen (rng, 0.5, 2.0);
+        const gdouble x = ncm_rng_gaussian_gen (rng, 0.0, 1.0);
+
+        ncm_stats_dist1d_epdf_add_obs_weight (epdf, x, w);
         break;
+      }
       case 1: /* claw of Marron and Wand */
       {
         const gdouble u = ncm_rng_uniform01_gen (rng);

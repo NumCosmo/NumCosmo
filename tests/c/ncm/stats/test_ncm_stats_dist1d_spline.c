@@ -148,6 +148,34 @@ test_ncm_stats_dist1d_spline_gauss (void)
   }
 }
 
+/*
+ * A mode exactly at zero: m2lnp = x^2 on three knot sets whose refinement, with no
+ * absolute tolerance, crawled towards zero or stopped at a single unchanged bracket. The
+ * mode is found within the absolute tolerance sqrt (reltol) dx, dx the grid spacing.
+ */
+static void
+test_ncm_stats_dist1d_spline_mode_at_zero (void)
+{
+  const gdouble lo[3] = {-5.0, -7.0, -5.0};
+  const guint n[3]    = {51, 101, 201};
+  guint k;
+
+  for (k = 0; k < 3; k++)
+  {
+    NcmSpline *m2lnp    = _test_spline_new (&_test_x2, lo[k], lo[k] + 10.0, n[k]);
+    NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (ncm_stats_dist1d_spline_new (m2lnp));
+
+    g_object_set (sd1, "reltol", 1.0e-8, NULL);
+    ncm_stats_dist1d_set_compute_cdf (sd1, FALSE);
+    ncm_stats_dist1d_prepare (sd1);
+
+    ncm_assert_cmpdouble_e (ncm_stats_dist1d_eval_mode (sd1), ==, 0.0, 0.0, 1.0e-4 * 10.0 / 999.0);
+
+    ncm_stats_dist1d_free (sd1);
+    ncm_spline_free (m2lnp);
+  }
+}
+
 /* Continuity of the value and of the outward slope at a bound */
 static void
 _test_assert_c1 (NcmStatsDist1d *sd1, gdouble xb, gdouble outward, gdouble L)
@@ -364,6 +392,7 @@ main (gint argc, gchar *argv[])
   g_test_set_nonfatal_assertions ();
 
   g_test_add_func ("/ncm/stats/dist1d_spline/gauss", &test_ncm_stats_dist1d_spline_gauss);
+  g_test_add_func ("/ncm/stats/dist1d_spline/mode_at_zero", &test_ncm_stats_dist1d_spline_mode_at_zero);
   g_test_add_func ("/ncm/stats/dist1d_spline/tails", &test_ncm_stats_dist1d_spline_tails);
   g_test_add_func ("/ncm/stats/dist1d_spline/density", &test_ncm_stats_dist1d_spline_density);
   g_test_add_func ("/ncm/stats/dist1d_spline/hsc_pz", &test_ncm_stats_dist1d_spline_hsc_pz);

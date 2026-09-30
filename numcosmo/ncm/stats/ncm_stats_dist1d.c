@@ -710,10 +710,13 @@ _ncm_stats_dist1d_m2lnp (gdouble x, gpointer p)
  *
  * Locates the maximum of the density: the minimum of $-2\ln p$ on 1000 equally spaced
  * points, refined by Brent's method between the two neighbouring grid points to a relative
- * tolerance $\sqrt{\mathrm{reltol}}$ and the absolute tolerance #NcmStatsDist1d:abstol.
+ * tolerance $\sqrt{\mathrm{reltol}}$ and an absolute tolerance, the larger of
+ * #NcmStatsDist1d:abstol and $\sqrt{\mathrm{reltol}}$ times the grid spacing. The
+ * absolute tolerance is what stops the refinement of a mode at zero.
  * When the two best grid points tie, Brent's method refines between them. The grid point is
  * returned when it is $x_i$ or $x_f$, or when a neighbour has zero density.
- * Warns if the refinement stops before its tolerance.
+ * Warns if the refinement stops before its tolerance, or leaves its bracket unchanged for
+ * ten iterations.
  *
  * Returns: the mode.
  */
@@ -724,10 +727,13 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
   const gdouble reltol        = sqrt (self->reltol);
   const gint max_iter         = 1000000;
   const gint linear_search    = 1000;
+  const gint max_stall        = 10;
   const gdouble dx            = (self->xf - self->xi) / (linear_search - 1.0);
+  const gdouble abstol        = GSL_MAX (self->abstol, reltol * dx);
   gdouble x                   = 0.5 * (self->xf + self->xi);
   gint k_min                  = -1;
   gint iter                   = 0;
+  gint stall                  = 0;
   gdouble x0, x1, last_x0, last_x1;
   gsl_function F;
   gdouble fmin;
@@ -808,12 +814,18 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
     x0 = gsl_min_fminimizer_x_lower (self->fmin);
     x1 = gsl_min_fminimizer_x_upper (self->fmin);
 
-    status = gsl_min_test_interval (x0, x1, self->abstol, reltol);
+    status = gsl_min_test_interval (x0, x1, abstol, reltol);
 
-    if ((status == GSL_CONTINUE) && (x0 == last_x0) && (x1 == last_x1))
+    /* Brent may leave the bracket unchanged for an iteration and shrink it on the next */
+    if ((x0 == last_x0) && (x1 == last_x1))
+      stall++;
+    else
+      stall = 0;
+
+    if ((status == GSL_CONTINUE) && (stall >= max_stall))
     {
-      g_warning ("ncm_stats_dist1d_eval_mode: minimization not improving, giving up. (% 22.15g) [% 22.15g % 22.15g]", x, x0, x1); /* LCOV_EXCL_LINE */
-      break;                                                                                                                      /* LCOV_EXCL_LINE */
+      g_warning ("ncm_stats_dist1d_eval_mode: minimization not improving in %d iterations, giving up. (% 22.15g) [% 22.15g % 22.15g]", max_stall, x, x0, x1); /* LCOV_EXCL_LINE */
+      break;                                                                                                                                                  /* LCOV_EXCL_LINE */
     }
 
     last_x0 = x0;
@@ -822,7 +834,7 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
 
   if (status != GSL_SUCCESS)
     g_warning ("ncm_stats_dist1d_eval_mode: minimization tolerance not achieved" /* LCOV_EXCL_LINE */
-               " in %d iterations, giving up. (% 22.15g) [% 22.15g % 22.15g]", max_iter, x, x0, x1);  /* LCOV_EXCL_LINE */
+               " in %d iterations, giving up. (% 22.15g) [% 22.15g % 22.15g]", iter, x, x0, x1);  /* LCOV_EXCL_LINE */
 
   return x;
 }
