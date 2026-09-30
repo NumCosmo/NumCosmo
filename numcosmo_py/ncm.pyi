@@ -4347,7 +4347,7 @@ class FitMCBS(GObject.Object):
     def new(cls, fit: Fit) -> FitMCBS: ...
     def run(
         self,
-        fiduc: MSet,
+        fiduc: typing.Optional[MSet],
         ni: int,
         nf: int,
         nbstraps: int,
