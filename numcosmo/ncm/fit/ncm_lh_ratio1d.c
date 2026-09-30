@@ -509,7 +509,8 @@ ncm_lh_ratio1d_root_brent (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x)
  *
  * Finds the interval of the parameter at confidence level @clevel. The search starts at
  * $\pm\sqrt{\chi^2_1}\,\sigma$, $\sigma$ from the covariance of the fit, which
- * must therefore hold one (a least-squares run or ncm_fit_obs_fisher()), and widens by
+ * must therefore hold one (ncm_fit_obs_fisher(), ncm_fit_ls_fisher() or
+ * ncm_fit_fisher()), and widens by
  * 10% until the profile crosses; each root is then found by Brent's method to relative
  * precision $10^{-5}$. An interval reaching a parameter bound stops there with a warning, and a
  * root solver failure gives a warning and NaN.
