@@ -4398,19 +4398,26 @@ class FitMCMC(GObject.Object):
         Metropolis-Hastings sampler
       mtype -> NcmFitRunMsgs: mtype
         Run messages type
+      data-file -> gchararray: data-file
+        Data file to be used by the catalog
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
+        data_file: str
         fit: Fit
         mtype: FitRunMsgs
         sampler: MSetTransKern
 
     props: Props = ...
     def __init__(
-        self, fit: Fit = ..., mtype: FitRunMsgs = ..., sampler: MSetTransKern = ...
+        self,
+        data_file: str = ...,
+        fit: Fit = ...,
+        mtype: FitRunMsgs = ...,
+        sampler: MSetTransKern = ...,
     ) -> None: ...
     @staticmethod
     def clear(mcmc: FitMCMC) -> None: ...
@@ -6800,8 +6807,6 @@ class MSetTransKernGauss(MSetTransKern):
         length
       cov -> NcmMatrix: cov
         covariance
-      max-iter -> guint: max-iter
-        maximum iterations
 
     Properties from NcmMSetTransKern:
       mset -> NcmMSet: mset
@@ -6814,16 +6819,11 @@ class MSetTransKernGauss(MSetTransKern):
     class Props:
         cov: Matrix
         length: int
-        max_iter: int
         mset: MSet
 
     props: Props = ...
     def __init__(
-        self,
-        cov: Matrix = ...,
-        length: int = ...,
-        max_iter: int = ...,
-        mset: MSet = ...,
+        self, cov: Matrix = ..., length: int = ..., mset: MSet = ...
     ) -> None: ...
     def get_cov(self) -> Matrix: ...
     def get_size(self) -> int: ...

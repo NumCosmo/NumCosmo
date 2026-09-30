@@ -425,6 +425,10 @@ math_tests = [
         'sources': ['ncm/fit/test_ncm_fit_mcbs.c'],
     },
     {
+        'name': 'ncm_fit_mcmc',
+        'sources': ['ncm/fit/test_ncm_fit_mcmc.c'],
+    },
+    {
         'name': 'ncm_lh_ratio1d',
         'sources': ['ncm/fit/test_ncm_lh_ratio1d.c'],
     },

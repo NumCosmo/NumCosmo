@@ -320,6 +320,8 @@ ncm_mset_trans_kern_pdf (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *t
   return NCM_MSET_TRANS_KERN_GET_CLASS (tkern)->pdf (tkern, theta, thetastar);
 }
 
+#define NCM_MSET_TRANS_KERN_PRIOR_MAX_ITER 1000
+
 /**
  * ncm_mset_trans_kern_prior_sample:
  * @tkern: a #NcmMSetTransKern.
@@ -327,16 +329,40 @@ ncm_mset_trans_kern_pdf (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *t
  * @rng: a #NcmRNG.
  *
  * Sample from the transition kernel using it as a prior. To use as a prior one must
- * call one of the functions ncm_mset_trans_kern_set_prior_* first.
+ * call one of the functions ncm_mset_trans_kern_set_prior_* first. Draws outside the
+ * parameter bounds are drawn again; 1000 failed draws abort.
  *
  */
 void
 ncm_mset_trans_kern_prior_sample (NcmMSetTransKern *tkern, NcmVector *thetastar, NcmRNG *rng)
 {
   NcmMSetTransKernPrivate *self = ncm_mset_trans_kern_get_instance_private (tkern);
+  NcmMSet *mset                 = ncm_mset_trans_kern_peek_mset (tkern);
+  guint iter, i;
 
   g_assert (self->theta != NULL);
-  ncm_mset_trans_kern_generate (tkern, self->theta, thetastar, rng);
+
+  for (iter = 0; iter < NCM_MSET_TRANS_KERN_PRIOR_MAX_ITER; iter++)
+  {
+    ncm_mset_trans_kern_generate (tkern, self->theta, thetastar, rng);
+
+    if (ncm_mset_fparam_valid_bounds (mset, thetastar))
+      return;
+  }
+
+  for (i = 0; i < ncm_mset_fparam_len (mset); i++)
+  {
+    const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
+    const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
+    const gdouble val = ncm_vector_get (thetastar, i);
+
+    if ((val < lb) || (val > ub))
+      g_warning ("ncm_mset_trans_kern_prior_sample: parameter %u (%s) is out of bounds [%.16g, %.16g]: %.16g",
+                 i, ncm_mset_fparam_name (mset, i), lb, ub, val);
+  }
+
+  g_error ("ncm_mset_trans_kern_prior_sample: failed to draw a sample within the bounds after %u draws.",
+           NCM_MSET_TRANS_KERN_PRIOR_MAX_ITER);
 }
 
 /**
