@@ -723,19 +723,16 @@ ncm_fit_state_get_grad_eval (NcmFitState *fstate)
 /**
  * ncm_fit_state_set_m2lnL_prec:
  * @fstate: a #NcmFitState
- * @prec: Precision of the m2lnL
+ * @prec: relative precision of $-2\ln L$, non-negative
  *
- * Sets the precision of the m2lnL of @fstate.
- *
- * This method is used by #NcmFit implementations to set @fstate state.
- * It should not be used by the user.
+ * Sets the relative precision of $-2\ln L$ the minimizer reached; a run stopped
+ * before converging can report more than one. #NcmFit implementations call it.
  *
  */
 void
 ncm_fit_state_set_m2lnL_prec (NcmFitState *fstate, gdouble prec)
 {
   g_assert_cmpfloat (prec, >=, 0.0);
-  g_assert_cmpfloat (prec, <, 1.0);
 
   fstate->m2lnL_prec = prec;
 }
@@ -744,9 +741,7 @@ ncm_fit_state_set_m2lnL_prec (NcmFitState *fstate, gdouble prec)
  * ncm_fit_state_get_m2lnL_prec:
  * @fstate: a #NcmFitState
  *
- * Gets the precision of the m2lnL of @fstate.
- *
- * Returns: Precision of the m2lnL
+ * Returns: the relative precision of $-2\ln L$ the minimizer reached
  */
 gdouble
 ncm_fit_state_get_m2lnL_prec (NcmFitState *fstate)

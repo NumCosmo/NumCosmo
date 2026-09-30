@@ -3880,7 +3880,7 @@ class FitGSLMM(Fit):
 
         FitGSLMM(**properties)
         new(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo:NumCosmoMath.FitGSLMMAlgos) -> NumCosmoMath.Fit
-        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str) -> NumCosmoMath.Fit
+        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str=None) -> NumCosmoMath.Fit
         new_default(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType) -> NumCosmoMath.Fit
 
     Object NcmFitGSLMM
@@ -3961,7 +3961,11 @@ class FitGSLMM(Fit):
     ) -> FitGSLMM: ...
     @classmethod
     def new_by_name(
-        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str
+        cls,
+        lh: Likelihood,
+        mset: MSet,
+        gtype: FitGradType,
+        algo_name: typing.Optional[str] = None,
     ) -> FitGSLMM: ...
     @classmethod
     def new_default(
@@ -3988,7 +3992,7 @@ class FitGSLMMS(Fit):
 
         FitGSLMMS(**properties)
         new(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo:NumCosmoMath.FitGSLMMSAlgos) -> NumCosmoMath.Fit
-        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str) -> NumCosmoMath.Fit
+        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str=None) -> NumCosmoMath.Fit
         new_default(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType) -> NumCosmoMath.Fit
 
     Object NcmFitGSLMMS
@@ -4069,7 +4073,11 @@ class FitGSLMMS(Fit):
     ) -> FitGSLMMS: ...
     @classmethod
     def new_by_name(
-        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str
+        cls,
+        lh: Likelihood,
+        mset: MSet,
+        gtype: FitGradType,
+        algo_name: typing.Optional[str] = None,
     ) -> FitGSLMMS: ...
     @classmethod
     def new_default(
@@ -4112,7 +4120,7 @@ class FitLevmar(Fit):
 
         FitLevmar(**properties)
         new(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo:NumCosmoMath.FitLevmarAlgos) -> NumCosmoMath.Fit
-        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str) -> NumCosmoMath.Fit
+        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str=None) -> NumCosmoMath.Fit
         new_default(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType) -> NumCosmoMath.Fit
 
     Object NcmFitLevmar
@@ -4193,7 +4201,11 @@ class FitLevmar(Fit):
     ) -> FitLevmar: ...
     @classmethod
     def new_by_name(
-        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str
+        cls,
+        lh: Likelihood,
+        mset: MSet,
+        gtype: FitGradType,
+        algo_name: typing.Optional[str] = None,
     ) -> FitLevmar: ...
     @classmethod
     def new_default(
@@ -4440,7 +4452,7 @@ class FitNLOpt(Fit):
         FitNLOpt(**properties)
         local_new(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo:NumCosmoMath.FitNloptAlgorithm, local_algo:NumCosmoMath.FitNloptAlgorithm) -> NumCosmoMath.Fit
         new(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo:NumCosmoMath.FitNloptAlgorithm) -> NumCosmoMath.Fit
-        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str) -> NumCosmoMath.Fit
+        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str=None) -> NumCosmoMath.Fit
         new_default(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType) -> NumCosmoMath.Fit
 
     Object NcmFitNLOpt
@@ -4534,7 +4546,11 @@ class FitNLOpt(Fit):
     ) -> FitNLOpt: ...
     @classmethod
     def new_by_name(
-        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str
+        cls,
+        lh: Likelihood,
+        mset: MSet,
+        gtype: FitGradType,
+        algo_name: typing.Optional[str] = None,
     ) -> FitNLOpt: ...
     @classmethod
     def new_default(

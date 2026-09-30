@@ -69,7 +69,6 @@ void test_ncm_fit_state_J (TestNcmFitState *test, gconstpointer pdata);
 
 void test_ncm_fit_state_set_ls_wrong (TestNcmFitState *test, gconstpointer pdata);
 void test_ncm_fit_state_set_m2lnL_prec_wrong_lower_bound (TestNcmFitState *test, gconstpointer pdata);
-void test_ncm_fit_state_set_m2lnL_prec_wrong_upper_bound (TestNcmFitState *test, gconstpointer pdata);
 void test_ncm_fit_state_set_params_prec_wrong_lower_bound (TestNcmFitState *test, gconstpointer pdata);
 void test_ncm_fit_state_set_params_prec_wrong_upper_bound (TestNcmFitState *test, gconstpointer pdata);
 void test_ncm_fit_state_set_elapsed_time_wrong_lower_bound (TestNcmFitState *test, gconstpointer pdata);
@@ -203,11 +202,6 @@ main (int argc, char *argv[])
   g_test_add ("/ncm/fit_state/set_m2lnL_prec/wrong/lower_bound", TestNcmFitState, NULL,
               &test_ncm_fit_state_new,
               &test_ncm_fit_state_set_m2lnL_prec_wrong_lower_bound,
-              &test_ncm_fit_state_free);
-
-  g_test_add ("/ncm/fit_state/set_m2lnL_prec/wrong/upper_bound", TestNcmFitState, NULL,
-              &test_ncm_fit_state_new,
-              &test_ncm_fit_state_set_m2lnL_prec_wrong_upper_bound,
               &test_ncm_fit_state_free);
 
   g_test_add ("/ncm/fit_state/set_params_prec/wrong/lower_bound", TestNcmFitState, NULL,
@@ -847,24 +841,6 @@ test_ncm_fit_state_set_m2lnL_prec_wrong_lower_bound (TestNcmFitState *test, gcon
   if (g_test_subprocess ())
   {
     ncm_fit_state_set_m2lnL_prec (test->fit_state, -1.0);
-
-    return;
-  }
-
-  /* LCOV_EXCL_STOP */
-
-  /* Reruns this same test in a subprocess */
-  g_test_trap_subprocess (NULL, 0, 0);
-  g_test_trap_assert_failed ();
-}
-
-void
-test_ncm_fit_state_set_m2lnL_prec_wrong_upper_bound (TestNcmFitState *test, gconstpointer pdata)
-{
-  /* LCOV_EXCL_START */
-  if (g_test_subprocess ())
-  {
-    ncm_fit_state_set_m2lnL_prec (test->fit_state, 1.1);
 
     return;
   }
