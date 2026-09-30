@@ -28,6 +28,8 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 #include <numcosmo/numcosmo.h>
+#include <gsl/gsl_sort.h>
+#include <gsl/gsl_statistics_double.h>
 #ifdef HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* HAVE_CFITSIO */
@@ -67,6 +69,9 @@ void test_ncm_mset_catalog_calc_param_ensemble_evol (TestNcmMSetCatalog *test, g
 void test_ncm_mset_catalog_calc_add_param_ensemble_evol (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_calc_add_param_ensemble_evol_short (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_ci_single (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_param_pdf (TestNcmMSetCatalog *test, gconstpointer pdata);
 
 #ifdef HAVE_CFITSIO
 void test_ncm_mset_catalog_file_hdu0_roundtrip (void);
@@ -103,6 +108,17 @@ TestNcmMSetCatalogTests fixtures[] =
   {NULL, NULL}
 };
 
+static void
+_test_ncm_mset_catalog_flist_scaled_p0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  res[0] = x[0] * ncm_mset_fparam_get (mset, 0);
+}
+
+static void
+_test_ncm_mset_catalog_flist_p0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  res[0] = ncm_mset_fparam_get (mset, 0);
+}
 
 TestNcmMSetCatalogTests tests[] =
 {
@@ -121,6 +137,9 @@ TestNcmMSetCatalogTests tests[] =
   {"calc_param_ensemble_evol", test_ncm_mset_catalog_calc_param_ensemble_evol},
   {"calc_add_param_ensemble_evol", test_ncm_mset_catalog_calc_add_param_ensemble_evol},
   {"calc_add_param_ensemble_evol/short", test_ncm_mset_catalog_calc_add_param_ensemble_evol_short},
+  {"distrib/short", test_ncm_mset_catalog_distrib_short},
+  {"ci/single", test_ncm_mset_catalog_ci_single},
+  {"param_pdf", test_ncm_mset_catalog_param_pdf},
   {NULL, NULL}
 };
 
@@ -132,6 +151,11 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
+
+  ncm_mset_func_list_register ("scaled_p0", "x\\theta_0", "TestNcmMSetCatalog", "x times the first free parameter",
+                               G_TYPE_NONE, _test_ncm_mset_catalog_flist_scaled_p0, 1, 1);
+  ncm_mset_func_list_register ("p0", "\\theta_0", "TestNcmMSetCatalog", "The first free parameter",
+                               G_TYPE_NONE, _test_ncm_mset_catalog_flist_p0, 0, 1);
 
   for (i = 0; fixtures[i].name != NULL; i++)
   {
@@ -2185,5 +2209,196 @@ test_ncm_mset_catalog_set_rng_twice (void)
   ncm_rng_free (rng2);
   ncm_mset_free (mset);
   ncm_model_mvnd_free (model);
+}
+
+static void
+_test_ncm_mset_catalog_add_uniform_rows (TestNcmMSetCatalog *test, guint n)
+{
+  const guint ncols = ncm_mset_catalog_ncols (test->mcat);
+  NcmVector *row    = ncm_vector_new (ncols);
+  guint i, j;
+
+  for (i = 0; i < n; i++)
+  {
+    for (j = 0; j < ncols; j++)
+      ncm_vector_set (row, j, ncm_rng_uniform01_gen (test->rng));
+
+    ncm_mset_catalog_add_from_vector (test->mcat, row);
+  }
+
+  ncm_vector_free (row);
+}
+
+/* The first free parameter of every row, sorted. */
+static gdouble *
+_test_ncm_mset_catalog_sorted_p0 (TestNcmMSetCatalog *test)
+{
+  const guint n = ncm_mset_catalog_len (test->mcat);
+  gdouble *p0   = g_new (gdouble, n);
+  guint i;
+
+  for (i = 0; i < n; i++)
+    p0[i] = ncm_vector_get (ncm_mset_catalog_peek_row (test->mcat, i), 1);
+
+  gsl_sort (p0, 1, n);
+
+  return p0;
+}
+
+void
+test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  /* The distribution, confidence interval and p-value functions on a catalog shorter than
+   * 100 rows. The function is x theta_0 at x = 1 and 2, with theta_0 uniform in [0, 1). */
+  const guint n       = 40;
+  const gdouble ps[2] = {0.5, 0.9};
+  NcmMSetFunc *func   = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmMSetCatalog:scaled_p0", NULL));
+  NcmMSetFunc *func0  = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmMSetCatalog:p0", NULL));
+  NcmVector *x_v      = ncm_vector_new (2);
+  GArray *p_val       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  gdouble *p0;
+  NcmStatsDist1d *sd1;
+  NcmMatrix *res;
+  guint k;
+
+  _test_ncm_mset_catalog_add_uniform_rows (test, n);
+  p0 = _test_ncm_mset_catalog_sorted_p0 (test);
+
+  ncm_vector_set (x_v, 0, 1.0);
+  ncm_vector_set (x_v, 1, 2.0);
+  g_array_append_vals (p_val, ps, 2);
+
+  sd1 = ncm_mset_catalog_calc_distrib (test->mcat, func0, NCM_FIT_RUN_MSGS_NONE);
+  g_assert_cmpfloat (ncm_stats_dist1d_eval_inv_pdf (sd1, 0.5), >, p0[0]);
+  g_assert_cmpfloat (ncm_stats_dist1d_eval_inv_pdf (sd1, 0.5), <, p0[n - 1]);
+  ncm_stats_dist1d_free (sd1);
+
+  res = ncm_mset_catalog_calc_ci_interp (test->mcat, func, x_v, p_val, 0, NCM_FIT_RUN_MSGS_NONE);
+  g_assert_cmpuint (ncm_matrix_ncols (res), ==, 9);
+
+  for (k = 0; k < 2; k++)
+  {
+    /* The 50% interval inside the 90% one. */
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 3), <, ncm_matrix_get (res, k, 1));
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 1), <, ncm_matrix_get (res, k, 0));
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 0), <, ncm_matrix_get (res, k, 2));
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 2), <, ncm_matrix_get (res, k, 4));
+  }
+
+  ncm_matrix_free (res);
+
+  res = ncm_mset_catalog_calc_pvalue (test->mcat, func, x_v, p_val, 0, NCM_FIT_RUN_MSGS_NONE);
+  g_assert_cmpuint (ncm_matrix_ncols (res), ==, 2);
+
+  /* The limits sit inside the range of theta_0 and below that of 2 theta_0. */
+  for (k = 0; k < 2; k++)
+  {
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 0), >, 0.0);
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 0), <, ncm_matrix_get (res, k, 1));
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 1), <, 1.0);
+  }
+
+  g_assert_cmpfloat (ncm_matrix_get (res, 1, 0), <, ncm_matrix_get (res, 0, 0));
+  ncm_matrix_free (res);
+
+  g_free (p0);
+  g_array_unref (p_val);
+  ncm_vector_free (x_v);
+  ncm_mset_func_free (func);
+  ncm_mset_func_free (func0);
+}
+
+void
+test_ncm_mset_catalog_ci_single (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  /* One p-value and one limit. The direct interval is the sample mean and the sample
+   * quantiles of x theta_0; the p-value matrix has one column per limit. */
+  const guint n     = 200;
+  const gdouble p   = 0.6827;
+  const gdouble lim = 0.5;
+  NcmMSetFunc *func = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmMSetCatalog:scaled_p0", NULL));
+  NcmVector *x_v    = ncm_vector_new (2);
+  GArray *p_val     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *lims      = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  gdouble *p0;
+  NcmMatrix *res;
+  guint k;
+
+  _test_ncm_mset_catalog_add_uniform_rows (test, n);
+  p0 = _test_ncm_mset_catalog_sorted_p0 (test);
+
+  ncm_vector_set (x_v, 0, 1.0);
+  ncm_vector_set (x_v, 1, 2.0);
+  g_array_append_val (p_val, p);
+  g_array_append_val (lims, lim);
+
+  res = ncm_mset_catalog_calc_ci_direct (test->mcat, func, x_v, p_val);
+  g_assert_cmpuint (ncm_matrix_ncols (res), ==, 3);
+
+  for (k = 0; k < 2; k++)
+  {
+    const gdouble x = ncm_vector_get (x_v, k);
+
+    ncm_assert_cmpdouble_e (ncm_matrix_get (res, k, 0), ==, x * gsl_stats_mean (p0, 1, n), 1.0e-14, 0.0);
+    ncm_assert_cmpdouble_e (ncm_matrix_get (res, k, 1), ==, x * gsl_stats_quantile_from_sorted_data (p0, 1, n, (1.0 - p) / 2.0), 1.0e-14, 0.0);
+    ncm_assert_cmpdouble_e (ncm_matrix_get (res, k, 2), ==, x * gsl_stats_quantile_from_sorted_data (p0, 1, n, (1.0 + p) / 2.0), 1.0e-14, 0.0);
+  }
+
+  ncm_matrix_free (res);
+
+  res = ncm_mset_catalog_calc_ci_interp (test->mcat, func, x_v, p_val, 0, NCM_FIT_RUN_MSGS_NONE);
+  g_assert_cmpuint (ncm_matrix_ncols (res), ==, 5);
+
+  for (k = 0; k < 2; k++)
+    ncm_assert_cmpdouble_e (ncm_matrix_get (res, k, 0), ==, ncm_vector_get (x_v, k) * gsl_stats_mean (p0, 1, n), 1.0e-14, 0.0);
+
+  ncm_matrix_free (res);
+
+  res = ncm_mset_catalog_calc_pvalue (test->mcat, func, x_v, lims, 0, NCM_FIT_RUN_MSGS_NONE);
+  g_assert_cmpuint (ncm_matrix_ncols (res), ==, 1);
+  g_assert_cmpfloat (ncm_matrix_get (res, 1, 0), <, ncm_matrix_get (res, 0, 0));
+  ncm_matrix_free (res);
+
+  g_free (p0);
+  g_array_unref (p_val);
+  g_array_unref (lims);
+  ncm_vector_free (x_v);
+  ncm_mset_func_free (func);
+}
+
+void
+test_ncm_mset_catalog_param_pdf (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  /* The histogram of theta_0 has n / 10 bins spanning the sampled range, the largest
+   * value included. The p-value is the fraction of rows at or above the lower edge of
+   * the bin holding the value: all of them in the first bin, the last bin's share at
+   * the maximum. */
+  const guint n     = 200;
+  const guint nbins = n / 10;
+  gdouble *p0       = NULL;
+  gdouble last_edge;
+  guint i, nlast = 0;
+
+  _test_ncm_mset_catalog_add_uniform_rows (test, n);
+  p0        = _test_ncm_mset_catalog_sorted_p0 (test);
+  last_edge = p0[0] + ((nbins - 1.0) / nbins) * (p0[n - 1] - p0[0]);
+
+  for (i = 0; i < n; i++)
+    nlast += (p0[i] >= last_edge) ? 1 : 0;
+
+  ncm_mset_catalog_param_pdf (test->mcat, 1);
+
+  ncm_assert_cmpdouble_e (ncm_mset_catalog_param_pdf_pvalue (test->mcat, p0[0], FALSE), ==, 1.0, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (ncm_mset_catalog_param_pdf_pvalue (test->mcat, p0[n - 1], FALSE), ==, nlast / (gdouble) n, 1.0e-12, 0.0);
+
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*outside the sampled interval*");
+  g_assert_cmpfloat (ncm_mset_catalog_param_pdf_pvalue (test->mcat, p0[0] - 1.0, FALSE), ==, 1.0);
+  g_test_assert_expected_messages ();
+
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*outside the sampled interval*");
+  g_assert_cmpfloat (ncm_mset_catalog_param_pdf_pvalue (test->mcat, p0[n - 1] + 1.0, FALSE), ==, 0.0);
+  g_test_assert_expected_messages ();
+
+  g_free (p0);
 }
 

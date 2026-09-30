@@ -4938,9 +4938,14 @@ ncm_mset_catalog_peek_autocorrelation_tau (NcmMSetCatalog *mcat)
 /**
  * ncm_mset_catalog_get_param_shrink_factor:
  * @mcat: a #NcmMSetCatalog
- * @p: parameter id.
+ * @p: parameter id
  *
- * Gets the current shrink factor of parameter @p.
+ * The potential scale reduction factor of column @p [Gelman and Rubin
+ * (1992)](https://doi.org/10.1214/ss/1177011136),
+ * $$\hat{R} = \sqrt{\frac{n - 1}{n} + \frac{m + 1}{m}\frac{B}{nW}},$$
+ * where $n$ is the length of one chain, $m$ the number of chains, $W$ the mean of the
+ * variances of the chains and $B/n$ the variance of their means. A catalog with a single
+ * chain returns one. It warns when the chains do not all have the same length.
  *
  * Returns: the shrink factor of @p.
  */
@@ -4980,23 +4985,18 @@ ncm_mset_catalog_get_param_shrink_factor (NcmMSetCatalog *mcat, guint p)
  * ncm_mset_catalog_get_shrink_factor:
  * @mcat: a #NcmMSetCatalog
  *
- * Gets the current shrink factor which is  the multivariate potential scale reduction factor (MPSRF), namely,
- * $$\hat{R}^p = \sqrt{\frac{n - 1}{n} + \left( \frac{m + 1}{m} \right) \lambda_1},$$
- * where $n$ is the number of points of one chain, $m$ is the number of chains and $\lambda_1$ is the largest
- * eigenvalue of the positive definite matrix $W^{-1}B/n$.
+ * The multivariate potential scale reduction factor over the free parameters [Brooks and
+ * Gelman (1998)](https://doi.org/10.1080/10618600.1998.10474787),
+ * $$\hat{R}^p = \sqrt{\frac{n - 1}{n} + \frac{m + 1}{m} \lambda_1},$$
+ * where $n$ is the length of one chain, $m$ the number of chains and $\lambda_1$ the
+ * largest eigenvalue of $W^{-1}B/n$, with $W$ the mean of the covariance matrices of the
+ * chains and $B/n$ the covariance of their means.
  *
- * $W$ is the within-chain covariance: $$W = $$ arithmetical mean of the covariance matrices of each chain.
+ * A catalog with a single chain returns one. When the first entry of $W$ is not finite
+ * or $W$ is not positive definite the factor is not computed and the return value is
+ * $10^{10}$. It warns when the chains do not all have the same length.
  *
- * $B$ is the between-chain covariance: $$B = $$ covariance between the means of each chain.
- *
- * Refined version:
- * $$\hat{R}^p = \sqrt{\frac{\hat{d} + 3}{\hat{d} + 1} \left(\frac{n - 1}{n} + \left( \frac{m + 1}{m} \right) \lambda_1\right)},$$
- * where $\hat{d} = 2 \hat{V}^2 / \widehat{Var}(\hat{V})$, $$\hat{V} = \frac{n -1}{n}W + \frac{m + 1}{m} \frac{B}{n}.$$
- *
- * Some references for this MCMC convergence diagnostic: [Brooks and Gelman (1998)](https://doi.org/10.1080/10618600.1998.10474787),
- * [Gelman and Rubin (1992)](https://doi.org/10.1214/ss/1177011136), [SAS/STAT](http://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introbayes_sect008.htm).
- *
- * Returns: the shrink factor $\hat{R}^p$
+ * Returns: the shrink factor $\hat{R}^p$.
  */
 gdouble
 ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
@@ -5084,9 +5084,11 @@ ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
 /**
  * ncm_mset_catalog_param_pdf:
  * @mcat: a #NcmMSetCatalog
- * @i: parameter index.
+ * @i: column index
  *
- * Bins and calculates the pdf associated with the parameter @i.
+ * Bins column @i of the rows into a histogram for ncm_mset_catalog_param_pdf_pvalue().
+ * The histogram has one bin per ten rows, and at least ten, spanning the sampled range
+ * of the column. Row weights are not used.
  *
  */
 void
@@ -5120,6 +5122,8 @@ ncm_mset_catalog_param_pdf (NcmMSetCatalog *mcat, guint i)
     self->h_pdf = gsl_histogram_pdf_alloc (nbins);
 
   gsl_histogram_set_ranges_uniform (self->h, p_min, p_max);
+  /* The bins are half open, so the last edge moves just past the largest value. */
+  self->h->range[nbins] = nextafter (p_max, GSL_POSINF);
 
   for (k = 0; k < ncm_stats_vec_nitens (self->pstats); k++)
   {
@@ -5134,10 +5138,13 @@ ncm_mset_catalog_param_pdf (NcmMSetCatalog *mcat, guint i)
 /**
  * ncm_mset_catalog_param_pdf_pvalue:
  * @mcat: a #NcmMSetCatalog
- * @pvalue: parameter value
- * @both: one or both sides p-value
+ * @pvalue: value of the column binned by ncm_mset_catalog_param_pdf()
+ * @both: unused
  *
- * Calculates the p-value associated with the parameter value @pvalue.
+ * The upper tail p-value of @pvalue in the histogram of the last call to
+ * ncm_mset_catalog_param_pdf(): the fraction of rows at or above the lower edge of the
+ * bin holding @pvalue. A value outside the sampled range warns and gives one below it,
+ * zero above it.
  *
  * Returns: the p-value.
  */
@@ -5158,49 +5165,41 @@ ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pvalue, gboolea
 
     if ((pvalue < p_min) || (pvalue > p_max))
     {
-      g_warning ("ncm_mset_catalog_param_pdf_pvalue: value % 20.15g outside mc obtained interval [% 20.15g % 20.15g]. Assuming 0 pvalue.",
-                 pvalue, p_min, p_max);
+      const gdouble p = (pvalue < p_min) ? 1.0 : 0.0;
 
-      return 0.0;
+      g_warning ("ncm_mset_catalog_param_pdf_pvalue: value % 20.15g outside the sampled interval [% 20.15g % 20.15g]. Assuming p-value %g.",
+                 pvalue, p_min, p_max, p);
+
+      return p;
     }
 
     gsl_histogram_find (self->h, pvalue, &i);
-    g_assert_cmpint (i, <=, self->h_pdf->n);
+    g_assert_cmpint (i, <, self->h_pdf->n);
 
-    if (i == 0)
-      return 1.0;
-    else
-      return (1.0 - self->h_pdf->sum[i - 1]);
+    /* sum[i] is the fraction of rows below the lower edge of bin i. */
+    return 1.0 - self->h_pdf->sum[i];
   }
 }
 
 /**
  * ncm_mset_catalog_calc_ci_direct:
  * @mcat: a #NcmMSetCatalog
- * @func: a #NcmMSetFunc of type n-n
+ * @func: a #NcmMSetFunc of dimension one and one argument
  * @x_v: #NcmVector of arguments of @func
- * @p_val: (element-type double): p-values for the confidence intervals
+ * @p_val: (element-type double): probabilities of the confidence intervals, in $(0, 1)$
  *
- * Calculates the mean and the confidence interval (CI) for the value of @func for each
- * p-value in @p_val. It stores the results in a #NcmVector, where the first element
- * contains the mean and the following contain the lower and upper bounds for each
- * p-value in @p_val.
+ * The mean and the central confidence intervals of @func over the rows, at each
+ * argument in @x_v. Row $k$ of the result belongs to the $k$-th argument; column 0 holds
+ * the mean and columns $1 + 2j$ and $2 + 2j$ the lower and upper bounds of the interval
+ * of probability $p_j$, the quantiles $(1 - p_j)/2$ and $(1 + p_j)/2$. For @p_val =
+ * (0.6827, 0.9545) the columns are the mean, the $1\sigma$ bounds and the $2\sigma$
+ * bounds.
  *
- * This function calculates the quantile directly using:
- * gsl_stats_quantile_from_sorted_data for this reason it must allocates the catalog
- * size times the number of elements in @x, for a less memory intensive version use
- * ncm_mset_catalog_calc_ci_interp().
+ * The quantiles are those of the sorted values, so the function holds the catalog length
+ * times the length of @x_v in memory; ncm_mset_catalog_calc_ci_interp() does not. Row
+ * weights are not used. The free parameters of the #NcmMSet are restored at the end.
  *
- * The #NcmMSetFunc @func must be of dimension one.
- *
- * # Example: #
- *
- * If @p_val contains two values ($1\sigma$) 0.6827 and ($\sigma$) 0.9545, the first
- * element will contain the mean, the second and third, the lower and upper bounds,
- * respectively. Then, the fourth and fifth elements the lower and upper bounds of
- * $2\sigma$ CI.
- *
- * Returns: (transfer full): a #NcmVector containing the mean and lower/upper bound of the confidence interval for @func.
+ * Returns: (transfer full): a #NcmMatrix with the means and the interval bounds.
  */
 NcmMatrix *
 ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector *x_v, GArray *p_val)
@@ -5208,7 +5207,7 @@ ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
   const guint dim             = ncm_vector_len (x_v);
 
-  g_assert_cmpuint (p_val->len, >, 1);
+  g_assert_cmpuint (p_val->len, >, 0);
   {
     const guint nelem      = p_val->len * 2 + 1;
     NcmMatrix *res         = ncm_matrix_new (dim, nelem);
@@ -5272,30 +5271,23 @@ ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
 /**
  * ncm_mset_catalog_calc_ci_interp:
  * @mcat: a #NcmMSetCatalog
- * @func: a #NcmMSetFunc of type n-n
+ * @func: a #NcmMSetFunc of dimension one and one argument
  * @x_v: #NcmVector of arguments of @func
- * @p_val: (element-type double): p-values for the confidence intervals
- * @nodes: number of nodes in the distribution approximations
+ * @p_val: (element-type double): probabilities of the confidence intervals, in $(0, 1)$
+ * @nodes: unused
  * @mtype: #NcmFitRunMsgs log level
  *
- * Calculates the mean and the confidence interval (CI) for the value of @func for each
- * p-value in @p_val. It stores the results in a #NcmMatrix, where the first element
- * contains the mean and the following contain the lower and upper bounds for each
- * p-value in @p_val.
+ * The mean and the confidence intervals of @func over the rows, at each argument in
+ * @x_v, with the quantiles taken from a #NcmStatsDist1dEPDF of the values at each
+ * argument. Row $k$ of the result belongs to the $k$-th argument and has $1 + 4 n_p$
+ * columns, $n_p$ the length of @p_val: column 0 holds the mean; columns $1 + 2j$ and
+ * $2 + 2j$ the central interval of probability $p_j$, as in
+ * ncm_mset_catalog_calc_ci_direct(); columns $1 + 2n_p + 2j$ and $2 + 2n_p + 2j$ the
+ * one-sided bounds, the quantiles $p_j$ and $1 - p_j$.
  *
- * This function creates an approximation of the distribution for each value of the
- * function @func and calculates the quantile from this approximation.
+ * Row weights are not used. The free parameters of the #NcmMSet are restored at the end.
  *
- * The #NcmMSetFunc @func must be of dimension one.
- *
- * # Example: #
- *
- * If @p_val contains two values ($1\sigma$) 0.6827 and ($\sigma$) 0.9545, the first
- * element will contain the mean, the second and third, the lower and upper bounds,
- * respectively. Then, the fourth and fifth elements the lower and upper bounds of
- * $2\sigma$ CI.
- *
- * Returns: (transfer full): a #NcmMatrix containing the mean and lower/upper bound of the confidence interval for @func.
+ * Returns: (transfer full): a #NcmMatrix with the means and the interval bounds.
  */
 NcmMatrix *
 ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector *x_v, GArray *p_val, guint nodes, NcmFitRunMsgs mtype)
@@ -5303,12 +5295,13 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
   const guint dim             = ncm_vector_len (x_v);
 
-  g_assert_cmpuint (p_val->len, >, 1);
+  g_assert_cmpuint (p_val->len, >, 0);
   {
     const guint nelem      = p_val->len * 4 + 1;
     NcmMatrix *res         = ncm_matrix_new (dim, nelem);
     NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (self->mset));
     const guint cat_len    = ncm_mset_catalog_len (mcat);
+    const guint div        = cat_len > 100 ? cat_len / 100 : 1;
     GPtrArray *epdf_a      = g_ptr_array_sized_new (dim);
     guint i, j;
 
@@ -5358,14 +5351,13 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
         ncm_stats_dist1d_epdf_add_obs (epdf, ncm_vector_get (self->quantile_ws, j));
       }
 
-      if (i % (cat_len / 100) == 0)
-        if (mtype > NCM_FIT_RUN_MSGS_NONE)
-          ncm_message ("=");
+      if ((mtype > NCM_FIT_RUN_MSGS_NONE) && (i % div == 0))
+        ncm_message ("=");
     }
 
     if (mtype > NCM_FIT_RUN_MSGS_NONE)
     {
-      if (i % (cat_len / 100) != 0)
+      if (i % div != 0)
         ncm_message ("=");
 
       ncm_message ("|\n");
@@ -5426,22 +5418,20 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
 /**
  * ncm_mset_catalog_calc_pvalue:
  * @mcat: a #NcmMSetCatalog
- * @func: a #NcmMSetFunc of type n-n
+ * @func: a #NcmMSetFunc of dimension one and one argument
  * @x_v: #NcmVector of arguments of @func
- * @lim: (element-type double): integration limits to compute the p-value
- * @nodes: number of nodes in the distribution approximations
+ * @lim: (element-type double): limits of the p-values
+ * @nodes: unused
  * @mtype: #NcmFitRunMsgs log level
  *
- * Calculates the p-values for the value of @func
- * for each limit in @lim, integrating the probability distribution function from
- * the left tail to @lim. It stores the results in a #NcmMatrix, where the
- * first element contains the p-value with respect to the first @lim, and so on.
+ * The lower tail probability of @func at each limit in @lim, at each argument in @x_v,
+ * from a #NcmStatsDist1dEPDF of the values at each argument. Row $k$ of the result
+ * belongs to the $k$-th argument and column $j$ to the $j$-th limit; a limit below the
+ * range of the distribution gives zero and one above it gives one.
  *
- * The #NcmMSetFunc @func must be of dimension one.
+ * Row weights are not used. The free parameters of the #NcmMSet are restored at the end.
  *
- * # Example: #
- *
- * Returns: (transfer full): a #NcmMatrix containing the p-values for @func.
+ * Returns: (transfer full): a #NcmMatrix with the p-values.
  */
 NcmMatrix *
 ncm_mset_catalog_calc_pvalue (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector *x_v, GArray *lim, guint nodes, NcmFitRunMsgs mtype)
@@ -5449,12 +5439,13 @@ ncm_mset_catalog_calc_pvalue (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
   const guint dim             = ncm_vector_len (x_v);
 
-  g_assert_cmpuint (lim->len, >, 1);
+  g_assert_cmpuint (lim->len, >, 0);
   {
-    const guint nelem      = lim->len * 2 + 1;
+    const guint nelem      = lim->len;
     NcmMatrix *res         = ncm_matrix_new (dim, nelem);
     NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (self->mset));
     const guint cat_len    = ncm_mset_catalog_len (mcat);
+    const guint div        = cat_len > 100 ? cat_len / 100 : 1;
     GPtrArray *epdf_a      = g_ptr_array_sized_new (dim);
     guint i, j;
 
@@ -5504,14 +5495,13 @@ ncm_mset_catalog_calc_pvalue (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector
         ncm_stats_dist1d_epdf_add_obs (epdf, ncm_vector_get (self->quantile_ws, j));
       }
 
-      if (i % (cat_len / 100) == 0)
-        if (mtype > NCM_FIT_RUN_MSGS_NONE)
-          ncm_message ("=");
+      if ((mtype > NCM_FIT_RUN_MSGS_NONE) && (i % div == 0))
+        ncm_message ("=");
     }
 
     if (mtype > NCM_FIT_RUN_MSGS_NONE)
     {
-      if (i % (cat_len / 100) != 0)
+      if (i % div != 0)
         ncm_message ("=");
 
       ncm_message ("|\n");
@@ -5559,13 +5549,11 @@ ncm_mset_catalog_calc_pvalue (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector
 /**
  * ncm_mset_catalog_calc_distrib:
  * @mcat: a #NcmMSetCatalog
- * @func: a #NcmMSetFunc of type 0-1
+ * @func: a #NcmMSetFunc of dimension one and no arguments
  * @mtype: #NcmFitRunMsgs log level
  *
- * Calculates the distribution of @func.
- *
- * This function creates an approximation of the distribution for each value of
- * the function @func calculated in each model in @mcat.
+ * The distribution of @func over the rows, a prepared #NcmStatsDist1dEPDF of its values.
+ * Row weights are not used. The free parameters of the #NcmMSet are restored at the end.
  *
  * Returns: (transfer full): a #NcmStatsDist1d describing the distribution.
  */
@@ -5580,6 +5568,7 @@ ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmFitRu
     NcmStatsDist1dEPDF *epdf1d = ncm_stats_dist1d_epdf_new (NCM_MSET_CATALOG_DIST_EST_SD_SCALE);
     NcmVector *save_params     = ncm_vector_new (ncm_mset_fparams_len (self->mset));
     const guint cat_len        = ncm_mset_catalog_len (mcat);
+    const guint div            = cat_len > 100 ? cat_len / 100 : 1;
     guint i;
 
     ncm_mset_fparams_get_vector (self->mset, save_params);
@@ -5603,14 +5592,13 @@ ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmFitRu
       x = ncm_mset_func_eval0 (func, self->mset);
       ncm_stats_dist1d_epdf_add_obs (epdf1d, x);
 
-      if (i % (cat_len / 100) == 0)
-        if (mtype > NCM_FIT_RUN_MSGS_NONE)
-          ncm_message ("=");
+      if ((mtype > NCM_FIT_RUN_MSGS_NONE) && (i % div == 0))
+        ncm_message ("=");
     }
 
     if (mtype > NCM_FIT_RUN_MSGS_NONE)
     {
-      if (i % (cat_len / 100) != 0)
+      if (i % div != 0)
         ncm_message ("=");
 
       ncm_message ("|\n");
@@ -5638,6 +5626,7 @@ _ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, guint vi, NcmFitRunMsgs mt
   NcmStatsDist1dEPDF *epdf1d  = ncm_stats_dist1d_epdf_new (NCM_MSET_CATALOG_DIST_EST_SD_SCALE);
   NcmVector *save_params      = ncm_vector_new (ncm_mset_fparams_len (self->mset));
   const guint cat_len         = ncm_mset_catalog_len (mcat);
+  const guint div             = cat_len > 100 ? cat_len / 100 : 1;
   guint i;
 
   ncm_mset_fparams_get_vector (self->mset, save_params);
@@ -5659,14 +5648,13 @@ _ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, guint vi, NcmFitRunMsgs mt
 
     ncm_stats_dist1d_epdf_add_obs (epdf1d, x);
 
-    if (i % (cat_len / 100) == 0)
-      if (mtype > NCM_FIT_RUN_MSGS_NONE)
-        ncm_message ("=");
+    if ((mtype > NCM_FIT_RUN_MSGS_NONE) && (i % div == 0))
+      ncm_message ("=");
   }
 
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
   {
-    if (i % (cat_len / 100) != 0)
+    if (i % div != 0)
       ncm_message ("=");
 
     ncm_message ("|\n");
@@ -5689,13 +5677,11 @@ _ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, guint vi, NcmFitRunMsgs mt
 /**
  * ncm_mset_catalog_calc_param_distrib:
  * @mcat: a #NcmMSetCatalog
- * @pi: a #NcmMSetPIndex
+ * @pi: a #NcmMSetPIndex of a free parameter
  * @mtype: #NcmFitRunMsgs log level
  *
- * Calculates the distribution of parameter @pi.
- *
- * This function creates an approximation of the distribution for each value of
- * the parameter @pi in @mcat.
+ * The distribution of the free parameter @pi over the rows, as in
+ * ncm_mset_catalog_calc_distrib().
  *
  * Returns: (transfer full): a #NcmStatsDist1d describing the distribution.
  */
@@ -5713,13 +5699,11 @@ ncm_mset_catalog_calc_param_distrib (NcmMSetCatalog *mcat, const NcmMSetPIndex *
 /**
  * ncm_mset_catalog_calc_add_param_distrib:
  * @mcat: a #NcmMSetCatalog
- * @add_param: additional parameter index
+ * @add_param: additional value index
  * @mtype: #NcmFitRunMsgs log level
  *
- * Calculates the distribution of parameter @pi.
- *
- * This function creates an approximation of the distribution for each value of
- * the parameter @pi in @mcat.
+ * The distribution of the additional value @add_param over the rows, as in
+ * ncm_mset_catalog_calc_distrib().
  *
  * Returns: (transfer full): a #NcmStatsDist1d describing the distribution.
  */
@@ -5755,6 +5739,7 @@ _ncm_mset_catalog_calc_ensemble_evol (NcmMSetCatalog *mcat, guint vi, guint nste
   ncm_mset_fparams_get_vector (self->mset, save_params);
 
   g_assert_cmpuint (self->nchains, >, 1);
+  g_assert_cmpuint (nsteps, >, 1);
 
   for (i = 0; i < nsteps; i++)
   {
@@ -5822,13 +5807,16 @@ _ncm_mset_catalog_calc_ensemble_evol (NcmMSetCatalog *mcat, guint vi, guint nste
 /**
  * ncm_mset_catalog_calc_param_ensemble_evol:
  * @mcat: a #NcmMSetCatalog
- * @pi: a #NcmMSetPIndex
- * @nsteps: number of steps to calculate the distribution
+ * @pi: a #NcmMSetPIndex of a free parameter
+ * @nsteps: number of grid points, at least two
  * @mtype: #NcmFitRunMsgs log level
- * @pval: (out callee-allocates): output #NcmVector containing parameter values
- * @t_evol: (out callee-allocates): output #NcmMatrix containing probability distribution evolution
+ * @pval: (out callee-allocates): the grid of parameter values
+ * @t_evol: (out callee-allocates): the density at each iteration
  *
- * Calculates the time evolution of the  parameter @pi distribution.
+ * The distribution of the free parameter @pi across the ensemble at each iteration. @pval
+ * is a uniform grid of @nsteps points over the sampled range of the parameter; row $t$ of
+ * @t_evol holds, at those points, the normalized density of a #NcmStatsDist1dEPDF of the
+ * $n_\mathrm{chains}$ values at iteration $t$. The catalog must have more than one chain.
  *
  */
 void
@@ -5845,13 +5833,14 @@ ncm_mset_catalog_calc_param_ensemble_evol (NcmMSetCatalog *mcat, const NcmMSetPI
 /**
  * ncm_mset_catalog_calc_add_param_ensemble_evol:
  * @mcat: a #NcmMSetCatalog
- * @add_param: additional parameter index
- * @nsteps: number of steps to calculate the distribution
+ * @add_param: additional value index
+ * @nsteps: number of grid points, at least two
  * @mtype: #NcmFitRunMsgs log level
- * @pval: (out callee-allocates): output #NcmVector containing parameter values
- * @t_evol: (out callee-allocates): output #NcmMatrix containing probability distribution evolution
+ * @pval: (out callee-allocates): the grid of values
+ * @t_evol: (out callee-allocates): the density at each iteration
  *
- * Calculates the time evolution of the  parameter @pi distribution.
+ * The distribution of the additional value @add_param across the ensemble at each
+ * iteration, as in ncm_mset_catalog_calc_param_ensemble_evol().
  *
  */
 void
