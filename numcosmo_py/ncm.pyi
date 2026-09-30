@@ -6067,7 +6067,7 @@ class MSetCatalog(GObject.Object):
       sync-interval -> gdouble: sync-interval
         Data sync interval
       read-only -> gboolean: read-only
-        If the fits catalogue must be open in the readonly mode
+        Whether the FITS file is opened read-only
 
     Signals from GObject:
       notify (GParam)

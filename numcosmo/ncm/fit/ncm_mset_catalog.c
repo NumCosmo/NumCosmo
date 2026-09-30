@@ -30,9 +30,9 @@
  * FITS file.
  *
  * Each row holds #NcmMSetCatalog:nadd-vals additional values ($-2\ln L$ and derived
- * functions, named by #NcmMSetCatalog:nadd-val-names) followed by the free parameters,
- * and a weight column when #NcmMSetCatalog:weighted is set. With #NcmMSetCatalog:nchains
- * chains the rows are interleaved, the row with id $i$ belonging to chain
+ * functions, named by #NcmMSetCatalog:nadd-val-names; for a #NcmMSetCatalog:weighted
+ * catalog the last one is the row weight) followed by the free parameters. With
+ * #NcmMSetCatalog:nchains chains the rows are interleaved, the row with id $i$ belonging to chain
  * $i \bmod n_\mathrm{chains}$ (the walkers of an ensemble sampler), and the catalog
  * keeps statistics of every chain, of the chain means and of each ensemble. Row ids start
  * at the first id (ncm_mset_catalog_get_first_id()); #NcmMSetCatalog:markovian-id marks
@@ -823,7 +823,7 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                    PROP_READONLY,
                                    g_param_spec_boolean ("read-only",
                                                          NULL,
-                                                         "If the fits catalogue must be open in the readonly mode",
+                                                         "Whether the FITS file is opened read-only",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
@@ -2773,10 +2773,7 @@ ncm_mset_catalog_peek_filename (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_get_rng:
  * @mcat: a #NcmMSetCatalog
  *
- * This function checks if any pseudo random number generator (RNG) is registered in the
- * catalog. If so, it returns it or NULL.
- *
- * Returns: (transfer full) (allow-none): the registered #NcmRNG in the catalog or NULL.
+ * Returns: (transfer full) (allow-none): the random number generator of @mcat, or %NULL
  */
 NcmRNG *
 ncm_mset_catalog_get_rng (NcmMSetCatalog *mcat)
@@ -2793,10 +2790,7 @@ ncm_mset_catalog_get_rng (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_peek_rng:
  * @mcat: a #NcmMSetCatalog
  *
- * This function checks if any pseudo random number generator (RNG) is registered in the
- * catalog. If so, it returns it or NULL.
- *
- * Returns: (transfer none) (allow-none): the registered #NcmRNG in the catalog or NULL.
+ * Returns: (transfer none) (allow-none): the random number generator of @mcat, or %NULL
  */
 NcmRNG *
 ncm_mset_catalog_peek_rng (NcmMSetCatalog *mcat)
@@ -2832,10 +2826,9 @@ ncm_mset_catalog_is_empty (NcmMSetCatalog *mcat)
  * in time and the correlation between chains at a given iteration, so no assumption is
  * made about either.
  *
- * It tries to guess when $p = 0$. In this case
- * $\sigma_{\hat{p}} \approx |\hat{p}|\sqrt{n_\mathrm{eff}}$, so for more than ten samples
- * it tests if $\text{lre} \approx 1$ and returns
- * $\text{lre} = \sigma_{\hat{p}}/\sqrt{n_\mathrm{eff}}$ instead.
+ * A mean compatible with zero makes the relative error about one: with at least ten
+ * samples, a parameter whose $\text{lre}$ lies in $[1, 2)$ contributes its absolute
+ * error $\sigma_{\hat{p}}/\sqrt{n_\mathrm{eff}}$ instead.
  *
  * Returns: the largest proportional error $\text{lre}$.
  */
@@ -2871,9 +2864,7 @@ ncm_mset_catalog_largest_error (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_len:
  * @mcat: a #NcmMSetCatalog
  *
- * Number of items in the catalog.
- *
- * Returns: number of items in the catalog.
+ * Returns: the number of rows of @mcat
  */
 guint
 ncm_mset_catalog_len (NcmMSetCatalog *mcat)
@@ -2887,10 +2878,8 @@ ncm_mset_catalog_len (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_max_time:
  * @mcat: a #NcmMSetCatalog
  *
- * Number of items in the catalog divided by the number
- * of chains.
- *
- * Returns: number of ensembles in the catalog.
+ * Returns: the number of rows divided by the number of chains: the number of iterations
+ *   (ensembles)
  */
 guint
 ncm_mset_catalog_max_time (NcmMSetCatalog *mcat)
@@ -2907,9 +2896,7 @@ ncm_mset_catalog_max_time (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_nchains:
  * @mcat: a #NcmMSetCatalog
  *
- * Number of chains in the catalog.
- *
- * Returns: number of chains in the catalog.
+ * Returns: the number of chains of @mcat
  */
 guint
 ncm_mset_catalog_nchains (NcmMSetCatalog *mcat)
@@ -2923,9 +2910,7 @@ ncm_mset_catalog_nchains (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_nadd_vals:
  * @mcat: a #NcmMSetCatalog
  *
- * Number of additional variables in the catalog.
- *
- * Returns: number of additional variables in the catalog.
+ * Returns: the number of additional values per row, the weight included
  */
 guint
 ncm_mset_catalog_nadd_vals (NcmMSetCatalog *mcat)
@@ -2939,9 +2924,7 @@ ncm_mset_catalog_nadd_vals (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_weighted:
  * @mcat: a #NcmMSetCatalog
  *
- * Whether the catalog has weights.
- *
- * Returns: whether the catalog has weights.
+ * Returns: whether the rows of @mcat are weighted
  */
 gboolean
 ncm_mset_catalog_weighted (NcmMSetCatalog *mcat)
@@ -2954,10 +2937,9 @@ ncm_mset_catalog_weighted (NcmMSetCatalog *mcat)
 /**
  * ncm_mset_catalog_get_row_from_time:
  * @mcat: a #NcmMSetCatalog
- * @t: time $t$
+ * @t: row id
  *
- *
- * Returns: row number of time $t$ step.
+ * Returns: the index in @mcat of the row with id @t
  */
 guint
 ncm_mset_catalog_get_row_from_time (NcmMSetCatalog *mcat, gint t)
@@ -2989,7 +2971,7 @@ ncm_mset_catalog_get_first_id (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_get_cur_id:
  * @mcat: a #NcmMSetCatalog
  *
- * Returns: the id of the last row added (-1 if empty).
+ * Returns: the id of the last row added; the first id minus one when empty
  */
 gint
 ncm_mset_catalog_get_cur_id (NcmMSetCatalog *mcat)
@@ -3073,9 +3055,10 @@ ncm_mset_catalog_col_symb (NcmMSetCatalog *mcat, guint i)
  * @name: column name
  * @col_index: (out): column index
  *
- * Finds the column @name in the catalog @mcat.
+ * Finds the column given by @name: a free-parameter name, an additional value name or a
+ * column number.
  *
- * Returns: whether if @name was found in catalog.
+ * Returns: whether @name was found
  */
 gboolean
 ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, guint *col_index)
@@ -3119,13 +3102,11 @@ ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, guint *co
 /**
  * ncm_mset_catalog_set_burnin:
  * @mcat: a #NcmMSetCatalog
- * @burnin: number of elements to ignore
+ * @burnin: number of leading rows to drop
  *
- * Sets the number of elements to ignore when reading from a catalogue, it must be set
- * before loading data from a file.
- *
- * It will not affect a catalogue in any other context, only when reading data from a
- * file. It is recommended to be used only when analyzing a catalogue.
+ * Sets the number of leading rows of the file that are not read; the ids of the rows
+ * read start after them. It applies only when rows are loaded from a file, so it must be
+ * set before that, and is meant for analyzing a catalog.
  *
  */
 void
@@ -3421,9 +3402,8 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
  * @mset: a #NcmMSet
  * @...: additional values
  *
- * This function adds a new element to the catalog using the parameters from @mset.
- * It assumes that @mset is compatible with the catalog and expect the
- * right number of additional values.
+ * Adds a row with the additional values @... (the weight last, for a weighted catalog)
+ * and the free parameters of @mset, which must have the free parameters of the catalog.
  *
  */
 void
@@ -3457,9 +3437,8 @@ ncm_mset_catalog_add_from_mset (NcmMSetCatalog *mcat, NcmMSet *mset, ...)
  * @mset: a #NcmMSet
  * @ax: (array) (element-type double): additional values array
  *
- * This function adds a new element to the catalog using the parameters from @mset.
- * It assumes that @mset is compatible with the catalog and expect the
- * right number of additional values in the array @ax.
+ * Adds a row with the additional values @ax (the weight last, for a weighted catalog)
+ * and the free parameters of @mset, which must have the free parameters of the catalog.
  *
  */
 void
@@ -3481,10 +3460,9 @@ ncm_mset_catalog_add_from_mset_array (NcmMSetCatalog *mcat, NcmMSet *mset, gdoub
 /**
  * ncm_mset_catalog_add_from_vector:
  * @mcat: a #NcmMSetCatalog
- * @vals: a #NcmVector
+ * @vals: a whole row: the additional values followed by the free parameters
  *
- * Adds a new element to the catalog using the values from the vector
- * @vals.
+ * Adds the row @vals.
  *
  */
 void
@@ -3499,11 +3477,10 @@ ncm_mset_catalog_add_from_vector (NcmMSetCatalog *mcat, NcmVector *vals)
 /**
  * ncm_mset_catalog_add_from_vector_array:
  * @mcat: a #NcmMSetCatalog
- * @vals: a #NcmVector
- * @ax: (array) (element-type double): additional values array
+ * @vals: the free parameters
+ * @ax: (array) (element-type double): the additional values
  *
- * Adds a new element to the catalog using the parameter values from the
- * vector @vals and additional parameters from array @ax.
+ * Adds a row with the additional values @ax and the free parameters @vals.
  *
  */
 void
@@ -3580,9 +3557,7 @@ ncm_mset_catalog_log_current_stats (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_get_mset:
  * @mcat: a #NcmMSetCatalog
  *
- * Gets the #NcmMSet catalog from @mcat.
- *
- * Returns: (transfer full): a reference to the used #NcmMSet object.
+ * Returns: (transfer full): the #NcmMSet of @mcat
  */
 NcmMSet *
 ncm_mset_catalog_get_mset (NcmMSetCatalog *mcat)
@@ -3596,9 +3571,7 @@ ncm_mset_catalog_get_mset (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_peek_mset:
  * @mcat: a #NcmMSetCatalog
  *
- * Gets the #NcmMSet catalog from @mcat.
- *
- * Returns: (transfer none): the used #NcmMSet object.
+ * Returns: (transfer none): the #NcmMSet of @mcat
  */
 NcmMSet *
 ncm_mset_catalog_peek_mset (NcmMSetCatalog *mcat)
