@@ -26,23 +26,24 @@
 /**
  * NcmMPIJobMCMC:
  *
- * MPI job object for running MCMC steps.
+ * #NcmMPIJob that evaluates and accepts or rejects MCMC proposals.
  *
- * This object is a subclass of #NcmMPIJob, designed to implement an MPI job for
- * evaluating the posterior at the proposal points during an MCMC run. It is utilized
- * by #NcmFitESMCMC to parallelize the evaluation of the posterior function. The job
- * involves computing the posterior function and, if applicable, additional functions
- * (e.g., derived quantities) at a specified point within the parameter space. Notably,
- * the slave also receives the current point and the current value for the acceptance
- * probability. Consequently, it decides whether to accept or reject the proposal point
- * and only computes the additional functions if the proposal point is accepted.
+ * #NcmFitESMCMC uses it to evaluate the proposals of an ensemble on the MPI workers.
+ * The input holds the proposal's free parameters followed by three values: $-2\ln L$
+ * at the current point, the log of the
+ * proposal ratio $\ln q$, and the uniform deviate $u$ that decides acceptance. The job
+ * sets the parameters in its #NcmFit and computes $-2\ln L^\star$ there, or $+\infty$
+ * when the models report the parameters invalid. A finite value is accepted when $u$ is
+ * below
+ * $$\min\left[1, \exp\left(\frac{-2\ln L - (-2\ln L^\star)}{2} + \ln q\right)\right],$$
+ * or always when $u$ is negative, which is how the initial points are sent. Bounds are
+ * checked by #NcmFitESMCMC before a proposal is sent.
  *
- * The MPI job is implemented as a function that takes a vector consisting of the set
- * parameters, the current value of the posterior function, the acceptance probability,
- * and the jump probability as input. The function returns a vector with the first
- * element being 1.0 if the proposal point is accepted and 0.0 otherwise. The next
- * value is the value of the posterior function at the proposal point. The remaining
- * values are the values of the additional functions at the proposal point.
+ * The return holds 1 when the proposal is accepted and 0 otherwise, then
+ * $-2\ln L^\star$, then, when a function array is set, the value of each function at
+ * the proposal, computed only when it is accepted. The functions must be scalar and take
+ * no arguments. The number of free parameters is read when the job is constructed.
+ * Input and return messages travel in the storage of the input and return vectors.
  *
  */
 
@@ -54,7 +55,6 @@
 #include "ncm_enum_types.h"
 #include "ncm/mpi/ncm_mpi_job_mcmc.h"
 #include "ncm/fit/ncm_fit_esmcmc.h"
-#include "ncm/core/ncm_timer.h"
 
 #ifndef HAVE_MPI
 #define MPI_DATATYPE_NULL (0)
@@ -67,7 +67,6 @@ typedef struct _NcmMPIJobMCMCPrivate
   NcmObjArray *func_oa;
   gint fparam_len;
   gint nadd_vals;
-  NcmTimer *nt;
 } NcmMPIJobMCMCPrivate;
 
 enum
@@ -75,7 +74,6 @@ enum
   PROP_0,
   PROP_FIT,
   PROP_FUNC_ARRAY,
-  PROP_JOB_TYPE,
 };
 
 struct _NcmMPIJobMCMC
@@ -95,8 +93,6 @@ ncm_mpi_job_mcmc_init (NcmMPIJobMCMC *mjmcmc)
 
   self->fparam_len = 0;
   self->nadd_vals  = 0;
-
-  self->nt = ncm_timer_new ();
 }
 
 static void
@@ -185,8 +181,6 @@ _ncm_mpi_job_mcmc_dispose (GObject *object)
 
   ncm_fit_clear (&self->fit);
   ncm_obj_array_clear (&self->func_oa);
-  ncm_timer_clear (&self->nt);
-
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mpi_job_mcmc_parent_class)->dispose (object);
@@ -342,13 +336,13 @@ _ncm_mpi_job_mcmc_get_return_buffer (NcmMPIJob *mpi_job, gpointer ret)
 static void
 _ncm_mpi_job_mcmc_destroy_input_buffer (NcmMPIJob *mpi_job, gpointer input, gpointer buf)
 {
-  g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (input)), ==, GPOINTER_TO_INT (buf));
+  g_assert_true (buf == ncm_vector_data (input));
 }
 
 static void
 _ncm_mpi_job_mcmc_destroy_return_buffer (NcmMPIJob *mpi_job, gpointer ret, gpointer buf)
 {
-  g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (ret)), ==, GPOINTER_TO_INT (buf));
+  g_assert_true (buf == ncm_vector_data (ret));
 }
 
 static gpointer
@@ -366,13 +360,13 @@ _ncm_mpi_job_mcmc_pack_return (NcmMPIJob *mpi_job, gpointer ret)
 static void
 _ncm_mpi_job_mcmc_unpack_input (NcmMPIJob *mpi_job, gpointer buf, gpointer input)
 {
-  g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (input)), ==, GPOINTER_TO_INT (buf));
+  g_assert_true (buf == ncm_vector_data (input));
 }
 
 static void
 _ncm_mpi_job_mcmc_unpack_return (NcmMPIJob *mpi_job, gpointer buf, gpointer ret)
 {
-  g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (ret)), ==, GPOINTER_TO_INT (buf));
+  g_assert_true (buf == ncm_vector_data (ret));
 }
 
 static void
@@ -435,11 +429,12 @@ _ncm_mpi_job_mcmc_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 /**
  * ncm_mpi_job_mcmc_new:
  * @fit: a #NcmFit
- * @func_oa: (nullable): a #NcmObjArray
+ * @func_oa: (nullable): a #NcmObjArray of scalar #NcmMSetFunc without arguments
  *
- * Creates a new #NcmMPIJobMCMC object.
+ * Creates a job that evaluates proposals with @fit and the functions in @func_oa at the
+ * accepted ones.
  *
- * Returns: a new #NcmMPIJobMCMC.
+ * Returns: (transfer full): a new #NcmMPIJobMCMC.
  */
 NcmMPIJobMCMC *
 ncm_mpi_job_mcmc_new (NcmFit *fit, NcmObjArray *func_oa)

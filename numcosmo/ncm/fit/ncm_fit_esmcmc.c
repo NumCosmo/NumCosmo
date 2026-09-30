@@ -2183,13 +2183,18 @@ _ncm_fit_esmcmc_eval_mpi (NcmFitESMCMC *esmcmc, const glong i, const glong f)
     const gdouble m2lnq         = -2.0 * ncm_vector_get (thetastar_in_k, self->fparam_len + 1);
     const gdouble m2lnp         = m2lnL_star - m2lnL_cur + m2lnq;
 
-    ncm_stats_vec_set (self->stats, 0, -0.5 * m2lnL_cur / M_LN10);
-    ncm_stats_vec_set (self->stats, 1, -0.5 * m2lnL_star / M_LN10);
-    ncm_stats_vec_set (self->stats, 2, -0.5 * (m2lnL_star - m2lnL_cur) / M_LN10);
-    ncm_stats_vec_set (self->stats, 3, -0.5 * m2lnq / M_LN10);
-    ncm_stats_vec_set (self->stats, 4, -0.5 * m2lnp / M_LN10);
-    ncm_stats_vec_set (self->stats, 5, GSL_MIN (1.0, exp (-0.5 * m2lnp)));
-    ncm_stats_vec_update (self->stats);
+    /* As in the serial path, only proposals evaluated to a finite value enter the step
+     * statistics; an offboard one was never sent and holds an old value. */
+    if (!g_array_index (self->offboard, gboolean, k) && gsl_finite (m2lnL_star))
+    {
+      ncm_stats_vec_set (self->stats, 0, -0.5 * m2lnL_cur / M_LN10);
+      ncm_stats_vec_set (self->stats, 1, -0.5 * m2lnL_star / M_LN10);
+      ncm_stats_vec_set (self->stats, 2, -0.5 * (m2lnL_star - m2lnL_cur) / M_LN10);
+      ncm_stats_vec_set (self->stats, 3, -0.5 * m2lnq / M_LN10);
+      ncm_stats_vec_set (self->stats, 4, -0.5 * m2lnp / M_LN10);
+      ncm_stats_vec_set (self->stats, 5, GSL_MIN (1.0, exp (-0.5 * m2lnp)));
+      ncm_stats_vec_update (self->stats);
+    }
 
     if (ncm_vector_get (thetastar_out_k, 0) != 0.0)
     {

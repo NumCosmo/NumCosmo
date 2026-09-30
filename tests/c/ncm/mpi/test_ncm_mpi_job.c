@@ -291,6 +291,118 @@ test_ncm_mpi_job_feval_run_array_async (void)
   _test_ncm_mpi_job_run_feval_job (&ncm_mpi_job_run_array_async);
 }
 
+/*
+ * NcmMPIJobMCMC accepts a finite -2 ln L* when the deviate u is below
+ * min[1, exp((m2lnL_cur - m2lnL*) / 2 + ln q)], or always when u is negative; the
+ * functions are returned only for accepted proposals. Each proposal is checked against
+ * the rule evaluated on the master.
+ */
+static void
+_test_ncm_mpi_job_run_mcmc_job (TestNcmMPIJobRunArray run_array)
+{
+  const guint len                = 40;
+  NcmRNG *rng                    = ncm_rng_seeded_new (NULL, 20260930);
+  NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (2, 1.0e-2, 1.0, 50.0, -1.0, 1.0, rng);
+  NcmModelMVND *model            = ncm_model_mvnd_new (2);
+  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model), NULL, NULL);
+  NcmDataset *dset               = ncm_dataset_new_list (data_mvnd, NULL);
+  NcmLikelihood *lh              = ncm_likelihood_new (dset);
+  NcmObjArray *func_oa           = ncm_obj_array_new ();
+  NcmSerialize *ser              = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmVector *y                   = ncm_data_gauss_cov_peek_mean (NCM_DATA_GAUSS_COV (data_mvnd));
+  GPtrArray *input_a             = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+  GPtrArray *ret_a               = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+  guint naccepted                = 0;
+  NcmMSetFunc *func;
+  NcmFit *fit;
+  NcmMPIJobMCMC *mjmcmc;
+  gdouble m2lnL_cur;
+  guint i;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  fit  = ncm_fit_factory (NCM_FIT_TYPE_GSL_LS, NULL, lh, mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
+  func = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmMPIJob:p0_2p1", NULL));
+  ncm_obj_array_add (func_oa, G_OBJECT (func));
+  mjmcmc = ncm_mpi_job_mcmc_new (fit, func_oa);
+
+  /* The current point is the maximum of the likelihood. */
+  ncm_fit_params_set_vector (fit, y);
+  ncm_fit_m2lnL_val (fit, &m2lnL_cur);
+
+  for (i = 0; i < len; i++)
+  {
+    NcmVector *input = ncm_vector_new (2 + 3);
+
+    ncm_vector_set (input, 0, ncm_vector_get (y, 0) + 0.5 * (i % 7));
+    ncm_vector_set (input, 1, ncm_vector_get (y, 1) - 0.3 * (i % 5));
+    ncm_vector_set (input, 2, m2lnL_cur);
+    ncm_vector_set (input, 3, 0.1 * ((gint) (i % 3) - 1));
+    ncm_vector_set (input, 4, (i % 10 == 0) ? -1.0 : ncm_rng_uniform01_gen (rng));
+    g_ptr_array_add (input_a, input);
+    g_ptr_array_add (ret_a, ncm_vector_new (1 + 1 + 1));
+  }
+
+  ncm_mpi_job_init_all_slaves (NCM_MPI_JOB (mjmcmc), ser);
+  run_array (NCM_MPI_JOB (mjmcmc), input_a, ret_a);
+  ncm_mpi_job_free_all_slaves (NCM_MPI_JOB (mjmcmc));
+
+  for (i = 0; i < len; i++)
+  {
+    NcmVector *input = g_ptr_array_index (input_a, i);
+    NcmVector *ret   = g_ptr_array_index (ret_a, i);
+    NcmVector *theta = ncm_vector_get_subvector (input, 0, 2);
+    const gdouble u  = ncm_vector_get (input, 4);
+    gdouble m2lnL_star;
+    gboolean accepted;
+
+    ncm_fit_params_set_vector (fit, theta);
+    ncm_fit_m2lnL_val (fit, &m2lnL_star);
+
+    accepted = (u < 0.0) || (u < GSL_MIN (1.0, exp (0.5 * (m2lnL_cur - m2lnL_star) + ncm_vector_get (input, 3))));
+
+    ncm_assert_cmpdouble_e (ncm_vector_get (ret, 1), ==, m2lnL_star, 1.0e-14, 0.0);
+    g_assert_cmpfloat (ncm_vector_get (ret, 0), ==, accepted ? 1.0 : 0.0);
+
+    if (accepted)
+    {
+      ncm_assert_cmpdouble_e (ncm_vector_get (ret, 2), ==, ncm_vector_get (theta, 0) + 2.0 * ncm_vector_get (theta, 1), 1.0e-14, 1.0e-14);
+      naccepted++;
+    }
+
+    ncm_vector_free (theta);
+  }
+
+  /* Both outcomes occur. */
+  g_assert_cmpuint (naccepted, >, 0);
+  g_assert_cmpuint (naccepted, <, len);
+
+  g_ptr_array_unref (input_a);
+  g_ptr_array_unref (ret_a);
+  ncm_serialize_free (ser);
+  ncm_mpi_job_mcmc_free (mjmcmc);
+  ncm_mset_func_free (func);
+  ncm_obj_array_unref (func_oa);
+  ncm_fit_free (fit);
+  ncm_likelihood_free (lh);
+  ncm_dataset_free (dset);
+  ncm_mset_free (mset);
+  ncm_model_mvnd_free (model);
+  ncm_data_gauss_cov_mvnd_free (data_mvnd);
+  ncm_rng_free (rng);
+}
+
+static void
+test_ncm_mpi_job_mcmc_run_array (void)
+{
+  _test_ncm_mpi_job_run_mcmc_job (&ncm_mpi_job_run_array);
+}
+
+static void
+test_ncm_mpi_job_mcmc_run_array_async (void)
+{
+  _test_ncm_mpi_job_run_mcmc_job (&ncm_mpi_job_run_array_async);
+}
+
 static void
 test_ncm_mpi_job_fit_run_array (void)
 {
@@ -385,6 +497,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mpi/job/fit/run_array_async", &test_ncm_mpi_job_fit_run_array_async);
   g_test_add_func ("/ncm/mpi/job/feval/run_array", &test_ncm_mpi_job_feval_run_array);
   g_test_add_func ("/ncm/mpi/job/feval/run_array_async", &test_ncm_mpi_job_feval_run_array_async);
+  g_test_add_func ("/ncm/mpi/job/mcmc/run_array", &test_ncm_mpi_job_mcmc_run_array);
+  g_test_add_func ("/ncm/mpi/job/mcmc/run_array_async", &test_ncm_mpi_job_mcmc_run_array_async);
 
   g_test_run ();
 }
