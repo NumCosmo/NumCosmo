@@ -410,7 +410,14 @@ test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata)
 
   ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd);
 
-  ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), ==, log (ratio), 0.2, 1.0e-3);
+  {
+    /* The cached value comes with its error. */
+    const gdouble lnnorm_sd_first = lnnorm_sd;
+
+    lnnorm_sd = GSL_NAN;
+    ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), ==, log (ratio), 0.2, 1.0e-3);
+    g_assert_true (lnnorm_sd == lnnorm_sd_first);
+  }
 }
 
 void

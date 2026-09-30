@@ -83,6 +83,7 @@ typedef struct _NcmMSetCatalogPrivate
   NcmVector *bestfit_row;
   gdouble bestfit;
   gdouble post_lnnorm;
+  gdouble post_lnnorm_sd;
   gboolean post_lnnorm_up;
   GPtrArray *order_cat;
   gboolean order_cat_sort;
@@ -198,6 +199,7 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->bestfit_row    = NULL;
   self->bestfit        = GSL_POSINF;
   self->post_lnnorm    = 0.0;
+  self->post_lnnorm_sd = GSL_NAN;
   self->post_lnnorm_up = FALSE;
   self->order_cat      = g_ptr_array_new_with_free_func ((GDestroyNotify) & ncm_vector_free);
   self->order_cat_sort = FALSE;
@@ -4316,6 +4318,8 @@ _ncm_mset_catalog_get_post_lnnorm_hyperbox (NcmMSetCatalog *mcat, gboolean use_b
 
     ncm_vector_clear (&mean);
     ncm_matrix_clear (&cov);
+    ncm_rng_clear (&rng);
+    post_lnnorm_sd[0] = GSL_NAN;
 
     return 0.0;
   }
@@ -4337,11 +4341,17 @@ _ncm_mset_catalog_get_post_lnnorm_hyperbox (NcmMSetCatalog *mcat, gboolean use_b
 /**
  * ncm_mset_catalog_get_post_lnnorm:
  * @mcat: a #NcmMSetCatalog
- * @post_lnnorm_sd: (out): error on the estimate of the posterior normalization
+ * @post_lnnorm_sd: (out): standard deviation of the estimate
  *
- * Computes, if necessary, the posterior normalization.
+ * Estimates $\ln Z$, $Z = \int e^{-m/2}\,\mathrm{d}\theta$ over the box of the
+ * parameter bounds, $m$ the #NcmMSetCatalog:m2lnp-var column: the log evidence for a
+ * flat prior of unit density on the box (for a normalized flat prior subtract the log of
+ * the box volume). The estimate averages $g/e^{-m/2}$ over the rows, $g$ the Gaussian
+ * with the rows' mean and $0.8^2$ times their covariance, normalized to the box by a
+ * Monte Carlo estimate of its mass there; the result is kept until rows are added.
+ * Without #NcmMSetCatalog:m2lnp-var it warns and returns zero.
  *
- * Returns: the current the posterior normalization logarithm.
+ * Returns: the estimate of $\ln Z$
  */
 gdouble
 ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd)
@@ -4362,13 +4372,13 @@ ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd)
     switch (method)
     {
       case NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX:
-        self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_hyperbox (mcat, FALSE, post_lnnorm_sd);
+        self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_hyperbox (mcat, FALSE, &self->post_lnnorm_sd);
         break;
       case NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS:
-        self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_hyperbox (mcat, TRUE, post_lnnorm_sd);
+        self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_hyperbox (mcat, TRUE, &self->post_lnnorm_sd);
         break;
       case NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID:
-        self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_elipsoid (mcat, post_lnnorm_sd);
+        self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_elipsoid (mcat, &self->post_lnnorm_sd);
         break;
       default:
         g_assert_not_reached ();
@@ -4377,6 +4387,9 @@ ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd)
 
     self->post_lnnorm_up = TRUE;
   }
+
+  /* The cached value comes with its error. */
+  post_lnnorm_sd[0] = self->post_lnnorm_sd;
 
   return self->post_lnnorm;
 }
@@ -4403,14 +4416,17 @@ _ncm_mset_catalog_sort_by_m2lnp (NcmMSetCatalog *mcat)
 /**
  * ncm_mset_catalog_get_post_lnvol:
  * @mcat: a #NcmMSetCatalog
- * @level: percentage of the posterior
- * @glnvol: (out) (nullable): the log volume of the Gaussian approximation
+ * @level: fraction of the posterior, in $(0, 1)$
+ * @glnvol: (out) (nullable): log volume of the region for the Gaussian approximation
  *
- * Computes the volume of the @level region of the posterior.
- * Sets into @glnvol the log volume of the Gaussian approximation
- * of the posterior.
+ * Estimates the log volume of the highest-posterior region holding the fraction @level
+ * of the rows: $Z$ (ncm_mset_catalog_get_post_lnnorm()) times the average over the rows
+ * of $e^{m/2}$ on that region, $m$ the #NcmMSetCatalog:m2lnp-var column. @glnvol gets
+ * the log volume of the same region for a Gaussian with the rows' covariance $C$, the
+ * ellipsoid $\theta^T C^{-1}\theta \leq \chi^2_n(\text{@level})$. With fewer rows than
+ * $1/\text{@level}$ it warns and returns zero.
  *
- * Returns: the current the posterior @level volume logarithm.
+ * Returns: the estimate of the log volume
  */
 gdouble
 ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdouble *glnvol)
@@ -4430,6 +4446,9 @@ ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdou
   {
     g_warning ("ncm_mset_catalog_get_post_lnvol: too few points in the catalog `%u', or level too close to zero %2f%%.\n",
                cat_len, level * 100.0);
+
+    if (glnvol != NULL)
+      glnvol[0] = GSL_NAN;
 
     return 0.0;
   }
@@ -4455,8 +4474,6 @@ ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdou
 
     ncm_matrix_cholesky_decomp (cov, 'U');
 
-    ncm_matrix_cholesky_lndet (cov);
-
     glnvol[0] = lnVnball + 0.5 * ncm_matrix_cholesky_lndet (cov) + 0.5 * fparams_len * lnsigma_size;
 
     ncm_matrix_clear (&cov);
@@ -4468,12 +4485,13 @@ ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdou
 /**
  * ncm_mset_catalog_get_nth_m2lnL_percentile:
  * @mcat: a #NcmMSetCatalog
- * @p: percentile
- * @nth: (out) (allow-none): the @p percentile of the likelihood
+ * @p: fraction of the rows, in $(0, 1)$
+ * @nth: (out) (allow-none): number of rows with a smaller value
  *
- * Computes the @p percentile of the likelihood.
+ * Finds the value of the #NcmMSetCatalog:m2lnp-var column at sorted position
+ * $\lfloor p\,n\rfloor$: the fraction @p of the $n$ rows have a smaller value.
  *
- * Returns: the @p percentile of the likelihood.
+ * Returns: the @p quantile of $-2\ln L$
  */
 gdouble
 ncm_mset_catalog_get_nth_m2lnL_percentile (NcmMSetCatalog *mcat, const gdouble p, guint *nth)
@@ -4508,7 +4526,7 @@ ncm_mset_catalog_get_nth_m2lnL_percentile (NcmMSetCatalog *mcat, const gdouble p
  * ncm_mset_catalog_get_bestfit_m2lnL:
  * @mcat: a #NcmMSetCatalog
  *
- * Returns: the current bestfit $-2\ln(L)$ value.
+ * Returns: the smallest value of the #NcmMSetCatalog:m2lnp-var column so far
  */
 gdouble
 ncm_mset_catalog_get_bestfit_m2lnL (NcmMSetCatalog *mcat)
@@ -4522,7 +4540,8 @@ ncm_mset_catalog_get_bestfit_m2lnL (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_get_bestfit_row:
  * @mcat: a #NcmMSetCatalog
  *
- * Returns: (transfer full): the current bestfit parameters.
+ * Returns: (transfer full) (nullable): a copy of the row with the smallest
+ *   #NcmMSetCatalog:m2lnp-var, or %NULL for an empty catalog
  */
 NcmVector *
 ncm_mset_catalog_get_bestfit_row (NcmMSetCatalog *mcat)
@@ -4538,9 +4557,10 @@ ncm_mset_catalog_get_bestfit_row (NcmMSetCatalog *mcat)
 /**
  * ncm_mset_catalog_get_mean:
  * @mcat: a #NcmMSetCatalog
- * @mean: (inout) (allow-none) (transfer full): a #NcmVector
+ * @mean: (inout) (allow-none) (transfer full): a #NcmVector, allocated when *@mean is %NULL
  *
- * Gets the current mean vector.
+ * Sets *@mean to the mean of the free parameters over the rows (weighted for a weighted
+ * catalog).
  *
  */
 void
@@ -4557,9 +4577,9 @@ ncm_mset_catalog_get_mean (NcmMSetCatalog *mcat, NcmVector **mean)
 /**
  * ncm_mset_catalog_get_covar:
  * @mcat: a #NcmMSetCatalog
- * @cov: (inout) (allow-none) (transfer full): a #NcmMatrix
+ * @cov: (inout) (allow-none) (transfer full): a #NcmMatrix, allocated when *@cov is %NULL
  *
- * Gets the current covariance matrix.
+ * Sets *@cov to the covariance of the free parameters over the rows.
  *
  */
 void
@@ -4578,7 +4598,8 @@ ncm_mset_catalog_get_covar (NcmMSetCatalog *mcat, NcmMatrix **cov)
  * @mcat: a #NcmMSetCatalog
  * @cov: (inout) (allow-none) (transfer full): a #NcmMatrix
  *
- * Gets the current full (including additional values) covariance matrix.
+ * Sets *@cov to the covariance of all the columns (additional values and free
+ * parameters) over the rows.
  *
  */
 void
@@ -4596,7 +4617,7 @@ ncm_mset_catalog_get_full_covar (NcmMSetCatalog *mcat, NcmMatrix **cov)
  * ncm_mset_catalog_log_full_covar:
  * @mcat: a #NcmMSetCatalog
  *
- * Logs the current full (including additional values) covariance matrix.
+ * Logs the covariance of all the columns (additional values and free parameters).
  *
  */
 void
