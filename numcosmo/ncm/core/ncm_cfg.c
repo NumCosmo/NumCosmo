@@ -1092,7 +1092,6 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
   NcmSerialize *ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
   NcmMPIJob *mpi_job       = NULL;
   gboolean init            = FALSE;
-  GArray *input_array      = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *work_ret_request = g_array_new (FALSE, FALSE, sizeof (MPI_Request));
   GArray *work_ret_bufs    = g_array_new (FALSE, TRUE, sizeof (struct buf_desc));
   gpointer input           = NULL;
@@ -1269,7 +1268,6 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
 
   NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Freeing arrays!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
 
-  g_array_unref (input_array);
   g_array_unref (work_ret_request);
   g_array_unref (work_ret_bufs);
 

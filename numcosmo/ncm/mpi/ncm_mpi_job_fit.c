@@ -270,7 +270,7 @@ _ncm_mpi_job_fit_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
   if (self->func_oa == NULL)
   {
     len[0]  = 1 + self->fparam_len;
-    size[0] = sizeof (gdouble);
+    size[0] = sizeof (gdouble) * len[0];
 
     return MPI_DOUBLE;
   }

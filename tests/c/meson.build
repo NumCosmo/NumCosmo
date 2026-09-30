@@ -841,6 +841,10 @@ if mpi_c_dep.found()
                 ],
                 'timeout': 0,
             },
+            {
+                'name': 'ncm_mpi_job',
+                'sources': ['ncm/mpi/test_ncm_mpi_job.c'],
+            },
         ]
         foreach c_test_mpi : c_tests_mpi
             executable_test = executable(
