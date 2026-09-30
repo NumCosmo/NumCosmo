@@ -77,6 +77,12 @@ TAU_FLAG_MEANINGS = (
 
 TAU_FLAG_COLOR = "bold bright_yellow"
 
+KEFF_MEANINGS = (
+    ("K_eff", "independent walkers per iteration: Var(rows) / Var(ensemble mean)"),
+    ("", "N when the N walkers are independent, 1 when they move together,"),
+    ("", "above N when walkers are held in place at different positions"),
+)
+
 
 def _tau_flag_legend() -> Table:
     """The conditions the ! column reports, one row each."""
@@ -86,6 +92,18 @@ def _tau_flag_legend() -> Table:
 
     for code, meaning in TAU_FLAG_MEANINGS:
         legend.add_row(code, meaning)
+
+    return legend
+
+
+def _keff_legend() -> Table:
+    """What the K_eff column measures."""
+    legend = Table(title="K_eff column", expand=False, box=None)
+    legend.add_column(justify="left", style="bold")
+    legend.add_column(justify="left")
+
+    for name, meaning in KEFF_MEANINGS:
+        legend.add_row(name, meaning)
 
     return legend
 
@@ -432,6 +450,7 @@ class AnalyzeMCMC(LoadCatalog):
         main_table.add_row(burnin_diag)
         main_table.add_row(param_diag)
         print_tau_legend = self.nitems >= 10
+        print_keff_legend = self.nchains > 1 and self.nitems >= 10
 
         covariance_matrix = Table(title="Covariance Matrix", expand=False)
         covariance_matrix.add_column("Parameter", justify="right", style="bold")
@@ -498,6 +517,9 @@ class AnalyzeMCMC(LoadCatalog):
 
         if print_tau_legend:
             main_table.add_row(_tau_flag_legend())
+
+        if print_keff_legend:
+            main_table.add_row(_keff_legend())
 
         self.console.print(main_table)
 

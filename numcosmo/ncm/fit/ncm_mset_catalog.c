@@ -26,23 +26,24 @@
 /**
  * NcmMSetCatalog:
  *
- * Ordered catalog of different NcmMSet parameter values.
+ * Ordered table of free-parameter values of a #NcmMSet, optionally kept in sync with a
+ * FITS file.
  *
- * This class defines a catalog type object. This object can automatically synchronize
- * with a fits file (thought cfitsio).
+ * Each row holds #NcmMSetCatalog:nadd-vals additional values ($-2\ln L$ and derived
+ * functions, named by #NcmMSetCatalog:nadd-val-names) followed by the free parameters,
+ * and a weight column when #NcmMSetCatalog:weighted is set. With #NcmMSetCatalog:nchains
+ * chains the rows are interleaved, the row with id $i$ belonging to chain
+ * $i \bmod n_\mathrm{chains}$ (the walkers of an ensemble sampler), and the catalog
+ * keeps statistics of every chain, of the chain means and of each ensemble. Row ids start
+ * at the first id (ncm_mset_catalog_get_first_id()); #NcmMSetCatalog:markovian-id marks
+ * where the Markov chain starts and #NcmMSetCatalog:burnin drops leading rows when
+ * reading a file.
  *
- * For Mote Carlo studies, like resampling from a fiducial model or bootstrap, it is
- * used to save the best-fitting values of each realization. Since the order of the
- * resampling is important, due to the fact that we use the same pseudo-random number
- * generator for all resampling calls, this object also guarantees the order of the
- * samples added.
- *
- * For Markov Chain Monte Carlo (MCMC) this object saves the value of the same likelihood in
- * different points of the parameter space.
- *
- * For both applications this object keeps an interactive mean and variance of the
- * parameters added, this allows a sample by sample analyses of the convergence.
- * Some MCMC convergence diagnostic functions are also implemented here.
+ * #NcmFitMC stores the best fit of each realization, in the order of the realizations,
+ * which reproduces a resampling from a seed; #NcmFitMCMC and #NcmFitESMCMC store their
+ * chains. The running means and variances allow convergence to be followed row by row,
+ * and the catalog provides autocorrelation times, effective sample sizes and other
+ * convergence diagnostics.
  *
  */
 
@@ -712,11 +713,10 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
    * Id of the first row produced by a Markovian step after the last move that did not
    * satisfy detailed balance (the initial ensemble, an exploration phase of the walker).
    * Rows from this id on form a valid Markov chain whose initial state is the ensemble of
-   * the #NcmMSetCatalog:nchains rows before it. Same numbering as #NcmMSetCatalog:first-id
-   * and the current id; the effective value is never below the first id, and a file
-   * without the key reads as its first id (every row Markovian, the behaviour before the
-   * key existed). When a file is read with a burn-in the stored value is shifted by it,
-   * like every other row id.
+   * the #NcmMSetCatalog:nchains rows before it. Same numbering as the first id
+   * (ncm_mset_catalog_get_first_id()) and the current id; the effective value is never below the first id, and a file
+   * without the key reads as its first id (every row Markovian). When a file is read with
+   * a burn-in the stored value is shifted by it, like every other row id.
    *
    */
   g_object_class_install_property (object_class,
@@ -785,8 +785,8 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
    * NcmMSetCatalog:sampler-options:
    *
    * The sampler's tunable settings, as a colon separated list of `name=value' pairs. Kept
-   * like #NcmMSetCatalog:sampler -- the SAMPOPT header key and a HISTORY card, never
-   * compared -- and separate from it so that the structure and its tuning can be read
+   * like #NcmMSetCatalog:sampler (the SAMPOPT header key and a HISTORY card, never
+   * compared) and separate from it, so that the structure and its tuning can be read
    * apart: two runs of the same sampler differ here and nowhere else.
    *
    */
@@ -832,15 +832,13 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
  * ncm_mset_catalog_new:
  * @mset: a #NcmMSet
  * @nadd_vals: number of additional values
- * @nchains: number of different chains in the catalog (>=1)
- * @weighted: set to TRUE whenever the catalog is weighted
- * @...: additional values name/symbol pairs
+ * @nchains: number of chains, at least one
+ * @weighted: whether the rows are weighted
+ * @...: a name and a symbol for each additional value
  *
- * Creates a new #NcmMSetCatalog based on the #NcmFit object @fit. The catalog assumes that
- * the @fit object will remain with the same set of free parameters during its whole lifetime.
- *
- * If @nchains is larger than one, the catalog will keep track of the statistics of each chain
- * separately.
+ * Creates a #NcmMSetCatalog for the free parameters of @mset, which must not change
+ * while the catalog is in use. With more than one chain the statistics of each chain
+ * are kept separately.
  *
  * Returns: (transfer full): a new #NcmMSetCatalog
  */
@@ -892,16 +890,13 @@ ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean we
  * ncm_mset_catalog_new_array:
  * @mset: a #NcmMSet
  * @nadd_vals: number of additional values
- * @nchains: number of different chains in the catalog (>=1)
- * @weighted: set to TRUE whenever the catalog is weighted
- * @names: (array zero-terminated=1): additional values name NULL-terminated array
- * @symbols: (array zero-terminated=1): additional values symbol NULL-terminated array
+ * @nchains: number of chains, at least one
+ * @weighted: whether the rows are weighted
+ * @names: (array zero-terminated=1): names of the additional values
+ * @symbols: (array zero-terminated=1): symbols of the additional values
  *
- * Creates a new #NcmMSetCatalog based on the #NcmFit object @fit. The catalog assumes that
- * the @fit object will remain with the same set of free parameters during its whole lifetime.
- *
- * If @nchains is larger than one, the catalog will keep track of the statistics of each chain
- * separately.
+ * Creates a #NcmMSetCatalog as ncm_mset_catalog_new(), with the names and symbols as
+ * arrays.
  *
  * Returns: (transfer full): a new #NcmMSetCatalog
  */
@@ -922,12 +917,12 @@ ncm_mset_catalog_new_array (NcmMSet *mset, guint nadd_vals, guint nchains, gbool
 
 /**
  * ncm_mset_catalog_new_from_file:
- * @filename: filename of the catalog fits
- * @burnin: Burn-in size
+ * @filename: catalog FITS file name
+ * @burnin: number of leading rows to drop
  *
- * Creates a new #NcmMSetCatalog from the catalog in the file @file.
- * It will use also the mset file (same name but with .mset extension).
- *
+ * Creates a #NcmMSetCatalog from the catalog in @filename, synchronized with it. The
+ * model set is read from the file, or for older files from the file with the same base
+ * name and the .mset extension.
  *
  * Returns: (transfer full): a new #NcmMSetCatalog
  */
@@ -944,13 +939,11 @@ ncm_mset_catalog_new_from_file (const gchar *filename, glong burnin)
 
 /**
  * ncm_mset_catalog_new_from_file_ro:
- * @filename: filename of the catalog fits
- * @burnin: Burn-in size
+ * @filename: catalog FITS file name
+ * @burnin: number of leading rows to drop
  *
- * Creates a new #NcmMSetCatalog from the catalog in the file @file.
- * The @file is opened in a read-only fashion.
- * It will use also the mset file (same name but with .mset extension).
- *
+ * Creates a #NcmMSetCatalog as ncm_mset_catalog_new_from_file(), opening @filename
+ * read-only.
  *
  * Returns: (transfer full): a new #NcmMSetCatalog
  */
@@ -973,12 +966,9 @@ ncm_mset_catalog_new_from_file_ro (const gchar *filename, glong burnin)
  * @nchains: (out): number of chains (walkers) in the catalog
  * @first_id: (out): id of the first element in the catalog
  *
- * Peeks basic bookkeeping information from @filename without fully loading
- * it: no model-set deserialization and no per-chain stats allocation
- * happen, only a few FITS header keys are read. Useful to translate a
- * burnin/tail request from iterations to rows -- see
- * ncm_mset_catalog_set_burnin() -- before paying the cost of actually
- * opening the catalog with ncm_mset_catalog_new_from_file_ro().
+ * Reads the number of rows, of chains and the first id of @filename from its header,
+ * without loading the catalog, e.g. to convert a burn-in from iterations to rows (see
+ * ncm_mset_catalog_set_burnin()) before ncm_mset_catalog_new_from_file_ro().
  *
  */
 void
@@ -1086,7 +1076,7 @@ ncm_mset_catalog_ref (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_free:
  * @mcat: a #NcmMSetCatalog
  *
- * Decreases the reference count of @mcat atomically.
+ * Saves @mcat to its file (ncm_mset_catalog_sync()) and decreases its reference count.
  *
  */
 void
@@ -1100,8 +1090,8 @@ ncm_mset_catalog_free (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_clear:
  * @mcat: a #NcmMSetCatalog
  *
- * Decrease the reference count of *@mcat atomically and sets the pointer *@mcat to
- * null.
+ * Saves *@mcat to its file, when not %NULL, decreases its reference count and sets it to
+ * %NULL.
  *
  */
 void
@@ -2089,7 +2079,7 @@ ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename)
   if (!self->constructed)
   {
     if (self->file != NULL)
-      g_error ("ncm_mset_catalog_set_file: Unknown error.");
+      g_error ("ncm_mset_catalog_set_file: file already set before construction.");
 
     self->file = g_strdup (filename);
   }
@@ -2145,9 +2135,9 @@ ncm_mset_catalog_set_sync_mode (NcmMSetCatalog *mcat, NcmMSetCatalogSync smode)
 /**
  * ncm_mset_catalog_set_sync_interval:
  * @mcat: a #NcmMSetCatalog
- * @interval: Minimum time interval between syncs
+ * @interval: minimum time between syncs, in seconds
  *
- * Sets the minimum time interval between syncs.
+ * Sets the minimum time between the syncs of ncm_mset_catalog_timed_sync().
  *
  */
 void
@@ -2161,9 +2151,10 @@ ncm_mset_catalog_set_sync_interval (NcmMSetCatalog *mcat, gdouble interval)
 /**
  * ncm_mset_catalog_set_first_id:
  * @mcat: a #NcmMSetCatalog
- * @first_id: the id of the first item in the sample
+ * @first_id: id of the first row
  *
- * Sets the first id of the catalog, mainly used to inform in which realization the catalog starts.
+ * Sets the id of the first row, e.g. the realization a #NcmFitMC catalog starts at. On a
+ * non-empty catalog it aborts.
  *
  */
 void
@@ -2200,9 +2191,9 @@ ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id)
 /**
  * ncm_mset_catalog_set_run_type:
  * @mcat: a #NcmMSetCatalog
- * @rtype_str: the run type string
+ * @rtype_str: description of the run
  *
- * Sets the run type string.
+ * Sets #NcmMSetCatalog:run-type-string, recorded in the file.
  *
  */
 void
@@ -2242,20 +2233,9 @@ ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str)
  * @mcat: a #NcmMSetCatalog
  * @rng: a #NcmRNG
  *
- * Sets the random number generator.
- *
- * A non-empty catalog already carries its own persisted RNG state to
- * continue from (restored automatically on file load, see
- * ncm_mset_catalog_peek_rng()) -- callers resuming a run must not call this
- * at all and let that state take over. Calling it anyway (e.g. reusing an
- * explicit seed on a resumed run) would silently discard the persisted
- * state and restart the stream from scratch, so every "new" row generated
- * from the replayed prefix of the stream would exactly duplicate a row
- * already in the catalog -- a silent data-corruption hazard, not merely a
- * cosmetic issue, so this aborts instead of warning (see, e.g., a resumed
- * NcmFitMC run bit-for-bit duplicating its own first N rows into rows
- * N+1..2N).
- *
+ * Makes @rng the random number generator of @mcat. On a non-empty catalog it aborts:
+ * the catalog continues from the generator state saved with its rows
+ * (ncm_mset_catalog_peek_rng()), and a new generator would repeat rows already in it.
  */
 void
 ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
@@ -2263,11 +2243,12 @@ ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
   if (!ncm_mset_catalog_is_empty (mcat))
-    g_error ("ncm_mset_catalog_set_rng: refusing to set RNG in a non-empty catalog (first id: %d, current id: %d) -- "
-             "this would discard the persisted RNG state and replay already-computed rows. "
-             "Do not pass an explicit RNG/seed when resuming; the catalog's own persisted state is used automatically.",
+    g_error ("ncm_mset_catalog_set_rng: refusing to set RNG in a non-empty catalog (first id: %d, current id: %d): "
+             "this would discard the saved RNG state and repeat rows already computed. "
+             "Do not pass an explicit RNG/seed when resuming; the catalog's saved state is used.",
              self->first_id, self->cur_id);
 
+  ncm_rng_clear (&self->rng);
   self->rng = ncm_rng_ref (rng);
 
   g_clear_pointer (&self->rng_inis, g_free);
@@ -2381,9 +2362,10 @@ static void _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x);
 /**
  * ncm_mset_catalog_sync:
  * @mcat: a #NcmMSetCatalog
- * @check: whether to check consistence between file and memory data
+ * @check: whether to check that the file and the memory agree
  *
- * Synchronize memory and data file. If no file was defined, it simply returns.
+ * Writes the rows not yet in the file, and the generator state, to the file of @mcat;
+ * without a file it does nothing.
  *
  */
 void
@@ -2584,11 +2566,10 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
 /**
  * ncm_mset_catalog_timed_sync:
  * @mcat: a #NcmMSetCatalog
- * @check: whether to check consistence between file and memory data
+ * @check: whether to check that the file and the memory agree
  *
- * Synchronize memory and data file if enough time was passed after
- * the last sync, see ncm_mset_catalog_set_sync_interval(). If no
- * file was defined, it simply returns.
+ * Calls ncm_mset_catalog_sync() when the time since the last sync exceeds the interval
+ * of ncm_mset_catalog_set_sync_interval().
  *
  */
 void
@@ -2607,7 +2588,8 @@ ncm_mset_catalog_timed_sync (NcmMSetCatalog *mcat, gboolean check)
  * ncm_mset_catalog_reset_stats:
  * @mcat: a #NcmMSetCatalog
  *
- * Reset catalog statistical quantities.
+ * Resets the statistics of @mcat (means, variances, chain and ensemble statistics,
+ * autocorrelation, best fit, per-ensemble arrays) and keeps its rows.
  *
  */
 void
@@ -2632,6 +2614,8 @@ ncm_mset_catalog_reset_stats (NcmMSetCatalog *mcat)
     ncm_stats_vec_reset (self->mean_pstats, FALSE);
     ncm_stats_vec_reset (self->e_stats, FALSE);
     ncm_stats_vec_reset (self->e_mean_stats, FALSE);
+    g_ptr_array_set_size (self->e_var_array, 0);
+    g_array_set_size (self->accept_ratio, 0);
     self->naccepted = 0;
   }
 
@@ -2652,8 +2636,8 @@ ncm_mset_catalog_reset_stats (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_reset:
  * @mcat: a #NcmMSetCatalog
  *
- * Clean all catalog data from memory and file. Otherwise it does
- * not change any object's parameter.
+ * Erases the rows of @mcat from memory and from its file, with all the statistics;
+ * the configuration (model set, chains, file, random number generator) is kept.
  *
  */
 void
@@ -2680,6 +2664,8 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
     ncm_stats_vec_reset (self->mean_pstats, TRUE);
     ncm_stats_vec_reset (self->e_stats, TRUE);
     ncm_stats_vec_reset (self->e_mean_stats, TRUE);
+    g_ptr_array_set_size (self->e_var_array, 0);
+    g_array_set_size (self->accept_ratio, 0);
     self->naccepted = 0;
   }
 
@@ -2708,8 +2694,7 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_erase_data:
  * @mcat: a #NcmMSetCatalog
  *
- * Erases all data from the fits file associated with the
- * catalog.
+ * Erases the rows of the file of @mcat; the rows in memory are kept.
  *
  */
 void
@@ -3202,7 +3187,7 @@ ncm_mset_catalog_set_markovian_id (NcmMSetCatalog *mcat, gint markovian_id)
  * ncm_mset_catalog_get_markovian_id:
  * @mcat: a #NcmMSetCatalog
  *
- * Returns: #NcmMSetCatalog:markovian-id, never below #NcmMSetCatalog:first-id.
+ * Returns: #NcmMSetCatalog:markovian-id, never below the first id.
  */
 gint
 ncm_mset_catalog_get_markovian_id (NcmMSetCatalog *mcat)

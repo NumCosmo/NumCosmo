@@ -61,6 +61,8 @@ void test_ncm_mset_catalog_trim_oob_markovian (void);
 void test_ncm_mset_catalog_weighted_tau_traps (void);
 void test_ncm_mset_catalog_weighted_tau_subprocess (void);
 void test_ncm_mset_catalog_accept_ratio_array (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_reset (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_set_rng_twice (void);
 void test_ncm_mset_catalog_calc_param_ensemble_evol (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_calc_add_param_ensemble_evol (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_calc_add_param_ensemble_evol_short (TestNcmMSetCatalog *test, gconstpointer pdata);
@@ -115,6 +117,7 @@ TestNcmMSetCatalogTests tests[] =
   {"autocorrelation", test_ncm_mset_catalog_autocorrelation},
   {"tau_diagnostics", test_ncm_mset_catalog_tau_diagnostics},
   {"accept_ratio_array", test_ncm_mset_catalog_accept_ratio_array},
+  {"reset", test_ncm_mset_catalog_reset},
   {"calc_param_ensemble_evol", test_ncm_mset_catalog_calc_param_ensemble_evol},
   {"calc_add_param_ensemble_evol", test_ncm_mset_catalog_calc_add_param_ensemble_evol},
   {"calc_add_param_ensemble_evol/short", test_ncm_mset_catalog_calc_add_param_ensemble_evol_short},
@@ -169,6 +172,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/catalog/tau/frozen_keff", &test_ncm_mset_catalog_tau_frozen_walkers);
   g_test_add_func ("/ncm/mset/catalog/trim_oob/markovian", &test_ncm_mset_catalog_trim_oob_markovian);
 
+  g_test_add_func ("/ncm/mset/catalog/set_rng/twice", &test_ncm_mset_catalog_set_rng_twice);
   g_test_add_func ("/ncm/mset/catalog/file/peek_info", &test_ncm_mset_catalog_file_peek_info);
   g_test_add_func ("/ncm/mset/catalog/file/multichain", &test_ncm_mset_catalog_file_multichain);
   g_test_add_func ("/ncm/mset/catalog/file/burnin_exceeds/traps", &test_ncm_mset_catalog_file_burnin_exceeds_traps);
@@ -2108,5 +2112,71 @@ test_ncm_mset_catalog_trim_oob_markovian (void)
   g_rmdir (tmp_dir);
   g_free (out_file);
   g_free (tmp_dir);
+}
+
+/* Adds @nens ensembles of rows drawn uniformly in [0, 1). */
+static void
+_test_ncm_mset_catalog_add_ensembles (TestNcmMSetCatalog *test, guint nens)
+{
+  const guint ncols = ncm_mset_catalog_ncols (test->mcat);
+  NcmVector *row    = ncm_vector_new (ncols);
+  guint i, j;
+
+  for (i = 0; i < nens * ncm_mset_catalog_nchains (test->mcat); i++)
+  {
+    for (j = 0; j < ncols; j++)
+      ncm_vector_set (row, j, ncm_rng_uniform01_gen (test->rng));
+
+    ncm_mset_catalog_add_from_vector (test->mcat, row);
+  }
+
+  ncm_vector_free (row);
+}
+
+void
+test_ncm_mset_catalog_reset (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  /* A reset empties the per-ensemble arrays too: after it, two ensembles give two
+   * ensemble variances and one acceptance ratio. */
+  _test_ncm_mset_catalog_add_ensembles (test, 5);
+  ncm_mset_catalog_reset (test->mcat);
+  g_assert_cmpuint (ncm_mset_catalog_len (test->mcat), ==, 0);
+
+  if (ncm_mset_catalog_nchains (test->mcat) > 1)
+  {
+    g_assert_null (ncm_mset_catalog_peek_current_e_var (test->mcat));
+    g_assert_cmpuint (ncm_mset_catalog_peek_accept_ratio_array (test->mcat)->len, ==, 0);
+
+    _test_ncm_mset_catalog_add_ensembles (test, 2);
+
+    g_assert_nonnull (ncm_mset_catalog_peek_e_var_t (test->mcat, 1));
+    g_assert_true (ncm_mset_catalog_peek_e_var_t (test->mcat, 1) == ncm_mset_catalog_peek_current_e_var (test->mcat));
+    g_assert_cmpuint (ncm_mset_catalog_peek_accept_ratio_array (test->mcat)->len, ==, 1);
+  }
+}
+
+void
+test_ncm_mset_catalog_set_rng_twice (void)
+{
+  /* On an empty catalog the generator may be replaced; the previous one is released. */
+  NcmModelMVND *model = ncm_model_mvnd_new (2);
+  NcmMSet *mset       = ncm_mset_new (NCM_MODEL (model), NULL, NULL);
+  NcmRNG *rng1        = ncm_rng_seeded_new (NULL, 1);
+  NcmRNG *rng2        = ncm_rng_seeded_new (NULL, 2);
+  NcmMSetCatalog *mcat;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+  mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE, "m2lnL", "-2\\ln(L)", NULL);
+
+  ncm_mset_catalog_set_rng (mcat, rng1);
+  ncm_mset_catalog_set_rng (mcat, rng2);
+  g_assert_true (ncm_mset_catalog_peek_rng (mcat) == rng2);
+
+  ncm_mset_catalog_free (mcat);
+  ncm_rng_free (rng1);
+  ncm_rng_free (rng2);
+  ncm_mset_free (mset);
+  ncm_model_mvnd_free (model);
 }
 
