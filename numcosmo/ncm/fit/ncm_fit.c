@@ -2509,8 +2509,6 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
   {
     const gdouble old_h_ini = ncm_diff_get_ini_h (self->diff);
 
-    ncm_fit_reset (fit);
-
     if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
     {
       self->end_update (fit, "");
@@ -2639,6 +2637,8 @@ _ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher, gboolean decomp)
   ncm_fit_state_set_has_covar (self->fstate, TRUE);
 }
 
+static void _ncm_fit_reset_on_new_dims (NcmFit *fit);
+
 /**
  * ncm_fit_obs_fisher:
  * @fit: a #NcmFit
@@ -2650,23 +2650,42 @@ _ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher, gboolean decomp)
  * #NcmDiff object.
  *
  * It sets both the covariance matrix and the Hessian matrix in the #NcmFitState object
- * associated to the @fit object.
+ * associated to the @fit object, and keeps the best fit there unless the numbers of
+ * residuals or free parameters changed since the last run.
  */
 void
 ncm_fit_obs_fisher (NcmFit *fit)
 {
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
-  NcmMatrix *hessian         = ncm_fit_state_peek_hessian (self->fstate);
+  NcmMatrix *hessian;
 
   if (ncm_mset_fparam_len (self->mset) == 0)
     g_error ("ncm_fit_obs_fisher: mset object has 0 free parameters");
 
-  ncm_fit_reset (fit);
+  _ncm_fit_reset_on_new_dims (fit);
+  hessian = ncm_fit_state_peek_hessian (self->fstate);
 
   _ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
   ncm_matrix_scale (hessian, 0.5);
 
   _ncm_fit_fisher_to_covar (fit, hessian, FALSE);
+}
+
+/* Resets @fit only when its dimensions changed since the last reset, so a Fisher
+ * matrix computed after a run keeps the best fit in the #NcmFitState. */
+static void
+_ncm_fit_reset_on_new_dims (NcmFit *fit)
+{
+  NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
+  guint data_len, fparam_len;
+  gint dof;
+
+  _ncm_fit_state_dims (fit, &data_len, &fparam_len, &dof);
+
+  if ((data_len != ncm_fit_state_get_data_len (self->fstate)) ||
+      (fparam_len != ncm_fit_state_get_fparam_len (self->fstate)) ||
+      (dof != ncm_fit_state_get_dof (self->fstate)))
+    ncm_fit_reset (fit);
 }
 
 /**

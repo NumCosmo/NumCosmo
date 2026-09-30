@@ -417,6 +417,10 @@ math_tests = [
         'sources': ['ncm/fit/test_ncm_fit_covar.c'],
     },
     {
+        'name': 'ncm_lh_ratio1d',
+        'sources': ['ncm/fit/test_ncm_lh_ratio1d.c'],
+    },
+    {
         'name': 'ncm_likelihood',
         'sources': ['ncm/fit/test_ncm_likelihood.c'],
     },

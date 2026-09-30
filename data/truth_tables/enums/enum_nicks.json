@@ -279,14 +279,6 @@
     "nick": "p-v",
     "type": "Ncm.IntegralNDMethod"
   },
-  "NCM_LH_RATIO1D_ROOT_BRACKET": {
-    "nick": "bracket",
-    "type": "Ncm.LHRatio1dRoot"
-  },
-  "NCM_LH_RATIO1D_ROOT_NUMDIFF": {
-    "nick": "numdiff",
-    "type": "Ncm.LHRatio1dRoot"
-  },
   "NCM_LH_RATIO2D_ROOT_BRACKET": {
     "nick": "bracket",
     "type": "Ncm.LHRatio2dRoot"
