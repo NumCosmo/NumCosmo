@@ -238,6 +238,13 @@ math_tests = [
         'sources': ['ncm/spline/test_ncm_ode_spline.c'],
     },
     {
+        'name': 'ncm_csq1d',
+        'sources': [
+            'ncm/dynamics/test_ncm_csq1d.c',
+            'ncm/dynamics/test_ncm_csq1d_bessel.c',
+        ],
+    },
+    {
         'name': 'ncm_integrate',
         'sources': ['ncm/integration/test_ncm_integrate.c'],
     },

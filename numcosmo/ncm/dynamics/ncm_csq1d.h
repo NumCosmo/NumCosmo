@@ -58,8 +58,8 @@ struct _NcmCSQ1DClass
   gdouble (*eval_F2)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   void (*prepare) (NcmCSQ1D *csq1d, NcmModel *model);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[2];
+  /* Padding to allow adding up to 6 more virtual functions without breaking ABI. */
+  gpointer padding[6];
 };
 
 /**

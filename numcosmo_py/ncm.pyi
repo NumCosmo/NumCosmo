@@ -1001,7 +1001,7 @@ class CSQ1D(GObject.Object):
       reltol -> gdouble: reltol
         Relative tolerance
       abstol -> gdouble: abstol
-        Absolute tolerance tolerance
+        Absolute tolerance
       ti -> gdouble: ti
         The initial time t_i
       tf -> gdouble: tf

@@ -233,7 +233,7 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
   NCM_CVODE_CHECK ((gpointer) self->LS_Um, "SUNLinSol_Dense", 0, );
 
   self->LS_Prop = SUNLinSol_Dense (self->y_Prop, self->A_Prop, self->sunctx);
-  NCM_CVODE_CHECK ((gpointer) self->LS_Um, "SUNLinSol_Dense", 0, );
+  NCM_CVODE_CHECK ((gpointer) self->LS_Prop, "SUNLinSol_Dense", 0, );
 
   self->alpha_s  = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   self->dgamma_s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
@@ -522,7 +522,7 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
                                    PROP_ABSTOL,
                                    g_param_spec_double ("abstol",
                                                         NULL,
-                                                        "Absolute tolerance tolerance",
+                                                        "Absolute tolerance",
                                                         0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
@@ -615,7 +615,7 @@ _ncm_csq1d_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 static gdouble
 _ncm_csq1d_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  g_error ("_ncm_csq1d_eval_xi: not implemented.");
+  g_error ("method eval_xi not implemented by %s.", G_OBJECT_TYPE_NAME (csq1d));
 
   return 0.0;
 }
@@ -623,7 +623,7 @@ _ncm_csq1d_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 static gdouble
 _ncm_csq1d_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  g_error ("_ncm_csq1d_eval_nu: not implemented.");
+  g_error ("method eval_nu not implemented by %s.", G_OBJECT_TYPE_NAME (csq1d));
 
   return 0.0;
 }
@@ -631,7 +631,7 @@ _ncm_csq1d_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 static gdouble
 _ncm_csq1d_eval_int_1_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  g_error ("_ncm_csq1d_eval_int_1_m: not implemented.");
+  g_error ("method eval_int_1_m not implemented by %s.", G_OBJECT_TYPE_NAME (csq1d));
 
   return 0.0;
 }
@@ -639,7 +639,7 @@ _ncm_csq1d_eval_int_1_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 static gdouble
 _ncm_csq1d_eval_int_mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  g_error ("_ncm_csq1d_eval_int_mnu2: not implemented.");
+  g_error ("method eval_int_mnu2 not implemented by %s.", G_OBJECT_TYPE_NAME (csq1d));
 
   return 0.0;
 }
@@ -647,7 +647,7 @@ _ncm_csq1d_eval_int_mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 static gdouble
 _ncm_csq1d_eval_int_qmnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  g_error ("_ncm_csq1d_eval_int_qmnu2: not implemented.");
+  g_error ("method eval_int_qmnu2 not implemented by %s.", G_OBJECT_TYPE_NAME (csq1d));
 
   return 0.0;
 }
@@ -655,7 +655,7 @@ _ncm_csq1d_eval_int_qmnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 static gdouble
 _ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  g_error ("_ncm_csq1d_eval_int_q2mnu2: not implemented.");
+  g_error ("method eval_int_q2mnu2 not implemented by %s.", G_OBJECT_TYPE_NAME (csq1d));
 
   return 0.0;
 }
@@ -663,7 +663,7 @@ _ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 static gdouble
 _ncm_csq1d_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  g_error ("_ncm_csq1d_eval_F1: not implemented.");
+  g_error ("method eval_F1 not implemented by %s.", G_OBJECT_TYPE_NAME (csq1d));
 
   return 0.0;
 }
@@ -1294,7 +1294,7 @@ ncm_csq1d_set_save_evol (NcmCSQ1D *csq1d, gboolean save_evol)
 /**
  * ncm_csq1d_set_init_cond:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @evol_state: a #NcmCSQ1DEvolState
  * @initial_state: a #NcmCSQ1DState
  *
@@ -1337,7 +1337,7 @@ ncm_csq1d_set_init_cond (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DEvolState evo
 /**
  * ncm_csq1d_set_init_cond_adiab:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @ti: initial time $t_i$
  *
  * Sets the values of the initial conditions at $t_i$.
@@ -1841,71 +1841,91 @@ _ncm_csq1d_J_Um (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer j
 /**
  * ncm_csq1d_eval_xi: (virtual eval_xi)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
- * Returns: $\xi$
+ * $\xi = \ln(m\nu)$ at @t. Subclasses must implement it.
+ *
+ * Returns: $\xi$.
  */
 /**
  * ncm_csq1d_eval_nu: (virtual eval_nu)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
- * Returns: $\nu$
+ * The frequency $\nu$ at @t. Subclasses must implement it.
+ *
+ * Returns: $\nu$.
  */
 /**
  * ncm_csq1d_eval_nu2: (virtual eval_nu2)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
- * Returns: $\nu^2$
+ * The squared frequency $\nu^2$ at @t. The default squares ncm_csq1d_eval_nu().
+ *
+ * Returns: $\nu^2$.
  */
 /**
  * ncm_csq1d_eval_m: (virtual eval_m)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
- * Returns: $m$
+ * The mass $m$ at @t. The default is $e^\xi/\nu$.
+ *
+ * Returns: $m$.
  */
 /**
  * ncm_csq1d_eval_int_1_m: (virtual eval_int_1_m)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
+ *
+ * Needed by the non-adiabatic vacuum and frames and by the propagator; the default
+ * aborts.
  *
  * Returns: $\int 1/m \mathrm{d}t$.
  */
 /**
  * ncm_csq1d_eval_int_mnu2: (virtual eval_int_mnu2)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
+ *
+ * Needed by the non-adiabatic vacuum and frames and by the propagator; the default
+ * aborts.
  *
  * Returns: $\int m\nu^2 \mathrm{d}t$.
  */
 /**
  * ncm_csq1d_eval_int_qmnu2: (virtual eval_int_qmnu2)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
+ *
+ * Needed by the non-adiabatic vacuum and frames and by the propagator; the default
+ * aborts.
  *
  * Returns: $\int \left(\int 1/m \mathrm{d}t\right) m\nu^2 \mathrm{d}t$.
  */
 /**
  * ncm_csq1d_eval_int_q2mnu2: (virtual eval_int_q2mnu2)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
+ *
+ * Needed by the non-adiabatic vacuum and frames and by the propagator; the default
+ * aborts.
  *
  * Returns: $\int \left(\int 1/m \mathrm{d}t\right)^2 m\nu^2 \mathrm{d}t$.
  */
 /**
  * ncm_csq1d_eval_int_nu: (virtual eval_int_nu)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
  * Computes the integral $\int_{t_i}^{t} \nu(t') \mathrm{d}t'$.
@@ -1918,18 +1938,22 @@ _ncm_csq1d_J_Um (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer j
 /**
  * ncm_csq1d_eval_F1: (virtual eval_F1)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
- * Returns: $F_1$
+ * The first adiabatic function $F_1 = \dot\xi/(2\nu)$ at @t. Subclasses must implement it.
+ *
+ * Returns: $F_1$.
  */
 /**
  * ncm_csq1d_eval_F2: (virtual eval_F2)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
- * Returns: $F_2$
+ * The second adiabatic function $F_2 = \dot F_1/(2\nu)$ at @t. The default differentiates ncm_csq1d_eval_F1() numerically.
+ *
+ * Returns: $F_2$.
  */
 
 static NcmCSQ1DEvolStop
@@ -2372,7 +2396,7 @@ _ncm_csq1d_prepare_adiab (NcmCSQ1D *csq1d, NcmModel *model)
 /**
  * ncm_csq1d_prepare_phase_splines:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  *
  * Prepares the phase-related splines (int_nu and delta_theta) for evaluation.
  * This method computes and caches the integrated phase splines, which are used
@@ -2425,7 +2449,7 @@ ncm_csq1d_prepare_phase_splines (NcmCSQ1D *csq1d, NcmModel *model)
 /**
  * ncm_csq1d_prepare: (virtual prepare)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  *
  * Prepares the object using @model. It integrates the system from the initial time to
  * the final time. If the #NcmCSQ1DInitialStateType is set to
@@ -2532,7 +2556,7 @@ _ncm_csq1d_find_adiab_time_limit_f (gdouble t, gpointer params)
 /**
  * ncm_csq1d_find_adiab_time_limit:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t0: time lower bound $t_0$
  * @t1: time upper bound $t_1$
  * @reltol: relative tolerance
@@ -2667,7 +2691,7 @@ static gdouble _ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data);
 /**
  * ncm_csq1d_find_adiab_max:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t0: time lower bound $t_0$
  * @t1: time upper bound $t_1$
  * @border_eps: border epsilon $\epsilon$
@@ -2941,7 +2965,7 @@ _ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, Ncm
 /**
  * ncm_csq1d_compute_adiab:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  * @alpha_reltol: (out) (allow-none): estimated error on $\alpha(t)$
@@ -2965,7 +2989,7 @@ ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmC
 /**
  * ncm_csq1d_compute_adiab_frame:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @frame: the frame to change
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
@@ -3096,7 +3120,7 @@ _ncm_csq1d_compute_nonadiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, 
 /**
  * ncm_csq1d_compute_nonadiab:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
@@ -3117,7 +3141,7 @@ ncm_csq1d_compute_nonadiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, N
 /**
  * ncm_csq1d_compute_H:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
@@ -3184,7 +3208,7 @@ ncm_csq1d_eval_delta_theta_at (NcmCSQ1D *csq1d, const gdouble t)
 /**
  * ncm_csq1d_eval_at:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
@@ -3209,7 +3233,7 @@ ncm_csq1d_eval_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DSt
 /**
  * ncm_csq1d_eval_at_frame:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @frame: a #NcmCSQ1DFrame
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
@@ -3544,7 +3568,7 @@ _ncm_csq1d_change_frame_to_nonadiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1D
 /**
  * ncm_csq1d_change_frame:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @state: a #NcmCSQ1DState
  * @frame: which frame to use
  *
@@ -3765,7 +3789,7 @@ _ncm_csq1d_prepare_prop_eval_u1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble
 /**
  * ncm_csq1d_prepare_prop:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @ti: initial time $t_i$
  * @tii: integral approximation time $t_{\mathrm{i}i}$
  * @tf: max time $t_f$
@@ -3928,7 +3952,7 @@ ncm_csq1d_get_tf_prop (NcmCSQ1D *csq1d)
 /**
  * ncm_csq1d_get_prop_vector:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
@@ -4049,7 +4073,7 @@ _ncm_csq1d_evolve_prop_vector (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *
 /**
  * ncm_csq1d_evolve_prop_vector:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @initial_state: initial state
  * @frame: frame
  * @t: time $t$
