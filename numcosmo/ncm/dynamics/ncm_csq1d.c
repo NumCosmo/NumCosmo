@@ -41,8 +41,9 @@
  * $(\alpha,\delta\gamma)$ together with the residual phase $\delta\theta$.
  * The full mode phase is
  * \begin{equation}
- * \theta(t) = \int_{t_i}^{t}\nu(t')\,\mathrm{d}t' + \delta\theta(t).
+ * \theta(t) = \int_{t_0}^{t}\nu(t')\,\mathrm{d}t' + \delta\theta(t),
  * \end{equation}
+ * from an origin $t_0$; only differences of $\theta$ are meaningful.
  *
  * For derivations, complete equations of motion, and mode-function formulas,
  * see the theoretical background page:
@@ -99,7 +100,8 @@ typedef enum _NcmCSQ1DEvolStop
 
 static gdouble _ncm_csq1d_int_nu_dydx       (gdouble y, gdouble x, gpointer userdata);
 static gdouble _ncm_csq1d_delta_theta_dydx  (gdouble y, gdouble x, gpointer userdata);
-static gdouble _ncm_csq1d_delta_theta_wkb_f (gdouble x, gpointer userdata);
+static gdouble _ncm_csq1d_delta_theta_adiab_dydx (gdouble y, gdouble s, gpointer userdata);
+static gdouble _ncm_csq1d_int_nu_back_dydx (gdouble y, gdouble s, gpointer userdata);
 
 typedef struct _NcmCSQ1DPrivate
 {
@@ -141,6 +143,11 @@ typedef struct _NcmCSQ1DPrivate
   NcmSpline *gamma_s;
   NcmOdeSpline *delta_theta_s;
   NcmSpline *delta_theta_spline;
+  NcmOdeSpline *delta_theta_adiab_s;
+  NcmSpline *delta_theta_adiab_spline;
+  NcmOdeSpline *int_nu_back_s;
+  NcmSpline *int_nu_back_spline;
+  gdouble t_phase_ref;
   NcmOdeSpline *int_nu_s;
   NcmSpline *int_nu_spline;
   NcmDiff *diff;
@@ -241,8 +248,25 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
 
     self->delta_theta_s      = ncm_ode_spline_new (s, &_ncm_csq1d_delta_theta_dydx);
     self->delta_theta_spline = NULL;
-    ncm_ode_spline_auto_abstol (self->delta_theta_s, TRUE);
     ncm_ode_spline_set_min_subdivisions (self->delta_theta_s, 8);
+    ncm_spline_free (s);
+  }
+
+  {
+    NcmSpline *s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+
+    self->delta_theta_adiab_s      = ncm_ode_spline_new (s, &_ncm_csq1d_delta_theta_adiab_dydx);
+    self->delta_theta_adiab_spline = NULL;
+    ncm_ode_spline_set_min_subdivisions (self->delta_theta_adiab_s, 8);
+    ncm_spline_free (s);
+  }
+
+  {
+    NcmSpline *s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+
+    self->int_nu_back_s      = ncm_ode_spline_new (s, &_ncm_csq1d_int_nu_back_dydx);
+    self->int_nu_back_spline = NULL;
+    ncm_ode_spline_set_min_subdivisions (self->int_nu_back_s, 8);
     ncm_spline_free (s);
   }
 
@@ -251,7 +275,6 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
 
     self->int_nu_s      = ncm_ode_spline_new (s, &_ncm_csq1d_int_nu_dydx);
     self->int_nu_spline = NULL;
-    ncm_ode_spline_auto_abstol (self->int_nu_s, TRUE);
     ncm_ode_spline_set_min_subdivisions (self->int_nu_s, 8);
     ncm_spline_free (s);
   }
@@ -273,6 +296,7 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
   self->vacuum_reltol          = 0.0;
   self->vacuum_max_time        = 0.0;
   self->vacuum_final_time      = 0.0;
+  self->t_phase_ref            = 0.0;
   self->phase_splines_prepared = FALSE;
 }
 
@@ -286,6 +310,8 @@ _ncm_csq1d_dispose (GObject *object)
   ncm_spline_clear (&self->dgamma_s);
   ncm_spline_clear (&self->gamma_s);
   ncm_ode_spline_clear (&self->delta_theta_s);
+  ncm_ode_spline_clear (&self->delta_theta_adiab_s);
+  ncm_ode_spline_clear (&self->int_nu_back_s);
   ncm_ode_spline_clear (&self->int_nu_s);
 
   {
@@ -687,10 +713,14 @@ _ncm_csq1d_eval_int_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  if (t <= self->t_ode_ini)
-    return 0.0;
+  if (!self->phase_splines_prepared)
+    g_error ("ncm_csq1d_eval_int_nu: phase splines not prepared. "
+             "Call ncm_csq1d_prepare_phase_splines() first.");
 
-  return ncm_spline_eval (self->int_nu_spline, t);
+  if (t >= self->t_phase_ref)
+    return (self->int_nu_spline != NULL) ? ncm_spline_eval (self->int_nu_spline, t) : 0.0;
+  else
+    return (self->int_nu_back_spline != NULL) ? ncm_spline_eval (self->int_nu_back_spline, -t) : 0.0;
 }
 
 static gdouble
@@ -706,19 +736,30 @@ _ncm_csq1d_delta_theta_dydx (gdouble y, gdouble x, gpointer userdata)
   return nu * expm1 (dgamma - gsl_sf_lncosh (alpha));
 }
 
+static void _ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state, gdouble *alpha_reltol, gdouble *dgamma_reltol);
+
+/* The integrals before the phase origin run backwards, in s = -t. */
+
+/* The integrand of delta theta on the adiabatic state of ncm_csq1d_compute_adiab(), the
+ * solution before the numerical evolution starts. */
 static gdouble
-_ncm_csq1d_delta_theta_wkb_f (gdouble x, gpointer userdata)
+_ncm_csq1d_delta_theta_adiab_dydx (gdouble y, gdouble s, gpointer userdata)
+{
+  NcmCSQ1DWS *ws   = (NcmCSQ1DWS *) userdata;
+  const gdouble nu = ncm_csq1d_eval_nu (ws->csq1d, ws->model, -s);
+  NcmCSQ1DState state;
+
+  _ncm_csq1d_compute_adiab (ws->csq1d, ws->model, -s, &state, NULL, NULL);
+
+  return -nu *expm1 (state.gamma - gsl_sf_lncosh (state.alpha));
+}
+
+static gdouble
+_ncm_csq1d_int_nu_back_dydx (gdouble y, gdouble s, gpointer userdata)
 {
   NcmCSQ1DWS *ws = (NcmCSQ1DWS *) userdata;
 
-  const gdouble nu     = ncm_csq1d_eval_nu (ws->csq1d, ws->model, x);
-  const gdouble alpha  = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, x);
-  const gdouble dgamma = -ncm_csq1d_eval_F2 (ws->csq1d, ws->model, x);
-  /*const gdouble sh_dg2 = sinh (0.5 * dgamma); */
-  const gdouble sh_a2 = sinh (0.5 * alpha);
-
-  /*return 2.0 * nu / cosh (alpha) * (sh_dg2 * sh_dg2 - sh_a2 * sh_a2); */
-  return nu * (expm1 (dgamma) - 2.0 * sh_a2 * sh_a2) / cosh (alpha);
+  return -ncm_csq1d_eval_nu (ws->csq1d, ws->model, -s);
 }
 
 static gdouble _ncm_csq1d_F1_func (const gdouble t, gpointer user_data);
@@ -1185,7 +1226,8 @@ ncm_csq1d_clear (NcmCSQ1D **csq1d)
  * @csq1d: a #NcmCSQ1D
  * @reltol: relative tolerance
  *
- * Sets the relative tolerance of the integrations, the evolution and the phase splines.
+ * Sets the relative tolerance of the evolution, which also serves as the absolute
+ * tolerance, in radians, of the phase splines, see ncm_csq1d_prepare_phase_splines().
  *
  */
 void
@@ -1212,7 +1254,6 @@ ncm_csq1d_set_abstol (NcmCSQ1D *csq1d, const gdouble abstol)
 
   if (self->abstol != abstol)
     self->abstol = abstol;
-
 }
 
 /**
@@ -1940,12 +1981,12 @@ _ncm_csq1d_J_Um (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer j
  * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
- * Computes the integral $\int_{t_i}^{t} \nu(t') \mathrm{d}t'$.
- * If not overridden by a subclass, a default implementation based on
- * #NcmOdeSpline is used. You must call ncm_csq1d_prepare_phase_splines()
- * after ncm_csq1d_prepare() before using this function.
+ * The integral $\int_{t_0}^{t} \nu(t')\,\mathrm{d}t'$ from a phase origin $t_0$; only
+ * differences of the phase are meaningful, so a subclass may use any origin. The
+ * default integrates $\nu$ from the start of the numerical evolution, the same origin
+ * as ncm_csq1d_eval_delta_theta_at(), and needs ncm_csq1d_prepare_phase_splines().
  *
- * Returns: $\int_{t_i}^{t} \nu(t') \mathrm{d}t'$.
+ * Returns: $\int_{t_0}^{t} \nu(t')\,\mathrm{d}t'$.
  */
 /**
  * ncm_csq1d_eval_F1: (virtual eval_F1)
@@ -2359,6 +2400,40 @@ _ncm_csq1d_prepare_splines (NcmCSQ1D *csq1d, NcmModel *model)
 
     self->t_ode_ini = self->t;
 
+    /* The steps record the points reached; the starting point is the first knot. */
+    {
+      gdouble alpha, dgamma, gamma;
+      const gdouble xi      = ncm_csq1d_eval_xi (csq1d, model, self->t);
+      const gdouble asinh_t = asinh (self->t);
+
+      switch (self->state)
+      {
+        case NCM_CSQ1D_EVOL_STATE_ADIABATIC:
+          alpha  = NV_Ith_S (self->y, 0);
+          dgamma = NV_Ith_S (self->y, 1);
+          gamma  = xi + dgamma;
+          break;
+        case NCM_CSQ1D_EVOL_STATE_UP:
+          alpha  = asinh (NV_Ith_S (self->y_Up, 0));
+          gamma  = NV_Ith_S (self->y_Up, 1) - gsl_sf_lncosh (alpha);
+          dgamma = gamma - xi;
+          break;
+        case NCM_CSQ1D_EVOL_STATE_UM:
+          alpha  = asinh (NV_Ith_S (self->y_Um, 0));
+          gamma  = -NV_Ith_S (self->y_Um, 1) + gsl_sf_lncosh (alpha);
+          dgamma = gamma - xi;
+          break;
+        default:
+          g_assert_not_reached ();
+          break;
+      }
+
+      g_array_append_val (asinh_t_a, asinh_t);
+      g_array_append_val (alpha_a,   alpha);
+      g_array_append_val (dgamma_a,  dgamma);
+      g_array_append_val (gamma_a,   gamma);
+    }
+
     _ncm_csq1d_evol_save (csq1d, model, &ws, asinh_t_a, alpha_a, dgamma_a, gamma_a);
 
     ncm_spline_set_array (self->alpha_s,  asinh_t_a, alpha_a,  TRUE);
@@ -2410,14 +2485,11 @@ _ncm_csq1d_prepare_adiab (NcmCSQ1D *csq1d, NcmModel *model)
  * @csq1d: a #NcmCSQ1D
  * @model: (nullable): a #NcmModel
  *
- * Prepares the phase-related splines (int_nu and delta_theta) for evaluation.
- * This method computes and caches the integrated phase splines, which are used
- * by ncm_csq1d_eval_int_nu() and ncm_csq1d_eval_delta_theta_at().
- *
- * This method must be called explicitly after ncm_csq1d_prepare() if you need
- * to use ncm_csq1d_eval_int_nu() or ncm_csq1d_eval_delta_theta_at().
- *
- * Note: This method must be called after ncm_csq1d_prepare().
+ * Integrates the phase splines read by ncm_csq1d_eval_delta_theta_at() and the default
+ * ncm_csq1d_eval_int_nu(), forward from the phase origin $t_0$ to $t_f$ and backward
+ * from $t_0$ to $t_i$. They use the relative tolerance of #NcmOdeSpline and an absolute
+ * tolerance of #NcmCSQ1D:reltol radians. Call it after ncm_csq1d_prepare(), which
+ * discards them; later calls do nothing until then.
  */
 void
 ncm_csq1d_prepare_phase_splines (NcmCSQ1D *csq1d, NcmModel *model)
@@ -2428,31 +2500,59 @@ ncm_csq1d_prepare_phase_splines (NcmCSQ1D *csq1d, NcmModel *model)
   if (self->phase_splines_prepared)
     return;
 
+  /* The phase integrals keep the relative tolerance of NcmOdeSpline, machine precision,
+   * so that the phase is limited by the evolution; they start at zero, where a relative
+   * tolerance alone has no scale, so they take an absolute tolerance of reltol radians. */
+  ncm_ode_spline_set_abstol (self->int_nu_s, self->reltol);
+  ncm_ode_spline_set_abstol (self->int_nu_back_s, self->reltol);
+  ncm_ode_spline_set_abstol (self->delta_theta_s, self->reltol);
+  ncm_ode_spline_set_abstol (self->delta_theta_adiab_s, self->reltol);
+
   {
-    /* Compute the WKB pre-phase integral [ti, t_ode_ini] using QAG,
-     * then start the NcmOdeSpline at t_ode_ini with that value as IC.
-     * This avoids integrating over the deep-WKB regime where the
-     * adaptive ODE step would collapse to machine epsilon. */
-    gsl_integration_workspace **w = ncm_integral_get_workspace ();
-    gsl_function F;
-    gdouble delta_theta_ini, err;
+    const gboolean adiab_ic = (self->initial_condition_type != NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC);
+    const gboolean evolved  = !adiab_ic || (self->tf > self->vacuum_final_time);
+
+    /* The origin of the phase is where the numerical evolution starts, the vacuum time
+     * with an adiabatic vacuum and the time of the ad hoc conditions otherwise; far from
+     * it the integral of nu can grow beyond what double precision resolves. Before the
+     * origin the solution is the adiabatic state and both integrals run backwards. */
+    self->t_phase_ref = adiab_ic ? GSL_MIN (self->vacuum_final_time, self->tf) : self->t_ode_ini;
+
+    self->int_nu_spline            = NULL;
+    self->int_nu_back_spline       = NULL;
+    self->delta_theta_spline       = NULL;
+    self->delta_theta_adiab_spline = NULL;
 
     if (NCM_CSQ1D_GET_CLASS (csq1d)->eval_int_nu == &_ncm_csq1d_eval_int_nu)
     {
-      ncm_ode_spline_set_interval (self->int_nu_s, 0.25 * M_PI, self->t_ode_ini, self->tf);
-      ncm_ode_spline_prepare (self->int_nu_s, &ws);
-      self->int_nu_spline = ncm_ode_spline_peek_spline (self->int_nu_s);
+      if (self->tf > self->t_phase_ref)
+      {
+        ncm_ode_spline_set_interval (self->int_nu_s, 0.0, self->t_phase_ref, self->tf);
+        ncm_ode_spline_prepare (self->int_nu_s, &ws);
+        self->int_nu_spline = ncm_ode_spline_peek_spline (self->int_nu_s);
+      }
+
+      if (self->t_phase_ref > self->ti)
+      {
+        ncm_ode_spline_set_interval (self->int_nu_back_s, 0.0, -self->t_phase_ref, -self->ti);
+        ncm_ode_spline_prepare (self->int_nu_back_s, &ws);
+        self->int_nu_back_spline = ncm_ode_spline_peek_spline (self->int_nu_back_s);
+      }
     }
 
-    F.function = &_ncm_csq1d_delta_theta_wkb_f;
-    F.params   = &ws;
-    gsl_integration_qag (&F, self->ti, self->t_ode_ini, 0.0, self->reltol,
-                         NCM_INTEGRAL_PARTITION, 6, *w, &delta_theta_ini, &err);
-    ncm_memory_pool_return (w);
+    if (evolved)
+    {
+      ncm_ode_spline_set_interval (self->delta_theta_s, 0.0, self->t_phase_ref, self->tf);
+      ncm_ode_spline_prepare (self->delta_theta_s, &ws);
+      self->delta_theta_spline = ncm_ode_spline_peek_spline (self->delta_theta_s);
+    }
 
-    ncm_ode_spline_set_interval (self->delta_theta_s, delta_theta_ini, self->t_ode_ini, self->tf);
-    ncm_ode_spline_prepare (self->delta_theta_s, &ws);
-    self->delta_theta_spline = ncm_ode_spline_peek_spline (self->delta_theta_s);
+    if (adiab_ic && (self->t_phase_ref > self->ti))
+    {
+      ncm_ode_spline_set_interval (self->delta_theta_adiab_s, 0.0, -self->t_phase_ref, -self->ti);
+      ncm_ode_spline_prepare (self->delta_theta_adiab_s, &ws);
+      self->delta_theta_adiab_spline = ncm_ode_spline_peek_spline (self->delta_theta_adiab_s);
+    }
   }
 
   self->phase_splines_prepared = TRUE;
@@ -2481,9 +2581,11 @@ ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
   gboolean success             = FALSE;
 
   /* Invalidate phase splines when preparing */
-  self->phase_splines_prepared = FALSE;
-  self->delta_theta_spline     = NULL;
-  self->int_nu_spline          = NULL;
+  self->phase_splines_prepared   = FALSE;
+  self->delta_theta_spline       = NULL;
+  self->delta_theta_adiab_spline = NULL;
+  self->int_nu_spline            = NULL;
+  self->int_nu_back_spline       = NULL;
 
   switch (self->initial_condition_type)
   {
@@ -3188,18 +3290,15 @@ _ncm_csq1d_eval_state (NcmCSQ1D *csq1d, const gdouble t, NcmCSQ1DState *state)
  * @csq1d: a #NcmCSQ1D
  * @t: time $t$
  *
- * Returns the accumulated residual phase shift $\delta\theta(t)$ computed
- * during the last call to ncm_csq1d_prepare().
- *
- * The full phase entering the mode functions is
- * $\theta(t) = \int_{t_i}^{t} \nu(t')\,\mathrm{d}t' + \delta\theta(t)$.
- *
- * For the full phase and residual-phase equations, including the numerically
- * stable form used internally, see
- * <a href="../../theory/ncm/dynamics/csq1d.html">CSQ1D Formalism</a>.
- *
- * Note: You must call ncm_csq1d_prepare_phase_splines() before using this function,
- * or it will throw an error.
+ * The residual phase $\delta\theta(t)$, zero at the phase origin $t_0$, the start of the
+ * numerical evolution: the vacuum time with an adiabatic vacuum, the time of the
+ * conditions of ncm_csq1d_set_init_cond() otherwise. With an adiabatic vacuum it is
+ * also defined before $t_0$, integrated on the adiabatic state; with ad hoc conditions
+ * it is zero there. The full phase is
+ * $\theta(t) = \int_{t_0}^{t} \nu(t')\,\mathrm{d}t' + \delta\theta(t)$, see
+ * ncm_csq1d_eval_int_nu() and the
+ * <a href="../../theory/ncm/dynamics/csq1d.html">CSQ1D Formalism</a> page. Aborts
+ * unless ncm_csq1d_prepare_phase_splines() was called after ncm_csq1d_prepare().
  *
  * Returns: $\delta\theta(t)$
  */
@@ -3208,14 +3307,14 @@ ncm_csq1d_eval_delta_theta_at (NcmCSQ1D *csq1d, const gdouble t)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  if (t <= self->t_ode_ini)
-    return 0.0;
-
   if (!self->phase_splines_prepared)
     g_error ("ncm_csq1d_eval_delta_theta_at: phase splines not prepared. "
              "Call ncm_csq1d_prepare_phase_splines() first.");
 
-  return ncm_spline_eval (self->delta_theta_spline, t);
+  if (t >= self->t_phase_ref)
+    return (self->delta_theta_spline != NULL) ? ncm_spline_eval (self->delta_theta_spline, t) : 0.0;
+  else
+    return (self->delta_theta_adiab_spline != NULL) ? ncm_spline_eval (self->delta_theta_adiab_spline, -t) : 0.0;
 }
 
 /**

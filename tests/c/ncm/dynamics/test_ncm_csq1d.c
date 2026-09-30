@@ -29,6 +29,7 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 #include <math.h>
+#include <gsl/gsl_sf_bessel.h>
 #include <glib.h>
 #include <glib-object.h>
 
@@ -165,6 +166,130 @@ test_ncm_csq1d_prepare_aborts (void)
   _test_ncm_csq1d_trap_abort ("ad_hoc", "*initial conditions must be set*");
   _test_ncm_csq1d_trap_abort ("nonadiab2", "*not implemented*");
   _test_ncm_csq1d_trap_abort ("init_adiab", "*is not a valid adiabatic time*");
+}
+
+/* The phase of the exact positive-frequency mode, -arg H^(1)_a (-k t), for t < 0. */
+static gdouble
+_test_theta_exact (const gdouble a, const gdouble k, const gdouble t)
+{
+  const gdouble x = -k * t;
+
+  return -atan2 (gsl_sf_bessel_Ynu (a, x), gsl_sf_bessel_Jnu (a, x));
+}
+
+static gdouble
+_test_theta (NcmCSQ1D *csq1d, const gdouble t)
+{
+  return ncm_csq1d_eval_int_nu (csq1d, NULL, t) + ncm_csq1d_eval_delta_theta_at (csq1d, t);
+}
+
+/* Largest error of theta (t2) - theta (t1) against the exact difference, modulo 2 pi. */
+static gdouble
+_test_phase_pair_error (NcmCSQ1D *csq1d, const gdouble a, const gdouble k, const gdouble *t1, guint n1, const gdouble *t2, guint n2)
+{
+  gdouble err = 0.0;
+  guint i, j;
+
+  for (i = 0; i < n1; i++)
+  {
+    for (j = 0; j < n2; j++)
+    {
+      const gdouble d = (_test_theta (csq1d, t2[j]) - _test_theta (csq1d, t1[i]))
+                        - (_test_theta_exact (a, k, t2[j]) - _test_theta_exact (a, k, t1[i]));
+
+      err = GSL_MAX (err, fabs (remainder (d, 2.0 * M_PI)));
+    }
+  }
+
+  return err;
+}
+
+static void
+test_ncm_csq1d_phase_hankel (void)
+{
+  /*
+   * theta = int nu + delta theta, both with origin at the start of the numerical
+   * evolution t_ode, against the exact Hankel phase: phase differences between times
+   * after t_ode, on both sides of it, and before it, where the solution is the adiabatic
+   * vacuum. Both integrals vanish at t_ode, int nu is k (t - t_ode) and theta is
+   * continuous there.
+   */
+  const gdouble as[] = {2.0, 0.5};
+  const gdouble k    = 1.0;
+  const gdouble ti   = -1.0e4;
+  guint l;
+
+  for (l = 0; l < G_N_ELEMENTS (as); l++)
+  {
+    const gdouble a    = as[l];
+    TestCSQ1DBessel *b = test_csq1d_bessel_new (a, k, TRUE);
+    NcmCSQ1D *csq1d    = NCM_CSQ1D (b);
+    gdouble t_ode, t_after[8], t_before[8], t_end[2], t_mid[1], e_nu = 0.0;
+    guint i;
+
+    ncm_csq1d_set_ti (csq1d, ti);
+    ncm_csq1d_set_tf (csq1d, -1.0e-1);
+    ncm_csq1d_set_reltol (csq1d, 1.0e-10);
+    ncm_csq1d_set_abstol (csq1d, 0.0);
+    ncm_csq1d_set_save_evol (csq1d, TRUE);
+    ncm_csq1d_set_initial_condition_type (csq1d, NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4);
+    ncm_csq1d_set_vacuum_max_time (csq1d, -10.0);
+    ncm_csq1d_set_vacuum_reltol (csq1d, 1.0e-8);
+    ncm_csq1d_prepare (csq1d, NULL);
+    ncm_csq1d_prepare_phase_splines (csq1d, NULL);
+
+    /* The vacuum time ncm_csq1d_prepare() finds, where the evolution starts. */
+    g_assert_true (ncm_csq1d_find_adiab_time_limit (csq1d, NULL, ti, -10.0, 1.0e-8, &t_ode));
+
+    {
+      NcmCSQ1DState *s_evol  = ncm_csq1d_state_new ();
+      NcmCSQ1DState *s_adiab = ncm_csq1d_state_new ();
+      const gdouble t_after0 = t_ode * (1.0 - 1.0e-9);
+
+      /* The evolution starts on the vacuum; measured 3.6e-15. */
+      ncm_csq1d_eval_at (csq1d, NULL, t_after0, s_evol);
+      ncm_csq1d_compute_adiab_frame (csq1d, NULL, NCM_CSQ1D_FRAME_ORIG, t_after0, s_adiab, NULL, NULL);
+      g_assert_cmpfloat (ncm_csq1d_state_compute_distance (s_evol, s_adiab), <, 4.0e-14);
+
+      ncm_csq1d_state_free (s_evol);
+      ncm_csq1d_state_free (s_adiab);
+    }
+
+    for (i = 0; i < 8; i++)
+    {
+      t_after[i]  = -9.0 * pow (0.3 / 9.0, i / 7.0);
+      t_before[i] = ti * 0.9 * pow (1.1 * t_ode / (0.9 * ti), i / 7.0);
+    }
+
+    t_end[0] = -5.0;
+    t_end[1] = -0.2;
+    t_mid[0] = 0.95 * t_ode;
+
+    g_assert_cmpfloat (ncm_csq1d_eval_int_nu (csq1d, NULL, t_ode), ==, 0.0);
+    g_assert_cmpfloat (ncm_csq1d_eval_delta_theta_at (csq1d, t_ode), ==, 0.0);
+
+    for (i = 0; i < 8; i++)
+    {
+      e_nu = GSL_MAX (e_nu, fabs (ncm_csq1d_eval_int_nu (csq1d, NULL, t_before[i]) - k * (t_before[i] - t_ode)));
+      e_nu = GSL_MAX (e_nu, fabs (ncm_csq1d_eval_int_nu (csq1d, NULL, t_after[i]) - k * (t_after[i] - t_ode)));
+    }
+
+    /* Measured, worst of a = 2 and 1/2, in radians: int nu 8.4e-10; pairs after 2.3e-8,
+     * straddling 4.9e-8, before 3.6e-9. */
+    g_assert_cmpfloat (e_nu, <, 1.0e-8);
+    g_assert_cmpfloat (_test_phase_pair_error (csq1d, a, k, t_after, 7, &t_end[1], 1), <, 3.0e-7);
+    g_assert_cmpfloat (_test_phase_pair_error (csq1d, a, k, t_before, 8, t_end, 2), <, 5.0e-7);
+    g_assert_cmpfloat (_test_phase_pair_error (csq1d, a, k, t_before, 8, t_mid, 1), <, 4.0e-8);
+
+    {
+      const gdouble dt = 1.0e-9 * fabs (t_ode);
+
+      /* Measured 1.7e-11. */
+      g_assert_cmpfloat (fabs (_test_theta (csq1d, t_ode + dt) - _test_theta (csq1d, t_ode - dt) - 2.0 * k * dt), <, 2.0e-10);
+    }
+
+    ncm_csq1d_free (csq1d);
+  }
 }
 
 static void
@@ -426,6 +551,7 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/ncm/csq1d/defaults", &test_ncm_csq1d_defaults);
   g_test_add_func ("/ncm/csq1d/properties", &test_ncm_csq1d_properties);
+  g_test_add_func ("/ncm/csq1d/phase/hankel", &test_ncm_csq1d_phase_hankel);
   g_test_add_func ("/ncm/csq1d/prepare/aborts", &test_ncm_csq1d_prepare_aborts);
   g_test_add_func ("/ncm/csq1d/prepare/aborts/subprocess", &test_ncm_csq1d_prepare_aborts_subprocess);
   g_test_add_func ("/ncm/csq1d/state/maps", &test_ncm_csq1d_state_maps);
