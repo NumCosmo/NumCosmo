@@ -137,7 +137,9 @@ typedef enum _NcmCSQ1DFrame /*< prefix=NCM_CSQ1D_FRAME >*/
 /**
  * NcmCSQ1DState:
  *
- * Represents the state of the system.
+ * A point $(\alpha, \gamma)$ of the hyperbolic plane at a time $t$ in a given
+ * #NcmCSQ1DFrame. The point is a complex structure $J_{ab}$, which fixes a mode of the
+ * oscillator up to a time-dependent phase, see ncm_csq1d_state_get_J().
  */
 typedef struct _NcmCSQ1DState NcmCSQ1DState;
 

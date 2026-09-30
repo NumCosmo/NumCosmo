@@ -179,6 +179,24 @@ This complex mode encodes the full oscillator evolution and corresponds to a
 particular complex representation of the two-dimensional phase-space
 solution.
 
+A point $(\alpha, \gamma)$ fixes the complex structure, and with it the mode
+only up to a phase: the eigenvector of the complex structure is not a solution
+of the equations of motion until it is multiplied by $e^{-i\theta(t)}$. The
+phase equation above holds in the phase used here, where $e^{i\theta}\phi$ is
+real and positive; this is the phase of
+[[numcosmo-math|ncm_csq1d_state_get_phi_Pphi]]. It differs from the eigenvector
+of @PennaLima2023, appendix on the $(\alpha, \gamma)$ parametrization, by the
+factor
+$e^{i(\arctan e^{-\alpha} - \pi)}$. Since that factor depends on time through
+$\alpha$, the paper's eigenvector multiplied by $e^{-i\theta}$ is not a
+solution; its phase would obey
+$\theta' + \frac{\mathrm{d}}{\mathrm{d}t}\arctan e^{-\alpha}$ instead.
+
+Quantities at a single time, such as $\vert\phi\vert^2$, the power spectrum or
+the Bogoliubov coefficients' moduli, depend on the complex structure alone and
+never need $\theta$. The phase matters for quantities at two times, such as
+$\phi(t_1)\phi^*(t_2)$, which carry $e^{-i[\theta(t_1) - \theta(t_2)]}$.
+
 ## API Reference
 
 See [[numcosmo-math|NcmCSQ1D]] for the full class reference.

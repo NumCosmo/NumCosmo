@@ -787,10 +787,10 @@ ncm_csq1d_state_free (NcmCSQ1DState *state)
  * @state: a #NcmCSQ1DState
  * @frame: the frame of @state
  * @t: the time of @state
- * @alpha: the alpha of @state
- * @gamma: the gamma of @state
+ * @alpha: $\alpha$
+ * @gamma: $\gamma$
  *
- * Sets the state using the $(\alpha, \gamma)$ parametrization.
+ * Sets @state to the point $(\alpha, \gamma)$ of @frame at @t.
  *
  */
 void
@@ -807,10 +807,11 @@ ncm_csq1d_state_set_ag (NcmCSQ1DState *state, const NcmCSQ1DFrame frame, const g
  * @state: a #NcmCSQ1DState
  * @frame: the frame of @state
  * @t: the time of @state
- * @chi: the chi of @state
- * @Up: the Up of @state
+ * @chi: $\chi = \sinh\alpha$
+ * @Up: $U_+ = \ln\cosh\alpha + \gamma$
  *
- * Sets the state using the $(\chi, U_+)$ parametrization.
+ * Sets @state from $(\chi, U_+)$; $e^{U_+}$ is the component $J_{22}$ of the complex
+ * structure, see ncm_csq1d_state_get_J().
  *
  */
 void
@@ -827,10 +828,11 @@ ncm_csq1d_state_set_up (NcmCSQ1DState *state, const NcmCSQ1DFrame frame, const g
  * @state: a #NcmCSQ1DState
  * @frame: the frame of @state
  * @t: the time of @state
- * @chi: the chi of @state
- * @Um: the Um of @state
+ * @chi: $\chi = \sinh\alpha$
+ * @Um: $U_- = \ln\cosh\alpha - \gamma$
  *
- * Sets the state using the $(\chi, U_-)$ parametrization.
+ * Sets @state from $(\chi, U_-)$; $e^{U_-}$ is the component $J_{11}$ of the complex
+ * structure, see ncm_csq1d_state_get_J().
  *
  */
 void
@@ -869,10 +871,10 @@ ncm_csq1d_state_get_frame (NcmCSQ1DState *state)
 /**
  * ncm_csq1d_state_get_ag:
  * @state: a #NcmCSQ1DState
- * @alpha: (out): the alpha of @state
- * @gamma: (out): the gamma of @state
+ * @alpha: (out): $\alpha$
+ * @gamma: (out): $\gamma$
  *
- * Computes the $(\alpha, \gamma)$ parametrization of @state.
+ * Gets the point $(\alpha, \gamma)$ of @state.
  *
  */
 void
@@ -885,10 +887,10 @@ ncm_csq1d_state_get_ag (NcmCSQ1DState *state, gdouble *alpha, gdouble *gamma)
 /**
  * ncm_csq1d_state_get_up:
  * @state: a #NcmCSQ1DState
- * @chi: (out): the chi of @state
- * @Up: (out): the Up of @state
+ * @chi: (out): $\chi = \sinh\alpha$
+ * @Up: (out): $U_+ = \ln\cosh\alpha + \gamma$
  *
- * Computes the $(\chi, U_+)$ parametrization of @state.
+ * Gets @state as $(\chi, U_+)$, see ncm_csq1d_state_set_up().
  *
  */
 void
@@ -901,10 +903,10 @@ ncm_csq1d_state_get_up (NcmCSQ1DState *state, gdouble *chi, gdouble *Up)
 /**
  * ncm_csq1d_state_get_um:
  * @state: a #NcmCSQ1DState
- * @chi: (out): the chi of @state
- * @Um: (out): the Um of @state
+ * @chi: (out): $\chi = \sinh\alpha$
+ * @Um: (out): $U_- = \ln\cosh\alpha - \gamma$
  *
- * Computes the $(\chi, U_-)$ parametrization of @state.
+ * Gets @state as $(\chi, U_-)$, see ncm_csq1d_state_set_um().
  *
  */
 void
@@ -917,11 +919,15 @@ ncm_csq1d_state_get_um (NcmCSQ1DState *state, gdouble *chi, gdouble *Um)
 /**
  * ncm_csq1d_state_get_J:
  * @state: a #NcmCSQ1DState
- * @J11: (out): the J11 of @state
- * @J12: (out): the J12 of @state
- * @J22: (out): the J22 of @state
+ * @J11: (out): $J_{11} = \cosh\alpha\,e^{-\gamma}$
+ * @J12: (out): $J_{12} = -\sinh\alpha$
+ * @J22: (out): $J_{22} = \cosh\alpha\,e^{\gamma}$
  *
- * Computes the covariant metric of @state.
+ * Gets the components of the complex structure $J_{ab}$ of @state, the symmetric,
+ * positive definite matrix of unit determinant the point $(\alpha, \gamma)$
+ * represents. For the mode $(\phi, P_\phi)$ of ncm_csq1d_state_get_phi_Pphi(),
+ * $J_{11} = 2\vert\phi\vert^2$, $J_{22} = 2\vert P_\phi\vert^2$ and
+ * $J_{12} = \phi P_\phi^* + \phi^* P_\phi$.
  *
  */
 void
@@ -938,38 +944,47 @@ ncm_csq1d_state_get_J (NcmCSQ1DState *state, gdouble *J11, gdouble *J12, gdouble
 /**
  * ncm_csq1d_state_get_phi_Pphi:
  * @state: a #NcmCSQ1DState
- * @phi: (out caller-allocates) (array fixed-size=2): the $\phi$ of @state
- * @Pphi: (out caller-allocates) (array fixed-size=2): the $P_\phi$ of @state
+ * @phi: (out caller-allocates) (array fixed-size=2): real and imaginary parts of $\phi$
+ * @Pphi: (out caller-allocates) (array fixed-size=2): real and imaginary parts of $P_\phi$
  *
- * Computes the $(\phi, P_\phi)$ parametrization of @state in the current
- * phase convention.
- *
- * See ncm_csq1d_eval_delta_theta_at() for the residual phase used to build the
- * full mode phase $\theta(t)$.
+ * Gets the eigenvector $(\phi, P_\phi)$ of the complex structure of @state in the phase
+ * where $\phi$ is real and positive,
+ * \begin{align}
+ * \phi &= \sqrt{\frac{e^{-\gamma}\cosh\alpha}{2}}, \\\\
+ * P_\phi &= -\tanh\alpha\,\sqrt{\frac{e^{\gamma}\cosh\alpha}{2}} - i\sqrt{\frac{e^{\gamma}}{2\cosh\alpha}},
+ * \end{align}
+ * normalized by $\phi P_\phi^* - \phi^* P_\phi = i$. In this phase
+ * $e^{-i\theta(t)}(\phi, P_\phi)$ solves the equations of motion, with
+ * $\theta = \int\nu\,\mathrm{d}t + \delta\theta$ from ncm_csq1d_eval_int_nu() and
+ * ncm_csq1d_eval_delta_theta_at(). This phase differs from the published one by a
+ * factor that depends on time through $\alpha$; see the
+ * <a href="../../theory/ncm/dynamics/csq1d.html">CSQ1D Formalism</a> page.
  *
  */
 void
 ncm_csq1d_state_get_phi_Pphi (NcmCSQ1DState *state, gdouble *phi, gdouble *Pphi)
 {
-  const gdouble alpha               = state->alpha;
-  const gdouble gamma               = state->gamma;
-  const gdouble exp_gamma_p_alpha_2 = exp (0.5 * (gamma + alpha));
-  const gdouble exp_gamma_m_alpha_2 = exp (0.5 * (gamma - alpha));
+  const gdouble alpha    = state->alpha;
+  const gdouble gamma    = state->gamma;
+  const gdouble ln_ca    = gsl_sf_lncosh (alpha);
+  const gdouble abs_phi  = exp (0.5 * (-gamma + ln_ca - M_LN2));
+  const gdouble abs_J22h = exp (0.5 * (+gamma + ln_ca - M_LN2));
 
-  phi[0] = +0.5 / exp_gamma_m_alpha_2;
-  phi[1] = -0.5 / exp_gamma_p_alpha_2;
+  phi[0] = abs_phi;
+  phi[1] = 0.0;
 
-  Pphi[0] = -0.5 * exp_gamma_p_alpha_2;
-  Pphi[1] = -0.5 * exp_gamma_m_alpha_2;
+  Pphi[0] = -tanh (alpha) * abs_J22h;
+  Pphi[1] = -exp (0.5 * (gamma - ln_ca - M_LN2));
 }
 
 /**
  * ncm_csq1d_state_get_poincare_half_plane:
  * @state: a #NcmCSQ1DState
- * @x: (out): the $x$ of @state
- * @lny: (out): the $\ln y$ of @state
+ * @x: (out): $x = -J_{12}/J_{22} = e^{-\gamma}\tanh\alpha$
+ * @lny: (out): $\ln y = -\ln J_{22}$
  *
- * Computes the Poincaré half-plane parametrization of @state.
+ * Gets @state as the point $x + iy$ of the Poincaré upper half-plane, where
+ * $J_{11} = (x^2 + y^2)/y$, $J_{12} = -x/y$ and $J_{22} = 1/y$.
  *
  */
 void
@@ -985,10 +1000,11 @@ ncm_csq1d_state_get_poincare_half_plane (NcmCSQ1DState *state, gdouble *x, gdoub
 /**
  * ncm_csq1d_state_get_poincare_disc:
  * @state: a #NcmCSQ1DState
- * @x: (out): the $x$ of @state
- * @y: (out): the $y$ of @state
+ * @x: (out): $x = \sinh\alpha/(1 + \cosh\alpha\cosh\gamma)$
+ * @y: (out): $y = -\cosh\alpha\sinh\gamma/(1 + \cosh\alpha\cosh\gamma)$
  *
- * Computes the Poincaré disc parametrization of @state.
+ * Gets @state as a point of the Poincaré disc, the projection of the hyperboloid point of
+ * ncm_csq1d_state_get_minkowski() from $(-1, 0, 0)$.
  *
  */
 void
@@ -1004,10 +1020,11 @@ ncm_csq1d_state_get_poincare_disc (NcmCSQ1DState *state, gdouble *x, gdouble *y)
 /**
  * ncm_csq1d_state_get_minkowski:
  * @state: a #NcmCSQ1DState
- * @x1: (out): the $x_1$ of @state
- * @x2: (out): the $x_2$ of @state
+ * @x1: (out): $x_1 = \sinh\alpha$
+ * @x2: (out): $x_2 = -\cosh\alpha\sinh\gamma$
  *
- * Computes the Minkowski parametrization of @state.
+ * Gets the spatial coordinates of @state on the hyperboloid $x_0^2 - x_1^2 - x_2^2 = 1$,
+ * with $x_0 = \cosh\alpha\cosh\gamma$.
  *
  */
 void
@@ -1026,12 +1043,6 @@ _arcsinh_exp_x (const gdouble x)
   return x + log1p (sqrt (1.0 + exp (-2.0 * x)));
 }
 
-static gdouble
-_arccosh_exp_x (const gdouble x)
-{
-  return x + log1p (sqrt (1.0 - exp (-2.0 * x)));
-}
-
 /**
  * ncm_csq1d_state_get_circle:
  * @state: a #NcmCSQ1DState
@@ -1039,9 +1050,9 @@ _arccosh_exp_x (const gdouble x)
  * @theta: angle
  * @cstate: (out caller-allocates): the new state
  *
- * Computes the complex structure matrix parameters for a circle
- * around the point @state with radius $r$ and angle
- * $\theta$ and stores the result in @cstate.
+ * Sets @cstate to the point at hyperbolic distance @r from @state in the direction
+ * @theta; $\theta = 0$ increases $\alpha$ by @r at fixed $\gamma$. @cstate keeps the
+ * frame and time of @state.
  *
  */
 void
@@ -1060,10 +1071,28 @@ ncm_csq1d_state_get_circle (NcmCSQ1DState *state, const gdouble r, const gdouble
   const gdouble abs_f    = fabs (f);
   const gdouble ln_abs_f = log (abs_f);
   const gdouble sign_f   = GSL_SIGN (f);
-  const gdouble t1       = sign_f * _arcsinh_exp_x (ln_cr + ln_ca + ln_abs_f);
-  const gdouble t2       = -(2.0 * st * tr / (ca * (1.0 + tr * ct * ta) + tr * st));
+  const gdouble ln_sh_t1 = ln_cr + ln_ca + ln_abs_f;
+
+  /* sinh (t1) = cosh (r) cosh (alpha) f, in logs only where it would overflow; f = 0 is
+   * the point at alpha = 0. */
+  const gdouble t1 = (ln_sh_t1 < 300.0) ? asinh (sign_f * exp (ln_sh_t1)) : sign_f *_arcsinh_exp_x (ln_sh_t1);
+
+  const gdouble t2 = -(2.0 * st * tr / (ca * (1.0 + tr * ct * ta) + tr * st));
 
   ncm_csq1d_state_set_ag (cstate, state->frame, state->t, t1, gamma + 0.5 * log1p (t2));
+}
+
+/* ln sinh (y) for y >= 0, -inf at 0, without overflow for large y. */
+static gdouble
+_ln_sinh (const gdouble y)
+{
+  if (y == 0.0)
+    return GSL_NEGINF;
+
+  if (y < 1.0)
+    return log (sinh (y));
+
+  return y - M_LN2 + log1p (-exp (-2.0 * y));
 }
 
 /**
@@ -1071,42 +1100,45 @@ ncm_csq1d_state_get_circle (NcmCSQ1DState *state, const gdouble r, const gdouble
  * @state: a #NcmCSQ1DState
  * @state1: a #NcmCSQ1DState
  *
- * Computes the distance between @state and @state1.
+ * The hyperbolic distance $d$ between the points of @state and @state1, which must have
+ * the same frame and time:
+ * $$\cosh d = \cosh\alpha\cosh\alpha_1\cosh(\gamma - \gamma_1) - \sinh\alpha\sinh\alpha_1.$$
  *
  * Returns: the distance between @state and @state1.
  */
 gdouble
 ncm_csq1d_state_compute_distance (NcmCSQ1DState *state, NcmCSQ1DState *state1)
 {
-  const gdouble dgamma01 = state->gamma - state1->gamma;
+  /*
+   * cosh (d) - 1 = 2 sinh^2 (delta alpha / 2) + 2 cosh (alpha) cosh (alpha1) sinh^2 (delta gamma / 2),
+   * a sum of non-negative terms, evaluated in logs so that large alpha or gamma do not
+   * overflow.
+   */
+  const gdouble da2    = 0.5 * fabs (state->alpha - state1->alpha);
+  const gdouble dg2    = 0.5 * fabs (state->gamma - state1->gamma);
+  const gdouble ln_a   = M_LN2 + 2.0 * _ln_sinh (da2);
+  const gdouble ln_g   = M_LN2 + gsl_sf_lncosh (state->alpha) + gsl_sf_lncosh (state1->alpha) + 2.0 * _ln_sinh (dg2);
+  const gdouble ln_max = GSL_MAX (ln_a, ln_g);
+  gdouble ln_x;
 
   g_assert (state->frame == state1->frame);
   g_assert (state->t == state1->t);
 
-  if ((fabs (state->alpha) > 1.0) || (fabs (state1->alpha) > 1.0) || (fabs (dgamma01) > 1.0))
-  {
-    const gdouble ln_cosh_alpha0 = gsl_sf_lncosh (state->alpha);
-    const gdouble ln_cosh_alpha1 = gsl_sf_lncosh (state1->alpha);
-    const gdouble ln_cosh_dgamma = gsl_sf_lncosh (dgamma01);
-    const gdouble tanh_alpha0    = tanh (state->alpha);
-    const gdouble tanh_alpha1    = tanh (state1->alpha);
-    const gdouble f              = log1p (-tanh_alpha0 * tanh_alpha1 * exp (-ln_cosh_dgamma));
+  if (ln_max == GSL_NEGINF)
+    return 0.0;
 
-    return _arccosh_exp_x (ln_cosh_alpha0 + ln_cosh_alpha1 + ln_cosh_dgamma + f);
+  ln_x = ln_max + log1p (exp (GSL_MIN (ln_a, ln_g) - ln_max));
+
+  if (ln_x < 18.0)
+  {
+    const gdouble x = exp (ln_x);
+
+    return log1p (x + sqrt (x * (x + 2.0)));
   }
   else
   {
-    const gdouble a        = gsl_sf_lncosh (state->alpha + state1->alpha);
-    const gdouble b        = gsl_sf_lncosh (state->alpha - state1->alpha);
-    const gdouble c        = gsl_sf_lncosh (dgamma01);
-    const gdouble expm1a   = expm1 (a);
-    const gdouble expm1b   = expm1 (b);
-    const gdouble expm1apc = expm1 (a + c);
-    const gdouble expm1bpc = expm1 (b + c);
-    const gdouble M12_m1   = 0.5 * (expm1apc + expm1bpc + expm1b - expm1a);
-    const gdouble dist     =  asinh (sqrt (M12_m1 * (2.0 + M12_m1)));
-
-    return dist;
+    /* acosh (1 + x) = ln (2 (1 + x)) to double precision for x > e^18. */
+    return M_LN2 + ln_x + log1p (exp (-ln_x));
   }
 }
 
