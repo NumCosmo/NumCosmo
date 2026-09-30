@@ -843,10 +843,22 @@ if mpi_c_dep.found()
             },
             {
                 'name': 'ncm_mpi_job',
-                'sources': ['ncm/mpi/test_ncm_mpi_job.c'],
+                'sources': [
+                    'ncm/mpi/test_ncm_mpi_job.c',
+                    'ncm/mpi/test_ncm_mpi_job_shape.c',
+                ],
                 # Three ranks give two workers: fewer inputs than workers, and workers
                 # returning out of order.
                 'nranks': [2, 3],
+            },
+            {
+                # Drives the worker side with raw MPI calls, without ncm_cfg_init.
+                'name': 'ncm_mpi_slave',
+                'sources': [
+                    'ncm/mpi/test_ncm_mpi_slave.c',
+                    'ncm/mpi/test_ncm_mpi_job_shape.c',
+                ],
+                'abort_driver': true,
             },
         ]
         foreach c_test_mpi : c_tests_mpi
@@ -854,7 +866,7 @@ if mpi_c_dep.found()
                 c_test_mpi['name'],
                 c_test_mpi['sources'],
                 c_args: tests_c_args,
-                dependencies: [libnumcosmo_dep],
+                dependencies: [libnumcosmo_dep, mpi_c_dep],
                 include_directories: [configinc, numcosmoinc],
             )
             if c_test_mpi.has_key('timeout')
@@ -900,6 +912,23 @@ if mpi_c_dep.found()
                     suite: suite,
                 )
             endforeach
+
+            # The refusals abort the MPI job, so each runs in its own mpiexec, launched
+            # and checked by the same program run without mpiexec.
+            if c_test_mpi.get('abort_driver', false)
+                test(
+                    '@0@_abort'.format(c_test_mpi['name']),
+                    executable_test,
+                    args: ['--spawn-aborts'] + test_seed_args,
+                    timeout: timeout,
+                    env: mpi_test_env + [
+                        'NCM_TEST_MPIEXEC=@0@'.format(mpiexec.full_path()),
+                        'NCM_TEST_SELF=@0@'.format(executable_test.full_path()),
+                    ],
+                    protocol: 'tap',
+                    suite: suite,
+                )
+            endif
         endforeach
     endif
 endif

@@ -46,6 +46,7 @@
 #include "ncm/mpi/ncm_mpi_job_fit.h"
 #include "ncm/mpi/ncm_mpi_job_mcmc.h"
 #include "ncm/mpi/ncm_mpi_job_feval.h"
+#include "ncm/mpi/ncm_mpi_slave.h"
 #include "ncm/algebra/ncm_vector.h"
 #include "ncm/spline/ncm_spline_bspline.h"
 #include "ncm/spline/ncm_spline_gsl.h"
@@ -410,7 +411,6 @@ void _nc_hicosmo_qspline_register_functions (void);
 void _nc_galaxy_shape_pop_beta_register_functions (void);
 
 #ifdef HAVE_MPI
-static void _ncm_cfg_mpi_main_loop (void);
 static gboolean _ncm_cfg_mpi_launched (void);
 
 #endif /* HAVE_MPI */
@@ -676,7 +676,9 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
       if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
       {
-        _ncm_cfg_mpi_main_loop ();
+        /* Workers never return to the caller. */
+        ncm_mpi_slave_run ();
+        exit (0);
       }
       else
       {
@@ -1051,251 +1053,6 @@ ncm_cfg_register_functions (void)
 
   return;
 }
-
-#ifdef HAVE_MPI
-
-static gboolean _ncm_cfg_mpi_cmd_handler (gpointer user_data);
-
-static void
-_ncm_cfg_mpi_main_loop (void)
-{
-  GMainLoop *mpi_ml = g_main_loop_new (NULL, FALSE);
-
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Starting slave!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-
-  g_timeout_add (100, &_ncm_cfg_mpi_cmd_handler, mpi_ml);
-
-  g_main_loop_run (mpi_ml);
-
-  g_main_loop_unref (mpi_ml);
-
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Dying slave!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-  exit (0);
-}
-
-static gboolean
-_ncm_cfg_mpi_cmd_handler (gpointer user_data)
-{
-  enum buf_type
-  {
-    input_type,
-    ret_type,
-    msg_type,
-  };
-  struct buf_desc
-  {
-    gpointer obj;
-    gpointer buf;
-    enum buf_type t;
-  };
-  GMainLoop *mpi_ml        = user_data;
-  NcmSerialize *ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-  NcmMPIJob *mpi_job       = NULL;
-  gboolean init            = FALSE;
-  GArray *work_ret_request = g_array_new (FALSE, FALSE, sizeof (MPI_Request));
-  GArray *work_ret_bufs    = g_array_new (FALSE, TRUE, sizeof (struct buf_desc));
-  gpointer input           = NULL;
-  gpointer input_buf       = NULL;
-  gint input_len           = 0;
-  gint input_size          = 0;
-  gint return_len          = 0;
-  gint return_size         = 0;
-  gboolean normal_exit     = TRUE;
-  MPI_Datatype input_dtype;
-  MPI_Datatype return_dtype;
-
-  while (TRUE)
-  {
-    gboolean end = FALSE;
-    gint cmd     = 0;
-    MPI_Status status;
-
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Waiting for command...\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-
-    MPI_Recv (&cmd, 1, MPI_INT, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_CMD, MPI_COMM_WORLD, &status);
-
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Received %d\n", _mpi_ctrl.size, _mpi_ctrl.rank, cmd);
-
-    switch (cmd)
-    {
-      case NCM_MPI_CTRL_SLAVE_INIT:
-      {
-        GVariant *job_ser = NULL;
-        gint job_size     = 0;
-        gint job_recv     = 0;
-        gchar *job        = NULL;
-
-        if (init)
-          g_error ("_ncm_cfg_mpi_cmd_handler: slave %d already initialized.", _mpi_ctrl.rank);
-
-        NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Initializing slave.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-
-        MPI_Probe (NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_JOB, MPI_COMM_WORLD, &status);
-        MPI_Get_count (&status, MPI_BYTE, &job_size);
-
-        NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave object size %d.\n", _mpi_ctrl.size, _mpi_ctrl.rank, job_size);
-
-        job = g_new (gchar, job_size);
-        MPI_Recv (job, job_size, MPI_BYTE, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_JOB, MPI_COMM_WORLD, &status);
-        MPI_Get_count (&status, MPI_BYTE, &job_recv);
-
-        NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave object received size %d.\n", _mpi_ctrl.size, _mpi_ctrl.rank, job_recv);
-
-        g_assert_cmpint (job_recv, ==, job_size);
-
-        job_ser = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), job, job_size, TRUE, g_free, job);
-
-        /*NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave object received string `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, g_variant_print (job_ser, TRUE));*/
-
-        mpi_job = NCM_MPI_JOB (ncm_serialize_from_variant (ser, job_ser));
-
-        ncm_mpi_job_work_init (mpi_job);
-
-        input_dtype  = ncm_mpi_job_input_datatype  (mpi_job, &input_len,  &input_size);
-        return_dtype = ncm_mpi_job_return_datatype (mpi_job, &return_len, &return_size);
-        input        = ncm_mpi_job_create_input (mpi_job);
-        input_buf    = ncm_mpi_job_get_input_buffer (mpi_job, input);
-
-        g_assert (NCM_IS_MPI_JOB (mpi_job));
-
-        g_variant_unref (job_ser);
-
-        init = TRUE;
-        break;
-      }
-      case NCM_MPI_CTRL_SLAVE_FREE:
-        end = TRUE;
-        break;
-      case NCM_MPI_CTRL_SLAVE_KILL:
-        end         = TRUE;
-        normal_exit = FALSE;
-        break;
-      case NCM_MPI_CTRL_SLAVE_WORK:
-      {
-        if (!init)
-        {
-          g_error ("_ncm_cfg_mpi_cmd_handler: uninitialized slave `%d' received work (vector).", _mpi_ctrl.rank);
-        }
-        else
-        {
-          struct buf_desc bd = {NULL, NULL, ret_type};
-          gint input_recv    = 0;
-          MPI_Request wr_request;
-
-          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave received a work request, command %d.\n",
-                                   _mpi_ctrl.size, _mpi_ctrl.rank, cmd);
-
-          MPI_Recv (input_buf, input_len, input_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD, &status);
-          MPI_Get_count (&status, input_dtype, &input_recv);
-
-          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave received work data: %d-bytes, working...\n", _mpi_ctrl.size, _mpi_ctrl.rank, input_len);
-
-          g_assert_cmpint (input_recv, ==, input_len);
-
-          ncm_mpi_job_unpack_input (mpi_job, input_buf, input);
-
-          bd.obj = ncm_mpi_job_create_return (mpi_job);
-
-          ncm_mpi_job_run (mpi_job, input, bd.obj);
-          bd.buf = ncm_mpi_job_pack_return (mpi_job, bd.obj);
-
-          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Job done, sending result, length %d!\n",
-                                   _mpi_ctrl.size, _mpi_ctrl.rank, return_len);
-
-          MPI_Isend (bd.buf, return_len, return_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &wr_request);
-
-          g_array_append_val (work_ret_request, wr_request);
-          g_array_append_val (work_ret_bufs,    bd);
-        }
-
-        break;
-      }
-      default:
-        g_error ("_ncm_cfg_mpi_cmd_handler: unknown MPI message `%d' to slave %d", cmd, _mpi_ctrl.rank);
-        break;
-    }
-
-    if (work_ret_request->len > 0)
-    {
-      gint i;
-
-      NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Testing %d sends:\n", _mpi_ctrl.size, _mpi_ctrl.rank, work_ret_request->len);
-
-      for (i = work_ret_request->len - 1; i >= 0; i--)
-      {
-        gint done = 0;
-
-        MPI_Test (&g_array_index (work_ret_request, MPI_Request, i), &done, &status);
-        NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Send %d is %s!\n",
-                                 _mpi_ctrl.size, _mpi_ctrl.rank, i, done ? "done" : "not done");
-
-        if (done)
-        {
-          struct buf_desc bd = g_array_index (work_ret_bufs, struct buf_desc, i);
-
-          ncm_mpi_job_destroy_return_buffer (mpi_job, bd.obj, bd.buf);
-          ncm_mpi_job_destroy_return (mpi_job, bd.obj);
-
-          g_array_remove_index_fast (work_ret_request, i);
-          g_array_remove_index_fast (work_ret_bufs, i);
-        }
-      }
-    }
-
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Finished command %d, %d requests left%s\n",
-                             _mpi_ctrl.size, _mpi_ctrl.rank, cmd, work_ret_request->len, end ? ", exiting!" : ".");
-
-    if (end)
-      break;
-  }
-
-  if (work_ret_request->len > 0)
-  {
-    guint i;
-
-    MPI_Waitall (work_ret_request->len, (MPI_Request *) work_ret_request->data, MPI_STATUSES_IGNORE);
-
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] All sent, freeing %d buffers!\n", _mpi_ctrl.size, _mpi_ctrl.rank, work_ret_request->len);
-
-    for (i = 0; i < work_ret_bufs->len; i++)
-    {
-      struct buf_desc bd = g_array_index (work_ret_bufs, struct buf_desc, i);
-
-      ncm_mpi_job_destroy_return_buffer (mpi_job, bd.obj, bd.buf);
-      ncm_mpi_job_destroy_return (mpi_job, bd.obj);
-    }
-  }
-
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Freeing arrays!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-
-  g_array_unref (work_ret_request);
-  g_array_unref (work_ret_bufs);
-
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Freeing input buffer %p [input %p, mpi_job %p]!\n", _mpi_ctrl.size, _mpi_ctrl.rank, input_buf, input, mpi_job);
-
-  if (input_buf != NULL)
-    ncm_mpi_job_destroy_input_buffer (mpi_job, input, input_buf);
-
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Freeing input %p [mpi_job %p]!\n", _mpi_ctrl.size, _mpi_ctrl.rank, input, mpi_job);
-
-  if (input != NULL)
-    ncm_mpi_job_destroy_input (mpi_job, input);
-
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Clearing MPI job %p!\n", _mpi_ctrl.size, _mpi_ctrl.rank, mpi_job);
-
-  ncm_mpi_job_clear (&mpi_job);
-
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Returning %d!\n", _mpi_ctrl.size, _mpi_ctrl.rank, normal_exit);
-
-  if (!normal_exit)
-    g_main_loop_quit (mpi_ml);
-
-  ncm_serialize_free (ser);
-
-  return normal_exit;
-}
-
-#endif /* HAVE_MPI */
 
 /**
  * ncm_cfg_enable_gsl_err_handler:
