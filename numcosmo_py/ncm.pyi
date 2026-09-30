@@ -4260,7 +4260,7 @@ class FitMC(GObject.Object):
 
     class Props:
         data_file: str
-        fiducial: MSet
+        fiducial: typing.Optional[MSet]
         fit: Fit
         function_array: ObjArray
         keep_order: bool
@@ -4272,7 +4272,7 @@ class FitMC(GObject.Object):
     def __init__(
         self,
         data_file: str = ...,
-        fiducial: MSet = ...,
+        fiducial: typing.Optional[MSet] = ...,
         fit: Fit = ...,
         function_array: ObjArray = ...,
         keep_order: bool = ...,
@@ -4304,7 +4304,7 @@ class FitMC(GObject.Object):
     def run(self, n: int) -> None: ...
     def run_lre(self, prerun: int, lre: float) -> None: ...
     def set_data_file(self, filename: str) -> None: ...
-    def set_fiducial(self, fiduc: MSet) -> None: ...
+    def set_fiducial(self, fiduc: typing.Optional[MSet] = None) -> None: ...
     def set_first_sample_id(self, first_sample_id: int) -> None: ...
     def set_mtype(self, mtype: FitRunMsgs) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
