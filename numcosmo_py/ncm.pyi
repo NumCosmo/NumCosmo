@@ -3019,7 +3019,7 @@ class Fit(GObject.Object):
         mset: MSet
         params_reltol: float
         state: FitState
-        sub_fit: Fit
+        sub_fit: typing.Optional[Fit]
 
     props: Props = ...
     parent_instance: GObject.Object = ...
@@ -3084,7 +3084,7 @@ class Fit(GObject.Object):
     def get_maxiter(self) -> int: ...
     def get_messages(self) -> FitRunMsgs: ...
     def get_params_reltol(self) -> float: ...
-    def get_sub_fit(self) -> Fit: ...
+    def get_sub_fit(self) -> typing.Optional[Fit]: ...
     def has_sub_fit(self) -> bool: ...
     def inequality_constraints_len(self) -> int: ...
     def is_least_squares(self) -> bool: ...
@@ -3839,7 +3839,7 @@ class FitGSLLS(Fit):
         mset: MSet
         params_reltol: float
         state: FitState
-        sub_fit: Fit
+        sub_fit: typing.Optional[Fit]
 
     props: Props = ...
     def __init__(
@@ -3935,7 +3935,7 @@ class FitGSLMM(Fit):
         mset: MSet
         params_reltol: float
         state: FitState
-        sub_fit: Fit
+        sub_fit: typing.Optional[Fit]
 
     props: Props = ...
     def __init__(
@@ -4043,7 +4043,7 @@ class FitGSLMMS(Fit):
         mset: MSet
         params_reltol: float
         state: FitState
-        sub_fit: Fit
+        sub_fit: typing.Optional[Fit]
 
     props: Props = ...
     def __init__(
@@ -4167,7 +4167,7 @@ class FitLevmar(Fit):
         mset: MSet
         params_reltol: float
         state: FitState
-        sub_fit: Fit
+        sub_fit: typing.Optional[Fit]
 
     props: Props = ...
     def __init__(
@@ -4498,7 +4498,7 @@ class FitNLOpt(Fit):
         mset: MSet
         params_reltol: float
         state: FitState
-        sub_fit: Fit
+        sub_fit: typing.Optional[Fit]
 
     props: Props = ...
     def __init__(

@@ -49,6 +49,8 @@ void test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_simple (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_dof (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_levmar_set_algo (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_covar_not_fit (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_get_sub_fit_none (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_full (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_grad_forward (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_grad_accurate (TestNcmFit *test, gconstpointer pdata);
@@ -82,10 +84,9 @@ void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
  * arrives as fixture data, so one function does for all of them.
  */
 static void
-_test_ncm_fit_new (TestNcmFit *test, gconstpointer pdata, NcmParamType ptype)
+_test_ncm_fit_new_dim (TestNcmFit *test, gconstpointer pdata, NcmParamType ptype, const gint dim)
 {
   const TestNcmFitAlgo *algo     = pdata;
-  const gint dim                 = g_test_rand_int_range (1, algo->max_dim);
   NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 1.0e0, 50.0, -1.0, 1.0, rng);
   NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (dim);
@@ -113,6 +114,14 @@ _test_ncm_fit_new (TestNcmFit *test, gconstpointer pdata, NcmParamType ptype)
   ncm_likelihood_clear (&lh);
   ncm_mset_clear (&mset);
   ncm_fit_clear (&fit);
+}
+
+static void
+_test_ncm_fit_new (TestNcmFit *test, gconstpointer pdata, NcmParamType ptype)
+{
+  const TestNcmFitAlgo *algo = pdata;
+
+  _test_ncm_fit_new_dim (test, pdata, ptype, g_test_rand_int_range (1, algo->max_dim));
 }
 
 void
@@ -160,6 +169,8 @@ static const TestNcmFitCase test_ncm_fit_cases[] = {
   { "/run/simple",             &test_ncm_fit_new, &test_ncm_fit_run_simple },
   { "/dof",                    &test_ncm_fit_new, &test_ncm_fit_dof },
   { "/levmar_set_algo",        &test_ncm_fit_new, &test_ncm_fit_levmar_set_algo },
+  { "/covar/not_fit",          &test_ncm_fit_new, &test_ncm_fit_covar_not_fit },
+  { "/sub_fit/none",           &test_ncm_fit_new, &test_ncm_fit_get_sub_fit_none },
   { "/run/full",               &test_ncm_fit_new, &test_ncm_fit_run_full },
   { "/set_get",                &test_ncm_fit_new, &test_ncm_fit_set_get },
   { "/log_info",               &test_ncm_fit_new, &test_ncm_fit_log_info },
@@ -513,6 +524,62 @@ test_ncm_fit_levmar_set_algo (TestNcmFit *test, gconstpointer pdata)
   g_assert_cmpint (algo, ==, other);
 
   g_assert_true (ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE));
+}
+
+void
+test_ncm_fit_covar_not_fit (TestNcmFit *test, gconstpointer pdata)
+{
+  /*
+   * The covariance with a parameter that was not fit aborts, whichever of the two it is.
+   * The child builds its own two-parameter fit: it does not share the parent's seed, so
+   * the fixture's random dimension could be one there.
+   */
+  const NcmModelID mid = ncm_model_mvnd_id ();
+
+  if (g_test_subprocess ())
+  {
+    const gchar *which = g_getenv ("TEST_NCM_FIT_COVAR");
+    const guint dim    = 2;
+    TestNcmFit test2;
+    NcmFit *fit;
+    NcmMSet *mset;
+
+    _test_ncm_fit_new_dim (&test2, pdata, NCM_PARAM_TYPE_FREE, dim);
+    fit  = test2.fit;
+    mset = ncm_fit_peek_mset (fit);
+
+    ncm_mset_param_set_ftype (mset, mid, dim - 1, NCM_PARAM_TYPE_FIXED);
+    ncm_mset_prepare_fparam_map (mset);
+    ncm_fit_reset (fit);
+    ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+    ncm_fit_obs_fisher (fit);
+
+    if (g_str_equal (which, "cov"))
+      ncm_fit_covar_cov (fit, mid, 0, mid, dim - 1);
+    else
+      ncm_fit_covar_cor (fit, mid, 0, mid, dim - 1);
+
+    return;
+  }
+
+  g_setenv ("TEST_NCM_FIT_COVAR", "cov", TRUE);
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*ncm_fit_covar_cov: parameters * were not both fit*");
+
+  g_setenv ("TEST_NCM_FIT_COVAR", "cor", TRUE);
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*ncm_fit_covar_cor: parameters * were not both fit*");
+
+  g_unsetenv ("TEST_NCM_FIT_COVAR");
+}
+
+void
+test_ncm_fit_get_sub_fit_none (TestNcmFit *test, gconstpointer pdata)
+{
+  g_assert_false (ncm_fit_has_sub_fit (test->fit));
+  g_assert_null (ncm_fit_get_sub_fit (test->fit));
 }
 
 void
