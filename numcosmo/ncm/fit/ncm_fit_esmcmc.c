@@ -316,6 +316,13 @@ _ncm_fit_esmcmc_constructed (GObject *object)
     if (self->walker == NULL)
       self->walker = NCM_FIT_ESMCMC_WALKER (ncm_fit_esmcmc_walker_apes_new (self->nwalkers, self->fparam_len));
 
+    /* The walker moves nwalkers points in the space of the free parameters. */
+    if (ncm_fit_esmcmc_walker_get_size (self->walker) != self->nwalkers)
+      ncm_fit_esmcmc_walker_set_size (self->walker, self->nwalkers);
+
+    if (ncm_fit_esmcmc_walker_get_nparams (self->walker) != self->fparam_len)
+      ncm_fit_esmcmc_walker_set_nparams (self->walker, self->fparam_len);
+
     g_assert (self->mj == NULL);
     self->mj = NCM_MPI_JOB (ncm_mpi_job_mcmc_new (self->fit, self->func_oa));
 
