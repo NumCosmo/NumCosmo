@@ -5826,7 +5826,7 @@ class MPIJobTest(MPIJob):
 
     Properties from NcmMPIJobTest:
       vector -> NcmVector: vector
-        vector
+        Vector of the returned values
 
     Properties from NcmMPIJob:
       placeholder -> guint: placeholder
