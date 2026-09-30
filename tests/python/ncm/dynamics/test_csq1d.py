@@ -25,11 +25,9 @@
 """Tests on NcmCSQ1D class."""
 
 import math
-import pytest
 
 from numpy.testing import assert_allclose
 import numpy as np
-from scipy.special import hankel1e, jv, yv  # pylint: disable=no-name-in-module
 
 from numcosmo_py import Ncm
 
@@ -143,116 +141,5 @@ def test_eval_int_nu_override():
         assert_allclose(bs.eval_int_nu(None, t), k * (t - ti))
 
 
-def test_nonadiab_prop():
-    """Test basic functionality of NcmCSQ1D."""
-    k = 8.0
-    alpha = 0.5
-    bs = BesselTest(alpha=alpha, adiab=False)
-    bs.set_k(k)
-
-    ti = 0.0
-    tii = 1.0e-7
-    tf = 2.0
-
-    bs.prepare_prop(None, ti, tii, tf)
-    state0 = Ncm.CSQ1DState.new()
-    state1 = Ncm.CSQ1DState.new()
-    state0.set_up(Ncm.CSQ1DFrame.NONADIAB1, ti, 0.0, 0.0)
-
-    def theo_phi(t):
-        """Theoretical phi."""
-        prefactor = 0.5 * (1.0 - 1.0j) * math.sqrt(math.pi / 2.0) * (k * t) ** (-alpha)
-        return prefactor * (
-            jv(alpha, k * t) - 1.0j * k ** (2.0 * alpha) * yv(alpha, k * t)
-        )
-
-    test_t = np.geomspace(tii, 1.0e-2, 10)
-
-    prop_J11 = [
-        bs.evolve_prop_vector(None, state0, Ncm.CSQ1DFrame.ORIG, t, state1).get_J()[0]
-        for t in test_t
-    ]
-
-    analytic_J11 = [2.0 * np.abs(theo_phi(t)) ** 2 for t in test_t]
-
-    assert_allclose(prop_J11, analytic_J11, rtol=1.0e-9)
-
-
-def test_nonadiab_approx():
-    """Test basic functionality of NcmCSQ1D."""
-    k = 8.0
-    alpha = 0.5
-    bs = BesselTest(alpha=alpha, adiab=False)
-    bs.set_k(k)
-
-    ti = 0.0
-    tii = 1.0e-7
-    tf = 2.0
-
-    bs.prepare_prop(None, ti, tii, tf)
-    state0 = Ncm.CSQ1DState.new()
-    state1 = Ncm.CSQ1DState.new()
-    state0.set_up(Ncm.CSQ1DFrame.NONADIAB1, ti, 0.0, 0.0)
-
-    def theo_phi(t):
-        """Theoretical phi."""
-        prefactor = 0.5 * (1.0 - 1.0j) * math.sqrt(math.pi / 2.0) * (k * t) ** (-alpha)
-        return prefactor * (
-            jv(alpha, k * t) - 1.0j * k ** (2.0 * alpha) * yv(alpha, k * t)
-        )
-
-    test_t = np.geomspace(tii, 1.0e-2, 10)
-
-    prop_J11 = [
-        bs.change_frame(
-            None, bs.compute_nonadiab(None, t, state1), Ncm.CSQ1DFrame.ORIG
-        ).get_J()[0]
-        for t in test_t
-    ]
-
-    analytic_J11 = [2.0 * np.abs(theo_phi(t)) ** 2 for t in test_t]
-
-    assert_allclose(prop_J11, analytic_J11, rtol=1.0e-4)
-
-
-def test_nonadiab_evol():
-    """Test basic functionality of NcmCSQ1D."""
-    k = 8.0
-    alpha = 0.5
-    bs = BesselTest(alpha=alpha, adiab=False)
-    bs.set_k(k)
-
-    ti = 0.0
-    tii = 1.0e-7
-    tf = 2.0
-
-    bs.prepare_prop(None, ti, tii, tf)
-    state0 = Ncm.CSQ1DState.new()
-    state1 = Ncm.CSQ1DState.new()
-    state = Ncm.CSQ1DState.new()
-    state0.set_up(Ncm.CSQ1DFrame.NONADIAB1, ti, 0.0, 0.0)
-
-    def theo_phi(t):
-        """Theoretical phi."""
-        prefactor = 0.5 * (1.0 - 1.0j) * math.sqrt(math.pi / 2.0) * (k * t) ** (-alpha)
-        return prefactor * (
-            jv(alpha, k * t) - 1.0j * k ** (2.0 * alpha) * yv(alpha, k * t)
-        )
-
-    bs.evolve_prop_vector(None, state0, Ncm.CSQ1DFrame.ORIG, 1.0e-4, state1)
-    bs.set_init_cond(None, Ncm.CSQ1DEvolState.UP, state1)
-    bs.set_tf(10.0)
-    bs.set_reltol(1.0e-14)
-    bs.prepare(None)
-    t_a, _smaller_abst = bs.get_time_array()
-
-    evol_J11 = [bs.eval_at(None, t, state).get_J()[0] for t in t_a]
-    analytic_J11 = [2.0 * np.abs(theo_phi(t)) ** 2 for t in t_a]
-
-    assert_allclose(evol_J11, analytic_J11, rtol=1.0e-7)
-
-
 if __name__ == "__main__":
-    test_nonadiab_prop()
-    test_nonadiab_evol()
     test_eval_int_nu_override()

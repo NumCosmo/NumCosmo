@@ -3217,32 +3217,6 @@ _ncm_csq1d_compute_nonadiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, 
   ncm_csq1d_state_set_up (state, NCM_CSQ1D_FRAME_NONADIAB1, t, +2.0 * r1, -2.0 * p1);
 }
 
-/*  OLD IMPLEMENTATION
- *  const gdouble q0             = ncm_csq1d_eval_int_1_m (csq1d, model, t);
- *  const gdouble q1             = ncm_csq1d_eval_int_q2mnu2 (csq1d, model, t);
- *  const gdouble p1             = ncm_csq1d_eval_int_qmnu2 (csq1d, model, t);
- *  const gdouble r1             = 0.5 * ncm_csq1d_eval_int_mnu2 (csq1d, model, t);
- *
- *  switch (frame)
- *  {
- *   case NCM_CSQ1D_FRAME_ORIG:
- *     chi[0] = (2.0 * p1 - 1.0) * (q0 + q1) + 2.0 * r1;
- *     Up[0]  = -2.0 * p1;
- *     break;
- *   case NCM_CSQ1D_FRAME_NONADIAB1:
- *     chi[0] = +2.0 * r1;
- *     Up[0]  = -2.0 * p1;
- *     break;
- *   case NCM_CSQ1D_FRAME_NONADIAB2:
- *     chi[0] = 0.0;
- *     Up[0]  = 0.0;
- *     break;
- *   default:
- *     g_assert_not_reached ();
- *     break;
- *  }
- */
-
 /**
  * ncm_csq1d_compute_nonadiab:
  * @csq1d: a #NcmCSQ1D
@@ -3250,9 +3224,10 @@ _ncm_csq1d_compute_nonadiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, 
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
- * Computes the value of the non-adiabatic VDC order two in the variables $\chi$ and
- * $U$ at $t$. The result is stored in the state object in the frame NCM_CSQ1D_FRAME_NONADIAB1.
- * Use ncm_csq1d_change_frame() to change the frame.
+ * The second order non-adiabatic vacuum at @t, $(\chi, U_+) = (2r_1, -2p_1)$ in
+ * #NCM_CSQ1D_FRAME_NONADIAB1, with $r_1$ and $p_1$ of #NcmCSQ1DFrame. It is accurate
+ * near the time where these integrals vanish, and it is the state the propagator of
+ * ncm_csq1d_prepare_prop() starts from there.
  *
  * Returns: (transfer none): the @state object with the result.
  */
@@ -3271,9 +3246,8 @@ ncm_csq1d_compute_nonadiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, N
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
- * Computes the Hamiltonian vector state of the original frame at $t$. The result is
- * stored in the state object in the frame NCM_CSQ1D_FRAME_ORIG.
- * Use ncm_csq1d_change_frame() to change the frame.
+ * The complex structure of the Hamiltonian at @t, $(\alpha, \gamma) = (0, \xi)$ in
+ * #NCM_CSQ1D_FRAME_ORIG, the origin of #NCM_CSQ1D_FRAME_ADIAB1.
  *
  * Returns: (transfer none): the @state object with the result.
  */
@@ -3946,10 +3920,15 @@ _ncm_csq1d_prepare_prop_eval_u1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble
  * @tii: integral approximation time $t_{\mathrm{i}i}$
  * @tf: max time $t_f$
  *
- * Computes the propagator for the given @csq1d and @model from @ti to @tf. The
- * propagator is computed using the integral approximation time @tii. The
- * propagator is stored in the @csq1d object and can be used to compute the
- * propagator a state from @ti to any time between @tii and @tf.
+ * Prepares the propagator $R(t)$ from @ti, the matrix
+ * $\begin{pmatrix} a + h & b \\ c & a - h \end{pmatrix}$ of unit determinant acting in the
+ * frame between #NCM_CSQ1D_FRAME_ORIG and #NCM_CSQ1D_FRAME_NONADIAB1. Over
+ * [@ti, @tii] it takes the first order, from the integrals of $m\nu^2$, $q m\nu^2$ and
+ * $q^2 m\nu^2$ with $q = -\int\mathrm{d}t/m$ by quadrature; from @tii it integrates the
+ * propagator equations to @tf, and stops earlier where the determinant drifts from one
+ * by 0.1. The time where the square of the first-order part, $-bc - h^2$, reaches the
+ * propagator threshold is kept, see ncm_csq1d_get_tf_prop(). ncm_csq1d_evolve_prop_vector()
+ * reads it from @tii to where the integration stopped.
  *
  */
 void
@@ -3967,20 +3946,13 @@ ncm_csq1d_prepare_prop (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti, cons
   _ncm_csq1d_prepare_prop_eval_u1 (csq1d, model, ti, tii, u1);
   self->ti_Prop = ti;
 
-/*
- *  ncm_message ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", ti, tii,
- *     u1[0], +ncm_csq1d_eval_int_qmnu2 (csq1d, model, tii),
- *     u1[1], +ncm_csq1d_eval_int_q2mnu2 (csq1d, model, tii),
- *     u1[2], -ncm_csq1d_eval_int_mnu2 (csq1d, model, tii)
- *     );
- */
-
   NV_Ith_S (self->y_Prop, 0) = 1.0;
   NV_Ith_S (self->y_Prop, 1) = u1[1];
   NV_Ith_S (self->y_Prop, 2) = u1[2];
   NV_Ith_S (self->y_Prop, 3) = u1[0];
 
-  g_array_append_val (t_a, ti);
+  /* The initial values are those at tii. */
+  g_array_append_val (t_a, tii);
 
   for (i = 0; i < 4; i++)
   {
@@ -4091,7 +4063,8 @@ _ncm_csq1d_prepare_prop_q2mnu2 (gdouble t, gpointer params)
  * ncm_csq1d_get_tf_prop:
  * @csq1d: a #NcmCSQ1D
  *
- * Returns: current final time $t_f$ for the propagator.
+ * Returns: the time ncm_csq1d_prepare_prop() found where the square of the first-order
+ * part of the propagator reaches the propagator threshold, NaN when it was not reached.
  */
 gdouble
 ncm_csq1d_get_tf_prop (NcmCSQ1D *csq1d)
@@ -4102,13 +4075,15 @@ ncm_csq1d_get_tf_prop (NcmCSQ1D *csq1d)
 }
 
 /**
- * ncm_csq1d_get_prop_vector:
+ * ncm_csq1d_compute_prop_vector:
  * @csq1d: a #NcmCSQ1D
  * @model: (nullable): a #NcmModel
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
- * Computes the state vector associated with the propagator at time $t$.
+ * The point of the hyperbolic plane given by the normalized first-order part of the
+ * propagator of ncm_csq1d_prepare_prop() at @t: $\chi = h/n_0$ and
+ * $U_+ = \ln(-c/n_0)$ with $n_0 = \sqrt{-bc - h^2}$, labelled #NCM_CSQ1D_FRAME_ORIG.
  *
  * Returns: (transfer none): the @state object with the result.
  */
@@ -4142,7 +4117,7 @@ _ncm_csq1d_evolve_prop_vector (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *
   const gdouble a12            = b;
   const gdouble a21            = c;
   const gdouble init_ti        = ncm_csq1d_state_get_time (initial_state);
-  const gdouble q1_ti          = ncm_csq1d_eval_int_qmnu2 (csq1d, model, init_ti);
+  const gdouble q1_ti          = ncm_csq1d_eval_int_q2mnu2 (csq1d, model, init_ti);
   gdouble chi_i, Up_i;
 
   if (init_ti != self->ti_Prop)
@@ -4231,8 +4206,13 @@ _ncm_csq1d_evolve_prop_vector (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
- * Uses the propagator to evolve the state vector @initial_state to time $t$ and
- * at frame @frame.
+ * Propagates @initial_state with the propagator of ncm_csq1d_prepare_prop() to @t, in
+ * @frame: #NCM_CSQ1D_FRAME_ORIG, #NCM_CSQ1D_FRAME_NONADIAB1 or
+ * #NCM_CSQ1D_FRAME_NONADIAB2. @initial_state must be in #NCM_CSQ1D_FRAME_NONADIAB1 at
+ * the initial time of the propagator, or the call aborts. The state is carried to the
+ * frame of the propagator, multiplied by $R(t)$ and carried to @frame; results in the
+ * non-adiabatic frames are computed there directly, avoiding the shear of the original
+ * frame.
  *
  * Returns: (transfer none): the state vector.
  */
