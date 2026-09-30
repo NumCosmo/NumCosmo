@@ -153,6 +153,16 @@ test_ncm_csq1d_prepare_aborts_subprocess (void)
     ncm_csq1d_prepare (NCM_CSQ1D (b), NULL);
     ncm_csq1d_eval_at (NCM_CSQ1D (b), NULL, -300.0, s1);
   }
+  else if ((g_strcmp0 (which, "adiab2_F1") == 0) || (g_strcmp0 (which, "nonadiab2_boost") == 0))
+  {
+    const gboolean f1 = (g_strcmp0 (which, "adiab2_F1") == 0);
+    NcmCSQ1DState *s0 = ncm_csq1d_state_new ();
+
+    /* |F1| = 25 at t = -0.1; 2 r1 = 1e7 at t = -20. */
+    b = test_csq1d_bessel_new (2.0, 1.0, TRUE);
+    ncm_csq1d_state_set_ag (s0, NCM_CSQ1D_FRAME_ORIG, f1 ? -0.1 : -20.0, 0.1, 0.3);
+    ncm_csq1d_change_frame (NCM_CSQ1D (b), NULL, s0, f1 ? NCM_CSQ1D_FRAME_ADIAB2 : NCM_CSQ1D_FRAME_NONADIAB2);
+  }
   else if (g_strcmp0 (which, "init_adiab") == 0)
   {
     /* At t = -2 the adiabatic alpha is -1.74, beyond the default threshold 1. */
@@ -179,6 +189,8 @@ test_ncm_csq1d_prepare_aborts (void)
   _test_ncm_csq1d_trap_abort ("nonadiab2", "*not implemented*");
   _test_ncm_csq1d_trap_abort ("init_adiab", "*is not a valid adiabatic time*");
   _test_ncm_csq1d_trap_abort ("ad_hoc_before", "*is before the initial conditions*");
+  _test_ncm_csq1d_trap_abort ("adiab2_F1", "*|F1| >= 1*");
+  _test_ncm_csq1d_trap_abort ("nonadiab2_boost", "*beyond double precision*");
 }
 
 /* The phase of the exact positive-frequency mode, -arg H^(1)_a (-k t), for t < 0. */
@@ -514,6 +526,191 @@ test_ncm_csq1d_adiab_finders (void)
   ncm_csq1d_free (csq1d);
 }
 
+static const gdouble _test_frame_ag[][2] = {
+  {
+    0.1, 0.3
+  }, {
+    -0.4, 1.2
+  }, {
+    1.3, -0.7
+  }, {
+    0.0, 0.0
+  }
+};
+
+/* The largest round-trip change and the largest relative change of distances between the
+ * test points over every pair of @frames at @t. The points are set near the origin of
+ * @frame_ref, where the states of interest are, and carried to each frame. */
+static void
+_test_frames (NcmCSQ1D *csq1d, const NcmCSQ1DFrame *frames, guint nframes, const NcmCSQ1DFrame frame_ref, const gdouble t, gdouble *round_trip, gdouble *isometry)
+{
+  NcmCSQ1DState *s0 = ncm_csq1d_state_new ();
+  NcmCSQ1DState *s1 = ncm_csq1d_state_new ();
+  guint i, j, l;
+
+  round_trip[0] = 0.0;
+  isometry[0]   = 0.0;
+
+  for (i = 0; i < nframes; i++)
+  {
+    for (j = 0; j < nframes; j++)
+    {
+      for (l = 0; l < G_N_ELEMENTS (_test_frame_ag); l++)
+      {
+        gdouble a0, g0, a, g;
+
+        ncm_csq1d_state_set_ag (s0, frame_ref, t, _test_frame_ag[l][0], _test_frame_ag[l][1]);
+        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[i]);
+        ncm_csq1d_state_get_ag (s0, &a0, &g0);
+        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[j]);
+        g_assert_cmpint (ncm_csq1d_state_get_frame (s0), ==, frames[j]);
+        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[i]);
+        ncm_csq1d_state_get_ag (s0, &a, &g);
+        round_trip[0] = GSL_MAX (round_trip[0], GSL_MAX (fabs (a - a0), fabs (g - g0) / GSL_MAX (1.0, fabs (g0))));
+      }
+
+      {
+        gdouble d;
+
+        ncm_csq1d_state_set_ag (s0, frame_ref, t, _test_frame_ag[0][0], _test_frame_ag[0][1]);
+        ncm_csq1d_state_set_ag (s1, frame_ref, t, _test_frame_ag[2][0], _test_frame_ag[2][1]);
+        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[i]);
+        ncm_csq1d_change_frame (csq1d, NULL, s1, frames[i]);
+        d = ncm_csq1d_state_compute_distance (s0, s1);
+        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[j]);
+        ncm_csq1d_change_frame (csq1d, NULL, s1, frames[j]);
+        isometry[0] = GSL_MAX (isometry[0], fabs (ncm_csq1d_state_compute_distance (s0, s1) / d - 1.0));
+      }
+    }
+  }
+
+  ncm_csq1d_state_free (s0);
+  ncm_csq1d_state_free (s1);
+}
+
+static void
+test_ncm_csq1d_frame_changes (void)
+{
+  /*
+   * Frame changes are canonical transformations: every pair round-trips and preserves
+   * the hyperbolic distance. The adiabatic frames at adiabatic times, the non-adiabatic
+   * ones where their integrals are moderate.
+   */
+  const NcmCSQ1DFrame adiab[]    = {NCM_CSQ1D_FRAME_ORIG, NCM_CSQ1D_FRAME_ADIAB1, NCM_CSQ1D_FRAME_ADIAB2};
+  const NcmCSQ1DFrame nonadiab[] = {NCM_CSQ1D_FRAME_ORIG, NCM_CSQ1D_FRAME_ADIAB1, NCM_CSQ1D_FRAME_NONADIAB1, NCM_CSQ1D_FRAME_NONADIAB2};
+  TestCSQ1DBessel *b             = test_csq1d_bessel_new (2.0, 1.0, TRUE);
+  NcmCSQ1D *csq1d                = NCM_CSQ1D (b);
+  gdouble rt, iso;
+
+  {
+    const gdouble t_adiab[]    = {-20.0, -200.0};
+    const gdouble t_nonadiab[] = {-0.5, -1.5};
+    guint i;
+
+    /* Measured: round trips at most 5.7e-15, distances to 8.9e-16. */
+    for (i = 0; i < 2; i++)
+    {
+      _test_frames (csq1d, adiab, G_N_ELEMENTS (adiab), NCM_CSQ1D_FRAME_ADIAB1, t_adiab[i], &rt, &iso);
+      g_assert_cmpfloat (rt, <, 6.0e-14);
+      g_assert_cmpfloat (iso, <, 1.0e-14);
+
+      _test_frames (csq1d, nonadiab, G_N_ELEMENTS (nonadiab), NCM_CSQ1D_FRAME_NONADIAB1, t_nonadiab[i], &rt, &iso);
+      g_assert_cmpfloat (rt, <, 6.0e-14);
+      g_assert_cmpfloat (iso, <, 1.0e-14);
+    }
+  }
+
+  {
+    /* ORIG to ADIAB1 subtracts xi from gamma, exactly. */
+    NcmCSQ1DState *s = ncm_csq1d_state_new ();
+    gdouble a, g;
+
+    ncm_csq1d_state_set_ag (s, NCM_CSQ1D_FRAME_ORIG, -20.0, 0.1, 0.3);
+    ncm_csq1d_change_frame (csq1d, NULL, s, NCM_CSQ1D_FRAME_ADIAB1);
+    ncm_csq1d_state_get_ag (s, &a, &g);
+    g_assert_cmpfloat (a, ==, 0.1);
+    g_assert_cmpfloat (g, ==, 0.3 - ncm_csq1d_eval_xi (csq1d, NULL, -20.0));
+    ncm_csq1d_state_free (s);
+  }
+
+  ncm_csq1d_free (csq1d);
+}
+
+static void
+test_ncm_csq1d_frame_adiab_vacuum (void)
+{
+  /* The fourth order vacuum lies |F1| from the origin of the first adiabatic frame and
+   * |F2| from that of the second. */
+  TestCSQ1DBessel *b = test_csq1d_bessel_new (2.0, 1.0, TRUE);
+  NcmCSQ1D *csq1d    = NCM_CSQ1D (b);
+  NcmCSQ1DState *v   = ncm_csq1d_state_new ();
+  NcmCSQ1DState *o   = ncm_csq1d_state_new ();
+  const gdouble ts[] = {-1000.0, -100.0};
+  guint i;
+
+  ncm_csq1d_set_initial_condition_type (csq1d, NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4);
+
+  for (i = 0; i < G_N_ELEMENTS (ts); i++)
+  {
+    const gdouble F1 = ncm_csq1d_eval_F1 (csq1d, NULL, ts[i]);
+    const gdouble F2 = ncm_csq1d_eval_F2 (csq1d, NULL, ts[i]);
+    gdouble d1, d2;
+
+    ncm_csq1d_compute_adiab_frame (csq1d, NULL, NCM_CSQ1D_FRAME_ADIAB1, ts[i], v, NULL, NULL);
+    ncm_csq1d_state_set_ag (o, NCM_CSQ1D_FRAME_ADIAB1, ts[i], 0.0, 0.0);
+    d1 = ncm_csq1d_state_compute_distance (v, o);
+
+    ncm_csq1d_compute_adiab_frame (csq1d, NULL, NCM_CSQ1D_FRAME_ADIAB2, ts[i], v, NULL, NULL);
+    ncm_csq1d_state_set_ag (o, NCM_CSQ1D_FRAME_ADIAB2, ts[i], 0.0, 0.0);
+    d2 = ncm_csq1d_state_compute_distance (v, o);
+
+    /* Measured relative offsets 0.27 F1^2 and 1.34 F1^2. */
+    g_assert_cmpfloat (fabs (d1 / fabs (F1) - 1.0), <, F1 * F1);
+    g_assert_cmpfloat (fabs (d2 / fabs (F2) - 1.0), <, 2.0 * F1 * F1);
+  }
+
+  ncm_csq1d_state_free (v);
+  ncm_csq1d_state_free (o);
+  ncm_csq1d_free (csq1d);
+}
+
+static void
+test_ncm_csq1d_frame_eval_at (void)
+{
+  /* eval_at_frame is eval_at changed to the frame, in every frame defined at the time. */
+  TestCSQ1DBessel *b                 = _test_ncm_csq1d_bessel_prepared_new (NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4);
+  NcmCSQ1D *csq1d                    = NCM_CSQ1D (b);
+  NcmCSQ1DState *s_frame             = ncm_csq1d_state_new ();
+  NcmCSQ1DState *s_orig              = ncm_csq1d_state_new ();
+  const NcmCSQ1DFrame frames_adiab[] = {NCM_CSQ1D_FRAME_ORIG, NCM_CSQ1D_FRAME_ADIAB1, NCM_CSQ1D_FRAME_ADIAB2};
+  const NcmCSQ1DFrame frames_non[]   = {NCM_CSQ1D_FRAME_NONADIAB1, NCM_CSQ1D_FRAME_NONADIAB2};
+  guint i;
+
+  ncm_csq1d_prepare (csq1d, NULL);
+
+  for (i = 0; i < G_N_ELEMENTS (frames_adiab) + G_N_ELEMENTS (frames_non); i++)
+  {
+    const gboolean adiab      = (i < G_N_ELEMENTS (frames_adiab));
+    const NcmCSQ1DFrame frame = adiab ? frames_adiab[i] : frames_non[i - G_N_ELEMENTS (frames_adiab)];
+    const gdouble t           = adiab ? -50.0 : -0.5;
+    gdouble a1, g1, a2, g2;
+
+    ncm_csq1d_eval_at_frame (csq1d, NULL, frame, t, s_frame);
+    ncm_csq1d_eval_at (csq1d, NULL, t, s_orig);
+    ncm_csq1d_change_frame (csq1d, NULL, s_orig, frame);
+
+    g_assert_cmpint (ncm_csq1d_state_get_frame (s_frame), ==, frame);
+    ncm_csq1d_state_get_ag (s_frame, &a1, &g1);
+    ncm_csq1d_state_get_ag (s_orig, &a2, &g2);
+    g_assert_cmpfloat (a1, ==, a2);
+    g_assert_cmpfloat (g1, ==, g2);
+  }
+
+  ncm_csq1d_state_free (s_frame);
+  ncm_csq1d_state_free (s_orig);
+  ncm_csq1d_free (csq1d);
+}
+
 static void
 test_ncm_csq1d_evolution_ad_hoc (void)
 {
@@ -818,6 +1015,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/csq1d/evolution/ad_hoc", &test_ncm_csq1d_evolution_ad_hoc);
   g_test_add_func ("/ncm/csq1d/adiab/hankel", &test_ncm_csq1d_adiab_hankel);
   g_test_add_func ("/ncm/csq1d/adiab/finders", &test_ncm_csq1d_adiab_finders);
+  g_test_add_func ("/ncm/csq1d/frame/changes", &test_ncm_csq1d_frame_changes);
+  g_test_add_func ("/ncm/csq1d/frame/adiab_vacuum", &test_ncm_csq1d_frame_adiab_vacuum);
+  g_test_add_func ("/ncm/csq1d/frame/eval_at", &test_ncm_csq1d_frame_eval_at);
   g_test_add_func ("/ncm/csq1d/prepare/aborts", &test_ncm_csq1d_prepare_aborts);
   g_test_add_func ("/ncm/csq1d/prepare/aborts/subprocess", &test_ncm_csq1d_prepare_aborts_subprocess);
   g_test_add_func ("/ncm/csq1d/state/maps", &test_ncm_csq1d_state_maps);

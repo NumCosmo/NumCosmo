@@ -106,13 +106,20 @@ typedef enum _NcmCSQ1DInitialStateType /*< enum,underscore_name=NCM_CSQ1D_INITIA
 
 /**
  * NcmCSQ1DFrame:
- * @NCM_CSQ1D_FRAME_ORIG: Original frame
- * @NCM_CSQ1D_FRAME_ADIAB1: Adiabatic frame 1
- * @NCM_CSQ1D_FRAME_ADIAB2: Adiabatic frame 2
- * @NCM_CSQ1D_FRAME_NONADIAB1: Non-adiabatic frame 1
- * @NCM_CSQ1D_FRAME_NONADIAB2: Non-adiabatic frame 2
+ * @NCM_CSQ1D_FRAME_ORIG: the complex structure of the original variables $(\phi, P_\phi)$
+ * @NCM_CSQ1D_FRAME_ADIAB1: first adiabatic frame, $\gamma$ replaced by $\delta\gamma = \gamma - \xi$
+ * @NCM_CSQ1D_FRAME_ADIAB2: second adiabatic frame, the first boosted by $\tanh^{-1}(-F_1)$; needs $\vert F_1\vert < 1$
+ * @NCM_CSQ1D_FRAME_NONADIAB1: first non-adiabatic frame, $\chi$ replaced by $\chi + e^{U_+}(q_0 + q_1)$ at fixed $U_+$
+ * @NCM_CSQ1D_FRAME_NONADIAB2: second non-adiabatic frame, the first with $U_+$ shifted by $2p_1$ and boosted by $-2r_1$
  *
- * Frames for the system.
+ * Frames the state can be expressed in: canonical transformations of the original
+ * variables, which act on the hyperbolic plane as isometries. The adiabatic vacuum of
+ * order $n$ is near the origin of the adiabatic frame $n$, within $\vert F_1\vert$ in
+ * the first and $\vert F_2\vert$ in the second. The non-adiabatic frames use
+ * $q_0 = \int\mathrm{d}t/m$, $q_1 = \int q_0^2 m\nu^2\,\mathrm{d}t$,
+ * $p_1 = \int q_0 m\nu^2\,\mathrm{d}t$ and $r_1 = \frac{1}{2}\int m\nu^2\,\mathrm{d}t$,
+ * see ncm_csq1d_eval_int_1_m() and the related methods; they suit times where these
+ * are small, and see ncm_csq1d_change_frame() for the precision of the boosts.
  *
  */
 typedef enum _NcmCSQ1DFrame /*< prefix=NCM_CSQ1D_FRAME >*/

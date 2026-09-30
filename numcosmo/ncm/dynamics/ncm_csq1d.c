@@ -3416,12 +3416,17 @@ ncm_csq1d_eval_at_frame (NcmCSQ1D *csq1d, NcmModel *model, const NcmCSQ1DFrame f
  *  }
  */
 
+/* A boost of rapidity p; it loses a factor e^|p| of relative precision, all of it at
+ * |p| = -ln (epsilon). */
 static void
 _ncm_csq1d_ct_g0g1 (const gdouble alpha, const gdouble gamma, const gdouble p, gdouble *alphap, gdouble *gammap)
 {
   const gdouble l_theta = _ALPHA_TO_THETA (alpha);
   const gdouble l_gamma = gamma;
   gdouble thetap        = 0.0;
+
+  if (fabs (p) >= -log (GSL_DBL_EPSILON))
+    g_error ("ncm_csq1d_change_frame: a boost of rapidity % 22.15g is beyond double precision.", p);
 
   ncm_util_mln_1mIexpzA_1pIexpmzA (l_gamma, l_theta, tanh (0.5 * p), gammap, &thetap);
   alphap[0] = _THETA_TO_ALPHA (thetap);
@@ -3715,9 +3720,13 @@ _ncm_csq1d_change_frame_to_nonadiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1D
  * @state: a #NcmCSQ1DState
  * @frame: which frame to use
  *
- * Changes the frame of the @state object to the given @frame. The state object
- * must be a valid state object, it cannot be NULL. The state object is updated
- * in place.
+ * Changes @state, in place, to @frame at its time, see #NcmCSQ1DFrame. A change that
+ * involves #NCM_CSQ1D_FRAME_ADIAB2 or #NCM_CSQ1D_FRAME_NONADIAB2 applies a boost, which
+ * loses a factor $e^{\vert p\vert}$ of relative precision for a rapidity $p$; it aborts
+ * when $\vert p\vert$ reaches $-\ln\epsilon$, and for #NCM_CSQ1D_FRAME_ADIAB2 when
+ * $\vert F_1\vert \geq 1$. A state at hyperbolic distance $d$ from the origin of the
+ * frames involved keeps an absolute precision of about $\epsilon e^{d}$ in its
+ * coordinates; the states of interest are near the origin of their frame.
  *
  * Returns: (transfer none): the state object in the new frame.
  */

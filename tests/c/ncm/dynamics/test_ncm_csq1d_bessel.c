@@ -124,18 +124,52 @@ _test_csq1d_bessel_eval_int_1_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble
   return -s *pow (s *t, -2.0 *a) / (2.0 * a);
 }
 
+/* With q = int dt / m: int m nu^2 = -k^2 (s t)^(2 + 2a) / (2a + 2),
+ * int q m nu^2 = -k^2 t^2 / (4 a), int q^2 m nu^2 = -k^2 (s t)^(2 - 2a) / (8 a^2 (1 - a)). */
+static gdouble
+_test_csq1d_bessel_eval_int_mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
+{
+  const gdouble a = _BESSEL (csq1d)->a;
+  const gdouble k = _BESSEL (csq1d)->k;
+  const gdouble s = _BESSEL (csq1d)->s;
+
+  return -k *k *pow (s *t, 2.0 + 2.0 *a) / (2.0 * a + 2.0);
+}
+
+static gdouble
+_test_csq1d_bessel_eval_int_qmnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
+{
+  const gdouble a = _BESSEL (csq1d)->a;
+  const gdouble k = _BESSEL (csq1d)->k;
+
+  return -gsl_pow_2 (k * t) / (4.0 * a);
+}
+
+static gdouble
+_test_csq1d_bessel_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
+{
+  const gdouble a = _BESSEL (csq1d)->a;
+  const gdouble k = _BESSEL (csq1d)->k;
+  const gdouble s = _BESSEL (csq1d)->s;
+
+  return -k *k *pow (s *t, 2.0 - 2.0 *a) / (8.0 * a * a * (1.0 - a));
+}
+
 static void
 test_csq1d_bessel_class_init (TestCSQ1DBesselClass *klass)
 {
   NcmCSQ1DClass *csq1d_class = NCM_CSQ1D_CLASS (klass);
 
-  csq1d_class->eval_xi      = &_test_csq1d_bessel_eval_xi;
-  csq1d_class->eval_nu      = &_test_csq1d_bessel_eval_nu;
-  csq1d_class->eval_nu2     = &_test_csq1d_bessel_eval_nu2;
-  csq1d_class->eval_m       = &_test_csq1d_bessel_eval_m;
-  csq1d_class->eval_F1      = &_test_csq1d_bessel_eval_F1;
-  csq1d_class->eval_F2      = &_test_csq1d_bessel_eval_F2;
-  csq1d_class->eval_int_1_m = &_test_csq1d_bessel_eval_int_1_m;
+  csq1d_class->eval_xi         = &_test_csq1d_bessel_eval_xi;
+  csq1d_class->eval_nu         = &_test_csq1d_bessel_eval_nu;
+  csq1d_class->eval_nu2        = &_test_csq1d_bessel_eval_nu2;
+  csq1d_class->eval_m          = &_test_csq1d_bessel_eval_m;
+  csq1d_class->eval_F1         = &_test_csq1d_bessel_eval_F1;
+  csq1d_class->eval_F2         = &_test_csq1d_bessel_eval_F2;
+  csq1d_class->eval_int_1_m    = &_test_csq1d_bessel_eval_int_1_m;
+  csq1d_class->eval_int_mnu2   = &_test_csq1d_bessel_eval_int_mnu2;
+  csq1d_class->eval_int_qmnu2  = &_test_csq1d_bessel_eval_int_qmnu2;
+  csq1d_class->eval_int_q2mnu2 = &_test_csq1d_bessel_eval_int_q2mnu2;
 }
 
 TestCSQ1DBessel *

@@ -143,111 +143,6 @@ def test_eval_int_nu_override():
         assert_allclose(bs.eval_int_nu(None, t), k * (t - ti))
 
 
-@pytest.mark.parametrize(
-    "frame",
-    [Ncm.CSQ1DFrame.ORIG, Ncm.CSQ1DFrame.ADIAB1, Ncm.CSQ1DFrame.ADIAB2],
-    ids=["orig", "adiab1", "adiab2"],
-)
-def test_evolution_frame(frame):
-    """Test initial conditions of NcmCSQ1D."""
-    bs = BesselTest(alpha=2.0)
-    bs.set_k(1.0)
-    bs.set_ti(-100.0)
-    state = Ncm.CSQ1DState.new()
-
-    limit_found, t_adiab = bs.find_adiab_time_limit(None, -1.0e4, -1.0e1, 1.0e-8)
-    assert limit_found
-    limit_found, t_adiab_end = bs.find_adiab_time_limit(None, -1.0e4, -1.0e0, 1.0e-1)
-    assert limit_found
-    bs.set_tf(t_adiab_end)
-
-    bs.set_save_evol(True)
-    bs.set_reltol(1.0e-10)
-    bs.set_abstol(0.0)
-    bs.set_init_cond_adiab(None, t_adiab)
-    bs.prepare(None)
-
-    t_a, _smaller_abst = bs.get_time_array()
-
-    for t in t_a:
-        state = bs.eval_at_frame(None, frame, t, state)
-        assert state.get_frame() == frame
-
-
-def test_change_frame_orig_adiab1():
-    """Test change_frame method of NcmCSQ1D."""
-    bs = BesselTest(alpha=2.0)
-    bs.set_k(1.0)
-    bs.set_ti(-100.0)
-    bs.set_tf(-1.0e-3)
-
-    t = -2.0e1
-    state = Ncm.CSQ1DState()
-    state.set_ag(Ncm.CSQ1DFrame.ORIG, t, 0.1, 0.3)
-
-    bs.change_frame(None, state, Ncm.CSQ1DFrame.ORIG)
-
-    assert state.get_frame() == Ncm.CSQ1DFrame.ORIG
-    assert state.get_ag() == (0.1, 0.3)
-
-    bs.change_frame(None, state, Ncm.CSQ1DFrame.ADIAB1)
-    assert state.get_frame() == Ncm.CSQ1DFrame.ADIAB1
-    assert_allclose(state.get_ag(), (0.1, 0.3 - bs.eval_xi(None, t)))
-
-    bs.change_frame(None, state, Ncm.CSQ1DFrame.ORIG)
-    assert state.get_frame() == Ncm.CSQ1DFrame.ORIG
-    assert_allclose(state.get_ag(), (0.1, 0.3))
-
-
-def test_change_frame_orig_adiab2():
-    """Test change_frame method of NcmCSQ1D."""
-    bs = BesselTest(alpha=2.0)
-    bs.set_k(1.0)
-    bs.set_ti(-100.0)
-    bs.set_tf(-1.0e-3)
-
-    t = -2.0e1
-    state = Ncm.CSQ1DState()
-    state.set_ag(Ncm.CSQ1DFrame.ORIG, t, 0.1, 0.3)
-
-    bs.change_frame(None, state, Ncm.CSQ1DFrame.ORIG)
-
-    assert state.get_frame() == Ncm.CSQ1DFrame.ORIG
-    assert state.get_ag() == (0.1, 0.3)
-
-    bs.change_frame(None, state, Ncm.CSQ1DFrame.ADIAB2)
-    assert state.get_frame() == Ncm.CSQ1DFrame.ADIAB2
-    assert not np.allclose(state.get_ag(), (0.1, 0.3 - bs.eval_xi(None, t)))
-
-    bs.change_frame(None, state, Ncm.CSQ1DFrame.ORIG)
-    assert state.get_frame() == Ncm.CSQ1DFrame.ORIG
-    assert_allclose(state.get_ag(), (0.1, 0.3))
-
-
-def test_change_frame_adiab1_adiab2():
-    """Test change_frame method of NcmCSQ1D."""
-    bs = BesselTest(alpha=2.0)
-    bs.set_k(1.0)
-    bs.set_ti(-100.0)
-    bs.set_tf(-1.0e-3)
-
-    t = -2.0e1
-    state = Ncm.CSQ1DState()
-    state.set_ag(Ncm.CSQ1DFrame.ADIAB1, t, 0.1, 0.3)
-
-    bs.change_frame(None, state, Ncm.CSQ1DFrame.ADIAB1)
-    assert state.get_frame() == Ncm.CSQ1DFrame.ADIAB1
-    assert state.get_ag() == (0.1, 0.3)
-
-    bs.change_frame(None, state, Ncm.CSQ1DFrame.ADIAB2)
-    assert state.get_frame() == Ncm.CSQ1DFrame.ADIAB2
-    assert not np.allclose(state.get_ag(), (0.1, 0.3))
-
-    bs.change_frame(None, state, Ncm.CSQ1DFrame.ADIAB1)
-    assert state.get_frame() == Ncm.CSQ1DFrame.ADIAB1
-    assert_allclose(state.get_ag(), (0.1, 0.3))
-
-
 def test_nonadiab_prop():
     """Test basic functionality of NcmCSQ1D."""
     k = 8.0
@@ -358,11 +253,6 @@ def test_nonadiab_evol():
 
 
 if __name__ == "__main__":
-    for frame0 in [Ncm.CSQ1DFrame.ORIG, Ncm.CSQ1DFrame.ADIAB1, Ncm.CSQ1DFrame.ADIAB2]:
-        test_evolution_frame(frame0)
-    test_change_frame_orig_adiab1()
-    test_change_frame_orig_adiab2()
-    test_change_frame_adiab1_adiab2()
     test_nonadiab_prop()
     test_nonadiab_evol()
     test_eval_int_nu_override()
