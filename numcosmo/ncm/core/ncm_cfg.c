@@ -474,6 +474,8 @@ _ncm_cfg_exit (void)
  * - sets the Cuba library core counts to zero;
  * - turns the GSL error handler off, see ncm_cfg_enable_gsl_err_handler();
  * - installs the NumCosmo log handlers;
+ * - warns when `OMP_NUM_THREADS` exceeds `OMP_THREAD_LIMIT`, since an OpenMP-threaded
+ *   BLAS can then deadlock;
  * - registers the library objects and functions;
  * - under an MPI launcher, initializes MPI; every rank except the master then runs the
  *   worker loop and never returns.
@@ -588,6 +590,8 @@ _ncm_cfg_mpi_launched (void)
  * - sets the Cuba library core counts to zero;
  * - turns the GSL error handler off, see ncm_cfg_enable_gsl_err_handler();
  * - installs the NumCosmo log handlers;
+ * - warns when `OMP_NUM_THREADS` exceeds `OMP_THREAD_LIMIT`, since an OpenMP-threaded
+ *   BLAS can then deadlock;
  * - registers the library objects and functions;
  * - under an MPI launcher, initializes MPI; every rank except the master then runs the
  *   worker loop and never returns.
@@ -632,6 +636,16 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message, NULL);
   _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_error, NULL);
+
+#ifdef _OPENMP
+
+  /* An OpenMP-threaded BLAS waits for omp_get_max_threads() threads, created only up to the limit. */
+  if (omp_get_max_threads () > omp_get_thread_limit ())
+    g_warning ("ncm_cfg_init: OMP_NUM_THREADS (%d) exceeds OMP_THREAD_LIMIT (%d); "
+               "an OpenMP-threaded BLAS can deadlock. Set both to the same value.",
+               omp_get_max_threads (), omp_get_thread_limit ());
+
+#endif /* _OPENMP */
 
   ncm_cfg_register_objects ();
   ncm_cfg_register_functions ();

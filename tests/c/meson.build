@@ -602,6 +602,10 @@ data_tests = [
         'name': 'nc_data_hubble',
         'sources': ['nc/data/test_nc_data_hubble.c'],
     },
+    {
+        'name': 'nc_data_snia_cov',
+        'sources': ['nc/data/test_nc_data_snia_cov.c'],
+    },
     # Truth-table validation of NcDataClusterWLFactor's integration methods:
     # regenerates a curated sample from a fixed seed (nothing stored) and
     # checks every method against a recomputed high-node self-converged
