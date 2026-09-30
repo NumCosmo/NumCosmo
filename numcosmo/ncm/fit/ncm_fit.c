@@ -2119,7 +2119,8 @@ ncm_fit_m2lnL_val (NcmFit *fit, gdouble *m2lnL)
  * @fit: a #NcmFit
  * @f: a #NcmVector
  *
- * Computes the residuals vector.
+ * Computes the least-squares residuals $f$ of the likelihood into @f, see
+ * ncm_likelihood_leastsquares_f(), and counts one function evaluation.
  *
  */
 void
@@ -2136,7 +2137,8 @@ ncm_fit_ls_f (NcmFit *fit, NcmVector *f)
  * @fit: a #NcmFit
  * @df: a #NcmVector
  *
- * Computes the gradient of the minus two times the logarithm base e of the likelihood.
+ * Computes the gradient of $-2\ln L$ with respect to the free parameters, with the
+ * method of #NcmFit:grad-type.
  *
  */
 void
@@ -2178,11 +2180,9 @@ _ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad)
 
     ncm_fit_params_set (fit, i, pph);
     ncm_likelihood_m2lnL_val (self->lh, self->mset, &m2lnL_pph);
-    /*ncm_fit_m2lnL_val (fit, &m2lnL_pph);*/
 
     ncm_fit_params_set (fit, i, pmh);
     ncm_likelihood_m2lnL_val (self->lh, self->mset, &m2lnL_pmh);
-    /*ncm_fit_m2lnL_val (fit, &m2lnL_pmh);*/
 
     ncm_vector_set (grad, i, (m2lnL_pph - m2lnL_pmh) * one_2h);
     ncm_fit_params_set (fit, i, p);
@@ -2207,7 +2207,7 @@ _ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad)
   grad_a = ncm_diff_rf_d1_N_to_1 (self->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, NULL);
 
   ncm_vector_set_array (grad, grad_a);
-  ncm_mset_fparams_set_vector (self->mset, x);
+  ncm_fit_params_set_vector (fit, x);
 
   g_array_unref (x_a);
   g_array_unref (grad_a);
@@ -2219,11 +2219,11 @@ _ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad)
 /**
  * ncm_fit_m2lnL_val_grad:
  * @fit: a #NcmFit
- * @result: (out): the minus two times the logarithm base e of the likelihood
+ * @result: (out): $-2\ln L$
  * @df: a #NcmVector
  *
- * Computes the minus two times the logarithm base e of the likelihood and its
- * gradient.
+ * Computes $-2\ln L$ and its gradient with respect to the free parameters, with the
+ * method of #NcmFit:grad-type.
  *
  */
 void
@@ -2259,7 +2259,7 @@ _ncm_fit_m2lnL_val_grad_nd_fo (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
     ncm_fit_params_set (fit, i, p);
   }
 
-  ncm_fit_state_add_func_eval (self->fstate, 1);
+  /* ncm_fit_m2lnL_val() counted the function evaluations. */
   ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
@@ -2282,7 +2282,8 @@ _ncm_fit_m2lnL_val_grad_nd_ac (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
  * @fit: a #NcmFit
  * @J: a #NcmMatrix
  *
- * Computes the Jacobian matrix for the least squares problem.
+ * Computes the Jacobian $J_{ij} = \partial f_i / \partial \theta_j$ of the least-squares
+ * residuals with respect to the free parameters, with the method of #NcmFit:grad-type.
  *
  */
 void
@@ -2383,9 +2384,15 @@ _ncm_fit_ls_J_nd_ac (NcmFit *fit, NcmMatrix *J)
   ncm_mset_fparams_get_vector (self->mset, x);
   J_a = ncm_diff_rf_d1_N_to_M (self->diff, x_a, data_len, _ncm_fit_numdiff_ls_f, fit, NULL);
 
-  ncm_matrix_set_from_array (J, J_a);
-  ncm_matrix_transpose (J);
-  ncm_mset_fparams_set_vector (self->mset, x);
+  /* J_a holds one derivative vector per free parameter: J^T, which is not square
+   * unless there are as many residuals as free parameters. */
+  {
+    NcmMatrix *JT = ncm_matrix_new_data_static ((gdouble *) J_a->data, fparam_len, data_len);
+
+    ncm_matrix_transpose_memcpy (J, JT);
+    ncm_matrix_free (JT);
+  }
+  ncm_fit_params_set_vector (fit, x);
 
   g_array_unref (x_a);
   g_array_unref (J_a);
@@ -2400,7 +2407,8 @@ _ncm_fit_ls_J_nd_ac (NcmFit *fit, NcmMatrix *J)
  * @f: a #NcmVector
  * @J: a #NcmMatrix
  *
- * Computes the residuals vector and the Jacobian matrix for the least squares problem.
+ * Computes the least-squares residuals and their Jacobian, see ncm_fit_ls_f() and
+ * ncm_fit_ls_J().
  *
  */
 void
@@ -2442,7 +2450,7 @@ _ncm_fit_numdiff_m2lnL_val (NcmVector *x, gpointer user_data)
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
   gdouble res                = 0.0;
 
-  ncm_mset_fparams_set_vector (self->mset, x);
+  ncm_fit_params_set_vector (fit, x);
 
   ncm_likelihood_m2lnL_val (self->lh, self->mset, &res);
   ncm_fit_state_add_func_eval (self->fstate, 1);
@@ -2456,10 +2464,9 @@ _ncm_fit_numdiff_m2lnL_val (NcmVector *x, gpointer user_data)
 static void
 _ncm_fit_numdiff_ls_f (NcmVector *x, NcmVector *y, gpointer user_data)
 {
-  NcmFit *fit                = NCM_FIT (user_data);
-  NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
+  NcmFit *fit = NCM_FIT (user_data);
 
-  ncm_mset_fparams_set_vector (self->mset, x);
+  ncm_fit_params_set_vector (fit, x);
 
   ncm_fit_ls_f (fit, y);
 }
@@ -2563,7 +2570,7 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
     self->end_update (fit, "");
 
   ncm_matrix_set_from_array (H, H_a);
-  ncm_mset_fparams_set_vector (self->mset, x);
+  ncm_fit_params_set_vector (fit, x);
 
   g_array_unref (x_a);
   g_array_unref (errors_a);
@@ -2612,8 +2619,7 @@ _ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher, gboolean decomp)
     gint signum;
     gint ret1;
 
-    ncm_matrix_scale (LU, 0.5);
-
+    /* @fisher is already the Fisher matrix, as in the Cholesky branch. */
     g_warning ("_ncm_fit_fisher_to_covar: covariance matrix not positive definite, errors are not trustworthy.");
 
     ret1 = gsl_linalg_LU_decomp (ncm_matrix_gsl (LU), p, &signum);
@@ -2653,7 +2659,7 @@ ncm_fit_obs_fisher (NcmFit *fit)
   NcmMatrix *hessian         = ncm_fit_state_peek_hessian (self->fstate);
 
   if (ncm_mset_fparam_len (self->mset) == 0)
-    g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
+    g_error ("ncm_fit_obs_fisher: mset object has 0 free parameters");
 
   ncm_fit_reset (fit);
 
@@ -2750,7 +2756,7 @@ ncm_fit_fisher_bias (NcmFit *fit, NcmVector *f_true)
   gint ret;
 
   if ((ncm_likelihood_priors_length_f (self->lh) > 0) || (ncm_likelihood_priors_length_m2lnL (self->lh) > 0))
-    g_warning ("ncm_fit_fisher: the analysis contains priors which are ignored in the Fisher matrix calculation.");
+    g_warning ("ncm_fit_fisher_bias: the analysis contains priors which are ignored in the Fisher matrix calculation.");
 
   ncm_dataset_fisher_matrix_bias (dset, self->mset, f_true, &IM, &bias);
 
@@ -2809,7 +2815,7 @@ ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
   gint ret;
 
   if (ncm_mset_fparam_len (self->mset) == 0)
-    g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
+    g_error ("ncm_fit_numdiff_m2lnL_lndet_covar: mset object has 0 free parameters");
 
   _ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
   ncm_matrix_scale (hessian, 0.5);
@@ -2831,9 +2837,9 @@ ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
     gint signum;
     gint ret1;
 
-    ncm_matrix_scale (LU, 0.5);
+    /* The Hessian is already halved, as in the Cholesky branch. */
 
-    g_warning ("ncm_fit_numdiff_m2lnL_covar: covariance matrix not positive definite, errors are not trustworthy.");
+    g_warning ("ncm_fit_numdiff_m2lnL_lndet_covar: covariance matrix not positive definite, errors are not trustworthy.");
 
     ret1 = gsl_linalg_LU_decomp (ncm_matrix_gsl (LU), p, &signum);
     NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_LU_decomp]", ret1);
@@ -2860,7 +2866,8 @@ ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
  * ncm_fit_get_covar:
  * @fit: a #NcmFit
  *
- * Returns a copy of the covariance matrix (pre-calculated by, e.g, ncm_fit_numdiff_m2lnL_covar()).
+ * Returns a copy of the covariance matrix, computed before by ncm_fit_obs_fisher(),
+ * ncm_fit_ls_fisher(), ncm_fit_fisher() or ncm_fit_fisher_bias().
  *
  * Returns: (transfer full): the covariance matrix
  */
@@ -2881,10 +2888,11 @@ ncm_fit_get_covar (NcmFit *fit)
  * @pid: the parameter id
  * @start: starting value
  * @stop: ending value
- * @nsteps: step size
+ * @nsteps: number of values, at least 2
  *
- * Computes the likelihood ratio test for the parameter @pid of the model @mid
- * in the interval [@start, @stop] subdivided by @nsteps. The function returns a
+ * Computes the likelihood ratio test for the parameter @pid of the model @mid at
+ * @nsteps equally spaced values in [@start, @stop], fitting the other free parameters
+ * at each. @fit must hold its best fit (ncm_fit_run()). The function returns a
  * #NcmMatrix with the following columns:
  *   1. Parameter value.
  *   2. The difference in -2 times the natural logarithm of the likelihood
@@ -2894,7 +2902,8 @@ ncm_fit_get_covar (NcmFit *fit)
  *      of the likelihood between the full model and the model with the parameter
  *      @pid fixed to the value in the first column, assuming a chi-squared distribution
  *      with one degree of freedom.
- *   4. Cumulative probability (two-sides) of the difference (Column 3).
+ *   4. The probability of a larger difference under that distribution, the p-value
+ *      (for one degree of freedom, the two-sided Gaussian tail).
  *
  * Returns: (transfer full): a #NcmMatrix with the results.
  */
@@ -2905,9 +2914,12 @@ ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gd
   NcmSerialize *ser          = ncm_serialize_global ();
   NcmMSet *mset_val          = ncm_mset_dup (self->mset, ser);
   NcmMatrix *results         = ncm_matrix_new (nsteps, 4);
-  const gdouble step         = (stop - start) / (nsteps - 1);
   NcmFit *fit_val;
+  gdouble step;
   guint i;
+
+  g_assert_cmpuint (nsteps, >=, 2);
+  step = (stop - start) / (nsteps - 1);
 
   ncm_serialize_free (ser);
   ncm_mset_param_set_ftype (mset_val, mid, pid, NCM_PARAM_TYPE_FIXED);
@@ -2950,12 +2962,11 @@ ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gd
  * @dof: degrees of freedom
  *
  * Computes the likelihood ratio test for the parameter @pid of the model @mid
- * with the value @val. The function returns the probability of the null hypothesis
- * assuming a chi-squared distribution with @dof degrees of freedom. That is,
- * it computes the left tail of the chi-squared distribution with @dof degrees of
- * freedom.
+ * fixed to @val, fitting the other free parameters. The difference in $-2\ln L$
+ * against the best fit held by @fit (ncm_fit_run()) is compared with a chi-squared
+ * distribution with @dof degrees of freedom.
  *
- * Returns: the probability of the null hypothesis.
+ * Returns: the upper tail of that distribution at the difference, the p-value.
  */
 gdouble
 ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof)

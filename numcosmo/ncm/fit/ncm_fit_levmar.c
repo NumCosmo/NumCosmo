@@ -305,6 +305,7 @@ _ncm_fit_levmar_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
 static void nc_residual_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata);
 static void nc_residual_levmar_J (gdouble *p, gdouble *j, gint m, gint n, gpointer adata);
+static void _ncm_fit_levmar_set_opts (NcmFit *fit, gdouble *opts);
 
 static gboolean
 ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
@@ -319,11 +320,7 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   NCM_UNUSED (mtype);
 
-  opts[0] = LM_INIT_MU;
-  opts[1] = 1.0e-15;
-  opts[2] = 1.0e-15;
-  opts[3] = 1.0e-20;
-  opts[4] = LM_DIFF_DELTA;
+  _ncm_fit_levmar_set_opts (fit, opts);
 
   ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
@@ -367,11 +364,7 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   NCM_UNUSED (mtype);
 
-  opts[0] = LM_INIT_MU;
-  opts[1] = 1.0e-15;
-  opts[2] = 1.0e-15;
-  opts[3] = 1.0e-20;
-  opts[4] = LM_DIFF_DELTA;
+  _ncm_fit_levmar_set_opts (fit, opts);
 
   ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
@@ -415,11 +408,7 @@ ncm_fit_levmar_bc_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   NCM_UNUSED (mtype);
 
-  opts[0] = LM_INIT_MU;
-  opts[1] = 1.0e-15;
-  opts[2] = 1.0e-15;
-  opts[3] = 1.0e-20;
-  opts[4] = LM_DIFF_DELTA;
+  _ncm_fit_levmar_set_opts (fit, opts);
 
   ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
@@ -464,11 +453,7 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   NCM_UNUSED (mtype);
 
-  opts[0] = LM_INIT_MU;
-  opts[1] = 1.0e-15;
-  opts[2] = 1.0e-15;
-  opts[3] = 1.0e-20;
-  opts[4] = LM_DIFF_DELTA;
+  _ncm_fit_levmar_set_opts (fit, opts);
 
   ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
@@ -498,6 +483,21 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
 
   return TRUE;
+}
+
+/*
+ * levmar stops when the relative step is below opts[2] or the squared residual norm,
+ * $-2\ln L$, is below opts[3]: the fit's parameter relative tolerance and $-2\ln L$
+ * absolute tolerance. The gradient test opts[1] has no counterpart in #NcmFit.
+ */
+static void
+_ncm_fit_levmar_set_opts (NcmFit *fit, gdouble *opts)
+{
+  opts[0] = LM_INIT_MU;
+  opts[1] = 1.0e-15;
+  opts[2] = ncm_fit_get_params_reltol (fit);
+  opts[3] = ncm_fit_get_m2lnL_abstol (fit);
+  opts[4] = LM_DIFF_DELTA;
 }
 
 static void
