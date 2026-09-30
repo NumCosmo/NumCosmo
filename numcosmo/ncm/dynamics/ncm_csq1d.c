@@ -2680,10 +2680,10 @@ _ncm_csq1d_find_adiab_time_limit_f (gdouble t, gpointer params)
  * @reltol: relative tolerance
  * @ti: (out): adiabatic time limit $t_i$
  *
- * Computes the time upper limit $t_i \in [t_0, t_1]$ where the adiabatic
- * approximation is satisfied up to @reltol. If both times are adiabatic, the
- * time closer to the adiabatic limit is chosen. If both times are non-adiabatic,
- * the function returns %FALSE.
+ * Finds the time $t_i \in [t_0, t_1]$ where the larger of the error estimates of
+ * ncm_csq1d_compute_adiab() reaches @reltol, to 1% in $t$. When both ends are below
+ * @reltol it returns $t_1$; when neither is, %FALSE. The estimates depend on the order,
+ * see ncm_csq1d_compute_adiab().
  *
  * Returns: whether the time limit was found.
  */
@@ -2805,6 +2805,7 @@ _ncm_csq1d_ln_nu_func (const gdouble t, gpointer user_data)
 
 static gdouble _ncm_csq1d_abs_F1_asinht (gdouble at, gpointer user_data);
 static gdouble _ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data);
+static gdouble _ncm_csq1d_find_adiab_border (gsl_function *F, const gdouble atm, const gdouble at_end);
 
 /**
  * ncm_csq1d_find_adiab_max:
@@ -2817,11 +2818,12 @@ static gdouble _ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data);
  * @t_Bl: (out): the value of $t_{B,\mathrm{lower}}$
  * @t_Bu: (out): the value of $t_{B,\mathrm{upper}}$
  *
- * Computes the time $t_\mathrm{min}$ that minimizes $F_1(t)$. Also computes the border
- * values $t_{B,\mathrm{lower}}$ and $t_{B,\mathrm{upper}}$ such that
- * $|F_1(t_{B,\mathrm{lower}}) - F_1(t_\mathrm{min})| = \epsilon$ for
- * $t_{B,\mathrm{lower}} < t_\mathrm{min}$ and $|F_1(t_{B,\mathrm{upper}}) -
- * F_1(t_\mathrm{min})| = \epsilon$ for $t_{B,\mathrm{upper}} > t_\mathrm{min}$.
+ * Finds the time $t_\mathrm{min} \in [t_0, t_1]$ that minimizes $\vert F_1(t)\vert$, the
+ * most adiabatic time, and the borders on each side of it where
+ * $\vert F_1 - F_1(t_\mathrm{min})\vert = \epsilon$; a border is the end of the
+ * interval when $F_1$ changes by less than $\epsilon$ on that side, as when the minimum
+ * is at the end. When $F_1$ vanishes on the whole interval it returns $t_1$ with
+ * $F_1(t_\mathrm{min}) = 0$ and the ends as borders.
  *
  * Returns: the time $t_\mathrm{min}$.
  */
@@ -2914,47 +2916,13 @@ ncm_csq1d_find_adiab_max (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, gdouble 
   gsl_min_fminimizer_free (fmin);
   ws.F1_min = ncm_csq1d_eval_F1 (csq1d, model, sinh (atm));
 
-  {
-    const gsl_root_fsolver_type *T;
-    gsl_root_fsolver *s;
-    guint max_iter = 1000;
+  F.function = &_ncm_csq1d_ln_abs_F1_eps_asinht;
+  F.params   = &ws;
 
-    iter = 0;
-
-    F.function = &_ncm_csq1d_ln_abs_F1_eps_asinht;
-    F.params   = &ws;
-
-    T = gsl_root_fsolver_brent;
-    s = gsl_root_fsolver_alloc (T);
-
-    gsl_root_fsolver_set (s, &F, atl, atm);
-
-    do {
-      iter++;
-      status  = gsl_root_fsolver_iterate (s);
-      t_Bl[0] = gsl_root_fsolver_root (s);
-      at0     = gsl_root_fsolver_x_lower (s);
-      at1     = gsl_root_fsolver_x_upper (s);
-      status  = gsl_root_test_interval (at0, at1, 0.0, 1.0e-7);
-
-      /* ncm_message ("Bl: [%d] % 22.15e % 22.15e % 22.15e\n", status, sinh (t_Bl[0]), sinh (at0), sinh (at1)); */
-    } while (status == GSL_CONTINUE && iter < max_iter);
-
-    gsl_root_fsolver_set (s, &F, atm, atu);
-
-    do {
-      iter++;
-      status  = gsl_root_fsolver_iterate (s);
-      t_Bu[0] = gsl_root_fsolver_root (s);
-      at0     = gsl_root_fsolver_x_lower (s);
-      at1     = gsl_root_fsolver_x_upper (s);
-      status  = gsl_root_test_interval (at0, at1, 0.0, 1.0e-7);
-
-      /* ncm_message ("Bu: [%d] % 22.15e % 22.15e % 22.15e\n", status, sinh (t_Bu[0]), sinh (at0), sinh (at1)); */
-    } while (status == GSL_CONTINUE && iter < max_iter);
-
-    gsl_root_fsolver_free (s);
-  }
+  /* The border on each side is where |F1 - F1_min| reaches epsilon, or the end of the
+   * interval when it does not reach it there (a minimum at the end included). */
+  t_Bl[0] = _ncm_csq1d_find_adiab_border (&F, atm, atl);
+  t_Bu[0] = _ncm_csq1d_find_adiab_border (&F, atm, atu);
 
   {
     const gdouble tm = sinh (atm);
@@ -2983,6 +2951,38 @@ _ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data)
   const gdouble F1 = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, sinh (at));
 
   return fabs ((F1 - ws->F1_min) / ws->reltol) - 1.0;
+}
+
+/* The root of F between the minimum atm, where F = -1, and at_end, or at_end when F does
+ * not change sign there. */
+static gdouble
+_ncm_csq1d_find_adiab_border (gsl_function *F, const gdouble atm, const gdouble at_end)
+{
+  const gdouble at_lo = GSL_MIN (atm, at_end);
+  const gdouble at_hi = GSL_MAX (atm, at_end);
+
+  if ((at_lo == at_hi) || (GSL_FN_EVAL (F, at_end) <= 0.0))
+    return at_end;
+
+  {
+    gsl_root_fsolver *s = gsl_root_fsolver_alloc (gsl_root_fsolver_brent);
+    gdouble at_root     = at_end;
+    guint iter          = 0;
+    gint status;
+
+    gsl_root_fsolver_set (s, F, at_lo, at_hi);
+
+    do {
+      iter++;
+      status  = gsl_root_fsolver_iterate (s);
+      at_root = gsl_root_fsolver_root (s);
+      status  = gsl_root_test_interval (gsl_root_fsolver_x_lower (s), gsl_root_fsolver_x_upper (s), 0.0, 1.0e-7);
+    } while (status == GSL_CONTINUE && iter < 1000);
+
+    gsl_root_fsolver_free (s);
+
+    return at_root;
+  }
 }
 
 static void
@@ -3086,13 +3086,21 @@ _ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, Ncm
  * @model: (nullable): a #NcmModel
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
- * @alpha_reltol: (out) (allow-none): estimated error on $\alpha(t)$
- * @dgamma_reltol: (out) (allow-none): estimated error on $\Delta\gamma(t)$
+ * @alpha_reltol: (out) (optional): the error estimate of $\alpha(t)$
+ * @dgamma_reltol: (out) (optional): the error estimate of $\delta\gamma(t)$
  *
- * Computes the value of the adiabatic approximation of the variables $\alpha$ and $\Delta\gamma$ at $t$.
- * This method computes the adiabatic approximation using the adiabatic series up to the order 2 or 4,
- * depending on the value of the property max-order-2. The result is stored in the state object in the
- * frame NCM_CSQ1D_FRAME_ADIAB1. Use ncm_csq1d_change_frame() to change the frame.
+ * The adiabatic vacuum at @t, $(\alpha, \delta\gamma)$ in #NCM_CSQ1D_FRAME_ADIAB1. The
+ * order follows the #NcmCSQ1DInitialStateType: second order,
+ * $\alpha = F_1$ and $\delta\gamma = -F_2$, for
+ * #NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2; fourth order otherwise,
+ * $\alpha = F_1 + F_1^3/3 - F_3$ and $\delta\gamma = -(1 + F_1^2)F_2 + F_4$, with $F_3$
+ * and $F_4$ from numerical derivatives of $F_2$ and $\ln\nu$.
+ *
+ * The fourth order estimates are the squared relative sizes of its fourth order terms;
+ * the second order ones are $\vert F_1\vert$ and $\vert F_2\vert$, the sizes of the
+ * terms themselves, far above the error. When $\vert F_3\vert > \vert F_2\vert$ or
+ * $\vert F_4\vert > \vert F_3\vert$ the fourth order series warns and falls back to the
+ * second order.
  *
  * Returns: (transfer none): the @state object with the result.
  */
@@ -3111,10 +3119,10 @@ ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmC
  * @frame: the frame to change
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
- * @alpha_reltol: (out) (allow-none): estimated error on $\alpha(t)$
- * @dgamma_reltol: (out) (allow-none): estimated error on $\Delta\gamma(t)$
+ * @alpha_reltol: (out) (optional): the error estimate of $\alpha(t)$
+ * @dgamma_reltol: (out) (optional): the error estimate of $\delta\gamma(t)$
  *
- * As ncm_csq1d_compute_adiab(), but changes the frame of the result to @frame.
+ * As ncm_csq1d_compute_adiab(), in @frame.
  *
  * Returns: (transfer none): the @state object with the result.
  */

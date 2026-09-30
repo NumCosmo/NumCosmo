@@ -411,6 +411,109 @@ test_ncm_csq1d_evolution_hankel (void)
   ncm_csq1d_free (c2);
 }
 
+/* Error of the adiabatic vacuum at t against the exact state, and its estimate. */
+static gdouble
+_test_adiab_error (NcmCSQ1D *csq1d, const gdouble a, const gdouble k, const gdouble t, gdouble *estimate)
+{
+  NcmCSQ1DState *s_ad = ncm_csq1d_state_new ();
+  NcmCSQ1DState *s_ex = ncm_csq1d_state_new ();
+  gdouble ar, gr, err;
+
+  ncm_csq1d_compute_adiab_frame (csq1d, NULL, NCM_CSQ1D_FRAME_ORIG, t, s_ad, &ar, &gr);
+  _test_bessel_exact_state (a, k, t, s_ex);
+  err = _test_J_relerr (s_ad, s_ex);
+
+  if (estimate != NULL)
+    estimate[0] = GSL_MAX (ar, gr);
+
+  ncm_csq1d_state_free (s_ad);
+  ncm_csq1d_state_free (s_ex);
+
+  return err;
+}
+
+static void
+test_ncm_csq1d_adiab_hankel (void)
+{
+  /*
+   * Against the exact Bessel state the fourth order vacuum has an error falling as
+   * |t|^-5, below its estimate, and at the time ncm_csq1d_find_adiab_time_limit()
+   * places it the error is below the tolerance asked for. The second order has an
+   * error falling as |t|^-3.
+   */
+  const gdouble a     = 2.0;
+  const gdouble k     = 1.0;
+  TestCSQ1DBessel *b4 = test_csq1d_bessel_new (a, k, TRUE);
+  TestCSQ1DBessel *b2 = test_csq1d_bessel_new (a, k, TRUE);
+  NcmCSQ1D *c4        = NCM_CSQ1D (b4);
+  NcmCSQ1D *c2        = NCM_CSQ1D (b2);
+  const gdouble ts[]  = {-3000.0, -300.0, -100.0, -30.0};
+
+  /* Below 1e-12 the comparison reaches the accuracy of the GSL Bessel functions used as
+   * reference, 4e-14 at x ~ 7000. */
+  const gdouble precs[] = {1.0e-12, 1.0e-10, 1.0e-6};
+  guint i;
+
+  ncm_csq1d_set_initial_condition_type (c4, NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4);
+  ncm_csq1d_set_initial_condition_type (c2, NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2);
+
+  for (i = 0; i < G_N_ELEMENTS (ts); i++)
+  {
+    gdouble est;
+    const gdouble err = _test_adiab_error (c4, a, k, ts[i], &est);
+
+    g_assert_cmpfloat (err, <, est);
+  }
+
+  /* Measured slopes: 420 = 3.33^5 against 412 and 27 = 3^3 exactly. */
+  ncm_assert_cmpdouble_e (_test_adiab_error (c4, a, k, -30.0, NULL) / _test_adiab_error (c4, a, k, -100.0, NULL), ==, pow (100.0 / 30.0, 5.0), 0.1, 0.0);
+  ncm_assert_cmpdouble_e (_test_adiab_error (c2, a, k, -1000.0, NULL) / _test_adiab_error (c2, a, k, -3000.0, NULL), ==, 27.0, 0.01, 0.0);
+
+  for (i = 0; i < G_N_ELEMENTS (precs); i++)
+  {
+    gdouble t_v;
+
+    g_assert_true (ncm_csq1d_find_adiab_time_limit (c4, NULL, -1.0e4, -10.0, precs[i], &t_v));
+    g_assert_cmpfloat (_test_adiab_error (c4, a, k, t_v, NULL), <=, precs[i]);
+  }
+
+  ncm_csq1d_free (c4);
+  ncm_csq1d_free (c2);
+}
+
+static void
+test_ncm_csq1d_adiab_finders (void)
+{
+  /*
+   * find_adiab_time_limit returns t1 when both ends are adiabatic and FALSE when neither
+   * is. For the Bessel system |F1| = 2.5 / |t| is smallest at the lower end, so
+   * find_adiab_max returns it, with the lower border there and the upper one where
+   * |F1 - F1_min| = epsilon; when F1 changes by less than epsilon the borders are the
+   * ends.
+   */
+  TestCSQ1DBessel *b = test_csq1d_bessel_new (2.0, 1.0, TRUE);
+  NcmCSQ1D *csq1d    = NCM_CSQ1D (b);
+  gdouble t_v, t_min, F1_min, t_Bl, t_Bu;
+
+  ncm_csq1d_set_initial_condition_type (csq1d, NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4);
+
+  g_assert_true (ncm_csq1d_find_adiab_time_limit (csq1d, NULL, -1.0e4, -100.0, 1.0e-2, &t_v));
+  g_assert_cmpfloat (t_v, ==, -100.0);
+  g_assert_false (ncm_csq1d_find_adiab_time_limit (csq1d, NULL, -100.0, -10.0, 1.0e-16, &t_v));
+
+  t_min = ncm_csq1d_find_adiab_max (csq1d, NULL, -1.0e3, -10.0, 0.1, &F1_min, &t_Bl, &t_Bu);
+  ncm_assert_cmpdouble_e (t_min, ==, -1.0e3, 1.0e-14, 0.0);
+  ncm_assert_cmpdouble_e (F1_min, ==, 2.5 / t_min, 1.0e-14, 0.0);
+  ncm_assert_cmpdouble_e (t_Bl, ==, -1.0e3, 1.0e-14, 0.0);
+  ncm_assert_cmpdouble_e (t_Bu, ==, 2.5 / (-0.1 + 2.5 / t_min), 1.0e-7, 0.0);
+
+  ncm_csq1d_find_adiab_max (csq1d, NULL, -1.0e3, -500.0, 0.1, &F1_min, &t_Bl, &t_Bu);
+  ncm_assert_cmpdouble_e (t_Bl, ==, -1.0e3, 1.0e-14, 0.0);
+  ncm_assert_cmpdouble_e (t_Bu, ==, -500.0, 1.0e-14, 0.0);
+
+  ncm_csq1d_free (csq1d);
+}
+
 static void
 test_ncm_csq1d_evolution_ad_hoc (void)
 {
@@ -713,6 +816,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/csq1d/phase/hankel", &test_ncm_csq1d_phase_hankel);
   g_test_add_func ("/ncm/csq1d/evolution/hankel", &test_ncm_csq1d_evolution_hankel);
   g_test_add_func ("/ncm/csq1d/evolution/ad_hoc", &test_ncm_csq1d_evolution_ad_hoc);
+  g_test_add_func ("/ncm/csq1d/adiab/hankel", &test_ncm_csq1d_adiab_hankel);
+  g_test_add_func ("/ncm/csq1d/adiab/finders", &test_ncm_csq1d_adiab_finders);
   g_test_add_func ("/ncm/csq1d/prepare/aborts", &test_ncm_csq1d_prepare_aborts);
   g_test_add_func ("/ncm/csq1d/prepare/aborts/subprocess", &test_ncm_csq1d_prepare_aborts_subprocess);
   g_test_add_func ("/ncm/csq1d/state/maps", &test_ncm_csq1d_state_maps);

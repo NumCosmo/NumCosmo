@@ -115,60 +115,6 @@ class BesselTestWithIntNu(BesselTest):
         return self.k * (t - self.get_ti())
 
 
-def test_initial_conditions_time():
-    """Test initial conditions of NcmCSQ1D."""
-    bs = BesselTest(alpha=2.0)
-    bs.set_k(1.0)
-    bs.set_ti(-100.0)
-    bs.set_tf(-1.0e-3)
-
-    limit_found, t_adiab = bs.find_adiab_time_limit(None, -1.0e3, -1.0e1, 1.0e-6)
-
-    assert limit_found
-    assert t_adiab >= bs.get_ti()
-    assert t_adiab <= bs.get_tf()
-
-    t_min, F1_min, t_lb, t_ub = bs.find_adiab_max(None, -1.0e3, -1.0e1, 1.0e-1)
-
-    assert_allclose(F1_min, bs.eval_F1(None, t_min))
-    assert math.fabs(F1_min - bs.eval_F1(None, t_lb)) <= 1.0e-1
-    assert math.fabs(F1_min - bs.eval_F1(None, t_ub)) <= 1.0e-1
-
-
-def test_initial_conditions_adiabatic():
-    """Test initial conditions of NcmCSQ1D."""
-    bs = BesselTest(alpha=2.0)
-    bs.set_k(1.0)
-    bs.set_ti(-100.0)
-    bs.set_tf(-1.0e-3)
-    state = Ncm.CSQ1DState.new()
-
-    for prec in np.geomspace(1.0e-14, 1.0e-6, 100):
-        limit_found, t_adiab = bs.find_adiab_time_limit(None, -1.0e4, -1.0e1, prec)
-
-        assert limit_found
-
-        # Getting the adiabatic solution
-        state, _alpha_reltol, _dgamma_reltol = bs.compute_adiab(None, t_adiab, state)
-        bs.change_frame(None, state, Ncm.CSQ1DFrame.ORIG)
-        phi_vec, Pphi_vec = state.get_phi_Pphi()
-
-        phi = phi_vec[0] + 1.0j * phi_vec[1]
-        Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
-
-        kt = bs.get_k() * t_adiab
-        hfnormm = 0.5 * math.sqrt(math.pi) * (-t_adiab) ** (-bs.alpha)
-        hfnormp = 0.5 * math.sqrt(math.pi) * (-t_adiab) ** (+bs.alpha)
-
-        # Analytical solution for phi and Pphi
-        theo_phi = hfnormm * hankel1e(bs.alpha, kt)
-        theo_Pphi = kt * hfnormp * hankel1e(1.0 + bs.alpha, kt)
-
-        # Compare with analytical solution
-        assert_allclose(abs(phi), abs(theo_phi), rtol=1.0e-6)
-        assert_allclose(abs(Pphi), abs(theo_Pphi), rtol=1.0e-6)
-
-
 def test_eval_int_nu_override():
     """Test that an overridden eval_int_nu is used in place of the ODE spline."""
     bs = BesselTestWithIntNu(alpha=2.0)
@@ -412,8 +358,6 @@ def test_nonadiab_evol():
 
 
 if __name__ == "__main__":
-    test_initial_conditions_time()
-    test_initial_conditions_adiabatic()
     for frame0 in [Ncm.CSQ1DFrame.ORIG, Ncm.CSQ1DFrame.ADIAB1, Ncm.CSQ1DFrame.ADIAB2]:
         test_evolution_frame(frame0)
     test_change_frame_orig_adiab1()
