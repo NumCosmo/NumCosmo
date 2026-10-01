@@ -53,6 +53,10 @@ void test_ncm_mset_catalog_cov (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_norma_bound (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_norma_unif (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_norma_methods (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_norma_methods_bound (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_norma_ellipsoid_half (void);
+void test_ncm_mset_catalog_norma_short (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_vol (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_bestfit (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_percentile (TestNcmMSetCatalog *test, gconstpointer pdata);
@@ -132,6 +136,9 @@ TestNcmMSetCatalogTests tests[] =
   {"norma", test_ncm_mset_catalog_norma},
   {"norma/bound", test_ncm_mset_catalog_norma_bound},
   {"norma/unif", test_ncm_mset_catalog_norma_unif},
+  {"norma/methods", test_ncm_mset_catalog_norma_methods},
+  {"norma/methods/bound", test_ncm_mset_catalog_norma_methods_bound},
+  {"norma/short", test_ncm_mset_catalog_norma_short},
   {"vol", test_ncm_mset_catalog_vol},
   {"bestfit", test_ncm_mset_catalog_bestfit},
   {"percentile", test_ncm_mset_catalog_percentile},
@@ -182,6 +189,8 @@ main (gint argc, gchar *argv[])
       g_free (path);
     }
   }
+
+  g_test_add_func ("/ncm/mset/catalog/norma/ellipsoid/half", &test_ncm_mset_catalog_norma_ellipsoid_half);
 
   g_test_add ("/ncm/mset/catalog/traps", TestNcmMSetCatalog, NULL,
               &test_ncm_mset_catalog_new,
@@ -451,6 +460,167 @@ test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata)
     lnnorm_sd = GSL_NAN;
     ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), ==, log (ratio), 0.2, 1.0e-3);
     g_assert_true (lnnorm_sd == lnnorm_sd_first);
+  }
+}
+
+/*
+ * Fills the catalog with n rows drawn from the fixture's Gaussian inside the bounds and
+ * returns the log of its mass there, the exact log evidence.
+ */
+static gdouble
+_test_ncm_mset_catalog_fill_gauss (TestNcmMSetCatalog *test, guint n)
+{
+  NcmData *data        = NCM_DATA (test->data_mvnd);
+  NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
+  NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
+  gulong N             = 0;
+  gulong Nin           = 0;
+  guint i;
+
+  for (i = 0; i < n; i++)
+  {
+    gdouble m2lnL = 0.0;
+    gulong Ni;
+
+    ncm_data_gauss_cov_mvnd_gen (test->data_mvnd, mset, mset, (NcmDataGaussCovMVNDBound) ncm_mset_fparam_valid_bounds, test->rng, &Ni);
+    ncm_data_m2lnL_val (data, mset, &m2lnL);
+    ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
+  }
+
+  return log (ncm_data_gauss_cov_mvnd_est_ratio (test->data_mvnd, mset, mset, (NcmDataGaussCovMVNDBound) ncm_mset_fparam_valid_bounds, &N, &Nin, 1.0e-3, test->rng));
+}
+
+/*
+ * The three estimators on 5000 rows against the exact log evidence, with tolerances
+ * ten times the scatter over 30 catalogs in dimensions 2 to 4. Each reports a finite
+ * error. A different method discards the kept estimate, and the same one keeps it.
+ */
+static void
+_test_ncm_mset_catalog_norma_methods_check (TestNcmMSetCatalog *test, const gdouble lnnorm, const gdouble tol[3])
+{
+  const NcmMSetCatalogPostNormMethod methods[3] = {
+    NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX,
+    NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS,
+    NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID,
+  };
+  gdouble lnnorm_k[3];
+  guint k;
+
+  g_assert_cmpint (ncm_mset_catalog_get_post_lnnorm_method (test->mcat), ==, NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX);
+
+  for (k = 0; k < 3; k++)
+  {
+    NcmMSetCatalogPostNormMethod method;
+    gdouble lnnorm_sd = GSL_NAN;
+
+    g_object_set (test->mcat, "post-lnnorm-method", methods[k], NULL);
+    g_object_get (test->mcat, "post-lnnorm-method", &method, NULL);
+    g_assert_cmpint (method, ==, methods[k]);
+
+    lnnorm_k[k] = ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd);
+    ncm_assert_cmpdouble_e (lnnorm_k[k], ==, lnnorm, 0.0, tol[k]);
+    g_assert_true (gsl_finite (lnnorm_sd));
+    g_assert_cmpfloat (lnnorm_sd, >, 0.0);
+  }
+
+  {
+    gdouble lnnorm_sd;
+
+    ncm_mset_catalog_set_post_lnnorm_method (test->mcat, NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID);
+    g_assert_cmpfloat (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), ==, lnnorm_k[2]);
+
+    ncm_mset_catalog_set_post_lnnorm_method (test->mcat, NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX);
+    g_assert_cmpfloat (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), !=, lnnorm_k[2]);
+  }
+}
+
+void
+test_ncm_mset_catalog_norma_methods (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  /* Wide bounds: scatter 0.0094 for the box, with either error, and 0.021 for the ellipsoid. */
+  const gdouble tol[3] = {0.1, 0.1, 0.2};
+
+  _test_ncm_mset_catalog_norma_methods_check (test, _test_ncm_mset_catalog_fill_gauss (test, 5000), tol);
+}
+
+void
+test_ncm_mset_catalog_norma_methods_bound (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  /* Upper bounds 1% above the mean cut the Gaussian, and the ellipsoid shrinks inside the
+   * box: scatter 0.025 for the box and 0.032 for the ellipsoid. */
+  const gdouble tol[3] = {0.25, 0.25, 0.3};
+  NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
+  NcmModel *model      = ncm_mset_peek (mset, ncm_model_mvnd_id ());
+  guint i;
+
+  for (i = 0; i < test->dim; i++)
+    ncm_model_param_set_upper_bound (model, i, ncm_model_param_get (model, i) * 1.01);
+
+  _test_ncm_mset_catalog_norma_methods_check (test, _test_ncm_mset_catalog_fill_gauss (test, 5000), tol);
+}
+
+void
+test_ncm_mset_catalog_norma_ellipsoid_half (void)
+{
+  /* Upper bounds at the mean cut the Gaussian in half. In four dimensions the ellipsoid
+   * holding half its mass no longer fits in the box, and it shrinks to the box; in two
+   * and three it still fits. Tolerance ten times the scatter over 30 catalogs, 0.043. */
+  TestNcmMSetCatalog test = {0};
+  NcmModelMVND *model_mvnd;
+  NcmMSet *mset;
+  gdouble lnnorm_sd, lnnorm;
+  guint i;
+
+  test.dim       = 4;
+  test.rng       = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  test.data_mvnd = ncm_data_gauss_cov_mvnd_new_full (test.dim, 5.0e-3, 1.0e-2, 1.0, 1.0, 2.0, test.rng);
+  model_mvnd     = ncm_model_mvnd_new (test.dim);
+  mset           = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+
+  ncm_mset_param_set_vector (mset, ncm_data_gauss_cov_peek_mean (NCM_DATA_GAUSS_COV (test.data_mvnd)));
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  for (i = 0; i < test.dim; i++)
+    ncm_model_param_set_upper_bound (NCM_MODEL (model_mvnd), i, ncm_model_param_get (NCM_MODEL (model_mvnd), i));
+
+  test.mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE, "m2lnL", "-2\\ln(L)", NULL);
+  ncm_mset_catalog_set_m2lnp_var (test.mcat, 0);
+
+  lnnorm = _test_ncm_mset_catalog_fill_gauss (&test, 5000);
+
+  ncm_mset_catalog_set_post_lnnorm_method (test.mcat, NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID);
+  ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test.mcat, &lnnorm_sd), ==, lnnorm, 0.0, 0.4);
+  g_assert_true (gsl_finite (lnnorm_sd));
+
+  ncm_model_mvnd_free (model_mvnd);
+  ncm_mset_free (mset);
+  test_ncm_mset_catalog_free (&test, NULL);
+}
+
+void
+test_ncm_mset_catalog_norma_short (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  /* Below 1000 rows the slices give no error: the estimate is finite, the error NaN, and
+   * a warning says so. */
+  const NcmMSetCatalogPostNormMethod methods[2] = {
+    NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX,
+    NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID,
+  };
+  guint k;
+
+  _test_ncm_mset_catalog_fill_gauss (test, 50);
+
+  for (k = 0; k < 2; k++)
+  {
+    gdouble lnnorm_sd = 0.0;
+
+    ncm_mset_catalog_set_post_lnnorm_method (test->mcat, methods[k]);
+    g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*catalog too small to estimate error*");
+    g_assert_true (gsl_finite (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd)));
+    g_test_assert_expected_messages ();
+    g_assert_true (gsl_isnan (lnnorm_sd));
   }
 }
 
@@ -2567,6 +2737,14 @@ test_ncm_mset_catalog_post_lnnorm_degenerate (TestNcmMSetCatalog *test, gconstpo
   g_assert_cmpfloat (ncm_mset_catalog_get_post_lnvol (test->mcat, 0.5 / ncm_mset_catalog_len (test->mcat), &glnvol), ==, 0.0);
   g_test_assert_expected_messages ();
   g_assert_true (gsl_isnan (glnvol));
+
+  /* The ellipsoid stops the same way. */
+  lnnorm_sd = 0.0;
+  ncm_mset_catalog_set_post_lnnorm_method (test->mcat, NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID);
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*Non-positive definite covariance*");
+  g_assert_cmpfloat (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), ==, 0.0);
+  g_test_assert_expected_messages ();
+  g_assert_true (gsl_isnan (lnnorm_sd));
 
   ncm_vector_free (row);
 }

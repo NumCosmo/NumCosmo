@@ -111,6 +111,7 @@ typedef struct _NcmMSetCatalogPrivate
   gsl_vector_complex *chain_sM_ev;
   NcmStatsAcorr *acorr;
   NcmStatsAcorrMethod tau_method;
+  NcmMSetCatalogPostNormMethod post_lnnorm_method;
   NcmVector *tau;
   gchar *rng_inis;
   gchar *rng_stat;
@@ -164,6 +165,7 @@ enum
   PROP_BURNIN,
   PROP_MARKOVIAN_ID,
   PROP_TAU_METHOD,
+  PROP_POST_LNNORM_METHOD,
   PROP_RNG,
   PROP_FILE,
   PROP_RUN_TYPE_STR,
@@ -229,7 +231,9 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->chain_sM_ev  = NULL;
   self->acorr        = NULL;
   self->tau_method   = NCM_STATS_ACORR_METHOD_MAX;
-  self->tau          = NULL;
+
+  self->post_lnnorm_method = NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX;
+  self->tau                = NULL;
 
   self->rng_inis          = NULL;
   self->rng_stat          = NULL;
@@ -426,6 +430,9 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_TAU_METHOD:
       ncm_mset_catalog_set_tau_method (mcat, g_value_get_enum (value));
       break;
+    case PROP_POST_LNNORM_METHOD:
+      ncm_mset_catalog_set_post_lnnorm_method (mcat, g_value_get_enum (value));
+      break;
     case PROP_RNG:
       ncm_mset_catalog_set_rng (mcat, g_value_get_object (value));
       break;
@@ -524,6 +531,9 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
       break;
     case PROP_TAU_METHOD:
       g_value_set_enum (value, ncm_mset_catalog_get_tau_method (mcat));
+      break;
+    case PROP_POST_LNNORM_METHOD:
+      g_value_set_enum (value, ncm_mset_catalog_get_post_lnnorm_method (mcat));
       break;
     case PROP_RNG:
       g_value_set_object (value, self->rng);
@@ -735,6 +745,14 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                       NULL,
                                                       "Method used to calculate the autocorrelation time",
                                                       NCM_TYPE_STATS_ACORR_METHOD, NCM_STATS_ACORR_METHOD_MAX,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_POST_LNNORM_METHOD,
+                                   g_param_spec_enum ("post-lnnorm-method",
+                                                      NULL,
+                                                      "Method used to estimate the log evidence",
+                                                      NCM_TYPE_MSET_CATALOG_POST_NORM_METHOD, NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
@@ -3233,6 +3251,41 @@ ncm_mset_catalog_get_tau_method (NcmMSetCatalog *mcat)
   return self->tau_method;
 }
 
+/**
+ * ncm_mset_catalog_set_post_lnnorm_method:
+ * @mcat: a #NcmMSetCatalog
+ * @method: a #NcmMSetCatalogPostNormMethod
+ *
+ * Sets the estimator of ncm_mset_catalog_get_post_lnnorm(). A different estimator
+ * discards the kept estimate.
+ *
+ */
+void
+ncm_mset_catalog_set_post_lnnorm_method (NcmMSetCatalog *mcat, NcmMSetCatalogPostNormMethod method)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  if (method != self->post_lnnorm_method)
+  {
+    self->post_lnnorm_method = method;
+    self->post_lnnorm_up     = FALSE;
+  }
+}
+
+/**
+ * ncm_mset_catalog_get_post_lnnorm_method:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: the estimator of ncm_mset_catalog_get_post_lnnorm().
+ */
+NcmMSetCatalogPostNormMethod
+ncm_mset_catalog_get_post_lnnorm_method (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  return self->post_lnnorm_method;
+}
+
 /*
  * The autocorrelation accumulator forms unweighted lagged sums. A weighted catalog is
  * therefore not fed (see _ncm_mset_catalog_post_update) and every quantity derived from
@@ -3986,20 +4039,18 @@ ncm_mset_catalog_peek_e_var_t (NcmMSetCatalog *mcat, guint t)
 
 #define NCM_MSET_CATALOG_RESCALE_COV (0.80)
 
+static gdouble _ncm_mset_catalog_get_post_lnnorm_sum (NcmMSetCatalog *mcat, NcmVector *mean, NcmMatrix *cov, const gdouble lnNorma, const gdouble R2_cut, gdouble *lnnorm_sd);
+
 static gdouble
 _ncm_mset_catalog_get_post_lnnorm_elipsoid (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
   const guint fparams_len     = ncm_mset_fparams_len (self->mset);
-  const guint cat_len         = ncm_mset_catalog_len (mcat);
   NcmMatrix *cov              = NULL;
   NcmVector *mean             = NULL;
-  NcmVector *v                = ncm_vector_new (fparams_len);
   gdouble level               = 0.50;
   gdouble R2_cut              = gsl_cdf_chisq_Pinv (level, fparams_len);
   gdouble lnNorma             = 0.0;
-  gdouble s                   = 0.0;
-  gdouble c                   = 0.0;
   gdouble R_max               = 1.0e300;
   gdouble R2_max, post_lnnorm;
   gint ret;
@@ -4036,51 +4087,22 @@ _ncm_mset_catalog_get_post_lnnorm_elipsoid (NcmMSetCatalog *mcat, gdouble *post_
 
     ncm_vector_clear (&mean);
     ncm_matrix_clear (&cov);
-    ncm_vector_free (v);
+    post_lnnorm_sd[0] = GSL_NAN;
 
     return 0.0;
   }
 
-  lnNorma = 0.5 * (fparams_len * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (cov)) + log (level);
-
-  for (i = 0; i < cat_len; i++)
-  {
-    NcmVector *row_i      = ncm_mset_catalog_peek_row (mcat, i);
-    const gdouble m2lnL_i = ncm_vector_get (row_i, self->m2lnp_var);
-    gdouble m2lnp_i       = 0.0;
-    gdouble e_i, t;
-
-    ncm_vector_memcpy2 (v, row_i, 0, self->nadd_vals, fparams_len);
-    ncm_vector_sub (v, mean);
-
-    ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
-                          ncm_matrix_gsl (cov), ncm_vector_gsl (v));
-    NCM_TEST_GSL_RESULT ("ncm_mset_catalog_get_post_lnnorm", ret);
-
-    ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (v), &m2lnp_i);
-    NCM_TEST_GSL_RESULT ("ncm_mset_catalog_get_post_lnnorm", ret);
-
-    if (m2lnp_i > R2_cut)
-      continue;
-
-    e_i = exp (0.5 * ((m2lnL_i - self->bestfit) - m2lnp_i));
-    t   = s + e_i;
-    c  += (s >= e_i) ? ((s - t) + e_i) : ((e_i - t) + s);
-    s   = t;
-  }
-
-  post_lnnorm       = -(log ((s + c) / cat_len) - lnNorma + 0.5 * self->bestfit);
-  post_lnnorm_sd[0] = GSL_NAN;
+  lnNorma     = 0.5 * (fparams_len * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (cov)) + log (level);
+  post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_sum (mcat, mean, cov, lnNorma, R2_cut, post_lnnorm_sd);
 
   ncm_vector_clear (&mean);
   ncm_matrix_clear (&cov);
-  ncm_vector_free (v);
 
   return post_lnnorm;
 }
 
 static gdouble
-_ncm_mset_catalog_get_post_lnnorm_sum (NcmMSetCatalog *mcat, NcmVector *mean, NcmMatrix *cov, const gdouble lnNorma, gdouble *lnnorm_sd)
+_ncm_mset_catalog_get_post_lnnorm_sum (NcmMSetCatalog *mcat, NcmVector *mean, NcmMatrix *cov, const gdouble lnNorma, const gdouble R2_cut, gdouble *lnnorm_sd)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
   const guint fparams_len     = ncm_mset_fparams_len (self->mset);
@@ -4108,6 +4130,7 @@ _ncm_mset_catalog_get_post_lnnorm_sum (NcmMSetCatalog *mcat, NcmVector *mean, Nc
       slice_res  = 0;
       nslices    = 1;
       g_warning ("_ncm_mset_catalog_get_post_lnnorm_sum: catalog too small to estimate error on the posterior norm.");
+      break;
     }
     else
     {
@@ -4142,6 +4165,10 @@ _ncm_mset_catalog_get_post_lnnorm_sum (NcmMSetCatalog *mcat, NcmVector *mean, Nc
 
       ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (v), &m2lnp_i);
       NCM_TEST_GSL_RESULT ("ncm_mset_catalog_get_post_lnnorm", ret);
+
+      /* A row outside the cut contributes zero. */
+      if (m2lnp_i > R2_cut)
+        continue;
 
       e_i = exp (0.5 * ((m2lnL_i - self->bestfit) - m2lnp_i));
       t   = s + e_i;
@@ -4243,24 +4270,15 @@ _ncm_mset_catalog_get_post_lnnorm_sum_bs (NcmMSetCatalog *mcat, NcmVector *mean,
 
     ncm_stats_vec_update (slnnorm);
 
-
-    printf ("# BS LNNORM: % 22.15g : % 22.15g % 22.15g % 22.15g % 22.15g\n",
-            -(log ((s + c) / cat_len) - lnNorma + 0.5 * self->bestfit),
-            -(log (ncm_stats_vec_get_mean (slnnorm, 0)) - lnNorma + 0.5 * self->bestfit),
-            ncm_stats_vec_get_mean (slnnorm, 1),
-            ncm_stats_vec_get_sd (slnnorm, 1),
-            ncm_stats_vec_get_sd (slnnorm, 1) / sqrt (j + 1.0)
-    );
-
-
     g_array_unref (bs_array);
 
+    /* Stops when the mean over the resamples is known to reltol. */
     if (j > 10)
     {
-      const gdouble lnnorm_mean    = ncm_stats_vec_get_sd (slnnorm, 0);
-      const gdouble lnnorm_mean_sd = ncm_stats_vec_get_sd (slnnorm, 0) / sqrt (j + 1.0);
+      const gdouble norm_mean    = ncm_stats_vec_get_mean (slnnorm, 0);
+      const gdouble norm_mean_sd = ncm_stats_vec_get_sd (slnnorm, 0) / sqrt (j + 1.0);
 
-      if (lnnorm_mean_sd / lnnorm_mean < reltol)
+      if (norm_mean_sd / norm_mean < reltol)
         break;
     }
   }
@@ -4335,7 +4353,7 @@ _ncm_mset_catalog_get_post_lnnorm_hyperbox (NcmMSetCatalog *mcat, gboolean use_b
   if (use_bs)
     post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_sum_bs (mcat, mean, cov, lnNorma, 1.0e-2, post_lnnorm_sd, rng);
   else
-    post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_sum (mcat, mean, cov, lnNorma, post_lnnorm_sd);
+    post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_sum (mcat, mean, cov, lnNorma, GSL_POSINF, post_lnnorm_sd);
 
   ncm_vector_clear (&mean);
   ncm_matrix_clear (&cov);
@@ -4353,9 +4371,15 @@ _ncm_mset_catalog_get_post_lnnorm_hyperbox (NcmMSetCatalog *mcat, gboolean use_b
  * parameter bounds, $m$ the #NcmMSetCatalog:m2lnp-var column: the log evidence for a
  * flat prior of unit density on the box (for a normalized flat prior subtract the log of
  * the box volume). The estimate averages $g/e^{-m/2}$ over the rows, $g$ the Gaussian
- * with the rows' mean and $0.8^2$ times their covariance, normalized to the box by a
- * Monte Carlo estimate of its mass there; the result is kept until rows are added.
- * Without #NcmMSetCatalog:m2lnp-var it warns and returns zero.
+ * with the rows' mean and $0.8^2$ times their covariance, normalized as
+ * #NcmMSetCatalog:post-lnnorm-method sets (#NcmMSetCatalogPostNormMethod): to the box, by
+ * a Monte Carlo estimate of its mass there, or to an ellipsoid inside it. The result is
+ * kept until rows are added or the method changes.
+ *
+ * @post_lnnorm_sd is the spread of the estimate over slices of the rows, or over
+ * bootstrap resamples; below 1000 rows the slices give none, and it is NaN with a
+ * warning. Without #NcmMSetCatalog:m2lnp-var it warns and returns zero; a covariance
+ * that is not positive definite warns and gives zero, with a NaN error.
  *
  * Returns: the estimate of $\ln Z$
  */
@@ -4373,9 +4397,7 @@ ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd)
 
   if (!self->post_lnnorm_up)
   {
-    NcmMSetCatalogPostNormMethod method = NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX;
-
-    switch (method)
+    switch (self->post_lnnorm_method)
     {
       case NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX:
         self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_hyperbox (mcat, FALSE, &self->post_lnnorm_sd);
