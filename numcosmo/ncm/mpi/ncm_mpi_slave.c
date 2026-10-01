@@ -143,9 +143,11 @@ ncm_mpi_slave_serve_job (void)
         end  = TRUE;
         kill = TRUE;
         break;
+      /* LCOV_EXCL_START */
       default:
         g_error ("ncm_mpi_slave_serve_job: unknown MPI message `%d' to slave %d", cmd, _mpi_ctrl.rank);
         break;
+        /* LCOV_EXCL_STOP */
     }
 
     _ncm_mpi_slave_release_sent (&slave, FALSE);

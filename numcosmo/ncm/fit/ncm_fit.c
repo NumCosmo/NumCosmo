@@ -405,6 +405,8 @@ ncm_fit_finalize (GObject *object)
 
 static void _ncm_fit_reset (NcmFit *fit);
 
+/* LCOV_EXCL_START */
+
 static NcmFit *
 _ncm_fit_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
 {
@@ -428,6 +430,8 @@ _ncm_fit_get_desc (NcmFit *fit)
 
   return NULL;
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 ncm_fit_class_init (NcmFitClass *klass)

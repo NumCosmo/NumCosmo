@@ -275,6 +275,8 @@ ncm_stats_dist1d_class_init (NcmStatsDist1dClass *klass)
   klass->get_current_h = &_ncm_stats_dist1d_get_current_h_not_implemented;
 }
 
+/* LCOV_EXCL_START */
+
 static gdouble
 _ncm_stats_dist1d_p_not_implemented (NcmStatsDist1d *sd1, gdouble x)
 {
@@ -298,6 +300,8 @@ _ncm_stats_dist1d_get_current_h_not_implemented (NcmStatsDist1d *sd1)
 
   return 0.0;
 }
+
+/* LCOV_EXCL_STOP */
 
 /**
  * ncm_stats_dist1d_ref:

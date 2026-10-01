@@ -464,6 +464,10 @@ math_tests = [
         'sources': ['ncm/fit/test_ncm_mset_trans_kern_gauss.c'],
     },
     {
+        'name': 'ncm_mset_trans_kern_flat',
+        'sources': ['ncm/fit/test_ncm_mset_trans_kern_flat.c'],
+    },
+    {
         'name': 'ncm_mset_trans_kern_cat',
         'sources': ['ncm/fit/test_ncm_mset_trans_kern_cat.c'],
     },
@@ -858,9 +862,9 @@ if mpi_c_dep.found()
                     'ncm/mpi/test_ncm_mpi_job.c',
                     'ncm/mpi/test_ncm_mpi_job_shape.c',
                 ],
-                # Three ranks give two workers: fewer inputs than workers, and workers
-                # returning out of order.
-                'nranks': [2, 3],
+                # One rank runs the jobs serially on the master. Three ranks give two
+                # workers: fewer inputs than workers, and workers returning out of order.
+                'nranks': [1, 2, 3],
             },
             {
                 # Drives the worker side with raw MPI calls, without ncm_cfg_init.

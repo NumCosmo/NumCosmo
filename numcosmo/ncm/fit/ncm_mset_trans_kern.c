@@ -164,6 +164,8 @@ _ncm_mset_trans_kern_reset (NcmMSetTransKern *tkern)
 {
 }
 
+/* LCOV_EXCL_START */
+
 static void
 _ncm_mset_trans_kern_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
 {
@@ -191,6 +193,8 @@ _ncm_mset_trans_kern_get_name (NcmMSetTransKern *tkern)
 
   return NULL;
 }
+
+/* LCOV_EXCL_STOP */
 
 /**
  * ncm_mset_trans_kern_ref:

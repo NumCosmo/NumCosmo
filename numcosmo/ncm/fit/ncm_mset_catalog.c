@@ -4285,6 +4285,7 @@ _ncm_mset_catalog_get_post_lnnorm_hyperbox (NcmMSetCatalog *mcat, gboolean use_b
   NcmVector *mean             = NULL;
   NcmRNG *rng                 = ncm_rng_new (NULL);
   gdouble lnNorma             = 0.0;
+  NcmMatrix *cov_mvnd;
   gdouble ratio, post_lnnorm;
   gint ret;
 
@@ -4292,12 +4293,29 @@ _ncm_mset_catalog_get_post_lnnorm_hyperbox (NcmMSetCatalog *mcat, gboolean use_b
   ncm_mset_catalog_get_mean (mcat, &mean);
   ncm_matrix_scale (cov, gsl_pow_2 (NCM_MSET_CATALOG_RESCALE_COV));
 
+  /* Factored before the ratio below, which would abort on the same covariance. */
+  cov_mvnd = ncm_matrix_dup (cov);
+  ret      = ncm_matrix_cholesky_decomp (cov, 'U');
+
+  if (ret != 0)
+  {
+    g_warning ("ncm_mset_catalog_get_post_lnnorm[ncm_matrix_cholesky_decomp]: %d. Non-positive definite covariance, more points are necessary.", ret);
+
+    ncm_vector_clear (&mean);
+    ncm_matrix_clear (&cov);
+    ncm_matrix_clear (&cov_mvnd);
+    ncm_rng_clear (&rng);
+    post_lnnorm_sd[0] = GSL_NAN;
+
+    return 0.0;
+  }
+
   {
     NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new (fparams_len);
     NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (fparams_len);
     NcmMSet *mset_mvnd             = ncm_mset_new (model_mvnd, NULL, NULL);
 
-    ncm_data_gauss_cov_mvnd_set_cov_mean (data_mvnd, mean, cov);
+    ncm_data_gauss_cov_mvnd_set_cov_mean (data_mvnd, mean, cov_mvnd);
 
     ncm_mset_param_set_all_ftype (mset_mvnd, NCM_PARAM_TYPE_FREE);
     ncm_mset_prepare_fparam_map (mset_mvnd);
@@ -4310,19 +4328,7 @@ _ncm_mset_catalog_get_post_lnnorm_hyperbox (NcmMSetCatalog *mcat, gboolean use_b
     ncm_data_gauss_cov_mvnd_clear (&data_mvnd);
   }
 
-  ret = ncm_matrix_cholesky_decomp (cov, 'U');
-
-  if (ret != 0)
-  {
-    g_warning ("ncm_mset_catalog_get_post_lnnorm[ncm_matrix_cholesky_decomp]: %d. Non-positive definite covariance, more points are necessary.", ret);
-
-    ncm_vector_clear (&mean);
-    ncm_matrix_clear (&cov);
-    ncm_rng_clear (&rng);
-    post_lnnorm_sd[0] = GSL_NAN;
-
-    return 0.0;
-  }
+  ncm_matrix_clear (&cov_mvnd);
 
   lnNorma = 0.5 * (fparams_len * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (cov)) + log (ratio);
 

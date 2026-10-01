@@ -48,6 +48,8 @@ ncm_stats_dist2d_init (NcmStatsDist2d *sd2)
 #define _NCM_STATS_DIST2D_NOT_IMPLEMENTED(name) \
         g_error ("ncm_stats_dist2d_" name ": `%s' does not implement " name ".", G_OBJECT_TYPE_NAME (sd2))
 
+/* LCOV_EXCL_START */
+
 static void
 _ncm_stats_dist2d_xbounds (NcmStatsDist2d *sd2, gdouble *xi, gdouble *xf)
 {
@@ -75,6 +77,8 @@ _ncm_stats_dist2d_m2lnp (NcmStatsDist2d *sd2, const gdouble x, const gdouble y)
 
   return 0.0;
 }
+
+/* LCOV_EXCL_STOP */
 
 static gdouble
 _ncm_stats_dist2d_cdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y)

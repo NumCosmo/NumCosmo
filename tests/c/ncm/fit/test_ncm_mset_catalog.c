@@ -75,6 +75,7 @@ void test_ncm_mset_catalog_param_pdf (TestNcmMSetCatalog *test, gconstpointer pd
 void test_ncm_mset_catalog_trim_by_type_short (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_heidel (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_heidel_by_chain_fail (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_post_lnnorm_degenerate (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_remove_last_ensemble (TestNcmMSetCatalog *test, gconstpointer pdata);
 
 #ifdef HAVE_CFITSIO
@@ -147,6 +148,7 @@ TestNcmMSetCatalogTests tests[] =
   {"trim_by_type/short", test_ncm_mset_catalog_trim_by_type_short},
   {"heidel", test_ncm_mset_catalog_heidel},
   {"heidel/by_chain/fail", test_ncm_mset_catalog_heidel_by_chain_fail},
+  {"post_lnnorm/degenerate", test_ncm_mset_catalog_post_lnnorm_degenerate},
   {"remove_last_ensemble", test_ncm_mset_catalog_remove_last_ensemble},
   {NULL, NULL}
 };
@@ -2253,6 +2255,28 @@ _test_ncm_mset_catalog_sorted_p0 (TestNcmMSetCatalog *test)
   return p0;
 }
 
+/* The messages of a call go to a temporary file, out of the TAP stream. */
+static FILE *
+_test_ncm_mset_catalog_log_begin (void)
+{
+  FILE *log = tmpfile ();
+
+  g_assert_nonnull (log);
+  ncm_cfg_set_logstream (log);
+
+  return log;
+}
+
+/* Something was written, and the messages go back to stdout. */
+static void
+_test_ncm_mset_catalog_log_end (FILE *log)
+{
+  fflush (log);
+  g_assert_cmpint (ftell (log), >, 0);
+  ncm_cfg_set_logstream (stdout);
+  fclose (log);
+}
+
 void
 test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
@@ -2307,6 +2331,35 @@ test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pda
   }
 
   g_assert_cmpfloat (ncm_matrix_get (res, 1, 0), <, ncm_matrix_get (res, 0, 0));
+
+  /* With the progress messages on, the results do not change. The distribution of the
+   * free parameter theta_0 is that of the function theta_0. */
+  {
+    NcmMSet *mset = ncm_mset_catalog_peek_mset (test->mcat);
+    FILE *log     = _test_ncm_mset_catalog_log_begin ();
+    NcmStatsDist1d *sd1_p, *sd1_f;
+    NcmMatrix *res_msgs;
+
+    sd1_f = ncm_mset_catalog_calc_distrib (test->mcat, func0, NCM_FIT_RUN_MSGS_SIMPLE);
+    sd1_p = ncm_mset_catalog_calc_param_distrib (test->mcat, ncm_mset_fparam_get_pi (mset, 0), NCM_FIT_RUN_MSGS_SIMPLE);
+    g_assert_cmpfloat (ncm_stats_dist1d_eval_inv_pdf (sd1_p, 0.5), ==, ncm_stats_dist1d_eval_inv_pdf (sd1_f, 0.5));
+
+    res_msgs = ncm_mset_catalog_calc_pvalue (test->mcat, func, x_v, p_val, 0, NCM_FIT_RUN_MSGS_SIMPLE);
+
+    for (k = 0; k < 2; k++)
+      g_assert_cmpfloat (ncm_matrix_get (res_msgs, k, 0), ==, ncm_matrix_get (res, k, 0));
+
+    ncm_matrix_free (res_msgs);
+
+    res_msgs = ncm_mset_catalog_calc_ci_interp (test->mcat, func, x_v, p_val, 0, NCM_FIT_RUN_MSGS_SIMPLE);
+    g_assert_cmpuint (ncm_matrix_ncols (res_msgs), ==, 9);
+    ncm_matrix_free (res_msgs);
+
+    _test_ncm_mset_catalog_log_end (log);
+    ncm_stats_dist1d_free (sd1_p);
+    ncm_stats_dist1d_free (sd1_f);
+  }
+
   ncm_matrix_free (res);
 
   g_free (p0);
@@ -2424,6 +2477,25 @@ test_ncm_mset_catalog_trim_by_type_short (TestNcmMSetCatalog *test, gconstpointe
   g_assert_cmpfloat (max_ess, ==, 0.0);
   g_assert_cmpuint (ncm_mset_catalog_calc_heidel_diag (test->mcat, 0, 0.0, NCM_FIT_RUN_MSGS_NONE), ==, 0);
 
+  /* The chain by chain versions give zero as well, and say why. */
+  {
+    FILE *log         = _test_ncm_mset_catalog_log_begin ();
+    gdouble wp_pvalue = 1.0;
+
+    max_ess = 1.0;
+    g_assert_cmpuint (ncm_mset_catalog_calc_max_ess_time (test->mcat, 0, &max_ess, NCM_FIT_RUN_MSGS_SIMPLE), ==, 0);
+    g_assert_cmpfloat (max_ess, ==, 0.0);
+
+    max_ess = 1.0;
+    g_assert_cmpuint (ncm_mset_catalog_max_ess_time_by_chain (test->mcat, 0, &max_ess, NCM_FIT_RUN_MSGS_SIMPLE), ==, 0);
+    g_assert_cmpfloat (max_ess, ==, 0.0);
+
+    g_assert_cmpuint (ncm_mset_catalog_heidel_diag_by_chain (test->mcat, 0, 0.0, &wp_pvalue, NCM_FIT_RUN_MSGS_SIMPLE), ==, 0);
+    g_assert_cmpfloat (wp_pvalue, ==, 0.0);
+
+    _test_ncm_mset_catalog_log_end (log);
+  }
+
   ncm_mset_catalog_trim_by_type (test->mcat, 0, NCM_MSET_CATALOG_TRIM_TYPE_ESS | NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL, NCM_FIT_RUN_MSGS_NONE);
   g_assert_cmpuint (ncm_mset_catalog_len (test->mcat), ==, 5 * ncm_mset_catalog_nchains (test->mcat));
 }
@@ -2440,6 +2512,18 @@ test_ncm_mset_catalog_heidel (TestNcmMSetCatalog *test, gconstpointer pdata)
   g_assert_cmpuint (ncm_mset_catalog_calc_heidel_diag (test->mcat, 0, 1.0e-6, NCM_FIT_RUN_MSGS_NONE), ==, 0);
   g_assert_cmpuint (ncm_mset_catalog_heidel_diag_by_chain (test->mcat, 0, 1.0e-6, &wp_pvalue, NCM_FIT_RUN_MSGS_NONE), ==, 0);
   g_assert_cmpfloat (wp_pvalue, <=, 1.0 - 1.0e-6);
+
+  /* The same with the messages on, and the effective sample size of the worst chain. */
+  {
+    FILE *log       = _test_ncm_mset_catalog_log_begin ();
+    gdouble max_ess = 0.0;
+
+    g_assert_cmpuint (ncm_mset_catalog_heidel_diag_by_chain (test->mcat, 0, 1.0e-6, &wp_pvalue, NCM_FIT_RUN_MSGS_SIMPLE), ==, 0);
+    ncm_mset_catalog_max_ess_time_by_chain (test->mcat, 0, &max_ess, NCM_FIT_RUN_MSGS_SIMPLE);
+    g_assert_cmpfloat (max_ess, >, 0.0);
+
+    _test_ncm_mset_catalog_log_end (log);
+  }
 }
 
 void
@@ -2454,6 +2538,37 @@ test_ncm_mset_catalog_heidel_by_chain_fail (TestNcmMSetCatalog *test, gconstpoin
   g_assert_cmpuint (ncm_mset_catalog_heidel_diag_by_chain (test->mcat, 0, 1.0 - 1.0e-6, &wp_pvalue, NCM_FIT_RUN_MSGS_NONE), ==, 0);
   g_assert_cmpfloat (wp_pvalue, >, 1.0e-6);
   g_assert_cmpfloat (wp_pvalue, <=, 1.0);
+}
+
+void
+test_ncm_mset_catalog_post_lnnorm_degenerate (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  /* Identical rows have a zero covariance: the evidence warns and gives zero with an
+   * undefined error, and the volume warns about the rows as well. The value 1/2 keeps
+   * the mean and the covariance exact. */
+  const guint ncols = ncm_mset_catalog_ncols (test->mcat);
+  NcmVector *row    = ncm_vector_new (ncols);
+  gdouble lnnorm_sd = 0.0;
+  gdouble glnvol    = 0.0;
+  guint i;
+
+  ncm_vector_set_all (row, 0.5);
+
+  for (i = 0; i < 4 * ncm_mset_catalog_nchains (test->mcat); i++)
+    ncm_mset_catalog_add_from_vector (test->mcat, row);
+
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*Non-positive definite covariance*");
+  g_assert_cmpfloat (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), ==, 0.0);
+  g_test_assert_expected_messages ();
+  g_assert_true (gsl_isnan (lnnorm_sd));
+
+  /* A level holding less than one row. */
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*too few points*");
+  g_assert_cmpfloat (ncm_mset_catalog_get_post_lnvol (test->mcat, 0.5 / ncm_mset_catalog_len (test->mcat), &glnvol), ==, 0.0);
+  g_test_assert_expected_messages ();
+  g_assert_true (gsl_isnan (glnvol));
+
+  ncm_vector_free (row);
 }
 
 void
