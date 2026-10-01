@@ -102,6 +102,11 @@ void ncm_diff_set_ini_h (NcmDiff *diff, const gdouble ini_h);
 void ncm_diff_set_dual_series (NcmDiff *diff, const gboolean dual_series);
 void ncm_diff_set_spectral_window (NcmDiff *diff, const gdouble spectral_window);
 
+void ncm_diff_set_domain (NcmDiff *diff, NcmVector *lb, NcmVector *ub);
+void ncm_diff_clear_domain (NcmDiff *diff);
+void ncm_diff_set_domain_warnings (NcmDiff *diff, const gboolean domain_warnings);
+gboolean ncm_diff_get_domain_warnings (NcmDiff *diff);
+
 void ncm_diff_log_central_tables (NcmDiff *diff);
 void ncm_diff_log_forward_tables (NcmDiff *diff);
 void ncm_diff_log_backward_tables (NcmDiff *diff);

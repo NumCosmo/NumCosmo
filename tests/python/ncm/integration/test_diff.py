@@ -362,3 +362,54 @@ def _run_diff_checks(diff: Ncm.Diff) -> None:
         * math.sin(math.pi * (x0_a[0] * x0_a[1] * x0_a[2] - 1.0)),
     ]
     cmp_array(H_a, HE_a, Herr_a)
+
+
+def test_diff_tiny_x() -> None:
+    """Test derivatives at a tiny nonzero x of functions of order one there.
+
+    The step ini_h |x| is far below the scale of f, so the quotients start as
+    cancellation noise; the value must still be inside an informative estimate.
+    """
+    diff = Ncm.Diff.new()
+
+    for x0 in (1.0e-4, 1.0e-8, 1.0e-12):
+        for f, d1, d2 in (
+            (math.exp, math.exp(x0), math.exp(x0)),
+            (lambda x: math.sin(x + 1.0), math.cos(x0 + 1.0), -math.sin(x0 + 1.0)),
+        ):
+            for method, exact in (
+                (diff.rf_d1_1_to_1, d1),
+                (diff.rc_d1_1_to_1, d1),
+                (diff.rc_d2_1_to_1, d2),
+            ):
+                val, err = method(x0, lambda x, *_: f(x), None)
+                assert math.fabs(val - exact) <= err
+                assert err <= 1.0e-3 * math.fabs(exact)
+
+
+def test_diff_domain() -> None:
+    """Test a domain that keeps the points of a central difference inside it.
+
+    exp on [0, inf) at a tiny x: the central step cannot grow without leaving the
+    domain, so the scheme falls back to a forward difference; with the warnings off
+    nothing is printed and the result is informative.
+    """
+    diff = Ncm.Diff(**{"domain-warnings": False})
+    assert not diff.get_domain_warnings()
+
+    diff.set_domain(Ncm.Vector.new_array([0.0]), Ncm.Vector.new_array([math.inf]))
+    points: list[float] = []
+
+    def f(x: float, *_) -> float:
+        points.append(x)
+        return math.exp(x)
+
+    for x0 in (1.0e-8, 1.0e-12):
+        for method in (diff.rc_d1_1_to_1, diff.rc_d2_1_to_1):
+            val, err = method(x0, f, None)
+            assert math.fabs(val - math.exp(x0)) <= err
+            assert err <= 1.0e-3 * math.exp(x0)
+
+    assert min(points) >= 0.0
+
+    diff.clear_domain()

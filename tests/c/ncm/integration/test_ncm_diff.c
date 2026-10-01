@@ -83,6 +83,17 @@ void test_ncm_diff_rc_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_rc_d2_N_to_1_all (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_rf_Hessian_N_to_1_all (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_rf_Hessian_N_to_1_rosenbrock (TestNcmDiff *test, gconstpointer pdata);
+void test_ncm_diff_1_to_1_tiny_x (TestNcmDiff *test, gconstpointer pdata);
+void test_ncm_diff_1_to_1_tiny_x_domain (TestNcmDiff *test, gconstpointer pdata);
+void test_ncm_diff_rf_Hessian_N_to_1_tiny_x (TestNcmDiff *test, gconstpointer pdata);
+void test_ncm_diff_domain_half_line (TestNcmDiff *test, gconstpointer pdata);
+void test_ncm_diff_domain_log (TestNcmDiff *test, gconstpointer pdata);
+void test_ncm_diff_domain_interval (TestNcmDiff *test, gconstpointer pdata);
+void test_ncm_diff_domain_Hessian (TestNcmDiff *test, gconstpointer pdata);
+void test_ncm_diff_domain_narrow (TestNcmDiff *test, gconstpointer pdata);
+void test_ncm_diff_domain_Hessian_upper (TestNcmDiff *test, gconstpointer pdata);
+void test_ncm_diff_domain_dual (TestNcmDiff *test, gconstpointer pdata);
+void test_ncm_diff_domain_narrow_subprocess (TestNcmDiff *test, gconstpointer pdata);
 
 void test_ncm_diff_rf_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_rc_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata);
@@ -305,6 +316,61 @@ main (gint argc, gchar *argv[])
               &test_ncm_diff_rc_d2_N_to_M_all,
               &test_ncm_diff_free);
 
+  g_test_add ("/ncm/diff/1_to_1/tiny_x", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_1_to_1_tiny_x,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/1_to_1/tiny_x/domain", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_1_to_1_tiny_x_domain,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/rf/Hessian/N_to_1/tiny_x", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_rf_Hessian_N_to_1_tiny_x,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/domain/half_line", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_domain_half_line,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/domain/log", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_domain_log,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/domain/interval", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_domain_interval,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/domain/Hessian", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_domain_Hessian,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/domain/Hessian/upper", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_domain_Hessian_upper,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/domain/dual", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_domain_dual,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/domain/narrow", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_domain_narrow,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/domain/narrow/subprocess", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_domain_narrow_subprocess,
+              &test_ncm_diff_free);
+
   g_test_add ("/ncm/diff/traps", TestNcmDiff, NULL,
               &test_ncm_diff_new,
               &test_ncm_diff_traps,
@@ -505,6 +571,31 @@ _test_ncm_diff_d2exp (const gdouble x, gpointer userdata)
 /*
  * LOG
  */
+
+/* sin (w x + 1): of order one at a tiny x, unlike sin (w x). */
+static gdouble
+_test_ncm_diff_sin1 (const gdouble x, gpointer userdata)
+{
+  gdouble *w_ptr = (gdouble *) userdata;
+
+  return sin (x * w_ptr[0] + 1.0);
+}
+
+static gdouble
+_test_ncm_diff_dsin1 (const gdouble x, gpointer userdata)
+{
+  gdouble *w_ptr = (gdouble *) userdata;
+
+  return w_ptr[0] * cos (x * w_ptr[0] + 1.0);
+}
+
+static gdouble
+_test_ncm_diff_d2sin1 (const gdouble x, gpointer userdata)
+{
+  gdouble *w_ptr = (gdouble *) userdata;
+
+  return -gsl_pow_2 (w_ptr[0]) * sin (x * w_ptr[0] + 1.0);
+}
 
 static gdouble
 _test_ncm_diff_log (const gdouble x, gpointer userdata)
@@ -775,6 +866,12 @@ _test_ncm_diff_rosenbrock (NcmVector *x, gpointer userdata)
   const gdouble x2 = ncm_vector_get (x, 1);
 
   return 0.1 * (100.0 * gsl_pow_2 (x2 - x1 * x1) + gsl_pow_2 (1.0 - x1));
+}
+
+static gdouble
+_test_ncm_diff_exp12 (NcmVector *x, gpointer userdata)
+{
+  return exp (ncm_vector_get (x, 0) + 2.0 * ncm_vector_get (x, 1));
 }
 
 /*
@@ -1570,8 +1667,11 @@ test_ncm_diff_rf_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
 
         ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
 
-        /* The error estimate must stay informative at a zero coordinate. */
-        if (zero)
+        /*
+         * The error estimate of the zero coordinate must stay informative; the
+         * other coordinates have steps of ini_h times their size.
+         */
+        if (zero && (j == i % 3))
           g_assert_cmpfloat (err, <=, 0.1 * scale);
       }
 
@@ -1641,8 +1741,11 @@ test_ncm_diff_rc_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
 
         ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
 
-        /* The error estimate must stay informative at a zero coordinate. */
-        if (zero)
+        /*
+         * The error estimate of the zero coordinate must stay informative; the
+         * other coordinates have steps of ini_h times their size.
+         */
+        if (zero && (j == i % 3))
           g_assert_cmpfloat (err, <=, 0.1 * scale);
       }
 
@@ -1694,6 +1797,21 @@ test_ncm_diff_rc_d2_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
       GArray *Adf_a = _test_ncm_diff_N_to_1_d2all (x_a, w);
       gdouble scale = 0.0;
 
+      /*
+       * At a zero coordinate the second derivatives vanish by symmetry; the
+       * estimate is measured against the curvature amplitude, the derivatives
+       * without their sine factor. A curvature below 1.0e-4 of f is within the
+       * padded round-off of the initial step and cannot be known to 10 %.
+       */
+      {
+        const gdouble x1  = g_array_index (x_a, gdouble, 0);
+        const gdouble x2  = g_array_index (x_a, gdouble, 1);
+        const gdouble x3  = g_array_index (x_a, gdouble, 2);
+        const gdouble amp = GSL_MAX (gsl_pow_2 (x2 * w[0]), GSL_MAX (gsl_pow_2 (x1 * w[0]), gsl_pow_2 (w[1])));
+
+        scale = GSL_MAX (amp, 1.0e-4) * exp (x3 * w[1]);
+      }
+
       for (j = 0; j < x_a->len; j++)
         scale = GSL_MAX (scale, fabs (g_array_index (Adf_a, gdouble, j)));
 
@@ -1712,8 +1830,11 @@ test_ncm_diff_rc_d2_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
 
         ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
 
-        /* The error estimate must stay informative at a zero coordinate. */
-        if (zero)
+        /*
+         * The error estimate of the zero coordinate must stay informative; the
+         * other coordinates have steps of ini_h times their size.
+         */
+        if (zero && (j == i % 3))
           g_assert_cmpfloat (err, <=, 0.1 * scale);
       }
 
@@ -1918,8 +2039,11 @@ test_ncm_diff_rf_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
 
         ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
 
-        /* The error estimate must stay informative at a zero coordinate. */
-        if (zero)
+        /*
+         * The error estimate of the zero coordinate must stay informative; the
+         * other coordinates have steps of ini_h times their size.
+         */
+        if (zero && (j / dim == i % 3))
           g_assert_cmpfloat (err, <=, 0.1 * scale);
       }
 
@@ -1990,8 +2114,11 @@ test_ncm_diff_rc_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
 
         ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
 
-        /* The error estimate must stay informative at a zero coordinate. */
-        if (zero)
+        /*
+         * The error estimate of the zero coordinate must stay informative; the
+         * other coordinates have steps of ini_h times their size.
+         */
+        if (zero && (j / dim == i % 3))
           g_assert_cmpfloat (err, <=, 0.1 * scale);
       }
 
@@ -2044,6 +2171,22 @@ test_ncm_diff_rc_d2_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
       GArray *Adf_a   = _test_ncm_diff_N_to_M_d2all (x_a, w);
       gdouble scale   = 0.0;
 
+      /*
+       * At a zero coordinate the second derivatives vanish by symmetry; the
+       * estimate is measured against the curvature amplitude, the derivatives
+       * without their sine and cosine factors. A curvature below 1.0e-4 of f
+       * is within the padded round-off of the initial step and cannot be
+       * known to 10 %.
+       */
+      {
+        const gdouble x1  = g_array_index (x_a, gdouble, 0);
+        const gdouble x2  = g_array_index (x_a, gdouble, 1);
+        const gdouble x3  = g_array_index (x_a, gdouble, 2);
+        const gdouble amp = GSL_MAX (gsl_pow_2 (x2 * w[0]), GSL_MAX (gsl_pow_2 (x1 * w[0]), gsl_pow_2 (w[1])));
+
+        scale = GSL_MAX (amp, 1.0e-4) * exp (fabs (x3 * w[1]));
+      }
+
       for (j = 0; j < x_a->len * dim; j++)
         scale = GSL_MAX (scale, fabs (g_array_index (Adf_a, gdouble, j)));
 
@@ -2063,8 +2206,11 @@ test_ncm_diff_rc_d2_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
 
         ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
 
-        /* The error estimate must stay informative at a zero coordinate. */
-        if (zero)
+        /*
+         * The error estimate of the zero coordinate must stay informative; the
+         * other coordinates have steps of ini_h times their size.
+         */
+        if (zero && (j / dim == i % 3))
           g_assert_cmpfloat (err, <=, 0.1 * scale);
       }
 
@@ -2075,6 +2221,442 @@ test_ncm_diff_rc_d2_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
   }
 
   g_array_unref (x_a);
+}
+
+/*
+ * A tiny nonzero x gives a step ini_h |x| far below the scale of a function
+ * of order one there: the quotients are cancellation noise. The derivative
+ * must still come out inside an informative estimate.
+ */
+void
+test_ncm_diff_1_to_1_tiny_x (TestNcmDiff *test, gconstpointer pdata)
+{
+  typedef gdouble (*Method) (NcmDiff *, const gdouble, NcmDiffFunc1to1, gpointer, gdouble *);
+
+  const Method methods[3]           = {&ncm_diff_rf_d1_1_to_1, &ncm_diff_rc_d1_1_to_1, &ncm_diff_rc_d2_1_to_1};
+  const gchar *names[3]             = {"rf_d1", "rc_d1", "rc_d2"};
+  const NcmDiffFunc1to1 funcs[2]    = {&_test_ncm_diff_exp, &_test_ncm_diff_sin1};
+  const NcmDiffFunc1to1 exact[2][3] = {
+    {&_test_ncm_diff_dexp, &_test_ncm_diff_dexp, &_test_ncm_diff_d2exp},
+    {&_test_ncm_diff_dsin1, &_test_ncm_diff_dsin1, &_test_ncm_diff_d2sin1}
+  };
+  const gdouble x0s[3] = {1.0e-4, 1.0e-8, 1.0e-12};
+  NcmDiff *diff        = test->diff;
+  gdouble w            = 1.0;
+  guint m, k, n;
+
+  for (m = 0; m < 3; m++)
+  {
+    for (k = 0; k < 2; k++)
+    {
+      for (n = 0; n < 3; n++)
+      {
+        gdouble err       = 0.0;
+        const gdouble df  = methods[m](diff, x0s[n], funcs[k], &w, &err);
+        const gdouble Adf = exact[k][m](x0s[n], &w);
+
+        g_test_message ("%s f%u x = %.0e: % .15e exact % .15e err %.2e", names[m], k, x0s[n], df, Adf, err);
+        ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
+        g_assert_cmpfloat (err, <=, 1.0e-3 * fabs (Adf));
+      }
+    }
+  }
+}
+
+/*
+ * Functions whose scale is x itself are fine at a tiny x and have no
+ * values on the other side of zero; any larger step must not spoil them.
+ */
+void
+test_ncm_diff_1_to_1_tiny_x_domain (TestNcmDiff *test, gconstpointer pdata)
+{
+  typedef gdouble (*Method) (NcmDiff *, const gdouble, NcmDiffFunc1to1, gpointer, gdouble *);
+
+  const Method methods[3]           = {&ncm_diff_rf_d1_1_to_1, &ncm_diff_rc_d1_1_to_1, &ncm_diff_rc_d2_1_to_1};
+  const NcmDiffFunc1to1 funcs[2]    = {&_test_ncm_diff_log, &_test_ncm_diff_plaw};
+  const NcmDiffFunc1to1 exact[2][3] = {
+    {&_test_ncm_diff_dlog, &_test_ncm_diff_dlog, &_test_ncm_diff_d2log},
+    {&_test_ncm_diff_dplaw, &_test_ncm_diff_dplaw, &_test_ncm_diff_d2plaw}
+  };
+  const gdouble x0s[2] = {1.0e-6, 1.0e-10};
+  gdouble w[2]         = {1.0, 0.5};
+  NcmDiff *diff        = test->diff;
+  guint m, k, n;
+
+  for (m = 0; m < 3; m++)
+  {
+    for (k = 0; k < 2; k++)
+    {
+      for (n = 0; n < 2; n++)
+      {
+        gdouble err       = 0.0;
+        const gdouble df  = methods[m](diff, x0s[n], funcs[k], &w[k], &err);
+        const gdouble Adf = exact[k][m](x0s[n], &w[k]);
+
+        ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
+        g_assert_cmpfloat (err, <=, 1.0e-3 * fabs (Adf));
+      }
+    }
+  }
+}
+
+/* exp (x1 + 2 x2) at tiny coordinates: H = exp (x1 + 2 x2) [[1, 2], [2, 4]]. */
+void
+test_ncm_diff_rf_Hessian_N_to_1_tiny_x (TestNcmDiff *test, gconstpointer pdata)
+{
+  const gdouble pts[3][2] = {
+    {
+      1.0e-8, 1.0e-12
+    }, {
+      1.0e-4, 1.0
+    }, {
+      1.0e-12, 0.0
+    }
+  };
+  NcmDiff *diff = test->diff;
+  GArray *x_a   = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  guint i, j;
+
+  g_array_set_size (x_a, 2);
+
+  for (i = 0; i < 3; i++)
+  {
+    const gdouble e    = exp (pts[i][0] + 2.0 * pts[i][1]);
+    const gdouble H[4] = {e, 2.0 * e, 2.0 * e, 4.0 * e};
+    GArray *err_a      = NULL;
+    GArray *df_a;
+
+    g_array_index (x_a, gdouble, 0) = pts[i][0];
+    g_array_index (x_a, gdouble, 1) = pts[i][1];
+
+    df_a = ncm_diff_rf_Hessian_N_to_1 (diff, x_a, &_test_ncm_diff_exp12, NULL, &err_a);
+
+    for (j = 0; j < 4; j++)
+    {
+      const gdouble err = g_array_index (err_a, gdouble, j);
+
+      g_test_message ("point %u entry %u: % .15e exact % .15e err %.2e", i, j, g_array_index (df_a, gdouble, j), H[j], err);
+      ncm_assert_cmpdouble_e (g_array_index (df_a, gdouble, j), ==, H[j], 0.0, err);
+      g_assert_cmpfloat (err, <=, 1.0e-3 * H[j]);
+    }
+
+    g_array_unref (df_a);
+    g_array_unref (err_a);
+  }
+
+  g_array_unref (x_a);
+}
+
+/* exp (x) recording the extreme points it was evaluated at. */
+typedef struct _TestNcmDiffDom
+{
+  gdouble xmin;
+  gdouble xmax;
+} TestNcmDiffDom;
+
+static gdouble
+_test_ncm_diff_exp_dom (const gdouble x, gpointer userdata)
+{
+  TestNcmDiffDom *dom = (TestNcmDiffDom *) userdata;
+
+  dom->xmin = GSL_MIN (dom->xmin, x);
+  dom->xmax = GSL_MAX (dom->xmax, x);
+
+  return exp (x);
+}
+
+static gdouble
+_test_ncm_diff_exp12_dom (NcmVector *x, gpointer userdata)
+{
+  TestNcmDiffDom *dom = (TestNcmDiffDom *) userdata;
+  const gdouble x1    = ncm_vector_get (x, 0);
+
+  dom->xmin = GSL_MIN (dom->xmin, x1);
+  dom->xmax = GSL_MAX (dom->xmax, x1);
+
+  return exp (x1 + 2.0 * ncm_vector_get (x, 1));
+}
+
+/* Sets a one-dimensional domain [lb, ub] on the differentiator. */
+static void
+_test_ncm_diff_set_domain_1d (NcmDiff *diff, const gdouble lb, const gdouble ub)
+{
+  NcmVector *lb_v = ncm_vector_new (1);
+  NcmVector *ub_v = ncm_vector_new (1);
+
+  ncm_vector_set (lb_v, 0, lb);
+  ncm_vector_set (ub_v, 0, ub);
+  ncm_diff_set_domain (diff, lb_v, ub_v);
+
+  ncm_vector_free (lb_v);
+  ncm_vector_free (ub_v);
+}
+
+/*
+ * exp on [0, inf) at a tiny x: the central step cannot grow without leaving
+ * the domain, so the scheme falls back to a forward difference, with one
+ * warning per call unless they are off; the result is informative.
+ */
+void
+test_ncm_diff_domain_half_line (TestNcmDiff *test, gconstpointer pdata)
+{
+  NcmDiff *diff        = test->diff;
+  const gdouble x0s[2] = {1.0e-8, 1.0e-12};
+  TestNcmDiffDom dom   = {GSL_POSINF, GSL_NEGINF};
+  gdouble w            = 1.0;
+  guint pass, n;
+
+  _test_ncm_diff_set_domain_1d (diff, 0.0, GSL_POSINF);
+
+  for (pass = 0; pass < 2; pass++)
+  {
+    const gboolean warn = (pass == 0);
+
+    ncm_diff_set_domain_warnings (diff, warn);
+
+    for (n = 0; n < 2; n++)
+    {
+      gdouble err1 = 0.0, err2 = 0.0, df1, df2;
+
+      if (warn)
+        g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*NcmDiff*domain*");
+
+      df1 = ncm_diff_rc_d1_1_to_1 (diff, x0s[n], &_test_ncm_diff_exp_dom, &dom, &err1);
+
+      if (warn)
+        g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*NcmDiff*domain*");
+
+      df2 = ncm_diff_rc_d2_1_to_1 (diff, x0s[n], &_test_ncm_diff_exp_dom, &dom, &err2);
+
+      g_test_assert_expected_messages ();
+      g_assert_cmpfloat (dom.xmin, >=, 0.0);
+
+      ncm_assert_cmpdouble_e (df1, ==, _test_ncm_diff_dexp (x0s[n], &w), 0.0, err1);
+      g_assert_cmpfloat (err1, <=, 1.0e-3 * _test_ncm_diff_dexp (x0s[n], &w));
+      ncm_assert_cmpdouble_e (df2, ==, _test_ncm_diff_d2exp (x0s[n], &w), 0.0, err2);
+      g_assert_cmpfloat (err2, <=, 1.0e-3 * _test_ncm_diff_d2exp (x0s[n], &w));
+    }
+  }
+
+  ncm_diff_clear_domain (diff);
+}
+
+/* log on [0, inf): its scale is x itself, central stays inside, no fallback. */
+void
+test_ncm_diff_domain_log (TestNcmDiff *test, gconstpointer pdata)
+{
+  NcmDiff *diff        = test->diff;
+  const gdouble x0s[2] = {1.0e-6, 1.0e-3};
+  gdouble w            = 1.0;
+  guint n;
+
+  _test_ncm_diff_set_domain_1d (diff, 0.0, GSL_POSINF);
+
+  for (n = 0; n < 2; n++)
+  {
+    gdouble err1 = 0.0, err2 = 0.0;
+    const gdouble df1 = ncm_diff_rc_d1_1_to_1 (diff, x0s[n], &_test_ncm_diff_log, &w, &err1);
+    const gdouble df2 = ncm_diff_rc_d2_1_to_1 (diff, x0s[n], &_test_ncm_diff_log, &w, &err2);
+
+    ncm_assert_cmpdouble_e (df1, ==, _test_ncm_diff_dlog (x0s[n], &w), 0.0, err1);
+    g_assert_cmpfloat (err1, <=, 1.0e-3 * fabs (_test_ncm_diff_dlog (x0s[n], &w)));
+    ncm_assert_cmpdouble_e (df2, ==, _test_ncm_diff_d2log (x0s[n], &w), 0.0, err2);
+    g_assert_cmpfloat (err2, <=, 1.0e-3 * fabs (_test_ncm_diff_d2log (x0s[n], &w)));
+  }
+
+  ncm_diff_clear_domain (diff);
+}
+
+/*
+ * exp on [1, 2]: near the lower edge the fallback is forward, near the upper
+ * one backward, in the middle central stays central and nothing is warned.
+ */
+void
+test_ncm_diff_domain_interval (TestNcmDiff *test, gconstpointer pdata)
+{
+  NcmDiff *diff        = test->diff;
+  const gdouble x0s[3] = {1.0 + 1.0e-8, 2.0 - 1.0e-8, 1.5};
+  TestNcmDiffDom dom   = {GSL_POSINF, GSL_NEGINF};
+  gdouble w            = 1.0;
+  guint n;
+
+  _test_ncm_diff_set_domain_1d (diff, 1.0, 2.0);
+
+  for (n = 0; n < 3; n++)
+  {
+    const gboolean edge = (n < 2);
+    gdouble err1        = 0.0, err2 = 0.0, df1, df2;
+
+    if (edge)
+      g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, (n == 0) ? "*NcmDiff*domain*forward*" : "*NcmDiff*domain*backward*");
+
+    df1 = ncm_diff_rc_d1_1_to_1 (diff, x0s[n], &_test_ncm_diff_exp_dom, &dom, &err1);
+
+    if (edge)
+      g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, (n == 0) ? "*NcmDiff*domain*forward*" : "*NcmDiff*domain*backward*");
+
+    df2 = ncm_diff_rc_d2_1_to_1 (diff, x0s[n], &_test_ncm_diff_exp_dom, &dom, &err2);
+
+    g_test_assert_expected_messages ();
+    g_assert_cmpfloat (dom.xmin, >=, 1.0);
+    g_assert_cmpfloat (dom.xmax, <=, 2.0);
+
+    ncm_assert_cmpdouble_e (df1, ==, _test_ncm_diff_dexp (x0s[n], &w), 0.0, err1);
+    g_assert_cmpfloat (err1, <=, 1.0e-3 * _test_ncm_diff_dexp (x0s[n], &w));
+    ncm_assert_cmpdouble_e (df2, ==, _test_ncm_diff_d2exp (x0s[n], &w), 0.0, err2);
+    g_assert_cmpfloat (err2, <=, 1.0e-3 * _test_ncm_diff_d2exp (x0s[n], &w));
+  }
+
+  ncm_diff_clear_domain (diff);
+}
+
+/*
+ * exp (x1 + 2 x2) with x1 on [0, inf) at x1 = 1e-8: only the diagonal along
+ * x1 is central and falls back, one warning; the cross term is forward.
+ */
+void
+test_ncm_diff_domain_Hessian (TestNcmDiff *test, gconstpointer pdata)
+{
+  NcmDiff *diff      = test->diff;
+  NcmVector *lb_v    = ncm_vector_new (2);
+  NcmVector *ub_v    = ncm_vector_new (2);
+  GArray *x_a        = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  const gdouble e    = exp (1.0e-8 + 2.0);
+  const gdouble H[4] = {e, 2.0 * e, 2.0 * e, 4.0 * e};
+  TestNcmDiffDom dom = {GSL_POSINF, GSL_NEGINF};
+  GArray *err_a      = NULL;
+  GArray *df_a;
+  guint j;
+
+  ncm_vector_set (lb_v, 0, 0.0);
+  ncm_vector_set (lb_v, 1, GSL_NEGINF);
+  ncm_vector_set (ub_v, 0, GSL_POSINF);
+  ncm_vector_set (ub_v, 1, GSL_POSINF);
+  ncm_diff_set_domain (diff, lb_v, ub_v);
+
+  g_array_set_size (x_a, 2);
+  g_array_index (x_a, gdouble, 0) = 1.0e-8;
+  g_array_index (x_a, gdouble, 1) = 1.0;
+
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*NcmDiff*domain*");
+  df_a = ncm_diff_rf_Hessian_N_to_1 (diff, x_a, &_test_ncm_diff_exp12_dom, &dom, &err_a);
+  g_test_assert_expected_messages ();
+  g_assert_cmpfloat (dom.xmin, >=, 0.0);
+
+  for (j = 0; j < 4; j++)
+  {
+    const gdouble err = g_array_index (err_a, gdouble, j);
+
+    ncm_assert_cmpdouble_e (g_array_index (df_a, gdouble, j), ==, H[j], 0.0, err);
+    g_assert_cmpfloat (err, <=, 1.0e-3 * H[j]);
+  }
+
+  ncm_diff_clear_domain (diff);
+  g_array_unref (df_a);
+  g_array_unref (err_a);
+  g_array_unref (x_a);
+  ncm_vector_free (lb_v);
+  ncm_vector_free (ub_v);
+}
+
+/*
+ * exp (x1 + 2 x2) with x1 on (-inf, 0] at x1 = -1e-8: the diagonal along x1
+ * falls back from central to backward and the cross term from forward to
+ * backward, two warnings; no point has x1 > 0.
+ */
+void
+test_ncm_diff_domain_Hessian_upper (TestNcmDiff *test, gconstpointer pdata)
+{
+  NcmDiff *diff      = test->diff;
+  NcmVector *lb_v    = ncm_vector_new (2);
+  NcmVector *ub_v    = ncm_vector_new (2);
+  GArray *x_a        = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  const gdouble e    = exp (-1.0e-8 + 2.0);
+  const gdouble H[4] = {e, 2.0 * e, 2.0 * e, 4.0 * e};
+  TestNcmDiffDom dom = {GSL_POSINF, GSL_NEGINF};
+  GArray *err_a      = NULL;
+  GArray *df_a;
+  guint j;
+
+  ncm_vector_set (lb_v, 0, GSL_NEGINF);
+  ncm_vector_set (lb_v, 1, GSL_NEGINF);
+  ncm_vector_set (ub_v, 0, 0.0);
+  ncm_vector_set (ub_v, 1, GSL_POSINF);
+  ncm_diff_set_domain (diff, lb_v, ub_v);
+
+  g_array_set_size (x_a, 2);
+  g_array_index (x_a, gdouble, 0) = -1.0e-8;
+  g_array_index (x_a, gdouble, 1) = 1.0;
+
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*NcmDiff*domain*central*backward*");
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*NcmDiff*domain*forward*backward*");
+  df_a = ncm_diff_rf_Hessian_N_to_1 (diff, x_a, &_test_ncm_diff_exp12_dom, &dom, &err_a);
+  g_test_assert_expected_messages ();
+  g_assert_cmpfloat (dom.xmax, <=, 0.0);
+
+  for (j = 0; j < 4; j++)
+  {
+    const gdouble err = g_array_index (err_a, gdouble, j);
+
+    ncm_assert_cmpdouble_e (g_array_index (df_a, gdouble, j), ==, H[j], 0.0, err);
+    g_assert_cmpfloat (err, <=, 1.0e-3 * H[j]);
+  }
+
+  ncm_diff_clear_domain (diff);
+  g_array_unref (df_a);
+  g_array_unref (err_a);
+  g_array_unref (x_a);
+  ncm_vector_free (lb_v);
+  ncm_vector_free (ub_v);
+}
+
+/* The half-line case with the dual-series scheme: same fallback, same bounds. */
+void
+test_ncm_diff_domain_dual (TestNcmDiff *test, gconstpointer pdata)
+{
+  NcmDiff *diff      = test->diff;
+  TestNcmDiffDom dom = {GSL_POSINF, GSL_NEGINF};
+  const gdouble x0   = 1.0e-8;
+  gdouble w          = 1.0;
+  gdouble err1       = 0.0, err2 = 0.0, df1, df2;
+
+  ncm_diff_set_dual_series (diff, TRUE);
+  _test_ncm_diff_set_domain_1d (diff, 0.0, GSL_POSINF);
+
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*NcmDiff*domain*");
+  df1 = ncm_diff_rc_d1_1_to_1 (diff, x0, &_test_ncm_diff_exp_dom, &dom, &err1);
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*NcmDiff*domain*");
+  df2 = ncm_diff_rc_d2_1_to_1 (diff, x0, &_test_ncm_diff_exp_dom, &dom, &err2);
+  g_test_assert_expected_messages ();
+
+  g_assert_cmpfloat (dom.xmin, >=, 0.0);
+  ncm_assert_cmpdouble_e (df1, ==, _test_ncm_diff_dexp (x0, &w), 0.0, err1);
+  g_assert_cmpfloat (err1, <=, 1.0e-3 * _test_ncm_diff_dexp (x0, &w));
+  ncm_assert_cmpdouble_e (df2, ==, _test_ncm_diff_d2exp (x0, &w), 0.0, err2);
+  g_assert_cmpfloat (err2, <=, 1.0e-3 * _test_ncm_diff_d2exp (x0, &w));
+
+  ncm_diff_set_dual_series (diff, FALSE);
+  ncm_diff_clear_domain (diff);
+}
+
+/* A domain too narrow for any useful step is an error, not a warning. */
+void
+test_ncm_diff_domain_narrow (TestNcmDiff *test, gconstpointer pdata)
+{
+  g_test_trap_subprocess ("/ncm/diff/domain/narrow/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*NcmDiff*domain*");
+}
+
+void
+test_ncm_diff_domain_narrow_subprocess (TestNcmDiff *test, gconstpointer pdata)
+{
+  NcmDiff *diff = test->diff;
+  gdouble w     = 1.0;
+  gdouble err   = 0.0;
+
+  _test_ncm_diff_set_domain_1d (diff, 1.0, 1.0 + 1.0e-13);
+  ncm_diff_rc_d1_1_to_1 (diff, 1.0 + 5.0e-14, &_test_ncm_diff_exp, &w, &err);
 }
 
 void
