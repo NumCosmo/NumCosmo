@@ -235,12 +235,27 @@ main (gint argc, gchar *argv[])
               &test_ncm_diff_rf_d1_N_to_1_all,
               &test_ncm_diff_free);
 
+  g_test_add ("/ncm/diff/rf/d1/N_to_1/zero", TestNcmDiff, GINT_TO_POINTER (TRUE),
+              &test_ncm_diff_new,
+              &test_ncm_diff_rf_d1_N_to_1_all,
+              &test_ncm_diff_free);
+
   g_test_add ("/ncm/diff/rc/d1/N_to_1/all", TestNcmDiff, NULL,
               &test_ncm_diff_new,
               &test_ncm_diff_rc_d1_N_to_1_all,
               &test_ncm_diff_free);
 
+  g_test_add ("/ncm/diff/rc/d1/N_to_1/zero", TestNcmDiff, GINT_TO_POINTER (TRUE),
+              &test_ncm_diff_new,
+              &test_ncm_diff_rc_d1_N_to_1_all,
+              &test_ncm_diff_free);
+
   g_test_add ("/ncm/diff/rc/d2/N_to_1/all", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_rc_d2_N_to_1_all,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/rc/d2/N_to_1/zero", TestNcmDiff, GINT_TO_POINTER (TRUE),
               &test_ncm_diff_new,
               &test_ncm_diff_rc_d2_N_to_1_all,
               &test_ncm_diff_free);
@@ -265,12 +280,27 @@ main (gint argc, gchar *argv[])
               &test_ncm_diff_rf_d1_N_to_M_all,
               &test_ncm_diff_free);
 
+  g_test_add ("/ncm/diff/rf/d1/N_to_M/zero", TestNcmDiff, GINT_TO_POINTER (TRUE),
+              &test_ncm_diff_new,
+              &test_ncm_diff_rf_d1_N_to_M_all,
+              &test_ncm_diff_free);
+
   g_test_add ("/ncm/diff/rc/d1/N_to_M/all", TestNcmDiff, NULL,
               &test_ncm_diff_new,
               &test_ncm_diff_rc_d1_N_to_M_all,
               &test_ncm_diff_free);
 
+  g_test_add ("/ncm/diff/rc/d1/N_to_M/zero", TestNcmDiff, GINT_TO_POINTER (TRUE),
+              &test_ncm_diff_new,
+              &test_ncm_diff_rc_d1_N_to_M_all,
+              &test_ncm_diff_free);
+
   g_test_add ("/ncm/diff/rc/d2/N_to_M/all", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_rc_d2_N_to_M_all,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/rc/d2/N_to_M/zero", TestNcmDiff, GINT_TO_POINTER (TRUE),
               &test_ncm_diff_new,
               &test_ncm_diff_rc_d2_N_to_M_all,
               &test_ncm_diff_free);
@@ -1494,10 +1524,12 @@ test_ncm_diff_rc_d2_1_to_M_all (TestNcmDiff *test, gconstpointer pdata)
 void
 test_ncm_diff_rf_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
 {
-  NcmDiff *diff = test->diff;
-  GArray *x_a   = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *err_a = NULL;
-  guint ntests  = 1000;
+  /* With pdata set, coordinate i % 3 of the i-th point is zero. */
+  const gboolean zero = GPOINTER_TO_INT (pdata);
+  NcmDiff *diff       = test->diff;
+  GArray *x_a         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *err_a       = NULL;
+  guint ntests        = 1000;
   guint i, j;
 
   g_array_set_size (x_a, 3);
@@ -1519,9 +1551,16 @@ test_ncm_diff_rf_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
     g_array_index (x_a, gdouble, 1) = v2;
     g_array_index (x_a, gdouble, 2) = v3;
 
+    if (zero)
+      g_array_index (x_a, gdouble, i % 3) = 0.0;
+
     {
       GArray *df_a  = ncm_diff_rf_d1_N_to_1 (diff, x_a, &_test_ncm_diff_N_to_1_all, w, &err_a);
       GArray *Adf_a = _test_ncm_diff_N_to_1_dall (x_a, w);
+      gdouble scale = 0.0;
+
+      for (j = 0; j < x_a->len; j++)
+        scale = GSL_MAX (scale, fabs (g_array_index (Adf_a, gdouble, j)));
 
       for (j = 0; j < x_a->len; j++)
       {
@@ -1530,6 +1569,10 @@ test_ncm_diff_rf_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
         const gdouble err = g_array_index (err_a, gdouble, j);
 
         ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
+
+        /* The error estimate must stay informative at a zero coordinate. */
+        if (zero)
+          g_assert_cmpfloat (err, <=, 0.1 * scale);
       }
 
       g_array_unref (df_a);
@@ -1544,10 +1587,12 @@ test_ncm_diff_rf_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
 void
 test_ncm_diff_rc_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
 {
-  NcmDiff *diff = test->diff;
-  GArray *x_a   = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *err_a = NULL;
-  guint ntests  = 1000;
+  /* With pdata set, coordinate i % 3 of the i-th point is zero. */
+  const gboolean zero = GPOINTER_TO_INT (pdata);
+  NcmDiff *diff       = test->diff;
+  GArray *x_a         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *err_a       = NULL;
+  guint ntests        = 1000;
   guint i, j;
   gint nerr = 5;
 
@@ -1570,9 +1615,16 @@ test_ncm_diff_rc_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
     g_array_index (x_a, gdouble, 1) = v2;
     g_array_index (x_a, gdouble, 2) = v3;
 
+    if (zero)
+      g_array_index (x_a, gdouble, i % 3) = 0.0;
+
     {
       GArray *df_a  = ncm_diff_rc_d1_N_to_1 (diff, x_a, &_test_ncm_diff_N_to_1_all, w, &err_a);
       GArray *Adf_a = _test_ncm_diff_N_to_1_dall (x_a, w);
+      gdouble scale = 0.0;
+
+      for (j = 0; j < x_a->len; j++)
+        scale = GSL_MAX (scale, fabs (g_array_index (Adf_a, gdouble, j)));
 
       for (j = 0; j < x_a->len; j++)
       {
@@ -1580,7 +1632,7 @@ test_ncm_diff_rc_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
         const gdouble Adf = g_array_index (Adf_a, gdouble, j);
         const gdouble err = g_array_index (err_a, gdouble, j);
 
-        if (((err == 0.0) || gsl_isnan (err)) && nerr)
+        if (!zero && ((err == 0.0) || gsl_isnan (err)) && nerr)
         {
           nerr--;
           g_test_skip ("Unable to estimate error.");
@@ -1588,6 +1640,10 @@ test_ncm_diff_rc_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
         }
 
         ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
+
+        /* The error estimate must stay informative at a zero coordinate. */
+        if (zero)
+          g_assert_cmpfloat (err, <=, 0.1 * scale);
       }
 
       g_array_unref (df_a);
@@ -1602,11 +1658,13 @@ test_ncm_diff_rc_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
 void
 test_ncm_diff_rc_d2_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
 {
-  NcmDiff *diff = test->diff;
-  GArray *x_a   = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *err_a = NULL;
-  guint ntests  = 1000;
-  gint nerr     = 5;
+  /* With pdata set, coordinate i % 3 of the i-th point is zero. */
+  const gboolean zero = GPOINTER_TO_INT (pdata);
+  NcmDiff *diff       = test->diff;
+  GArray *x_a         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *err_a       = NULL;
+  guint ntests        = 1000;
+  gint nerr           = 5;
   guint i, j;
 
   g_array_set_size (x_a, 3);
@@ -1628,9 +1686,16 @@ test_ncm_diff_rc_d2_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
     g_array_index (x_a, gdouble, 1) = v2;
     g_array_index (x_a, gdouble, 2) = v3;
 
+    if (zero)
+      g_array_index (x_a, gdouble, i % 3) = 0.0;
+
     {
       GArray *df_a  = ncm_diff_rc_d2_N_to_1 (diff, x_a, &_test_ncm_diff_N_to_1_all, w, &err_a);
       GArray *Adf_a = _test_ncm_diff_N_to_1_d2all (x_a, w);
+      gdouble scale = 0.0;
+
+      for (j = 0; j < x_a->len; j++)
+        scale = GSL_MAX (scale, fabs (g_array_index (Adf_a, gdouble, j)));
 
       for (j = 0; j < x_a->len; j++)
       {
@@ -1638,7 +1703,7 @@ test_ncm_diff_rc_d2_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
         const gdouble Adf = g_array_index (Adf_a, gdouble, j);
         const gdouble err = g_array_index (err_a, gdouble, j);
 
-        if (((err == 0.0) || gsl_isnan (err)) && nerr)
+        if (!zero && ((err == 0.0) || gsl_isnan (err)) && nerr)
         {
           nerr--;
           g_test_skip ("Unable to estimate error.");
@@ -1646,6 +1711,10 @@ test_ncm_diff_rc_d2_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
         }
 
         ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
+
+        /* The error estimate must stay informative at a zero coordinate. */
+        if (zero)
+          g_assert_cmpfloat (err, <=, 0.1 * scale);
       }
 
       g_array_unref (df_a);
@@ -1794,11 +1863,13 @@ test_ncm_diff_rf_Hessian_N_to_1_rosenbrock (TestNcmDiff *test, gconstpointer pda
 void
 test_ncm_diff_rf_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
 {
-  NcmDiff *diff = test->diff;
-  GArray *x_a   = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *err_a = NULL;
-  guint ntests  = 1000;
-  gint nerr     = 5;
+  /* With pdata set, coordinate i % 3 of the i-th point is zero. */
+  const gboolean zero = GPOINTER_TO_INT (pdata);
+  NcmDiff *diff       = test->diff;
+  GArray *x_a         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *err_a       = NULL;
+  guint ntests        = 1000;
+  gint nerr           = 5;
   guint i, j;
 
   g_array_set_size (x_a, 3);
@@ -1820,10 +1891,17 @@ test_ncm_diff_rf_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
     g_array_index (x_a, gdouble, 1) = v2;
     g_array_index (x_a, gdouble, 2) = v3;
 
+    if (zero)
+      g_array_index (x_a, gdouble, i % 3) = 0.0;
+
     {
       const guint dim = 3;
       GArray *df_a    = ncm_diff_rf_d1_N_to_M (diff, x_a, dim, &_test_ncm_diff_N_to_M_all, w, &err_a);
       GArray *Adf_a   = _test_ncm_diff_N_to_M_dall (x_a, w);
+      gdouble scale   = 0.0;
+
+      for (j = 0; j < x_a->len * dim; j++)
+        scale = GSL_MAX (scale, fabs (g_array_index (Adf_a, gdouble, j)));
 
       for (j = 0; j < x_a->len * dim; j++)
       {
@@ -1831,7 +1909,7 @@ test_ncm_diff_rf_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
         const gdouble Adf = g_array_index (Adf_a, gdouble, j);
         const gdouble err = g_array_index (err_a, gdouble, j);
 
-        if (((err == 0.0) || gsl_isnan (err)) && nerr)
+        if (!zero && ((err == 0.0) || gsl_isnan (err)) && nerr)
         {
           nerr--;
           g_test_skip ("Unable to estimate error.");
@@ -1839,6 +1917,10 @@ test_ncm_diff_rf_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
         }
 
         ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
+
+        /* The error estimate must stay informative at a zero coordinate. */
+        if (zero)
+          g_assert_cmpfloat (err, <=, 0.1 * scale);
       }
 
       g_array_unref (df_a);
@@ -1853,11 +1935,13 @@ test_ncm_diff_rf_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
 void
 test_ncm_diff_rc_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
 {
-  NcmDiff *diff = test->diff;
-  GArray *x_a   = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *err_a = NULL;
-  guint ntests  = 1000;
-  gint nerr     = 5;
+  /* With pdata set, coordinate i % 3 of the i-th point is zero. */
+  const gboolean zero = GPOINTER_TO_INT (pdata);
+  NcmDiff *diff       = test->diff;
+  GArray *x_a         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *err_a       = NULL;
+  guint ntests        = 1000;
+  gint nerr           = 5;
   guint i, j;
 
   g_array_set_size (x_a, 3);
@@ -1879,10 +1963,17 @@ test_ncm_diff_rc_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
     g_array_index (x_a, gdouble, 1) = v2;
     g_array_index (x_a, gdouble, 2) = v3;
 
+    if (zero)
+      g_array_index (x_a, gdouble, i % 3) = 0.0;
+
     {
       const guint dim = 3;
       GArray *df_a    = ncm_diff_rc_d1_N_to_M (diff, x_a, dim, &_test_ncm_diff_N_to_M_all, w, &err_a);
       GArray *Adf_a   = _test_ncm_diff_N_to_M_dall (x_a, w);
+      gdouble scale   = 0.0;
+
+      for (j = 0; j < x_a->len * dim; j++)
+        scale = GSL_MAX (scale, fabs (g_array_index (Adf_a, gdouble, j)));
 
       for (j = 0; j < x_a->len * dim; j++)
       {
@@ -1890,7 +1981,7 @@ test_ncm_diff_rc_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
         const gdouble Adf = g_array_index (Adf_a, gdouble, j);
         const gdouble err = g_array_index (err_a, gdouble, j);
 
-        if (((err == 0.0) || gsl_isnan (err)) && nerr)
+        if (!zero && ((err == 0.0) || gsl_isnan (err)) && nerr)
         {
           nerr--;
           g_test_skip ("Unable to estimate error.");
@@ -1898,6 +1989,10 @@ test_ncm_diff_rc_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
         }
 
         ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
+
+        /* The error estimate must stay informative at a zero coordinate. */
+        if (zero)
+          g_assert_cmpfloat (err, <=, 0.1 * scale);
       }
 
       g_array_unref (df_a);
@@ -1912,11 +2007,13 @@ test_ncm_diff_rc_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
 void
 test_ncm_diff_rc_d2_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
 {
-  NcmDiff *diff = test->diff;
-  GArray *x_a   = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *err_a = NULL;
-  guint ntests  = 1000;
-  gint nerr     = 15;
+  /* With pdata set, coordinate i % 3 of the i-th point is zero. */
+  const gboolean zero = GPOINTER_TO_INT (pdata);
+  NcmDiff *diff       = test->diff;
+  GArray *x_a         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *err_a       = NULL;
+  guint ntests        = 1000;
+  gint nerr           = 15;
   guint i, j;
 
   g_array_set_size (x_a, 3);
@@ -1938,10 +2035,17 @@ test_ncm_diff_rc_d2_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
     g_array_index (x_a, gdouble, 1) = v2;
     g_array_index (x_a, gdouble, 2) = v3;
 
+    if (zero)
+      g_array_index (x_a, gdouble, i % 3) = 0.0;
+
     {
       const guint dim = 3;
       GArray *df_a    = ncm_diff_rc_d2_N_to_M (diff, x_a, dim, &_test_ncm_diff_N_to_M_all, w, &err_a);
       GArray *Adf_a   = _test_ncm_diff_N_to_M_d2all (x_a, w);
+      gdouble scale   = 0.0;
+
+      for (j = 0; j < x_a->len * dim; j++)
+        scale = GSL_MAX (scale, fabs (g_array_index (Adf_a, gdouble, j)));
 
       for (j = 0; j < x_a->len * dim; j++)
       {
@@ -1950,7 +2054,7 @@ test_ncm_diff_rc_d2_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
         const gdouble err = g_array_index (err_a, gdouble, j);
 
         /*printf ("(% 22.15g % 22.15g % 22.15g) % 22.15g % 22.15g % 22.15g\n", v1, v2, v3, df, Adf, err);*/
-        if (((err == 0.0) || gsl_isnan (err)) && nerr)
+        if (!zero && ((err == 0.0) || gsl_isnan (err)) && nerr)
         {
           nerr--;
           g_test_skip ("Unable to estimate error.");
@@ -1958,6 +2062,10 @@ test_ncm_diff_rc_d2_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
         }
 
         ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
+
+        /* The error estimate must stay informative at a zero coordinate. */
+        if (zero)
+          g_assert_cmpfloat (err, <=, 0.1 * scale);
       }
 
       g_array_unref (df_a);
