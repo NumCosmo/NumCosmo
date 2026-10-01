@@ -30,6 +30,7 @@ project:
     - theory/ncm/stats/stats_dist.qmd
     - theory/ncm/stats/autocorrelation.qmd
     - theory/ncm/core/poisson_lognormal.qmd
+    - theory/ncm/integration/diff.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
     - benchmarks/ccl_two_point.qmd
@@ -168,6 +169,8 @@ website:
                 text: "FFTLog"
               - href: theory/ncm/algebra/spectral.qmd
                 text: "Spectral Methods"
+              - href: theory/ncm/integration/diff.qmd
+                text: "Numerical Differentiation"
               - href: theory/ncm/specfunc/sbessel_ode_solver.qmd
                 text: "Ultraspherical Spectral Solver"
               - href: theory/ncm/specfunc/sbessel_projection.qmd

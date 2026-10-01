@@ -2499,8 +2499,13 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H)
 
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
   {
-    /* The error of entry ij relative to sqrt (|H_ii H_jj|): a zero off-diagonal entry is not a large error. */
+    /*
+     * The error of entry ij relative to sqrt (|H_ii|) sqrt (|H_jj|): a zero
+     * off-diagonal entry is not a large error. Entries in a row or column
+     * with a zero diagonal have no such scale and are counted apart.
+     */
     gdouble worst_error = 0.0;
+    guint n_unscaled    = 0;
     guint i, j;
 
     for (i = 0; i < free_params_len; i++)
@@ -2512,12 +2517,17 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H)
         const gdouble err = g_array_index (errors_a, gdouble, i * free_params_len + j);
 
         if ((Hii > 0.0) && (Hjj > 0.0))
-          worst_error = GSL_MAX (worst_error, err / sqrt (Hii * Hjj));
+          worst_error = GSL_MAX (worst_error, err / (sqrt (Hii) * sqrt (Hjj)));
+        else
+          n_unscaled++;
       }
     }
 
     self->end_update (fit, "");
     _ncm_fit_message (fit, "#  - worst error relative to sqrt (|H_ii H_jj|): %.2e\n", worst_error);
+
+    if (n_unscaled > 0)
+      _ncm_fit_message (fit, "#  - %u entries with a zero diagonal are not included\n", n_unscaled);
   }
 
   ncm_matrix_set_from_array (H, H_a);

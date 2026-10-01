@@ -1,0 +1,571 @@
+---
+title: Numerical Differentiation
+---
+
+This page derives the methods of [[numcosmo-math|NcmDiff]]: finite-difference quotients with
+Richardson extrapolation, their error estimates and step control, the Hessian, the dual-series
+scheme, and derivatives from Chebyshev fits.
+
+```{python}
+#| echo: false
+import math
+import random
+
+import matplotlib.pyplot as plt
+import numpy as np
+from IPython.display import Markdown
+from numcosmo_py import Ncm
+
+Ncm.cfg_init()
+
+
+def derivative(diff, method, x0, f):
+    """Value, estimated error and number of evaluations of one NcmDiff call."""
+    count = [0]
+
+    def counted(x, *_):
+        count[0] += 1
+        return f(x)
+
+    value, err = getattr(diff, f"{method}_1_to_1")(x0, counted, None)
+    return value, err, count[0]
+```
+
+## Difference quotients
+
+Let $f$ be a function of one coordinate $x$, $h$ a step and $f_k \equiv f(x + kh)$ its values
+at the points $x + kh$, $k = -1, 0, 1, 2$. The library uses four difference quotients, named by
+the order of the derivative and by the side they sample, $+$ for forward and $0$ for central.
+Expanding $f$ in a Taylor series about $x$ gives their error series:
+$$
+\begin{aligned}
+D'_{+}(h) &\equiv \frac{f_1 - f_0}{h}
+  = f'(x) + \frac{h}{2} f''(x) + \frac{h^2}{6} f'''(x) + O(h^3), \\
+D'_{0}(h) &\equiv \frac{f_1 - f_{-1}}{2h}
+  = f'(x) + \frac{h^2}{6} f'''(x) + O(h^4), \\
+D''_{0}(h) &\equiv \frac{f_1 + f_{-1} - 2f_0}{h^2}
+  = f''(x) + \frac{h^2}{12} f^{(4)}(x) + O(h^4), \\
+D''_{+}(h) &\equiv \frac{f_2 - 2f_1 + f_0}{h^2}
+  = f''(x) + h f'''(x) + \frac{7h^2}{12} f^{(4)}(x) + O(h^3).
+\end{aligned}
+$$
+The forward quotients $D'_{+}$ and $D''_{+}$ have an error series in powers of $h$; the central
+ones $D'_{0}$ and $D''_{0}$ in powers of $h^2$. With $h < 0$ the forward quotients become
+backward ones, which evaluate $f$ only at $x$ and to its left.
+
+## Richardson extrapolation
+
+Write $d$ for the derivative a quotient approximates, $f'(x)$ or $f''(x)$, and its error
+series as
+$$
+D(h) = d + \sum_{m=1}^{\infty} a_m h^{p m},
+$$
+with $p = 1$ for the forward quotients and $p = 2$ for the central ones; the coefficients
+$a_m$ are those of the expansions above. The steps form a geometric ladder,
+$h_t \equiv h_0 r_s^{-t}$ for $t = 0, 1, \dots$, where $h_0$ is the initial step and
+$r_s > 1$, `NcmDiff:richardson-step` (2 by default), is the ratio between consecutive steps:
+each step of the ladder is $r_s$ times smaller than the one before. The same factor is used in
+the other direction when the step is moved up (see
+[Initial step and moving it up](#initial-step-and-moving-it-up)): a step $r_s$ times larger
+than the current top is added, $t = -1, -2, \dots$ With $g_t \equiv r_s^{p t}$, the powers of the steps are
+$h_t^{p} = h_0^{p} g_t^{-1}$, so $D(h_t)$ is a power series in $g_t^{-1}$. The row of order
+$n$ combines the first $n + 2$ steps,
+$$
+R_n \equiv \sum_{t=0}^{n+1} \lambda_t^{(n)} D(h_t), \qquad
+\lambda_t^{(n)} \equiv \prod_{\substack{j=0 \\ j \neq t}}^{n+1} \frac{1}{1 - g_j/g_t}.
+$$
+These are the weights of polynomial extrapolation to $g^{-1} \to 0$: they satisfy
+$\sum_t \lambda_t^{(n)} = 1$ and $\sum_t \lambda_t^{(n)} g_t^{-m} = 0$ for
+$m = 1, \dots, n+1$, and $\sum_t \lambda_t^{(n)} g_t^{-(n+2)} = (-1)^{n+1} \prod_t g_t^{-1}$.
+The row therefore cancels the first $n + 1$ terms of the error series. Writing
+$T_n \equiv R_n - d$ for its truncation error and $\tau_n$ for the leading term of $T_n$,
+$$
+R_n = d + T_n, \qquad
+T_n = \tau_n + O\!\left(h_0^{p(n+3)}\right), \qquad
+\tau_n \equiv (-1)^{n+1} a_{n+2}\, h_0^{p(n+2)} \prod_{t=0}^{n+1} g_t^{-1}.
+$$
+The quotient at $h_0$ alone is the case $n = -1$: $T_{-1} = D(h_0) - d$ and
+$\tau_{-1} = a_1 h_0^{p}$.
+
+As an example take the forward quotient, $p = 1$, with $r_s = 2$, so that $g_t = 2^t$ and the
+steps are $h_0$, $h_0/2$, $h_0/4$, $\dots$ Inserting the error series into the first two rows,
+$$
+\begin{aligned}
+R_0 &= 2 D(h_0/2) - D(h_0)
+     = d - \tfrac{1}{2} a_2 h_0^2 - \tfrac{3}{4} a_3 h_0^3 + O(h_0^4), \\
+R_1 &= \tfrac{1}{3} D(h_0) - 2 D(h_0/2) + \tfrac{8}{3} D(h_0/4)
+     = d + \tfrac{1}{8} a_3 h_0^3 + \tfrac{7}{32} a_4 h_0^4 + O(h_0^5):
+\end{aligned}
+$$
+$R_0$ removes the $a_1$ term and $R_1$ also the $a_2$ term, so $\tau_0 = -a_2 h_0^2/2$ and
+$\tau_1 = a_3 h_0^3/8$. For $f = e^x$ at $x = 1$ the derivative is $d = e$ and the coefficients
+are $a_m = e/(m+1)!$. With $h_0 = 10^{-2}$:
+
+| row | $T_n = R_n - e$ | $\tau_n$ |
+|---|---|---|
+| $D(h_0)$, $n = -1$ | $1.3637 \times 10^{-2}$ | $1.3591 \times 10^{-2}$ |
+| $R_0$ | $-2.2738 \times 10^{-5}$ | $-2.2652 \times 10^{-5}$ |
+| $R_1$ | $1.4207 \times 10^{-8}$ | $1.4158 \times 10^{-8}$ |
+
+The values were computed with 40 significant digits, so $T_n$ contains no rounding error. In every row
+$\tau_n$ agrees with $T_n$ to within 0.4 %; the remainder is the next term of the series. From one
+row to the next the leading term is multiplied by $-(a_{n+2}/a_{n+1})\, h_0^{p}/g_{n+1}$, here
+$-1.7 \times 10^{-3}$ and $-6.3 \times 10^{-4}$, so the sign of $T_n$ alternates.
+
+For $r_s = 2$ the central weights of order one are $(1/45, -4/9, 64/45)$. The tables are built
+once per order by the recursion
+$\lambda_t^{(n)} = \lambda_t^{(n-1)} / (1 - g_{n+1}/g_t)$ for $t \leq n$, and
+$\lambda_{n+1}^{(n)} = \prod_{t=0}^{n} 1/(1 - g_t/g_{n+1})$.
+
+## Cancellation and propagated evaluation error
+
+The code carries two numbers for every finite-difference step: the quotient itself and an
+estimate of the uncertainty that survives the subtraction of nearby function values. It is
+useful to keep these distinct from the later Richardson truncation estimate. Write
+
+$$
+Q_t \equiv D(h_t), \qquad \kappa_t \equiv \text{cancellation scale attached to } Q_t.
+$$
+
+The quantity $\kappa_t$ is what the implementation calls `canc`. It is not an estimate of
+all floating-point operations performed by the differentiation algorithm. Rather, it models the
+loss of information caused by forming a small difference from function values of much larger
+magnitude. The model assumes that each sampled value carries an uncertainty of order
+$\epsilon |f|$, where $\epsilon =$ `GSL_DBL_EPSILON`.
+
+For the four quotients used by `NcmDiff`, the implementation assigns
+$$
+\begin{aligned}
+\kappa'_{+}(h) &= \frac{\epsilon\,\max(|f_0|,|f_1|)}{|h|}, &
+ \kappa'_{0}(h) &= \frac{\epsilon\,\max(|f_{-1}|,|f_1|)}{2|h|}, \\
+\kappa''_{0}(h) &= \frac{3\epsilon\,\max(|f_{-1}|,|f_0|,|f_1|)}{h^2}, &
+ \kappa''_{+}(h) &= \frac{4\epsilon\,\max(|f_0|,|f_1|,|f_2|)}{h^2}.
+\end{aligned}
+$$
+The factors in the second-derivative formulas also account for the rounded sums used to build
+the numerator. The important feature is that these estimates depend on the magnitudes of the
+sampled values, not on the final difference. A quotient that rounds to zero can therefore still
+carry a nonzero $\kappa_t$.
+
+The actual step is formed by first rounding $x+h$ and then replacing $h$ by the representable
+difference $(x+h)-x$. This keeps the point used to evaluate the function consistent with the
+step used in the quotient. The formulas above should nevertheless be read as the error model
+used by `NcmDiff`, not as rigorous bounds for an arbitrary user function: they do not model an
+unknown error already present in the returned value of $f$, and the later Richardson weighted
+sum has no separate floating-point accumulation term.
+
+For a Richardson row,
+$$
+R_n = \sum_{t=0}^{n+1}\lambda_t^{(n)} Q_t,
+$$
+the per-step cancellation scales are propagated in quadrature,
+$$
+K_n \equiv
+\left[\sum_{t=0}^{n+1}
+       \left(\lambda_t^{(n)} \kappa_t\right)^2\right]^{1/2}.
+$$
+This is exactly the quantity accumulated by the ladder. The Richardson sum itself is accumulated
+with the C99 `fma()`, one rounding per term. For the comparison with the first extrapolated row it
+is convenient to define
+$$
+R_{-1} \equiv Q_0, \qquad K_{-1} \equiv \kappa_0.
+$$
+
+As the step decreases, truncation error usually falls while $\kappa_t$ grows as $|h|^{-1}$ for first
+derivatives and $|h|^{-2}$ for second derivatives. The algorithm therefore searches for a
+region in which successive Richardson rows agree before the propagated cancellation scale
+becomes dominant.
+
+## Error estimate and ladder control
+
+For every Richardson row define the change from the previous row,
+$$
+\Delta_n \equiv |R_n-R_{n-1}|,
+$$
+and the scale of the raw quotients entering that row,
+$$
+S_n \equiv \max_{0\leq t\leq n+1}|Q_t|.
+$$
+The error attached to the row is
+$$
+E_n \equiv \max\left(P_{\rm t}\Delta_n,\; P_{\rm r}K_{n-1},\; P_{\rm r}K_n\right),
+$$
+where $P_{\rm t}$ is `NcmDiff:terr-pad` and $P_{\rm r}$ is
+`NcmDiff:round-off-pad`; both are $3\times10^4$ by default. Thus the code combines two different
+pieces of information: disagreement between extrapolation orders, used as a truncation proxy,
+and the propagated cancellation scale of the two rows being compared. The padding factors are
+safety factors of the numerical heuristic, not statements that $E_n$ is a strict floating-point
+error bound.
+
+The scale $S_n$ is deliberately based on the unextrapolated quotients rather than on $|R_n|$.
+For a nonzero derivative the two are of the same order. Near a zero derivative, however,
+$R_n$ may be much smaller than the terms being combined; using $S_n$ still gives a meaningful
+scale on which to test whether two rows agree.
+
+The control for one scalar output component is then:
+
+1. A row is **informative** when
+   $$
+   P_{\rm r}K_n < 10^{-3}S_n.
+   $$
+   If $S_n=0$, it is informative only when $K_n=0$.
+2. Two consecutive rows **agree** when the current row is informative and
+   $\Delta_n < 10^{-3}S_n$. When $S_n=0$, the implementation treats the rows as agreeing; the
+   separate informativeness test is still used by the step-enlargement logic.
+3. Three consecutive agreements establish a stable Richardson sequence. Before that happens,
+   the best value is the row with the smallest $E_n$. The row completing the three-agreement
+   sequence replaces it; its reported error is the mean of its own $E_n$ and that of the
+   previous row, which damps row-to-row fluctuations. Later rows can replace it when they
+   improve the accepted estimate.
+4. The ladder continues while a useful improvement is still possible: while the padded
+   cancellation scale $P_{\rm r}K_n$ is still below the best accepted error, and, before a
+   stable sequence is established, also through every informative row. It also stops at
+   `NcmDiff:max-order`.
+
+For a vector-valued function there is one such ladder per output component. Function evaluations
+are shared: a new step is evaluated once and appended to every active component. A component
+that has stopped no longer drives the order upward, but the coordinate is not finished until all
+components have stopped.
+
+@tbl-zero lists derivatives that are exactly zero. Each value is its own absolute error.
+
+```{python}
+#| label: tbl-zero
+#| tbl-cap: "Zero derivatives with the default settings: the value returned (the exact value is 0), its estimated error and the number of evaluations of $f$."
+#| code-fold: true
+cases = [
+    (r"$\cos x$", "rf_d1", 0.0, math.cos),
+    (r"$x^3$", "rf_d1", 0.0, lambda x: x**3),
+    (r"$\sin x + \cos x$", "rf_d1", math.pi / 4, lambda x: math.sin(x) + math.cos(x)),
+    (r"$x e^{-x}$", "rf_d1", 1.0, lambda x: x * math.exp(-x)),
+    (r"$\cos x + x^2/2$", "rc_d2", 0.0, lambda x: math.cos(x) + 0.5 * x * x),
+    (r"$x^3 + x^4$", "rc_d2", 0.0, lambda x: x**3 + x**4),
+]
+diff = Ncm.Diff.new()
+rows = ["| $f$ | method | $x$ | value | estimate | evaluations |", "|---|---|---|---|---|---|"]
+for name, method, x0, f in cases:
+    value, err, n = derivative(diff, method, x0, f)
+    rows.append(f"| {name} | `{method}` | {x0:.4g} | {value:.2e} | {err:.2e} | {n} |")
+Markdown("\n".join(rows))
+```
+
+## Initial step and moving it up
+
+For one coordinate the nominal initial step is
+$$
+h_0 = \eta s_x, \qquad
+s_x = \begin{cases}|x|,&x\neq0,\\1,&x=0,\end{cases}
+$$
+where $\eta$ is `NcmDiff:ini-h` (by default $\epsilon^{1/8}$). This relative choice is useful
+when $|x|$ sets the scale of the problem, but for $0<|x|\ll1$ it can start far below the scale
+on which the function changes. `NcmDiff` detects this from the first Richardson row: if that row
+is not informative, it tries larger steps before accepting the ladder.
+
+For the ordinary single-series driver, when $0<|x|<1$ the first enlargement moves upward on the
+same geometric ladder to the largest available step not exceeding $\eta$ (or the domain-limited
+cap). Consequently the new top lies within one factor $r_s$ below that target; the ladder is
+restarted because the skipped smaller steps are no longer consecutive with the new top. Further
+enlargements prepend one step a factor $r_s$ larger and replay the Richardson rows from the
+stored quotients, without reevaluating the smaller steps.
+
+The dual-series driver uses the same criterion but, on its first enlargement for $|x|<1$,
+resets the two bases directly to $\eta$ and $\eta/\sqrt{r_s}$, again limited by the domain. Later
+enlargements multiply both ladders by $r_s$.
+
+In either case, enlargement is bounded by
+$$
+h \le r_s^3\,\eta\max(1,|x|),
+$$
+before any tighter domain restriction is applied. A proposed larger step is rejected if the
+resulting quotient is non-finite. For a vector-valued function, one uninformative output
+component is enough to trigger the enlargement for that coordinate, since all components share
+the same sampled points.
+
+@fig-ini-h shows the returned error and the estimate as `NcmDiff:ini-h` varies at $x = 1$.
+@fig-tiny-x shows the same quantities as $|x|$ decreases with the default setting.
+
+```{python}
+#| label: fig-ini-h
+#| fig-cap: "Relative error (solid) and relative estimate (dashed) of $\\mathrm{d}e^x/\\mathrm{d}x$ and $\\mathrm{d}^2e^x/\\mathrm{d}x^2$ at $x = 1$ against `NcmDiff:ini-h`, on 61 values. The vertical line is the default $\\epsilon^{1/8}$, where the errors are $7.9 \\times 10^{-13}$ (`rf_d1`), $7.0 \\times 10^{-14}$ (`rc_d1`) and $1.3 \\times 10^{-10}$ (`rc_d2`). Every estimate covers its error. Below $\\eta = 3.2 \\times 10^{-8}$ the error of `rc_d2` exceeds $10^{-3}$: its quotients are dominated by cancellation, and the step is moved up at most $r_s^3$ above $\\eta \\max(1, |x|)$."
+#| code-fold: true
+eps = np.finfo(float).eps
+etas = np.logspace(-15.5, -0.5, 61)
+fig, ax = plt.subplots(figsize=(6.4, 3.8))
+for color, method in zip(("C0", "C1", "C2"), ("rf_d1", "rc_d1", "rc_d2")):
+    err, est = [], []
+    for eta in etas:
+        value, e, _ = derivative(Ncm.Diff(**{"ini-h": max(eta, eps)}), method, 1.0, math.exp)
+        err.append(max(abs(value - math.e) / math.e, 1.0e-17))
+        est.append(e / math.e)
+    ax.loglog(etas, err, color=color, label=method)
+    ax.loglog(etas, est, color=color, ls="--", lw=0.8)
+ax.axvline(eps ** (1.0 / 8.0), color="0.5", lw=0.8)
+ax.set_xlabel(r"$\eta$ (ini-h)")
+ax.set_ylabel("relative error, estimate")
+ax.set_ylim(1.0e-17, 1.0e4)
+ax.legend()
+plt.show()
+```
+
+```{python}
+#| label: fig-tiny-x
+#| fig-cap: "Relative error (solid) and relative estimate (dashed) of the derivatives of $e^x$ against $x$, from $10^{-300}$ to 1, with the default settings. Over the 31 points the largest relative errors are $2.0 \\times 10^{-12}$ (`rf_d1`), $2.4 \\times 10^{-13}$ (`rc_d1`), $6.8 \\times 10^{-10}$ (`rc_d2`) and $1.6 \\times 10^{-14}$ (`sc_d1`), each inside its estimate; `rc_d1` takes 13 to 17 evaluations, `sc_d1` 99 to 167."
+#| code-fold: true
+xs = np.logspace(-300, 0, 31)
+diff = Ncm.Diff.new()
+fig, ax = plt.subplots(figsize=(6.4, 3.8))
+for color, method in zip(("C0", "C1", "C2", "C3"), ("rf_d1", "rc_d1", "rc_d2", "sc_d1")):
+    err, est = [], []
+    for x0 in xs:
+        value, e, _ = derivative(diff, method, x0, math.exp)
+        exact = math.exp(x0)
+        err.append(max(abs(value - exact) / exact, 1.0e-17))
+        est.append(e / exact)
+    ax.loglog(xs, err, color=color, label=method)
+    ax.loglog(xs, est, color=color, ls="--", lw=0.8)
+ax.set_xlabel(r"$x$")
+ax.set_ylabel("relative error, estimate")
+ax.set_xlim(1.0e-300, 1.0)
+ax.set_xticks([10.0**e for e in range(-300, 1, 50)])
+ax.set_ylim(1.0e-17, 1.0e-3)
+ax.legend(ncol=2)
+plt.show()
+```
+
+## Domains
+
+A domain set with `ncm_diff_set_domain()` is part of the step-selection algorithm: no sampled
+point is allowed outside the supplied interval. Without a domain, `NcmDiff` assumes that every
+point requested by the numerical scheme is valid.
+
+For a coordinate $x\in[a,b]$, define the available distances to the two edges as
+$\ell=x-a$ and $r=b-x$. A central scheme has room $\min(\ell,r)$; a one-sided scheme uses the
+room in the direction in which its steps point. The allowed top step is the smaller of the
+global move-up limit and a fraction of this room. The usual fraction is
+$1-1/r_s$, leaving space for the geometry of the ladder. The forward second-difference formula
+samples $x+2h$, so its fraction is additionally limited to $1/2$.
+
+If a requested central scheme cannot fit, it falls back to a one-sided quotient toward the edge
+with more room. If a one-sided scheme becomes blocked, it can reverse direction. This changes
+both the finite-difference formula and the Richardson table: central formulas use the even-power
+table, whereas one-sided formulas use the forward table. Unless `NcmDiff:domain-warnings` is
+false, each such fallback produces a warning.
+
+If cancellation says that the step should be enlarged but neither side of the domain leaves room
+for a useful enlargement, the differentiation fails instead of evaluating outside the domain.
+
+## Hessian
+
+The diagonal Hessian entries are computed by the same central second-derivative driver described
+above. The off-diagonal entry for coordinates $x$ and $y$ uses the mixed forward difference
+$$
+Q_{xy}(h_x,h_y) =
+\frac{f(x,y)+f(x+h_x,y+h_y)-f(x+h_x,y)-f(x,y+h_y)}{h_xh_y}.
+$$
+Its leading expansion is
+$$
+Q_{xy} = \partial_x\partial_y f
+ + \frac{h_x}{2}\partial_x^2\partial_y f
+ + \frac{h_y}{2}\partial_x\partial_y^2 f + O(h^2),
+$$
+so it is extrapolated with the forward Richardson table. The cancellation scale attached to one
+mixed quotient is
+$$
+\kappa_{xy} = \frac{4\epsilon\,\max |f|}{|h_xh_y|},
+$$
+where the maximum runs over its four sampled values. It is propagated through Richardson in the
+same way as for the one-dimensional quotients.
+
+The two coordinate steps share the same ladder index,
+$$
+h_{x,t}=h_{x,0}r_s^{-t},\qquad h_{y,t}=h_{y,0}r_s^{-t},
+$$
+but their base magnitudes and domain directions are independent. If the first row is
+uninformative, the pair is enlarged together as far as their individual caps allow. A blocked
+axis can reverse direction and restart the pair. The result is written symmetrically into
+$H_{ij}$ and $H_{ji}$.
+
+## Dual-series scheme
+
+With `NcmDiff:dual-series`, each derivative is evaluated on two interleaved step ladders,
+$$
+h_t^A = h_0 r_s^{-t}, \qquad
+h_t^B = \frac{h_0}{\sqrt{r_s}}r_s^{-t}.
+$$
+Both use the same Richardson weights. At a fixed order $n$ the two rows have the same leading
+truncation coefficient, but the steps of B are $\sqrt{r_s}$ times smaller, so its leading term
+is $r_s^{-p(n+2)/2}$ times that of A. Their disagreement therefore measures the truncation error
+of that order without using two consecutive orders of the same ladder.
+
+Let $R_n^A,R_n^B$ be the two rows and $K_n^A,K_n^B$ their propagated cancellation scales. The
+cross-ladder estimate used to select the result is
+$$
+E_n^{\rm cross} = 10\,\max\!\left(
+ |R_n^A-R_n^B|,\; K_n^A,\; K_n^B
+\right).
+$$
+This cross estimate deliberately does not use `terr-pad` or `round-off-pad`; the factor 10 is a
+separate constant of the dual-series scheme. The ordinary per-ladder controls are still updated,
+mainly because their first-row informativeness determines whether both ladders should be moved
+to larger steps.
+
+When a cross estimate improves, the smaller-step ladder B is selected if its cancellation scale
+is no larger than the A--B disagreement. If cancellation dominates that disagreement, the value
+from the ladder with the smaller cancellation scale is selected instead. The best cross estimate
+seen over the orders is retained.
+
+At least the first three Richardson rows are examined. After that, a worse row counts toward
+stopping only when the cancellation floor is already comparable to the best cross estimate; if
+cancellation is still far below the best estimate, the code interprets the stagnation as
+pre-asymptotic and continues. Otherwise two consecutive non-improving rows stop the dual
+sequence. The scheme costs roughly twice as many quotient evaluations and is disabled by
+default.
+
+## Derivatives from Chebyshev fits
+
+The `ncm_diff_sc_` methods use a different strategy: instead of shrinking finite-difference
+steps and extrapolating, they fit a Chebyshev series on a symmetric window
+$[x-R,x+R]$. On the $N$ Chebyshev--Lobatto nodes
+$$
+x_i=x+R\cos\!\left(\frac{\pi i}{N-1}\right),\qquad i=0,\ldots,N-1,
+$$
+a DCT-I gives coefficients $c_k$ such that
+$$
+f(x+Ru)\simeq\sum_{k=0}^{N-1}c_kT_k(u).
+$$
+The coefficients are differentiated recursively and evaluated at the center $u=0$; each
+derivative with respect to $u$ contributes one factor $R^{-1}$ when converted back to $x$.
+
+Two quantities are propagated through the coefficient differentiation:
+
+* a **tail estimate**, obtained by taking the absolute values of the highest quarter of the
+  fitted coefficients and propagating them through the Chebyshev derivative recurrence;
+* a **coefficient-rounding estimate**, which starts from
+  $\nu=\epsilon\sum_k|c_k|$ assigned to every coefficient and is propagated through the same
+  recurrence.
+
+The first detects an unresolved series; the second measures how strongly coefficient-level
+rounding is amplified by differentiation. Keeping the constant coefficient inside $\nu$ is
+important: a large additive offset in $f$ does not contribute to the derivative, but it does
+raise the numerical noise floor of the fitted coefficients.
+
+For choosing a window the code also forms
+$$
+q_{\rm fit} =
+\frac{\text{top-quarter coefficient mass above its noise floor}}
+     {\sum_{k\ge1}|c_k|+\text{tiny}},
+$$
+so a resolved fit has a small fraction of its nonconstant coefficient mass in the tail.
+
+@fig-cheb shows the coefficients of $e^x$ about $x = 10^{-8}$, computed with
+[[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs]].
+
+```{python}
+#| label: fig-cheb
+#| fig-cap: "Chebyshev coefficients $|c_1|$ to $|c_4|$ of $e^x$ on $[x - R, x + R]$, $x = 10^{-8}$, against $R$, from a degree-15 fit. The dashed line is $\\nu = \\epsilon \\sum_k |c_k|$, $2.2 \\times 10^{-16}$. At $R = 10^{-6}$ only $c_1$ ($10^{-6}$) and $c_2$ ($2.5 \\times 10^{-13}$) are above it; at $R = 10^{-3}$, $c_3$ ($4.2 \\times 10^{-11}$) and $c_4$ ($5.2 \\times 10^{-15}$) are too, growing as $R^k$."
+#| code-fold: true
+spectral = Ncm.Spectral.new()
+radii = np.logspace(-14, 0, 57)
+coeffs = np.array(
+    [
+        np.abs(spectral.compute_chebyshev_coeffs(lambda _, t: math.exp(t), 1.0e-8 - R, 1.0e-8 + R, 16, None))
+        for R in radii
+    ]
+)
+fig, ax = plt.subplots(figsize=(6.4, 3.8))
+for k in range(1, 5):
+    ax.loglog(radii, np.maximum(coeffs[:, k], 1.0e-20), label=f"$|c_{k}|$")
+ax.loglog(radii, np.finfo(float).eps * coeffs.sum(axis=1), color="0.4", ls="--", label=r"$\nu$")
+ax.set_xlabel(r"$R$")
+ax.set_ylabel("coefficient")
+ax.set_ylim(1.0e-20, 2.0)
+ax.legend(ncol=2)
+plt.show()
+```
+
+**Window search.** The search has three stages.
+
+1. A five-node, degree-four probe starts at $R=\eta |x|$ (or $\eta$ at $x=0$). It grows $R$ by
+   factors of 4 until the last two coefficients satisfy
+   $|c_3|+|c_4| > \max\left(16\nu,\; 10^{-3}\sum_{k\geq1}|c_k|\right)$, that is until they are
+   above the coefficient rounding and above a thousandth of the variation. If the very first
+   probe is at the rounding floor, $\sum_{k\geq1}|c_k| \leq 10^3\nu$ in some output component,
+   the search jumps directly to $\eta\max(1,|x|)$, subject to the window cap.
+2. Starting from that scale, a fixed 17-node fit scans a dyadic ladder of windows. It first
+   shrinks $R$, because a feature narrower than the initial window can remain unresolved even
+   while the estimated derivative error is temporarily getting worse. Once a resolved fit is
+   found, two non-improving shrink steps stop that direction; shrinking also stops once the best
+   fit is resolved to the rounding level, $q_{\rm fit} < 10^{-14}$. Expansion is tried only when the
+   starting window was already the best resolved one; it is useful for reducing rounding
+   amplification on a smooth function. A new window must improve the score by at least 10%.
+3. The selected window is refined on nested grids of 17, 33 and at most 65 nodes, reusing the
+   old node values.
+
+The window never exceeds `NcmDiff:spectral-window` times $\max(1,|x|)$, nor half the available
+symmetric room when a domain is present.
+
+For a 17-node probe, the score is the sum over output components of
+`tail + coefficient-rounding`, normalized by a fixed component scale taken from the first
+finite probe. This normalization is kept fixed while comparing windows. The additional
+$q_{\rm fit}$ criterion prevents a small score from accepting a fit whose high-order
+coefficients still contain a substantial unresolved part of the function.
+
+**Refinement error.** At each refinement level after the first, one component gets the
+un-padded estimate
+$$
+e_N = \max\!\left(
+ |d_N-d_{N_{\rm prev}}|,\; T_N+\nu_N
+\right),
+$$
+where $T_N$ is the propagated coefficient tail and $\nu_N$ the propagated coefficient-rounding
+term, both at $N$ nodes. The best $e_N$ encountered is retained. Refinement stops once no component improves, or
+once every component has $T_N\le \nu_N$; in the latter case a finer grid is expected to add
+rounding noise rather than useful spectral information. The error returned to the caller is
+$10e_N$.
+
+**Domain fallback.** Spectral differentiation requires a symmetric window. Near a finite domain
+edge, if the selected window is already close to the largest allowed symmetric window and the
+best derivative estimate is still worse than about $10^{-3}$ relative to the derivative, the
+call is repeated with the central Richardson driver. That driver can fall back to one-sided
+finite differences. A warning is emitted unless `NcmDiff:domain-warnings` is false.
+
+## Limits of the error model
+
+Neither differentiation family can infer arbitrary uncertainty already present in the function
+values. For the Richardson methods, the per-quotient cancellation scale assumes numerical noise
+of order $\epsilon |f|$ and `round-off-pad` only enlarges that model by a fixed factor. If the
+user function contains substantially larger errors---for example from an inner integration, an
+ODE solve with loose tolerances, stochastic noise, or explicit quantization---the reported
+Richardson error need not cover the true derivative error.
+
+The spectral method has a partial advantage in this situation because unresolved numerical
+noise can appear as high-order Chebyshev coefficient mass and therefore enter the tail estimate.
+This is not a guarantee: structured or correlated errors can still look spectrally smooth. The
+returned errors should therefore be interpreted as diagnostics of the numerical differentiation
+scheme applied to the supplied function values, not as uncertainty propagation for the function
+itself.
+
+@tbl-noise illustrates the distinction at $x=1.3$ for three deliberately contaminated
+functions.
+
+```{python}
+#| label: tbl-noise
+#| tbl-cap: "Relative error, relative estimate and evaluations of $f$ for three functions whose values carry errors far above the rounding of a double, at $x = 1.3$, with the default settings. The random noise is Gaussian with standard deviation $10^{-8}$, from a fixed seed. Rows marked *outside* have an error larger than the estimate."
+#| code-fold: true
+rng = random.Random(1)
+noisy = [
+    (r"$\sin x$ rounded to $10^{-6}$", lambda x: round(math.sin(x) * 1.0e6) / 1.0e6),
+    (r"$\sin x$ plus noise $10^{-8}$", lambda x: math.sin(x) + 1.0e-8 * rng.gauss(0.0, 1.0)),
+    (r"$10^{10} + \sin x$", lambda x: 1.0e10 + math.sin(x)),
+]
+x0 = 1.3
+diff = Ncm.Diff.new()
+rows = ["| $f$ | method | relative error | relative estimate | evaluations | |", "|---|---|---|---|---|---|"]
+for name, f in noisy:
+    for method, exact in (("rf_d1", math.cos(x0)), ("rc_d1", math.cos(x0)), ("sc_d1", math.cos(x0)),
+                          ("rc_d2", -math.sin(x0)), ("sc_d2", -math.sin(x0))):
+        value, err, n = derivative(diff, method, x0, f)
+        mark = "" if abs(value - exact) <= err else "*outside*"
+        rows.append(f"| {name} | `{method}` | {abs(value - exact) / abs(exact):.1e} | {err / abs(exact):.1e} | {n} | {mark} |")
+Markdown("\n".join(rows))
+```

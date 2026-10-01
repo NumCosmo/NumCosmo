@@ -40,33 +40,32 @@ G_DECLARE_FINAL_TYPE (NcmDiff, ncm_diff, NCM, DIFF, GObject)
 
 /**
  * NcmDiffFuncNtoM:
- * @x: function argument
- * @y: function value
+ * @x: function argument, of length $N$
+ * @y: function value, of length $M$
  * @user_data: (nullable): user data
  *
- * Functon $f(x)$ call back.
- *
+ * Function $f: \mathbb{R}^N \to \mathbb{R}^M$, writing $f(x)$ into @y.
  */
 typedef void (*NcmDiffFuncNtoM) (NcmVector *x, NcmVector *y, gpointer user_data);
 
 /**
  * NcmDiffFunc1toM:
  * @x: function argument
- * @y: function value
+ * @y: function value, of length $M$
  * @user_data: (nullable): user data
  *
- * Functon $f(x)$ call back.
- *
+ * Function $f: \mathbb{R} \to \mathbb{R}^M$, writing $f(x)$ into @y.
  */
 typedef void (*NcmDiffFunc1toM) (const gdouble x, NcmVector *y, gpointer user_data);
 
 /**
  * NcmDiffFuncNto1:
- * @x: function argument
+ * @x: function argument, of length $N$
  * @user_data: (nullable): user data
  *
- * Functon $f(x)$ call back.
+ * Function $f: \mathbb{R}^N \to \mathbb{R}$.
  *
+ * Returns: $f(x)$.
  */
 typedef gdouble (*NcmDiffFuncNto1) (NcmVector *x, gpointer user_data);
 
@@ -75,8 +74,9 @@ typedef gdouble (*NcmDiffFuncNto1) (NcmVector *x, gpointer user_data);
  * @x: function argument
  * @user_data: (nullable): user data
  *
- * Functon $f(x)$ call back.
+ * Function $f: \mathbb{R} \to \mathbb{R}$.
  *
+ * Returns: $f(x)$.
  */
 typedef gdouble (*NcmDiffFunc1to1) (const gdouble x, gpointer user_data);
 

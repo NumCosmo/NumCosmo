@@ -26,6 +26,7 @@
 
 import math
 import numpy as np
+import pytest
 
 from numcosmo_py import Ncm
 from numcosmo_py.helper import npa_to_seq
@@ -133,7 +134,7 @@ def test_diff_dual_series_1_to_1() -> None:
 def test_diff_spectral_window_property() -> None:
     """Test the spectral-window property default and round trip."""
     diff = Ncm.Diff.new()
-    assert diff.get_spectral_window() == 1.0
+    assert diff.get_spectral_window() == 256.0
 
     diff.set_spectral_window(0.5)
     assert diff.get_spectral_window() == 0.5
@@ -163,7 +164,7 @@ def test_diff_spectral_scale_detection() -> None:
     """Test that the spectral window search finds narrow features."""
     diff = Ncm.Diff.new()
 
-    # Varies on scale 1e-3 around x0 = 1; the initial window is 1.
+    # Varies on scale 1e-3 around x0 = 1, below the initial probe width.
     val, err = diff.sc_d1_1_to_1(1.0, lambda x, *_: math.atan(1000.0 * (x - 1.0)), None)
     assert math.fabs(val - 1000.0) <= err
     assert math.fabs(val / 1000.0 - 1.0) < 1.0e-6
@@ -381,6 +382,8 @@ def test_diff_tiny_x() -> None:
                 (diff.rf_d1_1_to_1, d1),
                 (diff.rc_d1_1_to_1, d1),
                 (diff.rc_d2_1_to_1, d2),
+                (diff.sc_d1_1_to_1, d1),
+                (diff.sc_d2_1_to_1, d2),
             ):
                 val, err = method(x0, lambda x, *_: f(x), None)
                 assert math.fabs(val - exact) <= err
@@ -413,3 +416,113 @@ def test_diff_domain() -> None:
     assert min(points) >= 0.0
 
     diff.clear_domain()
+
+
+@pytest.mark.parametrize("order", [1, 2])
+@pytest.mark.parametrize("x0", [0.0, 1.0e-12, 1.0])
+def test_diff_spectral_zero_derivatives(order, x0):
+    """Zero derivatives terminate with a useful absolute error estimate."""
+    diff = Ncm.Diff.new()
+    method = getattr(diff, f"sc_d{order}_1_to_1")
+    for f, exact in (
+        (lambda x: 1.0, 0.0),
+        (lambda x: 1.0 + x, 1.0 if order == 1 else 0.0),
+        (lambda x: 1.0 + (x - x0) ** 2, 0.0 if order == 1 else 2.0),
+    ):
+        points = []
+
+        def counted(x, *_):
+            points.append(x)
+            return f(x)
+
+        val, err = method(x0, counted, None)
+        assert abs(val - exact) <= err
+        assert err < 1.0e-6
+        assert len(points) < 300
+
+
+@pytest.mark.parametrize("order", [1, 2])
+@pytest.mark.parametrize("sign", [-1.0, 1.0])
+@pytest.mark.parametrize("x0", [0.0, 1.0e-12])
+def test_diff_spectral_domain(order, sign, x0):
+    """Spectral probes and the edge fallback respect both domain orientations."""
+    diff = Ncm.Diff(**{"domain-warnings": False})
+    lo, hi = (0.0, 1.0) if sign > 0 else (-1.0, 0.0)
+    diff.set_domain(Ncm.Vector.new_array([lo]), Ncm.Vector.new_array([hi]))
+    points = []
+
+    def bounded_exp(x, *_):
+        points.append(x)
+        return math.exp(x)
+
+    val, err = getattr(diff, f"sc_d{order}_1_to_1")(sign * x0, bounded_exp, None)
+    assert min(points) >= lo
+    assert max(points) <= hi
+    assert abs(val - math.exp(sign * x0)) <= err
+    assert err < 1.0e-3
+
+
+@pytest.mark.parametrize("dual", [False, True])
+@pytest.mark.parametrize("sign", [-1.0, 1.0])
+def test_diff_second_derivative_domain_step_factor(dual, sign):
+    """The one-sided second difference reserves room for both sample steps."""
+    diff = Ncm.Diff(
+        **{"richardson-step": 3.0, "dual-series": dual, "domain-warnings": False}
+    )
+    lo, hi = (0.0, 0.01) if sign > 0 else (-0.01, 0.0)
+    diff.set_domain(Ncm.Vector.new_array([lo]), Ncm.Vector.new_array([hi]))
+    points = []
+
+    def bounded_exp(x, *_):
+        points.append(x)
+        return math.exp(x)
+
+    val, err = diff.rc_d2_1_to_1(0.0, bounded_exp, None)
+    assert min(points) >= lo
+    assert max(points) <= hi
+    assert abs(val - 1.0) <= err
+
+
+@pytest.mark.parametrize("order", [1, 2])
+def test_diff_spectral_domain_vector(order):
+    """An edge fallback restores the argument and differentiates every component."""
+    diff = Ncm.Diff(**{"domain-warnings": False})
+    diff.set_domain(
+        Ncm.Vector.new_array([0.0, -math.inf]),
+        Ncm.Vector.new_array([1.0, math.inf]),
+    )
+    x0 = [1.0e-12, 1.0]
+    points = []
+
+    def f(x, y, *_):
+        a, b = x.dup_array()
+        points.append((a, b))
+        y.set(0, math.exp(a + b))
+        y.set(1, a + b)
+
+    vals, errs = getattr(diff, f"sc_d{order}_N_to_M")(x0, 2, f, None)
+    exact = [math.exp(sum(x0)), 1.0 if order == 1 else 0.0] * 2
+    assert all(0.0 <= a <= 1.0 for a, _ in points)
+    assert x0 == [1.0e-12, 1.0]
+    for val, err, ref in zip(vals, errs, exact):
+        assert abs(val - ref) <= err
+        assert err < 1.0e-3 * max(1.0, abs(ref))
+
+
+@pytest.mark.parametrize("window", [0.5, 4.0, 256.0])
+@pytest.mark.parametrize("x0", [0.0, 1.0e-12, 1.0, 100.0])
+def test_diff_spectral_window_cap(window, x0):
+    """No spectral sample is farther from x than spectral-window * max(1, |x|)."""
+    diff = Ncm.Diff(**{"spectral-window": window})
+    cap = window * max(1.0, abs(x0))
+
+    for f, exact in ((lambda x: 1.0, 0.0), (math.exp, math.exp(x0))):
+        points: list[float] = []
+
+        def counted(x, *_, f=f):
+            points.append(x)
+            return f(x)
+
+        val, err = diff.sc_d1_1_to_1(x0, counted, None)
+        assert max(abs(p - x0) for p in points) <= cap * (1.0 + 1.0e-15)
+        assert abs(val - exact) <= err

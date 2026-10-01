@@ -2403,19 +2403,19 @@ class Diff(GObject.Object):
 
     Properties from NcmDiff:
       max-order -> guint: max-order
-        Maximum order
+        Maximum extrapolation order
       richardson-step -> gdouble: richardson-step
-        Richardson extrapolation step
+        Ratio between consecutive steps
       round-off-pad -> gdouble: round-off-pad
-        Round off padding
+        Factor multiplying the cancellation scale in the error estimate
       terr-pad -> gdouble: terr-pad
-        Truncation error padding
+        Factor multiplying the truncation error in the error estimate
       ini-h -> gdouble: ini-h
-        Initial h
+        Initial step relative to |x|
       dual-series -> gboolean: dual-series
-        Use two parallel extrapolation series
+        Use two extrapolation series
       spectral-window -> gdouble: spectral-window
-        Initial spectral window half-width in units of the variable scale
+        Largest spectral window half-width in units of max (1, |x|)
       domain-warnings -> gboolean: domain-warnings
         Warn when a central difference falls back to a one-sided one at an edge of the domain
 
