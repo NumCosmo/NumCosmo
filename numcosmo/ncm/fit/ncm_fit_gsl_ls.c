@@ -183,6 +183,9 @@ _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
                                           ncm_fit_get_m2lnL_reltol (fit),
                                           NULL, NULL, &info, fit_gsl_ls->ls);
 
+  if ((status != GSL_SUCCESS) && (mtype > NCM_FIT_RUN_MSGS_NONE))
+    ncm_fit_log_step_error (fit, "%s (info %d)", gsl_strerror (status), info);
+
   {
     NcmVector *_x = ncm_vector_new_gsl_static (gsl_multifit_nlinear_position (fit_gsl_ls->ls));
     NcmVector *_f = ncm_vector_new_gsl_static (gsl_multifit_nlinear_residual (fit_gsl_ls->ls));

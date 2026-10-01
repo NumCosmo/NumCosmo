@@ -647,7 +647,10 @@ test_ncm_fit_gsl_ls_invalid_step (TestNcmFit *test, gconstpointer pdata)
   ncm_model_orig_param_set (model, 0, _test_ncm_fit_x0_max - 0.3);
   klass->valid = &_test_ncm_fit_valid_x0;
 
-  g_assert_true (ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE));
+  /* The messages go to stderr, out of the TAP stream, and report the solver status on failure */
+  ncm_cfg_set_logstream (stderr);
+  g_assert_true (ncm_fit_run (fit, NCM_FIT_RUN_MSGS_SIMPLE));
+  ncm_cfg_set_logstream (stdout);
   g_assert_cmpfloat (ncm_model_orig_param_get (model, 0), <=, _test_ncm_fit_x0_max);
   g_assert_cmpfloat (ncm_model_orig_param_get (model, 0), >=, _test_ncm_fit_x0_max - 10.0 * ncm_fit_get_params_reltol (fit));
 
