@@ -19,6 +19,10 @@
     "nick": "column-not-found",
     "type": "Ncm.CatalogError"
   },
+  "NCM_CATALOG_ERROR_ROW_OUT_OF_RANGE": {
+    "nick": "row-out-of-range",
+    "type": "Ncm.CatalogError"
+  },
   "NCM_CFG_ERROR_INVALID_FFTW_FLAG": {
     "nick": "flag",
     "type": "Ncm.CfgError"
@@ -98,6 +102,10 @@
   "NCM_DATA_POISSON_INT": {
     "nick": "int",
     "type": "Ncm.DataPoissonType"
+  },
+  "NCM_FIT_ESMCMC_WALKER_APES_KTYPE_AUTO": {
+    "nick": "auto",
+    "type": "Ncm.FitESMCMCWalkerAPESKType"
   },
   "NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY": {
     "nick": "cauchy",
@@ -271,22 +279,6 @@
     "nick": "p-v",
     "type": "Ncm.IntegralNDMethod"
   },
-  "NCM_LH_RATIO1D_ROOT_BRACKET": {
-    "nick": "bracket",
-    "type": "Ncm.LHRatio1dRoot"
-  },
-  "NCM_LH_RATIO1D_ROOT_NUMDIFF": {
-    "nick": "numdiff",
-    "type": "Ncm.LHRatio1dRoot"
-  },
-  "NCM_LH_RATIO2D_ROOT_BRACKET": {
-    "nick": "bracket",
-    "type": "Ncm.LHRatio2dRoot"
-  },
-  "NCM_LH_RATIO2D_ROOT_NUMDIFF": {
-    "nick": "numdiff",
-    "type": "Ncm.LHRatio2dRoot"
-  },
   "NCM_MATRIX_DERIVED": {
     "nick": "derived",
     "type": "Ncm.MatrixInternal"
@@ -418,14 +410,6 @@
   "NCM_MSET_CATALOG_SYNC_TIMED": {
     "nick": "timed",
     "type": "Ncm.MSetCatalogSync"
-  },
-  "NCM_MSET_CATALOG_TAU_METHOD_ACOR": {
-    "nick": "acor",
-    "type": "Ncm.MSetCatalogTauMethod"
-  },
-  "NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL": {
-    "nick": "ar-model",
-    "type": "Ncm.MSetCatalogTauMethod"
   },
   "NCM_MSET_CATALOG_TRIM_TYPE_ALL": {
     "nick": "all",
@@ -571,6 +555,18 @@
     "nick": "tophat",
     "type": "Ncm.PowspecFilterType"
   },
+  "NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET": {
+    "nick": "dirichlet",
+    "type": "Ncm.SBesselOdeConstraint"
+  },
+  "NCM_SBESSEL_ODE_CONSTRAINT_PINNED": {
+    "nick": "pinned",
+    "type": "Ncm.SBesselOdeConstraint"
+  },
+  "NCM_SBESSEL_ODE_CONSTRAINT_TAU": {
+    "nick": "tau",
+    "type": "Ncm.SBesselOdeConstraint"
+  },
   "NCM_SERIALIZE_OPT_AUTONAME_SER": {
     "nick": "autoname-ser",
     "type": "Ncm.SerializeOpt"
@@ -615,10 +611,6 @@
     "nick": "geometric",
     "type": "Ncm.SplineCurvatureType"
   },
-  "NCM_SPLINE_FUNCTION_4POINTS": {
-    "nick": "function-4points",
-    "type": "Ncm.SplineFuncType"
-  },
   "NCM_SPLINE_FUNCTION_SPLINE": {
     "nick": "function-spline",
     "type": "Ncm.SplineFuncType"
@@ -638,38 +630,6 @@
   "NCM_SPLINE_FUNC_GRID_LOG": {
     "nick": "func-grid-log",
     "type": "Ncm.SplineFuncType"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_COSINE": {
-    "nick": "cosine",
-    "type": "Ncm.SplineFuncTestType"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_EXP_SINC": {
-    "nick": "exp-sinc",
-    "type": "Ncm.SplineFuncTestType"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_PDF_FLAT": {
-    "nick": "flat",
-    "type": "Ncm.SplineFuncTestTypePDF"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_PDF_NORMAL": {
-    "nick": "normal",
-    "type": "Ncm.SplineFuncTestTypePDF"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL": {
-    "nick": "polynomial",
-    "type": "Ncm.SplineFuncTestType"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL_POS": {
-    "nick": "polynomial-pos",
-    "type": "Ncm.SplineFuncTestType"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_RBF": {
-    "nick": "rbf",
-    "type": "Ncm.SplineFuncTestType"
-  },
-  "NCM_SPLINE_FUNC_TEST_TYPE_USER": {
-    "nick": "user",
-    "type": "Ncm.SplineFuncTestType"
   },
   "NCM_SPLINE_GSL_AKIMA": {
     "nick": "akima",
@@ -695,13 +655,69 @@
     "nick": "polynomial",
     "type": "Ncm.SplineGslType"
   },
-  "NCM_SPLINE_RBF_TYPE_GAUSS": {
-    "nick": "gauss",
-    "type": "Ncm.SplineRBFType"
+  "NCM_SPLINE_GSL_STEFFEN": {
+    "nick": "steffen",
+    "type": "Ncm.SplineGslType"
   },
-  "NCM_SPLINE_RBF_TYPE_POSDEF_GAUSS": {
-    "nick": "posdef-gauss",
-    "type": "Ncm.SplineRBFType"
+  "NCM_STATS_ACORR_AR_CRIT_AIC": {
+    "nick": "aic",
+    "type": "Ncm.StatsAcorrARCrit"
+  },
+  "NCM_STATS_ACORR_AR_CRIT_AICC": {
+    "nick": "aicc",
+    "type": "Ncm.StatsAcorrARCrit"
+  },
+  "NCM_STATS_ACORR_AR_CRIT_FPE": {
+    "nick": "fpe",
+    "type": "Ncm.StatsAcorrARCrit"
+  },
+  "NCM_STATS_ACORR_AR_CRIT_NONE": {
+    "nick": "none",
+    "type": "Ncm.StatsAcorrARCrit"
+  },
+  "NCM_STATS_ACORR_DIAG_DRIFT": {
+    "nick": "drift",
+    "type": "Ncm.StatsAcorrDiag"
+  },
+  "NCM_STATS_ACORR_DIAG_METHOD_DISAGREEMENT": {
+    "nick": "method-disagreement",
+    "type": "Ncm.StatsAcorrDiag"
+  },
+  "NCM_STATS_ACORR_DIAG_OK": {
+    "nick": "ok",
+    "type": "Ncm.StatsAcorrDiag"
+  },
+  "NCM_STATS_ACORR_DIAG_SHORT_CHAIN": {
+    "nick": "short-chain",
+    "type": "Ncm.StatsAcorrDiag"
+  },
+  "NCM_STATS_ACORR_DIAG_VARIANCE_SHIFT": {
+    "nick": "variance-shift",
+    "type": "Ncm.StatsAcorrDiag"
+  },
+  "NCM_STATS_ACORR_DIAG_WINDOW_TRUNCATED": {
+    "nick": "window-truncated",
+    "type": "Ncm.StatsAcorrDiag"
+  },
+  "NCM_STATS_ACORR_DIAG_ZERO_VARIANCE": {
+    "nick": "zero-variance",
+    "type": "Ncm.StatsAcorrDiag"
+  },
+  "NCM_STATS_ACORR_METHOD_AR": {
+    "nick": "ar",
+    "type": "Ncm.StatsAcorrMethod"
+  },
+  "NCM_STATS_ACORR_METHOD_GEYER": {
+    "nick": "geyer",
+    "type": "Ncm.StatsAcorrMethod"
+  },
+  "NCM_STATS_ACORR_METHOD_MAX": {
+    "nick": "max",
+    "type": "Ncm.StatsAcorrMethod"
+  },
+  "NCM_STATS_ACORR_METHOD_SOKAL": {
+    "nick": "sokal",
+    "type": "Ncm.StatsAcorrMethod"
   },
   "NCM_STATS_DIST1D_EPDF_BW_AUTO": {
     "nick": "auto",
@@ -719,16 +735,20 @@
     "nick": "loo",
     "type": "Ncm.StatsDistCV"
   },
+  "NCM_STATS_DIST_CV_LOO_M2LNP": {
+    "nick": "loo-m2lnp",
+    "type": "Ncm.StatsDistCV"
+  },
   "NCM_STATS_DIST_CV_NONE": {
     "nick": "none",
     "type": "Ncm.StatsDistCV"
   },
-  "NCM_STATS_DIST_CV_SPLIT": {
-    "nick": "split",
+  "NCM_STATS_DIST_CV_SPLIT_ACCEPT": {
+    "nick": "split-accept",
     "type": "Ncm.StatsDistCV"
   },
-  "NCM_STATS_DIST_CV_SPLIT_NOFIT": {
-    "nick": "split-nofit",
+  "NCM_STATS_DIST_CV_SPLIT_M2LNP": {
+    "nick": "split-m2lnp",
     "type": "Ncm.StatsDistCV"
   },
   "NCM_STATS_DIST_KDE_COV_TYPE_FIXED": {
@@ -746,22 +766,6 @@
   "NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE": {
     "nick": "sample",
     "type": "Ncm.StatsDistKDECovType"
-  },
-  "NCM_STATS_VEC_AR_AIC": {
-    "nick": "aic",
-    "type": "Ncm.StatsVecARType"
-  },
-  "NCM_STATS_VEC_AR_AICC": {
-    "nick": "aicc",
-    "type": "Ncm.StatsVecARType"
-  },
-  "NCM_STATS_VEC_AR_FPE": {
-    "nick": "fpe",
-    "type": "Ncm.StatsVecARType"
-  },
-  "NCM_STATS_VEC_AR_NONE": {
-    "nick": "none",
-    "type": "Ncm.StatsVecARType"
   },
   "NCM_STATS_VEC_COV": {
     "nick": "cov",
@@ -3235,6 +3239,30 @@
     "nick": "spline",
     "type": "Nc.XcorKernelClosure"
   },
+  "NC_XCOR_KERNEL_CMB_ISW_SOURCE_THIN_SCREEN": {
+    "nick": "thin-screen",
+    "type": "Nc.XcorKernelCMBISWSource"
+  },
+  "NC_XCOR_KERNEL_CMB_ISW_SOURCE_VISIBILITY": {
+    "nick": "visibility",
+    "type": "Nc.XcorKernelCMBISWSource"
+  },
+  "NC_XCOR_KERNEL_CMB_ISW_SOURCE_VISIBILITY_REIONIZATION": {
+    "nick": "visibility-reionization",
+    "type": "Nc.XcorKernelCMBISWSource"
+  },
+  "NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN": {
+    "nick": "thin-screen",
+    "type": "Nc.XcorKernelCMBLensingSource"
+  },
+  "NC_XCOR_KERNEL_CMB_LENSING_SOURCE_VISIBILITY": {
+    "nick": "visibility",
+    "type": "Nc.XcorKernelCMBLensingSource"
+  },
+  "NC_XCOR_KERNEL_CMB_LENSING_SOURCE_VISIBILITY_REIONIZATION": {
+    "nick": "visibility-reionization",
+    "type": "Nc.XcorKernelCMBLensingSource"
+  },
   "NC_XCOR_KERNEL_CMB_LENSING_SPARAM_LEN": {
     "nick": "len",
     "type": "Nc.XcorKernelCMBLensingSParams"
@@ -3263,8 +3291,16 @@
     "nick": "prepare",
     "type": "Nc.XcorKernelImpl"
   },
+  "NC_XCOR_KERNEL_TABLE_KIND_CONVERGENCE": {
+    "nick": "convergence",
+    "type": "Nc.XcorKernelTableKind"
+  },
   "NC_XCOR_KERNEL_TABLE_KIND_DENSITY": {
     "nick": "density",
+    "type": "Nc.XcorKernelTableKind"
+  },
+  "NC_XCOR_KERNEL_TABLE_KIND_RSD": {
+    "nick": "rsd",
     "type": "Nc.XcorKernelTableKind"
   },
   "NC_XCOR_KERNEL_TABLE_KIND_SHEAR": {

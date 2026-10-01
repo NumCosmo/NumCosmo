@@ -207,6 +207,36 @@ test_ncm_mset_trans_kern_cat_choose_cut (TestNcmMSetTransKernCat *test, gconstpo
   ncm_vector_free (thetastar);
 }
 
+static void
+test_ncm_mset_trans_kern_cat_rbf_repeated (TestNcmMSetTransKernCat *test, gconstpointer pdata)
+{
+  /* A repeated row, as a sampler that rejects writes, is added to the interpolation once;
+   * the sampler must still draw points within the bounds. */
+  NcmStatsDistKernelGauss *sdk = ncm_stats_dist_kernel_gauss_new (TEST_TKC_DIM);
+  NcmStatsDistKDE *sd          = ncm_stats_dist_kde_new (NCM_STATS_DIST_KERNEL (sdk), NCM_STATS_DIST_CV_NONE);
+  NcmVector *thetastar         = ncm_vector_new (TEST_TKC_DIM);
+  NcmMSetTransKernCat *tcat;
+  guint i;
+
+  ncm_mset_catalog_add_from_vector (test->mcat, ncm_mset_catalog_peek_row (test->mcat, TEST_TKC_NROWS - 1));
+
+  tcat = ncm_mset_trans_kern_cat_new (test->mcat, NCM_STATS_DIST (sd));
+  ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (tcat), test->mset);
+  ncm_mset_trans_kern_cat_set_sampling (tcat, NCM_MSET_TRANS_KERN_CAT_SAMPLING_RBF_INTERP);
+  ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (tcat));
+
+  for (i = 0; i < 10; i++)
+  {
+    ncm_mset_trans_kern_prior_sample (NCM_MSET_TRANS_KERN (tcat), thetastar, test->rng);
+    g_assert_true (ncm_mset_fparam_valid_bounds (test->mset, thetastar));
+  }
+
+  ncm_vector_free (thetastar);
+  ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (tcat));
+  ncm_stats_dist_free (NCM_STATS_DIST (sd));
+  ncm_stats_dist_kernel_free (NCM_STATS_DIST_KERNEL (sdk));
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -222,6 +252,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/mset/trans_kern/cat/choose/cut", TestNcmMSetTransKernCat, NULL,
               &test_ncm_mset_trans_kern_cat_new,
               &test_ncm_mset_trans_kern_cat_choose_cut,
+              &test_ncm_mset_trans_kern_cat_free);
+
+  g_test_add ("/ncm/mset/trans_kern/cat/rbf/repeated", TestNcmMSetTransKernCat, NULL,
+              &test_ncm_mset_trans_kern_cat_new,
+              &test_ncm_mset_trans_kern_cat_rbf_repeated,
               &test_ncm_mset_trans_kern_cat_free);
 
   g_test_run ();

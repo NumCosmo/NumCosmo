@@ -63,7 +63,9 @@ def create_mset(
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     if os.path.exists(progress_file):
-        mset = Ncm.MSet.load(progress_file, ser)
+        loaded = Ncm.MSet.load(progress_file, ser)
+        assert loaded is not None
+        mset = loaded
     else:
         mset = Ncm.MSet.empty_new()
 
@@ -100,7 +102,7 @@ def run_xcdm_nopert_mcmc(
     verbose: bool = True,
     fit_first: bool = False,
     robust: bool = False,
-    use_apes_interpolation: bool = True,
+    use_apes_center_shrink: bool = False,
     use_apes_threads: Optional[bool] = None,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
@@ -141,7 +143,7 @@ def run_xcdm_nopert_mcmc(
         verbose=verbose,
         fit_first=fit_first,
         robust=robust,
-        use_apes_interpolation=use_apes_interpolation,
+        use_apes_center_shrink=use_apes_center_shrink,
         use_apes_threads=use_apes_threads,
         sampler=sampler,
         interpolation_method=interpolation_method,

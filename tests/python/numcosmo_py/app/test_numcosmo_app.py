@@ -638,6 +638,81 @@ def test_run_mcmc_apes_init_catalog(simple_experiment):
         raise result.exception
 
 
+def test_run_mcmc_apes_gauss_cov_without_covariance(simple_experiment):
+    """gauss-cov needs a covariance: none given and none in a fresh product file."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".fresh.yaml")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--output",
+            output.as_posix(),
+            "--initial-points-sampler",
+            IniSampler.GAUSS_COV.value,
+        ],
+    )
+    assert result.exit_code != 0
+    assert isinstance(result.exception, RuntimeError)
+    assert "covariance" in str(result.exception)
+
+
+def test_run_mcmc_apes_init_catalog_missing(simple_experiment, tmp_path):
+    """from-catalog with a catalog file that does not exist is refused."""
+    filename, _ = simple_experiment
+    missing = tmp_path / "missing.mcmc.fits"
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--initial-points-sampler",
+            IniSampler.FROM_CATALOG.value,
+            "--initial-catalog",
+            missing.as_posix(),
+        ],
+    )
+    assert result.exit_code != 0
+    assert isinstance(result.exception, RuntimeError)
+    assert "not found" in str(result.exception)
+
+
+def test_run_mcmc_apes_deprecated_auto_kernel(simple_experiment):
+    """The hidden --auto-kernel flag still reaches the walker with a Student-t kernel."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    with pytest.warns(DeprecationWarning, match="set_auto_kernel is deprecated"):
+        result = runner.invoke(
+            app,
+            [
+                "run",
+                "mcmc",
+                "apes",
+                filename.as_posix(),
+                "--output",
+                output.as_posix(),
+                "--interpolation-kernel",
+                InterpolationKernel.ST3.value,
+                "--auto-kernel",
+            ],
+        )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def _center_shrink_args(interpolation_kernel: str) -> list[str]:
+    """Centre shrinkage is on by default and needs a kernel with a covariance; the Cauchy
+    kernel has none and is refused with it on."""
+    if interpolation_kernel == InterpolationKernel.CAUCHY.value:
+        return ["--no-center-shrink"]
+    return []
+
+
 def test_run_mcmc_apes_method_kernel(
     simple_experiment, interpolation_method, interpolation_kernel
 ):
@@ -657,16 +732,17 @@ def test_run_mcmc_apes_method_kernel(
             interpolation_method,
             "--interpolation-kernel",
             interpolation_kernel,
-        ],
+        ]
+        + _center_shrink_args(interpolation_kernel),
     )
     if result.exit_code != 0:
         raise result.exception
 
 
-def test_run_mcmc_apes_method_kernel_no_interp(
+def test_run_mcmc_apes_method_kernel_nnls_weights(
     simple_experiment, interpolation_method, interpolation_kernel
 ):
-    """Run a MCMC analysis using APES."""
+    """Run a MCMC analysis using APES with the NNLS weight fit instead of uniform ones."""
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
@@ -682,8 +758,9 @@ def test_run_mcmc_apes_method_kernel_no_interp(
             interpolation_method,
             "--interpolation-kernel",
             interpolation_kernel,
-            "--no-use-interpolation",
-        ],
+            "--no-uniform-weights",
+        ]
+        + _center_shrink_args(interpolation_kernel),
     )
     if result.exit_code != 0:
         raise result.exception
@@ -735,6 +812,60 @@ def test_run_mcmc_apes_analyze_burnin_iterations(simple_experiment):
         raise result.exception
 
 
+def test_run_mcmc_apes_analyze_markovian_floor(simple_experiment):
+    """The catalog commands never analyse rows before the catalog's markovian-id: the
+    initial ensemble is dropped with --burnin 0, and an APES exploration phase of E
+    iterations raises a smaller --burnin to E + 1 with a message."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    assert Ncm.MSetCatalog.peek_markovian_id_from_file(catalog.as_posix()) > 0
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog.as_posix(), "--burnin", "0"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert "raised from 0" in result.output
+
+    # Fresh catalog with a three-iteration posterior-only exploration phase.
+    output2 = filename.with_suffix(".expl.yaml")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--output",
+            output2.as_posix(),
+            "--exploration",
+            "3",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog2 = output2.absolute().with_suffix(".mcmc.fits")
+    _nrows, nchains, first_id = Ncm.MSetCatalog.peek_info_from_file(catalog2.as_posix())
+    assert (
+        Ncm.MSetCatalog.peek_markovian_id_from_file(catalog2.as_posix())
+        == first_id + 4 * nchains
+    )
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog2.as_posix(), "--burnin", "1"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert "raised from 1" in result.output
+
+
 def test_run_mcmc_apes_analyze_burnin_beyond_catalog_size(simple_experiment):
     """--burnin larger than the catalog's iteration count fails with a clear,
     catchable error instead of aborting the process."""
@@ -754,6 +885,25 @@ def test_run_mcmc_apes_analyze_burnin_beyond_catalog_size(simple_experiment):
     )
     assert result.exit_code != 0
     assert "exceeds catalog" in result.output
+
+
+def test_run_mcmc_apes_analyze_tail_markovian_floor(simple_experiment):
+    """--tail spanning the whole chain is still floored at the catalog's markovian-id."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog.as_posix(), "--tail", "1000"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert "raised from 0" in result.output
 
 
 def test_run_mcmc_apes_analyze_tail(simple_experiment):
@@ -986,7 +1136,18 @@ def test_catalog_visual_hw(simple_experiment, monkeypatch):
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
         app,
-        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--output",
+            output.as_posix(),
+            # The catalog commands drop the initial ensemble (markovian-id), and the
+            # Heidelberger diagnostic needs at least 10 iterations after it.
+            "--nsamples",
+            "12",
+        ],
     )
     if result.exit_code != 0:
         raise result.exception
@@ -1008,7 +1169,18 @@ def test_catalog_param_evolution(simple_experiment, monkeypatch):
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
         app,
-        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--output",
+            output.as_posix(),
+            # The catalog commands drop the initial ensemble (markovian-id), and the
+            # Heidelberger diagnostic needs at least 10 iterations after it.
+            "--nsamples",
+            "12",
+        ],
     )
     if result.exit_code != 0:
         raise result.exception
@@ -1087,6 +1259,12 @@ def test_catalog_dump_mset_round_trips_as_starting_point(simple_experiment, tmp_
 
     catalog = output.absolute().with_suffix(".mc.fits")
     assert catalog.exists()
+
+    # Without --output the same YAML goes to the console.
+    result = runner.invoke(app, ["catalog", "dump-mset", catalog.as_posix()])
+    if result.exit_code != 0:
+        raise result.exception
+    assert "model-set" in result.stdout
 
     dumped = tmp_path / "dumped_mset.yaml"
     result = runner.invoke(
@@ -1314,6 +1492,33 @@ def test_run_mcmc_apes_calibrate(simple_experiment, calibration_method):
         raise result.exception
 
 
+def test_run_mcmc_apes_calibrate_no_interpolate(simple_experiment):
+    """calibrate without interpolation prepares the estimator from the points alone."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "calibrate",
+            output.absolute().with_suffix(".mcmc.fits").as_posix(),
+            "--no-interpolate",
+        ],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception
+
+    assert "Use interpolation" in result.stdout
+
+
 def test_run_mcmc_apes_get_best_fit(simple_experiment):
     """get-best-fit writes the catalog's best-fit parameters as a
     model-set yaml, dict-wrapped so it can be used as --starting-point."""
@@ -1366,3 +1571,89 @@ def test_run_mcmc_apes_get_best_fit_requires_output(simple_experiment):
     result = runner.invoke(app, ["catalog", "get-best-fit", catalog.as_posix()])
     assert result.exit_code != 0
     assert "Output file not defined" in result.output
+
+
+@pytest.mark.parametrize(
+    "target", ["gauss-constraint", "funnel", "rosenbrock", "gaussmix2d"]
+)
+def test_generate_sampler_test(tmp_path, target):
+    """Every synthetic benchmark target writes an experiment that loads back."""
+    experiment = tmp_path / f"{target}.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "sampler-test",
+            experiment.as_posix(),
+            "--target",
+            target,
+            "--dim",
+            "4",
+        ],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    loaded = ser.dict_str_from_yaml_file(experiment.as_posix())
+
+    assert isinstance(loaded.get("likelihood"), Ncm.Likelihood)
+    assert isinstance(loaded.get("model-set"), Ncm.MSet)
+    assert loaded.get("model-set").fparams_len() > 0
+
+
+def test_generate_sampler_test_wrong_suffix(tmp_path):
+    """The experiment file is YAML; anything else is refused before any work."""
+    experiment = tmp_path / "sampler_test.fits"
+    result = runner.invoke(app, ["generate", "sampler-test", experiment.as_posix()])
+
+    assert result.exit_code != 0
+    assert isinstance(result.exception, ValueError)
+    assert not experiment.exists()
+
+
+def test_run_mcmc_apes_analyze_ensemble_diagnostics(simple_experiment):
+    """A long enough multi-walker run reports the per-iteration chain count.
+
+    K_eff needs more than one chain and at least ten iterations, so the default run is
+    too short for it; --split-fraction and --seed are on the same path.
+    """
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--output",
+            output.as_posix(),
+            "--nsamples",
+            "30",
+            "--split-fraction",
+            "0.5",
+            "--seed",
+            "1234",
+        ],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception
+
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "analyze",
+            output.absolute().with_suffix(".mcmc.fits").as_posix(),
+            "--burnin",
+            "0",
+        ],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception
+
+    assert "K_eff" in result.stdout

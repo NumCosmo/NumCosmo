@@ -13,6 +13,14 @@ math_tests = [
         'sources': ['ncm/model/test_ncm_sparam.c'],
     },
     {
+        'name': 'ncm_vparam',
+        'sources': ['ncm/model/test_ncm_vparam.c'],
+    },
+    {
+        'name': 'ncm_reparam',
+        'sources': ['ncm/model/test_ncm_reparam.c'],
+    },
+    {
         'name': 'ncm_diff',
         'sources': ['ncm/integration/test_ncm_diff.c'],
     },
@@ -21,12 +29,84 @@ math_tests = [
         'sources': ['ncm/core/test_ncm_dtuple.c'],
     },
     {
+        'name': 'ncm_pln1d',
+        'sources': ['ncm/core/test_ncm_pln1d.c'],
+    },
+    {
+        'name': 'ncm_function_cache',
+        'sources': ['ncm/core/test_ncm_function_cache.c'],
+    },
+    {
+        'name': 'ncm_iset',
+        'sources': ['ncm/core/test_ncm_iset.c'],
+    },
+    {
+        'name': 'ncm_timer',
+        'sources': ['ncm/core/test_ncm_timer.c'],
+    },
+    {
+        'name': 'ncm_rng',
+        'sources': ['ncm/core/test_ncm_rng.c'],
+    },
+    {
+        'name': 'ncm_c',
+        'sources': ['ncm/core/test_ncm_c.c'],
+    },
+    {
         'name': 'ncm_catalog',
         'sources': ['ncm/data/test_ncm_catalog.c'],
     },
     {
+        'name': 'ncm_data',
+        'sources': ['ncm/data/test_ncm_data.c'],
+    },
+    {
+        'name': 'ncm_dataset',
+        'sources': ['ncm/data/test_ncm_dataset.c'],
+    },
+    {
+        'name': 'ncm_data_gauss',
+        'sources': ['ncm/data/test_ncm_data_gauss.c'],
+    },
+    {
+        'name': 'ncm_data_gauss_diag',
+        'sources': ['ncm/data/test_ncm_data_gauss_diag.c'],
+    },
+    {
+        'name': 'ncm_data_poisson',
+        'sources': ['ncm/data/test_ncm_data_poisson.c'],
+    },
+    {
+        'name': 'ncm_data_dist',
+        'sources': ['ncm/data/test_ncm_data_dist.c'],
+    },
+    {
+        'name': 'ncm_data_toys',
+        'sources': ['ncm/data/test_ncm_data_toys.c'],
+    },
+    {
         'name': 'ncm_sky_footprint',
         'sources': ['ncm/sphere/test_ncm_sky_footprint.c'],
+    },
+    {
+        'name': 'ncm_sphere_nn',
+        'sources': ['ncm/sphere/test_ncm_sphere_nn.c'],
+    },
+    {
+        'name': 'ncm_powspec',
+        'sources': ['ncm/powspec/test_ncm_powspec.c'],
+    },
+    {
+        'name': 'ncm_powspec_spline2d',
+        'sources': ['ncm/powspec/test_ncm_powspec_spline2d.c'],
+    },
+    {
+        'name': 'ncm_powspec_corr3d',
+        'sources': ['ncm/powspec/test_ncm_powspec_corr3d.c'],
+    },
+    {
+        'name': 'ncm_powspec_filter',
+        'sources': ['ncm/powspec/test_ncm_powspec_filter.c'],
     },
     {
         'name': 'ncm_fftlog',
@@ -47,12 +127,48 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_laurent_series.c'],
     },
     {
+        'name': 'ncm_spectral',
+        'sources': ['ncm/algebra/test_ncm_spectral.c'],
+    },
+    {
+        'name': 'ncm_nnls',
+        'sources': ['ncm/algebra/test_ncm_nnls.c'],
+    },
+    {
         'name': 'ncm_matrix',
         'sources': ['ncm/algebra/test_ncm_matrix.c'],
     },
     {
+        'name': 'ncm_complex',
+        'sources': ['ncm/algebra/test_ncm_complex.c'],
+    },
+    {
+        'name': 'ncm_lapack',
+        'sources': ['ncm/algebra/test_ncm_lapack.c'],
+    },
+    {
+        'name': 'ncm_bootstrap',
+        'sources': ['ncm/stats/test_ncm_bootstrap.c'],
+    },
+    {
         'name': 'ncm_stats_vec',
         'sources': ['ncm/stats/test_ncm_stats_vec.c'],
+    },
+    {
+        'name': 'ncm_stats_acorr',
+        'sources': ['ncm/stats/test_ncm_stats_acorr.c'],
+    },
+    {
+        'name': 'ncm_stats_dist1d',
+        'sources': ['ncm/stats/test_ncm_stats_dist1d.c'],
+    },
+    {
+        'name': 'ncm_stats_dist1d_spline',
+        'sources': ['ncm/stats/test_ncm_stats_dist1d_spline.c'],
+    },
+    {
+        'name': 'ncm_stats_dist2d_spline',
+        'sources': ['ncm/stats/test_ncm_stats_dist2d_spline.c'],
     },
     {
         'name': 'ncm_stats_dist1d_epdf',
@@ -85,6 +201,10 @@ math_tests = [
         'sources': ['ncm/stats/test_ncm_stats_dist_kernel.c'],
     },
     {
+        'name': 'ncm_function_sample_set',
+        'sources': ['ncm/stats/test_ncm_function_sample_set.c'],
+    },
+    {
         'name': 'ncm_spline',
         'sources': ['ncm/spline/test_ncm_spline.c'],
         'priority': 3,
@@ -97,6 +217,14 @@ math_tests = [
         'name': 'ncm_spline_vec',
         'sources': ['ncm/spline/test_ncm_spline_vec.c'],
     },
+    {
+        'name': 'ncm_spline_func',
+        'sources': ['ncm/spline/test_ncm_spline_func.c'],
+    },
+    {
+        'name': 'ncm_spline_bspline',
+        'sources': ['ncm/spline/test_ncm_spline_bspline.c'],
+    },
     # Bit-exact agreement between serial and concurrent evaluation of one shared
     # prepared NcmSplineBSpline: its GSL workspace is per-call scratch, so this is
     # the regression test for evaluating it from parallel kernel integrands.
@@ -108,6 +236,17 @@ math_tests = [
     {
         'name': 'ncm_ode_spline',
         'sources': ['ncm/spline/test_ncm_ode_spline.c'],
+    },
+    {
+        'name': 'ncm_csq1d',
+        'sources': [
+            'ncm/dynamics/test_ncm_csq1d.c',
+            'ncm/dynamics/test_ncm_csq1d_bessel.c',
+        ],
+    },
+    {
+        'name': 'ncm_integrate',
+        'sources': ['ncm/integration/test_ncm_integrate.c'],
     },
     {
         'name': 'ncm_integral1d',
@@ -124,6 +263,14 @@ math_tests = [
     {
         'name': 'ncm_sf_sbessel',
         'sources': ['ncm/specfunc/test_ncm_sf_sbessel.c'],
+    },
+    {
+        'name': 'ncm_sbessel_integrator',
+        'sources': ['ncm/specfunc/test_ncm_sbessel_integrator.c'],
+    },
+    {
+        'name': 'ncm_mpsf_sbessel',
+        'sources': ['ncm/specfunc/test_ncm_mpsf_sbessel.c'],
     },
     {
         'name': 'ncm_mpsf_0F1',
@@ -148,6 +295,18 @@ math_tests = [
     {
         'name': 'ncm_mset',
         'sources': ['ncm/model/test_ncm_mset.c'],
+    },
+    {
+        'name': 'ncm_mset_func',
+        'sources': ['ncm/model/test_ncm_mset_func.c'],
+    },
+    {
+        'name': 'ncm_model_builder',
+        'sources': ['ncm/model/test_ncm_model_builder.c'],
+    },
+    {
+        'name': 'ncm_model_toys',
+        'sources': ['ncm/model/test_ncm_model_toys.c'],
     },
     {
         'name': 'ncm_mset_catalog',
@@ -261,12 +420,52 @@ math_tests = [
         'timeout': 0,
     },
     {
+        'name': 'ncm_fit_covar',
+        'sources': ['ncm/fit/test_ncm_fit_covar.c'],
+    },
+    {
+        'name': 'ncm_fit_mc',
+        'sources': ['ncm/fit/test_ncm_fit_mc.c'],
+    },
+    {
+        'name': 'ncm_fit_mcbs',
+        'sources': ['ncm/fit/test_ncm_fit_mcbs.c'],
+    },
+    {
+        'name': 'ncm_fit_mcmc',
+        'sources': ['ncm/fit/test_ncm_fit_mcmc.c'],
+    },
+    {
+        'name': 'ncm_fit_esmcmc_walkers',
+        'sources': ['ncm/fit/test_ncm_fit_esmcmc_walkers.c'],
+    },
+    {
+        'name': 'ncm_lh_ratio1d',
+        'sources': ['ncm/fit/test_ncm_lh_ratio1d.c'],
+    },
+    {
+        'name': 'ncm_lh_ratio2d',
+        'sources': ['ncm/fit/test_ncm_lh_ratio2d.c'],
+    },
+    {
+        'name': 'ncm_likelihood',
+        'sources': ['ncm/fit/test_ncm_likelihood.c'],
+    },
+    {
+        'name': 'ncm_prior',
+        'sources': ['ncm/fit/test_ncm_prior.c'],
+    },
+    {
         'name': 'ncm_fit_state',
         'sources': ['ncm/fit/test_ncm_fit_state.c'],
     },
     {
         'name': 'ncm_mset_trans_kern_gauss',
         'sources': ['ncm/fit/test_ncm_mset_trans_kern_gauss.c'],
+    },
+    {
+        'name': 'ncm_mset_trans_kern_flat',
+        'sources': ['ncm/fit/test_ncm_mset_trans_kern_flat.c'],
     },
     {
         'name': 'ncm_mset_trans_kern_cat',
@@ -282,6 +481,7 @@ math_tests = [
         'sources': [
             'ncm/fit/test_ncm_fit_esmcmc.c',
             'ncm/fit/test_ncm_fit_esmcmc_common.c',
+            'ncm/fit/test_ncm_fit_esmcmc_parity.c',
         ],
         'timeout': 0,
         'suite': ['c', 'omp'],
@@ -291,6 +491,7 @@ math_tests = [
         'sources': [
             'ncm/fit/test_ncm_fit_esmcmc_recovery.c',
             'ncm/fit/test_ncm_fit_esmcmc_common.c',
+            'ncm/fit/test_ncm_fit_esmcmc_parity.c',
         ],
         'timeout': 0,
         'suite': ['c-statistical', 'omp'],
@@ -404,6 +605,10 @@ data_tests = [
     {
         'name': 'nc_data_hubble',
         'sources': ['nc/data/test_nc_data_hubble.c'],
+    },
+    {
+        'name': 'nc_data_snia_cov',
+        'sources': ['nc/data/test_nc_data_snia_cov.c'],
     },
     # Truth-table validation of NcDataClusterWLFactor's integration methods:
     # regenerates a curated sample from a fixed seed (nothing stored) and
@@ -551,6 +756,29 @@ xcor_tests = [
     },
 ]
 
+# The Arb reference generator behind the certified tables. Its output reaches
+# the suite as committed tables, so without this nothing ever executed it and a
+# mistyped closed form surfaced only as a table disagreeing with the library.
+# FLINT is not a dependency of NumCosmo, so the test exists only where it is
+# available -- the same condition under which the generator itself is built.
+if arb_dep.found()
+    xcor_tests += [
+        {
+            'name': 'xcor_window_arb',
+            'sources': ['nc/xcor/test_xcor_window_arb.c'],
+            'dependencies': [arb_dep, flint_dep],
+            'include_directories': [include_directories('../tools')],
+            # FLINT's headers trip these under GCC 16, reading the interior
+            # pointers of an acb_t as if they sized the whole struct. Same
+            # filter tests/tools/meson.build applies to the generator.
+            'c_args': cc.get_supported_arguments(
+                '-Wno-stringop-overread',
+                '-Wno-array-bounds',
+            ),
+        },
+    ]
+endif
+
 # Combine all test arrays
 all_c_tests = math_tests + model_tests + data_tests + lss_tests + galaxy_tests + xcor_tests
 
@@ -559,12 +787,17 @@ tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
 
 foreach c_test : all_c_tests
     extra_c_args = c_test.has_key('c_args') ? c_test['c_args'] : []
+    # A test of an offline reference generator needs that generator's own
+    # dependencies, which are not the library's: FLINT is not a NumCosmo
+    # dependency and such a test is registered only where it was found.
+    extra_deps = c_test.has_key('dependencies') ? c_test['dependencies'] : []
+    extra_inc = c_test.has_key('include_directories') ? c_test['include_directories'] : []
     executable_test = executable(
         c_test['name'],
         c_test['sources'],
         c_args: tests_c_args + extra_c_args,
-        dependencies: [libnumcosmo_dep, gsl_dep],
-        include_directories: [configinc, numcosmoinc],
+        dependencies: [libnumcosmo_dep, gsl_dep] + extra_deps,
+        include_directories: [configinc, numcosmoinc] + extra_inc,
     )
     if c_test.has_key('timeout')
         timeout = c_test['timeout']
@@ -617,8 +850,30 @@ if mpi_c_dep.found()
         c_tests_mpi = [
             {
                 'name': 'ncm_fit_esmcmc_mpi',
-                'sources': ['ncm/fit/test_ncm_fit_esmcmc_mpi.c'],
+                'sources': [
+                    'ncm/fit/test_ncm_fit_esmcmc_mpi.c',
+                    'ncm/fit/test_ncm_fit_esmcmc_parity.c',
+                ],
                 'timeout': 0,
+            },
+            {
+                'name': 'ncm_mpi_job',
+                'sources': [
+                    'ncm/mpi/test_ncm_mpi_job.c',
+                    'ncm/mpi/test_ncm_mpi_job_shape.c',
+                ],
+                # One rank runs the jobs serially on the master. Three ranks give two
+                # workers: fewer inputs than workers, and workers returning out of order.
+                'nranks': [1, 2, 3],
+            },
+            {
+                # Drives the worker side with raw MPI calls, without ncm_cfg_init.
+                'name': 'ncm_mpi_slave',
+                'sources': [
+                    'ncm/mpi/test_ncm_mpi_slave.c',
+                    'ncm/mpi/test_ncm_mpi_job_shape.c',
+                ],
+                'abort_driver': true,
             },
         ]
         foreach c_test_mpi : c_tests_mpi
@@ -626,7 +881,7 @@ if mpi_c_dep.found()
                 c_test_mpi['name'],
                 c_test_mpi['sources'],
                 c_args: tests_c_args,
-                dependencies: [libnumcosmo_dep],
+                dependencies: [libnumcosmo_dep, mpi_c_dep],
                 include_directories: [configinc, numcosmoinc],
             )
             if c_test_mpi.has_key('timeout')
@@ -640,30 +895,61 @@ if mpi_c_dep.found()
                 suite = ['c', 'mpi']
             endif
 
-            mpiexec_args = (
-                [
-                    '-n', '2',
-                    executable_test.full_path(),
-                ]
-                + test_seed_args
-            )
+            if c_test_mpi.has_key('nranks')
+                nranks = c_test_mpi['nranks']
+            else
+                nranks = [2]
+            endif
+
+            # OpenMPI refuses more ranks than cores, and CI runners have two. The
+            # ranks mostly wait on each other, so oversubscribing costs nothing;
+            # the first variable is read by OpenMPI 5 (PRRTE), the second by 4.
+            # MPICH ignores both and never refuses.
             mpi_test_env = [
                 'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
                 'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
+                'PRTE_MCA_rmaps_default_mapping_policy=:oversubscribe',
+                'OMPI_MCA_rmaps_base_oversubscribe=1',
             ]
             foreach k, v : omp_vars_serial
                 mpi_test_env += '@0@=@1@'.format(k, v)
             endforeach
-            test(
-                c_test_mpi['name'],
-                mpiexec,
-                args: mpiexec_args,
-                depends: [executable_test],
-                timeout: timeout,
-                env: mpi_test_env,
-                protocol: 'tap',
-                suite: suite,
-            )
+            foreach n : nranks
+                mpiexec_args = (
+                    [
+                        '-n', n.to_string(),
+                        executable_test.full_path(),
+                    ]
+                    + test_seed_args
+                )
+                test(
+                    (n == 2) ? c_test_mpi['name'] : '@0@_n@1@'.format(c_test_mpi['name'], n),
+                    mpiexec,
+                    args: mpiexec_args,
+                    depends: [executable_test],
+                    timeout: timeout,
+                    env: mpi_test_env,
+                    protocol: 'tap',
+                    suite: suite,
+                )
+            endforeach
+
+            # The refusals abort the MPI job, so each runs in its own mpiexec, launched
+            # and checked by the same program run without mpiexec.
+            if c_test_mpi.get('abort_driver', false)
+                test(
+                    '@0@_abort'.format(c_test_mpi['name']),
+                    executable_test,
+                    args: ['--spawn-aborts'] + test_seed_args,
+                    timeout: timeout,
+                    env: mpi_test_env + [
+                        'NCM_TEST_MPIEXEC=@0@'.format(mpiexec.full_path()),
+                        'NCM_TEST_SELF=@0@'.format(executable_test.full_path()),
+                    ],
+                    protocol: 'tap',
+                    suite: suite,
+                )
+            endif
         endforeach
     endif
 endif

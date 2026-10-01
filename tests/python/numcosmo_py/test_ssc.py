@@ -101,7 +101,7 @@ def test_fullsky_matches_reference(cosmo: Nc.HICosmo) -> None:
     assert_allclose(sij, sij.T, rtol=1.0e-12)
     assert_allclose(np.diag(sij), REFERENCE_SIJ_DIAG, rtol=1.0e-3)
     # The off-diagonal is the demanding one: a small residual of a large
-    # cancellation, and the reason this module tightens scaled_abstol.
+    # cancellation, and the reason this module tightens peak_epsilon.
     assert_allclose(sij[0, 1], REFERENCE_SIJ_01, rtol=1.0e-3)
 
     # Disjoint shells anticorrelate, and every cross term obeys Cauchy-Schwarz.

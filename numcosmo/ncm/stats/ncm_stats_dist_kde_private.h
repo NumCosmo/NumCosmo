@@ -39,10 +39,15 @@ typedef struct _NcmStatsDistKDEPrivate
   NcmStatsDistKDECovType cov_type;
   NcmMatrix *cov;
   NcmMatrix *cov_fixed;
+  NcmMatrix *cov_fixed_decomp;
   NcmMatrix *cov_decomp;
+  NcmMatrix *cov_decomp0;
   NcmMatrix *sample_matrix;
   NcmMatrix *invUsample_matrix;
   GPtrArray *invUsample_array;
+  NcmMatrix *center_matrix;
+  NcmMatrix *invUcenter_matrix;
+  GPtrArray *invUcenter_array;
   gdouble kernel_lnnorm;
   guint nearPD_maxiter;
   NcmMemoryPool *mp_eval_vars;

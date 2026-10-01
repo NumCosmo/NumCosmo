@@ -25,7 +25,7 @@
 """Tests for NcXcorSolver: the batched register/request interface.
 
 Covers registration/request bookkeeping (dev-notes/xcor_ultralevin_batching_plan.md
-sec 5.1), the ℓ-block planner (sec 5), and solve() (sec 5-6): the
+sec 5.1), the ell-block planner (sec 5), and solve() (sec 5-6): the
 per-block shared-closure KERNEL_CUBATURE path and the direct-delegation
 fallback for every other method.
 """
@@ -142,7 +142,7 @@ def test_plan_blocks_single_request_tiling(kernel_tsz: Nc.XcorKernel) -> None:
 def test_plan_blocks_multiple_requests_union(
     kernel_tsz: Nc.XcorKernel, kernel_cmb_isw: Nc.XcorKernel
 ) -> None:
-    """Blocks tile the union of every request's ℓ-range."""
+    """Blocks tile the union of every request's ell-range."""
     solver = Nc.XcorSolver.new()
     id_a = solver.register_kernel(kernel_tsz)
     id_b = solver.register_kernel(kernel_cmb_isw)
@@ -366,7 +366,7 @@ def test_solve_block_parallel_stress(
 ) -> None:
     """solve() over many blocks/kernels/requests matches nc_xcor_compute(),
     exercising the OpenMP block-parallel path (dev-notes/xcor_ultralevin_batching_plan.md
-    §6.3) with real concurrency, not just a single-block sanity check.
+    sec. 6.3) with real concurrency, not just a single-block sanity check.
 
     Each thread gets its own #NcmSerialize-duplicated clone of every
     registered kernel; this is the one test that would (nondeterministically)
@@ -467,6 +467,10 @@ def test_solve_tier3_duplicated_kernel_shrinking_last_block(
         nbar=3.0,
         intr_shear=7.0,
         integrator=integrator,
+        # Matched to the integrator above: a closure cannot be fitted to more
+        # precision than the samples carry, and the library refuses the pairing.
+        reltol=1.0e-2,
+        peak_epsilon=1.0e-2,
     )
     kernel.set_l_limber(-1)  # tier 3: true non-Limber
     kernel.prepare(cosmology.cosmo)
@@ -510,6 +514,8 @@ def _tier3_wl_kernel(cosmology: Cosmology, lmin: int, lmax: int) -> Nc.XcorKerne
         nbar=3.0,
         intr_shear=7.0,
         integrator=integrator,
+        reltol=1.0e-2,
+        peak_epsilon=1.0e-2,
     )
     kernel.set_l_limber(-1)
     kernel.prepare(cosmology.cosmo)
@@ -726,7 +732,7 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
                 z_upper=z_upper,
                 integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
                 reltol=1.0e-4,
-                scaled_abstol=1.0e-4,
+                peak_epsilon=1.0e-4,
             )
             kernel.set_l_limber(-1)
             kernel.prepare(cosmo)
@@ -760,7 +766,7 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
                 z_upper=z_upper,
                 integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
                 reltol=1.0e-4,
-                scaled_abstol=1.0e-4,
+                peak_epsilon=1.0e-4,
             )
             kernel.set_l_limber(-1)
             kernel.prepare(cosmo)
@@ -801,3 +807,38 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
         for got, expected in zip(through_solver, direct):
             assert np.all(np.isfinite(got))
             assert_allclose(got, expected, rtol=1.0e-10)
+
+
+def test_replan_with_the_same_blocks_keeps_the_integrators(
+    cosmology: Cosmology,
+) -> None:
+    """A plan that reproduces the previous blocks keeps the per-block integrators.
+
+    They carry the factorised operators, the expensive part of a cold solve, and
+    are keyed by the block's ell range only. A plan with different blocks drops
+    them.
+    """
+    kernel = _tier3_wl_kernel(cosmology, 2, 17)
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc.props.reltol = 1.0e-2
+    xc.prepare(cosmology.cosmo)
+
+    solver = Nc.XcorSolver.new()
+    kid = solver.register_kernel(kernel)
+    solver.request_cl(kid, kid, 2, 17)
+    solver.plan_blocks(8)
+    solver.solve(xc, cosmology.cosmo)
+    before = [solver.peek_block_integrator(b) for b in range(solver.get_n_blocks())]
+    assert all(b is not None for b in before)
+
+    solver.clear_requests()
+    solver.request_cl(kid, kid, 2, 17)
+    solver.plan_blocks(8)
+    after = [solver.peek_block_integrator(b) for b in range(solver.get_n_blocks())]
+    assert all(a is b for a, b in zip(after, before))
+
+    solver.clear_requests()
+    solver.request_cl(kid, kid, 2, 17)
+    solver.plan_blocks(4)
+    assert solver.get_n_blocks() == 4
+    assert all(solver.peek_block_integrator(b) is None for b in range(4))

@@ -26,11 +26,20 @@
 /**
  * NcmSBesselIntegratorGL:
  *
- * Gauss-Legendre based spherical Bessel function integrator.
+ * Reference spherical Bessel integrator for non-oscillatory integrands.
  *
- * This class implements integration of functions multiplied by spherical
- * Bessel functions using Gauss-Legendre quadrature.
+ * Integrates in $x = k\chi$, one multipole at a time. Below
+ * $x_\mathrm{mid} = \sqrt{\ell(\ell+1)} + m$, the turning point plus
+ * #NcmSBesselIntegratorGL:margin, it uses adaptive Gauss-Kronrod quadrature (61 points,
+ * relative tolerance $10^{-7}$); above it, fixed Gauss-Legendre panels of
+ * #NcmSBesselIntegratorGL:npts points each, without an error estimate. $j_\ell$ comes
+ * from GSL at every node.
  *
+ * Use it where $kb/\nu \lesssim 1.5$, with $\nu = \ell + 1/2$: there it reaches
+ * relative errors of $10^{-14}$ even where $I_\ell$ is as small as $10^{-189}$, which
+ * #NcmSBesselIntegratorLevin, accurate relative to the scale of the integrand, does not
+ * aim for. In the oscillatory regime its cost grows with $k$ and it is no more accurate
+ * than Levin. The integrand state lives in the object, so calls are not reentrant.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -40,10 +49,10 @@
 
 #include "ncm/specfunc/ncm_sbessel_integrator_gl.h"
 #include "ncm/core/ncm_dtuple.h"
-#include "ncm/specfunc/ncm_sf_sbessel.h"
 #include "ncm/core/ncm_c.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_bessel.h>
 #endif /* NUMCOSMO_GIR_SCAN */
@@ -187,7 +196,7 @@ ncm_sbessel_integrator_gl_class_init (NcmSBesselIntegratorGLClass *klass)
   /**
    * NcmSBesselIntegratorGL:npts:
    *
-   * Number of points for Gauss-Legendre quadrature in oscillatory region.
+   * Gauss-Legendre points per panel above $x_\mathrm{mid}$.
    */
   g_object_class_install_property (object_class,
                                    PROP_NPTS,
@@ -200,7 +209,8 @@ ncm_sbessel_integrator_gl_class_init (NcmSBesselIntegratorGLClass *klass)
   /**
    * NcmSBesselIntegratorGL:margin:
    *
-   * Safety margin beyond turning point for non-oscillatory region.
+   * Distance in $x$ from the turning point $\sqrt{\ell(\ell+1)}$ to $x_\mathrm{mid}$, where
+   * the panels start.
    */
   g_object_class_install_property (object_class,
                                    PROP_MARGIN,
@@ -213,7 +223,8 @@ ncm_sbessel_integrator_gl_class_init (NcmSBesselIntegratorGLClass *klass)
   /**
    * NcmSBesselIntegratorGL:nosc:
    *
-   * Number of oscillations per panel width in oscillatory region.
+   * Panels per half period of $j_\ell$ at $x_\mathrm{mid}$: the first panel is $\pi /$
+   * nosc wide, and the width grows with $x$ as $(1 + x/1000)$, up to $4\pi$.
    */
   g_object_class_install_property (object_class,
                                    PROP_NOSC,
@@ -227,15 +238,15 @@ ncm_sbessel_integrator_gl_class_init (NcmSBesselIntegratorGLClass *klass)
   parent_class->integrate     = &_ncm_sbessel_integrator_gl_integrate;
 }
 
-/* Integrand: f(y) * j_ell(y) where f(y) = K(y/k, k)/k */
+/* Integrand in x = k chi: F(x) j_ell(x), with F(x) = K(x/k, k) / k */
 static gdouble
-_ncm_sbessel_integrator_gl_integrand (gdouble y, gpointer user_data)
+_ncm_sbessel_integrator_gl_integrand (gdouble x, gpointer user_data)
 {
   NcmSBesselIntegratorGLParams *params = (NcmSBesselIntegratorGLParams *) user_data;
-  const gdouble x                      = y / params->k;
-  const gdouble K_val                  = params->F (params->user_data, x, params->k);
+  const gdouble chi                    = x / params->k;
+  const gdouble K_val                  = params->F (params->user_data, chi, params->k);
   const gdouble f_val                  = K_val / params->k;
-  const gdouble jl                     = gsl_sf_bessel_jl (params->ell, y);
+  const gdouble jl                     = gsl_sf_bessel_jl (params->ell, x);
 
   return f_val * jl;
 }
@@ -251,8 +262,8 @@ _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi,
   NcmSBesselIntegratorGL *sbigl = NCM_SBESSEL_INTEGRATOR_GL (sbi);
   gdouble result                = 0.0;
   gdouble abserr;
-  const gdouble y_min = k * a; /* Transform to y-space */
-  const gdouble y_max = k * b;
+  const gdouble x_min = k * a; /* Transform to x-space */
+  const gdouble x_max = k * b;
 
   /* Update integrand params */
   sbigl->params.F         = F;
@@ -260,34 +271,39 @@ _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi,
   sbigl->params.user_data = user_data;
   sbigl->params.ell       = ell;
 
-  /* Turning point and split in y-space */
+  /* Turning point and split, both in x = k chi */
   const gdouble x_tp  = sqrt (ell * (ell + 1.0));
-  const gdouble y_mid = k * (x_tp + sbigl->margin);
+  const gdouble x_mid = x_tp + sbigl->margin;
 
   /* ----------------------------
    * Region 1: non-oscillatory
    * ---------------------------- */
-  if (y_min < y_mid)
+  if (x_min < x_mid)
   {
     gsl_function G;
 
     G.function = &_ncm_sbessel_integrator_gl_integrand;
     G.params   = &sbigl->params;
 
-    const gdouble a1 = y_min;
-    const gdouble b1 = GSL_MIN (y_mid, y_max);
+    const gdouble a1 = x_min;
+    const gdouble b1 = GSL_MIN (x_mid, x_max);
 
     gdouble I1 = 0.0;
+    gint status;
 
-    gsl_integration_qag (&G, a1, b1,
-                         0.0, 1.0e-7,
-                         1000,
-                         GSL_INTEG_GAUSS61,
-                         sbigl->ws, &I1, &abserr);
+    status = gsl_integration_qag (&G, a1, b1,
+                                  0.0, 1.0e-7,
+                                  1000,
+                                  GSL_INTEG_GAUSS61,
+                                  sbigl->ws, &I1, &abserr);
+
+    if (status != GSL_SUCCESS)
+      g_error ("ncm_sbessel_integrator_gl: adaptive quadrature failed on [%g, %g] for ell = %d: %s.",
+               a1, b1, ell, gsl_strerror (status));
 
     result += I1;
 
-    if (b1 == y_max)
+    if (b1 == x_max)
       return result;
   }
 
@@ -295,8 +311,8 @@ _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi,
    * Region 2: oscillatory
    * ---------------------------- */
 
-  const gdouble a2 = GSL_MAX (y_mid, y_min);
-  const gdouble b2 = y_max;
+  const gdouble a2 = GSL_MAX (x_mid, x_min);
+  const gdouble b2 = x_max;
 
   gsl_function G;
 
@@ -309,49 +325,25 @@ _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi,
   /* Controls how dx grows with x */
   const gdouble x_scale = 1000.0;
 
-  /* Early-termination threshold */
-  const gdouble eps_tail = 1.0e-8;
+  gdouble x = a2;
 
-  gdouble y = a2;
-
-  while (y < b2)
+  while (x < b2)
   {
     /* ----------------------------
-     * Amplitude-based early exit
+     * dy that grows smoothly w.r.t x
      * ---------------------------- */
-    /* Amplitude-based early termination in x-space */
-    gdouble x  = y / k;
-    gdouble Kx = F (user_data, x, k);
-    gdouble fx = Kx / k;
+    gdouble dy   = GSL_MIN (dx0 * (1.0 + x / x_scale), 4.0 * M_PI);
+    gdouble x_hi = x + dy;
 
-    if (fabs (fx) / y < eps_tail)
-    {
-      gdouble jl1_y = ncm_sf_sbessel (ell + 1, y);
-      gdouble x_max = y_max / k;
-      gdouble Kb    = F (user_data, x_max, k);
-      gdouble fb    = Kb / k;
-      gdouble jl1_b = ncm_sf_sbessel (ell + 1, y_max);
-      gdouble tail  = fb * jl1_b - fx * jl1_y;
-
-      result += tail;
-      break;
-    }
-
-    /* ----------------------------
-     * dy that grows smoothly w.r.t y
-     * ---------------------------- */
-    gdouble dy   = GSL_MIN (dx0 * (1.0 + y / x_scale), 4.0 * M_PI);
-    gdouble y_hi = y + dy;
-
-    if (y_hi > b2)
-      y_hi = b2;
+    if (x_hi > b2)
+      x_hi = b2;
 
     /* One GL fixed panel */
     gdouble panel_result =
-      gsl_integration_glfixed (&G, y, y_hi, sbigl->gl_table);
+      gsl_integration_glfixed (&G, x, x_hi, sbigl->gl_table);
 
     result += panel_result;
-    y       = y_hi;
+    x       = x_hi;
   }
 
   return result;
@@ -370,8 +362,6 @@ _ncm_sbessel_integrator_gl_integrate (NcmSBesselIntegrator *sbi,
 
   ncm_sbessel_integrator_get_ell_range (sbi, &ell_min, &ell_max);
 
-  g_assert_cmpuint (ncm_vector_len (result), ==, ell_max - ell_min + 1);
-
   /* Loop over all ell values */
   for (ell = ell_min; ell <= ell_max; ell++)
   {
@@ -383,8 +373,8 @@ _ncm_sbessel_integrator_gl_integrate (NcmSBesselIntegrator *sbi,
 
 /**
  * ncm_sbessel_integrator_gl_new:
- * @ell_min: minimum multipole
- * @ell_max: maximum multipole
+ * @ell_min: lowest multipole
+ * @ell_max: highest multipole
  *
  * Creates a new #NcmSBesselIntegratorGL.
  *
@@ -420,7 +410,6 @@ ncm_sbessel_integrator_gl_ref (NcmSBesselIntegratorGL *sbigl)
  * @sbigl: a #NcmSBesselIntegratorGL
  *
  * Decreases the reference count of @sbigl by one.
- *
  */
 void
 ncm_sbessel_integrator_gl_free (NcmSBesselIntegratorGL *sbigl)
@@ -432,9 +421,7 @@ ncm_sbessel_integrator_gl_free (NcmSBesselIntegratorGL *sbigl)
  * ncm_sbessel_integrator_gl_clear:
  * @sbigl: a #NcmSBesselIntegratorGL
  *
- * If @sbigl is different from NULL, decreases the reference count of
- * @sbigl by one and sets @sbigl to NULL.
- *
+ * If *@sbigl is not NULL, decreases its reference count by one and sets *@sbigl to NULL.
  */
 void
 ncm_sbessel_integrator_gl_clear (NcmSBesselIntegratorGL **sbigl)
@@ -445,11 +432,9 @@ ncm_sbessel_integrator_gl_clear (NcmSBesselIntegratorGL **sbigl)
 /**
  * ncm_sbessel_integrator_gl_set_npts:
  * @sbigl: a #NcmSBesselIntegratorGL
- * @npts: number of Gauss-Legendre quadrature points
+ * @npts: points per panel
  *
- * Sets the number of Gauss-Legendre quadrature points used in the oscillatory region.
- * This will reallocate the GL table if the value changes.
- *
+ * Sets #NcmSBesselIntegratorGL:npts.
  */
 void
 ncm_sbessel_integrator_gl_set_npts (NcmSBesselIntegratorGL *sbigl, guint npts)
@@ -473,9 +458,7 @@ ncm_sbessel_integrator_gl_set_npts (NcmSBesselIntegratorGL *sbigl, guint npts)
  * ncm_sbessel_integrator_gl_get_npts:
  * @sbigl: a #NcmSBesselIntegratorGL
  *
- * Gets the number of Gauss-Legendre quadrature points.
- *
- * Returns: the number of quadrature points
+ * Returns: the #NcmSBesselIntegratorGL:npts
  */
 guint
 ncm_sbessel_integrator_gl_get_npts (NcmSBesselIntegratorGL *sbigl)
@@ -488,10 +471,9 @@ ncm_sbessel_integrator_gl_get_npts (NcmSBesselIntegratorGL *sbigl)
 /**
  * ncm_sbessel_integrator_gl_set_margin:
  * @sbigl: a #NcmSBesselIntegratorGL
- * @margin: safety margin beyond turning point
+ * @margin: distance from the turning point
  *
- * Sets the safety margin beyond the turning point for the non-oscillatory region.
- *
+ * Sets #NcmSBesselIntegratorGL:margin.
  */
 void
 ncm_sbessel_integrator_gl_set_margin (NcmSBesselIntegratorGL *sbigl, gdouble margin)
@@ -506,9 +488,7 @@ ncm_sbessel_integrator_gl_set_margin (NcmSBesselIntegratorGL *sbigl, gdouble mar
  * ncm_sbessel_integrator_gl_get_margin:
  * @sbigl: a #NcmSBesselIntegratorGL
  *
- * Gets the safety margin beyond the turning point.
- *
- * Returns: the margin value
+ * Returns: the #NcmSBesselIntegratorGL:margin
  */
 gdouble
 ncm_sbessel_integrator_gl_get_margin (NcmSBesselIntegratorGL *sbigl)
@@ -521,10 +501,9 @@ ncm_sbessel_integrator_gl_get_margin (NcmSBesselIntegratorGL *sbigl)
 /**
  * ncm_sbessel_integrator_gl_set_nosc:
  * @sbigl: a #NcmSBesselIntegratorGL
- * @nosc: number of oscillations per panel
+ * @nosc: panels per half period
  *
- * Sets the number of oscillations per panel width in the oscillatory region.
- *
+ * Sets #NcmSBesselIntegratorGL:nosc.
  */
 void
 ncm_sbessel_integrator_gl_set_nosc (NcmSBesselIntegratorGL *sbigl, gdouble nosc)
@@ -539,9 +518,7 @@ ncm_sbessel_integrator_gl_set_nosc (NcmSBesselIntegratorGL *sbigl, gdouble nosc)
  * ncm_sbessel_integrator_gl_get_nosc:
  * @sbigl: a #NcmSBesselIntegratorGL
  *
- * Gets the number of oscillations per panel.
- *
- * Returns: the nosc value
+ * Returns: the #NcmSBesselIntegratorGL:nosc
  */
 gdouble
 ncm_sbessel_integrator_gl_get_nosc (NcmSBesselIntegratorGL *sbigl)

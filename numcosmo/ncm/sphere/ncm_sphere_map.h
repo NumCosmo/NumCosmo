@@ -85,7 +85,6 @@ void ncm_sphere_map_clear (NcmSphereMap **smap);
 void ncm_sphere_map_set_nside (NcmSphereMap *smap, gint64 nside);
 gint64 ncm_sphere_map_get_nside (NcmSphereMap *smap);
 gint64 ncm_sphere_map_get_npix (NcmSphereMap *smap);
-gint64 ncm_sphere_map_get_nsmap (NcmSphereMap *smap);
 gint64 ncm_sphere_map_get_cap_size (NcmSphereMap *smap);
 gint64 ncm_sphere_map_get_middle_size (NcmSphereMap *smap);
 
@@ -137,7 +136,7 @@ void ncm_sphere_map_get_alm (NcmSphereMap *smap, guint l, guint m, gdouble *Re_a
 void ncm_sphere_map_set_alm (NcmSphereMap *smap, guint l, guint m, gdouble Re_alm, gdouble Im_alm);
 
 gdouble ncm_sphere_map_get_Cl (NcmSphereMap *smap, guint l);
-gdouble ncm_sphere_map_get_pix (NcmSphereMap *smap, guint i);
+gdouble ncm_sphere_map_get_pix (NcmSphereMap *smap, const gint64 i);
 
 void ncm_sphere_map_add_noise (NcmSphereMap *smap, const gdouble sd, NcmRNG *rng);
 void ncm_sphere_map_set_map (NcmSphereMap *smap, GArray *map);

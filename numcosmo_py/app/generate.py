@@ -48,6 +48,10 @@ from numcosmo_py.experiments.jpas_forecast24 import (
     JpasSSCType,
     generate_jpas_forecast_2024,
 )
+from numcosmo_py.experiments.gauss_constraint import (
+    create_mset as create_gauss_constraint_mset,
+    create_data_object as create_gauss_constraint_data,
+)
 from numcosmo_py.experiments.cluster_wl import (
     generate_lsst_cluster_wl,
     load_cluster_wl,
@@ -59,6 +63,7 @@ from numcosmo_py.experiments.cluster_wl import (
     HaloProfileType,
     IntegMethod,
     IntegMethodOptions,
+    DEFAULT_INTEG_AUTO_NODES,
     DEFAULT_INTEG_N_NODES,
     DEFAULT_INTEG_RULE_N,
     DEFAULT_INTEG_NODE_RELTOL,
@@ -205,7 +210,20 @@ class GeneratePlanck:
     ] = HIPrimModel.POWER_LAW
 
     massive_nu: Annotated[
-        bool, typer.Option(help="Use massive neutrinos.", show_default=True)
+        bool,
+        typer.Option(
+            help="Include the Planck baseline neutrino: one 0.06 eV species, fixed, "
+            "N_eff = 3.046. Off gives 3.046 massless species.",
+            show_default=True,
+        ),
+    ] = True
+
+    fit_nu_mass: Annotated[
+        bool,
+        typer.Option(
+            help="Let the neutrino mass vary (LCDM + sum m_nu). Requires --massive-nu.",
+            show_default=True,
+        ),
     ] = False
 
     include_lens_lkl: Annotated[
@@ -258,6 +276,7 @@ class GeneratePlanck:
             exp, mfunc_array = generate_planck18_native(
                 data_type=self.data_type,
                 massive_nu=self.massive_nu,
+                fit_nu_mass=self.fit_nu_mass,
                 prim_model=self.prim_model,
                 use_lensing_likelihood=self.include_lens_lkl,
                 from_release=self.from_release,
@@ -267,12 +286,14 @@ class GeneratePlanck:
         elif self.data_type == Planck18Types.TT:
             exp, mfunc_array = generate_planck18_tt(
                 massive_nu=self.massive_nu,
+                fit_nu_mass=self.fit_nu_mass,
                 prim_model=self.prim_model,
                 use_lensing_likelihood=self.include_lens_lkl,
             )
         elif self.data_type == Planck18Types.TTTEEE:
             exp, mfunc_array = generate_planck18_ttteee(
                 massive_nu=self.massive_nu,
+                fit_nu_mass=self.fit_nu_mass,
                 prim_model=self.prim_model,
                 use_lensing_likelihood=self.include_lens_lkl,
             )
@@ -294,6 +315,7 @@ class GeneratePlanck:
             assert isinstance(dist, Nc.Distance)
             add_snia_likelihood(dataset, mset, dist, self.include_snia)
             cosmo = mset.peek(Nc.HICosmo.id())
+            assert isinstance(cosmo, Nc.HICosmo)
             cosmo.set_property("w_fit", True)
 
         if self.include_des_y3_S8_prior:
@@ -351,7 +373,7 @@ class BuildPlanckRelease:
             )
 
         for path in written:
-            print(f"wrote {path}")
+            print(f"# wrote {path}")
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -670,7 +692,7 @@ class ClusterWL(ABC):
             show_default=True,
             rich_help_panel="Redshift integration method",
         ),
-    ] = False
+    ] = DEFAULT_INTEG_AUTO_NODES
 
     n_nodes: Annotated[
         int,
@@ -1734,3 +1756,79 @@ class GenerateDEWSpline:
             mfunc_oa,
             self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
         )
+
+
+class SamplerTestTarget(StrEnum):
+    """Synthetic target distributions used to benchmark the samplers."""
+
+    GAUSS_CONSTRAINT = "gauss-constraint"
+    FUNNEL = "funnel"
+    ROSENBROCK = "rosenbrock"
+    GAUSSMIX2D = "gaussmix2d"
+
+
+@dataclasses.dataclass(kw_only=True)
+class GenerateSamplerTest:
+    """Generate a synthetic sampler-benchmark experiment."""
+
+    experiment: Annotated[
+        Path, typer.Argument(help="Path to the experiment file to generate.")
+    ]
+
+    target: Annotated[
+        SamplerTestTarget,
+        typer.Option(help="Target distribution to sample."),
+    ] = SamplerTestTarget.GAUSS_CONSTRAINT
+
+    dim: Annotated[
+        int,
+        typer.Option(
+            help=(
+                "Dimension of the target. Used by gauss-constraint and funnel, "
+                "the remaining targets are two-dimensional."
+            ),
+            min=2,
+            max=50,
+        ),
+    ] = 10
+
+    def __post_init__(self):
+        """Generate the sampler benchmark experiment."""
+        Ncm.cfg_init()
+
+        if self.experiment.suffix != ".yaml":
+            raise ValueError(
+                f"Invalid experiment file suffix: {self.experiment.suffix}"
+            )
+
+        dset = Ncm.Dataset.new()
+
+        if self.target == SamplerTestTarget.GAUSS_CONSTRAINT:
+            # Same seed as the published runs, so the covariance is reproducible.
+            rng = Ncm.RNG.seeded_new(None, 0)
+            mset, _ = create_gauss_constraint_mset(self.dim)
+            dset.append_data(
+                create_gauss_constraint_data(mset, self.dim, rng, verbose=False)
+            )
+        elif self.target == SamplerTestTarget.FUNNEL:
+            model = Ncm.ModelFunnel.new(self.dim - 1)
+            mset = Ncm.MSet.new_array([model])
+            dset.append_data(Ncm.DataFunnel.new())
+        elif self.target == SamplerTestTarget.ROSENBROCK:
+            mset = Ncm.MSet.new_array([Ncm.ModelRosenbrock()])
+            dset.append_data(Ncm.DataRosenbrock.new())
+        elif self.target == SamplerTestTarget.GAUSSMIX2D:
+            mset = Ncm.MSet.new_array([Ncm.ModelRosenbrock()])
+            dset.append_data(Ncm.DataGaussMix2D.new())
+        else:
+            raise ValueError(f"Unknown target: {self.target}")
+
+        mset.param_set_all_ftype(Ncm.ParamType.FREE)
+        mset.prepare_fparam_map()
+
+        experiment = Ncm.ObjDictStr()
+        experiment.set("likelihood", Ncm.Likelihood.new(dset))
+        experiment.set("model-set", mset)
+
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser.dict_str_to_yaml_file(experiment, self.experiment.absolute().as_posix())

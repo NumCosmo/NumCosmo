@@ -26,9 +26,16 @@
 /**
  * NcmDataDist2d:
  *
- * This object is designate to data that is described by a bivariate and arbitrary
- * distribution.
+ * Abstract class for a sample drawn from a two-dimensional distribution.
  *
+ * The data are #NcmDataDist2d:n-points pairs $(x_i, y_i)$, the rows of
+ * #NcmDataDist2d:matrix, each drawn independently from a distribution with density
+ * $p(x, y)$ given the models in a #NcmMSet, and $-2\ln L = \sum_i -2\ln p(x_i, y_i)$.
+ *
+ * Subclasses implement dist2d_m2lnL_val, which returns $-2\ln p(x, y)$ for one pair,
+ * and, to resample, inv_pdf, which maps two uniform numbers $u, v \in [0, 1]$ to a
+ * draw of the distribution, see ncm_data_dist2d_inv_pdf(). The default methods abort
+ * with a message naming the class.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -62,13 +69,6 @@ ncm_data_dist2d_init (NcmDataDist2d *dist2d)
 
   self->np = 0;
   self->m  = NULL;
-}
-
-static void
-_ncm_data_dist2d_constructed (GObject *object)
-{
-  /* Chain up : start */
-  G_OBJECT_CLASS (ncm_data_dist2d_parent_class)->constructed (object);
 }
 
 static void
@@ -127,18 +127,14 @@ ncm_data_dist2d_dispose (GObject *object)
   G_OBJECT_CLASS (ncm_data_dist2d_parent_class)->dispose (object);
 }
 
-static void
-ncm_data_dist2d_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_data_dist2d_parent_class)->finalize (object);
-}
-
 static guint _ncm_data_dist2d_get_length (NcmData *data);
 static void _ncm_data_dist2d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static void _ncm_data_dist2d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 static void _ncm_data_dist2d_set_size (NcmDataDist2d *dist2d, guint np);
 static guint _ncm_data_dist2d_get_size (NcmDataDist2d *dist2d);
+
+static gdouble _ncm_data_dist2d_default_m2lnL_val (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble x, gdouble y);
+static void _ncm_data_dist2d_default_inv_pdf (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble u, gdouble v, gdouble *x, gdouble *y);
 
 static void
 ncm_data_dist2d_class_init (NcmDataDist2dClass *klass)
@@ -147,13 +143,16 @@ ncm_data_dist2d_class_init (NcmDataDist2dClass *klass)
   NcmDataDist2dClass *dist2d_class = NCM_DATA_DIST2D_CLASS (klass);
   NcmDataClass *data_class         = NCM_DATA_CLASS (klass);
 
-  object_class->constructed  = &_ncm_data_dist2d_constructed;
   object_class->set_property = &_ncm_data_dist2d_set_property;
   object_class->get_property = &_ncm_data_dist2d_get_property;
+  object_class->dispose      = &ncm_data_dist2d_dispose;
 
-  object_class->dispose  = &ncm_data_dist2d_dispose;
-  object_class->finalize = &ncm_data_dist2d_finalize;
-
+  /**
+   * NcmDataDist2d:n-points:
+   *
+   * The number of points; changing it reallocates the data and marks it not
+   * initialized.
+   */
   g_object_class_install_property (object_class,
                                    PROP_NPOINTS,
                                    g_param_spec_uint ("n-points",
@@ -162,6 +161,11 @@ ncm_data_dist2d_class_init (NcmDataDist2dClass *klass)
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmDataDist2d:matrix:
+   *
+   * The sample, one pair $(x_i, y_i)$ per row.
+   */
   g_object_class_install_property (object_class,
                                    PROP_MATRIX,
                                    g_param_spec_object ("matrix",
@@ -177,10 +181,26 @@ ncm_data_dist2d_class_init (NcmDataDist2dClass *klass)
   data_class->resample  = &_ncm_data_dist2d_resample;
   data_class->m2lnL_val = &_ncm_data_dist2d_m2lnL_val;
 
-  dist2d_class->dist2d_m2lnL_val = NULL;
-  dist2d_class->inv_pdf          = NULL;
+  dist2d_class->dist2d_m2lnL_val = &_ncm_data_dist2d_default_m2lnL_val;
+  dist2d_class->inv_pdf          = &_ncm_data_dist2d_default_inv_pdf;
   dist2d_class->set_size         = &_ncm_data_dist2d_set_size;
   dist2d_class->get_size         = &_ncm_data_dist2d_get_size;
+}
+
+static gdouble
+_ncm_data_dist2d_default_m2lnL_val (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble x, gdouble y)
+{
+  g_error ("_ncm_data_dist2d_default_m2lnL_val: `%s' does not implement dist2d_m2lnL_val.",
+           G_OBJECT_TYPE_NAME (dist2d));
+
+  return 0.0;
+}
+
+static void
+_ncm_data_dist2d_default_inv_pdf (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble u, gdouble v, gdouble *x, gdouble *y)
+{
+  g_error ("_ncm_data_dist2d_default_inv_pdf: `%s' does not implement inv_pdf, so it cannot be resampled.",
+           G_OBJECT_TYPE_NAME (dist2d));
 }
 
 static guint
@@ -237,9 +257,6 @@ _ncm_data_dist2d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   NcmDataDist2dPrivate * const self = ncm_data_dist2d_get_instance_private (dist2d);
   NcmDataDist2dClass *dist2d_class  = NCM_DATA_DIST2D_GET_CLASS (data);
   guint i;
-
-  if (dist2d_class->inv_pdf == NULL)
-    g_error ("_ncm_data_dist2d_resample: This object do not implement the inverse of the pdf.");
 
   ncm_rng_lock (rng);
 
@@ -337,6 +354,9 @@ NcmMatrix *
 ncm_data_dist2d_get_data (NcmDataDist2d *dist2d)
 {
   NcmDataDist2dPrivate * const self = ncm_data_dist2d_get_instance_private (dist2d);
+
+  if (self->m == NULL)
+    g_error ("ncm_data_dist2d_get_data: data `%s' has no points.", ncm_data_peek_desc (NCM_DATA (dist2d)));
 
   return ncm_matrix_ref (self->m);
 }

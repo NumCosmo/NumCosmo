@@ -58,7 +58,7 @@ struct _NcmReparamClass
   NcmReparamV old2new;
   NcmReparamV new2old;
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
+  /* Padding to allow adding up to 16 more virtual functions without breaking ABI. */
   gpointer padding[16];
 };
 

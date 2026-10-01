@@ -37,6 +37,16 @@ G_BEGIN_DECLS
 
 G_DECLARE_DERIVABLE_TYPE (NcmMSetFunc1, ncm_mset_func1, NCM, MSET_FUNC1, NcmMSetFunc)
 
+/**
+ * NcmMSetFunc1N:
+ * @f1: a #NcmMSetFunc1
+ * @mset: a #NcmMSet
+ * @x: (array) (element-type double): function arguments
+ *
+ * The eval1 virtual function of #NcmMSetFunc1.
+ *
+ * Returns: (array) (element-type double) (transfer full): the function values.
+ */
 typedef GArray *(*NcmMSetFunc1N) (NcmMSetFunc1 *f1, NcmMSet *mset, GArray *x);
 
 struct _NcmMSetFunc1Class
@@ -53,7 +63,6 @@ NcmMSetFunc1 *ncm_mset_func1_ref (NcmMSetFunc1 *f1);
 
 void ncm_mset_func1_free (NcmMSetFunc1 *f1);
 void ncm_mset_func1_clear (NcmMSetFunc1 **f1);
-GArray *ncm_mset_func1_eval1 (NcmMSetFunc1 *f1, NcmMSet *mset, GArray *x);
 
 G_END_DECLS
 

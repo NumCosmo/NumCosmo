@@ -22,20 +22,6 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * NcmSFSBessel:
- *
- * Double precision spherical bessel implementation.
- *
- * Implementation of double precision spherical Bessel functions. This module leverages
- * the multiple precision spherical Bessel functions implementation for precise
- * computations. It involves converting the arguments to multiple precision, performing
- * the calculations, and then converting the results back to double precision, ensuring
- * accuracy in the computation of spherical Bessel functions with the convenience of
- * double precision output.
- *
- */
-
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -47,6 +33,7 @@
 #include "ncm/spline/ncm_spline_func.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_util.h"
+#include "ncm/algebra/ncm_matrix.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
@@ -59,9 +46,19 @@
  *
  * Spherical Bessel function array evaluator with automatic cutoff.
  *
- * This object efficiently evaluates spherical Bessel functions j_l(x) for multiple l values
- * using the Steed/Barnett algorithm. It includes automatic cutoff logic to prevent numerical
- * instability for high l values where j_l(x) becomes negligibly small.
+ * Evaluates $j_\ell(x)$ in double precision for every order from zero up to a requested
+ * maximum in a single call. The method depends on the argument: the first two terms of
+ * the Taylor series for $x$ near zero, upward recurrence when $x$ exceeds the highest
+ * order requested, and the Steed/Barnett continued fraction followed by downward
+ * recurrence otherwise [Comp. Phys. Comm. 21, 297 (1981)].
+ *
+ * Orders whose value would fall below #NcmSFSBesselArray:threshold are not computed and
+ * are returned as zero. The argument at which each order crosses the threshold is
+ * tabulated at construction from Debye's asymptotic form. Negative arguments use
+ * $j_\ell(-x) = (-1)^\ell j_\ell(x)$.
+ *
+ * This object does not use the multiple precision implementation. For a single
+ * $j_\ell(x)$ computed without cancellation error, use ncm_sf_sbessel().
  */
 
 struct _NcmSFSBesselArray
@@ -176,8 +173,8 @@ ncm_sf_sbessel_array_class_init (NcmSFSBesselArrayClass *klass)
   /**
    * NcmSFSBesselArray:lmax:
    *
-   * Maximum l value for which the array can compute spherical Bessel functions. This
-   * value is relevant to automatic cutoff logic.
+   * Largest order the array evaluates. The cutoff table holds one entry per order up to
+   * it.
    */
   g_object_class_install_property (object_class,
                                    PROP_LMAX,
@@ -190,15 +187,29 @@ ncm_sf_sbessel_array_class_init (NcmSFSBesselArrayClass *klass)
   /**
    * NcmSFSBesselArray:threshold:
    *
-   * Threshold value below which j_l(x) is considered negligible and set to zero.
+   * Value below which $|j_\ell(x)|$ is treated as zero.
    */
   g_object_class_install_property (object_class,
                                    PROP_THRESHOLD,
                                    g_param_spec_double ("threshold",
                                                         NULL,
                                                         "Threshold value",
-                                                        0.0, 1.0, 1.0e-100,
+                                                        1.0e-300, 1.0, 1.0e-100,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
+
+/*
+ * Debye's asymptotic form of ln j_ell(x) for x = nu sech(alpha) < nu, nu = ell + 1/2,
+ * written with ln cosh(alpha) so that it holds for large alpha.
+ */
+static gdouble
+_ncm_sf_sbessel_array_ln_jl_debye (const gdouble nu, const gdouble alpha)
+{
+  const gdouble t        = tanh (alpha);
+  const gdouble ln_cosh  = alpha + log1p (exp (-2.0 * alpha)) - M_LN2;
+  const gdouble ln_2pinu = log (2.0 * M_PI * nu);
+
+  return nu * (t - alpha) - 0.5 * (ln_2pinu + log (t)) + 0.5 * (log (M_PI / (2.0 * nu)) + ln_cosh);
 }
 
 static void
@@ -206,24 +217,71 @@ _ncm_sf_sbessel_array_build_cutoff_cache (NcmSFSBesselArray *sba)
 {
   const gdouble log_threshold = log (sba->threshold);
   const guint max_ell         = sba->lmax;
+  gdouble alpha               = 0.0;
   guint ell;
 
-  /* Allocate cache array indexed by ell */
   g_clear_pointer (&sba->ell_cutoff_x, g_free);
 
   sba->ell_cutoff_size = max_ell + 1;
   sba->ell_cutoff_x    = g_new (gdouble, sba->ell_cutoff_size);
 
-  /* Compute x value where j_ell(x) = threshold for each ell */
-  sba->ell_cutoff_x[0] = 0.0; /* ell=0 case */
+  /*
+   * x at which |j_ell(x)| reaches the threshold, from the Debye form. The root in alpha
+   * moves slowly with ell, so Newton's method started at the previous root converges in a
+   * few steps; the bracket [alpha_lo, alpha_hi] guards it.
+   */
+  sba->ell_cutoff_x[0] = 0.0;
 
   for (ell = 1; ell <= max_ell; ell++)
   {
-    const gdouble ell_d       = (gdouble) ell;
-    const gdouble ln_j_l_peak = log (fabs (0.447 / pow (ell_d, 2.0 / 3.0))); /* Approximate peak value of j_ell */
-    const gdouble x_ell       = exp (((1.0 + ell_d) * M_LN2 + lgamma (1.5 + ell_d) + log_threshold - 0.5 * M_PI - ln_j_l_peak) / ell_d);
+    const gdouble nu = ell + 0.5;
+    gdouble alpha_lo = GSL_DBL_EPSILON;
+    gdouble alpha_hi = 1.0;
+    gint iter;
 
-    sba->ell_cutoff_x[ell] = x_ell;
+    if (_ncm_sf_sbessel_array_ln_jl_debye (nu, alpha_lo) <= log_threshold)
+    {
+      /* No crossing below the turning point */
+      sba->ell_cutoff_x[ell] = nu;
+      continue;
+    }
+
+    while (_ncm_sf_sbessel_array_ln_jl_debye (nu, alpha_hi) > log_threshold)
+    {
+      alpha_lo  = alpha_hi;
+      alpha_hi *= 2.0;
+    }
+
+    if ((alpha <= alpha_lo) || (alpha >= alpha_hi))
+      alpha = 0.5 * (alpha_lo + alpha_hi);
+
+    for (iter = 0; iter < 200; iter++)
+    {
+      const gdouble t  = tanh (alpha);
+      const gdouble f  = _ncm_sf_sbessel_array_ln_jl_debye (nu, alpha) - log_threshold;
+      const gdouble df = -nu * t * t - 0.5 / t + t;
+      gdouble alpha_new;
+
+      if (f > 0.0)
+        alpha_lo = alpha;
+      else
+        alpha_hi = alpha;
+
+      alpha_new = alpha - f / df;
+
+      if ((alpha_new <= alpha_lo) || (alpha_new >= alpha_hi))
+        alpha_new = 0.5 * (alpha_lo + alpha_hi);
+
+      if (fabs (alpha_new - alpha) <= 1.0e-12 * alpha_new)
+      {
+        alpha = alpha_new;
+        break;
+      }
+
+      alpha = alpha_new;
+    }
+
+    sba->ell_cutoff_x[ell] = nu * exp (-(alpha + log1p (exp (-2.0 * alpha)) - M_LN2));
   }
 }
 
@@ -233,6 +291,8 @@ _ncm_sf_sbessel_array_get_ell_cutoff (NcmSFSBesselArray *sba, gdouble x)
 {
   guint lo = 0;
   guint hi = sba->ell_cutoff_size - 1;
+
+  x = fabs (x);
 
   /* If x is beyond our cache, return max ell */
   if (x >= sba->ell_cutoff_x[hi])
@@ -257,13 +317,13 @@ _ncm_sf_sbessel_array_get_ell_cutoff (NcmSFSBesselArray *sba, gdouble x)
 /**
  * ncm_sf_sbessel_array_new:
  *
- * Creates a new #NcmSFSBesselArray for computing spherical Bessel functions up to l =
- * 10000 with automatic cutoff at 1e-100.
+ * Creates a new #NcmSFSBesselArray with the default #NcmSFSBesselArray:lmax and
+ * #NcmSFSBesselArray:threshold.
  *
  * Returns: (transfer full): a new #NcmSFSBesselArray
  */
 NcmSFSBesselArray *
-ncm_sf_sbessel_array_new ()
+ncm_sf_sbessel_array_new (void)
 {
   NcmSFSBesselArray *sba = g_object_new (NCM_TYPE_SF_SBESSEL_ARRAY,
                                          NULL);
@@ -273,11 +333,10 @@ ncm_sf_sbessel_array_new ()
 
 /**
  * ncm_sf_sbessel_array_new_full:
- * @lmax: maximum l value
- * @threshold: threshold value below which j_l(x) is negligible
+ * @lmax: largest order
+ * @threshold: value below which $|j_\ell(x)|$ is treated as zero
  *
- * Creates a new #NcmSFSBesselArray for computing spherical Bessel functions
- * up to l = @lmax with automatic cutoff at @threshold.
+ * Creates a new #NcmSFSBesselArray.
  *
  * Returns: (transfer full): a new #NcmSFSBesselArray
  */
@@ -322,8 +381,7 @@ ncm_sf_sbessel_array_free (NcmSFSBesselArray *sba)
  * ncm_sf_sbessel_array_clear:
  * @sba: a #NcmSFSBesselArray
  *
- * If @sba is different from NULL, decreases the reference count of
- * @sba by one and sets @sba to NULL.
+ * If *@sba is not NULL, decreases its reference count by one and sets *@sba to NULL.
  */
 void
 ncm_sf_sbessel_array_clear (NcmSFSBesselArray **sba)
@@ -353,14 +411,13 @@ sbessel_upward (gint lmax, gdouble x, gdouble *jl)
 /**
  * ncm_sf_sbessel_array_eval: (skip)
  * @sba: a #NcmSFSBesselArray
- * @ell: maximum l value to compute (must be <= lmax)
- * @x: argument value
- * @jl_x: output array of size (ell+1) for j_l(x) values
+ * @ell: highest order
+ * @x: argument $x$
+ * @jl_x: output, @ell + 1 values
  *
- *
- * Computes spherical Bessel functions j_l(x) for l = 0 to min(ell, lmax, cutoff(x))
- * using the Steed/Barnett algorithm with automatic cutoff for numerical stability.
- * Values beyond the cutoff are set to zero.
+ * Fills @jl_x with $j_l(x)$ for $l = 0, \dots,$ @ell, which must not exceed
+ * #NcmSFSBesselArray:lmax. Orders above ncm_sf_sbessel_array_eval_ell_cutoff() are set
+ * to zero.
  */
 void
 ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble *jl_x)
@@ -370,7 +427,20 @@ ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble
   g_return_if_fail (NCM_IS_SF_SBESSEL_ARRAY (sba));
   g_return_if_fail (ell <= sba->lmax);
   g_return_if_fail (jl_x != NULL);
-  /* Initialize output array to zero */
+
+  if (x < 0.0)
+  {
+    /* j_l(-x) = (-1)^l j_l(x) */
+    guint l;
+
+    ncm_sf_sbessel_array_eval (sba, ell, -x, jl_x);
+
+    for (l = 1; l <= ell; l += 2)
+      jl_x[l] = -jl_x[l];
+
+    return;
+  }
+
   memset (jl_x, 0, sizeof (gdouble) * (ell + 1));
 
   /* Apply cutoff */
@@ -428,11 +498,7 @@ ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble
         F = -F;
 
       if (B > end)
-      {
-        g_warning ("ncm_sf_sbessel_array_eval: continued fraction did not converge for lmax=%d, x=%g", lmax, x);
-
-        return;
-      }
+        g_error ("ncm_sf_sbessel_array_eval: continued fraction did not converge for lmax=%d, x=%g", lmax, x);
     } while (fabs (del) >= fabs (FP) * GSL_DBL_EPSILON);
 
     FP *= F;
@@ -441,7 +507,6 @@ ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble
     {
       /* downward recursion */
       gdouble XP2 = FP;
-      gdouble PL  = lmax * x_inv;
       gint L      = lmax;
       gint LP;
 
@@ -450,10 +515,12 @@ ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble
 
       for (LP = 1; LP <= lmax; LP++)
       {
+        /* L / x directly: accumulating PL -= 1 / x loses digits over thousands of steps */
+        const gdouble PL = L * x_inv;
+
         jl_x[L - 1] = PL * jl_x[L] + XP2;
         FP          = PL * jl_x[L - 1] - jl_x[L];
         XP2         = FP;
-        PL         -= x_inv;
         --L;
       }
 
@@ -478,23 +545,150 @@ ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble
   }
 }
 
+/*
+ * Shared tables of j_ell over a fixed set of abscissae. Building one takes a fraction of a
+ * millisecond, so the store saves memory, not time: callers holding many objects over one
+ * grid, one integrator per multipole block say, share a single table. It keeps one
+ * reference per table for the life of the process, as the FFTW plan bookkeeping does; a
+ * weak cache would race eviction against lookup.
+ */
+typedef struct _NcmSFSBesselArrayTableKey
+{
+  GArray *x;
+  guint ell_max;
+  gdouble threshold;
+} NcmSFSBesselArrayTableKey;
+
+static guint
+_ncm_sf_sbessel_array_table_key_hash (gconstpointer p)
+{
+  const NcmSFSBesselArrayTableKey *key = p;
+  guint hash                           = key->ell_max * 2654435761u;
+  guint i;
+
+  hash ^= g_double_hash (&key->threshold);
+
+  for (i = 0; i < key->x->len; i++)
+  {
+    const gdouble v = g_array_index (key->x, gdouble, i);
+    guint64 bits;
+
+    memcpy (&bits, &v, sizeof (bits));
+    hash = hash * 31u + (guint) (bits ^ (bits >> 32));
+  }
+
+  return hash;
+}
+
+static gboolean
+_ncm_sf_sbessel_array_table_key_equal (gconstpointer pa, gconstpointer pb)
+{
+  const NcmSFSBesselArrayTableKey *a = pa;
+  const NcmSFSBesselArrayTableKey *b = pb;
+
+  if ((a->ell_max != b->ell_max) || (a->threshold != b->threshold) || (a->x->len != b->x->len))
+    return FALSE;
+
+  return memcmp (a->x->data, b->x->data, a->x->len * sizeof (gdouble)) == 0;
+}
+
+static void
+_ncm_sf_sbessel_array_table_key_free (gpointer p)
+{
+  NcmSFSBesselArrayTableKey *key = p;
+
+  g_array_unref (key->x);
+  g_free (key);
+}
+
+static GHashTable *_ncm_sf_sbessel_array_tables = NULL;
+static GMutex _ncm_sf_sbessel_array_tables_lock;
+
+/**
+ * ncm_sf_sbessel_array_ref_table:
+ * @sba: a #NcmSFSBesselArray
+ * @x: (element-type gdouble): the abscissae
+ * @ell_max: highest order, at most #NcmSFSBesselArray:lmax
+ *
+ * Table of $j_\ell(x_i)$ with one row per abscissa of @x and one column per $\ell$ from 0
+ * to @ell_max, so row $i$ holds that abscissa's multipoles in order and is contiguous.
+ *
+ * The table is shared process-wide, keyed on the abscissae, @ell_max and
+ * #NcmSFSBesselArray:threshold: a later call with the same three returns the same matrix.
+ * Release the returned reference with ncm_matrix_free(); the store keeps its own for the
+ * life of the process.
+ *
+ * Returns: (transfer full): the table, @x->len by @ell_max + 1
+ */
+NcmMatrix *
+ncm_sf_sbessel_array_ref_table (NcmSFSBesselArray *sba, GArray *x, guint ell_max)
+{
+  NcmSFSBesselArrayTableKey lookup;
+  NcmMatrix *table;
+
+  g_return_val_if_fail (NCM_IS_SF_SBESSEL_ARRAY (sba), NULL);
+  g_return_val_if_fail (x != NULL, NULL);
+  g_return_val_if_fail (x->len > 0, NULL);
+  g_return_val_if_fail (ell_max <= sba->lmax, NULL);
+
+  lookup.x         = x;
+  lookup.ell_max   = ell_max;
+  lookup.threshold = sba->threshold;
+
+  g_mutex_lock (&_ncm_sf_sbessel_array_tables_lock);
+
+  if (_ncm_sf_sbessel_array_tables == NULL)
+    _ncm_sf_sbessel_array_tables = g_hash_table_new_full (_ncm_sf_sbessel_array_table_key_hash,
+                                                          _ncm_sf_sbessel_array_table_key_equal,
+                                                          _ncm_sf_sbessel_array_table_key_free,
+                                                          (GDestroyNotify) ncm_matrix_free);
+
+  table = g_hash_table_lookup (_ncm_sf_sbessel_array_tables, &lookup);
+
+  if (table == NULL)
+  {
+    NcmSFSBesselArrayTableKey *key;
+    guint i;
+
+    table = ncm_matrix_new (x->len, ell_max + 1);
+
+    for (i = 0; i < x->len; i++)
+      ncm_sf_sbessel_array_eval (sba, ell_max, g_array_index (x, gdouble, i),
+                                 ncm_matrix_ptr (table, i, 0));
+
+    key            = g_new (NcmSFSBesselArrayTableKey, 1);
+    key->x         = g_array_ref (x);
+    key->ell_max   = ell_max;
+    key->threshold = sba->threshold;
+
+    g_hash_table_insert (_ncm_sf_sbessel_array_tables, key, table);
+  }
+
+  ncm_matrix_ref (table);
+  g_mutex_unlock (&_ncm_sf_sbessel_array_tables_lock);
+
+  return table;
+}
+
 /**
  * ncm_sf_sbessel_array_eval1:
  * @sba: a #NcmSFSBesselArray
- * @ell: maximum l value to compute (must be <= lmax)
- * @x: argument value
+ * @ell: highest order
+ * @x: argument $x$
  *
- * Convenience wrapper around ncm_sf_sbessel_array_eval that returns results in a new
- * GArray. The GArray is allocated with the appropriate size and contains the j_l(x)
- * values for l = 0 to min(ell, lmax, cutoff(x)). Values beyond the cutoff are set to
- * zero.
+ * Same as ncm_sf_sbessel_array_eval(), returning the values in a new array.
  *
- * Returns: (transfer full) (element-type gdouble): a new GArray containing j_l(x) values for l = 0 to min(ell, lmax, cutoff(x)).
+ * Returns: (transfer full) (element-type gdouble): $j_l(x)$ for $l = 0, \dots,$ @ell
  */
 GArray *
 ncm_sf_sbessel_array_eval1 (NcmSFSBesselArray *sba, guint ell, gdouble x)
 {
-  GArray *ret = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *ret;
+
+  g_return_val_if_fail (NCM_IS_SF_SBESSEL_ARRAY (sba), NULL);
+  g_return_val_if_fail (ell <= sba->lmax, NULL);
+
+  ret = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
   g_array_set_size (ret, ell + 1);
 
@@ -504,14 +698,59 @@ ncm_sf_sbessel_array_eval1 (NcmSFSBesselArray *sba, guint ell, gdouble x)
 }
 
 /**
+ * ncm_sf_sbessel_jl_deriv_from_array: (skip)
+ * @ell: order $\ell$
+ * @x: argument $x$
+ * @jl_x: $j_l(x)$ for $l = 0, \dots, \ell$ at least
+ *
+ * Computes $j_\ell'(x)$ from precomputed $j_l(x)$ values (such as those filled by
+ * ncm_sf_sbessel_array_eval()) using $j_\ell'(x) = j_{\ell-1}(x) - \frac{\ell+1}{x}
+ * j_\ell(x)$. The downward form keeps the required indices within $[0, \ell]$; its two
+ * terms agree to a factor of about two at small $x$, so no accuracy is lost to
+ * cancellation there. For $\ell = 0$ it returns $-j_1(x)$ evaluated directly.
+ *
+ * Returns: the value $j_\ell'(x)$
+ */
+gdouble
+ncm_sf_sbessel_jl_deriv_from_array (guint ell, gdouble x, const gdouble *jl_x)
+{
+  if (x == 0.0)
+    return (ell == 1) ? 1.0 / 3.0 : 0.0;
+
+  if (ell > 0)
+    return jl_x[ell - 1] - ((ell + 1.0) / x) * jl_x[ell];
+
+  return -gsl_sf_bessel_j1 (x);
+}
+
+/**
+ * ncm_sf_sbessel_xjl_deriv_from_array: (skip)
+ * @ell: order $\ell$
+ * @x: argument $x$
+ * @jl_x: $j_l(x)$ for $l = 0, \dots, \ell$ at least
+ *
+ * Computes $\left(x\, j_\ell(x)\right)'$ from precomputed $j_l(x)$ values using
+ * $\left(x\, j_\ell(x)\right)' = x\, j_{\ell-1}(x) - \ell\, j_\ell(x)$. For $\ell = 0$
+ * it returns $\cos(x)$ exactly.
+ *
+ * Returns: the value $\left(x\, j_\ell(x)\right)'$
+ */
+gdouble
+ncm_sf_sbessel_xjl_deriv_from_array (guint ell, gdouble x, const gdouble *jl_x)
+{
+  if (ell > 0)
+    return x * jl_x[ell - 1] - ell * jl_x[ell];
+
+  return cos (x);
+}
+
+/**
  * ncm_sf_sbessel_array_eval_ell_cutoff:
  * @sba: a #NcmSFSBesselArray
- * @x: argument value
+ * @x: argument $x$
  *
- * Determines the maximum l value for which j_l(x) is above the threshold.
- * For l values above this cutoff, j_l(x) is negligibly small and set to zero.
- *
- * Returns: the cutoff l value
+ * Returns: the highest order ncm_sf_sbessel_array_eval() computes at @x; the orders
+ * above it are below #NcmSFSBesselArray:threshold
  */
 guint
 ncm_sf_sbessel_array_eval_ell_cutoff (NcmSFSBesselArray *sba, gdouble x)
@@ -525,9 +764,7 @@ ncm_sf_sbessel_array_eval_ell_cutoff (NcmSFSBesselArray *sba, gdouble x)
  * ncm_sf_sbessel_array_get_lmax:
  * @sba: a #NcmSFSBesselArray
  *
- * Gets the maximum l value for this array.
- *
- * Returns: the lmax value
+ * Returns: the #NcmSFSBesselArray:lmax
  */
 guint
 ncm_sf_sbessel_array_get_lmax (NcmSFSBesselArray *sba)
@@ -541,9 +778,7 @@ ncm_sf_sbessel_array_get_lmax (NcmSFSBesselArray *sba)
  * ncm_sf_sbessel_array_get_threshold:
  * @sba: a #NcmSFSBesselArray
  *
- * Gets the threshold value for this array.
- *
- * Returns: the threshold value
+ * Returns: the #NcmSFSBesselArray:threshold
  */
 gdouble
 ncm_sf_sbessel_array_get_threshold (NcmSFSBesselArray *sba)
@@ -555,10 +790,17 @@ ncm_sf_sbessel_array_get_threshold (NcmSFSBesselArray *sba)
 
 /**
  * ncm_sf_sbessel:
- * @l: Spherical Bessel order $\ell$
- * @x: Spherical Bessel argument $x$
+ * @l: order $\ell$
+ * @x: argument $x$
  *
- * Computes Spherical Bessel function $j_\ell(x)$.
+ * Computes the spherical Bessel function $j_\ell(x)$.
+ *
+ * The computation goes through ncm_mpsf_sbessel_d(), which takes @x exactly as a
+ * rational and evaluates $j_\ell(x)$ by binary splitting in exact integer arithmetic.
+ * The cancellation between series terms is therefore exact, and only the conversion of
+ * the result to double rounds.
+ *
+ * Underflows to zero when $|j_\ell(x)|$ is below the smallest representable double.
  *
  * Returns: the value of $j_\ell(x)$.
  */
@@ -589,13 +831,16 @@ _taylor_jl (const glong l, const gdouble x, const gdouble x2, const gdouble x3, 
 
 /**
  * ncm_sf_sbessel_taylor:
- * @l: Spherical Bessel order $\ell$
- * @x: Spherical Bessel argument $x$
- * @djl: (out) (array fixed-size=4): Output power series coefficients
+ * @l: order $\ell$
+ * @x: argument $x \neq 0$
+ * @djl: (out) (array fixed-size=4): the Taylor coefficients
  *
- * Computes Spherical Bessel function power series
- * coefficients up to order three, i.e.,
- * $$\left(j_\ell(x),\; j'_\ell(x), \frac{j''_\ell(x)}{2!}, \frac{j'''_\ell(x)}{3!}\right).$$
+ * Computes the Taylor coefficients of $j_\ell$ at @x up to third order,
+ * $$
+ * \left(j_\ell(x),\; j'_\ell(x),\; \frac{j''_\ell(x)}{2!},\;
+ * \frac{j'''_\ell(x)}{3!}\right),
+ * $$
+ * from $j_\ell(x)$ and $j_{\ell+1}(x)$ given by ncm_sf_sbessel().
  */
 void
 ncm_sf_sbessel_taylor (gulong l, gdouble x, gdouble *djl)
@@ -620,15 +865,15 @@ _ncm_sf_sbessel_spline_calc (gdouble x, gpointer data)
 
 /**
  * ncm_sf_sbessel_spline:
- * @l: Spherical Bessel order $\ell$.
- * @xi: Spherical Bessel interval lower-bound $x_i$.
- * @xf: Spherical Bessel interval lower-bound $x_f$.
- * @reltol: Interpolation error tolerance.
+ * @l: order $\ell$
+ * @xi: lower limit $x_i$
+ * @xf: upper limit $x_f$
+ * @reltol: relative tolerance
  *
- * Computes a spline approximation of the Spherical Bessel
- * $j_\ell$ in the interval $[x_i, x_f]$.
+ * Builds a cubic not-a-knot spline of $j_\ell$ on $[x_i, x_f]$, placing the knots with
+ * #NCM_SPLINE_FUNCTION_SPLINE until the interpolation meets @reltol.
  *
- * Returns: (transfer full): A #NcmSpline with the Spherical Bessel approximation.
+ * Returns: (transfer full): the spline
  */
 NcmSpline *
 ncm_sf_sbessel_spline (gulong l, gdouble xi, gdouble xf, gdouble reltol)

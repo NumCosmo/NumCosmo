@@ -26,23 +26,17 @@
 /**
  * NcmPriorGauss:
  *
- * A gaussian prior for NcmLikelihood.
+ * Base class for Gaussian priors.
  *
- * This object is a subclass of #NcmPrior, serving as a base class for Gaussian priors
- * used by NcmLikelihood. These objects describe Gaussian prior distributions
- * applicable to parameters or any derived quantity.
- *
- * The Gaussian prior is defined as:
+ * This object is a subclass of #NcmPrior and the base class of the Gaussian priors used
+ * by #NcmLikelihood, on a parameter (#NcmPriorGaussParam) or on a derived quantity
+ * (#NcmPriorGaussFunc). The subclass provides the quantity $x$; the prior returns the
+ * least-squares form
  * $$
- * -2\ln P(x) = \frac{\left(x - \mu\right)^2}{\sigma},
+ * f = \frac{x - \mu}{\sigma}, \qquad -2\ln P(x) = f^2 = \frac{\left(x - \mu\right)^2}{\sigma^2},
  * $$
- * where $\mu$ is the mean and $\sigma$ is the standard deviation. This Gaussian prior
- * places higher probability density around the mean and decreases exponentially as the
- * parameter deviates from the mean.
- *
- * The prior is not normalized. It is particularly useful for defining a Gaussian prior
- * when the analysis benefits from a smooth and symmetric distribution around the mean.
- * Additionally, it is compatible with least-squares based analysis.
+ * where $\mu$ is the mean and $\sigma$ the standard deviation. The prior is not
+ * normalized.
  *
  */
 
@@ -64,7 +58,6 @@ enum
 typedef struct _NcmPriorGaussPrivate
 {
   /*< private >*/
-  NcmPrior parent_instance;
   gdouble mu;
   gdouble sigma;
   gdouble var;
@@ -130,14 +123,15 @@ _ncm_prior_gauss_get_property (GObject *object, guint prop_id, GValue *value, GP
   }
 }
 
-static void
-_ncm_prior_gauss_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_prior_gauss_parent_class)->finalize (object);
-}
-
 static void _ncm_prior_gauss_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res);
+
+static gdouble
+_ncm_prior_gauss_mean (NcmPriorGauss *pg, NcmMSet *mset)
+{
+  g_error ("method mean not implemented by %s.", G_OBJECT_TYPE_NAME (pg));
+
+  return 0.0;
+}
 
 static void
 ncm_prior_gauss_class_init (NcmPriorGaussClass *klass)
@@ -147,33 +141,52 @@ ncm_prior_gauss_class_init (NcmPriorGaussClass *klass)
 
   object_class->set_property = &_ncm_prior_gauss_set_property;
   object_class->get_property = &_ncm_prior_gauss_get_property;
-  object_class->finalize     = &_ncm_prior_gauss_finalize;
 
+  /**
+   * NcmPriorGauss:mu:
+   *
+   * The mean $\mu$. Default: 0.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_MU,
                                    g_param_spec_double ("mu",
                                                         NULL,
-                                                        "mean",
+                                                        "Mean",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmPriorGauss:sigma:
+   *
+   * The standard deviation $\sigma$, positive. Default: 1.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_SIGMA,
                                    g_param_spec_double ("sigma",
                                                         NULL,
-                                                        "standard deviation",
+                                                        "Standard deviation",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmPriorGauss:variable:
+   *
+   * The argument passed to the mean function of #NcmPriorGaussFunc; the other
+   * subclasses do not read it. Default: 0.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_VARIABLE,
                                    g_param_spec_double ("variable",
                                                         NULL,
-                                                        "variable",
+                                                        "Argument of the mean function",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   NCM_PRIOR_CLASS (klass)->is_m2lnL = FALSE;
   mset_func_class->eval             = &_ncm_prior_gauss_eval;
+  klass->mean                       = &_ncm_prior_gauss_mean;
 }
 
 static void
@@ -262,9 +275,9 @@ ncm_prior_gauss_set_sigma (NcmPriorGauss *pg, const gdouble sigma)
 /**
  * ncm_prior_gauss_set_var:
  * @pg: a #NcmPriorGauss
- * @var: variable
+ * @var: argument of the mean function
  *
- * Sets the variable of @pg.
+ * Sets #NcmPriorGauss:variable.
  *
  */
 void
@@ -307,7 +320,7 @@ ncm_prior_gauss_get_sigma (NcmPriorGauss *pg)
  * ncm_prior_gauss_get_var:
  * @pg: a #NcmPriorGauss
  *
- * Returns: the variable of @pg.
+ * Returns: #NcmPriorGauss:variable.
  */
 gdouble
 ncm_prior_gauss_get_var (NcmPriorGauss *pg)

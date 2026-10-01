@@ -26,11 +26,9 @@
 /**
  * NcmSplineCubicD2:
  *
- * Cubic spline implementation given second derivatives.
- *
- * This object implements the necessary functions to compute a cubic spline with where
- * the user provides the second derivatives of the function.
- *
+ * Cubic spline with given second derivatives at the knots, so that no linear system is
+ * solved. The second derivatives are copied, by ncm_spline_cubic_d2_new() and
+ * ncm_spline_cubic_d2_set_d2(); changing the knots or values alone keeps them.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -197,15 +195,14 @@ _ncm_spline_cubic_d2_min_size (const NcmSpline *s)
 
 /**
  * ncm_spline_cubic_d2_new:
- * @xv: #NcmVector of knots
- * @yv: #NcmVector of the values of the function to be interpolated, computed at @xv
- * @d2yv: #NcmVector of the values of the second derivative of the function to be interpolated, computed at @xv
- * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it
+ * @xv: the knots
+ * @yv: the values at @xv
+ * @d2yv: the second derivatives at @xv
+ * @init: whether to prepare the new spline
  *
- * This function returns a new #NcmSpline setting all its members.
- * It makes a copy of the @d2yv vector and saves it internally.
+ * Creates the spline, copying @d2yv.
  *
- * Returns: a new #NcmSpline.
+ * Returns: a new #NcmSplineCubicD2.
  */
 NcmSplineCubicD2 *
 ncm_spline_cubic_d2_new (NcmVector *xv, NcmVector *yv, NcmVector *d2yv, gboolean init)
@@ -222,5 +219,24 @@ ncm_spline_cubic_d2_new (NcmVector *xv, NcmVector *yv, NcmVector *d2yv, gboolean
     ncm_spline_prepare (NCM_SPLINE (scd2));
 
   return scd2;
+}
+
+/**
+ * ncm_spline_cubic_d2_set_d2:
+ * @scd2: a #NcmSplineCubicD2
+ * @d2yv: the second derivatives at the knots
+ * @init: whether to prepare @scd2
+ *
+ * Copies @d2yv as the second derivatives. Aborts if its length is not the number of knots.
+ */
+void
+ncm_spline_cubic_d2_set_d2 (NcmSplineCubicD2 *scd2, NcmVector *d2yv, gboolean init)
+{
+  g_assert_cmpuint (ncm_vector_len (d2yv), ==, ncm_spline_get_len (NCM_SPLINE (scd2)));
+
+  ncm_vector_memcpy (scd2->d2, d2yv);
+
+  if (init)
+    ncm_spline_prepare (NCM_SPLINE (scd2));
 }
 

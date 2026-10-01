@@ -70,7 +70,7 @@ def _integrator() -> Ncm.SBesselIntegrator:
     return Ncm.SBesselIntegratorLevin.new(0, 8)
 
 
-# Every kernel here runs at the library's default tolerances. scaled-abstol
+# Every kernel here runs at the library's default tolerances. peak-epsilon
 # floors W_ell(k) against its own peak, but the C_ell integrand is k^2 W_1 W_2,
 # so the floor enters squared: the 1e-4 default is already 1e-8 on what is
 # integrated, which is about what the outer integral can carry. Overriding it to
@@ -610,7 +610,7 @@ def _cl_reference(
 # (shape, ell, rtol), at the library's default tolerances.
 #
 # The tolerances differ per shape because the achieved accuracy does, and by two
-# orders of magnitude. scaled-abstol floors W(k) against its own *peak*, so how
+# orders of magnitude. peak-epsilon floors W(k) against its own *peak*, so how
 # much of the contributing k-range it discards depends on how broad the window
 # is. Measured at ell = 8 against the quadrature below:
 #
@@ -622,7 +622,7 @@ def _cl_reference(
 # Nothing is wrong with the solver: a broad window carries weight over more of
 # the k-range, so the same peak-relative floor throws away more of it. The
 # numbers below are what the default delivers, not a target -- tightening the
-# floor moves them, at the cost documented in NcXcorKernel:scaled-abstol.
+# floor moves them, at the cost documented in NcXcorKernel:peak-epsilon.
 CL_CASES = [
     ("gauss", 2, 1.0e-5),
     ("gauss", 8, 1.0e-5),
@@ -1289,3 +1289,138 @@ def test_limber_agrees_with_non_limber_under_scale_dependence():
         limber = _cl(k_li, Nc.XcorMethod.LIMBER_Z_CUBATURE)
 
         assert limber == pytest.approx(non_limber, rel=5.0e-3)
+
+
+# ------------------------------------------------ component boundaries ---
+#
+# The adaptive k range drops a component where it is negligible, so the block
+# the closure fits jumps there by the component's size. The Chebyshev closure
+# makes every such boundary a panel edge and samples each panel with only the
+# components whose support contains it; pieces of one continuous window are
+# truncated together on the size of their sum. The observable is the panel
+# layout: a segment between two boundaries is bisected on its own, so a
+# boundary is an edge that is not a dyadic fraction of the domain.
+
+
+def _panel_edges(integrand: Nc.XcorKernelIntegrand) -> np.ndarray:
+    n_panels = integrand.get_n_panels()
+
+    return np.array(
+        [integrand.peek_panel(0)[1]]
+        + [integrand.peek_panel(i)[2] for i in range(n_panels)]
+    )
+
+
+def _interior_edges_are_dyadic(edges: np.ndarray) -> np.ndarray:
+    fraction = (edges[1:-1] - edges[0]) / (edges[-1] - edges[0])
+    scaled = fraction * 2.0**16
+
+    return np.abs(scaled - np.round(scaled)) < 1.0e-6
+
+
+def test_disjoint_component_boundaries_are_panel_edges(cosmology: Cosmology) -> None:
+    """Two disjoint bumps have different k supports, so each is cut inside the
+    other's range; the cut is a panel edge and the closure still describes the
+    same truncated function the spline closure does."""
+    kernel = _multi(cosmology, MULTI_DISJOINT_MEAN, MULTI_DISJOINT_SIGMA)
+    lmin, lmax = 2, 9
+
+    cheb = kernel.get_eval_vectorized_full(
+        cosmology.cosmo, lmin, lmax, _integrator(), Nc.XcorKernelClosure.CHEBYSHEV
+    )
+    spline = kernel.get_eval_vectorized_full(
+        cosmology.cosmo, lmin, lmax, _integrator(), Nc.XcorKernelClosure.SPLINE
+    )
+
+    assert not np.all(_interior_edges_are_dyadic(_panel_edges(cheb)))
+
+    lo, hi = cheb.get_range()
+    ks = np.geomspace(lo * 1.001, hi * 0.999, 400)
+    got = np.array([cheb.eval_array(k) for k in ks])
+    ref = np.array([spline.eval_array(k) for k in ks])
+
+    assert np.all(np.abs(got - ref).max(axis=0) / np.abs(ref).max(axis=0) < 1.0e-4)
+
+
+def test_a_visible_jump_at_a_component_boundary_does_not_split_the_panel(
+    cosmology: Cosmology,
+) -> None:
+    """With adaptive-epsilon at 1e-3 the jump is a thousandth of the block,
+    above the default fit tolerance. Fitted across, the doubling test never
+    passes and the splitter bisects to its width guard; with the boundary as an
+    edge the panel count stays at what the smooth pieces need, and the peaks,
+    which the truncation does not touch, are unchanged."""
+    lmin, lmax = 2, 9
+
+    def peaks_and_panels(epsilon):
+        kernel = _multi(cosmology, MULTI_DISJOINT_MEAN, MULTI_DISJOINT_SIGMA)
+        kernel.set_adaptive_epsilon(epsilon)
+        closure = kernel.get_eval_vectorized_full(
+            cosmology.cosmo,
+            lmin,
+            lmax,
+            _integrator(),
+            Nc.XcorKernelClosure.CHEBYSHEV,
+        )
+        lo, hi = closure.get_range()
+        ks = np.geomspace(lo, hi, 2000)
+        values = np.array([closure.eval_array(k) for k in ks])
+
+        return np.abs(values).max(axis=0), closure.get_n_panels()
+
+    peaks_ref, _ = peaks_and_panels(1.0e-5)
+    peaks, n_panels = peaks_and_panels(1.0e-3)
+
+    assert n_panels <= 12
+    assert_allclose(peaks, peaks_ref, rtol=1.0e-3)
+
+
+def test_pieces_of_one_window_are_truncated_together(cosmology: Cosmology) -> None:
+    """The lensing efficiency is two components meeting at the source edge.
+    Their k-space edge tails cancel in the sum, so cutting one alone would leave
+    the other's tail behind; cut together, on the size of their sum, no boundary
+    falls inside the domain and the panels are plain bisections of it."""
+    kernel = _lensing(cosmology)
+
+    for lmin, lmax in ((2, 9), (50, 57)):
+        closure = kernel.get_eval_vectorized_full(
+            cosmology.cosmo,
+            lmin,
+            lmax,
+            Ncm.SBesselIntegratorLevin.new(lmin, lmax),
+            Nc.XcorKernelClosure.CHEBYSHEV,
+        )
+
+        assert np.all(_interior_edges_are_dyadic(_panel_edges(closure)))
+
+
+def test_chebyshev_panels_are_checked_against_the_expansion_samples(
+    cosmology: Cosmology,
+) -> None:
+    """A tiny adaptive-epsilon makes the domain five decades wide, and the
+    first Chebyshev grid starts past the peak. Both levels of the doubling test
+    then see a small smooth function and agree. The expansion's own samples sit
+    on the peak, and a panel that misses them is split rather than kept."""
+    kernel = _multi(cosmology, MULTI_DISJOINT_MEAN, MULTI_DISJOINT_SIGMA)
+    kernel.set_adaptive_epsilon(1.0e-11)
+    kernel.set_reltol(1.0e-6)
+    kernel.set_peak_epsilon(1.0e-6)
+    ell = 10
+
+    def peak(closure_type):
+        closure = kernel.get_eval_vectorized_full(
+            cosmology.cosmo,
+            ell,
+            ell,
+            Ncm.SBesselIntegratorLevin.new(ell, ell),
+            closure_type,
+        )
+        lo, hi = closure.get_range()
+        ks = np.geomspace(lo, hi, 20000)
+
+        return max(abs(closure.eval_array(k)[0]) for k in ks)
+
+    cheb = peak(Nc.XcorKernelClosure.CHEBYSHEV)
+    spline = peak(Nc.XcorKernelClosure.SPLINE)
+
+    assert cheb == pytest.approx(spline, rel=1.0e-5)

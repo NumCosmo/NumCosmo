@@ -57,7 +57,32 @@ typedef enum /*< enum,underscore_name=NC_XCOR_KERNEL_CMB_LENSING_SPARAMS,prefix=
 
 #define NC_XCOR_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL (0.0)
 
+/**
+ * NcXcorKernelCMBLensingSource:
+ * @NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN: every CMB photon last scatters at the decoupling redshift of the #NcDistance
+ * @NC_XCOR_KERNEL_CMB_LENSING_SOURCE_VISIBILITY: the sources follow the visibility function of the #NcXcorKernelCMBLensing:recomb object over the last-scattering shell, normalized to unit integral there
+ * @NC_XCOR_KERNEL_CMB_LENSING_SOURCE_VISIBILITY_REIONIZATION: the sources follow the full visibility function, the reionization bump included
+ *
+ * Where the CMB photons are placed along the line of sight. The thin screen is
+ * the usual single source plane at $z_*$. The visibility source integrates the
+ * lensing efficiency over the last-scattering shell, whose width in comoving
+ * distance is about one percent of $\chi_*$. With reionization, the tenth of
+ * the photons that last scatter at $z \sim 10$ are lensed only by the structure
+ * in front of them: between the reionization bump and the shell the kernel is
+ * lowered by that fraction, while at low redshift, where every source is far
+ * away, the two visibility sources agree.
+ */
+typedef enum _NcXcorKernelCMBLensingSource /*< prefix=NC_XCOR_KERNEL_CMB_LENSING_SOURCE >*/
+{
+  NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN = 0,
+  NC_XCOR_KERNEL_CMB_LENSING_SOURCE_VISIBILITY,
+  NC_XCOR_KERNEL_CMB_LENSING_SOURCE_VISIBILITY_REIONIZATION,
+} NcXcorKernelCMBLensingSource;
+
 NcXcorKernelCMBLensing *nc_xcor_kernel_cmb_lensing_new (NcDistance *dist, NcmPowspec *ps, NcRecomb *recomb, NcmVector *Nl);
+
+void nc_xcor_kernel_cmb_lensing_set_source (NcXcorKernelCMBLensing *xclkl, NcXcorKernelCMBLensingSource source);
+NcXcorKernelCMBLensingSource nc_xcor_kernel_cmb_lensing_get_source (NcXcorKernelCMBLensing *xclkl);
 
 G_END_DECLS
 

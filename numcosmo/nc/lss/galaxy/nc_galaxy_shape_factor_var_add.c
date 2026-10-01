@@ -51,7 +51,7 @@
  * map and its exact Jacobian at a single pulled-back point. It keeps the
  * plane-instead-of-disc approximation, that is the untruncated Gaussian
  * normalization. See the
- * <a href="../../theory/wl_ellipticity.html#the-variance-add-approximation">Variance-Add Approximation</a>
+ * <a href="../../theory/nc/lss/galaxy/wl_ellipticity.html#the-variance-add-approximation">Variance-Add Approximation</a>
  * section of the theory page for the derivation.
  *
  * The variance addition is defined only for a population parameterized by an

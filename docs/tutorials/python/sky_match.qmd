@@ -79,24 +79,24 @@ While these configurations do not represent typical observational distributions,
 
 We use a simple random distribution to assign positions, redshifts, and masses to both clusters and halos:  
 
-- **Positions**:  
+- Positions:  
   - Defined by right ascension (RA) and declination (Dec) in degrees.  
   - RA is uniformly sampled in the range $[-10^\circ, 10^\circ]$.  
   - Dec is sampled uniformly in $\sin(\text{Dec})$ and converted back to degrees to ensure uniform coverage on the sphere.  
 
-- **Redshifts**:  
+- Redshifts:  
   - Uniformly distributed between 0.2 and 0.5.  
 
-- **Masses**:  
+- Masses:  
   - Sampled uniformly in $\log_{10} M_{\odot}$ within the range $[13, 15]$.
   - The additional 100 halos are sampled uniformly in $\log_{10} M_{\odot}$ within the range $[10, 13]$.
 
 To demonstrate the matching process, we generate:  
 
-- **100 galaxy clusters**, each with assigned positions, redshifts, and masses.  
-- **200 halos**, with two different placement strategies:  
-  1. **First 100 halos** are placed within 5 Mpc of a cluster's position (in each dimension), simulating a correlated distribution.  
-  2. **Remaining 100 halos** are distributed randomly to provide a broader test case.  
+- 100 galaxy clusters, each with assigned positions, redshifts, and masses.  
+- 200 halos, with two different placement strategies:  
+  1. First 100 halos are placed within 5 Mpc of a cluster's position (in each dimension), simulating a correlated distribution.  
+  2. Remaining 100 halos are distributed randomly to provide a broader test case.  
 
 This setup ensures that some halos are closely associated with clusters, while others are randomly placed to create a more comprehensive matching scenario.  
 
@@ -161,7 +161,10 @@ We plot the generated cluster and halo positions, with the dot sizes proportiona
 
 ```{python}
 # | label: fig-cluster-halo
-# | fig-cap: Cluster (red) and halo (blue) positions in the sky with sizes proportional to log mass. The redshift ranges from 0.2 to 0.5 and is indicated on the color intensity scale.
+# | fig-cap: >
+# |   Cluster (red) and halo (blue) positions in the sky with sizes proportional to log
+# |   mass. The redshift ranges from 0.2 to 0.5 and is indicated on the color intensity
+# |   scale.
 # | fig-cap-location: margin
 # | fig-width: 100%
 # | code-fold: true
@@ -205,8 +208,8 @@ halo_scatter = ax.scatter(
 # Colorbar to indicate redshift values
 color_bar = plt.colorbar(halo_scatter, ax=ax, label="Redshift (z)")
 
-ax.set_xlabel("Right Ascension (RA) [°]")
-ax.set_ylabel("Declination (Dec) [°]")
+ax.set_xlabel(r"Right Ascension (RA) [$^\circ$]")
+ax.set_ylabel(r"Declination (Dec) [$^\circ$]")
 ax.set_xlim(RA_MIN, RA_MAX)
 ax.set_ylim(DEC_MIN, DEC_MAX)
 ax.legend()
@@ -586,8 +589,8 @@ plt.show()
 The `select_best` method lets every cluster independently pick its nearest halo, so nothing prevents two clusters from claiming the *same* halo.
 The cross match above resolves this conservatively: it keeps only pairs that are each other's best (mutual matches) and discards the rest.
 
-The `select_best_assignment` method offers a third option, a **global one-to-one assignment** that minimizes the total matched distance.
-It builds the bipartite cluster–halo graph (edges weighted by distance, restricted to the supplied `mask`), splits it into connected components, and solves a minimum-weight matching on each.
+The `select_best_assignment` method offers a third option, a global one-to-one assignment that minimizes the total matched distance.
+It builds the bipartite cluster--halo graph (edges weighted by distance, restricted to the supplied `mask`), splits it into connected components, and solves a minimum-weight matching on each.
 The result assigns halos to clusters with the smallest possible total distance while guaranteeing that no halo is used twice.
 
 ```{python}
@@ -622,7 +625,7 @@ The table below compares them on the filtered 3D matches:
 
 ```{python}
 # | label: tbl-sky-match-3d-strategies
-# | tbl-cap: Comparison of the best-match selection strategies on the filtered 3D matches.
+# | tbl-cap: Best-match selection strategies on the filtered 3D matches.
 # | tbl-cap-location: margin
 # | tbl-width: 100%
 # | code-fold: true
@@ -659,8 +662,8 @@ The mutual-best cross match is the most conservative: it keeps the fewest pairs,
 ### When the Methods Disagree
 
 On the well-separated catalog above the three strategies nearly coincide.
-They diverge when objects contend for the same match — for instance when a cluster finder splits a single halo into several detections.
-To see this, we build a small catalog in which five of the ten halos are each detected as **three** clusters (two more halos are detected once, and the last two are missed), plus two spurious detections with no associated halo.
+They diverge when objects contend for the same match --- for instance when a cluster finder splits a single halo into several detections.
+To see this, we build a small catalog in which five of the ten halos are each detected as three clusters (two more halos are detected once, and the last two are missed), plus two spurious detections with no associated halo.
 
 ```{python}
 def radecz_to_xyz(ra, dec, z):
@@ -726,7 +729,7 @@ Greedy lets *both* detections of a fragmented halo keep it, so that halo is matc
 
 ```{python}
 # | label: tbl-sky-match-contended
-# | tbl-cap: The three strategies on the contended catalog. Greedy reuses the five fragmented halos.
+# | tbl-cap: Strategies on the contended catalog; greedy reuses the fragmented halos.
 # | tbl-cap-location: margin
 # | tbl-width: 100%
 # | code-fold: true
@@ -750,11 +753,13 @@ HTML(
 )
 ```
 
-The plot makes the difference concrete: in the greedy panel each of the five fragmented halos sits at the centre of a *fan* of three clusters (the colliding detections), while the assignment panel keeps a single cluster per halo — and reassigns some of the displaced detections to other nearby halos.
+The plot makes the difference concrete: in the greedy panel each of the five fragmented halos sits at the centre of a *fan* of three clusters (the colliding detections), while the assignment panel keeps a single cluster per halo --- and reassigns some of the displaced detections to other nearby halos.
 
 ```{python}
 # | label: fig-sky-match-contended
-# | fig-cap: "Greedy (left) double-books the fragmented halos; the global assignment (right) is one-to-one."
+# | fig-cap: >
+# |   Greedy (left) double-books the fragmented halos; the global assignment (right) is
+# |   one-to-one.
 # | fig-cap-location: margin
 # | fig-width: 100%
 # | code-fold: true
@@ -818,7 +823,7 @@ The table below shows these distances in mega-parsecs (Mpc):
 
 ```{python}
 # | label: tbl-sky-match-2d
-# | tbl-cap: The distances between clusters and halos computed using the cluster redshifts.
+# | tbl-cap: Cluster-halo distances computed with the cluster redshifts.
 # | tbl-cap-location: margin
 # | tbl-width: 100%
 # | code-fold: true
@@ -836,9 +841,9 @@ If we had used halo redshifts instead, we would still obtain a lower bound on th
 
 To refine the matching process, we apply filters based on distance and redshift criteria.  
 
-Since the computed distances provide only a **lower bound**—meaning the actual 3D separations could be larger, we set a **distance threshold of 60 Mpc** to exclude pairs that are likely too far apart.  
+Since the computed distances provide only a lower bound---meaning the actual 3D separations could be larger, we set a distance threshold of 60 Mpc to exclude pairs that are likely too far apart.  
 
-Additionally, we apply a **redshift filter**, retaining only pairs where the redshift difference is **below 0.02**, ensuring the matches remain within a physically relevant range.  
+Additionally, we apply a redshift filter, retaining only pairs where the redshift difference is below 0.02, ensuring the matches remain within a physically relevant range.  
 
 ```{python}
 # Apply a distance filter to retain only matches within 60 Mpc
@@ -854,7 +859,7 @@ The filtered table is shown below:
 
 ```{python}
 # | label: tbl-sky-match-2d-filtered
-# | tbl-cap: Filtered distances between clusters and halos computed using cluster redshifts.
+# | tbl-cap: Filtered cluster-halo distances, using the cluster redshifts.
 # | tbl-cap-location: margin
 # | tbl-width: 100%
 # | code-fold: true
@@ -866,7 +871,9 @@ The plot below illustrates the filtered results:
 
 ```{python}
 # | label: fig-sky-match-2d-filtered
-# | fig-cap: The filtered distances between clusters and halos computed using the cluster redshifts.
+# | fig-cap: >
+# |   The filtered distances between clusters and halos computed using the cluster
+# |   redshifts.
 # | fig-cap-location: margin
 # | fig-width: 100%
 # | code-fold: true
@@ -875,13 +882,13 @@ plot_mask(mask)
 plt.show()
 ```
 
-The refined selection highlights **cluster-halo pairs that are both spatially and redshift-wise well-matched** within the relevant observational range.  
+The refined selection highlights cluster-halo pairs that are both spatially and redshift-wise well-matched within the relevant observational range.  
 
 ### Best Match Selection  
 
-To further refine the associations, we use the `select_best` method to identify the **most suitable halo for each cluster**.
+To further refine the associations, we use the `select_best` method to identify the most suitable halo for each cluster.
 
-We specify the `selection_criteria` as **MORE_MASSIVE**, meaning we select the halo with the largest **halo_logM** value as the best match.  
+We specify the `selection_criteria` as MORE_MASSIVE, meaning we select the halo with the largest halo_logM value as the best match.  
 
 ```{python}
 # Find the best match for each cluster
@@ -926,7 +933,7 @@ plot_best(best)
 plt.show()
 ```
 
-This final selection ensures that each cluster is associated with the **most massive halo** within the given constraints, optimizing the matching process.
+This final selection ensures that each cluster is associated with the most massive halo within the given constraints, optimizing the matching process.
 
 ### Best Match by Global Assignment
 
@@ -951,7 +958,7 @@ plt.show()
 
 ### Cross Matching
 
-To improve the accuracy of our cluster-halo associations, we invert the catalogs with `invert_query_match` and combine the two best-match results with `get_cross_match_indices` to identify the **best match for each halo**.
+To improve the accuracy of our cluster-halo associations, we invert the catalogs with `invert_query_match` and combine the two best-match results with `get_cross_match_indices` to identify the best match for each halo.
 Previously, in @tbl-sky-match-2d-best, we selected the best match for each cluster. 
 However, since we did not use actual distances, some incorrect matches may have been included.  
 By applying `cross_match` from the halo perspective, we refine the matching process.  
@@ -1007,12 +1014,12 @@ plot_cross(cross_match)
 plt.show()
 ```
 
-In the final step, we assess the **best match for each cluster** by inspecting the `cross_match` dictionary, which stores the indices of the best matches.  
+In the final step, we assess the best match for each cluster by inspecting the `cross_match` dictionary, which stores the indices of the best matches.  
 We then evaluate the total number of matches, as well as the proportion of correct and incorrect assignments.  
 
 ```{python}
 # | label: tbl-sky-match-2d-match-full
-# | tbl-cap: Match statistics between clusters and halos computed using cluster redshifts.
+# | tbl-cap: Per-cluster 2D cross matches with the correctness column.
 # | tbl-cap-location: margin
 # | tbl-width: 100%
 # | code-fold: true
@@ -1036,7 +1043,7 @@ The match statistics are summarized below:
 
 ```{python}
 # | label: tbl-sky-match-2d-match-stats
-# | tbl-cap: Match statistics between clusters and halos computed using cluster redshifts.
+# | tbl-cap: Summary statistics for the 2D matches.
 # | tbl-cap-location: margin
 # | tbl-width: 100%
 # | code-fold: true
@@ -1061,7 +1068,7 @@ Because cluster *i* was generated near halo *i*, a match is *correct* when the a
 
 ```{python}
 # | label: tbl-sky-match-2d-strategies
-# | tbl-cap: Completeness of the selection strategies on the 2D matches (correct = halo index equals cluster index).
+# | tbl-cap: Completeness on the 2D matches (correct = halo index equals cluster index).
 # | tbl-cap-location: margin
 # | tbl-width: 100%
 # | code-fold: true
@@ -1108,8 +1115,8 @@ The mutual-best cross match keeps far fewer pairs: it is the conservative choice
 
 This tutorial demonstrated NumCosmo's `SkyMatch` class as a robust tool for cross-matching galaxy clusters with simulated dark matter halos. 
 Using mock datasets, 100 clusters and 200 halos (100 spatially correlated with clusters, 100 randomly distributed), we showcased two key methodologies:  
-- **`match_3d`**: Achieves precise associations using 3D positional and redshift data, ideal for spectroscopic surveys.  
-- **`match_2d`**: Relies on angular proximity, critical for photometric surveys or datasets with redshift uncertainties.  
+- `match_3d`: Achieves precise associations using 3D positional and redshift data, ideal for spectroscopic surveys.  
+- `match_2d`: Relies on angular proximity, critical for photometric surveys or datasets with redshift uncertainties.  
 
 Cross-validation via `cross_match` and statistical analysis revealed that correlated halos (positioned near clusters) were reliably matched, while mismatches arose primarily from random halos or positional noise. 
 This underscores the importance of probabilistic matching (`match_2d`) and systematic validation in real-world scenarios, where overlapping structures and observational errors are common.  

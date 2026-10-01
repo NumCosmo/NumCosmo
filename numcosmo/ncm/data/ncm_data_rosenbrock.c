@@ -26,10 +26,13 @@
 /**
  * NcmDataRosenbrock:
  *
- * Rosenbrock distribution.
+ * Likelihood of the Rosenbrock distribution.
  *
- * Data object describing the Rosenbrock distribution.
- *
+ * Evaluates, for the parameters $x_1$ and $x_2$ of the #NcmModelRosenbrock in the
+ * #NcmMSet,
+ * $$-2\ln L = \frac{100 (x_2 - x_1^2)^2 + (1 - x_1)^2}{10},$$
+ * whose minimum 0 is at $(1, 1)$. It is a standard test of minimizers and
+ * samplers; its length and degrees of freedom are a nominal 10.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -65,13 +68,6 @@ ncm_data_rosenbrock_constructed (GObject *object)
   ncm_data_set_init (NCM_DATA (object), TRUE);
 }
 
-static void
-ncm_data_rosenbrock_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_data_rosenbrock_parent_class)->finalize (object);
-}
-
 static guint _ncm_data_rosenbrock_get_length (NcmData *data);
 static guint _ncm_data_rosenbrock_get_dof (NcmData *data);
 static void _ncm_data_rosenbrock_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
@@ -83,13 +79,14 @@ ncm_data_rosenbrock_class_init (NcmDataRosenbrockClass *klass)
   NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
 
   object_class->constructed = ncm_data_rosenbrock_constructed;
-  object_class->finalize    = ncm_data_rosenbrock_finalize;
 
   data_class->get_length = &_ncm_data_rosenbrock_get_length;
   data_class->get_dof    = &_ncm_data_rosenbrock_get_dof;
   data_class->m2lnL_val  = &_ncm_data_rosenbrock_m2lnL_val;
 }
 
+/* These likelihoods are analytic and have no data points; 10 is a nominal count,
+ * which fits report as the degrees of freedom. */
 static guint
 _ncm_data_rosenbrock_get_length (NcmData *data)
 {
@@ -117,7 +114,7 @@ _ncm_data_rosenbrock_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
  *
  * Creates a new Rosenbrock distribution object.
  *
- * Returns: the newly created object.
+ * Returns: (transfer full): the newly created object.
  */
 NcmDataRosenbrock *
 ncm_data_rosenbrock_new (void)
@@ -146,7 +143,8 @@ ncm_data_rosenbrock_ref (NcmDataRosenbrock *drb)
  * ncm_data_rosenbrock_free:
  * @drb: a #NcmDataRosenbrock
  *
- * Decreases the reference count of @drb by one.
+ * Decreases the reference count of @drb by one. If the reference count reaches
+ * zero, @drb is freed.
  *
  */
 void
@@ -159,8 +157,8 @@ ncm_data_rosenbrock_free (NcmDataRosenbrock *drb)
  * ncm_data_rosenbrock_clear:
  * @drb: a #NcmDataRosenbrock
  *
- * If @drb is different from NULL, decreases the reference count of
- * @drb by one and sets @drb to NULL.
+ * If *@drb is not %NULL, decreases the reference count of *@drb by one and sets
+ * *@drb to %NULL.
  *
  */
 void

@@ -150,6 +150,11 @@ def _build(integ_method=Nc.DataClusterWLIntegMethod.LNINT):
     dcwlf.set_cut(R_MIN, R_MAX)
     dcwlf.set_prec(1.0e-6)
     dcwlf.set_integ_method(integ_method)
+    # Pinned off explicitly: these tests compare FIXED_NODES on the global
+    # (n-nodes, rule-n) grid against LNINT realization by realization, so they
+    # need that grid, not the per-galaxy calibrated one auto-nodes builds.
+    # Auto-nodes has its own coverage in parity.py.
+    dcwlf.set_auto_nodes(False)
 
     dset = Ncm.Dataset.new()
     dset.append_data(dcwlf)

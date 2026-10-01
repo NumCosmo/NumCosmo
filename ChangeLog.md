@@ -355,18 +355,18 @@ CHANGELOG
      Co-authored-by: henriquelettieri <henrique.cnl@hotmail.com>
  * Testing Richness proxies (#117)
 
-     * Added and expanded support for **cluster richness–mass analysis**:
+     * Added and expanded support for cluster richness–mass analysis:
      improvements to `nc_data_cluster_mass_rich`, new resampling/apply_cut
      functions, bootstrap support, stability fixes, and multiple algorithm
      optimizations.
-     * Introduced new functions for **Ascaso mass–richness calibration**, fixed
+     * Introduced new functions for Ascaso mass–richness calibration, fixed
      bugs in the Ascaso model, and added corresponding tests.
-     * Improved **cluster mass selection**: numerical integration optimizations,
+     * Improved cluster mass selection: numerical integration optimizations,
      new limits handling, bug fixes, and expanded test coverage.
-     * Added and reorganized various **tests and benchmarks**, including Despali
+     * Added and reorganized various tests and benchmarks, including Despali
      halo bias, photo-z Gaussian model, interpolation tests, and general
      fixture-based refactors.
-     * General **code quality updates**: documentation fixes, indentation/style
+     * General code quality updates: documentation fixes, indentation/style
      cleanup, removal of unused models, interface adjustments for bindings, and
      improved CI caching.
      * Removed all Jupyter notebooks and other unnecessary files during cleanup.

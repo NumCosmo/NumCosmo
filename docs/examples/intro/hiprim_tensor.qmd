@@ -97,7 +97,7 @@ Bcbe.set_BB_lmax(30)
 
 ## Setting Up the Cosmological Model
 
-We create a new homogeneous and isotropic cosmological model (`NcHICosmoDEXcdm`) and add the primordial and reionization submodels.
+We create a new homogeneous and isotropic cosmological model ([[numcosmo|NcHICosmoDEXcdm]]) and add the primordial and reionization submodels.
 
 ```{python}
 # Create a new reionization object

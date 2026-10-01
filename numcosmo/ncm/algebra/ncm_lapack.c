@@ -25,15 +25,16 @@
 /**
  * NcmLapack:
  *
- * Encapsulated LAPACK functions.
+ * Wrappers of LAPACK routines for the row-major data of #NcmMatrix.
  *
- * This object is dedicated to encapsulate functions from <ulink url="http://www.netlib.org/lapack/">LAPACK</ulink> choosing the most suitable backend.
- *
- * Priority order: (1) LAPACK and (2) GSL.
- * It no longer tries to use clapack or lapacke, it is faster and simpler to stick to fortran's lapack.
- *
- * The description of each function follows its respective LAPACK documentation.
- *
+ * LAPACK stores matrices in column-major order, so it reads a row-major array as the
+ * transpose. Each wrapper states how it accounts for that: for symmetric matrices the
+ * triangle @uplo is converted to the other one, some routines are replaced by their
+ * transposed counterpart (QR by LQ, for instance), and the rest read the array in
+ * column-major order as passed. The arguments otherwise follow the
+ * [LAPACK documentation](https://www.netlib.org/lapack/explore-html/). Routines that need a
+ * workspace take a #NcmLapackWS and size it with a workspace query. Without LAPACK, only
+ * dptsv, dpotrf and dpotri fall back to GSL; the others abort.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -63,9 +64,9 @@ G_DEFINE_BOXED_TYPE (NcmLapackWS, ncm_lapack_ws, ncm_lapack_ws_dup, ncm_lapack_w
 /**
  * ncm_lapack_ws_new:
  *
- * Creates a new Lapack workspace object.
+ * Creates an empty workspace, grown as needed by the wrappers that take one.
  *
- * Returns:(transfer full): a newly created #NcmLapackWS.
+ * Returns: (transfer full): a new #NcmLapackWS.
  */
 NcmLapackWS *
 ncm_lapack_ws_new (void)
@@ -81,8 +82,6 @@ ncm_lapack_ws_new (void)
 /**
  * ncm_lapack_ws_dup:
  * @ws: a #NcmLapackWS
- *
- * Duplicates a Lapack workspace object.
  *
  * Returns: (transfer full): a copy of @ws.
  */
@@ -101,8 +100,7 @@ ncm_lapack_ws_dup (NcmLapackWS *ws)
  * ncm_lapack_ws_free:
  * @ws: a #NcmLapackWS
  *
- * Frees a Lapack workspace object.
- *
+ * Frees @ws.
  */
 void
 ncm_lapack_ws_free (NcmLapackWS *ws)
@@ -116,8 +114,7 @@ ncm_lapack_ws_free (NcmLapackWS *ws)
  * ncm_lapack_ws_clear:
  * @ws: a #NcmLapackWS
  *
- * Clears a Lapack workspace object.
- *
+ * If *@ws is not %NULL, frees it and sets *@ws to %NULL.
  */
 void
 ncm_lapack_ws_clear (NcmLapackWS **ws)
@@ -135,27 +132,18 @@ ncm_lapack_ws_clear (NcmLapackWS **ws)
 
 /**
  * ncm_lapack_dptsv:
- * @d: array of doubles with dimension @n
- * @e: array of doubles with dimension @n -1
- * @b: array of doubles with dimension @n
- * @x: array of doubles with dimension @n
- * @n: The order of the matrix $A$ (>= 0)
+ * @d: the diagonal
+ * @e: the off-diagonal, of length @n - 1
+ * @b: the right-hand side
+ * @x: the solution
+ * @n: order of the matrix
  *
- * This function computes the solution to a real system of linear equations
- * $A*X = B$ (B = @b), where $A$ is an N-by-N (N = @n) symmetric positive definite tridiagonal
- * matrix, and $X$ and $B$ are N-by-NRHS (NRHS = 1) matrices.
+ * Solves $A x = b$ for the symmetric positive definite tridiagonal $A$ with diagonal @d and
+ * off-diagonal @e, with LAPACK DPTSV, which factors $A = L D L^\intercal$ and overwrites @d, @e
+ * and @b. Without LAPACK, uses gsl_linalg_solve_symm_tridiag().
  *
- * $A$ is factored as $A = L*D*L^T$, and the factored form of $A$ is then
- * used to solve the system of equations.
- *
- * Returns: i = 0:  successful exit
- *
- *        < 0:  -i, the i-th argument had an illegal value
- *
- *        > 0:   i, the leading minor of order i is not
- *               positive definite, and the solution has not been
- *               computed.  The factorization has not been completed
- *               unless i = N.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, gdouble *x, gint n)
@@ -191,26 +179,17 @@ ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, gdouble *x, gint n)
 
 /**
  * ncm_lapack_dpotrf:
- * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored
- * @n: The order of the matrix @a, @n >= 0
- * @a: array of doubles with dimension (@n, @lda)
- * @lda: The leading dimension of the array @a, @lda >= max (1,@n)
+ * @uplo: 'U' or 'L', the triangle of @a stored, in the row-major sense
+ * @n: order of the matrix
+ * @a: the matrix
+ * @lda: its leading dimension
  *
- * This function computes the Cholesky factorization of a real symmetric
- * positive definite matrix @a.
+ * Replaces the @uplo triangle of the symmetric positive definite @a by its Cholesky factor,
+ * with LAPACK DPOTRF. Without LAPACK, uses gsl_linalg_cholesky_decomp(), which aborts
+ * instead of returning an error.
  *
- * The factorization has the form
- * $A = U^T * U$, if @uplo = 'U', or
- * $A = L  * L^T$, if @uplo = 'L',
- * where A = @a, $U$ is an upper triangular matrix and $L$ is lower triangular.
- *
- * Returns: i = 0:  successful exit
- *
- *          < 0:  -i, the i-th argument had an illegal value
- *
- *          > 0:   i, the leading minor of order i is not
- *                positive definite, and the factorization could not be
- *                completed.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dpotrf (gchar uplo, gint n, gdouble *a, gint lda)
@@ -238,21 +217,17 @@ ncm_lapack_dpotrf (gchar uplo, gint n, gdouble *a, gint lda)
 
 /**
  * ncm_lapack_dpotri:
- * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored
- * @n: The order of the matrix @a, @n >= 0
- * @a: array of doubles with dimension (@n, @lda)
- * @lda: The leading dimension of the array @a, @lda >= max (1,@n)
+ * @uplo: 'U' or 'L', the triangle of @a stored, in the row-major sense
+ * @n: order of the matrix
+ * @a: the Cholesky factor
+ * @lda: its leading dimension
  *
- * This function computes the inverse of a real symmetric positive
- * definite matrix @a = A using the Cholesky factorization
- * $A = U^T*U$ or $A = L*L^T$ computed by ncm_lapack_dpotrf().
+ * Replaces the Cholesky factor from ncm_lapack_dpotrf() by the @uplo triangle of the
+ * inverse, with LAPACK DPOTRI. Without LAPACK, uses gsl_linalg_cholesky_invert(), which
+ * aborts instead of returning an error.
  *
- * Returns: i = 0:  successful exit
- *
- *          < 0:  -i, the i-th argument had an illegal value
- *
- *          > 0: the (i,i) element of the factor U
- *            or L is zero, and the inverse could not be computed.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dpotri (gchar uplo, gint n, gdouble *a, gint lda)
@@ -280,26 +255,19 @@ ncm_lapack_dpotri (gchar uplo, gint n, gdouble *a, gint lda)
 
 /**
  * ncm_lapack_dpotrs:
- * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored
- * @n: The order of the matrix @a, @n >= 0
- * @nrhs: Number of right-hand-side vectors to solve
- * @a: array of doubles with dimension (@n, @lda)
- * @lda: The leading dimension of the array @a, @lda >= max (1, @n)
- * @b: array of doubles with dimension (@n, @ldb)
- * @ldb: The leading dimension of the array @b, @ldb >= max (1, @n)
+ * @uplo: 'U' or 'L', the triangle of @a stored, in the row-major sense
+ * @n: order of the matrix
+ * @nrhs: number of right-hand sides
+ * @a: the Cholesky factor
+ * @lda: its leading dimension
+ * @b: the right-hand sides, one per row
+ * @ldb: their leading dimension
  *
- * This function computes the solution of $A X = B$ for a real symmetric positive
- * definite matrix @a = A using the Cholesky factorization $A = U^T*U$ or $A = L*L^T$
- * already performed by ncm_lapack_dpotrf().
- * On entry @b contain the vectors $B$ and on exit @b contain the solutions if the return
- * is 0.
+ * Solves $A x = b$ for each right-hand side with the Cholesky factor from
+ * ncm_lapack_dpotrf(), with LAPACK DPOTRS; @b is overwritten by the solutions. Aborts without LAPACK.
  *
- * Returns: i = 0:  successful exit
- *
- *          < 0:  -i, the i-th argument had an illegal value
- *
- *          > 0: the (i,i) element of the factor U
- *            or L is zero, and the inverse could not be computed.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dpotrs (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *b, gint ldb)
@@ -321,25 +289,19 @@ ncm_lapack_dpotrs (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble 
 
 /**
  * ncm_lapack_dposv:
- * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored
- * @n: The order of the matrix @a, @n >= 0
- * @nrhs: Number of right-hand-side vectors to solve
- * @a: array of doubles with dimension (@n, @lda)
- * @lda: The leading dimension of the array @a, @lda >= max (1, @n)
- * @b: array of doubles with dimension (@n, @ldb)
- * @ldb: The leading dimension of the array @b, @ldb >= max (1, @n)
+ * @uplo: 'U' or 'L', the triangle of @a stored, in the row-major sense
+ * @n: order of the matrix
+ * @nrhs: number of right-hand sides
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @b: the right-hand sides, one per row
+ * @ldb: their leading dimension
  *
- * This function computes the solution of $A X = B$ for a real symmetric positive
- * definite matrix @a = A using the Cholesky factorization $A = U^T*U$ or $A = L*L^T$.
- * On entry @b contain the vectors $B$ and on exit @b contain the solutions if the return
- * is 0.
+ * Solves $A x = b$ for the symmetric positive definite @a, with LAPACK DPOSV: @a is
+ * overwritten by its Cholesky factor and @b by the solutions. Aborts without LAPACK.
  *
- * Returns: i = 0:  successful exit
- *
- *          < 0:  -i, the i-th argument had an illegal value
- *
- *          > 0: the (i,i) element of the factor U
- *            or L is zero, and the inverse could not be computed.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dposv (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *b, gint ldb)
@@ -361,27 +323,20 @@ ncm_lapack_dposv (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *
 
 /**
  * ncm_lapack_dgesv:
- * @n: The number of equations, @n >= 0
- * @nrhs: Number of right-hand-side vectors to solve
- * @a: array of doubles with dimension (@n, @lda)
- * @lda: The leading dimension of the array @a, @lda >= max (1, @n)
- * @ipiv: array of integers with dimension @n for pivot indices
- * @b: array of doubles with dimension (@n, @ldb)
- * @ldb: The leading dimension of the array @b, @ldb >= max (1, @n)
+ * @n: order of the matrix
+ * @nrhs: number of right-hand sides
+ * @a: the matrix, in column-major order
+ * @lda: its leading dimension
+ * @ipiv: the pivot indices
+ * @b: the right-hand sides, one per row
+ * @ldb: their leading dimension
  *
- * This function computes the solution of $A X = B$ for a general @n by @n matrix @a = A
- * using the LU factorization with partial pivoting and row interchanges.
- * On entry @b contain the vectors $B$ and on exit @b contain the solutions if the return
- * is 0. The array @ipiv records the pivot indices from the factorization.
+ * Solves $A x = b$ for a general @a by LU factorization with partial pivoting, with LAPACK
+ * DGESV. @a is read in column-major order, so a row-major #NcmMatrix gives the solution for
+ * its transpose. @a is overwritten by the factorization and @b by the solutions. Aborts without LAPACK.
  *
- * Warning: this function expects @a to be a square matrix and in column-major format as in Fortran.
- *
- * Returns: i = 0:  successful exit
- *
- *          < 0:  -i, the i-th argument had an illegal value
- *
- *          > 0: the (i,i) element of the factor U is exactly zero,
- *               so the matrix is singular and the solution could not be computed.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dgesv (gint n, gint nrhs, gdouble *a, gint lda, gint *ipiv, gdouble *b, gint ldb)
@@ -401,22 +356,18 @@ ncm_lapack_dgesv (gint n, gint nrhs, gdouble *a, gint lda, gint *ipiv, gdouble *
 
 /**
  * ncm_lapack_dsytrf:
- * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored
- * @n: The order of the matrix @a, @n >= 0
- * @a: array of doubles with dimension (@n, @lda)
- * @lda: The leading dimension of the array @a, @lda >= max (1, @n)
- * @ipiv: Information about decomposition swaps and blocks
+ * @uplo: 'U' or 'L', the triangle of @a stored, in the row-major sense
+ * @n: order of the matrix
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @ipiv: the pivoting information
  * @ws: a #NcmLapackWS
  *
- * This function computes the factorization of a real symmetric
- * matrix @a, using the Bunch-Kaufman diagonal pivoting method.
+ * Replaces the @uplo triangle of the symmetric @a by its Bunch-Kaufman factorization, with
+ * LAPACK DSYTRF. Aborts without LAPACK.
  *
- * Returns: i = 0:  successful exit
- *
- *          < 0:  -i, the i-th argument had an illegal value
- *
- *          > 0: the (i,i) element of the factor U
- *            or L is zero, and the inverse could not be computed.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dsytrf (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapackWS *ws)
@@ -448,27 +399,20 @@ ncm_lapack_dsytrf (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapa
 
 /**
  * ncm_lapack_dsytrs:
- * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored
- * @n: The order of the matrix @a, @n >= 0
- * @nrhs: Number of right-hand-side vectors to solve
- * @a: array of doubles with dimension (@n, @lda)
- * @lda: The leading dimension of the array @a, @lda >= max (1, @n)
- * @ipiv: Information about decomposition swaps and blocks
- * @b: array of doubles with dimension (@n, @ldb)
- * @ldb: The leading dimension of the array @b, @ldb >= max (1, @n)
+ * @uplo: 'U' or 'L', the triangle of @a stored, in the row-major sense
+ * @n: order of the matrix
+ * @nrhs: number of right-hand sides
+ * @a: the factorization
+ * @lda: its leading dimension
+ * @ipiv: the pivoting information
+ * @b: the right-hand sides, one per row
+ * @ldb: their leading dimension
  *
- * This function computes the solution of $A X = B$ for a real symmetric positive
- * definite matrix @a = A using the Cholesky factorization $A = U^T*U$ or $A = L*L^T$
- * already performed by ncm_lapack_dpotrf().
- * On entry @b contain the vectors $B$ and on exit @b contain the solutions if the return
- * is 0.
+ * Solves $A x = b$ with the factorization from ncm_lapack_dsytrf(), with LAPACK DSYTRS; @b
+ * is overwritten by the solutions. Aborts without LAPACK.
  *
- * Returns: i = 0:  successful exit
- *
- *          < 0:  -i, the i-th argument had an illegal value
- *
- *          > 0: the (i,i) element of the factor U
- *            or L is zero, and the inverse could not be computed.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dsytrs (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gint *ipiv, gdouble *b, gint ldb)
@@ -490,22 +434,18 @@ ncm_lapack_dsytrs (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gint *ip
 
 /**
  * ncm_lapack_dsytri:
- * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored
- * @n: The order of the matrix @a, @n >= 0
- * @a: array of doubles with dimension (@n, @lda)
- * @lda: The leading dimension of the array @a, @lda >= max (1, @n)
- * @ipiv: Information about decomposition swaps and blocks
+ * @uplo: 'U' or 'L', the triangle of @a stored, in the row-major sense
+ * @n: order of the matrix
+ * @a: the factorization
+ * @lda: its leading dimension
+ * @ipiv: the pivoting information
  * @ws: a #NcmLapackWS
  *
- * This function compute the inverse of a real symmetric indefinite matrix @a using
- * the factorization @a =	U*D*U**T or @a =	L*D*L**T computed by ncm_lapack_dsytrf().
+ * Replaces the factorization from ncm_lapack_dsytrf() by the @uplo triangle of the inverse,
+ * with LAPACK DSYTRI. Aborts without LAPACK.
  *
- * Returns: i = 0:  successful exit
- *
- *          < 0:  -i, the i-th argument had an illegal value
- *
- *          > 0: the (i,i) element of the factor U
- *            or L is zero, and the inverse could not be computed.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dsytri (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapackWS *ws)
@@ -532,115 +472,37 @@ ncm_lapack_dsytri (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapa
 
 /**
  * ncm_lapack_dsysvxx:
- * @fact: FACT is CHARACTER*1
- * @uplo: UPLO is CHARACTER*1
- * @n: N is INTEGER
- * @nrhs: NRHS is INTEGER
- * @a: A is DOUBLE PRECISION array, dimension (LDA,N)
- * @lda: LDA is INTEGER
- * @af: AF is DOUBLE PRECISION array, dimension (LDAF,N)
- * @ldaf: LDA is INTEGER
- * @ipiv: IPIV is INTEGER array, dimension (N)
- * @equed: EQUED is CHARACTER*1
- * @s: S is DOUBLE PRECISION array, dimension (N)
- * @b: B is DOUBLE PRECISION array, dimension (LDB,NRHS)
- * @ldb: LDB is INTEGER
- * @x: X is DOUBLE PRECISION array, dimension (LDX,NRHS)
- * @ldx: LDX is INTEGER
- * @rcond: RCOND is DOUBLE PRECISION
- * @rpvgrw: RPVGRW is DOUBLE PRECISION
- * @berr: BERR is DOUBLE PRECISION array, dimension (NRHS)
- * @n_err_bnds: N_ERR_BNDS is INTEGER
- * @err_bnds_norm: ERR_BNDS_NORM is DOUBLE PRECISION array, dimension (NRHS, N_ERR_BNDS)
- * @err_bnds_comp: ERR_BNDS_COMP is DOUBLE PRECISION array, dimension (NRHS, N_ERR_BNDS)
- * @nparams: NPARAMS is INTEGER
- * @params: PARAMS is DOUBLE PRECISION array, dimension (NPARAMS)
- * @work: WORK is DOUBLE PRECISION array, dimension (4*N)
- * @iwork: IWORK is INTEGER array, dimension (N)
+ * @fact: 'F', 'N' or 'E', see LAPACK DSYSVXX
+ * @uplo: 'U' or 'L', the triangle of @a stored, in the row-major sense
+ * @n: order of the matrix
+ * @nrhs: number of right-hand sides
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @af: the factorization
+ * @ldaf: its leading dimension
+ * @ipiv: the pivoting information
+ * @equed: the equilibration done
+ * @s: the scale factors
+ * @b: the right-hand sides, one per row
+ * @ldb: their leading dimension
+ * @x: the solutions
+ * @ldx: their leading dimension
+ * @rcond: the reciprocal condition number
+ * @rpvgrw: the reciprocal pivot growth factor
+ * @berr: the backward errors
+ * @n_err_bnds: number of error bounds
+ * @err_bnds_norm: the normwise error bounds
+ * @err_bnds_comp: the componentwise error bounds
+ * @nparams: number of parameters
+ * @params: the algorithm parameters
+ * @work: the workspace
+ * @iwork: the integer workspace
  *
- * # Purpose #
+ * Solves $A x = b$ for the symmetric @a with iterative refinement and error bounds, with
+ * LAPACK DSYSVXX. Aborts without LAPACK.
  *
- * DSYSVXX uses the diagonal pivoting factorization to compute the
- * solution to a double precision system of linear equations A * X = B, where A
- * is an N-by-N symmetric matrix and X and B are N-by-NRHS matrices.
- *
- * If requested, both norm-wise and maximum component-wise error bounds
- * are returned. DSYSVXX will return a solution with a tiny
- * guaranteed error (O(eps) where eps is the working machine
- * precision) unless the matrix is very ill-conditioned, in which
- * case a warning is returned. Relevant condition numbers also are
- * calculated and returned.
- *
- * DSYSVXX accepts user-provided factorizations and equilibration
- * factors; see the definitions of the FACT and EQUED options.
- * Solving with refinement and using a factorization from a previous
- * DSYSVXX call will also produce a solution with either O(eps)
- * errors or warnings, but we cannot make that claim for general
- * user-provided factorizations and equilibration factors if they
- * differ from what DSYSVXX would itself produce.
- *
- * # Description #
- *
- * The following steps are performed:
- *
- * 1. If FACT = 'E', double precision scaling factors are computed to equilibrate
- *    the system:
- *    - diag(S)*A*diag(S)     *inv(diag(S))*X = diag(S)*B
- *    Whether or not the system will be equilibrated depends on the
- *    scaling of the matrix A, but if equilibration is used, A is
- *    overwritten by diag(S)*A*diag(S) and B by diag(S)*B.
- * 2. If FACT = 'N' or 'E', the LU decomposition is used to factor
- *    the matrix A (after equilibration if FACT = 'E') as
- *    - A = U * D * U**T,  if UPLO = 'U', or
- *    - A = L * D * L**T,  if UPLO = 'L',
- *    where U (or L) is a product of permutation and unit upper (lower)
- *    triangular matrices, and D is symmetric and block diagonal with
- *    1-by-1 and 2-by-2 diagonal blocks.
- * 3. If some D(i,i)=0, so that D is exactly singular, then the
- *    routine returns with INFO = i. Otherwise, the factored form of A
- *    is used to estimate the condition number of the matrix A (see
- *    argument RCOND).  If the reciprocal of the condition number is
- *    less than machine precision, the routine still goes on to solve
- *    for X and compute error bounds as described below.
- * 4. The system of equations is solved for X using the factored form
- *    of A.
- * 5. By default (unless PARAMS(LA_LINRX_ITREF_I) is set to zero),
- *    the routine will use iterative refinement to try to get a small
- *    error and error bounds.  Refinement calculates the residual to at
- *    least twice the working precision.
- * 6. If equilibration was used, the matrix X is premultiplied by
- *    diag(R) so that it solves the original system before
- *    equilibration.
- *
- * Some optional parameters are bundled in the PARAMS array.  These
- * settings determine how refinement is performed, but often the
- * defaults are acceptable.  If the defaults are acceptable, users
- * can pass NPARAMS = 0 which prevents the source code from accessing
- * the PARAMS argument.
- *
- * Returns: INFO is INTEGER
- * - = 0:  Successful exit. The solution to every right-hand side is
- *   guaranteed.
- * - < 0:  If INFO = -i, the i-th argument had an illegal value
- * - > 0 and <= N:  U(INFO,INFO) is exactly zero.  The factorization
- *   has been completed, but the factor U is exactly singular, so
- *   the solution and error bounds could not be computed. RCOND = 0
- *   is returned.
- * - = N+J: The solution corresponding to the Jth right-hand side is
- *   not guaranteed. The solutions corresponding to other right-
- *   hand sides K with K > J may not be guaranteed as well, but
- *   only the first such right-hand side is reported. If a small
- *   componentwise error is not requested (PARAMS(3) = 0.0) then
- *   the Jth right-hand side is the first with a normwise error
- *   bound that is not guaranteed (the smallest J such
- *   that ERR_BNDS_NORM(J,1) = 0.0). By default (PARAMS(3) = 1.0)
- *   the Jth right-hand side is the first with either a normwise or
- *   componentwise error bound that is not guaranteed (the smallest
- *   J such that either ERR_BNDS_NORM(J,1) = 0.0 or
- *   ERR_BNDS_COMP(J,1) = 0.0). See the definition of
- *   ERR_BNDS_NORM(:,1) and ERR_BNDS_COMP(:,1). To get information
- *   about all of the right-hand sides check ERR_BNDS_NORM or
- *   ERR_BNDS_COMP.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dsysvxx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *af, gint ldaf, gint *ipiv, gchar *equed, gdouble *s, gdouble *b, gint ldb, gdouble *x, gint ldx, gdouble *rcond, gdouble *rpvgrw, gdouble *berr, const gint n_err_bnds, gdouble *err_bnds_norm, gdouble *err_bnds_comp, const gint nparams, gdouble *params, gdouble *work, gint *iwork)
@@ -662,27 +524,29 @@ ncm_lapack_dsysvxx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint 
 
 /**
  * ncm_lapack_dsyevr:
- * @jobz: a char with value 'N', 'V' or 'I'
- * @range: a char with value 'A', 'V' or 'I'
- * @uplo: a char with value 'U' or 'L'
- * @n: an integer with the order of the matrix @a
- * @a: a double precision array with dimension (@n, @lda)
- * @lda: an integer with the leading dimension of the array @a, @lda >= max (1, @n)
- * @vl: a double precision with the lower bound of the interval to be searched for eigenvalues
- * @vu: a double precision with the upper bound of the interval to be searched for eigenvalues
- * @il: an integer with the index of the smallest eigenvalue to be returned
- * @iu: an integer with the index of the largest eigenvalue to be returned
- * @abstol: a double precision with the absolute error tolerance for the eigenvalues
- * @m: an integer with the total number of eigenvalues found
- * @w: a double precision array with dimension @n
- * @z: a double precision array with dimension (@ldz, @n)
- * @ldz: an integer with the leading dimension of the array @z, @ldz >= 1, and if @jobz = 'V' or 'I', @ldz >= @n
- * @isuppz: an integer array with dimension (2, @n)
+ * @jobz: 'N' for eigenvalues only, 'V' for eigenvectors too
+ * @range: 'A', 'V' or 'I': all eigenvalues, those in (@vl, @vu], or those of index @il to @iu
+ * @uplo: 'U' or 'L', the triangle of @a stored, in the row-major sense
+ * @n: order of the matrix
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @vl: lower bound of the eigenvalues for @range 'V'
+ * @vu: upper bound of the eigenvalues for @range 'V'
+ * @il: index of the smallest eigenvalue for @range 'I'
+ * @iu: index of the largest eigenvalue for @range 'I'
+ * @abstol: absolute tolerance of the eigenvalues
+ * @m: number of eigenvalues found
+ * @w: the eigenvalues, in increasing order
+ * @z: the eigenvectors, one per row
+ * @ldz: their leading dimension
+ * @isuppz: the support of the eigenvectors
  * @ws: a #NcmLapackWS
  *
- * Computes selected eigenvalues and, optionally, eigenvectors of a real symmetric matrix @a.
+ * Computes selected eigenvalues and, optionally, eigenvectors of the symmetric @a by the
+ * relatively robust representations algorithm, with LAPACK DSYEVR; @a is overwritten. Aborts without LAPACK.
  *
- * Returns: an integer with the error code
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dsyevr (gchar jobz, gchar range, gchar uplo, gint n, gdouble *a, gint lda, gdouble vl, gdouble vu, gint il, gint iu, gdouble abstol, gint *m, gdouble *w, gdouble *z, gint ldz, gint *isuppz, NcmLapackWS *ws)
@@ -720,17 +584,19 @@ ncm_lapack_dsyevr (gchar jobz, gchar range, gchar uplo, gint n, gdouble *a, gint
 
 /**
  * ncm_lapack_dsyevd:
- * @jobz: a char with value 'N', 'V' or 'I'
- * @uplo: a char with value 'U' or 'L'
- * @n: an integer with the order of the matrix @a
- * @a: a double precision array with dimension (@n, @lda)
- * @lda: an integer with the leading dimension of the array @a, @lda >= max (1, @n)
- * @w: a double precision array with dimension @n
+ * @jobz: 'N' for eigenvalues only, 'V' for eigenvectors too
+ * @uplo: 'U' or 'L', the triangle of @a stored, in the row-major sense
+ * @n: order of the matrix
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @w: the eigenvalues, in increasing order
  * @ws: a #NcmLapackWS
  *
- * Computes all eigenvalues and, optionally, eigenvectors of a real symmetric matrix @a.
+ * Computes all eigenvalues and, optionally, eigenvectors of the symmetric @a by divide and
+ * conquer, with LAPACK DSYEVD; with @jobz 'V' the eigenvectors overwrite @a, one per row. Aborts without LAPACK.
  *
- * Returns: an integer with the error code
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dsyevd (gchar jobz, gchar uplo, gint n, gdouble *a, gint lda, gdouble *w, NcmLapackWS *ws)
@@ -768,31 +634,21 @@ ncm_lapack_dsyevd (gchar jobz, gchar uplo, gint n, gdouble *a, gint lda, gdouble
 
 /**
  * ncm_lapack_dsysv:
- * @uplo: UPLO is CHARACTER*1
- * @n: N is INTEGER
- * @nrhs: NRHS is INTEGER
- * @a: A is DOUBLE PRECISION array, dimension (LDA,N)
- * @lda: LDA is INTEGER
- * @ipiv: IPIV is INTEGER array, dimension (N)
- * @b: B is DOUBLE PRECISION array, dimension (LDB,NRHS)
- * @ldb: LDB is INTEGER
- * @work: WORK is DOUBLE PRECISION array, dimension (MAX(1,LWORK))
- * @lwork: LWORK is INTEGER
+ * @uplo: 'U' or 'L', the triangle of @a stored, in the row-major sense
+ * @n: order of the matrix
+ * @nrhs: number of right-hand sides
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @ipiv: the pivoting information
+ * @b: the right-hand sides, one per row
+ * @ldb: their leading dimension
+ * @work: the workspace
+ * @lwork: its length, or -1 for a workspace query
  *
- * # Purpose #
+ * Solves $A x = b$ for the symmetric @a, with LAPACK DSYSV. Aborts without LAPACK.
  *
- * DSYSV uses the diagonal pivoting factorization to compute the
- * solution to a real system of linear equations A * X = B,
- * where A is an N-by-N symmetric matrix and X and B are N-by-NRHS
- * matrices.
- *
- * Returns: INFO is INTEGER
- * - = 0: successful exit
- * - < 0: if INFO = -i, the i-th argument had an illegal value
- * - > 0: if INFO = i, and i is
- * - <= N:  D(i,i) is exactly zero.  The factorization
- *   has been completed but the factor D is exactly
- *   singular, so the solution could not be computed.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dsysv (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gint *ipiv, gdouble *b, gint ldb, gdouble *work, gint lwork)
@@ -814,74 +670,31 @@ ncm_lapack_dsysv (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gint *ipi
 
 /**
  * ncm_lapack_dsysvx:
- * @fact: FACT is CHARACTER*1
- * @uplo: UPLO is CHARACTER*1
- * @n: N is INTEGER
- * @nrhs: NRHS is INTEGER
- * @a: A is DOUBLE PRECISION array, dimension (LDA,N)
- * @lda: LDA is INTEGER
- * @af: AF is DOUBLE PRECISION array, dimension (LDAF,N)
- * @ldaf: LDA is INTEGER
- * @ipiv: IPIV is INTEGER array, dimension (N)
- * @b: B is DOUBLE PRECISION array, dimension (LDB,NRHS)
- * @ldb: LDB is INTEGER
- * @x: X is DOUBLE PRECISION array, dimension (LDX,NRHS)
- * @ldx: LDX is INTEGER
- * @rcond: RCOND is DOUBLE PRECISION
- * @ferr: FERR is DOUBLE PRECISION array, dimension (NRHS)
- * @berr: BERR is DOUBLE PRECISION array, dimension (NRHS)
- * @work: WORK is DOUBLE PRECISION array, dimension (MAX(1,LWORK))
- * @lwork: LWORK is INTEGER
- * @iwork: IWORK is INTEGER array, dimension (N)
+ * @fact: 'F' or 'N', whether @af and @ipiv hold the factorization
+ * @uplo: 'U' or 'L', the triangle of @a stored, in the row-major sense
+ * @n: order of the matrix
+ * @nrhs: number of right-hand sides
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @af: the factorization
+ * @ldaf: its leading dimension
+ * @ipiv: the pivoting information
+ * @b: the right-hand sides, one per row
+ * @ldb: their leading dimension
+ * @x: the solutions
+ * @ldx: their leading dimension
+ * @rcond: the reciprocal condition number
+ * @ferr: the forward error bounds
+ * @berr: the backward errors
+ * @work: the workspace
+ * @lwork: its length, or -1 for a workspace query
+ * @iwork: the integer workspace
  *
- * # Purpose #
+ * Solves $A x = b$ for the symmetric @a, with error bounds and a condition estimate, with
+ * LAPACK DSYSVX. Aborts without LAPACK.
  *
- * DSYSVX uses the diagonal pivoting factorization to compute the
- * solution to a real system of linear equations A * X = B,
- * where A is an N-by-N symmetric matrix and X and B are N-by-NRHS
- * matrices.
- *
- * Error bounds on the solution and a condition estimate are also
- * provided.
- *
- * # Description #
- *
- * The following steps are performed:
- *
- * 1. If FACT = 'N', the diagonal pivoting method is used to factor A.
- *    The form of the factorization is
- *    - A = U * D * U**T,  if UPLO = 'U', or
- *    - A = L * D * L**T,  if UPLO = 'L',
- *    where U (or L) is a product of permutation and unit upper (lower)
- *    triangular matrices, and D is symmetric and block diagonal with
- *    1-by-1 and 2-by-2 diagonal blocks.
- * 2. If some D(i,i)=0, so that D is exactly singular, then the routine
- *    returns with INFO = i. Otherwise, the factored form of A is used
- *    to estimate the condition number of the matrix A.  If the
- *    reciprocal of the condition number is less than machine precision,
- *    INFO = N+1 is returned as a warning, but the routine still goes on
- *    to solve for X and compute error bounds as described below.
- * 3. The system of equations is solved for X using the factored form
- *    of A.
- * 4. Iterative refinement is applied to improve the computed solution
- *    matrix and calculate error bounds and backward error estimates
- *    for it.
- *
- * Returns: INFO is INTEGER
- * - = 0: successful exit
- * - < 0: if INFO = -i, the i-th argument had an illegal value
- * - > 0: if INFO = i, and i is
- * - <= N:  D(i,i) is exactly zero.  The factorization
- *   has been completed but the factor D is exactly
- *   singular, so the solution and error bounds could
- *   not be computed. RCOND = 0 is returned.
- * - = N+1: D is nonsingular, but RCOND is less than machine
- *   precision, meaning that the matrix is singular
- *   to working precision.  Nevertheless, the
- *   solution and error bounds are computed because
- *   there are a number of situations where the
- *   computed solution can be more accurate than the
- *   value of RCOND would suggest.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dsysvx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *af, gint ldaf, gint *ipiv, gdouble *b, gint ldb, gdouble *x, gint ldx, gdouble *rcond, gdouble *ferr, gdouble *berr, gdouble *work, gint lwork, gint *iwork)
@@ -903,30 +716,26 @@ ncm_lapack_dsysvx (gchar fact, gchar uplo, gint n, gint nrhs, gdouble *a, gint l
 
 /**
  * ncm_lapack_dgeev:
- * @jobvl: @n left eigenvectors of @a are not computed, 'V' left eigenvectors of @a are computed
- * @jobvr: @n right eigenvectors of @a are not computed, 'V' right eigenvectors of @a are computed
- * @n: The order of the matrix @a, @n >= 0
- * @a: array of doubles with dimension (@n, @lda)
- * @lda: The leading dimension of the array @a, @lda >= max (1, @n)
- * @wr: contain the real part of the computed eigenvalues
- * @wi: contain the imaginary part of the computed eigenvalues
- * @vl: if @jobvl = 'V', the left eigenvectors $u(j)$ are stored one after another in the rows of @vl, in the same order as their eigenvalues
- * @ldvl: the leading dimension of the array @vl
- * @vr: if @jobvr = 'V', the left eigenvectors $v(j)$ are stored one after another in the rows of @vr, in the same order as their eigenvalues
- * @ldvr: the leading dimension of the array @vr
- * @work: work area, must have @lwork allocated doubles
- * @lwork: work area size
+ * @jobvl: 'N' or 'V', whether to compute the left eigenvectors
+ * @jobvr: 'N' or 'V', whether to compute the right eigenvectors
+ * @n: order of the matrix
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @wr: real parts of the eigenvalues
+ * @wi: imaginary parts of the eigenvalues
+ * @vl: the left eigenvectors, one per row
+ * @ldvl: their leading dimension
+ * @vr: the right eigenvectors, one per row
+ * @ldvr: their leading dimension
+ * @work: the workspace
+ * @lwork: its length, or -1 for a workspace query
  *
- * This function computes the eigensystem for a real matrix @a = A.
+ * Computes the eigenvalues and, optionally, the eigenvectors of the general @a, with LAPACK
+ * DGEEV. LAPACK reads the transpose, whose left and right eigenvectors are the right and
+ * left ones of @a, so the two are exchanged in the call. @a is overwritten. Aborts without LAPACK.
  *
- * Calling this function with lwork == -1 computed the ideal @lwork in @work[0].
- *
- * Returns: i = 0:  successful exit
- *
- *          < 0:  -i, the i-th argument had an illegal value
- *
- *          > 0: the (i,i) element of the factor U
- *            or L is zero, and the inverse could not be computed.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dgeev (gchar jobvl, gchar jobvr, gint n, gdouble *a, gint lda, gdouble *wr, gdouble *wi, gdouble *vl, gint ldvl, gdouble *vr, gint ldvr, gdouble *work, gint lwork)
@@ -949,39 +758,33 @@ ncm_lapack_dgeev (gchar jobvl, gchar jobvr, gint n, gdouble *a, gint lda, gdoubl
 
 /**
  * ncm_lapack_dgeevx:
- * @balanc: a char with value 'N', 'P', 'S' or 'B'
- * @jobvl: @n left eigenvectors of @a are not computed, 'V' left eigenvectors of @a are computed
- * @jobvr: @n right eigenvectors of @a are not computed, 'V' right eigenvectors of @a are computed
- * @sense: a char with value 'N', 'E', 'V' or 'B'
- * @n: The order of the matrix @a, @n >= 0
- * @a: array of doubles with dimension (@n, @lda)
- * @lda: The leading dimension of the array @a, @lda >= max (1, @n)
- * @wr: contain the real part of the computed eigenvalues
- * @wi: contain the imaginary part of the computed eigenvalues
- * @vl: if @jobvl = 'V', the left eigenvectors $u(j)$ are stored one after another in the rows of @vl, in the same order as their eigenvalues
- * @ldvl: the leading dimension of the array @vl
- * @vr: if @jobvr = 'V', the left eigenvectors $v(j)$ are stored one after another in the rows of @vr, in the same order as their eigenvalues
- * @ldvr: the leading dimension of the array @vr
- * @ilo: an integer with the index of the first eigenvalue to be returned
- * @ihi: an integer with the index of the last eigenvalue to be returned
- * @scale: an array of doubles with dimension @n
- * @abnrm: an array of doubles with dimension @n
- * @rconde: an array of doubles with dimension @n
- * @rcondv: an array of doubles with dimension @n
- * @work: work area, must have @lwork allocated doubles
- * @lwork: work area size
- * @iwork: work area, must have @liwork allocated integers
+ * @balanc: 'N', 'P', 'S' or 'B', the balancing
+ * @jobvl: 'N' or 'V', whether to compute the left eigenvectors
+ * @jobvr: 'N' or 'V', whether to compute the right eigenvectors
+ * @sense: 'N', 'E', 'V' or 'B', the condition numbers computed
+ * @n: order of the matrix
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @wr: real parts of the eigenvalues
+ * @wi: imaginary parts of the eigenvalues
+ * @vl: the left eigenvectors, one per row
+ * @ldvl: their leading dimension
+ * @vr: the right eigenvectors, one per row
+ * @ldvr: their leading dimension
+ * @ilo: first index of the balanced block
+ * @ihi: last index of the balanced block
+ * @scale: the balancing details
+ * @abnrm: the one-norm of the balanced matrix
+ * @rconde: reciprocal condition numbers of the eigenvalues
+ * @rcondv: reciprocal condition numbers of the eigenvectors
+ * @work: the workspace
+ * @lwork: its length, or -1 for a workspace query
+ * @iwork: the integer workspace
  *
- * This function computes the eigensystem for a real matrix @a = A.
+ * Same as ncm_lapack_dgeev() with balancing and condition numbers, with LAPACK DGEEVX. Aborts without LAPACK.
  *
- * Calling this function with lwork == -1 computed the ideal @lwork in @work[0].
- *
- * Returns: i = 0:  successful exit
- *
- *          < 0:  -i, the i-th argument had an illegal value
- *
- *          > 0: the (i,i) element of the factor U
- *            or L is zero, and the inverse could not be computed.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dgeevx (gchar balanc, gchar jobvl, gchar jobvr, gchar sense, gint n, gdouble *a, gint lda, gdouble *wr, gdouble *wi, gdouble *vl, gint ldvl, gdouble *vr, gint ldvr, gint *ilo, gint *ihi, gdouble *scale, gdouble *abnrm, gdouble *rconde, gdouble *rcondv, gdouble *work, gint lwork, gint *iwork)
@@ -1004,30 +807,19 @@ ncm_lapack_dgeevx (gchar balanc, gchar jobvl, gchar jobvr, gchar sense, gint n, 
 
 /**
  * ncm_lapack_dgeqrf:
- * @m: M is INTEGER
- * The number of rows of the matrix A.  M >= 0.
- * @n: N is INTEGER
- * The number of columns of the matrix A.  N >= 0.
- * @a: A is DOUBLE PRECISION array, dimension (LDA,N)
- * On entry, the M-by-N matrix A.
- * On exit, the elements on and above the diagonal of the array
- * contain the min(M,N)-by-N upper trapezoidal matrix R (R is
- * upper triangular if m >= n); the elements below the diagonal,
- * with the array TAU, represent the orthogonal matrix Q as a
- * product of min(m,n) elementary reflectors (see Further
- * Details).
- * @lda: LDA is INTEGER
- * The leading dimension of the array A.  LDA >= max(1,M).
- * @tau: TAU is DOUBLE PRECISION array, dimension (min(M,N))
- * The scalar factors of the elementary reflectors (see Further
- * Details).
+ * @m: number of rows seen by LAPACK, the columns of the row-major @a
+ * @n: number of columns seen by LAPACK, the rows of the row-major @a
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @tau: the scalar factors of the elementary reflectors
  * @ws: a #NcmLapackWS
  *
- * DGEQRF computes a QR factorization of a real M-by-N matrix A:
- * A = Q * R.
+ * Computes the QR factorization $A = Q R$ of the row-major @a by calling LAPACK DGELQF on
+ * the transpose that LAPACK reads; @a is overwritten by the factors, as described by LAPACK
+ * DGELQF. Aborts without LAPACK.
  *
- * Returns: = 0:  successful exit
- * < 0:  if INFO = -i, the i-th argument had an illegal value
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dgeqrf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapackWS *ws)
@@ -1055,30 +847,19 @@ ncm_lapack_dgeqrf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapack
 
 /**
  * ncm_lapack_dgerqf:
- * @m: M is INTEGER
- * The number of rows of the matrix A.  M >= 0.
- * @n: N is INTEGER
- * The number of columns of the matrix A.  N >= 0.
- * @a: A is DOUBLE PRECISION array, dimension (LDA,N)
- * On entry, the M-by-N matrix A.
- * On exit, the elements on and above the diagonal of the array
- * contain the min(M,N)-by-N upper trapezoidal matrix R (R is
- * upper triangular if m >= n); the elements below the diagonal,
- * with the array TAU, represent the orthogonal matrix Q as a
- * product of min(m,n) elementary reflectors (see Further
- * Details).
- * @lda: LDA is INTEGER
- * The leading dimension of the array A.  LDA >= max(1,M).
- * @tau: TAU is DOUBLE PRECISION array, dimension (min(M,N))
- * The scalar factors of the elementary reflectors (see Further
- * Details).
+ * @m: number of rows seen by LAPACK, the columns of the row-major @a
+ * @n: number of columns seen by LAPACK, the rows of the row-major @a
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @tau: the scalar factors of the elementary reflectors
  * @ws: a #NcmLapackWS
  *
- * DGERQF computes a RQ factorization of a real M-by-N matrix A:
- * A = R * Q.
+ * Computes the RQ factorization $A = R Q$ of the row-major @a by calling LAPACK DGEQLF on
+ * the transpose that LAPACK reads; @a is overwritten by the factors, as described by LAPACK
+ * DGEQLF. Aborts without LAPACK.
  *
- * Returns: = 0:  successful exit
- * < 0:  if INFO = -i, the i-th argument had an illegal value
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dgerqf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapackWS *ws)
@@ -1106,30 +887,19 @@ ncm_lapack_dgerqf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapack
 
 /**
  * ncm_lapack_dgeqlf:
- * @m: M is INTEGER
- * The number of rows of the matrix A.  M >= 0.
- * @n: N is INTEGER
- * The number of columns of the matrix A.  N >= 0.
- * @a: A is DOUBLE PRECISION array, dimension (LDA,N)
- * On entry, the M-by-N matrix A.
- * On exit, the elements on and above the diagonal of the array
- * contain the min(M,N)-by-N upper trapezoidal matrix R (R is
- * upper triangular if m >= n); the elements below the diagonal,
- * with the array TAU, represent the orthogonal matrix Q as a
- * product of min(m,n) elementary reflectors (see Further
- * Details).
- * @lda: LDA is INTEGER
- * The leading dimension of the array A.  LDA >= max(1,M).
- * @tau: TAU is DOUBLE PRECISION array, dimension (min(M,N))
- * The scalar factors of the elementary reflectors (see Further
- * Details).
+ * @m: number of rows seen by LAPACK, the columns of the row-major @a
+ * @n: number of columns seen by LAPACK, the rows of the row-major @a
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @tau: the scalar factors of the elementary reflectors
  * @ws: a #NcmLapackWS
  *
- * DGEQLF computes a QL factorization of a real M-by-N matrix A:
- * A = Q * L.
+ * Computes the QL factorization $A = Q L$ of the row-major @a by calling LAPACK DGERQF on
+ * the transpose that LAPACK reads; @a is overwritten by the factors, as described by LAPACK
+ * DGERQF. Aborts without LAPACK.
  *
- * Returns: = 0:  successful exit
- * < 0:  if INFO = -i, the i-th argument had an illegal value
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dgeqlf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapackWS *ws)
@@ -1157,30 +927,19 @@ ncm_lapack_dgeqlf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapack
 
 /**
  * ncm_lapack_dgelqf:
- * @m: M is INTEGER
- * The number of rows of the matrix A.  M >= 0.
- * @n: N is INTEGER
- * The number of columns of the matrix A.  N >= 0.
- * @a: A is DOUBLE PRECISION array, dimension (LDA,N)
- * On entry, the M-by-N matrix A.
- * On exit, the elements on and above the diagonal of the array
- * contain the min(M,N)-by-N upper trapezoidal matrix R (R is
- * upper triangular if m >= n); the elements below the diagonal,
- * with the array TAU, represent the orthogonal matrix Q as a
- * product of min(m,n) elementary reflectors (see Further
- * Details).
- * @lda: LDA is INTEGER
- * The leading dimension of the array A.  LDA >= max(1,M).
- * @tau: TAU is DOUBLE PRECISION array, dimension (min(M,N))
- * The scalar factors of the elementary reflectors (see Further
- * Details).
+ * @m: number of rows seen by LAPACK, the columns of the row-major @a
+ * @n: number of columns seen by LAPACK, the rows of the row-major @a
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @tau: the scalar factors of the elementary reflectors
  * @ws: a #NcmLapackWS
  *
- * DGELQF computes a LQ factorization of a real M-by-N matrix A:
- * A = L * Q.
+ * Computes the LQ factorization $A = L Q$ of the row-major @a by calling LAPACK DGEQRF on
+ * the transpose that LAPACK reads; @a is overwritten by the factors, as described by LAPACK
+ * DGEQRF. Aborts without LAPACK.
  *
- * Returns: = 0:  successful exit
- * < 0:  if INFO = -i, the i-th argument had an illegal value
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dgelqf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapackWS *ws)
@@ -1208,18 +967,16 @@ ncm_lapack_dgelqf (gint m, gint n, gdouble *a, gint lda, gdouble *tau, NcmLapack
 
 /**
  * ncm_lapack_dggglm_alloc:
- * @L: a #NcmMatrix
- * @X: a #NcmMatrix
+ * @L: a row-major #NcmMatrix
+ * @X: a row-major #NcmMatrix
  * @p: a #NcmVector
  * @d: a #NcmVector
  * @y: a #NcmVector
  *
- * Calculates and allocs memory to solve the system
- * determined by the parameters.
+ * Allocates the workspace of ncm_lapack_dggglm_run() for these arguments, with a LAPACK
+ * DGGGLM workspace query. Aborts without LAPACK.
  *
- * This function is expect the matrix @X and @L to be row-major.
- *
- * Returns: (transfer full) (array) (element-type double): the newly allocated workspace
+ * Returns: (transfer full) (array) (element-type double): the workspace.
  */
 GArray *
 ncm_lapack_dggglm_alloc (NcmMatrix *L, NcmMatrix *X, NcmVector *p, NcmVector *d, NcmVector *y)
@@ -1271,17 +1028,18 @@ ncm_lapack_dggglm_alloc (NcmMatrix *L, NcmMatrix *X, NcmVector *p, NcmVector *d,
 
 /**
  * ncm_lapack_dggglm_run:
- * @ws: (in) (array) (element-type double): a workspace
- * @L: a #NcmMatrix
- * @X: a #NcmMatrix
+ * @ws: (in) (array) (element-type double): the workspace from ncm_lapack_dggglm_alloc()
+ * @L: a row-major #NcmMatrix
+ * @X: a row-major #NcmMatrix
  * @p: a #NcmVector
  * @d: a #NcmVector
  * @y: a #NcmVector
  *
- * Runs the dggglm function using the workspace @ws.
+ * Solves the general Gauss-Markov linear model problem of LAPACK DGGGLM for the given
+ * matrices and vectors. Aborts without LAPACK.
  *
- * This function is expect the matrix @X and @L to be row-major.
- *
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dggglm_run (GArray *ws, NcmMatrix *L, NcmMatrix *X, NcmVector *p, NcmVector *d, NcmVector *y)
@@ -1325,64 +1083,23 @@ ncm_lapack_dggglm_run (GArray *ws, NcmMatrix *L, NcmMatrix *X, NcmVector *p, Ncm
 
 /**
  * ncm_lapack_dgels:
- * @trans: is a char
- * = 'N': the linear system involves A
- * = 'T': the linear system involves A**T
- * @m: is an integer. The number of rows of the matrix A.  M >= 0
- * @n: is an integer. The number of columns of the matrix A.  N >= 0
- * @nrhs: is an integer. The number of right hand sides, i.e., the number of columns of the matrices B and X. NRHS >=0
- * @a: array of doubles with dimension (@n, @lda)
- * On entry, the M-by-N matrix A.
- * On exit,
- *   if M >= N, A is overwritten by details of its QR factorization as returned by DGEQRF
- *   if M <  N, A is overwritten by details of its LQ factorization as returned by DGELQF
- * @lda: The leading dimension of the array @a, @lda >= max (1,@n)
- * @b: array of doubles with dimension (@n, @ldb)
- * On entry, the matrix B of right hand side vectors, stored
- * columnwise; B is M-by-NRHS if TRANS = 'N', or N-by-NRHS
- * if TRANS = 'T'.
- * On exit, if INFO = 0, B is overwritten by the solution
- * vectors, stored columnwise:
- * if TRANS = 'N' and m >= n, rows 1 to n of B contain the least
- * squares solution vectors; the residual sum of squares for the
- * solution in each column is given by the sum of squares of
- * elements N+1 to M in that column;
- * if TRANS = 'N' and m < n, rows 1 to N of B contain the
- * minimum norm solution vectors;
- * if TRANS = 'T' and m >= n, rows 1 to M of B contain the
- * minimum norm solution vectors;
- * if TRANS = 'T' and m < n, rows 1 to M of B contain the
- * least squares solution vectors; the residual sum of squares
- * for the solution in each column is given by the sum of
- * squares of elements M+1 to N in that column.
- * @ldb: The leading dimension of the array @b, @ldb >= max (1, @n)
- * @work: WORK is DOUBLE PRECISION array, dimension (4*N)
- * @lwork: LWORK is INTEGER
+ * @trans: 'N' or 'T', whether to use the transpose of @a, in the row-major sense
+ * @m: number of rows of the row-major @a
+ * @n: number of columns of the row-major @a
+ * @nrhs: number of right-hand sides
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @b: the right-hand sides
+ * @ldb: their leading dimension
+ * @work: the workspace
+ * @lwork: its length, or -1 for a workspace query
  *
- * DGELS solves overdetermined or underdetermined real linear systems
- * involving an M-by-N matrix A, or its transpose, using a QR or LQ
- * factorization of A.  It is assumed that A has full rank.
+ * Solves the least-squares or minimum-norm problem for the full-rank @a, with LAPACK
+ * DGELS; @trans is converted and @m and @n are exchanged for the column-major call. @a is
+ * overwritten by its QR or LQ factorization and @b by the solutions. Aborts without LAPACK.
  *
- * The following options are provided:
- *
- * 1. If TRANS = 'N' and m >= n:  find the least squares solution of
- *    an overdetermined system, i.e., solve the least squares problem
- *                 minimize || B - A*X ||.
- *
- * 2. If TRANS = 'N' and m < n:  find the minimum norm solution of
- *    an underdetermined system A * X = B.
- *
- * 3. If TRANS = 'T' and m >= n:  find the minimum norm solution of
- *    an underdetermined system A**T * X = B.
- *
- * 4. If TRANS = 'T' and m < n:  find the least squares solution of
- *    an overdetermined system, i.e., solve the least squares problem
- *                 minimize || B - A**T * X ||.
- *
- * Several right hand side vectors b and solution vectors x can be
- * handled in a single call; they are stored as the columns of the
- * M-by-NRHS right hand side matrix B and the N-by-NRHS solution
- * matrix X.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dgels (gchar trans, const gint m, const gint n, const gint nrhs, gdouble *a, const gint lda, gdouble *b, const gint ldb, double *work, const gint lwork)
@@ -1404,75 +1121,23 @@ ncm_lapack_dgels (gchar trans, const gint m, const gint n, const gint nrhs, gdou
 
 /**
  * ncm_lapack_dgelsd:
- * @m: is an integer. The number of rows of the matrix A.  M >= 0
- * @n: is an integer. The number of columns of the matrix A.  N >= 0
- * @nrhs: is an integer. The number of right hand sides, i.e., the number of columns of the matrices B and X. NRHS >=0
- * @a: array of doubles with dimension (@n, @lda)
- * On entry, the M-by-N matrix A.
- * On exit,
- *   if M >= N, A is overwritten by details of its QR factorization as returned by DGEQRF
- *   if M <  N, A is overwritten by details of its LQ factorization as returned by DGELQF
- * @lda: The leading dimension of the array @a, @lda >= max (1,@n)
- * @b: array of doubles with dimension (@n, @ldb)
- * On entry, the matrix B of right hand side vectors, stored
- * columnwise; B is M-by-NRHS if TRANS = 'N', or N-by-NRHS
- * if TRANS = 'T'.
- * On exit, if INFO = 0, B is overwritten by the solution
- * vectors, stored columnwise:
- * if TRANS = 'N' and m >= n, rows 1 to n of B contain the least
- * squares solution vectors; the residual sum of squares for the
- * solution in each column is given by the sum of squares of
- * elements N+1 to M in that column;
- * if TRANS = 'N' and m < n, rows 1 to N of B contain the
- * minimum norm solution vectors;
- * if TRANS = 'T' and m >= n, rows 1 to M of B contain the
- * minimum norm solution vectors;
- * if TRANS = 'T' and m < n, rows 1 to M of B contain the
- * least squares solution vectors; the residual sum of squares
- * for the solution in each column is given by the sum of
- * squares of elements M+1 to N in that column.
- * @ldb: The leading dimension of the array @b, @ldb >= max (1, @n)
- * @s: S is DOUBLE PRECISION array, dimension (min(M,N))
- * The singular values of A in decreasing order.
- * The condition number of A in the 2-norm = S(1)/S(min(m,n)).
- * @rcond: RCOND is DOUBLE PRECISION
- * RCOND is used to determine the effective rank of A.
- * Singular values S(i) <= RCOND*S(1) are treated as zero.
- * If RCOND < 0, machine precision is used instead.
- * @rank: RANK is INTEGER
- * The effective rank of A, i.e., the number of singular values
- * which are greater than RCOND*S(1).
- * @ws: a Lapack workspace object #NcmLapackWS
+ * @m: number of rows seen by LAPACK
+ * @n: number of columns seen by LAPACK
+ * @nrhs: number of right-hand sides
+ * @a: the matrix
+ * @lda: its leading dimension
+ * @b: the right-hand sides
+ * @ldb: their leading dimension
+ * @s: the singular values, in decreasing order
+ * @rcond: the threshold below which singular values are treated as zero
+ * @rank: the effective rank
+ * @ws: a #NcmLapackWS
  *
- * DGELSD computes the minimum-norm solution to a real linear least
- * squares problem:
- *     minimize 2-norm(| b - A*x |)
- * using the singular value decomposition (SVD) of A. A is an M-by-N
- * matrix which may be rank-deficient.
+ * Solves the least-squares problem by the singular value decomposition, with LAPACK DGELSD,
+ * passing the arguments unchanged, so @a is read in column-major order. Aborts without LAPACK.
  *
- * Several right hand side vectors b and solution vectors x can be
- * handled in a single call; they are stored as the columns of the
- * M-by-NRHS right hand side matrix B and the N-by-NRHS solution
- * matrix X.
- *
- * The problem is solved in three steps:
- * (1) Reduce the coefficient matrix A to bidiagonal form with
- *     Householder transformations, reducing the original problem
- *     into a "bidiagonal least squares problem" (BLS)
- * (2) Solve the BLS using a divide and conquer approach.
- * (3) Apply back all the Householder transformations to solve
- *     the original least squares problem.
- *
- * The effective rank of A is determined by treating as zero those
- * singular values which are less than RCOND times the largest singular
- * value.
- *
- * The divide and conquer algorithm makes very mild assumptions about
- * floating point arithmetic. It will work on machines with a guard
- * digit in add/subtract, or on those binary machines without guard
- * digits which subtract like the Cray X-MP, Cray Y-MP, Cray C-90, or
- * Cray-2. It could conceivably fail on hexadecimal or decimal machines
- * without guard digits, but we know of none.
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive for the
+ * failure described in the LAPACK documentation.
  */
 gint
 ncm_lapack_dgelsd (const gint m, const gint n, const gint nrhs, gdouble *a, const gint lda, gdouble *b, const gint ldb, gdouble *s, gdouble *rcond, gint *rank, NcmLapackWS *ws)

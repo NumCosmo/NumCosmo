@@ -52,7 +52,7 @@
  * $\sqrt{x(g)}$, whose branch point at $x(g)=0$ shrinks the series' radius of
  * convergence to an unusable value for any $\alpha<2$, including this class's
  * $\alpha=1.4$ default. SeriesLensed callers should keep $\alpha\ge2$; see
- * `docs/theory/wl_shape_factor_history.md`.
+ * `docs/theory/nc/lss/galaxy/wl_shape_factor_history.md`.
  *
  * nc_galaxy_shape_pop_beta_get_e_rms() and
  * nc_galaxy_shape_pop_beta_get_mode() report
@@ -297,7 +297,7 @@ _nc_galaxy_shape_pop_beta_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopD
  * complex g-plane. That radius becomes unusably small for any alpha<2, where
  * P(x) has a pole at x=0 rather than only a branch point.
  * #NcGalaxyShapeFactorSeriesLensed callers should keep alpha>=2; see
- * docs/theory/wl_shape_factor_history.md. */
+ * docs/theory/nc/lss/galaxy/wl_shape_factor_history.md. */
 static void
 _nc_galaxy_shape_pop_beta_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
                                                 const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out)

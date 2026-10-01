@@ -173,7 +173,7 @@ _nc_galaxy_shape_pop_gauss_ldata_set_sigma (NcGalaxyShapePopData *data, const gd
   const gdouble inv_2sigma2         = 0.5 / (sigma * sigma);
 
   /* norm/inv_2sigma2 are the x-space (x=r^2) normalization,
-   * P(x) = norm*exp(-x/2σ²) on [0,1]: used directly by
+   * P(x) = norm*exp(-x/2 sigma^2) on [0,1]: used directly by
    * eval_p_rho2_g_series, and by eval_p() below via the *2r conversion. */
   ldata->sigma       = sigma;
   ldata->inv_2sigma2 = inv_2sigma2;
@@ -229,7 +229,7 @@ _nc_galaxy_shape_pop_gauss_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *d
   const gdouble sigma  = SIGMA;
   const gdouble lambda = 0.5 / (sigma * sigma);
   const gdouble exp_ml = exp (-lambda);
-  /* <x> for the exponential P(x) ∝ exp(-lambda x) truncated to [0,1]. */
+  /* <x> for the exponential P(x) proportional to exp(-lambda x), truncated to [0,1]. */
   const gdouble mean_x = (1.0 - exp_ml * (1.0 + lambda)) / (lambda * (1.0 - exp_ml));
 
   return sqrt (0.5 * mean_x);

@@ -42,7 +42,6 @@ struct _NcmMSetTransKernClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  gboolean bernoulli_scheme;
 
   void (*set_mset) (NcmMSetTransKern *tkern, NcmMSet *mset);
   void (*generate) (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng);
@@ -51,7 +50,7 @@ struct _NcmMSetTransKernClass
 
   const gchar *(*get_name) (NcmMSetTransKern *tkern);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
+  /* Padding to allow adding up to 13 more virtual functions without breaking ABI. */
   gpointer padding[13];
 };
 

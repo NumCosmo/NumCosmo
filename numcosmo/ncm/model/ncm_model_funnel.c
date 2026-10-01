@@ -26,10 +26,13 @@
 /**
  * NcmModelFunnel:
  *
- * Multivariate Normal Distribution mean model.
+ * Parameters of Neal's funnel distribution.
  *
- * Multivariate Normal distribution model of the mean.
- *
+ * The model holds the scalar parameter $\nu$ and the vector parameter
+ * $x = (x_1, \dots, x_n)$ of the funnel distribution,
+ * $$\nu \sim N(0, 3^2), \qquad x_i \mid \nu \sim N(0, e^{\nu}),$$
+ * whose likelihood is implemented by #NcmDataFunnel. Its narrow neck at negative
+ * $\nu$ makes it a standard test of samplers.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -39,74 +42,22 @@
 
 #include "ncm/model/ncm_model_funnel.h"
 
-#ifndef NUMCOSMO_GIR_SCAN
-#endif /* NUMCOSMO_GIR_SCAN */
-
 enum
 {
   PROP_0,
   PROP_SIZE,
 };
 
-typedef struct _NcmModelFunnelPrivate
-{
-  gint place_holder;
-} NcmModelFunnelPrivate;
-
 struct _NcmModelFunnel
 {
   NcmModel parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmModelFunnel, ncm_model_funnel, NCM_TYPE_MODEL)
+G_DEFINE_TYPE (NcmModelFunnel, ncm_model_funnel, NCM_TYPE_MODEL)
 
 static void
 ncm_model_funnel_init (NcmModelFunnel *model_funnel)
 {
-}
-
-static void
-_ncm_model_funnel_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  /*NcmModelFunnel *model_funnel = NCM_MODEL_FUNNEL (object);*/
-  g_return_if_fail (NCM_IS_MODEL_FUNNEL (object));
-
-  switch (prop_id)
-  {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
-  }
-}
-
-static void
-_ncm_model_funnel_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  /*NcmModelFunnel *model_funnel = NCM_MODEL_FUNNEL (object);*/
-  g_return_if_fail (NCM_IS_MODEL_FUNNEL (object));
-
-  switch (prop_id)
-  {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
-  }
-}
-
-static void
-_ncm_model_funnel_dispose (GObject *object)
-{
-  /*NcmModelFunnel *model_funnel = NCM_MODEL_FUNNEL (object);*/
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_model_funnel_parent_class)->dispose (object);
-}
-
-static void
-_ncm_model_funnel_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_model_funnel_parent_class)->finalize (object);
 }
 
 NCM_MSET_MODEL_REGISTER_ID (ncm_model_funnel, NCM_TYPE_MODEL_FUNNEL);
@@ -114,21 +65,14 @@ NCM_MSET_MODEL_REGISTER_ID (ncm_model_funnel, NCM_TYPE_MODEL_FUNNEL);
 static void
 ncm_model_funnel_class_init (NcmModelFunnelClass *klass)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property = &_ncm_model_funnel_set_property;
-  model_class->get_property = &_ncm_model_funnel_get_property;
-
-  object_class->dispose  = &_ncm_model_funnel_dispose;
-  object_class->finalize = &_ncm_model_funnel_finalize;
-
-  ncm_model_class_set_name_nick (model_class, "MFU", "NcmModelFunnel");
+  ncm_model_class_set_name_nick (model_class, "Funnel distribution", "Funnel");
   ncm_model_class_add_params (model_class, NNCM_MODEL_FUNNEL_SPARAM_LEN, NNCM_MODEL_FUNNEL_VPARAM_LEN, PROP_SIZE);
 
   ncm_mset_model_register_id (model_class,
                               "NcmModelFunnel",
-                              "MFU",
+                              "Funnel distribution",
                               NULL,
                               FALSE,
                               NCM_MSET_MODEL_MAIN);
@@ -145,7 +89,7 @@ ncm_model_funnel_class_init (NcmModelFunnelClass *klass)
  * ncm_model_funnel_new:
  * @n: number of $x$ variables
  *
- * Creates a new Funnel model.
+ * Creates a new funnel model with @n components in $x$.
  *
  * Returns: (transfer full): the newly created #NcmModelFunnel
  */
@@ -177,7 +121,8 @@ ncm_model_funnel_ref (NcmModelFunnel *mfu)
  * ncm_model_funnel_free:
  * @mfu: a #NcmModelFunnel
  *
- * Decreases the reference count of @mfu by one.
+ * Decreases the reference count of @mfu by one. If the reference count reaches
+ * zero, @mfu is freed.
  *
  */
 void
@@ -190,8 +135,8 @@ ncm_model_funnel_free (NcmModelFunnel *mfu)
  * ncm_model_funnel_clear:
  * @mfu: a #NcmModelFunnel
  *
- * If @mfu is different from NULL, decreases the reference count of
- * @mfu by one and sets @mfu to NULL.
+ * If *@mfu is not %NULL, decreases the reference count of *@mfu by one and sets
+ * *@mfu to %NULL.
  *
  */
 void

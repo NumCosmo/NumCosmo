@@ -26,21 +26,16 @@
 
 /**
  * NcmDTuple2:
- * @elements: (array fixed-size=2): The elements of the tuple.
+ * @elements: (array fixed-size=2): the elements
  *
- * A 2-dimensional tuple of double precision floating point numbers.
- *
- * Fixed-size arrays of two double values.
- *
+ * A pair of doubles.
  */
 
 /**
  * NcmDTuple3:
- * @elements: (array fixed-size=3): The elements of the tuple.
+ * @elements: (array fixed-size=3): the elements
  *
- * A 3-dimensional tuple of double precision floating point numbers.
- *
- * Fixed-size arrays of three double values.
+ * A triple of doubles.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -77,9 +72,9 @@ ncm_dtuple2_new (const gdouble x, const gdouble y)
  * ncm_dtuple2_new_from_variant:
  * @var: a #GVariant
  *
- * Creates a new #NcmDTuple2 from a #GVariant.
- * The #GVariant must be of type #NCM_DTUPLE2_TYPE.
+ * Creates a new #NcmDTuple2 from @var, which must have type #NCM_DTUPLE2_TYPE.
  *
+ * Returns: (transfer full): a new #NcmDTuple2.
  */
 NcmDTuple2 *
 ncm_dtuple2_new_from_variant (GVariant *var)
@@ -97,7 +92,7 @@ ncm_dtuple2_new_from_variant (GVariant *var)
  * ncm_dtuple2_copy:
  * @dt2: (in): a #NcmDTuple2
  *
- * Creates a new #NcmDTuple2 with the same values of @dt2.
+ * Creates a copy of @dt2.
  *
  * Returns: (transfer full): a new #NcmDTuple2.
  */
@@ -116,9 +111,9 @@ ncm_dtuple2_copy (const NcmDTuple2 *dt2)
  * ncm_dtuple2_serialize:
  * @dt2: a #NcmDTuple2
  *
- * Serializes a #NcmDTuple2.
+ * Serializes @dt2.
  *
- * Returns: (transfer full): a #GVariant.
+ * Returns: (transfer full): a #GVariant of type #NCM_DTUPLE2_TYPE.
  */
 GVariant *
 ncm_dtuple2_serialize (const NcmDTuple2 *dt2)
@@ -148,7 +143,6 @@ ncm_dtuple2_free (NcmDTuple2 *dt2)
  *
  * Returns: (transfer full): a new #NcmDTuple3.
  */
-
 NcmDTuple3 *
 ncm_dtuple3_new (const gdouble x, const gdouble y, const gdouble z)
 {
@@ -165,9 +159,7 @@ ncm_dtuple3_new (const gdouble x, const gdouble y, const gdouble z)
  * ncm_dtuple3_new_from_variant:
  * @var: a #GVariant
  *
- * Creates a new #NcmDTuple3 from a #GVariant.
- *
- * The #GVariant must be of type #NCM_DTUPLE3_TYPE.
+ * Creates a new #NcmDTuple3 from @var, which must have type #NCM_DTUPLE3_TYPE.
  *
  * Returns: (transfer full): a new #NcmDTuple3.
  */
@@ -187,7 +179,7 @@ ncm_dtuple3_new_from_variant (GVariant *var)
  * ncm_dtuple3_copy:
  * @dt3: (in): a #NcmDTuple3
  *
- * Creates a new #NcmDTuple3 with the same values of @dt3.
+ * Creates a copy of @dt3.
  *
  * Returns: (transfer full): a new #NcmDTuple3.
  */
@@ -207,9 +199,9 @@ ncm_dtuple3_copy (const NcmDTuple3 *dt3)
  * ncm_dtuple3_serialize:
  * @dt3: a #NcmDTuple3
  *
- * Serializes a #NcmDTuple3.
+ * Serializes @dt3.
  *
- * Returns: (transfer full): a #GVariant.
+ * Returns: (transfer full): a #GVariant of type #NCM_DTUPLE3_TYPE.
  */
 GVariant *
 ncm_dtuple3_serialize (const NcmDTuple3 *dt3)
@@ -233,8 +225,7 @@ ncm_dtuple3_free (NcmDTuple3 *dt3)
  * ncm_dtuple2_clear:
  * @dt2: a #NcmDTuple2
  *
- * If *@dt2 is not NULL, frees it and sets it to NULL.
- *
+ * If *@dt2 is not %NULL, frees it and sets it to %NULL.
  */
 void
 ncm_dtuple2_clear (NcmDTuple2 **dt2)
@@ -250,8 +241,7 @@ ncm_dtuple2_clear (NcmDTuple2 **dt2)
  * ncm_dtuple3_clear:
  * @dt3: a #NcmDTuple3
  *
- * If *@dt3 is not NULL, frees it and sets it to NULL.
- *
+ * If *@dt3 is not %NULL, frees it and sets it to %NULL.
  */
 void
 ncm_dtuple3_clear (NcmDTuple3 **dt3)

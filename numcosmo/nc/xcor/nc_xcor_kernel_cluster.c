@@ -36,6 +36,7 @@
  * \end{equation}
  *
  * where:
+ *
  * - $\frac{dV}{dz}$ is the comoving volume element per steradian,
  * - $\frac{dn}{dM}(M,z)$ is the halo mass function,
  * - $b(M,z)$ is the halo bias,

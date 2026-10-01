@@ -121,8 +121,8 @@ test_nc_xcor_ssc_sij_knobs (TestNcXcorSSCSij *test, gconstpointer pdata)
   nc_xcor_ssc_sij_set_reltol (test->ssc, 1.0e-5);
   ncm_assert_cmpdouble_e (nc_xcor_ssc_sij_get_reltol (test->ssc), ==, 1.0e-5, 1.0e-15, 0.0);
 
-  nc_xcor_ssc_sij_set_scaled_abstol (test->ssc, 1.0e-4);
-  ncm_assert_cmpdouble_e (nc_xcor_ssc_sij_get_scaled_abstol (test->ssc), ==, 1.0e-4, 1.0e-15, 0.0);
+  nc_xcor_ssc_sij_set_peak_epsilon (test->ssc, 1.0e-4);
+  ncm_assert_cmpdouble_e (nc_xcor_ssc_sij_get_peak_epsilon (test->ssc), ==, 1.0e-4, 1.0e-15, 0.0);
 
   nc_xcor_ssc_sij_set_method (test->ssc, NC_XCOR_METHOD_LIMBER_Z_CUBATURE);
   g_assert_cmpuint (nc_xcor_ssc_sij_get_method (test->ssc), ==, NC_XCOR_METHOD_LIMBER_Z_CUBATURE);

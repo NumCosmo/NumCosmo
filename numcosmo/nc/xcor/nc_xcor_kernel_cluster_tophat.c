@@ -33,17 +33,17 @@
  * and are absorbed into an overall normalization.
  *
  * The radial window is a top-hat in the comoving volume element, normalized to
- * unit integral in comoving distance $\xi$:
+ * unit integral in comoving distance $\chi$:
  * \begin{equation}
- *   W(\xi) = \frac{\xi^2}{\Delta V}
+ *   W(\chi) = \frac{\chi^2}{\Delta V}
  *   \Theta(z; z_{\rm lower}, z_{\rm upper}), \qquad
- *   \Delta V = \int_{\xi_{\rm lower}}^{\xi_{\rm upper}} \xi^2 \mathrm{d}\xi,
+ *   \Delta V = \int_{\chi_{\rm lower}}^{\chi_{\rm upper}} \chi^2 \mathrm{d}\chi,
  * \end{equation}
  *
- * so that $\int W(\xi) \mathrm{d}\xi = 1$ and the kernel entering the radial
+ * so that $\int W(\chi) \mathrm{d}\chi = 1$ and the kernel entering the radial
  * integral is
  * \begin{equation}
- *   K(\xi,k) = W(\xi) \sqrt{P(k,z(\xi))} ,
+ *   K(\chi,k) = W(\chi) \sqrt{P(k,z(\chi))} ,
  * \end{equation}
  *
  * where $P(k,z)$ is the matter power spectrum. With this normalization the
@@ -111,9 +111,9 @@ typedef struct _ClusteringComponentData
 #define _NC_XCOR_KERNEL_COMPONENT_CLUSTER_TOPHAT_GET_DATA(comp) \
         ((ClusteringComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
-static gdouble _clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k);
+static gdouble _clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
 static gdouble _clustering_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
-static void _clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
+static void _clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _clustering_component_data_clear (ClusteringComponentData *data);
 static NcXcorKernelComponent *_nc_xcor_kernel_component_cluster_tophat_new (NcXcorKernelClusterTophat *xclkc, NcDistance *dist, NcmPowspec *ps);
 
@@ -363,9 +363,9 @@ _nc_xcor_kernel_cluster_tophat_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cos
 {
   NcXcorKernelClusterTophat *xclkc = NC_XCOR_KERNEL_CLUSTER_TOPHAT (xclk);
   const gdouble window             = _nc_xcor_kernel_cluster_tophat_window (xclkc, z);
-  const gdouble xi_t               = nc_distance_transverse (xclkc->dist, cosmo, z);
+  const gdouble chi_t              = nc_distance_transverse (xclkc->dist, cosmo, z);
 
-  return xi_t * xi_t * window;
+  return chi_t * chi_t * window;
 }
 
 static gdouble
@@ -433,14 +433,14 @@ _clustering_component_data_clear (ClusteringComponentData *data)
 }
 
 static gdouble
-_clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
+_clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k)
 {
   ClusteringComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CLUSTER_TOPHAT_GET_DATA (comp);
-  const gdouble z               = nc_distance_inv_comoving (data->dist, cosmo, xi);
+  const gdouble z               = nc_distance_inv_comoving (data->dist, cosmo, chi);
   const gdouble powspec         = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble window          = _nc_xcor_kernel_cluster_tophat_window (data->xclkc, z);
 
-  return xi * xi * window * sqrt (powspec);
+  return chi * chi * window * sqrt (powspec);
 }
 
 static gdouble
@@ -452,7 +452,7 @@ _clustering_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *co
 }
 
 static void
-_clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
+_clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max)
 {
   ClusteringComponentData *data    = _NC_XCOR_KERNEL_COMPONENT_CLUSTER_TOPHAT_GET_DATA (comp);
   NcDistance *dist                 = data->dist;
@@ -462,10 +462,10 @@ _clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo,
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
-  *xi_min = nc_distance_comoving (dist, cosmo, xclkc->z_lower);
-  *xi_max = nc_distance_comoving (dist, cosmo, xclkc->z_upper);
-  *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
-  *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *chi_min = nc_distance_comoving (dist, cosmo, xclkc->z_lower);
+  *chi_max = nc_distance_comoving (dist, cosmo, xclkc->z_upper);
+  *k_min   = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *k_max   = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
 }
 
 static NcXcorKernelComponent *

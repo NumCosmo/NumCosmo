@@ -41,13 +41,6 @@ G_BEGIN_DECLS
 
 #define NCM_TYPE_STATS_VEC (ncm_stats_vec_get_type ())
 
-/**
- * NcmStatsVec:
- *
- * Online weighted statistics for fixed-length vectors. The object can retain
- * appended vectors for autocorrelation, effective-sample-size, and convergence
- * diagnostics.
- */
 G_DECLARE_FINAL_TYPE (NcmStatsVec, ncm_stats_vec, NCM, STATS_VEC, GObject)
 
 /**
@@ -80,38 +73,6 @@ typedef enum /*< prefix=NCM_STATS_VEC >*/
  */
 typedef void (*NcmStatsVecUpdateFunc) (NcmStatsVec *svec, const gdouble w, NcmVector *x);
 
-/**
- * NcmStatsVecARType:
- * @NCM_STATS_VEC_AR_NONE: Calculates using the required order.
- * @NCM_STATS_VEC_AR_FPE: Uses the FPE criterion to choose the ar order.
- * @NCM_STATS_VEC_AR_AIC: Uses the AIC criterion to choose the ar order.
- * @NCM_STATS_VEC_AR_AICC: Uses the AICc criterion to choose the ar order.
- *
- * Autoregressive model selection criteria.
- * These criteria are used to automatically select the optimal order
- * for autoregressive models in time series analysis.
- *
- */
-typedef enum /*< prefix=NCM_STATS_VEC_AR >*/
-{
-  NCM_STATS_VEC_AR_NONE = 0,
-  NCM_STATS_VEC_AR_FPE,
-  NCM_STATS_VEC_AR_AIC,
-  NCM_STATS_VEC_AR_AICC,
-  /* < private > */
-  NCM_STATS_VEC_AR_LEN, /*< skip >*/
-} NcmStatsVecARType;
-
-/**
- * ncm_stats_vec_new:
- * @len: vector length
- * @t: accumulated statistics
- * @save_x: whether to retain input vectors
- *
- * Creates a statistics accumulator.
- *
- * Returns: (transfer full): a new #NcmStatsVec.
- */
 NcmStatsVec *ncm_stats_vec_new (guint len, NcmStatsVecType t, gboolean save_x);
 NcmStatsVec *ncm_stats_vec_ref (NcmStatsVec *svec);
 void ncm_stats_vec_free (NcmStatsVec *svec);
@@ -134,13 +95,7 @@ gdouble ncm_stats_vec_get_quantile (NcmStatsVec *svec, guint i);
 gdouble ncm_stats_vec_get_quantile_spread (NcmStatsVec *svec, guint i);
 gdouble *ncm_stats_vec_get_quantile_all (NcmStatsVec *svec, guint i);
 
-NcmVector *ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p);
-NcmVector *ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsample);
-gdouble ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, guint p, const guint max_lag);
-gdouble ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subsample, const guint max_lag);
 
-gboolean ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmStatsVecARType ar_crit, NcmVector **rho, NcmVector **pacf, gdouble *ivar, guint *c_order);
-gdouble ncm_stats_vec_ar_ess (NcmStatsVec *svec, guint p, NcmStatsVecARType ar_crit, gdouble *spec0, guint *c_order);
 gdouble ncm_stats_vec_estimate_const_break (NcmStatsVec *svec, guint p);
 
 NcmVector *ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_ess);

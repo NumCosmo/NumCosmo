@@ -25,11 +25,11 @@
 /**
  * NcmSplineGsl:
  *
- * GSL spline object wrapper.
+ * Spline that delegates to a [GSL interpolation method](https://www.gnu.org/software/gsl/doc/html/interp.html).
  *
- * This object comprises the proper functions to use the [GNU Scientific Library
- * (GSL)](https://www.gnu.org/software/gsl/) spline functions and interpolation methods.
- *
+ * The knots and values must be contiguous vectors, since GSL reads them as arrays. Evaluation
+ * and integration outside the knots are GSL domain errors: they return NaN with the GSL error
+ * handler off, the default, see ncm_cfg_enable_gsl_err_handler().
  */
 
 #ifdef HAVE_CONFIG_H
@@ -146,8 +146,7 @@ ncm_spline_gsl_class_init (NcmSplineGslClass *klass)
   /**
    * NcmSplineGsl:type-name:
    *
-   * The name of the interpolation method from [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/).
-   *
+   * The name or nick of the #NcmSplineGslType.
    */
   g_object_class_install_property (object_class,
                                    PROP_TYPE_NAME,
@@ -268,16 +267,18 @@ _ncm_spline_gsl_deriv_nmax (const NcmSpline *s, const gdouble x)
     return gsl_interp_eval_deriv (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), x, s_acc);
   }
   else if ((sg->type == gsl_interp_cspline) || (sg->type == gsl_interp_cspline_periodic) ||
-           (sg->type == gsl_interp_akima) || (sg->type == gsl_interp_akima_periodic))
+           (sg->type == gsl_interp_akima) || (sg->type == gsl_interp_akima_periodic) ||
+           (sg->type == gsl_interp_steffen))
   {
-    const guint knot_i        = ncm_spline_get_index (s, x);
-    const gdouble x_i         = ncm_vector_get (s_xv, knot_i);
-    const gdouble x_ip1       = ncm_vector_get (s_xv, knot_i + 1);
-    const gdouble dx          = x_ip1 - x_i;
-    gdouble two_c_i           = gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), x_i, s_acc);
-    gdouble two_c_i_p_6d_i_dx = gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), x_ip1, s_acc);
+    /* The second derivative of Akima and Steffen splines jumps at the knots, so both points lie in the interval of x */
+    const guint knot_i  = ncm_spline_get_index (s, x);
+    const gdouble x_i   = ncm_vector_get (s_xv, knot_i);
+    const gdouble x_ip1 = ncm_vector_get (s_xv, knot_i + 1);
+    const gdouble x_mid = 0.5 * (x_i + x_ip1);
+    const gdouble d2_i  = gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), x_i, s_acc);
+    const gdouble d2_m  = gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), x_mid, s_acc);
 
-    return (two_c_i_p_6d_i_dx - two_c_i) / dx;
+    return (d2_m - d2_i) / (x_mid - x_i);
   }
   else
   {
@@ -308,12 +309,11 @@ _ncm_spline_gsl_copy_empty (const NcmSpline *s)
 
 /**
  * ncm_spline_gsl_new:
- * @type: gsl interpolation method
+ * @type: a GSL interpolation type
  *
- * This function returns a new gsl #NcmSpline which will use @type
- * interpolation method.
+ * Creates an empty spline using @type.
  *
- * Returns: a new #NcmSpline.
+ * Returns: a new #NcmSplineGsl.
  */
 NcmSplineGsl *
 ncm_spline_gsl_new (const gsl_interp_type *type)
@@ -327,12 +327,11 @@ ncm_spline_gsl_new (const gsl_interp_type *type)
 
 /**
  * ncm_spline_gsl_new_by_id:
- * @type_id: gsl interpolation method id
+ * @type_id: a #NcmSplineGslType
  *
- * This function returns a new gsl #NcmSpline which will use @type
- * interpolation method.
+ * Creates an empty spline using the method @type_id.
  *
- * Returns: a new #NcmSpline.
+ * Returns: a new #NcmSplineGsl.
  */
 NcmSplineGsl *
 ncm_spline_gsl_new_by_id (NcmSplineGslType type_id)
@@ -346,14 +345,14 @@ ncm_spline_gsl_new_by_id (NcmSplineGslType type_id)
 
 /**
  * ncm_spline_gsl_new_full:
- * @type: gsl interpolation method
- * @xv: #NcmVector of knots
- * @yv: #NcmVector of the values of the function, to be interpolated, computed at @xv
- * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it
+ * @type: a GSL interpolation type
+ * @xv: the knots
+ * @yv: the values at @xv
+ * @init: whether to prepare the new spline
  *
- * This function returns a new gsl #NcmSpline setting all its members.
+ * Creates a spline using @type with @xv and @yv, see ncm_spline_set().
  *
- * Returns: a new #NcmSpline.
+ * Returns: a new #NcmSplineGsl.
  */
 NcmSplineGsl *
 ncm_spline_gsl_new_full (const gsl_interp_type *type, NcmVector *xv, NcmVector *yv, gboolean init)
@@ -367,12 +366,12 @@ ncm_spline_gsl_new_full (const gsl_interp_type *type, NcmVector *xv, NcmVector *
 
 /**
  * ncm_spline_gsl_new_full_by_id:
- * @type_id: gsl interpolation method id
- * @xv: #NcmVector of knots
- * @yv: #NcmVector of the values of the function, to be interpolated, computed at @xv
- * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it
+ * @type_id: a #NcmSplineGslType
+ * @xv: the knots
+ * @yv: the values at @xv
+ * @init: whether to prepare the new spline
  *
- * This function returns a new gsl #NcmSplineGsl setting all its members.
+ * Creates a spline using the method @type_id with @xv and @yv, see ncm_spline_set().
  *
  * Returns: a new #NcmSplineGsl.
  */
@@ -389,15 +388,18 @@ ncm_spline_gsl_new_full_by_id (NcmSplineGslType type_id, NcmVector *xv, NcmVecto
 /**
  * ncm_spline_gsl_set_type:
  * @sg: a #NcmSplineGsl
- * @type: gsl interpolation method
+ * @type: a GSL interpolation type
  *
- * This function sets the interpolation method @type to @sg.
- *
+ * Sets the interpolation method; the spline must be prepared again. Aborts if @type is not one
+ * of those of #NcmSplineGslType.
  */
 void
 ncm_spline_gsl_set_type (NcmSplineGsl *sg, const gsl_interp_type *type)
 {
   const GEnumValue *type_id = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_SPLINE_GSL_TYPE, type->name);
+
+  if (type_id == NULL)
+    g_error ("ncm_spline_gsl_set_type: the GSL interpolation type `%s' is not one of NcmSplineGslType.", type->name);
 
   if (sg->interp != NULL)
   {
@@ -425,10 +427,9 @@ ncm_spline_gsl_set_type (NcmSplineGsl *sg, const gsl_interp_type *type)
 /**
  * ncm_spline_gsl_set_type_by_id:
  * @sg: a #NcmSplineGsl
- * @type_id: gsl interpolation method id
+ * @type_id: a #NcmSplineGslType
  *
- * This function sets the interpolation method @type_id to @sg.
- *
+ * Sets the interpolation method; the spline must be prepared again.
  */
 void
 ncm_spline_gsl_set_type_by_id (NcmSplineGsl *sg, NcmSplineGslType type_id)
@@ -453,6 +454,9 @@ ncm_spline_gsl_set_type_by_id (NcmSplineGsl *sg, NcmSplineGslType type_id)
     case NCM_SPLINE_GSL_AKIMA_PERIODIC:
       ncm_spline_gsl_set_type (sg, gsl_interp_akima_periodic);
       break;
+    case NCM_SPLINE_GSL_STEFFEN:
+      ncm_spline_gsl_set_type (sg, gsl_interp_steffen);
+      break;
     default:
       g_assert_not_reached ();
       break;
@@ -462,10 +466,10 @@ ncm_spline_gsl_set_type_by_id (NcmSplineGsl *sg, NcmSplineGslType type_id)
 /**
  * ncm_spline_gsl_set_type_by_name:
  * @sg: a #NcmSplineGsl
- * @type_name: gsl interpolation method name
+ * @type_name: the name or nick of a #NcmSplineGslType
  *
- * This function sets the interpolation method @type_name to @sg.
- *
+ * Sets the interpolation method; the spline must be prepared again. Aborts, listing the
+ * names, if @type_name is not one.
  */
 void
 ncm_spline_gsl_set_type_by_name (NcmSplineGsl *sg, const gchar *type_name)
@@ -485,9 +489,7 @@ ncm_spline_gsl_set_type_by_name (NcmSplineGsl *sg, const gchar *type_name)
  * ncm_spline_gsl_get_type_id:
  * @sg: a #NcmSplineGsl
  *
- * This function returns the interpolation method id of @sg.
- *
- * Returns: the interpolation method id.
+ * Returns: the interpolation method.
  */
 NcmSplineGslType
 ncm_spline_gsl_get_type_id (NcmSplineGsl *sg)
@@ -499,9 +501,7 @@ ncm_spline_gsl_get_type_id (NcmSplineGsl *sg)
  * ncm_spline_gsl_get_gsl_type:
  * @sg: a #NcmSplineGsl
  *
- * This function returns the interpolation method of @sg.
- *
- * Returns: the gsl interpolation method.
+ * Returns: the GSL interpolation type.
  */
 const gsl_interp_type *
 ncm_spline_gsl_get_gsl_type (NcmSplineGsl *sg)

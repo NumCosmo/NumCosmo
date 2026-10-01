@@ -34,6 +34,7 @@
  * the prior.
  *
  * Users enjoy the flexibility to specify the parameter in various ways:
+ *
  * - Using the pair NcmModelID and the parameter pid.
  * - Providing a single NcmMSetPIndex.
  * - Supplying a string consisting of a parameter full name "model:parameter".
@@ -125,6 +126,11 @@ _ncm_prior_flat_param_get_property (GObject *object, guint prop_id, GValue *valu
 static void
 _ncm_prior_flat_param_finalize (GObject *object)
 {
+  NcmPriorFlatParam *pfp = NCM_PRIOR_FLAT_PARAM (object);
+
+  g_clear_pointer (&pfp->param_name, g_free);
+  g_clear_pointer (&pfp->model_ns, g_free);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_prior_flat_param_parent_class)->finalize (object);
 }

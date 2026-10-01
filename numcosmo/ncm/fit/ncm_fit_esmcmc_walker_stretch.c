@@ -26,9 +26,16 @@
 /**
  * NcmFitESMCMCWalkerStretch:
  *
- * Ensemble sampler Markov Chain Monte Carlo walker - stretch move.
+ * Stretch move of Goodman and Weare for #NcmFitESMCMC.
  *
- * Implementing stretch move walker for #NcmFitESMCMC (affine invariant).
+ * Walker $k$ moves along the line to a walker $j$ of the other half of the ensemble,
+ * $X^\star = X_j + z\,(X_k - X_j)$, with $z$ drawn from $g(z) \propto 1/\sqrt{z}$ on
+ * $[1/a, a]$ (#NcmFitESMCMCWalkerStretch:scale); the proposal factor is $z^{d - 1}$ in $d$
+ * dimensions. The move is affine invariant. With multi-stretch it applies $d$ stretches
+ * in sequence, each toward a different walker, and the factor is the product of the
+ * $z^{d - 1}$. With box sampling (ncm_fit_esmcmc_walker_stretch_set_box()) a bounded
+ * parameter is stretched in $x = \operatorname{atanh}(2(\theta - l)/(u - l) - 1)$, so the
+ * proposal stays inside $(l, u)$, and the factor includes the Jacobian.
  *
  */
 
@@ -69,6 +76,7 @@ struct _NcmFitESMCMCWalkerStretch
   GArray *numbers;
   gboolean multi;
   gchar *desc;
+  gchar *opts;
 };
 
 G_DEFINE_TYPE (NcmFitESMCMCWalkerStretch, ncm_fit_esmcmc_walker_stretch, NCM_TYPE_FIT_ESMCMC_WALKER)
@@ -88,6 +96,7 @@ ncm_fit_esmcmc_walker_stretch_init (NcmFitESMCMCWalkerStretch *stretch)
   stretch->numbers  = g_array_new (TRUE, TRUE, sizeof (guint));
   stretch->multi    = FALSE;
   stretch->desc     = NULL;
+  stretch->opts     = NULL;
 }
 
 static void
@@ -147,6 +156,7 @@ _ncm_fit_esmcmc_walker_stretch_dispose (GObject *object)
   g_clear_pointer (&stretch->numbers, g_array_unref);
 
   g_clear_pointer (&stretch->desc, g_free);
+  g_clear_pointer (&stretch->opts, g_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_esmcmc_walker_stretch_parent_class)->dispose (object);
@@ -169,6 +179,7 @@ static gdouble _ncm_fit_esmcmc_walker_stretch_prob (NcmFitESMCMCWalker *walker, 
 static gdouble _ncm_fit_esmcmc_walker_stretch_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k);
 static void _ncm_fit_esmcmc_walker_stretch_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf);
 static const gchar *_ncm_fit_esmcmc_walker_stretch_desc (NcmFitESMCMCWalker *walker);
+static const gchar *_ncm_fit_esmcmc_walker_stretch_opts (NcmFitESMCMCWalker *walker);
 
 static void
 ncm_fit_esmcmc_walker_stretch_class_init (NcmFitESMCMCWalkerStretchClass *klass)
@@ -206,6 +217,7 @@ ncm_fit_esmcmc_walker_stretch_class_init (NcmFitESMCMCWalkerStretchClass *klass)
   walker_class->prob_norm   = &_ncm_fit_esmcmc_walker_stretch_prob_norm;
   walker_class->clean       = &_ncm_fit_esmcmc_walker_stretch_clean;
   walker_class->desc        = &_ncm_fit_esmcmc_walker_stretch_desc;
+  walker_class->opts        = &_ncm_fit_esmcmc_walker_stretch_opts;
 }
 
 static void
@@ -459,6 +471,21 @@ _ncm_fit_esmcmc_walker_stretch_step (NcmFitESMCMCWalker *walker, GPtrArray *thet
   }
 }
 
+/* The multi-stretch move is nparams stretches in sequence; its reverse applies the
+ * inverse stretches in reverse order, so its proposal factor is the product of each
+ * stretch's z^(d - 1). */
+static gdouble
+_ncm_fit_esmcmc_walker_stretch_multi_lnq (NcmFitESMCMCWalkerStretch *stretch, guint k)
+{
+  gdouble lnq = 0.0;
+  guint si;
+
+  for (si = 0; si < stretch->nparams; si++)
+    lnq += (stretch->nparams - 1.0) * log (ncm_matrix_get (stretch->z, k, si));
+
+  return lnq;
+}
+
 static gdouble
 _ncm_fit_esmcmc_walker_stretch_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star)
 {
@@ -472,7 +499,7 @@ _ncm_fit_esmcmc_walker_stretch_prob (NcmFitESMCMCWalker *walker, GPtrArray *thet
   }
   else
   {
-    return exp ((m2lnL_cur - m2lnL_star) * 0.5 + ncm_vector_get (stretch->norm_box, k));
+    return exp ((m2lnL_cur - m2lnL_star) * 0.5 + _ncm_fit_esmcmc_walker_stretch_multi_lnq (stretch, k) + ncm_vector_get (stretch->norm_box, k));
   }
 }
 
@@ -489,7 +516,7 @@ _ncm_fit_esmcmc_walker_stretch_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray 
   }
   else
   {
-    return ncm_vector_get (stretch->norm_box, k);
+    return _ncm_fit_esmcmc_walker_stretch_multi_lnq (stretch, k) + ncm_vector_get (stretch->norm_box, k);
   }
 }
 
@@ -506,9 +533,22 @@ _ncm_fit_esmcmc_walker_stretch_desc (NcmFitESMCMCWalker *walker)
 
   g_clear_pointer (&stretch->desc, g_free);
 
-  stretch->desc = g_strdup_printf ("Stretch-Move%s", stretch->multi ? "[multi-strecth]" : "");
+  stretch->desc = g_strdup ("Stretch-Move");
 
   return stretch->desc;
+}
+
+/* The one setting that changes the proposal without changing its structure. */
+static const gchar *
+_ncm_fit_esmcmc_walker_stretch_opts (NcmFitESMCMCWalker *walker)
+{
+  NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
+
+  g_clear_pointer (&stretch->opts, g_free);
+
+  stretch->opts = g_strdup_printf ("multi-stretch=%s", stretch->multi ? "yes" : "no");
+
+  return stretch->opts;
 }
 
 /**
@@ -516,8 +556,7 @@ _ncm_fit_esmcmc_walker_stretch_desc (NcmFitESMCMCWalker *walker)
  * @nwalkers: number of walkers
  * @nparams: number of parameters
  *
- * Creates a new #NcmFitESMCMCWalkerStretch to be used
- * with @nwalkers.
+ * Creates a #NcmFitESMCMCWalkerStretch for @nwalkers walkers in @nparams dimensions.
  *
  * Returns: (transfer full): a new #NcmFitESMCMCWalkerStretch.
  */
@@ -535,9 +574,9 @@ ncm_fit_esmcmc_walker_stretch_new (guint nwalkers, guint nparams)
 /**
  * ncm_fit_esmcmc_walker_stretch_set_scale:
  * @stretch: a #NcmFitESMCMCWalkerStretch
- * @a: new scale $a > 1$
+ * @a: scale, $a \geq 1.1$
  *
- * Sets the value of the scale $a > 1$.
+ * Sets the scale $a$: $z$ is drawn on $[1/a, a]$.
  *
  */
 void
@@ -551,9 +590,7 @@ ncm_fit_esmcmc_walker_stretch_set_scale (NcmFitESMCMCWalkerStretch *stretch, con
  * ncm_fit_esmcmc_walker_stretch_get_scale:
  * @stretch: a #NcmFitESMCMCWalkerStretch
  *
- * Gets the value of the scale $a > 1$.
- *
- * Returns: current value of $a$.
+ * Returns: the scale $a$
  */
 gdouble
 ncm_fit_esmcmc_walker_stretch_get_scale (NcmFitESMCMCWalkerStretch *stretch)
@@ -568,8 +605,8 @@ ncm_fit_esmcmc_walker_stretch_get_scale (NcmFitESMCMCWalkerStretch *stretch)
  * @lb: lower bound
  * @ub: upper bound
  *
- * Sets box sampling for the @n-th parameter using @lb as lower bound
- * and @ub as upper bound.
+ * Stretches the @n-th parameter in the transformed coordinate that maps $(lb, ub)$ to the
+ * real line, so its proposals stay inside the box.
  *
  */
 void
@@ -588,8 +625,7 @@ ncm_fit_esmcmc_walker_stretch_set_box (NcmFitESMCMCWalkerStretch *stretch, guint
  * @stretch: a #NcmFitESMCMCWalkerStretch
  * @mset: a #NcmMSet
  *
- * Sets box sampling for the parameters using bounds from
- * @mset.
+ * Sets box sampling for every free parameter of @mset with its bounds.
  *
  */
 void
@@ -611,9 +647,9 @@ ncm_fit_esmcmc_walker_stretch_set_box_mset (NcmFitESMCMCWalkerStretch *stretch, 
 /**
  * ncm_fit_esmcmc_walker_stretch_multi:
  * @stretch: a #NcmFitESMCMCWalkerStretch
- * @multi: a boolean
+ * @multi: whether to use multi-stretch
  *
- * Sets whether it should use multi-stretchs in a single step.
+ * Sets whether each step is $d$ stretches in sequence instead of one.
  *
  */
 void

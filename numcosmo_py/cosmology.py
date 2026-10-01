@@ -155,10 +155,17 @@ class Cosmology:
 
 
 def create_cosmo(
-    massive_nu: bool = False,
+    massive_nu: bool = True,
+    fit_nu_mass: bool = False,
     prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
 ) -> Nc.HICosmo:
-    """Create a cosmology for CMB experiments."""
+    """Create a cosmology for CMB experiments.
+
+    The default matches the Planck 2018 baseline: N_eff = 3.046 as 2.0328 massless
+    species plus one neutrino of 0.06 eV with its mass fixed, and T_CMB = 2.7255 K. `massive_nu=False` drops
+    the massive neutrino (3.046 massless, not the baseline); `fit_nu_mass=True` frees
+    the mass, which is the LCDM + sum m_nu extension, not the baseline either.
+    """
     prim: Nc.HIPrim
     match prim_model:
         case HIPrimModel.ATAN:
@@ -191,6 +198,9 @@ def create_cosmo(
 
     cosmo.params_set_default_ftype()
     cosmo.cmb_params()
+    cosmo["Tgamma0"] = (
+        2.7255  # Planck 2018 baseline (Fixsen 2009), also the CLASS default
+    )
     cosmo["H0"] = 70.0
     cosmo["omegab"] = 0.022
     cosmo["omegac"] = 0.12
@@ -198,7 +208,7 @@ def create_cosmo(
     if massive_nu:
         cosmo["ENnu"] = 2.0328
         cosmo["massnu_0"] = 0.06
-        cosmo.param_set_desc("massnu_0", {"fit": True})
+        cosmo.param_set_desc("massnu_0", {"fit": fit_nu_mass})
 
     cosmo.param_set_desc("H0", {"fit": True})
     cosmo.param_set_desc("omegac", {"fit": True})

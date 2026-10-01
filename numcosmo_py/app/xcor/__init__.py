@@ -34,7 +34,9 @@ from .kernels import (
     get_kernel_registry_help_text,
     parse_kernel_spec,
 )
+from .common import XcorKernelCommon, XcorMethodOption, XcorClosureOption
 from .view import ViewKernel, ListKernels
+from .cls import ComputeCls, EllSpacing, sample_ells
 
 __all__ = [
     "LSSTBinType",
@@ -46,6 +48,12 @@ __all__ = [
     "KERNEL_CONFIG_REGISTRY",
     "get_kernel_registry_help_text",
     "parse_kernel_spec",
+    "XcorKernelCommon",
+    "XcorMethodOption",
+    "XcorClosureOption",
     "ViewKernel",
     "ListKernels",
+    "ComputeCls",
+    "EllSpacing",
+    "sample_ells",
 ]

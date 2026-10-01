@@ -84,3 +84,36 @@ def test_powspec_class_deriv_z(cosmo: Nc.HICosmo) -> None:
     for k in k_a:
         dps, _ = diff.rc_d1_1_to_1(0.2, lambda z, k0: ps_ml.eval(cosmo, z, k0), k)
         assert_allclose(dps, ps_ml.deriv_z(cosmo, 0.2, k), atol=0.0, rtol=1.0e-10)
+
+
+def test_powspec_default_deriv_matches_finite_difference(cosmo: Nc.HICosmo) -> None:
+    """A spectrum without closed-form derivatives inherits a finite-difference one.
+
+    NcPowspecMNLHaloFit does not implement deriv_z or deriv_k, so it exercises
+    the base class default, checked here against a central difference on its
+    own eval().
+    """
+    ps_ml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH.new())
+    ps_nl = Nc.PowspecMNLHaloFit.new(ps_ml, 3.0, 1.0e-6)
+    ps_nl.prepare(cosmo)
+
+    for z, k in ((0.0, 0.05), (0.7, 0.2), (2.0, 1.0e-3), (1.0, 3.0)):
+        h_z = 1.0e-4 * (1.0 + z)
+        fd_z = (
+            (ps_nl.eval(cosmo, z + h_z, k) - ps_nl.eval(cosmo, z - h_z, k))
+            / (2.0 * h_z)
+            if z > h_z
+            else (
+                -3.0 * ps_nl.eval(cosmo, z, k)
+                + 4.0 * ps_nl.eval(cosmo, z + h_z, k)
+                - ps_nl.eval(cosmo, z + 2.0 * h_z, k)
+            )
+            / (2.0 * h_z)
+        )
+        h_k = 1.0e-4 * k
+        fd_k = (ps_nl.eval(cosmo, z, k + h_k) - ps_nl.eval(cosmo, z, k - h_k)) / (
+            2.0 * h_k
+        )
+
+        assert_allclose(ps_nl.deriv_z(cosmo, z, k), fd_z, rtol=1.0e-6)
+        assert_allclose(ps_nl.deriv_k(cosmo, z, k), fd_k, rtol=1.0e-6)

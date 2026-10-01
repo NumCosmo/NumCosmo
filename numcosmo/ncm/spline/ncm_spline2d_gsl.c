@@ -26,13 +26,12 @@
 /**
  * NcmSpline2dGsl:
  *
- * Implements spline from spline method using The GNU Scientific Library (GSL) as base
- * splines.
+ * Bicubic spline on a rectangular grid from #NcmSplineGsl splines.
  *
- * This object implements bidimensional splines with the method given by the
- * #NcmSplineGsl class.
- *
- *
+ * The interpolant of #NcmSpline2dBicubic with #NcmSpline2d:spline a #NcmSplineGsl: the
+ * corner derivatives of each cell come from the one-dimensional splines along the rows
+ * and the columns. The coefficients of a cell are computed at each evaluation instead of
+ * on preparation. The integrals require increasing limits.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -614,7 +613,7 @@ _ncm_spline2d_gsl_int_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl
   gdouble x0, x1, y0, y1, result;
   guint k, m;
 
-  g_assert (jl <= ju || il <= iu);
+  g_assert ((jl <= ju) && (il <= iu));
 
   if ((jl == ju) && (il == iu))
   {
@@ -781,12 +780,11 @@ _ncm_spline2d_gsl_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
 
 /**
  * ncm_spline2d_gsl_new:
- * @s: a #NcmSplineGsl derived #NcmSpline
+ * @s: a #NcmSplineGsl
  *
- * This function initializes a #NcmSpline2d of
- * [GSL](https://www.gnu.org/software/gsl/) type given in @s.
+ * Creates an empty #NcmSpline2dGsl with @s as #NcmSpline2d:spline.
  *
- * Returns: A new #NcmSpline2d.
+ * Returns: (transfer full): a new #NcmSpline2d.
  */
 NcmSpline2d *
 ncm_spline2d_gsl_new (NcmSpline *s)
@@ -803,10 +801,10 @@ ncm_spline2d_gsl_new (NcmSpline *s)
 /**
  * ncm_spline2d_gsl_natural_new:
  *
- * This function initializes a #NcmSpline2d of [GSL](https://www.gnu.org/software/gsl/)
- * type [gsl_interp_cspline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_cspline).
+ * Creates an empty #NcmSpline2dGsl on the natural cubic spline of GSL,
+ * [gsl_interp_cspline](https://www.gnu.org/software/gsl/doc/html/interp.html#c.gsl_interp_cspline).
  *
- * Returns: A new #NcmSpline2d.
+ * Returns: (transfer full): a new #NcmSpline2d.
  */
 NcmSpline2d *
 ncm_spline2d_gsl_natural_new ()

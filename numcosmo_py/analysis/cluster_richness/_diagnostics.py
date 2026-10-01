@@ -22,8 +22,8 @@ This module provides visualization tools for validating mass-richness models
 by comparing model predictions with observed data.
 
 Two validation approaches:
-1. Forward: Model (mu, sigma) → Truncated (mean, std) → Compare with sample stats
-2. Inverse: Sample (mean, std) → Invert to (mu, sigma) → Compare with model
+1. Forward: Model (mu, sigma) -> Truncated (mean, std) -> Compare with sample stats
+2. Inverse: Sample (mean, std) -> Invert to (mu, sigma) -> Compare with model
 
 The diagnostics help verify that the model parameters mu(lnM, z) and sigma(lnM, z)
 correctly predict the distribution of observed lnR values.
@@ -65,8 +65,8 @@ def compute_binned_statistics(
     The predictions account for total scatter: sigma_total = sqrt(sigma^2 + sigma_lnR^2),
     which combines the intrinsic model scatter with catalog measurement uncertainties.
 
-    :param mean_pred: Predicted truncated mean from model (forward: mu → mean)
-    :param std_pred: Predicted truncated std from model (forward: sigma → std)
+    :param mean_pred: Predicted truncated mean from model (forward: mu -> mean)
+    :param std_pred: Predicted truncated std from model (forward: sigma -> std)
     :param lnR: Observed log-richness values from sample
     :param mu: Model parameter mu(lnM, z) for each cluster
     :param sigma: Model parameter sigma(lnM, z) for each cluster
@@ -126,7 +126,7 @@ def compute_binned_statistics(
         # Observed sample statistics in mean_pred bins
         "sample_mean": sample_mean,
         "sample_std": sample_std,
-        # Model predictions (forward: mu,sigma → mean,std) in mean_pred bins
+        # Model predictions (forward: mu,sigma -> mean,std) in mean_pred bins
         "bin_mean_pred": bin_mean_pred,
         "bin_std_pred": bin_std_pred,
         # Binning scheme 2: By model parameter mu (inverse validation)
@@ -138,7 +138,7 @@ def compute_binned_statistics(
         "bin_sigma": bin_sigma,
         "bin_sigma_lnR": bin_sigma_lnR,
         "bin_sigma_total": bin_sigma_total,
-        # Recovered parameters (inverse: mean,std → mu,sigma) in mu bins
+        # Recovered parameters (inverse: mean,std -> mu,sigma) in mu bins
         "sample_mu": sample_mu,
         "sample_sigma": sample_sigma,
     }
@@ -151,7 +151,7 @@ def plot_mu_recovery(
 ) -> tuple[Figure, Axes]:
     """Plot recovered mu vs model mu (inverse validation).
 
-    Validates inverse conversion: sample statistics → model parameters.
+    Validates inverse conversion: sample statistics -> model parameters.
     Compares mu recovered from sample (mean, std) against model mu(lnM, z).
 
     :param stats: Dictionary from compute_binned_statistics
@@ -174,7 +174,7 @@ def plot_mu_recovery(
         edgecolor="C0",
         facecolor="C0",
         alpha=0.7,
-        label=r"Recovered $\mu$ (inverse: sample → model)",
+        label=r"Recovered $\mu$ (inverse: sample -> model)",
     )
     ax.stairs(
         stats["bin_mu"],
@@ -204,7 +204,7 @@ def plot_sigma_recovery(
 ) -> tuple[Figure, Axes]:
     """Plot recovered sigma vs model sigma (inverse validation).
 
-    Validates inverse conversion: sample statistics → model parameters.
+    Validates inverse conversion: sample statistics -> model parameters.
     Compares sigma recovered from sample (mean, std) against model sigma(lnM, z).
 
     :param stats: Dictionary from compute_binned_statistics
@@ -227,7 +227,7 @@ def plot_sigma_recovery(
         edgecolor="C0",
         facecolor="C0",
         alpha=0.7,
-        label=r"Recovered $\sigma$ (inverse: sample → model)",
+        label=r"Recovered $\sigma$ (inverse: sample -> model)",
     )
     ax.stairs(
         stats["bin_sigma"],
@@ -302,7 +302,7 @@ def plot_mean_lnR(
 ) -> tuple[Figure, Axes]:
     """Plot observed vs predicted truncated mean (forward validation).
 
-    Validates forward conversion: model parameters → truncated statistics.
+    Validates forward conversion: model parameters -> truncated statistics.
     Compares predicted truncated mean from model against observed sample mean.
 
     :param stats: Dictionary from compute_binned_statistics
@@ -337,14 +337,14 @@ def plot_mean_lnR(
         label=r"Observed sample mean of $\ln R$",
     )
 
-    # Step plot for model prediction (forward: mu,sigma → mean)
+    # Step plot for model prediction (forward: mu,sigma -> mean)
     ax.stairs(
         stats["bin_mean_pred"],
         mu_bins,
         color="black",
         lw=2,
         baseline=None,
-        label=r"Predicted $\mathrm{E}[\ln R]$ (forward: model → truncated)",
+        label=r"Predicted $\mathrm{E}[\ln R]$ (forward: model -> truncated)",
     )
     ax.set_xlabel(r"Predicted truncated mean $\mathrm{E}[\ln R]$ from model")
     ax.set_ylabel(r"Mean $\ln R$")
@@ -366,7 +366,7 @@ def plot_empirical_vs_model_sigma(
 ) -> tuple[Figure, Axes]:
     """Plot observed vs predicted truncated std (forward validation).
 
-    Validates forward conversion: model parameters → truncated statistics.
+    Validates forward conversion: model parameters -> truncated statistics.
     Compares predicted truncated std from model against observed sample std.
 
     :param stats: Dictionary from compute_binned_statistics
@@ -393,14 +393,14 @@ def plot_empirical_vs_model_sigma(
         label=r"Observed sample std of $\ln R$",
     )
 
-    # Step plot for model prediction (forward: mu,sigma → std)
+    # Step plot for model prediction (forward: mu,sigma -> std)
     ax.stairs(
         stats["bin_std_pred"],
         mu_bins,
         color="C1",
         lw=2,
         baseline=None,
-        label=r"Predicted $\mathrm{Std}[\ln R]$ (forward: model → truncated)",
+        label=r"Predicted $\mathrm{Std}[\ln R]$ (forward: model -> truncated)",
     )
     ax.set_xlabel(r"Predicted truncated mean $\mathrm{E}[\ln R]$ from model")
     ax.set_ylabel(r"Std $\ln R$")
@@ -513,7 +513,7 @@ def plot_scatter_components(
         lw=2,
         linestyle="--",
         baseline=None,
-        label=r"Recovered $\sigma$ (inverse: sample → model)",
+        label=r"Recovered $\sigma$ (inverse: sample -> model)",
     )
     ax.set_xlabel(r"Model parameter $\mu(\ln M, z)$")
     ax.set_ylabel(r"Scatter $\sigma$")
@@ -682,7 +682,7 @@ def plot_standardized_residuals_vs_predicted(
     ax.scatter(mu, z_obs, alpha=0.5, s=10, edgecolors="none")
     ax.axhline(0, color="r", linestyle="--", lw=2, label="Zero residual")
 
-    # Add reference bands at ±2 sigma
+    # Add reference bands at +/-2 sigma
     ax.axhline(2, color="gray", linestyle=":", lw=1, alpha=0.5)
     ax.axhline(-2, color="gray", linestyle=":", lw=1, alpha=0.5)
 

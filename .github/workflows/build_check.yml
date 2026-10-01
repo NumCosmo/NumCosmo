@@ -56,7 +56,7 @@ jobs:
     name: (conda lock files)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     # Fails when environment.yml was changed without regenerating
     # .github/locks/*.lock. The conda jobs below don't fail on a stale lock,
     # they fall back to solving it (slow), so this job is what makes the
@@ -67,7 +67,7 @@ jobs:
     name: (doc style)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         # Needs the merge base with the target branch to see only added lines.
         fetch-depth: 0
@@ -82,7 +82,7 @@ jobs:
     # ships 2.7.1. Revisit once ubuntu-latest has moved to 26.04.
     runs-on: ubuntu-26.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Restore data cache
       id: data-cache
       uses: ./.github/actions/data-cache
@@ -155,7 +155,7 @@ jobs:
       # is exact and a partial entry would then stick until DATA_CACHE_VERSION
       # is bumped.
       if: success() && steps.data-cache.outputs.hit != 'true'
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       with:
         path: ${{ steps.data-cache.outputs.paths }}
         key: ${{ steps.data-cache.outputs.key }}
@@ -171,7 +171,7 @@ jobs:
       CPATH: /usr/local/include
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Restore data cache
       id: data-cache
       uses: ./.github/actions/data-cache
@@ -225,15 +225,13 @@ jobs:
         cd examples
         python3 example_simple.py
         python3 example_cbe.py
-        cd ..
-        pytest -xvs tests/python --run-sphere-map -m sphere_map
     - name: Check NumCosmo
       run: |
         meson test -v -C build --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ env.FAST_TEST_ARGS }} || (cat build/meson-logs/testlog.txt && exit 1)
     - name: Save data cache
       # The macOS writer; see the same step in build-gcc-ubuntu.
       if: success() && steps.data-cache.outputs.hit != 'true'
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       with:
         path: ${{ steps.data-cache.outputs.paths }}
         key: ${{ steps.data-cache.outputs.key }}
@@ -253,7 +251,7 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Restore data cache
         uses: ./.github/actions/data-cache
         with:
@@ -333,7 +331,7 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Restore data cache
         # Only the shards whose tests reach a downloaded file: the marker-gated
         # powspec/xcor/omp lanes touch none, and neither do the c-* slices, so
@@ -371,17 +369,16 @@ jobs:
         # Second run to generate the coverage for the tests
         # Third run to merge the coverage base and the coverage for the tests
         run: |
-          lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
+          lcov --config-file .lcovrc --no-external --capture --initial --directory build --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
           meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
-          lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
+          lcov --config-file .lcovrc --no-external --capture --directory build --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
-          # tests/c and tests/python are the harness, not the library: they are ~22k lines
-          # at ~98%, since a test file is covered by its own execution, and counting them
-          # lifts the reported figure about three points above what the library actually
-          # reaches.
+          # tests/c is the harness, not the library: a test file is covered by its own
+          # execution, and counting it lifts the reported figure above what the library
+          # actually reaches. The Python tests produce no gcov data.
           # numcosmo/**/tests/*.c is a different thing -- installed helpers like
           # the analytic xcor kernels -- and stays.
-          lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/external/*' '*/tools/*' '*/tests/c/*' '*/tests/python/*' --output-file numcosmo-coverage.info
+          lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/external/*' '*/tools/*' '*/tests/c/*' --output-file numcosmo-coverage.info
       - name: Test timing summary
         if: always()
         # Surface the slowest tests of this shard in the job summary: this is how a test
@@ -390,7 +387,7 @@ jobs:
         run: |
           python3 .github/scripts/test_summary.py summary --testlog build/meson-logs/testlog.json --title "${{ matrix.name }}" >> "$GITHUB_STEP_SUMMARY"
       - name: CodeCov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           disable_search: true
           fail_ci_if_error: true

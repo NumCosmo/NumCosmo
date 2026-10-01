@@ -118,6 +118,7 @@ void ncm_quaternion_set_to_rotate_to_z (NcmQuaternion *q, NcmTriVec *v);
 /**
  * NCM_QUATERNION_INIT:
  *
+ * Initializer of a zero #NcmQuaternion.
  */
 #define NCM_QUATERNION_INIT \
         {0.0, {             \
@@ -128,6 +129,7 @@ void ncm_quaternion_set_to_rotate_to_z (NcmQuaternion *q, NcmTriVec *v);
 /**
  * NCM_QUATERNION_INIT_I:
  *
+ * Initializer of the identity #NcmQuaternion.
  */
 #define NCM_QUATERNION_INIT_I \
         {1.0, {               \

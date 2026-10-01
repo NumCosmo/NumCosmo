@@ -26,12 +26,20 @@
 /**
  * NcmFitMCMC:
  *
- * Markov Chain Monte Carlo analysis.
+ * Metropolis sampler of the posterior of the free parameters.
  *
- * Markov Chain Monte Carlo (MCMC) analysis is a method for sampling the posterior
- * probability distribution of a set of parameters. It relies on the
- * Metropolis–Hastings algorithm. The transition kernel utilized in this implementation
- * is specified by the #NcmMSetTransKern object.
+ * Each step draws a proposal from the #NcmMSetTransKern and accepts it with probability
+ * $\min(1, \exp[(-2\ln L_\mathrm{cur} + 2\ln L_\star)/2])$; the chain, with
+ * $-2\ln L$ of each state, is stored in a #NcmMSetCatalog. The acceptance has no
+ * Hastings ratio, so the kernel must be symmetric, $q(\theta^\star|\theta) =
+ * q(\theta|\theta^\star)$, as #NcmMSetTransKernGauss and #NcmMSetTransKernFlat are. A
+ * proposal outside the
+ * parameter bounds, at parameters the models report invalid, or with a non-finite
+ * $-2\ln L$ is rejected.
+ *
+ * A run is started with ncm_fit_mcmc_start_run(), extended with ncm_fit_mcmc_run() or
+ * ncm_fit_mcmc_run_lre() and closed with ncm_fit_mcmc_end_run(). With a data file the
+ * chain is saved during the run and a restarted run continues from its last state.
  *
  */
 
@@ -198,7 +206,7 @@ ncm_fit_mcmc_class_init (NcmFitMCMCClass *klass)
                                    PROP_SAMPLER,
                                    g_param_spec_object ("sampler",
                                                         NULL,
-                                                        "Metropolis–Hastings sampler",
+                                                        "Metropolis-Hastings sampler",
                                                         NCM_TYPE_MSET_TRANS_KERN,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -209,6 +217,13 @@ ncm_fit_mcmc_class_init (NcmFitMCMCClass *klass)
                                                       "Run messages type",
                                                       NCM_TYPE_FIT_RUN_MSGS, NCM_FIT_RUN_MSGS_SIMPLE,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_DATA_FILE,
+                                   g_param_spec_string ("data-file",
+                                                        NULL,
+                                                        "Data file to be used by the catalog",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static void
@@ -227,13 +242,12 @@ _ncm_fit_mcmc_set_fit_obj (NcmFitMCMC *mcmc, NcmFit *fit)
 /**
  * ncm_fit_mcmc_new:
  * @fit: a #NcmFit
- * @tkern: a #NcmMSetTransKern.
- * @mtype: messages type
+ * @tkern: a symmetric #NcmMSetTransKern
+ * @mtype: a #NcmFitRunMsgs
  *
- * Creates a new #NcmFitMCMC object that will use the @tkern transition kernel to
- * generate the MCMC proposals.
+ * Creates a #NcmFitMCMC sampling the posterior of @fit with proposals from @tkern.
  *
- * Returns: a new #NcmFitMCMC.
+ * Returns: (transfer full): a new #NcmFitMCMC.
  */
 NcmFitMCMC *
 ncm_fit_mcmc_new (NcmFit *fit, NcmMSetTransKern *tkern, NcmFitRunMsgs mtype)
@@ -251,7 +265,7 @@ ncm_fit_mcmc_new (NcmFit *fit, NcmMSetTransKern *tkern, NcmFitRunMsgs mtype)
  * ncm_fit_mcmc_free:
  * @mcmc: a #NcmFitMCMC
  *
- * Decrement the reference count of @mcmc and frees the memory used by it.
+ * Decreases the reference count of @mcmc.
  *
  */
 void
@@ -264,8 +278,7 @@ ncm_fit_mcmc_free (NcmFitMCMC *mcmc)
  * ncm_fit_mcmc_clear:
  * @mcmc: a #NcmFitMCMC
  *
- * If *@mcmc is not NULL, decrement the reference count of @mcmc and sets *@mcmc to
- * NULL.
+ * Decreases the reference count of *@mcmc and sets it to %NULL.
  *
  */
 void
@@ -277,16 +290,18 @@ ncm_fit_mcmc_clear (NcmFitMCMC **mcmc)
 /**
  * ncm_fit_mcmc_set_data_file:
  * @mcmc: a #NcmFitMCMC
- * @filename: a filename.
+ * @filename: a file name
  *
- * Sets the data file to be used to save the Markov Chain Monte Carlo realizations
- * catalog.
+ * Makes @filename the file of the catalog of @mcmc (ncm_mset_catalog_set_file()).
+ * Changing the file of a running catalog aborts.
  *
  */
 void
 ncm_fit_mcmc_set_data_file (NcmFitMCMC *mcmc, const gchar *filename)
 {
   const gchar *cur_filename = ncm_mset_catalog_peek_filename (mcmc->mcat);
+
+  g_assert_nonnull (filename);
 
   if (mcmc->started && (cur_filename != NULL))
     g_error ("ncm_fit_mcmc_set_data_file: Cannot change data file during a run, call ncm_fit_mcmc_end_run() first.");
@@ -303,9 +318,9 @@ ncm_fit_mcmc_set_data_file (NcmFitMCMC *mcmc, const gchar *filename)
 /**
  * ncm_fit_mcmc_set_mtype:
  * @mcmc: a #NcmFitMCMC
- * @mtype: messages type #NcmFitRunMsgs
+ * @mtype: a #NcmFitRunMsgs
  *
- * Sets the messages type to be used during the Markov Chain Monte Carlo run.
+ * Sets the messages of @mcmc to @mtype.
  *
  */
 void
@@ -317,9 +332,10 @@ ncm_fit_mcmc_set_mtype (NcmFitMCMC *mcmc, NcmFitRunMsgs mtype)
 /**
  * ncm_fit_mcmc_set_trans_kern:
  * @mcmc: a #NcmFitMCMC
- * @tkern: a #NcmMSetTransKern.
+ * @tkern: a symmetric #NcmMSetTransKern
  *
- * Sets the transition kernel to be used during the Markov Chain Monte Carlo run.
+ * Makes @tkern the proposal kernel of @mcmc and sets its model set to the one of the
+ * fit. Calling it during a run aborts.
  *
  */
 void
@@ -328,8 +344,9 @@ ncm_fit_mcmc_set_trans_kern (NcmFitMCMC *mcmc, NcmMSetTransKern *tkern)
   NcmMSet *mset = ncm_fit_peek_mset (mcmc->fit);
 
   if (mcmc->started)
-    g_error ("ncm_fit_mcmc_set_rtype: Cannot change resample type during a run, call ncm_fit_mcmc_end_run() first.");
+    g_error ("ncm_fit_mcmc_set_trans_kern: cannot change the kernel during a run, call ncm_fit_mcmc_end_run() first.");
 
+  ncm_mset_trans_kern_clear (&mcmc->tkern);
   mcmc->tkern = ncm_mset_trans_kern_ref (tkern);
 
   ncm_mset_catalog_set_run_type (mcmc->mcat, ncm_mset_trans_kern_get_name (tkern));
@@ -341,7 +358,9 @@ ncm_fit_mcmc_set_trans_kern (NcmFitMCMC *mcmc, NcmMSetTransKern *tkern)
  * @mcmc: a #NcmFitMCMC
  * @rng: a #NcmRNG
  *
- * Sets the random number generator to be used during the Markov Chain Monte Carlo run.
+ * Makes @rng the random number generator of the catalog of @mcmc, used by the kernel
+ * and the acceptance. Calling it during a run aborts; a run started without one creates
+ * one with a random seed.
  *
  */
 void
@@ -357,9 +376,7 @@ ncm_fit_mcmc_set_rng (NcmFitMCMC *mcmc, NcmRNG *rng)
  * ncm_fit_mcmc_get_accept_ratio:
  * @mcmc: a #NcmFitMCMC
  *
- * Gets the acceptance ratio of the Markov Chain Monte Carlo run.
- *
- * Returns: the current acceptance ratio.
+ * Returns: the fraction of the proposals of the current run that were accepted
  */
 gdouble
 ncm_fit_mcmc_get_accept_ratio (NcmFitMCMC *mcmc)
@@ -367,7 +384,7 @@ ncm_fit_mcmc_get_accept_ratio (NcmFitMCMC *mcmc)
   return mcmc->naccepted * 1.0 / (mcmc->ntotal * 1.0);
 }
 
-void
+static void
 _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
 {
   NcmMSet *mset       = ncm_fit_peek_mset (fit);
@@ -428,7 +445,9 @@ static void ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n);
  * ncm_fit_mcmc_start_run:
  * @mcmc: a #NcmFitMCMC
  *
- * Starts a new run, setup the Markov Chain Monte Carlo object and syncs the catalog.
+ * Starts a run: creates a random number generator if the catalog has none, and starts
+ * the chain from the last state of the catalog, or from the current parameters of the
+ * fit when the catalog is empty. Starting a running @mcmc aborts.
  *
  */
 void
@@ -504,7 +523,7 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
   }
   else if (cur_id < mcmc->cur_sample_id)
   {
-    g_error ("ncm_fit_mcmc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].",
+    g_error ("ncm_fit_mcmc_start_run: the catalog has fewer rows than the run [%d < %d].",
              cur_id, mcmc->cur_sample_id);
   }
 
@@ -532,8 +551,7 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
  * ncm_fit_mcmc_end_run:
  * @mcmc: a #NcmFitMCMC
  *
- * Ends the current run, frees the memory used by the Markov Chain Monte Carlo and
- * syncs the catalog.
+ * Ends the run and saves the catalog.
  *
  */
 void
@@ -551,7 +569,7 @@ ncm_fit_mcmc_end_run (NcmFitMCMC *mcmc)
  * ncm_fit_mcmc_reset:
  * @mcmc: a #NcmFitMCMC
  *
- * Resets the Markov Chain Monte Carlo object and the catalog.
+ * Erases the chain: the catalog is emptied and the acceptance counts reset.
  *
  */
 void
@@ -592,9 +610,10 @@ ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n)
 /**
  * ncm_fit_mcmc_set_first_sample_id:
  * @mcmc: a #NcmFitMCMC
- * @first_sample_id: id
+ * @first_sample_id: index of the first state
  *
- * Sets the first sample id to be used in the Markov Chain Monte Carlo.
+ * Makes @first_sample_id the index of the first state of the catalog. It requires a
+ * started run and cannot move backwards.
  *
  */
 void
@@ -620,10 +639,10 @@ static void _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc);
 /**
  * ncm_fit_mcmc_run:
  * @mcmc: a #NcmFitMCMC
- * @n: total number of realizations to run
+ * @n: total number of states
  *
- * Runs the Markov Chain Monte Carlo until it reaches the @n-th realization. Note that
- * if the first_id is non-zero it will run @n - first_id realizations.
+ * Extends the chain until it holds @n states, counting those already in the catalog.
+ * It requires a started run.
  *
  */
 void
@@ -687,36 +706,39 @@ _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
 
   for (i = 0; i < mcmc->n; i++)
   {
-    gdouble m2lnL_cur = ncm_fit_state_get_m2lnL_curval (fstate);
-    gdouble m2lnL_star, prob, jump = 0.0;
+    const gdouble m2lnL_cur = ncm_fit_state_get_m2lnL_curval (fstate);
+    gboolean accept         = FALSE;
+    gdouble m2lnL_star      = GSL_POSINF;
 
     ncm_mset_fparams_get_vector (mset, mcmc->theta);
     ncm_mset_trans_kern_generate (mcmc->tkern, mcmc->theta, mcmc->thetastar, rng);
-    ncm_mset_fparams_set_vector (mset, mcmc->thetastar);
-
-    ncm_fit_m2lnL_val (mcmc->fit, &m2lnL_star);
     mcmc->ntotal++;
-    mcmc->naccepted++;
 
-/*
- *   ncm_vector_log_vals (mcmc->theta, "# Theta  : ", "% 8.5g");
- *   ncm_vector_log_vals (mcmc->thetastar, "# Theta* : ", "% 8.5g");
- */
-    prob = GSL_MIN (exp ((m2lnL_cur - m2lnL_star) * 0.5), 1.0);
-    ncm_fit_state_set_m2lnL_curval (fstate, m2lnL_star);
-
-    /*printf ("# Prob %e [% 21.16g % 21.16g] % 21.16g\n", prob, m2lnL_cur, m2lnL_star, m2lnL_cur - m2lnL_star);*/
-
-    if (prob != 1.0)
+    /* Proposals outside the bounds, at invalid parameters or with a non-finite
+     * -2 ln L are rejected. */
+    if (ncm_mset_fparam_valid_bounds (mset, mcmc->thetastar))
     {
-      jump = ncm_rng_uniform01_gen (rng);
+      ncm_mset_fparams_set_vector (mset, mcmc->thetastar);
 
-      if (jump > prob)
+      if (ncm_mset_params_valid (mset))
+        ncm_fit_m2lnL_val (mcmc->fit, &m2lnL_star);
+
+      if (gsl_finite (m2lnL_star))
       {
-        ncm_mset_fparams_set_vector (mset, mcmc->theta);
-        ncm_fit_state_set_m2lnL_curval (fstate, m2lnL_cur);
-        mcmc->naccepted--;
+        const gdouble prob = GSL_MIN (exp ((m2lnL_cur - m2lnL_star) * 0.5), 1.0);
+
+        accept = (prob == 1.0) || (ncm_rng_uniform01_gen (rng) <= prob);
       }
+    }
+
+    if (accept)
+    {
+      ncm_fit_state_set_m2lnL_curval (fstate, m2lnL_star);
+      mcmc->naccepted++;
+    }
+    else
+    {
+      ncm_mset_fparams_set_vector (mset, mcmc->theta);
     }
 
     _ncm_fit_mcmc_update (mcmc, mcmc->fit);
@@ -727,12 +749,13 @@ _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
 /**
  * ncm_fit_mcmc_run_lre:
  * @mcmc: a #NcmFitMCMC
- * @prerun: number of pre-runs to do
- * @lre: largest relative error to attain
+ * @prerun: minimum number of states before the first error estimate
+ * @lre: largest relative error of the parameter means
  *
- * Runs the Markov Chain Monte Carlo until it reaches the @n-th realization. It starts
- * by running @prerun realizations and then it runs more realizations until the largest
- * relative error is less than @lre.
+ * Extends the chain to at least the larger of @prerun and 1000 states per free
+ * parameter, then until the largest relative error of the parameter means, with the
+ * autocorrelation time estimated from the chain (ncm_mset_catalog_largest_error()), is
+ * below @lre.
  *
  */
 void
@@ -786,7 +809,8 @@ ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre)
  * ncm_fit_mcmc_mean_covar:
  * @mcmc: a #NcmFitMCMC
  *
- * Computes the mean and covariance of the generated catalog.
+ * Stores the mean and covariance of the chain as the parameters and covariance of the
+ * #NcmFitState of the fit, and sets the model set of the catalog to the mean.
  *
  */
 void
@@ -807,9 +831,7 @@ ncm_fit_mcmc_mean_covar (NcmFitMCMC *mcmc)
  * ncm_fit_mcmc_get_catalog:
  * @mcmc: a #NcmFitMCMC
  *
- * Gets the generated catalog of @mcmc.
- *
- * Returns: (transfer full): the generated catalog.
+ * Returns: (transfer full): the catalog of @mcmc
  */
 NcmMSetCatalog *
 ncm_fit_mcmc_get_catalog (NcmFitMCMC *mcmc)

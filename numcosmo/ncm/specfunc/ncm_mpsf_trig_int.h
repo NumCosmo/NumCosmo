@@ -40,6 +40,8 @@ void ncm_mpsf_sin_int_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd);
 
 gdouble ncm_sf_sin_int (gdouble x);
 
+void ncm_mpsf_sin_int_free_cache (void);
+
 G_END_DECLS
 
 #endif /* _NCM_MPSF_TRIG_INT_H */

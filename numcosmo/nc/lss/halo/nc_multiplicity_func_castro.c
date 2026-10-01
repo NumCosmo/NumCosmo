@@ -38,7 +38,7 @@
  * term vanishes. Both amplitudes are exact normalisations, $\int f(\nu)\,
  * \mathrm{d}\nu/\nu = 1$.
  *
- * See the <a href="../../theory/castro_hmf.html">Castro Halo Mass Function and Bias</a>
+ * See the <a href="../../theory/nc/lss/halo/castro_hmf.html">Castro Halo Mass Function and Bias</a>
  * theory page for the full expressions, and
  * [Castro et al. (2023)](https://arxiv.org/abs/2208.02174) and
  * [Castro et al. (2025)](https://arxiv.org/abs/2504.07608).

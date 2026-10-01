@@ -71,7 +71,7 @@
  * splines for populations bounded at $r=0$, or with a fixed knot grid
  * (_build_g_spline_fixed_knots()) for populations that diverge there.
  *
- * See docs/theory/wl_shape_factor_history.md for the design rationale.
+ * See docs/theory/nc/lss/galaxy/wl_shape_factor_history.md for the design rationale.
  */
 
 #ifdef HAVE_CONFIG_H

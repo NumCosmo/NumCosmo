@@ -68,6 +68,8 @@ def _resampled_ncount() -> Nc.DataClusterNCount:
     psml.require_kmin(1.0e-3)
     psml.require_kmax(1.0e3)
     psf = Ncm.PowspecFilter.new(psml, Ncm.PowspecFilterType.TOPHAT)
+    # Explicit: the golden was drawn with the filter at this tolerance.
+    psf.set_reltol(1.0e-6)
     psf.set_best_lnr0()
 
     mulf = Nc.MultiplicityFuncBocquet.new()

@@ -55,11 +55,29 @@ void test_ncm_matrix_colmajor (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_add_mul (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_log_exp (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_square_to_sym (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_triang_to_sym (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_zero_triangle (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_update_vector (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_sym_update_vector (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_dtrmm_dtrsm (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_dtrmv_dtrsv (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_dsyrk (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_scale_rows_cols (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_sub_row_vector (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_chol_chi2_cols (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_is_identity (TestNcmMatrix *test, gconstpointer pdata);
+void test_ncm_matrix_cholesky_decomp_nearPD (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_free (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_submatrix (TestNcmMatrix *test, gconstpointer pdata);
 void test_ncm_matrix_serialization (TestNcmMatrix *test, gconstpointer pdata);
+
+void test_ncm_matrix_api_dsymm (void);
+void test_ncm_matrix_api_cholesky (void);
+void test_ncm_matrix_api_cor (void);
+void test_ncm_matrix_api_transpose_memcpy (void);
+void test_ncm_matrix_api_variant_empty (void);
+void test_ncm_matrix_api_fast_get_tda (void);
+void test_ncm_matrix_api_nearPD (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -130,6 +148,16 @@ main (gint argc, gchar *argv[])
               &test_ncm_matrix_square_to_sym,
               &test_ncm_matrix_free);
 
+  g_test_add ("/ncm/matrix/triang_to_sym", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_triang_to_sym,
+              &test_ncm_matrix_free);
+
+  g_test_add ("/ncm/matrix/zero_triangle", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_zero_triangle,
+              &test_ncm_matrix_free);
+
   g_test_add ("/ncm/matrix/update_vector", TestNcmMatrix, NULL,
               &test_ncm_matrix_new,
               &test_ncm_matrix_update_vector,
@@ -137,6 +165,46 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/matrix/sym_update_vector", TestNcmMatrix, NULL,
               &test_ncm_matrix_new,
               &test_ncm_matrix_sym_update_vector,
+              &test_ncm_matrix_free);
+
+  g_test_add ("/ncm/matrix/dtrmm_dtrsm", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_dtrmm_dtrsm,
+              &test_ncm_matrix_free);
+
+  g_test_add ("/ncm/matrix/dtrmv_dtrsv", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_dtrmv_dtrsv,
+              &test_ncm_matrix_free);
+
+  g_test_add ("/ncm/matrix/dsyrk", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_dsyrk,
+              &test_ncm_matrix_free);
+
+  g_test_add ("/ncm/matrix/scale_rows_cols", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_scale_rows_cols,
+              &test_ncm_matrix_free);
+
+  g_test_add ("/ncm/matrix/sub_row_vector", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_sub_row_vector,
+              &test_ncm_matrix_free);
+
+  g_test_add ("/ncm/matrix/chol_chi2_cols", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_chol_chi2_cols,
+              &test_ncm_matrix_free);
+
+  g_test_add ("/ncm/matrix/is_identity", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_is_identity,
+              &test_ncm_matrix_free);
+
+  g_test_add ("/ncm/matrix/cholesky_decomp_nearPD", TestNcmMatrix, NULL,
+              &test_ncm_matrix_new,
+              &test_ncm_matrix_cholesky_decomp_nearPD,
               &test_ncm_matrix_free);
 
   g_test_add ("/ncm/matrix/submatrix", TestNcmMatrix, NULL,
@@ -148,6 +216,14 @@ main (gint argc, gchar *argv[])
               &test_ncm_matrix_new,
               &test_ncm_matrix_serialization,
               &test_ncm_matrix_free);
+
+  g_test_add_func ("/ncm/matrix/api/dsymm", &test_ncm_matrix_api_dsymm);
+  g_test_add_func ("/ncm/matrix/api/cholesky", &test_ncm_matrix_api_cholesky);
+  g_test_add_func ("/ncm/matrix/api/cor", &test_ncm_matrix_api_cor);
+  g_test_add_func ("/ncm/matrix/api/transpose_memcpy", &test_ncm_matrix_api_transpose_memcpy);
+  g_test_add_func ("/ncm/matrix/api/variant_empty", &test_ncm_matrix_api_variant_empty);
+  g_test_add_func ("/ncm/matrix/api/fast_get_tda", &test_ncm_matrix_api_fast_get_tda);
+  g_test_add_func ("/ncm/matrix/api/nearPD", &test_ncm_matrix_api_nearPD);
 
   g_test_run ();
 }
@@ -731,6 +807,127 @@ test_ncm_matrix_log_exp (TestNcmMatrix *test, gconstpointer pdata)
   NCM_TEST_FREE (ncm_matrix_free, log_m);
 }
 
+/*
+ * @UL names the triangle that survives: 'U' clears the strict lower and leaves the upper
+ * and the diagonal untouched, 'L' the other way round.
+ */
+void
+test_ncm_matrix_zero_triangle (TestNcmMatrix *test, gconstpointer pdata)
+{
+  gint tests;
+
+  for (tests = 0; tests < 12; tests++)
+  {
+    const guint n  = g_test_rand_int_range (2, 40);
+    const gchar UL = (g_test_rand_int_range (0, 2) == 0) ? 'U' : 'L';
+    NcmMatrix *m   = ncm_matrix_new (n, n);
+    NcmMatrix *ref = ncm_matrix_new (n, n);
+    guint i, j;
+
+    for (i = 0; i < n; i++)
+    {
+      for (j = 0; j < n; j++)
+      {
+        const gdouble v = g_test_rand_double_range (-9.0, 9.0);
+
+        ncm_matrix_set (m, i, j, v);
+        ncm_matrix_set (ref, i, j, v);
+      }
+    }
+
+    ncm_matrix_zero_triangle (m, UL);
+
+    for (i = 0; i < n; i++)
+    {
+      for (j = 0; j < n; j++)
+      {
+        const gboolean cleared = (UL == 'U') ? (j < i) : (j > i);
+
+        if (cleared)
+          g_assert_cmpfloat (ncm_matrix_get (m, i, j), ==, 0.0);
+        else
+          g_assert_cmpfloat (ncm_matrix_get (m, i, j), ==, ncm_matrix_get (ref, i, j));
+      }
+    }
+
+    /* Clearing a triangle twice changes nothing more. */
+    ncm_matrix_zero_triangle (m, UL);
+
+    for (i = 0; i < n; i++)
+      for (j = i; j < n; j++)
+        if ((UL == 'U'))
+          g_assert_cmpfloat (ncm_matrix_get (m, i, j), ==, ncm_matrix_get (ref, i, j));
+
+    NCM_TEST_FREE (ncm_matrix_free, m);
+    NCM_TEST_FREE (ncm_matrix_free, ref);
+  }
+}
+
+/*
+ * U^T U for an upper triangular U, and L L^T for a lower one, both against a direct
+ * triple loop. Covers each triangle and both settings of @zero: with it off the caller
+ * promises the unused triangle is already clear, with it on the routine clears it, and
+ * the product must come out the same either way.
+ */
+void
+test_ncm_matrix_triang_to_sym (TestNcmMatrix *test, gconstpointer pdata)
+{
+  const gdouble reltol = 1.0e-13;
+  gint tests;
+
+  for (tests = 0; tests < 12; tests++)
+  {
+    const guint n    = g_test_rand_int_range (2, 40);
+    const gchar UL   = (g_test_rand_int_range (0, 2) == 0) ? 'U' : 'L';
+    NcmMatrix *T     = ncm_matrix_new (n, n);
+    NcmMatrix *dirty = ncm_matrix_new (n, n);
+    NcmMatrix *S0    = ncm_matrix_new (n, n);
+    NcmMatrix *S1    = ncm_matrix_new (n, n);
+    guint i, j, k;
+
+    /* T is triangular with the unused triangle exactly zero; dirty is the same matrix
+     * with rubbish in that triangle, which @zero is supposed to clear. */
+    for (i = 0; i < n; i++)
+    {
+      for (j = 0; j < n; j++)
+      {
+        const gboolean used = (UL == 'U') ? (j >= i) : (j <= i);
+        const gdouble v     = g_test_rand_double_range (0.5, 2.0);
+
+        ncm_matrix_set (T, i, j, used ? v : 0.0);
+        ncm_matrix_set (dirty, i, j, used ? v : g_test_rand_double_range (-9.0, 9.0));
+      }
+    }
+
+    ncm_matrix_triang_to_sym (T, UL, FALSE, S0);
+    ncm_matrix_triang_to_sym (dirty, UL, TRUE, S1);
+
+    for (i = 0; i < n; i++)
+    {
+      for (j = 0; j < n; j++)
+      {
+        gdouble ref = 0.0;
+
+        for (k = 0; k < n; k++)
+          ref += (UL == 'U') ? ncm_matrix_get (T, k, i) * ncm_matrix_get (T, k, j)
+                 : ncm_matrix_get (T, i, k) * ncm_matrix_get (T, j, k);
+
+        ncm_assert_cmpdouble_e (ncm_matrix_get (S0, i, j), ==, ref, reltol, 0.0);
+        ncm_assert_cmpdouble_e (ncm_matrix_get (S1, i, j), ==, ref, reltol, 0.0);
+
+        /* @zero also clears the unused triangle of its input. */
+        if ((UL == 'U') ? (j < i) : (j > i))
+          g_assert_cmpfloat (ncm_matrix_get (dirty, i, j), ==, 0.0);
+      }
+    }
+
+    NCM_TEST_FREE (ncm_matrix_free, T);
+    NCM_TEST_FREE (ncm_matrix_free, dirty);
+    NCM_TEST_FREE (ncm_matrix_free, S0);
+    NCM_TEST_FREE (ncm_matrix_free, S1);
+  }
+}
+
 void
 test_ncm_matrix_square_to_sym (TestNcmMatrix *test, gconstpointer pdata)
 {
@@ -1022,6 +1219,593 @@ test_ncm_matrix_sym_update_vector (TestNcmMatrix *test, gconstpointer pdata)
   }
 }
 
+/* op(A) as a dense matrix: the named triangle of A, the other one zero, transposed on 'T'. */
+static void
+_test_ncm_matrix_triangle_op (NcmMatrix *A, gchar UL, gchar T, NcmMatrix *opA)
+{
+  const guint n = ncm_matrix_nrows (A);
+  guint i, j;
+
+  for (i = 0; i < n; i++)
+  {
+    for (j = 0; j < n; j++)
+    {
+      const gboolean in_tri = (UL == 'U') ? (j >= i) : (j <= i);
+      const gdouble a_ij    = in_tri ? ncm_matrix_get (A, i, j) : 0.0;
+
+      if (T == 'N')
+        ncm_matrix_set (opA, i, j, a_ij);
+      else
+        ncm_matrix_set (opA, j, i, a_ij);
+    }
+  }
+}
+
+/* Both triangles filled, so the one a routine must not read is never zero; the diagonal
+ * dominates, so the solves stay well conditioned. */
+static void
+_test_ncm_matrix_fill_triangular (NcmMatrix *A)
+{
+  const guint n = ncm_matrix_nrows (A);
+  guint i, j;
+
+  for (i = 0; i < n; i++)
+    for (j = 0; j < n; j++)
+      ncm_matrix_set (A, i, j, g_test_rand_double_range (-1.0, 1.0) + ((i == j) ? 2.0 * n : 0.0));
+}
+
+void
+test_ncm_matrix_dtrmm_dtrsm (TestNcmMatrix *test, gconstpointer pdata)
+{
+  const gchar Sides[2] = {'L', 'R'};
+  const gchar ULs[2]   = {'U', 'L'};
+  const gchar Ts[2]    = {'N', 'T'};
+  gint tests;
+
+  for (tests = 0; tests < 6; tests++)
+  {
+    const guint n  = g_test_rand_int_range (2, 30);
+    const guint m  = g_test_rand_int_range (2, 30);
+    NcmMatrix *A   = ncm_matrix_new (n, n);
+    NcmMatrix *opA = ncm_matrix_new (n, n);
+    guint si, ui, ti;
+
+    _test_ncm_matrix_fill_triangular (A);
+
+    for (si = 0; si < 2; si++)
+    {
+      for (ui = 0; ui < 2; ui++)
+      {
+        for (ti = 0; ti < 2; ti++)
+        {
+          const gchar Side    = Sides[si];
+          const gchar UL      = ULs[ui];
+          const gchar T       = Ts[ti];
+          const guint nrows   = (Side == 'L') ? n : m;
+          const guint ncols   = (Side == 'L') ? m : n;
+          const gdouble alpha = g_test_rand_double_range (0.5, 2.0);
+          NcmMatrix *B0       = ncm_matrix_new (nrows, ncols);
+          NcmMatrix *B        = ncm_matrix_new (nrows, ncols);
+          guint i, j, k;
+
+          for (i = 0; i < nrows; i++)
+            for (j = 0; j < ncols; j++)
+              ncm_matrix_set (B0, i, j, g_test_rand_double_range (-1.0, 1.0));
+
+          ncm_matrix_memcpy (B, B0);
+          _test_ncm_matrix_triangle_op (A, UL, T, opA);
+
+          ncm_matrix_dtrmm (B, Side, UL, T, alpha, A);
+
+          for (i = 0; i < nrows; i++)
+          {
+            for (j = 0; j < ncols; j++)
+            {
+              gdouble ref = 0.0;
+
+              for (k = 0; k < n; k++)
+              {
+                if (Side == 'L')
+                  ref += ncm_matrix_get (opA, i, k) * ncm_matrix_get (B0, k, j);
+                else
+                  ref += ncm_matrix_get (B0, i, k) * ncm_matrix_get (opA, k, j);
+              }
+
+              ncm_assert_cmpdouble_e (ncm_matrix_get (B, i, j), ==, alpha * ref, 1.0e-12, 1.0e-12);
+            }
+          }
+
+          /* The solve undoes the product. */
+          ncm_matrix_dtrsm (B, Side, UL, T, 1.0 / alpha, A);
+
+          for (i = 0; i < nrows; i++)
+            for (j = 0; j < ncols; j++)
+              ncm_assert_cmpdouble_e (ncm_matrix_get (B, i, j), ==, ncm_matrix_get (B0, i, j), 1.0e-11, 1.0e-12);
+
+          NCM_TEST_FREE (ncm_matrix_free, B0);
+          NCM_TEST_FREE (ncm_matrix_free, B);
+        }
+      }
+    }
+
+    NCM_TEST_FREE (ncm_matrix_free, A);
+    NCM_TEST_FREE (ncm_matrix_free, opA);
+  }
+}
+
+void
+test_ncm_matrix_dtrmv_dtrsv (TestNcmMatrix *test, gconstpointer pdata)
+{
+  const gchar ULs[2] = {'U', 'L'};
+  const gchar Ts[2]  = {'N', 'T'};
+  gint tests;
+
+  for (tests = 0; tests < 6; tests++)
+  {
+    const guint n  = g_test_rand_int_range (2, 30);
+    NcmMatrix *A   = ncm_matrix_new (n, n);
+    NcmMatrix *opA = ncm_matrix_new (n, n);
+    NcmVector *v0  = ncm_vector_new (n);
+    NcmVector *v   = ncm_vector_new (n);
+    guint ui, ti;
+
+    _test_ncm_matrix_fill_triangular (A);
+
+    for (ui = 0; ui < 2; ui++)
+    {
+      for (ti = 0; ti < 2; ti++)
+      {
+        const gchar UL = ULs[ui];
+        const gchar T  = Ts[ti];
+        guint i, k;
+
+        for (i = 0; i < n; i++)
+          ncm_vector_set (v0, i, g_test_rand_double_range (-1.0, 1.0));
+
+        ncm_vector_memcpy (v, v0);
+        _test_ncm_matrix_triangle_op (A, UL, T, opA);
+
+        ncm_matrix_dtrmv (A, UL, T, v);
+
+        for (i = 0; i < n; i++)
+        {
+          gdouble ref = 0.0;
+
+          for (k = 0; k < n; k++)
+            ref += ncm_matrix_get (opA, i, k) * ncm_vector_get (v0, k);
+
+          ncm_assert_cmpdouble_e (ncm_vector_get (v, i), ==, ref, 1.0e-12, 1.0e-12);
+        }
+
+        ncm_matrix_dtrsv (A, UL, T, v);
+
+        for (i = 0; i < n; i++)
+          ncm_assert_cmpdouble_e (ncm_vector_get (v, i), ==, ncm_vector_get (v0, i), 1.0e-11, 1.0e-12);
+      }
+    }
+
+    NCM_TEST_FREE (ncm_matrix_free, A);
+    NCM_TEST_FREE (ncm_matrix_free, opA);
+    NCM_TEST_FREE (ncm_vector_free, v0);
+    NCM_TEST_FREE (ncm_vector_free, v);
+  }
+}
+
+void
+test_ncm_matrix_dsyrk (TestNcmMatrix *test, gconstpointer pdata)
+{
+  const gchar ULs[2] = {'U', 'L'};
+  const gchar Ts[2]  = {'N', 'T'};
+  gint tests;
+
+  for (tests = 0; tests < 6; tests++)
+  {
+    const guint n = g_test_rand_int_range (2, 30);
+    const guint k = g_test_rand_int_range (1, 30);
+    NcmMatrix *C0 = ncm_matrix_new (n, n);
+    NcmMatrix *C  = ncm_matrix_new (n, n);
+    guint ui, ti;
+
+    for (ui = 0; ui < 2; ui++)
+    {
+      for (ti = 0; ti < 2; ti++)
+      {
+        const gchar UL      = ULs[ui];
+        const gchar T       = Ts[ti];
+        const gdouble alpha = g_test_rand_double_range (0.5, 2.0);
+        const gdouble beta  = g_test_rand_double_range (-1.0, 1.0);
+        NcmMatrix *A        = (T == 'N') ? ncm_matrix_new (n, k) : ncm_matrix_new (k, n);
+        guint i, j, l;
+
+        for (i = 0; i < ncm_matrix_nrows (A); i++)
+          for (j = 0; j < ncm_matrix_ncols (A); j++)
+            ncm_matrix_set (A, i, j, g_test_rand_double_range (-1.0, 1.0));
+
+        for (i = 0; i < n; i++)
+          for (j = 0; j < n; j++)
+            ncm_matrix_set (C0, i, j, g_test_rand_double_range (-1.0, 1.0));
+
+        ncm_matrix_memcpy (C, C0);
+        ncm_matrix_dsyrk (C, UL, T, alpha, A, beta);
+
+        for (i = 0; i < n; i++)
+        {
+          for (j = 0; j < n; j++)
+          {
+            const gboolean in_tri = (UL == 'U') ? (j >= i) : (j <= i);
+
+            if (in_tri)
+            {
+              gdouble ref = 0.0;
+
+              for (l = 0; l < k; l++)
+              {
+                const gdouble a_il = (T == 'N') ? ncm_matrix_get (A, i, l) : ncm_matrix_get (A, l, i);
+                const gdouble a_jl = (T == 'N') ? ncm_matrix_get (A, j, l) : ncm_matrix_get (A, l, j);
+
+                ref += a_il * a_jl;
+              }
+
+              ref = alpha * ref + beta * ncm_matrix_get (C0, i, j);
+              ncm_assert_cmpdouble_e (ncm_matrix_get (C, i, j), ==, ref, 1.0e-12, 1.0e-12);
+            }
+            else
+            {
+              /* The other triangle is not touched. */
+              g_assert_cmpfloat (ncm_matrix_get (C, i, j), ==, ncm_matrix_get (C0, i, j));
+            }
+          }
+        }
+
+        NCM_TEST_FREE (ncm_matrix_free, A);
+      }
+    }
+
+    NCM_TEST_FREE (ncm_matrix_free, C0);
+    NCM_TEST_FREE (ncm_matrix_free, C);
+  }
+}
+
+void
+test_ncm_matrix_scale_rows_cols (TestNcmMatrix *test, gconstpointer pdata)
+{
+  gint tests;
+
+  for (tests = 0; tests < 8; tests++)
+  {
+    const guint nrows = g_test_rand_int_range (1, 30);
+    const guint ncols = g_test_rand_int_range (1, 30);
+    NcmMatrix *M0     = ncm_matrix_new (nrows, ncols);
+    NcmMatrix *M      = ncm_matrix_new (nrows, ncols);
+    NcmVector *r      = ncm_vector_new (nrows);
+    NcmVector *c      = ncm_vector_new (ncols);
+    guint i, j;
+
+    for (i = 0; i < nrows; i++)
+    {
+      ncm_vector_set (r, i, g_test_rand_double_range (-2.0, 2.0));
+
+      for (j = 0; j < ncols; j++)
+        ncm_matrix_set (M0, i, j, g_test_rand_double_range (-1.0, 1.0));
+    }
+
+    for (j = 0; j < ncols; j++)
+      ncm_vector_set (c, j, g_test_rand_double_range (-2.0, 2.0));
+
+    ncm_matrix_memcpy (M, M0);
+    ncm_matrix_scale_rows (M, r);
+
+    for (i = 0; i < nrows; i++)
+      for (j = 0; j < ncols; j++)
+        g_assert_cmpfloat (ncm_matrix_get (M, i, j), ==, ncm_vector_get (r, i) * ncm_matrix_get (M0, i, j));
+
+    ncm_matrix_memcpy (M, M0);
+    ncm_matrix_scale_cols (M, c);
+
+    for (i = 0; i < nrows; i++)
+      for (j = 0; j < ncols; j++)
+        g_assert_cmpfloat (ncm_matrix_get (M, i, j), ==, ncm_matrix_get (M0, i, j) * ncm_vector_get (c, j));
+
+    NCM_TEST_FREE (ncm_matrix_free, M0);
+    NCM_TEST_FREE (ncm_matrix_free, M);
+    NCM_TEST_FREE (ncm_vector_free, r);
+    NCM_TEST_FREE (ncm_vector_free, c);
+  }
+}
+
+void
+test_ncm_matrix_sub_row_vector (TestNcmMatrix *test, gconstpointer pdata)
+{
+  gint tests;
+
+  for (tests = 0; tests < 8; tests++)
+  {
+    const guint nrows = g_test_rand_int_range (1, 30);
+    const guint ncols = g_test_rand_int_range (1, 30);
+    NcmMatrix *M0     = ncm_matrix_new (nrows, ncols);
+    NcmMatrix *M      = ncm_matrix_new (nrows, ncols);
+    NcmVector *v      = ncm_vector_new (ncols);
+    NcmVector *v2     = ncm_vector_new (2 * ncols);
+    NcmVector *vs     = ncm_vector_get_subvector_stride (v2, 0, ncols, 2);
+    guint i, j;
+
+    for (i = 0; i < nrows; i++)
+      for (j = 0; j < ncols; j++)
+        ncm_matrix_set (M0, i, j, g_test_rand_double_range (-1.0, 1.0));
+
+    for (j = 0; j < ncols; j++)
+    {
+      ncm_vector_set (v, j, g_test_rand_double_range (-2.0, 2.0));
+      ncm_vector_set (v2, 2 * j, ncm_vector_get (v, j));
+      ncm_vector_set (v2, 2 * j + 1, 1.0e3);
+    }
+
+    ncm_matrix_memcpy (M, M0);
+    ncm_matrix_sub_row_vector (M, v);
+
+    for (i = 0; i < nrows; i++)
+      for (j = 0; j < ncols; j++)
+        g_assert_cmpfloat (ncm_matrix_get (M, i, j), ==, ncm_matrix_get (M0, i, j) - ncm_vector_get (v, j));
+
+    /* A strided vector is read through its stride. */
+    ncm_matrix_memcpy (M, M0);
+    ncm_matrix_sub_row_vector (M, vs);
+
+    for (i = 0; i < nrows; i++)
+      for (j = 0; j < ncols; j++)
+        g_assert_cmpfloat (ncm_matrix_get (M, i, j), ==, ncm_matrix_get (M0, i, j) - ncm_vector_get (v, j));
+
+    NCM_TEST_FREE (ncm_matrix_free, M0);
+    NCM_TEST_FREE (ncm_matrix_free, M);
+    NCM_TEST_FREE (ncm_vector_free, vs);
+    NCM_TEST_FREE (ncm_vector_free, v2);
+    NCM_TEST_FREE (ncm_vector_free, v);
+  }
+}
+
+void
+test_ncm_matrix_chol_chi2_cols (TestNcmMatrix *test, gconstpointer pdata)
+{
+  const guint d_a[4]  = { 1, 3, 8, 50 };
+  const guint np_a[3] = { 1, 7, 256 };
+  const guint nb_a[4] = { 1, 7, 32, 256 };
+  NcmRNG *rng         = ncm_rng_seeded_new (NULL, 20260923);
+  guint i_d, i_np, i_nb;
+
+  for (i_d = 0; i_d < 4; i_d++)
+  {
+    const guint d    = d_a[i_d];
+    NcmMatrix *cov   = ncm_matrix_new (d, d);
+    NcmMatrix *U     = ncm_matrix_new (d, d);
+    NcmVector *mu    = ncm_vector_new (d);
+    NcmVector *theta = ncm_vector_new (d);
+    guint i, j;
+
+    /* @mu scales the covariance, so it is an input here; a large correlation level keeps
+     * the factor well conditioned up to d = 50, where a small one is singular. */
+    ncm_vector_set_all (mu, 1.0);
+    ncm_matrix_fill_rand_cov2 (cov, mu, 0.1, 2.0, 10.0, rng);
+    ncm_matrix_memcpy (U, cov);
+    g_assert_cmpint (ncm_matrix_cholesky_decomp (U, 'U'), ==, 0);
+
+    /* Only the upper triangle may be read: the lower one is filled with garbage. */
+    for (i = 1; i < d; i++)
+      for (j = 0; j < i; j++)
+        ncm_matrix_set (U, i, j, 1.0e10 * ncm_rng_uniform_gen (rng, -1.0, 1.0));
+
+    for (j = 0; j < d; j++)
+      ncm_vector_set (theta, j, ncm_rng_uniform_gen (rng, -2.0, 2.0));
+
+    for (i_np = 0; i_np < 3; i_np++)
+    {
+      const guint np  = np_a[i_np];
+      NcmMatrix *X    = ncm_matrix_new (d, np);
+      NcmMatrix *Xr   = ncm_matrix_new (np, d);
+      NcmVector *ref  = ncm_vector_new (np);
+      NcmVector *chi2 = ncm_vector_new (np);
+      NcmVector *dq   = ncm_vector_new_data_static (ncm_matrix_ptr (Xr, 0, 0), d, 1);
+      guint p;
+
+      for (p = 0; p < np; p++)
+        for (j = 0; j < d; j++)
+        {
+          const gdouble x_pj = ncm_rng_uniform_gen (rng, -3.0, 3.0);
+
+          ncm_matrix_set (X, j, p, x_pj);
+          ncm_matrix_set (Xr, p, j, x_pj);
+        }
+
+      /* Reference: the sequence the VKDE evaluator used, on points as rows. */
+      ncm_matrix_sub_row_vector (Xr, theta);
+      ncm_matrix_dtrsm (Xr, 'R', 'U', 'N', 1.0, U);
+
+      for (p = 0; p < np; p++)
+      {
+        ncm_vector_replace_data (dq, ncm_matrix_ptr (Xr, p, 0));
+        ncm_vector_set (ref, p, ncm_vector_dot (dq, dq));
+      }
+
+      for (i_nb = 0; i_nb < 4; i_nb++)
+      {
+        NcmMatrix *work = ncm_matrix_new (d, nb_a[i_nb]);
+
+        ncm_vector_set_all (chi2, -1.0);
+        ncm_matrix_chol_chi2_cols (X, theta, U, work, chi2);
+
+        for (p = 0; p < np; p++)
+          ncm_assert_cmpdouble_e (ncm_vector_get (chi2, p), ==, ncm_vector_get (ref, p), 1.0e-13, 0.0);
+
+        NCM_TEST_FREE (ncm_matrix_free, work);
+      }
+
+      /* A strided centre is read through its stride. */
+      {
+        NcmMatrix *work = ncm_matrix_new (d, 32);
+        NcmVector *t2   = ncm_vector_new (2 * d);
+        NcmVector *ts   = ncm_vector_get_subvector_stride (t2, 0, d, 2);
+
+        for (j = 0; j < d; j++)
+        {
+          ncm_vector_set (t2, 2 * j, ncm_vector_get (theta, j));
+          ncm_vector_set (t2, 2 * j + 1, 1.0e3);
+        }
+
+        ncm_vector_set_all (chi2, -1.0);
+        ncm_matrix_chol_chi2_cols (X, ts, U, work, chi2);
+
+        for (p = 0; p < np; p++)
+          ncm_assert_cmpdouble_e (ncm_vector_get (chi2, p), ==, ncm_vector_get (ref, p), 1.0e-13, 0.0);
+
+        NCM_TEST_FREE (ncm_vector_free, ts);
+        NCM_TEST_FREE (ncm_vector_free, t2);
+        NCM_TEST_FREE (ncm_matrix_free, work);
+      }
+
+      /* Submatrix inputs, whose row stride exceeds the column count. */
+      {
+        NcmMatrix *Xb = ncm_matrix_new (d + 2, np + 3);
+        NcmMatrix *Xs = ncm_matrix_get_submatrix (Xb, 0, 0, d, np);
+        NcmMatrix *Wb = ncm_matrix_new (d + 2, 32 + 5);
+        NcmMatrix *Ws = ncm_matrix_get_submatrix (Wb, 0, 0, d, 32);
+
+        ncm_matrix_set_all (Xb, 1.0e10);
+        ncm_matrix_memcpy (Xs, X);
+
+        ncm_vector_set_all (chi2, -1.0);
+        ncm_matrix_chol_chi2_cols (Xs, theta, U, Ws, chi2);
+
+        for (p = 0; p < np; p++)
+          ncm_assert_cmpdouble_e (ncm_vector_get (chi2, p), ==, ncm_vector_get (ref, p), 1.0e-13, 0.0);
+
+        NCM_TEST_FREE (ncm_matrix_free, Ws);
+        NCM_TEST_FREE (ncm_matrix_free, Wb);
+        NCM_TEST_FREE (ncm_matrix_free, Xs);
+        NCM_TEST_FREE (ncm_matrix_free, Xb);
+      }
+
+      NCM_TEST_FREE (ncm_vector_free, dq);
+      NCM_TEST_FREE (ncm_vector_free, chi2);
+      NCM_TEST_FREE (ncm_vector_free, ref);
+      NCM_TEST_FREE (ncm_matrix_free, Xr);
+      NCM_TEST_FREE (ncm_matrix_free, X);
+    }
+
+    NCM_TEST_FREE (ncm_vector_free, theta);
+    NCM_TEST_FREE (ncm_vector_free, mu);
+    NCM_TEST_FREE (ncm_matrix_free, U);
+    NCM_TEST_FREE (ncm_matrix_free, cov);
+  }
+
+  ncm_rng_free (rng);
+}
+
+void
+test_ncm_matrix_is_identity (TestNcmMatrix *test, gconstpointer pdata)
+{
+  const gdouble tol = 1.0e-12;
+  gint tests;
+
+  for (tests = 0; tests < 8; tests++)
+  {
+    const guint n = g_test_rand_int_range (1, 30);
+    const guint i = g_test_rand_int_range (0, n);
+    const guint j = g_test_rand_int_range (0, n);
+    NcmMatrix *m  = ncm_matrix_new (n, n);
+
+    ncm_matrix_set_identity (m);
+    g_assert_true (ncm_matrix_is_identity (m, tol));
+
+    /* Inside the tolerance it is still the identity; at twice the tolerance it is not,
+     * on the diagonal as much as off it. */
+    ncm_matrix_addto (m, i, j, 0.5 * tol);
+    g_assert_true (ncm_matrix_is_identity (m, tol));
+
+    ncm_matrix_addto (m, i, j, 1.5 * tol);
+    g_assert_false (ncm_matrix_is_identity (m, tol));
+
+    ncm_matrix_set_identity (m);
+    ncm_matrix_set (m, i, j, GSL_NAN);
+    g_assert_false (ncm_matrix_is_identity (m, tol));
+
+    NCM_TEST_FREE (ncm_matrix_free, m);
+  }
+}
+
+void
+test_ncm_matrix_cholesky_decomp_nearPD (TestNcmMatrix *test, gconstpointer pdata)
+{
+  const gchar ULs[2] = {'U', 'L'};
+  const gdouble eps  = 1.0e-3;
+  gint tests;
+
+  for (tests = 0; tests < 6; tests++)
+  {
+    const guint n   = g_test_rand_int_range (2, 20);
+    const gchar UL  = ULs[tests % 2];
+    NcmMatrix *B    = ncm_matrix_new (n, n - 1);
+    NcmMatrix *cov  = ncm_matrix_new (n, n);
+    NcmMatrix *ref  = ncm_matrix_new (n, n);
+    NcmMatrix *dec  = ncm_matrix_new (n, n);
+    NcmMatrix *back = ncm_matrix_new (n, n);
+    gboolean repaired;
+    guint i, j;
+
+    /* Positive definite: the plain factor, no repair. */
+    for (i = 0; i < n; i++)
+      for (j = 0; j < n - 1; j++)
+        ncm_matrix_set (B, i, j, g_test_rand_double_range (-1.0, 1.0));
+
+    ncm_matrix_dgemm (cov, 'N', 'T', 1.0, B, B, 0.0);
+
+    for (i = 0; i < n; i++)
+      ncm_matrix_addto (cov, i, i, 1.0);
+
+    ncm_matrix_memcpy (ref, cov);
+    g_assert_cmpint (ncm_matrix_cholesky_decomp (ref, UL), ==, 0);
+
+    g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, dec, UL, 200, &repaired), ==, 0);
+    g_assert_false (repaired);
+
+    for (i = 0; i < n; i++)
+      for (j = 0; j < n; j++)
+        if ((UL == 'U') ? (j >= i) : (j <= i))
+          g_assert_cmpfloat (ncm_matrix_get (dec, i, j), ==, ncm_matrix_get (ref, i, j));
+
+    /* Indefinite by eps along one direction (an exactly singular matrix can still pass
+     * dpotrf through rounding): refused without the repair, repaired with it, the input
+     * untouched, and the repaired factor reproduces the matrix up to the eps that had to
+     * be added back. */
+    ncm_matrix_dgemm (cov, 'N', 'T', 1.0, B, B, 0.0);
+
+    for (i = 0; i < n; i++)
+      ncm_matrix_addto (cov, i, i, -eps);
+
+    ncm_matrix_memcpy (ref, cov);
+
+    g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, dec, UL, 0, &repaired), !=, 0);
+    g_assert_false (repaired);
+
+    g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, dec, UL, 200, &repaired), ==, 0);
+    g_assert_true (repaired);
+    g_assert_cmpfloat (ncm_matrix_cmp (cov, ref, 0.0), ==, 0.0);
+
+    ncm_matrix_triang_to_sym (dec, UL, TRUE, back);
+
+    for (i = 0; i < n; i++)
+      for (j = 0; j < n; j++)
+        ncm_assert_cmpdouble_e (ncm_matrix_get (back, i, j), ==, ncm_matrix_get (ref, i, j), 0.0, 2.0 * eps);
+
+    /* NULL is accepted for the flag. */
+    g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, dec, UL, 200, NULL), ==, 0);
+
+    NCM_TEST_FREE (ncm_matrix_free, B);
+    NCM_TEST_FREE (ncm_matrix_free, cov);
+    NCM_TEST_FREE (ncm_matrix_free, ref);
+    NCM_TEST_FREE (ncm_matrix_free, dec);
+    NCM_TEST_FREE (ncm_matrix_free, back);
+  }
+}
+
 void
 test_ncm_matrix_serialization (TestNcmMatrix *test, gconstpointer pdata)
 {
@@ -1051,5 +1835,233 @@ test_ncm_matrix_free (TestNcmMatrix *test, gconstpointer pdata)
 
   if (test->d != NULL)
     g_free (test->d);
+}
+
+/* A symmetric positive definite 3x3 matrix */
+static NcmMatrix *
+_test_matrix_spd (void)
+{
+  NcmMatrix *A = ncm_matrix_new (3, 3);
+
+  ncm_matrix_set_from_data (A, (gdouble[]) {4.0, 1.0, 0.5, 1.0, 3.0, 0.2, 0.5, 0.2, 2.0});
+
+  return A;
+}
+
+static gdouble
+_test_matrix_det3 (NcmMatrix *A)
+{
+#define a(i, j) ncm_matrix_get (A, i, j)
+
+  return a (0, 0) * (a (1, 1) * a (2, 2) - a (1, 2) * a (2, 1))
+         - a (0, 1) * (a (1, 0) * a (2, 2) - a (1, 2) * a (2, 0))
+         + a (0, 2) * (a (1, 0) * a (2, 1) - a (1, 1) * a (2, 0));
+
+#undef a
+}
+
+void
+test_ncm_matrix_api_dsymm (void)
+{
+  NcmMatrix *A  = _test_matrix_spd ();
+  NcmMatrix *Au = ncm_matrix_dup (A);
+  NcmMatrix *B  = ncm_matrix_new (3, 3);
+  NcmMatrix *C1 = ncm_matrix_new (3, 3);
+  NcmMatrix *C2 = ncm_matrix_new (3, 3);
+  guint i, j;
+
+  ncm_matrix_set_from_data (B, (gdouble[]) {1.0, 2.0, 3.0, -1.0, 0.5, 2.0, 0.0, 1.0, -2.0});
+
+  /* Only the upper triangle is read: garbage below the diagonal changes nothing */
+  ncm_matrix_set (Au, 1, 0, 100.0);
+  ncm_matrix_set (Au, 2, 0, -100.0);
+  ncm_matrix_set (Au, 2, 1, 50.0);
+
+  ncm_matrix_set_zero (C1);
+  ncm_matrix_dsymm (C1, 'U', 2.0, Au, B, 0.0);
+  ncm_matrix_dgemm (C2, 'N', 'N', 2.0, A, B, 0.0);
+
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++)
+      ncm_assert_cmpdouble_e (ncm_matrix_get (C1, i, j), ==, ncm_matrix_get (C2, i, j), 1.0e-15, 1.0e-15);
+
+  ncm_matrix_free (A);
+  ncm_matrix_free (Au);
+  ncm_matrix_free (B);
+  ncm_matrix_free (C1);
+  ncm_matrix_free (C2);
+}
+
+void
+test_ncm_matrix_api_cholesky (void)
+{
+  NcmMatrix *A     = _test_matrix_spd ();
+  NcmMatrix *L     = ncm_matrix_dup (A);
+  NcmMatrix *Ainv  = NULL;
+  NcmVector *b     = ncm_vector_new (3);
+  NcmVector *b2    = ncm_vector_new (3);
+  NcmVector *x     = ncm_vector_new (3);
+  const gdouble d3 = _test_matrix_det3 (A);
+  guint i, j;
+
+  ncm_vector_set_data (b, (gdouble[]) {1.0, -2.0, 0.5}, 3);
+  ncm_vector_memcpy (b2, b);
+
+  g_assert_cmpint (ncm_matrix_cholesky_decomp (L, 'U'), ==, 0);
+  ncm_assert_cmpdouble_e (ncm_matrix_cholesky_lndet (L), ==, log (d3), 1.0e-14, 0.0);
+
+  /* Solve with the factor, and in one call from the original matrix */
+  g_assert_cmpint (ncm_matrix_cholesky_solve2 (L, b2, 'U'), ==, 0);
+  {
+    NcmMatrix *A2 = ncm_matrix_dup (A);
+
+    g_assert_cmpint (ncm_matrix_cholesky_solve (A2, b, 'U'), ==, 0);
+    ncm_matrix_free (A2);
+  }
+
+  ncm_matrix_update_vector (A, 'N', 1.0, b, 0.0, x);
+  ncm_assert_cmpdouble_e (ncm_vector_get (x, 1), ==, -2.0, 1.0e-14, 0.0);
+
+  for (i = 0; i < 3; i++)
+    ncm_assert_cmpdouble_e (ncm_vector_get (b2, i), ==, ncm_vector_get (b, i), 1.0e-14, 0.0);
+
+  /* The inverse from the factor */
+  Ainv = ncm_matrix_dup (L);
+  g_assert_cmpint (ncm_matrix_cholesky_inverse (Ainv, 'U'), ==, 0);
+  ncm_matrix_copy_triangle (Ainv, 'U');
+  {
+    NcmMatrix *AAinv = ncm_matrix_new (3, 3);
+
+    ncm_matrix_dgemm (AAinv, 'N', 'N', 1.0, A, Ainv, 0.0);
+    g_assert_true (ncm_matrix_is_identity (AAinv, 1.0e-14));
+    ncm_matrix_free (AAinv);
+  }
+
+  NCM_UNUSED (j);
+
+  ncm_matrix_free (A);
+  ncm_matrix_free (L);
+  ncm_matrix_free (Ainv);
+  ncm_vector_free (b);
+  ncm_vector_free (b2);
+  ncm_vector_free (x);
+}
+
+void
+test_ncm_matrix_api_cor (void)
+{
+  NcmMatrix *cov = _test_matrix_spd ();
+  NcmMatrix *cor = ncm_matrix_cov_dup_cor (cov);
+  NcmRNG *rng    = ncm_rng_seeded_new (NULL, 123);
+  NcmMatrix *R   = ncm_matrix_new (5, 5);
+  guint i, j;
+
+  for (i = 0; i < 3; i++)
+  {
+    ncm_assert_cmpdouble_e (ncm_matrix_get (cor, i, i), ==, 1.0, 1.0e-15, 0.0);
+
+    for (j = 0; j < 3; j++)
+      ncm_assert_cmpdouble_e (ncm_matrix_get (cor, i, j), ==, ncm_matrix_get (cov, i, j) / sqrt (ncm_matrix_get (cov, i, i) * ncm_matrix_get (cov, j, j)), 1.0e-15, 0.0);
+  }
+
+  /* In place */
+  ncm_matrix_cov2cor (cov, cov);
+  g_assert_cmpfloat (ncm_matrix_cmp (cov, cor, 0.0), <, 1.0e-15);
+
+  /* A random correlation matrix: unit diagonal, symmetric, positive definite */
+  ncm_matrix_fill_rand_cor (R, 0.5, rng);
+
+  for (i = 0; i < 5; i++)
+  {
+    g_assert_cmpfloat (ncm_matrix_get (R, i, i), ==, 1.0);
+
+    for (j = 0; j < 5; j++)
+    {
+      g_assert_cmpfloat (ncm_matrix_get (R, i, j), ==, ncm_matrix_get (R, j, i));
+      g_assert_cmpfloat (fabs (ncm_matrix_get (R, i, j)), <=, 1.0);
+    }
+  }
+
+  g_assert_cmpint (ncm_matrix_cholesky_decomp (R, 'U'), ==, 0);
+
+  ncm_matrix_free (cov);
+  ncm_matrix_free (cor);
+  ncm_matrix_free (R);
+  ncm_rng_free (rng);
+}
+
+void
+test_ncm_matrix_api_transpose_memcpy (void)
+{
+  NcmMatrix *A  = ncm_matrix_new (2, 3);
+  NcmMatrix *At = ncm_matrix_new (3, 2);
+  NcmMatrix *B  = ncm_matrix_new (2, 3);
+
+  ncm_matrix_set_from_data (A, (gdouble[]) {1.0, 2.0, 3.0, 4.0, 5.0, 6.0});
+  ncm_matrix_transpose_memcpy (At, A);
+  g_assert_cmpfloat (ncm_matrix_get (At, 2, 1), ==, 6.0);
+  g_assert_cmpfloat (ncm_matrix_get (At, 0, 1), ==, 4.0);
+
+  /* cmp_diag reads only the diagonal */
+  ncm_matrix_memcpy (B, A);
+  ncm_matrix_set (B, 0, 2, 100.0);
+  g_assert_cmpfloat (ncm_matrix_cmp_diag (A, B, 0.0), ==, 0.0);
+  g_assert_cmpfloat (ncm_matrix_cmp (A, B, 0.0), >, 0.0);
+
+  ncm_matrix_free (A);
+  ncm_matrix_free (At);
+  ncm_matrix_free (B);
+}
+
+void
+test_ncm_matrix_api_variant_empty (void)
+{
+  NcmMatrix *A  = _test_matrix_spd ();
+  GVariant *var = ncm_matrix_get_variant (A);
+  NcmMatrix *B  = ncm_matrix_new_variant (var);
+
+  g_assert_cmpuint (ncm_matrix_nrows (B), ==, 3);
+  g_assert_cmpuint (ncm_matrix_ncols (B), ==, 3);
+  g_assert_cmpfloat (ncm_matrix_cmp (A, B, 0.0), ==, 0.0);
+
+  g_variant_unref (var);
+  ncm_matrix_free (A);
+  ncm_matrix_free (B);
+}
+
+void
+test_ncm_matrix_api_fast_get_tda (void)
+{
+  gdouble d[]  = {1.0, 2.0, -1.0, 3.0, 4.0, -1.0};
+  NcmMatrix *A = ncm_matrix_new_data_static_tda (d, 2, 2, 3);
+
+  /* Element (i, j) is at i tda + j */
+  g_assert_cmpuint (ncm_matrix_tda (A), ==, 3);
+  g_assert_cmpfloat (ncm_matrix_fast_get (A, 1 * 3 + 1), ==, 4.0);
+  g_assert_cmpfloat (ncm_matrix_get (A, 1, 0), ==, 3.0);
+  g_assert_cmpuint (ncm_matrix_size (A), ==, 4);
+
+  ncm_matrix_free (A);
+}
+
+void
+test_ncm_matrix_api_nearPD (void)
+{
+  NcmMatrix *A = ncm_matrix_new (3, 3);
+  NcmMatrix *L = ncm_matrix_new (3, 3);
+  gboolean repaired;
+
+  /* Symmetric but indefinite */
+  ncm_matrix_set_from_data (A, (gdouble[]) {1.0, 0.9, 0.9, 0.9, 1.0, -0.9, 0.9, -0.9, 1.0});
+
+  g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (A, L, 'U', 0, &repaired), !=, 0);
+  g_assert_false (repaired);
+
+  g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (A, L, 'U', 100, &repaired), ==, 0);
+  g_assert_true (repaired);
+  g_assert_cmpfloat (ncm_matrix_get (A, 1, 2), ==, -0.9); /* left unchanged */
+
+  ncm_matrix_free (A);
+  ncm_matrix_free (L);
 }
 

@@ -33,6 +33,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/core/ncm_rng.h>
 #include <numcosmo/ncm/core/ncm_util.h>
+#include <numcosmo/ncm/algebra/ncm_complex.h>
 #include <numcosmo/ncm/model/ncm_mset.h>
 #include <numcosmo/ncm/algebra/ncm_vector.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_obs.h>

@@ -271,7 +271,7 @@ def main() -> int:
 
             # 2. the radial integral, against certified Arb
             # The window returns a hard zero outside its support, so a node
-            # landing a hair outside -- the y = k chi round trip makes that
+            # landing a hair outside -- the x = k chi round trip makes that
             # unavoidable at the endpoints -- is a cliff the Chebyshev fit
             # cannot resolve, and the fit aborts on max-order. The library's own
             # integration path clamps for exactly this reason

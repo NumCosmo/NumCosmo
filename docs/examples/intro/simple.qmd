@@ -44,7 +44,7 @@ Ncm.cfg_init()
 
 ## Set Up the Cosmological Model
 
-Create a homogeneous and isotropic cosmological model (`NcHICosmoDEXcdm`) with one
+Create a homogeneous and isotropic cosmological model ([[numcosmo|NcHICosmoDEXcdm]]) with one
 massive neutrino, and apply a reparameterization suitable for CMB-based parameters.
 
 ```{python}

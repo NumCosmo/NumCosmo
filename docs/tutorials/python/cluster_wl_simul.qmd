@@ -66,15 +66,15 @@ Define an NFW halo profile, a cluster-position model, and an
 For our simulation, we define the following parameters:
 
 - `Nc.HaloDensityProfile`:
-  - **Halo density profile**: NFW
-  - **Mass overdensity**: $\Delta = 200$
-  - **Mass definition**: Critical density
-  - **Mass of the cluster**: $M = 2.0 \times 10^{16} M_\odot$
-  - **Concentration parameter**: $c = 4.0$
+  - Halo density profile: NFW
+  - Mass overdensity: $\Delta = 200$
+  - Mass definition: Critical density
+  - Mass of the cluster: $M = 2.0 \times 10^{16} M_\odot$
+  - Concentration parameter: $c = 4.0$
 - `Nc.HaloPosition`:
-  - **Right ascension (RA)**: $12.34^\circ$
-  - **Declination (Dec)**: $-55.123^\circ$
-  - **Redshift of the cluster**: $z = 0.2$
+  - Right ascension (RA): $12.34^\circ$
+  - Declination (Dec): $-55.123^\circ$
+  - Redshift of the cluster: $z = 0.2$
 
 We choose a cluster with a halo mass that is an exceptionally large mass, selected deliberately to make the lensing effect very visible in our simulations.
 
@@ -122,13 +122,13 @@ By making these errors very small, all galaxies are assumed to have the same sha
 This uniformity ensures that the lensing effect is highly visible in our simulations.
 The specific values are as follows:
 
-- **Redshift range**: $z = 0.7$ to $z = 0.9$
-- **Angular position range**:
+- Redshift range: $z = 0.7$ to $z = 0.9$
+- Angular position range:
   - Right ascension (RA): $[12.19^\circ, 12.49^\circ]$
   - Declination (Dec): $[-55.273^\circ, -54.973^\circ]$
-- **Galaxy shape distribution**:
-    - **Intrinsic ellipticity dispersion**: $1.0 \times 10^{-8}$
-    - **Ellipticity measurement error**: $1.0 \times 10^{-8}$
+- Galaxy shape distribution:
+    - Intrinsic ellipticity dispersion: $1.0 \times 10^{-8}$
+    - Ellipticity measurement error: $1.0 \times 10^{-8}$
 
 ```{python}
 
@@ -289,7 +289,10 @@ For visualization purposes, we choose all galaxies to have the same area, which 
 By plotting these ellipses, we can visually assess the impact of the weak lensing effect and better understand the distribution and shapes of the galaxies in our simulation.
 ```{python}
 # | label: fig-galaxy-distribution
-# | fig-cap: Galaxy distribution around the cluster. The blue ellipses represent the observed galaxy shapes, while the red ellipses indicate the intrinsic galaxy shapes. The black dot marks the true cluster position.
+# | fig-cap: >
+# |   Galaxy distribution around the cluster. The blue ellipses represent the observed
+# |   galaxy shapes, while the red ellipses indicate the intrinsic galaxy shapes. The
+# |   black dot marks the true cluster position.
 # | fig-cap-location: margin
 # | fig-width: 100%
 # | code-fold: true
@@ -405,7 +408,10 @@ We plot the galaxy distribution for nine different halo positions. The central p
 
 ```{python}
 # | label: fig-cluster-mass-position
-# | fig-cap: Galaxy distribution around the cluster for different halo positions. The blue ellipses represent the observed galaxy shapes, while the black dot indicates the true halo position.
+# | fig-cap: >
+# |   Galaxy distribution around the cluster for different halo positions. The blue
+# |   ellipses represent the observed galaxy shapes, while the black dot indicates the
+# |   true halo position.
 # | fig-cap-location: margin
 # | fig-width: 100%
 # | code-fold: true
@@ -465,7 +471,10 @@ The panels display the galaxy distribution with cluster masses varying from $10^
 
 ```{python}
 # | label: fig-cluster-mass-mass
-# | fig-cap: Galaxy distribution around the cluster for different halo masses. The blue ellipses represent the observed galaxy shapes. The black dot indicates the true halo position, with the size of the dot proportional to the halo mass.
+# | fig-cap: >
+# |   Galaxy distribution around the cluster for different halo masses. The blue
+# |   ellipses represent the observed galaxy shapes. The black dot indicates the true
+# |   halo position, with the size of the dot proportional to the halo mass.
 # | fig-cap-location: margin
 # | fig-width: 100%
 # | code-fold: true

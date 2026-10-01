@@ -50,6 +50,8 @@ void test_ncm_integral_nd_acosx_by_p_cz_eval (TestNcmIntegralND *test, gconstpoi
 
 void test_ncm_integral_nd_traps (TestNcmIntegralND *test, gconstpointer pdata);
 void test_ncm_integral_nd_invalid_test (TestNcmIntegralND *test, gconstpointer pdata);
+void test_ncm_integral_nd_maxeval (void);
+void test_ncm_integral_nd_maxeval_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -77,6 +79,9 @@ main (gint argc, gchar *argv[])
               &test_ncm_integral_nd_new_sinx,
               &test_ncm_integral_nd_invalid_test,
               &test_ncm_integral_nd_free);
+
+  g_test_add_func ("/ncm/integralnd/maxeval", &test_ncm_integral_nd_maxeval);
+  g_test_add_func ("/ncm/integralnd/maxeval/subprocess", &test_ncm_integral_nd_maxeval_subprocess);
 
   g_test_run ();
 }
@@ -181,8 +186,8 @@ test_acosx_by_p_cz (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints
     const gdouble y_i = ncm_vector_get (x, 3 * i + 1);
     const gdouble z_i = ncm_vector_get (x, 3 * i + 2);
 
-    ncm_vector_set (fval, i, test_int_acosx->data.a * sin (x_i));
-    ncm_vector_set (fval, i + 1, (test_int_acosx->data.b * y_i + test_int_acosx->data.c * z_i));
+    ncm_vector_set (fval, 2 * i, test_int_acosx->data.a * sin (x_i));
+    ncm_vector_set (fval, 2 * i + 1, (test_int_acosx->data.b * y_i + test_int_acosx->data.c * z_i));
     /* printf ("%d % 22.15g % 22.15g % 22.15g \n", i, y_i, z_i, test_int_acosx->data.b * y_i + test_int_acosx->data.c * z_i); */
   }
 }
@@ -337,5 +342,32 @@ void
 test_ncm_integral_nd_invalid_test (TestNcmIntegralND *test, gconstpointer pdata)
 {
   g_assert_not_reached ();
+}
+
+/* Stopping at maxeval without reaching the tolerance aborts. */
+void
+test_ncm_integral_nd_maxeval (void)
+{
+  g_test_trap_subprocess ("/ncm/integralnd/maxeval/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*stopped at maxeval*");
+}
+
+void
+test_ncm_integral_nd_maxeval_subprocess (void)
+{
+  NcmTestIntSin *test_int_sin = g_object_new (ncm_test_int_sin_get_type (), NULL);
+  NcmIntegralND *intnd        = NCM_INTEGRAL_ND (test_int_sin);
+  NcmVector *xi               = ncm_vector_new (1);
+  NcmVector *xf               = ncm_vector_new (1);
+  NcmVector *res              = ncm_vector_new (1);
+  NcmVector *err              = ncm_vector_new (1);
+
+  test_int_sin->data.a = 3.0;
+  ncm_vector_set (xi, 0, 0.0);
+  ncm_vector_set (xf, 0, 100.0);
+  ncm_integral_nd_set_reltol (intnd, 1.0e-12);
+  ncm_integral_nd_set_maxeval (intnd, 50);
+  ncm_integral_nd_eval (intnd, xi, xf, res, err);
 }
 

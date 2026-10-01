@@ -199,7 +199,8 @@ def create_mfunc_array_for_cmb(
 
 
 def generate_planck18_tt(
-    massive_nu: bool = False,
+    massive_nu: bool = True,
+    fit_nu_mass: bool = False,
     prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
     use_lensing_likelihood: bool = False,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
@@ -236,7 +237,9 @@ def generate_planck18_tt(
     planck_model = Nc.PlanckFICorTT()
     planck_model.params_set_default_ftype()
 
-    cosmo = create_cosmo(massive_nu=massive_nu, prim_model=prim_model)
+    cosmo = create_cosmo(
+        massive_nu=massive_nu, fit_nu_mass=fit_nu_mass, prim_model=prim_model
+    )
 
     mset = Ncm.MSet.new_array([planck_model, cosmo])
     mset.prepare_fparam_map()
@@ -274,7 +277,8 @@ def generate_planck18_tt(
 
 
 def generate_planck18_ttteee(
-    massive_nu: bool = False,
+    massive_nu: bool = True,
+    fit_nu_mass: bool = False,
     prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
     use_lensing_likelihood: bool = False,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
@@ -316,7 +320,9 @@ def generate_planck18_ttteee(
     planck_model = Nc.PlanckFICorTTTEEE()
     planck_model.params_set_default_ftype()
 
-    cosmo = create_cosmo(massive_nu=massive_nu, prim_model=prim_model)
+    cosmo = create_cosmo(
+        massive_nu=massive_nu, fit_nu_mass=fit_nu_mass, prim_model=prim_model
+    )
 
     mset = Ncm.MSet.new_array([planck_model, cosmo])
     mset.prepare_fparam_map()
@@ -355,7 +361,8 @@ def generate_planck18_ttteee(
 
 def generate_planck18_native(
     data_type: Planck18Types,
-    massive_nu: bool = False,
+    massive_nu: bool = True,
+    fit_nu_mass: bool = False,
     prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
     use_lensing_likelihood: bool = False,
     from_release: bool = False,
@@ -448,7 +455,9 @@ def generate_planck18_native(
 
     planck_model.params_set_default_ftype()
 
-    cosmo = create_cosmo(massive_nu=massive_nu, prim_model=prim_model)
+    cosmo = create_cosmo(
+        massive_nu=massive_nu, fit_nu_mass=fit_nu_mass, prim_model=prim_model
+    )
     mset = Ncm.MSet.new_array([planck_model, cosmo])
     mset.prepare_fparam_map()
 

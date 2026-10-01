@@ -45,7 +45,7 @@ main (gint argc, gchar *argv[])
     { "catalog",        'c', 0, G_OPTION_ARG_STRING_ARRAY, &cat_filename,   "Input catalog filename.", NULL },
     { "burnin",         'b', 0, G_OPTION_ARG_STRING_ARRAY, &burnins,        "Burnin for the input catalogs.", NULL },
     { "out",            'o', 0, G_OPTION_ARG_STRING,       &out,            "Output catalog.", NULL },
-    { NULL }
+    { NULL, 0, 0, 0, NULL, NULL, NULL }
   };
 
   ncm_cfg_init_full_ptr (&argc, &argv);

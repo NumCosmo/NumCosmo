@@ -1,0 +1,87 @@
+---
+title: Poisson-Lognormal Distribution
+---
+
+This page derives the quadrature used by [[numcosmo-math|NcmPLN1D]] to evaluate the
+Poisson-Lognormal probability of an integer count.
+
+## Definition
+
+For a count $R \geq 0$ and a rate $\lambda > 0$, the Poisson probability is
+$$
+P_{\rm P}(R \mid \lambda) \equiv e^{-\lambda} \frac{\lambda^{R}}{R!}.
+$$
+The rate follows a lognormal distribution, where $\mu$ and $\sigma$ are the mean and the
+standard deviation of $\ln\lambda$,
+$$
+P_{\rm LN}(\lambda \mid \mu, \sigma) \equiv \frac{1}{\lambda \sigma \sqrt{2\pi}}
+\exp\left[-\frac{(\ln\lambda - \mu)^2}{2\sigma^2}\right].
+$$
+The Poisson-Lognormal probability is
+$$
+P(R \mid \mu, \sigma) \equiv \int_{0}^{\infty} P_{\rm P}(R \mid \lambda)\,
+P_{\rm LN}(\lambda \mid \mu, \sigma)\,\mathrm{d}\lambda.
+$$
+
+## Change of variables
+
+Substituting $\lambda = e^{\sigma x}$, with $x \in (-\infty, \infty)$ and
+$\mathrm{d}\lambda = \sigma e^{\sigma x}\,\mathrm{d}x$, and completing the square in $x$,
+$$
+P(R \mid \mu, \sigma) = \frac{1}{\sqrt{2\pi}\,R!} \int_{-\infty}^{\infty} e^{I(x)}\,\mathrm{d}x,
+$$
+where
+$$
+u \equiv \frac{\mu}{\sigma} + R\sigma, \qquad
+I(x) \equiv -\frac{(x - u)^2}{2} - e^{\sigma x} + R\sigma u - \frac{R^2\sigma^2}{2}.
+$$
+
+## Mode
+
+The condition $I'(x) = -(x - u) - \sigma e^{\sigma x} = 0$ has the solution
+$$
+z = u - \frac{W_0\left(\sigma^2 e^{\sigma u}\right)}{\sigma},
+$$
+where $W_0$ is the principal branch of the Lambert $W$ function. This is
+[[numcosmo-math|ncm_pln1d_mode]]. The argument of $W_0$ exceeds the double range for
+$\sigma u \gtrsim 709$, so it is passed as a logarithm to
+[[numcosmo-math|ncm_util_lambert_W0_ln]]. At the mode, $\sigma e^{\sigma z} = u - z$.
+
+## Gauss-Hermite quadrature
+
+Near the mode, $I(x)$ is a parabola of curvature $I''(z) = -1 - \sigma (u - z)$, using
+$\sigma e^{\sigma z} = u - z$. The width of the peak is therefore
+$$
+s \equiv \left[1 + \sigma (u - z)\right]^{-1/2}.
+$$
+Writing $x = z + s y$, let $y_i$ and $w_i$ be the nodes and weights of the $n$-point
+Gauss-Hermite rule for the weight $e^{-y^2/2}$, with $n$ given by `NcmPLN1D:gh-order`. Then
+$$
+P(R \mid \mu, \sigma) \approx \frac{s\, e^{R\mu + R^2\sigma^2/2}}{\sqrt{2\pi}\,R!}
+\sum_{i=1}^{n} w_i\, e^{y_i^2/2}
+\exp\left[-\frac{(z - u + s y_i)^2}{2} - e^{\sigma (z + s y_i)}\right],
+$$
+where $R\mu + R^2\sigma^2/2 = R\sigma u - R^2\sigma^2/2$ is the constant term of $I(x)$. The sum
+is accumulated in logarithms.
+
+With $n = 60$, the absolute error of $\ln P$ against adaptive quadrature is below $10^{-10}$
+at 209 of the 210 points of the grid $R \in \{0, 1, 5, 20, 50, 200, 1000\}$,
+$\mu \in \{-2, 0, 1, 3, 6\}$, $\sigma \in \{10^{-3}, 10^{-2}, 0.1, 0.3, 0.8, 1.5\}$; the
+exception is $2 \times 10^{-10}$ at $(R, \mu, \sigma) = (0, -2, 1.5)$. At $(0, -2, 3)$ it is
+$6 \times 10^{-6}$.
+
+[[numcosmo-math|ncm_pln1d_eval_range_sum_lnp]] adds these probabilities for
+$R_{\min} \leq R \leq R_{\max}$, each with its own mode.
+
+## Laplace approximation
+
+For $\sigma \leq 10^{-4}$ the quadrature is replaced by the Laplace approximation about $z$.
+Using $\sigma e^{\sigma z} = u - z$, the curvature is $I''(z) = -1 - \sigma (u - z)$ and
+$$
+\ln P(R \mid \mu, \sigma) \approx I(z) - \ln R! - \frac{1}{2}\ln\left[1 + \sigma (u - z)\right],
+$$
+with
+$$
+I(z) = -\frac{(u - z)^2}{2} - \frac{u - z}{\sigma} + R\sigma u - \frac{R^2\sigma^2}{2}.
+$$
+As $\sigma \to 0$ this tends to the Poisson probability with $\lambda = e^{\mu}$.

@@ -38,7 +38,7 @@ typedef struct _TestNcmOdeSpline
 } TestNcmOdeSpline;
 
 static gdouble
-_test_ode_dydx (gdouble t, gdouble y, gpointer userdata)
+_test_ode_dydx (gdouble y, gdouble x, gpointer userdata)
 {
   TestNcmOdeSpline *test = (TestNcmOdeSpline *) userdata;
 
@@ -145,6 +145,121 @@ test_ncm_ode_spline_min_subdivisions_prop (TestNcmOdeSpline *test, gconstpointer
   g_assert_cmpuint (ncm_ode_spline_get_min_subdivisions (test->os), ==, test_value);
 }
 
+/* dy/dx = alpha y from y(0) = 1 is exp (alpha x); bound 10 times the measured 4.8e-8. */
+void
+test_ncm_ode_spline_values (TestNcmOdeSpline *test, gconstpointer pdata)
+{
+  NcmSpline *ss;
+  guint i;
+
+  ncm_ode_spline_set_interval (test->os, 1.0, 0.0, 5.0);
+  ncm_ode_spline_prepare (test->os, test);
+  ss = ncm_ode_spline_peek_spline (test->os);
+
+  for (i = 0; i <= 1000; i++)
+  {
+    const gdouble x = 5.0 * i / 1000.0;
+
+    ncm_assert_cmpdouble_e (ncm_spline_eval (ss, x), ==, exp (test->alpha * x), 5.0e-7, 0.0);
+  }
+}
+
+/* With yf set, the integration stops where y reaches it, x = ln (yf) / alpha; bound 10
+ * times the measured 3.8e-9. */
+void
+test_ncm_ode_spline_yf (TestNcmOdeSpline *test, gconstpointer pdata)
+{
+  NcmVector *xv;
+
+  ncm_ode_spline_set_xi (test->os, 0.0);
+  ncm_ode_spline_set_yi (test->os, 1.0);
+  ncm_ode_spline_set_yf (test->os, exp (10.0));
+  ncm_ode_spline_prepare (test->os, test);
+
+  xv = ncm_spline_peek_xv (ncm_ode_spline_peek_spline (test->os));
+
+  ncm_assert_cmpdouble_e (ncm_vector_get (xv, ncm_vector_len (xv) - 1), ==, 10.0 / test->alpha, 4.0e-8, 0.0);
+  ncm_assert_cmpdouble_e (ncm_ode_spline_get_yf_attained (test->os), ==, exp (10.0), 1.0e-8, 0.0);
+}
+
+/* The yf stopping mode integrates toward increasing x also from a negative start. */
+void
+test_ncm_ode_spline_yf_negative (TestNcmOdeSpline *test, gconstpointer pdata)
+{
+  NcmVector *xv;
+
+  ncm_ode_spline_set_xi (test->os, -1.0);
+  ncm_ode_spline_set_yi (test->os, 1.0);
+  ncm_ode_spline_set_yf (test->os, exp (10.0));
+  ncm_ode_spline_prepare (test->os, test);
+
+  xv = ncm_spline_peek_xv (ncm_ode_spline_peek_spline (test->os));
+
+  ncm_assert_cmpdouble_e (ncm_vector_get (xv, ncm_vector_len (xv) - 1), ==, -1.0 + 10.0 / test->alpha, 4.0e-8, 0.0);
+}
+
+/* The last knot is xf, also with a step limit that makes the final step short. */
+void
+test_ncm_ode_spline_ends_at_xf (TestNcmOdeSpline *test, gconstpointer pdata)
+{
+  NcmVector *xv;
+
+  ncm_ode_spline_set_min_subdivisions (test->os, 7);
+  ncm_ode_spline_set_interval (test->os, 1.0, 0.0, 5.0);
+  ncm_ode_spline_prepare (test->os, test);
+
+  xv = ncm_spline_peek_xv (ncm_ode_spline_peek_spline (test->os));
+
+  g_assert_cmpfloat (ncm_vector_get (xv, ncm_vector_len (xv) - 1), ==, 5.0);
+}
+
+static gdouble
+_test_ode_dydx_blowup (gdouble y, gdouble x, gpointer userdata)
+{
+  return (x < 1.0) ? y : GSL_NAN;
+}
+
+/* A non-finite right-hand side stalls CVODE at x = 1, which aborts. */
+void
+test_ncm_ode_spline_failure (void)
+{
+  g_test_trap_subprocess ("/ncm/ode_spline/failure/subprocess", 60000000, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*step size underflowed*");
+}
+
+void
+test_ncm_ode_spline_failure_subprocess (void)
+{
+  NcmSpline *s     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  NcmOdeSpline *os = ncm_ode_spline_new (s, _test_ode_dydx_blowup);
+
+  ncm_ode_spline_set_reltol (os, 1.0e-10);
+  ncm_ode_spline_set_interval (os, 1.0, 0.0, 5.0);
+  ncm_ode_spline_prepare (os, NULL);
+}
+
+/* Without stop-hnil the stalled integration stops, and the spline ends where it stalled,
+ * within the knot spacing NCM_ODE_SPLINE_MIN_STEP. */
+void
+test_ncm_ode_spline_stall_stops (void)
+{
+  NcmSpline *s     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  NcmOdeSpline *os = ncm_ode_spline_new (s, _test_ode_dydx_blowup);
+  NcmVector *xv;
+
+  g_object_set (os, "stop-hnil", FALSE, NULL);
+  ncm_ode_spline_set_reltol (os, 1.0e-10);
+  ncm_ode_spline_set_interval (os, 1.0, 0.0, 5.0);
+  ncm_ode_spline_prepare (os, NULL);
+
+  xv = ncm_spline_peek_xv (ncm_ode_spline_peek_spline (os));
+  ncm_assert_cmpdouble_e (ncm_vector_get (xv, ncm_vector_len (xv) - 1), ==, 1.0, NCM_ODE_SPLINE_MIN_STEP, 0.0);
+
+  ncm_ode_spline_free (os);
+  ncm_spline_free (s);
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -152,6 +267,25 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
+  g_test_add ("/ncm/ode_spline/values", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_values,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/yf", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_yf,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/yf_negative", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_yf_negative,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/ends_at_xf", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_ends_at_xf,
+              &test_ncm_ode_spline_free);
+  g_test_add_func ("/ncm/ode_spline/failure", &test_ncm_ode_spline_failure);
+  g_test_add_func ("/ncm/ode_spline/failure/subprocess", &test_ncm_ode_spline_failure_subprocess);
+  g_test_add_func ("/ncm/ode_spline/stall_stops", &test_ncm_ode_spline_stall_stops);
   g_test_add ("/ncm/ode_spline/min_subdivisions/default", TestNcmOdeSpline, NULL,
               &test_ncm_ode_spline_new,
               &test_ncm_ode_spline_min_subdivisions_default,

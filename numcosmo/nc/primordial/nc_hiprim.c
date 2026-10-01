@@ -105,6 +105,14 @@ nc_hiprim_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
 
 NCM_MSET_MODEL_REGISTER_ID (nc_hiprim, NC_TYPE_HIPRIM);
 
+/* The default range, unbounded, for a model with a closed form */
+static void
+_nc_hiprim_lnk_range (NcHIPrim *prim, gdouble *lnk_min, gdouble *lnk_max)
+{
+  *lnk_min = -G_MAXDOUBLE;
+  *lnk_max = +G_MAXDOUBLE;
+}
+
 static void
 nc_hiprim_class_init (NcHIPrimClass *klass)
 {
@@ -127,6 +135,8 @@ nc_hiprim_class_init (NcHIPrimClass *klass)
                               nc_hicosmo_id ());
 
   ncm_model_class_check_params_info (model_class);
+
+  klass->lnk_range = &_nc_hiprim_lnk_range;
 
 
   g_object_class_install_property (object_class,
@@ -262,6 +272,22 @@ gdouble
 nc_hiprim_get_lnk_pivot (NcHIPrim *prim)
 {
   return log (prim->k_pivot);
+}
+
+/**
+ * nc_hiprim_get_lnk_range: (virtual lnk_range)
+ * @prim: a #NcHIPrim
+ * @lnk_min: (out): the smallest $\ln(k\mathrm{Mpc})$ the model is defined for
+ * @lnk_max: (out): the largest $\ln(k\mathrm{Mpc})$ the model is defined for
+ *
+ * Gets the range of $\ln(k\mathrm{Mpc})$ where the model is defined: unbounded, $\pm$%G_MAXDOUBLE,
+ * for a closed form, and the range of its table for a tabulated model, outside which its
+ * value is extrapolated. Callers that sample the spectrum should stay inside it.
+ */
+void
+nc_hiprim_get_lnk_range (NcHIPrim *prim, gdouble *lnk_min, gdouble *lnk_max)
+{
+  NC_HIPRIM_GET_CLASS (prim)->lnk_range (prim, lnk_min, lnk_max);
 }
 
 /**

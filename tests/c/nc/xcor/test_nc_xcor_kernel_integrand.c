@@ -46,7 +46,7 @@
 #include <glib-object.h>
 
 /* A narrow window close in, and a power spectrum cut well below its default kmax: the
- * Levin ODE's cost is linear in the top of y = k chi_max, and these bound it at a few
+ * Levin ODE's cost is linear in the top of x = k chi_max, and these bound it at a few
  * hundred rather than a few hundred thousand. */
 #define TEST_CHI_LOWER 200.0
 #define TEST_CHI_UPPER 400.0
@@ -147,7 +147,7 @@ test_nc_xcor_kernel_integrand_new (TestNcXcorKernelIntegrand *test, gconstpointe
   nc_xcor_kernel_set_max_border_expansions (test->xclk, 1);
   nc_xcor_kernel_set_max_iter (test->xclk, 4);
   nc_xcor_kernel_set_reltol (test->xclk, 1.0e-3);
-  nc_xcor_kernel_set_scaled_abstol (test->xclk, 1.0e-4);
+  nc_xcor_kernel_set_peak_epsilon (test->xclk, 1.0e-4);
   nc_xcor_kernel_set_panel_order_cap (test->xclk, 12);
   nc_xcor_kernel_set_lmax (test->xclk, 16);
 
@@ -355,7 +355,7 @@ test_nc_xcor_kernel_integrand_tolerances (TestNcXcorKernelIntegrand *test, gcons
 
   nc_xcor_kernel_integrand_set_tolerances (integ, 1.0e-7, 1.0e-5);
   ncm_assert_cmpdouble_e (nc_xcor_kernel_integrand_get_reltol (integ), ==, 1.0e-7, 1.0e-15, 0.0);
-  ncm_assert_cmpdouble_e (nc_xcor_kernel_integrand_get_scaled_abstol (integ), ==, 1.0e-5, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (nc_xcor_kernel_integrand_get_peak_epsilon (integ), ==, 1.0e-5, 1.0e-15, 0.0);
 
   ncm_matrix_set_all (residuals, 1.0e-9);
   nc_xcor_kernel_integrand_set_residuals (integ, residuals);

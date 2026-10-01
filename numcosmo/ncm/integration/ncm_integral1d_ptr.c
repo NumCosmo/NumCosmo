@@ -26,13 +26,10 @@
 /**
  * NcmIntegral1dPtr:
  *
- * Function pointer one dimensional integration object.
+ * One-dimensional integral of an integrand given by a function pointer.
  *
- * This object facilitates one-dimensional integration by employing a function pointer
- * to evaluate the integrand. It's worth mentioning that this object is not well suited
- * for serialization or for integration with GObject introspection bindings, as it
- * relies on raw function pointers.
- *
+ * The integrand is a #NcmIntegral1dPtrF called with #NcmIntegral1dPtr:userdata. The
+ * function pointer is not serialized, so this type cannot be serialized.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -127,6 +124,14 @@ _ncm_integral1d_ptr_get_property (GObject *object, guint prop_id, GValue *value,
 static void
 _ncm_integral1d_ptr_finalize (GObject *object)
 {
+  NcmIntegral1dPtr *int1d_ptr          = NCM_INTEGRAL1D_PTR (object);
+  NcmIntegral1dPtrPrivate * const self = ncm_integral1d_ptr_get_instance_private (int1d_ptr);
+
+  if ((self->userdata != NULL) && (self->userfree != NULL))
+    self->userfree (self->userdata);
+
+  self->userdata = NULL;
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_integral1d_ptr_parent_class)->finalize (object);
 }
@@ -143,18 +148,36 @@ ncm_integral1d_ptr_class_init (NcmIntegral1dPtrClass *klass)
   object_class->get_property = &_ncm_integral1d_ptr_get_property;
   object_class->finalize     = &_ncm_integral1d_ptr_finalize;
 
+  /**
+   * NcmIntegral1dPtr:integrand:
+   *
+   * The integrand, a #NcmIntegral1dPtrF.
+   */
   g_object_class_install_property (object_class,
                                    PROP_INTEGRAND,
                                    g_param_spec_pointer ("integrand",
                                                          NULL,
                                                          "Integrand function pointer",
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmIntegral1dPtr:userdata:
+   *
+   * The user data passed to the integrand.
+   */
   g_object_class_install_property (object_class,
                                    PROP_USERDATA,
                                    g_param_spec_pointer ("userdata",
                                                          NULL,
                                                          "Integrand function user data",
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmIntegral1dPtr:userfree:
+   *
+   * The function that frees #NcmIntegral1dPtr:userdata when it is replaced and on
+   * finalization, or %NULL.
+   */
   g_object_class_install_property (object_class,
                                    PROP_USERFREE,
                                    g_param_spec_pointer ("userfree",
@@ -176,12 +199,12 @@ _ncm_integral1d_ptr_integrand (NcmIntegral1d *int1d, const gdouble x, const gdou
 
 /**
  * ncm_integral1d_ptr_new:
- * @F: (scope notified): a #NcmIntegral1dPtrF
- * @userfree: (scope notified): #GDestroyNotify
+ * @F: (scope notified): the integrand
+ * @userfree: (scope notified): the function that frees the user data
  *
- * Creates a new #NcmIntegral1dPtr object for the integrand @F.
+ * Creates a #NcmIntegral1dPtr with the default #NcmIntegral1d configuration.
  *
- * Returns: (transfer full): the new #NcmIntegral1dPtr object.
+ * Returns: (transfer full): a new #NcmIntegral1dPtr.
  */
 NcmIntegral1dPtr *
 ncm_integral1d_ptr_new (NcmIntegral1dPtrF F, GDestroyNotify userfree)
@@ -196,16 +219,16 @@ ncm_integral1d_ptr_new (NcmIntegral1dPtrF F, GDestroyNotify userfree)
 
 /**
  * ncm_integral1d_ptr_new_full:
- * @F: (scope notified): a #NcmIntegral1dPtrF
- * @userfree: (scope notified): #GDestroyNotify
+ * @F: (scope notified): the integrand
+ * @userfree: (scope notified): the function that frees the user data
  * @reltol: the relative tolerance
  * @abstol: the absolute tolerance
- * @partition: the maximum subdivisions
- * @rule: integration rule to use in each subinterval
+ * @partition: the maximum number of subintervals
+ * @rule: the Gauss-Kronrod rule
  *
- * Creates a new #NcmIntegral1dPtr object for the integrand @F.
+ * Creates a #NcmIntegral1dPtr, see #NcmIntegral1d for the configuration.
  *
- * Returns: (transfer full): the new #NcmIntegral1dPtr object.
+ * Returns: (transfer full): a new #NcmIntegral1dPtr.
  */
 NcmIntegral1dPtr *
 ncm_integral1d_ptr_new_full (NcmIntegral1dPtrF F, GDestroyNotify userfree, gdouble reltol, gdouble abstol, guint partition, guint rule)
@@ -226,22 +249,21 @@ ncm_integral1d_ptr_new_full (NcmIntegral1dPtrF F, GDestroyNotify userfree, gdoub
  * ncm_integral1d_ptr_ref:
  * @int1d_ptr: a #NcmIntegral1dPtr
  *
- * Increases the reference count of @int1d by one.
+ * Increases the reference count of @int1d_ptr by one.
  *
- * Returns: (transfer full): @int1d.
+ * Returns: (transfer full): @int1d_ptr.
  */
 NcmIntegral1dPtr *
-ncm_integral1d_ptr_ref (NcmIntegral1dPtr *int1d)
+ncm_integral1d_ptr_ref (NcmIntegral1dPtr *int1d_ptr)
 {
-  return g_object_ref (int1d);
+  return g_object_ref (int1d_ptr);
 }
 
 /**
  * ncm_integral1d_ptr_free:
  * @int1d_ptr: a #NcmIntegral1dPtr
  *
- * Decreases the reference count of @int1d by one.
- *
+ * Decreases the reference count of @int1d_ptr by one.
  */
 void
 ncm_integral1d_ptr_free (NcmIntegral1dPtr *int1d_ptr)
@@ -253,9 +275,8 @@ ncm_integral1d_ptr_free (NcmIntegral1dPtr *int1d_ptr)
  * ncm_integral1d_ptr_clear:
  * @int1d_ptr: a #NcmIntegral1dPtr
  *
- * If *@int1d is different from NULL, decreases the reference
- * count of *@int1d by one and sets *@int1d to NULL.
- *
+ * If *@int1d_ptr is not %NULL, decreases its reference count by one and sets *@int1d_ptr
+ * to %NULL.
  */
 void
 ncm_integral1d_ptr_clear (NcmIntegral1dPtr **int1d_ptr)
@@ -266,10 +287,10 @@ ncm_integral1d_ptr_clear (NcmIntegral1dPtr **int1d_ptr)
 /**
  * ncm_integral1d_ptr_set_userdata:
  * @int1d_ptr: a #NcmIntegral1dPtr
- * @userdata: a gpointer to user data
+ * @userdata: the user data
  *
- * Sets user data to @userdata.
- *
+ * Sets #NcmIntegral1dPtr:userdata, freeing the previous one with
+ * #NcmIntegral1dPtr:userfree.
  */
 void
 ncm_integral1d_ptr_set_userdata (NcmIntegral1dPtr *int1d_ptr, gpointer userdata)

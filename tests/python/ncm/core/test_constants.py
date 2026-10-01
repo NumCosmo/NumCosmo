@@ -123,7 +123,7 @@ def test_constants_derived():
     assert_allclose(Ncm.C.fine_struct_square(), constants.alpha**2)
     assert_allclose(Ncm.C.electric_constant(), constants.epsilon_0)
     assert_allclose(
-        Ncm.C.AR(),
+        Ncm.C.blackbody_energy_density(),
         4.0 * physical_constants["Stefan-Boltzmann constant"][0] / constants.c,
     )
     assert_allclose(Ncm.C.c2(), constants.c**2)
@@ -211,7 +211,10 @@ def test_constants_HI_ion_wn():
     assert_allclose(Ncm.C.HI_ion_wn_2s_2S0_5(), 2741981.734379)
     assert_allclose(Ncm.C.HI_ion_wn_2p_2P0_5(), 2741985.262977)
     assert_allclose(Ncm.C.HI_ion_wn_2p_2P3_5(), 2741948.674167)
-    assert_allclose(Ncm.C.HI_ion_wn_2p_2Pmean(), 2741966.968572)
+    # Weighted by the statistical weights 2J + 1 = 2, 4
+    assert_allclose(
+        Ncm.C.HI_ion_wn_2p_2Pmean(), (2741985.262977 + 2.0 * 2741948.674167) / 3.0
+    )
 
 
 def test_constants_HI_ion_E():
@@ -220,7 +223,7 @@ def test_constants_HI_ion_E():
     assert_allclose(Ncm.C.HI_ion_E_2s_2S0_5(), 5.44679825663478e-19)
     assert_allclose(Ncm.C.HI_ion_E_2p_2P0_5(), 5.446805266004078e-19)
     assert_allclose(Ncm.C.HI_ion_E_2p_2P3_5(), 5.446732584314035e-19)
-    assert_allclose(Ncm.C.HI_ion_E_2p_2Pmean(), 5.446768925159056e-19)
+    assert_allclose(Ncm.C.HI_ion_E_2p_2Pmean(), 5.446756811544049e-19)
 
 
 def test_constants_HI_Lyman_wn():
@@ -228,7 +231,9 @@ def test_constants_HI_Lyman_wn():
     assert_allclose(Ncm.C.HI_Lyman_wn_2s_2S0_5(), 8.22589543992821e6)
     assert_allclose(Ncm.C.HI_Lyman_wn_2p_2P0_5(), 8.22589191133e6)
     assert_allclose(Ncm.C.HI_Lyman_wn_2p_2P3_5(), 8.22592850014e6)
-    assert_allclose(Ncm.C.HI_Lyman_wn_2p_2Pmean(), 8.225910205735e6)
+    assert_allclose(
+        Ncm.C.HI_Lyman_wn_2p_2Pmean(), (8.22589191133e6 + 2.0 * 8.22592850014e6) / 3.0
+    )
 
 
 def test_constants_HI_Lyman_wl():
@@ -236,7 +241,9 @@ def test_constants_HI_Lyman_wl():
     assert_allclose(Ncm.C.HI_Lyman_wl_2s_2S0_5(), 1.0 / 8.22589543992821e6)
     assert_allclose(Ncm.C.HI_Lyman_wl_2p_2P0_5(), 1.0 / 8.22589191133e6)
     assert_allclose(Ncm.C.HI_Lyman_wl_2p_2P3_5(), 1.0 / 8.22592850014e6)
-    assert_allclose(Ncm.C.HI_Lyman_wl_2p_2Pmean(), 1.0 / 8.225910205735e6)
+    assert_allclose(
+        Ncm.C.HI_Lyman_wl_2p_2Pmean(), 3.0 / (8.22589191133e6 + 2.0 * 8.22592850014e6)
+    )
 
 
 def test_constants_HI_Lyman_wl3_8pi():
@@ -255,7 +262,7 @@ def test_constants_HI_Lyman_wl3_8pi():
     )
     assert_allclose(
         Ncm.C.HI_Lyman_wl3_8pi_2p_2Pmean(),
-        (1.0 / 8.225910205735e6) ** 3 / (8.0 * math.pi),
+        (3.0 / (8.22589191133e6 + 2.0 * 8.22592850014e6)) ** 3 / (8.0 * math.pi),
     )
 
 
@@ -265,7 +272,7 @@ def test_constants_boltzmann_factor():
     assert_allclose(Ncm.C.boltzmann_factor_HI_2s_2S0_5(5.0e3), 9.040447e17)
     assert_allclose(Ncm.C.boltzmann_factor_HI_2p_2P0_5(5.0e3), 9.040355e17)
     assert_allclose(Ncm.C.boltzmann_factor_HI_2p_2P3_5(5.0e3), 9.041307e17)
-    assert_allclose(Ncm.C.boltzmann_factor_HI_2p_2Pmean(5.0e3), 9.040831e17)
+    assert_allclose(Ncm.C.boltzmann_factor_HI_2p_2Pmean(5.0e3), 9.040989e17)
 
 
 def test_constants_HeI_ion_wn():

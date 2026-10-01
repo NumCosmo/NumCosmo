@@ -25,11 +25,11 @@
 /**
  * NcmCfg:
  *
- * Library configuration and helper functions.
+ * Library initialization and configuration.
  *
- * These functions are used to configure the library, including helper functions related
- * to the library configuration.
- *
+ * Initialization, log output, thread counts of the linear algebra libraries, FFTW
+ * planning and wisdom, data-file lookup, and helpers for #GOptionEntry, #GKeyFile and
+ * enumeration types.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -40,11 +40,13 @@
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_rng.h"
 #include "ncm/core/ncm_memory_pool.h"
+#include "ncm/algebra/ncm_complex.h"
 #include "ncm/mpi/ncm_mpi_job.h"
 #include "ncm/mpi/ncm_mpi_job_test.h"
 #include "ncm/mpi/ncm_mpi_job_fit.h"
 #include "ncm/mpi/ncm_mpi_job_mcmc.h"
 #include "ncm/mpi/ncm_mpi_job_feval.h"
+#include "ncm/mpi/ncm_mpi_slave.h"
 #include "ncm/algebra/ncm_vector.h"
 #include "ncm/spline/ncm_spline_bspline.h"
 #include "ncm/spline/ncm_spline_gsl.h"
@@ -61,7 +63,6 @@
 #include "ncm/core/ncm_pln1d.h"
 #include "ncm/powspec/ncm_powspec_corr3d.h"
 #include "ncm/powspec/ncm_powspec_filter.h"
-#include "ncm/powspec/ncm_powspec_sphere_proj.h"
 #include "ncm/powspec/ncm_powspec_spline2d.h"
 #include "ncm/powspec/tests/ncm_powspec_analytic.h"
 #include "ncm/powspec/ncm_powspec.h"
@@ -76,6 +77,8 @@
 #include "ncm/data/ncm_data_gauss_cov_mvnd.h"
 #include "ncm/data/ncm_data_rosenbrock.h"
 #include "ncm/data/ncm_data_funnel.h"
+#include "ncm/data/ncm_data_gaussmix2d.h"
+#include "ncm/stats/ncm_stats_acorr.h"
 #include "ncm/stats/ncm_stats_vec.h"
 #include "ncm/fit/ncm_fit_esmcmc_walker_stretch.h"
 #include "ncm/data/ncm_data.h"
@@ -92,12 +95,10 @@
 #include "ncm/fit/ncm_prior_flat_param.h"
 #include "ncm/fit/ncm_prior_flat_func.h"
 #include "ncm/specfunc/ncm_sbessel_integrator.h"
-#include "ncm/specfunc/ncm_sbessel_integrator_fftl.h"
 #include "ncm/specfunc/ncm_sbessel_integrator_gl.h"
 #include "ncm/specfunc/ncm_sbessel_integrator_levin.h"
 #include "ncm/specfunc/ncm_sbessel_ode_solver.h"
 #include "ncm/fftlog/ncm_fftlog_sbessel_j.h"
-#include "ncm/fftlog/ncm_fftlog_sbessel_jljm.h"
 #include "ncm/algebra/ncm_spectral.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/bbn/nc_bbn.h"
@@ -410,7 +411,6 @@ void _nc_hicosmo_qspline_register_functions (void);
 void _nc_galaxy_shape_pop_beta_register_functions (void);
 
 #ifdef HAVE_MPI
-static void _ncm_cfg_mpi_main_loop (void);
 static gboolean _ncm_cfg_mpi_launched (void);
 
 #endif /* HAVE_MPI */
@@ -464,11 +464,26 @@ _ncm_cfg_exit (void)
 /**
  * ncm_cfg_init:
  *
- * Main library configuration function. Must be called before any other function of NumCosmo.
+ * Initializes the library; it must be called before any other NumCosmo function, and
+ * later calls return immediately. It
  *
- * Initializes internal variables and sets all other library number of threads to one.
+ * - sets the default FFTW planner flag and time limit from `NCM_FFTW_PLANNER` and
+ *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(); the time
+ *   limit is 10 s when `NCM_FFTW_PLANNER_TIMELIMIT` is not set;
+ * - creates the directory `~/.numcosmo`, see ncm_cfg_get_fullpath();
+ * - sets the Cuba library core counts to zero;
+ * - turns the GSL error handler off, see ncm_cfg_enable_gsl_err_handler();
+ * - installs the NumCosmo log handlers;
+ * - warns when `OMP_NUM_THREADS` exceeds `OMP_THREAD_LIMIT`, since an OpenMP-threaded
+ *   BLAS can then deadlock;
+ * - registers the library objects and functions;
+ * - under an MPI launcher, initializes MPI; every rank except the master then runs the
+ *   worker loop and never returns.
  *
- * See also: ncm_cfg_init_full() ncm_cfg_init_full_ptr().
+ * MPI is detected from the launcher's environment (Open MPI, MPICH/Hydra, Slurm);
+ * `NUMCOSMO_MPI_INIT` set to 1 or 0 forces or skips it.
+ *
+ * Same as ncm_cfg_init_full() without command-line arguments.
  */
 void
 ncm_cfg_init (void)
@@ -501,19 +516,14 @@ _ncm_cfg_make_strv (gint argc, gchar **argv)
 
 /**
  * ncm_cfg_init_full:
- * @argc: a pointer to argc
- * @argv: (array length=argc): a pointer to argv
+ * @argc: number of arguments
+ * @argv: (array length=argc): the arguments
  *
- * Main library configuration function. Must be called before any other function of NumCosmo.
+ * Same as ncm_cfg_init_full_ptr(), for bindings: the arguments are copied and the
+ * possibly modified copy is returned.
  *
- * Initializes internal variables and sets all other library number of threads to one.
- * This function passes the arguments to other libraries, e.g, MPI. If that is not necessary
- * ncm_cfg_init() should be used. This version is compatible with bindings and can be safely
- * called from other languages.
- *
- * See also: ncm_cfg_init() ncm_cfg_init_full_ptr().
- *
- * Returns: (transfer full) (array zero-terminated=1): the possibly modified argv
+ * Returns: (transfer full) (array zero-terminated=1): the arguments after MPI
+ * initialization.
  */
 gchar **
 ncm_cfg_init_full (gint argc, gchar **argv)
@@ -530,38 +540,13 @@ ncm_cfg_init_full (gint argc, gchar **argv)
   return argv_ret;
 }
 
-/**
- * ncm_cfg_init_full_ptr:
- * @argc: a pointer to argc
- * @argv: (array length=argc): a pointer to argv
- *
- * Main library configuration function. Must be called before any other function of NumCosmo.
- *
- * Initializes internal variables and sets all other library number of threads to one.
- * This function passes the arguments to other libraries, e.g, MPI. If that is not necessary
- * ncm_cfg_init() should be used. This version should be used from C applications passing
- * @argc and @argv pointers from main.
- *
- * See also: ncm_cfg_init() ncm_cfg_init_full().
- */
 #ifdef HAVE_MPI
 
 /*
- * Was this process started by a parallel launcher?
- *
- * MPI_Init costs around a second of OpenMPI/UCX device probing, and every
- * NumCosmo process paid it: every CLI invocation, every test binary, every
- * pytest worker. Outside a launcher it buys nothing. The world is a single
- * rank, so _mpi_ctrl keeps the size/rank/nslaves defaults set in the caller,
- * and the dispatch in ncm_mpi_job.c is gated on nslaves > 0 and never runs.
- *
- * Detection is by the launcher's own environment rather than by initialising
- * and backing out: a rank other than the master must enter the slave main loop
- * during init and never return, so deferring the decision would run the
- * caller's entire program once per rank.
- *
- * NUMCOSMO_MPI_INIT overrides the detection in both directions, for a launcher
- * that sets none of these variables (=1) or to force the serial path (=0).
+ * Whether a parallel launcher started this process. MPI_Init costs about a second of
+ * device probing, so it is called only under a launcher. The launcher's environment is
+ * used, instead of initializing and backing out, because every rank except the master
+ * enters the worker loop during initialization and never returns.
  */
 static gboolean
 _ncm_cfg_mpi_launched (void)
@@ -590,6 +575,32 @@ _ncm_cfg_mpi_launched (void)
 
 #endif /* HAVE_MPI */
 
+/**
+ * ncm_cfg_init_full_ptr:
+ * @argc: a pointer to the number of arguments
+ * @argv: (array length=argc): a pointer to the arguments
+ *
+ * Initializes the library; it must be called before any other NumCosmo function, and
+ * later calls return immediately. It
+ *
+ * - sets the default FFTW planner flag and time limit from `NCM_FFTW_PLANNER` and
+ *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(); the time
+ *   limit is 10 s when `NCM_FFTW_PLANNER_TIMELIMIT` is not set;
+ * - creates the directory `~/.numcosmo`, see ncm_cfg_get_fullpath();
+ * - sets the Cuba library core counts to zero;
+ * - turns the GSL error handler off, see ncm_cfg_enable_gsl_err_handler();
+ * - installs the NumCosmo log handlers;
+ * - warns when `OMP_NUM_THREADS` exceeds `OMP_THREAD_LIMIT`, since an OpenMP-threaded
+ *   BLAS can then deadlock;
+ * - registers the library objects and functions;
+ * - under an MPI launcher, initializes MPI; every rank except the master then runs the
+ *   worker loop and never returns.
+ *
+ * MPI is detected from the launcher's environment (Open MPI, MPICH/Hydra, Slurm);
+ * `NUMCOSMO_MPI_INIT` set to 1 or 0 forces or skips it.
+ *
+ * @argc and @argv, as received by main(), are passed to MPI_Init().
+ */
 void
 ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 {
@@ -598,7 +609,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   if (numcosmo_init)
     return;
 
-  ncm_cfg_set_fftw_default_from_env_str (NUMCOSMO_FFTW_PLAN, -1.0, NULL);
+  ncm_cfg_set_fftw_default_from_env_str (NUMCOSMO_FFTW_PLAN, 10.0, NULL);
 
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
@@ -608,11 +619,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
     g_mkdir_with_parents (numcosmo_path, 0755);
-
-  /* ncm_cfg_set_openmp_nthreads (1); */
-  /* ncm_cfg_set_openblas_nthreads (1); */
-  /* ncm_cfg_set_blis_nthreads (1); */
-  /* ncm_cfg_set_mkl_nthreads (1); */
 
   g_setenv ("CUBACORES", "0", TRUE);
   g_setenv ("CUBACORESMAX", "0", TRUE);
@@ -625,16 +631,21 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   gsl_err = gsl_set_error_handler_off ();
 
-  fftw_set_timelimit (10.0);
-#ifdef HAVE_FFTW3F
-  fftwf_set_timelimit (10.0);
-#endif /* HAVE_FFTW3F */
-
   _log_stream     = stdout;
   _log_stream_err = stderr;
 
   _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message, NULL);
   _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_error, NULL);
+
+#ifdef _OPENMP
+
+  /* An OpenMP-threaded BLAS waits for omp_get_max_threads() threads, created only up to the limit. */
+  if (omp_get_max_threads () > omp_get_thread_limit ())
+    g_warning ("ncm_cfg_init: OMP_NUM_THREADS (%d) exceeds OMP_THREAD_LIMIT (%d); "
+               "an OpenMP-threaded BLAS can deadlock. Set both to the same value.",
+               omp_get_max_threads (), omp_get_thread_limit ());
+
+#endif /* _OPENMP */
 
   ncm_cfg_register_objects ();
   ncm_cfg_register_functions ();
@@ -647,7 +658,10 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   _mpi_ctrl.nslaves        = 0;
   _mpi_ctrl.working_slaves = 0;
 
-  atexit (_ncm_cfg_exit);
+  /*
+   * _ncm_cfg_exit finalizes MPI, so it is registered after MPI_Init: exit handlers run
+   * in reverse order, and those MPI_Init registers must run after MPI_Finalize.
+   */
 
 #ifdef HAVE_MPI
 
@@ -679,7 +693,10 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
       if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
       {
-        _ncm_cfg_mpi_main_loop ();
+        /* Workers never return to the caller. */
+        atexit (_ncm_cfg_exit);
+        ncm_mpi_slave_run ();
+        exit (0);
       }
       else
       {
@@ -696,14 +713,15 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
 #endif /* HAVE_MPI */
 
+  atexit (_ncm_cfg_exit);
+
   return;
 }
 
 /**
  * ncm_cfg_register_objects:
  *
- * Registers the objects of the library.
- *
+ * Registers the library types with ncm_cfg_register_obj(). Called by ncm_cfg_init().
  */
 void
 ncm_cfg_register_objects (void)
@@ -741,14 +759,12 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_SPECTRAL);
 
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_GL);
-  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_FFTL);
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN);
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_ODE_SOLVER);
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPLINE2D);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
-  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPHERE_PROJ);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_ANALYTIC);
 
@@ -764,6 +780,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_REPARAM_LINEAR);
 
   ncm_cfg_register_obj (NCM_TYPE_BOOTSTRAP);
+  ncm_cfg_register_obj (NCM_TYPE_STATS_ACORR);
   ncm_cfg_register_obj (NCM_TYPE_STATS_VEC);
 
   ncm_cfg_register_obj (NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH);
@@ -774,6 +791,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_DATA_GAUSS_COV_MVND);
   ncm_cfg_register_obj (NCM_TYPE_DATA_ROSENBROCK);
   ncm_cfg_register_obj (NCM_TYPE_DATA_FUNNEL);
+  ncm_cfg_register_obj (NCM_TYPE_DATA_GAUSSMIX2D);
 
   ncm_cfg_register_obj (NCM_TYPE_FIT);
 
@@ -791,7 +809,6 @@ ncm_cfg_register_objects (void)
 
 
   ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_J);
-  ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_JLJM);
 
   ncm_cfg_register_obj (NCM_TYPE_DATA);
 
@@ -1033,8 +1050,8 @@ static gsize _functions_initialized = 0;
 /**
  * ncm_cfg_register_functions:
  *
- * Register functions for the ncm_cfg namespace.
- *
+ * Registers, once per process, the #NcmMSetFuncList functions of the library models.
+ * Called by ncm_cfg_init().
  */
 void
 ncm_cfg_register_functions (void)
@@ -1057,258 +1074,11 @@ ncm_cfg_register_functions (void)
   return;
 }
 
-#ifdef HAVE_MPI
-
-static gboolean _ncm_cfg_mpi_cmd_handler (gpointer user_data);
-
-static void
-_ncm_cfg_mpi_main_loop (void)
-{
-  GMainLoop *mpi_ml = g_main_loop_new (NULL, FALSE);
-
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Starting slave!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-
-  g_timeout_add (100, &_ncm_cfg_mpi_cmd_handler, mpi_ml);
-
-  g_main_loop_run (mpi_ml);
-
-  g_main_loop_unref (mpi_ml);
-
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Dying slave!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-  exit (0);
-}
-
-static gboolean
-_ncm_cfg_mpi_cmd_handler (gpointer user_data)
-{
-  enum buf_type
-  {
-    input_type,
-    ret_type,
-    msg_type,
-  };
-  struct buf_desc
-  {
-    gpointer obj;
-    gpointer buf;
-    enum buf_type t;
-  };
-  GMainLoop *mpi_ml        = user_data;
-  NcmSerialize *ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-  NcmMPIJob *mpi_job       = NULL;
-  gboolean init            = FALSE;
-  GArray *input_array      = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *work_ret_request = g_array_new (FALSE, FALSE, sizeof (MPI_Request));
-  GArray *work_ret_bufs    = g_array_new (FALSE, TRUE, sizeof (struct buf_desc));
-  gpointer input           = NULL;
-  gpointer input_buf       = NULL;
-  gint input_len           = 0;
-  gint input_size          = 0;
-  gint return_len          = 0;
-  gint return_size         = 0;
-  gboolean normal_exit     = TRUE;
-  MPI_Datatype input_dtype;
-  MPI_Datatype return_dtype;
-
-  while (TRUE)
-  {
-    gboolean end = FALSE;
-    gint cmd     = 0;
-    MPI_Status status;
-
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Waiting for command...\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-
-    MPI_Recv (&cmd, 1, MPI_INT, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_CMD, MPI_COMM_WORLD, &status);
-
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Received %d\n", _mpi_ctrl.size, _mpi_ctrl.rank, cmd);
-
-    switch (cmd)
-    {
-      case NCM_MPI_CTRL_SLAVE_INIT:
-      {
-        GVariant *job_ser = NULL;
-        gint job_size     = 0;
-        gint job_recv     = 0;
-        gchar *job        = NULL;
-
-        if (init)
-          g_error ("_ncm_cfg_mpi_cmd_handler: slave %d already initialized.", _mpi_ctrl.rank);
-
-        NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Initializing slave.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-
-        MPI_Probe (NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_JOB, MPI_COMM_WORLD, &status);
-        MPI_Get_count (&status, MPI_BYTE, &job_size);
-
-        NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave object size %d.\n", _mpi_ctrl.size, _mpi_ctrl.rank, job_size);
-
-        job = g_new (gchar, job_size);
-        MPI_Recv (job, job_size, MPI_BYTE, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_JOB, MPI_COMM_WORLD, &status);
-        MPI_Get_count (&status, MPI_BYTE, &job_recv);
-
-        NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave object received size %d.\n", _mpi_ctrl.size, _mpi_ctrl.rank, job_recv);
-
-        g_assert_cmpint (job_recv, ==, job_size);
-
-        job_ser = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), job, job_size, TRUE, g_free, job);
-
-        /*NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave object received string `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, g_variant_print (job_ser, TRUE));*/
-
-        mpi_job = NCM_MPI_JOB (ncm_serialize_from_variant (ser, job_ser));
-
-        ncm_mpi_job_work_init (mpi_job);
-
-        input_dtype  = ncm_mpi_job_input_datatype  (mpi_job, &input_len,  &input_size);
-        return_dtype = ncm_mpi_job_return_datatype (mpi_job, &return_len, &return_size);
-        input        = ncm_mpi_job_create_input (mpi_job);
-        input_buf    = ncm_mpi_job_get_input_buffer (mpi_job, input);
-
-        g_assert (NCM_IS_MPI_JOB (mpi_job));
-
-        g_variant_unref (job_ser);
-
-        init = TRUE;
-        break;
-      }
-      case NCM_MPI_CTRL_SLAVE_FREE:
-        end = TRUE;
-        break;
-      case NCM_MPI_CTRL_SLAVE_KILL:
-        end         = TRUE;
-        normal_exit = FALSE;
-        break;
-      case NCM_MPI_CTRL_SLAVE_WORK:
-      {
-        if (!init)
-        {
-          g_error ("_ncm_cfg_mpi_cmd_handler: uninitialized slave `%d' received work (vector).", _mpi_ctrl.rank);
-        }
-        else
-        {
-          struct buf_desc bd = {NULL, NULL, ret_type};
-          gint input_recv    = 0;
-          MPI_Request wr_request;
-
-          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave received a work request, command %d.\n",
-                                   _mpi_ctrl.size, _mpi_ctrl.rank, cmd);
-
-          MPI_Recv (input_buf, input_len, input_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD, &status);
-          MPI_Get_count (&status, input_dtype, &input_recv);
-
-          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave received work data: %d-bytes, working...\n", _mpi_ctrl.size, _mpi_ctrl.rank, input_len);
-
-          g_assert_cmpint (input_recv, ==, input_len);
-
-          ncm_mpi_job_unpack_input (mpi_job, input_buf, input);
-
-          bd.obj = ncm_mpi_job_create_return (mpi_job);
-
-          ncm_mpi_job_run (mpi_job, input, bd.obj);
-          bd.buf = ncm_mpi_job_pack_return (mpi_job, bd.obj);
-
-          NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Job done, sending result, length %d!\n",
-                                   _mpi_ctrl.size, _mpi_ctrl.rank, return_len);
-
-          MPI_Isend (bd.buf, return_len, return_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &wr_request);
-
-          g_array_append_val (work_ret_request, wr_request);
-          g_array_append_val (work_ret_bufs,    bd);
-        }
-
-        break;
-      }
-      default:
-        g_error ("_ncm_cfg_mpi_cmd_handler: unknown MPI message `%d' to slave %d", cmd, _mpi_ctrl.rank);
-        break;
-    }
-
-    if (work_ret_request->len > 0)
-    {
-      gint i;
-
-      NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Testing %d sends:\n", _mpi_ctrl.size, _mpi_ctrl.rank, work_ret_request->len);
-
-      for (i = work_ret_request->len - 1; i >= 0; i--)
-      {
-        gint done = 0;
-
-        MPI_Test (&g_array_index (work_ret_request, MPI_Request, i), &done, &status);
-        NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Send %d is %s!\n",
-                                 _mpi_ctrl.size, _mpi_ctrl.rank, i, done ? "done" : "not done");
-
-        if (done)
-        {
-          struct buf_desc bd = g_array_index (work_ret_bufs, struct buf_desc, i);
-
-          ncm_mpi_job_destroy_return_buffer (mpi_job, bd.obj, bd.buf);
-          ncm_mpi_job_destroy_return (mpi_job, bd.obj);
-
-          g_array_remove_index_fast (work_ret_request, i);
-          g_array_remove_index_fast (work_ret_bufs, i);
-        }
-      }
-    }
-
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Finished command %d, %d requests left%s\n",
-                             _mpi_ctrl.size, _mpi_ctrl.rank, cmd, work_ret_request->len, end ? ", exiting!" : ".");
-
-    if (end)
-      break;
-  }
-
-  if (work_ret_request->len > 0)
-  {
-    guint i;
-
-    MPI_Waitall (work_ret_request->len, (MPI_Request *) work_ret_request->data, MPI_STATUSES_IGNORE);
-
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] All sent, freeing %d buffers!\n", _mpi_ctrl.size, _mpi_ctrl.rank, work_ret_request->len);
-
-    for (i = 0; i < work_ret_bufs->len; i++)
-    {
-      struct buf_desc bd = g_array_index (work_ret_bufs, struct buf_desc, i);
-
-      ncm_mpi_job_destroy_return_buffer (mpi_job, bd.obj, bd.buf);
-      ncm_mpi_job_destroy_return (mpi_job, bd.obj);
-    }
-  }
-
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Freeing arrays!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-
-  g_array_unref (input_array);
-  g_array_unref (work_ret_request);
-  g_array_unref (work_ret_bufs);
-
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Freeing input buffer %p [input %p, mpi_job %p]!\n", _mpi_ctrl.size, _mpi_ctrl.rank, input_buf, input, mpi_job);
-
-  if (input_buf != NULL)
-    ncm_mpi_job_destroy_input_buffer (mpi_job, input, input_buf);
-
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Freeing input %p [mpi_job %p]!\n", _mpi_ctrl.size, _mpi_ctrl.rank, input, mpi_job);
-
-  if (input != NULL)
-    ncm_mpi_job_destroy_input (mpi_job, input);
-
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Clearing MPI job %p!\n", _mpi_ctrl.size, _mpi_ctrl.rank, mpi_job);
-
-  ncm_mpi_job_clear (&mpi_job);
-
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Returning %d!\n", _mpi_ctrl.size, _mpi_ctrl.rank, normal_exit);
-
-  if (!normal_exit)
-    g_main_loop_quit (mpi_ml);
-
-  ncm_serialize_free (ser);
-
-  return normal_exit;
-}
-
-#endif /* HAVE_MPI */
-
 /**
  * ncm_cfg_enable_gsl_err_handler:
  *
- * Enables the GSL error handler.
- *
+ * Restores the GSL error handler that ncm_cfg_init() turned off, so that GSL errors
+ * abort.
  */
 void
 ncm_cfg_enable_gsl_err_handler (void)
@@ -1323,8 +1093,8 @@ static guint nreg_model = 0;
  * ncm_cfg_register_obj:
  * @obj: a #GType
  *
- * Registers the object @obj in the GObject type system.
- *
+ * Registers @obj and initializes its class, so that it can be found by name, for
+ * example when deserializing.
  */
 void
 ncm_cfg_register_obj (GType obj)
@@ -1341,7 +1111,7 @@ ncm_cfg_register_obj (GType obj)
 /**
  * ncm_cfg_mpi_nslaves:
  *
- * Returns: the total number of available slaves.
+ * Returns: the number of MPI worker ranks, zero outside an MPI launcher.
  */
 guint
 ncm_cfg_mpi_nslaves (void)
@@ -1351,10 +1121,10 @@ ncm_cfg_mpi_nslaves (void)
 
 /**
  * ncm_cfg_set_logfile:
- * @filename: name of the log-file
+ * @filename: the file name
  *
- * Sets all log information to @filename.
- *
+ * Sends the log messages to @filename, which is truncated. Aborts if it cannot be
+ * opened.
  */
 void
 ncm_cfg_set_logfile (gchar *filename)
@@ -1371,8 +1141,7 @@ ncm_cfg_set_logfile (gchar *filename)
  * ncm_cfg_set_logstream:
  * @stream: a stream
  *
- * Sets all log information to @stream.
- *
+ * Sends the log messages to @stream.
  */
 void
 ncm_cfg_set_logstream (FILE *stream)
@@ -1395,12 +1164,20 @@ _ncm_cfg_log_message_logger (const gchar *log_domain, GLogLevelFlags log_level, 
     container->logger (message);
 }
 
+/* Errors and criticals reach the logger whatever ncm_cfg_logfile() says */
+static void
+_ncm_cfg_log_error_logger (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
+{
+  NcmCfgLoggerFuncContainer *container = (NcmCfgLoggerFuncContainer *) user_data;
+
+  container->logger (message);
+}
+
 /**
  * ncm_cfg_set_log_handler:
  * @logger: (scope notified): a logger function
  *
- * Sets all log information to @stream.
- *
+ * Sends the message, info and debug log messages to @logger instead of the log stream.
  */
 void
 ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
@@ -1416,8 +1193,8 @@ ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
  * ncm_cfg_set_error_log_handler:
  * @logger: (scope notified): a logger function
  *
- * Sets all log information to @stream.
- *
+ * Sends the error and critical log messages to @logger, also while ncm_cfg_logfile() is
+ * off.
  */
 void
 ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger)
@@ -1426,15 +1203,14 @@ ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger)
 
   container.logger = logger;
 
-  _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_message_logger, &container);
+  _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_error_logger, &container);
 }
 
 /**
  * ncm_cfg_set_openmp_nthreads:
  * @n: number of threads
  *
- * Sets OpenMP number of threads to @n when available.
- *
+ * Sets the number of OpenMP threads, if NumCosmo was built with OpenMP.
  */
 void
 ncm_cfg_set_openmp_nthreads (gint n)
@@ -1448,8 +1224,7 @@ ncm_cfg_set_openmp_nthreads (gint n)
  * ncm_cfg_set_openblas_nthreads:
  * @n: number of threads
  *
- * Sets OpenBLAS number of threads to @n when available.
- *
+ * Sets the number of OpenBLAS threads, if NumCosmo was built with OpenBLAS.
  */
 void
 ncm_cfg_set_openblas_nthreads (gint n)
@@ -1464,8 +1239,7 @@ ncm_cfg_set_openblas_nthreads (gint n)
  * ncm_cfg_set_blis_nthreads:
  * @n: number of threads
  *
- * Sets BLIS number of threads to @n when available.
- *
+ * Sets the number of BLIS threads, if NumCosmo was built with BLIS.
  */
 void
 ncm_cfg_set_blis_nthreads (gint n)
@@ -1479,8 +1253,7 @@ ncm_cfg_set_blis_nthreads (gint n)
  * ncm_cfg_set_mkl_nthreads:
  * @n: number of threads
  *
- * Sets OpenBLAS number of threads to @n when available.
- *
+ * Sets the number of MKL threads, if NumCosmo was built with MKL.
  */
 void
 ncm_cfg_set_mkl_nthreads (gint n)
@@ -1492,10 +1265,9 @@ ncm_cfg_set_mkl_nthreads (gint n)
 
 /**
  * ncm_cfg_logfile:
- * @on: a gboolean
+ * @on: whether messages are logged
  *
- * Enables or disables the log file.
- *
+ * Turns the log messages on or off.
  */
 void
 ncm_cfg_logfile (gboolean on)
@@ -1505,10 +1277,9 @@ ncm_cfg_logfile (gboolean on)
 
 /**
  * ncm_cfg_logfile_flush:
- * @on: a gboolean
+ * @on: whether to flush
  *
- * Enables or disables the log file flush.
- *
+ * Turns on or off flushing the log stream after each message.
  */
 void
 ncm_cfg_logfile_flush (gboolean on)
@@ -1519,8 +1290,7 @@ ncm_cfg_logfile_flush (gboolean on)
 /**
  * ncm_cfg_logfile_flush_now:
  *
- * Flushes the log file.
- *
+ * Flushes the log stream.
  */
 void
 ncm_cfg_logfile_flush_now (void)
@@ -1532,8 +1302,7 @@ ncm_cfg_logfile_flush_now (void)
  * ncm_message_str:
  * @msg: a string
  *
- * Logs a message string.
- *
+ * Logs @msg as a message of the NumCosmo log domain.
  */
 void
 ncm_message_str (const gchar *msg)
@@ -1543,11 +1312,10 @@ ncm_message_str (const gchar *msg)
 
 /**
  * ncm_message:
- * @msg: a string
- * @...: a variable number of arguments
+ * @msg: a printf format string
+ * @...: arguments for @msg
  *
- * Logs a message.
- *
+ * Logs the formatted message as a message of the NumCosmo log domain.
  */
 void
 ncm_message (const gchar *msg, ...)
@@ -1562,13 +1330,13 @@ ncm_message (const gchar *msg, ...)
 /**
  * ncm_string_ww:
  * @msg: a string
- * @first: a string
- * @rest: a string
+ * @first: prefix of the first line
+ * @rest: prefix of the other lines
  * @ncols: number of columns
  *
- * Creates a word wrapped string.
+ * Wraps @msg at spaces into lines of at most @ncols columns, each ending with a newline.
  *
- * Returns: (transfer full): word wrapped string @msg.
+ * Returns: (transfer full): the wrapped string.
  */
 gchar *
 ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols)
@@ -1626,12 +1394,11 @@ ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint nc
 /**
  * ncm_message_ww:
  * @msg: a string
- * @first: a string
- * @rest: a string
+ * @first: prefix of the first line
+ * @rest: prefix of the other lines
  * @ncols: number of columns
  *
- * Logs a word wrapped message.
- *
+ * Logs @msg wrapped by ncm_string_ww().
  */
 void
 ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols)
@@ -1645,8 +1412,7 @@ ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, guint n
 /**
  * ncm_cfg_msg_sepa:
  *
- * Log a message separator.
- *
+ * Logs a separator line.
  */
 void
 ncm_cfg_msg_sepa (void)
@@ -1656,12 +1422,10 @@ ncm_cfg_msg_sepa (void)
 
 /**
  * ncm_cfg_get_fullpath:
- * @filename: filename
- * @...: a variable number of arguments
+ * @filename: a printf format string
+ * @...: arguments for @filename
  *
- * Gets the full path of @filename.
- *
- * Returns: (transfer full): the full path of @filename.
+ * Returns: (transfer full): the path of the formatted file name inside `~/.numcosmo`.
  */
 gchar *
 ncm_cfg_get_fullpath (const gchar *filename, ...)
@@ -1686,9 +1450,7 @@ ncm_cfg_get_fullpath (const gchar *filename, ...)
 /**
  * ncm_cfg_get_fullpath_base:
  *
- * Gets the full path base directory.
- *
- * Returns: (transfer none): the full path base directory.
+ * Returns: (transfer none): the path of `~/.numcosmo`.
  */
 const gchar *
 ncm_cfg_get_fullpath_base (void)
@@ -1700,15 +1462,16 @@ ncm_cfg_get_fullpath_base (void)
 
 /**
  * ncm_cfg_keyfile_to_arg:
- * @kfile: keyfile filename
+ * @kfile: a #GKeyFile
  * @group_name: group name
- * @entries: a #GOptionEntry
+ * @entries: a %NULL-terminated array of #GOptionEntry
  * @argv: an array of strings
- * @argc: a pointer to an integer
+ * @argc: the number of strings in @argv
  *
- * Transforms the @entries in a keyfile @kfile group @group_name into an array of
- * strings representing the command line arguments.
- *
+ * Appends to @argv, starting at position *@argc, the command-line arguments equivalent
+ * to the keys of @group_name in @kfile that match @entries, and updates *@argc. Boolean
+ * keys become a flag when true, empty values are skipped and list keys repeat the
+ * option. @argv must have room for them. Aborts if a key cannot be parsed.
  */
 void
 ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc)
@@ -1769,9 +1532,8 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *
  * ncm_cfg_string_to_comment:
  * @str: a string
  *
- * Transforms @str into a comment string.
- *
- * Returns: (transfer full): a comment string.
+ * Returns: (transfer full): @str wrapped at 80 columns below a separator line, as a
+ * #GKeyFile comment.
  */
 gchar *
 ncm_cfg_string_to_comment (const gchar *str)
@@ -1791,10 +1553,10 @@ ncm_cfg_string_to_comment (const gchar *str)
  * ncm_cfg_entries_to_keyfile:
  * @kfile: a #GKeyFile
  * @group_name: group name
- * @entries: a null terminated array of #GOptionEntry
+ * @entries: a %NULL-terminated array of #GOptionEntry
  *
- * Transforms the @entries into a keyfile @kfile group @group_name.
- *
+ * Writes the current values of @entries as keys of @group_name in @kfile, each commented
+ * with the entry description. Callback entries are skipped.
  */
 void
 ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries)
@@ -1860,7 +1622,6 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEnt
       case G_OPTION_ARG_CALLBACK:
       default:
         skip_comment = TRUE;
-        /*g_error ("ncm_cfg_entries_to_keyfile: cannot convert entry type %d to keyfile", entries[i].arg); */
         break;
     }
 
@@ -1878,12 +1639,13 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEnt
 
 /**
  * ncm_cfg_get_enum_by_id_name_nick:
- * @enum_type: enum type #GType
- * @id_name_nick: id, name or nick
+ * @enum_type: an enumeration #GType
+ * @id_name_nick: a value, name or nick
  *
- * Gets the enum value from @enum_type by @id_name_nick.
+ * Looks up @id_name_nick in @enum_type: a decimal integer is taken as the value,
+ * otherwise as the name, then as the nick.
  *
- * Returns: (transfer none): the enum value #GEnumValue.
+ * Returns: (transfer none) (nullable): the #GEnumValue, or %NULL if not found.
  */
 const GEnumValue *
 ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick)
@@ -1919,12 +1681,10 @@ ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick)
 
 /**
  * ncm_cfg_enum_get_value:
- * @enum_type: enum type #GType
- * @n: enum value position
+ * @enum_type: an enumeration #GType
+ * @n: the value
  *
- * Gets the enum value from @enum_type by @n.
- *
- * Returns: (transfer none): the enum value #GEnumValue.
+ * Returns: (transfer none) (nullable): the #GEnumValue of value @n, or %NULL if not found.
  */
 const GEnumValue *
 ncm_cfg_enum_get_value (GType enum_type, guint n)
@@ -1944,11 +1704,11 @@ ncm_cfg_enum_get_value (GType enum_type, guint n)
 
 /**
  * ncm_cfg_enum_print_all:
- * @enum_type: enum type #GType
+ * @enum_type: an enumeration #GType
  * @header: header string
  *
- * Prints all enum values from @enum_type.
- *
+ * Prints to standard output a table of the values, names and nicks of every member of
+ * @enum_type, in declaration order.
  */
 void
 ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
@@ -1964,8 +1724,9 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
 
   enum_class = g_type_class_ref (enum_type);
 
-  while ((snia = g_enum_get_value (enum_class, i++)) != NULL)
+  for (i = 0; i < (gint) enum_class->n_values; i++)
   {
+    snia         = &enum_class->values[i];
     name_max_len = GSL_MAX (name_max_len, (gint) strlen (snia->value_name));
     nick_max_len = GSL_MAX (nick_max_len, (gint) strlen (snia->value_nick));
   }
@@ -1979,10 +1740,10 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
 
   printf ("#\n");
   printf ("# Id | %-*s | %-*s |\n", name_max_len, "Name", nick_max_len, "Nick");
-  i = 0;
 
-  while ((snia = g_enum_get_value (enum_class, i++)) != NULL)
+  for (i = 0; i < (gint) enum_class->n_values; i++)
   {
+    snia = &enum_class->values[i];
     printf ("# %02d | %-*s | %-*s |\n", snia->value, name_max_len, snia->value_name, nick_max_len, snia->value_nick);
   }
 
@@ -2001,24 +1762,17 @@ G_LOCK_DEFINE_STATIC (fftw_saveload_lock);
 
 G_LOCK_DEFINE_STATIC (fftw_plan_lock);
 
-/* Every ncm_cfg_load_fftw_wisdom()/ncm_cfg_save_fftw_wisdom() call reads
- * and writes the *same* file regardless of the @filename argument (see
- * "overwrite, unifying wisdom" below) -- so within one process, re-loading
- * it after the first successful load is a pure no-op (FFTW's wisdom
- * registry is global and cumulative; parsing the same file content again
- * teaches it nothing new), and re-saving is only useful if new wisdom was
- * actually learned since the last save. Both guards are protected by
- * fftw_saveload_lock, held for the whole body of both functions. */
+/*
+ * One wisdom file per MPI rank. FFTW's wisdom is global and cumulative, so it is loaded
+ * once per process and saved only when it changed. Protected by fftw_saveload_lock.
+ */
 static gboolean _wisdom_loaded_d = FALSE;
-static gboolean _wisdom_loaded_f = FALSE;
 static gchar *_wisdom_saved_d    = NULL;
-static gchar *_wisdom_saved_f    = NULL;
 
 /**
  * ncm_cfg_lock_plan_fftw:
  *
- * Locks the FFTW plan. This is a generic lock for all FFTW plans.
- *
+ * Locks the global lock that serializes FFTW planning, which is not thread-safe.
  */
 void
 ncm_cfg_lock_plan_fftw (void)
@@ -2029,8 +1783,7 @@ ncm_cfg_lock_plan_fftw (void)
 /**
  * ncm_cfg_unlock_plan_fftw:
  *
- * Unlocks the FFTW plan. This is a generic lock for all FFTW plans.
- *
+ * Unlocks the lock taken by ncm_cfg_lock_plan_fftw().
  */
 void
 ncm_cfg_unlock_plan_fftw (void)
@@ -2038,47 +1791,134 @@ ncm_cfg_unlock_plan_fftw (void)
   G_UNLOCK (fftw_plan_lock);
 }
 
+static void _ncm_cfg_load_fftw_wisdom (void);
+static void _ncm_cfg_save_fftw_wisdom (void);
+
+G_LOCK_DEFINE_STATIC (fftw_keys_lock);
+
+static GHashTable *_fftw_planned_keys = NULL;
+
 /**
- * ncm_cfg_load_fftw_wisdom:
- * @filename: filename to load the wisdom
- * @...: variable number of arguments for @filename string
+ * ncm_cfg_fftw_plan_begin: (skip)
+ * @key: a printf format string naming what is planned
+ * @...: arguments for @key
  *
- * Loads the FFTW wisdom from @filename.
+ * Starts creating FFTW plans: loads the FFTW wisdom of this MPI rank, once per process, from
+ * `~/.numcosmo/ncm_cfg_wisdom_rank<rank>.fftw3`, and takes the
+ * planning lock, see ncm_cfg_lock_plan_fftw(). @key identifies the plans: the caller and
+ * everything that makes a plan different, such as the transform sizes and kinds and the
+ * number of transforms; the current default planner flag is added to it. It only tells
+ * whether the process planned the same before, and the wisdom file is the same for every
+ * key. Pass the return value to ncm_cfg_fftw_plan_end().
  *
- * Returns: TRUE if the wisdom was loaded.
+ * Returns: whether @key is planned for the first time in this process.
  */
 gboolean
-ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
+ncm_cfg_fftw_plan_begin (const gchar *key, ...)
+{
+  gchar *key_str;
+  gboolean first;
+  va_list ap;
+
+  {
+    gchar *site_key;
+
+    va_start (ap, key);
+    site_key = g_strdup_vprintf (key, ap);
+    va_end (ap);
+
+    /* A new planner flag plans anew, so it is part of the key */
+    key_str = g_strdup_printf ("%s|%s", site_key, ncm_cfg_get_fftw_default_flag_str ());
+    g_free (site_key);
+  }
+
+  _ncm_cfg_load_fftw_wisdom ();
+
+  G_LOCK (fftw_keys_lock);
+
+  if (_fftw_planned_keys == NULL)
+    _fftw_planned_keys = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+
+  first = !g_hash_table_contains (_fftw_planned_keys, key_str);
+
+  if (first)
+    g_hash_table_add (_fftw_planned_keys, key_str);
+  else
+    g_free (key_str);
+
+  G_UNLOCK (fftw_keys_lock);
+
+  ncm_cfg_lock_plan_fftw ();
+
+  return first;
+}
+
+/**
+ * ncm_cfg_fftw_plan_end: (skip)
+ * @first: the value returned by ncm_cfg_fftw_plan_begin()
+ *
+ * Releases the planning lock and, when @first is %TRUE, rewrites the wisdom file if the
+ * wisdom changed. A key planned before adds no wisdom, so its save, which exports the whole
+ * wisdom to compare it, is skipped. Wisdom is neither loaded nor saved under FFTW_ESTIMATE.
+ */
+void
+ncm_cfg_fftw_plan_end (gboolean first)
+{
+  ncm_cfg_unlock_plan_fftw ();
+
+  if (first)
+    _ncm_cfg_save_fftw_wisdom ();
+}
+
+/**
+ * ncm_cfg_fftw_plan_destroy: (skip)
+ * @plan: (nullable): a double-precision FFTW plan
+ *
+ * Destroys @plan holding the planning lock, see ncm_cfg_lock_plan_fftw(): FFTW's plan
+ * destruction is not thread-safe either. Does nothing for %NULL, so it can be the free
+ * function of a #GPtrArray of plans.
+ */
+void
+ncm_cfg_fftw_plan_destroy (gpointer plan)
+{
+  if (plan == NULL)
+    return;
+
+  ncm_cfg_lock_plan_fftw ();
+  fftw_destroy_plan (plan);
+  ncm_cfg_unlock_plan_fftw ();
+}
+
+/*
+ * Imports the FFTW wisdom of this MPI rank, once per process, from
+ * ~/.numcosmo/ncm_cfg_wisdom_rank<rank>.fftw3. Does nothing under
+ * FFTW_ESTIMATE, which uses no wisdom. Thread-safe.
+ */
+static void
+_ncm_cfg_load_fftw_wisdom (void)
 {
   gchar *file, *file_ext;
   gchar *full_filename;
-  va_list ap;
-  gboolean ret = FALSE;
 
   g_assert (numcosmo_init);
 
   /* FFTW_ESTIMATE neither consumes nor produces useful wisdom; skip the file I/O. */
   if (ncm_cfg_get_fftw_default_flag () == FFTW_ESTIMATE)
-    return FALSE;
+    return;
 
   G_LOCK (fftw_saveload_lock);
 
-  if (_wisdom_loaded_d && _wisdom_loaded_f)
+  if (_wisdom_loaded_d)
   {
     /* Already loaded once this process -- FFTW's wisdom registry is
      * global and cumulative, so re-parsing the same file again would
      * teach it nothing new. */
     G_UNLOCK (fftw_saveload_lock);
 
-    return TRUE;
+    return;
   }
 
-  va_start (ap, filename);
-  file = g_strdup_vprintf (filename, ap);
-  va_end (ap);
-
-  g_free (file);
-  file = g_strdup_printf ("ncm_cfg_wisdom_rank%d", _mpi_ctrl.rank); /* overwrite, unifying wisdom */
+  file = g_strdup_printf ("ncm_cfg_wisdom_rank%d", _mpi_ctrl.rank);
 
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
@@ -2086,75 +1926,37 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   if (!_wisdom_loaded_d)
   {
     if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
-    {
       fftw_import_wisdom_from_filename (full_filename);
-      ret = TRUE;
-    }
 
     _wisdom_loaded_d = TRUE;
   }
-
-#ifdef HAVE_FFTW3F
-  g_free (file_ext);
-  g_free (full_filename);
-
-  file_ext      = g_strdup_printf ("%s.fftw3f", file);
-  full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
-
-  if (!_wisdom_loaded_f)
-  {
-    if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
-    {
-      fftwf_import_wisdom_from_filename (full_filename);
-      ret = TRUE;
-    }
-
-    _wisdom_loaded_f = TRUE;
-  }
-
-#else
-  _wisdom_loaded_f = TRUE; /* no single-precision FFTW3 build, nothing to load */
-#endif
 
   g_free (file);
   g_free (file_ext);
   g_free (full_filename);
 
   G_UNLOCK (fftw_saveload_lock);
-
-  return ret;
 }
 
-/**
- * ncm_cfg_save_fftw_wisdom:
- * @filename: filename to save the wisdom
- * @...: variable number of arguments for @filename string
- *
- * Saves the current FFTW wisdom to @filename.
- *
- * Returns: TRUE if the wisdom was saved.
+/*
+ * Writes the FFTW wisdom of this MPI rank to the file _ncm_cfg_load_fftw_wisdom() reads,
+ * only if it changed since the last save. Does nothing under FFTW_ESTIMATE. Thread-safe.
  */
-gboolean
-ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
+static void
+_ncm_cfg_save_fftw_wisdom (void)
 {
   gchar *file, *file_ext;
   gchar *full_filename;
-  va_list ap;
 
   g_assert (numcosmo_init);
 
   /* FFTW_ESTIMATE neither consumes nor produces useful wisdom; skip the file I/O. */
   if (ncm_cfg_get_fftw_default_flag () == FFTW_ESTIMATE)
-    return FALSE;
+    return;
 
   G_LOCK (fftw_saveload_lock);
 
-  va_start (ap, filename);
-  file = g_strdup_vprintf (filename, ap);
-  va_end (ap);
-
-  g_free (file);
-  file = g_strdup_printf ("ncm_cfg_wisdom_rank%d", _mpi_ctrl.rank); /* overwrite, unifying wisdom */
+  file = g_strdup_printf ("ncm_cfg_wisdom_rank%d", _mpi_ctrl.rank);
 
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
@@ -2188,61 +1990,20 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
     }
   }
 
-#ifdef HAVE_FFTW3F
-  g_free (file_ext);
-  g_free (full_filename);
-
-  file_ext      = g_strdup_printf ("%s.fftw3f", file);
-  full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
-
-  {
-    char *wisdom_str = fftwf_export_wisdom_to_string ();
-
-    if (wisdom_str != NULL)
-    {
-      if ((_wisdom_saved_f != NULL) && g_str_equal (_wisdom_saved_f, wisdom_str))
-      {
-        /* Nothing learned since the last save -- skip the rewrite. */
-        g_free (wisdom_str);
-      }
-      else
-      {
-        gssize len  = strlen (wisdom_str);
-        gboolean OK = FALSE;
-
-#if GLIB_CHECK_VERSION (2, 66, 0)
-        OK = g_file_set_contents_full (full_filename, wisdom_str, len,
-                                       G_FILE_SET_CONTENTS_CONSISTENT,
-                                       0666, NULL);
-#else /* GLIB_CHECK_VERSION (2, 66, 0) */
-        OK = g_file_set_contents (full_filename, wisdom_str, len, NULL);
-#endif /* GLIB_CHECK_VERSION (2, 66, 0) */
-
-        g_assert (OK);
-        g_free (_wisdom_saved_f);
-        _wisdom_saved_f = wisdom_str; /* keep as the new comparison baseline */
-      }
-    }
-  }
-#endif
 
   g_free (file);
   g_free (file_ext);
   g_free (full_filename);
 
   G_UNLOCK (fftw_saveload_lock);
-
-  return TRUE;
 }
 
 /**
  * ncm_cfg_exists:
- * @filename: filename to search in the numcosmo path.
- * @...: a variable number of arguments for @filename string.
+ * @filename: a printf format string
+ * @...: arguments for @filename
  *
- * Checks if @filename exists in the numcosmo path.
- *
- * Returns: TRUE if @filename exists.
+ * Returns: whether the formatted file name exists inside `~/.numcosmo`.
  */
 gboolean
 ncm_cfg_exists (const gchar *filename, ...)
@@ -2268,13 +2029,14 @@ ncm_cfg_exists (const gchar *filename, ...)
 
 /**
  * ncm_cfg_get_data_filename:
- * @filename: filename to search in the data path.
- * @must_exist: raises an error if @filename is not found.
+ * @filename: a path relative to the data directory
+ * @must_exist: whether to abort if @filename is not found
  *
- * Looks for @filename in the data path and returns
- * the full path if found.
+ * Looks for @filename in the `data` directory under, in order, the path in
+ * #NCM_CFG_DATA_DIR_ENV, the installed package data directory and the source directory.
  *
- * Returns: (transfer full): Full path for @filename.
+ * Returns: (transfer full) (nullable): the full path, or %NULL if not found and
+ * @must_exist is %FALSE.
  */
 gchar *
 ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist)
@@ -2315,12 +2077,10 @@ ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist)
 /**
  * ncm_cfg_get_data_directory:
  *
- * Gets the data directory path. It first checks the environment variable
- * NCM_CFG_DATA_DIR_ENV, then the package data directory and finally the
- * package source directory. If none of these directories exists, it raises
- * an error.
+ * Looks for the `data` directory in the same places as ncm_cfg_get_data_filename().
+ * Aborts if none exists.
  *
- * Returns: (transfer full): Full path for the data directory.
+ * Returns: (transfer full): the path of the data directory.
  */
 gchar *
 ncm_cfg_get_data_directory (void)
@@ -2362,9 +2122,9 @@ ncm_cfg_get_data_directory (void)
  * @argv: array of strings
  * @argc: number of strings in @argv
  *
- * Converts @argv to a single string.
+ * Joins @argv with spaces, quoting with single quotes the arguments that contain a space.
  *
- * Returns: (transfer full): a command line string.
+ * Returns: (transfer full): the command line.
  */
 gchar *
 ncm_cfg_command_line (gchar *argv[], gint argc)
@@ -2414,11 +2174,11 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
 
 /**
  * ncm_cfg_array_set_variant: (skip)
- * @a: a GArray.
- * @var: a variant of array type.
+ * @a: a #GArray
+ * @var: a #GVariant of array type
  *
- * Transfers the data from @var to @a.
- *
+ * Resizes @a to the length of @var and copies its elements, which must have the element
+ * size of @a.
  */
 void
 ncm_cfg_array_set_variant (GArray *a, GVariant *var)
@@ -2433,12 +2193,13 @@ ncm_cfg_array_set_variant (GArray *a, GVariant *var)
 
 /**
  * ncm_cfg_array_to_variant: (skip)
- * @a: a GArray.
- * @etype: element type.
+ * @a: a #GArray
+ * @etype: the element type
  *
- * Creates a variant of array type from @a.
+ * Creates a #GVariant array of @etype sharing the data of @a, which it holds a reference
+ * to.
  *
- * Returns: (transfer full): a variant of array type.
+ * Returns: (transfer full): the #GVariant.
  */
 GVariant *
 ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
@@ -2463,14 +2224,13 @@ static gdouble __fftw_timelimit   = 60.0;
 
 /**
  * ncm_cfg_set_fftw_default_flag:
- * @flag: a FFTW library flag
- * @timeout: planner time out in seconds
- * @error: a GError
+ * @flag: FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT or FFTW_EXHAUSTIVE
+ * @timeout: planner time limit in seconds
+ * @error: a #GError location
  *
- * Sets the default FFTW flag (FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
- * to be used when building plans. The variable @timeout sets the maximum time spent on
- * planners.
- *
+ * Sets the planner flag used for new FFTW plans and FFTW's planner time limit; a negative
+ * @timeout means no limit. Sets @error, or aborts if @error is %NULL, for any other
+ * @flag.
  */
 void
 ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout, GError **error)
@@ -2496,28 +2256,16 @@ ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout, GError **error
   __fftw_timelimit     = timeout;
 
   fftw_set_timelimit (timeout);
-#ifdef HAVE_FFTW3F
-  fftwf_set_timelimit (timeout);
-#endif /* HAVE_FFTW3F */
 }
 
 /**
  * ncm_cfg_set_fftw_default_flag_str:
- * @flag_str: a FFTW library flag
- * @timeout: planner time out in seconds
- * @error: a GError
+ * @flag_str: "estimate", "measure", "patient" or "exhaustive", in any case
+ * @timeout: planner time limit in seconds
+ * @error: a #GError location
  *
- * Sets the default FFTW flag (FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
- * to be used when building plans. The variable @timeout sets the maximum time spent on
- * planners. The argument @flag_str is a string representation of the flag:
- *
- * - "estimate": FFTW_ESTIMATE
- * - "measure": FFTW_MEASURE
- * - "patient": FFTW_PATIENT
- * - "exhaustive": FFTW_EXHAUSTIVE
- *
- * This function is case insensitive.
- *
+ * Same as ncm_cfg_set_fftw_default_flag() with the flag named by @flag_str. Sets @error,
+ * or aborts if @error is %NULL, for any other string.
  */
 void
 ncm_cfg_set_fftw_default_flag_str (const gchar *flag_str, const gdouble timeout, GError **error)
@@ -2555,14 +2303,13 @@ ncm_cfg_set_fftw_default_flag_str (const gchar *flag_str, const gdouble timeout,
 
 /**
  * ncm_cfg_set_fftw_default_from_env:
- * @fallback_flag: a FFTW library flag
- * @fallback_timeout: planner time out in seconds
- * @error: a GError
+ * @fallback_flag: the flag used if `NCM_FFTW_PLANNER` is not set
+ * @fallback_timeout: the time limit used if `NCM_FFTW_PLANNER_TIMELIMIT` is not set
+ * @error: a #GError location
  *
- * Sets the default FFTW flag and planner time out from the environment variables
- * NCM_FFTW_PLANNER and NCM_FFTW_PLANNER_TIMELIMIT. If the environment variables
- * are not set, it uses the @fallback_flag and @fallback_timeout.
- *
+ * Same as ncm_cfg_set_fftw_default_flag() with the flag named in `NCM_FFTW_PLANNER`
+ * and the time limit in `NCM_FFTW_PLANNER_TIMELIMIT`. Sets @error, or aborts if @error
+ * is %NULL, if either is invalid.
  */
 void
 ncm_cfg_set_fftw_default_from_env (guint fallback_flag, const gdouble fallback_timeout, GError **error)
@@ -2597,14 +2344,11 @@ ncm_cfg_set_fftw_default_from_env (guint fallback_flag, const gdouble fallback_t
 
 /**
  * ncm_cfg_set_fftw_default_from_env_str:
- * @fallback_flag_str: a FFTW library flag string
- * @fallback_timeout: planner time out in seconds
- * @error: a GError
+ * @fallback_flag_str: the flag name used if `NCM_FFTW_PLANNER` is not set
+ * @fallback_timeout: the time limit used if `NCM_FFTW_PLANNER_TIMELIMIT` is not set
+ * @error: a #GError location
  *
- * Sets the default FFTW flag and planner time out from the environment variables
- * NCM_FFTW_PLANNER and NCM_FFTW_PLANNER_TIMELIMIT. If the environment variables
- * are not set, it uses the @fallback_flag_str and @fallback_timeout.
- *
+ * Same as ncm_cfg_set_fftw_default_from_env() with the fallback flag given by name.
  */
 void
 ncm_cfg_set_fftw_default_from_env_str (const gchar *fallback_flag_str, const gdouble fallback_timeout, GError **error)
@@ -2640,9 +2384,7 @@ ncm_cfg_set_fftw_default_from_env_str (const gchar *fallback_flag_str, const gdo
 /**
  * ncm_cfg_get_fftw_default_flag:
  *
- * Gets the default FFTW flag.
- *
- * Returns: the default FFTW flag.
+ * Returns: the planner flag used for new FFTW plans.
  */
 guint
 ncm_cfg_get_fftw_default_flag (void)
@@ -2653,9 +2395,7 @@ ncm_cfg_get_fftw_default_flag (void)
 /**
  * ncm_cfg_get_fftw_default_flag_str:
  *
- * Gets the default FFTW flag as a string.
- *
- * Returns: (transfer none): the default FFTW flag as a string.
+ * Returns: (transfer none): the name of the planner flag used for new FFTW plans.
  */
 const gchar *
 ncm_cfg_get_fftw_default_flag_str (void)
@@ -2686,9 +2426,8 @@ ncm_cfg_get_fftw_default_flag_str (void)
 /**
  * ncm_cfg_get_fftw_timelimit:
  *
- * Gets the planner time out in seconds. A negative value means no time out.
- *
- * Returns: the planner time out in seconds.
+ * Returns: the planner time limit last set through ncm_cfg_set_fftw_default_flag(), in
+ * seconds; negative means no limit.
  */
 gdouble
 ncm_cfg_get_fftw_timelimit (void)
@@ -2698,13 +2437,11 @@ ncm_cfg_get_fftw_timelimit (void)
 
 /**
  * ncm_cfg_get_version:
- * @major: (out): the major version
- * @minor: (out): the minor version
- * @micro: (out): the micro version
+ * @major: (out) (optional): the major version
+ * @minor: (out) (optional): the minor version
+ * @micro: (out) (optional): the micro version
  *
- * Gets the version of the library.
- *
- * Returns: the version in the format major * 10000 + minor * 100 + micro.
+ * Returns: the version as $10^4\,\mathrm{major} + 10^2\,\mathrm{minor} + \mathrm{micro}$.
  */
 guint
 ncm_cfg_get_version (guint *major, guint *minor, guint *micro)
@@ -2724,9 +2461,7 @@ ncm_cfg_get_version (guint *major, guint *minor, guint *micro)
 /**
  * ncm_cfg_get_version_string:
  *
- * Gets the version of the library as a string.
- *
- * Returns: (transfer full): the version of the library as a string.
+ * Returns: (transfer full): the version as "major.minor.micro".
  */
 gchar *
 ncm_cfg_get_version_string (void)
@@ -2740,8 +2475,7 @@ ncm_cfg_get_version_string (void)
  * @minor: minor version
  * @micro: micro version
  *
- * Checks if the library version is greater or equal to @major, @minor and @micro.
- *
+ * Returns: whether the library version is at least @major.@minor.@micro.
  */
 gboolean
 ncm_cfg_version_check (guint major, guint minor, guint micro)
@@ -2755,9 +2489,7 @@ ncm_cfg_version_check (guint major, guint minor, guint micro)
 /**
  * ncm_cfg_get_commit_hash:
  *
- * Gets the commit hash of the library.
- *
- * Returns: (transfer none): the commit hash of the library.
+ * Returns: (transfer none): the git commit the library was built from.
  */
 const gchar *
 ncm_cfg_get_commit_hash (void)

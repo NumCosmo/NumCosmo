@@ -55,9 +55,11 @@
 
 /* Cosmic thermodynamics */
 #include <numcosmo/nc/recomb/nc_recomb.h>
+#include <numcosmo/nc/recomb/nc_recomb_cbe.h>
 #include <numcosmo/nc/recomb/nc_recomb_seager.h>
 #include <numcosmo/nc/reion/nc_hireion.h>
 #include <numcosmo/nc/reion/nc_hireion_camb.h>
+#include <numcosmo/nc/reion/nc_hireion_camb_reparam_tau.h>
 
 /* Perturbations */
 #include <numcosmo/nc/perturbations/nc_hipert_adiab.h>
@@ -254,6 +256,7 @@
 #include <numcosmo/nc/xcor/nc_xcor_ssc_sij.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_radial_kdep.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_radial.h>
+#include <numcosmo/nc/xcor/nc_xcor_component_table.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_table.h>
 #include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_gauss.h>
 #include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_tophat.h>

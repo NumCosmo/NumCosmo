@@ -282,7 +282,7 @@ class TestCutAnalysis:
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "λ ≥ 20.0" in result.output
+        assert "lambda >= 20.0" in result.output
 
     def test_multiple_cuts(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test analysis with multiple richness cuts."""
@@ -303,7 +303,7 @@ class TestCutAnalysis:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         # Check that all cuts appear in output
         for cut_val in [5.0, 10.0, 15.0, 20.0]:
-            assert f"λ ≥ {cut_val}" in result.output
+            assert f"lambda >= {cut_val}" in result.output
 
     def test_default_cuts(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test analysis with default cuts."""
@@ -322,7 +322,7 @@ class TestCutAnalysis:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         # Default cuts are 5,10,15,20,30
         for cut_val in [5.0, 10.0, 15.0, 20.0, 30.0]:
-            assert f"λ ≥ {cut_val}" in result.output
+            assert f"lambda >= {cut_val}" in result.output
 
 
 class TestAnalysisOptions:
@@ -849,4 +849,4 @@ class TestDataValidation:
         assert "Mass range:" in result.output
         assert "Redshift range:" in result.output
         assert "Richness range:" in result.output
-        assert "σ(ln R) range:" in result.output
+        assert "sigma(ln R) range:" in result.output

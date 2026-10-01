@@ -42,11 +42,11 @@ G_DECLARE_FINAL_TYPE (NcmFitMC, ncm_fit_mc, NCM, FIT_MC, GObject)
 
 /**
  * NcmFitMCResampleType:
- * @NCM_FIT_MC_RESAMPLE_FROM_MODEL: Montecarlo resampling from models
- * @NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX: Montecarlo bootstraping each #NcmData separately.
- * @NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX: Montecarlo bootstraping mixing all #NcmData in the bootstrap process.
+ * @NCM_FIT_MC_RESAMPLE_FROM_MODEL: resampling from the fiducial model
+ * @NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX: bootstrap of each #NcmData separately
+ * @NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX: bootstrap of all #NcmData together
  *
- * Montecarlo resample options
+ * Resampling of #NcmFitMC.
  *
  */
 typedef enum _NcmFitMCResampleType /*< prefix=NCM_FIT_MC_RESAMPLE >*/

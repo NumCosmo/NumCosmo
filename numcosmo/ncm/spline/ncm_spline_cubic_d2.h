@@ -38,6 +38,7 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (NcmSplineCubicD2, ncm_spline_cubic_d2, NCM, SPLINE_CUBIC_D2, NcmSplineCubic)
 
 NcmSplineCubicD2 *ncm_spline_cubic_d2_new (NcmVector * xv, NcmVector * yv, NcmVector * d2yv, gboolean init);
+void ncm_spline_cubic_d2_set_d2 (NcmSplineCubicD2 *scd2, NcmVector *d2yv, gboolean init);
 
 G_END_DECLS
 

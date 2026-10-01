@@ -26,11 +26,14 @@
 /**
  * NcmDataGaussCovMVND:
  *
- * Multivariate Normal Distribution -- covariance provided.
+ * Multivariate normal data with a fixed covariance.
  *
- * Multivariate Normal distribution which uses the covariance matrix as input.
- * It should be used with its companion object #NcmModelMVND.
- *
+ * A #NcmDataGaussCov whose mean is the mean vector $\mu$ of the #NcmModelMVND in the
+ * #NcmMSet, with a fixed covariance and the normalization included. It is used to
+ * test samplers and fitters: ncm_data_gauss_cov_mvnd_gen_cov_mean() draws a random
+ * covariance and data vector, and ncm_data_gauss_cov_mvnd_gen(),
+ * ncm_data_gauss_cov_mvnd_est_ratio() and ncm_data_gauss_cov_mvnd_stats_vec() draw
+ * realizations, optionally restricted to a region.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -40,9 +43,6 @@
 
 #include "ncm/data/ncm_data_gauss_cov_mvnd.h"
 #include "ncm/model/ncm_model_mvnd.h"
-
-#ifndef NUMCOSMO_GIR_SCAN
-#endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcmDataGaussCovMVND
 {
@@ -56,24 +56,13 @@ ncm_data_gauss_cov_mvnd_init (NcmDataGaussCovMVND *gauss_mvnd)
 {
 }
 
-static void
-ncm_data_gauss_cov_mvnd_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_data_gauss_cov_mvnd_parent_class)->finalize (object);
-}
-
 static void _ncm_data_gauss_cov_mvnd_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp);
 
 static void
 ncm_data_gauss_cov_mvnd_class_init (NcmDataGaussCovMVNDClass *klass)
 {
-  GObjectClass *object_class        = G_OBJECT_CLASS (klass);
   NcmDataGaussCovClass *gauss_class = NCM_DATA_GAUSS_COV_CLASS (klass);
 
-  object_class->finalize = ncm_data_gauss_cov_mvnd_finalize;
-
-  /*data_class->prepare    = &_ncm_data_gauss_cov_test_prepare;*/
   gauss_class->mean_func = &_ncm_data_gauss_cov_mvnd_mean_func;
   gauss_class->cov_func  = NULL;
 }
@@ -90,9 +79,10 @@ _ncm_data_gauss_cov_mvnd_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVe
  * ncm_data_gauss_cov_mvnd_new:
  * @dim: dimension of the MVND
  *
- * Creates a new @dim-dimensional MVND.
+ * Creates a new @dim-dimensional MVND data, with the normalization included; its
+ * mean and covariance must be set before use.
  *
- * Returns: the newly created object.
+ * Returns: (transfer full): the newly created object.
  */
 NcmDataGaussCovMVND *
 ncm_data_gauss_cov_mvnd_new (const guint dim)
@@ -115,10 +105,10 @@ ncm_data_gauss_cov_mvnd_new (const guint dim)
  * @mean_max: maximum mean $\mu_i$
  * @rng: a #NcmRNG
  *
- * Creates a new @dim-dimensional MVND and generate using @rng a mean
- * and correlation matrix using the parameters above.
+ * Creates a new @dim-dimensional MVND data and draws its data vector and covariance
+ * with @rng, see ncm_data_gauss_cov_mvnd_gen_cov_mean().
  *
- * Returns: the newly created object.
+ * Returns: (transfer full): the newly created object.
  */
 NcmDataGaussCovMVND *
 ncm_data_gauss_cov_mvnd_new_full (const guint dim, const gdouble sigma_min, const gdouble sigma_max, const gdouble cor_level, const gdouble mean_min, const gdouble mean_max, NcmRNG *rng)
@@ -148,7 +138,8 @@ ncm_data_gauss_cov_mvnd_ref (NcmDataGaussCovMVND *data_mvnd)
  * ncm_data_gauss_cov_mvnd_free:
  * @data_mvnd: a #NcmDataGaussCovMVND
  *
- * Decreases the reference count of @data_mvnd by one.
+ * Decreases the reference count of @data_mvnd by one. If the reference count
+ * reaches zero, @data_mvnd is freed.
  *
  */
 void
@@ -161,8 +152,8 @@ ncm_data_gauss_cov_mvnd_free (NcmDataGaussCovMVND *data_mvnd)
  * ncm_data_gauss_cov_mvnd_clear:
  * @data_mvnd: a #NcmDataGaussCovMVND
  *
- * If @data_mvnd is different from NULL, decreases the reference count of
- * @data_mvnd by one and sets @data_mvnd to NULL.
+ * If *@data_mvnd is not %NULL, decreases the reference count of *@data_mvnd by
+ * one and sets *@data_mvnd to %NULL.
  *
  */
 void
@@ -181,8 +172,9 @@ ncm_data_gauss_cov_mvnd_clear (NcmDataGaussCovMVND **data_mvnd)
  * @mean_max: maximum mean $\mu_i$
  * @rng: a #NcmRNG
  *
- * Generates using @rng the mean and correlation matrix using
- * the parameters above.
+ * Draws with @rng a random covariance, see ncm_matrix_fill_rand_cov(), and a data
+ * vector with components uniform in [@mean_min, @mean_max], and marks the data
+ * initialized.
  *
  */
 void
@@ -190,16 +182,21 @@ ncm_data_gauss_cov_mvnd_gen_cov_mean (NcmDataGaussCovMVND *data_mvnd, const gdou
 {
   NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
   NcmVector *y          = ncm_data_gauss_cov_peek_mean (gcov);
-  NcmMatrix *cov        = ncm_data_gauss_cov_peek_cov (gcov);
   const guint np        = ncm_data_gauss_cov_get_size (gcov);
+  NcmMatrix *cov;
   guint i;
 
-  g_assert_cmpfloat (mean_min, <=, mean_max);
-  g_assert_cmpint (np, >, 0);
-  g_assert (y != NULL);
-  g_assert (cov != NULL);
+  if (np == 0)
+    g_error ("ncm_data_gauss_cov_mvnd_gen_cov_mean: the data has no points, set its size first.");
 
+  if (mean_min > mean_max)
+    g_error ("ncm_data_gauss_cov_mvnd_gen_cov_mean: mean_min (%g) is larger than mean_max (%g).", mean_min, mean_max);
+
+  /* A new matrix goes through set_cov, which invalidates the Cholesky factor. */
+  cov = ncm_matrix_new (np, np);
   ncm_matrix_fill_rand_cov (cov, sigma_min, sigma_max, cor_level, rng);
+  ncm_data_gauss_cov_set_cov (gcov, cov);
+  ncm_matrix_free (cov);
 
   if (mean_min == mean_max)
   {
@@ -224,7 +221,8 @@ ncm_data_gauss_cov_mvnd_gen_cov_mean (NcmDataGaussCovMVND *data_mvnd, const gdou
  * @mean: a #NcmVector
  * @cov: a #NcmMatrix
  *
- * Sets the mean and covariance of @data_mvnd.
+ * Copies @mean and @cov into @data_mvnd, which must have their dimension, and marks
+ * the data initialized.
  *
  */
 void
@@ -232,15 +230,22 @@ ncm_data_gauss_cov_mvnd_set_cov_mean (NcmDataGaussCovMVND *data_mvnd, NcmVector 
 {
   NcmDataGaussCov *gcov = NCM_DATA_GAUSS_COV (data_mvnd);
   NcmVector *cy         = ncm_data_gauss_cov_peek_mean (gcov);
-  NcmMatrix *ccov       = ncm_data_gauss_cov_peek_cov (gcov);
+  const guint np        = ncm_data_gauss_cov_get_size (gcov);
 
-  g_assert_cmpuint (ncm_vector_len (mean), ==, ncm_matrix_nrows (cov));
-  g_assert_cmpuint (ncm_vector_len (mean), ==, ncm_matrix_ncols (cov));
-  g_assert (cy != NULL);
-  g_assert (cov != NULL);
+  if (ncm_vector_len (mean) != np)
+    g_error ("ncm_data_gauss_cov_mvnd_set_cov_mean: the data has %u points, but the mean has %u.",
+             np, ncm_vector_len (mean));
 
-  ncm_matrix_memcpy (ccov, cov);
   ncm_vector_memcpy (cy, mean);
+
+  /* A copy goes through set_cov, which checks its size and invalidates the Cholesky
+   * factor. */
+  {
+    NcmMatrix *cov_copy = ncm_matrix_dup (cov);
+
+    ncm_data_gauss_cov_set_cov (gcov, cov_copy);
+    ncm_matrix_free (cov_copy);
+  }
 
   ncm_data_set_init (NCM_DATA (gcov), TRUE);
 }
@@ -269,10 +274,10 @@ ncm_data_gauss_cov_mvnd_peek_mean (NcmDataGaussCovMVND *data_mvnd)
  * @obj: (allow-none): a pointer to use in @bound
  * @bound: (scope call) (allow-none): a NcmDataGaussCovMVNDBound
  * @rng: a #NcmRNG
- * @N: (out): number of realizations necessary to generate a valid one
+ * @N: (out): number of realizations drawn, the last one being accepted
  *
- * Generates one realization of the MVND. If @bound is not NULL,
- * generates realizations until @bound returns TRUE.
+ * Draws a realization of the data, see ncm_data_resample(). If @bound is not %NULL,
+ * draws until @bound returns %TRUE; @N is 1 without a bound.
  *
  * Returns: (transfer none): a #NcmVector (should not be modified)
  */
@@ -302,6 +307,7 @@ ncm_data_gauss_cov_mvnd_gen (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, gpoi
   else
   {
     ncm_data_resample (data, mset, rng);
+    N[0] = 1;
   }
 
   return y;
@@ -371,15 +377,16 @@ ncm_data_gauss_cov_mvnd_est_ratio (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset
  * @data_mvnd: a #NcmDataGaussCovMVND
  * @mset: a #NcmMSet
  * @n: number of realizations
- * @maxiter: maximum number of iterations
+ * @maxiter: maximum number of consecutive rejected realizations
  * @lower: lower bound
  * @upper: upper bound
  * @save_realizations: whether to save realizations
  * @rng: a #NcmRNG
  *
- * Generates a #NcmStatsVec with the statistics of the MVND. If
- * @save_realizations is TRUE, the realizations are saved in the
- * #NcmStatsVec.
+ * Draws realizations of the data until @n of them fall inside [@lower, @upper] in
+ * every component and returns their statistics. If @maxiter realizations in a row
+ * are rejected it warns and returns the statistics gathered so far. If
+ * @save_realizations is %TRUE, the realizations are saved in the #NcmStatsVec.
  *
  * Returns: (transfer full): a new #NcmStatsVec with the statistics of the MVND.
  */
@@ -395,10 +402,12 @@ ncm_data_gauss_cov_mvnd_stats_vec (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset
   NcmMatrix *sample     = ncm_matrix_new (bulk_len, dim);
   glong iter            = 0;
 
-  g_assert_cmpuint (ncm_vector_stride (lower), ==, 1);
-  g_assert_cmpuint (ncm_vector_stride (upper), ==, 1);
-  g_assert_cmpuint (ncm_vector_len (lower), ==, dim);
-  g_assert_cmpuint (ncm_vector_len (upper), ==, dim);
+  if ((ncm_vector_len (lower) != dim) || (ncm_vector_len (upper) != dim))
+    g_error ("ncm_data_gauss_cov_mvnd_stats_vec: the data has dimension %u, but the bounds have %u and %u.",
+             dim, ncm_vector_len (lower), ncm_vector_len (upper));
+
+  if ((ncm_vector_stride (lower) != 1) || (ncm_vector_stride (upper) != 1))
+    g_error ("ncm_data_gauss_cov_mvnd_stats_vec: the bounds must be contiguous vectors.");
 
   while (ncm_stats_vec_nitens (stats) < n)
   {
@@ -459,8 +468,8 @@ ncm_data_gauss_cov_mvnd_log_info (NcmDataGaussCovMVND *data_mvnd)
   NcmVector *y          = ncm_data_gauss_cov_peek_mean (gcov);
   NcmMatrix *cov        = ncm_data_gauss_cov_peek_cov (gcov);
 
-  g_assert (y != NULL);
-  g_assert (cov != NULL);
+  if ((y == NULL) || (cov == NULL))
+    g_error ("ncm_data_gauss_cov_mvnd_log_info: the data has no mean or covariance, set its size first.");
 
   ncm_vector_log_vals (y,   "# NcmDataGaussCovMVND data mean: ", "% 12.5g", TRUE);
   ncm_matrix_log_vals (cov, "# NcmDataGaussCovMVND data cov: ", "% 12.5g");

@@ -36,11 +36,15 @@ typedef struct _NcmStatsDistVKDEPrivate
 {
   /*< private >*/
   GPtrArray *cov_array;
+  GPtrArray *cov_array0;
   NcmVector *lnnorms;
+  NcmMatrix *sample_T;
   gdouble local_frac;
   gboolean use_rot_href;
+  gdouble points_per_dim;
   NcmMemoryPool *mp_stats_vec;
   NcmMemoryPool *mp_eval_vars;
+  NcmMemoryPool *mp_eval_tile;
 } NcmStatsDistVKDEPrivate;
 
 G_END_DECLS

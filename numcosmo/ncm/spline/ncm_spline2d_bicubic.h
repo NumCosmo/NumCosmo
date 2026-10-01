@@ -40,8 +40,8 @@ G_DECLARE_FINAL_TYPE (NcmSpline2dBicubic, ncm_spline2d_bicubic, NCM, SPLINE2D_BI
 /**
  * NcmSpline2dBicubicCoeffs:
  *
- * Structure to hold the coefficients of a bicubic spline.
- *
+ * The coefficients of the bicubic polynomial of a grid cell with lower corner
+ * $(x_j, y_i)$: element `ij[k][l]` multiplies $(x - x_j)^k (y - y_i)^l$.
  */
 typedef struct _NcmSpline2dBicubicCoeffs NcmSpline2dBicubicCoeffs;
 

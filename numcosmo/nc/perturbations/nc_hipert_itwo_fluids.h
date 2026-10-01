@@ -28,6 +28,7 @@
 
 #include <glib-object.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
+#include <numcosmo/ncm/algebra/ncm_complex.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
@@ -146,6 +147,7 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_VARS,prefix=NC_HIPER
  * Enumeration of physical observables computed from the two-fluid perturbation state.
  *
  * Notes:
+ *
  * - The quantity $k_\\mathrm{phys}\\mathcal{V}_\\mathrm{diff} =
  *   k_\\mathrm{phys}(\\mathcal{V}_r - \\mathcal{V}_w)$ reflects differences in velocity
  *   potential.

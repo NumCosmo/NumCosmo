@@ -1,19 +1,5 @@
 src_site_theory_files = files(
     'index.qmd',
-    'csq1d.qmd',
-    'distances.qmd',
-    'recombination.qmd',
-    'transfer_func_eh.qmd',
-    'wl_surface_mass_density.qmd',
-    'wl_ellipticity.qmd',
-    'galaxy_wl_framework.qmd',
-    'wl_shape_marginalization_series.qmd',
-    'wl_shape_marginalization_fixed_quad.qmd',
-    'halo_density_profile.qmd',
-    'fftlog.qmd',
-    'spectral.qmd',
-    'ssc.qmd',
-    'castro_hmf.qmd',
 )
 
 if get_option('documentation')
@@ -21,3 +7,6 @@ if get_option('documentation')
         site_files += fs.copyfile(file)
     endforeach
 endif
+
+subdir('nc')
+subdir('ncm')

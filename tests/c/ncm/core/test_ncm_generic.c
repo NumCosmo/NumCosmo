@@ -44,12 +44,12 @@ void test_ncm_sphere_nn (void);
 void test_ncm_timer_basic (void);
 void test_ncm_sbessel_ode_solver_basic (void);
 void test_ncm_sbessel_integrator_gl_basic (void);
-void test_ncm_sbessel_integrator_fftl_basic (void);
 void test_ncm_sbessel_integrator_levin_basic (void);
 void test_ncm_fftlog_sbessel_j_basic (void);
-void test_ncm_fftlog_sbessel_jljm_basic (void);
 void test_ncm_bootstrap_basic (void);
+void test_ncm_stats_dist2d_spline_basic (void);
 void test_ncm_stats_vec_basic (void);
+void test_ncm_stats_acorr_basic (void);
 void test_ncm_mpi_job_basic (void);
 void test_ncm_mpi_job_test_basic (void);
 void test_ncm_mpi_job_fit_basic (void);
@@ -59,6 +59,8 @@ void test_ncm_spline_bspline_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
 void test_ncm_powspec_analytic_basic (void);
 void test_ncm_pln1d_basic (void);
+void test_ncm_function_cache_basic (void);
+void test_ncm_iset_basic (void);
 
 void test_nc_data_cluster_mass_rich_basic (void);
 void test_nc_data_cluster_mass_rich_count_basic (void);
@@ -100,6 +102,7 @@ void test_nc_xcor_basic (void);
 void test_nc_xcor_solver_basic (void);
 void test_nc_xcor_kernel_radial_kdep_growth_basic (void);
 void test_nc_xcor_kernel_table_basic (void);
+void test_nc_xcor_component_table_basic (void);
 
 void test_nc_galaxy_position_factor_flat_basic (void);
 void test_nc_galaxy_redshift_factor_composed_basic (void);
@@ -134,12 +137,12 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/timer/basic", test_ncm_timer_basic);
   g_test_add_func ("/ncm/sbessel_ode_solver/basic", test_ncm_sbessel_ode_solver_basic);
   g_test_add_func ("/ncm/sbessel_integrator_gl/basic", test_ncm_sbessel_integrator_gl_basic);
-  g_test_add_func ("/ncm/sbessel_integrator_fftl/basic", test_ncm_sbessel_integrator_fftl_basic);
   g_test_add_func ("/ncm/sbessel_integrator_levin/basic", test_ncm_sbessel_integrator_levin_basic);
   g_test_add_func ("/ncm/fftlog_sbessel_j/basic", test_ncm_fftlog_sbessel_j_basic);
-  g_test_add_func ("/ncm/fftlog_sbessel_jljm/basic", test_ncm_fftlog_sbessel_jljm_basic);
   g_test_add_func ("/ncm/bootstrap/basic", test_ncm_bootstrap_basic);
+  g_test_add_func ("/ncm/stats_dist2d_spline/basic", test_ncm_stats_dist2d_spline_basic);
   g_test_add_func ("/ncm/stats_vec/basic", test_ncm_stats_vec_basic);
+  g_test_add_func ("/ncm/stats_acorr/basic", test_ncm_stats_acorr_basic);
   g_test_add_func ("/ncm/mpi_job/basic", test_ncm_mpi_job_basic);
   g_test_add_func ("/ncm/mpi_job_test/basic", test_ncm_mpi_job_test_basic);
   g_test_add_func ("/ncm/mpi_job_fit/basic", test_ncm_mpi_job_fit_basic);
@@ -149,6 +152,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
   g_test_add_func ("/ncm/powspec_analytic/basic", test_ncm_powspec_analytic_basic);
   g_test_add_func ("/ncm/pln1d/basic", test_ncm_pln1d_basic);
+  g_test_add_func ("/ncm/function_cache/basic", test_ncm_function_cache_basic);
+  g_test_add_func ("/ncm/iset/basic", test_ncm_iset_basic);
 
   g_test_add_func ("/nc/data/cluster_mass_rich/basic", test_nc_data_cluster_mass_rich_basic);
   g_test_add_func ("/nc/data/cluster_mass_rich_count/basic", test_nc_data_cluster_mass_rich_count_basic);
@@ -193,6 +198,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/xcor/solver/basic", test_nc_xcor_solver_basic);
   g_test_add_func ("/nc/xcor/kernel_radial_kdep_growth/basic", test_nc_xcor_kernel_radial_kdep_growth_basic);
   g_test_add_func ("/nc/xcor/kernel_table/basic", test_nc_xcor_kernel_table_basic);
+  g_test_add_func ("/nc/xcor/component_table/basic", test_nc_xcor_component_table_basic);
 
   g_test_add_func ("/nc/galaxy/position_factor_flat/basic", test_nc_galaxy_position_factor_flat_basic);
   g_test_add_func ("/nc/galaxy/redshift_factor_composed/basic", test_nc_galaxy_redshift_factor_composed_basic);
@@ -266,24 +272,6 @@ test_ncm_sbessel_integrator_gl_basic (void)
 }
 
 void
-test_ncm_sbessel_integrator_fftl_basic (void)
-{
-  NcmSBesselIntegratorFFTL *sbilf = ncm_sbessel_integrator_fftl_new (0, 10);
-  NcmSBesselIntegratorFFTL *sbilf2;
-
-  g_assert_true (sbilf != NULL);
-  g_assert_true (NCM_IS_SBESSEL_INTEGRATOR_FFTL (sbilf));
-
-  sbilf2 = ncm_sbessel_integrator_fftl_ref (sbilf);
-  ncm_sbessel_integrator_fftl_clear (&sbilf2);
-  g_assert_true (sbilf2 == NULL);
-
-  g_assert_true (NCM_IS_SBESSEL_INTEGRATOR_FFTL (sbilf));
-
-  NCM_TEST_FREE (ncm_sbessel_integrator_fftl_free, sbilf);
-}
-
-void
 test_ncm_sbessel_integrator_levin_basic (void)
 {
   NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new (0, 10);
@@ -320,24 +308,6 @@ test_ncm_fftlog_sbessel_j_basic (void)
 }
 
 void
-test_ncm_fftlog_sbessel_jljm_basic (void)
-{
-  NcmFftlogSBesselJLJM *fftlog_jljm = ncm_fftlog_sbessel_jljm_new (2, 0, 0.0, 0.0, 0.0, 1.0, 128);
-  NcmFftlog *fftlog_jljm2;
-
-  g_assert_true (fftlog_jljm != NULL);
-  g_assert_true (NCM_IS_FFTLOG_SBESSEL_JLJM (fftlog_jljm));
-
-  fftlog_jljm2 = ncm_fftlog_ref (NCM_FFTLOG (fftlog_jljm));
-  ncm_fftlog_clear (&fftlog_jljm2);
-  g_assert_true (fftlog_jljm2 == NULL);
-
-  g_assert_true (NCM_IS_FFTLOG_SBESSEL_JLJM (fftlog_jljm));
-
-  NCM_TEST_FREE (ncm_fftlog_free, NCM_FFTLOG (fftlog_jljm));
-}
-
-void
 test_ncm_bootstrap_basic (void)
 {
   NcmBootstrap *bstrap = ncm_bootstrap_new ();
@@ -356,6 +326,23 @@ test_ncm_bootstrap_basic (void)
 }
 
 void
+test_ncm_stats_dist2d_spline_basic (void)
+{
+  NcmSpline2d *m2lnp  = ncm_spline2d_bicubic_notaknot_new ();
+  NcmStatsDist2d *sd2 = NCM_STATS_DIST2D (ncm_stats_dist2d_spline_new (m2lnp));
+  NcmStatsDist2d *sd2_2;
+
+  g_assert_true (NCM_IS_STATS_DIST2D_SPLINE (sd2));
+
+  sd2_2 = ncm_stats_dist2d_ref (sd2);
+  ncm_stats_dist2d_clear (&sd2_2);
+  g_assert_true (sd2_2 == NULL);
+
+  ncm_spline2d_free (m2lnp);
+  NCM_TEST_FREE (ncm_stats_dist2d_free, sd2);
+}
+
+void
 test_ncm_stats_vec_basic (void)
 {
   NcmStatsVec *svec = ncm_stats_vec_new (3, NCM_STATS_VEC_MEAN, FALSE);
@@ -371,6 +358,24 @@ test_ncm_stats_vec_basic (void)
   g_assert_true (NCM_IS_STATS_VEC (svec));
 
   NCM_TEST_FREE (ncm_stats_vec_free, svec);
+}
+
+void
+test_ncm_stats_acorr_basic (void)
+{
+  NcmStatsAcorr *acorr = ncm_stats_acorr_new (3);
+  NcmStatsAcorr *acorr2;
+
+  g_assert_true (acorr != NULL);
+  g_assert_true (NCM_IS_STATS_ACORR (acorr));
+
+  acorr2 = ncm_stats_acorr_ref (acorr);
+  ncm_stats_acorr_clear (&acorr2);
+  g_assert_true (acorr2 == NULL);
+
+  g_assert_true (NCM_IS_STATS_ACORR (acorr));
+
+  NCM_TEST_FREE (ncm_stats_acorr_free, acorr);
 }
 
 void
@@ -725,6 +730,40 @@ test_ncm_pln1d_basic (void)
   g_assert_true (NCM_IS_PLN1D (pln1d));
 
   NCM_TEST_FREE (ncm_pln1d_free, pln1d);
+}
+
+void
+test_ncm_function_cache_basic (void)
+{
+  NcmFunctionCache *cache = ncm_function_cache_new (1, 0.0, 1.0e-7);
+  NcmFunctionCache *cache2;
+
+  g_assert_true (NCM_IS_FUNCTION_CACHE (cache));
+
+  cache2 = ncm_function_cache_ref (cache);
+  ncm_function_cache_clear (&cache2);
+  g_assert_true (cache2 == NULL);
+
+  g_assert_true (NCM_IS_FUNCTION_CACHE (cache));
+
+  NCM_TEST_FREE (ncm_function_cache_free, cache);
+}
+
+void
+test_ncm_iset_basic (void)
+{
+  NcmISet *iset = ncm_iset_new (5);
+  NcmISet *iset2;
+
+  g_assert_true (NCM_IS_ISET (iset));
+
+  iset2 = ncm_iset_ref (iset);
+  ncm_iset_clear (&iset2);
+  g_assert_true (iset2 == NULL);
+
+  g_assert_true (NCM_IS_ISET (iset));
+
+  NCM_TEST_FREE (ncm_iset_free, iset);
 }
 
 void
@@ -1829,5 +1868,52 @@ test_nc_data_cluster_wl_factor_basic (void)
   nc_galaxy_shape_factor_clear (&shape_factor);
 
   NCM_TEST_FREE (nc_data_cluster_wl_factor_free, dcwlf);
+}
+
+void
+test_nc_xcor_component_table_basic (void)
+{
+  NcmVector *chi = ncm_vector_new (64);
+  NcmVector *W   = ncm_vector_new (64);
+  NcXcorComponentTable *xcct, *xcct2;
+  gdouble chi_min, chi_max;
+  guint i;
+
+  for (i = 0; i < 64; i++)
+  {
+    const gdouble chi_i = 1000.0 + 20.0 * i;
+    const gdouble t     = (chi_i - 1630.0) / 300.0;
+
+    ncm_vector_set (chi, i, chi_i);
+    ncm_vector_set (W, i, exp (-0.5 * t * t));
+  }
+
+  xcct = nc_xcor_component_table_new (chi, W);
+
+  g_assert_true (xcct != NULL);
+  g_assert_true (NC_IS_XCOR_COMPONENT_TABLE (xcct));
+  g_assert_cmpuint (nc_xcor_component_table_get_kind (xcct), ==, NC_XCOR_KERNEL_TABLE_KIND_DENSITY);
+  g_assert_cmpuint (nc_xcor_component_table_get_order (xcct), ==, NCM_SPLINE_BSPLINE_DEFAULT_ORDER);
+  g_assert_true (nc_xcor_component_table_get_normalize (xcct));
+  g_assert_true (gsl_finite (nc_xcor_component_table_get_norm (xcct)));
+  g_assert_true (nc_xcor_component_table_peek_spline (xcct) != NULL);
+  g_assert_true (nc_xcor_component_table_peek_knots (xcct) != NULL);
+  g_assert_cmpuint (nc_xcor_component_table_get_bessel_deriv (xcct), ==, 0);
+  g_assert_cmpfloat (nc_xcor_component_table_eval_kernel_factor (xcct, 1500.0, 0.1), ==, 1.0);
+  g_assert_cmpfloat (nc_xcor_component_table_eval_prefactor (xcct, 8), ==, 1.0);
+
+  nc_xcor_component_table_get_support (xcct, &chi_min, &chi_max);
+  g_assert_cmpfloat (chi_min, ==, 1000.0);
+  g_assert_cmpfloat (chi_max, ==, 1000.0 + 20.0 * 63);
+  g_assert_true (gsl_finite (nc_xcor_component_table_eval_W (xcct, 1630.0)));
+
+  xcct2 = nc_xcor_component_table_ref (xcct);
+  nc_xcor_component_table_clear (&xcct2);
+  g_assert_true (xcct2 == NULL);
+
+  ncm_vector_free (chi);
+  ncm_vector_free (W);
+
+  NCM_TEST_FREE (nc_xcor_component_table_free, xcct);
 }
 

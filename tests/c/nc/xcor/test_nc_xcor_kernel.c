@@ -296,7 +296,7 @@ test_nc_xcor_kernel_knobs (TestNcXcorKernel *test, gconstpointer pdata)
   nc_xcor_kernel_set_adaptive_epsilon (xclk, 1.0e-5);
   nc_xcor_kernel_set_adaptive_boundary_tries (xclk, 3);
   nc_xcor_kernel_set_reltol (xclk, 1.0e-3);
-  nc_xcor_kernel_set_scaled_abstol (xclk, 1.0e-4);
+  nc_xcor_kernel_set_peak_epsilon (xclk, 1.0e-4);
   nc_xcor_kernel_set_max_border_expansions (xclk, 1);
   nc_xcor_kernel_set_max_iter (xclk, 5);
   nc_xcor_kernel_set_expansion_factor (xclk, 0.5);
@@ -307,7 +307,7 @@ test_nc_xcor_kernel_knobs (TestNcXcorKernel *test, gconstpointer pdata)
   ncm_assert_cmpdouble_e (nc_xcor_kernel_get_adaptive_epsilon (xclk), ==, 1.0e-5, 1.0e-15, 0.0);
   g_assert_cmpuint (nc_xcor_kernel_get_adaptive_boundary_tries (xclk), ==, 3);
   ncm_assert_cmpdouble_e (nc_xcor_kernel_get_reltol (xclk), ==, 1.0e-3, 1.0e-15, 0.0);
-  ncm_assert_cmpdouble_e (nc_xcor_kernel_get_scaled_abstol (xclk), ==, 1.0e-4, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (nc_xcor_kernel_get_peak_epsilon (xclk), ==, 1.0e-4, 1.0e-15, 0.0);
   g_assert_cmpuint (nc_xcor_kernel_get_max_border_expansions (xclk), ==, 1);
   g_assert_cmpuint (nc_xcor_kernel_get_max_iter (xclk), ==, 5);
   ncm_assert_cmpdouble_e (nc_xcor_kernel_get_expansion_factor (xclk), ==, 0.5, 1.0e-15, 0.0);
@@ -358,9 +358,9 @@ test_nc_xcor_kernel_limber (TestNcXcorKernel *test, gconstpointer pdata)
 
     /* The _full form looks the kinetic quantities up and folds in the prefactor; the
      * plain form takes them and does not. Composing them must reproduce it exactly --
-     * and xi_z is in Hubble-radius units, which is the easy thing to get wrong. */
-    xck.xi_z = nc_distance_comoving (test->dist, test->cosmo, z);
-    xck.E_z  = nc_hicosmo_E (test->cosmo, z);
+     * and chi_z is in Hubble-radius units, which is the easy thing to get wrong. */
+    xck.chi_z = nc_distance_comoving (test->dist, test->cosmo, z);
+    xck.E_z   = nc_hicosmo_E (test->cosmo, z);
 
     ncm_assert_cmpdouble_e (nc_xcor_kernel_eval_limber_z (test->xclk, test->cosmo, z, &xck, l) *
                             nc_xcor_kernel_eval_limber_z_prefactor (test->xclk, test->cosmo, l),
@@ -550,6 +550,44 @@ test_nc_xcor_kernel_integrator (void)
   nc_hicosmo_free (cosmo);
 }
 
+/* RSD kernels have no representation in the redshift-space Limber tier, and asking
+ * for one must abort rather than silently drop the term. */
+static void
+test_nc_xcor_kernel_gal_rsd_limber_z_st (void)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist = nc_distance_new (TEST_ZMAX);
+  NcmPowspec *ps   = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                            NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  NcmSpline *dndz    = _dndz_new ();
+  NcXcorKernelGal *g = g_object_new (NC_TYPE_XCOR_KERNEL_GAL,
+                                     "dist", dist,
+                                     "powspec", ps,
+                                     "bparam-length", (gsize) 1,
+                                     "nbarm1", 1.234,
+                                     "dndz", dndz,
+                                     "domagbias", FALSE,
+                                     "dorsd", TRUE,
+                                     NULL);
+
+  ncm_model_orig_vparam_set (NCM_MODEL (g), NC_XCOR_KERNEL_GAL_BIAS, 0, 1.5);
+  nc_distance_prepare (dist, cosmo);
+  ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
+  nc_xcor_kernel_prepare (NC_XCOR_KERNEL (g), cosmo);
+
+  nc_xcor_kernel_eval_limber_z_full (NC_XCOR_KERNEL (g), cosmo, 0.5, dist, 10);
+
+  g_assert_not_reached ();
+}
+
+static void
+test_nc_xcor_kernel_gal_rsd_limber_z_trap (void)
+{
+  g_test_trap_subprocess ("/nc/xcor/kernel/gal/rsd_limber_z/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*redshift-space distortions are not supported*");
+}
+
 /* The galaxy kernel caches its bias so a likelihood stepping only b(z) can skip
  * rebuilding the window. The cache is what set_bias_old()/get_bias() expose, and getting
  * it wrong means either a stale window or no speedup at all. */
@@ -691,7 +729,7 @@ test_nc_xcor_kernel_radial_kdep (void)
                           nc_xcor_kernel_radial_eval_W (NC_XCOR_KERNEL_RADIAL (plain), 1600.0),
                           1.0e-14, 0.0);
 
-  g_assert_true (gsl_finite (nc_xcor_kernel_radial_eval_kernel_factor (NC_XCOR_KERNEL_RADIAL (withk),
+  g_assert_true (gsl_finite (nc_xcor_kernel_radial_eval_kernel_factor (NC_XCOR_KERNEL_RADIAL (withk), 0,
                                                                        cosmo, 1600.0, 0.5)));
 
   nc_xcor_kernel_free (plain);
@@ -748,6 +786,8 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/nc/xcor/kernel/integrator", &test_nc_xcor_kernel_integrator);
   g_test_add_func ("/nc/xcor/kernel/gal/bias", &test_nc_xcor_kernel_gal_bias);
+  g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/subprocess", &test_nc_xcor_kernel_gal_rsd_limber_z_st);
+  g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/trap", &test_nc_xcor_kernel_gal_rsd_limber_z_trap);
   g_test_add_func ("/nc/xcor/kernel/table/new_full", &test_nc_xcor_kernel_table_full);
   g_test_add_func ("/nc/xcor/kernel/radial/kdep", &test_nc_xcor_kernel_radial_kdep);
 

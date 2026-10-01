@@ -159,7 +159,7 @@ void _nc_xcor_check_kernel_tolerance (NcXcor *xc, NcXcorKernel *xclk);
  * such multipole exists -- the supports overlap, or at least one kernel never
  * enters the Limber tier -- and @l_zero is then left untouched.
  *
- * A Limber kernel is supported only where xi = (l + 1/2) / k lies inside its
+ * A Limber kernel is supported only where chi = (l + 1/2) / k lies inside its
  * own radial range, so two disjoint bins have disjoint support in k and their
  * product is zero -- the same statement as the Limber-z tier's overlap test.
  * The non-Limber tier is the opposite case: there the two kernels couple only

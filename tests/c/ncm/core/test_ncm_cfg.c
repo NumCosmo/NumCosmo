@@ -29,6 +29,7 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include <fftw3.h>
 
 #include <math.h>
 #include <glib.h>
@@ -50,6 +51,191 @@ void test_ncm_cfg_logfile_str_on_off (TesNcmCfg *test, gconstpointer pdata);
 
 void test_ncm_cfg_traps (TesNcmCfg *test, gconstpointer pdata);
 void test_ncm_cfg_invalid (TesNcmCfg *test, gconstpointer pdata);
+void test_ncm_cfg_string_ww (void);
+void test_ncm_cfg_command_line (void);
+void test_ncm_cfg_enum (void);
+void test_ncm_cfg_keyfile (void);
+void test_ncm_cfg_paths (void);
+void test_ncm_cfg_data_filename (void);
+void test_ncm_cfg_array_variant (void);
+void test_ncm_cfg_version (void);
+
+static void
+_test_ncm_cfg_error_logger (const gchar *message)
+{
+  printf ("CAUGHT: %s\n", message);
+  fflush (stdout);
+}
+
+/* The error logger receives criticals also while ncm_cfg_logfile() is off */
+static void
+test_ncm_cfg_error_log_handler (void)
+{
+  g_test_trap_subprocess ("/ncm/cfg/error_log_handler/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stdout ("*CAUGHT: a critical with the log off*");
+}
+
+static void
+test_ncm_cfg_error_log_handler_subprocess (void)
+{
+  ncm_cfg_set_error_log_handler (&_test_ncm_cfg_error_logger);
+  ncm_cfg_logfile (FALSE);
+  g_log ("NUMCOSMO", G_LOG_LEVEL_CRITICAL, "a critical with the log off");
+}
+
+/* Every member is printed, also values that are negative or after a gap */
+static void
+test_ncm_cfg_enum_print_all_gaps (void)
+{
+  g_test_trap_subprocess ("/ncm/cfg/enum_print_all_gaps/subprocess", 0, 0);
+  g_test_trap_assert_passed ();
+  g_test_trap_assert_stdout ("*TEST_GAP_NEG*TEST_GAP_FIVE*");
+}
+
+static void
+test_ncm_cfg_enum_print_all_gaps_subprocess (void)
+{
+  static const GEnumValue values[] = {
+    {-1, "TEST_GAP_NEG", "neg"},
+    {5, "TEST_GAP_FIVE", "five"},
+    {0, NULL, NULL}
+  };
+  GType type = g_enum_register_static ("TestNcmCfgGapEnum", values);
+
+  ncm_cfg_enum_print_all (type, "Gap enum");
+}
+
+/* A key is new once per process and per planner flag */
+static void
+test_ncm_cfg_fftw_plan_begin_end (void)
+{
+  GError *error = NULL;
+  gboolean first;
+
+  ncm_cfg_set_fftw_default_flag_str ("estimate", 10.0, &error);
+  g_assert_no_error (error);
+
+  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 7);
+  ncm_cfg_fftw_plan_end (first);
+  g_assert_true (first);
+
+  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 7);
+  ncm_cfg_fftw_plan_end (first);
+  g_assert_false (first);
+
+  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 8);
+  ncm_cfg_fftw_plan_end (first);
+  g_assert_true (first);
+
+  ncm_cfg_set_fftw_default_flag_str ("measure", 10.0, &error);
+  g_assert_no_error (error);
+
+  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 7);
+  ncm_cfg_fftw_plan_end (first);
+  g_assert_true (first);
+
+  ncm_cfg_set_fftw_default_flag_str ("estimate", 10.0, &error);
+  g_assert_no_error (error);
+}
+
+/* Without NCM_FFTW_PLANNER_TIMELIMIT the limit in effect, and reported, is 10 s */
+static void
+test_ncm_cfg_fftw_timelimit_default (void)
+{
+  g_unsetenv ("NCM_FFTW_PLANNER");
+  g_unsetenv ("NCM_FFTW_PLANNER_TIMELIMIT");
+  g_test_trap_subprocess ("/ncm/cfg/fftw_timelimit_default/subprocess", 0, 0);
+  g_test_trap_assert_passed ();
+}
+
+static void
+test_ncm_cfg_fftw_timelimit_default_subprocess (void)
+{
+  g_assert_cmpfloat (ncm_cfg_get_fftw_timelimit (), ==, 10.0);
+}
+
+/* OMP_NUM_THREADS above OMP_THREAD_LIMIT makes ncm_cfg_init() warn; GTest makes the warning fatal */
+static void
+test_ncm_cfg_omp_thread_limit (void)
+{
+#ifdef _OPENMP
+  gchar *nthreads = g_strdup (g_getenv ("OMP_NUM_THREADS"));
+  gchar *limit    = g_strdup (g_getenv ("OMP_THREAD_LIMIT"));
+
+  g_setenv ("OMP_NUM_THREADS", "2", TRUE);
+  g_setenv ("OMP_THREAD_LIMIT", "1", TRUE);
+  g_test_trap_subprocess ("/ncm/cfg/omp_thread_limit/subprocess", 0, 0);
+
+  /* Later subprocess tests inherit the environment. */
+  if (nthreads != NULL)
+    g_setenv ("OMP_NUM_THREADS", nthreads, TRUE);
+  else
+    g_unsetenv ("OMP_NUM_THREADS");
+
+  if (limit != NULL)
+    g_setenv ("OMP_THREAD_LIMIT", limit, TRUE);
+  else
+    g_unsetenv ("OMP_THREAD_LIMIT");
+
+  g_free (nthreads);
+  g_free (limit);
+
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*OMP_NUM_THREADS (2) exceeds OMP_THREAD_LIMIT (1)*");
+#else
+  g_test_skip ("built without OpenMP");
+#endif /* _OPENMP */
+}
+
+static void
+test_ncm_cfg_omp_thread_limit_subprocess (void)
+{
+}
+
+static gpointer
+_test_ncm_cfg_fftw_plan_worker (gpointer data)
+{
+  const guint id = GPOINTER_TO_UINT (data);
+  gdouble *in    = fftw_alloc_real (64);
+  gdouble *out   = fftw_alloc_real (64);
+  guint i;
+
+  for (i = 0; i < 50; i++)
+  {
+    const guint n        = 8 + ((id + i) % 7) * 8;
+    const gboolean first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_threads_redft00_%u", n);
+    fftw_plan plan       = fftw_plan_r2r_1d (n, in, out, FFTW_REDFT00, ncm_cfg_get_fftw_default_flag ());
+
+    ncm_cfg_fftw_plan_end (first);
+    ncm_cfg_fftw_plan_destroy (plan);
+  }
+
+  fftw_free (in);
+  fftw_free (out);
+
+  return NULL;
+}
+
+/* Planning and destroying from several threads goes through the planning lock */
+static void
+test_ncm_cfg_fftw_plan_destroy (void)
+{
+  GThread *threads[4];
+  GError *error = NULL;
+  guint i;
+
+  ncm_cfg_fftw_plan_destroy (NULL);
+
+  ncm_cfg_set_fftw_default_flag_str ("estimate", 10.0, &error);
+  g_assert_no_error (error);
+
+  for (i = 0; i < G_N_ELEMENTS (threads); i++)
+    threads[i] = g_thread_new ("fftw-plan", &_test_ncm_cfg_fftw_plan_worker, GUINT_TO_POINTER (i));
+
+  for (i = 0; i < G_N_ELEMENTS (threads); i++)
+    g_thread_join (threads[i]);
+}
 
 gint
 main (gint argc, gchar *argv[])
@@ -84,6 +270,25 @@ main (gint argc, gchar *argv[])
               &test_ncm_cfg_new,
               &test_ncm_cfg_logfile_str_on_off,
               &test_ncm_cfg_free);
+
+  g_test_add_func ("/ncm/cfg/string_ww", &test_ncm_cfg_string_ww);
+  g_test_add_func ("/ncm/cfg/command_line", &test_ncm_cfg_command_line);
+  g_test_add_func ("/ncm/cfg/enum", &test_ncm_cfg_enum);
+  g_test_add_func ("/ncm/cfg/fftw_plan_begin_end", &test_ncm_cfg_fftw_plan_begin_end);
+  g_test_add_func ("/ncm/cfg/fftw_plan_destroy", &test_ncm_cfg_fftw_plan_destroy);
+  g_test_add_func ("/ncm/cfg/fftw_timelimit_default", &test_ncm_cfg_fftw_timelimit_default);
+  g_test_add_func ("/ncm/cfg/fftw_timelimit_default/subprocess", &test_ncm_cfg_fftw_timelimit_default_subprocess);
+  g_test_add_func ("/ncm/cfg/omp_thread_limit", &test_ncm_cfg_omp_thread_limit);
+  g_test_add_func ("/ncm/cfg/omp_thread_limit/subprocess", &test_ncm_cfg_omp_thread_limit_subprocess);
+  g_test_add_func ("/ncm/cfg/enum_print_all_gaps", &test_ncm_cfg_enum_print_all_gaps);
+  g_test_add_func ("/ncm/cfg/enum_print_all_gaps/subprocess", &test_ncm_cfg_enum_print_all_gaps_subprocess);
+  g_test_add_func ("/ncm/cfg/error_log_handler", &test_ncm_cfg_error_log_handler);
+  g_test_add_func ("/ncm/cfg/error_log_handler/subprocess", &test_ncm_cfg_error_log_handler_subprocess);
+  g_test_add_func ("/ncm/cfg/keyfile", &test_ncm_cfg_keyfile);
+  g_test_add_func ("/ncm/cfg/paths", &test_ncm_cfg_paths);
+  g_test_add_func ("/ncm/cfg/data_filename", &test_ncm_cfg_data_filename);
+  g_test_add_func ("/ncm/cfg/array_variant", &test_ncm_cfg_array_variant);
+  g_test_add_func ("/ncm/cfg/version", &test_ncm_cfg_version);
 
   g_test_add ("/ncm/cfg/traps", TesNcmCfg, NULL,
               &test_ncm_cfg_new,
@@ -124,7 +329,7 @@ test_ncm_cfg_misc (TesNcmCfg *test, gconstpointer pdata)
   {
     gchar *full_path = ncm_cfg_get_fullpath ("test_full_path_%d.txt", 1);
 
-    g_assert_cmpstr (full_path, >=, ".numcosmo/test_full_path_1.txt");
+    g_assert_true (g_str_has_suffix (full_path, ".numcosmo/test_full_path_1.txt"));
 
     g_free (full_path);
   }
@@ -135,7 +340,7 @@ test_ncm_cfg_misc (TesNcmCfg *test, gconstpointer pdata)
                                                 "should be truncated to 80 characters, but it is not, so it "
                                                 "will be truncated by the user.");
 
-    g_assert_cmpstr (comment, >=, "###############################################################################");
+    g_assert_true (g_str_has_prefix (comment, "###############################################################################\n\n  test string"));
     g_free (comment);
   }
 
@@ -260,5 +465,180 @@ void
 test_ncm_cfg_invalid (TesNcmCfg *test, gconstpointer pdata)
 {
   g_assert_not_reached ();
+}
+
+void
+test_ncm_cfg_string_ww (void)
+{
+  gchar *ww = ncm_string_ww ("aaa bbb ccc ddd eee", "> ", "  ", 12);
+
+  /* The first line holds as many words as fit in ncols minus the first prefix */
+  g_assert_cmpstr (ww, ==, "> aaa bbb\n   ccc ddd\n   eee\n");
+  g_free (ww);
+}
+
+void
+test_ncm_cfg_command_line (void)
+{
+  gchar *argv[] = {"numcosmo", "run", "two words", "-x"};
+  gchar *cmd    = ncm_cfg_command_line (argv, G_N_ELEMENTS (argv));
+
+  g_assert_cmpstr (cmd, ==, "numcosmo run 'two words' -x");
+  g_free (cmd);
+}
+
+void
+test_ncm_cfg_enum (void)
+{
+  const GType t = NCM_TYPE_CFG_ERROR;
+
+  g_assert_cmpint (ncm_cfg_get_enum_by_id_name_nick (t, "1")->value, ==, NCM_CFG_ERROR_INVALID_FFTW_FLAG_STRING);
+  g_assert_cmpint (ncm_cfg_get_enum_by_id_name_nick (t, "NCM_CFG_ERROR_INVALID_FFTW_TIMELIMIT")->value, ==, NCM_CFG_ERROR_INVALID_FFTW_TIMELIMIT);
+  g_assert_cmpint (ncm_cfg_get_enum_by_id_name_nick (t, "flag")->value, ==, NCM_CFG_ERROR_INVALID_FFTW_FLAG);
+  g_assert_null (ncm_cfg_get_enum_by_id_name_nick (t, "not-a-nick"));
+  g_assert_null (ncm_cfg_get_enum_by_id_name_nick (t, "7"));
+
+  g_assert_cmpstr (ncm_cfg_enum_get_value (t, 2)->value_nick, ==, "timelimit");
+  g_assert_null (ncm_cfg_enum_get_value (t, 7));
+}
+
+void
+test_ncm_cfg_keyfile (void)
+{
+  gboolean flag          = TRUE;
+  gint number            = 42;
+  gdouble x              = 2.5;
+  gchar *name            = g_strdup ("value");
+  gchar **list           = g_strsplit ("a,b", ",", -1);
+  GOptionEntry entries[] = {
+    {"flag", 0, 0, G_OPTION_ARG_NONE, &flag, "A flag", NULL},
+    {"number", 0, 0, G_OPTION_ARG_INT, &number, "A number", NULL},
+    {"x", 0, 0, G_OPTION_ARG_DOUBLE, &x, "A double", NULL},
+    {"name", 0, 0, G_OPTION_ARG_STRING, &name, "A string", NULL},
+    {"list", 0, 0, G_OPTION_ARG_STRING_ARRAY, &list, "A list", NULL},
+    { NULL, 0, 0, 0, NULL, NULL, NULL },
+  };
+  GKeyFile *kfile = g_key_file_new ();
+  gchar *argv[16];
+  gchar *argv_owned[16];
+  gint argc     = 1;
+  GError *error = NULL;
+
+  ncm_cfg_entries_to_keyfile (kfile, "group", entries);
+  g_assert_cmpint (g_key_file_get_integer (kfile, "group", "number", NULL), ==, 42);
+  g_assert_true (g_key_file_get_boolean (kfile, "group", "flag", NULL));
+
+  /* Keyfile back to arguments: parsing them restores the values */
+  argv[0] = g_strdup ("prog");
+  ncm_cfg_keyfile_to_arg (kfile, "group", entries, argv, &argc);
+  g_assert_cmpint (argc, ==, 1 + 1 + 2 + 2 + 2 + 4);
+
+  /* g_option_context_parse() reorders argv, keep the strings to free them */
+  memcpy (argv_owned, argv, argc * sizeof (gchar *));
+
+  flag   = FALSE;
+  number = 0;
+  x      = 0.0;
+  g_clear_pointer (&name, g_free);
+  g_clear_pointer (&list, g_strfreev);
+
+  {
+    GOptionContext *ctx = g_option_context_new (NULL);
+    gchar **argv_p      = argv;
+
+    g_option_context_add_main_entries (ctx, entries, NULL);
+    g_assert_true (g_option_context_parse (ctx, &argc, &argv_p, &error));
+    g_assert_no_error (error);
+    g_option_context_free (ctx);
+  }
+
+  g_assert_true (flag);
+  g_assert_cmpint (number, ==, 42);
+  g_assert_cmpfloat (x, ==, 2.5);
+  g_assert_cmpstr (name, ==, "value");
+  g_assert_cmpuint (g_strv_length (list), ==, 2);
+  g_assert_cmpstr (list[1], ==, "b");
+
+  {
+    gint i;
+
+    for (i = 0; i < 12; i++)
+      g_free (argv_owned[i]);
+  }
+
+  g_free (name);
+  g_strfreev (list);
+  g_key_file_unref (kfile);
+}
+
+void
+test_ncm_cfg_paths (void)
+{
+  const gchar *base = ncm_cfg_get_fullpath_base ();
+  gchar *path       = ncm_cfg_get_fullpath ("sub_%d.txt", 3);
+  gchar *expected   = g_build_filename (base, "sub_3.txt", NULL);
+
+  g_assert_true (g_str_has_suffix (base, ".numcosmo"));
+  g_assert_cmpstr (path, ==, expected);
+  g_assert_false (ncm_cfg_exists ("test_ncm_cfg_file_that_does_not_exist_%d", 17));
+
+  g_free (path);
+  g_free (expected);
+}
+
+void
+test_ncm_cfg_data_filename (void)
+{
+  gchar *data_dir = ncm_cfg_get_data_directory ();
+  gchar *found    = ncm_cfg_get_data_filename ("BBN_spline2d.obj", TRUE);
+  gchar *expected = g_build_filename (data_dir, "BBN_spline2d.obj", NULL);
+
+  g_assert_true (g_file_test (data_dir, G_FILE_TEST_IS_DIR));
+  g_assert_cmpstr (found, ==, expected);
+  g_assert_null (ncm_cfg_get_data_filename ("test_ncm_cfg_no_such_data_file", FALSE));
+
+  g_free (data_dir);
+  g_free (found);
+  g_free (expected);
+}
+
+void
+test_ncm_cfg_array_variant (void)
+{
+  GArray *a            = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *b            = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  const gdouble vals[] = {1.0, -2.0, 3.5};
+  GVariant *var;
+
+  g_array_append_vals (a, vals, 3);
+  var = ncm_cfg_array_to_variant (a, G_VARIANT_TYPE_DOUBLE);
+  g_assert_true (g_variant_is_of_type (var, G_VARIANT_TYPE ("ad")));
+
+  ncm_cfg_array_set_variant (b, var);
+  g_assert_cmpuint (b->len, ==, 3);
+  g_assert_cmpfloat (g_array_index (b, gdouble, 2), ==, 3.5);
+
+  g_variant_unref (var);
+  g_array_unref (a);
+  g_array_unref (b);
+}
+
+void
+test_ncm_cfg_version (void)
+{
+  guint major, minor, micro;
+  const guint v = ncm_cfg_get_version (&major, &minor, &micro);
+  gchar *vstr   = ncm_cfg_get_version_string ();
+  gchar *vexp   = g_strdup_printf ("%u.%u.%u", major, minor, micro);
+
+  g_assert_cmpuint (v, ==, 10000 * major + 100 * minor + micro);
+  g_assert_cmpstr (vstr, ==, vexp);
+  g_assert_true (ncm_cfg_version_check (major, minor, micro));
+  g_assert_false (ncm_cfg_version_check (major, minor, micro + 1));
+  g_assert_true (ncm_cfg_version_check (0, 0, 0));
+  g_assert_nonnull (ncm_cfg_get_commit_hash ());
+
+  g_free (vstr);
+  g_free (vexp);
 }
 

@@ -36,29 +36,22 @@ G_BEGIN_DECLS
 /**
  * NcmSpectralF:
  * @user_data: user data
- * @x: point to evaluate in the interval [a, b]
+ * @x: the point, in $[a, b]$
  *
- * Function to be used in spectral computations. The function is defined over
- * an interval [a, b] and receives @x in that interval. Internally, Chebyshev
- * polynomials work with the transformed variable $t \in [-1, 1]$ where
- * $t = (2x - (a + b))/(b - a)$ and $x = ((b - a)t + (a + b))/2$.
+ * Function expanded on an interval $[a, b]$.
  *
- * Returns: the value of the function at @x
+ * Returns: the value at @x.
  */
 typedef gdouble (*NcmSpectralF) (gpointer user_data, gdouble x);
 
 /**
  * NcmSpectralFBatch:
  * @user_data: user data
- * @x: point to evaluate in the interval [a, b]
- * @y: vector to be filled with the components at @x
+ * @x: the point, in $[a, b]$
+ * @y: the components at @x
  *
- * Vector-valued counterpart of #NcmSpectralF, for a set of functions sharing
- * one abscissa. All components are produced by a single call, which is what
- * makes the batch worth having: where evaluating is the dominant cost and one
- * evaluation yields every component, fitting them separately multiplies that
- * cost by the number of components.
- *
+ * Vector-valued function expanded on an interval $[a, b]$; one call fills every
+ * component.
  */
 typedef void (*NcmSpectralFBatch) (gpointer user_data, gdouble x, NcmVector *y);
 
@@ -79,13 +72,16 @@ guint ncm_spectral_get_max_order (NcmSpectral *spectral);
 void ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint order, GArray **coeffs, gpointer user_data);
 guint ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble tol, GArray **coeffs, gpointer user_data);
 guint ncm_spectral_compute_chebyshev_coeffs_adaptive_full (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble reltol, gdouble abstol, GArray **coeffs, gpointer user_data);
-guint ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble tol, GArray **coeffs, gpointer user_data);
+guint ncm_spectral_compute_chebyshev_coeffs_adaptive_try (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, guint k_cap, gdouble reltol, gdouble abstol, GArray **coeffs, gpointer user_data, gboolean *converged);
 
 guint ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, NcmSpectralFBatch F, guint n_comp, gdouble a, gdouble b, guint k_min, gdouble reltol, gdouble abstol, NcmMatrix **coeffs, gpointer user_data);
 guint ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral, NcmSpectralFBatch F, guint n_comp, gdouble a, gdouble b, guint k_min, guint k_cap, gdouble reltol, gdouble abstol, gboolean fatal, NcmMatrix **coeffs, gpointer user_data);
 
 void ncm_spectral_chebT_to_gegenbauer_alpha1 (GArray *c, GArray **g);
 void ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g);
+void ncm_spectral_chebT_deriv_to_gegenbauer_alpha2 (GArray *c, GArray **g);
+void ncm_spectral_chebT_deriv2_to_gegenbauer_alpha2 (GArray *c, GArray **g);
+void ncm_spectral_gegenbauer_alpha2_xmul (GArray *g, gdouble alpha, gdouble beta, GArray **out);
 
 gdouble ncm_spectral_chebyshev_rebase (NcmSpectral *spectral, GArray *c, guint len, gdouble a_in, gdouble b_in, gdouble a_out, gdouble b_out, GArray **rebased);
 
@@ -98,6 +94,7 @@ gdouble ncm_spectral_chebyshev_eval (GArray *a, gdouble t);
 gdouble ncm_spectral_chebyshev_eval_x (GArray *a, gdouble a_v, gdouble b, gdouble x);
 gdouble ncm_spectral_chebyshev_deriv (GArray *a, gdouble t);
 gdouble ncm_spectral_chebyshev_deriv_x (GArray *a, gdouble a_v, gdouble b, gdouble x);
+gdouble ncm_spectral_chebyshev_integrate (GArray *a, gdouble a_v, gdouble b);
 
 NCM_INLINE gdouble ncm_spectral_x_to_t (gdouble a, gdouble b, gdouble x);
 NCM_INLINE gdouble ncm_spectral_t_to_x (gdouble a, gdouble b, gdouble t);

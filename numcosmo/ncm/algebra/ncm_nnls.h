@@ -40,13 +40,13 @@ G_DECLARE_FINAL_TYPE (NcmNNLS, ncm_nnls, NCM, NNLS, GObject)
 
 /**
  * NcmNNLSUMethod:
- * @NCM_NNLS_UMETHOD_NORMAL: Solve using normal equations and Cholesky decomposition
- * @NCM_NNLS_UMETHOD_NORMAL_LU: Solve using normal equations and LU decomposition
- * @NCM_NNLS_UMETHOD_QR: Solve using QR decomposition
- * @NCM_NNLS_UMETHOD_DGELSD: Solve using QR decomposition (Lapack's dgelsd)
- * @NCM_NNLS_UMETHOD_GSL: Solve using GSL's gsl_multifit_linear
+ * @NCM_NNLS_UMETHOD_NORMAL: normal equations by Cholesky decomposition, falling back to %NCM_NNLS_UMETHOD_NORMAL_LU
+ * @NCM_NNLS_UMETHOD_NORMAL_LU: normal equations by symmetric indefinite (LDL) decomposition, falling back to %NCM_NNLS_UMETHOD_QR
+ * @NCM_NNLS_UMETHOD_QR: QR decomposition, falling back to %NCM_NNLS_UMETHOD_DGELSD for a rank-deficient system
+ * @NCM_NNLS_UMETHOD_DGELSD: SVD, by LAPACK's dgelsd
+ * @NCM_NNLS_UMETHOD_GSL: truncated SVD, by gsl_multifit_linear_tsvd()
  *
- * Method used to solve the intermediate unconstrained least-squares.
+ * Method for the unconstrained least-squares problems of ncm_nnls_solve().
  */
 typedef enum _NcmNNLSUMethod /*< enum,underscore_name=NCM_NNLS_UMETHOD,prefix=NCM_NNLS_UMETHOD >*/
 {

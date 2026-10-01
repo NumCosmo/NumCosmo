@@ -26,11 +26,11 @@
 /**
  * NcmBootstrap:
  *
- * Generic index bootstrap.
+ * Random samples of the indexes of a data set.
  *
- * This object generate random samples of indexes. These samples are used to calculate
- * statistics using different combinations of the same data set.
- *
+ * A realization is an array of #NcmBootstrap:bootstrap-size indexes in [0,
+ * #NcmBootstrap:full-size), drawn with replacement by ncm_bootstrap_resample() or without
+ * replacement by ncm_bootstrap_remix(). Changing either size discards the realization.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -49,7 +49,6 @@ enum
   PROP_BSIZE,
   PROP_INIT,
   PROP_REAL,
-  PROP_SIZE,
 };
 
 struct _NcmBootstrap
@@ -103,13 +102,20 @@ _ncm_bootstrap_set_property (GObject *object, guint prop_id, const GValue *value
       {
         guint i;
 
-        g_assert_cmpuint (bsize, ==, bstrap->bsize);
+        if (bsize != bstrap->bsize)
+          g_error ("_ncm_bootstrap_set_property: realization has %u indexes, but the bootstrap size is %u.",
+                   bsize, bstrap->bsize);
 
         for (i = 0; i < bsize; i++)
         {
           guint j = 0;
 
-          g_variant_get_child (var, i, "u", j);
+          g_variant_get_child (var, i, "u", &j);
+
+          if (j >= bstrap->fsize)
+            g_error ("_ncm_bootstrap_set_property: realization index %u is not smaller than the full size %u.",
+                     j, bstrap->fsize);
+
           g_array_index (bstrap->bootstrap_index, guint, i) = j;
         }
 
@@ -239,9 +245,9 @@ ncm_bootstrap_class_init (NcmBootstrapClass *klass)
 /**
  * ncm_bootstrap_new:
  *
- * Creates a new zero sized #NcmBootstrap object.
+ * Creates a new #NcmBootstrap with both sizes zero.
  *
- * Returns: (transfer full): a #NcmBootstrap.
+ * Returns: (transfer full): a new #NcmBootstrap.
  */
 NcmBootstrap *
 ncm_bootstrap_new (void)
@@ -253,12 +259,12 @@ ncm_bootstrap_new (void)
 
 /**
  * ncm_bootstrap_sized_new:
- * @fsize: sample size.
+ * @fsize: full sample size
  *
- * Creates a new #NcmBootstrap object for a sample of size @fsize. This object
- * will sample with replacement all indexes @fsize times.
+ * Creates a new #NcmBootstrap with #NcmBootstrap:full-size and
+ * #NcmBootstrap:bootstrap-size both equal to @fsize.
  *
- * Returns: (transfer full): a #NcmBootstrap.
+ * Returns: (transfer full): a new #NcmBootstrap.
  */
 NcmBootstrap *
 ncm_bootstrap_sized_new (guint fsize)
@@ -273,13 +279,12 @@ ncm_bootstrap_sized_new (guint fsize)
 
 /**
  * ncm_bootstrap_full_new:
- * @fsize: sample size.
- * @bsize: bootstrap size.
+ * @fsize: full sample size
+ * @bsize: bootstrap size
  *
- * Creates a new #NcmBootstrap object for a sample of size @fsize. This object
- * will sample with replacement all indexes @bsize times.
+ * Creates a new #NcmBootstrap drawing @bsize indexes from [0, @fsize).
  *
- * Returns: (transfer full): a #NcmBootstrap.
+ * Returns: (transfer full): a new #NcmBootstrap.
  */
 NcmBootstrap *
 ncm_bootstrap_full_new (guint fsize, guint bsize)
@@ -294,11 +299,11 @@ ncm_bootstrap_full_new (guint fsize, guint bsize)
 
 /**
  * ncm_bootstrap_ref:
- * @bstrap: a #NcmBootstrap.
+ * @bstrap: a #NcmBootstrap
  *
  * Increases the reference count of @bstrap by one.
  *
- * Returns: (transfer full): a #NcmBootstrap.
+ * Returns: (transfer full): @bstrap.
  */
 NcmBootstrap *
 ncm_bootstrap_ref (NcmBootstrap *bstrap)
@@ -308,10 +313,9 @@ ncm_bootstrap_ref (NcmBootstrap *bstrap)
 
 /**
  * ncm_bootstrap_free:
- * @bstrap: a #NcmBootstrap.
+ * @bstrap: a #NcmBootstrap
  *
  * Decreases the reference count of @bstrap by one.
- *
  */
 void
 ncm_bootstrap_free (NcmBootstrap *bstrap)
@@ -321,10 +325,9 @@ ncm_bootstrap_free (NcmBootstrap *bstrap)
 
 /**
  * ncm_bootstrap_clear:
- * @bstrap: a #NcmBootstrap.
+ * @bstrap: a #NcmBootstrap
  *
- * Decreases the reference count of *@bstrap by one and sets *@bstrap tp NULL.
- *
+ * Decreases the reference count of *@bstrap by one and sets *@bstrap to %NULL.
  */
 void
 ncm_bootstrap_clear (NcmBootstrap **bstrap)
@@ -334,15 +337,18 @@ ncm_bootstrap_clear (NcmBootstrap **bstrap)
 
 /**
  * ncm_bootstrap_set_fsize:
- * @bstrap: a #NcmBootstrap.
- * @fsize: full sample size.
+ * @bstrap: a #NcmBootstrap
+ * @fsize: full sample size
  *
- * Sets the full sample size, it also sets the bsize to the same value @fsize.
- *
+ * Sets #NcmBootstrap:full-size to @fsize. The bootstrap size is not changed. A new
+ * size discards the realization.
  */
 void
 ncm_bootstrap_set_fsize (NcmBootstrap *bstrap, guint fsize)
 {
+  if (fsize != bstrap->fsize)
+    bstrap->init = FALSE;
+
   g_array_set_size (bstrap->increasing_index, fsize);
 
   bstrap->fsize = fsize;
@@ -358,9 +364,7 @@ ncm_bootstrap_set_fsize (NcmBootstrap *bstrap, guint fsize)
 
 /**
  * ncm_bootstrap_get_fsize:
- * @bstrap: a #NcmBootstrap.
- *
- * Gets the full sample size.
+ * @bstrap: a #NcmBootstrap
  *
  * Returns: the full sample size.
  */
@@ -372,24 +376,24 @@ ncm_bootstrap_get_fsize (NcmBootstrap *bstrap)
 
 /**
  * ncm_bootstrap_set_bsize:
- * @bstrap: a #NcmBootstrap.
- * @bsize: bootstrap size.
+ * @bstrap: a #NcmBootstrap
+ * @bsize: bootstrap size
  *
- * Sets the bootstrap size.
- *
+ * Sets #NcmBootstrap:bootstrap-size to @bsize. A new size discards the realization.
  */
 void
 ncm_bootstrap_set_bsize (NcmBootstrap *bstrap, guint bsize)
 {
+  if (bsize != bstrap->bsize)
+    bstrap->init = FALSE;
+
   bstrap->bsize = bsize;
   g_array_set_size (bstrap->bootstrap_index, bsize);
 }
 
 /**
  * ncm_bootstrap_get_bsize:
- * @bstrap: a #NcmBootstrap.
- *
- * Gets the bootstrap size.
+ * @bstrap: a #NcmBootstrap
  *
  * Returns: the bootstrap size.
  */
@@ -401,12 +405,12 @@ ncm_bootstrap_get_bsize (NcmBootstrap *bstrap)
 
 /**
  * ncm_bootstrap_resample:
- * @bstrap: a #NcmBootstrap.
- * @rng: a #NcmRNG.
+ * @bstrap: a #NcmBootstrap
+ * @rng: a #NcmRNG
  *
- * Sample with replacement #NcmBootstrap:bootstrap-size from the
- * #NcmBootstrap:full-size indexes.
- *
+ * Draws a new realization of #NcmBootstrap:bootstrap-size indexes from [0,
+ * #NcmBootstrap:full-size) with replacement. Locks @rng while drawing. Aborts if the
+ * full size is zero and the bootstrap size is not.
  */
 void
 ncm_bootstrap_resample (NcmBootstrap *bstrap, NcmRNG *rng)
@@ -417,6 +421,9 @@ ncm_bootstrap_resample (NcmBootstrap *bstrap, NcmRNG *rng)
   const gsize bsize        = bstrap->bsize;
   const gsize element_size = g_array_get_element_size (bstrap->bootstrap_index);
 
+  if ((fsize == 0) && (bsize > 0))
+    g_error ("ncm_bootstrap_resample: cannot draw %zu indexes from an empty sample.", bsize);
+
   ncm_rng_lock (rng);
   ncm_rng_sample (rng, bdata, bsize, idata, fsize, element_size);
   ncm_rng_unlock (rng);
@@ -425,14 +432,12 @@ ncm_bootstrap_resample (NcmBootstrap *bstrap, NcmRNG *rng)
 
 /**
  * ncm_bootstrap_remix:
- * @bstrap: a #NcmBootstrap.
- * @rng: a #NcmRNG.
+ * @bstrap: a #NcmBootstrap
+ * @rng: a #NcmRNG
  *
- * Sample without replacement #NcmBootstrap:bootstrap-size from the
- * #NcmBootstrap:full-size indexes. Note that in this case
- * #NcmBootstrap:bootstrap-size must be equal or smaller than
- * #NcmBootstrap:full-size.
- *
+ * Draws a new realization of #NcmBootstrap:bootstrap-size distinct indexes from [0,
+ * #NcmBootstrap:full-size) without replacement, stored in increasing order. Locks @rng
+ * while drawing. Aborts if the bootstrap size is larger than the full size.
  */
 void
 ncm_bootstrap_remix (NcmBootstrap *bstrap, NcmRNG *rng)
@@ -443,6 +448,9 @@ ncm_bootstrap_remix (NcmBootstrap *bstrap, NcmRNG *rng)
   const gsize bsize        = bstrap->bsize;
   const gsize element_size = g_array_get_element_size (bstrap->bootstrap_index);
 
+  if (bsize > fsize)
+    g_error ("ncm_bootstrap_remix: cannot draw %zu distinct indexes from a sample of %zu.", bsize, fsize);
+
   ncm_rng_lock (rng);
   ncm_rng_choose (rng, bdata, bsize, idata, fsize, element_size);
   ncm_rng_unlock (rng);
@@ -451,12 +459,12 @@ ncm_bootstrap_remix (NcmBootstrap *bstrap, NcmRNG *rng)
 
 /**
  * ncm_bootstrap_get:
- * @bstrap: a #NcmBootstrap.
- * @i: index in [0, #NcmBootstrap:bootstrap-size - 1].
+ * @bstrap: a #NcmBootstrap
+ * @i: position in the realization, in [0, #NcmBootstrap:bootstrap-size)
  *
- * Gets the index associated with the @i-th resampled index.
+ * Gets the index at position @i of the current realization. @i is not checked.
  *
- * Returns: the @i-th resampled index.
+ * Returns: the @i-th index of the realization.
  */
 guint
 ncm_bootstrap_get (NcmBootstrap *bstrap, guint i)
@@ -468,23 +476,37 @@ static gint _ncm_bootstrap_get_sort (gconstpointer a, gconstpointer b);
 
 /**
  * ncm_bootstrap_get_sortncomp:
- * @bstrap: a #NcmBootstrap.
+ * @bstrap: a #NcmBootstrap
  *
- * Fills an array with the sorted indexes followed by the number of
- * times they appear.
+ * Counts the distinct indexes of the current realization. The result holds the pairs
+ * (index, number of occurrences), in increasing order of index; it is empty when the
+ * bootstrap size is zero. The realization is not changed. Aborts if @bstrap has no
+ * realization.
  *
- * Returns: (array) (element-type guint) (transfer full): the sorted array of indexes and frequencies.
+ * Returns: (array) (element-type guint) (transfer full): the index and count pairs.
  */
 GArray *
 ncm_bootstrap_get_sortncomp (NcmBootstrap *bstrap)
 {
-  GArray *res     = g_array_sized_new (FALSE, TRUE, sizeof (guint), bstrap->bsize);
+  GArray *res     = g_array_sized_new (FALSE, TRUE, sizeof (guint), 2 * bstrap->bsize);
+  GArray *sorted  = g_array_sized_new (FALSE, FALSE, sizeof (guint), bstrap->bsize);
   const guint one = 1;
   guint i, j, n_c;
 
-  g_array_sort (bstrap->bootstrap_index, &_ncm_bootstrap_get_sort);
+  if (!bstrap->init)
+    g_error ("ncm_bootstrap_get_sortncomp: the bootstrap has no realization, call ncm_bootstrap_resample() or ncm_bootstrap_remix() first.");
 
-  n_c = g_array_index (bstrap->bootstrap_index, guint, 0);
+  if (bstrap->bsize == 0)
+  {
+    g_array_unref (sorted);
+
+    return res;
+  }
+
+  g_array_append_vals (sorted, bstrap->bootstrap_index->data, bstrap->bsize);
+  g_array_sort (sorted, &_ncm_bootstrap_get_sort);
+
+  n_c = g_array_index (sorted, guint, 0);
 
   j = 0;
   g_array_append_val (res, n_c);
@@ -492,7 +514,7 @@ ncm_bootstrap_get_sortncomp (NcmBootstrap *bstrap)
 
   for (i = 1; i < bstrap->bsize; i++)
   {
-    const guint n_i = g_array_index (bstrap->bootstrap_index, guint, i);
+    const guint n_i = g_array_index (sorted, guint, i);
 
     if (n_i == n_c)
     {
@@ -507,16 +529,19 @@ ncm_bootstrap_get_sortncomp (NcmBootstrap *bstrap)
     }
   }
 
+  g_array_unref (sorted);
+
   return res;
 }
 
 /**
  * ncm_bootstrap_is_init:
- * @bstrap: a #NcmBootstrap.
+ * @bstrap: a #NcmBootstrap
  *
- * Checks if the bootstrap object was initialized (remix or resample).
+ * Checks whether @bstrap holds a realization, drawn by ncm_bootstrap_resample() or
+ * ncm_bootstrap_remix() or set through #NcmBootstrap:realization.
  *
- * Returns: whether @bstrap is initialized.
+ * Returns: %TRUE if @bstrap holds a realization.
  */
 gboolean
 ncm_bootstrap_is_init (NcmBootstrap *bstrap)

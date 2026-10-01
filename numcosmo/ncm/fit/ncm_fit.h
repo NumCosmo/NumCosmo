@@ -131,8 +131,8 @@ struct _NcmFitClass
   const gchar *(*get_desc) (NcmFit *fit);
   gboolean is_least_squares;
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[13];
+  /* Padding to allow adding up to 14 more virtual functions without breaking ABI. */
+  gpointer padding[14];
 };
 
 NcmFit *ncm_fit_factory (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);

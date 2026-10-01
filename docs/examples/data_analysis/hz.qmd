@@ -1,0 +1,533 @@
+---
+title: "Fitting H(z) Data"
+format:
+  html: default
+  ipynb:
+    echo: true
+format-links: [ipynb]
+---
+
+{{< include /_functions.qmd >}}
+
+{{< include /notes/_numcosmo_py.qmd >}}
+
+## Introduction
+
+This example fits a simple background cosmology model to observational Hubble-rate
+data $H(z)$ using NumCosmo. We will:
+
+1. define a cosmological model,
+2. choose which parameters are free,
+3. select an observational H(z) dataset,
+4. build a likelihood and run the fit,
+5. inspect the best-fit values and their covariance,
+6. optionally continue with an ensemble MCMC analysis.
+
+
+## Prerequisites
+
+Before running this example, make sure the `numcosmo_py`[^numcosmo_py] package is installed in your
+environment. If it is not already installed, follow the
+[installation instructions in the NumCosmo documentation](https://numcosmo.readthedocs.io/en/latest/install.html).
+
+This example uses the core NumCosmo Python bindings, together with `numpy`, `pandas` and
+`plotnine` for the figures. The optional MCMC visualization uses `getdist`, which is also
+used by the [SN Ia fitting example](snia.qmd).
+
+## Import and Initialize
+
+First, import the required modules and initialize the NumCosmo library. The `Nc` and
+`Ncm` modules provide the core NumCosmo functionality. The call to `Ncm.cfg_init()`
+initializes the library objects.
+
+```{python}
+import numpy as np
+import pandas as pd
+from plotnine import *
+
+# These modules must be loaded before getdist to avoid its side effects
+import numcosmo_py.plotting
+import getdist
+from getdist import plots
+
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.plotting import mcat_to_catalog_data
+
+Ncm.cfg_init()
+```
+
+## Set Up the Cosmological Model
+
+We use the homogeneous and isotropic cosmological model `NcHICosmoDEXcdm`. In this
+example, we rewrite the dark energy density parameter in terms of the curvature
+parameter, which is the parameterization used in the fit below. The swap matters even
+though $\Omega_k$ stays fixed at zero: it makes $\Omega_x$ the derived quantity, so
+flatness is imposed once and holds as $\Omega_c$ varies, whereas fixing $\Omega_x$
+instead would let the curvature drift with it.
+
+```{python}
+# Initialize the cosmological model
+cosmo = Nc.HICosmoDEXcdm()
+
+# Rewrite Omega_x in terms of Omega_k
+cosmo.omega_x2omega_k()
+```
+
+## Set Parameter Values
+
+We now assign initial values to the cosmological parameters. These values provide the
+starting point for the fit.
+
+```{python}
+cosmo["H0"] = 70.0
+cosmo["Omegab"] = 0.05
+cosmo["Omegac"] = 0.25
+cosmo["Omegak"] = 0.0
+cosmo["w"] = -1.0
+```
+
+## Choose the Free Parameters
+
+The Hubble rate of this model factorizes as $H(z) = H_0 E(z)$, where $E(z)$ carries the
+dependence on the density parameters and on the dark-energy equation of state. The
+observations are direct measurements of $H(z)$ itself, so their tightest constraint is on
+the overall normalization $H_0$ --- it is the parameter this dataset determines best.
+
+Holding $H_0$ fixed would therefore assert the very quantity the data measures most
+precisely. Worse, it does not leave the remaining parameters untouched: any offset between
+the assumed $H_0$ and the value preferred by the data has to be absorbed by $E(z)$, which
+biases $\Omega_c$ and $w$. We consequently fit all three.
+
+```{python}
+cosmo.props.H0_fit = True
+cosmo.props.Omegac_fit = True
+cosmo.props.w_fit = True
+```
+
+## Build the Model Set
+
+We now create a model set from the cosmological model. The model set is the container
+used by NumCosmo to connect model parameters with likelihood calculations. Once the free
+parameters have been chosen, `prepare_fparam_map` builds the map from the model's
+parameters to the vector the fit actually varies.
+
+```{python}
+# Create a model set containing the cosmological model
+mset = Ncm.MSet.new_array([cosmo])
+
+# Build the free-parameter map and show the resulting configuration
+mset.prepare_fparam_map()
+mset.pretty_log()
+```
+
+`pretty_log` prints a second model below the cosmology, `NcBBN`, which the model set
+carries by default to supply the primordial helium abundance. It has no free parameters
+here and is not fitted; its presence does not mean the model set was built wrongly.
+
+## Select the H(z) Dataset
+
+NumCosmo provides predefined observational Hubble-rate datasets through
+`Nc.DataHubbleId`. In this example, we use the Gomez-Valent 2018 compilation.
+
+```{python}
+# Load the H(z) data compilation
+hz_data = Nc.DataHubble.new_from_id(Nc.DataHubbleId.GOMEZ_VALENT_COMP2018)
+```
+
+To see which H(z) datasets are available in the current NumCosmo installation, we can
+inspect the values exposed by `Nc.DataHubbleId`. The following cell also prints a short
+description and the number of data points in each dataset.
+
+```{python}
+# List the available H(z) dataset identifiers with basic metadata
+for _, member in sorted(Nc.DataHubbleId.__enum_values__.items()):
+    name = member.value_name.replace("NC_DATA_HUBBLE_", "")
+    data = Nc.DataHubble.new_from_id(member)
+
+    print(f"{name:35s}  n = {data.get_length():3d}  {data.get_desc()}")
+```
+
+To use a different H(z) dataset, replace `GOMEZ_VALENT_COMP2018` by one of the
+identifiers printed above.
+
+Each predefined Hubble-rate dataset stores the redshift values `z`, the observed
+Hubble parameter values `mean`, and the corresponding one-sigma uncertainties `sigma`.
+The next cell prints the first few rows of the dataset selected above.
+
+```{python}
+# Inspect the structure of the selected H(z) dataset
+z_data = hz_data.get_property("z")
+h_data = hz_data.get_property("mean")
+sigma_data = hz_data.get_property("sigma")
+n_points = hz_data.get_property("n-points")
+
+print(hz_data.get_property("desc"))
+print(f"Number of points: {n_points}")
+print()
+print("First five rows:")
+print("   z        H(z)      sigma")
+
+for i in range(min(5, n_points)):
+    print(f"{z_data.get(i):7.4f}  {h_data.get(i):8.2f}  {sigma_data.get(i):8.2f}")
+```
+
+## Build the Dataset and Likelihood
+
+We now create a NumCosmo dataset holding the selected H(z) data and build the
+corresponding likelihood.
+
+```{python}
+# Create a dataset from the H(z) data
+dset = Ncm.Dataset.new_array([hz_data])
+
+# Create the likelihood from the dataset
+lh = Ncm.Likelihood(dataset=dset)
+```
+
+## Create and Run the Fit
+
+We now create a `Fit` object. In this example, we use the NLOpt backend with the
+`ln-neldermead` algorithm. The fit combines the likelihood, the model set, and a
+numerical differentiation method.
+
+We run it with `run_restart` rather than `run`. Nelder-Mead is a simplex method: the
+simplex contracts around a point and can stall before reaching the true minimum.
+`run_restart` re-minimizes from the previous optimum with a fresh simplex and repeats
+until an entire minimization improves $-2\ln L$ by less than a tolerance. Its arguments
+are the message level, the absolute tolerance (`1.0e-3`), the relative tolerance (`0.0`,
+i.e. unused), and two optional arguments for saving the model set to a file, left as
+`None` here. On this fit the restart is not decorative: the first pass stops at
+$-2\ln L = 248.55$ and the second reaches $247.92$, an improvement of $0.63$. That is a
+small shift, but it is far above the $10^{-3}$ tolerance, which is why a second
+minimization was run at all.
+
+```{python}
+# Create the fit object
+fit = Ncm.Fit.factory(
+    Ncm.FitType.NLOPT,
+    "ln-neldermead",
+    lh,
+    mset,
+    Ncm.FitGradType.NUMDIFF_FORWARD,
+)
+
+# Run the fit, restarting until the minimum stops improving
+fit.run_restart(Ncm.FitRunMsgs.SIMPLE, 1.0e-3, 0.0, None, None)
+fit.log_info()
+```
+
+The `m2lnL` printed above is $-2\ln L$, which is not the same as $\chi^2$. For Gaussian
+data the two differ by the likelihood normalization,
+
+$$
+-2\ln L = \chi^2 + \sum_i \ln\left(2\pi\sigma_i^2\right),
+$$
+
+and that sum depends only on the quoted uncertainties, not on the parameters. Here it
+equals $233.57$, so the $247.92$ above corresponds to $\chi^2 = 14.36$ for the 28 degrees
+of freedom printed alongside it, or $\chi^2/\mathrm{dof} = 0.51$. Dividing the printed
+$-2\ln L$ by the printed degrees of freedom gives $8.85$ instead, which would look like a
+strongly rejected model; the constant normalization is what makes that ratio meaningless.
+
+## Estimate the Covariance Matrix
+
+After finding the best-fit point, we estimate the covariance matrix for the free
+parameters. This gives an approximate uncertainty for each fitted parameter and their
+correlation.
+
+```{python}
+# Estimate the covariance matrix using the Fisher matrix
+fit.fisher()
+
+# Print the covariance matrix
+fit.log_covar()
+```
+
+The fitted equation of state sits about $0.4\sigma$ from the cosmological-constant
+value $w = -1$, so this compilation on its own is consistent with a cosmological
+constant. The correlation matrix shows where the remaining freedom went: with $H_0$
+free the strong degeneracy is between $H_0$ and $w$, not between $\Omega_c$ and $w$.
+H(z) data constrain the amplitude of the expansion history far better than its shape,
+so a shift in the normalization is largely reabsorbed by the equation of state.
+
+## Visualize the Local Confidence Regions
+
+The covariance matrix gives a local approximation to the parameter uncertainties around
+the best-fit point. With three free parameters we have to choose a plane to draw, and for
+H(z) data the informative one is $(H_0, w)$: the normalization the data pins down, against
+the equation of state it constrains only weakly. `fisher_border` uses the corresponding
+two-by-two block of the full covariance matrix, so the region below is *marginalized* over
+$\Omega_c$ rather than computed at a fixed value of it.
+
+```{python}
+# | label: fig-hz-fisher-regions
+# | fig-cap: Local confidence regions for the H(z) fit in the $(H_0, w)$ plane, marginalized over $\Omega_c$.
+# | fig-cap-location: margin
+# | code-fold: true
+
+# Create a two-dimensional likelihood-ratio object for the H0-w plane
+lhr2d = Ncm.LHRatio2d.new(
+    fit,
+    mset.fparam_get_pi_by_name("H0"),
+    mset.fparam_get_pi_by_name("w"),
+    1.0e-3,
+)
+
+# Confidence levels
+sigma_levels = [
+    (Ncm.C.stats_1sigma(), r"$1\sigma$"),
+    (Ncm.C.stats_2sigma(), r"$2\sigma$"),
+    (Ncm.C.stats_3sigma(), r"$3\sigma$"),
+]
+
+# Collect each border as a tidy data frame
+regions_pd_list = []
+
+for sigma, label in sigma_levels:
+    fisher_region = lhr2d.fisher_border(sigma, 300.0, Ncm.FitRunMsgs.NONE)
+
+    regions_pd_list.append(
+        pd.DataFrame(
+            {
+                "H0": np.array(fisher_region.p1.dup_array()),
+                "w": np.array(fisher_region.p2.dup_array()),
+                "sigma": label,
+            }
+        )
+    )
+
+regions_pd = pd.concat(regions_pd_list)
+best_fit_pd = pd.DataFrame({"H0": [cosmo["H0"]], "w": [cosmo["w"]]})
+
+(
+    ggplot(regions_pd, aes("H0", "w", color="sigma"))
+    + geom_path()
+    + geom_point(
+        data=best_fit_pd, mapping=aes("H0", "w"), inherit_aes=False, size=3
+    )
+    + labs(x=r"$H_0$ [km s$^{-1}$ Mpc$^{-1}$]", y=r"$w$", color="Confidence")
+    + doc_theme()
+)
+```
+
+These borders are the Gaussian approximation to the likelihood around the best fit, not
+the likelihood itself; the [SNIa + BAO example](rg_snia_bao.qmd) draws both and shows how
+far apart they can be. Here the $2\sigma$ and $3\sigma$ borders cross $w = 0$ into a
+region the model's parameter bounds exclude --- $w$ is restricted to $[-5, 0]$ --- because
+the Gaussian approximation is unaware of those bounds, whereas the sampler below respects
+them.
+
+## Visualize the Best-Fit Expansion History
+
+After the fit, the cosmological model contains the best-fit values of the free
+parameters. We can use it to evaluate the Hubble parameter $H(z)$ over a range of
+redshifts and compare the resulting curve with the selected observational data.
+
+```{python}
+# | label: fig-hz-best-fit
+# | fig-cap: Best-fit Hubble parameter compared with the selected H(z) data.
+# | fig-cap-location: margin
+# | code-fold: true
+
+# Redshift grid and the best-fit expansion history, H(z) = H0 sqrt(E2(z))
+z_a = np.linspace(0.0, 2.0, 200)
+Hz_a = np.array([cosmo.H0() * np.sqrt(cosmo.E2(z)) for z in z_a])
+
+model_pd = pd.DataFrame({"z": z_a, "Hz": Hz_a})
+
+# The selected dataset as a tidy data frame with one-sigma error bars
+data_pd = pd.DataFrame(
+    {
+        "z": np.array(z_data.dup_array()),
+        "Hz": np.array(h_data.dup_array()),
+        "sigma": np.array(sigma_data.dup_array()),
+    }
+)
+data_pd["Hz_lower"] = data_pd["Hz"] - data_pd["sigma"]
+data_pd["Hz_upper"] = data_pd["Hz"] + data_pd["sigma"]
+
+(
+    ggplot(data_pd, aes("z", "Hz"))
+    + geom_errorbar(aes(ymin="Hz_lower", ymax="Hz_upper"), width=0.02)
+    + geom_point(size=1.5)
+    + geom_line(
+        data=model_pd, mapping=aes("z", "Hz"), inherit_aes=False, color="red"
+    )
+    + labs(x=r"$z$", y=r"$H(z)$ [km s$^{-1}$ Mpc$^{-1}$]")
+    + doc_theme()
+)
+```
+
+::: {.callout-note}
+## Optional advanced section
+
+The next sections extend the best-fit analysis with an ensemble MCMC sampler. They are
+not required for the basic $H(z)$ fit above, but they show how the same likelihood and
+model set can be reused for posterior sampling.
+:::
+
+
+## Configure the Initial Sampler
+
+The fit above gives the best-fit point and an approximate covariance matrix. We can also
+continue the analysis with an ensemble Markov Chain Monte Carlo sampler, which samples the
+parameter space around the best fit and provides another estimate of the uncertainties.
+
+The ensemble sampler needs an initial distribution for the walkers. Here we use a Gaussian
+transition kernel, seeded with the Fisher covariance computed above, so the initial
+ensemble already has roughly the right shape and the chain spends fewer steps expanding
+into the posterior.
+
+```{python}
+# Create a Gaussian transition kernel for the initial sample
+init_sampler = Ncm.MSetTransKernGauss.new(0)
+
+# Associate the sampler with the model set
+init_sampler.set_mset(mset)
+
+# Use the model-set parameter information to define the prior
+init_sampler.set_prior_from_mset()
+
+# Start the walkers from the best-fit covariance
+init_sampler.set_cov(fit.get_covar())
+```
+
+## Configure the Ensemble Walker
+
+The ensemble sampler evolves several walkers in parallel through parameter space. In
+this example, we use the APES walker, which builds proposal distributions from the
+current ensemble.
+
+```{python}
+# Number of walkers in the ensemble
+nwalkers = 300
+
+# Create the APES walker
+walker = Ncm.FitESMCMCWalkerAPES.new(nwalkers, mset.fparams_len())
+```
+
+## Create the Ensemble Sampler
+
+We now combine the fit object, the initial sampler and the ensemble walker into an
+`Ncm.FitESMCMC` object, which controls the MCMC run.
+
+Two settings are worth noting. `set_use_threads` lets the sampler evaluate the ensemble in
+parallel; the number of threads comes from OpenMP, so it follows `OMP_NUM_THREADS` and the
+machine's core count rather than any NumCosmo setting. And `set_rng` fixes the random seed:
+without it the sampler draws its own seed at `start_run`, and every render of this page
+would produce different numbers and a different triangle plot. Parallel evaluation does not
+compromise this --- the random draws are made serially, and only the likelihood evaluations
+are threaded.
+
+```{python}
+# Create the ensemble MCMC object
+esmcmc = Ncm.FitESMCMC.new(
+    fit,
+    nwalkers,
+    init_sampler,
+    walker,
+    Ncm.FitRunMsgs.NONE,
+)
+
+# Evaluate the ensemble in parallel
+esmcmc.set_use_threads(True)
+
+# Fix the seed so this page is reproducible across renders
+esmcmc.set_rng(Ncm.RNG.seeded_new("mt19937", 1234))
+```
+
+## Run the Ensemble MCMC
+
+We can now run the ensemble sampler. It initializes the chain, advances a fixed number of
+ensemble steps, and closes the run. Each step advances all `nwalkers` walkers, so 200 steps
+produce 60000 sampled points. A fixed step count keeps the cost of building this page
+predictable, but it is not a convergence criterion: the first steps are still relaxing away
+from the initial ensemble and are discarded as burn-in below.
+
+```{python}
+# Start the MCMC run
+esmcmc.start_run()
+
+# Run a fixed number of ensemble steps
+esmcmc.run(200)
+
+# Finish the MCMC run
+esmcmc.end_run()
+```
+
+## Inspect the MCMC Results
+
+Before using the chain we discard the burn-in: `trim` drops every point earlier than the
+given ensemble step, here the first 20 of 200. Its second argument is a thinning factor,
+and `1` keeps every remaining row. The mean and covariance are then computed from the
+trimmed catalog and stored in the fit object, so they print in the same format used above
+for the Fisher covariance.
+
+```{python}
+# Access the MCMC catalog and discard the first 20 ensemble steps
+mcat = esmcmc.peek_catalog()
+mcat.trim(20, 1)
+
+# Compute the MCMC mean and covariance from the trimmed chain
+esmcmc.mean_covar()
+
+# Print the covariance estimated from the MCMC sample
+fit.log_covar()
+```
+
+These numbers are not expected to reproduce the Fisher values above: `fisher` gives the
+Gaussian approximation at the maximum, while `mean_covar` reports the posterior mean and
+width, and the two separate once the posterior is broad and asymmetric --- here $w$ is only
+weakly constrained and its long negative tail pulls the mean below the mode.
+
+The parameter bounds noted at the Fisher figure act here too, and they are visible in the
+triangle plot below: the $w$ posterior is cut at its upper bound $0$, and the $H_0$ one at
+its upper bound $99$. The bounds sit about $2\sigma$ and $3\sigma$ from the respective
+means, so the upper side of the $w$ constraint in particular is set by the prior range
+rather than by the data. The shift in $H_0$, from $70.8$ to $73.1$, is the mirror of the
+$w$ tail through their $-0.90$ correlation: samples drawn to more negative $w$ come with
+larger $H_0$.
+
+## Visualize the MCMC Samples
+
+Finally, we can visualize the MCMC samples. The triangle plot shows the marginalized
+posterior distributions for the fitted parameters and their joint confidence regions.
+GetDist reports `Removed no burn in` because the burn-in was already removed from the
+catalog in the previous step.
+
+```{python}
+# | label: fig-hz-mcmc-results
+# | fig-cap: MCMC posterior samples for the H(z) fit.
+# | fig-cap-location: margin
+# | code-fold: true
+
+# Convert the trimmed NumCosmo catalog to a GetDist-compatible object
+cd = mcat_to_catalog_data(mcat, name="H(z) fit")
+
+# Plot the marginalized and joint posterior distributions
+g = plots.get_subplot_plotter()
+g.triangle_plot(cd.to_mcsamples(), shaded=False, filled=True)
+```
+
+## Summary
+
+In this example, we fitted observational $H(z)$ data with an XCDM background
+cosmology. The basic workflow followed the standard NumCosmo fitting structure:
+
+1. create a cosmological model,
+2. set initial parameter values,
+3. choose the free parameters,
+4. build a model set,
+5. load the observational dataset,
+6. construct the likelihood,
+7. run the fit,
+8. estimate the covariance matrix.
+
+We then extended the same setup with an optional ensemble MCMC analysis. This second
+part reused the likelihood and model set from the best-fit calculation, configured an
+initial sampler and an ensemble walker, and used the resulting chain to estimate the
+posterior mean and covariance.
+
+In this example, $H_0$, $\Omega_c$ and $w$ were varied in the fit, while the other
+cosmological parameters were kept fixed. The same structure can be extended to include
+additional datasets, different cosmological models, or more free parameters.

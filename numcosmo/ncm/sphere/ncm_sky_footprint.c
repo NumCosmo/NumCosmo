@@ -32,7 +32,8 @@
  * in right ascension and declination. It provides uniform sampling of positions
  * within the region (ncm_sky_footprint_gen_ra_dec()), a membership test
  * (ncm_sky_footprint_contains()), the solid angle (ncm_sky_footprint_get_area())
- * and the normalized position density (ncm_sky_footprint_density() and its log).
+ * and the normalized density of positions in these coordinates
+ * (ncm_sky_footprint_density() and its log).
  *
  * It is meant to be shared by composition: both the galaxy sample position
  * distribution used in weak-lensing likelihoods and the halo/cluster mock
@@ -199,8 +200,11 @@ ncm_sky_footprint_get_area (NcmSkyFootprint *footprint)
  * @ra: a right ascension (degrees)
  * @dec: a declination (degrees)
  *
- * Computes the normalized position density at (@ra, @dec), in units of
- * inverse square degree, returning zero outside the footprint.
+ * Computes the probability density of the position (@ra, @dec) with respect to
+ * $\mathrm{d}\mathrm{ra}\,\mathrm{d}\mathrm{dec}$, both in degrees, returning zero
+ * outside the footprint. It integrates to one over the footprint in these
+ * coordinates, so for positions uniform on the sphere it carries the factor
+ * $\cos(\mathrm{dec})$; it is not a density per unit solid angle.
  *
  * Returns: the position density at (@ra, @dec).
  */
@@ -216,8 +220,8 @@ ncm_sky_footprint_density (NcmSkyFootprint *footprint, const gdouble ra, const g
  * @ra: a right ascension (degrees)
  * @dec: a declination (degrees)
  *
- * Computes the natural logarithm of the normalized position density at
- * (@ra, @dec), returning negative infinity outside the footprint.
+ * Computes the natural logarithm of ncm_sky_footprint_density() at (@ra, @dec),
+ * returning negative infinity outside the footprint.
  *
  * Returns: the log position density at (@ra, @dec).
  */

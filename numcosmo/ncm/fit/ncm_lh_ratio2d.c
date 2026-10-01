@@ -26,9 +26,16 @@
 /**
  * NcmLHRatio2d:
  *
- * Likelihood ratio object for bidimensional parameter analysis.
+ * Two-dimensional confidence regions from the profile likelihood ratio.
  *
- * Class for likelihood ratio analysis of two parameters.
+ * For two free parameters of a best fit, it traces the curve where $-2\ln L$ minimized
+ * over the other free parameters exceeds the best-fit value by $\chi^2_2$ at the
+ * requested confidence level (Wilks' theorem). Each point of the profile is a run of a
+ * copy of the fit with both parameters fixed. The search works in the coordinates
+ * $(\alpha, \beta)$ of the eigenvectors of the parameters' covariance, scaled by their
+ * standard deviations, where a Gaussian likelihood has a circular border of radius
+ * $\sqrt{\chi^2_2}$. The fit must hold a covariance (ncm_fit_obs_fisher(),
+ * ncm_fit_ls_fisher() or ncm_fit_fisher()).
  *
  */
 
@@ -47,7 +54,6 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_roots.h>
-#include <gsl/gsl_deriv.h>
 #include <gsl/gsl_eigen.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -68,7 +74,6 @@ struct _NcmLHRatio2d
   NcmFit *fit;
   NcmFit *constrained;
   NcmFitRunMsgs mtype;
-  NcmLHRatio2dRoot rtype;
   NcmMSetPIndex pi[2];
   NcmRNG *rng;
   gdouble chisquare;
@@ -84,7 +89,6 @@ struct _NcmLHRatio2d
   guint niter;
   guint func_eval;
   guint grad_eval;
-  NcmDiff *diff;
 };
 
 G_DEFINE_TYPE (NcmLHRatio2d, ncm_lh_ratio2d, G_TYPE_OBJECT)
@@ -102,7 +106,6 @@ ncm_lh_ratio2d_init (NcmLHRatio2d *lhr2d)
   lhr2d->pi[1].pid   = 0;
   lhr2d->chisquare   = 0.0;
   lhr2d->mtype       = NCM_FIT_RUN_MSGS_NONE;
-  lhr2d->rtype       = NCM_LH_RATIO2D_ROOT_BRACKET;
   lhr2d->e_vec       = ncm_matrix_new (2, 2);
   lhr2d->e_val       = ncm_vector_new (2);
   lhr2d->r           = 0.0;
@@ -111,7 +114,6 @@ ncm_lh_ratio2d_init (NcmLHRatio2d *lhr2d)
   lhr2d->shift[1]    = 0.0;
   lhr2d->border_prec = 0.0;
   lhr2d->angular     = FALSE;
-  lhr2d->diff        = ncm_diff_new ();
 }
 
 static void
@@ -208,7 +210,7 @@ ncm_lh_ratio2d_constructed (GObject *object)
         g_error ("ncm_lh_ratio2d_constructed: cannot use parameter[%d:%u], model not set.",
                  lhr2d->pi[i].mid, lhr2d->pi[i].pid);
 
-      if (ncm_mset_param_get_ftype (fit_mset, lhr2d->pi[0].mid, lhr2d->pi[0].pid, NULL) != NCM_PARAM_TYPE_FREE)
+      if (ncm_mset_param_get_ftype (fit_mset, lhr2d->pi[i].mid, lhr2d->pi[i].pid, NULL) != NCM_PARAM_TYPE_FREE)
         g_error ("ncm_lh_ratio2d_constructed: cannot find for a non fitted parameter[%d:%u].",
                  lhr2d->pi[i].mid, lhr2d->pi[i].pid);
 
@@ -238,7 +240,6 @@ ncm_lh_ratio2d_dispose (GObject *object)
   ncm_matrix_clear (&lhr2d->e_vec);
   ncm_vector_clear (&lhr2d->e_val);
   ncm_rng_clear (&lhr2d->rng);
-  ncm_diff_clear (&lhr2d->diff);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_lh_ratio2d_parent_class)->dispose (object);
@@ -299,10 +300,11 @@ ncm_lh_ratio2d_class_init (NcmLHRatio2dClass *klass)
  * @fit: a #NcmFit
  * @pi1: a #NcmMSetPIndex for the first parameter
  * @pi2: a #NcmMSetPIndex for the second parameter
- * @border_prec: precision on the border finder.
+ * @border_prec: relative precision of each border point
  *
- * Creates a new #NcmLHRatio2d object. The parameters @pi1 and @pi2 must be
- * parameters of the model set of @fit.
+ * Creates a #NcmLHRatio2d for the free parameters @pi1 and @pi2 of @fit. @fit must
+ * hold a best fit (ncm_fit_run() converged) and a covariance; a parameter that is not
+ * free aborts.
  *
  * Returns: (transfer full): a new #NcmLHRatio2d.
  */
@@ -321,8 +323,7 @@ ncm_lh_ratio2d_new (NcmFit *fit, const NcmMSetPIndex *pi1, const NcmMSetPIndex *
  * ncm_lh_ratio2d_free:
  * @lhr2d: a #NcmLHRatio2d
  *
- * Decreases the reference count of @lhr2d by one. If the reference count
- * reaches zero, all memory allocated by @lhr2d is released.
+ * Decreases the reference count of @lhr2d.
  *
  */
 void
@@ -335,8 +336,7 @@ ncm_lh_ratio2d_free (NcmLHRatio2d *lhr2d)
  * ncm_lh_ratio2d_clear:
  * @lhr2d: a #NcmLHRatio2d
  *
- * If @lhr2d is not %NULL, decreases its reference count by one and sets
- * @lhr2d to %NULL.
+ * Decreases the reference count of *@lhr2d and sets it to %NULL.
  *
  */
 void
@@ -349,8 +349,8 @@ static void
 _ncm_lh_ratio2d_prepare_coords (NcmLHRatio2d *lhr2d)
 {
   NcmMSet *fit_mset             = ncm_fit_peek_mset (lhr2d->fit);
-  const guint fpi1              = ncm_mset_fparam_get_fpi (fit_mset, lhr2d->pi[0].mid, lhr2d->pi[0].pid);
-  const guint fpi2              = ncm_mset_fparam_get_fpi (fit_mset, lhr2d->pi[1].mid, lhr2d->pi[1].pid);
+  const gint fpi1               = ncm_mset_fparam_get_fpi (fit_mset, lhr2d->pi[0].mid, lhr2d->pi[0].pid);
+  const gint fpi2               = ncm_mset_fparam_get_fpi (fit_mset, lhr2d->pi[1].mid, lhr2d->pi[1].pid);
   NcmMatrix *cov                = ncm_matrix_new (2, 2);
   gsl_eigen_symmv_workspace *vw = gsl_eigen_symmv_alloc (2);
 
@@ -407,7 +407,8 @@ _ncm_lh_ratio2d_prepare_coords (NcmLHRatio2d *lhr2d)
  * @pi1: a #NcmMSetPIndex for the first parameter
  * @pi2: a #NcmMSetPIndex for the second parameter
  *
- * Sets the parameters to be used in the likelihood ratio analysis.
+ * Makes @pi1 and @pi2 the parameters of @lhr2d; a parameter that is not free in the fit
+ * aborts.
  *
  */
 void
@@ -664,13 +665,6 @@ ncm_lh_ratio2d_root_brent (NcmLHRatio2d *lhr2d, gdouble x0, gdouble x)
     status = gsl_root_test_interval (x0, x1, 0, lhr2d->border_prec);
 
     ncm_lh_ratio2d_log_root_step (lhr2d, x0, x1);
-
-    if (!gsl_finite (ncm_lh_ratio2d_f (x, lhr2d)))
-    {
-      g_debug ("Ops");
-      x = GSL_NAN;
-      break;
-    }
   } while (status == GSL_CONTINUE && iter < max_iter);
 
   gsl_root_fsolver_free (s);
@@ -679,92 +673,21 @@ ncm_lh_ratio2d_root_brent (NcmLHRatio2d *lhr2d, gdouble x0, gdouble x)
   return x;
 }
 
-static gdouble
-ncm_lh_ratio2d_numdiff_df (gdouble x, gpointer p)
+/* A point of the border: its scaled eigen-coordinates, the direction of the last step
+ * and the parameter values. */
+typedef struct _NcmLHRatio2dPoint
 {
-  NcmLHRatio2d *lhr2d = NCM_LH_RATIO2D (p);
-  gdouble res, err;
-
-  res = ncm_diff_rf_d1_1_to_1 (lhr2d->diff, x, ncm_lh_ratio2d_f, p, &err);
-
-  return res;
-}
+  gdouble x;
+  gdouble y;
+  gdouble theta;
+  gdouble p1;
+  gdouble p2;
+} NcmLHRatio2dPoint;
 
 static void
-ncm_lh_ratio2d_numdiff_fdf (gdouble x, gpointer p, gdouble *y, gdouble *dy)
+_ncm_lh_ratio2d_points_add (NcmLHRatio2d *lhr2d, GList **points)
 {
-  *dy = ncm_lh_ratio2d_numdiff_df (x, p);
-  *y  = ncm_lh_ratio2d_f (x, p);
-
-  return;
-}
-
-static gdouble
-ncm_lh_ratio2d_root_steffenson (NcmLHRatio2d *lhr2d, gdouble x0, gdouble x1)
-{
-  gint status;
-  gint iter = 0, max_iter = 1000000;
-  const gsl_root_fdfsolver_type *T;
-  gsl_root_fdfsolver *s;
-  gsl_function_fdf F;
-  gdouble x = (x0 + x1) * 0.5;
-
-  F.f      = &ncm_lh_ratio2d_f;
-  F.df     = &ncm_lh_ratio2d_numdiff_df;
-  F.fdf    = &ncm_lh_ratio2d_numdiff_fdf;
-  F.params = lhr2d;
-
-  T = gsl_root_fdfsolver_steffenson;
-  s = gsl_root_fdfsolver_alloc (T);
-  gsl_root_fdfsolver_set (s, &F, x);
-
-  ncm_lh_ratio2d_log_root_start (lhr2d, x0, x);
-
-  do {
-    iter++;
-    status = gsl_root_fdfsolver_iterate (s);
-
-    if (status)
-    {
-      g_warning ("%s", gsl_strerror (status));
-      gsl_root_fdfsolver_free (s);
-
-      return GSL_NAN;
-    }
-
-    x0     = x;
-    x      = gsl_root_fdfsolver_root (s);
-    status = gsl_root_test_delta (x, x0, 0, lhr2d->border_prec);
-
-    ncm_lh_ratio2d_log_root_step (lhr2d, x, x0);
-
-    if (!gsl_finite (ncm_lh_ratio2d_f (x, lhr2d)))
-    {
-      g_debug ("Ops");
-      x = GSL_NAN;
-      break;
-    }
-  } while (status == GSL_CONTINUE && iter < max_iter);
-
-  ncm_lh_ratio2d_log_root_finish (lhr2d, x, lhr2d->border_prec);
-
-  gsl_root_fdfsolver_free (s);
-
-  return x;
-}
-
-/**
- * ncm_lh_ratio2d_points_add:
- * @lhr2d: a #NcmLHRatio2d
- * @points: a #GList of #NcmLHRatio2dPoint
- *
- * Adds a new point to the list of points.
- *
- */
-void
-ncm_lh_ratio2d_points_add (NcmLHRatio2d *lhr2d, GList **points)
-{
-  NcmLHRatio2dPoint *p_new = g_slice_new (NcmLHRatio2dPoint);
+  NcmLHRatio2dPoint *p_new = g_new (NcmLHRatio2dPoint, 1);
 
   p_new->x     = lhr2d->shift[0] + lhr2d->r * cos (lhr2d->theta);
   p_new->y     = lhr2d->shift[1] + lhr2d->r * sin (lhr2d->theta);
@@ -775,116 +698,15 @@ ncm_lh_ratio2d_points_add (NcmLHRatio2d *lhr2d, GList **points)
   *points = g_list_append (*points, p_new);
 }
 
-/**
- * ncm_lh_ratio2d_points_exists: (skip)
- * @points: a #GList of #NcmLHRatio2dPoint
- * @x: coordinate x
- * @y: coordinate y
- * @n: number of points to check
- *
- * Checks if the point (@x, @y) exists in the list of points.
- *
- * Returns: %TRUE if the point exists, %FALSE otherwise.
- */
-gboolean
-ncm_lh_ratio2d_points_exists (GList **points, gdouble x, gdouble y, guint n)
+static void
+_ncm_lh_ratio2d_points_free (GList *points)
 {
-  GList *pos = g_list_last (*points);
-
-  while (n != 0)
-  {
-    NcmLHRatio2dPoint *crp1, *crp2;
-    gdouble t1, t2;
-
-    if (pos == NULL)
-      break;
-
-    crp1 = (NcmLHRatio2dPoint *) pos->data;
-    pos  = g_list_previous (pos);
-
-    if (pos == NULL)
-      break;
-
-    crp2 = (NcmLHRatio2dPoint *) pos->data;
-    t1   = (x - crp1->x) / (crp2->x - crp1->x);
-    t2   = (y - crp1->y) / (crp2->y - crp1->y);
-
-    if ((fabs (t1 - t2) < 1e-1) && (t1 >= 0.0) && (t1 <= 1.0))
-      return TRUE;
-
-    n--;
-  }
-
-  return FALSE;
+  g_list_free_full (points, g_free);
 }
 
-/**
- * ncm_lh_ratio2d_points_print: (skip)
- * @points: a #GList of #NcmLHRatio2dPoint
- * @out: a file handler to print to
- *
- * Prints the list of points to the file handler @out.
- *
- */
-void
-ncm_lh_ratio2d_points_print (GList *points, FILE *out)
-{
-  GList *spoints = points;
-
-  points = g_list_first (spoints);
-
-  while (points)
-  {
-    NcmLHRatio2dPoint *crp = (NcmLHRatio2dPoint *) points->data;
-
-    fprintf (out, "% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", crp->p1, crp->p2, crp->x, crp->y, crp->theta);
-    fflush (out);
-    points = g_list_next (points);
-  }
-
-  points = g_list_first (spoints);
-  {
-    NcmLHRatio2dPoint *crp = (NcmLHRatio2dPoint *) points->data;
-
-    fprintf (out, "% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", crp->p1, crp->p2, crp->x, crp->y, crp->theta);
-    fflush (out);
-  }
-}
-
-/**
- * ncm_lh_ratio2d_points_free: (skip)
- * @points: a #GList of #NcmLHRatio2dPoint
- *
- * Frees the list of points.
- *
- */
-void
-ncm_lh_ratio2d_points_free (GList *points)
-{
-  points = g_list_first (points);
-
-  while (points)
-  {
-    NcmLHRatio2dPoint *crp = (NcmLHRatio2dPoint *) points->data;
-
-    g_slice_free (NcmLHRatio2dPoint, crp);
-    points = g_list_next (points);
-  }
-
-  g_list_free (points);
-}
-
-/**
- * ncm_lh_ratio2d_points_to_region: (skip)
- * @points: a #GList of #NcmLHRatio2dPoint
- * @clevel: confidence level
- *
- * Converts the list of points to a region.
- *
- * Returns: (transfer full): a #NcmLHRatio2dRegion
- */
-NcmLHRatio2dRegion *
-ncm_lh_ratio2d_points_to_region (GList *points, gdouble clevel)
+/* The region of @points, closed by repeating the first point. */
+static NcmLHRatio2dRegion *
+_ncm_lh_ratio2d_points_to_region (GList *points, gdouble clevel)
 {
   GList *spoints         = points;
   NcmLHRatio2dRegion *rg = g_slice_new0 (NcmLHRatio2dRegion);
@@ -918,10 +740,6 @@ ncm_lh_ratio2d_points_to_region (GList *points, gdouble clevel)
 
   return rg;
 }
-
-#define TIMEOUT 90.0
-#define RESCALE (0.5)
-#define NMAXTRIES 40
 
 static void
 _ncm_lh_ratio2d_set_angular_interval (NcmLHRatio2d *lhr2d, const gdouble da, gdouble *theta0, gdouble *theta1)
@@ -964,29 +782,35 @@ _ncm_lh_ratio2d_set_angular_interval (NcmLHRatio2d *lhr2d, const gdouble da, gdo
 
 /**
  * ncm_lh_ratio2d_conf_region:
- * @lhr2d: a @NcmLHRatio2d
- * @clevel: confidence level
- * @expected_np: Expected number of points, if lesser than 1 it uses the default value of 100.
+ * @lhr2d: a #NcmLHRatio2d
+ * @clevel: confidence level, in $(0, 1)$
+ * @expected_np: number of border points for a Gaussian likelihood; values up to one
+ *   select 100
  * @mtype: a #NcmFitRunMsgs
  *
- * Computes the confidence region with the given @clevel.
+ * Traces the border of the confidence region at level @clevel. From the best fit it
+ * searches outwards, in a random direction of the scaled eigen-coordinates, for the
+ * first border point; it then walks along the border in steps of length
+ * $2\pi\sqrt{\chi^2_2}/$@expected_np, finding each next point by a root search in the
+ * direction of the step, until it returns to the first point; a walk longer than 100
+ * times @expected_np steps aborts. Each root is found by
+ * Brent's method to relative precision #NcmLHRatio2d:border-prec. Points outside the
+ * parameter bounds count as outside the region, so the border follows a bound it meets.
  *
- * Returns: (transfer full): a #NcmLHRatio2dRegion
+ * Returns: (transfer full): the border as a closed #NcmLHRatio2dRegion
  */
 NcmLHRatio2dRegion *
 ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expected_np, NcmFitRunMsgs mtype)
 {
-  gdouble init_x, init_y;
-  gint i, counter = -1;
-  GList *points = NULL, *final_points = NULL;
-  gboolean completed = FALSE;
-  gdouble second_try = FALSE;
-
-  static gdouble (*root) (NcmLHRatio2d *, gdouble, gdouble);
+  GList *points = NULL;
+  gdouble init_x, init_y, val, r0, r, scale, theta0, theta1;
+  guint max_steps;
+  guint i;
 
   if (expected_np <= 1.0)
     expected_np = 100.0;
 
+  max_steps    = (guint) (100.0 * expected_np);
   lhr2d->mtype = mtype;
   ncm_lh_ratio2d_log_start (lhr2d, clevel);
 
@@ -995,120 +819,71 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expecte
   lhr2d->shift[1]  = 0.0;
   lhr2d->theta     = ncm_rng_uniform01_gen (lhr2d->rng) * 2.0 * M_PI;
 
-  switch (lhr2d->rtype)
+  /* The first border point, searched outwards along theta. */
+  lhr2d->angular = FALSE;
+
+  scale = sqrt (lhr2d->chisquare);
+  r0    = 0.0;
+  r     = scale;
+
+  while ((val = ncm_lh_ratio2d_f (r, lhr2d)) < 0)
   {
-    case NCM_LH_RATIO2D_ROOT_BRACKET:
-      root = ncm_lh_ratio2d_root_brent;
-      break;
-    case NCM_LH_RATIO2D_ROOT_NUMDIFF:
-      root = ncm_lh_ratio2d_root_steffenson;
-      break;
-    default:
-      g_assert_not_reached ();
-      break;
+    ncm_lh_ratio2d_log_param_val (lhr2d, r, val);
+    r0 = r;
+    r += scale;
   }
 
-  while (!completed)
+  r = ncm_lh_ratio2d_root_brent (lhr2d, r0, r);
+  ncm_lh_ratio2d_log_border_found (lhr2d, r);
+
+  _ncm_lh_ratio2d_points_add (lhr2d, &points);
+
+  /* The walk: each step of length r from the last point, in the direction theta where
+   * the circle around it crosses the border. */
+  lhr2d->shift[0] = lhr2d->r * cos (lhr2d->theta);
+  lhr2d->shift[1] = lhr2d->r * sin (lhr2d->theta);
+
+  init_x = lhr2d->shift[0];
+  init_y = lhr2d->shift[1];
+
+  lhr2d->angular = TRUE;
+  lhr2d->r       = (2.0 * M_PI * sqrt (lhr2d->chisquare) / expected_np);
+
+  theta0 = lhr2d->theta - M_PI * 0.25;
+  theta1 = lhr2d->theta + M_PI * 0.25;
+
+  for (i = 0; ; i++)
   {
-    gdouble val, r0, r, scale;
-    gdouble theta0, theta1;
+    if (i >= max_steps)
+      g_error ("ncm_lh_ratio2d_conf_region: the border did not return to its first point "
+               "after %u steps (100 times the expected number of points).", max_steps);
 
-    lhr2d->angular = FALSE;
-
-    scale = sqrt (lhr2d->chisquare);
-    r0    = 0.0;
-    r     = scale;
-
-    while ((val = ncm_lh_ratio2d_f (r, lhr2d)) < 0)
-    {
-      ncm_lh_ratio2d_log_param_val (lhr2d, r, val);
-      r0 = r;
-      r += scale;
-    }
-
-    r = root (lhr2d, r0, r);
-    ncm_lh_ratio2d_log_border_found (lhr2d, r);
-
-    completed = TRUE;
-
-    if (second_try)
-      completed = TRUE;
-
-    ncm_lh_ratio2d_points_add (lhr2d, &points);
-
-    lhr2d->shift[0] = lhr2d->r * cos (lhr2d->theta);
-    lhr2d->shift[1] = lhr2d->r * sin (lhr2d->theta);
-
-    init_x = lhr2d->shift[0];
-    init_y = lhr2d->shift[1];
-
-    lhr2d->angular = TRUE;
-    lhr2d->r       = (2.0 * M_PI * sqrt (lhr2d->chisquare) / expected_np);
+    _ncm_lh_ratio2d_set_angular_interval (lhr2d, M_PI * 0.5, &theta0, &theta1);
+    lhr2d->theta = ncm_lh_ratio2d_root_brent (lhr2d, theta0, theta1);
 
     theta0 = lhr2d->theta - M_PI * 0.25;
     theta1 = lhr2d->theta + M_PI * 0.25;
 
-    i = 0;
+    lhr2d->theta = ncm_c_radian_0_2pi (lhr2d->theta);
 
-    while (TRUE)
+    _ncm_lh_ratio2d_points_add (lhr2d, &points);
+
+    lhr2d->shift[0] += lhr2d->r * cos (lhr2d->theta);
+    lhr2d->shift[1] += lhr2d->r * sin (lhr2d->theta);
+
+    if ((i > 10) && (fabs (init_x - lhr2d->shift[0]) < lhr2d->r) && (fabs (init_y - lhr2d->shift[1]) < lhr2d->r))
     {
-      _ncm_lh_ratio2d_set_angular_interval (lhr2d, M_PI * 0.5, &theta0, &theta1);
-      lhr2d->theta = root (lhr2d, theta0, theta1);
+      if (lhr2d->mtype > NCM_FIT_RUN_MSGS_NONE)
+        g_message ("#  Start found at [%u], ending...\n", i);
 
-      theta0 = lhr2d->theta - M_PI * 0.25;
-      theta1 = lhr2d->theta + M_PI * 0.25;
-
-      lhr2d->theta = ncm_c_radian_0_2pi (lhr2d->theta);
-
-      ncm_lh_ratio2d_points_add (lhr2d, &points);
-
-      lhr2d->shift[0] += lhr2d->r * cos (lhr2d->theta);
-      lhr2d->shift[1] += lhr2d->r * sin (lhr2d->theta);
-
-      counter--;
-
-      if (!counter)
-        break;
-
-      {
-        gboolean near_x = fabs (init_x - lhr2d->shift[0]) < lhr2d->r;
-        gboolean near_y = fabs (init_y - lhr2d->shift[1]) < lhr2d->r;
-
-        if ((i > 10) && near_x && near_y && (counter < 0))
-        {
-          g_message ("#  Start found at [%d], ending...\n", i);
-          completed = TRUE;
-          break;
-          counter = 5;
-        }
-      }
-      i++;
-    }
-
-    ncm_lh_ratio2d_points_add (lhr2d, &points);
-
-    if (final_points == NULL)
-    {
-      final_points = points;
-      points       = NULL;
-    }
-    else
-    {
-      final_points = g_list_concat (final_points, g_list_reverse (points));
-      points       = NULL;
-    }
-
-    if (!completed)
-    {
-      second_try = TRUE;
-      g_message ("#  Trying in another direction\n");
+      break;
     }
   }
 
   {
-    NcmLHRatio2dRegion *rg = ncm_lh_ratio2d_points_to_region (final_points, clevel);
+    NcmLHRatio2dRegion *rg = _ncm_lh_ratio2d_points_to_region (points, clevel);
 
-    ncm_lh_ratio2d_points_free (final_points);
+    _ncm_lh_ratio2d_points_free (points);
 
     return rg;
   }
@@ -1116,28 +891,29 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expecte
 
 /**
  * ncm_lh_ratio2d_fisher_border:
- * @lhr2d: a #NcmFit.
- * @clevel: confidence level
- * @expected_np:  Expected number of points, if lesser than 1 it uses the default value of 600.
- * @mtype: a #NcmFitRunMsgs
+ * @lhr2d: a #NcmLHRatio2d
+ * @clevel: confidence level, in $(0, 1)$
+ * @expected_np: number of points, truncated to an integer; values up to one select 600
+ * @mtype: a #NcmFitRunMsgs, unused
  *
- * Computes the Fisher border with the given @clevel.
+ * Computes the border at level @clevel of the Gaussian approximation given by the
+ * covariance of the fit: the ellipse $d^T C^{-1} d = \chi^2_2$, $d$ the offset from
+ * the best fit and $C$ the covariance of the two parameters.
  *
- * Returns: (transfer full): a #NcmLHRatio2dRegion
+ * Returns: (transfer full): the border as a closed #NcmLHRatio2dRegion
  */
 NcmLHRatio2dRegion *
 ncm_lh_ratio2d_fisher_border (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expected_np, NcmFitRunMsgs mtype)
 {
   GList *points = NULL;
-  gdouble theta;
-  gdouble step;
+  guint np, i;
 
   NCM_UNUSED (mtype);
 
   if (expected_np <= 1.0)
     expected_np = 600.0;
 
-  step = 2.0 * M_PI / expected_np;
+  np = (guint) expected_np;
 
   lhr2d->chisquare = gsl_cdf_chisq_Qinv (1.0 - clevel, 2);
   lhr2d->r         = sqrt (lhr2d->chisquare);
@@ -1145,16 +921,16 @@ ncm_lh_ratio2d_fisher_border (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expec
   lhr2d->shift[0] = 0.0;
   lhr2d->shift[1] = 0.0;
 
-  for (theta = 0.0; theta <= 2.0 * M_PI; theta += step)
+  for (i = 0; i < np; i++)
   {
-    lhr2d->theta = theta;
-    ncm_lh_ratio2d_points_add (lhr2d, &points);
+    lhr2d->theta = 2.0 * M_PI * i / np;
+    _ncm_lh_ratio2d_points_add (lhr2d, &points);
   }
 
   {
-    NcmLHRatio2dRegion *rg = ncm_lh_ratio2d_points_to_region (points, clevel);
+    NcmLHRatio2dRegion *rg = _ncm_lh_ratio2d_points_to_region (points, clevel);
 
-    ncm_lh_ratio2d_points_free (points);
+    _ncm_lh_ratio2d_points_free (points);
 
     return rg;
   }
@@ -1162,11 +938,9 @@ ncm_lh_ratio2d_fisher_border (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expec
 
 /**
  * ncm_lh_ratio2d_region_dup:
- * @rg: a #NcmLHRatio2dRegion.
+ * @rg: a #NcmLHRatio2dRegion
  *
- * Duplicates a #NcmLHRatio2dRegion.
- *
- * Returns: (transfer full): a #NcmLHRatio2dRegion.
+ * Returns: (transfer full): a copy of @rg
  */
 NcmLHRatio2dRegion *
 ncm_lh_ratio2d_region_dup (NcmLHRatio2dRegion *rg)
@@ -1183,9 +957,9 @@ ncm_lh_ratio2d_region_dup (NcmLHRatio2dRegion *rg)
 
 /**
  * ncm_lh_ratio2d_region_free:
- * @rg: a #NcmLHRatio2dRegion.
+ * @rg: a #NcmLHRatio2dRegion
  *
- * Frees a #NcmLHRatio2dRegion.
+ * Frees @rg.
  *
  */
 void
@@ -1198,9 +972,9 @@ ncm_lh_ratio2d_region_free (NcmLHRatio2dRegion *rg)
 
 /**
  * ncm_lh_ratio2d_region_clear:
- * @rg: a #NcmLHRatio2dRegion.
+ * @rg: a #NcmLHRatio2dRegion
  *
- * If @rg is not %NULL, frees a #NcmLHRatio2dRegion and sets @rg to %NULL.
+ * Frees *@rg, when not %NULL, and sets it to %NULL.
  *
  */
 void
@@ -1212,9 +986,9 @@ ncm_lh_ratio2d_region_clear (NcmLHRatio2dRegion **rg)
 /**
  * ncm_lh_ratio2d_region_print:
  * @rg: a #NcmLHRatio2dRegion
- * @out: a file handler to print to
+ * @out: a file
  *
- * Prints the region to the file handler @out.
+ * Prints the points of @rg to @out, one pair of parameter values per line.
  *
  */
 void

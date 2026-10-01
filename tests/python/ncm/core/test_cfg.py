@@ -198,7 +198,7 @@ from numcosmo_py import Ncm
 
 Ncm.cfg_init()
 # Creating this object plans real FFTW transforms, which is what drives the
-# wisdom load/save paths in ncm_cfg.c.
+# private wisdom load/save in ncm_cfg.c.
 Ncm.FftlogSBesselJ.new(0, -5.0, 5.0, 2.0, 200)
 print(Ncm.cfg_get_fftw_default_flag_str())
 """
@@ -210,9 +210,9 @@ print(Ncm.cfg_get_fftw_default_flag_str())
 def test_fftw_wisdom_round_trips_through_the_cache(tmp_path) -> None:
     """Wisdom is written once and read back by a later process.
 
-    ncm_cfg's wisdom load/save are variadic, so GObject introspection does not
-    expose them; they are reached only as a side effect of planning a
-    transform. Both are also no-ops under FFTW_ESTIMATE, which is why this
+    ncm_cfg's wisdom load/save are private; they are reached only through
+    ncm_cfg_fftw_plan_begin/end when a transform is planned. Both are also
+    no-ops under FFTW_ESTIMATE, which is why this
     runs a child with an explicit planner and its own HOME -- the wisdom file
     lives in $HOME/.numcosmo, and the loaded-once cache is per process, so the
     read-an-existing-file path needs a second process to be exercised at all.
