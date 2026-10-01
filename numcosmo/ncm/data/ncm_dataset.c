@@ -578,6 +578,7 @@ ncm_dataset_clear (NcmDataset **dset)
 }
 
 static void _ncm_dataset_prepare_all (NcmDataset *dset, NcmMSet *mset);
+static void _ncm_dataset_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static void _ncm_dataset_check_fisher_matrix (NcmMatrix **IM, const guint fparams_len);
 
 /**
@@ -707,9 +708,7 @@ ncm_dataset_bootstrap_resample (NcmDataset *dset, NcmRNG *rng)
         guint bsize          = g_array_index (dset->bstrap, guint, i);
 
         ncm_bootstrap_set_bsize (bstrap, bsize);
-
-        if (bsize > 0)
-          ncm_data_bootstrap_resample (data, rng);
+        ncm_data_bootstrap_resample (data, rng);
       }
 
       break;
@@ -919,19 +918,10 @@ ncm_dataset_m2lnL_val (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL)
 
   for (i = 0; i < dset->oa->len; i++)
   {
-    NcmData *data = ncm_dataset_peek_data (dset, i);
+    gdouble m2lnL_i;
 
-    if (!NCM_DATA_GET_CLASS (data)->m2lnL_val)
-    {
-      g_error ("ncm_dataset_m2lnL_val: data `%s' does not implement m2lnL_val.", ncm_data_peek_desc (data));
-    }
-    else
-    {
-      gdouble m2lnL_i;
-
-      NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, &m2lnL_i);
-      *m2lnL += m2lnL_i;
-    }
+    _ncm_dataset_data_m2lnL_val (ncm_dataset_peek_data (dset, i), mset, &m2lnL_i);
+    *m2lnL += m2lnL_i;
   }
 
   return;
@@ -958,19 +948,10 @@ ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v)
 
   for (i = 0; i < dset->oa->len; i++)
   {
-    NcmData *data = ncm_dataset_peek_data (dset, i);
+    gdouble m2lnL_i;
 
-    if (!NCM_DATA_GET_CLASS (data)->m2lnL_val)
-    {
-      g_error ("ncm_dataset_m2lnL_val: data `%s' does not implement m2lnL_val.", ncm_data_peek_desc (data));
-    }
-    else
-    {
-      gdouble m2lnL_i;
-
-      NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, &m2lnL_i);
-      ncm_vector_set (m2lnL_v, i, m2lnL_i);
-    }
+    _ncm_dataset_data_m2lnL_val (ncm_dataset_peek_data (dset, i), mset, &m2lnL_i);
+    ncm_vector_set (m2lnL_v, i, m2lnL_i);
   }
 
   return;
@@ -996,16 +977,25 @@ ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2ln
 
   /* Every block, not only the requested one: see _ncm_dataset_prepare_all. */
   _ncm_dataset_prepare_all (dset, mset);
-  {
-    NcmData *data = ncm_dataset_peek_data (dset, i);
-
-    if (!NCM_DATA_GET_CLASS (data)->m2lnL_val)
-      g_error ("ncm_dataset_m2lnL_val: data `%s' does not implement m2lnL_val.", ncm_data_peek_desc (data));
-    else
-      NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, m2lnL_i);
-  }
+  _ncm_dataset_data_m2lnL_val (ncm_dataset_peek_data (dset, i), mset, m2lnL_i);
 
   return;
+}
+
+/* Evaluates one prepared #NcmData, aborting if it has no m2lnL_val or its bootstrap has no realization */
+static void
+_ncm_dataset_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
+{
+  NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
+
+  if (!NCM_DATA_GET_CLASS (data)->m2lnL_val)
+    g_error ("ncm_dataset_m2lnL_val: data `%s' does not implement m2lnL_val.", ncm_data_peek_desc (data));
+
+  if ((bstrap != NULL) && !ncm_bootstrap_is_init (bstrap))
+    g_error ("ncm_dataset_m2lnL_val: data `%s': the bootstrap has no realization, call ncm_dataset_bootstrap_resample() first.",
+             ncm_data_peek_desc (data));
+
+  NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, m2lnL);
 }
 
 /**

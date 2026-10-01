@@ -59,7 +59,7 @@ struct _NcmFitESMCMCWalkerClass
   void (*end_run) (NcmFitESMCMCWalker *walker);
   gboolean (*is_markovian) (NcmFitESMCMCWalker *walker);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
+  /* Padding to allow adding up to 4 more virtual functions without breaking ABI. */
   gpointer padding[4];
 };
 

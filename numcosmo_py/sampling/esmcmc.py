@@ -118,7 +118,12 @@ def create_esmcmc(
         if robust:
             walker.set_cov_robust()
         walker.set_method(interpolation_method.genum)
-        walker.set_k_type(interpolation_kernel.genum)
+        # auto_kernel is the older spelling of InterpolationKernel.AUTO.
+        walker.set_k_type(
+            InterpolationKernel.AUTO.genum
+            if auto_kernel
+            else interpolation_kernel.genum
+        )
         # After the kernel, so that an incompatible pair is caught immediately.
         walker.set_center_shrink(use_apes_center_shrink)
         walker.set_defensive_frac(apes_defensive_frac)
@@ -127,7 +132,6 @@ def create_esmcmc(
         walker.set_vkde_points_per_dim(apes_vkde_points_per_dim)
         walker.set_uniform_weights(apes_uniform_weights)
         walker.set_cv_type(cv_method.genum)
-        walker.set_auto_kernel(auto_kernel)
         if split_fraction is not None:
             walker.set_split_frac(split_fraction)
         if use_apes_threads is None:

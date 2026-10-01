@@ -26,11 +26,10 @@
 /**
  * NcmPriorGaussFunc:
  *
- * Gaussian prior on a parameter.
+ * Gaussian prior on a derived quantity.
  *
- * This object is a subclass of #NcmPriorGauss, specializing in a Gaussian prior on a
- * derived quantity. The prior is characterized by a mean function, an optional
- * function argument, and user-specified mean and standard deviation parameters.
+ * This object is a subclass of #NcmPriorGauss whose quantity $x$ is a scalar
+ * #NcmMSetFunc, the mean function, evaluated at #NcmPriorGauss:variable.
  *
  */
 
@@ -115,13 +114,6 @@ _ncm_prior_gauss_func_dispose (GObject *object)
   G_OBJECT_CLASS (ncm_prior_gauss_func_parent_class)->dispose (object);
 }
 
-static void
-_ncm_prior_gauss_func_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_prior_gauss_func_parent_class)->finalize (object);
-}
-
 static gdouble _ncm_prior_gauss_func_mean (NcmPriorGauss *pg, NcmMSet *mset);
 
 static void
@@ -133,7 +125,6 @@ ncm_prior_gauss_func_class_init (NcmPriorGaussFuncClass *klass)
   object_class->set_property = &_ncm_prior_gauss_func_set_property;
   object_class->get_property = &_ncm_prior_gauss_func_get_property;
   object_class->dispose      = &_ncm_prior_gauss_func_dispose;
-  object_class->finalize     = &_ncm_prior_gauss_func_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_MEAN_FUNC,
@@ -159,7 +150,7 @@ _ncm_prior_gauss_func_mean (NcmPriorGauss *pg, NcmMSet *mset)
  * @mean_func: a #NcmMSetFunc
  * @mu: mean
  * @sigma: standard deviation
- * @var: variable
+ * @var: argument of @mean_func
  *
  * Creates a new Gaussian prior for parameter @pid of model @mid.
  *

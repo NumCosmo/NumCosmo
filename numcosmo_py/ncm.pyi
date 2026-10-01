@@ -1001,7 +1001,7 @@ class CSQ1D(GObject.Object):
       reltol -> gdouble: reltol
         Relative tolerance
       abstol -> gdouble: abstol
-        Absolute tolerance tolerance
+        Absolute tolerance
       ti -> gdouble: ti
         The initial time t_i
       tf -> gdouble: tf
@@ -1072,7 +1072,7 @@ class CSQ1D(GObject.Object):
         self, model: typing.Optional[Model], t: float, state: CSQ1DState
     ) -> CSQ1DState: ...
     def compute_prop_vector(
-        self, model: Model, t: float, state: CSQ1DState
+        self, model: typing.Optional[Model], t: float, state: CSQ1DState
     ) -> CSQ1DState: ...
     def do_eval_F1(self, model: typing.Optional[Model], t: float) -> float: ...
     def do_eval_F2(self, model: typing.Optional[Model], t: float) -> float: ...
@@ -3019,7 +3019,7 @@ class Fit(GObject.Object):
         mset: MSet
         params_reltol: float
         state: FitState
-        sub_fit: Fit
+        sub_fit: typing.Optional[Fit]
 
     props: Props = ...
     parent_instance: GObject.Object = ...
@@ -3084,7 +3084,7 @@ class Fit(GObject.Object):
     def get_maxiter(self) -> int: ...
     def get_messages(self) -> FitRunMsgs: ...
     def get_params_reltol(self) -> float: ...
-    def get_sub_fit(self) -> Fit: ...
+    def get_sub_fit(self) -> typing.Optional[Fit]: ...
     def has_sub_fit(self) -> bool: ...
     def inequality_constraints_len(self) -> int: ...
     def is_least_squares(self) -> bool: ...
@@ -3470,7 +3470,7 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
       use-threads -> gboolean: use-threads
         Whether to use threads when building the posterior approximation
       center-shrink -> gboolean: center-shrink
-        Whether to shrink the kernel centres toward the ensemble mean
+        Whether to shrink the kernel centers toward the ensemble mean
       defensive-frac -> gdouble: defensive-frac
         Weight of the wide Student-t component in the proposal
       defensive-scale -> gdouble: defensive-scale
@@ -3484,7 +3484,7 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
       cv-type -> NcmStatsDistCV: cv-type
         Cross-validation used to choose the over-smooth factor
       split-frac -> gdouble: split-frac
-        Fraction of the block used as kernel centres
+        Fraction of the block used as kernel centers
       exploration -> guint: exploration
         Exploration phase length cap in iterations
       exploration-qratio-floor -> gdouble: exploration-qratio-floor
@@ -3839,7 +3839,7 @@ class FitGSLLS(Fit):
         mset: MSet
         params_reltol: float
         state: FitState
-        sub_fit: Fit
+        sub_fit: typing.Optional[Fit]
 
     props: Props = ...
     def __init__(
@@ -3880,7 +3880,7 @@ class FitGSLMM(Fit):
 
         FitGSLMM(**properties)
         new(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo:NumCosmoMath.FitGSLMMAlgos) -> NumCosmoMath.Fit
-        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str) -> NumCosmoMath.Fit
+        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str=None) -> NumCosmoMath.Fit
         new_default(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType) -> NumCosmoMath.Fit
 
     Object NcmFitGSLMM
@@ -3935,7 +3935,7 @@ class FitGSLMM(Fit):
         mset: MSet
         params_reltol: float
         state: FitState
-        sub_fit: Fit
+        sub_fit: typing.Optional[Fit]
 
     props: Props = ...
     def __init__(
@@ -3961,7 +3961,11 @@ class FitGSLMM(Fit):
     ) -> FitGSLMM: ...
     @classmethod
     def new_by_name(
-        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str
+        cls,
+        lh: Likelihood,
+        mset: MSet,
+        gtype: FitGradType,
+        algo_name: typing.Optional[str] = None,
     ) -> FitGSLMM: ...
     @classmethod
     def new_default(
@@ -3988,7 +3992,7 @@ class FitGSLMMS(Fit):
 
         FitGSLMMS(**properties)
         new(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo:NumCosmoMath.FitGSLMMSAlgos) -> NumCosmoMath.Fit
-        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str) -> NumCosmoMath.Fit
+        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str=None) -> NumCosmoMath.Fit
         new_default(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType) -> NumCosmoMath.Fit
 
     Object NcmFitGSLMMS
@@ -4043,7 +4047,7 @@ class FitGSLMMS(Fit):
         mset: MSet
         params_reltol: float
         state: FitState
-        sub_fit: Fit
+        sub_fit: typing.Optional[Fit]
 
     props: Props = ...
     def __init__(
@@ -4069,7 +4073,11 @@ class FitGSLMMS(Fit):
     ) -> FitGSLMMS: ...
     @classmethod
     def new_by_name(
-        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str
+        cls,
+        lh: Likelihood,
+        mset: MSet,
+        gtype: FitGradType,
+        algo_name: typing.Optional[str] = None,
     ) -> FitGSLMMS: ...
     @classmethod
     def new_default(
@@ -4112,7 +4120,7 @@ class FitLevmar(Fit):
 
         FitLevmar(**properties)
         new(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo:NumCosmoMath.FitLevmarAlgos) -> NumCosmoMath.Fit
-        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str) -> NumCosmoMath.Fit
+        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str=None) -> NumCosmoMath.Fit
         new_default(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType) -> NumCosmoMath.Fit
 
     Object NcmFitLevmar
@@ -4167,7 +4175,7 @@ class FitLevmar(Fit):
         mset: MSet
         params_reltol: float
         state: FitState
-        sub_fit: Fit
+        sub_fit: typing.Optional[Fit]
 
     props: Props = ...
     def __init__(
@@ -4193,7 +4201,11 @@ class FitLevmar(Fit):
     ) -> FitLevmar: ...
     @classmethod
     def new_by_name(
-        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str
+        cls,
+        lh: Likelihood,
+        mset: MSet,
+        gtype: FitGradType,
+        algo_name: typing.Optional[str] = None,
     ) -> FitLevmar: ...
     @classmethod
     def new_default(
@@ -4248,7 +4260,7 @@ class FitMC(GObject.Object):
 
     class Props:
         data_file: str
-        fiducial: MSet
+        fiducial: typing.Optional[MSet]
         fit: Fit
         function_array: ObjArray
         keep_order: bool
@@ -4260,7 +4272,7 @@ class FitMC(GObject.Object):
     def __init__(
         self,
         data_file: str = ...,
-        fiducial: MSet = ...,
+        fiducial: typing.Optional[MSet] = ...,
         fit: Fit = ...,
         function_array: ObjArray = ...,
         keep_order: bool = ...,
@@ -4292,7 +4304,7 @@ class FitMC(GObject.Object):
     def run(self, n: int) -> None: ...
     def run_lre(self, prerun: int, lre: float) -> None: ...
     def set_data_file(self, filename: str) -> None: ...
-    def set_fiducial(self, fiduc: MSet) -> None: ...
+    def set_fiducial(self, fiduc: typing.Optional[MSet] = None) -> None: ...
     def set_first_sample_id(self, first_sample_id: int) -> None: ...
     def set_mtype(self, mtype: FitRunMsgs) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
@@ -4335,7 +4347,7 @@ class FitMCBS(GObject.Object):
     def new(cls, fit: Fit) -> FitMCBS: ...
     def run(
         self,
-        fiduc: MSet,
+        fiduc: typing.Optional[MSet],
         ni: int,
         nf: int,
         nbstraps: int,
@@ -4386,19 +4398,26 @@ class FitMCMC(GObject.Object):
         Metropolis-Hastings sampler
       mtype -> NcmFitRunMsgs: mtype
         Run messages type
+      data-file -> gchararray: data-file
+        Data file to be used by the catalog
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
+        data_file: str
         fit: Fit
         mtype: FitRunMsgs
         sampler: MSetTransKern
 
     props: Props = ...
     def __init__(
-        self, fit: Fit = ..., mtype: FitRunMsgs = ..., sampler: MSetTransKern = ...
+        self,
+        data_file: str = ...,
+        fit: Fit = ...,
+        mtype: FitRunMsgs = ...,
+        sampler: MSetTransKern = ...,
     ) -> None: ...
     @staticmethod
     def clear(mcmc: FitMCMC) -> None: ...
@@ -4440,7 +4459,7 @@ class FitNLOpt(Fit):
         FitNLOpt(**properties)
         local_new(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo:NumCosmoMath.FitNloptAlgorithm, local_algo:NumCosmoMath.FitNloptAlgorithm) -> NumCosmoMath.Fit
         new(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo:NumCosmoMath.FitNloptAlgorithm) -> NumCosmoMath.Fit
-        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str) -> NumCosmoMath.Fit
+        new_by_name(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType, algo_name:str=None) -> NumCosmoMath.Fit
         new_default(lh:NumCosmoMath.Likelihood, mset:NumCosmoMath.MSet, gtype:NumCosmoMath.FitGradType) -> NumCosmoMath.Fit
 
     Object NcmFitNLOpt
@@ -4498,7 +4517,7 @@ class FitNLOpt(Fit):
         mset: MSet
         params_reltol: float
         state: FitState
-        sub_fit: Fit
+        sub_fit: typing.Optional[Fit]
 
     props: Props = ...
     def __init__(
@@ -4534,7 +4553,11 @@ class FitNLOpt(Fit):
     ) -> FitNLOpt: ...
     @classmethod
     def new_by_name(
-        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str
+        cls,
+        lh: Likelihood,
+        mset: MSet,
+        gtype: FitGradType,
+        algo_name: typing.Optional[str] = None,
     ) -> FitNLOpt: ...
     @classmethod
     def new_default(
@@ -5249,22 +5272,17 @@ class LHRatio1d(GObject.Object):
         NcmFit object
       pi -> NcmMSetPIndex: pi
         Param index
-      constraint -> NcmMSetFunc: constraint
-        Constraint
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
-        constraint: MSetFunc
         fit: Fit
         pi: MSetPIndex
 
     props: Props = ...
-    def __init__(
-        self, constraint: MSetFunc = ..., fit: Fit = ..., pi: MSetPIndex = ...
-    ) -> None: ...
+    def __init__(self, fit: Fit = ..., pi: MSetPIndex = ...) -> None: ...
     @staticmethod
     def clear(lhr1d: LHRatio1d) -> None: ...
     def find_bounds(
@@ -5350,21 +5368,6 @@ class LHRatio2dClass(GObject.GPointer):
     """
 
     parent_class: GObject.ObjectClass = ...
-
-class LHRatio2dPoint(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        LHRatio2dPoint()
-    """
-
-    x: float = ...
-    y: float = ...
-    theta: float = ...
-    p1: float = ...
-    p2: float = ...
 
 class LHRatio2dRegion(GObject.GBoxed):
     r"""
@@ -5823,7 +5826,7 @@ class MPIJobTest(MPIJob):
 
     Properties from NcmMPIJobTest:
       vector -> NcmVector: vector
-        vector
+        Vector of the returned values
 
     Properties from NcmMPIJob:
       placeholder -> guint: placeholder
@@ -6047,6 +6050,8 @@ class MSetCatalog(GObject.Object):
         First row id of the Markovian chain
       tau-method -> NcmStatsAcorrMethod: tau-method
         Method used to calculate the autocorrelation time
+      post-lnnorm-method -> NcmMSetCatalogPostNormMethod: post-lnnorm-method
+        Method used to estimate the log evidence
       rng -> NcmRNG: rng
         Random number generator object
       filename -> gchararray: filename
@@ -6064,7 +6069,7 @@ class MSetCatalog(GObject.Object):
       sync-interval -> gdouble: sync-interval
         Data sync interval
       read-only -> gboolean: read-only
-        If the fits catalogue must be open in the readonly mode
+        Whether the FITS file is opened read-only
 
     Signals from GObject:
       notify (GParam)
@@ -6081,6 +6086,7 @@ class MSetCatalog(GObject.Object):
         nadd_val_symbols: list[str]
         nadd_vals: int
         nchains: int
+        post_lnnorm_method: MSetCatalogPostNormMethod
         read_only: bool
         rng: typing.Optional[RNG]
         run_type_string: str
@@ -6104,6 +6110,7 @@ class MSetCatalog(GObject.Object):
         nadd_val_symbols: typing.Sequence[str] = ...,
         nadd_vals: int = ...,
         nchains: int = ...,
+        post_lnnorm_method: MSetCatalogPostNormMethod = ...,
         read_only: bool = ...,
         rng: RNG = ...,
         run_type_string: str = ...,
@@ -6171,7 +6178,7 @@ class MSetCatalog(GObject.Object):
     def estimate_autocorrelation_tau(self, force_single_chain: bool) -> None: ...
     def free(self) -> None: ...
     def get_bestfit_m2lnL(self) -> float: ...
-    def get_bestfit_row(self) -> Vector: ...
+    def get_bestfit_row(self) -> typing.Optional[Vector]: ...
     def get_burnin(self) -> int: ...
     def get_covar(self) -> Matrix: ...
     def get_cur_id(self) -> int: ...
@@ -6188,6 +6195,7 @@ class MSetCatalog(GObject.Object):
     def get_nth_m2lnL_percentile(self, p: float) -> typing.Tuple[float, int]: ...
     def get_param_shrink_factor(self, p: int) -> float: ...
     def get_post_lnnorm(self) -> typing.Tuple[float, float]: ...
+    def get_post_lnnorm_method(self) -> MSetCatalogPostNormMethod: ...
     def get_post_lnvol(self, level: float) -> typing.Tuple[float, float]: ...
     def get_rng(self) -> typing.Optional[RNG]: ...
     def get_row_from_time(self, t: int) -> int: ...
@@ -6263,6 +6271,7 @@ class MSetCatalog(GObject.Object):
     def set_initial_sampler(self, sampler: typing.Optional[str] = None) -> None: ...
     def set_m2lnp_var(self, p: int) -> None: ...
     def set_markovian_id(self, markovian_id: int) -> None: ...
+    def set_post_lnnorm_method(self, method: MSetCatalogPostNormMethod) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
     def set_run_type(self, rtype_str: str) -> None: ...
     def set_sampler(self, sampler: typing.Optional[str] = None) -> None: ...
@@ -6742,7 +6751,6 @@ class MSetTransKernClass(GObject.GPointer):
     """
 
     parent_class: GObject.ObjectClass = ...
-    bernoulli_scheme: bool = ...
     set_mset: typing.Callable[[MSetTransKern, MSet], None] = ...
     generate: typing.Callable[[MSetTransKern, Vector, Vector, RNG], None] = ...
     pdf: typing.Callable[[MSetTransKern, Vector, Vector], float] = ...
@@ -6804,8 +6812,6 @@ class MSetTransKernGauss(MSetTransKern):
         length
       cov -> NcmMatrix: cov
         covariance
-      max-iter -> guint: max-iter
-        maximum iterations
 
     Properties from NcmMSetTransKern:
       mset -> NcmMSet: mset
@@ -6818,16 +6824,11 @@ class MSetTransKernGauss(MSetTransKern):
     class Props:
         cov: Matrix
         length: int
-        max_iter: int
         mset: MSet
 
     props: Props = ...
     def __init__(
-        self,
-        cov: Matrix = ...,
-        length: int = ...,
-        max_iter: int = ...,
-        mset: MSet = ...,
+        self, cov: Matrix = ..., length: int = ..., mset: MSet = ...
     ) -> None: ...
     def get_cov(self) -> Matrix: ...
     def get_size(self) -> int: ...
@@ -8671,15 +8672,15 @@ class PriorFlat(Prior):
 
     Properties from NcmPriorFlat:
       x-low -> gdouble: x-low
-        lower limit
+        Lower limit
       x-upp -> gdouble: x-upp
-        upper limit
+        Upper limit
       scale -> gdouble: scale
-        border scale
+        Width of the walls
       h0 -> gdouble: h0
-        Cut magnitude
+        Height of the walls
       variable -> gdouble: variable
-        variable
+        Argument of the mean function
 
     Properties from NcmMSetFunc:
       nvariables -> guint: nvariables
@@ -8762,15 +8763,15 @@ class PriorFlatFunc(PriorFlat):
 
     Properties from NcmPriorFlat:
       x-low -> gdouble: x-low
-        lower limit
+        Lower limit
       x-upp -> gdouble: x-upp
-        upper limit
+        Upper limit
       scale -> gdouble: scale
-        border scale
+        Width of the walls
       h0 -> gdouble: h0
-        Cut magnitude
+        Height of the walls
       variable -> gdouble: variable
-        variable
+        Argument of the mean function
 
     Properties from NcmMSetFunc:
       nvariables -> guint: nvariables
@@ -8855,15 +8856,15 @@ class PriorFlatParam(PriorFlat):
 
     Properties from NcmPriorFlat:
       x-low -> gdouble: x-low
-        lower limit
+        Lower limit
       x-upp -> gdouble: x-upp
-        upper limit
+        Upper limit
       scale -> gdouble: scale
-        border scale
+        Width of the walls
       h0 -> gdouble: h0
-        Cut magnitude
+        Height of the walls
       variable -> gdouble: variable
-        variable
+        Argument of the mean function
 
     Properties from NcmMSetFunc:
       nvariables -> guint: nvariables
@@ -8947,11 +8948,11 @@ class PriorGauss(Prior):
 
     Properties from NcmPriorGauss:
       mu -> gdouble: mu
-        mean
+        Mean
       sigma -> gdouble: sigma
-        standard deviation
+        Standard deviation
       variable -> gdouble: variable
-        variable
+        Argument of the mean function
 
     Properties from NcmMSetFunc:
       nvariables -> guint: nvariables
@@ -9026,11 +9027,11 @@ class PriorGaussFunc(PriorGauss):
 
     Properties from NcmPriorGauss:
       mu -> gdouble: mu
-        mean
+        Mean
       sigma -> gdouble: sigma
-        standard deviation
+        Standard deviation
       variable -> gdouble: variable
-        variable
+        Argument of the mean function
 
     Properties from NcmMSetFunc:
       nvariables -> guint: nvariables
@@ -9106,11 +9107,11 @@ class PriorGaussParam(PriorGauss):
 
     Properties from NcmPriorGauss:
       mu -> gdouble: mu
-        mean
+        Mean
       sigma -> gdouble: sigma
-        standard deviation
+        Standard deviation
       variable -> gdouble: variable
-        variable
+        Argument of the mean function
 
     Properties from NcmMSetFunc:
       nvariables -> guint: nvariables
@@ -11846,15 +11847,15 @@ class StatsDist(GObject.Object):
       kernel -> NcmStatsDistKernel: kernel
         Interpolating kernel
       N -> guint: N
-        sample size
+        Sample size
       over-smooth -> gdouble: over-smooth
-        Over-smooth distribution
+        Factor multiplying the rule-of-thumb bandwidth
       CV-type -> NcmStatsDistCV: CV-type
         Cross-validation method
       use-threads -> gboolean: use-threads
         Whether to use OpenMP threads during computation
       split-frac -> gdouble: split-frac
-        Fraction to use in the split cross-validation
+        Fraction of the sample used as kernel centers by the split cross-validations
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
       center-shrink -> gboolean: center-shrink
@@ -11993,9 +11994,7 @@ class StatsDist1d(GObject.Object):
       reltol -> gdouble: reltol
         relative tolerance
       abstol -> gdouble: abstol
-        Absolute tolerance on the random variables
-      max-prob -> gdouble: max-prob
-        Maximal probability considered
+        Absolute tolerance on the location of the mode
       compute-cdf -> gboolean: compute-cdf
         Whether to compute CDF and inverse CDF
 
@@ -12006,7 +12005,6 @@ class StatsDist1d(GObject.Object):
     class Props:
         abstol: float
         compute_cdf: bool
-        max_prob: float
         norma: float
         reltol: float
         xf: float
@@ -12018,7 +12016,6 @@ class StatsDist1d(GObject.Object):
         self,
         abstol: float = ...,
         compute_cdf: bool = ...,
-        max_prob: float = ...,
         reltol: float = ...,
         xf: float = ...,
         xi: float = ...,
@@ -12078,7 +12075,7 @@ class StatsDist1dEPDF(StatsDist1d):
 
     Properties from NcmStatsDist1dEPDF:
       max-obs -> guint: max-obs
-        Maximum observations before compacting
+        Number of added observations that triggers a merge
       n-obs -> guint: n-obs
         Number of observations
       bandwidth -> NcmStatsDist1dEPDFBw: bandwidth
@@ -12086,9 +12083,7 @@ class StatsDist1dEPDF(StatsDist1d):
       h-fixed -> gdouble: h-fixed
         Fixed bandwidth
       sd-min-scale -> gdouble: sd-min-scale
-        Percentage of the standard deviation to use as minimum distance
-      outliers-threshold -> gdouble: outliers-threshold
-        How many sigmas to consider an outlier
+        Merging distance in units of the standard deviation
 
     Properties from NcmStatsDist1d:
       xi -> gdouble: xi
@@ -12100,9 +12095,7 @@ class StatsDist1dEPDF(StatsDist1d):
       reltol -> gdouble: reltol
         relative tolerance
       abstol -> gdouble: abstol
-        Absolute tolerance on the random variables
-      max-prob -> gdouble: max-prob
-        Maximal probability considered
+        Absolute tolerance on the location of the mode
       compute-cdf -> gboolean: compute-cdf
         Whether to compute CDF and inverse CDF
 
@@ -12115,11 +12108,9 @@ class StatsDist1dEPDF(StatsDist1d):
         h_fixed: float
         max_obs: int
         n_obs: int
-        outliers_threshold: float
         sd_min_scale: float
         abstol: float
         compute_cdf: bool
-        max_prob: float
         norma: float
         reltol: float
         xf: float
@@ -12131,11 +12122,9 @@ class StatsDist1dEPDF(StatsDist1d):
         bandwidth: StatsDist1dEPDFBw = ...,
         h_fixed: float = ...,
         max_obs: int = ...,
-        outliers_threshold: float = ...,
         sd_min_scale: float = ...,
         abstol: float = ...,
         compute_cdf: bool = ...,
-        max_prob: float = ...,
         reltol: float = ...,
         xf: float = ...,
         xi: float = ...,
@@ -12180,14 +12169,15 @@ class StatsDist1dSpline(StatsDist1d):
 
         StatsDist1dSpline(**properties)
         new(m2lnp:NumCosmoMath.Spline) -> NumCosmoMath.StatsDist1dSpline
+        new_from_density(p:NumCosmoMath.Spline) -> NumCosmoMath.StatsDist1dSpline
 
     Object NcmStatsDist1dSpline
 
     Properties from NcmStatsDist1dSpline:
       m2lnp -> NcmSpline: m2lnp
-        m2lnp
-      tail-sigma -> gdouble: tail-sigma
-        Tail sigma
+        Spline of -2 ln p
+      density -> NcmSpline: density
+        Spline of the density p
 
     Properties from NcmStatsDist1d:
       xi -> gdouble: xi
@@ -12199,9 +12189,7 @@ class StatsDist1dSpline(StatsDist1d):
       reltol -> gdouble: reltol
         relative tolerance
       abstol -> gdouble: abstol
-        Absolute tolerance on the random variables
-      max-prob -> gdouble: max-prob
-        Maximal probability considered
+        Absolute tolerance on the location of the mode
       compute-cdf -> gboolean: compute-cdf
         Whether to compute CDF and inverse CDF
 
@@ -12210,11 +12198,10 @@ class StatsDist1dSpline(StatsDist1d):
     """
 
     class Props:
+        density: Spline
         m2lnp: Spline
-        tail_sigma: float
         abstol: float
         compute_cdf: bool
-        max_prob: float
         norma: float
         reltol: float
         xf: float
@@ -12223,17 +12210,18 @@ class StatsDist1dSpline(StatsDist1d):
     props: Props = ...
     def __init__(
         self,
+        density: Spline = ...,
         m2lnp: Spline = ...,
-        tail_sigma: float = ...,
         abstol: float = ...,
         compute_cdf: bool = ...,
-        max_prob: float = ...,
         reltol: float = ...,
         xf: float = ...,
         xi: float = ...,
     ) -> None: ...
     @classmethod
     def new(cls, m2lnp: Spline) -> StatsDist1dSpline: ...
+    @classmethod
+    def new_from_density(cls, p: Spline) -> StatsDist1dSpline: ...
 
 class StatsDist1dSplineClass(GObject.GPointer):
     r"""
@@ -12277,7 +12265,7 @@ class StatsDist2d(GObject.Object):
     def eval_inv_cond(self, u: float, xy: float) -> float: ...
     def eval_m2lnp(self, x: float, y: float) -> float: ...
     def eval_marginal_cdf(self, xy: float) -> float: ...
-    def eval_marginal_inv_cdf(self, xy: float) -> float: ...
+    def eval_marginal_inv_cdf(self, u: float) -> float: ...
     def eval_marginal_pdf(self, xy: float) -> float: ...
     def eval_pdf(self, x: float, y: float) -> float: ...
     def free(self) -> None: ...
@@ -12321,9 +12309,7 @@ class StatsDist2dSpline(StatsDist2d):
 
     Properties from NcmStatsDist2dSpline:
       m2lnp -> NcmSpline2d: m2lnp
-        m2lnp
-      marginal-x -> gboolean: marginal-x
-        Compute marginal with respect to x if True, and y if False.
+        Spline of -2 ln p
 
     Signals from GObject:
       notify (GParam)
@@ -12331,10 +12317,9 @@ class StatsDist2dSpline(StatsDist2d):
 
     class Props:
         m2lnp: Spline2d
-        marginal_x: bool
 
     props: Props = ...
-    def __init__(self, m2lnp: Spline2d = ..., marginal_x: bool = ...) -> None: ...
+    def __init__(self, m2lnp: Spline2d = ...) -> None: ...
     @classmethod
     def new(cls, m2lnp: Spline2d) -> StatsDist2dSpline: ...
 
@@ -12399,15 +12384,15 @@ class StatsDistKDE(StatsDist):
       kernel -> NcmStatsDistKernel: kernel
         Interpolating kernel
       N -> guint: N
-        sample size
+        Sample size
       over-smooth -> gdouble: over-smooth
-        Over-smooth distribution
+        Factor multiplying the rule-of-thumb bandwidth
       CV-type -> NcmStatsDistCV: CV-type
         Cross-validation method
       use-threads -> gboolean: use-threads
         Whether to use OpenMP threads during computation
       split-frac -> gdouble: split-frac
-        Fraction to use in the split cross-validation
+        Fraction of the sample used as kernel centers by the split cross-validations
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
       center-shrink -> gboolean: center-shrink
@@ -12624,7 +12609,7 @@ class StatsDistKernelST(StatsDistKernel):
 
     Properties from NcmStatsDistKernelST:
       nu -> gdouble: nu
-        nu value of the function
+        Degrees of freedom
 
     Properties from NcmStatsDistKernel:
       dimension -> guint: dimension
@@ -12673,9 +12658,9 @@ class StatsDistVKDE(StatsDistKDE):
 
     Properties from NcmStatsDistVKDE:
       local-frac -> gdouble: local-frac
-        Fraction to use in the local kernel covariance computation
+        Fraction of the sample used as neighbors of each local covariance
       use-rot-href -> gboolean: use-rot-href
-        Whether to use the href rule-of-thumb to compute the final bandwidth
+        Whether the bandwidth is the rule of thumb times over-smooth and n / k
       points-per-dim -> gdouble: points-per-dim
         Nearest neighbors per dimension for the local covariances (0: use local-frac)
 
@@ -12691,15 +12676,15 @@ class StatsDistVKDE(StatsDistKDE):
       kernel -> NcmStatsDistKernel: kernel
         Interpolating kernel
       N -> guint: N
-        sample size
+        Sample size
       over-smooth -> gdouble: over-smooth
-        Over-smooth distribution
+        Factor multiplying the rule-of-thumb bandwidth
       CV-type -> NcmStatsDistCV: CV-type
         Cross-validation method
       use-threads -> gboolean: use-threads
         Whether to use OpenMP threads during computation
       split-frac -> gdouble: split-frac
-        Fraction to use in the split cross-validation
+        Fraction of the sample used as kernel centers by the split cross-validations
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
       center-shrink -> gboolean: center-shrink
@@ -12829,7 +12814,7 @@ class StatsVec(GObject.Object):
     def compute_cov_robust_diag(self) -> Matrix: ...
     def compute_cov_robust_ogk(self) -> Matrix: ...
     def disable_quantile(self) -> None: ...
-    def dup_saved_x(self) -> list[Vector]: ...
+    def dup_saved_x(self) -> typing.Optional[list[Vector]]: ...
     def enable_quantile(self, p: float) -> None: ...
     def estimate_const_break(self, p: int) -> float: ...
     def free(self) -> None: ...
@@ -13821,36 +13806,6 @@ class IntegralNDMethod(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class LHRatio1dRoot(GObject.GEnum):
-    BRACKET: LHRatio1dRoot = ...
-    NUMDIFF: LHRatio1dRoot = ...
-    _generate_next_value_: function = ...
-    _hashable_values_: list = ...
-    _member_map_: dict = ...
-    _member_names_: list = ...
-    _member_type_: type = ...
-    _new_member_: builtin_function_or_method = ...
-    _unhashable_values_: list = ...
-    _unhashable_values_map_: dict = ...
-    _use_args_: bool = ...
-    _value2member_map_: dict = ...
-    _value_repr_: wrapper_descriptor = ...
-
-class LHRatio2dRoot(GObject.GEnum):
-    BRACKET: LHRatio2dRoot = ...
-    NUMDIFF: LHRatio2dRoot = ...
-    _generate_next_value_: function = ...
-    _hashable_values_: list = ...
-    _member_map_: dict = ...
-    _member_names_: list = ...
-    _member_type_: type = ...
-    _new_member_: builtin_function_or_method = ...
-    _unhashable_values_: list = ...
-    _unhashable_values_map_: dict = ...
-    _use_args_: bool = ...
-    _value2member_map_: dict = ...
-    _value_repr_: wrapper_descriptor = ...
-
 class MPIJobCtrlMsg(GObject.GEnum):
     FREE: MPIJobCtrlMsg = ...
     INIT: MPIJobCtrlMsg = ...
@@ -14228,6 +14183,7 @@ class SplineGslType(GObject.GEnum):
     CSPLINE_PERIODIC: SplineGslType = ...
     LINEAR: SplineGslType = ...
     POLYNOMIAL: SplineGslType = ...
+    STEFFEN: SplineGslType = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

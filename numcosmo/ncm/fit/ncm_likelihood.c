@@ -32,18 +32,16 @@
  * parameters.
  *
  * The posterior distribution is the combination of the #NcmDataset containing the
- * individual likelihoods of the data and the priors. The priors are defined as
- * #NcmPrior objects. The priors can be leastsquares priors or m2lnL priors. The
- * leastsquares priors compute the leastsquares vectors $\vec{f}_i$ and the m2lnL
- * priors the probabilities $-2\ln P_{\mathrm{prior},i}$.
- *
- * The final posterior distribution is defined as:
+ * individual likelihoods of the data and the priors, #NcmPrior objects of either form
+ * (ncm_prior_is_m2lnL()): least-squares priors return $f_i$ with
+ * $-2\ln P_{\mathrm{prior},i} = f_i^2$, m2lnL priors return $-2\ln P_{\mathrm{prior},j}$
+ * itself. The posterior is
  * \begin{equation}
- * -2\ln P_{\mathrm{posterior}} = -2\ln L_{\mathrm{data}} + \sum_i \vec{f}_i\cdot\vec{f}_i + \sum_i -2\ln P_{\mathrm{prior},i}
+ * -2\ln P_{\mathrm{posterior}} = -2\ln L_{\mathrm{data}} + \sum_i f_i^2 + \sum_j -2\ln P_{\mathrm{prior},j}.
  * \end{equation}
  *
- * Least-squares evaluation requires least-squares priors and least-squares
- * data likelihoods.
+ * The least-squares evaluation, ncm_likelihood_leastsquares_f(), needs least-squares
+ * data and only least-squares priors; an m2lnL prior makes it abort.
  *
  */
 
@@ -187,13 +185,6 @@ _ncm_likelihood_dispose (GObject *object)
 }
 
 static void
-_ncm_likelihood_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_likelihood_parent_class)->finalize (object);
-}
-
-static void
 ncm_likelihood_class_init (NcmLikelihoodClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -201,8 +192,13 @@ ncm_likelihood_class_init (NcmLikelihoodClass *klass)
   object_class->set_property = &_ncm_likelihood_set_property;
   object_class->get_property = &_ncm_likelihood_get_property;
   object_class->dispose      = &_ncm_likelihood_dispose;
-  object_class->finalize     = &_ncm_likelihood_finalize;
 
+  /**
+   * NcmLikelihood:dataset:
+   *
+   * The #NcmDataset of the data likelihoods.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_DATASET,
                                    g_param_spec_object ("dataset",
@@ -210,6 +206,13 @@ ncm_likelihood_class_init (NcmLikelihoodClass *klass)
                                                         "Dataset object",
                                                         NCM_TYPE_DATASET,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmLikelihood:priors-m2lnL:
+   *
+   * The priors that return $-2\ln P$.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_PRIORS_M2LNL,
                                    g_param_spec_boxed ("priors-m2lnL",
@@ -217,6 +220,13 @@ ncm_likelihood_class_init (NcmLikelihoodClass *klass)
                                                        "Priors m2lnL array",
                                                        NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmLikelihood:priors-f:
+   *
+   * The least-squares priors, returning $f$ with $-2\ln P = f^2$.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_PRIORS_F,
                                    g_param_spec_boxed ("priors-f",
@@ -224,6 +234,14 @@ ncm_likelihood_class_init (NcmLikelihoodClass *klass)
                                                        "Priors f array",
                                                        NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmLikelihood:m2lnL-v:
+   *
+   * The terms of the last ncm_likelihood_m2lnL_val(), see ncm_likelihood_peek_m2lnL_v().
+   * Setting %NULL is ignored.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_M2LNL_V,
                                    g_param_spec_object ("m2lnL-v",
@@ -326,8 +344,9 @@ ncm_likelihood_peek_dataset (NcmLikelihood *lh)
  * ncm_likelihood_peek_m2lnL_v:
  * @lh: a #NcmLikelihood
  *
- * Gets the m2lnL vector associated with the #NcmLikelihood containing the
- * last calculated m2lnL values.
+ * Gets the terms of the last ncm_likelihood_m2lnL_val(): the $-2\ln L$ of each data
+ * object of the dataset, then the $f_i^2$ of the least-squares priors, then the
+ * $-2\ln P$ of the m2lnL priors, in the order they were added.
  *
  * Returns: (transfer none): the m2lnL vector associated with the #NcmLikelihood.
  */
@@ -342,7 +361,8 @@ ncm_likelihood_peek_m2lnL_v (NcmLikelihood *lh)
  * @lh: a #NcmLikelihood
  * @prior: a #NcmPrior
  *
- * Adds a #NcmPrior to the #NcmLikelihood.
+ * Adds @prior to the least-squares or the m2lnL priors of @lh, according to
+ * ncm_prior_is_m2lnL().
  *
  */
 void
@@ -356,10 +376,10 @@ ncm_likelihood_priors_add (NcmLikelihood *lh, NcmPrior *prior)
 
 /**
  * ncm_likelihood_priors_take:
- * @lh: (in) (transfer full): a #NcmLikelihood
- * @prior: a #NcmPrior
+ * @lh: a #NcmLikelihood
+ * @prior: (transfer full): a #NcmPrior
  *
- * Adds a #NcmPrior to the #NcmLikelihood and takes ownership of the object.
+ * As ncm_likelihood_priors_add(), taking the reference of @prior.
  *
  */
 void
@@ -376,14 +396,15 @@ ncm_likelihood_priors_take (NcmLikelihood *lh, NcmPrior *prior)
  * @lh: a #NcmLikelihood
  * @i: prior index
  *
- * Peeks the prior at index @i in the #NcmLikelihood from the array of priors
- * that contribute to the leastsquares f.
+ * Peeks the least-squares prior at index @i.
  *
  * Returns: (transfer none): a #NcmPrior representing the prior at index @i.
  */
 NcmPrior *
 ncm_likelihood_priors_peek_f (NcmLikelihood *lh, guint i)
 {
+  g_assert_cmpuint (i, <, lh->priors_f->len);
+
   return g_ptr_array_index (lh->priors_f, i);
 }
 
@@ -392,14 +413,15 @@ ncm_likelihood_priors_peek_f (NcmLikelihood *lh, guint i)
  * @lh: a #NcmLikelihood
  * @i: prior index
  *
- * Peek the prior at index @i in the #NcmLikelihood from the array of priors
- * that contribute to the m2lnL.
+ * Peeks the m2lnL prior at index @i.
  *
  * Returns: (transfer none): a #NcmPrior representing the prior at index @i.
  */
 NcmPrior *
 ncm_likelihood_priors_peek_m2lnL (NcmLikelihood *lh, guint i)
 {
+  g_assert_cmpuint (i, <, lh->priors_m2lnL->len);
+
   return g_ptr_array_index (lh->priors_m2lnL, i);
 }
 
@@ -407,9 +429,7 @@ ncm_likelihood_priors_peek_m2lnL (NcmLikelihood *lh, guint i)
  * ncm_likelihood_priors_length_f:
  * @lh: a #NcmLikelihood
  *
- * Gets the number of priors that contribute to the leastsquares f.
- *
- * Returns: the number of priors that contribute to the leastsquares f.
+ * Returns: the number of least-squares priors.
  */
 guint
 ncm_likelihood_priors_length_f (NcmLikelihood *lh)
@@ -421,9 +441,7 @@ ncm_likelihood_priors_length_f (NcmLikelihood *lh)
  * ncm_likelihood_priors_length_m2lnL:
  * @lh: a #NcmLikelihood
  *
- * Gets the number of priors that contribute to the m2lnL.
- *
- * Returns: the number of priors that contribute to the m2lnL.
+ * Returns: the number of m2lnL priors.
  */
 guint
 ncm_likelihood_priors_length_m2lnL (NcmLikelihood *lh)
@@ -435,10 +453,10 @@ ncm_likelihood_priors_length_m2lnL (NcmLikelihood *lh)
  * ncm_likelihood_priors_leastsquares_f:
  * @lh: a #NcmLikelihood.
  * @mset: a #NcmMSet.
- * @priors_f: a #NcmVector.
+ * @priors_f: a #NcmVector, one element per least-squares prior
  *
- * Calculates the leastsquares f for the priors, note that the all priors
- * in @lh must be priors that contribute to the leastsquares f.
+ * Evaluates the least-squares priors into @priors_f. Aborts if @lh has an m2lnL
+ * prior.
  *
  */
 void
@@ -448,7 +466,7 @@ ncm_likelihood_priors_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVecto
   gboolean has_prior_m2lnL = ncm_likelihood_priors_length_m2lnL (lh) != 0;
 
   if (has_prior_m2lnL)
-    g_error ("ncm_likelihood_priors_leastsquares_f: cannot calculate leastsquares f, the likelihood contains m2lnL priors.");
+    g_error ("ncm_likelihood_priors_leastsquares_f: cannot calculate least-squares f, the likelihood contains m2lnL priors.");
 
   for (i = 0; i < lh->priors_f->len; i++)
   {
@@ -465,11 +483,11 @@ ncm_likelihood_priors_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVecto
  * ncm_likelihood_leastsquares_f:
  * @lh: a #NcmLikelihood.
  * @mset: a #NcmMSet.
- * @f: a #NcmVector.
+ * @f: a #NcmVector
  *
- * Combines the leastsquares f for the dataset and the priors, note that the
- * first elements of @f are the leastsquares f for the dataset and the last
- * elements are the leastsquares f for the priors.
+ * Evaluates the least-squares f of @lh into @f: first the dataset's
+ * (ncm_dataset_get_n() elements), then the least-squares priors'. Aborts if @lh has an
+ * m2lnL prior.
  *
  */
 void
@@ -480,7 +498,7 @@ ncm_likelihood_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVector *f)
   gboolean has_prior_m2lnL = ncm_likelihood_priors_length_m2lnL (lh) != 0;
 
   if (has_prior_m2lnL)
-    g_error ("ncm_likelihood_priors_leastsquares_f: cannot calculate leastsquares f, the likelihood contains m2lnL priors.");
+    g_error ("ncm_likelihood_leastsquares_f: cannot calculate least-squares f, the likelihood contains m2lnL priors.");
 
   if (data_size)
   {
@@ -505,8 +523,8 @@ ncm_likelihood_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVector *f)
  * @mset: a #NcmMSet.
  * @priors_m2lnL: (out): the sum of the priors m2lnL.
  *
- * Combines the m2lnL for the priors, note that the priors can be priors that
- * contribute to the leastsquares f or to the m2lnL.
+ * Computes the $-2\ln P$ of all priors: $f_i^2$ for the least-squares priors plus
+ * the values of the m2lnL priors.
  *
  */
 void
@@ -541,11 +559,9 @@ ncm_likelihood_priors_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *prio
  * @mset: a #NcmMSet.
  * @priors_m2lnL_v: a #NcmVector
  *
- * Computes the m2lnL for the priors, inserting the result in @priors_m2lnL_v.
- * The order of the elements in @priors_m2lnL_v is the same as the order of the
- * priors in the #NcmLikelihood. The first elements are the m2lnL for the priors
- * that contribute to the leastsquares f and the last elements are the m2lnL for
- * the priors that contribute to the m2lnL.
+ * Computes the $-2\ln P$ of each prior into @priors_m2lnL_v: first $f_i^2$ for the
+ * least-squares priors, then the values of the m2lnL priors, each in the order they
+ * were added.
  *
  */
 void
@@ -582,8 +598,8 @@ ncm_likelihood_priors_m2lnL_vec (NcmLikelihood *lh, NcmMSet *mset, NcmVector *pr
  * @mset: a #NcmMSet.
  * @m2lnL: (out): the sum of the m2lnL
  *
- * Combines the m2lnL for the dataset and the priors, note that the priors can
- * be priors that contribute to the leastsquares f or to the m2lnL.
+ * Computes $-2\ln P_{\mathrm{posterior}}$ of the class description, keeping the terms
+ * in the vector ncm_likelihood_peek_m2lnL_v().
  *
  */
 void
@@ -619,7 +635,6 @@ ncm_likelihood_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *m2lnL)
     ncm_dataset_m2lnL_vec (lh->dset, mset, lh->m2lnL_v);
   }
 
-  /*ncm_vector_log_vals (lh->m2lnL_v, "m2lnL: ", "% 22.15g", TRUE);*/
   *m2lnL = ncm_vector_sum_cpts (lh->m2lnL_v);
 
   return;

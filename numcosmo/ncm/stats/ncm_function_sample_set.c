@@ -138,7 +138,7 @@ _ncm_function_sample_point_free (gpointer data)
 }
 
 static NcmFunctionSamplePoint *
-_ncm_function_sample_point_new (const gdouble x, NcmVector *y)
+_ncm_function_sample_point_new (const gdouble x, NcmVector *y, const gboolean new_point)
 {
   NcmFunctionSamplePoint *sp = g_slice_new (NcmFunctionSamplePoint);
 
@@ -146,21 +146,7 @@ _ncm_function_sample_point_new (const gdouble x, NcmVector *y)
   sp->y           = ncm_vector_ref (y);
   sp->residual    = NULL;
   sp->interval_ok = 0;
-  sp->new_point   = TRUE;
-
-  return sp;
-}
-
-static NcmFunctionSamplePoint *
-_ncm_function_sample_point_new_old (const gdouble x, NcmVector *y)
-{
-  NcmFunctionSamplePoint *sp = g_slice_new (NcmFunctionSamplePoint);
-
-  sp->x           = x;
-  sp->y           = ncm_vector_ref (y);
-  sp->residual    = NULL;
-  sp->interval_ok = 0;
-  sp->new_point   = FALSE;
+  sp->new_point   = new_point;
 
   return sp;
 }
@@ -207,13 +193,6 @@ _ncm_function_sample_set_dispose (GObject *object)
   g_clear_pointer (&fss->absmaxF_x, g_array_unref);
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_function_sample_set_parent_class)->dispose (object);
-}
-
-static void
-_ncm_function_sample_set_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_function_sample_set_parent_class)->finalize (object);
 }
 
 static void
@@ -294,7 +273,6 @@ ncm_function_sample_set_class_init (NcmFunctionSampleSetClass *klass)
 
   object_class->constructed  = &_ncm_function_sample_set_constructed;
   object_class->dispose      = &_ncm_function_sample_set_dispose;
-  object_class->finalize     = &_ncm_function_sample_set_finalize;
   object_class->set_property = &_ncm_function_sample_set_set_property;
   object_class->get_property = &_ncm_function_sample_set_get_property;
 
@@ -389,6 +367,27 @@ void
 ncm_function_sample_set_clear (NcmFunctionSampleSet **fss)
 {
   g_clear_object (fss);
+}
+
+/* The x range and the componentwise |y| maxima follow every sample added. */
+static void
+_ncm_function_sample_set_track (NcmFunctionSampleSet *fss, const gdouble x, NcmVector *y)
+{
+  guint i;
+
+  fss->x_min = MIN (fss->x_min, x);
+  fss->x_max = MAX (fss->x_max, x);
+
+  for (i = 0; i < fss->len; i++)
+  {
+    const gdouble abs_y_i = fabs (ncm_vector_get (y, i));
+
+    if (abs_y_i > g_array_index (fss->absmaxF, gdouble, i))
+    {
+      g_array_index (fss->absmaxF, gdouble, i)   = abs_y_i;
+      g_array_index (fss->absmaxF_x, gdouble, i) = x;
+    }
+  }
 }
 
 /* ============================================================================
@@ -548,8 +547,8 @@ ncm_function_sample_set_iter_has_prev (NcmFunctionSampleSetIter *iter)
  * ncm_function_sample_set_iter_next:
  * @iter: a #NcmFunctionSampleSetIter
  *
- * Moves @iter to the next sample. If @iter is at the last sample or invalid,
- * @iter becomes invalid.
+ * Moves @iter to the next sample. From the last sample @iter becomes invalid; an
+ * invalid @iter aborts.
  *
  */
 void
@@ -563,8 +562,8 @@ ncm_function_sample_set_iter_next (NcmFunctionSampleSetIter *iter)
  * ncm_function_sample_set_iter_prev:
  * @iter: a #NcmFunctionSampleSetIter
  *
- * Moves @iter to the previous sample. If @iter is at the first sample or invalid,
- * behavior is undefined.
+ * Moves @iter to the previous sample. From the first sample @iter becomes invalid; an
+ * invalid @iter aborts.
  *
  */
 void
@@ -753,12 +752,11 @@ void
 ncm_function_sample_set_iter_insert_after (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmVector *y, NcmFunctionSampleSetIter **iter_out)
 {
   NcmFunctionSamplePoint *sp;
-  guint i;
 
   g_assert (iter->node != NULL);
   g_assert_cmpuint (ncm_vector_len (y), ==, fss->len);
 
-  sp = _ncm_function_sample_point_new (x, y);
+  sp = _ncm_function_sample_point_new (x, y, TRUE);
 
   fss->samples = g_list_insert_before (fss->samples, iter->node->next, sp);
 
@@ -768,23 +766,7 @@ ncm_function_sample_set_iter_insert_after (NcmFunctionSampleSet *fss, NcmFunctio
   (*iter_out)->node  = iter->node->next;
   (*iter_out)->owner = fss;
 
-  /* Update x_min and x_max tracking */
-  fss->x_min = MIN (fss->x_min, x);
-  fss->x_max = MAX (fss->x_max, x);
-
-  /* Update absmaxF tracking for each component */
-  for (i = 0; i < fss->len; i++)
-  {
-    gdouble y_i        = ncm_vector_get (y, i);
-    gdouble abs_y_i    = fabs (y_i);
-    gdouble *absmaxF_i = &g_array_index (fss->absmaxF, gdouble, i);
-
-    if (abs_y_i > *absmaxF_i)
-    {
-      *absmaxF_i                                 = abs_y_i;
-      g_array_index (fss->absmaxF_x, gdouble, i) = x;
-    }
-  }
+  _ncm_function_sample_set_track (fss, x, y);
 }
 
 /**
@@ -842,12 +824,11 @@ void
 ncm_function_sample_set_iter_insert_before (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmVector *y, NcmFunctionSampleSetIter **iter_out)
 {
   NcmFunctionSamplePoint *sp;
-  guint i;
 
   g_assert (iter->node != NULL);
   g_assert_cmpuint (ncm_vector_len (y), ==, fss->len);
 
-  sp = _ncm_function_sample_point_new (x, y);
+  sp = _ncm_function_sample_point_new (x, y, TRUE);
 
   fss->samples = g_list_insert_before (fss->samples, iter->node, sp);
 
@@ -857,23 +838,7 @@ ncm_function_sample_set_iter_insert_before (NcmFunctionSampleSet *fss, NcmFuncti
   (*iter_out)->node  = iter->node->prev;
   (*iter_out)->owner = fss;
 
-  /* Update x_min and x_max tracking */
-  fss->x_min = MIN (fss->x_min, x);
-  fss->x_max = MAX (fss->x_max, x);
-
-  /* Update absmaxF tracking for each component */
-  for (i = 0; i < fss->len; i++)
-  {
-    gdouble y_i        = ncm_vector_get (y, i);
-    gdouble abs_y_i    = fabs (y_i);
-    gdouble *absmaxF_i = &g_array_index (fss->absmaxF, gdouble, i);
-
-    if (abs_y_i > *absmaxF_i)
-    {
-      *absmaxF_i                                 = abs_y_i;
-      g_array_index (fss->absmaxF_x, gdouble, i) = x;
-    }
-  }
+  _ncm_function_sample_set_track (fss, x, y);
 }
 
 /**
@@ -945,29 +910,13 @@ void
 ncm_function_sample_set_add (NcmFunctionSampleSet *fss, const gdouble x, NcmVector *y)
 {
   NcmFunctionSamplePoint *sp;
-  guint i;
 
   g_assert_cmpuint (ncm_vector_len (y), ==, fss->len);
 
-  sp           = _ncm_function_sample_point_new (x, y);
+  sp           = _ncm_function_sample_point_new (x, y, TRUE);
   fss->samples = g_list_insert_sorted (fss->samples, sp, _ncm_function_sample_point_cmp);
 
-  /* Update x_min and x_max */
-  fss->x_min = MIN (fss->x_min, x);
-  fss->x_max = MAX (fss->x_max, x);
-
-  /* Update absmaxF for each component */
-  for (i = 0; i < fss->len; i++)
-  {
-    const gdouble abs_yi = fabs (ncm_vector_get (y, i));
-    gdouble current_max  = g_array_index (fss->absmaxF, gdouble, i);
-
-    if (abs_yi > current_max)
-    {
-      g_array_index (fss->absmaxF, gdouble, i)   = abs_yi;
-      g_array_index (fss->absmaxF_x, gdouble, i) = x;
-    }
-  }
+  _ncm_function_sample_set_track (fss, x, y);
 }
 
 /**
@@ -1012,29 +961,13 @@ void
 ncm_function_sample_set_add_old (NcmFunctionSampleSet *fss, const gdouble x, NcmVector *y)
 {
   NcmFunctionSamplePoint *sp;
-  guint i;
 
   g_assert_cmpuint (ncm_vector_len (y), ==, fss->len);
 
-  sp           = _ncm_function_sample_point_new_old (x, y);
+  sp           = _ncm_function_sample_point_new (x, y, FALSE);
   fss->samples = g_list_insert_sorted (fss->samples, sp, _ncm_function_sample_point_cmp);
 
-  /* Update x_min and x_max */
-  fss->x_min = MIN (fss->x_min, x);
-  fss->x_max = MAX (fss->x_max, x);
-
-  /* Update absmaxF for each component */
-  for (i = 0; i < fss->len; i++)
-  {
-    const gdouble abs_yi = fabs (ncm_vector_get (y, i));
-    gdouble current_max  = g_array_index (fss->absmaxF, gdouble, i);
-
-    if (abs_yi > current_max)
-    {
-      g_array_index (fss->absmaxF, gdouble, i)   = abs_yi;
-      g_array_index (fss->absmaxF_x, gdouble, i) = x;
-    }
-  }
+  _ncm_function_sample_set_track (fss, x, y);
 }
 
 /**
@@ -1240,12 +1173,9 @@ ncm_function_sample_set_get_absmaxF_linf_norm (NcmFunctionSampleSet *fss)
  * component is adequately resolved in adaptive refinement algorithms.
  *
  * A component whose peak is exactly zero (e.g. a spin-2 field's $\ell = 0, 1$
- * multipoles, which vanish identically) is excluded from the minimum: it is
- * already exactly represented by any spline through zero-valued samples and
- * needs no tolerance budget, so letting it collapse the tolerance to zero
- * for every *other*, genuinely nonzero component would be wrong -- that
- * tolerance would then be unsatisfiable by any finite refinement (see
- * ncm_function_sample_set_refine()).
+ * multipoles, which vanish identically) is excluded: a spline through its zero samples
+ * is exact, and a zero minimum would make a tolerance scaled by it unsatisfiable for the
+ * other components (see ncm_function_sample_set_refine()).
  *
  * Returns: the minimum of the nonzero component-wise maximum absolute
  *          values, or 0.0 if every component is identically zero (or there
@@ -1295,7 +1225,10 @@ ncm_function_sample_set_get_absmaxF_min (NcmFunctionSampleSet *fss)
  * - A hard limit is reached
  *
  * The interleaved expansion pattern (left, right, left, right, ...) ensures the
- * reference scale tracks the global function behavior correctly.
+ * reference scale tracks the global function behavior correctly. A side that already
+ * reaches its hard limit is not expanded. The new points are old points
+ * (ncm_function_sample_set_add_old()). The steps are multiplicative, so the domain must
+ * be positive; an empty set or a non-positive endpoint aborts.
  */
 void
 ncm_function_sample_set_expand_domain (NcmFunctionSampleSet     *fss,
@@ -1313,6 +1246,21 @@ ncm_function_sample_set_expand_domain (NcmFunctionSampleSet     *fss,
   guint left_converged     = 0;
   guint right_converged    = 0;
   guint i;
+
+  if (fss->samples == NULL)
+    g_error ("ncm_function_sample_set_expand_domain: the sample set is empty.");
+
+  /* The steps are multiplicative: only a positive endpoint moves outward. */
+  if ((fss->x_min <= 0.0) || (fss->x_max <= 0.0))
+    g_error ("ncm_function_sample_set_expand_domain: the domain [%g, %g] must be positive.",
+             fss->x_min, fss->x_max);
+
+  /* A side already at its hard limit has nothing to add. */
+  if (fss->x_min <= x_min_hard)
+    expanding_left = FALSE;
+
+  if (fss->x_max >= x_max_hard)
+    expanding_right = FALSE;
 
   for (i = 0; i < max_iterations; i++)
   {
@@ -1648,8 +1596,8 @@ ncm_function_sample_set_to_spline_vec_old (NcmFunctionSampleSet *fss, NcmSpline 
  * Records @diff as the residual of the interval owned by @sp, keeping the
  * larger of the two whenever an interval is measured more than once. What is
  * stored is the componentwise |f - spline| of the pass that accepted the
- * interval, so it describes the interval as it stood *before* its own
- * subdivision -- see the note in ncm_function_sample_set_get_residuals().
+ * interval, so it describes the interval as it stood before its own
+ * subdivision (see ncm_function_sample_set_get_residuals()).
  */
 static void
 _ncm_function_sample_point_update_residual (NcmFunctionSamplePoint *sp, NcmVector *diff, const guint len)
@@ -1684,8 +1632,8 @@ _ncm_function_sample_point_update_residual (NcmFunctionSamplePoint *sp, NcmVecto
  *
  * An entry is the componentwise $|f - \tilde f|$ measured by
  * ncm_function_sample_set_refine() on the pass that accepted the interval, not
- * the tolerance that pass was asked for -- refinement usually beats its own
- * threshold by orders, and by an amount that varies with the function. An
+ * the tolerance that pass was asked for: refinement usually beats its own
+ * threshold by orders of magnitude, by an amount that varies with the function. An
  * interval that was never accepted (refinement stopped at
  * @max_iter, or tracking was off for the pass that accepted it) reads NaN, and
  * the caller has to decide what to do with it.
@@ -1744,7 +1692,7 @@ ncm_function_sample_set_get_residuals (NcmFunctionSampleSet *fss)
  * The two differ in what they measure, and it is worth being clear which is
  * wanted. get_residuals() reports what refinement *observed*, against the true
  * function, but before the interval was split and at a point that then became a
- * knot -- so it describes the parent interval and overstates the final grid.
+ * knot, so it describes the parent interval and overstates the final grid.
  * This reports the error of the finished fit on the final intervals, and costs
  * one extra banded solve rather than one function evaluation per interval.
  *
@@ -1768,6 +1716,8 @@ ncm_function_sample_set_estimate_residuals (NcmFunctionSampleSet *fss, NcmSpline
   if (nsamples < 2)
     return NULL;
 
+  /* The second conversion rewrites the cached arrays the first spline views, with the
+   * same samples in arrays of the same size, so sv_base stays valid. */
   sv_base = ncm_function_sample_set_to_spline_vec (fss, base_spline);
   sv_ref  = ncm_function_sample_set_to_spline_vec (fss, ref_spline);
 
@@ -1922,12 +1872,15 @@ ncm_function_sample_set_refine (NcmFunctionSampleSet *fss, const gdouble reltol,
  * @min_pass_threshold: minimum interval_ok threshold to consider interval passed
  * @base_spline: base spline used for refinement tests
  *
- * Performs an iterative midpoint-based adaptive refinement similar to the
- * Python test harness. On each iteration intervals with interval_ok <
- * @min_pass_threshold receive their midpoint inserted (evaluated via @f). After
- * insertion, a refinement pass is performed via ncm_function_sample_set_refine(). The
- * process stops when all intervals reach @min_pass_threshold or when @max_iter is
- * reached.
+ * Refines @fss by midpoint insertion, starting from its old samples (see
+ * ncm_function_sample_set_mark_all_old()): the refinement tests each new point against
+ * the spline of the old ones. A set with fewer than 6 samples (the cubic not-a-knot
+ * minimum) first receives midpoints as old points until it has 6; fewer than 2 aborts. Then, on each iteration, every interval with interval_ok below
+ * @min_pass_threshold receives its midpoint (evaluated with @f), and
+ * ncm_function_sample_set_refine() tests the new points. The process stops when every
+ * interval reaches @min_pass_threshold, or after @max_iter iterations with a message
+ * if some interval has not. An interval too short to split at machine precision is
+ * marked as passed, and the number of such intervals is reported in a message.
  */
 void
 ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
@@ -1939,6 +1892,7 @@ ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
                                            NcmSpline                *base_spline,
                                            gpointer                 user_data)
 {
+  guint n_at_precision = 0;
   guint iteration;
 
   /* The Cubic not-a-knot spline requires at least 6 samples.
@@ -2016,7 +1970,9 @@ ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
 
             if (fabs (x_left - x_right) < GSL_MACH_EPS * (fabs (x_left) + fabs (x_right)))
             {
-              ncm_function_sample_set_iter_set_interval_ok (it, min_pass_threshold); /* Mark as passed to avoid infinite loop */
+              /* Passed so the loop ends; counted and reported below. */
+              ncm_function_sample_set_iter_set_interval_ok (it, min_pass_threshold);
+              n_at_precision++;
               continue;
             }
 
@@ -2032,9 +1988,14 @@ ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
     }
   }
 
-  if (iteration == max_iter)
+  if (!ncm_function_sample_set_all_intervals_ok (fss, min_pass_threshold))
     g_message ("# ncm_function_sample_set_adaptive_midpoint: Max iterations (%u) reached with %u knots\n",
                max_iter, ncm_function_sample_set_get_nsamples (fss));
+
+  if (n_at_precision > 0)
+    g_message ("# ncm_function_sample_set_adaptive_midpoint: %u interval(s) reached machine precision "
+               "without passing and were marked as passed (%u knots)\n",
+               n_at_precision, ncm_function_sample_set_get_nsamples (fss));
 }
 
 /**

@@ -26,52 +26,20 @@
 /**
  * NcmStatsDistKDE:
  *
- * Fixed-bandwidth kernel estimator for #NcmStatsDist.
+ * Kernel mixture with one scale matrix shared by all kernels.
  *
- * Uses one covariance matrix $\Sigma$ for all sample points. After the covariance
- * matrix is computed,
- * the algorithm computes the Cholesky decomposition, that is \begin{align} \Sigma &=
- * AA^T ,\end{align} where $A$ is a triangular positive defined matrix and $A^T$ is its
- * transpose. The $A$ matrix is used in the least square squares calculation method that
- * is called in the #NcmStatsDist class.
+ * Implements #NcmStatsDist with every kernel given the same scale matrix $\Sigma$,
+ * chosen by #NcmStatsDistKDE:cov-type: the sample covariance of the points that carry the
+ * kernels, a fixed matrix (#NcmStatsDistKDE:cov-fixed), the diagonal of the squared Qn
+ * scale estimates, or the orthogonalized Gnanadesikan-Kettenring robust covariance. A
+ * matrix that is not positive definite to rounding is replaced by the nearest one that
+ * is, with a warning, and one that cannot be repaired in #NcmStatsDistKDE:nearPD-maxiter
+ * iterations aborts. The bandwidth is #NcmStatsDist:over-smooth times the kernel rule of
+ * thumb, ncm_stats_dist_kernel_get_rot_bandwidth(). With a Gaussian kernel,
+ * #NCM_STATS_DIST_CV_LOO evaluates its objective in closed form.
  *
- *
- * The object also prepares the interpolation matrix to be implemented in the
- * least-squares problem, that is, given the relation
- *
- * $\left[\begin{array}{cccc}
- * \phi\left(\left\|\mathbf{x}_{1}-\mathbf{x}_{1}\right\|\right) & \phi\left(\left\|\mathbf{x}_{2}-\mathbf{x}_{1}\right\|\right) & \ldots & \phi\left(\left\|\mathbf{x}_{n}-\mathbf{x}_{1}\right\|\right) \newline
- * \phi\left(\left\|\mathbf{x}_{1}-\mathbf{x}_{2}\right\|\right) & \phi\left(\left\|\mathbf{x}_{2}-\mathbf{x}_{2}\right\|\right) & \ldots & \phi\left(\left\|\mathbf{x}_{n}-\mathbf{x}_{2}\right\|\right) \newline
- * \vdots & \vdots & & \vdots \newline
- * \phi\left(\left\|\mathbf{x}_{1}-\mathbf{x}_{n}\right\|\right) & \phi\left(\left\|\mathbf{x}_{2}-\mathbf{x}_{n}\right\|\right) & \ldots & \phi\left(\left\|\mathbf{x}_{n}-\mathbf{x}_{n}\right\|\right)
- * \end{array}\right]\left[\begin{array}{c}
- * \lambda_{1} \newline
- * \lambda_{2} \newline
- * \vdots \newline
- * \lambda_{n}
- * \end{array}\right]=\left[\begin{array}{c}
- * g_{1} \newline
- * g_{2} \newline
- * \vdots \newline
- * g_{n}
- * ,\end{array}\right]$
- *
- * which is explained in the #NcmStatsDist class, this object prepares the first matrix
- * for all the $n$ points in the sample, using the covariance matrix and the defined
- * kernel. The #NcmStatsDist class implements the solution for this relation and then
- * one can compute the distribution for a given vector $\vec{x}$ using a method of the
- * #NcmStatsDist class but that is implemented in this object.
- *
- *
- * The user must provide input the values: @sdk, @CV_type - ncm_stats_dist_kde_new(), @y
- * - ncm_stats_dist_add_obs(), @split_frac - ncm_stats_dist_set_split_frac(),
- * @over_smooth - ncm_stats_dist_set_over_smooth(), $v(x)$ -
- * ncm_stats_dist_prepare(). To see an example of how to use this object and the
- * main functions that are called within each function, check the flowchart at the end
- * of this documentation, where the order of the functions that should be called by the
- * user and some of the functions that the algorithm calls.
- *
- * ![kde_sketch](kde.png)
+ * The estimator, the shrinkage and the objectives are described on the <a
+ * href="../../theory/ncm/stats/stats_dist.html">Kernel Mixture Densities</a> page.
  *
  */
 
@@ -157,6 +125,7 @@ ncm_stats_dist_kde_init (NcmStatsDistKDE *sdkde)
   self->cov_type          = NCM_STATS_DIST_KDE_COV_TYPE_LEN;
   self->cov               = NULL;
   self->cov_fixed         = NULL;
+  self->cov_fixed_decomp  = NULL;
   self->cov_decomp        = NULL;
   self->cov_decomp0       = NULL;
   self->sample_matrix     = NULL;
@@ -182,7 +151,7 @@ _ncm_stats_dist_kde_set_property (GObject *object, guint prop_id, const GValue *
 {
   NcmStatsDistKDE *sdkde = NCM_STATS_DIST_KDE (object);
 
-  /*g_return_if_fail (NCM_IS_STATS_DIST_KDE (object));*/
+  g_return_if_fail (NCM_IS_STATS_DIST_KDE (object));
 
   switch (prop_id)
   {
@@ -205,8 +174,6 @@ static void
 _ncm_stats_dist_kde_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmStatsDistKDE *sdkde = NCM_STATS_DIST_KDE (object);
-
-  /*NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);*/
 
   g_return_if_fail (NCM_IS_STATS_DIST_KDE (object));
 
@@ -236,6 +203,7 @@ _ncm_stats_dist_kde_dispose (GObject *object)
   ncm_stats_vec_clear (&self->sample);
   ncm_matrix_clear (&self->cov);
   ncm_matrix_clear (&self->cov_fixed);
+  ncm_matrix_clear (&self->cov_fixed_decomp);
   ncm_matrix_clear (&self->cov_decomp);
   ncm_matrix_clear (&self->cov_decomp0);
   ncm_matrix_clear (&self->sample_matrix);
@@ -254,16 +222,6 @@ _ncm_stats_dist_kde_dispose (GObject *object)
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_kde_parent_class)->dispose (object);
-}
-
-static void
-_ncm_stats_dist_kde_finalize (GObject *object)
-{
-  /*NcmStatsDistKDE *sdkde = NCM_STATS_DIST_KDE (object);*/
-  /*NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);*/
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_stats_dist_kde_parent_class)->finalize (object);
 }
 
 static void _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim);
@@ -287,8 +245,14 @@ ncm_stats_dist_kde_class_init (NcmStatsDistKDEClass *klass)
   object_class->set_property = &_ncm_stats_dist_kde_set_property;
   object_class->get_property = &_ncm_stats_dist_kde_get_property;
   object_class->dispose      = &_ncm_stats_dist_kde_dispose;
-  object_class->finalize     = &_ncm_stats_dist_kde_finalize;
 
+  /**
+   * NcmStatsDistKDE:nearPD-maxiter:
+   *
+   * Maximum number of iterations of the nearest positive definite matrix search applied
+   * to a covariance that is not positive definite to rounding. Default: 200.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_NEARPD_MAXITER,
                                    g_param_spec_uint ("nearPD-maxiter",
@@ -296,6 +260,14 @@ ncm_stats_dist_kde_class_init (NcmStatsDistKDEClass *klass)
                                                       "Maximum number of iterations in the nearPD call",
                                                       1, G_MAXUINT, 200,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmStatsDistKDE:cov-type:
+   *
+   * The #NcmStatsDistKDECovType of the scale matrix shared by the kernels, computed from
+   * the points that carry them. Default: #NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_COV_TYPE,
                                    g_param_spec_enum ("cov-type",
@@ -303,6 +275,14 @@ ncm_stats_dist_kde_class_init (NcmStatsDistKDEClass *klass)
                                                       "Covariance type",
                                                       NCM_TYPE_STATS_DIST_KDE_COV_TYPE, NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmStatsDistKDE:cov-fixed:
+   *
+   * The scale matrix used with #NCM_STATS_DIST_KDE_COV_TYPE_FIXED; a prepare with that
+   * type and no matrix set aborts.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_COV_FIXED,
                                    g_param_spec_object ("cov-fixed",
@@ -360,9 +340,7 @@ _ncm_stats_dist_kde_prepare_shapes (NcmStatsDist *sd, GPtrArray *sample_array)
   NcmStatsDistPrivate * const pself   = ncm_stats_dist_get_instance_private (sd);
   guint i;
 
-  /*
-   * Computing the covariance matrix considering the whole sample.
-   */
+  /* The scale matrix comes from the points that carry the kernels. */
   ncm_stats_vec_reset (self->sample, TRUE);
 
   for (i = 0; i < pself->n_kernels; i++)
@@ -372,10 +350,6 @@ _ncm_stats_dist_kde_prepare_shapes (NcmStatsDist *sd, GPtrArray *sample_array)
     ncm_stats_vec_append (self->sample, theta_i, FALSE);
   }
 
-  /*
-   * Computing the Cholesky decomposition of the total covariance.
-   */
-  /*ncm_matrix_log_vals (ncm_stats_vec_peek_cov_matrix (self->sample, 0), "COV: ", "%12.5g");*/
 
   switch (self->cov_type)
   {
@@ -393,6 +367,9 @@ _ncm_stats_dist_kde_prepare_shapes (NcmStatsDist *sd, GPtrArray *sample_array)
         g_error ("_ncm_stats_dist_kde_prepare_shapes: cov_type is FIXED but a fixed "
                  "covariance matrix was not provided, use ncm_stats_dist_kde_set_cov_fixed to set one.");
 
+      /* The factor made when the matrix was set: cov_decomp holds the shrunk factor since
+       * the last prepare, and building cov_decomp0 from it would compound the shrinkage. */
+      ncm_matrix_memcpy (self->cov_decomp, self->cov_fixed_decomp);
       ncm_matrix_memcpy (self->cov, self->cov_fixed);
       break;
     }
@@ -575,14 +552,14 @@ _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
 }
 
 /*
- * The AMISE objective for one Gaussian bandwidth in closed form. The integral of the
- * squared estimate is the mean of the interpolation matrix at sqrt(2) times the
- * bandwidth (the convolution of two Gaussians); the leave-one-out cross term is the
- * off-diagonal mean of the matrix at the bandwidth itself, which is also where the object
+ * Least-squares cross-validation (the amise vfunc) for a Gaussian kernel in closed form.
+ * The integral of the squared mixture is the mean over the kernel centers of the mixture
+ * at sqrt(2) times the bandwidth (two Gaussians convolve to one at sqrt(2) h), valid for
+ * the uniform weights the fit runs with; the leave-one-out cross term is the off-diagonal
+ * mean of the interpolation matrix at the bandwidth itself, which is also where the object
  * is left. Any other kernel takes the base class's Monte Carlo estimate. NcmStatsDistVKDE
  * inherits this; there the sqrt(2) rule is an approximation, since two kernels with
- * different covariances do not convolve to either at sqrt(2) h -- the behaviour the
- * closed form has always had.
+ * different scale matrices do not convolve to either one at sqrt(2) h.
  */
 static gdouble
 _ncm_stats_dist_kde_amise (NcmStatsDist *sd)
@@ -597,12 +574,18 @@ _ncm_stats_dist_kde_amise (NcmStatsDist *sd)
   if (!NCM_IS_STATS_DIST_KERNEL_GAUSS (pself->kernel))
     return _ncm_stats_dist_amise (sd);
 
-  pself->href = sqrt (2.0) * href;
-  sd_class->compute_IM (sd, pself->IM);
+  /* At the centers, not at the sample points: they differ under center shrinkage. */
+  {
+    NcmVector *m2lnq = ncm_vector_get_subvector (pself->cv_m2lnp, 0, pself->n_kernels);
 
-  for (i = 0; i < pself->n_kernels; i++)
-    for (j = 0; j < pself->n_kernels; j++)
-      amise += ncm_matrix_get (pself->IM, i, j) / (n * n);
+    pself->href = sqrt (2.0) * href;
+    sd_class->eval_weights_m2lnp_vec (sd, pself->weights, pself->center_array, m2lnq);
+
+    for (i = 0; i < pself->n_kernels; i++)
+      amise += exp (-0.5 * ncm_vector_get (m2lnq, i)) / n;
+
+    ncm_vector_free (m2lnq);
+  }
 
   pself->href = href;
   sd_class->compute_IM (sd, pself->IM);
@@ -756,10 +739,9 @@ _ncm_stats_dist_kde_prepare_kernels (NcmStatsDist *sd)
  * @sdk: a #NcmStatsDistKernel
  * @CV_type: a #NcmStatsDistCV
  *
- * Creates a new #NcmStatsDistKDE object using @sdk as
- * kernel and @CV_type as cross-validation method.
+ * Creates a new #NcmStatsDistKDE with kernel @sdk and cross-validation @CV_type.
  *
- * Returns: (transfer full): the newly created #NcmStatsDistKDE object.
+ * Returns: (transfer full): a new #NcmStatsDistKDE.
  */
 NcmStatsDistKDE *
 ncm_stats_dist_kde_new (NcmStatsDistKernel *sdk, NcmStatsDistCV CV_type)
@@ -817,9 +799,7 @@ ncm_stats_dist_kde_clear (NcmStatsDistKDE **sdkde)
  * @sdkde: a #NcmStatsDistKDE
  * @maxiter: maximum number of iterations
  *
- * Sets the maximum number of iterations when finding the
- * nearest positive definite covariance matrix to @maxiter. This function is implemented
- * as a property and used wherever the object factors a covariance.
+ * Sets #NcmStatsDistKDE:nearPD-maxiter.
  *
  */
 void
@@ -834,7 +814,7 @@ ncm_stats_dist_kde_set_nearPD_maxiter (NcmStatsDistKDE *sdkde, const guint maxit
  * ncm_stats_dist_kde_get_nearPD_maxiter:
  * @sdkde: a #NcmStatsDistKDE
  *
- * Returns:an int nearPD_maxiter, the maximum number of iterations when finding the nearest positive definite covariance matrix.
+ * Returns: #NcmStatsDistKDE:nearPD-maxiter.
  */
 guint
 ncm_stats_dist_kde_get_nearPD_maxiter (NcmStatsDistKDE *sdkde)
@@ -849,7 +829,7 @@ ncm_stats_dist_kde_get_nearPD_maxiter (NcmStatsDistKDE *sdkde)
  * @sdkde: a #NcmStatsDistKDE
  * @cov_type: covariance type
  *
- * Sets the covariance type to use in kernel interpolation.
+ * Sets #NcmStatsDistKDE:cov-type. Takes effect at the next ncm_stats_dist_prepare().
  *
  */
 void
@@ -860,14 +840,14 @@ ncm_stats_dist_kde_set_cov_type (NcmStatsDistKDE *sdkde, NcmStatsDistKDECovType 
   self->cov_type = cov_type;
 
   if ((self->cov_type == NCM_STATS_DIST_KDE_COV_TYPE_FIXED) && (self->cov_fixed != NULL))
-    _ncm_stats_dist_cholesky (self->cov_decomp, self->cov_fixed, self->nearPD_maxiter, "the fixed covariance");
+    _ncm_stats_dist_cholesky (self->cov_fixed_decomp, self->cov_fixed, self->nearPD_maxiter, "the fixed covariance");
 }
 
 /**
  * ncm_stats_dist_kde_get_cov_type:
  * @sdkde: a #NcmStatsDistKDE
  *
- * Returns: the covariance type #NcmStatsDistKDECovType.
+ * Returns: #NcmStatsDistKDE:cov-type.
  */
 NcmStatsDistKDECovType
 ncm_stats_dist_kde_get_cov_type (NcmStatsDistKDE *sdkde)
@@ -880,11 +860,9 @@ ncm_stats_dist_kde_get_cov_type (NcmStatsDistKDE *sdkde)
 /**
  * ncm_stats_dist_kde_set_cov_fixed:
  * @sdkde: a #NcmStatsDistKDE
- * @cov_fixed: the fixed covariance matrix #NcmMatrix
+ * @cov_fixed: a $d \times d$ symmetric positive definite #NcmMatrix
  *
- * Sets the covariance matrix to be used when #NcmStatsDistKDECovType is
- * set to #NCM_STATS_DIST_KDE_COV_TYPE_FIXED. A copy of the matrix
- * @cov_fixed is made and saved into the object.
+ * Sets #NcmStatsDistKDE:cov-fixed to a copy of @cov_fixed.
  *
  */
 void
@@ -898,20 +876,20 @@ ncm_stats_dist_kde_set_cov_fixed (NcmStatsDistKDE *sdkde, NcmMatrix *cov_fixed)
   g_assert_cmpuint (ncm_matrix_nrows (cov_fixed), ==, pself->d);
 
   ncm_matrix_clear (&self->cov_fixed);
+  ncm_matrix_clear (&self->cov_fixed_decomp);
 
-  self->cov_fixed = ncm_matrix_dup (cov_fixed);
+  self->cov_fixed        = ncm_matrix_dup (cov_fixed);
+  self->cov_fixed_decomp = ncm_matrix_new (pself->d, pself->d);
 
   if (self->cov_type == NCM_STATS_DIST_KDE_COV_TYPE_FIXED)
-    _ncm_stats_dist_cholesky (self->cov_decomp, self->cov_fixed, self->nearPD_maxiter, "the fixed covariance");
+    _ncm_stats_dist_cholesky (self->cov_fixed_decomp, self->cov_fixed, self->nearPD_maxiter, "the fixed covariance");
 }
 
 /**
  * ncm_stats_dist_kde_peek_cov_fixed:
  * @sdkde: a #NcmStatsDistKDE
  *
- * Gets the currently used fixed covariance matrix.
- *
- * Returns: (transfer none) (allow-none): the fixed covariance matrix
+ * Returns: (transfer none) (nullable): #NcmStatsDistKDE:cov-fixed.
  */
 NcmMatrix *
 ncm_stats_dist_kde_peek_cov_fixed (NcmStatsDistKDE *sdkde)

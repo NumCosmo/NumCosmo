@@ -79,11 +79,15 @@ typedef enum _NcmMSetCatalogTrimType /*< prefix=NCM_MSET_CATALOG_TRIM_TYPE >*/
 
 /**
  * NcmMSetCatalogPostNormMethod:
- * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX: Uses a MVND limited in a hyperbox.
- * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS: Uses a MVND limited in a hyperbox and bootstrap to estimate error.
- * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID: Uses a MVND limited in a ellipsoid.
+ * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX: the Gaussian normalized to the box of
+ *   the parameter bounds, the error from the spread over slices of the rows
+ * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS: the same estimate, the error from
+ *   bootstrap resamples of the rows
+ * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID: the Gaussian truncated to the ellipsoid
+ *   holding half its mass, or a smaller one inside the box; the rows outside contribute
+ *   zero, and the error comes from slices as for the box
  *
- * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().
+ * The estimators of ncm_mset_catalog_get_post_lnnorm().
  *
  */
 typedef enum _NcmMSetCatalogPostNormMethod /*< prefix=NCM_MSET_CATALOG_POST_LNNORM_METHOD >*/
@@ -154,6 +158,8 @@ guint ncm_mset_catalog_get_markovian_burnin (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_set_tau_method (NcmMSetCatalog *mcat, NcmStatsAcorrMethod tau_method);
 NcmStatsAcorrMethod ncm_mset_catalog_get_tau_method (NcmMSetCatalog *mcat);
+void ncm_mset_catalog_set_post_lnnorm_method (NcmMSetCatalog *mcat, NcmMSetCatalogPostNormMethod method);
+NcmMSetCatalogPostNormMethod ncm_mset_catalog_get_post_lnnorm_method (NcmMSetCatalog *mcat);
 NcmStatsAcorr *ncm_mset_catalog_peek_acorr (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_add_from_mset (NcmMSetCatalog *mcat, NcmMSet *mset, ...) G_GNUC_NULL_TERMINATED;

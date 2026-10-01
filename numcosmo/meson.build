@@ -85,6 +85,7 @@ ncm_sources = files(
     'ncm/mpi/ncm_mpi_job_fit.c',
     'ncm/mpi/ncm_mpi_job_mcmc.c',
     'ncm/mpi/ncm_mpi_job_test.c',
+    'ncm/mpi/ncm_mpi_slave.c',
     'ncm/specfunc/ncm_mpsf_0F1.c',
     'ncm/specfunc/ncm_mpsf_sbessel.c',
     'ncm/specfunc/ncm_mpsf_trig_int.c',
@@ -314,6 +315,7 @@ ncm_headers_nogi = files(
 )
 
 ncm_headers_internal = files(
+    'ncm/mpi/ncm_mpi_slave.h',
     'ncm/stats/ncm_stats_dist_kde_private.h',
     'ncm/stats/ncm_stats_dist_kernel_private.h',
     'ncm/stats/ncm_stats_dist_private.h',

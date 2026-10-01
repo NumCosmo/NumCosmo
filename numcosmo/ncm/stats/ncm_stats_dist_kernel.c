@@ -26,49 +26,32 @@
 /**
  * NcmStatsDistKernel:
  *
- * N-dimensional kernel used by #NcmStatsDist for kernel-density estimation.
+ * Abstract kernel of the kernel mixture densities of #NcmStatsDist.
  *
- * Starting with the uni-dimensional case, let $X_1,...,X_n$ be independent and identically
- * distributed (iid) samples drawn from a distribution $f(x)$. The kernel density estimation of the function is
- * \begin{align}
- * \tilde{f}(x) = \sum_{i=1}^{n}K\left(\frac{x-x_i}{h}\right)
- * ,\end{align}
- * where $K$ is the kernel function and $h$ is the bandwidth parameter. The
- * estimator minimizes the mean-square error
- * \begin{align}
- * \label{eqmse}
- * MSE_x(\tilde{f}) = E\left[\tilde{f}(x) - f(x)\right]^2
- * ,\end{align}
- * where $E$ denotes expectation.
+ * A kernel is a symmetric density in $d$ dimensions with location $\mu$, scale matrix
+ * $\Sigma$ and bandwidth $h$,
+ * \begin{equation}
+ * K(x) = \frac{\bar{K}(\chi^2)}{h^d\,u(\Sigma)}, \qquad
+ * \chi^2 = \frac{(x - \mu)^T \Sigma^{-1} (x - \mu)}{h^2},
+ * \end{equation}
+ * where $\bar{K}$ is the unnormalized kernel (ncm_stats_dist_kernel_eval_unnorm()) and
+ * $u(\Sigma)$ its normalization at $h = 1$ (ncm_stats_dist_kernel_get_lnnorm() returns
+ * $\ln u$). The covariance of $K$ is $\kappa h^2 \Sigma$, with $\kappa$ given by
+ * ncm_stats_dist_kernel_get_var_factor().
  *
- * The kernel $K$ is a symmetric function that must satisfy
- * \begin{align}
- * &\int K(x)~dx = 1
- * .\end{align}
- * $K$ is normally a symmetric, normalized density that can be sampled.
+ * Given points $x_1, \dots, x_n$ with weights $w_i$, #NcmStatsDist builds the mixture
+ * \begin{equation}
+ * \tilde{f}(x) = \sum_{i=1}^n w_i K_i(x),
+ * \end{equation}
+ * where $K_i$ has location $x_i$. #NcmStatsDist chooses the weights, the scale matrices
+ * and the bandwidth, and adds the $d \ln h$ term to the normalization. The kernel
+ * provides $\bar{K}$, $u$, $\kappa$, the rule-of-thumb bandwidth and samples.
  *
- * Apart from ncm_stats_dist_kernel_get_dim(), this class has only virtual
- * methods, so a child object must be instantiated: #NcmStatsDistKernelGauss or
- * #NcmStatsDistKernelST. Either can be used with #NcmStatsDistKDE or
- * #NcmStatsDistVKDE. This class does not compute the kernel weights; that is
- * done by #NcmStatsDist.
+ * Apart from ncm_stats_dist_kernel_get_dim(), all methods are virtual. The
+ * implementations are #NcmStatsDistKernelGauss and #NcmStatsDistKernelST.
  *
  * For background see [Density Estimation for Statistics and Data Analysis,
  * B.W. Silverman](https://www.routledge.com/Density-Estimation-for-Statistics-and-Data-Analysis/Silverman/p/book/9780412246203).
- *
- * For the multidimensional case, given i.i.d d-dimensional sample points $X_1,.., X_n$ distributed by $f(x)$,
- * the multivariate kernel density estimator function $\tilde{f}(x)$ is given by
- * \begin{align}
- * \tilde{f}(x) = \frac{1}{h^d} \sum_{i=1}^n w_i K\left(\frac{x-x_i}{h}, \Sigma_i\right)
- * ,\end{align}
- * where $\Sigma_i$ is the covariance matrix of the $i$-th point (the kernels used in this library depend on the covariance matrix),
- * $d$ is the dimension and $w_i$ is the weight attached to each kernel to find the minimal error in equation \eqref{eqmse}.
- *
- * Methods define $K$, compute the bandwidth factor $h$, evaluate $K$, and
- * compute the weighted estimator.
- *
- * Apart from ncm_stats_dist_kernel_get_dim(), this class exposes virtual
- * methods. Use #NcmStatsDistKernelGauss or #NcmStatsDistKernelST.
  *
  **/
 
@@ -112,8 +95,6 @@ _ncm_stats_dist_kernel_set_property (GObject *object, guint prop_id, const GValu
 {
   NcmStatsDistKernel *sdk = NCM_STATS_DIST_KERNEL (object);
 
-  /*NcmStatsDistKernelPrivate * const self = sdk->priv;*/
-
   g_return_if_fail (NCM_IS_STATS_DIST_KERNEL (object));
 
   switch (prop_id)
@@ -132,8 +113,6 @@ _ncm_stats_dist_kernel_get_property (GObject *object, guint prop_id, GValue *val
 {
   NcmStatsDistKernel *sdk = NCM_STATS_DIST_KERNEL (object);
 
-  /*NcmStatsDistKernelPrivate * const self = sdk->priv;*/
-
   g_return_if_fail (NCM_IS_STATS_DIST_KERNEL (object));
 
   switch (prop_id)
@@ -145,23 +124,6 @@ _ncm_stats_dist_kernel_get_property (GObject *object, guint prop_id, GValue *val
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
   }
-}
-
-static void
-_ncm_stats_dist_kernel_dispose (GObject *object)
-{
-  /*NcmStatsDistKernel *sdk = NCM_STATS_DIST_KERNEL (object);*/
-  /*NcmStatsDistKernelPrivate * const self = sdk->priv;*/
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_stats_dist_kernel_parent_class)->dispose (object);
-}
-
-static void
-_ncm_stats_dist_kernel_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_stats_dist_kernel_parent_class)->finalize (object);
 }
 
 static void _ncm_stats_dist_kernel_set_dim (NcmStatsDistKernel *sdk, const guint dim);
@@ -225,8 +187,6 @@ ncm_stats_dist_kernel_class_init (NcmStatsDistKernelClass *klass)
 
   object_class->set_property = &_ncm_stats_dist_kernel_set_property;
   object_class->get_property = &_ncm_stats_dist_kernel_get_property;
-  object_class->dispose      = &_ncm_stats_dist_kernel_dispose;
-  object_class->finalize     = &_ncm_stats_dist_kernel_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_DIM,
@@ -267,7 +227,7 @@ _ncm_stats_dist_kernel_get_dim (NcmStatsDistKernel *sdk)
  * ncm_stats_dist_kernel_ref:
  * @sdk: a #NcmStatsDistKernel
  *
- * Increase the reference of @sdk by one.
+ * Increases the reference count of @sdk by one.
  *
  * Returns: (transfer full): @sdk.
  */
@@ -281,7 +241,7 @@ ncm_stats_dist_kernel_ref (NcmStatsDistKernel *sdk)
  * ncm_stats_dist_kernel_free:
  * @sdk: a #NcmStatsDistKernel
  *
- * Decrease the reference count of @sdk by one.
+ * Decreases the reference count of @sdk by one.
  *
  */
 void
@@ -294,8 +254,7 @@ ncm_stats_dist_kernel_free (NcmStatsDistKernel *sdk)
  * ncm_stats_dist_kernel_clear:
  * @sdk: a #NcmStatsDistKernel
  *
- * Decrease the reference count of @stats_dist_nd_kde_gauss by one, and sets the pointer *@sdk to
- * NULL.
+ * Decreases the reference count of *@sdk by one and sets *@sdk to NULL.
  *
  */
 void
@@ -308,9 +267,7 @@ ncm_stats_dist_kernel_clear (NcmStatsDistKernel **sdk)
  * ncm_stats_dist_kernel_get_dim: (virtual get_dim)
  * @sdk: a #NcmStatsDistKernel
  *
- * Gets current kernel dimension.
- *
- * Returns: current kernel dimension.
+ * Returns: the kernel dimension $d$.
  */
 guint
 ncm_stats_dist_kernel_get_dim (NcmStatsDistKernel *sdk)
@@ -323,8 +280,10 @@ ncm_stats_dist_kernel_get_dim (NcmStatsDistKernel *sdk)
  * @sdk: a #NcmStatsDistKernel
  * @n: number of kernels
  *
- * Computes the rule-of-thumb bandwidth for a interpolation
- * using @n kernels.
+ * Computes the rule-of-thumb bandwidth $h$ for a mixture of @n kernels: the $h$
+ * that minimizes the asymptotic mean integrated squared error when the estimated
+ * density is the kernel itself with the scale matrix $\Sigma$ of the mixture. See
+ * the implementations for the closed forms.
  *
  * Returns: the rule-of-thumb bandwidth.
  */
@@ -354,11 +313,11 @@ ncm_stats_dist_kernel_get_var_factor (NcmStatsDistKernel *sdk)
 /**
  * ncm_stats_dist_kernel_get_lnnorm: (virtual get_lnnorm)
  * @sdk: a #NcmStatsDistKernel
- * @cov_decomp: Cholesky decomposition of the kernel covariance
+ * @cov_decomp: upper-triangular Cholesky factor $U$ of the scale matrix, $\Sigma = U^T U$
  *
- * Computes the kernel normalization for a given covariance @cov_decomp.
+ * Computes $\ln u(\Sigma)$, the logarithm of the kernel normalization at $h = 1$.
  *
- * Returns: the kernel normalization logarithm.
+ * Returns: $\ln u(\Sigma)$.
  */
 gdouble
 ncm_stats_dist_kernel_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp)
@@ -369,11 +328,9 @@ ncm_stats_dist_kernel_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp
 /**
  * ncm_stats_dist_kernel_eval_unnorm: (virtual eval_unnorm)
  * @sdk: a #NcmStatsDistKernel
- * @chi2: a double
+ * @chi2: the scaled squared distance $\chi^2$
  *
- * Computes the unnormalized kernel at $\chi^2=$@chi2.
- *
- * Returns: the unnormalized kernel at $\chi^2=$@chi2.
+ * Returns: the unnormalized kernel $\bar{K}(\chi^2)$ at $\chi^2 = $ @chi2.
  */
 gdouble
 ncm_stats_dist_kernel_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble chi2)
@@ -384,11 +341,11 @@ ncm_stats_dist_kernel_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble chi2)
 /**
  * ncm_stats_dist_kernel_eval_unnorm_vec: (virtual eval_unnorm_vec)
  * @sdk: a #NcmStatsDistKernel
- * @chi2: a #NcmVector
- * @Ku: a #NcmVector
+ * @chi2: a #NcmVector of $\chi^2$ values
+ * @Ku: a #NcmVector of the same length
  *
- * Computes the unnormalized kernel at $\chi^2=$@chi2 for all elements of @chi2
- * and store the results at @Ku.
+ * Computes the unnormalized kernel $\bar{K}$ at every element of @chi2 and stores
+ * the results in @Ku.
  *
  */
 void
@@ -400,16 +357,16 @@ ncm_stats_dist_kernel_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2,
 /**
  * ncm_stats_dist_kernel_eval_gamma_lambda: (virtual eval_gamma_lambda)
  * @sdk: a #NcmStatsDistKernel
- * @chi2: a #NcmVector
+ * @chi2: a #NcmVector holding $\chi^2_i$, one entry per kernel
  * @lnc: a #NcmVector holding $\ln (w_i / u_i)$, one entry per kernel
- * @lnK: a #NcmVector to store the logarithm of the kernels
+ * @lnK: a #NcmVector that receives the logarithm of each term, $\ln (w_i \bar{K}(\chi^2_i) / u_i)$
  * @gamma: (out): $\gamma$
  * @lambda: (out): $\lambda$
  *
- * Computes the weighted sum of kernels at $\chi^2=$@chi2 (the density estimator function),
+ * Computes the weighted sum of kernels (the mixture density at one point),
  * $$ e^\gamma (1+\lambda) = \sum_i w_i\bar{K} (\chi^2_i) / u_i,$$
  * where $\gamma = \ln(w_a\bar{K} (\chi^2_a) / u_a)$ and $a$ labels the largest term of
- * the sum.
+ * the sum. The three vectors must have the same length and unit stride.
  *
  * The weight and the normalization enter only through their ratio, so @lnc carries the
  * combination $\ln w_i - \ln u_i$ already formed. The caller builds it once per batch of
@@ -426,20 +383,19 @@ ncm_stats_dist_kernel_eval_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi
 /**
  * ncm_stats_dist_kernel_sample: (virtual sample)
  * @sdk: a #NcmStatsDistKernel
- * @cov_decomp: Cholesky decomposition of the kernel covariance
- * @href: kernel bandwidth
- * @mu: kernel location vector
+ * @cov_decomp: upper-triangular Cholesky factor $U$ of the scale matrix, $\Sigma = U^T U$
+ * @href: kernel bandwidth $h$
+ * @mu: kernel location $\mu$
  * @y: output vector
  * @rng: a #NcmRNG
  *
- * Generates a random vector from the kernel distribution
- * using the covariance @cov_decomp, bandwidth @href and
- * location vector @mu. The result is stored in @y.
+ * Draws a point from the kernel with location @mu, scale matrix $\Sigma$ and
+ * bandwidth @href, and stores it in @y.
  *
  */
 void
 ncm_stats_dist_kernel_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *y, NcmRNG *rng)
 {
-  return NCM_STATS_DIST_KERNEL_GET_CLASS (sdk)->sample (sdk, cov_decomp, href, mu, y, rng);
+  NCM_STATS_DIST_KERNEL_GET_CLASS (sdk)->sample (sdk, cov_decomp, href, mu, y, rng);
 }
 

@@ -40,12 +40,11 @@ G_DECLARE_FINAL_TYPE (NcmStatsDist1dEPDF, ncm_stats_dist1d_epdf, NCM, STATS_DIST
 
 /**
  * NcmStatsDist1dEPDFBw:
- * @NCM_STATS_DIST1D_EPDF_BW_FIXED: Uses the given value of bandwidth.
- * @NCM_STATS_DIST1D_EPDF_BW_RoT: Uses the Silverman's rule of thumb to determine the bandwidth.
- * @NCM_STATS_DIST1D_EPDF_BW_AUTO: Uses Botev's et al method to automatically determine the best bandwidth.
+ * @NCM_STATS_DIST1D_EPDF_BW_FIXED: #NcmStatsDist1dEPDF:h-fixed
+ * @NCM_STATS_DIST1D_EPDF_BW_RoT: rule of thumb $(4/3)^{1/5}\min(\sigma, \mathrm{IQR}/1.34)\,N^{-1/5}$
+ * @NCM_STATS_DIST1D_EPDF_BW_AUTO: diffusion plug-in selector, see #NcmStatsDist1dEPDF
  *
- * Gaussian kernel bandwidth type.
- *
+ * How #NcmStatsDist1dEPDF chooses its kernel bandwidth.
  */
 typedef enum _NcmStatsDist1dEPDFBw /*< prefix=NCM_STATS_DIST1D_EPDF_BW >*/
 {

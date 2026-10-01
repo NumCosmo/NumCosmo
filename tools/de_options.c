@@ -44,7 +44,7 @@ nc_de_opt_get_run_group (NcDERunEntries *de_run)
     { "save-run", 's', 0, G_OPTION_ARG_FILENAME, &de_run->saverun,   "Save run configuration to file",                             NULL },
     { "main-seed",  0, 0, G_OPTION_ARG_INT64,    &de_run->main_seed, "Seed used to setup the main RNG",                            NULL },
     { "nthreads",   0, 0, G_OPTION_ARG_INT,      &de_run->nthreads,  "Max number of threads to be created by the pool",            NULL },
-    { NULL }
+    { NULL, 0, 0, 0, NULL, NULL, NULL }
   };
   GOptionGroup *run_group = g_option_group_new ("run", " - Run configuration options", "Show help options related to a run", NULL, NULL);
 
@@ -66,7 +66,7 @@ nc_de_opt_get_model_group (NcDEModelEntries *de_model, GOptionEntry **de_model_e
     { "Omega_k",       0, 0, G_OPTION_ARG_NONE,   &de_model->Omega_k,     "Change variable Omega_x -> Omega_k",                         NULL },
     { "flat",          0, 0, G_OPTION_ARG_NONE,   &de_model->flat,        "Change variable Omega_x -> Omega_k and set Omega_k to zero", NULL },
     { "help-names",    0, 0, G_OPTION_ARG_NONE,   &de_model->help_names,  "Print the parameters names of the chosen model", NULL },
-    { NULL }
+    { NULL, 0, 0, 0, NULL, NULL, NULL }
   };
   GOptionGroup *model_group = g_option_group_new ("model", " - Dark energy model options", "Show help options related to dark energy model", NULL, NULL);
 
@@ -151,7 +151,7 @@ nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple, GOptionE
     { "BBN-Omega_b",    0,                    0, G_OPTION_ARG_NONE,         &de_data_simple->BBN_Ob,       "Use BBN Omega_b * h2 Prior = 0.022 +/- 0.002", NULL },
     { "priors-gauss",   0,                    0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->priors_gauss, "Add a gaussian prior to a model",       NULL },
     { "data-file",      0,                    0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->data_files,   "File containing a serialized version of a NcmData object",   NULL },
-    { NULL }
+    { NULL, 0, 0, 0, NULL, NULL, NULL }
   };
   GOptionGroup *data_simple_group = g_option_group_new ("data", " - Cosmological data options", "Show help options related to the dataset to be used", NULL, NULL);
 
@@ -181,7 +181,7 @@ nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster, GOpti
     { "n_bins",        0, 0, G_OPTION_ARG_INT,            &de_data_cluster->n_bins,                "Number of bins", NULL },
     { "catalog",       0, 0, G_OPTION_ARG_FILENAME_ARRAY, &de_data_cluster->cata_file,             "Use the following catalog as the observational data. It can be used multiple times", "catalog.dat"},
     { "save-cat",      0, 0, G_OPTION_ARG_FILENAME,       &de_data_cluster->save_cata,             "Use this option to save the catalog used. (will overwrite)", NULL },
-    { NULL }
+    { NULL, 0, 0, 0, NULL, NULL, NULL }
   };
   GOptionGroup *data_cluster_group = g_option_group_new ("cluster", " - Include cluster number counts\n\t - Use --cluster-id 0 and --catalog to use a fit file catalog\n\t - Use --cluster-id 1 and --catalog to use a text file catalog (plain two columns redshift and ln mass)\n\t - Use --cluster-id 2 to make a mock catalog from theory\n", "Show help options related to cluster", NULL, NULL);
 
@@ -294,7 +294,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "qspline-cp-sigma", 0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->qspline_cp_sigma, "Value of sigma for the continuity priors", NULL},
     { "save-best-fit",    0, 0, G_OPTION_ARG_NONE,         &de_fit->save_best_fit,    "Create a file and print the cosmological parameters (both best-fit and fixed ones)", NULL},
     { "save-mset",        0, 0, G_OPTION_ARG_STRING,       &de_fit->save_mset,        "Save NcmMSet to a file for future usage", NULL},
-    { NULL }
+    { NULL, 0, 0, 0, NULL, NULL, NULL }
   };
   GOptionGroup *fit_group = g_option_group_new ("fit", " - Choices of statistical analysis", "Show help options related to model fitting", &de_fit->fisher, NULL);
 

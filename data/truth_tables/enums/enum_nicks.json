@@ -279,22 +279,6 @@
     "nick": "p-v",
     "type": "Ncm.IntegralNDMethod"
   },
-  "NCM_LH_RATIO1D_ROOT_BRACKET": {
-    "nick": "bracket",
-    "type": "Ncm.LHRatio1dRoot"
-  },
-  "NCM_LH_RATIO1D_ROOT_NUMDIFF": {
-    "nick": "numdiff",
-    "type": "Ncm.LHRatio1dRoot"
-  },
-  "NCM_LH_RATIO2D_ROOT_BRACKET": {
-    "nick": "bracket",
-    "type": "Ncm.LHRatio2dRoot"
-  },
-  "NCM_LH_RATIO2D_ROOT_NUMDIFF": {
-    "nick": "numdiff",
-    "type": "Ncm.LHRatio2dRoot"
-  },
   "NCM_MATRIX_DERIVED": {
     "nick": "derived",
     "type": "Ncm.MatrixInternal"
@@ -669,6 +653,10 @@
   },
   "NCM_SPLINE_GSL_POLYNOMIAL": {
     "nick": "polynomial",
+    "type": "Ncm.SplineGslType"
+  },
+  "NCM_SPLINE_GSL_STEFFEN": {
+    "nick": "steffen",
     "type": "Ncm.SplineGslType"
   },
   "NCM_STATS_ACORR_AR_CRIT_AIC": {

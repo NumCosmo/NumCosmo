@@ -174,7 +174,9 @@ def test_norm_bit_parity(zp, sigma0, n):
     assert_allclose(new_norm, _NORM_FROZEN[(zp, sigma0, n)], rtol=0.0, atol=0.0)
 
 
-# Frozen legacy seed=7531 draw sequence (50 draws), keyed by (zp, sigma0, n).
+# Frozen seed=7531 draw sequence (50 draws), keyed by (zp, sigma0, n), from the
+# current NcmStatsDist1d inverse CDF, not from legacy: the legacy draws carried the
+# old inverse-CDF error, up to 9.4e-5 in probability against 1.5e-5 now.
 # Stored as a flat (len(_CASES), 50) matrix, blocked by case (matching
 # _CASES order). Regenerate with Ncm.Serialize.to_binfile on an Ncm.Matrix
 # built from the rows in that order.
@@ -199,12 +201,10 @@ _GEN_FROZEN = _load_gen_golden()
 def test_gen_matches_seed_for_seed(zp, sigma0, n):
     """Same seed -> same inverse-CDF construction -> identical draws.
 
-    The new Spline scheme builds its lazy `dist` inside `gen()`, using the
-    exact same -2*log(y+1e-5) transform, NcmStatsDist1dSpline with
-    reltol=1e-5, and a do-while rejection loop against [z_min, z_max] that
-    legacy's `NcGalaxySDObsRedshiftPz` used (which built its own lazily
-    inside `prepare()`) -- so the RNG call sequence was identical, checked
-    here against a frozen legacy draw sequence (see module docstring).
+    The Spline scheme builds its lazy `dist` inside `gen()` from the
+    -2*log(y+1e-5) transform, NcmStatsDist1dSpline with reltol=1e-5, and a
+    do-while rejection loop against [z_min, z_max], checked against a frozen
+    draw sequence of the current inverse CDF (see _GEN_GOLDEN_FILE).
     """
     spline = _make_pz_spline(zp, sigma0, n)
     gsdrs, mset, new_data = _build_new(spline)
@@ -218,9 +218,8 @@ def test_gen_matches_seed_for_seed(zp, sigma0, n):
         gsdrs.gen(mset, new_data, rng_new)
         new_zs[i] = new_data.z
 
-    # rtol=1e-12 (not bit-exact): gen() routes through NcmStatsDist1d's
-    # inverse-CDF spline, built by a GSL adaptive-ODE solve
-    # (ncm_ode_spline_prepare) and evaluated via atanh() -- both genuinely
+    # rtol=1e-10 (not bit-exact): gen() routes through NcmStatsDist1d's
+    # inverse-CDF spline, built from a CVODE solve (ncm_ode_spline_prepare),
     # sensitive to the platform's libm/compiler at the ULP level, unlike the
     # other frozen comparisons in this file which only evaluate @pz's
     # cubic spline directly (see module docstring). Observed on CI: 1/50

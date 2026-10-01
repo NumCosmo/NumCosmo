@@ -26,49 +26,23 @@
 /**
  * NcmFitESMCMCWalkerAPES:
  *
- * Ensemble sampler Markov Chain Monte Carlo walker - apes move.
+ * Approximate Posterior Ensemble Sampler (APES) move for #NcmFitESMCMC.
  *
- * Implementing apes move walker for #NcmFitESMCMC.
+ * The ensemble is split into two halves. The walkers of each half propose points drawn
+ * from $\tilde{\pi}$, an approximation of the posterior built by a #NcmStatsDist
+ * (#NcmStatsDistKDE or #NcmStatsDistVKDE, #NcmFitESMCMCWalkerAPES:method) from the
+ * current positions of the other half, and accept them with probability
+ * $\min[1, \pi(Y)\tilde{\pi}(X)/(\pi(X)\tilde{\pi}(Y))]$, the independence-sampler
+ * rule; the halves move in turn. The better $\tilde{\pi}$ approximates the posterior,
+ * the higher the acceptance and the shorter the autocorrelation. The kernel
+ * (#NcmFitESMCMCWalkerAPES:kernel-type), its bandwidth and the other properties are
+ * forwarded to both estimators; the estimators are described on the <a
+ * href="../../theory/ncm/stats/stats_dist.html">Kernel Mixture Densities</a> page.
  *
- * This object implements the Approximate Posterior Ensemble Sample (APES) step proposal
- * for a walker. This proposal was developed by Sandro Dias Pinto Vitenti and
- * implemented in this library. Below there is a description of the proposal.
- *
- * The APES proposal consists of using radial basis interpolation to generate an
- * interpolant $\tilde{\pi}$ from a target distribution $\pi$ and use this interpolant
- * to propose new points for the walker. By using a distribution $\tilde{\pi}$ that
- * resembles the original target distribution, the APES proposal generates samples that
- * converge faster to the target distribution and are more independent when compared to
- * other step proposals.
- *
- * The APES step is implemented as follows: suppose that there are $L$ walkers. They are
- * divided into two blocks $L_1$ and $L_2$, containing the first and the second half of
- * the walkers respectively. When proposing new points $Y$ for the walkers in the $L_1$
- * block, we use the points in the $L_2$ block to generate an interpolant
- * $\tilde{\pi}_{L_2}$ and then propose points $Y \sim \tilde{\pi}_{L_2}$ for the $L_1$
- * block. These points are accepted or rejected based on an acceptance probability
- * $A(Y|X)$, and after the points of the first block are updated, we do the same
- * procedure for the $L_2$ block using the $L_1$ block. This procedure can be seen in
- * the pseudocode below.
- *
- * ![apes_sketch](apes.png)
- *
- * The user must provide the input the values: @nwalkers, @nparams, @method, @k\_@type,
- * @over\_@smooth$ and @use\_@interp - ncm\_fit\_esmcmc\_walker\_apes\_new\_full(). The
- * user can also initialize the object with: @nwalkers, @nparams -
- * ncm\_fit\_esmcmc\_walker\_apes\_new() and let the remaining parameters as default,
- * which are defined in the properties of the class. For more information about the
- * algorithm, check the explanation below.
- *
- *    - This object shall be used in the #NcmFitESMCMC class to generate a Monte Carlo
- *      Markov Chain using an ensemble sampler. To see an example of its implementation,
- *      check the file example\_rosenbrock.py in NumCosmo/examples.
- *
- *    - Regarding the radial basis interpolation method is implemented, check the
- *      #NcmStatsDist class.
- *
- *    - Regarding the types of kernel used in the interpolation method as the radial
- *      basis function, check the #NcmStatsDistKernel class.
+ * An optional exploration phase (#NcmFitESMCMCWalkerAPES:exploration) accepts with the
+ * proposal ratio floored (#NcmFitESMCMCWalkerAPES:exploration-qratio-floor, zero drops
+ * it); its rows are not Markovian and #NcmMSetCatalog:markovian-id marks where the chain
+ * starts.
  *
  */
 
@@ -479,7 +453,7 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
   /**
    * NcmFitESMCMCWalkerAPES:center-shrink:
    *
-   * Whether to shrink the kernel centres of the posterior approximation toward the
+   * Whether to shrink the kernel centers of the posterior approximation toward the
    * ensemble mean, so that the covariance of the approximation equals the covariance
    * of the half-ensemble it is built from for any value of
    * #NcmFitESMCMCWalkerAPES:over-smooth. See #NcmStatsDist:center-shrink.
@@ -494,7 +468,7 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                    PROP_CENTER_SHRINK,
                                    g_param_spec_boolean ("center-shrink",
                                                          NULL,
-                                                         "Whether to shrink the kernel centres toward the ensemble mean",
+                                                         "Whether to shrink the kernel centers toward the ensemble mean",
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -599,7 +573,7 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
   /**
    * NcmFitESMCMCWalkerAPES:split-frac:
    *
-   * The fraction of the block used as kernel centres when the cross-validation
+   * The fraction of the block used as kernel centers when the cross-validation
    * splits the sample. Default: 0.8. Zero keeps whatever #NcmStatsDist uses.
    *
    */
@@ -607,7 +581,7 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                    PROP_SPLIT_FRAC,
                                    g_param_spec_double ("split-frac",
                                                         NULL,
-                                                        "Fraction of the block used as kernel centres",
+                                                        "Fraction of the block used as kernel centers",
                                                         0.0, 1.0, 0.8,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -722,7 +696,7 @@ _ncm_fit_esmcmc_walker_apes_check_center_shrink (NcmFitESMCMCWalkerAPESPrivate *
   if (self->center_shrink && (self->k_type == NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY))
     g_error ("Centre shrinkage is on (the default) and the Cauchy kernel has no covariance for it to match.\n"
              "\tShrinkage makes the proposal reproduce the ensemble covariance, which Cauchy does not define: "
-             "use the ST3 or GAUSS kernel, or turn centre shrinkage off before setting the kernel type.");
+             "use the ST3 or GAUSS kernel, or turn center shrinkage off before setting the kernel type.");
 }
 
 /* Only the cross-validations that fit the bandwidth can fit the kernel with it; under any
@@ -1316,8 +1290,8 @@ _ncm_fit_esmcmc_walker_apes_opts (NcmFitESMCMCWalker *walker)
  * @nwalkers: number of walkers
  * @nparams: number of parameters
  *
- * Creates a new #NcmFitESMCMCWalkerAPES to be used
- * with @nwalkers.
+ * Creates a #NcmFitESMCMCWalkerAPES for @nwalkers walkers in @nparams dimensions, with the
+ * default properties.
  *
  * Returns: (transfer full): a new #NcmFitESMCMCWalkerAPES.
  */
@@ -1338,10 +1312,10 @@ ncm_fit_esmcmc_walker_apes_new (guint nwalkers, guint nparams)
  * @nparams: number of parameters
  * @method: a #NcmFitESMCMCWalkerAPESMethod
  * @k_type: a #NcmFitESMCMCWalkerAPESKType
- * @over_smooth: a double
+ * @over_smooth: bandwidth factor, see #NcmFitESMCMCWalkerAPES:over-smooth
  *
- * Creates a new #NcmFitESMCMCWalkerAPES to be used with @nwalkers, interpolation method
- * @method, kernel @kernel and over-smooth parameter @over_smooth.
+ * Creates a #NcmFitESMCMCWalkerAPES as ncm_fit_esmcmc_walker_apes_new(), with estimator
+ * @method, kernel @k_type and over-smooth factor @over_smooth.
  *
  * Returns: (transfer full): a new #NcmFitESMCMCWalkerAPES.
  */
@@ -1390,7 +1364,7 @@ ncm_fit_esmcmc_walker_apes_free (NcmFitESMCMCWalkerAPES *apes)
  * ncm_fit_esmcmc_walker_apes_clear:
  * @apes: a #NcmFitESMCMCWalkerAPES
  *
- * Decreases the reference count of *@apes atomically and sets the pointer *@apes to null.
+ * Decreases the reference count of *@apes and sets it to %NULL.
  *
  */
 void
@@ -1448,10 +1422,10 @@ ncm_fit_esmcmc_walker_apes_set_k_type (NcmFitESMCMCWalkerAPES *apes, NcmFitESMCM
 /**
  * ncm_fit_esmcmc_walker_apes_set_over_smooth:
  * @apes: a #NcmFitESMCMCWalkerAPES
- * @os: a double
+ * @os: bandwidth factor
  *
- * Sets the over smooth parameter to adjust the interpolation
- * bandwidth.
+ * Sets #NcmFitESMCMCWalkerAPES:over-smooth, forwarded to both estimators
+ * (#NcmStatsDist:over-smooth).
  *
  */
 void
@@ -1562,9 +1536,9 @@ ncm_fit_esmcmc_walker_apes_get_use_threads (NcmFitESMCMCWalkerAPES *apes)
 /**
  * ncm_fit_esmcmc_walker_apes_set_center_shrink:
  * @apes: a #NcmFitESMCMCWalkerAPES
- * @center_shrink: whether to shrink the kernel centres toward the ensemble mean
+ * @center_shrink: whether to shrink the kernel centers toward the ensemble mean
  *
- * Sets whether the posterior approximations use centre shrinkage, see
+ * Sets whether the posterior approximations use center shrinkage, see
  * #NcmFitESMCMCWalkerAPES:center-shrink.
  *
  */
@@ -1597,7 +1571,7 @@ ncm_fit_esmcmc_walker_apes_set_center_shrink (NcmFitESMCMCWalkerAPES *apes, gboo
  * ncm_fit_esmcmc_walker_apes_get_center_shrink:
  * @apes: a #NcmFitESMCMCWalkerAPES
  *
- * Returns: whether the posterior approximations use centre shrinkage.
+ * Returns: whether the posterior approximations use center shrinkage.
  */
 gboolean
 ncm_fit_esmcmc_walker_apes_get_center_shrink (NcmFitESMCMCWalkerAPES *apes)
@@ -1829,9 +1803,9 @@ ncm_fit_esmcmc_walker_apes_get_cv_type (NcmFitESMCMCWalkerAPES *apes)
 /**
  * ncm_fit_esmcmc_walker_apes_set_split_frac:
  * @apes: a #NcmFitESMCMCWalkerAPES
- * @split_frac: the fraction of the block used as kernel centres
+ * @split_frac: the fraction of the block used as kernel centers
  *
- * Sets the fraction of the block used as kernel centres when the cross-validation
+ * Sets the fraction of the block used as kernel centers when the cross-validation
  * splits the sample, see #NcmFitESMCMCWalkerAPES:split-frac. Zero keeps the
  * #NcmStatsDist default.
  *
@@ -1858,7 +1832,7 @@ ncm_fit_esmcmc_walker_apes_set_split_frac (NcmFitESMCMCWalkerAPES *apes, const g
  * ncm_fit_esmcmc_walker_apes_get_split_frac:
  * @apes: a #NcmFitESMCMCWalkerAPES
  *
- * Returns: the fraction of the block used as kernel centres.
+ * Returns: the fraction of the block used as kernel centers.
  */
 gdouble
 ncm_fit_esmcmc_walker_apes_get_split_frac (NcmFitESMCMCWalkerAPES *apes)
@@ -1930,9 +1904,9 @@ ncm_fit_esmcmc_walker_apes_peek_sds (NcmFitESMCMCWalkerAPES *apes, NcmStatsDist 
 /**
  * ncm_fit_esmcmc_walker_apes_set_local_frac:
  * @apes: a #NcmFitESMCMCWalkerAPES
- * @local_frac: a double determining the local fraction to use in VKDE.
+ * @local_frac: fraction of the sample in each local covariance, see #NcmStatsDistVKDE
  *
- * Sets the local fraction to use in VKDE.
+ * Sets the local fraction of both VKDE estimators; with another method it aborts.
  *
  */
 void
@@ -1954,10 +1928,10 @@ ncm_fit_esmcmc_walker_apes_set_local_frac (NcmFitESMCMCWalkerAPES *apes, gdouble
 /**
  * ncm_fit_esmcmc_walker_apes_set_cov_fixed_from_mset:
  * @apes: a #NcmFitESMCMCWalkerAPES
- * @mset: a #NcmMSet to get the covariance from.
+ * @mset: a #NcmMSet
  *
- * Sets the fixed covariance to the KDE interpolation using
- * the scales set into @mset.
+ * Makes both estimators use a fixed kernel covariance, diagonal with the squared
+ * free-parameter scales of @mset.
  *
  */
 void
@@ -1993,8 +1967,8 @@ ncm_fit_esmcmc_walker_apes_set_cov_fixed_from_mset (NcmFitESMCMCWalkerAPES *apes
  * ncm_fit_esmcmc_walker_apes_set_cov_robust_diag:
  * @apes: a #NcmFitESMCMCWalkerAPES
  *
- * Sets the fixed covariance to the KDE interpolation using
- * robust estimates of scale.
+ * Makes both estimators use a diagonal kernel covariance from robust estimates of the
+ * variances of the sample.
  *
  */
 void
@@ -2012,8 +1986,8 @@ ncm_fit_esmcmc_walker_apes_set_cov_robust_diag (NcmFitESMCMCWalkerAPES *apes)
  * ncm_fit_esmcmc_walker_apes_set_cov_robust:
  * @apes: a #NcmFitESMCMCWalkerAPES
  *
- * Sets the fixed covariance to the KDE interpolation using
- * robust estimates of scale.
+ * Makes both estimators use a kernel covariance from a robust estimate of the covariance
+ * of the sample.
  *
  */
 void

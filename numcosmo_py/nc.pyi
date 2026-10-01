@@ -4086,7 +4086,7 @@ class DECont(NumCosmoMath.CSQ1D):
       reltol -> gdouble: reltol
         Relative tolerance
       abstol -> gdouble: abstol
-        Absolute tolerance tolerance
+        Absolute tolerance
       ti -> gdouble: ti
         The initial time t_i
       tf -> gdouble: tf
@@ -13061,7 +13061,7 @@ class HIPertAdiab(NumCosmoMath.CSQ1D):
       reltol -> gdouble: reltol
         Relative tolerance
       abstol -> gdouble: abstol
-        Absolute tolerance tolerance
+        Absolute tolerance
       ti -> gdouble: ti
         The initial time t_i
       tf -> gdouble: tf
@@ -13933,7 +13933,7 @@ class HIPertEM(NumCosmoMath.CSQ1D):
       reltol -> gdouble: reltol
         Relative tolerance
       abstol -> gdouble: abstol
-        Absolute tolerance tolerance
+        Absolute tolerance
       ti -> gdouble: ti
         The initial time t_i
       tf -> gdouble: tf
@@ -14196,7 +14196,7 @@ class HIPertGW(NumCosmoMath.CSQ1D):
       reltol -> gdouble: reltol
         Relative tolerance
       abstol -> gdouble: abstol
-        Absolute tolerance tolerance
+        Absolute tolerance
       ti -> gdouble: ti
         The initial time t_i
       tf -> gdouble: tf

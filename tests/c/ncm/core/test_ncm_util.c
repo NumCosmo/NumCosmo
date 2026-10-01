@@ -382,13 +382,18 @@ test_ncm_util_sinh (void)
 void
 test_ncm_util_mln_1mIexpzA_1pIexpmzA (void)
 {
-  /* {rho, theta, A}: e^{|rho|}|A| below and above 0.1, where the series is replaced */
+  /* {rho, theta, A}: e^{|rho|}|A| below and above 0.1, where the series is replaced;
+   * with rho = 0 the terms of the series vanish for even orders at theta = 0 and for all
+   * orders at theta = pi / 2, and A = 0 makes every term zero. */
   const gdouble points[][3] = {
     {0.3, 0.2, 0.05},
     {-1.2, 0.7, 0.02},
     {0.0, 1.0, 0.0999},
     {0.0, 1.0, 0.1001},
     {0.5, -0.4, 0.3},
+    {0.0, 0.0, 0.06},
+    {0.0, 0.0, 0.0},
+    {0.0, M_PI_2, 0.05},
   };
   guint i;
 

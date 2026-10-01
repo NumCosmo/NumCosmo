@@ -1484,12 +1484,13 @@ test_ncm_fit_esmcmc_phase_label (void)
 {
   /* The rows of the exploration phase are not part of the Markovian chain, so the log has
    * to say which of the two the acceptance ratio it is reporting belongs to. The run
-   * writes to stdout, which is why it happens in a subprocess. */
-  g_test_trap_subprocess ("/ncm/fit/esmcmc/phase/markovian/subprocess", 0, G_TEST_SUBPROCESS_INHERIT_STDOUT);
+   * writes to stdout, which is why it happens in a subprocess; its stdout is captured
+   * and not echoed, since on stdout it would break the TAP stream. */
+  g_test_trap_subprocess ("/ncm/fit/esmcmc/phase/markovian/subprocess", 0, G_TEST_SUBPROCESS_DEFAULT);
   g_test_trap_assert_passed ();
   g_test_trap_assert_stdout ("*phase: markovian*");
 
-  g_test_trap_subprocess ("/ncm/fit/esmcmc/phase/exploration/subprocess", 0, G_TEST_SUBPROCESS_INHERIT_STDOUT);
+  g_test_trap_subprocess ("/ncm/fit/esmcmc/phase/exploration/subprocess", 0, G_TEST_SUBPROCESS_DEFAULT);
   g_test_trap_assert_passed ();
   g_test_trap_assert_stdout ("*phase: exploration*");
 }

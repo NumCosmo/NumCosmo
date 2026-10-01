@@ -523,7 +523,8 @@ ncm_util_lambert_W0_ln (const gdouble ln_y)
  *
  * Computes
  * $$z_1 = z - \ln\left(\frac{1 - i A e^{z}}{1 + i A e^{-z}}\right), \qquad z = \rho + i\theta,$$
- * from the series of the logarithm in $A$ when $e^{|\rho|}|A| < 0.1$, and sets
+ * from the series of the logarithm in $A$ when $e^{|\rho|}|A| < 0.1$, summed until the
+ * bound on its remaining terms is below machine precision, and sets
  * $z_1 = \rho_1 + i\theta_1$.
  */
 void
@@ -532,16 +533,21 @@ ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const g
   const double complex z = rho + I * theta;
   double complex zp;
 
-  if (exp (fabs (rho)) * fabs (A) < 0.1)
+  const gdouble x = exp (fabs (rho)) * fabs (A);
+
+  if (x < 0.1)
   {
     const double complex z_p_ipi_2 = z + 0.5 * M_PI * I;
     const double complex T         = cexp (z_p_ipi_2);
     double complex Tn              = T;
     gdouble An                     = A;
+    gdouble xn                     = x;
     gint i;
 
     zp = 0.0;
 
+    /* The n-th term is at most 2 x^n / n; individual terms can vanish (for rho = 0 at
+     * some theta), so the stop is on this bound and not on the last term. */
     for (i = 0; ; i++)
     {
       const gdouble n   = i + 1.0;
@@ -552,8 +558,10 @@ ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const g
 
       zp += dz;
 
-      if (cabs (dz / zp) < GSL_DBL_EPSILON * 1.0e-0)
+      if (2.0 * xn / n <= GSL_DBL_EPSILON * cabs (zp))
         break;
+
+      xn *= x;
     }
 
     zp = z - zp;

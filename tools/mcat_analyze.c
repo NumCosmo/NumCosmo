@@ -164,7 +164,7 @@ main (gint argc, gchar *argv[])
     { "dump-param",       0, 0, G_OPTION_ARG_STRING_ARRAY, &dump_param,       "Parameters to dump.", "param-name"},
     { "trim",           't', 0, G_OPTION_ARG_INT,          &trim,             "Trim the catalog at T.", "T" },
     { "thin",           'T', 0, G_OPTION_ARG_INT,          &thin,             "Thin the catalog skipping every (T-1) rows.", "T" },
-    { NULL }
+    { NULL, 0, 0, 0, NULL, NULL, NULL }
   };
 
   ncm_cfg_init_full_ptr (&argc, &argv);

@@ -26,6 +26,8 @@ instances, allowing any NcClusterMassRichness subclass to be stored.
 """
 
 import sqlite3
+from collections.abc import Iterator
+from contextlib import closing, contextmanager
 from pathlib import Path
 
 from numcosmo_py import Nc
@@ -57,9 +59,19 @@ class BestfitDatabase:
         self.db_path = db_path
         self._init_db()
 
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        """Open a connection that commits or rolls back on exit and is then closed.
+
+        A sqlite3 connection used as a context manager ends the transaction but
+        stays open.
+        """
+        with closing(sqlite3.connect(self.db_path)) as conn, conn:
+            yield conn
+
     def _init_db(self):
         """Initialize database schema with ACID-compliant transaction handling."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute(
                 "PRAGMA journal_mode = WAL"
             )  # Write-Ahead Logging for crash safety
@@ -98,7 +110,7 @@ class BestfitDatabase:
             yaml_str = model_to_yaml(result.bestfit)
             model_type = type(result.bestfit).__name__
 
-            with sqlite3.connect(self.db_path) as conn:
+            with self._connect() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
@@ -125,7 +137,7 @@ class BestfitDatabase:
 
         :param seeds_results: List of (mock_seed, CutAnalysisResult) tuples
         """
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             cursor = conn.cursor()
             for mock_seed, result in seeds_results:
                 yaml_str = model_to_yaml(result.bestfit)
@@ -154,7 +166,7 @@ class BestfitDatabase:
         :param cut: The richness cut value
         :return: Set of mock_seed values already in database
         """
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT mock_seed FROM best_fits WHERE cut = ?", (cut,))
             return {row[0] for row in cursor.fetchall()}
@@ -164,7 +176,7 @@ class BestfitDatabase:
 
         :return: Set of all mock_seed values in database
         """
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT DISTINCT mock_seed FROM best_fits")
             return {row[0] for row in cursor.fetchall()}
@@ -176,7 +188,7 @@ class BestfitDatabase:
         :param cut: The richness cut value
         :return: Deserialized model or None if not found
         """
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute(
@@ -209,7 +221,7 @@ class BestfitDatabase:
         :param cut: The richness cut value
         :return: True if deleted, False if not found
         """
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "DELETE FROM best_fits WHERE mock_seed = ? AND cut = ?",
@@ -223,7 +235,7 @@ class BestfitDatabase:
 
         :return: Number of entries
         """
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM best_fits")
             return cursor.fetchone()[0]

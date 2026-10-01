@@ -52,7 +52,7 @@ struct _NcmStatsDist1dClass
   void (*prepare) (NcmStatsDist1d *sd1);
   gdouble (*get_current_h) (NcmStatsDist1d *sd1);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
+  /* Padding to allow adding up to 14 more virtual functions without breaking ABI. */
   gpointer padding[14];
 };
 

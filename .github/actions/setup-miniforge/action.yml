@@ -26,6 +26,7 @@ runs:
       uses: conda-incubator/setup-miniconda@v4
       with:
         miniforge-version: latest
+        conda-remove-defaults: "true"
         python-version: ${{ inputs.python-version }}
         activate-environment: ${{ env.CONDA_ENV }}
     - name: Select lock file

@@ -36,9 +36,9 @@ G_BEGIN_DECLS
 
 /*
  * Centre shrinkage (West's kernel shrinkage): the transform A with
- * A (C + kappa h^2 Sigma-bar) A^T = C, for the sample covariance C = U_C^T U_C and the
- * mean kernel covariance Sigma-bar, so that the mixture's covariance matches the
- * sample's. Two stages: the basis W, W^{-1} and the eigenvalues s once per prepare
+ * A (r C + kappa h^2 Sigma-bar) A^T = C, for the unbiased sample covariance
+ * C = U_C^T U_C of the n kernel centres, r = (n - 1) / n, and the mean kernel scale
+ * matrix Sigma-bar, so that the covariance of the equal-weight mixture matches C. Two stages: the basis W, W^{-1} and the eigenvalues s once per prepare
  * (shape stage), then A, a = det(A)^{1/d} and Ahat = A / a once per bandwidth (kernel
  * stage). Centres are m + A (x_i - m); kernel factors follow Ahat.
  */
@@ -82,6 +82,7 @@ typedef struct _NcmStatsDistPrivate
   NcmMatrix *refactor_M;
   NcmMatrix *refactor_B;
   gdouble defensive_frac;
+  gdouble defensive_eps;
   gdouble defensive_scale;
   gdouble defensive_nu;
   NcmStatsDistKernel *defensive_kernel;

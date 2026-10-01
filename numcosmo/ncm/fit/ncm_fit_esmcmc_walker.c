@@ -26,46 +26,15 @@
 /**
  * NcmFitESMCMCWalker:
  *
- * Ensemble sampler Markov Chain Monte Carlo walker class.
+ * Abstract proposal move of #NcmFitESMCMC.
  *
- * Abstract class for implementing walkers for #NcmFitESMCMC.
- *
- * This class provides the tools to construct the walkers used to generate a Monte Carlo
- * Markov Chain using an ensemble sampler. The objects of this class shall be
- * implemented in the #NcmFitESMCMC class, which will generate the MCMC sample. Below,
- * there is a small review about an ensemble sampler and the walker features. For more
- * information about ensemble samplers, check [[Ensemble Samplers With Affine
- * Invariance, Jonathan Goodman and Jonathan
- * Weare](https://msp.org/camcos/2010/5-1/camcos-v5-n1-p04-s.pdf)].
- *
- * A Monte Carlo Markov Chain (MCMC) is an algorithm method to sample from probability
- * distributions without having to sample directly from the distribution. Suppose that
- * we want to generate a sample from an $n$-dimensional distribution $\pi(X)$. If the
- * function is complicated enough, it is not an easy task to compute the inverse and the
- * norm of the distribution to sample from it, and that is when the MCMC method may be
- * used.
- *
- * The MCMC method consists of a point proposal $Y$ based on a kernel $K(Y|X)$, which
- * depends on a step proposal and in an acceptance probability $A(Y|X)$, such that the
- * accepted points are distributed by the target distribution $\pi(X)$. This process of
- * proposing one point in a time $t$ and acceptance or rejection based on the
- * distribution may be viewed as one walker. The ensemble sampler is defined as
- * \begin{align}
- * \label{eq2.1}
- * \vec{X}&\equiv(X_1,X_2,X_3,...,X_L),
- * \end{align}
- * where $X_i \in \mathbb{R}^{n}$ is called a walker and $\vec{X} \in \mathbb{R}^{Ln}$.
- * The process now consists in proposing points for all the walkers in a time $t$ to a
- * new point in $t+1$, using the information from the other walkers. The ensemble
- * considers the position of the remaining walkers when moving each particular walker,
- * which is the advantage of this method when comparing it to single walker algorithms
- * since this feature leads to faster convergences. The desired target joint
- * distribution of the ensemble is one that let the walkers be independent of each
- * other, such that each walker has the desired target distribution $\pi(X)$, that is,
- * \begin{align}
- * \label{eq2.2}
- * \Pi(\vec{X})=\prod_{i}^{L}\pi(X_i)
- * .\end{align}
+ * An ensemble sampler moves $L$ walkers $X_1, \dots, X_L$, each a point of the
+ * free-parameter space, whose joint target is the product of the posterior at each
+ * walker. The move of walker $k$ uses the positions of the others (Goodman and Weare,
+ * [Ensemble samplers with affine invariance](https://msp.org/camcos/2010/5-1/camcos-v5-n1-p04-s.pdf)).
+ * A walker class draws the proposals (ncm_fit_esmcmc_walker_setup() and
+ * ncm_fit_esmcmc_walker_step()) and gives the proposal factor $q$ of the acceptance
+ * probability $\min(1, q\,L^\star/L)$ (ncm_fit_esmcmc_walker_prob_norm()).
  *
  */
 
@@ -145,13 +114,13 @@ ncm_fit_esmcmc_walker_get_property (GObject *object, guint prop_id, GValue *valu
 static void
 _ncm_fit_esmcmc_walker_set_size (NcmFitESMCMCWalker *walker, guint size)
 {
-  g_error ("_ncm_fit_esmcmc_walker_set_size: method not implemented.");
+  g_error ("method set_size not implemented by %s.", G_OBJECT_TYPE_NAME (walker));
 }
 
 static guint
 _ncm_fit_esmcmc_walker_get_size (NcmFitESMCMCWalker *walker)
 {
-  g_error ("_ncm_fit_esmcmc_walker_get_size: method not implemented.");
+  g_error ("method get_size not implemented by %s.", G_OBJECT_TYPE_NAME (walker));
 
   return 0;
 }
@@ -159,13 +128,13 @@ _ncm_fit_esmcmc_walker_get_size (NcmFitESMCMCWalker *walker)
 static void
 _ncm_fit_esmcmc_walker_set_nparams (NcmFitESMCMCWalker *walker, guint nparams)
 {
-  g_error ("_ncm_fit_esmcmc_walker_set_nparams: method not implemented.");
+  g_error ("method set_nparams not implemented by %s.", G_OBJECT_TYPE_NAME (walker));
 }
 
 static guint
 _ncm_fit_esmcmc_walker_get_nparams (NcmFitESMCMCWalker *walker)
 {
-  g_error ("_ncm_fit_esmcmc_walker_get_nparams: method not implemented.");
+  g_error ("method get_nparams not implemented by %s.", G_OBJECT_TYPE_NAME (walker));
 
   return 0;
 }
@@ -173,19 +142,19 @@ _ncm_fit_esmcmc_walker_get_nparams (NcmFitESMCMCWalker *walker)
 static void
 _ncm_fit_esmcmc_walker_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng)
 {
-  g_error ("_ncm_fit_esmcmc_walker_setup: method not implemented.");
+  g_error ("method setup not implemented by %s.", G_OBJECT_TYPE_NAME (walker));
 }
 
 static void
 _ncm_fit_esmcmc_walker_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k)
 {
-  g_error ("_ncm_fit_esmcmc_walker_step: method not implemented.");
+  g_error ("method step not implemented by %s.", G_OBJECT_TYPE_NAME (walker));
 }
 
 static gdouble
 _ncm_fit_esmcmc_walker_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star)
 {
-  g_error ("_ncm_fit_esmcmc_walker_prob: method not implemented.");
+  g_error ("method prob not implemented by %s.", G_OBJECT_TYPE_NAME (walker));
 
   return 0.0;
 }
@@ -193,7 +162,7 @@ _ncm_fit_esmcmc_walker_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrA
 static gdouble
 _ncm_fit_esmcmc_walker_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k)
 {
-  g_error ("_ncm_fit_esmcmc_walker_prob_norm: method not implemented.");
+  g_error ("method prob_norm not implemented by %s.", G_OBJECT_TYPE_NAME (walker));
 
   return 0.0;
 }
@@ -201,13 +170,13 @@ _ncm_fit_esmcmc_walker_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
 static void
 _ncm_fit_esmcmc_walker_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf)
 {
-  g_error ("_ncm_fit_esmcmc_walker_clean: method not implemented.");
+  g_error ("method clean not implemented by %s.", G_OBJECT_TYPE_NAME (walker));
 }
 
 static const gchar *
 _ncm_fit_esmcmc_walker_desc (NcmFitESMCMCWalker *walker)
 {
-  g_error ("_ncm_fit_esmcmc_walker_desc: method not implemented.");
+  g_error ("method desc not implemented by %s.", G_OBJECT_TYPE_NAME (walker));
 
   return NULL;
 }
@@ -283,7 +252,7 @@ ncm_fit_esmcmc_walker_class_init (NcmFitESMCMCWalkerClass *klass)
 
 /**
  * ncm_fit_esmcmc_walker_ref:
- * @walker: a #NcmMSetCatalog
+ * @walker: a #NcmFitESMCMCWalker
  *
  * Increases the reference count of @walker atomically.
  *
@@ -312,7 +281,7 @@ ncm_fit_esmcmc_walker_free (NcmFitESMCMCWalker *walker)
  * ncm_fit_esmcmc_walker_clear:
  * @walker: a #NcmFitESMCMCWalker
  *
- * Decreases the reference count of *@walker atomically and sets the pointer *@walker to null.
+ * Decreases the reference count of *@walker and sets it to %NULL.
  *
  */
 void
@@ -323,10 +292,10 @@ ncm_fit_esmcmc_walker_clear (NcmFitESMCMCWalker **walker)
 
 /**
  * ncm_fit_esmcmc_walker_set_size: (virtual set_size)
- * @walker: a #NcmMSetCatalog
- * @size: new walker's size
+ * @walker: a #NcmFitESMCMCWalker
+ * @size: number of walkers
  *
- * Sets the walker's size.
+ * Sets the number of walkers.
  *
  */
 void
@@ -337,9 +306,9 @@ ncm_fit_esmcmc_walker_set_size (NcmFitESMCMCWalker *walker, guint size)
 
 /**
  * ncm_fit_esmcmc_walker_get_size: (virtual get_size)
- * @walker: a #NcmMSetCatalog
+ * @walker: a #NcmFitESMCMCWalker
  *
- * Returns: the size of the @walker.
+ * Returns: the number of walkers
  *
  */
 guint
@@ -350,10 +319,11 @@ ncm_fit_esmcmc_walker_get_size (NcmFitESMCMCWalker *walker)
 
 /**
  * ncm_fit_esmcmc_walker_set_nparams: (virtual set_nparams)
- * @walker: a #NcmMSetCatalog
+ * @walker: a #NcmFitESMCMCWalker
  * @nparams: number of parameters
  *
- * Sets the number parameters of the walker.
+ * Sets the number of free parameters; #NcmFitESMCMC sets it to the number of free
+ * parameters of its fit.
  *
  */
 void
@@ -364,9 +334,9 @@ ncm_fit_esmcmc_walker_set_nparams (NcmFitESMCMCWalker *walker, guint nparams)
 
 /**
  * ncm_fit_esmcmc_walker_get_nparams: (virtual get_nparams)
- * @walker: a #NcmMSetCatalog
+ * @walker: a #NcmFitESMCMCWalker
  *
- * Returns: the nparams of the @walker.
+ * Returns: the number of free parameters
  *
  */
 guint
@@ -377,7 +347,7 @@ ncm_fit_esmcmc_walker_get_nparams (NcmFitESMCMCWalker *walker)
 
 /**
  * ncm_fit_esmcmc_walker_setup: (virtual setup)
- * @walker: a #NcmMSetCatalog
+ * @walker: a #NcmFitESMCMCWalker
  * @mset: a #NcmMSet
  * @theta: (element-type NcmVector): array of walkers positions
  * @m2lnL: (element-type NcmVector): array of walkers $-2\ln(L)$
@@ -385,7 +355,7 @@ ncm_fit_esmcmc_walker_get_nparams (NcmFitESMCMCWalker *walker)
  * @kf: last walker index
  * @rng: a #NcmRNG
  *
- * Setup the walkers @ki to @kf (@kf not included).
+ * Draws the random numbers of the moves of the walkers @ki to @kf - 1.
  *
  */
 void
@@ -396,13 +366,14 @@ ncm_fit_esmcmc_walker_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPtrArra
 
 /**
  * ncm_fit_esmcmc_walker_step: (virtual step)
- * @walker: a #NcmMSetCatalog
+ * @walker: a #NcmFitESMCMCWalker
  * @theta: (element-type NcmVector): array of walkers positions
  * @m2lnL: (element-type NcmVector): array of walkers $-2\ln(L)$
  * @thetastar: a #NcmVector
  * @k: index of the walker to move
  *
- * Move the @k-th walker and assign the new position in @thetastar.
+ * Computes the proposal of walker @k in @thetastar, from the numbers drawn by
+ * ncm_fit_esmcmc_walker_setup().
  *
  */
 void
@@ -413,7 +384,7 @@ ncm_fit_esmcmc_walker_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrAr
 
 /**
  * ncm_fit_esmcmc_walker_prob: (virtual prob)
- * @walker: a #NcmMSetCatalog
+ * @walker: a #NcmFitESMCMCWalker
  * @theta: (element-type NcmVector): array of walkers positions
  * @m2lnL: (element-type NcmVector): array of walkers $-2\ln(L)$
  * @thetastar: a #NcmVector
@@ -421,9 +392,10 @@ ncm_fit_esmcmc_walker_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrAr
  * @m2lnL_cur: current value of $-2\ln(L)$
  * @m2lnL_star: proposed value for $-2\ln(L^\star)$
  *
- * Calculates the transition probability
+ * Computes the acceptance ratio $q\,L^\star/L$ of moving walker @k from $-2\ln L$ =
+ * @m2lnL_cur to @thetastar with $-2\ln L^\star$ = @m2lnL_star.
  *
- * Returns: the transition probability.
+ * Returns: the acceptance ratio, before its minimum with one
  */
 gdouble
 ncm_fit_esmcmc_walker_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k, const gdouble m2lnL_cur, const gdouble m2lnL_star)
@@ -433,15 +405,16 @@ ncm_fit_esmcmc_walker_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrAr
 
 /**
  * ncm_fit_esmcmc_walker_prob_norm: (virtual prob_norm)
- * @walker: a #NcmMSetCatalog
+ * @walker: a #NcmFitESMCMCWalker
  * @theta: (element-type NcmVector): array of walkers positions
  * @m2lnL: (element-type NcmVector): array of walkers $-2\ln(L)$
  * @thetastar: a #NcmVector
  * @k: index of the walker to move
  *
- * Calculates the transition probability norm, this method is used in the MPI implementation.
+ * Computes $\ln q$, the proposal factor of the acceptance ratio of moving walker @k to
+ * @thetastar (e.g. $(d - 1)\ln z$ for the stretch move).
  *
- * Returns: the transition probability log-norm.
+ * Returns: $\ln q$
  */
 gdouble
 ncm_fit_esmcmc_walker_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, GPtrArray *m2lnL, NcmVector *thetastar, guint k)
@@ -451,11 +424,11 @@ ncm_fit_esmcmc_walker_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *theta, G
 
 /**
  * ncm_fit_esmcmc_walker_clean: (virtual clean)
- * @walker: a #NcmMSetCatalog
+ * @walker: a #NcmFitESMCMCWalker
  * @ki: first walker index
  * @kf: last walker index
  *
- * Cleanup after moving walkers from @ki to @kf (@kf not included).
+ * Releases what the moves of the walkers @ki to @kf - 1 needed.
  *
  */
 void
@@ -466,7 +439,7 @@ ncm_fit_esmcmc_walker_clean (NcmFitESMCMCWalker *walker, guint ki, guint kf)
 
 /**
  * ncm_fit_esmcmc_walker_desc: (virtual desc)
- * @walker: a #NcmMSetCatalog
+ * @walker: a #NcmFitESMCMCWalker
  *
  * Returns: (transfer none): walker description.
  */

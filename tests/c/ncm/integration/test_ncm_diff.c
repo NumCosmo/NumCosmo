@@ -82,6 +82,7 @@ void test_ncm_diff_rf_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_rc_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_rc_d2_N_to_1_all (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_rf_Hessian_N_to_1_all (TestNcmDiff *test, gconstpointer pdata);
+void test_ncm_diff_rf_Hessian_N_to_1_rosenbrock (TestNcmDiff *test, gconstpointer pdata);
 
 void test_ncm_diff_rf_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_rc_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata);
@@ -247,6 +248,16 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/diff/rf/Hessian/N_to_1/all", TestNcmDiff, NULL,
               &test_ncm_diff_new,
               &test_ncm_diff_rf_Hessian_N_to_1_all,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/rf/Hessian/N_to_1/zero", TestNcmDiff, GINT_TO_POINTER (TRUE),
+              &test_ncm_diff_new,
+              &test_ncm_diff_rf_Hessian_N_to_1_all,
+              &test_ncm_diff_free);
+
+  g_test_add ("/ncm/diff/rf/Hessian/N_to_1/rosenbrock", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_rf_Hessian_N_to_1_rosenbrock,
               &test_ncm_diff_free);
 
   g_test_add ("/ncm/diff/rf/d1/N_to_M/all", TestNcmDiff, NULL,
@@ -725,6 +736,15 @@ _test_ncm_diff_N_to_1_Hessian_all (GArray *x_a, gpointer userdata)
   ncm_matrix_free (y);
 
   return y_a;
+}
+
+static gdouble
+_test_ncm_diff_rosenbrock (NcmVector *x, gpointer userdata)
+{
+  const gdouble x1 = ncm_vector_get (x, 0);
+  const gdouble x2 = ncm_vector_get (x, 1);
+
+  return 0.1 * (100.0 * gsl_pow_2 (x2 - x1 * x1) + gsl_pow_2 (1.0 - x1));
 }
 
 /*
@@ -1640,11 +1660,13 @@ test_ncm_diff_rc_d2_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
 void
 test_ncm_diff_rf_Hessian_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
 {
-  NcmDiff *diff = test->diff;
-  GArray *x_a   = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *err_a = NULL;
-  guint ntests  = 1000;
-  guint nerr    = 0;
+  /* With pdata set, coordinate i % 3 of the i-th point is zero. */
+  const gboolean zero = GPOINTER_TO_INT (pdata);
+  NcmDiff *diff       = test->diff;
+  GArray *x_a         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *err_a       = NULL;
+  guint ntests        = 1000;
+  guint nerr          = 0;
   guint i, j;
 
   g_array_set_size (x_a, 3);
@@ -1666,9 +1688,16 @@ test_ncm_diff_rf_Hessian_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
     g_array_index (x_a, gdouble, 1) = v2;
     g_array_index (x_a, gdouble, 2) = v3;
 
+    if (zero)
+      g_array_index (x_a, gdouble, i % 3) = 0.0;
+
     {
       GArray *df_a  = ncm_diff_rf_Hessian_N_to_1 (diff, x_a, &_test_ncm_diff_N_to_1_all, w, &err_a);
       GArray *Adf_a = _test_ncm_diff_N_to_1_Hessian_all (x_a, w);
+      gdouble scale = 0.0;
+
+      for (j = 0; j < x_a->len * x_a->len; j++)
+        scale = GSL_MAX (scale, fabs (g_array_index (Adf_a, gdouble, j)));
 
       for (j = 0; j < x_a->len * x_a->len; j++)
       {
@@ -1685,12 +1714,73 @@ test_ncm_diff_rf_Hessian_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
           nerr++;
         else
           ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
+
+        /* The error estimate must stay informative at a zero coordinate. */
+        if (zero)
+          g_assert_cmpfloat (err, <=, 0.1 * scale);
       }
 
       g_array_unref (df_a);
       g_array_unref (Adf_a);
       g_array_unref (err_a);
     }
+  }
+
+  g_array_unref (x_a);
+}
+
+void
+test_ncm_diff_rf_Hessian_N_to_1_rosenbrock (TestNcmDiff *test, gconstpointer pdata)
+{
+  /*
+   * The Hessian of 0.1 [100 (x2 - x1^2)^2 + (1 - x1)^2] is
+   * [[120 x1^2 - 40 x2 + 0.2, -40 x1], [-40 x1, 20]]; at points with a zero
+   * coordinate the curvature along x2 dominates the mixed term.
+   */
+  const gdouble pts[3][2] = {
+    {
+      0.0, 1.0
+    }, {
+      0.0, 0.0
+    }, {
+      1.0, 0.0
+    }
+  };
+  NcmDiff *diff = test->diff;
+  GArray *x_a   = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  guint i, j;
+
+  g_array_set_size (x_a, 2);
+
+  for (i = 0; i < 3; i++)
+  {
+    const gdouble x1   = pts[i][0];
+    const gdouble x2   = pts[i][1];
+    const gdouble H[4] = {
+      120.0 * x1 * x1 - 40.0 * x2 + 0.2, -40.0 * x1, -40.0 * x1, 20.0
+    };
+    GArray *err_a = NULL;
+    GArray *df_a;
+    gdouble scale = 0.0;
+
+    g_array_index (x_a, gdouble, 0) = x1;
+    g_array_index (x_a, gdouble, 1) = x2;
+
+    df_a = ncm_diff_rf_Hessian_N_to_1 (diff, x_a, &_test_ncm_diff_rosenbrock, NULL, &err_a);
+
+    for (j = 0; j < 4; j++)
+      scale = GSL_MAX (scale, fabs (H[j]));
+
+    for (j = 0; j < 4; j++)
+    {
+      const gdouble err = g_array_index (err_a, gdouble, j);
+
+      ncm_assert_cmpdouble_e (g_array_index (df_a, gdouble, j), ==, H[j], 0.0, err);
+      g_assert_cmpfloat (err, <=, 0.1 * scale);
+    }
+
+    g_array_unref (df_a);
+    g_array_unref (err_a);
   }
 
   g_array_unref (x_a);

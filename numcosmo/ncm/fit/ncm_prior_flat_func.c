@@ -28,9 +28,8 @@
  *
  * Flat prior on a derived quantity.
  *
- * This object subclasses #NcmPriorFlat and defines a flat prior on a derived quantity.
- * The prior is characterized by a mean function, an optional function argument, and
- * specified lower and upper limits, along with the scale of the prior.
+ * This object is a subclass of #NcmPriorFlat whose quantity $x$ is a scalar
+ * #NcmMSetFunc, the mean function, evaluated at #NcmPriorFlat:variable.
  *
  */
 
@@ -114,13 +113,6 @@ _ncm_prior_flat_func_dispose (GObject *object)
   G_OBJECT_CLASS (ncm_prior_flat_func_parent_class)->dispose (object);
 }
 
-static void
-_ncm_prior_flat_func_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_prior_flat_func_parent_class)->finalize (object);
-}
-
 static gdouble _ncm_prior_flat_func_mean (NcmPriorFlat *pf, NcmMSet *mset);
 
 static void
@@ -132,7 +124,6 @@ ncm_prior_flat_func_class_init (NcmPriorFlatFuncClass *klass)
   object_class->set_property = &_ncm_prior_flat_func_set_property;
   object_class->get_property = &_ncm_prior_flat_func_get_property;
   object_class->dispose      = &_ncm_prior_flat_func_dispose;
-  object_class->finalize     = &_ncm_prior_flat_func_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_MEAN_FUNC,
@@ -159,7 +150,7 @@ _ncm_prior_flat_func_mean (NcmPriorFlat *pf, NcmMSet *mset)
  * @x_low: lower limit
  * @x_upp: upper limit
  * @scale: scale
- * @variable: variable
+ * @variable: argument of @mean_func
  *
  * Creates a new Flat prior for parameter @pid of model @mid.
  *

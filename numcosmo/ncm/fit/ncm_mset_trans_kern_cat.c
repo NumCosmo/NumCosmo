@@ -27,22 +27,16 @@
 /**
  * NcmMSetTransKernCat:
  *
- * Catalog sampler.
+ * Proposals drawn from a #NcmMSetCatalog.
  *
- * This object subclasses NcmMSetTransKern and implements a catalog sampler.
- *
- * Implementation of a catalog sampler class, capable of drawing samples from a catalog
- * of points. Users can select the desired sampling method as described in
- * #NcmMSetTransKernCatSampling.
- *
- * Key Functionality:
- *
- * - Draws samples from a catalog of points.
- * - Allows users to choose the sampling method from #NcmMSetTransKernCatSampling.
- *
- * This class is designed for scenarios where sampling from a pre-existing catalog is
- * useful, providing flexibility through the selection of various sampling methods
- * described in #NcmMSetTransKernCatSampling.
+ * It picks a row of the catalog (#NCM_MSET_TRANS_KERN_CAT_SAMPLING_CHOOSE, each row at
+ * most once), or samples a #NcmStatsDist built from the last rows of the catalog, the
+ * last ensemble for an ensemble sampler: an interpolation of $-2\ln L$
+ * (#NCM_MSET_TRANS_KERN_CAT_SAMPLING_RBF_INTERP) or a kernel density estimate
+ * (#NCM_MSET_TRANS_KERN_CAT_SAMPLING_KDE). The proposals do not depend on the current
+ * point and have no density (ncm_mset_trans_kern_pdf() aborts), so the kernel serves
+ * as a prior sampler, e.g. for the initial points of #NcmFitESMCMC, not for
+ * #NcmFitMCMC.
  *
  */
 
@@ -218,7 +212,7 @@ _ncm_mset_trans_kern_cat_finalize (GObject *object)
 static void _ncm_mset_trans_kern_cat_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset);
 static void _ncm_mset_trans_kern_cat_generate (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng);
 static gdouble _ncm_mset_trans_kern_cat_pdf (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar);
-void _ncm_mset_trans_kern_cat_reset (NcmMSetTransKern *tkern);
+static void _ncm_mset_trans_kern_cat_reset (NcmMSetTransKern *tkern);
 static const gchar *_ncm_mset_trans_kern_cat_get_name (NcmMSetTransKern *tkern);
 
 static void
@@ -374,7 +368,6 @@ _ncm_mset_trans_kern_cat_generate_choose (NcmMSetTransKern *tkern, NcmVector *th
 static void
 _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
 {
-  NcmMSet *mset                           = ncm_mset_trans_kern_peek_mset (tkern);
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (tkern);
   NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
   NcmMSet *mcat_mset                      = ncm_mset_catalog_peek_mset (self->mcat);
@@ -420,29 +413,27 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
       last_row = row_i;
     }
 
-    ncm_stats_dist_prepare (self->sd, m2lnp);
+    /* Consecutive repeated rows are added once, so only j entries are filled. */
+    {
+      NcmVector *m2lnp_j = ncm_vector_get_subvector (m2lnp, 0, j);
+
+      ncm_stats_dist_prepare (self->sd, m2lnp_j);
+      ncm_vector_free (m2lnp_j);
+    }
     ncm_vector_free (m2lnp);
 
     self->sd_prep = TRUE;
   }
 
+  /* One draw; ncm_mset_trans_kern_prior_sample() draws again outside the bounds. */
   ncm_rng_lock (rng);
-
-  while (TRUE)
-  {
-    ncm_stats_dist_sample (self->sd, thetastar, rng);
-
-    if (ncm_mset_fparam_valid_bounds (mset, thetastar))
-      break;
-  }
-
+  ncm_stats_dist_sample (self->sd, thetastar, rng);
   ncm_rng_unlock (rng);
 }
 
 static void
 _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
 {
-  NcmMSet *mset                           = ncm_mset_trans_kern_peek_mset (tkern);
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (tkern);
   NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
   NcmMSet *mcat_mset                      = ncm_mset_catalog_peek_mset (self->mcat);
@@ -486,16 +477,9 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
     self->sd_prep = TRUE;
   }
 
+  /* One draw; ncm_mset_trans_kern_prior_sample() draws again outside the bounds. */
   ncm_rng_lock (rng);
-
-  while (TRUE)
-  {
-    ncm_stats_dist_sample (self->sd, thetastar, rng);
-
-    if (ncm_mset_fparam_valid_bounds (mset, thetastar))
-      break;
-  }
-
+  ncm_stats_dist_sample (self->sd, thetastar, rng);
   ncm_rng_unlock (rng);
 }
 
@@ -538,7 +522,7 @@ _ncm_mset_trans_kern_cat_pdf (NcmMSetTransKern *tkern, NcmVector *theta, NcmVect
   return 0.0;
 }
 
-void
+static void
 _ncm_mset_trans_kern_cat_reset (NcmMSetTransKern *tkern)
 {
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (tkern);

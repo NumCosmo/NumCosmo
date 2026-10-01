@@ -147,12 +147,28 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_lapack.c'],
     },
     {
+        'name': 'ncm_bootstrap',
+        'sources': ['ncm/stats/test_ncm_bootstrap.c'],
+    },
+    {
         'name': 'ncm_stats_vec',
         'sources': ['ncm/stats/test_ncm_stats_vec.c'],
     },
     {
         'name': 'ncm_stats_acorr',
         'sources': ['ncm/stats/test_ncm_stats_acorr.c'],
+    },
+    {
+        'name': 'ncm_stats_dist1d',
+        'sources': ['ncm/stats/test_ncm_stats_dist1d.c'],
+    },
+    {
+        'name': 'ncm_stats_dist1d_spline',
+        'sources': ['ncm/stats/test_ncm_stats_dist1d_spline.c'],
+    },
+    {
+        'name': 'ncm_stats_dist2d_spline',
+        'sources': ['ncm/stats/test_ncm_stats_dist2d_spline.c'],
     },
     {
         'name': 'ncm_stats_dist1d_epdf',
@@ -183,6 +199,10 @@ math_tests = [
     {
         'name': 'ncm_stats_dist_kernel',
         'sources': ['ncm/stats/test_ncm_stats_dist_kernel.c'],
+    },
+    {
+        'name': 'ncm_function_sample_set',
+        'sources': ['ncm/stats/test_ncm_function_sample_set.c'],
     },
     {
         'name': 'ncm_spline',
@@ -216,6 +236,13 @@ math_tests = [
     {
         'name': 'ncm_ode_spline',
         'sources': ['ncm/spline/test_ncm_ode_spline.c'],
+    },
+    {
+        'name': 'ncm_csq1d',
+        'sources': [
+            'ncm/dynamics/test_ncm_csq1d.c',
+            'ncm/dynamics/test_ncm_csq1d_bessel.c',
+        ],
     },
     {
         'name': 'ncm_integrate',
@@ -393,12 +420,52 @@ math_tests = [
         'timeout': 0,
     },
     {
+        'name': 'ncm_fit_covar',
+        'sources': ['ncm/fit/test_ncm_fit_covar.c'],
+    },
+    {
+        'name': 'ncm_fit_mc',
+        'sources': ['ncm/fit/test_ncm_fit_mc.c'],
+    },
+    {
+        'name': 'ncm_fit_mcbs',
+        'sources': ['ncm/fit/test_ncm_fit_mcbs.c'],
+    },
+    {
+        'name': 'ncm_fit_mcmc',
+        'sources': ['ncm/fit/test_ncm_fit_mcmc.c'],
+    },
+    {
+        'name': 'ncm_fit_esmcmc_walkers',
+        'sources': ['ncm/fit/test_ncm_fit_esmcmc_walkers.c'],
+    },
+    {
+        'name': 'ncm_lh_ratio1d',
+        'sources': ['ncm/fit/test_ncm_lh_ratio1d.c'],
+    },
+    {
+        'name': 'ncm_lh_ratio2d',
+        'sources': ['ncm/fit/test_ncm_lh_ratio2d.c'],
+    },
+    {
+        'name': 'ncm_likelihood',
+        'sources': ['ncm/fit/test_ncm_likelihood.c'],
+    },
+    {
+        'name': 'ncm_prior',
+        'sources': ['ncm/fit/test_ncm_prior.c'],
+    },
+    {
         'name': 'ncm_fit_state',
         'sources': ['ncm/fit/test_ncm_fit_state.c'],
     },
     {
         'name': 'ncm_mset_trans_kern_gauss',
         'sources': ['ncm/fit/test_ncm_mset_trans_kern_gauss.c'],
+    },
+    {
+        'name': 'ncm_mset_trans_kern_flat',
+        'sources': ['ncm/fit/test_ncm_mset_trans_kern_flat.c'],
     },
     {
         'name': 'ncm_mset_trans_kern_cat',
@@ -789,13 +856,32 @@ if mpi_c_dep.found()
                 ],
                 'timeout': 0,
             },
+            {
+                'name': 'ncm_mpi_job',
+                'sources': [
+                    'ncm/mpi/test_ncm_mpi_job.c',
+                    'ncm/mpi/test_ncm_mpi_job_shape.c',
+                ],
+                # One rank runs the jobs serially on the master. Three ranks give two
+                # workers: fewer inputs than workers, and workers returning out of order.
+                'nranks': [1, 2, 3],
+            },
+            {
+                # Drives the worker side with raw MPI calls, without ncm_cfg_init.
+                'name': 'ncm_mpi_slave',
+                'sources': [
+                    'ncm/mpi/test_ncm_mpi_slave.c',
+                    'ncm/mpi/test_ncm_mpi_job_shape.c',
+                ],
+                'abort_driver': true,
+            },
         ]
         foreach c_test_mpi : c_tests_mpi
             executable_test = executable(
                 c_test_mpi['name'],
                 c_test_mpi['sources'],
                 c_args: tests_c_args,
-                dependencies: [libnumcosmo_dep],
+                dependencies: [libnumcosmo_dep, mpi_c_dep],
                 include_directories: [configinc, numcosmoinc],
             )
             if c_test_mpi.has_key('timeout')
@@ -809,30 +895,61 @@ if mpi_c_dep.found()
                 suite = ['c', 'mpi']
             endif
 
-            mpiexec_args = (
-                [
-                    '-n', '2',
-                    executable_test.full_path(),
-                ]
-                + test_seed_args
-            )
+            if c_test_mpi.has_key('nranks')
+                nranks = c_test_mpi['nranks']
+            else
+                nranks = [2]
+            endif
+
+            # OpenMPI refuses more ranks than cores, and CI runners have two. The
+            # ranks mostly wait on each other, so oversubscribing costs nothing;
+            # the first variable is read by OpenMPI 5 (PRRTE), the second by 4.
+            # MPICH ignores both and never refuses.
             mpi_test_env = [
                 'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
                 'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
+                'PRTE_MCA_rmaps_default_mapping_policy=:oversubscribe',
+                'OMPI_MCA_rmaps_base_oversubscribe=1',
             ]
             foreach k, v : omp_vars_serial
                 mpi_test_env += '@0@=@1@'.format(k, v)
             endforeach
-            test(
-                c_test_mpi['name'],
-                mpiexec,
-                args: mpiexec_args,
-                depends: [executable_test],
-                timeout: timeout,
-                env: mpi_test_env,
-                protocol: 'tap',
-                suite: suite,
-            )
+            foreach n : nranks
+                mpiexec_args = (
+                    [
+                        '-n', n.to_string(),
+                        executable_test.full_path(),
+                    ]
+                    + test_seed_args
+                )
+                test(
+                    (n == 2) ? c_test_mpi['name'] : '@0@_n@1@'.format(c_test_mpi['name'], n),
+                    mpiexec,
+                    args: mpiexec_args,
+                    depends: [executable_test],
+                    timeout: timeout,
+                    env: mpi_test_env,
+                    protocol: 'tap',
+                    suite: suite,
+                )
+            endforeach
+
+            # The refusals abort the MPI job, so each runs in its own mpiexec, launched
+            # and checked by the same program run without mpiexec.
+            if c_test_mpi.get('abort_driver', false)
+                test(
+                    '@0@_abort'.format(c_test_mpi['name']),
+                    executable_test,
+                    args: ['--spawn-aborts'] + test_seed_args,
+                    timeout: timeout,
+                    env: mpi_test_env + [
+                        'NCM_TEST_MPIEXEC=@0@'.format(mpiexec.full_path()),
+                        'NCM_TEST_SELF=@0@'.format(executable_test.full_path()),
+                    ],
+                    protocol: 'tap',
+                    suite: suite,
+                )
+            endif
         endforeach
     endif
 endif

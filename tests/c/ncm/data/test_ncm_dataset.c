@@ -156,8 +156,10 @@ void test_ncm_dataset_shared_fisher_bias (TestNcmDataset *test, gconstpointer pd
 void test_ncm_dataset_fisher_inout (TestNcmDataset *test, gconstpointer pdata);
 void test_ncm_dataset_fisher_no_fparams (TestNcmDataset *test, gconstpointer pdata);
 void test_ncm_dataset_copy_bootstrap (void);
+void test_ncm_dataset_bootstrap_total_empty (void);
 void test_ncm_dataset_errors (void);
 void test_ncm_dataset_fisher_bad_size_subprocess (void);
+void test_ncm_dataset_no_realization_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -173,8 +175,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/dataset/fisher/inout", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_fisher_inout, &test_ncm_dataset_free);
   g_test_add ("/ncm/dataset/fisher/no_fparams", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_fisher_no_fparams, &test_ncm_dataset_free);
   g_test_add_func ("/ncm/dataset/copy/bootstrap", &test_ncm_dataset_copy_bootstrap);
+  g_test_add_func ("/ncm/dataset/bootstrap/total_empty", &test_ncm_dataset_bootstrap_total_empty);
   g_test_add_func ("/ncm/dataset/errors", &test_ncm_dataset_errors);
   g_test_add_func ("/ncm/dataset/errors/fisher_bad_size/subprocess", &test_ncm_dataset_fisher_bad_size_subprocess);
+  g_test_add_func ("/ncm/dataset/errors/no_realization/subprocess", &test_ncm_dataset_no_realization_subprocess);
 
   g_test_run ();
 }
@@ -345,9 +349,58 @@ test_ncm_dataset_copy_bootstrap (void)
   ncm_rng_free (rng);
 }
 
+/* A total bootstrap can give a block no draws; that block contributes zero */
+void
+test_ncm_dataset_bootstrap_total_empty (void)
+{
+  NcmRNG *rng                = ncm_rng_seeded_new (NULL, 1);
+  NcmDataGaussCovMVND *data1 = ncm_data_gauss_cov_mvnd_new_full (2, 1.0e-2, 5.0e-2, 20.0, 1.0, 2.0, rng);
+  NcmDataGaussCovMVND *data2 = ncm_data_gauss_cov_mvnd_new_full (2, 1.0e-2, 5.0e-2, 20.0, 1.0, 2.0, rng);
+  NcmDataset *dset           = ncm_dataset_new_list (data1, data2, NULL);
+  NcmModelMVND *mvnd         = ncm_model_mvnd_new (2);
+  NcmMSet *mset              = ncm_mset_new (mvnd, NULL, NULL);
+  guint n_empty              = 0;
+  guint i;
+
+  ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_TOTAL);
+
+  for (i = 0; i < 100; i++)
+  {
+    NcmVector *m2lnL_v = ncm_vector_new (2);
+    guint j;
+
+    ncm_dataset_bootstrap_resample (dset, rng);
+    ncm_dataset_m2lnL_vec (dset, mset, m2lnL_v);
+
+    for (j = 0; j < 2; j++)
+    {
+      if (ncm_bootstrap_get_bsize (ncm_data_peek_bootstrap (ncm_dataset_peek_data (dset, j))) == 0)
+      {
+        g_assert_cmpfloat (ncm_vector_get (m2lnL_v, j), ==, 0.0);
+        n_empty++;
+      }
+    }
+
+    ncm_vector_free (m2lnL_v);
+  }
+
+  g_assert_cmpuint (n_empty, >, 0);
+
+  ncm_mset_free (mset);
+  ncm_model_mvnd_free (mvnd);
+  ncm_dataset_free (dset);
+  ncm_data_free (NCM_DATA (data1));
+  ncm_data_free (NCM_DATA (data2));
+  ncm_rng_free (rng);
+}
+
 void
 test_ncm_dataset_errors (void)
 {
+  g_test_trap_subprocess ("/ncm/dataset/errors/no_realization/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the bootstrap has no realization, call ncm_dataset_bootstrap_resample() first*");
+
   g_test_trap_subprocess ("/ncm/dataset/errors/fisher_bad_size/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*the Fisher matrix passed in is 3 x 3, but there are 1 free parameters*");
@@ -363,5 +416,19 @@ test_ncm_dataset_fisher_bad_size_subprocess (void)
   ncm_dataset_fisher_matrix (test.dset, test.mset, &IM);
   ncm_matrix_free (IM);
   test_ncm_dataset_free (&test, NULL);
+}
+
+void
+test_ncm_dataset_no_realization_subprocess (void)
+{
+  NcmRNG *rng               = ncm_rng_seeded_new (NULL, 1);
+  NcmDataGaussCovMVND *data = ncm_data_gauss_cov_mvnd_new_full (2, 1.0e-2, 5.0e-2, 20.0, 1.0, 2.0, rng);
+  NcmDataset *dset          = ncm_dataset_new_list (data, NULL);
+  NcmModelMVND *mvnd        = ncm_model_mvnd_new (2);
+  NcmMSet *mset             = ncm_mset_new (mvnd, NULL, NULL);
+  gdouble m2lnL;
+
+  ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_PARTIAL);
+  ncm_dataset_m2lnL_val (dset, mset, &m2lnL);
 }
 

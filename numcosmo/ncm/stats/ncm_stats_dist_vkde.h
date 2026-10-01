@@ -46,7 +46,7 @@ struct _NcmStatsDistVKDEClass
   /*< private >*/
   NcmStatsDistKDEClass parent_class;
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
+  /* Padding to allow adding up to 18 more virtual functions without breaking ABI. */
   gpointer padding[18];
 };
 
@@ -68,5 +68,5 @@ guint ncm_stats_dist_vkde_get_n_neighbors (NcmStatsDistVKDE *sdvkde, const guint
 
 G_END_DECLS
 
-#endif /* _NCM_STATS_DIST_ND_H_ */
+#endif /* _NCM_STATS_DIST_VKDE_H_ */
 

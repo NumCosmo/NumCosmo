@@ -26,21 +26,16 @@
 /**
  * NcmFitLevmar:
  *
- * Best-fit finder -- Levenberg-Marquardt nonlinear least squares algorithm library.
+ * Least-squares best-fit finder using the levmar Levenberg-Marquardt library.
  *
- * This object serves as an implementation of a best-fit finder utilizing the
- * Levenberg-Marquardt nonlinear least squares algorithm library. It is designed as a
- * subclass of #NcmFit and operates as a wrapper for the levmar library. It's important
- * to note that the NcmLevMar object can only be effectively employed when all #NcmData
- * within the #NcmDataset are of Gaussian type, and all priors defined in #NcmLikelihood
- * are of Gaussian type as well.
+ * It minimizes $f^T f = -2\ln L$ from ncm_fit_ls_f(), so every #NcmData and prior of
+ * the #NcmLikelihood must provide the least-squares form. The DER algorithms use
+ * ncm_fit_ls_J(), the DIF ones levmar's own finite differences; the BC algorithms keep
+ * the parameters within their bounds. A run stops when the relative step is below
+ * #NcmFit:params-reltol or $-2\ln L$ is below #NcmFit:m2lnL-abstol. At a point the
+ * models report invalid (ncm_mset_params_valid()) the residuals are computed anyway,
+ * with a warning. Constraints are not supported and abort the run.
  *
- * # Levenberg-Marquardt Algorithm:
- *
- * The Levenberg-Marquardt algorithm is a widely recognized approach for solving
- * nonlinear least squares problems. Its particular strength lies in its suitability
- * for solving problems with a substantial number of variables, especially when gradient
- * methods prove impractical.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -243,6 +238,9 @@ _ncm_fit_levmar_reset (NcmFit *fit)
       }
 
       fit_levmar->data_len = ncm_fit_state_get_data_len (fstate);
+
+      /* The workspace is sized by both lengths. */
+      g_clear_pointer (&fit_levmar->workz, g_free);
       ncm_fit_levmar_set_algo (fit_levmar, fit_levmar->algo);
     }
   }
@@ -272,7 +270,7 @@ _ncm_fit_levmar_run (NcmFit *fit, NcmFitRunMsgs mtype)
     ncm_vector_set (fit_levmar->ub, i, ncm_mset_fparam_get_upper_bound (mset, i));
   }
 
-  /* Creating a fake vector */
+  /* A vector without data: the residual callback points it at levmar's array. */
   ncm_vector_clear (&fit_levmar->f);
   fit_levmar->f = ncm_vector_new_data_static (GINT_TO_POINTER (1), fit_levmar->data_len, 1);
 
@@ -302,6 +300,8 @@ _ncm_fit_levmar_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
 static void nc_residual_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata);
 static void nc_residual_levmar_J (gdouble *p, gdouble *j, gint m, gint n, gpointer adata);
+static void _ncm_fit_levmar_set_opts (NcmFit *fit, gdouble *opts);
+static gboolean _ncm_fit_levmar_converged (gint ret, const gdouble *info);
 
 static gboolean
 ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
@@ -316,11 +316,7 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   NCM_UNUSED (mtype);
 
-  opts[0] = LM_INIT_MU;
-  opts[1] = 1.0e-15;
-  opts[2] = 1.0e-15;
-  opts[3] = 1.0e-20;
-  opts[4] = LM_DIFF_DELTA;
+  _ncm_fit_levmar_set_opts (fit, opts);
 
   ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
@@ -348,7 +344,7 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
 
-  return TRUE;
+  return _ncm_fit_levmar_converged (ret, info);
 }
 
 static gboolean
@@ -364,11 +360,7 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   NCM_UNUSED (mtype);
 
-  opts[0] = LM_INIT_MU;
-  opts[1] = 1.0e-15;
-  opts[2] = 1.0e-15;
-  opts[3] = 1.0e-20;
-  opts[4] = LM_DIFF_DELTA;
+  _ncm_fit_levmar_set_opts (fit, opts);
 
   ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
@@ -396,7 +388,7 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
 
-  return TRUE;
+  return _ncm_fit_levmar_converged (ret, info);
 }
 
 static gboolean
@@ -412,11 +404,7 @@ ncm_fit_levmar_bc_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   NCM_UNUSED (mtype);
 
-  opts[0] = LM_INIT_MU;
-  opts[1] = 1.0e-15;
-  opts[2] = 1.0e-15;
-  opts[3] = 1.0e-20;
-  opts[4] = LM_DIFF_DELTA;
+  _ncm_fit_levmar_set_opts (fit, opts);
 
   ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
@@ -445,7 +433,7 @@ ncm_fit_levmar_bc_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
 
-  return TRUE;
+  return _ncm_fit_levmar_converged (ret, info);
 }
 
 static gboolean
@@ -461,11 +449,7 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   NCM_UNUSED (mtype);
 
-  opts[0] = LM_INIT_MU;
-  opts[1] = 1.0e-15;
-  opts[2] = 1.0e-15;
-  opts[3] = 1.0e-20;
-  opts[4] = LM_DIFF_DELTA;
+  _ncm_fit_levmar_set_opts (fit, opts);
 
   ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
 
@@ -494,7 +478,33 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
 
-  return TRUE;
+  return _ncm_fit_levmar_converged (ret, info);
+}
+
+/*
+ * levmar stops when the relative step is below opts[2] or the squared residual norm,
+ * $-2\ln L$, is below opts[3]: the fit's parameter relative tolerance and $-2\ln L$
+ * absolute tolerance. The gradient test opts[1] has no counterpart in #NcmFit.
+ */
+
+/*
+ * levmar returns LM_ERROR for a singular matrix or non-finite residuals; info[6] == 3
+ * means it reached the maximum number of iterations.
+ */
+static gboolean
+_ncm_fit_levmar_converged (gint ret, const gdouble *info)
+{
+  return (ret >= 0) && (info[6] != 3.0);
+}
+
+static void
+_ncm_fit_levmar_set_opts (NcmFit *fit, gdouble *opts)
+{
+  opts[0] = LM_INIT_MU;
+  opts[1] = 1.0e-15;
+  opts[2] = ncm_fit_get_params_reltol (fit);
+  opts[3] = ncm_fit_get_m2lnL_abstol (fit);
+  opts[4] = LM_DIFF_DELTA;
 }
 
 static void
@@ -570,10 +580,10 @@ _ncm_fit_levmar_get_desc (NcmFit *fit)
  * @gtype: a #NcmFitGradType
  * @algo: a #NcmFitLevmarAlgos
  *
- * Creates a new #NcmFitLevmar object from the given likelihood, model set, gradient
- * type and algorithm.
+ * Creates a #NcmFitLevmar for @lh and @mset using @algo, with Jacobians computed as
+ * @gtype says (for the DER algorithms).
  *
- * Returns: a #NcmFitLevmar.
+ * Returns: (transfer full): a new #NcmFitLevmar.
  */
 NcmFit *
 ncm_fit_levmar_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, NcmFitLevmarAlgos algo)
@@ -593,10 +603,9 @@ ncm_fit_levmar_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, NcmF
  * @mset: a #NcmMSet
  * @gtype: a #NcmFitGradType
  *
- * Creates a new #NcmFitLevmar object from the given likelihood, model set and
- * gradient type. The algorithm used is the default one (#NCM_FIT_LEVMAR_DIF).
+ * Creates a #NcmFitLevmar as ncm_fit_levmar_new() with #NCM_FIT_LEVMAR_DIF.
  *
- * Returns: a #NcmFitLevmar.
+ * Returns: (transfer full): a new #NcmFitLevmar.
  */
 NcmFit *
 ncm_fit_levmar_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
@@ -614,13 +623,12 @@ ncm_fit_levmar_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gty
  * @lh: a #NcmLikelihood
  * @mset: a #NcmMSet
  * @gtype: a #NcmFitGradType
- * @algo_name: a string containing the name of the algorithm to be used
+ * @algo_name: (nullable): name or nick of a #NcmFitLevmarAlgos
  *
- * Creates a new #NcmFitLevmar object from the given likelihood, model set, gradient
- * type and algorithm name. If the algorithm name is NULL, the default one
- * (#NCM_FIT_LEVMAR_DIF) is used.
+ * Creates a #NcmFitLevmar as ncm_fit_levmar_new() with the algorithm named
+ * @algo_name, or #NCM_FIT_LEVMAR_DIF when @algo_name is %NULL. An unknown name aborts.
  *
- * Returns: a #NcmFitLevmar.
+ * Returns: (transfer full): a new #NcmFitLevmar.
  */
 NcmFit *
 ncm_fit_levmar_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, gchar *algo_name)
@@ -643,17 +651,22 @@ ncm_fit_levmar_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gty
 
 /**
  * ncm_fit_levmar_set_algo:
- * @fit_levmar: a #NcmFitLevmar.
- * @algo: a #levmar_algorithm.
+ * @fit_levmar: a #NcmFitLevmar
+ * @algo: a #NcmFitLevmarAlgos
  *
- * Sets the algorithm to be used by the given #NcmFitLevmar.
+ * Sets the algorithm of @fit_levmar to @algo.
  *
  */
 void
 ncm_fit_levmar_set_algo (NcmFitLevmar *fit_levmar, NcmFitLevmarAlgos algo)
 {
+  g_assert_cmpint (algo, <, NCM_FIT_LEVMAR_NUM_ALGOS);
+
   if (fit_levmar->algo != algo)
+  {
     g_clear_pointer (&fit_levmar->workz, g_free);
+    fit_levmar->algo = algo;
+  }
 
   if (fit_levmar->workz == NULL)
   {

@@ -276,6 +276,7 @@ test_ncm_data_dist_errors (void)
     {"2d_m2lnL",   "*`TestDist2dEmpty' does not implement dist2d_m2lnL_val*"},
     {"2d_inv_pdf", "*`TestDist2dEmpty' does not implement inv_pdf, so it cannot be resampled*"},
     {"no_points",  "*ncm_data_dist1d_get_data: data `TestDist1d' has no points*"},
+    {"no_realization", "*data `TestDist1d': the bootstrap has no realization*"},
   };
   guint i;
 
@@ -319,6 +320,14 @@ test_ncm_data_dist_errors_subprocess (void)
       ncm_data_m2lnL_val (data, mset, &m2lnL);
     else
       ncm_data_resample (data, mset, rng);
+  }
+  else if (g_str_equal (which, "no_realization"))
+  {
+    NcmData *data = g_object_new (TEST_TYPE_DIST1D, "n-points", 2, NULL);
+
+    ncm_data_set_init (data, TRUE);
+    ncm_data_bootstrap_create (data);
+    ncm_data_m2lnL_val (data, mset, &m2lnL);
   }
   else
   {
