@@ -68,7 +68,7 @@ struct _NcmStatsDistKernelClass
   void (*eval_gamma_lambda) (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *lnc, NcmVector *lnK, gdouble *gamma, gdouble *lambda);
   void (*sample) (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *y, NcmRNG *rng);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
+  /* Padding to allow adding up to 9 more virtual functions without breaking ABI. */
   /* <private> */
   gpointer padding[9];
 };

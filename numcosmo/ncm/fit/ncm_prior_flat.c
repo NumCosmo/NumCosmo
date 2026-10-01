@@ -28,23 +28,23 @@
  *
  * Base class for flat prior distributions.
  *
- * This object subclasses #NcmPrior and defines a base class for flat priors used by
- * NcmLikelihood. These objects describe flat prior distributions applicable to
- * parameters or any derived quantity.
- *
- * The prior is defined as:
+ * This object subclasses #NcmPrior and is the base class of the flat priors used by
+ * #NcmLikelihood, on a parameter (#NcmPriorFlatParam) or on a derived quantity
+ * (#NcmPriorFlatFunc). The subclass provides the quantity $x$; the prior returns the
+ * least-squares form
  * $$
- * -2\ln P(x) = \exp\left(\frac{2 h_0}{s} \left(\left(x_0 - x\right) + \frac{s}{2.0}\right)\right) +
- *              \exp\left(\frac{2 h_0}{s} \left(\left(x - x_1\right) + \frac{s}{2.0}\right)\right),
+ * f = \exp\left[\frac{h_0}{s}\left(x_0 - x\right) + \frac{h_0}{2}\right] +
+ *     \exp\left[\frac{h_0}{s}\left(x - x_1\right) + \frac{h_0}{2}\right],
+ * \qquad -2\ln P(x) = f^2,
  * $$
- * where $x_0$ and $x_1$ are the lower and upper limits, respectively, and $s$ is the
- * scale of the prior. The variable $h_0$ has a default value of $20.0$. Note that for
- * $x = x_0$, the first term is $e^{h_0}$ and grows exponentially with $x$ decreasing.
- * For $x = x_0 + s$, the first term is $e^{-h_0}$ and decreases exponentially with $x$
- * increasing. The same happens for the second term around $x_1$.
+ * where $x_0$ and $x_1$ are the lower and upper limits, $s$ is the width of the walls
+ * and $h_0$ their height (#NcmPriorFlat:h0, default 20). Near $x_0$,
+ * $-2\ln P \simeq \exp[(2 h_0/s)(x_0 - x + s/2)]$: it is $e^{h_0}$ at $x_0$, one at
+ * $x_0 + s/2$ and $e^{-h_0}$ at $x_0 + s$, and the same holds mirrored around $x_1$.
+ * Inside $[x_0 + s, x_1 - s]$ the prior adds less than $e^{-h_0}$ to $-2\ln L$.
  *
- * The prior is not normalized. It is useful for defining a flat prior when the
- * analysis is sensitive to discontinuities in the prior.
+ * The prior is not normalized. It replaces a hard cut, which an analysis sensitive to
+ * discontinuities cannot use, by walls that are smooth but steep.
  *
  */
 
@@ -69,7 +69,6 @@ enum
 typedef struct _NcmPriorFlatPrivate
 {
   /*< private >*/
-  NcmPrior parent_instance;
   gdouble x_low;
   gdouble x_upp;
   gdouble s;
@@ -151,14 +150,15 @@ _ncm_prior_flat_get_property (GObject *object, guint prop_id, GValue *value, GPa
   }
 }
 
-static void
-_ncm_prior_flat_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_prior_flat_parent_class)->finalize (object);
-}
-
 static void _ncm_prior_flat_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res);
+
+static gdouble
+_ncm_prior_flat_mean (NcmPriorFlat *pf, NcmMSet *mset)
+{
+  g_error ("method mean not implemented by %s.", G_OBJECT_TYPE_NAME (pf));
+
+  return 0.0;
+}
 
 static void
 ncm_prior_flat_class_init (NcmPriorFlatClass *klass)
@@ -168,48 +168,81 @@ ncm_prior_flat_class_init (NcmPriorFlatClass *klass)
 
   object_class->set_property = &_ncm_prior_flat_set_property;
   object_class->get_property = &_ncm_prior_flat_get_property;
-  object_class->finalize     = &_ncm_prior_flat_finalize;
 
+  /**
+   * NcmPriorFlat:x-low:
+   *
+   * The lower limit $x_0$. Default: 0.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_X_LOW,
                                    g_param_spec_double ("x-low",
                                                         NULL,
-                                                        "lower limit",
+                                                        "Lower limit",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmPriorFlat:x-upp:
+   *
+   * The upper limit $x_1$. Default: 1.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_X_UPP,
                                    g_param_spec_double ("x-upp",
                                                         NULL,
-                                                        "upper limit",
+                                                        "Upper limit",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmPriorFlat:scale:
+   *
+   * The width $s$ of the walls. Default: $10^{-10}$.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_S,
                                    g_param_spec_double ("scale",
                                                         NULL,
-                                                        "border scale",
+                                                        "Width of the walls",
                                                         G_MINDOUBLE, G_MAXDOUBLE, 1.0e-10,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmPriorFlat:h0:
+   *
+   * The height $h_0$ of the walls: $-2\ln P = e^{h_0}$ at the limits. Default: 20.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_H0,
                                    g_param_spec_double ("h0",
                                                         NULL,
-                                                        "Cut magnitude",
+                                                        "Height of the walls",
                                                         1.0, G_MAXDOUBLE, 20.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmPriorFlat:variable:
+   *
+   * The argument passed to the mean function of #NcmPriorFlatFunc; the other
+   * subclasses do not read it. Default: 0.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_VARIABLE,
                                    g_param_spec_double ("variable",
                                                         NULL,
-                                                        "variable",
+                                                        "Argument of the mean function",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   NCM_PRIOR_CLASS (klass)->is_m2lnL = FALSE;
   mset_func_class->eval             = &_ncm_prior_flat_eval;
+  klass->mean                       = &_ncm_prior_flat_mean;
 }
 
 static void
@@ -219,8 +252,9 @@ _ncm_prior_flat_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdoubl
   NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
   const gdouble mean               = NCM_PRIOR_FLAT_GET_CLASS (pf)->mean (pf, mset);
 
-  res[0] = 0.5 * (exp (-self->h0 / self->s * (mean - self->x_low) + self->h0) +
-                  exp (+self->h0 / self->s * (mean - self->x_upp) + self->h0));
+  /* f, with f^2 = -2 ln P, see the class description. */
+  res[0] = exp (self->h0 / self->s * (self->x_low - mean) + 0.5 * self->h0) +
+           exp (self->h0 / self->s * (mean - self->x_upp) + 0.5 * self->h0);
 }
 
 /**
@@ -298,9 +332,9 @@ ncm_prior_flat_set_x_upp (NcmPriorFlat *pf, const gdouble x_upp)
 /**
  * ncm_prior_flat_set_scale:
  * @pf: a #NcmPriorFlat
- * @scale: border scale
+ * @scale: width of the walls
  *
- * Sets the border scale of @pf.
+ * Sets #NcmPriorFlat:scale.
  *
  */
 void
@@ -314,9 +348,9 @@ ncm_prior_flat_set_scale (NcmPriorFlat *pf, const gdouble scale)
 /**
  * ncm_prior_flat_set_var:
  * @pf: a #NcmPriorFlat
- * @var: variable
+ * @var: argument of the mean function
  *
- * Sets the variable of @pf.
+ * Sets #NcmPriorFlat:variable.
  *
  */
 void
@@ -330,9 +364,9 @@ ncm_prior_flat_set_var (NcmPriorFlat *pf, const gdouble var)
 /**
  * ncm_prior_flat_set_h0:
  * @pf: a #NcmPriorFlat
- * @h0: Cut magnitude
+ * @h0: height of the walls
  *
- * Sets the cut magnitude of @pf.
+ * Sets #NcmPriorFlat:h0.
  *
  */
 void
@@ -375,7 +409,7 @@ ncm_prior_flat_get_x_upp (NcmPriorFlat *pf)
  * ncm_prior_flat_get_scale:
  * @pf: a #NcmPriorFlat
  *
- * Returns: the border scale of @pf.
+ * Returns: #NcmPriorFlat:scale.
  */
 gdouble
 ncm_prior_flat_get_scale (NcmPriorFlat *pf)
@@ -389,7 +423,7 @@ ncm_prior_flat_get_scale (NcmPriorFlat *pf)
  * ncm_prior_flat_get_var:
  * @pf: a #NcmPriorFlat
  *
- * Returns: the variable of @pf.
+ * Returns: #NcmPriorFlat:variable.
  */
 gdouble
 ncm_prior_flat_get_var (NcmPriorFlat *pf)
@@ -403,7 +437,7 @@ ncm_prior_flat_get_var (NcmPriorFlat *pf)
  * ncm_prior_flat_get_h0:
  * @pf: a #NcmPriorFlat
  *
- * Returns: the cut magnitude of @pf.
+ * Returns: #NcmPriorFlat:h0.
  */
 gdouble
 ncm_prior_flat_get_h0 (NcmPriorFlat *pf)

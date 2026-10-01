@@ -26,10 +26,13 @@
 /**
  * NcmFitGSLMM:
  *
- * Best-fit finder -- GSL non-linear minimization algorithms.
+ * Best-fit finder using the GSL gradient-based minimizers (gsl_multimin_fdfminimizer).
  *
- * This object implements a best-fit finder using the GSL non-linear minimization
- * algorithms. It is a subclass of #NcmFit.
+ * It minimizes $-2\ln L$ with the gradient from ncm_fit_m2lnL_grad(). The first trial
+ * step is the smallest free-parameter scale. At a point the models report invalid
+ * (ncm_mset_params_valid()) $-2\ln L$ is $+\infty$, so the line minimization
+ * backtracks; parameter bounds are not enforced. Constraints are not supported and
+ * abort the run.
  *
  */
 
@@ -81,6 +84,7 @@ ncm_fit_gsl_mm_init (NcmFitGSLMM *fit_gsl_mm)
 static gdouble nc_residual_multimin_f (const gsl_vector *x, gpointer p);
 static void nc_residual_multimin_df (const gsl_vector *x, gpointer p, gsl_vector *df);
 static void nc_residual_multimin_fdf (const gsl_vector *x, gpointer p, gdouble *f, gsl_vector *df);
+static void _ncm_fit_gsl_mm_prepare (NcmFitGSLMM *fit_gsl_mm);
 
 static void
 _ncm_fit_gsl_mm_constructed (GObject *object)
@@ -89,28 +93,16 @@ _ncm_fit_gsl_mm_constructed (GObject *object)
   G_OBJECT_CLASS (ncm_fit_gsl_mm_parent_class)->constructed (object);
   {
     NcmFitGSLMM *fit_gsl_mm = NCM_FIT_GSL_MM (object);
-    NcmFit *fit             = NCM_FIT (fit_gsl_mm);
-    NcmFitState *fstate     = ncm_fit_peek_state (fit);
-    NcmMSet *mset           = ncm_fit_peek_mset (fit);
-    guint i;
 
-    fit_gsl_mm->err_a = GSL_POSINF;
     fit_gsl_mm->err_b = 1.0e-1;
-
-    for (i = 0; i < ncm_fit_state_get_fparam_len (fstate); i++)
-    {
-      gdouble pscale = ncm_mset_fparam_get_scale (mset, i);
-
-      fit_gsl_mm->err_a = GSL_MIN (fit_gsl_mm->err_a, pscale);
-    }
 
     fit_gsl_mm->f.f      = &nc_residual_multimin_f;
     fit_gsl_mm->f.df     = &nc_residual_multimin_df;
     fit_gsl_mm->f.fdf    = &nc_residual_multimin_fdf;
-    fit_gsl_mm->f.n      = ncm_fit_state_get_fparam_len (fstate);
+    fit_gsl_mm->f.n      = 0;
     fit_gsl_mm->f.params = fit_gsl_mm;
 
-    ncm_fit_gsl_mm_set_algo (fit_gsl_mm, fit_gsl_mm->algo);
+    _ncm_fit_gsl_mm_prepare (fit_gsl_mm);
   }
 }
 
@@ -124,14 +116,8 @@ _ncm_fit_gsl_mm_set_property (GObject *object, guint prop_id, const GValue *valu
   switch (prop_id)
   {
     case PROP_ALGO:
-    {
-      if (fit_gsl_mm->mm == NULL)
-        fit_gsl_mm->algo = g_value_get_enum (value);
-      else
-        ncm_fit_gsl_mm_set_algo (fit_gsl_mm, g_value_get_enum (value));
-
+      ncm_fit_gsl_mm_set_algo (fit_gsl_mm, g_value_get_enum (value));
       break;
-    }
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -161,9 +147,7 @@ ncm_fit_gsl_mm_finalize (GObject *object)
 {
   NcmFitGSLMM *fit_gsl_mm = NCM_FIT_GSL_MM (object);
 
-  gsl_multimin_fdfminimizer_free (fit_gsl_mm->mm);
-  fit_gsl_mm->mm = NULL;
-
+  g_clear_pointer (&fit_gsl_mm->mm, gsl_multimin_fdfminimizer_free);
   g_clear_pointer (&fit_gsl_mm->desc, g_free);
 
   /* Chain up : end */
@@ -213,17 +197,62 @@ _ncm_fit_gsl_mm_reset (NcmFit *fit)
 {
   /* Chain up : start */
   NCM_FIT_CLASS (ncm_fit_gsl_mm_parent_class)->reset (fit);
-  {
-    NcmFitGSLMM *fit_gsl_mm = NCM_FIT_GSL_MM (fit);
-    NcmFitState *fstate     = ncm_fit_peek_state (fit);
 
-    if (fit_gsl_mm->f.n != ncm_fit_state_get_fparam_len (fstate))
-    {
-      gsl_multimin_fdfminimizer_free (fit_gsl_mm->mm);
-      fit_gsl_mm->mm  = NULL;
-      fit_gsl_mm->f.n = ncm_fit_state_get_fparam_len (fstate);
-      ncm_fit_gsl_mm_set_algo (fit_gsl_mm, fit_gsl_mm->algo);
-    }
+  _ncm_fit_gsl_mm_prepare (NCM_FIT_GSL_MM (fit));
+}
+
+static const gsl_multimin_fdfminimizer_type *_ncm_fit_gsl_mm_type (NcmFitGSLMMAlgos algo);
+
+/* Sets the first trial step to the smallest free-parameter scale and allocates the
+ * minimizer for the current number of free parameters; without free parameters there
+ * is none. */
+static void
+_ncm_fit_gsl_mm_prepare (NcmFitGSLMM *fit_gsl_mm)
+{
+  NcmFit *fit            = NCM_FIT (fit_gsl_mm);
+  NcmMSet *mset          = ncm_fit_peek_mset (fit);
+  const guint fparam_len = ncm_fit_state_get_fparam_len (ncm_fit_peek_state (fit));
+  guint i;
+
+  fit_gsl_mm->err_a = GSL_POSINF;
+
+  for (i = 0; i < fparam_len; i++)
+    fit_gsl_mm->err_a = GSL_MIN (fit_gsl_mm->err_a, ncm_mset_fparam_get_scale (mset, i));
+
+  if (fit_gsl_mm->f.n != fparam_len)
+  {
+    g_clear_pointer (&fit_gsl_mm->mm, gsl_multimin_fdfminimizer_free);
+    fit_gsl_mm->f.n = fparam_len;
+  }
+
+  if ((fit_gsl_mm->mm == NULL) && (fparam_len > 0))
+    fit_gsl_mm->mm = gsl_multimin_fdfminimizer_alloc (_ncm_fit_gsl_mm_type (fit_gsl_mm->algo), fparam_len);
+}
+
+static const gsl_multimin_fdfminimizer_type *
+_ncm_fit_gsl_mm_type (NcmFitGSLMMAlgos algo)
+{
+  switch (algo)
+  {
+    case NCM_FIT_GSL_MM_CONJUGATE_FR:
+      return gsl_multimin_fdfminimizer_conjugate_fr;
+
+    case NCM_FIT_GSL_MM_CONJUGATE_PR:
+      return gsl_multimin_fdfminimizer_conjugate_pr;
+
+    case NCM_FIT_GSL_MM_VECTOR_BFGS:
+      return gsl_multimin_fdfminimizer_vector_bfgs;
+
+    case NCM_FIT_GSL_MM_VECTOR_BFGS2:
+      return gsl_multimin_fdfminimizer_vector_bfgs2;
+
+    case NCM_FIT_GSL_MM_STEEPEST_DESCENT:
+      return gsl_multimin_fdfminimizer_steepest_descent;
+
+    default:                                                         /* LCOV_EXCL_LINE */
+      g_error ("_ncm_fit_gsl_mm_type: unknown algorithm %d.", algo); /* LCOV_EXCL_LINE */
+
+      return NULL; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -262,12 +291,20 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
       return FALSE;
     }
 
+    /* No progress means the line minimization cannot lower -2 ln L: converged. */
     if (status == GSL_ENOPROG)
     {
       if (mtype > NCM_FIT_RUN_MSGS_NONE)
         ncm_fit_log_step_error (fit, gsl_strerror (status));
 
       status = GSL_SUCCESS;
+    }
+    else if (status != GSL_SUCCESS)
+    {
+      if (mtype > NCM_FIT_RUN_MSGS_NONE)
+        ncm_fit_log_step_error (fit, gsl_strerror (status));
+
+      break;
     }
     else
     {
@@ -289,13 +326,12 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
     ncm_fit_log_step (fit);
   } while ((status == GSL_CONTINUE) && (ncm_fit_state_get_niter (fstate) < ncm_fit_get_maxiter (fit)));
 
+  ncm_fit_params_set_gsl_vector (fit, fit_gsl_mm->mm->x);
   ncm_mset_fparams_get_vector (mset, ncm_fit_state_peek_fparams (fstate));
   ncm_fit_state_set_m2lnL_curval (fstate, fit_gsl_mm->mm->f);
   ncm_fit_state_set_m2lnL_prec (fstate, fabs (gsl_blas_dnrm2 (fit_gsl_mm->mm->gradient) / fit_gsl_mm->mm->f));
 
-  ncm_fit_params_set_gsl_vector (fit, fit_gsl_mm->mm->x);
-
-  return TRUE;
+  return (status == GSL_SUCCESS);
 }
 
 static gdouble
@@ -308,7 +344,7 @@ nc_residual_multimin_f (const gsl_vector *x, gpointer p)
   ncm_fit_params_set_gsl_vector (fit, x);
 
   if (!ncm_mset_params_valid (mset))
-    return GSL_EDOM;
+    return GSL_POSINF;
 
   ncm_fit_m2lnL_val (fit, &result);
 
@@ -340,8 +376,15 @@ nc_residual_multimin_fdf (const gsl_vector *x, gpointer p, gdouble *f, gsl_vecto
 
   ncm_fit_params_set_gsl_vector (fit, x);
 
+  /* The line minimization backtracks from an infinite value. */
   if (!ncm_mset_params_valid (mset))
-    g_warning ("nc_residual_multimin_fdf: stepping in a invalid parameter point, continuing anyway.");
+  {
+    *f = GSL_POSINF;
+    gsl_vector_set_zero (df);
+    ncm_vector_free (dfv);
+
+    return;
+  }
 
   ncm_fit_m2lnL_val_grad (fit, f, dfv);
 
@@ -355,8 +398,7 @@ _ncm_fit_gsl_mm_get_desc (NcmFit *fit)
 
   if (fit_gsl_mm->desc == NULL)
     fit_gsl_mm->desc = g_strdup_printf ("GSL Multidimensional Minimization:%s",
-                                        fit_gsl_mm->mm != NULL ? gsl_multimin_fdfminimizer_name (fit_gsl_mm->mm) : "not-set");
-
+                                        _ncm_fit_gsl_mm_type (fit_gsl_mm->algo)->name);
 
   return fit_gsl_mm->desc;
 }
@@ -368,10 +410,10 @@ _ncm_fit_gsl_mm_get_desc (NcmFit *fit)
  * @gtype: a #NcmFitGradType
  * @algo: a #NcmFitGSLMMAlgos
  *
- * Creates a new #NcmFitGSLMM object with the given likelihood, model set and
- * gradient type. The algorithm to be used is specified by @algo.
+ * Creates a #NcmFitGSLMM for @lh and @mset using @algo, with gradients computed as
+ * @gtype says.
  *
- * Returns: (transfer full): a new #NcmFitGSLMM object.
+ * Returns: (transfer full): a new #NcmFitGSLMM.
  */
 NcmFit *
 ncm_fit_gsl_mm_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, NcmFitGSLMMAlgos algo)
@@ -391,10 +433,9 @@ ncm_fit_gsl_mm_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, NcmF
  * @mset: a #NcmMSet
  * @gtype: a #NcmFitGradType
  *
- * Creates a new #NcmFitGSLMM object with the given likelihood, model set and
- * gradient type. The algorithm to be used is the default one (#NCM_FIT_GSL_MM_VECTOR_BFGS2).
+ * Creates a #NcmFitGSLMM as ncm_fit_gsl_mm_new() with #NCM_FIT_GSL_MM_VECTOR_BFGS2.
  *
- * Returns: (transfer full): a new #NcmFitGSLMM object.
+ * Returns: (transfer full): a new #NcmFitGSLMM.
  */
 NcmFit *
 ncm_fit_gsl_mm_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
@@ -412,14 +453,12 @@ ncm_fit_gsl_mm_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gty
  * @lh: a #NcmLikelihood
  * @mset: a #NcmMSet
  * @gtype: a #NcmFitGradType
- * @algo_name: a string with the name of the algorithm to be used.
+ * @algo_name: (nullable): name or nick of a #NcmFitGSLMMAlgos
  *
- * Creates a new #NcmFitGSLMM object with the given likelihood, model set and
- * gradient type. The algorithm to be used is specified by @algo_name.
- * If @algo_name is NULL, the default algorithm (#NCM_FIT_GSL_MM_VECTOR_BFGS2)
- * is used.
+ * Creates a #NcmFitGSLMM as ncm_fit_gsl_mm_new() with the algorithm named @algo_name,
+ * or #NCM_FIT_GSL_MM_VECTOR_BFGS2 when @algo_name is %NULL. An unknown name aborts.
  *
- * Returns: (transfer full): a new #NcmFitGSLMM object.
+ * Returns: (transfer full): a new #NcmFitGSLMM.
  */
 NcmFit *
 ncm_fit_gsl_mm_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, gchar *algo_name)
@@ -442,41 +481,26 @@ ncm_fit_gsl_mm_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gty
 
 /**
  * ncm_fit_gsl_mm_set_algo:
- * @fit_gsl_mm: a #NcmFitGSLMM.
- * @algo: a #gsl_mm_algorithm.
+ * @fit_gsl_mm: a #NcmFitGSLMM
+ * @algo: a #NcmFitGSLMMAlgos
  *
- * Sets the algorithm to be used by @fit_gsl_mm.
+ * Sets the minimization algorithm of @fit_gsl_mm to @algo.
  *
  */
 void
 ncm_fit_gsl_mm_set_algo (NcmFitGSLMM *fit_gsl_mm, NcmFitGSLMMAlgos algo)
 {
-  const gsl_multimin_fdfminimizer_type *ncm_fit_gsl_mm_algos[] = {
-    gsl_multimin_fdfminimizer_conjugate_fr,
-    gsl_multimin_fdfminimizer_conjugate_pr,
-    gsl_multimin_fdfminimizer_vector_bfgs,
-    gsl_multimin_fdfminimizer_vector_bfgs2,
-    gsl_multimin_fdfminimizer_steepest_descent,
-  };
-  NcmFit *fit         = NCM_FIT (fit_gsl_mm);
-  NcmFitState *fstate = ncm_fit_peek_state (fit);
-
-  g_assert (fit_gsl_mm->algo < NCM_FIT_GSL_MM_NUM_ALGOS);
+  g_assert_cmpint (algo, <, NCM_FIT_GSL_MM_NUM_ALGOS);
 
   if (fit_gsl_mm->algo != algo)
   {
     fit_gsl_mm->algo = algo;
 
-    if (fit_gsl_mm->mm != NULL)
-      gsl_multimin_fdfminimizer_free (fit_gsl_mm->mm);
-
-    fit_gsl_mm->mm = NULL;
-
-    if (fit_gsl_mm->desc != NULL)
-      g_free (fit_gsl_mm->desc);
+    g_clear_pointer (&fit_gsl_mm->mm, gsl_multimin_fdfminimizer_free);
+    g_clear_pointer (&fit_gsl_mm->desc, g_free);
   }
 
-  if (fit_gsl_mm->mm == NULL)
-    fit_gsl_mm->mm = gsl_multimin_fdfminimizer_alloc (ncm_fit_gsl_mm_algos[fit_gsl_mm->algo], ncm_fit_state_get_fparam_len (fstate));
+  if ((fit_gsl_mm->mm == NULL) && (fit_gsl_mm->f.n > 0))
+    fit_gsl_mm->mm = gsl_multimin_fdfminimizer_alloc (_ncm_fit_gsl_mm_type (fit_gsl_mm->algo), fit_gsl_mm->f.n);
 }
 

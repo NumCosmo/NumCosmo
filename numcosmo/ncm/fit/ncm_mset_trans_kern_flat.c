@@ -26,25 +26,10 @@
 /**
  * NcmMSetTransKernFlat:
  *
- * Multivariate flat sampler.
+ * Proposals uniform in the box of the free-parameter bounds.
  *
- * This object subclasses NcmMSetTransKern and implements a multivariate flat sampler.
- *
- * Implementation of a multivariate flat sampler, offering a straightforward method for
- * generating random parameter vectors with multivariate parameters. This sampler
- * generates vectors uniformly distributed in the hypercube defined by the specified
- * bounds for each parameter.
- *
- * Key Functionality:
- *
- * - Generates random parameter vectors with multivariate parameters.
- * - Utilizes a simple flat sampling method within the hypercube defined by parameter
- *   bounds.
- *
- * This implementation is particularly useful when a basic flat sampling approach is
- * needed for generating random parameter vectors with multivariate parameters,
- * especially in scenarios where limited information is available about the posterior
- * distribution.
+ * The proposals do not depend on the current point, so the kernel is symmetric and its
+ * density is one over the volume of the box.
  *
  */
 
@@ -134,6 +119,8 @@ _ncm_mset_trans_kern_flat_generate (NcmMSetTransKern *tkern, NcmVector *theta, N
   guint fparam_len = ncm_mset_fparam_len (mset);
   guint i;
 
+  ncm_rng_lock (rng);
+
   for (i = 0; i < fparam_len; i++)
   {
     const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
@@ -142,6 +129,8 @@ _ncm_mset_trans_kern_flat_generate (NcmMSetTransKern *tkern, NcmVector *theta, N
 
     ncm_vector_set (thetastar, i, val);
   }
+
+  ncm_rng_unlock (rng);
 }
 
 static gdouble
@@ -159,9 +148,7 @@ _ncm_mset_trans_kern_flat_get_name (NcmMSetTransKern *tkern)
 /**
  * ncm_mset_trans_kern_flat_new:
  *
- * New NcmMSetTransKern flat.
- *
- * Returns: (transfer full): a new #NcmMSetTransKernFlat.
+ * Returns: (transfer full): a new #NcmMSetTransKernFlat
  *
  */
 NcmMSetTransKernFlat *

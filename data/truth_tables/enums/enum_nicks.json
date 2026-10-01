@@ -19,6 +19,10 @@
     "nick": "column-not-found",
     "type": "Ncm.CatalogError"
   },
+  "NCM_CATALOG_ERROR_ROW_OUT_OF_RANGE": {
+    "nick": "row-out-of-range",
+    "type": "Ncm.CatalogError"
+  },
   "NCM_CFG_ERROR_INVALID_FFTW_FLAG": {
     "nick": "flag",
     "type": "Ncm.CfgError"
@@ -274,22 +278,6 @@
   "NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V": {
     "nick": "p-v",
     "type": "Ncm.IntegralNDMethod"
-  },
-  "NCM_LH_RATIO1D_ROOT_BRACKET": {
-    "nick": "bracket",
-    "type": "Ncm.LHRatio1dRoot"
-  },
-  "NCM_LH_RATIO1D_ROOT_NUMDIFF": {
-    "nick": "numdiff",
-    "type": "Ncm.LHRatio1dRoot"
-  },
-  "NCM_LH_RATIO2D_ROOT_BRACKET": {
-    "nick": "bracket",
-    "type": "Ncm.LHRatio2dRoot"
-  },
-  "NCM_LH_RATIO2D_ROOT_NUMDIFF": {
-    "nick": "numdiff",
-    "type": "Ncm.LHRatio2dRoot"
   },
   "NCM_MATRIX_DERIVED": {
     "nick": "derived",
@@ -665,6 +653,10 @@
   },
   "NCM_SPLINE_GSL_POLYNOMIAL": {
     "nick": "polynomial",
+    "type": "Ncm.SplineGslType"
+  },
+  "NCM_SPLINE_GSL_STEFFEN": {
+    "nick": "steffen",
     "type": "Ncm.SplineGslType"
   },
   "NCM_STATS_ACORR_AR_CRIT_AIC": {

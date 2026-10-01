@@ -28,6 +28,7 @@
  *
  * Base class for two-dimensional probability distributions.
  *
+ * A subclass implements the methods it supports; the others abort naming the subclass.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -36,13 +37,6 @@
 #include "build_cfg.h"
 
 #include "ncm/stats/ncm_stats_dist2d.h"
-#include "ncm/spline/ncm_spline2d_bicubic.h"
-
-enum
-{
-  PROP_0,
-  PROP_SIZE,
-};
 
 G_DEFINE_ABSTRACT_TYPE (NcmStatsDist2d, ncm_stats_dist2d, G_TYPE_OBJECT)
 
@@ -51,69 +45,93 @@ ncm_stats_dist2d_init (NcmStatsDist2d *sd2)
 {
 }
 
-static void
-_ncm_stats_dist2d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  g_return_if_fail (NCM_IS_STATS_DIST2D (object));
+#define _NCM_STATS_DIST2D_NOT_IMPLEMENTED(name) \
+        g_error ("ncm_stats_dist2d_" name ": `%s' does not implement " name ".", G_OBJECT_TYPE_NAME (sd2))
 
-  switch (prop_id)
-  {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
-  }
+/* LCOV_EXCL_START */
+
+static void
+_ncm_stats_dist2d_xbounds (NcmStatsDist2d *sd2, gdouble *xi, gdouble *xf)
+{
+  _NCM_STATS_DIST2D_NOT_IMPLEMENTED ("xbounds");
 }
 
 static void
-_ncm_stats_dist2d_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_ncm_stats_dist2d_ybounds (NcmStatsDist2d *sd2, gdouble *yi, gdouble *yf)
 {
-  NcmStatsDist2d *sd2 = NCM_STATS_DIST2D (object);
-
-  g_return_if_fail (NCM_IS_STATS_DIST2D (object));
-
-  NCM_UNUSED (sd2);
-
-  switch (prop_id)
-  {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
-  }
+  _NCM_STATS_DIST2D_NOT_IMPLEMENTED ("ybounds");
 }
 
-static void
-_ncm_stats_dist2d_dispose (GObject *object)
+static gdouble
+_ncm_stats_dist2d_pdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y)
 {
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_stats_dist2d_parent_class)->dispose (object);
+  _NCM_STATS_DIST2D_NOT_IMPLEMENTED ("pdf");
+
+  return 0.0;
 }
 
-static void
-_ncm_stats_dist2d_finalize (GObject *object)
+static gdouble
+_ncm_stats_dist2d_m2lnp (NcmStatsDist2d *sd2, const gdouble x, const gdouble y)
 {
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_stats_dist2d_parent_class)->finalize (object);
+  _NCM_STATS_DIST2D_NOT_IMPLEMENTED ("m2lnp");
+
+  return 0.0;
+}
+
+/* LCOV_EXCL_STOP */
+
+static gdouble
+_ncm_stats_dist2d_cdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y)
+{
+  _NCM_STATS_DIST2D_NOT_IMPLEMENTED ("cdf");
+
+  return 0.0;
+}
+
+static gdouble
+_ncm_stats_dist2d_marginal_pdf (NcmStatsDist2d *sd2, const gdouble xy)
+{
+  _NCM_STATS_DIST2D_NOT_IMPLEMENTED ("marginal_pdf");
+
+  return 0.0;
+}
+
+static gdouble
+_ncm_stats_dist2d_marginal_cdf (NcmStatsDist2d *sd2, const gdouble xy)
+{
+  _NCM_STATS_DIST2D_NOT_IMPLEMENTED ("marginal_cdf");
+
+  return 0.0;
+}
+
+static gdouble
+_ncm_stats_dist2d_marginal_inv_cdf (NcmStatsDist2d *sd2, const gdouble u)
+{
+  _NCM_STATS_DIST2D_NOT_IMPLEMENTED ("marginal_inv_cdf");
+
+  return 0.0;
+}
+
+static gdouble
+_ncm_stats_dist2d_inv_cond (NcmStatsDist2d *sd2, const gdouble u, const gdouble xy)
+{
+  _NCM_STATS_DIST2D_NOT_IMPLEMENTED ("inv_cond");
+
+  return 0.0;
 }
 
 static void
 ncm_stats_dist2d_class_init (NcmStatsDist2dClass *klass)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
-
-  object_class->dispose      = &_ncm_stats_dist2d_dispose;
-  object_class->finalize     = &_ncm_stats_dist2d_finalize;
-  object_class->set_property = &_ncm_stats_dist2d_set_property;
-  object_class->get_property = &_ncm_stats_dist2d_get_property;
-
-  klass->xbounds          = NULL;
-  klass->ybounds          = NULL;
-  klass->pdf              = NULL;
-  klass->m2lnp            = NULL;
-  klass->cdf              = NULL;
-  klass->marginal_pdf     = NULL;
-  klass->marginal_cdf     = NULL;
-  klass->marginal_inv_cdf = NULL;
-  klass->inv_cond         = NULL;
+  klass->xbounds          = &_ncm_stats_dist2d_xbounds;
+  klass->ybounds          = &_ncm_stats_dist2d_ybounds;
+  klass->pdf              = &_ncm_stats_dist2d_pdf;
+  klass->m2lnp            = &_ncm_stats_dist2d_m2lnp;
+  klass->cdf              = &_ncm_stats_dist2d_cdf;
+  klass->marginal_pdf     = &_ncm_stats_dist2d_marginal_pdf;
+  klass->marginal_cdf     = &_ncm_stats_dist2d_marginal_cdf;
+  klass->marginal_inv_cdf = &_ncm_stats_dist2d_marginal_inv_cdf;
+  klass->inv_cond         = &_ncm_stats_dist2d_inv_cond;
   klass->prepare          = NULL;
 }
 
@@ -136,7 +154,6 @@ ncm_stats_dist2d_ref (NcmStatsDist2d *sd2)
  * @sd2: a #NcmStatsDist2d
  *
  * Decreases the reference count of @sd2.
- *
  */
 void
 ncm_stats_dist2d_free (NcmStatsDist2d *sd2)
@@ -148,8 +165,7 @@ ncm_stats_dist2d_free (NcmStatsDist2d *sd2)
  * ncm_stats_dist2d_clear:
  * @sd2: a #NcmStatsDist2d
  *
- * Decreases the reference count of *@sd2 and sets the pointer *@sd2 to NULL.
- *
+ * Decreases the reference count of *@sd2 and sets the pointer *@sd2 to %NULL.
  */
 void
 ncm_stats_dist2d_clear (NcmStatsDist2d **sd2)
@@ -161,7 +177,7 @@ ncm_stats_dist2d_clear (NcmStatsDist2d **sd2)
  * ncm_stats_dist2d_prepare: (virtual prepare)
  * @sd2: a #NcmStatsDist2d
  *
- * Prepares the object for calculations.
+ * Calls the subclass prepare, if any; must be called before evaluating @sd2.
  */
 void
 ncm_stats_dist2d_prepare (NcmStatsDist2d *sd2)
@@ -175,11 +191,10 @@ ncm_stats_dist2d_prepare (NcmStatsDist2d *sd2)
 /**
  * ncm_stats_dist2d_xbounds: (virtual xbounds)
  * @sd2: a #NcmStatsDist2d
- * @xi: (out): x lower bound
- * @xf: (out): x upper bound
+ * @xi: (out): lower bound of $x$
+ * @xf: (out): upper bound of $x$
  *
- * Gets the x bounds of the distribution.
- *
+ * Gets the range of $x$ of the support.
  */
 void
 ncm_stats_dist2d_xbounds (NcmStatsDist2d *sd2, gdouble *xi, gdouble *xf)
@@ -190,11 +205,10 @@ ncm_stats_dist2d_xbounds (NcmStatsDist2d *sd2, gdouble *xi, gdouble *xf)
 /**
  * ncm_stats_dist2d_ybounds: (virtual ybounds)
  * @sd2: a #NcmStatsDist2d
- * @yi: (out): y lower bound
- * @yf: (out): y upper bound
+ * @yi: (out): lower bound of $y$
+ * @yf: (out): upper bound of $y$
  *
- * Gets the y bounds of the distribution.
- *
+ * Gets the range of $y$ of the support.
  */
 void
 ncm_stats_dist2d_ybounds (NcmStatsDist2d *sd2, gdouble *yi, gdouble *yf)
@@ -205,12 +219,12 @@ ncm_stats_dist2d_ybounds (NcmStatsDist2d *sd2, gdouble *yi, gdouble *yf)
 /**
  * ncm_stats_dist2d_eval_pdf: (virtual pdf)
  * @sd2: a #NcmStatsDist2d
- * @x: random variable value
- * @y: random variable value
+ * @x: first variable
+ * @y: second variable
  *
- * Calculates the value of the probability density function (PDF) at @x and @y.
+ * Evaluates the density at (@x, @y).
  *
- * Returns: the PDF value at @x and @y
+ * Returns: the density $p(x, y)$.
  */
 gdouble
 ncm_stats_dist2d_eval_pdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y)
@@ -221,12 +235,12 @@ ncm_stats_dist2d_eval_pdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y
 /**
  * ncm_stats_dist2d_eval_m2lnp: (virtual m2lnp)
  * @sd2: a #NcmStatsDist2d
- * @x: random variable value
- * @y: random variable value
+ * @x: first variable
+ * @y: second variable
  *
- * Calculates the value of the $-2\ln(p(x, y))$ for the probability density function.
+ * Evaluates $-2\ln p(x, y)$.
  *
- * Returns: the value of $-2\ln(p(x, y))$.
+ * Returns: $-2\ln p(x, y)$.
  */
 gdouble
 ncm_stats_dist2d_eval_m2lnp (NcmStatsDist2d *sd2, const gdouble x, const gdouble y)
@@ -237,12 +251,12 @@ ncm_stats_dist2d_eval_m2lnp (NcmStatsDist2d *sd2, const gdouble x, const gdouble
 /**
  * ncm_stats_dist2d_eval_cdf: (virtual cdf)
  * @sd2: a #NcmStatsDist2d
- * @x: random variable value
- * @y: random variable value
+ * @x: first variable
+ * @y: second variable
  *
- * Calculates the value of the cumulative distribution function (CDF) within [x_i, @x] and [y_i, @y].
+ * Evaluates the probability of $[x_i, x] \times [y_i, y]$.
  *
- * Returns: the CDF value given the intervals [x_i, @x] and [y_i, @y]
+ * Returns: the cumulative distribution at (@x, @y).
  */
 gdouble
 ncm_stats_dist2d_eval_cdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y)
@@ -253,11 +267,11 @@ ncm_stats_dist2d_eval_cdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y
 /**
  * ncm_stats_dist2d_eval_marginal_pdf: (virtual marginal_pdf)
  * @sd2: a #NcmStatsDist2d
- * @xy: x or y
+ * @xy: value of the marginal's variable
  *
- * Evaluates the marginal PDF at @xy.
+ * Evaluates the marginal density of one variable; which one depends on the subclass.
  *
- * Returns: the marginal PDF value at @xy
+ * Returns: the marginal density at @xy.
  */
 gdouble
 ncm_stats_dist2d_eval_marginal_pdf (NcmStatsDist2d *sd2, const gdouble xy)
@@ -266,13 +280,13 @@ ncm_stats_dist2d_eval_marginal_pdf (NcmStatsDist2d *sd2, const gdouble xy)
 }
 
 /**
- * ncm_stats_dist2d_eval_marginal_cdf: (virtual marginal_pdf)
+ * ncm_stats_dist2d_eval_marginal_cdf: (virtual marginal_cdf)
  * @sd2: a #NcmStatsDist2d
- * @xy: x or y
+ * @xy: value of the marginal's variable
  *
- * Evaluates the marginal CDF at @xy.
+ * Evaluates the cumulative distribution of the marginal of ncm_stats_dist2d_eval_marginal_pdf().
  *
- * Returns: the marginal CDF value at @xy
+ * Returns: the marginal cumulative distribution at @xy.
  */
 gdouble
 ncm_stats_dist2d_eval_marginal_cdf (NcmStatsDist2d *sd2, const gdouble xy)
@@ -281,14 +295,30 @@ ncm_stats_dist2d_eval_marginal_cdf (NcmStatsDist2d *sd2, const gdouble xy)
 }
 
 /**
+ * ncm_stats_dist2d_eval_marginal_inv_cdf: (virtual marginal_inv_cdf)
+ * @sd2: a #NcmStatsDist2d
+ * @u: probability, in $[0, 1]$
+ *
+ * Evaluates the inverse of ncm_stats_dist2d_eval_marginal_cdf().
+ *
+ * Returns: the quantile of the marginal.
+ */
+gdouble
+ncm_stats_dist2d_eval_marginal_inv_cdf (NcmStatsDist2d *sd2, const gdouble u)
+{
+  return NCM_STATS_DIST2D_GET_CLASS (sd2)->marginal_inv_cdf (sd2, u);
+}
+
+/**
  * ncm_stats_dist2d_eval_inv_cond: (virtual inv_cond)
  * @sd2: a #NcmStatsDist2d
- * @u: a number between [0, 1]
- * @xy: x or y
+ * @u: probability, in $[0, 1]$
+ * @xy: value of the marginal's variable
  *
- * Evaluates the inverse conditional CDF at @u and @xy.
+ * Evaluates the quantile @u of the other variable conditional on the marginal's variable
+ * being @xy.
  *
- * Returns: the inverse conditional CDF value at @u and @xy.
+ * Returns: the conditional quantile.
  */
 gdouble
 ncm_stats_dist2d_eval_inv_cond (NcmStatsDist2d *sd2, const gdouble u, const gdouble xy)

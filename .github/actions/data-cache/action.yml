@@ -62,7 +62,7 @@ runs:
         } >> "$GITHUB_OUTPUT"
     - name: Restore data cache
       id: restore
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: ${{ steps.key.outputs.paths }}
         key: ${{ steps.key.outputs.value }}

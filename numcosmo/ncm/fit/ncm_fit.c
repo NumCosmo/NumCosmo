@@ -26,9 +26,19 @@
 /**
  * NcmFit:
  *
- * Abstract class for implementing fitting methods.
+ * Abstract class for best-fit searches.
  *
- * This object implements a abstract class for implementing fitting methods.
+ * Minimizes $-2\ln L$ of a #NcmLikelihood over the free parameters of a #NcmMSet. The
+ * implementations wrap GSL (#NcmFitGSLLS, #NcmFitGSLMM, #NcmFitGSLMMS), levmar
+ * (#NcmFitLevmar) and NLopt (#NcmFitNLOpt); ncm_fit_factory() creates any of them.
+ * Least-squares implementations minimize $|f|^2$ with $f$ from
+ * ncm_likelihood_leastsquares_f(). The result is kept in a #NcmFitState
+ * (ncm_fit_peek_state()), and the covariance of the free parameters follows from the
+ * Fisher matrix. A fit can carry equality and inequality constraints, and a subsidiary
+ * fit (ncm_fit_set_sub_fit()) that profiles the parameters it does not share.
+ *
+ * The degrees of freedom are those of the dataset plus one per prior, minus the number
+ * of free parameters.
  *
  */
 
@@ -83,7 +93,6 @@ enum
 typedef struct _NcmFitPrivate
 {
   /*< private >*/
-  GObject parent_instance;
   NcmLikelihood *lh;
   NcmMSet *mset;
   NcmFitState *fstate;
@@ -317,6 +326,24 @@ _ncm_fit_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
   }
 }
 
+/* The state's dimensions: one residual per data point and per prior, and the degrees of
+ * freedom of the dataset plus one per prior, minus the free parameters. */
+static void
+_ncm_fit_state_dims (NcmFit *fit, guint *data_len, guint *fparam_len, gint *dof)
+{
+  NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
+  NcmDataset *dset           = ncm_likelihood_peek_dataset (self->lh);
+  const guint n_priors       = ncm_likelihood_priors_length_f (self->lh) + ncm_likelihood_priors_length_m2lnL (self->lh);
+
+  g_assert (ncm_dataset_all_init (dset));
+
+  *data_len   = ncm_dataset_get_n (dset) + n_priors;
+  *fparam_len = ncm_mset_fparam_len (self->mset);
+  *dof        = ncm_dataset_get_dof (dset) + (gint) n_priors - (gint) * fparam_len;
+
+  g_assert_cmpuint (*data_len, >, 0);
+}
+
 static void
 _ncm_fit_constructed (GObject *object)
 {
@@ -325,40 +352,19 @@ _ncm_fit_constructed (GObject *object)
   {
     NcmFit *fit                = NCM_FIT (object);
     NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
-    NcmDataset *dset           = ncm_likelihood_peek_dataset (self->lh);
-    gint n                     = ncm_dataset_get_n (dset);
-    gint n_priors              = ncm_likelihood_priors_length_f (self->lh) +
-                                 ncm_likelihood_priors_length_m2lnL (self->lh);
-    gint data_dof = ncm_dataset_get_dof (dset);
-
-    g_assert (ncm_dataset_all_init (dset));
+    guint data_len, fparam_len;
+    gint dof;
 
     if (!ncm_mset_fparam_map_valid (self->mset))
       ncm_mset_prepare_fparam_map (self->mset);
 
-    /*
-     * It is no longer an error to fit 0 parameters, it just sets the value
-     * of m2lnL in the fit object.
-     *
-     * if (ncm_mset_fparam_len (self->mset) == 0)
-     * g_warning ("ncm_fit_factory: mset object has 0 free parameters");
-     *
-     */
+    /* Zero free parameters is allowed: the run then only evaluates -2 ln L. */
+    _ncm_fit_state_dims (fit, &data_len, &fparam_len, &dof);
 
-    {
-      guint data_len   = n + n_priors;
-      guint fparam_len = ncm_mset_fparam_len (self->mset);
-      gint dof         = data_dof + n_priors - fparam_len;
-
-      if (self->fstate == NULL)
-        self->fstate = ncm_fit_state_new (data_len, fparam_len, dof,
-                                          NCM_FIT_GET_CLASS (fit)->is_least_squares);
-      else
-        ncm_fit_state_set_all (self->fstate, data_len, fparam_len, dof,
-                               NCM_FIT_GET_CLASS (fit)->is_least_squares);
-
-      g_assert (data_len > 0);
-    }
+    if (self->fstate == NULL)
+      self->fstate = ncm_fit_state_new (data_len, fparam_len, dof, NCM_FIT_GET_CLASS (fit)->is_least_squares);
+    else
+      ncm_fit_state_set_all (self->fstate, data_len, fparam_len, dof, NCM_FIT_GET_CLASS (fit)->is_least_squares);
   }
 }
 
@@ -399,6 +405,34 @@ ncm_fit_finalize (GObject *object)
 
 static void _ncm_fit_reset (NcmFit *fit);
 
+/* LCOV_EXCL_START */
+
+static NcmFit *
+_ncm_fit_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
+{
+  g_error ("method copy_new not implemented by %s.", G_OBJECT_TYPE_NAME (fit));
+
+  return NULL;
+}
+
+static gboolean
+_ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
+{
+  g_error ("method run not implemented by %s.", G_OBJECT_TYPE_NAME (fit));
+
+  return FALSE;
+}
+
+static const gchar *
+_ncm_fit_get_desc (NcmFit *fit)
+{
+  g_error ("method get_desc not implemented by %s.", G_OBJECT_TYPE_NAME (fit));
+
+  return NULL;
+}
+
+/* LCOV_EXCL_STOP */
+
 static void
 ncm_fit_class_init (NcmFitClass *klass)
 {
@@ -412,7 +446,16 @@ ncm_fit_class_init (NcmFitClass *klass)
 
   klass->is_least_squares = FALSE;
   klass->reset            = &_ncm_fit_reset;
+  klass->copy_new         = &_ncm_fit_copy_new;
+  klass->run              = &_ncm_fit_run;
+  klass->get_desc         = &_ncm_fit_get_desc;
 
+  /**
+   * NcmFit:likelihood:
+   *
+   * The #NcmLikelihood whose $-2\\ln L$ is minimized.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_LIKELIHOOD,
                                    g_param_spec_object ("likelihood",
@@ -420,6 +463,13 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                         "Likelihood object",
                                                         NCM_TYPE_LIKELIHOOD,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFit:mset:
+   *
+   * The #NcmMSet whose free parameters are fitted.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_MSET,
                                    g_param_spec_object ("mset",
@@ -427,6 +477,13 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                         "Model set object",
                                                         NCM_TYPE_MSET,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFit:state:
+   *
+   * The #NcmFitState that receives the result; one is created when none is given.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_STATE,
                                    g_param_spec_object ("state",
@@ -434,6 +491,13 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                         "Fit state object",
                                                         NCM_TYPE_FIT_STATE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFit:grad-type:
+   *
+   * The #NcmFitGradType of the gradients and Jacobians the fit needs. Default: #NCM_FIT_GRAD_NUMDIFF_FORWARD.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_GRAD_TYPE,
                                    g_param_spec_enum ("grad-type",
@@ -442,6 +506,12 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                       NCM_TYPE_FIT_GRAD_TYPE, NCM_FIT_GRAD_NUMDIFF_FORWARD,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmFit:maxiter:
+   *
+   * Maximum number of iterations. Default: 100000.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_MAXITER,
                                    g_param_spec_uint ("maxiter",
@@ -450,6 +520,12 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                       0, G_MAXUINT32, NCM_FIT_DEFAULT_MAXITER,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmFit:m2lnL-reltol:
+   *
+   * Relative tolerance on $-2\\ln L$ for convergence. Default: $10^{-8}$.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_M2LNL_RELTOL,
                                    g_param_spec_double ("m2lnL-reltol",
@@ -457,6 +533,13 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                         "Relative tolerance in m2lnL",
                                                         0.0, G_MAXDOUBLE, NCM_FIT_DEFAULT_M2LNL_RELTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFit:m2lnL-abstol:
+   *
+   * Absolute tolerance on $-2\\ln L$ for convergence. Default: 0.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_M2LNL_ABSTOL,
                                    g_param_spec_double ("m2lnL-abstol",
@@ -464,6 +547,13 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                         "Absolute tolerance in m2lnL",
                                                         0.0, G_MAXDOUBLE, NCM_FIT_DEFAULT_M2LNL_ABSTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFit:params-reltol:
+   *
+   * Relative tolerance on the fitted parameters for convergence. Default: $10^{-5}$.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_PARAMS_RELTOL,
                                    g_param_spec_double ("params-reltol",
@@ -471,6 +561,13 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                         "Relative tolerance in fitted parameters",
                                                         0.0, G_MAXDOUBLE, NCM_FIT_DEFAULT_PARAMS_RELTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFit:equality-constraints:
+   *
+   * The equality constraints, scalar #NcmMSetFunc objects required to vanish.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_EQC,
                                    g_param_spec_boxed ("equality-constraints",
@@ -478,6 +575,13 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                        "Equality constraints array",
                                                        NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFit:equality-constraints-tot:
+   *
+   * The tolerances of #NcmFit:equality-constraints, one per constraint.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_EQC_TOT,
                                    g_param_spec_object ("equality-constraints-tot",
@@ -485,6 +589,13 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                         "Equality constraints tolerance",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFit:inequality-constraints:
+   *
+   * The inequality constraints, scalar #NcmMSetFunc objects required to be non-positive.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_INEQC,
                                    g_param_spec_boxed ("inequality-constraints",
@@ -492,6 +603,13 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                        "Inequality constraints array",
                                                        NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFit:inequality-constraints-tot:
+   *
+   * The tolerances of #NcmFit:inequality-constraints, one per constraint.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_INEQC_TOT,
                                    g_param_spec_object ("inequality-constraints-tot",
@@ -499,6 +617,13 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                         "Inequality constraints tolerance",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFit:sub-fit:
+   *
+   * The subsidiary fit, see ncm_fit_set_sub_fit().
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_SUBFIT,
                                    g_param_spec_object ("sub-fit",
@@ -512,23 +637,13 @@ static void
 _ncm_fit_reset (NcmFit *fit)
 {
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
-  /*ncm_mset_prepare_fparam_map (self->mset);*/
-  {
-    NcmDataset *dset = ncm_likelihood_peek_dataset (self->lh);
-    guint n          = ncm_dataset_get_n (dset);
-    gint n_priors    = ncm_likelihood_priors_length_f (self->lh) + ncm_likelihood_priors_length_m2lnL (self->lh);
-    guint data_len   = n + n_priors;
-    guint fparam_len = ncm_mset_fparam_len (self->mset);
-    gint data_dof    = ncm_dataset_get_dof (dset);
-    gint dof         = data_dof - fparam_len;
+  guint data_len, fparam_len;
+  gint dof;
 
-    g_assert (ncm_dataset_all_init (dset));
-    g_assert (data_len > 0);
+  _ncm_fit_state_dims (fit, &data_len, &fparam_len, &dof);
 
-    ncm_fit_state_set_all (self->fstate, data_len, fparam_len, dof,
-                           NCM_FIT_GET_CLASS (fit)->is_least_squares);
-    ncm_fit_state_reset (self->fstate);
-  }
+  ncm_fit_state_set_all (self->fstate, data_len, fparam_len, dof, NCM_FIT_GET_CLASS (fit)->is_least_squares);
+  ncm_fit_state_reset (self->fstate);
 }
 
 static void
@@ -593,9 +708,11 @@ _ncm_fit_message_sepa (NcmFit *fit)
  * @mset: a #NcmMSet
  * @gtype: a #NcmFitGradType
  *
- * Creates a new #NcmFit object.
+ * Creates the #NcmFit of type @ftype, #NcmFitGSLLS for #NCM_FIT_TYPE_GSL_LS or one of
+ * the named algorithms of the others (%NULL selects the implementation's default).
+ * An unknown @ftype aborts.
  *
- * Returns: (transfer full): a new #NcmFit object.
+ * Returns: (transfer full): a new #NcmFit.
  */
 NcmFit *
 ncm_fit_factory (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
@@ -649,9 +766,9 @@ ncm_fit_ref (NcmFit *fit)
  * @mset: a #NcmMSet
  * @gtype: a #NcmFitGradType
  *
- * Duplicates the #NcmFit object with new references for its contents.
+ * Creates a #NcmFit of the same type and settings as @fit for @lh, @mset and @gtype.
  *
- * Returns: (transfer full): Copy of @fit.
+ * Returns: (transfer full): a new #NcmFit.
  */
 NcmFit *
 ncm_fit_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
@@ -664,9 +781,9 @@ ncm_fit_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType 
  * @fit: a #NcmFit
  * @ser: a #NcmSerialize
  *
- * Duplicates the #NcmFit object duplicating all its contents.
+ * Duplicates @fit and everything it holds, through @ser.
  *
- * Returns: (transfer full): Duplicate of @fit.
+ * Returns: (transfer full): a duplicate of @fit.
  */
 NcmFit *
 ncm_fit_dup (NcmFit *fit, NcmSerialize *ser)
@@ -678,8 +795,7 @@ ncm_fit_dup (NcmFit *fit, NcmSerialize *ser)
  * ncm_fit_free:
  * @fit: a #NcmFit
  *
- * Atomically decrements the reference count of @fit by one. If the reference count drops to 0,
- * all memory allocated by @fit is released.
+ * Decreases the reference count of @fit by one.
  *
  */
 void
@@ -692,7 +808,7 @@ ncm_fit_free (NcmFit *fit)
  * ncm_fit_clear:
  * @fit: a #NcmFit
  *
- * The reference count of @fit is decreased and the pointer is set to NULL.
+ * Decreases the reference count of *@fit by one and sets *@fit to NULL.
  *
  */
 void
@@ -706,7 +822,12 @@ ncm_fit_clear (NcmFit **fit)
  * @fit: a #NcmFit
  * @sub_fit: a #NcmFit
  *
- * Sets a #NcmFit object to be used as subsidiary fit.
+ * Sets @sub_fit as the subsidiary fit of @fit: at every change of the parameters of
+ * @fit (ncm_fit_params_update()) @sub_fit is run, so @fit minimizes the profile of
+ * $-2\ln L$ over the parameters @sub_fit fits. The #NcmMSet of @sub_fit must be a
+ * different object from that of @fit and a subset of it; anything else aborts. A
+ * shallow copy (ncm_mset_shallow_copy()) shares the models, and with them the free
+ * and fixed types, so which parameters each fit varies is not checked.
  *
  */
 void
@@ -723,21 +844,7 @@ ncm_fit_set_sub_fit (NcmFit *fit, NcmFit *sub_fit)
   if (!ncm_mset_is_subset (self->mset, sub_self->mset))
     g_error ("ncm_fit_set_sub_fit: sub_fit must contain a NcmMSet which is a subset of the NcmMSet of fit.");
 
-  {
-    guint fparams_len = ncm_mset_fparams_len (sub_self->mset);
-    guint i;
-
-    g_assert_cmpuint (fparams_len, >, 0);
-
-    for (i = 0; i < fparams_len * 0; i++)
-    {
-      const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi (sub_self->mset, i);
-
-      if (ncm_mset_param_get_ftype (self->mset, pi->mid, pi->pid, NULL) != NCM_PARAM_TYPE_FIXED)
-        g_error ("ncm_fit_set_sub_fit: parameter [%d %u] (%s) is free in both fit and sub_fit.",
-                 pi->mid, pi->pid, ncm_mset_param_name (self->mset, pi->mid, pi->pid));
-    }
-  }
+  g_assert_cmpuint (ncm_mset_fparams_len (sub_self->mset), >, 0);
 
   self->sub_fit = ncm_fit_ref (sub_fit);
 }
@@ -746,16 +853,15 @@ ncm_fit_set_sub_fit (NcmFit *fit, NcmFit *sub_fit)
  * ncm_fit_get_sub_fit:
  * @fit: a #NcmFit
  *
- * Gets a #NcmFit object to be used as subsidiary fit.
- *
- * Returns: (transfer full): a #NcmFit object.
+ * Returns: (transfer full) (nullable): the subsidiary fit of @fit, or %NULL if it has
+ * none.
  */
 NcmFit *
 ncm_fit_get_sub_fit (NcmFit *fit)
 {
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
 
-  return ncm_fit_ref (self->sub_fit);
+  return (self->sub_fit != NULL) ? ncm_fit_ref (self->sub_fit) : NULL;
 }
 
 /**
@@ -816,18 +922,16 @@ static NcmFitGrad _ncm_fit_grad_numdiff_accurate = {
 
 /**
  * ncm_fit_set_grad_type:
- * @fit: a #NcmLikelihood
+ * @fit: a #NcmFit
  * @gtype: a #NcmFitGradType
  *
- * Sets the differentiation method to be used.
+ * Sets #NcmFit:grad-type. An invalid @gtype aborts.
  *
  */
 void
 ncm_fit_set_grad_type (NcmFit *fit, NcmFitGradType gtype)
 {
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
-
-  self->grad.gtype = gtype;
 
   switch (gtype)
   {
@@ -841,7 +945,7 @@ ncm_fit_set_grad_type (NcmFit *fit, NcmFitGradType gtype)
       self->grad = _ncm_fit_grad_numdiff_accurate;
       break;
     default:
-      g_error ("Invalid gtype %d", gtype);
+      g_error ("ncm_fit_set_grad_type: invalid gradient type %d.", gtype);
       break;
   }
 }
@@ -866,8 +970,7 @@ ncm_fit_set_maxiter (NcmFit *fit, guint maxiter)
  * ncm_fit_get_grad_type:
  * @fit: a #NcmFit
  *
- * Gets the differentiation method to be used.
- *
+ * Returns: #NcmFit:grad-type.
  */
 NcmFitGradType
 ncm_fit_get_grad_type (NcmFit *fit)
@@ -883,7 +986,7 @@ ncm_fit_get_grad_type (NcmFit *fit)
  *
  * Gets the maximum number of iterations.
  *
- * Returns: a integer (maxiter) that corresponds to the maximum number of iterations.
+ * Returns: #NcmFit:maxiter.
  */
 guint
 ncm_fit_get_maxiter (NcmFit *fit)
@@ -898,7 +1001,7 @@ ncm_fit_get_maxiter (NcmFit *fit)
  * @fit: a #NcmFit
  * @tol: relative tolerance
  *
- * Sets the relative tolerance for the m2lnL.
+ * Sets #NcmFit:m2lnL-reltol.
  *
  */
 void
@@ -913,9 +1016,7 @@ ncm_fit_set_m2lnL_reltol (NcmFit *fit, gdouble tol)
  * ncm_fit_get_m2lnL_reltol:
  * @fit: a #NcmFit
  *
- * Gets the relative tolerance for the m2lnL.
- *
- * Returns: the relative tolerance (double).
+ * Returns: #NcmFit:m2lnL-reltol.
  */
 gdouble
 ncm_fit_get_m2lnL_reltol (NcmFit *fit)
@@ -930,7 +1031,7 @@ ncm_fit_get_m2lnL_reltol (NcmFit *fit)
  * @fit: a #NcmFit
  * @tol: absolute tolerance
  *
- * Sets the absolute tolerance for the m2lnL.
+ * Sets #NcmFit:m2lnL-abstol.
  *
  */
 void
@@ -945,9 +1046,7 @@ ncm_fit_set_m2lnL_abstol (NcmFit *fit, gdouble tol)
  * ncm_fit_get_m2lnL_abstol:
  * @fit: a #NcmFit
  *
- * Gets the absolute tolerance for the m2lnL.
- *
- * Returns: the absolute tolerance (double).
+ * Returns: #NcmFit:m2lnL-abstol.
  */
 gdouble
 ncm_fit_get_m2lnL_abstol (NcmFit *fit)
@@ -962,7 +1061,7 @@ ncm_fit_get_m2lnL_abstol (NcmFit *fit)
  * @fit: a #NcmFit
  * @tol: relative tolerance
  *
- * Sets the relative tolerance for the fitted parameters.
+ * Sets #NcmFit:params-reltol.
  *
  */
 void
@@ -993,9 +1092,7 @@ ncm_fit_set_messages (NcmFit *fit, NcmFitRunMsgs mtype)
  * ncm_fit_get_params_reltol:
  * @fit: a #NcmFit
  *
- * Gets the relative tolerance for the fitted parameters.
- *
- * Returns: the relative tolerance (double).
+ * Returns: #NcmFit:params-reltol.
  */
 gdouble
 ncm_fit_get_params_reltol (NcmFit *fit)
@@ -1025,9 +1122,7 @@ ncm_fit_get_messages (NcmFit *fit)
  * ncm_fit_is_least_squares:
  * @fit: a #NcmFit
  *
- * Indicates if the least squares fitting is being used (TRUE) or not (FALSE).
- *
- * Returns: whenever the fit object use a least squares method.
+ * Returns: whether @fit minimizes a least-squares $|f|^2$.
  */
 gboolean
 ncm_fit_is_least_squares (NcmFit *fit)
@@ -1102,10 +1197,10 @@ ncm_fit_peek_diff (NcmFit *fit)
 /**
  * ncm_fit_params_set:
  * @fit: a #NcmFit
- * @i: the parameter index
- * @x: a double
+ * @i: index of a free parameter
+ * @x: its value
  *
- * Sets the parameters vector.
+ * Sets the free parameter @i to @x, then runs ncm_fit_params_update().
  *
  */
 void
@@ -1122,7 +1217,7 @@ ncm_fit_params_set (NcmFit *fit, guint i, const gdouble x)
  * @fit: a #NcmFit
  * @x: a #NcmVector
  *
- * Sets the parameters vector.
+ * Sets the free parameters to @x, then runs ncm_fit_params_update().
  *
  */
 void
@@ -1140,7 +1235,8 @@ ncm_fit_params_set_vector (NcmFit *fit, NcmVector *x)
  * @x: a #NcmVector
  * @offset: offset
  *
- * Sets the parameters from vector @x starting at @offset.
+ * Sets the free parameters from @x starting at element @offset, then runs
+ * ncm_fit_params_update().
  *
  */
 void
@@ -1157,7 +1253,7 @@ ncm_fit_params_set_vector_offset (NcmFit *fit, NcmVector *x, guint offset)
  * @fit: a #NcmFit
  * @x: (in) (array) (element-type gdouble): an array of gdouble
  *
- * Sets the parameters from array @x.
+ * Sets the free parameters from @x, then runs ncm_fit_params_update().
  *
  */
 void
@@ -1174,7 +1270,7 @@ ncm_fit_params_set_array (NcmFit *fit, const gdouble *x)
  * @fit: a #NcmFit
  * @x: a gsl_vector
  *
- * Sets the parameters from a gsl_vector @x.
+ * Sets the free parameters from @x, then runs ncm_fit_params_update().
  *
  */
 void
@@ -1190,7 +1286,8 @@ ncm_fit_params_set_gsl_vector (NcmFit *fit, const gsl_vector *x)
  * ncm_fit_params_update:
  * @fit: a #NcmFit
  *
- * Updates the parameters vector.
+ * Runs the subsidiary fit, if any, at the current parameters: what makes @fit see the
+ * profile of $-2\ln L$. Every ncm_fit_params_set function calls it.
  *
  */
 void
@@ -1212,7 +1309,8 @@ ncm_fit_params_update (NcmFit *fit)
  * @func: a #NcmMSetFunc
  * @tot: tolerance
  *
- * Adds an equality constraint with the function @func and the tolerance @tot.
+ * Adds the equality constraint $f = 0$, @func being a scalar #NcmMSetFunc $f$,
+ * satisfied within @tot. Only #NcmFitNLOpt supports constraints; the others abort.
  *
  */
 void
@@ -1230,7 +1328,8 @@ ncm_fit_add_equality_constraint (NcmFit *fit, NcmMSetFunc *func, const gdouble t
  * @func: a #NcmMSetFunc
  * @tot: tolerance
  *
- * Adds an inequality constraint with the function @func and the tolerance @tot.
+ * Adds the inequality constraint $f \leq 0$, @func being a scalar #NcmMSetFunc $f$,
+ * satisfied within @tot. Only #NcmFitNLOpt supports constraints; the others abort.
  *
  */
 void
@@ -1358,7 +1457,7 @@ ncm_fit_get_inequality_constraint (NcmFit *fit, guint i, NcmMSetFunc **func, gdo
  * @fpi: index of a free parameter
  *
  * Computes the variance of the fitted parameter @fpi.
- * This index refers to the list of all FREE parameters set in the MSet.
+ * The index is that of the free parameters of the #NcmMSet.
  *
  * See also the similar function ncm_fit_covar_var() to which one has to provide
  * the respective model of the parameter.
@@ -1371,6 +1470,7 @@ ncm_fit_covar_fparam_var (NcmFit *fit, guint fpi)
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
 
   g_assert (ncm_fit_state_has_covar (self->fstate));
+  g_assert_cmpuint (fpi, <, ncm_fit_state_get_fparam_len (self->fstate));
 
   {
     NcmMatrix *covar = ncm_fit_state_peek_covar (self->fstate);
@@ -1385,7 +1485,7 @@ ncm_fit_covar_fparam_var (NcmFit *fit, guint fpi)
  * @fpi: index of a free parameter
  *
  * Computes the standard deviation of the fitted parameter @fpi.
- * This index refers to the list of all FREE parameters set in the MSet.
+ * The index is that of the free parameters of the #NcmMSet.
  *
  * See also the similar function ncm_fit_covar_sd() to which one has to provide
  * the respective model of the parameter.
@@ -1405,12 +1505,12 @@ ncm_fit_covar_fparam_sd (NcmFit *fit, guint fpi)
  * @fpi2: index of a free parameter
  *
  * Computes the covariance between the fitted parameters @fpi1 and @fpi2.
- * These indices refers to the list of all FREE parameters set in the MSet.
+ * The indices are those of the free parameters of the #NcmMSet.
  *
  * See also the similar function ncm_fit_covar_cov() to which one has to provide
  * the respective models of the parameters.
  *
- * Returns: the covariance between the fitted parameters @pdi1 and @fpdi2
+ * Returns: the covariance between the fitted parameters @fpi1 and @fpi2
  */
 gdouble
 ncm_fit_covar_fparam_cov (NcmFit *fit, guint fpi1, guint fpi2)
@@ -1418,6 +1518,8 @@ ncm_fit_covar_fparam_cov (NcmFit *fit, guint fpi1, guint fpi2)
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
 
   g_assert (ncm_fit_state_has_covar (self->fstate));
+  g_assert_cmpuint (fpi1, <, ncm_fit_state_get_fparam_len (self->fstate));
+  g_assert_cmpuint (fpi2, <, ncm_fit_state_get_fparam_len (self->fstate));
 
   {
     NcmMatrix *covar = ncm_fit_state_peek_covar (self->fstate);
@@ -1433,12 +1535,12 @@ ncm_fit_covar_fparam_cov (NcmFit *fit, guint fpi1, guint fpi2)
  * @fpi2: index of a free parameter
  *
  * Computes the correlation between the fitted parameters @fpi1 and @fpi2.
- * These indices refers to the list of all FREE parameters set in the MSet.
+ * The indices are those of the free parameters of the #NcmMSet.
  *
  * See also the similar function ncm_fit_covar_cor() to which one has to provide
  * the respective models of the parameters.
  *
- * Returns: the correlation between the fitted parameters @pdi1 and @fpdi2
+ * Returns: the correlation between the fitted parameters @fpi1 and @fpi2
  */
 gdouble
 ncm_fit_covar_fparam_cor (NcmFit *fit, guint fpi1, guint fpi2)
@@ -1450,7 +1552,7 @@ ncm_fit_covar_fparam_cor (NcmFit *fit, guint fpi1, guint fpi2)
  * ncm_fit_covar_var:
  * @fit: a #NcmFit
  * @mid: a #NcmModelID
- * @pid: the parameter's index of the model @mid (integer)
+ * @pid: the parameter's index in the model @mid
  *
  * Computes the variance of the fitted parameter @pid of the model @mid.
  *
@@ -1463,7 +1565,7 @@ ncm_fit_covar_var (NcmFit *fit, NcmModelID mid, guint pid)
   gint fpi                   = ncm_mset_fparam_get_fpi (self->mset, mid, pid);
 
   if (fpi < 0)
-    g_error ("Parameter (%d:%u) was not fit.", mid, pid);
+    g_error ("ncm_fit_covar_var: parameter (%d:%u) was not fit.", mid, pid);
 
   return ncm_fit_covar_fparam_var (fit, fpi);
 }
@@ -1472,7 +1574,7 @@ ncm_fit_covar_var (NcmFit *fit, NcmModelID mid, guint pid)
  * ncm_fit_covar_sd:
  * @fit: a #NcmFit
  * @mid: a #NcmModelID
- * @pid: the parameter's index of the model @mid (integer)
+ * @pid: the parameter's index in the model @mid
  *
  * Computes the standard deviation of the fitted parameter @pid of the model @mid.
  *
@@ -1488,9 +1590,9 @@ ncm_fit_covar_sd (NcmFit *fit, NcmModelID mid, guint pid)
  * ncm_fit_covar_cov:
  * @fit: a #NcmFit
  * @mid1: a #NcmModelID
- * @pid1: the parameter's index of the model @mid1 (integer)
+ * @pid1: the parameter's index in the model @mid1
  * @mid2: a #NcmModelID
- * @pid2: the parameter's index of the model @mid1 (integer)
+ * @pid2: the parameter's index in the model @mid2
  *
  * Computes the covariance between the parameters @pid1 and @pid2 of the models
  * @mid1 and @mid2, respectively.
@@ -1504,8 +1606,8 @@ ncm_fit_covar_cov (NcmFit *fit, NcmModelID mid1, guint pid1, NcmModelID mid2, gu
   gint fpi1                  = ncm_mset_fparam_get_fpi (self->mset, mid1, pid1);
   gint fpi2                  = ncm_mset_fparam_get_fpi (self->mset, mid2, pid2);
 
-  if ((fpi1 < 0) || (fpi1 < 0))
-    g_error ("Parameters (%d:%u, %d:%u) were not fit.", mid1, pid1, mid2, pid2);
+  if ((fpi1 < 0) || (fpi2 < 0))
+    g_error ("ncm_fit_covar_cov: parameters (%d:%u, %d:%u) were not both fit.", mid1, pid1, mid2, pid2);
 
   return ncm_fit_covar_fparam_cov (fit, fpi1, fpi2);
 }
@@ -1514,9 +1616,9 @@ ncm_fit_covar_cov (NcmFit *fit, NcmModelID mid1, guint pid1, NcmModelID mid2, gu
  * ncm_fit_covar_cor:
  * @fit: a #NcmFit
  * @mid1: a #NcmModelID
- * @pid1: the parameter's index of the model @mid1 (integer)
+ * @pid1: the parameter's index in the model @mid1
  * @mid2: a #NcmModelID
- * @pid2: the parameter's index of the model @mid1 (integer)
+ * @pid2: the parameter's index in the model @mid2
  *
  * Computes the correlation between the parameters @pid1 and @pid2 of the models
  * @mid1 and @mid2, respectively.
@@ -1530,13 +1632,14 @@ ncm_fit_covar_cor (NcmFit *fit, NcmModelID mid1, guint pid1, NcmModelID mid2, gu
   gint fpi1                  = ncm_mset_fparam_get_fpi (self->mset, mid1, pid1);
   gint fpi2                  = ncm_mset_fparam_get_fpi (self->mset, mid2, pid2);
 
-  if ((fpi1 < 0) || (fpi1 < 0))
-    g_error ("Parameters (%d:%u, %d:%u) were not fit.", mid1, pid1, mid2, pid2);
+  if ((fpi1 < 0) || (fpi2 < 0))
+    g_error ("ncm_fit_covar_cor: parameters (%d:%u, %d:%u) were not both fit.", mid1, pid1, mid2, pid2);
 
   return ncm_fit_covar_fparam_cov (fit, fpi1, fpi2) / (ncm_fit_covar_fparam_sd (fit, fpi1) * ncm_fit_covar_fparam_sd (fit, fpi2));
 }
 
-gboolean
+/* A fit with no free parameters only evaluates -2 ln L. */
+static gboolean
 _ncm_fit_run_empty (NcmFit *fit, NcmFitRunMsgs mtype)
 {
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
@@ -1565,7 +1668,8 @@ _ncm_fit_run_empty (NcmFit *fit, NcmFitRunMsgs mtype)
  * ncm_fit_reset:
  * @fit: a #NcmFit
  *
- * Resets the fit.
+ * Resets the state of @fit to the current dimensions of its likelihood and free
+ * parameters. ncm_fit_run() calls it.
  *
  */
 void
@@ -1579,9 +1683,12 @@ ncm_fit_reset (NcmFit *fit)
  * @fit: a #NcmFit
  * @mtype: a #NcmFitRunMsgs
  *
- * Computes the minimization.
+ * Resets @fit and minimizes $-2\ln L$ from the current parameters, leaving the result
+ * in the #NcmFitState and the parameters at the minimum found. With no free parameters
+ * it only evaluates $-2\ln L$. A non-finite $-2\ln L$ at the starting point gives a
+ * warning and returns FALSE.
  *
- * Returns: TRUE if the minimization went through.
+ * Returns: TRUE if the minimization converged.
  */
 gboolean
 ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
@@ -1634,11 +1741,13 @@ ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
  * @save_mset: (nullable): the #NcmMSet used to save progress
  * @mset_file: (nullable): the file name to save progress
  *
- * Re-runs the fit until the difference between fits are less
- * than the required tolerance, i.e.,
- * $$ m2lnL_{i-1} - m2lnL_i < \mathrm{abstol} + \mathrm{reltol}\vert m2lnL_{i-1}\vert. $$
+ * Runs the fit repeatedly, each run starting where the last one stopped, until the
+ * improvement of $-2\ln L$ is below the tolerance,
+ * $$ (-2\ln L)_{i-1} - (-2\ln L)_i < \mathrm{abstol} + \mathrm{reltol}\,\vert(-2\ln L)_{i-1}\vert. $$
+ * After each run the parameters are copied to @save_mset (when given) and, when
+ * @mset_file is given, saved there.
  *
- * Returns: TRUE if the minimization went through.
+ * Returns: TRUE if the last minimization converged.
  */
 gboolean
 ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, const gdouble reltol, NcmMSet *save_mset, const gchar *mset_file)
@@ -1663,6 +1772,7 @@ ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, con
     ncm_fit_state_set_is_best_fit (self->fstate, TRUE);
 
     ncm_fit_log_end (fit);
+    ncm_serialize_free (ser);
 
     return run_ok;
   }
@@ -1730,10 +1840,10 @@ ncm_fit_get_desc (NcmFit *fit)
  * @end_update: (scope notified) (nullable): a #NcmFitUpdateChange
  *
  *
- * Sets the logger functions. The @writer function is called to write the
- * messages to the log. The @updater function is called to update the
- * parameters. The @start_update is called before the minimization starts and
- * the @end_update is called after the minimization ends.
+ * Sets the logger functions. @writer receives every message. With
+ * #NCM_FIT_RUN_MSGS_SIMPLE, @updater is called at each step with the number of
+ * function evaluations (the default prints a dot), and @start_update and @end_update
+ * open and close that progress line.
  *
  */
 void
@@ -1755,7 +1865,7 @@ ncm_fit_set_logger (NcmFit *fit, NcmFitWriter writer, NcmFitUpdater updater, Ncm
  * ncm_fit_log_start:
  * @fit: a #NcmFit
  *
- * This function prints in the log the initial state.
+ * Logs the solver and the differentiation method at the start of a run.
  *
  */
 void
@@ -1781,7 +1891,7 @@ ncm_fit_log_start (NcmFit *fit)
  * @strerror: error message
  * @...: arguments
  *
- * This function prints in the log the error message.
+ * Logs a solver error, formatted from @strerror and the arguments.
  *
  */
 void
@@ -1816,7 +1926,7 @@ ncm_fit_log_step_error (NcmFit *fit, const gchar *strerror, ...)
  * ncm_fit_log_end:
  * @fit: a #NcmFit
  *
- * This function prints in the log the precision with which the best-fit was found.
+ * Logs the precision reached by the run and the final state.
  *
  */
 void
@@ -1845,7 +1955,8 @@ ncm_fit_log_end (NcmFit *fit)
  * ncm_fit_log_state:
  * @fit: a #NcmFit
  *
- * This function prints in the log the current state.
+ * Logs the current state: elapsed time, counts, degrees of freedom, $-2\ln L$ with its
+ * terms, and the free parameters.
  *
  */
 void
@@ -1866,9 +1977,9 @@ ncm_fit_log_state (NcmFit *fit)
     elap_min  = elap_min % 60;
     elap_hour =  elap_hour % 24;
     _ncm_fit_message (fit, "#  Elapsed time: %02lu days, %02lu:%02lu:%010.7f\n", elap_day, elap_hour, elap_min, elap_sec);
-    _ncm_fit_message (fit, "#  iteration            [%06d]\n", ncm_fit_state_get_niter (self->fstate));
-    _ncm_fit_message (fit, "#  function evaluations [%06d]\n", ncm_fit_state_get_func_eval (self->fstate));
-    _ncm_fit_message (fit, "#  gradient evaluations [%06d]\n", ncm_fit_state_get_grad_eval (self->fstate));
+    _ncm_fit_message (fit, "#  iteration            [%06u]\n", ncm_fit_state_get_niter (self->fstate));
+    _ncm_fit_message (fit, "#  function evaluations [%06u]\n", ncm_fit_state_get_func_eval (self->fstate));
+    _ncm_fit_message (fit, "#  gradient evaluations [%06u]\n", ncm_fit_state_get_grad_eval (self->fstate));
     _ncm_fit_message (fit, "#  degrees of freedom   [%06d]\n", ncm_fit_state_get_dof (self->fstate));
 
     if (m2lnL_v != NULL)
@@ -1902,7 +2013,8 @@ ncm_fit_log_state (NcmFit *fit)
  * ncm_fit_log_step:
  * @fit: a #NcmFit
  *
- * This function prints in the log one step of the minimization.
+ * Logs one step of the minimization: the full state with #NCM_FIT_RUN_MSGS_FULL, the
+ * progress updater with #NCM_FIT_RUN_MSGS_SIMPLE.
  *
  */
 void
@@ -1958,11 +2070,9 @@ ncm_fit_log_covar (NcmFit *fit)
 /**
  * ncm_fit_data_m2lnL_val:
  * @fit: a #NcmFit
- * @data_m2lnL: (out): minus two times the logarithm base e of the likelihood.
+ * @data_m2lnL: (out): $-2\ln L$ of the data
  *
- * This function computes minus two times the logarithm base e of the likelihood
- * using only the data set and not considering any prior. The result is set
- * on @data_m2lnL.
+ * Computes $-2\ln L$ of the dataset alone, without the priors.
  *
  */
 void
@@ -1977,11 +2087,9 @@ ncm_fit_data_m2lnL_val (NcmFit *fit, gdouble *data_m2lnL)
 /**
  * ncm_fit_priors_m2lnL_val:
  * @fit: a #NcmFit
- * @priors_m2lnL: (out): minus two times the logarithm base e of the likelihood.
+ * @priors_m2lnL: (out): $-2\ln P$ of the priors
  *
- * This function computes minus two times the logarithm base e of the likelihood
- * using the data set and taking into account the assumed priors. The result is
- * set on @priors_m2lnL.
+ * Computes $-2\ln P$ of the priors alone, see ncm_likelihood_priors_m2lnL_val().
  *
  */
 void
@@ -1995,9 +2103,10 @@ ncm_fit_priors_m2lnL_val (NcmFit *fit, gdouble *priors_m2lnL)
 /**
  * ncm_fit_m2lnL_val:
  * @fit: a #NcmFit
- * @m2lnL: (out): minus two times the logarithm base e of the likelihood.
+ * @m2lnL: (out): $-2\ln L$
  *
- * Computes minus two times the logarithm base e of the likelihood.
+ * Computes $-2\ln L$ of the likelihood, data and priors, and counts one function
+ * evaluation in the state.
  *
  */
 void
@@ -2014,7 +2123,8 @@ ncm_fit_m2lnL_val (NcmFit *fit, gdouble *m2lnL)
  * @fit: a #NcmFit
  * @f: a #NcmVector
  *
- * Computes the residuals vector.
+ * Computes the least-squares residuals $f$ of the likelihood into @f, see
+ * ncm_likelihood_leastsquares_f(), and counts one function evaluation.
  *
  */
 void
@@ -2031,7 +2141,8 @@ ncm_fit_ls_f (NcmFit *fit, NcmVector *f)
  * @fit: a #NcmFit
  * @df: a #NcmVector
  *
- * Computes the gradient of the minus two times the logarithm base e of the likelihood.
+ * Computes the gradient of $-2\ln L$ with respect to the free parameters, with the
+ * method of #NcmFit:grad-type.
  *
  */
 void
@@ -2073,11 +2184,9 @@ _ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad)
 
     ncm_fit_params_set (fit, i, pph);
     ncm_likelihood_m2lnL_val (self->lh, self->mset, &m2lnL_pph);
-    /*ncm_fit_m2lnL_val (fit, &m2lnL_pph);*/
 
     ncm_fit_params_set (fit, i, pmh);
     ncm_likelihood_m2lnL_val (self->lh, self->mset, &m2lnL_pmh);
-    /*ncm_fit_m2lnL_val (fit, &m2lnL_pmh);*/
 
     ncm_vector_set (grad, i, (m2lnL_pph - m2lnL_pmh) * one_2h);
     ncm_fit_params_set (fit, i, p);
@@ -2102,7 +2211,7 @@ _ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad)
   grad_a = ncm_diff_rf_d1_N_to_1 (self->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, NULL);
 
   ncm_vector_set_array (grad, grad_a);
-  ncm_mset_fparams_set_vector (self->mset, x);
+  ncm_fit_params_set_vector (fit, x);
 
   g_array_unref (x_a);
   g_array_unref (grad_a);
@@ -2114,11 +2223,11 @@ _ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad)
 /**
  * ncm_fit_m2lnL_val_grad:
  * @fit: a #NcmFit
- * @result: (out): the minus two times the logarithm base e of the likelihood
+ * @result: (out): $-2\ln L$
  * @df: a #NcmVector
  *
- * Computes the minus two times the logarithm base e of the likelihood and its
- * gradient.
+ * Computes $-2\ln L$ and its gradient with respect to the free parameters, with the
+ * method of #NcmFit:grad-type.
  *
  */
 void
@@ -2154,7 +2263,7 @@ _ncm_fit_m2lnL_val_grad_nd_fo (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
     ncm_fit_params_set (fit, i, p);
   }
 
-  ncm_fit_state_add_func_eval (self->fstate, 1);
+  /* ncm_fit_m2lnL_val() counted the function evaluations. */
   ncm_fit_state_add_grad_eval (self->fstate, 1);
 }
 
@@ -2177,7 +2286,8 @@ _ncm_fit_m2lnL_val_grad_nd_ac (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
  * @fit: a #NcmFit
  * @J: a #NcmMatrix
  *
- * Computes the Jacobian matrix for the least squares problem.
+ * Computes the Jacobian $J_{ij} = \partial f_i / \partial \theta_j$ of the least-squares
+ * residuals with respect to the free parameters, with the method of #NcmFit:grad-type.
  *
  */
 void
@@ -2278,9 +2388,15 @@ _ncm_fit_ls_J_nd_ac (NcmFit *fit, NcmMatrix *J)
   ncm_mset_fparams_get_vector (self->mset, x);
   J_a = ncm_diff_rf_d1_N_to_M (self->diff, x_a, data_len, _ncm_fit_numdiff_ls_f, fit, NULL);
 
-  ncm_matrix_set_from_array (J, J_a);
-  ncm_matrix_transpose (J);
-  ncm_mset_fparams_set_vector (self->mset, x);
+  /* J_a holds one derivative vector per free parameter: J^T, which is not square
+   * unless there are as many residuals as free parameters. */
+  {
+    NcmMatrix *JT = ncm_matrix_new_data_static ((gdouble *) J_a->data, fparam_len, data_len);
+
+    ncm_matrix_transpose_memcpy (J, JT);
+    ncm_matrix_free (JT);
+  }
+  ncm_fit_params_set_vector (fit, x);
 
   g_array_unref (x_a);
   g_array_unref (J_a);
@@ -2295,7 +2411,8 @@ _ncm_fit_ls_J_nd_ac (NcmFit *fit, NcmMatrix *J)
  * @f: a #NcmVector
  * @J: a #NcmMatrix
  *
- * Computes the residuals vector and the Jacobian matrix for the least squares problem.
+ * Computes the least-squares residuals and their Jacobian, see ncm_fit_ls_f() and
+ * ncm_fit_ls_J().
  *
  */
 void
@@ -2337,7 +2454,7 @@ _ncm_fit_numdiff_m2lnL_val (NcmVector *x, gpointer user_data)
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
   gdouble res                = 0.0;
 
-  ncm_mset_fparams_set_vector (self->mset, x);
+  ncm_fit_params_set_vector (fit, x);
 
   ncm_likelihood_m2lnL_val (self->lh, self->mset, &res);
   ncm_fit_state_add_func_eval (self->fstate, 1);
@@ -2351,10 +2468,9 @@ _ncm_fit_numdiff_m2lnL_val (NcmVector *x, gpointer user_data)
 static void
 _ncm_fit_numdiff_ls_f (NcmVector *x, NcmVector *y, gpointer user_data)
 {
-  NcmFit *fit                = NCM_FIT (user_data);
-  NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
+  NcmFit *fit = NCM_FIT (user_data);
 
-  ncm_mset_fparams_set_vector (self->mset, x);
+  ncm_fit_params_set_vector (fit, x);
 
   ncm_fit_ls_f (fit, y);
 }
@@ -2396,8 +2512,6 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
   if (worst_relerror > reltol)
   {
     const gdouble old_h_ini = ncm_diff_get_ini_h (self->diff);
-
-    ncm_fit_reset (fit);
 
     if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
     {
@@ -2458,7 +2572,7 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
     self->end_update (fit, "");
 
   ncm_matrix_set_from_array (H, H_a);
-  ncm_mset_fparams_set_vector (self->mset, x);
+  ncm_fit_params_set_vector (fit, x);
 
   g_array_unref (x_a);
   g_array_unref (errors_a);
@@ -2507,8 +2621,7 @@ _ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher, gboolean decomp)
     gint signum;
     gint ret1;
 
-    ncm_matrix_scale (LU, 0.5);
-
+    /* @fisher is already the Fisher matrix, as in the Cholesky branch. */
     g_warning ("_ncm_fit_fisher_to_covar: covariance matrix not positive definite, errors are not trustworthy.");
 
     ret1 = gsl_linalg_LU_decomp (ncm_matrix_gsl (LU), p, &signum);
@@ -2528,6 +2641,8 @@ _ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher, gboolean decomp)
   ncm_fit_state_set_has_covar (self->fstate, TRUE);
 }
 
+static void _ncm_fit_reset_on_new_dims (NcmFit *fit);
+
 /**
  * ncm_fit_obs_fisher:
  * @fit: a #NcmFit
@@ -2539,23 +2654,42 @@ _ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher, gboolean decomp)
  * #NcmDiff object.
  *
  * It sets both the covariance matrix and the Hessian matrix in the #NcmFitState object
- * associated to the @fit object.
+ * associated to the @fit object, and keeps the best fit there unless the numbers of
+ * residuals or free parameters changed since the last run.
  */
 void
 ncm_fit_obs_fisher (NcmFit *fit)
 {
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
-  NcmMatrix *hessian         = ncm_fit_state_peek_hessian (self->fstate);
+  NcmMatrix *hessian;
 
   if (ncm_mset_fparam_len (self->mset) == 0)
-    g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
+    g_error ("ncm_fit_obs_fisher: mset object has 0 free parameters");
 
-  ncm_fit_reset (fit);
+  _ncm_fit_reset_on_new_dims (fit);
+  hessian = ncm_fit_state_peek_hessian (self->fstate);
 
   _ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
   ncm_matrix_scale (hessian, 0.5);
 
   _ncm_fit_fisher_to_covar (fit, hessian, FALSE);
+}
+
+/* Resets @fit only when its dimensions changed since the last reset, so a Fisher
+ * matrix computed after a run keeps the best fit in the #NcmFitState. */
+static void
+_ncm_fit_reset_on_new_dims (NcmFit *fit)
+{
+  NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
+  guint data_len, fparam_len;
+  gint dof;
+
+  _ncm_fit_state_dims (fit, &data_len, &fparam_len, &dof);
+
+  if ((data_len != ncm_fit_state_get_data_len (self->fstate)) ||
+      (fparam_len != ncm_fit_state_get_fparam_len (self->fstate)) ||
+      (dof != ncm_fit_state_get_dof (self->fstate)))
+    ncm_fit_reset (fit);
 }
 
 /**
@@ -2645,7 +2779,7 @@ ncm_fit_fisher_bias (NcmFit *fit, NcmVector *f_true)
   gint ret;
 
   if ((ncm_likelihood_priors_length_f (self->lh) > 0) || (ncm_likelihood_priors_length_m2lnL (self->lh) > 0))
-    g_warning ("ncm_fit_fisher: the analysis contains priors which are ignored in the Fisher matrix calculation.");
+    g_warning ("ncm_fit_fisher_bias: the analysis contains priors which are ignored in the Fisher matrix calculation.");
 
   ncm_dataset_fisher_matrix_bias (dset, self->mset, f_true, &IM, &bias);
 
@@ -2704,7 +2838,7 @@ ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
   gint ret;
 
   if (ncm_mset_fparam_len (self->mset) == 0)
-    g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
+    g_error ("ncm_fit_numdiff_m2lnL_lndet_covar: mset object has 0 free parameters");
 
   _ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
   ncm_matrix_scale (hessian, 0.5);
@@ -2726,9 +2860,9 @@ ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
     gint signum;
     gint ret1;
 
-    ncm_matrix_scale (LU, 0.5);
+    /* The Hessian is already halved, as in the Cholesky branch. */
 
-    g_warning ("ncm_fit_numdiff_m2lnL_covar: covariance matrix not positive definite, errors are not trustworthy.");
+    g_warning ("ncm_fit_numdiff_m2lnL_lndet_covar: covariance matrix not positive definite, errors are not trustworthy.");
 
     ret1 = gsl_linalg_LU_decomp (ncm_matrix_gsl (LU), p, &signum);
     NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_LU_decomp]", ret1);
@@ -2755,7 +2889,8 @@ ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
  * ncm_fit_get_covar:
  * @fit: a #NcmFit
  *
- * Returns a copy of the covariance matrix (pre-calculated by, e.g, ncm_fit_numdiff_m2lnL_covar()).
+ * Returns a copy of the covariance matrix, computed before by ncm_fit_obs_fisher(),
+ * ncm_fit_ls_fisher(), ncm_fit_fisher() or ncm_fit_fisher_bias().
  *
  * Returns: (transfer full): the covariance matrix
  */
@@ -2776,10 +2911,11 @@ ncm_fit_get_covar (NcmFit *fit)
  * @pid: the parameter id
  * @start: starting value
  * @stop: ending value
- * @nsteps: step size
+ * @nsteps: number of values, at least 2
  *
- * Computes the likelihood ratio test for the parameter @pid of the model @mid
- * in the interval [@start, @stop] subdivided by @nsteps. The function returns a
+ * Computes the likelihood ratio test for the parameter @pid of the model @mid at
+ * @nsteps equally spaced values in [@start, @stop], fitting the other free parameters
+ * at each. @fit must hold its best fit (ncm_fit_run()). The function returns a
  * #NcmMatrix with the following columns:
  *   1. Parameter value.
  *   2. The difference in -2 times the natural logarithm of the likelihood
@@ -2789,7 +2925,8 @@ ncm_fit_get_covar (NcmFit *fit)
  *      of the likelihood between the full model and the model with the parameter
  *      @pid fixed to the value in the first column, assuming a chi-squared distribution
  *      with one degree of freedom.
- *   4. Cumulative probability (two-sides) of the difference (Column 3).
+ *   4. The probability of a larger difference under that distribution, the p-value
+ *      (for one degree of freedom, the two-sided Gaussian tail).
  *
  * Returns: (transfer full): a #NcmMatrix with the results.
  */
@@ -2800,9 +2937,12 @@ ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gd
   NcmSerialize *ser          = ncm_serialize_global ();
   NcmMSet *mset_val          = ncm_mset_dup (self->mset, ser);
   NcmMatrix *results         = ncm_matrix_new (nsteps, 4);
-  const gdouble step         = (stop - start) / (nsteps - 1);
   NcmFit *fit_val;
+  gdouble step;
   guint i;
+
+  g_assert_cmpuint (nsteps, >=, 2);
+  step = (stop - start) / (nsteps - 1);
 
   ncm_serialize_free (ser);
   ncm_mset_param_set_ftype (mset_val, mid, pid, NCM_PARAM_TYPE_FIXED);
@@ -2845,12 +2985,11 @@ ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gd
  * @dof: degrees of freedom
  *
  * Computes the likelihood ratio test for the parameter @pid of the model @mid
- * with the value @val. The function returns the probability of the null hypothesis
- * assuming a chi-squared distribution with @dof degrees of freedom. That is,
- * it computes the left tail of the chi-squared distribution with @dof degrees of
- * freedom.
+ * fixed to @val, fitting the other free parameters. The difference in $-2\ln L$
+ * against the best fit held by @fit (ncm_fit_run()) is compared with a chi-squared
+ * distribution with @dof degrees of freedom.
  *
- * Returns: the probability of the null hypothesis.
+ * Returns: the upper tail of that distribution at the difference, the p-value.
  */
 gdouble
 ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof)

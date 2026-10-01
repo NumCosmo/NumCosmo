@@ -155,6 +155,44 @@ test_ncm_cfg_fftw_timelimit_default_subprocess (void)
   g_assert_cmpfloat (ncm_cfg_get_fftw_timelimit (), ==, 10.0);
 }
 
+/* OMP_NUM_THREADS above OMP_THREAD_LIMIT makes ncm_cfg_init() warn; GTest makes the warning fatal */
+static void
+test_ncm_cfg_omp_thread_limit (void)
+{
+#ifdef _OPENMP
+  gchar *nthreads = g_strdup (g_getenv ("OMP_NUM_THREADS"));
+  gchar *limit    = g_strdup (g_getenv ("OMP_THREAD_LIMIT"));
+
+  g_setenv ("OMP_NUM_THREADS", "2", TRUE);
+  g_setenv ("OMP_THREAD_LIMIT", "1", TRUE);
+  g_test_trap_subprocess ("/ncm/cfg/omp_thread_limit/subprocess", 0, 0);
+
+  /* Later subprocess tests inherit the environment. */
+  if (nthreads != NULL)
+    g_setenv ("OMP_NUM_THREADS", nthreads, TRUE);
+  else
+    g_unsetenv ("OMP_NUM_THREADS");
+
+  if (limit != NULL)
+    g_setenv ("OMP_THREAD_LIMIT", limit, TRUE);
+  else
+    g_unsetenv ("OMP_THREAD_LIMIT");
+
+  g_free (nthreads);
+  g_free (limit);
+
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*OMP_NUM_THREADS (2) exceeds OMP_THREAD_LIMIT (1)*");
+#else
+  g_test_skip ("built without OpenMP");
+#endif /* _OPENMP */
+}
+
+static void
+test_ncm_cfg_omp_thread_limit_subprocess (void)
+{
+}
+
 static gpointer
 _test_ncm_cfg_fftw_plan_worker (gpointer data)
 {
@@ -240,6 +278,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/cfg/fftw_plan_destroy", &test_ncm_cfg_fftw_plan_destroy);
   g_test_add_func ("/ncm/cfg/fftw_timelimit_default", &test_ncm_cfg_fftw_timelimit_default);
   g_test_add_func ("/ncm/cfg/fftw_timelimit_default/subprocess", &test_ncm_cfg_fftw_timelimit_default_subprocess);
+  g_test_add_func ("/ncm/cfg/omp_thread_limit", &test_ncm_cfg_omp_thread_limit);
+  g_test_add_func ("/ncm/cfg/omp_thread_limit/subprocess", &test_ncm_cfg_omp_thread_limit_subprocess);
   g_test_add_func ("/ncm/cfg/enum_print_all_gaps", &test_ncm_cfg_enum_print_all_gaps);
   g_test_add_func ("/ncm/cfg/enum_print_all_gaps/subprocess", &test_ncm_cfg_enum_print_all_gaps_subprocess);
   g_test_add_func ("/ncm/cfg/error_log_handler", &test_ncm_cfg_error_log_handler);
@@ -476,7 +516,7 @@ test_ncm_cfg_keyfile (void)
     {"x", 0, 0, G_OPTION_ARG_DOUBLE, &x, "A double", NULL},
     {"name", 0, 0, G_OPTION_ARG_STRING, &name, "A string", NULL},
     {"list", 0, 0, G_OPTION_ARG_STRING_ARRAY, &list, "A list", NULL},
-    {NULL},
+    { NULL, 0, 0, 0, NULL, NULL, NULL },
   };
   GKeyFile *kfile = g_key_file_new ();
   gchar *argv[16];

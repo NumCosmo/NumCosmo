@@ -52,6 +52,10 @@ void test_ncm_catalog_serialize (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_invalid_get (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_invalid_set (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_invalid_col_type (TestNcmCatalog *test, gconstpointer pdata);
+void test_ncm_catalog_invalid_row (TestNcmCatalog *test, gconstpointer pdata);
+void test_ncm_catalog_data_prop (TestNcmCatalog *test, gconstpointer pdata);
+void test_ncm_catalog_errors (void);
+void test_ncm_catalog_errors_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -100,6 +104,16 @@ main (gint argc, gchar *argv[])
               &test_ncm_catalog_invalid_set,
               &test_ncm_catalog_free);
 
+  g_test_add ("/ncm/catalog/invalid/row", TestNcmCatalog, NULL,
+              &test_ncm_catalog_new,
+              &test_ncm_catalog_invalid_row,
+              &test_ncm_catalog_free);
+  g_test_add ("/ncm/catalog/data_prop", TestNcmCatalog, NULL,
+              &test_ncm_catalog_new,
+              &test_ncm_catalog_data_prop,
+              &test_ncm_catalog_free);
+  g_test_add_func ("/ncm/catalog/errors", &test_ncm_catalog_errors);
+  g_test_add_func ("/ncm/catalog/errors/subprocess", &test_ncm_catalog_errors_subprocess);
   g_test_add ("/ncm/catalog/invalid/col_type", TestNcmCatalog, NULL,
               &test_ncm_catalog_new,
               &test_ncm_catalog_invalid_col_type,
@@ -342,5 +356,122 @@ test_ncm_catalog_invalid_col_type (TestNcmCatalog *test, gconstpointer pdata)
 
   g_assert_cmpint (ncm_catalog_get_col_type (test->catalog, "missing", &error), ==, NCM_CATALOG_COL_TYPE_INVALID);
   _test_ncm_catalog_assert_column_not_found_error (&error, "missing");
+}
+
+static void
+_test_ncm_catalog_assert_row_error (GError **error)
+{
+  g_assert_error (*error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_ROW_OUT_OF_RANGE);
+  g_assert_cmpstr ((*error)->message, ==, "Row 4 of column 'z' requested, but the catalog has 4 rows.");
+  g_clear_error (error);
+}
+
+void
+test_ncm_catalog_invalid_row (TestNcmCatalog *test, gconstpointer pdata)
+{
+  GError *error = NULL;
+
+  /* The last row is fine, the next one is reported. */
+  ncm_catalog_set (test->catalog, "z", 3, 1.5, &error);
+  g_assert_no_error (error);
+  g_assert_cmpfloat (ncm_catalog_get (test->catalog, "z", 3, &error), ==, 1.5);
+  g_assert_no_error (error);
+
+  g_assert_true (isnan (ncm_catalog_get (test->catalog, "z", 4, &error)));
+  _test_ncm_catalog_assert_row_error (&error);
+
+  g_assert_cmpint (ncm_catalog_get_int (test->catalog, "z", 4, &error), ==, 0);
+  _test_ncm_catalog_assert_row_error (&error);
+
+  g_assert_false (ncm_catalog_get_bool (test->catalog, "z", 4, &error));
+  _test_ncm_catalog_assert_row_error (&error);
+
+  ncm_catalog_set (test->catalog, "z", 4, 1.0, &error);
+  _test_ncm_catalog_assert_row_error (&error);
+
+  ncm_catalog_set_int (test->catalog, "z", 4, 1, &error);
+  _test_ncm_catalog_assert_row_error (&error);
+
+  ncm_catalog_set_bool (test->catalog, "z", 4, TRUE, &error);
+  _test_ncm_catalog_assert_row_error (&error);
+}
+
+void
+test_ncm_catalog_data_prop (TestNcmCatalog *test, gconstpointer pdata)
+{
+  NcmMatrix *data = ncm_matrix_new (6, 3);
+
+  /* A matrix with one column per name replaces the data and the length. */
+  ncm_matrix_set_zero (data);
+  ncm_matrix_set (data, 5, 2, 7.0);
+  g_object_set (test->catalog, "data", data, NULL);
+
+  g_assert_cmpuint (ncm_catalog_len (test->catalog), ==, 6);
+  g_assert_cmpfloat (ncm_catalog_get (test->catalog, "z", 5, NULL), ==, 7.0);
+
+  ncm_matrix_free (data);
+}
+
+void
+test_ncm_catalog_errors (void)
+{
+  const gchar *cases[][2] = {
+    {"data_cols",  "*the catalog has 3 columns, but the matrix has 2*"},
+    {"data_null",  "*the data matrix of a catalog cannot be unset*"},
+    {"duplicate",  "*column `ra' appears more than once*"},
+    {"types_len",  "*2 column types for 3 columns*"},
+    {"types_val",  "*column `dec' has the invalid type 7*"},
+    {"no_columns", "*a NcmCatalog needs its column names*"},
+  };
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (cases); i++)
+  {
+    g_setenv ("TEST_NCM_CATALOG_ERROR", cases[i][0], TRUE);
+    g_test_trap_subprocess ("/ncm/catalog/errors/subprocess", 0, 0);
+    g_test_trap_assert_failed ();
+    g_test_trap_assert_stderr (cases[i][1]);
+  }
+
+  g_unsetenv ("TEST_NCM_CATALOG_ERROR");
+}
+
+void
+test_ncm_catalog_errors_subprocess (void)
+{
+  const gchar *which       = g_getenv ("TEST_NCM_CATALOG_ERROR");
+  const gchar *col_names[] = {"ra", "dec", "z", NULL};
+
+  if (g_str_has_prefix (which, "data"))
+  {
+    NcmCatalog *catalog = ncm_catalog_new (4, (GStrv) col_names);
+
+    if (g_strcmp0 (which, "data_cols") == 0)
+      g_object_set (catalog, "data", ncm_matrix_new (4, 2), NULL);
+    else
+      g_object_set (catalog, "data", NULL, NULL);
+  }
+  else if (g_strcmp0 (which, "duplicate") == 0)
+  {
+    const gchar *dup_names[] = {"ra", "dec", "ra", NULL};
+
+    ncm_catalog_new (4, (GStrv) dup_names);
+  }
+  else if (g_strcmp0 (which, "types_len") == 0)
+  {
+    const NcmCatalogColType types[] = {NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_INT};
+
+    ncm_catalog_new_full (4, (GStrv) col_names, types, 2);
+  }
+  else if (g_strcmp0 (which, "types_val") == 0)
+  {
+    const NcmCatalogColType types[] = {NCM_CATALOG_COL_TYPE_DOUBLE, 7, NCM_CATALOG_COL_TYPE_INT};
+
+    ncm_catalog_new_full (4, (GStrv) col_names, types, 3);
+  }
+  else
+  {
+    g_object_new (NCM_TYPE_CATALOG, NULL);
+  }
 }
 

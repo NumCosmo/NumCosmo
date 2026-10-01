@@ -46,9 +46,9 @@ G_DECLARE_DERIVABLE_TYPE (NcmData, ncm_data, NCM, DATA, GObject)
  * NcmDataFisherMatrix:
  * @data: a #NcmData
  * @mset: a #NcmMSet
- * @IM: (out): The fisher matrix
+ * @IM: (inout) (allow-none) (transfer full): the Fisher matrix
  *
- * Calculates the Fisher-information matrix @I.
+ * The fisher_matrix virtual method of #NcmData, see ncm_data_fisher_matrix().
  *
  */
 typedef void (*NcmDataFisherMatrix) (NcmData *data, NcmMSet *mset, NcmMatrix **IM);
@@ -113,7 +113,6 @@ void ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 gboolean ncm_data_has_mean_vector (NcmData *data);
 
 void ncm_data_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu);
-void ncm_data_sigma_vector (NcmData *data, NcmMSet *mset, NcmVector *sigma);
 void ncm_data_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H);
 void ncm_data_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f);
 

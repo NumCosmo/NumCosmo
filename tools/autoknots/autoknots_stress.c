@@ -75,7 +75,7 @@ main (gint argc, gchar *argv[])
     {"xi",          0, 0, G_OPTION_ARG_DOUBLE, &xi,        "Lower limit", NULL},
     {"xf",          0, 0, G_OPTION_ARG_DOUBLE, &xf,        "Upper limit", NULL},
     {"output",    'o', 0, G_OPTION_ARG_STRING, &output,    "File for the statistics of every realization", NULL},
-    {NULL}
+    { NULL, 0, 0, 0, NULL, NULL, NULL }
   };
   GOptionContext *context = g_option_context_new ("- stress test of NcmSplineFunc knot placement");
   NcmSplineFuncTest *sft;

@@ -26,10 +26,11 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: conda-incubator/setup-miniconda@v4
         with:
           miniforge-version: latest
+          conda-remove-defaults: "true"
       - name: Install conda-lock
         run: pip install conda-lock
       - name: Regenerate lock files

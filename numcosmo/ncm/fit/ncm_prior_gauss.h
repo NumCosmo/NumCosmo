@@ -45,7 +45,7 @@ struct _NcmPriorGaussClass
   NcmPriorClass parent_class;
   NcmPriorGaussMean mean;
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
+  /* Padding to allow adding up to 17 more virtual functions without breaking ABI. */
   gpointer padding[17];
 };
 

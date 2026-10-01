@@ -558,8 +558,9 @@ ncm_serialize_remove_ser (NcmSerialize *ser, gpointer obj)
 
   if (g_hash_table_lookup_extended (ser->saved_ptr_name, obj, NULL, (gpointer *) &saved_name))
   {
-    g_hash_table_remove (ser->saved_ptr_name, obj);
+    /* saved_name is the value freed by the second removal. */
     g_hash_table_remove (ser->saved_name_ser, saved_name);
+    g_hash_table_remove (ser->saved_ptr_name, obj);
   }
 }
 
@@ -2391,10 +2392,9 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
   }
 
   if ((name != NULL) && (ser->opts & NCM_SERIALIZE_OPT_AUTOSAVE_SER))
-  {
     ncm_serialize_set (ser, obj, name, FALSE);
-    g_free (name);
-  }
+
+  g_free (name);
 
   return obj;
 }
@@ -2643,6 +2643,18 @@ ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
 
     if (str != NULL)
       var = g_variant_ref_sink (g_variant_new_string (str));
+  }
+  else if ((t == G_TYPE_LONG) || (t == G_TYPE_ULONG))
+  {
+    /* g_dbus_gvalue_to_gvariant() reads a 64-bit variant type with the
+     * int64/uint64 getters, so a long value must be transformed first.
+     */
+    GValue wide = G_VALUE_INIT;
+
+    g_value_init (&wide, (t == G_TYPE_LONG) ? G_TYPE_INT64 : G_TYPE_UINT64);
+    g_value_transform (val, &wide);
+    var = g_dbus_gvalue_to_gvariant (&wide, var_type);
+    g_value_unset (&wide);
   }
   else
   {

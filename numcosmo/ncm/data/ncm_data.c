@@ -28,13 +28,17 @@
  *
  * Abstract class for implementing data objects.
  *
- * The #NcmData object represent generic data. This is the root object used when
- * building a statistical analysis. Every implementation of #NcmData envolves
- * the methods described in #NcmDataClass.
+ * A #NcmData represents a data set and its statistical model given the models in a
+ * #NcmMSet. It is the root object of a statistical analysis; several of them are
+ * combined in a #NcmDataset. The methods an implementation provides are those of
+ * #NcmDataClass.
  *
- * A #NcmData must implement, at least, the method ncm_data_m2lnL_val() or
- * ncm_data_leastsquares_f() to perform respectively likelihood or least
- * squares analysis.
+ * An implementation must provide at least ncm_data_m2lnL_val(), for a likelihood
+ * analysis, or ncm_data_leastsquares_f(), for a least-squares one.
+ *
+ * Every evaluation first calls ncm_data_prepare(). The begin method, when present,
+ * runs once before the first prepare after the data change (after it is initialized
+ * and after each ncm_data_resample()), and prepare runs every time.
  *
  */
 
@@ -221,7 +225,7 @@ ncm_data_class_init (NcmDataClass *klass)
   /**
    * NcmData:long-desc:
    *
-   * Description of the data object.
+   * Detailed description of the data object.
    *
    */
   g_object_class_install_property (object_class,
@@ -233,9 +237,9 @@ ncm_data_class_init (NcmDataClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcmData:initialized:
+   * NcmData:init:
    *
-   * Whether the #NcmData is initialized.
+   * Whether the #NcmData is initialized, i.e., holds data.
    *
    */
   g_object_class_install_property (object_class,
@@ -284,13 +288,25 @@ typedef struct _NcmDataDiffArg
   NcmData *data;
 } NcmDataDiffArg;
 
-void
+static void
 _ncm_data_diff_f (NcmVector *x, NcmVector *y, gpointer user_data)
 {
   NcmDataDiffArg *arg = (NcmDataDiffArg *) user_data;
 
   ncm_mset_fparams_set_vector (arg->mset, x);
   ncm_data_mean_vector (arg->data, arg->mset, y);
+}
+
+/* Allocates *IM, or checks that the matrix passed in is fparams_len x fparams_len. */
+static void
+_ncm_data_check_fisher_matrix (NcmData *data, NcmMatrix **IM, const guint fparams_len)
+{
+  if (*IM == NULL)
+    *IM = ncm_matrix_new (fparams_len, fparams_len);
+  else if ((ncm_matrix_nrows (*IM) != fparams_len) || (ncm_matrix_ncols (*IM) != fparams_len))
+    g_error ("ncm_data_fisher_matrix: data `%s': the Fisher matrix passed in is %u x %u, "
+             "but there are %u free parameters.",
+             ncm_data_peek_desc (data), ncm_matrix_nrows (*IM), ncm_matrix_ncols (*IM), fparams_len);
 }
 
 static void
@@ -301,7 +317,7 @@ _ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
 
   if (fparams_len == 0)
   {
-    *IM = NULL;
+    ncm_matrix_clear (IM);
   }
   else
   {
@@ -309,21 +325,17 @@ _ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
     NcmDataDiffArg arg = {mset, data};
     const guint dim    = ncm_data_get_length (data);
 
-    if (*IM == NULL)
-    {
-      *IM = ncm_matrix_new (fparams_len, fparams_len);
-    }
-    else
-    {
-      g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, ncm_matrix_nrows (*IM));
-      g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, fparams_len);
-    }
+    _ncm_data_check_fisher_matrix (data, IM, fparams_len);
 
     ncm_mset_fparams_get_vector (mset, x_v);
     {
       GArray *x_a    = ncm_vector_dup_array (x_v);
       GArray *dmu_a  = ncm_diff_rf_d1_N_to_M (self->diff, x_a, dim, _ncm_data_diff_f, &arg, NULL);
       NcmMatrix *dmu = ncm_matrix_new_array (dmu_a, dim);
+
+      /* The derivative leaves the free parameters at its last step; the covariance
+       * must be evaluated at the point itself. */
+      ncm_mset_fparams_set_vector (mset, x_v);
 
       ncm_data_inv_cov_UH (data, mset, dmu);
 
@@ -333,7 +345,6 @@ _ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
       g_array_unref (x_a);
       ncm_matrix_free (dmu);
     }
-    ncm_mset_fparams_set_vector (mset, x_v);
     ncm_vector_free (x_v);
   }
 }
@@ -346,8 +357,8 @@ _ncm_data_fisher_matrix_bias (NcmData *data, NcmMSet *mset, NcmVector *f_true, N
 
   if (fparams_len == 0)
   {
-    *IM          = NULL;
-    *delta_theta = NULL;
+    ncm_matrix_clear (IM);
+    ncm_vector_clear (delta_theta);
   }
   else
   {
@@ -355,22 +366,18 @@ _ncm_data_fisher_matrix_bias (NcmData *data, NcmMSet *mset, NcmVector *f_true, N
     NcmDataDiffArg arg = {mset, data};
     const guint dim    = ncm_data_get_length (data);
 
-    if (*IM == NULL)
-    {
-      *IM = ncm_matrix_new (fparams_len, fparams_len);
-    }
-    else
-    {
-      g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, ncm_matrix_nrows (*IM));
-      g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, fparams_len);
-    }
+    _ncm_data_check_fisher_matrix (data, IM, fparams_len);
 
     if (*delta_theta == NULL)
       *delta_theta = ncm_vector_new (fparams_len);
-    else
-      g_assert_cmpuint (ncm_vector_len (*delta_theta), ==, fparams_len);
+    else if (ncm_vector_len (*delta_theta) != fparams_len)
+      g_error ("ncm_data_fisher_matrix_bias: data `%s': the bias vector has %u components, "
+               "but there are %u free parameters.",
+               ncm_data_peek_desc (data), ncm_vector_len (*delta_theta), fparams_len);
 
-    g_assert_cmpuint (ncm_vector_len (f_true), ==, dim);
+    if (ncm_vector_len (f_true) != dim)
+      g_error ("ncm_data_fisher_matrix_bias: data `%s' has %u points, but f_true has %u.",
+               ncm_data_peek_desc (data), dim, ncm_vector_len (f_true));
 
     ncm_mset_fparams_get_vector (mset, x_v);
     {
@@ -378,6 +385,10 @@ _ncm_data_fisher_matrix_bias (NcmData *data, NcmMSet *mset, NcmVector *f_true, N
       GArray *dmu_a  = ncm_diff_rf_d1_N_to_M (self->diff, x_a, dim, _ncm_data_diff_f, &arg, NULL);
       NcmMatrix *dmu = ncm_matrix_new_array (dmu_a, dim);
       NcmVector *mu  = ncm_vector_new (dim);
+
+      /* The derivative leaves the free parameters at its last step; the mean and the
+       * covariance must be evaluated at the point itself. */
+      ncm_mset_fparams_set_vector (mset, x_v);
 
       ncm_data_inv_cov_UH (data, mset, dmu);
 
@@ -394,7 +405,6 @@ _ncm_data_fisher_matrix_bias (NcmData *data, NcmMSet *mset, NcmVector *f_true, N
       ncm_matrix_free (dmu);
       ncm_vector_free (mu);
     }
-    ncm_mset_fparams_set_vector (mset, x_v);
     ncm_vector_free (x_v);
   }
 }
@@ -403,7 +413,7 @@ _ncm_data_fisher_matrix_bias (NcmData *data, NcmMSet *mset, NcmVector *f_true, N
  * ncm_data_ref:
  * @data: a #NcmData.
  *
- * Increase the reference count of @data.
+ * Increases the reference count of @data by one.
  *
  * Returns: (transfer full): @data.
  */
@@ -417,7 +427,8 @@ ncm_data_ref (NcmData *data)
  * ncm_data_free:
  * @data: a #NcmData.
  *
- * Decrease the reference count of @data.
+ * Decreases the reference count of @data by one. If the reference count reaches
+ * zero, @data is freed.
  *
  */
 void
@@ -430,7 +441,8 @@ ncm_data_free (NcmData *data)
  * ncm_data_clear:
  * @data: a #NcmData.
  *
- * Decrease the reference count of *@data and sets the pointer *@data to NULL.
+ * If *@data is not %NULL, decreases the reference count of *@data by one and sets
+ * *@data to %NULL.
  *
  */
 void
@@ -638,7 +650,10 @@ ncm_data_prepare (NcmData *data, NcmMSet *mset)
 {
   NcmDataPrivate * const self = ncm_data_get_instance_private (data);
 
-  g_assert (self->init);
+  if (!self->init)
+    g_error ("ncm_data_prepare: data `%s' is not initialized; set its data or resample it first.",
+             ncm_data_peek_desc (data));
+
   _ncm_data_prepare (data, mset);
 }
 
@@ -648,9 +663,10 @@ ncm_data_prepare (NcmData *data, NcmMSet *mset)
  * @mset: a #NcmMSet
  * @rng: a #NcmRNG
  *
- * Resample data in @data from the models contained in @mset.
- * During the resampling the @data is marked as resampling
- * and prepare is called.
+ * Resamples the data in @data from the models contained in @mset. During the
+ * resampling @data is marked as resampling (see ncm_data_is_resampling()) and
+ * prepared; afterwards @data is initialized and its begin method runs again before
+ * the next evaluation, since the data changed.
  *
  */
 void
@@ -660,7 +676,7 @@ ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
   if (NCM_DATA_GET_CLASS (data)->resample == NULL)
     g_error ("ncm_data_resample: The data (%s) does not implement resample.",
-             ncm_data_get_desc (data));
+             ncm_data_peek_desc (data));
 
   self->is_resampling = TRUE;
   _ncm_data_prepare (data, mset);
@@ -668,6 +684,7 @@ ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   NCM_DATA_GET_CLASS (data)->resample (data, mset, rng);
 
   self->is_resampling = FALSE;
+  self->begin         = FALSE;
   ncm_data_set_init (data, TRUE);
 }
 
@@ -720,9 +737,10 @@ ncm_data_bootstrap_create (NcmData *data)
 
   if (!NCM_DATA_GET_CLASS (data)->bootstrap)
     g_error ("ncm_data_bootstrap_create: The data (%s) does not implement bootstrap.",
-             ncm_data_get_desc (data));
+             ncm_data_peek_desc (data));
 
-  g_assert (self->init);
+  if (!self->init)
+    g_error ("ncm_data_bootstrap_create: data `%s' is not initialized.", ncm_data_peek_desc (data));
 
   if (self->bstrap == NULL)
   {
@@ -765,12 +783,19 @@ ncm_data_bootstrap_set (NcmData *data, NcmBootstrap *bstrap)
 
   if (!NCM_DATA_GET_CLASS (data)->bootstrap)
     g_error ("ncm_data_bootstrap_set: The data (%s) does not implement bootstrap.",
-             ncm_data_get_desc (data));
+             ncm_data_peek_desc (data));
 
-  g_assert (self->init);
-  g_assert (bstrap != NULL);
+  if (!self->init)
+    g_error ("ncm_data_bootstrap_set: data `%s' is not initialized.", ncm_data_peek_desc (data));
 
-  g_assert_cmpuint (ncm_bootstrap_get_fsize (bstrap), ==, ncm_data_get_length (data));
+  if (bstrap == NULL)
+    g_error ("ncm_data_bootstrap_set: data `%s': use ncm_data_bootstrap_remove() to remove the bootstrap.",
+             ncm_data_peek_desc (data));
+
+  if (ncm_bootstrap_get_fsize (bstrap) != ncm_data_get_length (data))
+    g_error ("ncm_data_bootstrap_set: data `%s' has %u points, but the bootstrap has a full size of %u.",
+             ncm_data_peek_desc (data), ncm_data_get_length (data), ncm_bootstrap_get_fsize (bstrap));
+
   ncm_bootstrap_ref (bstrap);
   ncm_bootstrap_clear (&self->bstrap);
   self->bstrap = bstrap;
@@ -791,11 +816,11 @@ ncm_data_bootstrap_resample (NcmData *data, NcmRNG *rng)
 
   if (!NCM_DATA_GET_CLASS (data)->bootstrap)
     g_error ("ncm_data_bootstrap_resample: The data (%s) does not implement bootstrap.",
-             ncm_data_get_desc (data));
+             ncm_data_peek_desc (data));
 
   if (self->bstrap == NULL)
     g_error ("ncm_data_bootstrap_resample: Bootstrap of %s is not enabled.",
-             ncm_data_get_desc (data));
+             ncm_data_peek_desc (data));
 
   ncm_bootstrap_resample (self->bstrap, rng);
 }
@@ -850,7 +875,7 @@ ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f)
 
   if (NCM_DATA_GET_CLASS (data)->leastsquares_f == NULL)
     g_error ("ncm_data_leastsquares_f: The data (%s) does not implement leastsquares_f.",
-             ncm_data_get_desc (data));
+             ncm_data_peek_desc (data));
 
   NCM_DATA_GET_CLASS (data)->leastsquares_f (data, mset, f);
 }
@@ -862,17 +887,24 @@ ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f)
  * @m2lnL: (out): a #double
  *
  * Calculates the value of $-2\ln(L)$, where $L$ represents the likelihood of
- * the data given the models in @mset. The result is stored in @m2lnL.
+ * the data given the models in @mset. The result is stored in @m2lnL. With a
+ * bootstrap enabled, aborts if the bootstrap has no realization.
  *
  */
 void
 ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
+  NcmDataPrivate * const self = ncm_data_get_instance_private (data);
+
   ncm_data_prepare (data, mset);
 
   if (NCM_DATA_GET_CLASS (data)->m2lnL_val == NULL)
     g_error ("ncm_data_m2lnL_val: The data (%s) does not implement m2lnL_val.",
-             ncm_data_get_desc (data));
+             ncm_data_peek_desc (data));
+
+  if ((self->bstrap != NULL) && !ncm_bootstrap_is_init (self->bstrap))
+    g_error ("ncm_data_m2lnL_val: data `%s': the bootstrap has no realization, call ncm_data_bootstrap_resample() first.",
+             ncm_data_peek_desc (data));
 
   NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, m2lnL);
 }
@@ -910,7 +942,7 @@ ncm_data_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu)
 
   if (NCM_DATA_GET_CLASS (data)->mean_vector == NULL)
     g_error ("ncm_data_mean_vector: The data (%s) does not implement mean_vector.",
-             ncm_data_get_desc (data));
+             ncm_data_peek_desc (data));
 
   NCM_DATA_GET_CLASS (data)->mean_vector (data, mset, mu);
 }
@@ -933,7 +965,7 @@ ncm_data_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
 
   if (NCM_DATA_GET_CLASS (data)->inv_cov_UH == NULL)
     g_error ("ncm_data_inv_cov_UH: The data (%s) does not implement inv_cov_UH.",
-             ncm_data_get_desc (data));
+             ncm_data_peek_desc (data));
 
   NCM_DATA_GET_CLASS (data)->inv_cov_UH (data, mset, H);
 }
@@ -956,7 +988,7 @@ ncm_data_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f)
 
   if (NCM_DATA_GET_CLASS (data)->inv_cov_Uf == NULL)
     g_error ("ncm_data_inv_cov_Uf: The data (%s) does not implement inv_cov_Uf.",
-             ncm_data_get_desc (data));
+             ncm_data_peek_desc (data));
 
   NCM_DATA_GET_CLASS (data)->inv_cov_Uf (data, mset, f);
 }
@@ -965,11 +997,13 @@ ncm_data_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f)
  * ncm_data_fisher_matrix: (virtual fisher_matrix)
  * @data: a #NcmData
  * @mset: a #NcmMSet
- * @IM: (out): The fisher matrix
+ * @IM: (inout) (allow-none) (transfer full): the Fisher matrix
  *
- * Calculates the Fisher-information matrix @I. Note that this is an
- * additive quantity, i.e., the Fisher-information matrix of different
- * and uncorrrelated data sets can be added.
+ * Calculates the Fisher-information matrix of @data with respect to the free
+ * parameters of @mset. If *@IM is %NULL a new matrix is allocated, otherwise *@IM
+ * must be a square matrix of the number of free parameters and is overwritten.
+ * Without free parameters *@IM is freed and set to %NULL. The Fisher matrix is
+ * additive: those of uncorrelated data sets add up.
  *
  */
 void
@@ -979,7 +1013,7 @@ ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
 
   if (NCM_DATA_GET_CLASS (data)->fisher_matrix == NULL)
     g_error ("ncm_data_fisher_matrix: The data (%s) does not implement fisher_matrix.",
-             ncm_data_get_desc (data));
+             ncm_data_peek_desc (data));
 
   NCM_DATA_GET_CLASS (data)->fisher_matrix (data, mset, IM);
 }
@@ -989,13 +1023,14 @@ ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
  * @data: a #NcmData
  * @mset: a #NcmMSet
  * @f_true: a #NcmVector
- * @IM: (out): The fisher matrix
- * @delta_theta: (out): The shift parameter vector
+ * @IM: (inout) (allow-none) (transfer full): the Fisher matrix
+ * @delta_theta: (inout) (allow-none) (transfer full): the parameter shift vector
  *
- * Calculates the Fisher-information matrix @I and the bias vector @f
- * assuming that the true theoretical model is @f_true. Note that these
- * are additive quantities, i.e., the Fisher-information matrix and
- * the bias vector of different and uncorrrelated data sets can be added.
+ * Calculates the Fisher-information matrix, as ncm_data_fisher_matrix(), and the
+ * parameter shift @delta_theta obtained when the true mean is @f_true, which must
+ * have ncm_data_get_length() components. *@delta_theta is allocated when %NULL and
+ * overwritten otherwise; without free parameters both are freed and set to %NULL.
+ * Both quantities are additive over uncorrelated data sets.
  *
  */
 void
@@ -1005,7 +1040,7 @@ ncm_data_fisher_matrix_bias (NcmData *data, NcmMSet *mset, NcmVector *f_true, Nc
 
   if (NCM_DATA_GET_CLASS (data)->fisher_matrix_bias == NULL)
     g_error ("ncm_data_fisher_matrix_bias: The data (%s) does not implement fisher_matrix_bias.",
-             ncm_data_get_desc (data));
+             ncm_data_peek_desc (data));
 
   NCM_DATA_GET_CLASS (data)->fisher_matrix_bias (data, mset, f_true, IM, delta_theta);
 }

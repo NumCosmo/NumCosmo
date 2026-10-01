@@ -26,8 +26,16 @@
 /**
  * NcmDataDist1d:
  *
- * This object is an abstract class for one variable distribution data.
+ * Abstract class for a sample drawn from a one-dimensional distribution.
  *
+ * The data are #NcmDataDist1d:n-points values $x_i$ (#NcmDataDist1d:vector), each
+ * drawn independently from a distribution with density $p(x)$ given the models in a
+ * #NcmMSet, and $-2\ln L = \sum_i -2\ln p(x_i)$.
+ *
+ * Subclasses implement dist1d_m2lnL_val, which returns $-2\ln p(x)$ for one point,
+ * and, to resample, inv_pdf, which maps a uniform number $u \in [0, 1]$ to a draw of
+ * the distribution (the inverse of its cumulative distribution). The default methods
+ * abort with a message naming the class.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -61,13 +69,6 @@ ncm_data_dist1d_init (NcmDataDist1d *dist1d)
 
   self->np = 0;
   self->x  = NULL;
-}
-
-static void
-_ncm_data_dist1d_constructed (GObject *object)
-{
-  /* Chain up : start */
-  G_OBJECT_CLASS (ncm_data_dist1d_parent_class)->constructed (object);
 }
 
 static void
@@ -126,18 +127,14 @@ ncm_data_dist1d_dispose (GObject *object)
   G_OBJECT_CLASS (ncm_data_dist1d_parent_class)->dispose (object);
 }
 
-static void
-ncm_data_dist1d_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_data_dist1d_parent_class)->finalize (object);
-}
-
 static guint _ncm_data_dist1d_get_length (NcmData *data);
 static void _ncm_data_dist1d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static void _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 static void _ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np);
 static guint _ncm_data_dist1d_get_size (NcmDataDist1d *dist1d);
+
+static gdouble _ncm_data_dist1d_default_m2lnL_val (NcmDataDist1d *dist1d, NcmMSet *mset, gdouble x);
+static gdouble _ncm_data_dist1d_default_inv_pdf (NcmDataDist1d *dist1d, NcmMSet *mset, gdouble u);
 
 static void
 ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
@@ -146,13 +143,16 @@ ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
   NcmDataDist1dClass *dist1d_class = NCM_DATA_DIST1D_CLASS (klass);
   NcmDataClass *data_class         = NCM_DATA_CLASS (klass);
 
-  object_class->constructed  = &_ncm_data_dist1d_constructed;
   object_class->set_property = &_ncm_data_dist1d_set_property;
   object_class->get_property = &_ncm_data_dist1d_get_property;
+  object_class->dispose      = &ncm_data_dist1d_dispose;
 
-  object_class->dispose  = &ncm_data_dist1d_dispose;
-  object_class->finalize = &ncm_data_dist1d_finalize;
-
+  /**
+   * NcmDataDist1d:n-points:
+   *
+   * The number of points; changing it reallocates the data and marks it not
+   * initialized.
+   */
   g_object_class_install_property (object_class,
                                    PROP_NPOINTS,
                                    g_param_spec_uint ("n-points",
@@ -161,6 +161,11 @@ ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmDataDist1d:vector:
+   *
+   * The sample $x_i$.
+   */
   g_object_class_install_property (object_class,
                                    PROP_VECTOR,
                                    g_param_spec_object ("vector",
@@ -176,10 +181,28 @@ ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
   data_class->resample  = &_ncm_data_dist1d_resample;
   data_class->m2lnL_val = &_ncm_data_dist1d_m2lnL_val;
 
-  dist1d_class->dist1d_m2lnL_val = NULL;
-  dist1d_class->inv_pdf          = NULL;
+  dist1d_class->dist1d_m2lnL_val = &_ncm_data_dist1d_default_m2lnL_val;
+  dist1d_class->inv_pdf          = &_ncm_data_dist1d_default_inv_pdf;
   dist1d_class->set_size         = &_ncm_data_dist1d_set_size;
   dist1d_class->get_size         = &_ncm_data_dist1d_get_size;
+}
+
+static gdouble
+_ncm_data_dist1d_default_m2lnL_val (NcmDataDist1d *dist1d, NcmMSet *mset, gdouble x)
+{
+  g_error ("_ncm_data_dist1d_default_m2lnL_val: `%s' does not implement dist1d_m2lnL_val.",
+           G_OBJECT_TYPE_NAME (dist1d));
+
+  return 0.0;
+}
+
+static gdouble
+_ncm_data_dist1d_default_inv_pdf (NcmDataDist1d *dist1d, NcmMSet *mset, gdouble u)
+{
+  g_error ("_ncm_data_dist1d_default_inv_pdf: `%s' does not implement inv_pdf, so it cannot be resampled.",
+           G_OBJECT_TYPE_NAME (dist1d));
+
+  return 0.0;
 }
 
 static guint
@@ -234,9 +257,6 @@ _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   NcmDataDist1dPrivate * const self = ncm_data_dist1d_get_instance_private (dist1d);
   NcmDataDist1dClass *dist1d_class  = NCM_DATA_DIST1D_GET_CLASS (data);
   guint i;
-
-  if (dist1d_class->inv_pdf == NULL)
-    g_error ("_ncm_data_dist1d_resample: This object do not implement the inverse of the pdf.");
 
   ncm_rng_lock (rng);
 
@@ -330,6 +350,9 @@ NcmVector *
 ncm_data_dist1d_get_data (NcmDataDist1d *dist1d)
 {
   NcmDataDist1dPrivate * const self = ncm_data_dist1d_get_instance_private (dist1d);
+
+  if (self->x == NULL)
+    g_error ("ncm_data_dist1d_get_data: data `%s' has no points.", ncm_data_peek_desc (NCM_DATA (dist1d)));
 
   return ncm_vector_ref (self->x);
 }

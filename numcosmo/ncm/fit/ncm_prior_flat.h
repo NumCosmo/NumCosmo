@@ -45,7 +45,7 @@ struct _NcmPriorFlatClass
   NcmPriorClass parent_class;
   NcmPriorFlatMean mean;
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
+  /* Padding to allow adding up to 17 more virtual functions without breaking ABI. */
   gpointer padding[17];
 };
 

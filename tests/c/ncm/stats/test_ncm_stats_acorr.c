@@ -1062,10 +1062,12 @@ test_ncm_stats_acorr_diag_zero_variance (void)
   ncm_assert_cmpdouble_e (ncm_stats_acorr_get_mean (acorr, 0), ==, 3.25, 1.0e-14, 0.0);
   ncm_assert_cmpdouble_e (ncm_stats_acorr_get_spec0 (acorr, 0), ==, 0.0, 1.0e-14, 1.0e-14);
 
-  /* A series with no variance has no correlation time to report under any estimator. */
+  /* Every estimator reports the same cap: a series with no variance is stuck, not mixing. */
   {
-    ncm_assert_cmpdouble_e (ncm_stats_acorr_get_tau_method (acorr, 0, NCM_STATS_ACORR_METHOD_GEYER), ==, 1.0, 1.0e-14, 0.0);
-    ncm_assert_cmpdouble_e (ncm_stats_acorr_get_tau_method (acorr, 0, NCM_STATS_ACORR_METHOD_SOKAL), ==, 1.0, 1.0e-14, 0.0);
+    ncm_assert_cmpdouble_e (ncm_stats_acorr_get_tau_method (acorr, 0, NCM_STATS_ACORR_METHOD_AR), ==, 200.0, 1.0e-14, 0.0);
+    ncm_assert_cmpdouble_e (ncm_stats_acorr_get_tau_method (acorr, 0, NCM_STATS_ACORR_METHOD_GEYER), ==, 200.0, 1.0e-14, 0.0);
+    ncm_assert_cmpdouble_e (ncm_stats_acorr_get_tau_method (acorr, 0, NCM_STATS_ACORR_METHOD_SOKAL), ==, 200.0, 1.0e-14, 0.0);
+    ncm_assert_cmpdouble_e (ncm_stats_acorr_get_tau_method (acorr, 0, NCM_STATS_ACORR_METHOD_MAX), ==, 200.0, 1.0e-14, 0.0);
   }
 
   /* Too short to say anything about, as well. */

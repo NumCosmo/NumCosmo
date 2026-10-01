@@ -42,7 +42,7 @@ struct _NcmPriorClass
   NcmMSetFuncClass parent_class;
   gboolean is_m2lnL;
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
+  /* Padding to allow adding up to 18 more virtual functions without breaking ABI. */
   gpointer padding[18];
 };
 

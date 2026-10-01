@@ -26,10 +26,25 @@
 /**
  * NcmDataGaussDiag:
  *
- * Gaussian data -- diagonal covariance provided.
+ * Gaussian data with a diagonal covariance.
  *
- * Gaussian distribution which uses a diagonal covariance matrix as input.
+ * Abstract class for data $y$ of #NcmDataGaussDiag:n-points independent points,
+ * each drawn from a normal distribution with mean $\mu_i$ and standard deviation
+ * $\sigma_i$ (#NcmDataGaussDiag:sigma), with weights $w_i = 1/\sigma_i^2$:
+ * $$-2\ln L = \sum_i w_i (\mu_i - y_i)^2 + \sum_i \ln(2\pi\sigma_i^2).$$
  *
+ * With #NcmDataGaussDiag:w-mean the likelihood is profiled over a constant offset
+ * $c$ added to the mean, which is minimized analytically:
+ * $\sum_i w_i r_i^2 - (\sum_i w_i r_i)^2 / \sum_i w_i$, with $r = \mu - y$. The
+ * least-squares vector, the Fisher matrix and the bias vector are those of the
+ * profiled likelihood, so a constant shift of the mean carries no information.
+ *
+ * Subclasses implement the mean_func virtual method, which fills the mean $\mu$
+ * given the models in a #NcmMSet. When $\sigma$ depends on the models, they also
+ * implement sigma_func, which fills the vector passed to it and returns %TRUE when it
+ * changed it. Setting #NcmDataGaussDiag:sigma updates the weights, while changing
+ * the vector returned by ncm_data_gauss_diag_peek_std() in place after the first
+ * evaluation does not: set the property instead.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -88,13 +103,6 @@ ncm_data_gauss_diag_init (NcmDataGaussDiag *diag)
 }
 
 static void
-_ncm_data_gauss_diag_constructed (GObject *object)
-{
-  /* Chain up : start */
-  G_OBJECT_CLASS (ncm_data_gauss_diag_parent_class)->constructed (object);
-}
-
-static void
 ncm_data_gauss_diag_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmDataGaussDiag *diag               = NCM_DATA_GAUSS_DIAG (object);
@@ -115,6 +123,7 @@ ncm_data_gauss_diag_set_property (GObject *object, guint prop_id, const GValue *
       break;
     case PROP_SIGMA:
       ncm_vector_substitute (&self->sigma, g_value_get_object (value), TRUE);
+      self->prepared_w = FALSE;
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -165,13 +174,6 @@ ncm_data_gauss_diag_dispose (GObject *object)
   G_OBJECT_CLASS (ncm_data_gauss_diag_parent_class)->dispose (object);
 }
 
-static void
-ncm_data_gauss_diag_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_data_gauss_diag_parent_class)->finalize (object);
-}
-
 static guint _ncm_data_gauss_diag_get_length (NcmData *data);
 static guint _ncm_data_gauss_diag_get_dof (NcmData *data);
 
@@ -193,12 +195,16 @@ ncm_data_gauss_diag_class_init (NcmDataGaussDiagClass *klass)
   NcmDataClass *data_class                = NCM_DATA_CLASS (klass);
   NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_CLASS (klass);
 
-  object_class->constructed  = &_ncm_data_gauss_diag_constructed;
   object_class->set_property = &ncm_data_gauss_diag_set_property;
   object_class->get_property = &ncm_data_gauss_diag_get_property;
   object_class->dispose      = &ncm_data_gauss_diag_dispose;
-  object_class->finalize     = &ncm_data_gauss_diag_finalize;
 
+  /**
+   * NcmDataGaussDiag:n-points:
+   *
+   * The number of data points; changing it reallocates the data and marks it not
+   * initialized.
+   */
   g_object_class_install_property (object_class,
                                    PROP_NPOINTS,
                                    g_param_spec_uint ("n-points",
@@ -207,6 +213,11 @@ ncm_data_gauss_diag_class_init (NcmDataGaussDiagClass *klass)
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmDataGaussDiag:w-mean:
+   *
+   * Whether the likelihood is profiled over a constant offset of the mean.
+   */
   g_object_class_install_property (object_class,
                                    PROP_WMEAN,
                                    g_param_spec_boolean ("w-mean",
@@ -215,6 +226,11 @@ ncm_data_gauss_diag_class_init (NcmDataGaussDiagClass *klass)
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmDataGaussDiag:mean:
+   *
+   * The data vector $y$.
+   */
   g_object_class_install_property (object_class,
                                    PROP_MEAN,
                                    g_param_spec_object ("mean",
@@ -223,6 +239,11 @@ ncm_data_gauss_diag_class_init (NcmDataGaussDiagClass *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmDataGaussDiag:sigma:
+   *
+   * The standard deviations $\sigma_i$; setting it updates the weights.
+   */
   g_object_class_install_property (object_class,
                                    PROP_SIGMA,
                                    g_param_spec_object ("sigma",
@@ -269,28 +290,48 @@ _ncm_data_gauss_diag_get_dof (NcmData *data)
   return dof;
 }
 
+/*
+ * Calls sigma_func, if any; when it changed sigma, the weights are marked stale.
+ * Every path that may update sigma goes through here.
+ */
 static void
-_ncm_data_gauss_prepare_weight (NcmData *data)
+_ncm_data_gauss_diag_update_sigma (NcmDataGaussDiag *diag, NcmMSet *mset)
 {
-  NcmDataGaussDiag *diag               = NCM_DATA_GAUSS_DIAG (data);
+  NcmDataGaussDiagPrivate * const self    = ncm_data_gauss_diag_get_instance_private (diag);
+  NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (diag);
+
+  if ((gauss_diag_class->sigma_func != NULL) && gauss_diag_class->sigma_func (diag, mset, self->sigma))
+    self->prepared_w = FALSE;
+}
+
+/* The weights w_i = 1 / sigma_i^2 and their sum, recomputed when stale. */
+static NcmVector *
+_ncm_data_gauss_diag_peek_weight (NcmDataGaussDiag *diag)
+{
   NcmDataGaussDiagPrivate * const self = ncm_data_gauss_diag_get_instance_private (diag);
-  guint i;
 
-  if (self->weight == NULL)
-    self->weight = ncm_vector_new (self->np);
-
-  self->wt = 0.0;
-
-  for (i = 0; i < self->np; i++)
+  if (!self->prepared_w)
   {
-    const gdouble sigma_i = ncm_vector_get (self->sigma, i);
-    const gdouble w_i     = 1.0 / (sigma_i * sigma_i);
+    guint i;
 
-    ncm_vector_set (self->weight, i, w_i);
-    self->wt += w_i;
+    if (self->weight == NULL)
+      self->weight = ncm_vector_new (self->np);
+
+    self->wt = 0.0;
+
+    for (i = 0; i < self->np; i++)
+    {
+      const gdouble sigma_i = ncm_vector_get (self->sigma, i);
+      const gdouble w_i     = 1.0 / (sigma_i * sigma_i);
+
+      ncm_vector_set (self->weight, i, w_i);
+      self->wt += w_i;
+    }
+
+    self->prepared_w = TRUE;
   }
 
-  self->prepared_w = TRUE;
+  return self->weight;
 }
 
 static void
@@ -299,11 +340,9 @@ _ncm_data_gauss_diag_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   NcmDataGaussDiag *diag                  = NCM_DATA_GAUSS_DIAG (data);
   NcmDataGaussDiagPrivate * const self    = ncm_data_gauss_diag_get_instance_private (diag);
   NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (diag);
-  gdouble has_sigma_func                  = (gauss_diag_class->sigma_func != NULL);
   guint i;
 
-  if (has_sigma_func)
-    gauss_diag_class->sigma_func (diag, mset, self->sigma);
+  _ncm_data_gauss_diag_update_sigma (diag, mset);
 
   gauss_diag_class->mean_func (diag, mset, self->y);
 
@@ -326,21 +365,17 @@ _ncm_data_gauss_diag_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   NcmDataGaussDiag *diag                  = NCM_DATA_GAUSS_DIAG (data);
   NcmDataGaussDiagPrivate * const self    = ncm_data_gauss_diag_get_instance_private (diag);
   NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (diag);
-  gdouble has_sigma_func                  = (gauss_diag_class->sigma_func != NULL);
-  gboolean sigma_update                   = FALSE;
   guint i;
 
   *m2lnL = 0.0;
 
-  if (has_sigma_func)
-    sigma_update = gauss_diag_class->sigma_func (diag, mset, self->sigma);
+  _ncm_data_gauss_diag_update_sigma (diag, mset);
 
   gauss_diag_class->mean_func (diag, mset, self->v);
 
   if (self->wmean)
   {
-    if (sigma_update || !self->prepared_w)
-      _ncm_data_gauss_prepare_weight (data);
+    _ncm_data_gauss_diag_peek_weight (diag);
 
     if (!ncm_data_bootstrap_enabled (data))
     {
@@ -435,15 +470,13 @@ _ncm_data_gauss_diag_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
   NcmDataGaussDiag *diag                  = NCM_DATA_GAUSS_DIAG (data);
   NcmDataGaussDiagPrivate * const self    = ncm_data_gauss_diag_get_instance_private (diag);
   NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (diag);
-  gdouble has_sigma_func                  = (gauss_diag_class->sigma_func != NULL);
-  gboolean sigma_update                   = FALSE;
   guint i;
 
   if (ncm_data_bootstrap_enabled (data))
-    g_error ("NcmDataGaussDiag: does not support bootstrap with least squares");
+    g_error ("_ncm_data_gauss_diag_leastsquares_f: data `%s': bootstrap is not supported with least squares.",
+             ncm_data_peek_desc (data));
 
-  if (has_sigma_func)
-    sigma_update = gauss_diag_class->sigma_func (diag, mset, self->sigma);
+  _ncm_data_gauss_diag_update_sigma (diag, mset);
 
   gauss_diag_class->mean_func (diag, mset, v);
 
@@ -451,8 +484,7 @@ _ncm_data_gauss_diag_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
   {
     gdouble wmean;
 
-    if (sigma_update || !self->prepared_w)
-      _ncm_data_gauss_prepare_weight (data);
+    _ncm_data_gauss_diag_peek_weight (diag);
 
     ncm_vector_sub (v, self->y);
 
@@ -493,42 +525,75 @@ _ncm_data_gauss_diag_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu)
   gauss_diag_class->mean_func (diag, mset, mu);
 }
 
+/*
+ * Whitening with the profiled offset: with W = diag (w), the profiled inverse
+ * covariance W - w w^T / wt equals W^{1/2} P W^{1/2}, where P = I - s s^T projects
+ * out s = w^{1/2} / sqrt (wt). So U = P W^{1/2}, with U^T U the profiled inverse
+ * covariance, and the least-squares vector is U r.
+ */
 static void
 _ncm_data_gauss_diag_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
 {
-  NcmDataGaussDiag *diag                  = NCM_DATA_GAUSS_DIAG (data);
-  NcmDataGaussDiagPrivate * const self    = ncm_data_gauss_diag_get_instance_private (diag);
-  NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (diag);
+  NcmDataGaussDiag *diag               = NCM_DATA_GAUSS_DIAG (data);
+  NcmDataGaussDiagPrivate * const self = ncm_data_gauss_diag_get_instance_private (diag);
   guint i;
 
   if (ncm_data_bootstrap_enabled (data))
-    g_error ("NcmDataGaussDiag: does not support bootstrap with least squares");
+    g_error ("_ncm_data_gauss_diag_inv_cov_UH: data `%s': bootstrap is not supported with the Fisher matrix.",
+             ncm_data_peek_desc (data));
 
-  if (gauss_diag_class->sigma_func != NULL)
-    gauss_diag_class->sigma_func (diag, mset, self->sigma);
+  _ncm_data_gauss_diag_update_sigma (diag, mset);
 
   for (i = 0; i < self->np; i++)
-  {
-    const gdouble sigma_i = ncm_vector_get (self->sigma, i);
+    ncm_matrix_mul_col (H, i, 1.0 / ncm_vector_get (self->sigma, i));
 
-    ncm_matrix_mul_col (H, i, 1.0 / sigma_i);
+  if (self->wmean)
+  {
+    NcmVector *w          = _ncm_data_gauss_diag_peek_weight (diag);
+    const gdouble sqrt_wt = sqrt (self->wt);
+    const guint nrows     = ncm_matrix_nrows (H);
+    guint a;
+
+    for (a = 0; a < nrows; a++)
+    {
+      gdouble h_s = 0.0;
+
+      for (i = 0; i < self->np; i++)
+        h_s += ncm_matrix_get (H, a, i) * sqrt (ncm_vector_get (w, i)) / sqrt_wt;
+
+      for (i = 0; i < self->np; i++)
+        ncm_matrix_set (H, a, i, ncm_matrix_get (H, a, i) - h_s * sqrt (ncm_vector_get (w, i)) / sqrt_wt);
+    }
   }
 }
 
 static void
 _ncm_data_gauss_diag_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f)
 {
-  NcmDataGaussDiag *diag                  = NCM_DATA_GAUSS_DIAG (data);
-  NcmDataGaussDiagPrivate * const self    = ncm_data_gauss_diag_get_instance_private (diag);
-  NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (diag);
+  NcmDataGaussDiag *diag               = NCM_DATA_GAUSS_DIAG (data);
+  NcmDataGaussDiagPrivate * const self = ncm_data_gauss_diag_get_instance_private (diag);
 
   if (ncm_data_bootstrap_enabled (data))
-    g_error ("NcmDataGaussDiag: does not support bootstrap with least squares");
+    g_error ("_ncm_data_gauss_diag_inv_cov_Uf: data `%s': bootstrap is not supported with the Fisher matrix.",
+             ncm_data_peek_desc (data));
 
-  if (gauss_diag_class->sigma_func != NULL)
-    gauss_diag_class->sigma_func (diag, mset, self->sigma);
+  _ncm_data_gauss_diag_update_sigma (diag, mset);
 
   ncm_vector_div (f, self->sigma);
+
+  if (self->wmean)
+  {
+    NcmVector *w          = _ncm_data_gauss_diag_peek_weight (diag);
+    const gdouble sqrt_wt = sqrt (self->wt);
+    gdouble f_s           = 0.0;
+    guint i;
+
+    for (i = 0; i < self->np; i++)
+      f_s += ncm_vector_get (f, i) * sqrt (ncm_vector_get (w, i)) / sqrt_wt;
+
+    for (i = 0; i < self->np; i++)
+      ncm_vector_subfrom (f, i, f_s * sqrt (ncm_vector_get (w, i)) / sqrt_wt);
+  }
 }
 
 static void
@@ -544,6 +609,7 @@ _ncm_data_gauss_diag_set_size (NcmDataGaussDiag *diag, guint np)
     ncm_vector_clear (&self->v);
     ncm_vector_clear (&self->sigma);
     ncm_vector_clear (&self->weight);
+    self->prepared_w = FALSE;
 
     ncm_data_set_init (data, FALSE);
   }

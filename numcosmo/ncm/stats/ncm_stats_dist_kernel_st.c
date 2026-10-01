@@ -26,51 +26,31 @@
 /**
  * NcmStatsDistKernelST:
  *
- * An N-dimensional Student's t kernel used to compute the kernel density estimation
- * function (KDE) in the #NcmStatsDist class.
+ * Multivariate Student's t kernel for #NcmStatsDist.
  *
- * This object defines a multivariate Student's t kernel to be used in the
- * #NcmStatsDistKernel class. Also, this object implements the virtual methods of the
- * #NcmStatsDistKernel class. For more information about the class, check the
- * documentation of #NcmStatsDistKernel. Below, there are some definitions of the
- * multivariate Student t distribution. For more information, check  [[On Sampling from
- * the Multivariate t Distribution, Marius
- * Hofert](https://journal.r-project.org/archive/2013/RJ-2013-033/RJ-2013-033.pdf)].
+ * The kernel of #NcmStatsDistKernel with $\nu$ degrees of freedom,
+ * \begin{equation}
+ * \bar{K}(\chi^2) = \left(1 + \frac{\chi^2}{\nu}\right)^{-(\nu + d)/2}, \qquad
+ * u(\Sigma) = \frac{\Gamma(\nu/2)\,(\nu\pi)^{d/2}}{\Gamma\left((\nu + d)/2\right)}\sqrt{\det\Sigma},
+ * \end{equation}
+ * that is, the density of the multivariate t distribution with location $\mu$ and scale
+ * matrix $h^2\Sigma$. For $\nu > 2$ its covariance is $\kappa h^2\Sigma$ with
+ * $\kappa = \nu/(\nu - 2)$; for $\nu \leq 2$ it has none. A sample is
+ * $x = \mu + h\sqrt{\nu/W}\,U^T z$, where $z$ holds $d$ independent standard normal
+ * variables, $W$ is a chi-squared variable with $\nu$ degrees of freedom and
+ * $\Sigma = U^T U$; see [On Sampling from the Multivariate t Distribution, Marius
+ * Hofert](https://journal.r-project.org/archive/2013/RJ-2013-033/RJ-2013-033.pdf). As
+ * $\nu \to \infty$ the kernel tends to #NcmStatsDistKernelGauss; for finite $\nu$ it
+ * decays as a power of $\chi^2$.
  *
- * The multivariate t distribution with $\nu$ degrees of freedom has its stochastic representation as
- * \begin{align}
- * \label{st}
- * \textbf{X} &= \mu + \sqrt{W} A \textbf{Z}
- * ,\end{align}
- * where $\textbf{Z}=(Z_1,Z_2,...,Z_n)$ is a $n$-dimension random vector whose components are independent normal random variables.
- * $A$ is a $d \times n$ matrix, $\mu$ is a $d$-dimensional random vector that defines the mean of the distribution and
- * $W=\frac{\nu}{\chi^2}$, being $\chi^2$ a random variable following a chi-squared distribution with $\nu > 0$ degrees of freedom.
- * The covariance matrix is defined as $\Sigma =  AA^T$, such that the distribution of $\textbf{X}$ is uniquely defined by its
- * covariance matrix and the mean vector, that is, $\textbf{X} \sim t(\mu, \Sigma)$.
- *
- * Assuming that $n=d$, the probability density function (pdf) of $\textbf{X}$ is
- * \begin{align}
- * \label{pdfst}
- * f_{\textbf{X}(x)} = \frac{\Gamma\left(\frac{\nu + d}{2}\right)}{\Gamma\left(\frac{\nu}{2}\right)(2\pi)^{\frac{d}{2}} \sqrt{det \Sigma}} \left[1+\frac{(x-\mu)^T \Sigma^-1 (x-\mu)}{\nu}\right]^{-\frac{\nu + d}{2}}
- * ,\end{align}
- * considering that the covariance matrix is positive definite and $x \in \mathbb{R^d}$. Also, the covariance matrix can be
- * decomposed in its Cholesky decomposition,
- * \begin{align}
- * \Sigma = LL^t
- * ,\end{align}
- * where $L$ is a triangular matrix with positive definite values. This decomposition can facilitate some computational calculations.
- *
- * The $\sqrt{W}$ factor makes the multivariate t distribution more flexible than the multivariate Gaussian distribution,
- * especially on its tails. Therefore, for problems that require a smoother function, the multivariate t kernell shall be used.
- * Also, as seen in equation \eqref{st}, the Student's t distribtuion can be generated using normal random variables, which makes the
- * distribution easier to be generated. For the case $\nu \rightarrow \infty$, the multivariate t distribution becomes the Gaussian
- * distribution.
- *
- * This object uses the pdf given by equation \eqref{pdfst} to define a Student's t kernel, such that it can generate points distributed
- * by multivariate t distributions.
- *
- * The user must provide the following input value: @dim - ncm\_stats\_dist\_kernel\_st\_new(). Once this object is initialized,
- * the user can use the methods in the #NcmStatsDistKernel class with this object.
+ * The rule-of-thumb bandwidth is
+ * \begin{equation}
+ * h = \left[\frac{16 (\nu - 2)^2 (1 + d + \nu)(3 + d + \nu)}
+ * {(2 + d)(d + \nu)(2 + d + \nu)(d + 2\nu)(2 + d + 2\nu)\,n}\right]^{1/(d + 4)},
+ * \end{equation}
+ * which minimizes the asymptotic mean integrated squared error for $n$ points drawn from
+ * a t density with $\nu$ degrees of freedom and scale matrix $\Sigma$. It is evaluated
+ * at $\nu = 3$ when $\nu < 3$, and tends to the Gaussian rule as $\nu \to \infty$.
  *
  */
 
@@ -78,8 +58,6 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
-
-#include "gsl/gsl_sf_result.h"
 
 #include "ncm/stats/ncm_stats_dist_kernel_st.h"
 #include "ncm/stats/ncm_stats_vec.h"
@@ -132,7 +110,6 @@ _ncm_stats_dist_kernel_st_set_property (GObject *object, guint prop_id, const GV
 {
   NcmStatsDistKernelST *sdkst = NCM_STATS_DIST_KERNEL_ST (object);
 
-  /*NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);*/
   g_return_if_fail (NCM_IS_STATS_DIST_KERNEL_ST (object));
 
   switch (prop_id)
@@ -151,8 +128,6 @@ _ncm_stats_dist_kernel_st_get_property (GObject *object, guint prop_id, GValue *
 {
   NcmStatsDistKernelST *sdkst = NCM_STATS_DIST_KERNEL_ST (object);
 
-  /*NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);*/
-
   g_return_if_fail (NCM_IS_STATS_DIST_KERNEL_ST (object));
 
   switch (prop_id)
@@ -164,26 +139,6 @@ _ncm_stats_dist_kernel_st_get_property (GObject *object, guint prop_id, GValue *
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
   }
-}
-
-static void
-_ncm_stats_dist_kernel_st_dispose (GObject *object)
-{
-  /*NcmStatsDistKernelST *sdkst               = NCM_STATS_DIST_KERNEL_ST (object);*/
-  /*NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);*/
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_stats_dist_kernel_st_parent_class)->dispose (object);
-}
-
-static void
-_ncm_stats_dist_kernel_st_finalize (GObject *object)
-{
-  /* NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (object); */
-  /* NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst); */
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_stats_dist_kernel_st_parent_class)->finalize (object);
 }
 
 static gdouble _ncm_stats_dist_kernel_st_get_rot_bandwidth (NcmStatsDistKernel *sdk, const gdouble n);
@@ -202,16 +157,14 @@ ncm_stats_dist_kernel_st_class_init (NcmStatsDistKernelSTClass *klass)
 
   object_class->set_property = &_ncm_stats_dist_kernel_st_set_property;
   object_class->get_property = &_ncm_stats_dist_kernel_st_get_property;
-  object_class->dispose      = &_ncm_stats_dist_kernel_st_dispose;
-  object_class->finalize     = &_ncm_stats_dist_kernel_st_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_NU,
                                    g_param_spec_double ("nu",
                                                         NULL,
-                                                        "nu value of the function",
+                                                        "Degrees of freedom",
                                                         1.0, G_MAXDOUBLE, 3.0,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   sdk_class->get_rot_bandwidth = &_ncm_stats_dist_kernel_st_get_rot_bandwidth;
   sdk_class->get_var_factor    = &_ncm_stats_dist_kernel_st_get_var_factor;
@@ -278,7 +231,6 @@ _ncm_stats_dist_kernel_st_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble ch
 static void
 _ncm_stats_dist_kernel_st_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *Ku)
 {
-  /*NcmStatsDistKernelPrivate * const pself = ncm_stats_dist_kernel_get_instance_private (sdk);*/
   const guint n = ncm_vector_len (chi2);
   guint i;
 
@@ -379,12 +331,11 @@ _ncm_stats_dist_kernel_st_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp
 /**
  * ncm_stats_dist_kernel_st_new:
  * @dim: sample space dimension
- * @nu: Student-t parameter $\nu$
+ * @nu: degrees of freedom $\nu$
  *
- * Creates a new #NcmStatsDistKernelST object with sample dimension @dim
- * and $\nu$ = @nu.
+ * Creates a new #NcmStatsDistKernelST of dimension @dim with @nu degrees of freedom.
  *
- * Returns: a new #NcmStatsDistKernelST.
+ * Returns: (transfer full): a new #NcmStatsDistKernelST.
  */
 NcmStatsDistKernelST *
 ncm_stats_dist_kernel_st_new (const guint dim, const gdouble nu)
@@ -401,9 +352,9 @@ ncm_stats_dist_kernel_st_new (const guint dim, const gdouble nu)
  * ncm_stats_dist_kernel_st_ref:
  * @sdkst: a #NcmStatsDistKernelST
  *
- * Increase the reference of @stats_dist_kernel_st by one.
+ * Increases the reference count of @sdkst by one.
  *
- * Returns: (transfer full): @stats_dist_kernel_st.
+ * Returns: (transfer full): @sdkst.
  */
 NcmStatsDistKernelST *
 ncm_stats_dist_kernel_st_ref (NcmStatsDistKernelST *sdkst)
@@ -415,7 +366,7 @@ ncm_stats_dist_kernel_st_ref (NcmStatsDistKernelST *sdkst)
  * ncm_stats_dist_kernel_st_free:
  * @sdkst: a #NcmStatsDistKernelST
  *
- * Decrease the reference count of @stats_dist_kernel_st by one.
+ * Decreases the reference count of @sdkst by one.
  *
  */
 void
@@ -428,8 +379,7 @@ ncm_stats_dist_kernel_st_free (NcmStatsDistKernelST *sdkst)
  * ncm_stats_dist_kernel_st_clear:
  * @sdkst: a #NcmStatsDistKernelST
  *
- * Decrease the reference count of @stats_dist_kernel_st by one, and sets the pointer *@stats_dist_kernel_st to
- * NULL.
+ * Decreases the reference count of *@sdkst by one and sets *@sdkst to NULL.
  *
  */
 void
@@ -441,9 +391,9 @@ ncm_stats_dist_kernel_st_clear (NcmStatsDistKernelST **sdkst)
 /**
  * ncm_stats_dist_kernel_st_set_nu:
  * @sdkst: a #NcmStatsDistKernelST
- * @nu: the over-smooth factor
+ * @nu: degrees of freedom $\nu$
  *
- * Sets the over-smooth factor to @nu.
+ * Sets the degrees of freedom to @nu.
  *
  */
 void
@@ -458,7 +408,7 @@ ncm_stats_dist_kernel_st_set_nu (NcmStatsDistKernelST *sdkst, const gdouble nu)
  * ncm_stats_dist_kernel_st_get_nu:
  * @sdkst: a #NcmStatsDistKernelST
  *
- * Returns: the over-smooth factor.
+ * Returns: the degrees of freedom $\nu$.
  */
 gdouble
 ncm_stats_dist_kernel_st_get_nu (NcmStatsDistKernelST *sdkst)

@@ -26,32 +26,13 @@
 /**
  * NcmMPIJobTest:
  *
- * Test implementation of MPI job class.
+ * #NcmMPIJob for testing the MPI job machinery.
  *
- * This subclass of #NcmMPIJob serves as a targeted tool for testing MPI job
- * functionality. It emulates a one-second computational workload, receiving a vector of
- * doubles as input and returning a single double from the specified position. The
- * intentional sleep period aids in validating communication and synchronization aspects
- * of MPI-based parallel computing.
- *
- * Functionality Overview:
- *
- * - Receives a vector of doubles as input.
- * - Simulates a one-second computational workload with intentional sleep.
- * - Returns a single double from the specified position in the input vector.
- *
- * Key Aspects:
- *
- * - MPI Job Testing: Validates communication and synchronization in MPI-based parallel computing.
- *
- * - Infrastructure Validation: Tests effective task distribution, result collection, and synchronization.
- *
- * - Performance Assessment: Evaluates the handling of tasks with varying execution times.
- *
- * - Debugging and Profiling: Essential for identifying and addressing issues in parallel execution.
- *
- * In summary, this testing subclass provides a focused tool for developing, validating, and optimizing
- * MPI-based parallelized applications.
+ * The job holds a vector, #NcmMPIJobTest:vector. Its input is a one-entry vector
+ * holding an index, and its return a one-entry vector holding the entry of the job's
+ * vector at that index, the input rounded down. Since each output identifies the input
+ * it came from, a test can check that every result reaches the position of its input.
+ * Input and return messages travel in the storage of the input and return vectors.
  *
  */
 
@@ -62,10 +43,6 @@
 
 #include "ncm/mpi/ncm_mpi_job_test.h"
 
-#ifndef NUMCOSMO_GIR_SCAN
-#include <unistd.h>
-#endif /* NUMCOSMO_GIR_SCAN */
-
 #ifndef HAVE_MPI
 #define MPI_DATATYPE_NULL (0)
 #define MPI_DOUBLE (0)
@@ -74,8 +51,6 @@
 typedef struct _NcmMPIJobTestPrivate
 {
   NcmVector *vec;
-  NcmVector *ret;
-  NcmRNG *rng;
 } NcmMPIJobTestPrivate;
 
 enum
@@ -97,10 +72,6 @@ ncm_mpi_job_test_init (NcmMPIJobTest *mjt)
   NcmMPIJobTestPrivate * const self = ncm_mpi_job_test_get_instance_private (mjt);
 
   self->vec = NULL;
-  self->ret = NULL;
-  self->rng = ncm_rng_new (NULL);
-
-  ncm_rng_set_random_seed (self->rng, FALSE);
 }
 
 static void
@@ -149,8 +120,6 @@ _ncm_mpi_job_test_dispose (GObject *object)
   NcmMPIJobTestPrivate * const self = ncm_mpi_job_test_get_instance_private (mjt);
 
   ncm_vector_clear (&self->vec);
-  ncm_vector_clear (&self->ret);
-  ncm_rng_clear (&self->rng);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mpi_job_test_parent_class)->dispose (object);
@@ -201,7 +170,7 @@ ncm_mpi_job_test_class_init (NcmMPIJobTestClass *klass)
                                    PROP_VECTOR,
                                    g_param_spec_object ("vector",
                                                         NULL,
-                                                        "vector",
+                                                        "Vector of the returned values",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -286,13 +255,13 @@ _ncm_mpi_job_test_get_return_buffer (NcmMPIJob *mpi_job, gpointer ret)
 static void
 _ncm_mpi_job_test_destroy_input_buffer (NcmMPIJob *mpi_job, gpointer input, gpointer buf)
 {
-  g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (input)), ==, GPOINTER_TO_INT (buf));
+  g_assert_true (buf == ncm_vector_data (input));
 }
 
 static void
 _ncm_mpi_job_test_destroy_return_buffer (NcmMPIJob *mpi_job, gpointer ret, gpointer buf)
 {
-  g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (ret)), ==, GPOINTER_TO_INT (buf));
+  g_assert_true (buf == ncm_vector_data (ret));
 }
 
 static gpointer
@@ -310,13 +279,13 @@ _ncm_mpi_job_test_pack_return (NcmMPIJob *mpi_job, gpointer ret)
 static void
 _ncm_mpi_job_test_unpack_input (NcmMPIJob *mpi_job, gpointer buf, gpointer input)
 {
-  g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (input)), ==, GPOINTER_TO_INT (buf));
+  g_assert_true (buf == ncm_vector_data (input));
 }
 
 static void
 _ncm_mpi_job_test_unpack_return (NcmMPIJob *mpi_job, gpointer buf, gpointer ret)
 {
-  g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (ret)), ==, GPOINTER_TO_INT (buf));
+  g_assert_true (buf == ncm_vector_data (ret));
 }
 
 void
@@ -337,9 +306,10 @@ _ncm_mpi_job_test_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 /**
  * ncm_mpi_job_test_new:
  *
- * Creates a new #NcmMPIJobTest object.
+ * Creates a job without a vector; set one with ncm_mpi_job_test_set_rand_vector() or the
+ * #NcmMPIJobTest:vector property before running it.
  *
- * Returns: a new #NcmMPIJobTest.
+ * Returns: (transfer full): a new #NcmMPIJobTest.
  */
 NcmMPIJobTest *
 ncm_mpi_job_test_new (void)
@@ -394,10 +364,10 @@ ncm_mpi_job_test_clear (NcmMPIJobTest **mjt)
 /**
  * ncm_mpi_job_test_set_rand_vector:
  * @mjt: a #NcmMPIJobTest
- * @len: vector length
+ * @len: vector length, at least one
  * @rng: a #NcmRNG
  *
- * Sets a random vector of length @len in @mjt.
+ * Sets the job's vector to @len standard normal deviates drawn from @rng.
  *
  */
 void

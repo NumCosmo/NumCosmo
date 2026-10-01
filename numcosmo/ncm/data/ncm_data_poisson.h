@@ -74,6 +74,9 @@ gdouble ncm_data_poisson_get_sum (NcmDataPoisson *poisson);
 NcmVector *ncm_data_poisson_get_hist_vals (NcmDataPoisson *poisson);
 NcmVector *ncm_data_poisson_get_hist_means (NcmDataPoisson *poisson, NcmMSet *mset);
 
+NcmVector *ncm_data_poisson_get_bin_edges (NcmDataPoisson *poisson);
+void ncm_data_poisson_get_bin_range (NcmDataPoisson *poisson, const guint i, gdouble *lower, gdouble *upper);
+
 G_END_DECLS
 
 #endif /* _NCM_DATA_POISSON_H_ */

@@ -101,7 +101,7 @@ def test_create_esmcmc_apes_forwards_settings(tmp_path, mvnd_likelihood):
     assert walker.get_defensive_nu() == 5.0
     assert walker.get_vkde_points_per_dim() == 12.0
     assert walker.get_uniform_weights()
-    assert walker.get_auto_kernel()
+    assert walker.get_k_type() == InterpolationKernel.AUTO.genum
     assert walker.get_split_frac() == 0.4
     assert walker.get_cv_type() == CrossValidationMethod.SPLIT_M2LNP.genum
 

@@ -60,6 +60,17 @@ void test_ncm_model_param_names (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_test_finite (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_svparams_len (TestNcmModel *test, gconstpointer pdata);
 
+void test_ncm_model_reparam_current (void);
+void test_ncm_model_reparam_is_equal (void);
+void test_ncm_model_reparam_remove (void);
+void test_ncm_model_reparam_remove_subprocess (void);
+void test_ncm_model_set_default_desc (void);
+void test_ncm_model_id_by_type_error (void);
+void test_ncm_model_param_desc (void);
+void test_ncm_model_renamed_submodel_param (void);
+void test_ncm_model_vparam_set_vector_len (void);
+void test_ncm_model_vparam_set_vector_len_subprocess (void);
+
 #define TEST_NCM_MODEL_NTYPES 5
 
 gint
@@ -139,6 +150,17 @@ main (gint argc, gchar *argv[])
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_svparams_len, ccc[i][2]);
     g_free (d);
   }
+
+  g_test_add_func ("/ncm/model/reparam/current", &test_ncm_model_reparam_current);
+  g_test_add_func ("/ncm/model/reparam/is_equal", &test_ncm_model_reparam_is_equal);
+  g_test_add_func ("/ncm/model/reparam/remove", &test_ncm_model_reparam_remove);
+  g_test_add_func ("/ncm/model/reparam/remove/subprocess", &test_ncm_model_reparam_remove_subprocess);
+  g_test_add_func ("/ncm/model/set_default_desc", &test_ncm_model_set_default_desc);
+  g_test_add_func ("/ncm/model/id_by_type_error", &test_ncm_model_id_by_type_error);
+  g_test_add_func ("/ncm/model/param_desc", &test_ncm_model_param_desc);
+  g_test_add_func ("/ncm/model/renamed_submodel_param", &test_ncm_model_renamed_submodel_param);
+  g_test_add_func ("/ncm/model/vparam_set_vector_len", &test_ncm_model_vparam_set_vector_len);
+  g_test_add_func ("/ncm/model/vparam_set_vector_len/subprocess", &test_ncm_model_vparam_set_vector_len_subprocess);
 
   g_test_run ();
 }
@@ -867,5 +889,244 @@ test_ncm_model_svparams_len (TestNcmModel *test, gconstpointer pdata)
 
   g_assert_cmpuint (sparam_len, ==, test->sparam_len);
   g_assert_cmpuint (vparam_len, ==, test->vparam_len);
+}
+
+/* A NcmModelMVND of dimension 2 under p_n = T p with T = [[1, 0.5], [0, 1]]. */
+static NcmReparam *
+_test_ncm_model_reparam_linear (void)
+{
+  NcmMatrix *T = ncm_matrix_new (2, 2);
+  NcmVector *v = ncm_vector_new (2);
+  NcmReparam *reparam;
+
+  ncm_matrix_set_identity (T);
+  ncm_matrix_set (T, 0, 1, 0.5);
+  ncm_vector_set_zero (v);
+
+  reparam = NCM_REPARAM (ncm_reparam_linear_new (2, T, v));
+
+  ncm_matrix_free (T);
+  ncm_vector_free (v);
+
+  return reparam;
+}
+
+/* The param functions, the finite checks included, read the new parameters. */
+void
+test_ncm_model_reparam_current (void)
+{
+  NcmModel *model     = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmReparam *reparam = _test_ncm_model_reparam_linear ();
+
+  ncm_model_orig_param_set (model, 0, 1.0);
+  ncm_model_orig_param_set (model, 1, 2.0);
+  ncm_model_set_reparam (model, reparam, NULL);
+  g_assert_true (ncm_model_peek_reparam (model) == reparam);
+
+  ncm_assert_cmpdouble_e (ncm_model_param_get (model, 0), ==, 2.0, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (ncm_model_param_get (model, 1), ==, 2.0, 1.0e-15, 0.0);
+
+  ncm_model_param_set (model, 0, 3.0);
+  ncm_assert_cmpdouble_e (ncm_model_orig_param_get (model, 0), ==, 2.0, 1.0e-15, 0.0);
+
+  /* A non-finite new parameter set without update leaves the original ones finite. */
+  ncm_model_param_set0 (model, 1, GSL_NAN);
+  g_assert_false (ncm_model_param_finite (model, 1));
+  g_assert_true (ncm_model_param_finite (model, 0));
+  g_assert_false (ncm_model_params_finite (model));
+  g_assert_true (gsl_finite (ncm_model_orig_param_get (model, 1)));
+
+  ncm_reparam_free (reparam);
+  ncm_model_free (model);
+}
+
+/* is_equal is symmetric: a model with a reparametrization differs from one without. */
+void
+test_ncm_model_reparam_is_equal (void)
+{
+  NcmModel *a         = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmModel *b         = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmModel *c         = NCM_MODEL (ncm_model_mvnd_new (3));
+  NcmReparam *reparam = _test_ncm_model_reparam_linear ();
+
+  g_assert_true (ncm_model_is_equal (a, b));
+  g_assert_false (ncm_model_is_equal (a, c));
+
+  ncm_model_set_reparam (b, reparam, NULL);
+  g_assert_false (ncm_model_is_equal (a, b));
+  g_assert_false (ncm_model_is_equal (b, a));
+
+  ncm_model_set_reparam (a, reparam, NULL);
+  g_assert_true (ncm_model_is_equal (a, b));
+
+  ncm_reparam_free (reparam);
+  ncm_model_free (a);
+  ncm_model_free (b);
+  ncm_model_free (c);
+}
+
+/* NULL does nothing on a model without a reparametrization; removing one aborts. */
+void
+test_ncm_model_reparam_remove (void)
+{
+  NcmModel *model = NCM_MODEL (ncm_model_mvnd_new (2));
+
+  ncm_model_set_reparam (model, NULL, NULL);
+  g_assert_null (ncm_model_peek_reparam (model));
+  ncm_model_free (model);
+
+  g_test_trap_subprocess ("/ncm/model/reparam/remove/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*cannot be removed*");
+}
+
+void
+test_ncm_model_reparam_remove_subprocess (void)
+{
+  NcmModel *model     = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmReparam *reparam = _test_ncm_model_reparam_linear ();
+
+  ncm_model_set_reparam (model, reparam, NULL);
+  ncm_model_set_reparam (model, NULL, NULL);
+}
+
+/* Setting a parameter to its default does not mark its description as modified. */
+void
+test_ncm_model_set_default_desc (void)
+{
+  NcmModel *model = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmObjDictInt *modified;
+
+  ncm_model_orig_param_set (model, 0, 0.7);
+  ncm_model_param_set_default (model, 0);
+  ncm_assert_cmpdouble_e (ncm_model_orig_param_get (model, 0), ==, ncm_model_param_get (model, 0), 0.0, 0.0);
+
+  g_object_get (model, "sparam-array", &modified, NULL);
+  g_assert_cmpuint (ncm_obj_dict_int_len (modified), ==, 0);
+  ncm_obj_dict_int_unref (modified);
+
+  ncm_model_params_save_as_default (model);
+  g_object_get (model, "sparam-array", &modified, NULL);
+  g_assert_cmpuint (ncm_obj_dict_int_len (modified), ==, 2);
+  ncm_obj_dict_int_unref (modified);
+
+  ncm_model_free (model);
+}
+
+/* A type that is not a model is an error, with -1 as the id. */
+void
+test_ncm_model_id_by_type_error (void)
+{
+  GError *error = NULL;
+
+  g_assert_cmpint (ncm_model_id_by_type (G_TYPE_OBJECT, &error), ==, -1);
+  g_assert_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_INVALID_TYPE);
+  g_clear_error (&error);
+}
+
+static GValue *
+_test_ncm_model_gvalue_double (const gdouble x)
+{
+  GValue *value = g_new0 (GValue, 1);
+
+  g_value_init (value, G_TYPE_DOUBLE);
+  g_value_set_double (value, x);
+
+  return value;
+}
+
+static void
+_test_ncm_model_gvalue_free (gpointer data)
+{
+  g_value_unset (data);
+  g_free (data);
+}
+
+/* get_desc reports a parameter and set_desc changes it; unknown keys are one error. */
+void
+test_ncm_model_param_desc (void)
+{
+  NcmModel *model = NCM_MODEL (ncm_model_mvnd_new (2));
+  GError *error   = NULL;
+  GHashTable *desc, *set;
+
+  ncm_model_param_set (model, 1, 0.25);
+  desc = ncm_model_param_get_desc (model, "mu_1", &error);
+  g_assert_no_error (error);
+  g_assert_cmpstr (g_value_get_string (g_hash_table_lookup (desc, "name")), ==, "mu_1");
+  g_assert_cmpfloat (g_value_get_double (g_hash_table_lookup (desc, "value")), ==, 0.25);
+  g_assert_cmpfloat (g_value_get_double (g_hash_table_lookup (desc, "upper-bound")), ==, ncm_model_param_get_upper_bound (model, 1));
+  g_assert_false (g_value_get_boolean (g_hash_table_lookup (desc, "fit")));
+  g_hash_table_unref (desc);
+
+  set = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, _test_ncm_model_gvalue_free);
+  g_hash_table_insert (set, "scale", _test_ncm_model_gvalue_double (0.125));
+  g_hash_table_insert (set, "value", _test_ncm_model_gvalue_double (0.5));
+  ncm_model_param_set_desc (model, "mu_1", set, &error);
+  g_assert_no_error (error);
+  g_assert_cmpfloat (ncm_model_param_get_scale (model, 1), ==, 0.125);
+  g_assert_cmpfloat (ncm_model_param_get (model, 1), ==, 0.5);
+
+  g_hash_table_insert (set, "bogus", _test_ncm_model_gvalue_double (1.0));
+  g_hash_table_insert (set, "name", _test_ncm_model_gvalue_double (1.0));
+  ncm_model_param_set_desc (model, "mu_1", set, &error);
+  g_assert_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_KEY);
+  g_clear_error (&error);
+
+  g_hash_table_unref (set);
+  ncm_model_free (model);
+}
+
+/* An original name renamed by a submodel's reparametrization is an error, qualified or
+ * not, never an abort. */
+void
+test_ncm_model_renamed_submodel_param (void)
+{
+  NcHIReion *reion     = NC_HIREION (nc_hireion_camb_new ());
+  NcHICosmoDEXcdm *cde = nc_hicosmo_de_xcdm_new_full (reion, NULL, NULL);
+  NcmModel *cosmo      = NCM_MODEL (cde);
+  NcmReparam *tau      = NCM_REPARAM (nc_hireion_camb_reparam_tau_new (ncm_model_len (NCM_MODEL (reion))));
+  GError *error        = NULL;
+
+  ncm_model_set_reparam (NCM_MODEL (reion), tau, NULL);
+
+  ncm_model_param_get_by_name (cosmo, "reion:z_re", &error);
+  g_assert_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_CHANGED);
+  g_clear_error (&error);
+
+  ncm_model_param_get_by_name (cosmo, "z_re", &error);
+  g_assert_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_CHANGED);
+  g_clear_error (&error);
+
+  g_assert_true (gsl_finite (ncm_model_param_get_by_name (cosmo, "tau_reion", &error)));
+  g_assert_no_error (error);
+
+  ncm_reparam_free (tau);
+  ncm_model_free (cosmo);
+  nc_hireion_free (reion);
+}
+
+static void
+_test_ncm_model_vparam_set_vector_len (void)
+{
+  NcmModel *model = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmVector *v    = ncm_vector_new (3);
+
+  ncm_vector_set_zero (v);
+  ncm_model_orig_vparam_set_vector (model, 0, v);
+}
+
+void
+test_ncm_model_vparam_set_vector_len (void)
+{
+  g_test_trap_subprocess ("/ncm/model/vparam_set_vector_len/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the vector has 3 elements but the vector parameter 0 has 2*");
+}
+
+void
+test_ncm_model_vparam_set_vector_len_subprocess (void)
+{
+  _test_ncm_model_vparam_set_vector_len ();
 }
 

@@ -480,14 +480,6 @@ omp_c = dependency(
   language: 'c',
   required: false,
 )
-omp_fortran = dependency(
-  'openmp',
-  language: 'fortran',
-  required: false,
-)
-if omp_fortran.found()
-  numcosmo_conf.set('HAVE_FORTRAN_OPENMP', true)
-endif
 
 #######################################################################################
 # Checking for GObject introspection:

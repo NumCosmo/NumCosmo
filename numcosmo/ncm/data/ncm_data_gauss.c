@@ -26,10 +26,21 @@
 /**
  * NcmDataGauss:
  *
- * Gaussian data -- inverse covariance provided.
+ * Gaussian data given by its inverse covariance.
  *
- * Gaussian distribution which uses the inverse covariance matrix as input.
+ * Abstract class for data $y$ of #NcmDataGauss:n-points points drawn from a normal
+ * distribution with mean $\mu$ and covariance $C$, given by its inverse $C^{-1}$
+ * (#NcmDataGauss:inv-cov); $-2\ln L = (\mu - y)^T C^{-1} (\mu - y)$, without the
+ * normalization. The Cholesky factor $C^{-1} = U^T U$ is computed when needed for
+ * resampling, least squares, bootstrap and the Fisher matrix.
  *
+ * Subclasses implement the mean_func virtual method, which fills the mean $\mu$
+ * given the models in a #NcmMSet. When $C^{-1}$ depends on the models, they also
+ * implement inv_cov_func, which updates the matrix passed to it and returns %TRUE
+ * when it changed it; the Cholesky factor is then recomputed before its next use.
+ * Setting #NcmDataGauss:inv-cov also invalidates the factor, while changing the
+ * matrix returned by ncm_data_gauss_peek_inv_cov() in place after the first
+ * evaluation does not: set the property instead.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -110,13 +121,6 @@ ncm_data_gauss_dispose (GObject *object)
 }
 
 static void
-ncm_data_gauss_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_data_gauss_parent_class)->finalize (object);
-}
-
-static void
 ncm_data_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmDataGauss *gauss              = NCM_DATA_GAUSS (object);
@@ -134,6 +138,7 @@ ncm_data_gauss_set_property (GObject *object, guint prop_id, const GValue *value
       break;
     case PROP_INV_COV:
       ncm_matrix_substitute (&self->inv_cov, g_value_get_object (value), TRUE);
+      self->prepared_LLT = FALSE;
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -190,8 +195,13 @@ ncm_data_gauss_class_init (NcmDataGaussClass *klass)
   object_class->set_property = &ncm_data_gauss_set_property;
   object_class->get_property = &ncm_data_gauss_get_property;
   object_class->dispose      = &ncm_data_gauss_dispose;
-  object_class->finalize     = &ncm_data_gauss_finalize;
 
+  /**
+   * NcmDataGauss:n-points:
+   *
+   * The number of data points; changing it reallocates the data and marks it not
+   * initialized.
+   */
   g_object_class_install_property (object_class,
                                    PROP_NPOINTS,
                                    g_param_spec_uint ("n-points",
@@ -200,6 +210,11 @@ ncm_data_gauss_class_init (NcmDataGaussClass *klass)
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmDataGauss:mean:
+   *
+   * The data vector $y$.
+   */
   g_object_class_install_property (object_class,
                                    PROP_MEAN,
                                    g_param_spec_object ("mean",
@@ -208,6 +223,11 @@ ncm_data_gauss_class_init (NcmDataGaussClass *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmDataGauss:inv-cov:
+   *
+   * The inverse covariance $C^{-1}$; setting it invalidates its Cholesky factor.
+   */
   g_object_class_install_property (object_class,
                                    PROP_INV_COV,
                                    g_param_spec_object ("inv-cov",
@@ -243,24 +263,47 @@ _ncm_data_gauss_get_length (NcmData *data)
   return self->np;
 }
 
+/*
+ * Calls inv_cov_func, if any; when it changed the inverse covariance, the Cholesky
+ * factor is marked stale. Every path that may update the matrix goes through here, so
+ * no path consumes the change without the factor noticing.
+ */
 static void
-_ncm_data_gauss_prepare_LLT (NcmData *data)
+_ncm_data_gauss_update_inv_cov (NcmDataGauss *gauss, NcmMSet *mset)
 {
-  NcmDataGauss *gauss              = NCM_DATA_GAUSS (data);
   NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
-  gint ret;
+  NcmDataGaussClass *gauss_class   = NCM_DATA_GAUSS_GET_CLASS (gauss);
 
-  if (self->LLT == NULL)
-    self->LLT = ncm_matrix_dup (self->inv_cov);
-  else
-    ncm_matrix_memcpy (self->LLT, self->inv_cov);
+  if ((gauss_class->inv_cov_func != NULL) && gauss_class->inv_cov_func (gauss, mset, self->inv_cov))
+    self->prepared_LLT = FALSE;
+}
 
-  ret = ncm_matrix_cholesky_decomp (self->LLT, 'U');
+/* The upper Cholesky factor U of C^{-1} = U^T U, recomputed when stale. */
+static NcmMatrix *
+_ncm_data_gauss_peek_LLT (NcmDataGauss *gauss)
+{
+  NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
 
-  if (ret != 0)
-    g_error ("_ncm_data_gauss_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret);
+  if (!self->prepared_LLT)
+  {
+    gint ret;
 
-  self->prepared_LLT = TRUE;
+    if (self->LLT == NULL)
+      self->LLT = ncm_matrix_dup (self->inv_cov);
+    else
+      ncm_matrix_memcpy (self->LLT, self->inv_cov);
+
+    ret = ncm_matrix_cholesky_decomp (self->LLT, 'U');
+
+    if (ret != 0)
+      g_error ("_ncm_data_gauss_peek_LLT: data `%s': the inverse covariance is not positive "
+               "definite (Cholesky decomposition returned %d).",
+               ncm_data_peek_desc (NCM_DATA (gauss)), ret);
+
+    self->prepared_LLT = TRUE;
+  }
+
+  return self->LLT;
 }
 
 static void
@@ -269,15 +312,12 @@ _ncm_data_gauss_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   NcmDataGauss *gauss              = NCM_DATA_GAUSS (data);
   NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
   NcmDataGaussClass *gauss_class   = NCM_DATA_GAUSS_GET_CLASS (gauss);
-  gboolean inv_cov_update          = FALSE;
+  NcmMatrix *LLT;
   gint ret;
   guint i;
 
-  if (gauss_class->inv_cov_func != NULL)
-    inv_cov_update = gauss_class->inv_cov_func (gauss, mset, self->inv_cov);
-
-  if (inv_cov_update || !self->prepared_LLT)
-    _ncm_data_gauss_prepare_LLT (data);
+  _ncm_data_gauss_update_inv_cov (gauss, mset);
+  LLT = _ncm_data_gauss_peek_LLT (gauss);
 
   ncm_rng_lock (rng);
 
@@ -292,7 +332,7 @@ _ncm_data_gauss_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
   /* CblasLower, CblasTrans => CblasUpper, CblasNoTrans */
   ret = gsl_blas_dtrsv (CblasUpper, CblasNoTrans, CblasNonUnit,
-                        ncm_matrix_gsl (self->LLT), ncm_vector_gsl (self->v));
+                        ncm_matrix_gsl (LLT), ncm_vector_gsl (self->v));
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_resample", ret);
 
   gauss_class->mean_func (gauss, mset, self->y);
@@ -306,7 +346,6 @@ _ncm_data_gauss_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   NcmDataGauss *gauss              = NCM_DATA_GAUSS (data);
   NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
   NcmDataGaussClass *gauss_class   = NCM_DATA_GAUSS_GET_CLASS (gauss);
-  gboolean inv_cov_update          = FALSE;
   guint i, j;
 
   *m2lnL = 0.0;
@@ -314,8 +353,7 @@ _ncm_data_gauss_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   gauss_class->mean_func (gauss, mset, self->v);
   ncm_vector_sub (self->v, self->y);
 
-  if (gauss_class->inv_cov_func != NULL)
-    inv_cov_update = gauss_class->inv_cov_func (gauss, mset, self->inv_cov);
+  _ncm_data_gauss_update_inv_cov (gauss, mset);
 
   if (!ncm_data_bootstrap_enabled (data))
   {
@@ -334,15 +372,13 @@ _ncm_data_gauss_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   {
     NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
     const guint bsize    = ncm_bootstrap_get_bsize (bstrap);
+    NcmMatrix *LLT       = _ncm_data_gauss_peek_LLT (gauss);
     gint ret;
-
-    if (inv_cov_update || !self->prepared_LLT)
-      _ncm_data_gauss_prepare_LLT (data);
 
     /* CblasLower, CblasTrans => CblasUpper, CblasNoTrans */
     ret = gsl_blas_dtrmv (CblasUpper, CblasNoTrans, CblasNonUnit,
-                          ncm_matrix_gsl (self->LLT), ncm_vector_gsl (self->v));
-    NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_resample", ret);
+                          ncm_matrix_gsl (LLT), ncm_vector_gsl (self->v));
+    NCM_TEST_GSL_RESULT ("_ncm_data_gauss_m2lnL_val", ret);
 
     for (i = 0; i < bsize; i++)
     {
@@ -360,24 +396,20 @@ _ncm_data_gauss_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
   NcmDataGauss *gauss              = NCM_DATA_GAUSS (data);
   NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
   NcmDataGaussClass *gauss_class   = NCM_DATA_GAUSS_GET_CLASS (gauss);
-  gboolean inv_cov_update          = FALSE;
   gint ret;
+
+  if (ncm_data_bootstrap_enabled (data))
+    g_error ("_ncm_data_gauss_leastsquares_f: data `%s': bootstrap is not supported with least squares.",
+             ncm_data_peek_desc (data));
 
   gauss_class->mean_func (gauss, mset, v);
   ncm_vector_sub (v, self->y);
 
-  if (ncm_data_bootstrap_enabled (data))
-    g_error ("NcmDataGauss: does not support bootstrap with least squares");
-
-  if (gauss_class->inv_cov_func != NULL)
-    inv_cov_update = gauss_class->inv_cov_func (gauss, mset, self->inv_cov);
-
-  if (inv_cov_update || !self->prepared_LLT)
-    _ncm_data_gauss_prepare_LLT (data);
+  _ncm_data_gauss_update_inv_cov (gauss, mset);
 
   /* CblasLower, CblasTrans => CblasUpper, CblasNoTrans */
   ret = gsl_blas_dtrmv (CblasUpper, CblasNoTrans, CblasNonUnit,
-                        ncm_matrix_gsl (self->LLT), ncm_vector_gsl (v));
+                        ncm_matrix_gsl (_ncm_data_gauss_peek_LLT (gauss)), ncm_vector_gsl (v));
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_leastsquares_f", ret);
 }
 
@@ -393,20 +425,13 @@ _ncm_data_gauss_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu)
 static void
 _ncm_data_gauss_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
 {
-  NcmDataGauss *gauss              = NCM_DATA_GAUSS (data);
-  NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
-  NcmDataGaussClass *gauss_class   = NCM_DATA_GAUSS_GET_CLASS (gauss);
-  gboolean inv_cov_update          = FALSE;
+  NcmDataGauss *gauss = NCM_DATA_GAUSS (data);
   gint ret;
 
-  if (gauss_class->inv_cov_func != NULL)
-    inv_cov_update = gauss_class->inv_cov_func (gauss, mset, self->inv_cov);
-
-  if (inv_cov_update || !self->prepared_LLT)
-    _ncm_data_gauss_prepare_LLT (data);
+  _ncm_data_gauss_update_inv_cov (gauss, mset);
 
   ret = gsl_blas_dtrmm (CblasRight, CblasUpper, CblasTrans, CblasNonUnit,
-                        1.0, ncm_matrix_gsl (self->LLT), ncm_matrix_gsl (H));
+                        1.0, ncm_matrix_gsl (_ncm_data_gauss_peek_LLT (gauss)), ncm_matrix_gsl (H));
 
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_inv_cov_UH", ret);
 }
@@ -414,20 +439,13 @@ _ncm_data_gauss_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
 static void
 _ncm_data_gauss_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f)
 {
-  NcmDataGauss *gauss              = NCM_DATA_GAUSS (data);
-  NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
-  NcmDataGaussClass *gauss_class   = NCM_DATA_GAUSS_GET_CLASS (gauss);
-  gboolean inv_cov_update          = FALSE;
+  NcmDataGauss *gauss = NCM_DATA_GAUSS (data);
   gint ret;
 
-  if (gauss_class->inv_cov_func != NULL)
-    inv_cov_update = gauss_class->inv_cov_func (gauss, mset, self->inv_cov);
-
-  if (inv_cov_update || !self->prepared_LLT)
-    _ncm_data_gauss_prepare_LLT (data);
+  _ncm_data_gauss_update_inv_cov (gauss, mset);
 
   ret = gsl_blas_dtrmv (CblasUpper, CblasNoTrans, CblasNonUnit,
-                        ncm_matrix_gsl (self->LLT), ncm_vector_gsl (f));
+                        ncm_matrix_gsl (_ncm_data_gauss_peek_LLT (gauss)), ncm_vector_gsl (f));
 
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_inv_cov_Uf", ret);
 }
@@ -445,6 +463,7 @@ _ncm_data_gauss_set_size (NcmDataGauss *gauss, guint np)
     ncm_vector_clear (&self->v);
     ncm_matrix_clear (&self->inv_cov);
     ncm_matrix_clear (&self->LLT);
+    self->prepared_LLT = FALSE;
 
     ncm_data_set_init (data, FALSE);
   }

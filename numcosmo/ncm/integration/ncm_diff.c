@@ -792,25 +792,10 @@ _ncm_diff_rf_Hessian_step (NcmDiff *diff, NcmDiffFuncNto1 f, gpointer user_data,
   df[0] = ((fval + f_hxhy) - (f_hx + f_hy)) / (hx * hy);
 
   {
-    const gdouble s1 = fval + f_hxhy;
-    const gdouble s2 = f_hx + f_hy;
+    /* Absolute round-off error of df[0], as in the other step algorithms. */
+    const gdouble max_s12 = GSL_MAX (fabs (fval + f_hxhy), fabs (f_hx + f_hy));
 
-    const gdouble d1 = s1 - s2;
-
-
-    if (G_UNLIKELY (d1 == 0.0))
-    {
-      roff[0] = 1.0;
-    }
-    else
-    {
-      const gdouble abs_s1  = fabs (s1);
-      const gdouble abs_s2  = fabs (s2);
-      const gdouble max_s12 = GSL_MAX (abs_s1, abs_s2);
-
-
-      roff[0] = fabs (max_s12 * GSL_DBL_EPSILON / d1);
-    }
+    roff[0] = max_s12 * GSL_DBL_EPSILON / fabs (hx * hy);
   }
 }
 

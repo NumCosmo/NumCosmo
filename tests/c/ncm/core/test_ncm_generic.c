@@ -47,6 +47,7 @@ void test_ncm_sbessel_integrator_gl_basic (void);
 void test_ncm_sbessel_integrator_levin_basic (void);
 void test_ncm_fftlog_sbessel_j_basic (void);
 void test_ncm_bootstrap_basic (void);
+void test_ncm_stats_dist2d_spline_basic (void);
 void test_ncm_stats_vec_basic (void);
 void test_ncm_stats_acorr_basic (void);
 void test_ncm_mpi_job_basic (void);
@@ -141,6 +142,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sbessel_integrator_levin/basic", test_ncm_sbessel_integrator_levin_basic);
   g_test_add_func ("/ncm/fftlog_sbessel_j/basic", test_ncm_fftlog_sbessel_j_basic);
   g_test_add_func ("/ncm/bootstrap/basic", test_ncm_bootstrap_basic);
+  g_test_add_func ("/ncm/stats_dist2d_spline/basic", test_ncm_stats_dist2d_spline_basic);
   g_test_add_func ("/ncm/stats_vec/basic", test_ncm_stats_vec_basic);
   g_test_add_func ("/ncm/stats_acorr/basic", test_ncm_stats_acorr_basic);
   g_test_add_func ("/ncm/mpi_job/basic", test_ncm_mpi_job_basic);
@@ -325,6 +327,23 @@ test_ncm_bootstrap_basic (void)
   g_assert_true (NCM_IS_BOOTSTRAP (bstrap));
 
   NCM_TEST_FREE (ncm_bootstrap_free, bstrap);
+}
+
+void
+test_ncm_stats_dist2d_spline_basic (void)
+{
+  NcmSpline2d *m2lnp  = ncm_spline2d_bicubic_notaknot_new ();
+  NcmStatsDist2d *sd2 = NCM_STATS_DIST2D (ncm_stats_dist2d_spline_new (m2lnp));
+  NcmStatsDist2d *sd2_2;
+
+  g_assert_true (NCM_IS_STATS_DIST2D_SPLINE (sd2));
+
+  sd2_2 = ncm_stats_dist2d_ref (sd2);
+  ncm_stats_dist2d_clear (&sd2_2);
+  g_assert_true (sd2_2 == NULL);
+
+  ncm_spline2d_free (m2lnp);
+  NCM_TEST_FREE (ncm_stats_dist2d_free, sd2);
 }
 
 void

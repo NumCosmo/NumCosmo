@@ -40,9 +40,9 @@ G_DECLARE_FINAL_TYPE (NcmModelMVND, ncm_model_mvnd, NCM, MODEL_MVND, NcmModel)
 
 /**
  * NcmModelMVNDVParams:
- * @NCM_MODEL_MVND_MEAN: Mean vector
+ * @NCM_MODEL_MVND_MEAN: the mean vector $\mu$
  *
- * MVND model parameters
+ * Vector parameters of #NcmModelMVND.
  *
  */
 typedef enum _NcmModelMVNDVParams /*< prefix=NCM_MODEL_MVND >*/

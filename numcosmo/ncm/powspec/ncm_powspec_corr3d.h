@@ -38,7 +38,7 @@ G_BEGIN_DECLS
 
 #define NCM_TYPE_POWSPEC_CORR3D (ncm_powspec_corr3d_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcmPowspecCorr3d, ncm_powspec_corr3d, NCM, POWSPEC_CORR3D, NcmPowspec)
+G_DECLARE_FINAL_TYPE (NcmPowspecCorr3d, ncm_powspec_corr3d, NCM, POWSPEC_CORR3D, GObject)
 
 NcmPowspecCorr3d *ncm_powspec_corr3d_new (NcmPowspec * ps);
 NcmPowspecCorr3d *ncm_powspec_corr3d_ref (NcmPowspecCorr3d *psc);
@@ -67,7 +67,7 @@ gdouble ncm_powspec_corr3d_get_r_max (NcmPowspecCorr3d *psc);
 gdouble ncm_powspec_corr3d_eval_xi_lnr (NcmPowspecCorr3d *psc, const gdouble z, const gdouble lnr);
 gdouble ncm_powspec_corr3d_eval_xi (NcmPowspecCorr3d *psc, const gdouble z, const gdouble r);
 
-#define NCM_POWSPEC_CORR3D_DEFAULT_SIZE (200)
+#define NCM_POWSPEC_CORR3D_DEFAULT_SIZE (100)
 
 G_END_DECLS
 

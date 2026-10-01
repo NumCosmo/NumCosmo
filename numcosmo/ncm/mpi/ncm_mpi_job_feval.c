@@ -26,17 +26,15 @@
 /**
  * NcmMPIJobFEval:
  *
- * MPI job object for evaluating fit steps.
+ * #NcmMPIJob that evaluates a fit's $-2\ln L$ at given points.
  *
- * This object is a subclass of #NcmMPIJob and is designed to implement an MPI job
- * for evaluating fit steps. It is employed by #NcmFit to parallelize the evaluation
- * of the posterior function. The job entails computing the posterior function and,
- * if applicable, additional functions (e.g., derived quantities) at a specified
- * point within the parameter space.
+ * The input is a vector of free parameters. The job sets them in its #NcmFit and returns
+ * a vector holding the fit's $-2\ln L$ there, priors included, and, when a function
+ * array is set, the value of each function there: $1 + n_\mathrm{func}$ entries. The
+ * functions must be scalar and take no arguments.
  *
- * The MPI job is implemented as a function that takes a vector of parameters as input
- * and produces a vector of values as output. The first value represents the posterior
- * function's value, while the subsequent values correspond to those of additional functions.
+ * The number of free parameters is read when the job is constructed. Input and return
+ * messages travel in the storage of the input and return vectors.
  *
  */
 
@@ -66,7 +64,6 @@ enum
   PROP_0,
   PROP_FIT,
   PROP_FUNC_ARRAY,
-  PROP_JOB_TYPE,
 };
 
 struct _NcmMPIJobFEval
@@ -329,13 +326,13 @@ _ncm_mpi_job_feval_get_return_buffer (NcmMPIJob *mpi_job, gpointer ret)
 static void
 _ncm_mpi_job_feval_destroy_input_buffer (NcmMPIJob *mpi_job, gpointer input, gpointer buf)
 {
-  g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (input)), ==, GPOINTER_TO_INT (buf));
+  g_assert_true (buf == ncm_vector_data (input));
 }
 
 static void
 _ncm_mpi_job_feval_destroy_return_buffer (NcmMPIJob *mpi_job, gpointer ret, gpointer buf)
 {
-  g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (ret)), ==, GPOINTER_TO_INT (buf));
+  g_assert_true (buf == ncm_vector_data (ret));
 }
 
 static gpointer
@@ -353,13 +350,13 @@ _ncm_mpi_job_feval_pack_return (NcmMPIJob *mpi_job, gpointer ret)
 static void
 _ncm_mpi_job_feval_unpack_input (NcmMPIJob *mpi_job, gpointer buf, gpointer input)
 {
-  g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (input)), ==, GPOINTER_TO_INT (buf));
+  g_assert_true (buf == ncm_vector_data (input));
 }
 
 static void
 _ncm_mpi_job_feval_unpack_return (NcmMPIJob *mpi_job, gpointer buf, gpointer ret)
 {
-  g_assert_cmphex (GPOINTER_TO_INT (ncm_vector_data (ret)), ==, GPOINTER_TO_INT (buf));
+  g_assert_true (buf == ncm_vector_data (ret));
 }
 
 static void
@@ -390,11 +387,12 @@ _ncm_mpi_job_feval_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 /**
  * ncm_mpi_job_feval_new:
  * @fit: a #NcmFit
- * @func_oa: (nullable): a #NcmObjArray
+ * @func_oa: (nullable): a #NcmObjArray of scalar #NcmMSetFunc without arguments
  *
- * Creates a new #NcmMPIJobFEval object.
+ * Creates a job that evaluates the $-2\ln L$ of @fit and the functions in @func_oa at
+ * the points it receives.
  *
- * Returns: a new #NcmMPIJobFEval.
+ * Returns: (transfer full): a new #NcmMPIJobFEval.
  */
 NcmMPIJobFEval *
 ncm_mpi_job_feval_new (NcmFit *fit, NcmObjArray *func_oa)

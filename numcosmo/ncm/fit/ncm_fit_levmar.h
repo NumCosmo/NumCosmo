@@ -39,10 +39,10 @@ G_DECLARE_FINAL_TYPE (NcmFitLevmar, ncm_fit_levmar, NCM, FIT_LEVMAR, NcmFit)
 
 /**
  * NcmFitLevmarAlgos:
- * @NCM_FIT_LEVMAR_DER: with external derivatives.
- * @NCM_FIT_LEVMAR_DIF: with internal derivatives (inside levmar).
- * @NCM_FIT_LEVMAR_BC_DER: with box constraints and external derivatives.
- * @NCM_FIT_LEVMAR_BC_DIF: with box constraints and internal derivatives (inside levmar).
+ * @NCM_FIT_LEVMAR_DER: Jacobian from ncm_fit_ls_J()
+ * @NCM_FIT_LEVMAR_DIF: Jacobian from levmar's finite differences
+ * @NCM_FIT_LEVMAR_BC_DER: parameter bounds, Jacobian from ncm_fit_ls_J()
+ * @NCM_FIT_LEVMAR_BC_DIF: parameter bounds, Jacobian from levmar's finite differences
  *
  * Levmar algorithms.
  *

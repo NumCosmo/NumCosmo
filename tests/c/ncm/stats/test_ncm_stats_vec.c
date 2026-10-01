@@ -170,6 +170,13 @@ test_ncm_stats_vec_diag_free (TestNcmStatsVec *test, gconstpointer pdata)
   NCM_TEST_FREE (ncm_stats_vec_free, test->svec);
 }
 
+static void test_ncm_stats_vec_reset_mean (void);
+static void test_ncm_stats_vec_strided (void);
+static void test_ncm_stats_vec_quantile_replay (void);
+static void test_ncm_stats_vec_bad_length_subprocess (void);
+static void test_ncm_stats_vec_cov_matrix_var_subprocess (void);
+static void test_ncm_stats_vec_input_traps (void);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -249,6 +256,12 @@ main (gint argc, gchar *argv[])
   }
 
   g_test_add_func ("/ncm/stats_vec/diag/discriminates", &test_ncm_stats_vec_diag_discriminates);
+  g_test_add_func ("/ncm/stats_vec/reset_mean", &test_ncm_stats_vec_reset_mean);
+  g_test_add_func ("/ncm/stats_vec/strided", &test_ncm_stats_vec_strided);
+  g_test_add_func ("/ncm/stats_vec/quantile_replay", &test_ncm_stats_vec_quantile_replay);
+  g_test_add_func ("/ncm/stats_vec/input_traps", &test_ncm_stats_vec_input_traps);
+  g_test_add_func ("/ncm/stats_vec/input_traps/bad_length/subprocess", &test_ncm_stats_vec_bad_length_subprocess);
+  g_test_add_func ("/ncm/stats_vec/input_traps/cov_matrix_var/subprocess", &test_ncm_stats_vec_cov_matrix_var_subprocess);
 
   g_test_add ("/ncm/stats_vec/traps", TestNcmStatsVec, NULL,
               &test_ncm_stats_vec_var_new,
@@ -509,7 +522,7 @@ test_ncm_stats_vec_cov_robust_test (TestNcmStatsVec *test, gconstpointer pdata)
     ncm_stats_vec_update (test->svec);
   }
 
-  for (i = 0; i < (gint) (test->ntests * 0.2); i++)
+  for (i = 0; i < (guint) (test->ntests * 0.2); i++)
   {
     gdouble x_0 = 0.0;
     guint j;
@@ -791,5 +804,122 @@ test_ncm_stats_vec_diag_const_break (TestNcmStatsVec *test, gconstpointer pdata)
      * to pin down from the outside. */
     (void) tc;
   }
+}
+
+/* A reset forgets the mean: one row of 0.3 after rows of 1e17 has mean 0.3 exactly */
+static void
+test_ncm_stats_vec_reset_mean (void)
+{
+  NcmStatsVec *svec = ncm_stats_vec_new (1, NCM_STATS_VEC_COV, FALSE);
+  NcmVector *x      = ncm_vector_new (1);
+
+  ncm_vector_set (x, 0, 1.0e17);
+  ncm_stats_vec_append (svec, x, TRUE);
+  ncm_stats_vec_reset (svec, TRUE);
+  g_assert_cmpfloat (ncm_stats_vec_get_mean (svec, 0), ==, 0.0);
+
+  ncm_vector_set (x, 0, 0.3);
+  ncm_stats_vec_append (svec, x, TRUE);
+  g_assert_cmpfloat (ncm_stats_vec_get_mean (svec, 0), ==, 0.3);
+
+  ncm_vector_free (x);
+  ncm_stats_vec_free (svec);
+}
+
+/* A strided vector, a matrix column, is read with its stride, copied or referenced */
+static void
+test_ncm_stats_vec_strided (void)
+{
+  NcmMatrix *m = ncm_matrix_new (3, 2);
+  guint i, j, dup;
+
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 2; j++)
+      ncm_matrix_set (m, i, j, 10.0 * i + j);
+
+  for (dup = 0; dup < 2; dup++)
+  {
+    NcmStatsVec *svec = ncm_stats_vec_new (3, NCM_STATS_VEC_COV, TRUE);
+    NcmVector *col    = ncm_matrix_get_col (m, 1);
+
+    g_assert_cmpuint (ncm_vector_stride (col), ==, 2);
+
+    ncm_stats_vec_append (svec, col, dup);
+    ncm_stats_vec_prepend (svec, col, dup);
+    ncm_stats_vec_enable_quantile (svec, 0.5);
+
+    for (i = 0; i < 3; i++)
+    {
+      g_assert_cmpfloat (ncm_stats_vec_get_mean (svec, i), ==, 10.0 * i + 1.0);
+      g_assert_cmpfloat (ncm_vector_get (ncm_stats_vec_peek_row (svec, 0), i), ==, 10.0 * i + 1.0);
+      g_assert_cmpfloat (ncm_stats_vec_get_quantile (svec, i), ==, 10.0 * i + 1.0);
+    }
+
+    ncm_vector_free (col);
+    ncm_stats_vec_free (svec);
+  }
+
+  ncm_matrix_free (m);
+}
+
+/* Enabling the quantiles late replays the saved rows except those of zero weight */
+static void
+test_ncm_stats_vec_quantile_replay (void)
+{
+  NcmStatsVec *late  = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, TRUE);
+  NcmStatsVec *early = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, TRUE);
+  NcmVector *x       = ncm_vector_new (1);
+  guint i;
+
+  ncm_stats_vec_enable_quantile (early, 0.5);
+
+  for (i = 1; i <= 11; i++)
+  {
+    const gdouble w = (i <= 5) ? 1.0 : 0.0;
+
+    ncm_vector_set (x, 0, (i <= 5) ? i : 100.0);
+    ncm_stats_vec_append_weight (late, x, w, TRUE);
+    ncm_stats_vec_append_weight (early, x, w, TRUE);
+  }
+
+  ncm_stats_vec_enable_quantile (late, 0.5);
+
+  g_assert_cmpfloat (ncm_stats_vec_get_quantile (early, 0), ==, 3.0);
+  g_assert_cmpfloat (ncm_stats_vec_get_quantile (late, 0), ==, ncm_stats_vec_get_quantile (early, 0));
+
+  ncm_vector_free (x);
+  ncm_stats_vec_free (late);
+  ncm_stats_vec_free (early);
+}
+
+static void
+test_ncm_stats_vec_bad_length_subprocess (void)
+{
+  NcmStatsVec *svec = ncm_stats_vec_new (3, NCM_STATS_VEC_MEAN, FALSE);
+  NcmVector *x      = ncm_vector_new (2);
+
+  ncm_vector_set_zero (x);
+  ncm_stats_vec_append (svec, x, TRUE);
+}
+
+static void
+test_ncm_stats_vec_cov_matrix_var_subprocess (void)
+{
+  NcmStatsVec *svec = ncm_stats_vec_new (2, NCM_STATS_VEC_VAR, FALSE);
+  NcmMatrix *m      = ncm_matrix_new (2, 2);
+
+  ncm_stats_vec_get_cov_matrix (svec, m, 0);
+}
+
+static void
+test_ncm_stats_vec_input_traps (void)
+{
+  g_test_trap_subprocess ("/ncm/stats_vec/input_traps/bad_length/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*vector of length 2 added to a NcmStatsVec of length 3*");
+
+  g_test_trap_subprocess ("/ncm/stats_vec/input_traps/cov_matrix_var/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*does not compute the covariance*");
 }
 

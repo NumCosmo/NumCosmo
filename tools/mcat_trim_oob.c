@@ -43,7 +43,7 @@ main (gint argc, gchar *argv[])
   {
     { "catalog",        'c', 0, G_OPTION_ARG_STRING, &cat_filename,   "Input catalog filename.", NULL },
     { "out",            'o', 0, G_OPTION_ARG_STRING, &out,            "Output catalog.", NULL },
-    { NULL }
+    { NULL, 0, 0, 0, NULL, NULL, NULL }
   };
 
   ncm_cfg_init_full_ptr (&argc, &argv);

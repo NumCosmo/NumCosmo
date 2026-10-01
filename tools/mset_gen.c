@@ -159,7 +159,7 @@ main (gint argc, gchar *argv[])
     { "out",       'o', 0, G_OPTION_ARG_FILENAME,     &outfile,       "Filename where the mset should be written", NULL},
     { "comments",  'c', 0, G_OPTION_ARG_NONE,         &save_comments, "Whether comments must be saved in the .mset file.", NULL},
     { "overwrite", 'w', 0, G_OPTION_ARG_NONE,         &overwrite,     "Whether it should overwrite an already existing .mset file.", NULL},
-    { NULL }
+    { NULL, 0, 0, 0, NULL, NULL, NULL }
   };
 
   ncm_cfg_init_full_ptr (&argc, &argv);

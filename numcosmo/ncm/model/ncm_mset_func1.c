@@ -26,11 +26,17 @@
 /**
  * NcmMSetFunc1:
  *
- * Abstract class for arbitrary MSet functions - bindable version
+ * Abstract class for #NcmMSetFunc functions written in a language binding.
  *
- * This class is an abstract class for arbitrary MSet functions it behaves exactly like
- * #NcmMSetFunc but its virtual function is bindable.
+ * The eval virtual function of #NcmMSetFunc takes and fills plain C arrays whose
+ * lengths language bindings cannot know, so it cannot be overridden from them.
+ * This class implements it through the eval1 virtual function, which takes the
+ * arguments and returns the values as #GArray. In Python a subclass overrides
+ * `do_eval1` and sets the number of variables and values with the "nvariables"
+ * and "dimension" properties.
  *
+ * Evaluate the function with the #NcmMSetFunc methods, for instance
+ * ncm_mset_func_eval_array() or ncm_mset_func_eval0().
  */
 
 #ifdef HAVE_CONFIG_H
@@ -40,58 +46,54 @@
 
 #include "ncm/model/ncm_mset_func1.h"
 
-typedef struct _NcmMSetFunc1Private
-{
-  gint placeholder;
-} NcmMSetFunc1Private;
-
-G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetFunc1, ncm_mset_func1, NCM_TYPE_MSET_FUNC)
+G_DEFINE_ABSTRACT_TYPE (NcmMSetFunc1, ncm_mset_func1, NCM_TYPE_MSET_FUNC)
 
 static void
 ncm_mset_func1_init (NcmMSetFunc1 *f1)
 {
-  NcmMSetFunc1Private *self = ncm_mset_func1_get_instance_private (f1);
-
-  self->placeholder = 0;
 }
 
-static void
-_ncm_mset_func1_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_mset_func1_parent_class)->finalize (object);
-}
-
-void _ncm_mset_func1_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res);
+static void _ncm_mset_func1_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res);
+static GArray *_ncm_mset_func1_eval1 (NcmMSetFunc1 *f1, NcmMSet *mset, GArray *x);
 
 static void
 ncm_mset_func1_class_init (NcmMSetFunc1Class *klass)
 {
-  GObjectClass *object_class   = G_OBJECT_CLASS (klass);
   NcmMSetFuncClass *func_class = NCM_MSET_FUNC_CLASS (klass);
 
-  object_class->finalize = &_ncm_mset_func1_finalize;
-
-  func_class->eval = _ncm_mset_func1_eval;
+  func_class->eval = &_ncm_mset_func1_eval;
+  klass->eval1     = &_ncm_mset_func1_eval1;
 }
 
-void
+static void
 _ncm_mset_func1_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
-  GArray *x_a      = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmMSetFunc1 *f1 = NCM_MSET_FUNC1 (func);
   const guint nvar = ncm_mset_func_get_nvar (func);
   const guint dim  = ncm_mset_func_get_dim (func);
+  GArray *x_a      = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), nvar);
   GArray *res_a;
 
   g_array_append_vals (x_a, x, nvar);
 
-  res_a = ncm_mset_func1_eval1 (NCM_MSET_FUNC1 (func), mset, x_a);
+  res_a = NCM_MSET_FUNC1_GET_CLASS (f1)->eval1 (f1, mset, x_a);
 
-  g_assert_cmpint (res_a->len, ==, dim);
-  memcpy (res, res_a->data, res_a->len * sizeof (gdouble));
+  if ((res_a == NULL) || (res_a->len != dim))
+    g_error ("_ncm_mset_func1_eval: function `%s' has dimension %u, but eval1 returned %u value(s).",
+             ncm_mset_func_peek_name (func), dim, (res_a != NULL) ? res_a->len : 0);
+
+  memcpy (res, res_a->data, dim * sizeof (gdouble));
 
   g_array_unref (x_a);
   g_array_unref (res_a);
+}
+
+static GArray *
+_ncm_mset_func1_eval1 (NcmMSetFunc1 *f1, NcmMSet *mset, GArray *x)
+{
+  g_error ("_ncm_mset_func1_eval1: no eval1 function implemented.");
+
+  return NULL;
 }
 
 /**
@@ -133,21 +135,5 @@ void
 ncm_mset_func1_clear (NcmMSetFunc1 **f1)
 {
   g_clear_object (f1);
-}
-
-/**
- * ncm_mset_func1_eval1: (virtual eval1)
- * @mset: a #NcmMSet
- * @f1: a #NcmMSetFunc1
- * @x: (array) (element-type double): function argument
- *
- * Evaluates the function at @x.
- *
- * Returns: (array) (element-type double) (transfer full): function result
- */
-GArray *
-ncm_mset_func1_eval1 (NcmMSetFunc1 *f1, NcmMSet *mset, GArray *x)
-{
-  return NCM_MSET_FUNC1_GET_CLASS (f1)->eval1 (f1, mset, x);
 }
 

@@ -58,7 +58,7 @@ struct _NcmStatsDist2dClass
   gdouble (*inv_cond) (NcmStatsDist2d *sd2, const gdouble u, const gdouble xy);
   void (*prepare) (NcmStatsDist2d *sd2);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
+  /* Padding to allow adding up to 8 more virtual functions without breaking ABI. */
   gpointer padding[8];
 };
 
@@ -77,7 +77,7 @@ gdouble ncm_stats_dist2d_eval_cdf (NcmStatsDist2d *sd2, const gdouble x, const g
 
 gdouble ncm_stats_dist2d_eval_marginal_pdf (NcmStatsDist2d *sd2, const gdouble xy);
 gdouble ncm_stats_dist2d_eval_marginal_cdf (NcmStatsDist2d *sd2, const gdouble xy);
-gdouble ncm_stats_dist2d_eval_marginal_inv_cdf (NcmStatsDist2d *sd2, const gdouble xy);
+gdouble ncm_stats_dist2d_eval_marginal_inv_cdf (NcmStatsDist2d *sd2, const gdouble u);
 gdouble ncm_stats_dist2d_eval_inv_cond (NcmStatsDist2d *sd2, const gdouble u, const gdouble xy);
 
 G_END_DECLS
