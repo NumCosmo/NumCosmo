@@ -44,18 +44,17 @@
  * #NcmDiff:terr-pad) and the propagated round-off of the difference
  * quotients (padded by #NcmDiff:round-off-pad). Two orders agree when
  * they differ by less than a thousandth of the largest difference quotient
- * of the row, so a zero derivative converges like any other, and only
- * while the round-off of the row is below that level. Orders are increased
- * while any component still improves; the best value per component is
- * returned.
+ * of the row and the round-off of the row is below that level; a zero
+ * derivative then converges like any other. Orders are increased while any
+ * component still improves; the best value per component is returned.
  *
- * The initial step is #NcmDiff:ini-h times the coordinate (times one at a
- * zero coordinate). When it is far below the scale on which $f$ varies the
- * first quotients are cancellation noise, and the step is moved up: first
- * to the step a zero coordinate gets, then by factors of
- * #NcmDiff:richardson-step, up to a few factors above it. No point of the
- * domain is treated as an edge, so near one the caller chooses the forward
- * scheme, which steps to one side only, or a smaller #NcmDiff:ini-h.
+ * The initial step is #NcmDiff:ini-h times $|x|$, or #NcmDiff:ini-h at
+ * $x = 0$. When the round-off of the first difference quotients exceeds a
+ * thousandth of their size the step is increased: to #NcmDiff:ini-h first,
+ * then by factors of #NcmDiff:richardson-step, at most three above it.
+ * With a domain set by ncm_diff_set_domain() no point is evaluated outside
+ * it; without one every point is evaluated, including points across an
+ * edge of the domain of $f$.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -481,7 +480,7 @@ ncm_diff_new (void)
  * ncm_diff_ref:
  * @diff: a #NcmDiff
  *
- * Increase the reference of @diff by one.
+ * Increases the reference count of @diff by one.
  *
  * Returns: (transfer full): @diff.
  */
@@ -495,8 +494,7 @@ ncm_diff_ref (NcmDiff *diff)
  * ncm_diff_free:
  * @diff: a #NcmDiff
  *
- * Decrease the reference count of @diff by one.
- *
+ * Decreases the reference count of @diff by one.
  */
 void
 ncm_diff_free (NcmDiff *diff)
@@ -508,9 +506,7 @@ ncm_diff_free (NcmDiff *diff)
  * ncm_diff_clear:
  * @diff: a #NcmDiff
  *
- * Decrease the reference count of @diff by one, and sets the pointer *@diff to
- * NULL.
- *
+ * Decreases the reference count of @diff by one and sets *@diff to %NULL.
  */
 void
 ncm_diff_clear (NcmDiff **diff)
@@ -538,9 +534,9 @@ ncm_diff_get_max_order (NcmDiff *diff)
  * ncm_diff_get_richardson_step:
  * @diff: a #NcmDiff
  *
- * Gets the current Richardson step used in the tables.
+ * Gets the Richardson step used in the tables.
  *
- * Returns: the maximum order.
+ * Returns: the Richardson step.
  */
 gdouble
 ncm_diff_get_richardson_step (NcmDiff *diff)
@@ -604,7 +600,6 @@ ncm_diff_get_ini_h (NcmDiff *diff)
  * @maxorder: the new maximum order
  *
  * Sets the maximum order used when calculating the derivatives to @maxorder.
- *
  */
 void
 ncm_diff_set_max_order (NcmDiff *diff, const guint maxorder)
@@ -628,7 +623,6 @@ ncm_diff_set_max_order (NcmDiff *diff, const guint maxorder)
  * @rs: the new Richardson step
  *
  * Sets the Richardson step used in the tables.
- *
  */
 void
 ncm_diff_set_richardson_step (NcmDiff *diff, const gdouble rs)
@@ -652,7 +646,6 @@ ncm_diff_set_richardson_step (NcmDiff *diff, const gdouble rs)
  * @roff_pad: the new round-off padding
  *
  * Sets the round-off padding used in the calculations.
- *
  */
 void
 ncm_diff_set_round_off_pad (NcmDiff *diff, const gdouble roff_pad)
@@ -669,7 +662,6 @@ ncm_diff_set_round_off_pad (NcmDiff *diff, const gdouble roff_pad)
  * @terr_pad: the new truncation error padding
  *
  * Sets the truncation error padding used in the calculations.
- *
  */
 void
 ncm_diff_set_trunc_error_pad (NcmDiff *diff, const gdouble terr_pad)
@@ -686,7 +678,6 @@ ncm_diff_set_trunc_error_pad (NcmDiff *diff, const gdouble terr_pad)
  * @ini_h: the new initial step
  *
  * Sets the initial step used in the calculations.
- *
  */
 void
 ncm_diff_set_ini_h (NcmDiff *diff, const gdouble ini_h)
@@ -700,18 +691,15 @@ ncm_diff_set_ini_h (NcmDiff *diff, const gdouble ini_h)
 /**
  * ncm_diff_set_dual_series:
  * @diff: a #NcmDiff
- * @dual_series: whether to use two parallel extrapolation series
+ * @dual_series: whether to use two extrapolation series
  *
  * Enables or disables the dual-series scheme. When enabled, every derivative
- * runs two Richardson extrapolation series in parallel, started from the
- * initial steps $h_0$ and $h_0/\sqrt{r_s}$, where $r_s$ is
- * #NcmDiff:richardson-step. The disagreement between the two series at the
- * same order replaces the difference between consecutive orders as the
- * truncation error estimate, which is tighter and does not lag one order
- * behind. The returned derivative comes from the smaller-step series.
- *
- * The scheme roughly doubles the number of function evaluations.
- *
+ * runs two Richardson extrapolation series, started from the initial steps
+ * $h_0$ and $h_0/\sqrt{r_s}$, where $r_s$ is #NcmDiff:richardson-step. The
+ * difference between the two series at the same order is the truncation
+ * error estimate, in place of the difference between consecutive orders. The
+ * returned derivative comes from the smaller-step series. The scheme takes
+ * about twice the function evaluations.
  */
 void
 ncm_diff_set_dual_series (NcmDiff *diff, const gboolean dual_series)
@@ -746,7 +734,6 @@ ncm_diff_get_dual_series (NcmDiff *diff)
  * (ncm_diff_sc_d1_N_to_M() and related), in units of the variable scale.
  * The window search starts from this value and expands or shrinks it to
  * match the scale of variation of the function.
- *
  */
 void
 ncm_diff_set_spectral_window (NcmDiff *diff, const gdouble spectral_window)
@@ -760,15 +747,17 @@ ncm_diff_set_spectral_window (NcmDiff *diff, const gdouble spectral_window)
 /**
  * ncm_diff_set_domain:
  * @diff: a #NcmDiff
- * @lb: (nullable): lower bounds of the coordinates, $-\infty$ where there is none
- * @ub: (nullable): upper bounds of the coordinates, $+\infty$ where there is none
+ * @lb: (nullable): lower bounds of the coordinates
+ * @ub: (nullable): upper bounds of the coordinates
  *
  * Sets the domain of the functions to differentiate: no point is evaluated
- * outside $[\mathrm{lb}, \mathrm{ub}]$. Coordinates are matched by index; the
- * scalar functions use entry zero. When a central difference cannot keep its
- * points inside the domain it falls back to a forward or backward one toward
- * the open side, with a warning unless #NcmDiff:domain-warnings is off.
- * Passing %NULL for both clears the domain.
+ * outside $[\mathrm{lb}, \mathrm{ub}]$. An entry $-\infty$ in @lb or
+ * $+\infty$ in @ub is no bound. Coordinates are matched by index; the scalar
+ * functions use entry zero. A central difference without room for its steps
+ * falls back to a forward or backward one toward the farther edge, with a
+ * warning unless #NcmDiff:domain-warnings is %FALSE; a domain with room for
+ * no useful step on either side is an error. %NULL for both clears the
+ * domain.
  */
 void
 ncm_diff_set_domain (NcmDiff *diff, NcmVector *lb, NcmVector *ub)
@@ -816,7 +805,7 @@ ncm_diff_set_domain_warnings (NcmDiff *diff, const gboolean domain_warnings)
  * ncm_diff_get_domain_warnings:
  * @diff: a #NcmDiff
  *
- * Returns: whether a fallback to a one-sided difference at an edge of the domain is warned about.
+ * Returns: whether a fallback to a one-sided difference is warned about.
  */
 gboolean
 ncm_diff_get_domain_warnings (NcmDiff *diff)
@@ -847,7 +836,6 @@ ncm_diff_get_spectral_window (NcmDiff *diff)
  * @diff: a #NcmDiff
  *
  * Logs all central tables.
- *
  */
 void
 ncm_diff_log_central_tables (NcmDiff *diff)
@@ -872,8 +860,7 @@ ncm_diff_log_central_tables (NcmDiff *diff)
  * ncm_diff_log_forward_tables:
  * @diff: a #NcmDiff
  *
- * Logs all central tables.
- *
+ * Logs all forward tables.
  */
 void
 ncm_diff_log_forward_tables (NcmDiff *diff)
@@ -898,8 +885,7 @@ ncm_diff_log_forward_tables (NcmDiff *diff)
  * ncm_diff_log_backward_tables:
  * @diff: a #NcmDiff
  *
- * Logs all central tables.
- *
+ * Logs all backward tables.
  */
 void
 ncm_diff_log_backward_tables (NcmDiff *diff)
@@ -923,160 +909,25 @@ ncm_diff_log_backward_tables (NcmDiff *diff)
 typedef void (*NcmDiffStepAlgo) (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *df, NcmVector *roff);
 typedef void (*NcmDiffHessianStepAlgo) (NcmDiff *diff, NcmDiffFuncNto1 f, gpointer user_data, const guint a, const gdouble x, const gdouble hx, const guint b, const gdouble y, const gdouble hy, NcmVector *x_v, const gdouble fval, gdouble *df, gdouble *roff);
 
-/*
- * Difference quotient (f1 - f2) scale, in place of f1, and its absolute
- * round-off error eps max (|f1|, |f2|) |scale|. The round-off does not depend
- * on the difference, so a quotient that rounds to exactly zero still carries
- * the error of the values it came from.
- */
-static void
-_ncm_diff_step_quotient (NcmVector *f1, const NcmVector *f2, const gdouble scale, NcmVector *roff)
-{
-  const guint len = ncm_vector_len (f1);
-  guint i;
-
-  for (i = 0; i < len; i++)
-  {
-    const gdouble f1_i = ncm_vector_get (f1, i);
-    const gdouble f2_i = ncm_vector_get (f2, i);
-
-    ncm_vector_set (f1,   i, (f1_i - f2_i) * scale);
-    ncm_vector_set (roff, i, GSL_MAX (fabs (f1_i), fabs (f2_i)) * GSL_DBL_EPSILON * fabs (scale));
-  }
-}
-
-static void
-_ncm_diff_rf_d1_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *df, NcmVector *roff)
-{
-  ncm_vector_addto (x_v, a, h);
-
-  f (x_v, df, user_data);
-
-  _ncm_diff_step_quotient (df, f_v, 1.0 / h, roff);
-
-  NCM_UNUSED (yh1_v);
-  NCM_UNUSED (yh2_v);
-}
-
-static void
-_ncm_diff_rc_d1_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *df, NcmVector *roff)
-{
-  ncm_vector_addto (x_v, a, h);
-
-  f (x_v, df, user_data);
-
-  ncm_vector_set (x_v, a, x - h);
-
-  f (x_v, yh1_v, user_data);
-
-  _ncm_diff_step_quotient (df, yh1_v, 0.5 / h, roff);
-
-  NCM_UNUSED (yh2_v);
-}
-
-static void
-_ncm_diff_rc_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *df, NcmVector *roff)
-{
-  const guint len     = ncm_vector_len (df);
-  const gdouble scale = 2.0 / (h * h);
-  guint i;
-
-  ncm_vector_addto (x_v, a, h);
-
-  f (x_v, df, user_data);
-
-  ncm_vector_set (x_v, a, x - h);
-
-  f (x_v, yh1_v, user_data);
-
-  /*
-   * The average of f (x + h) and f (x - h) can cancel exactly (an odd f at
-   * zero); the round-off is that of the three values entering the quotient.
-   */
-  for (i = 0; i < len; i++)
-  {
-    const gdouble fp_i  = ncm_vector_get (df, i);
-    const gdouble fm_i  = ncm_vector_get (yh1_v, i);
-    const gdouble f0_i  = ncm_vector_get (f_v, i);
-    const gdouble avg_i = (fp_i + fm_i) * 0.5;
-    const gdouble mag_i = GSL_MAX (GSL_MAX (fabs (fp_i), fabs (fm_i)), fabs (f0_i));
-
-    ncm_vector_set (df,   i, (avg_i - f0_i) * scale);
-    ncm_vector_set (roff, i, mag_i * GSL_DBL_EPSILON * scale);
-  }
-
-  NCM_UNUSED (yh2_v);
-}
-
-/*
- * Forward second difference (f (x + 2h) - 2 f (x + h) + f (x)) / h^2, the
- * one-sided scheme rc_d2 falls back to at an edge of the domain; a negative
- * h makes it backward.
- */
-static void
-_ncm_diff_rf_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *df, NcmVector *roff)
-{
-  const guint len     = ncm_vector_len (df);
-  const gdouble scale = 1.0 / (h * h);
-  guint i;
-
-  ncm_vector_addto (x_v, a, h);
-
-  f (x_v, df, user_data);
-
-  ncm_vector_addto (x_v, a, h);
-
-  f (x_v, yh1_v, user_data);
-
-  for (i = 0; i < len; i++)
-  {
-    const gdouble f1_i  = ncm_vector_get (df, i);
-    const gdouble f2_i  = ncm_vector_get (yh1_v, i);
-    const gdouble f0_i  = ncm_vector_get (f_v, i);
-    const gdouble mag_i = GSL_MAX (GSL_MAX (fabs (f1_i), fabs (f2_i)), fabs (f0_i));
-
-    ncm_vector_set (df,   i, ((f2_i - f1_i) - (f1_i - f0_i)) * scale);
-    ncm_vector_set (roff, i, 4.0 * mag_i * GSL_DBL_EPSILON * scale);
-  }
-
-  NCM_UNUSED (yh2_v);
-}
-
-static void
-_ncm_diff_rf_Hessian_step (NcmDiff *diff, NcmDiffFuncNto1 f, gpointer user_data, const guint a, const gdouble x, const gdouble hx, const guint b, const gdouble y, const gdouble hy, NcmVector *x_v, const gdouble fval, gdouble *df, gdouble *roff)
-{
-  gdouble f_hx, f_hy, f_hxhy;
-
-
-  ncm_vector_addto (x_v, a, hx);
-  f_hx = f (x_v, user_data);
-
-  ncm_vector_set (x_v, a, x);
-  ncm_vector_addto (x_v, b, hy);
-  f_hy = f (x_v, user_data);
-
-  ncm_vector_addto (x_v, a, hx);
-  f_hxhy = f (x_v, user_data);
-
-  df[0] = ((fval + f_hxhy) - (f_hx + f_hy)) / (hx * hy);
-
-  {
-    /* Absolute round-off error of df[0], as in the other step algorithms. */
-    const gdouble max_s12 = GSL_MAX (fabs (fval + f_hxhy), fabs (f_hx + f_hy));
-
-    roff[0] = max_s12 * GSL_DBL_EPSILON / fabs (hx * hy);
-  }
-}
-
 #define NCM_DIFF_ERR_PAD (1.0e0)
 #define NCM_DIFF_NTRY_CONV (3)
 
 /*
- * Per-component convergence tracker, shared by the vector and Hessian
- * drivers. At each extrapolation order it receives the current and previous
- * extrapolated values with their round-off estimates, updates the best value
- * and error seen so far, and reports whether this component still wants a
- * higher order.
+ * Control of one component in the dual-series scheme. Series A and B share
+ * the tables and start from different steps: their difference at equal
+ * order estimates the truncation error, and the round-off of both is added.
+ * It stops after NCM_DIFF_DUAL_MAX_WORSE orders without improvement.
+ */
+#define NCM_DIFF_DUAL_ERR_PAD (10.0)
+#define NCM_DIFF_DUAL_MAX_WORSE (2)
+#define NCM_DIFF_DUAL_MIN_ORDER (3)
+
+#define NCM_DIFF_MOVE_UP_GUARD (3)
+
+/*
+ * Control of one component. At each order it receives the current and
+ * previous rows with their round-off, updates the best value and error, and
+ * reports whether a higher order is needed.
  */
 typedef struct _NcmDiffConv
 {
@@ -1099,106 +950,6 @@ _ncm_diff_conv_init (NcmDiffConv *cs)
   cs->informative  = FALSE;
 }
 
-/*
- * The agreement of two orders is measured against scale, the largest
- * difference quotient of the row: for a nonzero derivative that is the
- * derivative itself, for a zero one the size of the terms being cancelled.
- */
-static gboolean
-_ncm_diff_conv_update (NcmDiffConv *cs, const gdouble terr_pad, const gdouble roff_pad,
-                       const gdouble df_curr, const gdouble df_last,
-                       const gdouble roff_curr, const gdouble roff_last, const gdouble scale)
-{
-  const gdouble err_trunc    = fabs (df_curr - df_last) * terr_pad;
-  const gdouble err_err      = (scale > 0.0) ? fabs (df_curr - df_last) / scale : 0.0;
-  const gdouble Eroff_last   = fabs (roff_last) * roff_pad;
-  const gdouble Eroff_curr   = fabs (roff_curr) * roff_pad;
-  const gdouble err_curr_max = GSL_MAX (err_trunc, GSL_MAX (Eroff_last, Eroff_curr));
-  gdouble err_curr_best      = cs->err_best;
-  gboolean improve           = FALSE;
-  gboolean informative, agree;
-
-  /*
-   * A row is informative while its round-off is below 1.0e-3 of the scale;
-   * rows above it (steps far below the scale f carries, quotients rounded to
-   * zero) can only agree by accident. Two orders agree when they differ by
-   * less than 1.0e-3 of the scale on an informative row. When every quotient
-   * is zero further steps can only add round-off, so the rows agree and the
-   * ladder stops with zero and the round-off as its error; such a row is
-   * informative only when f is exactly zero on the samples, with no
-   * round-off at all.
-   */
-  informative     = (scale > 0.0) ? (Eroff_curr < 1.0e-3 * scale) : (Eroff_curr == 0.0);
-  agree           = (scale > 0.0) ? ((err_err < 1.0e-3) && informative) : TRUE;
-  cs->informative = informative;
-
-  /*
-   * Estimates fluctuate in the beginning. Thus we only start checking for
-   * convergence after they agree NCM_DIFF_NTRY_CONV times in a row.
-   */
-  if (cs->not_conv && agree)
-  {
-    cs->not_conv--;
-
-    if (!cs->not_conv)
-      cs->cstarted = 1;
-  }
-  else if (!agree)
-  {
-    cs->not_conv = NCM_DIFF_NTRY_CONV;
-  }
-
-  /*
-   * If the current maximum error is smaller than the best error estimate
-   * improve it again. It also sets the best error estimate to the average of
-   * the last two to avoid fake convergence due to fluctuations on error
-   * estimates.
-   */
-  if (cs->cstarted || ((err_curr_max < cs->err_best) && !cs->not_conv))
-  {
-    cs->df_best  = df_curr;
-    cs->err_best = 0.5 * (err_curr_max + cs->err_last_max);
-
-    err_curr_best = cs->err_best;
-    improve       = TRUE;
-  }
-  else if (err_curr_max < cs->err_best)
-  {
-    /* Not converged: keep the row with the smallest total error. */
-    cs->df_best  = df_curr;
-    cs->err_best = err_curr_max;
-
-    err_curr_best = err_curr_max;
-  }
-
-  /*
-   * The round-off of the rows grows with the order and bounds their total
-   * error from below, so once it passes the best error no later row can rank
-   * better. A ladder that has not converged goes on while its rows are
-   * informative, since they may yet agree and replace a best value taken from
-   * a false plateau (steps aliased with an oscillation of f).
-   */
-  if ((Eroff_curr < err_curr_best) || (cs->not_conv && informative))
-    improve = TRUE;
-
-  cs->cstarted     = 0;
-  cs->err_last_max = err_curr_max;
-
-  return improve;
-}
-
-/*
- * Per-component tracker for the dual-series scheme. The two series A and B
- * share the extrapolation tables but start from different initial steps, so
- * their disagreement at the same order estimates the truncation error
- * directly. The error also includes the propagated round-off of both series.
- * A component asks to stop after NCM_DIFF_DUAL_MAX_WORSE orders without
- * improvement.
- */
-#define NCM_DIFF_DUAL_ERR_PAD (10.0)
-#define NCM_DIFF_DUAL_MAX_WORSE (2)
-#define NCM_DIFF_DUAL_MIN_ORDER (3)
-
 typedef struct _NcmDiffDualConv
 {
   gdouble df_best;
@@ -1212,46 +963,6 @@ _ncm_diff_dual_conv_init (NcmDiffDualConv *cs)
   cs->df_best  = 0.0;
   cs->err_best = GSL_POSINF;
   cs->n_worse  = 0;
-}
-
-static gboolean
-_ncm_diff_dual_conv_update (NcmDiffDualConv *cs, const gdouble df_A, const gdouble df_B,
-                            const gdouble roff_A, const gdouble roff_B)
-{
-  const gdouble cross = fabs (df_A - df_B);
-  const gdouble roff  = GSL_MAX (fabs (roff_A), fabs (roff_B));
-  const gdouble err   = GSL_MAX (cross, roff) * NCM_DIFF_DUAL_ERR_PAD;
-
-  if (err < cs->err_best)
-  {
-    /* B (smaller steps) has the smaller truncation error; when round-off
-     * dominates the disagreement, the ladder with less round-off wins. */
-    if (fabs (roff_B) <= cross)
-      cs->df_best = df_B;
-    else
-      cs->df_best = (fabs (roff_A) < fabs (roff_B)) ? df_A : df_B;
-
-    cs->err_best = err;
-    cs->n_worse  = 0;
-
-    return TRUE;
-  }
-
-  /*
-   * While the round-off is still far below the best error the series has not
-   * reached its floor: the current stagnation is pre-asymptotic (e.g. steps
-   * still larger than the scale of variation of f), so keep refining.
-   */
-  if (roff * NCM_DIFF_DUAL_ERR_PAD < cs->err_best)
-  {
-    cs->n_worse = 0;
-
-    return TRUE;
-  }
-
-  cs->n_worse++;
-
-  return cs->n_worse < NCM_DIFF_DUAL_MAX_WORSE;
 }
 
 /*
@@ -1294,7 +1005,7 @@ _ncm_diff_ladder_clear (NcmDiffLadder *ladder)
   g_clear_pointer (&ladder->roffs, g_array_unref);
 }
 
-/* Restarts the ladder with no steps. */
+/* Empties the ladder: no steps, no rows, the control reset. */
 static void
 _ncm_diff_ladder_reset (NcmDiffLadder *ladder)
 {
@@ -1335,13 +1046,6 @@ _ncm_diff_ladder_restart (NcmDiffLadder *ladder)
   _ncm_diff_conv_init (&ladder->conv);
 }
 
-/* Extrapolation order k uses the first k + 2 steps. */
-static gboolean
-_ncm_diff_ladder_needs_step (NcmDiffLadder *ladder)
-{
-  return !ladder->converged && (ladder->dfs->len < ladder->order + 2);
-}
-
 static void
 _ncm_diff_ladder_add_step (NcmDiffLadder *ladder, const gdouble df, const gdouble roff)
 {
@@ -1358,172 +1062,39 @@ _ncm_diff_ladder_prepend_step (NcmDiffLadder *ladder, const gdouble df, const gd
 }
 
 /*
- * Richardson extrapolation at the order of dtable: df = sum_t lambda_t dfs[t],
- * with the round-off estimates combined in quadrature. Also measures the row:
- * the largest quotient dmax = max_t |dfs[t]|, the scale of what is being
- * extrapolated; the largest term max_term = max_t |lambda_t dfs[t]|; and
- * rho = |df| / max_term, the fraction of the terms surviving the sum, near
- * 1 / max |lambda| for a nonzero derivative and far below it when the terms
- * cancel (a zero derivative), zero when every quotient is zero.
+ * Two ladders sharing the step factors, A from h0 and B from h0 / sqrt (rs),
+ * each with its own control, and a cross control that decides from their
+ * disagreement at equal order.
  */
+typedef struct _NcmDiffDual
+{
+  NcmDiffLadder A;
+  NcmDiffLadder B;
+  NcmDiffDualConv cross;
+  gboolean converged;
+} NcmDiffDual;
+
 static void
-_ncm_diff_ladder_accum (NcmDiffLadder *ladder, NcmDiffTable *dtable, const guint nt)
+_ncm_diff_dual_init (NcmDiffDual *dual, GPtrArray *tables)
 {
-  gdouble dmax     = 0.0;
-  gdouble max_term = 0.0;
-  guint t;
-
-  ladder->df_curr   = 0.0;
-  ladder->roff_curr = 0.0;
-
-  for (t = 0; t < nt; t++)
-  {
-    const gdouble lambda_t = ncm_vector_get (dtable->lambda, t);
-    const gdouble df_t     = g_array_index (ladder->dfs, gdouble, t);
-    const gdouble roff_t   = g_array_index (ladder->roffs, gdouble, t);
-
-    /* Fused, as the BLAS daxpy of the former vector accumulation. */
-    ladder->df_curr   = fma (lambda_t, df_t, ladder->df_curr);
-    ladder->roff_curr = hypot (ladder->roff_curr, lambda_t * roff_t);
-
-    dmax     = GSL_MAX (dmax, fabs (df_t));
-    max_term = GSL_MAX (max_term, fabs (lambda_t * df_t));
-  }
-
-  ladder->dmax     = dmax;
-  ladder->max_term = max_term;
-  ladder->rho      = (max_term > 0.0) ? fabs (ladder->df_curr) / max_term : 0.0;
+  _ncm_diff_ladder_init (&dual->A, tables);
+  _ncm_diff_ladder_init (&dual->B, tables);
 }
 
-/*
- * Extrapolates at the current order, updates the control unless the ladder
- * has converged, and moves to the next order. The rows of a converged ladder
- * are still computed for the controls that read them.
- */
 static void
-_ncm_diff_ladder_extrapolate (NcmDiffLadder *ladder, const gdouble terr_pad, const gdouble roff_pad)
+_ncm_diff_dual_clear (NcmDiffDual *dual)
 {
-  NcmDiffTable *dtable;
-
-  /* No table for this order, or not enough steps for its row (a ladder that
-   * converged at the last stored step of a replay). */
-  if ((ladder->order == ladder->tables->len) || (ladder->order + 2 > ladder->dfs->len))
-    return;
-
-  dtable = g_ptr_array_index (ladder->tables, ladder->order);
-
-  if (ladder->order == 0)
-  {
-    ladder->df_last      = g_array_index (ladder->dfs, gdouble, 0);
-    ladder->roff_last    = g_array_index (ladder->roffs, gdouble, 0);
-    ladder->conv.df_best = ladder->df_last;
-  }
-
-  _ncm_diff_ladder_accum (ladder, dtable, ladder->order + 2);
-
-  if (!ladder->converged && !_ncm_diff_conv_update (&ladder->conv, terr_pad, roff_pad,
-                                                    ladder->df_curr, ladder->df_last,
-                                                    ladder->roff_curr, ladder->roff_last, ladder->dmax))
-    ladder->converged = TRUE;
-
-  if (ladder->order == 0)
-    ladder->first_informative = ladder->conv.informative;
-
-  ladder->df_last   = ladder->df_curr;
-  ladder->roff_last = ladder->roff_curr;
-  ladder->order++;
-
-  if (ladder->order == ladder->tables->len)
-    ladder->converged = TRUE;
+  _ncm_diff_ladder_clear (&dual->A);
+  _ncm_diff_ladder_clear (&dual->B);
 }
 
-/*
- * Replays the rows and the control over the stored steps after the top has
- * changed, up to convergence or the last stored step; the same as a fresh
- * run from the new top, without evaluating f again.
- */
 static void
-_ncm_diff_ladder_replay (NcmDiffLadder *ladder, const gdouble terr_pad, const gdouble roff_pad)
+_ncm_diff_dual_reset (NcmDiffDual *dual)
 {
-  _ncm_diff_ladder_restart (ladder);
-
-  while (!ladder->converged && (ladder->order + 2 <= ladder->dfs->len))
-    _ncm_diff_ladder_extrapolate (ladder, terr_pad, roff_pad);
-}
-
-/*
- * Step of index k, h0 rs^-k, through the formula of the tables so that
- * k >= 0 reproduces their steps; k < 0 are the steps above the initial one.
- */
-static gdouble
-_ncm_diff_step_h (NcmDiffPrivate *self, const guint po, const gdouble h0, const gint k)
-{
-  if (po == 0)
-    return h0 * (1.0 / pow (self->rs, k));
-  else
-    return h0 * sqrt (1.0 / pow (self->rs, 2 * k));
-}
-
-/* Evaluates the step ho along coordinate a into df_t and roff_t, restoring x_v. */
-static void
-_ncm_diff_eval_step (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffFuncNtoM f, gpointer user_data,
-                     const guint a, const gdouble x, const gdouble ho,
-                     NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *df_t, NcmVector *roff_t)
-{
-  volatile gdouble temp = x + ho;
-  const gdouble h       = temp - x;
-
-  step_algo (diff, f, user_data, a, x, h, x_v, f_v, yh1_v, yh2_v, df_t, roff_t);
-  ncm_vector_set (x_v, a, x);
-}
-
-static gboolean
-_ncm_diff_vector_finite (NcmVector *v)
-{
-  const guint len = ncm_vector_len (v);
-  guint i;
-
-  for (i = 0; i < len; i++)
-    if (!gsl_finite (ncm_vector_get (v, i)))
-      return FALSE;
-
-  return TRUE;
-}
-
-#define NCM_DIFF_MOVE_UP_GUARD (3)
-
-/*
- * Largest step a move up may take along a coordinate: the guard above the
- * step a zero coordinate gets. Zero is not treated as an edge of the domain:
- * no point is unless the caller sets a domain, the initial step already
- * crosses an edge that lies within ini_h |x| of x, and near one the caller
- * chooses the forward scheme or a smaller ini_h.
- */
-static gdouble
-_ncm_diff_move_up_cap (NcmDiffPrivate *self, const gdouble x)
-{
-  const gdouble scale = (x == 0.0) ? 1.0 : fabs (x);
-
-  return self->ini_h * GSL_MAX (1.0, scale) * pow (self->rs, NCM_DIFF_MOVE_UP_GUARD);
-}
-
-/* Distances from x to the edges of the domain of coordinate a, infinite without a domain. */
-static void
-_ncm_diff_room (NcmDiffPrivate *self, const guint a, const gdouble x, gdouble *lo, gdouble *hi)
-{
-  lo[0] = GSL_POSINF;
-  hi[0] = GSL_POSINF;
-
-  if ((self->lb != NULL) && (a < ncm_vector_len (self->lb)))
-    lo[0] = x - ncm_vector_get (self->lb, a);
-
-  if ((self->ub != NULL) && (a < ncm_vector_len (self->ub)))
-    hi[0] = ncm_vector_get (self->ub, a) - x;
-
-  if ((lo[0] < 0.0) || (hi[0] < 0.0))
-    g_error ("NcmDiff: coordinate %u at % .15g is outside its domain [% .15g, % .15g].", a, x,
-             (self->lb != NULL) ? ncm_vector_get (self->lb, a) : GSL_NEGINF,
-             (self->ub != NULL) ? ncm_vector_get (self->ub, a) : GSL_POSINF);
+  _ncm_diff_ladder_reset (&dual->A);
+  _ncm_diff_ladder_reset (&dual->B);
+  _ncm_diff_dual_conv_init (&dual->cross);
+  dual->converged = FALSE;
 }
 
 /*
@@ -1546,92 +1117,30 @@ typedef struct _NcmDiffScheme
   gdouble hi;
 } NcmDiffScheme;
 
-/* Room the scheme has: the nearer edge for a central one, the edge ahead for a one-sided one. */
-static gdouble
-_ncm_diff_scheme_room (const NcmDiffScheme *sch)
-{
-  if (sch->central)
-    return GSL_MIN (sch->lo, sch->hi);
+static GArray *_ncm_diff_by_step_algo_single (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo onesided_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr);
+static GArray *_ncm_diff_by_step_algo_dual (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo onesided_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr);
 
-  return (sch->sign > 0.0) ? sch->hi : sch->lo;
+static GArray *
+ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo onesided_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
+{
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
+  if (self->dual_series)
+    return _ncm_diff_by_step_algo_dual (diff, step_algo, onesided_algo, po, x_a, dim, f, user_data, Eerr);
+
+  return _ncm_diff_by_step_algo_single (diff, step_algo, onesided_algo, po, x_a, dim, f, user_data, Eerr);
 }
 
-/* Largest step the scheme may take: the move-up guard, and a step that keeps the points strictly inside the domain. */
-static gdouble
-_ncm_diff_scheme_cap (NcmDiffPrivate *self, const NcmDiffScheme *sch, const gdouble x)
-{
-  return GSL_MIN (_ncm_diff_move_up_cap (self, x), _ncm_diff_scheme_room (sch) * (1.0 - 1.0 / self->rs));
-}
-
-static void
-_ncm_diff_scheme_warn (NcmDiffPrivate *self, const NcmDiffScheme *sch, const guint a, const gdouble x, const gchar *from)
-{
-  if (self->domain_warnings)
-    g_warning ("NcmDiff: coordinate %u at % .15g is %.3e from the edge of its domain, "
-               "falling back from a %s difference to a %s one.",
-               a, x, _ncm_diff_scheme_room (sch), from, (sch->sign > 0.0) ? "forward" : "backward");
-}
-
-/*
- * Switches to the one-sided scheme toward the farther edge, or flips the
- * side of a one-sided one, when that gives more room than the present
- * scheme has. Returns whether the scheme changed.
- */
-static gboolean
-_ncm_diff_scheme_fallback (NcmDiffPrivate *self, NcmDiffScheme *sch, const guint a, const gdouble x)
-{
-  const gdouble room = _ncm_diff_scheme_room (sch);
-  const gdouble sign = (sch->hi >= sch->lo) ? 1.0 : -1.0;
-  const gdouble far  = GSL_MAX (sch->lo, sch->hi);
-
-  if (far <= room)
-    return FALSE;
-
-  if (sch->central)
-  {
-    sch->central = FALSE;
-    sch->algo    = sch->onesided;
-    sch->tables  = self->forward_tables;
-    sch->po      = 0;
-    sch->sign    = sign;
-    _ncm_diff_scheme_warn (self, sch, a, x, "central");
-  }
-  else
-  {
-    sch->sign = sign;
-    _ncm_diff_scheme_warn (self, sch, a, x, (sign > 0.0) ? "backward" : "forward");
-  }
-
-  return TRUE;
-}
-
-/*
- * Starts coordinate a with the scheme the caller asked for and the initial
- * step ini_h |x|, within the room of the domain; without room for it on the
- * asked side the scheme falls back at once.
- */
-static void
-_ncm_diff_scheme_init (NcmDiffPrivate *self, NcmDiffScheme *sch, NcmDiffStepAlgo algo, NcmDiffStepAlgo onesided, const guint po,
-                       const guint a, const gdouble x)
-{
-  const gdouble scale = (x == 0.0) ? 1.0 : fabs (x);
-
-  sch->algo     = algo;
-  sch->onesided = onesided;
-  sch->tables   = (po == 0) ? self->forward_tables : self->central_tables;
-  sch->po       = po;
-  sch->central  = (po != 0);
-  sch->sign     = 1.0;
-  sch->h0       = self->ini_h * scale;
-
-  _ncm_diff_room (self, a, x, &sch->lo, &sch->hi);
-
-  if (sch->h0 > _ncm_diff_scheme_cap (self, sch, x))
-  {
-    _ncm_diff_scheme_fallback (self, sch, a, x);
-    sch->h0 = GSL_MIN (sch->h0, _ncm_diff_scheme_cap (self, sch, x));
-  }
-}
+static void _ncm_diff_scheme_init (NcmDiffPrivate *self, NcmDiffScheme *sch, NcmDiffStepAlgo algo, NcmDiffStepAlgo onesided, const guint po, const guint a, const gdouble x);
+static gboolean _ncm_diff_ladder_needs_step (NcmDiffLadder *ladder);
+static gdouble _ncm_diff_step_h (NcmDiffPrivate *self, const guint po, const gdouble h0, const gint k);
+static void _ncm_diff_eval_step (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble ho, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *df_t, NcmVector *roff_t);
+static void _ncm_diff_ladder_extrapolate (NcmDiffLadder *ladder, const gdouble terr_pad, const gdouble roff_pad);
+static gdouble _ncm_diff_scheme_cap (NcmDiffPrivate *self, const NcmDiffScheme *sch, const gdouble x);
+static gboolean _ncm_diff_scheme_fallback (NcmDiffPrivate *self, NcmDiffScheme *sch, const guint a, const gdouble x);
+static gdouble _ncm_diff_scheme_room (const NcmDiffScheme *sch);
+static gboolean _ncm_diff_vector_finite (NcmVector *v);
+static void _ncm_diff_ladder_replay (NcmDiffLadder *ladder, const gdouble terr_pad, const gdouble roff_pad);
 
 static GArray *
 _ncm_diff_by_step_algo_single (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo onesided_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
@@ -1726,15 +1235,15 @@ _ncm_diff_by_step_algo_single (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiff
 
       /*
        * A first row that is not informative means the initial step is far
-       * below the scale of f and the quotients are cancellation noise; the
-       * only cure is a larger step. The first move jumps to the step a zero
-       * coordinate gets and restarts the ladders there, since the steps
-       * below are no longer consecutive; further moves go up by the
-       * Richardson factor, within the guard, and the controls replay over
-       * the steps from the new top. A step that leaves the domain of f (a
-       * non-finite value) is rejected. When the domain set by the caller
-       * leaves no room for the move, the scheme falls back to a one-sided
-       * one and restarts; a domain with no room on either side is an error.
+       * below the scale f varies on and the quotients are round-off. The
+       * first move sets the step to the one a zero coordinate gets and
+       * restarts the ladders there, since the stored steps are not
+       * consecutive with it; each further move prepends a step one
+       * Richardson factor larger, within the guard, and replays the
+       * controls. A move whose evaluation is not finite is rejected. When
+       * the domain leaves no room for the move the scheme falls back to a
+       * one-sided one and restarts; a domain without room on either side is
+       * an error.
        */
       for (i = 0; i < dim; i++)
         uninformative = uninformative || !g_array_index (ladders, NcmDiffLadder, i).first_informative;
@@ -1844,88 +1353,362 @@ _ncm_diff_by_step_algo_single (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiff
   }
 }
 
+static void _ncm_diff_room (NcmDiffPrivate *self, const guint a, const gdouble x, gdouble *lo, gdouble *hi);
+
 /*
- * Two ladders sharing the step factors, A from h0 and B from h0 / sqrt (rs),
- * each with its own control, and a cross control that decides from their
- * disagreement at equal order.
+ * Starts coordinate a with the scheme the caller asked for and the initial
+ * step ini_h |x|, within the room of the domain; without room for it on the
+ * asked side the scheme falls back at once.
  */
-typedef struct _NcmDiffDual
-{
-  NcmDiffLadder A;
-  NcmDiffLadder B;
-  NcmDiffDualConv cross;
-  gboolean converged;
-} NcmDiffDual;
-
 static void
-_ncm_diff_dual_init (NcmDiffDual *dual, GPtrArray *tables)
+_ncm_diff_scheme_init (NcmDiffPrivate *self, NcmDiffScheme *sch, NcmDiffStepAlgo algo, NcmDiffStepAlgo onesided, const guint po,
+                       const guint a, const gdouble x)
 {
-  _ncm_diff_ladder_init (&dual->A, tables);
-  _ncm_diff_ladder_init (&dual->B, tables);
+  const gdouble scale = (x == 0.0) ? 1.0 : fabs (x);
+
+  sch->algo     = algo;
+  sch->onesided = onesided;
+  sch->tables   = (po == 0) ? self->forward_tables : self->central_tables;
+  sch->po       = po;
+  sch->central  = (po != 0);
+  sch->sign     = 1.0;
+  sch->h0       = self->ini_h * scale;
+
+  _ncm_diff_room (self, a, x, &sch->lo, &sch->hi);
+
+  if (sch->h0 > _ncm_diff_scheme_cap (self, sch, x))
+  {
+    _ncm_diff_scheme_fallback (self, sch, a, x);
+    sch->h0 = GSL_MIN (sch->h0, _ncm_diff_scheme_cap (self, sch, x));
+  }
+}
+
+/* Distances from x to the edges of the domain of coordinate a, infinite without a domain. */
+static void
+_ncm_diff_room (NcmDiffPrivate *self, const guint a, const gdouble x, gdouble *lo, gdouble *hi)
+{
+  lo[0] = GSL_POSINF;
+  hi[0] = GSL_POSINF;
+
+  if ((self->lb != NULL) && (a < ncm_vector_len (self->lb)))
+    lo[0] = x - ncm_vector_get (self->lb, a);
+
+  if ((self->ub != NULL) && (a < ncm_vector_len (self->ub)))
+    hi[0] = ncm_vector_get (self->ub, a) - x;
+
+  if ((lo[0] < 0.0) || (hi[0] < 0.0))
+    g_error ("NcmDiff: coordinate %u at % .15g is outside its domain [% .15g, % .15g].", a, x,
+             (self->lb != NULL) ? ncm_vector_get (self->lb, a) : GSL_NEGINF,
+             (self->ub != NULL) ? ncm_vector_get (self->ub, a) : GSL_POSINF);
+}
+
+static gdouble _ncm_diff_move_up_cap (NcmDiffPrivate *self, const gdouble x);
+
+/* Largest step of the scheme: the smaller of the move-up guard and the room, with a margin that keeps the points strictly inside the domain. */
+static gdouble
+_ncm_diff_scheme_cap (NcmDiffPrivate *self, const NcmDiffScheme *sch, const gdouble x)
+{
+  return GSL_MIN (_ncm_diff_move_up_cap (self, x), _ncm_diff_scheme_room (sch) * (1.0 - 1.0 / self->rs));
+}
+
+/*
+ * Largest step a move up may take along a coordinate,
+ * NCM_DIFF_MOVE_UP_GUARD Richardson factors above the step a zero
+ * coordinate gets. Edges are enforced only when the caller sets a domain,
+ * see ncm_diff_set_domain().
+ */
+static gdouble
+_ncm_diff_move_up_cap (NcmDiffPrivate *self, const gdouble x)
+{
+  const gdouble scale = (x == 0.0) ? 1.0 : fabs (x);
+
+  return self->ini_h * GSL_MAX (1.0, scale) * pow (self->rs, NCM_DIFF_MOVE_UP_GUARD);
+}
+
+/* Room of the scheme: the distance to the nearer edge for a central one, to the edge its steps point to for a one-sided one. */
+static gdouble
+_ncm_diff_scheme_room (const NcmDiffScheme *sch)
+{
+  if (sch->central)
+    return GSL_MIN (sch->lo, sch->hi);
+
+  return (sch->sign > 0.0) ? sch->hi : sch->lo;
+}
+
+static void _ncm_diff_scheme_warn (NcmDiffPrivate *self, const NcmDiffScheme *sch, const guint a, const gdouble x, const gchar *from);
+
+/*
+ * Switches to the one-sided scheme toward the farther edge, or flips the
+ * side of a one-sided one, when that gives more room than the present
+ * scheme has. Returns whether the scheme changed.
+ */
+static gboolean
+_ncm_diff_scheme_fallback (NcmDiffPrivate *self, NcmDiffScheme *sch, const guint a, const gdouble x)
+{
+  const gdouble room = _ncm_diff_scheme_room (sch);
+  const gdouble sign = (sch->hi >= sch->lo) ? 1.0 : -1.0;
+  const gdouble far  = GSL_MAX (sch->lo, sch->hi);
+
+  if (far <= room)
+    return FALSE;
+
+  if (sch->central)
+  {
+    sch->central = FALSE;
+    sch->algo    = sch->onesided;
+    sch->tables  = self->forward_tables;
+    sch->po      = 0;
+    sch->sign    = sign;
+    _ncm_diff_scheme_warn (self, sch, a, x, "central");
+  }
+  else
+  {
+    sch->sign = sign;
+    _ncm_diff_scheme_warn (self, sch, a, x, (sign > 0.0) ? "backward" : "forward");
+  }
+
+  return TRUE;
 }
 
 static void
-_ncm_diff_dual_clear (NcmDiffDual *dual)
+_ncm_diff_scheme_warn (NcmDiffPrivate *self, const NcmDiffScheme *sch, const guint a, const gdouble x, const gchar *from)
 {
-  _ncm_diff_ladder_clear (&dual->A);
-  _ncm_diff_ladder_clear (&dual->B);
+  if (self->domain_warnings)
+    g_warning ("NcmDiff: coordinate %u at % .15g is %.3e from the edge of its domain, "
+               "falling back from a %s difference to a %s one.",
+               a, x, _ncm_diff_scheme_room (sch), from, (sch->sign > 0.0) ? "forward" : "backward");
 }
 
-static void
-_ncm_diff_dual_reset (NcmDiffDual *dual)
+/* Extrapolation order k uses the first k + 2 steps. */
+static gboolean
+_ncm_diff_ladder_needs_step (NcmDiffLadder *ladder)
 {
-  _ncm_diff_ladder_reset (&dual->A);
-  _ncm_diff_ladder_reset (&dual->B);
-  _ncm_diff_dual_conv_init (&dual->cross);
-  dual->converged = FALSE;
+  return !ladder->converged && (ladder->dfs->len < ladder->order + 2);
+}
+
+/*
+ * Step of index k, h0 rs^-k, through the formula of the tables so that
+ * k >= 0 reproduces their steps; k < 0 are the steps above the initial one.
+ */
+static gdouble
+_ncm_diff_step_h (NcmDiffPrivate *self, const guint po, const gdouble h0, const gint k)
+{
+  if (po == 0)
+    return h0 * (1.0 / pow (self->rs, k));
+  else
+    return h0 * sqrt (1.0 / pow (self->rs, 2 * k));
+}
+
+/* Evaluates the step ho along coordinate a into df_t and roff_t, restoring x_v. */
+static void
+_ncm_diff_eval_step (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffFuncNtoM f, gpointer user_data,
+                     const guint a, const gdouble x, const gdouble ho,
+                     NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *df_t, NcmVector *roff_t)
+{
+  volatile gdouble temp = x + ho;
+  const gdouble h       = temp - x;
+
+  step_algo (diff, f, user_data, a, x, h, x_v, f_v, yh1_v, yh2_v, df_t, roff_t);
+  ncm_vector_set (x_v, a, x);
+}
+
+static void _ncm_diff_ladder_accum (NcmDiffLadder *ladder, NcmDiffTable *dtable, const guint nt);
+static gboolean _ncm_diff_conv_update (NcmDiffConv *cs, const gdouble terr_pad, const gdouble roff_pad, const gdouble df_curr, const gdouble df_last, const gdouble roff_curr, const gdouble roff_last, const gdouble scale);
+
+/*
+ * Extrapolates at the current order, updates the control unless the ladder
+ * has converged, and moves to the next order. The rows of a converged ladder
+ * are still computed for the controls that read them.
+ */
+static void
+_ncm_diff_ladder_extrapolate (NcmDiffLadder *ladder, const gdouble terr_pad, const gdouble roff_pad)
+{
+  NcmDiffTable *dtable;
+
+  /* No table for this order, or not enough steps for its row: a ladder that
+   * converged at the last row of a replay. */
+  if ((ladder->order == ladder->tables->len) || (ladder->order + 2 > ladder->dfs->len))
+    return;
+
+  dtable = g_ptr_array_index (ladder->tables, ladder->order);
+
+  if (ladder->order == 0)
+  {
+    ladder->df_last      = g_array_index (ladder->dfs, gdouble, 0);
+    ladder->roff_last    = g_array_index (ladder->roffs, gdouble, 0);
+    ladder->conv.df_best = ladder->df_last;
+  }
+
+  _ncm_diff_ladder_accum (ladder, dtable, ladder->order + 2);
+
+  if (!ladder->converged && !_ncm_diff_conv_update (&ladder->conv, terr_pad, roff_pad,
+                                                    ladder->df_curr, ladder->df_last,
+                                                    ladder->roff_curr, ladder->roff_last, ladder->dmax))
+    ladder->converged = TRUE;
+
+  if (ladder->order == 0)
+    ladder->first_informative = ladder->conv.informative;
+
+  ladder->df_last   = ladder->df_curr;
+  ladder->roff_last = ladder->roff_curr;
+  ladder->order++;
+
+  if (ladder->order == ladder->tables->len)
+    ladder->converged = TRUE;
+}
+
+/*
+ * Richardson extrapolation at the order of dtable: df = sum_t lambda_t dfs[t],
+ * with the round-off estimates combined in quadrature. Also measures the row:
+ * the largest quotient dmax = max_t |dfs[t]|, the scale of what is being
+ * extrapolated; the largest term max_term = max_t |lambda_t dfs[t]|; and
+ * rho = |df| / max_term, near 1 / max |lambda| for a nonzero derivative, far
+ * below it when the terms cancel (a zero derivative), and zero when every
+ * quotient is zero.
+ */
+static void
+_ncm_diff_ladder_accum (NcmDiffLadder *ladder, NcmDiffTable *dtable, const guint nt)
+{
+  gdouble dmax     = 0.0;
+  gdouble max_term = 0.0;
+  guint t;
+
+  ladder->df_curr   = 0.0;
+  ladder->roff_curr = 0.0;
+
+  for (t = 0; t < nt; t++)
+  {
+    const gdouble lambda_t = ncm_vector_get (dtable->lambda, t);
+    const gdouble df_t     = g_array_index (ladder->dfs, gdouble, t);
+    const gdouble roff_t   = g_array_index (ladder->roffs, gdouble, t);
+
+    /* fma: one rounding per term. */
+    ladder->df_curr   = fma (lambda_t, df_t, ladder->df_curr);
+    ladder->roff_curr = hypot (ladder->roff_curr, lambda_t * roff_t);
+
+    dmax     = GSL_MAX (dmax, fabs (df_t));
+    max_term = GSL_MAX (max_term, fabs (lambda_t * df_t));
+  }
+
+  ladder->dmax     = dmax;
+  ladder->max_term = max_term;
+  ladder->rho      = (max_term > 0.0) ? fabs (ladder->df_curr) / max_term : 0.0;
+}
+
+/*
+ * The agreement of two orders is measured against scale, the largest
+ * difference quotient of the row: for a nonzero derivative that is the
+ * derivative itself, for a zero one the size of the terms being cancelled.
+ */
+static gboolean
+_ncm_diff_conv_update (NcmDiffConv *cs, const gdouble terr_pad, const gdouble roff_pad,
+                       const gdouble df_curr, const gdouble df_last,
+                       const gdouble roff_curr, const gdouble roff_last, const gdouble scale)
+{
+  const gdouble err_trunc    = fabs (df_curr - df_last) * terr_pad;
+  const gdouble err_err      = (scale > 0.0) ? fabs (df_curr - df_last) / scale : 0.0;
+  const gdouble Eroff_last   = fabs (roff_last) * roff_pad;
+  const gdouble Eroff_curr   = fabs (roff_curr) * roff_pad;
+  const gdouble err_curr_max = GSL_MAX (err_trunc, GSL_MAX (Eroff_last, Eroff_curr));
+  gdouble err_curr_best      = cs->err_best;
+  gboolean improve           = FALSE;
+  gboolean informative, agree;
+
+  /*
+   * A row is informative while its round-off is below 1.0e-3 of the scale;
+   * rows above it (steps far below the scale f varies on, quotients rounded
+   * to zero) can only agree by accident. Two orders agree when they differ by
+   * less than 1.0e-3 of the scale on an informative row. When every quotient
+   * is zero further steps can only add round-off, so the rows agree and the
+   * ladder stops with zero and the round-off as its error; such a row is
+   * informative only when f is exactly zero on the samples, with no
+   * round-off at all.
+   */
+  informative     = (scale > 0.0) ? (Eroff_curr < 1.0e-3 * scale) : (Eroff_curr == 0.0);
+  agree           = (scale > 0.0) ? ((err_err < 1.0e-3) && informative) : TRUE;
+  cs->informative = informative;
+
+  /* The first rows fluctuate: convergence is checked only after
+   * NCM_DIFF_NTRY_CONV consecutive agreeing rows. */
+  if (cs->not_conv && agree)
+  {
+    cs->not_conv--;
+
+    if (!cs->not_conv)
+      cs->cstarted = 1;
+  }
+  else if (!agree)
+  {
+    cs->not_conv = NCM_DIFF_NTRY_CONV;
+  }
+
+  /* A converged row replaces the best value; its error is the mean of the
+   * last two row errors, since a single row error fluctuates. */
+  if (cs->cstarted || ((err_curr_max < cs->err_best) && !cs->not_conv))
+  {
+    cs->df_best  = df_curr;
+    cs->err_best = 0.5 * (err_curr_max + cs->err_last_max);
+
+    err_curr_best = cs->err_best;
+    improve       = TRUE;
+  }
+  else if (err_curr_max < cs->err_best)
+  {
+    /* Not converged: keep the row with the smallest total error. */
+    cs->df_best  = df_curr;
+    cs->err_best = err_curr_max;
+
+    err_curr_best = err_curr_max;
+  }
+
+  /*
+   * The round-off of the rows grows with the order and bounds their total
+   * error from below, so once it passes the best error no later row can rank
+   * better. A ladder that has not converged goes on while its rows are
+   * informative, since they may yet agree and replace a best value taken
+   * from rows that agreed because the steps were aliased with an oscillation
+   * of f.
+   */
+  if ((Eroff_curr < err_curr_best) || (cs->not_conv && informative))
+    improve = TRUE;
+
+  cs->cstarted     = 0;
+  cs->err_last_max = err_curr_max;
+
+  return improve;
 }
 
 static gboolean
-_ncm_diff_dual_needs_step (NcmDiffDual *dual)
+_ncm_diff_vector_finite (NcmVector *v)
 {
-  return !dual->converged && (dual->A.dfs->len < dual->A.order + 2);
+  const guint len = ncm_vector_len (v);
+  guint i;
+
+  for (i = 0; i < len; i++)
+    if (!gsl_finite (ncm_vector_get (v, i)))
+      return FALSE;
+
+  return TRUE;
 }
 
+/*
+ * Replays the rows and the control over the stored steps after the top has
+ * changed, up to convergence or the last stored step; the same as a fresh
+ * run from the new top, without evaluating f again.
+ */
+static void
+_ncm_diff_ladder_replay (NcmDiffLadder *ladder, const gdouble terr_pad, const gdouble roff_pad)
+{
+  _ncm_diff_ladder_restart (ladder);
+
+  while (!ladder->converged && (ladder->order + 2 <= ladder->dfs->len))
+    _ncm_diff_ladder_extrapolate (ladder, terr_pad, roff_pad);
+}
+
+static gboolean _ncm_diff_dual_needs_step (NcmDiffDual *dual);
 static void _ncm_diff_dual_extrapolate (NcmDiffDual *dual, const gdouble terr_pad, const gdouble roff_pad);
-
-/* Replays both ladders and the cross control over the stored steps. */
-static void
-_ncm_diff_dual_replay (NcmDiffDual *dual, const gdouble terr_pad, const gdouble roff_pad)
-{
-  _ncm_diff_ladder_restart (&dual->A);
-  _ncm_diff_ladder_restart (&dual->B);
-  _ncm_diff_dual_conv_init (&dual->cross);
-  dual->converged = FALSE;
-
-  while (!dual->converged && (dual->A.order + 2 <= dual->A.dfs->len))
-    _ncm_diff_dual_extrapolate (dual, terr_pad, roff_pad);
-}
-
-/* The first row of either ladder is not informative. */
-static gboolean
-_ncm_diff_dual_first_uninformative (NcmDiffDual *dual)
-{
-  return !dual->A.first_informative || !dual->B.first_informative;
-}
-
-/*
- * Extrapolates both ladders at the current order and lets the cross control
- * decide; the first NCM_DIFF_DUAL_MIN_ORDER orders are always taken.
- */
-static void
-_ncm_diff_dual_extrapolate (NcmDiffDual *dual, const gdouble terr_pad, const gdouble roff_pad)
-{
-  gboolean improve;
-
-  _ncm_diff_ladder_extrapolate (&dual->A, terr_pad, roff_pad);
-  _ncm_diff_ladder_extrapolate (&dual->B, terr_pad, roff_pad);
-
-  improve = _ncm_diff_dual_conv_update (&dual->cross, dual->A.df_curr, dual->B.df_curr,
-                                        dual->A.roff_curr, dual->B.roff_curr);
-
-  if (((dual->A.order >= NCM_DIFF_DUAL_MIN_ORDER) && !improve) || (dual->A.order == dual->A.tables->len))
-    dual->converged = TRUE;
-}
+static gboolean _ncm_diff_dual_first_uninformative (NcmDiffDual *dual);
+static void _ncm_diff_dual_replay (NcmDiffDual *dual, const gdouble terr_pad, const gdouble roff_pad);
 
 static GArray *
 _ncm_diff_by_step_algo_dual (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo onesided_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
@@ -2171,108 +1954,108 @@ _ncm_diff_by_step_algo_dual (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffSt
   }
 }
 
+static gboolean
+_ncm_diff_dual_needs_step (NcmDiffDual *dual)
+{
+  return !dual->converged && (dual->A.dfs->len < dual->A.order + 2);
+}
+
+static gboolean _ncm_diff_dual_conv_update (NcmDiffDualConv *cs, const gdouble df_A, const gdouble df_B, const gdouble roff_A, const gdouble roff_B);
+
+/*
+ * Extrapolates both ladders at the current order and lets the cross control
+ * decide; the first NCM_DIFF_DUAL_MIN_ORDER orders are always taken.
+ */
+static void
+_ncm_diff_dual_extrapolate (NcmDiffDual *dual, const gdouble terr_pad, const gdouble roff_pad)
+{
+  gboolean improve;
+
+  _ncm_diff_ladder_extrapolate (&dual->A, terr_pad, roff_pad);
+  _ncm_diff_ladder_extrapolate (&dual->B, terr_pad, roff_pad);
+
+  improve = _ncm_diff_dual_conv_update (&dual->cross, dual->A.df_curr, dual->B.df_curr,
+                                        dual->A.roff_curr, dual->B.roff_curr);
+
+  if (((dual->A.order >= NCM_DIFF_DUAL_MIN_ORDER) && !improve) || (dual->A.order == dual->A.tables->len))
+    dual->converged = TRUE;
+}
+
+static gboolean
+_ncm_diff_dual_conv_update (NcmDiffDualConv *cs, const gdouble df_A, const gdouble df_B,
+                            const gdouble roff_A, const gdouble roff_B)
+{
+  const gdouble cross = fabs (df_A - df_B);
+  const gdouble roff  = GSL_MAX (fabs (roff_A), fabs (roff_B));
+  const gdouble err   = GSL_MAX (cross, roff) * NCM_DIFF_DUAL_ERR_PAD;
+
+  if (err < cs->err_best)
+  {
+    /* B (smaller steps) has the smaller truncation error; when round-off
+     * dominates the disagreement, the ladder with the smaller round-off is
+     * taken. */
+    if (fabs (roff_B) <= cross)
+      cs->df_best = df_B;
+    else
+      cs->df_best = (fabs (roff_A) < fabs (roff_B)) ? df_A : df_B;
+
+    cs->err_best = err;
+    cs->n_worse  = 0;
+
+    return TRUE;
+  }
+
+  /* While the round-off is far below the best error the stagnation is
+   * pre-asymptotic (steps larger than the scale f varies on): continue. */
+  if (roff * NCM_DIFF_DUAL_ERR_PAD < cs->err_best)
+  {
+    cs->n_worse = 0;
+
+    return TRUE;
+  }
+
+  cs->n_worse++;
+
+  return cs->n_worse < NCM_DIFF_DUAL_MAX_WORSE;
+}
+
+/* The first row of either ladder is not informative. */
+static gboolean
+_ncm_diff_dual_first_uninformative (NcmDiffDual *dual)
+{
+  return !dual->A.first_informative || !dual->B.first_informative;
+}
+
+/* Replays both ladders and the cross control over the stored steps. */
+static void
+_ncm_diff_dual_replay (NcmDiffDual *dual, const gdouble terr_pad, const gdouble roff_pad)
+{
+  _ncm_diff_ladder_restart (&dual->A);
+  _ncm_diff_ladder_restart (&dual->B);
+  _ncm_diff_dual_conv_init (&dual->cross);
+  dual->converged = FALSE;
+
+  while (!dual->converged && (dual->A.order + 2 <= dual->A.dfs->len))
+    _ncm_diff_dual_extrapolate (dual, terr_pad, roff_pad);
+}
+
+static GArray *_ncm_diff_Hessian_by_step_algo_single (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr);
+static GArray *_ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr);
+
 static GArray *
-ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo onesided_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
+ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
 {
   NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
 
   if (self->dual_series)
-    return _ncm_diff_by_step_algo_dual (diff, step_algo, onesided_algo, po, x_a, dim, f, user_data, Eerr);
+    return _ncm_diff_Hessian_by_step_algo_dual (diff, Hstep_algo, po, x_a, f, user_data, Eerr);
 
-  return _ncm_diff_by_step_algo_single (diff, step_algo, onesided_algo, po, x_a, dim, f, user_data, Eerr);
+  return _ncm_diff_Hessian_by_step_algo_single (diff, Hstep_algo, po, x_a, f, user_data, Eerr);
 }
 
-/* Evaluates one Hessian cross-term step with offsets hxo and hyo: the
- * difference quotient df_t and its round-off estimate roff_t. */
-static void
-_ncm_diff_hessian_eval_step (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, NcmDiffFuncNto1 f, gpointer user_data,
-                             const guint a, const gdouble x, const gdouble hxo,
-                             const guint b, const gdouble y, const gdouble hyo,
-                             NcmVector *x_v, const gdouble fval,
-                             gdouble *df_t, gdouble *roff_t)
-{
-  volatile gdouble t_x = x + hxo;
-  const gdouble hx     = t_x - x;
-  volatile gdouble t_y = y + hyo;
-  const gdouble hy     = t_y - y;
-
-  Hstep_algo (diff, f, user_data, a, x, hx, b, y, hy, x_v, fval, df_t, roff_t);
-
-  ncm_vector_set (x_v, a, x);
-  ncm_vector_set (x_v, b, y);
-}
-
-/*
- * Moving up along the two axes of a cross term: the jump sets each axis
- * to the smaller of the step a zero coordinate gets and its cap, a further
- * move goes one factor up on both. Returns whether the move fits the caps;
- * when it does not, an axis without room falls back to the other side,
- * which restarts the pair, and an axis with room on neither side is an
- * error when the room is below its initial step.
- */
-static gboolean
-_ncm_diff_hessian_move_fits (NcmDiffPrivate *self, NcmDiffScheme *sx, NcmDiffScheme *sy, const guint a, const gdouble x, const guint b, const gdouble y,
-                             const gboolean jump, const gint k_new, gdouble *hx0_new, gdouble *hy0_new, gboolean *restart)
-{
-  const gdouble scale_x = (x == 0.0) ? 1.0 : fabs (x);
-  const gdouble scale_y = (y == 0.0) ? 1.0 : fabs (y);
-  const gdouble cx      = _ncm_diff_scheme_cap (self, sx, x);
-  const gdouble cy      = _ncm_diff_scheme_cap (self, sy, y);
-  gboolean blocked_x, blocked_y;
-
-  hx0_new[0] = jump ? GSL_MIN (self->ini_h * GSL_MAX (1.0, scale_x), cx) : sx->h0;
-  hy0_new[0] = jump ? GSL_MIN (self->ini_h * GSL_MAX (1.0, scale_y), cy) : sy->h0;
-  restart[0] = FALSE;
-
-  if (jump)
-  {
-    blocked_x = (hx0_new[0] <= sx->h0);
-    blocked_y = (hy0_new[0] <= sy->h0);
-
-    if (!(blocked_x && blocked_y))
-      return TRUE;
-  }
-  else
-  {
-    blocked_x = (_ncm_diff_step_h (self, 0, sx->h0, k_new) > cx);
-    blocked_y = (_ncm_diff_step_h (self, 0, sy->h0, k_new) > cy);
-
-    if (!blocked_x && !blocked_y)
-      return TRUE;
-  }
-
-  if (blocked_x && _ncm_diff_scheme_fallback (self, sx, a, x))
-    restart[0] = TRUE;
-
-  if (blocked_y && _ncm_diff_scheme_fallback (self, sy, b, y))
-    restart[0] = TRUE;
-
-  if (!restart[0])
-  {
-    if (blocked_x && (_ncm_diff_scheme_room (sx) < self->ini_h * scale_x))
-      g_error ("NcmDiff: coordinate %u at % .15g: its domain leaves room for steps of at most %.3e, "
-               "below the initial step %.3e, and the quotients are round-off.",
-               a, x, _ncm_diff_scheme_room (sx), self->ini_h * scale_x);
-
-    if (blocked_y && (_ncm_diff_scheme_room (sy) < self->ini_h * scale_y))
-      g_error ("NcmDiff: coordinate %u at % .15g: its domain leaves room for steps of at most %.3e, "
-               "below the initial step %.3e, and the quotients are round-off.",
-               b, y, _ncm_diff_scheme_room (sy), self->ini_h * scale_y);
-  }
-
-  return FALSE;
-}
-
-/* Initial steps of the two axes of a cross term, within their caps, after a fallback. */
-static void
-_ncm_diff_hessian_restart_bases (NcmDiffPrivate *self, NcmDiffScheme *sx, NcmDiffScheme *sy, const gdouble x, const gdouble y)
-{
-  const gdouble scale_x = (x == 0.0) ? 1.0 : fabs (x);
-  const gdouble scale_y = (y == 0.0) ? 1.0 : fabs (y);
-
-  sx->h0 = GSL_MIN (self->ini_h * GSL_MAX (1.0, scale_x), _ncm_diff_scheme_cap (self, sx, x));
-  sy->h0 = GSL_MIN (self->ini_h * GSL_MAX (1.0, scale_y), _ncm_diff_scheme_cap (self, sy, y));
-}
+static void _ncm_diff_hessian_eval_step (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, NcmDiffFuncNto1 f, gpointer user_data, const guint a, const gdouble x, const gdouble hxo, const guint b, const gdouble y, const gdouble hyo, NcmVector *x_v, const gdouble fval, gdouble *df_t, gdouble *roff_t);
+static gboolean _ncm_diff_hessian_move_fits (NcmDiffPrivate *self, NcmDiffScheme *sx, NcmDiffScheme *sy, const guint a, const gdouble x, const guint b, const gdouble y, const gboolean jump, const gint k_new, gdouble *hx0_new, gdouble *hy0_new, gboolean *restart);
+static void _ncm_diff_hessian_restart_bases (NcmDiffPrivate *self, NcmDiffScheme *sx, NcmDiffScheme *sy, const gdouble x, const gdouble y);
 
 static GArray *
 _ncm_diff_Hessian_by_step_algo_single (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
@@ -2417,6 +2200,98 @@ _ncm_diff_Hessian_by_step_algo_single (NcmDiff *diff, NcmDiffHessianStepAlgo Hst
 
     return df;
   }
+}
+
+/* Evaluates one Hessian cross-term step with offsets hxo and hyo: the
+ * difference quotient df_t and its round-off estimate roff_t. */
+static void
+_ncm_diff_hessian_eval_step (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, NcmDiffFuncNto1 f, gpointer user_data,
+                             const guint a, const gdouble x, const gdouble hxo,
+                             const guint b, const gdouble y, const gdouble hyo,
+                             NcmVector *x_v, const gdouble fval,
+                             gdouble *df_t, gdouble *roff_t)
+{
+  volatile gdouble t_x = x + hxo;
+  const gdouble hx     = t_x - x;
+  volatile gdouble t_y = y + hyo;
+  const gdouble hy     = t_y - y;
+
+  Hstep_algo (diff, f, user_data, a, x, hx, b, y, hy, x_v, fval, df_t, roff_t);
+
+  ncm_vector_set (x_v, a, x);
+  ncm_vector_set (x_v, b, y);
+}
+
+/*
+ * Moving up along the two axes of a cross term: the first move sets each
+ * axis to the smaller of the step a zero coordinate gets and its cap, a
+ * further move goes one factor up on both. Returns whether the move fits the
+ * caps. When it does not, an axis without room falls back to the other side
+ * and the pair restarts; an axis with room on neither side below its initial
+ * step is an error.
+ */
+static gboolean
+_ncm_diff_hessian_move_fits (NcmDiffPrivate *self, NcmDiffScheme *sx, NcmDiffScheme *sy, const guint a, const gdouble x, const guint b, const gdouble y,
+                             const gboolean jump, const gint k_new, gdouble *hx0_new, gdouble *hy0_new, gboolean *restart)
+{
+  const gdouble scale_x = (x == 0.0) ? 1.0 : fabs (x);
+  const gdouble scale_y = (y == 0.0) ? 1.0 : fabs (y);
+  const gdouble cx      = _ncm_diff_scheme_cap (self, sx, x);
+  const gdouble cy      = _ncm_diff_scheme_cap (self, sy, y);
+  gboolean blocked_x, blocked_y;
+
+  hx0_new[0] = jump ? GSL_MIN (self->ini_h * GSL_MAX (1.0, scale_x), cx) : sx->h0;
+  hy0_new[0] = jump ? GSL_MIN (self->ini_h * GSL_MAX (1.0, scale_y), cy) : sy->h0;
+  restart[0] = FALSE;
+
+  if (jump)
+  {
+    blocked_x = (hx0_new[0] <= sx->h0);
+    blocked_y = (hy0_new[0] <= sy->h0);
+
+    if (!(blocked_x && blocked_y))
+      return TRUE;
+  }
+  else
+  {
+    blocked_x = (_ncm_diff_step_h (self, 0, sx->h0, k_new) > cx);
+    blocked_y = (_ncm_diff_step_h (self, 0, sy->h0, k_new) > cy);
+
+    if (!blocked_x && !blocked_y)
+      return TRUE;
+  }
+
+  if (blocked_x && _ncm_diff_scheme_fallback (self, sx, a, x))
+    restart[0] = TRUE;
+
+  if (blocked_y && _ncm_diff_scheme_fallback (self, sy, b, y))
+    restart[0] = TRUE;
+
+  if (!restart[0])
+  {
+    if (blocked_x && (_ncm_diff_scheme_room (sx) < self->ini_h * scale_x))
+      g_error ("NcmDiff: coordinate %u at % .15g: its domain leaves room for steps of at most %.3e, "
+               "below the initial step %.3e, and the quotients are round-off.",
+               a, x, _ncm_diff_scheme_room (sx), self->ini_h * scale_x);
+
+    if (blocked_y && (_ncm_diff_scheme_room (sy) < self->ini_h * scale_y))
+      g_error ("NcmDiff: coordinate %u at % .15g: its domain leaves room for steps of at most %.3e, "
+               "below the initial step %.3e, and the quotients are round-off.",
+               b, y, _ncm_diff_scheme_room (sy), self->ini_h * scale_y);
+  }
+
+  return FALSE;
+}
+
+/* Initial steps of the two axes of a cross term, within their caps, after a fallback. */
+static void
+_ncm_diff_hessian_restart_bases (NcmDiffPrivate *self, NcmDiffScheme *sx, NcmDiffScheme *sy, const gdouble x, const gdouble y)
+{
+  const gdouble scale_x = (x == 0.0) ? 1.0 : fabs (x);
+  const gdouble scale_y = (y == 0.0) ? 1.0 : fabs (y);
+
+  sx->h0 = GSL_MIN (self->ini_h * GSL_MAX (1.0, scale_x), _ncm_diff_scheme_cap (self, sx, x));
+  sy->h0 = GSL_MIN (self->ini_h * GSL_MAX (1.0, scale_y), _ncm_diff_scheme_cap (self, sy, y));
 }
 
 static GArray *
@@ -2578,15 +2453,151 @@ _ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep
   }
 }
 
-static GArray *
-ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
+static void _ncm_diff_step_quotient (NcmVector *f1, const NcmVector *f2, const gdouble scale, NcmVector *roff);
+
+static void
+_ncm_diff_rf_d1_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *df, NcmVector *roff)
 {
-  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+  ncm_vector_addto (x_v, a, h);
 
-  if (self->dual_series)
-    return _ncm_diff_Hessian_by_step_algo_dual (diff, Hstep_algo, po, x_a, f, user_data, Eerr);
+  f (x_v, df, user_data);
 
-  return _ncm_diff_Hessian_by_step_algo_single (diff, Hstep_algo, po, x_a, f, user_data, Eerr);
+  _ncm_diff_step_quotient (df, f_v, 1.0 / h, roff);
+
+  NCM_UNUSED (yh1_v);
+  NCM_UNUSED (yh2_v);
+}
+
+/*
+ * Difference quotient (f1 - f2) scale, in place of f1, and its absolute
+ * round-off error eps max (|f1|, |f2|) |scale|. The round-off does not depend
+ * on the difference, so a quotient that rounds to exactly zero still carries
+ * the error of the values it came from.
+ */
+static void
+_ncm_diff_step_quotient (NcmVector *f1, const NcmVector *f2, const gdouble scale, NcmVector *roff)
+{
+  const guint len = ncm_vector_len (f1);
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble f1_i = ncm_vector_get (f1, i);
+    const gdouble f2_i = ncm_vector_get (f2, i);
+
+    ncm_vector_set (f1,   i, (f1_i - f2_i) * scale);
+    ncm_vector_set (roff, i, GSL_MAX (fabs (f1_i), fabs (f2_i)) * GSL_DBL_EPSILON * fabs (scale));
+  }
+}
+
+static void
+_ncm_diff_rc_d1_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *df, NcmVector *roff)
+{
+  ncm_vector_addto (x_v, a, h);
+
+  f (x_v, df, user_data);
+
+  ncm_vector_set (x_v, a, x - h);
+
+  f (x_v, yh1_v, user_data);
+
+  _ncm_diff_step_quotient (df, yh1_v, 0.5 / h, roff);
+
+  NCM_UNUSED (yh2_v);
+}
+
+static void
+_ncm_diff_rc_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *df, NcmVector *roff)
+{
+  const guint len     = ncm_vector_len (df);
+  const gdouble scale = 2.0 / (h * h);
+  guint i;
+
+  ncm_vector_addto (x_v, a, h);
+
+  f (x_v, df, user_data);
+
+  ncm_vector_set (x_v, a, x - h);
+
+  f (x_v, yh1_v, user_data);
+
+  /*
+   * The average of f (x + h) and f (x - h) can cancel exactly (an odd f at
+   * zero); the round-off is that of the three values entering the quotient.
+   */
+  for (i = 0; i < len; i++)
+  {
+    const gdouble fp_i  = ncm_vector_get (df, i);
+    const gdouble fm_i  = ncm_vector_get (yh1_v, i);
+    const gdouble f0_i  = ncm_vector_get (f_v, i);
+    const gdouble avg_i = (fp_i + fm_i) * 0.5;
+    const gdouble mag_i = GSL_MAX (GSL_MAX (fabs (fp_i), fabs (fm_i)), fabs (f0_i));
+
+    ncm_vector_set (df,   i, (avg_i - f0_i) * scale);
+    ncm_vector_set (roff, i, mag_i * GSL_DBL_EPSILON * scale);
+  }
+
+  NCM_UNUSED (yh2_v);
+}
+
+/*
+ * Forward second difference (f (x + 2h) - 2 f (x + h) + f (x)) / h^2, the
+ * one-sided scheme rc_d2 falls back to at an edge of the domain; a negative
+ * h makes it backward.
+ */
+static void
+_ncm_diff_rf_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *df, NcmVector *roff)
+{
+  const guint len     = ncm_vector_len (df);
+  const gdouble scale = 1.0 / (h * h);
+  guint i;
+
+  ncm_vector_addto (x_v, a, h);
+
+  f (x_v, df, user_data);
+
+  ncm_vector_addto (x_v, a, h);
+
+  f (x_v, yh1_v, user_data);
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble f1_i  = ncm_vector_get (df, i);
+    const gdouble f2_i  = ncm_vector_get (yh1_v, i);
+    const gdouble f0_i  = ncm_vector_get (f_v, i);
+    const gdouble mag_i = GSL_MAX (GSL_MAX (fabs (f1_i), fabs (f2_i)), fabs (f0_i));
+
+    ncm_vector_set (df,   i, ((f2_i - f1_i) - (f1_i - f0_i)) * scale);
+    ncm_vector_set (roff, i, 4.0 * mag_i * GSL_DBL_EPSILON * scale);
+  }
+
+  NCM_UNUSED (yh2_v);
+}
+
+static void
+_ncm_diff_rf_Hessian_step (NcmDiff *diff, NcmDiffFuncNto1 f, gpointer user_data, const guint a, const gdouble x, const gdouble hx, const guint b, const gdouble y, const gdouble hy, NcmVector *x_v, const gdouble fval, gdouble *df, gdouble *roff)
+{
+  gdouble f_hx, f_hy, f_hxhy;
+
+
+  ncm_vector_addto (x_v, a, hx);
+  f_hx = f (x_v, user_data);
+
+  ncm_vector_set (x_v, a, x);
+  ncm_vector_addto (x_v, b, hy);
+  f_hy = f (x_v, user_data);
+
+  ncm_vector_addto (x_v, a, hx);
+  f_hxhy = f (x_v, user_data);
+
+  df[0] = ((fval + f_hxhy) - (f_hx + f_hy)) / (hx * hy);
+
+  {
+    /* Absolute round-off error of df[0], as in the other step algorithms. */
+    const gdouble max_s12 = GSL_MAX (fabs (fval + f_hxhy), fabs (f_hx + f_hy));
+
+    roff[0] = max_s12 * GSL_DBL_EPSILON / fabs (hx * hy);
+  }
 }
 
 /*
@@ -2755,9 +2766,9 @@ _ncm_diff_sc_eval0 (const gdouble *c, const guint n)
  *
  * - tail: the top quarter of the fitted coefficients, propagated in absolute
  *   value through the differentiation (truncation). Measured on the original
- *   coefficients, never on the differentiated ones: differentiation makes a
- *   slowly decaying series bottom-heavy, so its own tail can look converged
- *   while the fit has not resolved the function at all.
+ *   coefficients, never on the differentiated ones: differentiation
+ *   concentrates a slowly decaying series in its low coefficients, so its
+ *   own tail is small while the fit has not resolved the function.
  * - roff: the coefficient round-off eps * sum |c_k|, propagated the same way
  *   (the amplification of the k-th coefficient grows as k^2 per order).
  *
@@ -2849,8 +2860,8 @@ _ncm_diff_sc_deriv_est (const gdouble *c, const guint len, const gdouble R, cons
  *   scores of different windows compare directly. With w_set FALSE the
  *   weights are first filled from this probe.
  * - q: the worst q_fit over components, the fraction of coefficient mass in
- *   the top quarter of the series. A resolved window sits at round-off
- *   (q ~ 1e-12); an unresolved one at q >~ 1e-3.
+ *   the top quarter of the series. A resolved window has q at the round-off
+ *   level (~1e-12); an unresolved one has q >~ 1e-3.
  *
  * Returns FALSE (score GSL_POSINF) when the function is non-finite on the window.
  */
@@ -2894,12 +2905,12 @@ _ncm_diff_sc_probe (NcmDiffSCData *data, const gdouble x, const gdouble R, const
 
 /*
  * Window search: hill descent on the probe score over a dyadic ladder of
- * half-widths, shrinking first and expanding only when shrinking never beat
- * the initial window. While no resolved window (q below NCM_DIFF_SC_BAD_Q)
- * has been seen the shrinking never gives up: for a feature much narrower
- * than the window the score can even move away from the eventual minimum
- * until the window reaches the feature scale. Expansion only makes sense for
- * a resolved fit (it lowers the round-off amplification), so it requires one.
+ * half-widths, shrinking first and expanding only when no shrinking improved
+ * on the initial window. While no resolved window (q below NCM_DIFF_SC_BAD_Q)
+ * has been seen the shrinking continues: for a feature much narrower than
+ * the window the score can move away from the eventual minimum until the
+ * window reaches the feature scale. Expansion requires a resolved fit, since
+ * it only lowers the round-off amplification.
  * Stores the node values of the best window in fvals_best and returns its
  * half-width, or 0.0 when no finite window was found.
  */
@@ -2938,8 +2949,8 @@ _ncm_diff_sc_scan_window (NcmDiffSCData *data, const gdouble x, const gdouble R0
     if (_ncm_diff_sc_probe (data, x, R, dim, order, y_v, fvals, coeffs, w, w_set, &score, &q))
       w_set = TRUE;
 
-    /* A first resolved window always wins over an unresolved best: the score
-     * of an unresolved fit only measures how wrong it knows itself to be. */
+    /* A resolved window replaces an unresolved best regardless of score: the
+     * score of an unresolved fit measures its tail, not its distance to f. */
     if ((q_best > NCM_DIFF_SC_BAD_Q) && (q <= NCM_DIFF_SC_BAD_Q))
       improved = TRUE;
     else if ((score < NCM_DIFF_SC_IMPROVE * score_best) && (q <= GSL_MAX (q_best, NCM_DIFF_SC_BAD_Q)))
@@ -3166,7 +3177,7 @@ _ncm_diff_sc_dn (NcmDiff *diff, const guint order, GArray *x_a, const guint dim,
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N\to \mathbb{R}^M$,
  * where $N = $ length of @x_a and $M = $ @dim.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x_a.
  */
 GArray *
 ncm_diff_rf_d1_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
@@ -3187,7 +3198,7 @@ ncm_diff_rf_d1_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncN
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N\to \mathbb{R}^M$,
  * where $N = $ length of @x_a and $M = $ @dim.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x_a.
  */
 GArray *
 ncm_diff_rc_d1_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
@@ -3208,7 +3219,7 @@ ncm_diff_rc_d1_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncN
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N\to \mathbb{R}^M$,
  * where $N = $ length of @x_a and $M = $ @dim.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x_a.
  */
 GArray *
 ncm_diff_rc_d2_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
@@ -3260,11 +3271,11 @@ _ncm_diff_trans_1_to_1 (NcmVector *x, NcmVector *y, gpointer user_data)
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  *
- * Calculates the first derivative of @f: $\partial_i f$ using the forward method plus
- * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
- * where $N = $ length of @x_a.
+ * Calculates the first derivative of @f using the forward method plus
+ * Richardson extrapolation. The function $f$ is considered as a
+ * $f:\mathbb{R} \to \mathbb{R}^M$, where $M = $ @dim.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x.
  */
 GArray *
 ncm_diff_rf_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr)
@@ -3293,11 +3304,11 @@ ncm_diff_rf_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffF
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  *
- * Calculates the first derivative of @f: $\partial_i f$ using the central method plus
- * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
- * where $N = $ length of @x_a.
+ * Calculates the first derivative of @f using the central method plus
+ * Richardson extrapolation. The function $f$ is considered as a
+ * $f:\mathbb{R} \to \mathbb{R}^M$, where $M = $ @dim.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x.
  */
 GArray *
 ncm_diff_rc_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr)
@@ -3325,11 +3336,11 @@ ncm_diff_rc_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffF
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  *
- * Calculates the second derivative of @f: $\partial_i^2 f$ using the central method plus
- * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
- * where $N = $ length of @x_a.
+ * Calculates the second derivative of @f using the central method plus
+ * Richardson extrapolation. The function $f$ is considered as a
+ * $f:\mathbb{R} \to \mathbb{R}^M$, where $M = $ @dim.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x.
  */
 GArray *
 ncm_diff_rc_d2_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr)
@@ -3360,7 +3371,7 @@ ncm_diff_rc_d2_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffF
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x_a.
  */
 GArray *
 ncm_diff_rf_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
@@ -3383,7 +3394,7 @@ ncm_diff_rf_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer u
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x_a.
  */
 GArray *
 ncm_diff_rc_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
@@ -3406,7 +3417,7 @@ ncm_diff_rc_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer u
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x_a.
  */
 GArray *
 ncm_diff_rc_d2_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
@@ -3429,7 +3440,7 @@ ncm_diff_rc_d2_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer u
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  *
- * Returns: (transfer full) (array) (element-type double): The Hessian of @f at @x_a.
+ * Returns: (transfer full) (array) (element-type double): the Hessian of @f at @x_a.
  */
 GArray *
 ncm_diff_rf_Hessian_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
@@ -3470,7 +3481,7 @@ ncm_diff_rf_Hessian_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpoin
  * Calculates the first derivative of @f: $\partial_i f$ using the forward method plus
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R} \to \mathbb{R}$.
  *
- * Returns: The derivative of @f at @x.
+ * Returns: the derivative of @f at @x.
  */
 gdouble
 ncm_diff_rf_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpointer user_data, gdouble *err)
@@ -3511,7 +3522,7 @@ ncm_diff_rf_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpoint
  * Calculates the first derivative of @f: $\partial_i f$ using the central method plus
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R} \to \mathbb{R}$.
  *
- * Returns: The derivative of @f at @x.
+ * Returns: the derivative of @f at @x.
  */
 gdouble
 ncm_diff_rc_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpointer user_data, gdouble *err)
@@ -3552,7 +3563,7 @@ ncm_diff_rc_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpoint
  * Calculates the second derivative of @f: $\partial_i^2 f$ using the central method plus
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R} \to \mathbb{R}$.
  *
- * Returns: The derivative of @f at @x.
+ * Returns: the derivative of @f at @x.
  */
 gdouble
 ncm_diff_rc_d2_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpointer user_data, gdouble *err)
@@ -3598,12 +3609,12 @@ ncm_diff_rc_d2_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpoint
  * differentiated analytically at the window center. The function $f$ is considered
  * as a $f:\mathbb{R}^N\to \mathbb{R}^M$, where $N = $ length of @x_a and $M = $ @dim.
  *
- * Compared to the finite-difference methods, the spectral method samples the
- * function on a wide window instead of a shrinking neighborhood, which lowers the
- * round-off amplification and handles functions whose scale of variation differs
- * from the magnitude of the variable. It uses more function evaluations.
+ * The spectral method samples $f$ on a window matched to its scale of
+ * variation instead of a shrinking neighborhood of $x$, with lower round-off
+ * amplification and more function evaluations than the finite-difference
+ * methods.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x_a.
  */
 GArray *
 ncm_diff_sc_d1_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
@@ -3624,7 +3635,7 @@ ncm_diff_sc_d1_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncN
  * method, see ncm_diff_sc_d1_N_to_M(). The function $f$ is considered as a
  * $f:\mathbb{R}^N\to \mathbb{R}^M$, where $N = $ length of @x_a and $M = $ @dim.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x_a.
  */
 GArray *
 ncm_diff_sc_d2_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
@@ -3645,7 +3656,7 @@ ncm_diff_sc_d2_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncN
  * ncm_diff_sc_d1_N_to_M(). The function $f$ is considered as a
  * $f:\mathbb{R}\to \mathbb{R}^M$, where $M = $ @dim.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x.
  */
 GArray *
 ncm_diff_sc_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr)
@@ -3677,7 +3688,7 @@ ncm_diff_sc_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffF
  * ncm_diff_sc_d1_N_to_M(). The function $f$ is considered as a
  * $f:\mathbb{R}\to \mathbb{R}^M$, where $M = $ @dim.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x.
  */
 GArray *
 ncm_diff_sc_d2_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr)
@@ -3708,7 +3719,7 @@ ncm_diff_sc_d2_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffF
  * ncm_diff_sc_d1_N_to_M(). The function $f$ is considered as a
  * $f:\mathbb{R}^N \to \mathbb{R}$, where $N = $ length of @x_a.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x_a.
  */
 GArray *
 ncm_diff_sc_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
@@ -3730,7 +3741,7 @@ ncm_diff_sc_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer u
  * see ncm_diff_sc_d1_N_to_M(). The function $f$ is considered as a
  * $f:\mathbb{R}^N \to \mathbb{R}$, where $N = $ length of @x_a.
  *
- * Returns: (transfer full) (array) (element-type double): The derivative of @f at @x_a.
+ * Returns: (transfer full) (array) (element-type double): the derivative of @f at @x_a.
  */
 GArray *
 ncm_diff_sc_d2_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
@@ -3752,7 +3763,7 @@ ncm_diff_sc_d2_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer u
  * ncm_diff_sc_d1_N_to_M(). The function $f$ is considered as a
  * $f:\mathbb{R} \to \mathbb{R}$.
  *
- * Returns: The derivative of @f at @x.
+ * Returns: the derivative of @f at @x.
  */
 gdouble
 ncm_diff_sc_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpointer user_data, gdouble *err)
@@ -3793,7 +3804,7 @@ ncm_diff_sc_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpoint
  * ncm_diff_sc_d1_N_to_M(). The function $f$ is considered as a
  * $f:\mathbb{R} \to \mathbb{R}$.
  *
- * Returns: The derivative of @f at @x.
+ * Returns: the derivative of @f at @x.
  */
 gdouble
 ncm_diff_sc_d2_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpointer user_data, gdouble *err)
