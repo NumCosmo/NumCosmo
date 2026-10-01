@@ -212,10 +212,15 @@ _ncm_fit_gsl_ls_f (const gsl_vector *x, gpointer p, gsl_vector *f)
 
   ncm_fit_params_set_gsl_vector (fit, x);
 
-  /* An infinite residual makes the trust-region solver reject the step. */
+  /*
+   * A residual whose norm exceeds that of any valid point makes the trust-region solver
+   * reject the step. It is finite, with a sum of squares of GSL_DBL_MAX / 2: a BLAS
+   * kernel may return a NaN norm for an infinite entry, and GSL accepts a step whose
+   * reduction ratio is NaN.
+   */
   if (!ncm_mset_params_valid (mset))
   {
-    gsl_vector_set_all (f, GSL_POSINF);
+    gsl_vector_set_all (f, sqrt (GSL_DBL_MAX / (2.0 * f->size)));
 
     return GSL_SUCCESS;
   }
