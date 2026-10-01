@@ -925,12 +925,32 @@ nc_wl_surface_mass_density_reduced_shear_crit_cache_prep_with_lens_ctx (NcWLSurf
 void
 nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensitySigmaCache *sigma_cache)
 {
-  NCM_UNUSED (zl);
-
   gdouble r_s, rho_s;
 
-  nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
+  NCM_UNUSED (zl);
 
+  nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
+  nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep_with_rs (dp, R, r_s, rho_s, sigma_cache);
+}
+
+/**
+ * nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep_with_rs:
+ * @dp: a #NcHaloDensityProfile
+ * @R: projected radius [Mpc]
+ * @r_s: the profile's scale radius at the cluster redshift [Mpc]
+ * @rho_s: the profile's scale density at the cluster redshift
+ * @sigma_cache: (out): a #NcWLSurfaceMassDensitySigmaCache
+ *
+ * As nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep(), with the
+ * scale quantities supplied by a caller that already holds them, as
+ * #NcGalaxyShapeFactor does after its prepare. Beyond saving the per-call
+ * recomputation, this leaves the profile's own lazily updated state
+ * untouched, so it can be called for many radii concurrently.
+ *
+ */
+void
+nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep_with_rs (NcHaloDensityProfile *dp, const gdouble R, const gdouble r_s, const gdouble rho_s, NcWLSurfaceMassDensitySigmaCache *sigma_cache)
+{
   const gdouble X          = R / r_s;
   const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
   const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;

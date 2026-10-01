@@ -67,6 +67,11 @@
 
 #include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
+#include <math.h>
+#include <gsl/gsl_integration.h>
+#endif /* NUMCOSMO_GIR_SCAN */
+
 enum
 {
   PROP_0,
@@ -155,6 +160,64 @@ _nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *
     p_data[i] = klass->eval_p (gsp, data, g_array_index (r, gdouble, i));
 }
 
+/* Number of fixed Gauss-Legendre nodes for the generic moment_2k() fallback.
+ * This path is only exercised by a population with no closed-form override
+ * (Gauss, GaussLocal and Beta all have one), so it is sized for headroom
+ * rather than hot-loop cost. */
+#define NC_GALAXY_SHAPE_POP_MOMENT_2K_DEFAULT_NNODES 64
+
+/* Real (non-stub) default: fixed Gauss-Legendre quadrature of
+ * int_0^1 r^2k P_pop(r) dr, batched through eval_p_array() (r^2k is
+ * evaluated on the node array, not the population, so this is the second
+ * safe generic fallback in the class, after eval_p_array() itself). k=0 is
+ * the population's own normalization constant, returned as 1.0 directly
+ * rather than integrated -- quadrature there would be a pure error source
+ * for a quantity that is exact by construction. */
+static gdouble
+_nc_galaxy_shape_pop_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k)
+{
+  const guint n_nodes = NC_GALAXY_SHAPE_POP_MOMENT_2K_DEFAULT_NNODES;
+
+  if (k == 0)
+  {
+    return 1.0;
+  }
+  else
+  {
+    gsl_integration_glfixed_table *table = gsl_integration_glfixed_table_alloc (n_nodes);
+    gdouble weight[NC_GALAXY_SHAPE_POP_MOMENT_2K_DEFAULT_NNODES];
+    GArray *r_arr  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), n_nodes);
+    GArray *p_arr  = NULL;
+    gdouble moment = 0.0;
+    guint i;
+
+    g_array_set_size (r_arr, n_nodes);
+
+    {
+      gdouble * const r_data = (gdouble *) r_arr->data;
+
+      for (i = 0; i < n_nodes; i++)
+        gsl_integration_glfixed_point (0.0, 1.0, i, &r_data[i], &weight[i], table);
+    }
+
+    nc_galaxy_shape_pop_eval_p_array (gsp, data, r_arr, &p_arr);
+
+    {
+      const gdouble * const r_data = (const gdouble *) r_arr->data;
+      const gdouble * const p_data = (const gdouble *) p_arr->data;
+
+      for (i = 0; i < n_nodes; i++)
+        moment += weight[i] * pow (r_data[i], 2.0 * k) * p_data[i];
+    }
+
+    g_array_unref (r_arr);
+    g_array_unref (p_arr);
+    gsl_integration_glfixed_table_free (table);
+
+    return moment;
+  }
+}
+
 static void
 nc_galaxy_shape_pop_class_init (NcGalaxyShapePopClass *klass)
 {
@@ -175,6 +238,7 @@ nc_galaxy_shape_pop_class_init (NcGalaxyShapePopClass *klass)
   klass->e_rms                = &_nc_galaxy_shape_pop_e_rms;
   klass->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_eval_p_rho2_g_series;
   klass->eval_p_array         = &_nc_galaxy_shape_pop_eval_p_array;
+  klass->moment_2k            = &_nc_galaxy_shape_pop_moment_2k;
 }
 
 /**
@@ -515,5 +579,31 @@ gdouble
 nc_galaxy_shape_pop_get_mode_r (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
 {
   return (data->ldata_get_mode_r != NULL) ? data->ldata_get_mode_r (data) : 0.0;
+}
+
+/**
+ * nc_galaxy_shape_pop_moment_2k: (virtual moment_2k)
+ * @gsp: a #NcGalaxyShapePop
+ * @data: a resolved #NcGalaxyShapePopData
+ * @k: the moment order
+ *
+ * Computes the radial moment
+ * $M_{2k} = \langle |\chi_I|^{2k} \rangle = \int_0^1 r^{2k}\,P_\mathrm{pop}(r)\,\mathrm{d}r$,
+ * reading the resolved parameters from @data (the
+ * nc_galaxy_shape_pop_eval_p() contract: no live parameter access), so
+ * @data must have been resolved by nc_galaxy_shape_pop_prepare() since the
+ * population's parameters last changed. $k=0$ always returns exactly 1
+ * (the population's own normalization), never integrated.
+ *
+ * The base class provides a real (non-error) fixed-quadrature default valid
+ * for any population; concrete models override it with a closed form where
+ * one exists.
+ *
+ * Returns: the radial moment $M_{2k}$.
+ */
+gdouble
+nc_galaxy_shape_pop_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k)
+{
+  return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->moment_2k (gsp, data, k);
 }
 

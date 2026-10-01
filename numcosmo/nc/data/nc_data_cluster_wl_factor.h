@@ -85,6 +85,10 @@ guint nc_data_cluster_wl_factor_get_max_total_nodes (NcDataClusterWLFactor *dcwl
 
 guint nc_data_cluster_wl_factor_get_low_prob_count (NcDataClusterWLFactor *dcwlf);
 
+void nc_data_cluster_wl_factor_data_prepare (NcDataClusterWLFactor *dcwlf, NcmMSet *mset);
+gboolean nc_data_cluster_wl_factor_is_data_prepared (NcDataClusterWLFactor *dcwlf);
+guint nc_data_cluster_wl_factor_get_calib_count (NcDataClusterWLFactor *dcwlf);
+
 NcGalaxyWLObs *nc_data_cluster_wl_factor_peek_obs (NcDataClusterWLFactor *dcwlf);
 
 void nc_data_cluster_wl_factor_set_resample_flag (NcDataClusterWLFactor *dcwlf, NcDataClusterWLResampleFlag resample_flag);

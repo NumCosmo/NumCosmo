@@ -106,8 +106,8 @@ nc_galaxy_shape_pop_gauss_local_class_init (NcGalaxyShapePopGaussLocalClass *kla
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
   ncm_model_class_check_params_info (model_class);
 
-  /* eval_p, gen and eval_p_rho2_g_series are the SAME functions
-   * NcGalaxyShapePopGauss uses (reused directly, not inherited): all three
+  /* eval_p, gen, eval_p_rho2_g_series and moment_2k are the SAME functions
+   * NcGalaxyShapePopGauss uses (reused directly, not inherited): all four
    * only ever touch data->ldata, whose {norm, inv_2sigma2, sigma} layout
    * and meaning are identical here. */
   gsp_class->data_init            = &_nc_galaxy_shape_pop_gauss_local_data_init;
@@ -117,6 +117,7 @@ nc_galaxy_shape_pop_gauss_local_class_init (NcGalaxyShapePopGaussLocalClass *kla
   gsp_class->e_rms                = &_nc_galaxy_shape_pop_gauss_local_e_rms;
   gsp_class->exponent_at_origin   = &_nc_galaxy_shape_pop_gauss_local_exponent_at_origin;
   gsp_class->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series;
+  gsp_class->moment_2k            = &_nc_galaxy_shape_pop_gauss_moment_2k;
 }
 
 static void
