@@ -658,7 +658,10 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   _mpi_ctrl.nslaves        = 0;
   _mpi_ctrl.working_slaves = 0;
 
-  atexit (_ncm_cfg_exit);
+  /*
+   * _ncm_cfg_exit finalizes MPI, so it is registered after MPI_Init: exit handlers run
+   * in reverse order, and those MPI_Init registers must run after MPI_Finalize.
+   */
 
 #ifdef HAVE_MPI
 
@@ -691,6 +694,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
       if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
       {
         /* Workers never return to the caller. */
+        atexit (_ncm_cfg_exit);
         ncm_mpi_slave_run ();
         exit (0);
       }
@@ -708,6 +712,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   }
 
 #endif /* HAVE_MPI */
+
+  atexit (_ncm_cfg_exit);
 
   return;
 }

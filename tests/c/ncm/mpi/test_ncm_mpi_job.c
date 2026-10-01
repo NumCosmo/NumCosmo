@@ -472,6 +472,34 @@ test_ncm_mpi_job_sequence (void)
   _test_ncm_mpi_job_run_shape_job (&ncm_mpi_job_run_array, 1, 11, 20);
 }
 
+static void (*_test_ncm_mpi_job_shape_run) (NcmMPIJob *mpi_job, gpointer input, gpointer ret) = NULL;
+
+static void
+_test_ncm_mpi_job_slow_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
+{
+  g_usleep (20000);
+  _test_ncm_mpi_job_shape_run (mpi_job, input, ret);
+}
+
+static void
+test_ncm_mpi_job_async_refill (void)
+{
+  /*
+   * The master runs its inputs slowly (the class is changed in its process only), so
+   * the workers return while inputs are queued and the control thread hands them new
+   * ones. Freeing the job waits for every pooled buffer to come back.
+   */
+  NcmMPIJobClass *klass = g_type_class_ref (TEST_TYPE_MPI_JOB_SHAPE);
+
+  _test_ncm_mpi_job_shape_run = klass->run;
+  klass->run                  = &_test_ncm_mpi_job_slow_run;
+
+  _test_ncm_mpi_job_run_shape_job (&ncm_mpi_job_run_array_async, 3, 5, 20);
+
+  klass->run = _test_ncm_mpi_job_shape_run;
+  g_type_class_unref (klass);
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -493,6 +521,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mpi/job/empty", &test_ncm_mpi_job_empty);
   g_test_add_func ("/ncm/mpi/job/single_input", &test_ncm_mpi_job_single_input);
   g_test_add_func ("/ncm/mpi/job/sequence", &test_ncm_mpi_job_sequence);
+  g_test_add_func ("/ncm/mpi/job/async_refill", &test_ncm_mpi_job_async_refill);
   g_test_add_func ("/ncm/mpi/job/fit/run_array", &test_ncm_mpi_job_fit_run_array);
   g_test_add_func ("/ncm/mpi/job/fit/run_array_async", &test_ncm_mpi_job_fit_run_array_async);
   g_test_add_func ("/ncm/mpi/job/feval/run_array", &test_ncm_mpi_job_feval_run_array);

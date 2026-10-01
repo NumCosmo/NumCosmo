@@ -1119,6 +1119,7 @@ _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
 
       MPI_Send (&cmd, 1, MPI_INT, slave_id, NCM_MPI_CTRL_TAG_CMD, MPI_COMM_WORLD);
       MPI_Send (input_buf, self->input_len, self->input_dtype, slave_id, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD);
+      ncm_mpi_job_destroy_input_buffer (ctrl_data->mpi_job, j->input, input_buf);
 
       bd->obj = j->ret;
       bd->buf = ncm_mpi_job_get_return_buffer (ctrl_data->mpi_job, j->ret);
