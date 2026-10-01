@@ -34,6 +34,7 @@
  * the prior.
  *
  * Users enjoy the flexibility to specify the parameter in various ways:
+ *
  * - Using the pair NcmModelID and the parameter pid.
  * - Providing a single NcmMSetPIndex.
  * - Supplying a string consisting of a parameter full name "model:parameter".

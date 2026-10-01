@@ -377,6 +377,7 @@ nc_planck_fi_cor_tt_add_default18_sz_prior (NcmLikelihood *lh)
  * @lh: a #NcmLikelihood
  *
  * Adds all default priors above:
+ *
  * - nc_planck_fi_cor_tt_add_default_gal_priors()
  * - nc_planck_fi_cor_tt_add_default_calib_priors()
  * - nc_planck_fi_cor_tt_add_default_sz_prior()
@@ -395,6 +396,7 @@ nc_planck_fi_cor_tt_add_all_default_priors (NcmLikelihood *lh)
  * @lh: a #NcmLikelihood
  *
  * Adds all default priors above:
+ *
  * - nc_planck_fi_cor_tt_add_default18_gal_priors()
  * - nc_planck_fi_cor_tt_add_default18_calib_priors()
  * - nc_planck_fi_cor_tt_add_default18_sz_prior()

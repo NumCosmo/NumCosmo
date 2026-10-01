@@ -365,7 +365,7 @@ class RunClusterRichnessAnalysis(AppLogging):
             f"{np.exp(data.lnR.max()):.1f}]"
         )
         self.console.print(
-            f"  σ(ln R) range: [{data.sigma_lnR.min():.4f}, "
+            f"  sigma(ln R) range: [{data.sigma_lnR.min():.4f}, "
             f"{data.sigma_lnR.max():.4f}]"
         )
 
@@ -383,7 +383,7 @@ class RunClusterRichnessAnalysis(AppLogging):
             n_above = np.sum(data.lnR >= cut)
             fraction = n_above / len(data) * 100
             table.add_row(
-                f"λ ≥ {np.exp(cut):.1f}",
+                f"lambda >= {np.exp(cut):.1f}",
                 f"{n_above}",
                 f"{fraction:.1f}%",
             )
@@ -552,14 +552,14 @@ class RunClusterRichnessAnalysis(AppLogging):
             )
 
             if self.run_diagnostics:
-                self.console.print(f"\n[cyan]Cut λ ≥ {np.exp(cut):.1f}:[/cyan]")
+                self.console.print(f"\n[cyan]Cut lambda >= {np.exp(cut):.1f}:[/cyan]")
                 self.console.print(f"  N clusters: {len(data_cut)}")
 
                 # Print some diagnostic statistics
                 sigma_emp = np.nanmean(stats["sample_std"])
                 sigma_mod = np.nanmean(stats["bin_std_pred"])
-                self.console.print(f"  Mean empirical σ: {sigma_emp:.3f}")
-                self.console.print(f"  Mean model σ: {sigma_mod:.3f}")
+                self.console.print(f"  Mean empirical sigma: {sigma_emp:.3f}")
+                self.console.print(f"  Mean model sigma: {sigma_mod:.3f}")
 
                 # How many cluster have integer richness?
                 R_array = np.exp(data_cut.lnR)
@@ -576,7 +576,7 @@ class RunClusterRichnessAnalysis(AppLogging):
                 repeated_int_R = {k: v for k, v in repeated_int_R.items() if v > 1}
                 self.console.print(
                     f"  Clusters with integer richness above cut "
-                    f"λ ≥ {np.exp(cut):.1f}: "
+                    f"lambda >= {np.exp(cut):.1f}: "
                     f"{np.sum(list(repeated_int_R.values()))} "
                     f"out of {len(data_cut)}"
                 )

@@ -133,7 +133,7 @@ def test_rg_snia_bao() -> None:
 
     #
     #  Creating a new Likelihood ratio test object.
-    #  First we create two PIndex indicating which parameter
+    #  Create two PIndex values identifying the parameters.
     #    we are going to study.
     #
     p1 = Ncm.MSetPIndex.new(cosmo.id(), Nc.HICosmoDESParams.OMEGA_C)

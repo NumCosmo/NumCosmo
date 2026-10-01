@@ -15,9 +15,8 @@ format-links: [ipynb]
 
 ## Introduction
 
-In this example, we demonstrate how to use NumCosmo to compute cosmological observables
-and fit a model to data. We use the `numcosmo_py`[^numcosmo_py] package to simplify
-the library usage and `plotnine` for data visualization.
+Computes cosmological observables and fits a model with `numcosmo_py`[^numcosmo_py]
+and `plotnine`.
 
 ## Computational Cosmology
 
@@ -203,7 +202,7 @@ esmcmc.end_run()
 
 ```
 
-Finally, we can extract the MCMC samples and visualize the results.
+Extract the MCMC samples and visualize the results.
 
 ```{python}
 # | label: fig-mcmc-results

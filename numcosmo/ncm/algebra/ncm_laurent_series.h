@@ -92,7 +92,7 @@ void ncm_laurent_series_conj_into (NcmLaurentSeries *out, const NcmLaurentSeries
  * not a short-lived per-call temporary.
  *
  * Boxed with reference-count "copy" (ncm_laurent_series_tps_ref()), not a
- * deep copy, matching #NcGalaxyShapeFactorData and siblings: a "copy"
+ * deep copy, matching #NcGalaxyShapeFactorData and related types: a "copy"
  * shares the same underlying storage, so later mutations via the owning
  * object's own eval()/compute step are visible through every outstanding
  * reference.
@@ -147,7 +147,7 @@ void ncm_laurent_series_tps_eval_ptr (const NcmLaurentSeriesTPS *tps, const NcmC
 void ncm_laurent_series_tps_pow (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, gdouble p);
 
 /* In-place tier: writes into a caller-supplied @out instead of allocating,
- * for the hot loop in nc_wl_ellipticity_series.c. Only conv() needs any
+ * for the performance-critical loop in nc_wl_ellipticity_series.c. Only conv() needs any
  * scratch beyond @out's own slots (the fold's ping-pong accumulator, see
  * ncm_laurent_series_tps_new()'s own comment on @conv_acc/@conv_term); it
  * draws that scratch from @out's own private fields, never from an external
@@ -158,7 +158,7 @@ void ncm_laurent_series_tps_conj (NcmLaurentSeriesTPS *out, const NcmLaurentSeri
 void ncm_laurent_series_tps_add (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, const NcmLaurentSeriesTPS *b, gdouble sb);
 
 /* @s by value: fast, `(skip)`-ed from introspection (see the file's own top
- * doc comment on the bare/`_ptr` convention). No `_ptr` sibling exists yet
+ * doc comment on the bare/`_ptr` convention). No `_ptr` function exists yet
  * (nothing calls one). */
 void ncm_laurent_series_tps_scale (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, NcmComplex s);
 NcmComplex ncm_laurent_series_tps_eval (const NcmLaurentSeriesTPS *tps, NcmComplex w, NcmComplex g);

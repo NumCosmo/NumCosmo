@@ -36,16 +36,16 @@ from numcosmo_py import Ncm
 def pln1d_integral_numerical(R, mu, sigma, n_samples=500):
     """Compute Poisson-Lognormal 1D integral numerically using trapezoidal rule.
 
-    Computes P(R|μ,σ) = ∫ P_Poisson(R|λ) * P_LogNormal(λ|μ,σ) dλ
+    Computes P(R|mu,sigma) = int P_Poisson(R|lambda) * P_LogNormal(lambda|mu,sigma) dlambda
 
     Parameters
     ----------
     R : float
         Poisson rate parameter
     mu : float
-        Log-normal location parameter (mean of log(λ))
+        Log-normal location parameter (mean of log(lambda))
     sigma : float
-        Log-normal scale parameter (std dev of log(λ))
+        Log-normal scale parameter (std dev of log(lambda))
     n_samples : int, optional
         Number of sample points for numerical integration (default: 500)
 
@@ -54,8 +54,8 @@ def pln1d_integral_numerical(R, mu, sigma, n_samples=500):
     float
         Numerical integral result
     """
-    # Substitute λ = exp(x), so dλ = exp(x) dx
-    # Integral becomes: ∫ exp(R*x - exp(x)) / R! * 1/(σ√(2π)) * exp(-(x-μ)²/(2σ²)) dx
+    # Substitute lambda = exp(x), so dlambda = exp(x) dx
+    # Integral becomes: int exp(R*x - exp(x)) / R! * 1/(sigma*sqrt(2pi)) * exp(-(x-mu)^2/(2sigma^2)) dx
 
     # Sample x in a wide range around the expected mode
     x_center = np.log(R) if R > 0 else 0.0
@@ -65,7 +65,7 @@ def pln1d_integral_numerical(R, mu, sigma, n_samples=500):
     x_values = np.linspace(x_min, x_max, n_samples)
 
     # Compute integrand in log space for numerical stability
-    # ln(integrand) = R*x - exp(x) - ln(R!) - 0.5*ln(2π*σ²) - (x-μ)²/(2σ²)
+    # ln(integrand) = R*x - exp(x) - ln(R!) - 0.5*ln(2pi*sigma^2) - (x-mu)^2/(2sigma^2)
     lnfactorial_R = gammaln(R + 1)
 
     ln_integrand = (
@@ -471,7 +471,7 @@ class TestPLN1D(unittest.TestCase):
 
     def test_pln1d_result_bounds(self):
         """Test that results are within physically reasonable bounds."""
-        # For Poisson–Lognormal with these parameters
+        # For Poisson-Lognormal with these parameters
         R_values = np.array([0.0, 1.0, 5.0, 10.0])
         mu = 0.0
         sigma = 1.0
@@ -595,7 +595,7 @@ class TestPLN1D(unittest.TestCase):
         coeffs = np.polyfit(ln_R_values, ln_p_values, 2)
 
         # For a normal in ln(R), ln(p) should be quadratic in ln(R)
-        # coeffs[0] is the quadratic term (related to 1/(2σ²))
+        # coeffs[0] is the quadratic term (related to 1/(2sigma^2))
         # coeffs[1] is the linear term (related to mean)
         # coeffs[2] is the constant
 
@@ -604,8 +604,8 @@ class TestPLN1D(unittest.TestCase):
         self.assertLess(abs(peak_ln_R - mu), sigma, "Peak should be near mu")
 
         # The width (curvature) should be approximately consistent with sigma
-        # For a Gaussian: ln(p) ∝ -(ln(R) - μ)² / (2σ²)
-        # So the quadratic coefficient should be approximately -1/(2σ²)
+        # For a Gaussian: ln(p) proportional to -(ln(R) - mu)^2 / (2sigma^2)
+        # So the quadratic coefficient should be approximately -1/(2sigma^2)
         expected_curvature = -1.0 / (2 * (sigma**2 + np.exp(-mu)))
         rel_error = abs(coeffs[0] - expected_curvature) / abs(expected_curvature)
         # Allow 10% relative error due to finite sample and Poisson term

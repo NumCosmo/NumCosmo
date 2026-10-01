@@ -71,6 +71,19 @@ import cases_k_integral as cases  # noqa: E402  pylint: disable=wrong-import-pos
 # reach, so it is stated instead.
 K_MARGIN = 1.5
 
+# Cases where K_MARGIN is not enough, as an absolute k_hi in 1/Mpc.
+#
+# The lensing window has a hard edge at chi_lower where it does not vanish, so
+# its I_ell falls as 1/k and the C_ell integrand only as k^-3.5. Beyond the
+# library's ell = 2 range times the margin (0.86/Mpc), the auto spectrum has
+# 2.9e-7 of its own value still outstanding, against a target of 1e-10.
+# Measured on the library's own closure built out to 79/Mpc: 1.8e-8 outstanding
+# beyond 2/Mpc, 7.5e-10 beyond 5/Mpc, 5.0e-11 beyond 10/Mpc. The cross spectrum
+# with a Gaussian needs no floor -- the Gaussian side cuts the product off, at
+# 4e-10 beyond that same 0.86/Mpc. Cost grows as the square of the phase
+# k_hi chi_max, which is why this is one entry and not a global bound.
+K_HI_FLOOR = {"A4": 10.0}
+
 
 def library_k_range(pair: cases.PairSpec, ell: int) -> tuple[float, float]:
     """The k interval the library's own closures span at ONE multipole, in 1/Mpc.
@@ -105,7 +118,9 @@ def library_k_range(pair: cases.PairSpec, ell: int) -> tuple[float, float]:
             kernel_b, cosmo, ell, ell, settings
         ).get_range()
 
-    return min(a_lo, b_lo) / RH / K_MARGIN, max(a_hi, b_hi) / RH * K_MARGIN
+    k_hi = max(a_hi, b_hi) / RH * K_MARGIN
+
+    return min(a_lo, b_lo) / RH / K_MARGIN, max(k_hi, K_HI_FLOOR.get(pair.case, 0.0))
 
 
 def run_one(
@@ -258,7 +273,12 @@ def main() -> None:
 
     write_table(args.out, entries, args)
 
-    print(f"\nwrote {len(entries)} of {len(tasks)} entries to {args.out}")
+    # `entries` is the whole table, resumed cells included, while `tasks` is
+    # only this run's work: reporting one "of" the other read as "87 of 1".
+    print(
+        f"\nwrote {len(entries)} entries to {args.out}\n"
+        f"  {len(tasks) - len(failed)} of {len(tasks)} cells certified this run"
+    )
 
     if failed:
         print("failed:")
@@ -268,7 +288,12 @@ def main() -> None:
 
 
 def write_table(out: pathlib.Path, entries: dict, args) -> None:
-    """Serialize what is finished so far."""
+    """Serialize what is finished so far.
+
+    The ``ells`` header is derived from the entries rather than taken from the
+    invocation: a partial rerun (one case, a subset of multipoles) must not
+    relabel a table that still carries every other case.
+    """
     payload = {
         "convention": (
             "C_ell = 2/pi INT dk k^2 P(k) I1_ell(k) I2_ell(k), k in 1/Mpc, "
@@ -282,7 +307,7 @@ def write_table(out: pathlib.Path, entries: dict, args) -> None:
             "k_eq": 0.10594,
         },
         "target_rel": args.target_rel,
-        "ells": args.ells,
+        "ells": sorted({entry["ell"] for entry in entries.values()}),
         "generator": "tests/tools/nc_xcor_kquad_arb.c",
         "cases": entries,
     }

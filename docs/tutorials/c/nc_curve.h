@@ -112,49 +112,27 @@ typedef enum _NcCurveImpl
 
 #define NC_CURVE_IMPL_ALL NCM_MODEL_CLASS_IMPL_ALL
 
-/*
- * Since this is a abstract model we need to define its ID
- * in order to allow it to be found inside of a #NcmMSet
- * object.
- *
- */
+/* Register the model ID. */
 NCM_MSET_MODEL_DECLARE_ID (nc_curve);
 
-/*
- * This function must be used by implementations to set the virtual function f.
- *
- */
+/* Set the virtual f method. */
 void nc_curve_set_f_impl (NcCurveClass *curve_class, NcCurveF f);
 
-/*
- * The default methods that all objects should implement.
- * We also chose to implement a constructor nc_curve_new_from_name()
- * to allow creating any child directly.
- *
- */
+/* Constructors and reference-counting methods. */
 NcCurve *nc_curve_new_from_name (const gchar *curve_name);
 NcCurve *nc_curve_ref (NcCurve *curve);
 void nc_curve_free (NcCurve *curve);
 void nc_curve_clear (NcCurve **curve);
 
-/*
- * Property accessors prototypes.
- *
- */
+/* Property accessors. */
 void nc_curve_set_xl (NcCurve *curve, const gdouble xl);
 void nc_curve_set_xu (NcCurve *curve, const gdouble xu);
 gdouble nc_curve_get_xl (NcCurve *curve);
 gdouble nc_curve_get_xu (NcCurve *curve);
 
-/*
- * The only quantity calculated by this model is the value
- * of $f(x)$, which is represented by the following virtual
- * method.
- *
- */
+/* Evaluate f(x). */
 gdouble nc_curve_f (NcCurve *curve, const gdouble x);
 
 G_END_DECLS
 
 #endif /* _NC_CURVE_H_ */
-

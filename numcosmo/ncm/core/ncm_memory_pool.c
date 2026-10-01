@@ -27,9 +27,9 @@
  *
  * Generic memory pool.
  *
- * #NcmMemoryPool is a generic memory pool, it alloc memory using a user defined
- * function and save it for future use, the memory must be returned to the pool using
- * #ncm_memory_pool_return. These functions are thread safe.
+ * Allocates objects with a user-provided function, retains them for reuse, and
+ * releases them with the corresponding free function. Pool operations are
+ * thread-safe.
  *
  */
 
@@ -46,10 +46,8 @@
  * @userdata: userdata pointer for @mp_alloc function.
  * @mp_free: function used to free memory alloced by mp_alloc.
  *
- * This function prepare a memory pool which allocate memory
- * using mp_alloc and save it for future use, the memory must
- * be returned to the pool using #ncm_memory_pool_return.
- * These functions are thread safe.
+ * Creates a pool that allocates objects with @mp_alloc and reuses returned
+ * objects. Objects must be returned with ncm_memory_pool_return().
  *
  * Returns: the memory pool #NcmMemoryPool
  */
@@ -75,11 +73,12 @@ ncm_memory_pool_new (NcmMemoryPoolAlloc mp_alloc, gpointer userdata, GDestroyNot
  * @mp: a #NcmMemoryPool, memory pool to be emptied
  * @free_slices: if true and the pool was built with a free function, free the slices
  *
- * This function free all the slices in the pool and also
- * the slices if free_slices == TRUE and the
- * pool was built with a free function
+ * Removes every slice from @mp. The memory each slice points to is released
+ * with the pool's free function only when @free_slices is %TRUE and such a
+ * function was given to ncm_memory_pool_new(). Blocks until all slices
+ * currently checked out have been returned.
  *
- * Returns: the number of slices freed
+ * Returns: the number of slices removed
  */
 guint
 ncm_memory_pool_empty (NcmMemoryPool *mp, gboolean free_slices)
@@ -116,9 +115,10 @@ ncm_memory_pool_empty (NcmMemoryPool *mp, gboolean free_slices)
  * @mp: a #NcmMemoryPool, memory pool to be freed
  * @free_slices: if true and the pool was built with a free function, free the slices
  *
- * This function free the memory pool and also
- * the slices if free_slices == TRUE and the
- * pool was built with a free function
+ * Frees @mp. The memory each slice points to is released with the pool's free
+ * function only when @free_slices is %TRUE and such a function was given to
+ * ncm_memory_pool_new(). Blocks until all slices currently checked out have
+ * been returned.
  *
  */
 void

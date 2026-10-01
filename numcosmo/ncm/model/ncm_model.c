@@ -27,12 +27,9 @@
  *
  * Abstract class for implementing models.
  *
- * The #NcmModel abstract class represents a general model. This object serves for two
- * general objectives. First, all the numerical properties (doubles), i.e., parameters,
- * are implemented by the class functions described below, this allows the
- * implementation of a general statistical analyses based on these models. Second, each
- * child of NcmModel can register itself as a model type. This allows multiples models
- * types to be used simultaneously.
+ * Stores numerical model parameters and provides the interface used by
+ * statistical analyses. Subclasses register their model type and may be
+ * combined in an #NcmMSet.
  *
  */
 
@@ -2767,6 +2764,7 @@ ncm_model_params_set_default_ftype (NcmModel *model)
  *
  * Gets the description of the parameter @param. The output is a GHashTable which
  * contains the following keys:
+ *
  * - "name": the name of the parameter.
  * - "symbol": the symbol of the parameter.
  * - "scale": the scale of the parameter.

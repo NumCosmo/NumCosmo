@@ -380,10 +380,9 @@ _nc_cluster_abundance_z_p_lnM_p_d2n_integrand (gdouble lnM, gdouble z, gpointer 
  * @z_obs: (array) (element-type gdouble): observed redshift
  * @z_obs_params: (array) (element-type gdouble) (allow-none): parameters for the observed redshift distribution (e.g., photometric redshift uncertainties)
  *
- * This function computes $ \int_0^\infty dz \int_{-\infty}^\infty d\ln M \frac{d^2N(\ln M, z)}{dzd\ln M} * P(z^{phot}|z) *
- * P(\ln M^{obs}|\ln M, z) $. We studied the convergence of this integral to optimize this function. We verified
- * that it converges to 5 decimal places at the redshift interval $ [z^{phot} - 10\sigma^{phot}, z^{phot} +
- * 10\sigma^{phot}] $ and the mass interval $ [\ln M^{obs} - 7\sigma_{\ln M}, \ln M^{obs} + 7\sigma_{\ln M}] $.
+ * Computes
+ * $ \int dz\,d\ln M\,\frac{d^2N}{dz\,d\ln M}
+ * P(z^{phot}|z)P(\ln M^{obs}|\ln M,z) $.
  *
  * Returns: a gdouble which represents $ \frac{d^2N(\ln M^{obs}, z^{phot})}{dzd\ln M} $.
  */

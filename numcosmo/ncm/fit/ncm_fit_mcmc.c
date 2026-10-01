@@ -30,7 +30,7 @@
  *
  * Markov Chain Monte Carlo (MCMC) analysis is a method for sampling the posterior
  * probability distribution of a set of parameters. It relies on the
- * Metropolis–Hastings algorithm. The transition kernel utilized in this implementation
+ * Metropolis-Hastings algorithm. The transition kernel utilized in this implementation
  * is specified by the #NcmMSetTransKern object.
  *
  */
@@ -198,7 +198,7 @@ ncm_fit_mcmc_class_init (NcmFitMCMCClass *klass)
                                    PROP_SAMPLER,
                                    g_param_spec_object ("sampler",
                                                         NULL,
-                                                        "Metropolis–Hastings sampler",
+                                                        "Metropolis-Hastings sampler",
                                                         NCM_TYPE_MSET_TRANS_KERN,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 

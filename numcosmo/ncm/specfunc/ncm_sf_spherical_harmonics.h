@@ -126,6 +126,11 @@ struct _NcmSFSphericalHarmonicsP
   gdouble lp1m;
 };
 
+/**
+ * NCM_SF_SPHERICAL_HARMONICS_MAX_LEN:
+ *
+ * Maximum number of angles held by a #NcmSFSphericalHarmonicsYArray.
+ */
 #define NCM_SF_SPHERICAL_HARMONICS_MAX_LEN 6
 
 /**
@@ -133,6 +138,7 @@ struct _NcmSFSphericalHarmonicsP
  * @l: $l$
  * @l0: $l_0$
  * @m: $m$
+ * @len: number of angles
  * @x: array of $x$
  * @sqrt1mx2: array of $\sqrt{1-x^2}$
  * @Yl0m: array of $Y_{l_0}^m$
@@ -210,10 +216,38 @@ NCM_INLINE void ncm_sf_spherical_harmonics_start_rec (NcmSFSphericalHarmonics *s
 NCM_INLINE void ncm_sf_spherical_harmonics_start_rec_array (NcmSFSphericalHarmonics *spha, NcmSFSphericalHarmonicsYArray *sphaYa, const gint len, const gdouble *theta);
 NCM_INLINE NcmSFSphericalHarmonicsK *ncm_sf_spherical_harmonics_get_Klm (NcmSFSphericalHarmonics *spha, const gint l0, const gint m);
 
+/**
+ * NCM_SF_SPHERICAL_HARMONICS_DEFAULT_ABSTOL:
+ *
+ * Default absolute tolerance for #NcmSFSphericalHarmonicsY.
+ */
 #define NCM_SF_SPHERICAL_HARMONICS_DEFAULT_ABSTOL (1.0e-20)
+
+/**
+ * NCM_SF_SPHERICAL_HARMONICS_ARRAY_DEFAULT_ABSTOL:
+ *
+ * Default absolute tolerance for #NcmSFSphericalHarmonicsYArray. Smaller than the
+ * scalar default since the array advances only when every angle is below tolerance.
+ */
 #define NCM_SF_SPHERICAL_HARMONICS_ARRAY_DEFAULT_ABSTOL (1.0e-40)
+
+/* Internal rescaling: the $l_0$ seeds are stored divided by this factor and the
+ * reported values multiplied by it, extending the representable range of
+ * $\bar{Y}_l^m$ at large $m$. Undefined at the end of the inline section. */
 #define NCM_SF_SPHERICAL_HARMONICS_EPS (1.0e-280)
+
+/* When set, a tolerance-driven advance in $l$ also moves the $l_0$ seeds. */
 #define NCM_SF_SPHERICAL_HARMONICS_LATERAL_MOVE 1
+
+/**
+ * NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX:
+ * @ai: angle index
+ * @li: multipole offset within the block
+ * @len: number of angles
+ *
+ * Index of the @li-th multipole of the @ai-th angle in the flat buffers used by the
+ * #NcmSFSphericalHarmonicsYArray methods.
+ */
 #define NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX(ai, li, len) ((li) * (len) + (ai))
 
 G_END_DECLS

@@ -193,7 +193,7 @@ nc_multiplicity_func_despali_class_init (NcMultiplicityFuncDespaliClass *klass)
 }
 
 static gdouble
-_nc_multiplicity_func_despali_virial_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z) /* $f(\sigma)$ Despali: MNRAS 456, 2486–2504 (2016) */
+_nc_multiplicity_func_despali_virial_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z) /* $f(\sigma)$ Despali: MNRAS 456, 2486-2504 (2016) */
 {
   NcMultiplicityFuncDespali *md                 = NC_MULTIPLICITY_FUNC_DESPALI (mulf);
   NcMultiplicityFuncDespaliPrivate * const self = nc_multiplicity_func_despali_get_instance_private (md);
@@ -236,7 +236,7 @@ _nc_multiplicity_func_despali_virial_eval (NcMultiplicityFunc *mulf, NcHICosmo *
 }
 
 static gdouble
-_nc_multiplicity_func_despali_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z) /* $f(\sigma)$ Despali: MNRAS 456, 2486–2504 (2016) */
+_nc_multiplicity_func_despali_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z) /* $f(\sigma)$ Despali: MNRAS 456, 2486-2504 (2016) */
 {
   NcMultiplicityFuncDespali *md                 = NC_MULTIPLICITY_FUNC_DESPALI (mulf);
   NcMultiplicityFuncDespaliPrivate * const self = nc_multiplicity_func_despali_get_instance_private (md);
@@ -297,7 +297,7 @@ _nc_multiplicity_func_despali_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *co
 }
 
 static gdouble
-_nc_multiplicity_func_despali_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z) /* $f(\sigma)$ Despali: MNRAS 456, 2.0486–2504 (2016) */
+_nc_multiplicity_func_despali_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z) /* $f(\sigma)$ Despali: MNRAS 456, 2.0486-2504 (2016) */
 {
   NcMultiplicityFuncDespali *md                 = NC_MULTIPLICITY_FUNC_DESPALI (mulf);
   NcMultiplicityFuncDespaliPrivate * const self = nc_multiplicity_func_despali_get_instance_private (md);
@@ -393,7 +393,7 @@ _nc_multiplicity_func_despali_get_mdef (NcMultiplicityFunc *mulf)
 }
 
 static gdouble
-_nc_multiplicity_func_despali_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z) /* $f(\sigma)$ Despali: MNRAS 456, 2486–2504 (2016) */
+_nc_multiplicity_func_despali_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z) /* $f(\sigma)$ Despali: MNRAS 456, 2486-2504 (2016) */
 {
   NcMultiplicityFuncDespali *md                 = NC_MULTIPLICITY_FUNC_DESPALI (mulf);
   NcMultiplicityFuncDespaliPrivate * const self = nc_multiplicity_func_despali_get_instance_private (md);

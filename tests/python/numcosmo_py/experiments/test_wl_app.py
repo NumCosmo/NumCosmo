@@ -774,7 +774,7 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
     only ``GalaxyPopGen`` variant with non-empty ``get_mfuncs()``), plus
     the ``NcGalaxyShapePopBeta:mode``/``:e_rms`` ``NcmMSetFuncList`` entries
     read back from the written ``.functions.yaml`` -- present because alpha
-    and beta are explicitly freed here (see the fixed-alpha/beta sibling
+    and beta are explicitly freed here (see the fixed-alpha/beta counterpart
     test below for the empty-list case).
     """
     result = runner.invoke(

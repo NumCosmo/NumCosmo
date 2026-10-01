@@ -39,10 +39,11 @@ from numcosmo_py import Nc
 
 
 def confidence_ellipse(mu, cov, ax, n_std=1.0, facecolor="none", **kwargs):
-    """Add confidence ellipse.
+    """Add a covariance ellipse centered at ``mu`` to ``ax``.
 
-    This function adds an confidence ellipse to the given axes, given the mean
-    and covariance of the data.
+    ``cov`` must be a 2x2 covariance matrix. ``n_std`` controls the ellipse
+    scale; additional keyword arguments are passed to
+    :class:``matplotlib.patches.Ellipse``.
     """
     pearson = cov[0, 1] / np.sqrt(cov[0, 0] * cov[1, 1])
     # Using a special case to obtain the eigenvalues of this
@@ -89,20 +90,12 @@ def add_ellipse_from_ellipticity(
     edgecolor: str = "black",
     facecolor: str = "none",
 ) -> None:
-    r"""Add an ellipse to a plot based on the ellipticity.
+    r"""Add one ellipse per position from ellipticity components.
 
-    The ellipticity is given by the e1 and e2 components of the ellipticity vector. The
-    semi-major and semi-minor axes are calculated from the ellipticity and the angle of
-    the ellipse is calculated from the ellipticity components. The equation for the
-    angle is given by:
-    $$
-    \theta = 0.5 \arctan2(e2, e1),$$ $$q = \frac{1 - \epsilon}{1 + \epsilon},
-    $$
-    where $q$ is the axis ratio, $a$ is the semi-major axis, and $b$ is the semi-minor
-    axis. The area of the ellipse is given by:
-    $$
-    A = \pi a b.
-    $$
+    The position arrays and ellipticity arrays must have equal length. The
+    axis ratio is $q=(1-\epsilon)/(1+\epsilon)$, with
+    $\epsilon=\sqrt{e_1^2+e_2^2}$ and angle
+    $\theta=\arctan2(e_2,e_1)/2$. ``ellipse_area`` sets $\pi ab$.
 
     :param ax: The axes to add the ellipse to.
     :param ra_a: The right ascension of the center of the ellipse.
@@ -219,7 +212,10 @@ def plot_m2lnp(
     vmin: float = 1.0e-12,
     vmax: float = 1.0,
 ):
-    """Plot the -2lnp."""
+    """Plot a square grid of ``-2 ln p`` values.
+
+    ``z`` is reshaped to ``(plotn, plotn)`` after subtracting its minimum.
+    """
     z = z - np.min(z)
     z = np.exp(-0.5 * z)
     exp_z = z.reshape(plotn, plotn)

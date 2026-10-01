@@ -26,13 +26,7 @@
 /**
  * NcCurve:
  *
- * Abstract class for curves
- *
- * NcCurve is the abstract class designed to include the functions
- * that any simple curve should implement, see NcCurveImpl.
- * Its parent_class is NcmModel.
- *
- * (This is a gtk-doc comment, which always start with two **)
+ * Abstract curve model with domain bounds and a virtual f(x) method.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -42,26 +36,14 @@
 
 #include "nc_curve.h"
 
-/*
- * All implementations of NcCurve will required the function interval.
- * We could have let the interval itself as model parameters in order
- * to allow it to be fit too, this approach will be presented in a more
- * advanced example.
- *
- */
+/* Domain bounds. */
 typedef struct _NcCurvePrivate
 {
   gdouble xl;
   gdouble xu;
 } NcCurvePrivate;
 
-/*
- * Properties enumerator, note that we added a last item PROP_SIZE,
- * this is useful to obtain the actual number of properties in the
- * object without hard coding it. PROP_0 is a special property of
- * the GObject system we should always be there.
- *
- */
+/* Object properties. */
 enum
 {
   PROP_0,
@@ -71,8 +53,7 @@ enum
 };
 
 /*
- * Here we define the object GType using the macro G_DEFINE_ABSTRACT_TYPE.
- * This macro basically defines the function nc_curve_get_type (void) and
+ * Define the abstract GType.
  * everything necessary to define an object in the GLib type system. The
  * ABSTRACT version of the macro creates a GType that cannot be instantiated
  * this means that to use this object we *must* define a child.
@@ -149,41 +130,17 @@ _nc_curve_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
   }
 }
 
-/*
- * Here we must de-allocate any memory allocated *inside* gobject framework,
- * i.e., we must unref any outside object contained in our object.
- *
- * Nothing to do!
- *
- */
+/* Release GObject-owned resources. */
 static void
 _nc_curve_dispose (GObject *object)
 {
-  /*
-   * The following comment is always included to remark that at this point the parent
-   * method must be called, chaining down the function call, i.e., first we finalize
-   * the properties of the child, if any, then the parent and parent's parent, etc.
-   *
-   */
-  /* Chain up : end */
   G_OBJECT_CLASS (nc_curve_parent_class)->dispose (object);
 }
 
-/*
- * Here we must de-allocate any memory allocated *outside* gobject framework.
- * Nothing to do!
- *
- */
+/* Release non-GObject resources. */
 static void
 _nc_curve_finalize (GObject *object)
 {
-  /*
-   * The following comment is always included to remark that at this point the parent
-   * method must be called, chaining down the function call, i.e., first we finalize
-   * the properties of the child, if any, then the parent and parent's parent, etc.
-   *
-   */
-  /* Chain up : end */
   G_OBJECT_CLASS (nc_curve_parent_class)->finalize (object);
 }
 
@@ -200,9 +157,7 @@ NCM_MSET_MODEL_REGISTER_ID (nc_curve, NC_TYPE_CURVE);
 static gdouble _nc_curve_f (NcCurve *curve, const gdouble x);
 
 /*
- * At _class_init we will define all properties and parameters we should
- * also include a default implementation for our virtual function `f'.
- *
+ * Define properties, parameters, and the default virtual method.
  */
 static void
 nc_curve_class_init (NcCurveClass *klass)
@@ -531,11 +486,6 @@ nc_curve_get_xu (NcCurve *curve)
 }
 
 /*
- * Finally, we implement the generic caller for the
- * virtual function `f'.
- *
- */
-
 /**
  * nc_curve_f: (virtual f)
  * @curve: a #NcCurve
@@ -548,11 +498,5 @@ nc_curve_get_xu (NcCurve *curve)
 gdouble
 nc_curve_f (NcCurve *curve, const gdouble x)
 {
-  /*
-   * This function call by pointer guarantees that
-   * the correct virtual function will be called.
-   *
-   */
   return NC_CURVE_GET_CLASS (curve)->f (curve, x);
 }
-

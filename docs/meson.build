@@ -78,7 +78,16 @@ if get_option('documentation')
         env: env,
         install: true,
         install_dir: docs_dir,
-        depends: [numcosmo_math_doc, numcosmo_doc, site_files],
+        # The Quarto kernel loads the typelibs, not the GIR the doc targets pull in;
+        # without these a C API change rebuilds the library and leaves the kernel on
+        # a stale typelib.
+        depends: [
+            numcosmo_math_doc,
+            numcosmo_doc,
+            site_files,
+            numcosmo_math_gir[1],
+            numcosmo_gir[1],
+        ],
     )
 
 endif

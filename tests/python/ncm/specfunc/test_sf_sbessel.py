@@ -306,5 +306,78 @@ class TestSFSBesselRecursionRelations:
         )
 
 
+class TestSFSBesselArraySharedTable:
+    """The process-wide j_l table keyed on its abscissae.
+
+    Callers holding many objects over one grid -- one integrator per multipole block --
+    would otherwise each carry an identical copy, so the rows are shared. What has to
+    hold is that the shared rows are the numbers a direct evaluation gives, that the same
+    grid returns the same table object, and that a different grid or ell_max does not.
+    """
+
+    ELL_MAX = 40
+
+    @staticmethod
+    def _grid(values):
+        """The abscissae as the GArray the table is keyed on."""
+        return Ncm.Vector.new_array(list(values)).dup_array()
+
+    def test_rows_match_direct_evaluation(self) -> None:
+        """Every row is what eval1 returns for that abscissa."""
+        sba = Ncm.SFSBesselArray.new()
+        xs = [0.5, 3.0, 17.0, 120.0]
+        table = sba.ref_table(self._grid(xs), self.ELL_MAX)
+
+        assert table.nrows() == len(xs)
+        assert table.ncols() == self.ELL_MAX + 1
+
+        for i, x in enumerate(xs):
+            direct = np.array(sba.eval1(self.ELL_MAX, x))
+            shared = np.array([table.get(i, j) for j in range(self.ELL_MAX + 1)])
+            assert_allclose(shared, direct, rtol=0.0, atol=0.0)
+
+    def test_same_grid_returns_the_same_table(self) -> None:
+        """Two requests for the same abscissae and ell_max share one table."""
+        sba = Ncm.SFSBesselArray.new()
+        xs = [1.0, 2.0, 4.0]
+        first = sba.ref_table(self._grid(xs), self.ELL_MAX)
+        second = sba.ref_table(self._grid(xs), self.ELL_MAX)
+
+        # Same object, so writing through one is seen by the other. Restored after.
+        keep = first.get(1, 3)
+        first.set(1, 3, -7.5)
+        assert second.get(1, 3) == -7.5
+        first.set(1, 3, keep)
+
+    def test_a_different_key_is_a_different_table(self) -> None:
+        """Changing the abscissae or ell_max gives another table."""
+        sba = Ncm.SFSBesselArray.new()
+        base = sba.ref_table(self._grid([1.0, 2.0]), self.ELL_MAX)
+        other_x = sba.ref_table(self._grid([1.0, 3.0]), self.ELL_MAX)
+        other_ell = sba.ref_table(self._grid([1.0, 2.0]), self.ELL_MAX + 1)
+
+        assert other_ell.ncols() == self.ELL_MAX + 2
+        # The second row differs because the second abscissa does.
+        row_base = [base.get(1, j) for j in range(self.ELL_MAX + 1)]
+        row_other = [other_x.get(1, j) for j in range(self.ELL_MAX + 1)]
+        assert not np.allclose(np.array(row_base), np.array(row_other))
+
+    def test_matches_scipy(self) -> None:
+        """The shared rows are correct, not merely self-consistent."""
+        sba = Ncm.SFSBesselArray.new()
+        xs = [2.0, 30.0]
+        table = sba.ref_table(self._grid(xs), 20)
+
+        for i, x in enumerate(xs):
+            for ell in range(21):
+                assert_allclose(
+                    table.get(i, ell),
+                    spherical_jn(ell, x),
+                    rtol=1.0e-12,
+                    atol=1.0e-300,
+                    err_msg=f"j_{ell}({x})",
+                )
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

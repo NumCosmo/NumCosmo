@@ -16,10 +16,20 @@ if arb_dep.found()
     # (compare_powspec_analytic_arb.py) compiles its own copy through
     # pkg-config so it can run against an installed NumCosmo; this target
     # exists so a compile break is caught wherever FLINT is available.
+    # FLINT's own headers trip -Wstringop-overread and -Warray-bounds under GCC 16,
+    # which reads the interior pointers of an acb_t as if they sized the whole struct.
+    # The diagnostics are about flint/acb.h, not about anything here, so they are
+    # filtered rather than read past.
+    arb_tool_args = cc.get_supported_arguments(
+        '-Wno-stringop-overread',
+        '-Wno-array-bounds',
+    )
+
     foreach tool : ['ncm_powspec_analytic_arb', 'nc_xcor_kernel_analytic_arb', 'nc_xcor_kquad_arb']
         executable(
             tool,
             tool + '.c',
+            c_args: arb_tool_args,
             dependencies: [arb_dep, flint_dep, mathlib_dep],
             install: false,
             build_by_default: true,

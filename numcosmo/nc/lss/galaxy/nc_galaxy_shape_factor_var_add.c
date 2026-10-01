@@ -40,24 +40,24 @@
  *   \frac{e^{-|\chi_I^\ast|^2 / 2(\sigma^2 + \sigma_\mathrm{noise}^2)}}
  *        {2\pi\,(\sigma^2 + \sigma_\mathrm{noise}^2)}\,
  *   \left|\det J_{f^{-1}}(\epsilon_\mathrm{obs})\right|.$$
- * The "variance-add" combination itself (rather than the exact truncated
- * convolution) is exact only in the doubly-linear regime where the shear map
- * is expanded jointly to first order in $g$ AND $\chi_I$ (not just in $g$
- * alone, since the dropped terms mix the two) and the intrinsic integral is
- * extended from the physical unit disc $|\chi_I|<1$ to the whole plane (the
- * only way two independent Gaussians combine in closed form). This
- * implementation removes the map-linearization by using the exact inverse
- * map and its exact Jacobian at a single pulled-back point, but keeps the
- * plane-instead-of-disc approximation (the plain un-truncated Gaussian
- * normalization). See the
- * <a href="../../theory/wl_ellipticity.html#the-variance-add-approximation">Variance-Add Approximation</a>
- * section of the theory page for the full derivation.
+ * The variance-add combination, as opposed to the exact truncated convolution,
+ * is exact only where the shear map is expanded jointly to first order in $g$
+ * and $\chi_I$ -- not in $g$ alone, since the dropped terms mix the two -- and
+ * the intrinsic integral is extended from the physical unit disc
+ * $|\chi_I|<1$ to the whole plane, which is the only way two independent
+ * Gaussians combine in closed form.
  *
- * The variance addition is only meaningful for a population parameterized by
- * an (untruncated) Gaussian width sigma, so this method requires the
- * population resolved from the #NcmMSet to support
- * nc_galaxy_shape_pop_get_sigma() (currently #NcGalaxyShapePopGauss or
- * #NcGalaxyShapePopGaussLocal, Global or per-galaxy).
+ * This implementation removes the map linearization by using the exact inverse
+ * map and its exact Jacobian at a single pulled-back point. It keeps the
+ * plane-instead-of-disc approximation, that is the untruncated Gaussian
+ * normalization. See the
+ * <a href="../../theory/wl_ellipticity.html#the-variance-add-approximation">Variance-Add Approximation</a>
+ * section of the theory page for the derivation.
+ *
+ * The variance addition is defined only for a population parameterized by an
+ * untruncated Gaussian width, so the population resolved from the #NcmMSet must
+ * support nc_galaxy_shape_pop_get_sigma(): currently #NcGalaxyShapePopGauss or
+ * #NcGalaxyShapePopGaussLocal, global or per-galaxy.
  */
 
 #ifdef HAVE_CONFIG_H

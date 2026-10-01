@@ -1,11 +1,11 @@
 name: 'Setup Miniforge conda environment'
 description: >-
   Sets up Miniforge and builds the NumCosmo conda environment from the
-  committed lock file for this runner (no solving), falling back to solving
+  committed lock file for this runner, with no solving, falling back to solving
   environment.yml when there is none. Shared by build-miniforge and
-  build-miniforge-coverage in build_check.yml and by the docs job -- extracted
-  so the setup logic only needs to be changed in one place. See
-  CONTRIBUTING.md, section "CI conda environment".
+  build-miniforge-coverage in build_check.yml and by the docs job, so the setup
+  logic only needs to change in one place. See CONTRIBUTING.md, section "CI
+  conda environment".
 
 inputs:
   python-version:
@@ -30,8 +30,8 @@ runs:
         activate-environment: ${{ env.CONDA_ENV }}
     - name: Select lock file
       # A lock file is used only if it exists for this runner AND was solved
-      # from the current environment.yml; otherwise we warn and solve (the
-      # check-conda-locks job is what fails loudly on a stale lock).
+      # from the current environment.yml; otherwise warn and solve. The
+      # check-conda-locks job is what fails loudly on a stale lock.
       id: lock
       shell: bash
       run: |

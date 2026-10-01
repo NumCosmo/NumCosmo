@@ -44,7 +44,7 @@ class TestSpectralWeighted:
 
         For f(x) = c (constant), the integral over [a,b] is c*(b-a).
         In the weighted API, coeffs[0] already includes the interval scaling,
-        so the integral is obtained as π * coeffs[0].
+        so the integral is obtained as pi * coeffs[0].
         """
 
         def f_constant(_user_data, _x):
@@ -59,7 +59,7 @@ class TestSpectralWeighted:
         )
         coeffs = np.array(coeffs_list)
 
-        # The first coefficient times π should equal the integral
+        # The first coefficient times pi should equal the integral
         expected_integral = 2.5 * (b - a)
         computed_integral = coeffs[0] * np.pi
         assert_allclose(computed_integral, expected_integral, rtol=1.0e-9, atol=1.0e-10)
@@ -138,7 +138,7 @@ class TestSpectralWeighted:
         # Compute reference integral using scipy
         expected_integral, _error = quad(lambda x: np.exp(-x * x), a, b)
 
-        # First coefficient times π should match the integral
+        # First coefficient times pi should match the integral
         computed_integral = coeffs[0] * np.pi
         assert_allclose(computed_integral, expected_integral, rtol=1.0e-9, atol=1.0e-10)
 
@@ -207,7 +207,7 @@ class TestSpectralWeighted:
             # Compute reference integral
             expected_integral, _error = quad(lambda x, f=func: f(None, x), a, b)
 
-            # First coefficient times π should match the integral
+            # First coefficient times pi should match the integral
             computed_integral = coeffs[0] * np.pi
             assert_allclose(
                 computed_integral,
@@ -237,7 +237,7 @@ class TestSpectralWeighted:
             # Compute reference integral
             expected_integral, _error = quad(lambda x: np.exp(-x * x), a, b)
 
-            # First coefficient times π should match the integral
+            # First coefficient times pi should match the integral
             computed_integral = coeffs[0] * np.pi
             assert_allclose(
                 computed_integral,
@@ -383,7 +383,7 @@ class TestSpectralWeighted:
         # Compute reference integral
         expected_integral, _error = quad(lambda x: f_osc(None, x), a, b)
 
-        # First coefficient times π should match the integral
+        # First coefficient times pi should match the integral
         computed_integral = coeffs[0] * np.pi
         assert_allclose(computed_integral, expected_integral, rtol=1.0e-8, atol=1.0e-9)
 
@@ -605,7 +605,7 @@ class TestSpectralProductIntegral:
     """Tests for computing integrals of products.
 
     For two functions F(x) and G(x), the integral of their product can be computed as:
-    ∫_a^b F(x)G(x)dx = π·a_0·b_0 + (π/2)·Σ_{k>0} a_k·b_k
+    int_a^b F(x)G(x)dx = pi*a_0*b_0 + (pi/2)*Sum_{k>0} a_k*b_k
     where a_k are weighted coefficients of F and b_k are standard coefficients of G.
     """
 
@@ -624,24 +624,24 @@ class TestSpectralProductIntegral:
             coeffs_standard: Standard Chebyshev coefficients (b_k)
 
         Returns:
-            The integral ∫F(x)G(x)dx computed as π·a_0·b_0 + (π/2)·Σ_{k>0} a_k·b_k
+            The integral intF(x)G(x)dx computed as pi*a_0*b_0 + (pi/2)*Sum_{k>0} a_k*b_k
         """
         # Ensure both arrays have the same length
         min_len = min(len(coeffs_weighted), len(coeffs_standard))
         a_coeffs = coeffs_weighted[:min_len]
         b_coeffs = coeffs_standard[:min_len]
 
-        # First term: π·a_0·b_0
+        # First term: pi*a_0*b_0
         result = np.pi * a_coeffs[0] * b_coeffs[0]
 
-        # Sum term: (π/2)·Σ_{k>0} a_k·b_k
+        # Sum term: (pi/2)*Sum_{k>0} a_k*b_k
         if min_len > 1:
             result += (np.pi / 2.0) * np.sum(a_coeffs[1:] * b_coeffs[1:])
 
         return result
 
     def test_product_gaussian_polynomial(self, spectral: Ncm.Spectral) -> None:
-        """Test product integral: Gaussian × polynomial."""
+        """Test product integral: Gaussian x polynomial."""
 
         def f_gaussian(_user_data, x):
             return np.exp(-x * x)
@@ -677,7 +677,7 @@ class TestSpectralProductIntegral:
         assert_allclose(cheb_integral, expected_integral, rtol=1.0e-8, atol=1.0e-9)
 
     def test_product_gaussian_exponential(self, spectral: Ncm.Spectral) -> None:
-        """Test product integral: Gaussian × exponential."""
+        """Test product integral: Gaussian x exponential."""
 
         def f_gaussian(_user_data, x):
             return np.exp(-x * x)
@@ -708,7 +708,7 @@ class TestSpectralProductIntegral:
         assert_allclose(cheb_integral, expected_integral, rtol=1.0e-8, atol=1.0e-9)
 
     def test_product_gaussian_sine(self, spectral: Ncm.Spectral) -> None:
-        """Test product integral: Gaussian × sine."""
+        """Test product integral: Gaussian x sine."""
 
         def f_gaussian(_user_data, x):
             return np.exp(-x * x)
@@ -739,7 +739,7 @@ class TestSpectralProductIntegral:
         assert_allclose(cheb_integral, expected_integral, rtol=1.0e-8, atol=1.0e-9)
 
     def test_product_gaussian_cosine(self, spectral: Ncm.Spectral) -> None:
-        """Test product integral: Gaussian × cosine."""
+        """Test product integral: Gaussian x cosine."""
 
         def f_gaussian(_user_data, x):
             return np.exp(-x * x)
@@ -770,7 +770,7 @@ class TestSpectralProductIntegral:
         assert_allclose(cheb_integral, expected_integral, rtol=1.0e-8, atol=1.0e-9)
 
     def test_product_gaussian_rational(self, spectral: Ncm.Spectral) -> None:
-        """Test product integral: Gaussian × rational function."""
+        """Test product integral: Gaussian x rational function."""
 
         def f_gaussian(_user_data, x):
             return np.exp(-x * x)
@@ -801,7 +801,7 @@ class TestSpectralProductIntegral:
         assert_allclose(cheb_integral, expected_integral, rtol=1.0e-8, atol=1.0e-9)
 
     def test_product_gaussian_power(self, spectral: Ncm.Spectral) -> None:
-        """Test product integral: Gaussian × power function."""
+        """Test product integral: Gaussian x power function."""
 
         def f_gaussian(_user_data, x):
             return np.exp(-0.5 * x * x)
@@ -832,7 +832,7 @@ class TestSpectralProductIntegral:
         assert_allclose(cheb_integral, expected_integral, rtol=1.0e-8, atol=1.0e-9)
 
     def test_product_gaussian_oscillatory(self, spectral: Ncm.Spectral) -> None:
-        """Test product integral: Gaussian × oscillatory function."""
+        """Test product integral: Gaussian x oscillatory function."""
 
         def f_gaussian(_user_data, x):
             return np.exp(-x * x)
@@ -863,7 +863,7 @@ class TestSpectralProductIntegral:
         assert_allclose(cheb_integral, expected_integral, rtol=1.0e-7, atol=1.0e-8)
 
     def test_product_constant_functions(self, spectral: Ncm.Spectral) -> None:
-        """Test product integral: constant × constant."""
+        """Test product integral: constant x constant."""
 
         def f_const(_user_data, _x):
             return 2.0
@@ -893,7 +893,7 @@ class TestSpectralProductIntegral:
         assert_allclose(cheb_integral, expected_integral, rtol=1.0e-8, atol=1.0e-9)
 
     def test_product_linear_quadratic(self, spectral: Ncm.Spectral) -> None:
-        """Test product integral: linear × quadratic."""
+        """Test product integral: linear x quadratic."""
 
         def f_linear(_user_data, x):
             return 2.0 * x + 1.0
@@ -918,7 +918,7 @@ class TestSpectralProductIntegral:
         cheb_integral = self._compute_product_integral_chebyshev(a_coeffs, b_coeffs)
 
         # Analytical: (2x+1)(x^2-0.5) = 2x^3 + x^2 - x - 0.5
-        # ∫_{-1}^{1} (2x^3 + x^2 - x - 0.5)dx = [x^4/2 + x^3/3 - x^2/2 - x/2]_{-1}^{1}
+        # int_{-1}^{1} (2x^3 + x^2 - x - 0.5)dx = [x^4/2 + x^3/3 - x^2/2 - x/2]_{-1}^{1}
         # = (1/2 + 1/3 - 1/2 - 1/2) - (1/2 - 1/3 - 1/2 + 1/2)
         # = (1/3 - 1/2) - (1/2 - 1/3) = 2/3 - 1 = -1/3
         expected_integral, _error = quad(
@@ -928,7 +928,7 @@ class TestSpectralProductIntegral:
         assert_allclose(cheb_integral, expected_integral, rtol=1.0e-8, atol=1.0e-9)
 
     def test_product_symmetric_functions(self, spectral: Ncm.Spectral) -> None:
-        """Test product integral: even function × odd function = 0."""
+        """Test product integral: even function x odd function = 0."""
 
         def f_even(_user_data, x):
             return np.exp(-x * x)  # Even
@@ -952,7 +952,7 @@ class TestSpectralProductIntegral:
 
         cheb_integral = self._compute_product_integral_chebyshev(a_coeffs, b_coeffs)
 
-        # Integral of even × odd on symmetric interval should be ~0
+        # Integral of even x odd on symmetric interval should be ~0
         expected_integral, _error = quad(
             lambda x: f_even(None, x) * g_odd(None, x), a, b
         )

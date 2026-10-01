@@ -1,8 +1,12 @@
 # NcXcor non-Limber infrastructure plan (UltraLevin)
 
-Status: plan, nothing implemented yet. Documentation-first by design — this
-is the spec the implementation work will follow, kept up to date as decisions
-are made and as pieces land.
+Status (2026-09-11): milestones 1, 2, 3, 5 and 6 of section 7 are done and
+milestone 4 is skipped; `NcXcorSolver` exists and is validated against CCL and the
+certified tables (section 9). The production CLI is `numcosmo xcor cls` (#374),
+the outer quadrature default is `NC_XCOR_METHOD_KERNEL_EXACT`, the closure default is
+Chebyshev (#369), and the theory pages `docs/theory/sbessel_projection.qmd` and
+`docs/theory/sbessel_ode_solver.qmd` document the solver (#369, #373). Sections 1 to 6
+are the design as written before implementation; section 7 tracks what landed.
 
 ## 0. Goal
 
@@ -49,7 +53,7 @@ passing unit tests, including `scipy`+truth-table accuracy checks up to
 ([ncm_sbessel_integrator_levin.c:934-1031](numcosmo/ncm/specfunc/ncm_sbessel_integrator_levin.c#L934-L1031))
 correctly falls back to a direct ODE solve when `y=kx` falls outside the
 precomputed knot grid rather than silently extrapolating. **The numerics
-here are solid — every bug and gap in this plan is in the xcor glue layer
+here are solid — every bug and gap in this plan is in the xcor integration layer
 around it, not in `NcmSBesselIntegratorLevin` itself.**
 
 ### 1.1 Why it is fast: three independent axes of reuse
@@ -65,11 +69,11 @@ cache — is computed once and reused along three axes:
    selected based on `n_ℓ`
    ([ncm_sbessel_ode_solver.h:69-70](numcosmo/ncm/specfunc/ncm_sbessel_ode_solver.h#L69-L70)).
    Calling `set_ell_range` with the *same* range repeatedly is free.
-2. **Knot/panel axis.** Operators are built once per log-spaced `y = kx` knot
+2. **Knot/panel axis.** Operators are built once per log-spaced `x = k chi` knot
    panel ([ncm_sbessel_integrator_levin.c:95](numcosmo/ncm/specfunc/ncm_sbessel_integrator_levin.c#L95),
-   bounds `y_knots_min`/`y_knots_max`,
+   bounds `x_knots_min`/`x_knots_max`,
    [ncm_sbessel_integrator_levin.h:63-64](numcosmo/ncm/specfunc/ncm_sbessel_integrator_levin.h#L63-L64)).
-   Because panels live in the *dimensionless* `y = kx` variable, one panel
+   Because panels live in the *dimensionless* `x = k chi` variable, one panel
    set serves any physical `k` and any physical `[a,b]` — this is what lets
    one integrator instance answer many `k` queries during adaptive
    k-sampling without re-factorizing anything.
@@ -194,8 +198,8 @@ remains relevant only as the hard ceiling no block may exceed, alongside
 `MAX_ELL_BLOCK` (64) — 8 comfortably satisfies both, with wide margin.
 
 **Out of scope here, logged for later:** the max-reduction convergence gate
-is a property of the shared `ncm_sbessel_ode_solver.c` primitive, not xcor
-glue. An early-exit per-ℓ (stop rotating/counting columns for an ℓ once
+is a property of the shared `ncm_sbessel_ode_solver.c` primitive, not the xcor
+integration layer. An early-exit per-ℓ (stop rotating/counting columns for an ℓ once
 *it* converges, instead of running every ℓ in the batch out to the slowest
 one) could in principle recover some of the loss at large `B` — but that's
 an UltraLevin-level optimization, a separate effort from this plan, and
@@ -232,12 +236,12 @@ is linear in `n_ell`, but widening the block 8× reduces the call count only
 **2.9×**, so total work grows 2.4×. Calls are driven by how many **k-samples**
 the adaptive closure needs, not by ℓ, and a wider ℓ-block needs more of them —
 it spans a wider k-range and a harder function to represent. `B=8` therefore
-wins because ℓ-batching stops paying once the extra k-sampling outruns the
+is preferred because ℓ-batching stops paying once the extra k-sampling outruns the
 amortisation, not because it dodges a convergence-gate penalty.
 
 Consequence: the cost of a wide ℓ-range lives in
 `_nc_xcor_kernel_build_spline_integrand`'s adaptive k-sampling, i.e. ordinary
-xcor glue, not in the delicate `ncm_sbessel_ode_solver.c`. That is where to
+xcor integration layer, not in the delicate `ncm_sbessel_ode_solver.c`. That is where to
 look next. Also unexplained and possibly a better target: the long tail of hard
 diagonalizations — mean `solution_order` is 69 but p90 is 133 and the maximum
 414.
@@ -266,7 +270,7 @@ code, and hits tier 3 harder than tier 2: the reason to pay for tier 3 is to
 capture the diffraction tails *outside* the naive Limber k-band (what the
 exponential-decay extrapolation in `_component_states_compute_non_limber`
 models); constraining tier 3's outer integral to the Limber band throws away
-the thing tier 3 exists to compute, on top of the extrapolation-blowup
+the thing tier 3 exists to compute, on top of the extrapolation-instability
 failure mode in §3.
 
 **Production is not exposed to any of this today.** `numcosmo_py/app/xcor/kernels.py`
@@ -342,14 +346,14 @@ has **zero callers** outside its own definition.
    `xclki2 = nc_xcor_kernel_get_eval(...)`, then
    `nc_xcor_kernel_integrand_get_range(xclki1, &k1_min, &k1_max)` / same for
    `xclki2`, then intersect exactly as before:
-   `k_min = max(k1_min,k2_min)`, `k_max = min(k1_max,k2_max)`. Landed, plus a
+   `k_min = max(k1_min,k2_min)`, `k_max = min(k1_max,k2_max)`. Implemented, plus a
    pre-existing integrand refcount leak fixed along the way (`get_eval`/
    `get_eval_vectorized` are `transfer full`; the old code never unreffed).
 2. `nc_xcor_kernel_get_k_range()` stays as public API — still useful as a
    cheap seed/estimate (e.g. §1's k-seed computation, or a caller that wants
    a bound without paying for a full spline build) — but stopped being used
    as the outer-integral bound for tiers 2/3.
-3. Regression tests landed (`test_xcor_kernel_methods`,
+3. Regression tests were added (`test_xcor_kernel_methods`,
    `tests/python/nc/xcor/test_integration.py`): `KERNEL_GSL`/`KERNEL_CUBATURE`,
    tier 2 and tier 3 separately, agreement with each other and convergence to
    tier 1 at moderate ℓ. Two separate, pre-existing bugs found along the way
@@ -358,7 +362,7 @@ has **zero callers** outside its own definition.
    fatal-errors on GSL roundoff for it at tier 3. Both skipped in the test
    with a documented reason, not worked around silently.
 4. External validation against CCL done — see §9 for the full comparison
-   (correctness, "who's righter", speed, and a deep precision/speed-lever
+   (correctness, relative accuracy, speed, and a detailed precision/speed-parameter
    investigation this raised). Short version: NumCosmo's tier-3 answer
    agrees with CCL's independent FKEM non-Limber computation to ~0.15% at
    default settings, and convergence testing suggests NumCosmo is the one
@@ -401,7 +405,7 @@ times more than necessary), instead of once per `(kernel, ℓ-block)` and
 shared across every pair that touches it in that block. The current
 interface has no place to say "here are all the kernels and all the Cℓ's I
 want — figure out the cheapest order," because `nc_xcor_compute()` is a
-single-pair, single-block call with no memory of sibling calls. §5 fixes
+single-pair, single-block call with no memory of related calls. §5 fixes
 this.
 
 ## 5. Batched interface for tiers 2/3
@@ -582,7 +586,7 @@ void nc_xcor_set_integrator_pool   (NcXcor *xc, NcmMemoryPool *pool);
   degenerates to exactly the `set_integrator` case for free.
 
 Don't make `NcmSBesselIntegratorLevin` itself reentrant — its scratch state
-is deeply threaded through the hot path, not worth it. Xcor stays agnostic
+is deeply threaded through the performance-critical path, not worthwhile. Xcor stays agnostic
 to *how much* concurrency exists; it only needs an integrator when step
 5.2.2a needs one, and asks the injected source for it.
 
@@ -639,7 +643,7 @@ correct, batched baseline exists (§7 milestone 6).
 1. **Correctness fix (§3) — DONE.** Reordered both `_nc_xcor_kernel_gsl` and
    `_nc_xcor_kernel_cubature` to build the integrand(s) first and read the
    outer bound off `nc_xcor_kernel_integrand_get_range()`. `KERNEL_GSL`/
-   `KERNEL_CUBATURE` regression tests landed for tier 2 and tier 3 separately
+   `KERNEL_CUBATURE` regression tests were added for tier 2 and tier 3 separately
    (agreement with each other, convergence to tier 1). External CCL
    validation done, see §9. **Still open:** delete the stale third-branch
    docstring on `get_eval_vectorized` once milestone 3's block planner makes
@@ -652,7 +656,7 @@ correct, batched baseline exists (§7 milestone 6).
    (a shared NCM primitive, not xcor-specific) could never converge when any
    component of a multi-ℓ block is identically zero — true for weak lensing
    at ℓ=0,1 (spin-2 field, no monopole/dipole) — causing exponential sample-
-   count blowup and OOM. Fixed in `ncm_function_sample_set_refine`/
+   count growth and OOM. Fixed in `ncm_function_sample_set_refine`/
    `get_absmaxF_min` with 5 new regression tests
    (`tests/python/ncm/stats/test_function_sample_set.py`); verified against
    the exact originally-crashing calls. *Accuracy* (not just timing/
@@ -662,7 +666,7 @@ correct, batched baseline exists (§7 milestone 6).
    was chosen for benchmark turnaround time, not because 1200-3000 is
    expected to behave differently in kind (block=8's tiling makes per-call
    cost independent of the overall `lmax` ceiling anyway).
-3. **Batched interface (§5-§6) — DONE.** Landed as `NcXcorSolver`, a
+3. **Batched interface (§5-§6) — DONE.** Implemented as `NcXcorSolver`, a
    companion object (§5's open placement question resolved this way):
    `register_kernel`/`request_cl`/`plan_blocks`/`solve`/`get_result`;
    `nc_xcor_compute()` itself is unchanged, still the non-batched
@@ -687,7 +691,11 @@ correct, batched baseline exists (§7 milestone 6).
    with no way to verify the result end-to-end isn't worth the risk for a
    performance win nothing currently exercises; revisit if/when something
    comes to depend on `NcDataXcor` being fast.
-5. **Production config exposure — done via milestone 1's `view.py` work**
+5. **Production config exposure — done.** Since #374 the production path is
+   `numcosmo xcor cls` (`numcosmo_py/app/xcor/cls.py`, options shared with the
+   viewer through `common.py`: kernels, `--method` cubature/gsl/exact, closure,
+   `peak-epsilon`, block size, multipole sampling). Originally done via milestone
+   1's `view.py` work
    (§7 milestone 1 exposed `l-limber`/`integrator`
    reltol/cheb-reltol/max-order as CLI options). No separate non-`view.py`
    "production config" path exists to extend, since `NcDataXcor` (the
@@ -702,8 +710,10 @@ correct, batched baseline exists (§7 milestone 6).
    a shrinking ℓ-block, and corrected §9.4's "tuned config" claim (doesn't
    generalize, was wrong by up to 23-29% outside the one case it was
    measured on). **Still open:** N beyond 10; block-level OpenMP effect on
-   these specific ratios (measured single-threaded here); docs (a theory
-   page for the ODE-solver/Levin combination, `docs/theory/`) not started.
+   these specific ratios (measured single-threaded here). Docs: **done**,
+   `docs/theory/sbessel_projection.qmd` (#369) and
+   `docs/theory/sbessel_ode_solver.qmd` (#373), plus the certified benchmark
+   `docs/benchmarks/xcor_certified_projection.qmd`.
 
 ## 8. Non-goals
 
@@ -781,7 +791,7 @@ cubature agreeing with each other could both be wrong the same way), but
 agreement with a *different codebase* using a *different non-Limber
 algorithm* (FKEM vs. UltraLevin/Chebyshev-Gegenbauer spectral collocation).
 
-### 9.2 Who's righter: convergence study
+### 9.2 Relative accuracy: convergence study
 
 Tightened each method's own precision knob independently and watched which
 answer moved:
@@ -796,13 +806,13 @@ tolerance tightening — default settings were already fully converged.
 CCL/FKEM's answer is still drifting even after quadrupling its grid
 (`Nchi` 2000→8000), and drifting *toward* NumCosmo's value. Cross-checking
 both at their tightest tested settings still leaves ~0.16% disagreement,
-which doesn't shrink at anywhere near the rate you'd expect if NumCosmo were
-the one that was wrong. **Read: NumCosmo is righter.** FKEM is a fixed,
-finite log-spaced-grid method (its precision-control story is literally a
+which doesn't shrink at the rate expected if NumCosmo were the less accurate
+calculation. The comparison favors NumCosmo. FKEM is a fixed,
+finite log-spaced-grid method (its precision-control behavior is defined by a
 `CCLWarning: Nchi must be a positive integer. Setting to match tracer with
 large chi samples x2` heuristic, not a continuous adaptive tolerance)
 carrying real, still-shrinking discretization error at the settings tested;
-NumCosmo's adaptive reltol-based refinement has actually converged.
+NumCosmo's adaptive reltol-based refinement has converged.
 
 ### 9.3 Speed: CCL is 70-250x faster at default settings, and it isn't parallelism
 
@@ -830,7 +840,7 @@ The precision/speed tradeoff is spread across **four separate objects**,
 found by enumerating every `g_param_spec` in the relevant files rather than
 assuming:
 
-- `NcXcorKernel`: `reltol`, `scaled-abstol` (k-space closure adaptive-
+- `NcXcorKernel`: `reltol`, `peak-epsilon` (k-space closure adaptive-
   midpoint refinement), `adaptive-epsilon`, `adaptive-boundary-tries`,
   `max-border-expansions`, `expansion-factor` (domain-expansion/boundary-
   finding phase), `max-iter`.
@@ -853,11 +863,11 @@ noted; deviation relative to fully-converged reference):
 
 | knob | result |
 |---|---|
-| `NcXcorKernel.reltol` 1e-4→1e-1 (1000x looser) | 415→385 ms (**~7%**), dev ≤7.8e-6 — **not a real lever**, cost is elsewhere |
-| `NcmSBesselIntegratorLevin.reltol`/`cheb-reltol`/`max-order`, default→(1e-1,1e-1,32) | 421→164.5 ms (**2.6x**), dev 1.2e-4 — **the real lever** |
+| `NcXcorKernel.reltol` 1e-4→1e-1 (1000x looser) | 415→385 ms (**~7%**), dev ≤7.8e-6 — **not an effective parameter**, cost is elsewhere |
+| `NcmSBesselIntegratorLevin.reltol`/`cheb-reltol`/`max-order`, default→(1e-1,1e-1,32) | 421→164.5 ms (**2.6x**), dev 1.2e-4 — **the effective parameter** |
 | `NcXcorKernel.adaptive-epsilon` 1e-3→1e-2→1e-1 | 333→302→271 ms, dev 4.9e-4→6.3e-3→**5.2e-2** — works, but accuracy degrades faster than it's worth |
 | `NcXcorKernel.max-border-expansions` 500(default)→200→50 | no effect at all (dev=0) — default is already non-binding | 
-| `NcXcorKernel.max-border-expansions`→10 | 271 ms but dev=**0.20** (20% error) — **not a real lever**, just truncates the domain and gives a wrong answer, not a genuine accuracy/speed tradeoff |
+| `NcXcorKernel.max-border-expansions`→10 | 271 ms but dev=**0.20** (20% error) — **not an effective parameter**, truncates the domain and gives a wrong answer, not an accuracy/speed tradeoff |
 
 **Conclusion: the integrator's own `reltol`/`cheb-reltol`/`max-order` is the
 only knob that trades meaningful speed for negligible accuracy loss.**
@@ -895,7 +905,7 @@ curve) — makes sense, there's no "worst-ℓ-gates-convergence" cost inflation
 here since it's the same kernel throughout, just less fixed per-block
 overhead to amortize as blocks get bigger.
 
-**Combining both real levers** (`ell_batch_size=23` + integrator
+**Combining both effective parameters** (`ell_batch_size=23` + integrator
 `reltol=1e-2`/`cheb-reltol=1e-2`/`max-order=64`): **151.6 ms**, dev only
 **1.1e-5** — the best configuration found, ~2.8x faster than the naive
 default with excellent accuracy retained (much better than any single lever
@@ -1062,7 +1072,7 @@ difference is on NumCosmo's side:
 | 5 | 1763.7 ms | **497.5 ms** | 14.83× | **4.28×** |
 | 10 | 3272.8 ms | **863.8 ms** | 7.58× | **1.99×** |
 
-**~3.5× at N=5 and ~3.8× at N=10**, from work landed after §9.8 was written:
+**~3.5× at N=5 and ~3.8× at N=10**, from work implemented after §9.8 was written:
 FFTW wisdom I/O caching, the spectral/abstol convergence work, and the
 per-block integrators (one `NcmSBesselIntegratorLevin` per ℓ-block, pinned to
 its range and reused across `solve()` calls, with the registered kernels
@@ -1315,3 +1325,52 @@ level-doubling test clears it), the reproducer shrunk to `xc.compute` on the
 single failing block (wrong code path), and the reproducer with a narrowed ℓ
 range (which is what exposed the 2×2 above). Always rebuild the pre-fix code
 and confirm the candidate fails before keeping it.
+
+### 9.11 Where a warm solve spends its time (2026-09-10)
+
+Setup: the certified-projection page's adjacent pair (`xcor_pair_grid_mild`),
+`NcXcorSolver`, ell in [2, 129], `plan_blocks(8)`, one P-core of an i7-1255U,
+`OMP_NUM_THREADS=1`, kernels prepared once, first solve discarded.
+
+**Factorisation is not repeated for fixed panels, and that was never the cost.**
+Temporary counters in `_ncm_sbessel_ode_operator_factorize_batched` gave, per
+solve: 72,388 factorise calls (one per panel solve), 66,925 to 68,346 served by
+replaying stored rotations, 365 extensions in the cold solve and none afterwards,
+and 5,098 (cold) versus 4,042 (warm) fresh factorisations. Only 1,056
+factorisations and 28,530 columns are one-time. The 4,042 recurring ones are edge
+pieces the extended-panel path rejected: counters on every exit of
+`_ncm_sbessel_integrator_levin_integrate_extended_panel` showed 49,336 edge
+pieces per solve (68% of all panel solves), the dead-junction probe failing on
+every one of them (the junctions are interior chi-panel boundaries where the
+forcing is alive), the continuation accepted for 45,280 and rejected by the
+growth check for 4,056. Every rejected piece had a fit of 17 to 32 coefficients
+and filled less than 0.7 of its dyadic cell; most overshot the limit by two to six
+orders. Pieces filling 0.8 or more were never rejected.
+
+**Ladder experiment.** A quarter-octave cell ladder (fill in (0.84, 1]) removed
+every rejection, cut the warm solve from 575 to 504 ms at B = 8 with identical
+certified deviations on all three rungs, but failed
+`test_radial_integral_matches_arb[tophat_near]` at ell = 2 by 3e-8 relative
+(tolerance 1e-8). A half-octave ladder (fill in (0.71, 1]) leaves 131 rejections
+per solve, gives the same speed gain, and passes the near top-hat tests; it is the
+one in the tree. Open: at B = 64 the half-octave ladder is 2.6x slower than the
+octave one (3.4 s versus 1.3 s warm). The profile there is 41%
+`ncm_sbessel_ode_operator_solve_values` (the generic path; batched kernels exist
+up to 32 lanes) and 25% `_ncm_sbessel_check_convergence_batched`, with no new
+Givens work, so it is replay volume, not refactorisation. Not understood yet.
+
+**Composition of a warm solve with 100% edge reuse** (quarter-octave build, but
+half-octave is within a few percent): 36% `solve_values` (edge pieces), 8%
+convergence check inside the replay, 7% `solve_endpoints` (interior panels), 9%
+right-hand side (Chebyshev fit, rebase, Gegenbauer, FFTW), 16% window and P(k)
+evaluation at the panel nodes plus libm, 9% Python and glue. An edge piece costs
+about 2.5x an interior panel and edges are two thirds of the solves. The count
+comes from geometry: 63 k-nodes per kernel-block x 32 kernel-blocks x about 12
+chi-panels per kernel x 2 edges. Integrating a kernel's support in one call
+instead of one call per chi-panel would cut the edge count by roughly 5x.
+
+**Measurement notes.** Pin to a P-core (CPUs 0-3) with `taskset`; E-cores are
+2.0x slower and unpinned runs mix them. Warm-versus-cold is a 5-10% effect here
+because the one-time factorisation is under 10% of the Givens work in any solve.
+P(k) and W evaluations do not amortise over repetitions: the right-hand side is
+rebuilt per k, per block, per panel inside `solve()`.

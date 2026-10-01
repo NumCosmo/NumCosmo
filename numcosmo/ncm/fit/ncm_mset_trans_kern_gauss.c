@@ -38,7 +38,7 @@
  * specifying individual standard deviations as parameter scales, assuming zero
  * correlation.
  *
- * **Key Functionality:**
+ * Key Functionality:
  *
  * - Generates random parameter vectors with multivariate parameters.
  * - Utilizes a multivariate Gaussian distribution for sampling.

@@ -57,6 +57,7 @@ void test_ncm_model_test_name_index (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_test_dup (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_test_impl (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_param_names (TestNcmModel *test, gconstpointer pdata);
+void test_ncm_model_test_finite (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_svparams_len (TestNcmModel *test, gconstpointer pdata);
 
 #define TEST_NCM_MODEL_NTYPES 5
@@ -128,6 +129,10 @@ main (gint argc, gchar *argv[])
 
     d = g_strdup_printf ("/ncm/%s/param_names", (gchar *) ccc[i][0]);
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_param_names, ccc[i][2]);
+    g_free (d);
+
+    d = g_strdup_printf ("/ncm/%s/finite", (gchar *) ccc[i][0]);
+    g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_finite, ccc[i][2]);
     g_free (d);
 
     d = g_strdup_printf ("/ncm/%s/svparams_len", (gchar *) ccc[i][0]);

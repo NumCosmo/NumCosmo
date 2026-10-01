@@ -23,12 +23,16 @@ project:
     - theory/halo_density_profile.qmd
     - theory/fftlog.qmd
     - theory/spectral.qmd
+    - theory/sbessel_ode_solver.qmd
+    - theory/sbessel_projection.qmd
     - theory/ssc.qmd
     - theory/castro_hmf.qmd
     - theory/cluster_richness_projection.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
     - benchmarks/ccl_two_point.qmd
+    - benchmarks/xcor_certified_projection.qmd
+    - benchmarks/xcor_derivatives.qmd
     - tutorials/c/gobject.qmd
     - tutorials/c/curve_tutorial.qmd
     - tutorials/python/bounce.qmd
@@ -41,6 +45,7 @@ project:
     - tutorials/python/xcor_accuracy.qmd
     - examples/data_analysis/inspect_data_objects.qmd
     - examples/data_analysis/snia.qmd
+    - examples/data_analysis/hz.qmd
     - examples/data_analysis/rg_snia_bao.qmd
     - examples/intro/epdf.qmd
     - examples/intro/hiprim.qmd
@@ -122,6 +127,7 @@ website:
               - href: tutorials/python/xcor_accuracy.qmd
                 text: "Angular Power Spectrum Accuracy"
       - section: theory/index.qmd
+        text: "Theory"
         contents:
           - section: "Background & Thermal History"
             contents:
@@ -161,6 +167,10 @@ website:
                 text: "FFTLog"
               - href: theory/spectral.qmd
                 text: "Spectral Methods"
+              - href: theory/sbessel_ode_solver.qmd
+                text: "Ultraspherical Spectral Solver"
+              - href: theory/sbessel_projection.qmd
+                text: "UltraLevin: Angular Power Spectra"
               - href: theory/csq1d.qmd
                 text: "CSQ1D Formalism"
       - section: examples/index.qmd
@@ -187,6 +197,8 @@ website:
             contents:
               - href: examples/data_analysis/snia.qmd
                 text: "SN Ia Fitting"
+              - href: examples/data_analysis/hz.qmd
+                text: "H(z) Fitting"
               - href: examples/data_analysis/rg_snia_bao.qmd
                 text: "SNIa + BAO Confidence Regions"
               - href: examples/data_analysis/inspect_data_objects.qmd
@@ -194,6 +206,7 @@ website:
               - href: examples/intro/epdf.qmd
                 text: "Empirical PDF"
       - section: benchmarks/index.qmd
+        text: "Validation"
         contents:
           - href: benchmarks/ccl_background.qmd
             text: "CCL Background"
@@ -201,6 +214,10 @@ website:
             text: "CCL Power Spectrum"
           - href: benchmarks/ccl_two_point.qmd
             text: "CCL Two-Point Correlation"
+          - href: benchmarks/xcor_certified_projection.qmd
+            text: "Certified Radial Projection"
+          - href: benchmarks/xcor_derivatives.qmd
+            text: "Angular Power Spectrum Derivatives"
 
 resources:
   - reference/**

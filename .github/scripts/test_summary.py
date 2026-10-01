@@ -23,7 +23,7 @@ The coverage job splits the C tests with meson's own `--slice K/N`, which
 balances by test count. This report is how the consequence of that becomes
 visible: if one test grows big enough to unbalance its shard, it shows up at
 the top of the list. The remedy is to split that test, which is worth doing
-for isolation and for per-test timeouts anyway -- not to reweight the split.
+for isolation and for per-test timeouts anyway, not to reweight the split.
 
 See the `build-miniforge-coverage` job in `.github/workflows/build_check.yml`.
 """

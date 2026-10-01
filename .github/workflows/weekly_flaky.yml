@@ -3,7 +3,7 @@ name: Weekly flaky/repeated tests
 # Stress lane for the seeded/statistical tests. Unlike the per-push CI (which pins a fixed
 # g_test seed for bit-reproducibility, -Dflaky_tests=false), this configures with
 # -Dflaky_tests=true so every test run draws a fresh random seed, and `meson test --repeat`
-# re-runs each test many times -- surfacing tolerance regressions that a single fixed-seed run
+# re-runs each test many times, surfacing tolerance regressions that a single fixed-seed run
 # would miss. The per-test threading policy (omp tests run alone with OMP_NUM_THREADS=cores,
 # everything else concurrent at 1 thread) is provided by meson itself (see TESTING.md), so no
 # env vars are set here. Tunables: the cron schedule, --repeat count, and suite scope below.
@@ -15,8 +15,8 @@ on:
 
 env:
   CONDA_ENV: numcosmo_developer
-  # Kept in step with build_check.yml's knob of the same name, so both
-  # workflows share one stored copy of the data files.
+  # Must match build_check.yml's DATA_CACHE_VERSION, so both workflows share one
+  # stored copy of the data files.
   DATA_CACHE_VERSION: 0
 
 jobs:

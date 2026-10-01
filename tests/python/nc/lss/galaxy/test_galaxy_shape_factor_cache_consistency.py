@@ -43,7 +43,7 @@ Both are now fixed (nc_galaxy_shape_factor.c's ``optzs_hash``). This test
 exists so that any *future* omission in this hash scheme is caught directly
 and cheaply here, rather than showing up only as an unexplained discrepancy
 several layers up (that's how both bugs above were actually found: an
-``NcDataClusterWLFactor`` Monte-Carlo mass-recovery run silently stopped
+``NcDataClusterWLFactor`` Monte-Carlo mass-recovery run no longer exercised
 responding to mass changes after a resample() cycle).
 
 Methodology: build one "cached" ``NcGalaxyShapeFactorVarAdd`` reused across a

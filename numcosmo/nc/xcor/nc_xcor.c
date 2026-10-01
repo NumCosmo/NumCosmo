@@ -28,7 +28,7 @@
  */
 
 /**
- * NcXCor:
+ * NcXcor:
  *
  * Angular auto- and cross-spectra.
  *
@@ -40,7 +40,18 @@
  * \begin{equation}
  * C_{\ell}^{AB} = \int_0^{z_*} dz \frac{H(z)}{c \chi^2(z)} W^A(z) W^B (z) P\left(k = \frac{\ell +1/2}{\chi(z)} , z \right),
  * \end{equation}
- * where $P\left(k = \frac{\ell +1/2}{\chi(z)} , z \right)$ is the power spectrum (a #NcmPowspec) at redshift $z$ and $chi(z)$ the comoving distance (a #NcDistance).
+ * where $P\left(k = \frac{\ell +1/2}{\chi(z)} , z \right)$ is the power spectrum (a #NcmPowspec) at redshift $z$ and $\chi(z)$ the comoving distance (a #NcDistance).
+ *
+ * The symbol $\chi$ is the one used in the cross-correlation literature; #NcDistance
+ * calls the same quantity $D_c$. The kernel components work in units of the Hubble
+ * radius, with $k$ in $R_{H0}^{-1}$, so that $k\chi$ is dimensionless and $\chi$ is
+ * exactly nc_distance_comoving(); the Limber expression above is in Mpc, reached by
+ * multiplying by $R_{H0} = c/H_0$ from nc_hicosmo_RH_Mpc().
+ *
+ * See <a href="../../theory/sbessel_projection.html">UltraLevin: Non-Limber
+ * Angular Power Spectra</a> for how the non-Limber form is evaluated: the
+ * Levin reduction of the radial integral, the two representations of
+ * $W_\ell(k)$, and the exact outer integral over $k$.
  *
  */
 
@@ -77,7 +88,7 @@ nc_xcor_init (NcXcor *xc)
   xc->dist           = NULL;
   xc->RH             = 0.0;
   xc->meth           = NC_XCOR_METHOD_LIMBER_Z_GSL;
-  xc->closure_type   = NC_XCOR_KERNEL_CLOSURE_SPLINE;
+  xc->closure_type   = NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV;
   xc->ell_batch_size = 8;
 }
 
@@ -223,29 +234,43 @@ nc_xcor_class_init (NcXcorClass *klass)
   /**
    * NcXcor:closure-type:
    *
-   * How each kernel represents its sampled $W_\ell(k)$. See
-   * #NcXcorKernelClosure.
+   * How each kernel represents its sampled $W_\ell(k)$. Defaults to
+   * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV; see #NcXcorKernelClosure.
    *
-   * The choice is made here rather than on #NcXcorKernel because it is the
-   * pair, not the kernel, that constrains it. %NC_XCOR_METHOD_KERNEL_EXACT
-   * integrates a pair on the common refinement of the two closures' panels,
-   * which requires both to be of the same kind; a per-kernel setting could
-   * express a mixed pair the exact method cannot integrate at all. The
-   * pointwise methods are indifferent to it, but they read the same property,
-   * so no computation mixes the two representations.
+   * The property is on #NcXcor rather than on #NcXcorKernel because the two
+   * representations are alternative fits to the same sampled function:
+   * comparing them means something only when every kernel in one computation
+   * uses the same one. A single pair may nonetheless be mixed, and is
+   * integrated exactly -- %NC_XCOR_METHOD_KERNEL_EXACT takes a spline against
+   * a panel set on the common refinement of the two breakpoint sets. Two
+   * kernels with different #NcXcorKernel:l-limber values produce such a pair
+   * whatever this property is set to.
    *
-   * The spline default is what every method has been calibrated against.
-   * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV samples the same function over the same
-   * domain and differs only in what is fitted to it, so a computation can be
-   * switched over and the two compared directly.
+   * Accuracy, against the certified Arb $C_\ell$ table (43 entries, 17 pairs):
+   * the Chebyshev closure is closer in 36 of the 43, and its median deviation
+   * is 4.5x smaller at every tolerance rung. The spline has one failure mode
+   * the Chebyshev closure does not: on a far-separated pair at loose tolerance
+   * it returns the wrong sign, with an error 31x the pair's own $|C_\ell|$.
    *
-   * It applies to the non-Limber closure only. Under Limber each multipole is
-   * supported on its own band and zero outside it, so the block's window
-   * carries a step per multipole; a Chebyshev series converges on the
-   * non-Limber kernel because $W_\ell(k)$ is entire in $k$, and a step is not.
-   * Multipoles taken under Limber keep the spline closure whatever this is set
-   * to.
+   * Cost, on a tomographic workload through #NcXcorSolver (5 Gaussian bins,
+   * 15 pairs, $\ell \le 60$, one thread): the Chebyshev closure costs 1.4x the
+   * spline at #NcXcorKernel:reltol $10^{-4}$ and 1.13x at $10^{-6}$, for a
+   * median deviation 4 to 5 orders of magnitude smaller. On hard-edged cluster
+   * top-hats it costs 1.8x and the spline does not converge: asked for
+   * $10^{-8}$, the two disagree by $10^{-4}$ of the pair's own $|C_\ell|$.
    *
+   * %NC_XCOR_KERNEL_CLOSURE_SPLINE has two uses. It is the independent
+   * cross-check: a deviation both closures show at every tolerance is a wrong
+   * reference rather than a bad fit, and that diagnostic needs two
+   * structurally different representations. And it recovers that 1.13x to 1.4x
+   * on smooth windows at tolerances where both converge.
+   *
+   * This property governs the non-Limber closure only. Under Limber each
+   * multipole is supported on its own band in $k$ and zero outside it, so a
+   * block's window carries one step per multipole. A Chebyshev series
+   * converges on the non-Limber window because $W_\ell(k)$ is entire in $k$; a
+   * step is not. Multipoles taken under Limber keep the spline closure
+   * whatever this property is set to.
    */
   g_object_class_install_property (object_class,
                                    PROP_CLOSURE_TYPE,
@@ -253,7 +278,7 @@ nc_xcor_class_init (NcXcorClass *klass)
                                                       NULL,
                                                       "Representation used for the k-space closures.",
                                                       NC_TYPE_XCOR_KERNEL_CLOSURE,
-                                                      NC_XCOR_KERNEL_CLOSURE_SPLINE,
+                                                      NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -561,124 +586,51 @@ _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xc
  * @vp: a #NcmVector
  * @vp_err: (nullable): a #NcmVector for the error estimate, or %NULL
  *
- * As nc_xcor_compute(), additionally filling @vp_err with an estimate of the
- * absolute error on each $C_\ell$ -- the same length as @vp, and in the same
- * units, so @vp_err[i] / @vp[i] is the relative estimate.
+ * Computes the spectra and, when @vp_err is non-%NULL, an absolute error
+ * estimate for each $C_\ell$. The estimate has the same length and units as
+ * @vp, so @vp_err[i] / @vp[i] is the relative estimate.
  *
- * Only %NC_XCOR_METHOD_KERNEL_EXACT provides one; every other method leaves
- * NaN, which is deliberate -- a zero there would read as "no error".
+ * Only %NC_XCOR_METHOD_KERNEL_EXACT provides an estimate. Other methods set
+ * @vp_err to NaN rather than zero, which would read as "no error".
  *
- * The estimate is not a quadrature error, and does not belong to the k
- * integral at all. That method integrates its spline closures exactly, so the
- * outer quadrature contributes nothing; what @vp_err reports is a
- * **kernel-building** error -- how well nc_xcor_kernel_get_eval_vectorized_full()
- * fitted $W_\ell(k)$ -- propagated through the conditioning of this particular
- * pair. The quadrature's only contribution is the amplification factor, which
- * is also the one thing that cannot be known before the pair is formed.
- *
- * Propagating $\delta (W^A W^B) = \vert W^A \vert \delta W^B + \vert W^B
- * \vert \delta W^A$ gives
+ * For %NC_XCOR_METHOD_KERNEL_EXACT, the outer integral is exact on both
+ * closures -- GL(5) on merged knot panels of two cubics, a bilinear form in
+ * the coefficients on cells where either side is a Chebyshev panel -- so the
+ * quadrature contributes no error and @vp_err reports the closure fit error,
+ * how well nc_xcor_kernel_get_eval_vectorized_full() fitted $W_\ell(k)$,
+ * propagated through this pair's conditioning. It propagates
+ * $\delta (W^A W^B) = \vert W^A \vert \delta W^B + \vert W^B \vert \delta W^A$:
  *
  * $$ \sigma_\ell \simeq \int \mathrm{d}k\, k^2 \left( \vert W^A_\ell \vert\, \delta W^B_\ell
  *    + \vert W^B_\ell \vert\, \delta W^A_\ell \right) $$
  *
- * with $\delta W^i$ the residual the closure's fit **achieved**, recorded per
- * knot interval while #NcXcorKernel:track-fit-residual is on -- which it is by
- * default. See nc_xcor_kernel_integrand_peek_residuals().
- *
- * With tracking off, or on an interval whose refinement was never accepted,
- * $\delta W^i$ falls back to the criterion the fit was *asked* for,
- * nc_xcor_kernel_integrand_set_tolerances()'s $\delta W^i \le \epsilon_i \vert
- * W^i \vert + a_i W^i_\mathrm{max}$, and the same propagation gives the older
- * three-term form:
+ * The per-cell $\delta W^i$ is the residual the fit achieved, recorded per
+ * interval on which the closure is a single polynomial -- a knot interval, or
+ * a Chebyshev panel -- while #NcXcorKernel:track-fit-residual is on, which is
+ * the default; see nc_xcor_kernel_integrand_peek_residuals(). With tracking
+ * off, or on an interval whose refinement was never accepted, $\delta W^i$
+ * falls back to the criterion the fit was asked for,
+ * $\delta W^i \le \epsilon_i \vert W^i \vert + a_i W^i_\mathrm{max}$, and the
+ * same propagation gives
  *
  * $$ \sigma_\ell \simeq (\epsilon_A + \epsilon_B) \int \mathrm{d}k\, k^2 \vert W^A_\ell W^B_\ell \vert
  *    + a_A W^A_{\ell,\mathrm{max}} \int \mathrm{d}k\, k^2 \vert W^B_\ell \vert
  *    + a_B W^B_{\ell,\mathrm{max}} \int \mathrm{d}k\, k^2 \vert W^A_\ell \vert $$
  *
- * The first rides on the product, so it is the one the pair's cancellation
- * amplifies. The second and third are each closure's peak-scaled floor weighted
- * by the *other* closure's true size, and they are usually the larger of the
- * two: for cluster top-hat bins at the library defaults they dominate the
- * relative term by one to two orders. That is worth stating plainly, because a
- * floor set per closure is often assumed to reach $C_\ell$ only squared. It
- * does so only where both closures sit on their floors at once; wherever just
- * one does, it is linear in $a$ and weighted by the other's real amplitude.
+ * Read @vp_err as an upper bound, not as a tight estimate: it is built on
+ * absolute values, so it adds error that the integral cancels, and it exceeds
+ * the true relative error by 1.2 to 1467 times over the measured cases.
  *
- * ## How conservative, measured
+ * Two limits qualify that bound. The fit criterion is an $L^2$ norm over the
+ * whole multipole block at each $k$, so a multipole that is sub-dominant
+ * within its block is held only to the block's norm and its error can be
+ * understated. And the outer integral runs over the intersection of the two
+ * closures' fitted $k$ ranges, so @vp_err cannot account for what the
+ * intersection discarded. A small @vp_err means the quadrature and the fit are
+ * under control, not that the $C_\ell$ is correct.
  *
- * Refinement beats the tolerance it was given by one to three orders, and by
- * an amount that depends on the kernel, so the fallback form above is a ceiling
- * rather than an estimate. Measured against a reference built at reltol
- * $10^{-10}$, over $\ell = 2 \dots 9$ at the library defaults, worst ratio of
- * estimate to true relative error:
- *
- * | pair | true relative error | achieved | tolerance-only |
- * |---|---|---|---|
- * | top-hat, auto | 4.3e-6 to 1.3e-4 | 1.2-50x | 12-858x |
- * | top-hat, cross adjacent | 6.7e-4 to 0.13 | 2.9-16x | 35-320x |
- * | top-hat, cross separated | 0.07 to 8993 | 3.7e-4-11x | 5.1e-3-161x |
- * | Gaussian, auto | 6.5e-8 to 9.6e-7 | 68-630x | 537-7949x |
- * | Gaussian, cross separated | 5.0e-4 to 1.2 | 237-1467x | 6440-50487x |
- *
- * Using the achieved residual is worth a uniform 13 to 34 times across all
- * five, at no measurable cost -- the record is one double per knot per
- * multipole, and building it does not slow the closure down.
- *
- * Read the result as a ceiling still: a small @vp_err is a strong statement, a
- * large one warrants checking rather than despair. Both rows where the ratio
- * drops below one are separated top-hat bins whose $C_\ell$ has no digits left
- * at all, and where the estimate says so -- over the three pairs, three
- * thresholds and both forms, there is no cell where @vp_err calls a $C_\ell$
- * good that is not.
- *
- * Those figures are a **worst case**, and deliberately so: a cluster top-hat has
- * a sharp edge in $\xi$, which gives $W_\ell(k)$ a $1/k$ tail instead of an
- * exponential one. Nothing integrates across that edge -- it is declared through
- * the component's limits, see #NcXcorKernelComponent -- but the tail keeps far
- * more of k-space above the closure's floor, so the fit costs more and is
- * worse. On the same comoving shells a smooth kernel needs 161 knots against
- * the top-hat's 541, and its cross spectrum is accurate to 7.7e-4 rather than
- * 0.13 -- a factor of 165.
- *
- * That comparison also bounds what @vp_err can do, and the achieved residual
- * only half fixes it. The table above still runs from 2.9x over-conservative on
- * a top-hat cross to 1467x on a Gaussian one, because a second mechanism is
- * left: a spline's error alternates sign from panel to panel, and an estimate
- * built on $\vert \cdot \vert$ adds what the integral cancels. That
- * cancellation is near-total for a smoothly fitted kernel and partial for a
- * ragged one, which is exactly the direction of the spread. Closing it needs a
- * signed error model, not a better residual.
- *
- * ## And read them against the tolerances an application actually sets
- *
- * The table uses #NcXcorKernel's bare defaults, which exist to be cheap. A
- * caller that cares sets its own: #NcXcorSSCSij uses reltol $10^{-6}$ with
- * scaled-abstol $10^{-5}$, deliberately offset from each other -- the rationale
- * lives at that object's defaults, and is worth reading before changing either
- * here. At those, on the same top-hat bins, the diagonal is accurate to 5.9e-6
- * rather than 1.3e-4, and the adjacent-bin cross to 2.8e-3 rather than 0.13.
- *
- * The separated-bin cross stays poor in *relative* terms, but that is the wrong
- * measure for it: it is 2.4e-4 of the diagonal, so what it contributes to
- * anything built from these is far below the diagonal's own error. Judge a
- * @vp_err against the amplitude its term carries, never on its own.
- *
- * One thing pushes the other way, against the conservatism: the criterion is an
- * $L^2$ norm over the whole multipole block at each $k$, not over one
- * multipole, so a multipole that is sub-dominant within its block is held only
- * to the block's norm. For those, $\epsilon \vert W_\ell \vert$ understates the
- * fit error.
- *
- * **What it does not cover**, and it is the same classification again -- the
- * other kernel-building error, which is a range rather than a residual. The
- * outer integral runs over the intersection of
- * the two closures' fitted k-ranges, and @vp_err measures only what is inside
- * that range -- it cannot see what the intersection discarded. Two kernels
- * whose closures are fitted on different k-supports lose the non-overlapping
- * part silently, and that loss grows with separation, the same direction in
- * which the cancellation grows. A small @vp_err therefore means the quadrature
- * and the fit are in hand, not that the $C_\ell$ is right.
+ * See `dev-notes/xcor_exact_quadrature.md` section 10 for the measured
+ * calibration.
  *
  */
 void
@@ -699,20 +651,20 @@ nc_xcor_compute_full (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHI
   if (isauto)
     xclk2 = xclk1;
 
-  /* The kernel-space (non-Limber) methods perform each kernel's radial
-   * integral separately and couple the two only through the outer k integral,
-   * so two kernels with disjoint redshift support still have a non-zero cross
-   * spectrum -- two disjoint radial shells are correlated through the same 3D
-   * field. The z-overlap short-circuit below is therefore specific to the
-   * Limber-z tier, whose C_l is a single integral over the common support, and
-   * must not be applied here.
+  /* Kernel-space (non-Limber) methods do each kernel's radial integral
+   * separately and couple the two only through the outer k integral, so two
+   * kernels with disjoint redshift support still have a non-zero cross
+   * spectrum: two disjoint radial shells are correlated through the same 3D
+   * field. The z-overlap short-circuit below is specific to the Limber-z tier,
+   * whose C_l is a single integral over the common support, and must not be
+   * applied here.
    *
    * The exception is a kernel-space method running kernels that are themselves
    * in the Limber tier: there W(k) is supported only on its own per-ell band,
-   * disjoint bins have disjoint support, and the Cl is zero. Integrating it
+   * disjoint bins have disjoint support, and the C_l is zero. Integrating it
    * anyway multiplies the two exponential extrapolation tails, which is a
-   * numerical smoothing device rather than physics, and yields a large
-   * spurious cross spectrum.
+   * smoothing device rather than physics, and gives a large spurious cross
+   * spectrum.
    *
    * The tier is chosen per multipole, so a range straddling the threshold is
    * split: the tail from l_zero up is zeroed, the head below it is integrated

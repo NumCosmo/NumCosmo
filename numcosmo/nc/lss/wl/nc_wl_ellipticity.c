@@ -33,13 +33,13 @@
  * log-determinant of the corresponding Jacobian. A separate set of functions is
  * provided for each ellipticity convention (#NcGalaxyWLObsEllipConv) instead of
  * selecting it through object state, so the math can be inlined directly into
- * the weak-lensing hot loops.
+ * performance-critical weak-lensing loops.
  *
  * Each transformation comes in two flavours (matching ncm_laurent_series.h's
  * own bare/`_ptr` convention): the `_ptr`-suffixed functions documented here
  * take #NcmComplex by pointer and are introspectable, while their plain-named
  * counterparts (nc_wl_ellipticity.h) take it by value and are inlined for the
- * C hot loops.
+ * performance-critical C loops.
  *
  * #NcWLEllipticityTraceKernelPrep is a simple #GBoxed struct caching the
  * g-only terms of the TRACE kernel across many evaluations at the same
@@ -62,7 +62,7 @@ G_DEFINE_BOXED_TYPE (NcWLEllipticityTraceKernelPrep, nc_wl_ellipticity_trace_ker
 /**
  * nc_wl_ellipticity_trace_kernel_prep_new:
  *
- * Allocates a new, zeroed #NcWLEllipticityTraceKernelPrep. C hot loops
+ * Allocates a new, zeroed #NcWLEllipticityTraceKernelPrep. Performance-critical C code
  * should prefer stack allocation and nc_wl_ellipticity_trace_kernel_prepare()
  * directly; this heap-allocating constructor exists for GValue/introspection
  * use.

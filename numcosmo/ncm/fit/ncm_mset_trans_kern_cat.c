@@ -35,7 +35,7 @@
  * of points. Users can select the desired sampling method as described in
  * #NcmMSetTransKernCatSampling.
  *
- * **Key Functionality:**
+ * Key Functionality:
  *
  * - Draws samples from a catalog of points.
  * - Allows users to choose the sampling method from #NcmMSetTransKernCatSampling.

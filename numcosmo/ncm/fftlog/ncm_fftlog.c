@@ -1542,8 +1542,8 @@ ncm_fftlog_calibrate_size_gsl (NcmFftlog *fftlog, gsl_function *Fk, const gdoubl
 
   if (self->N > (gint) self->max_n)
   {
-    g_message ("ncm_fftlog_calibrate_size_gsl: maximum number of knots reached. "
-               "Requested precision %e, achieved precision %e.", reltol, lreltol);
+    g_message ("# ncm_fftlog_calibrate_size_gsl: maximum number of knots reached. "
+               "Requested precision %e, achieved precision %e.\n", reltol, lreltol);
 
     return;
   }

@@ -149,6 +149,7 @@ _ncm_sbessel_integrator_finalize (GObject *object)
 static void _ncm_sbessel_integrator_set_ell_range_default (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max);
 static gdouble _ncm_sbessel_integrator_integrate_ell_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, gint ell, gpointer user_data);
 static void _ncm_sbessel_integrator_integrate_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data);
+static void _ncm_sbessel_integrator_integrate_deriv_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, guint deriv, NcmVector *result, gpointer user_data);
 
 static void
 ncm_sbessel_integrator_class_init (NcmSBesselIntegratorClass *klass)
@@ -174,9 +175,10 @@ ncm_sbessel_integrator_class_init (NcmSBesselIntegratorClass *klass)
                                                        NCM_TYPE_DTUPLE2,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->set_ell_range = &_ncm_sbessel_integrator_set_ell_range_default;
-  klass->integrate_ell = &_ncm_sbessel_integrator_integrate_ell_default;
-  klass->integrate     = &_ncm_sbessel_integrator_integrate_not_implemented;
+  klass->set_ell_range   = &_ncm_sbessel_integrator_set_ell_range_default;
+  klass->integrate_ell   = &_ncm_sbessel_integrator_integrate_ell_default;
+  klass->integrate       = &_ncm_sbessel_integrator_integrate_not_implemented;
+  klass->integrate_deriv = &_ncm_sbessel_integrator_integrate_deriv_not_implemented;
 }
 
 static void
@@ -219,6 +221,13 @@ static void
 _ncm_sbessel_integrator_integrate_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data)
 {
   g_error ("ncm_sbessel_integrator_integrate: method not implemented for `%s'",
+           G_OBJECT_TYPE_NAME (sbi));
+}
+
+static void
+_ncm_sbessel_integrator_integrate_deriv_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, guint deriv, NcmVector *result, gpointer user_data)
+{
+  g_error ("ncm_sbessel_integrator_integrate_deriv: method not implemented for `%s'",
            G_OBJECT_TYPE_NAME (sbi));
 }
 
@@ -311,9 +320,9 @@ ncm_sbessel_integrator_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, 
  * @ell: multipole
  * @user_data: (nullable): user data passed to @F
  *
- * Integrates the function @F(x, k) multiplied by the spherical Bessel function
+ * Integrates the function @F(chi, k) multiplied by the spherical Bessel function
  * $j_\ell(kx)$ from @a to @b for a single multipole.
- * Computes: $\int_a^b K(x,k) j_\ell(kx) dx$
+ * Computes: $\int_a^b K(\chi,k) j_\ell(k\chi) d\chi$
  *
  * Returns: the integral value
  */
@@ -333,9 +342,9 @@ ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselInteg
  * @result: a #NcmVector to store results
  * @user_data: (nullable): user data passed to @F
  *
- * Integrates the function @F(x, k) multiplied by the spherical Bessel function
+ * Integrates the function @F(chi, k) multiplied by the spherical Bessel function
  * $j_\ell(kx)$ from @a to @b for all multipoles from ell_min to ell_max.
- * Computes: $\int_a^b K(x,k) j_\ell(kx) dx$ for each $\ell$.
+ * Computes: $\int_a^b K(\chi,k) j_\ell(k\chi) d\chi$ for each $\ell$.
  * The results are stored in @result, which must have length (ell_max - ell_min + 1).
  *
  */
@@ -343,6 +352,35 @@ void
 ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data)
 {
   NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate (sbi, F, a, b, k, result, user_data);
+}
+
+/**
+ * ncm_sbessel_integrator_integrate_deriv: (virtual integrate_deriv)
+ * @sbi: a #NcmSBesselIntegrator
+ * @F: (scope call) (closure user_data): function to integrate
+ * @a: lower integration limit
+ * @b: upper integration limit
+ * @k: wave number parameter
+ * @deriv: derivative order of the spherical Bessel weight, up to 2
+ * @result: a #NcmVector to store results
+ * @user_data: (nullable): user data passed to @F
+ *
+ * Integrates the function @F(chi, k) multiplied by the @deriv-th derivative of the
+ * spherical Bessel function with respect to its argument, computing
+ * $\int_a^b K(\chi,k)\, j_\ell^{(d)}(k\chi)\, \mathrm{d}\chi$ for each $\ell$ from ell_min
+ * to ell_max. For @deriv equal to zero this is ncm_sbessel_integrator_integrate().
+ * The results are stored in @result, which must have length (ell_max - ell_min + 1).
+ */
+void
+ncm_sbessel_integrator_integrate_deriv (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, guint deriv, NcmVector *result, gpointer user_data)
+{
+  if (deriv > 2)
+    g_error ("ncm_sbessel_integrator_integrate_deriv: derivative order %u not supported (up to 2)", deriv);
+
+  if (deriv == 0)
+    NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate (sbi, F, a, b, k, result, user_data);
+  else
+    NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate_deriv (sbi, F, a, b, k, deriv, result, user_data);
 }
 
 typedef struct _NcmSBesselIntegratorGaussianData
@@ -353,10 +391,10 @@ typedef struct _NcmSBesselIntegratorGaussianData
 } NcmSBesselIntegratorGaussianData;
 
 static gdouble
-_ncm_sbessel_integrator_gaussian_func (gpointer user_data, gdouble x, gdouble k)
+_ncm_sbessel_integrator_gaussian_func (gpointer user_data, gdouble chi, gdouble k)
 {
   NcmSBesselIntegratorGaussianData *data = (NcmSBesselIntegratorGaussianData *) user_data;
-  const gdouble z                        = (x - data->center) / data->std;
+  const gdouble z                        = (chi - data->center) / data->std;
 
   return exp (-0.5 * z * z);
 }
@@ -371,7 +409,7 @@ _ncm_sbessel_integrator_gaussian_func (gpointer user_data, gdouble x, gdouble k)
  * @k: wave number parameter
  * @ell: multipole
  *
- * Integrates a Gaussian function $\exp(-\frac{1}{2}(\frac{x - center}{std})^2)$
+ * Integrates a Gaussian function $\exp(-\frac{1}{2}(\frac{\chi - center}{std})^2)$
  * multiplied by the spherical Bessel function $j_\ell(kx)$ from @a to @b
  * for a single multipole.
  *
@@ -398,7 +436,7 @@ ncm_sbessel_integrator_integrate_gaussian_ell (NcmSBesselIntegrator *sbi, gdoubl
  * @k: wave number parameter
  * @result: a #NcmVector to store results
  *
- * Integrates a Gaussian function $\exp(-\frac{1}{2}(\frac{x - center}{std})^2)$
+ * Integrates a Gaussian function $\exp(-\frac{1}{2}(\frac{\chi - center}{std})^2)$
  * multiplied by the spherical Bessel function $j_\ell(kx)$ from @a to @b
  * for all multipoles from ell_min to ell_max.
  * The results are stored in @result, which must have length (ell_max - ell_min + 1).
@@ -423,14 +461,14 @@ typedef struct _NcmSBesselIntegratorRationalData
 } NcmSBesselIntegratorRationalData;
 
 static gdouble
-_ncm_sbessel_integrator_rational_func (gpointer user_data, gdouble x, gdouble k)
+_ncm_sbessel_integrator_rational_func (gpointer user_data, gdouble chi, gdouble k)
 {
   NcmSBesselIntegratorRationalData *data = (NcmSBesselIntegratorRationalData *) user_data;
-  const gdouble z                        = (x - data->center) / data->std;
+  const gdouble z                        = (chi - data->center) / data->std;
   const gdouble denom                    = 1.0 + z * z;
   const gdouble denom_cubed              = denom * denom * denom;
 
-  return x * x / denom_cubed;
+  return chi * chi / denom_cubed;
 }
 
 /**
@@ -443,7 +481,7 @@ _ncm_sbessel_integrator_rational_func (gpointer user_data, gdouble x, gdouble k)
  * @k: wave number parameter
  * @ell: multipole
  *
- * Integrates a rational function $\frac{x^2}{(1+((x - center)/std)^2)^3}$
+ * Integrates a rational function $\frac{\chi^2}{(1+((\chi - center)/std)^2)^3}$
  * multiplied by the spherical Bessel function $j_\ell(kx)$ from @a to @b for a single
  * multipole.
  *
@@ -470,7 +508,7 @@ ncm_sbessel_integrator_integrate_rational_ell (NcmSBesselIntegrator *sbi, gdoubl
  * @k: wave number parameter
  * @result: a #NcmVector to store results
  *
- * Integrates a rational function $\frac{x^2}{(1+((x - center)/std)^2)^3}$
+ * Integrates a rational function $\frac{\chi^2}{(1+((\chi - center)/std)^2)^3}$
  * multiplied by the spherical Bessel function $j_\ell(kx)$ from @a to @b for all
  * multipoles from ell_min to ell_max. The results are stored in @result, which must have
  * length (ell_max - ell_min + 1).

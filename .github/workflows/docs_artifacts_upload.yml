@@ -33,7 +33,9 @@ jobs:
         uses: ./.github/actions/setup-miniforge
         with:
           python-version: '3.13'
-      - name: Install LaTeX
+      - name: Install LaTeX and ffmpeg
+        # ffmpeg encodes the inline animations of the theory pages
+        # (matplotlib's to_html5_video).
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -41,7 +43,8 @@ jobs:
             texlive-latex-extra \
             texlive-fonts-recommended \
             cm-super \
-            dvipng
+            dvipng \
+            ffmpeg
       - name: Build documentation
         shell: bash -l {0}
         run: |

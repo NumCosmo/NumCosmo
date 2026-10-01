@@ -26,38 +26,35 @@
 /**
  * NcmStatsDistKernel:
  *
- * An N-dimensional kernel used to compute the kernel density estimation function (KDE)
- * in the #NcmStatsDist class.
- *
- * This class provides the tools to generate a kernel function to be used in a kernel
- * density estimation method. Below is a quick review of the kernel density estimation method
- * and some properties of the kernel function, which are generalized for multidimensional problems.
- * For further information, check [[Density Estimation for Statistics and Data Analysis, B.W. Silverman](https://www.routledge.com/Density-Estimation-for-Statistics-and-Data-Analysis/Silverman/p/book/9780412246203)].
+ * N-dimensional kernel used by #NcmStatsDist for kernel-density estimation.
  *
  * Starting with the uni-dimensional case, let $X_1,...,X_n$ be independent and identically
  * distributed (iid) samples drawn from a distribution $f(x)$. The kernel density estimation of the function is
  * \begin{align}
  * \tilde{f}(x) = \sum_{i=1}^{n}K\left(\frac{x-x_i}{h}\right)
  * ,\end{align}
- * where $K$ is the kernel function and $h$ is the bandwidth parameter. The kernel density
- * estimator function must be close to the true density function $f(x)$, which can be tested
- * by analyzing whether the estimator provides similar expected values as the function $f(x)$,
- * that is, the function $\tilde{f}(x)$ must minimize the mean square error (MSE)
+ * where $K$ is the kernel function and $h$ is the bandwidth parameter. The
+ * estimator minimizes the mean-square error
  * \begin{align}
  * \label{eqmse}
  * MSE_x(\tilde{f}) = E\left[\tilde{f}(x) - f(x)\right]^2
  * ,\end{align}
- * where $E$ represents the expected value. This value depends on the choice of the kernel function,
- * the data and the bandwidth. If the estimator $\tilde{f}(x)$ is close enough to the true function,
- * it shall be used to generate samples that are distributed by $f(x)$.
+ * where $E$ denotes expectation.
  *
  * The kernel $K$ is a symmetric function that must satisfy
  * \begin{align}
  * &\int K(x)~dx = 1
  * .\end{align}
- * Usually, the kernel function is a symmetric probability density function that is easy to sample from,
- * but it is totally under the user's control. Using simple kernels, such as the Gaussian kernel, makes
- * the kernel density estimator method a better alternative to generate samples when the desired distribution is a complicated function.
+ * $K$ is normally a symmetric, normalized density that can be sampled.
+ *
+ * Apart from ncm_stats_dist_kernel_get_dim(), this class has only virtual
+ * methods, so a child object must be instantiated: #NcmStatsDistKernelGauss or
+ * #NcmStatsDistKernelST. Either can be used with #NcmStatsDistKDE or
+ * #NcmStatsDistVKDE. This class does not compute the kernel weights; that is
+ * done by #NcmStatsDist.
+ *
+ * For background see [Density Estimation for Statistics and Data Analysis,
+ * B.W. Silverman](https://www.routledge.com/Density-Estimation-for-Statistics-and-Data-Analysis/Silverman/p/book/9780412246203).
  *
  * For the multidimensional case, given i.i.d d-dimensional sample points $X_1,.., X_n$ distributed by $f(x)$,
  * the multivariate kernel density estimator function $\tilde{f}(x)$ is given by
@@ -67,27 +64,11 @@
  * where $\Sigma_i$ is the covariance matrix of the $i$-th point (the kernels used in this library depend on the covariance matrix),
  * $d$ is the dimension and $w_i$ is the weight attached to each kernel to find the minimal error in equation \eqref{eqmse}.
  *
- * The methods in this class define the type of kernel $K$, compute the bandwidth factor $h$, evaluate the kernel
- * function at a given $d$-dimensional point $x$ or at a given vector of points $\vec{x}$, and, given the weights $w_i$,
- * compute the kernel density estimation function $\tilde{f}(x)$.
+ * Methods define $K$, compute the bandwidth factor $h$, evaluate $K$, and
+ * compute the weighted estimator.
  *
- * Besides the function ncm\_stats\_dist\_kernel\_get\_dim(), this class object only has virtual methods.
- * Therefore, to use this object, the user must initialize one of the child objects (#NcmStatsDistKernelGauss or #NcmStatsDistKernelST).
- * Inside the child objects are the implemented functions, which must be defined for each specific type of kernel function.
- * Check the childs documentations for more information. More information about how the algorithm should be implemented is described below:
- *
- *		-This class is implemented in the #NcmStatsDist class, where the #NcmStatsDistKernel class shall define
- *		the type of kernel used in the interpolation function in #NcmStatsDist and how to compute values such as
- *		the weighted sum of the kernels, the bandwidth, and so on. Yet, the user may use these class objects
- *		to perform other kernel calculations, although some of the methods are not implemented outside the
- *		#NcmStatsDist class.
- *
- *		-This class does not possess the methods to compute the weights of each kernel. You may find this method in the
- *		#NcmStatsDist class.
- *
- *		-Every child object of this class can be used either in the #NcmStatsDistKDE class or in the #NcmStatsDistVKDE class.
- *
- *
+ * Apart from ncm_stats_dist_kernel_get_dim(), this class exposes virtual
+ * methods. Use #NcmStatsDistKernelGauss or #NcmStatsDistKernelST.
  *
  **/
 

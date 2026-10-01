@@ -28,23 +28,15 @@
  *
  * Base class for implementing N-dimensional probability distributions.
  *
- * Abstract class to reconstruct an arbitrary N-dimensional probability distribution.
- * This class provides the tools to perform a radial basis interpolation in a
- * multidimensional function using a radial basis function and then generates a new
- * sample using the interpolation function as the kernel. This method generates a sample
- * that is distributed by the original distribution, but in a more simple way since the
- * used kernels are easier to sample from. For more information about radial basis
- * interpolation, check [[Radial Basis Function Interpolation, Wilna du
- * Toit](https://core.ac.uk/download/pdf/37320748.pdf)]. A brief description of the
- * radial basis interpolation method can be found below.
+ * Reconstructs an N-dimensional probability distribution with radial-basis
+ * interpolation and samples from the resulting kernel mixture.
  *
- * Given a d-dimensional function $g(x): \mathbf{R}^d \rightarrow \mathbf{R}$, a radial basis
- * function $\phi(x, \Sigma)$ is used such that
+ * For a d-dimensional function $g(x)$, the interpolant is
  * \begin{align}
  * \label{Interpolation_eq}
  * s(x) = \sum_i^n \lambda_i \phi(|x-x_i|, \Sigma_i), \quad x~ \in~ \mathbf{R}
  *. \end{align}
- * The variables $\lambda_i$ represent the weights and are found such that
+ * The weights $\lambda_i$ satisfy
  *  \begin{align}
  * \label{eqnnls1}
  * s(x_i) = g(x_i)
@@ -61,38 +53,27 @@
  * one may use $s(x)$ to sample values from $g(x)$, which is easier to do since $s(x)$ is
  * a polynomial function.
  *
- * We want $s(x)$ to be a probability distribution so we can sample from it. Therefore the Lambda matrix containing the
- * weights is seen as the probability density and it must be minimized such that its values are always positive and sum up to one. To solve equation this problem,
- * this algorithm has the tools to solve equation \eqref{eqnnls} for $\lambda$, which is a least-squares problem,
- * using the NNLS method, which can be found in nnls.c file. Thus, the algorithm can randomly choose a kernel $\phi(|x-x_i|, \Sigma_i)$ associated
- * to a probability contained in $\lambda$ and sample a point from it.
+ * NNLS constrains the kernel weights to be non-negative and to sum to one, so
+ * that they form a probability distribution; the solver is in `nnls.c`.
+ * Sampling selects a kernel according to its weight and samples from that
+ * kernel.
+ *
+ * For an introduction to radial basis interpolation see
+ * [Radial Basis Function Interpolation, Wilna du
+ * Toit](https://core.ac.uk/download/pdf/37320748.pdf).
  *
  *
- * In this object, the radial basis interpolation function is not completely defined. One must choose one of the instances of the class, the
- * #NcmStatsDistKernelST object or the #NcmStatsDistKernelGauss object, which uses a multivariate Student's t function and a Gaussian function as the kernel.
- * After initializing the desired object for the interpolation function, one may use the methods of this file to generate the interpolation and to
- * sample from the new interpolated function.
+ * This class is abstract in two directions and cannot compute a sample on its
+ * own. #NcmStatsDistKDE or #NcmStatsDistVKDE fixes whether the kernel
+ * bandwidth is fixed or variable, and supplies the interpolation matrix $IM$
+ * and the covariance decompositions; a #NcmStatsDistKernel subclass, either
+ * #NcmStatsDistKernelGauss or #NcmStatsDistKernelST, supplies the kernel
+ * function itself.
  *
- * The user must provide the input the values: @over_smooth - ncm_stats_dist_set_over_smooth(), @split_frac - ncm_stats_dist_set_split_frac(),
- * @over_smooth - ncm_stats_dist_set_over_smooth(), $v(x)$ - ncm_stats_dist_prepare_interp(). The other parameters
- * must be inserted when the instance for the #NcmStatsDistKDE or the #NcmStatsDistVKDE object is initialized. To perform a calculation of this class, one
- * needs to initialize the class within one of its subclasses (#NcmStatsDistKernelGauss or #NcmStatsDistKernelST), along with the input of a child object of the class
- * #NcmStatsDistKernel. For more information about the algorithm, see the description below.
- *
- *	 -Since this class does not define what type of kernel will be used in the calculation (the fixed kernel in the #NcmStatsDistKDE class or the variable kernel in #NcmStatsDistVKDE class),
- *  one cannot compute the sample just using this instance. Also, it must be provided the function to be used as the kernel, which is implemented in the children from the class #NcmStatsDistKernel.
- *  When initializing the #NcmStatsDistKDE or #NcmStatsDistVKDE classes, the function to be used as the kernel is defined in the object initialization function.
- *
- *  -This class also needs a child object to compute the interpolation matrix $IM$ and the covariance matrices stored in @cov_decomp to perform the interpolation,
- *  which is kernel dependent and therefore also computed by the class child objects.
- *
- *  -Regarding the kernel types based on the radial basis function, $\phi(|x-x_i|)$, and how the sample points in ncm_stats_dist_sample() are generated,
- *      see the different implementations of #NcmStatsDistKernel, e.g., #NcmStatsDistKernelGauss and #NcmStatsDistKernelST
- *
- *  -Regarding how the functions ncm_stats_dist_eval() and ncm_stats_dist_eval_m2lnp() are implemented, see
- *  the different implementations of #NcmStatsDist, i.e., #NcmStatsDistKDE and #NcmStatsDistVKDE. These objects also
- *  compute the covariance matrix of each sample point and other objects needed for the least-squares problem, when
- *  computing the weights matrix ($\lambda$).
+ * The caller must supply @over_smooth through ncm_stats_dist_set_over_smooth(),
+ * @split_frac through ncm_stats_dist_set_split_frac(), and $v(x)$ through
+ * ncm_stats_dist_prepare_interp(). The remaining parameters are set when the
+ * #NcmStatsDistKDE or #NcmStatsDistVKDE instance is created.
  *
  */
 

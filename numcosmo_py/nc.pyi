@@ -412,6 +412,7 @@ WINDOW_VOLUME_TOPHAT: int = 0
 WL_SURFACE_MASS_DENSITY_DEFAULT_PARAMS_ABSTOL: float = 0.0
 WL_SURFACE_MASS_DENSITY_DEFAULT_PCC: float = 0.8
 WL_SURFACE_MASS_DENSITY_DEFAULT_ROFF: float = 1.0
+XCOR_COMPONENT_TABLE_CHI_FLOOR: float = 0.01
 XCOR_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_KERNEL_COMPONENT_DEFAULT_EPSILON: float = 0.0
@@ -422,7 +423,7 @@ XCOR_KERNEL_GAL_DEFAULT_NOISE_BIAS: float = 0.0
 XCOR_KERNEL_GAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_KERNEL_GAL_G_FUNC_LEN: int = 200
 XCOR_KERNEL_MAX_ELL_BLOCK: int = 64
-XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL: float = 1e-06
+XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON: float = 1e-06
 XCOR_KERNEL_RADIAL_MAX_COMPS: int = 6
 XCOR_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_LENSING_EFFICIENCY_DEFAULT_ABSTOL: float = 0.0
@@ -5985,6 +5986,7 @@ class DataClusterWLFactor(NumCosmoMath.Data):
     def free(self) -> None: ...
     def get_auto_nodes(self) -> bool: ...
     def get_integ_method(self) -> DataClusterWLIntegMethod: ...
+    def get_low_prob_count(self) -> int: ...
     def get_max_total_nodes(self) -> int: ...
     def get_n_nodes(self) -> int: ...
     def get_node_reltol(self) -> float: ...
@@ -21220,6 +21222,9 @@ class Recomb(GObject.Object):
     tau_drag_lambda: float = ...
     tau_cutoff_z: float = ...
     tau_cutoff_lambda: float = ...
+    v_tau_reion_min_z: float = ...
+    v_tau_reion_min_lambda: float = ...
+    v_tau_reion_min_up: bool = ...
     def __init__(
         self, init_frac: float = ..., prec: float = ..., zi: float = ...
     ) -> None: ...
@@ -21269,6 +21274,8 @@ class Recomb(GObject.Object):
     def get_tau_z(self, cosmo: HICosmo) -> float: ...
     def get_v_tau_max_lambda(self, cosmo: HICosmo) -> float: ...
     def get_v_tau_max_z(self, cosmo: HICosmo) -> float: ...
+    def get_v_tau_reion_min_lambda(self, cosmo: HICosmo) -> float: ...
+    def get_v_tau_reion_min_z(self, cosmo: HICosmo) -> float: ...
     def get_zi(self) -> float: ...
     def log_v_tau(self, cosmo: HICosmo, lambda_: float) -> float: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
@@ -22899,6 +22906,91 @@ class XcorClass(GObject.GPointer):
 
     parent_class: GObject.ObjectClass = ...
 
+class XcorComponentTable(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorComponentTable(**properties)
+        new(chi:NumCosmoMath.Vector, W:NumCosmoMath.Vector) -> NumCosmo.XcorComponentTable
+        new_full(chi:NumCosmoMath.Vector, W:NumCosmoMath.Vector, kind:NumCosmo.XcorKernelTableKind, order:int, normalize:bool) -> NumCosmo.XcorComponentTable
+
+    Object NcXcorComponentTable
+
+    Properties from NcXcorComponentTable:
+      chi -> NcmVector: chi
+        Sample comoving distances in Mpc
+      W -> NcmVector: W
+        Window samples
+      kind -> NcXcorKernelTableKind: kind
+        Window kind
+      order -> guint: order
+        B-spline order of the reconstruction
+      normalize -> gboolean: normalize
+        Rescale to unit integral over the support
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        W: NumCosmoMath.Vector
+        chi: NumCosmoMath.Vector
+        kind: XcorKernelTableKind
+        normalize: bool
+        order: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        W: NumCosmoMath.Vector = ...,
+        chi: NumCosmoMath.Vector = ...,
+        kind: XcorKernelTableKind = ...,
+        normalize: bool = ...,
+        order: int = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(xcct: XcorComponentTable) -> None: ...
+    def eval_W(self, chi: float) -> float: ...
+    def eval_kernel_factor(self, chi: float, k: float) -> float: ...
+    def eval_prefactor(self, l: int) -> float: ...
+    def free(self) -> None: ...
+    def get_bessel_deriv(self) -> int: ...
+    def get_kind(self) -> XcorKernelTableKind: ...
+    def get_norm(self) -> float: ...
+    def get_normalize(self) -> bool: ...
+    def get_order(self) -> int: ...
+    def get_support(self) -> typing.Tuple[float, float]: ...
+    @classmethod
+    def new(
+        cls, chi: NumCosmoMath.Vector, W: NumCosmoMath.Vector
+    ) -> XcorComponentTable: ...
+    @classmethod
+    def new_full(
+        cls,
+        chi: NumCosmoMath.Vector,
+        W: NumCosmoMath.Vector,
+        kind: XcorKernelTableKind,
+        order: int,
+        normalize: bool,
+    ) -> XcorComponentTable: ...
+    def peek_knots(self) -> NumCosmoMath.Vector: ...
+    def peek_spline(self) -> NumCosmoMath.Spline: ...
+    def ref(self) -> XcorComponentTable: ...
+    def set_samples(self, chi: NumCosmoMath.Vector, W: NumCosmoMath.Vector) -> None: ...
+
+class XcorComponentTableClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorComponentTableClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
 class XcorKernel(NumCosmoMath.Model):
     r"""
     :Constructors:
@@ -22926,8 +23018,8 @@ class XcorKernel(NumCosmoMath.Model):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -22974,9 +23066,9 @@ class XcorKernel(NumCosmoMath.Model):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -23002,9 +23094,9 @@ class XcorKernel(NumCosmoMath.Model):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -23059,20 +23151,22 @@ class XcorKernel(NumCosmoMath.Model):
     def get_max_border_expansions(self) -> int: ...
     def get_max_iter(self) -> int: ...
     def get_panel_order_cap(self) -> int: ...
+    def get_peak_epsilon(self) -> float: ...
     def get_reltol(self) -> float: ...
-    def get_scaled_abstol(self) -> float: ...
     def get_track_fit_residual(self) -> bool: ...
     def get_z_range(self) -> typing.Tuple[float, float, float]: ...
     @staticmethod
     def id() -> int: ...
     @staticmethod
     def log_all_models() -> None: ...
+    def mark_outdated(self) -> None: ...
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
     def peek_dist(self) -> Distance: ...
     def peek_integrator(self) -> typing.Optional[NumCosmoMath.SBesselIntegrator]: ...
     def peek_powspec(self) -> NumCosmoMath.Powspec: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
+    def prepare_if_needed(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> XcorKernel: ...
     def set_adaptive_boundary_tries(self, adaptive_boundary_tries: int) -> None: ...
     def set_adaptive_epsilon(self, adaptive_epsilon: float) -> None: ...
@@ -23082,8 +23176,8 @@ class XcorKernel(NumCosmoMath.Model):
     def set_max_border_expansions(self, max_border_expansions: int) -> None: ...
     def set_max_iter(self, max_iter: int) -> None: ...
     def set_panel_order_cap(self, panel_order_cap: int) -> None: ...
+    def set_peak_epsilon(self, peak_epsilon: float) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
-    def set_scaled_abstol(self, scaled_abstol: float) -> None: ...
     def set_track_fit_residual(self, track_fit_residual: bool) -> None: ...
 
 class XcorKernelAnalyticGauss(XcorKernelRadial):
@@ -23109,6 +23203,8 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -23127,8 +23223,8 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -23168,6 +23264,7 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         chi_mean: float
         chi_sigma: float
         n_sigma: float
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -23179,9 +23276,9 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -23199,6 +23296,7 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         chi_mean: float = ...,
         chi_sigma: float = ...,
         n_sigma: float = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -23210,9 +23308,9 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -23275,6 +23373,8 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -23293,8 +23393,8 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -23334,6 +23434,7 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         chi_lower: float
         chi_source_lower: float
         chi_source_upper: float
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -23345,9 +23446,9 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -23365,6 +23466,7 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         chi_lower: float = ...,
         chi_source_lower: float = ...,
         chi_source_upper: float = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -23376,9 +23478,9 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -23442,6 +23544,8 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -23460,8 +23564,8 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -23502,6 +23606,7 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         chi_sigma: NumCosmoMath.Vector
         n_sigma: float
         weight: NumCosmoMath.Vector
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -23513,9 +23618,9 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -23534,6 +23639,7 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         chi_sigma: NumCosmoMath.Vector = ...,
         n_sigma: float = ...,
         weight: NumCosmoMath.Vector = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -23545,9 +23651,9 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -23618,6 +23724,8 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -23636,8 +23744,8 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -23679,6 +23787,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         chi_lower: float
         chi_scale: float
         chi_upper: float
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -23690,9 +23799,9 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -23712,6 +23821,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         chi_lower: float = ...,
         chi_scale: float = ...,
         chi_upper: float = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -23723,9 +23833,9 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -23794,6 +23904,8 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -23812,8 +23924,8 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -23854,6 +23966,7 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         chi_scale: float
         n_scale: float
         nu: float
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -23865,9 +23978,9 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -23886,6 +23999,7 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         chi_scale: float = ...,
         n_scale: float = ...,
         nu: float = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -23897,9 +24011,9 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -23964,6 +24078,8 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -23982,8 +24098,8 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -24022,6 +24138,7 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
     class Props:
         chi_lower: float
         chi_upper: float
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -24033,9 +24150,9 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -24052,6 +24169,7 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         self,
         chi_lower: float = ...,
         chi_upper: float = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -24063,9 +24181,9 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -24127,6 +24245,8 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -24145,8 +24265,8 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -24187,6 +24307,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         chi_sigma: float
         chi_upper: float
         n_sigma: float
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -24198,9 +24319,9 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -24219,6 +24340,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         chi_sigma: float = ...,
         chi_upper: float = ...,
         n_sigma: float = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -24230,9 +24352,9 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -24290,6 +24412,8 @@ class XcorKernelCMBISW(XcorKernel):
         Recombination object
       Nl -> NcmVector: Nl
         Noise spectrum
+      source -> NcXcorKernelCMBISWSource: source
+        Placement of the CMB sources along the line of sight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -24308,8 +24432,8 @@ class XcorKernelCMBISW(XcorKernel):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -24348,6 +24472,7 @@ class XcorKernelCMBISW(XcorKernel):
     class Props:
         Nl: NumCosmoMath.Vector
         recomb: Recomb
+        source: XcorKernelCMBISWSource
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
@@ -24358,9 +24483,9 @@ class XcorKernelCMBISW(XcorKernel):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -24377,6 +24502,7 @@ class XcorKernelCMBISW(XcorKernel):
         self,
         Nl: NumCosmoMath.Vector = ...,
         recomb: Recomb = ...,
+        source: XcorKernelCMBISWSource = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
@@ -24387,18 +24513,19 @@ class XcorKernelCMBISW(XcorKernel):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
-    def eval_KL_max(self, y: float) -> float: ...
-    def eval_k_epsilon(self, y: float) -> float: ...
-    def eval_k_max(self, y: float) -> float: ...
+    def eval_KL_max(self, x: float) -> float: ...
+    def eval_k_epsilon(self, x: float) -> float: ...
+    def eval_k_max(self, x: float) -> float: ...
     def get_epsilon(self) -> float: ...
+    def get_source(self) -> XcorKernelCMBISWSource: ...
     @classmethod
     def new(
         cls,
@@ -24408,6 +24535,7 @@ class XcorKernelCMBISW(XcorKernel):
         Nl: NumCosmoMath.Vector,
     ) -> XcorKernelCMBISW: ...
     def set_epsilon(self, epsilon: float) -> None: ...
+    def set_source(self, source: XcorKernelCMBISWSource) -> None: ...
 
 class XcorKernelCMBISWClass(GObject.GPointer):
     r"""
@@ -24436,6 +24564,8 @@ class XcorKernelCMBLensing(XcorKernel):
         Recombination object
       Nl -> NcmVector: Nl
         Noise spectrum
+      source -> NcXcorKernelCMBLensingSource: source
+        Placement of the CMB sources along the line of sight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -24454,8 +24584,8 @@ class XcorKernelCMBLensing(XcorKernel):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -24494,6 +24624,7 @@ class XcorKernelCMBLensing(XcorKernel):
     class Props:
         Nl: NumCosmoMath.Vector
         recomb: Recomb
+        source: XcorKernelCMBLensingSource
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
@@ -24504,9 +24635,9 @@ class XcorKernelCMBLensing(XcorKernel):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -24523,6 +24654,7 @@ class XcorKernelCMBLensing(XcorKernel):
         self,
         Nl: NumCosmoMath.Vector = ...,
         recomb: Recomb = ...,
+        source: XcorKernelCMBLensingSource = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
@@ -24533,14 +24665,15 @@ class XcorKernelCMBLensing(XcorKernel):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
+    def get_source(self) -> XcorKernelCMBLensingSource: ...
     @classmethod
     def new(
         cls,
@@ -24549,6 +24682,7 @@ class XcorKernelCMBLensing(XcorKernel):
         recomb: Recomb,
         Nl: NumCosmoMath.Vector,
     ) -> XcorKernelCMBLensing: ...
+    def set_source(self, source: XcorKernelCMBLensingSource) -> None: ...
 
 class XcorKernelCMBLensingClass(GObject.GPointer):
     r"""
@@ -24611,8 +24745,8 @@ class XcorKernelCluster(XcorKernel):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -24659,9 +24793,9 @@ class XcorKernelCluster(XcorKernel):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -24687,9 +24821,9 @@ class XcorKernelCluster(XcorKernel):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -24743,8 +24877,8 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -24793,9 +24927,9 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -24822,9 +24956,9 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -24869,17 +25003,20 @@ class XcorKernelComponent(GObject.Object):
       epsilon -> gdouble: epsilon
         Epsilon value for kernel analysis
       ny -> guint: ny
-        Number of y points
+        Number of x points
       max-iter -> guint: max-iter
         Maximum iterations for GSL solvers
       tol -> gdouble: tol
         Tolerance for GSL solvers
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
+        bessel_deriv: int
         epsilon: float
         max_iter: int
         ny: int
@@ -24888,21 +25025,27 @@ class XcorKernelComponent(GObject.Object):
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
-        self, epsilon: float = ..., max_iter: int = ..., ny: int = ..., tol: float = ...
+        self,
+        bessel_deriv: int = ...,
+        epsilon: float = ...,
+        max_iter: int = ...,
+        ny: int = ...,
+        tol: float = ...,
     ) -> None: ...
     @staticmethod
     def clear(comp: XcorKernelComponent) -> None: ...
-    def do_eval_kernel(self, cosmo: HICosmo, xi: float, k: float) -> float: ...
+    def do_eval_kernel(self, cosmo: HICosmo, chi: float, k: float) -> float: ...
     def do_eval_prefactor(self, cosmo: HICosmo, k: float, l: int) -> float: ...
     def do_get_limits(
         self, cosmo: HICosmo
     ) -> typing.Tuple[float, float, float, float]: ...
-    def eval_KL_max(self, y: float) -> float: ...
-    def eval_k_epsilon(self, y: float) -> float: ...
-    def eval_k_max(self, y: float) -> float: ...
-    def eval_kernel(self, cosmo: HICosmo, xi: float, k: float) -> float: ...
+    def eval_KL_max(self, x: float) -> float: ...
+    def eval_k_epsilon(self, x: float) -> float: ...
+    def eval_k_max(self, x: float) -> float: ...
+    def eval_kernel(self, cosmo: HICosmo, chi: float, k: float) -> float: ...
     def eval_prefactor(self, cosmo: HICosmo, k: float, l: int) -> float: ...
     def free(self) -> None: ...
+    def get_bessel_deriv(self) -> int: ...
     def get_epsilon(self) -> float: ...
     def get_limits(
         self, cosmo: HICosmo
@@ -24912,6 +25055,7 @@ class XcorKernelComponent(GObject.Object):
     def get_tol(self) -> float: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> XcorKernelComponent: ...
+    def set_bessel_deriv(self, bessel_deriv: int) -> None: ...
     def set_epsilon(self, epsilon: float) -> None: ...
     def set_max_iter(self, max_iter: int) -> None: ...
     def set_ny(self, ny: int) -> None: ...
@@ -24956,6 +25100,8 @@ class XcorKernelGal(XcorKernel):
         Bias spline object
       domagbias -> gboolean: domagbias
         Do magnification bias
+      dorsd -> gboolean: dorsd
+        Do redshift-space distortions
       nbarm1 -> gdouble: nbarm1
         One over nbar (galaxy angular density)
       mag-bias -> gdouble: mag-bias
@@ -24990,8 +25136,8 @@ class XcorKernelGal(XcorKernel):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -25034,6 +25180,7 @@ class XcorKernelGal(XcorKernel):
         bparam_length: int
         dndz: NumCosmoMath.Spline
         domagbias: bool
+        dorsd: bool
         mag_bias: float
         mag_bias_fit: bool
         nbarm1: float
@@ -25049,9 +25196,9 @@ class XcorKernelGal(XcorKernel):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -25072,6 +25219,7 @@ class XcorKernelGal(XcorKernel):
         bparam_length: int = ...,
         dndz: NumCosmoMath.Spline = ...,
         domagbias: bool = ...,
+        dorsd: bool = ...,
         mag_bias: float = ...,
         mag_bias_fit: bool = ...,
         nbarm1: float = ...,
@@ -25087,9 +25235,9 @@ class XcorKernelGal(XcorKernel):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -25154,16 +25302,16 @@ class XcorKernelIntegrand(GObject.GBoxed):
     ] = ...
     residuals: NumCosmoMath.Matrix = ...
     reltol: float = ...
-    scaled_abstol: float = ...
+    peak_epsilon: float = ...
     @staticmethod
     def clear(integrand: XcorKernelIntegrand) -> None: ...
     def eval_array(self, k: float) -> list[float]: ...
     def get_len(self) -> int: ...
     def get_n_panels(self) -> int: ...
+    def get_peak_epsilon(self) -> float: ...
     def get_range(self) -> typing.Tuple[float, float]: ...
     def get_range_comp(self, i: int) -> typing.Tuple[float, float]: ...
     def get_reltol(self) -> float: ...
-    def get_scaled_abstol(self) -> float: ...
     @classmethod
     def new(
         cls,
@@ -25185,7 +25333,7 @@ class XcorKernelIntegrand(GObject.GBoxed):
     def set_residuals(
         self, residuals: typing.Optional[NumCosmoMath.Matrix] = None
     ) -> None: ...
-    def set_tolerances(self, reltol: float, scaled_abstol: float) -> None: ...
+    def set_tolerances(self, reltol: float, peak_epsilon: float) -> None: ...
     def unref(self) -> None: ...
 
 class XcorKernelRadial(XcorKernel):
@@ -25201,6 +25349,8 @@ class XcorKernelRadial(XcorKernel):
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -25219,8 +25369,8 @@ class XcorKernelRadial(XcorKernel):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -25257,6 +25407,7 @@ class XcorKernelRadial(XcorKernel):
     """
 
     class Props:
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -25268,9 +25419,9 @@ class XcorKernelRadial(XcorKernel):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -25286,6 +25437,7 @@ class XcorKernelRadial(XcorKernel):
     parent_instance: XcorKernel = ...
     def __init__(
         self,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -25297,23 +25449,29 @@ class XcorKernelRadial(XcorKernel):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     def do_eval_W_comp(self, comp: int, chi: float) -> float: ...
-    def do_eval_kernel_factor(self, cosmo: HICosmo, chi: float, k: float) -> float: ...
-    def do_eval_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
+    def do_eval_kernel_factor(
+        self, comp: int, cosmo: HICosmo, chi: float, k: float
+    ) -> float: ...
+    def do_eval_prefactor(self, comp: int, cosmo: HICosmo, l: int) -> float: ...
+    def do_get_comp_bessel_deriv(self, comp: int) -> int: ...
     def do_get_comp_support(self, comp: int) -> typing.Tuple[float, float]: ...
     def do_get_n_comps(self) -> int: ...
     def eval_W(self, chi: float) -> float: ...
     def eval_W_comp(self, comp: int, chi: float) -> float: ...
-    def eval_kernel_factor(self, cosmo: HICosmo, chi: float, k: float) -> float: ...
-    def eval_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
+    def eval_kernel_factor(
+        self, comp: int, cosmo: HICosmo, chi: float, k: float
+    ) -> float: ...
+    def eval_prefactor(self, comp: int, cosmo: HICosmo, l: int) -> float: ...
+    def get_comp_bessel_deriv(self, comp: int) -> int: ...
     def get_comp_support(self, comp: int) -> typing.Tuple[float, float]: ...
     def get_n_comps(self) -> int: ...
     def get_support(self) -> typing.Tuple[float, float]: ...
@@ -25335,9 +25493,10 @@ class XcorKernelRadialClass(GObject.GPointer):
         [XcorKernelRadial, int], typing.Tuple[float, float]
     ] = ...
     eval_kernel_factor: typing.Callable[
-        [XcorKernelRadial, HICosmo, float, float], float
+        [XcorKernelRadial, int, HICosmo, float, float], float
     ] = ...
-    eval_prefactor: typing.Callable[[XcorKernelRadial, HICosmo, int], float] = ...
+    eval_prefactor: typing.Callable[[XcorKernelRadial, int, HICosmo, int], float] = ...
+    get_comp_bessel_deriv: typing.Callable[[XcorKernelRadial, int], int] = ...
     padding: list[None] = ...
 
 class XcorKernelRadialKDep(GObject.Object):
@@ -25434,7 +25593,8 @@ class XcorKernelTable(XcorKernelRadial):
 
         XcorKernelTable(**properties)
         new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi:NumCosmoMath.Vector, W:NumCosmoMath.Vector) -> NumCosmo.XcorKernelTable
-        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi:NumCosmoMath.Vector, W:NumCosmoMath.Vector, kind:NumCosmo.XcorKernelTableKind, order:int, normalize:bool, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelTable
+        new_from_components(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, components:NumCosmoMath.ObjArray, sbi:NumCosmoMath.SBesselIntegrator=None) -> NumCosmo.XcorKernelTable
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi:NumCosmoMath.Vector, W:NumCosmoMath.Vector, kind:NumCosmo.XcorKernelTableKind, order:int, normalize:bool, sbi:NumCosmoMath.SBesselIntegrator=None) -> NumCosmo.XcorKernelTable
 
     Object NcXcorKernelTable
 
@@ -25449,10 +25609,14 @@ class XcorKernelTable(XcorKernelRadial):
         B-spline order of the reconstruction
       normalize -> gboolean: normalize
         Rescale to unit integral over the support
+      components -> NcmObjArray: components
+        Tabulated components
 
     Properties from NcXcorKernelRadial:
       scale-dependence -> NcXcorKernelRadialKDep: scale-dependence
         Scale-dependent factor multiplying the radial integrand
+      bessel-deriv -> guint: bessel-deriv
+        Derivative order of the spherical Bessel weight
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -25471,8 +25635,8 @@ class XcorKernelTable(XcorKernelRadial):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -25511,9 +25675,11 @@ class XcorKernelTable(XcorKernelRadial):
     class Props:
         W: NumCosmoMath.Vector
         chi: NumCosmoMath.Vector
+        components: NumCosmoMath.ObjArray
         kind: XcorKernelTableKind
         normalize: bool
         order: int
+        bessel_deriv: int
         scale_dependence: XcorKernelRadialKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
@@ -25525,9 +25691,9 @@ class XcorKernelTable(XcorKernelRadial):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -25544,9 +25710,11 @@ class XcorKernelTable(XcorKernelRadial):
         self,
         W: NumCosmoMath.Vector = ...,
         chi: NumCosmoMath.Vector = ...,
+        components: NumCosmoMath.ObjArray = ...,
         kind: XcorKernelTableKind = ...,
         normalize: bool = ...,
         order: int = ...,
+        bessel_deriv: int = ...,
         scale_dependence: XcorKernelRadialKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
@@ -25558,15 +25726,16 @@ class XcorKernelTable(XcorKernelRadial):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     def get_kind(self) -> XcorKernelTableKind: ...
+    def get_n_components(self) -> int: ...
     def get_norm(self) -> float: ...
     def get_normalize(self) -> bool: ...
     def get_order(self) -> int: ...
@@ -25579,6 +25748,14 @@ class XcorKernelTable(XcorKernelRadial):
         W: NumCosmoMath.Vector,
     ) -> XcorKernelTable: ...
     @classmethod
+    def new_from_components(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        components: NumCosmoMath.ObjArray,
+        sbi: typing.Optional[NumCosmoMath.SBesselIntegrator] = None,
+    ) -> XcorKernelTable: ...
+    @classmethod
     def new_full(
         cls,
         dist: Distance,
@@ -25588,10 +25765,14 @@ class XcorKernelTable(XcorKernelRadial):
         kind: XcorKernelTableKind,
         order: int,
         normalize: bool,
-        sbi: NumCosmoMath.SBesselIntegrator,
+        sbi: typing.Optional[NumCosmoMath.SBesselIntegrator] = None,
     ) -> XcorKernelTable: ...
+    def peek_component(self, i: int) -> XcorComponentTable: ...
     def peek_knots(self) -> NumCosmoMath.Vector: ...
     def peek_spline(self) -> NumCosmoMath.Spline: ...
+    def replace_samples(
+        self, i: int, chi: NumCosmoMath.Vector, W: NumCosmoMath.Vector
+    ) -> None: ...
 
 class XcorKernelTableClass(GObject.GPointer):
     r"""
@@ -25640,8 +25821,8 @@ class XcorKernelWeakLensing(XcorKernel):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -25691,9 +25872,9 @@ class XcorKernelWeakLensing(XcorKernel):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -25721,9 +25902,9 @@ class XcorKernelWeakLensing(XcorKernel):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -25784,8 +25965,8 @@ class XcorKerneltSZ(XcorKernel):
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
         Relative tolerance for adaptive midpoint refinement
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
       max-iter -> guint: max-iter
@@ -25834,9 +26015,9 @@ class XcorKerneltSZ(XcorKernel):
         max_border_expansions: int
         max_iter: int
         panel_order_cap: int
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         track_fit_residual: bool
         implementation: int
         name: str
@@ -25863,9 +26044,9 @@ class XcorKerneltSZ(XcorKernel):
         max_border_expansions: int = ...,
         max_iter: int = ...,
         panel_order_cap: int = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -25896,7 +26077,7 @@ class XcorKinetic(GObject.GBoxed):
         XcorKinetic()
     """
 
-    xi_z: float = ...
+    chi_z: float = ...
     E_z: float = ...
     def copy(self) -> XcorKinetic: ...
     def free(self) -> None: ...
@@ -25992,8 +26173,8 @@ class XcorSSCSij(GObject.Object):
         Multipole block size for the solver
       reltol -> gdouble: reltol
         Relative tolerance of the kernel spline and the outer k integral
-      scaled-abstol -> gdouble: scaled-abstol
-        Absolute floor of the adaptive refinement of the U_i(k) spline
+      peak-epsilon -> gdouble: peak-epsilon
+        Peak-relative floor of the adaptive refinement of the U_i(k) spline
 
     Signals from GObject:
       notify (GParam)
@@ -26005,9 +26186,9 @@ class XcorSSCSij(GObject.Object):
         dist: Distance
         mask_cl: typing.Optional[NumCosmoMath.Vector]
         method: XcorMethod
+        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        scaled_abstol: float
         z_edges: NumCosmoMath.Vector
 
     props: Props = ...
@@ -26018,9 +26199,9 @@ class XcorSSCSij(GObject.Object):
         dist: Distance = ...,
         mask_cl: typing.Optional[NumCosmoMath.Vector] = ...,
         method: XcorMethod = ...,
+        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        scaled_abstol: float = ...,
         z_edges: NumCosmoMath.Vector = ...,
     ) -> None: ...
     @staticmethod
@@ -26033,8 +26214,8 @@ class XcorSSCSij(GObject.Object):
     def get_lmax(self) -> int: ...
     def get_method(self) -> XcorMethod: ...
     def get_nbins(self) -> int: ...
+    def get_peak_epsilon(self) -> float: ...
     def get_reltol(self) -> float: ...
-    def get_scaled_abstol(self) -> float: ...
     @staticmethod
     def mask_cl_fullsky() -> NumCosmoMath.Vector: ...
     @classmethod
@@ -26052,8 +26233,8 @@ class XcorSSCSij(GObject.Object):
         self, mask_cl: typing.Optional[NumCosmoMath.Vector] = None
     ) -> None: ...
     def set_method(self, method: XcorMethod) -> None: ...
+    def set_peak_epsilon(self, peak_epsilon: float) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
-    def set_scaled_abstol(self, scaled_abstol: float) -> None: ...
 
 class XcorSSCSijClass(GObject.GPointer):
     r"""
@@ -28222,8 +28403,40 @@ class WLSurfaceMassDensityParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
+class XcorKernelCMBISWSource(GObject.GEnum):
+    THIN_SCREEN: XcorKernelCMBISWSource = ...
+    VISIBILITY: XcorKernelCMBISWSource = ...
+    VISIBILITY_REIONIZATION: XcorKernelCMBISWSource = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
 class XcorKernelCMBLensingSParams(GObject.GEnum):
     LEN: XcorKernelCMBLensingSParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class XcorKernelCMBLensingSource(GObject.GEnum):
+    THIN_SCREEN: XcorKernelCMBLensingSource = ...
+    VISIBILITY: XcorKernelCMBLensingSource = ...
+    VISIBILITY_REIONIZATION: XcorKernelCMBLensingSource = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -28297,7 +28510,9 @@ class XcorKernelImpl(GObject.GEnum):
     _value_repr_: wrapper_descriptor = ...
 
 class XcorKernelTableKind(GObject.GEnum):
+    CONVERGENCE: XcorKernelTableKind = ...
     DENSITY: XcorKernelTableKind = ...
+    RSD: XcorKernelTableKind = ...
     SHEAR: XcorKernelTableKind = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...

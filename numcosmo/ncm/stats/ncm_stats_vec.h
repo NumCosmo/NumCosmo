@@ -63,6 +63,14 @@ typedef enum /*< prefix=NCM_STATS_VEC >*/
   NCM_STATS_VEC_TYPES_LEN, /*< skip >*/
 } NcmStatsVecType;
 
+/**
+ * NcmStatsVecUpdateFunc:
+ * @svec: a #NcmStatsVec
+ * @w: sample weight
+ * @x: sample vector
+ *
+ * Updates the accumulated statistics with one weighted sample.
+ */
 typedef void (*NcmStatsVecUpdateFunc) (NcmStatsVec *svec, const gdouble w, NcmVector *x);
 
 /**

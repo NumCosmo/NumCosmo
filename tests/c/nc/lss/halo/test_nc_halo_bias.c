@@ -53,6 +53,7 @@ void test_nc_halo_bias_new (TestNcHaloBias *test, gconstpointer pdata);
 void test_nc_halo_bias_eval (TestNcHaloBias *test, gconstpointer pdata);
 void test_nc_halo_bias_free (TestNcHaloBias *test, gconstpointer pdata);
 void test_nc_halo_bias_set_get (TestNcHaloBias *test, gconstpointer pdata);
+void test_nc_halo_bias_integrand (TestNcHaloBias *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -72,7 +73,7 @@ main (gint argc, gchar *argv[])
               &test_nc_halo_bias_free);
   g_test_add ("/nc/halo_bias/integrand", TestNcHaloBias, NULL,
               &test_nc_halo_bias_new,
-              &test_nc_halo_bias_set_get,
+              &test_nc_halo_bias_integrand,
               &test_nc_halo_bias_free);
 
 
@@ -96,7 +97,13 @@ test_nc_halo_bias_free (TestNcHaloBias *test, gconstpointer pdata)
 void
 test_nc_halo_bias_new (TestNcHaloBias *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo         = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcHIPrimPowerLaw *prim = nc_hiprim_power_law_new ();
+
+  /* The transfer-function power spectrum reads the primordial spectrum from the
+   * cosmology's "prim" slot and asserts it is there; the slot is construction-fixed, so
+   * it cannot be attached afterwards. Without it nothing that prepares the mass function
+   * can run -- which is why the integrand check below had never executed. */
+  NcHICosmo *cosmo         = NC_HICOSMO (g_object_new (NC_TYPE_HICOSMO_DE_XCDM, "prim", prim, NULL));
   NcDistance *dist         = nc_distance_new (3.0);
   NcTransferFunc *tf       = NC_TRANSFER_FUNC (ncm_serialize_global_from_string ("NcTransferFuncEH"));
   NcPowspecML *ps_ml       = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
@@ -147,6 +154,7 @@ test_nc_halo_bias_new (TestNcHaloBias *test, gconstpointer pdata)
   g_assert_true (NC_IS_HALO_BIAS_TINKER (bt));
   g_assert_true (NC_IS_HALO_BIAS_PS (ps));
 
+  nc_hiprim_free (NC_HIPRIM (prim));
   nc_multiplicity_func_free (mulf);
   ncm_powspec_filter_free (psf);
   nc_powspec_ml_free (ps_ml);
@@ -231,13 +239,21 @@ test_nc_halo_bias_eval (TestNcHaloBias *test, gconstpointer pdata)
 void
 test_nc_halo_bias_integrand (TestNcHaloBias *test, gconstpointer pdata)
 {
-  gdouble lnM            = g_test_rand_double_range (12.0, 15.0);
-  gdouble bias_integrand = nc_halo_bias_integrand (NC_HALO_BIAS (test->ps), test->cosmo, lnM, test->z);
-  gdouble d2n_dzdlnM     = nc_halo_mass_function_d2n_dzdlnM (test->mfp, test->cosmo, lnM, test->z);
-  gdouble sigma          = nc_halo_mass_function_sigma_lnM (test->mfp, test->cosmo, lnM, test->z);
-  gdouble bias           = nc_halo_bias_eval (NC_HALO_BIAS (test->ps), test->cosmo, sigma, lnM, test->z);
+  const gdouble lnM = g_test_rand_double_range (log (1.0e13), log (1.0e15));
+  gdouble bias_integrand, d2n_dzdlnM, sigma, bias;
 
+  /* d2n_dzdlnM reads a two-dimensional spline that does not exist until the mass
+   * function is prepared, and is only defined over the range it was prepared on. */
+  nc_halo_mass_function_set_eval_limits (test->mfp, test->cosmo,
+                                         log (1.0e12), log (1.0e16), 0.0, 2.0);
+  nc_halo_mass_function_prepare (test->mfp, test->cosmo);
 
+  bias_integrand = nc_halo_bias_integrand (NC_HALO_BIAS (test->ps), test->cosmo, lnM, test->z);
+  d2n_dzdlnM     = nc_halo_mass_function_d2n_dzdlnM (test->mfp, test->cosmo, lnM, test->z);
+  sigma          = nc_halo_mass_function_sigma_lnM (test->mfp, test->cosmo, lnM, test->z);
+  bias           = nc_halo_bias_eval (NC_HALO_BIAS (test->ps), test->cosmo, sigma, lnM, test->z);
+
+  /* The integrand is the mass function weighted by the bias, by definition. */
   g_assert_cmpfloat (d2n_dzdlnM * bias, ==, bias_integrand);
 }
 

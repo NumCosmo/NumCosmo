@@ -581,7 +581,7 @@ ncm_util_normal_gaussian_integral (const gdouble xl, const gdouble xu)
     if (ul > ERF_BOUND)
     {
       /*
-       * When both ul and uu are in the right tail (ul > ERF_BOUND), erf(x) ≈ 1 and
+       * When both ul and uu are in the right tail (ul > ERF_BOUND), erf(x) is close to 1 and
        * loses precision. Use erfc(x) = 1 - erf(x) for better accuracy since x >
        * ERF_BOUND.
        */

@@ -29,82 +29,50 @@
 /**
  * NcGalaxyShapeFactorSeriesLensed:
  *
- * Lensed-frame series evaluation of the intrinsic-ellipticity marginal, both
- * ellipticity conventions, arbitrary truncation order, any population model
- * implementing #NcGalaxyShapePop's eval_p_rho2_g_series vfunc (currently
- * #NcGalaxyShapePopGauss, #NcGalaxyShapePopGaussLocal and
- * #NcGalaxyShapePopBeta).
+ * Lensed-frame Taylor-series evaluation of the intrinsic-ellipticity marginal
+ * for both ellipticity conventions and arbitrary truncation order.
  *
- * Changes to the LENSED frame (same substitution #NcGalaxyShapeFactorQuad
- * uses) and Taylor-expands the *population* term in $g$, keeping the noise
- * kernel exact:
+ * Requires a population implementing #NcGalaxyShapePop's eval_p_rho2_g_series
+ * vfunc: currently #NcGalaxyShapePopGauss, #NcGalaxyShapePopGaussLocal and
+ * #NcGalaxyShapePopBeta. A population that does not implement it reports an
+ * error the first time this class needs it, from the base class default,
+ * rather than at prepare() time.
+ *
+ * Taylor-expands the population term in $g$ while keeping the noise kernel
+ * exact:
  *
  *   marginal(eps_obs) = Int d^2chi_L [P_pop(f_{-g}(chi_L)) |Jac(f_{-g})(chi_L)|]
  *                        * N_2(eps_obs - chi_L; sigma_noise^2)
  *
- * The bracketed term $F_g(\chi_L)$ is Taylor-expanded in $g$ at fixed
- * $\chi_L$; its coefficients scale with $1/\sigma_\mathrm{pop}^2$, and
- * $\sigma_\mathrm{pop}$ is a population/prior parameter this project
- * hard-constrains away from being pathologically small (see
- * docs/theory/wl_shape_factor_history.md for why this matters relative to
- * expanding the noise kernel instead).
+ * The expanded term's coefficients scale with $1/\sigma_\mathrm{pop}^2$, and
+ * $\sigma_\mathrm{pop}$ is a population parameter this project constrains away
+ * from very small values. See docs/theory/wl_shape_factor_history.md for why
+ * this matters relative to expanding the noise kernel instead.
  *
- * This class is a thin orchestrator over two collaborators, each owning its
- * own closed-form derivation and doing its own construction-time
- * allocation:
+ * The angular integral uses Jacobi--Anger reduction. The radial integral uses
+ * fixed Gauss--Legendre quadrature over the configured window. Per-galaxy
+ * harmonic sums are cached by $(R,\sigma_\mathrm{noise},\text{pop\_hash})$
+ * and deliberately not by $\phi$, which is the argument of
+ * $g=(1+m)g_\mathrm{true}+c_1+ic_2$ and drifts with $g$ whenever the galaxy's
+ * additive bias is nonzero. The Horner coefficients are recomputed from the
+ * cached sums on every call by a trig-polynomial evaluation, which tracks that
+ * drift at negligible cost.
  *
- * - #NcWLEllipticitySeriesTrace / #NcWLEllipticitySeriesTraceDet
- *   (nc_wl_ellipticity_series.h) supply $\chi_I(\chi_L,g)$'s Jacobian
- *   series and $|\chi_I(\chi_L,g)|^2$'s series (population-independent,
- *   pure shear-map output), one object per ellipticity convention, chosen
- *   once per workspace based on #NcGalaxyWLObsEllipConv.
- * - #NcGalaxyShapePop's eval_p_rho2_g_series vfunc composes
- *   $P_\mathrm{pop}(\chi_I(\chi_L,g))$'s own $g$-Taylor series from that
- *   $|\chi_I|^2$ series -- e.g. #NcGalaxyShapePopGauss composes
- *   $\exp(-|\chi_I|^2/2\sigma_\mathrm{pop}^2)$ via the standard
- *   exp-of-power-series recursion, with the $g^0$ term
- *   ($\chi_I(g=0)=\chi_L\neq0$) factored out as a scalar prefactor first.
+ * The series' radius of convergence is set by eval_p's nearest non-analytic
+ * point in $x=|\chi_I|^2$. It is entire for the Gaussian family
+ * (#NcGalaxyShapePopGauss, #NcGalaxyShapePopGaussLocal), so any $g$ in this
+ * project's small-shear regime is usable. #NcGalaxyShapePopBeta's
+ * $P(x)\propto x^{\alpha-1}(1-x)^{\beta-1}$ has a branch point at $x=0$ when
+ * $\alpha<1$ and at $x=1$ when $\beta<1$, so the series can diverge at modest
+ * $g$ once the $\rho$ quadrature comes close enough to that point. Raising
+ * trunc_order makes such cases worse rather than better, which identifies
+ * evaluation outside the disk of convergence rather than truncation error.
+ * $\alpha,\beta>1$ has no such restriction.
  *
- * $F_g(\chi_L)$ itself is just $P_\mathrm{pop}(\chi_I(\chi_L,g))$'s series
- * convolved with the Jacobian series (ncm_laurent_series_tps_conv()).
- *
- * $\theta$-integral done EXACTLY via Jacobi-Anger
- * (ncm_laurent_series_jacobi_anger_reduce()); $\rho$-integral a fixed,
- * windowed Gauss-Legendre quadrature (see
- * #NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED_WINDOW_NSIGMA). Caching is
- * two-layered, per galaxy: the Jacobi-Anger reduction's own
- * $\phi$-independent harmonic sums $H$ (the expensive part: Bessel
- * functions and Laurent-series algebra over the whole $\rho$ quadrature)
- * are keyed to $(R,\sigma_\mathrm{noise},\text{pop\_hash})$ -- deliberately
- * NOT to $\phi$, which is the argument of
- * $g=(1+m)g_\mathrm{true}+c_1+ic_2$ and so drifts with $g$ whenever the
- * galaxy's additive bias is nonzero. $J[0..\mathrm{order}]$, the actual
- * Horner-method polynomial coefficients, is instead recomputed from $H$ on
- * every call via a cheap trig-polynomial evaluation (_finalize_J()),
- * tracking $\phi$'s drift at negligible cost.
- *
- * A population that does not implement eval_p_rho2_g_series errors clearly
- * the first time this class actually needs it (base class default), rather
- * than at prepare() time.
- *
- * The $g$-Taylor series' own radius of convergence is set by eval_p's
- * nearest non-analytic point in $x=|\chi_I|^2$: entire for the Gaussian
- * family (#NcGalaxyShapePopGauss, #NcGalaxyShapePopGaussLocal), so any $g$
- * this project's own small-shear regime allows works; but
- * #NcGalaxyShapePopBeta's $P(x)\propto x^{\alpha-1}(1-x)^{\beta-1}$ has a
- * branch point at $x=0$ (if $\alpha<1$) and/or $x=1$ (if $\beta<1$), so the
- * series can diverge at even modest $g$ once the $\rho$ quadrature comes
- * close enough to that point -- confirmed by raising trunc_order making
- * such cases *worse*, the standard signature of evaluating a Taylor series
- * outside its own disk of convergence, rather than better as truncation
- * error alone would predict. $\alpha,\beta>1$ (an interior-peaked,
- * everywhere-smooth density) has no such restriction.
- *
- * See <a href="../../theory/wl_shape_marginalization_series.html">A
- * Small-Shear Series Marginalization for the Shape Likelihood</a> and
- * `dev-notes/wl_shape_series_marginalization_derivation.py` sections 9-11
- * for the full derivation and symbolic/numeric verification this class
- * mirrors.
+ * See <a href="../../theory/wl_shape_marginalization_series.html">A Small-Shear
+ * Series Marginalization for the Shape Likelihood</a> and
+ * `dev-notes/wl_shape_series_marginalization_derivation.py` sections 9-11 for
+ * the derivation and its verification.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -141,17 +109,10 @@ typedef struct _NcGalaxyShapeFactorSeriesLensedPrivate
   guint trunc_order;
   guint n_nodes;
 
-  /* Pool of per-computation workspaces (NcGalaxyShapeFactorSeriesLensedWS,
-   * defined further down, right before _compute_H), each bundling the
-   * ellip_conv-appropriate #NcWLEllipticitySeriesTrace/TraceDet, this
-   * class's own pop_coeffs/F, and the rho_nodes/weights/GL-table triple
-   * _compute_H needs. NcmMemoryPool (ncm_memory_pool.h) is this project's
-   * own thread-safe, auto-growing checkout pool -- same pattern as
-   * ncm_integral_get_workspace() and NcmStatsDistKDE's mp_eval_vars:
-   * _compute_H checks out one workspace per call and returns it when done,
-   * so concurrent calls (were this ever parallelized) get independent
-   * workspaces -- and independent, non-shared mutable series state --
-   * rather than racing on shared state. */
+  /* Pool of per-computation workspaces. #NcmMemoryPool is thread-safe and
+   * auto-growing, the same pattern as ncm_integral_get_workspace(): _compute_H
+   * checks out one workspace per call and returns it when done, so concurrent
+   * calls get independent workspaces and independent mutable series state. */
   NcmMemoryPool *mp_ws;
 } NcGalaxyShapeFactorSeriesLensedPrivate;
 
@@ -177,11 +138,7 @@ nc_galaxy_shape_factor_series_lensed_init (NcGalaxyShapeFactorSeriesLensed *gsfs
   self->trunc_order = 4;
   self->n_nodes     = 60;
 
-  /* Lazily populated (ncm_memory_pool_new itself allocates no workspace),
-   * so this runs safely before trunc-order/n-nodes's CONSTRUCT properties
-   * are set -- _ws_new (defined near _compute_H) reads them from @gsfsl's
-   * own private data only when a workspace is actually first requested,
-   * by which point construction has completed. */
+  /* Workspaces are allocated on first use, after construct properties are set. */
   self->mp_ws = ncm_memory_pool_new (&_nc_galaxy_shape_factor_series_lensed_ws_new, gsfsl, &_nc_galaxy_shape_factor_series_lensed_ws_free);
 }
 
@@ -331,31 +288,18 @@ _nc_galaxy_shape_factor_series_lensed_data_init (NcGalaxyShapeFactor *gsf, NcmMS
   data->ldata_required_columns = &_nc_galaxy_shape_factor_series_lensed_ldata_required_columns;
 }
 
-/* Gaussian-envelope half-width margin (in units of sigma_noise) used to
- * window the rho integral around its peak at rho=R -- see _compute_H.
- * Same value and rationale as the noise-side scheme's own window
- * (independently chosen here, not shared code): 8 sigma leaves a tail of
- * exp(-32) ~ 1e-14, already below the truncation error of everything else
- * in this pipeline. */
+/* Half-width of the radial integration window in units of sigma_noise, around
+ * the peak at rho=R; see _compute_H. At 8 sigma the neglected tail is
+ * exp(-32) ~ 1e-14, below the truncation error of everything else here. */
 #define NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED_WINDOW_NSIGMA (8.0)
 
-/* Comfortably positive (avoids log(0)=-Infinity, which risks Inf-Inf=NaN
- * arithmetic inside the caller's adaptive z-integral) but small enough
- * (-2*log(...) ~ 1381) to represent "this scheme's truncated approximation
- * has broken down here" for any practical purpose -- see the guard in
- * _nc_galaxy_shape_factor_series_lensed_marginal. */
+/* Positive fallback for underflowed marginal values. Avoids log(0)=-Infinity,
+ * which risks Inf-Inf=NaN inside the caller's adaptive z-integral, while
+ * -2*log(...) ~ 1381 still marks the truncated approximation as broken down;
+ * see the guard in _nc_galaxy_shape_factor_series_lensed_marginal. */
 #define NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED_MIN_MARGINAL (1.0e-300)
 
-/* Per-computation workspace, pooled via #NcmMemoryPool (see mp_ws's own
- * comment on the private struct above). @series_trace/@series_trace_det:
- * only one is ever non-NULL, chosen at _ws_new() time from @self's own
- * @ellip_conv (resolved once, at constructed() time) and never revisited.
- * @pop_coeffs/@F are this class's own (population composed with the
- * Jacobian series); n_nodes is CONSTRUCT_ONLY (fixed for the instance's
- * whole life), so rho_nodes/weights/table are sized correctly here, once,
- * and never resized. Every one of these is owned, allocated exactly once
- * at workspace-creation time -- _compute_H's per-rho-node loop never
- * allocates anything, it only ever refills already-existing storage. */
+/* Per-computation workspace pooled via #NcmMemoryPool. */
 typedef struct _NcGalaxyShapeFactorSeriesLensedWS
 {
   NcWLEllipticitySeriesTrace *series_trace;
@@ -505,8 +449,8 @@ _compute_H (NcGalaxyShapeFactorSeriesLensedPrivate * const self, NcGalaxyShapePo
     }
     else
     {
-      /* See this function's own doc comment: maxk must be identical at
-       * every rho node for a given trunc_order/convention. */
+      /* See this function's own doc comment: maxk must be identical at every
+       * rho node for a given trunc_order/convention. */
       g_assert_cmpint (maxk, ==, (gint) ldata->maxk);
     }
 

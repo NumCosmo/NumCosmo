@@ -58,21 +58,21 @@ G_BEGIN_DECLS
  * call: #NcXcorKernel's internal per-block state uses fixed-size stack
  * arrays sized by this constant (not just the Levin integrator's own,
  * larger ell_cache_max). Exceeding it is a fatal, non-catchable g_error.
- * Public so callers planning ℓ-block tilings (e.g. #NcXcorSolver) can
+ * Public so callers planning $\ell$-block tilings (e.g. #NcXcorSolver) can
  * respect it without duplicating the number.
  */
 #define NC_XCOR_KERNEL_MAX_ELL_BLOCK 64
 
 /**
- * NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL:
+ * NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON:
  *
- * Smallest #NcXcorKernel:scaled-abstol worth asking for. The tolerance is a
+ * Smallest #NcXcorKernel:peak-epsilon worth asking for. The tolerance is a
  * fraction of the peak of $W_i(k)$, but the quantity integrated to form
  * $C_\ell$ is $k^2 W_i W_j$, so it enters *squared*: this floor is $10^{-12}$
  * on the integrand, already past what the outer $k$ integral carries. Below it
- * nc_xcor_kernel_set_scaled_abstol() warns.
+ * nc_xcor_kernel_set_peak_epsilon() warns.
  */
-#define NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL (1.0e-6)
+#define NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON (1.0e-6)
 
 G_DECLARE_DERIVABLE_TYPE (NcXcorKernel, nc_xcor_kernel, NC, XCOR_KERNEL, NcmModel);
 
@@ -84,21 +84,20 @@ typedef struct _NcXcorKernelIntegrand NcXcorKernelIntegrand;
  * @NC_XCOR_KERNEL_CLOSURE_SPLINE: cubic spline on an adaptively refined grid
  * @NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV: Chebyshev series on a Chebyshev-Lobatto grid
  *
- * How a kernel represents $W_\ell(k)$ once it has been sampled. Selected by
- * #NcXcor:closure-type, which applies it to every kernel in a computation --
- * see that property for why the choice is not per kernel.
+ * Representation of $W_\ell(k)$ after sampling. Selected by
+ * #NcXcor:closure-type for all kernels in a computation.
  *
  * %NC_XCOR_KERNEL_CLOSURE_SPLINE discovers its grid: it bisects until the fit
  * meets a tolerance, so the sample count grows as $\epsilon^{-1/4}$ and the
- * spacing it arrives at is ragged.
+ * resulting spacing is uneven.
  *
- * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV prescribes it. $W_\ell(k)$ is an integral
- * of a compactly supported window against $j_\ell(k\chi)$, which is entire in
- * $k$, so $W_\ell$ is entire in $k$ whatever the window is -- and a Chebyshev
- * series converges geometrically on it. The order is then set by the total
- * phase $k_\mathrm{max}\chi_\mathrm{max}$ rather than discovered, and below
- * the order that resolves that phase the expansion carries nothing while above
- * it accuracy is nearly free.
+ * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV prescribes its grid. $W_\ell(k)$ is an
+ * integral of a compactly supported window against $j_\ell(k\chi)$, which is
+ * entire in $k$, so $W_\ell$ is entire in $k$ for any window and a Chebyshev
+ * series converges geometrically on it. The order follows from the total phase
+ * $k_\mathrm{max}\chi_\mathrm{max}$ rather than being discovered: below the
+ * order that resolves that phase the expansion carries nothing, and above it
+ * accuracy is nearly free.
  *
  */
 typedef enum _NcXcorKernelClosure /*< prefix=NC_XCOR_KERNEL_CLOSURE >*/
@@ -186,7 +185,7 @@ typedef void (*NcXcorKernelIntegrandGetRange) (gpointer data, gdouble *k_min, gd
  * Function type for getting the valid k range of a single component. A block
  * of multipoles shares one k-domain, but each multipole may be supported on
  * only part of it -- under the Limber approximation a multipole's window
- * vanishes outside $[\nu/\xi_\mathrm{max}, \nu/\xi_\mathrm{min}]$, and the
+ * vanishes outside $[\nu/\chi_\mathrm{max}, \nu/\chi_\mathrm{min}]$, and the
  * edge of that band is a step in the shared domain. See
  * nc_xcor_kernel_integrand_get_range_comp().
  */
@@ -231,7 +230,7 @@ typedef NcmVector *(*NcXcorKernelIntegrandGetKnots) (gpointer data);
  *   only the whole vector can be evaluated at once
  * @reltol: the relative half of the fit criterion this integrand was built to,
  *   or 0.0 when it is exact or unknown
- * @scaled_abstol: the floor of that criterion, as a fraction of the fitted
+ * @peak_epsilon: the floor of that criterion, as a fraction of the fitted
  *   function's own peak, or 0.0 when there was none
  * @data: user data passed to @eval_func, @get_range_func and @get_knots_func
  * @data_free: function to free @data, or %NULL if no cleanup needed
@@ -272,7 +271,7 @@ struct _NcXcorKernelIntegrand
   NcXcorKernelIntegrandRestrict restrict_func;
   NcmMatrix *residuals;
   gdouble reltol;
-  gdouble scaled_abstol;
+  gdouble peak_epsilon;
 };
 
 struct _NcXcorKernelClass
@@ -310,7 +309,7 @@ typedef enum _NcXcorKernelImpl /*< prefix=NC_XCOR_KERNEL_IMPL >*/
 
 /**
  * NcXcorKinetic:
- * @xi_z: comoving distance $\xi(z)$ at redshift $z$
+ * @chi_z: comoving distance $\chi(z)$ at redshift $z$
  * @E_z: normalized Hubble function $E(z) = H(z)/H_0$ at redshift $z$
  *
  * A boxed type for the kinetic quantities necessary to compute the kernels.
@@ -318,7 +317,7 @@ typedef enum _NcXcorKernelImpl /*< prefix=NC_XCOR_KERNEL_IMPL >*/
  */
 struct _NcXcorKinetic
 {
-  gdouble xi_z;
+  gdouble chi_z;
   gdouble E_z;
 };
 
@@ -349,8 +348,8 @@ void nc_xcor_kernel_set_adaptive_boundary_tries (NcXcorKernel *xclk, guint adapt
 gdouble nc_xcor_kernel_get_reltol (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_reltol (NcXcorKernel *xclk, gdouble reltol);
 
-gdouble nc_xcor_kernel_get_scaled_abstol (NcXcorKernel *xclk);
-void nc_xcor_kernel_set_scaled_abstol (NcXcorKernel *xclk, gdouble scaled_abstol);
+gdouble nc_xcor_kernel_get_peak_epsilon (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_peak_epsilon (NcXcorKernel *xclk, gdouble peak_epsilon);
 
 guint nc_xcor_kernel_get_max_border_expansions (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_max_border_expansions (NcXcorKernel *xclk, guint max_border_expansions);
@@ -380,6 +379,8 @@ gdouble nc_xcor_kernel_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *c
 gdouble nc_xcor_kernel_eval_limber_z_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l);
 
 void nc_xcor_kernel_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
+void nc_xcor_kernel_prepare_if_needed (NcXcorKernel *xclk, NcHICosmo *cosmo);
+void nc_xcor_kernel_mark_outdated (NcXcorKernel *xclk);
 void nc_xcor_kernel_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 
 GPtrArray *nc_xcor_kernel_get_component_list (NcXcorKernel *xclk);
@@ -400,9 +401,9 @@ guint nc_xcor_kernel_integrand_get_n_panels (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_peek_panel (NcXcorKernelIntegrand *integrand, guint i, NcmMatrix **coeffs, gdouble *a, gdouble *b);
 void nc_xcor_kernel_integrand_set_restrict (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandRestrict restrict_func);
 gboolean nc_xcor_kernel_integrand_restrict (NcXcorKernelIntegrand *integrand, gdouble a, gdouble b, NcmMatrix **coeffs);
-void nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdouble reltol, gdouble scaled_abstol);
+void nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdouble reltol, gdouble peak_epsilon);
 gdouble nc_xcor_kernel_integrand_get_reltol (NcXcorKernelIntegrand *integrand);
-gdouble nc_xcor_kernel_integrand_get_scaled_abstol (NcXcorKernelIntegrand *integrand);
+gdouble nc_xcor_kernel_integrand_get_peak_epsilon (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_set_residuals (NcXcorKernelIntegrand *integrand, NcmMatrix *residuals);
 NcmMatrix *nc_xcor_kernel_integrand_peek_residuals (NcXcorKernelIntegrand *integrand);
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_ref (NcXcorKernelIntegrand *integrand);

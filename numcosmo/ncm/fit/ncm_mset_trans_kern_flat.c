@@ -35,7 +35,7 @@
  * generates vectors uniformly distributed in the hypercube defined by the specified
  * bounds for each parameter.
  *
- * **Key Functionality:**
+ * Key Functionality:
  *
  * - Generates random parameter vectors with multivariate parameters.
  * - Utilizes a simple flat sampling method within the hypercube defined by parameter

@@ -33,9 +33,9 @@
 G_BEGIN_DECLS
 
 /*
- * Shared with sibling models resolving the same truncated-Gaussian family
+ * Shared with related models resolving the same truncated-Gaussian family
  * differently (e.g. GaussLocal, which sources sigma from a per-galaxy input
- * instead of a model parameter). NcGalaxyShapePopGauss and its siblings are
+ * instead of a model parameter). NcGalaxyShapePopGauss and its related types are
  * NOT related by inheritance: they share these plain functions directly
  * (reused as class vfunc pointers or called outright), not a common
  * instantiable base. Not part of the public API.

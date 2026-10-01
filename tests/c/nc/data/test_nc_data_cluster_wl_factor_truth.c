@@ -184,9 +184,26 @@ _truth_eval (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, guint nrows, NcDataClu
 {
   NcmVector *v = ncm_vector_new (nrows);
 
+  nc_data_cluster_wl_factor_set_auto_nodes (dcwlf, FALSE);
   nc_data_cluster_wl_factor_set_n_nodes (dcwlf, n_nodes);
   nc_data_cluster_wl_factor_set_rule_n (dcwlf, rule_n);
   nc_data_cluster_wl_factor_set_integ_method (dcwlf, method);
+  nc_data_cluster_wl_factor_eval_m2lnP_gal (dcwlf, mset, v);
+
+  return v;
+}
+
+/* The opt-in auto-nodes configuration: FIXED_NODES with each galaxy getting
+ * its own calibrated (n_nodes, rule_n) at node-reltol. _truth_eval pins
+ * auto-nodes off above, so without this arm the matrix -- the repo's strongest
+ * cross-method check -- would never touch the calibrated grid. */
+static NcmVector *
+_truth_eval_auto (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, guint nrows)
+{
+  NcmVector *v = ncm_vector_new (nrows);
+
+  nc_data_cluster_wl_factor_set_auto_nodes (dcwlf, TRUE);
+  nc_data_cluster_wl_factor_set_integ_method (dcwlf, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
   nc_data_cluster_wl_factor_eval_m2lnP_gal (dcwlf, mset, v);
 
   return v;
@@ -322,14 +339,7 @@ test_nc_data_cluster_wl_factor_truth_new (TestNcDataClusterWLFactorTruth *test, 
     pop_shape = NC_GALAXY_SHAPE_POP (nc_galaxy_shape_pop_gauss_new ());
     ncm_model_param_set (NCM_MODEL (pop_shape), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, ncm_rng_uniform_gen (rng, 0.05, 0.2));
   }
-  else /* beta: the class's own defaults (alpha=1.4, beta=1.6 on
-        * r=|chi_I|) -- non-integer exponents (exercising the same
-        * fractional-power path as test_nc_galaxy_shape_pop_series.c) but
-        * comfortably above the alpha>=1 floor, unlike that test's
-        * deliberately sub-floor alpha=0.9: this test's Quad config runs a
-        * full 2D adaptive Divonne cubature, which cannot resolve a genuine
-        * x=0 divergence within its evaluation budget (see
-        * docs/theory/wl_shape_factor_history.md's Quad alpha<1 bug entry). */
+  else /* beta population with alpha >= 1 */
   {
     pop_shape = NC_GALAXY_SHAPE_POP (nc_galaxy_shape_pop_beta_new ());
     ncm_model_param_set_by_name (NCM_MODEL (pop_shape), "alpha", NC_GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA, NULL);
@@ -503,14 +513,23 @@ test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *te
   NcmVector *vF            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
   NcmVector *vL            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
   NcmVector *vC            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
+  NcmVector *vA            = _truth_eval_auto (test->dcwlf, test->mset, test->nrows);
 
   _truth_cmp ("FIXED vs golden", vF, test->golden, 1.0e-6, abstol);
   _truth_cmp ("LNINT vs golden", vL, test->golden, 1.0e-6, abstol);
   _truth_cmp ("CUBATURE vs golden", vC, test->golden, 1.0e-6, abstol);
 
+  /* Auto-nodes targets node-reltol per galaxy (1e-4 by default, and the
+   * calibration may stop short of it), so it is held to a bar set by that
+   * tolerance, not by the 1e-6 the three pinned arms above meet. It is here
+   * to prove the calibrated configuration integrates the right thing at all,
+   * not to re-prove convergence. */
+  _truth_cmp ("AUTO_NODES vs golden", vA, test->golden, 5.0e-2, GSL_MAX (abstol, 1.0e-3));
+
   ncm_vector_free (vF);
   ncm_vector_free (vL);
   ncm_vector_free (vC);
+  ncm_vector_free (vA);
 }
 
 /* Direct shape-scheme-vs-shape-scheme cross-check: SeriesLensed (truncated

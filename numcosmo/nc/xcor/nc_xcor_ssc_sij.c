@@ -28,34 +28,31 @@
  *
  * Super-sample covariance $S_{ij}$ matrix for a set of top-hat redshift bins.
  *
- * Each redshift bin becomes a #NcXcorKernelClusterTophat whose radial window is
- * normalized to unit integral in comoving distance, so the angular power
- * spectrum $C^{ij}_\ell$ of the pair is that of the volume-averaged matter
- * density contrast. Given the angular power spectrum $C^{\rm mask}_\ell$ of the
- * survey footprint,
+ * Each redshift bin becomes a #NcXcorKernelClusterTophat with a radial window
+ * normalized to unit integral. Given the mask spectrum $C^{\rm mask}_\ell$,
  *
  * $$S_{ij} = \frac{1}{4\pi C^{\rm mask}_0}
  *     \sum_{\ell=0}^{\ell_{\rm max}} (2\ell+1) C^{\rm mask}_\ell C^{ij}_\ell,$$
  *
  * which reduces to the full-sky $S_{ij} = C^{ij}_0 / 4\pi$ for the trivial mask
- * $C^{\rm mask}_\ell = 4\pi \delta_{\ell 0}$ --- the default here, also
- * available as nc_xcor_ssc_sij_mask_cl_fullsky(). See
+ * $C^{\rm mask}_\ell = 4\pi \delta_{\ell 0}$, the default here, also available
+ * as nc_xcor_ssc_sij_mask_cl_fullsky(). See
  * <a href="../../theory/ssc.html">Super-sample covariance</a> for the
  * derivation and the accuracy study.
  *
  * The mask spectrum does not depend on cosmology, so it is supplied once, by
  * nc_xcor_ssc_sij_set_mask_cl(); #NcmSphereMap computes it from a HEALPix
- * footprint. Only the $C^{ij}_\ell$ are recomputed per cosmology, which is what
- * makes this object cheap enough to call once per likelihood step.
+ * footprint. Only the $C^{ij}_\ell$ are recomputed per cosmology, which is
+ * what makes this object cheap enough to call once per likelihood step.
  *
  * Every kernel is put in permanent non-Limber mode (`l_limber = -1`): the
- * Limber approximation is meaningless at the low multipoles that dominate
+ * Limber approximation is not valid at the low multipoles that dominate
  * $S_{ij}$, and it makes the cross spectrum of two disjoint bins vanish.
  *
  * The default quadrature is %NC_XCOR_METHOD_KERNEL_EXACT, which needs no
  * tolerance and cannot fail to converge. The adaptive alternatives target a
  * tolerance the integrand may not support and abort when they cannot reach it,
- * which would kill a Monte Carlo chain mid-flight.
+ * which would end a Monte Carlo chain mid-run.
  *
  * A single #NcXcorSolver is built once and reused across cosmologies, so the
  * per-block spherical Bessel factorizations are paid for only on the first
@@ -82,35 +79,35 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-/* Empirical sweet spot for nc_xcor_solver_plan_blocks(), from
+/* Measured best value for nc_xcor_solver_plan_blocks(), see
  * dev-notes/xcor_ultralevin_batching_plan.md section 1.3. */
 #define NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE (8)
 
-/* One order tighter than #NcXcorKernel's own 1.0e-4 default. This, not
- * `reltol`, is what limits the accuracy of the off-diagonal S_ij: they are a
- * small residual of a large cancellation, four orders of magnitude below the
- * diagonal for well-separated bins.
+/* Scaled absolute tolerance for the closure fit, one order tighter than
+ * #NcXcorKernel's own 1.0e-4 default. This, not `reltol`, is what limits the
+ * accuracy of the off-diagonal S_ij: they are a small residual of a large
+ * cancellation, four orders of magnitude below the diagonal for well-separated
+ * bins.
  *
- * Offset from NC_XCOR_SSC_SIJ_DEFAULT_RELTOL below, upwards, because this
- * object rebuilds S at every likelihood step, where tightening costs ~2x per
- * rebuild for accuracy no forecast can use. That cost argument is the whole
- * reason for the value.
+ * It is offset upwards from NC_XCOR_SSC_SIJ_DEFAULT_RELTOL below because this
+ * object rebuilds S at every likelihood step, where tightening costs about 2x
+ * per rebuild for accuracy no forecast can use.
  *
- * It is *not* offset to dodge the p-adaptive cubature failure that
- * numcosmo_py/ssc.py documents at length, and which equal values are the one
- * setting to trigger. That failure needs an adaptive outer rule refining
- * against a tolerance the closure's own fit error puts out of reach; this
- * object defaults to %NC_XCOR_METHOD_KERNEL_EXACT, which has no outer tolerance
- * and no adaptive step, so it cannot occur here. Equal values would be safe --
- * they would just cost more.
+ * The offset is not there to avoid the p-adaptive cubature failure described
+ * in numcosmo_py/ssc.py, which equal values are the one setting to trigger.
+ * That failure needs an adaptive outer rule refining against a tolerance the
+ * closure's own fit error puts out of reach; this object defaults to
+ * %NC_XCOR_METHOD_KERNEL_EXACT, which has no outer tolerance and no adaptive
+ * step, so it cannot occur here. Equal values would be safe, only more
+ * expensive.
  *
- * Must be kept equal to DEFAULT_SCALED_ABSTOL in numcosmo_py/ssc.py, which is
+ * Must be kept equal to DEFAULT_PEAK_EPSILON in numcosmo_py/ssc.py, which is
  * what the frozen path uses: the two are documented to differ only in whether
- * S_ij follows the cosmology, not in how it is computed. Note that this promise
- * is already imperfect on a second axis -- that path builds its NcXcor with
- * %NC_XCOR_METHOD_KERNEL_CUBATURE while this one defaults to
+ * S_ij follows the cosmology, not in how it is computed. That correspondence
+ * is already imperfect on a second axis: the frozen path builds its NcXcor
+ * with %NC_XCOR_METHOD_KERNEL_CUBATURE while this one defaults to
  * %NC_XCOR_METHOD_KERNEL_EXACT. */
-#define NC_XCOR_SSC_SIJ_DEFAULT_SCALED_ABSTOL (1.0e-5)
+#define NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON (1.0e-5)
 
 #define NC_XCOR_SSC_SIJ_DEFAULT_RELTOL (1.0e-6)
 
@@ -125,7 +122,7 @@ enum
   PROP_METHOD,
   PROP_BLOCK_SIZE,
   PROP_RELTOL,
-  PROP_SCALED_ABSTOL,
+  PROP_PEAK_EPSILON,
   PROP_SIZE,
 };
 
@@ -143,7 +140,7 @@ struct _NcXcorSSCSij
   NcXcorMethod method;
   guint block_size;
   gdouble reltol;
-  gdouble scaled_abstol;
+  gdouble peak_epsilon;
 
   GPtrArray *kernels; /* element-type NcXcorKernel*, one per bin, owned refs */
   NcXcor *xcor;
@@ -177,10 +174,10 @@ nc_xcor_ssc_sij_init (NcXcorSSCSij *ssc_sij)
   ssc_sij->mask_cl = NULL;
   ssc_sij->area    = 0.0;
 
-  ssc_sij->method        = NC_XCOR_METHOD_KERNEL_EXACT;
-  ssc_sij->block_size    = NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE;
-  ssc_sij->reltol        = NC_XCOR_SSC_SIJ_DEFAULT_RELTOL;
-  ssc_sij->scaled_abstol = NC_XCOR_SSC_SIJ_DEFAULT_SCALED_ABSTOL;
+  ssc_sij->method       = NC_XCOR_METHOD_KERNEL_EXACT;
+  ssc_sij->block_size   = NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE;
+  ssc_sij->reltol       = NC_XCOR_SSC_SIJ_DEFAULT_RELTOL;
+  ssc_sij->peak_epsilon = NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON;
 
   ssc_sij->kernels     = g_ptr_array_new_with_free_func ((GDestroyNotify) nc_xcor_kernel_free);
   ssc_sij->xcor        = NULL;
@@ -233,8 +230,8 @@ _nc_xcor_ssc_sij_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_RELTOL:
       nc_xcor_ssc_sij_set_reltol (ssc_sij, g_value_get_double (value));
       break;
-    case PROP_SCALED_ABSTOL:
-      nc_xcor_ssc_sij_set_scaled_abstol (ssc_sij, g_value_get_double (value));
+    case PROP_PEAK_EPSILON:
+      nc_xcor_ssc_sij_set_peak_epsilon (ssc_sij, g_value_get_double (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -275,8 +272,8 @@ _nc_xcor_ssc_sij_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_RELTOL:
       g_value_set_double (value, ssc_sij->reltol);
       break;
-    case PROP_SCALED_ABSTOL:
-      g_value_set_double (value, ssc_sij->scaled_abstol);
+    case PROP_PEAK_EPSILON:
+      g_value_set_double (value, ssc_sij->peak_epsilon);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -344,7 +341,7 @@ _nc_xcor_ssc_sij_constructed (GObject *object)
      * S_ij, and makes the cross spectrum of two disjoint bins vanish. */
     nc_xcor_kernel_set_l_limber (kernel, -1);
     nc_xcor_kernel_set_reltol (kernel, ssc_sij->reltol);
-    nc_xcor_kernel_set_scaled_abstol (kernel, ssc_sij->scaled_abstol);
+    nc_xcor_kernel_set_peak_epsilon (kernel, ssc_sij->peak_epsilon);
 
     g_ptr_array_add (ssc_sij->kernels, kernel);
   }
@@ -462,11 +459,11 @@ nc_xcor_ssc_sij_class_init (NcXcorSSCSijClass *klass)
                                                         GSL_DBL_EPSILON, 1.0, NC_XCOR_SSC_SIJ_DEFAULT_RELTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_SCALED_ABSTOL,
-                                   g_param_spec_double ("scaled-abstol",
+                                   PROP_PEAK_EPSILON,
+                                   g_param_spec_double ("peak-epsilon",
                                                         NULL,
-                                                        "Absolute floor of the adaptive refinement of the U_i(k) spline",
-                                                        0.0, 1.0, NC_XCOR_SSC_SIJ_DEFAULT_SCALED_ABSTOL,
+                                                        "Peak-relative floor of the adaptive refinement of the U_i(k) spline",
+                                                        0.0, 1.0, NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -657,7 +654,7 @@ nc_xcor_ssc_sij_peek_mask_cl (NcXcorSSCSij *ssc_sij)
  *
  * Selects the crude finite-area estimator, $S_{ij} = S^{\rm fullsky}_{ij} /
  * f_{\rm sky}$ with $f_{\rm sky} = \Omega / 4\pi$: the full-sky matrix simply
- * rescaled by the sky fraction @area subtends. This is **not** a mask
+ * rescaled by the sky fraction @area subtends. This is not a mask
  * deconvolution, and it knows nothing about the shape of the footprint; use
  * nc_xcor_ssc_sij_set_mask_cl() when the shape matters.
  *
@@ -742,7 +739,7 @@ nc_xcor_ssc_sij_get_block_size (NcXcorSSCSij *ssc_sij)
  *
  * Sets the relative tolerance of the kernel splines and of the outer $k$
  * integral. This is not the knob limiting the accuracy of the off-diagonal
- * $S_{ij}$, see nc_xcor_ssc_sij_set_scaled_abstol().
+ * $S_{ij}$, see nc_xcor_ssc_sij_set_peak_epsilon().
  *
  */
 void
@@ -774,13 +771,13 @@ nc_xcor_ssc_sij_get_reltol (NcXcorSSCSij *ssc_sij)
 }
 
 /**
- * nc_xcor_ssc_sij_set_scaled_abstol:
+ * nc_xcor_ssc_sij_set_peak_epsilon:
  * @ssc_sij: a #NcXcorSSCSij
- * @scaled_abstol: the absolute floor of the adaptive refinement
+ * @peak_epsilon: the absolute floor of the adaptive refinement
  *
  * Sets the absolute floor of the adaptive refinement building the $U_i(k)$
- * spline of every kernel. **This, not the relative tolerance, is what limits
- * the accuracy of the off-diagonal $S_{ij}$**, which are a small residual of a
+ * spline of every kernel. This, not the relative tolerance, is what limits
+ * the accuracy of the off-diagonal $S_{ij}$, which are a small residual of a
  * large cancellation: tightening it from #NcXcorKernel's own `1.0e-4` default
  * to the `1.0e-6` used here moves $S_{06}$ by tens of percent for J-PAS-like
  * bins while barely moving $S_{00}$.
@@ -788,33 +785,33 @@ nc_xcor_ssc_sij_get_reltol (NcXcorSSCSij *ssc_sij)
  * `1.0e-6` is the end of that road, not a waypoint. The floor is a fraction of
  * the peak of $W_i(k)$ while the integrand is $k^2 W_i W_j$, so it enters
  * squared: `1.0e-6` is already `1.0e-12` there. Below it
- * nc_xcor_kernel_set_scaled_abstol() warns and the accuracy is not recoverable
- * at any cost -- see %NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL.
+ * nc_xcor_kernel_set_peak_epsilon() warns and the accuracy is not recoverable
+ * at any cost -- see %NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON.
  *
  */
 void
-nc_xcor_ssc_sij_set_scaled_abstol (NcXcorSSCSij *ssc_sij, gdouble scaled_abstol)
+nc_xcor_ssc_sij_set_peak_epsilon (NcXcorSSCSij *ssc_sij, gdouble peak_epsilon)
 {
   guint i;
 
-  ssc_sij->scaled_abstol = scaled_abstol;
+  ssc_sij->peak_epsilon = peak_epsilon;
 
   for (i = 0; i < ssc_sij->kernels->len; i++)
-    nc_xcor_kernel_set_scaled_abstol (g_ptr_array_index (ssc_sij->kernels, i), scaled_abstol);
+    nc_xcor_kernel_set_peak_epsilon (g_ptr_array_index (ssc_sij->kernels, i), peak_epsilon);
 
   _nc_xcor_ssc_sij_invalidate (ssc_sij);
 }
 
 /**
- * nc_xcor_ssc_sij_get_scaled_abstol:
+ * nc_xcor_ssc_sij_get_peak_epsilon:
  * @ssc_sij: a #NcXcorSSCSij
  *
  * Returns: the absolute floor of the adaptive refinement
  */
 gdouble
-nc_xcor_ssc_sij_get_scaled_abstol (NcXcorSSCSij *ssc_sij)
+nc_xcor_ssc_sij_get_peak_epsilon (NcXcorSSCSij *ssc_sij)
 {
-  return ssc_sij->scaled_abstol;
+  return ssc_sij->peak_epsilon;
 }
 
 /**

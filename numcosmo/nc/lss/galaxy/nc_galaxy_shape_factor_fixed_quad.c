@@ -29,7 +29,7 @@
 /**
  * NcGalaxyShapeFactorFixedQuad:
  *
- * Fixed-node quadrature evaluation of the intrinsic-ellipticity marginal.
+ * Fixed-node evaluation of the intrinsic-ellipticity marginal.
  *
  * Evaluates
  * $$
@@ -37,33 +37,38 @@
  *   P_\mathrm{pop}(\chi_I)\, N_2\big(\epsilon_\mathrm{obs} - f_g(\chi_I);
  *   \sigma_\mathrm{noise}^2\big)
  * $$
- * exactly (no series truncation in $g$), like #NcGalaxyShapeFactorQuad, via one of two
- * fixed quadrature schemes chosen from $\epsilon_\mathrm{obs}$/$\sigma_\mathrm{noise}$
- * alone, never $g$:
+ * with no series truncation in $g$, as #NcGalaxyShapeFactorQuad does, using one
+ * of two fixed quadrature schemes chosen from $\epsilon_\mathrm{obs}$ and
+ * $\sigma_\mathrm{noise}$ alone, never from $g$:
  *
- * - **Two-panel $\psi$** (default). Quad's $\psi=f_h^{-1}(\chi_L)$
- *   reparametrization ($h$: $f_h(0)=\epsilon_\mathrm{obs}$), radially split
- *   into $[0,R_\sigma)$/$[R_\sigma,1)$ Gauss-Legendre panels (see
- *   _exact_r_sigma()), with Quad's puncture correction.
- * - **Native $\chi_I$-polar**. Used when $1+\lvert\epsilon_\mathrm{obs}\rvert\leq
- *   N_\sigma\sigma_\mathrm{noise}$ ($N_\sigma=8$, see _use_chi_i_native()): integrates
- *   $\chi_I$'s own polar coordinates directly, no reparametrization, no Jacobian, no
- *   puncture correction (see _marginal_chi_i_native()).
+ * - Two-panel $\psi$, the default. Uses Quad's
+ *   $\psi=f_h^{-1}(\chi_L)$ reparametrization, with $h$ such that
+ *   $f_h(0)=\epsilon_\mathrm{obs}$, split radially into $[0,R_\sigma)$ and
+ *   $[R_\sigma,1)$ Gauss--Legendre panels (see _exact_r_sigma()), with Quad's
+ *   puncture correction.
+ * - Native $\chi_I$-polar. Used when
+ *   $1+\lvert\epsilon_\mathrm{obs}\rvert\leq N_\sigma\sigma_\mathrm{noise}$,
+ *   with $N_\sigma=8$ (see _use_chi_i_native()). Integrates in $\chi_I$'s own
+ *   polar coordinates, with no reparametrization, no Jacobian and no puncture
+ *   correction (see _marginal_chi_i_native()).
  *
- * Both are exact; the switch only picks which grid resolves the integrand.
- * #NcGalaxyShapeFactorFixedQuad:n-radial/:n-angular size whichever grid is chosen
- * (two-panel: nodes PER PANEL; native: nodes in the one grid). The per-galaxy domain
- * depends only on $\epsilon_\mathrm{obs}$/$\sigma_\mathrm{noise}$, cached and reused
- * across every $g$.
+ * Both schemes are exact; the choice only selects which grid resolves the
+ * integrand. #NcGalaxyShapeFactorFixedQuad:n-radial and
+ * #NcGalaxyShapeFactorFixedQuad:n-angular size whichever grid is chosen: for
+ * the two-panel scheme they are nodes per panel, for the native scheme nodes
+ * in the single grid. The per-galaxy domain depends only on
+ * $\epsilon_\mathrm{obs}$ and $\sigma_\mathrm{noise}$, and is cached and
+ * reused across every $g$.
  *
- * Works for any population; a fixed grid cannot resolve one narrower than
- * its node spacing ($\sigma_\mathrm{pop}\lesssim0.05$) -- use Quad instead.
+ * Works for any population, with one limit: a fixed grid cannot resolve a
+ * population narrower than its node spacing, roughly
+ * $\sigma_\mathrm{pop}\lesssim0.05$. Use #NcGalaxyShapeFactorQuad there.
  *
  * #NcGalaxyShapeFactorFixedQuad:use-marginal-spline additionally caches
  * $\ln P(\epsilon_\mathrm{obs}\mid g)$ over
  * $[-g_\mathrm{max},g_\mathrm{max}]^2$
- * (#NcGalaxyShapeFactorFixedQuad:spline-g-max), built lazily via autoknots
- * 2D splines for populations bounded at $r=0$, or a fixed knot grid
+ * (#NcGalaxyShapeFactorFixedQuad:spline-g-max), built lazily with autoknots 2D
+ * splines for populations bounded at $r=0$, or with a fixed knot grid
  * (_build_g_spline_fixed_knots()) for populations that diverge there.
  *
  * See docs/theory/wl_shape_factor_history.md for the design rationale.
@@ -669,7 +674,8 @@ _marginal_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyS
 /* Verbose, node-by-node re-evaluation of _marginal_two_panel(), for
  * _direct_marginal_at_g()'s failure branch only: dumps every quantity that
  * feeds the sum (including which expm1/direct branch each node took) to
- * stderr right before the g_error() abort. Never called on the hot path.
+ * stderr right before the g_error() abort. Never called on the
+ * performance-critical path.
  */
 static gdouble
 _marginal_two_panel_debug (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
@@ -804,7 +810,7 @@ _marginal_chi_i_native (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGala
 /* Verbose, node-by-node re-evaluation of _marginal_chi_i_native(), for
  * _direct_marginal_at_g()'s failure branch only: dumps every quantity that
  * feeds the sum to stderr right before the g_error() abort. Never called on
- * the hot path.
+ * the performance-critical path.
  */
 static gdouble
 _marginal_chi_i_native_debug (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,

@@ -41,6 +41,7 @@ void test_ncm_sf_sbessel_free (TestNcmSFSBessel *test, gconstpointer pdata);
 void test_ncm_sf_sbessel_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata);
 void test_ncm_sf_sbessel_taylor_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata);
 void test_ncm_sf_sbessel_spline_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata);
+void test_ncm_sf_sbessel_deriv_from_array_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata);
 
 void test_ncm_sf_sbessel_traps (TestNcmSFSBessel *test, gconstpointer pdata);
 void test_ncm_sf_sbessel_invalid_st (TestNcmSFSBessel *test, gconstpointer pdata);
@@ -71,6 +72,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/sf/sbessel/spline/cmp/gsl", TestNcmSFSBessel, NULL,
               &test_ncm_sf_sbessel_new,
               &test_ncm_sf_sbessel_spline_cmp_gsl,
+              &test_ncm_sf_sbessel_free);
+
+  g_test_add ("/ncm/sf/sbessel/deriv_from_array/cmp/gsl", TestNcmSFSBessel, NULL,
+              &test_ncm_sf_sbessel_new,
+              &test_ncm_sf_sbessel_deriv_from_array_cmp_gsl,
               &test_ncm_sf_sbessel_free);
 
   g_test_add ("/ncm/sf/sbessel/traps", TestNcmSFSBessel, NULL,
@@ -179,6 +185,50 @@ test_ncm_sf_sbessel_spline_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata)
 
     ncm_spline_free (s);
   }
+}
+
+void
+test_ncm_sf_sbessel_deriv_from_array_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata)
+{
+  NcmSFSBesselArray *sba = ncm_sf_sbessel_array_new ();
+  gdouble *jl_x          = g_new (gdouble, L + 1);
+  guint i, j;
+
+  for (i = 0; i < NTOT; i++)
+  {
+    const gdouble x = 120.0 / NTOT * (i + 1);
+
+    ncm_sf_sbessel_array_eval (sba, L, x, jl_x);
+
+    for (j = 0; j <= L; j++)
+    {
+      /* j_l'(x) = (l j_{l-1} - (l+1) j_{l+1}) / (2 l + 1) via GSL values */
+      const gdouble gsl_jlm1 = (j > 0) ? gsl_sf_bessel_jl (j - 1, x) : cos (x) / x;
+      const gdouble gsl_jlp1 = gsl_sf_bessel_jl (j + 1, x);
+      const gdouble gsl_djl  = (j * gsl_jlm1 - (j + 1.0) * gsl_jlp1) / (2.0 * j + 1.0);
+      const gdouble gsl_jl   = gsl_sf_bessel_jl (j, x);
+      const gdouble gsl_dxjl = gsl_jl + x * gsl_djl;
+      const gdouble ncm_djl  = ncm_sf_sbessel_jl_deriv_from_array (j, x, jl_x);
+      const gdouble ncm_dxjl = ncm_sf_sbessel_xjl_deriv_from_array (j, x, jl_x);
+      const gdouble scale_d  = GSL_MAX (fabs (gsl_jlm1), fabs (gsl_jlp1)) + GSL_DBL_MIN;
+      const gdouble scale_dx = x * scale_d + GSL_DBL_MIN;
+
+      /* deep in the evanescent tail the array underflows to zero by design */
+      if (jl_x[j] == 0.0)
+        continue;
+
+      ncm_assert_cmpdouble_e (ncm_djl, ==, gsl_djl, 1.0e-11, 1.0e-11 * scale_d);
+      ncm_assert_cmpdouble_e (ncm_dxjl, ==, gsl_dxjl, 1.0e-11, 1.0e-11 * scale_dx);
+    }
+  }
+
+  /* l = 0 and l = 1 at x = 0 */
+  ncm_sf_sbessel_array_eval (sba, L, 0.0, jl_x);
+  ncm_assert_cmpdouble_e (ncm_sf_sbessel_jl_deriv_from_array (0, 0.0, jl_x), ==, 0.0, 0.0, 1.0e-15);
+  ncm_assert_cmpdouble_e (ncm_sf_sbessel_jl_deriv_from_array (1, 0.0, jl_x), ==, 1.0 / 3.0, 1.0e-15, 0.0);
+
+  g_free (jl_x);
+  ncm_sf_sbessel_array_free (sba);
 }
 
 void

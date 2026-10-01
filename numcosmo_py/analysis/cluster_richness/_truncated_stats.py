@@ -28,8 +28,8 @@ Model parameters: mu(lnM, z), sigma(lnM, z) - Gaussian distribution parameters
 Dependent variable: lnR (log richness)
 
 Functions provided:
-- Forward conversion: (mu, sigma) → (truncated mean, truncated std)
-- Inverse conversion: (truncated mean, truncated std) → (mu, sigma)
+- Forward conversion: (mu, sigma) -> (truncated mean, truncated std)
+- Inverse conversion: (truncated mean, truncated std) -> (mu, sigma)
 """
 
 import sys
@@ -245,13 +245,13 @@ def truncated_to_normal(
 ) -> float | np.ndarray:
     """Map samples from one-sided truncated to standard normal.
 
-    It maps truncated N(mu, sigma^2) on [a, ∞) to standard normal N(0,1).
+    It maps truncated N(mu, sigma^2) on [a, inf) to standard normal N(0,1).
 
     Numerically stable transformation using the CDF method for one-sided truncation.
     Uses different strategies based on whether the truncation point is in the left
     or right tail to avoid catastrophic cancellation.
 
-    For x ~ TruncatedNormal(mu, sigma, [a, ∞)), returns z ~ Normal(0, 1) such that
+    For x ~ TruncatedNormal(mu, sigma, [a, inf)), returns z ~ Normal(0, 1) such that
     the quantile positions are preserved.
 
     :param x: Sample(s) from truncated normal distribution (scalar or array)
@@ -272,7 +272,7 @@ def truncated_to_normal(
     Phi_t = norm.cdf(t)
 
     # For alpha > 0 (right tail): u = 1 - SF(t)/SF(alpha)
-    # For alpha <= 0 (left tail): u = [Φ(t) - Φ(alpha)] / [1 - Φ(alpha)]
+    # For alpha <= 0 (left tail): u = [Phi(t) - Phi(alpha)] / [1 - Phi(alpha)]
     u_right = 1.0 - SF_t / SF_alpha
     u_left = (Phi_t - Phi_alpha) / (1.0 - Phi_alpha)
 

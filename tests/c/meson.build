@@ -58,9 +58,25 @@ math_tests = [
         'name': 'ncm_stats_dist1d_epdf',
         'sources': ['ncm/stats/test_ncm_stats_dist1d_epdf.c'],
     },
+    # Split by claim: building an estimator is mechanics a small sample exercises fully,
+    # while requiring it to reproduce its own distribution needs the full sample and costs
+    # three quarters of the runtime -- a Jensen-Shannon divergence, a covariance recovered
+    # to 50%, a sampling frequency matched over ten million draws.
     {
         'name': 'ncm_stats_dist',
-        'sources': ['ncm/stats/test_ncm_stats_dist.c'],
+        'sources': [
+            'ncm/stats/test_ncm_stats_dist.c',
+            'ncm/stats/test_ncm_stats_dist_common.c',
+        ],
+        'timeout': 0,
+        'suite': ['c', 'omp'],
+    },
+    {
+        'name': 'ncm_stats_dist_divergence',
+        'sources': [
+            'ncm/stats/test_ncm_stats_dist_divergence.c',
+            'ncm/stats/test_ncm_stats_dist_common.c',
+        ],
         'timeout': 0,
         'suite': ['c-statistical', 'omp'],
     },
@@ -253,10 +269,31 @@ math_tests = [
         'sources': ['ncm/fit/test_ncm_mset_trans_kern_gauss.c'],
     },
     {
+        'name': 'ncm_mset_trans_kern_cat',
+        'sources': ['ncm/fit/test_ncm_mset_trans_kern_cat.c'],
+    },
+    # Split by claim, not by check: driving a chain is mechanics a short run covers, while
+    # requiring the sample covariance to reproduce the data covariance converges as
+    # 1/sqrt(n) and is chased by loops that double the chain length up to fifteen times.
+    # The mechanics run in the instrumented lane at a fixed short length; the recovery
+    # assertions, with their retries, run in the statistical tier.
+    {
         'name': 'ncm_fit_esmcmc',
-        'sources': ['ncm/fit/test_ncm_fit_esmcmc.c'],
+        'sources': [
+            'ncm/fit/test_ncm_fit_esmcmc.c',
+            'ncm/fit/test_ncm_fit_esmcmc_common.c',
+        ],
         'timeout': 0,
-        'suite': ['c-acceptance', 'omp'],
+        'suite': ['c', 'omp'],
+    },
+    {
+        'name': 'ncm_fit_esmcmc_recovery',
+        'sources': [
+            'ncm/fit/test_ncm_fit_esmcmc_recovery.c',
+            'ncm/fit/test_ncm_fit_esmcmc_common.c',
+        ],
+        'timeout': 0,
+        'suite': ['c-statistical', 'omp'],
     },
     {
         'name': 'ncm_func_eval',
@@ -294,6 +331,10 @@ model_tests = [
     {
         'name': 'nc_recomb',
         'sources': ['nc/recomb/test_nc_recomb.c'],
+    },
+    {
+        'name': 'nc_hiprim',
+        'sources': ['nc/primordial/test_nc_hiprim.c'],
     },
     # Split by cost: Cls and calc_ps run CLASS deep enough to take 12.3 s and 4.4 s
     # per model, where every other check is 0.4 s or less. Measured per line those
@@ -482,20 +523,80 @@ galaxy_tests = [
     },
 ]
 
+# Cross-correlation tests
+xcor_tests = [
+    {
+        'name': 'nc_xcor',
+        'sources': ['nc/xcor/test_nc_xcor.c'],
+    },
+    {
+        'name': 'nc_xcor_kernel',
+        'sources': ['nc/xcor/test_nc_xcor_kernel.c'],
+    },
+    {
+        'name': 'nc_xcor_kquad',
+        'sources': ['nc/xcor/test_nc_xcor_kquad.c'],
+    },
+    {
+        'name': 'nc_xcor_kernel_analytic',
+        'sources': ['nc/xcor/test_nc_xcor_kernel_analytic.c'],
+    },
+    {
+        'name': 'nc_xcor_kernel_integrand',
+        'sources': ['nc/xcor/test_nc_xcor_kernel_integrand.c'],
+    },
+    {
+        'name': 'nc_xcor_solver',
+        'sources': ['nc/xcor/test_nc_xcor_solver.c'],
+    },
+    {
+        'name': 'nc_xcor_ssc_sij',
+        'sources': ['nc/xcor/test_nc_xcor_ssc_sij.c'],
+    },
+]
+
+# The Arb reference generator behind the certified tables. Its output reaches
+# the suite as committed tables, so without this nothing ever executed it and a
+# mistyped closed form surfaced only as a table disagreeing with the library.
+# FLINT is not a dependency of NumCosmo, so the test exists only where it is
+# available -- the same condition under which the generator itself is built.
+if arb_dep.found()
+    xcor_tests += [
+        {
+            'name': 'xcor_window_arb',
+            'sources': ['nc/xcor/test_xcor_window_arb.c'],
+            'dependencies': [arb_dep, flint_dep],
+            'include_directories': [include_directories('../tools')],
+            # FLINT's headers trip these under GCC 16, reading the interior
+            # pointers of an acb_t as if they sized the whole struct. Same
+            # filter tests/tools/meson.build applies to the generator.
+            'c_args': cc.get_supported_arguments(
+                '-Wno-stringop-overread',
+                '-Wno-array-bounds',
+            ),
+        },
+    ]
+endif
+
 # Combine all test arrays
-all_c_tests = math_tests + model_tests + data_tests + lss_tests + galaxy_tests
+all_c_tests = math_tests + model_tests + data_tests + lss_tests + galaxy_tests + xcor_tests
 
 # Build and register all tests
 tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
 
 foreach c_test : all_c_tests
     extra_c_args = c_test.has_key('c_args') ? c_test['c_args'] : []
+    # A test of an offline reference generator needs that generator's own
+    # dependencies, which are not the library's: FLINT is not a NumCosmo
+    # dependency and such a test is registered only where it was found.
+    extra_deps = c_test.has_key('dependencies') ? c_test['dependencies'] : []
+    extra_inc = c_test.has_key('include_directories') ? c_test['include_directories'] : []
     executable_test = executable(
         c_test['name'],
         c_test['sources'],
         c_args: tests_c_args + extra_c_args,
-        dependencies: [libnumcosmo_dep, gsl_dep],
-        include_directories: [configinc, numcosmoinc],
+        dependencies: [libnumcosmo_dep, gsl_dep] + extra_deps,
+        include_directories: [configinc, numcosmoinc] + extra_inc,
     )
     if c_test.has_key('timeout')
         timeout = c_test['timeout']

@@ -3096,3 +3096,52 @@ class TestSpectralBatch:
             # Coefficients decay to nothing well before the last mode, so the
             # comparison is absolute against the leading scale.
             assert_allclose(c[i], expected, atol=1.0e-14)
+
+
+class TestChebDerivToGegenbauer:
+    """Tests for the derivative maps into the Gegenbauer C^(2) basis."""
+
+    @staticmethod
+    def _random_cheb(n: int, seed: int) -> np.ndarray:
+        rng = np.random.default_rng(seed)
+        return rng.standard_normal(n)
+
+    @pytest.mark.parametrize("n", [1, 2, 3, 4, 9, 16])
+    def test_chebT_deriv_to_gegenbauer_alpha2(self, n: int) -> None:
+        """C^(2) coefficients of f'(t) must reproduce the Chebyshev derivative."""
+        c = self._random_cheb(n, 41 + n)
+        g = list(Ncm.Spectral.chebT_deriv_to_gegenbauer_alpha2(list(c)))
+
+        t_vals = np.linspace(-0.95, 0.95, 17)
+        dcheb = np.polynomial.chebyshev.chebder(c)
+        for t in t_vals:
+            expected = np.polynomial.chebyshev.chebval(t, dcheb) if n > 1 else 0.0
+            got = Ncm.Spectral.gegenbauer_alpha2_eval(g, t)
+            assert_allclose(got, expected, rtol=1.0e-13, atol=1.0e-14)
+
+    @pytest.mark.parametrize("n", [1, 2, 3, 4, 9, 16])
+    def test_chebT_deriv2_to_gegenbauer_alpha2(self, n: int) -> None:
+        """The diagonal map must reproduce the second Chebyshev derivative."""
+        c = self._random_cheb(n, 137 + n)
+        g = list(Ncm.Spectral.chebT_deriv2_to_gegenbauer_alpha2(list(c)))
+
+        t_vals = np.linspace(-0.95, 0.95, 17)
+        dcheb2 = np.polynomial.chebyshev.chebder(c, 2)
+        for t in t_vals:
+            expected = np.polynomial.chebyshev.chebval(t, dcheb2) if n > 2 else 0.0
+            got = Ncm.Spectral.gegenbauer_alpha2_eval(g, t)
+            assert_allclose(got, expected, rtol=1.0e-11, atol=1.0e-12)
+
+    @pytest.mark.parametrize("n", [1, 2, 5, 12])
+    def test_gegenbauer_alpha2_xmul(self, n: int) -> None:
+        """Affine multiplication must act pointwise as (alpha t + beta) h(t)."""
+        alpha, beta = 0.75, -1.3
+        c = self._random_cheb(n, 7 + n)
+        g = list(Ncm.Spectral.chebT_to_gegenbauer_alpha2(list(c)))
+        out = list(Ncm.Spectral.gegenbauer_alpha2_xmul(g, alpha, beta))
+
+        t_vals = np.linspace(-0.95, 0.95, 17)
+        for t in t_vals:
+            h = Ncm.Spectral.gegenbauer_alpha2_eval(g, t)
+            got = Ncm.Spectral.gegenbauer_alpha2_eval(out, t)
+            assert_allclose(got, (alpha * t + beta) * h, rtol=1.0e-13, atol=1.0e-14)

@@ -61,7 +61,7 @@ typedef enum _NcmMSetCatalogSync /*< prefix=NCM_MSET_CATALOG_SYNC >*/
 /**
  * NcmMSetCatalogTrimType:
  * @NCM_MSET_CATALOG_TRIM_TYPE_ESS: trim the catalog using the maximum ess criterion.
- * @NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL: trim the catalog using the Heidelberger and Welch’s convergence diagnostic.
+ * @NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL: trim the catalog using the Heidelberger and Welch's convergence diagnostic.
  * @NCM_MSET_CATALOG_TRIM_TYPE_CK: trim the catalog using the estimate of the time where $-2\ln(L)$ stops evolving.
  * @NCM_MSET_CATALOG_TRIM_TYPE_ALL: trim the catalog using all tests above.
  *

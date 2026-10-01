@@ -25,10 +25,7 @@
 /**
  * NcmSpline:
  *
- * Base class for implementing splines.
- *
- * This class comprises all functions to provide a #NcmSpline, together with all
- * necessary methods.
+ * Base class for spline interpolation.
  *
  */
 

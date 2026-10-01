@@ -166,7 +166,7 @@ def test_xcor_kernel_methods(
     l_limber: int,
     request: pytest.FixtureRequest,
 ) -> None:
-    """Regression test for the §3 outer-k-bound fix (KERNEL_GSL/KERNEL_CUBATURE).
+    """Regression test for the sec. 3 outer-k-bound fix (KERNEL_GSL/KERNEL_CUBATURE).
 
     Before the fix, these methods were wrong by 15-27 orders of magnitude and
     disagreed with each other by ell-dependent factors (evaluating the fitted
@@ -396,7 +396,7 @@ def test_xcor_compute_lmax_range(
 
     # Verify all values are finite and reasonable
     assert np.all(np.isfinite(cl_array))
-    assert np.max(cl_array) < 1.0  # CMB lensing C_ℓ should be small
+    assert np.max(cl_array) < 1.0  # CMB lensing C_ell should be small
 
 
 @pytest.mark.parametrize("reltol", [1.0e-4, 1.0e-6, 1.0e-8])

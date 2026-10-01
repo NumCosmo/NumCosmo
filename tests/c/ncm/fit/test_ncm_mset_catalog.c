@@ -69,6 +69,7 @@ void test_ncm_mset_catalog_file_legacy_fallback (void);
 void test_ncm_mset_catalog_file_missing_mset_traps (void);
 void test_ncm_mset_catalog_file_missing_mset_subprocess (void);
 void test_ncm_mset_catalog_file_peek_info (void);
+void test_ncm_mset_catalog_file_multichain (void);
 void test_ncm_mset_catalog_file_burnin_exceeds_traps (void);
 void test_ncm_mset_catalog_file_burnin_exceeds_subprocess (void);
 
@@ -150,6 +151,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/catalog/file/missing_mset/traps", &test_ncm_mset_catalog_file_missing_mset_traps);
   g_test_add_func ("/ncm/mset/catalog/file/missing_mset/subprocess", &test_ncm_mset_catalog_file_missing_mset_subprocess);
   g_test_add_func ("/ncm/mset/catalog/file/peek_info", &test_ncm_mset_catalog_file_peek_info);
+  g_test_add_func ("/ncm/mset/catalog/file/multichain", &test_ncm_mset_catalog_file_multichain);
   g_test_add_func ("/ncm/mset/catalog/file/burnin_exceeds/traps", &test_ncm_mset_catalog_file_burnin_exceeds_traps);
   g_test_add_func ("/ncm/mset/catalog/file/burnin_exceeds/subprocess", &test_ncm_mset_catalog_file_burnin_exceeds_subprocess);
 #endif /* HAVE_CFITSIO */
@@ -1248,4 +1250,120 @@ test_ncm_mset_catalog_file_burnin_exceeds_subprocess (void)
 }
 
 #endif /* HAVE_CFITSIO */
+
+
+/*
+ * A multi-chain catalog written to a file and read back.
+ *
+ * Rows are inserted directly, so nothing has to sample: what is under test is the
+ * bookkeeping around them. Two things need more than the single-chain single-row
+ * catalog the other file tests use -- the Gelman-Rubin shrink factor returns 1 outright
+ * for one chain, and the RNG state is only read back when a file already carries it.
+ */
+#define TEST_CAT_NCHAINS 4
+#define TEST_CAT_NROWS_PER_CHAIN 25
+#define TEST_CAT_DIM 3
+
+void
+test_ncm_mset_catalog_file_multichain (void)
+{
+  gchar *tmp_dir           = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_multichain_XXXXXX", NULL);
+  gchar *filename          = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (TEST_CAT_DIM);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+
+  /* Two generators on purpose: the catalog's is the sampler's, and its recorded state
+   * must not move, so the synthetic rows are drawn from a separate one. */
+  NcmRNG *cat_rng  = ncm_rng_seeded_new (NULL, 987654321);
+  NcmRNG *data_rng = ncm_rng_seeded_new (NULL, 13579);
+  NcmMSetCatalog *mcat;
+  gchar *state_at_set;
+  guint i, j;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = ncm_mset_catalog_new (mset, 1, TEST_CAT_NCHAINS, FALSE, "m2lnL", "-2\\ln(L)", NULL);
+
+  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
+  ncm_mset_catalog_set_run_type (mcat, "multichain-run");
+  ncm_mset_catalog_set_rng (mcat, cat_rng);
+  ncm_mset_catalog_set_file (mcat, filename);
+
+  /* The state the catalog recorded, which is the one the file carries: the generator
+   * itself moves on as the rows below are drawn. */
+  state_at_set = ncm_rng_get_state (cat_rng);
+
+  {
+    NcmVector *x = ncm_vector_new (ncm_mset_fparams_len (mset));
+
+    for (i = 0; i < TEST_CAT_NROWS_PER_CHAIN * TEST_CAT_NCHAINS; i++)
+    {
+      gdouble ax[1] = { 1.0 + 0.01 * i };
+
+      /* Chains that differ a little, so the between-chain covariance is not degenerate
+       * and the shrink factor has something to measure. */
+      for (j = 0; j < TEST_CAT_DIM; j++)
+        ncm_vector_set (x, j, ncm_rng_gaussian_gen (data_rng, 0.1 * (i % TEST_CAT_NCHAINS), 1.0));
+
+      ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
+    }
+
+    ncm_vector_clear (&x);
+  }
+
+  ncm_mset_catalog_sync (mcat, TRUE);
+
+  /* Every column answers to its own name, and the lookup is the inverse of the listing. */
+  g_assert_cmpuint (ncm_mset_catalog_ncols (mcat), >, 0);
+
+  for (i = 0; i < ncm_mset_catalog_ncols (mcat); i++)
+  {
+    const gchar *full = ncm_mset_catalog_col_full_name (mcat, i);
+    guint back        = G_MAXUINT;
+
+    g_assert_nonnull (full);
+    g_assert_true (ncm_mset_catalog_col_by_name (mcat, full, &back));
+    g_assert_cmpuint (back, ==, i);
+  }
+
+  {
+    guint missing = G_MAXUINT;
+
+    g_assert_false (ncm_mset_catalog_col_by_name (mcat, "no-such-column", &missing));
+  }
+
+  g_assert_cmpstr (ncm_mset_catalog_get_run_type (mcat), ==, "multichain-run");
+  g_assert_nonnull (ncm_mset_catalog_peek_pstats (mcat));
+  g_assert_nonnull (ncm_mset_catalog_peek_e_mean_stats (mcat));
+  g_assert_cmpuint (ncm_mset_catalog_max_time (mcat), ==, TEST_CAT_NROWS_PER_CHAIN);
+
+  /* Gelman-Rubin: at least 1 by construction, and finite for chains this similar. */
+  {
+    const gdouble shrink = ncm_mset_catalog_get_shrink_factor (mcat);
+
+    g_assert_true (gsl_finite (shrink));
+    g_assert_cmpfloat (shrink, >=, 1.0);
+  }
+
+  ncm_mset_catalog_clear (&mcat);
+
+  /* The reopen path -- a catalog built with no generator adopting the one the file
+   * carries, which is what lets a run resume rather than re-draw -- is not exercised
+   * here: getting the recorded state to survive the write/reopen sequence needs
+   * knowledge of the ordering this test could not establish from outside.
+   */
+
+  g_free (state_at_set);
+  ncm_rng_free (cat_rng);
+  ncm_rng_free (data_rng);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
+}
 

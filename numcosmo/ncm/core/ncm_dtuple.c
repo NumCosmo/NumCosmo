@@ -30,8 +30,7 @@
  *
  * A 2-dimensional tuple of double precision floating point numbers.
  *
- * In this module we define the #NcmDTuple2 which are fixed sized arrays of double
- * values.
+ * Fixed-size arrays of two double values.
  *
  */
 
@@ -41,8 +40,7 @@
  *
  * A 3-dimensional tuple of double precision floating point numbers.
  *
- * In this module we define the #NcmDTuple3 which are fixed sized arrays of double
- * values.
+ * Fixed-size arrays of three double values.
  */
 
 #ifdef HAVE_CONFIG_H

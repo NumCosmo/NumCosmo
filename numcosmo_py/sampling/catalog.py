@@ -72,7 +72,11 @@ class Catalog:
         sample: np.ndarray[tuple[int, int], np.dtype[np.float64]],
         interweaved: bool = True,
     ):
-        """Add a new sample to the catalog."""
+        """Append one sample or a 2D sample array to the catalog.
+
+        A 2D array is interpreted as interleaved chain samples when
+        ``interweaved`` is true. Otherwise rows are grouped by chain.
+        """
         ncols = self._catalog.ncols()
 
         if len(sample.shape) == 1:
@@ -107,7 +111,7 @@ class Catalog:
         interweaved: bool = True,
         weights: Optional[np.ndarray] = None,
     ):
-        """Add a new point to the catalog."""
+        """Append parameter points with their ``-2 ln p`` values and weights."""
         if self._catalog.weighted() and weights is None:
             raise ValueError("weights must be provided for a weighted catalog")
 

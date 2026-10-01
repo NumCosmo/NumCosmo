@@ -320,6 +320,7 @@ def test_m2lnL_parity_fixed_nodes(shape_kind, z_kind):
     dcwlf.set_obs(new_obs)
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
 
     new_m2lnL = dcwlf.m2lnL_val(mset)
 
@@ -718,9 +719,7 @@ def test_resample_matches_legacy(shape_kind, z_kind):
 
         for col in shape_cols:
             new_vals = [new_obs.get(col, i) for i in range(n)]
-            assert_allclose(
-                new_vals, frozen["cols"][col], rtol=1.0e-8, atol=0.0
-            )
+            assert_allclose(new_vals, frozen["cols"][col], rtol=1.0e-8, atol=0.0)
 
         new_m2lnL = dcwlf.m2lnL_val(mset)
         assert_allclose(new_m2lnL, frozen["m2lnL"], rtol=1.0e-5)

@@ -24,7 +24,7 @@ ellipticity conventions.
 scheme once shipped as ``NcGalaxyShapeFactorSeries`` (removed once this class
 superseded it): instead of expanding the noise kernel in `g`
 (whose Taylor coefficients scale like ``1/sigma_noise^2`` and combinatorially
-blow up at small per-galaxy ``std_noise`` -- a real, non-roundoff failure
+diverge at small per-galaxy ``std_noise`` -- a real, non-roundoff failure
 mode), this class works in the LENSED frame (same
 substitution ``NcGalaxyShapeFactorQuad`` already uses) and expands the
 POPULATION in `g` instead, whose coefficients scale with
@@ -232,7 +232,7 @@ def test_marginal_matches_quad_small_std_noise_stress_case(ellip_conv):
     """THE HEADLINE CASE this class exists for: small std_noise (0.005)
     combined with moderate g -- the exact regime that made the noise-side
     scheme's expansion (once shipped as NcGalaxyShapeFactorSeries, removed
-    once this class superseded it) combinatorially blow up (up to ~850%+
+once this class superseded it) grow combinatorially (up to ~850%+
     error at higher truncation order) since its coefficients scale like
     1/std_noise^2. This class' coefficients scale with 1/sigma_pop^2
     instead, so accuracy here should be unaffected by how small std_noise

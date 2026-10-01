@@ -466,7 +466,8 @@ _ncm_spline_bspline_min_size (const NcmSpline *s)
 
 /*
  * The gsl_bspline_calc* family writes scratch (deltal, deltar, B, dB, icache) into the
- * per-instance workspace, so it cannot run concurrently. Evaluation is the one hot path
+ * per-instance workspace, so it cannot run concurrently. Evaluation is the one
+ * performance-critical path
  * -- kernel integrands call it from OpenMP loops on shared splines -- so it is computed
  * here with de Boor's recursion (PPPACK bsplvb, the same algorithm GSL runs) on stack
  * scratch, reading only state that preparation froze. The derivative and integral

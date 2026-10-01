@@ -39,70 +39,45 @@
  * intrinsic population to an untruncated Gaussian (contrast
  * #NcGalaxyShapeFactorVarAdd, which approximates both).
  *
- * **Substitution.** The integration variable is $\psi$, not $\chi_I$ or the
- * lensed $\chi_L=f_g(\chi_I)$ directly: $\chi_L=f_h(\psi)$, where $h$ is the
- * shear with $f_h(0)=\epsilon_\mathrm{obs}$ exactly
- * (nc_wl_ellipticity_shear_at_origin_trace() /
- * `_trace_det()`). $\psi=0$ therefore always maps to $\chi_L=\epsilon_\mathrm{obs}$,
- * so the noise kernel's peak sits at the box center by construction, with
- * no per-call box re-centering. $\chi_I=f_g^{-1}(\chi_L)$ as usual, with
- * $\det J_{f_g^{-1}}$ from nc_galaxy_shape_factor_lndet_jac()'s sibling
- * kernels (already used by `VarAdd`). $\psi$ is turned into a plane
- * integral by the usual bijection,
+ * Uses the substitution $\chi_L=f_h(\psi)$, with $f_h(0)=\epsilon_\mathrm{obs}$.
+ * The transformed origin maps to $\chi_L=\epsilon_\mathrm{obs}$.
  * $$\psi(u,v) = (u,v)/\sqrt{1+u^2+v^2}, \qquad
  *   \left|\det\frac{\partial\psi}{\partial(u,v)}\right| = \frac{1}{(1+u^2+v^2)^2},$$
- * so $(u,v)$ ranges over the whole plane and $\chi_I$ correspondingly over
- * the whole disc, with no truncation. $x_I=\lvert\chi_I\rvert^2$ is
- * computed directly from the complex division (a sum of two squares, not
- * itself subtraction-sensitive), then $r_I=\sqrt{x_I}$ before the
- * nc_galaxy_shape_pop_eval_p() call (see that vfunc's r-native contract in
- * nc_galaxy_shape_pop.h), and the returned r-marginal density is converted
- * to the 2D area density this integrand needs via $P_\mathrm{pop}(r_I)/(2\pi r_I)$.
+ * which maps the whole plane to the whole intrinsic-ellipticity disc, with no
+ * truncation. The inverse shear Jacobian and the population density provide
+ * the integration measure. nc_galaxy_shape_pop_eval_p() is called on
+ * $r_I=\sqrt{x_I}$, following the r-native contract in nc_galaxy_shape_pop.h,
+ * and the r-marginal density it returns is converted to the 2D area density
+ * this integrand needs as $P_\mathrm{pop}(r_I)/(2\pi r_I)$.
  *
- * **Puncture correction.** The integrand evaluates only the bracket
+ * The integrand evaluates the bracket
  * $N_2(\epsilon_\mathrm{obs}-\chi_L)-N_0$, $N_0=N_2(\epsilon_\mathrm{obs}-\chi_{L0})$,
- * $\chi_{L0}=f_g(0)$ (the population's own peak location under $g$,
- * unrelated to $h$): $N_0$ is added back once after the cubature, using
- * $\int P_\mathrm{pop}=1$ exactly (valid because $\chi_I$ ranges over the
- * whole disc, never a truncated subset). This makes the integrand vanish
- * smoothly at $\chi_I=0$ for $\alpha\geq1$ populations instead of the raw
- * integrand's sharp near-divergent peak there, so Divonne needs far fewer
- * evaluations. The bracket itself is $N_0\,\mathrm{expm1}(\Delta)$,
- * $\Delta=(d_0-d_i)/(2\sigma_\mathrm{noise}^2)$, whenever $\Delta$ stays
- * below a generous safety bound (expm1 avoids the cancellation direct
- * subtraction would suffer near $\Delta=0$); above that bound expm1 would
- * overflow exactly like $\exp$ would, with no cancellation left to protect
- * against either, so the bracket falls back to the plain difference of two
- * individually-bounded noise evaluations instead.
+ * $\chi_{L0}=f_g(0)$,
+ * and adds $N_0$ back after the cubature using $\int P_\mathrm{pop}=1$, which
+ * holds because $\chi_I$ covers the whole disc rather than a truncated
+ * subset. Near zero it uses
+ * $N_0\,\mathrm{expm1}(\Delta)$, with a bounded direct difference outside the
+ * safe range.
  *
- * **Cubature.** Divonne (ncm_integrate_2dim_divonne()) integrates $\psi$
- * directly in its own polar coordinates $(\rho,\theta)\in[0,1)\times[-\pi,\pi)$
- * -- an exact, finite domain covering the whole disc at $\rho=1$, with no
- * asymptotic tail to truncate -- seeded with two peak hints: $\psi\approx0$
- * (trivial, always the exact noise peak) and the $\psi$-preimage of
- * $\chi_{L0}=f_g(0)$ (the population's peak location under the common
- * assumption that $P_\mathrm{pop}$ is radially symmetric about $\chi_I=0$;
- * only approximate otherwise, e.g. #NcGalaxyShapePopBeta with $\mu$ away
- * from 0, but Divonne's stratified search still finds the true peak from
- * there). A third hint (the peak-ring point closest to $\epsilon_\mathrm{obs}$)
- * is added when the population's mode is not at $\chi_I=0$.
+ * Divonne integrates the transformed disc and receives peak hints at $\psi=0$,
+ * the preimage of $f_g(0)$, and the off-center population mode when applicable.
  *
- * The integrand clamps any non-finite evaluation to zero before returning:
- * Cuba can segfault outright on a NaN/Inf sample, and some populations have
- * a genuine, mathematically correct divergence at a disc point (e.g.
- * #NcGalaxyShapePopBeta with $\alpha<1$ diverges at $x=0$, which can
- * coincide with a peak hint).
+ * Non-finite integrand values are returned as zero. Cuba can segfault on a
+ * NaN or infinite sample, and some populations diverge at a disc point as a
+ * matter of mathematics rather than error: #NcGalaxyShapePopBeta with
+ * $\alpha<1$ diverges at $x=0$, which can coincide with a peak hint.
  *
- * This scheme is exact but substantially more expensive per evaluation than
- * `VarAdd` (a full 2D cubature vs. one closed-form expression). It is meant
- * as an accuracy reference / fallback for regimes where the variance-add
- * approximation is not trusted, not as a routine replacement in
- * large-catalog likelihood evaluations. Cuba's own fork()-based internal
- * parallelism is disabled globally by ncm_cfg_init() (`cubacores(0, 0)`),
- * so this is safe to call concurrently from multiple OpenMP threads.
+ * Uses 2D cubature, so it costs substantially more per evaluation than
+ * #NcGalaxyShapeFactorVarAdd's closed-form expression. It is intended as an
+ * accuracy reference and fallback where the variance-add approximation is not
+ * trusted, not as a routine replacement in large-catalog likelihood
+ * evaluations.
  *
- * See docs/theory/wl_shape_factor_history.md for the evidence behind this
- * design and earlier approaches tried and rejected.
+ * Cuba's fork()-based internal parallelism is disabled globally by
+ * ncm_cfg_init() (`cubacores(0, 0)`), so this is safe to call concurrently
+ * from multiple OpenMP threads.
+ *
+ * See docs/theory/wl_shape_factor_history.md for the design history.
  */
 
 #ifdef HAVE_CONFIG_H

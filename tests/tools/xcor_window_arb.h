@@ -27,10 +27,13 @@
  * The analytic xcor windows in Arb ball arithmetic, shared by the reference
  * generators in this directory.
  *
- *   I_ell(k) = int W(chi) g(chi, k) j_ell(k chi) dchi
+ *   I_ell(k) = int W(chi) g(chi, k) j_ell^(d) (k chi) dchi
  *
  * with chi in Mpc, W normalized so that int W dchi = 1 over its truncated
- * support, and g the optional scale-dependent growth (1 unless kdep is on).
+ * support, g the optional scale-dependent growth (1 unless kdep is on), and d
+ * the Bessel-derivative order (0 unless bessel_deriv is set; d = 2 is the
+ * redshift-space distortion term's weight). The derivative is taken with
+ * respect to the argument k chi.
  *
  * Header-only and all-static: these tools are standalone programs compiled one
  * at a time, so this is the whole build integration.
@@ -105,9 +108,14 @@ typedef struct
   double alpha, beta;
   /* lensing */
   double chi_source_lower, chi_source_upper;
-  /* multi */
+
+  /* multi. Bumps whose n_sigma supports meet form one group; the window is
+   * the sum of a group's bumps over the group's whole stretch and zero in the
+   * gaps between groups, as nc_xcor_kernel_analytic_multi.c defines it. */
   int n_bumps;
   double mu[MAX_BUMPS], sg[MAX_BUMPS], wt[MAX_BUMPS];
+  int n_groups;
+  double grp_lo[MAX_BUMPS], grp_hi[MAX_BUMPS];
 
   /* Scale-dependent growth, off unless kdep_on. Matches
    * _nc_xcor_kernel_radial_kdep_growth_eval(). */
@@ -122,7 +130,27 @@ typedef struct
 
   /* set while integrating: 0 = bare window, 1 = window times j_ell */
   int with_bessel;
+
+  /* Derivative order of the spherical Bessel weight, up to 2. Mirrors
+   * NcXcorKernelComponent:bessel-deriv: 0 for j_ell, 1 for j_ell', 2 for the
+   * j_ell'' a redshift-space distortion term carries. The derivative is with
+   * respect to the Bessel argument x = k chi, not with respect to chi, which
+   * is the convention the library integrates in. */
+  int bessel_deriv;
 } Par;
+
+/* Index of the multi group holding chi, or -1 in a gap. */
+static int
+g_of (const Par *p, double c)
+{
+  int g;
+
+  for (g = 0; g < p->n_groups; g++)
+    if ((c >= p->grp_lo[g]) && (c <= p->grp_hi[g]))
+      return g;
+
+  return -1;
+}
 
 static void
 par_init (Par *p)
@@ -131,7 +159,8 @@ par_init (Par *p)
   acb_init (p->k);
 }
 
-static void
+/* static inline: only one of the tools including this header clears a Par. */
+static inline void
 par_clear (Par *p)
 {
   acb_clear (p->k);
@@ -279,10 +308,29 @@ window_u (acb_t out, const acb_t chi, Par *p, slong order, slong prec)
     }
 
     case SHAPE_MULTI:
+    {
+      /* Zero in a gap between groups; inside a group, every bump of that group
+       * across the group's whole stretch. The caller places panel edges at the
+       * gap edges, so any one call lies wholly on one side of them, and the
+       * midpoint of chi is enough to select the group. */
+      double c;
+      int g;
+
+      /* Through a local copy: an interior pointer into @chi makes GCC 16 size
+       * the ball as its midpoint alone and warn on every later read of it. */
+      acb_set (v, chi);
+      c = arf_get_d (arb_midref (acb_realref (v)), ARF_RND_NEAR);
+      g = g_of (p, c);
+
       acb_zero (out);
 
-      for (i = 0; i < p->n_bumps; i++)
+      for (i = 0; (g >= 0) && (i < p->n_bumps); i++)
       {
+        const double lo_i = fmax (0.0, p->mu[i] - p->n_sigma * p->sg[i]);
+
+        if ((lo_i < p->grp_lo[g]) || (lo_i > p->grp_hi[g]))
+          continue;
+
         acb_set_d (t, p->mu[i]);
         acb_sub (u, chi, t, prec);
         acb_set_d (t, p->sg[i]);
@@ -296,6 +344,7 @@ window_u (acb_t out, const acb_t chi, Par *p, slong order, slong prec)
       }
 
       break;
+    }
 
     default:
       fprintf (stderr, "window_u: bad shape\n");
@@ -424,7 +473,108 @@ sph_bessel (acb_t out, const acb_t z, long ell, slong prec)
   acb_clear (t);
 }
 
-/* The integrand handed to acb_calc_integrate: W_u, optionally times g j_ell. */
+/*
+ * j_ell^(d) (z) for d = 0, 1, 2, through the recurrences in the ORDER:
+ *
+ *   j_l'  = [ l j_{l-1} - (l+1) j_{l+1} ] / (2l+1)
+ *   j_l'' = { l [ (l-1) j_{l-2} - l j_l ] / (2l-1)
+ *             - (l+1) [ (l+1) j_l - (l+2) j_{l+2} ] / (2l+3) } / (2l+1)
+ *
+ * the second being the first applied twice.
+ *
+ * Deliberately NOT the argument recurrences the library uses --
+ * j_l' = (l/x) j_l - j_{l+1} and j_l'' = (l(l-1)/x^2 - 1) j_l + (2/x) j_{l+1}
+ * -- for two independent reasons. The first is that a reference must not share
+ * a route with what it certifies: the library reaches a derivative component
+ * by integration by parts on those identities, so a reference built on them
+ * would agree with it for reasons that are not the answer being right. The
+ * second is arithmetic: those forms divide by x, and a window whose support
+ * reaches the observer puts x = 0 inside the domain, where a ball divided by a
+ * ball straddling zero is everything. The order recurrences have no division
+ * at all, so every ball stays finite on the whole domain.
+ *
+ * Nor is there cancellation to pay for near the origin: j_l'' ~ l(l-1)
+ * z^(l-2)/(2l+1)!!, and the j_{l-2} term alone carries exactly that leading
+ * behaviour -- (2l+1)(2l-1)(2l-3)!! = (2l+1)!! -- with the rest higher order.
+ *
+ * Orders below zero never appear: their coefficients (l, or l-1) vanish first,
+ * so the guards below are exact rather than approximations at small l.
+ */
+static void
+sph_bessel_deriv (acb_t out, const acb_t z, long ell, int deriv, slong prec)
+{
+  acb_t jm2, jm1, j0, jp1, jp2, t;
+
+  if (deriv == 0)
+  {
+    sph_bessel (out, z, ell, prec);
+
+    return;
+  }
+
+  acb_init (jm2);
+  acb_init (jm1);
+  acb_init (j0);
+  acb_init (jp1);
+  acb_init (jp2);
+  acb_init (t);
+
+  if (deriv == 1)
+  {
+    /* [ l j_{l-1} - (l+1) j_{l+1} ] / (2l+1) */
+    if (ell >= 1)
+    {
+      sph_bessel (jm1, z, ell - 1, prec);
+      acb_mul_si (jm1, jm1, ell, prec);
+    }
+
+    sph_bessel (jp1, z, ell + 1, prec);
+    acb_mul_si (jp1, jp1, ell + 1, prec);
+
+    acb_sub (out, jm1, jp1, prec);
+    acb_div_si (out, out, 2 * ell + 1, prec);
+  }
+  else
+  {
+    /* l [ (l-1) j_{l-2} - l j_l ] / (2l-1) */
+    sph_bessel (j0, z, ell, prec);
+
+    if (ell >= 2)
+    {
+      sph_bessel (jm2, z, ell - 2, prec);
+      acb_mul_si (jm2, jm2, ell - 1, prec);
+    }
+
+    acb_mul_si (t, j0, ell, prec);
+    acb_sub (jm2, jm2, t, prec);
+    acb_mul_si (jm2, jm2, ell, prec);
+
+    if (ell >= 1)
+      acb_div_si (jm2, jm2, 2 * ell - 1, prec);
+    else
+      acb_zero (jm2);  /* the l factor above already killed it */
+
+    /* (l+1) [ (l+1) j_l - (l+2) j_{l+2} ] / (2l+3) */
+    sph_bessel (jp2, z, ell + 2, prec);
+    acb_mul_si (jp2, jp2, ell + 2, prec);
+    acb_mul_si (t, j0, ell + 1, prec);
+    acb_sub (jp2, t, jp2, prec);
+    acb_mul_si (jp2, jp2, ell + 1, prec);
+    acb_div_si (jp2, jp2, 2 * ell + 3, prec);
+
+    acb_sub (out, jm2, jp2, prec);
+    acb_div_si (out, out, 2 * ell + 1, prec);
+  }
+
+  acb_clear (jm2);
+  acb_clear (jm1);
+  acb_clear (j0);
+  acb_clear (jp1);
+  acb_clear (jp2);
+  acb_clear (t);
+}
+
+/* The integrand handed to acb_calc_integrate: W_u, optionally times g j_ell^(d). */
 static int
 window_integrand (acb_ptr out, const acb_t chi, void *param, slong order, slong prec)
 {
@@ -450,7 +600,7 @@ window_integrand (acb_ptr out, const acb_t chi, void *param, slong order, slong 
   acb_init (g);
 
   acb_mul (z, chi, p->k, prec);
-  sph_bessel (J, z, p->ell, prec);
+  sph_bessel_deriv (J, z, p->ell, p->bessel_deriv, prec);
   kdep_growth (g, chi, p, prec);
 
   acb_mul (out, W, J, prec);
@@ -592,13 +742,19 @@ integrate_panels (acb_t res, Par *p, slong prec)
   mag_clear (tol);
 }
 
-/* Recompute at doubling precision until the relative radius clears @target. */
+/*
+ * Recompute at doubling precision until the relative radius clears @target, giving up
+ * past @prec_max. A relative target is what costs: in the evanescent regime, k chi_max
+ * well below ell, the integral is astronomically small and certifying its leading
+ * digits needs a working precision that grows with ell. 8192 covers ell <= 200 for
+ * every shape here; ell = 1000 needs more.
+ */
 static slong
-certified (acb_t res, Par *p, double target)
+certified (acb_t res, Par *p, double target, slong prec_max)
 {
   slong prec;
 
-  for (prec = 128; prec <= 8192; prec *= 2)
+  for (prec = 128; prec <= prec_max; prec *= 2)
   {
     double r, m;
 
@@ -614,8 +770,9 @@ certified (acb_t res, Par *p, double target)
       return prec;
   }
 
-  fprintf (stderr, "certified: did not reach %g (shape %s ell %ld)\n",
-           target, shape_names[p->shape], p->ell);
+  fprintf (stderr, "certified: did not reach %g at prec %ld (shape %s ell %ld); "
+                   "raise --prec-max\n",
+           target, prec_max, shape_names[p->shape], p->ell);
   exit (1);
 }
 
@@ -661,17 +818,60 @@ shape_support (Par *p)
       break;
 
     case SHAPE_MULTI:
-      p->chi_min = p->mu[0] - p->n_sigma * p->sg[0];
-      p->chi_max = p->mu[0] + p->n_sigma * p->sg[0];
+    {
+      /* Merge the bumps' supports into groups, as the library does: sort by
+       * lower edge, and a bump whose support starts inside the current group
+       * extends it. The window is zero between groups, so the gap edges are
+       * breakpoints. */
+      double lo[MAX_BUMPS], hi[MAX_BUMPS];
+      int j;
 
-      for (i = 1; i < p->n_bumps; i++)
+      for (i = 0; i < p->n_bumps; i++)
       {
-        p->chi_min = fmin (p->chi_min, p->mu[i] - p->n_sigma * p->sg[i]);
-        p->chi_max = fmax (p->chi_max, p->mu[i] + p->n_sigma * p->sg[i]);
+        lo[i] = fmax (0.0, p->mu[i] - p->n_sigma * p->sg[i]);
+        hi[i] = p->mu[i] + p->n_sigma * p->sg[i];
       }
 
-      p->chi_min = fmax (0.0, p->chi_min);
+      for (i = 1; i < p->n_bumps; i++)
+        for (j = i; (j > 0) && (lo[j] < lo[j - 1]); j--)
+        {
+          double s;
+
+          s         = lo[j];
+          lo[j]     = lo[j - 1];
+          lo[j - 1] = s;
+          s         = hi[j];
+          hi[j]     = hi[j - 1];
+          hi[j - 1] = s;
+        }
+
+      p->n_groups = 0;
+
+      for (i = 0; i < p->n_bumps; i++)
+      {
+        if ((p->n_groups > 0) && (lo[i] <= p->grp_hi[p->n_groups - 1]))
+        {
+          p->grp_hi[p->n_groups - 1] = fmax (p->grp_hi[p->n_groups - 1], hi[i]);
+        }
+        else
+        {
+          p->grp_lo[p->n_groups] = lo[i];
+          p->grp_hi[p->n_groups] = hi[i];
+          p->n_groups++;
+        }
+      }
+
+      p->chi_min = p->grp_lo[0];
+      p->chi_max = p->grp_hi[p->n_groups - 1];
+
+      for (i = 1; i < p->n_groups; i++)
+      {
+        p->breaks[p->n_break++] = p->grp_hi[i - 1];
+        p->breaks[p->n_break++] = p->grp_lo[i];
+      }
+
       break;
+    }
 
     default:
       fprintf (stderr, "shape_support: bad shape\n");

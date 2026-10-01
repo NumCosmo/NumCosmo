@@ -28,8 +28,8 @@ Model Structure:
     - Dependent variable: lnR (log richness)
 
 Validation Approaches:
-    1. Forward: Model (mu, sigma) → Truncated (mean, std) → Compare with sample
-    2. Inverse: Sample (mean, std) → Recover (mu, sigma) → Compare with model
+    1. Forward: Model (mu, sigma) -> Truncated (mean, std) -> Compare with sample
+    2. Inverse: Sample (mean, std) -> Recover (mu, sigma) -> Compare with model
 
 Tools provided:
 

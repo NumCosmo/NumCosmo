@@ -32,7 +32,7 @@
  * This object implements the integration of second order differential equation (ODE)
  * for the matter (baryons + cold dark matter: $\Omega_m$, see nc_hicosmo_E2Omega_m()
  * and nc_hicosmo_E2()) density contrast, $\delta$, in the linear regime of
- * perturbations, see for instance [Matínez and Saar (2002)](https://ui.adsabs.harvard.edu/abs/2002sgd..book.....M).
+ * perturbations, see for instance [Martínez and Saar (2002)](https://ui.adsabs.harvard.edu/abs/2002sgd..book.....M).
  * The equation is given by
  * \begin{equation*}
  * \ddot{ \delta } + 2 \frac{\dot{a}}{a} \dot{ \delta } - 4\pi G \bar{\rho}(a)\delta = 0,
@@ -648,17 +648,17 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
  * @z: redshift $z$
  *
  * This function evaluates the derivative of the normalized growth
- * function $\mathrm{d}D/\mathrm{d}a$ at redshift $z$, also called as linear growth rate.
- * Where $a$ is the scale factor.
+ * function with respect to redshift, $\mathrm{d}D/\mathrm{d}z = -a^2\, \mathrm{d}D/\mathrm{d}a$,
+ * where $a = 1/(1+z)$ is the scale factor.
  *
- * Note that this  definition is different from the one normally applied in redshift-space distortion studies.
- * These studies use the parameter given by,
+ * This is not the linear growth rate used in redshift-space distortion studies,
  * \begin{equation*}
- * f(z) = \left. \frac{\mathrm{d}\ln D}{\mathrm{d} \ln a} \right|_{z} = -\frac{(1 + z)}{D(z)} \left. \frac{\mathrm{d} D}{\mathrm{d} a} \right|_{z} \,\, .
+ * f(z) = \left. \frac{\mathrm{d}\ln D}{\mathrm{d} \ln a} \right|_{z} = -\frac{(1 + z)}{D(z)} \left. \frac{\mathrm{d} D}{\mathrm{d} z} \right|_{z} \,\, ,
  * \end{equation*}
+ * which follows from this derivative and nc_growth_func_eval().
  * For more details see e.g. [Zarrouk et al. (2018)][X2018MNRAS.477.1639Z] [[arXiv](https://arxiv.org/abs/1801.03062)].
  *
- * Returns: the derivative of the normalized growth function $\left. \frac{\mathrm{d} D}{\mathrm{d} a} \right|_z$.
+ * Returns: the derivative of the normalized growth function $\left. \frac{\mathrm{d} D}{\mathrm{d} z} \right|_z$.
  */
 
 /**
@@ -667,9 +667,11 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  * @d: (out): Growth function $D(z)$
- * @f: (out): Growth function derivative $\left. \mathrm{d}D/\mathrm{d}a \right|_{z}$
+ * @f: (out): Growth function derivative $\left. \mathrm{d}D/\mathrm{d}z \right|_{z}$
  *
- * This function evaluates the normalized growth function $D$ and its derivative $\mathrm{d}D/\mathrm{d}a$ at redshift $z$.
+ * This function evaluates the normalized growth function $D$ and its derivative
+ * with respect to redshift, $\mathrm{d}D/\mathrm{d}z$, at redshift $z$. See
+ * nc_growth_func_eval_deriv() for the relation to the linear growth rate.
  *
  */
 
