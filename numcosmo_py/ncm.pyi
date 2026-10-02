@@ -2403,44 +2403,65 @@ class Diff(GObject.Object):
 
     Properties from NcmDiff:
       max-order -> guint: max-order
-        Maximum order
+        Maximum extrapolation order
       richardson-step -> gdouble: richardson-step
-        Richardson extrapolation step
-      round-off-pad -> gdouble: round-off-pad
-        Round off padding
-      terr-pad -> gdouble: terr-pad
-        Truncation error padding
+        Ratio between consecutive steps
+      func-precision -> gdouble: func-precision
+        Relative precision of the values of f
+      trunc-change-ratio -> gdouble: trunc-change-ratio
+        Largest ratio of a row's truncation error to its change from the previous row
       ini-h -> gdouble: ini-h
-        Initial h
+        Initial step relative to |x|
+      dual-series -> gboolean: dual-series
+        Use two extrapolation series
+      spectral-window -> gdouble: spectral-window
+        Largest spectral window half-width in units of max (1, |x|)
+      domain-warnings -> gboolean: domain-warnings
+        Warn when a central difference falls back to a one-sided one at an edge of the domain
+      func-abs-precision -> gdouble: func-abs-precision
+        Absolute precision of the values of f
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
+        domain_warnings: bool
+        dual_series: bool
+        func_abs_precision: float
+        func_precision: float
         ini_h: float
         max_order: int
         richardson_step: float
-        round_off_pad: float
-        terr_pad: float
+        spectral_window: float
+        trunc_change_ratio: float
 
     props: Props = ...
     def __init__(
         self,
+        domain_warnings: bool = ...,
+        dual_series: bool = ...,
+        func_abs_precision: float = ...,
+        func_precision: float = ...,
         ini_h: float = ...,
         max_order: int = ...,
         richardson_step: float = ...,
-        round_off_pad: float = ...,
-        terr_pad: float = ...,
+        spectral_window: float = ...,
+        trunc_change_ratio: float = ...,
     ) -> None: ...
     @staticmethod
     def clear(diff: Diff) -> None: ...
+    def clear_domain(self) -> None: ...
     def free(self) -> None: ...
+    def get_domain_warnings(self) -> bool: ...
+    def get_dual_series(self) -> bool: ...
+    def get_func_abs_precision(self) -> float: ...
+    def get_func_precision(self) -> float: ...
     def get_ini_h(self) -> float: ...
     def get_max_order(self) -> int: ...
     def get_richardson_step(self) -> float: ...
-    def get_round_off_pad(self) -> float: ...
-    def get_trunc_error_pad(self) -> float: ...
+    def get_spectral_window(self) -> float: ...
+    def get_trunc_change_ratio(self) -> float: ...
     def log_backward_tables(self) -> None: ...
     def log_central_tables(self) -> None: ...
     def log_forward_tables(self) -> None: ...
@@ -2510,11 +2531,56 @@ class Diff(GObject.Object):
         f: typing.Callable[..., None],
         *user_data: typing.Any,
     ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d1_1_to_1(
+        self, x: float, f: typing.Callable[..., float], *user_data: typing.Any
+    ) -> typing.Tuple[float, float]: ...
+    def sc_d1_1_to_M(
+        self, x: float, dim: int, f: typing.Callable[..., None], *user_data: typing.Any
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d1_N_to_1(
+        self,
+        x_a: typing.Sequence[float] | npt.NDArray[np.float64],
+        f: typing.Callable[..., float],
+        *user_data: typing.Any,
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d1_N_to_M(
+        self,
+        x_a: typing.Sequence[float] | npt.NDArray[np.float64],
+        dim: int,
+        f: typing.Callable[..., None],
+        *user_data: typing.Any,
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d2_1_to_1(
+        self, x: float, f: typing.Callable[..., float], *user_data: typing.Any
+    ) -> typing.Tuple[float, float]: ...
+    def sc_d2_1_to_M(
+        self, x: float, dim: int, f: typing.Callable[..., None], *user_data: typing.Any
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d2_N_to_1(
+        self,
+        x_a: typing.Sequence[float] | npt.NDArray[np.float64],
+        f: typing.Callable[..., float],
+        *user_data: typing.Any,
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d2_N_to_M(
+        self,
+        x_a: typing.Sequence[float] | npt.NDArray[np.float64],
+        dim: int,
+        f: typing.Callable[..., None],
+        *user_data: typing.Any,
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def set_domain(
+        self, lb: typing.Optional[Vector] = None, ub: typing.Optional[Vector] = None
+    ) -> None: ...
+    def set_domain_warnings(self, domain_warnings: bool) -> None: ...
+    def set_dual_series(self, dual_series: bool) -> None: ...
+    def set_func_abs_precision(self, func_abs_prec: float) -> None: ...
+    def set_func_precision(self, func_prec: float) -> None: ...
     def set_ini_h(self, ini_h: float) -> None: ...
     def set_max_order(self, maxorder: int) -> None: ...
     def set_richardson_step(self, rs: float) -> None: ...
-    def set_round_off_pad(self, roff_pad: float) -> None: ...
-    def set_trunc_error_pad(self, terr_pad: float) -> None: ...
+    def set_spectral_window(self, spectral_window: float) -> None: ...
+    def set_trunc_change_ratio(self, trunc_ratio: float) -> None: ...
 
 class DiffClass(GObject.GPointer):
     r"""
