@@ -368,10 +368,12 @@ jobs:
         # First run to generate the coverage base
         # Second run to generate the coverage for the tests
         # Third run to merge the coverage base and the coverage for the tests
+        # The gcov data are all in build; numcosmo and tests are listed because
+        # --no-external keeps only the sources under the listed directories.
         run: |
-          lcov --config-file .lcovrc --no-external --capture --initial --directory build --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
+          lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
           meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
-          lcov --config-file .lcovrc --no-external --capture --directory build --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
+          lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
           # tests/c is the harness, not the library: a test file is covered by its own
           # execution, and counting it lifts the reported figure above what the library
