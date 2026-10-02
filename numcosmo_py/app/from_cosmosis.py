@@ -99,6 +99,7 @@ if COSMOSIS:
 
         if outfile is None:
             outfile = Path(inifile.stem + ".yaml")
+
         from numcosmo_py.external.cosmosis import (
             convert_likelihoods,
             create_numcosmo_mapping,

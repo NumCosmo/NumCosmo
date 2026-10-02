@@ -316,6 +316,7 @@ def make_plik_lite_cldf(root, spectra=("TT",), seed: int = 3) -> str:
     lkl = os.path.join(path, "clik", "lkl_0")
     ext = os.path.join(lkl, "_external")
     os.makedirs(ext, exist_ok=True)
+
     from numcosmo_py.experiments.planck_lite import NBIN_TOTAL
 
     x_all, cov_all, blmin, blmax, bweight = plik_lite_tables(seed)

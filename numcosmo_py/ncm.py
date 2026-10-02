@@ -8,6 +8,7 @@ import sys
 import gi
 
 gi.require_version("NumCosmoMath", "1.0")
+
 from gi.repository import NumCosmoMath as Ncm
 from gi.repository.NumCosmoMath import *  # type: ignore
 

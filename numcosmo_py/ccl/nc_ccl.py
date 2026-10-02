@@ -50,6 +50,8 @@ def _get_neutrino_masses(ccl_cosmo: pyccl.Cosmology) -> tuple[int, list[float]]:
     m_nu = list(ccl_cosmo["m_nu"])
 
     return massnu_length, m_nu
+
+
 def create_nc_obj(
     ccl_cosmo: pyccl.Cosmology,
     prec: float = 1.0e-7,
@@ -90,6 +92,7 @@ def create_nc_obj(
     # Creating the transfer/linear power spectrum
     tf = None
     ps_ml = None
+
     if ccl_cosmo._config_init_kwargs["transfer_function"] == "eisenstein_hu":
         tf = Nc.TransferFuncEH.new()
         tf.props.CCL_comp = True
@@ -130,6 +133,7 @@ def create_nc_obj(
         # is compared with CCL at prec relative to its value, so ask a tenth of prec.
         psf.set_reltol(0.1 * prec)
         psf.set_best_lnr0()
+
     return Cosmology(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mln, psf_tophat=psf)
 
 

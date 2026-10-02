@@ -63,6 +63,7 @@ class LSSTBinType(GEnum):
     :cvar Y10_LENS: Year 10 lens sample - CLI value: 'y10-lens'
     :cvar Y10_SOURCE: Year 10 source sample - CLI value: 'y10-source'
     """
+
     Y1_LENS = Nc.GalaxyRedshiftPopLSSTSRDType.Y1_LENS
     Y1_SOURCE = Nc.GalaxyRedshiftPopLSSTSRDType.Y1_SOURCE
     Y10_LENS = Nc.GalaxyRedshiftPopLSSTSRDType.Y10_LENS
@@ -92,6 +93,7 @@ class CMBLensingSource(GEnum):
     :cvar VISIBILITY_REIONIZATION: the full visibility function, reionization
         bump included - CLI value: 'visibility-reionization'
     """
+
     THIN_SCREEN = Nc.XcorKernelCMBLensingSource.THIN_SCREEN
     VISIBILITY = Nc.XcorKernelCMBLensingSource.VISIBILITY
     VISIBILITY_REIONIZATION = Nc.XcorKernelCMBLensingSource.VISIBILITY_REIONIZATION
@@ -152,6 +154,7 @@ class CMBISWSource(GEnum):
     :cvar VISIBILITY_REIONIZATION: the full visibility function, reionization
         bump included - CLI value: 'visibility-reionization'
     """
+
     THIN_SCREEN = Nc.XcorKernelCMBISWSource.THIN_SCREEN
     VISIBILITY = Nc.XcorKernelCMBISWSource.VISIBILITY
     VISIBILITY_REIONIZATION = Nc.XcorKernelCMBISWSource.VISIBILITY_REIONIZATION

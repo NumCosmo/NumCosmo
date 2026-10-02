@@ -38,6 +38,7 @@ import pytest
 from numpy.testing import assert_allclose
 
 pytest.importorskip("pyccl")
+
 import pyccl
 
 from numcosmo_py import Nc, Ncm

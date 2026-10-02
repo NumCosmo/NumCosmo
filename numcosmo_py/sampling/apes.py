@@ -97,6 +97,7 @@ class APES:
 
             def do_begin(self) -> None:
                 pass
+
             def do_prepare(self, mset: Ncm.MSet):
                 model = get_generic_model(mset)
                 self.theta = np.array(model.orig_params_peek_vector().dup_array())

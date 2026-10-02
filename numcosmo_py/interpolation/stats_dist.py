@@ -28,12 +28,14 @@ from numcosmo_py import GEnum, Ncm
 
 class InterpolationMethod(GEnum):
     """Possible interpolation methods Ncm.StatsDist."""
+
     KDE = Ncm.FitESMCMCWalkerAPESMethod.KDE
     VKDE = Ncm.FitESMCMCWalkerAPESMethod.VKDE
 
 
 class InterpolationKernel(GEnum):
     """Possible interpolation kernels for Ncm.StatsDist."""
+
     CAUCHY = Ncm.FitESMCMCWalkerAPESKType.CAUCHY
     ST3 = Ncm.FitESMCMCWalkerAPESKType.ST3
     GAUSS = Ncm.FitESMCMCWalkerAPESKType.GAUSS
@@ -42,6 +44,7 @@ class InterpolationKernel(GEnum):
 
 class CrossValidationMethod(GEnum):
     """Cross validation methods for Ncm.StatsDist."""
+
     NONE = Ncm.StatsDistCV.NONE
     SPLIT_M2LNP = Ncm.StatsDistCV.SPLIT_M2LNP
     SPLIT_ACCEPT = Ncm.StatsDistCV.SPLIT_ACCEPT

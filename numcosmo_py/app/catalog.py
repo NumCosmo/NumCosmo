@@ -768,6 +768,7 @@ class CalibrateCatalog(LoadCatalog):
                     self.console.print(f"# {indices}", markup=False)
 
                     _, axis = plt.subplots(1, 1, figsize=(16, 8))
+
                     for ii in range(int(sdist.get_n_kernels())):
                         y_i, cov_i, _, w_i = sdist.get_Ki(ii)
                         mean = np.array(y_i.dup_array())

@@ -72,6 +72,7 @@ FOOTPRINT_PAD_DEG = 1.0e-9
 
 class EllipConv(GEnum):
     """Ellipticity convention."""
+
     TRACE = Nc.GalaxyWLObsEllipConv.TRACE
     TRACE_DET = Nc.GalaxyWLObsEllipConv.TRACE_DET
 
@@ -91,6 +92,7 @@ class EllipConv(GEnum):
 
 class EllipCoord(GEnum):
     """Ellipticity coordinate system."""
+
     CARTESIAN = Nc.WLEllipticityFrame.CARTESIAN
     CELESTIAL = Nc.WLEllipticityFrame.CELESTIAL
 
@@ -110,6 +112,7 @@ class EllipCoord(GEnum):
 
 class MassDef(GEnum):
     """Mass definition for the halo mass summary."""
+
     CRITICAL = Nc.HaloMassSummaryMassDef.CRITICAL
     MEAN = Nc.HaloMassSummaryMassDef.MEAN
     VIRIAL = Nc.HaloMassSummaryMassDef.VIRIAL
@@ -130,6 +133,7 @@ class MassDef(GEnum):
 
 class LSSTVariant(GEnum):
     """LSST-SRD redshift-distribution variant."""
+
     Y1_SOURCE = Nc.GalaxyRedshiftPopLSSTSRDType.Y1_SOURCE
     Y1_LENS = Nc.GalaxyRedshiftPopLSSTSRDType.Y1_LENS
     Y10_SOURCE = Nc.GalaxyRedshiftPopLSSTSRDType.Y10_SOURCE
@@ -155,6 +159,7 @@ class WLCatalogID(GEnum):
     Presently all Subaru HSC-SSP PDR1 cluster fields; the identifiers carry the
     survey and data release so that catalogs from elsewhere can join them.
     """
+
     HSC_PDR1_HWL16A_002 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_002
     HSC_PDR1_HWL16A_007 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_007
     HSC_PDR1_HWL16A_060 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_060
@@ -839,6 +844,7 @@ class HaloProfileType(StrEnum):
 
 class IntegMethod(GEnum):
     """Cluster WL redshift-integral method (``NcDataClusterWLIntegMethod``)."""
+
     LNINT = Nc.DataClusterWLIntegMethod.LNINT
     FIXED_NODES = Nc.DataClusterWLIntegMethod.FIXED_NODES
     CUBATURE = Nc.DataClusterWLIntegMethod.CUBATURE
@@ -1419,12 +1425,8 @@ def load_cluster_wl(
     # cluster_ra/dec is an external estimate; reject it up front if outside
     # the galaxy window (fit bounds = that window), reporting both axes
     # together.
-    ra_bad = not (
-        gal_ra_min <= cluster_ra <= gal_ra_max
-    )
-    dec_bad = not (
-        gal_dec_min <= cluster_dec <= gal_dec_max
-    )
+    ra_bad = not (gal_ra_min <= cluster_ra <= gal_ra_max)
+    dec_bad = not (gal_dec_min <= cluster_dec <= gal_dec_max)
 
     if ra_bad or dec_bad:
         raise ValueError(

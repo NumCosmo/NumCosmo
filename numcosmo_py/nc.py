@@ -9,6 +9,7 @@ import gi
 
 gi.require_version("NumCosmo", "1.0")
 gi.require_version("NumCosmoMath", "1.0")
+
 from gi.repository import NumCosmo
 from gi.repository.NumCosmo import *  # type: ignore
 
