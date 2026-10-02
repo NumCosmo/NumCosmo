@@ -106,6 +106,8 @@ void ncm_diff_set_domain (NcmDiff *diff, NcmVector *lb, NcmVector *ub);
 void ncm_diff_clear_domain (NcmDiff *diff);
 void ncm_diff_set_domain_warnings (NcmDiff *diff, const gboolean domain_warnings);
 gboolean ncm_diff_get_domain_warnings (NcmDiff *diff);
+void ncm_diff_set_func_abs_precision (NcmDiff *diff, const gdouble func_abs_prec);
+gdouble ncm_diff_get_func_abs_precision (NcmDiff *diff);
 
 void ncm_diff_log_central_tables (NcmDiff *diff);
 void ncm_diff_log_forward_tables (NcmDiff *diff);

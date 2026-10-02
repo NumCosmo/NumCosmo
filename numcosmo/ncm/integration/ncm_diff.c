@@ -78,6 +78,7 @@ typedef struct _NcmDiffPrivate
   gdouble rs;
   gdouble terr_pad;
   gdouble roff_pad;
+  gdouble func_abs_prec;
   gdouble ini_h;
   gboolean dual_series;
   gdouble spectral_window;
@@ -110,6 +111,7 @@ enum
   PROP_DUAL_SERIES,
   PROP_SPECTRAL_WINDOW,
   PROP_DOMAIN_WARNINGS,
+  PROP_FUNC_ABS_PRECISION,
   PROP_SIZE,
 };
 
@@ -129,6 +131,7 @@ ncm_diff_init (NcmDiff *diff)
   self->rs              = 0.0;
   self->terr_pad        = 0.0;
   self->roff_pad        = 0.0;
+  self->func_abs_prec   = 0.0;
   self->ini_h           = 0.0;
   self->dual_series     = FALSE;
   self->spectral_window = 0.0;
@@ -178,6 +181,9 @@ _ncm_diff_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_DOMAIN_WARNINGS:
       ncm_diff_set_domain_warnings (diff, g_value_get_boolean (value));
       break;
+    case PROP_FUNC_ABS_PRECISION:
+      ncm_diff_set_func_abs_precision (diff, g_value_get_double (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -216,6 +222,9 @@ _ncm_diff_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
       break;
     case PROP_DOMAIN_WARNINGS:
       g_value_set_boolean (value, ncm_diff_get_domain_warnings (diff));
+      break;
+    case PROP_FUNC_ABS_PRECISION:
+      g_value_set_double (value, ncm_diff_get_func_abs_precision (diff));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -330,6 +339,13 @@ ncm_diff_class_init (NcmDiffClass *klass)
                                                          "Warn when a central difference falls back to a one-sided one at an edge of the domain",
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_FUNC_ABS_PRECISION,
+                                   g_param_spec_double ("func-abs-precision",
+                                                        NULL,
+                                                        "Absolute precision of the values of f",
+                                                        0.0, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static NcmDiffTable *
@@ -833,6 +849,46 @@ ncm_diff_get_domain_warnings (NcmDiff *diff)
 }
 
 /**
+ * ncm_diff_set_func_abs_precision:
+ * @diff: a #NcmDiff
+ * @func_abs_prec: absolute precision of the values of $f$
+ *
+ * Sets #NcmDiff:func-abs-precision, a bound on the absolute error of each
+ * value of $f$ around a smooth function, for values whose error does not
+ * scale with their size: a function that subtracts close terms inside, such
+ * as $\ln(1 + x)$ at small $x$, or one computed by an algorithm run with an
+ * absolute tolerance. The cancellation scale of each difference quotient
+ * includes the error these values leave in it, unpadded by
+ * #NcmDiff:round-off-pad. The default, zero, adds nothing. Requires
+ * @func_abs_prec $\geq 0$.
+ */
+void
+ncm_diff_set_func_abs_precision (NcmDiff *diff, const gdouble func_abs_prec)
+{
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
+  g_assert_cmpfloat (func_abs_prec, >=, 0.0);
+  g_assert (gsl_finite (func_abs_prec));
+  self->func_abs_prec = func_abs_prec;
+}
+
+/**
+ * ncm_diff_get_func_abs_precision:
+ * @diff: a #NcmDiff
+ *
+ * Gets #NcmDiff:func-abs-precision.
+ *
+ * Returns: the absolute precision of the values of $f$.
+ */
+gdouble
+ncm_diff_get_func_abs_precision (NcmDiff *diff)
+{
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
+  return self->func_abs_prec;
+}
+
+/**
  * ncm_diff_get_spectral_window:
  * @diff: a #NcmDiff
  *
@@ -923,11 +979,17 @@ ncm_diff_log_backward_tables (NcmDiff *diff)
   }
 }
 
-typedef void (*NcmDiffStepAlgo) (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot, NcmVector *canc);
-typedef void (*NcmDiffHessianStepAlgo) (NcmDiff *diff, NcmDiffFuncNto1 f, gpointer user_data, const guint a, const gdouble x, const gdouble hx, const guint b, const gdouble y, const gdouble hy, NcmVector *x_v, const gdouble fval, gdouble *quot, gdouble *canc);
+typedef void (*NcmDiffStepAlgo) (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot, NcmVector *canc, gdouble *canc_abs);
+typedef void (*NcmDiffHessianStepAlgo) (NcmDiff *diff, NcmDiffFuncNto1 f, gpointer user_data, const guint a, const gdouble x, const gdouble hx, const guint b, const gdouble y, const gdouble hy, NcmVector *x_v, const gdouble fval, gdouble *quot, gdouble *canc, gdouble *canc_abs);
 
 #define NCM_DIFF_ERR_PAD (1.0e0)
 #define NCM_DIFF_NTRY_CONV (3)
+
+/*
+ * Largest share of a row its largest term may carry for the row to agree or
+ * to replace a best value from such rows, see _ncm_diff_ladder_accum().
+ */
+#define NCM_DIFF_LEAD_SHARE_MAX (0.99)
 
 /*
  * Control of one component in the dual-series scheme. Series A and B share
@@ -954,6 +1016,7 @@ typedef struct _NcmDiffControl
   guchar agreements_left;
   guchar just_converged;
   gboolean informative;
+  gboolean best_eligible;
 } NcmDiffControl;
 
 static void
@@ -965,6 +1028,7 @@ _ncm_diff_control_init (NcmDiffControl *cs)
   cs->agreements_left = NCM_DIFF_NTRY_CONV;
   cs->just_converged  = 0;
   cs->informative     = FALSE;
+  cs->best_eligible   = FALSE;
 }
 
 typedef struct _NcmDiffCrossControl
@@ -995,13 +1059,17 @@ typedef struct _NcmDiffLadder
   guint order;
   GArray *quots;
   GArray *cancs;
+  GArray *cancs_abs;
   gdouble row;
   gdouble row_prev;
   gdouble row_canc;
   gdouble row_canc_prev;
+  gdouble row_canc_abs;
+  gdouble row_canc_abs_prev;
   gdouble quot_scale;
   gdouble max_term;
   gdouble rho;
+  gdouble lead_share;
   NcmDiffControl control;
   gboolean converged;
   gboolean first_informative;
@@ -1010,9 +1078,10 @@ typedef struct _NcmDiffLadder
 static void
 _ncm_diff_ladder_init (NcmDiffLadder *ladder, GPtrArray *tables)
 {
-  ladder->tables = tables;
-  ladder->quots  = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  ladder->cancs  = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  ladder->tables    = tables;
+  ladder->quots     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  ladder->cancs     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  ladder->cancs_abs = g_array_new (FALSE, FALSE, sizeof (gdouble));
 }
 
 static void
@@ -1020,6 +1089,7 @@ _ncm_diff_ladder_clear (NcmDiffLadder *ladder)
 {
   g_clear_pointer (&ladder->quots, g_array_unref);
   g_clear_pointer (&ladder->cancs, g_array_unref);
+  g_clear_pointer (&ladder->cancs_abs, g_array_unref);
 }
 
 /* Empties the ladder: no steps, no rows, the control reset. */
@@ -1031,15 +1101,20 @@ _ncm_diff_ladder_reset (NcmDiffLadder *ladder)
   ladder->row_prev      = 0.0;
   ladder->row_canc      = 0.0;
   ladder->row_canc_prev = 0.0;
-  ladder->quot_scale    = 0.0;
-  ladder->max_term      = 0.0;
-  ladder->rho           = 0.0;
-  ladder->converged     = FALSE;
+
+  ladder->row_canc_abs      = 0.0;
+  ladder->row_canc_abs_prev = 0.0;
+  ladder->quot_scale        = 0.0;
+  ladder->max_term          = 0.0;
+  ladder->rho               = 0.0;
+  ladder->lead_share        = 0.0;
+  ladder->converged         = FALSE;
 
   ladder->first_informative = FALSE;
 
   g_array_set_size (ladder->quots, 0);
   g_array_set_size (ladder->cancs, 0);
+  g_array_set_size (ladder->cancs_abs, 0);
 
   _ncm_diff_control_init (&ladder->control);
 }
@@ -1053,10 +1128,14 @@ _ncm_diff_ladder_restart (NcmDiffLadder *ladder)
   ladder->row_prev      = 0.0;
   ladder->row_canc      = 0.0;
   ladder->row_canc_prev = 0.0;
-  ladder->quot_scale    = 0.0;
-  ladder->max_term      = 0.0;
-  ladder->rho           = 0.0;
-  ladder->converged     = FALSE;
+
+  ladder->row_canc_abs      = 0.0;
+  ladder->row_canc_abs_prev = 0.0;
+  ladder->quot_scale        = 0.0;
+  ladder->max_term          = 0.0;
+  ladder->rho               = 0.0;
+  ladder->lead_share        = 0.0;
+  ladder->converged         = FALSE;
 
   ladder->first_informative = FALSE;
 
@@ -1064,18 +1143,20 @@ _ncm_diff_ladder_restart (NcmDiffLadder *ladder)
 }
 
 static void
-_ncm_diff_ladder_add_step (NcmDiffLadder *ladder, const gdouble quot, const gdouble canc)
+_ncm_diff_ladder_add_step (NcmDiffLadder *ladder, const gdouble quot, const gdouble canc, const gdouble canc_abs)
 {
   g_array_append_val (ladder->quots, quot);
   g_array_append_val (ladder->cancs, canc);
+  g_array_append_val (ladder->cancs_abs, canc_abs);
 }
 
 /* A step larger than every stored one becomes the new top of the ladder. */
 static void
-_ncm_diff_ladder_prepend_step (NcmDiffLadder *ladder, const gdouble quot, const gdouble canc)
+_ncm_diff_ladder_prepend_step (NcmDiffLadder *ladder, const gdouble quot, const gdouble canc, const gdouble canc_abs)
 {
   g_array_prepend_val (ladder->quots, quot);
   g_array_prepend_val (ladder->cancs, canc);
+  g_array_prepend_val (ladder->cancs_abs, canc_abs);
 }
 
 /*
@@ -1151,7 +1232,7 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo
 static void _ncm_diff_scheme_init (NcmDiffPrivate *self, NcmDiffScheme *sch, NcmDiffStepAlgo algo, NcmDiffStepAlgo onesided, const guint po, const guint a, const gdouble x);
 static gboolean _ncm_diff_ladder_needs_step (NcmDiffLadder *ladder);
 static gdouble _ncm_diff_step_h (NcmDiffPrivate *self, const guint po, const gdouble h0, const gint k);
-static void _ncm_diff_eval_step (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble ho, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot_t, NcmVector *canc_t);
+static void _ncm_diff_eval_step (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble ho, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot_t, NcmVector *canc_t, gdouble *canc_abs_t);
 static void _ncm_diff_ladder_extrapolate (NcmDiffLadder *ladder, const gdouble terr_pad, const gdouble roff_pad);
 static gdouble _ncm_diff_scheme_cap (NcmDiffPrivate *self, const NcmDiffScheme *sch, const gdouble x);
 static gboolean _ncm_diff_scheme_fallback (NcmDiffPrivate *self, NcmDiffScheme *sch, const guint a, const gdouble x);
@@ -1233,11 +1314,13 @@ _ncm_diff_by_step_algo_single (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiff
       {
         const guint nsteps = g_array_index (ladders, NcmDiffLadder, 0).quots->len;
 
+        gdouble canc_abs_t;
+
         _ncm_diff_eval_step (diff, sch.algo, f, user_data, a, x, sch.sign * _ncm_diff_step_h (self, sch.po, sch.h0, k_top + nsteps),
-                             x_v, f_v, yh1_v, yh2_v, quot_t, canc_t);
+                             x_v, f_v, yh1_v, yh2_v, quot_t, canc_t, &canc_abs_t);
 
         for (i = 0; i < dim; i++)
-          _ncm_diff_ladder_add_step (&g_array_index (ladders, NcmDiffLadder, i), ncm_vector_get (quot_t, i), ncm_vector_get (canc_t, i));
+          _ncm_diff_ladder_add_step (&g_array_index (ladders, NcmDiffLadder, i), ncm_vector_get (quot_t, i), ncm_vector_get (canc_t, i), canc_abs_t);
 
         continue;
       }
@@ -1299,7 +1382,9 @@ _ncm_diff_by_step_algo_single (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiff
         }
         else
         {
-          _ncm_diff_eval_step (diff, sch.algo, f, user_data, a, x, sch.sign * h_new, x_v, f_v, yh1_v, yh2_v, quot_t, canc_t);
+          gdouble canc_abs_t;
+
+          _ncm_diff_eval_step (diff, sch.algo, f, user_data, a, x, sch.sign * h_new, x_v, f_v, yh1_v, yh2_v, quot_t, canc_t, &canc_abs_t);
 
           if (!_ncm_diff_vector_finite (quot_t))
           {
@@ -1314,11 +1399,11 @@ _ncm_diff_by_step_algo_single (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiff
               if (jump)
               {
                 _ncm_diff_ladder_reset (ladder);
-                _ncm_diff_ladder_add_step (ladder, ncm_vector_get (quot_t, i), ncm_vector_get (canc_t, i));
+                _ncm_diff_ladder_add_step (ladder, ncm_vector_get (quot_t, i), ncm_vector_get (canc_t, i), canc_abs_t);
               }
               else
               {
-                _ncm_diff_ladder_prepend_step (ladder, ncm_vector_get (quot_t, i), ncm_vector_get (canc_t, i));
+                _ncm_diff_ladder_prepend_step (ladder, ncm_vector_get (quot_t, i), ncm_vector_get (canc_t, i), canc_abs_t);
                 _ncm_diff_ladder_replay (ladder, self->terr_pad, self->roff_pad);
               }
             }
@@ -1371,7 +1456,7 @@ _ncm_diff_by_step_algo_single (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiff
 }
 
 static void _ncm_diff_room (NcmDiffPrivate *self, const guint a, const gdouble x, gdouble *lo, gdouble *hi);
-static void _ncm_diff_rf_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot, NcmVector *canc);
+static void _ncm_diff_rf_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot, NcmVector *canc, gdouble *canc_abs);
 
 /*
  * Starts coordinate a with the scheme the caller asked for and the initial
@@ -1528,17 +1613,17 @@ _ncm_diff_step_h (NcmDiffPrivate *self, const guint po, const gdouble h0, const 
 static void
 _ncm_diff_eval_step (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffFuncNtoM f, gpointer user_data,
                      const guint a, const gdouble x, const gdouble ho,
-                     NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot_t, NcmVector *canc_t)
+                     NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot_t, NcmVector *canc_t, gdouble *canc_abs_t)
 {
   volatile gdouble temp = x + ho;
   const gdouble h       = temp - x;
 
-  step_algo (diff, f, user_data, a, x, h, x_v, f_v, yh1_v, yh2_v, quot_t, canc_t);
+  step_algo (diff, f, user_data, a, x, h, x_v, f_v, yh1_v, yh2_v, quot_t, canc_t, canc_abs_t);
   ncm_vector_set (x_v, a, x);
 }
 
 static void _ncm_diff_ladder_accum (NcmDiffLadder *ladder, NcmDiffTable *dtable, const guint nt);
-static gboolean _ncm_diff_control_update (NcmDiffControl *cs, const gdouble terr_pad, const gdouble roff_pad, const gdouble row, const gdouble row_prev, const gdouble row_canc, const gdouble row_canc_prev, const gdouble quot_scale);
+static gboolean _ncm_diff_control_update (NcmDiffControl *cs, const gdouble terr_pad, const gdouble roff_pad, const gdouble row, const gdouble row_prev, const gdouble row_canc, const gdouble row_canc_prev, const gdouble row_canc_abs, const gdouble row_canc_abs_prev, const gdouble quot_scale, const gdouble lead_share);
 
 /*
  * Extrapolates at the current order, updates the control unless the ladder
@@ -1559,23 +1644,27 @@ _ncm_diff_ladder_extrapolate (NcmDiffLadder *ladder, const gdouble terr_pad, con
 
   if (ladder->order == 0)
   {
-    ladder->row_prev        = g_array_index (ladder->quots, gdouble, 0);
-    ladder->row_canc_prev   = g_array_index (ladder->cancs, gdouble, 0);
-    ladder->control.df_best = ladder->row_prev;
+    ladder->row_prev          = g_array_index (ladder->quots, gdouble, 0);
+    ladder->row_canc_prev     = g_array_index (ladder->cancs, gdouble, 0);
+    ladder->row_canc_abs_prev = g_array_index (ladder->cancs_abs, gdouble, 0);
+    ladder->control.df_best   = ladder->row_prev;
   }
 
   _ncm_diff_ladder_accum (ladder, dtable, ladder->order + 2);
 
   if (!ladder->converged && !_ncm_diff_control_update (&ladder->control, terr_pad, roff_pad,
                                                        ladder->row, ladder->row_prev,
-                                                       ladder->row_canc, ladder->row_canc_prev, ladder->quot_scale))
+                                                       ladder->row_canc, ladder->row_canc_prev,
+                                                       ladder->row_canc_abs, ladder->row_canc_abs_prev,
+                                                       ladder->quot_scale, ladder->lead_share))
     ladder->converged = TRUE;
 
   if (ladder->order == 0)
     ladder->first_informative = ladder->control.informative;
 
-  ladder->row_prev      = ladder->row;
-  ladder->row_canc_prev = ladder->row_canc;
+  ladder->row_prev          = ladder->row;
+  ladder->row_canc_prev     = ladder->row_canc;
+  ladder->row_canc_abs_prev = ladder->row_canc_abs;
   ladder->order++;
 
   if (ladder->order == ladder->tables->len)
@@ -1589,35 +1678,45 @@ _ncm_diff_ladder_extrapolate (NcmDiffLadder *ladder, const gdouble terr_pad, con
  * extrapolated; the largest term max_term = max_t |lambda_t quots[t]|; and
  * rho = |df| / max_term, near 1 / max |lambda| for a nonzero derivative, far
  * below it when the terms cancel (a zero derivative), and zero when every
- * quotient is zero.
+ * quotient is zero. Since sum_t lambda_t = 1, quotients that agree give
+ * rho = 1 / max |lambda|, while rho = 1 means the largest term is the whole
+ * row and the others vanished or cancelled, which a smooth error series does
+ * not do; lead_share = (rho - 1 / max |lambda|) / (1 - 1 / max |lambda|)
+ * places the row between the two, 0 and 1.
  */
 static void
 _ncm_diff_ladder_accum (NcmDiffLadder *ladder, NcmDiffTable *dtable, const guint nt)
 {
   gdouble quot_scale = 0.0;
   gdouble max_term   = 0.0;
+  gdouble lambda_max = 0.0;
   guint t;
 
-  ladder->row      = 0.0;
-  ladder->row_canc = 0.0;
+  ladder->row          = 0.0;
+  ladder->row_canc     = 0.0;
+  ladder->row_canc_abs = 0.0;
 
   for (t = 0; t < nt; t++)
   {
     const gdouble lambda_t = ncm_vector_get (dtable->lambda, t);
     const gdouble quot_t   = g_array_index (ladder->quots, gdouble, t);
     const gdouble canc_t   = g_array_index (ladder->cancs, gdouble, t);
+    const gdouble cabs_t   = g_array_index (ladder->cancs_abs, gdouble, t);
 
     /* fma: one rounding per term. */
-    ladder->row      = fma (lambda_t, quot_t, ladder->row);
-    ladder->row_canc = hypot (ladder->row_canc, lambda_t * canc_t);
+    ladder->row          = fma (lambda_t, quot_t, ladder->row);
+    ladder->row_canc     = hypot (ladder->row_canc, lambda_t * canc_t);
+    ladder->row_canc_abs = hypot (ladder->row_canc_abs, lambda_t * cabs_t);
 
     quot_scale = GSL_MAX (quot_scale, fabs (quot_t));
     max_term   = GSL_MAX (max_term, fabs (lambda_t * quot_t));
+    lambda_max = GSL_MAX (lambda_max, fabs (lambda_t));
   }
 
   ladder->quot_scale = quot_scale;
   ladder->max_term   = max_term;
   ladder->rho        = (max_term > 0.0) ? fabs (ladder->row) / max_term : 0.0;
+  ladder->lead_share = (lambda_max > 1.0) ? (ladder->rho - 1.0 / lambda_max) / (1.0 - 1.0 / lambda_max) : 0.0;
 }
 
 /*
@@ -1628,16 +1727,21 @@ _ncm_diff_ladder_accum (NcmDiffLadder *ladder, NcmDiffTable *dtable, const guint
 static gboolean
 _ncm_diff_control_update (NcmDiffControl *cs, const gdouble terr_pad, const gdouble roff_pad,
                           const gdouble row, const gdouble row_prev,
-                          const gdouble row_canc, const gdouble row_canc_prev, const gdouble quot_scale)
+                          const gdouble row_canc, const gdouble row_canc_prev,
+                          const gdouble row_canc_abs, const gdouble row_canc_abs_prev,
+                          const gdouble quot_scale, const gdouble lead_share)
 {
-  const gdouble trunc_est     = fabs (row - row_prev) * terr_pad;
-  const gdouble rel_change    = (quot_scale > 0.0) ? fabs (row - row_prev) / quot_scale : 0.0;
-  const gdouble canc_est_prev = fabs (row_canc_prev) * roff_pad;
-  const gdouble canc_est      = fabs (row_canc) * roff_pad;
+  const gdouble trunc_est  = fabs (row - row_prev) * terr_pad;
+  const gdouble rel_change = (quot_scale > 0.0) ? fabs (row - row_prev) / quot_scale : 0.0;
+
+  /* The padded cancellation scale of the rounding plus the unpadded one of
+   * the stated absolute precision: both come from the same values. */
+  const gdouble canc_est_prev = fabs (row_canc_prev) * roff_pad + row_canc_abs_prev;
+  const gdouble canc_est      = fabs (row_canc) * roff_pad + row_canc_abs;
   const gdouble err_curr_max  = GSL_MAX (trunc_est, GSL_MAX (canc_est_prev, canc_est));
   gdouble err_curr_best       = cs->err_best;
   gboolean improve            = FALSE;
-  gboolean informative, agree;
+  gboolean informative, eligible, agree;
 
   /*
    * A row is informative while its padded cancellation scale is below 1.0e-3
@@ -1648,10 +1752,14 @@ _ncm_diff_control_update (NcmDiffControl *cs, const gdouble terr_pad, const gdou
    * steps can only add cancellation, so the rows agree and the ladder stops
    * with zero and the padded cancellation scale as its error; such a row is
    * informative only when f is exactly zero on the samples, with a zero
-   * cancellation scale.
+   * cancellation scale. A row carried by its largest term (lead_share above
+   * NCM_DIFF_LEAD_SHARE_MAX) is not a combination of quotients that agree,
+   * whatever its cancellation scale says: such a row is not eligible to
+   * agree, and never replaces a best value taken from eligible rows.
    */
   informative     = (quot_scale > 0.0) ? (canc_est < 1.0e-3 * quot_scale) : (canc_est == 0.0);
-  agree           = (quot_scale > 0.0) ? ((rel_change < 1.0e-3) && informative) : TRUE;
+  eligible        = (lead_share < NCM_DIFF_LEAD_SHARE_MAX);
+  agree           = (quot_scale > 0.0) ? ((rel_change < 1.0e-3) && informative && eligible) : TRUE;
   cs->informative = informative;
 
   /* The first rows fluctuate: convergence is checked only after
@@ -1672,17 +1780,20 @@ _ncm_diff_control_update (NcmDiffControl *cs, const gdouble terr_pad, const gdou
    * last two row errors, since a single row error fluctuates. */
   if (cs->just_converged || ((err_curr_max < cs->err_best) && !cs->agreements_left))
   {
-    cs->df_best  = row;
-    cs->err_best = 0.5 * (err_curr_max + cs->err_last_max);
+    cs->df_best       = row;
+    cs->err_best      = 0.5 * (err_curr_max + cs->err_last_max);
+    cs->best_eligible = TRUE;
 
     err_curr_best = cs->err_best;
     improve       = TRUE;
   }
-  else if (err_curr_max < cs->err_best)
+  else if ((err_curr_max < cs->err_best) && (eligible || !cs->best_eligible))
   {
-    /* Not converged: keep the row with the smallest total error. */
-    cs->df_best  = row;
-    cs->err_best = err_curr_max;
+    /* Not converged: keep the row with the smallest total error, eligible
+     * rows first. */
+    cs->df_best       = row;
+    cs->err_best      = err_curr_max;
+    cs->best_eligible = eligible;
 
     err_curr_best = err_curr_max;
   }
@@ -1821,14 +1932,16 @@ _ncm_diff_by_step_algo_dual (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffSt
 
         for (s = 0; s < 2; s++)
         {
+          gdouble canc_abs_t;
+
           _ncm_diff_eval_step (diff, sch.algo, f, user_data, a, x, sch.sign * _ncm_diff_step_h (self, sch.po, h0[s], k),
-                               x_v, f_v, yh1_v, yh2_v, quot_t[s], canc_t[s]);
+                               x_v, f_v, yh1_v, yh2_v, quot_t[s], canc_t[s], &canc_abs_t);
 
           for (i = 0; i < dim; i++)
           {
             NcmDiffDual *dual = &g_array_index (duals, NcmDiffDual, i);
 
-            _ncm_diff_ladder_add_step ((s == 0) ? &dual->A : &dual->B, ncm_vector_get (quot_t[s], i), ncm_vector_get (canc_t[s], i));
+            _ncm_diff_ladder_add_step ((s == 0) ? &dual->A : &dual->B, ncm_vector_get (quot_t[s], i), ncm_vector_get (canc_t[s], i), canc_abs_t);
           }
         }
 
@@ -1888,11 +2001,12 @@ _ncm_diff_by_step_algo_dual (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffSt
         else
         {
           gboolean finite = TRUE;
+          gdouble canc_abs_t[2];
 
           for (s = 0; s < 2; s++)
           {
             _ncm_diff_eval_step (diff, sch.algo, f, user_data, a, x, sch.sign * _ncm_diff_step_h (self, sch.po, h0_new[s], k_new),
-                                 x_v, f_v, yh1_v, yh2_v, quot_t[s], canc_t[s]);
+                                 x_v, f_v, yh1_v, yh2_v, quot_t[s], canc_t[s], &canc_abs_t[s]);
             finite = finite && _ncm_diff_vector_finite (quot_t[s]);
           }
 
@@ -1914,9 +2028,9 @@ _ncm_diff_by_step_algo_dual (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffSt
                 NcmDiffLadder *ladder = (s == 0) ? &dual->A : &dual->B;
 
                 if (may_jump)
-                  _ncm_diff_ladder_add_step (ladder, ncm_vector_get (quot_t[s], i), ncm_vector_get (canc_t[s], i));
+                  _ncm_diff_ladder_add_step (ladder, ncm_vector_get (quot_t[s], i), ncm_vector_get (canc_t[s], i), canc_abs_t[s]);
                 else
-                  _ncm_diff_ladder_prepend_step (ladder, ncm_vector_get (quot_t[s], i), ncm_vector_get (canc_t[s], i));
+                  _ncm_diff_ladder_prepend_step (ladder, ncm_vector_get (quot_t[s], i), ncm_vector_get (canc_t[s], i), canc_abs_t[s]);
               }
 
               if (!may_jump)
@@ -2001,7 +2115,8 @@ _ncm_diff_dual_extrapolate (NcmDiffDual *dual, const gdouble terr_pad, const gdo
   _ncm_diff_ladder_extrapolate (&dual->B, terr_pad, roff_pad);
 
   improve = _ncm_diff_cross_control_update (&dual->cross, dual->A.row, dual->B.row,
-                                            dual->A.row_canc, dual->B.row_canc);
+                                            dual->A.row_canc + dual->A.row_canc_abs,
+                                            dual->B.row_canc + dual->B.row_canc_abs);
 
   if (((dual->A.order >= NCM_DIFF_DUAL_MIN_ORDER) && !improve) || (dual->A.order == dual->A.tables->len))
     dual->converged = TRUE;
@@ -2079,7 +2194,7 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
   return _ncm_diff_Hessian_by_step_algo_single (diff, Hstep_algo, po, x_a, f, user_data, Eerr);
 }
 
-static void _ncm_diff_hessian_eval_step (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, NcmDiffFuncNto1 f, gpointer user_data, const guint a, const gdouble x, const gdouble hxo, const guint b, const gdouble y, const gdouble hyo, NcmVector *x_v, const gdouble fval, gdouble *quot_t, gdouble *canc_t);
+static void _ncm_diff_hessian_eval_step (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, NcmDiffFuncNto1 f, gpointer user_data, const guint a, const gdouble x, const gdouble hxo, const guint b, const gdouble y, const gdouble hyo, NcmVector *x_v, const gdouble fval, gdouble *quot_t, gdouble *canc_t, gdouble *canc_abs_t);
 static gboolean _ncm_diff_hessian_move_fits (NcmDiffPrivate *self, NcmDiffScheme *sx, NcmDiffScheme *sy, const guint a, const gdouble x, const guint b, const gdouble y, const gboolean jump, const gint k_new, gdouble *hx0_new, gdouble *hy0_new, gboolean *restart);
 static void _ncm_diff_hessian_restart_bases (NcmDiffPrivate *self, NcmDiffScheme *sx, NcmDiffScheme *sy, const gdouble x, const gdouble y);
 
@@ -2140,13 +2255,13 @@ _ncm_diff_Hessian_by_step_algo_single (NcmDiff *diff, NcmDiffHessianStepAlgo Hst
         while (_ncm_diff_ladder_needs_step (&ladder))
         {
           const gint k = k_top + ladder.quots->len;
-          gdouble quot_t, canc_t;
+          gdouble quot_t, canc_t, canc_abs_t;
 
           _ncm_diff_hessian_eval_step (diff, Hstep_algo, f, user_data,
                                        a, x, sx.sign * _ncm_diff_step_h (self, 0, sx.h0, k),
                                        b, y, sy.sign * _ncm_diff_step_h (self, 0, sy.h0, k),
-                                       x_v, fval, &quot_t, &canc_t);
-          _ncm_diff_ladder_add_step (&ladder, quot_t, canc_t);
+                                       x_v, fval, &quot_t, &canc_t, &canc_abs_t);
+          _ncm_diff_ladder_add_step (&ladder, quot_t, canc_t, canc_abs_t);
         }
 
         _ncm_diff_ladder_extrapolate (&ladder, self->terr_pad, self->roff_pad);
@@ -2173,12 +2288,12 @@ _ncm_diff_Hessian_by_step_algo_single (NcmDiff *diff, NcmDiffHessianStepAlgo Hst
           }
           else
           {
-            gdouble quot_t, canc_t;
+            gdouble quot_t, canc_t, canc_abs_t;
 
             _ncm_diff_hessian_eval_step (diff, Hstep_algo, f, user_data,
                                          a, x, sx.sign * _ncm_diff_step_h (self, 0, hx0_new, k_new),
                                          b, y, sy.sign * _ncm_diff_step_h (self, 0, hy0_new, k_new),
-                                         x_v, fval, &quot_t, &canc_t);
+                                         x_v, fval, &quot_t, &canc_t, &canc_abs_t);
 
             if (!gsl_finite (quot_t))
             {
@@ -2187,14 +2302,14 @@ _ncm_diff_Hessian_by_step_algo_single (NcmDiff *diff, NcmDiffHessianStepAlgo Hst
             else if (may_jump)
             {
               _ncm_diff_ladder_reset (&ladder);
-              _ncm_diff_ladder_add_step (&ladder, quot_t, canc_t);
+              _ncm_diff_ladder_add_step (&ladder, quot_t, canc_t, canc_abs_t);
               sx.h0    = hx0_new;
               sy.h0    = hy0_new;
               may_jump = FALSE;
             }
             else
             {
-              _ncm_diff_ladder_prepend_step (&ladder, quot_t, canc_t);
+              _ncm_diff_ladder_prepend_step (&ladder, quot_t, canc_t, canc_abs_t);
               _ncm_diff_ladder_replay (&ladder, self->terr_pad, self->roff_pad);
               k_top = k_new;
             }
@@ -2235,14 +2350,14 @@ _ncm_diff_hessian_eval_step (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, N
                              const guint a, const gdouble x, const gdouble hxo,
                              const guint b, const gdouble y, const gdouble hyo,
                              NcmVector *x_v, const gdouble fval,
-                             gdouble *quot_t, gdouble *canc_t)
+                             gdouble *quot_t, gdouble *canc_t, gdouble *canc_abs_t)
 {
   volatile gdouble t_x = x + hxo;
   const gdouble hx     = t_x - x;
   volatile gdouble t_y = y + hyo;
   const gdouble hy     = t_y - y;
 
-  Hstep_algo (diff, f, user_data, a, x, hx, b, y, hy, x_v, fval, quot_t, canc_t);
+  Hstep_algo (diff, f, user_data, a, x, hx, b, y, hy, x_v, fval, quot_t, canc_t, canc_abs_t);
 
   ncm_vector_set (x_v, a, x);
   ncm_vector_set (x_v, b, y);
@@ -2383,13 +2498,13 @@ _ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep
           for (s = 0; s < 2; s++)
           {
             const gdouble fac = (s == 0) ? 1.0 : 1.0 / srs;
-            gdouble quot_t, canc_t;
+            gdouble quot_t, canc_t, canc_abs_t;
 
             _ncm_diff_hessian_eval_step (diff, Hstep_algo, f, user_data,
                                          a, x, sx.sign * _ncm_diff_step_h (self, 0, sx.h0 * fac, k),
                                          b, y, sy.sign * _ncm_diff_step_h (self, 0, sy.h0 * fac, k),
-                                         x_v, fval, &quot_t, &canc_t);
-            _ncm_diff_ladder_add_step ((s == 0) ? &dual.A : &dual.B, quot_t, canc_t);
+                                         x_v, fval, &quot_t, &canc_t, &canc_abs_t);
+            _ncm_diff_ladder_add_step ((s == 0) ? &dual.A : &dual.B, quot_t, canc_t, canc_abs_t);
           }
         }
 
@@ -2417,7 +2532,7 @@ _ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep
           }
           else
           {
-            gdouble quot_t[2], canc_t[2];
+            gdouble quot_t[2], canc_t[2], canc_abs_t[2];
             gboolean finite = TRUE;
             guint s;
 
@@ -2428,7 +2543,7 @@ _ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep
               _ncm_diff_hessian_eval_step (diff, Hstep_algo, f, user_data,
                                            a, x, sx.sign * _ncm_diff_step_h (self, 0, hx0_new * fac, k_new),
                                            b, y, sy.sign * _ncm_diff_step_h (self, 0, hy0_new * fac, k_new),
-                                           x_v, fval, &quot_t[s], &canc_t[s]);
+                                           x_v, fval, &quot_t[s], &canc_t[s], &canc_abs_t[s]);
               finite = finite && gsl_finite (quot_t[s]);
             }
 
@@ -2439,16 +2554,16 @@ _ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep
             else if (may_jump)
             {
               _ncm_diff_dual_reset (&dual);
-              _ncm_diff_ladder_add_step (&dual.A, quot_t[0], canc_t[0]);
-              _ncm_diff_ladder_add_step (&dual.B, quot_t[1], canc_t[1]);
+              _ncm_diff_ladder_add_step (&dual.A, quot_t[0], canc_t[0], canc_abs_t[0]);
+              _ncm_diff_ladder_add_step (&dual.B, quot_t[1], canc_t[1], canc_abs_t[1]);
               sx.h0    = hx0_new;
               sy.h0    = hy0_new;
               may_jump = FALSE;
             }
             else
             {
-              _ncm_diff_ladder_prepend_step (&dual.A, quot_t[0], canc_t[0]);
-              _ncm_diff_ladder_prepend_step (&dual.B, quot_t[1], canc_t[1]);
+              _ncm_diff_ladder_prepend_step (&dual.A, quot_t[0], canc_t[0], canc_abs_t[0]);
+              _ncm_diff_ladder_prepend_step (&dual.B, quot_t[1], canc_t[1], canc_abs_t[1]);
               _ncm_diff_dual_replay (&dual, self->terr_pad, self->roff_pad);
               k_top = k_new;
             }
@@ -2482,13 +2597,18 @@ _ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep
 static void _ncm_diff_step_quotient (NcmVector *f1, const NcmVector *f2, const gdouble scale, NcmVector *canc);
 
 static void
-_ncm_diff_rf_d1_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot, NcmVector *canc)
+_ncm_diff_rf_d1_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot, NcmVector *canc, gdouble *canc_abs)
 {
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
   ncm_vector_addto (x_v, a, h);
 
   f (x_v, quot, user_data);
 
   _ncm_diff_step_quotient (quot, f_v, 1.0 / h, canc);
+
+  /* Two values, each within func_abs_prec. */
+  canc_abs[0] = 2.0 * self->func_abs_prec / fabs (h);
 
   NCM_UNUSED (yh1_v);
   NCM_UNUSED (yh2_v);
@@ -2496,10 +2616,15 @@ _ncm_diff_rf_d1_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, cons
 
 /*
  * Difference quotient (f1 - f2) scale, in place of f1, and its cancellation
- * error eps max (|f1|, |f2|) |scale|: each value carries at most eps/2 of its
- * size and the subtraction is exact. It does not depend on the difference, so
- * a quotient that rounds to exactly zero still carries the error of the
- * values it came from.
+ * scale eps max (|f1|, |f2|) |scale|. Subtracting close values loses digits:
+ * when each value carries at most eps/2 of its size and they are within a
+ * factor of 2, the difference is exact but keeps their errors, at most
+ * eps max (|f1|, |f2|), so its relative accuracy is
+ * eps max (|f1|, |f2|) / |f1 - f2|. Multiplied by the quotient
+ * |f1 - f2| |scale| this gives the absolute error, in which |f1 - f2|
+ * cancels; without it in the denominator the scale stays finite when the
+ * difference is exactly zero. See "Cancellation and propagated evaluation
+ * error" in docs/theory/ncm/integration/diff.qmd.
  */
 static void
 _ncm_diff_step_quotient (NcmVector *f1, const NcmVector *f2, const gdouble scale, NcmVector *canc)
@@ -2518,8 +2643,10 @@ _ncm_diff_step_quotient (NcmVector *f1, const NcmVector *f2, const gdouble scale
 }
 
 static void
-_ncm_diff_rc_d1_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot, NcmVector *canc)
+_ncm_diff_rc_d1_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot, NcmVector *canc, gdouble *canc_abs)
 {
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
   ncm_vector_addto (x_v, a, h);
 
   f (x_v, quot, user_data);
@@ -2530,14 +2657,18 @@ _ncm_diff_rc_d1_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, cons
 
   _ncm_diff_step_quotient (quot, yh1_v, 0.5 / h, canc);
 
+  /* Two values, each within func_abs_prec, over 2 h. */
+  canc_abs[0] = self->func_abs_prec / fabs (h);
+
   NCM_UNUSED (yh2_v);
 }
 
 static void
-_ncm_diff_rc_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot, NcmVector *canc)
+_ncm_diff_rc_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot, NcmVector *canc, gdouble *canc_abs)
 {
-  const guint len     = ncm_vector_len (quot);
-  const gdouble scale = 2.0 / (h * h);
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+  const guint len             = ncm_vector_len (quot);
+  const gdouble scale         = 2.0 / (h * h);
   guint i;
 
   ncm_vector_addto (x_v, a, h);
@@ -2566,6 +2697,10 @@ _ncm_diff_rc_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, cons
     ncm_vector_set (canc, i, 1.5 * mag_i * GSL_DBL_EPSILON * scale);
   }
 
+  /* f (x + h) + f (x - h) - 2 f (x): at most 4 func_abs_prec, the quotient
+   * scales (f (x + h) + f (x - h)) / 2 - f (x) by scale. */
+  canc_abs[0] = 2.0 * self->func_abs_prec * scale;
+
   NCM_UNUSED (yh2_v);
 }
 
@@ -2575,10 +2710,11 @@ _ncm_diff_rc_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, cons
  * h makes it backward.
  */
 static void
-_ncm_diff_rf_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot, NcmVector *canc)
+_ncm_diff_rf_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, const guint a, const gdouble x, const gdouble h, NcmVector *x_v, NcmVector *f_v, NcmVector *yh1_v, NcmVector *yh2_v, NcmVector *quot, NcmVector *canc, gdouble *canc_abs)
 {
-  const guint len     = ncm_vector_len (quot);
-  const gdouble scale = 1.0 / (h * h);
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+  const guint len             = ncm_vector_len (quot);
+  const gdouble scale         = 1.0 / (h * h);
   guint i;
 
   ncm_vector_addto (x_v, a, h);
@@ -2600,12 +2736,16 @@ _ncm_diff_rf_d2_step (NcmDiff *diff, NcmDiffFuncNtoM f, gpointer user_data, cons
     ncm_vector_set (canc, i, 4.0 * mag_i * GSL_DBL_EPSILON * scale);
   }
 
+  /* f (x + 2h) - 2 f (x + h) + f (x): at most 4 func_abs_prec. */
+  canc_abs[0] = 4.0 * self->func_abs_prec * scale;
+
   NCM_UNUSED (yh2_v);
 }
 
 static void
-_ncm_diff_rf_Hessian_step (NcmDiff *diff, NcmDiffFuncNto1 f, gpointer user_data, const guint a, const gdouble x, const gdouble hx, const guint b, const gdouble y, const gdouble hy, NcmVector *x_v, const gdouble fval, gdouble *quot, gdouble *canc)
+_ncm_diff_rf_Hessian_step (NcmDiff *diff, NcmDiffFuncNto1 f, gpointer user_data, const guint a, const gdouble x, const gdouble hx, const guint b, const gdouble y, const gdouble hy, NcmVector *x_v, const gdouble fval, gdouble *quot, gdouble *canc, gdouble *canc_abs)
 {
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
   gdouble f_hx, f_hy, f_hxhy;
 
 
@@ -2629,6 +2769,9 @@ _ncm_diff_rf_Hessian_step (NcmDiff *diff, NcmDiffFuncNto1 f, gpointer user_data,
 
     canc[0] = 4.0 * max_f * GSL_DBL_EPSILON / fabs (hx * hy);
   }
+
+  /* Four values, each within func_abs_prec. */
+  canc_abs[0] = 4.0 * self->func_abs_prec / fabs (hx * hy);
 }
 
 /*
@@ -2668,6 +2811,7 @@ typedef struct _NcmDiffSCData
   gpointer user_data;
   NcmVector *x_v;
   guint a;
+  gdouble coef_abs;
 } NcmDiffSCData;
 
 /*
@@ -2807,14 +2951,17 @@ _ncm_diff_sc_eval0 (const gdouble *c, const guint n)
  *   coefficients, never on the differentiated ones: differentiation
  *   concentrates a slowly decaying series in its low coefficients, so its
  *   own tail is small while the fit has not resolved the function.
- * - coef_round: the rounding error eps * sum |c_k| of the coefficients, propagated the same way
- *   (the amplification of the k-th coefficient grows as k^2 per order).
+ * - coef_round: the error nu = eps * sum |c_k| + coef_abs of each
+ *   coefficient, propagated the same way (the amplification of the k-th
+ *   coefficient grows as k^2 per order). A value carrying eps/2 of its size
+ *   moves each coefficient by at most eps max |f|, one carrying the absolute
+ *   precision a by at most 2 a = coef_abs.
  *
  * Also returns q_fit, the top-quarter coefficient mass above noise divided
  * by the nonconstant coefficient mass, with the offset retained in the noise.
  */
 static void
-_ncm_diff_sc_deriv_est (const gdouble *c, const guint len, const gdouble R, const guint order,
+_ncm_diff_sc_deriv_est (const gdouble *c, const guint len, const gdouble R, const guint order, const gdouble coef_abs,
                         gdouble *deriv, gdouble *tail, gdouble *coef_round, gdouble *q_fit)
 {
   const gdouble Rinv     = 1.0 / R;
@@ -2850,11 +2997,11 @@ _ncm_diff_sc_deriv_est (const gdouble *c, const guint len, const gdouble R, cons
   /* The denominator excludes c_0, so a constant offset cannot make an
    * unresolved tail small; only the coefficient noise is subtracted here,
    * the derivative error below keeps it. */
-  q_fit[0] = GSL_MAX (0.0, sum_abs_tail - 8.0 * (len - tail_start) * GSL_DBL_EPSILON * sum_abs_c)
+  q_fit[0] = GSL_MAX (0.0, sum_abs_tail - 8.0 * (len - tail_start) * (GSL_DBL_EPSILON * sum_abs_c + coef_abs))
              / (sum_variation + GSL_DBL_MIN);
 
   {
-    const gdouble nu = GSL_DBL_EPSILON * sum_abs_c;
+    const gdouble nu = GSL_DBL_EPSILON * sum_abs_c + coef_abs;
 
     for (k = 0; k < len; k++)
       nb[k] = nu;
@@ -2932,7 +3079,7 @@ _ncm_diff_sc_probe (NcmDiffSCData *data, const gdouble x, const gdouble R, const
   {
     gdouble deriv, tail, coef_round, q_fit, err;
 
-    _ncm_diff_sc_deriv_est (ncm_matrix_ptr (coeffs, c, 0), NCM_DIFF_SC_PROBE_N, R, order, &deriv, &tail, &coef_round, &q_fit);
+    _ncm_diff_sc_deriv_est (ncm_matrix_ptr (coeffs, c, 0), NCM_DIFF_SC_PROBE_N, R, order, data->coef_abs, &deriv, &tail, &coef_round, &q_fit);
 
     err = tail + coef_round;
 
@@ -2952,8 +3099,8 @@ _ncm_diff_sc_probe (NcmDiffSCData *data, const gdouble x, const gdouble R, const
 /*
  * Outward search for the scale of f. Each probe is a degree-four fit on 5
  * Chebyshev-Lobatto nodes (3 nodes, then their 2 nested additions). The
- * half-width grows by 4 until c_3 and c_4 exceed both 16 times the rounding
- * error nu = eps sum |c_k| and 1e-3 of the nonconstant coefficients, or it
+ * half-width grows by 4 until c_3 and c_4 exceed both 16 times the
+ * coefficient error nu = eps sum |c_k| + 2 a and 1e-3 of the nonconstant coefficients, or it
  * reaches cap. When the first probe is at the rounding level (nonconstant
  * coefficients below 1e3 nu in some component) the half-width is set to
  * R_jump at once, the probe a zero coordinate starts with. The result is
@@ -2992,7 +3139,7 @@ _ncm_diff_sc_find_scale (NcmDiffSCData *data, const gdouble x, const gdouble R0,
         for (k = 1; k < 5; k++)
           variation += fabs (ncm_matrix_get (coeffs, c, k));
 
-        noise     = GSL_DBL_EPSILON * (fabs (ncm_matrix_get (coeffs, c, 0)) + variation);
+        noise     = GSL_DBL_EPSILON * (fabs (ncm_matrix_get (coeffs, c, 0)) + variation) + data->coef_abs;
         feature   = feature || (tail > GSL_MAX (16.0 * noise, NCM_DIFF_SC_BAD_Q * variation));
         round_off = round_off || (variation <= 1.0e3 * noise);
       }
@@ -3136,7 +3283,7 @@ _ncm_diff_sc_dn (NcmDiff *diff, const guint order, GArray *x_a, const guint dim,
   GArray *d_prev              = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *w_a                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *conv                = g_array_new (FALSE, FALSE, sizeof (NcmDiffCrossControl));
-  NcmDiffSCData data          = {f, user_data, x_v, 0};
+  NcmDiffSCData data          = {f, user_data, x_v, 0, 2.0 * self->func_abs_prec};
   NcmMatrix *Eerr_m           = NULL;
   NcmMatrix *df_m;
   gboolean fallback = FALSE;
@@ -3223,7 +3370,7 @@ _ncm_diff_sc_dn (NcmDiff *diff, const guint order, GArray *x_a, const guint dim,
           NcmDiffCrossControl *cs = &g_array_index (conv, NcmDiffCrossControl, c);
           gdouble d_c, tail_c, coef_round_c, q_fit_c;
 
-          _ncm_diff_sc_deriv_est (ncm_matrix_ptr (coeffs, c, 0), N, R, order, &d_c, &tail_c, &coef_round_c, &q_fit_c);
+          _ncm_diff_sc_deriv_est (ncm_matrix_ptr (coeffs, c, 0), N, R, order, data.coef_abs, &d_c, &tail_c, &coef_round_c, &q_fit_c);
 
           if (tail_c > coef_round_c)
             resolved = FALSE;

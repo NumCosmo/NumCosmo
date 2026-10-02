@@ -86,6 +86,7 @@ void test_ncm_diff_rf_Hessian_N_to_1_all (TestNcmDiff *test, gconstpointer pdata
 void test_ncm_diff_rf_Hessian_N_to_1_rosenbrock (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_1_to_1_tiny_x (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_1_to_1_tiny_x_domain (TestNcmDiff *test, gconstpointer pdata);
+void test_ncm_diff_1_to_1_func_abs_precision (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_1_to_1_extreme_x (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_rf_Hessian_N_to_1_tiny_x (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_domain_half_line (TestNcmDiff *test, gconstpointer pdata);
@@ -340,6 +341,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_diff_1_to_1_tiny_x_domain,
               &test_ncm_diff_free);
 
+  g_test_add ("/ncm/diff/1_to_1/func_abs_precision", TestNcmDiff, NULL,
+              &test_ncm_diff_new,
+              &test_ncm_diff_1_to_1_func_abs_precision,
+              &test_ncm_diff_free);
+
   g_test_add ("/ncm/diff/rf/Hessian/N_to_1/tiny_x", TestNcmDiff, NULL,
               &test_ncm_diff_new,
               &test_ncm_diff_rf_Hessian_N_to_1_tiny_x,
@@ -437,6 +443,7 @@ test_ncm_diff_property_minima (TestNcmDiff *test, gconstpointer pdata)
                                 "round-off-pad", 1.01,
                                 "terr-pad", 1.1,
                                 "ini-h", GSL_DBL_EPSILON,
+                                "func-abs-precision", 0.0,
                                 NULL);
 
   g_assert_cmpuint (ncm_diff_get_max_order (diff), ==, 1);
@@ -444,6 +451,7 @@ test_ncm_diff_property_minima (TestNcmDiff *test, gconstpointer pdata)
   g_assert_cmpfloat (ncm_diff_get_round_off_pad (diff), ==, 1.01);
   g_assert_cmpfloat (ncm_diff_get_trunc_error_pad (diff), ==, 1.1);
   g_assert_cmpfloat (ncm_diff_get_ini_h (diff), ==, GSL_DBL_EPSILON);
+  g_assert_cmpfloat (ncm_diff_get_func_abs_precision (diff), ==, 0.0);
 
   ncm_diff_free (diff);
 }
@@ -2411,6 +2419,51 @@ test_ncm_diff_1_to_1_tiny_x_domain (TestNcmDiff *test, gconstpointer pdata)
       }
     }
   }
+}
+
+/* ln (1 + x) evaluated as written: 1 + x rounds, an absolute error of eps / 2. */
+static gdouble
+_test_ncm_diff_log1p_naive (const gdouble x, gpointer userdata)
+{
+  return log (1.0 + x);
+}
+
+/*
+ * ln (1 + x) for x from 1e-10 to 1: its values carry an absolute error of
+ * eps / 2, far above eps |f| at small x. With that precision stated every
+ * estimate covers the error.
+ */
+void
+test_ncm_diff_1_to_1_func_abs_precision (TestNcmDiff *test, gconstpointer pdata)
+{
+  typedef gdouble (*Method) (NcmDiff *, const gdouble, NcmDiffFunc1to1, gpointer, gdouble *);
+
+  const Method methods[3] = {&ncm_diff_rf_d1_1_to_1, &ncm_diff_rc_d1_1_to_1, &ncm_diff_rc_d2_1_to_1};
+  const guint orders[3]   = {1, 1, 2};
+  NcmDiff *diff           = test->diff;
+  gdouble prec            = 0.0;
+  guint ntests            = 1000;
+  guint m, i;
+
+  g_assert_cmpfloat (ncm_diff_get_func_abs_precision (diff), ==, 0.0);
+  g_object_set (diff, "func-abs-precision", 0.5 * GSL_DBL_EPSILON, NULL);
+  g_object_get (diff, "func-abs-precision", &prec, NULL);
+  g_assert_cmpfloat (prec, ==, 0.5 * GSL_DBL_EPSILON);
+
+  for (m = 0; m < G_N_ELEMENTS (methods); m++)
+  {
+    for (i = 0; i < ntests; i++)
+    {
+      const gdouble x   = exp (g_test_rand_double_range (log (1.0e-10), 0.0));
+      const gdouble Adf = (orders[m] == 1) ? 1.0 / (1.0 + x) : -1.0 / gsl_pow_2 (1.0 + x);
+      gdouble err       = 0.0;
+      const gdouble df  = methods[m](diff, x, &_test_ncm_diff_log1p_naive, NULL, &err);
+
+      ncm_assert_cmpdouble_e (df, ==, Adf, 0.0, err);
+    }
+  }
+
+  ncm_diff_set_func_abs_precision (diff, 0.0);
 }
 
 /* exp (x1 + 2 x2) at tiny coordinates: H = exp (x1 + 2 x2) [[1, 2], [2, 4]]. */

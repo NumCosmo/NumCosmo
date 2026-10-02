@@ -130,8 +130,49 @@ $$
 The quantity $\kappa_t$ is what the implementation calls `canc`. It is not an estimate of
 all floating-point operations performed by the differentiation algorithm. Rather, it models the
 loss of information caused by forming a small difference from function values of much larger
-magnitude. The model assumes that each sampled value carries an uncertainty of order
-$\epsilon |f|$, where $\epsilon =$ `GSL_DBL_EPSILON`.
+magnitude.
+
+Subtracting two close values loses digits. Let $\epsilon =$ `GSL_DBL_EPSILON`. If $a$ and $b$
+each carry at most $\epsilon/2$ of their size and are within a factor of 2 of each other, their
+difference is computed exactly [@Higham2002Accuracy, Theorem 2.5] but keeps their errors, at
+most $\epsilon \max(|a|,|b|)$, so its relative accuracy is $\epsilon \max(|a|,|b|)/|a-b|$
+[@Higham2002Accuracy, sec. 1.7]. For $a = 1.2346$ and $b = 1.2345$, $|a - b| = 10^{-4}$: four
+digits are lost, and the difference is accurate to about $3 \times 10^{-12}$ instead of
+$\epsilon$. The quotient $Q = (a-b)/h$ has the same relative accuracy; multiplied by
+$|Q| = |a-b|/|h|$ it gives the absolute error, in which $|a-b|$ cancels:
+$$
+\kappa = \frac{\epsilon \max(|a|,|b|)}{|h|}.
+$$
+Without $|a - b|$ in the denominator, $\kappa$ stays finite when the difference is exactly zero.
+@tbl-canc compares $\kappa$ with the error the subtraction actually leaves in $D'_{+}$.
+
+```{python}
+#| label: tbl-canc
+#| tbl-cap: "Cancellation in $D'_{+}(h)$ of $e^x$ at $x = 1$: the digits lost in $f_1 - f_0$, the cancellation scale $\\kappa'_{+}$ and the measured cancellation error, the distance from the quotient of the double values to the quotient of the exact values of $e^x$ at the same two points (50 digits, mpmath). The truncation error is not included. The single quotient is formed in the cell, as `NcmDiff` forms it, since the library does not return it alone."
+#| code-fold: true
+import mpmath
+
+mpmath.mp.dps = 50
+eps = np.finfo(float).eps
+x0 = 1.0
+rows = [
+    "| $h$ | digits lost | $\\kappa'_{+}$ | measured | measured / $\\kappa'_{+}$ |",
+    "|---|---|---|---|---|",
+]
+for k in range(1, 8):
+    h = 10.0 ** (-2 * k)
+    h_rep = (x0 + h) - x0
+    f0, f1 = math.exp(x0), math.exp(x0 + h_rep)
+    quot = (f1 - f0) * (1.0 / h_rep)
+    quot_exact = (mpmath.exp(mpmath.mpf(x0 + h_rep)) - mpmath.exp(mpmath.mpf(x0))) / h_rep
+    measured = float(abs(mpmath.mpf(quot) - quot_exact))
+    kappa = eps * max(abs(f0), abs(f1)) / abs(h_rep)
+    lost = math.log10(max(abs(f0), abs(f1)) / abs(f1 - f0))
+    rows.append(
+        f"| $10^{{{-2 * k}}}$ | {lost:.1f} | {kappa:.2e} | {measured:.2e} | {measured / kappa:.2f} |"
+    )
+Markdown("\n".join(rows))
+```
 
 For the four quotients used by `NcmDiff`, the implementation assigns
 $$
@@ -142,17 +183,34 @@ $$
  \kappa''_{+}(h) &= \frac{4\epsilon\,\max(|f_0|,|f_1|,|f_2|)}{h^2}.
 \end{aligned}
 $$
-The factors in the second-derivative formulas also account for the rounded sums used to build
-the numerator. The important feature is that these estimates depend on the magnitudes of the
-sampled values, not on the final difference. A quotient that rounds to zero can therefore still
-carry a nonzero $\kappa_t$.
+The constants of the second-derivative scales count the same way. $D''_{0}$ is computed as
+$\left[(f_1 + f_{-1})/2 - f_0\right] 2/h^2$: in the numerator $f_1 + f_{-1} - 2f_0$ the three
+values carry at most $2\epsilon\max|f|$, the rounding of the sum $f_1 + f_{-1}$ adds
+$\epsilon\max|f|$, and the final subtraction is exact. $D''_{+}$ is computed as
+$\left[(f_2 - f_1) - (f_1 - f_0)\right]/h^2$: the values carry at most $2\epsilon\max|f|$ and
+the three subtractions are exact when the values are within a factor of 2; the code uses twice
+that count, $4\epsilon$. These scales depend on the magnitudes of the sampled values, not on the
+final difference. A quotient that rounds to zero can therefore still carry a nonzero
+$\kappa_t$.
 
 The actual step is formed by first rounding $x+h$ and then replacing $h$ by the representable
 difference $(x+h)-x$. This keeps the point used to evaluate the function consistent with the
 step used in the quotient. The formulas above should nevertheless be read as the error model
-used by `NcmDiff`, not as rigorous bounds for an arbitrary user function: they do not model an
-unknown error already present in the returned value of $f$, and the later Richardson weighted
-sum has no separate floating-point accumulation term.
+used by `NcmDiff`, not as rigorous bounds for an arbitrary user function: they assume each value
+of $f$ is correct to within $\epsilon/2$ of its size, a larger relative error in the values is
+covered only by the pad `NcmDiff:round-off-pad`, and the later Richardson weighted sum has no
+separate floating-point accumulation term.
+
+Some functions carry an error that does not scale with their values: one that subtracts close
+terms inside, such as $\ln(1+x)$ evaluated as written, where $1+x$ rounds to an absolute error
+of $\epsilon/2$ while $|f| \approx x$; or one computed by another algorithm run with an absolute
+tolerance. The user states that error as `NcmDiff:func-abs-precision`, $a$ (0 by default), and
+each quotient gets a second scale by the same count with $a$ in place of $\epsilon|f_k|/2$:
+$$
+\kappa^{a\prime}_{+} = \frac{2a}{|h|}, \quad
+\kappa^{a\prime}_{0} = \frac{a}{|h|}, \quad
+\kappa^{a\prime\prime}_{0} = \kappa^{a\prime\prime}_{+} = \frac{4a}{h^2}.
+$$
 
 For a Richardson row,
 $$
@@ -162,13 +220,20 @@ the per-step cancellation scales are propagated in quadrature,
 $$
 K_n \equiv
 \left[\sum_{t=0}^{n+1}
-       \left(\lambda_t^{(n)} \kappa_t\right)^2\right]^{1/2}.
+       \left(\lambda_t^{(n)} \kappa_t\right)^2\right]^{1/2},
 $$
-This is exactly the quantity accumulated by the ladder. The Richardson sum itself is accumulated
+and $K^a_n$ from the $\kappa^a_t$ in the same way. The ladder accumulates both. Quadrature
+assumes the errors of different steps are independent, since each step uses its own
+evaluations of $f$. The two scales of one row are added instead, in
+$$
+C_n \equiv P_{\rm r}K_n + K^a_n,
+$$
+since both come from the same values; $P_{\rm r}$ is the pad defined below, which multiplies
+only the scale of the rounding model. The Richardson sum itself is accumulated
 with the C99 `fma()`, one rounding per term. For the comparison with the first extrapolated row it
 is convenient to define
 $$
-R_{-1} \equiv Q_0, \qquad K_{-1} \equiv \kappa_0.
+R_{-1} \equiv Q_0, \qquad K_{-1} \equiv \kappa_0, \qquad K^a_{-1} \equiv \kappa^a_0.
 $$
 
 As the step decreases, truncation error usually falls while $\kappa_t$ grows as $|h|^{-1}$ for first
@@ -188,7 +253,7 @@ S_n \equiv \max_{0\leq t\leq n+1}|Q_t|.
 $$
 The error attached to the row is
 $$
-E_n \equiv \max\left(P_{\rm t}\Delta_n,\; P_{\rm r}K_{n-1},\; P_{\rm r}K_n\right),
+E_n \equiv \max\left(P_{\rm t}\Delta_n,\; C_{n-1},\; C_n\right),
 $$
 where $P_{\rm t}$ is `NcmDiff:terr-pad` and $P_{\rm r}$ is
 `NcmDiff:round-off-pad`; both are $3\times10^4$ by default. Thus the code combines two different
@@ -206,21 +271,33 @@ The control for one scalar output component is then:
 
 1. A row is **informative** when
    $$
-   P_{\rm r}K_n < 10^{-3}S_n.
+   C_n < 10^{-3}S_n.
    $$
-   If $S_n=0$, it is informative only when $K_n=0$.
-2. Two consecutive rows **agree** when the current row is informative and
+   If $S_n=0$, it is informative only when $C_n=0$.
+2. A row is **eligible** when its **lead share**
+   $$
+   \sigma_n \equiv \frac{\rho_n - 1/\Lambda_n}{1 - 1/\Lambda_n}, \qquad
+   \rho_n \equiv \frac{|R_n|}{\max_t|\lambda^{(n)}_t Q_t|}, \qquad
+   \Lambda_n \equiv \max_t|\lambda^{(n)}_t|,
+   $$
+   is below 0.99. Since $\sum_t\lambda^{(n)}_t = 1$, quotients that agree give
+   $\rho_n = 1/\Lambda_n$ and $\sigma_n = 0$, while $\sigma_n = 1$ means the largest term is
+   the whole row and the others vanished or cancelled, which a smooth error series does not do:
+   at steps so small that $f(x + h)$ rounds to $f(x)$ the quotients are exactly zero except for
+   isolated ones. The test uses only the row's own terms, so it holds whatever the precision of
+   $f$ is.
+3. Two consecutive rows **agree** when the current row is informative and eligible and
    $\Delta_n < 10^{-3}S_n$. When $S_n=0$, the implementation treats the rows as agreeing; the
    separate informativeness test is still used by the step-enlargement logic.
-3. Three consecutive agreements establish a stable Richardson sequence. Before that happens,
-   the best value is the row with the smallest $E_n$. The row completing the three-agreement
-   sequence replaces it; its reported error is the mean of its own $E_n$ and that of the
-   previous row, which damps row-to-row fluctuations. Later rows can replace it when they
-   improve the accepted estimate.
-4. The ladder continues while a useful improvement is still possible: while the padded
-   cancellation scale $P_{\rm r}K_n$ is still below the best accepted error, and, before a
-   stable sequence is established, also through every informative row. It also stops at
-   `NcmDiff:max-order`.
+4. Three consecutive agreements establish a stable Richardson sequence. Before that happens,
+   the best value is the row with the smallest $E_n$, among the eligible rows once one has
+   been seen: a row that is not eligible never replaces a best value from an eligible one. The
+   row completing the three-agreement sequence replaces it; its reported error is the mean of
+   its own $E_n$ and that of the previous row, which damps row-to-row fluctuations. Later rows
+   can replace it when they improve the accepted estimate.
+5. The ladder continues while a useful improvement is still possible: while $C_n$ is still
+   below the best accepted error, and, before a stable sequence is established, also through
+   every informative row. It also stops at `NcmDiff:max-order`.
 
 For a vector-valued function there is one such ladder per output component. Function evaluations
 are shared: a new step is evaluated once and appended to every active component. A component
@@ -371,7 +448,8 @@ $$
 so it is extrapolated with the forward Richardson table. The cancellation scale attached to one
 mixed quotient is
 $$
-\kappa_{xy} = \frac{4\epsilon\,\max |f|}{|h_xh_y|},
+\kappa_{xy} = \frac{4\epsilon\,\max |f|}{|h_xh_y|}, \qquad
+\kappa^a_{xy} = \frac{4a}{|h_xh_y|},
 $$
 where the maximum runs over its four sampled values. It is propagated through Richardson in the
 same way as for the one-dimensional quotients.
@@ -397,7 +475,8 @@ truncation coefficient, but the steps of B are $\sqrt{r_s}$ times smaller, so it
 is $r_s^{-p(n+2)/2}$ times that of A. Their disagreement therefore measures the truncation error
 of that order without using two consecutive orders of the same ladder.
 
-Let $R_n^A,R_n^B$ be the two rows and $K_n^A,K_n^B$ their propagated cancellation scales. The
+Let $R_n^A,R_n^B$ be the two rows and $K_n^A,K_n^B$ their propagated cancellation scales, each
+including $K^a_n$ of its ladder. The
 cross-ladder estimate used to select the result is
 $$
 E_n^{\rm cross} = 10\,\max\!\left(
@@ -441,8 +520,10 @@ Two quantities are propagated through the coefficient differentiation:
 * a **tail estimate**, obtained by taking the absolute values of the highest quarter of the
   fitted coefficients and propagating them through the Chebyshev derivative recurrence;
 * a **coefficient-rounding estimate**, which starts from
-  $\nu=\epsilon\sum_k|c_k|$ assigned to every coefficient and is propagated through the same
-  recurrence.
+  $\nu=\epsilon\sum_k|c_k| + 2a$ assigned to every coefficient and is propagated through the
+  same recurrence. A value carrying $\epsilon/2$ of its size moves each coefficient
+  $c_k = (2/N)\sum_j f_j T_k(x_j)$ by at most $\epsilon\max|f| \leq \epsilon\sum_k|c_k|$,
+  and one carrying the absolute precision $a$ by at most $2a$.
 
 The first detects an unresolved series; the second measures how strongly coefficient-level
 rounding is amplified by differentiation. Keeping the constant coefficient inside $\nu$ is
