@@ -42,19 +42,17 @@ from typing import (
     Annotated,
     Any,
     ClassVar,
-    Union,
-    Type,
     cast,
     get_args,
     get_origin,
 )
 
-from pydantic import BaseModel, BeforeValidator, Field, ConfigDict
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 from pydantic.fields import FieldInfo
 from pydantic_core import core_schema
 from tabulate import tabulate
 
-from numcosmo_py import Nc, parse_options_strict, GEnum
+from numcosmo_py import GEnum, Nc, parse_options_strict
 
 
 class LSSTBinType(GEnum):
@@ -65,8 +63,6 @@ class LSSTBinType(GEnum):
     :cvar Y10_LENS: Year 10 lens sample - CLI value: 'y10-lens'
     :cvar Y10_SOURCE: Year 10 source sample - CLI value: 'y10-source'
     """
-
-    # pylint: disable=no-member
     Y1_LENS = Nc.GalaxyRedshiftPopLSSTSRDType.Y1_LENS
     Y1_SOURCE = Nc.GalaxyRedshiftPopLSSTSRDType.Y1_SOURCE
     Y10_LENS = Nc.GalaxyRedshiftPopLSSTSRDType.Y10_LENS
@@ -96,8 +92,6 @@ class CMBLensingSource(GEnum):
     :cvar VISIBILITY_REIONIZATION: the full visibility function, reionization
         bump included - CLI value: 'visibility-reionization'
     """
-
-    # pylint: disable=no-member
     THIN_SCREEN = Nc.XcorKernelCMBLensingSource.THIN_SCREEN
     VISIBILITY = Nc.XcorKernelCMBLensingSource.VISIBILITY
     VISIBILITY_REIONIZATION = Nc.XcorKernelCMBLensingSource.VISIBILITY_REIONIZATION
@@ -158,8 +152,6 @@ class CMBISWSource(GEnum):
     :cvar VISIBILITY_REIONIZATION: the full visibility function, reionization
         bump included - CLI value: 'visibility-reionization'
     """
-
-    # pylint: disable=no-member
     THIN_SCREEN = Nc.XcorKernelCMBISWSource.THIN_SCREEN
     VISIBILITY = Nc.XcorKernelCMBISWSource.VISIBILITY
     VISIBILITY_REIONIZATION = Nc.XcorKernelCMBISWSource.VISIBILITY_REIONIZATION
@@ -547,25 +539,25 @@ class KernelRadialMultiConfig(_KernelRadialConfig):
 
 
 # Type alias for all kernel configuration types
-KernelConfigTypes = Union[
-    KernelCMBLensingConfig,
-    KernelCMBISWConfig,
-    KernelTSZConfig,
-    KernelNumberCountsConfig,
-    KernelWeakLensingConfig,
-    KernelClusterTophatConfig,
-    KernelRadialGaussConfig,
-    KernelRadialTophatConfig,
-    KernelRadialTophatSmoothConfig,
-    KernelRadialStudentTConfig,
-    KernelRadialPowerExpConfig,
-    KernelRadialLensingConfig,
-    KernelRadialMultiConfig,
-]
+KernelConfigTypes = (
+    KernelCMBLensingConfig
+    | KernelCMBISWConfig
+    | KernelTSZConfig
+    | KernelNumberCountsConfig
+    | KernelWeakLensingConfig
+    | KernelClusterTophatConfig
+    | KernelRadialGaussConfig
+    | KernelRadialTophatConfig
+    | KernelRadialTophatSmoothConfig
+    | KernelRadialStudentTConfig
+    | KernelRadialPowerExpConfig
+    | KernelRadialLensingConfig
+    | KernelRadialMultiConfig
+)
 
 
 # Registry mapping CLI names to configuration classes
-KERNEL_CONFIG_REGISTRY: dict[str, Type[BaseModel]] = {
+KERNEL_CONFIG_REGISTRY: dict[str, type[BaseModel]] = {
     "cmb_lensing": KernelCMBLensingConfig,
     "cmb_isw": KernelCMBISWConfig,
     "tsz": KernelTSZConfig,
@@ -585,7 +577,7 @@ KERNEL_CONFIG_REGISTRY: dict[str, Type[BaseModel]] = {
 _IVAR_RE = re.compile(r"^:ivar (\w+):\s*(.*)$")
 
 
-def _field_descriptions(config_class: Type[BaseModel]) -> dict[str, str]:
+def _field_descriptions(config_class: type[BaseModel]) -> dict[str, str]:
     """Collect the ``:ivar:`` documentation of a config's fields.
 
     The class docstring is the single place a parameter is described, so the
@@ -658,7 +650,7 @@ def _default_text(value: Any) -> str:
     return str(value)
 
 
-def _ordered_fields(config_class: Type[BaseModel]) -> list[str]:
+def _ordered_fields(config_class: type[BaseModel]) -> list[str]:
     """List a config's fields, the ones it declares itself first.
 
     :param config_class: A kernel configuration class.
@@ -672,7 +664,7 @@ def _ordered_fields(config_class: Type[BaseModel]) -> list[str]:
     return own + [name for name in fields if name not in own]
 
 
-def kernel_parameter_summary(config_class: Type[BaseModel]) -> str:
+def kernel_parameter_summary(config_class: type[BaseModel]) -> str:
     """Summarise a kernel's parameters as the key=value list it is given as.
 
     :param config_class: A kernel configuration class.

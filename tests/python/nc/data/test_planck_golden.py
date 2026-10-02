@@ -90,7 +90,6 @@ _KEYS = [c[0] for c in _CASES]
 
 def _make(name, relpath, builder):
     """Build one native likelihood + its mset at the fixed fiducial cosmology."""
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
     from numcosmo_py.experiments.planck18 import mset_set_parameters, Planck18Types
 

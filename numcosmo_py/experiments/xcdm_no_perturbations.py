@@ -28,21 +28,20 @@ Experiments using the XCDM model and likelihoods that do not depend on perturbat
 
 import os
 
-from numcosmo_py import Ncm, Nc
-from numcosmo_py.sampling.esmcmc import (
-    create_esmcmc,
-    WalkerTypes,
-    InterpolationMethod,
-    InterpolationKernel,
-)
-
+from numcosmo_py import Nc, Ncm
 from numcosmo_py.datasets.hicosmo import (
-    SNIaID,
     BAOID,
     HID,
-    add_snia_likelihood,
+    SNIaID,
     add_bao_likelihood,
     add_h_likelihood,
+    add_snia_likelihood,
+)
+from numcosmo_py.sampling.esmcmc import (
+    InterpolationKernel,
+    InterpolationMethod,
+    WalkerTypes,
+    create_esmcmc,
 )
 
 

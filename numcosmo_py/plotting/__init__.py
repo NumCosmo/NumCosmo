@@ -23,30 +23,26 @@
 
 """NumCosmoPy plotting utilities."""
 
+import dataclasses
 import os
 import warnings
-import dataclasses
 from collections.abc import Sequence
 
+import matplotlib.artist
+import matplotlib.figure
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
-import matplotlib.figure
-import matplotlib.artist
-import matplotlib.pyplot as plt
 
 from numcosmo_py import Ncm
+
 from .tools import set_rc_params_article
 
 original_display = os.environ.get("DISPLAY", "")
 if original_display is not None:
     os.environ["DISPLAY"] = ":0"
-# pylint: disable=wrong-import-position
-# pylint: disable=wrong-import-order
-import getdist  # noqa: E402
-import getdist.plots  # noqa: E402
-
-# pylint: enable=wrong-import-order
-# pylint: enable=wrong-import-position
+import getdist
+import getdist.plots
 
 if original_display is not None:
     os.environ["DISPLAY"] = original_display
@@ -189,7 +185,7 @@ def mcat_to_catalog_data(
         indices_array = np.arange(mcat.ncols())
 
     # Get the -2 log likelihood column
-    m2lnL: int = mcat.get_m2lnp_var()  # pylint:disable=invalid-name
+    m2lnL: int = mcat.get_m2lnp_var()
     posterior: np.ndarray = 0.5 * rows[:, m2lnL]
     indices_array = indices_array[indices_array != m2lnL]
 
@@ -203,8 +199,8 @@ def mcat_to_catalog_data(
         indices_array = indices_array[indices_array != weight_index]
 
     rows = rows[:, indices_array]
-    param_symbols: list[str] = list(mcat.col_symb(int(i)) for i in indices_array)
-    param_names: list[str] = list(mcat.col_name(int(i)) for i in indices_array)
+    param_symbols: list[str] = [mcat.col_symb(int(i)) for i in indices_array]
+    param_names: list[str] = [mcat.col_name(int(i)) for i in indices_array]
 
     bestfit_row = mcat.get_bestfit_row()
     if bestfit_row is None:

@@ -65,7 +65,6 @@ def _clik(relpath):
 
 
 def _mset():
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
     from numcosmo_py.experiments.planck18 import mset_set_parameters, Planck18Types
 

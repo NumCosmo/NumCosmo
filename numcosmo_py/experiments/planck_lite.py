@@ -37,7 +37,7 @@ import os
 import numpy as np
 from astropy.io import fits
 
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Nc, Ncm
 
 # plik v22 fixed layout.
 PLMIN = 30
@@ -68,10 +68,7 @@ def find_baseline_file(relpath: str) -> str | None:
     Uses the same base directory as the clik data downloader
     (``ncm_cfg_get_fullpath_base``), falling back to ``~/.numcosmo``.
     """
-    try:
-        base = Ncm.cfg_get_fullpath_base()
-    except Exception:  # pylint: disable=broad-except
-        base = os.path.expanduser("~/.numcosmo")
+    base = Ncm.cfg_get_fullpath_base()
     candidate = os.path.join(base, relpath)
     if os.path.exists(candidate):
         return candidate

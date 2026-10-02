@@ -39,7 +39,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from scipy.integrate import quad
-from scipy.special import (  # pylint: disable=no-name-in-module
+from scipy.special import (
     erf,
     erfc,
     spherical_jn,

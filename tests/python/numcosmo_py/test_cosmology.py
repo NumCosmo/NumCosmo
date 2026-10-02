@@ -151,7 +151,6 @@ def test_cosmology_missing_dist():
 
     # Create cosmology and then manually set _dist to None to test the exception
     cosmology = Cosmology(cosmo=cosmo, dist=dist)
-    # pylint: disable-next=protected-access
     cosmology._dist = None
 
     with pytest.raises(AttributeError, match="Distance not set."):
@@ -189,7 +188,6 @@ def test_cosmology_lazy_dist_preparation():
     # Create Cosmology object - but override prepare() to prevent automatic prep
     cosmology = Cosmology.__new__(Cosmology)
     cosmology.cosmo = cosmo
-    # pylint: disable=protected-access
     cosmology._dist = dist
     cosmology._ps_ml = None
     cosmology._ps_mnl = None
@@ -197,7 +195,6 @@ def test_cosmology_lazy_dist_preparation():
     cosmology._dist.compute_inv_comoving(True)
     cosmology.recomb = Nc.RecombSeager()
     cosmology._mset = Ncm.MSet.new_array([cosmo])
-    # pylint: enable=protected-access
 
     # Access dist property should trigger preparation
     dist_obj = cosmology.dist

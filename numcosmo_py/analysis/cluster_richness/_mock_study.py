@@ -32,15 +32,15 @@ from rich.table import Table as RichTable
 
 from numcosmo_py import Nc, Ncm
 
+from ._analyzer import ClusterData, CutAnalyzer
+from ._database import BestfitDatabase
 from ._parameters import (
     CutAnalysisResult,
     dup_model,
-    model_params_as_list,
     get_model_param_names,
+    model_params_as_list,
 )
 from ._utils import PARAM_FORMAT
-from ._analyzer import CutAnalyzer, ClusterData
-from ._database import BestfitDatabase
 
 
 def _get_default_console() -> Console:

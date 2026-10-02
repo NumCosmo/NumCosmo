@@ -36,17 +36,19 @@ This module builds ``NcDataClusterWLFactor`` experiments, on the
   ``NcGalaxyRedshiftFactorSpline`` and the chosen ``shape_dist`` scheme.
 """
 
-from typing import Annotated, Any, Sequence
-from enum import StrEnum, auto
+from collections.abc import Sequence
 from dataclasses import dataclass
+from enum import StrEnum, auto
+from typing import Annotated, Any, Self
+
 import numpy as np
-from pydantic import BaseModel, Field, ConfigDict, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from pydantic_core import core_schema
 from rich.console import Console
 from rich.table import Table
 from tabulate import tabulate
 
-from numcosmo_py import Ncm, Nc, parse_options_strict, GEnum
+from numcosmo_py import GEnum, Nc, Ncm, parse_options_strict
 
 DEFAULT_TABLE_FMT = "rounded_grid"
 
@@ -70,8 +72,6 @@ FOOTPRINT_PAD_DEG = 1.0e-9
 
 class EllipConv(GEnum):
     """Ellipticity convention."""
-
-    # pylint: disable=no-member
     TRACE = Nc.GalaxyWLObsEllipConv.TRACE
     TRACE_DET = Nc.GalaxyWLObsEllipConv.TRACE_DET
 
@@ -91,8 +91,6 @@ class EllipConv(GEnum):
 
 class EllipCoord(GEnum):
     """Ellipticity coordinate system."""
-
-    # pylint: disable=no-member
     CARTESIAN = Nc.WLEllipticityFrame.CARTESIAN
     CELESTIAL = Nc.WLEllipticityFrame.CELESTIAL
 
@@ -112,8 +110,6 @@ class EllipCoord(GEnum):
 
 class MassDef(GEnum):
     """Mass definition for the halo mass summary."""
-
-    # pylint: disable=no-member
     CRITICAL = Nc.HaloMassSummaryMassDef.CRITICAL
     MEAN = Nc.HaloMassSummaryMassDef.MEAN
     VIRIAL = Nc.HaloMassSummaryMassDef.VIRIAL
@@ -134,8 +130,6 @@ class MassDef(GEnum):
 
 class LSSTVariant(GEnum):
     """LSST-SRD redshift-distribution variant."""
-
-    # pylint: disable=no-member
     Y1_SOURCE = Nc.GalaxyRedshiftPopLSSTSRDType.Y1_SOURCE
     Y1_LENS = Nc.GalaxyRedshiftPopLSSTSRDType.Y1_LENS
     Y10_SOURCE = Nc.GalaxyRedshiftPopLSSTSRDType.Y10_SOURCE
@@ -161,8 +155,6 @@ class WLCatalogID(GEnum):
     Presently all Subaru HSC-SSP PDR1 cluster fields; the identifiers carry the
     survey and data release so that catalogs from elsewhere can join them.
     """
-
-    # pylint: disable=no-member
     HSC_PDR1_HWL16A_002 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_002
     HSC_PDR1_HWL16A_007 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_007
     HSC_PDR1_HWL16A_060 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_060
@@ -265,7 +257,7 @@ class GalaxyZGen(StrEnum):
 
     COMPOSED = (auto(), GalaxyZGenComposed)
 
-    def __new__(cls, value: str, _model_cls: type[GalaxyZGenTypes]) -> "GalaxyZGen":
+    def __new__(cls, value: str, _model_cls: type[GalaxyZGenTypes]) -> Self:
         """Create a new instance of the enum.
 
         Initialize the enum including help text and model class.
@@ -420,8 +412,10 @@ class GalaxyShapeFactorGenSeriesLensed(GalaxyShapeFactorGenBase):
         """Return the help text for this scheme."""
         return [
             "GalaxyShapeFactorGenSeriesLensed",
-            f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
-            f"series_trunc_order={DEFAULT_SHAPE_SERIES_TRUNC_ORDER}",
+            (
+                f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
+                f"series_trunc_order={DEFAULT_SHAPE_SERIES_TRUNC_ORDER}"
+            ),
         ]
 
     def requires_sigma(self) -> bool:
@@ -465,10 +459,12 @@ class GalaxyShapeFactorGenFixedQuad(GalaxyShapeFactorGenBase):
         """Return the help text for this scheme."""
         return [
             "GalaxyShapeFactorGenFixedQuad",
-            f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
-            f"use_marginal_spline={DEFAULT_SHAPE_USE_MARGINAL_SPLINE}, "
-            f"spline_g_max={DEFAULT_SHAPE_SPLINE_G_MAX}, "
-            f"spline_rel_err={DEFAULT_SHAPE_SPLINE_REL_ERR}",
+            (
+                f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
+                f"use_marginal_spline={DEFAULT_SHAPE_USE_MARGINAL_SPLINE}, "
+                f"spline_g_max={DEFAULT_SHAPE_SPLINE_G_MAX}, "
+                f"spline_rel_err={DEFAULT_SHAPE_SPLINE_REL_ERR}"
+            ),
         ]
 
     def requires_sigma(self) -> bool:
@@ -514,9 +510,7 @@ class ShapeFactorGen(StrEnum):
     FIXED_QUAD = (auto(), GalaxyShapeFactorGenFixedQuad)
     LAPLACE = (auto(), GalaxyShapeFactorGenLaplace)
 
-    def __new__(
-        cls, value: str, _model_cls: type[GalaxyShapeFactorGenTypes]
-    ) -> "ShapeFactorGen":
+    def __new__(cls, value: str, _model_cls: type[GalaxyShapeFactorGenTypes]) -> Self:
         """Create a new instance of the enum.
 
         Initialize the enum including help text and model class.
@@ -804,7 +798,7 @@ class GalaxyPopGen(StrEnum):
     GAUSS_LOCAL = (auto(), GalaxyPopGenGaussLocal)
     BETA = (auto(), GalaxyPopGenBeta)
 
-    def __new__(cls, value: str, _model_cls: type[GalaxyPopGenTypes]) -> "GalaxyPopGen":
+    def __new__(cls, value: str, _model_cls: type[GalaxyPopGenTypes]) -> Self:
         """Create a new instance of the enum.
 
         Initialize the enum including help text and model class.
@@ -845,8 +839,6 @@ class HaloProfileType(StrEnum):
 
 class IntegMethod(GEnum):
     """Cluster WL redshift-integral method (``NcDataClusterWLIntegMethod``)."""
-
-    # pylint: disable=no-member
     LNINT = Nc.DataClusterWLIntegMethod.LNINT
     FIXED_NODES = Nc.DataClusterWLIntegMethod.FIXED_NODES
     CUBATURE = Nc.DataClusterWLIntegMethod.CUBATURE
@@ -1010,15 +1002,22 @@ class ClusterModel(BaseModel):
         self._halo_position.prepare(cosmo)
 
 
+# Defaults shared by every call that omits the argument; all four are frozen.
+DEFAULT_Z_GEN = GalaxyZGenComposed()
+DEFAULT_SHAPE_GEN = GalaxyShapeFactorGenVarAdd()
+DEFAULT_POP_GEN = GalaxyPopGenGauss()
+DEFAULT_INTEG_OPTIONS = IntegMethodOptions()
+
+
 class GalaxyDistributionModel:
     """Galaxy distribution model parameters."""
 
     def __init__(
         self,
         galaxies: GalaxyDistributionData,
-        z_gen: GalaxyZGenTypes = GalaxyZGenComposed(),
-        shape_gen: GalaxyShapeFactorGenTypes = GalaxyShapeFactorGenVarAdd(),
-        pop_gen: GalaxyPopGenTypes = GalaxyPopGenGauss(),
+        z_gen: GalaxyZGenTypes = DEFAULT_Z_GEN,
+        shape_gen: GalaxyShapeFactorGenTypes = DEFAULT_SHAPE_GEN,
+        pop_gen: GalaxyPopGenTypes = DEFAULT_POP_GEN,
     ) -> None:
         """Initialize the galaxy distribution model."""
         check_shape_pop_compat(shape_gen, pop_gen)
@@ -1044,7 +1043,7 @@ class GalaxyDistributionModel:
         cosmo: Nc.HICosmo,
         cluster: ClusterModel,
         rng: Ncm.RNG,
-        integ_options: IntegMethodOptions = IntegMethodOptions(),
+        integ_options: IntegMethodOptions = DEFAULT_INTEG_OPTIONS,
     ) -> tuple[Nc.DataClusterWLFactor, Ncm.MSet]:
         """Generate the galaxy data.
 
@@ -1422,10 +1421,10 @@ def load_cluster_wl(
     # together.
     ra_bad = not (
         gal_ra_min <= cluster_ra <= gal_ra_max
-    )  # pylint: disable=superfluous-parens
+    )
     dec_bad = not (
         gal_dec_min <= cluster_dec <= gal_dec_max
-    )  # pylint: disable=superfluous-parens
+    )
 
     if ra_bad or dec_bad:
         raise ValueError(

@@ -34,8 +34,6 @@ from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
-# pylint: disable=no-member
-
 
 class GTestA(GObject.Object):
     """Test class for serialization."""

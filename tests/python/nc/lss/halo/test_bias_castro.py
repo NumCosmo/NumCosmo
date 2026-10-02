@@ -319,7 +319,6 @@ def test_eval_finite_for_extreme_masses() -> None:
 
 def _regenerate() -> None:  # pragma: no cover - developer tool
     """Rewrite the truth table from CCToolkit via complex-step differentiation."""
-    # pylint: disable=import-outside-toplevel
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(

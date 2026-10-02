@@ -33,7 +33,7 @@ derived-quantity support in `numcosmo_py.plotting.derived`.
 from __future__ import annotations
 
 import enum
-from typing import Callable, List
+from collections.abc import Callable
 
 from . import Ncm
 
@@ -74,7 +74,7 @@ def resolve_param(
 
 
 def parse_variable_bindings(
-    mset: Ncm.MSet, nadd_vals: int, bindings: List[str], option_name: str
+    mset: Ncm.MSet, nadd_vals: int, bindings: list[str], option_name: str
 ) -> dict[str, int]:
     """Parse repeated "name=parameter" (or bare "parameter") bindings.
 
@@ -170,7 +170,7 @@ def asymmetric_bounds(
 
 def stat_center_and_bounds(
     stat: DerivedStat, sd1: Ncm.StatsDist1d, bestfit_center: float
-) -> tuple[float, List[tuple[float, float]]]:
+) -> tuple[float, list[tuple[float, float]]]:
     """Compute the (center, [(lo, hi) per SIGMA_LEVELS]) reported for `stat`.
 
     `bestfit_center` is the quantity evaluated at the catalog's best-fit row;

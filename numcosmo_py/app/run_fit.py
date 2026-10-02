@@ -27,19 +27,19 @@ import dataclasses
 import resource
 import sys
 import time
-from typing import Annotated, Tuple
+from typing import Annotated
 
 import typer
 
 from .. import Ncm
-from .loading import LoadExperiment
 from ..sampling import (
-    check_runner_algorithm,
     FitGradType,
     FitRunMessages,
     FitRunner,
     NcmFitLogger,
+    check_runner_algorithm,
 )
+from .loading import LoadExperiment
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -153,7 +153,7 @@ class RunFit(RunCommonOptions):
     """Computes the best fit of the model to the data."""
 
     restart: Annotated[
-        Tuple[float, float],
+        tuple[float, float],
         typer.Option(
             help=(
                 "Restart the fit until the given the value of m2lnL varies less"

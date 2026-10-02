@@ -23,9 +23,10 @@
 
 """NumCosmo cosmology class."""
 
-from typing import TypedDict
 from enum import StrEnum
-from . import Ncm, Nc
+from typing import TypedDict
+
+from . import Nc, Ncm
 
 
 class ParameterDesc(TypedDict, total=False):

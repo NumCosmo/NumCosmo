@@ -34,7 +34,7 @@ import os
 import numpy as np
 from astropy.io import fits
 
-from numcosmo_py import Ncm, Nc, GLib
+from numcosmo_py import GLib, Nc, Ncm
 
 PLIK_TT_RELPATH = os.path.join(
     "baseline", "plc_3.0", "hi_l", "plik", "plik_rd12_HM_v22_TT.clik"

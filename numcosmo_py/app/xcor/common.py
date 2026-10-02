@@ -32,8 +32,8 @@ through inheritance rather than through duplicated option blocks.
 import dataclasses
 import enum
 import time
-from typing import Annotated, Any
 from pathlib import Path
+from typing import Annotated, Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,23 +45,23 @@ from numcosmo_py.cosmology import Cosmology
 from .kernels import (
     CMBISWSource,
     CMBLensingSource,
-    _KernelRadialConfig,
-    parse_kernel_spec,
-    LSSTBinType,
-    KernelCMBLensingConfig,
-    KernelCMBISWConfig,
-    KernelTSZConfig,
-    KernelNumberCountsConfig,
-    KernelWeakLensingConfig,
     KernelClusterTophatConfig,
+    KernelCMBISWConfig,
+    KernelCMBLensingConfig,
+    KernelConfigTypes,
+    KernelNumberCountsConfig,
     KernelRadialGaussConfig,
-    KernelRadialTophatConfig,
-    KernelRadialTophatSmoothConfig,
-    KernelRadialStudentTConfig,
-    KernelRadialPowerExpConfig,
     KernelRadialLensingConfig,
     KernelRadialMultiConfig,
-    KernelConfigTypes,
+    KernelRadialPowerExpConfig,
+    KernelRadialStudentTConfig,
+    KernelRadialTophatConfig,
+    KernelRadialTophatSmoothConfig,
+    KernelTSZConfig,
+    KernelWeakLensingConfig,
+    LSSTBinType,
+    _KernelRadialConfig,
+    parse_kernel_spec,
 )
 from .plotting import style_ratio_axis
 
@@ -910,7 +910,7 @@ class XcorKernelCommon:
         """
         print("Plotting C_ell...")
 
-        colors = plt.cm.tab10.colors  # type: ignore # pylint: disable=no-member
+        colors = plt.cm.tab10.colors  # type: ignore
         ax1: plt.Axes
 
         if cls_alt is not None:

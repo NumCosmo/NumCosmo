@@ -200,8 +200,7 @@ def _regenerate() -> None:  # pragma: no cover - developer tool
     Requires CCToolkit on the path. ``hmf.py`` is pure numpy/scipy, so it is
     loaded directly to avoid the package __init__ pulling in CAMB.
     """
-    # pylint: disable=too-many-locals
-    import importlib.util  # pylint: disable=import-outside-toplevel
+    import importlib.util
 
     spec = importlib.util.spec_from_file_location(
         "cc_hmf", "../CCToolkit/cctoolkit/hmf.py"

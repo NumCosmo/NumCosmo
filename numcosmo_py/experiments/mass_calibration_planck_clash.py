@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # mass_calibration_planck_clash.py
 #
@@ -24,9 +23,7 @@
 
 """Old Planck-CLASH mass calibration experiment."""
 
-from typing import Tuple
-
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Nc, Ncm
 
 Ncm.cfg_init()
 
@@ -56,7 +53,7 @@ def create_cosmology() -> Nc.HICosmo:
 
 def create_cluster_abundance(
     Tinker_lin_interp=True,
-) -> Tuple[Nc.ClusterAbundance, Nc.ClusterRedshiftNodist, Nc.ClusterMassPlCL]:
+) -> tuple[Nc.ClusterAbundance, Nc.ClusterRedshiftNodist, Nc.ClusterMassPlCL]:
     """Create a cluster abundance."""
     # Cosmological distances
     dist = Nc.Distance.new(4.0)

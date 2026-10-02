@@ -24,14 +24,14 @@
 """CLI command for viewing cross-correlation kernels."""
 
 import dataclasses
-from typing import Annotated
 from pathlib import Path
+from typing import Annotated
 
-import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-from matplotlib.lines import Line2D
+import matplotlib.pyplot as plt
 import numpy as np
 import typer
+from matplotlib.lines import Line2D
 
 from numcosmo_py import Nc
 
@@ -496,7 +496,7 @@ class ViewKernel(XcorKernelCommon):
         print("Plotting results...")
 
         # Define color palette for different kernels
-        colors = plt.cm.tab10.colors  # type: ignore # pylint: disable=no-member
+        colors = plt.cm.tab10.colors  # type: ignore
         ax1: plt.Axes
         ax2: plt.Axes
 

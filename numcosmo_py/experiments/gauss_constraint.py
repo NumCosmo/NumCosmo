@@ -28,23 +28,20 @@ constraint.
 """
 
 from pathlib import Path
-from typing import Tuple
 
 import numpy as np
 
 from numcosmo_py import Ncm
+from numcosmo_py.external.minimax_tilting_sampler import TruncatedMVN
 from numcosmo_py.sampling.esmcmc import (
-    create_esmcmc,
-    WalkerTypes,
     InterpolationKernel,
     InterpolationMethod,
+    WalkerTypes,
+    create_esmcmc,
 )
 
 
-from numcosmo_py.external.minimax_tilting_sampler import TruncatedMVN
-
-
-def create_mset(dim: int) -> Tuple[Ncm.MSet, Ncm.ModelMVND]:
+def create_mset(dim: int) -> tuple[Ncm.MSet, Ncm.ModelMVND]:
     """Create a MSet with a Gaussian distribution with positivity constraint."""
     mgc = Ncm.ModelMVND.new(dim)
     for i in range(dim):
@@ -124,10 +121,10 @@ def sample_with_tmvn(
         f.write(f"#   Mean : {' '.join(mean_array)}\n")
         f.write(f"#   Stdev: {' '.join(stdev_array)}\n")
 
-        for i in range(sv.nitens()):
-            f.write(
-                " ".join([f"{v: 22.15g}" for v in sv.peek_row(i).dup_array()]) + "\n"
-            )
+        f.writelines(
+            " ".join([f"{v: 22.15g}" for v in sv.peek_row(i).dup_array()]) + "\n"
+            for i in range(sv.nitens())
+        )
 
     return filename
 

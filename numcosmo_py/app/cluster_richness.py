@@ -32,23 +32,23 @@ from astropy.table import Table
 from rich.panel import Panel
 from rich.table import Table as RichTable
 
-
 from numcosmo_py import Nc
 from numcosmo_py.analysis.cluster_richness import (
-    RichnessModelType,
-    CutAnalyzer,
-    ClusterData,
-    MockStudy,
-    get_model_param_names,
-    model_params_as_list,
     PARAM_FORMAT,
+    ClusterData,
+    CutAnalysisResult,
+    CutAnalyzer,
+    MockStudy,
+    RichnessModelType,
     compute_binned_statistics,
+    get_model_param_names,
+    mean_lnR_truncated,
+    model_params_as_list,
     plot_diagnostic_summary,
     plot_residuals_summary,
-    mean_lnR_truncated,
     std_lnR_truncated,
-    CutAnalysisResult,
 )
+
 from .logging import AppLogging
 
 

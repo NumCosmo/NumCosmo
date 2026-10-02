@@ -23,8 +23,7 @@ from astropy.table import Table, vstack
 
 from numcosmo_py import Nc, Ncm
 
-from . import sky_match
-from . import _cosmology, _geometry
+from . import _cosmology, _geometry, sky_match
 
 
 class CompletenessModel(Protocol):
@@ -934,9 +933,7 @@ class MockGenerator:
             temp_table["RA"] = ra_corrected
             temp_table["DEC"] = dec_g
             temp_table["z"] = z_galaxy
-            temp_table["is_central"] = [
-                True if j < n_cen else False for j in range(total_gals)
-            ]
+            temp_table["is_central"] = [j < n_cen for j in range(total_gals)]
             temp_table[f"{object_type}_RA"] = np.full(total_gals, object_ra)
             temp_table[f"{object_type}_DEC"] = np.full(total_gals, object_dec)
             temp_table[f"{object_type}_z"] = np.full(total_gals, object_z)

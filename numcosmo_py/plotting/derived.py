@@ -30,13 +30,11 @@ dimension alongside the catalog's own parameters.
 
 from __future__ import annotations
 
-from typing import List
-
 import numpy as np
 
 from .. import Ncm
 from ..catalog_stats import parse_variable_bindings
-from ..safe_eval import compile_expr, SafeExprError
+from ..safe_eval import SafeExprError, compile_expr
 from . import CatalogData
 
 
@@ -45,7 +43,7 @@ def add_derived_column(
     mset: Ncm.MSet,
     nadd_vals: int,
     mcat: Ncm.MSetCatalog,
-    variable: List[str],
+    variable: list[str],
     expr: str,
     symbol: str | None,
     name: str,

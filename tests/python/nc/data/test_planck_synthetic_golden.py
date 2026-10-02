@@ -55,7 +55,6 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 from python.fixtures_planck import (
     FixedClBoltzmann,
     make_commander_cldf,

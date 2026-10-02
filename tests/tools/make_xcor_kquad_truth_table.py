@@ -53,7 +53,7 @@ sys.path.insert(
     0, str(pathlib.Path(__file__).resolve().parents[1] / "python" / "nc" / "xcor")
 )
 
-import cases_k_integral as cases  # noqa: E402  pylint: disable=wrong-import-position
+import cases_k_integral as cases  # noqa: E402
 
 # The k range each pair is integrated over.
 #

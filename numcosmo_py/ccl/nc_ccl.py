@@ -26,7 +26,7 @@
 import numpy as np
 import pyccl
 
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Nc, Ncm
 from numcosmo_py.cosmology import Cosmology
 
 # CCL uses an older release of CODATA
@@ -50,9 +50,6 @@ def _get_neutrino_masses(ccl_cosmo: pyccl.Cosmology) -> tuple[int, list[float]]:
     m_nu = list(ccl_cosmo["m_nu"])
 
     return massnu_length, m_nu
-
-
-# pylint:disable-next=too-many-arguments,too-many-locals
 def create_nc_obj(
     ccl_cosmo: pyccl.Cosmology,
     prec: float = 1.0e-7,
@@ -93,8 +90,6 @@ def create_nc_obj(
     # Creating the transfer/linear power spectrum
     tf = None
     ps_ml = None
-
-    # pylint: disable=protected-access
     if ccl_cosmo._config_init_kwargs["transfer_function"] == "eisenstein_hu":
         tf = Nc.TransferFuncEH.new()
         tf.props.CCL_comp = True
@@ -106,7 +101,6 @@ def create_nc_obj(
             + ccl_cosmo._config_init_kwargs["transfer_function"]  # noqa: W503
             + "` not supported"  # noqa: W503
         )
-    # pylint: enable=protected-access
 
     ps_ml.set_kmin(k_min)
     ps_ml.set_kmax(k_max)
@@ -123,13 +117,11 @@ def create_nc_obj(
         hiprim.param_set_by_name("ln10e10ASA", np.log(1.0e10 * A_s * fact))
 
     ps_mln = None
-    # pylint: disable=protected-access
     if ccl_cosmo._config_init_kwargs["matter_power_spectrum"] == "halofit":
         ps_mln = Nc.PowspecMNLHaloFit.new(ps_ml, ps_nln_z_max, prec)
         ps_mln.set_kmin(k_min)
         ps_mln.set_kmax(k_max)
         ps_mln.prepare(cosmo)
-    # pylint: enable=protected-access
 
     psf = None
     if ps_ml:
@@ -138,8 +130,6 @@ def create_nc_obj(
         # is compared with CCL at prec relative to its value, so ask a tenth of prec.
         psf.set_reltol(0.1 * prec)
         psf.set_best_lnr0()
-
-    # pylint: enable=protected-access
     return Cosmology(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mln, psf_tophat=psf)
 
 
@@ -223,7 +213,7 @@ class CCLParams:
 
 
 # Missing function in CCL
-def dsigmaM_dlnM(cosmo, M, a):  # pylint: disable=invalid-name
+def dsigmaM_dlnM(cosmo, M, a):
     """Compute the logarithmic derivative of the mass variance.
 
     Compute the logarithmic derivative of the mass variance with respect to
@@ -231,13 +221,11 @@ def dsigmaM_dlnM(cosmo, M, a):  # pylint: disable=invalid-name
     """
     cosmo.compute_sigma()
 
-    logM = np.log10(np.atleast_1d(M))  # pylint: disable=invalid-name
+    logM = np.log10(np.atleast_1d(M))
     status = 0
-    # pylint: disable-next=invalid-name
     dsigMdlnM, status = pyccl.lib.dlnsigM_dlogM_vec(
         cosmo.cosmo, a, logM, len(logM), status
     )
     if np.ndim(M) == 0:
-        # pylint: disable-next=invalid-name
         dsigMdlnM = dsigMdlnM[0]
     return dsigMdlnM

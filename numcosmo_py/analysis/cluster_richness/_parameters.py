@@ -26,7 +26,7 @@ subclass instances (NcClusterMassAscaso, NcClusterMassExt, etc.).
 from dataclasses import dataclass
 from typing import Any, TypeVar
 
-from numcosmo_py import Nc, Ncm, GLib
+from numcosmo_py import GLib, Nc, Ncm
 
 # Type variable for generic model duplication
 _T = TypeVar("_T", bound=Ncm.Model)

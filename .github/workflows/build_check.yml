@@ -78,7 +78,7 @@ jobs:
     - name: Ensure clear Jupyter Notebooks
       if: ${{ !cancelled() }}
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
-    # uncrustify, black and flake8 come from the lock environment. environment.yml
+    # uncrustify, black and ruff come from the lock environment. environment.yml
     # leaves them unpinned, so the weekly lock update moves them to their latest
     # release.
     - uses: ./.github/actions/setup-miniforge
@@ -96,11 +96,11 @@ jobs:
       shell: bash -el {0}
       run: |
         black --check numcosmo_py
-    - name: Running flake8
+    - name: Running ruff
       if: ${{ !cancelled() }}
       shell: bash -el {0}
       run: |
-        flake8 numcosmo_py
+        ruff check numcosmo_py
 
   lint-built:
     name: (lint, built)
@@ -318,9 +318,6 @@ jobs:
           python example_simple.py
           python example_cbe.py
           numcosmo generate planck18 test_exp_gen.yaml --data-type TT
-      #- name: Running pylint
-      #  run: |
-      #    pylint --rcfile .pylintrc numcosmo_py
       - name: Check NumCosmo
         run: meson test -v -C build --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ env.FAST_TEST_ARGS }} || (cat build/meson-logs/testlog.txt && exit 1)
       - name: Check NumCosmo (validation tier)

@@ -25,7 +25,7 @@ from this class.
 
 import dataclasses
 from pathlib import Path
-from typing import Annotated, IO
+from typing import IO, Annotated
 
 import typer
 from rich.console import Console
@@ -80,7 +80,8 @@ class AppLogging:
 
         self.console_io = None
         if self.log_file:
-            self.console_io = open(self.log_file, "w", encoding="utf-8")
+            # Kept open for the whole command; close_logging() closes it.
+            self.console_io = open(self.log_file, "w", encoding="utf-8")  # noqa: SIM115
 
         self.console = set_ncm_console(self.console_io, self.quite)
 

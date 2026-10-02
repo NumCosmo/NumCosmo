@@ -258,8 +258,8 @@ ago.
 All C files, including headers, must be formatted with uncrustify using the
 provided configuration `numcosmo_uncrustify.cfg`. Formatting is checked in CI.
 
-Python code is checked with the configured `flake8`, `pylint`, and `mypy`
-settings (see `.flake8`, `.pylintrc`, `.mypy.ini`).
+Python code is formatted with `black` and checked with `ruff` and `mypy`, using
+their configurations in `pyproject.toml` and `.mypy.ini`.
 
 ## CI conda environment
 

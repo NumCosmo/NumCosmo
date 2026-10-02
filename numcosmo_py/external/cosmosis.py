@@ -126,9 +126,9 @@ def convert_single_model(
         if p.section == sampling_parameters_section:
             model_builder.add_sparam_obj(convert_parameter(p, required_parameters))
 
-    FirecrownModel = model_builder.create()  # pylint: disable=invalid-name
+    FirecrownModel = model_builder.create()
     GObject.new(FirecrownModel)
-    NcmFirecrownModel = FirecrownModel.pytype  # pylint: disable=invalid-name
+    NcmFirecrownModel = FirecrownModel.pytype
     GObject.type_register(NcmFirecrownModel)
 
     model: Ncm.Model = NcmFirecrownModel()

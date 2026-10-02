@@ -23,8 +23,8 @@
 
 """Sampling module for numcosmo."""
 
-from typing import Union, Type, IO
 from enum import StrEnum, auto
+from typing import IO, ClassVar
 
 from rich.console import Console
 from rich.highlighter import RegexHighlighter
@@ -43,7 +43,7 @@ from rich.progress import (
 from rich.text import Text
 from rich.theme import Theme
 
-from .. import Ncm, GEnum
+from .. import GEnum, Ncm
 
 
 class FitRunner(GEnum):
@@ -83,12 +83,10 @@ class FitMCResampleType(GEnum):
 def get_algorithms(
     runner: FitRunner,
 ) -> (
-    Union[
-        Type[Ncm.FitNloptAlgorithm],
-        Type[Ncm.FitLevmarAlgos],
-        Type[Ncm.FitGSLMMSAlgos],
-        Type[Ncm.FitGSLMMAlgos],
-    ]
+    type[Ncm.FitNloptAlgorithm]
+    | type[Ncm.FitLevmarAlgos]
+    | type[Ncm.FitGSLMMSAlgos]
+    | type[Ncm.FitGSLMMAlgos]
     | None
 ):
     """Get algorithms for a given runner."""
@@ -120,7 +118,7 @@ class NcmHighlighter(RegexHighlighter):
     """Apply style to anything that looks like an email."""
 
     base_style = "Ncm."
-    highlights = [
+    highlights: ClassVar[list[str]] = [
         r"(?P<FitTypeFIXED>FIXED)",
         r"(?P<FitTypeFREE>FREE)",
         r"\b(?P<float>\d+(\.?\d+)?([eE][-+]?\d+)?)\b",
@@ -191,7 +189,7 @@ class NcmFitLogger:
         """Write progress to Rich."""
         self.console.print(message, end="")
 
-    def update_progress(self, _fit: Ncm.Fit, n: Union[int, float]):
+    def update_progress(self, _fit: Ncm.Fit, n: float):
         """Update progress bar."""
         total = self.progress.tasks[0].total
         assert self.task is not None

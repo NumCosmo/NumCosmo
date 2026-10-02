@@ -26,7 +26,7 @@
 import dataclasses
 from enum import StrEnum, auto
 from pathlib import Path
-from typing import Annotated, Union
+from typing import Annotated
 
 import typer
 
@@ -339,7 +339,7 @@ class RunMCMC(RunCommonOptions):
         if self.nwalkers == 0:
             self.nwalkers = 100 * (fparams_len + 1)
 
-        init_sampler: Union[Ncm.MSetTransKernGauss, Ncm.MSetTransKernCat]
+        init_sampler: Ncm.MSetTransKernGauss | Ncm.MSetTransKernCat
         if self.initial_points_sampler == IniSampler.GAUSS_MSET:
             init_sampler = Ncm.MSetTransKernGauss.new(0)
             init_sampler.set_mset(self.mset)

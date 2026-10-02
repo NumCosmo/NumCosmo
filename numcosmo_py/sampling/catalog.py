@@ -24,12 +24,12 @@
 """A simplified interface for the sampling catalogs."""
 
 import numpy as np
-
 from getdist import MCSamples
 
 from numcosmo_py import Ncm
-from .model import build_mset
+
 from ..plotting import mcat_to_catalog_data
+from .model import build_mset
 
 
 class Catalog:

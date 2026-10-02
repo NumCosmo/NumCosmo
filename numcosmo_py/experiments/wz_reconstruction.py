@@ -37,17 +37,17 @@ reconstruction priors, so injected and recovered curvature live on a common
 footing.
 """
 
-from typing import Any
-from enum import StrEnum, auto
-from abc import ABC, abstractmethod
-from pathlib import Path
 import dataclasses
 import math
+from abc import ABC, abstractmethod
+from enum import StrEnum, auto
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
 
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Nc, Ncm
 
 
 class BasisType(StrEnum):

@@ -29,12 +29,13 @@ This module contains dataclasses and subcommands to load data from files.
 
 import dataclasses
 import sys
+from pathlib import Path
 from typing import Annotated, cast
 
-from pathlib import Path
 import typer
 
 from numcosmo_py import Ncm
+
 from .logging import AppLogging
 
 
@@ -101,7 +102,8 @@ class LoadExperiment(AppLogging):
                 builders_file.absolute().as_posix()
             )
 
-            for model_builder_name in model_builders.keys():
+            # NcmObjDictStr is not iterable; keys() is its only key listing.
+            for model_builder_name in model_builders.keys():  # noqa: SIM118
                 model_builder: Ncm.ModelBuilder = cast(
                     Ncm.ModelBuilder, model_builders.get(model_builder_name)
                 )
@@ -132,8 +134,11 @@ class LoadExperiment(AppLogging):
             self.functions = functions
             for i in range(functions.len()):
                 function: Ncm.MSetFunc = cast(Ncm.MSetFunc, functions.get(i))
+                # A wrong object in the file is a data error, not a TypeError.
                 if not isinstance(function, Ncm.MSetFunc):
-                    raise RuntimeError(f"Invalid function file {functions_file}.")
+                    raise RuntimeError(  # noqa: TRY004
+                        f"Invalid function file {functions_file}."
+                    )
 
         if self.product_file:
             if self.output is not None:
@@ -252,7 +257,6 @@ def register_firecrown() -> None:
         sys.stderr = sys.__stderr__
 
     try:
-        # pylint: disable-next=import-outside-toplevel,unused-import
         import firecrown.connector.numcosmo.numcosmo  # noqa: F401
     except ImportError:
         pass

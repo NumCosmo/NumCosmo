@@ -23,23 +23,17 @@
 
 """Create a new ensemble sampler object."""
 
-from typing import Union
-
-from numcosmo_py import Ncm, GEnum
+from numcosmo_py import GEnum, Ncm
 
 
 class InterpolationMethod(GEnum):
     """Possible interpolation methods Ncm.StatsDist."""
-
-    # pylint: disable=no-member
     KDE = Ncm.FitESMCMCWalkerAPESMethod.KDE
     VKDE = Ncm.FitESMCMCWalkerAPESMethod.VKDE
 
 
 class InterpolationKernel(GEnum):
     """Possible interpolation kernels for Ncm.StatsDist."""
-
-    # pylint: disable=no-member
     CAUCHY = Ncm.FitESMCMCWalkerAPESKType.CAUCHY
     ST3 = Ncm.FitESMCMCWalkerAPESKType.ST3
     GAUSS = Ncm.FitESMCMCWalkerAPESKType.GAUSS
@@ -48,8 +42,6 @@ class InterpolationKernel(GEnum):
 
 class CrossValidationMethod(GEnum):
     """Cross validation methods for Ncm.StatsDist."""
-
-    # pylint: disable=no-member
     NONE = Ncm.StatsDistCV.NONE
     SPLIT_M2LNP = Ncm.StatsDistCV.SPLIT_M2LNP
     SPLIT_ACCEPT = Ncm.StatsDistCV.SPLIT_ACCEPT
@@ -88,7 +80,7 @@ def create_stats_dist(
     :return: A new Ncm.StatsDist object.
     """
 
-    kernel: Union[Ncm.StatsDistKernelST, Ncm.StatsDistKernelGauss]
+    kernel: Ncm.StatsDistKernelST | Ncm.StatsDistKernelGauss
     if interpolation_kernel == InterpolationKernel.CAUCHY:
         kernel = Ncm.StatsDistKernelST.new(dim, 1.0)
     elif interpolation_kernel == InterpolationKernel.ST3:

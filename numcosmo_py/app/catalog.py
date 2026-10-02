@@ -23,38 +23,38 @@
 
 """NumCosmo APP subcommands to analyze catalogs."""
 
-import math
 import dataclasses
-from typing import Annotated, List
+import math
 from pathlib import Path
-import typer
-from rich.table import Table
-from rich.text import Text
-from rich.progress import track
-import numpy as np
+from typing import Annotated
 
 import matplotlib.pyplot as plt
+import numpy as np
+import typer
 from matplotlib.colors import LogNorm
+from rich.progress import track
+from rich.table import Table
+from rich.text import Text
 
 from .. import Ncm
-from ..interpolation.stats_dist import (
-    create_stats_dist,
-    CrossValidationMethod,
-    InterpolationKernel,
-    InterpolationMethod,
-)
-from ..plotting.tools import set_rc_params_article, confidence_ellipse
-from ..safe_eval import compile_expr, SafeExprError
 from ..catalog_stats import (
     DerivedStat,
     parse_variable_bindings,
     resolve_param,
     stat_center_and_bounds,
 )
-from .loading import LoadCatalog, LoadExperiment, LoadedCatalog, load_catalog
-from .logging import AppLogging
+from ..interpolation.stats_dist import (
+    CrossValidationMethod,
+    InterpolationKernel,
+    InterpolationMethod,
+    create_stats_dist,
+)
 from ..plotting import mcat_to_catalog_data, plot_mcsamples
 from ..plotting.derived import add_derived_column
+from ..plotting.tools import confidence_ellipse, set_rc_params_article
+from ..safe_eval import SafeExprError, compile_expr
+from .loading import LoadCatalog, LoadedCatalog, LoadExperiment, load_catalog
+from .logging import AppLogging
 
 TAU_FLAG_CODES = (
     (Ncm.StatsAcorrDiag.SHORT_CHAIN, "S"),
@@ -108,7 +108,7 @@ def _keff_legend() -> Table:
     return legend
 
 
-def _sampler_options(options: str | None) -> List[tuple[str, str]]:
+def _sampler_options(options: str | None) -> list[tuple[str, str]]:
     """The sampler options as (name, value) pairs, in the order the sampler wrote them.
 
     The sampler writes them as a colon separated list of ``name=value``; anything that
@@ -659,7 +659,7 @@ class CalibrateCatalog(LoadCatalog):
         super().__post_init__()
 
         mcat = self.mcat
-        m2lnL_id = mcat.get_m2lnp_var()  # pylint: disable-msg=invalid-name
+        m2lnL_id = mcat.get_m2lnp_var()
         mcat_len = mcat.len()
 
         nwalkers = self.nchains
@@ -762,15 +762,13 @@ class CalibrateCatalog(LoadCatalog):
         self.console.print(main_table)
 
         if self.plot_2d:
-            for a in range(nvar):  # pylint: disable-msg=invalid-name
-                for b in range(a + 1, nvar):  # pylint: disable-msg=invalid-name
+            for a in range(nvar):
+                for b in range(a + 1, nvar):
                     indices = np.array([a, b])
                     self.console.print(f"# {indices}", markup=False)
 
                     _, axis = plt.subplots(1, 1, figsize=(16, 8))
-
-                    # pylint: disable-next=invalid-name
-                    for ii in range(0, int(sdist.get_n_kernels())):
+                    for ii in range(int(sdist.get_n_kernels())):
                         y_i, cov_i, _, w_i = sdist.get_Ki(ii)
                         mean = np.array(y_i.dup_array())
                         cov = np.array(
@@ -807,7 +805,7 @@ class PlotCorner(AppLogging):
     """
 
     mcmc_file: Annotated[
-        List[Path],
+        list[Path],
         typer.Argument(
             help=(
                 "Path(s) to the MCMC catalog file(s). Give more than one to "
@@ -840,14 +838,14 @@ class PlotCorner(AppLogging):
     ] = None
 
     include: Annotated[
-        List[str] | None,
+        list[str] | None,
         typer.Option(
             help="List of parameters and or model names to include in the analysis.",
         ),
     ] = None
 
     exclude: Annotated[
-        List[str] | None,
+        list[str] | None,
         typer.Option(
             help="List of parameters and or model names to exclude from the analysis.",
         ),
@@ -863,7 +861,7 @@ class PlotCorner(AppLogging):
     ] = None
 
     plot_name: Annotated[
-        List[str] | None,
+        list[str] | None,
         typer.Option(
             help=(
                 "Legend name(s) for each catalog, matched by position. May be "
@@ -874,7 +872,7 @@ class PlotCorner(AppLogging):
     ] = None
 
     remove_index: Annotated[
-        List[int] | None,
+        list[int] | None,
         typer.Option(
             help="Index of the parameter to remove.",
             min=0,
@@ -914,7 +912,7 @@ class PlotCorner(AppLogging):
     ] = True
 
     derived_variable: Annotated[
-        List[str] | None,
+        list[str] | None,
         typer.Option(
             "--derived-variable",
             help=(
@@ -960,7 +958,7 @@ class PlotCorner(AppLogging):
 
         # mcmc_file is a required positional argument, so Click already
         # refuses to run with zero catalogs given.
-        derived_variable: List[str] = []
+        derived_variable: list[str] = []
         if self.derived_expr is not None:
             if not self.derived_variable:
                 raise typer.BadParameter(
@@ -1133,7 +1131,7 @@ class DerivedQuantityError(LoadCatalog):
     """
 
     variable: Annotated[
-        List[str],
+        list[str],
         typer.Option(
             "--variable",
             "-x",
@@ -1147,7 +1145,7 @@ class DerivedQuantityError(LoadCatalog):
     ]
 
     expr: Annotated[
-        List[str],
+        list[str],
         typer.Option(
             "--expr",
             help=(
@@ -1163,7 +1161,7 @@ class DerivedQuantityError(LoadCatalog):
     ]
 
     stat: Annotated[
-        List[DerivedStat] | None,
+        list[DerivedStat] | None,
         typer.Option(
             help=(
                 "Statistic(s) to report. Unlike median/bestfit, mode is NOT "
@@ -1175,7 +1173,7 @@ class DerivedQuantityError(LoadCatalog):
     ] = None
 
     symbol: Annotated[
-        List[str] | None,
+        list[str] | None,
         typer.Option(
             "--symbol",
             help=(
@@ -1419,8 +1417,7 @@ class CheckM2lnL(LoadExperiment):
             table.add_column("recomputed -2lnL", justify="right")
             table.add_column("delta", justify="right")
 
-            n_shown = 0
-            for k in worst:
+            for n_shown, k in enumerate(worst):
                 if abs_diffs[k] <= self.tolerance:
                     break
                 if n_shown >= self.max_report:
@@ -1431,7 +1428,6 @@ class CheckM2lnL(LoadExperiment):
                     f"{recomputed[k]:.6f}",
                     f"{diffs[k]:.6g}",
                 )
-                n_shown += 1
 
             self.console.print(table)
 

@@ -32,7 +32,6 @@ import matplotlib
 matplotlib.use("Agg")
 
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 
 import numpy as np
 
