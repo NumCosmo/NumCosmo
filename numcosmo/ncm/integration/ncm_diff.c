@@ -50,8 +50,8 @@
  * result is accepted only where they agree, which rejects a plateau that one
  * ladder alone would take for convergence when it aliases an oscillation of
  * $f$. With #NcmDiff:dual-series off a single ladder is used: it costs about
- * two thirds of the evaluations, and relies on heuristics to avoid such
- * traps.
+ * two thirds of the evaluations, and relies on heuristics to reject such
+ * plateaus.
  *
  * A single ladder carries an error estimate combining the truncation error
  * (difference between consecutive extrapolation orders, times
@@ -768,8 +768,8 @@ ncm_diff_set_ini_h (NcmDiff *diff, const gdouble ini_h)
  * between consecutive orders, and a row is accepted only where they agree:
  * a single series can converge on an oscillation of $f$ it aliases, the
  * other does not alias it the same way. Disabled, a single series is used,
- * with about two thirds of the function evaluations, and its protection
- * against such traps comes from heuristics, the lead share of a row and
+ * with about two thirds of the function evaluations, and it rejects aliased
+ * plateaus by heuristics, the lead share of a row and
  * #NcmDiff:trunc-change-ratio.
  */
 void
