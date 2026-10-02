@@ -514,9 +514,21 @@ $|R_n^A-R_n^B| < 10^{-3}S_n$ and $\max(C_n^A, C_n^B) < 10^{-3}S_n$. The ordinary
 mainly because their first-row informativeness determines whether both ladders should be moved
 to larger steps.
 
-The best value is the row with the smallest cross estimate among the eligible rows once one
-has been seen: the first eligible row replaces any best value from rows that disagree, whatever
-their errors, and a row that is not eligible never replaces an eligible one. When a row becomes
+The best value is the eligible row with the smallest disagreement $|R_n^A-R_n^B|$ once one has
+been seen. The disagreement measures the scatter of the values of $f$ together with the
+truncation error, while $C_n$ assumes the stated precision: for a function more precise than
+`NcmDiff:func-precision` states, ranking by $E_n^{\rm cross}$ would stop where the assumed noise,
+not the actual one, appears. $C_n$ stays in the gate and in the reported error. Furthermore, the first eligible row replaces any best value from rows that disagree, whatever
+their errors, and a row that is not eligible never replaces an eligible one. Before any row is
+eligible, rows are ranked by $E_n^{\rm cross}/S_n$: rows from steps far apart can differ in size
+by orders of magnitude (the move to larger steps reaches quotients that are pre-asymptotic and
+small), so their absolute errors are not comparable.
+
+Two ladders can also agree on an early row while both are off, when the leading truncation term
+nearly vanishes at $x$. The error of the best eligible row is therefore raised to cover
+$10\,|R - R_{\rm best}|$ for every later eligible row $R$. When no row is ever eligible nothing
+establishes which row is right, and the reported error covers 10 times the distance from the
+best value to every row seen. When a row becomes
 the best, the smaller-step ladder B is selected if its cancellation scale is no larger than the
 A--B disagreement. If cancellation dominates that disagreement, the value from the ladder with
 the smaller cancellation scale is selected instead.

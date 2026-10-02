@@ -1064,6 +1064,12 @@ typedef struct _NcmDiffCrossControl
 {
   gdouble df_best;
   gdouble err_best;
+  gdouble rel_err_best;
+  gdouble cross_best;
+  gdouble row_lo;
+  gdouble row_hi;
+  gdouble elig_lo;
+  gdouble elig_hi;
   guchar n_worse;
   gboolean best_eligible;
 } NcmDiffCrossControl;
@@ -1073,8 +1079,31 @@ _ncm_diff_cross_control_init (NcmDiffCrossControl *cs)
 {
   cs->df_best       = 0.0;
   cs->err_best      = GSL_POSINF;
+  cs->rel_err_best  = GSL_POSINF;
+  cs->cross_best    = GSL_POSINF;
+  cs->row_lo        = GSL_POSINF;
+  cs->row_hi        = GSL_NEGINF;
+  cs->elig_lo       = GSL_POSINF;
+  cs->elig_hi       = GSL_NEGINF;
   cs->n_worse       = 0;
   cs->best_eligible = FALSE;
+}
+
+/*
+ * The error of the best value. Two ladders can agree on a row while both are
+ * off, when the leading truncation term nearly vanishes at x, so the error
+ * covers the spread of every agreeing row around the best; without any
+ * agreeing row nothing establishes which row is right, and it covers the
+ * spread of every row seen. The spreads enter only the reported error: the
+ * rows are ranked and the ladders stopped by the errors of the rows alone.
+ */
+static gdouble
+_ncm_diff_cross_control_err (const NcmDiffCrossControl *cs)
+{
+  const gdouble lo = cs->best_eligible ? cs->elig_lo : cs->row_lo;
+  const gdouble hi = cs->best_eligible ? cs->elig_hi : cs->row_hi;
+
+  return GSL_MAX (cs->err_best, NCM_DIFF_DUAL_ERR_PAD * GSL_MAX (hi - cs->df_best, cs->df_best - lo));
 }
 
 /*
@@ -2097,7 +2126,7 @@ _ncm_diff_by_step_algo_dual (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffSt
       ncm_matrix_set (df_m, a, i, dual->cross.df_best);
 
       if (Eerr_m != NULL)
-        ncm_matrix_set (Eerr_m, a, i, dual->cross.err_best);
+        ncm_matrix_set (Eerr_m, a, i, _ncm_diff_cross_control_err (&dual->cross));
     }
   }
 
@@ -2169,22 +2198,43 @@ _ncm_diff_cross_control_update (NcmDiffCrossControl *cs, const gdouble row_A, co
    * rows are eligible: two ladders whose steps are not commensurate alias
    * an oscillation of f differently, so an aliased plateau of one ladder is
    * not one of the other. Before any agreement the row with the smallest
-   * error is kept; a disagreeing row never replaces an agreeing one, and
-   * the first agreeing row replaces a disagreeing one whatever their errors.
+   * error relative to quot_scale is kept, since rows from steps far apart
+   * can differ in size by orders of magnitude. Agreeing rows have the size
+   * of the derivative and are ranked by their disagreement alone: it
+   * measures the scatter of the values of f together with the truncation
+   * error, while the cancellation scale assumes the stated precision, which
+   * for a function more precise than stated would stop the ladders where its
+   * noise has not yet appeared. The cancellation scale stays in the gate and
+   * in the error reported. A disagreeing row never replaces an agreeing
+   * one, and the first agreeing row replaces a disagreeing one whatever
+   * their errors.
    */
   const gboolean eligible = (quot_scale > 0.0) ? ((cross < 1.0e-3 * quot_scale) && (canc < 1.0e-3 * quot_scale)) : (canc == 0.0);
+  /* Rows of quotients that are all exactly zero rank among themselves by their errors. */
+  const gdouble rel_err = err / GSL_MAX (quot_scale, GSL_DBL_MIN);
+  const gboolean better = cs->best_eligible ? (eligible && (cross < cs->cross_best)) : (eligible || (rel_err < cs->rel_err_best));
 
-  if ((eligible && !cs->best_eligible) || ((err < cs->err_best) && (eligible || !cs->best_eligible)))
+  /* B (smaller steps) has the smaller truncation error; when cancellation
+   * dominates the disagreement, the ladder with the smaller cancellation scale is
+   * taken. */
+  const gdouble row_sel = (fabs (canc_B) <= cross) ? row_B : ((fabs (canc_A) < fabs (canc_B)) ? row_A : row_B);
+
+  cs->row_lo = GSL_MIN (cs->row_lo, row_sel);
+  cs->row_hi = GSL_MAX (cs->row_hi, row_sel);
+
+  if (eligible)
   {
-    /* B (smaller steps) has the smaller truncation error; when cancellation
-     * dominates the disagreement, the ladder with the smaller cancellation scale is
-     * taken. */
-    if (fabs (canc_B) <= cross)
-      cs->df_best = row_B;
-    else
-      cs->df_best = (fabs (canc_A) < fabs (canc_B)) ? row_A : row_B;
+    cs->elig_lo = GSL_MIN (cs->elig_lo, row_sel);
+    cs->elig_hi = GSL_MAX (cs->elig_hi, row_sel);
+  }
+
+  if (better)
+  {
+    cs->df_best = row_sel;
 
     cs->err_best      = err;
+    cs->rel_err_best  = rel_err;
+    cs->cross_best    = cross;
     cs->n_worse       = 0;
     cs->best_eligible = eligible;
 
@@ -2624,8 +2674,8 @@ _ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep
 
       if (Eerr_m != NULL)
       {
-        ncm_matrix_set (Eerr_m, a, b, dual.cross.err_best);
-        ncm_matrix_set (Eerr_m, b, a, dual.cross.err_best);
+        ncm_matrix_set (Eerr_m, a, b, _ncm_diff_cross_control_err (&dual.cross));
+        ncm_matrix_set (Eerr_m, b, a, _ncm_diff_cross_control_err (&dual.cross));
       }
     }
   }
