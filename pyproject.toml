@@ -83,3 +83,16 @@ omit = ["*/external/*"]
 [tool.ruff]
 line-length = 88
 extend-exclude = ["numcosmo_py/external", "*.pyi"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+check_untyped_defs = true
+exclude = [
+    '.*meson.*',
+    'numcosmo_py/external/',
+]
+
+[[tool.mypy.overrides]]
+module = ["numcosmo_py.nc", "numcosmo_py.ncm", "numcosmo_py.external.*"]
+ignore_errors = true

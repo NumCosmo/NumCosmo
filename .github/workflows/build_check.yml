@@ -124,7 +124,16 @@ jobs:
       - name: Installing NumCosmo
         run: |
           meson install -C build
+      # Regenerates nc.pyi and ncm.pyi from the installed typelibs and fails
+      # if they differ from the committed stubs. To fix, build and run
+      # numcosmo_py/update_pyi.sh, then commit the stubs.
+      - name: Checking stubs are up to date
+        if: ${{ !cancelled() }}
+        run: |
+          sh numcosmo_py/update_pyi.sh
+          git diff --exit-code -- numcosmo_py/nc.pyi numcosmo_py/ncm.pyi
       - name: Running mypy
+        if: ${{ !cancelled() }}
         run: |
           mypy -p numcosmo_py
 
