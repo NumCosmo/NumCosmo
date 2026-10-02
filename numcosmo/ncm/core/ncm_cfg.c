@@ -470,7 +470,9 @@ _ncm_cfg_exit (void)
  * - sets the default FFTW planner flag and time limit from `NCM_FFTW_PLANNER` and
  *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(); the time
  *   limit is 10 s when `NCM_FFTW_PLANNER_TIMELIMIT` is not set;
- * - creates the directory `~/.numcosmo`, see ncm_cfg_get_fullpath();
+ * - creates the NumCosmo data directory, see ncm_cfg_get_fullpath(); it is
+ *   the value of `NUMCOSMO_HOME` when set, otherwise `$XDG_DATA_HOME/numcosmo` when
+ *   `XDG_DATA_HOME` is set, otherwise `~/.numcosmo`;
  * - sets the Cuba library core counts to zero;
  * - turns the GSL error handler off, see ncm_cfg_enable_gsl_err_handler();
  * - installs the NumCosmo log handlers;
@@ -586,7 +588,9 @@ _ncm_cfg_mpi_launched (void)
  * - sets the default FFTW planner flag and time limit from `NCM_FFTW_PLANNER` and
  *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(); the time
  *   limit is 10 s when `NCM_FFTW_PLANNER_TIMELIMIT` is not set;
- * - creates the directory `~/.numcosmo`, see ncm_cfg_get_fullpath();
+ * - creates the NumCosmo data directory, see ncm_cfg_get_fullpath(); it is
+ *   the value of `NUMCOSMO_HOME` when set, otherwise `$XDG_DATA_HOME/numcosmo` when
+ *   `XDG_DATA_HOME` is set, otherwise `~/.numcosmo`;
  * - sets the Cuba library core counts to zero;
  * - turns the GSL error handler off, see ncm_cfg_enable_gsl_err_handler();
  * - installs the NumCosmo log handlers;
@@ -604,8 +608,6 @@ _ncm_cfg_mpi_launched (void)
 void
 ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 {
-  const gchar *home;
-
   if (numcosmo_init)
     return;
 
@@ -614,8 +616,17 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
 
-  home          = g_get_home_dir ();
-  numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
+  {
+    const gchar *xdg_data_home = g_getenv ("XDG_DATA_HOME");
+    const gchar *numcosmo_home = g_getenv ("NUMCOSMO_HOME");
+
+    if (numcosmo_home != NULL)
+      numcosmo_path = g_strdup (numcosmo_home);
+    else if (xdg_data_home != NULL)
+      numcosmo_path = g_build_filename (xdg_data_home, "numcosmo", NULL);
+    else
+      numcosmo_path = g_build_filename (g_get_home_dir (), ".numcosmo", NULL);
+  }
 
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
     g_mkdir_with_parents (numcosmo_path, 0755);
@@ -1425,7 +1436,8 @@ ncm_cfg_msg_sepa (void)
  * @filename: a printf format string
  * @...: arguments for @filename
  *
- * Returns: (transfer full): the path of the formatted file name inside `~/.numcosmo`.
+ * Returns: (transfer full): the path of the formatted file name inside the NumCosmo data
+ * directory, see ncm_cfg_init().
  */
 gchar *
 ncm_cfg_get_fullpath (const gchar *filename, ...)
@@ -1450,7 +1462,7 @@ ncm_cfg_get_fullpath (const gchar *filename, ...)
 /**
  * ncm_cfg_get_fullpath_base:
  *
- * Returns: (transfer none): the path of `~/.numcosmo`.
+ * Returns: (transfer none): the path of the NumCosmo data directory, see ncm_cfg_init().
  */
 const gchar *
 ncm_cfg_get_fullpath_base (void)
@@ -1804,9 +1816,9 @@ static GHashTable *_fftw_planned_keys = NULL;
  * @...: arguments for @key
  *
  * Starts creating FFTW plans: loads the FFTW wisdom of this MPI rank, once per process, from
- * `~/.numcosmo/ncm_cfg_wisdom_rank<rank>.fftw3`, and takes the
- * planning lock, see ncm_cfg_lock_plan_fftw(). @key identifies the plans: the caller and
- * everything that makes a plan different, such as the transform sizes and kinds and the
+ * `ncm_cfg_wisdom_rank<rank>.fftw3` in the NumCosmo data directory, see ncm_cfg_init(), and
+ * takes the planning lock, see ncm_cfg_lock_plan_fftw(). @key identifies the plans: the caller
+ * and everything that makes a plan different, such as the transform sizes and kinds and the
  * number of transforms; the current default planner flag is added to it. It only tells
  * whether the process planned the same before, and the wisdom file is the same for every
  * key. Pass the return value to ncm_cfg_fftw_plan_end().
@@ -1891,7 +1903,7 @@ ncm_cfg_fftw_plan_destroy (gpointer plan)
 
 /*
  * Imports the FFTW wisdom of this MPI rank, once per process, from
- * ~/.numcosmo/ncm_cfg_wisdom_rank<rank>.fftw3. Does nothing under
+ * ncm_cfg_wisdom_rank<rank>.fftw3 in the NumCosmo data directory. Does nothing under
  * FFTW_ESTIMATE, which uses no wisdom. Thread-safe.
  */
 static void
@@ -2003,7 +2015,8 @@ _ncm_cfg_save_fftw_wisdom (void)
  * @filename: a printf format string
  * @...: arguments for @filename
  *
- * Returns: whether the formatted file name exists inside `~/.numcosmo`.
+ * Returns: whether the formatted file name exists inside the NumCosmo data directory, see
+ * ncm_cfg_init().
  */
 gboolean
 ncm_cfg_exists (const gchar *filename, ...)
