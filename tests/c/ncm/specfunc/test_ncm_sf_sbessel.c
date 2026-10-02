@@ -175,8 +175,16 @@ void
 test_ncm_sf_sbessel_taylor_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata)
 {
   NcmDiff *diff = ncm_diff_new ();
+  NcmVector *lb = ncm_vector_new (1);
+  NcmVector *ub = ncm_vector_new (1);
   gdouble jla[4];
   guint i, j;
+
+  /* j_l is defined for x >= 0: no step may cross it. */
+  ncm_vector_set (lb, 0, 0.0);
+  ncm_vector_set (ub, 0, GSL_POSINF);
+  ncm_diff_set_domain (diff, lb, ub);
+  ncm_diff_set_domain_warnings (diff, FALSE);
 
   for (j = 0; j <= L; j++)
   {
@@ -195,6 +203,8 @@ test_ncm_sf_sbessel_taylor_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata)
     }
   }
 
+  ncm_vector_free (lb);
+  ncm_vector_free (ub);
   ncm_diff_free (diff);
 }
 

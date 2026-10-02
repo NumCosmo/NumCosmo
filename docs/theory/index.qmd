@@ -32,6 +32,7 @@ classes and methods.
 ## Numerical Methods
 
 - [FFTLog](ncm/fftlog/fftlog.qmd) --- logarithmic fast Fourier transform.
+- [Numerical Differentiation](ncm/integration/diff.qmd) --- difference quotients with Richardson extrapolation, their round-off and error control, moving the step up, domains, the Hessian, the dual-series scheme and derivatives from Chebyshev fits.
 - [Spectral Methods](ncm/algebra/spectral.qmd) --- Chebyshev approximation, Clenshaw--Curtis integration, and ultraspherical operators.
 - [The Ultraspherical Spectral Solver](ncm/specfunc/sbessel_ode_solver.qmd) --- the banded discretization of the spherical Bessel operator, batching over multipoles, the incremental Givens QR and conjugate panel spans.
 - [UltraLevin: Non-Limber Angular Power Spectra](ncm/specfunc/sbessel_projection.qmd) --- the Levin reduction, fixed panels in x, the window over k and its exact outer integral.
