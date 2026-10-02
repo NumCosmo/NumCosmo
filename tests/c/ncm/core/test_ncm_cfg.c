@@ -41,6 +41,42 @@ typedef struct _TesNcmCfg
   guint place_holder;
 } TesNcmCfg;
 
+static gchar *test_ncm_cfg_executable;
+
+static void
+_test_ncm_cfg_spawn (const gchar *test_path, gchar **envp, gboolean should_pass, const gchar *expected_output)
+{
+  gchar *argv[] = {test_ncm_cfg_executable, "-p", (gchar *) test_path, NULL};
+  gchar *output = NULL;
+  gchar *errors = NULL;
+  gint status;
+  GError *error = NULL;
+
+  g_assert_true (g_spawn_sync (NULL, argv, envp, 0, NULL, NULL, &output, &errors, &status, &error));
+  g_assert_no_error (error);
+
+  if (should_pass)
+  {
+    g_assert_true (g_spawn_check_wait_status (status, &error));
+    g_assert_no_error (error);
+    g_assert_null (strstr (output, "GLib-DEBUG: setenv()/putenv()"));
+    g_assert_null (strstr (output, "GLib-DEBUG: unsetenv()"));
+    g_assert_null (strstr (errors, "GLib-DEBUG: setenv()/putenv()"));
+    g_assert_null (strstr (errors, "GLib-DEBUG: unsetenv()"));
+  }
+  else
+  {
+    g_assert_false (g_spawn_check_wait_status (status, &error));
+    g_clear_error (&error);
+  }
+
+  if (expected_output != NULL)
+    g_assert_true (strstr (output, expected_output) != NULL || strstr (errors, expected_output) != NULL);
+
+  g_free (output);
+  g_free (errors);
+}
+
 void test_ncm_cfg_new (TesNcmCfg *test, gconstpointer pdata);
 void test_ncm_cfg_free (TesNcmCfg *test, gconstpointer pdata);
 
@@ -144,10 +180,13 @@ test_ncm_cfg_fftw_plan_begin_end (void)
 static void
 test_ncm_cfg_fftw_timelimit_default (void)
 {
-  g_unsetenv ("NCM_FFTW_PLANNER");
-  g_unsetenv ("NCM_FFTW_PLANNER_TIMELIMIT");
-  g_test_trap_subprocess ("/ncm/cfg/fftw_timelimit_default/subprocess", 0, 0);
-  g_test_trap_assert_passed ();
+  gchar **envp = g_get_environ ();
+
+  envp = g_environ_unsetenv (envp, "NCM_FFTW_PLANNER");
+  envp = g_environ_unsetenv (envp, "NCM_FFTW_PLANNER_TIMELIMIT");
+  envp = g_environ_setenv (envp, "NCM_TEST_CFG_CHILD", "1", TRUE);
+  _test_ncm_cfg_spawn ("/ncm/cfg/fftw_timelimit_default/subprocess", envp, TRUE, NULL);
+  g_strfreev (envp);
 }
 
 static void
@@ -161,29 +200,13 @@ static void
 test_ncm_cfg_omp_thread_limit (void)
 {
 #ifdef _OPENMP
-  gchar *nthreads = g_strdup (g_getenv ("OMP_NUM_THREADS"));
-  gchar *limit    = g_strdup (g_getenv ("OMP_THREAD_LIMIT"));
+  gchar **envp = g_get_environ ();
 
-  g_setenv ("OMP_NUM_THREADS", "2", TRUE);
-  g_setenv ("OMP_THREAD_LIMIT", "1", TRUE);
-  g_test_trap_subprocess ("/ncm/cfg/omp_thread_limit/subprocess", 0, 0);
-
-  /* Later subprocess tests inherit the environment. */
-  if (nthreads != NULL)
-    g_setenv ("OMP_NUM_THREADS", nthreads, TRUE);
-  else
-    g_unsetenv ("OMP_NUM_THREADS");
-
-  if (limit != NULL)
-    g_setenv ("OMP_THREAD_LIMIT", limit, TRUE);
-  else
-    g_unsetenv ("OMP_THREAD_LIMIT");
-
-  g_free (nthreads);
-  g_free (limit);
-
-  g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*OMP_NUM_THREADS (2) exceeds OMP_THREAD_LIMIT (1)*");
+  envp = g_environ_setenv (envp, "OMP_NUM_THREADS", "2", TRUE);
+  envp = g_environ_setenv (envp, "OMP_THREAD_LIMIT", "1", TRUE);
+  _test_ncm_cfg_spawn ("/ncm/cfg/omp_thread_limit/subprocess", envp, FALSE,
+                       "OMP_NUM_THREADS (2) exceeds OMP_THREAD_LIMIT (1)");
+  g_strfreev (envp);
 #else
   g_test_skip ("built without OpenMP");
 #endif /* _OPENMP */
@@ -202,18 +225,9 @@ typedef enum
 } TestNcmCfgPath;
 
 static void
-_test_ncm_cfg_restore_env (const gchar *name, const gchar *value)
-{
-  if (value != NULL)
-    g_setenv (name, value, TRUE);
-  else
-    g_unsetenv (name);
-}
-
-static void
 _test_ncm_cfg_path (TestNcmCfgPath mode)
 {
-  if (g_test_subprocess ())
+  if (g_getenv ("NCM_TEST_CFG_CHILD") != NULL)
   {
     gchar *expected;
     gchar *path;
@@ -247,36 +261,29 @@ _test_ncm_cfg_path (TestNcmCfgPath mode)
   }
   else
   {
-    gchar *home = g_strdup (g_getenv ("HOME"));
-    gchar *xdg_data_home = g_strdup (g_getenv ("XDG_DATA_HOME"));
-    gchar *numcosmo_home = g_strdup (g_getenv ("NUMCOSMO_HOME"));
-    gchar *test_path_env = g_strdup (g_getenv ("NCM_TEST_CFG_PATH"));
-    gchar *tmp_dir       = g_dir_make_tmp ("test_ncm_cfg_path_XXXXXX", NULL);
+    gchar *tmp_dir = g_dir_make_tmp ("test_ncm_cfg_path_XXXXXX", NULL);
     gchar *xdg_dir;
     gchar *override_dir;
     gchar *chosen_dir;
+    gchar **envp = g_get_environ ();
+    const gchar *test_path;
 
     g_assert_nonnull (tmp_dir);
     xdg_dir      = g_build_filename (tmp_dir, "xdg", NULL);
     override_dir = g_build_filename (tmp_dir, "custom", "data", NULL);
-    g_setenv ("HOME", tmp_dir, TRUE);
-    g_unsetenv ("XDG_DATA_HOME");
-    g_unsetenv ("NUMCOSMO_HOME");
-    g_setenv ("NCM_TEST_CFG_PATH", "1", TRUE);
+    envp = g_environ_setenv (envp, "HOME", tmp_dir, TRUE);
+    envp = g_environ_unsetenv (envp, "XDG_DATA_HOME");
+    envp = g_environ_unsetenv (envp, "NUMCOSMO_HOME");
+    envp = g_environ_setenv (envp, "NCM_TEST_CFG_CHILD", "1", TRUE);
 
     if (mode != TEST_NCM_CFG_PATH_DEFAULT)
-      g_setenv ("XDG_DATA_HOME", xdg_dir, TRUE);
+      envp = g_environ_setenv (envp, "XDG_DATA_HOME", xdg_dir, TRUE);
     if (mode == TEST_NCM_CFG_PATH_OVERRIDE)
-      g_setenv ("NUMCOSMO_HOME", override_dir, TRUE);
+      envp = g_environ_setenv (envp, "NUMCOSMO_HOME", override_dir, TRUE);
 
-    g_test_trap_subprocess (NULL, 0, 0);
-
-    _test_ncm_cfg_restore_env ("HOME", home);
-    _test_ncm_cfg_restore_env ("XDG_DATA_HOME", xdg_data_home);
-    _test_ncm_cfg_restore_env ("NUMCOSMO_HOME", numcosmo_home);
-    _test_ncm_cfg_restore_env ("NCM_TEST_CFG_PATH", test_path_env);
-
-    g_test_trap_assert_passed ();
+    test_path = (mode == TEST_NCM_CFG_PATH_DEFAULT) ? "/ncm/cfg/path/default" :
+                (mode == TEST_NCM_CFG_PATH_XDG) ? "/ncm/cfg/path/xdg" : "/ncm/cfg/path/override";
+    _test_ncm_cfg_spawn (test_path, envp, TRUE, NULL);
 
     if (mode == TEST_NCM_CFG_PATH_OVERRIDE)
     {
@@ -296,10 +303,7 @@ _test_ncm_cfg_path (TestNcmCfgPath mode)
     }
     g_assert_cmpint (g_rmdir (tmp_dir), ==, 0);
 
-    g_free (home);
-    g_free (xdg_data_home);
-    g_free (numcosmo_home);
-    g_free (test_path_env);
+    g_strfreev (envp);
     g_free (tmp_dir);
     g_free (xdg_dir);
     g_free (override_dir);
@@ -371,8 +375,10 @@ test_ncm_cfg_fftw_plan_destroy (void)
 gint
 main (gint argc, gchar *argv[])
 {
+  test_ncm_cfg_executable = g_find_program_in_path (argv[0]);
+  g_assert_nonnull (test_ncm_cfg_executable);
   g_test_init (&argc, &argv, NULL);
-  if (!g_test_subprocess () || g_getenv ("NCM_TEST_CFG_PATH") == NULL)
+  if (g_getenv ("NCM_TEST_CFG_CHILD") == NULL)
   {
     ncm_cfg_init_full_ptr (&argc, &argv);
     ncm_cfg_enable_gsl_err_handler ();
