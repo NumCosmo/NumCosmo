@@ -23,7 +23,7 @@
 
 """Create a new ensemble sampler object."""
 
-from typing import Optional, Union
+from typing import Union
 
 from numcosmo_py import Ncm, GEnum
 
@@ -64,8 +64,8 @@ def create_stats_dist(
     cv_method: CrossValidationMethod = CrossValidationMethod.NONE,
     dim: int = 2,
     over_smooth: float = 1.0,
-    split_fraction: Optional[float] = None,
-    local_fraction: Optional[float] = None,
+    split_fraction: float | None = None,
+    local_fraction: float | None = None,
     center_shrink: bool = False,
     auto_kernel: bool = False,
     verbose: bool = False,

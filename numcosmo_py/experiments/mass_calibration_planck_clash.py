@@ -129,7 +129,7 @@ def run_example():
     lh = Ncm.Likelihood(dataset=dset)
 
     # Gaussian prior on the lensing bias, b_l = 0 \pm 0.08
-    lh.priors_add_gauss_param(clusterm.id(), 4, 0.0, 0.08)
+    lh.priors_add(Ncm.PriorGaussParam.new(clusterm, 4, 0.0, 0.08))
 
     algorithm = "ln-neldermead"
     fit = Ncm.Fit.factory(

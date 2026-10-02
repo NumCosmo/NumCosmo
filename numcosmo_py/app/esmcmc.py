@@ -26,7 +26,7 @@
 import dataclasses
 from enum import StrEnum, auto
 from pathlib import Path
-from typing import Optional, Annotated, Union
+from typing import Annotated, Union
 
 import typer
 
@@ -110,7 +110,7 @@ class RunMCMC(RunCommonOptions):
     ] = 1.0
 
     local_fraction: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(
             help="Local fraction to use.",
             min=0.02,
@@ -130,7 +130,7 @@ class RunMCMC(RunCommonOptions):
     ] = CrossValidationMethod.SPLIT_M2LNP
 
     split_fraction: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(
             help="Fraction of each block used as kernel centres. Default: 0.8.",
             min=0.02,
@@ -139,7 +139,7 @@ class RunMCMC(RunCommonOptions):
     ] = None
 
     auto_kernel: Annotated[
-        Optional[bool],
+        bool | None,
         typer.Option(
             hidden=True,
             help="Deprecated: use --interpolation-kernel auto.",
@@ -218,7 +218,7 @@ class RunMCMC(RunCommonOptions):
     ] = Parallelization.NONE
 
     initial_points_sampler: Annotated[
-        Optional[IniSampler],
+        IniSampler | None,
         typer.Option(
             help=(
                 "Sampler to use for the initial points. "
@@ -246,7 +246,7 @@ class RunMCMC(RunCommonOptions):
     ] = 1.0
 
     initial_sampler_covar: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             help=(
                 "Path to the covariance matrix file to use for the initial points "
@@ -256,7 +256,7 @@ class RunMCMC(RunCommonOptions):
     ] = None
 
     initial_catalog: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             help="Path to the catalog file to use for the initial points sampler.",
         ),
@@ -318,7 +318,7 @@ class RunMCMC(RunCommonOptions):
     ] = True
 
     seed: Annotated[
-        Optional[int],
+        int | None,
         typer.Option(
             min=0,
             help=(

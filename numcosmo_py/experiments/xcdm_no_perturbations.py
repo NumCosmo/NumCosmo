@@ -27,7 +27,6 @@ Experiments using the XCDM model and likelihoods that do not depend on perturbat
 """
 
 import os
-from typing import Optional
 
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.sampling.esmcmc import (
@@ -103,7 +102,7 @@ def run_xcdm_nopert_mcmc(
     fit_first: bool = False,
     robust: bool = False,
     use_apes_center_shrink: bool = False,
-    use_apes_threads: Optional[bool] = None,
+    use_apes_threads: bool | None = None,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
@@ -114,9 +113,9 @@ def run_xcdm_nopert_mcmc(
     flat: bool = False,
     use_neutrino: bool = False,
     z_f: float = 3.0,
-    snia_id: Optional[SNIaID] = SNIaID.COV_PANTHEON_PLUS_SH0ES_SYS_STAT,
-    bao_id: Optional[BAOID] = BAOID.ALL_COMBINED_JAN_2023,
-    h_id: Optional[HID] = HID.ALL_COMBINED_JAN_2023,
+    snia_id: SNIaID | None = SNIaID.COV_PANTHEON_PLUS_SH0ES_SYS_STAT,
+    bao_id: BAOID | None = BAOID.ALL_COMBINED_JAN_2023,
+    h_id: HID | None = HID.ALL_COMBINED_JAN_2023,
 ) -> str:
     """Run the XCDM model with no perturbations MCMC."""
     mset = create_mset(use_neutrino, flat)

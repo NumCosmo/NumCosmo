@@ -23,7 +23,6 @@ model and analyzing them to assess parameter biases and uncertainties.
 """
 
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from rich.console import Console, Group
@@ -72,7 +71,7 @@ class MockStudy:
         fiducial_results: dict[float, CutAnalysisResult] | None = None,
         db_path: Path = Path("bestfits.db"),
         recompute: bool = False,
-        console: Optional[Console] = None,
+        console: Console | None = None,
     ):
         """Initialize mock study.
 

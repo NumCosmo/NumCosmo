@@ -23,7 +23,7 @@
 
 """Create a new ensemble sampler object."""
 
-from typing import Optional, Union
+from typing import Union
 import warnings
 from enum import StrEnum, auto
 from numcosmo_py import Ncm
@@ -55,19 +55,19 @@ def create_esmcmc(
     apes_defensive_nu: float = 3.0,
     apes_vkde_points_per_dim: float = 0.0,
     apes_uniform_weights: bool = False,
-    use_apes_threads: Optional[bool] = None,
+    use_apes_threads: bool | None = None,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
     cv_method: CrossValidationMethod = CrossValidationMethod.NONE,
-    split_fraction: Optional[float] = None,
+    split_fraction: float | None = None,
     auto_kernel: bool = False,
     nwalkers: int = 320,
     use_threads: bool = True,
     over_smooth: float = 1.0,
-    local_fraction: Optional[float] = None,
+    local_fraction: float | None = None,
     init_sampling_scale: float = 1.0e-1,
-    start_mcat: Optional[Ncm.MSetCatalog] = None,
+    start_mcat: Ncm.MSetCatalog | None = None,
 ):
     """Create a new ensemble sampler object."""
     # New fit object using the likelihood.

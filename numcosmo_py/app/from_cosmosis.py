@@ -23,7 +23,7 @@
 
 """NumCosmo APP subcommand to convert CosmoSIS likelihoods to NumCosmo."""
 
-from typing import Optional, Annotated
+from typing import Annotated
 from pathlib import Path
 import importlib.util
 
@@ -52,7 +52,7 @@ if COSMOSIS:
         inifile: Annotated[Path, typer.Argument(help="Path to the Cosmosis ini file.")],
         *,
         outfile: Annotated[
-            Optional[Path],
+            Path | None,
             typer.Option(
                 help="Path to the output file, if not given,"
                 " the input file name is used with the extension .yaml."

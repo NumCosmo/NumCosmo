@@ -707,9 +707,7 @@ PAIRS: typing.Final[list[PairSpec]] = [
     PairSpec(
         "R7", "power_exp_rsd", "gauss_high", "j_ell'' x j_ell, skewed x narrow (X8)"
     ),
-    PairSpec(
-        "R8", "lensing_rsd", "gauss_mid", "j_ell'' x j_ell, broad x narrow (X6)"
-    ),
+    PairSpec("R8", "lensing_rsd", "gauss_mid", "j_ell'' x j_ell, broad x narrow (X6)"),
     PairSpec(
         "R9",
         "multi_disjoint_rsd",
@@ -904,7 +902,7 @@ def _neumaier_sum(terms: list[np.ndarray]) -> np.ndarray:
 
 def _cell_values(
     integrand1: Nc.XcorKernelIntegrand,
-    integrand2: typing.Optional[Nc.XcorKernelIntegrand],
+    integrand2: Nc.XcorKernelIntegrand | None,
     a: float,
     b: float,
     order: int,
@@ -926,7 +924,7 @@ def _cell_values(
 
 def _cell_integral(
     integrand1: Nc.XcorKernelIntegrand,
-    integrand2: typing.Optional[Nc.XcorKernelIntegrand],
+    integrand2: Nc.XcorKernelIntegrand | None,
     a: float,
     b: float,
     atol: float,
@@ -972,7 +970,7 @@ class Reference:
 def reference_cl(
     RH: float,
     integrand1: Nc.XcorKernelIntegrand,
-    integrand2: typing.Optional[Nc.XcorKernelIntegrand],
+    integrand2: Nc.XcorKernelIntegrand | None,
     rtol: float = 1.0e-14,
 ) -> Reference:
     """The outer integral over frozen closures, to the accuracy doubles allow.
@@ -1047,7 +1045,7 @@ def reference_cl(
 def per_multipole_reference(
     RH: float,
     kernel_a: Nc.XcorKernelRadial,
-    kernel_b: typing.Optional[Nc.XcorKernelRadial],
+    kernel_b: Nc.XcorKernelRadial | None,
     cosmo: Nc.HICosmo,
     lmin: int,
     lmax: int,
@@ -1079,7 +1077,7 @@ def per_multipole_reference(
 
 def cancellation_ratio(
     integrand1: Nc.XcorKernelIntegrand,
-    integrand2: typing.Optional[Nc.XcorKernelIntegrand],
+    integrand2: Nc.XcorKernelIntegrand | None,
     n_samples: int = 20000,
 ) -> np.ndarray:
     """INT |kappa^2 W1 W2| / |INT kappa^2 W1 W2|, per multipole.

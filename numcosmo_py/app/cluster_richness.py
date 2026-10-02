@@ -24,7 +24,7 @@ scaling relations using the cluster_richness analysis package.
 
 import dataclasses
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import numpy as np
 import typer
@@ -99,7 +99,7 @@ class RunClusterRichnessAnalysis(AppLogging):
     ] = "richness"
 
     sigma_lnR_column: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             "--sigma-lnR-col",
             help=(
@@ -132,7 +132,7 @@ class RunClusterRichnessAnalysis(AppLogging):
 
     # Analysis options
     cuts: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             "--cuts",
             "-c",
@@ -210,7 +210,7 @@ class RunClusterRichnessAnalysis(AppLogging):
     ] = "cluster_richness"
 
     output_dir: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--output-dir",
             help="Directory for output files (default: current directory).",

@@ -24,7 +24,6 @@ mass-richness relations with progressive richness cuts.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from rich.console import Console
@@ -121,7 +120,7 @@ class CutAnalyzer:
         base_dir: Path | None = None,
         sample_desc: str = "Sample",
         verbose: bool = True,
-        console: Optional[Console] = None,
+        console: Console | None = None,
     ):
         """Initialize the analyzer.
 

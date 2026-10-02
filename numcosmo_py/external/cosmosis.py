@@ -26,7 +26,7 @@
 
 import os
 import math
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple
 from pathlib import Path
 
 from cosmosis.runtime.config import Inifile
@@ -396,7 +396,7 @@ def convert_cosmology(
 
 def convert_likelihoods(
     inifile: Path,
-    mapping: Optional[MappingNumCosmo] = None,
+    mapping: MappingNumCosmo | None = None,
     mute_cosmosis: bool = False,
 ) -> Tuple[Ncm.ObjDictStr, Ncm.MSet, Ncm.Likelihood]:
     """Convert the likelihoods.

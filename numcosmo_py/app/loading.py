@@ -29,7 +29,7 @@ This module contains dataclasses and subcommands to load data from files.
 
 import dataclasses
 import sys
-from typing import Optional, Annotated, cast
+from typing import Annotated, cast
 
 from pathlib import Path
 import typer
@@ -64,7 +64,7 @@ class LoadExperiment(AppLogging):
         ),
     ] = False
     starting_point: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--starting-point",
             "-s",
@@ -75,7 +75,7 @@ class LoadExperiment(AppLogging):
         ),
     ] = None
     output: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--output",
             "-o",
@@ -123,7 +123,7 @@ class LoadExperiment(AppLogging):
         )
 
         functions_file = self.experiment.with_suffix(".functions.yaml")
-        self.functions: Optional[Ncm.ObjArray] = None
+        self.functions: Ncm.ObjArray | None = None
         if functions_file.exists():
             functions: Ncm.ObjArray = ser.array_from_yaml_file(
                 functions_file.absolute().as_posix()
@@ -184,7 +184,7 @@ class LoadExperiment(AppLogging):
         self.likelihood = likelihood
         self.mset = mset
 
-    def _load_saved_mset(self) -> Optional[Ncm.MSet]:
+    def _load_saved_mset(self) -> Ncm.MSet | None:
         """Load the saved model.
 
         Load the saved model-set from the starting point file or the product file.
@@ -263,8 +263,8 @@ def register_firecrown() -> None:
 def _catalog_indices(
     mcat: Ncm.MSetCatalog,
     total_columns: int,
-    include: Optional[list[str]],
-    exclude: Optional[list[str]],
+    include: list[str] | None,
+    exclude: list[str] | None,
 ) -> list[int]:
     """Resolve the --include/--exclude column selection to a list of indices."""
     include = include or []
@@ -305,14 +305,14 @@ class LoadedCatalog:
 
     mcat: Ncm.MSetCatalog
     mset: Ncm.MSet
-    functions: Optional[Ncm.ObjArray]
+    functions: Ncm.ObjArray | None
     fparams_len: int
     nadd_vals: int
     total_columns: int
     nchains: int
     indices: list[int]
     burnin: int
-    burnin_raised_from: Optional[int]
+    burnin_raised_from: int | None
     markovian_start: int
     full_stats: Ncm.StatsVec
     stats: Ncm.StatsVec
@@ -320,8 +320,8 @@ class LoadedCatalog:
 
 
 def _resolve_burnin_rows(
-    mcmc_file: Path, burnin: int, tail: Optional[int]
-) -> tuple[int, int, Optional[int], int]:
+    mcmc_file: Path, burnin: int, tail: int | None
+) -> tuple[int, int, int | None, int]:
     """Resolve a --burnin/--tail request (in iterations) to a row count.
 
     `burnin` discards the first N iterations (ensemble steps); `tail` keeps
@@ -376,9 +376,9 @@ def _resolve_burnin_rows(
 def load_catalog(
     mcmc_file: Path,
     burnin: int = 0,
-    tail: Optional[int] = None,
-    include: Optional[list[str]] = None,
-    exclude: Optional[list[str]] = None,
+    tail: int | None = None,
+    include: list[str] | None = None,
+    exclude: list[str] | None = None,
 ) -> LoadedCatalog:
     """Load an MCMC catalog file and prepare it for analysis.
 
@@ -403,7 +403,7 @@ def load_catalog(
     assert isinstance(mset, Ncm.MSet)
     mset.prepare_fparam_map()
 
-    functions: Optional[Ncm.ObjArray] = mcat.peek_functions_array()
+    functions: Ncm.ObjArray | None = mcat.peek_functions_array()
 
     fparams_len = mset.fparams_len()
     nadd_vals: int = mcat.nadd_vals()
@@ -466,7 +466,7 @@ class LoadCatalog(AppLogging):
     ] = 0
 
     tail: Annotated[
-        Optional[int],
+        int | None,
         typer.Option(
             help=(
                 "Keep only the last N iterations (ensemble steps) instead of "
@@ -477,21 +477,21 @@ class LoadCatalog(AppLogging):
     ] = None
 
     include: Annotated[
-        Optional[list[str]],
+        list[str] | None,
         typer.Option(
             help="List of parameters and or model names to include in the analysis.",
         ),
     ] = None
 
     exclude: Annotated[
-        Optional[list[str]],
+        list[str] | None,
         typer.Option(
             help="List of parameters and or model names to exclude from the analysis.",
         ),
     ] = None
 
     output: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--output",
             "-o",
@@ -502,7 +502,7 @@ class LoadCatalog(AppLogging):
     # These are set in __post_init__ from load_catalog(), not from the CLI.
     mcat: Ncm.MSetCatalog = dataclasses.field(init=False)
     mset: Ncm.MSet = dataclasses.field(init=False)
-    functions: Optional[Ncm.ObjArray] = dataclasses.field(init=False)
+    functions: Ncm.ObjArray | None = dataclasses.field(init=False)
     fparams_len: int = dataclasses.field(init=False)
     nadd_vals: int = dataclasses.field(init=False)
     total_columns: int = dataclasses.field(init=False)

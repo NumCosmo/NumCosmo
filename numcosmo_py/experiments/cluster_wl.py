@@ -932,7 +932,7 @@ class ClusterModel(BaseModel):
     r_min: Annotated[float, Field(gt=0.0)] = 0.3
     r_max: Annotated[float, Field(gt=0.0)] = 3.0
     cluster_mass: Annotated[float, Field(ge=1.0e10, le=1.0e17)] = 1.0e14
-    dist: Annotated[None | Nc.Distance, Field()] = Nc.Distance.new(5.0)
+    dist: Annotated[Nc.Distance, Field()] = Nc.Distance.new(5.0)
 
     _halo_mass_summary: Nc.HaloCMParam = PrivateAttr()
     _density_profile: Nc.HaloDensityProfile = PrivateAttr()

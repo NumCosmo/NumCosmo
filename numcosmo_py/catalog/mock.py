@@ -111,8 +111,8 @@ class MockGenerator:
     def __init__(
         self,
         cosmo: Nc.HICosmo,
-        halo_set_size: int | None = 200,
-        cluster_set_size: int | None = 100,
+        halo_set_size: int = 200,
+        cluster_set_size: int = 100,
         ra_interval: tuple[float, float] = (-10, 10),
         dec_interval: tuple[float, float] = (-10, 10),
         z_interval: tuple[float, float] = (0.2, 0.5),
@@ -299,23 +299,32 @@ class MockGenerator:
 
         :return: tuple ``(z_true, lnM_true, lnM_obs)`` numpy arrays.
         """
+        hmf = self.hmf
+        cluster_m = self.cluster_m
+        if hmf is None or cluster_m is None:
+            raise ValueError("Sampling halos from the HMF requires hmf and cluster_m.")
+
         sky_area_rad = self.sky_area() * (np.pi / 180) ** 2  # deg^2 -> steradians
         cluster_z = Nc.ClusterRedshiftNodist(z_min=self.z_min, z_max=self.z_max)
 
-        self.hmf.prepare(self.cosmo)
-        self.hmf.set_area(sky_area_rad)
+        hmf.prepare(self.cosmo)
+        hmf.set_area(sky_area_rad)
 
         # Cluster abundance integrates the HMF over the volume and mass range.
-        cad = Nc.ClusterAbundance.new(self.hmf, None)
+        cad = Nc.ClusterAbundance.new(hmf, None)
         cad.set_area(sky_area_rad)
-        cad.prepare(self.cosmo, cluster_z, self.cluster_m)
+        cad.prepare(self.cosmo, cluster_z, cluster_m)
 
-        rng = Ncm.RNG.seeded_new(None, self.seed)
-        mset = Ncm.MSet.new_array([self.cosmo, self.cluster_m, cluster_z])
+        if self.seed is None:
+            rng = Ncm.RNG.new(None)
+            rng.set_random_seed(False)
+        else:
+            rng = Ncm.RNG.seeded_new(None, self.seed)
+        mset = Ncm.MSet.new_array([self.cosmo, cluster_m, cluster_z])
         ncount = Nc.DataClusterNCount.new(
             cad,
             "NcClusterRedshiftNodist",
-            "Nc" + str(type(self.cluster_m)).rsplit(".", maxsplit=1)[-1].strip("'>"),
+            "Nc" + str(type(cluster_m)).rsplit(".", maxsplit=1)[-1].strip("'>"),
         )
         ncount.init_from_sampling(mset, sky_area_rad, rng)
 
@@ -480,37 +489,42 @@ class MockGenerator:
         """
         from scipy.integrate import dblquad
 
+        hmf = self.hmf
+        cluster_m = self.cluster_m
+        if hmf is None:
+            raise ValueError("Injecting fake clusters requires hmf.")
+
         sky_area_rad = self.sky_area() * (np.pi / 180) ** 2  # deg^2 -> steradians
 
-        if self.cluster_m is None or isinstance(self.cluster_m, Nc.ClusterMassNodist):
-            self.hmf.set_area(sky_area_rad)
+        if cluster_m is None or isinstance(cluster_m, Nc.ClusterMassNodist):
+            hmf.set_area(sky_area_rad)
 
             def hmf_fake(logm, z):
-                return self.hmf.d2n_dzdlnM(self.cosmo, logm, z) * (
+                return hmf.d2n_dzdlnM(self.cosmo, logm, z) * (
                     1 / purity_model(logm, z) - 1
                 )
 
             def hmf_fake_pdf(logm, z):
                 return np.log(
-                    self.hmf.d2n_dzdlnM(self.cosmo, logm, z)
+                    hmf.d2n_dzdlnM(self.cosmo, logm, z)
                     * (1 / purity_model(logm, z) - 1)
                     / mean_fake_clusters_size
                 )
 
         else:
             clusterz = Nc.ClusterRedshiftNodist(z_min=self.z_min, z_max=self.z_max)
-            cad = Nc.ClusterAbundance.new(self.hmf, None)
+            cad = Nc.ClusterAbundance.new(hmf, None)
             cad.set_area(sky_area_rad)
-            cad.prepare(self.cosmo, clusterz, self.cluster_m)
+            cad.prepare(self.cosmo, clusterz, cluster_m)
 
             def hmf_fake(logm, z):
                 return cad.lnM_p_d2n(
-                    self.cosmo, clusterz, self.cluster_m, [logm], None, z
+                    self.cosmo, clusterz, cluster_m, [logm], None, z
                 ) * (1 / purity_model(logm, z) - 1)
 
             def hmf_fake_pdf(logm, z):
                 return np.log(
-                    cad.lnM_p_d2n(self.cosmo, clusterz, self.cluster_m, [logm], None, z)
+                    cad.lnM_p_d2n(self.cosmo, clusterz, cluster_m, [logm], None, z)
                     * (1 / purity_model(logm, z) - 1)
                     / mean_fake_clusters_size
                 )
@@ -545,7 +559,7 @@ class MockGenerator:
             return np.max(vals)
 
         def sample_fakes_rejection(target_func, n_to_generate):
-            sampled = []
+            sampled: list[list[float]] = []
             max_val = calculate_approx_max(target_func)
             while len(sampled) < n_to_generate:
                 m_test = np.random.uniform(
@@ -700,9 +714,9 @@ class MockGenerator:
         halo_ra = np.degrees(np.arctan2(halo_x2, halo_x1))
         halo_dec = np.degrees(np.arcsin(halo_x3 / cluster_r))
         halo_r = np.sqrt(halo_x1**2 + halo_x2**2 + halo_x3**2)
-        halo_z = [
-            dist.inv_comoving(self.cosmo, r / self.cosmo.RH_Mpc()) for r in halo_r
-        ]
+        halo_z = np.array(
+            [dist.inv_comoving(self.cosmo, r / self.cosmo.RH_Mpc()) for r in halo_r]
+        )
 
         # For the halo masses we use the cluster's masses added a Gaussian noise
         halo_logm = cluster_logm + np.random.normal(0, 0.1, self.cluster_set_size)
@@ -757,21 +771,26 @@ class MockGenerator:
         return halos
 
     def get_galaxy_coords(
-        self, ra_c: float, dec_c: float, sep_angular_rad: float, phi_rad: float
-    ) -> tuple[float, float]:
+        self,
+        ra_c: float,
+        dec_c: float,
+        sep_angular_rad: npt.NDArray[np.float64],
+        phi_rad: npt.NDArray[np.float64],
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """
-        Compute the RA and DEC of a galaxy given the angular separation, position angle
-        and center coordinates of the cluster/halo.
+        Compute the RA and DEC of galaxies given their angular separations, position
+        angles and the center coordinates of the cluster/halo.
 
         :param float ra_c: cluster/halo central right ascension angle in degrees.
         :param float dec_c: cluster/halo central declination angle in degrees.
-        :param float sep_angular_rad: galaxy angular separation from the center in
-            radians.
-        :param float phi_rad: galaxy position angle (angle from north to east) in
-            radians.
+        :param npt.NDArray[np.float64] sep_angular_rad: galaxy angular separations
+            from the center in radians.
+        :param npt.NDArray[np.float64] phi_rad: galaxy position angles (angle from
+            north to east) in radians.
 
-        :return tuple[float, float]: ra: galaxy right ascension angle in degrees, dec:
-            galaxy declination angle in degrees
+        :return tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]: ra: galaxy
+            right ascension angles in degrees, dec: galaxy declination angles in
+            degrees
         """
 
         # Convert center coordinates to radians
@@ -957,8 +976,8 @@ class MockGenerator:
     ):
         """Return galaxies lying within R200c of each object, matched by distance."""
 
-        object_coordinates = {"RA": "RA", "DEC": "DEC", "z": "z"}
-        galaxy_coordinates = {"RA": "RA", "DEC": "DEC", "z": "z"}
+        object_coordinates: sky_match.Coordinates = {"RA": "RA", "DEC": "DEC", "z": "z"}
+        galaxy_coordinates: sky_match.Coordinates = {"RA": "RA", "DEC": "DEC", "z": "z"}
 
         obj_id = f"{object_type}_id"
         obj_mass = f"{object_type}_mass"

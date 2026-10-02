@@ -126,7 +126,7 @@ jobs:
           meson install -C build
       - name: Running mypy
         run: |
-          mypy --exclude '.*meson.*|numcosmo_py/generate_stubs\.py' -p numcosmo_py
+          mypy -p numcosmo_py
 
   build-gcc-ubuntu:
     name: (ubuntu, apt, pip)

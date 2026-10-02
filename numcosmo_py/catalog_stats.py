@@ -33,7 +33,7 @@ derived-quantity support in `numcosmo_py.plotting.derived`.
 from __future__ import annotations
 
 import enum
-from typing import Callable, List, Optional
+from typing import Callable, List
 
 from . import Ncm
 
@@ -51,7 +51,7 @@ class DerivedStat(str, enum.Enum):
 
 def resolve_param(
     mset: Ncm.MSet, nadd_vals: int, name: str
-) -> tuple[Optional[Ncm.MSetPIndex], int]:
+) -> tuple[Ncm.MSetPIndex | None, int]:
     """Resolve a free-parameter name or numeric column index.
 
     Returns the (optional) `Ncm.MSetPIndex` and the full-row column index

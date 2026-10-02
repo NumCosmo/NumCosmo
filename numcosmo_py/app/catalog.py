@@ -25,7 +25,7 @@
 
 import math
 import dataclasses
-from typing import Optional, Annotated, List
+from typing import Annotated, List
 from pathlib import Path
 import typer
 from rich.table import Table
@@ -108,7 +108,7 @@ def _keff_legend() -> Table:
     return legend
 
 
-def _sampler_options(options: Optional[str]) -> List[tuple[str, str]]:
+def _sampler_options(options: str | None) -> List[tuple[str, str]]:
     """The sampler options as (name, value) pairs, in the order the sampler wrote them.
 
     The sampler writes them as a colon separated list of ``name=value``; anything that
@@ -577,7 +577,7 @@ class CalibrateCatalog(LoadCatalog):
     ] = 1.0
 
     split_fraction: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(
             help="Split fraction to use.",
             min=0.02,
@@ -585,7 +585,7 @@ class CalibrateCatalog(LoadCatalog):
     ] = None
 
     local_fraction: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(
             help="Local fraction to use.",
             min=0.02,
@@ -828,7 +828,7 @@ class PlotCorner(AppLogging):
     ] = 0
 
     tail: Annotated[
-        Optional[int],
+        int | None,
         typer.Option(
             help=(
                 "Keep only the last N iterations (ensemble steps) of every "
@@ -840,21 +840,21 @@ class PlotCorner(AppLogging):
     ] = None
 
     include: Annotated[
-        Optional[List[str]],
+        List[str] | None,
         typer.Option(
             help="List of parameters and or model names to include in the analysis.",
         ),
     ] = None
 
     exclude: Annotated[
-        Optional[List[str]],
+        List[str] | None,
         typer.Option(
             help="List of parameters and or model names to exclude from the analysis.",
         ),
     ] = None
 
     output: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--output",
             "-o",
@@ -863,7 +863,7 @@ class PlotCorner(AppLogging):
     ] = None
 
     plot_name: Annotated[
-        Optional[List[str]],
+        List[str] | None,
         typer.Option(
             help=(
                 "Legend name(s) for each catalog, matched by position. May be "
@@ -874,7 +874,7 @@ class PlotCorner(AppLogging):
     ] = None
 
     remove_index: Annotated[
-        Optional[List[int]],
+        List[int] | None,
         typer.Option(
             help="Index of the parameter to remove.",
             min=0,
@@ -914,7 +914,7 @@ class PlotCorner(AppLogging):
     ] = True
 
     derived_variable: Annotated[
-        Optional[List[str]],
+        List[str] | None,
         typer.Option(
             "--derived-variable",
             help=(
@@ -927,7 +927,7 @@ class PlotCorner(AppLogging):
     ] = None
 
     derived_expr: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             help=(
                 "Add an extra corner-plot dimension computed from this "
@@ -939,7 +939,7 @@ class PlotCorner(AppLogging):
     ] = None
 
     derived_symbol: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             help=(
                 "Axis label for --derived-expr. Defaults to the expression " "itself."
@@ -1021,7 +1021,7 @@ class ParameterAnalysis(LoadCatalog):
     """Plots the corner plot of the catalog."""
 
     plot_name: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(help="Name of the plot file."),
     ] = None
 
@@ -1163,7 +1163,7 @@ class DerivedQuantityError(LoadCatalog):
     ]
 
     stat: Annotated[
-        Optional[List[DerivedStat]],
+        List[DerivedStat] | None,
         typer.Option(
             help=(
                 "Statistic(s) to report. Unlike median/bestfit, mode is NOT "
@@ -1175,7 +1175,7 @@ class DerivedQuantityError(LoadCatalog):
     ] = None
 
     symbol: Annotated[
-        Optional[List[str]],
+        List[str] | None,
         typer.Option(
             "--symbol",
             help=(
@@ -1310,7 +1310,7 @@ class CheckM2lnL(LoadExperiment):
     ] = 0
 
     tail: Annotated[
-        Optional[int],
+        int | None,
         typer.Option(
             help=(
                 "Keep only the last N iterations (ensemble steps) instead of "
@@ -1347,7 +1347,7 @@ class CheckM2lnL(LoadExperiment):
     ] = 1
 
     max_rows: Annotated[
-        Optional[int],
+        int | None,
         typer.Option(
             help="Stop after checking this many rows (after --stride). If not "
             "given, all selected rows are checked.",
@@ -1457,7 +1457,7 @@ class DumpMset(AppLogging):
     ]
 
     output: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--output",
             "-o",

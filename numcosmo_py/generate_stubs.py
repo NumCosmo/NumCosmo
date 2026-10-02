@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional, Tuple, Type, Union, cast
+from typing import Any, Callable, Tuple, Type, Union, cast
 
 import argparse
 import importlib
@@ -44,7 +44,7 @@ def _object_get_props(
     repo: GIRepository.Repository, obj: GI.ObjectInfo
 ) -> Tuple[list[GIRepository.BaseInfo], list[GIRepository.BaseInfo]]:
     parents: list[GI.ObjectInfo] = []
-    parent: Optional[GI.ObjectInfo] = obj.get_parent()
+    parent: GI.ObjectInfo | None = obj.get_parent()
     while parent:
         parents.append(parent)
         parent = parent.get_parent()
@@ -418,10 +418,10 @@ def _build_function_info(
     current_namespace: str,
     name: str,
     function: GI.FunctionInfo | GI.VFuncInfo,
-    in_class: Optional[Any],
+    in_class: Any | None,
     needed_namespaces: set[str],
-    return_signature: Optional[str] = None,
-    comment: Optional[str] = None,
+    return_signature: str | None = None,
+    comment: str | None = None,
 ) -> str:
     constructor: bool = False
     method: bool = isinstance(function, GI.VFuncInfo)
@@ -483,7 +483,7 @@ def _wrapped_strip_boolean_result(
     current_namespace: str,
     name: str,
     function: Any,
-    in_class: Optional[Any],
+    in_class: Any | None,
     needed_namespaces: set[str],
 ) -> str:
     real_function = function.__wrapped__
@@ -528,7 +528,7 @@ def _build_function(
     current_namespace: str,
     name: str,
     function: Any,
-    in_class: Optional[Any],
+    in_class: Any | None,
     needed_namespaces: set[str],
 ) -> str:
     if name.startswith("_") and name not in dunder_list:
@@ -574,7 +574,7 @@ def _build_function(
 
 def _check_override(
     prefix: str, name: str, local_overrides: dict[str, str]
-) -> Optional[str]:
+) -> str | None:
     full_name = _generate_full_name(prefix, name)
     if full_name in local_overrides:
         return "# override\n" + local_overrides[full_name]
@@ -588,7 +588,7 @@ def _gi_build_stub(
     children: list[str],
     needed_namespaces: set[str],
     local_overrides: dict[str, str],
-    in_class: Optional[Any],
+    in_class: Any | None,
     prefix_name: str,
 ) -> str:
     """Build stubs for a GI module.
@@ -1005,7 +1005,7 @@ def _find_methods(obj: Type[Any]) -> list[str]:
     return sorted(list(obj_attrs))
 
 
-def _get_gname(obj: Type[Any]) -> Optional[str]:
+def _get_gname(obj: Type[Any]) -> str | None:
     if not hasattr(obj, "__gtype__"):
         return None
     return obj.__gtype__.name  # type: ignore

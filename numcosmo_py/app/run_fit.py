@@ -27,7 +27,7 @@ import dataclasses
 import resource
 import sys
 import time
-from typing import Optional, Annotated, Tuple
+from typing import Annotated, Tuple
 
 import typer
 
@@ -53,7 +53,7 @@ class RunCommonOptions(LoadExperiment):
         ),
     ] = FitRunner.NLOPT
     algorithm: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             help="Algorithm to use for the fit.",
         ),
@@ -72,17 +72,17 @@ class RunCommonOptions(LoadExperiment):
     ] = FitRunMessages.SIMPLE
 
     params_reltol: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(help="Relative tolerance for the fitting parameters."),
     ] = None
 
     m2lnl_reltol: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(help="Relative tolerance for -2lnL."),
     ] = None
 
     m2lnl_abstol: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(help="Absolute tolerance for -2lnL."),
     ] = None
 

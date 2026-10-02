@@ -385,7 +385,7 @@ class GenerateJpasForecast:
     ]
 
     fitting_sky_cut: Annotated[
-        JpasSSCType | None,
+        JpasSSCType,
         typer.Option(
             help="Super Sample Covariance method for fitting.", show_default=True
         ),
@@ -449,7 +449,7 @@ class GenerateJpasForecast:
     ] = 8
 
     cluster_redshift_type: Annotated[
-        ClusterRedshiftType | None,
+        ClusterRedshiftType,
         typer.Option(help="Cluster photoz relation.", show_default=True),
     ] = ClusterRedshiftType.NODIST
 
@@ -490,7 +490,7 @@ class GenerateJpasForecast:
     ] = 2
 
     cluster_mass_type: Annotated[
-        ClusterMassType | None,
+        ClusterMassType,
         typer.Option(help="Cluster mass-observable relation.", show_default=True),
     ] = ClusterMassType.NODIST
 
@@ -767,7 +767,7 @@ class ClusterWL(ABC):
         try:
             check_shape_pop_compat(shape_gen, pop_gen)
         except ValueError as e:
-            raise typer.BadParameter(e)
+            raise typer.BadParameter(str(e)) from e
 
         exp = self._build_experiment(shape_gen, pop_gen)
 
@@ -813,14 +813,16 @@ class ClusterWL(ABC):
         shape_factor_list = shlex.split(self.shape_factor)
         shape_factor_type = shape_factor_list.pop(0)
         try:
-            shape_factor = ShapeFactorGen(shape_factor_type)
+            # Lookup by value; mypy checks it against the (value, model_cls)
+            # signature that builds the members.
+            shape_factor = ShapeFactorGen(shape_factor_type)  # type: ignore[call-arg]
         except ValueError as e:
-            raise typer.BadParameter(e)
+            raise typer.BadParameter(str(e)) from e
 
         try:
             shape_factor_args = shape_factor.model_cls.from_args(shape_factor_list)
         except ValueError as e:
-            raise typer.BadParameter(e)
+            raise typer.BadParameter(str(e)) from e
         return shape_factor, shape_factor_args
 
     def parse_pop_dist(self):
@@ -828,14 +830,16 @@ class ClusterWL(ABC):
         pop_dist_list = shlex.split(self.pop_dist)
         pop_dist_type = pop_dist_list.pop(0)
         try:
-            pop_dist = GalaxyPopGen(pop_dist_type)
+            # Lookup by value; mypy checks it against the (value, model_cls)
+            # signature that builds the members.
+            pop_dist = GalaxyPopGen(pop_dist_type)  # type: ignore[call-arg]
         except ValueError as e:
-            raise typer.BadParameter(e)
+            raise typer.BadParameter(str(e)) from e
 
         try:
             pop_dist_args = pop_dist.model_cls.from_args(pop_dist_list)
         except ValueError as e:
-            raise typer.BadParameter(e)
+            raise typer.BadParameter(str(e)) from e
         return pop_dist, pop_dist_args
 
     @abstractmethod
@@ -906,14 +910,16 @@ class GenerateClusterWL(ClusterWL):
         z_dist_list = shlex.split(self.z_dist)
         z_dist_type = z_dist_list.pop(0)
         try:
-            z_dist = GalaxyZGen(z_dist_type)
+            # Lookup by value; mypy checks it against the (value, model_cls)
+            # signature that builds the members.
+            z_dist = GalaxyZGen(z_dist_type)  # type: ignore[call-arg]
         except ValueError as e:
-            raise typer.BadParameter(e)
+            raise typer.BadParameter(str(e)) from e
 
         try:
             z_dist_args = z_dist.model_cls.from_args(z_dist_list)
         except ValueError as e:
-            raise typer.BadParameter(e)
+            raise typer.BadParameter(str(e)) from e
         return z_dist, z_dist_args
 
     def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:

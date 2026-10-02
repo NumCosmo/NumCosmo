@@ -28,7 +28,7 @@ constraint.
 """
 
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Tuple
 
 import numpy as np
 
@@ -140,16 +140,16 @@ def run_gauss_constraint_mcmc(
     fit_first: bool = False,
     robust: bool = False,
     use_apes_center_shrink: bool = False,
-    use_apes_threads: Optional[bool] = None,
+    use_apes_threads: bool | None = None,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
     nwalkers: int = 3000,
     use_threads: bool = True,
     over_smooth: float = 1.1,
-    local_fraction: Optional[float] = None,
+    local_fraction: float | None = None,
     init_sampling_scale: float = 1.0,
-    start_catalog: Optional[Path] = None,
+    start_catalog: Path | None = None,
     tmvn: bool = False,
 ) -> str:
     """Run the Funnel MCMC example."""

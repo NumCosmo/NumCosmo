@@ -24,7 +24,7 @@
 """CLI command for viewing cross-correlation kernels."""
 
 import dataclasses
-from typing import Annotated, Optional
+from typing import Annotated
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -223,7 +223,7 @@ class KernelVariants:
 
 def ListKernels(
     kernel_type: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(
             help=(
                 "Kernel type to document. Given one, every parameter it takes "
@@ -398,7 +398,7 @@ class ViewKernel(XcorKernelCommon):
         print()
         print("[OK] Kernel visualization complete!")
 
-    def _cls_output_path(self) -> Optional[Path]:
+    def _cls_output_path(self) -> Path | None:
         """Where the C_ell figure is written.
 
         The kernel figure already owns --output, so the spectra go beside it

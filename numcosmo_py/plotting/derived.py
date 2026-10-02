@@ -30,7 +30,7 @@ dimension alongside the catalog's own parameters.
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List
 
 import numpy as np
 
@@ -47,7 +47,7 @@ def add_derived_column(
     mcat: Ncm.MSetCatalog,
     variable: List[str],
     expr: str,
-    symbol: Optional[str],
+    symbol: str | None,
     name: str,
 ) -> CatalogData:
     """Append a derived quantity, computed from `expr`, as a new column of `cd`.
