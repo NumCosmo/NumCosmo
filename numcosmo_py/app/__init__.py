@@ -27,42 +27,42 @@ from typing import TypedDict
 
 import typer
 
-from .from_cosmosis import COSMOSIS
 from . import from_cosmosis
-from .run_fit import RunFit, RunTest
-from .run_mc import RunMC
-from .fisher import ComputeTheoryVector, RunFisher, RunFisherBias
-from .esmcmc import RunMCMC
 from .catalog import (
     AnalyzeMCMC,
     CalibrateCatalog,
+    CheckM2lnL,
+    DerivedQuantityError,
+    DumpMset,
+    GetBestFit,
+    ParameterEvolution,
     PlotCorner,
     VisualHW,
-    ParameterEvolution,
-    DerivedQuantityError,
-    GetBestFit,
-    DumpMset,
-    CheckM2lnL,
-)
-from .generate import (
-    GeneratePlanck,
-    BuildPlanckRelease,
-    GenerateJpasForecast,
-    GenerateClusterWL,
-    LoadClusterWL,
-    GenerateClusterRichnessCount,
-    GenerateQSpline,
-    GenerateXCDM,
-    GenerateDEWSpline,
-    GenerateSamplerTest,
 )
 from .cluster_richness import RunClusterRichnessAnalysis
+from .esmcmc import RunMCMC
+from .fisher import ComputeTheoryVector, RunFisher, RunFisherBias
+from .from_cosmosis import COSMOSIS
+from .generate import (
+    BuildPlanckRelease,
+    GenerateClusterRichnessCount,
+    GenerateClusterWL,
+    GenerateDEWSpline,
+    GenerateJpasForecast,
+    GeneratePlanck,
+    GenerateQSpline,
+    GenerateSamplerTest,
+    GenerateXCDM,
+    LoadClusterWL,
+)
 from .inspect import (
-    InspectSummary,
     InspectClusterNCounts,
     InspectGalaxyShapeIntegrand,
+    InspectSummary,
 )
-from .xcor import ViewKernel, ListKernels, ComputeCls
+from .run_fit import RunFit, RunTest
+from .run_mc import RunMC
+from .xcor import ComputeCls, ListKernels, ViewKernel
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
 app_run = typer.Typer(no_args_is_help=True, help="Run different statistical analyses.")

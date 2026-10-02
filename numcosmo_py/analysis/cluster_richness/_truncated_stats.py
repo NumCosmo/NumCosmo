@@ -36,8 +36,8 @@ import sys
 from typing import TypedDict
 
 import numpy as np
+from scipy.optimize import OptimizeResult, least_squares
 from scipy.stats import norm
-from scipy.optimize import least_squares, OptimizeResult
 
 
 class InversionResult(TypedDict, total=False):
@@ -168,9 +168,7 @@ def invert_truncated_stats(
                 residuals, x0, xtol=2.23e-16, bounds=(lower, upper), max_nfev=2000
             )
             # pick best by cost
-            if best is None:
-                best = sol
-            elif sol.cost < best.cost:
+            if best is None or sol.cost < best.cost:
                 best = sol
         except (ValueError, RuntimeError) as e:
             print(

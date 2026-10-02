@@ -55,9 +55,9 @@ test = [
     "pytest-timeout",
 ]
 dev = [
+    "black",
     "mypy",
-    "pylint",
-    "flake8",
+    "ruff",
 ]
 
 [project.urls]
@@ -78,3 +78,21 @@ build-backend = "setuptools.build_meta"
 
 [tool.coverage.run]
 omit = ["*/external/*"]
+
+# Ruff's default rule set; target-version comes from requires-python.
+[tool.ruff]
+line-length = 88
+extend-exclude = ["numcosmo_py/external", "*.pyi"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+check_untyped_defs = true
+exclude = [
+    '.*meson.*',
+    'numcosmo_py/external/',
+]
+
+[[tool.mypy.overrides]]
+module = ["numcosmo_py.nc", "numcosmo_py.ncm", "numcosmo_py.external.*"]
+ignore_errors = true

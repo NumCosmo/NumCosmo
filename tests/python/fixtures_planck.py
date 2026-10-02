@@ -297,7 +297,6 @@ PLIK_LITE_LMAX = 500  # covers 215 bins of width 2 starting at ell = 30
 
 def plik_lite_tables(seed: int = 3):
     """Return the (x_all, cov_all, blmin, blmax, bweight) of the synthetic file."""
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py.experiments.planck_lite import NBIN_TT, NBIN_TOTAL
 
     rng = np.random.default_rng(seed)
@@ -318,7 +317,6 @@ def make_plik_lite_cldf(root, spectra=("TT",), seed: int = 3) -> str:
     ext = os.path.join(lkl, "_external")
     os.makedirs(ext, exist_ok=True)
 
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py.experiments.planck_lite import NBIN_TOTAL
 
     x_all, cov_all, blmin, blmax, bweight = plik_lite_tables(seed)
@@ -520,7 +518,6 @@ def planck_mset(pol: bool = False, **params):
     @pol selects the TTTEEE nuisance model; @params overrides individual
     nuisance parameters by name. Returns the (mset, planck model) pair.
     """
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py import Ncm, Nc
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
 
@@ -538,7 +535,6 @@ def planck_mset(pol: bool = False, **params):
 
 def theory_cls(pb, spectrum: str, lmax: int) -> np.ndarray:
     """Return the prepared theory $C_\\ell$ of @spectrum as a numpy array."""
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py import Ncm
 
     vec = Ncm.Vector.new(lmax + 1)
@@ -549,7 +545,6 @@ def theory_cls(pb, spectrum: str, lmax: int) -> np.ndarray:
 
 def model_vector(data, mset) -> np.ndarray:
     """Return the model (mean) vector a Gaussian likelihood assembles."""
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py import Ncm
 
     size = data.get_length()

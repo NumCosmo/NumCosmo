@@ -24,14 +24,13 @@
 """Example of using the Rosenbrock function to test the MCMC sampler."""
 
 from pathlib import Path
-from typing import Optional
 
 from numcosmo_py import Ncm
 from numcosmo_py.sampling.esmcmc import (
-    create_esmcmc,
-    WalkerTypes,
     InterpolationKernel,
     InterpolationMethod,
+    WalkerTypes,
+    create_esmcmc,
 )
 
 
@@ -43,16 +42,16 @@ def run_funnel_mcmc(
     fit_first: bool = False,
     robust: bool = False,
     use_apes_center_shrink: bool = False,
-    use_apes_threads: Optional[bool] = None,
+    use_apes_threads: bool | None = None,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
     nwalkers: int = 3000,
     use_threads: bool = True,
     over_smooth: float = 0.2,
-    local_fraction: Optional[float] = None,
+    local_fraction: float | None = None,
     init_sampling_scale: float = 1.0e2,
-    start_catalog: Optional[Path] = None,
+    start_catalog: Path | None = None,
 ) -> str:
     """Runs the Funnel MCMC example."""
 

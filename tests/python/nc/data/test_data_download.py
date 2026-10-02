@@ -98,7 +98,7 @@ def test_concurrent_download_is_safe(tmp_path):
     """
     env = dict(os.environ, HOME=str(tmp_path))
     procs = [
-        subprocess.Popen(  # pylint: disable=consider-using-with
+        subprocess.Popen(
             [sys.executable, "-c", _FETCH, TINY_ASSET],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -198,7 +198,7 @@ def test_a_waiter_uses_what_the_holder_produced(tmp_path):
     # Held by nobody, which is what a live download looks like from outside.
     (base / f"{TINY_ASSET}.lock").mkdir()
 
-    proc = subprocess.Popen(  # pylint: disable=consider-using-with
+    proc = subprocess.Popen(
         [sys.executable, "-c", _FETCH, TINY_ASSET],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -253,7 +253,7 @@ def test_wl_catalog_waits_for_the_holder(tmp_path):
     # Held by nobody, which is what a live download looks like from outside.
     (base / f"{WL_ASSET}.lock").mkdir()
 
-    proc = subprocess.Popen(  # pylint: disable=consider-using-with
+    proc = subprocess.Popen(
         [sys.executable, "-c", _FETCH_WL],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

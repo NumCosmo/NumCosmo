@@ -31,13 +31,13 @@ Planck publications in addition to NumCosmo; see ``planck_native_provenance.md``
 for the source data and the reference list.
 """
 
-from typing import Any, cast
 from enum import StrEnum
+from typing import Any, cast
 
 import numpy as np
 
-from numcosmo_py import Ncm, Nc
-from numcosmo_py.cosmology import HIPrimModel, create_cosmo, ParameterDesc
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.cosmology import HIPrimModel, ParameterDesc, create_cosmo
 
 
 class Planck18Types(StrEnum):
@@ -383,26 +383,25 @@ def generate_planck18_native(
     See ``numcosmo_py/experiments/planck_native_provenance.md`` for the data
     provenance and the required Planck Collaboration citations.
     """
-    # pylint: disable=import-outside-toplevel
-    from numcosmo_py.experiments.planck_lite import find_baseline_file
-    from numcosmo_py.experiments.planck_simall import SIMALL_EE_RELPATH, build_simall
     from numcosmo_py.experiments.planck_commander import (
         COMMANDER_RELPATH,
         build_commander,
-    )
-    from numcosmo_py.experiments.planck_smica import (
-        PLIK_TT_RELPATH,
-        PLIK_TTTEEE_RELPATH,
-        build_smica_tt,
-        build_smica_ttteee,
     )
     from numcosmo_py.experiments.planck_lensing import (
         LENSING_FULL_RELPATH,
         build_lensing,
     )
+    from numcosmo_py.experiments.planck_lite import find_baseline_file
     from numcosmo_py.experiments.planck_native_release import (
         PlanckReleaseId,
         load_planck_release,
+    )
+    from numcosmo_py.experiments.planck_simall import SIMALL_EE_RELPATH, build_simall
+    from numcosmo_py.experiments.planck_smica import (
+        PLIK_TT_RELPATH,
+        PLIK_TTTEEE_RELPATH,
+        build_smica_tt,
+        build_smica_ttteee,
     )
 
     cbe_boltzmann = Nc.HIPertBoltzmannCBE.new()

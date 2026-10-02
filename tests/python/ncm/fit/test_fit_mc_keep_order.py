@@ -167,16 +167,16 @@ class _OrderProbeData(Ncm.Data):
         self.call_count = 0
         self.target = 0.0
 
-    def do_get_length(self):  # pylint: disable-msg=arguments-differ
+    def do_get_length(self):
         return 1
 
-    def do_begin(self):  # pylint: disable-msg=arguments-differ
+    def do_begin(self):
         pass
 
-    def do_prepare(self, mset):  # pylint: disable-msg=arguments-differ
+    def do_prepare(self, mset):
         pass
 
-    def do_resample(self, mset, rng):  # pylint: disable-msg=arguments-differ
+    def do_resample(self, mset, rng):
         key = threading.get_ident()
 
         if key not in _OrderProbeData._thread_slots:
@@ -197,7 +197,7 @@ class _OrderProbeData(Ncm.Data):
         if thread_slot == 0 and self.call_count == 1:
             time.sleep(SLOW_SLEEP_S)
 
-    def do_m2lnL_val(self, mset):  # pylint: disable-msg=arguments-differ
+    def do_m2lnL_val(self, mset):
         model = mset.peek(Ncm.ModelMVND.id())
         param = model.orig_vparam_get(0, 0)
 

@@ -26,8 +26,8 @@
 from collections.abc import Iterable
 
 import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter, SymmetricalLogLocator
 import numpy as np
+from matplotlib.ticker import FuncFormatter, SymmetricalLogLocator
 
 
 def percent_tick(value: float, _pos: int | None = None) -> str:

@@ -15,7 +15,6 @@ dependencies:
   - click
   - coverage
   - fftw
-  - flake8
   - fortran-compiler <2  # see the c-compiler note above
   - gcovr
   - getdist
@@ -47,7 +46,6 @@ dependencies:
   - pydantic
   - pygobject
   - pygobject-stubs
-  - pylint
   - pytest
   - pytest-cov
   - pytest-lazy-fixtures
@@ -57,10 +55,12 @@ dependencies:
   - quarto
   - requests
   - rich
+  - ruff
   - scipy
   - setuptools
   - tabulate
   - tqdm
   - typer
   - types-tabulate
+  - uncrustify
   - zlib

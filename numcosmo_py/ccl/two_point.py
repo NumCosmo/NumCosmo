@@ -23,7 +23,7 @@
 
 """Two-point correlation functions."""
 
-from typing import Callable, Sequence
+from collections.abc import Callable, Sequence
 
 import numpy as np
 import pyccl
@@ -259,7 +259,7 @@ def block_transformer(
     def evaluate(k_a: np.ndarray) -> np.ndarray:
         out = np.zeros((n_ell, len(k_a)))
         for kernel_cb, der, f_c, chi_from in pieces:
-            deriv = der if der > 0 else 0
+            deriv = max(0, der)
             block = np.zeros((n_ell, len(k_a)))
             for ik, k in enumerate(k_a):
                 integ.integrate_deriv(

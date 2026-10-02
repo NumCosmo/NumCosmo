@@ -23,14 +23,13 @@
 
 """NumCosmo APP subcommand to convert CosmoSIS likelihoods to NumCosmo."""
 
-from typing import Optional, Annotated
-from pathlib import Path
 import importlib.util
+from pathlib import Path
+from typing import Annotated
 
 import typer
 
 from numcosmo_py import Ncm
-
 from numcosmo_py.external.cosmosis_types import (
     LinearMatterPowerSpectrum,
     NonLinearMatterPowerSpectrum,
@@ -52,7 +51,7 @@ if COSMOSIS:
         inifile: Annotated[Path, typer.Argument(help="Path to the Cosmosis ini file.")],
         *,
         outfile: Annotated[
-            Optional[Path],
+            Path | None,
             typer.Option(
                 help="Path to the output file, if not given,"
                 " the input file name is used with the extension .yaml."
@@ -101,7 +100,6 @@ if COSMOSIS:
         if outfile is None:
             outfile = Path(inifile.stem + ".yaml")
 
-        # pylint: disable-next=import-outside-toplevel
         from numcosmo_py.external.cosmosis import (
             convert_likelihoods,
             create_numcosmo_mapping,

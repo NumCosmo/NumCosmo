@@ -8,7 +8,6 @@ from scipy.special import spherical_jn
 
 pytest.importorskip("pyccl")
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 import pyccl
 
 from numcosmo_py import Nc, Ncm

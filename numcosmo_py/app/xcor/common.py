@@ -32,8 +32,8 @@ through inheritance rather than through duplicated option blocks.
 import dataclasses
 import enum
 import time
-from typing import Annotated, Any, Optional
 from pathlib import Path
+from typing import Annotated, Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,23 +45,23 @@ from numcosmo_py.cosmology import Cosmology
 from .kernels import (
     CMBISWSource,
     CMBLensingSource,
-    _KernelRadialConfig,
-    parse_kernel_spec,
-    LSSTBinType,
-    KernelCMBLensingConfig,
-    KernelCMBISWConfig,
-    KernelTSZConfig,
-    KernelNumberCountsConfig,
-    KernelWeakLensingConfig,
     KernelClusterTophatConfig,
+    KernelCMBISWConfig,
+    KernelCMBLensingConfig,
+    KernelConfigTypes,
+    KernelNumberCountsConfig,
     KernelRadialGaussConfig,
-    KernelRadialTophatConfig,
-    KernelRadialTophatSmoothConfig,
-    KernelRadialStudentTConfig,
-    KernelRadialPowerExpConfig,
     KernelRadialLensingConfig,
     KernelRadialMultiConfig,
-    KernelConfigTypes,
+    KernelRadialPowerExpConfig,
+    KernelRadialStudentTConfig,
+    KernelRadialTophatConfig,
+    KernelRadialTophatSmoothConfig,
+    KernelTSZConfig,
+    KernelWeakLensingConfig,
+    LSSTBinType,
+    _KernelRadialConfig,
+    parse_kernel_spec,
 )
 from .plotting import style_ratio_axis
 
@@ -206,7 +206,7 @@ class XcorKernelCommon:
     ] = False
 
     integrator_reltol: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(
             min=0.0,
             max=1.0,
@@ -221,7 +221,7 @@ class XcorKernelCommon:
     ] = None
 
     integrator_cheb_reltol: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(
             min=0.0,
             max=1.0,
@@ -235,7 +235,7 @@ class XcorKernelCommon:
     ] = None
 
     integrator_max_order: Annotated[
-        Optional[int],
+        int | None,
         typer.Option(
             help=(
                 "NcmSBesselIntegratorLevin maximum spectral order "
@@ -285,7 +285,7 @@ class XcorKernelCommon:
     ] = True
 
     output: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             help="Output file path for plot (e.g., kernel_plot.png).",
         ),
@@ -324,7 +324,7 @@ class XcorKernelCommon:
         self._create_integrator()
 
         print("Parsing kernel specification...")
-        self._solver_cache: Optional[tuple[Nc.XcorSolver, list[int]]] = None
+        self._solver_cache: tuple[Nc.XcorSolver, list[int]] | None = None
         self.kernels: list[tuple[str, Nc.XcorKernel]] = []
         for spec in self.kernel:
             kernel_name, kernel_config = parse_kernel_spec(spec)
@@ -780,7 +780,7 @@ class XcorKernelCommon:
             return [(i, i) for i in range(n_kernels)]
         return [(i, j) for i in range(n_kernels) for j in range(i, n_kernels)]
 
-    def _cls_output_path(self) -> Optional[Path]:
+    def _cls_output_path(self) -> Path | None:
         """Where the C_ell figure is written.
 
         :return: The output path, or None when nothing is to be saved.
@@ -910,7 +910,7 @@ class XcorKernelCommon:
         """
         print("Plotting C_ell...")
 
-        colors = plt.cm.tab10.colors  # type: ignore # pylint: disable=no-member
+        colors = plt.cm.tab10.colors  # type: ignore
         ax1: plt.Axes
 
         if cls_alt is not None:

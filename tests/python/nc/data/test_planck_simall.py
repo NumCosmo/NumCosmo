@@ -88,7 +88,6 @@ def test_matches_clik_reference(relpath, enum, length):
 
     The tabulated log-probability with floor indexing reproduces clik exactly.
     """
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
     from numcosmo_py.experiments.planck18 import mset_set_parameters, Planck18Types
 

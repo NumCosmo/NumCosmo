@@ -22,7 +22,7 @@
 import os
 from pathlib import Path
 import numpy as np
-from numpy.random import RandomState  # pylint: disable=no-name-in-module
+from numpy.random import RandomState
 import pytest
 
 from numcosmo_py import Nc, Ncm

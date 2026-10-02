@@ -36,7 +36,6 @@ from typer.testing import CliRunner
 pytest.importorskip("astropy")
 pytest.importorskip("getdist")
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 
 import numpy as np
 from numpy import sin, cos, pi, log10, deg2rad
@@ -887,7 +886,6 @@ def test_cluster_wl_app_generate_redshift_dist_bogus_type(experiment_file):
 
 def test_cluster_wl_app_generate_halo_profile(experiment_file: Path, halo_profile: str):
     """Test the generation of the cluster WL app with diferent cluster profiles."""
-    # pylint: disable=unused-variable
     result = runner.invoke(
         app,
         [
@@ -948,7 +946,6 @@ def test_cluster_wl_app_generate_halo_profile_bad(experiment_file, halo_profile_
 
 def test_cluster_wl_app_halo_mass_summary(experiment_file, halo_mass_summary):
     """Test the generation of the cluster WL app with specific halo mass summary."""
-    # pylint: disable=unused-variable
     mass, c = halo_mass_summary
     result = runner.invoke(
         app,
@@ -1006,7 +1003,6 @@ def test_cluster_wl_app_halo_mass_summary_bad(experiment_file, halo_mass_summary
 
 def test_cluster_wl_app_halo_position(experiment_file, halo_position):
     """Test the generation of the cluster WL app with specific RA and Dec."""
-    # pylint: disable=unused-variable
     cluster_ra, cluster_dec, cluster_z = halo_position
     dec_min = cluster_dec - 0.2
     dec_max = cluster_dec + 0.2
@@ -1271,7 +1267,6 @@ def test_cluster_wl_app_file_extension_bad(experiment_file):
 
 def test_cluster_wl_app_fit_parameters(experiment_file, fit_parameters):
     """Test the generation of the cluster WL app with specific fit parameters."""
-    # pylint: disable=unused-variable
     result = runner.invoke(
         app,
         [

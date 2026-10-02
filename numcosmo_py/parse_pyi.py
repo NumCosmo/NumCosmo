@@ -1,7 +1,5 @@
 """Parse pyi files."""
 
-from typing import Optional
-
 import ast
 import re
 
@@ -29,7 +27,7 @@ def _search_overridden_symbols(local_input: str) -> list[str]:
     symbols: list[str] = []
     parents: list[str] = []
 
-    last_class: Optional[str] = None
+    last_class: str | None = None
     last_indentation_level: int = 0
 
     is_override: bool = False

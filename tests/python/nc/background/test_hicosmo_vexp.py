@@ -39,7 +39,7 @@ Ncm.cfg_init()
 def fixture_vexp(request) -> Nc.HICosmoVexp:
     """Fixture for NcHICosmoVexp."""
     vexp = Nc.HICosmoVexp.new()
-    vexp.props.dphi = request.param  # pylint: disable=no-member
+    vexp.props.dphi = request.param
 
     return vexp
 
@@ -66,9 +66,9 @@ def test_hubble_negative_dphi(vexp):
 
     # Negative d_phi means matching Omega_L in the expansion
     # phase.
-    if vexp.props.dphi < 0.0:  # pylint: disable=no-member
+    if vexp.props.dphi < 0.0:
         assert_allclose(vexp.Omega_t0(), 1.0)
-        assert_allclose(vexp.E2(0.0), vexp.props.OmegaL)  # pylint: disable=no-member
+        assert_allclose(vexp.E2(0.0), vexp.props.OmegaL)
 
 
 def test_hubble_positive_dphi(vexp):
@@ -77,9 +77,9 @@ def test_hubble_positive_dphi(vexp):
 
     # Positive d_phi means matching Omega_c in the expansion
     # phase.
-    if vexp.props.dphi > 0.0:  # pylint: disable=no-member
+    if vexp.props.dphi > 0.0:
         assert_allclose(vexp.Omega_t0(), 1.0)
-        assert_allclose(vexp.E2(0.0), vexp.props.Omegac)  # pylint: disable=no-member
+        assert_allclose(vexp.E2(0.0), vexp.props.Omegac)
 
 
 def test_tau_min_max(vexp):
@@ -160,13 +160,9 @@ def test_E_tau_negative_dphi(vexp):
     tau0e = vexp.tau_xe(1.0)
 
     # Negative d_phi means matching Omega_L in the expansion phase.
-    if vexp.props.dphi < 0.0:  # pylint: disable=no-member
-        assert_allclose(
-            vexp.E_tau(tau0c) ** 2, vexp.props.Omegac  # pylint: disable=no-member
-        )
-        assert_allclose(
-            vexp.E_tau(tau0e) ** 2, vexp.props.OmegaL  # pylint: disable=no-member
-        )
+    if vexp.props.dphi < 0.0:
+        assert_allclose(vexp.E_tau(tau0c) ** 2, vexp.props.Omegac)
+        assert_allclose(vexp.E_tau(tau0e) ** 2, vexp.props.OmegaL)
 
 
 def test_E_tau_positive_dphi(vexp):
@@ -182,13 +178,9 @@ def test_E_tau_positive_dphi(vexp):
     tau0e = vexp.tau_xe(1.0)
 
     # Positive d_phi means matching Omega_c in the expansion phase.
-    if vexp.props.dphi > 0.0:  # pylint: disable=no-member
-        assert_allclose(
-            vexp.E_tau(tau0c) ** 2, vexp.props.OmegaL  # pylint: disable=no-member
-        )
-        assert_allclose(
-            vexp.E_tau(tau0e) ** 2, vexp.props.Omegac  # pylint: disable=no-member
-        )
+    if vexp.props.dphi > 0.0:
+        assert_allclose(vexp.E_tau(tau0c) ** 2, vexp.props.OmegaL)
+        assert_allclose(vexp.E_tau(tau0e) ** 2, vexp.props.Omegac)
 
 
 def test_Ricci_scale(vexp):
@@ -226,12 +218,12 @@ def test_serialize(vexp):
     """Test NcHICosmoVexp serialization."""
     assert vexp is not None
 
-    vexp.props.dphi = -1.234e-1  # pylint: disable=no-member
-    vexp.props.Omegac = 0.321  # pylint: disable=no-member
-    vexp.props.OmegaL = 0.679  # pylint: disable=no-member
+    vexp.props.dphi = -1.234e-1
+    vexp.props.Omegac = 0.321
+    vexp.props.OmegaL = 0.679
 
-    vexp.props.glue_de = True  # pylint: disable=no-member
-    vexp.props.xb = 1.0e30  # pylint: disable=no-member
+    vexp.props.glue_de = True
+    vexp.props.xb = 1.0e30
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
@@ -242,11 +234,11 @@ def test_serialize(vexp):
     assert isinstance(vexp2, Nc.HICosmo)
     assert isinstance(vexp2, Ncm.Model)
 
-    assert vexp2.props.dphi == vexp.props.dphi  # pylint: disable=no-member
-    assert vexp2.props.Omegac == vexp.props.Omegac  # pylint: disable=no-member
-    assert vexp2.props.OmegaL == vexp.props.OmegaL  # pylint: disable=no-member
-    assert vexp2.props.glue_de == vexp.props.glue_de  # pylint: disable=no-member
-    assert vexp2.props.xb == vexp.props.xb  # pylint: disable=no-member
+    assert vexp2.props.dphi == vexp.props.dphi
+    assert vexp2.props.Omegac == vexp.props.Omegac
+    assert vexp2.props.OmegaL == vexp.props.OmegaL
+    assert vexp2.props.glue_de == vexp.props.glue_de
+    assert vexp2.props.xb == vexp.props.xb
 
 
 def test_eval_at(vexp):

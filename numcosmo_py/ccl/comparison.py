@@ -24,14 +24,16 @@
 """Compare CCL and NumCosmo results."""
 
 import timeit
+
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
-import matplotlib.pyplot as plt
 import pyccl
-import numcosmo_py.cosmology as ncc
+
 import numcosmo_py.ccl.two_point as tp
+import numcosmo_py.cosmology as ncc
+from numcosmo_py import Nc, Ncm
 from numcosmo_py.plotting.tools import latex_float
-from numcosmo_py import Ncm, Nc
 
 
 class CompareFunc1d:

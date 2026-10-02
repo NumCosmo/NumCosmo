@@ -51,9 +51,7 @@ class DataGaussCovTest(Ncm.DataGaussCov):
         mean = Ncm.Vector.new_array([0.0, 0.0])
         super().__init__(n_points=2, cov=cov, mean=mean, init=True)
 
-    def do_mean_func(  # pylint: disable=arguments-differ
-        self, mset: Ncm.MSet, vp: Ncm.Vector
-    ) -> None:
+    def do_mean_func(self, mset: Ncm.MSet, vp: Ncm.Vector) -> None:
         """Do mean function."""
 
         mvnd = mset.peek(Ncm.ModelMVND.id())
@@ -67,9 +65,7 @@ class DataGaussCovTest(Ncm.DataGaussCov):
 class DataGaussCovTestUpdateCov(DataGaussCovTest):
     """Test class for NcmDataGaussCov with update covariance."""
 
-    def do_cov_func(  # pylint: disable=arguments-differ
-        self, _: MSet, cov: Matrix
-    ) -> bool:
+    def do_cov_func(self, _: MSet, cov: Matrix) -> bool:
         """Do inverse covariance function."""
 
         cov.memcpy(self.peek_cov())

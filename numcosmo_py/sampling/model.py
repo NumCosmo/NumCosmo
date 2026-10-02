@@ -25,7 +25,7 @@
 
 import sys
 
-from numcosmo_py import Ncm, GObject
+from numcosmo_py import GObject, Ncm
 
 GENERIC_MODEL_NAME = "NcmModelGeneric"
 
@@ -44,9 +44,9 @@ MODEL_BUILDER.add_vparam(
     Ncm.ParamType.FREE,
 )
 
-NcmTypeModelGeneric = MODEL_BUILDER.create()  # pylint:disable=invalid-name
+NcmTypeModelGeneric = MODEL_BUILDER.create()
 GObject.new(NcmTypeModelGeneric)
-NcmModelGeneric = NcmTypeModelGeneric.pytype  # pylint:disable=invalid-name
+NcmModelGeneric = NcmTypeModelGeneric.pytype
 GObject.type_register(NcmModelGeneric)
 del MODEL_BUILDER
 

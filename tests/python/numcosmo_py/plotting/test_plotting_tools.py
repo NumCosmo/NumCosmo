@@ -36,7 +36,6 @@ import pytest
 
 pytest.importorskip("getdist")
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 
 import matplotlib
 import matplotlib.pyplot as plt
