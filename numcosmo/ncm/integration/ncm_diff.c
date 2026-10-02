@@ -678,6 +678,9 @@ ncm_diff_set_richardson_step (NcmDiff *diff, const gdouble rs)
  * rounded value, the tolerance of the algorithm for a value computed by one.
  * The Richardson methods scale the cancellation scale of each difference
  * quotient, computed for values correct to $\epsilon/2$, by $2s/\epsilon$.
+ * The spectral methods do not use it: their coefficient error assumes
+ * values correct to $\epsilon/2$, and a larger relative scatter of the
+ * values shows in the coefficient tail of the fit.
  * The default, $1.5 \times 10^4 \epsilon \approx 3.3 \times 10^{-12}$, is the
  * precision assumed for a function nothing is stated about; it covers, for
  * example, $\sin(w x)$ at $|w x|$ up to $10^4$, whose rounded argument
@@ -711,7 +714,11 @@ ncm_diff_set_func_precision (NcmDiff *diff, const gdouble func_prec)
  * oscillation of $f$, can have a change below their error. $P_{\rm t}$
  * times the change enters the error estimate of each row, and through the
  * best error the rule that keeps the ladder going past an agreement, which
- * is what lets it leave an aliased plateau. Requires @trunc_ratio $\geq 1.1$.
+ * is what lets it leave an aliased plateau. It applies to the single
+ * ladder only: with #NcmDiff:dual-series the disagreement of the two
+ * ladders at the same order replaces it in the error estimate, and their
+ * agreement gate in the protection against aliased plateaus. Requires
+ * @trunc_ratio $\geq 1.1$.
  */
 void
 ncm_diff_set_trunc_change_ratio (NcmDiff *diff, const gdouble trunc_ratio)
@@ -1058,14 +1065,16 @@ typedef struct _NcmDiffCrossControl
   gdouble df_best;
   gdouble err_best;
   guchar n_worse;
+  gboolean best_eligible;
 } NcmDiffCrossControl;
 
 static void
 _ncm_diff_cross_control_init (NcmDiffCrossControl *cs)
 {
-  cs->df_best  = 0.0;
-  cs->err_best = GSL_POSINF;
-  cs->n_worse  = 0;
+  cs->df_best       = 0.0;
+  cs->err_best      = GSL_POSINF;
+  cs->n_worse       = 0;
+  cs->best_eligible = FALSE;
 }
 
 /*
@@ -2122,7 +2131,7 @@ _ncm_diff_dual_needs_step (NcmDiffDual *dual)
   return !dual->converged && (dual->A.quots->len < dual->A.order + 2);
 }
 
-static gboolean _ncm_diff_cross_control_update (NcmDiffCrossControl *cs, const gdouble row_A, const gdouble row_B, const gdouble canc_A, const gdouble canc_B);
+static gboolean _ncm_diff_cross_control_update (NcmDiffCrossControl *cs, const gdouble row_A, const gdouble row_B, const gdouble canc_A, const gdouble canc_B, const gdouble quot_scale);
 
 /*
  * Extrapolates both ladders at the current order and lets the cross control
@@ -2137,8 +2146,9 @@ _ncm_diff_dual_extrapolate (NcmDiffDual *dual, const gdouble trunc_ratio, const 
   _ncm_diff_ladder_extrapolate (&dual->B, trunc_ratio, canc_pad);
 
   improve = _ncm_diff_cross_control_update (&dual->cross, dual->A.row, dual->B.row,
-                                            dual->A.row_canc + dual->A.row_canc_abs,
-                                            dual->B.row_canc + dual->B.row_canc_abs);
+                                            canc_pad * dual->A.row_canc + dual->A.row_canc_abs,
+                                            canc_pad * dual->B.row_canc + dual->B.row_canc_abs,
+                                            GSL_MAX (dual->A.quot_scale, dual->B.quot_scale));
 
   if (((dual->A.order >= NCM_DIFF_DUAL_MIN_ORDER) && !improve) || (dual->A.order == dual->A.tables->len))
     dual->converged = TRUE;
@@ -2146,13 +2156,25 @@ _ncm_diff_dual_extrapolate (NcmDiffDual *dual, const gdouble trunc_ratio, const 
 
 static gboolean
 _ncm_diff_cross_control_update (NcmDiffCrossControl *cs, const gdouble row_A, const gdouble row_B,
-                                const gdouble canc_A, const gdouble canc_B)
+                                const gdouble canc_A, const gdouble canc_B, const gdouble quot_scale)
 {
   const gdouble cross = fabs (row_A - row_B);
   const gdouble canc  = GSL_MAX (fabs (canc_A), fabs (canc_B));
   const gdouble err   = GSL_MAX (cross, canc) * NCM_DIFF_DUAL_ERR_PAD;
 
-  if (err < cs->err_best)
+  /*
+   * The two ladders agree when they differ by less than 1.0e-3 of
+   * quot_scale, the largest quotient of either row, with both cancellation
+   * scales below that level, the gate of a single ladder. Only agreeing
+   * rows are eligible: two ladders whose steps are not commensurate alias
+   * an oscillation of f differently, so an aliased plateau of one ladder is
+   * not one of the other. Before any agreement the row with the smallest
+   * error is kept; a disagreeing row never replaces an agreeing one, and
+   * the first agreeing row replaces a disagreeing one whatever their errors.
+   */
+  const gboolean eligible = (quot_scale > 0.0) ? ((cross < 1.0e-3 * quot_scale) && (canc < 1.0e-3 * quot_scale)) : (canc == 0.0);
+
+  if ((eligible && !cs->best_eligible) || ((err < cs->err_best) && (eligible || !cs->best_eligible)))
   {
     /* B (smaller steps) has the smaller truncation error; when cancellation
      * dominates the disagreement, the ladder with the smaller cancellation scale is
@@ -2162,15 +2184,19 @@ _ncm_diff_cross_control_update (NcmDiffCrossControl *cs, const gdouble row_A, co
     else
       cs->df_best = (fabs (canc_A) < fabs (canc_B)) ? row_A : row_B;
 
-    cs->err_best = err;
-    cs->n_worse  = 0;
+    cs->err_best      = err;
+    cs->n_worse       = 0;
+    cs->best_eligible = eligible;
 
     return TRUE;
   }
 
   /* While the cancellation scale is far below the best error the stagnation is
-   * pre-asymptotic (steps larger than the scale f varies on): continue. */
-  if (canc * NCM_DIFF_DUAL_ERR_PAD < cs->err_best)
+   * pre-asymptotic (steps larger than the scale f varies on): continue. Before
+   * the ladders first agree the best error comes from rows that disagree and
+   * says nothing about how far they are from agreeing, so the ladders continue
+   * while the cancellation scale is below the agreement level. */
+  if ((canc * NCM_DIFF_DUAL_ERR_PAD < cs->err_best) || (!cs->best_eligible && (canc < 1.0e-3 * quot_scale)))
   {
     cs->n_worse = 0;
 

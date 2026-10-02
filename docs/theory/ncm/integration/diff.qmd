@@ -491,28 +491,42 @@ truncation coefficient, but the steps of B are $\sqrt{r_s}$ times smaller, so it
 is $r_s^{-p(n+2)/2}$ times that of A. Their disagreement therefore measures the truncation error
 of that order without using two consecutive orders of the same ladder.
 
-Let $R_n^A,R_n^B$ be the two rows and $K_n^A,K_n^B$ their propagated cancellation scales, each
-including $K^a_n$ of its ladder. The
-cross-ladder estimate used to select the result is
+Let $R_n^A,R_n^B$ be the two rows and $C_n^A,C_n^B$ their cancellation scales, $C_n$ of each
+ladder as defined above. The cross-ladder estimate used to select the result is
 $$
 E_n^{\rm cross} = 10\,\max\!\left(
- |R_n^A-R_n^B|,\; K_n^A,\; K_n^B
+ |R_n^A-R_n^B|,\; C_n^A,\; C_n^B
 \right).
 $$
-This cross estimate deliberately does not use $P_{\rm t}$ or $P_{\rm r}$; the factor 10 is a
-separate constant of the dual-series scheme. The ordinary per-ladder controls are still updated,
+This cross estimate does not use $P_{\rm t}$; the factor 10 is a separate constant of the
+dual-series scheme. The disagreement of the two ladders at the same order measures the
+truncation error of that order directly, and their agreement gate below protects against
+aliased plateaus, so neither role of $P_{\rm t}$ is needed: `NcmDiff:trunc-change-ratio` has no
+effect with `NcmDiff:dual-series`.
+
+The two step ladders are not commensurate: an oscillation of $f$ that a ladder aliases, with a
+step spanning many periods, looks different to the other one. A single ladder can converge on
+such an alias: if $h_0$ spans an integer number of periods divisible by $2^k$ plus a fraction,
+halving the step halves the fraction for $k$ steps, and the samples are exactly those of a
+slower sine. The cross rows are therefore gated like single rows: with
+$S_n = \max(S_n^A, S_n^B)$, a cross row is **eligible** when
+$|R_n^A-R_n^B| < 10^{-3}S_n$ and $\max(C_n^A, C_n^B) < 10^{-3}S_n$. The ordinary per-ladder controls are still updated,
 mainly because their first-row informativeness determines whether both ladders should be moved
 to larger steps.
 
-When a cross estimate improves, the smaller-step ladder B is selected if its cancellation scale
-is no larger than the A--B disagreement. If cancellation dominates that disagreement, the value
-from the ladder with the smaller cancellation scale is selected instead. The best cross estimate
-seen over the orders is retained.
+The best value is the row with the smallest cross estimate among the eligible rows once one
+has been seen: the first eligible row replaces any best value from rows that disagree, whatever
+their errors, and a row that is not eligible never replaces an eligible one. When a row becomes
+the best, the smaller-step ladder B is selected if its cancellation scale is no larger than the
+A--B disagreement. If cancellation dominates that disagreement, the value from the ladder with
+the smaller cancellation scale is selected instead.
 
 At least the first three Richardson rows are examined. After that, a worse row counts toward
 stopping only when the cancellation floor is already comparable to the best cross estimate; if
 cancellation is still far below the best estimate, the code interprets the stagnation as
-pre-asymptotic and continues. Otherwise two consecutive non-improving rows stop the dual
+pre-asymptotic and continues. Before the first eligible row the best estimate comes from rows
+that disagree and says nothing about how close they are, so the ladders also continue while
+$\max(C_n^A, C_n^B) < 10^{-3}S_n$. Otherwise two consecutive non-improving rows stop the dual
 sequence. The scheme costs roughly twice as many quotient evaluations and is disabled by
 default.
 
@@ -540,6 +554,13 @@ Two quantities are propagated through the coefficient differentiation:
   same recurrence. A value carrying $\epsilon/2$ of its size moves each coefficient
   $c_k = (2/N)\sum_j f_j T_k(x_j)$ by at most $\epsilon\max|f| \leq \epsilon\sum_k|c_k|$,
   and one carrying the absolute precision $a$ by at most $2a$.
+
+  The relative precision `NcmDiff:func-precision` is not used here: a relative scatter of the
+  values above $\epsilon/2$ shows in the coefficient tail instead. On the test families with
+  such scatter (for example $\sin(wx)$ at $|wx|$ up to $5\times10^4$) every estimate covers its
+  error with $\nu$ as above, while replacing $\epsilon$ by $2s$ at the default $s$ would raise
+  $\nu$ by $1.5\times10^4$ and with it the floor the window search compares the coefficients
+  against.
 
 The first detects an unresolved series; the second measures how strongly coefficient-level
 rounding is amplified by differentiation. Keeping the constant coefficient inside $\nu$ is
