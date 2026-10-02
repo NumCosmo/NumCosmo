@@ -163,6 +163,7 @@
 #include <numcosmo/nc/lss/cluster/nc_cluster_mass_plcl.h>
 #include <numcosmo/nc/lss/cluster/nc_cluster_mass_richness.h>
 #include <numcosmo/nc/lss/cluster/nc_cluster_richness_projection.h>
+#include <numcosmo/nc/lss/cluster/nc_cluster_mass_projection.h>
 #include <numcosmo/nc/lss/cluster/nc_cluster_mass_ascaso.h>
 #include <numcosmo/nc/lss/cluster/nc_cluster_mass_ext.h>
 #include <numcosmo/nc/lss/cluster/nc_cluster_mass_selection.h>
