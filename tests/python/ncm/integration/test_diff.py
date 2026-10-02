@@ -107,14 +107,14 @@ def test_diff_dual_series() -> None:
 def test_diff_dual_series_property() -> None:
     """Test the dual-series property default and round trip."""
     diff = Ncm.Diff.new()
-    assert not diff.get_dual_series()
+    assert diff.get_dual_series()
 
-    diff_dual = Ncm.Diff(**{"dual-series": True})
-    assert diff_dual.get_dual_series()
-    assert diff_dual.props.dual_series
+    diff_single = Ncm.Diff(**{"dual-series": False})
+    assert not diff_single.get_dual_series()
+    assert not diff_single.props.dual_series
 
-    diff_dual.set_dual_series(False)
-    assert not diff_dual.get_dual_series()
+    diff_single.set_dual_series(True)
+    assert diff_single.get_dual_series()
 
 
 def test_diff_dual_series_1_to_1() -> None:

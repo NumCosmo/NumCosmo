@@ -107,6 +107,9 @@ void test_ncm_diff_rc_d2_N_to_M_all (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_traps (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_invalid_st (TestNcmDiff *test, gconstpointer pdata);
 
+void test_ncm_diff_new_single (TestNcmDiff *test, gconstpointer pdata);
+static void _test_ncm_diff_add (const gchar *path, gconstpointer pdata, void (*test_func) (TestNcmDiff *test, gconstpointer pdata));
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -116,300 +119,123 @@ main (gint argc, gchar *argv[])
 
   g_test_set_nonfatal_assertions ();
 
-  g_test_add ("/ncm/diff/property_minima", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_property_minima,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/property_minima", NULL, &test_ncm_diff_property_minima);
 
-  g_test_add ("/ncm/diff/misc", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_misc,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/misc", NULL, &test_ncm_diff_misc);
 
-  g_test_add ("/ncm/diff/log_tables", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_log_tables,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/log_tables", NULL, &test_ncm_diff_log_tables);
 
-  g_test_add ("/ncm/diff/rf/d1/1_to_1/sin", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_d1_1_to_1_sin,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/d1/1_to_1/sin", NULL, &test_ncm_diff_rf_d1_1_to_1_sin);
 
-  g_test_add ("/ncm/diff/rc/d1/1_to_1/sin", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d1_1_to_1_sin,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d1/1_to_1/sin", NULL, &test_ncm_diff_rc_d1_1_to_1_sin);
 
-  g_test_add ("/ncm/diff/rc/d2/1_to_1/sin", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d2_1_to_1_sin,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d2/1_to_1/sin", NULL, &test_ncm_diff_rc_d2_1_to_1_sin);
 
-  g_test_add ("/ncm/diff/rf/d1/1_to_1/asin", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_d1_1_to_1_asin,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/d1/1_to_1/asin", NULL, &test_ncm_diff_rf_d1_1_to_1_asin);
 
-  g_test_add ("/ncm/diff/rc/d1/1_to_1/asin", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d1_1_to_1_asin,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d1/1_to_1/asin", NULL, &test_ncm_diff_rc_d1_1_to_1_asin);
 
-  g_test_add ("/ncm/diff/rc/d2/1_to_1/asin", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d2_1_to_1_asin,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d2/1_to_1/asin", NULL, &test_ncm_diff_rc_d2_1_to_1_asin);
 
-  g_test_add ("/ncm/diff/rf/d1/1_to_1/tan", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_d1_1_to_1_tan,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/d1/1_to_1/tan", NULL, &test_ncm_diff_rf_d1_1_to_1_tan);
 
-  g_test_add ("/ncm/diff/rc/d1/1_to_1/tan", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d1_1_to_1_tan,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d1/1_to_1/tan", NULL, &test_ncm_diff_rc_d1_1_to_1_tan);
 
-  g_test_add ("/ncm/diff/rc/d2/1_to_1/tan", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d2_1_to_1_tan,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d2/1_to_1/tan", NULL, &test_ncm_diff_rc_d2_1_to_1_tan);
 
-  g_test_add ("/ncm/diff/rf/d1/1_to_1/exp", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_d1_1_to_1_exp,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/d1/1_to_1/exp", NULL, &test_ncm_diff_rf_d1_1_to_1_exp);
 
-  g_test_add ("/ncm/diff/rc/d1/1_to_1/exp", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d1_1_to_1_exp,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d1/1_to_1/exp", NULL, &test_ncm_diff_rc_d1_1_to_1_exp);
 
-  g_test_add ("/ncm/diff/rc/d2/1_to_1/exp", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d2_1_to_1_exp,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d2/1_to_1/exp", NULL, &test_ncm_diff_rc_d2_1_to_1_exp);
 
-  g_test_add ("/ncm/diff/rf/d1/1_to_1/log", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_d1_1_to_1_log,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/d1/1_to_1/log", NULL, &test_ncm_diff_rf_d1_1_to_1_log);
 
-  g_test_add ("/ncm/diff/rc/d1/1_to_1/log", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d1_1_to_1_log,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d1/1_to_1/log", NULL, &test_ncm_diff_rc_d1_1_to_1_log);
 
-  g_test_add ("/ncm/diff/rc/d2/1_to_1/log", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d2_1_to_1_log,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d2/1_to_1/log", NULL, &test_ncm_diff_rc_d2_1_to_1_log);
 
-  g_test_add ("/ncm/diff/rf/d1/1_to_1/poly3", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_d1_1_to_1_poly3,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/d1/1_to_1/poly3", NULL, &test_ncm_diff_rf_d1_1_to_1_poly3);
 
-  g_test_add ("/ncm/diff/rc/d1/1_to_1/poly3", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d1_1_to_1_poly3,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d1/1_to_1/poly3", NULL, &test_ncm_diff_rc_d1_1_to_1_poly3);
 
-  g_test_add ("/ncm/diff/rc/d2/1_to_1/poly3", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d2_1_to_1_poly3,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d2/1_to_1/poly3", NULL, &test_ncm_diff_rc_d2_1_to_1_poly3);
 
-  g_test_add ("/ncm/diff/rf/d1/1_to_1/plaw", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_d1_1_to_1_plaw,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/d1/1_to_1/plaw", NULL, &test_ncm_diff_rf_d1_1_to_1_plaw);
 
-  g_test_add ("/ncm/diff/rc/d1/1_to_1/plaw", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d1_1_to_1_plaw,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d1/1_to_1/plaw", NULL, &test_ncm_diff_rc_d1_1_to_1_plaw);
 
-  g_test_add ("/ncm/diff/rc/d2/1_to_1/plaw", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d2_1_to_1_plaw,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d2/1_to_1/plaw", NULL, &test_ncm_diff_rc_d2_1_to_1_plaw);
 
-  g_test_add ("/ncm/diff/rf/d1/1_to_M/all", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_d1_1_to_M_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/d1/1_to_M/all", NULL, &test_ncm_diff_rf_d1_1_to_M_all);
 
-  g_test_add ("/ncm/diff/rc/d1/1_to_M/all", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d1_1_to_M_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d1/1_to_M/all", NULL, &test_ncm_diff_rc_d1_1_to_M_all);
 
-  g_test_add ("/ncm/diff/rc/d2/1_to_M/all", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d2_1_to_M_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d2/1_to_M/all", NULL, &test_ncm_diff_rc_d2_1_to_M_all);
 
-  g_test_add ("/ncm/diff/rf/d1/N_to_1/all", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_d1_N_to_1_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/d1/N_to_1/all", NULL, &test_ncm_diff_rf_d1_N_to_1_all);
 
-  g_test_add ("/ncm/diff/rf/d1/N_to_1/zero", TestNcmDiff, GINT_TO_POINTER (TRUE),
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_d1_N_to_1_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/d1/N_to_1/zero", GINT_TO_POINTER (TRUE), &test_ncm_diff_rf_d1_N_to_1_all);
 
-  g_test_add ("/ncm/diff/rc/d1/N_to_1/all", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d1_N_to_1_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d1/N_to_1/all", NULL, &test_ncm_diff_rc_d1_N_to_1_all);
 
-  g_test_add ("/ncm/diff/rc/d1/N_to_1/zero", TestNcmDiff, GINT_TO_POINTER (TRUE),
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d1_N_to_1_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d1/N_to_1/zero", GINT_TO_POINTER (TRUE), &test_ncm_diff_rc_d1_N_to_1_all);
 
-  g_test_add ("/ncm/diff/rc/d2/N_to_1/all", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d2_N_to_1_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d2/N_to_1/all", NULL, &test_ncm_diff_rc_d2_N_to_1_all);
 
-  g_test_add ("/ncm/diff/rc/d2/N_to_1/zero", TestNcmDiff, GINT_TO_POINTER (TRUE),
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d2_N_to_1_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d2/N_to_1/zero", GINT_TO_POINTER (TRUE), &test_ncm_diff_rc_d2_N_to_1_all);
 
-  g_test_add ("/ncm/diff/rf/Hessian/N_to_1/all", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_Hessian_N_to_1_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/Hessian/N_to_1/all", NULL, &test_ncm_diff_rf_Hessian_N_to_1_all);
 
-  g_test_add ("/ncm/diff/rf/Hessian/N_to_1/zero", TestNcmDiff, GINT_TO_POINTER (TRUE),
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_Hessian_N_to_1_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/Hessian/N_to_1/zero", GINT_TO_POINTER (TRUE), &test_ncm_diff_rf_Hessian_N_to_1_all);
 
-  g_test_add ("/ncm/diff/rf/Hessian/N_to_1/rosenbrock", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_Hessian_N_to_1_rosenbrock,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/Hessian/N_to_1/rosenbrock", NULL, &test_ncm_diff_rf_Hessian_N_to_1_rosenbrock);
 
-  g_test_add ("/ncm/diff/rf/d1/N_to_M/all", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_d1_N_to_M_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/d1/N_to_M/all", NULL, &test_ncm_diff_rf_d1_N_to_M_all);
 
-  g_test_add ("/ncm/diff/rf/d1/N_to_M/zero", TestNcmDiff, GINT_TO_POINTER (TRUE),
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_d1_N_to_M_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/d1/N_to_M/zero", GINT_TO_POINTER (TRUE), &test_ncm_diff_rf_d1_N_to_M_all);
 
-  g_test_add ("/ncm/diff/rc/d1/N_to_M/all", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d1_N_to_M_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d1/N_to_M/all", NULL, &test_ncm_diff_rc_d1_N_to_M_all);
 
-  g_test_add ("/ncm/diff/rc/d1/N_to_M/zero", TestNcmDiff, GINT_TO_POINTER (TRUE),
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d1_N_to_M_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d1/N_to_M/zero", GINT_TO_POINTER (TRUE), &test_ncm_diff_rc_d1_N_to_M_all);
 
-  g_test_add ("/ncm/diff/rc/d2/N_to_M/all", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d2_N_to_M_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d2/N_to_M/all", NULL, &test_ncm_diff_rc_d2_N_to_M_all);
 
-  g_test_add ("/ncm/diff/rc/d2/N_to_M/zero", TestNcmDiff, GINT_TO_POINTER (TRUE),
-              &test_ncm_diff_new,
-              &test_ncm_diff_rc_d2_N_to_M_all,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rc/d2/N_to_M/zero", GINT_TO_POINTER (TRUE), &test_ncm_diff_rc_d2_N_to_M_all);
 
-  g_test_add ("/ncm/diff/1_to_1/tiny_x", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_1_to_1_tiny_x,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/1_to_1/tiny_x", NULL, &test_ncm_diff_1_to_1_tiny_x);
 
-  g_test_add ("/ncm/diff/1_to_1/extreme_x", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_1_to_1_extreme_x,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/1_to_1/extreme_x", NULL, &test_ncm_diff_1_to_1_extreme_x);
 
-  g_test_add ("/ncm/diff/1_to_1/tiny_x/domain", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_1_to_1_tiny_x_domain,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/1_to_1/tiny_x/domain", NULL, &test_ncm_diff_1_to_1_tiny_x_domain);
 
-  g_test_add ("/ncm/diff/1_to_1/func_abs_precision", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_1_to_1_func_abs_precision,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/1_to_1/func_abs_precision", NULL, &test_ncm_diff_1_to_1_func_abs_precision);
 
-  g_test_add ("/ncm/diff/rf/Hessian/N_to_1/tiny_x", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_rf_Hessian_N_to_1_tiny_x,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/rf/Hessian/N_to_1/tiny_x", NULL, &test_ncm_diff_rf_Hessian_N_to_1_tiny_x);
 
-  g_test_add ("/ncm/diff/domain/half_line", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_domain_half_line,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/domain/half_line", NULL, &test_ncm_diff_domain_half_line);
 
-  g_test_add ("/ncm/diff/domain/log", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_domain_log,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/domain/log", NULL, &test_ncm_diff_domain_log);
 
-  g_test_add ("/ncm/diff/domain/interval", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_domain_interval,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/domain/interval", NULL, &test_ncm_diff_domain_interval);
 
-  g_test_add ("/ncm/diff/domain/second_step", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_domain_second_step,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/domain/second_step", NULL, &test_ncm_diff_domain_second_step);
 
-  g_test_add ("/ncm/diff/domain/spectral_fallback", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_domain_spectral_fallback,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/domain/spectral_fallback", NULL, &test_ncm_diff_domain_spectral_fallback);
 
-  g_test_add ("/ncm/diff/domain/Hessian", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_domain_Hessian,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/domain/Hessian", NULL, &test_ncm_diff_domain_Hessian);
 
-  g_test_add ("/ncm/diff/domain/Hessian/upper", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_domain_Hessian_upper,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/domain/Hessian/upper", NULL, &test_ncm_diff_domain_Hessian_upper);
 
-  g_test_add ("/ncm/diff/domain/dual", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_domain_dual,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/domain/dual", NULL, &test_ncm_diff_domain_dual);
 
-  g_test_add ("/ncm/diff/domain/narrow", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_domain_narrow,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/domain/narrow", NULL, &test_ncm_diff_domain_narrow);
 
-  g_test_add ("/ncm/diff/domain/narrow/subprocess", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_domain_narrow_subprocess,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/domain/narrow/subprocess", NULL, &test_ncm_diff_domain_narrow_subprocess);
 
-  g_test_add ("/ncm/diff/traps", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_traps,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/traps", NULL, &test_ncm_diff_traps);
 
-  g_test_add ("/ncm/diff/invalid/st/subprocess", TestNcmDiff, NULL,
-              &test_ncm_diff_new,
-              &test_ncm_diff_invalid_st,
-              &test_ncm_diff_free);
+  _test_ncm_diff_add ("/ncm/diff/invalid/st/subprocess", NULL, &test_ncm_diff_invalid_st);
 
   g_test_run ();
 }
@@ -431,6 +257,31 @@ test_ncm_diff_free (TestNcmDiff *test, gconstpointer pdata)
   NcmDiff *diff = test->diff;
 
   NCM_TEST_FREE (ncm_diff_free, diff);
+}
+
+/* The single-ladder scheme, the default before the dual one. */
+void
+test_ncm_diff_new_single (TestNcmDiff *test, gconstpointer pdata)
+{
+  test_ncm_diff_new (test, pdata);
+  ncm_diff_set_dual_series (test->diff, FALSE);
+}
+
+/*
+ * Adds a test twice: with the default scheme at path, and with the single
+ * ladder at the same path under /ncm/diff/single.
+ */
+static void
+_test_ncm_diff_add (const gchar *path, gconstpointer pdata, void (*test_func) (TestNcmDiff *test, gconstpointer pdata))
+{
+  gchar *single_path = g_strconcat ("/ncm/diff/single", path + strlen ("/ncm/diff"), NULL);
+
+  g_test_add_vtable (path, sizeof (TestNcmDiff), pdata,
+                     (GTestFixtureFunc) & test_ncm_diff_new, (GTestFixtureFunc) test_func, (GTestFixtureFunc) & test_ncm_diff_free);
+  g_test_add_vtable (single_path, sizeof (TestNcmDiff), pdata,
+                     (GTestFixtureFunc) & test_ncm_diff_new_single, (GTestFixtureFunc) test_func, (GTestFixtureFunc) & test_ncm_diff_free);
+
+  g_free (single_path);
 }
 
 /* Every property accepts the minimum its specification documents. */

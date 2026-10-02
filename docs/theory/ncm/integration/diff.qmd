@@ -539,8 +539,16 @@ cancellation is still far below the best estimate, the code interprets the stagn
 pre-asymptotic and continues. Before the first eligible row the best estimate comes from rows
 that disagree and says nothing about how close they are, so the ladders also continue while
 $\max(C_n^A, C_n^B) < 10^{-3}S_n$. Otherwise two consecutive non-improving rows stop the dual
-sequence. The scheme costs roughly twice as many quotient evaluations and is disabled by
-default.
+sequence.
+
+The dual-series scheme is the default. On a battery of 18 test families, 1000 points each,
+every error that sampling can resolve is inside its estimate, as with a single ladder, with a
+typical relative error of $4\times10^{-12}$ against $1\times10^{-11}$, and
+on a stress of $\sin(wx)$ whose initial step spans up to $10^4$ periods it has no failures where
+the single ladder has up to four. It costs about 1.6 times the evaluations of a single ladder.
+A single ladder, with `NcmDiff:dual-series` off, is the faster choice; its protection against
+aliased plateaus comes from the lead share and `NcmDiff:trunc-change-ratio`, and an exactly
+aliased ladder is beyond it.
 
 ## Derivatives from Chebyshev fits
 

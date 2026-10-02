@@ -44,7 +44,16 @@
  * $\sum_i \lambda_i D(h_0 \sqrt{h_i})$ (central), where $D(h)$ is the
  * finite-difference quotient at step $h$.
  *
- * Each result carries an error estimate combining the truncation error
+ * By default every derivative runs two Richardson ladders whose steps are not
+ * commensurate, see #NcmDiff:dual-series: their disagreement at the same order
+ * measures the truncation error and the scatter of the values of $f$, and a
+ * result is accepted only where they agree, which rejects a plateau that one
+ * ladder alone would take for convergence when it aliases an oscillation of
+ * $f$. With #NcmDiff:dual-series off a single ladder is used: it costs about
+ * two thirds of the evaluations, and relies on heuristics to avoid such
+ * traps.
+ *
+ * A single ladder carries an error estimate combining the truncation error
  * (difference between consecutive extrapolation orders, times
  * #NcmDiff:trunc-change-ratio) and the cancellation scale of the difference
  * quotients, the size of the error of the values of $f$ that survives their
@@ -326,7 +335,7 @@ ncm_diff_class_init (NcmDiffClass *klass)
                                    g_param_spec_boolean ("dual-series",
                                                          NULL,
                                                          "Use two extrapolation series",
-                                                         FALSE,
+                                                         TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_SPECTRAL_WINDOW,
@@ -751,13 +760,17 @@ ncm_diff_set_ini_h (NcmDiff *diff, const gdouble ini_h)
  * @diff: a #NcmDiff
  * @dual_series: whether to use two extrapolation series
  *
- * Enables or disables the dual-series scheme. When enabled, every derivative
- * runs two Richardson extrapolation series, started from the initial steps
- * $h_0$ and $h_0/\sqrt{r_s}$, where $r_s$ is #NcmDiff:richardson-step. The
- * difference between the two series at the same order is the truncation
- * error estimate, in place of the difference between consecutive orders. The
- * returned derivative comes from the smaller-step series. The scheme takes
- * about twice the function evaluations.
+ * Enables or disables the dual-series scheme, on by default. When enabled,
+ * every derivative runs two Richardson extrapolation series, started from
+ * the initial steps $h_0$ and $h_0/\sqrt{r_s}$, where $r_s$ is
+ * #NcmDiff:richardson-step. The difference between the two series at the
+ * same order is the truncation error estimate, in place of the difference
+ * between consecutive orders, and a row is accepted only where they agree:
+ * a single series can converge on an oscillation of $f$ it aliases, the
+ * other does not alias it the same way. Disabled, a single series is used,
+ * with about two thirds of the function evaluations, and its protection
+ * against such traps comes from heuristics, the lead share of a row and
+ * #NcmDiff:trunc-change-ratio.
  */
 void
 ncm_diff_set_dual_series (NcmDiff *diff, const gboolean dual_series)
@@ -1070,6 +1083,8 @@ typedef struct _NcmDiffCrossControl
   gdouble row_hi;
   gdouble elig_lo;
   gdouble elig_hi;
+  GArray *elig_val;
+  GArray *elig_err;
   guchar n_worse;
   gboolean best_eligible;
 } NcmDiffCrossControl;
@@ -1087,23 +1102,45 @@ _ncm_diff_cross_control_init (NcmDiffCrossControl *cs)
   cs->elig_hi       = GSL_NEGINF;
   cs->n_worse       = 0;
   cs->best_eligible = FALSE;
+  cs->elig_val      = NULL;
+  cs->elig_err      = NULL;
 }
 
 /*
  * The error of the best value. Two ladders can agree on a row while both are
  * off, when the leading truncation term nearly vanishes at x, so the error
- * covers the spread of every agreeing row around the best; without any
+ * covers the spread around the best of the agreeing rows that follow it
+ * (earlier ones agree worse, by the ranking, and pass the gate only because
+ * it is relative to the largest quotient, large near a zero derivative); without any
  * agreeing row nothing establishes which row is right, and it covers the
  * spread of every row seen. The spreads enter only the reported error: the
  * rows are ranked and the ladders stopped by the errors of the rows alone.
+ *
+ * Every agreeing row k also bounds the best value through its own error,
+ * |best - d| <= |best - R_k| + err_k, so with an agreeing best the error is
+ * the smallest of these bounds, at most that of the best row, and at least
+ * the spread of the rows that follow it.
  */
 static gdouble
 _ncm_diff_cross_control_err (const NcmDiffCrossControl *cs)
 {
-  const gdouble lo = cs->best_eligible ? cs->elig_lo : cs->row_lo;
-  const gdouble hi = cs->best_eligible ? cs->elig_hi : cs->row_hi;
+  const gdouble lo     = cs->best_eligible ? cs->elig_lo : cs->row_lo;
+  const gdouble hi     = cs->best_eligible ? cs->elig_hi : cs->row_hi;
+  const gdouble spread = NCM_DIFF_DUAL_ERR_PAD * GSL_MAX (hi - cs->df_best, cs->df_best - lo);
+  gdouble bound        = cs->err_best;
 
-  return GSL_MAX (cs->err_best, NCM_DIFF_DUAL_ERR_PAD * GSL_MAX (hi - cs->df_best, cs->df_best - lo));
+  if (!cs->best_eligible)
+    return GSL_MAX (cs->err_best, spread);
+
+  if (cs->elig_val != NULL)
+  {
+    guint k;
+
+    for (k = 0; k < cs->elig_val->len; k++)
+      bound = GSL_MIN (bound, g_array_index (cs->elig_err, gdouble, k) + fabs (cs->df_best - g_array_index (cs->elig_val, gdouble, k)));
+  }
+
+  return GSL_MAX (bound, spread);
 }
 
 /*
@@ -1229,14 +1266,30 @@ typedef struct _NcmDiffDual
   NcmDiffLadder A;
   NcmDiffLadder B;
   NcmDiffCrossControl cross;
+  GArray *elig_val;
+  GArray *elig_err;
   gboolean converged;
 } NcmDiffDual;
+
+/* Restarts the cross control on the arrays of agreeing rows the dual owns, emptied. */
+static void
+_ncm_diff_dual_cross_restart (NcmDiffDual *dual)
+{
+  _ncm_diff_cross_control_init (&dual->cross);
+  g_array_set_size (dual->elig_val, 0);
+  g_array_set_size (dual->elig_err, 0);
+  dual->cross.elig_val = dual->elig_val;
+  dual->cross.elig_err = dual->elig_err;
+}
 
 static void
 _ncm_diff_dual_init (NcmDiffDual *dual, GPtrArray *tables)
 {
   _ncm_diff_ladder_init (&dual->A, tables);
   _ncm_diff_ladder_init (&dual->B, tables);
+  dual->elig_val = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  dual->elig_err = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  _ncm_diff_dual_cross_restart (dual);
 }
 
 static void
@@ -1244,6 +1297,8 @@ _ncm_diff_dual_clear (NcmDiffDual *dual)
 {
   _ncm_diff_ladder_clear (&dual->A);
   _ncm_diff_ladder_clear (&dual->B);
+  g_clear_pointer (&dual->elig_val, g_array_unref);
+  g_clear_pointer (&dual->elig_err, g_array_unref);
 }
 
 static void
@@ -1251,7 +1306,7 @@ _ncm_diff_dual_reset (NcmDiffDual *dual)
 {
   _ncm_diff_ladder_reset (&dual->A);
   _ncm_diff_ladder_reset (&dual->B);
-  _ncm_diff_cross_control_init (&dual->cross);
+  _ncm_diff_dual_cross_restart (dual);
   dual->converged = FALSE;
 }
 
@@ -2226,11 +2281,19 @@ _ncm_diff_cross_control_update (NcmDiffCrossControl *cs, const gdouble row_A, co
   {
     cs->elig_lo = GSL_MIN (cs->elig_lo, row_sel);
     cs->elig_hi = GSL_MAX (cs->elig_hi, row_sel);
+
+    if (cs->elig_val != NULL)
+    {
+      g_array_append_val (cs->elig_val, row_sel);
+      g_array_append_val (cs->elig_err, err);
+    }
   }
 
   if (better)
   {
     cs->df_best = row_sel;
+    cs->elig_lo = row_sel;
+    cs->elig_hi = row_sel;
 
     cs->err_best      = err;
     cs->rel_err_best  = rel_err;
@@ -2271,7 +2334,7 @@ _ncm_diff_dual_replay (NcmDiffDual *dual, const gdouble trunc_ratio, const gdoub
 {
   _ncm_diff_ladder_restart (&dual->A);
   _ncm_diff_ladder_restart (&dual->B);
-  _ncm_diff_cross_control_init (&dual->cross);
+  _ncm_diff_dual_cross_restart (dual);
   dual->converged = FALSE;
 
   while (!dual->converged && (dual->A.order + 2 <= dual->A.quots->len))
