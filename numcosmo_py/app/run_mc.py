@@ -25,7 +25,7 @@
 
 import dataclasses
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 
@@ -79,7 +79,7 @@ class RunMC(RunCommonOptions):
     ] = None
 
     fiducial: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             help="YAML file with a fiducial NcmMSet to resample from (the injected "
             "truth). If omitted, resampling uses the fit model itself.",

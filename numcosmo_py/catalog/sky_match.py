@@ -4,17 +4,18 @@ Module to match objects in the sky halo-halo, cluster-halo, cluster-cluster.
 """
 
 from __future__ import annotations
+
 import dataclasses
-from typing import TypedDict, cast, assert_never
-from pathlib import Path
 from enum import StrEnum, auto
+from pathlib import Path
+from typing import TypedDict, assert_never, cast
+
+import networkx as nx
 import numpy as np
 import numpy.typing as npt
+from astropy.table import Column, Table, join
 
-from astropy.table import Table, Column, join
-import networkx as nx
-
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Nc, Ncm
 
 Ncm.cfg_init()
 
@@ -389,14 +390,14 @@ class SkyMatchResult:
         :param selection_criteria: Selection criteria to use.
         :param mask: Mask to use to select the best matched objects.
         """
-        if selection_criteria == SelectionCriteria.MORE_MASSIVE:
-            if more_massive_column is None or (
-                more_massive_column not in self.sky_match.match_data.columns
-            ):
-                raise ValueError(
-                    f"A more_massive_column ({more_massive_column}) must "
-                    f"be provided and present in the match data."
-                )
+        if selection_criteria == SelectionCriteria.MORE_MASSIVE and (
+            more_massive_column is None
+            or more_massive_column not in self.sky_match.match_data.columns
+        ):
+            raise ValueError(
+                f"A more_massive_column ({more_massive_column}) must "
+                f"be provided and present in the match data."
+            )
 
         if mask is None:
             mask = self.full_mask()

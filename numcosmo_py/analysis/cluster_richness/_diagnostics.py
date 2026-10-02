@@ -31,12 +31,11 @@ correctly predict the distribution of observed lnR values.
 
 from typing import cast
 
-import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
+import numpy as np
 from matplotlib.axes import Axes
-from scipy.stats import binned_statistic
-from scipy.stats import norm
+from matplotlib.figure import Figure
+from scipy.stats import binned_statistic, norm
 
 from ._truncated_stats import (
     invert_truncated_stats_mu_from_sample,

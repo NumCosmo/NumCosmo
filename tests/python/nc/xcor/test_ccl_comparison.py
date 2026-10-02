@@ -36,7 +36,6 @@ import numpy as np
 pytest.importorskip("getdist")
 pytest.importorskip("pyccl")
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 
 import pyccl
 

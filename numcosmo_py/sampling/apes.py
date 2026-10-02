@@ -23,18 +23,19 @@
 
 """A simplified interface for the ensemble sampler NcmFitESMCMC using APES."""
 
-from typing import Optional, Callable, Union, Tuple, List
+from collections.abc import Callable
+
 import numpy as np
 
 from numcosmo_py import Ncm
 from numcosmo_py.interpolation.stats_dist import (
-    InterpolationMethod,
-    InterpolationKernel,
     CrossValidationMethod,
+    InterpolationKernel,
+    InterpolationMethod,
 )
 
-from .model import NcmModelGeneric, get_generic_model
 from .catalog import Catalog
+from .model import NcmModelGeneric, get_generic_model
 
 
 class APES:
@@ -44,19 +45,19 @@ class APES:
         self,
         *,
         nwalkers: int,
-        ndim: Optional[int],
-        model: Optional[Ncm.Model],
-        log_prob: Callable[[Union[np.ndarray, List[float]], Tuple], float],
-        args: Tuple = (),
+        ndim: int | None,
+        model: Ncm.Model | None,
+        log_prob: Callable[[np.ndarray | list[float], tuple], float],
+        args: tuple = (),
         verbose: bool = False,
         robust: bool = False,
         interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
         interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
         over_smooth: float = 0.2,
-        local_fraction: Optional[float] = None,
+        local_fraction: float | None = None,
         center_shrink: bool = False,
         cv_method: CrossValidationMethod = CrossValidationMethod.NONE,
-        split_fraction: Optional[float] = None,
+        split_fraction: float | None = None,
         auto_kernel: bool = False,
     ):
         """Create a new APES sampler object."""
@@ -72,7 +73,6 @@ class APES:
             raise ValueError("Only one of ndim or model must be provided.")
 
         if ndim is not None:
-            # pylint:disable-next=invalid-name
             model = NcmModelGeneric(theta_length=ndim)
 
         if model is None:
@@ -90,20 +90,20 @@ class APES:
             def __init__(self) -> None:
                 super().__init__()
                 self.set_init(True)
-                self.theta: Optional[np.ndarray] = None
+                self.theta: np.ndarray | None = None
 
-            def do_get_length(self) -> int:  # pylint: disable-msg=arguments-differ
+            def do_get_length(self) -> int:
                 return 100
 
-            def do_begin(self) -> None:  # pylint: disable-msg=arguments-differ
+            def do_begin(self) -> None:
                 pass
 
-            # pylint: disable-next=arguments-differ
             def do_prepare(self, mset: Ncm.MSet):
                 model = get_generic_model(mset)
                 self.theta = np.array(model.orig_params_peek_vector().dup_array())
 
-            def do_m2lnL_val(self, _):  # pylint: disable-msg=arguments-differ
+            def do_m2lnL_val(self, _):
+                assert self.theta is not None
                 return -2.0 * pself.log_prob(self.theta, pself.args)
 
         apes_likelihood = APESLikehood()
@@ -176,7 +176,7 @@ class APES:
             for point in initial_sample:
                 point_vector = Ncm.Vector.new_array(point)
                 self.mset.fparams_set_vector(point_vector)
-                m2lnL = self.fit.m2lnL_val()  # pylint:disable=invalid-name
+                m2lnL = self.fit.m2lnL_val()
                 mcat.add_from_vector_array(point_vector, [m2lnL])
             assert mcat.len() == self.nwalkers
 

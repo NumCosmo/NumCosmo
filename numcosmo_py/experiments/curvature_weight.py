@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # curvature_weight.py
 #
@@ -54,7 +53,7 @@ its diagonal alternates (a checkerboard nullspace artifact); the function-space
 information above is its smooth, knot-count-independent counterpart.
 """
 
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import numpy.typing as npt

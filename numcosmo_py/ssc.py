@@ -138,8 +138,9 @@ one alone breaks it.
 `reltol` is inert while `peak_epsilon` binds.
 """
 
-from typing import Callable, Sequence
+import itertools
 import time
+from collections.abc import Callable, Sequence
 
 import numpy as np
 from numpy.typing import NDArray
@@ -197,7 +198,7 @@ def print_progress(done: int, total: int, elapsed: float, message: str) -> None:
 
 def _nside_from_npix(npix: int) -> int:
     """Recover a HEALPix `nside` from a map length, validating it."""
-    nside = int(round(np.sqrt(npix / 12.0)))
+    nside = int(np.rint(np.sqrt(npix / 12.0)))
 
     if nside < 1 or 12 * nside * nside != npix:
         raise ValueError(f"{npix} is not a valid HEALPix map length.")
@@ -356,7 +357,7 @@ class SijCalculator:
                 z_upper=float(z_upper),
                 integrator=Ncm.SBesselIntegratorLevin.new(0, block_size),
             )
-            for z_lower, z_upper in zip(z_edges[:-1], z_edges[1:])
+            for z_lower, z_upper in itertools.pairwise(z_edges)
         ]
 
         for kernel in self.kernels:

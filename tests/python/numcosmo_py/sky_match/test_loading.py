@@ -30,7 +30,6 @@ import numpy as np
 
 pytest.importorskip("astropy")
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 
 from numcosmo_py import Ncm
 from numcosmo_py.catalog import SkyMatch, Mask

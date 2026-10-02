@@ -87,7 +87,6 @@ def test_build_release_and_load(tmp_path):
 @needs_data
 def test_release_block_evaluates(tmp_path):
     """A block loaded from the release self-configures its CBE and evaluates."""
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
     from numcosmo_py.experiments.planck18 import mset_set_parameters, Planck18Types
 
@@ -201,7 +200,7 @@ def test_download_publishes_by_rename(tmp_path, monkeypatch):
     final = cache / release_filename(PlanckReleaseId.PR3_COMMANDER)
     observed = {}
 
-    def _fake_download(url, path):  # pylint: disable=unused-argument
+    def _fake_download(url, path):
         # Mid-transfer: the destination the caller will read must not be here.
         observed["final_exists"] = final.exists()
         observed["wrote_to"] = path
@@ -303,7 +302,6 @@ def test_native_types_are_registered_in_a_fresh_process():
     load_planck_release() came to abort with "object `NcDataPlanckCommander' is
     not registered". The child must therefore construct nothing.
     """
-    # pylint: disable=import-outside-toplevel
     import subprocess  # nosec B404 - fixed argv, no shell
     import sys
 

@@ -32,8 +32,8 @@ env:
   # Two sets, and every job runs exactly one of them plus optionally the other.
   #
   # FAST_TEST_ARGS is what runs on every build leg: the unit tiers. It is a deny-list so
-  # that a newly added suite runs by default and has to be excluded deliberately -- the
-  # opposite convention would let a new lane be silently skipped everywhere.
+  # that a newly added suite runs by default and has to be excluded deliberately; an
+  # allow-list would let a new lane be skipped everywhere without notice.
   #
   # VALIDATION_TEST_ARGS is the tier that does not need repeating per platform: slow,
   # platform-independent physics and statistical validation. One leg runs it (see
@@ -52,29 +52,89 @@ env:
 
 jobs:
 
-  check-conda-locks:
-    name: (conda lock files)
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v5
-    # Fails when environment.yml was changed without regenerating
-    # .github/locks/*.lock. The conda jobs below don't fail on a stale lock,
-    # they fall back to solving it (slow), so this job is what makes the
-    # mismatch visible. See CONTRIBUTING.md, section "CI conda environment".
-    - run: python3 .github/scripts/conda_locks.py check
-
-  check-doc-style:
-    name: (doc style)
+  lint:
+    name: (lint)
+    # Checks that read the source only, without building NumCosmo. Every check
+    # step runs even when an earlier one fails, so one push reports them all.
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
       with:
         # Needs the merge base with the target branch to see only added lines.
         fetch-depth: 0
+    # Fails when environment.yml was changed without regenerating
+    # .github/locks/*.lock. The conda jobs below don't fail on a stale lock,
+    # they fall back to solving it (slow), so this check is what makes the
+    # mismatch visible. See CONTRIBUTING.md, section "CI conda environment".
+    - name: Conda lock files
+      if: ${{ !cancelled() }}
+      run: python3 .github/scripts/conda_locks.py check
     # Rejects evaluative wording in comments and docs, and reports theory-page
     # cross-references the branch drops. See CONTRIBUTING.md, section "Writing
     # style for comments and documentation".
-    - run: ./.github/scripts/check_doc_style.sh --base origin/${{ github.base_ref || 'master' }}
+    - name: Doc style
+      if: ${{ !cancelled() }}
+      run: ./.github/scripts/check_doc_style.sh --base origin/${{ github.base_ref || 'master' }}
+    - name: Ensure clear Jupyter Notebooks
+      if: ${{ !cancelled() }}
+      uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
+    # uncrustify, black and ruff come from the lock environment. environment.yml
+    # leaves them unpinned, so the weekly lock update moves them to their latest
+    # release.
+    - uses: ./.github/actions/setup-miniforge
+      if: ${{ !cancelled() }}
+      with:
+        python-version: "3.13"
+    - name: Checking indentation
+      if: ${{ !cancelled() }}
+      shell: bash -el {0}
+      run: |
+        find numcosmo -path numcosmo/external -prune -o \( -name '*.c' -o -name '*.h' \) -print0 \
+          | xargs -0 uncrustify -c numcosmo_uncrustify.cfg --check -q
+    - name: Running black check
+      if: ${{ !cancelled() }}
+      shell: bash -el {0}
+      run: |
+        black --check numcosmo_py
+    - name: Running ruff
+      if: ${{ !cancelled() }}
+      shell: bash -el {0}
+      run: |
+        ruff check numcosmo_py
+
+  lint-built:
+    name: (lint, built)
+    # Checks that run against a built and installed NumCosmo.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-miniforge
+        with:
+          python-version: "3.13"
+      - name: Setting up NumCosmo
+        run: |
+          meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
+      - name: Building NumCosmo
+        run: |
+          meson compile -C build
+      - name: Installing NumCosmo
+        run: |
+          meson install -C build
+      # Regenerates nc.pyi and ncm.pyi from the installed typelibs and fails
+      # if they differ from the committed stubs. To fix, build and run
+      # numcosmo_py/update_pyi.sh, then commit the stubs.
+      - name: Checking stubs are up to date
+        if: ${{ !cancelled() }}
+        run: |
+          sh numcosmo_py/update_pyi.sh
+          git diff --exit-code -- numcosmo_py/nc.pyi numcosmo_py/ncm.pyi
+      - name: Running mypy
+        if: ${{ !cancelled() }}
+        run: |
+          mypy -p numcosmo_py
 
   build-gcc-ubuntu:
     name: (ubuntu, apt, pip)
@@ -95,24 +155,18 @@ jobs:
       uses: ./.github/actions/apt-deps
     - name: Pip install pre-requisites
       run: pip install -e ".[test]" meson ninja --break-system-packages
-    - name: Ensure clear Jupyter Notebooks
-      uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
       run: meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate -Ddocumentation=false --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: meson compile -C build
     - name: Prefetch data files
       # This job writes the Linux data cache, so it fetches every asset, not
-      # just the ones its own tests happen to touch -- see the step at the end
-      # of the job and prefetch_data.py.
+      # only the ones its own tests read (see the step at the end of the job
+      # and prefetch_data.py).
       if: steps.data-cache.outputs.hit != 'true'
       run: |
         source build/numcosmo_export.sh
         python3 .github/scripts/prefetch_data.py
-    - name: Checking indentation
-      run: |
-        find numcosmo -path numcosmo/external -prune -o \( -name '*.c' -o -name '*.h' \) -print0 \
-          | xargs -0 uncrustify -c numcosmo_uncrustify.cfg --check -q
     - name: Test python examples
       run: |
         source build/numcosmo_export.sh
@@ -194,10 +248,7 @@ jobs:
         # interpreter instead of building them.
     - name: Export brew library paths
       run: |
-        # gmp installs no pkg-config file, so its prefix has to be passed to
-        # the linker directly. This was a hardcoded Cellar path
-        # (/opt/homebrew/Cellar/gmp/6.3.0/lib), which stops existing at the
-        # next gmp update; ask brew for the prefix instead.
+        # gmp installs no pkg-config file, so pass its brew prefix to the linker.
         gmp_lib="$(brew --prefix gmp)/lib"
         for var in LIBRARY_PATH LD_LIBRARY_PATH DYLD_LIBRARY_PATH; do
           echo "${var}=/usr/local/lib:${gmp_lib}" >> "$GITHUB_ENV"
@@ -205,8 +256,6 @@ jobs:
     - name: Pip install pre-requisites
       run: |
         python3 -m pip install -e ".[test]" --break-system-packages
-    - name: Ensure clear Jupyter Notebooks
-      uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
       run: |
         meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate -Dmpi=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
@@ -262,7 +311,6 @@ jobs:
           mpi: ${{ matrix.mpi }}
       - name: Setting up NumCosmo
         run: |
-          conda activate numcosmo_developer
           meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
         run: |
@@ -274,31 +322,10 @@ jobs:
           python example_simple.py
           python example_cbe.py
           numcosmo generate planck18 test_exp_gen.yaml --data-type TT
-      - name: Running black check
-        run: |
-          black --check numcosmo_py
-      - name: Running flake8
-        run: |
-          flake8 numcosmo_py
-      - name: Running mypy
-        run: |
-          mypy --exclude '.*meson.*|numcosmo_py/generate_stubs\.py' -p numcosmo_py
-      #- name: Checking indentation
-      #  run: |
-      #    uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/*.c numcosmo/*.h
-      #- name: Running pylint
-      #  run: |
-      #    pylint --rcfile .pylintrc numcosmo_py
       - name: Check NumCosmo
         run: meson test -v -C build --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ env.FAST_TEST_ARGS }} || (cat build/meson-logs/testlog.txt && exit 1)
       - name: Check NumCosmo (validation tier)
-        # Slow, platform-independent validation, run once rather than on every leg. Both
-        # halves used to sit in the coverage job, which is the slowest place to run them
-        # and the least useful: py-acceptance reached 31021 lines of which 170 were its
-        # alone, 48 min there against 84 s optimized; the two C tiers were 356 s of that
-        # job's 947 s of C work for 13 uniquely covered lines, all needing a CLASS run.
-        # The mechanics they shared with the unit tier were split out into the `c` suite
-        # (tests/c/meson.build), so this changed where they run, not what is covered.
+        # Slow, platform-independent validation, run on this leg only.
         if: matrix.os == 'ubuntu' && matrix.mpi == 'openmpi'
         run: meson test -v -C build ${{ env.VALIDATION_TEST_ARGS }} || (cat build/meson-logs/testlog.txt && exit 1)
 
@@ -313,19 +340,14 @@ jobs:
       matrix:
         include:
           - { os: ubuntu, python-version: "3.13", name: python, args: "--suite python" }
-          # omp-marked tests are excluded from the plain `python` suite (tests/python/meson.build) so
-          # the fast xdist lane isn't starved by a thread-pinned-to-1 test hogging one worker; they
-          # need their own shard here or the coverage job would silently stop exercising them.
+          # omp-marked tests are excluded from the `python` suite (tests/python/meson.build),
+          # where each would occupy one xdist worker at one thread; this shard runs them.
           - { os: ubuntu, python-version: "3.13", name: py-omp, args: "--suite py-omp" }
           - { os: ubuntu, python-version: "3.13", name: py-powspec, args: "--suite py-powspec" }
           - { os: ubuntu, python-version: "3.13", name: py-xcor, args: "--suite py-xcor" }
           - { os: ubuntu, python-version: "3.13", name: py-app, args: "--suite py-app" }
-          # One shard, not three. The C suite is 591 s of summed test time, which at
-          # --num-processes here is about 2.5 min of actual work; three legs spent ~19 min
-          # of machine time to parallelize that, because ~5 min of each 6-min leg was
-          # checkout, conda and the -O0 build. Slicing bought no wall time either: this
-          # job's critical path is py-xcor, several times longer. Split again if the C
-          # suite grows enough to become that critical path.
+          # One shard: the C suite takes less wall time than the py-xcor shard. Split it
+          # if it becomes the longest shard.
           - { os: ubuntu, python-version: "3.13", name: c, args: "--suite c" }
     defaults:
       run:
@@ -333,9 +355,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Restore data cache
-        # Only the shards whose tests reach a downloaded file: the marker-gated
-        # powspec/xcor/omp lanes touch none, and neither do the c-* slices, so
-        # restoring ~470 MB there would cost them time and buy nothing.
+        # Only these shards read downloaded data files; the others skip the ~470 MB
+        # restore.
         if: contains(fromJSON('["python", "py-app"]'), matrix.name)
         uses: ./.github/actions/data-cache
         with:
@@ -345,18 +366,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Setting up NumCosmo
         run: |
-          conda activate numcosmo_developer
-          # conda's compiler activation injects -O2 into CFLAGS and CPPFLAGS, both of
-          # which meson places after the buildtype flags, so -Dbuildtype=debug alone
-          # left this build optimized. gcc's inlining then detaches a function's line
-          # counts from its own record, which lcov 2.x rejects, and erases inlined
-          # functions from the report entirely. Append -O0 so it actually wins.
-          #
-          # -U_FORTIFY_SOURCE goes with it: conda also injects -D_FORTIFY_SOURCE=2, and
-          # glibc's features.h warns when that is set without optimization, which at -O0
-          # is once per translation unit -- 900 lines of noise per build, hiding real
-          # warnings. The fortified variants need -O to do anything anyway, so this drops
-          # nothing. Appended last in each variable, so it takes precedence over conda's -D.
+          # conda's compiler activation adds -O2 and -D_FORTIFY_SOURCE=2, which meson
+          # places after the buildtype flags. -O0, appended last, keeps the build
+          # unoptimized: inlining breaks lcov 2.x's line records and drops inlined
+          # functions from the report. -U_FORTIFY_SOURCE removes the glibc warning that
+          # -O0 triggers in every translation unit; fortification needs -O anyway.
           export CFLAGS="$CFLAGS -O0 -U_FORTIFY_SOURCE"
           export CPPFLAGS="$CPPFLAGS -O0 -U_FORTIFY_SOURCE"
           export FFLAGS="$FFLAGS -O0"
@@ -378,14 +392,13 @@ jobs:
           # tests/c is the harness, not the library: a test file is covered by its own
           # execution, and counting it lifts the reported figure above what the library
           # actually reaches. The Python tests produce no gcov data.
-          # numcosmo/**/tests/*.c is a different thing -- installed helpers like
-          # the analytic xcor kernels -- and stays.
+          # numcosmo/**/tests/*.c holds installed helpers (the analytic xcor kernels)
+          # and stays.
           lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/external/*' '*/tools/*' '*/tests/c/*' --output-file numcosmo-coverage.info
       - name: Test timing summary
         if: always()
-        # Surface the slowest tests of this shard in the job summary: this is how a test
-        # growing fat enough to matter becomes visible, and the fix for that is to split
-        # the test rather than to shard around it.
+        # Lists this shard's slowest tests in the job summary; split a test that shows
+        # up there rather than adding a shard.
         run: |
           python3 .github/scripts/test_summary.py summary --testlog build/meson-logs/testlog.json --title "${{ matrix.name }}" >> "$GITHUB_STEP_SUMMARY"
       - name: CodeCov
@@ -396,14 +409,3 @@ jobs:
           files: ./numcosmo-coverage.info,./build/coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
-      #- name: Generate coverage
-      #    # For some reason, gcovr is ignoring the configured gcovr.cfg file
-      #    # ninja coverage -C build -v -d stats -d explain
-      #  run: |
-      #      gcovr --root . --object-directory build --config gcovr.cfg --xml-pretty -o build/meson-logs/coverage.xml
-      #- name: Coveralls
-      #  uses: coverallsapp/github-action@v2
-      #  with:
-      #    files: ./numcosmo-coverage.info
-      #    format: lcov
-      #    github-token: ${{ secrets.GITHUB_TOKEN }}

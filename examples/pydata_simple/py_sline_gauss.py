@@ -63,13 +63,13 @@ class PySLineGauss(Ncm.DataGaussCov):
     #
     # Implements the virtual method get_length.
     #
-    def do_get_length(self) -> int:  # pylint: disable-msg=arguments-differ
+    def do_get_length(self) -> int:
         return super().get_size()
 
     #
     # Implements the virtual method get_dof.
     #
-    def do_get_dof(self) -> int:  # pylint: disable-msg=arguments-differ
+    def do_get_dof(self) -> int:
         return super().get_size()
 
     #
@@ -79,7 +79,7 @@ class PySLineGauss(Ncm.DataGaussCov):
     # involves the decomposition of a constant matrix, it can be done
     # during `begin' once and then used afterwards.
     #
-    def do_begin(self):  # pylint: disable-msg=arguments-differ
+    def do_begin(self):
         return
 
     #
@@ -87,7 +87,7 @@ class PySLineGauss(Ncm.DataGaussCov):
     # This method should do all the necessary calculations using mset
     # to be able to calculate the likelihood afterwards.
     #
-    def do_prepare(self, _mset):  # pylint: disable-msg=arguments-differ
+    def do_prepare(self, _mset):
         return
 
     #
@@ -95,7 +95,6 @@ class PySLineGauss(Ncm.DataGaussCov):
     # This method should compute the theoretical mean for the gaussian
     # distribution.
     #
-    # pylint: disable-next=arguments-differ
     def do_mean_func(self, mset: Ncm.MSet, vp: Ncm.Vector) -> None:
         mid = mset.get_id_by_ns("NcPySLineModel")
         slm = mset.peek(mid)

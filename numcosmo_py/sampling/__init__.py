@@ -23,8 +23,8 @@
 
 """Sampling module for numcosmo."""
 
-from typing import Optional, Union, Type, IO
 from enum import StrEnum, auto
+from typing import IO, ClassVar
 
 from rich.console import Console
 from rich.highlighter import RegexHighlighter
@@ -43,7 +43,7 @@ from rich.progress import (
 from rich.text import Text
 from rich.theme import Theme
 
-from .. import Ncm, GEnum
+from .. import GEnum, Ncm
 
 
 class FitRunner(GEnum):
@@ -82,14 +82,13 @@ class FitMCResampleType(GEnum):
 
 def get_algorithms(
     runner: FitRunner,
-) -> Optional[
-    Union[
-        Type[Ncm.FitNloptAlgorithm],
-        Type[Ncm.FitLevmarAlgos],
-        Type[Ncm.FitGSLMMSAlgos],
-        Type[Ncm.FitGSLMMAlgos],
-    ]
-]:
+) -> (
+    type[Ncm.FitNloptAlgorithm]
+    | type[Ncm.FitLevmarAlgos]
+    | type[Ncm.FitGSLMMSAlgos]
+    | type[Ncm.FitGSLMMAlgos]
+    | None
+):
     """Get algorithms for a given runner."""
     if runner == FitRunner.NLOPT:
         return Ncm.FitNloptAlgorithm
@@ -104,7 +103,7 @@ def get_algorithms(
     raise RuntimeError(f"Runner {runner} not found.")
 
 
-def check_runner_algorithm(runner: FitRunner, algorithm: Optional[str]):
+def check_runner_algorithm(runner: FitRunner, algorithm: str | None):
     """Check if algorithm is valid."""
     if algorithm is not None:
         algorithms = get_algorithms(runner)
@@ -119,7 +118,7 @@ class NcmHighlighter(RegexHighlighter):
     """Apply style to anything that looks like an email."""
 
     base_style = "Ncm."
-    highlights = [
+    highlights: ClassVar[list[str]] = [
         r"(?P<FitTypeFIXED>FIXED)",
         r"(?P<FitTypeFREE>FREE)",
         r"\b(?P<float>\d+(\.?\d+)?([eE][-+]?\d+)?)\b",
@@ -129,7 +128,7 @@ class NcmHighlighter(RegexHighlighter):
     ]
 
 
-def set_ncm_console(file: Optional[IO[str]], quite: bool = False) -> Console:
+def set_ncm_console(file: IO[str] | None, quite: bool = False) -> Console:
     """Set console for Ncm.Fit."""
     theme = Theme(
         {
@@ -169,7 +168,7 @@ class FitSpeedColumn(ProgressColumn):
 class NcmFitLogger:
     """Class implementing logging functions for Ncm.Fit."""
 
-    def __init__(self, console: Optional[Console]) -> None:
+    def __init__(self, console: Console | None) -> None:
         """Initialize NcmFitLogger."""
         self.console = console if console is not None else Console()
         self.progress = Progress(
@@ -184,13 +183,13 @@ class NcmFitLogger:
             console=self.console,
             expand=True,
         )
-        self.task: Optional[TaskID] = None
+        self.task: TaskID | None = None
 
     def write_progress(self, _fit: Ncm.Fit, message: str):
         """Write progress to Rich."""
         self.console.print(message, end="")
 
-    def update_progress(self, _fit: Ncm.Fit, n: Union[int, float]):
+    def update_progress(self, _fit: Ncm.Fit, n: float):
         """Update progress bar."""
         total = self.progress.tasks[0].total
         assert self.task is not None

@@ -836,7 +836,6 @@ class TestSetMSetParams:
 
         # Set parameters
         params = (0.27, -0.95, 0.82)
-        # pylint: disable-next=protected-access
         jpas._set_mset_params(mset, params)
 
         # Check that Omegac and w are set

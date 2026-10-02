@@ -55,60 +55,60 @@ class BesselTest(Ncm.CSQ1D):
         """Get k parameter."""
         return self.k
 
-    def do_eval_m(self, _model, x):  # pylint: disable=arguments-differ
+    def do_eval_m(self, _model, x):
         """Evaluate m function, m = (-x)**(1+2alpha)."""
         return (self.t_sign * x) ** (1.0 + 2.0 * self.alpha)
 
-    def do_eval_nu(self, _model, _x):  # pylint: disable=arguments-differ
+    def do_eval_nu(self, _model, _x):
         """Evaluate nu2 function, nu = k."""
         return self.k
 
-    def do_eval_nu2(self, _model, _x):  # pylint: disable=arguments-differ
+    def do_eval_nu2(self, _model, _x):
         """Evaluate nu2 function, nu2 = k**2."""
         return self.k**2
 
-    def do_eval_xi(self, _model, x):  # pylint: disable=arguments-differ
+    def do_eval_xi(self, _model, x):
         """Evaluate xi function, xi = ln(m*nu)."""
         return math.log(self.k) + (1.0 + 2.0 * self.alpha) * math.log(self.t_sign * x)
 
-    def do_eval_F1(self, _model, x):  # pylint: disable=arguments-differ
+    def do_eval_F1(self, _model, x):
         """Evaluate F1 function, F1 = xi'/(2nu)."""
         return 0.5 * (1.0 + 2.0 * self.alpha) / (x * self.k)
 
-    def do_eval_F2(self, _model, x):  # pylint: disable=arguments-differ
+    def do_eval_F2(self, _model, x):
         """Evaluate F2 function, F2 = F1'/(2nu)."""
         return -0.25 * (1.0 + 2.0 * self.alpha) / (x * self.k) ** 2
 
-    def do_eval_int_1_m(self, _model, t):  # pylint: disable=arguments-differ
+    def do_eval_int_1_m(self, _model, t):
         """Evaluate int_1_m function, int_1_m."""
         return (
             -self.t_sign * (t * self.t_sign) ** (-2.0 * self.alpha) / (2.0 * self.alpha)
         )
 
-    def do_eval_int_mnu2(self, _model, t):  # pylint: disable=arguments-differ
+    def do_eval_int_mnu2(self, _model, t):
         """Evaluate int_mnu2 function, int_mnu2."""
         return (self.k**2 * t * (t * self.t_sign) ** (2.0 * self.alpha + 1.0)) / (
             2.0 * (self.alpha + 1.0)
         )
 
-    def do_eval_int_qmnu2(self, _model, t):  # pylint: disable=arguments-differ
+    def do_eval_int_qmnu2(self, _model, t):
         """Evaluate int_qmnu2 function, int_qmnu2."""
         return -((self.k * t) ** 2 / (4.0 * self.alpha))
 
-    def do_eval_int_q2mnu2(self, _model, t):  # pylint: disable=arguments-differ
+    def do_eval_int_q2mnu2(self, _model, t):
         """Evaluate int_q2mnu2 function, int_q2mnu2."""
         return ((self.k * t) ** 2 * (t * self.t_sign) ** (-2.0 * self.alpha)) / (
             8.0 * self.t_sign * self.alpha**2 * (1.0 - self.alpha)
         )
 
-    def do_prepare(self, _model):  # pylint: disable=arguments-differ
+    def do_prepare(self, _model):
         """Prepare method, nothing to do."""
 
 
 class BesselTestWithIntNu(BesselTest):
     """BesselTest subclass with analytic eval_int_nu override."""
 
-    def do_eval_int_nu(self, _model, t):  # pylint: disable=arguments-differ
+    def do_eval_int_nu(self, _model, t):
         """Evaluate the integral of nu analytically: k * (t - ti)."""
         return self.k * (t - self.get_ti())
 

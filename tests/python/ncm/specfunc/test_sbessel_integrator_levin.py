@@ -244,13 +244,10 @@ class TestSBesselIntegratorLevin:
         for a, b in [(5.0, 50.0), (6.7, 43.0), (9.5, 32.0), (10.5, 96.0)]:
             sampled = [np.inf, -np.inf]
 
-            # pylint: disable=cell-var-from-loop
             def f_domain(x: float, _k: float) -> float:
                 sampled[0] = min(sampled[0], x)
                 sampled[1] = max(sampled[1], x)
                 return np.exp(-0.03 * x)
-
-            # pylint: enable=cell-var-from-loop
 
             integrator.integrate(f_domain, a, b, 1.0, result)
             assert sampled[0] >= np.nextafter(a, -np.inf)

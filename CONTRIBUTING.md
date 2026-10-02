@@ -258,8 +258,10 @@ ago.
 All C files, including headers, must be formatted with uncrustify using the
 provided configuration `numcosmo_uncrustify.cfg`. Formatting is checked in CI.
 
-Python code is checked with the configured `flake8`, `pylint`, and `mypy`
-settings (see `.flake8`, `.pylintrc`, `.mypy.ini`).
+Python code is formatted with `black` and checked with `ruff` and `mypy`, both
+configured in `pyproject.toml`. CI also regenerates the stubs `numcosmo_py/nc.pyi`
+and `numcosmo_py/ncm.pyi` and fails if they differ from the committed ones; after
+changing the C API, build and run `numcosmo_py/update_pyi.sh`, then commit the stubs.
 
 ## CI conda environment
 
@@ -289,7 +291,7 @@ to the data-file cache.
 
 ### Changing dependencies
 
-Editing `environment.yml` invalidates every lock, and the `check-conda-locks`
+Editing `environment.yml` invalidates every lock, and the `lint`
 job fails until they are regenerated:
 
 ```bash

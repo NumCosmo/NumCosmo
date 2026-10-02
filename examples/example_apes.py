@@ -24,8 +24,6 @@
 
 """Example of using the APES MCMC sampler on test posteriors."""
 
-from typing import Optional
-
 import typer
 from numcosmo_py import Ncm
 from numcosmo_py.experiments.rosenbrock import run_rosenbrock_mcmc
@@ -44,7 +42,7 @@ app.command()(run_xcdm_nopert_mcmc)
 
 
 @app.callback()
-def main(log_file: Optional[str] = None):
+def main(log_file: str | None = None):
     """
     Call different examples of using the APES MCMC sampler on test posteriors.
 
