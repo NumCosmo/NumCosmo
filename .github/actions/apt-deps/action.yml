@@ -32,5 +32,4 @@ runs:
           libnlopt-dev \
           libcfitsio-dev \
           libhdf5-dev \
-          libopenmpi-dev \
-          uncrustify
+          libopenmpi-dev

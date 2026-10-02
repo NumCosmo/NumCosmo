@@ -52,29 +52,81 @@ env:
 
 jobs:
 
-  check-conda-locks:
-    name: (conda lock files)
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v5
-    # Fails when environment.yml was changed without regenerating
-    # .github/locks/*.lock. The conda jobs below don't fail on a stale lock,
-    # they fall back to solving it (slow), so this job is what makes the
-    # mismatch visible. See CONTRIBUTING.md, section "CI conda environment".
-    - run: python3 .github/scripts/conda_locks.py check
-
-  check-doc-style:
-    name: (doc style)
+  lint:
+    name: (lint)
+    # Checks that read the source only, without building NumCosmo. Every check
+    # step runs even when an earlier one fails, so one push reports them all.
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
       with:
         # Needs the merge base with the target branch to see only added lines.
         fetch-depth: 0
+    # Fails when environment.yml was changed without regenerating
+    # .github/locks/*.lock. The conda jobs below don't fail on a stale lock,
+    # they fall back to solving it (slow), so this check is what makes the
+    # mismatch visible. See CONTRIBUTING.md, section "CI conda environment".
+    - name: Conda lock files
+      if: ${{ !cancelled() }}
+      run: python3 .github/scripts/conda_locks.py check
     # Rejects evaluative wording in comments and docs, and reports theory-page
     # cross-references the branch drops. See CONTRIBUTING.md, section "Writing
     # style for comments and documentation".
-    - run: ./.github/scripts/check_doc_style.sh --base origin/${{ github.base_ref || 'master' }}
+    - name: Doc style
+      if: ${{ !cancelled() }}
+      run: ./.github/scripts/check_doc_style.sh --base origin/${{ github.base_ref || 'master' }}
+    - name: Ensure clear Jupyter Notebooks
+      if: ${{ !cancelled() }}
+      uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
+    # uncrustify, black and flake8 come from the lock environment. environment.yml
+    # leaves them unpinned, so the weekly lock update moves them to their latest
+    # release.
+    - uses: ./.github/actions/setup-miniforge
+      if: ${{ !cancelled() }}
+      with:
+        python-version: "3.13"
+    - name: Checking indentation
+      if: ${{ !cancelled() }}
+      shell: bash -el {0}
+      run: |
+        find numcosmo -path numcosmo/external -prune -o \( -name '*.c' -o -name '*.h' \) -print0 \
+          | xargs -0 uncrustify -c numcosmo_uncrustify.cfg --check -q
+    - name: Running black check
+      if: ${{ !cancelled() }}
+      shell: bash -el {0}
+      run: |
+        black --check numcosmo_py
+    - name: Running flake8
+      if: ${{ !cancelled() }}
+      shell: bash -el {0}
+      run: |
+        flake8 numcosmo_py
+
+  lint-built:
+    name: (lint, built)
+    # Checks that run against a built and installed NumCosmo.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-miniforge
+        with:
+          python-version: "3.13"
+      - name: Setting up NumCosmo
+        run: |
+          conda activate numcosmo_developer
+          meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
+      - name: Building NumCosmo
+        run: |
+          meson compile -C build
+      - name: Installing NumCosmo
+        run: |
+          meson install -C build
+      - name: Running mypy
+        run: |
+          mypy --exclude '.*meson.*|numcosmo_py/generate_stubs\.py' -p numcosmo_py
 
   build-gcc-ubuntu:
     name: (ubuntu, apt, pip)
@@ -95,8 +147,6 @@ jobs:
       uses: ./.github/actions/apt-deps
     - name: Pip install pre-requisites
       run: pip install -e ".[test]" meson ninja --break-system-packages
-    - name: Ensure clear Jupyter Notebooks
-      uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
       run: meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate -Ddocumentation=false --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
@@ -109,10 +159,6 @@ jobs:
       run: |
         source build/numcosmo_export.sh
         python3 .github/scripts/prefetch_data.py
-    - name: Checking indentation
-      run: |
-        find numcosmo -path numcosmo/external -prune -o \( -name '*.c' -o -name '*.h' \) -print0 \
-          | xargs -0 uncrustify -c numcosmo_uncrustify.cfg --check -q
     - name: Test python examples
       run: |
         source build/numcosmo_export.sh
@@ -205,8 +251,6 @@ jobs:
     - name: Pip install pre-requisites
       run: |
         python3 -m pip install -e ".[test]" --break-system-packages
-    - name: Ensure clear Jupyter Notebooks
-      uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
       run: |
         meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate -Dmpi=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
@@ -274,18 +318,6 @@ jobs:
           python example_simple.py
           python example_cbe.py
           numcosmo generate planck18 test_exp_gen.yaml --data-type TT
-      - name: Running black check
-        run: |
-          black --check numcosmo_py
-      - name: Running flake8
-        run: |
-          flake8 numcosmo_py
-      - name: Running mypy
-        run: |
-          mypy --exclude '.*meson.*|numcosmo_py/generate_stubs\.py' -p numcosmo_py
-      #- name: Checking indentation
-      #  run: |
-      #    uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/*.c numcosmo/*.h
       #- name: Running pylint
       #  run: |
       #    pylint --rcfile .pylintrc numcosmo_py

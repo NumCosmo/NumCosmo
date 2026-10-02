@@ -63,4 +63,5 @@ dependencies:
   - tqdm
   - typer
   - types-tabulate
+  - uncrustify
   - zlib

@@ -289,7 +289,7 @@ to the data-file cache.
 
 ### Changing dependencies
 
-Editing `environment.yml` invalidates every lock, and the `check-conda-locks`
+Editing `environment.yml` invalidates every lock, and the `lint`
 job fails until they are regenerated:
 
 ```bash
