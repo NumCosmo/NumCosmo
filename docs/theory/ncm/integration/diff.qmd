@@ -197,9 +197,13 @@ The actual step is formed by first rounding $x+h$ and then replacing $h$ by the 
 difference $(x+h)-x$. This keeps the point used to evaluate the function consistent with the
 step used in the quotient. The formulas above should nevertheless be read as the error model
 used by `NcmDiff`, not as rigorous bounds for an arbitrary user function: they assume each value
-of $f$ is correct to within $\epsilon/2$ of its size, a larger relative error in the values is
-covered only by the pad `NcmDiff:round-off-pad`, and the later Richardson weighted sum has no
-separate floating-point accumulation term.
+of $f$ is correct to within $\epsilon/2$ of its size, and the later Richardson weighted sum has
+no separate floating-point accumulation term. Values of relative precision $s$, stated as
+`NcmDiff:func-precision`, carry $2s/\epsilon$ times that error, and their cancellation scales
+are scaled by
+$$
+P_{\rm r} \equiv \frac{2s}{\epsilon}.
+$$
 
 Some functions carry an error that does not scale with their values: one that subtracts close
 terms inside, such as $\ln(1+x)$ evaluated as written, where $1+x$ rounds to an absolute error
@@ -228,8 +232,7 @@ evaluations of $f$. The two scales of one row are added instead, in
 $$
 C_n \equiv P_{\rm r}K_n + K^a_n,
 $$
-since both come from the same values; $P_{\rm r}$ is the pad defined below, which multiplies
-only the scale of the rounding model. The Richardson sum itself is accumulated
+since both come from the same values. The Richardson sum itself is accumulated
 with the C99 `fma()`, one rounding per term. For the comparison with the first extrapolated row it
 is convenient to define
 $$
@@ -255,12 +258,25 @@ The error attached to the row is
 $$
 E_n \equiv \max\left(P_{\rm t}\Delta_n,\; C_{n-1},\; C_n\right),
 $$
-where $P_{\rm t}$ is `NcmDiff:terr-pad` and $P_{\rm r}$ is
-`NcmDiff:round-off-pad`; both are $3\times10^4$ by default. Thus the code combines two different
-pieces of information: disagreement between extrapolation orders, used as a truncation proxy,
-and the propagated cancellation scale of the two rows being compared. The padding factors are
-safety factors of the numerical heuristic, not statements that $E_n$ is a strict floating-point
-error bound.
+where $P_{\rm t}$ is `NcmDiff:trunc-change-ratio`, $3\times10^4$ by default. The default
+`NcmDiff:func-precision` is $s = 1.5\times10^4\epsilon \approx 3.3\times10^{-12}$, so that
+$P_{\rm r} = 3\times10^4$ as well. Thus the code combines two different pieces of information:
+disagreement between extrapolation orders, used as a truncation proxy, and the propagated
+cancellation scale of the two rows being compared. Neither makes $E_n$ a strict
+floating-point error bound.
+
+$P_{\rm t}$ is the largest ratio assumed between the truncation error of a row and its change,
+$|T_n| \leq P_{\rm t}\Delta_n$. Since $\Delta_n = |T_{n-1} - T_n|$, once the rows are asymptotic
+$\Delta_n \approx |T_{n-1}|$, the error of the previous row, which already exceeds $|T_n|$ by the
+ratio of consecutive leading terms (about $10^3$ in the example above). Rows that agree before
+that, early or on a plateau aliased with an oscillation of $f$, can have $\Delta_n < |T_n|$.
+Through the best error, $P_{\rm t}$ also sets how far the ladder continues past an agreement
+(rule 5 below), which is what lets it leave an aliased plateau. The default `func-precision`,
+$s \approx 3.3\times10^{-12}$, is the precision assumed for a function nothing is stated about;
+it covers, for example, $\sin(wx)$ at $|wx|$ up to $10^4$, whose rounded argument moves the
+values by up to $10^{-12}$, and makes the estimates for a function accurate to a few ulps about
+$10^4$ times its actual error. A smaller stated precision tightens the estimates and also
+lowers $C_n$ in rule 5, so the ladder stops earlier.
 
 The scale $S_n$ is deliberately based on the unextrapolated quotients rather than on $|R_n|$.
 For a nonzero derivative the two are of the same order. Near a zero derivative, however,
@@ -483,7 +499,7 @@ E_n^{\rm cross} = 10\,\max\!\left(
  |R_n^A-R_n^B|,\; K_n^A,\; K_n^B
 \right).
 $$
-This cross estimate deliberately does not use `terr-pad` or `round-off-pad`; the factor 10 is a
+This cross estimate deliberately does not use $P_{\rm t}$ or $P_{\rm r}$; the factor 10 is a
 separate constant of the dual-series scheme. The ordinary per-ladder controls are still updated,
 mainly because their first-row informativeness determines whether both ladders should be moved
 to larger steps.
@@ -613,11 +629,11 @@ finite differences. A warning is emitted unless `NcmDiff:domain-warnings` is fal
 ## Limits of the error model
 
 Neither differentiation family can infer arbitrary uncertainty already present in the function
-values. For the Richardson methods, the per-quotient cancellation scale assumes numerical noise
-of order $\epsilon |f|$ and `round-off-pad` only enlarges that model by a fixed factor. If the
-user function contains substantially larger errors---for example from an inner integration, an
-ODE solve with loose tolerances, stochastic noise, or explicit quantization---the reported
-Richardson error need not cover the true derivative error.
+values. For the Richardson methods, the per-quotient cancellation scale assumes the values are
+within `NcmDiff:func-precision` (relative) and `NcmDiff:func-abs-precision` (absolute) of a
+smooth function. If the user function contains larger errors than stated---for example from an
+inner integration, an ODE solve with loose tolerances, stochastic noise, or explicit
+quantization---the reported Richardson error need not cover the true derivative error.
 
 The spectral method has a partial advantage in this situation because unresolved numerical
 noise can appear as high-order Chebyshev coefficient mass and therefore enter the tail estimate.

@@ -440,16 +440,16 @@ test_ncm_diff_property_minima (TestNcmDiff *test, gconstpointer pdata)
   NcmDiff *diff = g_object_new (NCM_TYPE_DIFF,
                                 "max-order", 1,
                                 "richardson-step", 1.1,
-                                "round-off-pad", 1.01,
-                                "terr-pad", 1.1,
+                                "func-precision", 0.5 * GSL_DBL_EPSILON,
+                                "trunc-change-ratio", 1.1,
                                 "ini-h", GSL_DBL_EPSILON,
                                 "func-abs-precision", 0.0,
                                 NULL);
 
   g_assert_cmpuint (ncm_diff_get_max_order (diff), ==, 1);
   g_assert_cmpfloat (ncm_diff_get_richardson_step (diff), ==, 1.1);
-  g_assert_cmpfloat (ncm_diff_get_round_off_pad (diff), ==, 1.01);
-  g_assert_cmpfloat (ncm_diff_get_trunc_error_pad (diff), ==, 1.1);
+  g_assert_cmpfloat (ncm_diff_get_func_precision (diff), ==, 0.5 * GSL_DBL_EPSILON);
+  g_assert_cmpfloat (ncm_diff_get_trunc_change_ratio (diff), ==, 1.1);
   g_assert_cmpfloat (ncm_diff_get_ini_h (diff), ==, GSL_DBL_EPSILON);
   g_assert_cmpfloat (ncm_diff_get_func_abs_precision (diff), ==, 0.0);
 

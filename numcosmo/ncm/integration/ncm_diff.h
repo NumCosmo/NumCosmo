@@ -88,16 +88,16 @@ void ncm_diff_clear (NcmDiff **diff);
 
 guint ncm_diff_get_max_order (NcmDiff *diff);
 gdouble ncm_diff_get_richardson_step (NcmDiff *diff);
-gdouble ncm_diff_get_round_off_pad (NcmDiff *diff);
-gdouble ncm_diff_get_trunc_error_pad (NcmDiff *diff);
+gdouble ncm_diff_get_func_precision (NcmDiff *diff);
+gdouble ncm_diff_get_trunc_change_ratio (NcmDiff *diff);
 gdouble ncm_diff_get_ini_h (NcmDiff *diff);
 gboolean ncm_diff_get_dual_series (NcmDiff *diff);
 gdouble ncm_diff_get_spectral_window (NcmDiff *diff);
 
 void ncm_diff_set_max_order (NcmDiff *diff, const guint maxorder);
 void ncm_diff_set_richardson_step (NcmDiff *diff, const gdouble rs);
-void ncm_diff_set_round_off_pad (NcmDiff *diff, const gdouble roff_pad);
-void ncm_diff_set_trunc_error_pad (NcmDiff *diff, const gdouble terr_pad);
+void ncm_diff_set_func_precision (NcmDiff *diff, const gdouble func_prec);
+void ncm_diff_set_trunc_change_ratio (NcmDiff *diff, const gdouble trunc_ratio);
 void ncm_diff_set_ini_h (NcmDiff *diff, const gdouble ini_h);
 void ncm_diff_set_dual_series (NcmDiff *diff, const gboolean dual_series);
 void ncm_diff_set_spectral_window (NcmDiff *diff, const gdouble spectral_window);
