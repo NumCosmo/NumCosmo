@@ -66,14 +66,10 @@ def find_baseline_file(relpath: str) -> str | None:
     """Return the absolute path of a baseline data file, or None if absent.
 
     Uses the same base directory as the clik data downloader
-    (``ncm_cfg_get_fullpath_base``), falling back to ``~/.numcosmo``.
+    (``ncm_cfg_get_fullpath_base``).
     """
-    base = Ncm.cfg_get_fullpath_base()
-    candidate = os.path.join(base, relpath)
-    if os.path.exists(candidate):
-        return candidate
-    fallback = os.path.join(os.path.expanduser("~/.numcosmo"), relpath)
-    return fallback if os.path.exists(fallback) else None
+    candidate = os.path.join(Ncm.cfg_get_fullpath_base(), relpath)
+    return candidate if os.path.exists(candidate) else None
 
 
 def _read_fortran_unformatted_matrix(path: str, n: int) -> np.ndarray:
