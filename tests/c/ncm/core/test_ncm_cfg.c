@@ -43,30 +43,55 @@ typedef struct _TesNcmCfg
 
 static gchar *test_ncm_cfg_executable;
 
+static gboolean
+_test_ncm_cfg_check_wait_status (gint status, GError **error)
+{
+#if GLIB_CHECK_VERSION (2, 70, 0)
+
+  return g_spawn_check_wait_status (status, error);
+
+#else
+
+  return g_spawn_check_exit_status (status, error);
+
+#endif /* GLIB_CHECK_VERSION(2,70,0) */
+}
+
 static void
 _test_ncm_cfg_spawn (const gchar *test_path, gchar **envp, gboolean should_pass, const gchar *expected_output)
 {
   gchar *argv[] = {test_ncm_cfg_executable, "-p", (gchar *) test_path, NULL};
-  gchar *output = NULL;
-  gchar *errors = NULL;
+  /* GLib reports setenv()/unsetenv() after threads exist only as GLib debug messages. */
+  gchar **child_envp = g_environ_setenv (g_strdupv (envp), "G_MESSAGES_DEBUG", "GLib", TRUE);
+  gchar *output      = NULL;
+  gchar *errors      = NULL;
   gint status;
   GError *error = NULL;
+  gboolean spawned;
 
-  g_assert_true (g_spawn_sync (NULL, argv, envp, 0, NULL, NULL, &output, &errors, &status, &error));
+  spawned = g_spawn_sync (NULL, argv, child_envp, 0, NULL, NULL, &output, &errors, &status, &error);
+  g_strfreev (child_envp);
   g_assert_no_error (error);
+
+  if (!spawned)
+  {
+    g_clear_error (&error);
+
+    return;
+  }
 
   if (should_pass)
   {
-    g_assert_true (g_spawn_check_wait_status (status, &error));
+    g_assert_true (_test_ncm_cfg_check_wait_status (status, &error));
     g_assert_no_error (error);
-    g_assert_null (strstr (output, "GLib-DEBUG: setenv()/putenv()"));
-    g_assert_null (strstr (output, "GLib-DEBUG: unsetenv()"));
-    g_assert_null (strstr (errors, "GLib-DEBUG: setenv()/putenv()"));
-    g_assert_null (strstr (errors, "GLib-DEBUG: unsetenv()"));
+    g_assert_null (strstr (output, "setenv()/putenv() are not thread-safe"));
+    g_assert_null (strstr (output, "unsetenv() is not thread-safe"));
+    g_assert_null (strstr (errors, "setenv()/putenv() are not thread-safe"));
+    g_assert_null (strstr (errors, "unsetenv() is not thread-safe"));
   }
   else
   {
-    g_assert_false (g_spawn_check_wait_status (status, &error));
+    g_assert_false (_test_ncm_cfg_check_wait_status (status, &error));
     g_clear_error (&error);
   }
 
