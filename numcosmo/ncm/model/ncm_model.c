@@ -76,8 +76,8 @@ typedef struct _NcmModelPrivate
   gboolean constructed;
 
   /* Weak reference to the host this model is a submodel of, set once by
-   * _ncm_model_add_submodel(); submodels are fixed at construction and never
-   * replaced or detached, so it changes only when the host is freed. */
+   * _ncm_model_add_submodel(); submodels are never replaced or detached, so it
+   * changes only when the host is freed. */
   GWeakRef host_wr;
 } NcmModelPrivate;
 
@@ -420,6 +420,7 @@ _ncm_model_valid (NcmModel *model)
 }
 
 static void _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel);
+static gboolean _ncm_model_class_has_slot_for (NcmModelClass *model_class, GType submodel_type);
 
 static void
 ncm_model_class_init (NcmModelClass *klass)
@@ -3550,10 +3551,12 @@ ncm_model_main_model (NcmModel *model)
  * @model: a #NcmModel
  * @submodel: a #NcmModel
  *
- * Attaches @submodel to @model. Only valid while @model is being constructed (through
- * its submodel slot properties); aborts afterwards, when @submodel already belongs to
- * another host, and when @model already has a submodel with the model id of @submodel.
- * An override must chain up.
+ * Attaches @submodel to @model. Submodels are construction-fixed: they are given while
+ * @model is being constructed, through its submodel slot properties. Attaching after
+ * construction is deprecated, kept only for 0.27 compatibility and dropped in 1.0; do
+ * not use it. Aborts when @submodel already belongs to another host, when @model
+ * already has a submodel with the model id of @submodel, and, on the deprecated path,
+ * when @model's class declares no slot for @submodel's type. An override must chain up.
  */
 void
 ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
@@ -3574,10 +3577,9 @@ _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
   g_assert (is_submodel);
   g_assert_cmpint (main_model_id, ==, ncm_model_id (model));
 
-  if (self->constructed)
-    g_error ("_ncm_model_add_submodel: submodels are construction-fixed -- `%s' must receive its `%s' "
-             "as a construction property (e.g. `g_object_new()`/constructor kwarg), "
-             "not attached after construction.",
+  /* Deprecated post-construction attach (0.27 compatibility, removed in 1.0). */
+  if (self->constructed && !_ncm_model_class_has_slot_for (NCM_MODEL_GET_CLASS (model), G_OBJECT_TYPE (submodel)))
+    g_error ("_ncm_model_add_submodel: `%s' declares no submodel slot for `%s'.",
              G_OBJECT_TYPE_NAME (model), G_OBJECT_TYPE_NAME (submodel));
 
   {
@@ -3605,6 +3607,25 @@ _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
   }
 
   g_weak_ref_set (&submodel_self->host_wr, model);
+}
+
+static gboolean
+_ncm_model_class_has_slot_for (NcmModelClass *model_class, GType submodel_type)
+{
+  guint i;
+
+  if (model_class->submodel_slot == NULL)
+    return FALSE;
+
+  for (i = 0; i < model_class->submodel_slot_len; i++)
+  {
+    NcmModelSubmodelSlot *slot = g_ptr_array_index (model_class->submodel_slot, i);
+
+    if ((slot != NULL) && g_type_is_a (submodel_type, slot->submodel_type))
+      return TRUE;
+  }
+
+  return FALSE;
 }
 
 /**
