@@ -84,7 +84,7 @@ _nc_data_download_lock (const gchar *lockpath, const gchar *readypath, gint max_
     }
 
     if (_nc_data_download_lock_owner_is_dead (*lockdir))
-      break;  /* its owner was killed on this host: take it over now */
+      break;  /* owner process no longer exists on this host: take it over */
 
     if (waited >= max_wait_s)
       break;  /* owner unknown or on another host: take it over */
@@ -112,7 +112,7 @@ _nc_data_download_lock_set_owner (const gchar *lockdir)
   gchar *owner    = g_build_filename (lockdir, "owner", NULL);
   gchar *contents = g_strdup_printf ("%d@%s\n", (gint) getpid (), g_get_host_name ());
 
-  /* Best effort: without it a waiter falls back to the timed takeover. */
+  /* Without an owner file, waiters take the lock over after max_wait_s. */
   if (!g_file_set_contents (owner, contents, -1, NULL))
     g_unlink (owner);
 
@@ -127,7 +127,7 @@ _nc_data_download_lock_owner_is_dead (const gchar *lockdir)
   gchar *contents = NULL;
   gboolean dead   = FALSE;
 
-  /* No owner file: it is being written, or the lock predates it. */
+  /* No owner file: it is still being written, or an older NumCosmo created the lock. */
   if (g_file_get_contents (owner, &contents, NULL, NULL))
   {
     gchar **fields = g_strsplit (g_strchomp (contents), "@", 2);
@@ -173,7 +173,7 @@ _nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what, 
 
   ncm_message ("# Downloading %s from [%s]...\n", what, url);
 
-  /* Only when downloading: that is when the old location costs something. */
+  /* Printed once per process, and only on a download. */
   if (ncm_cfg_fullpath_base_is_legacy ())
   {
     static gsize noticed = 0;

@@ -152,8 +152,8 @@ const gchar *ncm_cfg_get_commit_hash (void);
 /**
  * NCM_CFG_HOME_ENV:
  *
- * Name of the environment variable that overrides the directory returned by
- * ncm_cfg_get_fullpath_base(), see ncm_cfg_init().
+ * Name of the environment variable that sets the NumCosmo user data directory, see
+ * ncm_cfg_init().
  */
 #define NCM_CFG_HOME_ENV "NUMCOSMO_HOME"
 

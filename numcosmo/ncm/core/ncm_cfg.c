@@ -474,9 +474,10 @@ _ncm_cfg_exit (void)
  *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(); the time
  *   limit is 10 s when `NCM_FFTW_PLANNER_TIMELIMIT` is not set;
  * - creates the NumCosmo user data directory, see ncm_cfg_get_fullpath(); it is
- *   `NUMCOSMO_HOME` when set (it must be an absolute path), otherwise `~/.numcosmo`
- *   when that directory exists (deprecated), otherwise `$XDG_DATA_HOME/numcosmo`, or
- *   `~/.local/share/numcosmo` when `XDG_DATA_HOME` is unset, empty or relative;
+ *   `NUMCOSMO_HOME` when set, otherwise `~/.numcosmo` when that directory exists
+ *   (deprecated), otherwise `$XDG_DATA_HOME/numcosmo`, or `~/.local/share/numcosmo`
+ *   when `XDG_DATA_HOME` is unset, empty or relative; aborts when `NUMCOSMO_HOME` is
+ *   relative or the directory cannot be created;
  * - sets the Cuba library core counts to zero;
  * - turns the GSL error handler off, see ncm_cfg_enable_gsl_err_handler();
  * - installs the NumCosmo log handlers;
@@ -593,9 +594,10 @@ _ncm_cfg_mpi_launched (void)
  *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(); the time
  *   limit is 10 s when `NCM_FFTW_PLANNER_TIMELIMIT` is not set;
  * - creates the NumCosmo user data directory, see ncm_cfg_get_fullpath(); it is
- *   `NUMCOSMO_HOME` when set (it must be an absolute path), otherwise `~/.numcosmo`
- *   when that directory exists (deprecated), otherwise `$XDG_DATA_HOME/numcosmo`, or
- *   `~/.local/share/numcosmo` when `XDG_DATA_HOME` is unset, empty or relative;
+ *   `NUMCOSMO_HOME` when set, otherwise `~/.numcosmo` when that directory exists
+ *   (deprecated), otherwise `$XDG_DATA_HOME/numcosmo`, or `~/.local/share/numcosmo`
+ *   when `XDG_DATA_HOME` is unset, empty or relative; aborts when `NUMCOSMO_HOME` is
+ *   relative or the directory cannot be created;
  * - sets the Cuba library core counts to zero;
  * - turns the GSL error handler off, see ncm_cfg_enable_gsl_err_handler();
  * - installs the NumCosmo log handlers;
@@ -756,7 +758,7 @@ _ncm_cfg_data_dir (void)
 
   g_free (legacy);
 
-  /* Not g_get_user_data_dir(): it returns a relative XDG_DATA_HOME as given. */
+  /* XDG_DATA_HOME is checked here; g_get_user_data_dir() returns a relative value as given. */
   if ((xdg_data_home != NULL) && g_path_is_absolute (xdg_data_home))
     return g_build_filename (xdg_data_home, "numcosmo", NULL);
 
@@ -1470,8 +1472,8 @@ ncm_cfg_msg_sepa (void)
  * @filename: a printf format string
  * @...: arguments for @filename
  *
- * Returns: (transfer full): the path of the formatted file name inside the NumCosmo data
- * directory, see ncm_cfg_init().
+ * Returns: (transfer full): the path of the formatted file name inside the NumCosmo user
+ * data directory, see ncm_cfg_init().
  */
 gchar *
 ncm_cfg_get_fullpath (const gchar *filename, ...)
@@ -1509,10 +1511,8 @@ ncm_cfg_get_fullpath_base (void)
 /**
  * ncm_cfg_fullpath_base_is_legacy:
  *
- * Whether the NumCosmo user data directory is the deprecated `~/.numcosmo`, used only
- * because it already exists, see ncm_cfg_init().
- *
- * Returns: %TRUE if ncm_cfg_get_fullpath_base() is the legacy `~/.numcosmo`.
+ * Returns: %TRUE when the NumCosmo user data directory is the deprecated `~/.numcosmo`,
+ * used because it exists, see ncm_cfg_init().
  */
 gboolean
 ncm_cfg_fullpath_base_is_legacy (void)

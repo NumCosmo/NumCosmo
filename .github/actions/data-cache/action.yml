@@ -47,9 +47,8 @@ runs:
           exit 1
         fi
         echo "value=numcosmo-data-${RUNNER_OS}-v${{ inputs.version }}-${tags}" >> "$GITHUB_OUTPUT"
-        # Pinned, not resolved: this runs before NumCosmo is built, so the
-        # library cannot be asked, and every later step must use the cached
-        # directory. It is the XDG default a fresh runner would get anyway.
+        # Set here because this step runs before NumCosmo is built; every later
+        # step uses this directory, the XDG default on a fresh runner.
         data_dir="${HOME}/.local/share/numcosmo"
         echo "NUMCOSMO_HOME=${data_dir}" >> "$GITHUB_ENV"
         # Only the downloaded files. The FFTW wisdom (*.fftw3, *.fftw3f) and

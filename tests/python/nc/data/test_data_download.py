@@ -77,7 +77,7 @@ WL_ASSET = "wl_obs_HWL16a-094.gvar"
 
 
 def isolated_env(home) -> dict[str, str]:
-    """Return the environment with HOME set to @home and no user data directory override."""
+    """Return the environment with HOME set to @home and NUMCOSMO_HOME and XDG_DATA_HOME removed."""
     env = dict(os.environ, HOME=str(home))
     env.pop("NUMCOSMO_HOME", None)
     env.pop("XDG_DATA_HOME", None)
@@ -86,7 +86,7 @@ def isolated_env(home) -> dict[str, str]:
 
 
 def run_isolated(script: str, home, *args) -> subprocess.CompletedProcess:
-    """Run @script with an empty HOME, so the user data directory starts bare."""
+    """Run @script with an empty HOME, so the user data directory starts empty."""
     env = isolated_env(home)
 
     return subprocess.run(
@@ -148,11 +148,11 @@ def test_a_failed_download_says_so(tmp_path):
 
 
 def test_a_dead_owners_lock_is_taken_over_at_once(tmp_path):
-    """A lock whose owner was killed on this host must not hold up the next run.
+    """A lock whose owner process no longer exists on this host is taken over at once.
 
-    A SIGKILL, the OOM killer or a CI timeout leaves the lock directory behind
-    with no chance to release it; the next fetch used to wait out the full
-    900 s before taking it over.
+    A SIGKILL, the OOM killer or a CI timeout leaves the lock directory behind;
+    the next fetch reads its owner file, finds the process gone and takes the
+    lock over.
     """
     finished = subprocess.Popen(["true"])
     finished.wait()
@@ -178,7 +178,7 @@ def test_a_dead_owners_lock_is_taken_over_at_once(tmp_path):
 
 
 def test_a_download_into_the_legacy_directory_says_so(tmp_path):
-    """A download into an existing ~/.numcosmo points at the XDG location."""
+    """A download into an existing ~/.numcosmo prints the deprecation notice."""
     (tmp_path / ".numcosmo").mkdir()
 
     result = run_isolated(_FETCH, tmp_path, TINY_ASSET)
@@ -189,7 +189,7 @@ def test_a_download_into_the_legacy_directory_says_so(tmp_path):
 
 
 def test_a_download_into_the_xdg_directory_is_quiet(tmp_path):
-    """Without ~/.numcosmo the data goes to the XDG default, with no notice."""
+    """Without ~/.numcosmo the file goes to the XDG default and no notice is printed."""
     result = run_isolated(_FETCH, tmp_path, TINY_ASSET)
 
     assert result.returncode == 0, result.stderr
