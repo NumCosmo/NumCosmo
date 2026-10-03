@@ -157,6 +157,8 @@ def test_a_failed_download_leaves_nothing_behind(tmp_path):
 
     assert not list(tmp_path.rglob("this-asset-does-not-exist.fits"))
     assert not list(tmp_path.rglob("*.part"))
+    # A lock left by the aborted fetch makes the next one wait 900 s.
+    assert not list(tmp_path.rglob("*.lock"))
 
 
 def test_a_partial_tree_is_replaced(tmp_path):

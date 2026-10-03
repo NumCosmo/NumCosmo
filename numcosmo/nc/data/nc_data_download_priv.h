@@ -60,15 +60,16 @@ gboolean _nc_data_download_lock (const gchar *lockpath, const gchar *readypath, 
 void _nc_data_download_unlock (gchar *lockdir);
 
 /*
- * Fetches @url to @dest. **Call with the lock held.**
+ * Fetches @url to @dest. **Call with the lock held**, passing it as @lockdir.
  *
  * The transfer goes to a per-process temporary beside @dest and is renamed
  * over it only once wget has reported success, so no other process can observe
  * a partial file and an interrupted run leaves nothing that looks like good
  * data. @what names the data in the error message; failure is fatal, and says
- * the URL and directory so the file can be fetched by hand.
+ * the URL and directory so the file can be fetched by hand. Failure releases
+ * @lockdir first, so the next run does not wait out the stale lock.
  */
-void _nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what);
+void _nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what, gchar *lockdir);
 
 G_END_DECLS
 

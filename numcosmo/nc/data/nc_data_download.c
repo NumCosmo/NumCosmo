@@ -108,7 +108,7 @@ _nc_data_download_unlock (gchar *lockdir)
 }
 
 void
-_nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what)
+_nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what, gchar *lockdir)
 {
   gchar *tmp    = g_strdup_printf ("%s.%d.part", dest, (gint) getpid ());
   GError *error = NULL;
@@ -127,6 +127,7 @@ _nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what)
                        NULL, NULL, NULL, NULL, &status, &error))
     {
       g_unlink (tmp);
+      _nc_data_download_unlock (lockdir);
       g_error ("_nc_data_download_file: cannot run wget for %s. Error: %s. "
                "Please download %s by hand and place it at %s.",
                what, error->message, url, dest);
@@ -135,6 +136,7 @@ _nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what)
     if (status != 0)
     {
       g_unlink (tmp);
+      _nc_data_download_unlock (lockdir);
       g_error ("_nc_data_download_file: wget failed (status %d) fetching %s. "
                "Please download %s by hand and place it at %s.",
                status, what, url, dest);
@@ -145,6 +147,7 @@ _nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what)
   if (g_rename (tmp, dest) != 0)
   {
     g_unlink (tmp);
+    _nc_data_download_unlock (lockdir);
     g_error ("_nc_data_download_file: cannot move %s into place at %s.", what, dest);
   }
 

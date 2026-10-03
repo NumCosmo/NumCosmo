@@ -321,7 +321,7 @@ nc_galaxy_wl_obs_catalog_id_get_filename (NcGalaxyWLObsCatalogId id)
        * truncated one that every later run took for complete. */
       if (_nc_data_download_lock (full_filename, full_filename, 900, &lockdir))
       {
-        _nc_data_download_file (url_str, full_filename, filename);
+        _nc_data_download_file (url_str, full_filename, filename, lockdir);
         _nc_data_download_unlock (lockdir);
       }
 
