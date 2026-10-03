@@ -250,6 +250,8 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
 
   ncm_model_class_set_name_nick (model_class, "Abstract class for HI cosmological models.", "NcHICosmo");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
+  /* Yp moved to the bbn submodel; files written before that store its description. */
+  ncm_model_class_add_removed_param (model_class, "Yp");
 
   g_object_class_install_property (object_class,
                                    PROP_YP,

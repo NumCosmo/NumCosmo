@@ -101,6 +101,8 @@ G_DEFINE_QUARK (ncm-model-error, ncm_model_error)
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmModel, ncm_model, G_TYPE_OBJECT)
 
+static gboolean _ncm_model_class_param_was_removed (NcmModelClass *model_class, const gchar *name);
+
 typedef struct _NcmModelSubmodelSlot
 {
   gchar *name;
@@ -214,12 +216,22 @@ _ncm_model_set_sparams_from_dict (NcmModel *model, NcmObjDictInt *modified_spara
 
     while (g_hash_table_iter_next (&iter, (gpointer *) &key, (gpointer *) &value))
     {
-      const guint n = *key;
+      const gchar *name = ncm_sparam_name (value);
+      gpointer n_ptr;
+      guint n;
       NcmSParam *current_sp;
 
-      if (n >= self->total_len)
-        g_error ("_ncm_model_set_sparams_from_dict: parameter %u is out of range (0-%u)", n, self->total_len - 1);
+      /* Placed by name: removing a parameter shifts the index of every later one. */
+      if (!g_hash_table_lookup_extended (self->sparams_name_id, name, NULL, &n_ptr))
+      {
+        if (_ncm_model_class_param_was_removed (NCM_MODEL_GET_CLASS (model), name))
+          continue;
 
+        g_error ("_ncm_model_set_sparams_from_dict: model `%s' has no parameter `%s'.",
+                 G_OBJECT_TYPE_NAME (model), name);
+      }
+
+      n          = GPOINTER_TO_UINT (n_ptr);
       current_sp = g_ptr_array_index (self->sparams, n);
       g_assert_nonnull (current_sp);
 
@@ -452,6 +464,7 @@ ncm_model_class_init (NcmModelClass *klass)
   klass->submodel_slot_len        = 0;
   klass->parent_submodel_slot_len = 0;
   klass->submodel_slot            = NULL;
+  klass->removed_param            = NULL;
 
   /**
    * NcmModel:name:
@@ -535,7 +548,9 @@ ncm_model_class_init (NcmModelClass *klass)
    * NcmModel:sparam-array:
    *
    * The parameter descriptions that differ from the class ones, #NcmSParam keyed by
-   * parameter index.
+   * parameter index. Each one is placed by its parameter name: a description of a
+   * parameter declared with ncm_model_class_add_removed_param() is skipped, and one of
+   * any other unknown parameter aborts.
    */
   g_object_class_install_property (object_class,
                                    PROP_SPARAM_ARRAY,
@@ -1127,6 +1142,52 @@ ncm_model_class_set_submodel (NcmModelClass *model_class, guint submodel_slot_id
                                    g_param_spec_object (name, NULL, symbol,
                                                         submodel_type,
                                                         G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+}
+
+/**
+ * ncm_model_class_add_removed_param:
+ * @model_class: a #NcmModelClass
+ * @name: name of a parameter the class no longer has
+ *
+ * Declares @name as removed from the class: a stored description of it in
+ * #NcmModel:sparam-array is skipped. Subclasses inherit the declaration.
+ */
+void
+ncm_model_class_add_removed_param (NcmModelClass *model_class, const gchar *name)
+{
+  NcmModelClass *parent = g_type_class_peek_parent (model_class);
+
+  /* A subclass inherits its parent's pointer; it gets an array of its own. */
+  if ((model_class->removed_param == NULL) ||
+      (NCM_IS_MODEL_CLASS (parent) && (model_class->removed_param == parent->removed_param)))
+    model_class->removed_param = g_ptr_array_new_with_free_func (g_free);
+
+  g_ptr_array_add (model_class->removed_param, g_strdup (name));
+}
+
+static gboolean
+_ncm_model_class_param_was_removed (NcmModelClass *model_class, const gchar *name)
+{
+  gpointer klass = model_class;
+
+  while (NCM_IS_MODEL_CLASS (klass))
+  {
+    GPtrArray *removed = NCM_MODEL_CLASS (klass)->removed_param;
+    guint i;
+
+    if (removed != NULL)
+    {
+      for (i = 0; i < removed->len; i++)
+      {
+        if (g_strcmp0 (g_ptr_array_index (removed, i), name) == 0)
+          return TRUE;
+      }
+    }
+
+    klass = g_type_class_peek_parent (klass);
+  }
+
+  return FALSE;
 }
 
 /**

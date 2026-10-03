@@ -310,3 +310,67 @@ def test_a_catalog_whose_reparam_cannot_be_resized_fails_loudly():
 
     assert result.returncode != 0
     assert "carries state of its own" in result.stderr
+
+
+# NcmModel:sparam-array keys each modified parameter description by index, and
+# removing Yp shifted every later index. The files below were written by
+# NumCosmo 0.27 (tests/tools/make_sparam_desc_fixtures.py) with descriptions
+# modified after the Yp index, and on Yp itself; sparam_desc.json records each
+# parameter's description and value then, by name.
+SPARAM_DESC_CASES = ("de_cpl_desc", "lcdm_desc")
+
+
+def load_sparam_desc():
+    """Each parameter's description and value in the 0.27 fixtures, by name."""
+    filename = Ncm.cfg_get_data_filename("truth_tables/bbn/sparam_desc.json", True)
+
+    with open(filename, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@pytest.mark.parametrize("name", SPARAM_DESC_CASES)
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_a_stored_description_lands_on_its_parameter(name, fmt):
+    """Each stored description goes to the parameter of the same name."""
+    golden = load_sparam_desc()[name]
+    cosmo = read_fixture(name, fmt)
+
+    assert cosmo.__gtype__.name == golden["type"]
+    assert cosmo.sparam_len() == len(golden["params"])
+
+    for param, desc in golden["params"].items():
+        ok, i = cosmo.param_index_from_name(param)
+
+        assert ok, param
+        assert cosmo.param_get_lower_bound(i) == desc["lower"], param
+        assert cosmo.param_get_upper_bound(i) == desc["upper"], param
+        assert cosmo.param_get_scale(i) == desc["scale"], param
+        assert (cosmo.param_get_ftype(i) == Ncm.ParamType.FREE) == desc["free"], param
+        assert cosmo.param_get(i) == desc["value"], param
+
+
+def test_a_stored_description_of_an_unknown_parameter_fails_loudly(tmp_path):
+    """A description naming a parameter the model does not have aborts the load.
+
+    Only parameters declared with ncm_model_class_add_removed_param() are
+    skipped. The refusal is a g_error, so it is observed from a subprocess.
+    """
+    source = Ncm.cfg_get_data_filename("truth_tables/bbn/de_cpl_desc.yaml", True)
+    with open(source, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    assert "name: 'w1'" in text
+    patched = tmp_path / "unknown_param.yaml"
+    patched.write_text(text.replace("name: 'w1'", "name: 'not_a_parameter'"))
+
+    script = (
+        "from numcosmo_py import Ncm\n"
+        "Ncm.cfg_init()\n"
+        f"Ncm.Serialize.new(0).from_yaml_file({str(patched)!r})\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, check=False
+    )
+
+    assert result.returncode != 0
+    assert "has no parameter `not_a_parameter'" in result.stderr
