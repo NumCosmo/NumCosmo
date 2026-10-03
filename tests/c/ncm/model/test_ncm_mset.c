@@ -792,8 +792,7 @@ test_ncm_mset_unslotted_submodel_attach_subprocess (void)
   NcHICosmo *cosmo      = NC_HICOSMO (nc_hicosmo_lcdm_new_full (NULL, NULL, NULL));
   TestUnslottedSub *sub = g_object_new (TEST_TYPE_UNSLOTTED_SUB, NULL);
 
-  /* Submodels are construction-fixed for every type: a type without a
-   * declared slot has no legal attachment path at all. */
+  /* A type without a declared slot has no legal attachment path at all. */
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (sub));
 
   ncm_model_free (NCM_MODEL (sub));
@@ -805,7 +804,7 @@ test_ncm_mset_unslotted_submodel_attach (void)
 {
   g_test_trap_subprocess ("/ncm/mset/submodel/unslotted_attach/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*construction-fixed*");
+  g_test_trap_assert_stderr ("*declares no submodel slot*");
 }
 
 void
