@@ -184,7 +184,6 @@ test_ncm_cfg_fftw_timelimit_default (void)
 
   envp = g_environ_unsetenv (envp, "NCM_FFTW_PLANNER");
   envp = g_environ_unsetenv (envp, "NCM_FFTW_PLANNER_TIMELIMIT");
-  envp = g_environ_setenv (envp, "NCM_TEST_CFG_CHILD", "1", TRUE);
   _test_ncm_cfg_spawn ("/ncm/cfg/fftw_timelimit_default/subprocess", envp, TRUE, NULL);
   g_strfreev (envp);
 }
@@ -246,7 +245,7 @@ _test_ncm_cfg_path (TestNcmCfgPath mode)
     g_assert_cmpstr (ncm_cfg_get_fullpath_base (), ==, expected);
     g_assert_true (g_file_test (expected, G_FILE_TEST_IS_DIR));
 
-    path = ncm_cfg_get_fullpath ("test_%d.txt", 3);
+    path          = ncm_cfg_get_fullpath ("test_%d.txt", 3);
     expected_path = g_build_filename (expected, "test_3.txt", NULL);
     g_assert_cmpstr (path, ==, expected_path);
     g_assert_false (ncm_cfg_exists ("test_%d.txt", 3));
@@ -271,13 +270,14 @@ _test_ncm_cfg_path (TestNcmCfgPath mode)
     g_assert_nonnull (tmp_dir);
     xdg_dir      = g_build_filename (tmp_dir, "xdg", NULL);
     override_dir = g_build_filename (tmp_dir, "custom", "data", NULL);
-    envp = g_environ_setenv (envp, "HOME", tmp_dir, TRUE);
-    envp = g_environ_unsetenv (envp, "XDG_DATA_HOME");
-    envp = g_environ_unsetenv (envp, "NUMCOSMO_HOME");
-    envp = g_environ_setenv (envp, "NCM_TEST_CFG_CHILD", "1", TRUE);
+    envp         = g_environ_setenv (envp, "HOME", tmp_dir, TRUE);
+    envp         = g_environ_unsetenv (envp, "XDG_DATA_HOME");
+    envp         = g_environ_unsetenv (envp, "NUMCOSMO_HOME");
+    envp         = g_environ_setenv (envp, "NCM_TEST_CFG_CHILD", "1", TRUE);
 
     if (mode != TEST_NCM_CFG_PATH_DEFAULT)
       envp = g_environ_setenv (envp, "XDG_DATA_HOME", xdg_dir, TRUE);
+
     if (mode == TEST_NCM_CFG_PATH_OVERRIDE)
       envp = g_environ_setenv (envp, "NUMCOSMO_HOME", override_dir, TRUE);
 
@@ -298,9 +298,11 @@ _test_ncm_cfg_path (TestNcmCfgPath mode)
       chosen_dir = g_build_filename (tmp_dir, mode == TEST_NCM_CFG_PATH_XDG ? "xdg/numcosmo" : ".numcosmo", NULL);
       g_assert_cmpint (g_rmdir (chosen_dir), ==, 0);
       g_free (chosen_dir);
+
       if (mode == TEST_NCM_CFG_PATH_XDG)
         g_assert_cmpint (g_rmdir (xdg_dir), ==, 0);
     }
+
     g_assert_cmpint (g_rmdir (tmp_dir), ==, 0);
 
     g_strfreev (envp);
@@ -378,6 +380,7 @@ main (gint argc, gchar *argv[])
   test_ncm_cfg_executable = g_find_program_in_path (argv[0]);
   g_assert_nonnull (test_ncm_cfg_executable);
   g_test_init (&argc, &argv, NULL);
+
   if (g_getenv ("NCM_TEST_CFG_CHILD") == NULL)
   {
     ncm_cfg_init_full_ptr (&argc, &argv);
@@ -443,7 +446,7 @@ main (gint argc, gchar *argv[])
               &test_ncm_cfg_invalid,
               &test_ncm_cfg_free);
 
-  g_test_run ();
+  return g_test_run ();
 }
 
 void
@@ -787,3 +790,4 @@ test_ncm_cfg_version (void)
   g_free (vstr);
   g_free (vexp);
 }
+
