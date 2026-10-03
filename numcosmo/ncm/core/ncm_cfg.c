@@ -308,15 +308,16 @@
 G_DEFINE_QUARK (ncm-cfg-error, ncm_cfg_error)
 /* *INDENT-ON* */
 
-static gchar *numcosmo_path         = NULL;
-static gboolean numcosmo_init       = FALSE;
-static FILE *_log_stream            = NULL;
-static FILE *_log_stream_err        = NULL;
-static guint _log_msg_id            = 0;
-static guint _log_err_id            = 0;
-static gboolean _enable_msg         = TRUE;
-static gboolean _enable_msg_flush   = TRUE;
-static gsl_error_handler_t *gsl_err = NULL;
+static gchar *numcosmo_path          = NULL;
+static gboolean numcosmo_path_legacy = FALSE;
+static gboolean numcosmo_init        = FALSE;
+static FILE *_log_stream             = NULL;
+static FILE *_log_stream_err         = NULL;
+static guint _log_msg_id             = 0;
+static guint _log_err_id             = 0;
+static gboolean _enable_msg          = TRUE;
+static gboolean _enable_msg_flush    = TRUE;
+static gsl_error_handler_t *gsl_err  = NULL;
 
 # if (defined (__GNUC__)                                            \
   && ((__GNUC__ == 11 && __GNUC_MINOR__ >= 1) || (__GNUC__ >= 12))) \
@@ -410,6 +411,8 @@ void _nc_hicosmo_de_wspline_register_functions (void);
 void _nc_hicosmo_qspline_register_functions (void);
 void _nc_galaxy_shape_pop_beta_register_functions (void);
 
+static gchar *_ncm_cfg_data_dir (void);
+
 #ifdef HAVE_MPI
 static gboolean _ncm_cfg_mpi_launched (void);
 
@@ -470,7 +473,11 @@ _ncm_cfg_exit (void)
  * - sets the default FFTW planner flag and time limit from `NCM_FFTW_PLANNER` and
  *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(); the time
  *   limit is 10 s when `NCM_FFTW_PLANNER_TIMELIMIT` is not set;
- * - creates the directory `~/.numcosmo`, see ncm_cfg_get_fullpath();
+ * - creates the NumCosmo user data directory, see ncm_cfg_get_fullpath(); it is
+ *   `NUMCOSMO_HOME` when set, otherwise `~/.numcosmo` when that directory exists
+ *   (deprecated), otherwise `$XDG_DATA_HOME/numcosmo`, or `~/.local/share/numcosmo`
+ *   when `XDG_DATA_HOME` is unset, empty or relative; aborts when `NUMCOSMO_HOME` is
+ *   relative or the directory cannot be created;
  * - sets the Cuba library core counts to zero;
  * - turns the GSL error handler off, see ncm_cfg_enable_gsl_err_handler();
  * - installs the NumCosmo log handlers;
@@ -586,7 +593,11 @@ _ncm_cfg_mpi_launched (void)
  * - sets the default FFTW planner flag and time limit from `NCM_FFTW_PLANNER` and
  *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(); the time
  *   limit is 10 s when `NCM_FFTW_PLANNER_TIMELIMIT` is not set;
- * - creates the directory `~/.numcosmo`, see ncm_cfg_get_fullpath();
+ * - creates the NumCosmo user data directory, see ncm_cfg_get_fullpath(); it is
+ *   `NUMCOSMO_HOME` when set, otherwise `~/.numcosmo` when that directory exists
+ *   (deprecated), otherwise `$XDG_DATA_HOME/numcosmo`, or `~/.local/share/numcosmo`
+ *   when `XDG_DATA_HOME` is unset, empty or relative; aborts when `NUMCOSMO_HOME` is
+ *   relative or the directory cannot be created;
  * - sets the Cuba library core counts to zero;
  * - turns the GSL error handler off, see ncm_cfg_enable_gsl_err_handler();
  * - installs the NumCosmo log handlers;
@@ -604,8 +615,6 @@ _ncm_cfg_mpi_launched (void)
 void
 ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 {
-  const gchar *home;
-
   if (numcosmo_init)
     return;
 
@@ -614,11 +623,11 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
 
-  home          = g_get_home_dir ();
-  numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
+  numcosmo_path = _ncm_cfg_data_dir ();
 
-  if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
-    g_mkdir_with_parents (numcosmo_path, 0755);
+  if (g_mkdir_with_parents (numcosmo_path, 0755) != 0)
+    g_error ("ncm_cfg_init: cannot create the NumCosmo user data directory `%s': %s.",
+             numcosmo_path, g_strerror (errno));
 
   g_setenv ("CUBACORES", "0", TRUE);
   g_setenv ("CUBACORESMAX", "0", TRUE);
@@ -716,6 +725,44 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   atexit (_ncm_cfg_exit);
 
   return;
+}
+
+/*
+ * NUMCOSMO_HOME when set; otherwise ~/.numcosmo when it exists (deprecated);
+ * otherwise the XDG user data directory. Empty values count as unset, and a relative
+ * XDG_DATA_HOME is ignored, as the XDG Base Directory Specification requires.
+ */
+static gchar *
+_ncm_cfg_data_dir (void)
+{
+  const gchar *numcosmo_home = g_getenv (NCM_CFG_HOME_ENV);
+  const gchar *xdg_data_home = g_getenv ("XDG_DATA_HOME");
+  gchar *legacy;
+
+  if ((numcosmo_home != NULL) && (numcosmo_home[0] != '\0'))
+  {
+    if (!g_path_is_absolute (numcosmo_home))
+      g_error ("ncm_cfg_init: " NCM_CFG_HOME_ENV " must be an absolute path, got `%s'.", numcosmo_home);
+
+    return g_strdup (numcosmo_home);
+  }
+
+  legacy = g_build_filename (g_get_home_dir (), ".numcosmo", NULL);
+
+  if (g_file_test (legacy, G_FILE_TEST_IS_DIR))
+  {
+    numcosmo_path_legacy = TRUE;
+
+    return legacy;
+  }
+
+  g_free (legacy);
+
+  /* XDG_DATA_HOME is checked here; g_get_user_data_dir() returns a relative value as given. */
+  if ((xdg_data_home != NULL) && g_path_is_absolute (xdg_data_home))
+    return g_build_filename (xdg_data_home, "numcosmo", NULL);
+
+  return g_build_filename (g_get_home_dir (), ".local", "share", "numcosmo", NULL);
 }
 
 /**
@@ -1425,7 +1472,8 @@ ncm_cfg_msg_sepa (void)
  * @filename: a printf format string
  * @...: arguments for @filename
  *
- * Returns: (transfer full): the path of the formatted file name inside `~/.numcosmo`.
+ * Returns: (transfer full): the path of the formatted file name inside the NumCosmo user
+ * data directory, see ncm_cfg_init().
  */
 gchar *
 ncm_cfg_get_fullpath (const gchar *filename, ...)
@@ -1450,7 +1498,7 @@ ncm_cfg_get_fullpath (const gchar *filename, ...)
 /**
  * ncm_cfg_get_fullpath_base:
  *
- * Returns: (transfer none): the path of `~/.numcosmo`.
+ * Returns: (transfer none): the path of the NumCosmo user data directory, see ncm_cfg_init().
  */
 const gchar *
 ncm_cfg_get_fullpath_base (void)
@@ -1458,6 +1506,20 @@ ncm_cfg_get_fullpath_base (void)
   g_assert (numcosmo_init);
 
   return numcosmo_path;
+}
+
+/**
+ * ncm_cfg_fullpath_base_is_legacy:
+ *
+ * Returns: %TRUE when the NumCosmo user data directory is the deprecated `~/.numcosmo`,
+ * used because it exists, see ncm_cfg_init().
+ */
+gboolean
+ncm_cfg_fullpath_base_is_legacy (void)
+{
+  g_assert (numcosmo_init);
+
+  return numcosmo_path_legacy;
 }
 
 /**
@@ -1804,9 +1866,9 @@ static GHashTable *_fftw_planned_keys = NULL;
  * @...: arguments for @key
  *
  * Starts creating FFTW plans: loads the FFTW wisdom of this MPI rank, once per process, from
- * `~/.numcosmo/ncm_cfg_wisdom_rank<rank>.fftw3`, and takes the
- * planning lock, see ncm_cfg_lock_plan_fftw(). @key identifies the plans: the caller and
- * everything that makes a plan different, such as the transform sizes and kinds and the
+ * `ncm_cfg_wisdom_rank<rank>.fftw3` in the NumCosmo user data directory, see ncm_cfg_init(), and
+ * takes the planning lock, see ncm_cfg_lock_plan_fftw(). @key identifies the plans: the caller
+ * and everything that makes a plan different, such as the transform sizes and kinds and the
  * number of transforms; the current default planner flag is added to it. It only tells
  * whether the process planned the same before, and the wisdom file is the same for every
  * key. Pass the return value to ncm_cfg_fftw_plan_end().
@@ -1891,7 +1953,7 @@ ncm_cfg_fftw_plan_destroy (gpointer plan)
 
 /*
  * Imports the FFTW wisdom of this MPI rank, once per process, from
- * ~/.numcosmo/ncm_cfg_wisdom_rank<rank>.fftw3. Does nothing under
+ * ncm_cfg_wisdom_rank<rank>.fftw3 in the NumCosmo user data directory. Does nothing under
  * FFTW_ESTIMATE, which uses no wisdom. Thread-safe.
  */
 static void
@@ -2003,7 +2065,8 @@ _ncm_cfg_save_fftw_wisdom (void)
  * @filename: a printf format string
  * @...: arguments for @filename
  *
- * Returns: whether the formatted file name exists inside `~/.numcosmo`.
+ * Returns: whether the formatted file name exists inside the NumCosmo user data directory, see
+ * ncm_cfg_init().
  */
 gboolean
 ncm_cfg_exists (const gchar *filename, ...)

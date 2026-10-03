@@ -1054,7 +1054,7 @@ nc_data_planck_lkl_download_baseline (const gchar *dir)
     g_error ("nc_data_planck_lkl_download_baseline: cannot create %s.", staging);
   }
 
-  _nc_data_download_file (url_str, tarball, "Planck baseline data");
+  _nc_data_download_file (url_str, tarball, "Planck baseline data", lockdir);
 
   ncm_message ("# Extracting file [%s]...\n", file);
 

@@ -214,7 +214,8 @@ def test_fftw_wisdom_round_trips_through_the_cache(tmp_path) -> None:
     ncm_cfg_fftw_plan_begin/end when a transform is planned. Both are also
     no-ops under FFTW_ESTIMATE, which is why this
     runs a child with an explicit planner and its own HOME -- the wisdom file
-    lives in $HOME/.numcosmo, and the loaded-once cache is per process, so the
+    lives in the NumCosmo user data directory, $HOME/.local/share/numcosmo here, and the
+    loaded-once cache is per process, so the
     read-an-existing-file path needs a second process to be exercised at all.
     """
     import subprocess
@@ -224,6 +225,8 @@ def test_fftw_wisdom_round_trips_through_the_cache(tmp_path) -> None:
     # so the planner below is what the child actually uses.
     env = {k: v for k, v in os.environ.items() if not k.startswith("NCM_FFTW")}
     env["HOME"] = str(tmp_path)
+    env.pop("NUMCOSMO_HOME", None)
+    env.pop("XDG_DATA_HOME", None)
     env["NCM_FFTW_PLANNER"] = "measure"
     env.pop("OMP_NUM_THREADS", None)
 
@@ -239,7 +242,7 @@ def test_fftw_wisdom_round_trips_through_the_cache(tmp_path) -> None:
         assert proc.returncode == 0, proc.stderr
         return proc.stdout
 
-    wisdom_dir = tmp_path / ".numcosmo"
+    wisdom_dir = tmp_path / ".local" / "share" / "numcosmo"
 
     # First process: nothing to load, so it plans from scratch and saves.
     assert "measure" in run_child()

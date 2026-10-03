@@ -128,7 +128,7 @@ they are heavy or special. Gated by a `--run-*` flag (the skip logic lives in
 |--------|-------|-------------|
 | `mpi` | MPI runtime (`mpiexec`) | `--run-mpi` |
 | `app` | CLI dependencies / heavy app flows | `--run-app` |
-| `planck_data` | a local `plc_3.0` Planck tree under `~/.numcosmo` | `--run-planck-data` |
+| `planck_data` | a local `plc_3.0` Planck tree in the NumCosmo user data directory (see `ncm_cfg_init`) | `--run-planck-data` |
 | `powspec` | power-spectrum extras | `--run-powspec` |
 | `xcor` | cross-correlation extras | `--run-xcor` |
 | `sphere_map` | sphere-map extras | `--run-sphere-map` |

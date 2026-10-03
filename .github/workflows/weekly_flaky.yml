@@ -17,7 +17,7 @@ env:
   CONDA_ENV: numcosmo_developer
   # Must match build_check.yml's DATA_CACHE_VERSION, so both workflows share one
   # stored copy of the data files.
-  DATA_CACHE_VERSION: 0
+  DATA_CACHE_VERSION: 1
 
 jobs:
   flaky:
