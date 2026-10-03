@@ -150,6 +150,14 @@ const gchar *ncm_cfg_get_commit_hash (void);
 #define NCM_CFG_DATA_DIR_ENV "NUMCOSMO_DATA_DIR"
 
 /**
+ * NCM_CFG_HOME_ENV:
+ *
+ * Name of the environment variable that overrides the directory returned by
+ * ncm_cfg_get_fullpath_base(), see ncm_cfg_init().
+ */
+#define NCM_CFG_HOME_ENV "NUMCOSMO_HOME"
+
+/**
  * NCM_CHECK_PREPARED:
  * @obj: an object with a `prepared` member
  * @name: the calling method

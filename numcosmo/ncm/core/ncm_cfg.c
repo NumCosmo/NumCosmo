@@ -733,14 +733,14 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 static gchar *
 _ncm_cfg_data_dir (void)
 {
-  const gchar *numcosmo_home = g_getenv ("NUMCOSMO_HOME");
+  const gchar *numcosmo_home = g_getenv (NCM_CFG_HOME_ENV);
   const gchar *xdg_data_home = g_getenv ("XDG_DATA_HOME");
   gchar *legacy;
 
   if ((numcosmo_home != NULL) && (numcosmo_home[0] != '\0'))
   {
     if (!g_path_is_absolute (numcosmo_home))
-      g_error ("ncm_cfg_init: NUMCOSMO_HOME must be an absolute path, got `%s'.", numcosmo_home);
+      g_error ("ncm_cfg_init: " NCM_CFG_HOME_ENV " must be an absolute path, got `%s'.", numcosmo_home);
 
     return g_strdup (numcosmo_home);
   }

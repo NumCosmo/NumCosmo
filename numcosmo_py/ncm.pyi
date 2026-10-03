@@ -10,6 +10,7 @@ T = typing.TypeVar("T")
 
 BOOTSTRAP_RNG_NAME: str = r"bootstrap"
 CFG_DATA_DIR_ENV: str = r"NUMCOSMO_DATA_DIR"
+CFG_HOME_ENV: str = r"NUMCOSMO_HOME"
 COMPLEX_ZERO: float = 0.0
 DATA_RESAMPLE_RNG_NAME: str = r"data_resample"
 DEFAULT_PRECISION: float = 0.0
