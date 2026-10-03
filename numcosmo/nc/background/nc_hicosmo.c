@@ -79,7 +79,7 @@ enum
  * sinks kept only so files written before the move still deserialize: the old
  * fixed-Yp mode is physically identical to the default #NcBBNParthenope, so
  * the value is ignored; the old sampled-Yp mode was removed, so requesting it
- * is a fatal, actionable error. Both properties are dropped entirely in 1.0.
+ * is a fatal, actionable error. Both properties are dropped in 1.0.
  *
  * Deliberately not flagged G_PARAM_DEPRECATED. Under G_ENABLE_DIAGNOSTIC that
  * flag makes every load of an old file emit a GLib warning, PyGObject turns it
@@ -250,7 +250,7 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
 
   ncm_model_class_set_name_nick (model_class, "Abstract class for HI cosmological models.", "NcHICosmo");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
-  /* Yp moved to the bbn submodel; files written before that store its description. */
+  /* Yp moved to the bbn submodel; files written before that store its description. Dropped in 1.0. */
   ncm_model_class_add_removed_param (model_class, "Yp");
 
   g_object_class_install_property (object_class,

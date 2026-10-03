@@ -3638,7 +3638,7 @@ _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
   g_assert (is_submodel);
   g_assert_cmpint (main_model_id, ==, ncm_model_id (model));
 
-  /* Deprecated post-construction attach (0.27 compatibility, removed in 1.0). */
+  /* Deprecated post-construction attach, 0.27 compatibility, dropped in 1.0. */
   if (self->constructed && !_ncm_model_class_has_slot_for (NCM_MODEL_GET_CLASS (model), G_OBJECT_TYPE (submodel)))
     g_error ("_ncm_model_add_submodel: `%s' declares no submodel slot for `%s'.",
              G_OBJECT_TYPE_NAME (model), G_OBJECT_TYPE_NAME (submodel));
