@@ -40,6 +40,7 @@ from gi.repository import (
     GObject,
 )
 
+from . import _compat  # noqa: F401  (deprecated 0.27 API, removed in 1.0)
 from . import nc as Nc
 from . import ncm as Ncm
 
