@@ -73,6 +73,7 @@ struct _NcmModelClass
   guint submodel_slot_len;
   guint parent_submodel_slot_len;
   GPtrArray *submodel_slot;
+  GPtrArray *removed_param;
 };
 
 #define NCM_MODEL_MAX_STATES (10)
@@ -131,6 +132,7 @@ void ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, gu
 
 void ncm_model_class_add_submodels (NcmModelClass *model_class, guint submodel_slot_len);
 void ncm_model_class_set_submodel (NcmModelClass *model_class, guint submodel_slot_id, const gchar *name, const gchar *symbol, GType submodel_type);
+void ncm_model_class_add_removed_param (NcmModelClass *model_class, const gchar *name);
 
 void ncm_model_class_check_params_info (NcmModelClass *model_class);
 

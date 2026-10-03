@@ -173,7 +173,7 @@ _nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what, 
 
   ncm_message ("# Downloading %s from [%s]...\n", what, url);
 
-  /* Printed once per process, and only on a download. */
+  /* Printed once per process, and only on a download. Dropped in 1.0. */
   if (ncm_cfg_fullpath_base_is_legacy ())
   {
     static gsize noticed = 0;

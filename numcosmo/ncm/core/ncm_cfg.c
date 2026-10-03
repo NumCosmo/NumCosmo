@@ -747,6 +747,7 @@ _ncm_cfg_data_dir (void)
     return g_strdup (numcosmo_home);
   }
 
+  /* Legacy directory, 0.27 compatibility, dropped in 1.0. */
   legacy = g_build_filename (g_get_home_dir (), ".numcosmo", NULL);
 
   if (g_file_test (legacy, G_FILE_TEST_IS_DIR))
@@ -1512,7 +1513,7 @@ ncm_cfg_get_fullpath_base (void)
  * ncm_cfg_fullpath_base_is_legacy:
  *
  * Returns: %TRUE when the NumCosmo user data directory is the deprecated `~/.numcosmo`,
- * used because it exists, see ncm_cfg_init().
+ * used because it exists, see ncm_cfg_init(); dropped in 1.0.
  */
 gboolean
 ncm_cfg_fullpath_base_is_legacy (void)

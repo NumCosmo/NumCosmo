@@ -1,0 +1,110 @@
+{
+  "de_cpl_desc": {
+    "params": {
+      "ENnu": {
+        "free": false,
+        "lower": 2.0,
+        "scale": 0.11,
+        "upper": 4.0,
+        "value": 3.046
+      },
+      "H0": {
+        "free": false,
+        "lower": 31.0,
+        "scale": 1.0,
+        "upper": 99.0,
+        "value": 67.36
+      },
+      "Omegab": {
+        "free": true,
+        "lower": 0.01,
+        "scale": 0.0012,
+        "upper": 0.09,
+        "value": 0.0432
+      },
+      "Omegac": {
+        "free": false,
+        "lower": 0.01,
+        "scale": 0.01,
+        "upper": 0.9,
+        "value": 0.2568
+      },
+      "Omegax": {
+        "free": false,
+        "lower": 0.01,
+        "scale": 0.01,
+        "upper": 1.4,
+        "value": 0.7
+      },
+      "Tgamma0": {
+        "free": false,
+        "lower": 2.0,
+        "scale": 0.01,
+        "upper": 3.0,
+        "value": 2.7245
+      },
+      "w0": {
+        "free": true,
+        "lower": -2.5,
+        "scale": 0.013,
+        "upper": -0.3,
+        "value": -1.0
+      },
+      "w1": {
+        "free": false,
+        "lower": -0.9,
+        "scale": 0.017,
+        "upper": 0.9,
+        "value": 0.0
+      }
+    },
+    "type": "NcHICosmoDECpl"
+  },
+  "lcdm_desc": {
+    "params": {
+      "ENnu": {
+        "free": true,
+        "lower": 2.5,
+        "scale": 0.07,
+        "upper": 3.5,
+        "value": 3.046
+      },
+      "H0": {
+        "free": false,
+        "lower": 31.0,
+        "scale": 1.0,
+        "upper": 99.0,
+        "value": 67.36
+      },
+      "Omegab": {
+        "free": false,
+        "lower": 0.03,
+        "scale": 0.01,
+        "upper": 0.05,
+        "value": 0.0432
+      },
+      "Omegac": {
+        "free": false,
+        "lower": 0.01,
+        "scale": 0.01,
+        "upper": 0.9,
+        "value": 0.2568
+      },
+      "Omegax": {
+        "free": false,
+        "lower": 0.01,
+        "scale": 0.01,
+        "upper": 2.0,
+        "value": 0.7
+      },
+      "Tgamma0": {
+        "free": false,
+        "lower": 2.0,
+        "scale": 0.01,
+        "upper": 3.0,
+        "value": 2.7245
+      }
+    },
+    "type": "NcHICosmoLCDM"
+  }
+}

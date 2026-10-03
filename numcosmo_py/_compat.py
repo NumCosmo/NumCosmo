@@ -21,10 +21,10 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Deprecated NumCosmo 0.27 Python API, kept until 1.0.
+"""Deprecated NumCosmo 0.27 Python API, dropped in 1.0.
 
 Each shim emits a DeprecationWarning and maps the 0.27 call onto the current
-API. The whole module is removed in 1.0.
+API.
 """
 
 import warnings
