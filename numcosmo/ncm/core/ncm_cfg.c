@@ -410,6 +410,8 @@ void _nc_hicosmo_de_wspline_register_functions (void);
 void _nc_hicosmo_qspline_register_functions (void);
 void _nc_galaxy_shape_pop_beta_register_functions (void);
 
+static gchar *_ncm_cfg_data_dir (void);
+
 #ifdef HAVE_MPI
 static gboolean _ncm_cfg_mpi_launched (void);
 
@@ -471,8 +473,9 @@ _ncm_cfg_exit (void)
  *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(); the time
  *   limit is 10 s when `NCM_FFTW_PLANNER_TIMELIMIT` is not set;
  * - creates the NumCosmo data directory, see ncm_cfg_get_fullpath(); it is
- *   the value of `NUMCOSMO_HOME` when set, otherwise `$XDG_DATA_HOME/numcosmo` when
- *   `XDG_DATA_HOME` is set, otherwise `~/.numcosmo`;
+ *   `NUMCOSMO_HOME` when set (it must be an absolute path), otherwise `~/.numcosmo`
+ *   when that directory exists (deprecated), otherwise `$XDG_DATA_HOME/numcosmo`, or
+ *   `~/.local/share/numcosmo` when `XDG_DATA_HOME` is unset, empty or relative;
  * - sets the Cuba library core counts to zero;
  * - turns the GSL error handler off, see ncm_cfg_enable_gsl_err_handler();
  * - installs the NumCosmo log handlers;
@@ -589,8 +592,9 @@ _ncm_cfg_mpi_launched (void)
  *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(); the time
  *   limit is 10 s when `NCM_FFTW_PLANNER_TIMELIMIT` is not set;
  * - creates the NumCosmo data directory, see ncm_cfg_get_fullpath(); it is
- *   the value of `NUMCOSMO_HOME` when set, otherwise `$XDG_DATA_HOME/numcosmo` when
- *   `XDG_DATA_HOME` is set, otherwise `~/.numcosmo`;
+ *   `NUMCOSMO_HOME` when set (it must be an absolute path), otherwise `~/.numcosmo`
+ *   when that directory exists (deprecated), otherwise `$XDG_DATA_HOME/numcosmo`, or
+ *   `~/.local/share/numcosmo` when `XDG_DATA_HOME` is unset, empty or relative;
  * - sets the Cuba library core counts to zero;
  * - turns the GSL error handler off, see ncm_cfg_enable_gsl_err_handler();
  * - installs the NumCosmo log handlers;
@@ -616,20 +620,11 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
 
-  {
-    const gchar *xdg_data_home = g_getenv ("XDG_DATA_HOME");
-    const gchar *numcosmo_home = g_getenv ("NUMCOSMO_HOME");
+  numcosmo_path = _ncm_cfg_data_dir ();
 
-    if (numcosmo_home != NULL)
-      numcosmo_path = g_strdup (numcosmo_home);
-    else if (xdg_data_home != NULL)
-      numcosmo_path = g_build_filename (xdg_data_home, "numcosmo", NULL);
-    else
-      numcosmo_path = g_build_filename (g_get_home_dir (), ".numcosmo", NULL);
-  }
-
-  if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
-    g_mkdir_with_parents (numcosmo_path, 0755);
+  if (g_mkdir_with_parents (numcosmo_path, 0755) != 0)
+    g_error ("ncm_cfg_init: cannot create the NumCosmo data directory `%s': %s.",
+             numcosmo_path, g_strerror (errno));
 
   g_setenv ("CUBACORES", "0", TRUE);
   g_setenv ("CUBACORESMAX", "0", TRUE);
@@ -727,6 +722,40 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   atexit (_ncm_cfg_exit);
 
   return;
+}
+
+/*
+ * NUMCOSMO_HOME when set; otherwise ~/.numcosmo when it exists (deprecated);
+ * otherwise the XDG data directory. Empty values count as unset, and a relative
+ * XDG_DATA_HOME is ignored, as the XDG Base Directory Specification requires.
+ */
+static gchar *
+_ncm_cfg_data_dir (void)
+{
+  const gchar *numcosmo_home = g_getenv ("NUMCOSMO_HOME");
+  const gchar *xdg_data_home = g_getenv ("XDG_DATA_HOME");
+  gchar *legacy;
+
+  if ((numcosmo_home != NULL) && (numcosmo_home[0] != '\0'))
+  {
+    if (!g_path_is_absolute (numcosmo_home))
+      g_error ("ncm_cfg_init: NUMCOSMO_HOME must be an absolute path, got `%s'.", numcosmo_home);
+
+    return g_strdup (numcosmo_home);
+  }
+
+  legacy = g_build_filename (g_get_home_dir (), ".numcosmo", NULL);
+
+  if (g_file_test (legacy, G_FILE_TEST_IS_DIR))
+    return legacy;
+
+  g_free (legacy);
+
+  /* Not g_get_user_data_dir(): it returns a relative XDG_DATA_HOME as given. */
+  if ((xdg_data_home != NULL) && g_path_is_absolute (xdg_data_home))
+    return g_build_filename (xdg_data_home, "numcosmo", NULL);
+
+  return g_build_filename (g_get_home_dir (), ".local", "share", "numcosmo", NULL);
 }
 
 /**

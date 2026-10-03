@@ -245,28 +245,27 @@ typedef enum
 {
   TEST_NCM_CFG_PATH_DEFAULT,
   TEST_NCM_CFG_PATH_XDG,
+  TEST_NCM_CFG_PATH_XDG_RELATIVE,
+  TEST_NCM_CFG_PATH_LEGACY,
   TEST_NCM_CFG_PATH_OVERRIDE,
+  TEST_NCM_CFG_PATH_OVERRIDE_EMPTY,
+  TEST_NCM_CFG_PATH_OVERRIDE_RELATIVE,
 } TestNcmCfgPath;
 
 static void
-_test_ncm_cfg_path (TestNcmCfgPath mode)
+_test_ncm_cfg_path (TestNcmCfgPath mode, const gchar *test_path)
 {
   if (g_getenv ("NCM_TEST_CFG_CHILD") != NULL)
   {
-    gchar *expected;
+    const gchar *expected;
     gchar *path;
     gchar *expected_path;
     GError *error = NULL;
 
     ncm_cfg_init ();
 
-    if (mode == TEST_NCM_CFG_PATH_OVERRIDE)
-      expected = g_strdup (g_getenv ("NUMCOSMO_HOME"));
-    else if (mode == TEST_NCM_CFG_PATH_XDG)
-      expected = g_build_filename (g_getenv ("XDG_DATA_HOME"), "numcosmo", NULL);
-    else
-      expected = g_build_filename (g_getenv ("HOME"), ".numcosmo", NULL);
-
+    expected = g_getenv ("NCM_TEST_CFG_EXPECTED");
+    g_assert_nonnull (expected);
     g_assert_cmpstr (ncm_cfg_get_fullpath_base (), ==, expected);
     g_assert_true (g_file_test (expected, G_FILE_TEST_IS_DIR));
 
@@ -281,78 +280,138 @@ _test_ncm_cfg_path (TestNcmCfgPath mode)
 
     g_free (expected_path);
     g_free (path);
-    g_free (expected);
   }
   else
   {
-    gchar *tmp_dir = g_dir_make_tmp ("test_ncm_cfg_path_XXXXXX", NULL);
+    /* Directories the case must create, relative to the temporary HOME, innermost first. */
+    const gchar *xdg_default[] = {".local/share/numcosmo", ".local/share", ".local", NULL};
+    const gchar *xdg_set[]     = {"xdg/numcosmo", "xdg", NULL};
+    const gchar *legacy[]      = {".numcosmo", NULL};
+    const gchar *override[]    = {"custom/data", "custom", NULL};
+    const gchar *none[]        = {NULL};
+    const gchar **created      = none;
+    gchar *tmp_dir             = g_dir_make_tmp ("test_ncm_cfg_path_XXXXXX", NULL);
     gchar *xdg_dir;
-    gchar *override_dir;
-    gchar *chosen_dir;
-    gchar **envp = g_get_environ ();
-    const gchar *test_path;
+    gchar *expected = NULL;
+    gchar **envp    = g_get_environ ();
+    guint i;
 
     g_assert_nonnull (tmp_dir);
-    xdg_dir      = g_build_filename (tmp_dir, "xdg", NULL);
-    override_dir = g_build_filename (tmp_dir, "custom", "data", NULL);
-    envp         = g_environ_setenv (envp, "HOME", tmp_dir, TRUE);
-    envp         = g_environ_unsetenv (envp, "XDG_DATA_HOME");
-    envp         = g_environ_unsetenv (envp, "NUMCOSMO_HOME");
-    envp         = g_environ_setenv (envp, "NCM_TEST_CFG_CHILD", "1", TRUE);
+    xdg_dir = g_build_filename (tmp_dir, "xdg", NULL);
+    envp    = g_environ_setenv (envp, "HOME", tmp_dir, TRUE);
+    envp    = g_environ_unsetenv (envp, "XDG_DATA_HOME");
+    envp    = g_environ_unsetenv (envp, "NUMCOSMO_HOME");
+    envp    = g_environ_setenv (envp, "NCM_TEST_CFG_CHILD", "1", TRUE);
 
-    if (mode != TEST_NCM_CFG_PATH_DEFAULT)
-      envp = g_environ_setenv (envp, "XDG_DATA_HOME", xdg_dir, TRUE);
-
-    if (mode == TEST_NCM_CFG_PATH_OVERRIDE)
-      envp = g_environ_setenv (envp, "NUMCOSMO_HOME", override_dir, TRUE);
-
-    test_path = (mode == TEST_NCM_CFG_PATH_DEFAULT) ? "/ncm/cfg/path/default" :
-                (mode == TEST_NCM_CFG_PATH_XDG) ? "/ncm/cfg/path/xdg" : "/ncm/cfg/path/override";
-    _test_ncm_cfg_spawn (test_path, envp, TRUE, NULL);
-
-    if (mode == TEST_NCM_CFG_PATH_OVERRIDE)
+    switch (mode)
     {
-      chosen_dir = override_dir;
-      g_assert_cmpint (g_rmdir (chosen_dir), ==, 0);
-      chosen_dir = g_build_filename (tmp_dir, "custom", NULL);
-      g_assert_cmpint (g_rmdir (chosen_dir), ==, 0);
-      g_free (chosen_dir);
+      case TEST_NCM_CFG_PATH_DEFAULT:
+        expected = g_build_filename (tmp_dir, ".local", "share", "numcosmo", NULL);
+        created  = xdg_default;
+        break;
+      case TEST_NCM_CFG_PATH_XDG:
+        envp     = g_environ_setenv (envp, "XDG_DATA_HOME", xdg_dir, TRUE);
+        expected = g_build_filename (xdg_dir, "numcosmo", NULL);
+        created  = xdg_set;
+        break;
+      case TEST_NCM_CFG_PATH_XDG_RELATIVE:
+        envp     = g_environ_setenv (envp, "XDG_DATA_HOME", "relative/xdg", TRUE);
+        expected = g_build_filename (tmp_dir, ".local", "share", "numcosmo", NULL);
+        created  = xdg_default;
+        break;
+      case TEST_NCM_CFG_PATH_LEGACY:
+        envp     = g_environ_setenv (envp, "XDG_DATA_HOME", xdg_dir, TRUE);
+        expected = g_build_filename (tmp_dir, ".numcosmo", NULL);
+        created  = legacy;
+        g_assert_cmpint (g_mkdir (expected, 0755), ==, 0);
+        break;
+      case TEST_NCM_CFG_PATH_OVERRIDE:
+        expected = g_build_filename (tmp_dir, "custom", "data", NULL);
+        envp     = g_environ_setenv (envp, "XDG_DATA_HOME", xdg_dir, TRUE);
+        envp     = g_environ_setenv (envp, "NUMCOSMO_HOME", expected, TRUE);
+        created  = override;
+        break;
+      case TEST_NCM_CFG_PATH_OVERRIDE_EMPTY:
+        envp     = g_environ_setenv (envp, "NUMCOSMO_HOME", "", TRUE);
+        expected = g_build_filename (tmp_dir, ".local", "share", "numcosmo", NULL);
+        created  = xdg_default;
+        break;
+      case TEST_NCM_CFG_PATH_OVERRIDE_RELATIVE:
+        envp = g_environ_setenv (envp, "NUMCOSMO_HOME", "relative/numcosmo", TRUE);
+        break;
+      default:                   /* LCOV_EXCL_LINE */
+        g_assert_not_reached (); /* LCOV_EXCL_LINE */
+        break;                   /* LCOV_EXCL_LINE */
+    }
+
+    if (expected != NULL)
+    {
+      envp = g_environ_setenv (envp, "NCM_TEST_CFG_EXPECTED", expected, TRUE);
+      _test_ncm_cfg_spawn (test_path, envp, TRUE, NULL);
     }
     else
     {
-      chosen_dir = g_build_filename (tmp_dir, mode == TEST_NCM_CFG_PATH_XDG ? "xdg/numcosmo" : ".numcosmo", NULL);
-      g_assert_cmpint (g_rmdir (chosen_dir), ==, 0);
-      g_free (chosen_dir);
+      _test_ncm_cfg_spawn (test_path, envp, FALSE, "NUMCOSMO_HOME must be an absolute path");
+    }
 
-      if (mode == TEST_NCM_CFG_PATH_XDG)
-        g_assert_cmpint (g_rmdir (xdg_dir), ==, 0);
+    /* Removing exactly these, then HOME itself, fails if anything else was created. */
+    for (i = 0; created[i] != NULL; i++)
+    {
+      gchar *dir = g_build_filename (tmp_dir, created[i], NULL);
+
+      g_assert_cmpint (g_rmdir (dir), ==, 0);
+      g_free (dir);
     }
 
     g_assert_cmpint (g_rmdir (tmp_dir), ==, 0);
 
     g_strfreev (envp);
+    g_free (expected);
     g_free (tmp_dir);
     g_free (xdg_dir);
-    g_free (override_dir);
   }
 }
 
 static void
 test_ncm_cfg_path_default (void)
 {
-  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_DEFAULT);
+  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_DEFAULT, "/ncm/cfg/path/default");
 }
 
 static void
 test_ncm_cfg_path_xdg (void)
 {
-  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_XDG);
+  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_XDG, "/ncm/cfg/path/xdg");
+}
+
+static void
+test_ncm_cfg_path_xdg_relative (void)
+{
+  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_XDG_RELATIVE, "/ncm/cfg/path/xdg_relative");
+}
+
+static void
+test_ncm_cfg_path_legacy (void)
+{
+  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_LEGACY, "/ncm/cfg/path/legacy");
 }
 
 static void
 test_ncm_cfg_path_override (void)
 {
-  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_OVERRIDE);
+  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_OVERRIDE, "/ncm/cfg/path/override");
+}
+
+static void
+test_ncm_cfg_path_override_empty (void)
+{
+  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_OVERRIDE_EMPTY, "/ncm/cfg/path/override_empty");
+}
+
+static void
+test_ncm_cfg_path_override_relative (void)
+{
+  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_OVERRIDE_RELATIVE, "/ncm/cfg/path/override_relative");
 }
 
 static gpointer
@@ -450,7 +509,11 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/cfg/omp_thread_limit/subprocess", &test_ncm_cfg_omp_thread_limit_subprocess);
   g_test_add_func ("/ncm/cfg/path/default", &test_ncm_cfg_path_default);
   g_test_add_func ("/ncm/cfg/path/xdg", &test_ncm_cfg_path_xdg);
+  g_test_add_func ("/ncm/cfg/path/xdg_relative", &test_ncm_cfg_path_xdg_relative);
+  g_test_add_func ("/ncm/cfg/path/legacy", &test_ncm_cfg_path_legacy);
   g_test_add_func ("/ncm/cfg/path/override", &test_ncm_cfg_path_override);
+  g_test_add_func ("/ncm/cfg/path/override_empty", &test_ncm_cfg_path_override_empty);
+  g_test_add_func ("/ncm/cfg/path/override_relative", &test_ncm_cfg_path_override_relative);
   g_test_add_func ("/ncm/cfg/enum_print_all_gaps", &test_ncm_cfg_enum_print_all_gaps);
   g_test_add_func ("/ncm/cfg/enum_print_all_gaps/subprocess", &test_ncm_cfg_enum_print_all_gaps_subprocess);
   g_test_add_func ("/ncm/cfg/error_log_handler", &test_ncm_cfg_error_log_handler);

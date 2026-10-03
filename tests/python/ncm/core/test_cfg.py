@@ -214,7 +214,7 @@ def test_fftw_wisdom_round_trips_through_the_cache(tmp_path) -> None:
     ncm_cfg_fftw_plan_begin/end when a transform is planned. Both are also
     no-ops under FFTW_ESTIMATE, which is why this
     runs a child with an explicit planner and its own HOME -- the wisdom file
-    lives in the NumCosmo data directory, $HOME/.numcosmo by default, and the
+    lives in the NumCosmo data directory, $HOME/.local/share/numcosmo here, and the
     loaded-once cache is per process, so the
     read-an-existing-file path needs a second process to be exercised at all.
     """
@@ -242,7 +242,7 @@ def test_fftw_wisdom_round_trips_through_the_cache(tmp_path) -> None:
         assert proc.returncode == 0, proc.stderr
         return proc.stdout
 
-    wisdom_dir = tmp_path / ".numcosmo"
+    wisdom_dir = tmp_path / ".local" / "share" / "numcosmo"
 
     # First process: nothing to load, so it plans from scratch and saves.
     assert "measure" in run_child()
