@@ -39,7 +39,11 @@
 
 #include <glib/gstdio.h>
 #include <errno.h>
+#include <signal.h>
 #include <unistd.h>
+
+static void _nc_data_download_lock_set_owner (const gchar *lockdir);
+static gboolean _nc_data_download_lock_owner_is_dead (const gchar *lockdir);
 
 gboolean
 _nc_data_download_lock (const gchar *lockpath, const gchar *readypath, gint max_wait_s, gchar **lockdir)
@@ -79,12 +83,17 @@ _nc_data_download_lock (const gchar *lockpath, const gchar *readypath, gint max_
       return FALSE;
     }
 
+    if (_nc_data_download_lock_owner_is_dead (*lockdir))
+      break;  /* its owner was killed on this host: take it over now */
+
     if (waited >= max_wait_s)
-      break;  /* stale lock from a killed run: take it over */
+      break;  /* owner unknown or on another host: take it over */
 
     g_usleep (G_USEC_PER_SEC);
     waited++;
   }
+
+  _nc_data_download_lock_set_owner (*lockdir);
 
   if (g_file_test (readypath, G_FILE_TEST_EXISTS))
   {
@@ -97,11 +106,59 @@ _nc_data_download_lock (const gchar *lockpath, const gchar *readypath, gint max_
   return TRUE;
 }
 
+static void
+_nc_data_download_lock_set_owner (const gchar *lockdir)
+{
+  gchar *owner    = g_build_filename (lockdir, "owner", NULL);
+  gchar *contents = g_strdup_printf ("%d@%s\n", (gint) getpid (), g_get_host_name ());
+
+  /* Best effort: without it a waiter falls back to the timed takeover. */
+  if (!g_file_set_contents (owner, contents, -1, NULL))
+    g_unlink (owner);
+
+  g_free (contents);
+  g_free (owner);
+}
+
+static gboolean
+_nc_data_download_lock_owner_is_dead (const gchar *lockdir)
+{
+  gchar *owner    = g_build_filename (lockdir, "owner", NULL);
+  gchar *contents = NULL;
+  gboolean dead   = FALSE;
+
+  /* No owner file: it is being written, or the lock predates it. */
+  if (g_file_get_contents (owner, &contents, NULL, NULL))
+  {
+    gchar **fields = g_strsplit (g_strchomp (contents), "@", 2);
+
+    if ((g_strv_length (fields) == 2) && (g_strcmp0 (fields[1], g_get_host_name ()) == 0))
+    {
+      gchar *end       = NULL;
+      const gint64 pid = g_ascii_strtoll (fields[0], &end, 10);
+
+      if ((end != fields[0]) && (*end == '\0') && (pid > 0))
+        dead = (kill ((pid_t) pid, 0) != 0) && (errno == ESRCH);
+    }
+
+    g_strfreev (fields);
+    g_free (contents);
+  }
+
+  g_free (owner);
+
+  return dead;
+}
+
 void
 _nc_data_download_unlock (gchar *lockdir)
 {
   if (lockdir != NULL)
   {
+    gchar *owner = g_build_filename (lockdir, "owner", NULL);
+
+    g_unlink (owner);
+    g_free (owner);
     g_rmdir (lockdir);
     g_free (lockdir);
   }

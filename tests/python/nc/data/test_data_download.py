@@ -36,6 +36,7 @@ test session with it.
 """
 
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -144,6 +145,36 @@ def test_a_failed_download_says_so(tmp_path):
     assert result.returncode != 0
     assert "wget failed" in result.stderr
     assert "this-asset-does-not-exist.fits" in result.stderr
+
+
+def test_a_dead_owners_lock_is_taken_over_at_once(tmp_path):
+    """A lock whose owner was killed on this host must not hold up the next run.
+
+    A SIGKILL, the OOM killer or a CI timeout leaves the lock directory behind
+    with no chance to release it; the next fetch used to wait out the full
+    900 s before taking it over.
+    """
+    finished = subprocess.Popen(["true"])
+    finished.wait()
+
+    lock = tmp_path / ".numcosmo" / f"{TINY_ASSET}.lock"
+    lock.mkdir(parents=True)
+    (lock / "owner").write_text(f"{finished.pid}@{socket.gethostname()}\n")
+
+    start = time.monotonic()
+    result = subprocess.run(
+        [sys.executable, "-c", _FETCH, TINY_ASSET],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=isolated_env(tmp_path),
+        timeout=120,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert time.monotonic() - start < 60.0
+    assert (tmp_path / ".numcosmo" / TINY_ASSET).stat().st_size == 310
+    assert not lock.exists()
 
 
 def test_a_failed_download_leaves_nothing_behind(tmp_path):

@@ -52,8 +52,9 @@ G_BEGIN_DECLS
  * cannot double as the lock, since the tree it lives in gets replaced.
  *
  * A lock *directory* rather than a lock file: mkdir() is atomic everywhere
- * this runs, NFS included. A lock left by a killed process is taken over
- * after @max_wait_s rather than waited on forever.
+ * this runs, NFS included. The owner records "pid@host" inside it: a lock
+ * whose owner is dead on this host is taken over at once; one with no
+ * readable owner, or an owner on another host, after @max_wait_s.
  */
 gboolean _nc_data_download_lock (const gchar *lockpath, const gchar *readypath, gint max_wait_s, gchar **lockdir);
 
