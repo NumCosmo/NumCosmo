@@ -75,9 +75,18 @@ sys.stdout.write(
 WL_ASSET = "wl_obs_HWL16a-094.gvar"
 
 
+def isolated_env(home) -> dict[str, str]:
+    """Return the environment with HOME set to @home and no data directory override."""
+    env = dict(os.environ, HOME=str(home))
+    env.pop("NUMCOSMO_HOME", None)
+    env.pop("XDG_DATA_HOME", None)
+
+    return env
+
+
 def run_isolated(script: str, home, *args) -> subprocess.CompletedProcess:
     """Run @script with an empty HOME, so the data directory starts bare."""
-    env = dict(os.environ, HOME=str(home))
+    env = isolated_env(home)
 
     return subprocess.run(
         [sys.executable, "-c", script, *args],
@@ -96,7 +105,7 @@ def test_concurrent_download_is_safe(tmp_path):
     NumCosmo process, so without a lock two transfers wrote one path while a
     third read it. The reader saw a truncated file and the process aborted.
     """
-    env = dict(os.environ, HOME=str(tmp_path))
+    env = isolated_env(tmp_path)
     procs = [
         subprocess.Popen(
             [sys.executable, "-c", _FETCH, TINY_ASSET],
@@ -203,7 +212,7 @@ def test_a_waiter_uses_what_the_holder_produced(tmp_path):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        env=dict(os.environ, HOME=str(tmp_path)),
+        env=isolated_env(tmp_path),
     )
 
     try:
@@ -258,7 +267,7 @@ def test_wl_catalog_waits_for_the_holder(tmp_path):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        env=dict(os.environ, HOME=str(tmp_path)),
+        env=isolated_env(tmp_path),
     )
 
     try:

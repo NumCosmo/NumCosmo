@@ -225,6 +225,8 @@ def test_fftw_wisdom_round_trips_through_the_cache(tmp_path) -> None:
     # so the planner below is what the child actually uses.
     env = {k: v for k, v in os.environ.items() if not k.startswith("NCM_FFTW")}
     env["HOME"] = str(tmp_path)
+    env.pop("NUMCOSMO_HOME", None)
+    env.pop("XDG_DATA_HOME", None)
     env["NCM_FFTW_PLANNER"] = "measure"
     env.pop("OMP_NUM_THREADS", None)
 
