@@ -473,7 +473,7 @@ _ncm_cfg_exit (void)
  * - sets the default FFTW planner flag and time limit from `NCM_FFTW_PLANNER` and
  *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(); the time
  *   limit is 10 s when `NCM_FFTW_PLANNER_TIMELIMIT` is not set;
- * - creates the NumCosmo data directory, see ncm_cfg_get_fullpath(); it is
+ * - creates the NumCosmo user data directory, see ncm_cfg_get_fullpath(); it is
  *   `NUMCOSMO_HOME` when set (it must be an absolute path), otherwise `~/.numcosmo`
  *   when that directory exists (deprecated), otherwise `$XDG_DATA_HOME/numcosmo`, or
  *   `~/.local/share/numcosmo` when `XDG_DATA_HOME` is unset, empty or relative;
@@ -592,7 +592,7 @@ _ncm_cfg_mpi_launched (void)
  * - sets the default FFTW planner flag and time limit from `NCM_FFTW_PLANNER` and
  *   `NCM_FFTW_PLANNER_TIMELIMIT`, see ncm_cfg_set_fftw_default_from_env_str(); the time
  *   limit is 10 s when `NCM_FFTW_PLANNER_TIMELIMIT` is not set;
- * - creates the NumCosmo data directory, see ncm_cfg_get_fullpath(); it is
+ * - creates the NumCosmo user data directory, see ncm_cfg_get_fullpath(); it is
  *   `NUMCOSMO_HOME` when set (it must be an absolute path), otherwise `~/.numcosmo`
  *   when that directory exists (deprecated), otherwise `$XDG_DATA_HOME/numcosmo`, or
  *   `~/.local/share/numcosmo` when `XDG_DATA_HOME` is unset, empty or relative;
@@ -624,7 +624,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   numcosmo_path = _ncm_cfg_data_dir ();
 
   if (g_mkdir_with_parents (numcosmo_path, 0755) != 0)
-    g_error ("ncm_cfg_init: cannot create the NumCosmo data directory `%s': %s.",
+    g_error ("ncm_cfg_init: cannot create the NumCosmo user data directory `%s': %s.",
              numcosmo_path, g_strerror (errno));
 
   g_setenv ("CUBACORES", "0", TRUE);
@@ -727,7 +727,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
 /*
  * NUMCOSMO_HOME when set; otherwise ~/.numcosmo when it exists (deprecated);
- * otherwise the XDG data directory. Empty values count as unset, and a relative
+ * otherwise the XDG user data directory. Empty values count as unset, and a relative
  * XDG_DATA_HOME is ignored, as the XDG Base Directory Specification requires.
  */
 static gchar *
@@ -1496,7 +1496,7 @@ ncm_cfg_get_fullpath (const gchar *filename, ...)
 /**
  * ncm_cfg_get_fullpath_base:
  *
- * Returns: (transfer none): the path of the NumCosmo data directory, see ncm_cfg_init().
+ * Returns: (transfer none): the path of the NumCosmo user data directory, see ncm_cfg_init().
  */
 const gchar *
 ncm_cfg_get_fullpath_base (void)
@@ -1509,7 +1509,7 @@ ncm_cfg_get_fullpath_base (void)
 /**
  * ncm_cfg_fullpath_base_is_legacy:
  *
- * Whether the NumCosmo data directory is the deprecated `~/.numcosmo`, used only
+ * Whether the NumCosmo user data directory is the deprecated `~/.numcosmo`, used only
  * because it already exists, see ncm_cfg_init().
  *
  * Returns: %TRUE if ncm_cfg_get_fullpath_base() is the legacy `~/.numcosmo`.
@@ -1866,7 +1866,7 @@ static GHashTable *_fftw_planned_keys = NULL;
  * @...: arguments for @key
  *
  * Starts creating FFTW plans: loads the FFTW wisdom of this MPI rank, once per process, from
- * `ncm_cfg_wisdom_rank<rank>.fftw3` in the NumCosmo data directory, see ncm_cfg_init(), and
+ * `ncm_cfg_wisdom_rank<rank>.fftw3` in the NumCosmo user data directory, see ncm_cfg_init(), and
  * takes the planning lock, see ncm_cfg_lock_plan_fftw(). @key identifies the plans: the caller
  * and everything that makes a plan different, such as the transform sizes and kinds and the
  * number of transforms; the current default planner flag is added to it. It only tells
@@ -1953,7 +1953,7 @@ ncm_cfg_fftw_plan_destroy (gpointer plan)
 
 /*
  * Imports the FFTW wisdom of this MPI rank, once per process, from
- * ncm_cfg_wisdom_rank<rank>.fftw3 in the NumCosmo data directory. Does nothing under
+ * ncm_cfg_wisdom_rank<rank>.fftw3 in the NumCosmo user data directory. Does nothing under
  * FFTW_ESTIMATE, which uses no wisdom. Thread-safe.
  */
 static void
@@ -2065,7 +2065,7 @@ _ncm_cfg_save_fftw_wisdom (void)
  * @filename: a printf format string
  * @...: arguments for @filename
  *
- * Returns: whether the formatted file name exists inside the NumCosmo data directory, see
+ * Returns: whether the formatted file name exists inside the NumCosmo user data directory, see
  * ncm_cfg_init().
  */
 gboolean

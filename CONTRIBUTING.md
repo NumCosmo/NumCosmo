@@ -333,7 +333,7 @@ environment.yml` still solves normally (see [docs/install.qmd](docs/install.qmd)
 Several data sets are not in the repository: the Planck baseline (`plc_3.0`),
 the SNIa covariance catalogs, the curated weak-lensing catalogs and the native
 Planck likelihood objects. NumCosmo downloads each one from a tagged GitHub
-release the first time it is asked for and keeps it in the NumCosmo data
+release the first time it is asked for and keeps it in the NumCosmo user data
 directory (see `ncm_cfg_init`). That is about 470 MB, and without a cache
 every CI job fetches its share of it on every run.
 

@@ -180,7 +180,7 @@ _nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what, 
 
     if (g_once_init_enter (&noticed))
     {
-      ncm_message ("# The NumCosmo data directory %s is deprecated; move it to "
+      ncm_message ("# The NumCosmo user data directory %s is deprecated; move it to "
                    "$XDG_DATA_HOME/numcosmo (~/.local/share/numcosmo by default) "
                    "or set NUMCOSMO_HOME.\n", ncm_cfg_get_fullpath_base ());
       g_once_init_leave (&noticed, 1);

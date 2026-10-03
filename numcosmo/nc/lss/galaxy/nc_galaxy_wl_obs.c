@@ -295,7 +295,7 @@ static const gchar *_nc_galaxy_wl_obs_catalog_files[] = {
  *
  * Downloads (if not already cached) and returns the local filename of the
  * catalog identified by @id. The file is fetched from the NumCosmo
- * datafile-release-v1.0.0 GitHub release into the NumCosmo data directory
+ * datafile-release-v1.0.0 GitHub release into the NumCosmo user data directory
  * (see ncm_cfg_get_fullpath_base()) the first time it is requested; later
  * calls reuse the cached copy.
  *

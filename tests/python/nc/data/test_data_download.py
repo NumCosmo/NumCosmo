@@ -77,7 +77,7 @@ WL_ASSET = "wl_obs_HWL16a-094.gvar"
 
 
 def isolated_env(home) -> dict[str, str]:
-    """Return the environment with HOME set to @home and no data directory override."""
+    """Return the environment with HOME set to @home and no user data directory override."""
     env = dict(os.environ, HOME=str(home))
     env.pop("NUMCOSMO_HOME", None)
     env.pop("XDG_DATA_HOME", None)
@@ -86,7 +86,7 @@ def isolated_env(home) -> dict[str, str]:
 
 
 def run_isolated(script: str, home, *args) -> subprocess.CompletedProcess:
-    """Run @script with an empty HOME, so the data directory starts bare."""
+    """Run @script with an empty HOME, so the user data directory starts bare."""
     env = isolated_env(home)
 
     return subprocess.run(
@@ -351,7 +351,7 @@ def test_wl_catalog_waits_for_the_holder(tmp_path):
 
 
 def test_wl_catalog_already_there_is_not_refetched(tmp_path):
-    """A catalog already in the data directory is returned untouched."""
+    """A catalog already in the user data directory is returned untouched."""
     base = tmp_path / ".numcosmo"
     base.mkdir()
     target = base / WL_ASSET
