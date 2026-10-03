@@ -308,15 +308,16 @@
 G_DEFINE_QUARK (ncm-cfg-error, ncm_cfg_error)
 /* *INDENT-ON* */
 
-static gchar *numcosmo_path         = NULL;
-static gboolean numcosmo_init       = FALSE;
-static FILE *_log_stream            = NULL;
-static FILE *_log_stream_err        = NULL;
-static guint _log_msg_id            = 0;
-static guint _log_err_id            = 0;
-static gboolean _enable_msg         = TRUE;
-static gboolean _enable_msg_flush   = TRUE;
-static gsl_error_handler_t *gsl_err = NULL;
+static gchar *numcosmo_path          = NULL;
+static gboolean numcosmo_path_legacy = FALSE;
+static gboolean numcosmo_init        = FALSE;
+static FILE *_log_stream             = NULL;
+static FILE *_log_stream_err         = NULL;
+static guint _log_msg_id             = 0;
+static guint _log_err_id             = 0;
+static gboolean _enable_msg          = TRUE;
+static gboolean _enable_msg_flush    = TRUE;
+static gsl_error_handler_t *gsl_err  = NULL;
 
 # if (defined (__GNUC__)                                            \
   && ((__GNUC__ == 11 && __GNUC_MINOR__ >= 1) || (__GNUC__ >= 12))) \
@@ -747,7 +748,11 @@ _ncm_cfg_data_dir (void)
   legacy = g_build_filename (g_get_home_dir (), ".numcosmo", NULL);
 
   if (g_file_test (legacy, G_FILE_TEST_IS_DIR))
+  {
+    numcosmo_path_legacy = TRUE;
+
     return legacy;
+  }
 
   g_free (legacy);
 
@@ -1499,6 +1504,22 @@ ncm_cfg_get_fullpath_base (void)
   g_assert (numcosmo_init);
 
   return numcosmo_path;
+}
+
+/**
+ * ncm_cfg_fullpath_base_is_legacy:
+ *
+ * Whether the NumCosmo data directory is the deprecated `~/.numcosmo`, used only
+ * because it already exists, see ncm_cfg_init().
+ *
+ * Returns: %TRUE if ncm_cfg_get_fullpath_base() is the legacy `~/.numcosmo`.
+ */
+gboolean
+ncm_cfg_fullpath_base_is_legacy (void)
+{
+  g_assert (numcosmo_init);
+
+  return numcosmo_path_legacy;
 }
 
 /**

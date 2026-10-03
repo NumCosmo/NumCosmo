@@ -177,6 +177,28 @@ def test_a_dead_owners_lock_is_taken_over_at_once(tmp_path):
     assert not lock.exists()
 
 
+def test_a_download_into_the_legacy_directory_says_so(tmp_path):
+    """A download into an existing ~/.numcosmo points at the XDG location."""
+    (tmp_path / ".numcosmo").mkdir()
+
+    result = run_isolated(_FETCH, tmp_path, TINY_ASSET)
+
+    assert result.returncode == 0, result.stderr
+    assert "is deprecated" in result.stdout
+    assert (tmp_path / ".numcosmo" / TINY_ASSET).stat().st_size == 310
+
+
+def test_a_download_into_the_xdg_directory_is_quiet(tmp_path):
+    """Without ~/.numcosmo the data goes to the XDG default, with no notice."""
+    result = run_isolated(_FETCH, tmp_path, TINY_ASSET)
+
+    assert result.returncode == 0, result.stderr
+    assert "is deprecated" not in result.stdout
+    assert (
+        tmp_path / ".local" / "share" / "numcosmo" / TINY_ASSET
+    ).stat().st_size == 310
+
+
 def test_a_failed_download_leaves_nothing_behind(tmp_path):
     """A failure must not poison the cache for every later run.
 

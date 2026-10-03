@@ -268,6 +268,7 @@ _test_ncm_cfg_path (TestNcmCfgPath mode, const gchar *test_path)
     g_assert_nonnull (expected);
     g_assert_cmpstr (ncm_cfg_get_fullpath_base (), ==, expected);
     g_assert_true (g_file_test (expected, G_FILE_TEST_IS_DIR));
+    g_assert_cmpint (ncm_cfg_fullpath_base_is_legacy (), ==, g_getenv ("NCM_TEST_CFG_LEGACY") != NULL);
 
     path          = ncm_cfg_get_fullpath ("test_%d.txt", 3);
     expected_path = g_build_filename (expected, "test_3.txt", NULL);
@@ -321,6 +322,7 @@ _test_ncm_cfg_path (TestNcmCfgPath mode, const gchar *test_path)
         break;
       case TEST_NCM_CFG_PATH_LEGACY:
         envp     = g_environ_setenv (envp, "XDG_DATA_HOME", xdg_dir, TRUE);
+        envp     = g_environ_setenv (envp, "NCM_TEST_CFG_LEGACY", "1", TRUE);
         expected = g_build_filename (tmp_dir, ".numcosmo", NULL);
         created  = legacy;
         g_assert_cmpint (g_mkdir (expected, 0755), ==, 0);
