@@ -271,7 +271,7 @@ _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model)
                  prim_lnk_min, prim_lnk_max, -8.0 * M_LN10, 8.0 * M_LN10);
     }
 
-    ncm_spline_set_func (pk_s, NCM_SPLINE_FUNCTION_SPLINE, &F, lnk_lb, lnk_ub, 0, 1.0e-13);
+    ncm_spline_set_func (pk_s, NCM_SPLINE_FUNCTION_SPLINE, &F, lnk_lb, lnk_ub, 0, 1.0e-9);
 
     ncm_spline_clear (&ps_mlt->Pk);
     ps_mlt->Pk = pk_s;

@@ -53,11 +53,14 @@
  * the settled mesh is closed: every interval wider in the knot variable than the mean of
  * its two neighbors (a border interval, than its one neighbor), by more than one part in
  * $10^8$ (bisection leaves exact factors of two), has its midpoint evaluated and tested as
- * above, the point kept as a knot; the
- * intervals that fail are split, the rounds resume, and the closure repeats until a closure
- * round flags nothing or every flagged interval passes. The closure removes errors from an
- * adaptive mesh and discovers no feature: a feature the starting knots and their midpoints
- * carry no evidence of is found by no test on those samples.
+ * above, the point kept as a knot; the intervals that fail are split, the rounds resume,
+ * and the closure repeats until a closure round flags nothing or every flagged interval
+ * passes. A flagged interval that fails also flags every adjacent interval of the same
+ * width, on both sides: bisection locks onto an oscillation below the tolerance, and such
+ * a run of intervals, each one period wide, passes every midpoint test at the same phase
+ * while the width comparison sees only the two ends of the run. The closure removes errors
+ * from an adaptive mesh and discovers no feature: a feature the starting knots and their
+ * midpoints carry no evidence of is found by no test on those samples.
  *
  * The adaptive types stop with a warning when the number of knots exceeds `max_nodes`,
  * unlimited when zero, and abort when an interval becomes shorter than
@@ -105,6 +108,9 @@ typedef struct
 
 /* Relative margin of the closure's width comparison: bisection leaves exact factors of two. */
 #define NCM_SPLINE_FUNC_CLOSURE_MARGIN (1.0e-8)
+
+static void _ncm_spline_flag_same_width_left (GList *nodes, gdouble (*fwd) (gdouble), const gdouble h);
+static void _ncm_spline_flag_same_width_right (GList *nodes, gdouble (*fwd) (gdouble), const gdouble h);
 
 static void
 _BIVec_free (gpointer mem)
@@ -257,6 +263,15 @@ _ncm_spline_new_function_adaptive (NcmSpline *s, gsl_function *F, const gdouble 
         else
         {
           improves++;
+
+          if (closing)
+          {
+            /* a flagged interval that fails: its run of equal width is suspect too */
+            const gdouble hp = fwd (x1) - fwd (x0);
+
+            _ncm_spline_flag_same_width_left (wnodes->prev, fwd, hp);
+            _ncm_spline_flag_same_width_right (wnodes->next, fwd, hp);
+          }
         }
       }
     } while ((wnodes = g_list_next (wnodes)) && wnodes->next);
@@ -314,6 +329,46 @@ _ncm_spline_new_function_adaptive (NcmSpline *s, gsl_function *F, const gdouble 
 }
 
 /*
+ * Flags, walking left from the interval that ends at @nodes, every interval of width @h in
+ * u = fwd (x) within NCM_SPLINE_FUNC_CLOSURE_MARGIN, and stops at the first of another width.
+ */
+static void
+_ncm_spline_flag_same_width_left (GList *nodes, gdouble (*fwd) (gdouble), const gdouble h)
+{
+  GList *w;
+
+  for (w = nodes; (w != NULL) && (w->prev != NULL); w = w->prev)
+  {
+    const gdouble h_i = fwd (BIVEC_LIST_X (w)) - fwd (BIVEC_LIST_X (w->prev));
+
+    if (fabs (h_i - h) < NCM_SPLINE_FUNC_CLOSURE_MARGIN * h)
+      BIVEC_LIST_OK (w->prev) = 0;
+    else
+      break;
+  }
+}
+
+/*
+ * Flags, walking right from the interval that starts at @nodes, every interval of width @h
+ * in u = fwd (x) within NCM_SPLINE_FUNC_CLOSURE_MARGIN, and stops at the first of another width.
+ */
+static void
+_ncm_spline_flag_same_width_right (GList *nodes, gdouble (*fwd) (gdouble), const gdouble h)
+{
+  GList *w;
+
+  for (w = nodes; (w != NULL) && (w->next != NULL); w = w->next)
+  {
+    const gdouble h_i = fwd (BIVEC_LIST_X (w->next)) - fwd (BIVEC_LIST_X (w));
+
+    if (fabs (h_i - h) < NCM_SPLINE_FUNC_CLOSURE_MARGIN * h)
+      BIVEC_LIST_OK (w) = 0;
+    else
+      break;
+  }
+}
+
+/*
  * Reopens, on a settled mesh, every interval wider in u = fwd (x) than the mean of its two
  * neighbors by more than NCM_SPLINE_FUNC_CLOSURE_MARGIN, a border interval than its one
  * neighbor, and returns how many it reopened.
@@ -330,13 +385,28 @@ _ncm_spline_func_flag_wide (GList *nodes, gdouble (*fwd) (gdouble))
     gdouble h_mean  = 0.0;
 
     if ((w->prev != NULL) && (w->next->next != NULL))
-      h_mean = 0.5 * (fwd (BIVEC_LIST_X (w)) - fwd (BIVEC_LIST_X (w->prev)) + fwd (BIVEC_LIST_X (w->next->next)) - fwd (BIVEC_LIST_X (w->next)));
+    {
+      const gdouble h_left  = (fwd (BIVEC_LIST_X (w)) - fwd (BIVEC_LIST_X (w->prev)));
+      const gdouble h_right = (fwd (BIVEC_LIST_X (w->next->next)) - fwd (BIVEC_LIST_X (w->next)));
+
+      h_mean = 0.5 * (h_left + h_right);
+    }
     else if (w->prev != NULL)
-      h_mean = fwd (BIVEC_LIST_X (w)) - fwd (BIVEC_LIST_X (w->prev));
+    {
+      const gdouble h_left = (fwd (BIVEC_LIST_X (w)) - fwd (BIVEC_LIST_X (w->prev)));
+
+      h_mean = h_left;
+    }
     else if (w->next->next != NULL)
-      h_mean = fwd (BIVEC_LIST_X (w->next->next)) - fwd (BIVEC_LIST_X (w->next));
+    {
+      const gdouble h_right = (fwd (BIVEC_LIST_X (w->next->next)) - fwd (BIVEC_LIST_X (w->next)));
+
+      h_mean = h_right;
+    }
     else
+    {
       continue;
+    }
 
     if (h > h_mean * (1.0 + NCM_SPLINE_FUNC_CLOSURE_MARGIN))
     {
