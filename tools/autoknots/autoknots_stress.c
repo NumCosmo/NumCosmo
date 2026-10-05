@@ -53,8 +53,6 @@ main (gint argc, gchar *argv[])
   gint64 seed            = 1;
   gdouble rel_error      = 1.0e-8;
   gdouble scale          = 0.0;
-  gint refine            = 1;
-  gdouble refine_ns      = 1.0;
   gdouble xi             = 0.0;
   gdouble xf             = 1.0;
   GError *error          = NULL;
@@ -70,8 +68,6 @@ main (gint argc, gchar *argv[])
     {"seed",      's', 0, G_OPTION_ARG_INT64,  &seed,      "Random seed", NULL},
     {"rel-error", 'r', 0, G_OPTION_ARG_DOUBLE, &rel_error, "Relative tolerance", NULL},
     {"scale",       0, 0, G_OPTION_ARG_DOUBLE, &scale,     "Scale of the function values", NULL},
-    {"refine",      0, 0, G_OPTION_ARG_INT,    &refine,    "Number of refinement passes", NULL},
-    {"refine-ns",   0, 0, G_OPTION_ARG_DOUBLE, &refine_ns, "Standard deviations above the mean spacing for refinement", NULL},
     {"xi",          0, 0, G_OPTION_ARG_DOUBLE, &xi,        "Lower limit", NULL},
     {"xf",          0, 0, G_OPTION_ARG_DOUBLE, &xf,        "Upper limit", NULL},
     {"output",    'o', 0, G_OPTION_ARG_STRING, &output,    "File for the statistics of every realization", NULL},
@@ -101,8 +97,8 @@ main (gint argc, gchar *argv[])
   if (pdf_v == NULL)
     g_error ("autoknots_stress: unknown parameter distribution `%s'.", pdf_str);
 
-  if ((npar <= 0) || (nsim <= 0) || (ngrid <= 0) || (refine < 0))
-    g_error ("autoknots_stress: npar, nsim and ngrid must be positive and refine non-negative.");
+  if ((npar <= 0) || (nsim <= 0) || (ngrid <= 0))
+    g_error ("autoknots_stress: npar, nsim and ngrid must be positive.");
 
   sft = ncm_spline_func_test_new ();
 
@@ -111,8 +107,6 @@ main (gint argc, gchar *argv[])
   ncm_spline_func_test_set_ngrid (sft, ngrid);
   ncm_spline_func_test_set_rel_error (sft, rel_error);
   ncm_spline_func_test_set_scale (sft, scale);
-  ncm_spline_func_test_set_refine (sft, refine);
-  ncm_spline_func_test_set_refine_ns (sft, refine_ns);
   ncm_spline_func_test_set_xi (sft, xi);
   ncm_spline_func_test_set_xf (sft, xf);
   ncm_spline_func_test_set_params_info_all (sft, npar, p1, p2);

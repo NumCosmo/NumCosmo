@@ -105,12 +105,6 @@ gdouble ncm_spline_func_test_get_rel_error (NcmSplineFuncTest *sft);
 void ncm_spline_func_test_set_scale (NcmSplineFuncTest *sft, const gdouble scale);
 gdouble ncm_spline_func_test_get_scale (NcmSplineFuncTest *sft);
 
-void ncm_spline_func_test_set_refine (NcmSplineFuncTest *sft, const guint refine);
-guint ncm_spline_func_test_get_refine (NcmSplineFuncTest *sft);
-
-void ncm_spline_func_test_set_refine_ns (NcmSplineFuncTest *sft, const gdouble refine_ns);
-gdouble ncm_spline_func_test_get_refine_ns (NcmSplineFuncTest *sft);
-
 void ncm_spline_func_test_set_out_threshold (NcmSplineFuncTest *sft, const gdouble out_threshold);
 gdouble ncm_spline_func_test_get_out_threshold (NcmSplineFuncTest *sft);
 

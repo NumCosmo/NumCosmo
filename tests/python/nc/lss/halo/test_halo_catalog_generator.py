@@ -43,7 +43,7 @@ Ncm.cfg_init()
 AREA = 270 * (math.pi / 180.0) ** 2
 
 GOLDEN_FILE = "truth_tables/cluster/nc_data_cluster_ncount_golden_seed0.bin"
-GOLDEN_RTOL = 1.0e-9
+GOLDEN_RTOL = 1.0e-7
 GOLDEN_ATOL = 1.0e-12
 
 
@@ -210,3 +210,22 @@ def test_generate_matches_golden_snapshot() -> None:
         np.testing.assert_allclose(
             got[column], ref, rtol=GOLDEN_RTOL, atol=GOLDEN_ATOL, err_msg=column
         )
+
+    # The sampled (z, lnM) move at 1e-8 with the knots of the splines behind the
+    # abundance; the observable draws on top of them are the pipeline's own.
+    # lnM_obs - lnM_true is sigma times the draw, and with z_bias = 0 so is
+    # (z_obs - z_true) / (1 + z_true): both pinned exactly.
+    np.testing.assert_allclose(
+        got["lnM_obs"] - got["lnM_true"],
+        golden["lnM_obs"] - golden["lnM_true"],
+        rtol=0.0,
+        atol=1.0e-12,
+        err_msg="lnM draw",
+    )
+    np.testing.assert_allclose(
+        (got["z_obs"] - got["z_true"]) / (1.0 + got["z_true"]),
+        (golden["z_obs"] - golden["z_true"]) / (1.0 + golden["z_true"]),
+        rtol=0.0,
+        atol=1.0e-12,
+        err_msg="z draw",
+    )
