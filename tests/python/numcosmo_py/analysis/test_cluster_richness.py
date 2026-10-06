@@ -478,6 +478,12 @@ class TestCreateRichnessModel:
         model = create_richness_model("ext")
         assert isinstance(model, Nc.ClusterMassExt)
 
+    def test_create_projection(self) -> None:
+        """Test creating the projection model."""
+        model = create_richness_model("projection")
+        assert isinstance(model, Nc.ClusterMassProjection)
+        assert not model.is_lognormal() or model["fprj"] == 0.0
+
     def test_case_insensitive(self) -> None:
         """Test model type is case insensitive."""
         model1 = create_richness_model("ASCASO")
@@ -506,6 +512,10 @@ class TestGetModelTypeName:
     def test_ext(self, ext_model: Nc.ClusterMassExt) -> None:
         """Test type name for Ext model."""
         assert get_model_type_name(ext_model) == "ext"
+
+    def test_projection(self) -> None:
+        """Test type name for the projection model."""
+        assert get_model_type_name(create_richness_model("projection")) == "projection"
 
 
 class TestParamFormat:

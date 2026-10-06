@@ -170,6 +170,7 @@ _nc_cluster_mass_projection_finalize (GObject *object)
 
 static gdouble _nc_cluster_mass_projection_mu (NcClusterMassRichness *mr, gdouble lnM, gdouble z);
 static gdouble _nc_cluster_mass_projection_sigma (NcClusterMassRichness *mr, gdouble lnM, gdouble z);
+static gboolean _nc_cluster_mass_projection_is_lognormal (NcClusterMassRichness *mr);
 
 static gdouble _nc_cluster_mass_projection_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params);
 static gdouble _nc_cluster_mass_projection_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z);
@@ -294,8 +295,9 @@ nc_cluster_mass_projection_class_init (NcClusterMassProjectionClass *klass)
 
   ncm_model_class_check_params_info (model_class);
 
-  mr_class->mu    = &_nc_cluster_mass_projection_mu;
-  mr_class->sigma = &_nc_cluster_mass_projection_sigma;
+  mr_class->mu           = &_nc_cluster_mass_projection_mu;
+  mr_class->sigma        = &_nc_cluster_mass_projection_sigma;
+  mr_class->is_lognormal = &_nc_cluster_mass_projection_is_lognormal;
 
   cm_class->P              = &_nc_cluster_mass_projection_p;
   cm_class->intP           = &_nc_cluster_mass_projection_intp;
@@ -328,6 +330,18 @@ _nc_cluster_mass_projection_sigma (NcClusterMassRichness *mr, gdouble lnM, gdoub
 
   /* Add a small number to the standard deviation to avoid numerical instabilities */
   return hypot (sigma, 1.0e-5);
+}
+
+/*
+ * (mu, sigma) describe the unprojected component alone, so they do not determine
+ * the distribution: a caller that needs P must evaluate it.
+ */
+static gboolean
+_nc_cluster_mass_projection_is_lognormal (NcClusterMassRichness *mr)
+{
+  NcClusterMassProjection *mp = NC_CLUSTER_MASS_PROJECTION (mr);
+
+  return F_PRJ <= 0.0;
 }
 
 /*

@@ -42,6 +42,7 @@
 #include "nc/data/nc_data_cluster_mass_rich.h"
 #include "nc/lss/cluster/nc_cluster_mass_richness.h"
 
+#include "ncm/core/ncm_c.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_util.h"
 #include "ncm/integration/ncm_integrate.h"
@@ -317,19 +318,75 @@ _nc_data_cluster_mass_rich_get_dof (NcmData *data)
   return _nc_data_cluster_mass_rich_get_length (data);
 }
 
-static inline gdouble
-_nc_data_cluster_mass_rich_m2lnL_single (NcDataClusterMassRichPrivate *self, const gdouble lnR_i, const gdouble lnR_i_mean, const gdouble lnR_i_std, const gdouble sigma_lnR_cat_i, const gdouble lnR_cut_i)
+/*
+ * Everything a per-cluster term needs that does not change along the catalog.
+ */
+typedef struct _NcDataClusterMassRichEval
 {
-  const gdouble lnR_i_std_total = sqrt (lnR_i_std * lnR_i_std + sigma_lnR_cat_i * sigma_lnR_cat_i);
+  NcClusterMass *cm;
+  NcClusterMassRichness *mr;
+  NcHICosmo *cosmo;
+  gboolean lognormal;
+  gdouble cut;
+  gdouble lnR_max;
+} NcDataClusterMassRichEval;
 
-  return gsl_pow_2 ((lnR_i - lnR_i_mean) / lnR_i_std_total)
-         + 2.0 * log (lnR_i_std_total)
-         +      -2.0 * M_LN2
-         + 2.0 * gsl_sf_log_erfc ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std_total));
+static void
+_nc_data_cluster_mass_rich_eval_init (NcDataClusterMassRichEval *ev, NcmMSet *mset)
+{
+  ev->cm        = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+  ev->mr        = NC_CLUSTER_MASS_RICHNESS (ev->cm);
+  ev->cosmo     = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  ev->lognormal = nc_cluster_mass_richness_is_lognormal (ev->mr);
+  ev->cut       = nc_cluster_mass_richness_get_cut (ev->mr);
+  ev->lnR_max   = 0.0;
+
+  g_object_get (ev->mr, "lnRichness-max", &ev->lnR_max, NULL);
+}
+
+/*
+ * -2 ln of the richness likelihood of one cluster, conditioned on it passing the
+ * cut. When (mu, sigma) determine the distribution the truncated Gaussian is
+ * written out in log space, so a cluster far in the tail costs a large but finite
+ * penalty instead of underflowing to zero probability. Otherwise the model's own
+ * P is used, normalized over [cut, lnR_max] by intP_bin, which carries the
+ * catalog uncertainty exactly as P does.
+ *
+ * Both branches drop the same constant ln(2 pi) per cluster, so the two are on
+ * one scale and values computed for different models stay comparable.
+ */
+static inline gdouble
+_nc_data_cluster_mass_rich_m2lnL_single (const NcDataClusterMassRichEval *ev, const gdouble lnM_i, const gdouble z_i, const gdouble lnR_i, const gdouble sigma_lnR_cat_i)
+{
+  if (ev->lognormal)
+  {
+    gdouble lnR_i_mean, lnR_i_std;
+
+    nc_cluster_mass_richness_mu_sigma (ev->mr, lnM_i, z_i, &lnR_i_mean, &lnR_i_std);
+    {
+      const gdouble lnR_i_std_total = sqrt (lnR_i_std * lnR_i_std + sigma_lnR_cat_i * sigma_lnR_cat_i);
+
+      return gsl_pow_2 ((lnR_i - lnR_i_mean) / lnR_i_std_total)
+             + 2.0 * log (lnR_i_std_total)
+             +      -2.0 * M_LN2
+             + 2.0 * gsl_sf_log_erfc ((ev->cut - lnR_i_mean) / (M_SQRT2 * lnR_i_std_total));
+    }
+  }
+  else
+  {
+    const gdouble P     = nc_cluster_mass_p (ev->cm, ev->cosmo, lnM_i, z_i, &lnR_i, &sigma_lnR_cat_i);
+    const gdouble norma = nc_cluster_mass_intp_bin (ev->cm, ev->cosmo, lnM_i, z_i,
+                                                    &ev->cut, &ev->lnR_max, &sigma_lnR_cat_i);
+
+    if ((P <= 0.0) || (norma <= 0.0))
+      return GSL_POSINF;
+
+    return -2.0 * (log (P) - log (norma)) - ncm_c_ln2pi ();
+  }
 }
 
 static gdouble
-_nc_data_cluster_mass_rich_m2lnL (NcDataClusterMassRichPrivate *self, NcClusterMassRichness *mr)
+_nc_data_cluster_mass_rich_m2lnL (NcDataClusterMassRichPrivate *self, const NcDataClusterMassRichEval *ev)
 {
   const guint ncluster = ncm_vector_len (self->z_cluster);
 
@@ -342,18 +399,15 @@ _nc_data_cluster_mass_rich_m2lnL (NcDataClusterMassRichPrivate *self, NcClusterM
     const gdouble lnM_i           = ncm_vector_get (self->lnM_cluster, i);
     const gdouble lnR_i           = ncm_vector_get (self->lnR_cluster, i);
     const gdouble sigma_lnR_cat_i = ncm_vector_get (self->sigma_lnR_cluster, i);
-    const gdouble lnR_i_mean      = nc_cluster_mass_richness_mu (mr, lnM_i, z_i);
-    const gdouble lnR_i_std       = nc_cluster_mass_richness_sigma (mr, lnM_i, z_i);
-    const gdouble lnR_cut_i       = nc_cluster_mass_richness_get_cut (mr);
 
-    local_m2lnL += _nc_data_cluster_mass_rich_m2lnL_single (self, lnR_i, lnR_i_mean, lnR_i_std, sigma_lnR_cat_i, lnR_cut_i);
+    local_m2lnL += _nc_data_cluster_mass_rich_m2lnL_single (ev, lnM_i, z_i, lnR_i, sigma_lnR_cat_i);
   }
 
   return local_m2lnL;
 }
 
 static gdouble
-_nc_data_cluster_mass_rich_m2lnL_bootstrap (NcDataClusterMassRichPrivate *self, NcClusterMassRichness *mr, NcmBootstrap *bstrap)
+_nc_data_cluster_mass_rich_m2lnL_bootstrap (NcDataClusterMassRichPrivate *self, const NcDataClusterMassRichEval *ev, NcmBootstrap *bstrap)
 {
   const guint bsize   = ncm_bootstrap_get_bsize (bstrap);
   gdouble local_m2lnL = 0.0;
@@ -366,11 +420,8 @@ _nc_data_cluster_mass_rich_m2lnL_bootstrap (NcDataClusterMassRichPrivate *self, 
     const gdouble lnM_i           = ncm_vector_get (self->lnM_cluster, i);
     const gdouble lnR_i           = ncm_vector_get (self->lnR_cluster, i);
     const gdouble sigma_lnR_cat_i = ncm_vector_get (self->sigma_lnR_cluster, i);
-    const gdouble lnR_i_mean      = nc_cluster_mass_richness_mu (mr, lnM_i, z_i);
-    const gdouble lnR_i_std       = nc_cluster_mass_richness_sigma (mr, lnM_i, z_i);
-    const gdouble lnR_cut_i       = nc_cluster_mass_richness_get_cut (mr);
 
-    local_m2lnL += _nc_data_cluster_mass_rich_m2lnL_single (self, lnR_i, lnR_i_mean, lnR_i_std, sigma_lnR_cat_i, lnR_cut_i);
+    local_m2lnL += _nc_data_cluster_mass_rich_m2lnL_single (ev, lnM_i, z_i, lnR_i, sigma_lnR_cat_i);
   }
 
   return local_m2lnL;
@@ -381,13 +432,14 @@ _nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2l
 {
   NcDataClusterMassRich *dmr                = NC_DATA_CLUSTER_MASS_RICH (data);
   NcDataClusterMassRichPrivate * const self = nc_data_cluster_mass_rich_get_instance_private (dmr);
-  NcClusterMass *cluster_mass               = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-  NcClusterMassRichness *mr                 = NC_CLUSTER_MASS_RICHNESS (cluster_mass);
-  gdouble local_m2lnL                       = 0.0;
+  NcDataClusterMassRichEval ev;
+  gdouble local_m2lnL = 0.0;
+
+  _nc_data_cluster_mass_rich_eval_init (&ev, mset);
 
   if (!ncm_data_bootstrap_enabled (data))
   {
-    local_m2lnL = _nc_data_cluster_mass_rich_m2lnL (self, mr);
+    local_m2lnL = _nc_data_cluster_mass_rich_m2lnL (self, &ev);
   }
   else
   {
@@ -403,7 +455,7 @@ _nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2l
 
     g_assert (ncm_bootstrap_is_init (bstrap));
 
-    local_m2lnL = _nc_data_cluster_mass_rich_m2lnL_bootstrap (self, mr, bstrap);
+    local_m2lnL = _nc_data_cluster_mass_rich_m2lnL_bootstrap (self, &ev, bstrap);
   }
 
   *m2lnL = local_m2lnL;

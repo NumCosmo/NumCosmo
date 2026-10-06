@@ -51,6 +51,27 @@ from numcosmo_py.analysis.cluster_richness import (
 )
 from .logging import AppLogging
 
+#: Starting point of the log-normal part, shared by every model that has it.
+LOGNORMAL_START = {
+    "mup0": 4.0,
+    "mup1": 1.0,
+    "mup2": 0.2,
+    "sigmap0": 0.5,
+    "sigmap1": 0.03,
+    "sigmap2": 0.15,
+}
+
+#: Starting point of the extended relation, which has its own parametrization.
+EXT_START = {
+    "mup0": 4.0,
+    "mup1": 1.0,
+    "mup2": 0.1,
+    "mup3": 0.01,
+    "sigmap0": -0.3,
+    "sigmap1": -0.08,
+    "sigmap2": 0.005,
+}
+
 
 @dataclasses.dataclass(kw_only=True)
 class RunClusterRichnessAnalysis(AppLogging):
@@ -595,24 +616,25 @@ class RunClusterRichnessAnalysis(AppLogging):
         :return: Configured NcClusterMassRichness model
         """
         model_init: Nc.ClusterMassRichness
+        start: dict[str, float]
+
         if self.model_type == RichnessModelType.ASCASO:
             model_init = Nc.ClusterMassAscaso(lnRichness_min=0.0, lnRichness_max=20.0)
-            model_init["mup0"] = 4.0
-            model_init["mup1"] = 1.0
-            model_init["mup2"] = 0.2
-            model_init["sigmap0"] = 0.5
-            model_init["sigmap1"] = 0.03
-            model_init["sigmap2"] = 0.15
+            start = dict(LOGNORMAL_START)
         elif self.model_type == RichnessModelType.EXT:
             model_init = Nc.ClusterMassExt(lnRichness_min=0.0, lnRichness_max=20.0)
-            model_init["mup0"] = 4.0
-            model_init["mup1"] = 1.0
-            model_init["mup2"] = 0.1
-            model_init["mup3"] = 0.01
-            model_init["sigmap0"] = -0.3
-            model_init["sigmap1"] = -0.08
-            model_init["sigmap2"] = 0.005
+            start = dict(EXT_START)
+        elif self.model_type == RichnessModelType.PROJECTION:
+            model_init = Nc.ClusterMassProjection(
+                lnRichness_min=0.0, lnRichness_max=20.0
+            )
+            # Projection starts weak: a tenth of the clusters contaminated, with a
+            # mean added richness of ten.
+            start = {**LOGNORMAL_START, "fprj": 0.1, "tau": 0.1}
         else:
             raise ValueError(f"Unknown model type: {self.model_type}")
+
+        for name, value in start.items():
+            model_init[name] = value
 
         return model_init

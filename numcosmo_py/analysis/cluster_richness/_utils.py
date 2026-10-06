@@ -35,6 +35,7 @@ class RichnessModelType(StrEnum):
 
     ASCASO = "ascaso"
     EXT = "ext"
+    PROJECTION = "projection"
 
 
 def setup_model_fit_params(model: Nc.ClusterMassRichness) -> None:
@@ -58,7 +59,7 @@ def create_richness_model(
 ) -> Nc.ClusterMassRichness:
     """Create a new NcClusterMassRichness model of the specified type.
 
-    :param model_type: Type of model to create ("ascaso" or "ext")
+    :param model_type: Type of model to create ("ascaso", "ext" or "projection")
     :param lnRichness_min: Minimum log-richness bound (default: 0.0)
     :param lnRichness_max: Maximum log-richness bound (default: 20.0)
     :return: New model instance
@@ -77,9 +78,14 @@ def create_richness_model(
             return Nc.ClusterMassExt(
                 lnRichness_min=lnRichness_min, lnRichness_max=lnRichness_max
             )
+        case RichnessModelType.PROJECTION:
+            return Nc.ClusterMassProjection(
+                lnRichness_min=lnRichness_min, lnRichness_max=lnRichness_max
+            )
         case _:
             raise ValueError(
-                f"Unknown model type: {model_type}. Use 'ascaso' or 'ext'."
+                f"Unknown model type: {model_type}. "
+                "Use 'ascaso', 'ext' or 'projection'."
             )
 
 
@@ -87,9 +93,12 @@ def get_model_type_name(model: Nc.ClusterMassRichness) -> str:
     """Get the type name of a richness model.
 
     :param model: A NcClusterMassRichness subclass instance
-    :return: Type name string ("ascaso", "ext", or the GObject type name)
+    :return: Type name string ("ascaso", "ext", "projection", or the GObject
+        type name)
     """
     match model:
+        case Nc.ClusterMassProjection():
+            return "projection"
         case Nc.ClusterMassAscaso():
             return "ascaso"
         case Nc.ClusterMassExt():

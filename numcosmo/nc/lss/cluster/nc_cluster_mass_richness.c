@@ -169,6 +169,7 @@ nc_cluster_mass_richness_finalize (GObject *object)
 static gdouble _nc_cluster_mass_richness_mu (NcClusterMassRichness *mr, gdouble lnM, gdouble z);
 static gdouble _nc_cluster_mass_richness_sigma (NcClusterMassRichness *mr, gdouble lnM, gdouble z);
 static void _nc_cluster_mass_richness_mu_sigma (NcClusterMassRichness *mr, gdouble lnM, gdouble z, gdouble *mu, gdouble *sigma);
+static gboolean _nc_cluster_mass_richness_is_lognormal (NcClusterMassRichness *mr);
 
 static gdouble _nc_cluster_mass_richness_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params);
 static gdouble _nc_cluster_mass_richness_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z);
@@ -300,9 +301,10 @@ nc_cluster_mass_richness_class_init (NcClusterMassRichnessClass *klass)
   ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 
   /* Set virtual methods for this class */
-  klass->mu       = &_nc_cluster_mass_richness_mu;
-  klass->sigma    = &_nc_cluster_mass_richness_sigma;
-  klass->mu_sigma = &_nc_cluster_mass_richness_mu_sigma;
+  klass->mu           = &_nc_cluster_mass_richness_mu;
+  klass->sigma        = &_nc_cluster_mass_richness_sigma;
+  klass->mu_sigma     = &_nc_cluster_mass_richness_mu_sigma;
+  klass->is_lognormal = &_nc_cluster_mass_richness_is_lognormal;
 }
 
 /* LCOV_EXCL_START */
@@ -330,6 +332,12 @@ _nc_cluster_mass_richness_mu_sigma (NcClusterMassRichness *mr, gdouble lnM, gdou
 {
   *mu    = nc_cluster_mass_richness_mu (mr, lnM, z);
   *sigma = nc_cluster_mass_richness_sigma (mr, lnM, z);
+}
+
+static gboolean
+_nc_cluster_mass_richness_is_lognormal (NcClusterMassRichness *mr)
+{
+  return TRUE;
 }
 
 static gdouble
@@ -602,6 +610,24 @@ void
 nc_cluster_mass_richness_mu_sigma (NcClusterMassRichness *mr, gdouble lnM, gdouble z, gdouble *mu, gdouble *sigma)
 {
   NC_CLUSTER_MASS_RICHNESS_GET_CLASS (mr)->mu_sigma (mr, lnM, z, mu, sigma);
+}
+
+/**
+ * nc_cluster_mass_richness_is_lognormal:
+ * @mr: a #NcClusterMassRichness
+ *
+ * Whether $P(\ln\lambda \mid M, z)$ is the plain Gaussian of mean
+ * nc_cluster_mass_richness_mu() and width nc_cluster_mass_richness_sigma(),
+ * truncated at the cut. Subclasses that add a further component to the richness
+ * distribution override this and return %FALSE; callers that take a shortcut
+ * through $(\mu, \sigma)$ instead of evaluating $P$ must check it first.
+ *
+ * Returns: %TRUE if $(\mu, \sigma)$ determine the distribution by themselves.
+ */
+gboolean
+nc_cluster_mass_richness_is_lognormal (NcClusterMassRichness *mr)
+{
+  return NC_CLUSTER_MASS_RICHNESS_GET_CLASS (mr)->is_lognormal (mr);
 }
 
 /**

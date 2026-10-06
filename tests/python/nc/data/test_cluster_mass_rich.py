@@ -197,3 +197,90 @@ def test_serialize_deserialize(cluster_mass_rich: Nc.DataClusterMassRich):
         cluster_mass_rich.peek_z().dup_array(),
         cluster_mass_rich2.peek_z().dup_array(),
     )
+
+
+def _projection(fprj: float, tau: float = 0.1) -> Nc.ClusterMassProjection:
+    """A projection model sharing the log-normal part with the default Ascaso."""
+    ascaso = Nc.ClusterMassAscaso()
+    projection = Nc.ClusterMassProjection()
+
+    for i in range(ascaso.sparam_len()):
+        projection[ascaso.param_name(i)] = ascaso.param_get(i)
+
+    projection["fprj"] = fprj
+    projection["tau"] = tau
+
+    return projection
+
+
+def _dataset(model, lnM, z, lnR):
+    """A single-cluster-set dataset built on a given richness model."""
+    dcmr = Nc.DataClusterMassRich.new()
+    sigma_lnR = Ncm.Vector.new(len(lnM))
+    sigma_lnR.set_zero()
+    dcmr.set_data(
+        Ncm.Vector.new_array(lnM),
+        Ncm.Vector.new_array(z),
+        Ncm.Vector.new_array(lnR),
+        sigma_lnR,
+    )
+
+    return Ncm.Dataset.new_array([dcmr]), Ncm.MSet.new_array([model])
+
+
+def test_is_lognormal():
+    """Only a model that adds a component to the richness reports FALSE."""
+    assert Nc.ClusterMassAscaso().is_lognormal()
+    assert _projection(0.0).is_lognormal()
+    assert not _projection(0.2).is_lognormal()
+
+
+@pytest.fixture(name="sample")
+def fixture_sample(ascaso: Nc.ClusterMassAscaso):
+    """Masses, redshifts and richnesses above the cut, from the clean relation."""
+    rng = np.random.default_rng(7)
+    n = 300
+    lnM = rng.uniform(14.0 * np.log(10.0), 15.0 * np.log(10.0), n)
+    z = rng.uniform(0.2, 0.9, n)
+    mu = np.array([ascaso.mu(m, zz) for m, zz in zip(lnM, z)])
+    sigma = np.array([ascaso.sigma(m, zz) for m, zz in zip(lnM, z)])
+    cut = ascaso.get_cut()
+    lnR = np.maximum(rng.normal(mu, sigma), cut + 0.01)
+
+    return lnM.tolist(), z.tolist(), lnR.tolist()
+
+
+def test_m2lnL_paths_agree(ascaso: Nc.ClusterMassAscaso, sample):
+    """With f_prj -> 0 the generic P/intP_bin path must match the closed form."""
+    lnM, z, lnR = sample
+
+    dset_a, mset_a = _dataset(ascaso, lnM, z, lnR)
+    dset_p, mset_p = _dataset(_projection(1.0e-12), lnM, z, lnR)
+
+    assert_allclose(dset_p.m2lnL_val(mset_p), dset_a.m2lnL_val(mset_a), rtol=1.0e-9)
+
+
+def test_m2lnL_responds_to_projection(sample):
+    """f_prj and tau must reach the likelihood, not just sit in the model."""
+    lnM, z, lnR = sample
+
+    def m2lnL(fprj, tau):
+        dset, mset = _dataset(_projection(fprj, tau), lnM, z, lnR)
+
+        return dset.m2lnL_val(mset)
+
+    reference = m2lnL(0.0, 0.1)
+
+    assert m2lnL(0.2, 0.1) != pytest.approx(reference)
+    assert m2lnL(0.2, 0.5) != pytest.approx(m2lnL(0.2, 0.1))
+
+
+def test_m2lnL_outlier_stays_finite(ascaso: Nc.ClusterMassAscaso, sample):
+    """A cluster deep in the tail costs a large but finite penalty."""
+    lnM, z, lnR = sample
+    far = list(lnR)
+    far[0] = ascaso.mu(lnM[0], z[0]) + 40.0 * ascaso.sigma(lnM[0], z[0])
+
+    dset, mset = _dataset(ascaso, lnM, z, far)
+
+    assert np.isfinite(dset.m2lnL_val(mset))

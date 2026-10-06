@@ -62,14 +62,16 @@ struct _NcClusterMassRichnessClass
   gdouble (*mu) (NcClusterMassRichness *mr, gdouble lnM, gdouble z);
   gdouble (*sigma) (NcClusterMassRichness *mr, gdouble lnM, gdouble z);
   void (*mu_sigma) (NcClusterMassRichness *mr, gdouble lnM, gdouble z, gdouble *mu, gdouble *sigma);
+  gboolean (*is_lognormal) (NcClusterMassRichness *mr);
 
   /* Padding to allow adding up to 18 virtual functions without breaking ABI. */
-  gpointer padding[15];
+  gpointer padding[14];
 };
 
 gdouble nc_cluster_mass_richness_mu (NcClusterMassRichness *mr, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_richness_sigma (NcClusterMassRichness *mr, gdouble lnM, gdouble z);
 void nc_cluster_mass_richness_mu_sigma (NcClusterMassRichness *mr, gdouble lnM, gdouble z, gdouble *mu, gdouble *sigma);
+gboolean nc_cluster_mass_richness_is_lognormal (NcClusterMassRichness *mr);
 gdouble nc_cluster_mass_richness_get_cut (NcClusterMassRichness *mr);
 
 void nc_cluster_mass_richness_set_sample_full_dist (NcClusterMassRichness *mr, gboolean on);

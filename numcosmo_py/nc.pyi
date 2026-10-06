@@ -53,6 +53,16 @@ CLUSTER_MASS_PLCL_MCL: int = 1
 CLUSTER_MASS_PLCL_MPL: int = 0
 CLUSTER_MASS_PLCL_SD_CL: int = 1
 CLUSTER_MASS_PLCL_SD_PL: int = 0
+CLUSTER_MASS_PROJECTION_DEFAULT_F_PRJ: float = 0.15
+CLUSTER_MASS_PROJECTION_DEFAULT_MU_P0: float = 3.19
+CLUSTER_MASS_PROJECTION_DEFAULT_MU_P1: int = 0
+CLUSTER_MASS_PROJECTION_DEFAULT_MU_P2: int = 0
+CLUSTER_MASS_PROJECTION_DEFAULT_PARAMS_ABSTOL: float = 0.0
+CLUSTER_MASS_PROJECTION_DEFAULT_RELTOL: float = 0.0
+CLUSTER_MASS_PROJECTION_DEFAULT_SIGMA_P0: float = 0.33
+CLUSTER_MASS_PROJECTION_DEFAULT_SIGMA_P1: int = 0
+CLUSTER_MASS_PROJECTION_DEFAULT_SIGMA_P2: float = 0.0
+CLUSTER_MASS_PROJECTION_DEFAULT_TAU: float = 0.1
 CLUSTER_MASS_RICHNESS_DEFAULT_CUT: float = 0.0
 CLUSTER_MASS_RICHNESS_DEFAULT_PARAMS_ABSTOL: float = 0.0
 CLUSTER_MASS_SELECTION_DEFAULT_CUT: float = 0.0
@@ -78,6 +88,7 @@ CLUSTER_PSEUDO_COUNTS_DEFAULT_ZMIN: float = 0.188
 CLUSTER_REDSHIFT_PHOTOZ_GAUSS_GLOBAL_DEFAULT_BIAS: float = 0.0
 CLUSTER_REDSHIFT_PHOTOZ_GAUSS_GLOBAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
 CLUSTER_REDSHIFT_PHOTOZ_GAUSS_GLOBAL_DEFAULT_SIGMA0: float = 0.03
+CLUSTER_RICHNESS_PROJECTION_DEFAULT_RELTOL: float = 0.0
 DATA_BAO_RDV_LEN: int = 1
 DATA_CLUSTER_PSEUDO_COUNTS_RESAMPLE_MAX_TRIES: int = 100000
 DATA_SNIA_COV_LEN: int = 1
@@ -2964,6 +2975,174 @@ class ClusterMassPlCLClass(GObject.GPointer):
 
     parent_class: ClusterMassClass = ...
 
+class ClusterMassProjection(ClusterMassRichness):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterMassProjection(**properties)
+
+    Object NcClusterMassProjection
+
+    Properties from NcClusterMassProjection:
+      reltol -> gdouble: reltol
+        Relative accuracy of the projection quadrature
+      mup0 -> gdouble: mup0
+        mu_p0
+      mup1 -> gdouble: mup1
+        mu_p1
+      mup2 -> gdouble: mup2
+        mu_p2
+      sigmap0 -> gdouble: sigmap0
+        \sigma_p0
+      sigmap1 -> gdouble: sigmap1
+        \sigma_p1
+      sigmap2 -> gdouble: sigmap2
+        \sigma_p2
+      fprj -> gdouble: fprj
+        f_\mathrm{prj}
+      tau -> gdouble: tau
+        \tau
+      mup0-fit -> gboolean: mup0-fit
+        mu_p0:fit
+      mup1-fit -> gboolean: mup1-fit
+        mu_p1:fit
+      mup2-fit -> gboolean: mup2-fit
+        mu_p2:fit
+      sigmap0-fit -> gboolean: sigmap0-fit
+        \sigma_p0:fit
+      sigmap1-fit -> gboolean: sigmap1-fit
+        \sigma_p1:fit
+      sigmap2-fit -> gboolean: sigmap2-fit
+        \sigma_p2:fit
+      fprj-fit -> gboolean: fprj-fit
+        f_\mathrm{prj}:fit
+      tau-fit -> gboolean: tau-fit
+        \tau:fit
+
+    Properties from NcClusterMassRichness:
+      M0 -> gdouble: M0
+        Pivot mass
+      z0 -> gdouble: z0
+        Pivot redshift
+      lnRichness-min -> gdouble: lnRichness-min
+        Minimum LnRichness
+      lnRichness-max -> gdouble: lnRichness-max
+        Maximum LnRichness
+      sample-full-dist -> gboolean: sample-full-dist
+        Whether to sample from the full (untruncated) distribution
+      cut -> gdouble: cut
+        CUT
+      cut-fit -> gboolean: cut-fit
+        CUT:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        fprj: float
+        fprj_fit: bool
+        mup0: float
+        mup0_fit: bool
+        mup1: float
+        mup1_fit: bool
+        mup2: float
+        mup2_fit: bool
+        reltol: float
+        sigmap0: float
+        sigmap0_fit: bool
+        sigmap1: float
+        sigmap1_fit: bool
+        sigmap2: float
+        sigmap2_fit: bool
+        tau: float
+        tau_fit: bool
+        M0: float
+        cut: float
+        cut_fit: bool
+        lnRichness_max: float
+        lnRichness_min: float
+        sample_full_dist: bool
+        z0: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        fprj: float = ...,
+        fprj_fit: bool = ...,
+        mup0: float = ...,
+        mup0_fit: bool = ...,
+        mup1: float = ...,
+        mup1_fit: bool = ...,
+        mup2: float = ...,
+        mup2_fit: bool = ...,
+        reltol: float = ...,
+        sigmap0: float = ...,
+        sigmap0_fit: bool = ...,
+        sigmap1: float = ...,
+        sigmap1_fit: bool = ...,
+        sigmap2: float = ...,
+        sigmap2_fit: bool = ...,
+        tau: float = ...,
+        tau_fit: bool = ...,
+        M0: float = ...,
+        cut: float = ...,
+        cut_fit: bool = ...,
+        lnRichness_max: float = ...,
+        lnRichness_min: float = ...,
+        sample_full_dist: bool = ...,
+        z0: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def f_prj(self) -> float: ...
+    def get_reltol(self) -> float: ...
+    def set_reltol(self, reltol: float) -> None: ...
+    def tau(self) -> float: ...
+
+class ClusterMassProjectionClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterMassProjectionClass()
+    """
+
+    parent_class: ClusterMassRichnessClass = ...
+
 class ClusterMassRichness(ClusterMass):
     r"""
     :Constructors:
@@ -3049,6 +3228,7 @@ class ClusterMassRichness(ClusterMass):
     ) -> None: ...
     def compute_truncated_mean(self, lnR_mean: float, lnR_sigma: float) -> float: ...
     def compute_truncated_std(self, lnR_mean: float, lnR_sigma: float) -> float: ...
+    def do_is_lognormal(self) -> bool: ...
     def do_mu(self, lnM: float, z: float) -> float: ...
     def do_mu_sigma(self, lnM: float, z: float) -> typing.Tuple[float, float]: ...
     def do_sigma(self, lnM: float, z: float) -> float: ...
@@ -3056,6 +3236,7 @@ class ClusterMassRichness(ClusterMass):
     def get_mean(self, lnM: float, z: float) -> float: ...
     def get_sample_full_dist(self) -> bool: ...
     def get_std(self, lnM: float, z: float) -> float: ...
+    def is_lognormal(self) -> bool: ...
     def ln1pz0(self) -> float: ...
     def lnM0(self) -> float: ...
     def mu(self, lnM: float, z: float) -> float: ...
@@ -3078,6 +3259,7 @@ class ClusterMassRichnessClass(GObject.GPointer):
     mu_sigma: typing.Callable[
         [ClusterMassRichness, float, float], typing.Tuple[float, float]
     ] = ...
+    is_lognormal: typing.Callable[[ClusterMassRichness], bool] = ...
     padding: list[None] = ...
 
 class ClusterMassSelection(ClusterMass):
@@ -3974,6 +4156,54 @@ class ClusterRedshiftNodistClass(GObject.GPointer):
     """
 
     parent_class: ClusterRedshiftClass = ...
+
+class ClusterRichnessProjection(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterRichnessProjection(**properties)
+        new() -> NumCosmo.ClusterRichnessProjection
+
+    Object NcClusterRichnessProjection
+
+    Properties from NcClusterRichnessProjection:
+      reltol -> gdouble: reltol
+        Relative tolerance
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        reltol: float
+
+    props: Props = ...
+    def __init__(self, reltol: float = ...) -> None: ...
+    @staticmethod
+    def clear(crp: ClusterRichnessProjection) -> None: ...
+    def eval(self, lnlambda: float) -> float: ...
+    def eval_int(self, lnlambda_lo: float, lnlambda_hi: float) -> float: ...
+    def eval_lnlambda(self, lnlambda: float) -> float: ...
+    def free(self) -> None: ...
+    def get_reltol(self) -> float: ...
+    @classmethod
+    def new(cls) -> ClusterRichnessProjection: ...
+    def prepare(self, mu: float, sigma: float, tau: float) -> None: ...
+    def ref(self) -> ClusterRichnessProjection: ...
+    def set_reltol(self, reltol: float) -> None: ...
+
+class ClusterRichnessProjectionClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterRichnessProjectionClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
 
 class CorClusterCmbLensLimber(GObject.Object):
     r"""
@@ -26651,6 +26881,25 @@ class ClusterMassPlCLSParams(GObject.GEnum):
     _new_member_: builtin_function_or_method = ...
     _unhashable_values_: list = ...
     _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class ClusterMassProjectionSParams(GObject.GEnum):
+    F_PRJ: ClusterMassProjectionSParams = ...
+    MU_P0: ClusterMassProjectionSParams = ...
+    MU_P1: ClusterMassProjectionSParams = ...
+    MU_P2: ClusterMassProjectionSParams = ...
+    SIGMA_P0: ClusterMassProjectionSParams = ...
+    SIGMA_P1: ClusterMassProjectionSParams = ...
+    SIGMA_P2: ClusterMassProjectionSParams = ...
+    TAU: ClusterMassProjectionSParams = ...
+    _generate_next_value_: function = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
     _use_args_: bool = ...
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
