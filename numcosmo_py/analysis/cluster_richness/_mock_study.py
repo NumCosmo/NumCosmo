@@ -37,7 +37,7 @@ from ._parameters import (
     CutAnalysisResult,
     dup_model,
     model_params_as_list,
-    get_model_param_names,
+    get_model_free_param_names,
 )
 from ._utils import PARAM_FORMAT
 from ._analyzer import CutAnalyzer, ClusterData
@@ -187,7 +187,7 @@ class MockStudy:
         )
 
         # Get parameter names for display
-        param_names = get_model_param_names(self.model_fiducial)
+        param_names = get_model_free_param_names(self.model_fiducial)
 
         # Initialize tracking for running means
         running_bestfit: dict[float, list[Nc.ClusterMassRichness]] = {

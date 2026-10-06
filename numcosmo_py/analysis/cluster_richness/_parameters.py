@@ -206,3 +206,20 @@ def get_model_param_names(model: Nc.ClusterMassRichness) -> list[str]:
     :return: List of parameter names
     """
     return [model.param_name(i) for i in range(model.sparam_len())]
+
+
+def get_model_free_param_names(model: Nc.ClusterMassRichness) -> list[str]:
+    """Get list of FREE parameter names, in the order used by the value lists.
+
+    This is the list that pairs with :func:`model_params_as_list` and
+    :func:`model_params_from_list`; :func:`get_model_param_names` includes the
+    fixed parameters as well and does not.
+
+    :param model: A NcClusterMassRichness subclass instance
+    :return: List of free parameter names
+    """
+    return [
+        model.param_name(i)
+        for i in range(model.sparam_len())
+        if model.param_get_ftype(i) != Ncm.ParamType.FIXED
+    ]

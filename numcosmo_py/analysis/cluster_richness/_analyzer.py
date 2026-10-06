@@ -38,7 +38,7 @@ from ._parameters import (
     dup_model,
     model_params_as_list,
     model_params_from_list,
-    get_model_param_names,
+    get_model_free_param_names,
 )
 from ._utils import setup_model_fit_params, PARAM_FORMAT
 
@@ -365,7 +365,7 @@ class CutAnalyzer:
 
         # Get parameter names from first result
         first_result = next(iter(self.results.values()))
-        param_names = get_model_param_names(first_result.bestfit)
+        param_names = get_model_free_param_names(first_result.bestfit)
         labels = param_names  # Use actual parameter names
 
         table = RichTable(title=title, show_header=True, header_style="bold cyan")

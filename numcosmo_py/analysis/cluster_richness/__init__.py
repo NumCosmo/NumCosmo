@@ -63,6 +63,7 @@ Helper Functions:
     - model_params_from_list: Set parameters from ordered list
     - copy_model_params: Copy parameters between models
     - get_model_param_names: Get list of parameter names
+    - get_model_free_param_names: Get list of free parameter names
 """
 
 from ._parameters import (
@@ -76,6 +77,7 @@ from ._parameters import (
     model_params_as_list,
     model_params_from_list,
     get_model_param_names,
+    get_model_free_param_names,
 )
 from ._utils import (
     setup_model_fit_params,
@@ -127,6 +129,7 @@ __all__ = [
     "model_params_as_list",
     "model_params_from_list",
     "get_model_param_names",
+    "get_model_free_param_names",
     # Utils
     "setup_model_fit_params",
     "create_richness_model",

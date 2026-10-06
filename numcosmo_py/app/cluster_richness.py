@@ -39,7 +39,7 @@ from numcosmo_py.analysis.cluster_richness import (
     CutAnalyzer,
     ClusterData,
     MockStudy,
-    get_model_param_names,
+    get_model_free_param_names,
     model_params_as_list,
     PARAM_FORMAT,
     compute_binned_statistics,
@@ -436,7 +436,7 @@ class RunClusterRichnessAnalysis(AppLogging):
         # Extract best-fit from first cut as fiducial for mocks
         first_cut = cuts_array[0]
         model_fiducial = real_results[first_cut].bestfit
-        param_names = get_model_param_names(model_fiducial)
+        param_names = get_model_free_param_names(model_fiducial)
         param_values = model_params_as_list(model_fiducial)
 
         self.console.print(
