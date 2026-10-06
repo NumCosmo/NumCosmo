@@ -118,6 +118,17 @@ void ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
                                                 const gint               min_pass_threshold,
                                                 NcmSpline                *base_spline,
                                                 gpointer                 user_data);
+void ncm_function_sample_set_adaptive_midpoint_full (NcmFunctionSampleSet     *fss,
+                                                     NcmFunctionSampleSetFunc f,
+                                                     const gdouble            reltol,
+                                                     const gdouble            abstol,
+                                                     const guint              max_iter,
+                                                     const gint               min_pass_threshold,
+                                                     NcmSpline                *base_spline,
+                                                     gpointer                 user_data,
+                                                     guint                    *closure_rounds,
+                                                     guint                    *closure_flagged,
+                                                     guint                    *closure_failed);
 
 /* Domain expansion */
 void ncm_function_sample_set_expand_domain (NcmFunctionSampleSet     *fss,

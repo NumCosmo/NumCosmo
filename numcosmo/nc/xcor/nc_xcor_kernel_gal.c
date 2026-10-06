@@ -513,8 +513,8 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
    * $j_\ell''(k\chi)$, where $f(k,z) = -(1+z)\,\partial_z P(k,z) / (2P)$ is the
    * linear growth rate read from the power spectrum, scale dependence included.
    * Supported by the
-   * kernel-space methods only (%NC_XCOR_METHOD_KERNEL_EXACT,
-   * %NC_XCOR_METHOD_KERNEL_CUBATURE, %NC_XCOR_METHOD_KERNEL_GSL): the
+   * kernel-space methods only (%NC_XCOR_METHOD_KERNEL_EXACT and
+   * %NC_XCOR_METHOD_KERNEL_CUBATURE): the
    * redshift-space Limber methods, including the #NcXcor:meth default
    * %NC_XCOR_METHOD_LIMBER_Z_GSL, stop with an error on a kernel with this
    * property set.

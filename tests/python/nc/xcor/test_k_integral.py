@@ -25,11 +25,8 @@
 """The outer k-integral: each kernel-space method against its own truth.
 
 Every method is handed frozen closures and compared to a reference built from
-*the closures that method actually integrates* -- per ell block for
-KERNEL_EXACT and KERNEL_CUBATURE, per multipole for KERNEL_GSL. Comparing all
-three against one block-closure reference charges GSL for a closure it never
-built, and on a strongly cancelling pair that difference is a factor of three,
-not a rounding.
+the closures it integrates, one per ell block for KERNEL_EXACT and
+KERNEL_CUBATURE alike.
 
 What is measured here is therefore the quadrature alone. The closure's own
 error against certified Arb values is ``test_xcor_window_truth_table.py``'s
@@ -85,19 +82,7 @@ CLOSURE_PARAMS = [
 METHODS = {
     "exact": Nc.XcorMethod.KERNEL_EXACT,
     "cubature": Nc.XcorMethod.KERNEL_CUBATURE,
-    "gsl": Nc.XcorMethod.KERNEL_GSL,
-    "gsl_block": Nc.XcorMethod.KERNEL_GSL_BLOCK,
 }
-
-# KERNEL_GSL calls nc_xcor_kernel_get_eval once per multipole; every other
-# method calls ..._get_eval_vectorized_full once per block. KERNEL_GSL_BLOCK
-# runs KERNEL_GSL's rule over KERNEL_EXACT's closure, which is what makes a
-# quadrature comparison a comparison of quadratures.
-PER_MULTIPOLE = frozenset({"gsl"})
-
-# The methods reachable through Nc.Xcor.integrate_block(), i.e. the ones with
-# an entry in the NcXcorKQuad table.
-BLOCK_METHODS = sorted(set(METHODS) - PER_MULTIPOLE)
 
 # Measured over the case matrix at reltol = peak_epsilon = 1e-4, as the worst
 # deviation from the matching reference relative to the block's peak, with an
@@ -105,56 +90,29 @@ BLOCK_METHODS = sorted(set(METHODS) - PER_MULTIPOLE)
 #
 #   exact    spline     8.1e-12       cubature spline     1.7e-05
 #   exact    chebyshev  2.3e-08       cubature chebyshev  1.1e-05
-#   gsl      spline     4.4e-12       gsl      chebyshev  1.6e-03
-#   gsl_blk  spline     3.2e-11       gsl_blk  chebyshev  3.2e-04
 #
 # These are an order or two above what a [2, 20, 200] ladder reported, because
 # that ladder missed the l = 4-10 region where every method is worst; see
 # cases.ELLS_SUITE. Read the two exact rows as the claim they are: GL(5) on the
-# merged knot set is exact, and so is qagp on those same knots -- both sit at
-# the reference's own floor. Cubature is not converging to the closure, it is
-# stopping at the relative tolerance it was asked for.
+# merged knot set is exact and sits at the reference's own floor. Cubature is
+# not converging to the closure, it is stopping at the relative tolerance it was
+# asked for.
 #
-# gsl/chebyshev at 1.6e-03 is the largest error anywhere in the matrix, at
-# l = 10. It is the one combination where the per-multipole closure and the
-# Chebyshev fit interact badly, and it is why that tolerance is so much looser
-# than its spline counterpart.
-#
-# gsl_block runs gsl's rule on exact's closure and lands within an order of
-# both: the rule is not what separates them. On splines it is the looser of the
-# two by about eight times, and that is the block closure rather than the
-# quadrature -- a block is fitted to an L2 norm over all its multipoles, so a
-# multipole that is sub-dominant within its block is held only to the block's
-# norm, while gsl fits each one on its own. See nc_xcor_compute_full().
-# The two spline entries were raised (exact 1.0e-10 -> 1.5e-9, gsl_block
-# 5.0e-10 -> 3.0e-9) when X10 entered the matrix, and the reason is worth keeping:
-# on that pair -- SRD lens 0 crossed with lens 9, disjoint supports -- the spline
-# *reference* itself only converges to 2.2e-11 (see REFERENCE_FLOOR), and the two
-# methods land at 3.2e-10 and 1.0e-9 of the block's peak. A gate of 1.0e-10 was
-# asking a method to agree with a reference more tightly than that reference
-# converges, which is not a statement about the method. The Chebyshev entries are
-# untouched and remain four orders tighter on the same pair: this is the
-# catastrophic spline regime of section 14, reached now by a cross a 3x2pt
-# analysis actually computes rather than by one chosen to be hard.
-# One pair leaves a bound behind rather than nudging it, and the bound is worth
-# more kept tight for the other thirty-four than raised to whatever the hardest
-# configuration in the suite happens to need. Keyed (method, closure, case):
-#   R13 is a j'' weight on one side of a tail x tail pair, and gsl on a spline
-#   closure lands 2.36e-10 of the block's peak from the reference against
-#   9.31e-12 for the next case, X10. Chebyshev on the same pair is untouched.
-TOLERANCE_BY_CASE = {
-    ("gsl", "spline", "R13"): 5.0e-10,
-}
-
+# The exact spline entry was raised (1.0e-10 -> 1.5e-9) when X10 entered the
+# matrix, and the reason is worth keeping: on that pair (SRD lens 0 crossed
+# with lens 9, disjoint supports) the spline *reference* itself only converges
+# to 2.2e-11 (see REFERENCE_FLOOR), and exact lands at 3.2e-10 of the block's
+# peak. A gate of 1.0e-10 was asking a method to agree with a reference more
+# tightly than that reference converges, which is not a statement about the
+# method. The Chebyshev entries are untouched and remain four orders tighter on
+# the same pair: this is the catastrophic spline regime of section 14, reached
+# now by a cross a 3x2pt analysis actually computes rather than by one chosen to
+# be hard.
 TOLERANCE = {
     ("exact", "spline"): 1.5e-9,
     ("exact", "chebyshev"): 5.0e-7,
     ("cubature", "spline"): 2.0e-4,
     ("cubature", "chebyshev"): 2.0e-4,
-    ("gsl", "spline"): 5.0e-11,
-    ("gsl", "chebyshev"): 2.0e-2,
-    ("gsl_block", "spline"): 3.0e-9,
-    ("gsl_block", "chebyshev"): 5.0e-3,
 }
 
 # The reference's own convergence, likewise measured on cases.ELLS_SUITE: the
@@ -224,23 +182,6 @@ class Frozen:
         )
         self.reference = cases.reference_cl(self.RH, self.integrand_a, self.integrand_b)
         self.cancellation = cases.cancellation_ratio(self.integrand_a, self.integrand_b)
-        self._per_multipole: np.ndarray | None = None
-
-    @property
-    def per_multipole(self) -> np.ndarray:
-        """Return the reference built on one closure per multipole, on first use."""
-        if self._per_multipole is None:
-            self._per_multipole = cases.per_multipole_reference(
-                self.RH,
-                self.kernel_a,
-                None if self.pair.isauto else self.kernel_b,
-                self.cosmo,
-                self.lmin,
-                self.lmax,
-                self.settings,
-            )
-
-        return self._per_multipole
 
     def compute(self, method: str) -> np.ndarray:
         """Compute one block through the library, by the named kernel-space method."""
@@ -281,10 +222,6 @@ class Frozen:
         )
 
         return np.array(vp.dup_array())
-
-    def truth_for(self, method: str) -> np.ndarray:
-        """Return the reference that matches the method's own closure and batching."""
-        return self.per_multipole if method in PER_MULTIPOLE else self.reference.cl
 
     def peak_error(self, got: np.ndarray, truth: np.ndarray) -> float:
         """Return the worst deviation over the block, relative to the block's peak."""
@@ -363,10 +300,8 @@ def test_method_matches_reference(
 ) -> None:
     """Check every kernel-space method against the quadrature's own reference."""
     state = frozen(case, closure, lmin)
-    error = state.peak_error(state.compute(method), state.truth_for(method))
-    tolerance = TOLERANCE_BY_CASE.get(
-        (method, closure, case), TOLERANCE[(method, closure)]
-    )
+    error = state.peak_error(state.compute(method), state.reference.cl)
+    tolerance = TOLERANCE[(method, closure)]
 
     assert error < tolerance, (
         f"{case} ({state.pair.regime}): {method} on a {closure} closure "
@@ -375,7 +310,7 @@ def test_method_matches_reference(
     )
 
 
-@pytest.mark.parametrize("method", BLOCK_METHODS)
+@pytest.mark.parametrize("method", sorted(METHODS))
 @pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS])
 @pytest.mark.parametrize("closure", CLOSURE_PARAMS)
 @pytest.mark.parametrize("lmin", cases.ELLS_SUITE)
@@ -419,21 +354,13 @@ def test_method_introspection_is_consistent(method: str) -> None:
 
 
 def test_limber_z_methods_have_no_block_quadrature() -> None:
-    """Check that integrate_block() refuses the redshift-space tier and KERNEL_GSL.
-
-    integrate_block() refuses it, and refuses KERNEL_GSL too -- that one is
-    kernel-space but fits its closure one multipole at a time, so there is no
-    block for a caller to hand it.
-    """
+    """Check that the redshift-space tier is not kernel-space and reports no error."""
     for meth in (
         Nc.XcorMethod.LIMBER_Z_GSL,
         Nc.XcorMethod.LIMBER_Z_CUBATURE,
     ):
         assert not Nc.xcor_method_is_kernel_space(meth)
         assert not Nc.xcor_method_has_error_estimate(meth)
-
-    assert Nc.xcor_method_is_kernel_space(Nc.XcorMethod.KERNEL_GSL)
-    assert not Nc.xcor_method_has_error_estimate(Nc.XcorMethod.KERNEL_GSL)
 
 
 @pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS if pair.isauto])
@@ -462,20 +389,22 @@ def test_far_separated_bins_cancel_by_orders(frozen, closure: str) -> None:
     assert low > 1.0e3
 
 
-def test_narrow_shell_caps_the_spline_closure() -> None:
-    """Check that a 56 Mpc hard shell caps the spline closure and not the spectral one.
+def test_narrow_shell_spline_follows_peak_epsilon() -> None:
+    """Check that the spline closure resolves a 56 Mpc hard shell down to peak-epsilon.
 
     The knob that matters is ``peak-epsilon``, not ``reltol``. Measured on
     this shell, four decades of ``reltol`` (1e-4 to 1e-8) change the answer by
     nothing at all for either closure and cost nothing either; every decade of
     ``peak-epsilon`` moves both. So the comparison is taken along that axis,
-    at the library's own documented floor of 1e-6 -- below it the setter warns,
-    because the value is measured against the peak of W(k) while the C_ell
-    integrand is k^2 W_a W_b, so it enters squared.
+    down to the library's own documented floor of 1e-6 -- below it the setter
+    warns, because the value is measured against the peak of W(k) while the
+    C_ell integrand is k^2 W_a W_b, so it enters squared.
 
-    At that floor the spline closure sits at ~2e-5 and has nowhere left to go;
-    the spectral closure is at machine zero. That gap is the justification for
-    carrying two closure types, so it is asserted rather than remembered.
+    Measured against the spectral closure at 1e-6 (2e-8 from the one at 1e-8):
+    the spline lands at 8.4e-6, 8.9e-7 and 1.2e-7 of the peak at peak-epsilon
+    1e-4, 1e-5 and 1e-6, a decade per decade. The closure of the settled sample
+    set (ncm_function_sample_set_adaptive_midpoint()) is what keeps the spline
+    from stalling here at 2e-5, so that is asserted rather than remembered.
     """
     cosmo, dist, ps = cases.make_cosmo_bits()
     RH = Nc.HICosmo.RH_Mpc(cosmo)
@@ -499,24 +428,22 @@ def test_narrow_shell_caps_the_spline_closure() -> None:
         """Return the worst deviation from the reference, relative to its peak."""
         return float(np.abs(values - truth).max() / peak)
 
-    # The spline closure at the floor, and one decade above it. It improves
-    # with peak-epsilon, so this is not a stall -- it is a cap, and the floor
-    # is where the cap bites.
-    spline_floor = error(solve(Nc.XcorKernelClosure.SPLINE, 1.0e-6))
-    spline_above = error(solve(Nc.XcorKernelClosure.SPLINE, 1.0e-5))
+    spline = {
+        pe: error(solve(Nc.XcorKernelClosure.SPLINE, pe))
+        for pe in (1.0e-4, 1.0e-5, 1.0e-6)
+    }
 
-    assert spline_floor > 1.0e-6
-    assert spline_above > spline_floor
-
-    # The spectral closure, one decade *above* the floor, is already ahead.
-    assert error(solve(Nc.XcorKernelClosure.CHEBYSHEV, 1.0e-5)) < spline_floor
+    # A decade of peak-epsilon buys a decade of accuracy, down to the floor.
+    assert 5.0 < spline[1.0e-4] / spline[1.0e-5] < 20.0
+    assert 5.0 < spline[1.0e-5] / spline[1.0e-6] < 20.0
+    assert spline[1.0e-6] < 1.0e-6
 
 
 def test_reltol_is_not_what_moves_the_narrow_shell() -> None:
     """Check that reltol does not move the narrow-shell answer.
 
     Guards the reading above: if a future change makes ``reltol`` matter on
-    this shell, the comparison in ``test_narrow_shell_caps_the_spline_closure``
+    this shell, the comparison in ``test_narrow_shell_spline_follows_peak_epsilon``
     is taken along the wrong axis and has to be revisited.
     """
     cosmo, dist, ps = cases.make_cosmo_bits()
@@ -561,7 +488,6 @@ TRUTH_TABLE = "truth_tables/xcor/xcor_kquad.json.gz"
 # it: on the far-separated pair at ell = 2 the spline closure is wrong by 435%
 # of the pair's own scale. The chebyshev worst is that same pair at ell = 50,
 # 1.04e-2 of scale, on a certified value eleven orders below the pair's peak.
-# The tight statement is the comparative test below.
 #
 # A loose gate has a cost, paid once already: the X9 entries were certified
 # with the generator's side-b leak (kdep applied to both windows), putting
@@ -676,32 +602,3 @@ def test_closure_matches_certified_c_ell(certified: dict, closure: str) -> None:
         f"{closure} deviates from the certified C_ell, as a fraction of the "
         f"pair's scale: " + "; ".join(over)
     )
-
-
-def test_spectral_closure_is_closer_to_certified_truth(certified: dict) -> None:
-    """Check that the spectral closure beats the spline one against certified values.
-
-    Level 1 cannot state this: it compares each method to a reference built on
-    the closure under test, so a closure that is wrong in the same way as its
-    reference looks right. Only a certified value separates them.
-    """
-    scale = _pair_scale(certified)
-    spline, chebyshev = [], []
-
-    for entry in certified["cases"].values():
-        truth = float(entry["value"])
-        norm = scale[entry["case"]]
-        spline.append(
-            abs(_library_cl(entry["case"], entry["ell"], "spline") - truth) / norm
-        )
-        chebyshev.append(
-            abs(_library_cl(entry["case"], entry["ell"], "chebyshev") - truth) / norm
-        )
-
-    closer = sum(1 for s, c in zip(spline, chebyshev) if c < s)
-
-    # Measured: closer in 36 of 43, median 4.0e-6 against 1.8e-5. (An earlier
-    # 34-of-43 was taken against X9 entries certified with the generator's
-    # side-b leak; the library was right and the table was wrong there.)
-    assert closer >= 0.7 * len(spline)
-    assert np.median(chebyshev) < 0.5 * np.median(spline)

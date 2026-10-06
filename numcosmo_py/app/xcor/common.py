@@ -72,7 +72,6 @@ class XcorMethodOption(str, enum.Enum):
     """Quadrature methods available for the C_ell computation."""
 
     CUBATURE = "cubature"
-    GSL = "gsl"
     EXACT = "exact"
 
     def to_nc(self) -> Nc.XcorMethod:
@@ -83,8 +82,6 @@ class XcorMethodOption(str, enum.Enum):
         match self:
             case XcorMethodOption.CUBATURE:
                 return Nc.XcorMethod.KERNEL_CUBATURE
-            case XcorMethodOption.GSL:
-                return Nc.XcorMethod.KERNEL_GSL
             case XcorMethodOption.EXACT:
                 return Nc.XcorMethod.KERNEL_EXACT
         raise ValueError(f"Unknown method: {self}")
@@ -173,8 +170,7 @@ class XcorKernelCommon:
                 "Representation fitted to the sampled kernel. 'spline' bisects "
                 "until it meets a tolerance; 'chebyshev' expands on panels of a "
                 "prescribed order. Both plot and both compute C_ell, so the two "
-                "can be compared directly. Limber multipoles keep the spline "
-                "whatever this is set to."
+                "can be compared directly."
             ),
             show_default=True,
         ),

@@ -70,10 +70,10 @@ ELLS: typing.Final[list[int]] = [2, 3, 4, 6, 10, 20, 50, 100, 200]
 # worst -- which is NOT the high end. Measured worst deviation of the block's
 # peak, over the case matrix:
 #
-#   exact/chebyshev  2.3e-08 at l=6     gsl/chebyshev   1.6e-03 at l=10
-#   exact/spline     8.1e-12 at l=6     gsl_block/spl   3.6e-11 at l=4
+#   exact/chebyshev  2.3e-08 at l=6
+#   exact/spline     8.1e-12 at l=6
 #
-# against 4.7e-10, 1.7e-04, 5.3e-13 and 8.6e-12 at l=200. The error peaks
+# against 4.7e-10 and 5.3e-13 at l=200. The error peaks
 # around l = 4-10 and falls away by l = 50, so a ladder of [2, 20, 200] tested
 # the easy end hard and the hard end not at all. l = 2 stays for the
 # cancellation reason above; 6 and 10 are the peak; 50 keeps a high-l point
@@ -82,8 +82,7 @@ ELLS: typing.Final[list[int]] = [2, 3, 4, 6, 10, 20, 50, 100, 200]
 # so the cost is the operator, not the fit).
 #
 # Knowingly not covered: cubature/chebyshev is worst at l = 20 (4.1e-05 against
-# 1.1e-05 here), and gsl_block/chebyshev at l = 200 (4.6e-04 against 3.2e-04).
-# Both are within a factor of four of a point that is covered.
+# 1.1e-05 here), within a factor of four of a point that is covered.
 ELLS_SUITE: typing.Final[list[int]] = [2, 6, 10, 50]
 
 # Gauss-Legendre orders the reference escalates through, per cell. A spline
@@ -114,8 +113,8 @@ class Settings:
     into 19.9 s, so these are recorded in every row the bench driver emits.
 
     ``l_limber = -1`` is not a detail: at the library default of 0 every
-    multipole takes Limber, Limber keeps the spline closure whatever
-    ``closure`` says, and a Chebyshev sweep silently measures splines.
+    multipole takes Limber and a sweep meant for the non-Limber closures
+    measures the Limber ones.
     """
 
     reltol: float = 1.0e-4
@@ -1040,39 +1039,6 @@ def reference_cl(
         k_min,
         k_max,
     )
-
-
-def per_multipole_reference(
-    RH: float,
-    kernel_a: Nc.XcorKernelRadial,
-    kernel_b: Nc.XcorKernelRadial | None,
-    cosmo: Nc.HICosmo,
-    lmin: int,
-    lmax: int,
-    settings: Settings,
-) -> np.ndarray:
-    """The same integral, from one closure per multipole.
-
-    This is what ``NC_XCOR_METHOD_KERNEL_GSL`` integrates: it calls
-    ``nc_xcor_kernel_get_eval`` per multipole rather than
-    ``..._get_eval_vectorized_full`` per block, so a block-closure reference
-    would charge it for a closure it never built. On a strongly cancelling pair
-    the two closures do not agree at the library's default tolerances -- see
-    ``test_k_integral.py`` -- so which one the reference is built on is the
-    difference between measuring a quadrature and measuring that disagreement.
-    """
-    values = []
-
-    for ell in range(lmin, lmax + 1):
-        integrand_a = build_integrand(kernel_a, cosmo, ell, ell, settings)
-        integrand_b = (
-            None
-            if kernel_b is None
-            else build_integrand(kernel_b, cosmo, ell, ell, settings)
-        )
-        values.append(reference_cl(RH, integrand_a, integrand_b).cl[0])
-
-    return np.array(values)
 
 
 def cancellation_ratio(

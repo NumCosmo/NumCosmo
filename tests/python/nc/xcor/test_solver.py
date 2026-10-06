@@ -325,7 +325,7 @@ def test_solve_fallback_method_matches_compute(
     kernel_tsz: Nc.XcorKernel,
     kernel_cmb_lens: Nc.XcorKernel,
 ) -> None:
-    """Methods other than KERNEL_CUBATURE delegate directly to nc_xcor_compute(),
+    """The redshift-space Limber methods delegate directly to nc_xcor_compute(),
     with no block-shared closure caching."""
     lmin, lmax = 20, 27
 
@@ -337,7 +337,9 @@ def test_solve_fallback_method_matches_compute(
         kernel_tsz.prepare(cosmology.cosmo)
         kernel_cmb_lens.prepare(cosmology.cosmo)
 
-        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_GSL)
+        xc = Nc.Xcor.new(
+            cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE
+        )
         xc.prepare(cosmology.cosmo)
 
         solver = Nc.XcorSolver.new()

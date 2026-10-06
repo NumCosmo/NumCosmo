@@ -627,7 +627,12 @@ test fails: a not-a-knot cubic spline is built from the accepted points only,
 evaluated at the candidate, and the candidate is accepted when
 $\|f - s\|_2 \le \epsilon_r \|f\|_2 + \epsilon_a\, W_{\max}$ in the norm over the
 block, with $W_{\max}$ the smallest of the block's per-multipole peaks. The two
-tolerances add, so the larger one decides where refinement stops. A jump is
+tolerances add, so the larger one decides where refinement stops. Once every
+interval has passed, the settled set is closed as in
+[AutoKnots: Adaptive Knot Placement](../spline/spline_func.qmd): an interval wider
+than the mean of its two neighbors is tested once at its midpoint, a failure also
+reopens the run of equal widths around it, and refinement resumes until a
+closure round finds no failure. A jump is
 handled by continuing a dropped component beyond its boundary as
 $v\,\exp[-10^{10}\,\delta k/k_R]$: the sampled function stays continuous, one
 cubic can span the boundary, and what remains is a jump in the first
@@ -787,9 +792,10 @@ because the panels bound $N$.
 A spline against a panel. A cell of the common refinement lies inside one
 knot interval, so the spline is one cubic there, and interpolation at four
 Chebyshev--Lobatto nodes reproduces a cubic exactly. The spline side is thus
-turned into four Chebyshev coefficients and Eq. (9) applies. This is what
-allows a pair whose two kernels sit in different regimes to be integrated
-without either being refitted.
+turned into four Chebyshev coefficients and Eq. (9) applies. Both tiers follow
+[[numcosmo|NcXcor]]:closure-type, so [[numcosmo|nc_xcor_compute]] never pairs the
+two representations; such a pair comes only from closures built separately and
+passed to [[numcosmo|nc_xcor_integrate_block]].
 
 The error reported with $C_\ell$ propagates the closures' fit residuals,
 $\delta(W^X W^Y) \simeq |W^X|\,\delta W^Y + |W^Y|\,\delta W^X$, integrated

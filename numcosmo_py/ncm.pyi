@@ -4853,6 +4853,16 @@ class FunctionSampleSet(GObject.Object):
         base_spline: Spline,
         *user_data: typing.Any,
     ) -> None: ...
+    def adaptive_midpoint_full(
+        self,
+        f: typing.Callable[..., None],
+        reltol: float,
+        abstol: float,
+        max_iter: int,
+        min_pass_threshold: int,
+        base_spline: Spline,
+        *user_data: typing.Any,
+    ) -> typing.Tuple[int, int, int]: ...
     def add(self, x: float, y: Vector) -> None: ...
     def add_func(
         self, x: float, f: typing.Callable[..., None], *user_data: typing.Any

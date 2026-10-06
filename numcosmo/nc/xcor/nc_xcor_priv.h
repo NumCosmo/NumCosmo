@@ -117,16 +117,8 @@ const NcXcorKQuad *_nc_xcor_kquad_for_method (NcXcorMethod meth);
 void _nc_xcor_kernel_space_run (NcXcor *xc, const NcXcorKQuad *kquad, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp, NcmVector *vp_err);
 
 /*
- * %NC_XCOR_METHOD_KERNEL_GSL's runner. The only kernel-space method not in the
- * table above: it fits a closure per multipole, so there is no block for a
- * caller to hand it.
- */
-void _nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp);
-
-/*
  * QUADPACK's status is a statement about certification, not about the answer,
- * so both GSL methods judge it against the error they achieved. Defined in
- * nc_xcor.c because both tiers use it.
+ * so %NC_XCOR_METHOD_LIMBER_Z_GSL judges it against the error it achieved.
  */
 void _nc_xcor_check_qag_status (const gchar *where, gint ret, gdouble reltol, gdouble result, gdouble err);
 
@@ -138,8 +130,6 @@ void _nc_xcor_check_qag_status (const gchar *where, gint ret, gdouble reltol, gd
  * the same functions is nc_xcor_integrate_block().
  */
 void _nc_xcor_kernel_integrate_block_cubature (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp, NcmVector *vp_err);
-
-void _nc_xcor_kernel_integrate_block_gsl (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp, NcmVector *vp_err);
 
 /*
  * %NC_XCOR_METHOD_KERNEL_EXACT: exact 5-node Gauss-Legendre over the common
