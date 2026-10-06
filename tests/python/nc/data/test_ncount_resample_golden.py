@@ -46,7 +46,7 @@ Ncm.cfg_init()
 GOLDEN_FILE = "truth_tables/cluster/nc_data_cluster_ncount_golden_seed0.bin"
 # Cross-stack libm/GSL/BLAS rounding drifts the proxy draws by a few ULP; this
 # tolerance absorbs that while still flagging real changes in the draw order.
-GOLDEN_RTOL = 1.0e-9
+GOLDEN_RTOL = 1.0e-7
 GOLDEN_ATOL = 1.0e-12
 
 
@@ -121,9 +121,30 @@ def test_resample_matches_golden_snapshot() -> None:
     assert ncdata.get_lnM_obs_params() is None
     assert ncdata.get_z_obs_params() is None
 
+    got = {}
+    ref = {}
     for getter in ("get_lnM_obs", "get_z_obs", "get_lnM_true", "get_z_true"):
-        got = np.array(getattr(ncdata, getter)().dup_array())
-        ref = np.array(getattr(golden, getter)().dup_array())
+        got[getter] = np.array(getattr(ncdata, getter)().dup_array())
+        ref[getter] = np.array(getattr(golden, getter)().dup_array())
         np.testing.assert_allclose(
-            got, ref, rtol=GOLDEN_RTOL, atol=GOLDEN_ATOL, err_msg=getter
+            got[getter], ref[getter], rtol=GOLDEN_RTOL, atol=GOLDEN_ATOL, err_msg=getter
         )
+
+    # The sampled (z, lnM) inherit the knots of the splines behind the abundance and move
+    # at 1e-8 with them; the observable draws on top of them are the pipeline's own.
+    # lnM_obs - lnM_true is sigma times the draw, and with z_bias = 0 so is
+    # (z_obs - z_true) / (1 + z_true): both pinned exactly.
+    np.testing.assert_allclose(
+        got["get_lnM_obs"] - got["get_lnM_true"],
+        ref["get_lnM_obs"] - ref["get_lnM_true"],
+        rtol=0.0,
+        atol=1.0e-12,
+        err_msg="lnM draw",
+    )
+    np.testing.assert_allclose(
+        (got["get_z_obs"] - got["get_z_true"]) / (1.0 + got["get_z_true"]),
+        (ref["get_z_obs"] - ref["get_z_true"]) / (1.0 + ref["get_z_true"]),
+        rtol=0.0,
+        atol=1.0e-12,
+        err_msg="z draw",
+    )

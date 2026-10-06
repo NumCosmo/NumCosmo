@@ -207,7 +207,14 @@ def test_weak_lensing_kernel(
         / cosmo.RH_Mpc()
     )
 
-    assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-20)
+    # Pointwise relative down to reltol_target of the peak: in the far tail the two codes'
+    # own quadratures set the difference, not the kernel.
+    assert_allclose(
+        nc_Wchi_a,
+        Wchi_a,
+        rtol=reltol_target,
+        atol=reltol_target * np.max(np.abs(Wchi_a)),
+    )
 
 
 @pytest.mark.parametrize("gal_bin", [0, 1, 2, 3, 4])
