@@ -26,14 +26,12 @@
 /**
  * NcmFitMCBS:
  *
- * Monte Carlo and bootstrap analysis.
+ * Monte Carlo study of the bootstrap mean.
  *
- * This class implements the Monte Carlo and bootstrap analysis. It performs a Monte
- * Carlo analysis where for each sample of the likelihood function, a bootstrap analysis
- * is performed. The results are stored in a #NcmMSetCatalog.
- *
- * The main objective of this class is to provide a way to estimate the accuracy of the
- * bootstrap analysis.
+ * For each data realization resampled from a fiducial model it runs a bootstrap of that
+ * realization (two #NcmFitMC) and stores the mean of the bootstrap best fits as a row
+ * of a #NcmMSetCatalog. The catalog shows how the bootstrap mean is distributed over
+ * data realizations.
  *
  */
 
@@ -85,12 +83,14 @@ ncm_fit_mcbs_set_property (GObject *object, guint prop_id, const GValue *value, 
 
   g_return_if_fail (NCM_IS_FIT_MCBS (object));
   {
-    NcmMSet *mset = ncm_fit_peek_mset (mcbs->fit);
-
     switch (prop_id)
     {
       case PROP_FIT:
+      {
+        NcmMSet *mset;
+
         mcbs->fit         = g_value_dup_object (value);
+        mset              = ncm_fit_peek_mset (mcbs->fit);
         mcbs->mc_resample = ncm_fit_mc_new (mcbs->fit, NCM_FIT_MC_RESAMPLE_FROM_MODEL, NCM_FIT_RUN_MSGS_NONE);
         mcbs->mc_bstrap   = ncm_fit_mc_new (mcbs->fit, NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX, NCM_FIT_RUN_MSGS_NONE);
         mcbs->mcat        = ncm_mset_catalog_new (mset, 1, 1, FALSE,
@@ -99,6 +99,7 @@ ncm_fit_mcbs_set_property (GObject *object, guint prop_id, const GValue *value, 
         ncm_mset_catalog_set_m2lnp_var (mcbs->mcat, 0);
         ncm_mset_catalog_set_run_type (mcbs->mcat, NCM_MSET_CATALOG_RTYPE_BSTRAP_MEAN);
         break;
+      }
       case PROP_FILE:
         ncm_fit_mcbs_set_filename (mcbs, g_value_get_string (value));
         break;
@@ -188,9 +189,9 @@ ncm_fit_mcbs_class_init (NcmFitMCBSClass *klass)
  * ncm_fit_mcbs_new:
  * @fit: a #NcmFit
  *
- * Creates a new #NcmFitMCBS object.
+ * Creates a #NcmFitMCBS for @fit.
  *
- * Returns: (transfer full): a new #NcmFitMCBS object.
+ * Returns: (transfer full): a new #NcmFitMCBS.
  */
 NcmFitMCBS *
 ncm_fit_mcbs_new (NcmFit *fit)
@@ -204,7 +205,7 @@ ncm_fit_mcbs_new (NcmFit *fit)
  * ncm_fit_mcbs_free:
  * @mcbs: a #NcmFitMCBS
  *
- * Decreases the reference count of @mcbs by one.
+ * Decreases the reference count of @mcbs.
  *
  */
 void
@@ -217,8 +218,7 @@ ncm_fit_mcbs_free (NcmFitMCBS *mcbs)
  * ncm_fit_mcbs_clear:
  * @mcbs: a #NcmFitMCBS
  *
- * If *@mcbs is not %NULL, decreases its reference count by one and
- * sets *@mcbs to %NULL.
+ * Decreases the reference count of *@mcbs and sets it to %NULL.
  *
  */
 void
@@ -230,9 +230,11 @@ ncm_fit_mcbs_clear (NcmFitMCBS **mcbs)
 /**
  * ncm_fit_mcbs_set_filename:
  * @mcbs: a #NcmFitMCBS
- * @filename: a filename
+ * @filename: a file name
  *
- * Sets the filename of the data to be used in the analysis.
+ * Makes @filename the file of the catalog of @mcbs and erases the data it holds. Each
+ * bootstrap catalog is saved next to it, as the file name without its .fits extension
+ * followed by -bstrap-NNNNNN.fits, NNNNNN the realization index.
  *
  */
 void
@@ -263,16 +265,10 @@ ncm_fit_mcbs_set_filename (NcmFitMCBS *mcbs, const gchar *filename)
     }
 
     g_regex_unref (fits_ext);
-    {
-      gchar *resample_str = g_strdup_printf ("%s-resample.fits", mcbs->base_name);
 
-      ncm_mset_catalog_set_file (mcbs->mcat, filename);
-
-      ncm_mset_catalog_reset (mcbs->mcat);
-      ncm_mset_catalog_erase_data (mcbs->mcat);
-
-      g_free (resample_str);
-    }
+    ncm_mset_catalog_set_file (mcbs->mcat, filename);
+    ncm_mset_catalog_reset (mcbs->mcat);
+    ncm_mset_catalog_erase_data (mcbs->mcat);
   }
 }
 
@@ -281,7 +277,8 @@ ncm_fit_mcbs_set_filename (NcmFitMCBS *mcbs, const gchar *filename)
  * @mcbs: a #NcmFitMCBS
  * @rng: a #NcmRNG
  *
- * Sets the random number generator to be used in the analysis.
+ * Makes @rng the random number generator of the catalog of @mcbs; the realizations are
+ * resampled with a generator seeded as @rng. Calling it during a run aborts.
  *
  */
 void
@@ -296,20 +293,21 @@ ncm_fit_mcbs_set_rng (NcmFitMCBS *mcbs, NcmRNG *rng)
 /**
  * ncm_fit_mcbs_run:
  * @mcbs: a #NcmFitMCBS
- * @fiduc: a #NcmMSet
- * @ni: index of the first sample to be used in the analysis
- * @nf: index of the last sample to be used in the analysis
- * @nbstraps: number of bootstrap samples
- * @rtype: a #NcmFitMCResampleType
- * @mtype: a #NcmFitRunMsgs
- * @bsmt: whether to use OpenMP threads in the bootstrap analysis
+ * @fiduc: (nullable): the fiducial #NcmMSet, see ncm_fit_mc_set_fiducial()
+ * @ni: index of the first realization
+ * @nf: one past the index of the last realization
+ * @nbstraps: number of bootstrap fits per realization
+ * @rtype: bootstrap #NcmFitMCResampleType
+ * @mtype: #NcmFitRunMsgs of the bootstrap runs
+ * @bsmt: whether the bootstrap fits use OpenMP threads
  *
- * Runs the Monte Carlo and bootstrap analysis. The results are stored in the catalog
- * of @mcbs. The catalog is cleared before the analysis.
+ * Resamples the realizations @ni to @nf - 1 from @fiduc and, for each, runs @nbstraps
+ * bootstrap fits of type @rtype, adding their mean to the catalog of @mcbs. At the end
+ * the mean and covariance of the catalog become the parameters and covariance of the
+ * #NcmFitState of the fit. @rtype must be a bootstrap; #NCM_FIT_MC_RESAMPLE_FROM_MODEL
+ * aborts.
  *
- * Note: Multi-threading for bootstrap analysis (@bsmt = TRUE) is currently not fully
- * supported and may produce incorrect results. Use @bsmt = FALSE for reliable
- * single-threaded execution.
+ * Multi-threaded bootstraps (@bsmt = %TRUE) may give incorrect results; use %FALSE.
  *
  */
 void
@@ -320,7 +318,13 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
   NcmLikelihood *lh    = ncm_fit_peek_likelihood (mcbs->fit);
   gboolean cat_has_rng = FALSE;
   NcmDataset *dset     = ncm_likelihood_peek_dataset (lh);
+  NcmDatasetBStrapType bstrap_type;
   guint i;
+
+  if (rtype == NCM_FIT_MC_RESAMPLE_FROM_MODEL)
+    g_error ("ncm_fit_mcbs_run: the internal run must be a bootstrap: NCM_FIT_MC_RESAMPLE_BOOTSTRAP_*.");
+
+  bstrap_type = (rtype == NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX) ? NCM_DATASET_BSTRAP_PARTIAL : NCM_DATASET_BSTRAP_TOTAL;
 
   ncm_fit_mc_set_rtype (mcbs->mc_resample, NCM_FIT_MC_RESAMPLE_FROM_MODEL);
   ncm_fit_mc_set_mtype (mcbs->mc_resample, NCM_FIT_RUN_MSGS_SIMPLE);
@@ -348,15 +352,11 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
   ncm_fit_mc_set_mtype (mcbs->mc_bstrap, mtype);
   ncm_fit_mc_set_use_threads (mcbs->mc_bstrap, bsmt);
 
-  if (rtype == NCM_FIT_MC_RESAMPLE_FROM_MODEL)
-    g_error ("ncm_fit_mcbs_run: the internal run must be a bootstrap: NCM_FIT_MC_RESAMPLE_BOOTSTRAP_*.");
-
   for (i = ni; i < nf; i++)
   {
     ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_DISABLE);
-    /*ncm_fit_mc_set_first_sample_id (mcbs->mc_resample, i + 1); */
     ncm_fit_mc_run (mcbs->mc_resample, i + 1);
-    ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_TOTAL);
+    ncm_dataset_bootstrap_set (dset, bstrap_type);
 
     if (mcbs->base_name != NULL)
     {
@@ -393,9 +393,7 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
  * ncm_fit_mcbs_get_catalog:
  * @mcbs: a #NcmFitMCBS
  *
- * Gets the generated catalog of @mcbs.
- *
- * Returns: (transfer full): the generated catalog.
+ * Returns: (transfer full): the catalog of @mcbs, one bootstrap mean per realization
  */
 NcmMSetCatalog *
 ncm_fit_mcbs_get_catalog (NcmFitMCBS *mcbs)

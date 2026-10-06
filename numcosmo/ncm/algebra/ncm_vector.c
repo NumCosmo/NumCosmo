@@ -26,11 +26,12 @@
 /**
  * NcmVector:
  *
- * Vector object representing arrays of doubles.
+ * Reference-counted vector of doubles, a view over a #gsl_vector.
  *
- * This object defines the functions for allocating and accessing vectors. Also includes
- * several vector operations.
- *
+ * The data can be allocated by the vector or come from GSL, a #GArray, a #GVariant, another
+ * #NcmVector (a subvector) or a user array, with the ownership stated by each constructor.
+ * Components are separated by a stride; the "fast" accessors assume a stride of one.
+ * Functions taking two vectors require the same length unless stated otherwise.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -165,8 +166,7 @@ ncm_vector_class_init (NcmVectorClass *klass)
   /**
    * NcmVector:values:
    *
-   * GVariant representation of the vector used to serialize the object.
-   *
+   * The components as a #GVariant of type `ad`, used for serialization.
    */
   g_object_class_install_property (object_class, PROP_VALS,
                                    g_param_spec_variant ("values", NULL, "values",
@@ -176,12 +176,11 @@ ncm_vector_class_init (NcmVectorClass *klass)
 
 /**
  * ncm_vector_new:
- * @n: defines the size of the vector
+ * @n: number of components
  *
- * This function allocates memory for a new #NcmVector of doubles
- * with @n components.
+ * Allocates a vector of @n components, not initialized.
  *
- * Returns: A new #NcmVector.
+ * Returns: (transfer full): a new #NcmVector.
  */
 NcmVector *
 ncm_vector_new (gsize n)
@@ -193,17 +192,15 @@ ncm_vector_new (gsize n)
 
 /**
  * ncm_vector_new_full:
- * @d: (array) (element-type double): pointer to the first double allocated
- * @size: number of doubles allocated
- * @stride: the step-size from one element to the next in physical memory, measured in units of double
- * @pdata: (allow-none): descending data pointer
- * @pfree: (scope notified) (allow-none): free function to be called when destroying the vector
+ * @d: (array) (element-type double): the data
+ * @size: number of components
+ * @stride: distance between consecutive components, in doubles
+ * @pdata: (allow-none): data owned by the vector
+ * @pfree: (scope notified) (allow-none): function releasing @pdata
  *
- * This function returns a #NcmVector of the array @d.
- * This function saves @userdata internally and frees it using @free
- * when it is no longer necessary.
+ * Creates a vector over @d; @pfree is called on @pdata when the vector is finalized.
  *
- * Returns: A new #NcmVector.
+ * Returns: (transfer full): a new #NcmVector.
  */
 NcmVector *
 ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDestroyNotify pfree)
@@ -229,13 +226,11 @@ ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDest
 
 /**
  * ncm_vector_new_fftw:
- * @size: number of doubles allocated
+ * @size: number of components
  *
- * This function allocates memory for a new #NcmVector of double
- * with @n components. It uses fftw_alloc_real in order to be used
- * by fftw* functions.
+ * Allocates a vector of @size components with fftw_alloc_real(), aligned for FFTW.
  *
- * Returns: A new #NcmVector.
+ * Returns: (transfer full): a new #NcmVector.
  */
 NcmVector *
 ncm_vector_new_fftw (guint size)
@@ -250,12 +245,11 @@ ncm_vector_new_fftw (guint size)
 
 /**
  * ncm_vector_new_gsl: (skip)
- * @gv: vector from [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/doc/html/index.html) to be converted into a #NcmVector
+ * @gv: a #gsl_vector
  *
- * This function saves @gv internally and frees it when it is no longer necessary.
- * The @gv vector must not be freed.
+ * Creates a vector over @gv, which it takes ownership of and frees with gsl_vector_free().
  *
- * Returns: A new #NcmVector.
+ * Returns: (transfer full): a new #NcmVector.
  */
 NcmVector *
 ncm_vector_new_gsl (gsl_vector *gv)
@@ -269,12 +263,11 @@ ncm_vector_new_gsl (gsl_vector *gv)
 
 /**
  * ncm_vector_new_gsl_static: (skip)
- * @gv: vector from [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/doc/html/index.html) to be converted into a #NcmVector
+ * @gv: a #gsl_vector
  *
- * This function saves @gv internally and does not frees.
- * The @gv vector must be valid during the life of the created #NcmVector.
+ * Creates a vector over @gv, which must outlive it.
  *
- * Returns: A new #NcmVector.
+ * Returns: (transfer full): a new #NcmVector.
  */
 NcmVector *
 ncm_vector_new_gsl_static (gsl_vector *gv)
@@ -288,12 +281,11 @@ ncm_vector_new_gsl_static (gsl_vector *gv)
 
 /**
  * ncm_vector_new_array:
- * @a: (array) (element-type double): array of doubles to be converted into a #NcmVector
+ * @a: (array) (element-type double): a #GArray of doubles
  *
- * This function saves @a internally and frees it when it is no longer necessary.
- * The @a array must not be freed.
+ * Creates a vector over the elements of @a, holding a reference to it. @a must not be empty.
  *
- * Returns: (transfer full): A new #NcmVector.
+ * Returns: (transfer full): a new #NcmVector.
  */
 NcmVector *
 ncm_vector_new_array (GArray *a)
@@ -311,16 +303,13 @@ ncm_vector_new_array (GArray *a)
 
 /**
  * ncm_vector_new_data_slice:
- * @d: (array) (element-type double): pointer to the first double allocated
- * @size: number of doubles allocated
- * @stride: the step-size from one element to the next in physical memory, measured in units of double
+ * @d: (array) (element-type double): the data
+ * @size: number of components
+ * @stride: distance between consecutive components, in doubles
  *
- * This function returns a #NcmVector of the array @d allocated using
- * [g_slice](https://developer.gnome.org/glib/stable/glib-Memory-Slices.html) function.
- * This function saves @d internally and frees it when it is no longer necessary.
- * The @d vector must not be freed.
+ * Creates a vector over @d, allocated with g_slice_alloc(), which it takes ownership of.
  *
- * Returns: A new #NcmVector.
+ * Returns: (transfer full): a new #NcmVector.
  */
 NcmVector *
 ncm_vector_new_data_slice (gdouble *d, gsize size, gsize stride)
@@ -335,15 +324,14 @@ ncm_vector_new_data_slice (gdouble *d, gsize size, gsize stride)
 
 /**
  * ncm_vector_new_data_malloc:
- * @d: (array) (element-type double): pointer to the first double allocated
- * @size: number of doubles allocated
- * @stride: the step-size from one element to the next in physical memory, measured in units of double
+ * @d: (array) (element-type double): the data
+ * @size: number of components
+ * @stride: distance between consecutive components, in doubles
  *
- * This function returns a #NcmVector of the array @d allocated using malloc.
- * It saves @d internally and frees it when it is no longer necessary.
- * The @d vector must not be freed.
+ * Creates a vector over @d, allocated with g_malloc() or malloc(), which it takes
+ * ownership of and frees with g_free().
  *
- * Returns: A new #NcmVector.
+ * Returns: (transfer full): a new #NcmVector.
  */
 NcmVector *
 ncm_vector_new_data_malloc (gdouble *d, gsize size, gsize stride)
@@ -358,15 +346,13 @@ ncm_vector_new_data_malloc (gdouble *d, gsize size, gsize stride)
 
 /**
  * ncm_vector_new_data_static:
- * @d: (array) (element-type double): pointer to the first double allocated
- * @size: number of doubles allocated
- * @stride: the step-size from one element to the next in physical memory, measured in units of double
+ * @d: (array) (element-type double): the data
+ * @size: number of components
+ * @stride: distance between consecutive components, in doubles
  *
- * This function returns a #NcmVector of the array @d.
- * The memory allocated is kept during all time life of the object and
- * must not be freed during this period.
+ * Creates a vector over @d, which must outlive it.
  *
- * Returns: A new #NcmVector.
+ * Returns: (transfer full): a new #NcmVector.
  */
 NcmVector *
 ncm_vector_new_data_static (gdouble *d, gsize size, gsize stride)
@@ -381,14 +367,13 @@ ncm_vector_new_data_static (gdouble *d, gsize size, gsize stride)
 
 /**
  * ncm_vector_new_data_dup:
- * @d: (array) (element-type double): pointer to the first double allocated
- * @size: number of doubles allocated
- * @stride: the step-size from one element to the next in physical memory, measured in units of double
+ * @d: (array) (element-type double): the data
+ * @size: number of components
+ * @stride: distance between consecutive components, in doubles
  *
- * This function returns a #NcmVector of the array @d.
- * It allocate a new vector and copy the contents of @d into it.
+ * Creates a vector with a copy of @d.
  *
- * Returns: (transfer full): A new #NcmVector.
+ * Returns: (transfer full): a new #NcmVector.
  */
 NcmVector *
 ncm_vector_new_data_dup (gdouble *d, const gsize size, const gsize stride)
@@ -403,12 +388,11 @@ ncm_vector_new_data_dup (gdouble *d, const gsize size, const gsize stride)
 
 /**
  * ncm_vector_new_variant:
- * @var: a #GVariant of the type "ad"
+ * @var: a #GVariant of type `ad`
  *
- * This function convert a #GVariant array to a #NcmVector allocating new
- * memory for the vector.
+ * Creates a vector with a copy of the elements of @var.
  *
- * Returns: A new #NcmVector.
+ * Returns: (transfer full): a new #NcmVector.
  */
 NcmVector *
 ncm_vector_new_variant (GVariant *var)
@@ -422,15 +406,13 @@ ncm_vector_new_variant (GVariant *var)
 
 /**
  * ncm_vector_const_new_data:
- * @d: (array) (element-type double): pointer to the first double allocated
- * @size: number of doubles allocated
- * @stride: the step-size from one element to the next in physical memory, measured in units of double
+ * @d: (array) (element-type double): the data
+ * @size: number of components
+ * @stride: distance between consecutive components, in doubles
  *
- * This function returns a constant #NcmVector of the array @d.
- * The memory allocated is kept during all time life of the object and
- * must not be freed during this period.
+ * Creates a constant vector over @d, which must outlive it.
  *
- * Returns: A new constant #NcmVector.
+ * Returns: (transfer full): a new constant #NcmVector.
  */
 const NcmVector *
 ncm_vector_const_new_data (const gdouble *d, gsize size, gsize stride)
@@ -454,7 +436,7 @@ ncm_vector_const_new_data (const gdouble *d, gsize size, gsize stride)
  * ncm_vector_ref:
  * @cv: a #NcmVector
  *
- * Increases the reference count of @cv by one atomically.
+ * Increases the reference count of @cv by one.
  *
  * Returns: (transfer full): @cv.
  */
@@ -468,7 +450,7 @@ ncm_vector_ref (NcmVector *cv)
  * ncm_vector_const_ref:
  * @cv: a constant #NcmVector
  *
- * Increases the reference count of the constant @cv by one atomically.
+ * Increases the reference count of @cv by one.
  *
  * Returns: (transfer full): @cv.
  */
@@ -480,12 +462,11 @@ ncm_vector_const_ref (const NcmVector *cv)
 
 /**
  * ncm_vector_const_new_variant:
- * @var: a #GVariant of the type "ad"
+ * @var: a #GVariant of type `ad`
  *
- * This function convert a #GVariant array to a #NcmVector. Since it returns
- * a constant #NcmVector it uses the same memory of @var.
+ * Creates a constant vector over the data of @var, holding a reference to it.
  *
- * Returns: (transfer full): A new #NcmVector.
+ * Returns: (transfer full): a new constant #NcmVector.
  */
 const NcmVector *
 ncm_vector_const_new_variant (GVariant *var)
@@ -504,9 +485,7 @@ ncm_vector_const_new_variant (GVariant *var)
  * ncm_vector_free:
  * @cv: a #NcmVector
  *
- * Atomically decrements the reference count of @cv by one. If the reference count drops to 0,
- * all memory allocated by @cv is released.
- *
+ * Decreases the reference count of @cv by one.
  */
 void
 ncm_vector_free (NcmVector *cv)
@@ -518,9 +497,7 @@ ncm_vector_free (NcmVector *cv)
  * ncm_vector_const_free:
  * @cv: a constant #NcmVector
  *
- * Atomically decrements the reference count of the constant @cv by one. If the reference count drops to 0,
- * all memory allocated by @cv is released.
- *
+ * Decreases the reference count of @cv by one.
  */
 void
 ncm_vector_const_free (const NcmVector *cv)
@@ -532,9 +509,7 @@ ncm_vector_const_free (const NcmVector *cv)
  * ncm_vector_clear:
  * @cv: a #NcmVector
  *
- * If @cv is different from NULL, atomically decrements the reference count of @cv by one.
- * If the reference count drops to 0, all memory allocated by @cv is released and @cv is set to NULL.
- *
+ * If *@cv is not %NULL, decreases its reference count by one and sets *@cv to %NULL.
  */
 void
 ncm_vector_clear (NcmVector **cv)
@@ -546,9 +521,7 @@ ncm_vector_clear (NcmVector **cv)
  * ncm_vector_dup:
  * @cv: a constant #NcmVector
  *
- * This function copies the elements of the constant vector @cv into the new #NcmVector.
- *
- * Returns: (transfer full): A #NcmVector.
+ * Returns: (transfer full): a newly allocated copy of @cv, with stride one.
  */
 NcmVector *
 ncm_vector_dup (const NcmVector *cv)
@@ -563,13 +536,11 @@ ncm_vector_dup (const NcmVector *cv)
 /**
  * ncm_vector_substitute:
  * @cv1: a #NcmVector
- * @cv2: a #NcmVector
- * @check_size: whether to check vector size
+ * @cv2: (nullable): a #NcmVector
+ * @check_size: whether to require the same length
  *
- * This function substitute the vector *@cv1 by @cv2, it will unref *@cv1 first.
- * If @check_size is TRUE then the function asserts that both vectors have the
- * same size.
- *
+ * Replaces *@cv1 by a new reference to @cv2, releasing the previous one. With @check_size,
+ * aborts if both are set and their lengths differ.
  */
 void
 ncm_vector_substitute (NcmVector **cv1, NcmVector *cv2, gboolean check_size)
@@ -592,14 +563,12 @@ ncm_vector_substitute (NcmVector **cv1, NcmVector *cv2, gboolean check_size)
 /**
  * ncm_vector_get_subvector:
  * @cv: a #NcmVector
- * @k: component index of the original vector
- * @size: number of components of the subvector
+ * @k: index of the first component
+ * @size: number of components
  *
- * This function returns a new #NcmVector which is a subvector of the vector @cv.
- * The start of the new vector is the component @k from the original vector @cv.
- * The new vector has @size elements.
+ * Creates a view of the components @k to @k + @size - 1 of @cv, holding a reference to it.
  *
- * Returns: (transfer full): A #NcmVector.
+ * Returns: (transfer full): the subvector.
  */
 NcmVector *
 ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size)
@@ -645,15 +614,14 @@ ncm_vector_get_subvector2 (NcmVector *sub_cv, NcmVector *cv, const gsize k, cons
 /**
  * ncm_vector_get_subvector_stride:
  * @cv: a #NcmVector
- * @k: component index of the original vector
- * @size: number of components of the subvector
- * @stride: the step-size from one element to the next in physical memory, measured in units of double
+ * @k: index of the first component
+ * @size: number of components
+ * @stride: distance between consecutive components, in doubles
  *
- * This function returns a new #NcmVector which is a subvector of the vector @cv.
- * The start of the new vector is the component @k from the original vector @cv.
- * The new vector has @size elements.
+ * Creates a view of @size components of @cv starting at @k, @stride doubles apart in
+ * memory, holding a reference to @cv.
  *
- * Returns: (transfer full): A #NcmVector.
+ * Returns: (transfer full): the subvector.
  */
 NcmVector *
 ncm_vector_get_subvector_stride (NcmVector *cv, const gsize k, const gsize size, const gsize stride)
@@ -678,10 +646,7 @@ ncm_vector_get_subvector_stride (NcmVector *cv, const gsize k, const gsize size,
  * ncm_vector_get_variant:
  * @cv: a constant #NcmVector
  *
- * Convert @cv to a GVariant of the type "ad" without destroying the
- * original vector @cv.
- *
- * Returns: (transfer full): A #GVariant of the type "ad".
+ * Returns: (transfer full): a #GVariant of type `ad` with a copy of the components.
  */
 GVariant *
 ncm_vector_get_variant (const NcmVector *cv)
@@ -706,11 +671,10 @@ ncm_vector_get_variant (const NcmVector *cv)
  * ncm_vector_peek_variant:
  * @cv: a constant #NcmVector
  *
- * Convert @cv to a GVariant of the type "ad" using the same memory space.
- * The vector @cv should not be modified during the variant existence.
- * If the vector has stride != 1 then ncm_vector_get_variant() is called.
+ * Creates a #GVariant of type `ad` sharing the data of @cv, which must not change while
+ * the variant exists; with a stride other than one it copies, as ncm_vector_get_variant().
  *
- * Returns: (transfer full): A #GVariant of the type "ad".
+ * Returns: (transfer full): the #GVariant.
  */
 GVariant *
 ncm_vector_peek_variant (const NcmVector *cv)
@@ -737,12 +701,11 @@ ncm_vector_peek_variant (const NcmVector *cv)
 /**
  * ncm_vector_log_vals:
  * @cv: a constant #NcmVector
- * @prestr: initial string
- * @format: float format
- * @cr: whether to include a carriage return
+ * @prestr: prefix
+ * @format: printf format of one component
+ * @cr: whether to end with a newline
  *
- * Log the values of @cv using @prestr and @format.
- *
+ * Logs the components of @cv.
  */
 void
 ncm_vector_log_vals (const NcmVector *cv, const gchar *prestr, const gchar *format, gboolean cr)
@@ -767,13 +730,12 @@ ncm_vector_log_vals (const NcmVector *cv, const gchar *prestr, const gchar *form
 /**
  * ncm_vector_log_vals_avpb:
  * @cv: a constant #NcmVector
- * @prestr: initial string
- * @format: float format
- * @a: a double
- * @b: a double
+ * @prestr: prefix
+ * @format: printf format of one component
+ * @a: factor $a$
+ * @b: offset $b$
  *
- * Log the values of (@a $\times$ @cv $+$ @b) using @prestr and @format.
- *
+ * Logs $a v_i + b$ for each component $v_i$ of @cv, ending with a newline.
  */
 void
 ncm_vector_log_vals_avpb (const NcmVector *cv, const gchar *prestr, const gchar *format, const gdouble a, const gdouble b)
@@ -797,13 +759,12 @@ ncm_vector_log_vals_avpb (const NcmVector *cv, const gchar *prestr, const gchar 
 /**
  * ncm_vector_log_vals_func:
  * @cv: a constant #NcmVector
- * @prestr: initial string
- * @format: float format
+ * @prestr: prefix
+ * @format: printf format of one component
  * @f: (scope notified): a #NcmVectorCompFunc
- * @user_data: user data used in @f
+ * @user_data: user data
  *
- * Log the values of @f(@cv) using @prestr and @format.
- *
+ * Logs @f of each component of @cv, called with @user_data, ending with a newline.
  */
 void
 ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar *format, NcmVectorCompFunc f, gpointer user_data)
@@ -826,11 +787,11 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
 
 /**
  * ncm_vector_const_new_gsl: (skip)
- * @gv: constant #gsl_vector from [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/doc/html/index.html)
+ * @gv: a constant #gsl_vector
  *
- * This function converts the #gsl_vector @gv into a new constant #NcmVector.
+ * Creates a constant vector over @gv, which must outlive it.
  *
- * Returns: A new constant #NcmVector.
+ * Returns: (transfer full): a new constant #NcmVector.
  */
 
 /**
@@ -838,7 +799,7 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  * @cv: a constant #NcmVector
  * @i: component index
  *
- * Returns: The @i-th component of the vector @cv.
+ * Returns: the component @i.
  */
 
 /**
@@ -846,7 +807,9 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  * @cv: a constant #NcmVector
  * @i: component index
  *
- * Returns: The @i-th component of the vector @cv assuming stride == 1.
+ * Same as ncm_vector_get(), for a vector of stride one.
+ *
+ * Returns: the component @i.
  */
 
 /**
@@ -854,7 +817,7 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  * @cv: a #NcmVector
  * @i: component index
  *
- * Returns: A pointer to the @i-th component of the vector @cv.
+ * Returns: a pointer to the component @i.
  */
 
 /**
@@ -862,7 +825,9 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  * @cv: a #NcmVector
  * @i: component index
  *
- * Returns: A pointer to the @i-th component of the vector @cv assuming stride == 1.
+ * Same as ncm_vector_ptr(), for a vector of stride one.
+ *
+ * Returns: a pointer to the component @i.
  */
 
 /**
@@ -870,133 +835,120 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  * @cv: a constant #NcmVector
  * @i: component index
  *
- * Returns: A constant pointer to the @i-th component of the vector @cv.
+ * Returns: a constant pointer to the component @i.
  */
 
 /**
  * ncm_vector_set:
  * @cv: a #NcmVector
  * @i: component index
- * @val: a constant double
+ * @val: a double
  *
- * This function sets the value of the @i-th component of the vector @cv to @val.
+ * Sets the component @i to @val.
  */
 
 /**
  * ncm_vector_fast_set:
  * @cv: a #NcmVector
  * @i: component index
- * @val: a constant double
+ * @val: a double
  *
- * This function sets the value of the @i-th component of the vector @cv to @val assuming stride == 1.
+ * Same as ncm_vector_set(), for a vector of stride one.
  */
 
 /**
  * ncm_vector_addto:
  * @cv: a #NcmVector
  * @i: component index
- * @val: a constant double
+ * @val: a double
  *
- * This function adds @val to the value of the @i-th component of the vector @cv.
- *
+ * Adds @val to the component @i.
  */
 
 /**
  * ncm_vector_fast_addto:
  * @cv: a #NcmVector
  * @i: component index
- * @val: a constant double
+ * @val: a double
  *
- * This function adds @val to the value of the @i-th component of @cv assuming stride == 1.
- *
+ * Same as ncm_vector_addto(), for a vector of stride one.
  */
 
 /**
  * ncm_vector_subfrom:
  * @cv: a #NcmVector
  * @i: component index
- * @val: a constant double
+ * @val: a double
  *
- * This function subtracts @val from the value of the @i-th component of the vector @cv.
- *
+ * Subtracts @val from the component @i.
  */
 
 /**
  * ncm_vector_fast_subfrom:
  * @cv: a #NcmVector
  * @i: component index
- * @val: a constant double
+ * @val: a double
  *
- * This function subtracts @val from the value of the @i-th component of the vector @cv assuming stride == 1.
- *
+ * Same as ncm_vector_subfrom(), for a vector of stride one.
  */
 
 /**
  * ncm_vector_mulby:
  * @cv: a #NcmVector
  * @i: component index
- * @val: a constant double
+ * @val: a double
  *
- * This function multiplies the @i-th component of the vector @cv by @val.
- *
+ * Multiplies the component @i by @val.
  */
 
 /**
  * ncm_vector_fast_mulby:
  * @cv: a #NcmVector
  * @i: component index
- * @val: a constant double
+ * @val: a double
  *
- * This function multiplies the @i-th component of the vector by @val assuming stride == 1.
- *
+ * Same as ncm_vector_mulby(), for a vector of stride one.
  */
 
 /**
  * ncm_vector_set_all:
  * @cv: a #NcmVector
- * @val: a constant double
+ * @val: a double
  *
- * This function sets all the components of the vector @cv to the value @val.
- *
+ * Sets every component to @val.
  */
 
 /**
  * ncm_vector_set_data:
  * @cv: a #NcmVector
- * @array: (array length=size) (element-type double): a pointer to a double array
- * @size: data array size
+ * @array: (array length=size) (element-type double): the values
+ * @size: length of @array
  *
- * This function sets all the components of the vector @cv using the data @array.
- * @size must match the vector size.
- *
+ * Sets the components of @cv to @array, whose length must be that of @cv.
  */
 
 /**
  * ncm_vector_set_array:
  * @cv: a #NcmVector
- * @array: (array) (element-type double): a pointer to a double GArray
+ * @array: (array) (element-type double): a #GArray of doubles
  *
- * This function sets all the components of the vector @cv using the data array @array.
- * @array->len must match the vector size.
- *
+ * Sets the components of @cv to @array, whose length must be that of @cv.
  */
 
 /**
  * ncm_vector_scale:
  * @cv: a #NcmVector
- * @val: a constant double
+ * @val: a double
  *
- * This function multiplies the components of the vector @cv by the constant factor @val.
- *
+ * Multiplies every component by @val.
  */
 
 /**
  * ncm_vector_add_constant:
  * @cv: a #NcmVector
- * @val: a constant double
+ * @val: a double
  *
- * This function adds the constant @val to all components of the vector @cv.
- *
+ * Adds @val to every component.
  */
 
 /**
@@ -1004,19 +956,15 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  * @cv1: a #NcmVector
  * @cv2: a constant #NcmVector
  *
- * This function multiplies the components of the vector @cv1 by the components of the vector @cv2.
- * The two vectors must have the same length.
- *
+ * Multiplies @cv1 by @cv2, component by component.
  */
 
 /**
  * ncm_vector_div:
- * @cv1: a #NcmVector, numerator
- * @cv2: a #NcmVector, denominator
+ * @cv1: a #NcmVector
+ * @cv2: a constant #NcmVector
  *
- * This function divides the components of the vector @cv1 by the components of the vector @cv2.
- * The two vectors must have the same length.
- *
+ * Divides @cv1 by @cv2, component by component.
  */
 
 /**
@@ -1024,9 +972,7 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  * @cv1: a #NcmVector
  * @cv2: a constant #NcmVector
  *
- * This function adds the components of the vector @cv2 to the components of the vector @cv1.
- * The two vectors must have the same length.
- *
+ * Adds @cv2 to @cv1.
  */
 
 /**
@@ -1034,17 +980,22 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  * @cv1: a #NcmVector
  * @cv2: a constant #NcmVector
  *
- * This function subtracts the components of the vector @cv2 to the components of the vector @cv1.
- * The two vectors must have the same length.
+ * Subtracts @cv2 from @cv1.
+ */
+
+/**
+ * ncm_vector_sqr_dist:
+ * @cv1: a constant #NcmVector
+ * @cv2: a constant #NcmVector
  *
+ * Returns: $\sum_i (v_{1,i} - v_{2,i})^2$.
  */
 
 /**
  * ncm_vector_set_zero:
  * @cv: a #NcmVector
  *
- * This function sets all the components of the vector @cv to zero.
- *
+ * Sets every component to zero.
  */
 
 /**
@@ -1052,9 +1003,7 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  * @cv1: a #NcmVector
  * @cv2: a constant #NcmVector
  *
- * This function copies the components of the vector @cv2 into the vector @cv1.
- * The two vectors must have the same length.
- *
+ * Copies @cv2 into @cv1.
  */
 
 /**
@@ -1075,82 +1024,62 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  * ncm_vector_get_array:
  * @cv: a #NcmVector
  *
- * This function returns the array of @cv. It is only applied if the vector @cv was created with ncm_vector_new_array ().
+ * @cv must have been created by ncm_vector_new_array().
  *
- * Returns: (transfer container) (element-type double): A pointer to a double GArray.
+ * Returns: (transfer full) (element-type double): a new reference to the #GArray of @cv.
  */
 
 /**
  * ncm_vector_dup_array:
  * @cv: a #NcmVector
  *
- * This function allocates a new array and copy the contents of the vector @cv into it. The array must not be freed.
- *
- * Returns: (transfer full) (element-type double): A new pointer to a double GArray.
+ * Returns: (transfer full) (element-type double): a new #GArray with a copy of the components.
  */
 
 /**
  * ncm_vector_data:
  * @cv: a #NcmVector
  *
- * This function returns a pointer to the vector @cv data.
- *
- * Returns: (transfer none): A pointer to @cv data.
+ * Returns: (transfer none): a pointer to the first component.
  */
 
 /**
  * ncm_vector_const_data:
  * @cv: a constant #NcmVector
  *
- * This function returns a constant pointer to the vector @cv data.
- *
- * Returns: (transfer none): A constant pointer to the vector @cv data.
+ * Returns: (transfer none): a constant pointer to the first component.
  */
 
 /**
  * ncm_vector_replace_data: (skip)
  * @cv: a #NcmVector
- * @data: a pointer to the new data
+ * @data: the new data
  *
- * This function replaces the data of the vector @cv by @data.
- * It does not make any check on the size of the new data.
- * It assumes that the new data has the same size of the vector @cv
- * and that the original data was statically allocated.
- *
- * It is useful when one needs to convert a data pointer to a #NcmVector.
- *
+ * Points @cv to @data, keeping its length and stride. The previous data must not be owned
+ * by @cv; nothing is checked.
  */
 /**
  * ncm_vector_replace_data_full: (skip)
  * @cv: a #NcmVector
- * @data: a pointer to the new data
- * @size: the size of the new data
- * @stride: the step-size from one element to the next in physical memory, measured in units of double
+ * @data: the new data
+ * @size: number of components
+ * @stride: distance between consecutive components, in doubles
  *
- * This function replaces the data of the vector @cv by @data.
- * It does not make any check on the size of the new data.
- * It assumes that the new data has the same size of the vector @cv
- * and that the original data was statically allocated.
- *
- * It is useful when one needs to convert a data pointer to a #NcmVector.
- *
+ * Points @cv to @data with the given length and stride. The previous data must not be
+ * owned by @cv; nothing is checked.
  */
 /**
  * ncm_vector_gsl: (skip)
  * @cv: a #NcmVector
  *
- * This function returns a pointer to the #gsl_vector associated to the vector @cv.
- *
- * Returns: a pointer to a #gsl_vector.
+ * Returns: the #gsl_vector of @cv.
  */
 
 /**
  * ncm_vector_const_gsl: (skip)
  * @cv: a constant #NcmVector
  *
- * This function returns a constant pointer to the #gsl_vector associated to the vector @cv.
- *
- * Returns: a constant pointer to a #gsl_vector.
+ * Returns: the constant #gsl_vector of @cv.
  */
 
 /**
@@ -1158,9 +1087,7 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  * @cv1: a constant #NcmVector
  * @cv2: a constant #NcmVector
  *
- * This function returns the dot product of the #NcmVector @cv1 and @cv2.
- *
- * Returns: $\vec{v}_1 \cdot \vec{v}_2$.
+ * Returns: $\sum_i v_{1,i} v_{2,i}$.
  */
 gdouble
 ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2)
@@ -1172,74 +1099,58 @@ ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2)
  * ncm_vector_len:
  * @cv: a constant #NcmVector
  *
- * Computes the number of components in the #NcmVector @cv.
- *
- * Returns: the number of components in @cv.
+ * Returns: the number of components.
  */
 
 /**
  * ncm_vector_stride:
  * @cv: a constant #NcmVector
  *
- * This function returns the stride of #NcmVector @cv.
- *
- * Returns: the stride of @cv.
+ * Returns: the distance between consecutive components, in doubles.
  */
 
 /**
  * ncm_vector_get_max:
  * @cv: a constant #NcmVector
  *
- * Gets the maximum value of the vector components.
- *
- * Returns: the maximum value of the vector components.
+ * Returns: the largest component.
  */
 
 /**
  * ncm_vector_get_min:
  * @cv: a constant #NcmVector
  *
- * Gets the minimum value of the vector components.
- *
- * Returns: the minimum value of the vector components.
+ * Returns: the smallest component.
  */
 
 /**
  * ncm_vector_get_max_index:
  * @cv: a constant #NcmVector
  *
- * Gets the index of the maximal vector component.
- *
- * Returns: the index of the maximal component.
+ * Returns: the index of the largest component.
  */
 
 /**
  * ncm_vector_get_min_index:
  * @cv: a constant #NcmVector
  *
- * Gets the index of the minimal vector component.
- *
- * Returns: the index of the minimal component.
+ * Returns: the index of the smallest component.
  */
 
 /**
  * ncm_vector_get_minmax:
  * @cv: a constant #NcmVector
- * @min: (out): minimum component value of @cv
- * @max: (out): maximum component value of @cv
+ * @min: (out): the smallest component
+ * @max: (out): the largest component
  *
- * Gets the minimum/maximum value of the vector components.
- *
+ * Finds the smallest and largest components.
  */
 
 /**
  * ncm_vector_is_finite:
  * @cv: a constant #NcmVector
  *
- * Tests all entries, if one or more are not finite return FALSE.
- * Otherwise returns TRUE.
- *
- * Returns: whether all components of @cv are finite.
+ * Returns: whether every component is finite.
  */
 
 /**
@@ -1247,44 +1158,35 @@ ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2)
  * @cv1: a constant #NcmVector
  * @cv2: a constant #NcmVector
  *
- * Compare @cv1 and @cv2 and returns TRUE if all components
- * of @cv1 are less than @cv2's.
- *
- * Returns: whether @cv1 < @cv2.
+ * Returns: whether $v_{1,i} < v_{2,i}$ for every $i$.
  */
 /**
  * ncm_vector_lteq:
  * @cv1: a constant #NcmVector
  * @cv2: a constant #NcmVector
  *
- * Compare @cv1 and @cv2 and returns TRUE if all components
- * of @cv1 are less than or equal to @cv2's.
- *
- * Returns: whether @cv1 <= @cv2.
+ * Returns: whether $v_{1,i} \leq v_{2,i}$ for every $i$.
  */
 /**
  * ncm_vector_between:
  * @cv: a constant #NcmVector
- * @cv_lb: a constant #NcmVector
- * @cv_ub: a constant #NcmVector
- * @type: an int
+ * @cv_lb: a constant #NcmVector of lower bounds
+ * @cv_ub: a constant #NcmVector of upper bounds
+ * @type: 0 or 1
  *
- * Check whether all components of @cv are between components
- * of @cv_lb and @cv_ub.
- * If type == 0, compare using @cv_lb <= @cv <  @cv_ub;
- * If type == 1, compare using @cv_lb <  @cv <= @cv_ub;
+ * Checks every component against its bounds: $l_i \leq v_i < u_i$ for @type 0, and
+ * $l_i < v_i \leq u_i$ for @type 1. Aborts for other values of @type.
  *
- * Returns: whether @cv is between @cv_lb and @cv_ub.
+ * Returns: whether every component is within its bounds.
  */
 
 /**
  * ncm_vector_get_absminmax:
  * @cv: a constant #NcmVector
- * @absmin: (out): minimum component absolute value of @cv
- * @absmax: (out): maximum component absolute value of @cv
+ * @absmin: (out): the smallest absolute value
+ * @absmax: (out): the largest absolute value
  *
- * Gets the minimum/maximum absolute value of @cv components.
- *
+ * Finds the smallest and largest absolute values of the components.
  */
 void
 ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax)
@@ -1306,13 +1208,13 @@ ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax)
 
 /**
  * ncm_vector_find_closest_index:
- * @cv: a @NcmVector.
- * @x: a gdouble $x$
+ * @cv: a constant #NcmVector
+ * @x: a double $x$
  *
- * Assuming that @cv elements are in increasing order ($x_i < x_{i+1}$)
- * finds the largest index $i$ such the $x_i < x$. It also assumes that
- * $x_0 < x < x_{\mathrm{len} - 1}$.
+ * Finds by bisection the largest $i < n - 1$ with $v_i \leq x$, for components in
+ * increasing order and $v_0 \leq x$, where $n$ is the length of @cv.
  *
+ * Returns: the index $i$.
  */
 guint
 ncm_vector_find_closest_index (const NcmVector *cv, const gdouble x)
@@ -1336,11 +1238,10 @@ ncm_vector_find_closest_index (const NcmVector *cv, const gdouble x)
 /**
  * ncm_vector_set_from_variant:
  * @cv: a #NcmVector
- * @var: a #GVariant of type ad
+ * @var: a #GVariant of type `ad`
  *
- * Sets the values of @cv using the variant @var. This function fails
- * if @cv and @var differ in size.
- *
+ * Sets the components of @cv to the elements of @var. A vector of length zero is allocated
+ * with the length of @var. Aborts if @var has another type or length.
  */
 void
 ncm_vector_set_from_variant (NcmVector *cv, GVariant *var)
@@ -1396,11 +1297,10 @@ ncm_vector_dnrm2 (const NcmVector *cv)
 /**
  * ncm_vector_axpy:
  * @cv1: a #NcmVector
- * @alpha: a constant double $\alpha$
+ * @alpha: $\alpha$
  * @cv2: a constant #NcmVector
  *
- * Performs the operation: @cv1$=\alpha\times$ @cv2 $+$ @cv1.
- *
+ * Sets $v_1 \to v_1 + \alpha v_2$.
  */
 void
 ncm_vector_axpy (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
@@ -1417,9 +1317,8 @@ ncm_vector_axpy (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
  * @cv1: a #NcmVector
  * @cv2: a constant #NcmVector
  *
- * Performs a comparison, component-wise, of the two vectors and
- * puts the weighted difference in @cv1.
- *
+ * Sets each component of @cv1 to $|v_{1,i} - v_{2,i}| / \min(|v_{1,i}|, |v_{2,i}|)$, or
+ * to the absolute value of the other component when one of them is zero.
  */
 void
 ncm_vector_cmp (NcmVector *cv1, const NcmVector *cv2)
@@ -1492,9 +1391,9 @@ ncm_vector_cmp2 (const NcmVector *cv1, const NcmVector *cv2, const gdouble relto
  * @cv1: a #NcmVector
  * @cv2: a constant #NcmVector
  *
- * Estimate the round-off error component wise in the
- * subtraction of @cv1 by @cv2.
- *
+ * Sets each component of @cv1 to $\epsilon \max(|v_{1,i}|, |v_{2,i}|) / |v_{2,i} - v_{1,i}|$,
+ * the relative round-off error of the difference, with $\epsilon$ the double precision;
+ * or to one when the components are equal.
  */
 void
 ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2)
@@ -1527,8 +1426,7 @@ ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2)
  * ncm_vector_reciprocal:
  * @cv: a #NcmVector
  *
- * Calculates the reciprocal of @cv.
- *
+ * Sets each component to its reciprocal.
  */
 void
 ncm_vector_reciprocal (NcmVector *cv)
@@ -1548,8 +1446,7 @@ ncm_vector_reciprocal (NcmVector *cv)
  * ncm_vector_square:
  * @cv: a #NcmVector
  *
- * Calculates the term-wise square of @cv.
- *
+ * Sets each component to its square.
  */
 void
 ncm_vector_square (NcmVector *cv)
@@ -1569,8 +1466,7 @@ ncm_vector_square (NcmVector *cv)
  * ncm_vector_sqrt:
  * @cv: a #NcmVector
  *
- * Calculates the term-wise square-root of @cv.
- *
+ * Sets each component to its square root.
  */
 void
 ncm_vector_sqrt (NcmVector *cv)
@@ -1589,13 +1485,10 @@ ncm_vector_sqrt (NcmVector *cv)
 /**
  * ncm_vector_hypot:
  * @cv1: a #NcmVector
- * @a: a constant gdouble
+ * @alpha: $\alpha$
  * @cv2: a constant #NcmVector
  *
- * Performs the operation: $x^i_1 = \sqrt{(x^i_1)^2+(\alpha x^i_2)^2}$
- * where $x_1^i$ and $x_2^i$ are the components of @cv1 and @cv2
- * respectively.
- *
+ * Sets $v_{1,i} \to \sqrt{v_{1,i}^2 + (\alpha v_{2,i})^2}$.
  */
 void
 ncm_vector_hypot (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
@@ -1618,9 +1511,7 @@ ncm_vector_hypot (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
  * ncm_vector_sum_cpts:
  * @cv: a constant #NcmVector
  *
- * Calculates the sum of the components.
- *
- * Returns: the sum of the vector @cv components.
+ * Returns: the sum of the components.
  */
 
 
@@ -1628,8 +1519,6 @@ ncm_vector_hypot (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
  * ncm_vector_mean:
  * @cv: a constant #NcmVector
  *
- * Calculates the mean of the components.
- *
- * Returns: the mean of the vector @cv components.
+ * Returns: the mean of the components.
  */
 

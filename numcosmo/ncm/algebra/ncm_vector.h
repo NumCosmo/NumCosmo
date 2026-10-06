@@ -45,14 +45,13 @@ G_DECLARE_FINAL_TYPE (NcmVector, ncm_vector, NCM, VECTOR, GObject)
 
 /**
  * NcmVectorInternal:
- * @NCM_VECTOR_SLICE: Uses [g_slice_*](https://developer.gnome.org/glib/stable/glib-Memory-Slices.html) family functions from [Glib](https://developer.gnome.org/glib/) to alloc and free memory segments.
- * @NCM_VECTOR_GSL_VECTOR: Uses [gsl_vector](https://www.gnu.org/software/gsl/doc/html/vectors.html#vectors) from [GSL](https://www.gnu.org/software/gsl/) as the base object.
- * @NCM_VECTOR_MALLOC: Uses [malloc](https://en.wikipedia.org/wiki/C_dynamic_memory_allocation) for memory allocation and free functions.
- * @NCM_VECTOR_ARRAY: Uses [g_array](https://developer.gnome.org/glib/stable/glib-Arrays.html) from [Glib](https://developer.gnome.org/glib/) as base.
- * @NCM_VECTOR_DERIVED: Uses another #NcmVector (for example, if it is getting a subvector from a #NcmVector).
+ * @NCM_VECTOR_SLICE: data allocated with g_slice_alloc()
+ * @NCM_VECTOR_GSL_VECTOR: data of a #gsl_vector
+ * @NCM_VECTOR_MALLOC: data allocated with malloc() or fftw_alloc_real()
+ * @NCM_VECTOR_ARRAY: data of a #GArray
+ * @NCM_VECTOR_DERIVED: data owned by another object, such as the vector of a subvector
  *
- * This enumerator is only used internally. Only by developers.
- *
+ * Origin of the data of a #NcmVector, used internally.
  */
 typedef enum _NcmVectorInternal /*< prefix=NCM_VECTOR >*/
 {
@@ -73,6 +72,16 @@ struct _NcmVector
   NcmVectorInternal type;
 };
 
+/**
+ * NcmVectorCompFunc:
+ * @v_i: the component $v_i$
+ * @i: its index
+ * @user_data: user data
+ *
+ * Function of a vector component, see ncm_vector_log_vals_func().
+ *
+ * Returns: the value.
+ */
 typedef gdouble (*NcmVectorCompFunc) (gdouble v_i, guint i, gpointer user_data);
 
 #define NCM_N2VECTOR(v) ((NcmVector *) ((v)->content))
@@ -113,7 +122,7 @@ void ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2);
 void ncm_vector_reciprocal (NcmVector *cv);
 void ncm_vector_square (NcmVector *cv);
 void ncm_vector_sqrt (NcmVector *cv);
-void ncm_vector_hypot (NcmVector *cv1, const gdouble a, const NcmVector *cv2);
+void ncm_vector_hypot (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2);
 
 NCM_INLINE gdouble ncm_vector_sum_cpts (const NcmVector *cv);
 NCM_INLINE gdouble ncm_vector_mean (const NcmVector *cv);
@@ -140,6 +149,7 @@ NCM_INLINE void ncm_vector_mul (NcmVector *cv1, const NcmVector *cv2);
 NCM_INLINE void ncm_vector_div (NcmVector *cv1, const NcmVector *cv2);
 NCM_INLINE void ncm_vector_add (NcmVector *cv1, const NcmVector *cv2);
 NCM_INLINE void ncm_vector_sub (NcmVector *cv1, const NcmVector *cv2);
+NCM_INLINE gdouble ncm_vector_sqr_dist (const NcmVector *cv1, const NcmVector *cv2);
 NCM_INLINE void ncm_vector_set_zero (NcmVector *cv);
 NCM_INLINE void ncm_vector_memcpy (NcmVector *cv1, const NcmVector *cv2);
 NCM_INLINE void ncm_vector_memcpy2 (NcmVector *cv1, const NcmVector *cv2, const guint cv1_start, const guint cv2_start, const guint size);
@@ -359,6 +369,29 @@ NCM_INLINE void
 ncm_vector_sub (NcmVector *cv1, const NcmVector *cv2)
 {
   gsl_vector_sub (ncm_vector_gsl (cv1), ncm_vector_const_gsl (cv2));
+}
+
+NCM_INLINE gdouble
+ncm_vector_sqr_dist (const NcmVector *cv1, const NcmVector *cv2)
+{
+  const guint n     = ncm_vector_len (cv1);
+  const guint s1    = ncm_vector_stride (cv1);
+  const guint s2    = ncm_vector_stride (cv2);
+  const gdouble *d1 = ncm_vector_const_data (cv1);
+  const gdouble *d2 = ncm_vector_const_data (cv2);
+  gdouble res       = 0.0;
+  guint i;
+
+  g_assert_cmpuint (n, ==, ncm_vector_len (cv2));
+
+  for (i = 0; i < n; i++)
+  {
+    const gdouble diff = d1[i * s1] - d2[i * s2];
+
+    res += diff * diff;
+  }
+
+  return res;
 }
 
 NCM_INLINE void

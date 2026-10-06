@@ -39,7 +39,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from scipy.integrate import quad
-from scipy.special import (  # pylint: disable=no-name-in-module
+from scipy.special import (
     erf,
     erfc,
     spherical_jn,
@@ -441,7 +441,7 @@ GX, GW = np.polynomial.legendre.leggauss(12)
 
 
 def _gauss_with_kdep(
-    cosmology: Cosmology, kdep: typing.Optional[Nc.XcorKernelRadialKDep]
+    cosmology: Cosmology, kdep: Nc.XcorKernelRadialKDep | None
 ) -> Nc.XcorKernelAnalyticGauss:
     """The baseline Gaussian, optionally carrying a scale dependence.
 
@@ -841,7 +841,7 @@ def test_zero_amplitude_kdep_changes_nothing(cosmology: Cosmology) -> None:
     lmin, lmax = 2, 8
     out = {}
 
-    kdeps: list[tuple[str, typing.Optional[Nc.XcorKernelRadialKDep]]] = [
+    kdeps: list[tuple[str, Nc.XcorKernelRadialKDep | None]] = [
         ("none", None),
         ("zero", Nc.XcorKernelRadialKDepGrowth.new(0.0, 0.05, 1500.0)),
     ]
@@ -872,7 +872,7 @@ def test_kdep_makes_the_integrand_non_separable(cosmology: Cosmology) -> None:
     lmin, lmax = 2, 8
     out = {}
 
-    kdeps: list[tuple[str, typing.Optional[Nc.XcorKernelRadialKDep]]] = [
+    kdeps: list[tuple[str, Nc.XcorKernelRadialKDep | None]] = [
         ("off", None),
         ("on", Nc.XcorKernelRadialKDepGrowth.new(0.3, 0.05, 3000.0)),
     ]

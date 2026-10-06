@@ -26,9 +26,16 @@
 /**
  * NcmFitNLOpt:
  *
- * Interface for NLopt optmization library.
+ * Best-fit finder using the NLopt library.
  *
- * A subclass of #NcmFit that uses the NLopt library to perform the optimization.
+ * It minimizes $-2\ln L$ within the parameter bounds, with the gradient from
+ * ncm_fit_m2lnL_grad() for the gradient-based algorithms, and supports the constraints
+ * of #NcmFit. The initial steps are the free-parameter scales and the absolute
+ * parameter tolerances their abstol; a run stops at #NcmFit:m2lnL-reltol,
+ * #NcmFit:m2lnL-abstol, #NcmFit:params-reltol or after #NcmFit:maxiter evaluations.
+ * At a point the models report invalid (ncm_mset_params_valid()) $-2\ln L$ is
+ * $+\infty$. A global algorithm can be combined with a local one
+ * (ncm_fit_nlopt_local_new()).
  *
  */
 
@@ -268,7 +275,7 @@ _ncm_fit_nlopt_reset (NcmFit *fit)
       ncm_fit_nlopt_set_algo (fit_nlopt, fit_nlopt->nlopt_algo);
 
       if (fit_nlopt->local_nlopt_algo != 0)
-        ncm_fit_nlopt_set_algo (fit_nlopt, fit_nlopt->local_nlopt_algo);
+        ncm_fit_nlopt_set_local_algo (fit_nlopt, fit_nlopt->local_nlopt_algo);
     }
   }
 }
@@ -292,6 +299,7 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
   NcmMSet *mset          = ncm_fit_peek_mset (fit);
   const guint fparam_len = ncm_fit_state_get_fparam_len (fstate);
   gdouble minf           = 0.0;
+  gboolean converged     = FALSE;
 
   NCM_UNUSED (mtype);
 
@@ -300,7 +308,9 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_mset_fparams_get_vector (mset, fparams);
 
   {
-    GArray *ca = g_array_new (FALSE, FALSE, sizeof (NcmFitNLOptConst));
+    /* NLopt keeps pointers to the elements: the array must not be reallocated. */
+    GArray *ca = g_array_sized_new (FALSE, FALSE, sizeof (NcmFitNLOptConst),
+                                    ncm_fit_inequality_constraints_len (fit) + ncm_fit_equality_constraints_len (fit));
     nlopt_result ret;
     guint i;
 
@@ -371,11 +381,20 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
     ret = nlopt_optimize (fit_nlopt->nlopt, ncm_vector_data (fparams), &minf);
 
-    ncm_fit_state_set_m2lnL_prec (fstate,
-                                  GSL_MAX (nlopt_get_ftol_rel (fit_nlopt->nlopt),
-                                           nlopt_get_ftol_abs (fit_nlopt->nlopt) / minf)
-    );
+    {
+      const gdouble ftol_abs = nlopt_get_ftol_abs (fit_nlopt->nlopt);
+      gdouble m2lnL_prec     = nlopt_get_ftol_rel (fit_nlopt->nlopt);
+
+      if (ftol_abs > 0.0)
+        m2lnL_prec = GSL_MAX (m2lnL_prec, ftol_abs / fabs (minf));
+
+      ncm_fit_state_set_m2lnL_prec (fstate, m2lnL_prec);
+    }
     ncm_fit_state_set_params_prec (fstate, nlopt_get_xtol_rel (fit_nlopt->nlopt));
+
+    /* Converged: a tolerance or the stop value was reached, or round-off limited the
+     * progress (NLopt: the result is typically useful). */
+    converged = ((ret > 0) && (ret != NLOPT_MAXEVAL_REACHED) && (ret != NLOPT_MAXTIME_REACHED)) || (ret == NLOPT_ROUNDOFF_LIMITED);
 
     if (ret < 0)
     {
@@ -412,7 +431,7 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
     ncm_fit_state_set_m2lnL_curval (fstate, minf);
   }
 
-  return TRUE;
+  return converged;
 }
 
 static gdouble
@@ -520,9 +539,10 @@ _ncm_fit_nlopt_get_desc (NcmFit *fit)
  * @gtype: a #NcmFitGradType
  * @algo: a #NcmFitNloptAlgorithm
  *
- * Creates a new #NcmFitNLOpt object using the specified @algo.
+ * Creates a #NcmFitNLOpt for @lh and @mset using @algo, with gradients computed as
+ * @gtype says.
  *
- * Returns: (transfer full): a new #NcmFitNLOpt object.
+ * Returns: (transfer full): a new #NcmFitNLOpt.
  */
 NcmFit *
 ncm_fit_nlopt_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, NcmFitNloptAlgorithm algo)
@@ -544,10 +564,10 @@ ncm_fit_nlopt_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, NcmFi
  * @algo: a #NcmFitNloptAlgorithm
  * @local_algo: a #NcmFitNloptAlgorithm
  *
- * Creates a new #NcmFitNLOpt object using the specified @algo and @local_algo.
- * The @local_algo is used to refine the solution found by @algo.
+ * Creates a #NcmFitNLOpt as ncm_fit_nlopt_new(), with @local_algo as the local
+ * optimizer of @algo (nlopt_set_local_optimizer()).
  *
- * Returns: (transfer full): a new #NcmFitNLOpt object.
+ * Returns: (transfer full): a new #NcmFitNLOpt.
  */
 NcmFit *
 ncm_fit_nlopt_local_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, NcmFitNloptAlgorithm algo, NcmFitNloptAlgorithm local_algo)
@@ -568,9 +588,9 @@ ncm_fit_nlopt_local_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype,
  * @mset: a #NcmMSet
  * @gtype: a #NcmFitGradType
  *
- * Creates a new #NcmFitNLOpt object using the default algorithm.
+ * Creates a #NcmFitNLOpt as ncm_fit_nlopt_new() with #NCM_FIT_NLOPT_LN_NELDERMEAD.
  *
- * Returns: (transfer full): a new #NcmFitNLOpt object.
+ * Returns: (transfer full): a new #NcmFitNLOpt.
  */
 NcmFit *
 ncm_fit_nlopt_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
@@ -588,11 +608,13 @@ ncm_fit_nlopt_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtyp
  * @lh: a #NcmLikelihood
  * @mset: a #NcmMSet
  * @gtype: a #NcmFitGradType
- * @algo_name: a string containing the name of the algorithm to be used
+ * @algo_name: (nullable): name or nick of a #NcmFitNloptAlgorithm, or "algo:local_algo"
  *
- * Creates a new #NcmFitNLOpt object using the specified @algo_name.
+ * Creates a #NcmFitNLOpt with the algorithm named @algo_name, as ncm_fit_nlopt_new();
+ * with two names separated by a colon, as ncm_fit_nlopt_local_new(). %NULL selects
+ * #NCM_FIT_NLOPT_LN_NELDERMEAD. An unknown name aborts.
  *
- * Returns: (transfer full): a new #NcmFitNLOpt object.
+ * Returns: (transfer full): a new #NcmFitNLOpt.
  */
 NcmFit *
 ncm_fit_nlopt_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, gchar *algo_name)
@@ -646,10 +668,10 @@ ncm_fit_nlopt_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtyp
 
 /**
  * ncm_fit_nlopt_set_algo:
- * @fit_nlopt: a #NcmFitNLOpt.
- * @algo: a #NcmFitNloptAlgorithm.
+ * @fit_nlopt: a #NcmFitNLOpt
+ * @algo: a #NcmFitNloptAlgorithm
  *
- * Sets the algorithm to be used by @fit_nlopt.
+ * Sets the algorithm of @fit_nlopt to @algo.
  *
  */
 void
@@ -661,28 +683,23 @@ ncm_fit_nlopt_set_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
   const guint fparam_len = ncm_fit_state_get_fparam_len (fstate);
 
   if (fit_nlopt->nlopt_algo != algo)
+  {
     g_clear_pointer (&fit_nlopt->nlopt, nlopt_destroy);
+    g_clear_pointer (&fit_nlopt->desc, g_free);
+    fit_nlopt->nlopt_algo = algo;
+  }
 
   if (fit_nlopt->nlopt == NULL)
-  {
-    fit_nlopt->nlopt      = nlopt_create ((nlopt_algorithm) algo, fparam_len);
-    fit_nlopt->nlopt_algo = algo;
-  }
-
-  if (fit_nlopt->nlopt_algo != algo)
-  {
-    fit_nlopt->nlopt_algo = algo;
-    g_clear_pointer (&fit_nlopt->desc, g_free);
-  }
+    fit_nlopt->nlopt = nlopt_create ((nlopt_algorithm) algo, fparam_len);
 }
 
 /**
  * ncm_fit_nlopt_set_local_algo:
- * @fit_nlopt: a #NcmFitNLOpt.
- * @algo: a #NcmFitNloptAlgorithm.
+ * @fit_nlopt: a #NcmFitNLOpt
+ * @algo: a #NcmFitNloptAlgorithm
  *
- * Sets the local algorithm to be used by @fit_nlopt. This algorithm is used to
- * refine the solution found by the main algorithm.
+ * Sets the local optimizer of @fit_nlopt's algorithm to @algo
+ * (nlopt_set_local_optimizer()).
  *
  */
 void
@@ -694,18 +711,13 @@ ncm_fit_nlopt_set_local_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
   const guint fparam_len = ncm_fit_state_get_fparam_len (fstate);
 
   if (fit_nlopt->local_nlopt_algo != algo)
+  {
     g_clear_pointer (&fit_nlopt->local_nlopt, nlopt_destroy);
+    g_clear_pointer (&fit_nlopt->desc, g_free);
+    fit_nlopt->local_nlopt_algo = algo;
+  }
 
   if (fit_nlopt->local_nlopt == NULL)
-  {
-    fit_nlopt->local_nlopt      = nlopt_create ((nlopt_algorithm) algo, fparam_len);
-    fit_nlopt->local_nlopt_algo = algo;
-  }
-
-  if (fit_nlopt->local_nlopt_algo != algo)
-  {
-    fit_nlopt->local_nlopt_algo = algo;
-    g_clear_pointer (&fit_nlopt->desc, g_free);
-  }
+    fit_nlopt->local_nlopt = nlopt_create ((nlopt_algorithm) algo, fparam_len);
 }
 

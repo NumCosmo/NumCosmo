@@ -26,12 +26,13 @@ runs:
       uses: conda-incubator/setup-miniconda@v4
       with:
         miniforge-version: latest
+        conda-remove-defaults: "true"
         python-version: ${{ inputs.python-version }}
         activate-environment: ${{ env.CONDA_ENV }}
     - name: Select lock file
       # A lock file is used only if it exists for this runner AND was solved
       # from the current environment.yml; otherwise warn and solve. The
-      # check-conda-locks job is what fails loudly on a stale lock.
+      # lint job is what fails loudly on a stale lock.
       id: lock
       shell: bash
       run: |

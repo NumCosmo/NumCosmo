@@ -47,12 +47,11 @@ GQuark ncm_cfg_error_quark (void);
 
 /**
  * NcmCfgError:
- * @NCM_CFG_ERROR_INVALID_FFTW_FLAG: Invalid FFTW flag.
- * @NCM_CFG_ERROR_INVALID_FFTW_FLAG_STRING: Invalid FFTW flag string.
- * @NCM_CFG_ERROR_INVALID_FFTW_TIMELIMIT: Invalid FFTW planner timelimit.
+ * @NCM_CFG_ERROR_INVALID_FFTW_FLAG: invalid FFTW planner flag
+ * @NCM_CFG_ERROR_INVALID_FFTW_FLAG_STRING: invalid FFTW planner flag name
+ * @NCM_CFG_ERROR_INVALID_FFTW_TIMELIMIT: invalid FFTW planner time limit
  *
- * Error codes for the ncm_cfg namespace.
- *
+ * Error codes of the #NCM_CFG_ERROR domain.
  */
 typedef enum _NcmCfgError /*< prefix=NCM_CFG_ERROR_INVALID_FFTW >*/
 {
@@ -61,6 +60,12 @@ typedef enum _NcmCfgError /*< prefix=NCM_CFG_ERROR_INVALID_FFTW >*/
   NCM_CFG_ERROR_INVALID_FFTW_TIMELIMIT,
 } NcmCfgError;
 
+/**
+ * NcmCfgLoggerFunc:
+ * @msg: the log message
+ *
+ * Function receiving log messages, see ncm_cfg_set_log_handler().
+ */
 typedef void (*NcmCfgLoggerFunc) (const gchar *msg);
 
 void ncm_cfg_init (void);
@@ -75,6 +80,7 @@ void ncm_cfg_register_obj (GType obj);
 guint ncm_cfg_mpi_nslaves (void);
 gchar *ncm_cfg_get_fullpath (const gchar *filename, ...);
 const gchar *ncm_cfg_get_fullpath_base (void);
+gboolean ncm_cfg_fullpath_base_is_legacy (void);
 
 void ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc);
 void ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries);
@@ -86,8 +92,9 @@ void ncm_cfg_enum_print_all (GType enum_type, const gchar *header);
 
 void ncm_cfg_lock_plan_fftw (void);
 void ncm_cfg_unlock_plan_fftw (void);
-gboolean ncm_cfg_load_fftw_wisdom (const gchar *filename, ...);
-gboolean ncm_cfg_save_fftw_wisdom (const gchar *filename, ...);
+gboolean ncm_cfg_fftw_plan_begin (const gchar *key, ...) G_GNUC_PRINTF (1, 2);
+void ncm_cfg_fftw_plan_end (gboolean first);
+void ncm_cfg_fftw_plan_destroy (gpointer plan);
 gboolean ncm_cfg_exists (const gchar *filename, ...);
 
 void ncm_cfg_set_logfile (gchar *filename);
@@ -134,8 +141,30 @@ const gchar *ncm_cfg_get_commit_hash (void);
 
 /* Macros */
 
+/**
+ * NCM_CFG_DATA_DIR_ENV:
+ *
+ * Name of the environment variable with the directory searched first for data files,
+ * see ncm_cfg_get_data_filename().
+ */
 #define NCM_CFG_DATA_DIR_ENV "NUMCOSMO_DATA_DIR"
 
+/**
+ * NCM_CFG_HOME_ENV:
+ *
+ * Name of the environment variable that sets the NumCosmo user data directory, see
+ * ncm_cfg_init().
+ */
+#define NCM_CFG_HOME_ENV "NUMCOSMO_HOME"
+
+/**
+ * NCM_CHECK_PREPARED:
+ * @obj: an object with a `prepared` member
+ * @name: the calling method
+ *
+ * Aborts if @obj is not prepared. Expands to nothing unless NumCosmo is built with
+ * `NUMCOSMO_CHECK_PREPARE`.
+ */
 #ifdef NUMCOSMO_CHECK_PREPARE
 #define NCM_CHECK_PREPARED(obj, name)                                      \
         G_STMT_START {                                                     \
@@ -146,9 +175,26 @@ const gchar *ncm_cfg_get_commit_hash (void);
 #define NCM_CHECK_PREPARED(obj, name)
 #endif /* NUMCOSMO_CHECK_PREPARE */
 
+/**
+ * NCM_ZERO_LIMIT:
+ *
+ * Magnitude below which #NcDistance and #NcWLSurfaceMassDensity treat the curvature
+ * $\Omega_{k0}$ as zero, that is, the universe as flat.
+ */
 #define NCM_ZERO_LIMIT 1e-13
+
+/**
+ * NCM_DEFAULT_PRECISION:
+ *
+ * Default relative tolerance of the numerical methods.
+ */
 #define NCM_DEFAULT_PRECISION 1e-7
 
+/**
+ * NCM_THREAD_POOL_MAX:
+ *
+ * Maximum number of threads of the global pool of #NcmFuncEval.
+ */
 #ifndef NCM_THREAD_POOL_MAX
 #define NCM_THREAD_POOL_MAX 5
 #endif
@@ -161,6 +207,12 @@ const gchar *ncm_cfg_get_commit_hash (void);
 #define mpz_clears ncm_mpz_clears
 #endif /* mpz_inits */
 
+/**
+ * NCM_FITS_ERROR:
+ * @status: a CFITSIO status
+ *
+ * Aborts with the CFITSIO error message if @status is nonzero.
+ */
 #ifndef NUMCOSMO_GIR_SCAN
 #define NCM_FITS_ERROR(status)                     \
         G_STMT_START {                             \

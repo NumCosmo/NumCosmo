@@ -45,7 +45,6 @@ def fixture_dc2_like_file(tmp_path: Path) -> Path:
     """Create a small FITS file mimicking a DC2-style true-count catalog."""
     pytest.importorskip("astropy")
     # flake8: noqa: E402
-    # pylint: disable=import-outside-toplevel
     from astropy.table import Table
 
     rng = np.random.default_rng(7)

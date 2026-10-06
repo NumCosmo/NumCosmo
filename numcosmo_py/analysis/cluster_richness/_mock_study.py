@@ -23,7 +23,6 @@ model and analyzing them to assess parameter biases and uncertainties.
 """
 
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from rich.console import Console, Group
@@ -33,15 +32,15 @@ from rich.table import Table as RichTable
 
 from numcosmo_py import Nc, Ncm
 
+from ._analyzer import ClusterData, CutAnalyzer
+from ._database import BestfitDatabase
 from ._parameters import (
     CutAnalysisResult,
     dup_model,
-    model_params_as_list,
     get_model_free_param_names,
+    model_params_as_list,
 )
 from ._utils import PARAM_FORMAT
-from ._analyzer import CutAnalyzer, ClusterData
-from ._database import BestfitDatabase
 
 
 def _get_default_console() -> Console:
@@ -72,7 +71,7 @@ class MockStudy:
         fiducial_results: dict[float, CutAnalysisResult] | None = None,
         db_path: Path = Path("bestfits.db"),
         recompute: bool = False,
-        console: Optional[Console] = None,
+        console: Console | None = None,
     ):
         """Initialize mock study.
 

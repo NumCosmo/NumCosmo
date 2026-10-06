@@ -39,7 +39,11 @@
 
 #include <glib/gstdio.h>
 #include <errno.h>
+#include <signal.h>
 #include <unistd.h>
+
+static void _nc_data_download_lock_set_owner (const gchar *lockdir);
+static gboolean _nc_data_download_lock_owner_is_dead (const gchar *lockdir);
 
 gboolean
 _nc_data_download_lock (const gchar *lockpath, const gchar *readypath, gint max_wait_s, gchar **lockdir)
@@ -79,12 +83,17 @@ _nc_data_download_lock (const gchar *lockpath, const gchar *readypath, gint max_
       return FALSE;
     }
 
+    if (_nc_data_download_lock_owner_is_dead (*lockdir))
+      break;  /* owner process no longer exists on this host: take it over */
+
     if (waited >= max_wait_s)
-      break;  /* stale lock from a killed run: take it over */
+      break;  /* owner unknown or on another host: take it over */
 
     g_usleep (G_USEC_PER_SEC);
     waited++;
   }
+
+  _nc_data_download_lock_set_owner (*lockdir);
 
   if (g_file_test (readypath, G_FILE_TEST_EXISTS))
   {
@@ -97,24 +106,86 @@ _nc_data_download_lock (const gchar *lockpath, const gchar *readypath, gint max_
   return TRUE;
 }
 
+static void
+_nc_data_download_lock_set_owner (const gchar *lockdir)
+{
+  gchar *owner    = g_build_filename (lockdir, "owner", NULL);
+  gchar *contents = g_strdup_printf ("%d@%s\n", (gint) getpid (), g_get_host_name ());
+
+  /* Without an owner file, waiters take the lock over after max_wait_s. */
+  if (!g_file_set_contents (owner, contents, -1, NULL))
+    g_unlink (owner);
+
+  g_free (contents);
+  g_free (owner);
+}
+
+static gboolean
+_nc_data_download_lock_owner_is_dead (const gchar *lockdir)
+{
+  gchar *owner    = g_build_filename (lockdir, "owner", NULL);
+  gchar *contents = NULL;
+  gboolean dead   = FALSE;
+
+  /* No owner file: it is still being written, or an older NumCosmo created the lock. */
+  if (g_file_get_contents (owner, &contents, NULL, NULL))
+  {
+    gchar **fields = g_strsplit (g_strchomp (contents), "@", 2);
+
+    if ((g_strv_length (fields) == 2) && (g_strcmp0 (fields[1], g_get_host_name ()) == 0))
+    {
+      gchar *end       = NULL;
+      const gint64 pid = g_ascii_strtoll (fields[0], &end, 10);
+
+      if ((end != fields[0]) && (*end == '\0') && (pid > 0))
+        dead = (kill ((pid_t) pid, 0) != 0) && (errno == ESRCH);
+    }
+
+    g_strfreev (fields);
+    g_free (contents);
+  }
+
+  g_free (owner);
+
+  return dead;
+}
+
 void
 _nc_data_download_unlock (gchar *lockdir)
 {
   if (lockdir != NULL)
   {
+    gchar *owner = g_build_filename (lockdir, "owner", NULL);
+
+    g_unlink (owner);
+    g_free (owner);
     g_rmdir (lockdir);
     g_free (lockdir);
   }
 }
 
 void
-_nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what)
+_nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what, gchar *lockdir)
 {
   gchar *tmp    = g_strdup_printf ("%s.%d.part", dest, (gint) getpid ());
   GError *error = NULL;
   gint status   = 0;
 
   ncm_message ("# Downloading %s from [%s]...\n", what, url);
+
+  /* Printed once per process, and only on a download. Dropped in 1.0. */
+  if (ncm_cfg_fullpath_base_is_legacy ())
+  {
+    static gsize noticed = 0;
+
+    if (g_once_init_enter (&noticed))
+    {
+      ncm_message ("# The NumCosmo user data directory %s is deprecated; move it to "
+                   "$XDG_DATA_HOME/numcosmo (~/.local/share/numcosmo by default) "
+                   "or set NUMCOSMO_HOME.\n", ncm_cfg_get_fullpath_base ());
+      g_once_init_leave (&noticed, 1);
+    }
+  }
 
   {
     gchar *cmd[] = { "wget", "--tries=3", "--timeout=30", "-O", tmp, (gchar *) url, NULL };
@@ -127,6 +198,7 @@ _nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what)
                        NULL, NULL, NULL, NULL, &status, &error))
     {
       g_unlink (tmp);
+      _nc_data_download_unlock (lockdir);
       g_error ("_nc_data_download_file: cannot run wget for %s. Error: %s. "
                "Please download %s by hand and place it at %s.",
                what, error->message, url, dest);
@@ -135,6 +207,7 @@ _nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what)
     if (status != 0)
     {
       g_unlink (tmp);
+      _nc_data_download_unlock (lockdir);
       g_error ("_nc_data_download_file: wget failed (status %d) fetching %s. "
                "Please download %s by hand and place it at %s.",
                status, what, url, dest);
@@ -145,6 +218,7 @@ _nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what)
   if (g_rename (tmp, dest) != 0)
   {
     g_unlink (tmp);
+    _nc_data_download_unlock (lockdir);
     g_error ("_nc_data_download_file: cannot move %s into place at %s.", what, dest);
   }
 

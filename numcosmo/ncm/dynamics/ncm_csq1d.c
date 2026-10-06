@@ -41,12 +41,13 @@
  * $(\alpha,\delta\gamma)$ together with the residual phase $\delta\theta$.
  * The full mode phase is
  * \begin{equation}
- * \theta(t) = \int_{t_i}^{t}\nu(t')\,\mathrm{d}t' + \delta\theta(t).
+ * \theta(t) = \int_{t_0}^{t}\nu(t')\,\mathrm{d}t' + \delta\theta(t),
  * \end{equation}
+ * from an origin $t_0$; only differences of $\theta$ are meaningful.
  *
  * For derivations, complete equations of motion, and mode-function formulas,
  * see the theoretical background page:
- * <a href="../../theory/csq1d.html">CSQ1D Formalism</a>.
+ * <a href="../../theory/ncm/dynamics/csq1d.html">CSQ1D Formalism</a>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -57,7 +58,6 @@
 #include <complex.h>
 
 #include "ncm/dynamics/ncm_csq1d.h"
-#include "ncm/model/ncm_model_ctrl.h"
 #include "ncm/spline/ncm_ode_spline.h"
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/integration/ncm_diff.h"
@@ -100,7 +100,8 @@ typedef enum _NcmCSQ1DEvolStop
 
 static gdouble _ncm_csq1d_int_nu_dydx       (gdouble y, gdouble x, gpointer userdata);
 static gdouble _ncm_csq1d_delta_theta_dydx  (gdouble y, gdouble x, gpointer userdata);
-static gdouble _ncm_csq1d_delta_theta_wkb_f (gdouble x, gpointer userdata);
+static gdouble _ncm_csq1d_delta_theta_adiab_dydx (gdouble y, gdouble s, gpointer userdata);
+static gdouble _ncm_csq1d_int_nu_back_dydx (gdouble y, gdouble s, gpointer userdata);
 
 typedef struct _NcmCSQ1DPrivate
 {
@@ -114,7 +115,6 @@ typedef struct _NcmCSQ1DPrivate
   gdouble adiab_threshold;
   gdouble prop_threshold;
   gboolean save_evol;
-  NcmModelCtrl *ctrl;
   gpointer cvode;
   gpointer cvode_Up;
   gpointer cvode_Um;
@@ -143,6 +143,11 @@ typedef struct _NcmCSQ1DPrivate
   NcmSpline *gamma_s;
   NcmOdeSpline *delta_theta_s;
   NcmSpline *delta_theta_spline;
+  NcmOdeSpline *delta_theta_adiab_s;
+  NcmSpline *delta_theta_adiab_spline;
+  NcmOdeSpline *int_nu_back_s;
+  NcmSpline *int_nu_back_spline;
+  gdouble t_phase_ref;
   NcmOdeSpline *int_nu_s;
   NcmSpline *int_nu_spline;
   NcmDiff *diff;
@@ -190,7 +195,6 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
   self->adiab_threshold = 0.0;
   self->prop_threshold  = 0.0;
   self->save_evol       = FALSE;
-  self->ctrl            = ncm_model_ctrl_new (NULL);
 
   self->cvode           = NULL;
   self->cvode_init      = FALSE;
@@ -233,7 +237,7 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
   NCM_CVODE_CHECK ((gpointer) self->LS_Um, "SUNLinSol_Dense", 0, );
 
   self->LS_Prop = SUNLinSol_Dense (self->y_Prop, self->A_Prop, self->sunctx);
-  NCM_CVODE_CHECK ((gpointer) self->LS_Um, "SUNLinSol_Dense", 0, );
+  NCM_CVODE_CHECK ((gpointer) self->LS_Prop, "SUNLinSol_Dense", 0, );
 
   self->alpha_s  = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   self->dgamma_s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
@@ -244,8 +248,25 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
 
     self->delta_theta_s      = ncm_ode_spline_new (s, &_ncm_csq1d_delta_theta_dydx);
     self->delta_theta_spline = NULL;
-    ncm_ode_spline_auto_abstol (self->delta_theta_s, TRUE);
     ncm_ode_spline_set_min_subdivisions (self->delta_theta_s, 8);
+    ncm_spline_free (s);
+  }
+
+  {
+    NcmSpline *s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+
+    self->delta_theta_adiab_s      = ncm_ode_spline_new (s, &_ncm_csq1d_delta_theta_adiab_dydx);
+    self->delta_theta_adiab_spline = NULL;
+    ncm_ode_spline_set_min_subdivisions (self->delta_theta_adiab_s, 8);
+    ncm_spline_free (s);
+  }
+
+  {
+    NcmSpline *s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+
+    self->int_nu_back_s      = ncm_ode_spline_new (s, &_ncm_csq1d_int_nu_back_dydx);
+    self->int_nu_back_spline = NULL;
+    ncm_ode_spline_set_min_subdivisions (self->int_nu_back_s, 8);
     ncm_spline_free (s);
   }
 
@@ -254,7 +275,6 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
 
     self->int_nu_s      = ncm_ode_spline_new (s, &_ncm_csq1d_int_nu_dydx);
     self->int_nu_spline = NULL;
-    ncm_ode_spline_auto_abstol (self->int_nu_s, TRUE);
     ncm_ode_spline_set_min_subdivisions (self->int_nu_s, 8);
     ncm_spline_free (s);
   }
@@ -276,6 +296,7 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
   self->vacuum_reltol          = 0.0;
   self->vacuum_max_time        = 0.0;
   self->vacuum_final_time      = 0.0;
+  self->t_phase_ref            = 0.0;
   self->phase_splines_prepared = FALSE;
 }
 
@@ -285,11 +306,12 @@ _ncm_csq1d_dispose (GObject *object)
   NcmCSQ1D *csq1d              = NCM_CSQ1D (object);
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  ncm_model_ctrl_clear (&self->ctrl);
   ncm_spline_clear (&self->alpha_s);
   ncm_spline_clear (&self->dgamma_s);
   ncm_spline_clear (&self->gamma_s);
   ncm_ode_spline_clear (&self->delta_theta_s);
+  ncm_ode_spline_clear (&self->delta_theta_adiab_s);
+  ncm_ode_spline_clear (&self->int_nu_back_s);
   ncm_ode_spline_clear (&self->int_nu_s);
 
   {
@@ -522,7 +544,7 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
                                    PROP_ABSTOL,
                                    g_param_spec_double ("abstol",
                                                         NULL,
-                                                        "Absolute tolerance tolerance",
+                                                        "Absolute tolerance",
                                                         0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
@@ -615,7 +637,7 @@ _ncm_csq1d_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 static gdouble
 _ncm_csq1d_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  g_error ("_ncm_csq1d_eval_xi: not implemented.");
+  g_error ("method eval_xi not implemented by %s.", G_OBJECT_TYPE_NAME (csq1d));
 
   return 0.0;
 }
@@ -623,7 +645,7 @@ _ncm_csq1d_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 static gdouble
 _ncm_csq1d_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  g_error ("_ncm_csq1d_eval_nu: not implemented.");
+  g_error ("method eval_nu not implemented by %s.", G_OBJECT_TYPE_NAME (csq1d));
 
   return 0.0;
 }
@@ -631,7 +653,7 @@ _ncm_csq1d_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 static gdouble
 _ncm_csq1d_eval_int_1_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  g_error ("_ncm_csq1d_eval_int_1_m: not implemented.");
+  g_error ("method eval_int_1_m not implemented by %s.", G_OBJECT_TYPE_NAME (csq1d));
 
   return 0.0;
 }
@@ -639,7 +661,7 @@ _ncm_csq1d_eval_int_1_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 static gdouble
 _ncm_csq1d_eval_int_mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  g_error ("_ncm_csq1d_eval_int_mnu2: not implemented.");
+  g_error ("method eval_int_mnu2 not implemented by %s.", G_OBJECT_TYPE_NAME (csq1d));
 
   return 0.0;
 }
@@ -647,7 +669,7 @@ _ncm_csq1d_eval_int_mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 static gdouble
 _ncm_csq1d_eval_int_qmnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  g_error ("_ncm_csq1d_eval_int_qmnu2: not implemented.");
+  g_error ("method eval_int_qmnu2 not implemented by %s.", G_OBJECT_TYPE_NAME (csq1d));
 
   return 0.0;
 }
@@ -655,7 +677,7 @@ _ncm_csq1d_eval_int_qmnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 static gdouble
 _ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  g_error ("_ncm_csq1d_eval_int_q2mnu2: not implemented.");
+  g_error ("method eval_int_q2mnu2 not implemented by %s.", G_OBJECT_TYPE_NAME (csq1d));
 
   return 0.0;
 }
@@ -663,7 +685,7 @@ _ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 static gdouble
 _ncm_csq1d_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  g_error ("_ncm_csq1d_eval_F1: not implemented.");
+  g_error ("method eval_F1 not implemented by %s.", G_OBJECT_TYPE_NAME (csq1d));
 
   return 0.0;
 }
@@ -691,10 +713,14 @@ _ncm_csq1d_eval_int_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  if (t <= self->t_ode_ini)
-    return 0.0;
+  if (!self->phase_splines_prepared)
+    g_error ("ncm_csq1d_eval_int_nu: phase splines not prepared. "
+             "Call ncm_csq1d_prepare_phase_splines() first.");
 
-  return ncm_spline_eval (self->int_nu_spline, t);
+  if (t >= self->t_phase_ref)
+    return (self->int_nu_spline != NULL) ? ncm_spline_eval (self->int_nu_spline, t) : 0.0;
+  else
+    return (self->int_nu_back_spline != NULL) ? ncm_spline_eval (self->int_nu_back_spline, -t) : 0.0;
 }
 
 static gdouble
@@ -710,19 +736,30 @@ _ncm_csq1d_delta_theta_dydx (gdouble y, gdouble x, gpointer userdata)
   return nu * expm1 (dgamma - gsl_sf_lncosh (alpha));
 }
 
+static void _ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state, gdouble *alpha_reltol, gdouble *dgamma_reltol);
+
+/* The integrals before the phase origin run backwards, in s = -t. */
+
+/* The integrand of delta theta on the adiabatic state of ncm_csq1d_compute_adiab(), the
+ * solution before the numerical evolution starts. */
 static gdouble
-_ncm_csq1d_delta_theta_wkb_f (gdouble x, gpointer userdata)
+_ncm_csq1d_delta_theta_adiab_dydx (gdouble y, gdouble s, gpointer userdata)
+{
+  NcmCSQ1DWS *ws   = (NcmCSQ1DWS *) userdata;
+  const gdouble nu = ncm_csq1d_eval_nu (ws->csq1d, ws->model, -s);
+  NcmCSQ1DState state;
+
+  _ncm_csq1d_compute_adiab (ws->csq1d, ws->model, -s, &state, NULL, NULL);
+
+  return -nu *expm1 (state.gamma - gsl_sf_lncosh (state.alpha));
+}
+
+static gdouble
+_ncm_csq1d_int_nu_back_dydx (gdouble y, gdouble s, gpointer userdata)
 {
   NcmCSQ1DWS *ws = (NcmCSQ1DWS *) userdata;
 
-  const gdouble nu     = ncm_csq1d_eval_nu (ws->csq1d, ws->model, x);
-  const gdouble alpha  = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, x);
-  const gdouble dgamma = -ncm_csq1d_eval_F2 (ws->csq1d, ws->model, x);
-  /*const gdouble sh_dg2 = sinh (0.5 * dgamma); */
-  const gdouble sh_a2 = sinh (0.5 * alpha);
-
-  /*return 2.0 * nu / cosh (alpha) * (sh_dg2 * sh_dg2 - sh_a2 * sh_a2); */
-  return nu * (expm1 (dgamma) - 2.0 * sh_a2 * sh_a2) / cosh (alpha);
+  return -ncm_csq1d_eval_nu (ws->csq1d, ws->model, -s);
 }
 
 static gdouble _ncm_csq1d_F1_func (const gdouble t, gpointer user_data);
@@ -787,10 +824,10 @@ ncm_csq1d_state_free (NcmCSQ1DState *state)
  * @state: a #NcmCSQ1DState
  * @frame: the frame of @state
  * @t: the time of @state
- * @alpha: the alpha of @state
- * @gamma: the gamma of @state
+ * @alpha: $\alpha$
+ * @gamma: $\gamma$
  *
- * Sets the state using the $(\alpha, \gamma)$ parametrization.
+ * Sets @state to the point $(\alpha, \gamma)$ of @frame at @t.
  *
  */
 void
@@ -807,10 +844,11 @@ ncm_csq1d_state_set_ag (NcmCSQ1DState *state, const NcmCSQ1DFrame frame, const g
  * @state: a #NcmCSQ1DState
  * @frame: the frame of @state
  * @t: the time of @state
- * @chi: the chi of @state
- * @Up: the Up of @state
+ * @chi: $\chi = \sinh\alpha$
+ * @Up: $U_+ = \ln\cosh\alpha + \gamma$
  *
- * Sets the state using the $(\chi, U_+)$ parametrization.
+ * Sets @state from $(\chi, U_+)$; $e^{U_+}$ is the component $J_{22}$ of the complex
+ * structure, see ncm_csq1d_state_get_J().
  *
  */
 void
@@ -827,10 +865,11 @@ ncm_csq1d_state_set_up (NcmCSQ1DState *state, const NcmCSQ1DFrame frame, const g
  * @state: a #NcmCSQ1DState
  * @frame: the frame of @state
  * @t: the time of @state
- * @chi: the chi of @state
- * @Um: the Um of @state
+ * @chi: $\chi = \sinh\alpha$
+ * @Um: $U_- = \ln\cosh\alpha - \gamma$
  *
- * Sets the state using the $(\chi, U_-)$ parametrization.
+ * Sets @state from $(\chi, U_-)$; $e^{U_-}$ is the component $J_{11}$ of the complex
+ * structure, see ncm_csq1d_state_get_J().
  *
  */
 void
@@ -869,10 +908,10 @@ ncm_csq1d_state_get_frame (NcmCSQ1DState *state)
 /**
  * ncm_csq1d_state_get_ag:
  * @state: a #NcmCSQ1DState
- * @alpha: (out): the alpha of @state
- * @gamma: (out): the gamma of @state
+ * @alpha: (out): $\alpha$
+ * @gamma: (out): $\gamma$
  *
- * Computes the $(\alpha, \gamma)$ parametrization of @state.
+ * Gets the point $(\alpha, \gamma)$ of @state.
  *
  */
 void
@@ -885,10 +924,10 @@ ncm_csq1d_state_get_ag (NcmCSQ1DState *state, gdouble *alpha, gdouble *gamma)
 /**
  * ncm_csq1d_state_get_up:
  * @state: a #NcmCSQ1DState
- * @chi: (out): the chi of @state
- * @Up: (out): the Up of @state
+ * @chi: (out): $\chi = \sinh\alpha$
+ * @Up: (out): $U_+ = \ln\cosh\alpha + \gamma$
  *
- * Computes the $(\chi, U_+)$ parametrization of @state.
+ * Gets @state as $(\chi, U_+)$, see ncm_csq1d_state_set_up().
  *
  */
 void
@@ -901,10 +940,10 @@ ncm_csq1d_state_get_up (NcmCSQ1DState *state, gdouble *chi, gdouble *Up)
 /**
  * ncm_csq1d_state_get_um:
  * @state: a #NcmCSQ1DState
- * @chi: (out): the chi of @state
- * @Um: (out): the Um of @state
+ * @chi: (out): $\chi = \sinh\alpha$
+ * @Um: (out): $U_- = \ln\cosh\alpha - \gamma$
  *
- * Computes the $(\chi, U_-)$ parametrization of @state.
+ * Gets @state as $(\chi, U_-)$, see ncm_csq1d_state_set_um().
  *
  */
 void
@@ -917,11 +956,15 @@ ncm_csq1d_state_get_um (NcmCSQ1DState *state, gdouble *chi, gdouble *Um)
 /**
  * ncm_csq1d_state_get_J:
  * @state: a #NcmCSQ1DState
- * @J11: (out): the J11 of @state
- * @J12: (out): the J12 of @state
- * @J22: (out): the J22 of @state
+ * @J11: (out): $J_{11} = \cosh\alpha\,e^{-\gamma}$
+ * @J12: (out): $J_{12} = -\sinh\alpha$
+ * @J22: (out): $J_{22} = \cosh\alpha\,e^{\gamma}$
  *
- * Computes the covariant metric of @state.
+ * Gets the components of the complex structure $J_{ab}$ of @state, the symmetric,
+ * positive definite matrix of unit determinant the point $(\alpha, \gamma)$
+ * represents. For the mode $(\phi, P_\phi)$ of ncm_csq1d_state_get_phi_Pphi(),
+ * $J_{11} = 2\vert\phi\vert^2$, $J_{22} = 2\vert P_\phi\vert^2$ and
+ * $J_{12} = \phi P_\phi^* + \phi^* P_\phi$.
  *
  */
 void
@@ -938,38 +981,47 @@ ncm_csq1d_state_get_J (NcmCSQ1DState *state, gdouble *J11, gdouble *J12, gdouble
 /**
  * ncm_csq1d_state_get_phi_Pphi:
  * @state: a #NcmCSQ1DState
- * @phi: (out caller-allocates) (array fixed-size=2): the $\phi$ of @state
- * @Pphi: (out caller-allocates) (array fixed-size=2): the $P_\phi$ of @state
+ * @phi: (out caller-allocates) (array fixed-size=2): real and imaginary parts of $\phi$
+ * @Pphi: (out caller-allocates) (array fixed-size=2): real and imaginary parts of $P_\phi$
  *
- * Computes the $(\phi, P_\phi)$ parametrization of @state in the current
- * phase convention.
- *
- * See ncm_csq1d_eval_delta_theta_at() for the residual phase used to build the
- * full mode phase $\theta(t)$.
+ * Gets the eigenvector $(\phi, P_\phi)$ of the complex structure of @state in the phase
+ * where $\phi$ is real and positive,
+ * \begin{align}
+ * \phi &= \sqrt{\frac{e^{-\gamma}\cosh\alpha}{2}}, \\\\
+ * P_\phi &= -\tanh\alpha\,\sqrt{\frac{e^{\gamma}\cosh\alpha}{2}} - i\sqrt{\frac{e^{\gamma}}{2\cosh\alpha}},
+ * \end{align}
+ * normalized by $\phi P_\phi^* - \phi^* P_\phi = i$. In this phase
+ * $e^{-i\theta(t)}(\phi, P_\phi)$ solves the equations of motion, with
+ * $\theta = \int\nu\,\mathrm{d}t + \delta\theta$ from ncm_csq1d_eval_int_nu() and
+ * ncm_csq1d_eval_delta_theta_at(). This phase differs from the published one by a
+ * factor that depends on time through $\alpha$; see the
+ * <a href="../../theory/ncm/dynamics/csq1d.html">CSQ1D Formalism</a> page.
  *
  */
 void
 ncm_csq1d_state_get_phi_Pphi (NcmCSQ1DState *state, gdouble *phi, gdouble *Pphi)
 {
-  const gdouble alpha               = state->alpha;
-  const gdouble gamma               = state->gamma;
-  const gdouble exp_gamma_p_alpha_2 = exp (0.5 * (gamma + alpha));
-  const gdouble exp_gamma_m_alpha_2 = exp (0.5 * (gamma - alpha));
+  const gdouble alpha    = state->alpha;
+  const gdouble gamma    = state->gamma;
+  const gdouble ln_ca    = gsl_sf_lncosh (alpha);
+  const gdouble abs_phi  = exp (0.5 * (-gamma + ln_ca - M_LN2));
+  const gdouble abs_J22h = exp (0.5 * (+gamma + ln_ca - M_LN2));
 
-  phi[0] = +0.5 / exp_gamma_m_alpha_2;
-  phi[1] = -0.5 / exp_gamma_p_alpha_2;
+  phi[0] = abs_phi;
+  phi[1] = 0.0;
 
-  Pphi[0] = -0.5 * exp_gamma_p_alpha_2;
-  Pphi[1] = -0.5 * exp_gamma_m_alpha_2;
+  Pphi[0] = -tanh (alpha) * abs_J22h;
+  Pphi[1] = -exp (0.5 * (gamma - ln_ca - M_LN2));
 }
 
 /**
  * ncm_csq1d_state_get_poincare_half_plane:
  * @state: a #NcmCSQ1DState
- * @x: (out): the $x$ of @state
- * @lny: (out): the $\ln y$ of @state
+ * @x: (out): $x = -J_{12}/J_{22} = e^{-\gamma}\tanh\alpha$
+ * @lny: (out): $\ln y = -\ln J_{22}$
  *
- * Computes the Poincaré half-plane parametrization of @state.
+ * Gets @state as the point $x + iy$ of the Poincaré upper half-plane, where
+ * $J_{11} = (x^2 + y^2)/y$, $J_{12} = -x/y$ and $J_{22} = 1/y$.
  *
  */
 void
@@ -985,10 +1037,11 @@ ncm_csq1d_state_get_poincare_half_plane (NcmCSQ1DState *state, gdouble *x, gdoub
 /**
  * ncm_csq1d_state_get_poincare_disc:
  * @state: a #NcmCSQ1DState
- * @x: (out): the $x$ of @state
- * @y: (out): the $y$ of @state
+ * @x: (out): $x = \sinh\alpha/(1 + \cosh\alpha\cosh\gamma)$
+ * @y: (out): $y = -\cosh\alpha\sinh\gamma/(1 + \cosh\alpha\cosh\gamma)$
  *
- * Computes the Poincaré disc parametrization of @state.
+ * Gets @state as a point of the Poincaré disc, the projection of the hyperboloid point of
+ * ncm_csq1d_state_get_minkowski() from $(-1, 0, 0)$.
  *
  */
 void
@@ -1004,10 +1057,11 @@ ncm_csq1d_state_get_poincare_disc (NcmCSQ1DState *state, gdouble *x, gdouble *y)
 /**
  * ncm_csq1d_state_get_minkowski:
  * @state: a #NcmCSQ1DState
- * @x1: (out): the $x_1$ of @state
- * @x2: (out): the $x_2$ of @state
+ * @x1: (out): $x_1 = \sinh\alpha$
+ * @x2: (out): $x_2 = -\cosh\alpha\sinh\gamma$
  *
- * Computes the Minkowski parametrization of @state.
+ * Gets the spatial coordinates of @state on the hyperboloid $x_0^2 - x_1^2 - x_2^2 = 1$,
+ * with $x_0 = \cosh\alpha\cosh\gamma$.
  *
  */
 void
@@ -1026,12 +1080,6 @@ _arcsinh_exp_x (const gdouble x)
   return x + log1p (sqrt (1.0 + exp (-2.0 * x)));
 }
 
-static gdouble
-_arccosh_exp_x (const gdouble x)
-{
-  return x + log1p (sqrt (1.0 - exp (-2.0 * x)));
-}
-
 /**
  * ncm_csq1d_state_get_circle:
  * @state: a #NcmCSQ1DState
@@ -1039,9 +1087,9 @@ _arccosh_exp_x (const gdouble x)
  * @theta: angle
  * @cstate: (out caller-allocates): the new state
  *
- * Computes the complex structure matrix parameters for a circle
- * around the point @state with radius $r$ and angle
- * $\theta$ and stores the result in @cstate.
+ * Sets @cstate to the point at hyperbolic distance @r from @state in the direction
+ * @theta; $\theta = 0$ increases $\alpha$ by @r at fixed $\gamma$. @cstate keeps the
+ * frame and time of @state.
  *
  */
 void
@@ -1060,10 +1108,28 @@ ncm_csq1d_state_get_circle (NcmCSQ1DState *state, const gdouble r, const gdouble
   const gdouble abs_f    = fabs (f);
   const gdouble ln_abs_f = log (abs_f);
   const gdouble sign_f   = GSL_SIGN (f);
-  const gdouble t1       = sign_f * _arcsinh_exp_x (ln_cr + ln_ca + ln_abs_f);
-  const gdouble t2       = -(2.0 * st * tr / (ca * (1.0 + tr * ct * ta) + tr * st));
+  const gdouble ln_sh_t1 = ln_cr + ln_ca + ln_abs_f;
+
+  /* sinh (t1) = cosh (r) cosh (alpha) f, in logs only where it would overflow; f = 0 is
+   * the point at alpha = 0. */
+  const gdouble t1 = (ln_sh_t1 < 300.0) ? asinh (sign_f * exp (ln_sh_t1)) : sign_f *_arcsinh_exp_x (ln_sh_t1);
+
+  const gdouble t2 = -(2.0 * st * tr / (ca * (1.0 + tr * ct * ta) + tr * st));
 
   ncm_csq1d_state_set_ag (cstate, state->frame, state->t, t1, gamma + 0.5 * log1p (t2));
+}
+
+/* ln sinh (y) for y >= 0, -inf at 0, without overflow for large y. */
+static gdouble
+_ln_sinh (const gdouble y)
+{
+  if (y == 0.0)
+    return GSL_NEGINF;
+
+  if (y < 1.0)
+    return log (sinh (y));
+
+  return y - M_LN2 + log1p (-exp (-2.0 * y));
 }
 
 /**
@@ -1071,42 +1137,45 @@ ncm_csq1d_state_get_circle (NcmCSQ1DState *state, const gdouble r, const gdouble
  * @state: a #NcmCSQ1DState
  * @state1: a #NcmCSQ1DState
  *
- * Computes the distance between @state and @state1.
+ * The hyperbolic distance $d$ between the points of @state and @state1, which must have
+ * the same frame and time:
+ * $$\cosh d = \cosh\alpha\cosh\alpha_1\cosh(\gamma - \gamma_1) - \sinh\alpha\sinh\alpha_1.$$
  *
  * Returns: the distance between @state and @state1.
  */
 gdouble
 ncm_csq1d_state_compute_distance (NcmCSQ1DState *state, NcmCSQ1DState *state1)
 {
-  const gdouble dgamma01 = state->gamma - state1->gamma;
+  /*
+   * cosh (d) - 1 = 2 sinh^2 (delta alpha / 2) + 2 cosh (alpha) cosh (alpha1) sinh^2 (delta gamma / 2),
+   * a sum of non-negative terms, evaluated in logs so that large alpha or gamma do not
+   * overflow.
+   */
+  const gdouble da2    = 0.5 * fabs (state->alpha - state1->alpha);
+  const gdouble dg2    = 0.5 * fabs (state->gamma - state1->gamma);
+  const gdouble ln_a   = M_LN2 + 2.0 * _ln_sinh (da2);
+  const gdouble ln_g   = M_LN2 + gsl_sf_lncosh (state->alpha) + gsl_sf_lncosh (state1->alpha) + 2.0 * _ln_sinh (dg2);
+  const gdouble ln_max = GSL_MAX (ln_a, ln_g);
+  gdouble ln_x;
 
   g_assert (state->frame == state1->frame);
   g_assert (state->t == state1->t);
 
-  if ((fabs (state->alpha) > 1.0) || (fabs (state1->alpha) > 1.0) || (fabs (dgamma01) > 1.0))
-  {
-    const gdouble ln_cosh_alpha0 = gsl_sf_lncosh (state->alpha);
-    const gdouble ln_cosh_alpha1 = gsl_sf_lncosh (state1->alpha);
-    const gdouble ln_cosh_dgamma = gsl_sf_lncosh (dgamma01);
-    const gdouble tanh_alpha0    = tanh (state->alpha);
-    const gdouble tanh_alpha1    = tanh (state1->alpha);
-    const gdouble f              = log1p (-tanh_alpha0 * tanh_alpha1 * exp (-ln_cosh_dgamma));
+  if (ln_max == GSL_NEGINF)
+    return 0.0;
 
-    return _arccosh_exp_x (ln_cosh_alpha0 + ln_cosh_alpha1 + ln_cosh_dgamma + f);
+  ln_x = ln_max + log1p (exp (GSL_MIN (ln_a, ln_g) - ln_max));
+
+  if (ln_x < 18.0)
+  {
+    const gdouble x = exp (ln_x);
+
+    return log1p (x + sqrt (x * (x + 2.0)));
   }
   else
   {
-    const gdouble a        = gsl_sf_lncosh (state->alpha + state1->alpha);
-    const gdouble b        = gsl_sf_lncosh (state->alpha - state1->alpha);
-    const gdouble c        = gsl_sf_lncosh (dgamma01);
-    const gdouble expm1a   = expm1 (a);
-    const gdouble expm1b   = expm1 (b);
-    const gdouble expm1apc = expm1 (a + c);
-    const gdouble expm1bpc = expm1 (b + c);
-    const gdouble M12_m1   = 0.5 * (expm1apc + expm1bpc + expm1b - expm1a);
-    const gdouble dist     =  asinh (sqrt (M12_m1 * (2.0 + M12_m1)));
-
-    return dist;
+    /* acosh (1 + x) = ln (2 (1 + x)) to double precision for x > e^18. */
+    return M_LN2 + ln_x + log1p (exp (-ln_x));
   }
 }
 
@@ -1157,7 +1226,8 @@ ncm_csq1d_clear (NcmCSQ1D **csq1d)
  * @csq1d: a #NcmCSQ1D
  * @reltol: relative tolerance
  *
- * Sets the relative tolerance to @reltol.
+ * Sets the relative tolerance of the evolution, which also serves as the absolute
+ * tolerance, in radians, of the phase splines, see ncm_csq1d_prepare_phase_splines().
  *
  */
 void
@@ -1166,10 +1236,7 @@ ncm_csq1d_set_reltol (NcmCSQ1D *csq1d, const gdouble reltol)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   if (self->reltol != reltol)
-  {
     self->reltol = reltol;
-    ncm_model_ctrl_force_update (self->ctrl);
-  }
 }
 
 /**
@@ -1177,7 +1244,7 @@ ncm_csq1d_set_reltol (NcmCSQ1D *csq1d, const gdouble reltol)
  * @csq1d: a #NcmCSQ1D
  * @abstol: absolute tolerance
  *
- * Sets the absolute tolerance to @abstol.
+ * Sets the absolute tolerance of the integrations.
  *
  */
 void
@@ -1186,19 +1253,16 @@ ncm_csq1d_set_abstol (NcmCSQ1D *csq1d, const gdouble abstol)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   if (self->abstol != abstol)
-  {
     self->abstol = abstol;
-
-    ncm_model_ctrl_force_update (self->ctrl);
-  }
 }
 
 /**
  * ncm_csq1d_set_ti:
  * @csq1d: a #NcmCSQ1D
- * @ti: mode $t_i$
+ * @ti: initial time $t_i$
  *
- * Sets the initial time $t_i$ to @ti.
+ * Sets the initial time $t_i$. Changing it discards initial conditions set with
+ * ncm_csq1d_set_init_cond().
  *
  */
 void
@@ -1210,16 +1274,15 @@ ncm_csq1d_set_ti (NcmCSQ1D *csq1d, const gdouble ti)
   {
     self->ti            = ti;
     self->init_cond_set = FALSE;
-    ncm_model_ctrl_force_update (self->ctrl);
   }
 }
 
 /**
  * ncm_csq1d_set_tf:
  * @csq1d: a #NcmCSQ1D
- * @tf: mode $t_f$
+ * @tf: final time $t_f$
  *
- * Sets the initial time $t_f$ to @tf.
+ * Sets the final time $t_f$.
  *
  */
 void
@@ -1228,18 +1291,20 @@ ncm_csq1d_set_tf (NcmCSQ1D *csq1d, const gdouble tf)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   if (self->tf != tf)
-  {
     self->tf = tf;
-    ncm_model_ctrl_force_update (self->ctrl);
-  }
 }
 
 /**
  * ncm_csq1d_set_adiab_threshold:
  * @csq1d: a #NcmCSQ1D
- * @adiab_threshold: mode $A_t$
+ * @adiab_threshold: adiabatic threshold $A_t$
  *
- * Sets the adiabatic threshold $A_t$.
+ * Sets the adiabatic threshold $A_t$. The evolution uses the adiabatic variables
+ * $(\alpha, \delta\gamma)$ until both $\vert\alpha\vert$ and $\vert\delta\gamma\vert$
+ * exceed $A_t$, then $(\chi, U_+)$ when $\delta\gamma > 0$ and $(\chi, U_-)$ otherwise,
+ * and returns to the adiabatic variables when both $\vert\chi\vert$ and
+ * $\vert\delta\gamma\vert$ fall below $A_t$. ncm_csq1d_set_init_cond_adiab() refuses
+ * times where $\vert\alpha\vert$ or $\vert\delta\gamma\vert$ exceeds $A_t$.
  *
  */
 void
@@ -1248,18 +1313,17 @@ ncm_csq1d_set_adiab_threshold (NcmCSQ1D *csq1d, const gdouble adiab_threshold)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   if (self->adiab_threshold != adiab_threshold)
-  {
-    ncm_model_ctrl_force_update (self->ctrl);
     self->adiab_threshold = adiab_threshold;
-  }
 }
 
 /**
  * ncm_csq1d_set_prop_threshold:
  * @csq1d: a #NcmCSQ1D
- * @prop_threshold: mode $P_t$
+ * @prop_threshold: propagator threshold $P_t$
  *
- * Sets the propagator threshold $P_t$.
+ * Sets the propagator threshold $P_t$: ncm_csq1d_prepare_prop() records, as
+ * ncm_csq1d_get_tf_prop(), the time where the square of the first-order part of the
+ * propagator reaches $P_t$. It is read when ncm_csq1d_prepare_prop() is called.
  *
  */
 void
@@ -1273,35 +1337,33 @@ ncm_csq1d_set_prop_threshold (NcmCSQ1D *csq1d, const gdouble prop_threshold)
 /**
  * ncm_csq1d_set_save_evol:
  * @csq1d: a #NcmCSQ1D
- * @save: whether to save all evolution
+ * @save: whether to save the evolution
  *
- * If true saves all evolution to be evaluated later through ncm_csq1d_eval_at() and
+ * Whether ncm_csq1d_prepare() keeps the evolution in splines for ncm_csq1d_eval_at() and
  * related methods.
  *
  */
 void
-ncm_csq1d_set_save_evol (NcmCSQ1D *csq1d, gboolean save_evol)
+ncm_csq1d_set_save_evol (NcmCSQ1D *csq1d, const gboolean save)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  if (self->save_evol != save_evol)
-  {
-    ncm_model_ctrl_force_update (self->ctrl);
-    self->save_evol = save_evol;
-  }
+  self->save_evol = save;
 }
 
 /**
  * ncm_csq1d_set_init_cond:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @evol_state: a #NcmCSQ1DEvolState
  * @initial_state: a #NcmCSQ1DState
  *
- * Sets the values of the initial conditions to @initial_state.
- * Depending on the value of @evol_state, the initial conditions
- * are set in the adiabatic frame 1 if @evol_state is #NCM_CSQ1D_EVOL_STATE_ADIABATIC,
- * or in the original frame when using the $U_+$ or $U_-$ parametrization.
+ * Sets the initial conditions of the evolution to @initial_state, at its time, and the
+ * variables the evolution starts in: $(\alpha, \delta\gamma)$ in
+ * #NCM_CSQ1D_FRAME_ADIAB1 for #NCM_CSQ1D_EVOL_STATE_ADIABATIC, $(\chi, U_\pm)$ in
+ * #NCM_CSQ1D_FRAME_ORIG for #NCM_CSQ1D_EVOL_STATE_UP and #NCM_CSQ1D_EVOL_STATE_UM.
+ * @initial_state is changed to that frame. Used by ncm_csq1d_prepare() with
+ * #NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC.
  *
  */
 void
@@ -1337,11 +1399,14 @@ ncm_csq1d_set_init_cond (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DEvolState evo
 /**
  * ncm_csq1d_set_init_cond_adiab:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @ti: initial time $t_i$
  *
- * Sets the values of the initial conditions at $t_i$.
- * This method also updates the value of $t_i$.
+ * Sets the initial conditions to the adiabatic vacuum at @ti, computed by
+ * ncm_csq1d_compute_adiab(), and starts the evolution there in the adiabatic variables.
+ * It aborts when $\vert\alpha\vert$ or $\vert\delta\gamma\vert$ exceeds the adiabatic
+ * threshold at @ti, see ncm_csq1d_set_adiab_threshold(). The property
+ * #NcmCSQ1D:ti is not changed.
  *
  */
 void
@@ -1364,9 +1429,8 @@ ncm_csq1d_set_init_cond_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t
  * @csq1d: a #NcmCSQ1D
  * @initial_condition_type: the vacuum type
  *
- * Sets the initial condition type to @initial_condition_type. The initial condition
- * type is used to determine the initial state state when preparing the object using
- * ncm_csq1d_prepare().
+ * Sets how ncm_csq1d_prepare() sets the initial conditions, see
+ * #NcmCSQ1DInitialStateType. It also selects the order of ncm_csq1d_compute_adiab().
  *
  */
 void
@@ -1375,10 +1439,7 @@ ncm_csq1d_set_initial_condition_type (NcmCSQ1D *csq1d, NcmCSQ1DInitialStateType 
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   if (self->initial_condition_type != initial_condition_type)
-  {
-    ncm_model_ctrl_force_update (self->ctrl);
     self->initial_condition_type = initial_condition_type;
-  }
 }
 
 /**
@@ -1386,9 +1447,8 @@ ncm_csq1d_set_initial_condition_type (NcmCSQ1D *csq1d, NcmCSQ1DInitialStateType 
  * @csq1d: a #NcmCSQ1D
  * @vacuum_reltol: relative tolerance
  *
- * Sets the relative tolerance for the vacuum definition. This tolerance
- * is used to determine the vacuum state when preparing the object using
- * ncm_csq1d_prepare().
+ * Sets the relative accuracy the adiabatic expansion must reach where
+ * ncm_csq1d_prepare() sets the adiabatic vacuum, see ncm_csq1d_find_adiab_time_limit().
  *
  */
 void
@@ -1397,10 +1457,7 @@ ncm_csq1d_set_vacuum_reltol (NcmCSQ1D *csq1d, const gdouble vacuum_reltol)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   if (self->vacuum_reltol != vacuum_reltol)
-  {
-    ncm_model_ctrl_force_update (self->ctrl);
     self->vacuum_reltol = vacuum_reltol;
-  }
 }
 
 /**
@@ -1408,9 +1465,8 @@ ncm_csq1d_set_vacuum_reltol (NcmCSQ1D *csq1d, const gdouble vacuum_reltol)
  * @csq1d: a #NcmCSQ1D
  * @vacuum_max_time: maximum time
  *
- * Sets the maximum time for the vacuum search. This time is used
- * to determine the vacuum state when preparing the object using
- * ncm_csq1d_prepare().
+ * Sets the latest time at which ncm_csq1d_prepare() may set the adiabatic vacuum; the
+ * search runs from $t_i$ to @vacuum_max_time.
  *
  */
 void
@@ -1419,10 +1475,7 @@ ncm_csq1d_set_vacuum_max_time (NcmCSQ1D *csq1d, const gdouble vacuum_max_time)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
   if (self->vacuum_max_time != vacuum_max_time)
-  {
-    ncm_model_ctrl_force_update (self->ctrl);
     self->vacuum_max_time = vacuum_max_time;
-  }
 }
 
 /**
@@ -1443,7 +1496,7 @@ ncm_csq1d_get_reltol (NcmCSQ1D *csq1d)
  * ncm_csq1d_get_abstol:
  * @csq1d: a #NcmCSQ1D
  *
- * Returns: the absolute tolerance to @abstol.
+ * Returns: the absolute tolerance.
  */
 gdouble
 ncm_csq1d_get_abstol (NcmCSQ1D *csq1d)
@@ -1471,7 +1524,7 @@ ncm_csq1d_get_ti (NcmCSQ1D *csq1d)
  * ncm_csq1d_get_tf:
  * @csq1d: a #NcmCSQ1D
  *
- * Returns: the initial time $t_f$.
+ * Returns: the final time $t_f$.
  */
 gdouble
 ncm_csq1d_get_tf (NcmCSQ1D *csq1d)
@@ -1541,7 +1594,7 @@ ncm_csq1d_get_initial_condition_type (NcmCSQ1D *csq1d)
  * ncm_csq1d_get_vacuum_reltol:
  * @csq1d: a #NcmCSQ1D
  *
- * Returns: the relative tolerance for the vacuum definition.
+ * Returns: the relative accuracy required from the adiabatic vacuum.
  */
 gdouble
 ncm_csq1d_get_vacuum_reltol (NcmCSQ1D *csq1d)
@@ -1555,7 +1608,7 @@ ncm_csq1d_get_vacuum_reltol (NcmCSQ1D *csq1d)
  * ncm_csq1d_get_vacuum_max_time:
  * @csq1d: a #NcmCSQ1D
  *
- * Returns: the maximum time for the vacuum search.
+ * Returns: the latest time at which the vacuum may be set.
  */
 gdouble
 ncm_csq1d_get_vacuum_max_time (NcmCSQ1D *csq1d)
@@ -1841,95 +1894,119 @@ _ncm_csq1d_J_Um (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer j
 /**
  * ncm_csq1d_eval_xi: (virtual eval_xi)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
- * Returns: $\xi$
+ * $\xi = \ln(m\nu)$ at @t. Subclasses must implement it.
+ *
+ * Returns: $\xi$.
  */
 /**
  * ncm_csq1d_eval_nu: (virtual eval_nu)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
- * Returns: $\nu$
+ * The frequency $\nu$ at @t. Subclasses must implement it.
+ *
+ * Returns: $\nu$.
  */
 /**
  * ncm_csq1d_eval_nu2: (virtual eval_nu2)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
- * Returns: $\nu^2$
+ * The squared frequency $\nu^2$ at @t. The default squares ncm_csq1d_eval_nu().
+ *
+ * Returns: $\nu^2$.
  */
 /**
  * ncm_csq1d_eval_m: (virtual eval_m)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
- * Returns: $m$
+ * The mass $m$ at @t. The default is $e^\xi/\nu$.
+ *
+ * Returns: $m$.
  */
 /**
  * ncm_csq1d_eval_int_1_m: (virtual eval_int_1_m)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
+ *
+ * Needed by the non-adiabatic vacuum and frames and by the propagator; the default
+ * aborts.
  *
  * Returns: $\int 1/m \mathrm{d}t$.
  */
 /**
  * ncm_csq1d_eval_int_mnu2: (virtual eval_int_mnu2)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
+ *
+ * Needed by the non-adiabatic vacuum and frames and by the propagator; the default
+ * aborts.
  *
  * Returns: $\int m\nu^2 \mathrm{d}t$.
  */
 /**
  * ncm_csq1d_eval_int_qmnu2: (virtual eval_int_qmnu2)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
+ *
+ * Needed by the non-adiabatic vacuum and frames and by the propagator; the default
+ * aborts.
  *
  * Returns: $\int \left(\int 1/m \mathrm{d}t\right) m\nu^2 \mathrm{d}t$.
  */
 /**
  * ncm_csq1d_eval_int_q2mnu2: (virtual eval_int_q2mnu2)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
+ *
+ * Needed by the non-adiabatic vacuum and frames and by the propagator; the default
+ * aborts.
  *
  * Returns: $\int \left(\int 1/m \mathrm{d}t\right)^2 m\nu^2 \mathrm{d}t$.
  */
 /**
  * ncm_csq1d_eval_int_nu: (virtual eval_int_nu)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
- * Computes the integral $\int_{t_i}^{t} \nu(t') \mathrm{d}t'$.
- * If not overridden by a subclass, a default implementation based on
- * #NcmOdeSpline is used. You must call ncm_csq1d_prepare_phase_splines()
- * after ncm_csq1d_prepare() before using this function.
+ * The integral $\int_{t_0}^{t} \nu(t')\,\mathrm{d}t'$ from a phase origin $t_0$; only
+ * differences of the phase are meaningful, so a subclass may use any origin. The
+ * default integrates $\nu$ from the start of the numerical evolution, the same origin
+ * as ncm_csq1d_eval_delta_theta_at(), and needs ncm_csq1d_prepare_phase_splines().
  *
- * Returns: $\int_{t_i}^{t} \nu(t') \mathrm{d}t'$.
+ * Returns: $\int_{t_0}^{t} \nu(t')\,\mathrm{d}t'$.
  */
 /**
  * ncm_csq1d_eval_F1: (virtual eval_F1)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
- * Returns: $F_1$
+ * The first adiabatic function $F_1 = \dot\xi/(2\nu)$ at @t. Subclasses must implement it.
+ *
+ * Returns: $F_1$.
  */
 /**
  * ncm_csq1d_eval_F2: (virtual eval_F2)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  *
- * Returns: $F_2$
+ * The second adiabatic function $F_2 = \dot F_1/(2\nu)$ at @t. The default differentiates ncm_csq1d_eval_F1() numerically.
+ *
+ * Returns: $F_2$.
  */
 
 static NcmCSQ1DEvolStop
@@ -2323,6 +2400,40 @@ _ncm_csq1d_prepare_splines (NcmCSQ1D *csq1d, NcmModel *model)
 
     self->t_ode_ini = self->t;
 
+    /* The steps record the points reached; the starting point is the first knot. */
+    {
+      gdouble alpha, dgamma, gamma;
+      const gdouble xi      = ncm_csq1d_eval_xi (csq1d, model, self->t);
+      const gdouble asinh_t = asinh (self->t);
+
+      switch (self->state)
+      {
+        case NCM_CSQ1D_EVOL_STATE_ADIABATIC:
+          alpha  = NV_Ith_S (self->y, 0);
+          dgamma = NV_Ith_S (self->y, 1);
+          gamma  = xi + dgamma;
+          break;
+        case NCM_CSQ1D_EVOL_STATE_UP:
+          alpha  = asinh (NV_Ith_S (self->y_Up, 0));
+          gamma  = NV_Ith_S (self->y_Up, 1) - gsl_sf_lncosh (alpha);
+          dgamma = gamma - xi;
+          break;
+        case NCM_CSQ1D_EVOL_STATE_UM:
+          alpha  = asinh (NV_Ith_S (self->y_Um, 0));
+          gamma  = -NV_Ith_S (self->y_Um, 1) + gsl_sf_lncosh (alpha);
+          dgamma = gamma - xi;
+          break;
+        default:
+          g_assert_not_reached ();
+          break;
+      }
+
+      g_array_append_val (asinh_t_a, asinh_t);
+      g_array_append_val (alpha_a,   alpha);
+      g_array_append_val (dgamma_a,  dgamma);
+      g_array_append_val (gamma_a,   gamma);
+    }
+
     _ncm_csq1d_evol_save (csq1d, model, &ws, asinh_t_a, alpha_a, dgamma_a, gamma_a);
 
     ncm_spline_set_array (self->alpha_s,  asinh_t_a, alpha_a,  TRUE);
@@ -2372,16 +2483,13 @@ _ncm_csq1d_prepare_adiab (NcmCSQ1D *csq1d, NcmModel *model)
 /**
  * ncm_csq1d_prepare_phase_splines:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  *
- * Prepares the phase-related splines (int_nu and delta_theta) for evaluation.
- * This method computes and caches the integrated phase splines, which are used
- * by ncm_csq1d_eval_int_nu() and ncm_csq1d_eval_delta_theta_at().
- *
- * This method must be called explicitly after ncm_csq1d_prepare() if you need
- * to use ncm_csq1d_eval_int_nu() or ncm_csq1d_eval_delta_theta_at().
- *
- * Note: This method must be called after ncm_csq1d_prepare().
+ * Integrates the phase splines read by ncm_csq1d_eval_delta_theta_at() and the default
+ * ncm_csq1d_eval_int_nu(), forward from the phase origin $t_0$ to $t_f$ and backward
+ * from $t_0$ to $t_i$. They use the relative tolerance of #NcmOdeSpline and an absolute
+ * tolerance of #NcmCSQ1D:reltol radians. Call it after ncm_csq1d_prepare(), which
+ * discards them; later calls do nothing until then.
  */
 void
 ncm_csq1d_prepare_phase_splines (NcmCSQ1D *csq1d, NcmModel *model)
@@ -2392,31 +2500,59 @@ ncm_csq1d_prepare_phase_splines (NcmCSQ1D *csq1d, NcmModel *model)
   if (self->phase_splines_prepared)
     return;
 
+  /* The phase integrals keep the relative tolerance of NcmOdeSpline, machine precision,
+   * so that the phase is limited by the evolution; they start at zero, where a relative
+   * tolerance alone has no scale, so they take an absolute tolerance of reltol radians. */
+  ncm_ode_spline_set_abstol (self->int_nu_s, self->reltol);
+  ncm_ode_spline_set_abstol (self->int_nu_back_s, self->reltol);
+  ncm_ode_spline_set_abstol (self->delta_theta_s, self->reltol);
+  ncm_ode_spline_set_abstol (self->delta_theta_adiab_s, self->reltol);
+
   {
-    /* Compute the WKB pre-phase integral [ti, t_ode_ini] using QAG,
-     * then start the NcmOdeSpline at t_ode_ini with that value as IC.
-     * This avoids integrating over the deep-WKB regime where the
-     * adaptive ODE step would collapse to machine epsilon. */
-    gsl_integration_workspace **w = ncm_integral_get_workspace ();
-    gsl_function F;
-    gdouble delta_theta_ini, err;
+    const gboolean adiab_ic = (self->initial_condition_type != NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC);
+    const gboolean evolved  = !adiab_ic || (self->tf > self->vacuum_final_time);
+
+    /* The origin of the phase is where the numerical evolution starts, the vacuum time
+     * with an adiabatic vacuum and the time of the ad hoc conditions otherwise; far from
+     * it the integral of nu can grow beyond what double precision resolves. Before the
+     * origin the solution is the adiabatic state and both integrals run backwards. */
+    self->t_phase_ref = adiab_ic ? GSL_MIN (self->vacuum_final_time, self->tf) : self->t_ode_ini;
+
+    self->int_nu_spline            = NULL;
+    self->int_nu_back_spline       = NULL;
+    self->delta_theta_spline       = NULL;
+    self->delta_theta_adiab_spline = NULL;
 
     if (NCM_CSQ1D_GET_CLASS (csq1d)->eval_int_nu == &_ncm_csq1d_eval_int_nu)
     {
-      ncm_ode_spline_set_interval (self->int_nu_s, 0.25 * M_PI, self->t_ode_ini, self->tf);
-      ncm_ode_spline_prepare (self->int_nu_s, &ws);
-      self->int_nu_spline = ncm_ode_spline_peek_spline (self->int_nu_s);
+      if (self->tf > self->t_phase_ref)
+      {
+        ncm_ode_spline_set_interval (self->int_nu_s, 0.0, self->t_phase_ref, self->tf);
+        ncm_ode_spline_prepare (self->int_nu_s, &ws);
+        self->int_nu_spline = ncm_ode_spline_peek_spline (self->int_nu_s);
+      }
+
+      if (self->t_phase_ref > self->ti)
+      {
+        ncm_ode_spline_set_interval (self->int_nu_back_s, 0.0, -self->t_phase_ref, -self->ti);
+        ncm_ode_spline_prepare (self->int_nu_back_s, &ws);
+        self->int_nu_back_spline = ncm_ode_spline_peek_spline (self->int_nu_back_s);
+      }
     }
 
-    F.function = &_ncm_csq1d_delta_theta_wkb_f;
-    F.params   = &ws;
-    gsl_integration_qag (&F, self->ti, self->t_ode_ini, 0.0, self->reltol,
-                         NCM_INTEGRAL_PARTITION, 6, *w, &delta_theta_ini, &err);
-    ncm_memory_pool_return (w);
+    if (evolved)
+    {
+      ncm_ode_spline_set_interval (self->delta_theta_s, 0.0, self->t_phase_ref, self->tf);
+      ncm_ode_spline_prepare (self->delta_theta_s, &ws);
+      self->delta_theta_spline = ncm_ode_spline_peek_spline (self->delta_theta_s);
+    }
 
-    ncm_ode_spline_set_interval (self->delta_theta_s, delta_theta_ini, self->t_ode_ini, self->tf);
-    ncm_ode_spline_prepare (self->delta_theta_s, &ws);
-    self->delta_theta_spline = ncm_ode_spline_peek_spline (self->delta_theta_s);
+    if (adiab_ic && (self->t_phase_ref > self->ti))
+    {
+      ncm_ode_spline_set_interval (self->delta_theta_adiab_s, 0.0, -self->t_phase_ref, -self->ti);
+      ncm_ode_spline_prepare (self->delta_theta_adiab_s, &ws);
+      self->delta_theta_adiab_spline = ncm_ode_spline_peek_spline (self->delta_theta_adiab_s);
+    }
   }
 
   self->phase_splines_prepared = TRUE;
@@ -2425,16 +2561,17 @@ ncm_csq1d_prepare_phase_splines (NcmCSQ1D *csq1d, NcmModel *model)
 /**
  * ncm_csq1d_prepare: (virtual prepare)
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  *
- * Prepares the object using @model. It integrates the system from the initial time to
- * the final time. If the #NcmCSQ1DInitialStateType is set to
- * #NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC, the initial conditions must be set using
- * ncm_csq1d_set_init_cond(). Otherwise, the initial conditions are automatically set
- * using the chosen method. See ncm_csq1d_set_initial_condition_type().
- *
- * The initial conditions based on the vacuum are controlled by the parameters
- * ncm_csq1d_set_vacuum_reltol() and ncm_csq1d_set_vacuum_max_time().
+ * Sets the initial conditions and integrates the system to $t_f$, according to the
+ * #NcmCSQ1DInitialStateType. With #NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC the
+ * conditions of ncm_csq1d_set_init_cond() are used. With the adiabatic types
+ * ncm_csq1d_find_adiab_time_limit() places the vacuum between $t_i$ and the vacuum
+ * maximum time, at the vacuum relative tolerance, and the system is integrated from
+ * there; when $t_f$ comes first nothing is integrated and ncm_csq1d_eval_at() uses the
+ * adiabatic expansion. The virtual method is called first,
+ * for the subclass to prepare its own state. Every call recomputes the solution and
+ * discards the phase splines of ncm_csq1d_prepare_phase_splines().
  *
  */
 void
@@ -2444,9 +2581,11 @@ ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
   gboolean success             = FALSE;
 
   /* Invalidate phase splines when preparing */
-  self->phase_splines_prepared = FALSE;
-  self->delta_theta_spline     = NULL;
-  self->int_nu_spline          = NULL;
+  self->phase_splines_prepared   = FALSE;
+  self->delta_theta_spline       = NULL;
+  self->delta_theta_adiab_spline = NULL;
+  self->int_nu_spline            = NULL;
+  self->int_nu_back_spline       = NULL;
 
   switch (self->initial_condition_type)
   {
@@ -2478,9 +2617,12 @@ ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
 /**
  * ncm_csq1d_get_time_array:
  * @csq1d: a #NcmCSQ1D
- * @smallest_t: (out) (allow-none): the smallest absolute value of $t$ in the array
+ * @smallest_t: (out) (nullable): the smallest absolute value of $t$ in the array
  *
- * Returns: (transfer full) (element-type gdouble): the time array of the computed steps.
+ * The times of the saved evolution: its start, then the integration steps at least
+ * $10^{-5}$ apart in relative $\operatorname{asinh} t$, and $t_f$.
+ *
+ * Returns: (transfer full) (element-type gdouble): the times of the saved evolution.
  */
 GArray *
 ncm_csq1d_get_time_array (NcmCSQ1D *csq1d, gdouble *smallest_t)
@@ -2532,16 +2674,16 @@ _ncm_csq1d_find_adiab_time_limit_f (gdouble t, gpointer params)
 /**
  * ncm_csq1d_find_adiab_time_limit:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t0: time lower bound $t_0$
  * @t1: time upper bound $t_1$
  * @reltol: relative tolerance
  * @ti: (out): adiabatic time limit $t_i$
  *
- * Computes the time upper limit $t_i \in [t_0, t_1]$ where the adiabatic
- * approximation is satisfied up to @reltol. If both times are adiabatic, the
- * time closer to the adiabatic limit is chosen. If both times are non-adiabatic,
- * the function returns %FALSE.
+ * Finds the time $t_i \in [t_0, t_1]$ where the larger of the error estimates of
+ * ncm_csq1d_compute_adiab() reaches @reltol, to 1% in $t$. When both ends are below
+ * @reltol it returns $t_1$; when neither is, %FALSE. The estimates depend on the order,
+ * see ncm_csq1d_compute_adiab().
  *
  * Returns: whether the time limit was found.
  */
@@ -2663,11 +2805,12 @@ _ncm_csq1d_ln_nu_func (const gdouble t, gpointer user_data)
 
 static gdouble _ncm_csq1d_abs_F1_asinht (gdouble at, gpointer user_data);
 static gdouble _ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data);
+static gdouble _ncm_csq1d_find_adiab_border (gsl_function *F, const gdouble atm, const gdouble at_end);
 
 /**
  * ncm_csq1d_find_adiab_max:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t0: time lower bound $t_0$
  * @t1: time upper bound $t_1$
  * @border_eps: border epsilon $\epsilon$
@@ -2675,11 +2818,12 @@ static gdouble _ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data);
  * @t_Bl: (out): the value of $t_{B,\mathrm{lower}}$
  * @t_Bu: (out): the value of $t_{B,\mathrm{upper}}$
  *
- * Computes the time $t_\mathrm{min}$ that minimizes $F_1(t)$. Also computes the border
- * values $t_{B,\mathrm{lower}}$ and $t_{B,\mathrm{upper}}$ such that
- * $|F_1(t_{B,\mathrm{lower}}) - F_1(t_\mathrm{min})| = \epsilon$ for
- * $t_{B,\mathrm{lower}} < t_\mathrm{min}$ and $|F_1(t_{B,\mathrm{upper}}) -
- * F_1(t_\mathrm{min})| = \epsilon$ for $t_{B,\mathrm{upper}} > t_\mathrm{min}$.
+ * Finds the time $t_\mathrm{min} \in [t_0, t_1]$ that minimizes $\vert F_1(t)\vert$, the
+ * most adiabatic time, and the borders on each side of it where
+ * $\vert F_1 - F_1(t_\mathrm{min})\vert = \epsilon$; a border is the end of the
+ * interval when $F_1$ changes by less than $\epsilon$ on that side, as when the minimum
+ * is at the end. When $F_1$ vanishes on the whole interval it returns $t_1$ with
+ * $F_1(t_\mathrm{min}) = 0$ and the ends as borders.
  *
  * Returns: the time $t_\mathrm{min}$.
  */
@@ -2772,47 +2916,13 @@ ncm_csq1d_find_adiab_max (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, gdouble 
   gsl_min_fminimizer_free (fmin);
   ws.F1_min = ncm_csq1d_eval_F1 (csq1d, model, sinh (atm));
 
-  {
-    const gsl_root_fsolver_type *T;
-    gsl_root_fsolver *s;
-    guint max_iter = 1000;
+  F.function = &_ncm_csq1d_ln_abs_F1_eps_asinht;
+  F.params   = &ws;
 
-    iter = 0;
-
-    F.function = &_ncm_csq1d_ln_abs_F1_eps_asinht;
-    F.params   = &ws;
-
-    T = gsl_root_fsolver_brent;
-    s = gsl_root_fsolver_alloc (T);
-
-    gsl_root_fsolver_set (s, &F, atl, atm);
-
-    do {
-      iter++;
-      status  = gsl_root_fsolver_iterate (s);
-      t_Bl[0] = gsl_root_fsolver_root (s);
-      at0     = gsl_root_fsolver_x_lower (s);
-      at1     = gsl_root_fsolver_x_upper (s);
-      status  = gsl_root_test_interval (at0, at1, 0.0, 1.0e-7);
-
-      /* ncm_message ("Bl: [%d] % 22.15e % 22.15e % 22.15e\n", status, sinh (t_Bl[0]), sinh (at0), sinh (at1)); */
-    } while (status == GSL_CONTINUE && iter < max_iter);
-
-    gsl_root_fsolver_set (s, &F, atm, atu);
-
-    do {
-      iter++;
-      status  = gsl_root_fsolver_iterate (s);
-      t_Bu[0] = gsl_root_fsolver_root (s);
-      at0     = gsl_root_fsolver_x_lower (s);
-      at1     = gsl_root_fsolver_x_upper (s);
-      status  = gsl_root_test_interval (at0, at1, 0.0, 1.0e-7);
-
-      /* ncm_message ("Bu: [%d] % 22.15e % 22.15e % 22.15e\n", status, sinh (t_Bu[0]), sinh (at0), sinh (at1)); */
-    } while (status == GSL_CONTINUE && iter < max_iter);
-
-    gsl_root_fsolver_free (s);
-  }
+  /* The border on each side is where |F1 - F1_min| reaches epsilon, or the end of the
+   * interval when it does not reach it there (a minimum at the end included). */
+  t_Bl[0] = _ncm_csq1d_find_adiab_border (&F, atm, atl);
+  t_Bu[0] = _ncm_csq1d_find_adiab_border (&F, atm, atu);
 
   {
     const gdouble tm = sinh (atm);
@@ -2841,6 +2951,38 @@ _ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data)
   const gdouble F1 = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, sinh (at));
 
   return fabs ((F1 - ws->F1_min) / ws->reltol) - 1.0;
+}
+
+/* The root of F between the minimum atm, where F = -1, and at_end, or at_end when F does
+ * not change sign there. */
+static gdouble
+_ncm_csq1d_find_adiab_border (gsl_function *F, const gdouble atm, const gdouble at_end)
+{
+  const gdouble at_lo = GSL_MIN (atm, at_end);
+  const gdouble at_hi = GSL_MAX (atm, at_end);
+
+  if ((at_lo == at_hi) || (GSL_FN_EVAL (F, at_end) <= 0.0))
+    return at_end;
+
+  {
+    gsl_root_fsolver *s = gsl_root_fsolver_alloc (gsl_root_fsolver_brent);
+    gdouble at_root     = at_end;
+    guint iter          = 0;
+    gint status;
+
+    gsl_root_fsolver_set (s, F, at_lo, at_hi);
+
+    do {
+      iter++;
+      status  = gsl_root_fsolver_iterate (s);
+      at_root = gsl_root_fsolver_root (s);
+      status  = gsl_root_test_interval (gsl_root_fsolver_x_lower (s), gsl_root_fsolver_x_upper (s), 0.0, 1.0e-7);
+    } while (status == GSL_CONTINUE && iter < 1000);
+
+    gsl_root_fsolver_free (s);
+
+    return at_root;
+  }
 }
 
 static void
@@ -2941,16 +3083,24 @@ _ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, Ncm
 /**
  * ncm_csq1d_compute_adiab:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
- * @alpha_reltol: (out) (allow-none): estimated error on $\alpha(t)$
- * @dgamma_reltol: (out) (allow-none): estimated error on $\Delta\gamma(t)$
+ * @alpha_reltol: (out) (optional): the error estimate of $\alpha(t)$
+ * @dgamma_reltol: (out) (optional): the error estimate of $\delta\gamma(t)$
  *
- * Computes the value of the adiabatic approximation of the variables $\alpha$ and $\Delta\gamma$ at $t$.
- * This method computes the adiabatic approximation using the adiabatic series up to the order 2 or 4,
- * depending on the value of the property max-order-2. The result is stored in the state object in the
- * frame NCM_CSQ1D_FRAME_ADIAB1. Use ncm_csq1d_change_frame() to change the frame.
+ * The adiabatic vacuum at @t, $(\alpha, \delta\gamma)$ in #NCM_CSQ1D_FRAME_ADIAB1. The
+ * order follows the #NcmCSQ1DInitialStateType: second order,
+ * $\alpha = F_1$ and $\delta\gamma = -F_2$, for
+ * #NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2; fourth order otherwise,
+ * $\alpha = F_1 + F_1^3/3 - F_3$ and $\delta\gamma = -(1 + F_1^2)F_2 + F_4$, with $F_3$
+ * and $F_4$ from numerical derivatives of $F_2$ and $\ln\nu$.
+ *
+ * The fourth order estimates are the squared relative sizes of its fourth order terms;
+ * the second order ones are $\vert F_1\vert$ and $\vert F_2\vert$, the sizes of the
+ * terms themselves, far above the error. When $\vert F_3\vert > \vert F_2\vert$ or
+ * $\vert F_4\vert > \vert F_3\vert$ the fourth order series warns and falls back to the
+ * second order.
  *
  * Returns: (transfer none): the @state object with the result.
  */
@@ -2965,14 +3115,14 @@ ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmC
 /**
  * ncm_csq1d_compute_adiab_frame:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @frame: the frame to change
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
- * @alpha_reltol: (out) (allow-none): estimated error on $\alpha(t)$
- * @dgamma_reltol: (out) (allow-none): estimated error on $\Delta\gamma(t)$
+ * @alpha_reltol: (out) (optional): the error estimate of $\alpha(t)$
+ * @dgamma_reltol: (out) (optional): the error estimate of $\delta\gamma(t)$
  *
- * As ncm_csq1d_compute_adiab(), but changes the frame of the result to @frame.
+ * As ncm_csq1d_compute_adiab(), in @frame.
  *
  * Returns: (transfer none): the @state object with the result.
  */
@@ -3067,42 +3217,17 @@ _ncm_csq1d_compute_nonadiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, 
   ncm_csq1d_state_set_up (state, NCM_CSQ1D_FRAME_NONADIAB1, t, +2.0 * r1, -2.0 * p1);
 }
 
-/*  OLD IMPLEMENTATION
- *  const gdouble q0             = ncm_csq1d_eval_int_1_m (csq1d, model, t);
- *  const gdouble q1             = ncm_csq1d_eval_int_q2mnu2 (csq1d, model, t);
- *  const gdouble p1             = ncm_csq1d_eval_int_qmnu2 (csq1d, model, t);
- *  const gdouble r1             = 0.5 * ncm_csq1d_eval_int_mnu2 (csq1d, model, t);
- *
- *  switch (frame)
- *  {
- *   case NCM_CSQ1D_FRAME_ORIG:
- *     chi[0] = (2.0 * p1 - 1.0) * (q0 + q1) + 2.0 * r1;
- *     Up[0]  = -2.0 * p1;
- *     break;
- *   case NCM_CSQ1D_FRAME_NONADIAB1:
- *     chi[0] = +2.0 * r1;
- *     Up[0]  = -2.0 * p1;
- *     break;
- *   case NCM_CSQ1D_FRAME_NONADIAB2:
- *     chi[0] = 0.0;
- *     Up[0]  = 0.0;
- *     break;
- *   default:
- *     g_assert_not_reached ();
- *     break;
- *  }
- */
-
 /**
  * ncm_csq1d_compute_nonadiab:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
- * Computes the value of the non-adiabatic VDC order two in the variables $\chi$ and
- * $U$ at $t$. The result is stored in the state object in the frame NCM_CSQ1D_FRAME_NONADIAB1.
- * Use ncm_csq1d_change_frame() to change the frame.
+ * The second order non-adiabatic vacuum at @t, $(\chi, U_+) = (2r_1, -2p_1)$ in
+ * #NCM_CSQ1D_FRAME_NONADIAB1, with $r_1$ and $p_1$ of #NcmCSQ1DFrame. It is accurate
+ * near the time where these integrals vanish, and it is the state the propagator of
+ * ncm_csq1d_prepare_prop() starts from there.
  *
  * Returns: (transfer none): the @state object with the result.
  */
@@ -3117,13 +3242,12 @@ ncm_csq1d_compute_nonadiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, N
 /**
  * ncm_csq1d_compute_H:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
- * Computes the Hamiltonian vector state of the original frame at $t$. The result is
- * stored in the state object in the frame NCM_CSQ1D_FRAME_ORIG.
- * Use ncm_csq1d_change_frame() to change the frame.
+ * The complex structure of the Hamiltonian at @t, $(\alpha, \gamma) = (0, \xi)$ in
+ * #NCM_CSQ1D_FRAME_ORIG, the origin of #NCM_CSQ1D_FRAME_ADIAB1.
  *
  * Returns: (transfer none): the @state object with the result.
  */
@@ -3151,18 +3275,15 @@ _ncm_csq1d_eval_state (NcmCSQ1D *csq1d, const gdouble t, NcmCSQ1DState *state)
  * @csq1d: a #NcmCSQ1D
  * @t: time $t$
  *
- * Returns the accumulated residual phase shift $\delta\theta(t)$ computed
- * during the last call to ncm_csq1d_prepare().
- *
- * The full phase entering the mode functions is
- * $\theta(t) = \int_{t_i}^{t} \nu(t')\,\mathrm{d}t' + \delta\theta(t)$.
- *
- * For the full phase and residual-phase equations, including the numerically
- * stable form used internally, see
- * <a href="../../theory/csq1d.html">CSQ1D Formalism</a>.
- *
- * Note: You must call ncm_csq1d_prepare_phase_splines() before using this function,
- * or it will throw an error.
+ * The residual phase $\delta\theta(t)$, zero at the phase origin $t_0$, the start of the
+ * numerical evolution: the vacuum time with an adiabatic vacuum, the time of the
+ * conditions of ncm_csq1d_set_init_cond() otherwise. With an adiabatic vacuum it is
+ * also defined before $t_0$, integrated on the adiabatic state; with ad hoc conditions
+ * it is zero there. The full phase is
+ * $\theta(t) = \int_{t_0}^{t} \nu(t')\,\mathrm{d}t' + \delta\theta(t)$, see
+ * ncm_csq1d_eval_int_nu() and the
+ * <a href="../../theory/ncm/dynamics/csq1d.html">CSQ1D Formalism</a> page. Aborts
+ * unless ncm_csq1d_prepare_phase_splines() was called after ncm_csq1d_prepare().
  *
  * Returns: $\delta\theta(t)$
  */
@@ -3171,34 +3292,52 @@ ncm_csq1d_eval_delta_theta_at (NcmCSQ1D *csq1d, const gdouble t)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  if (t <= self->t_ode_ini)
-    return 0.0;
-
   if (!self->phase_splines_prepared)
     g_error ("ncm_csq1d_eval_delta_theta_at: phase splines not prepared. "
              "Call ncm_csq1d_prepare_phase_splines() first.");
 
-  return ncm_spline_eval (self->delta_theta_spline, t);
+  if (t >= self->t_phase_ref)
+    return (self->delta_theta_spline != NULL) ? ncm_spline_eval (self->delta_theta_spline, t) : 0.0;
+  else
+    return (self->delta_theta_adiab_spline != NULL) ? ncm_spline_eval (self->delta_theta_adiab_spline, -t) : 0.0;
 }
 
 /**
  * ncm_csq1d_eval_at:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
- * Computes the system state at $t$, the result is stored in the state object
- * in the frame NCM_CSQ1D_FRAME_ORIG. Use ncm_csq1d_change_frame() to change the frame.
+ * Evaluates the solution at @t in #NCM_CSQ1D_FRAME_ORIG, see
+ * ncm_csq1d_eval_at_frame() for the rules.
  *
  * Returns: (transfer none): the @state object with the result.
  */
+
+/* Whether the solution at t is the evolved one: from the start of the evolution with ad
+ * hoc conditions, before which there is no solution, and after the vacuum time with an
+ * adiabatic vacuum, before which the solution is the adiabatic state. */
+static gboolean
+_ncm_csq1d_is_evolved_at (NcmCSQ1DPrivate * const self, const gdouble t)
+{
+  if (self->initial_condition_type == NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC)
+  {
+    if (t < self->t_ode_ini)
+      g_error ("ncm_csq1d_eval_at: time % 22.15g is before the initial conditions at % 22.15g.", t, self->t_ode_ini);
+
+    return TRUE;
+  }
+
+  return t > self->vacuum_final_time;
+}
+
 NcmCSQ1DState *
 ncm_csq1d_eval_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  if (t > self->vacuum_final_time)
+  if (_ncm_csq1d_is_evolved_at (self, t))
     _ncm_csq1d_eval_state (csq1d, t, state);
   else
     ncm_csq1d_compute_adiab_frame (csq1d, model, NCM_CSQ1D_FRAME_ORIG, t, state, NULL, NULL);
@@ -3209,13 +3348,15 @@ ncm_csq1d_eval_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DSt
 /**
  * ncm_csq1d_eval_at_frame:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @frame: a #NcmCSQ1DFrame
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
- * Computes the system state at $t$, the result is stored in the state object
- * in the frame @frame.
+ * Evaluates the solution at @t in @frame: from the saved evolution after the vacuum time
+ * with an adiabatic vacuum, from ncm_csq1d_compute_adiab_frame() up to it; with ad hoc
+ * conditions, from the saved evolution, aborting before the time of the conditions,
+ * where there is no solution. Needs ncm_csq1d_prepare().
  *
  * Returns: (transfer none): the @state object with the result.
  */
@@ -3224,7 +3365,7 @@ ncm_csq1d_eval_at_frame (NcmCSQ1D *csq1d, NcmModel *model, const NcmCSQ1DFrame f
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  if (t > self->vacuum_final_time)
+  if (_ncm_csq1d_is_evolved_at (self, t))
   {
     _ncm_csq1d_eval_state (csq1d, t, state);
     ncm_csq1d_change_frame (csq1d, model, state, frame);
@@ -3249,12 +3390,17 @@ ncm_csq1d_eval_at_frame (NcmCSQ1D *csq1d, NcmModel *model, const NcmCSQ1DFrame f
  *  }
  */
 
+/* A boost of rapidity p; it loses a factor e^|p| of relative precision, all of it at
+ * |p| = -ln (epsilon). */
 static void
 _ncm_csq1d_ct_g0g1 (const gdouble alpha, const gdouble gamma, const gdouble p, gdouble *alphap, gdouble *gammap)
 {
   const gdouble l_theta = _ALPHA_TO_THETA (alpha);
   const gdouble l_gamma = gamma;
   gdouble thetap        = 0.0;
+
+  if (fabs (p) >= -log (GSL_DBL_EPSILON))
+    g_error ("ncm_csq1d_change_frame: a boost of rapidity % 22.15g is beyond double precision.", p);
 
   ncm_util_mln_1mIexpzA_1pIexpmzA (l_gamma, l_theta, tanh (0.5 * p), gammap, &thetap);
   alphap[0] = _THETA_TO_ALPHA (thetap);
@@ -3544,13 +3690,17 @@ _ncm_csq1d_change_frame_to_nonadiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1D
 /**
  * ncm_csq1d_change_frame:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @state: a #NcmCSQ1DState
  * @frame: which frame to use
  *
- * Changes the frame of the @state object to the given @frame. The state object
- * must be a valid state object, it cannot be NULL. The state object is updated
- * in place.
+ * Changes @state, in place, to @frame at its time, see #NcmCSQ1DFrame. A change that
+ * involves #NCM_CSQ1D_FRAME_ADIAB2 or #NCM_CSQ1D_FRAME_NONADIAB2 applies a boost, which
+ * loses a factor $e^{\vert p\vert}$ of relative precision for a rapidity $p$; it aborts
+ * when $\vert p\vert$ reaches $-\ln\epsilon$, and for #NCM_CSQ1D_FRAME_ADIAB2 when
+ * $\vert F_1\vert \geq 1$. A state at hyperbolic distance $d$ from the origin of the
+ * frames involved keeps an absolute precision of about $\epsilon e^{d}$ in its
+ * coordinates; the states of interest are near the origin of their frame.
  *
  * Returns: (transfer none): the state object in the new frame.
  */
@@ -3765,15 +3915,20 @@ _ncm_csq1d_prepare_prop_eval_u1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble
 /**
  * ncm_csq1d_prepare_prop:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @ti: initial time $t_i$
  * @tii: integral approximation time $t_{\mathrm{i}i}$
  * @tf: max time $t_f$
  *
- * Computes the propagator for the given @csq1d and @model from @ti to @tf. The
- * propagator is computed using the integral approximation time @tii. The
- * propagator is stored in the @csq1d object and can be used to compute the
- * propagator a state from @ti to any time between @tii and @tf.
+ * Prepares the propagator $R(t)$ from @ti, the matrix
+ * $\begin{pmatrix} a + h & b \\ c & a - h \end{pmatrix}$ of unit determinant acting in the
+ * frame between #NCM_CSQ1D_FRAME_ORIG and #NCM_CSQ1D_FRAME_NONADIAB1. Over
+ * [@ti, @tii] it takes the first order, from the integrals of $m\nu^2$, $q m\nu^2$ and
+ * $q^2 m\nu^2$ with $q = -\int\mathrm{d}t/m$ by quadrature; from @tii it integrates the
+ * propagator equations to @tf, and stops earlier where the determinant drifts from one
+ * by 0.1. The time where the square of the first-order part, $-bc - h^2$, reaches the
+ * propagator threshold is kept, see ncm_csq1d_get_tf_prop(). ncm_csq1d_evolve_prop_vector()
+ * reads it from @tii to where the integration stopped.
  *
  */
 void
@@ -3791,20 +3946,13 @@ ncm_csq1d_prepare_prop (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti, cons
   _ncm_csq1d_prepare_prop_eval_u1 (csq1d, model, ti, tii, u1);
   self->ti_Prop = ti;
 
-/*
- *  ncm_message ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", ti, tii,
- *     u1[0], +ncm_csq1d_eval_int_qmnu2 (csq1d, model, tii),
- *     u1[1], +ncm_csq1d_eval_int_q2mnu2 (csq1d, model, tii),
- *     u1[2], -ncm_csq1d_eval_int_mnu2 (csq1d, model, tii)
- *     );
- */
-
   NV_Ith_S (self->y_Prop, 0) = 1.0;
   NV_Ith_S (self->y_Prop, 1) = u1[1];
   NV_Ith_S (self->y_Prop, 2) = u1[2];
   NV_Ith_S (self->y_Prop, 3) = u1[0];
 
-  g_array_append_val (t_a, ti);
+  /* The initial values are those at tii. */
+  g_array_append_val (t_a, tii);
 
   for (i = 0; i < 4; i++)
   {
@@ -3915,7 +4063,8 @@ _ncm_csq1d_prepare_prop_q2mnu2 (gdouble t, gpointer params)
  * ncm_csq1d_get_tf_prop:
  * @csq1d: a #NcmCSQ1D
  *
- * Returns: current final time $t_f$ for the propagator.
+ * Returns: the time ncm_csq1d_prepare_prop() found where the square of the first-order
+ * part of the propagator reaches the propagator threshold, NaN when it was not reached.
  */
 gdouble
 ncm_csq1d_get_tf_prop (NcmCSQ1D *csq1d)
@@ -3926,13 +4075,15 @@ ncm_csq1d_get_tf_prop (NcmCSQ1D *csq1d)
 }
 
 /**
- * ncm_csq1d_get_prop_vector:
+ * ncm_csq1d_compute_prop_vector:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
- * Computes the state vector associated with the propagator at time $t$.
+ * The point of the hyperbolic plane given by the normalized first-order part of the
+ * propagator of ncm_csq1d_prepare_prop() at @t: $\chi = h/n_0$ and
+ * $U_+ = \ln(-c/n_0)$ with $n_0 = \sqrt{-bc - h^2}$, labelled #NCM_CSQ1D_FRAME_ORIG.
  *
  * Returns: (transfer none): the @state object with the result.
  */
@@ -3966,7 +4117,7 @@ _ncm_csq1d_evolve_prop_vector (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *
   const gdouble a12            = b;
   const gdouble a21            = c;
   const gdouble init_ti        = ncm_csq1d_state_get_time (initial_state);
-  const gdouble q1_ti          = ncm_csq1d_eval_int_qmnu2 (csq1d, model, init_ti);
+  const gdouble q1_ti          = ncm_csq1d_eval_int_q2mnu2 (csq1d, model, init_ti);
   gdouble chi_i, Up_i;
 
   if (init_ti != self->ti_Prop)
@@ -4049,14 +4200,19 @@ _ncm_csq1d_evolve_prop_vector (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *
 /**
  * ncm_csq1d_evolve_prop_vector:
  * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
+ * @model: (nullable): a #NcmModel
  * @initial_state: initial state
  * @frame: frame
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
- * Uses the propagator to evolve the state vector @initial_state to time $t$ and
- * at frame @frame.
+ * Propagates @initial_state with the propagator of ncm_csq1d_prepare_prop() to @t, in
+ * the frame @frame, one of #NCM_CSQ1D_FRAME_ORIG, #NCM_CSQ1D_FRAME_NONADIAB1 or
+ * #NCM_CSQ1D_FRAME_NONADIAB2. @initial_state must be in #NCM_CSQ1D_FRAME_NONADIAB1 at
+ * the initial time of the propagator, or the call aborts. The state is carried to the
+ * frame of the propagator, multiplied by $R(t)$ and carried to @frame; results in the
+ * non-adiabatic frames are computed there directly, avoiding the shear of the original
+ * frame.
  *
  * Returns: (transfer none): the state vector.
  */

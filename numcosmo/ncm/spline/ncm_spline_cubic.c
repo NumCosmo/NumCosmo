@@ -26,11 +26,12 @@
 /**
  * NcmSplineCubic:
  *
- * Base class for implementing cubic splines.
- *
- * This class implements the functions which use a polynomial interpolation method of
- * third degree.
- *
+ * Abstract base class of the cubic splines,
+ * $$s(x) = y_i + b_i \Delta x + c_i \Delta x^2 + d_i \Delta x^3, \qquad \Delta x = x - x_i,$$
+ * on each interval $[x_i, x_{i+1}]$. It evaluates the interpolant, its derivatives and
+ * integrals from the coefficients $b_i, c_i, d_i$; the subclasses compute them, and differ in
+ * how the second derivatives, $2c_i$, are fixed. Outside the knots the boundary cubic is
+ * extrapolated.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -46,8 +47,6 @@
 
 typedef struct _NcmSplineCubicPrivate
 {
-  /*< private >*/
-  NcmSpline parent_instance;
   NcmVector *xv;
   NcmVector *yv;
   NcmVector *b;
@@ -385,10 +384,9 @@ _ncm_spline_cubic_integ_idx (const NcmSpline *s, const gdouble xi, const gsize i
  * ncm_spline_cubic_peek_b_vec:
  * @s: a #NcmSplineCubic
  *
- * Gets the vector of coefficients b. This method is used by subclasses to implement
- * the ncm_spline_prepare() virtual method. It should not be used by the user.
+ * For subclasses implementing the prepare method.
  *
- * Returns: (transfer none): the vector of coefficients b.
+ * Returns: (transfer none): the coefficients $b_i$.
  */
 NcmVector *
 ncm_spline_cubic_peek_b_vec (const NcmSplineCubic *s)
@@ -402,11 +400,9 @@ ncm_spline_cubic_peek_b_vec (const NcmSplineCubic *s)
  * ncm_spline_cubic_peek_c_vec:
  * @s: a #NcmSplineCubic
  *
- * Gets the vector of coefficients c. This method is used by subclasses
- * to implement the ncm_spline_prepare() virtual method.
- * It should not be used by the user.
+ * For subclasses implementing the prepare method.
  *
- * Returns: (transfer none): the vector of coefficients c.
+ * Returns: (transfer none): the coefficients $c_i$.
  */
 NcmVector *
 ncm_spline_cubic_peek_c_vec (const NcmSplineCubic *s)
@@ -420,11 +416,9 @@ ncm_spline_cubic_peek_c_vec (const NcmSplineCubic *s)
  * ncm_spline_cubic_peek_d_vec:
  * @s: a #NcmSplineCubic
  *
- * Gets the vector of coefficients d. This method is used by subclasses
- * to implement the ncm_spline_prepare() virtual method.
- * It should not be used by the user.
+ * For subclasses implementing the prepare method.
  *
- * Returns: (transfer none): the vector of coefficients d.
+ * Returns: (transfer none): the coefficients $d_i$.
  */
 NcmVector *
 ncm_spline_cubic_peek_d_vec (const NcmSplineCubic *s)
@@ -438,11 +432,9 @@ ncm_spline_cubic_peek_d_vec (const NcmSplineCubic *s)
  * ncm_spline_cubic_peek_diag_vec:
  * @s: a #NcmSplineCubic
  *
- * Gets the vector diag of the tri-diagonal matrix. This method is used by subclasses
- * to implement the ncm_spline_prepare() virtual method. It should not be used by the
- * user.
+ * For subclasses implementing the prepare method.
  *
- * Returns: (transfer none): the vector of coefficients g.
+ * Returns: (transfer none): workspace for the diagonal of the tridiagonal system.
  */
 NcmVector *
 ncm_spline_cubic_peek_diag_vec (const NcmSplineCubic *s)
@@ -456,11 +448,9 @@ ncm_spline_cubic_peek_diag_vec (const NcmSplineCubic *s)
  * ncm_spline_cubic_peek_offdiag_vec:
  * @s: a #NcmSplineCubic
  *
- * Gets the vector offdiag of the tri-diagonal matrix. This method is used by
- * subclasses to implement the ncm_spline_prepare() virtual method. It should not be
- * used by the user.
+ * For subclasses implementing the prepare method.
  *
- * Returns: (transfer none): the vector of coefficients g.
+ * Returns: (transfer none): workspace for the off-diagonal of the tridiagonal system.
  */
 NcmVector *
 ncm_spline_cubic_peek_offdiag_vec (const NcmSplineCubic *s)

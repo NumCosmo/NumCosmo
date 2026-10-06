@@ -27,6 +27,7 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include "test_ncm_fit_esmcmc_parity.h"
 
 typedef struct _TestNcmFitESMCMC
 {
@@ -46,6 +47,8 @@ void test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_parity_serial_vs_mpi (void);
+void test_ncm_fit_esmcmc_parity_apes_serial_vs_mpi (void);
+void test_ncm_fit_esmcmc_parity_stats_serial_vs_mpi (void);
 
 typedef struct _TestNcmFitEsmcmcFunc
 {
@@ -92,6 +95,8 @@ main (gint argc, gchar *argv[])
   }
 
   g_test_add_func ("/ncm/fit/esmcmc/parity/serial_vs_mpi", &test_ncm_fit_esmcmc_parity_serial_vs_mpi);
+  g_test_add_func ("/ncm/fit/esmcmc/parity/apes_serial_vs_mpi", &test_ncm_fit_esmcmc_parity_apes_serial_vs_mpi);
+  g_test_add_func ("/ncm/fit/esmcmc/parity/stats_serial_vs_mpi", &test_ncm_fit_esmcmc_parity_stats_serial_vs_mpi);
 
   g_test_run ();
 }
@@ -142,7 +147,7 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
       gchar *apes_ser               = ncm_serialize_to_string (ser, G_OBJECT (apes), TRUE);
       NcmFitESMCMCWalkerAPES *apes0 = NCM_FIT_ESMCMC_WALKER_APES (ncm_serialize_from_string (ser, apes_ser));
 
-      g_assert_true (ncm_fit_esmcmc_walker_apes_interp (apes)     == ncm_fit_esmcmc_walker_apes_interp (apes0));
+      g_assert_true (ncm_fit_esmcmc_walker_apes_get_uniform_weights (apes) == ncm_fit_esmcmc_walker_apes_get_uniform_weights (apes0));
       g_assert_true (ncm_fit_esmcmc_walker_apes_get_method (apes) == ncm_fit_esmcmc_walker_apes_get_method (apes0));
       g_assert_true (ncm_fit_esmcmc_walker_apes_get_k_type (apes) == ncm_fit_esmcmc_walker_apes_get_k_type (apes0));
 
@@ -407,5 +412,131 @@ test_ncm_fit_esmcmc_parity_serial_vs_mpi (void)
 
   ncm_mset_catalog_clear (&mcat_serial);
   ncm_mset_catalog_clear (&mcat_mpi);
+}
+
+/* APES with the production configuration, MPI evaluation against serial. The proposal is
+ * drawn on the master in both cases and each slave decides acceptance with the jump it
+ * received, so the result does not depend on which slave answers first; the two must
+ * agree to rounding on the first new ensemble. The threaded arm is checked against the
+ * same serial reference in test_ncm_fit_esmcmc (OMP lane); this binary runs with
+ * OMP_THREAD_LIMIT=1, where a threaded arm would only repeat the serial one. */
+void
+test_ncm_fit_esmcmc_parity_apes_serial_vs_mpi (void)
+{
+  NcmMSetCatalog *mcat_serial = test_ncm_fit_esmcmc_parity_apes_catalog (FALSE, FALSE);
+  NcmMSetCatalog *mcat_mpi    = test_ncm_fit_esmcmc_parity_apes_catalog (FALSE, TRUE);
+
+  test_ncm_fit_esmcmc_parity_compare (mcat_serial, mcat_mpi, 1.0e-12, 1.0e-14);
+
+  ncm_mset_catalog_clear (&mcat_serial);
+  ncm_mset_catalog_clear (&mcat_mpi);
+}
+
+/* Keeps the lines of the ensemble diagnostic summary, which depend on the step
+ * statistics only, and drops the rest (timings). */
+static void
+_test_ncm_fit_esmcmc_capture_summary (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
+{
+  GString *summary = user_data;
+
+  if (g_str_has_prefix (message, "# log10 ") ||
+      g_str_has_prefix (message, "# accept. prob:") ||
+      g_str_has_prefix (message, "#                "))
+    g_string_append (summary, message);
+}
+
+/* The stretch scenario of the parity test inside tight bounds, so that some proposals
+ * fall outside them, at the full message level. */
+static GString *
+_test_ncm_fit_esmcmc_parity_stats_run (gboolean use_mpi, gdouble *offboard_ratio)
+{
+  const gint dim                      = 2;
+  const gint nwalkers                 = 60;
+  NcmRNG *rng                         = ncm_rng_seeded_new (NULL, 20260721);
+  NcmDataGaussCovMVND *data_mvnd      = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 2.0e-2, 0.3, -1.0, 1.0, rng);
+  NcmModelMVND *model_mvnd            = ncm_model_mvnd_new (dim);
+  NcmDataset *dset                    = ncm_dataset_new_list (data_mvnd, NULL);
+  NcmLikelihood *lh                   = ncm_likelihood_new (dset);
+  NcmMSet *mset                       = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmMSetTransKernGauss *init_sampler = ncm_mset_trans_kern_gauss_new (0);
+  NcmRNG *esmcmc_rng                  = ncm_rng_seeded_new (NULL, 20260721);
+  NcmVector *y                        = ncm_data_gauss_cov_peek_mean (NCM_DATA_GAUSS_COV (data_mvnd));
+  NcmMatrix *cov                      = ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (data_mvnd));
+  GString *summary                    = g_string_new (NULL);
+  NcmFitESMCMCWalkerStretch *stretch;
+  NcmFit *fit;
+  NcmFitESMCMC *esmcmc;
+  guint handler_id;
+  gint i;
+
+  for (i = 0; i < dim; i++)
+  {
+    const gdouble sigma = sqrt (ncm_matrix_get (cov, i, i));
+
+    ncm_model_param_set_lower_bound (NCM_MODEL (model_mvnd), i, ncm_vector_get (y, i) - sigma);
+    ncm_model_param_set_upper_bound (NCM_MODEL (model_mvnd), i, ncm_vector_get (y, i) + sigma);
+    ncm_model_orig_param_set (NCM_MODEL (model_mvnd), i, ncm_vector_get (y, i));
+  }
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+
+  fit     = ncm_fit_factory (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  stretch = ncm_fit_esmcmc_walker_stretch_new (nwalkers, ncm_mset_fparams_len (mset));
+  esmcmc  = ncm_fit_esmcmc_new (fit,
+                                nwalkers,
+                                NCM_MSET_TRANS_KERN (init_sampler),
+                                NCM_FIT_ESMCMC_WALKER (stretch),
+                                NCM_FIT_RUN_MSGS_FULL);
+
+  ncm_fit_esmcmc_set_rng (esmcmc, esmcmc_rng);
+  ncm_fit_esmcmc_set_use_threads (esmcmc, FALSE);
+  ncm_fit_esmcmc_use_mpi (esmcmc, use_mpi);
+
+  ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
+  ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
+  ncm_mset_trans_kern_gauss_set_cov_from_rescale (init_sampler, 1.0e-1);
+
+  handler_id = g_log_set_handler ("NUMCOSMO", G_LOG_LEVEL_MESSAGE, &_test_ncm_fit_esmcmc_capture_summary, summary);
+
+  ncm_fit_esmcmc_start_run (esmcmc);
+  ncm_fit_esmcmc_run (esmcmc, 5);
+  ncm_fit_esmcmc_end_run (esmcmc);
+
+  g_log_remove_handler ("NUMCOSMO", handler_id);
+
+  offboard_ratio[0] = ncm_fit_esmcmc_get_offboard_ratio (esmcmc);
+
+  ncm_data_gauss_cov_mvnd_clear (&data_mvnd);
+  ncm_model_mvnd_clear (&model_mvnd);
+  ncm_dataset_clear (&dset);
+  ncm_likelihood_clear (&lh);
+  ncm_mset_clear (&mset);
+  ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (init_sampler));
+  ncm_fit_clear (&fit);
+  ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (stretch));
+  ncm_fit_esmcmc_clear (&esmcmc);
+  ncm_rng_free (rng);
+
+  return summary;
+}
+
+/* The step statistics behind the diagnostic summary are those of the proposals that were
+ * evaluated; serial and MPI runs from the same seed must report the same summary, with
+ * proposals outside the bounds in the run. */
+void
+test_ncm_fit_esmcmc_parity_stats_serial_vs_mpi (void)
+{
+  gdouble offboard_serial = 0.0;
+  gdouble offboard_mpi    = 0.0;
+  GString *summary_serial = _test_ncm_fit_esmcmc_parity_stats_run (FALSE, &offboard_serial);
+  GString *summary_mpi    = _test_ncm_fit_esmcmc_parity_stats_run (TRUE, &offboard_mpi);
+
+  g_assert_cmpfloat (offboard_serial, >, 0.0);
+  g_assert_cmpfloat (offboard_mpi, ==, offboard_serial);
+  g_assert_cmpuint (summary_serial->len, >, 0);
+  g_assert_cmpstr (summary_mpi->str, ==, summary_serial->str);
+
+  g_string_free (summary_serial, TRUE);
+  g_string_free (summary_mpi, TRUE);
 }
 

@@ -176,13 +176,13 @@ class MVNDMean(Ncm.MSetFunc1):
     def __init__(self, index=0):
         """Initialize the MVNDMean object.
 
-        Sets the dimension to 1 and the number of variables to 0.
+        Sets the dimension to 1, the number of variables to 0 and a name per index,
+        which labels the catalog column.
         """
-        super().__init__(
-            dimension=1, nvariables=0, eval_x=Ncm.Vector.new(1), index=index
-        )
+        super().__init__(dimension=1, nvariables=0, index=index)
+        self.set_meta(f"mvnd_mean_{index}", f"\\mu_{index}", "Test", "MVND mean", 0, 1)
 
-    def do_eval1(self, mset: Ncm.MSet, _):  # pylint: disable-msg=arguments-differ
+    def do_eval1(self, mset: Ncm.MSet, _):
         """Compute the MVND mean."""
         mvnd = mset.peek(Ncm.ModelMVND.id())
         assert mvnd is not None

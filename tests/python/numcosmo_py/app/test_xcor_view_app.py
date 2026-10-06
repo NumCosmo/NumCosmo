@@ -32,7 +32,6 @@ import matplotlib
 matplotlib.use("Agg")
 
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 
 import numpy as np
 
@@ -237,7 +236,7 @@ def test_view_kernel_rejects_both_comparisons() -> None:
     assert "Kernel evaluation complete" not in result.output
 
 
-@pytest.mark.parametrize("method", ["exact", "cubature", "gsl"])
+@pytest.mark.parametrize("method", ["exact", "cubature"])
 def test_view_kernel_cls_method(method: str) -> None:
     """Every quadrature is reachable for the C_ell computation."""
     result = _view("--cls", "--cls-method", method)

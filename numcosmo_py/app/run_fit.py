@@ -27,19 +27,19 @@ import dataclasses
 import resource
 import sys
 import time
-from typing import Optional, Annotated, Tuple
+from typing import Annotated
 
 import typer
 
 from .. import Ncm
-from .loading import LoadExperiment
 from ..sampling import (
-    check_runner_algorithm,
     FitGradType,
     FitRunMessages,
     FitRunner,
     NcmFitLogger,
+    check_runner_algorithm,
 )
+from .loading import LoadExperiment
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -53,7 +53,7 @@ class RunCommonOptions(LoadExperiment):
         ),
     ] = FitRunner.NLOPT
     algorithm: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             help="Algorithm to use for the fit.",
         ),
@@ -72,17 +72,17 @@ class RunCommonOptions(LoadExperiment):
     ] = FitRunMessages.SIMPLE
 
     params_reltol: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(help="Relative tolerance for the fitting parameters."),
     ] = None
 
     m2lnl_reltol: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(help="Relative tolerance for -2lnL."),
     ] = None
 
     m2lnl_abstol: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(help="Absolute tolerance for -2lnL."),
     ] = None
 
@@ -153,7 +153,7 @@ class RunFit(RunCommonOptions):
     """Computes the best fit of the model to the data."""
 
     restart: Annotated[
-        Tuple[float, float],
+        tuple[float, float],
         typer.Option(
             help=(
                 "Restart the fit until the given the value of m2lnL varies less"

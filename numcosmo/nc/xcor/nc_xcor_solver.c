@@ -453,6 +453,19 @@ _nc_xcor_solver_prepare_block_integrators (NcXcorSolver *solver)
                "but no registered kernel has one and none was set with "
                "nc_xcor_solver_set_integrator().", block->lmin, block->lmax);
 
+    /* The template tabulates j_ell only up to its ell-cache-max, an absolute
+     * multipole, so it must cover every block it is copied into. */
+    if (NCM_IS_SBESSEL_INTEGRATOR_LEVIN (proto))
+    {
+      const guint ell_cache_max = ncm_sbessel_integrator_levin_get_ell_cache_max (NCM_SBESSEL_INTEGRATOR_LEVIN (proto));
+
+      if (block->lmax > ell_cache_max)
+        g_error ("_nc_xcor_solver_prepare_block_integrators: block [%u, %u] reaches above "
+                 "the integrator's ell-cache-max (%u). Set an integrator built with "
+                 "ell-cache-max >= %u with nc_xcor_solver_set_integrator().",
+                 block->lmin, block->lmax, ell_cache_max, block->lmax);
+    }
+
     if (ser == NULL)
       ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
 
@@ -501,12 +514,10 @@ _nc_xcor_solver_guint_cmp (gconstpointer a, gconstpointer b)
  *
  * Tiles the union of all requested $\ell$-ranges into contiguous blocks, each
  * covering at most @default_block_size multipoles, further capped by
- * #NC_XCOR_KERNEL_MAX_ELL_BLOCK and by the smallest
- * ncm_sbessel_integrator_levin_get_ell_cache_max() among all registered
- * kernels using a #NcmSBesselIntegratorLevin. A block also never straddles
- * a registered kernel's l_limber threshold, since a kernel evaluated in
- * Limber mode below l_limber and non-Limber mode above it needs the switch
- * to fall on a block boundary.
+ * #NC_XCOR_KERNEL_MAX_ELL_BLOCK. A block also never straddles a registered
+ * kernel's l_limber threshold, since a kernel evaluated in Limber mode below
+ * l_limber and non-Limber mode above it needs the switch to fall on a block
+ * boundary.
  *
  * Replaces any blocks from a previous call. Requires at least one request.
  *
@@ -537,19 +548,6 @@ nc_xcor_solver_plan_blocks (NcXcorSolver *solver, guint default_block_size)
   }
 
   max_block_size = MIN (default_block_size, (guint) NC_XCOR_KERNEL_MAX_ELL_BLOCK);
-
-  for (i = 0; i < solver->kernels->len; i++)
-  {
-    NcXcorKernel *xclk               = g_ptr_array_index (solver->kernels, i);
-    NcmSBesselIntegrator *integrator = nc_xcor_kernel_peek_integrator (xclk);
-
-    if ((integrator != NULL) && NCM_IS_SBESSEL_INTEGRATOR_LEVIN (integrator))
-    {
-      guint ell_cache_max = ncm_sbessel_integrator_levin_get_ell_cache_max (NCM_SBESSEL_INTEGRATOR_LEVIN (integrator));
-
-      max_block_size = MIN (max_block_size, ell_cache_max);
-    }
-  }
 
   /* Every registered kernel's l_limber, if it falls strictly inside the
    * overall range, forces a block boundary there: below it the kernel
@@ -762,8 +760,8 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
  * to have been called first. Replaces any results from a previous
  * nc_xcor_solver_solve() call.
  *
- * When @xc's method has a block quadrature -- %NC_XCOR_METHOD_KERNEL_CUBATURE,
- * %NC_XCOR_METHOD_KERNEL_EXACT or %NC_XCOR_METHOD_KERNEL_GSL_BLOCK -- each distinct
+ * When @xc's method is kernel-space (%NC_XCOR_METHOD_KERNEL_CUBATURE or
+ * %NC_XCOR_METHOD_KERNEL_EXACT), each distinct
  * kernel's k-space closure (nc_xcor_kernel_get_eval_vectorized()) is built
  * once per $\ell$-block and shared across every request needing it in that
  * block, instead of rebuilding it once per pair the way nc_xcor_compute()
@@ -777,21 +775,15 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
  * integrand cache built from it. No thread touches another's integrand or
  * integrator state, so no locking is needed inside the per-block work itself.
  *
- * They share that whole path and differ only in the outer quadrature --
- * adaptive cubature, exact Gauss-Legendre over the common refinement of each
- * pair's knot sets, or qagp broken on those same knots -- so none of them
- * needs a solve loop of its own.
+ * They share that whole path and differ only in the outer quadrature
+ * (adaptive cubature, or exact Gauss-Legendre over the common refinement of
+ * each pair's knot sets), so neither needs a solve loop of its own.
  *
- * Every other method (%NC_XCOR_METHOD_LIMBER_Z_GSL,
- * %NC_XCOR_METHOD_LIMBER_Z_CUBATURE, %NC_XCOR_METHOD_KERNEL_GSL) has no
- * block-shared closure to reuse -- tier 1 stays untouched by design (plan
- * doc sec. 8), and %NC_XCOR_METHOD_KERNEL_GSL fits its closure per $\ell$ regardless
- * of pairing -- so those requests are computed directly with
- * nc_xcor_compute(), one call per request, serially, for correctness with no
- * reuse. Keeping %NC_XCOR_METHOD_KERNEL_GSL on that path is also what makes
- * it answer the same here as through nc_xcor_compute();
- * %NC_XCOR_METHOD_KERNEL_GSL_BLOCK is the one to use for its quadrature with
- * the sharing.
+ * The redshift-space Limber methods (%NC_XCOR_METHOD_LIMBER_Z_GSL,
+ * %NC_XCOR_METHOD_LIMBER_Z_CUBATURE) have no block-shared closure to reuse
+ * (tier 1 stays untouched by design, plan doc sec. 8), so those requests are
+ * computed directly with nc_xcor_compute(), one call per request, serially,
+ * for correctness with no reuse.
  *
  * Results are retrieved with nc_xcor_solver_get_result().
  *

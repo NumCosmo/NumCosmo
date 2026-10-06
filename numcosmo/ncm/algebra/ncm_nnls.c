@@ -26,10 +26,13 @@
 /**
  * NcmNNLS:
  *
- * Non-negative linear least-squares.
+ * Non-negative linear least squares.
  *
- * NcmNNLS is a class that implements the non-negative linear least-squares algorithm.
- *
+ * Solves $\min_{\vec x} |A\vec x - \vec f|$ subject to $\vec x \ge 0$ for an $m \times n$ matrix
+ * $A$, with the sizes fixed at construction. ncm_nnls_solve() is an active-set method that adds
+ * blocks of variables with the largest gradient to the passive set and solves the unconstrained
+ * problem on it by the #NcmNNLS:umethod. The other solvers are alternatives built on external
+ * codes; ncm_nnls_solve_splx() and ncm_nnls_solve_gsmo() add a constraint on $\sum_i x_i$.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -243,6 +246,7 @@ _ncm_nnls_finalize (GObject *object)
 
   g_array_unref (self->ipiv);
   g_array_unref (self->work);
+  g_clear_pointer (&self->work_gsl, gsl_multifit_linear_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_nnls_parent_class)->finalize (object);
@@ -259,6 +263,11 @@ ncm_nnls_class_init (NcmNNLSClass *klass)
   object_class->dispose      = &_ncm_nnls_dispose;
   object_class->finalize     = &_ncm_nnls_finalize;
 
+  /**
+   * NcmNNLS:umethod:
+   *
+   * Method for the unconstrained least-squares problems of ncm_nnls_solve().
+   */
   g_object_class_install_property (object_class,
                                    PROP_UMETHOD,
                                    g_param_spec_enum ("umethod",
@@ -266,6 +275,12 @@ ncm_nnls_class_init (NcmNNLSClass *klass)
                                                       "Unconstrained method",
                                                       NCM_TYPE_NNLS_UMETHOD, NCM_NNLS_UMETHOD_NORMAL,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmNNLS:reltol:
+   *
+   * Relative tolerance of ncm_nnls_solve(), ncm_nnls_solve_splx() and ncm_nnls_solve_gsmo().
+   */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
                                    g_param_spec_double ("reltol",
@@ -273,6 +288,12 @@ ncm_nnls_class_init (NcmNNLSClass *klass)
                                                         "Relative tolerance",
                                                         GSL_DBL_MIN, 1.0e-1, GSL_DBL_EPSILON,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmNNLS:nrows:
+   *
+   * Number of rows $m$ of the matrix.
+   */
   g_object_class_install_property (object_class,
                                    PROP_NROWS,
                                    g_param_spec_uint ("nrows",
@@ -280,6 +301,12 @@ ncm_nnls_class_init (NcmNNLSClass *klass)
                                                       "Number of rows",
                                                       1, G_MAXUINT, 1,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmNNLS:ncols:
+   *
+   * Number of columns $n$ of the matrix.
+   */
   g_object_class_install_property (object_class,
                                    PROP_NCOLS,
                                    g_param_spec_uint ("ncols",
@@ -307,12 +334,10 @@ _ncm_nnls_set_ncols (NcmNNLS *nnls, const guint ncols)
 
 /**
  * ncm_nnls_new:
- * @nrows: number of rows
- * @ncols: number of columns
+ * @nrows: number of rows $m$
+ * @ncols: number of columns $n$
  *
- * Creates a new #NcmNNLS object.
- *
- * Returns: a new #NcmNNLS.
+ * Returns: (transfer full): a new #NcmNNLS.
  */
 NcmNNLS *
 ncm_nnls_new (guint nrows, guint ncols)
@@ -329,7 +354,7 @@ ncm_nnls_new (guint nrows, guint ncols)
  * ncm_nnls_ref:
  * @nnls: a #NcmNNLS
  *
- * Increase the reference of @nnls by one.
+ * Increases the reference count of @nnls by one.
  *
  * Returns: (transfer full): @nnls.
  */
@@ -343,8 +368,7 @@ ncm_nnls_ref (NcmNNLS *nnls)
  * ncm_nnls_free:
  * @nnls: a #NcmNNLS
  *
- * Decrease the reference count of @nnls by one.
- *
+ * Decreases the reference count of @nnls by one.
  */
 void
 ncm_nnls_free (NcmNNLS *nnls)
@@ -356,9 +380,7 @@ ncm_nnls_free (NcmNNLS *nnls)
  * ncm_nnls_clear:
  * @nnls: a #NcmNNLS
  *
- * Decrease the reference count of @nnls by one, and sets the pointer *@nnls to
- * NULL.
- *
+ * If *@nnls is not %NULL, decreases its reference count by one and sets *@nnls to %NULL.
  */
 void
 ncm_nnls_clear (NcmNNLS **nnls)
@@ -371,8 +393,7 @@ ncm_nnls_clear (NcmNNLS **nnls)
  * @nnls: a #NcmNNLS
  * @umethod: a #NcmNNLSUMethod
  *
- * Sets which unconstrained least-squares method to use.
- *
+ * Sets the #NcmNNLS:umethod.
  */
 void
 ncm_nnls_set_umethod (NcmNNLS *nnls, NcmNNLSUMethod umethod)
@@ -386,9 +407,7 @@ ncm_nnls_set_umethod (NcmNNLS *nnls, NcmNNLSUMethod umethod)
  * ncm_nnls_get_umethod:
  * @nnls: a #NcmNNLS
  *
- * Gets the unconstrained least-squares method being used.
- *
- * Returns: a #NcmNNLSUMethod.
+ * Returns: the #NcmNNLS:umethod.
  */
 NcmNNLSUMethod
 ncm_nnls_get_umethod (NcmNNLS *nnls)
@@ -401,10 +420,9 @@ ncm_nnls_get_umethod (NcmNNLS *nnls)
 /**
  * ncm_nnls_set_reltol:
  * @nnls: a #NcmNNLS
- * @reltol: a double
+ * @reltol: the relative tolerance
  *
- * Sets relative tolerance to @reltol.
- *
+ * Sets the #NcmNNLS:reltol, in $[$%GSL_DBL_MIN$, 1)$.
  */
 void
 ncm_nnls_set_reltol (NcmNNLS *nnls, const gdouble reltol)
@@ -421,9 +439,7 @@ ncm_nnls_set_reltol (NcmNNLS *nnls, const gdouble reltol)
  * ncm_nnls_get_reltol:
  * @nnls: a #NcmNNLS
  *
- * Gets the relative tolerance being used.
- *
- * Returns: the current relative tolerance.
+ * Returns: the #NcmNNLS:reltol.
  */
 gdouble
 ncm_nnls_get_reltol (NcmNNLS *nnls)
@@ -437,7 +453,7 @@ ncm_nnls_get_reltol (NcmNNLS *nnls)
  * ncm_nnls_get_nrows:
  * @nnls: a #NcmNNLS
  *
- * Returns: number of rows.
+ * Returns: the number of rows $m$.
  */
 guint
 ncm_nnls_get_nrows (NcmNNLS *nnls)
@@ -451,7 +467,7 @@ ncm_nnls_get_nrows (NcmNNLS *nnls)
  * ncm_nnls_get_ncols:
  * @nnls: a #NcmNNLS
  *
- * Returns: number of rows.
+ * Returns: the number of columns $n$.
  */
 guint
 ncm_nnls_get_ncols (NcmNNLS *nnls)
@@ -634,13 +650,18 @@ _ncm_nnls_solve_normal_QR (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix
                           ncm_vector_data (self->sub_x_tmp), ldb,
                           &g_array_index (self->work, gdouble, 0), lwork);
 
-  g_assert_cmpint (ret, ==, 0);
+  /* ret < 0 is an illegal argument, a programming error. ret > 0 means the system is
+   * rank deficient (e.g. an all-zero column), use the SVD based minimum-norm solution. */
+  g_assert_cmpint (ret, >=, 0);
+
+  if (ret > 0)
+    _ncm_nnls_solve_normal_DGELSD (self, Pset, A, x, f);
 }
 
 static void
 _ncm_nnls_solve_normal_DGELSD (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f)
 {
-  gdouble rcond;
+  gdouble rcond = -1.0; /* dgelsd input: negative means machine precision */
   gint ret, ldb, rank;
 
   _ncm_nnls_prepare_usys_DGELSD (self, Pset, A, x, f);
@@ -728,6 +749,14 @@ _ncm_nnls_compute_mgrad (NcmNNLSPrivate * const self, NcmMatrix *A, NcmVector *x
 static void
 _ncm_nnls_solve_feasible (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix *A, NcmVector *x, NcmVector *f, guint max_remove)
 {
+  /* An empty passive set has the zero vector as its only feasible solution. */
+  if (ncm_iset_get_len (Pset) == 0)
+  {
+    ncm_vector_set_zero (x);
+
+    return;
+  }
+
   /*ncm_iset_log_vals (Pset, "Pset: ");*/
   _ncm_nnls_solve_unconstrained (self, Pset, A, x, f);
 
@@ -739,6 +768,13 @@ _ncm_nnls_solve_feasible (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix 
   while (ncm_iset_get_len (self->invalid))
   {
     ncm_iset_remove_smallest_subset (self->invalid, Pset, x, max_remove);
+
+    if (ncm_iset_get_len (Pset) == 0)
+    {
+      ncm_vector_set_zero (x);
+
+      return;
+    }
 
     /*ncm_iset_log_vals (Pset, "Pset: ");*/
     _ncm_nnls_solve_unconstrained (self, Pset, A, x, f);
@@ -753,16 +789,15 @@ _ncm_nnls_solve_feasible (NcmNNLSPrivate * const self, NcmISet *Pset, NcmMatrix 
 /**
  * ncm_nnls_solve:
  * @nnls: a #NcmNNLS
- * @A: a #NcmMatrix $A$
- * @x: a #NcmVector $\vec{x}$
- * @f: a #NcmVector $\vec{f}$
+ * @A: the $m \times n$ matrix $A$
+ * @x: the solution $\vec x$
+ * @f: the vector $\vec f$
  *
- * Solves the system $A\vec{x} = \vec{f}$ for $\vec{x}$
- * imposing the non negativity constraint on $\vec{x}$,
- * i.e., $\vec{x} > 0$.
+ * Solves $\min |A\vec x - \vec f|$ subject to $\vec x \ge 0$ by the active-set method. A block
+ * of variables is added while its gradient component exceeds #NcmNNLS:reltol times the residual
+ * norm and adding it reduces that norm by more than the same fraction.
  *
- *
- * Returns: the Euclidean norm of the residuals.
+ * Returns: $|A\vec x - \vec f|$.
  */
 gdouble
 ncm_nnls_solve (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
@@ -877,17 +912,14 @@ int nnls_c (double *a, const int *mda, const int *m, const int *n, double *b,
 /**
  * ncm_nnls_solve_LH:
  * @nnls: a #NcmNNLS
- * @A: a #NcmMatrix $A$
- * @x: a #NcmVector $\vec{x}$
- * @f: a #NcmVector $\vec{f}$
+ * @A: the $m \times n$ matrix $A$
+ * @x: the solution $\vec x$
+ * @f: the vector $\vec f$
  *
- * Solves the system $A\vec{x} = \vec{f}$ for $\vec{x}$
- * imposing the non negativity constraint on $\vec{x}$,
- * i.e., $\vec{x} > 0$. This method solves the system
- * using the original code by Charles L. Lawson and
- * Richard J. Hanson translated to C using f2c.
+ * Solves $\min |A\vec x - \vec f|$ subject to $\vec x \ge 0$ with the Lawson-Hanson NNLS code,
+ * translated to C by f2c. Aborts if that code fails.
  *
- * Returns: the Euclidean norm of the residuals.
+ * Returns: $|A\vec x - \vec f|$.
  */
 gdouble
 ncm_nnls_solve_LH (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
@@ -916,11 +948,16 @@ ncm_nnls_solve_LH (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
   if (self->ipiv->len < self->ncols)
     g_array_set_size (self->ipiv, self->ncols);
 
-  nnls_c (ncm_matrix_data (A), &nrows, &nrows, &ncols, ncm_vector_data (self->residuals),
+  /* The Fortran code takes a column-major matrix and overwrites it, and overwrites b */
+  nnls_c (ncm_matrix_data (self->A_QR), &nrows, &nrows, &ncols, ncm_vector_data (self->residuals),
           ncm_vector_data (x), &rnorm, ncm_vector_data (self->x_tmp), &g_array_index (self->work, gdouble, 0),
           &g_array_index (self->ipiv, gint, 0), &mode);
 
-  return rnorm;
+  if (mode != 1)
+    g_error ("ncm_nnls_solve_LH: the Lawson-Hanson code failed with mode %d "
+             "(2: bad dimensions, 3: iteration limit reached).", mode);
+
+  return _ncm_nnls_compute_residuals (self, A, x, f, self->residuals);
 }
 
 void LowRankQP (gint *n, gint *m, gint *p, gint *method, gint *verbose, gint *niter,
@@ -930,16 +967,15 @@ void LowRankQP (gint *n, gint *m, gint *p, gint *method, gint *verbose, gint *ni
 /**
  * ncm_nnls_solve_lowrankqp:
  * @nnls: a #NcmNNLS
- * @A: a #NcmMatrix $A$
- * @x: a #NcmVector $\vec{x}$
- * @f: a #NcmVector $\vec{f}$
+ * @A: the $m \times n$ matrix $A$
+ * @x: the solution $\vec x$
+ * @f: the vector $\vec f$
  *
- * Solves the system $A\vec{x} = \vec{f}$ for $\vec{x}$
- * imposing the non negativity constraint on $\vec{x}$,
- * i.e., $\vec{x} > 0$. This method solves the system
- * using the LowRankQP quadratic programming code.
+ * Solves $\min |A\vec x - \vec f|$ subject to $0 \le \vec x \le 10^{20}$ with the LowRankQP
+ * interior-point code. The #NcmNNLS:umethod must be %NCM_NNLS_UMETHOD_NORMAL or
+ * %NCM_NNLS_UMETHOD_NORMAL_LU, and $m \ne n$.
  *
- * Returns: the Euclidean norm of the residuals.
+ * Returns: $|A\vec x - \vec f|$.
  */
 gdouble
 ncm_nnls_solve_lowrankqp (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
@@ -996,25 +1032,20 @@ ncm_nnls_solve_lowrankqp (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *
   return _ncm_nnls_compute_residuals (self, A, x, f, self->residuals);
 }
 
-static void
-print_state (libqp_state_T state)
-{
-  ncm_message ("niter %d QP % 22.15g QD % 22.15g %d\n", state.nIter, state.QP, state.QD, state.exitflag);
-}
+static void _ncm_nnls_prepare_qp (NcmNNLSPrivate * const self, NcmMatrix *A, NcmVector *f);
 
 /**
  * ncm_nnls_solve_splx:
  * @nnls: a #NcmNNLS
- * @A: a #NcmMatrix $A$
- * @x: a #NcmVector $\vec{x}$
- * @f: a #NcmVector $\vec{f}$
+ * @A: the $m \times n$ matrix $A$
+ * @x: the solution $\vec x$
+ * @f: the vector $\vec f$
  *
- * Solves the system $A\vec{x} = \vec{f}$ for $\vec{x}$
- * imposing the non negativity constraint on $\vec{x}$,
- * i.e., $\vec{x} > 0$. This method solves the system
- * using function libqp_splx_solver from [libqp](https://cmp.felk.cvut.cz/~xfrancv/libqp/html/).
+ * Solves $\min |A\vec x - \vec f|$ subject to $\vec x \ge 0$ and $\sum_i x_i \le 1$ with
+ * libqp_splx_solver() from [libqp](https://cmp.felk.cvut.cz/~xfrancv/libqp/html/), to a relative
+ * duality gap of #NcmNNLS:reltol. Aborts if it does not converge in 1000 iterations.
  *
- * Returns: the Euclidean norm of the residuals.
+ * Returns: $|A\vec x - \vec f|$.
  */
 gdouble
 ncm_nnls_solve_splx (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
@@ -1028,20 +1059,11 @@ ncm_nnls_solve_splx (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
   libqp_state_T res;
   gint i;
 
-  if (!self->LU_alloc)
-  {
-    self->M        = ncm_matrix_new (ncols, ncols);
-    self->M_U      = ncm_matrix_new (ncols, ncols);
-    self->LU_alloc = TRUE;
-  }
-
-  ncm_matrix_square_to_sym (A, 'T', 'U', self->M);
-  ncm_matrix_update_vector (A, 'T', -1.0, f, 0.0, self->b);
+  _ncm_nnls_prepare_qp (self, A, f);
 
   for (i = 0; i < ncols; i++)
     g_ptr_array_add (col, ncm_matrix_ptr (self->M, i, 0));
 
-  ncm_vector_set_all (self->x_tmp, 1.0);
   ncm_vector_set_all (x, 0.0);
 
   for (i = 0; i < ncols; i++)
@@ -1056,32 +1078,31 @@ ncm_nnls_solve_splx (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
                            ncm_vector_data (x),
                            ncols, 1000,
                            0.0, self->reltol, GSL_NEGINF,
-                           /*&print_state*/ NULL);
+                           NULL);
 
   g_ptr_array_unref (col);
   g_free (II);
 
-  g_assert_cmpint (res.exitflag, >=, 0);
-
-  if (FALSE)
-    print_state (res);
+  if (res.exitflag <= 0)
+    g_error ("ncm_nnls_solve_splx: libqp stopped with exit flag %d after %d iterations.",
+             res.exitflag, res.nIter);
 
   return _ncm_nnls_compute_residuals (self, A, x, f, self->residuals);
 }
 
 /**
- * ncm_nnls_solve_gmso:
+ * ncm_nnls_solve_gsmo:
  * @nnls: a #NcmNNLS
- * @A: a #NcmMatrix $A$
- * @x: a #NcmVector $\vec{x}$
- * @f: a #NcmVector $\vec{f}$
+ * @A: the $m \times n$ matrix $A$
+ * @x: the solution $\vec x$
+ * @f: the vector $\vec f$
  *
- * Solves the system $A\vec{x} = \vec{f}$ for $\vec{x}$
- * imposing the non negativity constraint on $\vec{x}$,
- * i.e., $\vec{x} > 0$. This method solves the system
- * using function libqp_gmso_solver from [libqp](https://cmp.felk.cvut.cz/~xfrancv/libqp/html/).
+ * Solves $\min |A\vec x - \vec f|$ subject to $\vec x \ge 0$ and $\sum_i x_i = 1$ with
+ * libqp_gsmo_solver() from [libqp](https://cmp.felk.cvut.cz/~xfrancv/libqp/html/), until the KKT
+ * conditions hold to #NcmNNLS:reltol times $|A^T\vec f|$. Aborts if it does not converge in 1000
+ * iterations.
  *
- * Returns: the Euclidean norm of the residuals.
+ * Returns: $|A\vec x - \vec f|$.
  */
 gdouble
 ncm_nnls_solve_gsmo (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
@@ -1093,20 +1114,11 @@ ncm_nnls_solve_gsmo (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
   libqp_state_T res;
   gint i;
 
-  if (!self->LU_alloc)
-  {
-    self->M        = ncm_matrix_new (ncols, ncols);
-    self->M_U      = ncm_matrix_new (ncols, ncols);
-    self->LU_alloc = TRUE;
-  }
-
-  ncm_matrix_square_to_sym (A, 'T', 'U', self->M);
-  ncm_matrix_update_vector (A, 'T', -1.0, f, 0.0, self->b);
+  _ncm_nnls_prepare_qp (self, A, f);
 
   for (i = 0; i < ncols; i++)
     g_ptr_array_add (col, ncm_matrix_ptr (self->M, i, 0));
 
-  ncm_vector_set_all (self->x_tmp, 1.0);
   ncm_vector_set_all (self->x_try, 1.0);
   ncm_vector_set_all (self->mgrad, 0.0);
   ncm_vector_set_all (self->residuals, GSL_POSINF);
@@ -1124,29 +1136,57 @@ ncm_nnls_solve_gsmo (NcmNNLS *nnls, NcmMatrix *A, NcmVector *x, NcmVector *f)
                            ncm_vector_data (self->residuals),
                            ncm_vector_data (x),
                            ncols, 1000,
-                           self->reltol,
-                           /*&print_state*/ NULL);
+                           self->reltol * ncm_vector_dnrm2 (self->b),
+                           NULL);
 
   g_ptr_array_unref (col);
   g_free (II);
 
-  g_assert_cmpint (res.exitflag, >=, 0);
-
-  if (FALSE)
-    print_state (res);
+  if (res.exitflag <= 0)
+    g_error ("ncm_nnls_solve_gsmo: libqp stopped with exit flag %d after %d iterations.",
+             res.exitflag, res.nIter);
 
   return _ncm_nnls_compute_residuals (self, A, x, f, self->residuals);
+}
+
+/*
+ * The quadratic program min x^T H x / 2 + b^T x with H = A^T A, whole in M since libqp reads
+ * its columns, b = -A^T f, and the diagonal of H in x_tmp.
+ */
+static void
+_ncm_nnls_prepare_qp (NcmNNLSPrivate * const self, NcmMatrix *A, NcmVector *f)
+{
+  const guint ncols = self->ncols;
+  guint i, j;
+
+  if (!self->LU_alloc)
+  {
+    self->M        = ncm_matrix_new (ncols, ncols);
+    self->M_U      = ncm_matrix_new (ncols, ncols);
+    self->LU_alloc = TRUE;
+  }
+
+  ncm_matrix_square_to_sym (A, 'T', 'U', self->M);
+
+  for (i = 0; i < ncols; i++)
+  {
+    for (j = 0; j < i; j++)
+      ncm_matrix_set (self->M, i, j, ncm_matrix_get (self->M, j, i));
+
+    ncm_vector_set (self->x_tmp, i, ncm_matrix_get (self->M, i, i));
+  }
+
+  ncm_matrix_update_vector (A, 'T', -1.0, f, 0.0, self->b);
 }
 
 /**
  * ncm_nnls_get_residuals:
  * @nnls: a #NcmNNLS
  *
- * Gets the solution residuals, this method return the last residuals
- * computed during ncm_nnls_solve(). If ncm_nnls_solve() was not
- * called the return is undefined.
+ * Gets the residuals $\vec f - A\vec x$ of the last solve; before any solve its content is
+ * undefined.
  *
- * Returns: (transfer none): residuals vector.
+ * Returns: (transfer none): the residuals.
  */
 NcmVector *
 ncm_nnls_get_residuals (NcmNNLS *nnls)

@@ -23,38 +23,114 @@
 
 """NumCosmo APP subcommands to analyze catalogs."""
 
-import math
 import dataclasses
-from typing import Optional, Annotated, List
+import math
 from pathlib import Path
-import typer
-from rich.table import Table
-from rich.text import Text
-from rich.progress import track
-import numpy as np
+from typing import Annotated
 
 import matplotlib.pyplot as plt
+import numpy as np
+import typer
 from matplotlib.colors import LogNorm
+from rich.progress import track
+from rich.table import Table
+from rich.text import Text
 
 from .. import Ncm
-from ..interpolation.stats_dist import (
-    create_stats_dist,
-    CrossValidationMethod,
-    InterpolationKernel,
-    InterpolationMethod,
-)
-from ..plotting.tools import set_rc_params_article, confidence_ellipse
-from ..safe_eval import compile_expr, SafeExprError
 from ..catalog_stats import (
     DerivedStat,
     parse_variable_bindings,
     resolve_param,
     stat_center_and_bounds,
 )
-from .loading import LoadCatalog, LoadExperiment, LoadedCatalog, load_catalog
-from .logging import AppLogging
+from ..interpolation.stats_dist import (
+    CrossValidationMethod,
+    InterpolationKernel,
+    InterpolationMethod,
+    create_stats_dist,
+)
 from ..plotting import mcat_to_catalog_data, plot_mcsamples
 from ..plotting.derived import add_derived_column
+from ..plotting.tools import confidence_ellipse, set_rc_params_article
+from ..safe_eval import SafeExprError, compile_expr
+from .loading import LoadCatalog, LoadedCatalog, LoadExperiment, load_catalog
+from .logging import AppLogging
+
+TAU_FLAG_CODES = (
+    (Ncm.StatsAcorrDiag.SHORT_CHAIN, "S"),
+    (Ncm.StatsAcorrDiag.WINDOW_TRUNCATED, "W"),
+    (Ncm.StatsAcorrDiag.DRIFT, "D"),
+    (Ncm.StatsAcorrDiag.METHOD_DISAGREEMENT, "M"),
+    (Ncm.StatsAcorrDiag.ZERO_VARIANCE, "Z"),
+    (Ncm.StatsAcorrDiag.VARIANCE_SHIFT, "V"),
+)
+
+TAU_FLAG_MEANINGS = (
+    ("S", "chain shorter than 50 tau"),
+    ("W", "no block level resolved the correlation"),
+    ("D", "mean moved between the halves"),
+    ("M", "estimators of tau disagree by over 2x"),
+    ("Z", "parameter never moved"),
+    ("V", "halves differ in variance by over 100x (an unremoved burn-in)"),
+)
+
+
+TAU_FLAG_COLOR = "bold bright_yellow"
+
+KEFF_MEANINGS = (
+    ("K_eff", "independent walkers per iteration: Var(rows) / Var(ensemble mean)"),
+    ("", "N when the N walkers are independent, 1 when they move together,"),
+    ("", "above N when walkers are held in place at different positions"),
+)
+
+
+def _tau_flag_legend() -> Table:
+    """The conditions the ! column reports, one row each."""
+    legend = Table(title="! column", expand=False, box=None)
+    legend.add_column(justify="center", style=TAU_FLAG_COLOR)
+    legend.add_column(justify="left")
+
+    for code, meaning in TAU_FLAG_MEANINGS:
+        legend.add_row(code, meaning)
+
+    return legend
+
+
+def _keff_legend() -> Table:
+    """What the K_eff column measures."""
+    legend = Table(title="K_eff column", expand=False, box=None)
+    legend.add_column(justify="left", style="bold")
+    legend.add_column(justify="left")
+
+    for name, meaning in KEFF_MEANINGS:
+        legend.add_row(name, meaning)
+
+    return legend
+
+
+def _sampler_options(options: str | None) -> list[tuple[str, str]]:
+    """The sampler options as (name, value) pairs, in the order the sampler wrote them.
+
+    The sampler writes them as a colon separated list of ``name=value``; anything that
+    does not parse is kept whole under an empty name rather than dropped, so a sampler
+    this version does not know about still shows what it recorded.
+    """
+    if not options:
+        return []
+
+    pairs = []
+    for item in options.split(":"):
+        name, sep, value = item.partition("=")
+        pairs.append((name, value) if sep else ("", item))
+
+    return pairs
+
+
+def _tau_flag_code(diag: int) -> str:
+    """One letter per condition set in an autocorrelation diagnostic."""
+    code = "".join(letter for flag, letter in TAU_FLAG_CODES if diag & flag)
+
+    return code if code else "-"
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -70,6 +146,17 @@ class AnalyzeMCMC(LoadCatalog):
             ),
         ),
     ] = False
+
+    def _cut_text(self, extra: float) -> str:
+        """Iterations still to remove, and the total that implies."""
+        return f"{extra:.0f} ({extra + self.burnin_applied:.0f})"
+
+    def _burnin_text(self) -> str:
+        """The burn-in applied, noting when the markovian-id floor raised the request."""
+        if self.burnin_raised_from is None:
+            return f"{self.burnin_applied}"
+
+        return f"{self.burnin_applied} (raised from {self.burnin_raised_from})"
 
     def __post_init__(self) -> None:
         """Analyzes the results of a MCMC run."""
@@ -93,12 +180,41 @@ class AnalyzeMCMC(LoadCatalog):
         details.add_column(justify="right", style=values_color)
 
         details.add_row("Run type", mcat.get_run_type())
+        details.add_row("Initial sampler", mcat.get_initial_sampler() or "not recorded")
+        details.add_row("Sampler", mcat.get_sampler() or "not recorded")
+        # The sampler's own tunables, one row each: two runs of the same sampler differ
+        # here and nowhere else, so a single joined string would hide what changed.
+        for name, value in _sampler_options(mcat.get_sampler_options()):
+            details.add_row(f"  {name}", value)
         details.add_row("Size", f"{mcat.len()}")
         details.add_row("Number of Iterations", f"{mcat.max_time()}")
         details.add_row("Number of chains", f"{self.nchains}")
+        details.add_row("Markovian chain starts", f"{self.markovian_start}")
+        details.add_row("Burn-in", self._burnin_text())
         details.add_row("Number of parameters", f"{self.fparams_len}")
         details.add_row("Number of extra columns", f"{self.nadd_vals}")
         details.add_row("Weighted", f"{mcat.weighted()}")
+
+        # Var(-2lnL) settles orders of magnitude sooner than the autocorrelation time, so
+        # it tells a short chain apart from a converged one. Where the posterior is locally
+        # Gaussian in n parameters, -2lnL is chi^2 with n degrees of freedom and the
+        # variance approaches 2n; the reference is printed for that comparison. It does NOT
+        # hold for a strongly non-Gaussian posterior: on a two-mode target the ratio sits
+        # near 1.4 whether or not the chain has converged. What is general is the trend,
+        # the variance falling and then holding steady from one iteration to the next.
+        m2lnL_id = mcat.get_m2lnp_var()
+        if (m2lnL_id >= 0) and (mcat.len() > 1):
+            m2lnL_var = mcat.peek_pstats().get_var(m2lnL_id)
+            expected = 2.0 * self.fparams_len
+
+            details.add_row("Var(-2lnL)", f"{m2lnL_var:.2f}")
+
+            if expected > 0.0:
+                details.add_row(
+                    "  vs 2n, if Gaussian",
+                    f"{expected:.2f}  (ratio {m2lnL_var / expected:.3f})",
+                )
+
         main_table.add_row(details)
 
         if self.nitems == 0:
@@ -110,15 +226,23 @@ class AnalyzeMCMC(LoadCatalog):
 
         # Global diagnostics
 
-        global_diag = Table(
-            title="Global Convergence Diagnostics",
-            expand=False,
+        # Two tables, because these are two kinds of quantity. A diagnostic that proposes a
+        # burn-in cut fills all the columns; a summary statistic of the whole chain has no
+        # cut to suggest and no AR model behind it, and sharing one frame left 13 of 28
+        # cells reading NA.
+        summary_diag = Table(title="Chain summary", expand=False)
+        summary_diag.add_column("Quantity", justify="left", style=desc_color)
+        summary_diag.add_column("Worst parameter", justify="left", style=values_color)
+        summary_diag.add_column("Value", justify="left", style=values_color)
+
+        burnin_diag = Table(title="Suggested burn-in", expand=False)
+        burnin_diag.add_column("Diagnostic", justify="left", style=desc_color)
+        burnin_diag.add_column(
+            "Additional burn-in (total)", justify="left", style=values_color
         )
-        global_diag.add_column("Diagnostic Statistic", justify="left", style=desc_color)
-        global_diag.add_column("Suggested cut-off", justify="left", style=values_color)
-        global_diag.add_column("Worst parameter", justify="left", style=values_color)
-        global_diag.add_column("AR model order", justify="left", style=values_color)
-        global_diag.add_column("Value", justify="left", style=values_color)
+        burnin_diag.add_column("Worst parameter", justify="left", style=values_color)
+        burnin_diag.add_column("AR order", justify="left", style=values_color)
+        burnin_diag.add_column("Value", justify="left", style=values_color)
 
         param_diag = Table(title="Parameters", expand=False, show_lines=True)
         param_diag_matrix = []
@@ -164,42 +288,77 @@ class AnalyzeMCMC(LoadCatalog):
             )
             tau_vec = mcat.peek_autocorrelation_tau()
 
+            # The error of the mean is the long-run variance of the ensemble-mean series
+            # over the number of iterations, which is what Var(x) / ESS is. Nothing here
+            # assumes the chains are independent within an iteration: whatever
+            # correlation they carry is in K_eff, and so in the ESS.
             mean_sd_array = [
-                np.sqrt(fs.get_var(i) * tau_vec.get(i) / fs.nitens())
-                for i in self.indices
+                np.sqrt(fs.get_var(i) / mcat.get_ess(i)) for i in self.indices
             ]
             param_diag_matrix.append([f"{mean_sd: .6g}" for mean_sd in mean_sd_array])
 
             # Autocorrelation Time
             tau_row = []
-            tau_row.append("Autocorrelation time (tau)")
-            tau_row.append("NA")
+            tau_row.append("tau")
             tau_row.append(
                 f"{tau_vec.get_max():.0f} "
                 f"({mcat.col_full_name(tau_vec.get_max_index())})"
             )
-            tau_row.append("NA")
             tau_row.append(f"{tau_vec.get_max():.3f}")
-            global_diag.add_row(*tau_row)
+            summary_diag.add_row(*tau_row)
 
             param_diag.add_column(
                 "tau", justify="left", style=val_color, vertical="middle"
             )
             param_diag_matrix.append([f"{tau_vec.get(i): .6g}" for i in self.indices])
 
+            # Conditions attached to each tau, one letter each, see TAU_FLAG_LEGEND.
+            # Anything other than "-" means the estimate is not to be read as a
+            # converged autocorrelation time.
+            diags = [mcat.get_tau_diag(i) for i in self.indices]
+            param_diag.add_column(
+                "!", justify="left", style=TAU_FLAG_COLOR, vertical="middle"
+            )
+            param_diag_matrix.append([_tau_flag_code(d) for d in diags])
+
+            flagged = [
+                f"{mcat.col_full_name(i)}:{_tau_flag_code(d)}"
+                for i, d in zip(self.indices, diags)
+                if d != 0
+            ]
+            tau_status_row = ["tau status", "NA"]
+            tau_status_row.append(
+                "ok" if not flagged else f"{len(flagged)} flagged, worst {flagged[0]}"
+            )
+            summary_diag.add_row(*tau_status_row)
+
+        if self.nchains > 1 and self.nitems >= 10:
+            # Effective number of independent chains per iteration: the variance over all
+            # rows divided by the variance of the ensemble mean. It is the number of
+            # chains when they are independent at a given iteration and one when they
+            # move together; above the number of chains it means the ensemble mean is
+            # steadier than independent chains would make it, which is what walkers held
+            # in place at different positions look like.
+            keff = [mcat.get_keff(i) for i in self.indices]
+            keff_row = ["K_eff", "NA"]
+            keff_row.append(f"{min(keff):.1f} of {self.nchains}")
+            summary_diag.add_row(*keff_row)
+
+            param_diag.add_column("K_eff", justify="left", style=val_color)
+            param_diag_matrix.append([f"{k:.1f}" for k in keff])
+
         if self.nchains > 1:
             # Gelman Rubin
             gelman_rubin_row = []
-            gelman_rubin_row.append("Gelman-Rubin (G&B) Shrink Factor (R-1)")
+            gelman_rubin_row.append("Gelman-Rubin (R-1)")
             skf = [mcat.get_param_shrink_factor(i) - 1 for i in self.indices]
-            gelman_rubin_row.append("NA")
-            gr_worst = int(np.argmin(skf))
+            # R - 1 grows as convergence worsens, so the worst parameter is the largest.
+            gr_worst = int(np.argmax(skf))
             gelman_rubin_row.append(
                 f"{skf[gr_worst]:.3f} ({mcat.col_full_name(gr_worst)})"
             )
-            gelman_rubin_row.append("NA")
             gelman_rubin_row.append(f"{mcat.get_shrink_factor() - 1:.3f}")
-            global_diag.add_row(*gelman_rubin_row)
+            summary_diag.add_row(*gelman_rubin_row)
 
             param_diag.add_column(
                 "G&R", justify="left", style=val_color, vertical="middle"
@@ -211,12 +370,12 @@ class AnalyzeMCMC(LoadCatalog):
         cb = [self.stats.estimate_const_break(i) for i in self.indices]
         cb_worst = int(np.argmax(cb))
         const_break_row = []
-        const_break_row.append("Constant Break (CB) (iterations, points)")
-        const_break_row.append(f"{cb[cb_worst]:.0f}")
+        const_break_row.append("Constant break")
+        const_break_row.append(self._cut_text(cb[cb_worst]))
         const_break_row.append(f"{cb[cb_worst]:.0f} ({mcat.col_full_name(cb_worst)})")
         const_break_row.append("NA")
         const_break_row.append(f"{cb[cb_worst]:.0f}")
-        global_diag.add_row(*const_break_row)
+        burnin_diag.add_row(*const_break_row)
 
         param_diag.add_column("CB", justify="left", style=val_color)
         param_diag_matrix.append(
@@ -233,22 +392,19 @@ class AnalyzeMCMC(LoadCatalog):
                 ess_worst_ess,
             ) = self.stats.max_ess_time(100)
             ess_row = []
-            ess_row.append("Effective Sample Size (ESS) (ensembles, points)")
-            ess_row.append(f"{ess_best_cutoff}")
+            ess_row.append("ESS")
+            ess_row.append(self._cut_text(ess_best_cutoff))
             ess_row.append(
                 f"{ess_vec.get(ess_worst_index):.0f} "
                 f"({mcat.col_full_name(ess_worst_index)})"
             )
             ess_row.append(f"{ess_worst_order}")
             ess_row.append(f"{ess_worst_ess:.0f}")
-            global_diag.add_row(*ess_row)
+            burnin_diag.add_row(*ess_row)
 
             param_diag.add_column("ESS", justify="left", style=val_color)
             param_diag_matrix.append(
-                [
-                    f"{ess_vec.get(i):.0f} {ess_vec.get(i) * self.nchains:.0f}"
-                    for i in self.indices
-                ]
+                [f"{ess_vec.get(i):.0f} {mcat.get_ess(i):.0f}" for i in self.indices]
             )
 
             # Heidelberger and Welch
@@ -263,10 +419,10 @@ class AnalyzeMCMC(LoadCatalog):
             ) = self.stats.heidel_diag(100, hw_pvalue)
 
             hw_row = []
-            hw_row.append(f"Heidelberger and Welch p-value (>{hw_pvalue * 100.0:.1f}%)")
+            hw_row.append(f"Heidelberger-Welch (>{hw_pvalue * 100.0:.1f}%)")
 
             if hw_best_cutoff >= 0:
-                hw_row.append(f"{hw_best_cutoff}")
+                hw_row.append(self._cut_text(hw_best_cutoff))
             else:
                 hw_row.append("All parameters fail")
             hw_row.append(
@@ -275,7 +431,7 @@ class AnalyzeMCMC(LoadCatalog):
             )
             hw_row.append(f"{hw_worst_order}")
             hw_row.append(f"{(1.0 - hw_worst_pvalue) * 100.0:.1f}%")
-            global_diag.add_row(*hw_row)
+            burnin_diag.add_row(*hw_row)
 
             param_diag.add_column(
                 "H&W",
@@ -290,8 +446,11 @@ class AnalyzeMCMC(LoadCatalog):
             param_diag.add_row(*row)
 
         # Add the global diagnostics to the main table
-        main_table.add_row(global_diag)
+        main_table.add_row(summary_diag)
+        main_table.add_row(burnin_diag)
         main_table.add_row(param_diag)
+        print_tau_legend = self.nitems >= 10
+        print_keff_legend = self.nchains > 1 and self.nitems >= 10
 
         covariance_matrix = Table(title="Covariance Matrix", expand=False)
         covariance_matrix.add_column("Parameter", justify="right", style="bold")
@@ -356,6 +515,12 @@ class AnalyzeMCMC(LoadCatalog):
 
             main_table.add_row(evidence_table)
 
+        if print_tau_legend:
+            main_table.add_row(_tau_flag_legend())
+
+        if print_keff_legend:
+            main_table.add_row(_keff_legend())
+
         self.console.print(main_table)
 
         self.close_logging()
@@ -382,9 +547,13 @@ class CalibrateCatalog(LoadCatalog):
     interpolation_kernel: Annotated[
         InterpolationKernel,
         typer.Option(
-            help="Interpolation kernel to use.",
+            help=(
+                "Interpolation kernel to use. AUTO, the default, fits the kernel "
+                "together with the over-smoothing factor and needs a --cv-method that "
+                "fits it. Cauchy cannot be combined with --center-shrink."
+            ),
         ),
-    ] = InterpolationKernel.CAUCHY
+    ] = InterpolationKernel.AUTO
 
     cv_method: Annotated[
         CrossValidationMethod,
@@ -393,11 +562,11 @@ class CalibrateCatalog(LoadCatalog):
                 "Cross-validation method to use. If NONE, no cross-validation is "
                 "used and only weights information is printed. If SPLIT, the sample "
                 "is split into two parts, one for training and the other for testing. "
-                "If SPLIT_NOFIT, the sample is split into two parts, one for training "
+                "If SPLIT_M2LNP, the sample is split into two parts, one for training "
                 "and the other for testing, but equal weights are used for both parts."
             ),
         ),
-    ] = CrossValidationMethod.SPLIT_NOFIT
+    ] = CrossValidationMethod.SPLIT_M2LNP
 
     over_smooth: Annotated[
         float,
@@ -408,7 +577,7 @@ class CalibrateCatalog(LoadCatalog):
     ] = 1.0
 
     split_fraction: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(
             help="Split fraction to use.",
             min=0.02,
@@ -416,7 +585,7 @@ class CalibrateCatalog(LoadCatalog):
     ] = None
 
     local_fraction: Annotated[
-        Optional[float],
+        float | None,
         typer.Option(
             help="Local fraction to use.",
             min=0.02,
@@ -427,6 +596,25 @@ class CalibrateCatalog(LoadCatalog):
         bool,
         typer.Option(
             help="Use interpolation to compute the weights of the APES approximation.",
+        ),
+    ] = True
+
+    auto_kernel: Annotated[
+        bool,
+        typer.Option(
+            hidden=True,
+            help="Deprecated: use --interpolation-kernel auto.",
+        ),
+    ] = False
+
+    center_shrink: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Shrink the kernel centres toward the sample mean so that the "
+                "approximation has the same covariance as the sample. Requires a "
+                "kernel with a finite covariance, so not the Cauchy one."
+            ),
         ),
     ] = True
 
@@ -471,7 +659,7 @@ class CalibrateCatalog(LoadCatalog):
         super().__post_init__()
 
         mcat = self.mcat
-        m2lnL_id = mcat.get_m2lnp_var()  # pylint: disable-msg=invalid-name
+        m2lnL_id = mcat.get_m2lnp_var()
         mcat_len = mcat.len()
 
         nwalkers = self.nchains
@@ -494,6 +682,8 @@ class CalibrateCatalog(LoadCatalog):
             over_smooth=math.fabs(self.over_smooth),
             split_fraction=self.split_fraction,
             local_fraction=self.local_fraction,
+            center_shrink=self.center_shrink,
+            auto_kernel=self.auto_kernel,
             verbose=self.verbose,
         )
 
@@ -504,7 +694,7 @@ class CalibrateCatalog(LoadCatalog):
 
         m2lnL_v = Ncm.Vector.new_array(m2lnL)
         if self.interpolate:
-            sdist.prepare_interp(m2lnL_v)
+            sdist.prepare(m2lnL_v)
         else:
             sdist.prepare()
 
@@ -513,10 +703,8 @@ class CalibrateCatalog(LoadCatalog):
         main_table = Table(
             title="Catalog calibration information",
             caption=(
-                "APES approximation of the posterior distribution. The calibration "
-                "information shows how well the APES approximation fits the last "
-                "nwalkers sample of the MCMC chain. Too concentrated weights "
-                "indicate that the APES approximation is not a good fit."
+                "How well the APES proposal fits the last nwalkers sample. "
+                "Concentrated weights mean a poor fit."
             ),
             min_width=88,
         )
@@ -535,6 +723,11 @@ class CalibrateCatalog(LoadCatalog):
         main_table.add_row("Split fraction", f"{self.split_fraction}")
         main_table.add_row("Local fraction", f"{self.local_fraction}")
         main_table.add_row("Use interpolation", f"{self.interpolate}")
+        main_table.add_row("Centre shrinkage", f"{self.center_shrink}")
+        main_table.add_row("Automatic kernel", f"{self.auto_kernel}")
+        main_table.add_row(
+            "Centre shrinkage factor", f"{sdist.get_center_shrink_factor():.3f}"
+        )
         main_table.add_row("Use half of the walkers", f"{self.use_half}")
 
         rng = Ncm.RNG.new()
@@ -569,15 +762,14 @@ class CalibrateCatalog(LoadCatalog):
         self.console.print(main_table)
 
         if self.plot_2d:
-            for a in range(nvar):  # pylint: disable-msg=invalid-name
-                for b in range(a + 1, nvar):  # pylint: disable-msg=invalid-name
+            for a in range(nvar):
+                for b in range(a + 1, nvar):
                     indices = np.array([a, b])
-                    print(f"# {indices}")
+                    self.console.print(f"# {indices}", markup=False)
 
                     _, axis = plt.subplots(1, 1, figsize=(16, 8))
 
-                    # pylint: disable-next=invalid-name
-                    for ii in range(0, int(sdist.get_n_kernels())):
+                    for ii in range(int(sdist.get_n_kernels())):
                         y_i, cov_i, _, w_i = sdist.get_Ki(ii)
                         mean = np.array(y_i.dup_array())
                         cov = np.array(
@@ -614,7 +806,7 @@ class PlotCorner(AppLogging):
     """
 
     mcmc_file: Annotated[
-        List[Path],
+        list[Path],
         typer.Argument(
             help=(
                 "Path(s) to the MCMC catalog file(s). Give more than one to "
@@ -635,7 +827,7 @@ class PlotCorner(AppLogging):
     ] = 0
 
     tail: Annotated[
-        Optional[int],
+        int | None,
         typer.Option(
             help=(
                 "Keep only the last N iterations (ensemble steps) of every "
@@ -647,21 +839,21 @@ class PlotCorner(AppLogging):
     ] = None
 
     include: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         typer.Option(
             help="List of parameters and or model names to include in the analysis.",
         ),
     ] = None
 
     exclude: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         typer.Option(
             help="List of parameters and or model names to exclude from the analysis.",
         ),
     ] = None
 
     output: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--output",
             "-o",
@@ -670,7 +862,7 @@ class PlotCorner(AppLogging):
     ] = None
 
     plot_name: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         typer.Option(
             help=(
                 "Legend name(s) for each catalog, matched by position. May be "
@@ -681,7 +873,7 @@ class PlotCorner(AppLogging):
     ] = None
 
     remove_index: Annotated[
-        Optional[List[int]],
+        list[int] | None,
         typer.Option(
             help="Index of the parameter to remove.",
             min=0,
@@ -721,7 +913,7 @@ class PlotCorner(AppLogging):
     ] = True
 
     derived_variable: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         typer.Option(
             "--derived-variable",
             help=(
@@ -734,7 +926,7 @@ class PlotCorner(AppLogging):
     ] = None
 
     derived_expr: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             help=(
                 "Add an extra corner-plot dimension computed from this "
@@ -746,7 +938,7 @@ class PlotCorner(AppLogging):
     ] = None
 
     derived_symbol: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             help=(
                 "Axis label for --derived-expr. Defaults to the expression " "itself."
@@ -767,7 +959,7 @@ class PlotCorner(AppLogging):
 
         # mcmc_file is a required positional argument, so Click already
         # refuses to run with zero catalogs given.
-        derived_variable: List[str] = []
+        derived_variable: list[str] = []
         if self.derived_expr is not None:
             if not self.derived_variable:
                 raise typer.BadParameter(
@@ -828,7 +1020,7 @@ class ParameterAnalysis(LoadCatalog):
     """Plots the corner plot of the catalog."""
 
     plot_name: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(help="Name of the plot file."),
     ] = None
 
@@ -940,7 +1132,7 @@ class DerivedQuantityError(LoadCatalog):
     """
 
     variable: Annotated[
-        List[str],
+        list[str],
         typer.Option(
             "--variable",
             "-x",
@@ -954,7 +1146,7 @@ class DerivedQuantityError(LoadCatalog):
     ]
 
     expr: Annotated[
-        List[str],
+        list[str],
         typer.Option(
             "--expr",
             help=(
@@ -970,7 +1162,7 @@ class DerivedQuantityError(LoadCatalog):
     ]
 
     stat: Annotated[
-        Optional[List[DerivedStat]],
+        list[DerivedStat] | None,
         typer.Option(
             help=(
                 "Statistic(s) to report. Unlike median/bestfit, mode is NOT "
@@ -982,7 +1174,7 @@ class DerivedQuantityError(LoadCatalog):
     ] = None
 
     symbol: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         typer.Option(
             "--symbol",
             help=(
@@ -1033,6 +1225,8 @@ class DerivedQuantityError(LoadCatalog):
             epdf.prepare()
 
         bestfit_row = mcat.get_bestfit_row()
+        if bestfit_row is None:
+            raise RuntimeError("The catalog is empty, it has no best-fit row.")
         bf_values = {
             name: bestfit_row.get(pindex) for name, pindex in var_pindex.items()
         }
@@ -1068,9 +1262,10 @@ class GetBestFit(LoadCatalog):
         """Get best-fit parameters."""
         super().__post_init__()
 
-        best_fit = np.array(self.mcat.get_bestfit_row().dup_array(), dtype=np.float64)[
-            self.nadd_vals :
-        ]
+        bestfit_row = self.mcat.get_bestfit_row()
+        if bestfit_row is None:
+            raise RuntimeError("The catalog is empty, it has no best-fit row.")
+        best_fit = np.array(bestfit_row.dup_array(), dtype=np.float64)[self.nadd_vals :]
         self.mset.fparams_set_array(best_fit)
 
         if self.output is None:
@@ -1114,7 +1309,7 @@ class CheckM2lnL(LoadExperiment):
     ] = 0
 
     tail: Annotated[
-        Optional[int],
+        int | None,
         typer.Option(
             help=(
                 "Keep only the last N iterations (ensemble steps) instead of "
@@ -1151,7 +1346,7 @@ class CheckM2lnL(LoadExperiment):
     ] = 1
 
     max_rows: Annotated[
-        Optional[int],
+        int | None,
         typer.Option(
             help="Stop after checking this many rows (after --stride). If not "
             "given, all selected rows are checked.",
@@ -1223,8 +1418,7 @@ class CheckM2lnL(LoadExperiment):
             table.add_column("recomputed -2lnL", justify="right")
             table.add_column("delta", justify="right")
 
-            n_shown = 0
-            for k in worst:
+            for n_shown, k in enumerate(worst):
                 if abs_diffs[k] <= self.tolerance:
                     break
                 if n_shown >= self.max_report:
@@ -1235,7 +1429,6 @@ class CheckM2lnL(LoadExperiment):
                     f"{recomputed[k]:.6f}",
                     f"{diffs[k]:.6g}",
                 )
-                n_shown += 1
 
             self.console.print(table)
 
@@ -1261,7 +1454,7 @@ class DumpMset(AppLogging):
     ]
 
     output: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--output",
             "-o",

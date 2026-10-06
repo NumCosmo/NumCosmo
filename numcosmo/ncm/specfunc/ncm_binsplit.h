@@ -38,6 +38,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcmBinSplit NcmBinSplit;
 
+
 struct _NcmBinSplit
 {
   /*< private >*/
@@ -57,9 +58,19 @@ struct _NcmBinSplit
 
 extern mpz_t NCM_BINSPLIT_ONE;
 
+/**
+ * NcmBinSplitEval:
+ * @bs: a #NcmBinSplit
+ * @n1: the first term
+ * @n2: one past the last term
+ *
+ * Sets @bs to the sum of the terms in $[n_1, n_2)$ of a series, see
+ * ncm_binsplit_eval.c.
+ */
 typedef void (*NcmBinSplitEval) (NcmBinSplit *bs, gulong n1, gulong n2);
 
 NcmBinSplit *ncm_binsplit_alloc (gpointer userdata);
+void ncm_binsplit_free (NcmBinSplit *bs);
 glong ncm_binsplit_test_next (NcmBinSplit *bs, NcmBinSplitEval bs_eval, gulong nt);
 void ncm_binsplit_join (NcmBinSplit *bs, NcmBinSplit *bs_l, NcmBinSplit *bs_r);
 void ncm_binsplit_eval_join (NcmBinSplit *bs, NcmBinSplitEval bs_eval, gulong nt);
@@ -68,7 +79,28 @@ void ncm_binsplit_get (NcmBinSplit *bs, mpfr_t res);
 void ncm_binsplit_get_q (NcmBinSplit *bs, mpq_t q);
 gdouble ncm_binsplit_get_d (NcmBinSplit *bs, mp_rnd_t rnd);
 
+/**
+ * NCM_BINSPLIT_DECL:
+ * @name: the function name
+ * @v: the output
+ * @u: the factor
+ * @n: the term index
+ * @data: the user data
+ *
+ * Declares a term function of ncm_binsplit_eval.c, setting @v to @u times the factor of
+ * term @n.
+ */
 #define NCM_BINSPLIT_DECL(name, v, u, n, data) static inline void name (mpz_t v, mpz_t u, gulong n, gpointer data)
+
+/**
+ * NCM_BINSPLIT_DENC_NULL:
+ * @a: unused
+ * @b: unused
+ * @c: unused
+ * @d: unused
+ *
+ * A term function that does nothing, for a factor identically one.
+ */
 #define NCM_BINSPLIT_DENC_NULL(a, b, c, d)
 
 G_END_DECLS

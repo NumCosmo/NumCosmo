@@ -23,30 +23,26 @@
 
 """NumCosmoPy plotting utilities."""
 
+import dataclasses
 import os
 import warnings
-import dataclasses
 from collections.abc import Sequence
 
+import matplotlib.artist
+import matplotlib.figure
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
-import matplotlib.figure
-import matplotlib.artist
-import matplotlib.pyplot as plt
 
 from numcosmo_py import Ncm
+
 from .tools import set_rc_params_article
 
 original_display = os.environ.get("DISPLAY", "")
 if original_display is not None:
     os.environ["DISPLAY"] = ":0"
-# pylint: disable=wrong-import-position
-# pylint: disable=wrong-import-order
-import getdist  # noqa: E402
-import getdist.plots  # noqa: E402
-
-# pylint: enable=wrong-import-order
-# pylint: enable=wrong-import-position
+import getdist
+import getdist.plots
 
 if original_display is not None:
     os.environ["DISPLAY"] = original_display
@@ -64,6 +60,7 @@ class CatalogData:
     bestfit: np.ndarray | None
     params_names: list[str]
     params_symbols: list[str]
+    ranges: dict[str, tuple[float, float]] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
         """Post initialization.
@@ -75,6 +72,7 @@ class CatalogData:
         assert len(self.params_names) == len(self.params_symbols)
         assert len(self.params_names) == self.rows.shape[1]
         assert self.bestfit is None or (len(self.bestfit) == self.rows.shape[1])
+        assert set(self.ranges).issubset(self.params_names)
 
     def asinh_transform(self, indices: npt.NDArray[np.int64]) -> None:
         """Apply an asinh transformation to the catalog data."""
@@ -126,6 +124,7 @@ class CatalogData:
                 labels=self.params_symbols,
                 label=self.name,
                 weights=self.weights,
+                ranges=self.ranges,
             )
 
         assert self.rows.shape[0] % self.nchains == 0
@@ -142,6 +141,7 @@ class CatalogData:
                 if self.weights is not None
                 else None
             ),
+            ranges=self.ranges,
         )
 
 
@@ -185,7 +185,7 @@ def mcat_to_catalog_data(
         indices_array = np.arange(mcat.ncols())
 
     # Get the -2 log likelihood column
-    m2lnL: int = mcat.get_m2lnp_var()  # pylint:disable=invalid-name
+    m2lnL: int = mcat.get_m2lnp_var()
     posterior: np.ndarray = 0.5 * rows[:, m2lnL]
     indices_array = indices_array[indices_array != m2lnL]
 
@@ -199,10 +199,29 @@ def mcat_to_catalog_data(
         indices_array = indices_array[indices_array != weight_index]
 
     rows = rows[:, indices_array]
-    param_symbols: list[str] = list(mcat.col_symb(int(i)) for i in indices_array)
-    param_names: list[str] = list(mcat.col_name(int(i)) for i in indices_array)
+    param_symbols: list[str] = [mcat.col_symb(int(i)) for i in indices_array]
+    param_names: list[str] = [mcat.col_name(int(i)) for i in indices_array]
 
-    bestfit = np.array(mcat.get_bestfit_row().dup_array())[indices_array]
+    bestfit_row = mcat.get_bestfit_row()
+    if bestfit_row is None:
+        raise ValueError("The catalog is empty, it has no best-fit row.")
+    bestfit = np.array(bestfit_row.dup_array())[indices_array]
+
+    # The hard prior bounds of every fitted parameter, keyed by the column name getdist
+    # will know it as. Without these getdist has no way to tell a prior wall from ordinary
+    # data: its kernel spreads mass across the edge, the density is pulled down there, and a
+    # posterior that is flat up to its bound is rendered as a peak away from it. Columns
+    # before the parameters are derived quantities and carry no bound.
+    mset = mcat.peek_mset()
+    nadd = mcat.nadd_vals()
+    ranges: dict[str, tuple[float, float]] = {}
+    for i in indices_array:
+        fpi = int(i) - nadd
+        if fpi >= 0:
+            ranges[mcat.col_name(int(i))] = (
+                mset.fparam_get_lower_bound(fpi),
+                mset.fparam_get_upper_bound(fpi),
+            )
 
     return CatalogData(
         name=name,
@@ -213,6 +232,7 @@ def mcat_to_catalog_data(
         bestfit=bestfit,
         params_names=param_names,
         params_symbols=param_symbols,
+        ranges=ranges,
     )
 
 

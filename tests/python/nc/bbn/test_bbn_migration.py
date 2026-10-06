@@ -40,7 +40,7 @@ Ncm.cfg_init()
 
 # Yp used to be a parameter of the cosmology, with its fit type doubling as the
 # switch between "use this value" and "predict it from BBN". The fixtures in
-# data/truth_tables/bbn were written by that code; golden.json records what each
+# data/truth_tables/bbn were written by that code; pre_migration_values.json records what each
 # one evaluated to then. The compat properties are inert sinks now: a fixed-Yp
 # file lands on the default NcBBNParthenope (the same physics its fit type
 # meant), while a free-Yp file requests a removed mode and must fail loudly --
@@ -58,9 +58,11 @@ EXPECTED = {
 FORMATS = ("obj", "bin", "yaml")
 
 
-def load_golden():
+def load_pre_migration_values():
     """The values each fixture evaluated to before the migration."""
-    filename = Ncm.cfg_get_data_filename("truth_tables/bbn/golden.json", True)
+    filename = Ncm.cfg_get_data_filename(
+        "truth_tables/bbn/pre_migration_values.json", True
+    )
 
     with open(filename, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -99,13 +101,13 @@ def test_old_file_gets_the_right_bbn_model(name, fmt):
 @pytest.mark.parametrize("fmt", FORMATS)
 def test_old_file_still_evaluates_the_same(name, fmt):
     """Yp is unchanged, except where the migration deliberately changes it."""
-    golden = load_golden()[name]
+    before = load_pre_migration_values()[name]
     cosmo = read_fixture(name, fmt)
 
     expected = EXPECTED[name][1]
 
     if expected is None:
-        expected = golden["Yp_4He"]
+        expected = before["Yp_4He"]
 
     assert_allclose(Nc.HICosmo.Yp_4He(cosmo), expected, rtol=1.0e-9)
 
@@ -310,3 +312,67 @@ def test_a_catalog_whose_reparam_cannot_be_resized_fails_loudly():
 
     assert result.returncode != 0
     assert "carries state of its own" in result.stderr
+
+
+# NcmModel:sparam-array keys each modified parameter description by index, and
+# removing Yp shifted every later index. The files below were written by
+# NumCosmo 0.27 (tests/tools/make_sparam_desc_fixtures.py) with descriptions
+# modified after the Yp index, and on Yp itself; sparam_desc.json records each
+# parameter's description and value then, by name.
+SPARAM_DESC_CASES = ("de_cpl_desc", "lcdm_desc")
+
+
+def load_sparam_desc():
+    """Each parameter's description and value in the 0.27 fixtures, by name."""
+    filename = Ncm.cfg_get_data_filename("truth_tables/bbn/sparam_desc.json", True)
+
+    with open(filename, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@pytest.mark.parametrize("name", SPARAM_DESC_CASES)
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_a_stored_description_lands_on_its_parameter(name, fmt):
+    """Each stored description goes to the parameter of the same name."""
+    stored = load_sparam_desc()[name]
+    cosmo = read_fixture(name, fmt)
+
+    assert cosmo.__gtype__.name == stored["type"]
+    assert cosmo.sparam_len() == len(stored["params"])
+
+    for param, desc in stored["params"].items():
+        ok, i = cosmo.param_index_from_name(param)
+
+        assert ok, param
+        assert cosmo.param_get_lower_bound(i) == desc["lower"], param
+        assert cosmo.param_get_upper_bound(i) == desc["upper"], param
+        assert cosmo.param_get_scale(i) == desc["scale"], param
+        assert (cosmo.param_get_ftype(i) == Ncm.ParamType.FREE) == desc["free"], param
+        assert cosmo.param_get(i) == desc["value"], param
+
+
+def test_a_stored_description_of_an_unknown_parameter_fails_loudly(tmp_path):
+    """A description naming a parameter the model does not have aborts the load.
+
+    Only parameters declared with ncm_model_class_add_removed_param() are
+    skipped. The refusal is a g_error, so it is observed from a subprocess.
+    """
+    source = Ncm.cfg_get_data_filename("truth_tables/bbn/de_cpl_desc.yaml", True)
+    with open(source, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    assert "name: 'w1'" in text
+    patched = tmp_path / "unknown_param.yaml"
+    patched.write_text(text.replace("name: 'w1'", "name: 'not_a_parameter'"))
+
+    script = (
+        "from numcosmo_py import Ncm\n"
+        "Ncm.cfg_init()\n"
+        f"Ncm.Serialize.new(0).from_yaml_file({str(patched)!r})\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, check=False
+    )
+
+    assert result.returncode != 0
+    assert "has no parameter `not_a_parameter'" in result.stderr

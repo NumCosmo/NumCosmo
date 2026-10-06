@@ -50,7 +50,8 @@ struct _NcmFftlogClass
   const gchar *name;
 
   void (*compute_Ym) (NcmFftlog *fftlog, gpointer Ym_0);
-  /* Padding to allow 18 virtual functions without breaking ABI. */
+  void (*get_bias_range) (NcmFftlog *fftlog, gdouble *bias_min, gdouble *bias_max);
+  /* Padding to allow adding up to 16 more virtual functions without breaking ABI. */
   gpointer padding[16];
 };
 
@@ -87,10 +88,12 @@ gboolean ncm_fftlog_get_noring (NcmFftlog *fftlog);
 
 void ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk);
 
+void ncm_fftlog_set_bias (NcmFftlog *fftlog, const gdouble bias);
+gdouble ncm_fftlog_get_bias (NcmFftlog *fftlog);
+void ncm_fftlog_get_bias_range (NcmFftlog *fftlog, gdouble *bias_min, gdouble *bias_max);
+
 void ncm_fftlog_use_eval_interval (NcmFftlog *fftlog, gboolean use_eval_interval);
 void ncm_fftlog_use_smooth_padding (NcmFftlog *fftlog, gboolean use_smooth_padding);
-void ncm_fftlog_set_smooth_padding_scale (NcmFftlog *fftlog, gdouble log10sc);
-gdouble ncm_fftlog_get_smooth_padding_scale (NcmFftlog *fftlog);
 
 void ncm_fftlog_set_eval_r_min (NcmFftlog *fftlog, const gdouble eval_r_min);
 void ncm_fftlog_set_eval_r_max (NcmFftlog *fftlog, const gdouble eval_r_max);
@@ -98,6 +101,8 @@ gdouble ncm_fftlog_get_eval_r_min (NcmFftlog *fftlog);
 gdouble ncm_fftlog_get_eval_r_max (NcmFftlog *fftlog);
 
 gdouble *ncm_fftlog_get_Ym (NcmFftlog *fftlog, guint *size);
+void ncm_fftlog_get_end_slopes (NcmFftlog *fftlog, gdouble *slope_min, gdouble *slope_max);
+gdouble ncm_fftlog_get_best_bias (NcmFftlog *fftlog);
 
 void ncm_fftlog_get_lnk_vector (NcmFftlog *fftlog, NcmVector *lnk);
 void ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk);

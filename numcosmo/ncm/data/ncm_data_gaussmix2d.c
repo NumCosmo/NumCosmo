@@ -26,10 +26,15 @@
 /**
  * NcmDataGaussMix2D:
  *
- * Gaussian Mixture 2d distribution.
+ * Likelihood of a two-component Gaussian mixture in two dimensions.
  *
- * Data object describing a Gaussian Mixture 2d distribution.
- *
+ * Evaluates the normalized density of an equal-weight mixture of two bivariate
+ * normals at the point $(x_1, x_2)$ given by the parameters of the
+ * #NcmModelRosenbrock in the #NcmMSet (the model serves only as a holder of two
+ * parameters). The components have means $(-1.5, 0)$ and $(1.5, 0)$, standard
+ * deviations $0.4$ and $0.2$ on both axes and correlations $0.6$ and $-0.6$. It is a
+ * standard test of samplers on a bimodal target; its length and degrees of freedom
+ * are a nominal 10.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -44,17 +49,12 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-typedef struct _NcmDataGaussMix2DPrivate
-{
-  gint unused;
-} NcmDataGaussMix2DPrivate;
-
 struct _NcmDataGaussMix2D
 {
   NcmData parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmDataGaussMix2D, ncm_data_gaussmix2d, NCM_TYPE_DATA)
+G_DEFINE_TYPE (NcmDataGaussMix2D, ncm_data_gaussmix2d, NCM_TYPE_DATA)
 
 static void
 ncm_data_gaussmix2d_init (NcmDataGaussMix2D *gm2d)
@@ -70,13 +70,6 @@ ncm_data_gaussmix2d_constructed (GObject *object)
   ncm_data_set_init (NCM_DATA (object), TRUE);
 }
 
-static void
-ncm_data_gaussmix2d_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_data_gaussmix2d_parent_class)->finalize (object);
-}
-
 static guint _ncm_data_gaussmix2d_get_length (NcmData *data);
 static guint _ncm_data_gaussmix2d_get_dof (NcmData *data);
 static void _ncm_data_gaussmix2d_prepare (NcmData *data, NcmMSet *mset);
@@ -89,7 +82,6 @@ ncm_data_gaussmix2d_class_init (NcmDataGaussMix2DClass *klass)
   NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
 
   object_class->constructed = ncm_data_gaussmix2d_constructed;
-  object_class->finalize    = ncm_data_gaussmix2d_finalize;
 
   data_class->get_length = &_ncm_data_gaussmix2d_get_length;
   data_class->get_dof    = &_ncm_data_gaussmix2d_get_dof;
@@ -97,6 +89,8 @@ ncm_data_gaussmix2d_class_init (NcmDataGaussMix2DClass *klass)
   data_class->m2lnL_val  = &_ncm_data_gaussmix2d_m2lnL_val;
 }
 
+/* These likelihoods are analytic and have no data points; 10 is a nominal count,
+ * which fits report as the degrees of freedom. */
 static guint
 _ncm_data_gaussmix2d_get_length (NcmData *data)
 {
@@ -112,10 +106,9 @@ _ncm_data_gaussmix2d_get_dof (NcmData *data)
 static void
 _ncm_data_gaussmix2d_prepare (NcmData *data, NcmMSet *mset)
 {
-  NcmModelRosenbrock *mrb = NCM_MODEL_ROSENBROCK (ncm_mset_peek (mset, ncm_model_rosenbrock_id ()));
-
-  g_assert (mrb != NULL);
-  g_assert (NCM_IS_MODEL_ROSENBROCK (mrb));
+  if (ncm_mset_peek (mset, ncm_model_rosenbrock_id ()) == NULL)
+    g_error ("_ncm_data_gaussmix2d_prepare: the model set needs a NcmModelRosenbrock, "
+             "whose parameters x1 and x2 are the point where the mixture is evaluated.");
 }
 
 static void
@@ -158,7 +151,7 @@ _ncm_data_gaussmix2d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
  *
  * Creates a new #NcmDataGaussMix2D.
  *
- * Returns: the newly created object.
+ * Returns: (transfer full): the newly created object.
  */
 NcmDataGaussMix2D *
 ncm_data_gaussmix2d_new (void)
@@ -173,7 +166,8 @@ ncm_data_gaussmix2d_new (void)
  * ncm_data_gaussmix2d_ref:
  * @gm2d: a #NcmDataGaussMix2D
  *
- * Increases the reference count of @gm2d by onG
+ * Increases the reference count of @gm2d by one.
+ *
  * Returns: (transfer full): @gm2d
  */
 NcmDataGaussMix2D *
@@ -186,7 +180,9 @@ ncm_data_gaussmix2d_ref (NcmDataGaussMix2D *gm2d)
  * ncm_data_gaussmix2d_free:
  * @gm2d: a #NcmDataGaussMix2D
  *
- * Decreases the reference count of @gm2d by onG
+ * Decreases the reference count of @gm2d by one. If the reference count reaches
+ * zero, @gm2d is freed.
+ *
  */
 void
 ncm_data_gaussmix2d_free (NcmDataGaussMix2D *gm2d)
@@ -198,8 +194,8 @@ ncm_data_gaussmix2d_free (NcmDataGaussMix2D *gm2d)
  * ncm_data_gaussmix2d_clear:
  * @gm2d: a #NcmDataGaussMix2D
  *
- * If @gm2d is different from NULL, decreases the reference count of
- * @gm2d by one and sets Gto NULL.
+ * If *@gm2d is not %NULL, decreases the reference count of *@gm2d by one and sets
+ * *@gm2d to %NULL.
  *
  */
 void

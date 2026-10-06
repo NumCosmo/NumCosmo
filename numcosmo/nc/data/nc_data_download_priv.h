@@ -52,23 +52,26 @@ G_BEGIN_DECLS
  * cannot double as the lock, since the tree it lives in gets replaced.
  *
  * A lock *directory* rather than a lock file: mkdir() is atomic everywhere
- * this runs, NFS included. A lock left by a killed process is taken over
- * after @max_wait_s rather than waited on forever.
+ * this runs, NFS included. The process holding the lock writes "pid@host" to an
+ * `owner` file inside it. A lock whose owner process no longer exists on this
+ * host is taken over at once; one with no owner file, or an owner on another
+ * host, after @max_wait_s.
  */
 gboolean _nc_data_download_lock (const gchar *lockpath, const gchar *readypath, gint max_wait_s, gchar **lockdir);
 
 void _nc_data_download_unlock (gchar *lockdir);
 
 /*
- * Fetches @url to @dest. **Call with the lock held.**
+ * Fetches @url to @dest. **Call with the lock held**, passing it as @lockdir.
  *
  * The transfer goes to a per-process temporary beside @dest and is renamed
  * over it only once wget has reported success, so no other process can observe
  * a partial file and an interrupted run leaves nothing that looks like good
  * data. @what names the data in the error message; failure is fatal, and says
- * the URL and directory so the file can be fetched by hand.
+ * the URL and directory so the file can be fetched by hand. On failure it
+ * releases @lockdir before aborting.
  */
-void _nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what);
+void _nc_data_download_file (const gchar *url, const gchar *dest, const gchar *what, gchar *lockdir);
 
 G_END_DECLS
 

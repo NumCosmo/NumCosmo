@@ -1,7 +1,7 @@
 project(
   'numcosmo',
   ['c', 'fortran'],
-  version: '0.27.0',
+  version: '0.28.0',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.3.0',
   default_options: [
@@ -480,14 +480,6 @@ omp_c = dependency(
   language: 'c',
   required: false,
 )
-omp_fortran = dependency(
-  'openmp',
-  language: 'fortran',
-  required: false,
-)
-if omp_fortran.found()
-  numcosmo_conf.set('HAVE_FORTRAN_OPENMP', true)
-endif
 
 #######################################################################################
 # Checking for GObject introspection:
@@ -571,17 +563,7 @@ fftw3_dep = dependency(
   version: fftw_req,
 )
 
-fftw3f_dep = dependency(
-  'fftw3f',
-  version: fftw_req,
-  required: false,
-)
-
 numcosmo_conf.set('HAVE_FFTW3', true)
-
-if fftw3f_dep.found()
-  numcosmo_conf.set('HAVE_FFTW3F', true)
-endif
 
 numcosmo_conf.set_quoted('NUMCOSMO_FFTW_PLAN', get_option('fftw-planner'))
 
@@ -940,7 +922,6 @@ dependencies_summary = {
   'blas': blas_dep,
   'cfitsio': cfitsio_dep,
   'fftw3': fftw3_dep,
-  'fftw3f': fftw3f_dep,
   'flint': flint_dep,
   'glib-gio': gio_dep,
   'glib-gobject': gobject_dep,

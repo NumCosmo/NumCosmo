@@ -24,6 +24,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * The harmonic transforms of NcmSphereMap, included in ncm_sphere_map.c. Each ring holds
+ * the FFT of its pixels (the analysis) or receives it (the synthesis). The rings are
+ * taken in blocks of NCM_SPHERE_MAP_BLOCK_NC pairs mirrored about the equator, which share
+ * one Y_lm recursion in theta (Y_lm(pi - theta) = (-1)^(l+m) Y_lm(theta)), and the rings a
+ * block does not fill are handled one at a time. The l loop is unrolled in steps of
+ * NCM_SPHERE_MAP_BLOCK_STEP, and the m loop is cut into chunks of about
+ * 1024 NCM_SPHERE_MAP_BLOCK_CM coefficients to stay in cache.
+ */
+
 static void
 NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_run_over_l) (NcmSphereMap *pix, NcmSFSphericalHarmonicsY *sphaY, NcmComplex *restrict alm, const NcmComplex *Fim_i)
 {
@@ -92,8 +102,6 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_run_over_l_array) (NcmSphereMap *pix, 
   gint l                           = ncm_sf_spherical_harmonics_Y_array_get_l (sphaYa);
   gdouble Ylm[NCM_SPHERE_MAP_BLOCK_STEP * NCM_SPHERE_MAP_BLOCK_NCT];
 
-  /*gdouble *Ylm = fftw_alloc_real (NCM_SPHERE_MAP_BLOCK_STEP * NCM_SPHERE_MAP_BLOCK_NCT);*/
-
   alm += (l - m);
 
   while (l < lmaxmstepm2)
@@ -158,8 +166,6 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_run_over_l_array) (NcmSphereMap *pix, 
       ncm_complex_res_add_mul_real (&alm[0], &Fim_i[j], Ylm);
     }
   }
-
-  /*fftw_free (Ylm);*/
 }
 
 static void
@@ -228,8 +234,6 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_get_alm_from_apcircles) (NcmSphereMap 
       if (l0 > lmax)
       {
         return FALSE;
-
-        break;
       }
       else
       {
@@ -245,12 +249,8 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_get_alm_from_apcircles) (NcmSphereMap 
 
         return TRUE;
       }
-      else
-      {
-        return FALSE;
-      }
 
-      break;
+      return FALSE;
     }
   }
 }
@@ -384,8 +384,6 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_map2alm_run) (NcmSphereMap *pix)
       chunk += (lmax + 1 - m);
       m++;
     } while ((chunk < (1024 * NCM_SPHERE_MAP_BLOCK_CM)) && (m < lmax + 1));
-
-    /*printf ("# mmax %ld lmax %u chunk %ld offset %ld\n", m - 1, lmax, chunk, offset);*/
 
     for (r_i = 0; r_i < lr_i; r_i += NCM_SPHERE_MAP_BLOCK_NC)
     {

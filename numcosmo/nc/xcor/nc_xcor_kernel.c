@@ -41,7 +41,7 @@
  *
  * Kernels also implement the noise power spectrum.
  *
- * See <a href="../../theory/sbessel_projection.html">UltraLevin: Non-Limber
+ * See <a href="../../theory/ncm/specfunc/sbessel_projection.html">UltraLevin: Non-Limber
  * Angular Power Spectra</a> for the pipeline a kernel drives: the adaptive
  * $k$ domain, the closure fitted to $W_\ell(k)$, and the error estimate the fit
  * residuals feed.
@@ -1302,20 +1302,17 @@ _component_states_init_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
 
   g_assert_cmpfloat (comp_states.k_min_hard, <, comp_states.k_max_hard);
 
-  /* Compute boundary values for extrapolation */
+  /* Edge values for the pointwise fall-off in _component_states_compute_limber() */
   for (i = 0; i < n_comp; i++)
   {
     ComponentState *state = &comp_states.states[i];
 
     for (j = 0; j < n_l; j++)
     {
-      const gint l_j        = lmin + j;
-      const gdouble k_min_j = state->k_min_limber_ell[j];
-      const gdouble k_max_j = state->k_max_limber_ell[j];
+      const gint l_j = lmin + j;
 
-      /* Evaluate at the two boundaries */
-      state->last_values_left[j]  = _component_limber_eval (state->comp, cosmo, state->chi_max, k_min_j, l_j);
-      state->last_values_right[j] = _component_limber_eval (state->comp, cosmo, state->chi_max, k_max_j, l_j);
+      state->last_values_left[j]  = _component_limber_eval (state->comp, cosmo, state->chi_max, state->k_min_limber_ell[j], l_j);
+      state->last_values_right[j] = _component_limber_eval (state->comp, cosmo, state->chi_max, state->k_max_limber_ell[j], l_j);
     }
   }
 
@@ -1577,38 +1574,39 @@ _component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_d
   {
     ComponentState *state = &comp_states->states[ci];
 
-    /* Evaluate with per-ell boundary checking and extrapolation */
+    /* A multipole's window is supported on its band alone: chi = nu / k must
+     * fall inside the component's support. In panel mode membership is decided
+     * once per panel, at its midpoint; the band edges are panel cuts, so a
+     * panel lies entirely inside or entirely outside the band and the window
+     * is zero outside. Sampled pointwise, for the spline closure, the step is
+     * replaced by a Gaussian fall-off from the edge value, of relative width
+     * 1e-8 (DECAY_RATE), so that the midpoint refinement stops at a passing
+     * test inside the fall-off instead of bisecting to machine precision. */
     for (i = 0; i < comp_states->n_l; i++)
     {
       const gint l                = comp_states->lmin + i;
-      const gboolean within_range = (k >= state->k_min_limber_ell[i]) && (k <= state->k_max_limber_ell[i]);
+      const gdouble k_side        = comp_states->panel_mode ? comp_states->panel_mid : k;
+      const gboolean within_range = (k_side >= state->k_min_limber_ell[i]) && (k_side <= state->k_max_limber_ell[i]);
 
       if (within_range)
       {
-        /* Normal Limber evaluation within valid range */
         kernel_out[ci][i] = _component_limber_eval (state->comp, state->params.cosmo, state->chi_max, k, l);
+      }
+      else if (comp_states->panel_mode)
+      {
+        kernel_out[ci][i] = 0.0;
+      }
+      else if (k < state->k_min_limber_ell[i])
+      {
+        const gdouble delta_k = state->k_min_limber_ell[i] - k;
+
+        kernel_out[ci][i] = state->last_values_left[i] * exp (-gsl_pow_2 (DECAY_RATE * delta_k / state->k_min_limber_ell[i]));
       }
       else
       {
-        /* Exponential extrapolation outside valid Limber range */
-        if (k < state->k_min_limber_ell[i])
-        {
-          /* Left extrapolation */
-          const gdouble delta_k    = state->k_min_limber_ell[i] - k;
-          const gdouble decay_rate = DECAY_RATE;
-          const gdouble decay      = exp (-gsl_pow_2 (decay_rate * delta_k / state->k_min_limber_ell[i]));
+        const gdouble delta_k = k - state->k_max_limber_ell[i];
 
-          kernel_out[ci][i] = state->last_values_left[i] * decay;
-        }
-        else /* k > state->k_max_limber_ell[i] */
-        {
-          /* Right extrapolation */
-          const gdouble delta_k    = k - state->k_max_limber_ell[i];
-          const gdouble decay_rate = DECAY_RATE;
-          const gdouble decay      = exp (-gsl_pow_2 (decay_rate * delta_k / state->k_max_limber_ell[i]));
-
-          kernel_out[ci][i] = state->last_values_right[i] * decay;
-        }
+        kernel_out[ci][i] = state->last_values_right[i] * exp (-gsl_pow_2 (DECAY_RATE * delta_k / state->k_max_limber_ell[i]));
       }
     }
   }
@@ -1775,6 +1773,22 @@ _component_states_collect_cuts (ComponentStates *comp_states, gdouble k_min, gdo
     if ((state->right_boundary_found >= comp_states->adaptive_boundary_tries) &&
         (state->last_k_right > k_min) && (state->last_k_right < k_max))
       g_array_append_val (cuts, state->last_k_right);
+
+    /* Under Limber the window steps to zero at every multipole's band edge,
+     * see _component_states_compute_limber(). */
+    if (comp_states->is_limber)
+    {
+      guint j;
+
+      for (j = 0; j < comp_states->n_l; j++)
+      {
+        if ((state->k_min_limber_ell[j] > k_min) && (state->k_min_limber_ell[j] < k_max))
+          g_array_append_val (cuts, state->k_min_limber_ell[j]);
+
+        if ((state->k_max_limber_ell[j] > k_min) && (state->k_max_limber_ell[j] < k_max))
+          g_array_append_val (cuts, state->k_max_limber_ell[j]);
+      }
+    }
   }
 
   g_array_sort (cuts, _nc_xcor_kernel_cmp_gdouble);
@@ -2244,7 +2258,7 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
 }
 
 static NcXcorKernelIntegrand *
-_nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax)
+_nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcXcorKernelClosure closure_type)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
   const guint n_l           = lmax - lmin + 1;
@@ -2259,14 +2273,19 @@ _nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
 
     g_ptr_array_unref (comp_list);
 
-    /* Always the spline here, whatever #NcXcor:closure-type asks for.
-     * Under Limber a multipole's window is supported only on its own band in k
-     * and is zero outside it, so the block's shared domain carries one step per
-     * multipole -- see _spline_integrand_get_range_comp(). A Chebyshev series
-     * converges on this kernel because W_l(k) is entire in k, and a step is
-     * not: the expansion would never converge and the panel splitter would
-     * bisect until it gave up. The Limber closure is also the cheap one, so
-     * there is nothing to win by trying. */
+    /* Under Limber a multipole's window is supported on its own band in k,
+     * [nu / chi_max, nu / chi_min], and is zero outside it, so a block's shared
+     * domain carries one step per multipole. The Chebyshev closure makes every
+     * band edge a panel cut and decides membership per panel
+     * (_component_states_collect_cuts(), _component_states_compute_limber()),
+     * leaving each panel smooth; the spline closure confines each multipole to
+     * its band at integration time (_spline_integrand_get_range_comp()). */
+    if (closure_type == NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV)
+      return _nc_xcor_kernel_build_cheb_integrand (xclk, cosmo, lmin, lmax,
+                                                   &comp_states,
+                                                   _component_states_compute_limber,
+                                                   self->reltol, self->peak_epsilon);
+
     return _nc_xcor_kernel_build_spline_integrand (xclk, cosmo, lmin, lmax,
                                                    &comp_states,
                                                    _component_states_compute_limber,
@@ -3039,9 +3058,7 @@ nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l
  * as long as each gets its own @sbi.
  *
  * @sbi is unused below the kernel's l-limber threshold, where no spherical
- * Bessel integral is performed. @closure_type is likewise unused there: a
- * Limber window carries a step per multipole and only the spline closure
- * represents that.
+ * Bessel integral is performed.
  *
  * Returns: (transfer full): the kernel integrand over [@lmin, @lmax]
  */
@@ -3051,7 +3068,7 @@ nc_xcor_kernel_get_eval_vectorized_full (NcXcorKernel *xclk, NcHICosmo *cosmo, g
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   if ((self->l_limber == 0) || ((self->l_limber > 0) && (lmin >= self->l_limber)))
-    return _nc_xcor_kernel_build_limber_integrand (xclk, cosmo, lmin, lmax);
+    return _nc_xcor_kernel_build_limber_integrand (xclk, cosmo, lmin, lmax, closure_type);
   else
     return _nc_xcor_kernel_build_non_limber_integrand (xclk, cosmo, lmin, lmax, sbi, closure_type);
 }

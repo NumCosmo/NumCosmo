@@ -22,7 +22,7 @@
 ``NcGalaxyShapeFactor`` owns the whole HSM measurement engine (generation,
 geometry caches, frame bookkeeping); subclasses supply only the
 intrinsic-ellipticity marginalization. ``NcGalaxyShapeFactorVarAdd`` is the
-legacy variance-add Gaussian approximation, validated for golden parity
+legacy variance-add Gaussian approximation, validated for parity
 against the pristine ``NcGalaxySDShapeHSMGaussGlobal`` oracle (same math, the
 intrinsic width coming from the ``NcGalaxyShapePopGauss`` model in the mset
 instead of a parameter of the shape model itself).
@@ -40,8 +40,8 @@ is slated for deletion in a follow-up PR. Each frozen assertion keeps the
 tolerance (``rtol``/``atol``/bit-exact ``==``) that the original live
 comparison used. The ``_INTEG_PARITY_FROZEN`` and ``_GEN_PARITY_FROZEN``
 sequences are stored as ``Ncm.Matrix`` binfiles (``data/truth_tables/wl/``)
-rather than inline literals; see ``_load_integ_parity_golden`` and
-``_load_gen_parity_golden``.
+rather than inline literals; see ``_load_integ_parity_truth_table`` and
+``_load_gen_parity_truth_table``.
 """
 
 import math
@@ -74,15 +74,15 @@ _CONV_NAMES = {
 # flat (len(_CONVS) * len(_GALAXIES) * 2, 100) matrix, blocked by ellip_conv
 # (matching _CONVS order), then by galaxy (matching _GALAXIES order), then
 # by use_lnp (False, True).
-_INTEG_PARITY_GOLDEN_FILE = (
+_INTEG_PARITY_TRUTH_TABLE_FILE = (
     "truth_tables/wl/nc_galaxy_shape_factor_var_add_integ_parity.bin"
 )
 
 
-def _load_integ_parity_golden() -> np.ndarray:
+def _load_integ_parity_truth_table() -> np.ndarray:
     """Load the frozen integ() sequences as a (len(_CONVS), len(_GALAXIES),
     2, 100) array."""
-    path = Ncm.cfg_get_data_filename(_INTEG_PARITY_GOLDEN_FILE, True)
+    path = Ncm.cfg_get_data_filename(_INTEG_PARITY_TRUTH_TABLE_FILE, True)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     matrix = ser.from_binfile(path)
     assert isinstance(matrix, Ncm.Matrix)
@@ -93,15 +93,19 @@ def _load_integ_parity_golden() -> np.ndarray:
 # (eps_int_1, eps_int_2, eps_obs_1, eps_obs_2) tuples per row. Stored as a
 # flat (len(_CONVS) * len(_GALAXIES) * 50, 4) matrix, blocked by ellip_conv
 # (matching _CONVS order), then by galaxy (matching _GALAXIES order).
-_GEN_PARITY_GOLDEN_FILE = (
+# The eps_obs columns were regenerated from the current engine (2026-09-25)
+# after ncm_trivec_get_spherical_coord() moved from acos to atan2 and
+# ncm_quaternion_set_to_rotate_to_z() to atan2 half-angles: they moved by at
+# most 1.8e-12 absolute; the eps_int columns are unchanged.
+_GEN_PARITY_TRUTH_TABLE_FILE = (
     "truth_tables/wl/nc_galaxy_shape_factor_var_add_gen_parity.bin"
 )
 
 
-def _load_gen_parity_golden() -> np.ndarray:
+def _load_gen_parity_truth_table() -> np.ndarray:
     """Load the frozen gen() draw sequences as a (len(_CONVS),
     len(_GALAXIES), 50, 4) array."""
-    path = Ncm.cfg_get_data_filename(_GEN_PARITY_GOLDEN_FILE, True)
+    path = Ncm.cfg_get_data_filename(_GEN_PARITY_TRUTH_TABLE_FILE, True)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     matrix = ser.from_binfile(path)
     assert isinstance(matrix, Ncm.Matrix)
@@ -159,7 +163,7 @@ def _set_galaxy(new, galaxy):
     gsf.data_set(s_data, e1, e2, std_noise, c1, c2, m, Nc.WLEllipticityFrame.CELESTIAL)
 
 
-_INTEG_PARITY_FROZEN = _load_integ_parity_golden()
+_INTEG_PARITY_FROZEN = _load_integ_parity_truth_table()
 
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
@@ -186,7 +190,7 @@ def test_integ_parity_legacy(ellip_conv, galaxy, use_lnp):
         assert_allclose(new_integ.eval(z, s_data), expected, rtol=1.0e-12, atol=1.0e-12)
 
 
-_GEN_PARITY_FROZEN = _load_gen_parity_golden()
+_GEN_PARITY_FROZEN = _load_gen_parity_truth_table()
 
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)

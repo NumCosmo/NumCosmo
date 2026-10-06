@@ -25,12 +25,16 @@
 /**
  * NcmFunctionCache:
  *
- * A generic cache for functions values.
+ * Cache of vector-valued function values keyed by a scalar argument.
  *
- * A simple cache that saves function values at different argument values. It can be
- * used to find an already computed value or the value of the function closest to an
- * already computed point.
+ * Stores values $f(x) \in \mathbb{R}^n$ and returns either the value at a cached $x$
+ * or the value at the cached argument closest to a given $x$. Two arguments are the
+ * same key when they agree to a relative tolerance of $10^{-15}$. Insertion and
+ * lookup are thread-safe.
  *
+ * `NcmFunctionCache:abstol` and `NcmFunctionCache:reltol` are kept for the code that fills
+ * the cache; ncm_integral_cached_x_inf(), for example, uses them as integration
+ * tolerances.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -191,14 +195,12 @@ ncm_function_cache_class_init (NcmFunctionCacheClass *klass)
 /**
  * ncm_function_cache_new:
  * @n: function dimension
- * @abstol: relative tolerance
- * @reltol: absolute tolerance
+ * @abstol: absolute tolerance
+ * @reltol: relative tolerance
  *
- * Creates a new #NcmFunctionCache for a @n dimensional function.
- * The points are considered the same within the tolerance
- * described by @abstol and @reltol.
+ * Creates a new #NcmFunctionCache for an @n-dimensional function.
  *
- * Returns: the newly created #NcmFunctionCache.
+ * Returns: (transfer full): a new #NcmFunctionCache.
  */
 NcmFunctionCache *
 ncm_function_cache_new (guint n, gdouble abstol, gdouble reltol)
@@ -216,7 +218,7 @@ ncm_function_cache_new (guint n, gdouble abstol, gdouble reltol)
  * ncm_function_cache_ref:
  * @cache: a #NcmFunctionCache
  *
- * Increase the reference of @cache by one.
+ * Increases the reference count of @cache by one.
  *
  * Returns: (transfer full): @cache.
  */
@@ -230,8 +232,7 @@ ncm_function_cache_ref (NcmFunctionCache *cache)
  * ncm_function_cache_free:
  * @cache: a #NcmFunctionCache
  *
- * Decrease the reference count of @cache by one.
- *
+ * Decreases the reference count of @cache by one.
  */
 void
 ncm_function_cache_free (NcmFunctionCache *cache)
@@ -243,9 +244,7 @@ ncm_function_cache_free (NcmFunctionCache *cache)
  * ncm_function_cache_clear:
  * @cache: a #NcmFunctionCache
  *
- * Decrease the reference count of @cache by one, and sets the pointer *@cache to
- * NULL.
- *
+ * Decreases the reference count of *@cache by one and sets *@cache to %NULL.
  */
 void
 ncm_function_cache_clear (NcmFunctionCache **cache)
@@ -271,7 +270,7 @@ ncm_function_cache_get_reltol (NcmFunctionCache *cache)
  * ncm_function_cache_get_abstol:
  * @cache: a #NcmFunctionCache
  *
- * Returns: the relative tolerance.
+ * Returns: the absolute tolerance.
  */
 gdouble
 ncm_function_cache_get_abstol (NcmFunctionCache *cache)
@@ -285,8 +284,7 @@ ncm_function_cache_get_abstol (NcmFunctionCache *cache)
  * ncm_function_cache_empty_cache:
  * @cache: a #NcmFunctionCache
  *
- * Empties the content of @cache.
- *
+ * Empties @cache. The entries are released on the next insertion or lookup.
  */
 void
 ncm_function_cache_empty_cache (NcmFunctionCache *cache)
@@ -300,20 +298,18 @@ ncm_function_cache_empty_cache (NcmFunctionCache *cache)
  * ncm_function_cache_insert_vector:
  * @cache: a #NcmFunctionCache
  * @x: the argument $x$
- * @p: function value at $x$
+ * @p: the function value $f(x)$
  *
- * Insert a new point in the cache.
- *
+ * Adds $f(x)$ to @cache, holding a reference to @p. Does nothing if $x$ is
+ * already cached. The length of @p must be the function dimension.
  */
 void
 ncm_function_cache_insert_vector (NcmFunctionCache *cache, gdouble x, NcmVector *p)
 {
   NcmFunctionCachePrivate * const self = ncm_function_cache_get_instance_private (cache);
-  gdouble *x_ptr                       = g_slice_new (gdouble);
+  gdouble *x_ptr;
 
   g_assert_cmpuint (self->n, ==, ncm_vector_len (p));
-
-  *x_ptr = x;
 
   g_mutex_lock (&self->lock);
   cache_clean (cache);
@@ -325,6 +321,9 @@ ncm_function_cache_insert_vector (NcmFunctionCache *cache, gdouble x, NcmVector 
     return;
   }
 
+  x_ptr  = g_slice_new (gdouble);
+  *x_ptr = x;
+
   g_tree_insert (self->tree, x_ptr, ncm_vector_ref (p));
 
   g_mutex_unlock (&self->lock);
@@ -334,10 +333,9 @@ ncm_function_cache_insert_vector (NcmFunctionCache *cache, gdouble x, NcmVector 
  * ncm_function_cache_insert: (skip)
  * @cache: a #NcmFunctionCache
  * @x: the argument $x$
- * @...: function value at $x$
+ * @...: the components of $f(x)$, as doubles
  *
- * Insert a new point in the cache.
- *
+ * Adds $f(x)$ to @cache. Does nothing if $x$ is already cached.
  */
 void
 ncm_function_cache_insert (NcmFunctionCache *cache, gdouble x, ...)
@@ -391,23 +389,33 @@ static gint gdouble_search_near (gconstpointer a, gconstpointer b);
  * ncm_function_cache_get_near:
  * @cache: a #NcmFunctionCache
  * @x: the argument $x$
- * @x_found_ptr: Whether a point $x_c$ close to $x$ was found in the cache
- * @v: (out callee-allocates) (transfer full): the function at $x_c$ or NULL if no point was not found
+ * @x_found_ptr: (out): the cached argument $x_c$
+ * @v: (out callee-allocates) (transfer full): the function value $f(x_c)$
  * @type: a #NcmFunctionCacheSearchType
  *
- * Searches the @cache and returns the value of the function closest to $x$, $x_c$.
+ * Finds the cached argument $x_c$ closest to $x$ in the direction given by @type.
+ * A cached argument within `NcmFunctionCache:reltol` of $x$ counts as equal to $x$,
+ * satisfies every @type and ends the search. @x_found_ptr and @v are set only when
+ * $x_c$ exists.
  *
- * Returns: whether a point $x_c$ was found.
+ * Returns: whether $x_c$ was found.
  */
 gboolean
 ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdouble *x_found_ptr, NcmVector **v, NcmFunctionCacheSearchType type)
 {
   NcmFunctionCachePrivate * const self = ncm_function_cache_get_instance_private (cache);
-  NcmFunctionCacheSearch search        = {FALSE, x, 0.0, GSL_POSINF, 0, NCM_FUNCTION_CACHE_SEARCH_BOTH, self->reltol};
-  NcmVector *res                       = NULL;
+  NcmFunctionCacheSearch search        = {
+    .found  = FALSE,
+    .near_x = x,
+    .x      = 0.0,
+    .diff   = GSL_POSINF,
+    .dir    = 0,
+    .reltol = self->reltol,
+    .type   = type,
+  };
+  NcmVector *res = NULL;
 
   g_mutex_lock (&self->lock);
-  search.type = type;
 
   if (cache_clean (cache))
   {
@@ -442,12 +450,12 @@ ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdouble *x_foun
 /**
  * ncm_function_cache_get: (skip)
  * @cache: a #NcmFunctionCache
- * @x_ptr: the argument $x$
- * @v: (out) (transfer none): the function at $x$ or NULL if no point was not found
+ * @x_ptr: pointer to the argument $x$
+ * @v: (out) (transfer none): the function value $f(x)$
  *
- * Searches the @cache and returns the value of the function at $x$.
+ * Looks up $x$ in @cache. @v is set only when $x$ is cached.
  *
- * Returns: whether a point $x$ was found.
+ * Returns: whether $x$ was found.
  */
 gboolean
 ncm_function_cache_get (NcmFunctionCache *cache, gdouble *x_ptr, NcmVector **v)

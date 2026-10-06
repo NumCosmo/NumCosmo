@@ -45,14 +45,13 @@ G_DECLARE_FINAL_TYPE (NcmMatrix, ncm_matrix, NCM, MATRIX, GObject)
 
 /**
  * NcmMatrixInternal:
- * @NCM_MATRIX_SLICE: Uses [g_slice_*](https://developer.gnome.org/glib/stable/glib-Memory-Slices.html) family functions from [Glib](https://developer.gnome.org/glib/) to alloc and free memory segments.
- * @NCM_MATRIX_GSL_MATRIX: Uses [gsl_matrix](https://www.gnu.org/software/gsl/doc/html/vectors.html#matrices) from [GSL](https://www.gnu.org/software/gsl/) as the base object.
- * @NCM_MATRIX_MALLOC: Uses [malloc](https://en.wikipedia.org/wiki/C_dynamic_memory_allocation) for memory allocation and free functions.
- * @NCM_MATRIX_GARRAY: Uses [g_array](https://developer.gnome.org/glib/stable/glib-Arrays.html) from [Glib](https://developer.gnome.org/glib/) as base.
- * @NCM_MATRIX_DERIVED: Uses another #NcmMatrix (for example, if it is getting a submatrix from a #NcmMatrix).
+ * @NCM_MATRIX_SLICE: data allocated with g_slice_alloc()
+ * @NCM_MATRIX_GSL_MATRIX: data of a #gsl_matrix
+ * @NCM_MATRIX_MALLOC: data allocated with malloc()
+ * @NCM_MATRIX_GARRAY: data of a #GArray
+ * @NCM_MATRIX_DERIVED: data owned by another object, such as the matrix of a submatrix
  *
- * This enumerator is only used internally. Only by developers.
- *
+ * Origin of the data of a #NcmMatrix, used internally.
  */
 typedef enum _NcmMatrixInternal /*< prefix=NCM_MATRIX >*/
 {
@@ -161,15 +160,27 @@ void ncm_matrix_clear (NcmMatrix **cm);
 void ncm_matrix_const_free (const NcmMatrix *cm);
 
 void ncm_matrix_copy_triangle (NcmMatrix *cm, gchar UL);
+void ncm_matrix_zero_triangle (NcmMatrix *cm, gchar UL);
 void ncm_matrix_dsymm (NcmMatrix *cm, gchar UL, const gdouble alpha, NcmMatrix *A, NcmMatrix *B, const gdouble beta);
 void ncm_matrix_dgemm (NcmMatrix *cm, gchar TransA, gchar TransB, const gdouble alpha, NcmMatrix *A, NcmMatrix *B, const gdouble beta);
+void ncm_matrix_dtrmm (NcmMatrix *cm, gchar Side, gchar UL, gchar TransA, const gdouble alpha, NcmMatrix *A);
+void ncm_matrix_dtrsm (NcmMatrix *cm, gchar Side, gchar UL, gchar TransA, const gdouble alpha, NcmMatrix *A);
+void ncm_matrix_dtrmv (NcmMatrix *cm, gchar UL, gchar Trans, NcmVector *v);
+void ncm_matrix_dtrsv (NcmMatrix *cm, gchar UL, gchar Trans, NcmVector *v);
+void ncm_matrix_dsyrk (NcmMatrix *cm, gchar UL, gchar Trans, const gdouble alpha, NcmMatrix *A, const gdouble beta);
+void ncm_matrix_scale_rows (NcmMatrix *cm, const NcmVector *s);
+void ncm_matrix_scale_cols (NcmMatrix *cm, const NcmVector *s);
+void ncm_matrix_sub_row_vector (NcmMatrix *cm, const NcmVector *v);
+gboolean ncm_matrix_is_identity (const NcmMatrix *cm, const gdouble tol);
 
 gint ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL);
 gint ncm_matrix_cholesky_inverse (NcmMatrix *cm, gchar UL);
 gdouble ncm_matrix_cholesky_lndet (NcmMatrix *cm);
 gint ncm_matrix_cholesky_solve (NcmMatrix *cm, NcmVector *b, gchar UL);
 gint ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL);
+void ncm_matrix_chol_chi2_cols (const NcmMatrix *cm, const NcmVector *theta, const NcmMatrix *U, NcmMatrix *work, NcmVector *chi2);
 gint ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const guint maxiter);
+gint ncm_matrix_cholesky_decomp_nearPD (const NcmMatrix *cm, NcmMatrix *decomp, gchar UL, const guint maxiter, gboolean *repaired);
 void ncm_matrix_sym_exp_cholesky (NcmMatrix *cm, gchar UL, NcmMatrix *exp_cm_dec);
 void ncm_matrix_sym_posdef_log (NcmMatrix *cm, gchar UL, NcmMatrix *ln_cm);
 void ncm_matrix_triang_to_sym (NcmMatrix *cm, gchar UL, gboolean zero, NcmMatrix *sym);

@@ -1,0 +1,80 @@
+NcHICosmoDECpl:
+  sparam-array:
+    7:
+      NcmSParam:
+        name: 'w0'
+        symbol: 'w_0'
+        lower-bound: -2.5
+        upper-bound: -0.29999999999999999
+        scale: 0.012999999999999999
+        absolute-tolerance: 0.0
+        default-value: -1.0
+        fit-type: 0
+    4:
+      NcmSParam:
+        name: 'Yp'
+        symbol: 'Y_p'
+        lower-bound: 0.20000000000000001
+        upper-bound: 0.29999999999999999
+        scale: 0.0020999999999999999
+        absolute-tolerance: 0.0
+        default-value: 0.23999999999999999
+        fit-type: 1
+    6:
+      NcmSParam:
+        name: 'Omegab'
+        symbol: '\\Omega_{b0}'
+        lower-bound: 0.01
+        upper-bound: 0.089999999999999997
+        scale: 0.0011999999999999999
+        absolute-tolerance: 0.0
+        default-value: 0.043200000000000002
+        fit-type: 1
+    8:
+      NcmSParam:
+        name: 'w1'
+        symbol: 'w_1'
+        lower-bound: -0.90000000000000002
+        upper-bound: 0.90000000000000002
+        scale: 0.017000000000000001
+        absolute-tolerance: 0.0
+        default-value: 0.0
+        fit-type: 0
+    5:
+      NcmSParam:
+        name: 'ENnu'
+        symbol: 'N_\\nu'
+        lower-bound: 2.0
+        upper-bound: 4.0
+        scale: 0.11
+        absolute-tolerance: 0.0
+        default-value: 3.0459999999999998
+        fit-type: 1
+  submodel-array: []
+  CCL-comp: false
+  H0: 67.359999999999999
+  Omegac: 0.25679999999999997
+  Omegax: 0.69999999999999996
+  Tgamma0: 2.7244999999999999
+  Yp: 0.23999999999999999
+  ENnu: 3.0459999999999998
+  Omegab: 0.043200000000000002
+  massnu-length: 0
+  Tnu-length: 0
+  munu-length: 0
+  gnu-length: 0
+  H0-fit: false
+  Omegac-fit: false
+  Omegax-fit: false
+  Tgamma0-fit: false
+  Yp-fit: false
+  ENnu-fit: false
+  Omegab-fit: true
+  massnu-fit: []
+  Tnu-fit: []
+  munu-fit: []
+  gnu-fit: []
+  w0: -1.0
+  w1: 0.0
+  w0-fit: true
+  w1-fit: false

@@ -138,6 +138,7 @@ _nc_hiprim_two_fluids_finalize (GObject *object)
 }
 
 static gdouble _nc_hiprim_two_fluids_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk);
+static void _nc_hiprim_two_fluids_lnk_range (NcHIPrim *prim, gdouble *lnk_min, gdouble *lnk_max);
 static gdouble _nc_hiprim_two_fluids_lnT_powespec_lnk (NcHIPrim *prim, const gdouble lnk);
 
 static void
@@ -152,7 +153,7 @@ nc_hiprim_two_fluids_class_init (NcHIPrimTwoFluidsClass *klass)
   model_class->set_property = &_nc_hiprim_two_fluids_set_property;
   model_class->get_property = &_nc_hiprim_two_fluids_get_property;
 
-  ncm_model_class_set_name_nick (model_class, "Power Law model for primordial spectra", "TwoFluids");
+  ncm_model_class_set_name_nick (model_class, "Two Fluids model for primordial spectra", "TwoFluids");
   ncm_model_class_add_params (model_class, NC_HIPRIM_TWO_FLUIDS_SPARAM_LEN, 0, PROP_SIZE);
 
   /* Set ln10e10ASA param info */
@@ -212,6 +213,8 @@ nc_hiprim_two_fluids_class_init (NcHIPrimTwoFluidsClass *klass)
 
   nc_hiprim_set_lnSA_powspec_lnk_impl (prim_class, &_nc_hiprim_two_fluids_lnSA_powespec_lnk);
   nc_hiprim_set_lnT_powspec_lnk_impl  (prim_class, &_nc_hiprim_two_fluids_lnT_powespec_lnk);
+
+  prim_class->lnk_range = &_nc_hiprim_two_fluids_lnk_range;
 }
 
 #define VECTOR     (NCM_MODEL (prim))
@@ -234,6 +237,24 @@ _nc_hiprim_two_fluids_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
   const gdouble lnw                     = LNW;
 
   return LN10E10ASA - 10.0 * M_LN10 + ncm_spline2d_eval (self->lnSA_powspec_lnk_lnw, ln_ka, lnw);
+}
+
+/* The table is in (ln (k / k_0), ln w): its x knots shifted by LNK0 */
+static void
+_nc_hiprim_two_fluids_lnk_range (NcHIPrim *prim, gdouble *lnk_min, gdouble *lnk_max)
+{
+  NcHIPrimTwoFluids *two_fluids         = NC_HIPRIM_TWO_FLUIDS (prim);
+  NcHIPrimTwoFluidsPrivate * const self = nc_hiprim_two_fluids_get_instance_private (two_fluids);
+  const gdouble lnk0                    = LNK0;
+  NcmVector *lnka;
+
+  if (self->lnSA_powspec_lnk_lnw == NULL)
+    g_error ("_nc_hiprim_two_fluids_lnk_range: no adiabatic spectrum table is set.");
+
+  lnka = ncm_spline2d_peek_xv (self->lnSA_powspec_lnk_lnw);
+
+  *lnk_min = lnk0 + ncm_vector_get (lnka, 0);
+  *lnk_max = lnk0 + ncm_vector_get (lnka, ncm_vector_len (lnka) - 1);
 }
 
 static gdouble

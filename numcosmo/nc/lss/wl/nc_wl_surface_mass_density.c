@@ -39,7 +39,7 @@
  *
  * For the full definitions, the mean surface density, and the critical surface
  * density, see the theoretical background page:
- * <a href="../../theory/wl_surface_mass_density.html">Weak-Lensing Surface Mass Density</a>.
+ * <a href="../../theory/nc/lss/wl/wl_surface_mass_density.html">Weak-Lensing Surface Mass Density</a>.
  *
  * Usually $z_\mathrm{lens} = z_\mathrm{cluster}$, but these are kept as separate
  * arguments to handle cases where the shear signal has been rescaled to a

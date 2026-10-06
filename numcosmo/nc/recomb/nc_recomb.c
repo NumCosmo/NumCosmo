@@ -39,7 +39,7 @@
  *
  * For the abundance definitions, the Saha equilibrium relations, and the
  * optical-depth conventions, see the theoretical background page:
- * <a href="../../theory/recombination.html">Cosmic Recombination</a>.
+ * <a href="../../theory/nc/recomb/recombination.html">Cosmic Recombination</a>.
  * Further background in Weinberg (2008), Cosmology.
  */
 

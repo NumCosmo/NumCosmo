@@ -26,19 +26,19 @@
 /**
  * NcmPowspec:
  *
- * Abstrac class for power spectrum implementation.
+ * Abstract class for a power spectrum $P(k, z)$.
  *
- * This module comprises the set of functions to compute a power spectrum and
- * derived quantities.
+ * For a field $\delta(\vec{x})$ with Fourier transform $\tilde{\delta}(\vec{k})$,
+ * $$\langle \tilde{\delta}(\vec{k}) \tilde{\delta}^*(\vec{k}^\prime) \rangle = (2\pi)^3 \delta_D(\vec{k} - \vec{k}^\prime) P(k),$$
+ * and the two-point correlation function is
+ * $$\xi(|\vec{x} - \vec{x}^\prime|) = \int \frac{\mathrm{d}^3 k}{(2\pi)^3} e^{i \vec{k} \cdot (\vec{x} - \vec{x}^\prime)} P(k).$$
+ * $P$ is the dimensional spectrum, $P(k) = 2\pi^2 \Delta^2(k) / k^3$, with $k$ in
+ * $\mathrm{Mpc}^{-1}$ and $P$ in $\mathrm{Mpc}^3$.
  *
- * Given a field $\delta(\vec{x})$ at position $\vec{x}$, the power spectrum is defined
- * as the Fourier transform of the two-point correlation point, i.e., $$\xi(\vec{x} -
- * \vec{x}^\prime) = \int \frac{d^3 k}{(2 \pi)^3} e^{i \vec{k}.(\vec{x} -
- * \vec{x}^\prime)} P(k),$$ where $\langle \delta(\vec{k} - \vec{k}^\prime)\rangle =
- * (2\pi)^3 \delta_D(\vec{k} - \vec{k}^\prime) P(k)$ and $\delta_D$ is the Dirac's delta
- * function. The standard output is the dimensional power spectrum, not the
- * dimensionless one $\Delta(k)^2$, $$P(k) \equiv \frac{2 \pi^2 \Delta(k)^2}{k^3}.$$
- *
+ * A subclass implements prepare(), eval() and get_nknots(); eval_vec(), deriv_z(),
+ * deriv_k() and get_spline_2d() have defaults built on eval(). Each of
+ * ncm_powspec_var_tophat_R(), ncm_powspec_corr3d() and ncm_powspec_sproj() uses one
+ * integrator stored in the object, so concurrent calls on the same object are not safe.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -61,8 +61,6 @@
 
 typedef struct _NcmPowspecPrivate
 {
-  /*< private > */
-  GObject parent_instance;
   gdouble zi;
   gdouble zf;
   gdouble kmin;
@@ -205,14 +203,13 @@ _ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const 
   return 0.0;
 }
 
+/* LCOV_EXCL_STOP */
+
 /*
- * Default derivatives: a fourth-order finite difference on the child's own
- * eval(). A child with a closed form overrides these; every other child gets
- * derivatives good to about h^4 of the local curvature, which is far below
- * the tolerances any caller of a power spectrum works to. The redshift step
- * is relative to 1 + z and switches to a one-sided stencil next to z = 0, so
- * the spectrum is never asked below the range it was prepared on; the
- * wavenumber step is taken in ln k.
+ * Default derivatives: fourth-order finite differences of eval(), error O(h^4),
+ * with h = 1e-3 (1 + z) in z and h = 1e-3 in ln k. Below z = 2h the z stencil is
+ * one-sided (z to z + 4h), so it never evaluates z < 0; either stencil can reach
+ * outside [zi, zf].
  */
 #define NCM_POWSPEC_DERIV_REL_STEP (1.0e-3)
 
@@ -254,8 +251,6 @@ _ncm_powspec_deriv_k (NcmPowspec *powspec, NcmModel *model, const gdouble z, con
   /* d/dk = (d/dln k) / k */
   return (Pm2 - 8.0 * Pm1 + 8.0 * Pp1 - Pp2) / (12.0 * h * k);
 }
-
-/* LCOV_EXCL_STOP */
 
 static void _ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
 
@@ -348,7 +343,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
   /**
    * NcmPowspec:zi:
    *
-   * The initial time (redshift) to compute $P(k,z)$.
+   * Lower end of the redshift range of $P(k, z)$.
    */
   g_object_class_install_property (object_class,
                                    PROP_ZI,
@@ -361,7 +356,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
   /**
    * NcmPowspec:zf:
    *
-   * The final time (redshift) to compute $P(k,z)$.
+   * Upper end of the redshift range of $P(k, z)$.
    */
   g_object_class_install_property (object_class,
                                    PROP_ZF,
@@ -374,7 +369,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
   /**
    * NcmPowspec:kmin:
    *
-   * The minimum mode (wave-number) value to compute $P(k,z)$.
+   * Lower end of the wavenumber range of $P(k, z)$, in $\mathrm{Mpc}^{-1}$.
    */
   g_object_class_install_property (object_class,
                                    PROP_KMIN,
@@ -387,7 +382,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
   /**
    * NcmPowspec:kmax:
    *
-   * The maximum mode (wave-number) value to compute $P(k,z)$.
+   * Upper end of the wavenumber range of $P(k, z)$, in $\mathrm{Mpc}^{-1}$.
    */
   g_object_class_install_property (object_class,
                                    PROP_KMAX,
@@ -400,7 +395,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
   /**
    * NcmPowspec:reltol:
    *
-   * The relative tolerance on the interpolation error.
+   * Relative tolerance of the spline built by the default get_spline_2d().
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL_SPLINE,
@@ -441,7 +436,7 @@ _ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, Nc
  *
  * Increases the reference count of @powspec by one atomically.
  *
- * Returns: (transfer full): @powspec.
+ * Returns: (transfer full): @powspec
  */
 NcmPowspec *
 ncm_powspec_ref (NcmPowspec *powspec)
@@ -456,7 +451,6 @@ ncm_powspec_ref (NcmPowspec *powspec)
  * Atomically decrements the reference count of @powspec by one.
  * If the reference count drops to 0,
  * all memory allocated by @powspec is released.
- *
  */
 void
 ncm_powspec_free (NcmPowspec *powspec)
@@ -468,11 +462,8 @@ ncm_powspec_free (NcmPowspec *powspec)
  * ncm_powspec_clear:
  * @powspec: a #NcmPowspec
  *
- * If @powspec is different from NULL,
- * atomically decrements the reference count of @powspec by one.
- * If the reference count drops to 0,
- * all memory allocated by @powspec is released and @powspec is set to NULL.
- *
+ * If *@powspec is not %NULL, decrements its reference count and sets
+ * *@powspec to %NULL.
  */
 void
 ncm_powspec_clear (NcmPowspec **powspec)
@@ -483,10 +474,9 @@ ncm_powspec_clear (NcmPowspec **powspec)
 /**
  * ncm_powspec_set_zi:
  * @powspec: a #NcmPowspec
- * @zi: initial time $z_i$
+ * @zi: lowest redshift $z_i$
  *
- * Sets the initial time $z_i$.
- *
+ * Sets NcmPowspec:zi to @zi.
  */
 void
 ncm_powspec_set_zi (NcmPowspec *powspec, const gdouble zi)
@@ -503,10 +493,9 @@ ncm_powspec_set_zi (NcmPowspec *powspec, const gdouble zi)
 /**
  * ncm_powspec_set_zf:
  * @powspec: a #NcmPowspec
- * @zf: final time $z_f$
+ * @zf: highest redshift $z_f$
  *
- * Sets the final time $z_f$.
- *
+ * Sets NcmPowspec:zf to @zf.
  */
 void
 ncm_powspec_set_zf (NcmPowspec *powspec, const gdouble zf)
@@ -523,10 +512,9 @@ ncm_powspec_set_zf (NcmPowspec *powspec, const gdouble zf)
 /**
  * ncm_powspec_set_kmin:
  * @powspec: a #NcmPowspec
- * @kmin: minimum mode $k_\mathrm{min}$
+ * @kmin: lowest wavenumber $k_\mathrm{min}$ in $\mathrm{Mpc}^{-1}$
  *
- * Sets the minimum mode value $k_\mathrm{min}$.
- *
+ * Sets NcmPowspec:kmin to @kmin.
  */
 void
 ncm_powspec_set_kmin (NcmPowspec *powspec, const gdouble kmin)
@@ -543,10 +531,9 @@ ncm_powspec_set_kmin (NcmPowspec *powspec, const gdouble kmin)
 /**
  * ncm_powspec_set_kmax:
  * @powspec: a #NcmPowspec
- * @kmax: maxmimum mode $k_\mathrm{max}$
+ * @kmax: highest wavenumber $k_\mathrm{max}$ in $\mathrm{Mpc}^{-1}$
  *
- * Sets the maximum mode value $k_\mathrm{max}$.
- *
+ * Sets NcmPowspec:kmax to @kmax.
  */
 void
 ncm_powspec_set_kmax (NcmPowspec *powspec, const gdouble kmax)
@@ -563,10 +550,9 @@ ncm_powspec_set_kmax (NcmPowspec *powspec, const gdouble kmax)
 /**
  * ncm_powspec_set_reltol_spline:
  * @powspec: a #NcmPowspec
- * @reltol: relative tolerance for interpolation errors
+ * @reltol: relative tolerance
  *
- * Sets the relative tolerance for interpolation errors to @reltol.
- *
+ * Sets NcmPowspec:reltol to @reltol.
  */
 void
 ncm_powspec_set_reltol_spline (NcmPowspec *powspec, const gdouble reltol)
@@ -579,10 +565,9 @@ ncm_powspec_set_reltol_spline (NcmPowspec *powspec, const gdouble reltol)
 /**
  * ncm_powspec_require_zi:
  * @powspec: a #NcmPowspec
- * @zi: initial time $z_i$
+ * @zi: lowest redshift $z_i$
  *
- * Requires the initial time to be less or equal to $z_i$.
- *
+ * Lowers NcmPowspec:zi to @zi if @zi is below it.
  */
 void
 ncm_powspec_require_zi (NcmPowspec *powspec, const gdouble zi)
@@ -596,10 +581,9 @@ ncm_powspec_require_zi (NcmPowspec *powspec, const gdouble zi)
 /**
  * ncm_powspec_require_zf:
  * @powspec: a #NcmPowspec
- * @zf: final time $z_f$
+ * @zf: highest redshift $z_f$
  *
- * Requires the final time to be greater or equal to $z_f$.
- *
+ * Raises NcmPowspec:zf to @zf if @zf is above it.
  */
 void
 ncm_powspec_require_zf (NcmPowspec *powspec, const gdouble zf)
@@ -613,10 +597,9 @@ ncm_powspec_require_zf (NcmPowspec *powspec, const gdouble zf)
 /**
  * ncm_powspec_require_kmin:
  * @powspec: a #NcmPowspec
- * @kmin: minimum mode $k_\mathrm{min}$
+ * @kmin: lowest wavenumber $k_\mathrm{min}$ in $\mathrm{Mpc}^{-1}$
  *
- * Requires the minimum mode value to be less or equal to $k_\mathrm{min}$.
- *
+ * Lowers NcmPowspec:kmin to @kmin if @kmin is below it.
  */
 void
 ncm_powspec_require_kmin (NcmPowspec *powspec, const gdouble kmin)
@@ -630,10 +613,9 @@ ncm_powspec_require_kmin (NcmPowspec *powspec, const gdouble kmin)
 /**
  * ncm_powspec_require_kmax:
  * @powspec: a #NcmPowspec
- * @kmax: maxmimum mode $k_\mathrm{max}$
+ * @kmax: highest wavenumber $k_\mathrm{max}$ in $\mathrm{Mpc}^{-1}$
  *
- * Sets the maximum mode value $k_\mathrm{max}$.
- *
+ * Raises NcmPowspec:kmax to @kmax if @kmax is above it.
  */
 void
 ncm_powspec_require_kmax (NcmPowspec *powspec, const gdouble kmax)
@@ -648,8 +630,7 @@ ncm_powspec_require_kmax (NcmPowspec *powspec, const gdouble kmax)
  * ncm_powspec_get_zi:
  * @powspec: a #NcmPowspec
  *
- * Gets the initial value $z_i$.
- *
+ * Returns: NcmPowspec:zi
  */
 gdouble
 ncm_powspec_get_zi (NcmPowspec *powspec)
@@ -663,8 +644,7 @@ ncm_powspec_get_zi (NcmPowspec *powspec)
  * ncm_powspec_get_zf:
  * @powspec: a #NcmPowspec
  *
- * Gets the final value $z_f$.
- *
+ * Returns: NcmPowspec:zf
  */
 gdouble
 ncm_powspec_get_zf (NcmPowspec *powspec)
@@ -678,8 +658,7 @@ ncm_powspec_get_zf (NcmPowspec *powspec)
  * ncm_powspec_get_kmin:
  * @powspec: a #NcmPowspec
  *
- * Gets the minimum mode value $k_\mathrm{min}$.
- *
+ * Returns: NcmPowspec:kmin
  */
 gdouble
 ncm_powspec_get_kmin (NcmPowspec *powspec)
@@ -693,8 +672,7 @@ ncm_powspec_get_kmin (NcmPowspec *powspec)
  * ncm_powspec_get_kmax:
  * @powspec: a #NcmPowspec
  *
- * Gets the maximum mode value $k_\mathrm{max}$.
- *
+ * Returns: NcmPowspec:kmax
  */
 gdouble
 ncm_powspec_get_kmax (NcmPowspec *powspec)
@@ -708,9 +686,7 @@ ncm_powspec_get_kmax (NcmPowspec *powspec)
  * ncm_powspec_get_reltol_spline:
  * @powspec: a #NcmPowspec
  *
- * Gets the relative tolerance for interpolation errors.
- *
- * Returns: the relative tolerance for interpolation errors.
+ * Returns: NcmPowspec:reltol
  */
 gdouble
 ncm_powspec_get_reltol_spline (NcmPowspec *powspec)
@@ -726,8 +702,7 @@ ncm_powspec_get_reltol_spline (NcmPowspec *powspec)
  * @Nz: (out): number of knots in $z$
  * @Nk: (out): number of knots in $k$
  *
- * Gets the number of knots used to calculate the power spectrum.
- *
+ * Gets the number of knots of the table behind @powspec.
  */
 void
 ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
@@ -740,14 +715,10 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
  * @powspec: a #NcmPowspec
  * @model: (allow-none): a #NcmModel
  *
- * Prepares the power spectrum @powspec using the model @model.
- *
- * The object is left up to date with respect to @model, so a subsequent
- * ncm_powspec_prepare_if_needed() call is a no-op: preparing does the work
- * *and* records that it was done.
- *
+ * Prepares @powspec for @model and records the state of @model, so
+ * ncm_powspec_prepare_if_needed() does nothing until @model or the range of
+ * @powspec changes. With @model %NULL nothing is recorded.
  */
-
 void
 ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model)
 {
@@ -755,9 +726,7 @@ ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model)
 
   NCM_POWSPEC_GET_CLASS (powspec)->prepare (powspec, model);
 
-  /* @model is (allow-none) -- ncm_powspec_prepare (ps, NULL) is a supported
-   * call for spectra that carry their own table. There is nothing to record
-   * against in that case, and ncm_model_ctrl_update() dereferences its model. */
+  /* ncm_model_ctrl_update() dereferences its model. */
   if (model != NULL)
     ncm_model_ctrl_update (self->ctrl, model);
 }
@@ -767,9 +736,8 @@ ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model)
  * @powspec: a #NcmPowspec
  * @model: (allow-none): a #NcmModel
  *
- * Prepares the object @powspec using the model @model if it was changed
- * since last preparation.
- *
+ * Calls ncm_powspec_prepare() if @model or the range of @powspec changed since
+ * the last preparation, and always when @model is %NULL.
  */
 void
 ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model)
@@ -777,9 +745,7 @@ ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model)
   NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
   gboolean model_up;
 
-  /* Same (allow-none) contract as ncm_powspec_prepare(): with no model there
-   * is nothing to compare against, so prepare unconditionally rather than
-   * dereference NULL inside ncm_model_ctrl_update(). */
+  /* No model to compare against: prepare unconditionally. */
   if (model == NULL)
   {
     ncm_powspec_prepare (powspec, NULL);
@@ -797,12 +763,10 @@ ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model)
  * ncm_powspec_eval:
  * @powspec: a #NcmPowspec
  * @model: (allow-none): a #NcmModel
- * @z: time $z$
- * @k: mode $k$
+ * @z: redshift
+ * @k: wavenumber in $\mathrm{Mpc}^{-1}$
  *
- * Evaluates the power spectrum @powspec at $(z, k)$.
- *
- * Returns: $P(z, k)$.
+ * Returns: $P(k, z)$ in $\mathrm{Mpc}^3$
  */
 gdouble
 ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
@@ -814,13 +778,11 @@ ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const g
  * ncm_powspec_eval_vec:
  * @powspec: a #NcmPowspec
  * @model: (allow-none): a #NcmModel
- * @z: time $z$
- * @k: a #NcmVector
- * @Pk: a #NcmVector
+ * @z: redshift
+ * @k: wavenumbers in $\mathrm{Mpc}^{-1}$
+ * @Pk: output, same length as @k
  *
- * Evaluates the power spectrum @powspec at $z$ and in the knots
- * contained in @k and puts the result in @Pk.
- *
+ * Sets @Pk to $P(k_i, z)$ for each $k_i$ in @k.
  */
 void
 ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk)
@@ -832,14 +794,14 @@ ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, Ncm
  * ncm_powspec_deriv_z:
  * @powspec: a #NcmPowspec
  * @model: (allow-none): a #NcmModel
- * @z: time $z$
- * @k: mode $k$
+ * @z: redshift
+ * @k: wavenumber in $\mathrm{Mpc}^{-1}$
  *
- * Evaluates the derivative of the power spectrum @powspec with respect to $z$ at $(z, k)$.
- * A child without a closed form inherits a fourth-order finite difference of its own
- * ncm_powspec_eval(), with a step of $10^{-3}(1+z)$.
+ * The default is a fourth-order finite difference of ncm_powspec_eval() with
+ * step $h = 10^{-3}(1+z)$; it evaluates $P$ in $[\max(0, z - 2h), z + 4h]$,
+ * which can reach outside [NcmPowspec:zi, NcmPowspec:zf].
  *
- * Returns: $\partial P(z, k) / \partial z$.
+ * Returns: $\partial P(k, z) / \partial z$
  */
 gdouble
 ncm_powspec_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
@@ -851,14 +813,13 @@ ncm_powspec_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, cons
  * ncm_powspec_deriv_k:
  * @powspec: a #NcmPowspec
  * @model: (allow-none): a #NcmModel
- * @z: time $z$
- * @k: mode $k$
+ * @z: redshift
+ * @k: wavenumber in $\mathrm{Mpc}^{-1}$
  *
- * Evaluates the derivative of the power spectrum @powspec with respect to $k$ at $(z, k)$.
- * A child without a closed form inherits a fourth-order finite difference of its own
- * ncm_powspec_eval(), with a step of $10^{-3}$ in $\ln k$.
+ * The default is a fourth-order finite difference of ncm_powspec_eval() with
+ * step $10^{-3}$ in $\ln k$.
  *
- * Returns: $\partial P(z, k) / \partial k$.
+ * Returns: $\partial P(k, z) / \partial k$
  */
 gdouble
 ncm_powspec_deriv_k (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
@@ -871,9 +832,12 @@ ncm_powspec_deriv_k (NcmPowspec *powspec, NcmModel *model, const gdouble z, cons
  * @powspec: a #NcmPowspec
  * @model: (allow-none): a #NcmModel
  *
- * Compute a 2D spline for the power spectrum.
+ * Builds a spline of $P$ in $(z, k)$. The default is a bicubic not-a-knot
+ * spline with knots in $z$ and in $k$ (not $\ln k$), placed to meet
+ * NcmPowspec:reltol along $z$ at the geometric middle of the $k$ range and
+ * along $k$ at the middle of the $z$ range.
  *
- * Returns: (transfer full): a #NcmSpline2d interpolating spline as a function of $(z, k)$.
+ * Returns: (transfer full): a new #NcmSpline2d
  */
 NcmSpline2d *
 ncm_powspec_get_spline_2d (NcmPowspec *powspec, NcmModel *model)
@@ -885,9 +849,8 @@ ncm_powspec_get_spline_2d (NcmPowspec *powspec, NcmModel *model)
  * ncm_powspec_peek_model_ctrl:
  * @powspec: a #NcmPowspec
  *
- * Gets the #NcmModelCtrl used by @powspec.
- *
- * Returns: (transfer none): the #NcmModelCtrl used by @powspec.
+ * Returns: (transfer none): the #NcmModelCtrl that records the state @powspec
+ * was prepared for
  */
 NcmModelCtrl *
 ncm_powspec_peek_model_ctrl (NcmPowspec *powspec)
@@ -926,20 +889,19 @@ _ncm_powspec_var_tophat_R_integ (gpointer user_data, gdouble lnk, gdouble weight
  * ncm_powspec_var_tophat_R:
  * @powspec: a #NcmPowspec
  * @model: (allow-none): a #NcmModel
- * @reltol: relative tolerance for integration
- * @z: the value of $z$
- * @R: the value of $R$
+ * @reltol: relative tolerance of the quadrature
+ * @z: redshift
+ * @R: radius in Mpc
  *
- * This function computes the value of the linearly extrapolated
- * rms fluctuations of mass in a sphere of radius $R$ applying a top-hat filter at redshift $z$,
- * $$\sigma_{R}^{2}(z) = \frac{1}{2\pi^2} \int_{k_{\mathrm{min}}}^{k_\mathrm{max}}  W^{2}_{TH}(kR) \, P(k,z) \, k^2 \, \mathrm{d}k \, .$$
- * Where, $W_{TH}(t)$ is the top-hat filter in Fourier space,
- * $$W_{TH}(t) = \frac{3}{t^3} \left( \sin t - t \cos t  \right) = \frac{3}{t} j_{1}(t),$$
- * and $j_1(t)$ is the first order spherical Bessel function of the first kind.
- * This function is recommended for a small set of $z$ and $R$ values.
- * For a wide range of values it is best to apply #NcmPowspecFilter, instead.
+ * Computes the variance of the field smoothed by a top-hat of radius @R,
+ * $$\sigma_R^2(z) = \frac{1}{2\pi^2} \int_{k_\mathrm{min}}^{k_\mathrm{max}} W^2(kR) \, P(k, z) \, k^2 \, \mathrm{d}k, \qquad W(x) = \frac{3 j_1(x)}{x},$$
+ * by quadrature in $\ln k$, after ncm_powspec_prepare_if_needed(). The integral
+ * covers $[k_\mathrm{min}, k_\mathrm{max}]$ only, so for $R$ within a few
+ * e-foldings of $1/k_\mathrm{max}$ it differs from #NcmPowspecFilter, which
+ * continues the table into its padding. For many values of $z$ and $R$ use
+ * #NcmPowspecFilter.
  *
- * Returns: $\sigma_{R}^{2}(z)$.
+ * Returns: $\sigma_R^2(z)$
  */
 gdouble
 ncm_powspec_var_tophat_R (NcmPowspec *powspec, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R)
@@ -967,13 +929,11 @@ ncm_powspec_var_tophat_R (NcmPowspec *powspec, NcmModel *model, const gdouble re
  * ncm_powspec_sigma_tophat_R:
  * @powspec: a #NcmPowspec
  * @model: (allow-none): a #NcmModel
- * @reltol: relative tolerance for integration
- * @z: the value of $z$
- * @R: the value of $R$
+ * @reltol: relative tolerance of the quadrature
+ * @z: redshift
+ * @R: radius in Mpc
  *
- * Computes $\sigma_R(z) = \sqrt{\sigma_{R}^{2}(z)}$. See ncm_powspec_var_tophat_R().
- *
- * Returns: $\sigma_R(z)$.
+ * Returns: $\sigma_R(z)$, the square root of ncm_powspec_var_tophat_R()
  */
 gdouble
 ncm_powspec_sigma_tophat_R (NcmPowspec *powspec, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R)
@@ -997,17 +957,16 @@ _ncm_powspec_corr3D_integ (gpointer user_data, gdouble lnk, gdouble weight)
  * ncm_powspec_corr3d:
  * @powspec: a #NcmPowspec
  * @model: (allow-none): a #NcmModel
- * @reltol: relative tolerance for integration
- * @z: the value of $z$
- * @r: the value of $r$
+ * @reltol: relative tolerance of the quadrature
+ * @z: redshift
+ * @r: separation in Mpc
  *
- * Computes the spatial correlation function in configuration space at redshift $z$ and position $r$,
- * $$\xi(r,z) = \frac{1}{2\pi^2} \int_{k_{\mathrm{min}}}^{k_\mathrm{max}} P(k,z) \, j_{0}(kr) \, k^2 \, \mathrm{d}k \, ,$$
- * where, $j_0(t)$ is the zero order spherical Bessel function of the first kind.
- * This function is recommended for a small set of $r$ and $z$ values.
- * For a wide range of values it is best to apply #NcmPowspecCorr3d, instead.
+ * Computes the correlation function
+ * $$\xi(r, z) = \frac{1}{2\pi^2} \int_{k_\mathrm{min}}^{k_\mathrm{max}} P(k, z) \, j_0(kr) \, k^2 \, \mathrm{d}k$$
+ * by quadrature in $\ln k$, after ncm_powspec_prepare_if_needed(). For many
+ * values of $r$ and $z$ use #NcmPowspecCorr3d.
  *
- * Returns: $\xi(r,z)$.
+ * Returns: $\xi(r, z)$
  */
 gdouble
 ncm_powspec_corr3d (NcmPowspec *powspec, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble r)
@@ -1048,17 +1007,19 @@ _ncm_powspec_sproj_integ (gpointer user_data, gdouble lnk, gdouble weight)
  * ncm_powspec_sproj:
  * @powspec: a #NcmPowspec
  * @model: (allow-none): a #NcmModel
- * @reltol: relative tolerance for integration
- * @ell: the value of $\ell$
- * @z1: the value of $z_1$
- * @z2: the value of $z_2$
- * @xi1: the value of $\xi_1$
- * @xi2: the value of $\xi_2$
+ * @reltol: relative tolerance of the quadrature
+ * @ell: multipole $\ell$
+ * @z1: redshift of the first sphere
+ * @z2: redshift of the second sphere
+ * @xi1: comoving radius of the first sphere in Mpc
+ * @xi2: comoving radius of the second sphere in Mpc
  *
- * Computes \(C_\ell (z_1, z_2) = \int\dots\). This method calculates the angular power
- * spectrum directly from the power spectrum by integrating over the wave-numbers. It
- * is slow and intended for testing purposes only.
+ * Computes the angular power spectrum of the field on two spheres,
+ * $$C_\ell = \frac{2}{\pi} \int_{k_\mathrm{min}}^{k_\mathrm{max}} \sqrt{P(k, z_1) P(k, z_2)} \, j_\ell(k \xi_1) \, j_\ell(k \xi_2) \, k^2 \, \mathrm{d}k,$$
+ * by quadrature in $\ln k$, after ncm_powspec_prepare_if_needed(). The
+ * unequal-time spectrum is the geometric mean. Slow; for tests.
  *
+ * Returns: $C_\ell$
  */
 gdouble
 ncm_powspec_sproj (NcmPowspec *powspec, NcmModel *model, const gdouble reltol, const gint ell, const gdouble z1, const gdouble z2, const gdouble xi1, const gdouble xi2)

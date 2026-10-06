@@ -25,10 +25,9 @@
 /**
  * NcmUtil:
  *
- * Miscellaneous utilities.
- *
- * Miscellaneous utility functions, macros and objects.
- *
+ * Utility functions and macros: elementary functions evaluated without
+ * cancellation, Gaussian integrals, floating-point comparison, on-sky geometry,
+ * SUNDIALS CVODE helpers, #GError helpers, test assertions and callback declarations.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -49,6 +48,7 @@
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_sf_hyperg.h>
+#include <gsl/gsl_sf_lambert.h>
 
 #include <cvode/cvode.h>
 #include <fftw3.h>
@@ -109,10 +109,11 @@ _ncm_coarse_dbl_get_bs (void)
 /**
  * ncm_rational_coarse_double: (skip)
  * @x: a double
- * @q: a #mpq_t to store the result
+ * @q: the result
  *
- * Computes a rational approximation for @x and stores the result in @q.
- *
+ * Sets @q to the continued-fraction approximation of @x truncated when the next
+ * correction is below the double precision. Aborts if the relative difference between
+ * @q and @x exceeds $10^{-15}$.
  */
 void
 ncm_rational_coarse_double (gdouble x, mpq_t q)
@@ -145,9 +146,6 @@ ncm_rational_coarse_double (gdouble x, mpq_t q)
   mpz_set_ui (kim2, 1);
   mpz_set_ui (a, 1);
 
-  /*  mpq_set_d (q, x); */
-  /*  mpq_canonicalize (q); */
-  /*  mpfr_printf ("# AUTO: %.15g %.15f %d | %Qd\n", x, xo, expo2, q); */
   while (TRUE)
   {
     mpz_set_d (a, xo);
@@ -164,7 +162,6 @@ ncm_rational_coarse_double (gdouble x, mpq_t q)
 
     mpz_mul (ki, kim1, kim2);
 
-    /*mpfr_printf ("# ---- %.5e %Zu %.15g | %Zd/%Zd %Zd/%Zd\n", fabs(1.0/(xi * mpz_get_d (ki))), a, xo, him1, kim1, him2, kim2); */
     if (fabs (1.0 / (xi * mpz_get_d (ki))) < GSL_DBL_EPSILON)
     {
       mpz_set (mpq_numref (q), him2);
@@ -186,7 +183,6 @@ ncm_rational_coarse_double (gdouble x, mpq_t q)
   if (GSL_SIGN (x) == -1)
     mpq_neg (q, q);
 
-  /*  mpfr_printf ("# MINE: %.15g %.15f %d | %Qd\n", x, xo, expo2, q); */
   if (fabs (mpq_get_d (q) / x - 1) > 1e-15)
   {
     mpfr_fprintf (stderr, "# Q = %Qd\n", q);
@@ -208,11 +204,10 @@ ncm_rational_coarse_double (gdouble x, mpq_t q)
 
 /**
  * ncm_mpz_inits: (skip)
- * @z: a #mpz_t to initialize
- * @...: a null terminated list of #mpz_t to initialize
+ * @z: a #mpz_t
+ * @...: a %NULL-terminated list of #mpz_t
  *
- * Initializes @z and all the #mpz_t in the list.
- *
+ * Initializes @z and every #mpz_t in the list.
  */
 void
 ncm_mpz_inits (mpz_t z, ...)
@@ -231,11 +226,10 @@ ncm_mpz_inits (mpz_t z, ...)
 
 /**
  * ncm_mpz_clears: (skip)
- * @z: a #mpz_t to clear
- * @...: a null terminated list of #mpz_t to clear
+ * @z: a #mpz_t
+ * @...: a %NULL-terminated list of #mpz_t
  *
- * Clears @z and all the #mpz_t in the list.
- *
+ * Clears @z and every #mpz_t in the list.
  */
 void
 ncm_mpz_clears (mpz_t z, ...)
@@ -254,81 +248,74 @@ ncm_mpz_clears (mpz_t z, ...)
 
 /**
  * ncm_util_sqrt1px_m1:
- * @x: a real number $&gt;-1$
+ * @x: a real number $x > -1$
  *
- * Calculates $\sqrt{1+x}-1$ using the appropriated expression
- * to avoid round-off when $x \approx 0$.
+ * Computes $\sqrt{1+x} - 1$ as $x / (\sqrt{1+x} + 1)$, without cancellation at
+ * $x \approx 0$.
  *
- * Returns: $\sqrt{1+x}-1$.
+ * Returns: $\sqrt{1+x} - 1$.
  */
 /**
  * ncm_util_ln1pexpx:
  * @x: a real number $x$
  *
- * Calculates $\ln[1+\exp(x)]$.
+ * Computes $\ln(1 + e^x)$ without overflow; it returns $x$ when $e^{-x}$ is below the
+ * double precision.
  *
- * Returns: $\ln[1+\exp(x)]$.
+ * Returns: $\ln(1 + e^x)$.
  */
 /**
  * ncm_util_1pcosx:
- * @sinx: a real number $\sin(x)$
- * @cosx: a real number $\cos(x)$
+ * @sinx: $\sin x$
+ * @cosx: $\cos x$
  *
- * Calculates $1 + \cos(x)$ using the appropriated taylor series when
- * $\cos(x) \approx -1$.
+ * Computes $1 + \cos x$, as $\sin^2 x / (1 - \cos x)$ when $\cos x \leq -0.9$.
  *
- * Returns: $1 + \cos(x)$.
+ * Returns: $1 + \cos x$.
  */
 /**
  * ncm_util_1mcosx:
- * @sinx: a real number $\sin(x)$
- * @cosx: a real number $\cos(x)$
+ * @sinx: $\sin x$
+ * @cosx: $\cos x$
  *
- * Calculates $1 - \cos(x)$ using the appropriated taylor series when
- * $\cos(x) \approx 1$.
+ * Computes $1 - \cos x$, as $\sin^2 x / (1 + \cos x)$ when $\cos x \geq 0.9$.
  *
- * Returns: $1 - \cos(x)$.
+ * Returns: $1 - \cos x$.
  */
 /**
  * ncm_util_1psinx:
- * @sinx: a real number $\sin(x)$
- * @cosx: a real number $\cos(x)$
+ * @sinx: $\sin x$
+ * @cosx: $\cos x$
  *
- * Calculates $1 + \sin(x)$ using the appropriated taylor series when
- * $\sin(x) \approx -1$.
+ * Computes $1 + \sin x$, as $\cos^2 x / (1 - \sin x)$ when $\sin x \leq -0.9$.
  *
- * Returns: $1 + \sin(x)$.
+ * Returns: $1 + \sin x$.
  */
 /**
  * ncm_util_1msinx:
- * @sinx: a real number $\sin(x)$
- * @cosx: a real number $\cos(x)$
+ * @sinx: $\sin x$
+ * @cosx: $\cos x$
  *
- * Calculates $1 - \sin(x)$ using the appropriated taylor series when
- * $\sin(x) \approx 1$.
+ * Computes $1 - \sin x$, as $\cos^2 x / (1 + \sin x)$ when $\sin x \geq 0.9$.
  *
- * Returns: $1 - \sin(x)$.
+ * Returns: $1 - \sin x$.
  */
 /**
  * ncm_util_cos2x:
- * @sinx: a real number $\sin(x)$
- * @cosx: a real number $\cos(x)$
+ * @sinx: $\sin x$
+ * @cosx: $\cos x$
  *
- * Calculates $\cos(2x)$ using the appropriated taylor series when
- * $\sin(x) \approx 1$.
+ * Computes $\cos(2x)$ as $(\cos x - \sin x)(\cos x + \sin x)$.
  *
- * Returns: $1 - \sin(x)$.
+ * Returns: $\cos(2x)$.
  */
 
 /**
  * ncm_cmpdbl:
- * @x: a double.
- * @y: a double.
+ * @x: a double
+ * @y: a double
  *
- * Compares @x and @y and returns the difference between them
- * relative to their mean.
- *
- * Returns: $\frac{2(x-y)}{x+y}$.
+ * Returns: $|2(x - y)/(x + y)|$, or zero if $x = y$.
  */
 gdouble
 ncm_cmpdbl (const gdouble x, const gdouble y)
@@ -343,9 +330,7 @@ ncm_cmpdbl (const gdouble x, const gdouble y)
  * ncm_exprel:
  * @x: a double
  *
- * Computes the relative exponential $(\exp(x) - 1)/x$.
- *
- * Returns: $(\exp(x) - 1)/x$.
+ * Returns: $(e^x - 1)/x$.
  */
 gdouble
 ncm_exprel (const gdouble x)
@@ -357,9 +342,7 @@ ncm_exprel (const gdouble x)
  * ncm_d1exprel:
  * @x: a double
  *
- * Computes the first derivative of the relative exponential $(\exp(x) - 1)/x$.
- *
- * Returns: first derivative of $(\exp(x) - 1)/x$.
+ * Returns: the first derivative of $(e^x - 1)/x$.
  */
 gdouble
 ncm_d1exprel (const gdouble x)
@@ -371,9 +354,7 @@ ncm_d1exprel (const gdouble x)
  * ncm_d2exprel:
  * @x: a double
  *
- * Computes the second derivative of the relative exponential $(\exp(x) - 1)/x$.
- *
- * Returns: second derivative of $(\exp(x) - 1)/x$.
+ * Returns: the second derivative of $(e^x - 1)/x$.
  */
 gdouble
 ncm_d2exprel (const gdouble x)
@@ -385,9 +366,7 @@ ncm_d2exprel (const gdouble x)
  * ncm_d3exprel:
  * @x: a double
  *
- * Computes the third derivative of the relative exponential $(\exp(x) - 1)/x$.
- *
- * Returns: third derivative of $(\exp(x) - 1)/x$.
+ * Returns: the third derivative of $(e^x - 1)/x$.
  */
 gdouble
 ncm_d3exprel (const gdouble x)
@@ -399,10 +378,9 @@ ncm_d3exprel (const gdouble x)
  * ncm_util_sinh1:
  * @x: a double
  *
- * Computes $\frac{\sinh(x)}{x}$. For small values of @x the taylor series is used.
- * For large values of @x the value is computed using the standard library function.
+ * Computes $\sinh(x)/x$, from its Taylor series for $|x| < 0.9$.
  *
- * Returns: $\frac{\sinh(x)}{x}$
+ * Returns: $\sinh(x)/x$.
  */
 gdouble
 ncm_util_sinh1 (const gdouble x)
@@ -439,7 +417,9 @@ ncm_util_sinh1 (const gdouble x)
  * ncm_util_sinh3:
  * @x: a double
  *
- * Returns: $\frac{\sinh(x)-x}{x^3/3!}$
+ * Computes $[\sinh(x) - x] / (x^3/3!)$, from its Taylor series for $|x| < 0.9$.
+ *
+ * Returns: $[\sinh(x) - x] / (x^3/3!)$.
  */
 gdouble
 ncm_util_sinh3 (const gdouble x)
@@ -476,7 +456,9 @@ ncm_util_sinh3 (const gdouble x)
  * ncm_util_sinhx_m_xcoshx_x3:
  * @x: a double
  *
- * Returns: $\frac{\sinh(x)-x\cosh(x)}{x^3}$
+ * Computes $[\sinh(x) - x\cosh(x)]/x^3$, without cancellation for $|x| < 0.9$.
+ *
+ * Returns: $[\sinh(x) - x\cosh(x)]/x^3$.
  */
 gdouble
 ncm_util_sinhx_m_xcoshx_x3 (const gdouble x)
@@ -491,16 +473,59 @@ ncm_util_sinhx_m_xcoshx_x3 (const gdouble x)
 }
 
 /**
+ * ncm_util_lambert_W0_ln:
+ * @ln_y: the logarithm $\ln y$
+ *
+ * Computes the principal branch $W_0(y)$ of the Lambert $W$ function from $\ln y$,
+ * so that $y$ may exceed the double range. Uses gsl_sf_lambert_W0() for
+ * $\ln y < \ln(\mathrm{DBL\_MAX}) - 1$, otherwise Newton's method on
+ * $W + \ln W = \ln y$. Aborts if Newton's method does not converge.
+ *
+ * Returns: $W_0(y)$.
+ */
+gdouble
+ncm_util_lambert_W0_ln (const gdouble ln_y)
+{
+  /* gsl_sf_lambert_W0() fails as y approaches DBL_MAX */
+  if (ln_y < GSL_LOG_DBL_MAX - 1.0)
+  {
+    return gsl_sf_lambert_W0 (exp (ln_y));
+  }
+  else
+  {
+    const guint max_iter = 100;
+    gdouble W            = ln_y - log (ln_y);
+    guint i;
+
+    for (i = 0; i < max_iter; i++)
+    {
+      const gdouble dW = (W + log (W) - ln_y) / (1.0 + 1.0 / W);
+
+      W -= dW;
+
+      if (fabs (dW) <= GSL_DBL_EPSILON * W)
+        return W;
+    }
+
+    g_error ("ncm_util_lambert_W0_ln: Newton's method did not converge for ln_y = %g.", ln_y);
+
+    return GSL_NAN;
+  }
+}
+
+/**
  * ncm_util_mln_1mIexpzA_1pIexpmzA:
- * @rho: a double $\rho$
- * @theta: a double $\theta$
- * @A: a double $A$
- * @rho1: (out): a double $\rho_1$
- * @theta1: (out): a double $\theta_1$
+ * @rho: $\rho$
+ * @theta: $\theta$
+ * @A: $A$
+ * @rho1: (out): $\rho_1$
+ * @theta1: (out): $\theta_1$
  *
- * Computes $$z_1 = z - \ln\left(\frac{1-i e^{+z} A}{1+i e^{-z} A}\right),$$ where $z = \rho + i\theta$
- * and return the new $z_1 = \rho_1 + i\theta_1$ into @rho1 and $\theta1$.
- *
+ * Computes
+ * $$z_1 = z - \ln\left(\frac{1 - i A e^{z}}{1 + i A e^{-z}}\right), \qquad z = \rho + i\theta,$$
+ * from the series of the logarithm in $A$ when $e^{|\rho|}|A| < 0.1$, summed until the
+ * bound on its remaining terms is below machine precision, and sets
+ * $z_1 = \rho_1 + i\theta_1$.
  */
 void
 ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const gdouble A, gdouble *rho1, gdouble *theta1)
@@ -508,16 +533,21 @@ ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const g
   const double complex z = rho + I * theta;
   double complex zp;
 
-  if (exp (fabs (rho)) * fabs (A) < 0.1)
+  const gdouble x = exp (fabs (rho)) * fabs (A);
+
+  if (x < 0.1)
   {
     const double complex z_p_ipi_2 = z + 0.5 * M_PI * I;
     const double complex T         = cexp (z_p_ipi_2);
     double complex Tn              = T;
     gdouble An                     = A;
+    gdouble xn                     = x;
     gint i;
 
     zp = 0.0;
 
+    /* The n-th term is at most 2 x^n / n; individual terms can vanish (for rho = 0 at
+     * some theta), so the stop is on this bound and not on the last term. */
     for (i = 0; ; i++)
     {
       const gdouble n   = i + 1.0;
@@ -528,8 +558,10 @@ ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const g
 
       zp += dz;
 
-      if (cabs (dz / zp) < GSL_DBL_EPSILON * 1.0e-0)
+      if (2.0 * xn / n <= GSL_DBL_EPSILON * cabs (zp))
         break;
+
+      xn *= x;
     }
 
     zp = z - zp;
@@ -547,13 +579,14 @@ ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const g
 
 /**
  * ncm_util_normal_gaussian_integral:
- * @xl: the lower bound
- * @xu: the upper bound
+ * @xl: lower limit
+ * @xu: upper limit
  *
- * Computes the integral of the Gaussian distribution with zero mean and unit variance
- * between @xl and @xu
+ * Computes $\int_{x_l}^{x_u} e^{-x^2/2}\,\mathrm{d}x / \sqrt{2\pi}$, using erfc() when both
+ * limits are in the same tail, beyond $3\sqrt{2}$, to keep the relative precision. The
+ * result is negative for $x_u < x_l$.
  *
- * Returns: value of the integral.
+ * Returns: the integral.
  */
 gdouble
 ncm_util_normal_gaussian_integral (const gdouble xl, const gdouble xu)
@@ -580,31 +613,20 @@ ncm_util_normal_gaussian_integral (const gdouble xl, const gdouble xu)
 
     if (ul > ERF_BOUND)
     {
-      /*
-       * When both ul and uu are in the right tail (ul > ERF_BOUND), erf(x) is close to 1 and
-       * loses precision. Use erfc(x) = 1 - erf(x) for better accuracy since x >
-       * ERF_BOUND.
-       */
+      /* Both limits in the right tail */
       const gdouble val = 0.5 * (erfc (ul) - erfc (uu));
 
       return sign * val;
     }
     else if (uu < -ERF_BOUND)
     {
-      /*
-       * When both ul and uu are in the left tail (uu < -ERF_BOUND), erf(x) approximates
-       * -1 and is numerically unstable. Use erf(x) = -erf(-x) = erfc(-x) -1 for better
-       * accuracy since -x > ERF_BOUND.
-       */
+      /* Both limits in the left tail */
       const gdouble val = 0.5 * (erfc (-uu) - erfc (-ul));
 
       return sign * val;
     }
     else
     {
-      /*
-       * Otherwise, we can use erf.
-       */
       const gdouble val = 0.5 * (erf (uu) - erf (ul));
 
       return sign * val;
@@ -614,15 +636,15 @@ ncm_util_normal_gaussian_integral (const gdouble xl, const gdouble xu)
 
 /**
  * ncm_util_gaussian_integral:
- * @xl: the lower bound
- * @xu: the upper bound
- * @mu: the mean
- * @sigma: the standard deviation
+ * @xl: lower limit
+ * @xu: upper limit
+ * @mu: mean
+ * @sigma: standard deviation
  *
- * Computes the integral of the Gaussian distribution with mean @mu and standard deviation @sigma
- * between @xl and @xu.
+ * Same as ncm_util_normal_gaussian_integral() for the Gaussian of mean @mu and standard
+ * deviation @sigma.
  *
- * Returns: value of the integral.
+ * Returns: the integral.
  */
 gdouble
 ncm_util_gaussian_integral (const gdouble xl, const gdouble xu, const gdouble mu, const gdouble sigma)
@@ -632,15 +654,15 @@ ncm_util_gaussian_integral (const gdouble xl, const gdouble xu, const gdouble mu
 
 /**
  * ncm_util_log_normal_gaussian_integral:
- * @xl: the lower bound
- * @xu: the upper bound
- * @sign: (nullable): pointer to a gdouble to store the sign of the integral
+ * @xl: lower limit
+ * @xu: upper limit
+ * @sign: (out): the sign of the integral
  *
- * Computes the logarithm of the integral of the Gaussian distribution with zero mean
- * and unit variance between @xl and @xu. If @sign is not %NULL, the sign of the
- * result (+/-1) is stored in *@sign.
+ * Computes the logarithm of the absolute value of ncm_util_normal_gaussian_integral(),
+ * keeping the relative precision in both tails and when the integral is close to one.
  *
- * Returns: log of the absolute value of the integral.
+ * Returns: the logarithm of the absolute value of the integral, $-\infty$ if
+ * $x_l = x_u$.
  */
 gdouble
 ncm_util_log_normal_gaussian_integral (const gdouble xl, const gdouble xu, gdouble *sign)
@@ -694,17 +716,16 @@ ncm_util_log_normal_gaussian_integral (const gdouble xl, const gdouble xu, gdoub
 
 /**
  * ncm_util_log_gaussian_integral:
- * @xl: the lower bound
- * @xu: the upper bound
- * @mu: the mean
- * @sigma: the standard deviation
- * @sign: (nullable): pointer to a gdouble to store the sign of the integral
+ * @xl: lower limit
+ * @xu: upper limit
+ * @mu: mean
+ * @sigma: standard deviation
+ * @sign: (out): the sign of the integral
  *
- * Computes the logarithm of the integral of the Gaussian distribution with mean @mu and
- * standard deviation @sigma between @xl and @xu. Uses the standard normal log integral.
- * If @sign is not %NULL, the sign of the result (+/-1) is stored in *@sign.
+ * Same as ncm_util_log_normal_gaussian_integral() for the Gaussian of mean @mu and
+ * standard deviation @sigma.
  *
- * Returns: log of the integral value.
+ * Returns: the logarithm of the absolute value of the integral.
  */
 gdouble
 ncm_util_log_gaussian_integral (const gdouble xl, const gdouble xu, const gdouble mu, const gdouble sigma, gdouble *sign)
@@ -719,13 +740,14 @@ ncm_util_log_gaussian_integral (const gdouble xl, const gdouble xu, const gdoubl
  * ncm_cmp:
  * @x: a double
  * @y: a double
- * @reltol: relative precision
- * @abstol: the absolute precision
+ * @reltol: relative tolerance
+ * @abstol: absolute tolerance
  *
- * Compare x and y and return -1 if x < y, 0 if x == y and 1 if x > y,
- * all comparisons are done with precision @reltol and @abstol.
+ * Compares @x and @y, which are equal when
+ * $|x - y| \leq \epsilon_\mathrm{rel} \max(|x|, |y|) + \epsilon_\mathrm{abs}$. If one of them is
+ * zero, $\max(|x|, |y|)$ is replaced by one, so @reltol also acts as an absolute tolerance.
  *
- * Returns: -1, 0, 1.
+ * Returns: $-1$ if $x < y$, $0$ if they are equal, $1$ if $x > y$.
  */
 gint
 ncm_cmp (gdouble x, gdouble y, const gdouble reltol, const gdouble abstol)
@@ -761,208 +783,76 @@ _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint l
   g_free (s);
 }
 
-G_DEFINE_BOXED_TYPE (NcmComplex, ncm_complex, ncm_complex_dup, ncm_complex_free)
-
-/**
- * ncm_complex_new:
- *
- * Allocates a new complex number.
- *
- * Returns: (transfer full): a new #NcmComplex.
- */
-NcmComplex *
-ncm_complex_new ()
-{
-  return g_new0 (NcmComplex, 1);
-}
-
-/**
- * ncm_complex_dup:
- * @c: a #NcmComplex
- *
- * Allocates a new complex number and copy the contents of @c to it.
- *
- * Returns: (transfer full): a new #NcmComplex.
- */
-NcmComplex *
-ncm_complex_dup (NcmComplex *c)
-{
-  NcmComplex *cc = ncm_complex_new ();
-
-  *cc = *c;
-
-  return cc;
-}
-
-/**
- * ncm_complex_free:
- * @c: a #NcmComplex
- *
- * Frees @c, it should not be used on a statically allocated NcmComplex.
- *
- */
-void
-ncm_complex_free (NcmComplex *c)
-{
-  g_free (c);
-}
-
-/**
- * ncm_complex_clear:
- * @c: a #NcmComplex
- *
- * Frees *@c and sets *@c to NULL, it should not be used on a statically allocated NcmComplex.
- *
- */
-void
-ncm_complex_clear (NcmComplex **c)
-{
-  g_clear_pointer (c, g_free);
-}
-
-/**
- * ncm_complex_set:
- * @c: a #NcmComplex
- * @a: the real part $a$
- * @b: the imaginary part $b$
- *
- * Sets @c to $a + I b$.
- *
- */
-/**
- * ncm_complex_set_c: (skip)
- * @c: a #NcmComplex
- * @z: a complex double
- *
- * Sets @c to $Re(z) + I Im(z)$.
- *
- */
-/**
- * ncm_complex_set_zero:
- * @c: a #NcmComplex
- *
- * Sets @c to $0 + I 0$.
- *
- */
-/**
- * ncm_complex_Re:
- * @c: a #NcmComplex
- *
- * Returns the real part of @c.
- *
- * Returns: Re$(c)$.
- */
-/**
- * ncm_complex_Im:
- * @c: a #NcmComplex
- *
- * Returns the imaginary part of @c.
- *
- * Returns: Im$(c)$.
- */
-/**
- * ncm_complex_Abs:
- * @c: a #NcmComplex
- *
- * Returns the absolute value of @c.
- *
- * Returns: $|c|$
- */
-/**
- * ncm_complex_c: (skip)
- * @c: a #NcmComplex
- *
- * Returns the complex number $Re(c) + I Im(c)$.
- *
- * Returns: $Re(c) + I Im(c)$.
- */
-
-/**
- * ncm_complex_res_add_mul_real:
- * @c1: a #NcmComplex
- * @c2: a #NcmComplex
- * @v: a gdouble
- *
- * Computes @c1 = @c1 + @c2 * @v, assuming that
- * @c1 and @c2 are different.
- *
- */
-/**
- * ncm_complex_res_add_mul:
- * @c1: a #NcmComplex
- * @c2: a #NcmComplex
- * @c3: #NcmComplex
- *
- * Computes @c1 = @c1 + @c2 * @c3, assuming that
- * @c1 and @c2 are different.
- *
- */
-
-/**
- * ncm_complex_mul_real:
- * @c: a #NcmComplex
- * @v: a gdouble
- *
- * Computes @c1 = @c1 * @v.
- *
- */
-/**
- * ncm_complex_res_mul:
- * @c1: a #NcmComplex
- * @c2: a #NcmComplex
- *
- * Computes @c1 = @c1 * @c2, assuming that
- * @c1 and @c2 are different.
- *
- */
-
 /**
  * ncm_util_position_angle:
- * @ra1: Right ascension of object 1
- * @dec1: Declination of object 1
- * @ra2: Right ascension of object 2
- * @dec2: Declination of object 2
+ * @ra1: right ascension of the first object, in degrees
+ * @dec1: declination of the first object, in degrees
+ * @ra2: right ascension of the second object, in degrees
+ * @dec2: declination of the second object, in degrees
  *
- * Computes the on-sky position angle (East of North) between object1 (@ra1, @dec1) and object2 (@ra2, dec2).
- * The input coordinates ((@ra1, @dec1), (@ra2, @dec2)) must be given in decimal degrees.
- *
- * Returns: the position angle in radians
+ * Returns: the position angle of the second object seen from the first, East of
+ * North, in radians.
  */
 
 /**
  * ncm_util_great_circle_distance:
- * @ra1: Right ascension of object 1
- * @dec1: Declination of object 1
- * @ra2: Right ascension of object 2
- * @dec2: Declination of object 2
+ * @ra1: right ascension of the first object, in degrees
+ * @dec1: declination of the first object, in degrees
+ * @ra2: right ascension of the second object, in degrees
+ * @dec2: declination of the second object, in degrees
  *
- * Compute the great circle distance (or separation, as defined in astropy) between poistion 1 (@ra1, @dec1) and position 2 (@ra2, @dec2).
- * See [Great-circle distance](https://en.wikipedia.org/wiki/Great-circle_distance), in particular the Vincenty equation (implemented here).
- * The input coordinates ((@ra1, @dec1), (@ra2, @dec2)) must be given in decimal degrees.
+ * Computes the angular separation from the Vincenty formula, see
+ * [great-circle distance](https://en.wikipedia.org/wiki/Great-circle_distance).
  *
- * Returns: the great circle distance in decimal degrees
+ * Returns: the angular separation, in degrees.
  */
 
 /**
  * ncm_util_projected_radius:
- * @theta: a gdouble in radians
- * @d: a gdouble in Mpc
+ * @theta: angular separation, in radians
+ * @d: distance
  *
- * Converts the the angular separation `$\theta$' of a galaxy
- * at redshift `$z$' to the projected physical distance in Mpc.
+ * Returns: $d \sin\theta$, the separation projected at distance @d, in the units of @d.
+ */
+
+/**
+ * ncm_util_smooth_trans:
+ * @f0: value before the transition
+ * @f1: value after the transition
+ * @z0: start of the transition
+ * @dz: length of the transition
+ * @z: the point
  *
- * Returns: the physical distance in Mpc.
+ * Computes $f = f_0 \theta_0 + f_1 \theta_1$ with the logistic weights
+ * $\theta_0 = 1/(1 + e^{g})$ and $\theta_1 = 1/(1 + e^{-g})$, where
+ * $g = 72 (z - z_0 - \Delta z/2)/\Delta z$. At $z_0$ and $z_0 + \Delta z$ the weight of the
+ * other value is $e^{-36} \approx 2 \times 10^{-16}$.
+ *
+ * Returns: $f$.
+ */
+/**
+ * ncm_util_smooth_trans_get_theta:
+ * @z0: start of the transition
+ * @dz: length of the transition
+ * @z: the point
+ * @theta0: (out): the weight $\theta_0$
+ * @theta1: (out): the weight $\theta_1$
+ *
+ * Computes the weights of ncm_util_smooth_trans().
  */
 
 /**
  * ncm_util_cvode_check_flag:
- * @flagvalue: pointer to flag value
- * @funcname: cvode function name
- * @opt: option
+ * @flagvalue: the value returned by a SUNDIALS function
+ * @funcname: the name of that function
+ * @opt: the kind of value
  *
- * Checks the CVode flag value and prints a message if an error occured.
+ * Checks the value returned by the SUNDIALS function @funcname and logs a message on
+ * failure. For @opt 0, @flagvalue is a pointer that must not be %NULL; for 1, a pointer
+ * to an int flag that must not be negative; for 2, a pointer returned by a memory
+ * allocation that must not be %NULL. Aborts for other values of @opt.
  *
- * Returns: TRUE if no error occured, FALSE otherwise.
+ * Returns: whether the call succeeded.
  */
 gboolean
 ncm_util_cvode_check_flag (gpointer flagvalue, const gchar *funcname, gint opt)
@@ -1015,11 +905,11 @@ ncm_util_cvode_check_flag (gpointer flagvalue, const gchar *funcname, gint opt)
 
 /**
  * ncm_util_cvode_print_stats:
- * @cvode: a CVodeMem
+ * @cvode: a CVODE memory block
  *
- * Prints the statistics of the CVodeMem object @cvode.
+ * Logs the integrator statistics of @cvode.
  *
- * Returns: TRUE.
+ * Returns: %TRUE.
  */
 gboolean
 ncm_util_cvode_print_stats (gpointer cvode)
@@ -1067,13 +957,11 @@ ncm_util_cvode_print_stats (gpointer cvode)
 
 /**
  * ncm_util_basename_fits:
- * @fits_filename: a fits filename
+ * @fits_filename: a file name
  *
- * Extracts the extension .fits or .fit from @fits_filename and returns
- * the prefix. If the extension is not found a copy of @fits_filename is
- * returned.
+ * Removes a final ".fits" or ".fit" extension, in any case, from @fits_filename.
  *
- * Returns: (transfer full): prefix of @fits_filename.
+ * Returns: (transfer full): @fits_filename without the extension.
  */
 gchar *
 ncm_util_basename_fits (const gchar *fits_filename)
@@ -1096,13 +984,15 @@ ncm_util_basename_fits (const gchar *fits_filename)
 
 /**
  * ncm_util_function_params:
- * @func: string representing function and its parameters
- * @x: (out) (array) (element-type double): the parameters or NULL if none found
- * @len: (out caller-allocates): number of parameters
+ * @func: a string "name" or "name(x1, x2, ...)"
+ * @x: (out) (array length=len) (element-type double) (transfer full): the parameters
+ * @len: (out): number of parameters
  *
- * Extracts the function name and its numerical parameters.
+ * Parses the function name and its numerical parameters from @func. Aborts if a
+ * parameter is not a number.
  *
- * Returns: (transfer full): function name or NULL if it fails.
+ * Returns: (transfer full) (nullable): the function name, or %NULL if @func does not
+ * have that form.
  */
 gchar *
 ncm_util_function_params (const gchar *func, gdouble **x, guint *len)
@@ -1161,55 +1051,30 @@ ncm_util_function_params (const gchar *func, gdouble **x, guint *len)
 
 /**
  * ncm_util_fact_size:
- * @n: a unsigned long integer
+ * @n: the minimum size
  *
- * Calculate the smallest factorization of @n such that
- * $n_f = 2^\mu \times 3^\nu \times 5^\alpha \times 7^\beta$
- * and $n_f \geq n$.
+ * Computes the smallest integer $n_f \geq \max(n, 1)$ whose only prime factors are 2, 3,
+ * 5 and 7, a size for which FFTW is efficient.
  *
- * This functions is useful to find a fft size such that fftw
- * can optimized it more easily.
- *
- * Returns: $n_f$
+ * Returns: $n_f$.
  */
 gulong
 ncm_util_fact_size (const gulong n)
 {
-  if (n == 1)
+  const gulong primes[] = {2, 3, 5, 7};
+  gulong nf;
+
+  for (nf = MAX (n, 1); ; nf++)
   {
-    return 0;
-  }
-  else
-  {
-    const gulong r2 = n % 2;
-    const gulong r3 = n % 3;
-    const gulong r5 = n % 5;
-    const gulong r7 = n % 7;
-    gulong m        = 1;
+    gulong r = nf;
+    guint i;
 
-    if (r2 == 0)
-      m *= 2;
+    for (i = 0; i < G_N_ELEMENTS (primes); i++)
+      while (r % primes[i] == 0)
+        r /= primes[i];
 
-    if (r3 == 0)
-      m *= 3;
-
-    if (r5 == 0)
-      m *= 5;
-
-    if (r7 == 0)
-      m *= 7;
-
-    if (m != 1)
-    {
-      if (n / m == 1)
-        return m;
-      else
-        return m * ncm_util_fact_size (n / m);
-    }
-    else
-    {
-      return ncm_util_fact_size (n + 1);
-    }
+    if (r == 1)
+      return nf;
   }
 }
 
@@ -1223,10 +1088,9 @@ _ncm_util_set_destroyed (gpointer b)
 
 /**
  * ncm_util_sleep_ms:
- * @milliseconds: sleep time in milliseconds
+ * @milliseconds: time in milliseconds
  *
- * Suspend the thread execution for @milliseconds.
- *
+ * Suspends the calling thread for @milliseconds.
  */
 void
 ncm_util_sleep_ms (gint milliseconds)
@@ -1248,17 +1112,14 @@ ncm_util_sleep_ms (gint milliseconds)
 
 /**
  * ncm_util_set_or_call_error:
- * @error: a #GError or NULL
- * @domain: an error domain GQuark
- * @code: an error code
+ * @error: (nullable): a #GError location
+ * @domain: the error domain
+ * @code: the error code
  * @format: a printf format string
  * @...: arguments for @format
  *
- * If @error is not NULL, it sets the error message, otherwise it calls g_error.
- * The error message is formatted using @format and the arguments.
- *
- * If @error is not NULL and it already contains an error, it is considered a
- * programming error and g_error is called.
+ * Sets *@error to a new error with the formatted message, or aborts with that message
+ * if @error is %NULL. Aborts if *@error is already set.
  */
 void
 ncm_util_set_or_call_error (GError **error, GQuark domain, gint code, const gchar *format, ...)
@@ -1290,16 +1151,13 @@ ncm_util_set_or_call_error (GError **error, GQuark domain, gint code, const gcha
 
 /**
  * ncm_util_forward_or_call_error:
- * @error: a #GError or NULL
- * @local_error: a #GError or NULL
+ * @error: (nullable): a #GError location
+ * @local_error: (nullable) (transfer full): an error
  * @format: a printf format string
  * @...: arguments for @format
  *
- * Forwards the error from @local_error, adding a prefix message formatted with @format
- * and its arguments, if @local_error is not NULL. If @local_error is NULL, the function
- * does nothing. If @error is not NULL, the function forwards @local_error to @error. If
- * @error is NULL, the function calls g_error with @local_error.
- *
+ * Does nothing if @local_error is %NULL. Otherwise moves @local_error to *@error with the
+ * formatted message as a prefix, or aborts with both messages if @error is %NULL.
  */
 void
 ncm_util_forward_or_call_error (GError **error, GError *local_error, const gchar *format, ...)

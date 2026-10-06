@@ -35,13 +35,15 @@ It includes:
 5. Generation of mock data for forecast analysis.
 """
 
-from typing import cast
-from enum import StrEnum, auto
 import functools
+import itertools
 import time
+from enum import StrEnum, auto
+from typing import cast
+
 import numpy as np
 
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Nc, Ncm
 from numcosmo_py.ssc import SijCalculator, find_lmax, mask_angular_power_spectrum
 
 
@@ -139,7 +141,7 @@ def create_zbins_kernels(
     kernels_T = np.zeros((z_bins_len, kernel_nknots))
 
     # Create the top-hat kernel for each redshift bin
-    for i, (zminbin, zmaxbin) in enumerate(zip(z_bins_knots[:-1], z_bins_knots[1:])):
+    for i, (zminbin, zmaxbin) in enumerate(itertools.pairwise(z_bins_knots)):
         Dz = zmaxbin - zminbin  # Bin width
 
         kernel = np.zeros_like(kernel_z)

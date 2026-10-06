@@ -42,13 +42,11 @@ gsl_integration_workspace **ncm_integral_get_workspace (void);
 typedef struct _NcmIntegrand2dim NcmIntegrand2dim;
 typedef gdouble (*_NcmIntegrand2dimFunc) (gdouble x, gdouble y, gpointer userdata);
 
-typedef void (*NcmIntegralPeakfinder) (const gint *ndim, const gdouble b[], gint *n, gdouble x[], void *userdata);
-
 /**
  * NcmIntegrand2dim:
  *
- * Two-dimensional integrand structure.
- * Holds a function pointer and user data for 2D numerical integration routines.
+ * An integrand $f(x, y)$ with its user data, for ncm_integrate_2dim() and
+ * ncm_integrate_2dim_divonne().
  */
 struct _NcmIntegrand2dim
 {
@@ -63,8 +61,7 @@ typedef gdouble (*_NcmIntegrand3dimFunc) (gdouble x, gdouble y, gdouble z, gpoin
 /**
  * NcmIntegrand3dim:
  *
- * Three-dimensional integrand structure.
- * Holds a function pointer and user data for 3D numerical integration routines.
+ * An integrand $f(x, y, z)$ with its user data, for ncm_integrate_3dim_divonne().
  */
 struct _NcmIntegrand3dim
 {
@@ -78,9 +75,7 @@ typedef struct _NcmIntegralFixed NcmIntegralFixed;
 /**
  * NcmIntegralFixed:
  *
- * Fixed-point numerical integration structure.
- * Contains integration bounds and nodes for fixed Gauss-Legendre
- * or other quadrature schemes.
+ * Gauss-Legendre rules on equal panels with a stored weight, see ncm_integral_fixed_new().
  */
 struct _NcmIntegralFixed
 {
@@ -103,26 +98,44 @@ gint ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdoubl
 
 gboolean ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error);
 gboolean ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error);
-gboolean ncm_integrate_2dim_divonne_peakfinder (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], const gint nextra, NcmIntegralPeakfinder peakfinder, gdouble *result, gdouble *error);
-gboolean ncm_integrate_2dim_vegas (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint nstart, gdouble *result, gdouble *error);
 
-gboolean ncm_integrate_3dim (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error);
 gboolean ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error);
-gboolean ncm_integrate_3dim_vegas (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, const gint nstart, gdouble *result, gdouble *error);
 
 NcmIntegralFixed *ncm_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu);
 void ncm_integral_fixed_free (NcmIntegralFixed *intf);
 void ncm_integral_fixed_calc_nodes (NcmIntegralFixed *intf, gsl_function *F);
 gdouble ncm_integral_fixed_nodes_eval (NcmIntegralFixed *intf);
 gdouble ncm_integral_fixed_integ_mult (NcmIntegralFixed *intf, gsl_function *F);
-gdouble ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, gdouble max, gdouble reltol);
 void ncm_integral_fixed_get_nodes (NcmIntegralFixed *intf, NcmVector *nodes);
 gdouble ncm_integral_fixed_integ_vec_mult (NcmIntegralFixed *intf, const NcmVector *f_at_nodes);
 NcmIntegralFixed *ncm_integral_fixed_calibrate (gsl_function *F, gsl_function *G, gdouble xl, gdouble xu, gdouble reltol, gdouble exact_F_integ, gulong max_total_nodes, guint *n_nodes_out, guint *rule_n_out, gdouble *relerr_out);
 
+/**
+ * NCM_INTEGRAL_PARTITION:
+ *
+ * The number of subintervals of the pooled GSL workspaces.
+ */
 #define NCM_INTEGRAL_PARTITION 100000
+
+/**
+ * NCM_INTEGRAL_ALG:
+ *
+ * The default GSL Gauss-Kronrod rule, 61 points.
+ */
 #define NCM_INTEGRAL_ALG 6
+
+/**
+ * NCM_INTEGRAL_ERROR:
+ *
+ * The default relative tolerance.
+ */
 #define NCM_INTEGRAL_ERROR 1e-13
+
+/**
+ * NCM_INTEGRAL_ABS_ERROR:
+ *
+ * The default absolute tolerance.
+ */
 #define NCM_INTEGRAL_ABS_ERROR 0.0
 
 G_END_DECLS

@@ -26,51 +26,31 @@
 /**
  * NcmStatsDistKernelST:
  *
- * An N-dimensional Student's t kernel used to compute the kernel density estimation
- * function (KDE) in the #NcmStatsDist class.
+ * Multivariate Student's t kernel for #NcmStatsDist.
  *
- * This object defines a multivariate Student's t kernel to be used in the
- * #NcmStatsDistKernel class. Also, this object implements the virtual methods of the
- * #NcmStatsDistKernel class. For more information about the class, check the
- * documentation of #NcmStatsDistKernel. Below, there are some definitions of the
- * multivariate Student t distribution. For more information, check  [[On Sampling from
- * the Multivariate t Distribution, Marius
- * Hofert](https://journal.r-project.org/archive/2013/RJ-2013-033/RJ-2013-033.pdf)].
+ * The kernel of #NcmStatsDistKernel with $\nu$ degrees of freedom,
+ * \begin{equation}
+ * \bar{K}(\chi^2) = \left(1 + \frac{\chi^2}{\nu}\right)^{-(\nu + d)/2}, \qquad
+ * u(\Sigma) = \frac{\Gamma(\nu/2)\,(\nu\pi)^{d/2}}{\Gamma\left((\nu + d)/2\right)}\sqrt{\det\Sigma},
+ * \end{equation}
+ * that is, the density of the multivariate t distribution with location $\mu$ and scale
+ * matrix $h^2\Sigma$. For $\nu > 2$ its covariance is $\kappa h^2\Sigma$ with
+ * $\kappa = \nu/(\nu - 2)$; for $\nu \leq 2$ it has none. A sample is
+ * $x = \mu + h\sqrt{\nu/W}\,U^T z$, where $z$ holds $d$ independent standard normal
+ * variables, $W$ is a chi-squared variable with $\nu$ degrees of freedom and
+ * $\Sigma = U^T U$; see [On Sampling from the Multivariate t Distribution, Marius
+ * Hofert](https://journal.r-project.org/archive/2013/RJ-2013-033/RJ-2013-033.pdf). As
+ * $\nu \to \infty$ the kernel tends to #NcmStatsDistKernelGauss; for finite $\nu$ it
+ * decays as a power of $\chi^2$.
  *
- * The multivariate t distribution with $\nu$ degrees of freedom has its stochastic representation as
- * \begin{align}
- * \label{st}
- * \textbf{X} &= \mu + \sqrt{W} A \textbf{Z}
- * ,\end{align}
- * where $\textbf{Z}=(Z_1,Z_2,...,Z_n)$ is a $n$-dimension random vector whose components are independent normal random variables.
- * $A$ is a $d \times n$ matrix, $\mu$ is a $d$-dimensional random vector that defines the mean of the distribution and
- * $W=\frac{\nu}{\chi^2}$, being $\chi^2$ a random variable following a chi-squared distribution with $\nu > 0$ degrees of freedom.
- * The covariance matrix is defined as $\Sigma =  AA^T$, such that the distribution of $\textbf{X}$ is uniquely defined by its
- * covariance matrix and the mean vector, that is, $\textbf{X} \sim t(\mu, \Sigma)$.
- *
- * Assuming that $n=d$, the probability density function (pdf) of $\textbf{X}$ is
- * \begin{align}
- * \label{pdfst}
- * f_{\textbf{X}(x)} = \frac{\Gamma\left(\frac{\nu + d}{2}\right)}{\Gamma\left(\frac{\nu}{2}\right)(2\pi)^{\frac{d}{2}} \sqrt{det \Sigma}} \left[1+\frac{(x-\mu)^T \Sigma^-1 (x-\mu)}{\nu}\right]^{-\frac{\nu + d}{2}}
- * ,\end{align}
- * considering that the covariance matrix is positive definite and $x \in \mathbb{R^d}$. Also, the covariance matrix can be
- * decomposed in its Cholesky decomposition,
- * \begin{align}
- * \Sigma = LL^t
- * ,\end{align}
- * where $L$ is a triangular matrix with positive definite values. This decomposition can facilitate some computational calculations.
- *
- * The $\sqrt{W}$ factor makes the multivariate t distribution more flexible than the multivariate Gaussian distribution,
- * especially on its tails. Therefore, for problems that require a smoother function, the multivariate t kernell shall be used.
- * Also, as seen in equation \eqref{st}, the Student's t distribtuion can be generated using normal random variables, which makes the
- * distribution easier to be generated. For the case $\nu \rightarrow \infty$, the multivariate t distribution becomes the Gaussian
- * distribution.
- *
- * This object uses the pdf given by equation \eqref{pdfst} to define a Student's t kernel, such that it can generate points distributed
- * by multivariate t distributions.
- *
- * The user must provide the following input value: @dim - ncm\_stats\_dist\_kernel\_st\_new(). Once this object is initialized,
- * the user can use the methods in the #NcmStatsDistKernel class with this object.
+ * The rule-of-thumb bandwidth is
+ * \begin{equation}
+ * h = \left[\frac{16 (\nu - 2)^2 (1 + d + \nu)(3 + d + \nu)}
+ * {(2 + d)(d + \nu)(2 + d + \nu)(d + 2\nu)(2 + d + 2\nu)\,n}\right]^{1/(d + 4)},
+ * \end{equation}
+ * which minimizes the asymptotic mean integrated squared error for $n$ points drawn from
+ * a t density with $\nu$ degrees of freedom and scale matrix $\Sigma$. It is evaluated
+ * at $\nu = 3$ when $\nu < 3$, and tends to the Gaussian rule as $\nu \to \infty$.
  *
  */
 
@@ -79,8 +59,6 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "gsl/gsl_sf_result.h"
-
 #include "ncm/stats/ncm_stats_dist_kernel_st.h"
 #include "ncm/stats/ncm_stats_vec.h"
 #include "ncm/core/ncm_c.h"
@@ -88,9 +66,9 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_sf_gamma.h>
-#include "external/levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #include "ncm/stats/ncm_stats_dist_kernel_private.h"
@@ -132,7 +110,6 @@ _ncm_stats_dist_kernel_st_set_property (GObject *object, guint prop_id, const GV
 {
   NcmStatsDistKernelST *sdkst = NCM_STATS_DIST_KERNEL_ST (object);
 
-  /*NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);*/
   g_return_if_fail (NCM_IS_STATS_DIST_KERNEL_ST (object));
 
   switch (prop_id)
@@ -151,8 +128,6 @@ _ncm_stats_dist_kernel_st_get_property (GObject *object, guint prop_id, GValue *
 {
   NcmStatsDistKernelST *sdkst = NCM_STATS_DIST_KERNEL_ST (object);
 
-  /*NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);*/
-
   g_return_if_fail (NCM_IS_STATS_DIST_KERNEL_ST (object));
 
   switch (prop_id)
@@ -166,32 +141,12 @@ _ncm_stats_dist_kernel_st_get_property (GObject *object, guint prop_id, GValue *
   }
 }
 
-static void
-_ncm_stats_dist_kernel_st_dispose (GObject *object)
-{
-  /*NcmStatsDistKernelST *sdkst               = NCM_STATS_DIST_KERNEL_ST (object);*/
-  /*NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);*/
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_stats_dist_kernel_st_parent_class)->dispose (object);
-}
-
-static void
-_ncm_stats_dist_kernel_st_finalize (GObject *object)
-{
-  /* NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (object); */
-  /* NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst); */
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_stats_dist_kernel_st_parent_class)->finalize (object);
-}
-
 static gdouble _ncm_stats_dist_kernel_st_get_rot_bandwidth (NcmStatsDistKernel *sdk, const gdouble n);
+static gdouble _ncm_stats_dist_kernel_st_get_var_factor (NcmStatsDistKernel *sdk);
 static gdouble _ncm_stats_dist_kernel_st_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp);
 static gdouble _ncm_stats_dist_kernel_st_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble chi2);
 static void _ncm_stats_dist_kernel_st_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *Ku);
-static void _ncm_stats_dist_kernel_st_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, NcmVector *lnK, gdouble *gamma, gdouble *lambda);
-static void _ncm_stats_dist_kernel_st_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, NcmVector *lnK, gdouble *gamma, gdouble *lambda);
+static void _ncm_stats_dist_kernel_st_eval_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *lnc, NcmVector *lnK, gdouble *gamma, gdouble *lambda);
 static void _ncm_stats_dist_kernel_st_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *y, NcmRNG *rng);
 
 static void
@@ -202,24 +157,22 @@ ncm_stats_dist_kernel_st_class_init (NcmStatsDistKernelSTClass *klass)
 
   object_class->set_property = &_ncm_stats_dist_kernel_st_set_property;
   object_class->get_property = &_ncm_stats_dist_kernel_st_get_property;
-  object_class->dispose      = &_ncm_stats_dist_kernel_st_dispose;
-  object_class->finalize     = &_ncm_stats_dist_kernel_st_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_NU,
                                    g_param_spec_double ("nu",
                                                         NULL,
-                                                        "nu value of the function",
+                                                        "Degrees of freedom",
                                                         1.0, G_MAXDOUBLE, 3.0,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  sdk_class->get_rot_bandwidth      = &_ncm_stats_dist_kernel_st_get_rot_bandwidth;
-  sdk_class->get_lnnorm             = &_ncm_stats_dist_kernel_st_get_lnnorm;
-  sdk_class->eval_unnorm            = &_ncm_stats_dist_kernel_st_eval_unnorm;
-  sdk_class->eval_unnorm_vec        = &_ncm_stats_dist_kernel_st_eval_unnorm_vec;
-  sdk_class->eval_sum0_gamma_lambda = &_ncm_stats_dist_kernel_st_eval_sum0_gamma_lambda;
-  sdk_class->eval_sum1_gamma_lambda = &_ncm_stats_dist_kernel_st_eval_sum1_gamma_lambda;
-  sdk_class->sample                 = &_ncm_stats_dist_kernel_st_sample;
+  sdk_class->get_rot_bandwidth = &_ncm_stats_dist_kernel_st_get_rot_bandwidth;
+  sdk_class->get_var_factor    = &_ncm_stats_dist_kernel_st_get_var_factor;
+  sdk_class->get_lnnorm        = &_ncm_stats_dist_kernel_st_get_lnnorm;
+  sdk_class->eval_unnorm       = &_ncm_stats_dist_kernel_st_eval_unnorm;
+  sdk_class->eval_unnorm_vec   = &_ncm_stats_dist_kernel_st_eval_unnorm_vec;
+  sdk_class->eval_gamma_lambda = &_ncm_stats_dist_kernel_st_eval_gamma_lambda;
+  sdk_class->sample            = &_ncm_stats_dist_kernel_st_sample;
 }
 
 static gdouble
@@ -235,6 +188,20 @@ _ncm_stats_dist_kernel_st_get_rot_bandwidth (NcmStatsDistKernel *sdk, const gdou
     16.0 * gsl_pow_2 (nu - 2) * (1.0 + d + nu) * (3.0 + d + nu) /
     ((2.0 + d) * (d + nu) * (2.0 + d + nu) * (d + 2.0 * nu) * (2.0 + d + 2.0 * nu) * n),
     1.0 / (d + 4.0));
+}
+
+static gdouble
+_ncm_stats_dist_kernel_st_get_var_factor (NcmStatsDistKernel *sdk)
+{
+  NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (sdk);
+  NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
+
+  /* The multivariate Student-t covariance is nu / (nu - 2) times its scale matrix;
+   * for nu <= 2 the second moment does not exist. */
+  if (self->nu <= 2.0)
+    return GSL_POSINF;
+
+  return self->nu / (self->nu - 2.0);
 }
 
 static gdouble
@@ -264,7 +231,6 @@ _ncm_stats_dist_kernel_st_eval_unnorm (NcmStatsDistKernel *sdk, const gdouble ch
 static void
 _ncm_stats_dist_kernel_st_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *Ku)
 {
-  /*NcmStatsDistKernelPrivate * const pself = ncm_stats_dist_kernel_get_instance_private (sdk);*/
   const guint n = ncm_vector_len (chi2);
   guint i;
 
@@ -293,32 +259,29 @@ _ncm_stats_dist_kernel_st_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector *c
 }
 
 static void
-_ncm_stats_dist_kernel_st_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, NcmVector *lnnorms, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
+_ncm_stats_dist_kernel_st_eval_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *lnc, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
 {
   NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (sdk);
   NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
   NcmStatsDistKernelPrivate * const pself  = ncm_stats_dist_kernel_get_instance_private (sdk);
 
-  const guint n       = ncm_vector_len (chi2);
   const gdouble kappa = -0.5 * (self->nu + pself->d);
+  const guint n       = ncm_vector_len (chi2);
   gdouble lnt_max     = GSL_NEGINF;
   guint i, i_max = 0;
 
-  g_assert (n == ncm_vector_len (weights));
-  g_assert (n == ncm_vector_len (lnnorms));
-  g_assert (n == ncm_vector_len (lnK));
-  g_assert (1 == ncm_vector_stride (chi2));
-  g_assert (1 == ncm_vector_stride (weights));
-  g_assert (1 == ncm_vector_stride (lnnorms));
-  g_assert (1 == ncm_vector_stride (lnK));
+  g_assert_cmpuint (n, ==, ncm_vector_len (lnc));
+  g_assert_cmpuint (n, ==, ncm_vector_len (lnK));
+  g_assert_cmpuint (1, ==, ncm_vector_stride (chi2));
+  g_assert_cmpuint (1, ==, ncm_vector_stride (lnc));
+  g_assert_cmpuint (1, ==, ncm_vector_stride (lnK));
 
   for (i = 0; i < n; i++)
   {
     const gdouble chi2_i = ncm_vector_fast_get (chi2, i);
-    const gdouble w_i    = ncm_vector_fast_get (weights, i);
-    const gdouble lnu_i  = ncm_vector_fast_get (lnnorms, i);
+    const gdouble lnc_i  = ncm_vector_fast_get (lnc, i);
 
-    const gdouble lnt_i = kappa * log1p (chi2_i / self->nu) - lnu_i + log (w_i);
+    const gdouble lnt_i = kappa * log1p (chi2_i / self->nu) + lnc_i;
 
     if (lnt_i > lnt_max)
     {
@@ -341,58 +304,12 @@ _ncm_stats_dist_kernel_st_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, NcmVe
 }
 
 static void
-_ncm_stats_dist_kernel_st_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, NcmVector *chi2, NcmVector *weights, gdouble lnnorm, NcmVector *lnK, gdouble *gamma, gdouble *lambda)
-{
-  NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (sdk);
-  NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
-  NcmStatsDistKernelPrivate * const pself  = ncm_stats_dist_kernel_get_instance_private (sdk);
-
-  const guint n       = ncm_vector_len (chi2);
-  const gdouble kappa = -0.5 * (self->nu + pself->d);
-  gdouble lnt_max     = GSL_NEGINF;
-  guint i, i_max = 0;
-
-  g_assert_cmpuint (n, ==, ncm_vector_len (weights));
-  g_assert_cmpuint (n, ==, ncm_vector_len (lnK));
-  g_assert_cmpuint (1, ==, ncm_vector_stride (chi2));
-  g_assert_cmpuint (1, ==, ncm_vector_stride (weights));
-  g_assert_cmpuint (1, ==, ncm_vector_stride (lnK));
-
-  for (i = 0; i < n; i++)
-  {
-    const gdouble chi2_i = ncm_vector_fast_get (chi2, i);
-    const gdouble w_i    = ncm_vector_fast_get (weights, i);
-
-    const gdouble lnt_i = kappa * log1p (chi2_i / self->nu) + log (w_i);
-
-    if (lnt_i > lnt_max)
-    {
-      i_max   = i;
-      lnt_max = lnt_i;
-    }
-
-    ncm_vector_fast_set (lnK, i, lnt_i);
-  }
-
-  lambda[0] = 0.0;
-
-  for (i = 0; i < i_max; i++)
-    lambda[0] += exp (ncm_vector_fast_get (lnK, i) - lnt_max);
-
-  for (i = i_max + 1; i < n; i++)
-    lambda[0] += exp (ncm_vector_fast_get (lnK, i) - lnt_max);
-
-  gamma[0] = lnt_max - lnnorm;
-}
-
-static void
 _ncm_stats_dist_kernel_st_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *x, NcmRNG *rng)
 {
   NcmStatsDistKernelST *sdkst              = NCM_STATS_DIST_KERNEL_ST (sdk);
   NcmStatsDistKernelSTPrivate * const self = ncm_stats_dist_kernel_st_get_instance_private (sdkst);
   NcmStatsDistKernelPrivate * const pself  = ncm_stats_dist_kernel_get_instance_private (sdk);
   gdouble chi_scale;
-  gint ret;
   guint i;
 
   for (i = 0; i < pself->d; i++)
@@ -402,10 +319,8 @@ _ncm_stats_dist_kernel_st_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp
     ncm_vector_set (x, i, u_i * href);
   }
 
-  /* CblasLower, CblasNoTrans => CblasUpper, CblasTrans */
-  ret = gsl_blas_dtrmv (CblasUpper, CblasTrans, CblasNonUnit,
-                        ncm_matrix_gsl (cov_decomp), ncm_vector_gsl (x));
-  NCM_TEST_GSL_RESULT ("_ncm_stats_dist_kernel_st_sample", ret);
+  /* x <- U^T x, the lower factor L = U^T applied to a standard normal draw. */
+  ncm_matrix_dtrmv (cov_decomp, 'U', 'T', x);
 
   chi_scale = sqrt (self->nu / ncm_rng_chisq_gen (rng, self->nu));
 
@@ -416,12 +331,11 @@ _ncm_stats_dist_kernel_st_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp
 /**
  * ncm_stats_dist_kernel_st_new:
  * @dim: sample space dimension
- * @nu: Student-t parameter $\nu$
+ * @nu: degrees of freedom $\nu$
  *
- * Creates a new #NcmStatsDistKernelST object with sample dimension @dim
- * and $\nu$ = @nu.
+ * Creates a new #NcmStatsDistKernelST of dimension @dim with @nu degrees of freedom.
  *
- * Returns: a new #NcmStatsDistKernelST.
+ * Returns: (transfer full): a new #NcmStatsDistKernelST.
  */
 NcmStatsDistKernelST *
 ncm_stats_dist_kernel_st_new (const guint dim, const gdouble nu)
@@ -438,9 +352,9 @@ ncm_stats_dist_kernel_st_new (const guint dim, const gdouble nu)
  * ncm_stats_dist_kernel_st_ref:
  * @sdkst: a #NcmStatsDistKernelST
  *
- * Increase the reference of @stats_dist_kernel_st by one.
+ * Increases the reference count of @sdkst by one.
  *
- * Returns: (transfer full): @stats_dist_kernel_st.
+ * Returns: (transfer full): @sdkst.
  */
 NcmStatsDistKernelST *
 ncm_stats_dist_kernel_st_ref (NcmStatsDistKernelST *sdkst)
@@ -452,7 +366,7 @@ ncm_stats_dist_kernel_st_ref (NcmStatsDistKernelST *sdkst)
  * ncm_stats_dist_kernel_st_free:
  * @sdkst: a #NcmStatsDistKernelST
  *
- * Decrease the reference count of @stats_dist_kernel_st by one.
+ * Decreases the reference count of @sdkst by one.
  *
  */
 void
@@ -465,8 +379,7 @@ ncm_stats_dist_kernel_st_free (NcmStatsDistKernelST *sdkst)
  * ncm_stats_dist_kernel_st_clear:
  * @sdkst: a #NcmStatsDistKernelST
  *
- * Decrease the reference count of @stats_dist_kernel_st by one, and sets the pointer *@stats_dist_kernel_st to
- * NULL.
+ * Decreases the reference count of *@sdkst by one and sets *@sdkst to NULL.
  *
  */
 void
@@ -478,9 +391,9 @@ ncm_stats_dist_kernel_st_clear (NcmStatsDistKernelST **sdkst)
 /**
  * ncm_stats_dist_kernel_st_set_nu:
  * @sdkst: a #NcmStatsDistKernelST
- * @nu: the over-smooth factor
+ * @nu: degrees of freedom $\nu$
  *
- * Sets the over-smooth factor to @nu.
+ * Sets the degrees of freedom to @nu.
  *
  */
 void
@@ -495,7 +408,7 @@ ncm_stats_dist_kernel_st_set_nu (NcmStatsDistKernelST *sdkst, const gdouble nu)
  * ncm_stats_dist_kernel_st_get_nu:
  * @sdkst: a #NcmStatsDistKernelST
  *
- * Returns: the over-smooth factor.
+ * Returns: the degrees of freedom $\nu$.
  */
 gdouble
 ncm_stats_dist_kernel_st_get_nu (NcmStatsDistKernelST *sdkst)

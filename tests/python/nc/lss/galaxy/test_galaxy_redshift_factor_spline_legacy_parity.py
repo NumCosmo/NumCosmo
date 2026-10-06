@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program. If not, see <http://www.gnu.org/licenses/>.
 
-"""Golden-parity test: ``NcGalaxyRedshiftFactorSpline`` vs legacy
+"""Parity test: ``NcGalaxyRedshiftFactorSpline`` vs legacy
 ``NcGalaxySDObsRedshiftPz``.
 
 ``test_galaxy_redshift_factor_spline.py`` states there is "no legacy class
@@ -40,8 +40,8 @@ this file's original legacy-comparison code, at git rev ``77313f22``
 removed so these tests no longer depend on legacy at runtime -- legacy is
 slated for deletion in a follow-up PR. The larger captured sequences are
 stored as ``Ncm.Matrix`` binfiles (``data/truth_tables/wl/``) rather than
-inline literals; see ``_load_integ_golden``, ``_load_gen_golden``, and
-``_load_read_row_golden``.
+inline literals; see ``_load_integ_truth_table``, ``_load_gen_truth_table``, and
+``_load_read_row_truth_table``.
 """
 
 import pytest
@@ -101,21 +101,21 @@ def _build_new(spline):
 # as a flat (len(_CASES) * 2, 37) matrix, blocked by case (matching _CASES
 # order) then by use_lnp (False, True). Regenerate with Ncm.Serialize.to_binfile
 # on an Ncm.Matrix built from the rows in that order.
-_INTEG_GOLDEN_FILE = (
+_INTEG_TRUTH_TABLE_FILE = (
     "truth_tables/wl/nc_galaxy_redshift_factor_spline_legacy_integ_parity.bin"
 )
 
 
-def _load_integ_golden() -> np.ndarray:
+def _load_integ_truth_table() -> np.ndarray:
     """Load the frozen integ() sequences as a (len(_CASES), 2, 37) array."""
-    path = Ncm.cfg_get_data_filename(_INTEG_GOLDEN_FILE, True)
+    path = Ncm.cfg_get_data_filename(_INTEG_TRUTH_TABLE_FILE, True)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     matrix = ser.from_binfile(path)
     assert isinstance(matrix, Ncm.Matrix)
     return np.array(matrix.dup_array()).reshape(len(_CASES), 2, 37)
 
 
-_INTEG_FROZEN = _load_integ_golden()
+_INTEG_FROZEN = _load_integ_truth_table()
 
 
 @pytest.mark.parametrize("zp,sigma0,n", _CASES)
@@ -174,37 +174,37 @@ def test_norm_bit_parity(zp, sigma0, n):
     assert_allclose(new_norm, _NORM_FROZEN[(zp, sigma0, n)], rtol=0.0, atol=0.0)
 
 
-# Frozen legacy seed=7531 draw sequence (50 draws), keyed by (zp, sigma0, n).
+# Frozen seed=7531 draw sequence (50 draws), keyed by (zp, sigma0, n), from the
+# current NcmStatsDist1d inverse CDF, not from legacy: the legacy draws carried the
+# old inverse-CDF error, up to 9.4e-5 in probability against 1.5e-5 now.
 # Stored as a flat (len(_CASES), 50) matrix, blocked by case (matching
 # _CASES order). Regenerate with Ncm.Serialize.to_binfile on an Ncm.Matrix
 # built from the rows in that order.
-_GEN_GOLDEN_FILE = (
+_GEN_TRUTH_TABLE_FILE = (
     "truth_tables/wl/nc_galaxy_redshift_factor_spline_legacy_gen_parity.bin"
 )
 
 
-def _load_gen_golden() -> np.ndarray:
+def _load_gen_truth_table() -> np.ndarray:
     """Load the frozen gen() draw sequences as a (len(_CASES), 50) array."""
-    path = Ncm.cfg_get_data_filename(_GEN_GOLDEN_FILE, True)
+    path = Ncm.cfg_get_data_filename(_GEN_TRUTH_TABLE_FILE, True)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     matrix = ser.from_binfile(path)
     assert isinstance(matrix, Ncm.Matrix)
     return np.array(matrix.dup_array()).reshape(len(_CASES), 50)
 
 
-_GEN_FROZEN = _load_gen_golden()
+_GEN_FROZEN = _load_gen_truth_table()
 
 
 @pytest.mark.parametrize("zp,sigma0,n", _CASES)
 def test_gen_matches_seed_for_seed(zp, sigma0, n):
     """Same seed -> same inverse-CDF construction -> identical draws.
 
-    The new Spline scheme builds its lazy `dist` inside `gen()`, using the
-    exact same -2*log(y+1e-5) transform, NcmStatsDist1dSpline with
-    reltol=1e-5, and a do-while rejection loop against [z_min, z_max] that
-    legacy's `NcGalaxySDObsRedshiftPz` used (which built its own lazily
-    inside `prepare()`) -- so the RNG call sequence was identical, checked
-    here against a frozen legacy draw sequence (see module docstring).
+    The Spline scheme builds its lazy `dist` inside `gen()` from the
+    -2*log(y+1e-5) transform, NcmStatsDist1dSpline with reltol=1e-5, and a
+    do-while rejection loop against [z_min, z_max], checked against a frozen
+    draw sequence of the current inverse CDF (see _GEN_TRUTH_TABLE_FILE).
     """
     spline = _make_pz_spline(zp, sigma0, n)
     gsdrs, mset, new_data = _build_new(spline)
@@ -218,9 +218,8 @@ def test_gen_matches_seed_for_seed(zp, sigma0, n):
         gsdrs.gen(mset, new_data, rng_new)
         new_zs[i] = new_data.z
 
-    # rtol=1e-12 (not bit-exact): gen() routes through NcmStatsDist1d's
-    # inverse-CDF spline, built by a GSL adaptive-ODE solve
-    # (ncm_ode_spline_prepare) and evaluated via atanh() -- both genuinely
+    # rtol=1e-10 (not bit-exact): gen() routes through NcmStatsDist1d's
+    # inverse-CDF spline, built from a CVODE solve (ncm_ode_spline_prepare),
     # sensitive to the platform's libm/compiler at the ULP level, unlike the
     # other frozen comparisons in this file which only evaluate @pz's
     # cubic spline directly (see module docstring). Observed on CI: 1/50
@@ -247,21 +246,21 @@ def test_required_columns_bit_parity(zp, sigma0, n):
 # matrix, blocked by case (matching _CASES order). Regenerate with
 # Ncm.Serialize.to_binfile on an Ncm.Matrix built from the rows in that
 # order.
-_READ_ROW_GOLDEN_FILE = (
+_READ_ROW_TRUTH_TABLE_FILE = (
     "truth_tables/wl/nc_galaxy_redshift_factor_spline_legacy_read_row_parity.bin"
 )
 
 
-def _load_read_row_golden() -> np.ndarray:
+def _load_read_row_truth_table() -> np.ndarray:
     """Load the frozen read-row/eval sequences as a (len(_CASES), 11) array."""
-    path = Ncm.cfg_get_data_filename(_READ_ROW_GOLDEN_FILE, True)
+    path = Ncm.cfg_get_data_filename(_READ_ROW_TRUTH_TABLE_FILE, True)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     matrix = ser.from_binfile(path)
     assert isinstance(matrix, Ncm.Matrix)
     return np.array(matrix.dup_array()).reshape(len(_CASES), 11)
 
 
-_READ_ROW_FROZEN = _load_read_row_golden()
+_READ_ROW_FROZEN = _load_read_row_truth_table()
 
 
 @pytest.mark.parametrize("zp,sigma0,n", _CASES)

@@ -25,7 +25,7 @@ from this class.
 
 import dataclasses
 from pathlib import Path
-from typing import Annotated, Optional, IO
+from typing import IO, Annotated
 
 import typer
 from rich.console import Console
@@ -49,7 +49,7 @@ class AppLogging:
     """
 
     log_file: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--log-file",
             "-l",
@@ -68,7 +68,7 @@ class AppLogging:
 
     # These are set in __post_init__, not from CLI
     console: Console = dataclasses.field(init=False)
-    console_io: Optional[IO[str]] = dataclasses.field(init=False, default=None)
+    console_io: IO[str] | None = dataclasses.field(init=False, default=None)
 
     def __post_init__(self) -> None:
         """Initialize logging configuration.
@@ -80,7 +80,8 @@ class AppLogging:
 
         self.console_io = None
         if self.log_file:
-            self.console_io = open(self.log_file, "w", encoding="utf-8")
+            # Kept open for the whole command; close_logging() closes it.
+            self.console_io = open(self.log_file, "w", encoding="utf-8")  # noqa: SIM115
 
         self.console = set_ncm_console(self.console_io, self.quite)
 

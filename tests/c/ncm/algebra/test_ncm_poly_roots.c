@@ -322,6 +322,44 @@ test_random_quartic_matches_gsl_large (void)
   g_rand_free (rng);
 }
 
+/* A double root is returned twice, except the double root zero of a_2 x^2 */
+static void
+test_quadratic_double_root (void)
+{
+  const gdouble a[3]  = {4.0, -4.0, 1.0};
+  const gdouble a0[3] = {0.0, 0.0, 3.0};
+  gdouble roots[2];
+
+  g_assert_cmpint (ncm_poly_roots_real_quadratic (a, roots), ==, 2);
+  g_assert_cmpfloat (roots[0], ==, 2.0);
+  g_assert_cmpfloat (roots[1], ==, 2.0);
+
+  g_assert_cmpint (ncm_poly_roots_real_quadratic (a0, roots), ==, 1);
+  g_assert_cmpfloat (roots[0], ==, 0.0);
+}
+
+/* The roots of cubics and quartics come in increasing order */
+static void
+test_roots_increasing (void)
+{
+  const gdouble c[4] = {6.0, -1.0, -4.0, 1.0};        /* x^3 - 4x^2 - x + 6, three real roots */
+  const gdouble q[5] = {24.0, -2.0, -25.0, 2.0, 1.0}; /* (x + 6)(x + 1)(x - 1)(x - 4) */
+  gdouble roots[4];
+  gint n, i;
+
+  n = ncm_poly_roots_real_cubic (c, roots);
+  g_assert_cmpint (n, ==, 3);
+
+  for (i = 1; i < n; i++)
+    g_assert_cmpfloat (roots[i - 1], <, roots[i]);
+
+  n = ncm_poly_roots_real_quartic (q, roots);
+  g_assert_cmpint (n, ==, 4);
+
+  for (i = 1; i < n; i++)
+    g_assert_cmpfloat (roots[i - 1], <, roots[i]);
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -331,6 +369,8 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/ncm/poly_roots/known_quadratic", &test_known_quadratic);
   g_test_add_func ("/ncm/poly_roots/known_quadratic_no_real_roots", &test_known_quadratic_no_real_roots);
+  g_test_add_func ("/ncm/poly_roots/quadratic_double_root", &test_quadratic_double_root);
+  g_test_add_func ("/ncm/poly_roots/roots_increasing", &test_roots_increasing);
   g_test_add_func ("/ncm/poly_roots/known_cubic", &test_known_cubic);
   g_test_add_func ("/ncm/poly_roots/known_quartic_all_real", &test_known_quartic_all_real);
   g_test_add_func ("/ncm/poly_roots/known_quartic_two_real_two_complex", &test_known_quartic_two_real_two_complex);
@@ -342,3 +382,4 @@ main (gint argc, gchar *argv[])
 
   return g_test_run ();
 }
+

@@ -25,11 +25,7 @@
 /**
  * NcmFuncEval:
  *
- * A general purpose multi-threaded function evaluator.
- *
- * Thread pool based function evaluator. This module is used by the different
- * objects in NumCosmo that need to evaluate functions in parallel.
- *
+ * Parallel loops over an index range on a global thread pool.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -88,10 +84,9 @@ func (gpointer data, gpointer empty)
 /**
  * ncm_func_eval_get_pool: (skip)
  *
- * Allocate if its not yet allocated and return the
- * internal GThreadPool pool.
+ * Returns the global thread pool, creating it on first call.
  *
- * Returns: the pointer to the internal GThreadPool pool
+ * Returns: the global #GThreadPool.
  */
 GThreadPool *
 ncm_func_eval_get_pool (void)
@@ -119,12 +114,10 @@ ncm_func_eval_get_pool (void)
 
 /**
  * ncm_func_eval_set_max_threads:
- * @mt: new max threads to be used in the pool, -1 means unlimited
+ * @mt: maximum number of threads
  *
- * Set the new maximun number of threads to be used by the pool. Note that this
- * function is global changing this will affect every place which uses these
- * functions.
- *
+ * Sets the maximum number of threads of the global pool, used by every caller
+ * of the ncm_func_eval functions. A value of -1 means unlimited.
  */
 void
 ncm_func_eval_set_max_threads (gint mt)
@@ -140,19 +133,21 @@ ncm_func_eval_set_max_threads (gint mt)
 
 /**
  * ncm_func_eval_threaded_loop_nw:
- * @lfunc: (scope notified): #NcmFuncEvalLoop to be evaluated in threads
- * @i: initial index
- * @f: final index
- * @data: pointer to be passed to @fl
- * @nworkers: number of workers.
+ * @lfunc: (scope notified): loop function
+ * @i: first index
+ * @f: one past the last index
+ * @data: user data
+ * @nworkers: number of workers
  *
- * Using the thread pool, evaluate @fl in each value of (@f-@i)/@nwork.
- *
+ * Splits [@i, @f) into @nworkers contiguous ranges, the first one also taking
+ * the remainder, and calls @lfunc with @data on each range in the pool. Returns
+ * after all calls finish. Uses at most @f - @i workers, and runs a single serial
+ * call if the pool has zero threads. Requires @f > @i and @nworkers > 0.
  */
 void
 ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data, guint nworkers)
 {
-  NcmFuncEvalCtrl ctrl = {0, {NULL}, {NULL}, };
+  NcmFuncEvalCtrl ctrl = {0};
   guint delta, res;
 
   ncm_func_eval_get_pool ();
@@ -160,12 +155,12 @@ ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointe
   g_mutex_init (&ctrl.update);
   g_cond_init (&ctrl.finish);
 
-  g_assert_cmpuint (f, >, i);
-  g_assert_cmpuint (f - i, >, nworkers);
+  g_assert_cmpint (f, >, i);
   g_assert_cmpuint (nworkers, >, 0);
 
-  delta = (f - i) / nworkers;
-  res   = (f - i) % nworkers;
+  nworkers = MIN (nworkers, (gulong) (f - i));
+  delta    = (f - i) / nworkers;
+  res      = (f - i) % nworkers;
 
   if ((g_thread_pool_get_max_threads (_function_thread_pool) == 0) || (delta == 0))
   {
@@ -206,41 +201,43 @@ ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointe
 
 /**
  * ncm_func_eval_threaded_loop:
- * @lfunc: (scope notified): #NcmFuncEvalLoop to be evaluated in threads
- * @i: initial index
- * @f: final index
- * @data: pointer to be passed to @fl
+ * @lfunc: (scope notified): loop function
+ * @i: first index
+ * @f: one past the last index
+ * @data: user data
  *
- * Using the thread pool, evaluate @fl in each value of (@f-@i)/nthreads
- *
+ * Calls ncm_func_eval_threaded_loop_nw() with one worker per pool thread, one per
+ * processor for an unlimited pool, and serially for a pool of zero threads.
  */
 void
 ncm_func_eval_threaded_loop (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data)
 {
   ncm_func_eval_get_pool ();
   {
-    guint nthreads = g_thread_pool_get_max_threads (_function_thread_pool);
+    const gint max_threads = g_thread_pool_get_max_threads (_function_thread_pool);
+    const guint nworkers   = (max_threads > 0) ? (guint) max_threads : ((max_threads < 0) ? g_get_num_processors () : 1);
 
-    ncm_func_eval_threaded_loop_nw (lfunc, i, f, data, nthreads);
+    ncm_func_eval_threaded_loop_nw (lfunc, i, f, data, nworkers);
   }
 }
 
 /**
  * ncm_func_eval_threaded_loop_full:
- * @lfunc: (scope notified): #NcmFuncEvalLoop to be evaluated in threads
- * @i: initial index
- * @f: final index
- * @data: pointer to be passed to @fl
+ * @lfunc: (scope notified): loop function
+ * @i: first index
+ * @f: one past the last index
+ * @data: user data
  *
- * Using the thread pool, evaluate @fl sending one worker per index.
- *
+ * Calls @lfunc with @data on each index of [@i, @f) as a separate pool task
+ * and returns after all finish. Runs a single serial call if the pool has zero
+ * threads.
  */
 #if NCM_THREAD_POOL_MAX > 1
 
 void
 ncm_func_eval_threaded_loop_full (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data)
 {
-  NcmFuncEvalCtrl ctrl = {0, {NULL}, {NULL}, };
+  NcmFuncEvalCtrl ctrl = {0};
 
   ncm_func_eval_get_pool ();
   g_mutex_init (&ctrl.update);

@@ -43,13 +43,11 @@ G_DECLARE_DERIVABLE_TYPE (NcmSpline, ncm_spline, NCM, SPLINE, GObject)
 
 /**
  * NcmSplineCurvatureType:
- * @NCM_SPLINE_CURVATURE_D2: plain second derivative, $c(x) = f''(x)$
- * @NCM_SPLINE_CURVATURE_GEOMETRIC: geometric curvature of the curve $(x, f(x))$,
- *   $c(x) = f''(x) / \left(1 + f'(x)^2\right)^{3/2}$
+ * @NCM_SPLINE_CURVATURE_D2: the second derivative, $c(x) = f''(x)$
+ * @NCM_SPLINE_CURVATURE_GEOMETRIC: the curvature of the curve $(x, f(x))$, $c(x) = f''(x) / \left(1 + f'(x)^2\right)^{3/2}$
  *
- * Choice of the curvature density $c(x)$ used by the $L_p$ curvature functionals
- * ncm_spline_curvature_lp_norm() and ncm_spline_curvature_max().
- *
+ * Curvature density $c(x)$ of the curvature functionals, such as
+ * ncm_spline_curvature_lp_norm().
  */
 typedef enum _NcmSplineCurvatureType /*< prefix=NCM_SPLINE_CURVATURE >*/
 {

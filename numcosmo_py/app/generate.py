@@ -23,65 +23,71 @@
 
 """NumCosmo APP subcommands generate experiment files."""
 
-from typing import Annotated, cast
+import dataclasses
+import shlex
 from abc import ABC, abstractmethod
 from enum import StrEnum, auto
-import dataclasses
 from pathlib import Path
-import shlex
+from typing import Annotated, cast
 
 import numpy as np
 import typer
 
-from numcosmo_py import Ncm, Nc
-from numcosmo_py.experiments.planck18 import (
-    Planck18Types,
-    HIPrimModel,
-    generate_planck18_tt,
-    generate_planck18_ttteee,
-    generate_planck18_native,
-    mset_set_parameters,
-)
-from numcosmo_py.experiments.jpas_forecast24 import (
-    ClusterRedshiftType,
-    ClusterMassType,
-    JpasSSCType,
-    generate_jpas_forecast_2024,
-)
-from numcosmo_py.experiments.cluster_wl import (
-    generate_lsst_cluster_wl,
-    load_cluster_wl,
-    check_shape_pop_compat,
-    GalaxyPopGen,
-    ShapeFactorGen,
-    GalaxyZGen,
-    WLCatalogID,
-    HaloProfileType,
-    IntegMethod,
-    IntegMethodOptions,
-    DEFAULT_INTEG_AUTO_NODES,
-    DEFAULT_INTEG_N_NODES,
-    DEFAULT_INTEG_RULE_N,
-    DEFAULT_INTEG_NODE_RELTOL,
-    DEFAULT_INTEG_MAX_TOTAL_NODES,
-    ResampleFlagChoice,
-    resolve_resample_flag,
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.datasets.hicosmo import (
+    BAOID,
+    HID,
+    SNIaID,
+    add_bao_likelihood,
+    add_h_likelihood,
+    add_snia_likelihood,
 )
 from numcosmo_py.experiments.cluster_richness_count import (
     generate_cluster_richness_count,
     load_cluster_richness_count,
 )
-from numcosmo_py.datasets.hicosmo import (
-    SNIaID,
-    BAOID,
-    HID,
-    add_bao_likelihood,
-    add_h_likelihood,
-    add_snia_likelihood,
+from numcosmo_py.experiments.cluster_wl import (
+    DEFAULT_INTEG_AUTO_NODES,
+    DEFAULT_INTEG_MAX_TOTAL_NODES,
+    DEFAULT_INTEG_N_NODES,
+    DEFAULT_INTEG_NODE_RELTOL,
+    DEFAULT_INTEG_RULE_N,
+    GalaxyPopGen,
+    GalaxyZGen,
+    HaloProfileType,
+    IntegMethod,
+    IntegMethodOptions,
+    ResampleFlagChoice,
+    ShapeFactorGen,
+    WLCatalogID,
+    check_shape_pop_compat,
+    generate_lsst_cluster_wl,
+    load_cluster_wl,
+    resolve_resample_flag,
 )
 from numcosmo_py.experiments.curvature_weight import (
-    wspline_curvature_weight,
     qspline_curvature_weight,
+    wspline_curvature_weight,
+)
+from numcosmo_py.experiments.gauss_constraint import (
+    create_data_object as create_gauss_constraint_data,
+)
+from numcosmo_py.experiments.gauss_constraint import (
+    create_mset as create_gauss_constraint_mset,
+)
+from numcosmo_py.experiments.jpas_forecast24 import (
+    ClusterMassType,
+    ClusterRedshiftType,
+    JpasSSCType,
+    generate_jpas_forecast_2024,
+)
+from numcosmo_py.experiments.planck18 import (
+    HIPrimModel,
+    Planck18Types,
+    generate_planck18_native,
+    generate_planck18_tt,
+    generate_planck18_ttteee,
+    mset_set_parameters,
 )
 
 
@@ -150,7 +156,7 @@ def _add_curvature_prior(
     if prior_type is CurvaturePriorType.NONE:
         return
 
-    obj: "Ncm.Spline | None" = None
+    obj: Ncm.Spline | None = None
     if prior_type is CurvaturePriorType.MEAN_KAPPA:
         func_name, var = f"{namespace}:mean_kappa", 0.0
     elif prior_type is CurvaturePriorType.LP_KAPPA:
@@ -162,9 +168,11 @@ def _add_curvature_prior(
     else:  # LOCAL_D2
         func_name, var, obj = f"{namespace}:w{d2_name}", p, weight
 
-    if prior_type in (CurvaturePriorType.LOCAL_KAPPA, CurvaturePriorType.LOCAL_D2):
-        if weight is None:
-            raise ValueError(f"{prior_type} requires a precomputed weight spline.")
+    if (
+        prior_type in (CurvaturePriorType.LOCAL_KAPPA, CurvaturePriorType.LOCAL_D2)
+        and weight is None
+    ):
+        raise ValueError(f"{prior_type} requires a precomputed weight spline.")
 
     func = Ncm.MSetFuncList.new(func_name, obj)
     likelihood.priors_add(Ncm.PriorGaussFunc.new(func, 0.0, sigma, var))
@@ -206,7 +214,20 @@ class GeneratePlanck:
     ] = HIPrimModel.POWER_LAW
 
     massive_nu: Annotated[
-        bool, typer.Option(help="Use massive neutrinos.", show_default=True)
+        bool,
+        typer.Option(
+            help="Include the Planck baseline neutrino: one 0.06 eV species, fixed, "
+            "N_eff = 3.046. Off gives 3.046 massless species.",
+            show_default=True,
+        ),
+    ] = True
+
+    fit_nu_mass: Annotated[
+        bool,
+        typer.Option(
+            help="Let the neutrino mass vary (LCDM + sum m_nu). Requires --massive-nu.",
+            show_default=True,
+        ),
     ] = False
 
     include_lens_lkl: Annotated[
@@ -259,6 +280,7 @@ class GeneratePlanck:
             exp, mfunc_array = generate_planck18_native(
                 data_type=self.data_type,
                 massive_nu=self.massive_nu,
+                fit_nu_mass=self.fit_nu_mass,
                 prim_model=self.prim_model,
                 use_lensing_likelihood=self.include_lens_lkl,
                 from_release=self.from_release,
@@ -268,12 +290,14 @@ class GeneratePlanck:
         elif self.data_type == Planck18Types.TT:
             exp, mfunc_array = generate_planck18_tt(
                 massive_nu=self.massive_nu,
+                fit_nu_mass=self.fit_nu_mass,
                 prim_model=self.prim_model,
                 use_lensing_likelihood=self.include_lens_lkl,
             )
         elif self.data_type == Planck18Types.TTTEEE:
             exp, mfunc_array = generate_planck18_ttteee(
                 massive_nu=self.massive_nu,
+                fit_nu_mass=self.fit_nu_mass,
                 prim_model=self.prim_model,
                 use_lensing_likelihood=self.include_lens_lkl,
             )
@@ -295,6 +319,7 @@ class GeneratePlanck:
             assert isinstance(dist, Nc.Distance)
             add_snia_likelihood(dataset, mset, dist, self.include_snia)
             cosmo = mset.peek(Nc.HICosmo.id())
+            assert isinstance(cosmo, Nc.HICosmo)
             cosmo.set_property("w_fit", True)
 
         if self.include_des_y3_S8_prior:
@@ -338,7 +363,6 @@ class BuildPlanckRelease:
 
     def __post_init__(self) -> None:
         """Build and serialize all available native Planck likelihoods."""
-        # pylint: disable=import-outside-toplevel
         from numcosmo_py.experiments.planck_native_release import build_release
 
         Ncm.cfg_init()
@@ -352,7 +376,7 @@ class BuildPlanckRelease:
             )
 
         for path in written:
-            print(f"wrote {path}")
+            print(f"# wrote {path}")
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -364,7 +388,7 @@ class GenerateJpasForecast:
     ]
 
     fitting_sky_cut: Annotated[
-        JpasSSCType | None,
+        JpasSSCType,
         typer.Option(
             help="Super Sample Covariance method for fitting.", show_default=True
         ),
@@ -428,7 +452,7 @@ class GenerateJpasForecast:
     ] = 8
 
     cluster_redshift_type: Annotated[
-        ClusterRedshiftType | None,
+        ClusterRedshiftType,
         typer.Option(help="Cluster photoz relation.", show_default=True),
     ] = ClusterRedshiftType.NODIST
 
@@ -469,7 +493,7 @@ class GenerateJpasForecast:
     ] = 2
 
     cluster_mass_type: Annotated[
-        ClusterMassType | None,
+        ClusterMassType,
         typer.Option(help="Cluster mass-observable relation.", show_default=True),
     ] = ClusterMassType.NODIST
 
@@ -746,7 +770,7 @@ class ClusterWL(ABC):
         try:
             check_shape_pop_compat(shape_gen, pop_gen)
         except ValueError as e:
-            raise typer.BadParameter(e)
+            raise typer.BadParameter(str(e)) from e
 
         exp = self._build_experiment(shape_gen, pop_gen)
 
@@ -792,14 +816,16 @@ class ClusterWL(ABC):
         shape_factor_list = shlex.split(self.shape_factor)
         shape_factor_type = shape_factor_list.pop(0)
         try:
-            shape_factor = ShapeFactorGen(shape_factor_type)
+            # Lookup by value; mypy checks it against the (value, model_cls)
+            # signature that builds the members.
+            shape_factor = ShapeFactorGen(shape_factor_type)  # type: ignore[call-arg]
         except ValueError as e:
-            raise typer.BadParameter(e)
+            raise typer.BadParameter(str(e)) from e
 
         try:
             shape_factor_args = shape_factor.model_cls.from_args(shape_factor_list)
         except ValueError as e:
-            raise typer.BadParameter(e)
+            raise typer.BadParameter(str(e)) from e
         return shape_factor, shape_factor_args
 
     def parse_pop_dist(self):
@@ -807,14 +833,16 @@ class ClusterWL(ABC):
         pop_dist_list = shlex.split(self.pop_dist)
         pop_dist_type = pop_dist_list.pop(0)
         try:
-            pop_dist = GalaxyPopGen(pop_dist_type)
+            # Lookup by value; mypy checks it against the (value, model_cls)
+            # signature that builds the members.
+            pop_dist = GalaxyPopGen(pop_dist_type)  # type: ignore[call-arg]
         except ValueError as e:
-            raise typer.BadParameter(e)
+            raise typer.BadParameter(str(e)) from e
 
         try:
             pop_dist_args = pop_dist.model_cls.from_args(pop_dist_list)
         except ValueError as e:
-            raise typer.BadParameter(e)
+            raise typer.BadParameter(str(e)) from e
         return pop_dist, pop_dist_args
 
     @abstractmethod
@@ -885,14 +913,16 @@ class GenerateClusterWL(ClusterWL):
         z_dist_list = shlex.split(self.z_dist)
         z_dist_type = z_dist_list.pop(0)
         try:
-            z_dist = GalaxyZGen(z_dist_type)
+            # Lookup by value; mypy checks it against the (value, model_cls)
+            # signature that builds the members.
+            z_dist = GalaxyZGen(z_dist_type)  # type: ignore[call-arg]
         except ValueError as e:
-            raise typer.BadParameter(e)
+            raise typer.BadParameter(str(e)) from e
 
         try:
             z_dist_args = z_dist.model_cls.from_args(z_dist_list)
         except ValueError as e:
-            raise typer.BadParameter(e)
+            raise typer.BadParameter(str(e)) from e
         return z_dist, z_dist_args
 
     def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:
@@ -1036,8 +1066,9 @@ class LoadClusterWL(ClusterWL):
                 Nc.GalaxyWLObs, ser.from_binfile(self.data_file.absolute().as_posix())
             )
 
+        # A wrong object in the file is a data error, not a TypeError.
         if not isinstance(obs, Nc.GalaxyWLObs):
-            raise ValueError(
+            raise ValueError(  # noqa: TRY004
                 f"File does not contain a NcGalaxyWLObs: {type(obs).__name__}"
             )
 
@@ -1270,7 +1301,7 @@ class GenerateClusterRichnessCount:
         Raises:
             ValueError: A requested column is not present in the table.
         """
-        from astropy.table import Table  # pylint: disable=import-outside-toplevel
+        from astropy.table import Table
 
         assert self.data_file is not None
         table = Table.read(self.data_file, hdu=self.hdu)
@@ -1735,3 +1766,79 @@ class GenerateDEWSpline:
             mfunc_oa,
             self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
         )
+
+
+class SamplerTestTarget(StrEnum):
+    """Synthetic target distributions used to benchmark the samplers."""
+
+    GAUSS_CONSTRAINT = "gauss-constraint"
+    FUNNEL = "funnel"
+    ROSENBROCK = "rosenbrock"
+    GAUSSMIX2D = "gaussmix2d"
+
+
+@dataclasses.dataclass(kw_only=True)
+class GenerateSamplerTest:
+    """Generate a synthetic sampler-benchmark experiment."""
+
+    experiment: Annotated[
+        Path, typer.Argument(help="Path to the experiment file to generate.")
+    ]
+
+    target: Annotated[
+        SamplerTestTarget,
+        typer.Option(help="Target distribution to sample."),
+    ] = SamplerTestTarget.GAUSS_CONSTRAINT
+
+    dim: Annotated[
+        int,
+        typer.Option(
+            help=(
+                "Dimension of the target. Used by gauss-constraint and funnel, "
+                "the remaining targets are two-dimensional."
+            ),
+            min=2,
+            max=50,
+        ),
+    ] = 10
+
+    def __post_init__(self):
+        """Generate the sampler benchmark experiment."""
+        Ncm.cfg_init()
+
+        if self.experiment.suffix != ".yaml":
+            raise ValueError(
+                f"Invalid experiment file suffix: {self.experiment.suffix}"
+            )
+
+        dset = Ncm.Dataset.new()
+
+        if self.target == SamplerTestTarget.GAUSS_CONSTRAINT:
+            # Same seed as the published runs, so the covariance is reproducible.
+            rng = Ncm.RNG.seeded_new(None, 0)
+            mset, _ = create_gauss_constraint_mset(self.dim)
+            dset.append_data(
+                create_gauss_constraint_data(mset, self.dim, rng, verbose=False)
+            )
+        elif self.target == SamplerTestTarget.FUNNEL:
+            model = Ncm.ModelFunnel.new(self.dim - 1)
+            mset = Ncm.MSet.new_array([model])
+            dset.append_data(Ncm.DataFunnel.new())
+        elif self.target == SamplerTestTarget.ROSENBROCK:
+            mset = Ncm.MSet.new_array([Ncm.ModelRosenbrock()])
+            dset.append_data(Ncm.DataRosenbrock.new())
+        elif self.target == SamplerTestTarget.GAUSSMIX2D:
+            mset = Ncm.MSet.new_array([Ncm.ModelRosenbrock()])
+            dset.append_data(Ncm.DataGaussMix2D.new())
+        else:
+            raise ValueError(f"Unknown target: {self.target}")
+
+        mset.param_set_all_ftype(Ncm.ParamType.FREE)
+        mset.prepare_fparam_map()
+
+        experiment = Ncm.ObjDictStr()
+        experiment.set("likelihood", Ncm.Likelihood.new(dset))
+        experiment.set("model-set", mset)
+
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser.dict_str_to_yaml_file(experiment, self.experiment.absolute().as_posix())

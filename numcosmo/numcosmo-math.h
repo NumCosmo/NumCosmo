@@ -56,6 +56,7 @@
 #include <numcosmo/ncm/integration/ncm_integral1d_ptr.h>
 #include <numcosmo/ncm/integration/ncm_integral_nd.h>
 #include <numcosmo/ncm/core/ncm_rng.h>
+#include <numcosmo/ncm/stats/ncm_stats_acorr.h>
 #include <numcosmo/ncm/stats/ncm_stats_vec.h>
 #include <numcosmo/ncm/stats/ncm_stats_dist1d.h>
 #include <numcosmo/ncm/stats/ncm_stats_dist1d_spline.h>
@@ -72,13 +73,11 @@
 #include <numcosmo/ncm/algebra/ncm_lapack.h>
 #include <numcosmo/ncm/spline/ncm_spline.h>
 #include <numcosmo/ncm/spline/ncm_spline_func.h>
-#include <numcosmo/ncm/spline/ncm_spline_func_test.h>
 #include <numcosmo/ncm/spline/ncm_spline_bspline.h>
 #include <numcosmo/ncm/spline/ncm_spline_gsl.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic_notaknot.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic_d2.h>
-#include <numcosmo/ncm/spline/ncm_spline_rbf.h>
 #include <numcosmo/ncm/spline/ncm_spline_vec.h>
 #include <numcosmo/ncm/stats/ncm_function_sample_set.h>
 #include <numcosmo/ncm/spline/ncm_spline2d.h>
@@ -88,7 +87,6 @@
 #include <numcosmo/ncm/powspec/ncm_powspec_corr3d.h>
 #include <numcosmo/ncm/powspec/ncm_powspec_filter.h>
 #include <numcosmo/ncm/powspec/tests/ncm_powspec_analytic.h>
-#include <numcosmo/ncm/powspec/ncm_powspec_sphere_proj.h>
 #include <numcosmo/ncm/powspec/ncm_powspec_spline2d.h>
 #include <numcosmo/ncm/powspec/ncm_powspec.h>
 #include <numcosmo/ncm/dynamics/ncm_csq1d.h>
@@ -97,7 +95,6 @@
 #include <numcosmo/ncm/specfunc/ncm_mpsf_sbessel.h>
 #include <numcosmo/ncm/specfunc/ncm_sf_sbessel.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_integrator.h>
-#include <numcosmo/ncm/specfunc/ncm_sbessel_integrator_fftl.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_integrator_gl.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_integrator_levin.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_ode_solver.h>
@@ -105,7 +102,6 @@
 #include <numcosmo/ncm/specfunc/ncm_mpsf_0F1.h>
 #include <numcosmo/ncm/fftlog/ncm_fftlog.h>
 #include <numcosmo/ncm/fftlog/ncm_fftlog_sbessel_j.h>
-#include <numcosmo/ncm/fftlog/ncm_fftlog_sbessel_jljm.h>
 #include <numcosmo/ncm/fftlog/ncm_fftlog_tophatwin2.h>
 #include <numcosmo/ncm/fftlog/ncm_fftlog_gausswin2.h>
 #include <numcosmo/ncm/model/ncm_sparam.h>
@@ -174,6 +170,7 @@
 #include <numcosmo/ncm/fit/ncm_lh_ratio1d.h>
 #include <numcosmo/ncm/fit/ncm_lh_ratio2d.h>
 #include <numcosmo/ncm/algebra/ncm_quaternion.h>
+#include <numcosmo/ncm/algebra/ncm_complex.h>
 
 /* Utilities */
 #include <numcosmo/ncm/specfunc/ncm_binsplit.h>

@@ -296,8 +296,8 @@ def test_model_setitem_getitem_not_found() -> None:
     with pytest.raises(
         GLib.Error,
         match=re.compile(
-            rf"^ncm-model-error: Parameter named: x3 does not exist in "
-            rf"NcmModelRosenbrock "
+            rf"^ncm-model-error: ncm_model_param_get_by_name: model "
+            rf"`NcmModelRosenbrock' does not have a parameter called `x3'\. .* "
             rf"\({int(Ncm.ModelError.PARAM_NAME_NOT_FOUND)}\)$",
             re.DOTALL,
         ),
@@ -307,8 +307,8 @@ def test_model_setitem_getitem_not_found() -> None:
     with pytest.raises(
         GLib.Error,
         match=re.compile(
-            rf"^ncm-model-error: Parameter named: x3 does not exist in "
-            rf"NcmModelRosenbrock "
+            rf"^ncm-model-error: ncm_model_param_set_by_name: model "
+            rf"`NcmModelRosenbrock' does not have a parameter called `x3'\. .* "
             rf"\({int(Ncm.ModelError.PARAM_NAME_NOT_FOUND)}\)$",
             re.DOTALL,
         ),

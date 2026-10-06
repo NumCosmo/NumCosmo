@@ -43,6 +43,9 @@ G_DECLARE_FINAL_TYPE (NcmModelBuilder, ncm_model_builder, NCM, MODEL_BUILDER, GO
 NcmModelBuilder *ncm_model_builder_new (GType ptype, const gchar *name, const gchar *desc);
 NcmModelBuilder *ncm_model_builder_ref (NcmModelBuilder *mb);
 
+void ncm_model_builder_free (NcmModelBuilder *mb);
+void ncm_model_builder_clear (NcmModelBuilder **mb);
+
 void ncm_model_builder_add_sparam_obj (NcmModelBuilder *mb, NcmSParam *sparam);
 void ncm_model_builder_add_vparam_obj (NcmModelBuilder *mb, NcmVParam *vparam);
 
@@ -52,8 +55,10 @@ void ncm_model_builder_add_vparam (NcmModelBuilder *mb, guint default_length, co
 GType ncm_model_builder_create (NcmModelBuilder *mb);
 
 void ncm_model_builder_add_sparams (NcmModelBuilder *mb, NcmObjArray *sparams);
-NcmObjArray *ncm_model_builder_get_sparams (NcmModelBuilder *mb);
+void ncm_model_builder_add_vparams (NcmModelBuilder *mb, NcmObjArray *vparams);
 
+NcmObjArray *ncm_model_builder_get_sparams (NcmModelBuilder *mb);
+NcmObjArray *ncm_model_builder_get_vparams (NcmModelBuilder *mb);
 
 G_END_DECLS
 

@@ -100,7 +100,6 @@ NCM_INLINE gdouble ncm_c_Glightyear_Mpc (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_hc (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_fine_struct_square (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_electric_constant (void) G_GNUC_CONST;
-NCM_INLINE gdouble ncm_c_AR (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_c2 (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_planck_length2 (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_rest_energy_atomic (void) G_GNUC_CONST;
@@ -655,12 +654,6 @@ ncm_c_electric_constant (void)
 }
 
 NCM_INLINE gdouble
-ncm_c_AR (void)
-{
-  return 4.0 * ncm_c_stefan_boltzmann () / ncm_c_c ();
-}
-
-NCM_INLINE gdouble
 ncm_c_c2 (void)
 {
   return ncm_c_c () * ncm_c_c ();
@@ -958,7 +951,7 @@ ncm_c_HI_ion_wn_2p_2P3_5 (void)
 NCM_INLINE gdouble
 ncm_c_HI_ion_wn_2p_2Pmean (void)
 {
-  return 0.5 * (ncm_c_HI_ion_wn_2p_2P0_5 () + ncm_c_HI_ion_wn_2p_2P3_5 ());
+  return (ncm_c_HI_ion_wn_2p_2P0_5 () + 2.0 * ncm_c_HI_ion_wn_2p_2P3_5 ()) / 3.0;
 }
 
 /* Ionization energy: E */
@@ -1016,7 +1009,7 @@ ncm_c_HI_Lyman_wn_2p_2P3_5 (void)
 NCM_INLINE gdouble
 ncm_c_HI_Lyman_wn_2p_2Pmean (void)
 {
-  return 0.5 * (ncm_c_HI_Lyman_wn_2p_2P0_5 () + ncm_c_HI_Lyman_wn_2p_2P3_5 ());
+  return (ncm_c_HI_Lyman_wn_2p_2P0_5 () + 2.0 * ncm_c_HI_Lyman_wn_2p_2P3_5 ()) / 3.0;
 }
 
 /* Lyman series wavelength: wl */

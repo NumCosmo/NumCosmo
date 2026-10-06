@@ -41,11 +41,11 @@ G_DECLARE_FINAL_TYPE (NcmMSetTransKernCat, ncm_mset_trans_kern_cat, NCM, MSET_TR
 
 /**
  * NcmMSetTransKernCatSampling:
- * @NCM_MSET_TRANS_KERN_CAT_SAMPLING_CHOOSE: sampling by choosing radomly points from the catalog
- * @NCM_MSET_TRANS_KERN_CAT_SAMPLING_RBF_INTERP: sampling from the RBF interpolation built using the last ensemble from the catalog
- * @NCM_MSET_TRANS_KERN_CAT_SAMPLING_KDE: sampling from the KDE estimate built using the last ensemble from the catalog
+ * @NCM_MSET_TRANS_KERN_CAT_SAMPLING_CHOOSE: a random row of the catalog, each at most once
+ * @NCM_MSET_TRANS_KERN_CAT_SAMPLING_RBF_INTERP: a #NcmStatsDist interpolating $-2\ln L$ of the last rows
+ * @NCM_MSET_TRANS_KERN_CAT_SAMPLING_KDE: a #NcmStatsDist kernel density estimate of the last rows
  *
- * Sampling methods.
+ * Sampling methods of #NcmMSetTransKernCat.
  *
  */
 typedef enum _NcmMSetTransKernCatSampling /*< prefix=NCM_MSET_TRANS_KERN_CAT_SAMPLING >*/

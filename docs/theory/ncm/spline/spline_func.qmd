@@ -1,0 +1,176 @@
+---
+title: "AutoKnots: Adaptive Knot Placement"
+---
+
+This page describes the adaptive knot placement of `ncm_spline_set_func()`, selected by
+[[numcosmo-math|NcmSplineFuncType]]: the AutoKnots algorithm of @Vitenti2025AutoKnots as
+the library implements it, and the point where the implementation departs from the paper,
+the closure of the settled mesh that replaced the reopening by standard deviation.
+
+```{python}
+#| echo: false
+import math
+
+import matplotlib.pyplot as plt
+import numpy as np
+from numcosmo_py import Nc, Ncm
+
+Ncm.cfg_init()
+```
+
+## The rounds
+
+Let $f$ be the function to interpolate on $[x_i, x_f]$ and $u$ the knot variable, $x$,
+$\ln x$ or $\sinh^{-1} x$ according to the `NcmSplineFuncType`. The mesh starts from
+$\max(m, 3)$ knots uniform in $u$, where $m$ is the minimum size of the spline. Each round
+visits every interval $[x_i, x_{i+1}]$ not yet accepted, evaluates $f$ at its midpoint
+$\overline{x}_i$ in $u$ and inserts $\overline{x}_i$ as a knot. Both new intervals are
+accepted when
+$$
+|f(\overline{x}_i) - \hat{f}(\overline{x}_i)| \le \delta\,(|f(\overline{x}_i)| + \varepsilon)
+\quad\text{and}\quad
+|\widetilde{\mathcal{I}}_i - \hat{\mathcal{I}}_i| \le
+\delta\,(|\widetilde{\mathcal{I}}_i| + \varepsilon\,h_i),
+$$
+where $\hat{f}$ is the spline through the knots of the previous round,
+$\hat{\mathcal{I}}_i$ its integral over the interval, $\widetilde{\mathcal{I}}_i$ the
+integral of the quadratic through the three points, $h_i \equiv x_{i+1} - x_i$, $\delta$
+the relative tolerance and $\varepsilon$ the scale, zero for `ncm_spline_set_func()`. The
+rounds end when a round accepts every interval it visits. Every evaluation becomes a knot,
+and every round costs one preparation of the whole spline. This is the algorithm of the
+paper.
+
+## A false pass
+
+The midpoint test samples $f$ at one point of the interval, and $\hat{f}$ there is the spline
+of the previous round. The two can agree by coincidence where $\hat{f}$ is still wrong, and
+the two intervals accepted on that evidence are never visited again. Nothing in the samples
+of that round distinguishes the coincidence from a correct pass. The mesh around it does,
+once it has settled: the neighbors of a false pass are refined by their own tests, and the
+accepted pair is left wider than the intervals next to it.
+
+The paper, and the library through version 0.28.0, handled this with a global reopening
+after the rounds: every interval wider than the mean width plus `refine_ns` standard
+deviations was tested again, `refine` times. That rule compares every width with the global
+mean and detects an outlier only where the correct mesh is nearly uniform. On functions with
+a feature of width $w$ between $10^{-4}$ and $10^{-1}$ on $[0, 1]$, whose correct mesh has
+intervals of every width, the threshold is far above the widths of the false passes: 10% to
+18% of random realizations missed the tolerance by up to 227 times, while 8% to 12% more
+evaluations were spent on realizations that needed none.
+
+## The closure of the settled mesh
+
+The library now compares each width with its two neighbors. After the rounds end, an
+interval is flagged when it is wider in $u$ than the mean of its neighbors,
+$$
+h_i > \frac{h_{i-1} + h_{i+1}}{2}\,(1 + 10^{-8}),
+$$
+a border interval when wider than its one neighbor. Bisection leaves exact factors of two
+between neighbors, so the margin covers rounding only. Each flagged interval has its
+midpoint evaluated and tested with the two criteria above, the point kept as a knot. The
+intervals that fail are split, the rounds resume on them, and the closure repeats until a
+closure round finds no failure. A closure that flags nothing and one whose flagged intervals
+all pass both end the routine; `ncm_spline_set_func_full()` reports which.
+
+A flagged interval that fails also flags every adjacent interval of the same width, on both
+sides, for the next test. The reason is aliasing. When $f$ has an oscillation below the
+tolerance and the bisection reaches intervals one period wide, a run of such intervals
+passes every midpoint test at the same phase, and inside the run all widths are equal, so
+the width comparison flags only its two ends. Without the spread the closure advanced into
+such a run one interval per closure round. With it, the whole run is tested in the round
+after its end fails. A flagged interval that passes spreads nothing. Spreading on every
+flag, pass or fail, halves every run of equal widths next to a change of width in every
+closure round, and over-refines for as long as failures elsewhere keep the loop running.
+
+The closure removes errors from an adaptive mesh and discovers no feature. A feature the
+starting knots and their midpoints carry no evidence of is found by no test on those
+samples, and a run of equal widths over the whole range has no end for the closure to start
+from. Only a test point off the dyadic midpoint would detect either, at the cost of
+evaluations everywhere.
+
+## An aliased run
+
+The library met an aliased run in one of its own splines. `NcPowspecMLTransfer` builds the
+linear matter power spectrum from the Eisenstein-Hu transfer function and interpolates
+$\ln P(k)$ in $\ln k$ with `ncm_spline_set_func()`. The transfer function is a fitting
+formula with a term proportional to $\sin(k\tilde{s})/(k\tilde{s})$, where $\tilde{s}$ is a
+length set by the cosmological parameters (see the [Eisenstein--Hu Transfer
+Function](../../nc/powspec/transfer_func_eh.qmd)). So $\ln P(k)$ is a smooth function plus
+an oscillation of period $2\pi/\tilde{s}$ in $k$ whose amplitude decreases with $k$ as a
+power law and never vanishes: $1.4 \times 10^{-10}$ of $|\ln P|$ at
+$k = 17\,\mathrm{Mpc}^{-1}$, where the period is $3.5 \times 10^{-3}$ in $\ln k$, and
+$4.7 \times 10^{-13}$ at $k = 100$.
+
+The spline was requested at $\delta = 10^{-13}$, so above $k = 10$ the oscillation was
+above the tolerance and had to be resolved. The rounds did not resolve it. Bisection in
+$\ln k$ reached intervals two periods wide, whose midpoints are one period from the knots.
+There the oscillation has the same phase as at the knots, so the spline through the knots,
+which follows the smooth part, agrees with $f$ at the midpoint, both tests pass, and the two
+halves, each one period wide, are accepted with the oscillation unresolved inside them
+(@fig-eh-alias). The reopening by standard deviation did not find them, since the mesh
+inside such a run is uniform. The result was off by $2.5 \times 10^{-10}$ on 29% of the grid
+points between $k = 10$ and $100$, in runs of up to 366 consecutive intervals above the
+tolerance.
+
+This is the run the spread along equal widths is for. The width comparison flags the two
+ends of the run, where the mesh changes; their midpoints fail, the failure flags the run,
+and the next round tests all of it. The request is now $\delta = 10^{-9}$, where the
+oscillation is below the tolerance over the whole range, since the fitting formula is not
+accurate to $10^{-13}$ in the first place.
+
+```{python}
+#| label: fig-eh-alias
+#| fig-cap: "The oscillation of $\\ln P(k)$ about its smooth part near $k = 17\\,\\mathrm{Mpc}^{-1}$, the smooth part removed by a cubic fit over the window. The points are samples one period apart, as the rounds leave them in an aliased run: the knots of the intervals two periods wide (filled) and their tested midpoints (open). All of them see the oscillation at the same phase, so the spline through the knots agrees with $f$ at every tested point while the oscillation between them, $2.4 \\times 10^{-9}$ in amplitude against a tolerance of $1.8 \\times 10^{-12}$, is missed."
+#| code-fold: true
+cosmo = Nc.HICosmoDEXcdm(reion=Nc.HIReionCamb(), prim=Nc.HIPrimPowerLaw())
+cosmo.omega_x2omega_k()
+cosmo["Omegak"] = 0.0
+tf = Nc.TransferFuncEH()
+tf.prepare(cosmo)
+
+
+def ln_p(lnk):
+    """ln(k^0.96 T_EH(k)^2) at ln k."""
+    k = math.exp(lnk)
+    return math.log(k**0.96 * tf.eval(cosmo, k) ** 2)
+
+
+period = 3.49e-3
+x0 = math.log(17.0)
+x = np.linspace(x0 - 0.5 * period, x0 + 5.5 * period, 2001)
+y = np.array([ln_p(v) for v in x])
+smooth = np.polyval(np.polyfit(x - x0, y, 3), x - x0)
+samples = x0 + period * np.arange(0, 6)
+resid = np.interp(samples, x, y - smooth)
+fig, ax = plt.subplots(figsize=(6.4, 3.4))
+ax.plot(x - x0, y - smooth, color="C0", lw=1.0, label=r"$\ln P$ minus its smooth part")
+ax.plot(samples[::2] - x0, resid[::2], "o", color="C1", ms=7, label="knots")
+ax.plot(samples[1::2] - x0, resid[1::2], "o", mfc="white", mec="C1", ms=7, label="tested midpoints")
+ax.set_xlabel(r"$\ln(k / 17\,\mathrm{Mpc}^{-1})$")
+ax.set_ylabel("oscillation")
+ax.legend(loc="lower left", fontsize=9)
+plt.show()
+```
+
+## Measurements
+
+The two rules were compared on random functions of two kinds: the four smooth families of
+the AutoKnots stress tool, polynomial, cosine, positive polynomial and exponential sinc,
+whose correct meshes are nearly uniform, and functions $1 + A\,g((x - x_0)/w)$ with a
+localized feature $g$ of width $w$, Gaussian or Lorentzian, whose correct meshes have
+intervals of every width, the case the reopening by standard deviation cannot read. Each
+family has 500 realizations at $\delta = 10^{-8}$, $\varepsilon = 1$ on $[0, 1]$, validated
+on a uniform grid of 20001 points plus 2001 points within $8w$ of each feature. The entries
+are evaluations relative to the rounds alone, the fraction of realizations within the
+tolerance everywhere, and the worst error in units of the tolerance.
+
+| family | reopening by standard deviation | closure |
+|---|---|---|
+| polynomial, cosine, positive polynomial, exponential sinc | +8% to +20%, 100%, 0.7 | +1% to +4%, 99.6% to 100%, 1.6 |
+| Gaussian feature, $w \in [0.02, 0.1]$ | +10%, 89.6%, 17 | +4%, 100%, 0.45 |
+| Lorentzian feature, $w \in [10^{-4}, 0.1]$ | +8%, 83.6%, 42 | +3.5%, 100%, 0.16 |
+| two Lorentzians, cores $10^{-4}$ and $10^{-1}$ | +11%, 82.2%, 227 | +4%, 100%, 0.46 |
+
+On the four smooth families the spread along runs of equal width changes no knot. On the
+Eisenstein-Hu spline at $10^{-13}$ it reduces the closure from 225 rounds and 73475 knots to
+42 rounds and 64819, with the true error at the tolerance.

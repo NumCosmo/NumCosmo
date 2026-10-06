@@ -184,9 +184,9 @@ def test_plan_blocks_l_limber_forces_split(kernel_tsz: Nc.XcorKernel) -> None:
         kernel_tsz.set_l_limber(original_l_limber)
 
 
-def test_plan_blocks_capped_by_ell_cache_max(kernel_tsz: Nc.XcorKernel) -> None:
-    """Block size is capped by the smallest registered integrator's
-    ell_cache_max, even when a larger default_block_size is requested."""
+def test_plan_blocks_ignores_kernel_integrator(kernel_tsz: Nc.XcorKernel) -> None:
+    """Block size is set by the solver alone. A registered kernel's integrator
+    does not cap it: its ell_cache_max is an absolute multipole, not a width."""
     small_integrator = Ncm.SBesselIntegratorLevin.new_full(
         0, 5, 1.0e-4, 1.0e6, 21, 5, 1.0e-13, 2, 1.0e-8
     )
@@ -205,9 +205,8 @@ def test_plan_blocks_capped_by_ell_cache_max(kernel_tsz: Nc.XcorKernel) -> None:
 
     solver.plan_blocks(8)
 
-    ell_cache_max = small_integrator.get_ell_cache_max()
-    for lmin, lmax in [solver.get_block(i) for i in range(solver.get_n_blocks())]:
-        assert lmax - lmin + 1 <= ell_cache_max
+    blocks = [solver.get_block(i) for i in range(solver.get_n_blocks())]
+    assert blocks == [(0, 7), (8, 15), (16, 20)]
 
 
 def test_plan_blocks_replaces_previous_plan(kernel_tsz: Nc.XcorKernel) -> None:
@@ -326,7 +325,7 @@ def test_solve_fallback_method_matches_compute(
     kernel_tsz: Nc.XcorKernel,
     kernel_cmb_lens: Nc.XcorKernel,
 ) -> None:
-    """Methods other than KERNEL_CUBATURE delegate directly to nc_xcor_compute(),
+    """The redshift-space Limber methods delegate directly to nc_xcor_compute(),
     with no block-shared closure caching."""
     lmin, lmax = 20, 27
 
@@ -338,7 +337,9 @@ def test_solve_fallback_method_matches_compute(
         kernel_tsz.prepare(cosmology.cosmo)
         kernel_cmb_lens.prepare(cosmology.cosmo)
 
-        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_GSL)
+        xc = Nc.Xcor.new(
+            cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE
+        )
         xc.prepare(cosmology.cosmo)
 
         solver = Nc.XcorSolver.new()

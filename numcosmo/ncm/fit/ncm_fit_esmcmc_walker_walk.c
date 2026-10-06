@@ -26,9 +26,14 @@
 /**
  * NcmFitESMCMCWalkerWalk:
  *
- * Ensemble sampler Markov Chain Monte Carlo walker - walk move.
+ * Walk move of Goodman and Weare for #NcmFitESMCMC.
  *
- * Implementing walk move walker for #NcmFitESMCMC (affine invariant).
+ * Walker $k$ moves by $X^\star = X_k + (a/\sqrt{d})\sum_{j \in S} z_j (X_j - \bar{X}_S)$,
+ * $S$ a set of $d$ walkers of the other half of the ensemble, $\bar{X}_S$ their mean and
+ * $z_j$ standard normal; the step is about $a$ posterior standard deviations
+ * (#NcmFitESMCMCWalkerWalk:scale, default one; for a Gaussian in four dimensions it
+ * gives an acceptance of about one half). The move is symmetric (no proposal factor)
+ * and affine invariant.
  *
  */
 
@@ -170,7 +175,7 @@ ncm_fit_esmcmc_walker_walk_class_init (NcmFitESMCMCWalkerWalkClass *klass)
                                    g_param_spec_double ("scale",
                                                         NULL,
                                                         "Walk scale a",
-                                                        1.0e-2, G_MAXDOUBLE, 0.2,
+                                                        1.0e-2, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   walker_class->set_size    = &_ncm_fit_esmcmc_walker_walk_set_size;
@@ -338,12 +343,13 @@ _ncm_fit_esmcmc_walker_walk_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
     NcmVector *theta_j = g_ptr_array_index (theta, j);
     guint m;
 
+    /* The i-th chosen walker moves every coordinate m. */
     for (m = 0; m < walk->nparams; m++)
     {
-      const gdouble thetabar_k_i = ncm_vector_get (thetabar_k, i);
-      const gdouble theta_j_i    = ncm_vector_get (theta_j, i);
+      const gdouble thetabar_k_m = ncm_vector_get (thetabar_k, m);
+      const gdouble theta_j_m    = ncm_vector_get (theta_j, m);
 
-      ncm_vector_addto (thetastar, i, walk->a * z * (theta_j_i - thetabar_k_i) / walk->sqrt_nparams);
+      ncm_vector_addto (thetastar, m, walk->a * z * (theta_j_m - thetabar_k_m) / walk->sqrt_nparams);
     }
   }
 }
@@ -376,8 +382,8 @@ _ncm_fit_esmcmc_walker_walk_desc (NcmFitESMCMCWalker *walker)
  * ncm_fit_esmcmc_walker_walk_new:
  * @nwalkers: number of walkers
  *
- * Creates a new #NcmFitESMCMCWalkerWalk to be used
- * with @nwalkers.
+ * Creates a #NcmFitESMCMCWalkerWalk for @nwalkers walkers; #NcmFitESMCMC sets its
+ * number of parameters.
  *
  * Returns: (transfer full): a new #NcmFitESMCMCWalkerWalk.
  */
@@ -394,9 +400,9 @@ ncm_fit_esmcmc_walker_walk_new (guint nwalkers)
 /**
  * ncm_fit_esmcmc_walker_walk_set_scale:
  * @walk: a #NcmFitESMCMCWalkerWalk
- * @a: new scale $a > 1$
+ * @a: scale, $a \geq 0.01$
  *
- * Sets the value of the scale $a > 1$.
+ * Sets the scale $a$ of the steps.
  *
  */
 void
@@ -410,9 +416,7 @@ ncm_fit_esmcmc_walker_walk_set_scale (NcmFitESMCMCWalkerWalk *walk, const gdoubl
  * ncm_fit_esmcmc_walker_walk_get_scale:
  * @walk: a #NcmFitESMCMCWalkerWalk
  *
- * Gets the value of the scale $a > 1$.
- *
- * Returns: current value of $a$.
+ * Returns: the scale $a$
  */
 gdouble
 ncm_fit_esmcmc_walker_walk_get_scale (NcmFitESMCMCWalkerWalk *walk)

@@ -37,22 +37,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmLHRatio1d, ncm_lh_ratio1d, NCM, LH_RATIO1D, GObject)
 
-/**
- * NcmLHRatio1dRoot:
- * @NCM_LH_RATIO1D_ROOT_BRACKET: Root finding by bracketing
- * @NCM_LH_RATIO1D_ROOT_NUMDIFF: Root finding by numerical differentiation
- *
- * Root finding methods used by #NcmLHRatio1d.
- *
- */
-typedef enum _NcmLHRatio1dRoot /*< prefix=NCM_LH_RATIO1D_ROOT >*/
-{
-  NCM_LH_RATIO1D_ROOT_BRACKET = 0,
-  NCM_LH_RATIO1D_ROOT_NUMDIFF,
-} NcmLHRatio1dRoot;
-
-
-NcmLHRatio1d *ncm_lh_ratio1d_new (NcmFit *fit, const NcmMSetPIndex *pi);
+NcmLHRatio1d *ncm_lh_ratio1d_new (NcmFit * fit, const NcmMSetPIndex * pi);
 void ncm_lh_ratio1d_free (NcmLHRatio1d *lhr1d);
 void ncm_lh_ratio1d_clear (NcmLHRatio1d **lhr1d);
 

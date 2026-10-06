@@ -25,14 +25,11 @@
 /**
  * NcmReparamLinear:
  *
- * Linear reparametrization object.
- *
- * Object implementing a linear reparametrization of the model's parameters.
- * It uses as imput a matrix $M$ (#NcmReparamLinear:matrix) and a vector $v$
- * (#NcmReparamLinear:vector), such that the new parameters
- * $\vec{w}$ are given by $$\vec{w} = M\cdot\vec{y} + \vec{v},$$ where $\vec{y}$
- * represents the original model's parameters.
- *
+ * Linear reparametrization: the new parameters are
+ * $$\vec{p}_n = T \vec{p} + \vec{v},$$
+ * with $\vec{p}$ the original parameters of the model, $T$ (#NcmReparamLinear:matrix)
+ * an invertible square matrix and $\vec{v}$ (#NcmReparamLinear:vector) a shift.
+ * Construction factors $T$ and aborts when it is singular.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -140,8 +137,14 @@ _ncm_reparam_linear_constructed (GObject *object)
     relin->p    = gsl_permutation_alloc (length);
 
     ncm_matrix_memcpy (relin->T_LU, relin->T);
-    gsl_linalg_LU_decomp (ncm_matrix_gsl (relin->T_LU), relin->p, &relin->signum);
-    gsl_linalg_LU_solve (ncm_matrix_gsl (relin->T_LU), relin->p, ncm_vector_gsl (relin->v), ncm_vector_gsl (relin->vp));
+
+    if ((gsl_linalg_LU_decomp (ncm_matrix_gsl (relin->T_LU), relin->p, &relin->signum) != GSL_SUCCESS) ||
+        (gsl_linalg_LU_det (ncm_matrix_gsl (relin->T_LU), relin->signum) == 0.0))
+      g_error ("_ncm_reparam_linear_constructed: the matrix T is singular.");
+
+    /* vp = T^-1 v, so new2old is p = T^-1 p_n - vp. */
+    if (gsl_linalg_LU_solve (ncm_matrix_gsl (relin->T_LU), relin->p, ncm_vector_gsl (relin->v), ncm_vector_gsl (relin->vp)) != GSL_SUCCESS)
+      g_error ("_ncm_reparam_linear_constructed: solving T vp = v failed.");
   }
 }
 
@@ -188,8 +191,7 @@ ncm_reparam_linear_class_init (NcmReparamLinearClass *klass)
   /**
    * NcmReparamLinear:vector:
    *
-   * The vector $\vec{v}$.
-   *
+   * The shift $\vec{v}$.
    */
   g_object_class_install_property (object_class,
                                    PROP_V,
@@ -202,8 +204,7 @@ ncm_reparam_linear_class_init (NcmReparamLinearClass *klass)
   /**
    * NcmReparamLinear:matrix:
    *
-   * The matrix $M$.
-   *
+   * The matrix $T$.
    */
   g_object_class_install_property (object_class,
                                    PROP_T,
@@ -238,7 +239,9 @@ _ncm_reparam_linear_new2old (NcmReparam *reparam, NcmModel *model)
   NcmVector *params       = ncm_model_orig_params_peek_vector (model);
   NcmVector *new_params   = ncm_reparam_peek_params (reparam);
 
-  gsl_linalg_LU_solve (ncm_matrix_gsl (relin->T_LU), relin->p, ncm_vector_gsl (new_params), ncm_vector_gsl (params));
+  if (gsl_linalg_LU_solve (ncm_matrix_gsl (relin->T_LU), relin->p, ncm_vector_gsl (new_params), ncm_vector_gsl (params)) != GSL_SUCCESS)
+    g_error ("_ncm_reparam_linear_new2old: solving T p = p_n failed.");
+
   ncm_vector_sub (params, relin->vp);
 
   return TRUE;
@@ -246,16 +249,11 @@ _ncm_reparam_linear_new2old (NcmReparam *reparam, NcmModel *model)
 
 /**
  * ncm_reparam_linear_new:
- * @size: model's length.
- * @T: a #NcmMatrix
- * @v: a #NcmVector
+ * @size: number of parameters of the model
+ * @T: the @size by @size matrix $T$
+ * @v: the shift $\vec{v}$, of length @size
  *
- * Creates a new reparametrization using the parameters transformation matrix
- * @T and the shift vector @v, i.e., the new parameters vector $\vec{p}_n$ is
- * given by $\vec{p}_n = T\cdot{}\vec{p} + \vec{v}$, where $p$ are the old
- * parameters vector.
- *
- * Returns: (transfer full): a new #NcmReparamLinear.
+ * Returns: (transfer full): a new #NcmReparamLinear with $\vec{p}_n = T \vec{p} + \vec{v}$
  */
 NcmReparamLinear *
 ncm_reparam_linear_new (guint size, NcmMatrix *T, NcmVector *v)
@@ -274,8 +272,7 @@ ncm_reparam_linear_new (guint size, NcmMatrix *T, NcmVector *v)
  * @lin: a #NcmReparamLinear
  * @compat_type: a #GType
  *
- * Sets the object's type compatible with this reparametrization.
- *
+ * Same as ncm_reparam_set_compat_type().
  */
 void
 ncm_reparam_linear_set_compat_type (NcmReparamLinear *lin, GType compat_type)

@@ -1,0 +1,220 @@
+---
+title: FFTLog
+---
+
+This page describes the logarithmic Fast Fourier Transform implemented by the
+abstract [[numcosmo-math|NcmFftlog]] class. It computes the FFT of a function
+assumed to be a periodic sequence of logarithmically spaced points, following
+the FFTLog approach of @Hamilton2000 with the extensions described below.
+
+## Decomposition
+
+A function $G(r)$ is written as
+$$
+G(r) = \int_0^\infty F(k)\,K(kr)\,\mathrm{d}k, \tag{1}
+$$
+where $F(k)$ is defined in the fundamental interval
+$[\ln k_0 - L/2,\ \ln k_0 + L/2]$, $L$ is the period, $\ln k_0$ the center value,
+and $K(kr)$ a kernel function. Assuming $F(k)$ can be written in terms of the $N$
+lowest Fourier modes,
+$$
+F(k) = \sum_n c_n\,e^{\frac{2\pi i n}{L}\ln\left(\frac{k}{k_0}\right)}.
+$$
+Substituting into Eq. (1) and changing variables $k \rightarrow t = kr$,
+$$
+\begin{aligned}
+r G(r) &= \sum_n c_n \int_0^\infty \left(\frac{k}{k_0}\right)^{\frac{2\pi i n}{L}} K(kr)\,\mathrm{d}(kr) \\
+       &= \sum_n c_n \int_0^\infty \left(\frac{t}{k_0 r}\right)^{\frac{2\pi i n}{L}} K(t)\,\mathrm{d}t \\
+       &= \sum_n c_n\,e^{-\frac{2\pi i n}{L}\ln\left(\frac{r}{r_0}\right)}\,e^{-\frac{2\pi i n}{L}\ln(k_0 r_0)}\,Y_n,
+\end{aligned}
+$$
+where
+$$
+Y_n = \int_0^\infty t^{\frac{2\pi i n}{L}} K(t)\,\mathrm{d}t,
+$$
+and the Fourier coefficients are
+$$
+c_n = \frac{1}{N}\sum_m F(k_m)\,e^{-\frac{2\pi i n m}{N}}.
+$$
+The total number of points $N$ is the number of knots in the fundamental
+interval, which are equally spaced.
+
+## Discretization
+
+The variable discretization differs depending on whether $N$ is even or odd; in
+general
+$$
+k_n = k_0\,\mathrm{e}^{n L / N}, \qquad r_m = r_0\,\mathrm{e}^{m L / N}.
+$$
+If $N$ is odd, $n$ and $m$ run over $[-\lfloor N/2\rfloor, \lfloor N/2\rfloor]$,
+where $\lfloor N/2\rfloor$ is the round-down of $N/2$. In this case
+$$
+\begin{aligned}
+\ln\left(k_{-\lfloor N/2\rfloor}\right) &= \ln(k_0) - \frac{N-1}{N}\frac{L}{2}, \\
+\ln\left(k_{+\lfloor N/2\rfloor}\right) &= \ln(k_0) + \frac{N-1}{N}\frac{L}{2},
+\end{aligned}
+$$
+so for odd $N$ the values of $k_n$ (and $r_n$) never touch the borders
+$\ln(k_0) \pm L/2$ and $\ln(r_0) \pm L/2$. For even $N$
+($\lfloor N/2\rfloor = N/2$),
+$$
+\begin{aligned}
+\ln\left(k_{-\lfloor N/2\rfloor}\right) &= \ln(k_0) - \frac{L}{2}, \\
+\ln\left(k_{+\lfloor N/2\rfloor}\right) &= \ln(k_0) + \frac{L}{2}.
+\end{aligned}
+$$
+Since the functions are assumed periodic with period $L$, these two points refer
+to the same value. We therefore include only the lower end point
+$\ln(k_0) - L/2$ for even $N$. The original FFTLog paper includes both points with
+a $1/2$ weight; using only the lower end point avoids that complication.
+
+## Padding
+
+Because the algorithm assumes the decomposed function is periodic, it is worth
+extending the interval in $\ln k$ with padding intervals
+$\left[\ln k_0 - \frac{L_T}{2},\ \ln k_0 - \frac{L}{2}\right)$ and
+$\left(\ln k_0 + \frac{L}{2},\ \ln k_0 + \frac{L_T}{2}\right]$, where the total
+period $L_T$ is set by the final number of knots, about $N(1 + \mathrm{padding})$.
+The $N$ fundamental knots are equally distributed, and about $N \times \mathrm{padding}$
+knots are placed in the two symmetric padding intervals; the exact split is given in the
+section on the size below.
+
+By default the padding holds zeros. When $F$ does not vanish at an end of the
+interval this puts a step into the periodic input, and the transform rings at $r$
+near the inverse of that end at a level that falls only as $1/N$, so a calibration
+of $N$ on the whole output grid never converges. With
+[[numcosmo-math|ncm_fftlog_use_smooth_padding]] the padding continues the input
+instead: each end is continued by its power law, with the value and log-slope of
+$F$ at the end taken from a cubic through the four nearest knots and anchored at
+the end itself, so that the continuation does not move with the knots; an end where
+$F k$ would grow along the continuation is cut by a Gaussian in $\ln k$ of width the
+inverse of that log-slope; and each continuation is tapered to zero by a $C^\infty$ step
+over $[0.4\,h, 0.8\,h]$ from its own end, with $h = pL/2$ the nominal padding of each
+side, so the two ends never meet and the taper does not move when a fractional padding
+rounds to a different period at each size. The periodic input is then continuous with its first
+derivative at each end of the interval, where the continuation matches the value and
+log-slope of $F$ but not its higher derivatives, and smooth elsewhere; the transform
+converges as about $N^{-3}$ over the whole grid, down to a roundoff floor: for the
+Eisenstein--Hu case below the change per doubling of $N$ is $8.1 \times 10^{-10}$,
+$5.7 \times 10^{-11}$ and $1.2 \times 10^{-11}$ from 1000 to 8000 knots. The result within a few e-foldings of
+$1/k_\mathrm{max}$ or $1/k_\mathrm{min}$ depends on the continuation, which is an
+extrapolation of $F$ beyond its interval: for the $\sigma^2(R)$ of an
+Eisenstein--Hu spectrum tabulated on $[10^{-6}, 10^3]$ (padding one, 6000 knots), the
+power-law continuation is off the spectrum's own extension by $3.1 \times 10^{-4}$ of the
+peak at $R = 1/k_\mathrm{max}$, $2.5 \times 10^{-8}$ at $10/k_\mathrm{max}$ and
+$1.2 \times 10^{-9}$ at $100/k_\mathrm{max}$.
+
+### Reach of the continuation
+
+Beyond $0.8\,h$ from each end the padded input is zero, so the transform computes the
+integral of $F$ continued over at most $0.8\,h$ e-folds past each end of the table, and
+leaves out the rest. What that costs depends on how fast $F k$, the integrand in $\ln k$,
+falls beyond the ends:
+
+- For $F = k^2 P(k) / (2\pi^2)$ of a physical spectrum, $F k$ falls as $k^{3 + n_s}$
+  below $k_\mathrm{min}$, so the low-$k$ part left out is negligible. Above
+  $k_\mathrm{max}$, $F k$ is nearly flat ($\propto k^{n_s - 1}$ up to logarithms) and the
+  kernel's own decay, $t^{-4}$ for the top-hat, makes the part left out negligible except
+  within a few e-foldings of $1/k_\mathrm{max}$, as in the Eisenstein--Hu figures above.
+- For an input whose $F k$ falls slowly beyond an end, the missing part is felt over the
+  whole grid and grows toward that edge. For the top-hat window and $F \propto k^{-0.6}$
+  on $[10^{-10}, 10^{3}]$ with padding one ($F k \propto k^{0.4}$ below $k_\mathrm{min}$),
+  $G$ is off the power law continued to $k = 0$ by $6 \times 10^{-6}$ at
+  $k_\mathrm{min} r = 10^{-9}$, $2.4 \times 10^{-4}$ at $10^{-5}$ and $1.5 \times 10^{-3}$
+  at $10^{-3}$.
+
+Any reference for such an input is itself an extrapolation of the table. When an
+application needs it further, the levers are, in order of cost:
+
+1. **A longer padding.** The taper scales with $h = pL/2$, so a larger padding fraction
+   carries the continuation proportionally further, at the price of more knots.
+2. **A wider table.** Tabulating $P(k)$ beyond the range of interest removes the
+   extrapolation from the result altogether.
+3. **The taper placement.** The window $[0.4\,h, 0.8\,h]$ is set in
+   `_ncm_fftlog_add_smooth_padding()`. A later, narrower taper keeps more of a slow tail:
+   with $[0.65\,h, 0.95\,h]$, the Gaussian window and $F \propto k^{-1/2}$ on
+   $[10^{-8}, 10^3]$ are off $\Gamma(1/4) / (2\sqrt{r})$ by $2.3 \times 10^{-4}$ at
+   $k_\mathrm{min} r = 10^{-3}$ instead of $8.5 \times 10^{-4}$. Its sharper step has a
+   slower spectral decay, which the output at small $r$ amplifies as $r^{-(1+b)}$ under a
+   positive bias: for the Gaussian window, $F = 1$, $L = 10$, padding $0.3$ and $b = 1.8$,
+   the second derivative at the smallest $r$ is still off by $2.3 \times 10^{-4}$ of its
+   peak at 20000 knots, and a calibration to $10^{-7}$ does not converge. The end of the
+   taper must also stay inside the rounded padding, which is at least $0.95\,h$ for the
+   sizes a calibration visits (measured for $p = 0.3$ and $1$, $N \ge 100$).
+4. **Letting the two ends overlap.** Continuing each end past the middle of the padding,
+   blended with the other, reaches furthest ($6.8 \times 10^{-5}$ in the example of
+   lever 3), but the blend then holds values of $f = F k^{-b}$ from both ends, whose
+   $k^b$ differ by $e^{b L_T}$. It is safe only without a bias, and it moves with the
+   rounded period of a fractional padding.
+
+The tests `/ncm/fftlog/smooth_padding/negative_slope` and
+`/ncm/fftlog/smooth_padding/refine_stable` measure the reach and the stability under
+refinement; a change to the continuation should keep both.
+
+## Bias
+
+The transform represents $F$ by its Fourier series in $\ln k$, and its roundoff
+scales with the dynamic range of what it represents, over the interval and the
+padding. An $F$ that grows into a padding (for the variance of a power law
+$P \propto k^n$, $F \propto k^{n+2}$ grows below $k_\mathrm{min}$ when $n < -2$)
+sets a floor far above double precision: for the top-hat window and
+$F \propto k^{-0.6}$ over 13 decades, the change from $N$ to $1.2N$ knots stalls at
+$2.4 \times 10^{-6}$ of the peak. With a bias $b$
+([[numcosmo-math|ncm_fftlog_set_bias]]) the series is of $f(k) = F(k) k^{-b}$
+instead,
+$$
+G(r) = r^{-b} \int_0^\infty f(k)\,(kr)^b K(kr)\,\mathrm{d}k,
+\qquad
+Y_n = \int_0^\infty t^{\,b + \frac{2\pi i n}{L_T}} K(t)\,\mathrm{d}t,
+$$
+and each $\ln r$ derivative brings down $-(1 + b + 2\pi i n / L_T)$. $G$ is the same for
+any $b$; the padding holds $f$, and the smooth continuation, fitted to $f$, gives the
+same padded $F$. For a power law $F \propto k^b$, $f$ is constant; with the bias chosen as
+below, $b = -0.40$, the example above converges to $10^{-11}$ at 8000 knots.
+
+The coefficients exist only where $t^b K(t)$ is integrable: $-1 < b < 3$ for the
+top-hat window, whose square falls as $t^{-4}$, and $b > -1$ for the Gaussian. Within
+that range the bias moves two floors. The periodic image of the input one period away
+enters with weight $e^{-(b - b_\mathrm{min}) L_T}$ at one end of the range and
+$e^{-(b_\mathrm{max} - b) L_T}$ at the other, and a positive bias multiplies the
+roundoff of the output at small $r$ by $r^{-(1+b)}$.
+[[numcosmo-math|ncm_fftlog_get_best_bias]] therefore keeps $b = 0$ when $F$ decays
+into both paddings, otherwise takes the value closest to zero between the log-slopes of
+$F$ at the two ends (their midpoint when $F$ grows at both ends), and keeps it
+$\ln(1/\epsilon)/L_T$ inside the range.
+
+## Size
+
+For efficiency, the requested $N(1 + p)$, with $p$ the padding fraction, is replaced by
+the smallest $N_f^\prime \ge N(1 + p)$ that factorizes as $2^a 3^b 5^c 7^d$, with
+$a,b,c,d$ non-negative integers. Each side then takes
+$N_\mathrm{pad} = \lfloor N_f^\prime p / (2(1 + p)) \rfloor$ knots and the interval the
+remaining $N^\prime = N_f^\prime - 2 N_\mathrm{pad}$, so the padding fraction actually used,
+and with it $L_T = L N_f^\prime / N^\prime$, changes slightly with the size: for $p = 0.3$
+and $L = 10$ around 3000 knots, $L_T$ is below $L(1 + p)$ by $1.7$ to
+$6.2 \times 10^{-3}$. The taper of the smooth padding is placed on the nominal padding
+$p L / 2$ so that it does not move with this rounding.
+
+## Usage
+
+The user provides $\ln k_0$, $\ln r_0$, $L$, the padding fraction, $N$, and the
+function $F(k)$. The function can be supplied either as a `gsl_function`,
+evaluated at the fundamental-interval knots, or as a vector of values computed at
+each $\ln k$ knot; the padding is filled as described above.
+
+The kernel-dependent coefficients $Y_n$ are provided by the concrete
+implementations, e.g. [[numcosmo-math|NcmFftlogTophatwin2]] and
+[[numcosmo-math|NcmFftlogGausswin2]].
+
+## API Reference
+
+See [[numcosmo-math|NcmFftlog]] for the full class reference. The most relevant
+methods are:
+
+- setup: [[numcosmo-math|ncm_fftlog_set_lnk0]],
+  [[numcosmo-math|ncm_fftlog_set_lnr0]], [[numcosmo-math|ncm_fftlog_set_length]],
+  [[numcosmo-math|ncm_fftlog_set_padding]], [[numcosmo-math|ncm_fftlog_set_size]],
+  [[numcosmo-math|ncm_fftlog_set_bias]], [[numcosmo-math|ncm_fftlog_get_best_bias]]
+- evaluation: [[numcosmo-math|ncm_fftlog_eval_by_gsl_function]],
+  [[numcosmo-math|ncm_fftlog_eval_by_vector]],
+  [[numcosmo-math|ncm_fftlog_get_lnk_vector]]

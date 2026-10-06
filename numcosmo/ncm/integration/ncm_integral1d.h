@@ -36,6 +36,16 @@ G_BEGIN_DECLS
 
 G_DECLARE_DERIVABLE_TYPE (NcmIntegral1d, ncm_integral1d, NCM, INTEGRAL1D, GObject)
 
+/**
+ * NcmIntegral1dF:
+ * @int1d: a #NcmIntegral1d
+ * @x: the point
+ * @w: the variable $\alpha$ of the change of variables, or 1
+ *
+ * The integrand of #NcmIntegral1d.
+ *
+ * Returns: $F(x)$.
+ */
 typedef gdouble (*NcmIntegral1dF) (NcmIntegral1d *int1d, const gdouble x, const gdouble w);
 
 struct _NcmIntegral1dClass
@@ -77,9 +87,32 @@ gdouble ncm_integral1d_eval_gauss_hermite1_r_p (NcmIntegral1d *int1d, const gdou
 gdouble ncm_integral1d_eval_gauss_laguerre (NcmIntegral1d *int1d, gdouble *err);
 gdouble ncm_integral1d_eval_gauss_laguerre_r (NcmIntegral1d *int1d, const gdouble r, gdouble *err);
 
+/**
+ * NCM_INTEGRAL1D_DEFAULT_PARTITION:
+ *
+ * Default #NcmIntegral1d:partition.
+ */
 #define NCM_INTEGRAL1D_DEFAULT_PARTITION 100000
+
+/**
+ * NCM_INTEGRAL1D_DEFAULT_ALG:
+ *
+ * Default #NcmIntegral1d:rule, the 61-point Gauss-Kronrod rule.
+ */
 #define NCM_INTEGRAL1D_DEFAULT_ALG 6
+
+/**
+ * NCM_INTEGRAL1D_DEFAULT_RELTOL:
+ *
+ * Default #NcmIntegral1d:reltol.
+ */
 #define NCM_INTEGRAL1D_DEFAULT_RELTOL 1e-13
+
+/**
+ * NCM_INTEGRAL1D_DEFAULT_ABSTOL:
+ *
+ * Default #NcmIntegral1d:abstol.
+ */
 #define NCM_INTEGRAL1D_DEFAULT_ABSTOL 0.0
 
 G_END_DECLS

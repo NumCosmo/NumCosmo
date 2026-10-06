@@ -1,0 +1,8 @@
+subdir('algebra')
+subdir('core')
+subdir('dynamics')
+subdir('fftlog')
+subdir('integration')
+subdir('specfunc')
+subdir('spline')
+subdir('stats')

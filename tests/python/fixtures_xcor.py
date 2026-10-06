@@ -83,7 +83,7 @@ class NcXcorKernelComponentTest(Nc.XcorKernelComponent):
         flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT_ONLY,
     )
 
-    def do_eval_kernel(  # pylint: disable=arguments-differ
+    def do_eval_kernel(
         self,
         _cosmo: Nc.HICosmo,
         chi: float,
@@ -96,7 +96,7 @@ class NcXcorKernelComponentTest(Nc.XcorKernelComponent):
         gaussian = chi * np.exp(-0.5 * (z / self.sigma) ** 2)
         return gaussian * np.sinc(k * z * 1.0e-20)
 
-    def do_eval_prefactor(  # pylint: disable=arguments-differ
+    def do_eval_prefactor(
         self,
         _cosmo: Nc.HICosmo,
         _k: float,
@@ -105,7 +105,7 @@ class NcXcorKernelComponentTest(Nc.XcorKernelComponent):
         """Evaluate prefactor: constant for simplicity."""
         return 1.0
 
-    def do_get_limits(  # pylint: disable=arguments-differ
+    def do_get_limits(
         self,
         _cosmo: Nc.HICosmo,
     ) -> tuple[float, float, float, float]:

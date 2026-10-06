@@ -59,6 +59,7 @@
 #include <numcosmo/nc/recomb/nc_recomb_seager.h>
 #include <numcosmo/nc/reion/nc_hireion.h>
 #include <numcosmo/nc/reion/nc_hireion_camb.h>
+#include <numcosmo/nc/reion/nc_hireion_camb_reparam_tau.h>
 
 /* Perturbations */
 #include <numcosmo/nc/perturbations/nc_hipert_adiab.h>

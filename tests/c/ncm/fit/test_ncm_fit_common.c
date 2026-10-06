@@ -47,11 +47,22 @@ void test_ncm_fit_ls_f_J (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_params_set_get (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_simple (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_dof (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_levmar_set_algo (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_gsl_ls_invalid_step (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_gsl_mm_set_algo (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_gsl_mms_set_algo (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_nlopt_set_algo (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_equality_constraints_two (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_covar_not_fit (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_get_sub_fit_none (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_full (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_grad_forward (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_grad_accurate (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_grad_wrong_type (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_empty (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_empty_free (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_maxiter (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_restart (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_restart_simple (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_restart_save (TestNcmFit *test, gconstpointer pdata);
@@ -80,10 +91,9 @@ void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
  * arrives as fixture data, so one function does for all of them.
  */
 static void
-_test_ncm_fit_new (TestNcmFit *test, gconstpointer pdata, NcmParamType ptype)
+_test_ncm_fit_new_dim (TestNcmFit *test, gconstpointer pdata, NcmParamType ptype, const gint dim)
 {
   const TestNcmFitAlgo *algo     = pdata;
-  const gint dim                 = g_test_rand_int_range (1, algo->max_dim);
   NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 1.0e0, 50.0, -1.0, 1.0, rng);
   NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (dim);
@@ -111,6 +121,14 @@ _test_ncm_fit_new (TestNcmFit *test, gconstpointer pdata, NcmParamType ptype)
   ncm_likelihood_clear (&lh);
   ncm_mset_clear (&mset);
   ncm_fit_clear (&fit);
+}
+
+static void
+_test_ncm_fit_new (TestNcmFit *test, gconstpointer pdata, NcmParamType ptype)
+{
+  const TestNcmFitAlgo *algo = pdata;
+
+  _test_ncm_fit_new_dim (test, pdata, ptype, g_test_rand_int_range (1, algo->max_dim));
 }
 
 void
@@ -156,6 +174,14 @@ typedef struct _TestNcmFitCase
 static const TestNcmFitCase test_ncm_fit_cases[] = {
   { "/run",                    &test_ncm_fit_new, &test_ncm_fit_run },
   { "/run/simple",             &test_ncm_fit_new, &test_ncm_fit_run_simple },
+  { "/dof",                    &test_ncm_fit_new, &test_ncm_fit_dof },
+  { "/levmar_set_algo",        &test_ncm_fit_new, &test_ncm_fit_levmar_set_algo },
+  { "/gsl_ls_invalid_step",    &test_ncm_fit_new, &test_ncm_fit_gsl_ls_invalid_step },
+  { "/gsl_mm_set_algo",        &test_ncm_fit_new, &test_ncm_fit_gsl_mm_set_algo },
+  { "/gsl_mms_set_algo",       &test_ncm_fit_new, &test_ncm_fit_gsl_mms_set_algo },
+  { "/nlopt_set_algo",         &test_ncm_fit_new, &test_ncm_fit_nlopt_set_algo },
+  { "/covar/not_fit",          &test_ncm_fit_new, &test_ncm_fit_covar_not_fit },
+  { "/sub_fit/none",           &test_ncm_fit_new, &test_ncm_fit_get_sub_fit_none },
   { "/run/full",               &test_ncm_fit_new, &test_ncm_fit_run_full },
   { "/set_get",                &test_ncm_fit_new, &test_ncm_fit_set_get },
   { "/log_info",               &test_ncm_fit_new, &test_ncm_fit_log_info },
@@ -167,6 +193,8 @@ static const TestNcmFitCase test_ncm_fit_cases[] = {
   { "/run/grad/accurate",      &test_ncm_fit_new, &test_ncm_fit_run_grad_accurate },
   { "/run/grad/wrong/type",    &test_ncm_fit_new, &test_ncm_fit_run_grad_wrong_type },
   { "/run/empty",              &test_ncm_fit_new_empty, &test_ncm_fit_run_empty },
+  { "/run/empty/free",         &test_ncm_fit_new_empty, &test_ncm_fit_run_empty_free },
+  { "/run/maxiter",            &test_ncm_fit_new, &test_ncm_fit_run_maxiter },
   { "/run/empty/restart",      &test_ncm_fit_new_empty, &test_ncm_fit_run_restart },
   { "/run/restart",            &test_ncm_fit_new, &test_ncm_fit_run_restart },
   { "/run/restart/simple",     &test_ncm_fit_new, &test_ncm_fit_run_restart_simple },
@@ -182,6 +210,7 @@ static const TestNcmFitCase test_ncm_fit_cases[] = {
   { "/sub_fit/set",            &test_ncm_fit_new, &test_ncm_fit_sub_fit_set },
   { "/sub_fit/save_mset",      &test_ncm_fit_new, &test_ncm_fit_sub_fit_save_mset },
   { "/constraints/equality",   &test_ncm_fit_new, &test_ncm_fit_equality_constraints },
+  { "/constraints/equality/two", &test_ncm_fit_new, &test_ncm_fit_equality_constraints_two },
   { "/constraints/inequality", &test_ncm_fit_new, &test_ncm_fit_inequality_constraints },
   { "/serialize/constraints",  &test_ncm_fit_new, &test_ncm_fit_serialize_constraints },
   { "/fisher/ls",              &test_ncm_fit_new, &test_ncm_fit_fisher_ls },
@@ -439,6 +468,21 @@ test_ncm_fit_ls_f_J (TestNcmFit *test, gconstpointer pdata)
   }
 }
 
+static void
+_test_ncm_fit_assert_best_fit (TestNcmFit *test)
+{
+  NcmMSet *mset   = ncm_fit_peek_mset (test->fit);
+  NcmModel *model = NCM_MODEL (ncm_mset_peek (mset, ncm_model_mvnd_id ()));
+  NcmVector *ym   = ncm_model_orig_vparam_get_vector (model, NCM_MODEL_MVND_MEAN);
+  NcmVector *y    = ncm_data_gauss_cov_mvnd_peek_mean (test->data_mvnd);
+  guint i;
+
+  for (i = 0; i < ncm_vector_len (y); i++)
+    ncm_assert_cmpdouble_e (ncm_vector_get (y, i), ==, ncm_vector_get (ym, i), 5.0e-2, 5.0e-2);
+
+  ncm_vector_free (ym);
+}
+
 void
 test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata)
 {
@@ -447,25 +491,226 @@ test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata)
   ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
   ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
 
+  _test_ncm_fit_assert_best_fit (test);
+}
+
+void
+test_ncm_fit_dof (TestNcmFit *test, gconstpointer pdata)
+{
+  /* Each prior adds one degree of freedom, and a run (which resets the state) keeps it. */
+  NcmFit *fit            = test->fit;
+  NcmMSet *mset          = ncm_fit_peek_mset (fit);
+  NcmLikelihood *lh      = ncm_fit_peek_likelihood (fit);
+  NcmModel *model        = NCM_MODEL (ncm_mset_peek (mset, ncm_model_mvnd_id ()));
+  NcmPriorGaussParam *p0 = ncm_prior_gauss_param_new (model, 0, 0.0, 10.0);
+  NcmPriorGaussParam *p1 = ncm_prior_gauss_param_new (model, 0, 0.5, 20.0);
+  gint dof;
+
+  ncm_likelihood_priors_take (lh, NCM_PRIOR (p0));
+  ncm_likelihood_priors_take (lh, NCM_PRIOR (p1));
+  ncm_fit_reset (fit);
+
+  dof = ncm_dataset_get_dof (ncm_likelihood_peek_dataset (lh)) + 2 - (gint) ncm_mset_fparam_len (mset);
+
+  g_assert_cmpint (ncm_fit_state_get_dof (ncm_fit_peek_state (fit)), ==, dof);
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  g_assert_cmpint (ncm_fit_state_get_dof (ncm_fit_peek_state (fit)), ==, dof);
+}
+
+void
+test_ncm_fit_levmar_set_algo (TestNcmFit *test, gconstpointer pdata)
+{
+  /* Levmar only: ncm_fit_levmar_set_algo() switches the algorithm, and the fit still runs. */
+  NcmFit *fit = test->fit;
+  NcmFitLevmarAlgos algo, other;
+
+  if (!NCM_IS_FIT_LEVMAR (fit))
+    return;
+
+  g_object_get (fit, "algorithm", &algo, NULL);
+  other = (algo == NCM_FIT_LEVMAR_DIF) ? NCM_FIT_LEVMAR_DER : NCM_FIT_LEVMAR_DIF;
+
+  ncm_fit_levmar_set_algo (NCM_FIT_LEVMAR (fit), other);
+  g_object_get (fit, "algorithm", &algo, NULL);
+  g_assert_cmpint (algo, ==, other);
+
+  g_assert_true (ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE));
+}
+
+void
+test_ncm_fit_gsl_mm_set_algo (TestNcmFit *test, gconstpointer pdata)
+{
+  /* GSL multidimensional minimization only: after ncm_fit_gsl_mm_set_algo() the
+   * description names the new algorithm, and the fit still runs. */
+  NcmFit *fit = test->fit;
+  NcmFitGSLMMAlgos algo, other;
+
+  if (!NCM_IS_FIT_GSL_MM (fit))
+    return;
+
+  g_object_get (fit, "algorithm", &algo, NULL);
+  other = (algo == NCM_FIT_GSL_MM_VECTOR_BFGS2) ? NCM_FIT_GSL_MM_CONJUGATE_FR : NCM_FIT_GSL_MM_VECTOR_BFGS2;
+
+  g_assert_nonnull (ncm_fit_get_desc (fit));
+  ncm_fit_gsl_mm_set_algo (NCM_FIT_GSL_MM (fit), other);
+  g_object_get (fit, "algorithm", &algo, NULL);
+  g_assert_cmpint (algo, ==, other);
+  g_assert_true (g_str_has_suffix (ncm_fit_get_desc (fit), (other == NCM_FIT_GSL_MM_VECTOR_BFGS2) ? ":vector_bfgs2" : ":conjugate_fr"));
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  _test_ncm_fit_assert_best_fit (test);
+}
+
+void
+test_ncm_fit_gsl_mms_set_algo (TestNcmFit *test, gconstpointer pdata)
+{
+  /* GSL simplex minimization only: after ncm_fit_gsl_mms_set_algo() the description
+   * names the new algorithm, and the fit still runs. */
+  NcmFit *fit = test->fit;
+  NcmFitGSLMMSAlgos algo, other;
+
+  if (!NCM_IS_FIT_GSL_MMS (fit))
+    return;
+
+  g_object_get (fit, "algorithm", &algo, NULL);
+  other = (algo == NCM_FIT_GSL_MMS_NMSIMPLEX2) ? NCM_FIT_GSL_MMS_NMSIMPLEX : NCM_FIT_GSL_MMS_NMSIMPLEX2;
+
+  g_assert_nonnull (ncm_fit_get_desc (fit));
+  ncm_fit_gsl_mms_set_algo (NCM_FIT_GSL_MMS (fit), other);
+  g_object_get (fit, "algorithm", &algo, NULL);
+  g_assert_cmpint (algo, ==, other);
+  g_assert_true (g_str_has_suffix (ncm_fit_get_desc (fit), (other == NCM_FIT_GSL_MMS_NMSIMPLEX2) ? ":nmsimplex2" : ":nmsimplex"));
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  _test_ncm_fit_assert_best_fit (test);
+}
+
+void
+test_ncm_fit_nlopt_set_algo (TestNcmFit *test, gconstpointer pdata)
+{
+  /* NLopt only: the description follows the algorithms, and a reset for a new number
+   * of free parameters keeps the algorithm and the local one. */
+  NcmFit *fit   = test->fit;
+  NcmMSet *mset = ncm_fit_peek_mset (fit);
+  NcmFitNloptAlgorithm algo, local_algo;
+
+  if (!NCM_IS_FIT_NLOPT (fit))
+    return;
+
+  ncm_fit_nlopt_set_algo (NCM_FIT_NLOPT (fit), NCM_FIT_NLOPT_LN_NELDERMEAD);
+  g_assert_cmpstr (ncm_fit_get_desc (fit), ==, "NLOpt:ln-neldermead");
+
+  ncm_fit_nlopt_set_algo (NCM_FIT_NLOPT (fit), NCM_FIT_NLOPT_GN_CRS2_LM);
+  ncm_fit_nlopt_set_local_algo (NCM_FIT_NLOPT (fit), NCM_FIT_NLOPT_LN_BOBYQA);
+  g_assert_cmpstr (ncm_fit_get_desc (fit), ==, "NLOpt:gn-crs2-lm:ln-bobyqa");
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FIXED);
+  ncm_fit_reset (fit);
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_fit_reset (fit);
+
+  g_object_get (fit, "algorithm", &algo, "local-algorithm", &local_algo, NULL);
+  g_assert_cmpint (algo, ==, NCM_FIT_NLOPT_GN_CRS2_LM);
+  g_assert_cmpint (local_algo, ==, NCM_FIT_NLOPT_LN_BOBYQA);
+  g_assert_cmpstr (ncm_fit_get_desc (fit), ==, "NLOpt:gn-crs2-lm:ln-bobyqa");
+}
+
+static gdouble _test_ncm_fit_x0_max = 0.0;
+
+static gboolean
+_test_ncm_fit_valid_x0 (NcmModel *model)
+{
+  return ncm_model_orig_param_get (model, 0) <= _test_ncm_fit_x0_max;
+}
+
+void
+test_ncm_fit_gsl_ls_invalid_step (TestNcmFit *test, gconstpointer pdata)
+{
+  /*
+   * GSL least squares only: a trial step to parameters the model reports invalid is
+   * rejected, so a run whose minimum lies beyond x0_max ends valid, next to x0_max
+   * within the step tolerance. The test replaces the MVND valid method for its
+   * duration.
+   */
+  NcmFit *fit          = test->fit;
+  NcmMSet *mset        = ncm_fit_peek_mset (fit);
+  NcmModel *model      = NCM_MODEL (ncm_mset_peek (mset, ncm_model_mvnd_id ()));
+  NcmModelClass *klass = NCM_MODEL_GET_CLASS (model);
+  NcmVector *y         = ncm_data_gauss_cov_mvnd_peek_mean (test->data_mvnd);
+
+  gboolean (*valid) (NcmModel *model) = klass->valid;
+
+  if (!NCM_IS_FIT_GSL_LS (fit))
+    return;
+
+  _test_ncm_fit_x0_max = ncm_vector_get (y, 0) - 0.2;
+  ncm_model_orig_param_set (model, 0, _test_ncm_fit_x0_max - 0.3);
+  klass->valid = &_test_ncm_fit_valid_x0;
+
+  /* The messages go to stderr, out of the TAP stream, and report the solver status on failure */
+  ncm_cfg_set_logstream (stderr);
+  g_assert_true (ncm_fit_run (fit, NCM_FIT_RUN_MSGS_SIMPLE));
+  ncm_cfg_set_logstream (stdout);
+  g_assert_cmpfloat (ncm_model_orig_param_get (model, 0), <=, _test_ncm_fit_x0_max);
+  g_assert_cmpfloat (ncm_model_orig_param_get (model, 0), >=, _test_ncm_fit_x0_max - 10.0 * ncm_fit_get_params_reltol (fit));
+
+  klass->valid = valid;
+}
+
+void
+test_ncm_fit_covar_not_fit (TestNcmFit *test, gconstpointer pdata)
+{
+  /*
+   * The covariance with a parameter that was not fit aborts, whichever of the two it is.
+   * The child builds its own two-parameter fit: it does not share the parent's seed, so
+   * the fixture's random dimension could be one there.
+   */
+  const NcmModelID mid = ncm_model_mvnd_id ();
+
+  if (g_test_subprocess ())
   {
-    NcmMSet *mset   = ncm_fit_peek_mset (fit);
-    NcmModel *model = NCM_MODEL (ncm_mset_peek (mset, ncm_model_mvnd_id ()));
-    NcmVector *ym   = ncm_model_orig_vparam_get_vector (model, NCM_MODEL_MVND_MEAN);
-    NcmVector *y    = ncm_data_gauss_cov_mvnd_peek_mean (test->data_mvnd);
-    guint i;
+    const gchar *which = g_getenv ("TEST_NCM_FIT_COVAR");
+    const guint dim    = 2;
+    TestNcmFit test2;
+    NcmFit *fit;
+    NcmMSet *mset;
 
-    for (i = 0; i < ncm_vector_len (y); i++)
-    {
-      ncm_assert_cmpdouble_e (ncm_vector_get (y, i), ==, ncm_vector_get (ym, i), 5.0e-2, 5.0e-2);
+    _test_ncm_fit_new_dim (&test2, pdata, NCM_PARAM_TYPE_FREE, dim);
+    fit  = test2.fit;
+    mset = ncm_fit_peek_mset (fit);
 
-      /*
-       *  printf ("[%4d] % 22.15g % 22.15g %e\n", i,
-       *       ncm_vector_get (y, i),
-       *       ncm_vector_get (ym, i),
-       *       fabs (ncm_vector_get (y, i) / ncm_vector_get (ym, i) - 1.0));
-       */
-    }
+    ncm_mset_param_set_ftype (mset, mid, dim - 1, NCM_PARAM_TYPE_FIXED);
+    ncm_mset_prepare_fparam_map (mset);
+    ncm_fit_reset (fit);
+    ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+    ncm_fit_obs_fisher (fit);
+
+    if (g_str_equal (which, "cov"))
+      ncm_fit_covar_cov (fit, mid, 0, mid, dim - 1);
+    else
+      ncm_fit_covar_cor (fit, mid, 0, mid, dim - 1);
+
+    return;
   }
+
+  g_setenv ("TEST_NCM_FIT_COVAR", "cov", TRUE);
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*ncm_fit_covar_cov: parameters * were not both fit*");
+
+  g_setenv ("TEST_NCM_FIT_COVAR", "cor", TRUE);
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*ncm_fit_covar_cor: parameters * were not both fit*");
+
+  g_unsetenv ("TEST_NCM_FIT_COVAR");
+}
+
+void
+test_ncm_fit_get_sub_fit_none (TestNcmFit *test, gconstpointer pdata)
+{
+  g_assert_false (ncm_fit_has_sub_fit (test->fit));
+  g_assert_null (ncm_fit_get_sub_fit (test->fit));
 }
 
 void
@@ -638,6 +883,52 @@ test_ncm_fit_run_empty (TestNcmFit *test, gconstpointer pdata)
 
   ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
   ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+}
+
+void
+test_ncm_fit_run_empty_free (TestNcmFit *test, gconstpointer pdata)
+{
+  /* A fit built without free parameters runs once they are freed, fixed and freed again. */
+  NcmFit *fit   = test->fit;
+  NcmMSet *mset = ncm_fit_peek_mset (fit);
+  guint i;
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  _test_ncm_fit_assert_best_fit (test);
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FIXED);
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+
+  for (i = 0; i < ncm_mset_fparams_len (mset); i++)
+    ncm_mset_fparam_set (mset, i, 0.0);
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  _test_ncm_fit_assert_best_fit (test);
+}
+
+void
+test_ncm_fit_run_maxiter (TestNcmFit *test, gconstpointer pdata)
+{
+  /* A run stopped by the iteration limit before converging reports no best fit. */
+  NcmFit *fit   = test->fit;
+  NcmMSet *mset = ncm_fit_peek_mset (fit);
+  NcmVector *y  = ncm_data_gauss_cov_mvnd_peek_mean (test->data_mvnd);
+  gboolean ok;
+  guint i;
+
+  for (i = 0; i < ncm_mset_fparams_len (mset); i++)
+    ncm_mset_fparam_set (mset, i, ncm_vector_get (y, i) + 1.0);
+
+
+  ncm_fit_set_maxiter (fit, 1);
+  ok = ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  g_assert_false (ok);
+  g_assert_false (ncm_fit_state_is_best_fit (ncm_fit_peek_state (fit)));
 }
 
 void
@@ -1132,6 +1423,51 @@ test_ncm_fit_equality_constraints (TestNcmFit *test, gconstpointer pdata)
   g_assert_true (ncm_fit_equality_constraints_len (fit) == 0);
 
   ncm_mset_func_free (func);
+}
+
+void
+test_ncm_fit_equality_constraints_two (TestNcmFit *test, gconstpointer pdata)
+{
+  /* NLopt:slsqp only: two equality constraints, mu_0 = 1 and mu_1 = -0.5. */
+  NcmFit *fit        = test->fit;
+  NcmMSet *mset      = ncm_fit_peek_mset (fit);
+  NcmMSetFunc *func0 = NCM_MSET_FUNC (ncm_prior_gauss_param_new_name ("NcmModelMVND:mu_0", 1.0, 1.0, NULL));
+  NcmMSetFunc *func1 = NCM_MSET_FUNC (ncm_prior_gauss_param_new_name ("NcmModelMVND:mu_1", -0.5, 1.0, NULL));
+  NcmFitNloptAlgorithm algorithm;
+
+  if (!NCM_IS_FIT_NLOPT (fit) || (ncm_mset_fparams_len (mset) < 2))
+  {
+    ncm_mset_func_free (func0);
+    ncm_mset_func_free (func1);
+
+    return;
+  }
+
+  g_object_get (fit, "algorithm", &algorithm, NULL);
+
+  if (algorithm != NCM_FIT_NLOPT_LD_SLSQP)
+  {
+    ncm_mset_func_free (func0);
+    ncm_mset_func_free (func1);
+
+    return;
+  }
+
+  ncm_fit_set_grad_type (fit, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  ncm_fit_add_equality_constraint (fit, func0, 1.0e-5);
+  ncm_fit_add_equality_constraint (fit, func1, 1.0e-5);
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+  {
+    NcmModel *model = NCM_MODEL (ncm_mset_peek (mset, ncm_model_mvnd_id ()));
+
+    ncm_assert_cmpdouble_e (ncm_model_orig_param_get (model, 0), ==, 1.0, 5.0e-2, 5.0e-2);
+    ncm_assert_cmpdouble_e (ncm_model_orig_param_get (model, 1), ==, -0.5, 5.0e-2, 5.0e-2);
+  }
+
+  ncm_mset_func_free (func0);
+  ncm_mset_func_free (func1);
 }
 
 void

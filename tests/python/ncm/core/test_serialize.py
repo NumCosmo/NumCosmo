@@ -34,8 +34,6 @@ from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
-# pylint: disable=no-member
-
 
 class GTestA(GObject.Object):
     """Test class for serialization."""
@@ -845,3 +843,32 @@ def test_serialize_dict_str_binfile_overwrite(
     assert ods_loaded.len() == 2
     assert ods_loaded.get("a2") == a2
     assert ods_loaded.get("a3") == a3
+
+
+@pytest.mark.parametrize("seed", [0, 12345, 2**32 + 7])
+def test_serialize_ulong_property(seed: int) -> None:
+    """A gulong property (NcmRNG:seed) survives a serialization round trip."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    rng = Ncm.RNG.seeded_new(None, seed)
+    rng2 = ser.dup_obj(rng)
+    assert isinstance(rng2, Ncm.RNG)
+    assert rng2.get_seed() == seed
+    assert f"'seed': <uint64 {seed}>" in ser.to_string(rng, True)
+
+
+def test_serialize_rng_resumes_stream() -> None:
+    """A deserialized NcmRNG keeps its seed and continues from the serialized state."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    rng = Ncm.RNG.seeded_new(None, 987654)
+    for _ in range(5):
+        rng.uniform01_gen()
+    rng2 = ser.dup_obj(rng)
+    assert rng2.get_seed() == 987654
+    assert rng2.get_algo() == rng.get_algo()
+    assert [rng2.uniform01_gen() for _ in range(8)] == [
+        rng.uniform01_gen() for _ in range(8)
+    ]
+    # a copy taken now diverges from a fresh generator with the same seed
+    fresh = Ncm.RNG.seeded_new(None, 987654)
+    rng3 = ser.dup_obj(rng)
+    assert rng3.uniform01_gen() != fresh.uniform01_gen()

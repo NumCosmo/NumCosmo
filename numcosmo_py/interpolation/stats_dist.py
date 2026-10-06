@@ -23,15 +23,12 @@
 
 """Create a new ensemble sampler object."""
 
-from typing import Optional, Union
-
-from numcosmo_py import Ncm, GEnum
+from numcosmo_py import GEnum, Ncm
 
 
 class InterpolationMethod(GEnum):
     """Possible interpolation methods Ncm.StatsDist."""
 
-    # pylint: disable=no-member
     KDE = Ncm.FitESMCMCWalkerAPESMethod.KDE
     VKDE = Ncm.FitESMCMCWalkerAPESMethod.VKDE
 
@@ -39,19 +36,19 @@ class InterpolationMethod(GEnum):
 class InterpolationKernel(GEnum):
     """Possible interpolation kernels for Ncm.StatsDist."""
 
-    # pylint: disable=no-member
     CAUCHY = Ncm.FitESMCMCWalkerAPESKType.CAUCHY
     ST3 = Ncm.FitESMCMCWalkerAPESKType.ST3
     GAUSS = Ncm.FitESMCMCWalkerAPESKType.GAUSS
+    AUTO = Ncm.FitESMCMCWalkerAPESKType.AUTO
 
 
 class CrossValidationMethod(GEnum):
     """Cross validation methods for Ncm.StatsDist."""
 
-    # pylint: disable=no-member
     NONE = Ncm.StatsDistCV.NONE
-    SPLIT = Ncm.StatsDistCV.SPLIT
-    SPLIT_NOFIT = Ncm.StatsDistCV.SPLIT_NOFIT
+    SPLIT_M2LNP = Ncm.StatsDistCV.SPLIT_M2LNP
+    SPLIT_ACCEPT = Ncm.StatsDistCV.SPLIT_ACCEPT
+    LOO_M2LNP = Ncm.StatsDistCV.LOO_M2LNP
 
 
 def create_stats_dist(
@@ -62,8 +59,10 @@ def create_stats_dist(
     cv_method: CrossValidationMethod = CrossValidationMethod.NONE,
     dim: int = 2,
     over_smooth: float = 1.0,
-    split_fraction: Optional[float] = None,
-    local_fraction: Optional[float] = None,
+    split_fraction: float | None = None,
+    local_fraction: float | None = None,
+    center_shrink: bool = False,
+    auto_kernel: bool = False,
     verbose: bool = False,
 ):
     """Create a new interpolation object.
@@ -76,18 +75,25 @@ def create_stats_dist(
     :param over_smooth: Oversmoothing factor.
     :param split_fraction: Split fraction.
     :param local_fraction: Local fraction.
+    :param center_shrink: Shrink the kernel centres toward the sample mean so that the
+        mixture covariance matches the sample covariance.
+    :param auto_kernel: Deprecated, pass ``InterpolationKernel.AUTO`` instead.
     :param verbose: Verbose output.
 
     :return: A new Ncm.StatsDist object.
     """
 
-    kernel: Union[Ncm.StatsDistKernelST, Ncm.StatsDistKernelGauss]
+    kernel: Ncm.StatsDistKernelST | Ncm.StatsDistKernelGauss
     if interpolation_kernel == InterpolationKernel.CAUCHY:
         kernel = Ncm.StatsDistKernelST.new(dim, 1.0)
     elif interpolation_kernel == InterpolationKernel.ST3:
         kernel = Ncm.StatsDistKernelST.new(dim, 3.0)
     elif interpolation_kernel == InterpolationKernel.GAUSS:
         kernel = Ncm.StatsDistKernelGauss.new(dim)
+    elif interpolation_kernel == InterpolationKernel.AUTO:
+        # Where the kernel fit starts from; the cross-validation moves it from here.
+        kernel = Ncm.StatsDistKernelST.new(dim, 10.0)
+        auto_kernel = True
     else:
         raise RuntimeError(f"Kernel {interpolation_kernel} not supported")
 
@@ -100,7 +106,15 @@ def create_stats_dist(
         if local_fraction is not None:
             sdist.set_local_frac(local_fraction)
 
+    if auto_kernel and not isinstance(kernel, Ncm.StatsDistKernelST):
+        raise ValueError(
+            "auto_kernel tunes a Student-t kernel in place; use "
+            "InterpolationKernel.AUTO or a Student-t interpolation kernel."
+        )
+
     sdist.set_over_smooth(over_smooth)
+    sdist.set_auto_kernel(auto_kernel)
+    sdist.set_center_shrink(center_shrink)
     if robust:
         sdist.set_cov_type(Ncm.StatsDistKDECovType.ROBUST)
 

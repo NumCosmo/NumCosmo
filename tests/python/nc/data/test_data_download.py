@@ -36,6 +36,7 @@ test session with it.
 """
 
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -75,9 +76,18 @@ sys.stdout.write(
 WL_ASSET = "wl_obs_HWL16a-094.gvar"
 
 
-def run_isolated(script: str, home, *args) -> subprocess.CompletedProcess:
-    """Run @script with an empty HOME, so the data directory starts bare."""
+def isolated_env(home) -> dict[str, str]:
+    """Return the environment with HOME set to @home and NUMCOSMO_HOME and XDG_DATA_HOME removed."""
     env = dict(os.environ, HOME=str(home))
+    env.pop("NUMCOSMO_HOME", None)
+    env.pop("XDG_DATA_HOME", None)
+
+    return env
+
+
+def run_isolated(script: str, home, *args) -> subprocess.CompletedProcess:
+    """Run @script with an empty HOME, so the user data directory starts empty."""
+    env = isolated_env(home)
 
     return subprocess.run(
         [sys.executable, "-c", script, *args],
@@ -96,9 +106,9 @@ def test_concurrent_download_is_safe(tmp_path):
     NumCosmo process, so without a lock two transfers wrote one path while a
     third read it. The reader saw a truncated file and the process aborted.
     """
-    env = dict(os.environ, HOME=str(tmp_path))
+    env = isolated_env(tmp_path)
     procs = [
-        subprocess.Popen(  # pylint: disable=consider-using-with
+        subprocess.Popen(
             [sys.executable, "-c", _FETCH, TINY_ASSET],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -137,6 +147,58 @@ def test_a_failed_download_says_so(tmp_path):
     assert "this-asset-does-not-exist.fits" in result.stderr
 
 
+def test_a_dead_owners_lock_is_taken_over_at_once(tmp_path):
+    """A lock whose owner process no longer exists on this host is taken over at once.
+
+    A SIGKILL, the OOM killer or a CI timeout leaves the lock directory behind;
+    the next fetch reads its owner file, finds the process gone and takes the
+    lock over.
+    """
+    finished = subprocess.Popen(["true"])
+    finished.wait()
+
+    lock = tmp_path / ".numcosmo" / f"{TINY_ASSET}.lock"
+    lock.mkdir(parents=True)
+    (lock / "owner").write_text(f"{finished.pid}@{socket.gethostname()}\n")
+
+    start = time.monotonic()
+    result = subprocess.run(
+        [sys.executable, "-c", _FETCH, TINY_ASSET],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=isolated_env(tmp_path),
+        timeout=120,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert time.monotonic() - start < 60.0
+    assert (tmp_path / ".numcosmo" / TINY_ASSET).stat().st_size == 310
+    assert not lock.exists()
+
+
+def test_a_download_into_the_legacy_directory_says_so(tmp_path):
+    """A download into an existing ~/.numcosmo prints the deprecation notice."""
+    (tmp_path / ".numcosmo").mkdir()
+
+    result = run_isolated(_FETCH, tmp_path, TINY_ASSET)
+
+    assert result.returncode == 0, result.stderr
+    assert "is deprecated" in result.stdout
+    assert (tmp_path / ".numcosmo" / TINY_ASSET).stat().st_size == 310
+
+
+def test_a_download_into_the_xdg_directory_is_quiet(tmp_path):
+    """Without ~/.numcosmo the file goes to the XDG default and no notice is printed."""
+    result = run_isolated(_FETCH, tmp_path, TINY_ASSET)
+
+    assert result.returncode == 0, result.stderr
+    assert "is deprecated" not in result.stdout
+    assert (
+        tmp_path / ".local" / "share" / "numcosmo" / TINY_ASSET
+    ).stat().st_size == 310
+
+
 def test_a_failed_download_leaves_nothing_behind(tmp_path):
     """A failure must not poison the cache for every later run.
 
@@ -148,6 +210,8 @@ def test_a_failed_download_leaves_nothing_behind(tmp_path):
 
     assert not list(tmp_path.rglob("this-asset-does-not-exist.fits"))
     assert not list(tmp_path.rglob("*.part"))
+    # A lock left by the aborted fetch makes the next one wait 900 s.
+    assert not list(tmp_path.rglob("*.lock"))
 
 
 def test_a_partial_tree_is_replaced(tmp_path):
@@ -198,12 +262,12 @@ def test_a_waiter_uses_what_the_holder_produced(tmp_path):
     # Held by nobody, which is what a live download looks like from outside.
     (base / f"{TINY_ASSET}.lock").mkdir()
 
-    proc = subprocess.Popen(  # pylint: disable=consider-using-with
+    proc = subprocess.Popen(
         [sys.executable, "-c", _FETCH, TINY_ASSET],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        env=dict(os.environ, HOME=str(tmp_path)),
+        env=isolated_env(tmp_path),
     )
 
     try:
@@ -253,12 +317,12 @@ def test_wl_catalog_waits_for_the_holder(tmp_path):
     # Held by nobody, which is what a live download looks like from outside.
     (base / f"{WL_ASSET}.lock").mkdir()
 
-    proc = subprocess.Popen(  # pylint: disable=consider-using-with
+    proc = subprocess.Popen(
         [sys.executable, "-c", _FETCH_WL],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        env=dict(os.environ, HOME=str(tmp_path)),
+        env=isolated_env(tmp_path),
     )
 
     try:
@@ -287,7 +351,7 @@ def test_wl_catalog_waits_for_the_holder(tmp_path):
 
 
 def test_wl_catalog_already_there_is_not_refetched(tmp_path):
-    """A catalog already in the data directory is returned untouched."""
+    """A catalog already in the user data directory is returned untouched."""
     base = tmp_path / ".numcosmo"
     base.mkdir()
     target = base / WL_ASSET

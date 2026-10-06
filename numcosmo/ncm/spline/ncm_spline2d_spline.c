@@ -25,11 +25,16 @@
 /**
  * NcmSpline2dSpline:
  *
- * Implements bidimensional splines from splines method.
+ * Spline of splines on a rectangular grid.
  *
- * This object implements bidimensional splines with the method given by the #NcmSpline
- * class, e.g. #NcmSplineCubicNotaknot.
- *
+ * $z(x, y)$ is the spline in $y$, of the type of #NcmSpline2d:spline, through the values
+ * at $x$ of the splines in $x$ along the rows. The spline in $y$ is rebuilt when $x$
+ * changes, and the one used by ncm_spline2d_integ_dx() and ncm_spline2d_integ_dxdy() when
+ * the limits in $x$ change. The derivatives in $y$ are those of the spline in $y$; the
+ * derivatives involving $x$ come from splines in $y$ through the $x$-derivatives of the
+ * rows. These splines are kept in the object, so evaluation is not reentrant.
+ * ncm_spline2d_integ_dx_spline() and ncm_spline2d_integ_dy_spline() are not implemented
+ * and abort.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -46,16 +51,22 @@ struct _NcmSpline2dSpline
   NcmSpline2d parent_instance;
   gboolean first_prepare;
   gboolean first_prepare_integ;
+  gboolean first_prepare_dx;
   gdouble last_x;
+  gdouble last_x_dx;
   gdouble last_xl;
   gdouble last_xu;
   gdouble last_yl;
   gdouble last_yu;
   NcmVector *vertv;
   NcmVector *vertintv;
+  NcmVector *vertdxv;
+  NcmVector *vertdx2v;
   NcmSpline **s_hor;
   NcmSpline *s_ver;
   NcmSpline *s_ver_integ;
+  NcmSpline *s_ver_dx;
+  NcmSpline *s_ver_dx2;
   guint s_hor_len;
 };
 
@@ -66,16 +77,22 @@ ncm_spline2d_spline_init (NcmSpline2dSpline *s2ds)
 {
   s2ds->first_prepare       = FALSE;
   s2ds->first_prepare_integ = FALSE;
+  s2ds->first_prepare_dx    = FALSE;
   s2ds->last_x              = GSL_NAN;
+  s2ds->last_x_dx           = GSL_NAN;
   s2ds->last_xl             = GSL_NAN;
   s2ds->last_xu             = GSL_NAN;
   s2ds->last_yl             = GSL_NAN;
   s2ds->last_yu             = GSL_NAN;
   s2ds->vertv               = NULL;
   s2ds->vertintv            = NULL;
+  s2ds->vertdxv             = NULL;
+  s2ds->vertdx2v            = NULL;
   s2ds->s_hor               = NULL;
   s2ds->s_ver               = NULL;
   s2ds->s_ver_integ         = NULL;
+  s2ds->s_ver_dx            = NULL;
+  s2ds->s_ver_dx2           = NULL;
   s2ds->s_hor_len           = 0;
 }
 
@@ -87,12 +104,16 @@ _ncm_spline2d_spline_clear (NcmSpline2d *s2d)
 
   ncm_vector_clear (&s2ds->vertv);
   ncm_vector_clear (&s2ds->vertintv);
+  ncm_vector_clear (&s2ds->vertdxv);
+  ncm_vector_clear (&s2ds->vertdx2v);
 
   for (i = 0; i < s2ds->s_hor_len; i++)
     ncm_spline_clear (&s2ds->s_hor[i]);
 
   ncm_spline_clear (&s2ds->s_ver);
   ncm_spline_clear (&s2ds->s_ver_integ);
+  ncm_spline_clear (&s2ds->s_ver_dx);
+  ncm_spline_clear (&s2ds->s_ver_dx2);
 }
 
 static void
@@ -188,6 +209,8 @@ _ncm_spline2d_spline_alloc (NcmSpline2d *s2d)
 
   s2ds->vertv    = ncm_vector_new (s2ds->s_hor_len);
   s2ds->vertintv = ncm_vector_new (s2ds->s_hor_len);
+  s2ds->vertdxv  = ncm_vector_new (s2ds->s_hor_len);
+  s2ds->vertdx2v = ncm_vector_new (s2ds->s_hor_len);
 
   s2ds->s_hor = g_new0 (NcmSpline *, s2ds->s_hor_len);
 
@@ -201,6 +224,8 @@ _ncm_spline2d_spline_alloc (NcmSpline2d *s2d)
 
   s2ds->s_ver       = ncm_spline_new (s, yv, s2ds->vertv, FALSE);
   s2ds->s_ver_integ = ncm_spline_new (s, yv, s2ds->vertintv, FALSE);
+  s2ds->s_ver_dx    = ncm_spline_new (s, yv, s2ds->vertdxv, FALSE);
+  s2ds->s_ver_dx2   = ncm_spline_new (s, yv, s2ds->vertdx2v, FALSE);
 }
 
 static void
@@ -250,6 +275,7 @@ _ncm_spline2d_spline_prepare (NcmSpline2d *s2d)
 
   s2ds->first_prepare       = TRUE;
   s2ds->first_prepare_integ = TRUE;
+  s2ds->first_prepare_dx    = TRUE;
 }
 
 static gdouble
@@ -274,49 +300,89 @@ _ncm_spline2d_spline_eval (NcmSpline2d *s2d, gdouble x, gdouble y)
   return ncm_spline_eval (s2ds->s_ver, y);
 }
 
-/* LCOV_EXCL_START */
+/* The spline in y through the rows at x, shared with _eval */
+static NcmSpline *
+_ncm_spline2d_spline_peek_ver (NcmSpline2d *s2d, const gdouble x)
+{
+  NcmSpline2dSpline *s2ds = NCM_SPLINE2D_SPLINE (s2d);
+  guint i;
+
+  if ((s2ds->last_x != x) || s2ds->first_prepare)
+  {
+    for (i = 0; i < s2ds->s_hor_len; i++)
+      ncm_vector_set (s2ds->vertv, i, ncm_spline_eval (s2ds->s_hor[i], x));
+
+    ncm_spline_prepare (s2ds->s_ver);
+    s2ds->last_x        = x;
+    s2ds->first_prepare = FALSE;
+  }
+
+  return s2ds->s_ver;
+}
+
+/* The splines in y through the first and second x-derivatives of the rows at x */
+static void
+_ncm_spline2d_spline_prepare_dx (NcmSpline2d *s2d, const gdouble x)
+{
+  NcmSpline2dSpline *s2ds = NCM_SPLINE2D_SPLINE (s2d);
+  guint i;
+
+  if ((s2ds->last_x_dx != x) || s2ds->first_prepare_dx)
+  {
+    for (i = 0; i < s2ds->s_hor_len; i++)
+    {
+      ncm_vector_set (s2ds->vertdxv, i, ncm_spline_eval_deriv (s2ds->s_hor[i], x));
+      ncm_vector_set (s2ds->vertdx2v, i, ncm_spline_eval_deriv2 (s2ds->s_hor[i], x));
+    }
+
+    ncm_spline_prepare (s2ds->s_ver_dx);
+    ncm_spline_prepare (s2ds->s_ver_dx2);
+    s2ds->last_x_dx        = x;
+    s2ds->first_prepare_dx = FALSE;
+  }
+}
 
 static gdouble
 _ncm_spline2d_spline_dzdx (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
-  g_error ("spsp does not implement dzdx");
+  NcmSpline2dSpline *s2ds = NCM_SPLINE2D_SPLINE (s2d);
 
-  return 0.0;
+  _ncm_spline2d_spline_prepare_dx (s2d, x);
+
+  return ncm_spline_eval (s2ds->s_ver_dx, y);
 }
 
 static gdouble
 _ncm_spline2d_spline_dzdy (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
-  g_error ("spsp does not implement dzdy");
-
-  return 0.0;
+  return ncm_spline_eval_deriv (_ncm_spline2d_spline_peek_ver (s2d, x), y);
 }
 
 static gdouble
 _ncm_spline2d_spline_d2zdx2 (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
-  g_error ("spsp does not implement d2zdx2");
+  NcmSpline2dSpline *s2ds = NCM_SPLINE2D_SPLINE (s2d);
 
-  return 0.0;
+  _ncm_spline2d_spline_prepare_dx (s2d, x);
+
+  return ncm_spline_eval (s2ds->s_ver_dx2, y);
 }
 
 static gdouble
 _ncm_spline2d_spline_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
-  g_error ("spsp does not implement d2zdy2");
-
-  return 0.0;
+  return ncm_spline_eval_deriv2 (_ncm_spline2d_spline_peek_ver (s2d, x), y);
 }
 
 static gdouble
 _ncm_spline2d_spline_d2zdxy (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
-  g_error ("spsp does not implement d2zdxy");
+  NcmSpline2dSpline *s2ds = NCM_SPLINE2D_SPLINE (s2d);
 
-  return 0.0;
+  _ncm_spline2d_spline_prepare_dx (s2d, x);
+
+  return ncm_spline_eval_deriv (s2ds->s_ver_dx, y);
 }
-
-/* LCOV_EXCL_STOP */
 
 static gdouble
 _ncm_spline2d_spline_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y)
@@ -410,10 +476,9 @@ _ncm_spline2d_spline_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
  * ncm_spline2d_spline_new:
  * @s: a #NcmSpline
  *
- * This function initializes a #NcmSpline2d
- * object with a spline method given in @s.
+ * Creates an empty #NcmSpline2dSpline with @s as #NcmSpline2d:spline.
  *
- * Returns: A new #NcmSpline2d.
+ * Returns: (transfer full): a new #NcmSpline2d.
  */
 NcmSpline2d *
 ncm_spline2d_spline_new (NcmSpline *s)

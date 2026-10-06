@@ -6,7 +6,7 @@
  *  <vitenti@uel.br>
  ****************************************************************************/
 /*
- * ncm_dtuple.c
+ * ncm_dtuple.h
  * Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -72,16 +72,13 @@ void ncm_dtuple3_clear (NcmDTuple3 **dt3);
 
 /**
  * NCM_DTUPLE2_STATIC_INIT:
- * @x: The first element of the tuple
- * @y: The second element of the tuple
+ * @x: first element
+ * @y: second element
  *
- * Initializes a #NcmDTuple2 with the given elements.
- *
- * For example:
+ * Static initializer for a #NcmDTuple2:
  * |[<!-- language="C" -->
  * NcmDTuple2 tuple = NCM_DTUPLE2_STATIC_INIT (1.0, 2.0);
  * ]|
- *
  */
 #define NCM_DTUPLE2_STATIC_INIT(x, y) \
         {                             \
@@ -91,17 +88,14 @@ void ncm_dtuple3_clear (NcmDTuple3 **dt3);
 
 /**
  * NCM_DTUPLE3_STATIC_INIT:
- * @x: The first element of the tuple
- * @y: The second element of the tuple
- * @z: The third element of the tuple
+ * @x: first element
+ * @y: second element
+ * @z: third element
  *
- * Initializes a #NcmDTuple3 with the given elements.
- *
- * For example:
+ * Static initializer for a #NcmDTuple3:
  * |[<!-- language="C" -->
  * NcmDTuple3 tuple = NCM_DTUPLE3_STATIC_INIT (1.0, 2.0, 3.0);
  * ]|
- *
  */
 #define NCM_DTUPLE3_STATIC_INIT(x, y, z) \
         {                                \

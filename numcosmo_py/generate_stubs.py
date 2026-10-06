@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 """Generate stubs for numcosmo_py."""
 
-# pylint: disable=too-many-lines
 # Based on https://github.com/PyCQA/astroid/blob/main/astroid/brain/brain_gi.py
 # Licensed under the LGPL: https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html
 # For details: https://github.com/PyCQA/astroid/blob/main/LICENSE
 # Updated for numcosmo_py by Sandro Dias Pinto Vitenti <vitenti@uel.br> in July 2025
 
 from __future__ import annotations
-
-from typing import Any, Callable, Optional, Tuple, Type, Union, cast
 
 import argparse
 import importlib
@@ -18,33 +15,35 @@ import itertools
 import pprint
 import re
 import textwrap
+from collections.abc import Callable
 from types import ModuleType
+from typing import Any, cast
 
 import gi
 import gi._gi as GI
+
 from numcosmo_py import parse_pyi
 
 gi.require_version("GIRepository", "3.0")
 
 # pyright: reportMissingModuleSource=false
-# pylint:disable-next=wrong-import-position,unused-import,wrong-import-order
-from gi.repository import GIRepository  # noqa: E402
-
 # pyright: reportMissingModuleSource=false
-# pylint:disable-next=wrong-import-position,unused-import,wrong-import-order
-from gi.repository import GObject  # noqa: E402
+from gi.repository import (
+    GIRepository,
+    GObject,
+)
 
 _identifier_re = r"^[A-Za-z_]\w*$"
 
-ObjectT = Union[ModuleType, Type[Any]]  # pylint: disable=invalid-name
+ObjectT = ModuleType | type[Any]
 dunder_list = ["__getitem__", "__setitem__"]
 
 
 def _object_get_props(
     repo: GIRepository.Repository, obj: GI.ObjectInfo
-) -> Tuple[list[GIRepository.BaseInfo], list[GIRepository.BaseInfo]]:
+) -> tuple[list[GIRepository.BaseInfo], list[GIRepository.BaseInfo]]:
     parents: list[GI.ObjectInfo] = []
-    parent: Optional[GI.ObjectInfo] = obj.get_parent()
+    parent: GI.ObjectInfo | None = obj.get_parent()
     while parent:
         parents.append(parent)
         parent = parent.get_parent()
@@ -67,7 +66,6 @@ def _object_get_props(
             raise RuntimeError(f"Unable to find {namespace}.{container}")
 
         assert isinstance(class_info, GIRepository.ObjectInfo)
-        # pylint: disable-next=no-member
         if class_info.get_g_type().is_a(GObject.Object.__gtype__):  # type: ignore
             n_props = class_info.get_n_properties()
             for i in range(n_props):
@@ -98,7 +96,7 @@ def _callable_get_arguments(
     current_namespace: str,
     needed_namespaces: set[str],
     can_default: bool = False,
-) -> Tuple[list[str], list[str], list[str]]:
+) -> tuple[list[str], list[str], list[str]]:
     function_args = ltype.get_arguments()
     accept_optional_args = False
     optional_args_name = ""
@@ -418,10 +416,10 @@ def _build_function_info(
     current_namespace: str,
     name: str,
     function: GI.FunctionInfo | GI.VFuncInfo,
-    in_class: Optional[Any],
+    in_class: Any | None,
     needed_namespaces: set[str],
-    return_signature: Optional[str] = None,
-    comment: Optional[str] = None,
+    return_signature: str | None = None,
+    comment: str | None = None,
 ) -> str:
     constructor: bool = False
     method: bool = isinstance(function, GI.VFuncInfo)
@@ -483,7 +481,7 @@ def _wrapped_strip_boolean_result(
     current_namespace: str,
     name: str,
     function: Any,
-    in_class: Optional[Any],
+    in_class: Any | None,
     needed_namespaces: set[str],
 ) -> str:
     real_function = function.__wrapped__
@@ -528,17 +526,16 @@ def _build_function(
     current_namespace: str,
     name: str,
     function: Any,
-    in_class: Optional[Any],
+    in_class: Any | None,
     needed_namespaces: set[str],
 ) -> str:
     if name.startswith("_") and name not in dunder_list:
         return ""
 
-    if hasattr(function, "__wrapped__"):
-        if "strip_boolean_result" in str(function):
-            return _wrapped_strip_boolean_result(
-                current_namespace, name, function, in_class, needed_namespaces
-            )
+    if hasattr(function, "__wrapped__") and "strip_boolean_result" in str(function):
+        return _wrapped_strip_boolean_result(
+            current_namespace, name, function, in_class, needed_namespaces
+        )
 
     if isinstance(function, (GI.FunctionInfo, GI.VFuncInfo)):
         return _build_function_info(
@@ -560,7 +557,6 @@ def _build_function(
             # Replace first parameter with "self" and drop its annotation
             first = params[0].replace(
                 name="self",
-                # pylint: disable-next=protected-access
                 annotation=inspect._empty,  # type: ignore
             )
             params[0] = first
@@ -574,7 +570,7 @@ def _build_function(
 
 def _check_override(
     prefix: str, name: str, local_overrides: dict[str, str]
-) -> Optional[str]:
+) -> str | None:
     full_name = _generate_full_name(prefix, name)
     if full_name in local_overrides:
         return "# override\n" + local_overrides[full_name]
@@ -588,18 +584,18 @@ def _gi_build_stub(
     children: list[str],
     needed_namespaces: set[str],
     local_overrides: dict[str, str],
-    in_class: Optional[Any],
+    in_class: Any | None,
     prefix_name: str,
 ) -> str:
     """Build stubs for a GI module.
 
     Inspect the passed module recursively and build stubs for functions, classes, etc.
     """
-    classes: dict[str, Type[Any]] = {}
+    classes: dict[str, type[Any]] = {}
     functions: dict[str, Callable[..., Any]] = {}
     constants: dict[str, Any] = {}
-    flags: dict[str, Type[Any]] = {}
-    enums: dict[str, Type[Any]] = {}
+    flags: dict[str, type[Any]] = {}
+    enums: dict[str, type[Any]] = {}
 
     ret = ""
 
@@ -623,9 +619,12 @@ def _gi_build_stub(
                 enums[name] = obj
             else:
                 classes[name] = obj
-        elif inspect.isfunction(obj) or inspect.isbuiltin(obj):
-            functions[name] = obj
-        elif inspect.ismethod(obj) or inspect.ismethoddescriptor(obj):
+        elif (
+            inspect.isfunction(obj)
+            or inspect.isbuiltin(obj)
+            or inspect.ismethod(obj)
+            or inspect.ismethoddescriptor(obj)
+        ):
             functions[name] = obj
         elif callable(obj):
             # Fall back to a function for anything callable
@@ -978,7 +977,7 @@ def _gi_build_stub(
     return ret
 
 
-def _find_methods(obj: Type[Any]) -> list[str]:
+def _find_methods(obj: type[Any]) -> list[str]:
     mro = inspect.getmro(obj)
     main_name = _get_gname(mro[0])
 
@@ -1002,10 +1001,10 @@ def _find_methods(obj: Type[Any]) -> list[str]:
                 if name in dir(obj) and name not in obj_attrs:
                     obj_attrs.add(name)
 
-    return sorted(list(obj_attrs))
+    return sorted(obj_attrs)
 
 
-def _get_gname(obj: Type[Any]) -> Optional[str]:
+def _get_gname(obj: type[Any]) -> str | None:
     if not hasattr(obj, "__gtype__"):
         return None
     return obj.__gtype__.name  # type: ignore

@@ -38,47 +38,16 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmLHRatio2d, ncm_lh_ratio2d, NCM, LH_RATIO2D, GObject)
 
-/**
- * NcmLHRatio2dRoot:
- * @NCM_LH_RATIO2D_ROOT_BRACKET: Root finding by bracketing
- * @NCM_LH_RATIO2D_ROOT_NUMDIFF: Root finding by numerical differentiation
- *
- * Root finding methods used by #NcmLHRatio2d.
- *
- */
-typedef enum _NcmLHRatio2dRoot /*< prefix=NCM_LH_RATIO2D_ROOT >*/
-{
-  NCM_LH_RATIO2D_ROOT_BRACKET = 0,
-  NCM_LH_RATIO2D_ROOT_NUMDIFF,
-} NcmLHRatio2dRoot;
-
-
-/**
- * NcmLHRatio2dPoint:
- *
- * Boxed object containing a point in the 2d parameter space.
- *
- */
-typedef struct _NcmLHRatio2dPoint
-{
-  /*< private >*/
-  gdouble x;
-  gdouble y;
-  gdouble theta;
-  gdouble p1;
-  gdouble p2;
-} NcmLHRatio2dPoint;
-
 typedef struct _NcmLHRatio2dRegion NcmLHRatio2dRegion;
 
 /**
  * NcmLHRatio2dRegion:
- * @np: Number of points.
- * @p1: a #NcmVector containing points of parameter one.
- * @p2: a #NcmVector containing points of parameter two.
- * @clevel: the confidence level represented by the border.
+ * @np: number of points, the first repeated at the end
+ * @p1: values of the first parameter
+ * @p2: values of the second parameter
+ * @clevel: confidence level of the border
  *
- * Object describing a confidence region.
+ * Border of a two-dimensional confidence region, as a closed polygon.
  *
  */
 struct _NcmLHRatio2dRegion

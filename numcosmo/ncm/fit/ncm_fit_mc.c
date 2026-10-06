@@ -26,23 +26,19 @@
 /**
  * NcmFitMC:
  *
- * Monte Carlo analysis.
+ * Monte Carlo study of a best-fit estimator.
  *
- * This object implements a Monte Carlo analysis. This object is initialized
- * with a #NcmFit object and a #NcmMSet object. The #NcmFit object is used to
- * calculate the likelihood of the #NcmMSet object. The #NcmMSet object is
- * used to sample the parameter space.
+ * Each realization resamples the data of the fit's #NcmDataset, runs the fit from the
+ * fiducial parameters and stores $-2\ln L$, the best-fit free parameters and the values
+ * of the optional functions (#NcmFitMC:function-array) as a row of a #NcmMSetCatalog.
+ * The resampling is chosen by #NcmFitMCResampleType: from the fiducial model
+ * (#NcmFitMC:fiducial, ncm_dataset_resample()), or a bootstrap of the data, of each
+ * #NcmData separately or of all of them together. The catalog then holds the
+ * distribution of the estimator, e.g. its mean and covariance (ncm_fit_mc_mean_covar()).
  *
- * The #NcmFitMC object will resample the likelihood using the input #NcmMSet
- * object as a fiducial model. The resampling can be done in three ways:
- * #NCM_FIT_MC_RESAMPLE_FROM_MODEL, #NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX and
- * #NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX. The first option will resample the
- * likelihood from the input #NcmMSet object. The other two options will
- * resample the likelihood from the original likelihood data using bootstrap
- * resampling. The difference between the last two options is that the
- * #NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX will resample each #NcmData separately
- * while the #NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX will resample all #NcmData
- * together.
+ * A run is started with ncm_fit_mc_start_run(), extended with ncm_fit_mc_run() or
+ * ncm_fit_mc_run_lre() and closed with ncm_fit_mc_end_run(). With a data file the
+ * catalog is saved during the run and a restarted run continues from its last row.
  *
  */
 
@@ -390,8 +386,8 @@ ncm_fit_mc_class_init (NcmFitMCClass *klass)
  * @rtype: a #NcmFitMCResampleType
  * @mtype: a #NcmFitRunMsgs
  *
- * Creates a new #NcmFitMC object with the fit object @fit, the resample type
- * @rtype and the run messages type @mtype.
+ * Creates a #NcmFitMC for @fit with resampling @rtype and messages @mtype. The
+ * fiducial model is a copy of the model set of @fit.
  *
  * Returns: (transfer full): a new #NcmFitMC.
  */
@@ -412,11 +408,10 @@ ncm_fit_mc_new (NcmFit *fit, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype)
  * @fit: a #NcmFit
  * @rtype: a #NcmFitMCResampleType
  * @mtype: a #NcmFitRunMsgs
- * @funcs_array: a #NcmObjArray
+ * @funcs_array: a #NcmObjArray of scalar constant #NcmMSetFunc
  *
- * Creates a new #NcmFitMC object with the fit object @fit, the resample type
- * @rtype and the run messages type @mtype. The functions array @funcs_array
- * is used to compute extra columns in the catalog.
+ * Creates a #NcmFitMC as ncm_fit_mc_new(), with one more catalog column per function
+ * of @funcs_array, evaluated at each best fit.
  *
  * Returns: (transfer full): a new #NcmFitMC.
  */
@@ -437,9 +432,7 @@ ncm_fit_mc_new_funcs_array (NcmFit *fit, NcmFitMCResampleType rtype, NcmFitRunMs
  * ncm_fit_mc_free:
  * @mc: a #NcmFitMC
  *
- * Decrement the reference count atomically by one. If the reference count
- * reaches zero, all memory allocated by the object is released and the object
- * is freed.
+ * Decreases the reference count of @mc.
  *
  */
 void
@@ -452,10 +445,7 @@ ncm_fit_mc_free (NcmFitMC *mc)
  * ncm_fit_mc_clear:
  * @mc: a #NcmFitMC
  *
- * When this function is invoked, it first checks whether *@mc is not %NULL. If *@mc is
- * not NULL, the function reduces the reference count of *@mc by one. If the reference
- * count reaches zero, all memory allocated by the object is released, the object is
- * freed, and *@mc is set to %NULL.
+ * Decreases the reference count of *@mc and sets it to %NULL.
  */
 void
 ncm_fit_mc_clear (NcmFitMC **mc)
@@ -468,15 +458,19 @@ static void ncm_fit_mc_intern_skip (NcmFitMC *mc, guint n);
 /**
  * ncm_fit_mc_set_data_file:
  * @mc: a #NcmFitMC
- * @filename: a filename
+ * @filename: a file name
  *
- * Sets the data file to be used by the #NcmMSetCatalog object of @mc.
+ * Makes @filename the file of the catalog of @mc (ncm_mset_catalog_set_file()). During
+ * a run, the realizations the file already holds are skipped; changing the file of a
+ * running catalog aborts.
  *
  */
 void
 ncm_fit_mc_set_data_file (NcmFitMC *mc, const gchar *filename)
 {
   const gchar *cur_filename = ncm_mset_catalog_peek_filename (mc->mcat);
+
+  g_assert_nonnull (filename);
 
   if (mc->started && (cur_filename != NULL))
     g_error ("ncm_fit_mc_set_data_file: Cannot change data file during a run, call ncm_fit_mc_end_run() first.");
@@ -498,7 +492,7 @@ ncm_fit_mc_set_data_file (NcmFitMC *mc, const gchar *filename)
     }
     else if (mcat_cur_id < mc->cur_sample_id)
     {
-      g_error ("ncm_fit_mc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].",
+      g_error ("ncm_fit_mc_set_data_file: the catalog has fewer rows than the run [%d < %d].",
                mcat_cur_id, mc->cur_sample_id);
     }
   }
@@ -537,15 +531,19 @@ _ncm_fit_mc_resample (NcmFitMC *mc, NcmFit *fit)
  * @mc: a #NcmFitMC
  * @rtype: a #NcmFitMCResampleType
  *
- * Sets the resample type of @mc to @rtype.
+ * Sets the resampling of @mc to @rtype, which also sets the bootstrap mode of the
+ * dataset. Calling it during a run aborts.
  *
  */
 void
 ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype)
 {
-  const GEnumValue *eval = ncm_cfg_enum_get_value (NCM_TYPE_FIT_MC_RESAMPLE_TYPE, rtype);
-  NcmLikelihood *lh      = ncm_fit_peek_likelihood (mc->fit);
-  NcmDataset *dset       = ncm_likelihood_peek_dataset (lh);
+  NcmLikelihood *lh = ncm_fit_peek_likelihood (mc->fit);
+  NcmDataset *dset  = ncm_likelihood_peek_dataset (lh);
+  const GEnumValue *eval;
+
+  g_assert_cmpint (rtype, <, NCM_FIT_MC_RESAMPLE_BOOTSTRAP_LEN);
+  eval = ncm_cfg_enum_get_value (NCM_TYPE_FIT_MC_RESAMPLE_TYPE, rtype);
 
   if (mc->started)
     g_error ("ncm_fit_mc_set_rtype: Cannot change resample type during a run, call ncm_fit_mc_end_run() first.");
@@ -626,15 +624,13 @@ ncm_fit_mc_keep_order (NcmFitMC *mc, gboolean keep_order)
 /**
  * ncm_fit_mc_set_fiducial:
  * @mc: a #NcmFitMC
- * @fiduc: a #NcmMSet
+ * @fiduc: (nullable): a #NcmMSet
  *
- * Sets the fiducial model of @mc to @fiduc. If @fiduc is %NULL, the fiducial
- * model is set to the model set of the fit object of @mc. If @fiduc is not
- * %NULL, the fiducial model is set to @fiduc. If @fiduc is not %NULL, it must
- * be equal to the model set of the fit object of @mc.
- *
- * Note that in the end of an analysis, the #NcmMSet in @mc will be equal to
- * the last sampled model set.
+ * Makes @fiduc the fiducial model of @mc: the model the data are resampled from and
+ * whose parameters start every fit. %NULL, or the model set of the fit itself, selects a
+ * copy of the model set of the fit; any other @fiduc must have the same models and
+ * parameters (ncm_mset_cmp()). After a run the model set of the fit holds the last best
+ * fit.
  *
  */
 void
@@ -661,7 +657,9 @@ ncm_fit_mc_set_fiducial (NcmFitMC *mc, NcmMSet *fiduc)
  * @mc: a #NcmFitMC
  * @rng: a #NcmRNG
  *
- * Sets the RNG object of @mc to @rng.
+ * Makes @rng the random number generator of the catalog of @mc, used by the
+ * resampling. Calling it during a run aborts; a run started without one creates one
+ * with a random seed.
  *
  */
 void
@@ -677,10 +675,8 @@ ncm_fit_mc_set_rng (NcmFitMC *mc, NcmRNG *rng)
  * ncm_fit_mc_is_running:
  * @mc: a #NcmFitMC
  *
- * Checks whether a run is running, that is whether ncm_fit_mc_start_run()
- * was called and ncm_fit_mc_end_run() was not called yet.
- *
- * Returns: %TRUE if a run is running, %FALSE otherwise.
+ * Returns: whether ncm_fit_mc_start_run() was called without a later
+ *   ncm_fit_mc_end_run()
  */
 gboolean
 ncm_fit_mc_is_running (NcmFitMC *mc)
@@ -688,9 +684,9 @@ ncm_fit_mc_is_running (NcmFitMC *mc)
   return mc->started;
 }
 
-void _ncm_fit_mc_update_post (NcmFitMC *mc);
+static void _ncm_fit_mc_update_post (NcmFitMC *mc);
 
-void
+static void
 _ncm_fit_mc_update_from_theta (NcmFitMC *mc, NcmVector *theta)
 {
   ncm_mset_catalog_add_from_vector (mc->mcat, theta);
@@ -698,7 +694,7 @@ _ncm_fit_mc_update_from_theta (NcmFitMC *mc, NcmVector *theta)
   _ncm_fit_mc_update_post (mc);
 }
 
-void
+static void
 _ncm_fit_mc_update_post (NcmFitMC *mc)
 {
   const guint part = 5;
@@ -745,7 +741,7 @@ _ncm_fit_mc_update_post (NcmFitMC *mc)
   }
 }
 
-void
+static void
 _ncm_fit_mc_resample_bstrap (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng)
 {
   ncm_dataset_bootstrap_resample (dset, rng);
@@ -755,14 +751,10 @@ _ncm_fit_mc_resample_bstrap (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng)
  * ncm_fit_mc_start_run:
  * @mc: a #NcmFitMC
  *
- * Starts a Monte Carlo run. This function will start a Monte Carlo run
- * using the #NcmFit object and the #NcmMSet object of @mc.
- *
- * This method will not compute the any likelihood. It will only start
- * the run. To compute samples, call ncm_fit_mc_run() or ncm_fit_mc_run_lre()
- * after this function.
- *
- * To finish the run, call ncm_fit_mc_end_run().
+ * Starts a run: records the fiducial parameters, creates a random number generator if
+ * the catalog has none, and skips the realizations the catalog already holds. It
+ * computes no realization; ncm_fit_mc_run() or ncm_fit_mc_run_lre() do. Starting a
+ * running @mc aborts.
  *
  */
 void
@@ -832,7 +824,7 @@ ncm_fit_mc_start_run (NcmFitMC *mc)
   }
   else if (mcat_cur_id < mc->cur_sample_id)
   {
-    g_error ("ncm_fit_mc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].",
+    g_error ("ncm_fit_mc_start_run: the catalog has fewer rows than the run [%d < %d].",
              mcat_cur_id, mc->cur_sample_id);
   }
 }
@@ -841,8 +833,7 @@ ncm_fit_mc_start_run (NcmFitMC *mc)
  * ncm_fit_mc_end_run:
  * @mc: a #NcmFitMC
  *
- * Ends a Monte Carlo run. This function will end a Monte Carlo run
- * using the #NcmFit object and the #NcmMSet object of @mc.
+ * Ends the run: saves the catalog and disables the dataset bootstrap.
  *
  */
 void
@@ -857,10 +848,7 @@ ncm_fit_mc_end_run (NcmFitMC *mc)
   ncm_mset_catalog_sync (mc->mcat, TRUE);
   ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_DISABLE);
 
-  /* Releases any object(s) register_shared() anchored for this run (not
-   * just the autosave-only entries dup_fit's own reset(TRUE) calls leave
-   * alone), so a long-lived mc reused across many runs doesn't keep a
-   * stale shared object alive between them. */
+  /* Releases the objects ncm_dataset_register_shared() kept for this run. */
   ncm_serialize_reset (mc->ser, FALSE);
 
   mc->started = FALSE;
@@ -870,8 +858,8 @@ ncm_fit_mc_end_run (NcmFitMC *mc)
  * ncm_fit_mc_reset:
  * @mc: a #NcmFitMC
  *
- * Resets the Monte Carlo run. This function will reset the Monte Carlo run
- * erase all samples and reset the catalog.
+ * Erases all realizations: the catalog is emptied and the next run starts from the
+ * first realization.
  *
  */
 void
@@ -912,8 +900,8 @@ ncm_fit_mc_intern_skip (NcmFitMC *mc, guint n)
  * @mc: a #NcmFitMC
  * @first_sample_id: first sample id
  *
- * Sets the first sample id of the Monte Carlo run to @first_sample_id.
- * This function will skip all samples until it reaches the @first_sample_id.
+ * Makes @first_sample_id the index of the first realization of the catalog, skipping
+ * the realizations before it. It requires a started run and cannot move backwards.
  *
  */
 void
@@ -941,10 +929,11 @@ static void _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data);
 /**
  * ncm_fit_mc_run:
  * @mc: a #NcmFitMC
- * @n: total number of realizations to run
+ * @n: total number of realizations
  *
- * Runs the Monte Carlo until it reaches the @n-th realization. Note that
- * if the first_id is non-zero it will run @n - first_id realizations.
+ * Computes realizations until the run holds @n of them, counting those already done
+ * and skipped. It requires a started run; with #NcmFitMC:use-threads the fits run in
+ * OpenMP threads, each with its own copy of the fit.
  *
  */
 void
@@ -1096,17 +1085,10 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
     {
       ncm_mset_param_set_vector (mset, mc->bf);
 
-      /* mc->keep_order is fixed for the whole run (set before this parallel
-       * region starts), so every iteration takes the same branch -- this
-       * uniform control flow is required for the "omp ordered" construct's
-       * per-iteration sequencing to be well defined. With keep_order, the
-       * "ordered" region forces resample calls (and thus sample_index
-       * assignment) to happen in strict loop-iteration order across all
-       * threads, regardless of which thread executes which j -- making the
-       * catalog's row order deterministic and reproducible. Without it,
-       * "critical" only serializes access to the shared RNG/counter, so
-       * sample_index ends up in thread-scheduling arrival order instead
-       * (see ncm_fit_mc_keep_order()). */
+      /* keep_order is fixed for the run, so every iteration takes the same branch, as
+       * "omp ordered" requires. With it the resamplings (and the sample indices) follow
+       * the loop order; without it "critical" only serializes the shared RNG and
+       * counter, and the indices follow the thread arrival order. */
       if (mc->keep_order)
       {
         #pragma omp ordered
@@ -1206,8 +1188,9 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
  * @prerun: number of pre-runs
  * @lre: largest relative error
  *
- * Runs the Monte Carlo until the largest relative error considering the errors on the
- * parameter means is less than @lre.
+ * Computes at least @prerun realizations (100 when zero), then more until the largest
+ * relative error of the parameter means (ncm_mset_catalog_largest_error()) is below
+ * @lre.
  *
  */
 void
@@ -1258,10 +1241,9 @@ ncm_fit_mc_run_lre (NcmFitMC *mc, guint prerun, gdouble lre)
  * ncm_fit_mc_mean_covar:
  * @mc: a #NcmFitMC
  *
- * Computes the mean and covariance of the Monte Carlo run.
- * The mean and covariance are stored in the #NcmFit object of @mc.
- * The mean is stored in the #NcmFitState object of the #NcmFit object
- * and in the #NcmMSetCatalog object of @mc.
+ * Stores the mean and covariance of the best fits in the catalog as the parameters and
+ * covariance of the #NcmFitState of the fit, and sets the model set of the catalog to
+ * the mean.
  *
  */
 void
@@ -1283,9 +1265,7 @@ ncm_fit_mc_mean_covar (NcmFitMC *mc)
  * ncm_fit_mc_get_catalog:
  * @mc: a #NcmFitMC
  *
- * Gets the generated catalog of @mc.
- *
- * Returns: (transfer full): the generated catalog.
+ * Returns: (transfer full): the catalog of @mc
  */
 NcmMSetCatalog *
 ncm_fit_mc_get_catalog (NcmFitMC *mc)
@@ -1297,9 +1277,7 @@ ncm_fit_mc_get_catalog (NcmFitMC *mc)
  * ncm_fit_mc_peek_catalog:
  * @mc: a #NcmFitMC
  *
- * Peeks the generated catalog of @mc.
- *
- * Returns: (transfer none): the generated catalog.
+ * Returns: (transfer none): the catalog of @mc
  */
 NcmMSetCatalog *
 ncm_fit_mc_peek_catalog (NcmFitMC *mc)

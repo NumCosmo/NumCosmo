@@ -26,15 +26,19 @@
 /**
  * NcmMSetFuncList:
  *
- * NcmMSet Functions list.
+ * A #NcmMSetFunc chosen by name from a registry of C functions.
  *
- * This object is a subclass of #NcmMSetFunc, designed to manage a list of functions. To
- * register these functions, the #ncm_mset_func_list_register function is employed.
- * Selection of functions is accomplished through the use of the
- * ncm_mset_func_list_select() function. Additionally, external objects have the
- * capability to register functions by utilizing the #ncm_mset_func_list_register
- * function.
+ * Model classes register their functions with ncm_mset_func_list_register(), each
+ * under a namespace and a name, for instance "NcHICosmo:H". A #NcmMSetFuncList is
+ * built from that full name with ncm_mset_func_list_new() and takes the metadata
+ * of the registered function. Some functions also need an object of a given type,
+ * passed as the #NcmMSetFuncList:object property.
  *
+ * ncm_mset_func_list_select() lists the registered functions.
+ * ncm_mset_func_list_new_ns_name() and ncm_mset_func_list_has_ns_name() also accept
+ * a namespace prefix, such as "NcHICosmo" for a function registered in
+ * "NcHICosmoDE"; an exact namespace wins, and a name found under several
+ * namespaces with that prefix is ambiguous.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -51,17 +55,15 @@ enum
   PROP_OBJECT,
 };
 
-
 typedef struct _NcmMSetFuncListPrivate
 {
-  /*< private >*/
-  NcmMSetFunc parent_instance;
   GType obj_type;
   NcmMSetFuncListN func;
   GObject *obj;
 } NcmMSetFuncListPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetFuncList, ncm_mset_func_list, NCM_TYPE_MSET_FUNC)
+G_DEFINE_BOXED_TYPE (NcmMSetFuncListStruct, ncm_mset_func_list_struct, ncm_mset_func_list_struct_copy, ncm_mset_func_list_struct_free)
 
 static void
 ncm_mset_func_list_init (NcmMSetFuncList *flist)
@@ -87,18 +89,36 @@ _ncm_mset_func_list_set_property (GObject *object, guint prop_id, const GValue *
   switch (prop_id)
   {
     case PROP_FULL_NAME:
-      _ncm_mset_func_list_init_from_full_name (flist, g_value_get_string (value));
+    {
+      const gchar *full_name = g_value_get_string (value);
+
+      if (full_name == NULL)
+        g_error ("_ncm_mset_func_list_set_property: a NcmMSetFuncList needs the full name "
+                 "`namespace:name' of a registered function.");
+
+      _ncm_mset_func_list_init_from_full_name (flist, full_name);
       break;
+    }
     case PROP_OBJECT:
+      g_clear_object (&self->obj);
       self->obj = g_value_dup_object (value);
 
       if (self->obj != NULL)
-        g_assert (g_type_is_a (G_OBJECT_TYPE (self->obj), self->obj_type));
+      {
+        if (!g_type_is_a (G_OBJECT_TYPE (self->obj), self->obj_type))
+          g_error ("_ncm_mset_func_list_set_property: function `%s:%s' requires an object of type `%s', but got a `%s'.",
+                   ncm_mset_func_peek_ns (func),
+                   ncm_mset_func_peek_name (func),
+                   g_type_name (self->obj_type),
+                   G_OBJECT_TYPE_NAME (self->obj));
+      }
       else if (self->obj_type != G_TYPE_NONE)
-        g_error ("_ncm_mset_func_list_set_property: object %s:%s requires an object `%s'.",
+      {
+        g_error ("_ncm_mset_func_list_set_property: function `%s:%s' requires an object of type `%s'.",
                  ncm_mset_func_peek_ns (func),
                  ncm_mset_func_peek_name (func),
                  g_type_name (self->obj_type));
+      }
 
       break;
     default:                                                      /* LCOV_EXCL_LINE */
@@ -148,15 +168,6 @@ _ncm_mset_func_list_dispose (GObject *object)
   G_OBJECT_CLASS (ncm_mset_func_list_parent_class)->dispose (object);
 }
 
-static void
-_ncm_mset_func_list_finalize (GObject *object)
-{
-  /*NcmMSetFuncList *flist = NCM_MSET_FUNC_LIST (object);*/
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_mset_func_list_parent_class)->finalize (object);
-}
-
 static void _ncm_mset_func_list_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res);
 
 static void
@@ -168,15 +179,27 @@ ncm_mset_func_list_class_init (NcmMSetFuncListClass *klass)
   object_class->set_property = &_ncm_mset_func_list_set_property;
   object_class->get_property = &_ncm_mset_func_list_get_property;
   object_class->dispose      = &_ncm_mset_func_list_dispose;
-  object_class->finalize     = &_ncm_mset_func_list_finalize;
 
+  /**
+   * NcmMSetFuncList:full-name:
+   *
+   * The full name `namespace:name' of the registered function, required at
+   * construction.
+   */
   g_object_class_install_property (object_class,
                                    PROP_FULL_NAME,
                                    g_param_spec_string ("full-name",
                                                         NULL,
                                                         "Namespace and function name",
-                                                        "NULL",
+                                                        NULL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetFuncList:object:
+   *
+   * The object the registered function needs, of the type given at registration,
+   * or %NULL for a function that needs none.
+   */
   g_object_class_install_property (object_class,
                                    PROP_OBJECT,
                                    g_param_spec_object ("object",
@@ -195,46 +218,38 @@ G_LOCK_DEFINE_STATIC (insert_lock);
 static void
 _ncm_mset_func_list_init_from_full_name (NcmMSetFuncList *flist, const gchar *full_name)
 {
+  NcmMSetFuncListPrivate * const self = ncm_mset_func_list_get_instance_private (flist);
+  NcmMSetFunc *func                   = NCM_MSET_FUNC (flist);
+  NcmMSetFuncListClass *flist_class   = g_type_class_ref (NCM_TYPE_MSET_FUNC_LIST);
+  gchar **ns_name                     = g_strsplit (full_name, ":", 2);
+
+  if (g_strv_length (ns_name) != 2)
+    g_error ("_ncm_mset_func_list_init_from_full_name: invalid full name `%s', expected `namespace:name'.", full_name);
+
   G_LOCK (insert_lock);
   {
-    NcmMSetFuncListPrivate * const self = ncm_mset_func_list_get_instance_private (flist);
-    NcmMSetFunc *func                   = NCM_MSET_FUNC (flist);
-    NcmMSetFuncListClass *flist_class   = g_type_class_ref (NCM_TYPE_MSET_FUNC_LIST);
-
-    gchar **ns_name       = g_strsplit (full_name, ":", 2);
     GHashTable *func_hash = g_hash_table_lookup (flist_class->ns_hash, ns_name[0]);
-
-    if (g_strv_length (ns_name) != 2)
-      g_error ("_ncm_mset_func_list_init_from_full_name: invalid full_name `%s'.", full_name);
+    gpointer fdata_i;
 
     if (func_hash == NULL)
-    {
       g_error ("_ncm_mset_func_list_init_from_full_name: namespace `%s' not found.", ns_name[0]);
-    }
-    else
+
+    if (!g_hash_table_lookup_extended (func_hash, ns_name[1], NULL, &fdata_i))
+      g_error ("_ncm_mset_func_list_init_from_full_name: name `%s' not found in namespace `%s'.", ns_name[1], ns_name[0]);
+
     {
-      gpointer fdata_i;
+      NcmMSetFuncListStruct *fdata = &g_array_index (flist_class->func_array, NcmMSetFuncListStruct, GPOINTER_TO_INT (fdata_i));
 
-      if (g_hash_table_lookup_extended (func_hash, ns_name[1], NULL, &fdata_i))
-      {
-        NcmMSetFuncListStruct *fdata = &g_array_index (flist_class->func_array, NcmMSetFuncListStruct, GPOINTER_TO_INT (fdata_i));
+      ncm_mset_func_set_meta (func, fdata->name, fdata->symbol, fdata->ns, fdata->desc, fdata->nvar, fdata->dim);
 
-        ncm_mset_func_set_meta (func, fdata->name, fdata->symbol, fdata->ns, fdata->desc, fdata->nvar, fdata->dim);
-
-        self->obj_type = fdata->obj_type;
-        self->func     = fdata->func;
-      }
-      else
-      {
-        g_error ("_ncm_mset_func_list_init_from_full_name: name `%s' not found in namespace `%s'.", ns_name[1], ns_name[0]);
-      }
+      self->obj_type = fdata->obj_type;
+      self->func     = fdata->func;
     }
-
-    g_strfreev (ns_name);
-
-    g_type_class_unref (flist_class);
   }
   G_UNLOCK (insert_lock);
+
+  g_strfreev (ns_name);
+  g_type_class_unref (flist_class);
 }
 
 static void
@@ -304,16 +319,15 @@ ncm_mset_func_list_register (const gchar *name, const gchar *symbol, const gchar
 
 /**
  * ncm_mset_func_list_select:
- * @ns: (allow-none): namespace
- * @nvar: number of variables
- * @dim: function dimension
+ * @ns: (allow-none): namespace prefix
+ * @nvar: number of variables, or -1 for any
+ * @dim: function dimension, or -1 for any
  *
- * Selects the NcmMSetFuncListStruct array containing the function
- * in the namespace @ns with @nvar and @dim. If @ns is NULL then
- * gets from all namespaces, @nvar and/or @dim equals to -1 selects
- * any value. The contained strings must not be freed.
+ * Lists the registered functions whose namespace starts with @ns, or all of them if
+ * @ns is %NULL, with @nvar variables and dimension @dim. The strings of the
+ * elements belong to the registry and must not be freed.
  *
- * Returns: (transfer container) (element-type NcmMSetFuncListStruct): NcmMSetFuncListStruct array.
+ * Returns: (transfer container) (element-type NcmMSetFuncListStruct): the matching functions.
  */
 GArray *
 ncm_mset_func_list_select (const gchar *ns, gint nvar, gint dim)
@@ -349,6 +363,35 @@ ncm_mset_func_list_select (const gchar *ns, gint nvar, gint dim)
 }
 
 /**
+ * ncm_mset_func_list_struct_copy:
+ * @fdata: a #NcmMSetFuncListStruct
+ *
+ * Copies @fdata. The copy shares the strings of @fdata, which belong to the
+ * registry and live for the whole program.
+ *
+ * Returns: (transfer full): a copy of @fdata.
+ */
+NcmMSetFuncListStruct *
+ncm_mset_func_list_struct_copy (const NcmMSetFuncListStruct *fdata)
+{
+  return g_memdup2 (fdata, sizeof (NcmMSetFuncListStruct));
+}
+
+/**
+ * ncm_mset_func_list_struct_free:
+ * @fdata: a #NcmMSetFuncListStruct
+ *
+ * Frees a copy made by ncm_mset_func_list_struct_copy(); the shared strings are
+ * not freed.
+ *
+ */
+void
+ncm_mset_func_list_struct_free (NcmMSetFuncListStruct *fdata)
+{
+  g_free (fdata);
+}
+
+/**
  * ncm_mset_func_list_new:
  * @full_name: function full name
  * @obj: (allow-none): associated object
@@ -371,13 +414,59 @@ ncm_mset_func_list_new (const gchar *full_name, GObject *obj)
 }
 
 /**
+ * ncm_mset_func_list_ref:
+ * @flist: a #NcmMSetFuncList
+ *
+ * Increases the reference count of @flist by one.
+ *
+ * Returns: (transfer full): @flist.
+ */
+NcmMSetFuncList *
+ncm_mset_func_list_ref (NcmMSetFuncList *flist)
+{
+  return g_object_ref (flist);
+}
+
+/**
+ * ncm_mset_func_list_free:
+ * @flist: a #NcmMSetFuncList
+ *
+ * Decreases the reference count of @flist by one. If the reference count reaches
+ * zero, @flist is freed.
+ *
+ */
+void
+ncm_mset_func_list_free (NcmMSetFuncList *flist)
+{
+  g_object_unref (flist);
+}
+
+/**
+ * ncm_mset_func_list_clear:
+ * @flist: a #NcmMSetFuncList
+ *
+ * If *@flist is not %NULL, decreases the reference count of *@flist by one and
+ * sets *@flist to %NULL.
+ *
+ */
+void
+ncm_mset_func_list_clear (NcmMSetFuncList **flist)
+{
+  g_clear_object (flist);
+}
+
+static const gchar *_ncm_mset_func_list_find_ns (NcmMSetFuncListClass *flist_class, const gchar *ns, const gchar *name);
+
+/**
  * ncm_mset_func_list_new_ns_name:
- * @ns: function namespace
+ * @ns: function namespace or namespace prefix
  * @name: function name
  * @obj: (allow-none): associated object
  *
- * Creates a new instance of #NcmMSetFuncList based on the provided @ns and @name.
- * The @obj must match the type as the registered object.
+ * Creates a new #NcmMSetFuncList for the function @name. If @ns has no function
+ * @name, the function is looked up in the namespaces starting with @ns; it aborts
+ * if none or several of them have it. The @obj must have the type given at
+ * registration.
  *
  * Returns: (transfer full): newly created #NcmMSetFuncList.
  */
@@ -385,40 +474,24 @@ NcmMSetFuncList *
 ncm_mset_func_list_new_ns_name (const gchar *ns, const gchar *name, GObject *obj)
 {
   NcmMSetFuncListClass *flist_class = g_type_class_ref (NCM_TYPE_MSET_FUNC_LIST);
-  const gchar *full_ns              = NULL;
+  gchar *full_name                  = NULL;
 
   G_LOCK (insert_lock);
   {
-    guint i;
+    const gchar *full_ns = _ncm_mset_func_list_find_ns (flist_class, ns, name);
 
-    for (i = 0; i < flist_class->func_array->len; i++)
-    {
-      NcmMSetFuncListStruct *fdata = &g_array_index (flist_class->func_array, NcmMSetFuncListStruct, i);
+    if (full_ns == NULL)
+      g_error ("ncm_mset_func_list_new_ns_name: function `%s' not found in namespace `%s' "
+               "nor in any namespace starting with it.",
+               name, ns);
 
-      if (g_str_has_prefix (fdata->ns, ns))
-      {
-        GHashTable *func_hash = g_hash_table_lookup (flist_class->ns_hash, fdata->ns);
-
-        if ((func_hash != NULL) && g_hash_table_lookup_extended (func_hash, name, NULL, NULL))
-        {
-          full_ns = fdata->ns;
-          break;
-        }
-      }
-    }
+    full_name = g_strdup_printf ("%s:%s", full_ns, name);
   }
   G_UNLOCK (insert_lock);
   g_type_class_unref (flist_class);
 
-  if (full_ns == NULL)
-    g_error ("ncm_mset_func_list_new_ns_name: namespace `%s' not found.", ns);
-
   {
-    gchar *full_name       = g_strdup_printf ("%s:%s", full_ns, name);
-    NcmMSetFuncList *flist = g_object_new (NCM_TYPE_MSET_FUNC_LIST,
-                                           "full-name", full_name,
-                                           "object", obj,
-                                           NULL);
+    NcmMSetFuncList *flist = ncm_mset_func_list_new (full_name, obj);
 
     g_free (full_name);
 
@@ -428,38 +501,23 @@ ncm_mset_func_list_new_ns_name (const gchar *ns, const gchar *name, GObject *obj
 
 /**
  * ncm_mset_func_list_has_ns_name:
- * @ns: function namespace
+ * @ns: function namespace or namespace prefix
  * @name: function name
  *
- * Check if function @name exists in @ns.
+ * Checks if function @name exists in @ns or, as in
+ * ncm_mset_func_list_new_ns_name(), in a namespace starting with @ns. Aborts if
+ * several namespaces starting with @ns have @name.
  *
- * Returns: whether the function @name exists in @ns.
+ * Returns: whether the function @name exists.
  */
 gboolean
 ncm_mset_func_list_has_ns_name (const gchar *ns, const gchar *name)
 {
   NcmMSetFuncListClass *flist_class = g_type_class_ref (NCM_TYPE_MSET_FUNC_LIST);
-  gboolean has_func                 = FALSE;
+  gboolean has_func;
 
   G_LOCK (insert_lock);
-
-  {
-    guint i;
-
-    for (i = 0; i < flist_class->func_array->len; i++)
-    {
-      NcmMSetFuncListStruct *fdata = &g_array_index (flist_class->func_array, NcmMSetFuncListStruct, i);
-
-      if (g_str_has_prefix (fdata->ns, ns))
-      {
-        GHashTable *func_hash = g_hash_table_lookup (flist_class->ns_hash, fdata->ns);
-
-        if ((func_hash != NULL) && g_hash_table_lookup_extended (func_hash, name, NULL, NULL))
-          has_func = TRUE;
-      }
-    }
-  }
-
+  has_func = (_ncm_mset_func_list_find_ns (flist_class, ns, name) != NULL);
   G_UNLOCK (insert_lock);
 
   g_type_class_unref (flist_class);
@@ -467,33 +525,95 @@ ncm_mset_func_list_has_ns_name (const gchar *ns, const gchar *name)
   return has_func;
 }
 
+/*
+ * _ncm_mset_func_list_find_ns:
+ * @flist_class: the #NcmMSetFuncListClass
+ * @ns: namespace or namespace prefix
+ * @name: function name
+ *
+ * Finds the namespace of function @name: @ns itself if it has @name, otherwise the
+ * namespace starting with @ns that has @name. Aborts if several such namespaces
+ * have @name. Must be called with insert_lock held.
+ *
+ * Returns: (transfer none) (nullable): the namespace, or %NULL if none has @name.
+ */
+static const gchar *
+_ncm_mset_func_list_find_ns (NcmMSetFuncListClass *flist_class, const gchar *ns, const gchar *name)
+{
+  GHashTable *func_hash = g_hash_table_lookup (flist_class->ns_hash, ns);
+
+  if ((func_hash != NULL) && g_hash_table_contains (func_hash, name))
+    return ns;
+
+  {
+    GPtrArray *found     = g_ptr_array_new ();
+    const gchar *full_ns = NULL;
+    GHashTableIter iter;
+    gpointer key, value;
+
+    g_hash_table_iter_init (&iter, flist_class->ns_hash);
+
+    while (g_hash_table_iter_next (&iter, &key, &value))
+    {
+      if (g_str_has_prefix (key, ns) && g_hash_table_contains (value, name))
+        g_ptr_array_add (found, key);
+    }
+
+    if (found->len > 1)
+    {
+      GString *list = g_string_new (NULL);
+      guint i;
+
+      g_ptr_array_sort_values (found, (GCompareFunc) g_strcmp0);
+
+      for (i = 0; i < found->len; i++)
+        g_string_append_printf (list, "%s`%s'", (i > 0) ? ", " : "", (gchar *) g_ptr_array_index (found, i));
+
+      g_error ("_ncm_mset_func_list_find_ns: function `%s' is ambiguous under namespace `%s', found in %s; "
+               "use the full namespace.",
+               name, ns, list->str);
+    }
+
+    if (found->len == 1)
+      full_ns = g_ptr_array_index (found, 0);
+
+    g_ptr_array_unref (found);
+
+    return full_ns;
+  }
+}
+
 /**
  * ncm_mset_func_list_has_full_name:
  * @full_name: function full name
  *
- * Check if function @full_name exists.
+ * Checks if the function @full_name, of the form `namespace:name', is registered.
+ * The namespace must match exactly, as in ncm_mset_func_list_new().
  *
- * Returns: whether the function @full_name.
+ * Returns: whether the function @full_name exists.
  */
 gboolean
 ncm_mset_func_list_has_full_name (const gchar *full_name)
 {
-  gchar **ns_name = g_strsplit (full_name, ":", 2);
+  NcmMSetFuncListClass *flist_class = g_type_class_ref (NCM_TYPE_MSET_FUNC_LIST);
+  gchar **ns_name                   = g_strsplit (full_name, ":", 2);
+  gboolean has_func;
 
-  if (g_strv_length (ns_name) == 2)
+  if (g_strv_length (ns_name) != 2)
+    g_error ("ncm_mset_func_list_has_full_name: invalid full name `%s', expected `namespace:name'.", full_name);
+
+  G_LOCK (insert_lock);
   {
-    gboolean has_func = ncm_mset_func_list_has_ns_name (ns_name[0], ns_name[1]);
+    GHashTable *func_hash = g_hash_table_lookup (flist_class->ns_hash, ns_name[0]);
 
-    g_strfreev (ns_name);
-
-    return has_func;
+    has_func = (func_hash != NULL) && g_hash_table_contains (func_hash, ns_name[1]);
   }
-  else
-  {
-    g_error ("ncm_mset_func_list_has_full_name: invalid full_name `%s'.", full_name);
-  }
+  G_UNLOCK (insert_lock);
 
-  return FALSE;
+  g_strfreev (ns_name);
+  g_type_class_unref (flist_class);
+
+  return has_func;
 }
 
 /**

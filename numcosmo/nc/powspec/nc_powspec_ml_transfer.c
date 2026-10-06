@@ -250,10 +250,28 @@ _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model)
     NcPowspecMLTransferArg arg = {cosmo, nc_hicosmo_peek_prim (cosmo), ps_mlt->tf, nc_hicosmo_h (cosmo), ps_mlt->Pm_k2Pzeta};
     gsl_function F;
 
+    gdouble lnk_lb = -8.0 * M_LN10;
+    gdouble lnk_ub = +8.0 * M_LN10;
+
     F.function = _nc_powspec_ml_transfer_eval_pk;
     F.params   = &arg;
 
-    ncm_spline_set_func (pk_s, NCM_SPLINE_FUNCTION_SPLINE, &F, -8.0 * M_LN10, 8.0 * M_LN10, 0, 1.0e-13);
+    /* Sample only where the primordial model is defined, see nc_hiprim_get_lnk_range() */
+    {
+      gdouble prim_lnk_min, prim_lnk_max;
+
+      nc_hiprim_get_lnk_range (arg.prim, &prim_lnk_min, &prim_lnk_max);
+
+      lnk_lb = GSL_MAX_DBL (lnk_lb, prim_lnk_min);
+      lnk_ub = GSL_MIN_DBL (lnk_ub, prim_lnk_max);
+
+      if (lnk_lb >= lnk_ub)
+        g_error ("_nc_powspec_ml_transfer_prepare: the primordial model is defined on "
+                 "ln k in [%g, %g], which does not overlap the range needed here, [%g, %g].",
+                 prim_lnk_min, prim_lnk_max, -8.0 * M_LN10, 8.0 * M_LN10);
+    }
+
+    ncm_spline_set_func (pk_s, NCM_SPLINE_FUNCTION_SPLINE, &F, lnk_lb, lnk_ub, 0, 1.0e-9);
 
     ncm_spline_clear (&ps_mlt->Pk);
     ps_mlt->Pk = pk_s;

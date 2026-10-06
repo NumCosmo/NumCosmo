@@ -25,10 +25,20 @@
 /**
  * NcmSpline2dBicubic:
  *
- * Bidimensional bicubic spline.
+ * Bicubic spline on a rectangular grid.
  *
- * This class implements the functions which use a bicubic interpolation method.
+ * On each grid cell, $z$ is the bicubic polynomial that matches $z$, $\partial z/\partial
+ * x$, $\partial z/\partial y$ and $\partial^2 z/\partial x\partial y$ at the four
+ * corners. These derivatives come from one-dimensional splines of type
+ * #NcmSpline2d:spline, a #NcmSplineCubic: along the rows for $\partial z/\partial x$,
+ * along the columns for $\partial z/\partial y$, and along the rows of $\partial
+ * z/\partial y$ for the cross derivative. Outside the knots the polynomial of the edge
+ * cell is extrapolated.
  *
+ * The integrals are exact for this piecewise polynomial and require increasing limits.
+ * ncm_spline2d_integ_dx_spline() and ncm_spline2d_integ_dy_spline() keep their result,
+ * keyed by the limits, in the object, so they are not reentrant. The knot vectors must
+ * have unit stride.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -159,11 +169,11 @@ ncm_spline2d_bicubic_class_init (NcmSpline2dBicubicClass *klass)
 
 /**
  * ncm_spline2d_bicubic_new:
- * @s: a #NcmSplineCubic derived #NcmSpline
+ * @s: a #NcmSplineCubic
  *
- * This function initializes a #NcmSpline2d of bicubic type given @s.
+ * Creates an empty #NcmSpline2dBicubic with @s as #NcmSpline2d:spline.
  *
- * Returns: A new #NcmSpline2d.
+ * Returns: (transfer full): a new #NcmSpline2d.
  */
 NcmSpline2d *
 ncm_spline2d_bicubic_new (NcmSpline *s)
@@ -180,10 +190,9 @@ ncm_spline2d_bicubic_new (NcmSpline *s)
 /**
  * ncm_spline2d_bicubic_notaknot_new:
  *
- * This function initializes a #NcmSpline2d of bi-cubic not-a-knot type
- * (See #NcmSplineCubicNotaknot).
+ * Creates an empty #NcmSpline2dBicubic on #NcmSplineCubicNotaknot.
  *
- * Returns: A new #NcmSpline2d.
+ * Returns: (transfer full): a new #NcmSpline2d.
  */
 NcmSpline2d *
 ncm_spline2d_bicubic_notaknot_new ()
@@ -1327,11 +1336,12 @@ _ncm_spline2d_bicubic_eval_vec_y (NcmSpline2d *s2d, gdouble x, const NcmVector *
     l   = g_array_index (order, size_t, k);
     y_l = ncm_vector_get (y, l);
 
-    if (y_l > ncm_vector_fast_get (yv, i + 1))
+    /* Stops at the last cell: values above the last knot extrapolate it */
+    if ((i + 1 < y_interv) && (y_l > ncm_vector_fast_get (yv, i + 1)))
     {
       do {
         i++;
-      } while (y_l > ncm_vector_fast_get (yv, i + 1));
+      } while ((i + 1 < y_interv) && (y_l > ncm_vector_fast_get (yv, i + 1)));
 
       y0 = ncm_vector_fast_get (yv, i);
       sa = &NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j);
@@ -1351,6 +1361,14 @@ _ncm_spline2d_bicubic_eval_vec_y (NcmSpline2d *s2d, gdouble x, const NcmVector *
   }
 }
 
+/**
+ * ncm_spline2d_bicubic_eval_poly: (skip)
+ * @sa: the coefficients of a cell
+ * @x: the offset from the lower corner in $x$
+ * @y: the offset from the lower corner in $y$
+ *
+ * Returns: the bicubic polynomial of @sa at (@x, @y).
+ */
 gdouble
 ncm_spline2d_bicubic_eval_poly (const NcmSpline2dBicubicCoeffs *sa, const gdouble x, const gdouble y)
 {
@@ -1413,6 +1431,16 @@ ncm_spline2d_bicubic_eval_poly_d2zdy2 (const NcmSpline2dBicubicCoeffs *sa, const
   return 2.0 * a2 + y * 6.0 * a3;
 }
 
+/**
+ * ncm_spline2d_bicubic_fij_to_aij: (skip)
+ * @sf: the corner values of $z$, $\partial_x z$, $\partial_y z$ and $\partial_x\partial_y z$
+ * @dx: the cell width in $x$
+ * @dy: the cell width in $y$
+ * @sa: (out caller-allocates): the polynomial coefficients
+ *
+ * Computes the coefficients of the bicubic polynomial matching @sf at the corners of a
+ * @dx by @dy cell; @sa may be @sf.
+ */
 void
 ncm_spline2d_bicubic_fij_to_aij (NcmSpline2dBicubicCoeffs *sf, const gdouble dx, const gdouble dy, NcmSpline2dBicubicCoeffs *sa)
 {
@@ -1477,6 +1505,15 @@ ncm_spline2d_bicubic_fij_to_aij (NcmSpline2dBicubicCoeffs *sf, const gdouble dx,
              (fxy_00 + fxy_x0 + fxy_0y + fxy_xy) * dx * dy) / (dx3 * dy3);
 }
 
+/**
+ * ncm_spline2d_bicubic_bi: (skip)
+ * @sc: a prepared #NcmSplineCubic
+ * @xv: the knots of @sc
+ * @yv: the values of @sc
+ * @i: the knot index
+ *
+ * Returns: the first derivative of @sc at knot @i, from its second-derivative coefficients.
+ */
 gdouble
 ncm_spline2d_bicubic_bi (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, gsize i)
 {
@@ -1491,6 +1528,17 @@ ncm_spline2d_bicubic_bi (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, gsize
   return b_i;
 }
 
+/**
+ * ncm_spline2d_bicubic_bi_bip1: (skip)
+ * @sc: a prepared #NcmSplineCubic
+ * @xv: the knots of @sc
+ * @yv: the values of @sc
+ * @i: the knot index
+ * @b_i: (out): the first derivative at knot @i
+ * @b_ip1: (out): the first derivative at knot @i + 1
+ *
+ * Computes the first derivatives of @sc at knots @i and @i + 1.
+ */
 void
 ncm_spline2d_bicubic_bi_bip1 (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, gsize i, gdouble *b_i, gdouble *b_ip1)
 {
@@ -1505,6 +1553,14 @@ ncm_spline2d_bicubic_bi_bip1 (NcmSplineCubic *sc, NcmVector *xv, NcmVector *yv, 
   *b_ip1 = 3.0 * dy_dx - 2.0 * (*b_i) - c_i * dx;
 }
 
+/**
+ * ncm_spline2d_bicubic_integ_dx_coeffs: (skip)
+ * @aij: the coefficients of a cell
+ * @dy: the offset from the lower corner in $y$
+ * @coeffs: (array fixed-size=4): the output coefficients
+ *
+ * Computes the coefficients of the cubic in $x$ obtained by fixing $y$ in @aij.
+ */
 void
 ncm_spline2d_bicubic_integ_dx_coeffs (NcmSpline2dBicubicCoeffs *aij, gdouble dy, gdouble *coeffs)
 {
@@ -1517,6 +1573,14 @@ ncm_spline2d_bicubic_integ_dx_coeffs (NcmSpline2dBicubicCoeffs *aij, gdouble dy,
   coeffs[3] = aij->ij[3][0] + aij->ij[3][1] * dy + aij->ij[3][2] * dy2 + aij->ij[3][3] * dy3;
 }
 
+/**
+ * ncm_spline2d_bicubic_integ_dy_coeffs: (skip)
+ * @aij: the coefficients of a cell
+ * @dx: the offset from the lower corner in $x$
+ * @coeffs: (array fixed-size=4): the output coefficients
+ *
+ * Computes the coefficients of the cubic in $y$ obtained by fixing $x$ in @aij.
+ */
 void
 ncm_spline2d_bicubic_integ_dy_coeffs (NcmSpline2dBicubicCoeffs *aij, gdouble dx, gdouble *coeffs)
 {
@@ -1529,6 +1593,18 @@ ncm_spline2d_bicubic_integ_dy_coeffs (NcmSpline2dBicubicCoeffs *aij, gdouble dx,
   coeffs[3] = aij->ij[0][3] + aij->ij[1][3] * dx + aij->ij[2][3] * dx2 + aij->ij[3][3] * dx3;
 }
 
+/**
+ * ncm_spline2d_bicubic_integ_eval2d: (skip)
+ * @aij: the coefficients of the cell with lower corner (@x0, @y0)
+ * @x0: the lower corner in $x$
+ * @xl: the lower limit in $x$
+ * @xu: the upper limit in $x$
+ * @y0: the lower corner in $y$
+ * @yl: the lower limit in $y$
+ * @yu: the upper limit in $y$
+ *
+ * Returns: the integral of the polynomial of @aij over [@xl, @xu] by [@yl, @yu].
+ */
 gdouble
 ncm_spline2d_bicubic_integ_eval2d (NcmSpline2dBicubicCoeffs *aij, const gdouble x0, const gdouble xl, const gdouble xu, const gdouble y0, const gdouble yl, const gdouble yu)
 {

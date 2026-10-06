@@ -28,12 +28,14 @@ This module contains dataclasses and subcommands to load data from files.
 """
 
 import dataclasses
-from typing import Optional, Annotated, cast
-
+import sys
 from pathlib import Path
+from typing import Annotated, cast
+
 import typer
 
 from numcosmo_py import Ncm
+
 from .logging import AppLogging
 
 
@@ -63,7 +65,7 @@ class LoadExperiment(AppLogging):
         ),
     ] = False
     starting_point: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--starting-point",
             "-s",
@@ -74,7 +76,7 @@ class LoadExperiment(AppLogging):
         ),
     ] = None
     output: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--output",
             "-o",
@@ -85,6 +87,8 @@ class LoadExperiment(AppLogging):
 
     def __post_init__(self) -> None:
         """Load the experiment file and prepare the experiment."""
+        register_firecrown()
+
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
         builders_file = self.experiment.with_suffix(".builders.yaml")
@@ -98,7 +102,8 @@ class LoadExperiment(AppLogging):
                 builders_file.absolute().as_posix()
             )
 
-            for model_builder_name in model_builders.keys():
+            # NcmObjDictStr is not iterable; keys() is its only key listing.
+            for model_builder_name in model_builders.keys():  # noqa: SIM118
                 model_builder: Ncm.ModelBuilder = cast(
                     Ncm.ModelBuilder, model_builders.get(model_builder_name)
                 )
@@ -120,7 +125,7 @@ class LoadExperiment(AppLogging):
         )
 
         functions_file = self.experiment.with_suffix(".functions.yaml")
-        self.functions: Optional[Ncm.ObjArray] = None
+        self.functions: Ncm.ObjArray | None = None
         if functions_file.exists():
             functions: Ncm.ObjArray = ser.array_from_yaml_file(
                 functions_file.absolute().as_posix()
@@ -129,8 +134,11 @@ class LoadExperiment(AppLogging):
             self.functions = functions
             for i in range(functions.len()):
                 function: Ncm.MSetFunc = cast(Ncm.MSetFunc, functions.get(i))
+                # A wrong object in the file is a data error, not a TypeError.
                 if not isinstance(function, Ncm.MSetFunc):
-                    raise RuntimeError(f"Invalid function file {functions_file}.")
+                    raise RuntimeError(  # noqa: TRY004
+                        f"Invalid function file {functions_file}."
+                    )
 
         if self.product_file:
             if self.output is not None:
@@ -181,7 +189,7 @@ class LoadExperiment(AppLogging):
         self.likelihood = likelihood
         self.mset = mset
 
-    def _load_saved_mset(self) -> Optional[Ncm.MSet]:
+    def _load_saved_mset(self) -> Ncm.MSet | None:
         """Load the saved model.
 
         Load the saved model-set from the starting point file or the product file.
@@ -224,11 +232,43 @@ class LoadExperiment(AppLogging):
         self.close_logging()
 
 
+def register_firecrown() -> None:
+    """Register the Firecrown-NumCosmo connector in the GObject registry.
+
+    Importing the connector is what registers it, and registration is needed only to
+    deserialize a model that depends on it. The import reaches crow, CLMM and healpy, so
+    it is done here rather than when the command line starts: `numcosmo --help` and
+    every command that reads no serialized model pay nothing for it. Does nothing when
+    Firecrown is absent.
+    """
+    # The dependency chain touches the process's standard streams while it is
+    # imported: cosmosis calls faulthandler.enable(), which needs a real file
+    # descriptor. Deferring the import moved it inside whatever the caller has
+    # installed in their place, and an in-memory buffer -- what a command-line test
+    # harness uses -- has no descriptor to give. So the import runs against the
+    # process's own streams, which is where it ran when it still happened at module
+    # load.
+    stdout, stderr = sys.stdout, sys.stderr
+
+    if sys.__stdout__ is not None:
+        sys.stdout = sys.__stdout__
+
+    if sys.__stderr__ is not None:
+        sys.stderr = sys.__stderr__
+
+    try:
+        import firecrown.connector.numcosmo.numcosmo  # noqa: F401
+    except ImportError:
+        pass
+    finally:
+        sys.stdout, sys.stderr = stdout, stderr
+
+
 def _catalog_indices(
     mcat: Ncm.MSetCatalog,
     total_columns: int,
-    include: Optional[list[str]],
-    exclude: Optional[list[str]],
+    include: list[str] | None,
+    exclude: list[str] | None,
 ) -> list[int]:
     """Resolve the --include/--exclude column selection to a list of indices."""
     include = include or []
@@ -269,36 +309,45 @@ class LoadedCatalog:
 
     mcat: Ncm.MSetCatalog
     mset: Ncm.MSet
-    functions: Optional[Ncm.ObjArray]
+    functions: Ncm.ObjArray | None
     fparams_len: int
     nadd_vals: int
     total_columns: int
     nchains: int
     indices: list[int]
+    burnin: int
+    burnin_raised_from: int | None
+    markovian_start: int
     full_stats: Ncm.StatsVec
     stats: Ncm.StatsVec
     nitems: int
 
 
-def _resolve_burnin_rows(mcmc_file: Path, burnin: int, tail: Optional[int]) -> int:
+def _resolve_burnin_rows(
+    mcmc_file: Path, burnin: int, tail: int | None
+) -> tuple[int, int, int | None, int]:
     """Resolve a --burnin/--tail request (in iterations) to a row count.
 
     `burnin` discards the first N iterations (ensemble steps); `tail` keeps
     only the last N instead. Peeks the catalog's row/chain counts first
     (cheap: a few FITS header keys, no model-set deserialization) to convert
     iterations to rows and validate the request before the catalog is
-    actually opened.
+    actually opened. The catalog's markovian-id (first row of the Markovian
+    chain) is a floor on `burnin`: rows before it were produced by the
+    initial ensemble or by an exploration phase and are never analysed.
+
+    Returns the row count, the iterations it corresponds to, the value the
+    request was raised from (None when the request stood), and the iteration
+    at which the Markovian chain starts.
     """
     if tail is not None and burnin != 0:
         raise typer.BadParameter("Give at most one of --burnin and --tail.")
 
-    if burnin == 0 and tail is None:
-        return 0
-
-    nrows, nchains, _first_id = Ncm.MSetCatalog.peek_info_from_file(
-        mcmc_file.absolute().as_posix()
-    )
+    filename = mcmc_file.absolute().as_posix()
+    nrows, nchains, first_id = Ncm.MSetCatalog.peek_info_from_file(filename)
     n_iterations = nrows // nchains
+    markovian_id = Ncm.MSetCatalog.peek_markovian_id_from_file(filename)
+    markovian_iterations = -(-(markovian_id - first_id) // nchains)
 
     if tail is not None:
         if tail < 0:
@@ -307,6 +356,12 @@ def _resolve_burnin_rows(mcmc_file: Path, burnin: int, tail: Optional[int]) -> i
     else:
         burnin_iterations = burnin
 
+    raised_from = None
+
+    if markovian_iterations > burnin_iterations:
+        raised_from = burnin_iterations
+        burnin_iterations = markovian_iterations
+
     if burnin_iterations > n_iterations:
         raise typer.BadParameter(
             f"--burnin of {burnin_iterations} iteration(s) exceeds catalog "
@@ -314,15 +369,20 @@ def _resolve_burnin_rows(mcmc_file: Path, burnin: int, tail: Optional[int]) -> i
             f"({nrows} rows, {nchains} chains)."
         )
 
-    return burnin_iterations * nchains
+    return (
+        burnin_iterations * nchains,
+        burnin_iterations,
+        raised_from,
+        markovian_iterations,
+    )
 
 
 def load_catalog(
     mcmc_file: Path,
     burnin: int = 0,
-    tail: Optional[int] = None,
-    include: Optional[list[str]] = None,
-    exclude: Optional[list[str]] = None,
+    tail: int | None = None,
+    include: list[str] | None = None,
+    exclude: list[str] | None = None,
 ) -> LoadedCatalog:
     """Load an MCMC catalog file and prepare it for analysis.
 
@@ -332,7 +392,11 @@ def load_catalog(
     if not mcmc_file.exists():
         raise typer.BadParameter(f"MCMC file {mcmc_file} not found.")
 
-    burnin_rows = _resolve_burnin_rows(mcmc_file, burnin, tail)
+    burnin_rows, burnin_iterations, burnin_raised_from, markovian_start = (
+        _resolve_burnin_rows(mcmc_file, burnin, tail)
+    )
+
+    register_firecrown()
 
     mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_file_ro(
         mcmc_file.absolute().as_posix(), burnin_rows
@@ -343,7 +407,7 @@ def load_catalog(
     assert isinstance(mset, Ncm.MSet)
     mset.prepare_fparam_map()
 
-    functions: Optional[Ncm.ObjArray] = mcat.peek_functions_array()
+    functions: Ncm.ObjArray | None = mcat.peek_functions_array()
 
     fparams_len = mset.fparams_len()
     nadd_vals: int = mcat.nadd_vals()
@@ -372,6 +436,9 @@ def load_catalog(
         total_columns=total_columns,
         nchains=nchains,
         indices=indices,
+        burnin=burnin_iterations,
+        burnin_raised_from=burnin_raised_from,
+        markovian_start=markovian_start,
         full_stats=full_stats,
         stats=stats,
         nitems=nitems,
@@ -403,7 +470,7 @@ class LoadCatalog(AppLogging):
     ] = 0
 
     tail: Annotated[
-        Optional[int],
+        int | None,
         typer.Option(
             help=(
                 "Keep only the last N iterations (ensemble steps) instead of "
@@ -414,21 +481,21 @@ class LoadCatalog(AppLogging):
     ] = None
 
     include: Annotated[
-        Optional[list[str]],
+        list[str] | None,
         typer.Option(
             help="List of parameters and or model names to include in the analysis.",
         ),
     ] = None
 
     exclude: Annotated[
-        Optional[list[str]],
+        list[str] | None,
         typer.Option(
             help="List of parameters and or model names to exclude from the analysis.",
         ),
     ] = None
 
     output: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--output",
             "-o",
@@ -439,7 +506,7 @@ class LoadCatalog(AppLogging):
     # These are set in __post_init__ from load_catalog(), not from the CLI.
     mcat: Ncm.MSetCatalog = dataclasses.field(init=False)
     mset: Ncm.MSet = dataclasses.field(init=False)
-    functions: Optional[Ncm.ObjArray] = dataclasses.field(init=False)
+    functions: Ncm.ObjArray | None = dataclasses.field(init=False)
     fparams_len: int = dataclasses.field(init=False)
     nadd_vals: int = dataclasses.field(init=False)
     total_columns: int = dataclasses.field(init=False)
@@ -467,3 +534,8 @@ class LoadCatalog(AppLogging):
         self.full_stats = loaded.full_stats
         self.stats = loaded.stats
         self.nitems = loaded.nitems
+        # the burn-in actually applied, which the markovian-id floor may have raised
+        # above the requested `burnin`
+        self.burnin_applied = loaded.burnin
+        self.burnin_raised_from = loaded.burnin_raised_from
+        self.markovian_start = loaded.markovian_start

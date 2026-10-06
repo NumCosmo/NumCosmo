@@ -988,7 +988,7 @@ def test_component_chebyshev_decomposition(
     """Test Chebyshev decomposition of component kernel g_k(x) = K*xi(x/k, k).
 
     Validates that the adaptive Chebyshev expansion accurately represents the
-    kernel function within the specified tolerance (rtol=1e-9).
+    kernel function to the tolerance the expansion is asked for (1e-8).
     """
     _, _, component = kernel_component
     cosmo = cosmology.cosmo
@@ -1008,8 +1008,9 @@ def test_component_chebyshev_decomposition(
         x_max = k * xi_max
 
         # Compute Chebyshev coefficients adaptively
+        cheb_reltol = 1.0e-8
         final_k, coeffs = spectral.compute_chebyshev_coeffs_adaptive(
-            g_k, x_min, x_max, 4, 1.0e-8
+            g_k, x_min, x_max, 4, cheb_reltol
         )
         max_order_k = spectral.get_max_order()
 
@@ -1036,8 +1037,8 @@ def test_component_chebyshev_decomposition(
         assert_allclose(
             cheb_vals,
             direct_vals,
-            rtol=1.0e-9,
-            atol=1.0e-9 * max_direct,
+            rtol=cheb_reltol,
+            atol=cheb_reltol * max_direct,
             err_msg=(
                 f"Chebyshev expansion mismatch at k={k}, max_direct={max_direct} "
                 f"max_order_k={max_order_k}"

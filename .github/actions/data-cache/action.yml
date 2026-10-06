@@ -47,6 +47,10 @@ runs:
           exit 1
         fi
         echo "value=numcosmo-data-${RUNNER_OS}-v${{ inputs.version }}-${tags}" >> "$GITHUB_OUTPUT"
+        # Set here because this step runs before NumCosmo is built; every later
+        # step uses this directory, the XDG default on a fresh runner.
+        data_dir="${HOME}/.local/share/numcosmo"
+        echo "NUMCOSMO_HOME=${data_dir}" >> "$GITHUB_ENV"
         # Only the downloaded files. The FFTW wisdom (*.fftw3, *.fftw3f) and
         # the FFTLog tables the library writes into the same directory are
         # excluded: they record what one machine measured to be fastest, and
@@ -55,14 +59,14 @@ runs:
         # expansion.
         {
           echo "paths<<EOF"
-          echo "${HOME}/.numcosmo/baseline"
-          echo "${HOME}/.numcosmo/*.fits"
-          echo "${HOME}/.numcosmo/*.gvar"
+          echo "${data_dir}/baseline"
+          echo "${data_dir}/*.fits"
+          echo "${data_dir}/*.gvar"
           echo "EOF"
         } >> "$GITHUB_OUTPUT"
     - name: Restore data cache
       id: restore
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: ${{ steps.key.outputs.paths }}
         key: ${{ steps.key.outputs.value }}

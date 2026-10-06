@@ -73,10 +73,12 @@ if enable_gir and python_for_tests.found()
     endif
 
     # Default (unit) lane: everything except the statistical/acceptance tiers (see
-    # TESTING.md). Capability-gated tests (powspec/xcor/app/...) are already skipped here by
-    # conftest since no --run-* flag is passed. The real timeout bounds a total hang;
-    # per-test hangs are dumped by pytest.ini's faulthandler_timeout. The coverage job
-    # neutralizes this timeout via `--timeout-multiplier 0`.
+    # TESTING.md). Capability-gated tests (powspec/xcor/app/...) are skipped here by conftest
+    # since their --run-* flag is not passed. The exception is planck_data: --run-planck-data
+    # is passed because those tests take 15 s in total and skip when the plc_3.0 tree is
+    # absent. The real timeout bounds a total hang; per-test hangs are dumped by pytest.ini's
+    # faulthandler_timeout. The coverage job neutralizes this timeout via
+    # `--timeout-multiplier 0`.
     #
     # omp-marked tests are also excluded here: this lane pins OMP_NUM_THREADS=1 (see
     # env above), so an omp-marked test's `#pragma omp parallel` path still runs but with
@@ -92,6 +94,7 @@ if enable_gir and python_for_tests.found()
         pytest,
         args: pytest_parallel_args
         + [
+            '--run-planck-data',
             '-m',
             'not statistical and not acceptance and not omp',
             meson.current_source_dir(),

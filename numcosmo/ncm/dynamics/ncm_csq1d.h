@@ -58,23 +58,19 @@ struct _NcmCSQ1DClass
   gdouble (*eval_F2)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   void (*prepare) (NcmCSQ1D *csq1d, NcmModel *model);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[2];
+  /* Padding to allow adding up to 6 more virtual functions without breaking ABI. */
+  gpointer padding[6];
 };
 
 /**
  * NcmCSQ1DEvolState:
- * @NCM_CSQ1D_EVOL_STATE_INVALID: Invalid state
- * @NCM_CSQ1D_EVOL_STATE_ADIABATIC: Adiabatic state variables $(\alpha,\, \delta\gamma)$
- * @NCM_CSQ1D_EVOL_STATE_UP: $(\chi,\, U_+)$ state variables
- * @NCM_CSQ1D_EVOL_STATE_UM: $(\chi,\, U_-)$ state variables
+ * @NCM_CSQ1D_EVOL_STATE_INVALID: no evolution variables set
+ * @NCM_CSQ1D_EVOL_STATE_ADIABATIC: $(\alpha, \delta\gamma)$ in #NCM_CSQ1D_FRAME_ADIAB1
+ * @NCM_CSQ1D_EVOL_STATE_UP: $(\chi, U_+)$ in #NCM_CSQ1D_FRAME_ORIG
+ * @NCM_CSQ1D_EVOL_STATE_UM: $(\chi, U_-)$ in #NCM_CSQ1D_FRAME_ORIG
  *
- * Variables describing the system evolution state. The state @NCM_CSQ1D_EVOL_STATE_ADIABATIC
- * is used to describe the adiabatic evolution of the system, this state use the frame
- * #NCM_CSQ1D_FRAME_ADIAB1 with the variables $(\alpha,\, \delta\gamma)$ to compute the evolution.
- * The state @NCM_CSQ1D_EVOL_STATE_UP and @NCM_CSQ1D_EVOL_STATE_UM are used to describe the
- * non-adiabatic evolution of the system, these states use the frame #NCM_CSQ1D_FRAME_ORIG with
- * the variables $(\chi,\, U_+)$ and $(\chi,\, U_-)$ to compute the evolution, respectively.
+ * The variables the evolution is integrated in. The evolution switches between them
+ * with the adiabatic threshold, see ncm_csq1d_set_adiab_threshold().
  *
  */
 typedef enum _NcmCSQ1DEvolState /*< prefix=NCM_CSQ1D_EVOL_STATE >*/
@@ -87,20 +83,14 @@ typedef enum _NcmCSQ1DEvolState /*< prefix=NCM_CSQ1D_EVOL_STATE >*/
 
 /**
  * NcmCSQ1DInitialStateType:
- * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC: Ad-hoc initial condition
- * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2: Second order adiabatic vacuum
- * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4: Fourth order adiabatic vacuum
- * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_NONADIABATIC2: Second order non-adiabatic vacuum
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC: conditions set with ncm_csq1d_set_init_cond()
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2: adiabatic vacuum from the second order expansion
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4: adiabatic vacuum from the fourth order expansion
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_NONADIABATIC2: second order non-adiabatic vacuum; ncm_csq1d_prepare() does not implement it and aborts
  *
- * Initial conditions for the system. The initial condition
- * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC is used to set an arbitrary initial
- * condition. The initial conditions @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2,
- * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4 and
- * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_NONADIABATIC2 are used to set the initial
- * conditions for the adiabatic and non-adiabatic vacuum initial conditions.
- *
- * If the initial condition is set to @NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC
- * the initial condition must be set using the function family ncm_csq1d_set_init_cond*.
+ * How ncm_csq1d_prepare() sets the initial conditions. The type also selects the order of
+ * ncm_csq1d_compute_adiab(): second order for
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2, fourth order otherwise.
  *
  */
 typedef enum _NcmCSQ1DInitialStateType /*< enum,underscore_name=NCM_CSQ1D_INITIAL_CONDITION_TYPE,prefix=NCM_CSQ1D_INITIAL_CONDITION_TYPE >*/
@@ -116,13 +106,20 @@ typedef enum _NcmCSQ1DInitialStateType /*< enum,underscore_name=NCM_CSQ1D_INITIA
 
 /**
  * NcmCSQ1DFrame:
- * @NCM_CSQ1D_FRAME_ORIG: Original frame
- * @NCM_CSQ1D_FRAME_ADIAB1: Adiabatic frame 1
- * @NCM_CSQ1D_FRAME_ADIAB2: Adiabatic frame 2
- * @NCM_CSQ1D_FRAME_NONADIAB1: Non-adiabatic frame 1
- * @NCM_CSQ1D_FRAME_NONADIAB2: Non-adiabatic frame 2
+ * @NCM_CSQ1D_FRAME_ORIG: the complex structure of the original variables $(\phi, P_\phi)$
+ * @NCM_CSQ1D_FRAME_ADIAB1: first adiabatic frame, $\gamma$ replaced by $\delta\gamma = \gamma - \xi$
+ * @NCM_CSQ1D_FRAME_ADIAB2: second adiabatic frame, the first boosted by $\tanh^{-1}(-F_1)$; needs $\vert F_1\vert < 1$
+ * @NCM_CSQ1D_FRAME_NONADIAB1: first non-adiabatic frame, $\chi$ replaced by $\chi + e^{U_+}(q_0 + q_1)$ at fixed $U_+$
+ * @NCM_CSQ1D_FRAME_NONADIAB2: second non-adiabatic frame, the first with $U_+$ shifted by $2p_1$ and boosted by $-2r_1$
  *
- * Frames for the system.
+ * Frames the state can be expressed in: canonical transformations of the original
+ * variables, which act on the hyperbolic plane as isometries. The adiabatic vacuum of
+ * order $n$ is near the origin of the adiabatic frame $n$, within $\vert F_1\vert$ in
+ * the first and $\vert F_2\vert$ in the second. The non-adiabatic frames use
+ * $q_0 = \int\mathrm{d}t/m$, $q_1 = \int q_0^2 m\nu^2\,\mathrm{d}t$,
+ * $p_1 = \int q_0 m\nu^2\,\mathrm{d}t$ and $r_1 = \frac{1}{2}\int m\nu^2\,\mathrm{d}t$,
+ * see ncm_csq1d_eval_int_1_m() and the related methods; they suit times where these
+ * are small, and see ncm_csq1d_change_frame() for the precision of the boosts.
  *
  */
 typedef enum _NcmCSQ1DFrame /*< prefix=NCM_CSQ1D_FRAME >*/
@@ -137,7 +134,9 @@ typedef enum _NcmCSQ1DFrame /*< prefix=NCM_CSQ1D_FRAME >*/
 /**
  * NcmCSQ1DState:
  *
- * Represents the state of the system.
+ * A point $(\alpha, \gamma)$ of the hyperbolic plane at a time $t$ in a given
+ * #NcmCSQ1DFrame. The point is a complex structure $J_{ab}$, which fixes a mode of the
+ * oscillator up to a time-dependent phase, see ncm_csq1d_state_get_J().
  */
 typedef struct _NcmCSQ1DState NcmCSQ1DState;
 

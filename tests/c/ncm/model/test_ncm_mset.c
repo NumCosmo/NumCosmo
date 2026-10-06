@@ -33,6 +33,7 @@
 #include <string.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <glib/gstdio.h>
 
 typedef struct _TestNcmMSet
 {
@@ -48,7 +49,6 @@ void test_ncm_mset_setpeek (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_setpospeek (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_pushpeek (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_fparams (TestNcmMSet *test, gconstpointer pdata);
-void test_ncm_mset_fparams_validate_all (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_shallow_copy (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata);
@@ -57,6 +57,24 @@ void test_ncm_mset_unslotted_submodel_attach (void);
 void test_ncm_mset_unslotted_submodel_attach_subprocess (void);
 void test_ncm_mset_load_unslotted_submodel_group (void);
 void test_ncm_mset_two_level_submodel_slots (void);
+void test_ncm_mset_peek_by_name_unknown (void);
+void test_ncm_mset_remove_host (void);
+void test_ncm_mset_split_full_name (void);
+void test_ncm_mset_set_fmap_updates_models (void);
+void test_ncm_mset_set_fmap_invalid (void);
+void test_ncm_mset_stack_bound (void);
+void test_ncm_mset_id_lookups (void);
+void test_ncm_mset_ns_by_negative_id (void);
+void test_ncm_mset_set_fmap_update_models (void);
+void test_ncm_mset_max_model_nick (void);
+void test_ncm_mset_params_pretty_print (void);
+void test_ncm_mset_fparam_lookups (void);
+void test_ncm_mset_saveload_fmap (void);
+void test_ncm_mset_load_twice_same_ser (void);
+void test_ncm_mset_getsetitem (void);
+void test_ncm_mset_fparam_get_fpi_range (void);
+void test_ncm_mset_fparam_get_fpi_range_subprocess (void);
+void test_ncm_mset_ns_by_negative_id_subprocess (void);
 
 void test_ncm_mset_traps (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_invalid_get (TestNcmMSet *test, gconstpointer pdata);
@@ -89,11 +107,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_fparams,
               &test_ncm_mset_free);
 
-  g_test_add ("/ncm/mset/fparams/validate_all", TestNcmMSet, NULL,
-              &test_ncm_mset_new,
-              &test_ncm_mset_fparams_validate_all,
-              &test_ncm_mset_free);
-
   g_test_add ("/ncm/mset/dup", TestNcmMSet, NULL,
               &test_ncm_mset_new,
               &test_ncm_mset_dup,
@@ -114,6 +127,24 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/submodel/unslotted_attach/subprocess", &test_ncm_mset_unslotted_submodel_attach_subprocess);
   g_test_add_func ("/ncm/mset/load/unslotted_submodel_group", &test_ncm_mset_load_unslotted_submodel_group);
   g_test_add_func ("/ncm/mset/submodel/two_level_slots", &test_ncm_mset_two_level_submodel_slots);
+  g_test_add_func ("/ncm/mset/peek_by_name/unknown", &test_ncm_mset_peek_by_name_unknown);
+  g_test_add_func ("/ncm/mset/remove/host", &test_ncm_mset_remove_host);
+  g_test_add_func ("/ncm/mset/split_full_name", &test_ncm_mset_split_full_name);
+  g_test_add_func ("/ncm/mset/set_fmap/updates_models", &test_ncm_mset_set_fmap_updates_models);
+  g_test_add_func ("/ncm/mset/set_fmap/invalid", &test_ncm_mset_set_fmap_invalid);
+  g_test_add_func ("/ncm/mset/stack_bound", &test_ncm_mset_stack_bound);
+  g_test_add_func ("/ncm/mset/id_lookups", &test_ncm_mset_id_lookups);
+  g_test_add_func ("/ncm/mset/ns_by_negative_id", &test_ncm_mset_ns_by_negative_id);
+  g_test_add_func ("/ncm/mset/set_fmap/update_models", &test_ncm_mset_set_fmap_update_models);
+  g_test_add_func ("/ncm/mset/max_model_nick", &test_ncm_mset_max_model_nick);
+  g_test_add_func ("/ncm/mset/params_pretty_print", &test_ncm_mset_params_pretty_print);
+  g_test_add_func ("/ncm/mset/fparam/lookups", &test_ncm_mset_fparam_lookups);
+  g_test_add_func ("/ncm/mset/saveload/fmap", &test_ncm_mset_saveload_fmap);
+  g_test_add_func ("/ncm/mset/load/twice_same_ser", &test_ncm_mset_load_twice_same_ser);
+  g_test_add_func ("/ncm/mset/getsetitem", &test_ncm_mset_getsetitem);
+  g_test_add_func ("/ncm/mset/fparam/get_fpi_range", &test_ncm_mset_fparam_get_fpi_range);
+  g_test_add_func ("/ncm/mset/fparam/get_fpi_range/subprocess", &test_ncm_mset_fparam_get_fpi_range_subprocess);
+  g_test_add_func ("/ncm/mset/ns_by_negative_id/subprocess", &test_ncm_mset_ns_by_negative_id_subprocess);
 
   g_test_add ("/ncm/mset/traps", TestNcmMSet, NULL,
               &test_ncm_mset_new,
@@ -335,32 +366,6 @@ test_ncm_mset_fparams (TestNcmMSet *test, gconstpointer pdata)
 
   nc_cluster_mass_free (mass);
   nc_cluster_mass_free (benson);
-}
-
-void
-test_ncm_mset_fparams_validate_all (TestNcmMSet *test, gconstpointer pdata)
-{
-  test_ncm_mset_fparams (test, pdata);
-
-  ncm_mset_fparam_set (test->mset, 0, 1.0);
-  ncm_mset_param_set_all_ftype (test->mset, NCM_PARAM_TYPE_FREE);
-  ncm_mset_prepare_fparam_map (test->mset);
-
-  {
-    const gint ntests     = 100000;
-    const gint fparam_len = ncm_mset_fparam_len (test->mset);
-    NcmVector *theta      = ncm_vector_new (fparam_len);
-    gint i;
-
-    ncm_mset_fparams_get_vector (test->mset, theta);
-
-    for (i = 0; i < ntests; i++)
-    {
-      g_assert_true (ncm_mset_fparam_validate_all (test->mset, theta));
-    }
-
-    ncm_vector_free (theta);
-  }
 }
 
 void
@@ -787,8 +792,7 @@ test_ncm_mset_unslotted_submodel_attach_subprocess (void)
   NcHICosmo *cosmo      = NC_HICOSMO (nc_hicosmo_lcdm_new_full (NULL, NULL, NULL));
   TestUnslottedSub *sub = g_object_new (TEST_TYPE_UNSLOTTED_SUB, NULL);
 
-  /* Submodels are construction-fixed for every type: a type without a
-   * declared slot has no legal attachment path at all. */
+  /* A type without a declared slot has no legal attachment path at all. */
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (sub));
 
   ncm_model_free (NCM_MODEL (sub));
@@ -800,7 +804,7 @@ test_ncm_mset_unslotted_submodel_attach (void)
 {
   g_test_trap_subprocess ("/ncm/mset/submodel/unslotted_attach/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*construction-fixed*");
+  g_test_trap_assert_stderr ("*declares no submodel slot*");
 }
 
 void
@@ -1043,5 +1047,559 @@ test_ncm_mset_invalid_stack (TestNcmMSet *test, gconstpointer pdata)
   ncm_mset_push (test->mset, NCM_MODEL (cosmo), NULL);
 
   nc_hicosmo_free (NC_HICOSMO (cosmo));
+}
+
+/* An unregistered namespace gives no model, with or without a stack position, even when
+ * namespace id -1 plus that position is the id of a model in the set. */
+void
+test_ncm_mset_peek_by_name_unknown (void)
+{
+  NcmModel *mvnd = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmMSet *mset  = ncm_mset_new (mvnd, NULL, NULL);
+  const gint id  = ncm_model_mvnd_id ();
+  gchar *name    = g_strdup_printf ("NoSuchModel:%d", id + 1);
+  GError *error  = NULL;
+
+  g_assert_true (ncm_mset_peek_by_name (mset, "NcmModelMVND", NULL) == mvnd);
+  g_assert_null (ncm_mset_peek_by_name (mset, "NoSuchModel", NULL));
+  g_assert_null (ncm_mset_peek_by_name (mset, name, NULL));
+
+  g_assert_null (ncm_mset_fetch_by_name (mset, name, &error));
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_NOT_SET);
+  g_clear_error (&error);
+
+  g_free (name);
+  ncm_mset_free (mset);
+  ncm_model_free (mvnd);
+}
+
+/* Removing a host removes its submodels; the set then matches its serialized copy. */
+void
+test_ncm_mset_remove_host (void)
+{
+  NcHIReion *reion     = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim       = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcmModel *cosmo      = NCM_MODEL (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
+  NcmModel *mvnd       = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmMSet *mset        = ncm_mset_new (cosmo, NULL, mvnd, NULL);
+  NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  const guint mvnd_len = ncm_model_len (mvnd);
+  NcmMSet *dup;
+
+  g_assert_nonnull (ncm_mset_peek (mset, nc_hiprim_id ()));
+  g_assert_cmpuint (ncm_mset_total_len (mset), >, mvnd_len);
+
+  ncm_mset_remove (mset, nc_hicosmo_id ());
+
+  g_assert_null (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  g_assert_null (ncm_mset_peek (mset, nc_hiprim_id ()));
+  g_assert_null (ncm_mset_peek (mset, nc_hireion_id ()));
+  g_assert_cmpuint (ncm_mset_nmodels (mset), ==, 1);
+  g_assert_cmpuint (ncm_mset_total_len (mset), ==, mvnd_len);
+
+  dup = ncm_mset_dup (mset, ser);
+  g_assert_cmpuint (ncm_mset_nmodels (dup), ==, 1);
+  g_assert_cmpuint (ncm_mset_total_len (dup), ==, mvnd_len);
+
+  ncm_mset_free (dup);
+  ncm_serialize_free (ser);
+  ncm_mset_free (mset);
+  ncm_model_free (mvnd);
+  ncm_model_free (cosmo);
+  nc_hiprim_free (prim);
+  nc_hireion_free (reion);
+}
+
+/* Full names split with and without a stack position; a stack position out of range is
+ * an error that leaves the outputs unset. */
+void
+test_ncm_mset_split_full_name (void)
+{
+  gchar *ns       = NULL;
+  gchar *pname    = NULL;
+  guint stackpos  = 99;
+  GError *error   = NULL;
+  gchar *too_high = g_strdup_printf ("NcHICosmo:%d:H0", NCM_MSET_MAX_STACKSIZE);
+
+  g_assert_true (ncm_mset_split_full_name ("NcHICosmo:H0", &ns, &stackpos, &pname, &error));
+  g_assert_no_error (error);
+  g_assert_cmpstr (ns, ==, "NcHICosmo");
+  g_assert_cmpstr (pname, ==, "H0");
+  g_assert_cmpuint (stackpos, ==, 0);
+  g_clear_pointer (&ns, g_free);
+  g_clear_pointer (&pname, g_free);
+
+  g_assert_true (ncm_mset_split_full_name ("NcHICosmo:2:Omegac", &ns, &stackpos, &pname, &error));
+  g_assert_cmpuint (stackpos, ==, 2);
+  g_assert_cmpstr (pname, ==, "Omegac");
+  g_clear_pointer (&ns, g_free);
+  g_clear_pointer (&pname, g_free);
+
+  g_assert_false (ncm_mset_split_full_name ("not a name", &ns, &stackpos, &pname, &error));
+  g_assert_no_error (error);
+
+  g_assert_false (ncm_mset_split_full_name (too_high, &ns, &stackpos, &pname, &error));
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID);
+  g_assert_null (ns);
+  g_assert_null (pname);
+  g_clear_error (&error);
+
+  g_free (too_high);
+}
+
+/* After set_fmap moves the free parameter to another model, setting the free
+ * parameters updates that model (its pkey changes). */
+void
+test_ncm_mset_set_fmap_updates_models (void)
+{
+  NcmModel *a         = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmModel *b         = NCM_MODEL (ncm_model_rosenbrock_new ());
+  NcmMSet *mset       = ncm_mset_new (a, NULL, b, NULL);
+  NcmVector *x        = ncm_vector_new (1);
+  const gchar *fmap[] = {"NcmModelRosenbrock:x1", NULL};
+  gchar **got;
+  guint64 pkey;
+
+  ncm_model_param_set_ftype (a, 0, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+  g_assert_cmpuint (ncm_mset_fparams_len (mset), ==, 1);
+
+  ncm_mset_set_fmap (mset, fmap, FALSE, NULL);
+  got = ncm_mset_get_fmap (mset);
+  g_assert_cmpstr (got[0], ==, "NcmModelRosenbrock:x1");
+  g_assert_null (got[1]);
+  g_strfreev (got);
+
+  pkey = ncm_model_state_get_pkey (b);
+  ncm_vector_set (x, 0, 1.25);
+  ncm_mset_fparams_set_vector (mset, x);
+  g_assert_cmpfloat (ncm_model_param_get (b, 0), ==, 1.25);
+  g_assert_cmpuint (ncm_model_state_get_pkey (b), !=, pkey);
+
+  ncm_vector_free (x);
+  ncm_mset_free (mset);
+  ncm_model_free (a);
+  ncm_model_free (b);
+}
+
+/* An unknown or repeated name is an error that leaves the previous map in place. */
+void
+test_ncm_mset_set_fmap_invalid (void)
+{
+  NcmModel *a          = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmMSet *mset        = ncm_mset_new (a, NULL, NULL);
+  const gchar *good[]  = {"NcmModelMVND:mu_0", NULL};
+  const gchar *bad[]   = {"NcmModelMVND:mu_1", "NcmModelMVND:nope", NULL};
+  const gchar *twice[] = {"NcmModelMVND:mu_1", "NcmModelMVND:mu_1", NULL};
+  GError *error        = NULL;
+
+  ncm_mset_set_fmap (mset, good, FALSE, &error);
+  g_assert_no_error (error);
+
+  ncm_mset_set_fmap (mset, bad, FALSE, &error);
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_NOT_FOUND);
+  g_clear_error (&error);
+
+  ncm_mset_set_fmap (mset, twice, FALSE, &error);
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID);
+  g_clear_error (&error);
+
+  g_assert_true (ncm_mset_fparam_map_valid (mset));
+  g_assert_cmpuint (ncm_mset_fparams_len (mset), ==, 1);
+  g_assert_cmpstr (ncm_mset_fparam_full_name (mset, 0), ==, "NcmModelMVND:mu_0");
+  g_assert_cmpint (ncm_mset_fparam_get_fpi (mset, ncm_model_mvnd_id (), 0), ==, 0);
+  g_assert_cmpint (ncm_mset_fparam_get_fpi (mset, ncm_model_mvnd_id (), 1), ==, -1);
+
+  ncm_mset_free (mset);
+  ncm_model_free (a);
+}
+
+/* A stack position of NCM_MSET_MAX_STACKSIZE is rejected (it is the next class's
+ * id); a non-stackable model at position 1 is rejected without keeping a reference. */
+void
+test_ncm_mset_stack_bound (void)
+{
+  NcDistance *dist   = nc_distance_new (3.0);
+  NcHaloPosition *hp = nc_halo_position_new (dist);
+  NcmModel *mvnd     = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmMSet *mset      = ncm_mset_empty_new ();
+  GError *error      = NULL;
+
+  ncm_mset_set_pos (mset, NCM_MODEL (hp), NCM_MSET_MAX_STACKSIZE - 1, &error);
+  g_assert_no_error (error);
+
+  ncm_mset_set_pos (mset, NCM_MODEL (hp), NCM_MSET_MAX_STACKSIZE, &error);
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_INVALID_ID);
+  g_clear_error (&error);
+  g_assert_null (ncm_mset_peek (mset, ncm_model_id (NCM_MODEL (hp)) + NCM_MSET_MAX_STACKSIZE));
+
+  ncm_mset_set_pos (mset, mvnd, 1, &error);
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_NOT_STACKABLE);
+  g_clear_error (&error);
+  g_assert_cmpuint (G_OBJECT (mvnd)->ref_count, ==, 1);
+
+  ncm_mset_free (mset);
+  ncm_model_free (mvnd);
+  nc_halo_position_free (hp);
+  nc_distance_free (dist);
+}
+
+/* get_id_by_type finds a subclass of a registered class; ns and type by id agree. */
+void
+test_ncm_mset_id_lookups (void)
+{
+  g_assert_cmpint (ncm_mset_get_id_by_type (NC_TYPE_HICOSMO_DE_XCDM), ==, nc_hicosmo_id ());
+  g_assert_cmpint (ncm_mset_get_id_by_type (NC_TYPE_HICOSMO), ==, nc_hicosmo_id ());
+  g_assert_cmpint (ncm_mset_get_id_by_ns ("NcHICosmo"), ==, nc_hicosmo_id ());
+  g_assert_cmpstr (ncm_mset_get_ns_by_id (nc_hicosmo_id () + 1), ==, "NcHICosmo");
+  g_assert_true (ncm_mset_get_type_by_id (nc_hicosmo_id ()) == NC_TYPE_HICOSMO);
+}
+
+void
+test_ncm_mset_ns_by_negative_id (void)
+{
+  g_test_trap_subprocess ("/ncm/mset/ns_by_negative_id/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+}
+
+void
+test_ncm_mset_ns_by_negative_id_subprocess (void)
+{
+  ncm_mset_get_ns_by_id (-1);
+}
+
+/* With update_models, the fit types follow the map and the map keeps its order. */
+void
+test_ncm_mset_set_fmap_update_models (void)
+{
+  NcmModel *a         = NCM_MODEL (ncm_model_mvnd_new (3));
+  NcmMSet *mset       = ncm_mset_new (a, NULL, NULL);
+  const gchar *fmap[] = {"NcmModelMVND:mu_2", "NcmModelMVND:mu_1", NULL};
+
+  ncm_model_param_set_ftype (a, 0, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  ncm_mset_set_fmap (mset, fmap, TRUE, NULL);
+
+  g_assert_cmpuint (ncm_mset_fparams_len (mset), ==, 2);
+  g_assert_cmpstr (ncm_mset_fparam_full_name (mset, 0), ==, "NcmModelMVND:mu_2");
+  g_assert_cmpstr (ncm_mset_fparam_full_name (mset, 1), ==, "NcmModelMVND:mu_1");
+  g_assert_cmpint (ncm_model_param_get_ftype (a, 0), ==, NCM_PARAM_TYPE_FIXED);
+  g_assert_cmpint (ncm_model_param_get_ftype (a, 1), ==, NCM_PARAM_TYPE_FREE);
+  g_assert_cmpint (ncm_model_param_get_ftype (a, 2), ==, NCM_PARAM_TYPE_FREE);
+
+  ncm_mset_free (mset);
+  ncm_model_free (a);
+}
+
+/* Models without parameters count: NcBBNParthenope, a submodel of the cosmology. */
+void
+test_ncm_mset_max_model_nick (void)
+{
+  NcmModel *cosmo = NCM_MODEL (nc_hicosmo_de_xcdm_new ());
+  NcmMSet *mset   = ncm_mset_new (cosmo, NULL, NULL);
+  guint longest   = 0;
+  guint i;
+
+  for (i = 0; i < ncm_mset_nmodels (mset); i++)
+    longest = GSL_MAX (longest, strlen (ncm_model_nick (ncm_mset_peek_array_pos (mset, i))));
+
+  g_assert_nonnull (ncm_mset_peek (mset, nc_bbn_id ()));
+  g_assert_cmpuint (ncm_model_len (ncm_mset_peek (mset, nc_bbn_id ())), ==, 0);
+  g_assert_cmpuint (ncm_mset_max_model_nick (mset), ==, longest);
+
+  ncm_mset_free (mset);
+  ncm_model_free (cosmo);
+}
+
+/* The line after the header starts with the model nick. */
+void
+test_ncm_mset_params_pretty_print (void)
+{
+  NcmModel *a   = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmMSet *mset = ncm_mset_new (a, NULL, NULL);
+  FILE *out     = tmpfile ();
+  gchar line[256];
+
+  ncm_mset_params_pretty_print (mset, out, "a header");
+  rewind (out);
+
+  g_assert_nonnull (fgets (line, sizeof (line), out));
+  g_assert_cmpstr (line, ==, "# a header\n");
+  g_assert_nonnull (fgets (line, sizeof (line), out));
+  g_assert_true (g_str_has_prefix (line, ncm_model_nick (a)));
+
+  fclose (out);
+  ncm_mset_free (mset);
+  ncm_model_free (a);
+}
+
+/* Free parameters by index, by name and by full name, with two stacked models sharing
+ * parameter names. */
+void
+test_ncm_mset_fparam_lookups (void)
+{
+  NcDistance *dist    = nc_distance_new (3.0);
+  NcHaloPosition *hp0 = nc_halo_position_new (dist);
+  NcHaloPosition *hp1 = nc_halo_position_new (dist);
+  NcmMSet *mset       = ncm_mset_empty_new ();
+  const NcmModelID id = ncm_model_id (NCM_MODEL (hp0));
+  GError *error       = NULL;
+  const NcmMSetPIndex *pi;
+  NcmMSetPIndex *pif;
+  guint ra;
+
+  ncm_mset_push (mset, NCM_MODEL (hp0), NULL);
+  ncm_mset_push (mset, NCM_MODEL (hp1), NULL);
+  g_assert_true (ncm_model_orig_param_index_from_name (NCM_MODEL (hp0), "ra", &ra));
+
+  ncm_model_param_set_ftype (NCM_MODEL (hp0), ra, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set_ftype (NCM_MODEL (hp1), ra, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+  g_assert_cmpuint (ncm_mset_fparams_len (mset), ==, 2);
+  g_assert_cmpuint (ncm_mset_fparam_len (mset), ==, 2);
+
+  ncm_mset_fparam_set (mset, 1, 12.5);
+  g_assert_cmpfloat (ncm_mset_fparam_get (mset, 1), ==, 12.5);
+  g_assert_cmpfloat (ncm_model_param_get (NCM_MODEL (hp1), ra), ==, 12.5);
+  g_assert_cmpstr (ncm_mset_fparam_full_name (mset, 1), ==, "NcHaloPosition:01:ra");
+
+  g_assert_null (ncm_mset_fparam_get_pi_by_name (mset, "ra", &error));
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_PARAM_NAME_AMBIGUOUS);
+  g_clear_error (&error);
+
+  pi = ncm_mset_fparam_get_pi_by_name (mset, "NcHaloPosition:01:ra", &error);
+  g_assert_no_error (error);
+  g_assert_cmpint (pi->mid, ==, id + 1);
+  g_assert_null (ncm_mset_fparam_get_pi_by_name (mset, "nope", &error));
+  g_assert_no_error (error);
+
+  pif = ncm_mset_param_get_by_full_name (mset, "NcHaloPosition:1:ra", &error);
+  g_assert_no_error (error);
+  g_assert_cmpint (pif->mid, ==, id + 1);
+  g_assert_cmpuint (pif->pid, ==, ra);
+  ncm_mset_pindex_free (pif);
+
+  pif = ncm_mset_param_get_by_full_name (mset, "NcHaloPosition:0", &error);
+  g_assert_no_error (error);
+  g_assert_cmpint (pif->mid, ==, id);
+  g_assert_cmpuint (pif->pid, ==, 0);
+  ncm_mset_pindex_free (pif);
+
+  g_assert_null (ncm_mset_param_get_by_full_name (mset, "NcHaloPosition:5:ra", &error));
+  g_assert_no_error (error);
+  g_assert_null (ncm_mset_param_get_by_full_name (mset, "NcHaloPosition:nope", &error));
+  g_assert_no_error (error);
+  g_assert_null (ncm_mset_param_get_by_full_name (mset, "NoSuchModel:ra", &error));
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_NOT_FOUND);
+  g_clear_error (&error);
+
+  ncm_mset_free (mset);
+  nc_halo_position_free (hp0);
+  nc_halo_position_free (hp1);
+  nc_distance_free (dist);
+}
+
+void
+test_ncm_mset_fparam_get_fpi_range (void)
+{
+  g_test_trap_subprocess ("/ncm/mset/fparam/get_fpi_range/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*parameter 2 is out of range*");
+}
+
+void
+test_ncm_mset_fparam_get_fpi_range_subprocess (void)
+{
+  NcmModel *a   = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmMSet *mset = ncm_mset_new (a, NULL, NULL);
+
+  ncm_mset_prepare_fparam_map (mset);
+  ncm_mset_fparam_get_fpi (mset, ncm_model_mvnd_id (), 2);
+}
+
+/* A map set in its own order survives save and load; a file without the fmap key, the
+ * format before it, gets the map prepared from the fit types. */
+void
+test_ncm_mset_saveload_fmap (void)
+{
+  NcmModel *a         = NCM_MODEL (ncm_model_mvnd_new (3));
+  NcmMSet *mset       = ncm_mset_new (a, NULL, NULL);
+  NcmSerialize *ser   = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  const gchar *fmap[] = {"NcmModelMVND:mu_2", "NcmModelMVND:mu_0", NULL};
+  gchar *filename     = NULL;
+  gint fd             = g_file_open_tmp ("test_ncm_mset_fmap_XXXXXX.mset", &filename, NULL);
+  NcmMSet *loaded;
+
+  g_assert_cmpint (fd, >=, 0);
+  g_close (fd, NULL);
+
+  ncm_mset_set_fmap (mset, fmap, TRUE, NULL);
+
+  {
+    NcmSerialize *ser_save = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+
+    ncm_mset_save (mset, ser_save, filename, TRUE, NULL);
+    ncm_serialize_free (ser_save);
+  }
+
+  loaded = ncm_mset_load (filename, ser, NULL);
+  g_assert_true (ncm_mset_fparam_map_valid (loaded));
+  g_assert_cmpuint (ncm_mset_fparams_len (loaded), ==, 2);
+  g_assert_cmpstr (ncm_mset_fparam_full_name (loaded, 0), ==, "NcmModelMVND:mu_2");
+  g_assert_cmpstr (ncm_mset_fparam_full_name (loaded, 1), ==, "NcmModelMVND:mu_0");
+  ncm_mset_free (loaded);
+
+  {
+    GKeyFile *kf = g_key_file_new ();
+
+    g_assert_true (g_key_file_load_from_file (kf, filename, G_KEY_FILE_NONE, NULL));
+    g_assert_true (g_key_file_remove_key (kf, "NcmMSet", "fmap", NULL));
+    g_assert_true (g_key_file_save_to_file (kf, filename, NULL));
+    g_key_file_free (kf);
+  }
+
+  loaded = ncm_mset_load (filename, ser, NULL);
+  g_assert_true (ncm_mset_fparam_map_valid (loaded));
+  g_assert_cmpuint (ncm_mset_fparams_len (loaded), ==, 2);
+  g_assert_cmpstr (ncm_mset_fparam_full_name (loaded, 0), ==, "NcmModelMVND:mu_0");
+  g_assert_cmpstr (ncm_mset_fparam_full_name (loaded, 1), ==, "NcmModelMVND:mu_2");
+  ncm_mset_free (loaded);
+
+  g_unlink (filename);
+  g_free (filename);
+  ncm_serialize_free (ser);
+  ncm_mset_free (mset);
+  ncm_model_free (a);
+}
+
+/* Loading leaves no submodel names in the serializer, so a second load with the same
+ * serializer works (one without NCM_SERIALIZE_OPT_AUTOSAVE_SER, which would keep the
+ * names of the models it builds). */
+void
+test_ncm_mset_load_twice_same_ser (void)
+{
+  NcHIReion *reion  = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim    = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcmModel *cosmo   = NCM_MODEL (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
+  NcmMSet *mset     = ncm_mset_new (cosmo, NULL, NULL);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  gchar *filename   = NULL;
+  gint fd           = g_file_open_tmp ("test_ncm_mset_twice_XXXXXX.mset", &filename, NULL);
+  guint i;
+
+  g_assert_cmpint (fd, >=, 0);
+  g_close (fd, NULL);
+
+  {
+    NcmSerialize *ser_save = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+
+    ncm_mset_save (mset, ser_save, filename, FALSE, NULL);
+    ncm_serialize_free (ser_save);
+  }
+
+  for (i = 0; i < 2; i++)
+  {
+    GError *error   = NULL;
+    NcmMSet *loaded = ncm_mset_load (filename, ser, &error);
+
+    g_assert_no_error (error);
+    g_assert_cmpuint (ncm_mset_nmodels (loaded), ==, ncm_mset_nmodels (mset));
+    g_assert_nonnull (ncm_mset_peek (loaded, nc_hiprim_id ()));
+    g_assert_false (ncm_serialize_contain_name (ser, "NcHIPrim"));
+    ncm_mset_free (loaded);
+  }
+
+  g_unlink (filename);
+  g_free (filename);
+  ncm_serialize_free (ser);
+  ncm_mset_free (mset);
+  ncm_model_free (cosmo);
+  nc_hiprim_free (prim);
+  nc_hireion_free (reion);
+}
+
+static void
+_test_ncm_mset_value_int (GValue *v, const gint i)
+{
+  g_value_init (v, G_TYPE_INT);
+  g_value_set_int (v, i);
+}
+
+static void
+_test_ncm_mset_value_str (GValue *v, const gchar *str)
+{
+  g_value_init (v, G_TYPE_STRING);
+  g_value_set_string (v, str);
+}
+
+/* __getitem__ and __setitem__ by integer id, stack position included, and by name;
+ * invalid stack positions are errors on both. */
+void
+test_ncm_mset_getsetitem (void)
+{
+  NcDistance *dist    = nc_distance_new (3.0);
+  NcHaloPosition *h0  = nc_halo_position_new (dist);
+  NcHaloPosition *h1  = nc_halo_position_new (dist);
+  NcHaloPosition *h2  = nc_halo_position_new (dist);
+  NcmModel *mvnd      = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmMSet *mset       = ncm_mset_empty_new ();
+  const NcmModelID id = ncm_model_id (NCM_MODEL (h0));
+  const gchar *bad[]  = {"NcHaloPosition:", "NcHaloPosition:+1", "NcHaloPosition:1x", "NcHaloPosition:1000"};
+  GError *error       = NULL;
+  GValue v            = G_VALUE_INIT;
+  guint i;
+
+  _test_ncm_mset_value_int (&v, id);
+  ncm_mset___setitem__ (mset, &v, NCM_MODEL (h0), &error);
+  g_assert_no_error (error);
+  g_value_unset (&v);
+
+  _test_ncm_mset_value_int (&v, id + 2);
+  ncm_mset___setitem__ (mset, &v, NCM_MODEL (h2), &error);
+  g_assert_no_error (error);
+  g_assert_true (ncm_mset___getitem__ (mset, &v, &error) == NCM_MODEL (h2));
+  g_value_unset (&v);
+
+  _test_ncm_mset_value_str (&v, "NcHaloPosition:01");
+  ncm_mset___setitem__ (mset, &v, NCM_MODEL (h1), &error);
+  g_assert_no_error (error);
+  g_assert_true (ncm_mset___getitem__ (mset, &v, &error) == NCM_MODEL (h1));
+  g_value_unset (&v);
+  g_assert_true (ncm_mset_peek_pos (mset, id, 1) == NCM_MODEL (h1));
+  g_assert_true (ncm_mset_peek_by_name (mset, "NcHaloPosition", NULL) == NCM_MODEL (h0));
+
+  for (i = 0; i < G_N_ELEMENTS (bad); i++)
+  {
+    _test_ncm_mset_value_str (&v, bad[i]);
+
+    ncm_mset___setitem__ (mset, &v, NCM_MODEL (h1), &error);
+    g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_INVALID);
+    g_clear_error (&error);
+
+    g_assert_null (ncm_mset___getitem__ (mset, &v, &error));
+    g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_INVALID);
+    g_clear_error (&error);
+
+    g_value_unset (&v);
+  }
+
+  /* The positions set before are untouched by the rejected names. */
+  g_assert_true (ncm_mset_peek_pos (mset, id, 0) == NCM_MODEL (h0));
+  g_assert_true (ncm_mset_peek_pos (mset, id, 1) == NCM_MODEL (h1));
+  g_assert_true (ncm_mset_peek_pos (mset, id, 2) == NCM_MODEL (h2));
+
+  _test_ncm_mset_value_int (&v, id + 1);
+  ncm_mset___setitem__ (mset, &v, mvnd, &error);
+  g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_ID_MISMATCH);
+  g_clear_error (&error);
+  g_value_unset (&v);
+
+  ncm_mset_free (mset);
+  ncm_model_free (mvnd);
+  nc_halo_position_free (h0);
+  nc_halo_position_free (h1);
+  nc_halo_position_free (h2);
+  nc_distance_free (dist);
 }
 

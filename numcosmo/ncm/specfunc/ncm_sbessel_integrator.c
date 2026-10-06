@@ -26,11 +26,16 @@
 /**
  * NcmSBesselIntegrator:
  *
- * Base class for spherical Bessel function integrators.
+ * Base class for spherical Bessel integrators.
  *
- * This class provides a framework for integrating functions multiplied by
- * spherical Bessel functions $j_\ell(x)$.
- *
+ * Computes
+ * $$
+ * I_\ell(k) = \int_a^b K(\chi, k)\, j_\ell(k\chi)\, \mathrm{d}\chi
+ * $$
+ * for every multipole in #NcmSBesselIntegrator:ell-range at once, with
+ * ncm_sbessel_integrator_integrate(), or for a single one with
+ * ncm_sbessel_integrator_integrate_ell(). ncm_sbessel_integrator_integrate_deriv()
+ * replaces $j_\ell$ by one of its first two derivatives.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -51,7 +56,6 @@ enum
 {
   PROP_0,
   PROP_ELL_RANGE,
-  PROP_SIZE,
 };
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmSBesselIntegrator, ncm_sbessel_integrator, G_TYPE_OBJECT)
@@ -78,8 +82,12 @@ _ncm_sbessel_integrator_set_property (GObject *object, guint prop_id, const GVal
     {
       NcmDTuple2 *ell_range = g_value_get_boxed (value);
 
+      /* Not given at construction: the range [0, 0] */
       if (ell_range == NULL)
-        g_error ("_ncm_sbessel_integrator_set_property: ell_range is NULL.");
+      {
+        ncm_sbessel_integrator_set_ell_range (sbi, 0, 0);
+        break;
+      }
 
       /* Convert from double to uint with validation */
       if ((ell_range->elements[0] < 0.0) || (ell_range->elements[1] < 0.0))
@@ -164,8 +172,8 @@ ncm_sbessel_integrator_class_init (NcmSBesselIntegratorClass *klass)
   /**
    * NcmSBesselIntegrator:ell-range:
    *
-   * Multipole range [ell_min, ell_max]. Both values must be non-negative integers
-   * with ell_min <= ell_max.
+   * Multipole range $[\ell_\mathrm{min}, \ell_\mathrm{max}]$, two non-negative integers
+   * in order. Defaults to $[0, 0]$.
    */
   g_object_class_install_property (object_class,
                                    PROP_ELL_RANGE,
@@ -233,6 +241,17 @@ _ncm_sbessel_integrator_integrate_deriv_not_implemented (NcmSBesselIntegrator *s
 
 /* LCOV_EXCL_STOP */
 
+static void
+_ncm_sbessel_integrator_check_result (NcmSBesselIntegrator *sbi, NcmVector *result)
+{
+  NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
+  const guint n_ell                 = self->ell_max - self->ell_min + 1;
+
+  if (ncm_vector_len (result) < n_ell)
+    g_error ("ncm_sbessel_integrator: result has length %u, the multipole range [%u, %u] needs %u.",
+             ncm_vector_len (result), self->ell_min, self->ell_max, n_ell);
+}
+
 /**
  * ncm_sbessel_integrator_ref:
  * @sbi: a #NcmSBesselIntegrator
@@ -252,7 +271,6 @@ ncm_sbessel_integrator_ref (NcmSBesselIntegrator *sbi)
  * @sbi: a #NcmSBesselIntegrator
  *
  * Decreases the reference count of @sbi by one.
- *
  */
 void
 ncm_sbessel_integrator_free (NcmSBesselIntegrator *sbi)
@@ -264,9 +282,7 @@ ncm_sbessel_integrator_free (NcmSBesselIntegrator *sbi)
  * ncm_sbessel_integrator_clear:
  * @sbi: a #NcmSBesselIntegrator
  *
- * If @sbi is different from NULL, decreases the reference count of
- * @sbi by one and sets @sbi to NULL.
- *
+ * If *@sbi is not NULL, decreases its reference count by one and sets *@sbi to NULL.
  */
 void
 ncm_sbessel_integrator_clear (NcmSBesselIntegrator **sbi)
@@ -277,11 +293,10 @@ ncm_sbessel_integrator_clear (NcmSBesselIntegrator **sbi)
 /**
  * ncm_sbessel_integrator_get_ell_range:
  * @sbi: a #NcmSBesselIntegrator
- * @ell_min: (out): location to store minimum multipole
- * @ell_max: (out): location to store maximum multipole
+ * @ell_min: (out): lowest multipole
+ * @ell_max: (out): highest multipole
  *
- * Gets the multipole range.
- *
+ * Gets #NcmSBesselIntegrator:ell-range.
  */
 void
 ncm_sbessel_integrator_get_ell_range (NcmSBesselIntegrator *sbi, guint *ell_min, guint *ell_max)
@@ -295,14 +310,11 @@ ncm_sbessel_integrator_get_ell_range (NcmSBesselIntegrator *sbi, guint *ell_min,
 /**
  * ncm_sbessel_integrator_set_ell_range: (virtual set_ell_range)
  * @sbi: a #NcmSBesselIntegrator
- * @ell_min: minimum multipole
- * @ell_max: maximum multipole
+ * @ell_min: lowest multipole
+ * @ell_max: highest multipole
  *
- * Sets the multipole range for integration. If the range has changed from
- * the previous call, subclasses may perform preparation work (e.g., allocating
- * operators for the new range). The default implementation simply updates
- * ell_min and ell_max properties.
- *
+ * Sets #NcmSBesselIntegrator:ell-range. Subclasses may prepare work for the new range
+ * here, such as allocating operators.
  */
 void
 ncm_sbessel_integrator_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max)
@@ -313,67 +325,70 @@ ncm_sbessel_integrator_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, 
 /**
  * ncm_sbessel_integrator_integrate_ell: (virtual integrate_ell)
  * @sbi: a #NcmSBesselIntegrator
- * @F: (scope call) (closure user_data): function to integrate
- * @a: lower integration limit
- * @b: upper integration limit
- * @k: wave number parameter
- * @ell: multipole
+ * @F: (scope call) (closure user_data): the radial kernel $K(\chi, k)$
+ * @a: lower limit
+ * @b: upper limit
+ * @k: wavenumber $k$
+ * @ell: multipole $\ell \geq 0$
  * @user_data: (nullable): user data passed to @F
  *
- * Integrates the function @F(chi, k) multiplied by the spherical Bessel function
- * $j_\ell(kx)$ from @a to @b for a single multipole.
- * Computes: $\int_a^b K(\chi,k) j_\ell(k\chi) d\chi$
+ * Computes $I_\ell(k)$ for a single multipole. The default implementation sets the
+ * range to $[\ell, \ell]$, calls ncm_sbessel_integrator_integrate() and restores the
+ * range, so it is not reentrant and may trigger the preparation work of
+ * ncm_sbessel_integrator_set_ell_range() twice per call.
  *
- * Returns: the integral value
+ * Returns: $I_\ell(k)$
  */
 gdouble
 ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, gint ell, gpointer user_data)
 {
+  if (ell < 0)
+    g_error ("ncm_sbessel_integrator_integrate_ell: negative multipole %d.", ell);
+
   return NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate_ell (sbi, F, a, b, k, ell, user_data);
 }
 
 /**
  * ncm_sbessel_integrator_integrate: (virtual integrate)
  * @sbi: a #NcmSBesselIntegrator
- * @F: (scope call) (closure user_data): function to integrate
- * @a: lower integration limit
- * @b: upper integration limit
- * @k: wave number parameter
- * @result: a #NcmVector to store results
+ * @F: (scope call) (closure user_data): the radial kernel $K(\chi, k)$
+ * @a: lower limit
+ * @b: upper limit
+ * @k: wavenumber $k$
+ * @result: output, one value per multipole
  * @user_data: (nullable): user data passed to @F
  *
- * Integrates the function @F(chi, k) multiplied by the spherical Bessel function
- * $j_\ell(kx)$ from @a to @b for all multipoles from ell_min to ell_max.
- * Computes: $\int_a^b K(\chi,k) j_\ell(k\chi) d\chi$ for each $\ell$.
- * The results are stored in @result, which must have length (ell_max - ell_min + 1).
- *
+ * Computes $I_\ell(k)$ for every multipole in #NcmSBesselIntegrator:ell-range, storing
+ * $I_{\ell_\mathrm{min}+i}(k)$ in element $i$ of @result, whose length must be at least
+ * $\ell_\mathrm{max} - \ell_\mathrm{min} + 1$; later elements are left untouched.
  */
 void
 ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data)
 {
+  _ncm_sbessel_integrator_check_result (sbi, result);
   NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate (sbi, F, a, b, k, result, user_data);
 }
 
 /**
  * ncm_sbessel_integrator_integrate_deriv: (virtual integrate_deriv)
  * @sbi: a #NcmSBesselIntegrator
- * @F: (scope call) (closure user_data): function to integrate
- * @a: lower integration limit
- * @b: upper integration limit
- * @k: wave number parameter
- * @deriv: derivative order of the spherical Bessel weight, up to 2
- * @result: a #NcmVector to store results
+ * @F: (scope call) (closure user_data): the radial kernel $K(\chi, k)$
+ * @a: lower limit
+ * @b: upper limit
+ * @k: wavenumber $k$
+ * @deriv: derivative order $d \leq 2$
+ * @result: output, one value per multipole
  * @user_data: (nullable): user data passed to @F
  *
- * Integrates the function @F(chi, k) multiplied by the @deriv-th derivative of the
- * spherical Bessel function with respect to its argument, computing
- * $\int_a^b K(\chi,k)\, j_\ell^{(d)}(k\chi)\, \mathrm{d}\chi$ for each $\ell$ from ell_min
- * to ell_max. For @deriv equal to zero this is ncm_sbessel_integrator_integrate().
- * The results are stored in @result, which must have length (ell_max - ell_min + 1).
+ * Same as ncm_sbessel_integrator_integrate() with $j_\ell(k\chi)$ replaced by
+ * $j_\ell^{(d)}(k\chi)$, the derivative with respect to the argument. Order zero is
+ * ncm_sbessel_integrator_integrate().
  */
 void
 ncm_sbessel_integrator_integrate_deriv (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, guint deriv, NcmVector *result, gpointer user_data)
 {
+  _ncm_sbessel_integrator_check_result (sbi, result);
+
   if (deriv > 2)
     g_error ("ncm_sbessel_integrator_integrate_deriv: derivative order %u not supported (up to 2)", deriv);
 
@@ -387,7 +402,6 @@ typedef struct _NcmSBesselIntegratorGaussianData
 {
   gdouble center;
   gdouble std;
-  gdouble k;
 } NcmSBesselIntegratorGaussianData;
 
 static gdouble
@@ -402,26 +416,22 @@ _ncm_sbessel_integrator_gaussian_func (gpointer user_data, gdouble chi, gdouble 
 /**
  * ncm_sbessel_integrator_integrate_gaussian_ell:
  * @sbi: a #NcmSBesselIntegrator
- * @center: center of the Gaussian
- * @std: standard deviation of the Gaussian
- * @a: lower integration limit
- * @b: upper integration limit
- * @k: wave number parameter
- * @ell: multipole
+ * @center: center $\chi_c$
+ * @std: width $\sigma$
+ * @a: lower limit
+ * @b: upper limit
+ * @k: wavenumber $k$
+ * @ell: multipole $\ell \geq 0$
  *
- * Integrates a Gaussian function $\exp(-\frac{1}{2}(\frac{\chi - center}{std})^2)$
- * multiplied by the spherical Bessel function $j_\ell(kx)$ from @a to @b
- * for a single multipole.
+ * ncm_sbessel_integrator_integrate_ell() with $K = e^{-(\chi - \chi_c)^2 / (2\sigma^2)}$,
+ * the shape of the Gaussian truth tables, evaluated in C to avoid callback overhead.
  *
- * This is a convenience function optimized for testing against truth tables,
- * avoiding the overhead of Python callbacks.
- *
- * Returns: the integral value
+ * Returns: $I_\ell(k)$
  */
 gdouble
 ncm_sbessel_integrator_integrate_gaussian_ell (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble a, gdouble b, gdouble k, gint ell)
 {
-  NcmSBesselIntegratorGaussianData data = {center, std, k};
+  NcmSBesselIntegratorGaussianData data = {center, std};
 
   return ncm_sbessel_integrator_integrate_ell (sbi, &_ncm_sbessel_integrator_gaussian_func, a, b, k, ell, &data);
 }
@@ -429,26 +439,20 @@ ncm_sbessel_integrator_integrate_gaussian_ell (NcmSBesselIntegrator *sbi, gdoubl
 /**
  * ncm_sbessel_integrator_integrate_gaussian:
  * @sbi: a #NcmSBesselIntegrator
- * @center: center of the Gaussian
- * @std: standard deviation of the Gaussian
- * @a: lower integration limit
- * @b: upper integration limit
- * @k: wave number parameter
- * @result: a #NcmVector to store results
+ * @center: center $\chi_c$
+ * @std: width $\sigma$
+ * @a: lower limit
+ * @b: upper limit
+ * @k: wavenumber $k$
+ * @result: output, one value per multipole
  *
- * Integrates a Gaussian function $\exp(-\frac{1}{2}(\frac{\chi - center}{std})^2)$
- * multiplied by the spherical Bessel function $j_\ell(kx)$ from @a to @b
- * for all multipoles from ell_min to ell_max.
- * The results are stored in @result, which must have length (ell_max - ell_min + 1).
- *
- * This is a convenience function optimized for testing against truth tables,
- * avoiding the overhead of Python callbacks.
- *
+ * ncm_sbessel_integrator_integrate() with the Gaussian of
+ * ncm_sbessel_integrator_integrate_gaussian_ell().
  */
 void
 ncm_sbessel_integrator_integrate_gaussian (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble a, gdouble b, gdouble k, NcmVector *result)
 {
-  NcmSBesselIntegratorGaussianData data = {center, std, k};
+  NcmSBesselIntegratorGaussianData data = {center, std};
 
   ncm_sbessel_integrator_integrate (sbi, &_ncm_sbessel_integrator_gaussian_func, a, b, k, result, &data);
 }
@@ -457,7 +461,6 @@ typedef struct _NcmSBesselIntegratorRationalData
 {
   gdouble center;
   gdouble std;
-  gdouble k;
 } NcmSBesselIntegratorRationalData;
 
 static gdouble
@@ -474,26 +477,23 @@ _ncm_sbessel_integrator_rational_func (gpointer user_data, gdouble chi, gdouble 
 /**
  * ncm_sbessel_integrator_integrate_rational_ell:
  * @sbi: a #NcmSBesselIntegrator
- * @center: center of the rational function
- * @std: standard deviation parameter
- * @a: lower integration limit
- * @b: upper integration limit
- * @k: wave number parameter
- * @ell: multipole
+ * @center: center $\chi_c$
+ * @std: width $\sigma$
+ * @a: lower limit
+ * @b: upper limit
+ * @k: wavenumber $k$
+ * @ell: multipole $\ell \geq 0$
  *
- * Integrates a rational function $\frac{\chi^2}{(1+((\chi - center)/std)^2)^3}$
- * multiplied by the spherical Bessel function $j_\ell(kx)$ from @a to @b for a single
- * multipole.
+ * ncm_sbessel_integrator_integrate_ell() with
+ * $K = \chi^2 / [1 + (\chi - \chi_c)^2 / \sigma^2]^3$, the shape of the rational truth
+ * tables, evaluated in C to avoid callback overhead.
  *
- * This is a convenience function optimized for testing against truth tables, avoiding
- * the overhead of Python callbacks.
- *
- * Returns: the integral value
+ * Returns: $I_\ell(k)$
  */
 gdouble
 ncm_sbessel_integrator_integrate_rational_ell (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble a, gdouble b, gdouble k, gint ell)
 {
-  NcmSBesselIntegratorRationalData data = {center, std, k};
+  NcmSBesselIntegratorRationalData data = {center, std};
 
   return ncm_sbessel_integrator_integrate_ell (sbi, &_ncm_sbessel_integrator_rational_func, a, b, k, ell, &data);
 }
@@ -501,26 +501,20 @@ ncm_sbessel_integrator_integrate_rational_ell (NcmSBesselIntegrator *sbi, gdoubl
 /**
  * ncm_sbessel_integrator_integrate_rational:
  * @sbi: a #NcmSBesselIntegrator
- * @center: center of the rational function
- * @std: standard deviation parameter
- * @a: lower integration limit
- * @b: upper integration limit
- * @k: wave number parameter
- * @result: a #NcmVector to store results
+ * @center: center $\chi_c$
+ * @std: width $\sigma$
+ * @a: lower limit
+ * @b: upper limit
+ * @k: wavenumber $k$
+ * @result: output, one value per multipole
  *
- * Integrates a rational function $\frac{\chi^2}{(1+((\chi - center)/std)^2)^3}$
- * multiplied by the spherical Bessel function $j_\ell(kx)$ from @a to @b for all
- * multipoles from ell_min to ell_max. The results are stored in @result, which must have
- * length (ell_max - ell_min + 1).
- *
- * This is a convenience function optimized for testing against truth tables, avoiding
- * the overhead of Python callbacks.
- *
+ * ncm_sbessel_integrator_integrate() with the rational function of
+ * ncm_sbessel_integrator_integrate_rational_ell().
  */
 void
 ncm_sbessel_integrator_integrate_rational (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble a, gdouble b, gdouble k, NcmVector *result)
 {
-  NcmSBesselIntegratorRationalData data = {center, std, k};
+  NcmSBesselIntegratorRationalData data = {center, std};
 
   ncm_sbessel_integrator_integrate (sbi, &_ncm_sbessel_integrator_rational_func, a, b, k, result, &data);
 }

@@ -49,7 +49,7 @@
  * Gauss-Legendre rule: a single call returns one $\lambda$, so nothing is computed
  * that the caller does not consume. Its integral follows from a closed-form
  * identity rather than a second quadrature. See
- * <a href="../../theory/cluster_richness_projection.html">Richness projection</a>
+ * <a href="../../theory/nc/lss/cluster/cluster_richness_projection.html">Richness projection</a>
  * for the derivation.
  *
  */

@@ -24,14 +24,14 @@
 """CLI command for viewing cross-correlation kernels."""
 
 import dataclasses
-from typing import Annotated, Optional
 from pathlib import Path
+from typing import Annotated
 
-import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-from matplotlib.lines import Line2D
+import matplotlib.pyplot as plt
 import numpy as np
 import typer
+from matplotlib.lines import Line2D
 
 from numcosmo_py import Nc
 
@@ -223,7 +223,7 @@ class KernelVariants:
 
 def ListKernels(
     kernel_type: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(
             help=(
                 "Kernel type to document. Given one, every parameter it takes "
@@ -398,7 +398,7 @@ class ViewKernel(XcorKernelCommon):
         print()
         print("[OK] Kernel visualization complete!")
 
-    def _cls_output_path(self) -> Optional[Path]:
+    def _cls_output_path(self) -> Path | None:
         """Where the C_ell figure is written.
 
         The kernel figure already owns --output, so the spectra go beside it
@@ -496,7 +496,7 @@ class ViewKernel(XcorKernelCommon):
         print("Plotting results...")
 
         # Define color palette for different kernels
-        colors = plt.cm.tab10.colors  # type: ignore # pylint: disable=no-member
+        colors = plt.cm.tab10.colors  # type: ignore
         ax1: plt.Axes
         ax2: plt.Axes
 
@@ -620,5 +620,6 @@ class ViewKernel(XcorKernelCommon):
             plt.show()
         else:
             print("  [OK] Plot generated (not displayed)")
+            plt.close(fig)
 
         print()

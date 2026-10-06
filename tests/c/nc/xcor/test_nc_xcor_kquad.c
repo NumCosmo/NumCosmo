@@ -24,11 +24,11 @@
 
 /*
  * The kernel-space outer integral: given two $W_\ell(k)$ representations, integrate
- * $k^2 W^1_\ell W^2_\ell$ over a multipole block. Each method does it differently --
- * adaptive GSL over breakpoints, fixed cubature, exact GL(5) on the panel union -- and
- * this checks the parts that are the same whichever is chosen: the band is filled, the
- * auto path agrees with passing one kernel twice to the cross path, and an error
- * estimate accompanies the result exactly when the method claims to offer one.
+ * $k^2 W^1_\ell W^2_\ell$ over a multipole block. Each method does it differently
+ * (fixed cubature or exact GL(5) on the panel union), and this checks the parts that
+ * are the same whichever is chosen: the band is filled, the auto path agrees with
+ * passing one kernel twice to the cross path, and an error estimate accompanies the
+ * result exactly when the method claims to offer one.
  *
  * Everything is sized to keep this in the unit lane: two narrow windows close in, the
  * power spectrum capped well below its default, a four-multipole block, and the kernels'
@@ -67,17 +67,12 @@ typedef struct _TestNcXcorKQuad
  * TestMethod:
  * @name: path component naming the method
  * @meth: the method itself
- * @has_block: whether nc_xcor_integrate_block() accepts it
  * @closure: how the kernels represent W_l(k) for this case
- *
- * Kernel-space is not the same as block-capable: NC_XCOR_METHOD_KERNEL_GSL builds its
- * closure per multipole, so it has no block quadrature and integrate_block() refuses it.
  */
 typedef struct _TestMethod
 {
   const gchar *name;
   NcXcorMethod meth;
-  gboolean has_block;
   NcXcorKernelClosure closure;
 } TestMethod;
 
@@ -87,14 +82,10 @@ typedef struct _TestMethod
  * default closure is the Chebyshev one, so asking for the spline is the only way
  * through that second branch. */
 static const TestMethod test_methods[] = {
-  {"kernel_gsl/spline",          NC_XCOR_METHOD_KERNEL_GSL,       FALSE, NC_XCOR_KERNEL_CLOSURE_SPLINE   },
-  {"kernel_cubature/spline",     NC_XCOR_METHOD_KERNEL_CUBATURE,  TRUE,  NC_XCOR_KERNEL_CLOSURE_SPLINE   },
-  {"kernel_exact/spline",        NC_XCOR_METHOD_KERNEL_EXACT,     TRUE,  NC_XCOR_KERNEL_CLOSURE_SPLINE   },
-  {"kernel_gsl_block/spline",    NC_XCOR_METHOD_KERNEL_GSL_BLOCK, TRUE,  NC_XCOR_KERNEL_CLOSURE_SPLINE   },
-  {"kernel_gsl/chebyshev",       NC_XCOR_METHOD_KERNEL_GSL,       FALSE, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
-  {"kernel_cubature/chebyshev",  NC_XCOR_METHOD_KERNEL_CUBATURE,  TRUE,  NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
-  {"kernel_exact/chebyshev",     NC_XCOR_METHOD_KERNEL_EXACT,     TRUE,  NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
-  {"kernel_gsl_block/chebyshev", NC_XCOR_METHOD_KERNEL_GSL_BLOCK, TRUE,  NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
+  {"kernel_cubature/spline",    NC_XCOR_METHOD_KERNEL_CUBATURE, NC_XCOR_KERNEL_CLOSURE_SPLINE   },
+  {"kernel_exact/spline",       NC_XCOR_METHOD_KERNEL_EXACT,    NC_XCOR_KERNEL_CLOSURE_SPLINE   },
+  {"kernel_cubature/chebyshev", NC_XCOR_METHOD_KERNEL_CUBATURE, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
+  {"kernel_exact/chebyshev",    NC_XCOR_METHOD_KERNEL_EXACT,    NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
 };
 
 static NcXcorKernel *
@@ -252,13 +243,6 @@ test_nc_xcor_kquad_integrate_block (TestNcXcorKQuad *test, gconstpointer pdata)
   NcmVector *direct;
   guint i;
 
-  if (!tm->has_block)
-  {
-    g_test_skip ("builds its closure per multipole, so it has no block quadrature");
-
-    return;
-  }
-
   i1 = nc_xcor_kernel_get_eval_vectorized (test->k1, test->cosmo, TEST_LMIN, TEST_LMAX, closure);
   i2 = nc_xcor_kernel_get_eval_vectorized (test->k2, test->cosmo, TEST_LMIN, TEST_LMAX, closure);
 
@@ -310,8 +294,7 @@ test_nc_xcor_kquad_method_table (void)
 {
   const NcXcorMethod all[] = {
     NC_XCOR_METHOD_LIMBER_Z_GSL, NC_XCOR_METHOD_LIMBER_Z_CUBATURE,
-    NC_XCOR_METHOD_KERNEL_GSL, NC_XCOR_METHOD_KERNEL_CUBATURE,
-    NC_XCOR_METHOD_KERNEL_EXACT, NC_XCOR_METHOD_KERNEL_GSL_BLOCK
+    NC_XCOR_METHOD_KERNEL_CUBATURE, NC_XCOR_METHOD_KERNEL_EXACT
   };
   guint i, j;
 

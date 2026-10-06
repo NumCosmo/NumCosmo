@@ -73,16 +73,17 @@ Documentation is split by purpose, and the split is intentional:
   relation or signature, and the key methods. Keep it short.
 - Theoretical background (the Quarto project under `docs/`, rendered to the
   website) — the physics, derivations, and full equations live here, in
-  `docs/theory/<area>/<topic>.qmd`.
+  `docs/theory/<ns>/<area>/<topic>.qmd`, mirroring the `numcosmo/<ns>/<area>/`
+  of the class it documents.
 
 When a class involves non-trivial math, do not put the derivation in the C doc
 comment. Put it on a theory page and link to it. The pattern is established by
 `NcmCSQ1D`: see the short doc comment in
 `numcosmo/ncm/dynamics/ncm_csq1d.c` and the corresponding
-`docs/theory/csq1d.qmd`.
+`docs/theory/ncm/dynamics/csq1d.qmd`.
 
 - From the C doc comment, link to the theory page with a plain anchor, e.g.
-  `<a href="../../theory/csq1d.html">CSQ1D Formalism</a>`.
+  `<a href="../../theory/ncm/dynamics/csq1d.html">CSQ1D Formalism</a>`.
 - From the theory page, link back to the API with wiki-style symbol references:
   `[[numcosmo-math|NcmCSQ1D]]`, `[[numcosmo|NcDistance]]`,
   `[[numcosmo-math|ncm_csq1d_prepare]]`. Unresolved references degrade to plain
@@ -137,7 +138,7 @@ Placement. A function or class doc states what the thing does and its error
 modes, and stops. Derivations go on a theory page (see above). Measurement
 tables, rejected approaches, and how a bug was found go in
 `dev-notes/<topic>.md` or an area history document such as
-`docs/theory/wl_shape_factor_history.md`, with a pointer left in the code.
+`docs/theory/nc/lss/galaxy/wl_shape_factor_history.md`, with a pointer left in the code.
 
 Do not delete these when shortening a comment. Move them if they belong
 elsewhere, but they must survive somewhere findable:
@@ -257,8 +258,10 @@ ago.
 All C files, including headers, must be formatted with uncrustify using the
 provided configuration `numcosmo_uncrustify.cfg`. Formatting is checked in CI.
 
-Python code is checked with the configured `flake8`, `pylint`, and `mypy`
-settings (see `.flake8`, `.pylintrc`, `.mypy.ini`).
+Python code is formatted with `black` and checked with `ruff` and `mypy`, both
+configured in `pyproject.toml`. CI also regenerates the stubs `numcosmo_py/nc.pyi`
+and `numcosmo_py/ncm.pyi` and fails if they differ from the committed ones; after
+changing the C API, build and run `numcosmo_py/update_pyi.sh`, then commit the stubs.
 
 ## CI conda environment
 
@@ -288,7 +291,7 @@ to the data-file cache.
 
 ### Changing dependencies
 
-Editing `environment.yml` invalidates every lock, and the `check-conda-locks`
+Editing `environment.yml` invalidates every lock, and the `lint`
 job fails until they are regenerated:
 
 ```bash
@@ -330,13 +333,14 @@ environment.yml` still solves normally (see [docs/install.qmd](docs/install.qmd)
 Several data sets are not in the repository: the Planck baseline (`plc_3.0`),
 the SNIa covariance catalogs, the curated weak-lensing catalogs and the native
 Planck likelihood objects. NumCosmo downloads each one from a tagged GitHub
-release the first time it is asked for and keeps it in `~/.numcosmo`. That is
-about 470 MB, and without a cache every CI job fetches its share of it on every
-run.
+release the first time it is asked for and keeps it in the NumCosmo user data
+directory (see `ncm_cfg_init`). That is about 470 MB, and without a cache
+every CI job fetches its share of it on every run.
 
-`.github/actions/data-cache` restores that directory — only the downloaded
-files, never the FFTW wisdom and FFTLog tables the library writes alongside
-them. Two things make an entry stale, and nothing else does:
+`.github/actions/data-cache` pins that directory for the job by exporting
+`NUMCOSMO_HOME=$HOME/.local/share/numcosmo`, and restores only the downloaded
+files into it, never the FFTW wisdom and FFTLog tables the library writes
+alongside them. Two things make an entry stale, and nothing else does:
 
 - The release tag. The key embeds the `datafile-release-vX.Y.Z` tag read
   back out of the sources that name it, so bumping the tag there is enough.

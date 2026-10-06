@@ -22,7 +22,7 @@
 ``NcGalaxyRedshiftFactorComposed`` convolves a population slot
 (``NcGalaxyRedshiftPop``) with a photo-z observable slot
 (``NcGalaxyRedshiftObs``) over a selection window. Its joint integrand,
-integration limits and normalization were validated for golden parity against
+integration limits and normalization were validated for parity against
 the legacy ``NcGalaxySDObsRedshiftGauss`` (use_true_z), which shares identical
 math.
 
@@ -37,7 +37,7 @@ runtime -- legacy is slated for deletion in a follow-up PR. Each frozen
 assertion keeps the tolerance (``rtol``/``atol``) that the original live
 comparison used. The integrand sequences are stored as an ``Ncm.Matrix``
 binfile (``data/truth_tables/wl/``) rather than inline literals; see
-``_load_golden``.
+``_load_truth_table``.
 """
 
 import pytest
@@ -96,24 +96,24 @@ def test_serialize_deserialize():
 
 
 # Frozen legacy integrand output, sampled on a 200-point z-grid (see module
-# docstring). Stored as a flat (len(_CASES) * 2, _GOLDEN_N) matrix, blocked
+# docstring). Stored as a flat (len(_CASES) * 2, _TRUTH_TABLE_N) matrix, blocked
 # by case (matching _CASES order) then by use_lnp (False, True). Regenerate
 # with Ncm.Serialize.to_binfile on an Ncm.Matrix built from the rows in that
 # order.
-_GOLDEN_FILE = "truth_tables/wl/nc_galaxy_redshift_factor_composed_integrand_parity.bin"
-_GOLDEN_N = 200
+_TRUTH_TABLE_FILE = "truth_tables/wl/nc_galaxy_redshift_factor_composed_integrand_parity.bin"
+_TRUTH_TABLE_N = 200
 
 
-def _load_golden() -> np.ndarray:
-    """Load the frozen integrand sequences as a (len(_CASES), 2, _GOLDEN_N) array."""
-    path = Ncm.cfg_get_data_filename(_GOLDEN_FILE, True)
+def _load_truth_table() -> np.ndarray:
+    """Load the frozen integrand sequences as a (len(_CASES), 2, _TRUTH_TABLE_N) array."""
+    path = Ncm.cfg_get_data_filename(_TRUTH_TABLE_FILE, True)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     matrix = ser.from_binfile(path)
     assert isinstance(matrix, Ncm.Matrix)
-    return np.array(matrix.dup_array()).reshape(len(_CASES), 2, _GOLDEN_N)
+    return np.array(matrix.dup_array()).reshape(len(_CASES), 2, _TRUTH_TABLE_N)
 
 
-_INTEGRAND_FROZEN = _load_golden()
+_INTEGRAND_FROZEN = _load_truth_table()
 
 
 @pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)

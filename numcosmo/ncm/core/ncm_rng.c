@@ -27,17 +27,14 @@
 /**
  * NcmRNG:
  *
- * Encapsulated GNU Scientific Library (GSL) random number generator with support for
- * multhreading.
+ * Pseudo-random number generator wrapping a GSL `gsl_rng`.
  *
- * This object encapsulates the [GNU Scientific Library
- * (GSL)](https://www.gnu.org/software/gsl/) pseudo random number generator (PRNG). Its
- * main purpose is to add support for saving and loading state and multhreading. For
- * more information about the GSL routines see both links: [random number
- * generation](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-generation)
- * and [random number
- * distributions](https://www.gnu.org/software/gsl/doc/html/randist.html#random-number-distributions).
- *
+ * Adds a serializable state (`NcmRNG:state`), a process-wide record of the seeds
+ * already used, a pool of named generators and a mutex. The generation functions do
+ * not lock; code sharing an #NcmRNG between threads brackets its calls with
+ * ncm_rng_lock() and ncm_rng_unlock(). See the GSL documentation on
+ * [random number generation](https://www.gnu.org/software/gsl/doc/html/rng.html) and
+ * [random number distributions](https://www.gnu.org/software/gsl/doc/html/randist.html).
  */
 
 #ifdef HAVE_CONFIG_H
@@ -54,11 +51,10 @@
 
 typedef struct _NcmRNGPrivate
 {
-  /*< private >*/
-  GObject parent_instance;
   gsl_rng *r;
   gulong seed_val;
   gboolean seed_set;
+  gboolean state_set;
   GMutex lock;
 } NcmRNGPrivate;
 
@@ -78,6 +74,9 @@ enum
   PROP_SEED,
 };
 
+/* Seeds are hash-table keys held in a pointer */
+G_STATIC_ASSERT (sizeof (gulong) <= sizeof (gpointer));
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcmRNG, ncm_rng, G_TYPE_OBJECT)
 G_DEFINE_BOXED_TYPE (NcmRNGDiscrete, ncm_rng_discrete, ncm_rng_discrete_copy, ncm_rng_discrete_free)
 
@@ -86,9 +85,10 @@ ncm_rng_init (NcmRNG *rng)
 {
   NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
 
-  self->r        = NULL;
-  self->seed_val = 0;
-  self->seed_set = FALSE;
+  self->r         = NULL;
+  self->seed_val  = 0;
+  self->seed_set  = FALSE;
+  self->state_set = FALSE;
 
   g_mutex_init (&self->lock);
 }
@@ -102,8 +102,25 @@ _ncm_rng_constructed (GObject *object)
     NcmRNG *rng                = NCM_RNG (object);
     NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
 
-    if (!self->seed_set)
+    if (!self->seed_set && !self->state_set)
       ncm_rng_set_seed (rng, gsl_rng_default_seed);
+  }
+}
+
+/* Records @seed as the generator's seed and as used in the process. */
+static void
+_ncm_rng_record_seed (NcmRNG *rng, gulong seed)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  self->seed_val = seed;
+
+  if (self->r != NULL)
+  {
+    NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);
+
+    g_hash_table_insert (rng_class->seed_hash, (gpointer) (guintptr) seed, GINT_TO_POINTER (1));
+    self->seed_set = TRUE;
   }
 }
 
@@ -120,11 +137,27 @@ _ncm_rng_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       ncm_rng_set_algo (rng, g_value_get_string (value));
       break;
     case PROP_STATE:
+    {
+      NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
       ncm_rng_set_state (rng, g_value_get_string (value));
+      self->state_set = TRUE;
       break;
+    }
     case PROP_SEED:
-      ncm_rng_set_seed (rng, g_value_get_ulong (value));
+    {
+      /* A state set through the property wins over the seed: the seed is
+       * recorded, so that a deserialized generator resumes its stream.
+       */
+      NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+      if (self->state_set)
+        _ncm_rng_record_seed (rng, g_value_get_ulong (value));
+      else
+        ncm_rng_set_seed (rng, g_value_get_ulong (value));
+
       break;
+    }
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -182,9 +215,8 @@ ncm_rng_class_init (NcmRNGClass *klass)
   /**
    * NcmRNG:algorithm:
    *
-   * The name of the pseudo random number algorithm to be used from [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/).
-   * A list of the available algorithms can be find [here](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-generator-algorithms).
-   *
+   * The GSL name of the algorithm, one of the
+   * [GSL generators](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-generator-algorithms).
    */
   g_object_class_install_property (object_class,
                                    PROP_ALGO,
@@ -197,22 +229,20 @@ ncm_rng_class_init (NcmRNGClass *klass)
   /**
    * NcmRNG:seed:
    *
-   * Pseudo random number algorithm seed.
-   *
+   * The last seed set.
    */
   g_object_class_install_property (object_class,
                                    PROP_SEED,
                                    g_param_spec_ulong ("seed",
                                                        NULL,
-                                                       "Algorithm seed",
+                                                       "Algorithm seed; only recorded when a state was set",
                                                        0, G_MAXULONG, 0,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmRNG:state:
    *
-   * Pseudo random number algorithm state.
-   *
+   * The state of the generator encoded in Base64, see ncm_rng_get_state().
    */
   g_object_class_install_property (object_class,
                                    PROP_STATE,
@@ -230,11 +260,11 @@ ncm_rng_class_init (NcmRNGClass *klass)
 
 /**
  * ncm_rng_discrete_new:
- * @weights: (array length=n): array of weights
- * @n: number of elements in @weights
+ * @weights: (array length=n): the weights
+ * @n: number of weights
  *
- * Creates a new #NcmRNGDiscrete. This object is used to generate random numbers
- * from a discrete distribution for the given set of weights.
+ * Creates the lookup table for sampling the indexes $[0, n)$ with probabilities
+ * proportional to @weights, for ncm_rng_discrete_gen().
  *
  * Returns: (transfer full): a new #NcmRNGDiscrete.
  */
@@ -258,9 +288,7 @@ ncm_rng_discrete_new (const gdouble *weights, const guint n)
  * ncm_rng_discrete_copy:
  * @rng: a #NcmRNGDiscrete
  *
- * Creates a copy of @rng_discrete.
- *
- * Returns: (transfer full): a copy of @rng_discrete.
+ * Returns: (transfer full): a copy of @rng.
  */
 NcmRNGDiscrete *
 ncm_rng_discrete_copy (NcmRNGDiscrete *rng)
@@ -272,8 +300,7 @@ ncm_rng_discrete_copy (NcmRNGDiscrete *rng)
  * ncm_rng_discrete_free:
  * @rng: a #NcmRNGDiscrete
  *
- * Frees the memory allocated by @rng.
- *
+ * Frees @rng.
  */
 void
 ncm_rng_discrete_free (NcmRNGDiscrete *rng)
@@ -287,10 +314,9 @@ ncm_rng_discrete_free (NcmRNGDiscrete *rng)
  * ncm_rng_new:
  * @algo: (allow-none): algorithm name
  *
- * Creates a new #NcmRNG using the algorithm @algo.
- * See the list of algorithms [here](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-generator-algorithms).
- * If @algo is NULL the default algorithm and seed are used.
- * See this [link](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-environment-variables) for more details.
+ * Creates a new #NcmRNG with the GSL algorithm @algo, or the GSL default if @algo is
+ * %NULL. The seed is the GSL default seed. Both defaults are set by the
+ * [GSL environment variables](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-environment-variables).
  *
  * Returns: (transfer full): a new #NcmRNG.
  */
@@ -307,12 +333,9 @@ ncm_rng_new (const gchar *algo)
 /**
  * ncm_rng_seeded_new:
  * @algo: (allow-none): algorithm name
- * @seed: seed used to initialize the PRNG
+ * @seed: the seed
  *
- * Creates a new #NcmRNG using the algorithm @algo.
- * See the list of algorithms [here](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-generator-algorithms).
- * If @algo is NULL the default algorithm is used.
- * See this [link](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-environment-variables) for more details.
+ * Same as ncm_rng_new(), with seed @seed.
  *
  * Returns: (transfer full): a new #NcmRNG.
  */
@@ -346,7 +369,6 @@ ncm_rng_ref (NcmRNG *rng)
  * @rng: a #NcmRNG
  *
  * Decreases the reference count of @rng by one.
- *
  */
 void
 ncm_rng_free (NcmRNG *rng)
@@ -358,8 +380,7 @@ ncm_rng_free (NcmRNG *rng)
  * ncm_rng_clear:
  * @rng: a #NcmRNG
  *
- * Decreases the reference count of *@rng by one and sets *@rng to NULL.
- *
+ * Decreases the reference count of *@rng by one and sets *@rng to %NULL.
  */
 void
 ncm_rng_clear (NcmRNG **rng)
@@ -371,8 +392,7 @@ ncm_rng_clear (NcmRNG **rng)
  * ncm_rng_lock:
  * @rng: a #NcmRNG
  *
- * Locks @rng.
- *
+ * Locks the mutex of @rng.
  */
 void
 ncm_rng_lock (NcmRNG *rng)
@@ -386,8 +406,7 @@ ncm_rng_lock (NcmRNG *rng)
  * ncm_rng_unlock:
  * @rng: a #NcmRNG
  *
- * Unlocks @rng.
- *
+ * Unlocks the mutex of @rng.
  */
 void
 ncm_rng_unlock (NcmRNG *rng)
@@ -401,9 +420,7 @@ ncm_rng_unlock (NcmRNG *rng)
  * ncm_rng_get_algo:
  * @rng: a #NcmRNG
  *
- * Gets the name of the algorithm.
- *
- * Returns: (transfer none): algorithm name.
+ * Returns: (transfer none): the GSL name of the algorithm.
  */
 const gchar *
 ncm_rng_get_algo (NcmRNG *rng)
@@ -417,10 +434,10 @@ ncm_rng_get_algo (NcmRNG *rng)
  * ncm_rng_get_state:
  * @rng: a #NcmRNG
  *
- * Gets the state of the algorithm in [Base64](https://en.wikipedia.org/wiki/Base64).
- * It can be a very large string depending on the underlining state.
+ * Encodes the state of the generator in Base64. Its length is proportional to the
+ * size of the GSL state, which depends on the algorithm.
  *
- * Returns: (transfer full): algorithm state.
+ * Returns: (transfer full): the encoded state.
  */
 gchar *
 ncm_rng_get_state (NcmRNG *rng)
@@ -435,10 +452,12 @@ ncm_rng_get_state (NcmRNG *rng)
 /**
  * ncm_rng_set_algo:
  * @rng: a #NcmRNG
- * @algo: algorithm name
+ * @algo: (nullable): algorithm name
  *
- * Sets the PRNG algorithm.
- *
+ * Sets the GSL algorithm, one of the
+ * [GSL generators](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-generator-algorithms), or the GSL
+ * default for %NULL. Replacing the algorithm allocates a new generator seeded with the current
+ * seed. Aborts if @algo is not a GSL algorithm.
  */
 void
 ncm_rng_set_algo (NcmRNG *rng, const gchar *algo)
@@ -477,20 +496,23 @@ ncm_rng_set_algo (NcmRNG *rng, const gchar *algo)
   {
     self->r = gsl_rng_alloc (type);
   }
-  else if (strcmp (gsl_rng_name (self->r), algo) != 0)
+  else if (strcmp (gsl_rng_name (self->r), type->name) != 0)
   {
     gsl_rng_free (self->r);
     self->r = gsl_rng_alloc (type);
+
+    if (self->seed_set)
+      gsl_rng_set (self->r, self->seed_val);
   }
 }
 
 /**
  * ncm_rng_set_state:
  * @rng: a #NcmRNG
- * @state: algorithm state
+ * @state: a state from ncm_rng_get_state()
  *
- * Sets the PRNG algorithm state.
- *
+ * Restores the state of the generator. @state must come from a generator with the
+ * same algorithm; aborts if its length differs.
  */
 void
 ncm_rng_set_state (NcmRNG *rng, const gchar *state)
@@ -511,18 +533,15 @@ ncm_rng_set_state (NcmRNG *rng, const gchar *state)
 /**
  * ncm_rng_check_seed:
  * @rng: a #NcmRNG
- * @seed: seed for the PRNG
+ * @seed: a seed
  *
- * Check if the seed was already used by any #NcmRNG.
- *
- * Returns: TRUE if @seed was never used and FALSE otherwise.
+ * Returns: whether no #NcmRNG in the process has been seeded with @seed.
  */
 gboolean
 ncm_rng_check_seed (NcmRNG *rng, gulong seed)
 {
   NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);
-  gint seed_int          = seed;
-  gpointer b             = g_hash_table_lookup (rng_class->seed_hash, GINT_TO_POINTER (seed_int));
+  gpointer b             = g_hash_table_lookup (rng_class->seed_hash, (gpointer) (guintptr) seed);
 
   return GPOINTER_TO_INT (b) == 0;
 }
@@ -530,37 +549,26 @@ ncm_rng_check_seed (NcmRNG *rng, gulong seed)
 /**
  * ncm_rng_set_seed:
  * @rng: a #NcmRNG
- * @seed: seed for the PRNG
+ * @seed: the seed
  *
- * Sets the PRNG algorithm seed.
- *
+ * Seeds the generator with @seed and records it as used.
  */
 void
 ncm_rng_set_seed (NcmRNG *rng, gulong seed)
 {
   NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
 
-  self->seed_val = seed;
+  _ncm_rng_record_seed (rng, seed);
 
   if (self->r != NULL)
-  {
-    NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);
-    gint seed_int          = seed;
-
     gsl_rng_set (self->r, seed);
-    g_hash_table_insert (rng_class->seed_hash, GINT_TO_POINTER (seed_int), GINT_TO_POINTER (1));
-    self->seed_set = TRUE;
-  }
 }
 
 /**
  * ncm_rng_get_seed:
  * @rng: a #NcmRNG
  *
- * This functions returns the seed used to initialize the PRNG.
- *
- * Returns: @rng's @seed.
- *
+ * Returns: the last seed set.
  */
 gulong
 ncm_rng_get_seed (NcmRNG *rng)
@@ -573,12 +581,12 @@ ncm_rng_get_seed (NcmRNG *rng)
 /**
  * ncm_rng_set_random_seed:
  * @rng: a #NcmRNG
- * @allow_colisions: a gboolean
+ * @allow_colisions: whether a used seed is accepted
  *
- * Sets the algorithm seed using a PRNG seeded by /dev/urandom (Unix/Linux)
- * or current time, when the first is not available (see #g_rand_new).
- * If @allow_colisions is FALSE this function will set the first unused seed generated.
- *
+ * Seeds the generator with a positive 32-bit seed drawn from a #GRand, itself seeded
+ * from /dev/urandom or, if unavailable, the current time (see g_rand_new()). Unless
+ * @allow_colisions is %TRUE, draws again until the seed passes
+ * ncm_rng_check_seed().
  */
 void
 ncm_rng_set_random_seed (NcmRNG *rng, gboolean allow_colisions)
@@ -598,10 +606,10 @@ static GHashTable *rng_table = NULL;
 
 /**
  * ncm_rng_pool_get:
- * @name: a string
+ * @name: the name
  *
- * Gets the #NcmRNG named @name from the pool.
- * If it doesn't exists, it creates one, add it to the pool and returns it.
+ * Returns the process-wide #NcmRNG named @name, creating it with ncm_rng_new() on
+ * first use. Thread-safe.
  *
  * Returns: (transfer full): the #NcmRNG named @name.
  */
@@ -649,9 +657,8 @@ ncm_rng_pool_get (const gchar *name)
  * ncm_rng_gen_ulong:
  * @rng: a #NcmRNG
  *
- * This function returns a random unsigned integer from the uniform distribution.
- *
- * Returns: a random unsigned long from the uniform distribution.
+ * Returns: a uniform integer between the minimum and maximum of the algorithm,
+ * see gsl_rng_get().
  */
 gulong
 ncm_rng_gen_ulong (NcmRNG *rng)
@@ -664,12 +671,9 @@ ncm_rng_gen_ulong (NcmRNG *rng)
 /**
  * ncm_rng_uniform_int_gen:
  * @rng: a #NcmRNG
- * @n: upper limit
+ * @n: number of values
  *
- * This function returns a random number drawn from the
- * uniform distribution between zero and @n.
- *
- * Returns: a random number from the uniform distribution.
+ * Returns: a uniform integer in $[0, n - 1]$.
  */
 gulong
 ncm_rng_uniform_int_gen (NcmRNG *rng, gulong n)
@@ -683,10 +687,7 @@ ncm_rng_uniform_int_gen (NcmRNG *rng, gulong n)
  * ncm_rng_uniform01_gen:
  * @rng: a #NcmRNG
  *
- * This function returns a random number drawn from the
- * uniform distribution between zero and one $[0,1)$.
- *
- * Returns: a random number from the uniform distribution.
+ * Returns: a uniform number in $[0, 1)$.
  */
 gdouble
 ncm_rng_uniform01_gen (NcmRNG *rng)
@@ -700,10 +701,7 @@ ncm_rng_uniform01_gen (NcmRNG *rng)
  * ncm_rng_uniform01_pos_gen:
  * @rng: a #NcmRNG
  *
- * This function returns a random number drawn from the
- * uniform distribution between zero and one $(0,1)$.
- *
- * Returns: a random number from the uniform distribution.
+ * Returns: a uniform number in $(0, 1)$.
  */
 gdouble
 ncm_rng_uniform01_pos_gen (NcmRNG *rng)
@@ -716,13 +714,10 @@ ncm_rng_uniform01_pos_gen (NcmRNG *rng)
 /**
  * ncm_rng_uniform_gen:
  * @rng: a #NcmRNG
- * @xl: lower value
- * @xu: upper value
+ * @xl: lower limit
+ * @xu: upper limit
  *
- * This functions returns a random number drawn from the
- * uniform distribution between the values @xl and @xu.
- *
- * Returns: a random number from the uniform distribution.
+ * Returns: a uniform number in $[x_l, x_u)$.
  */
 gdouble
 ncm_rng_uniform_gen (NcmRNG *rng, const gdouble xl, const gdouble xu)
@@ -738,11 +733,7 @@ ncm_rng_uniform_gen (NcmRNG *rng, const gdouble xl, const gdouble xu)
  * @mu: mean
  * @sigma: standard deviation
  *
- * This function returns a random number drawn from the
- * [Gaussian distribution](https://en.wikipedia.org/wiki/Normal_distribution),
- * with mean @mu and standard deviation @sigma.
- *
- * Returns: a random number from the Gaussian distribution.
+ * Returns: a Gaussian number with mean @mu and standard deviation @sigma.
  */
 gdouble
 ncm_rng_gaussian_gen (NcmRNG *rng, const gdouble mu, const gdouble sigma)
@@ -756,12 +747,7 @@ ncm_rng_gaussian_gen (NcmRNG *rng, const gdouble mu, const gdouble sigma)
  * ncm_rng_ugaussian_gen:
  * @rng: a #NcmRNG
  *
- * This function returns a random number drwan from the
- * [Gaussian distribution](https://en.wikipedia.org/wiki/Normal_distribution),
- * with mean zero and standard deviation one.
- * Equivalent as above but with @mean = 0 and @sigma = 1.
- *
- * Returns: a random number from the Gaussian distribution.
+ * Returns: a Gaussian number with zero mean and unit standard deviation.
  */
 gdouble
 ncm_rng_ugaussian_gen (NcmRNG *rng)
@@ -774,14 +760,13 @@ ncm_rng_ugaussian_gen (NcmRNG *rng)
 /**
  * ncm_rng_gaussian_tail_gen:
  * @rng: a #NcmRNG
- * @a: positive lower limit
+ * @a: lower limit
  * @sigma: standard deviation
  *
- * This function returns a random number drawn from the upper tail of the
- * [Gaussian distribution](https://en.wikipedia.org/wiki/Normal_distribution) with standard deviation @sigma.
- * The value returned is larger than the lower limit @a, which must be positive.
+ * Draws from the zero-mean Gaussian of standard deviation @sigma restricted to
+ * $x > a$, with $a > 0$.
  *
- * Returns: a random number from the Gaussian distribution tail.
+ * Returns: the number drawn.
  */
 gdouble
 ncm_rng_gaussian_tail_gen (NcmRNG *rng, const gdouble a, const gdouble sigma)
@@ -794,13 +779,11 @@ ncm_rng_gaussian_tail_gen (NcmRNG *rng, const gdouble a, const gdouble sigma)
 /**
  * ncm_rng_exponential_gen:
  * @rng: a #NcmRNG
- * @mu: scale parameter
+ * @mu: mean
  *
- * This function returns a random number drawn from the
- * [exponential distribution](https://en.wikipedia.org/wiki/Exponential_distribution)
- * with scale parameter (mean) @mu.
+ * Draws from $p(x) = e^{-x/\mu}/\mu$, $x \geq 0$.
  *
- * Returns: a random number from the exponential distribution.
+ * Returns: the number drawn.
  */
 gdouble
 ncm_rng_exponential_gen (NcmRNG *rng, const gdouble mu)
@@ -813,13 +796,11 @@ ncm_rng_exponential_gen (NcmRNG *rng, const gdouble mu)
 /**
  * ncm_rng_laplace_gen:
  * @rng: a #NcmRNG
- * @a: width of the distribution
+ * @a: width
  *
- * This function returns a random number drawn from the
- * [Laplace distribution](https://en.wikipedia.org/wiki/Laplace_distribution)
- * with width @a.
+ * Draws from $p(x) = e^{-|x|/a}/(2a)$.
  *
- * Returns: a random number from the Laplace distribution.
+ * Returns: the number drawn.
  */
 gdouble
 ncm_rng_laplace_gen (NcmRNG *rng, const gdouble a)
@@ -832,14 +813,12 @@ ncm_rng_laplace_gen (NcmRNG *rng, const gdouble a)
 /**
  * ncm_rng_exppow_gen:
  * @rng: a #NcmRNG
- * @a: scale parameter
+ * @a: scale
  * @b: exponent
  *
- * This function returns a random number drawn from the
- * [exponential power distribution](https://en.wikipedia.org/wiki/Generalized_normal_distribution#Version_1)
- * with scale parameter @a and exponent @b.
+ * Draws from $p(x) = e^{-|x/a|^b} / [2a\,\Gamma(1 + 1/b)]$.
  *
- * Returns: a random number from the exponential power distribution.
+ * Returns: the number drawn.
  */
 gdouble
 ncm_rng_exppow_gen (NcmRNG *rng, const gdouble a, const gdouble b)
@@ -852,14 +831,12 @@ ncm_rng_exppow_gen (NcmRNG *rng, const gdouble a, const gdouble b)
 /**
  * ncm_rng_beta_gen:
  * @rng: a #NcmRNG
- * @a: shape parameter
- * @b: shape parameter
+ * @a: first shape parameter
+ * @b: second shape parameter
  *
- * This function returns a random number drawn from the
- * [beta distribution](https://en.wikipedia.org/wiki/Beta_distribution)
- * with shape parameters @a and @b. The shape parameters must be positive.
+ * Draws from $p(x) \propto x^{a-1} (1 - x)^{b-1}$, $0 \leq x \leq 1$, with $a, b > 0$.
  *
- * Returns: a random number from the beta distribution.
+ * Returns: the number drawn.
  */
 gdouble
 ncm_rng_beta_gen (NcmRNG *rng, const gdouble a, const gdouble b)
@@ -872,14 +849,12 @@ ncm_rng_beta_gen (NcmRNG *rng, const gdouble a, const gdouble b)
 /**
  * ncm_rng_gamma_gen:
  * @rng: a #NcmRNG
- * @a: shape parameter
- * @b: scale parameter
+ * @a: shape
+ * @b: scale
  *
- * This function returns a random number drawn from the
- * [gamma distribution](https://en.wikipedia.org/wiki/Gamma_distribution)
- * with shape parameter @a and scale parameter @b.
+ * Draws from $p(x) = x^{a-1} e^{-x/b} / [\Gamma(a)\, b^a]$, $x > 0$.
  *
- * Returns: a random number from the gamma distribution.
+ * Returns: the number drawn.
  */
 gdouble
 ncm_rng_gamma_gen (NcmRNG *rng, const gdouble a, const gdouble b)
@@ -894,10 +869,7 @@ ncm_rng_gamma_gen (NcmRNG *rng, const gdouble a, const gdouble b)
  * @rng: a #NcmRNG
  * @nu: degrees of freedom $\nu$
  *
- * This function returns a random number drawn from the
- * [Chi-square Distribution](https://en.wikipedia.org/wiki/Chi-square_distribution),
- * with $\nu$ degrees of freedom.
- * Returns: a random number from Chi-square distribution.
+ * Returns: a $\chi^2$ number with $\nu$ degrees of freedom.
  */
 gdouble
 ncm_rng_chisq_gen (NcmRNG *rng, const gdouble nu)
@@ -910,12 +882,9 @@ ncm_rng_chisq_gen (NcmRNG *rng, const gdouble nu)
 /**
  * ncm_rng_poisson_gen:
  * @rng: a #NcmRNG
- * @mu: degrees of freedom $\nu$
+ * @mu: mean
  *
- * This function returns a random number drawn from the Poisson distribution,
- * with frequency @mu.
- *
- * Returns: a random number from the Poisson distribution.
+ * Returns: a Poisson count with mean @mu.
  */
 gdouble
 ncm_rng_poisson_gen (NcmRNG *rng, const gdouble mu)
@@ -928,13 +897,11 @@ ncm_rng_poisson_gen (NcmRNG *rng, const gdouble mu)
 /**
  * ncm_rng_rayleigh_gen:
  * @rng: a #NcmRNG
- * @sigma: scale parameter
+ * @sigma: scale
  *
- * This function returns a random number drawn from the
- * [Rayleigh distribution](https://en.wikipedia.org/wiki/Rayleigh_distribution)
- * with scale parameter @sigma.
+ * Draws from $p(x) = (x/\sigma^2)\, e^{-x^2/(2\sigma^2)}$, $x > 0$.
  *
- * Returns: a random number from the Rayleigh distribution.
+ * Returns: the number drawn.
  */
 gdouble
 ncm_rng_rayleigh_gen (NcmRNG *rng, const gdouble sigma)
@@ -949,9 +916,7 @@ ncm_rng_rayleigh_gen (NcmRNG *rng, const gdouble sigma)
  * @rng: a #NcmRNG
  * @rng_discrete: a #NcmRNGDiscrete
  *
- * This function returns a random number drawn from the discrete distribution. The
- * weights must created using ncm_rng_discrete_new().
- *
+ * Returns: an index drawn with the probabilities of @rng_discrete.
  */
 gsize
 ncm_rng_discrete_gen (NcmRNG *rng, NcmRNGDiscrete *rng_discrete)
@@ -964,16 +929,14 @@ ncm_rng_discrete_gen (NcmRNG *rng, NcmRNGDiscrete *rng_discrete)
 /**
  * ncm_rng_sample:
  * @rng: a #NcmRNG
- * @dest: an array of @k elements of size @size
- * @k: number of elements in @dest
- * @src: an array of @n elements of size @size
- * @n: number of elements in @src
- * @size: size of each element in @dest and @src
+ * @dest: array of @k elements
+ * @k: number of elements of @dest
+ * @src: array of @n elements
+ * @n: number of elements of @src
+ * @size: size in bytes of each element
  *
- * This function fills the array @dest with @k elements from the array @src.
- * The elements are chosen randomly using the algorithm (sample with replecement) in
+ * Fills @dest with @k elements of @src drawn with replacement, see
  * [gsl_ran_sample()](https://www.gnu.org/software/gsl/doc/html/randist.html#c.gsl_ran_sample).
- *
  */
 void
 ncm_rng_sample (NcmRNG *rng, void *dest, size_t k, void *src, size_t n, size_t size)
@@ -986,16 +949,15 @@ ncm_rng_sample (NcmRNG *rng, void *dest, size_t k, void *src, size_t n, size_t s
 /**
  * ncm_rng_choose:
  * @rng: a #NcmRNG
- * @dest: an array of @k elements of size @size
- * @k: number of elements in @dest
- * @src: an array of @n elements of size @size
- * @n: number of elements in @src
- * @size: size of each element in @dest and @src
+ * @dest: array of @k elements
+ * @k: number of elements of @dest
+ * @src: array of @n elements
+ * @n: number of elements of @src
+ * @size: size in bytes of each element
  *
- * This function fills the array @dest with @k elements from the array @src.
- * The elements are chosen randomly using the algorithm (choose with replecement) in
+ * Fills @dest with @k distinct elements of @src drawn without replacement, in their
+ * order in @src, with $k \leq n$, see
  * [gsl_ran_choose()](https://www.gnu.org/software/gsl/doc/html/randist.html#c.gsl_ran_choose).
- *
  */
 void
 ncm_rng_choose (NcmRNG *rng, void *dest, size_t k, void *src, size_t n, size_t size)
@@ -1008,14 +970,13 @@ ncm_rng_choose (NcmRNG *rng, void *dest, size_t k, void *src, size_t n, size_t s
 /**
  * ncm_rng_multinomial:
  * @rng: a #NcmRNG
- * @K: number of possible outcomes
+ * @K: number of outcomes
  * @N: number of trials
- * @p: (array length=K) (element-type gdouble): array of probabilities
- * @n: (array length=K) (element-type guint): array of counts
+ * @p: (array length=K) (element-type gdouble): probabilities
+ * @n: (array length=K) (element-type guint): counts
  *
- * This function fills the array @n with @K elements using a multinomial distribution
- * defined by the array @p.
- *
+ * Fills @n with the counts of @N trials of a multinomial distribution with
+ * probabilities proportional to @p.
  */
 void
 ncm_rng_multinomial (NcmRNG *rng, gsize K, guint N, const gdouble *p, guint *n)
@@ -1028,17 +989,14 @@ ncm_rng_multinomial (NcmRNG *rng, gsize K, guint N, const gdouble *p, guint *n)
 /**
  * ncm_rng_bivariate_gaussian_gen:
  * @rng: a #NcmRNG
- * @sigma_x: standard deviation
- * @sigma_y: standard deviation
+ * @sigma_x: standard deviation of $x$
+ * @sigma_y: standard deviation of $y$
  * @rho: correlation coefficient
- * @x: (out): random number from the Bivariate Gaussian distribution
- * @y: (out): random number from the Bivariate Gaussian distribution
+ * @x: (out): the first component
+ * @y: (out): the second component
  *
- * This function returns a random number drawn from the
- * [Bivariate Gaussian distribution](https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Bivariate_case),
- * with standard deviations @sigma_x and @sigma_y and correlation coefficient @rho.
- * The correlation coefficient must be in the range $-1 \leq \rho \leq 1$.
- *
+ * Draws a pair from the zero-mean bivariate Gaussian with standard deviations @sigma_x
+ * and @sigma_y and correlation coefficient $-1 \leq \rho \leq 1$.
  */
 void
 ncm_rng_bivariate_gaussian_gen (NcmRNG *rng, const gdouble sigma_x, const gdouble sigma_y, const gdouble rho, gdouble *x, gdouble *y)

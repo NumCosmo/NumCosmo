@@ -23,7 +23,7 @@
 
 """Two-point correlation functions."""
 
-from typing import Callable, Sequence
+from collections.abc import Callable, Sequence
 
 import numpy as np
 import pyccl
@@ -259,7 +259,7 @@ def block_transformer(
     def evaluate(k_a: np.ndarray) -> np.ndarray:
         out = np.zeros((n_ell, len(k_a)))
         for kernel_cb, der, f_c, chi_from in pieces:
-            deriv = der if der > 0 else 0
+            deriv = max(0, der)
             block = np.zeros((n_ell, len(k_a)))
             for ik, k in enumerate(k_a):
                 integ.integrate_deriv(
@@ -431,6 +431,7 @@ def tracer_kernel(
     *,
     order: int = 8,
     kernel_reltol: float | None = None,
+    integrator: Ncm.SBesselIntegrator | None = None,
 ) -> Nc.XcorKernelTable:
     r"""A CCL tracer as a prepared :class:`Nc.XcorKernelTable`, never Limber.
 
@@ -447,14 +448,19 @@ def tracer_kernel(
     :param order: B-spline order of the window reconstruction.
     :param kernel_reltol: when given, sets both the kernel's closure ``reltol``
         and ``peak-epsilon``; the library default (1e-4) applies otherwise.
+    :param integrator: the integrator the kernel carries, shared when several
+        kernels go to one solver; a library-default Levin one otherwise.
     """
     comps = tracer_component_tables(tracer, cosmology, order=order)
     oa = Ncm.ObjArray.new()
     for comp in comps:
         oa.add(comp)
 
+    if integrator is None:
+        integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
+
     kernel = Nc.XcorKernelTable.new_from_components(
-        cosmology.dist, cosmology.ps_ml, oa, Ncm.SBesselIntegratorLevin.new(0, 8)
+        cosmology.dist, cosmology.ps_ml, oa, integrator
     )
     if kernel_reltol is not None:
         kernel.set_reltol(kernel_reltol)
@@ -502,19 +508,27 @@ class TracerClSolver:
         self.ells = np.atleast_1d(np.asarray(ells, dtype=int))
         self.pairs = [(int(a), int(b)) for a, b in pairs]
         self.order = order
+        # One integrator for every kernel and as the solver's template.
+        self.integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
         self.kernels = [
-            tracer_kernel(t, cosmology, order=order, kernel_reltol=kernel_reltol)
+            tracer_kernel(
+                t,
+                cosmology,
+                order=order,
+                kernel_reltol=kernel_reltol,
+                integrator=self.integrator,
+            )
             for t in tracers
         ]
 
-        cache_max = Ncm.SBesselIntegratorLevin.new(0, 0).get_ell_cache_max()
-        block_size = max(1, min(block_size, Nc.XCOR_KERNEL_MAX_ELL_BLOCK, cache_max))
+        block_size = max(1, min(block_size, Nc.XCOR_KERNEL_MAX_ELL_BLOCK))
 
         self.solver = Nc.XcorSolver.new()
         ids = [self.solver.register_kernel(k) for k in self.kernels]
         for a, b in self.pairs:
             for ell in self.ells:
                 self.solver.request_cl(ids[a], ids[b], int(ell), int(ell))
+        self.solver.set_integrator(self.integrator)
         self.solver.plan_blocks(block_size)
 
         self.xcor = Nc.Xcor.new(

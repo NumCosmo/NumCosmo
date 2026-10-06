@@ -27,35 +27,36 @@
 /**
  * NcmObjArray:
  *
- * GObjects array with serialization support.
+ * Reference-counted array of #GObject, serializable by #NcmSerialize.
  *
- * A #NcmObjArray is a #GPtrArray that holds GObject's. It is used to store GObject's
- * that can be serialized to a #GVariant.
- *
+ * A #GPtrArray that holds a reference to each element.
  */
 /**
  * NcmObjDictStr:
  *
- * GObjects dictionary with string keys.
+ * Reference-counted dictionary from strings to #GObject, serializable by
+ * #NcmSerialize.
  *
- * A #NcmObjDictStr is a #GHashTable that holds GObject's with string keys. It is used
- * to store GObject's that can be serialized to a #GVariant.
+ * A #GHashTable that holds a copy of each key and a reference to each value.
  */
 /**
  * NcmObjDictInt:
  *
- * GObjects dictionary with integer keys.
+ * Reference-counted dictionary from integers to #GObject, serializable by
+ * #NcmSerialize.
  *
- * A #NcmObjDictInt is a #GHashTable that holds GObject's with integer keys. It is used
- * to store GObject's that can be serialized to a #GVariant.
+ * A #GHashTable that holds a reference to each value.
  */
 /**
  * NcmVarDict:
  *
- * Variable dictionary.
+ * Reference-counted dictionary from strings to #GVariant, serializable by
+ * #NcmSerialize.
  *
- * A #NcmVarDict is a #GHashTable that holds #GVariant's. It is used to store #GVariant's
- * that can be serialized to a #GVariant.
+ * The values are strings, 32-bit integers, doubles, booleans, arrays of these three
+ * numeric types, and serialized #GObject or #NcmObjArray; ncm_var_dict_set_variant()
+ * lists the #GVariant types. Each getter requires the value under the key to have
+ * its type.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -79,7 +80,7 @@ G_DEFINE_BOXED_TYPE (NcmVarDict, ncm_var_dict, ncm_var_dict_ref, ncm_var_dict_un
 /**
  * ncm_obj_array_new:
  *
- * Creates a new #NcmObjArray.
+ * Creates a new empty #NcmObjArray.
  *
  * Returns: (transfer full): a new #NcmObjArray.
  */
@@ -95,9 +96,9 @@ ncm_obj_array_new ()
 
 /**
  * ncm_obj_array_sized_new:
- * @n: initial allocation size.
+ * @n: number of elements to preallocate
  *
- * Creates a new #NcmObjArray with @n elements preallocated.
+ * Creates a new empty #NcmObjArray with room for @n elements.
  *
  * Returns: (transfer full): a new #NcmObjArray.
  */
@@ -113,7 +114,7 @@ ncm_obj_array_sized_new (guint n)
 
 /**
  * ncm_obj_array_ref:
- * @oa: a #NcmObjArray.
+ * @oa: a #NcmObjArray
  *
  * Increases the reference count of @oa by one.
  *
@@ -127,11 +128,9 @@ ncm_obj_array_ref (NcmObjArray *oa)
 
 /**
  * ncm_obj_array_unref:
- * @oa: a #NcmObjArray.
+ * @oa: a #NcmObjArray
  *
- * Decreases the reference count of @oa by one. If the reference count
- * reaches zero, all objects in the array are unreferenced.
- *
+ * Decreases the reference count of @oa by one. At zero, releases the references to the elements.
  */
 void
 ncm_obj_array_unref (NcmObjArray *oa)
@@ -141,10 +140,9 @@ ncm_obj_array_unref (NcmObjArray *oa)
 
 /**
  * ncm_obj_array_clear:
- * @oa: a pointer to a #NcmObjArray.
+ * @oa: a #NcmObjArray
  *
- * If *@oa is not %NULL, unreferences it and sets *@oa to %NULL.
- *
+ * If *@oa is not %NULL, decreases its reference count by one and sets *@oa to %NULL.
  */
 void
 ncm_obj_array_clear (NcmObjArray **oa)
@@ -154,11 +152,10 @@ ncm_obj_array_clear (NcmObjArray **oa)
 
 /**
  * ncm_obj_array_add:
- * @oa: a #NcmObjArray.
- * @obj: a GObject.
+ * @oa: a #NcmObjArray
+ * @obj: a #GObject
  *
- * Adds a GObject to a #NcmObjArray.
- *
+ * Appends @obj to @oa, holding a reference to it.
  */
 void
 ncm_obj_array_add (NcmObjArray *oa, GObject *obj)
@@ -169,13 +166,11 @@ ncm_obj_array_add (NcmObjArray *oa, GObject *obj)
 
 /**
  * ncm_obj_array_set:
- * @oa: a #NcmObjArray.
- * @i: object index.
- * @obj: a GObject.
+ * @oa: a #NcmObjArray
+ * @i: index
+ * @obj: a #GObject
  *
- * Sets a GObject to a #NcmObjArray. If there is already a GObject
- * at position @i, it is unreferenced.
- *
+ * Replaces the element at @i, which must exist, by @obj, holding a reference to it.
  */
 void
 ncm_obj_array_set (NcmObjArray *oa, guint i, GObject *obj)
@@ -194,11 +189,9 @@ ncm_obj_array_set (NcmObjArray *oa, guint i, GObject *obj)
 /**
  * ncm_obj_array_get:
  * @oa: a #NcmObjArray
- * @i: object index
+ * @i: index
  *
- * Gets a GObject from a #NcmObjArray at position @i.
- *
- * Returns: (transfer full): the GObject at position @i.
+ * Returns: (transfer full): the element at @i.
  */
 GObject *
 ncm_obj_array_get (NcmObjArray *oa, guint i)
@@ -208,13 +201,10 @@ ncm_obj_array_get (NcmObjArray *oa, guint i)
 
 /**
  * ncm_obj_array_peek:
- * @oa: a #NcmObjArray.
- * @i: object index.
+ * @oa: a #NcmObjArray
+ * @i: index
  *
- * Peeks a GObject from a #NcmObjArray at position @i without increasing its reference
- * count.
- *
- * Returns: (transfer none): the GObject at position @i.
+ * Returns: (transfer none): the element at @i.
  */
 GObject *
 ncm_obj_array_peek (NcmObjArray *oa, guint i)
@@ -228,9 +218,7 @@ ncm_obj_array_peek (NcmObjArray *oa, guint i)
  * ncm_obj_array_len:
  * @oa: a #NcmObjArray
  *
- * Gets the length of a #NcmObjArray.
- *
- * Returns: array length
+ * Returns: the number of elements of @oa.
  */
 guint
 ncm_obj_array_len (NcmObjArray *oa)
@@ -245,7 +233,7 @@ ncm_obj_array_len (NcmObjArray *oa)
 /**
  * ncm_obj_dict_str_new:
  *
- * Creates a new #NcmObjDictStr.
+ * Creates a new empty #NcmObjDictStr.
  *
  * Returns: (transfer full): a new #NcmObjDictStr.
  */
@@ -259,7 +247,7 @@ ncm_obj_dict_str_new ()
 
 /**
  * ncm_obj_dict_str_ref:
- * @ods: a #NcmObjDictStr.
+ * @ods: a #NcmObjDictStr
  *
  * Increases the reference count of @ods by one.
  *
@@ -273,11 +261,9 @@ ncm_obj_dict_str_ref (NcmObjDictStr *ods)
 
 /**
  * ncm_obj_dict_str_unref:
- * @ods: a #NcmObjDictStr.
+ * @ods: a #NcmObjDictStr
  *
- * Decreases the reference count of @ods by one. If the reference count
- * reaches zero, all objects in the dictionary are unreferenced.
- *
+ * Decreases the reference count of @ods by one. At zero, releases the keys and the references to the values.
  */
 void
 ncm_obj_dict_str_unref (NcmObjDictStr *ods)
@@ -287,10 +273,9 @@ ncm_obj_dict_str_unref (NcmObjDictStr *ods)
 
 /**
  * ncm_obj_dict_str_clear:
- * @ods: a pointer to a #NcmObjDictStr.
+ * @ods: a #NcmObjDictStr
  *
- * If *@ods is not %NULL, unreferences it and sets *@ods to %NULL.
- *
+ * If *@ods is not %NULL, decreases its reference count by one and sets *@ods to %NULL.
  */
 void
 ncm_obj_dict_str_clear (NcmObjDictStr **ods)
@@ -300,12 +285,12 @@ ncm_obj_dict_str_clear (NcmObjDictStr **ods)
 
 /**
  * ncm_obj_dict_str_add:
- * @ods: a #NcmObjDictStr.
- * @key: a string.
- * @obj: a GObject.
+ * @ods: a #NcmObjDictStr
+ * @key: the key
+ * @obj: a #GObject
  *
- * Adds a GObject to a #NcmObjDictStr.
- *
+ * Stores @obj under @key, holding a reference to it. A value already under @key is
+ * replaced.
  */
 void
 ncm_obj_dict_str_add (NcmObjDictStr *ods, const gchar *key, GObject *obj)
@@ -318,13 +303,11 @@ ncm_obj_dict_str_add (NcmObjDictStr *ods, const gchar *key, GObject *obj)
 
 /**
  * ncm_obj_dict_str_set:
- * @ods: a #NcmObjDictStr.
- * @key: a string.
- * @obj: a GObject.
+ * @ods: a #NcmObjDictStr
+ * @key: the key
+ * @obj: a #GObject
  *
- * Sets a GObject to a #NcmObjDictStr. If there is already a GObject
- * with key @key, it is unreferenced.
- *
+ * Same as ncm_obj_dict_str_add().
  */
 void
 ncm_obj_dict_str_set (NcmObjDictStr *ods, const gchar *key, GObject *obj)
@@ -339,11 +322,9 @@ ncm_obj_dict_str_set (NcmObjDictStr *ods, const gchar *key, GObject *obj)
 /**
  * ncm_obj_dict_str_get:
  * @ods: a #NcmObjDictStr
- * @key: a string.
+ * @key: the key
  *
- * Gets a GObject from a #NcmObjDictStr with key @key.
- *
- * Returns: (transfer full): the GObject with key @key.
+ * Returns: (transfer full) (nullable): the value under @key, or %NULL.
  */
 GObject *
 ncm_obj_dict_str_get (NcmObjDictStr *ods, const gchar *key)
@@ -358,13 +339,10 @@ ncm_obj_dict_str_get (NcmObjDictStr *ods, const gchar *key)
 
 /**
  * ncm_obj_dict_str_peek:
- * @ods: a #NcmObjDictStr.
- * @key: a string.
+ * @ods: a #NcmObjDictStr
+ * @key: the key
  *
- * Peeks a GObject from a #NcmObjDictStr with key @key without increasing its reference
- * count.
- *
- * Returns: (transfer none): the GObject with key @key.
+ * Returns: (transfer none) (nullable): the value under @key, or %NULL.
  */
 GObject *
 ncm_obj_dict_str_peek (NcmObjDictStr *ods, const gchar *key)
@@ -378,9 +356,7 @@ ncm_obj_dict_str_peek (NcmObjDictStr *ods, const gchar *key)
  * ncm_obj_dict_str_len:
  * @ods: a #NcmObjDictStr
  *
- * Gets the length of a #NcmObjDictStr.
- *
- * Returns: dictionary length
+ * Returns: the number of keys of @ods.
  */
 guint
 ncm_obj_dict_str_len (NcmObjDictStr *ods)
@@ -392,9 +368,7 @@ ncm_obj_dict_str_len (NcmObjDictStr *ods)
  * ncm_obj_dict_str_keys:
  * @ods: a #NcmObjDictStr
  *
- * Gets the keys of a #NcmObjDictStr.
- *
- * Returns: (transfer container): the keys of a #NcmObjDictStr.
+ * Returns: (transfer container): the keys of @ods, in no particular order.
  */
 GStrv
 ncm_obj_dict_str_keys (NcmObjDictStr *ods)
@@ -409,7 +383,7 @@ ncm_obj_dict_str_keys (NcmObjDictStr *ods)
 /**
  * ncm_obj_dict_int_new:
  *
- * Creates a new #NcmObjDictInt.
+ * Creates a new empty #NcmObjDictInt.
  *
  * Returns: (transfer full): a new #NcmObjDictInt.
  */
@@ -423,7 +397,7 @@ ncm_obj_dict_int_new ()
 
 /**
  * ncm_obj_dict_int_ref:
- * @odi: a #NcmObjDictInt.
+ * @odi: a #NcmObjDictInt
  *
  * Increases the reference count of @odi by one.
  *
@@ -437,11 +411,9 @@ ncm_obj_dict_int_ref (NcmObjDictInt *odi)
 
 /**
  * ncm_obj_dict_int_unref:
- * @odi: a #NcmObjDictInt.
+ * @odi: a #NcmObjDictInt
  *
- * Decreases the reference count of @odi by one. If the reference count
- * reaches zero, all objects in the dictionary are unreferenced.
- *
+ * Decreases the reference count of @odi by one. At zero, releases the references to the values.
  */
 void
 ncm_obj_dict_int_unref (NcmObjDictInt *odi)
@@ -451,10 +423,9 @@ ncm_obj_dict_int_unref (NcmObjDictInt *odi)
 
 /**
  * ncm_obj_dict_int_clear:
- * @odi: a pointer to a #NcmObjDictInt.
+ * @odi: a #NcmObjDictInt
  *
- * If *@odi is not %NULL, unreferences it and sets *@odi to %NULL.
- *
+ * If *@odi is not %NULL, decreases its reference count by one and sets *@odi to %NULL.
  */
 void
 ncm_obj_dict_int_clear (NcmObjDictInt **odi)
@@ -464,12 +435,12 @@ ncm_obj_dict_int_clear (NcmObjDictInt **odi)
 
 /**
  * ncm_obj_dict_int_add:
- * @odi: a #NcmObjDictInt.
- * @key: an integer.
- * @obj: a GObject.
+ * @odi: a #NcmObjDictInt
+ * @key: the key
+ * @obj: a #GObject
  *
- * Adds a GObject to a #NcmObjDictInt.
- *
+ * Stores @obj under @key, holding a reference to it. A value already under @key is
+ * replaced.
  */
 void
 ncm_obj_dict_int_add (NcmObjDictInt *odi, gint key, GObject *obj)
@@ -481,13 +452,11 @@ ncm_obj_dict_int_add (NcmObjDictInt *odi, gint key, GObject *obj)
 
 /**
  * ncm_obj_dict_int_set:
- * @odi: a #NcmObjDictInt.
- * @key: an integer.
- * @obj: a GObject.
+ * @odi: a #NcmObjDictInt
+ * @key: the key
+ * @obj: a #GObject
  *
- * Sets a GObject to a #NcmObjDictInt. If there is already a GObject
- * with key @key, it is unreferenced.
- *
+ * Same as ncm_obj_dict_int_add().
  */
 void
 ncm_obj_dict_int_set (NcmObjDictInt *odi, gint key, GObject *obj)
@@ -501,11 +470,9 @@ ncm_obj_dict_int_set (NcmObjDictInt *odi, gint key, GObject *obj)
 /**
  * ncm_obj_dict_int_get:
  * @odi: a #NcmObjDictInt
- * @key: an integer.
+ * @key: the key
  *
- * Gets a GObject from a #NcmObjDictInt with key @key.
- *
- * Returns: (transfer full): the GObject with key @key.
+ * Returns: (transfer full) (nullable): the value under @key, or %NULL.
  */
 GObject *
 ncm_obj_dict_int_get (NcmObjDictInt *odi, gint key)
@@ -520,13 +487,10 @@ ncm_obj_dict_int_get (NcmObjDictInt *odi, gint key)
 
 /**
  * ncm_obj_dict_int_peek:
- * @odi: a #NcmObjDictInt.
- * @key: an integer.
+ * @odi: a #NcmObjDictInt
+ * @key: the key
  *
- * Peeks a GObject from a #NcmObjDictInt with key @key without increasing its reference
- * count.
- *
- * Returns: (transfer none): the GObject with key @key.
+ * Returns: (transfer none) (nullable): the value under @key, or %NULL.
  */
 GObject *
 ncm_obj_dict_int_peek (NcmObjDictInt *odi, gint key)
@@ -538,9 +502,7 @@ ncm_obj_dict_int_peek (NcmObjDictInt *odi, gint key)
  * ncm_obj_dict_int_len:
  * @odi: a #NcmObjDictInt
  *
- * Gets the length of a #NcmObjDictInt.
- *
- * Returns: dictionary length
+ * Returns: the number of keys of @odi.
  */
 guint
 ncm_obj_dict_int_len (NcmObjDictInt *odi)
@@ -552,9 +514,7 @@ ncm_obj_dict_int_len (NcmObjDictInt *odi)
  * ncm_obj_dict_int_keys:
  * @odi: a #NcmObjDictInt
  *
- * Gets the keys of a #NcmObjDictInt.
- *
- * Returns: (transfer full) (array) (element-type int): the keys of a #NcmObjDictInt.
+ * Returns: (transfer full) (array) (element-type int): the keys of @odi, in no particular order.
  */
 GArray *
 ncm_obj_dict_int_keys (NcmObjDictInt *odi)
@@ -578,7 +538,7 @@ ncm_obj_dict_int_keys (NcmObjDictInt *odi)
 /**
  * ncm_var_dict_new:
  *
- * Creates a new #NcmVarDict.
+ * Creates a new empty #NcmVarDict.
  *
  * Returns: (transfer full): a new #NcmVarDict.
  */
@@ -592,7 +552,7 @@ ncm_var_dict_new ()
 
 /**
  * ncm_var_dict_ref:
- * @vd: a #NcmVarDict.
+ * @vd: a #NcmVarDict
  *
  * Increases the reference count of @vd by one.
  *
@@ -606,11 +566,9 @@ ncm_var_dict_ref (NcmVarDict *vd)
 
 /**
  * ncm_var_dict_unref:
- * @vd: a #NcmVarDict.
+ * @vd: a #NcmVarDict
  *
- * Decreases the reference count of @vd by one. If the reference count
- * reaches zero, all objects in the dictionary are unreferenced.
- *
+ * Decreases the reference count of @vd by one. At zero, releases the keys and values.
  */
 void
 ncm_var_dict_unref (NcmVarDict *vd)
@@ -620,10 +578,9 @@ ncm_var_dict_unref (NcmVarDict *vd)
 
 /**
  * ncm_var_dict_clear:
- * @vd: a pointer to a #NcmVarDict.
+ * @vd: a #NcmVarDict
  *
- * If *@vd is not %NULL, unreferences it and sets *@vd to %NULL.
- *
+ * If *@vd is not %NULL, decreases its reference count by one and sets *@vd to %NULL.
  */
 void
 ncm_var_dict_clear (NcmVarDict **vd)
@@ -631,17 +588,8 @@ ncm_var_dict_clear (NcmVarDict **vd)
   g_clear_pointer (vd, ncm_var_dict_unref);
 }
 
-/**
- * ncm_var_dict_peek:
- * @vd: a #NcmVarDict.
- * @key: a string.
- *
- * Peeks a #GVariant from a #NcmVarDict with key @key without increasing its reference
- * count.
- *
- * Returns: (transfer none): the #GVariant with key @key.
- */
-GVariant *
+/* The value under @key, or NULL */
+static GVariant *
 ncm_var_dict_peek (NcmVarDict *vd, const gchar *key)
 {
   g_assert (key != NULL);
@@ -649,15 +597,27 @@ ncm_var_dict_peek (NcmVarDict *vd, const gchar *key)
   return g_hash_table_lookup ((GHashTable *) vd, key);
 }
 
+/* The value under @key, or NULL; aborts if it is not of @type */
+static GVariant *
+_ncm_var_dict_peek_type (NcmVarDict *vd, const gchar *key, const GVariantType *type, const gchar *func)
+{
+  GVariant *v = ncm_var_dict_peek (vd, key);
+
+  if ((v != NULL) && !g_variant_is_of_type (v, type))
+    g_error ("%s: the value under `%s' has type `%s', not `%.*s'.", func, key,
+             g_variant_get_type_string (v), (gint) g_variant_type_get_string_length (type),
+             g_variant_type_peek_string (type));
+
+  return v;
+}
+
 /**
  * ncm_var_dict_set_string:
  * @vd: a #NcmVarDict
- * @key: a string
+ * @key: the key
  * @value: a string
  *
- * Sets a string to a #NcmVarDict. If there is already a string
- * with key @key, it is unreferenced.
- *
+ * Stores @value under @key. A value already under @key is replaced.
  */
 void
 ncm_var_dict_set_string (NcmVarDict *vd, const gchar *key, const gchar *value)
@@ -672,12 +632,10 @@ ncm_var_dict_set_string (NcmVarDict *vd, const gchar *key, const gchar *value)
 /**
  * ncm_var_dict_set_int:
  * @vd: a #NcmVarDict
- * @key: a string
+ * @key: the key
  * @value: an integer
  *
- * Sets an integer to a #NcmVarDict. If there is already an integer
- * with key @key, it is unreferenced.
- *
+ * Stores @value under @key. A value already under @key is replaced.
  */
 void
 ncm_var_dict_set_int (NcmVarDict *vd, const gchar *key, gint value)
@@ -691,12 +649,10 @@ ncm_var_dict_set_int (NcmVarDict *vd, const gchar *key, gint value)
 /**
  * ncm_var_dict_set_double:
  * @vd: a #NcmVarDict
- * @key: a string
+ * @key: the key
  * @value: a double
  *
- * Sets a double to a #NcmVarDict. If there is already a double
- * with key @key, it is unreferenced.
- *
+ * Stores @value under @key. A value already under @key is replaced.
  */
 void
 ncm_var_dict_set_double (NcmVarDict *vd, const gchar *key, gdouble value)
@@ -710,11 +666,10 @@ ncm_var_dict_set_double (NcmVarDict *vd, const gchar *key, gdouble value)
 /**
  * ncm_var_dict_set_boolean:
  * @vd: a #NcmVarDict
- * @key: a string
+ * @key: the key
  * @value: a boolean
  *
- * Sets a boolean to a #NcmVarDict. If there is already a boolean
- * with key @key, it is unreferenced.
+ * Stores @value under @key. A value already under @key is replaced.
  */
 void
 ncm_var_dict_set_boolean (NcmVarDict *vd, const gchar *key, gboolean value)
@@ -728,12 +683,10 @@ ncm_var_dict_set_boolean (NcmVarDict *vd, const gchar *key, gboolean value)
 /**
  * ncm_var_dict_set_int_array:
  * @vd: a #NcmVarDict
- * @key: a string
- * @value: (array) (element-type int): a GArray of integers
+ * @key: the key
+ * @value: (array) (element-type int): an array of integers
  *
- * Sets an array of integers to a #NcmVarDict. If there is already an array
- * of integers with key @key, it is unreferenced.
- *
+ * Stores a copy of @value under @key. A value already under @key is replaced.
  */
 void
 ncm_var_dict_set_int_array (NcmVarDict *vd, const gchar *key, GArray *value)
@@ -753,11 +706,10 @@ ncm_var_dict_set_int_array (NcmVarDict *vd, const gchar *key, GArray *value)
 /**
  * ncm_var_dict_set_double_array:
  * @vd: a #NcmVarDict
- * @key: a string
- * @value: (array) (element-type double): a GArray of doubles
+ * @key: the key
+ * @value: (array) (element-type double): an array of doubles
  *
- * Sets an array of doubles to a #NcmVarDict. If there is already an array
- * of doubles with key @key, it is unreferenced.
+ * Stores a copy of @value under @key. A value already under @key is replaced.
  */
 void
 ncm_var_dict_set_double_array (NcmVarDict *vd, const gchar *key, GArray *value)
@@ -777,11 +729,10 @@ ncm_var_dict_set_double_array (NcmVarDict *vd, const gchar *key, GArray *value)
 /**
  * ncm_var_dict_set_boolean_array:
  * @vd: a #NcmVarDict
- * @key: a string
- * @value: (array) (element-type boolean): a GArray of booleans
+ * @key: the key
+ * @value: (array) (element-type boolean): an array of booleans
  *
- * Sets an array of booleans to a #NcmVarDict. If there is already an array
- * of booleans with key @key, it is unreferenced.
+ * Stores a copy of @value under @key. A value already under @key is replaced.
  */
 void
 ncm_var_dict_set_boolean_array (NcmVarDict *vd, const gchar *key, GArray *value)
@@ -812,29 +763,22 @@ ncm_var_dict_set_boolean_array (NcmVarDict *vd, const gchar *key, GArray *value)
 /**
  * ncm_var_dict_set_variant:
  * @vd: a #NcmVarDict
- * @key: a string
+ * @key: the key
  * @value: a #GVariant
  *
- * Sets a #GVariant to a #NcmVarDict. If there is already a #GVariant
- * with key @key, it is unreferenced.
- *
- * Valid #GVariant types are:
+ * Stores @value under @key. A value already under @key is replaced. Aborts unless
+ * @value has one of the types
  *
  * - G_VARIANT_TYPE_STRING
  * - G_VARIANT_TYPE_INT32
  * - G_VARIANT_TYPE_DOUBLE
  * - G_VARIANT_TYPE_BOOLEAN
- * - G_VARIANT_TYPE_ARRAY (element-type int)
- * - G_VARIANT_TYPE_ARRAY (element-type double)
- * - G_VARIANT_TYPE_ARRAY (element-type boolean)
- * - #NCM_SERIALIZE_OBJECT_TYPE (a serialized #GObject, as set by ncm_var_dict_set_object())
- * - #NCM_SERIALIZE_OBJECT_ARRAY_TYPE (a serialized #NcmObjArray, as set by ncm_var_dict_set_object_array())
+ * - "ai", "ad" and "ab"
+ * - #NCM_SERIALIZE_OBJECT_TYPE, as stored by ncm_var_dict_set_object()
+ * - #NCM_SERIALIZE_OBJECT_ARRAY_TYPE, as stored by ncm_var_dict_set_object_array()
  *
- * The last two are accepted here (rather than only through their dedicated
- * setters) so that ncm_serialize_var_dict_from_variant() can reconstruct a
- * #NcmVarDict containing objects, since it restores every entry through
- * this function.
- *
+ * The last two are accepted because ncm_serialize_var_dict_from_variant() restores
+ * every entry through this function.
  */
 void
 ncm_var_dict_set_variant (NcmVarDict *vd, const gchar *key, GVariant *value)
@@ -875,19 +819,13 @@ ncm_var_dict_set_variant (NcmVarDict *vd, const gchar *key, GVariant *value)
 /**
  * ncm_var_dict_set_object:
  * @vd: a #NcmVarDict
- * @key: a string
+ * @key: the key
  * @ser: a #NcmSerialize
  * @obj: a #GObject
  *
- * Sets a #GObject to a #NcmVarDict, serializing it through @ser. If there
- * is already a value with key @key, it is unreferenced.
- *
- * Note: @ser is taken as an argument (rather than an internal throwaway
- * instance) because it carries global serialization state -- named
- * instances, autosave/autoname behavior -- that callers frequently need
- * fine-grained control over, e.g. to keep shared sub-objects consistent
- * across a larger serialization.
- *
+ * Serializes @obj with @ser and stores it under @key. A value already under @key is
+ * replaced. @ser carries the named instances and the autosave and autoname settings,
+ * so objects shared across a larger serialization stay shared.
  */
 void
 ncm_var_dict_set_object (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, GObject *obj)
@@ -904,14 +842,11 @@ ncm_var_dict_set_object (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, GO
 /**
  * ncm_var_dict_set_object_array:
  * @vd: a #NcmVarDict
- * @key: a string
+ * @key: the key
  * @ser: a #NcmSerialize
  * @oa: a #NcmObjArray
  *
- * Sets a #NcmObjArray to a #NcmVarDict, serializing it through @ser. If
- * there is already a value with key @key, it is unreferenced. See
- * ncm_var_dict_set_object() for why @ser is an explicit argument.
- *
+ * Serializes @oa with @ser and stores it under @key, as ncm_var_dict_set_object().
  */
 void
 ncm_var_dict_set_object_array (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, NcmObjArray *oa)
@@ -928,11 +863,9 @@ ncm_var_dict_set_object_array (NcmVarDict *vd, const gchar *key, NcmSerialize *s
 /**
  * ncm_var_dict_has_key:
  * @vd: a #NcmVarDict
- * @key: a string
+ * @key: the key
  *
- * Checks if a #NcmVarDict has a key @key.
- *
- * Returns: whether the key @key was found.
+ * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_has_key (NcmVarDict *vd, const gchar *key)
@@ -943,17 +876,18 @@ ncm_var_dict_has_key (NcmVarDict *vd, const gchar *key)
 /**
  * ncm_var_dict_get_string:
  * @vd: a #NcmVarDict
- * @key: a string
- * @value: (out) (transfer full): a string
+ * @key: the key
+ * @value: (out) (transfer full): the string
  *
- * Gets a string from a #NcmVarDict with key @key.
+ * Gets the string under @key. @value is set only when @key is present. Aborts if the value
+ * under @key has another type.
  *
- * Returns: whether the string with key @key was found.
+ * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_string (NcmVarDict *vd, const gchar *key, gchar **value)
 {
-  GVariant *v = ncm_var_dict_peek (vd, key);
+  GVariant *v = _ncm_var_dict_peek_type (vd, key, G_VARIANT_TYPE_STRING, "ncm_var_dict_get_string");
 
   if (v != NULL)
   {
@@ -968,17 +902,18 @@ ncm_var_dict_get_string (NcmVarDict *vd, const gchar *key, gchar **value)
 /**
  * ncm_var_dict_get_int:
  * @vd: a #NcmVarDict
- * @key: a string
- * @value: (out): an integer
+ * @key: the key
+ * @value: (out): the integer
  *
- * Gets an integer from a #NcmVarDict with key @key.
+ * Gets the integer under @key. @value is set only when @key is present. Aborts if the value
+ * under @key has another type.
  *
- * Returns: whether the integer with key @key was found.
+ * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_int (NcmVarDict *vd, const gchar *key, gint *value)
 {
-  GVariant *v = ncm_var_dict_peek (vd, key);
+  GVariant *v = _ncm_var_dict_peek_type (vd, key, G_VARIANT_TYPE_INT32, "ncm_var_dict_get_int");
 
   if (v != NULL)
   {
@@ -993,42 +928,45 @@ ncm_var_dict_get_int (NcmVarDict *vd, const gchar *key, gint *value)
 /**
  * ncm_var_dict_get_double:
  * @vd: a #NcmVarDict
- * @key: a string
- * @value: (out): a double
+ * @key: the key
+ * @value: (out): the double
  *
- * Gets a double from a #NcmVarDict with key @key.
+ * Gets the double under @key; an integer is converted. @value is set only when @key is
+ * present. Aborts if the value under @key has another type.
  *
- * Returns: whether the double with key @key was found.
+ * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_double (NcmVarDict *vd, const gchar *key, gdouble *value)
 {
   GVariant *v = ncm_var_dict_peek (vd, key);
 
-  if (v != NULL)
-  {
-    *value = g_variant_get_double (v);
+  if (v == NULL)
+    return FALSE;
 
-    return TRUE;
-  }
+  if (g_variant_is_of_type (v, G_VARIANT_TYPE_INT32))
+    *value = g_variant_get_int32 (v);
+  else
+    *value = g_variant_get_double (_ncm_var_dict_peek_type (vd, key, G_VARIANT_TYPE_DOUBLE, "ncm_var_dict_get_double"));
 
-  return FALSE;
+  return TRUE;
 }
 
 /**
  * ncm_var_dict_get_boolean:
  * @vd: a #NcmVarDict
- * @key: a string
- * @value: (out): a boolean
+ * @key: the key
+ * @value: (out): the boolean
  *
- * Gets a boolean from a #NcmVarDict with key @key.
+ * Gets the boolean under @key. @value is set only when @key is present. Aborts if the value
+ * under @key has another type.
  *
- * Returns: whether the boolean with key @key was found.
+ * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_boolean (NcmVarDict *vd, const gchar *key, gboolean *value)
 {
-  GVariant *v = ncm_var_dict_peek (vd, key);
+  GVariant *v = _ncm_var_dict_peek_type (vd, key, G_VARIANT_TYPE_BOOLEAN, "ncm_var_dict_get_boolean");
 
   if (v != NULL)
   {
@@ -1043,17 +981,18 @@ ncm_var_dict_get_boolean (NcmVarDict *vd, const gchar *key, gboolean *value)
 /**
  * ncm_var_dict_get_int_array:
  * @vd: a #NcmVarDict
- * @key: a string
- * @value: (out) (transfer full) (element-type int): an array of integers
+ * @key: the key
+ * @value: (out) (transfer full) (element-type int): the array of integers
  *
- * Gets an array of integers from a #NcmVarDict with key @key.
+ * Copies the array of integers under @key to a new #GArray. @value is set only when @key
+ * is present. Aborts if the value under @key has another type.
  *
- * Returns: whether the array of integers with key @key was found.
+ * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_int_array (NcmVarDict *vd, const gchar *key, GArray **value)
 {
-  GVariant *v = ncm_var_dict_peek (vd, key);
+  GVariant *v = _ncm_var_dict_peek_type (vd, key, G_VARIANT_TYPE ("ai"), "ncm_var_dict_get_int_array");
 
   if (v != NULL)
   {
@@ -1073,17 +1012,18 @@ ncm_var_dict_get_int_array (NcmVarDict *vd, const gchar *key, GArray **value)
 /**
  * ncm_var_dict_get_double_array:
  * @vd: a #NcmVarDict
- * @key: a string
- * @value: (out) (transfer full) (element-type double): an array of doubles
+ * @key: the key
+ * @value: (out) (transfer full) (element-type double): the array of doubles
  *
- * Gets an array of doubles from a #NcmVarDict with key @key.
+ * Copies the array of doubles under @key to a new #GArray. @value is set only when @key
+ * is present. Aborts if the value under @key has another type.
  *
- * Returns: whether the array of doubles with key @key was found.
+ * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_double_array (NcmVarDict *vd, const gchar *key, GArray **value)
 {
-  GVariant *v = ncm_var_dict_peek (vd, key);
+  GVariant *v = _ncm_var_dict_peek_type (vd, key, G_VARIANT_TYPE ("ad"), "ncm_var_dict_get_double_array");
 
   if (v != NULL)
   {
@@ -1103,17 +1043,18 @@ ncm_var_dict_get_double_array (NcmVarDict *vd, const gchar *key, GArray **value)
 /**
  * ncm_var_dict_get_boolean_array:
  * @vd: a #NcmVarDict
- * @key: a string
- * @value: (out) (transfer full) (element-type boolean): an array of booleans
+ * @key: the key
+ * @value: (out) (transfer full) (element-type boolean): the array of booleans
  *
- * Gets an array of booleans from a #NcmVarDict with key @key.
+ * Copies the array of booleans under @key to a new #GArray. @value is set only when @key
+ * is present. Aborts if the value under @key has another type.
  *
- * Returns: whether the array of booleans with key @key was found.
+ * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_boolean_array (NcmVarDict *vd, const gchar *key, GArray **value)
 {
-  GVariant *v = ncm_var_dict_peek (vd, key);
+  GVariant *v = _ncm_var_dict_peek_type (vd, key, G_VARIANT_TYPE ("ab"), "ncm_var_dict_get_boolean_array");
 
   if (v != NULL)
   {
@@ -1139,12 +1080,12 @@ ncm_var_dict_get_boolean_array (NcmVarDict *vd, const gchar *key, GArray **value
 /**
  * ncm_var_dict_get_variant:
  * @vd: a #NcmVarDict
- * @key: a string
- * @value: (out) (transfer full): a #GVariant
+ * @key: the key
+ * @value: (out) (transfer full): the #GVariant
  *
- * Gets a #GVariant from a #NcmVarDict with key @key.
+ * Gets the #GVariant under @key. @value is set only when @key is present.
  *
- * Returns: whether the #GVariant with key @key was found.
+ * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_variant (NcmVarDict *vd, const gchar *key, GVariant **value)
@@ -1164,15 +1105,14 @@ ncm_var_dict_get_variant (NcmVarDict *vd, const gchar *key, GVariant **value)
 /**
  * ncm_var_dict_get_object:
  * @vd: a #NcmVarDict
- * @key: a string
+ * @key: the key
  * @ser: a #NcmSerialize
- * @obj: (out) (transfer full): a #GObject
+ * @obj: (out) (transfer full): the object
  *
- * Gets a #GObject from a #NcmVarDict with key @key, deserializing it
- * through @ser. See ncm_var_dict_set_object() for why @ser is an explicit
- * argument.
+ * Deserializes the object under @key with @ser, see ncm_var_dict_set_object(). @obj
+ * is set only when @key is present.
  *
- * Returns: whether the object with key @key was found.
+ * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_object (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, GObject **obj)
@@ -1192,15 +1132,14 @@ ncm_var_dict_get_object (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, GO
 /**
  * ncm_var_dict_get_object_array:
  * @vd: a #NcmVarDict
- * @key: a string
+ * @key: the key
  * @ser: a #NcmSerialize
- * @oa: (out) (transfer full): a #NcmObjArray
+ * @oa: (out) (transfer full): the #NcmObjArray
  *
- * Gets a #NcmObjArray from a #NcmVarDict with key @key, deserializing it
- * through @ser. See ncm_var_dict_set_object() for why @ser is an explicit
- * argument.
+ * Deserializes the #NcmObjArray under @key with @ser, see ncm_var_dict_set_object().
+ * @oa is set only when @key is present.
  *
- * Returns: whether the object array with key @key was found.
+ * Returns: whether @key is present.
  */
 gboolean
 ncm_var_dict_get_object_array (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, NcmObjArray **oa)
@@ -1221,9 +1160,7 @@ ncm_var_dict_get_object_array (NcmVarDict *vd, const gchar *key, NcmSerialize *s
  * ncm_var_dict_len:
  * @vd: a #NcmVarDict
  *
- * Gets the length of a #NcmVarDict.
- *
- * Returns: dictionary length
+ * Returns: the number of keys of @vd.
  */
 guint
 ncm_var_dict_len (NcmVarDict *vd)
@@ -1235,9 +1172,7 @@ ncm_var_dict_len (NcmVarDict *vd)
  * ncm_var_dict_keys:
  * @vd: a #NcmVarDict
  *
- * Gets the keys of a #NcmVarDict.
- *
- * Returns: (transfer container): the keys of a #NcmVarDict.
+ * Returns: (transfer container): the keys of @vd, in no particular order.
  */
 GStrv
 ncm_var_dict_keys (NcmVarDict *vd)

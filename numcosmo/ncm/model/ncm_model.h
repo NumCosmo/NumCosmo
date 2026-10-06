@@ -73,6 +73,7 @@ struct _NcmModelClass
   guint submodel_slot_len;
   guint parent_submodel_slot_len;
   GPtrArray *submodel_slot;
+  GPtrArray *removed_param;
 };
 
 #define NCM_MODEL_MAX_STATES (10)
@@ -131,6 +132,7 @@ void ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, gu
 
 void ncm_model_class_add_submodels (NcmModelClass *model_class, guint submodel_slot_len);
 void ncm_model_class_set_submodel (NcmModelClass *model_class, guint submodel_slot_id, const gchar *name, const gchar *symbol, GType submodel_type);
+void ncm_model_class_add_removed_param (NcmModelClass *model_class, const gchar *name);
 
 void ncm_model_class_check_params_info (NcmModelClass *model_class);
 
@@ -233,8 +235,8 @@ void ncm_model_param_set_abstol (NcmModel *model, guint n, const gdouble abstol)
 void ncm_model_param_set_ftype (NcmModel *model, guint n, const NcmParamType ptype);
 void ncm_model_params_set_default_ftype (NcmModel *model);
 
-GHashTable *ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error);
-void ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GError **error);
+GHashTable *ncm_model_param_get_desc (NcmModel *model, const gchar *param, GError **error);
+void ncm_model_param_set_desc (NcmModel *model, const gchar *param, GHashTable *desc, GError **error);
 
 gboolean ncm_model_is_submodel (NcmModel *model);
 NcmModelID ncm_model_main_model (NcmModel *model);
@@ -249,8 +251,8 @@ gboolean ncm_model_type_is_submodel (GType model_type);
 NcmModelID ncm_model_type_main_model (GType model_type);
 
 /* pygobject dict */
-gdouble ncm_model___getitem__ (NcmModel *model, gchar *param, GError **error);
-void ncm_model___setitem__ (NcmModel *model, gchar *param, gdouble val, GError **error);
+gdouble ncm_model___getitem__ (NcmModel *model, const gchar *param, GError **error);
+void ncm_model___setitem__ (NcmModel *model, const gchar *param, gdouble val, GError **error);
 
 #define NCM_MODEL_CLASS_IMPL_ALL ((guint64) (~((guint64) 0)))
 #define NCM_MODEL_OPT2IMPL(opt) (((guint64) 1) << ((guint64) (opt)))

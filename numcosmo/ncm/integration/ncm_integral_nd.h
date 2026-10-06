@@ -40,37 +40,24 @@ G_DECLARE_DERIVABLE_TYPE (NcmIntegralND, ncm_integral_nd, NCM, INTEGRAL_ND, GObj
 /**
  * NcmIntegralNDF:
  * @intnd: a #NcmIntegralND
- * @x: a #NcmVector containing the value of the variable of integration
- * @dim: the dimension of the integral argument
- * @npoints: the number of points in the array @x
- * @fdim: the dimension of the function to be integrated
- * @fval: a #NcmVector containing the @fdim values of the integrand at all points in @x
+ * @x: the points, @npoints groups of @dim coordinates
+ * @dim: the number of variables $n$
+ * @npoints: the number of points
+ * @fdim: the number of components $m$
+ * @fval: the output values, @npoints groups of @fdim components
  *
- * The type of the function that must be implemented by a subclass of #NcmIntegralND.
- *
- * This function receives @npoints points in the array @x (size @dim * @npoints), and
- * returns an array (size @fdim * @npoints) of @npoints values of the integrand at all
- * points in @x. The @x is an array of doubles in row-major order
- * (i.e. the first @dim elements of @x are the coordinates of the first point, the next
- * @dim elements are the coordinates of the second point, and so on). The return value
- * is an array of @fdim values of the integrand at all points in @x (e.g. the first
- * @fdim elements are the values of the integrand at the first point, the next @fdim
- * elements are the values of the integrand at the second point, and so on).
- *
+ * The integrand of #NcmIntegralND, computing $F$ at each point of @x into @fval, point
+ * after point. @npoints is one except for the vectorized methods.
  */
 typedef void (*NcmIntegralNDF) (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
 
 /**
  * NcmIntegralNDGetDimensions:
  * @intnd: a #NcmIntegralND
- * @dim: (out): the dimension of the integral argument
- * @fdim: (out): the dimension of the function to be integrated
+ * @dim: (out): the number of variables $n$
+ * @fdim: (out): the number of components $m$
  *
- * The type of the function that must be implemented by a subclass of #NcmIntegralND.
- *
- * This function returns the dimension of the integral argument and the dimension of
- * the function to be integrated.
- *
+ * Gets the dimensions of the integrand of #NcmIntegralND.
  */
 typedef void (*NcmIntegralNDGetDimensions) (NcmIntegralND *intnd, guint *dim, guint *fdim);
 
@@ -88,16 +75,14 @@ struct _NcmIntegralNDClass
 
 /**
  * NcmIntegralNDMethod:
- * @NCM_INTEGRAL_ND_METHOD_CUBATURE_H: adaptive integration by partitioning the integration domain ("h-adaptive")
- *  and using the same fixed-degree quadrature in each subdomain, recursively, until convergence is achieved.
- * @NCM_INTEGRAL_ND_METHOD_CUBATURE_P: adaptive integration by increasing the degree of (tensor-product
- *  Clenshaw-Curtis) quadrature rules ("p-adaptive"), rather than subdividing the domain ("h-adaptive").
- *  Possibly better for smooth integrands in low dimensions.
- * @NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V: same as @NCM_INTEGRAL_ND_METHOD_CUBATURE_H with vectorized integrand
- * @NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V: same as @NCM_INTEGRAL_ND_METHOD_CUBATURE_P with vectorized integrand
+ * @NCM_INTEGRAL_ND_METHOD_CUBATURE_H: h-adaptive, subdividing the domain with a
+ *   fixed-degree rule in each part
+ * @NCM_INTEGRAL_ND_METHOD_CUBATURE_P: p-adaptive, raising the degree of a tensor-product
+ *   Clenshaw-Curtis rule on the whole domain, suited to smooth integrands in few dimensions
+ * @NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V: h-adaptive with a vectorized integrand
+ * @NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V: p-adaptive with a vectorized integrand
  *
- * The type of the method used to perform the integral.
- *
+ * The cubature algorithms of #NcmIntegralND.
  */
 typedef enum _NcmIntegralNDMethod /*< prefix=NCM_INTEGRAL_ND_METHOD_CUBATURE >*/
 {
@@ -111,14 +96,15 @@ typedef enum _NcmIntegralNDMethod /*< prefix=NCM_INTEGRAL_ND_METHOD_CUBATURE >*/
 
 /**
  * NcmIntegralNDError:
- * @NCM_INTEGRAL_ND_ERROR_INDIVIDUAL: error is estimated for each integrand separately
- * @NCM_INTEGRAL_ND_ERROR_PAIRWISE: error is estimated for each pair of integrands
- * @NCM_INTEGRAL_ND_ERROR_L2: error is estimated for the L2 norm of the vector of integrands
- * @NCM_INTEGRAL_ND_ERROR_L1: error is estimated for the L1 norm of the vector of integrands
- * @NCM_INTEGRAL_ND_ERROR_LINF: error is estimated for the L-infinity norm of the vector of integrands
+ * @NCM_INTEGRAL_ND_ERROR_INDIVIDUAL: each component meets the tolerance
+ * @NCM_INTEGRAL_ND_ERROR_PAIRWISE: each pair of consecutive components, taken as the real
+ *   and imaginary parts of a complex value, meets the tolerance in modulus
+ * @NCM_INTEGRAL_ND_ERROR_L2: the $L^2$ norm of the error vector meets the tolerance
+ *   relative to the $L^2$ norm of the integral
+ * @NCM_INTEGRAL_ND_ERROR_L1: as %NCM_INTEGRAL_ND_ERROR_L2 with the $L^1$ norm
+ * @NCM_INTEGRAL_ND_ERROR_LINF: as %NCM_INTEGRAL_ND_ERROR_L2 with the maximum norm
  *
- * The type of the error estimation used to perform the integral.
- *
+ * How #NcmIntegralND measures the error of a vector-valued integral.
  */
 typedef enum _NcmIntegralNDError /*< prefix=NCM_INTEGRAL_ND_ERROR >*/
 {
@@ -149,21 +135,33 @@ gdouble ncm_integral_nd_get_abstol (NcmIntegralND *intnd);
 
 void ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector *xf, NcmVector *res, NcmVector *err);
 
+/**
+ * NCM_INTEGRAL_ND_DEFAULT_RELTOL:
+ *
+ * Default #NcmIntegralND:reltol.
+ */
 #define NCM_INTEGRAL_ND_DEFAULT_RELTOL 1e-7
+
+/**
+ * NCM_INTEGRAL_ND_DEFAULT_ABSTOL:
+ *
+ * Default #NcmIntegralND:abstol.
+ */
 #define NCM_INTEGRAL_ND_DEFAULT_ABSTOL 0.0
 
 /**
  * NCM_INTEGRAL_ND_DEFINE_TYPE_WITH_FREE:
- * @MODULE: the name of the module defining the type, all capitalized
- * @OBJ_NAME: the name of the type to define, all capitalized
- * @ModuleObjName: the name of the type to define, camel case
- * @module_obj_name: the name of the type to define, snake case
- * @method_get_dimensions: the name of the method that returns the dimension of the integral argument and the dimension of the function to be integrated
- * @method_integrand: the name of the method that returns the value of the integrand at all points in @x
- * @user_data: the type of the user data
- * @user_data_free: the name of the method that frees the user data
+ * @MODULE: the module prefix, in upper case
+ * @OBJ_NAME: the type name without the prefix, in upper case
+ * @ModuleObjName: the type name, in camel case
+ * @module_obj_name: the type name, in snake case
+ * @method_get_dimensions: the #NcmIntegralNDGetDimensions
+ * @method_integrand: the #NcmIntegralNDF
+ * @user_data: the type of the user-data field `data`
+ * @user_data_free: the function called with a pointer to `data` on finalization
  *
- * A convenience macro to define a subclass of #NcmIntegralND with a custom user data type and a custom method to free the user data.
+ * Defines a final subclass of #NcmIntegralND whose instance holds a field `data` of type
+ * @user_data.
  */
 #define NCM_INTEGRAL_ND_DEFINE_TYPE_WITH_FREE(MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_get_dimensions, method_integrand, user_data, user_data_free) \
         G_DECLARE_FINAL_TYPE (ModuleObjName, module_obj_name, MODULE, OBJ_NAME, NcmIntegralND)                                                                      \
@@ -192,15 +190,15 @@ void ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmV
 
 /**
  * NCM_INTEGRAL_ND_DEFINE_TYPE:
- * @MODULE: the name of the module defining the type, all capitalized
- * @OBJ_NAME: the name of the type to define, all capitalized
- * @ModuleObjName: the name of the type to define, camel case
- * @module_obj_name: the name of the type to define, snake case
- * @method_get_dimensions: the name of the method that returns the dimension of the integral argument and the dimension of the function to be integrated
- * @method_integrand: the name of the method that returns the value of the integrand at all points in @x
- * @user_data: the type of the user data
+ * @MODULE: the module prefix, in upper case
+ * @OBJ_NAME: the type name without the prefix, in upper case
+ * @ModuleObjName: the type name, in camel case
+ * @module_obj_name: the type name, in snake case
+ * @method_get_dimensions: the #NcmIntegralNDGetDimensions
+ * @method_integrand: the #NcmIntegralNDF
+ * @user_data: the type of the user-data field `data`
  *
- * A convenience macro to define a subclass of #NcmIntegralND with a custom user data type.
+ * Same as %NCM_INTEGRAL_ND_DEFINE_TYPE_WITH_FREE with nothing to free.
  */
 #define NCM_INTEGRAL_ND_DEFINE_TYPE(MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_get_dimensions, method_integrand, user_data)                    \
         NCM_INTEGRAL_ND_DEFINE_TYPE_WITH_FREE (MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_get_dimensions, method_integrand, user_data, (void)) \

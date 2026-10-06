@@ -136,8 +136,8 @@ def test_mask_cl_fullsky_is_the_default(cosmology: Cosmology) -> None:
 
 
 def test_fullsky_matches_python_reference(cosmology: Cosmology) -> None:
-    """On the same quadrature, C and Python agree to machine precision."""
-    ssc_sij = _make_ssc_sij(cosmology, Nc.XcorMethod.KERNEL_CUBATURE)
+    """On the same quadrature, KERNEL_EXACT, C and Python agree to machine precision."""
+    ssc_sij = _make_ssc_sij(cosmology)
 
     got = _matrix_to_np(ssc_sij.eval(cosmology.cosmo))
     expected = _make_reference(cosmology).fullsky(cosmology.cosmo)
@@ -145,18 +145,18 @@ def test_fullsky_matches_python_reference(cosmology: Cosmology) -> None:
     assert_allclose(got, expected, rtol=1.0e-12)
 
 
-def test_fullsky_fixed_matches_python_reference(cosmology: Cosmology) -> None:
-    """The default fixed quadrature agrees with the adaptive Python reference.
+def test_fullsky_cubature_matches_python_reference(cosmology: Cosmology) -> None:
+    """The adaptive quadrature agrees with the fixed Python reference.
 
-    KERNEL_EXACT is the default precisely because it cannot fail to converge,
-    so it must reproduce the adaptive result rather than merely be close.
+    KERNEL_EXACT is the default because it cannot fail to converge, so the
+    adaptive KERNEL_CUBATURE result must reproduce it rather than merely be close.
 
     The comparison is against the peak of the matrix, not element-wise: the
     off-diagonals are four orders of magnitude below the diagonal, so their own
     relative error is set by how the two quadratures resolve a near total
     cancellation, and is not the quantity that matters for the covariance.
     """
-    ssc_sij = _make_ssc_sij(cosmology)
+    ssc_sij = _make_ssc_sij(cosmology, Nc.XcorMethod.KERNEL_CUBATURE)
 
     got = _matrix_to_np(ssc_sij.eval(cosmology.cosmo))
     expected = _make_reference(cosmology).fullsky(cosmology.cosmo)

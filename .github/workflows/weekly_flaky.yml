@@ -17,7 +17,7 @@ env:
   CONDA_ENV: numcosmo_developer
   # Must match build_check.yml's DATA_CACHE_VERSION, so both workflows share one
   # stored copy of the data files.
-  DATA_CACHE_VERSION: 0
+  DATA_CACHE_VERSION: 1
 
 jobs:
   flaky:
@@ -25,7 +25,7 @@ jobs:
     # Pinned to 26.04 for GSL >= 2.8; see build_check.yml.
     runs-on: ubuntu-26.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Restore data cache
       # Restore only: this lane repeats the python suite 20 times and would
       # otherwise re-download every asset, but build_check.yml is what keeps

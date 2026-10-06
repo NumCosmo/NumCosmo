@@ -48,7 +48,7 @@ void ncm_vparam_clear (NcmVParam **vparam);
 void ncm_vparam_set_len (NcmVParam *vparam, guint len);
 guint ncm_vparam_get_len (NcmVParam *vparam);
 void ncm_vparam_set_sparam (NcmVParam *vparam, guint n, NcmSParam *spn);
-void ncm_vparam_set_sparam_full (NcmVParam *vparam, guint n, gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype);
+void ncm_vparam_set_sparam_full (NcmVParam *vparam, guint n, const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype);
 NcmSParam *ncm_vparam_peek_sparam (const NcmVParam *vparam, guint n);
 NcmSParam *ncm_vparam_get_sparam (NcmVParam *vparam, guint n);
 

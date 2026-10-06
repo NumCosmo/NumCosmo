@@ -27,23 +27,21 @@ Experiments using the XCDM model and likelihoods that do not depend on perturbat
 """
 
 import os
-from typing import Optional
 
-from numcosmo_py import Ncm, Nc
-from numcosmo_py.sampling.esmcmc import (
-    create_esmcmc,
-    WalkerTypes,
-    InterpolationMethod,
-    InterpolationKernel,
-)
-
+from numcosmo_py import Nc, Ncm
 from numcosmo_py.datasets.hicosmo import (
-    SNIaID,
     BAOID,
     HID,
-    add_snia_likelihood,
+    SNIaID,
     add_bao_likelihood,
     add_h_likelihood,
+    add_snia_likelihood,
+)
+from numcosmo_py.sampling.esmcmc import (
+    InterpolationKernel,
+    InterpolationMethod,
+    WalkerTypes,
+    create_esmcmc,
 )
 
 
@@ -63,7 +61,9 @@ def create_mset(
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     if os.path.exists(progress_file):
-        mset = Ncm.MSet.load(progress_file, ser)
+        loaded = Ncm.MSet.load(progress_file, ser)
+        assert loaded is not None
+        mset = loaded
     else:
         mset = Ncm.MSet.empty_new()
 
@@ -100,8 +100,8 @@ def run_xcdm_nopert_mcmc(
     verbose: bool = True,
     fit_first: bool = False,
     robust: bool = False,
-    use_apes_interpolation: bool = True,
-    use_apes_threads: Optional[bool] = None,
+    use_apes_center_shrink: bool = False,
+    use_apes_threads: bool | None = None,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
@@ -112,9 +112,9 @@ def run_xcdm_nopert_mcmc(
     flat: bool = False,
     use_neutrino: bool = False,
     z_f: float = 3.0,
-    snia_id: Optional[SNIaID] = SNIaID.COV_PANTHEON_PLUS_SH0ES_SYS_STAT,
-    bao_id: Optional[BAOID] = BAOID.ALL_COMBINED_JAN_2023,
-    h_id: Optional[HID] = HID.ALL_COMBINED_JAN_2023,
+    snia_id: SNIaID | None = SNIaID.COV_PANTHEON_PLUS_SH0ES_SYS_STAT,
+    bao_id: BAOID | None = BAOID.ALL_COMBINED_JAN_2023,
+    h_id: HID | None = HID.ALL_COMBINED_JAN_2023,
 ) -> str:
     """Run the XCDM model with no perturbations MCMC."""
     mset = create_mset(use_neutrino, flat)
@@ -141,7 +141,7 @@ def run_xcdm_nopert_mcmc(
         verbose=verbose,
         fit_first=fit_first,
         robust=robust,
-        use_apes_interpolation=use_apes_interpolation,
+        use_apes_center_shrink=use_apes_center_shrink,
         use_apes_threads=use_apes_threads,
         sampler=sampler,
         interpolation_method=interpolation_method,

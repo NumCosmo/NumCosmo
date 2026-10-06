@@ -26,36 +26,32 @@
 /**
  * NcmMPIJob:
  *
- * Abstract class to implement MPI jobs.
+ * Abstract class for jobs distributed over MPI ranks.
  *
- * This abstract class simplifies the implementation of MPI jobs through a master/slave
- * model. Subclasses must implement virtual methods. The master dispatches jobs to the
- * slaves, awaits results, and slaves execute the job, sending results back to the
- * master.
+ * Rank 0 is the master and the other ranks are workers. When NumCosmo runs under an MPI
+ * launcher, ncm_cfg_init() starts MPI and the workers enter a loop that waits for
+ * commands from the master; they never return to the caller.
  *
- * For example, NcmMPIJobMCMC is a specific subclass that implements an MCMC job. Each
- * slave creates an instance of #NcmLikelihood, evaluating the likelihood function for
- * samples received from the master.
+ * A job evaluates an output object from an input object with ncm_mpi_job_run(). The
+ * subclass defines both objects and how each travels over MPI: the datatype and length
+ * of its message (ncm_mpi_job_input_datatype(), ncm_mpi_job_return_datatype()), and how
+ * it is packed into and unpacked from a buffer. #NcmMPIJobFit, #NcmMPIJobFEval and
+ * #NcmMPIJobMCMC evaluate a fit, a set of functions and a likelihood at the parameters
+ * they receive.
  *
- * The master/slave model uses MPI. The subclass is responsible for implementing
- * virtual methods for packing/unpacking input and return objects into/from MPI buffers.
+ * The master sends a serialized copy of the job to every worker with
+ * ncm_mpi_job_init_all_slaves(). ncm_mpi_job_run_array() then deals the inputs to the
+ * workers in turn and runs the last $n/n_\mathrm{ranks}$ of them itself, after sending
+ * the rest; ncm_mpi_job_run_array_async() lets a second thread feed each worker a new
+ * input as soon as it returns one while the master runs inputs from the same queue.
+ * Either way every output lands at the position of its input. With a single rank, or
+ * without MPI support, both run every input on the master. The job only runs on the
+ * master, so a job whose ncm_mpi_job_run() calls MPI cannot be used with
+ * ncm_mpi_job_run_array_async().
  *
- * When NumCosmo is compiled with MPI support, the rank 0 process executes normally,
- * while other ranks wait for commands from the master. The method
- * ncm_mpi_job_init_all_slaves() sends a serialized version of itself to all slaves.
- * Slaves deserialize it and wait for commands.
- *
- * Each call to ncm_mpi_job_run_array() sends an array of inputs to the slaves in a
- * round-robin fashion. Slaves execute the job and return results to the master,
- * maintaining the input order. This method uses rank 0 to control the slaves, so the
- * master isn't involved in computations.
- *
- * Conversely, ncm_mpi_job_run_array_async() sends inputs to the slaves and creates a
- * lightweight thread to receive results while the master concurrently executes the job.
- *
- * After job completion, the master calls ncm_mpi_job_free_all_slaves() to release the
- * slaves. It's an error to use two or more instances of any subclass of #NcmMPIJob
- * simultaneously.
+ * ncm_mpi_job_free_all_slaves() releases the workers, which then wait for the next job;
+ * finalizing the job does it too. The workers serve one job at a time, so two jobs
+ * cannot hold them at once.
  *
  */
 
@@ -104,6 +100,7 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmMPIJob, ncm_mpi_job, G_TYPE_OBJECT)
 static gpointer _ncm_mpi_job_create_input_buffer (gpointer userdata);
 static gpointer _ncm_mpi_job_create_return_buffer (gpointer userdata);
 static void _ncm_mpi_job_destroy_buffer (gpointer p);
+static void _ncm_mpi_job_run_array_serial (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArray *ret_array);
 
 static void
 ncm_mpi_job_init (NcmMPIJob *mpi_job)
@@ -236,7 +233,7 @@ _ncm_mpi_job_finalize (GObject *object)
 static NcmMPIDatatype
 _ncm_mpi_job_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
-  g_error ("_ncm_mpi_job_input_datatype: method not implemented.");
+  g_error ("method input_datatype not implemented by %s.", G_OBJECT_TYPE_NAME (mpi_job));
 
   return MPI_DATATYPE_NULL;
 }
@@ -244,7 +241,7 @@ _ncm_mpi_job_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 static NcmMPIDatatype
 _ncm_mpi_job_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
-  g_error ("_ncm_mpi_job_return_datatype: method not implemented.");
+  g_error ("method return_datatype not implemented by %s.", G_OBJECT_TYPE_NAME (mpi_job));
 
   return MPI_DATATYPE_NULL;
 }
@@ -252,7 +249,7 @@ _ncm_mpi_job_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 static gpointer
 _ncm_mpi_job_create_input (NcmMPIJob *mpi_job)
 {
-  g_error ("_ncm_mpi_job_create_input: method not implemented.");
+  g_error ("method create_input not implemented by %s.", G_OBJECT_TYPE_NAME (mpi_job));
 
   return NULL;
 }
@@ -260,7 +257,7 @@ _ncm_mpi_job_create_input (NcmMPIJob *mpi_job)
 static gpointer
 _ncm_mpi_job_create_return (NcmMPIJob *mpi_job)
 {
-  g_error ("_ncm_mpi_job_create_return: method not implemented.");
+  g_error ("method create_return not implemented by %s.", G_OBJECT_TYPE_NAME (mpi_job));
 
   return NULL;
 }
@@ -268,13 +265,13 @@ _ncm_mpi_job_create_return (NcmMPIJob *mpi_job)
 static void
 _ncm_mpi_job_destroy_input (NcmMPIJob *mpi_job, gpointer input)
 {
-  g_error ("_ncm_mpi_job_destroy_input: method not implemented.");
+  g_error ("method destroy_input not implemented by %s.", G_OBJECT_TYPE_NAME (mpi_job));
 }
 
 static void
 _ncm_mpi_job_destroy_return (NcmMPIJob *mpi_job, gpointer ret)
 {
-  g_error ("_ncm_mpi_job_destroy_return: method not implemented.");
+  g_error ("method destroy_return not implemented by %s.", G_OBJECT_TYPE_NAME (mpi_job));
 }
 
 static gpointer _ncm_mpi_job_get_input_buffer (NcmMPIJob *mpi_job, gpointer input);
@@ -286,7 +283,7 @@ static void _ncm_mpi_job_destroy_return_buffer (NcmMPIJob *mpi_job, gpointer ret
 static gpointer
 _ncm_mpi_job_pack_input (NcmMPIJob *mpi_job, gpointer input)
 {
-  g_error ("_ncm_mpi_job_pack_input: method not implemented.");
+  g_error ("method pack_input not implemented by %s.", G_OBJECT_TYPE_NAME (mpi_job));
 
   return NULL;
 }
@@ -294,7 +291,7 @@ _ncm_mpi_job_pack_input (NcmMPIJob *mpi_job, gpointer input)
 static gpointer
 _ncm_mpi_job_pack_return (NcmMPIJob *mpi_job, gpointer ret)
 {
-  g_error ("_ncm_mpi_job_pack_return: method not implemented.");
+  g_error ("method pack_return not implemented by %s.", G_OBJECT_TYPE_NAME (mpi_job));
 
   return NULL;
 }
@@ -302,19 +299,19 @@ _ncm_mpi_job_pack_return (NcmMPIJob *mpi_job, gpointer ret)
 static void
 _ncm_mpi_job_unpack_input (NcmMPIJob *mpi_job, gpointer buf, gpointer input)
 {
-  g_error ("_ncm_mpi_job_unpack_input: method not implemented.");
+  g_error ("method unpack_input not implemented by %s.", G_OBJECT_TYPE_NAME (mpi_job));
 }
 
 static void
 _ncm_mpi_job_unpack_return (NcmMPIJob *mpi_job, gpointer buf, gpointer ret)
 {
-  g_error ("_ncm_mpi_job_unpack_return: method not implemented.");
+  g_error ("method unpack_return not implemented by %s.", G_OBJECT_TYPE_NAME (mpi_job));
 }
 
 static void
 _ncm_mpi_job_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 {
-  g_error ("_ncm_mpi_job_run: method not implemented.");
+  g_error ("method run not implemented by %s.", G_OBJECT_TYPE_NAME (mpi_job));
 }
 
 /* LCOV_EXCL_STOP */
@@ -363,12 +360,6 @@ ncm_mpi_job_class_init (NcmMPIJobClass *klass)
   klass->unpack_return = &_ncm_mpi_job_unpack_return;
 
   klass->run = &_ncm_mpi_job_run;
-}
-
-static void
-_ncm_mpi_job_work_clear (NcmMPIJob *mpi_job)
-{
-  /*NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);*/
 }
 
 static gpointer
@@ -458,8 +449,8 @@ ncm_mpi_job_clear (NcmMPIJob **mpi_job)
  * ncm_mpi_job_work_init: (virtual work_init)
  * @mpi_job: a #NcmMPIJob
  *
- * Method called after @mpi_job is initialized at the slave
- * and before start working.
+ * Called by a worker once, after it deserializes @mpi_job and before its first input.
+ * The default does nothing.
  *
  */
 void
@@ -473,9 +464,8 @@ ncm_mpi_job_work_init (NcmMPIJob *mpi_job)
  * ncm_mpi_job_work_clear: (virtual work_clear)
  * @mpi_job: a #NcmMPIJob
  *
- * Method called during the working phase of @mpi_job and in the
- * end before object destruction. This method can be called multiple
- * times during the work phase.
+ * Releases what ncm_mpi_job_work_init() set up. The worker loop does not call it, and
+ * the default does nothing.
  *
  */
 void
@@ -483,17 +473,16 @@ ncm_mpi_job_work_clear (NcmMPIJob *mpi_job)
 {
   if (NCM_MPI_JOB_GET_CLASS (mpi_job)->work_clear != NULL)
     NCM_MPI_JOB_GET_CLASS (mpi_job)->work_clear (mpi_job);
-
-  _ncm_mpi_job_work_clear (mpi_job);
 }
 
 /**
  * ncm_mpi_job_input_datatype: (virtual input_datatype)
  * @mpi_job: a #NcmMPIJob
- * @len: (out): input length
- * @size: (out): input buffer size
+ * @len: (out): number of elements in an input message
+ * @size: (out): size of an input buffer in bytes
  *
- * Computes the size and datatype of the input buffer.
+ * The MPI datatype of the input messages, with their length and the buffer size. They
+ * are read once, when @mpi_job is constructed. The default aborts.
  *
  * Returns: (transfer none): the input datatype.
  */
@@ -506,10 +495,11 @@ ncm_mpi_job_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 /**
  * ncm_mpi_job_return_datatype: (virtual return_datatype)
  * @mpi_job: a #NcmMPIJob
- * @len: (out): input length
- * @size: (out): input buffer size
+ * @len: (out): number of elements in a return message
+ * @size: (out): size of a return buffer in bytes
  *
- * Computes the size and datatype of the return buffer.
+ * The MPI datatype of the return messages, with their length and the buffer size. They
+ * are read once, when @mpi_job is constructed. The default aborts.
  *
  * Returns: (transfer none): the return datatype.
  */
@@ -523,9 +513,10 @@ ncm_mpi_job_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
  * ncm_mpi_job_create_input: (virtual create_input)
  * @mpi_job: a #NcmMPIJob
  *
- * Creates a new input object.
+ * Creates an input object, released with ncm_mpi_job_destroy_input(). The default
+ * aborts.
  *
- * Returns: (transfer none): the newly input object.
+ * Returns: (transfer none): the new input object.
  */
 gpointer
 ncm_mpi_job_create_input (NcmMPIJob *mpi_job)
@@ -537,9 +528,10 @@ ncm_mpi_job_create_input (NcmMPIJob *mpi_job)
  * ncm_mpi_job_create_return: (virtual create_return)
  * @mpi_job: a #NcmMPIJob
  *
- * Creates a new return object.
+ * Creates a return object, released with ncm_mpi_job_destroy_return(). The default
+ * aborts.
  *
- * Returns: (transfer none): the newly return object.
+ * Returns: (transfer none): the new return object.
  */
 gpointer
 ncm_mpi_job_create_return (NcmMPIJob *mpi_job)
@@ -552,7 +544,7 @@ ncm_mpi_job_create_return (NcmMPIJob *mpi_job)
  * @mpi_job: a #NcmMPIJob
  * @input: an input object
  *
- * Destroy the @input object created with ncm_mpi_job_create_input().
+ * Releases @input, created with ncm_mpi_job_create_input(). The default aborts.
  *
  */
 void
@@ -566,7 +558,7 @@ ncm_mpi_job_destroy_input (NcmMPIJob *mpi_job, gpointer input)
  * @mpi_job: a #NcmMPIJob
  * @ret: a return object
  *
- * Destroy the @return object created with ncm_mpi_job_create_return().
+ * Releases @ret, created with ncm_mpi_job_create_return(). The default aborts.
  *
  */
 void
@@ -580,9 +572,10 @@ ncm_mpi_job_destroy_return (NcmMPIJob *mpi_job, gpointer ret)
  * @mpi_job: a #NcmMPIJob
  * @input: an input object
  *
- * Creates a buffer from @input compatible with ncm_mpi_job_input_datatype().
+ * A buffer for an input message, released with ncm_mpi_job_destroy_input_buffer(). The
+ * default takes one of the input buffer size from a pool and ignores @input.
  *
- * Returns: (transfer none): the created buffer.
+ * Returns: (transfer none): the buffer.
  */
 gpointer
 ncm_mpi_job_get_input_buffer (NcmMPIJob *mpi_job, gpointer input)
@@ -595,9 +588,10 @@ ncm_mpi_job_get_input_buffer (NcmMPIJob *mpi_job, gpointer input)
  * @mpi_job: a #NcmMPIJob
  * @ret: a return object
  *
- * Creates a buffer from @ret compatible with ncm_mpi_job_return_datatype().
+ * A buffer for a return message, released with ncm_mpi_job_destroy_return_buffer().
+ * The default takes one of the return buffer size from a pool and ignores @ret.
  *
- * Returns: (transfer none): the created buffer.
+ * Returns: (transfer none): the buffer.
  */
 gpointer
 ncm_mpi_job_get_return_buffer (NcmMPIJob *mpi_job, gpointer ret)
@@ -609,10 +603,10 @@ ncm_mpi_job_get_return_buffer (NcmMPIJob *mpi_job, gpointer ret)
  * ncm_mpi_job_destroy_input_buffer: (virtual destroy_input_buffer)
  * @mpi_job: a #NcmMPIJob
  * @input: an input object
- * @buf: a input buffer
+ * @buf: an input buffer
  *
- * Destroy @buf created with ncm_mpi_job_get_input_buffer()
- * or ncm_mpi_job_pack_input().
+ * Releases @buf, obtained from ncm_mpi_job_get_input_buffer() or
+ * ncm_mpi_job_pack_input(). The default returns it to the pool.
  *
  */
 void
@@ -627,8 +621,8 @@ ncm_mpi_job_destroy_input_buffer (NcmMPIJob *mpi_job, gpointer input, gpointer b
  * @ret: a return object
  * @buf: a return buffer
  *
- * Destroy @buf created with ncm_mpi_job_get_return_buffer()
- * or ncm_mpi_job_pack_return().
+ * Releases @buf, obtained from ncm_mpi_job_get_return_buffer() or
+ * ncm_mpi_job_pack_return(). The default returns it to the pool.
  *
  */
 void
@@ -640,9 +634,10 @@ ncm_mpi_job_destroy_return_buffer (NcmMPIJob *mpi_job, gpointer ret, gpointer bu
 /**
  * ncm_mpi_job_pack_input: (virtual pack_input)
  * @mpi_job: a #NcmMPIJob
- * @input: the input pointer
+ * @input: an input object
  *
- * Packs (when necessary) the input into the input buffer.
+ * A buffer holding @input as an input message, released with
+ * ncm_mpi_job_destroy_input_buffer(). The default aborts.
  *
  * Returns: (transfer none): the packed buffer.
  */
@@ -655,9 +650,10 @@ ncm_mpi_job_pack_input (NcmMPIJob *mpi_job, gpointer input)
 /**
  * ncm_mpi_job_pack_return: (virtual pack_return)
  * @mpi_job: a #NcmMPIJob
- * @ret: the return pointer
+ * @ret: a return object
  *
- * Packs (when necessary) the return into the return buffer @buf.
+ * A buffer holding @ret as a return message, released with
+ * ncm_mpi_job_destroy_return_buffer(). The default aborts.
  *
  * Returns: (transfer none): the packed buffer.
  */
@@ -670,10 +666,10 @@ ncm_mpi_job_pack_return (NcmMPIJob *mpi_job, gpointer ret)
 /**
  * ncm_mpi_job_unpack_input: (virtual unpack_input)
  * @mpi_job: a #NcmMPIJob
- * @buf: the received buffer
- * @input: the unpacked buffer
+ * @buf: a received input buffer
+ * @input: the input object to fill
  *
- * Unpacks (when necessary) the buffer @buf into the input pointer @input.
+ * Copies the input message in @buf into @input. The default aborts.
  *
  */
 void
@@ -685,10 +681,10 @@ ncm_mpi_job_unpack_input (NcmMPIJob *mpi_job, gpointer buf, gpointer input)
 /**
  * ncm_mpi_job_unpack_return: (virtual unpack_return)
  * @mpi_job: a #NcmMPIJob
- * @buf: the received buffer
- * @ret: the unpacked buffer
+ * @buf: a received return buffer
+ * @ret: the return object to fill
  *
- * Unpacks (when necessary) the buffer @buf into the return pointer @return.
+ * Copies the return message in @buf into @ret. The default aborts.
  *
  */
 void
@@ -700,10 +696,10 @@ ncm_mpi_job_unpack_return (NcmMPIJob *mpi_job, gpointer buf, gpointer ret)
 /**
  * ncm_mpi_job_run: (virtual run)
  * @mpi_job: a #NcmMPIJob
- * @input: an input pointer
- * @ret: an return pointer
+ * @input: an input object
+ * @ret: the return object to fill
  *
- * Runs job @mpi_job using @input and returns in @ret.
+ * Runs @mpi_job on @input and writes the result to @ret. The default aborts.
  *
  */
 void
@@ -717,7 +713,9 @@ ncm_mpi_job_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
  * @mpi_job: a #NcmMPIJob
  * @ser: a #NcmSerialize
  *
- * Initialize all available slaves with @mpi_job.
+ * Sends @mpi_job, serialized with @ser, to every worker, which then waits for inputs.
+ * Must be called on the master. With a single rank, or without MPI support, it does
+ * nothing.
  *
  */
 void
@@ -771,19 +769,20 @@ ncm_mpi_job_init_all_slaves (NcmMPIJob *mpi_job, NcmSerialize *ser)
     g_variant_unref (job_ser);
   }
 
-#else
-  g_error ("ncm_mpi_job_init_all_slaves: MPI unsupported.");
 #endif /* HAVE_MPI */
 }
 
 /**
  * ncm_mpi_job_run_array:
  * @mpi_job: a #NcmMPIJob
- * @input_array: (array) (element-type GObject): an array of input pointers
- * @ret_array: (array) (element-type GObject): an array of (allocated) return pointers
+ * @input_array: (array) (element-type GObject): the input objects
+ * @ret_array: (array) (element-type GObject): the return objects to fill, as many as inputs
  *
- * Send work to all slaves in a round-robin fashion. Both arrays @input_array and @ret_array
- * must have the same length and should be filled with the appropriated pointers.
+ * Runs @mpi_job on every input, writing each result to the return object at the same
+ * position. The inputs are dealt to the workers in turn, except the last
+ * $n/n_\mathrm{ranks}$, which the master runs itself after sending the rest. Must be
+ * called on the master, after ncm_mpi_job_init_all_slaves(). With a single rank, or
+ * without MPI support, the master runs every input.
  *
  */
 void
@@ -854,7 +853,7 @@ ncm_mpi_job_run_array (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArray *re
         {
           struct buf_desc bd = {ret, ncm_mpi_job_get_return_buffer (mpi_job, ret), ret_type};
 
-          MPI_Irecv (bd.buf, self->return_len, self->input_dtype, slave_id, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &request);
+          MPI_Irecv (bd.buf, self->return_len, self->return_dtype, slave_id, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &request);
           g_array_append_val (req_array, request);
           g_array_append_val (buf_desc_a, bd);
         }
@@ -940,28 +939,20 @@ ncm_mpi_job_run_array (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArray *re
 
     return;
   }
-  else
-  {
-    const guint njobs = input_array->len;
-    guint i;
-
-    for (i = 0; i < njobs; i++)
-    {
-      gpointer input = g_ptr_array_index (input_array, i);
-      gpointer ret   = g_ptr_array_index (ret_array, i);
-
-      ncm_mpi_job_run (mpi_job, input, ret);
-    }
-
-    return;
-  }
-
-#else
-  g_error ("ncm_mpi_job_run_array: MPI unsupported.");
-
-  return;
 
 #endif /* HAVE_MPI */
+  _ncm_mpi_job_run_array_serial (mpi_job, input_array, ret_array);
+}
+
+static void
+_ncm_mpi_job_run_array_serial (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArray *ret_array)
+{
+  guint i;
+
+  g_assert_cmpuint (input_array->len, ==, ret_array->len);
+
+  for (i = 0; i < input_array->len; i++)
+    ncm_mpi_job_run (mpi_job, g_ptr_array_index (input_array, i), g_ptr_array_index (ret_array, i));
 }
 
 typedef struct _NcmMPIJobCtrlData
@@ -1052,7 +1043,7 @@ _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
         bd.t0 = t0;
 #endif /* NCM_MPI_DEBUG */
 
-        MPI_Irecv (bd.buf, self->return_len, self->input_dtype, i, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &request);
+        MPI_Irecv (bd.buf, self->return_len, self->return_dtype, i, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &request);
         g_array_append_val (ret_req_array, request);
         g_array_append_val (ret_buf_desc_a, bd);
       }
@@ -1128,12 +1119,13 @@ _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
 
       MPI_Send (&cmd, 1, MPI_INT, slave_id, NCM_MPI_CTRL_TAG_CMD, MPI_COMM_WORLD);
       MPI_Send (input_buf, self->input_len, self->input_dtype, slave_id, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD);
+      ncm_mpi_job_destroy_input_buffer (ctrl_data->mpi_job, j->input, input_buf);
 
       bd->obj = j->ret;
       bd->buf = ncm_mpi_job_get_return_buffer (ctrl_data->mpi_job, j->ret);
       bd->t   = ret_type;
 
-      MPI_Irecv (bd->buf, self->return_len, self->input_dtype, slave_id, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, request);
+      MPI_Irecv (bd->buf, self->return_len, self->return_dtype, slave_id, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, request);
 
       g_free (j);
     }
@@ -1169,13 +1161,15 @@ _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
 /**
  * ncm_mpi_job_run_array_async:
  * @mpi_job: a #NcmMPIJob
- * @input_array: (array) (element-type GObject): an array of input pointers
- * @ret_array: (array) (element-type GObject): an array of (allocated) return pointers
+ * @input_array: (array) (element-type GObject): the input objects
+ * @ret_array: (array) (element-type GObject): the return objects to fill, as many as inputs
  *
- * Send work to all slaves using an additional thread to control the slaves work.
- * The main execution thread runs jobs in parallel while it waits for the slaves to finish.
- * Both arrays @input_array and @ret_array must have the same length and should be
- * filled with the appropriated pointers.
+ * Runs @mpi_job on every input, writing each result to the return object at the same
+ * position. The inputs wait in a queue: a second thread gives one to each worker and a
+ * new one as soon as a worker returns its result, while the master takes inputs from
+ * the same queue and runs them. Must be called on the master, after
+ * ncm_mpi_job_init_all_slaves(). With a single rank, or without MPI support, the master
+ * runs every input.
  *
  */
 void
@@ -1233,36 +1227,20 @@ ncm_mpi_job_run_array_async (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArr
 
     g_thread_join (ctrl_thread);
     g_async_queue_unref (jobs);
-  }
-  else
-  {
-    const guint njobs = input_array->len;
-    gint i;
-
-    for (i = 0; i < (gint) njobs; i++)
-    {
-      gpointer input = g_ptr_array_index (input_array, i);
-      gpointer ret   = g_ptr_array_index (ret_array, i);
-
-      ncm_mpi_job_run (mpi_job, input, ret);
-    }
 
     return;
   }
 
-#else
-  g_error ("ncm_mpi_job_run_array: MPI unsupported.");
-
-  return;
-
 #endif /* HAVE_MPI */
+  _ncm_mpi_job_run_array_serial (mpi_job, input_array, ret_array);
 }
 
 /**
  * ncm_mpi_job_free_all_slaves:
  * @mpi_job: a #NcmMPIJob
  *
- * Frees all available slaves used by @mpi_job.
+ * Releases the workers initialized with @mpi_job; they drop their copy and wait for
+ * the next job. Does nothing when @mpi_job holds no workers or on a worker rank.
  *
  */
 void

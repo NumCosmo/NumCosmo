@@ -77,7 +77,7 @@
  * ncm_cfg_init() (`cubacores(0, 0)`), so this is safe to call concurrently
  * from multiple OpenMP threads.
  *
- * See docs/theory/wl_shape_factor_history.md for the design history.
+ * See docs/theory/nc/lss/galaxy/wl_shape_factor_history.md for the design history.
  */
 
 #ifdef HAVE_CONFIG_H

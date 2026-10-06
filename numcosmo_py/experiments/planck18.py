@@ -31,13 +31,13 @@ Planck publications in addition to NumCosmo; see ``planck_native_provenance.md``
 for the source data and the reference list.
 """
 
-from typing import Any, cast
 from enum import StrEnum
+from typing import Any, cast
 
 import numpy as np
 
-from numcosmo_py import Ncm, Nc
-from numcosmo_py.cosmology import HIPrimModel, create_cosmo, ParameterDesc
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.cosmology import HIPrimModel, ParameterDesc, create_cosmo
 
 
 class Planck18Types(StrEnum):
@@ -199,7 +199,8 @@ def create_mfunc_array_for_cmb(
 
 
 def generate_planck18_tt(
-    massive_nu: bool = False,
+    massive_nu: bool = True,
+    fit_nu_mass: bool = False,
     prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
     use_lensing_likelihood: bool = False,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
@@ -236,7 +237,9 @@ def generate_planck18_tt(
     planck_model = Nc.PlanckFICorTT()
     planck_model.params_set_default_ftype()
 
-    cosmo = create_cosmo(massive_nu=massive_nu, prim_model=prim_model)
+    cosmo = create_cosmo(
+        massive_nu=massive_nu, fit_nu_mass=fit_nu_mass, prim_model=prim_model
+    )
 
     mset = Ncm.MSet.new_array([planck_model, cosmo])
     mset.prepare_fparam_map()
@@ -274,7 +277,8 @@ def generate_planck18_tt(
 
 
 def generate_planck18_ttteee(
-    massive_nu: bool = False,
+    massive_nu: bool = True,
+    fit_nu_mass: bool = False,
     prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
     use_lensing_likelihood: bool = False,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
@@ -316,7 +320,9 @@ def generate_planck18_ttteee(
     planck_model = Nc.PlanckFICorTTTEEE()
     planck_model.params_set_default_ftype()
 
-    cosmo = create_cosmo(massive_nu=massive_nu, prim_model=prim_model)
+    cosmo = create_cosmo(
+        massive_nu=massive_nu, fit_nu_mass=fit_nu_mass, prim_model=prim_model
+    )
 
     mset = Ncm.MSet.new_array([planck_model, cosmo])
     mset.prepare_fparam_map()
@@ -355,7 +361,8 @@ def generate_planck18_ttteee(
 
 def generate_planck18_native(
     data_type: Planck18Types,
-    massive_nu: bool = False,
+    massive_nu: bool = True,
+    fit_nu_mass: bool = False,
     prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
     use_lensing_likelihood: bool = False,
     from_release: bool = False,
@@ -376,26 +383,25 @@ def generate_planck18_native(
     See ``numcosmo_py/experiments/planck_native_provenance.md`` for the data
     provenance and the required Planck Collaboration citations.
     """
-    # pylint: disable=import-outside-toplevel
-    from numcosmo_py.experiments.planck_lite import find_baseline_file
-    from numcosmo_py.experiments.planck_simall import SIMALL_EE_RELPATH, build_simall
     from numcosmo_py.experiments.planck_commander import (
         COMMANDER_RELPATH,
         build_commander,
-    )
-    from numcosmo_py.experiments.planck_smica import (
-        PLIK_TT_RELPATH,
-        PLIK_TTTEEE_RELPATH,
-        build_smica_tt,
-        build_smica_ttteee,
     )
     from numcosmo_py.experiments.planck_lensing import (
         LENSING_FULL_RELPATH,
         build_lensing,
     )
+    from numcosmo_py.experiments.planck_lite import find_baseline_file
     from numcosmo_py.experiments.planck_native_release import (
         PlanckReleaseId,
         load_planck_release,
+    )
+    from numcosmo_py.experiments.planck_simall import SIMALL_EE_RELPATH, build_simall
+    from numcosmo_py.experiments.planck_smica import (
+        PLIK_TT_RELPATH,
+        PLIK_TTTEEE_RELPATH,
+        build_smica_tt,
+        build_smica_ttteee,
     )
 
     cbe_boltzmann = Nc.HIPertBoltzmannCBE.new()
@@ -448,7 +454,9 @@ def generate_planck18_native(
 
     planck_model.params_set_default_ftype()
 
-    cosmo = create_cosmo(massive_nu=massive_nu, prim_model=prim_model)
+    cosmo = create_cosmo(
+        massive_nu=massive_nu, fit_nu_mass=fit_nu_mass, prim_model=prim_model
+    )
     mset = Ncm.MSet.new_array([planck_model, cosmo])
     mset.prepare_fparam_map()
 

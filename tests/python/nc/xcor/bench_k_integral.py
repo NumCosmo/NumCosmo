@@ -42,7 +42,7 @@ Timing is reported in three numbers per block, never collapsed into one:
 
 ``build``
     both closures for the block, built through a *fresh* Levin integrator. A
-    property of the closure, not of the method -- all three methods pay it.
+    property of the closure, not of the method: both methods pay it.
     Timing a rebuild through an integrator that has already served this kernel
     reads 1.7x cheap, because it carries warm per-ell Bessel caches.
 ``compute``
@@ -50,16 +50,13 @@ Timing is reported in three numbers per block, never collapsed into one:
     kernel, which this harness has already driven.
 ``quad``
     the outer quadrature alone, through ``Nc.Xcor.integrate_block()`` on the
-    closures this harness already holds. Not defined for ``gsl``, which fits a
-    closure per multipole and so has no block to be handed; that is what
-    ``gsl_block`` is for.
+    closures this harness already holds.
 ``delta``
     ``compute`` minus the cheapest method's ``compute`` on the same pair,
     closure and block. Everything but the quadrature is common to the methods,
     so this is the part that is the method's, without the subtraction of two
-    differently-warmed quantities that a ``compute - build`` would be. Where
-    ``quad`` is defined it is the better number; ``delta`` stays the only one
-    available for ``gsl``.
+    differently-warmed quantities that a ``compute - build`` would be.
+    ``quad`` is the better number.
 """
 
 from __future__ import annotations
@@ -87,17 +84,7 @@ except ImportError:  # running from the repository root
 METHODS: typing.Final[dict[str, Nc.XcorMethod]] = {
     "exact": Nc.XcorMethod.KERNEL_EXACT,
     "cubature": Nc.XcorMethod.KERNEL_CUBATURE,
-    "gsl": Nc.XcorMethod.KERNEL_GSL,
-    "gsl_block": Nc.XcorMethod.KERNEL_GSL_BLOCK,
 }
-
-# KERNEL_GSL calls nc_xcor_kernel_get_eval once per multipole; every other
-# method calls ..._get_eval_vectorized_full once per block. Each is measured
-# against a reference built on the closure it actually integrates, or the row
-# reports a closure difference under a method's name. gsl_block runs the same
-# qagp as gsl over the block closure, which is what makes it comparable to
-# exact and cubature at all.
-PER_MULTIPOLE: typing.Final[frozenset[str]] = frozenset({"gsl"})
 
 CLOSURES: typing.Final[dict[str, Nc.XcorKernelClosure]] = {
     "spline": Nc.XcorKernelClosure.SPLINE,
@@ -158,19 +145,6 @@ def sweep_case(
         reference = cases.reference_cl(RH, integrand_a, integrand_b)
         cancellation = cases.cancellation_ratio(integrand_a, integrand_b)
 
-        references = {"block": reference.cl}
-
-        if PER_MULTIPOLE.intersection(method_names):
-            references["per_multipole"] = cases.per_multipole_reference(
-                RH,
-                kernel_a,
-                None if pair.isauto else kernel_b,
-                cosmo,
-                lmin,
-                lmax,
-                settings,
-            )
-
         common = {
             "case": pair.case,
             "regime": pair.regime,
@@ -213,48 +187,40 @@ def sweep_case(
                 timings.append(time.perf_counter() - start)
 
             # The quadrature on its own, over the closures already built above.
-            # Only the block methods can be driven this way; gsl fits per
-            # multipole and has nothing to be handed.
-            quad_time = None
+            vp_quad = Ncm.Vector.new(len(ells))
+            quad_timings = []
 
-            if method_name not in PER_MULTIPOLE:
-                vp_quad = Ncm.Vector.new(len(ells))
-                quad_timings = []
+            for _ in range(repeats):
+                start = time.perf_counter()
+                xcor.integrate_block(
+                    integrand_a,
+                    integrand_b,
+                    lmin,
+                    lmax,
+                    pair.isauto,
+                    METHODS[method_name],
+                    vp_quad,
+                    None,
+                )
+                quad_timings.append(time.perf_counter() - start)
 
-                for _ in range(repeats):
-                    start = time.perf_counter()
-                    xcor.integrate_block(
-                        integrand_a,
-                        integrand_b,
-                        lmin,
-                        lmax,
-                        pair.isauto,
-                        METHODS[method_name],
-                        vp_quad,
-                        None,
-                    )
-                    quad_timings.append(time.perf_counter() - start)
+            quad_time = float(np.median(quad_timings))
 
-                quad_time = float(np.median(quad_timings))
+            # Same closures, same method: any difference here is the
+            # entry point disagreeing with itself, not a tolerance.
+            drift = np.abs(
+                np.array(vp_quad.dup_array()) - np.array(vp.dup_array())
+            ).max()
 
-                # Same closures, same method: any difference here is the
-                # entry point disagreeing with itself, not a tolerance.
-                drift = np.abs(
-                    np.array(vp_quad.dup_array()) - np.array(vp.dup_array())
-                ).max()
-
-                if drift > 0.0:
-                    print(
-                        f"  ! {pair.case} {method_name}: integrate_block "
-                        f"differs from compute by {drift:.3e}",
-                        flush=True,
-                    )
+            if drift > 0.0:
+                print(
+                    f"  ! {pair.case} {method_name}: integrate_block "
+                    f"differs from compute by {drift:.3e}",
+                    flush=True,
+                )
 
             got = np.array(vp.dup_array())
-            reference_kind = (
-                "per_multipole" if method_name in PER_MULTIPOLE else "block"
-            )
-            truth = references[reference_kind]
+            truth = reference.cl
             scale = np.abs(truth).max()
             relative = np.where(
                 np.abs(truth) > 0.0,

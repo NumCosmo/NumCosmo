@@ -52,9 +52,6 @@ NcmFftlogSBesselJ *ncm_fftlog_sbessel_j_new (guint ell, gdouble lnr0, gdouble ln
 void ncm_fftlog_sbessel_j_set_ell (NcmFftlogSBesselJ *fftlog_jl, const guint ell);
 guint ncm_fftlog_sbessel_j_get_ell (NcmFftlogSBesselJ *fftlog_jl);
 
-void ncm_fftlog_sbessel_j_set_q (NcmFftlogSBesselJ *fftlog_jl, const gdouble q);
-gdouble ncm_fftlog_sbessel_j_get_q (NcmFftlogSBesselJ *fftlog_jl);
-
 void ncm_fftlog_sbessel_j_set_best_lnr0 (NcmFftlogSBesselJ *fftlog_jl);
 void ncm_fftlog_sbessel_j_set_best_lnk0 (NcmFftlogSBesselJ *fftlog_jl);
 

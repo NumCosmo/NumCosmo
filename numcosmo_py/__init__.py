@@ -23,36 +23,35 @@
 
 """Import NumCosmo Python bindings."""
 
-from enum import Enum, StrEnum, auto
 import re
-from typing import Dict, Union, Sequence, Iterator, cast
-import numpy as np
+from collections.abc import Iterator, Sequence
+from enum import Enum, StrEnum, auto
+from typing import cast
+
 import gi
+import numpy as np
 
 gi.require_version("NumCosmo", "1.0")
 gi.require_version("NumCosmoMath", "1.0")
 
 # pyright: reportMissingModuleSource=false
-# pylint:disable-next=wrong-import-position,unused-import
-from gi.repository import GLib  # noqa: E402
+from gi.repository import (
+    GLib,
+    GObject,
+)
 
-# pylint:disable-next=wrong-import-position,unused-import
-from gi.repository import GObject  # noqa: E402
-
-# pylint:disable-next=wrong-import-position,unused-import
-from . import ncm as Ncm  # noqa: E402
-
-# pylint:disable-next=wrong-import-position,unused-import
-from . import nc as Nc  # noqa: E402
+from . import _compat  # noqa: F401  (deprecated 0.27 API, dropped in 1.0)
+from . import nc as Nc
+from . import ncm as Ncm
 
 __all__ = [
-    "Nc",
-    "Ncm",
+    "GEnum",
     "GLib",
     "GObject",
-    "GEnum",
-    "var_dict_to_dict",
+    "Nc",
+    "Ncm",
     "dict_to_var_dict",
+    "var_dict_to_dict",
 ]
 
 Ncm.cfg_register_objects()
@@ -96,9 +95,9 @@ class GEnum(StrEnum):
 
 
 def dict_to_var_dict(
-    dictionary: Dict[
+    dictionary: dict[
         str,
-        Union[str, float, int, bool, Sequence[float], Sequence[int], Sequence[bool]],
+        str | float | int | bool | Sequence[float] | Sequence[int] | Sequence[bool],
     ],
 ) -> Ncm.VarDict:
     """Convert a dictionary to a VarDict."""
@@ -132,16 +131,17 @@ def dict_to_var_dict(
 
 def var_dict_to_dict(
     var_dict: Ncm.VarDict,
-) -> Dict[
-    str, Union[str, float, int, bool, Sequence[float], Sequence[int], Sequence[bool]]
+) -> dict[
+    str, str | float | int | bool | Sequence[float] | Sequence[int] | Sequence[bool]
 ]:
     """Convert a VarDict to a dictionary."""
-    dictionary: Dict[
+    dictionary: dict[
         str,
-        Union[str, float, int, bool, Sequence[float], Sequence[int], Sequence[bool]],
+        str | float | int | bool | Sequence[float] | Sequence[int] | Sequence[bool],
     ] = {}
 
-    for key in var_dict.keys():
+    # NcmVarDict is not iterable; keys() is its only key listing.
+    for key in var_dict.keys():  # noqa: SIM118
         found: bool
         value: GLib.Variant
         found, value = var_dict.get_variant(key)

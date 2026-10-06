@@ -28,7 +28,6 @@ import pytest
 pytest.importorskip("getdist")
 pytest.importorskip("astropy")
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 
 from astropy.table import Table
 from typer.testing import CliRunner
@@ -53,7 +52,7 @@ def fixture_mock_cluster_data(tmp_path: Path) -> Tuple[Path, dict]:
     - Redshifts between 0.1 and 0.5
     - Richnesses following a mass-richness relation with scatter
     """
-    rng = np.random.RandomState(42)  # pylint: disable=no-member
+    rng = np.random.RandomState(42)
 
     # Generate mock data
     n_clusters = 100
@@ -100,7 +99,7 @@ def fixture_mock_cluster_data(tmp_path: Path) -> Tuple[Path, dict]:
 @pytest.fixture(name="mock_cluster_data_custom_columns")
 def fixture_mock_cluster_data_custom_columns(tmp_path: Path) -> Path:
     """Create a mock FITS file with custom column names."""
-    rng = np.random.RandomState(123)  # pylint: disable=no-member
+    rng = np.random.RandomState(123)
 
     n_clusters = 50
     log_mass = rng.uniform(np.log(1e14), np.log(1e15), n_clusters)
@@ -702,7 +701,7 @@ class TestEdgeCases:
 
     def test_very_small_dataset(self, tmp_path: Path) -> None:
         """Test with minimal dataset (10 clusters)."""
-        rng = np.random.RandomState(999)  # pylint: disable=no-member
+        rng = np.random.RandomState(999)
 
         n_clusters = 10
         log_mass = rng.uniform(np.log(1e14), np.log(1e15), n_clusters)
@@ -763,7 +762,7 @@ class TestEdgeCases:
 
     def test_consistent_column_naming(self, tmp_path: Path) -> None:
         """Test that column name variations work correctly."""
-        rng = np.random.RandomState(555)  # pylint: disable=no-member
+        rng = np.random.RandomState(555)
 
         n_clusters = 50
         log_mass = rng.uniform(np.log(1e14), np.log(1e15), n_clusters)

@@ -67,3 +67,15 @@ executable(
     include_directories: configinc,
     dependencies: [libnumcosmo_dep],
 )
+
+# Stress test of NcmSplineFunc knot placement (AutoKnots paper); not installed.
+executable(
+    'autoknots_stress',
+    [
+        'autoknots/autoknots_stress.c',
+        'autoknots/ncm_spline_func_test.c',
+    ],
+    install: false,
+    include_directories: configinc,
+    dependencies: [libnumcosmo_dep],
+)

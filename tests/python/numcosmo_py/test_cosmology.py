@@ -95,11 +95,34 @@ def test_create_cosmo():
 
 
 def test_create_cosmo_massive_nu():
-    """Test the create_cosmo function with massive neutrinos."""
-    cosmo = create_cosmo(massive_nu=True)
+    """The default is the Planck baseline: one 0.06 eV neutrino with a fixed mass."""
+    cosmo = create_cosmo()
     assert isinstance(cosmo, Nc.HICosmo)
+    assert cosmo.NMassNu() == 1
     assert cosmo["ENnu"] == 2.0328
     assert cosmo["massnu_0"] == 0.06
+    assert cosmo["Tgamma0"] == 2.7255
+    assert (
+        cosmo.param_get_ftype(cosmo.param_index_from_name("massnu_0")[1])
+        == Ncm.ParamType.FIXED
+    )
+
+
+def test_create_cosmo_fit_nu_mass():
+    """fit_nu_mass frees the neutrino mass: the LCDM + sum m_nu extension."""
+    cosmo = create_cosmo(fit_nu_mass=True)
+    assert cosmo.NMassNu() == 1
+    assert (
+        cosmo.param_get_ftype(cosmo.param_index_from_name("massnu_0")[1])
+        == Ncm.ParamType.FREE
+    )
+
+
+def test_create_cosmo_massless_nu():
+    """massive_nu=False drops the massive species: 3.046 massless."""
+    cosmo = create_cosmo(massive_nu=False)
+    assert cosmo.NMassNu() == 0
+    assert cosmo["ENnu"] == 3.046
 
 
 def test_create_cosmo_invalid_prim():
@@ -128,7 +151,6 @@ def test_cosmology_missing_dist():
 
     # Create cosmology and then manually set _dist to None to test the exception
     cosmology = Cosmology(cosmo=cosmo, dist=dist)
-    # pylint: disable-next=protected-access
     cosmology._dist = None
 
     with pytest.raises(AttributeError, match="Distance not set."):
@@ -166,7 +188,6 @@ def test_cosmology_lazy_dist_preparation():
     # Create Cosmology object - but override prepare() to prevent automatic prep
     cosmology = Cosmology.__new__(Cosmology)
     cosmology.cosmo = cosmo
-    # pylint: disable=protected-access
     cosmology._dist = dist
     cosmology._ps_ml = None
     cosmology._ps_mnl = None
@@ -174,7 +195,6 @@ def test_cosmology_lazy_dist_preparation():
     cosmology._dist.compute_inv_comoving(True)
     cosmology.recomb = Nc.RecombSeager()
     cosmology._mset = Ncm.MSet.new_array([cosmo])
-    # pylint: enable=protected-access
 
     # Access dist property should trigger preparation
     dist_obj = cosmology.dist

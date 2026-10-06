@@ -48,7 +48,7 @@
  * exactly nc_distance_comoving(); the Limber expression above is in Mpc, reached by
  * multiplying by $R_{H0} = c/H_0$ from nc_hicosmo_RH_Mpc().
  *
- * See <a href="../../theory/sbessel_projection.html">UltraLevin: Non-Limber
+ * See <a href="../../theory/ncm/specfunc/sbessel_projection.html">UltraLevin: Non-Limber
  * Angular Power Spectra</a> for how the non-Limber form is evaluated: the
  * Levin reduction of the radial integral, the two representations of
  * $W_\ell(k)$, and the exact outer integral over $k$.
@@ -240,37 +240,41 @@ nc_xcor_class_init (NcXcorClass *klass)
    * The property is on #NcXcor rather than on #NcXcorKernel because the two
    * representations are alternative fits to the same sampled function:
    * comparing them means something only when every kernel in one computation
-   * uses the same one. A single pair may nonetheless be mixed, and is
-   * integrated exactly -- %NC_XCOR_METHOD_KERNEL_EXACT takes a spline against
-   * a panel set on the common refinement of the two breakpoint sets. Two
-   * kernels with different #NcXcorKernel:l-limber values produce such a pair
-   * whatever this property is set to.
+   * uses the same one. %NC_XCOR_METHOD_KERNEL_EXACT also integrates a mixed
+   * pair exactly, a spline against a panel set on the common refinement of the
+   * two breakpoint sets.
    *
-   * Accuracy, against the certified Arb $C_\ell$ table (43 entries, 17 pairs):
-   * the Chebyshev closure is closer in 36 of the 43, and its median deviation
-   * is 4.5x smaller at every tolerance rung. The spline has one failure mode
-   * the Chebyshev closure does not: on a far-separated pair at loose tolerance
-   * it returns the wrong sign, with an error 31x the pair's own $|C_\ell|$.
+   * Measured against the certified Arb $C_\ell$ table (93 entries, 35 pairs),
+   * with #NcXcorKernel:reltol equal to #NcXcorKernel:peak-epsilon and the
+   * deviation as a fraction of each pair's largest $|C_\ell|$: the median
+   * deviation is $2.8 \times 10^{-6}$ for the spline and $1.8 \times 10^{-6}$
+   * for the Chebyshev closure at $10^{-4}$, and $1.1 \times 10^{-7}$ and
+   * $6.9 \times 10^{-8}$ at $10^{-6}$. At $10^{-4}$ the spline returns the wrong
+   * sign at $\ell = 10$ on three far-separated pairs, by up to $1.7 \times
+   * 10^{3}$ times the entry's own $|C_\ell|$. Both closures return the wrong
+   * sign at $\ell = 50$ on pairs whose certified $C_\ell$ there is eight to
+   * eleven orders below the pair's largest.
    *
-   * Cost, on a tomographic workload through #NcXcorSolver (5 Gaussian bins,
-   * 15 pairs, $\ell \le 60$, one thread): the Chebyshev closure costs 1.4x the
-   * spline at #NcXcorKernel:reltol $10^{-4}$ and 1.13x at $10^{-6}$, for a
-   * median deviation 4 to 5 orders of magnitude smaller. On hard-edged cluster
-   * top-hats it costs 1.8x and the spline does not converge: asked for
-   * $10^{-8}$, the two disagree by $10^{-4}$ of the pair's own $|C_\ell|$.
+   * Cost through #NcXcorSolver with %NC_XCOR_METHOD_KERNEL_EXACT, one thread,
+   * closures built for each solve. On 5 Gaussian windows, 15 pairs and
+   * $\ell \le 60$, the Chebyshev closure takes 1.2 times the spline's time at
+   * $10^{-4}$ and 0.78 times at $10^{-6}$, with a median deviation from its own
+   * $10^{-8}$ result 3 and 60 times smaller. On 4 hard-edged top-hats, 10 pairs
+   * and $\ell \le 40$, it takes 0.62 times the spline's time at $10^{-4}$ with
+   * a median deviation 8 times larger, and 0.97 times at $10^{-6}$. At
+   * $10^{-8}$ the two closures agree to a median $5 \times 10^{-10}$ of the
+   * pair's largest $|C_\ell|$.
    *
-   * %NC_XCOR_KERNEL_CLOSURE_SPLINE has two uses. It is the independent
-   * cross-check: a deviation both closures show at every tolerance is a wrong
-   * reference rather than a bad fit, and that diagnostic needs two
-   * structurally different representations. And it recovers that 1.13x to 1.4x
-   * on smooth windows at tolerances where both converge.
+   * %NC_XCOR_KERNEL_CLOSURE_SPLINE is the independent cross-check: a deviation
+   * both closures show at every tolerance is a wrong reference rather than a
+   * bad fit, and that diagnostic needs two structurally different
+   * representations.
    *
-   * This property governs the non-Limber closure only. Under Limber each
-   * multipole is supported on its own band in $k$ and zero outside it, so a
-   * block's window carries one step per multipole. A Chebyshev series
-   * converges on the non-Limber window because $W_\ell(k)$ is entire in $k$; a
-   * step is not. Multipoles taken under Limber keep the spline closure
-   * whatever this property is set to.
+   * Under Limber each multipole is supported on its own band in $k$ and is
+   * zero outside it, so a block's window carries one step per multipole. The
+   * Chebyshev closure makes every band edge a panel cut and decides band
+   * membership per panel, so each panel is smooth; the spline closure confines
+   * each multipole to its band when integrating.
    */
   g_object_class_install_property (object_class,
                                    PROP_CLOSURE_TYPE,
@@ -443,11 +447,10 @@ nc_xcor_get_reltol (NcXcor *xc)
  * @xc: a #NcXcor
  * @ell_batch_size: multipole batch size
  *
- * Sets the multipole batch size used by the kernel-space block methods
- * (%NC_XCOR_METHOD_KERNEL_CUBATURE, %NC_XCOR_METHOD_KERNEL_EXACT and
- * %NC_XCOR_METHOD_KERNEL_GSL_BLOCK): each batch builds one k-space closure per
- * kernel and shares it across the whole batch. It does not reach
- * %NC_XCOR_METHOD_KERNEL_GSL, which fits one closure per multipole.
+ * Sets the multipole batch size used by the kernel-space methods
+ * (%NC_XCOR_METHOD_KERNEL_CUBATURE and %NC_XCOR_METHOD_KERNEL_EXACT): each
+ * batch builds one k-space closure per kernel and shares it across the whole
+ * batch.
  *
  * The Levin machinery is tuned for 8 (the default) or 16; wider batches are
  * counterproductive, not faster. #NC_XCOR_KERNEL_MAX_ELL_BLOCK is a hard
@@ -561,11 +564,6 @@ _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xc
   if (vp_err != NULL)
     ncm_vector_set_all (vp_err, GSL_NAN);
 
-  if (xc->meth == NC_XCOR_METHOD_KERNEL_GSL)
-  {
-    _nc_xcor_kernel_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
-  }
-  else
   {
     const NcXcorKQuad *kquad = _nc_xcor_kquad_for_method (xc->meth);
 

@@ -19,7 +19,9 @@
 
 """Tests for the numcosmo_py.analysis.cluster_richness package."""
 
+import gc
 import os
+import warnings
 from pathlib import Path
 import pytest
 import numpy as np
@@ -862,6 +864,33 @@ class TestBestfitDatabase:
         assert retrieved is not None
         assert isinstance(retrieved, Nc.ClusterMassExt)
         assert retrieved["mup0"] == 8.8
+
+    def test_closes_connections(
+        self, temp_db_path: Path, ascaso_model: Nc.ClusterMassAscaso
+    ) -> None:
+        """Test that every method closes the connection it opens."""
+        result = CutAnalysisResult(
+            cut=1.5,
+            n_clusters=50,
+            bestfit=ascaso_model,
+            mcmc_mean=dup_model(ascaso_model),
+            mcmc_median=dup_model(ascaso_model),
+            bootstrap_mean=dup_model(ascaso_model),
+            m2lnL=100.0,
+        )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", ResourceWarning)
+            db = BestfitDatabase(temp_db_path)
+            db.insert_bestfit(mock_seed=1, result=result)
+            db.batch_insert([(2, result)])
+            db.get_computed_seeds(1.5)
+            db.get_all_computed_seeds()
+            db.get_bestfit(mock_seed=1, cut=1.5)
+            db.delete_bestfit(mock_seed=1, cut=1.5)
+            db.count_entries()
+            gc.collect()
+
+        assert not [w for w in caught if issubclass(w.category, ResourceWarning)]
 
 
 # =============================================================================

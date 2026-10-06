@@ -97,6 +97,60 @@ def test_eval_x_grid_unames_unique_after_serialization() -> None:
     assert all(u != "wDE_z" for u in unames)
 
 
+class _PySum(Ncm.MSetFunc1):
+    """Values sum(x) + k for k = 0, ..., dim - 1, written in Python."""
+
+    __gtype_name__ = "NcmPyTestMSetFuncSum"
+
+    def __init__(self, nvar: int, dim: int) -> None:
+        super().__init__(nvariables=nvar, dimension=dim)
+        self.set_meta("f", "f", "Test", "Shifted sums of the arguments", nvar, dim)
+
+    def do_eval1(self, _mset: Ncm.MSet, x: list[float]) -> list[float]:
+        """Evaluate the shifted sums."""
+        return [sum(x) + k for k in range(self.get_dim())]
+
+
+def test_eval_array_python_subclass() -> None:
+    """eval_array returns every value of a Python subclass through the bindings."""
+    mset = Ncm.MSet.empty_new()
+    func = _PySum(2, 3)
+
+    assert func.eval_array(mset, [1.0, 2.0]) == [3.0, 4.0, 5.0]
+
+    func.set_eval_x([10.0, 20.0])
+    assert func.eval_array(mset, None) == [30.0, 31.0, 32.0]
+    assert func.eval_array(mset, [1.0, 2.0]) == [3.0, 4.0, 5.0]
+
+    scalar = _PySum(1, 1)
+    assert scalar.eval1(mset, 6.0) == 6.0
+    assert scalar.eval_nvar(mset, [6.0]) == 6.0
+
+
+def test_eval_array_function_list() -> None:
+    """eval_array evaluates a C function from the bindings."""
+    cosmo = Nc.HICosmoDEXcdm()
+    mset = Ncm.MSet.new_array([cosmo])
+    func = Ncm.MSetFuncList.new("NcHICosmo:H", None)
+
+    assert func.eval_array(mset, [2.0]) == [cosmo.H(2.0)]
+
+
+def test_func_list_select_elements_outlive_array() -> None:
+    """Elements of select stay valid after the returned array is released."""
+    Nc.HICosmoDEXcdm()
+    selected = list(Ncm.MSetFuncList.select("NcHICosmo", 1, 1))
+    junk = [bytes(1000) for _ in range(2000)]
+    del junk
+
+    assert len(selected) > 0
+    for fdata in selected:
+        assert fdata.ns.startswith("NcHICosmo")
+        assert fdata.nvar == 1
+        assert fdata.dim == 1
+        assert Ncm.MSetFuncList.has_full_name(f"{fdata.ns}:{fdata.name}")
+
+
 if __name__ == "__main__":
     test_eval_x_uname_is_unique()
     test_eval_x_uname_survives_serialization()

@@ -22,7 +22,7 @@
 ``NcGalaxyPositionFactorFlat`` is a plain-GObject calculator (no companion
 NcmModel) whose density P(ra, dec) is uniform over a rectangular sky footprint.
 The footprint is held configuration, not a model, so gen/integ ignore the passed
-mset. Validated for golden parity against the legacy ``NcGalaxySDPositionFlat``,
+mset. Validated for parity against the legacy ``NcGalaxySDPositionFlat``,
 which wrapped the identical footprint sampler/density.
 
 FROZEN REFERENCE VALUES: the parity documented above was proven by running
@@ -36,7 +36,7 @@ legacy-comparison code, at git rev ``77313f22`` (2026-07-16), then legacy
 ``NcGalaxySDTrueRedshiftLSSTSRD``) construction was removed so these tests
 no longer depend on legacy at runtime -- legacy is slated for deletion in a
 follow-up PR. The captured sequences are stored as an ``Ncm.Matrix`` binfile
-(``data/truth_tables/``) rather than inline literals; see ``_load_golden``.
+(``data/truth_tables/``) rather than inline literals; see ``_load_truth_table``.
 """
 
 import math
@@ -58,23 +58,23 @@ _CASES = [
 ]
 
 # Frozen gen()/integ() sequences for RNG seed 123, one (ra, dec, integrand)
-# triple per row. Stored as a flat (len(_CASES) * 2 * GOLDEN_N, 3) matrix,
+# triple per row. Stored as a flat (len(_CASES) * 2 * _TRUTH_TABLE_N, 3) matrix,
 # blocked by case (matching _CASES order) then by use_lnp (False, True).
 # Regenerate with Ncm.Serialize.to_binfile on an Ncm.Matrix built from the
 # rows in that order.
-_GOLDEN_FILE = (
+_TRUTH_TABLE_FILE = (
     "truth_tables/wl/nc_galaxy_position_factor_flat_gen_integ_parity_seed123.bin"
 )
-_GOLDEN_N = 500
+_TRUTH_TABLE_N = 500
 
 
-def _load_golden() -> np.ndarray:
-    """Load the frozen sequences as a (len(_CASES), 2, _GOLDEN_N, 3) array."""
-    path = Ncm.cfg_get_data_filename(_GOLDEN_FILE, True)
+def _load_truth_table() -> np.ndarray:
+    """Load the frozen sequences as a (len(_CASES), 2, _TRUTH_TABLE_N, 3) array."""
+    path = Ncm.cfg_get_data_filename(_TRUTH_TABLE_FILE, True)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     matrix = ser.from_binfile(path)
     assert isinstance(matrix, Ncm.Matrix)
-    return np.array(matrix.dup_array()).reshape(len(_CASES), 2, _GOLDEN_N, 3)
+    return np.array(matrix.dup_array()).reshape(len(_CASES), 2, _TRUTH_TABLE_N, 3)
 
 
 def _build_new(ra_min, ra_max, dec_min, dec_max):
@@ -86,7 +86,7 @@ def _build_new(ra_min, ra_max, dec_min, dec_max):
     return flat, mset, data
 
 
-_GEN_INTEG_PARITY_FROZEN = _load_golden()
+_GEN_INTEG_PARITY_FROZEN = _load_truth_table()
 
 
 @pytest.mark.parametrize("ra_min,ra_max,dec_min,dec_max", _CASES)

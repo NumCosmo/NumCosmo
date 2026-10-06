@@ -67,6 +67,16 @@ void test_ncm_vector_serialization (TestNcmVector *test, gconstpointer pdata);
 void test_ncm_vector_data_const_sanity (TestNcmVector *test, gconstpointer pdata);
 void test_ncm_vector_replace_data (TestNcmVector *test, gconstpointer pdata);
 
+void test_ncm_vector_api_find_closest_index (void);
+void test_ncm_vector_api_compare (void);
+void test_ncm_vector_api_between (void);
+void test_ncm_vector_api_variant_set (void);
+void test_ncm_vector_api_substitute (void);
+void test_ncm_vector_api_peek_variant (void);
+void test_ncm_vector_api_reductions (void);
+void test_ncm_vector_api_dup (void);
+void test_ncm_vector_api_between_invalid_subprocess (void);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -302,6 +312,16 @@ main (gint argc, gchar *argv[])
               &test_ncm_vector_data_const_new,
               &test_ncm_vector_data_const_sanity,
               &test_ncm_vector_data_const_free);
+
+  g_test_add_func ("/ncm/vector/api/find_closest_index", &test_ncm_vector_api_find_closest_index);
+  g_test_add_func ("/ncm/vector/api/compare", &test_ncm_vector_api_compare);
+  g_test_add_func ("/ncm/vector/api/between", &test_ncm_vector_api_between);
+  g_test_add_func ("/ncm/vector/api/variant_set", &test_ncm_vector_api_variant_set);
+  g_test_add_func ("/ncm/vector/api/substitute", &test_ncm_vector_api_substitute);
+  g_test_add_func ("/ncm/vector/api/peek_variant", &test_ncm_vector_api_peek_variant);
+  g_test_add_func ("/ncm/vector/api/reductions", &test_ncm_vector_api_reductions);
+  g_test_add_func ("/ncm/vector/api/dup", &test_ncm_vector_api_dup);
+  g_test_add_func ("/ncm/vector/api/between/invalid/subprocess", &test_ncm_vector_api_between_invalid_subprocess);
 
   g_test_run ();
 }
@@ -730,6 +750,54 @@ test_ncm_vector_operations (TestNcmVector *test, gconstpointer pdata)
     ncm_vector_clear (&cv2);
   }
 
+  {
+    NcmVector *cv2 = ncm_vector_dup (v);
+    gdouble ref    = 0.0;
+
+    g_assert_cmpfloat (ncm_vector_sqr_dist (v, cv2), ==, 0.0);
+
+    for (i = 0; i < v_size; i++)
+    {
+      gdouble diff;
+
+      ncm_vector_addto (cv2, i, g_test_rand_double_range (-1.0, 1.0));
+      diff = ncm_vector_get (v, i) - ncm_vector_get (cv2, i);
+      ref += diff * diff;
+    }
+
+    ncm_assert_cmpdouble_e (ncm_vector_sqr_dist (v, cv2), ==, ref, 1.0e-13, 0.0);
+    ncm_assert_cmpdouble_e (ncm_vector_sqr_dist (cv2, v), ==, ref, 1.0e-13, 0.0);
+
+    /* Strided views: the stride of each argument is honoured separately. */
+    if (v_size >= 4)
+    {
+      const guint half = v_size / 2;
+      NcmVector *s1    = ncm_vector_get_subvector_stride (v, 0, half, 2);
+      NcmVector *s2    = ncm_vector_get_subvector_stride (cv2, 0, half, 2);
+      NcmVector *c2    = ncm_vector_get_subvector (cv2, 0, half);
+      gdouble ref_s    = 0.0;
+      gdouble ref_m    = 0.0;
+
+      for (i = 0; i < half; i++)
+      {
+        const gdouble diff_s = ncm_vector_get (v, 2 * i) - ncm_vector_get (cv2, 2 * i);
+        const gdouble diff_m = ncm_vector_get (v, 2 * i) - ncm_vector_get (cv2, i);
+
+        ref_s += diff_s * diff_s;
+        ref_m += diff_m * diff_m;
+      }
+
+      ncm_assert_cmpdouble_e (ncm_vector_sqr_dist (s1, s2), ==, ref_s, 1.0e-13, 0.0);
+      ncm_assert_cmpdouble_e (ncm_vector_sqr_dist (s1, c2), ==, ref_m, 1.0e-13, 0.0);
+
+      ncm_vector_clear (&s1);
+      ncm_vector_clear (&s2);
+      ncm_vector_clear (&c2);
+    }
+
+    ncm_vector_clear (&cv2);
+  }
+
   ncm_vector_clear (&cv);
 }
 
@@ -871,5 +939,210 @@ test_ncm_vector_replace_data (TestNcmVector *test, gconstpointer pdata)
     ncm_assert_cmpdouble (ncm_vector_get (test->v, i), ==, 100.0 * i);
     ncm_assert_cmpdouble (orig_d[i], ==, 10.0 * i);
   }
+}
+
+static NcmVector *
+_test_vector_from (const gdouble *d, guint n)
+{
+  return ncm_vector_new_data_dup ((gdouble *) d, n, 1);
+}
+
+void
+test_ncm_vector_api_find_closest_index (void)
+{
+  const gdouble xs[] = {0.0, 1.0, 2.0, 3.0, 4.0};
+  NcmVector *v       = _test_vector_from (xs, 5);
+
+  /* The largest i < n - 1 with v_i <= x */
+  g_assert_cmpuint (ncm_vector_find_closest_index (v, 0.0), ==, 0);
+  g_assert_cmpuint (ncm_vector_find_closest_index (v, 0.5), ==, 0);
+  g_assert_cmpuint (ncm_vector_find_closest_index (v, 2.0), ==, 2);
+  g_assert_cmpuint (ncm_vector_find_closest_index (v, 3.9), ==, 3);
+  g_assert_cmpuint (ncm_vector_find_closest_index (v, 4.0), ==, 3);
+
+  ncm_vector_free (v);
+}
+
+void
+test_ncm_vector_api_compare (void)
+{
+  const gdouble a[] = {1.0, 0.0, 0.0, 2.0, -4.0};
+  const gdouble b[] = {2.0, 0.0, -3.0, 0.0, -1.0};
+  NcmVector *v1     = _test_vector_from (a, 5);
+  NcmVector *v2     = _test_vector_from (b, 5);
+
+  /* |a - b| / min(|a|, |b|), or the other absolute value if one is zero */
+  ncm_vector_cmp (v1, v2);
+  g_assert_cmpfloat (ncm_vector_get (v1, 0), ==, 1.0);
+  g_assert_cmpfloat (ncm_vector_get (v1, 1), ==, 0.0);
+  g_assert_cmpfloat (ncm_vector_get (v1, 2), ==, 3.0);
+  g_assert_cmpfloat (ncm_vector_get (v1, 3), ==, 2.0);
+  g_assert_cmpfloat (ncm_vector_get (v1, 4), ==, 3.0);
+
+  /* eps max(|a|, |b|) / |b - a|, or one if equal */
+  {
+    const gdouble c[] = {1.0, 5.0};
+    const gdouble d[] = {1.5, 5.0};
+    NcmVector *w1     = _test_vector_from (c, 2);
+    NcmVector *w2     = _test_vector_from (d, 2);
+
+    ncm_vector_sub_round_off (w1, w2);
+    ncm_assert_cmpdouble_e (ncm_vector_get (w1, 0), ==, GSL_DBL_EPSILON * 1.5 / 0.5, 1.0e-15, 0.0);
+    g_assert_cmpfloat (ncm_vector_get (w1, 1), ==, 1.0);
+
+    ncm_vector_free (w1);
+    ncm_vector_free (w2);
+  }
+
+  ncm_vector_free (v1);
+  ncm_vector_free (v2);
+}
+
+void
+test_ncm_vector_api_between (void)
+{
+  const gdouble lb[] = {0.0, 0.0};
+  const gdouble ub[] = {1.0, 1.0};
+  const gdouble at[] = {0.0, 0.5};
+  const gdouble up[] = {1.0, 0.5};
+  NcmVector *vlb     = _test_vector_from (lb, 2);
+  NcmVector *vub     = _test_vector_from (ub, 2);
+  NcmVector *vat     = _test_vector_from (at, 2);
+  NcmVector *vup     = _test_vector_from (up, 2);
+
+  g_assert_true (ncm_vector_between (vat, vlb, vub, 0));
+  g_assert_false (ncm_vector_between (vat, vlb, vub, 1));
+  g_assert_false (ncm_vector_between (vup, vlb, vub, 0));
+  g_assert_true (ncm_vector_between (vup, vlb, vub, 1));
+
+  g_assert_true (ncm_vector_lteq (vlb, vat));
+  g_assert_false (ncm_vector_lt (vlb, vat));
+  g_assert_true (ncm_vector_lt (vlb, vub));
+
+  ncm_vector_free (vlb);
+  ncm_vector_free (vub);
+  ncm_vector_free (vat);
+  ncm_vector_free (vup);
+
+  g_test_trap_subprocess ("/ncm/vector/api/between/invalid/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+}
+
+void
+test_ncm_vector_api_between_invalid_subprocess (void)
+{
+  NcmVector *v = ncm_vector_new (1);
+
+  ncm_vector_set_zero (v);
+  ncm_vector_between (v, v, v, 2);
+}
+
+void
+test_ncm_vector_api_variant_set (void)
+{
+  GVariant *var  = g_variant_ref_sink (g_variant_new_fixed_array (G_VARIANT_TYPE_DOUBLE, (gdouble[]) {1.0, 2.0, 3.0}, 3, sizeof (gdouble)));
+  NcmVector *v   = ncm_vector_new (3);
+  NcmVector *cvv = (NcmVector *) ncm_vector_const_new_variant (var);
+
+  ncm_vector_set_from_variant (v, var);
+  g_assert_cmpfloat (ncm_vector_get (v, 2), ==, 3.0);
+  g_assert_cmpfloat (ncm_vector_get (cvv, 1), ==, 2.0);
+
+  ncm_vector_const_free (cvv);
+  ncm_vector_free (v);
+  g_variant_unref (var);
+}
+
+void
+test_ncm_vector_api_substitute (void)
+{
+  NcmVector *a = ncm_vector_new (2);
+  NcmVector *b = ncm_vector_new (2);
+  NcmVector *p = NULL;
+
+  ncm_vector_substitute (&p, a, TRUE);
+  g_assert_true (p == a);
+  ncm_vector_substitute (&p, a, TRUE); /* the same vector: nothing changes */
+  ncm_vector_substitute (&p, b, TRUE);
+  g_assert_true (p == b);
+  ncm_vector_substitute (&p, NULL, TRUE);
+  g_assert_null (p);
+
+  ncm_vector_free (a);
+  ncm_vector_free (b);
+}
+
+void
+test_ncm_vector_api_peek_variant (void)
+{
+  const gdouble d[] = {1.0, 2.0, 3.0, 4.0};
+  NcmVector *v      = _test_vector_from (d, 4);
+  NcmVector *vs     = ncm_vector_get_subvector_stride (v, 0, 2, 2);
+
+  /* Stride one: the variant shares the data */
+  {
+    GVariant *var = ncm_vector_peek_variant (v);
+    gsize n;
+
+    g_assert_true (g_variant_get_fixed_array (var, &n, sizeof (gdouble)) == (gconstpointer) ncm_vector_data (v));
+    g_assert_cmpuint (n, ==, 4);
+    g_variant_unref (var);
+  }
+
+  /* Stride two: a copy of {1, 3} */
+  {
+    GVariant *var = ncm_vector_peek_variant (vs);
+    gsize n;
+    const gdouble *e = g_variant_get_fixed_array (var, &n, sizeof (gdouble));
+
+    g_assert_cmpuint (n, ==, 2);
+    g_assert_cmpfloat (e[1], ==, 3.0);
+    g_variant_unref (var);
+  }
+
+  ncm_vector_free (vs);
+  ncm_vector_free (v);
+}
+
+void
+test_ncm_vector_api_reductions (void)
+{
+  const gdouble d[] = {-3.0, 1.0, 2.0};
+  const gdouble e[] = {1.0, 1.0, 1.0};
+  NcmVector *v      = _test_vector_from (d, 3);
+  NcmVector *w      = _test_vector_from (e, 3);
+  gdouble absmin, absmax;
+
+  ncm_vector_get_absminmax (v, &absmin, &absmax);
+  g_assert_cmpfloat (absmin, ==, 1.0);
+  g_assert_cmpfloat (absmax, ==, 3.0);
+
+  ncm_vector_axpy (v, 2.0, w);
+  g_assert_cmpfloat (ncm_vector_get (v, 0), ==, -1.0);
+  g_assert_cmpfloat (ncm_vector_get (v, 2), ==, 4.0);
+  g_assert_cmpfloat (ncm_vector_dot (v, w), ==, 6.0);
+
+  ncm_vector_free (v);
+  ncm_vector_free (w);
+}
+
+void
+test_ncm_vector_api_dup (void)
+{
+  gdouble d[]  = {1.0, 2.0, 3.0, 4.0};
+  NcmVector *v = ncm_vector_new_data_dup (d, 2, 2);
+  GArray *a;
+
+  /* new_data_dup copies: changing the source does not change the vector */
+  d[2] = 30.0;
+  g_assert_cmpfloat (ncm_vector_get (v, 1), ==, 3.0);
+  g_assert_cmpuint (ncm_vector_stride (v), ==, 1);
+
+  a = ncm_vector_dup_array (v);
+  g_assert_cmpuint (a->len, ==, 2);
+  g_assert_cmpfloat (g_array_index (a, gdouble, 1), ==, 3.0);
+
+  g_array_unref (a);
+  ncm_vector_free (v);
 }
 

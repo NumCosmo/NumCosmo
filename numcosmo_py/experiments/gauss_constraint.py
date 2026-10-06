@@ -28,23 +28,20 @@ constraint.
 """
 
 from pathlib import Path
-from typing import Optional, Tuple
 
 import numpy as np
 
 from numcosmo_py import Ncm
+from numcosmo_py.external.minimax_tilting_sampler import TruncatedMVN
 from numcosmo_py.sampling.esmcmc import (
-    create_esmcmc,
-    WalkerTypes,
     InterpolationKernel,
     InterpolationMethod,
+    WalkerTypes,
+    create_esmcmc,
 )
 
 
-from numcosmo_py.external.minimax_tilting_sampler import TruncatedMVN
-
-
-def create_mset(dim: int) -> Tuple[Ncm.MSet, Ncm.ModelMVND]:
+def create_mset(dim: int) -> tuple[Ncm.MSet, Ncm.ModelMVND]:
     """Create a MSet with a Gaussian distribution with positivity constraint."""
     mgc = Ncm.ModelMVND.new(dim)
     for i in range(dim):
@@ -64,7 +61,9 @@ def create_mset(dim: int) -> Tuple[Ncm.MSet, Ncm.ModelMVND]:
     return mset, mgc
 
 
-def create_data_object(mset: Ncm.MSet, dim: int, rng: Ncm.RNG) -> Ncm.DataGaussCovMVND:
+def create_data_object(
+    mset: Ncm.MSet, dim: int, rng: Ncm.RNG, verbose: bool = True
+) -> Ncm.DataGaussCovMVND:
     """Create a dataset with a Gaussian distribution with positivity constraint."""
     dgc = Ncm.DataGaussCovMVND.new(dim)
     mean = Ncm.Vector.new(dim)
@@ -81,8 +80,9 @@ def create_data_object(mset: Ncm.MSet, dim: int, rng: Ncm.RNG) -> Ncm.DataGaussC
     # cov50.log_vals("", "% 22.15g")
 
     dgc.set_cov_mean(mean, cov)
-    m2lnN = dgc.get_log_norma(mset)
-    print(f"# Constant normalization {m2lnN}")
+    if verbose:
+        m2lnN = dgc.get_log_norma(mset)
+        print(f"# Constant normalization {m2lnN}")
 
     return dgc
 
@@ -121,10 +121,10 @@ def sample_with_tmvn(
         f.write(f"#   Mean : {' '.join(mean_array)}\n")
         f.write(f"#   Stdev: {' '.join(stdev_array)}\n")
 
-        for i in range(sv.nitens()):
-            f.write(
-                " ".join([f"{v: 22.15g}" for v in sv.peek_row(i).dup_array()]) + "\n"
-            )
+        f.writelines(
+            " ".join([f"{v: 22.15g}" for v in sv.peek_row(i).dup_array()]) + "\n"
+            for i in range(sv.nitens())
+        )
 
     return filename
 
@@ -136,17 +136,17 @@ def run_gauss_constraint_mcmc(
     verbose: bool = True,
     fit_first: bool = False,
     robust: bool = False,
-    use_apes_interpolation: bool = True,
-    use_apes_threads: Optional[bool] = None,
+    use_apes_center_shrink: bool = False,
+    use_apes_threads: bool | None = None,
     sampler: WalkerTypes = WalkerTypes.APES,
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
     nwalkers: int = 3000,
     use_threads: bool = True,
     over_smooth: float = 1.1,
-    local_fraction: Optional[float] = None,
+    local_fraction: float | None = None,
     init_sampling_scale: float = 1.0,
-    start_catalog: Optional[Path] = None,
+    start_catalog: Path | None = None,
     tmvn: bool = False,
 ) -> str:
     """Run the Funnel MCMC example."""
@@ -171,7 +171,7 @@ def run_gauss_constraint_mcmc(
         verbose=verbose,
         fit_first=fit_first,
         robust=robust,
-        use_apes_interpolation=use_apes_interpolation,
+        use_apes_center_shrink=use_apes_center_shrink,
         use_apes_threads=use_apes_threads,
         sampler=sampler,
         interpolation_method=interpolation_method,

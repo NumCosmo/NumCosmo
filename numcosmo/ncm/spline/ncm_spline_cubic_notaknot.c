@@ -26,11 +26,9 @@
 /**
  * NcmSplineCubicNotaknot:
  *
- * Cubic spline implementation with 'not a knot' boundary conditions.
- *
- * This object implements the necessary functions to compute a cubic spline with
- * boundary conditions obtained with the 'not a knot' method.
- *
+ * Cubic spline with not-a-knot end conditions: the third derivative is continuous at the
+ * second and the next-to-last knots, so the first two and the last two intervals are each one
+ * cubic. It needs at least six knots, strictly increasing; preparing aborts otherwise.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -92,9 +90,9 @@ ncm_spline_cubic_notaknot_class_init (NcmSplineCubicNotaknotClass *klass)
 /**
  * ncm_spline_cubic_notaknot_new:
  *
- * This function returns a new cubic #NcmSpline.
+ * Creates an empty not-a-knot spline.
  *
- * Returns: a new #NcmSpline.
+ * Returns: a new #NcmSplineCubicNotaknot.
  */
 NcmSplineCubicNotaknot *
 ncm_spline_cubic_notaknot_new ()
@@ -104,13 +102,13 @@ ncm_spline_cubic_notaknot_new ()
 
 /**
  * ncm_spline_cubic_notaknot_new_full:
- * @xv: #NcmVector of knots
- * @yv: #NcmVector of the values of the function, to be interpolated, computed at @xv
- * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it
+ * @xv: the knots
+ * @yv: the values at @xv
+ * @init: whether to prepare the new spline
  *
- * This function returns a new #NcmSpline setting all its members.
+ * Creates a not-a-knot spline with @xv and @yv, see ncm_spline_set().
  *
- * Returns: a new #NcmSpline.
+ * Returns: a new #NcmSplineCubicNotaknot.
  */
 NcmSplineCubicNotaknot *
 ncm_spline_cubic_notaknot_new_full (NcmVector *xv, NcmVector *yv, gboolean init)
@@ -179,10 +177,11 @@ _ncm_spline_cubic_notaknot_prepare_base (NcmSpline *s)
   g_assert (sys_size > 1);
 #ifdef NUMCOSMO_CHECK_SPLINE_NODES
 
-  if ((h_0 < 0.0) || (h_1 < 0.0) || (h_nm1 < 0.0))
-    g_error ("_ncm_spline_cubic_notaknot_prepare_base: in node [0, 1, 2, %zu, %zu] (% 20.15g, % 20.15g, % 20.15g, % 20.15g, % 20.15g), (% 20.15g, % 20.15g, % 20.15g, % 20.15g, % 20.15g).", nm1, n,
-             ncm_vector_get (s_xv, 0), ncm_vector_get (s_xv, 1), ncm_vector_get (s_xv, 2), ncm_vector_get (s_xv, nm1), ncm_vector_get (s_xv, n),
-             ncm_vector_get (s_yv, 0), ncm_vector_get (s_yv, 1), ncm_vector_get (s_yv, 2), ncm_vector_get (s_yv, nm1), ncm_vector_get (s_yv, n));
+  if (!(h_0 > 0.0) || !(h_1 > 0.0) || !(h_nm1 > 0.0))
+    g_error ("_ncm_spline_cubic_notaknot_prepare_base: the knots must be strictly increasing, "
+             "but x[0, 1, 2] = (% 20.15g, % 20.15g, % 20.15g) and x[%zu, %zu] = (% 20.15g, % 20.15g).",
+             ncm_vector_get (s_xv, 0), ncm_vector_get (s_xv, 1), ncm_vector_get (s_xv, 2),
+             nm1, n, ncm_vector_get (s_xv, nm1), ncm_vector_get (s_xv, n));
 
 #endif
 
@@ -195,11 +194,10 @@ _ncm_spline_cubic_notaknot_prepare_base (NcmSpline *s)
 
 #ifdef NUMCOSMO_CHECK_SPLINE_NODES
 
-    if (h_ip1 <= 0.0)
-      g_error ("_ncm_spline_cubic_notaknot_prepare_base: in node %zd of %zd x_ip2 = % 20.15g and x_ip1 = % 20.15g, y_ip2 = % 20.15g and y_ip1 = % 20.15g.",
-               i, n,
-               ncm_vector_get (s_xv, i + 2), ncm_vector_get (s_xv, i + 1),
-               ncm_vector_get (s_yv, i + 2), ncm_vector_get (s_yv, i + 1));
+    if (!(h_ip1 > 0.0))
+      g_error ("_ncm_spline_cubic_notaknot_prepare_base: the knots must be strictly increasing, "
+               "but x[%zu] = % 20.15g and x[%zu] = % 20.15g.",
+               i + 1, ncm_vector_get (s_xv, i + 1), i + 2, ncm_vector_get (s_xv, i + 2));
 
 #endif
 

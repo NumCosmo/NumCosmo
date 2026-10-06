@@ -40,7 +40,7 @@ class PyTestFunc(Ncm.MSetFunc1):
         self.symbol = r"\int_0^{10} f(x)\mathrm{d}x"
         self.name = r"intf"
 
-    def do_eval1(self, mset, _):  # pylint: disable-msg=arguments-differ
+    def do_eval1(self, mset, _):
         mid = mset.get_id_by_ns("NcPySLineModel")
         slm = mset.peek(mid)
         assert isinstance(slm, PySLineModel)

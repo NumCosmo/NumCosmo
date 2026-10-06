@@ -26,11 +26,21 @@
 /**
  * NcmModelBuilder:
  *
- * A #NcmModel builder.
+ * Builds a #NcmModel subclass at run time.
  *
- * This model can be used to create runtime NcmModels. It is particularly useful to
- * create models in binded languages, e.g., python.
+ * A builder holds the parent type, the name and description of the new model and
+ * its scalar and vector parameters; ncm_model_builder_create() registers the new
+ * type. The builder is serializable, so a model defined in a language binding, for
+ * instance Python, can be saved and rebuilt in another process.
  *
+ * The parent must be #NcmModel or one of its subclasses. The new parameters come
+ * after those of the parent. If the parent is not registered in #NcmMSet, the new
+ * model is registered under its name; otherwise it shares the parent's model id,
+ * as C subclasses do.
+ *
+ * Creating a type whose name is already registered returns the existing type if it
+ * has the same parent and the same parameters, so the same builder may be created
+ * again in one process; any other name clash aborts.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -81,6 +91,7 @@ ncm_model_builder_init (NcmModelBuilder *mb)
   mb->type               = G_TYPE_INVALID;
   mb->sparams            = ncm_obj_array_new ();
   mb->vparams            = ncm_obj_array_new ();
+  mb->stackable          = FALSE;
   mb->created            = FALSE;
 }
 
@@ -94,27 +105,30 @@ ncm_model_builder_set_property (GObject *object, guint prop_id, const GValue *va
   switch (prop_id)
   {
     case PROP_PARENT_TYPE_STRING:
-      g_assert_false (mb->created);
       mb->parent_type_string = g_value_dup_string (value);
       mb->ptype              = g_type_from_name (mb->parent_type_string);
+
+      if (mb->ptype == 0)
+        g_error ("ncm_model_builder_set_property: parent type `%s' is not registered.",
+                 mb->parent_type_string);
+
+      if (!g_type_is_a (mb->ptype, NCM_TYPE_MODEL))
+        g_error ("ncm_model_builder_set_property: parent type `%s' is not a NcmModel.",
+                 mb->parent_type_string);
+
       break;
     case PROP_NAME:
-      g_assert_false (mb->created);
-      g_clear_pointer (&mb->name, g_free);
       mb->name = g_value_dup_string (value);
       break;
     case PROP_DESC:
-      g_assert_false (mb->created);
-      g_clear_pointer (&mb->desc, g_free);
       mb->desc = g_value_dup_string (value);
       break;
     case PROP_SPARAMS:
     {
       NcmObjArray *sparams = g_value_get_boxed (value);
 
-      if (sparams)
+      if (sparams != NULL)
       {
-        g_assert_false (mb->created);
         g_clear_pointer (&mb->sparams, ncm_obj_array_unref);
         mb->sparams = ncm_obj_array_ref (sparams);
       }
@@ -125,9 +139,8 @@ ncm_model_builder_set_property (GObject *object, guint prop_id, const GValue *va
     {
       NcmObjArray *vparams = g_value_get_boxed (value);
 
-      if (vparams)
+      if (vparams != NULL)
       {
-        g_assert_false (mb->created);
         g_clear_pointer (&mb->vparams, ncm_obj_array_unref);
         mb->vparams = ncm_obj_array_ref (vparams);
       }
@@ -135,7 +148,6 @@ ncm_model_builder_set_property (GObject *object, guint prop_id, const GValue *va
       break;
     }
     case PROP_STACKABLE:
-      g_assert_false (mb->created);
       mb->stackable = g_value_get_boolean (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
@@ -214,6 +226,11 @@ ncm_model_builder_class_init (NcmModelBuilderClass *klass)
   object_class->dispose      = ncm_model_builder_dispose;
   object_class->finalize     = ncm_model_builder_finalize;
 
+  /**
+   * NcmModelBuilder:parent-type-string:
+   *
+   * The name of the parent type, #NcmModel or one of its subclasses.
+   */
   g_object_class_install_property (object_class,
                                    PROP_PARENT_TYPE_STRING,
                                    g_param_spec_string ("parent-type-string",
@@ -221,6 +238,13 @@ ncm_model_builder_class_init (NcmModelBuilderClass *klass)
                                                         "Parent type name",
                                                         "NcmModel",
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmModelBuilder:name:
+   *
+   * The name of the new type, also its #NcmMSet namespace when the parent is not
+   * registered.
+   */
   g_object_class_install_property (object_class,
                                    PROP_NAME,
                                    g_param_spec_string ("name",
@@ -228,6 +252,12 @@ ncm_model_builder_class_init (NcmModelBuilderClass *klass)
                                                         "Model's name",
                                                         "no-name",
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmModelBuilder:description:
+   *
+   * The description of the new model.
+   */
   g_object_class_install_property (object_class,
                                    PROP_DESC,
                                    g_param_spec_string ("description",
@@ -235,6 +265,12 @@ ncm_model_builder_class_init (NcmModelBuilderClass *klass)
                                                         "Model's description",
                                                         "no-description",
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmModelBuilder:sparams:
+   *
+   * The scalar parameters of the new model, a #NcmObjArray of #NcmSParam.
+   */
   g_object_class_install_property (object_class,
                                    PROP_SPARAMS,
                                    g_param_spec_boxed ("sparams",
@@ -242,6 +278,12 @@ ncm_model_builder_class_init (NcmModelBuilderClass *klass)
                                                        "Scalar parameters",
                                                        NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmModelBuilder:vparams:
+   *
+   * The vector parameters of the new model, a #NcmObjArray of #NcmVParam.
+   */
   g_object_class_install_property (object_class,
                                    PROP_VPARAMS,
                                    g_param_spec_boxed ("vparams",
@@ -249,6 +291,13 @@ ncm_model_builder_class_init (NcmModelBuilderClass *klass)
                                                        "Vector parameters",
                                                        NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmModelBuilder:stackable:
+   *
+   * Whether several instances of the new model can be stacked in a #NcmMSet. Used
+   * only when the new model is registered under its own name.
+   */
   g_object_class_install_property (object_class,
                                    PROP_STACKABLE,
                                    g_param_spec_boolean ("stackable",
@@ -260,13 +309,12 @@ ncm_model_builder_class_init (NcmModelBuilderClass *klass)
 
 /**
  * ncm_model_builder_new:
- * @ptype: Parent's type
- * @name: model's name
- * @desc: model's description
+ * @ptype: parent type, #NcmModel or one of its subclasses
+ * @name: name of the new type
+ * @desc: description of the new model
  *
- * Creates a new NcmModelBuilder object. This does not create the new class
- * after defining all parameters one should call ncm_model_builder_create()
- * to effectively define a new class.
+ * Creates a new #NcmModelBuilder. Add the parameters and then call
+ * ncm_model_builder_create() to register the new type.
  *
  * Returns: (transfer full): a new #NcmModelBuilder.
  */
@@ -287,7 +335,7 @@ ncm_model_builder_new (GType ptype, const gchar *name, const gchar *desc)
  * ncm_model_builder_ref:
  * @mb: a #NcmModelBuilder
  *
- * Increase reference count of @mb by one.
+ * Increases the reference count of @mb by one.
  *
  * Returns: (transfer full): @mb.
  */
@@ -298,17 +346,50 @@ ncm_model_builder_ref (NcmModelBuilder *mb)
 }
 
 /**
+ * ncm_model_builder_free:
+ * @mb: a #NcmModelBuilder
+ *
+ * Decreases the reference count of @mb by one. If the reference count reaches
+ * zero, @mb is freed.
+ *
+ */
+void
+ncm_model_builder_free (NcmModelBuilder *mb)
+{
+  g_object_unref (mb);
+}
+
+/**
+ * ncm_model_builder_clear:
+ * @mb: a #NcmModelBuilder
+ *
+ * If *@mb is not %NULL, decreases the reference count of *@mb by one and sets
+ * *@mb to %NULL.
+ *
+ */
+void
+ncm_model_builder_clear (NcmModelBuilder **mb)
+{
+  g_clear_object (mb);
+}
+
+/**
  * ncm_model_builder_add_sparam_obj:
  * @mb: a #NcmModelBuilder
  * @sparam: a #NcmSParam
  *
- * Adds the parameters described by @sparam to @mb.
+ * Adds the scalar parameter @sparam to @mb. Aborts if the type was already
+ * created.
  *
  */
 void
 ncm_model_builder_add_sparam_obj (NcmModelBuilder *mb, NcmSParam *sparam)
 {
-  g_assert (!mb->created);
+  if (mb->created)
+    g_error ("ncm_model_builder_add_sparam_obj: model `%s' was already created, "
+             "cannot add the parameter `%s'.",
+             mb->name, ncm_sparam_name (sparam));
+
   ncm_obj_array_add (mb->sparams, G_OBJECT (sparam));
 }
 
@@ -317,13 +398,18 @@ ncm_model_builder_add_sparam_obj (NcmModelBuilder *mb, NcmSParam *sparam)
  * @mb: a #NcmModelBuilder
  * @vparam: a #NcmVParam
  *
- * Adds the parameters described by @sparam to @mb.
+ * Adds the vector parameter @vparam to @mb. Aborts if the type was already
+ * created.
  *
  */
 void
 ncm_model_builder_add_vparam_obj (NcmModelBuilder *mb, NcmVParam *vparam)
 {
-  g_assert (!mb->created);
+  if (mb->created)
+    g_error ("ncm_model_builder_add_vparam_obj: model `%s' was already created, "
+             "cannot add the parameter `%s'.",
+             mb->name, ncm_vparam_name (vparam));
+
   ncm_obj_array_add (mb->vparams, G_OBJECT (vparam));
 }
 
@@ -331,15 +417,15 @@ ncm_model_builder_add_vparam_obj (NcmModelBuilder *mb, NcmVParam *vparam)
  * ncm_model_builder_add_sparam:
  * @mb: a #NcmModelBuilder
  * @symbol: symbol of the scalar parameter
- * @name: name of the sacalar parameter
- * @lower_bound: lower-bound value
- * @upper_bound: upper-bound value
+ * @name: name of the scalar parameter
+ * @lower_bound: lower bound
+ * @upper_bound: upper bound
  * @scale: parameter scale
  * @abstol: absolute tolerance
  * @default_value: default value
  * @ppt: a #NcmParamType
  *
- * Creates a new #NcmSParam from arguments and add it to @mb.
+ * Creates a new #NcmSParam from the arguments and adds it to @mb.
  *
  */
 void
@@ -358,14 +444,14 @@ ncm_model_builder_add_sparam (NcmModelBuilder *mb, const gchar *symbol, const gc
  * @default_length: default length of the vector parameter
  * @symbol: symbol of the vector parameter
  * @name: name of the vector parameter
- * @lower_bound: parameter lower bound
- * @upper_bound: parameter upper bound
+ * @lower_bound: lower bound
+ * @upper_bound: upper bound
  * @scale: parameter scale
  * @abstol: absolute tolerance
  * @default_value: default value
  * @ppt: a #NcmParamType
  *
- * Creates a new #NcmVParam from arguments and add it to @mb.
+ * Creates a new #NcmVParam from the arguments and adds it to @mb.
  *
  */
 void
@@ -381,9 +467,9 @@ ncm_model_builder_add_vparam (NcmModelBuilder *mb, guint default_length, const g
 /**
  * ncm_model_builder_add_sparams:
  * @mb: a #NcmModelBuilder
- * @sparams: an array of #NcmSParam objects
+ * @sparams: a #NcmObjArray of #NcmSParam
  *
- * Adds all #NcmSParam objects in @sparams to @mb.
+ * Adds every #NcmSParam in @sparams to @mb.
  *
  */
 void
@@ -393,10 +479,36 @@ ncm_model_builder_add_sparams (NcmModelBuilder *mb, NcmObjArray *sparams)
 
   for (i = 0; i < sparams->len; i++)
   {
-    NcmSParam *sparam = NCM_SPARAM (ncm_obj_array_get (sparams, i));
+    GObject *obj = ncm_obj_array_peek (sparams, i);
 
-    g_assert (NCM_IS_SPARAM (sparam));
-    ncm_model_builder_add_sparam_obj (mb, sparam);
+    if (!NCM_IS_SPARAM (obj))
+      g_error ("ncm_model_builder_add_sparams: element %u is a `%s', not a NcmSParam.", i, G_OBJECT_TYPE_NAME (obj));
+
+    ncm_model_builder_add_sparam_obj (mb, NCM_SPARAM (obj));
+  }
+}
+
+/**
+ * ncm_model_builder_add_vparams:
+ * @mb: a #NcmModelBuilder
+ * @vparams: a #NcmObjArray of #NcmVParam
+ *
+ * Adds every #NcmVParam in @vparams to @mb.
+ *
+ */
+void
+ncm_model_builder_add_vparams (NcmModelBuilder *mb, NcmObjArray *vparams)
+{
+  guint i;
+
+  for (i = 0; i < vparams->len; i++)
+  {
+    GObject *obj = ncm_obj_array_peek (vparams, i);
+
+    if (!NCM_IS_VPARAM (obj))
+      g_error ("ncm_model_builder_add_vparams: element %u is a `%s', not a NcmVParam.", i, G_OBJECT_TYPE_NAME (obj));
+
+    ncm_model_builder_add_vparam_obj (mb, NCM_VPARAM (obj));
   }
 }
 
@@ -404,7 +516,9 @@ ncm_model_builder_add_sparams (NcmModelBuilder *mb, NcmObjArray *sparams)
  * ncm_model_builder_get_sparams:
  * @mb: a #NcmModelBuilder
  *
- * Returns: (transfer full): a #NcmObjArray containing all #NcmSParam objects in @mb.
+ * Gets the scalar parameters of @mb.
+ *
+ * Returns: (transfer full): a new #NcmObjArray with the #NcmSParam objects in @mb.
  */
 NcmObjArray *
 ncm_model_builder_get_sparams (NcmModelBuilder *mb)
@@ -413,23 +527,92 @@ ncm_model_builder_get_sparams (NcmModelBuilder *mb)
   guint i;
 
   for (i = 0; i < mb->sparams->len; i++)
-  {
-    GObject *obj = ncm_obj_array_peek (mb->sparams, i);
-
-    ncm_obj_array_add (oa, obj);
-  }
+    ncm_obj_array_add (oa, ncm_obj_array_peek (mb->sparams, i));
 
   return oa;
 }
 
-void
+/**
+ * ncm_model_builder_get_vparams:
+ * @mb: a #NcmModelBuilder
+ *
+ * Gets the vector parameters of @mb.
+ *
+ * Returns: (transfer full): a new #NcmObjArray with the #NcmVParam objects in @mb.
+ */
+NcmObjArray *
+ncm_model_builder_get_vparams (NcmModelBuilder *mb)
+{
+  NcmObjArray *oa = ncm_obj_array_new ();
+  guint i;
+
+  for (i = 0; i < mb->vparams->len; i++)
+    ncm_obj_array_add (oa, ncm_obj_array_peek (mb->vparams, i));
+
+  return oa;
+}
+
+static void _ncm_model_builder_class_init (gpointer g_class, gpointer class_data);
+static void _ncm_model_builder_check_existing (NcmModelBuilder *mb, GType existing);
+
+/**
+ * ncm_model_builder_create:
+ * @mb: a #NcmModelBuilder
+ *
+ * Registers the new type with the parameters of @mb and returns it. Later calls
+ * return the same type. If a type with the name of @mb is already registered, it
+ * is returned when it has the same parent and the same parameters; otherwise this
+ * function aborts.
+ *
+ * Returns: the new type.
+ */
+GType
+ncm_model_builder_create (NcmModelBuilder *mb)
+{
+  if (!mb->created)
+  {
+    const GType existing = g_type_from_name (mb->name);
+
+    if (existing != 0)
+    {
+      _ncm_model_builder_check_existing (mb, existing);
+      mb->type = existing;
+    }
+    else
+    {
+      GTypeQuery query = {0, };
+      GTypeInfo info   = {0, };
+
+      g_type_query (mb->ptype, &query);
+
+      info.class_size    = query.class_size;
+      info.class_init    = _ncm_model_builder_class_init;
+      info.class_data    = ncm_model_builder_ref (mb);
+      info.instance_size = query.instance_size;
+
+      mb->type = g_type_register_static (mb->ptype, mb->name, &info, 0);
+
+      g_type_class_unref (g_type_class_ref (mb->type));
+    }
+
+    mb->created = TRUE;
+  }
+
+  return mb->type;
+}
+
+/*
+ * The class_init of the new type: the parameters of @mb come after those of the
+ * parent, whose ids are absolute.
+ */
+static void
 _ncm_model_builder_class_init (gpointer g_class, gpointer class_data)
 {
   NcmModelClass *model_class = NCM_MODEL_CLASS (g_class);
   NcmModelBuilder *mb        = NCM_MODEL_BUILDER (class_data);
   guint i;
 
-  if (model_class->main_model_id == -1)
+  if (model_class->model_id < 0)
     ncm_mset_model_register_id (model_class, mb->name, mb->desc, NULL, mb->stackable, -1);
 
   ncm_model_class_set_name_nick (model_class, mb->name, mb->name);
@@ -439,65 +622,90 @@ _ncm_model_builder_class_init (gpointer g_class, gpointer class_data)
   {
     NcmSParam *sparam = NCM_SPARAM (ncm_obj_array_peek (mb->sparams, i));
 
-    ncm_model_class_set_sparam_obj (model_class, i, sparam);
+    ncm_model_class_set_sparam_obj (model_class, model_class->parent_sparam_len + i, sparam);
   }
 
   for (i = 0; i < mb->vparams->len; i++)
   {
     NcmVParam *vparam = NCM_VPARAM (ncm_obj_array_peek (mb->vparams, i));
 
-    ncm_model_class_set_vparam_obj (model_class, i, vparam);
+    ncm_model_class_set_vparam_obj (model_class, model_class->parent_vparam_len + i, vparam);
   }
 
   ncm_model_class_check_params_info (model_class);
 }
 
-void
-_ncm_model_builder_instance_init (GTypeInstance *instance, gpointer g_class)
-{
-}
+static gboolean _ncm_model_builder_sparam_equal (const NcmSParam *a, const NcmSParam *b);
 
-/**
- * ncm_model_builder_create:
- * @mb: a #NcmModelBuilder
- *
- * Creates a new object type using the scalar and vector parameters defined
- * in @mb. If the object type was already created, this function just returns
- * the type.
- *
- * Returns: the new object type.
+/*
+ * Aborts unless @existing, a type already registered under the name of @mb, has
+ * the parent and the parameters @mb would give it.
  */
-GType
-ncm_model_builder_create (NcmModelBuilder *mb)
+static void
+_ncm_model_builder_check_existing (NcmModelBuilder *mb, GType existing)
 {
-  if (!mb->created)
+  NcmModelClass *model_class;
+  guint i;
+
+  if (g_type_parent (existing) != mb->ptype)
+    g_error ("ncm_model_builder_create: a type named `%s' already exists with parent `%s', "
+             "but this builder has parent `%s'.",
+             mb->name, g_type_name (g_type_parent (existing)), g_type_name (mb->ptype));
+
+  model_class = g_type_class_ref (existing);
+
+  if ((model_class->sparam_len - model_class->parent_sparam_len != mb->sparams->len) ||
+      (model_class->vparam_len - model_class->parent_vparam_len != mb->vparams->len))
+    g_error ("ncm_model_builder_create: a type named `%s' already exists with %u scalar and %u vector "
+             "parameter(s), but this builder has %u and %u.",
+             mb->name,
+             model_class->sparam_len - model_class->parent_sparam_len,
+             model_class->vparam_len - model_class->parent_vparam_len,
+             mb->sparams->len, mb->vparams->len);
+
+  for (i = 0; i < mb->sparams->len; i++)
   {
-    GTypeQuery query = {0, };
-    GTypeInfo info   = {0, };
+    const NcmSParam *a = g_ptr_array_index (model_class->sparam, model_class->parent_sparam_len + i);
+    const NcmSParam *b = NCM_SPARAM (ncm_obj_array_peek (mb->sparams, i));
 
-    g_type_query (mb->ptype, &query);
-
-    info.class_size     = query.class_size;
-    info.base_init      = NULL;
-    info.base_finalize  = NULL;
-    info.class_init     = _ncm_model_builder_class_init;
-    info.class_finalize = NULL;
-    info.class_data     = ncm_model_builder_ref (mb);
-    info.instance_size  = query.instance_size;
-    info.n_preallocs    = 0;
-    info.instance_init  = _ncm_model_builder_instance_init;
-    info.value_table    = NULL;
-
-    mb->type    = g_type_register_static (mb->ptype, mb->name, &info, 0);
-    mb->created = TRUE;
-
-    {
-      GObjectClass *object_class = g_type_class_ref (mb->type);
-
-      g_type_class_unref (object_class);
-    }
+    if (!_ncm_model_builder_sparam_equal (a, b))
+      g_error ("ncm_model_builder_create: a type named `%s' already exists, but its scalar parameter %u "
+               "(`%s' there, `%s' here) differs in name, symbol, bounds, scale, tolerance, default value "
+               "or fit type.",
+               mb->name, i, ncm_sparam_name (a), ncm_sparam_name (b));
   }
 
-  return mb->type;
+  for (i = 0; i < mb->vparams->len; i++)
+  {
+    NcmVParam *a   = g_ptr_array_index (model_class->vparam, model_class->parent_vparam_len + i);
+    NcmVParam *b   = NCM_VPARAM (ncm_obj_array_peek (mb->vparams, i));
+    gboolean equal = (g_strcmp0 (ncm_vparam_name (a), ncm_vparam_name (b)) == 0) &&
+                     (g_strcmp0 (ncm_vparam_symbol (a), ncm_vparam_symbol (b)) == 0) &&
+                     (ncm_vparam_len (a) == ncm_vparam_len (b));
+    guint j;
+
+    for (j = 0; equal && (j < ncm_vparam_len (a)); j++)
+      equal = _ncm_model_builder_sparam_equal (ncm_vparam_peek_sparam (a, j), ncm_vparam_peek_sparam (b, j));
+
+    if (!equal)
+      g_error ("ncm_model_builder_create: a type named `%s' already exists, but its vector parameter %u "
+               "(`%s' there, `%s' here) differs in name, symbol, length or components.",
+               mb->name, i, ncm_vparam_name (a), ncm_vparam_name (b));
+  }
+
+  g_type_class_unref (model_class);
+}
+
+static gboolean
+_ncm_model_builder_sparam_equal (const NcmSParam *a, const NcmSParam *b)
+{
+  return (g_strcmp0 (ncm_sparam_name (a), ncm_sparam_name (b)) == 0) &&
+         (g_strcmp0 (ncm_sparam_symbol (a), ncm_sparam_symbol (b)) == 0) &&
+         (ncm_sparam_get_lower_bound (a) == ncm_sparam_get_lower_bound (b)) &&
+         (ncm_sparam_get_upper_bound (a) == ncm_sparam_get_upper_bound (b)) &&
+         (ncm_sparam_get_scale (a) == ncm_sparam_get_scale (b)) &&
+         (ncm_sparam_get_absolute_tolerance (a) == ncm_sparam_get_absolute_tolerance (b)) &&
+         (ncm_sparam_get_default_value (a) == ncm_sparam_get_default_value (b)) &&
+         (ncm_sparam_get_fit_type (a) == ncm_sparam_get_fit_type (b));
 }
 

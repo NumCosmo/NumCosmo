@@ -27,6 +27,7 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include <gsl/gsl_errno.h>
 
 #include <glib.h>
 #include <gsl/gsl_poly.h>
@@ -135,6 +136,7 @@ F_sin_poly_deriv2 (gdouble x, gpointer p)
 void test_ncm_spline_cubic_notaknot_new_empty (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_gsl_cspline_new_empty (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_gsl_linear_new_empty (TestNcmSpline *test, gconstpointer pdata);
+void test_ncm_spline_gsl_steffen_new_empty (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_new (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_new_array (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_new_data (TestNcmSpline *test, gconstpointer pdata);
@@ -190,7 +192,7 @@ TestNcmSplineFunc _test_ncm_spline_traps[] = {
   {&test_ncm_spline_invalid_x_array,          "/array/invalid/x/subprocess"},
   {&test_ncm_spline_invalid_y_array,          "/array/invalid/y/subprocess"},
   {&test_ncm_spline_invalid_xy_array,         "/array/invalid/xy/subprocess"},
-  {NULL}
+  {NULL, NULL}
 };
 
 TestNcmSplineFunc _test_ncm_spline_tests[] = {
@@ -216,7 +218,7 @@ TestNcmSplineFunc _test_ncm_spline_tests[] = {
   {&test_ncm_spline_get_index_acc_stride2, "/get_index/acc/stride2"},
   {&test_ncm_spline_get_index_acc_stride5, "/get_index/acc/stride5"},
   {&test_ncm_spline_traps,                 "/traps"},
-  {NULL}
+  {NULL, NULL}
 };
 
 void
@@ -241,6 +243,368 @@ _test_ncm_spline_add_tests (void ( *tnew ) (TestNcmSpline *test, gconstpointer p
   }
 }
 
+/* Not-a-knot reproduces a cubic exactly, also where it extrapolates the boundary cubics */
+static void
+test_ncm_spline_cubic_notaknot_extrapolates (void)
+{
+  NcmVector *xv = ncm_vector_new (11);
+  NcmVector *yv = ncm_vector_new (11);
+  NcmSpline *s;
+  const gdouble xs[] = {-0.3, 0.37, 1.2};
+  guint i;
+
+  for (i = 0; i < 11; i++)
+  {
+    const gdouble x = 0.1 * i;
+
+    ncm_vector_set (xv, i, x);
+    ncm_vector_set (yv, i, x * x * x - 2.0 * x);
+  }
+
+  s = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
+
+  for (i = 0; i < G_N_ELEMENTS (xs); i++)
+  {
+    const gdouble x = xs[i];
+
+    g_assert_cmpfloat (fabs (ncm_spline_eval (s, x) - (x * x * x - 2.0 * x)), <, 2.0e-14);
+    g_assert_cmpfloat (fabs (ncm_spline_eval_deriv (s, x) - (3.0 * x * x - 2.0)), <, 2.0e-13);
+  }
+
+  ncm_spline_free (s);
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+}
+
+/* With the GSL error handler off, NcmSplineGsl returns NaN outside the knots */
+static void
+test_ncm_spline_gsl_domain_nan (void)
+{
+  NcmVector *xv = ncm_vector_new (11);
+  NcmVector *yv = ncm_vector_new (11);
+  NcmSpline *s;
+  guint i;
+
+  for (i = 0; i < 11; i++)
+  {
+    ncm_vector_set (xv, i, 0.1 * i);
+    ncm_vector_set (yv, i, 0.01 * i * i);
+  }
+
+  s = NCM_SPLINE (ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_CSPLINE, xv, yv, TRUE));
+
+  gsl_set_error_handler_off ();
+  g_assert_true (isnan (ncm_spline_eval (s, 1.05)));
+  g_assert_true (isnan (ncm_spline_eval (s, -0.05)));
+  g_assert_true (isnan (ncm_spline_eval_integ (s, -0.1, 0.5)));
+  ncm_cfg_enable_gsl_err_handler ();
+
+  ncm_spline_free (s);
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+}
+
+/* Reversed limits give minus the integral, for every spline type */
+static void
+test_ncm_spline_integ_reversed (void)
+{
+  NcmVector *xv = ncm_vector_new (11);
+  NcmVector *yv = ncm_vector_new (11);
+  NcmSpline *splines[2];
+  guint i;
+
+  for (i = 0; i < 11; i++)
+  {
+    ncm_vector_set (xv, i, 0.1 * i);
+    ncm_vector_set (yv, i, 0.01 * i * i);
+  }
+
+  splines[0] = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
+  splines[1] = NCM_SPLINE (ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_CSPLINE, xv, yv, TRUE));
+
+  for (i = 0; i < G_N_ELEMENTS (splines); i++)
+  {
+    const gdouble fwd = ncm_spline_eval_integ (splines[i], 0.15, 0.85);
+
+    g_assert_cmpfloat (ncm_spline_eval_integ (splines[i], 0.85, 0.15), ==, -fwd);
+    g_assert_cmpfloat (ncm_spline_eval_integ (splines[i], 0.18, 0.12), ==, -ncm_spline_eval_integ (splines[i], 0.12, 0.18));
+  }
+
+  {
+    const gsize ia = ncm_spline_get_index (splines[0], 0.15);
+    const gsize ib = ncm_spline_get_index (splines[0], 0.85);
+
+    g_assert_cmpfloat (ncm_spline_eval_integ_idx (splines[0], 0.85, ib, 0.15, ia), ==,
+                       -ncm_spline_eval_integ_idx (splines[0], 0.15, ia, 0.85, ib));
+  }
+
+  ncm_spline_free (splines[0]);
+  ncm_spline_free (splines[1]);
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+}
+
+static NcmSpline *
+_test_ncm_spline_cube (gdouble scale)
+{
+  NcmVector *xv = ncm_vector_new (11);
+  NcmVector *yv = ncm_vector_new (11);
+  NcmSpline *s;
+  guint i;
+
+  for (i = 0; i < 11; i++)
+  {
+    const gdouble x = 0.1 * i;
+
+    ncm_vector_set (xv, i, x);
+    ncm_vector_set (yv, i, scale * x * x * x);
+  }
+
+  s = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+
+  return s;
+}
+
+/* Not-a-knot reproduces x^3, so c(x) = 6x and N_p = (6^p / (p + 1))^(1/p) on [0, 1], at any scale */
+static void
+test_ncm_spline_curvature_norms (void)
+{
+  const gdouble ps[]    = {0.5, 1.0, 2.0};
+  const gdouble scale[] = {1.0, 1.0e-9};
+  guint i, j;
+
+  for (j = 0; j < G_N_ELEMENTS (scale); j++)
+  {
+    NcmSpline *s = _test_ncm_spline_cube (scale[j]);
+    NcmSpline *w = _test_ncm_spline_cube (0.0);
+
+    ncm_vector_set_all (ncm_spline_peek_yv (w), 2.0);
+    ncm_spline_prepare (w);
+
+    for (i = 0; i < G_N_ELEMENTS (ps); i++)
+    {
+      const gdouble p     = ps[i];
+      const gdouble exact = scale[j] * pow (pow (6.0, p) / (p + 1.0), 1.0 / p);
+      const gdouble n_p   = ncm_spline_curvature_lp_norm (s, NCM_SPLINE_CURVATURE_D2, p, 0.0, 1.0);
+      const gdouble n_w   = ncm_spline_curvature_weighted_lp_norm (s, NCM_SPLINE_CURVATURE_D2, p, w, 0.0, 1.0);
+
+      g_assert_cmpfloat (fabs (n_p / exact - 1.0), <, 1.0e-13);
+      g_assert_cmpfloat (fabs (n_w / exact - 1.0), <, 1.0e-13);
+    }
+
+    ncm_spline_free (s);
+    ncm_spline_free (w);
+  }
+}
+
+static void
+test_ncm_spline_notaknot_repeated_knot (void)
+{
+  g_test_trap_subprocess ("/ncm/spline_cubic_notaknot/repeated_knot/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*strictly increasing*");
+}
+
+static void
+test_ncm_spline_notaknot_repeated_knot_subprocess (void)
+{
+  NcmVector *xv = ncm_vector_new (8);
+  NcmVector *yv = ncm_vector_new (8);
+  guint i;
+
+  for (i = 0; i < 8; i++)
+  {
+    ncm_vector_set (xv, i, (i == 0) ? 0.0 : 0.1 * (i - 1));
+    ncm_vector_set (yv, i, 1.0 * i);
+  }
+
+  ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE);
+}
+
+/* After ncm_spline_cubic_d2_set_d2 the spline reproduces x^3 from its values and second derivatives */
+static void
+test_ncm_spline_cubic_d2_set_d2 (void)
+{
+  NcmVector *xv  = ncm_vector_new (11);
+  NcmVector *yv  = ncm_vector_new (11);
+  NcmVector *d2v = ncm_vector_new (11);
+  NcmSplineCubicD2 *scd2;
+  guint i;
+
+  for (i = 0; i < 11; i++)
+  {
+    const gdouble x = 0.1 * i;
+
+    ncm_vector_set (xv, i, x);
+    ncm_vector_set (yv, i, x * x);
+    ncm_vector_set (d2v, i, 2.0);
+  }
+
+  scd2 = ncm_spline_cubic_d2_new (xv, yv, d2v, TRUE);
+
+  for (i = 0; i < 11; i++)
+  {
+    const gdouble x = 0.1 * i;
+
+    ncm_vector_set (yv, i, x * x * x);
+    ncm_vector_set (d2v, i, 6.0 * x);
+  }
+
+  ncm_spline_cubic_d2_set_d2 (scd2, d2v, TRUE);
+
+  for (i = 0; i < 10; i++)
+  {
+    const gdouble x = 0.1 * i + 0.05;
+
+    g_assert_cmpfloat (fabs (ncm_spline_eval (NCM_SPLINE (scd2), x) - x * x * x), <, 1.0e-15);
+  }
+
+  ncm_spline_free (NCM_SPLINE (scd2));
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+  ncm_vector_free (d2v);
+}
+
+static void
+test_ncm_spline_invalid_d2_len (void)
+{
+  g_test_trap_subprocess ("/ncm/spline_cubic_d2/invalid_d2_len/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+}
+
+static void
+test_ncm_spline_invalid_d2_len_subprocess (void)
+{
+  NcmVector *xv  = ncm_vector_new (5);
+  NcmVector *yv  = ncm_vector_new (5);
+  NcmVector *d2v = ncm_vector_new (4);
+  NcmSplineCubicD2 *scd2;
+
+  ncm_vector_set_all (yv, 1.0);
+  ncm_vector_set_all (d2v, 0.0);
+  ncm_vector_set (xv, 0, 0.0);
+  ncm_vector_set (xv, 1, 1.0);
+  ncm_vector_set (xv, 2, 2.0);
+  ncm_vector_set (xv, 3, 3.0);
+  ncm_vector_set (xv, 4, 4.0);
+
+  scd2 = ncm_spline_cubic_d2_new (xv, yv, yv, FALSE);
+  ncm_spline_cubic_d2_set_d2 (scd2, d2v, FALSE);
+}
+
+static void
+test_ncm_spline_gsl_unsupported_type (void)
+{
+  g_test_trap_subprocess ("/ncm/spline_gsl/unsupported_type/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*not one of NcmSplineGslType*");
+}
+
+static void
+test_ncm_spline_gsl_unsupported_type_subprocess (void)
+{
+  static const gsl_interp_type not_a_type = {"not-a-type", 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+
+  ncm_spline_gsl_new (&not_a_type);
+}
+
+/* Steffen stays between neighbouring knot values on monotone data; a natural cubic spline overshoots a step */
+static void
+test_ncm_spline_gsl_steffen_monotone (void)
+{
+  const guint nknots = 40;
+  NcmVector *xv      = ncm_vector_new (nknots);
+  NcmVector *yv      = ncm_vector_new (nknots);
+  NcmSpline *steffen;
+  NcmSpline *cspline;
+  gdouble cspline_overshoot = 0.0;
+  guint i, j;
+
+  for (i = 0; i < nknots; i++)
+  {
+    ncm_vector_set (xv, i, i);
+    ncm_vector_set (yv, i, (i < nknots / 2) ? 1.0e-6 * i : 1.0 + 1.0e-6 * i);
+  }
+
+  steffen = NCM_SPLINE (ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_STEFFEN, xv, yv, TRUE));
+  cspline = NCM_SPLINE (ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_CSPLINE, xv, yv, TRUE));
+
+  for (i = 0; i + 1 < nknots; i++)
+  {
+    const gdouble y_i   = ncm_vector_get (yv, i);
+    const gdouble y_ip1 = ncm_vector_get (yv, i + 1);
+
+    for (j = 0; j <= 10; j++)
+    {
+      const gdouble x = i + 0.1 * j;
+      const gdouble s = ncm_spline_eval (steffen, x);
+      const gdouble c = ncm_spline_eval (cspline, x);
+
+      g_assert_cmpfloat (s, >=, y_i);
+      g_assert_cmpfloat (s, <=, y_ip1);
+      cspline_overshoot = GSL_MAX (cspline_overshoot, GSL_MAX (y_i - c, c - y_ip1));
+    }
+  }
+
+  g_assert_cmpfloat (cspline_overshoot, >, 1.0e-2);
+  g_assert_true (ncm_spline_gsl_get_gsl_type (NCM_SPLINE_GSL (steffen)) == gsl_interp_steffen);
+
+  {
+    NcmSplineGsl *by_name = ncm_spline_gsl_new (gsl_interp_linear);
+
+    ncm_spline_gsl_set_type_by_name (by_name, "steffen");
+    g_assert_true (ncm_spline_gsl_get_type_id (by_name) == NCM_SPLINE_GSL_STEFFEN);
+    ncm_spline_free (NCM_SPLINE (by_name));
+  }
+
+  ncm_spline_free (steffen);
+  ncm_spline_free (cspline);
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+}
+
+/* The third derivative is constant on each interval, including for splines whose second derivative jumps at the knots */
+static void
+test_ncm_spline_gsl_deriv_nmax (void)
+{
+  const NcmSplineGslType types[] = {NCM_SPLINE_GSL_CSPLINE, NCM_SPLINE_GSL_AKIMA, NCM_SPLINE_GSL_STEFFEN};
+  const guint nknots             = 21;
+  NcmVector *xv                  = ncm_vector_new (nknots);
+  NcmVector *yv                  = ncm_vector_new (nknots);
+  guint t, i;
+
+  for (i = 0; i < nknots; i++)
+  {
+    const gdouble x = 3.0 * i / (nknots - 1.0);
+
+    ncm_vector_set (xv, i, x);
+    ncm_vector_set (yv, i, sin (3.0 * x) + x * x * x);
+  }
+
+  for (t = 0; t < G_N_ELEMENTS (types); t++)
+  {
+    NcmSpline *s = NCM_SPLINE (ncm_spline_gsl_new_full_by_id (types[t], xv, yv, TRUE));
+
+    for (i = 0; i + 1 < nknots; i++)
+    {
+      const gdouble x_i = ncm_vector_get (xv, i);
+      const gdouble dx  = ncm_vector_get (xv, i + 1) - x_i;
+      const gdouble a   = x_i + 0.25 * dx;
+      const gdouble b   = x_i + 0.75 * dx;
+      const gdouble d3  = (ncm_spline_eval_deriv2 (s, b) - ncm_spline_eval_deriv2 (s, a)) / (b - a);
+
+      ncm_assert_cmpdouble_e (ncm_spline_eval_deriv_nmax (s, x_i + 0.3 * dx), ==, d3, 1.0e-10, 1.0e-10);
+    }
+
+    ncm_spline_free (s);
+  }
+
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -257,6 +621,22 @@ main (gint argc, gchar *argv[])
   _test_ncm_spline_add_tests (&test_ncm_spline_gsl_linear_new_empty,
                               &test_ncm_spline_free_empty,
                               "spline_gsl/linear");
+  _test_ncm_spline_add_tests (&test_ncm_spline_gsl_steffen_new_empty,
+                              &test_ncm_spline_free_empty,
+                              "spline_gsl/steffen");
+  g_test_add_func ("/ncm/spline_cubic_notaknot/extrapolates", &test_ncm_spline_cubic_notaknot_extrapolates);
+  g_test_add_func ("/ncm/spline_gsl/domain_nan", &test_ncm_spline_gsl_domain_nan);
+  g_test_add_func ("/ncm/spline/integ_reversed", &test_ncm_spline_integ_reversed);
+  g_test_add_func ("/ncm/spline/curvature_norms", &test_ncm_spline_curvature_norms);
+  g_test_add_func ("/ncm/spline_cubic_notaknot/repeated_knot", &test_ncm_spline_notaknot_repeated_knot);
+  g_test_add_func ("/ncm/spline_cubic_notaknot/repeated_knot/subprocess", &test_ncm_spline_notaknot_repeated_knot_subprocess);
+  g_test_add_func ("/ncm/spline_cubic_d2/set_d2", &test_ncm_spline_cubic_d2_set_d2);
+  g_test_add_func ("/ncm/spline_cubic_d2/invalid_d2_len", &test_ncm_spline_invalid_d2_len);
+  g_test_add_func ("/ncm/spline_cubic_d2/invalid_d2_len/subprocess", &test_ncm_spline_invalid_d2_len_subprocess);
+  g_test_add_func ("/ncm/spline_gsl/unsupported_type", &test_ncm_spline_gsl_unsupported_type);
+  g_test_add_func ("/ncm/spline_gsl/unsupported_type/subprocess", &test_ncm_spline_gsl_unsupported_type_subprocess);
+  g_test_add_func ("/ncm/spline_gsl/steffen/monotone", &test_ncm_spline_gsl_steffen_monotone);
+  g_test_add_func ("/ncm/spline_gsl/deriv_nmax", &test_ncm_spline_gsl_deriv_nmax);
   g_test_run ();
 }
 
@@ -311,6 +691,38 @@ test_ncm_spline_gsl_cspline_new_empty (TestNcmSpline *test, gconstpointer pdata)
   test->error_d1 = 2.0e-1;
   test->error_d2 = 2.0e-1;
   test->s_base   = NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_cspline));
+  g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
+  {
+    NcmVector *xv = ncm_vector_new (test->nknots);
+    NcmVector *yv = ncm_vector_new (test->nknots);
+    guint i;
+
+    for (i = 0; i < test->nknots; i++)
+    {
+      ncm_vector_set (xv, i, i * M_PI);
+      ncm_vector_set (yv, i, i * M_PI_2);
+    }
+
+    ncm_spline_set (test->s_base, xv, yv, FALSE);
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
+  }
+}
+
+void
+test_ncm_spline_gsl_steffen_new_empty (TestNcmSpline *test, gconstpointer pdata)
+{
+  test->name     = "spline_gsl/steffen";
+  test->deriv1   = TRUE;
+  test->deriv2   = FALSE;
+  test->nknots   = g_test_rand_int_range (_NCM_SPLINE_TEST_NKNOTS, 2 * _NCM_SPLINE_TEST_NKNOTS);
+  test->dx       = _NCM_SPLINE_TEST_DX;
+  test->xi       = 10.0 * GSL_SIGN (g_test_rand_double_range (-1.0, 1.0));
+  test->prec     = 1.0e-5;
+  test->error    = 5.0e-3;
+  test->error_d1 = 2.0e-1;
+  test->error_d2 = 2.0e-1;
+  test->s_base   = NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_steffen));
   g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
   {
     NcmVector *xv = ncm_vector_new (test->nknots);
@@ -623,6 +1035,11 @@ test_ncm_spline_set_type (TestNcmSpline *test, gconstpointer pdata)
     g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
     g_assert_true (ncm_spline_gsl_get_type_id (NCM_SPLINE_GSL (test->s_base)) == NCM_SPLINE_GSL_CSPLINE_PERIODIC);
     g_assert_true (ncm_spline_gsl_get_gsl_type (NCM_SPLINE_GSL (test->s_base)) == gsl_interp_cspline_periodic);
+
+    ncm_spline_gsl_set_type (NCM_SPLINE_GSL (test->s_base), gsl_interp_steffen);
+    g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
+    g_assert_true (ncm_spline_gsl_get_type_id (NCM_SPLINE_GSL (test->s_base)) == NCM_SPLINE_GSL_STEFFEN);
+    g_assert_true (ncm_spline_gsl_get_gsl_type (NCM_SPLINE_GSL (test->s_base)) == gsl_interp_steffen);
   }
 }
 

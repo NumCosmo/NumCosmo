@@ -11,23 +11,28 @@ project:
     - theory/index.qmd
     - examples/index.qmd
     - benchmarks/index.qmd
-    - theory/csq1d.qmd
-    - theory/distances.qmd
-    - theory/recombination.qmd
-    - theory/transfer_func_eh.qmd
-    - theory/wl_ellipticity.qmd
-    - theory/galaxy_wl_framework.qmd
-    - theory/wl_shape_marginalization_series.qmd
-    - theory/wl_shape_marginalization_fixed_quad.qmd
-    - theory/wl_surface_mass_density.qmd
-    - theory/halo_density_profile.qmd
-    - theory/fftlog.qmd
-    - theory/spectral.qmd
-    - theory/sbessel_ode_solver.qmd
-    - theory/sbessel_projection.qmd
-    - theory/ssc.qmd
-    - theory/castro_hmf.qmd
-    - theory/cluster_richness_projection.qmd
+    - theory/ncm/dynamics/csq1d.qmd
+    - theory/nc/background/distances.qmd
+    - theory/nc/recomb/recombination.qmd
+    - theory/nc/powspec/transfer_func_eh.qmd
+    - theory/nc/lss/galaxy/wl_ellipticity.qmd
+    - theory/nc/lss/galaxy/galaxy_wl_framework.qmd
+    - theory/nc/lss/galaxy/wl_shape_marginalization_series.qmd
+    - theory/nc/lss/galaxy/wl_shape_marginalization_fixed_quad.qmd
+    - theory/nc/lss/wl/wl_surface_mass_density.qmd
+    - theory/nc/lss/halo/halo_density_profile.qmd
+    - theory/ncm/fftlog/fftlog.qmd
+    - theory/ncm/algebra/spectral.qmd
+    - theory/ncm/specfunc/sbessel_ode_solver.qmd
+    - theory/ncm/specfunc/sbessel_projection.qmd
+    - theory/nc/xcor/ssc.qmd
+    - theory/nc/lss/halo/castro_hmf.qmd
+    - theory/nc/lss/cluster/cluster_richness_projection.qmd
+    - theory/ncm/stats/stats_dist.qmd
+    - theory/ncm/stats/autocorrelation.qmd
+    - theory/ncm/core/poisson_lognormal.qmd
+    - theory/ncm/integration/diff.qmd
+    - theory/ncm/spline/spline_func.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
     - benchmarks/ccl_two_point.qmd
@@ -46,6 +51,7 @@ project:
     - examples/data_analysis/inspect_data_objects.qmd
     - examples/data_analysis/snia.qmd
     - examples/data_analysis/hz.qmd
+    - examples/data_analysis/bao_sdss_dr16.qmd
     - examples/data_analysis/rg_snia_bao.qmd
     - examples/intro/epdf.qmd
     - examples/intro/hiprim.qmd
@@ -131,48 +137,58 @@ website:
         contents:
           - section: "Background & Thermal History"
             contents:
-              - href: theory/distances.qmd
+              - href: theory/nc/background/distances.qmd
                 text: "Cosmological Distances"
-              - href: theory/recombination.qmd
+              - href: theory/nc/recomb/recombination.qmd
                 text: "Cosmic Recombination"
           - section: "Linear Theory & Power Spectrum"
             contents:
-              - href: theory/transfer_func_eh.qmd
+              - href: theory/nc/powspec/transfer_func_eh.qmd
                 text: "Eisenstein–Hu Transfer Function"
           - section: "Galaxy Population & Weak Lensing"
             contents:
-              - href: theory/galaxy_wl_framework.qmd
+              - href: theory/nc/lss/galaxy/galaxy_wl_framework.qmd
                 text: "Galaxy Population & WL Framework"
-              - href: theory/wl_ellipticity.qmd
+              - href: theory/nc/lss/galaxy/wl_ellipticity.qmd
                 text: "Weak-Lensing Ellipticity"
-              - href: theory/wl_shape_marginalization_series.qmd
+              - href: theory/nc/lss/galaxy/wl_shape_marginalization_series.qmd
                 text: "Small-Shear Series Marginalization"
-              - href: theory/wl_shape_marginalization_fixed_quad.qmd
+              - href: theory/nc/lss/galaxy/wl_shape_marginalization_fixed_quad.qmd
                 text: "Fixed-Node Lens-Domain Quadrature"
           - section: "Clusters & Weak Lensing"
             contents:
-              - href: theory/halo_density_profile.qmd
+              - href: theory/nc/lss/halo/halo_density_profile.qmd
                 text: "Halo Density Profiles"
-              - href: theory/wl_surface_mass_density.qmd
+              - href: theory/nc/lss/wl/wl_surface_mass_density.qmd
                 text: "Weak-Lensing Surface Mass Density"
-              - href: theory/castro_hmf.qmd
+              - href: theory/nc/lss/halo/castro_hmf.qmd
                 text: "Castro Halo Mass Function and Bias"
-              - href: theory/cluster_richness_projection.qmd
+              - href: theory/nc/lss/cluster/cluster_richness_projection.qmd
                 text: "Richness Projection"
-              - href: theory/ssc.qmd
+              - href: theory/nc/xcor/ssc.qmd
                 text: "Super-Sample Covariance"
           - section: "Numerical Methods"
             contents:
-              - href: theory/fftlog.qmd
+              - href: theory/ncm/fftlog/fftlog.qmd
                 text: "FFTLog"
-              - href: theory/spectral.qmd
+              - href: theory/ncm/algebra/spectral.qmd
                 text: "Spectral Methods"
-              - href: theory/sbessel_ode_solver.qmd
+              - href: theory/ncm/integration/diff.qmd
+                text: "Numerical Differentiation"
+              - href: theory/ncm/spline/spline_func.qmd
+                text: "AutoKnots: Adaptive Knot Placement"
+              - href: theory/ncm/specfunc/sbessel_ode_solver.qmd
                 text: "Ultraspherical Spectral Solver"
-              - href: theory/sbessel_projection.qmd
+              - href: theory/ncm/specfunc/sbessel_projection.qmd
                 text: "UltraLevin: Angular Power Spectra"
-              - href: theory/csq1d.qmd
+              - href: theory/ncm/dynamics/csq1d.qmd
                 text: "CSQ1D Formalism"
+              - href: theory/ncm/stats/stats_dist.qmd
+                text: "Kernel Mixture Densities"
+              - href: theory/ncm/core/poisson_lognormal.qmd
+                text: "Poisson-Lognormal Distribution"
+              - href: theory/ncm/stats/autocorrelation.qmd
+                text: "Autocorrelation Time and ESS"
       - section: examples/index.qmd
         contents:
           - section: "Background & Distances"
@@ -199,6 +215,8 @@ website:
                 text: "SN Ia Fitting"
               - href: examples/data_analysis/hz.qmd
                 text: "H(z) Fitting"
+              - href: examples/data_analysis/bao_sdss_dr16.qmd
+                text: "BAO Fitting"
               - href: examples/data_analysis/rg_snia_bao.qmd
                 text: "SNIa + BAO Confidence Regions"
               - href: examples/data_analysis/inspect_data_objects.qmd

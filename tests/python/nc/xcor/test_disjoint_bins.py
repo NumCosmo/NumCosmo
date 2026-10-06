@@ -75,7 +75,7 @@ def _make_kernels(cosmology: Cosmology, bins=None) -> list[Nc.XcorKernel]:
 
 
 @pytest.mark.parametrize(
-    "method", [Nc.XcorMethod.KERNEL_GSL, Nc.XcorMethod.KERNEL_CUBATURE]
+    "method", [Nc.XcorMethod.KERNEL_CUBATURE, Nc.XcorMethod.KERNEL_EXACT]
 )
 def test_disjoint_bins_cross_is_nonzero(
     cosmology: Cosmology, method: Nc.XcorMethod
@@ -84,13 +84,6 @@ def test_disjoint_bins_cross_is_nonzero(
     k1, k2 = _make_kernels(cosmology)
 
     xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, method)
-    # The disjoint-bin cross spectrum is a small residual of a large
-    # cancellation. KERNEL_GSL targets reltol * 1e-2 in the outer k integral and
-    # aborts on GSL roundoff at the default 1e-6; the result is already stable
-    # to five digits at 1e-4.
-    if method == Nc.XcorMethod.KERNEL_GSL:
-        xcor.set_reltol(1.0e-4)
-
     xcor.prepare(cosmology.cosmo)
 
     cross = Ncm.Vector.new(3)
@@ -143,7 +136,6 @@ def test_disjoint_bins_cross_matches_solver(cosmology: Cosmology) -> None:
 @pytest.mark.parametrize(
     "method",
     [
-        Nc.XcorMethod.KERNEL_GSL,
         Nc.XcorMethod.KERNEL_CUBATURE,
         Nc.XcorMethod.KERNEL_EXACT,
     ],
@@ -193,7 +185,6 @@ def test_kernel_space_limber_disjoint_is_zero(
 @pytest.mark.parametrize(
     "method",
     [
-        Nc.XcorMethod.KERNEL_GSL,
         Nc.XcorMethod.KERNEL_CUBATURE,
         Nc.XcorMethod.KERNEL_EXACT,
     ],
@@ -219,11 +210,6 @@ def test_kernel_space_limber_disjoint_splits_at_threshold(
         kernel.prepare(cosmology.cosmo)
 
     xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, method)
-    # See test_disjoint_bins_cross_is_nonzero: KERNEL_GSL aborts on GSL roundoff
-    # at the default reltol for this large-cancellation residual.
-    if method == Nc.XcorMethod.KERNEL_GSL:
-        xcor.set_reltol(1.0e-4)
-
     xcor.prepare(cosmology.cosmo)
 
     straddling = Ncm.Vector.new(lmax + 1)
