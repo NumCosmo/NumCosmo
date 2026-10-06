@@ -32,7 +32,7 @@ actually produces sane spectra, on its own and cheaply.
 The assertions are physical invariants rather than reference values -- positive
 auto-spectra, the Cauchy-Schwarz bound on TE, the first acoustic peak, and
 lensing moving the damping tail -- so this stays a fast sanity check that does
-not need a golden table or a tight tolerance. A multipole range well below
+not need a truth table or a tight tolerance. A multipole range well below
 Planck's is enough for all of them, which is what keeps it cheap.
 """
 

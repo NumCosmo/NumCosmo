@@ -50,7 +50,7 @@ void test_ncm_sky_footprint_density (TestNcmSkyFootprint *test, gconstpointer pd
 void test_ncm_sky_footprint_gen (TestNcmSkyFootprint *test, gconstpointer pdata);
 void test_ncm_sky_footprint_serialize (TestNcmSkyFootprint *test, gconstpointer pdata);
 void test_ncm_sky_footprint_gen_moments (TestNcmSkyFootprint *test, gconstpointer pdata);
-void test_ncm_sky_footprint_gen_golden (TestNcmSkyFootprint *test, gconstpointer pdata);
+void test_ncm_sky_footprint_gen_truth_table (TestNcmSkyFootprint *test, gconstpointer pdata);
 void test_ncm_sky_footprint_default (void);
 void test_ncm_sky_footprint_traps (void);
 void test_ncm_sky_footprint_invalid_ra_span (void);
@@ -81,8 +81,8 @@ main (gint argc, gchar *argv[])
               &test_ncm_sky_footprint_new, &test_ncm_sky_footprint_serialize, &test_ncm_sky_footprint_free);
   g_test_add ("/ncm/sky_footprint/gen/moments", TestNcmSkyFootprint, NULL,
               &test_ncm_sky_footprint_new, &test_ncm_sky_footprint_gen_moments, &test_ncm_sky_footprint_free);
-  g_test_add ("/ncm/sky_footprint/gen/golden", TestNcmSkyFootprint, NULL,
-              &test_ncm_sky_footprint_new, &test_ncm_sky_footprint_gen_golden, &test_ncm_sky_footprint_free);
+  g_test_add ("/ncm/sky_footprint/gen/truth_table", TestNcmSkyFootprint, NULL,
+              &test_ncm_sky_footprint_new, &test_ncm_sky_footprint_gen_truth_table, &test_ncm_sky_footprint_free);
   g_test_add_func ("/ncm/sky_footprint/default", &test_ncm_sky_footprint_default);
   g_test_add_func ("/ncm/sky_footprint/traps", &test_ncm_sky_footprint_traps);
   g_test_add_func ("/ncm/sky_footprint/invalid/ra_span/subprocess", &test_ncm_sky_footprint_invalid_ra_span);
@@ -280,29 +280,29 @@ test_ncm_sky_footprint_gen_moments (TestNcmSkyFootprint *test, gconstpointer pda
  * change in the sampling.
  */
 void
-test_ncm_sky_footprint_gen_golden (TestNcmSkyFootprint *test, gconstpointer pdata)
+test_ncm_sky_footprint_gen_truth_table (TestNcmSkyFootprint *test, gconstpointer pdata)
 {
   NcmSkyFootprint *fp = NCM_SKY_FOOTPRINT (test->rect);
   NcmSerialize *ser   = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
   gchar *path         = ncm_cfg_get_data_filename ("truth_tables/sphere/ncm_sky_footprint_rect_seed123.bin", TRUE);
-  NcmMatrix *golden   = NCM_MATRIX (ncm_serialize_from_binfile (ser, path));
+  NcmMatrix *truth    = NCM_MATRIX (ncm_serialize_from_binfile (ser, path));
   NcmRNG *rng         = ncm_rng_seeded_new (NULL, 123);
   guint i;
 
-  g_assert_cmpuint (ncm_matrix_ncols (golden), ==, 2);
-  g_assert_cmpuint (ncm_matrix_nrows (golden), ==, 5000);
+  g_assert_cmpuint (ncm_matrix_ncols (truth), ==, 2);
+  g_assert_cmpuint (ncm_matrix_nrows (truth), ==, 5000);
 
-  for (i = 0; i < ncm_matrix_nrows (golden); i++)
+  for (i = 0; i < ncm_matrix_nrows (truth); i++)
   {
     gdouble ra, dec;
 
     ncm_sky_footprint_gen_ra_dec (fp, rng, &ra, &dec);
-    g_assert_cmpfloat (fabs (ra - ncm_matrix_get (golden, i, 0)), <=, 1.0e-12 + 1.0e-9 * fabs (ncm_matrix_get (golden, i, 0)));
-    g_assert_cmpfloat (fabs (dec - ncm_matrix_get (golden, i, 1)), <=, 1.0e-12 + 1.0e-9 * fabs (ncm_matrix_get (golden, i, 1)));
+    g_assert_cmpfloat (fabs (ra - ncm_matrix_get (truth, i, 0)), <=, 1.0e-12 + 1.0e-9 * fabs (ncm_matrix_get (truth, i, 0)));
+    g_assert_cmpfloat (fabs (dec - ncm_matrix_get (truth, i, 1)), <=, 1.0e-12 + 1.0e-9 * fabs (ncm_matrix_get (truth, i, 1)));
   }
 
   ncm_rng_free (rng);
-  ncm_matrix_free (golden);
+  ncm_matrix_free (truth);
   g_free (path);
   ncm_serialize_free (ser);
 }
