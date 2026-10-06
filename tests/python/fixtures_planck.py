@@ -594,9 +594,9 @@ class FixedClBoltzmann(Nc.HIPertBoltzmann):
 
     Removes the Boltzmann solve from the loop, so a likelihood's $-2\\ln L$ becomes
     a pure function of the stored spectra and the nuisance parameters. That is what
-    lets a golden reference be exact everywhere: with CLASS in the loop the value
+    lets a truth table be exact everywhere: with CLASS in the loop the value
     also tracks the Boltzmann code's grids and the compiler's floating-point
-    choices, which is what forced the real-data golden's tolerance up to 2e-2.
+    choices, which is what forced the real-data truth table's tolerance up to 2e-2.
     """
 
     def __init__(self, spectra=None, **kwargs):

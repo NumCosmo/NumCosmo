@@ -41,7 +41,7 @@ original live comparison used -- not bit-identical, since the sigma-from-
 e_rms inversion uses an independent bisection here rather than legacy's
 Newton solve on a differently rearranged (but algebraically equivalent)
 formula. The captured sequence is stored as an ``Ncm.Matrix`` binfile
-(``data/truth_tables/wl/``) rather than inline literals; see ``_load_golden``.
+(``data/truth_tables/wl/``) rather than inline literals; see ``_load_truth_table``.
 """
 
 import subprocess
@@ -158,25 +158,25 @@ def test_local_matches_global_at_equal_e_rms(ellip_conv):
         assert_allclose(integ_l.eval(z, data_l), integ_g.eval(z, data_g), rtol=1.0e-8)
 
 
-_GOLDEN_FILE = "truth_tables/wl/nc_galaxy_shape_pop_gauss_local_integ_parity.bin"
-_GOLDEN_N = 50
+_TRUTH_TABLE_FILE = "truth_tables/wl/nc_galaxy_shape_pop_gauss_local_integ_parity.bin"
+_TRUTH_TABLE_N = 50
 
 
-def _load_golden() -> np.ndarray:
+def _load_truth_table() -> np.ndarray:
     """Load the frozen per-galaxy integ() sequences as a
-    (len(_CONVS), len(_GALAXIES), 2, _GOLDEN_N) array, blocked by ellip_conv
+    (len(_CONVS), len(_GALAXIES), 2, _TRUTH_TABLE_N) array, blocked by ellip_conv
     (matching _CONVS order), then by galaxy (matching _GALAXIES order), then
     by use_lnp (False, True)."""
-    path = Ncm.cfg_get_data_filename(_GOLDEN_FILE, True)
+    path = Ncm.cfg_get_data_filename(_TRUTH_TABLE_FILE, True)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     matrix = ser.from_binfile(path)
     assert isinstance(matrix, Ncm.Matrix)
     return np.array(matrix.dup_array()).reshape(
-        len(_CONVS), len(_GALAXIES), 2, _GOLDEN_N
+        len(_CONVS), len(_GALAXIES), 2, _TRUTH_TABLE_N
     )
 
 
-_INTEG_PARITY_PER_GALAXY_FROZEN = _load_golden()
+_INTEG_PARITY_PER_GALAXY_FROZEN = _load_truth_table()
 
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)

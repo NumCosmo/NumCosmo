@@ -128,7 +128,7 @@ they are heavy or special. Gated by a `--run-*` flag (the skip logic lives in
 |--------|-------|-------------|
 | `mpi` | MPI runtime (`mpiexec`) | `--run-mpi` |
 | `app` | CLI dependencies / heavy app flows | `--run-app` |
-| `planck_data` | a local `plc_3.0` Planck tree in the NumCosmo user data directory (see `ncm_cfg_init`) | `--run-planck-data` |
+| `planck_data` | a local `plc_3.0` Planck tree in the NumCosmo user data directory (see `ncm_cfg_init`) | `--run-planck-data` (passed by the default `pytest` lane) |
 | `powspec` | power-spectrum extras | `--run-powspec` |
 | `xcor` | cross-correlation extras | `--run-xcor` |
 | `sphere_map` | sphere-map extras | `--run-sphere-map` |
@@ -422,11 +422,11 @@ converters, so the ingestion path and the native likelihoods run everywhere. Pre
 synthetic inputs whose expected result has a closed form -- with the real, opaque data
 a test can only check that a number came out.
 
-## 7. Determinism & golden data
+## 7. Determinism & truth tables
 
 - Statistical tests pin an explicit seeded RNG (a shared fixture), not the implicit
   global GSL seed. Tolerances are pinned to that seed.
-- Golden references use NumCosmo serialization into `data/truth_tables/`, loaded via
+- Truth tables use NumCosmo serialization into `data/truth_tables/`, loaded via
   `Ncm.cfg_get_data_filename` and compared with `np.testing.assert_allclose`. No byte-hash
   snapshots, no large hardcoded value arrays.
 

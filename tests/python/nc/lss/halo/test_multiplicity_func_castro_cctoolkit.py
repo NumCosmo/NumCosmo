@@ -89,8 +89,8 @@ def _load_table(name: str) -> np.ndarray:
     return np.array(matrix.dup_array()).reshape(matrix.nrows(), matrix.ncols())
 
 
-C23_GOLDEN = _load_table(_C23_TABLE)
-C25_GOLDEN = _load_table(_C25_TABLE)
+C23_TRUTH_TABLE = _load_table(_C23_TABLE)
+C25_TRUTH_TABLE = _load_table(_C25_TABLE)
 
 
 def _make_cosmo(w: float = -1.0) -> Nc.HICosmo:
@@ -136,7 +136,7 @@ def _make_psf(slope: float, cosmo: Nc.HICosmo) -> Ncm.PowspecFilter:
     return psf
 
 
-@pytest.mark.parametrize("row", C23_GOLDEN)
+@pytest.mark.parametrize("row", C23_TRUTH_TABLE)
 def test_c23_matches_cctoolkit(row: np.ndarray) -> None:
     """The 2023 calibration reproduces the CCToolkit reference to round-off."""
     finder_idx, slope, z, sigma, expected = row
@@ -148,7 +148,7 @@ def test_c23_matches_cctoolkit(row: np.ndarray) -> None:
     assert got == pytest.approx(expected, rel=RTOL)
 
 
-@pytest.mark.parametrize("row", C25_GOLDEN)
+@pytest.mark.parametrize("row", C25_TRUTH_TABLE)
 def test_c25_matches_cctoolkit(row: np.ndarray) -> None:
     """The 2025 calibration reproduces the CCToolkit reference to round-off."""
     w, slope, z, sigma, expected = row
@@ -161,7 +161,7 @@ def test_c25_matches_cctoolkit(row: np.ndarray) -> None:
     assert got == pytest.approx(expected, rel=RTOL)
 
 
-@pytest.mark.parametrize("row", C23_GOLDEN[::12])
+@pytest.mark.parametrize("row", C23_TRUTH_TABLE[::12])
 def test_c23_through_filter(row: np.ndarray) -> None:
     """Going through the filter reproduces eval_full, checking the wiring."""
     finder_idx, slope, z, sigma, expected = row
@@ -177,7 +177,7 @@ def test_c23_through_filter(row: np.ndarray) -> None:
     assert got == pytest.approx(expected, rel=RTOL_FILTER)
 
 
-@pytest.mark.parametrize("row", C25_GOLDEN[::12])
+@pytest.mark.parametrize("row", C25_TRUTH_TABLE[::12])
 def test_c25_through_filter(row: np.ndarray) -> None:
     """Going through the filter reproduces eval_full, checking the wiring."""
     w, slope, z, sigma, expected = row
@@ -214,10 +214,10 @@ def _regenerate() -> None:  # pragma: no cover - developer tool
         hmf.best_fit_values_SUBFIND,
         hmf.best_fit_values_VELOCIraptor,
     ]
-    slopes = sorted(set(C23_GOLDEN[:, 1]))
-    zs = sorted(set(C23_GOLDEN[:, 2]))
-    sigmas = sorted(set(C23_GOLDEN[:, 3]))
-    ws = sorted(set(C25_GOLDEN[:, 0]))
+    slopes = sorted(set(C23_TRUTH_TABLE[:, 1]))
+    zs = sorted(set(C23_TRUTH_TABLE[:, 2]))
+    sigmas = sorted(set(C23_TRUTH_TABLE[:, 3]))
+    ws = sorted(set(C25_TRUTH_TABLE[:, 0]))
 
     def delta_c(cosmo: Nc.HICosmo, z: float) -> float:
         om = cosmo.E2Omega_m(z) / cosmo.E2(z)

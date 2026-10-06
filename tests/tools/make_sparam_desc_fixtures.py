@@ -99,7 +99,7 @@ def describe(cosmo):
 
 def main():
     ser = Ncm.Serialize.new(0)
-    golden = {}
+    descs = {}
 
     for name, obj in CASES.items():
         ser.reset(True)
@@ -108,10 +108,10 @@ def main():
         ser.to_binfile(obj, os.path.join(OUT, f"{name}.bin"))
         ser.reset(True)
         ser.to_yaml_file(obj, os.path.join(OUT, f"{name}.yaml"))
-        golden[name] = {"type": obj.__gtype__.name, "params": describe(obj)}
+        descs[name] = {"type": obj.__gtype__.name, "params": describe(obj)}
 
     with open(os.path.join(OUT, "sparam_desc.json"), "w", encoding="utf-8") as f:
-        json.dump(golden, f, indent=2, sort_keys=True)
+        json.dump(descs, f, indent=2, sort_keys=True)
         f.write("\n")
 
 
