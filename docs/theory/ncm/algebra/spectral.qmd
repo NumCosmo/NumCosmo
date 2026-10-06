@@ -215,8 +215,8 @@ used:
   kind, with $U_n(\pm 1) = (n+1)(\pm 1)^n$ and the recurrence
   $U_{n+1} = 2s\,U_n - U_{n-1}$.
 - $\lambda = 2$: $C^{(2)}_n$, with $C^{(2)}_0 = 1$, $C^{(2)}_1 = 4s$,
-  endpoint values $C^{(2)}_n(\pm 1) = \binom{n+3}{3}(\pm 1)^n$, and the
-  recurrence
+  endpoint values $C^{(2)}_n(\pm 1) = \binom{n+3}{3}(\pm 1)^n$, with $\binom{n+3}{3} =
+  (n+1)(n+2)(n+3)/6$ the binomial coefficient, and the recurrence
   $(n+1)\,C^{(2)}_{n+1} = 2(n+2)\,s\,C^{(2)}_n - (n+3)\,C^{(2)}_{n-1}$.
 
 Conversion from the Chebyshev to the $\lambda=1$ basis uses the identity $U_n - U_{n-2}
