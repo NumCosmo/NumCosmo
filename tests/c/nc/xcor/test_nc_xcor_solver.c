@@ -270,6 +270,42 @@ test_nc_xcor_solver_solve (TestNcXcorSolver *test, gconstpointer pdata)
   nc_xcor_free (xc);
 }
 
+/* The template's ell-cache-max is an absolute multipole: a block reaching above it
+ * must abort before any integration, not be shrunk to fit. */
+static void
+test_nc_xcor_solver_cache_max_traps (TestNcXcorSolver *test, gconstpointer pdata)
+{
+  g_test_trap_subprocess ("/nc/xcor/solver/cache_max/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*reaches above the integrator's ell-cache-max (5)*");
+}
+
+static void
+test_nc_xcor_solver_cache_max (TestNcXcorSolver *test, gconstpointer pdata)
+{
+  NcmSBesselIntegrator *sbi       = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 32));
+  NcmSBesselIntegrator *small_sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new_full (0, 5, 1.0e-4, 1.0e6, 21, 5,
+                                                                                                   1.0e-13, 2, 1.0e-8));
+  NcXcorKernel *nl = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new_full (test->dist, test->ps,
+                                                                             1500.0, 300.0, 4.0, sbi));
+  NcXcor *xc = nc_xcor_new (test->dist, test->ps, NC_XCOR_METHOD_KERNEL_EXACT);
+  guint id;
+
+  nc_xcor_kernel_set_l_limber (nl, -1);
+  nc_xcor_prepare (xc, test->cosmo);
+
+  id = nc_xcor_solver_register_kernel (test->solver, nl);
+  nc_xcor_solver_request_cl (test->solver, id, id, 0, 20);
+  nc_xcor_solver_set_integrator (test->solver, small_sbi);
+  nc_xcor_solver_plan_blocks (test->solver, 8);
+  nc_xcor_solver_solve (test->solver, xc, test->cosmo);
+
+  nc_xcor_free (xc);
+  nc_xcor_kernel_free (nl);
+  ncm_sbessel_integrator_free (small_sbi);
+  ncm_sbessel_integrator_free (sbi);
+}
+
 typedef struct _TestCheck
 {
   const gchar *name;
@@ -283,6 +319,8 @@ static const TestCheck test_checks[] = {
   {"plan",           &test_nc_xcor_solver_plan          },
   {"plan/l_limber",  &test_nc_xcor_solver_plan_l_limber },
   {"solve",          &test_nc_xcor_solver_solve         },
+  {"cache_max/traps", &test_nc_xcor_solver_cache_max_traps},
+  {"cache_max/subprocess", &test_nc_xcor_solver_cache_max},
 };
 
 gint

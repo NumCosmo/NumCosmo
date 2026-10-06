@@ -145,6 +145,10 @@ struct _NcXcorSSCSij
   GPtrArray *kernels; /* element-type NcXcorKernel*, one per bin, owned refs */
   NcXcor *xcor;
 
+  /* The one integrator shared by every kernel and handed to the solver as the
+   * template of its per-block copies. */
+  NcmSBesselIntegrator *sbi;
+
   /* Built on the first prepare() and reused: the solver pins one spherical
    * Bessel factorization per ell-block for its whole life, so rebuilding it
    * per cosmology would throw away the only expensive part that is not
@@ -181,6 +185,7 @@ nc_xcor_ssc_sij_init (NcXcorSSCSij *ssc_sij)
 
   ssc_sij->kernels     = g_ptr_array_new_with_free_func ((GDestroyNotify) nc_xcor_kernel_free);
   ssc_sij->xcor        = NULL;
+  ssc_sij->sbi         = NULL;
   ssc_sij->solver      = NULL;
   ssc_sij->sij         = NULL;
   ssc_sij->ctrl        = ncm_model_ctrl_new (NULL);
@@ -318,6 +323,11 @@ _nc_xcor_ssc_sij_constructed (GObject *object)
 
   nbins = ncm_vector_len (ssc_sij->z_edges) - 1;
 
+  /* #NcXcorKernel refuses non-Limber mode unless it carries an integrator of
+   * its own, so every kernel is handed this one at construction. The solver
+   * computes with per-block copies of it, never with the kernels' reference. */
+  ssc_sij->sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, ssc_sij->block_size));
+
   for (i = 0; i < nbins; i++)
   {
     const gdouble z_lower = ncm_vector_get (ssc_sij->z_edges, i + 0);
@@ -328,14 +338,7 @@ _nc_xcor_ssc_sij_constructed (GObject *object)
       g_error ("_nc_xcor_ssc_sij_constructed: z-edges must be strictly increasing, "
                "got %.17g at index %u followed by %.17g.", z_lower, i, z_upper);
 
-    /* #NcXcorKernel refuses non-Limber mode unless it carries an integrator of
-     * its own, so one is handed over at construction. The solver ignores it --
-     * it copies its own per-block integrators -- but the kernel needs it to
-     * accept l_limber = -1. */
-    NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, ssc_sij->block_size));
-
-    kernel = NC_XCOR_KERNEL (nc_xcor_kernel_cluster_tophat_new_full (ssc_sij->dist, ssc_sij->ps, z_lower, z_upper, sbi));
-    ncm_sbessel_integrator_free (sbi);
+    kernel = NC_XCOR_KERNEL (nc_xcor_kernel_cluster_tophat_new_full (ssc_sij->dist, ssc_sij->ps, z_lower, z_upper, ssc_sij->sbi));
 
     /* The Limber approximation is meaningless at the low multipoles dominating
      * S_ij, and makes the cross spectrum of two disjoint bins vanish. */
@@ -376,6 +379,7 @@ _nc_xcor_ssc_sij_dispose (GObject *object)
   ncm_model_ctrl_clear (&ssc_sij->ctrl);
   nc_xcor_solver_clear (&ssc_sij->solver);
   nc_xcor_clear (&ssc_sij->xcor);
+  ncm_sbessel_integrator_clear (&ssc_sij->sbi);
 
   g_clear_pointer (&ssc_sij->kernels, g_ptr_array_unref);
 
@@ -860,7 +864,6 @@ _nc_xcor_ssc_sij_ensure_solver (NcXcorSSCSij *ssc_sij)
 {
   const guint nbins = ssc_sij->kernels->len;
   const guint lmax  = nc_xcor_ssc_sij_get_lmax (ssc_sij);
-  NcmSBesselIntegrator *sbi;
   guint i, j;
 
   if (ssc_sij->solver != NULL)
@@ -883,9 +886,7 @@ _nc_xcor_ssc_sij_ensure_solver (NcXcorSSCSij *ssc_sij)
       nc_xcor_solver_request_cl (ssc_sij->solver, i, j, 0, lmax);
   }
 
-  sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, ssc_sij->block_size));
-  nc_xcor_solver_set_integrator (ssc_sij->solver, sbi);
-  ncm_sbessel_integrator_free (sbi);
+  nc_xcor_solver_set_integrator (ssc_sij->solver, ssc_sij->sbi);
 
   nc_xcor_solver_plan_blocks (ssc_sij->solver, ssc_sij->block_size);
 }
