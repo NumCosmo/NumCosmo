@@ -682,11 +682,11 @@ ncm_diff_set_richardson_step (NcmDiff *diff, const gdouble rs)
  * @diff: a #NcmDiff
  * @func_prec: relative precision of the values of $f$
  *
- * Sets #NcmDiff:func-precision, a bound $s$ on the relative error of each
+ * Sets #NcmDiff:func-precision, a bound $\delta_r$ on the relative error of each
  * value of $f$ around a smooth function: $\epsilon/2$ for a correctly
  * rounded value, the tolerance of the algorithm for a value computed by one.
  * The Richardson methods scale the cancellation scale of each difference
- * quotient, computed for values correct to $\epsilon/2$, by $2s/\epsilon$.
+ * quotient, computed for values correct to $\epsilon/2$, by $2\delta_r/\epsilon$.
  * The spectral methods do not use it: their coefficient error assumes
  * values correct to $\epsilon/2$, and a larger relative scatter of the
  * values shows in the coefficient tail of the fit.
@@ -3010,8 +3010,8 @@ _ncm_diff_sc_eval_nodes (NcmDiffSCData *data, const gdouble x, const gdouble R,
 
     if (new_node)
     {
-      const gdouble t  = (2 * i == N_new - 1) ? 0.0 : cos (M_PI * i / (N_new - 1.0));
-      const gdouble xi = x + R * t;
+      const gdouble s  = (2 * i == N_new - 1) ? 0.0 : cos (M_PI * i / (N_new - 1.0));
+      const gdouble xi = x + R * s;
 
       ncm_vector_set (data->x_v, data->a, xi);
       data->f (data->x_v, y_v, data->user_data);
@@ -3035,7 +3035,7 @@ _ncm_diff_sc_eval_nodes (NcmDiffSCData *data, const gdouble x, const gdouble R,
 
 /*
  * Direct DCT-I of the node values: coeffs[c][k] such that component c is
- * sum_k coeffs[c][k] T_k(t) on the window. O(N^2) per component, negligible
+ * sum_k coeffs[c][k] T_k(s) on the window. O(N^2) per component, negligible
  * against the function evaluations for the N used here.
  */
 static void
@@ -3059,12 +3059,12 @@ _ncm_diff_sc_dct (NcmMatrix *fvals, const guint dim, const guint N, NcmMatrix *c
 
     for (k = 0; k < N; k++)
     {
-      gdouble s = 0.5 * (f_first + (((k % 2) == 0) ? f_last : -f_last));
+      gdouble sum = 0.5 * (f_first + (((k % 2) == 0) ? f_last : -f_last));
 
       for (i = 1; i < N - 1; i++)
-        s += (ncm_matrix_get (fvals, c, i) - offset) * cosm[(k * i) % two_Nm1];
+        sum += (ncm_matrix_get (fvals, c, i) - offset) * cosm[(k * i) % two_Nm1];
 
-      ncm_matrix_set (coeffs, c, k, s * (((k == 0) || (k == N - 1)) ? 1.0 : 2.0) / (N - 1.0) + ((k == 0) ? offset : 0.0));
+      ncm_matrix_set (coeffs, c, k, sum * (((k == 0) || (k == N - 1)) ? 1.0 : 2.0) / (N - 1.0) + ((k == 0) ? offset : 0.0));
     }
   }
 
@@ -3073,8 +3073,8 @@ _ncm_diff_sc_dct (NcmMatrix *fvals, const guint dim, const guint N, NcmMatrix *c
 
 /*
  * Derivative of a Chebyshev series in coefficient space: given
- * f(t) = sum_{k=0}^{n-1} c_k T_k(t), fills b with the n - 1 coefficients of
- * f'(t) in the same convention. With non-negative input the output is
+ * f(s) = sum_{k=0}^{n-1} c_k T_k(s), fills b with the n - 1 coefficients of
+ * f'(s) in the same convention. With non-negative input the output is
  * non-negative, so the same recurrence propagates error magnitudes.
  */
 static void
@@ -3090,17 +3090,17 @@ _ncm_diff_sc_cheb_deriv (const gdouble *c, const guint n, gdouble *b)
   b[0] *= 0.5;
 }
 
-/* Chebyshev series value at the window center, t = 0. */
+/* Chebyshev series value at the window center, s = 0. */
 static gdouble
 _ncm_diff_sc_eval0 (const gdouble *c, const guint n)
 {
-  gdouble s = 0.0;
+  gdouble sum = 0.0;
   guint k;
 
   for (k = 0; k < n; k += 2)
-    s += (((k % 4) == 0) ? c[k] : -c[k]);
+    sum += (((k % 4) == 0) ? c[k] : -c[k]);
 
-  return s;
+  return sum;
 }
 
 /*
