@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# test_planck_synthetic_golden.py
+# test_planck_synthetic_truth_table.py
 #
 # Fri August 29 2026
 # Copyright  2026  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# test_planck_synthetic_golden.py
+# test_planck_synthetic_truth_table.py
 # Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
@@ -22,15 +22,15 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Golden snapshot pinning the native Planck likelihood assembly, data-free.
+"""Truth table pinning the native Planck likelihood assembly, data-free.
 
-``test_planck_golden.py`` pins the same quantity against the real ``plc_3.0``
-data, which makes it a stronger physical statement and a much weaker regression
-test: it needs data no CI lane has, so it only ever runs on a developer machine,
-and with a Boltzmann solve in the loop its value tracks the Boltzmann code's
-grids and the compiler's floating-point choices as much as the code under test.
+``test_planck_truth_table.py`` pins the same quantity against the real ``plc_3.0``
+data, which makes it a stronger physical statement and a weaker regression test:
+it skips wherever the ``plc_3.0`` tree is absent, and with a Boltzmann solve in
+the loop its value tracks the Boltzmann code's grids and the compiler's
+floating-point choices as much as the code under test.
 
-This snapshot removes both limitations. The likelihoods are built from the
+This test removes both limitations. The likelihoods are built from the
 synthetic cldf trees (deterministic, seeded) and driven by #FixedClBoltzmann,
 which hands out stored spectra instead of solving anything, so ``-2\\ln L`` is a
 pure function of the committed inputs. It therefore runs in every lane on every
@@ -38,11 +38,11 @@ platform, and its tolerance can be tight enough to catch a real change in the
 assembly rather than merely a large one.
 
 What it does *not* check is the coupling to the Boltzmann code or agreement with
-clik; that is ``test_planck_golden.py``'s job.
+clik; that is ``test_planck_truth_table.py``'s job.
 
-Regenerate the reference (only when an intentional change moves the values)::
+Regenerate the truth table (only when an intentional change moves the values)::
 
-    python tests/python/nc/data/test_planck_synthetic_golden.py
+    python tests/python/nc/data/test_planck_synthetic_truth_table.py
 """
 
 import os
@@ -75,14 +75,14 @@ from numcosmo_py.experiments.planck18 import mset_set_parameters, Planck18Types
 
 Ncm.cfg_init()
 
-GOLDEN_FILE = "truth_tables/planck_synthetic_m2lnl_golden.bin"
+TRUTH_TABLE_FILE = "truth_tables/planck/m2lnl_synthetic.bin"
 # With no Boltzmann solve in the loop the only spread left is how a compiler
 # arranges the same arithmetic: all seven values come out bit-identical between
 # the -O2 and the -O0 (coverage) builds. The bound is kept a few orders above
 # that measurement to allow for other compilers, and is still seven orders
-# tighter than the real-data snapshot's -- tight enough to fail on a genuine
+# tighter than the real-data truth table's -- tight enough to fail on a genuine
 # change in the assembly rather than only on a large one.
-GOLDEN_RTOL = 1.0e-9
+TRUTH_TABLE_RTOL = 1.0e-9
 
 
 def _commander(root, pb):
@@ -115,7 +115,7 @@ def _lensing_marged(root, pb):
 
 
 # (name, builder, needs the TTTEEE nuisance model). Fixed order defines the
-# golden vector layout; append, never reorder.
+# truth-table layout; append, never reorder.
 _CASES = [
     ("commander", _commander, False),
     ("simall_eebb", _simall, False),
@@ -153,22 +153,22 @@ def _compute_all(root):
     return values
 
 
-def test_planck_synthetic_m2lnl_golden(tmp_path):
+def test_planck_synthetic_m2lnl_truth_table(tmp_path):
     """The synthetic Planck m2lnL values match the stored reference."""
-    path = Ncm.cfg_get_data_filename(GOLDEN_FILE, True)
-    golden = Ncm.Serialize.new(Ncm.SerializeOpt.NONE).from_binfile(path)
-    assert isinstance(golden, Ncm.Vector)
-    assert golden.len() == len(_KEYS)
+    path = Ncm.cfg_get_data_filename(TRUTH_TABLE_FILE, True)
+    table = Ncm.Serialize.new(Ncm.SerializeOpt.NONE).from_binfile(path)
+    assert isinstance(table, Ncm.Vector)
+    assert table.len() == len(_KEYS)
 
     values = _compute_all(tmp_path)
     for i, name in enumerate(_KEYS):
         assert values[i] == pytest.approx(
-            golden.get(i), rel=GOLDEN_RTOL
-        ), f"{name}: {values[i]} vs golden {golden.get(i)}"
+            table.get(i), rel=TRUTH_TABLE_RTOL
+        ), f"{name}: {values[i]} vs truth table {table.get(i)}"
 
 
 if __name__ == "__main__":
-    # Regenerate data/truth_tables/planck_synthetic_m2lnl_golden.bin.
+    # Regenerate data/truth_tables/planck/m2lnl_synthetic.bin.
     import os
     import tempfile
 
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     vec = Ncm.Vector.new_array(vals)
     out = os.path.abspath(
         os.path.join(
-            os.path.dirname(__file__), "..", "..", "..", "..", "data", GOLDEN_FILE
+            os.path.dirname(__file__), "..", "..", "..", "..", "data", TRUTH_TABLE_FILE
         )
     )
     Ncm.Serialize.new(Ncm.SerializeOpt.NONE).to_binfile(vec, out)
