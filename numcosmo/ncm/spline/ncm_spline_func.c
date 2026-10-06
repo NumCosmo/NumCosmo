@@ -33,7 +33,9 @@
  *
  * The adaptive types, %NCM_SPLINE_FUNCTION_SPLINE, %NCM_SPLINE_FUNCTION_SPLINE_LNKNOT and
  * %NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT, implement AutoKnots, [Vitenti et al.
- * (2025)](https://doi.org/10.1016/j.ascom.2025.100970), with the notation used there. They
+ * (2025)](https://doi.org/10.1016/j.ascom.2025.100970), with the notation used there; the
+ * closure of the settled mesh and its reason are described in
+ * <a href="../../theory/ncm/spline/spline_func.html">AutoKnots: Adaptive Knot Placement</a>. They
  * start from $\max(m, 3)$ knots uniform in $x$, $\ln x$ or $\sinh^{-1} x$, where $m$ is
  * ncm_spline_min_size(). Each round visits every interval $[x_i, x_{i+1}]$ not yet
  * accepted, evaluates $f$ at its midpoint $\overline{x}_i$ in the same variable and
