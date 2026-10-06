@@ -198,22 +198,22 @@ difference $(x+h)-x$. This keeps the point used to evaluate the function consist
 step used in the quotient. The formulas above should nevertheless be read as the error model
 used by `NcmDiff`, not as rigorous bounds for an arbitrary user function: they assume each value
 of $f$ is correct to within $\epsilon/2$ of its size, and the later Richardson weighted sum has
-no separate floating-point accumulation term. Values of relative precision $s$, stated as
-`NcmDiff:func-precision`, carry $2s/\epsilon$ times that error, and their cancellation scales
+no separate floating-point accumulation term. Values of relative precision $\delta_r$, stated as
+`NcmDiff:func-precision`, carry $2\delta_r/\epsilon$ times that error, and their cancellation scales
 are scaled by
 $$
-P_{\rm r} \equiv \frac{2s}{\epsilon}.
+P_{\rm r} \equiv \frac{2\delta_r}{\epsilon}.
 $$
 
 Some functions carry an error that does not scale with their values: one that subtracts close
 terms inside, such as $\ln(1+x)$ evaluated as written, where $1+x$ rounds to an absolute error
 of $\epsilon/2$ while $|f| \approx x$; or one computed by another algorithm run with an absolute
-tolerance. The user states that error as `NcmDiff:func-abs-precision`, $a$ (0 by default), and
-each quotient gets a second scale by the same count with $a$ in place of $\epsilon|f_k|/2$:
+tolerance. The user states that error as `NcmDiff:func-abs-precision`, $\delta_a$ (0 by default), and
+each quotient gets a second scale by the same count with $\delta_a$ in place of $\epsilon|f_k|/2$:
 $$
-\kappa^{a\prime}_{+} = \frac{2a}{|h|}, \quad
-\kappa^{a\prime}_{0} = \frac{a}{|h|}, \quad
-\kappa^{a\prime\prime}_{0} = \kappa^{a\prime\prime}_{+} = \frac{4a}{h^2}.
+\kappa^{a\prime}_{+} = \frac{2\delta_a}{|h|}, \quad
+\kappa^{a\prime}_{0} = \frac{\delta_a}{|h|}, \quad
+\kappa^{a\prime\prime}_{0} = \kappa^{a\prime\prime}_{+} = \frac{4\delta_a}{h^2}.
 $$
 
 For a Richardson row,
@@ -259,7 +259,7 @@ $$
 E_n \equiv \max\left(P_{\rm t}\Delta_n,\; C_{n-1},\; C_n\right),
 $$
 where $P_{\rm t}$ is `NcmDiff:trunc-change-ratio`, $3\times10^4$ by default. The default
-`NcmDiff:func-precision` is $s = 1.5\times10^4\epsilon \approx 3.3\times10^{-12}$, so that
+`NcmDiff:func-precision` is $\delta_r = 1.5\times10^4\epsilon \approx 3.3\times10^{-12}$, so that
 $P_{\rm r} = 3\times10^4$ as well. Thus the code combines two different pieces of information:
 disagreement between extrapolation orders, used as a truncation proxy, and the propagated
 cancellation scale of the two rows being compared. Neither makes $E_n$ a strict
@@ -272,7 +272,7 @@ ratio of consecutive leading terms (about $10^3$ in the example above). Rows tha
 that, early or on a plateau aliased with an oscillation of $f$, can have $\Delta_n < |T_n|$.
 Through the best error, $P_{\rm t}$ also sets how far the ladder continues past an agreement
 (rule 5 below), which is what lets it leave an aliased plateau. The default `func-precision`,
-$s \approx 3.3\times10^{-12}$, is the precision assumed for a function nothing is stated about;
+$\delta_r \approx 3.3\times10^{-12}$, is the precision assumed for a function nothing is stated about;
 it covers, for example, $\sin(wx)$ at $|wx|$ up to $10^4$, whose rounded argument moves the
 values by up to $10^{-12}$, and makes the estimates for a function accurate to a few ulps about
 $10^4$ times its actual error. A smaller stated precision tightens the estimates and also
@@ -558,27 +558,31 @@ $[x-R,x+R]$. On the $N$ Chebyshev--Lobatto nodes
 $$
 x_i=x+R\cos\!\left(\frac{\pi i}{N-1}\right),\qquad i=0,\ldots,N-1,
 $$
-a DCT-I gives coefficients $c_k$ such that
+a DCT-I gives coefficients $c^k$ such that
 $$
-f(x+Ru)\simeq\sum_{k=0}^{N-1}c_kT_k(u).
+f(x+Rs)\simeq\sum_{k=0}^{N-1}c^kT_k(s),
 $$
-The coefficients are differentiated recursively and evaluated at the center $u=0$; each
-derivative with respect to $u$ contributes one factor $R^{-1}$ when converted back to $x$.
+with $s \in [-1,1]$ the Chebyshev variable of the window. The coefficients are differentiated
+recursively and evaluated at the center $s=0$; each derivative with respect to $s$ contributes
+one factor $R^{-1}$ when converted back to $x$.
 
 Two quantities are propagated through the coefficient differentiation:
 
 * a **tail estimate**, obtained by taking the absolute values of the highest quarter of the
   fitted coefficients and propagating them through the Chebyshev derivative recurrence;
 * a **coefficient-rounding estimate**, which starts from
-  $\nu=\epsilon\sum_k|c_k| + 2a$ assigned to every coefficient and is propagated through the
-  same recurrence. A value carrying $\epsilon/2$ of its size moves each coefficient
-  $c_k = (2/N)\sum_j f_j T_k(x_j)$ by at most $\epsilon\max|f| \leq \epsilon\sum_k|c_k|$,
-  and one carrying the absolute precision $a$ by at most $2a$.
+  $\nu=\epsilon\sum_k|c^k| + 2\delta_a$ assigned to every coefficient and is propagated
+  through the same recurrence. Each coefficient is a weighted sum
+  $c^k = \sum_j w^k{}_j\,f_j$ of the values, the DCT-I of the
+  [Spectral Methods](../algebra/spectral.qmd) page, with $\sum_j |w^k{}_j| \leq 2$. A value
+  carrying $\epsilon/2$ of its size therefore moves each coefficient by at most
+  $\epsilon\max|f| \leq \epsilon\sum_k|c^k|$, and one carrying the absolute precision
+  $\delta_a$ by at most $2\delta_a$.
 
   The relative precision `NcmDiff:func-precision` is not used here: a relative scatter of the
   values above $\epsilon/2$ shows in the coefficient tail instead. On the test families with
   such scatter (for example $\sin(wx)$ at $|wx|$ up to $5\times10^4$) every estimate covers its
-  error with $\nu$ as above, while replacing $\epsilon$ by $2s$ at the default $s$ would raise
+  error with $\nu$ as above, while replacing $\epsilon$ by $2\delta_r$ at the default $\delta_r$ would raise
   $\nu$ by $1.5\times10^4$ and with it the floor the window search compares the coefficients
   against.
 
@@ -591,7 +595,7 @@ For choosing a window the code also forms
 $$
 q_{\rm fit} =
 \frac{\text{top-quarter coefficient mass above its noise floor}}
-     {\sum_{k\ge1}|c_k|+\text{tiny}},
+     {\sum_{k\ge1}|c^k|+\text{tiny}},
 $$
 so a resolved fit has a small fraction of its nonconstant coefficient mass in the tail.
 
@@ -600,7 +604,7 @@ so a resolved fit has a small fraction of its nonconstant coefficient mass in th
 
 ```{python}
 #| label: fig-cheb
-#| fig-cap: "Chebyshev coefficients $|c_1|$ to $|c_4|$ of $e^x$ on $[x - R, x + R]$, $x = 10^{-8}$, against $R$, from a degree-15 fit. The dashed line is $\\nu = \\epsilon \\sum_k |c_k|$, $2.2 \\times 10^{-16}$. At $R = 10^{-6}$ only $c_1$ ($10^{-6}$) and $c_2$ ($2.5 \\times 10^{-13}$) are above it; at $R = 10^{-3}$, $c_3$ ($4.2 \\times 10^{-11}$) and $c_4$ ($5.2 \\times 10^{-15}$) are too, growing as $R^k$."
+#| fig-cap: "Chebyshev coefficients $|c^1|$ to $|c^4|$ of $e^x$ on $[x - R, x + R]$, $x = 10^{-8}$, against $R$, from a degree-15 fit. The dashed line is $\\nu = \\epsilon \\sum_k |c^k|$, $2.2 \\times 10^{-16}$. At $R = 10^{-6}$ only $c^1$ ($10^{-6}$) and $c^2$ ($2.5 \\times 10^{-13}$) are above it; at $R = 10^{-3}$, $c^3$ ($4.2 \\times 10^{-11}$) and $c^4$ ($5.2 \\times 10^{-15}$) are too, growing as $R^k$."
 #| code-fold: true
 spectral = Ncm.Spectral.new()
 radii = np.logspace(-14, 0, 57)
@@ -612,7 +616,7 @@ coeffs = np.array(
 )
 fig, ax = plt.subplots(figsize=(6.4, 3.8))
 for k in range(1, 5):
-    ax.loglog(radii, np.maximum(coeffs[:, k], 1.0e-20), label=f"$|c_{k}|$")
+    ax.loglog(radii, np.maximum(coeffs[:, k], 1.0e-20), label=f"$|c^{k}|$")
 ax.loglog(radii, np.finfo(float).eps * coeffs.sum(axis=1), color="0.4", ls="--", label=r"$\nu$")
 ax.set_xlabel(r"$R$")
 ax.set_ylabel("coefficient")
@@ -625,9 +629,9 @@ plt.show()
 
 1. A five-node, degree-four probe starts at $R=\eta |x|$ (or $\eta$ at $x=0$). It grows $R$ by
    factors of 4 until the last two coefficients satisfy
-   $|c_3|+|c_4| > \max\left(16\nu,\; 10^{-3}\sum_{k\geq1}|c_k|\right)$, that is until they are
+   $|c^3|+|c^4| > \max\left(16\nu,\; 10^{-3}\sum_{k\geq1}|c^k|\right)$, that is until they are
    above the coefficient rounding and above a thousandth of the variation. If the very first
-   probe is at the rounding floor, $\sum_{k\geq1}|c_k| \leq 10^3\nu$ in some output component,
+   probe is at the rounding floor, $\sum_{k\geq1}|c^k| \leq 10^3\nu$ in some output component,
    the search jumps directly to $\eta\max(1,|x|)$, subject to the window cap.
 2. Starting from that scale, a fixed 17-node fit scans a dyadic ladder of windows. It first
    shrinks $R$, because a feature narrower than the initial window can remain unresolved even

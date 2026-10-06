@@ -1,0 +1,391 @@
+---
+title: "Spectral Operator Matrices"
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+---
+
+{{< include /_functions.qmd >}}
+
+A linear ordinary differential equation with polynomial coefficients becomes a linear
+system once its solution is expanded in Chebyshev polynomials. The method of @Olver2013
+imposes the equation in the Gegenbauer basis $C^{(2)}_k$ instead, so every term of the
+equation is a linear map from the Chebyshev coefficients of the solution to Gegenbauer
+coefficients. Three kinds of map are needed: the change of basis itself, the derivatives,
+and multiplication by low-order polynomials.
+
+This tutorial writes these maps as explicit matrices. It shows that each one is banded and
+checks that it represents the operator it is meant to represent.
+
+The notation and the formulas for every operator are on the
+[Spectral Methods](../../theory/ncm/algebra/spectral.qmd) page; this tutorial builds the
+matrices with [[numcosmo-math|NcmSpectral]] and checks them.
+
+```{python}
+#| code-fold: true
+from fractions import Fraction
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+from numcosmo_py import Ncm
+
+Ncm.cfg_init()
+
+
+def show(mat: np.ndarray) -> None:
+    """Print a matrix with its entries as fractions."""
+    cells = [[str(Fraction(v).limit_denominator(10000)) for v in row] for row in mat]
+    width = max(len(c) for row in cells for c in row)
+    for row in cells:
+        print("  ".join(c.rjust(width) for c in row))
+
+
+def gegenbauer_curve(g: np.ndarray, s: np.ndarray) -> np.ndarray:
+    """Sum the C^(2) series with coefficients g at the points s."""
+    return np.array([Ncm.Spectral.gegenbauer_alpha2_eval(list(g), x) for x in s])
+
+
+def plot_columns(mat, s, ref, cols, ref_label):
+    """Plot each column of mat as its C^(2) terms, their sum and the reference."""
+    fig, axs = plt.subplots(2, (len(cols) + 1) // 2, figsize=(9.0, 5.4), sharex=True)
+    for ax, i in zip(axs.flat, cols):
+        for k in np.flatnonzero(mat[:, i]):
+            term = np.zeros(mat.shape[0])
+            term[k] = mat[k, i]
+            ax.plot(s, gegenbauer_curve(term, s), lw=0.9, label=f"$k = {k}$")
+        ax.plot(s, ref[i], lw=3.0, color="0.7", label=ref_label)
+        ax.plot(s, gegenbauer_curve(mat[:, i], s), "--", lw=1.0, color="k", label="sum")
+        ax.set_title(f"$i = {i}$", fontsize=10)
+        ax.set_xticks([-1.0, -0.5, 0.0, 0.5, 1.0])
+        ax.legend(fontsize=7)
+    for ax in axs[-1]:
+        ax.set_xlabel("$s$")
+    plt.tight_layout()
+    plt.show()
+```
+
+## The projection {#sec-projection}
+
+A polynomial of degree less than $N$ has two expansions on the Chebyshev variable
+$s \in [-1, 1]$: one in the Chebyshev polynomials $T_i$ and one in the Gegenbauer
+polynomials $C^{(2)}_k$ defined in
+[Ultraspherical Bases](../../theory/ncm/algebra/spectral.qmd#ultraspherical-bases),
+$$
+f(s) = \sum_{i=0}^{N-1} c^i\,T_i(s) = \sum_{k=0}^{N-1} g^k\,C^{(2)}_k(s).
+$$
+Both sets are bases of the same space of polynomials, so the two coefficient vectors are
+related by a linear map,
+$$
+g^k = \sum_{i=0}^{N-1} M^k{}_i\,c^i.
+$$
+This $M$ is the projection operator. It changes the basis and leaves the function
+unchanged. [[numcosmo-math|ncm_spectral_get_proj_matrix]] returns it for a given $N$:
+
+```{python}
+N = 6
+M_proj = Ncm.Spectral.get_proj_matrix(N).to_numpy()
+show(M_proj)
+```
+
+Three properties can be read from it.
+
+- $M$ is upper triangular. $C^{(2)}_k$ has degree $k$, so $T_i$, of degree $i$, needs only
+  the $C^{(2)}_k$ with $k \le i$.
+- Row $k$ has at most three nonzero entries, in columns $k$, $k+2$ and $k+4$, so $M$ is
+  banded.
+- The nonzero entries have $i - k$ even. $T_i$ and $C^{(2)}_i$ have the parity of $i$, so
+  $T_i$ contains only the $C^{(2)}_k$ with $k$ of that parity.
+
+Column $i$ of $M$ is the image of $T_i$ itself: setting $c^j = \delta^j{}_i$ gives
+$g^k = M^k{}_i$, that is,
+$$
+T_i(s) = \sum_k M^k{}_i\,C^{(2)}_k(s).
+$$
+For $i = 2$ the column reads $T_2 = -\tfrac23\,C^{(2)}_0 + \tfrac16\,C^{(2)}_2$. With
+$C^{(2)}_0 = 1$ and $C^{(2)}_2 = 12 s^2 - 2$ this is $2 s^2 - 1$, which is $T_2$.
+
+## The columns of the projection {#sec-columns}
+
+The identity $T_i = \sum_k M^k{}_i\,C^{(2)}_k$ can be checked for every column.
+[[numcosmo-math|ncm_spectral_chebyshev_eval]] sums a Chebyshev series and
+[[numcosmo-math|ncm_spectral_gegenbauer_alpha2_eval]] sums a $C^{(2)}$ series, so both
+sides come from the library and the check uses no formula from this page. Column $i$ of
+the identity matrix is the Chebyshev coefficient vector of $T_i$, and column $i$ of $M$ is
+its image.
+
+```{python}
+s = np.linspace(-1.0, 1.0, 401)
+eye = np.eye(N)
+
+T = np.array([[Ncm.Spectral.chebyshev_eval(list(eye[:, i]), x) for x in s] for i in range(N)])
+G = np.array(
+    [[Ncm.Spectral.gegenbauer_alpha2_eval(list(M_proj[:, i]), x) for x in s] for i in range(N)]
+)
+print(f"largest difference over the {N} columns: {np.max(np.abs(G - T)):.1e}")
+```
+
+```{python}
+#| label: fig-proj-columns
+#| fig-cap: "Each panel is one column $i$ of the $N = 6$ projection matrix. The thin curves are its terms $M^k{}_i\\,C^{(2)}_k(s)$, one per nonzero entry $k$; the dashed curve is their sum and the thick gray curve is $T_i$. The sum and $T_i$ coincide; their largest difference over the six columns is $2.2 \\times 10^{-15}$. For $i = 0$ and $1$ the single term is $T_i$ itself and lies under the gray curve."
+#| code-fold: true
+plot_columns(M_proj, s, T, range(N), "$T_i$")
+```
+
+The same holds for larger $N$. The absolute difference grows with $N$ because the endpoint
+values $|C^{(2)}_k(\pm 1)| = \binom{k+3}{3} = (k+1)(k+2)(k+3)/6$, the binomial coefficient
+given in [Ultraspherical Bases](../../theory/ncm/algebra/spectral.qmd#ultraspherical-bases),
+make the terms of the sum large near the endpoints.
+The sum $\sum_k |M^k{}_i|\,C^{(2)}_k(1)$ bounds the size of those terms, since
+$|C^{(2)}_k(s)| \le C^{(2)}_k(1)$, and the difference divided by it is the rounding of the
+sum:
+
+```{python}
+for n in (6, 64):
+    M_n = Ncm.Spectral.get_proj_matrix(n).to_numpy()
+    eye_n = np.eye(n)
+    err, rel = 0.0, 0.0
+    for i in range(n):
+        diff = max(
+            abs(
+                Ncm.Spectral.gegenbauer_alpha2_eval(list(M_n[:, i]), x)
+                - Ncm.Spectral.chebyshev_eval(list(eye_n[:, i]), x)
+            )
+            for x in s
+        )
+        scale = Ncm.Spectral.gegenbauer_alpha2_eval(list(np.abs(M_n[:, i])), 1.0)
+        err, rel = max(err, diff), max(rel, diff / scale)
+    print(f"N = {n:2d}: largest difference {err:.1e}, relative to the term size {rel:.1e}")
+```
+
+## A differential operator {#sec-s2d2}
+
+A term $s^2 f''$ of an equation needs the map from the Chebyshev coefficients of $f$ to
+the $C^{(2)}$ coefficients of $s^2 f''$,
+$$
+\sum_{i=0}^{N-1} c^i\,s^2\,T_i''(s) = \sum_{k=0}^{N-1} g^k\,C^{(2)}_k(s),
+\qquad
+g^k = \sum_{i=0}^{N-1} M^k{}_i\,c^i .
+$$
+[[numcosmo-math|ncm_spectral_get_s2_d2_matrix]] returns this $M$:
+
+```{python}
+M_s2d2 = Ncm.Spectral.get_s2_d2_matrix(N).to_numpy()
+show(M_s2d2)
+```
+
+- Columns 0 and 1 are zero, since $T_0'' = T_1'' = 0$.
+- $s^2 T_i''$ is a polynomial of degree $i$ with the parity of $i$, so $M$ is upper
+  triangular with nonzero entries only where $i - k$ is even, as for the projection.
+- Row $k$ again has at most three nonzero entries, in columns $k$, $k+2$ and $k+4$.
+
+The last point is the reason for the $C^{(2)}$ basis. In the Chebyshev basis a derivative
+is not banded: the coefficient $c'^k$ of $f'$ is a sum over every $c^j$ with $j > k$ and
+$j - k$ odd ([Evaluation](../../theory/ncm/algebra/spectral.qmd#evaluation)), so each row of
+the Chebyshev derivative matrix is filled up to the last column. In the $C^{(2)}$ basis the
+second derivative is a single diagonal, $T_n'' = 2n\,C^{(2)}_{n-2}$, and multiplying by
+$s^2$ widens that diagonal to the band above.
+
+Column $i$ of $M$ is now the image of $T_i$ under $s^2\,\mathrm{d}^2/\mathrm{d}s^2$,
+$$
+s^2\,T_i''(s) = \sum_k M^k{}_i\,C^{(2)}_k(s).
+$$
+The right-hand side is summed by the library as before. The left-hand side is computed with
+NumPy's `Chebyshev` class, which differentiates and evaluates Chebyshev series on its own,
+so the check does not reuse the library's derivative maps.
+
+```{python}
+from numpy.polynomial import Chebyshev
+
+S2D2 = np.array([s**2 * Chebyshev.basis(i).deriv(2)(s) for i in range(N)])
+G = np.array([gegenbauer_curve(M_s2d2[:, i], s) for i in range(N)])
+print(f"largest difference over the {N} columns: {np.max(np.abs(G - S2D2)):.1e}")
+```
+
+```{python}
+#| label: fig-s2d2-columns
+#| fig-cap: "Columns $i = 2$ to $5$ of the $N = 6$ matrix of $s^2\\,\\mathrm{d}^2/\\mathrm{d}s^2$. The thin curves are the terms $M^k{}_i\\,C^{(2)}_k(s)$, the dashed curve is their sum and the thick gray curve is $s^2 T_i''(s)$ from NumPy. The sum and the reference coincide; their largest difference over the six columns is $8.5 \\times 10^{-14}$, against values up to $s^2 T_5''(\\pm 1) = 200$."
+#| code-fold: true
+plot_columns(M_s2d2, s, S2D2, range(2, N), "$s^2 T_i''$")
+```
+
+At $N = 64$ the values reach $s^2 T_{63}''(\pm 1) = 63^2(63^2 - 1)/3 \approx 5.2 \times 10^6$,
+and both evaluations round at their own level. At $s = \pm 1$ the exact value
+$T_i''(\pm 1) = (\pm 1)^i\, i^2 (i^2 - 1)/3$ is known, and the library's sum agrees with it
+to the rounding of a double:
+
+```{python}
+for n in (6, 64):
+    M_n = Ncm.Spectral.get_s2_d2_matrix(n).to_numpy()
+    err, rel, end = 0.0, 0.0, 0.0
+    for i in range(n):
+        ref = s**2 * Chebyshev.basis(i).deriv(2)(s)
+        diff = np.max(np.abs(gegenbauer_curve(M_n[:, i], s) - ref))
+        scale = Ncm.Spectral.gegenbauer_alpha2_eval(list(np.abs(M_n[:, i])), 1.0)
+        exact = i * i * (i * i - 1) / 3.0
+        at_one = Ncm.Spectral.gegenbauer_alpha2_eval(list(M_n[:, i]), 1.0)
+        err, rel = max(err, diff), max(rel, diff / max(scale, 1.0))
+        end = max(end, abs(at_one - exact) / max(exact, 1.0))
+    print(
+        f"N = {n:2d}: largest difference {err:.1e}, relative to the term size {rel:.1e}, "
+        f"relative error at s = 1 {end:.1e}"
+    )
+```
+
+## Operators that raise the degree {#sec-truncation}
+
+Multiplication by $s$ maps $T_i$ to $s\,T_i$, a polynomial of degree $i + 1$. Its image
+needs $C^{(2)}_{i+1}$, so column $i$ of the matrix has an entry in row $i + 1$, below the
+diagonal. [[numcosmo-math|ncm_spectral_get_s_matrix]] returns the $N \times N$ matrix:
+
+```{python}
+M_s = Ncm.Spectral.get_s_matrix(N).to_numpy()
+show(M_s)
+```
+
+Row $k$ has its nonzero entries in columns $k - 1$, $k + 1$, $k + 3$ and $k + 5$: the band
+has one diagonal below the main one. For the last column, $i = N - 1$, the entry in row
+$N$ falls outside the matrix. The column check shows it: every column reproduces $s\,T_i$
+except the last.
+
+```{python}
+for i in range(N):
+    diff = np.max(np.abs(gegenbauer_curve(M_s[:, i], s) - s * Chebyshev.basis(i)(s)))
+    print(f"column {i}: largest difference {diff:.1e}")
+```
+
+The $N \times N$ matrix is the leading block of the larger one, and the missing piece of
+the last column is the entry the larger matrix has in row $N$. Adding that term back
+closes the difference:
+
+```{python}
+M_s_big = Ncm.Spectral.get_s_matrix(N + 1).to_numpy()
+print("leading block equal:", np.array_equal(M_s_big[:N, :N], M_s))
+
+missing = np.zeros(N + 1)
+missing[N] = M_s_big[N, N - 1]
+residual = gegenbauer_curve(M_s[:, N - 1], s) + gegenbauer_curve(missing, s)
+print(f"M^{N}_{N - 1} = {Fraction(missing[N]).limit_denominator(1000)}")
+print(f"with it, largest difference {np.max(np.abs(residual - s * Chebyshev.basis(N - 1)(s))):.1e}")
+```
+
+This loses nothing in the coefficients the matrix keeps. A function with $N$ Chebyshev
+coefficients has $c^j = 0$ for $j \ge N$, so every row $k < N$ of the product is complete:
+the matrix returns the first $N$ coefficients $g^0, \dots, g^{N-1}$ of $s f$ exactly and
+drops $g^N$, the coefficient of degree $N$. For $s^2$
+([[numcosmo-math|ncm_spectral_get_s2_matrix]]) the image has degree $i + 2$ and two
+coefficients are dropped. The reference below multiplies the Chebyshev series by $s$ or
+$s^2$ with NumPy and converts the product to $C^{(2)}$ with the projection checked above:
+
+```{python}
+rng = np.random.default_rng(1)
+c = rng.normal(size=N)
+
+for name, get_matrix, factor in (
+    ("s", Ncm.Spectral.get_s_matrix, Chebyshev([0.0, 1.0])),
+    ("s^2", Ncm.Spectral.get_s2_matrix, Chebyshev([0.5, 0.0, 0.5])),
+):
+    product = (Chebyshev(c) * factor).coef
+    g_ref = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(list(product)))
+    g = get_matrix(N).to_numpy() @ c
+    print(
+        f"{name:>3}: kept rows differ by {np.max(np.abs(g - g_ref[:N])):.1e}, "
+        f"dropped coefficients {np.array2string(g_ref[N:], precision=4)}"
+    )
+```
+
+The projection and the derivative operators do not raise the degree, so their $N \times N$
+matrices drop nothing. In a solver the equation is imposed on rows $k < N$ only, so the
+dropped coefficients belong to the truncation of the expansion, not to an error in the
+operator.
+
+## Assembling an equation {#sec-assembly}
+
+The operators combine linearly, so the matrix of an equation is the sum of the matrices of
+its terms. The solver of [The Ultraspherical Spectral Solver](../../theory/ncm/specfunc/sbessel_ode_solver.qmd#discretization)
+maps a panel $[x_a, x_b]$ to $s$ by $x = m + h s$, with $m \equiv (x_a + x_b)/2$ and
+$h \equiv (x_b - x_a)/2$, and writes the spherical Bessel equation for $u = x\,w$ as
+$$
+\left[\frac{m^2}{h^2} + \frac{2m}{h}\,s + s^2\right]\frac{\mathrm{d}^2 u}{\mathrm{d}s^2}
++ \left[(m^2 - \ell(\ell+1)) + 2mh\,s + h^2 s^2\right] u
+= (m + hs)\,F(m+hs).
+$$
+Each of its six terms is one of the matrices above times a constant, and the left-hand side
+is
+$$
+L = \frac{m^2}{h^2}\,M_{\mathrm{d}^2} + \frac{2m}{h}\,M_{s\,\mathrm{d}^2} + M_{s^2\mathrm{d}^2}
+  + \big(m^2 - \ell(\ell+1)\big)\,M_{\mathrm{proj}} + 2mh\,M_{s} + h^2\,M_{s^2},
+$$
+with $M_{\mathrm{d}^2}$ from [[numcosmo-math|ncm_spectral_get_d2_matrix]] and
+$M_{s\,\mathrm{d}^2}$ from [[numcosmo-math|ncm_spectral_get_s_d2_matrix]]. The homogeneous
+equation, $F = 0$, has the solution $u = x\,j_\ell(x)$, so $L$ applied to the Chebyshev
+coefficients of $x\,j_\ell(x)$ must vanish up to rounding. The coefficients come from the
+library's adaptive fit and $j_\ell$ from [[numcosmo-math|ncm_sf_sbessel]]:
+
+```{python}
+ell, x_a, x_b = 20, 30.0, 60.0
+m, h = 0.5 * (x_a + x_b), 0.5 * (x_b - x_a)
+
+spectral = Ncm.Spectral.new()
+_, c_u = spectral.compute_chebyshev_coeffs_adaptive(
+    lambda _, x: x * Ncm.sf_sbessel(ell, x), x_a, x_b, 3, 1.0e-13, None
+)
+c_u = np.array(c_u)
+n_u = len(c_u)
+
+S = Ncm.Spectral
+L = (
+    (m**2 / h**2) * S.get_d2_matrix(n_u).to_numpy()
+    + (2.0 * m / h) * S.get_s_d2_matrix(n_u).to_numpy()
+    + S.get_s2_d2_matrix(n_u).to_numpy()
+    + (m**2 - ell * (ell + 1)) * S.get_proj_matrix(n_u).to_numpy()
+    + 2.0 * m * h * S.get_s_matrix(n_u).to_numpy()
+    + h**2 * S.get_s2_matrix(n_u).to_numpy()
+)
+
+offsets = [np.flatnonzero(L[k]) - k for k in range(n_u)]
+print(f"N = {n_u}, band from {min(o.min() for o in offsets)} to {max(o.max() for o in offsets)}")
+
+residual = L @ c_u
+term_size = np.abs(L) @ np.abs(c_u)
+print(f"largest |L c| = {np.max(np.abs(residual)):.1e}, largest term {term_size.max():.1e}")
+```
+
+The band runs from two diagonals below the main one to six above, the width the solver page
+states for this operator. Every component of $L\,c$ is at most $10^{-12}$, and
+@fig-assembly shows where that comes from. In the first rows the terms are of order $10^2$
+and cancel to about $10^{-15}$ of their size. Past row 40 the fitted coefficients are
+rounding noise, below $10^{-15}$ of the largest, and $L$, with entries up to
+$2.4 \times 10^3$, carries that noise into $L\,c$ without cancellation. What remains is the
+rounding of the fit and of the sums: $L$ annihilates $x\,j_\ell$ to that level.
+
+```{python}
+#| label: fig-assembly
+#| fig-cap: "Each row $k$ of $L\\,c$ for $u = x\\,j_{20}(x)$ on $[30, 60]$: the component $|(L\\,c)^k|$, the size of the terms that sum to it, $\\sum_i |L^k{}_i|\\,|c^i|$, and $\\epsilon$ times that size (dashed). In the first rows the component is at $\\epsilon$ times the term size: terms of order $10^2$ cancel. Past $k \\approx 40$ the fitted coefficients are rounding noise and the component equals the term size, about $10^{-12}$."
+#| code-fold: true
+fig, ax = plt.subplots(figsize=(6.4, 3.8))
+ax.semilogy(np.abs(residual), ".", ms=3, label=r"$|(L\,c)^k|$")
+ax.semilogy(term_size, lw=1.0, label=r"$\sum_i |L^k{}_i|\,|c^i|$")
+ax.semilogy(np.finfo(float).eps * term_size, "--", lw=1.0, color="0.5", label=r"$\epsilon \times$ term size")
+ax.set_xlabel("row $k$")
+ax.legend(fontsize=8)
+plt.tight_layout()
+plt.show()
+```
+
+[[numcosmo-math|NcmSBesselOdeSolver]] builds the same rows without forming the six
+matrices: it adds each term into a row buffer with the row builders, such as
+[[numcosmo-math|ncm_spectral_compute_s2_d2_row]]. The operator it creates returns its
+matrix with the two constraint rows on top, and the rows below them are $L$:
+
+```{python}
+solver = Ncm.SBesselOdeSolver.new()
+op = solver.create_operator(x_a, x_b, ell, ell)
+A = op.get_matrix(n_u).to_numpy()
+diff = np.max(np.abs(A[2:] - L[: n_u - 2]))
+print(f"solver rows 2 to {n_u - 1} against L: largest difference {diff:.1e}, largest entry {np.max(np.abs(L)):.1e}")
+```

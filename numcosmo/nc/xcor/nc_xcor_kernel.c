@@ -832,22 +832,22 @@ _cheb_integrand_find_panel (const ChebIntegrandData *cid, const gdouble k)
  * not evaluate at all, it works on the coefficients.
  */
 static gdouble
-_cheb_panel_eval_one (const ChebPanel *panel, guint comp, const gdouble t)
+_cheb_panel_eval_one (const ChebPanel *panel, guint comp, const gdouble s)
 {
-  const gdouble two_t = 2.0 * t;
+  const gdouble two_s = 2.0 * s;
   gdouble b_1         = 0.0;
   gdouble b_2         = 0.0;
   gint n;
 
   for (n = (gint) panel->N - 1; n >= 1; n--)
   {
-    const gdouble b_0 = two_t * b_1 - b_2 + ncm_matrix_get (panel->coeffs, comp, n);
+    const gdouble b_0 = two_s * b_1 - b_2 + ncm_matrix_get (panel->coeffs, comp, n);
 
     b_2 = b_1;
     b_1 = b_0;
   }
 
-  return t * b_1 - b_2 + ncm_matrix_get (panel->coeffs, comp, 0);
+  return s * b_1 - b_2 + ncm_matrix_get (panel->coeffs, comp, 0);
 }
 
 static void
@@ -855,11 +855,11 @@ _cheb_integrand_eval (gpointer data, gdouble k, gdouble *W)
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
   const ChebPanel *panel = _cheb_integrand_find_panel (cid, k);
-  const gdouble t        = ncm_spectral_x_to_t (panel->a, panel->b, k);
+  const gdouble s        = ncm_spectral_x_to_s (panel->a, panel->b, k);
   guint i;
 
   for (i = 0; i < cid->len; i++)
-    W[i] = _cheb_panel_eval_one (panel, i, t);
+    W[i] = _cheb_panel_eval_one (panel, i, s);
 }
 
 static void
@@ -867,11 +867,11 @@ _cheb_integrand_eval_comps (gpointer data, gdouble k, guint offset, guint len, g
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
   const ChebPanel *panel = _cheb_integrand_find_panel (cid, k);
-  const gdouble t        = ncm_spectral_x_to_t (panel->a, panel->b, k);
+  const gdouble s        = ncm_spectral_x_to_s (panel->a, panel->b, k);
   guint i;
 
   for (i = 0; i < len; i++)
-    W[offset + i] = _cheb_panel_eval_one (panel, offset + i, t);
+    W[offset + i] = _cheb_panel_eval_one (panel, offset + i, s);
 }
 
 static void
@@ -1843,13 +1843,13 @@ _nc_xcor_kernel_cheb_panel_matches_samples (const ChebPanel *panel, NcmFunctionS
     if ((x > panel->a) && (x < panel->b))
     {
       NcmVector *y    = ncm_function_sample_set_iter_get_y (iter);
-      const gdouble t = ncm_spectral_x_to_t (panel->a, panel->b, x);
+      const gdouble s = ncm_spectral_x_to_s (panel->a, panel->b, x);
       guint c;
 
       for (c = 0; c < n_l; c++)
       {
         const gdouble yc  = ncm_vector_get (y, c);
-        const gdouble fit = _cheb_panel_eval_one (panel, c, t);
+        const gdouble fit = _cheb_panel_eval_one (panel, c, s);
 
         if (fabs (fit - yc) > 10.0 * (reltol * fabs (yc) + abstol))
         {

@@ -60,62 +60,62 @@ typedef void (*NcmSpectralFBatch) (gpointer user_data, gdouble x, NcmVector *y);
 G_DECLARE_FINAL_TYPE (NcmSpectral, ncm_spectral, NCM, SPECTRAL, GObject)
 
 NcmSpectral *ncm_spectral_new (void);
-NcmSpectral *ncm_spectral_new_with_max_order (guint max_order);
+NcmSpectral *ncm_spectral_new_with_max_level (guint max_level);
 NcmSpectral *ncm_spectral_ref (NcmSpectral *spectral);
 
 void ncm_spectral_free (NcmSpectral *spectral);
 void ncm_spectral_clear (NcmSpectral **spectral);
 
-void ncm_spectral_set_max_order (NcmSpectral *spectral, guint max_order);
-guint ncm_spectral_get_max_order (NcmSpectral *spectral);
+void ncm_spectral_set_max_level (NcmSpectral *spectral, guint max_level);
+guint ncm_spectral_get_max_level (NcmSpectral *spectral);
 
 void ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint order, GArray **coeffs, gpointer user_data);
-guint ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble tol, GArray **coeffs, gpointer user_data);
-guint ncm_spectral_compute_chebyshev_coeffs_adaptive_full (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble reltol, gdouble abstol, GArray **coeffs, gpointer user_data);
-guint ncm_spectral_compute_chebyshev_coeffs_adaptive_try (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, guint k_cap, gdouble reltol, gdouble abstol, GArray **coeffs, gpointer user_data, gboolean *converged);
+guint ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint level_min, gdouble tol, GArray **coeffs, gpointer user_data);
+guint ncm_spectral_compute_chebyshev_coeffs_adaptive_full (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint level_min, gdouble reltol, gdouble abstol, GArray **coeffs, gpointer user_data);
+guint ncm_spectral_compute_chebyshev_coeffs_adaptive_try (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint level_min, guint level_cap, gdouble reltol, gdouble abstol, GArray **coeffs, gpointer user_data, gboolean *converged);
 
-guint ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, NcmSpectralFBatch F, guint n_comp, gdouble a, gdouble b, guint k_min, gdouble reltol, gdouble abstol, NcmMatrix **coeffs, gpointer user_data);
-guint ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral, NcmSpectralFBatch F, guint n_comp, gdouble a, gdouble b, guint k_min, guint k_cap, gdouble reltol, gdouble abstol, gboolean fatal, NcmMatrix **coeffs, gpointer user_data);
+guint ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, NcmSpectralFBatch F, guint n_comp, gdouble a, gdouble b, guint level_min, gdouble reltol, gdouble abstol, NcmMatrix **coeffs, gpointer user_data);
+guint ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral, NcmSpectralFBatch F, guint n_comp, gdouble a, gdouble b, guint level_min, guint level_cap, gdouble reltol, gdouble abstol, gboolean fatal, NcmMatrix **coeffs, gpointer user_data);
 
 void ncm_spectral_chebT_to_gegenbauer_alpha1 (GArray *c, GArray **g);
 void ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g);
 void ncm_spectral_chebT_deriv_to_gegenbauer_alpha2 (GArray *c, GArray **g);
 void ncm_spectral_chebT_deriv2_to_gegenbauer_alpha2 (GArray *c, GArray **g);
-void ncm_spectral_gegenbauer_alpha2_xmul (GArray *g, gdouble alpha, gdouble beta, GArray **out);
+void ncm_spectral_gegenbauer_alpha2_mul_affine (GArray *g, gdouble alpha, gdouble beta, GArray **out);
 
 gdouble ncm_spectral_chebyshev_rebase (NcmSpectral *spectral, GArray *c, guint len, gdouble a_in, gdouble b_in, gdouble a_out, gdouble b_out, GArray **rebased);
 
-gdouble ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble t);
-gdouble ncm_spectral_gegenbauer_alpha1_eval_x (GArray *c, gdouble a, gdouble b, gdouble x);
-gdouble ncm_spectral_gegenbauer_alpha2_eval (GArray *c, gdouble t);
-gdouble ncm_spectral_gegenbauer_alpha2_eval_x (GArray *c, gdouble a, gdouble b, gdouble x);
+gdouble ncm_spectral_gegenbauer_alpha1_eval (GArray *g, gdouble s);
+gdouble ncm_spectral_gegenbauer_alpha1_eval_x (GArray *g, gdouble a, gdouble b, gdouble x);
+gdouble ncm_spectral_gegenbauer_alpha2_eval (GArray *g, gdouble s);
+gdouble ncm_spectral_gegenbauer_alpha2_eval_x (GArray *g, gdouble a, gdouble b, gdouble x);
 
-gdouble ncm_spectral_chebyshev_eval (GArray *a, gdouble t);
-gdouble ncm_spectral_chebyshev_eval_x (GArray *a, gdouble a_v, gdouble b, gdouble x);
-gdouble ncm_spectral_chebyshev_deriv (GArray *a, gdouble t);
-gdouble ncm_spectral_chebyshev_deriv_x (GArray *a, gdouble a_v, gdouble b, gdouble x);
-gdouble ncm_spectral_chebyshev_integrate (GArray *a, gdouble a_v, gdouble b);
+gdouble ncm_spectral_chebyshev_eval (GArray *c, gdouble s);
+gdouble ncm_spectral_chebyshev_eval_x (GArray *c, gdouble a, gdouble b, gdouble x);
+gdouble ncm_spectral_chebyshev_deriv (GArray *c, gdouble s);
+gdouble ncm_spectral_chebyshev_deriv_x (GArray *c, gdouble a, gdouble b, gdouble x);
+gdouble ncm_spectral_chebyshev_integrate (GArray *c, gdouble a, gdouble b);
 
-NCM_INLINE gdouble ncm_spectral_x_to_t (gdouble a, gdouble b, gdouble x);
-NCM_INLINE gdouble ncm_spectral_t_to_x (gdouble a, gdouble b, gdouble t);
+NCM_INLINE gdouble ncm_spectral_x_to_s (gdouble a, gdouble b, gdouble x);
+NCM_INLINE gdouble ncm_spectral_s_to_x (gdouble a, gdouble b, gdouble s);
 
 NcmMatrix *ncm_spectral_get_proj_matrix (guint N);
-NcmMatrix *ncm_spectral_get_x_matrix (guint N);
-NcmMatrix *ncm_spectral_get_x2_matrix (guint N);
+NcmMatrix *ncm_spectral_get_s_matrix (guint N);
+NcmMatrix *ncm_spectral_get_s2_matrix (guint N);
 NcmMatrix *ncm_spectral_get_d_matrix (guint N);
-NcmMatrix *ncm_spectral_get_x_d_matrix (guint N);
+NcmMatrix *ncm_spectral_get_s_d_matrix (guint N);
 NcmMatrix *ncm_spectral_get_d2_matrix (guint N);
-NcmMatrix *ncm_spectral_get_x_d2_matrix (guint N);
-NcmMatrix *ncm_spectral_get_x2_d2_matrix (guint N);
+NcmMatrix *ncm_spectral_get_s_d2_matrix (guint N);
+NcmMatrix *ncm_spectral_get_s2_d2_matrix (guint N);
 
 NCM_INLINE void ncm_spectral_compute_proj_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
-NCM_INLINE void ncm_spectral_compute_x_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
-NCM_INLINE void ncm_spectral_compute_x2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
+NCM_INLINE void ncm_spectral_compute_s_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
+NCM_INLINE void ncm_spectral_compute_s2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
 NCM_INLINE void ncm_spectral_compute_d_row (gdouble * restrict row_data, glong offset, gdouble coeff);
-NCM_INLINE void ncm_spectral_compute_x_d_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
+NCM_INLINE void ncm_spectral_compute_s_d_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
 NCM_INLINE void ncm_spectral_compute_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
-NCM_INLINE void ncm_spectral_compute_x_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
-NCM_INLINE void ncm_spectral_compute_x2_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
+NCM_INLINE void ncm_spectral_compute_s_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
+NCM_INLINE void ncm_spectral_compute_s2_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
 
 G_END_DECLS
 
@@ -131,15 +131,15 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 NCM_INLINE gdouble
-ncm_spectral_x_to_t (gdouble a, gdouble b, gdouble x)
+ncm_spectral_x_to_s (gdouble a, gdouble b, gdouble x)
 {
   return (2.0 * x - (a + b)) / (b - a);
 }
 
 NCM_INLINE gdouble
-ncm_spectral_t_to_x (gdouble a, gdouble b, gdouble t)
+ncm_spectral_s_to_x (gdouble a, gdouble b, gdouble s)
 {
-  return 0.5 * ((b - a) * t + (a + b));
+  return 0.5 * ((b - a) * s + (a + b));
 }
 
 NCM_INLINE void
@@ -162,7 +162,7 @@ ncm_spectral_compute_proj_row (gdouble * restrict row_data, glong k, glong offse
 }
 
 NCM_INLINE void
-ncm_spectral_compute_x_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
+ncm_spectral_compute_s_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
 {
   const gdouble kd = (gdouble) k;
 
@@ -182,7 +182,7 @@ ncm_spectral_compute_x_row (gdouble * restrict row_data, glong k, glong offset, 
 }
 
 NCM_INLINE void
-ncm_spectral_compute_x2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
+ncm_spectral_compute_s2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
 {
   const gdouble kd  = (gdouble) k;
   const gdouble kp2 = kd + 2.0;
@@ -221,7 +221,7 @@ ncm_spectral_compute_d_row (gdouble * restrict row_data, glong offset, gdouble c
 }
 
 NCM_INLINE void
-ncm_spectral_compute_x_d_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
+ncm_spectral_compute_s_d_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
 {
   const gdouble kd = (gdouble) k;
 
@@ -244,7 +244,7 @@ ncm_spectral_compute_d2_row (gdouble * restrict row_data, glong k, glong offset,
 }
 
 NCM_INLINE void
-ncm_spectral_compute_x_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
+ncm_spectral_compute_s_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
 {
   const gdouble kd = (gdouble) k;
 
@@ -254,7 +254,7 @@ ncm_spectral_compute_x_d2_row (gdouble * restrict row_data, glong k, glong offse
 }
 
 NCM_INLINE void
-ncm_spectral_compute_x2_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
+ncm_spectral_compute_s2_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
 {
   const gdouble kd  = (gdouble) k;
   const gdouble kp2 = kd + 2.0;

@@ -625,9 +625,10 @@ either can be selected for a whole computation through
 Cubic spline. The domain is refined by inserting midpoints where an out-of-sample
 test fails: a not-a-knot cubic spline is built from the accepted points only,
 evaluated at the candidate, and the candidate is accepted when
-$\|f - s\|_2 \le \epsilon_r \|f\|_2 + \epsilon_a\, W_{\max}$ in the norm over the
-block, with $W_{\max}$ the smallest of the block's per-multipole peaks. The two
-tolerances add, so the larger one decides where refinement stops. Once every
+$\|f - f_{\rm spl}\|_2 \le \epsilon_r \|f\|_2 + \epsilon_a\, W_{\max}$ in the norm over
+the block, with $f_{\rm spl}$ the spline's value at the candidate and $W_{\max}$ the
+smallest of the block's per-multipole peaks. The two tolerances add, so the larger one
+decides where refinement stops. Once every
 interval has passed, the settled set is closed as in
 [AutoKnots: Adaptive Knot Placement](../spline/spline_func.qmd): an interval wider
 than the mean of its two neighbors is tested once at its midpoint, a failure also
@@ -767,25 +768,26 @@ Two splines. The cell integrand is $k^2$ times two cubics, degree 8, and
 five-point Gauss--Legendre is exact through degree 9. Both closures are
 evaluated at the five nodes of each cell; the sum is the integral.
 
-Two Chebyshev panels. On a cell $[k_a, k_b]$ with $k = m + h t$, each
+Two Chebyshev panels. On a cell $[k_a, k_b]$ with $k = m + h s$, each
 closure's panel polynomial is restricted to the cell by the affine change of
 variable, which is a change of basis and exact. Write the restrictions as
-$W^X = \sum_i a_i T_i(t)$ and $W^Y = \sum_j b_j T_j(t)$. The weight is a
+$W^X = \sum_i c^i(W^X)\, T_i(s)$ and $W^Y = \sum_j c^j(W^Y)\, T_j(s)$. The weight is a
 degree-two series in the cell's own variable,
 $$
 k^2 = \Big(m^2 + \tfrac{h^2}{2}\Big) T_0 + 2mh\, T_1 + \tfrac{h^2}{2}\, T_2 ,
 $$
 and it is folded into one side with the product rule $T_p T_j = \tfrac12
-(T_{p+j} + T_{|p-j|})$, giving $\tilde b_j$ with two more terms. The cell
+(T_{p+j} + T_{|p-j|})$, giving the coefficients $c^j(k^2 W^Y)$, two more than those of
+$W^Y$. The cell
 integral is then the bilinear form
 $$
 \int_{k_a}^{k_b} \mathrm{d}k\; k^2 W^X W^Y
- = h \sum_{i}\sum_{j} a_i\, \tilde b_j \int_{-1}^{1} T_i T_j\, \mathrm{d}t,
+ = h \sum_{i}\sum_{j} c^i(W^X)\, c^j(k^2 W^Y) \int_{-1}^{1} T_i T_j\, \mathrm{d}s,
 \qquad
-\int_{-1}^{1} T_i T_j\, \mathrm{d}t = \frac{1}{1-(i+j)^2} + \frac{1}{1-(i-j)^2}
+\int_{-1}^{1} T_i T_j\, \mathrm{d}s = \frac{1}{1-(i+j)^2} + \frac{1}{1-(i-j)^2}
 \tag{9}
 $$
-for $i+j$ even and zero otherwise, from $\int_{-1}^{1} T_n = 2/(1-n^2)$ for
+for $i+j$ even and zero otherwise, from $\int_{-1}^{1} T_n\,\mathrm{d}s = 2/(1-n^2)$ for
 even $n$. The form is $O(N^2)$ per cell with $N \le 33$; it is affordable
 because the panels bound $N$.
 

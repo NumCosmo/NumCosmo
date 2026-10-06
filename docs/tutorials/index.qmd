@@ -20,4 +20,5 @@ Tutorials cover complete workflows. For short API examples, see
 - [Halo Catalog Mock](python/halo_catalog_mock.qmd) --- mock halo, cluster and member catalogs.
 - [Sky Match](python/sky_match.qmd) --- matching observations to simulations by sky position.
 - [Sky Match by Membership](python/sky_match_id.qmd) --- matching by shared membership identifiers.
+- [Spectral Operator Matrices](python/spectral_operators.qmd) --- the Chebyshev-to-Gegenbauer operator matrices, their band structure, and checks that they act as stated.
 - [Angular Power Spectrum Accuracy](python/xcor_accuracy.qmd) --- choosing the tolerances that control a non-Limber $C_\ell$, and reading the error it reports.

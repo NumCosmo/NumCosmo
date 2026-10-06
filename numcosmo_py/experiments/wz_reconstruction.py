@@ -94,9 +94,9 @@ class TruncatedBasisSampler:
         """Basis matrix ``phi_k(x)`` with shape ``(len(x), n_modes)``."""
         x = np.asarray(x, dtype=float)
         if self.basis is BasisType.CHEBYSHEV:
-            u = 2.0 * (x - self.x_min) / (self.x_max - self.x_min) - 1.0
+            s = 2.0 * (x - self.x_min) / (self.x_max - self.x_min) - 1.0
             # chebvander gives T_0..T_{n_modes}; drop the constant T_0.
-            return np.polynomial.chebyshev.chebvander(u, self.n_modes)[:, 1:]
+            return np.polynomial.chebyshev.chebvander(s, self.n_modes)[:, 1:]
         # Fourier: sine modes vanishing at the endpoints.
         t = (x - self.x_min) / (self.x_max - self.x_min)
         k = np.arange(1, self.n_modes + 1, dtype=float)
