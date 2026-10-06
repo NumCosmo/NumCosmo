@@ -1212,8 +1212,8 @@ _ncm_sbessel_create_row_bc_at_p1 (NcmSBesselOdeOperator *op, NcmSBesselOdeSolver
  *
  * Creates row @row_index of the mapped operator
  * $$
- * L = \frac{(m+ht)^2}{h^2}\frac{d^2}{dt^2}
- *       +(m+ht)^2-\ell(\ell+1)
+ * L = \frac{(m+hs)^2}{h^2}\frac{d^2}{ds^2}
+ *       +(m+hs)^2-\ell(\ell+1)
  * $$
  * in the $C^{(2)}$ coefficient basis.
  *
@@ -1236,12 +1236,12 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeOperator *op, NcmSBesselOdeSolver
   /* Compute offset once for all operators */
   const glong offset = k - row->col_index;
 
-  /* Second derivative term: (m^2/h^2) d^2 + (2m/h) x d^2 + x^2 d^2 */
+  /* Second derivative term: (m^2/h^2) d^2 + (2m/h) s d^2 + s^2 d^2 */
   ncm_spectral_compute_d2_row (row_data, k, offset, m2 / h2);
   ncm_spectral_compute_s_d2_row (row_data, k, offset, 2.0 * m / h);
   ncm_spectral_compute_s2_d2_row (row_data, k, offset, 1.0);
 
-  /* Identity term: (m^2 - ell(ell+1)) I + 2m h t + h^2 t^2 */
+  /* Identity term: (m^2 - ell(ell+1)) I + 2m h s + h^2 s^2 */
   ncm_spectral_compute_proj_row (row_data, k, offset, m2 - llp1);
   ncm_spectral_compute_s_row (row_data, k, offset, 2.0 * m * h);
   ncm_spectral_compute_s2_row (row_data, k, offset, h2);
@@ -1259,8 +1259,8 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeOperator *op, NcmSBesselOdeSolver
  * optimized incremental algorithm. The key insight is that operator rows for
  * consecutive ell values differ only in the ell(ell+1) term:
  *
- * - All derivative operators ($d^2$, $t\,d^2$, $t^2 d^2$) are ell-independent
- * - Identity terms ($x$, $x^2$) are ell-independent
+ * - All derivative operators ($d^2$, $s\,d^2$, $s^2 d^2$) are ell-independent
+ * - Multiplication terms ($s$, $s^2$) are ell-independent
  * - Only the projection term $m^2 - \ell(\ell+1)$ depends on ell
  *
  * The optimization uses the recurrence $(\ell+1)(\ell+2) - \ell(\ell+1) = 2(\ell+1)$,
@@ -1292,12 +1292,12 @@ _ncm_sbessel_create_row_operator_batched (NcmSBesselOdeOperator *op, NcmSBesselO
   /* Compute offset once */
   const glong offset = k - row[0].col_index;
 
-  /* Second derivative term: (m^2/h^2) d^2 + (2m/h) x d^2 + x^2 d^2 - ell-independent */
+  /* Second derivative term: (m^2/h^2) d^2 + (2m/h) s d^2 + s^2 d^2 - ell-independent */
   ncm_spectral_compute_d2_row (row[0].data, k, offset, m2 / h2);
   ncm_spectral_compute_s_d2_row (row[0].data, k, offset, 2.0 * m / h);
   ncm_spectral_compute_s2_d2_row (row[0].data, k, offset, 1.0);
 
-  /* Identity term: 2m h x + h^2 x^2 - ell-independent part */
+  /* Identity term: 2m h s + h^2 s^2 - ell-independent part */
   ncm_spectral_compute_s_row (row[0].data, k, offset, 2.0 * m * h);
   ncm_spectral_compute_s2_row (row[0].data, k, offset, h2);
 
@@ -2165,8 +2165,8 @@ _ncm_sbessel_ode_solver_compute_endpoints (NcmSBesselOdeOperator *op, glong n_co
     acc_bc_at_p1 += _ncm_sbessel_bc_pat2 (op, row) * c_k;
 
     /* Accumulate derivative contributions:
-     * dy/dt|_{t=-1} = sum_k k^2 * (-1)^(k+1) * c_k
-     * dy/dt|_{t=+1} = sum_k k^2 * c_k
+     * du/ds|_{s=-1} = sum_k k^2 * (-1)^(k+1) * c_k
+     * du/ds|_{s=+1} = sum_k k^2 * c_k
      */
     deriv_at_m1    += k_squared * (-row_sign) * c_k; /* u'(-1) */
     deriv_at_p1    += k_squared * c_k;               /* u'(+1) */
@@ -2631,8 +2631,8 @@ _ncm_sbessel_ode_operator_compute_endpoints_batched (NcmSBesselOdeOperator *op, 
       op->acc_bc_at_p1[l_idx] += _ncm_sbessel_bc_pat2 (op, row) * c_k;
 
       /* Accumulate derivative contributions:
-       * du/dt|_{t=-1} = sum_k k^2 * (-1)^(k+1) * c_k
-       * du/dt|_{t=+1} = sum_k k^2 * c_k
+       * du/ds|_{s=-1} = sum_k k^2 * (-1)^(k+1) * c_k
+       * du/ds|_{s=+1} = sum_k k^2 * c_k
        */
       endp_data[l_idx * 3 + 0] += k_squared * (-row_sign) * c_k; /* u'(-1) */
       endp_data[l_idx * 3 + 1] += k_squared * c_k;               /* u'(+1) */
@@ -2657,7 +2657,7 @@ static inline __attribute__ ((always_inline)) void
 
 _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
                                                   glong n_cols, const guint n_ell,
-                                                  gdouble t0, gdouble t1,
+                                                  gdouble s0, gdouble s1,
                                                   GArray *values)
 {
   const gdouble h       = op->half_len;
@@ -2672,7 +2672,7 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
   g_assert_cmpuint (ring_size, <=, G_MAXSIZE - 4 * (gsize) n_cols);
 
   /* The first ring_size entries hold the circular back-substitution buffer;
-   * the remaining entries hold [T_k(t0), T'_k(t0), T_k(t1), T'_k(t1)]. */
+   * the remaining entries hold [T_k(s0), T'_k(s0), T_k(s1), T'_k(s1)]. */
   _ensure_solution_batched_capacity (op, ring_size + 4 * (gsize) n_cols);
   memset (op->solution_batched, 0, ring_size * sizeof (gdouble));
   weights = op->solution_batched + ring_size;
@@ -2684,9 +2684,9 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
 
   if (n_cols > 1)
   {
-    weights[4] = t0;
+    weights[4] = s0;
     weights[5] = 1.0;
-    weights[6] = t1;
+    weights[6] = s1;
     weights[7] = 1.0;
   }
 
@@ -2696,10 +2696,10 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
     const gsize im1 = i - 4;
     const gsize im2 = i - 8;
 
-    weights[i + 0] = 2.0 * t0 * weights[im1 + 0] - weights[im2 + 0];
-    weights[i + 1] = 2.0 * weights[im1 + 0] + 2.0 * t0 * weights[im1 + 1] - weights[im2 + 1];
-    weights[i + 2] = 2.0 * t1 * weights[im1 + 2] - weights[im2 + 2];
-    weights[i + 3] = 2.0 * weights[im1 + 2] + 2.0 * t1 * weights[im1 + 3] - weights[im2 + 3];
+    weights[i + 0] = 2.0 * s0 * weights[im1 + 0] - weights[im2 + 0];
+    weights[i + 1] = 2.0 * weights[im1 + 0] + 2.0 * s0 * weights[im1 + 1] - weights[im2 + 1];
+    weights[i + 2] = 2.0 * s1 * weights[im1 + 2] - weights[im2 + 2];
+    weights[i + 3] = 2.0 * weights[im1 + 2] + 2.0 * s1 * weights[im1 + 3] - weights[im2 + 3];
   }
 
   g_array_set_size (values, 4 * n_ell);
@@ -2832,12 +2832,12 @@ static inline __attribute__ ((always_inline)) void
 
 _ncm_sbessel_ode_operator_solve_values_batched_internal (NcmSBesselOdeOperator *op,
                                                          GArray *rhs, const guint n_ell,
-                                                         gdouble t0, gdouble t1,
+                                                         gdouble s0, gdouble s1,
                                                          GArray *values)
 {
   const glong n_cols = _ncm_sbessel_ode_operator_factorize_batched (op, n_ell, rhs);
 
-  _ncm_sbessel_ode_operator_compute_values_batched (op, n_cols, n_ell, t0, t1, values);
+  _ncm_sbessel_ode_operator_compute_values_batched (op, n_cols, n_ell, s0, s1, values);
 }
 
 /* Specialized batched solvers for common sizes - enables better compiler optimizations */
@@ -2912,33 +2912,33 @@ _ncm_sbessel_ode_operator_solve_endpoints_batched_32 (NcmSBesselOdeOperator *op,
 /* Arbitrary-point computations */
 
 static void
-_ncm_sbessel_ode_operator_solve_values_batched_2 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble t0, gdouble t1, GArray *values)
+_ncm_sbessel_ode_operator_solve_values_batched_2 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble s0, gdouble s1, GArray *values)
 {
-  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 2, t0, t1, values);
+  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 2, s0, s1, values);
 }
 
 static void
-_ncm_sbessel_ode_operator_solve_values_batched_4 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble t0, gdouble t1, GArray *values)
+_ncm_sbessel_ode_operator_solve_values_batched_4 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble s0, gdouble s1, GArray *values)
 {
-  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 4, t0, t1, values);
+  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 4, s0, s1, values);
 }
 
 static void
-_ncm_sbessel_ode_operator_solve_values_batched_8 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble t0, gdouble t1, GArray *values)
+_ncm_sbessel_ode_operator_solve_values_batched_8 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble s0, gdouble s1, GArray *values)
 {
-  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 8, t0, t1, values);
+  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 8, s0, s1, values);
 }
 
 static void
-_ncm_sbessel_ode_operator_solve_values_batched_16 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble t0, gdouble t1, GArray *values)
+_ncm_sbessel_ode_operator_solve_values_batched_16 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble s0, gdouble s1, GArray *values)
 {
-  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 16, t0, t1, values);
+  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 16, s0, s1, values);
 }
 
 static void
-_ncm_sbessel_ode_operator_solve_values_batched_32 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble t0, gdouble t1, GArray *values)
+_ncm_sbessel_ode_operator_solve_values_batched_32 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble s0, gdouble s1, GArray *values)
 {
-  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 32, t0, t1, values);
+  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 32, s0, s1, values);
 }
 
 /**
@@ -3202,8 +3202,8 @@ void
 ncm_sbessel_ode_operator_solve_values (NcmSBesselOdeOperator *op, GArray *rhs,
                                        gdouble x0, gdouble x1, GArray **values)
 {
-  const gdouble t0 = (x0 - op->mid_point) / op->half_len;
-  const gdouble t1 = (x1 - op->mid_point) / op->half_len;
+  const gdouble s0 = (x0 - op->mid_point) / op->half_len;
+  const gdouble s1 = (x1 - op->mid_point) / op->half_len;
 
   g_assert_cmpfloat (x0, >=, op->a);
   g_assert_cmpfloat (x0, <=, op->b);
@@ -3216,27 +3216,27 @@ ncm_sbessel_ode_operator_solve_values (NcmSBesselOdeOperator *op, GArray *rhs,
   switch (op->n_ell)
   {
     case 2:
-      _ncm_sbessel_ode_operator_solve_values_batched_2 (op, rhs, t0, t1, *values);
+      _ncm_sbessel_ode_operator_solve_values_batched_2 (op, rhs, s0, s1, *values);
       break;
 
     case 4:
-      _ncm_sbessel_ode_operator_solve_values_batched_4 (op, rhs, t0, t1, *values);
+      _ncm_sbessel_ode_operator_solve_values_batched_4 (op, rhs, s0, s1, *values);
       break;
 
     case 8:
-      _ncm_sbessel_ode_operator_solve_values_batched_8 (op, rhs, t0, t1, *values);
+      _ncm_sbessel_ode_operator_solve_values_batched_8 (op, rhs, s0, s1, *values);
       break;
 
     case 16:
-      _ncm_sbessel_ode_operator_solve_values_batched_16 (op, rhs, t0, t1, *values);
+      _ncm_sbessel_ode_operator_solve_values_batched_16 (op, rhs, s0, s1, *values);
       break;
 
     case 32:
-      _ncm_sbessel_ode_operator_solve_values_batched_32 (op, rhs, t0, t1, *values);
+      _ncm_sbessel_ode_operator_solve_values_batched_32 (op, rhs, s0, s1, *values);
       break;
 
     default:
-      _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, op->n_ell, t0, t1, *values);
+      _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, op->n_ell, s0, s1, *values);
       break;
   }
 }

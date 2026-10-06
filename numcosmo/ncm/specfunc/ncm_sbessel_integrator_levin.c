@@ -1163,7 +1163,7 @@ _ncm_sbessel_integrator_levin_build_rhs_from_gegen (NcmSBesselIntegratorLevin *s
  * representation. For deriv > 0 the fit is of F(x) itself and the forcing is
  * x F'(x) or x F''(x): the derivative is read off in the C^(2) basis (a
  * banded, respectively diagonal, map of the same coefficients), scaled by the
- * chain-rule factor of the interval, and multiplied by x(t) = mid + half t.
+ * chain-rule factor of the interval, and multiplied by x(s) = mid + half s.
  * The deriv == 1 forcing carries a minus sign, matching the single
  * integration by parts int F j' = [F j] - int F' j.
  */
@@ -1878,7 +1878,7 @@ _ncm_sbessel_integrator_levin_prepare_extended_rhs (NcmSBesselIntegratorLevin *s
     reference_scale += fabs (g_array_index (sbilv->edge_cheb_coeffs, gdouble, i));
 
   /* Remove only roundoff-level tail coefficients before extrapolation.  Even
-   * a 1e-16 coefficient can grow enormously under T_n(alpha t + beta). */
+   * a 1e-16 coefficient can grow enormously under T_n(alpha s_out + beta). */
   discard_limit = 1.0e-4 * sbilv->cheb_reltol * reference_scale;
   effective_len = sbilv->edge_cheb_coeffs->len;
 
