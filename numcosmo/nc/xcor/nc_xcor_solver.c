@@ -453,6 +453,19 @@ _nc_xcor_solver_prepare_block_integrators (NcXcorSolver *solver)
                "but no registered kernel has one and none was set with "
                "nc_xcor_solver_set_integrator().", block->lmin, block->lmax);
 
+    /* The template tabulates j_ell only up to its ell-cache-max, an absolute
+     * multipole, so it must cover every block it is copied into. */
+    if (NCM_IS_SBESSEL_INTEGRATOR_LEVIN (proto))
+    {
+      const guint ell_cache_max = ncm_sbessel_integrator_levin_get_ell_cache_max (NCM_SBESSEL_INTEGRATOR_LEVIN (proto));
+
+      if (block->lmax > ell_cache_max)
+        g_error ("_nc_xcor_solver_prepare_block_integrators: block [%u, %u] reaches above "
+                 "the integrator's ell-cache-max (%u). Set an integrator built with "
+                 "ell-cache-max >= %u with nc_xcor_solver_set_integrator().",
+                 block->lmin, block->lmax, ell_cache_max, block->lmax);
+    }
+
     if (ser == NULL)
       ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
 
@@ -501,12 +514,10 @@ _nc_xcor_solver_guint_cmp (gconstpointer a, gconstpointer b)
  *
  * Tiles the union of all requested $\ell$-ranges into contiguous blocks, each
  * covering at most @default_block_size multipoles, further capped by
- * #NC_XCOR_KERNEL_MAX_ELL_BLOCK and by the smallest
- * ncm_sbessel_integrator_levin_get_ell_cache_max() among all registered
- * kernels using a #NcmSBesselIntegratorLevin. A block also never straddles
- * a registered kernel's l_limber threshold, since a kernel evaluated in
- * Limber mode below l_limber and non-Limber mode above it needs the switch
- * to fall on a block boundary.
+ * #NC_XCOR_KERNEL_MAX_ELL_BLOCK. A block also never straddles a registered
+ * kernel's l_limber threshold, since a kernel evaluated in Limber mode below
+ * l_limber and non-Limber mode above it needs the switch to fall on a block
+ * boundary.
  *
  * Replaces any blocks from a previous call. Requires at least one request.
  *
@@ -537,19 +548,6 @@ nc_xcor_solver_plan_blocks (NcXcorSolver *solver, guint default_block_size)
   }
 
   max_block_size = MIN (default_block_size, (guint) NC_XCOR_KERNEL_MAX_ELL_BLOCK);
-
-  for (i = 0; i < solver->kernels->len; i++)
-  {
-    NcXcorKernel *xclk               = g_ptr_array_index (solver->kernels, i);
-    NcmSBesselIntegrator *integrator = nc_xcor_kernel_peek_integrator (xclk);
-
-    if ((integrator != NULL) && NCM_IS_SBESSEL_INTEGRATOR_LEVIN (integrator))
-    {
-      guint ell_cache_max = ncm_sbessel_integrator_levin_get_ell_cache_max (NCM_SBESSEL_INTEGRATOR_LEVIN (integrator));
-
-      max_block_size = MIN (max_block_size, ell_cache_max);
-    }
-  }
 
   /* Every registered kernel's l_limber, if it falls strictly inside the
    * overall range, forces a block boundary there: below it the kernel
