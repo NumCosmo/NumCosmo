@@ -11,18 +11,19 @@ well-conditioned spectral method of @Olver2013.
 ## Chebyshev Representation
 
 A function $f$ on an interval $[a,b]$ is approximated by a truncated Chebyshev series
-in the affine coordinate
+in the Chebyshev variable
 $$
-t = \frac{2x - (a+b)}{b-a} \in [-1,1],
+s \equiv \frac{2x - (a+b)}{b-a} \in [-1,1],
 \qquad
-x = \frac{a+b}{2} + \frac{b-a}{2}\,t,
+x = \frac{a+b}{2} + \frac{b-a}{2}\,s,
 $$
 so that
 $$
-f(x) = \sum_{k=0}^{N-1} a_k\,T_k(t),
+f(x) = \sum_{k=0}^{N-1} c^k\,T_k(s),
 \tag{1}
 $$
-where $T_k$ is the Chebyshev polynomial of the first kind. The forward and inverse maps
+where $T_k$ is the Chebyshev polynomial of the first kind and $c^k$ are the Chebyshev
+coefficients. The forward and inverse maps
 are [[numcosmo-math|ncm_spectral_x_to_s]] and [[numcosmo-math|ncm_spectral_s_to_x]].
 
 ## Computing the Coefficients
@@ -30,66 +31,73 @@ are [[numcosmo-math|ncm_spectral_x_to_s]] and [[numcosmo-math|ncm_spectral_s_to_
 The coefficients in Eq. (1) are obtained by sampling $f$ at the Chebyshev--Lobatto
 nodes
 $$
-t_k = \cos\!\left(\frac{k\pi}{N-1}\right),
+s_j = \cos\!\left(\frac{j\pi}{N-1}\right),
 \qquad
-x_k = \frac{a+b}{2} + \frac{b-a}{2}\,t_k,
-\qquad k = 0,\dots,N-1,
+x_j = \frac{a+b}{2} + \frac{b-a}{2}\,s_j,
+\qquad j = 0,\dots,N-1,
 $$
 and applying a type-I discrete cosine transform (FFTW `REDFT00`). The transform output
-$\tilde a_k$ is normalized to the coefficients of Eq. (1) by
+$\tilde c^k$ is normalized to the coefficients of Eq. (1) by
 $$
-a_0 = \frac{\tilde a_0}{2(N-1)},
+c^0 = \frac{\tilde c^0}{2(N-1)},
 \qquad
-a_{N-1} = \frac{\tilde a_{N-1}}{2(N-1)},
+c^{N-1} = \frac{\tilde c^{N-1}}{2(N-1)},
 \qquad
-a_k = \frac{\tilde a_k}{N-1}\;\;(0 < k < N-1),
+c^k = \frac{\tilde c^k}{N-1}\;\;(0 < k < N-1),
 $$
 the endpoint terms of the DCT-I on the Lobatto grid being halved. This fixed-order transform is
 [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs]].
 
 ## Adaptive Refinement
 
-For adaptive computation the node count is tied to a refinement level $k$ by $N = 2^{k}
-+ 1$, which makes the Lobatto grids *nested*: the nodes at level $k$,
+The adaptive routines do not choose $N$ directly. They choose a refinement level $r$, a
+non-negative integer, and use
 $$
-t_j = \cos\!\left(\frac{j\pi}{2^{k}}\right),
-\qquad j = 0,\dots,2^{k},
+N = 2^r + 1
 $$
-are a subset of those at level $k+1$. Refining therefore reuses every existing sample
---- the previous values move to the even-indexed positions and only the new odd-indexed
-nodes are evaluated, halving the number of function calls per level.
+nodes. The level is an exponent: raising $r$ by one doubles the number of intervals between
+nodes, so the level arguments of the adaptive functions (`level_min`, `level_cap`) and the
+`max-level` property count doublings of the grid, not coefficients. With this choice the
+Lobatto grids are *nested*: the nodes at level $r$,
+$$
+s_j = \cos\!\left(\frac{j\pi}{2^r}\right),
+\qquad j = 0,\dots,2^r,
+$$
+are a subset of those at level $r+1$. Refining therefore reuses every existing sample: the
+previous values move to the even-indexed positions and only the new odd-indexed nodes are
+evaluated, halving the number of function calls per level.
 
-Starting from a minimum level $k_\mathrm{min}$, the level is raised one step at a time,
-each step doubling the number of intervals, until the coefficient vectors at successive
-resolutions agree,
+Starting from a minimum level $r_\mathrm{min}$ (`level_min`), the level is raised one step
+at a time until the coefficients $c^k_{(r)}$ at level $r$ agree with the coefficients
+$c^k_{(r-1)}$ at level $r-1$,
 $$
-\sum_{k<N} \left(a_k^{(2N)} - a_k^{(N)}\right)^2
+\sum_{k \le 2^{r-1}} \left(c^k_{(r)} - c^k_{(r-1)}\right)^2
 \;<\;
 \max\!\left(
-\varepsilon_\mathrm{rel}^2 \sum_{k<N} \left(a_k^{(2N)}\right)^2,\;\;
+\varepsilon_\mathrm{rel}^2 \sum_{k \le 2^{r-1}} \left(c^k_{(r)}\right)^2,\;\;
 \varepsilon_\mathrm{abs}^2
 \right).
 \tag{2}
 $$
-The sums run over the coarser level's coefficients, the ones both expansions carry. The
-entry point is [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive]], which
-returns the final level $k$.
+The sums run over the coarser level's $2^{r-1} + 1$ coefficients, the ones both expansions
+carry. The entry point is [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive]],
+which returns the final level $r$.
 
 $\varepsilon_\mathrm{abs}$ is measured in the units of the coefficients themselves and
 is zero unless asked for, which leaves the relative test alone. It is for a caller that
 knows $f$ to be negligible on $[a,b]$ against some larger quantity $f$ contributes to:
 refining a term that cannot affect the result to full relative accuracy is pure cost,
-and for a sharply varying $f$ it can exhaust the order budget.
+and for a sharply varying $f$ it can exhaust `max-level`.
 
 ### When the tolerance is not met
 
-The maximum order (`max-order`) is not a second stopping condition. It bounds the size
+The maximum level (`max-level`) is not a second stopping condition. It bounds the size
 of the sample and transform buffers; Eq. (2) is what must end the refinement. Falling
-out of the loop at `max-order` therefore means the coefficients on hand are
+out of the loop at `max-level` therefore means the coefficients on hand are
 unconverged, and the three entry points differ only in what they do about that.
 
 - [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive]] takes
-  $\varepsilon_\mathrm{rel}$ alone and treats reaching `max-order` as fatal. That is
+  $\varepsilon_\mathrm{rel}$ alone and treats reaching `max-level` as fatal. That is
   the right default for a caller expanding on one interval it cannot change: it has no
   recourse, so returning an unconverged series would only move the failure downstream,
   where its origin is no longer visible.
@@ -97,7 +105,7 @@ unconverged, and the three entry points differ only in what they do about that.
   $\varepsilon_\mathrm{abs}$ and is otherwise identical, fatal included. Passing zero
   reproduces the previous entry point exactly.
 - [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive_try]] accepts a cap
-  $k_\mathrm{cap}$ of its own, at or below `max-order`, and reports through an output
+  $r_\mathrm{cap}$ (`level_cap`) of its own, at or below `max-level`, and reports through an output
   flag whether the tolerance was met rather than failing. It is for a caller that has a
   fallback, and for which not converging is information: not converging on a panel is
   how such a caller learns to subdivide, or to take a different route entirely. Its use
@@ -112,8 +120,8 @@ what costs. [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_batch_adaptive
 takes an [[numcosmo-math|NcmSpectralFBatch]] instead, visits every node once, and
 performs a single batched DCT-I over the interleaved components.
 
-Convergence is judged per component and the component needing the highest order sets
-the level for all of them, so the order is shared because the grid is. Sharing the grid
+Convergence is judged per component and the component needing the highest level sets
+it for all of them: the level is shared because the grid is. Sharing the grid
 is also what leaves the resulting coefficients directly combinable, which is the point
 when the components are to be summed or multiplied afterwards.
 [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap]] exposes a
@@ -130,7 +138,7 @@ function of its own rather than a flag on the batch one.
 
 Integrating Eq. (1) term by term with
 $$
-\int_{-1}^{1} T_k(t)\,\mathrm{d}t =
+\int_{-1}^{1} T_k(s)\,\mathrm{d}s =
 \begin{cases}
 \dfrac{2}{1-k^2}, & k \text{ even},\\[4pt]
 0, & k \text{ odd},
@@ -138,7 +146,7 @@ $$
 $$
 gives
 $$
-\int_a^b f(x)\,\mathrm{d}x = \frac{b-a}{2}\sum_{k\ \mathrm{even}} \frac{2\,a_k}{1-k^2}.
+\int_a^b f(x)\,\mathrm{d}x = \frac{b-a}{2}\sum_{k\ \mathrm{even}} \frac{2\,c^k}{1-k^2}.
 $$
 With the coefficients of the Lobatto transform this is Clenshaw--Curtis quadrature
 [@Trefethen2008], which converges as fast as the coefficients decay. It is
@@ -148,51 +156,53 @@ batch expansion fits them together.
 
 ## Evaluation
 
-A Chebyshev series is evaluated with the Clenshaw recurrence. For interior points $|t|
+A Chebyshev series is evaluated with the Clenshaw recurrence. For interior points $|s|
 < 0.9$,
 $$
-b_k = 2t\,b_{k+1} - b_{k+2} + a_k,
+b_k = 2s\,b_{k+1} - b_{k+2} + c^k,
 \qquad
-f = t\,b_1 - b_2 + a_0,
+f = s\,b_1 - b_2 + c^0,
 $$
 run downward from $k = N-1$ with $b_N = b_{N+1} = 0$. Near the endpoints the plain
 recurrence loses accuracy through cancellation, so the Reinsch modification is used
 instead, propagating the differenced quantities $d_k$ and $e_k = d_k \pm e_{k+1}$ with
-the shifted argument $t \mp 1$. Exactly at $t = \pm 1$ the closed forms $T_k(1) = 1$
+the shifted argument $s \mp 1$. Exactly at $s = \pm 1$ the closed forms $T_k(1) = 1$
 and $T_k(-1) = (-1)^k$ are summed directly. Evaluation is
 [[numcosmo-math|ncm_spectral_chebyshev_eval]] (and
 [[numcosmo-math|ncm_spectral_chebyshev_eval_x]] for an argument in $[a,b]$).
 
 The derivative is obtained without explicitly forming the derivative series. The
-coefficients $b_k$ of $f'(t) = \sum_k b_k T_k(t)$ satisfy
+coefficients $c'^k$ of $f'(s) = \sum_k c'^k T_k(s)$ satisfy
 $$
-b_k = \sum_{\substack{j > k \\ j-k\ \mathrm{odd}}} 2j\,a_j\;\;(k\ge 1),
+c'^k = \sum_{\substack{j > k \\ j-k\ \mathrm{odd}}} 2j\,c^j\;\;(k\ge 1),
 \qquad
-b_0 = \sum_{\substack{j\ \mathrm{odd}}} j\,a_j,
+c'^0 = \sum_{\substack{j\ \mathrm{odd}}} j\,c^j,
 $$
 and are folded into a single fused backward Clenshaw pass in
 [[numcosmo-math|ncm_spectral_chebyshev_deriv]]. The chain rule supplies the derivative
 with respect to the physical variable, $\mathrm{d}f/\mathrm{d}x =
-(2/(b-a))\,\mathrm{d}f/\mathrm{d}t$, in
+(2/(b-a))\,\mathrm{d}f/\mathrm{d}s$, in
 [[numcosmo-math|ncm_spectral_chebyshev_deriv_x]].
 
 ## Rebasing to Another Interval
 
 A series computed on $[a_\mathrm{in}, b_\mathrm{in}]$ can be re-expressed on a
-different interval without evaluating $f$ again. Writing $s$ for the argument on the
-source interval and $t$ for the one on the target, $s = \alpha t + \beta$ is affine, so
-each $T_k(s)$ expands in the $T_j(t)$ through the Chebyshev recurrence applied to that
+different interval without evaluating $f$ again. Writing $s_\mathrm{in}$ for the
+Chebyshev variable of the source interval and $s_\mathrm{out}$ for that of the target,
+$s_\mathrm{in} = \alpha s_\mathrm{out} + \beta$ is affine, so each $T_k(s_\mathrm{in})$
+expands in the $T_j(s_\mathrm{out})$ through the Chebyshev recurrence applied to that
 affine argument. [[numcosmo-math|ncm_spectral_chebyshev_rebase]] runs the recurrence and
 costs $O(n^2)$ in the number of coefficients kept.
 
 The target interval need not lie inside the source one. Outside it the result is the
 polynomial's own continuation, which is what makes a rebase usable as a smooth
-extension of a fit --- but only for a short series. Once $|s| > 1$ the Chebyshev
-polynomials grow like $\left(|s| + \sqrt{s^2-1}\right)^k$, so widening the interval by a
+extension of a fit, but only for a short series. Once $|s_\mathrm{in}| > 1$ the Chebyshev
+polynomials grow like $\left(|s_\mathrm{in}| + \sqrt{s_\mathrm{in}^2-1}\right)^k$, so widening the interval by a
 factor $\alpha$ amplifies the coefficient of $T_k$ by about $\left(\alpha +
 \sqrt{\alpha^2-1}\right)^k$: at $\alpha = 2$ that is $3.7^k$, and a coefficient sitting
 at roundoff level in a degree-65 fit returns larger than the function it belongs to.
-The function returns $\sum_j |b_j|$, which bounds $|f|$ over the whole target interval
+The function returns $\sum_j |c_\mathrm{out}^j|$, the sum over the rebased coefficients,
+which bounds $|f|$ over the whole target interval
 and is the cheapest way to tell a continuation apart from amplified roundoff.
 
 ## Ultraspherical Bases
@@ -203,21 +213,23 @@ used:
 
 - $\lambda = 1$: $C^{(1)}_n = U_n$, the Chebyshev polynomials of the second
   kind, with $U_n(\pm 1) = (n+1)(\pm 1)^n$ and the recurrence
-  $U_{n+1} = 2t\,U_n - U_{n-1}$.
-- $\lambda = 2$: $C^{(2)}_n$, with $C^{(2)}_0 = 1$, $C^{(2)}_1 = 4t$,
+  $U_{n+1} = 2s\,U_n - U_{n-1}$.
+- $\lambda = 2$: $C^{(2)}_n$, with $C^{(2)}_0 = 1$, $C^{(2)}_1 = 4s$,
   endpoint values $C^{(2)}_n(\pm 1) = \binom{n+3}{3}(\pm 1)^n$, and the
   recurrence
-  $(n+1)\,C^{(2)}_{n+1} = 2(n+2)\,t\,C^{(2)}_n - (n+3)\,C^{(2)}_{n-1}$.
+  $(n+1)\,C^{(2)}_{n+1} = 2(n+2)\,s\,C^{(2)}_n - (n+3)\,C^{(2)}_{n-1}$.
 
 Conversion from the Chebyshev to the $\lambda=1$ basis uses the identity $U_n - U_{n-2}
 = 2T_n$, i.e. $T_n = \tfrac12\!\left(C^{(1)}_n - C^{(1)}_{n-2}\right)$ for $n \ge 2$
-(with $T_0 = C^{(1)}_0$ and $T_1 = \tfrac12 C^{(1)}_1$), giving the coefficient map
-$g_k = \tfrac12(c_k - c_{k+2})$. Conversion to the $\lambda=2$ basis,
+(with $T_0 = C^{(1)}_0$ and $T_1 = \tfrac12 C^{(1)}_1$), giving the map
+$g^k = \tfrac12(c^k - c^{k+2})$ from the Chebyshev coefficients $c^k$ to the
+$C^{(1)}$ coefficients $g^k$. Conversion to the $\lambda=2$ basis, whose coefficients are
+also written $g^k$,
 $$
-g_k = \tfrac12 c_0\,\delta_{k,0}
-    + \frac{c_k}{2(k+1)}
-    - \frac{(k+2)\,c_{k+2}}{(k+1)(k+3)}
-    + \frac{c_{k+4}}{2(k+3)},
+g^k = \tfrac12 c^0\,\delta_{k,0}
+    + \frac{c^k}{2(k+1)}
+    - \frac{(k+2)\,c^{k+2}}{(k+1)(k+3)}
+    + \frac{c^{k+4}}{2(k+3)},
 $$
 is the projection (identity) operator written between bases. These are
 [[numcosmo-math|ncm_spectral_chebT_to_gegenbauer_alpha1]] and
@@ -226,41 +238,46 @@ evaluated by [[numcosmo-math|ncm_spectral_gegenbauer_alpha1_eval]] and
 [[numcosmo-math|ncm_spectral_gegenbauer_alpha2_eval]] with the same Clenshaw strategy
 as above.
 
-Two derivative maps are tabulated on their own because they collapse to something
+Two derivative maps are tabulated on their own because they reduce to something
 shorter than a general composition. Combining $T_n' = n\,C^{(1)}_{n-1}$ with the ladder
 $C^{(1)}_m = \left(C^{(2)}_m - C^{(2)}_{m-2}\right)/(m+1)$ leaves the two-term rule
-$g_k = c_{k+1} - c_{k+3}$ for the $C^{(2)}$ coefficients of $f'$, and $T_n'' =
-2n\,C^{(2)}_{n-2}$ makes the second derivative diagonal, $g_k = 2(k+2)\,c_{k+2}$. These
+$g^k = c^{k+1} - c^{k+3}$ for the $C^{(2)}$ coefficients of $f'$, and $T_n'' =
+2n\,C^{(2)}_{n-2}$ makes the second derivative diagonal, $g^k = 2(k+2)\,c^{k+2}$. These
 are [[numcosmo-math|ncm_spectral_chebT_deriv_to_gegenbauer_alpha2]] and
 [[numcosmo-math|ncm_spectral_chebT_deriv2_to_gegenbauer_alpha2]]; both differentiate
-with respect to $t$, leaving the chain-rule factor $2/(b-a)$ per derivative to the
+with respect to $s$, leaving the chain-rule factor $2/(b-a)$ per derivative to the
 caller. Multiplication by an affine factor without leaving the $C^{(2)}$ basis, from
 the recurrence
 $$
-t\,C^{(2)}_n = \frac{(n+1)\,C^{(2)}_{n+1} + (n+3)\,C^{(2)}_{n-1}}{2(n+2)},
+s\,C^{(2)}_n = \frac{(n+1)\,C^{(2)}_{n+1} + (n+3)\,C^{(2)}_{n-1}}{2(n+2)},
 $$
 is [[numcosmo-math|ncm_spectral_gegenbauer_alpha2_mul_affine]].
 
 ## Ultraspherical Operators
 
 The well-conditioned spectral method of @Olver2013 represents a linear differential
-operator as a *banded* matrix by mapping the Chebyshev coefficients $c_n$ of $f$ to the
-$C^{(2)}$ coefficients of the transformed function. Each operator below is banded
+operator as a *banded* matrix by mapping the Chebyshev coefficients $c^k$ of $f$ to the
+$C^{(2)}$ coefficients $g^k$ of the transformed function. Written as a matrix,
+$$
+g^k = \sum_i M^k{}_i\,c^i,
+$$
+and each row of the table below is row $k$ of $M$; the matrix functions return $M$
+truncated to $N \times N$. Each operator below is banded
 (bandwidth $\le 9$) and adds into a shared row buffer, so that a full operator such as
-$a_2(x)\,f'' + a_1(x)\,f' + a_0(x)\,f$ with polynomial coefficients up to degree two is
+$p_2(s)\,f'' + p_1(s)\,f' + p_0(s)\,f$ with polynomial coefficients up to degree two is
 assembled as a banded linear combination of these primitives. Throughout the table
-$c_k \equiv 0$ for $k < 0$, so a term whose index runs off the start simply vanishes.
+$c^k \equiv 0$ for $k < 0$, so a term whose index runs off the start vanishes.
 
 | Operator | $C^{(2)}$ coefficient of the output | Method |
 |---|---|---|
-| identity | $\dfrac{c_k}{2(k+1)} - \dfrac{(k+2)c_{k+2}}{(k+1)(k+3)} + \dfrac{c_{k+4}}{2(k+3)} + \tfrac12 c_0\,\delta_{k,0}$ | [[numcosmo-math\|ncm_spectral_get_proj_matrix]] |
-| $x$ | $\dfrac{c_{k-1}}{4(k+1)} - \dfrac{c_{k+1}}{4(k+3)} - \dfrac{c_{k+3}}{4(k+1)} + \dfrac{c_{k+5}}{4(k+3)} + \tfrac14 c_1\,\delta_{k,0} + \tfrac18 c_0\,\delta_{k,1}$ | [[numcosmo-math\|ncm_spectral_get_s_matrix]] |
-| $x^2$ | $\dfrac{c_{k-2}}{8(k+1)} + \dfrac{c_k}{4(k+1)(k+3)} - \dfrac{(k+2)c_{k+2}}{4(k+1)(k+3)} - \dfrac{c_{k+4}}{4(k+1)(k+3)} + \dfrac{c_{k+6}}{8(k+3)} + \big(\tfrac1{12}c_0 + \tfrac18 c_2\big)\delta_{k,0} + \tfrac1{16}c_1\,\delta_{k,1} + \tfrac1{24}c_0\,\delta_{k,2}$ | [[numcosmo-math\|ncm_spectral_get_s2_matrix]] |
-| $\mathrm{d}/\mathrm{d}x$ | $c_{k+1} - c_{k+3}$ | [[numcosmo-math\|ncm_spectral_get_d_matrix]] |
-| $x\,\mathrm{d}/\mathrm{d}x$ | $\dfrac{k\,c_k}{2(k+1)} + \dfrac{(k+2)c_{k+2}}{(k+1)(k+3)} - \dfrac{(k+4)c_{k+4}}{2(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_s_d_matrix]] |
-| $\mathrm{d}^2/\mathrm{d}x^2$ | $2(k+2)\,c_{k+2}$ | [[numcosmo-math\|ncm_spectral_get_d2_matrix]] |
-| $x\,\mathrm{d}^2/\mathrm{d}x^2$ | $k\,c_{k+1} + (k+4)\,c_{k+3}$ | [[numcosmo-math\|ncm_spectral_get_s_d2_matrix]] |
-| $x^2\,\mathrm{d}^2/\mathrm{d}x^2$ | $\dfrac{k(k-1)c_k}{2(k+1)} + \dfrac{(k+2)\big((k+2)^2-3\big)c_{k+2}}{(k+1)(k+3)} + \dfrac{(k+4)(k+5)c_{k+4}}{2(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_s2_d2_matrix]] |
+| identity | $\dfrac{c^k}{2(k+1)} - \dfrac{(k+2)c^{k+2}}{(k+1)(k+3)} + \dfrac{c^{k+4}}{2(k+3)} + \tfrac12 c^0\,\delta_{k,0}$ | [[numcosmo-math\|ncm_spectral_get_proj_matrix]] |
+| $s$ | $\dfrac{c^{k-1}}{4(k+1)} - \dfrac{c^{k+1}}{4(k+3)} - \dfrac{c^{k+3}}{4(k+1)} + \dfrac{c^{k+5}}{4(k+3)} + \tfrac14 c^1\,\delta_{k,0} + \tfrac18 c^0\,\delta_{k,1}$ | [[numcosmo-math\|ncm_spectral_get_s_matrix]] |
+| $s^2$ | $\dfrac{c^{k-2}}{8(k+1)} + \dfrac{c^k}{4(k+1)(k+3)} - \dfrac{(k+2)c^{k+2}}{4(k+1)(k+3)} - \dfrac{c^{k+4}}{4(k+1)(k+3)} + \dfrac{c^{k+6}}{8(k+3)} + \big(\tfrac1{12}c^0 + \tfrac18 c^2\big)\delta_{k,0} + \tfrac1{16}c^1\,\delta_{k,1} + \tfrac1{24}c^0\,\delta_{k,2}$ | [[numcosmo-math\|ncm_spectral_get_s2_matrix]] |
+| $\mathrm{d}/\mathrm{d}s$ | $c^{k+1} - c^{k+3}$ | [[numcosmo-math\|ncm_spectral_get_d_matrix]] |
+| $s\,\mathrm{d}/\mathrm{d}s$ | $\dfrac{k\,c^k}{2(k+1)} + \dfrac{(k+2)c^{k+2}}{(k+1)(k+3)} - \dfrac{(k+4)c^{k+4}}{2(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_s_d_matrix]] |
+| $\mathrm{d}^2/\mathrm{d}s^2$ | $2(k+2)\,c^{k+2}$ | [[numcosmo-math\|ncm_spectral_get_d2_matrix]] |
+| $s\,\mathrm{d}^2/\mathrm{d}s^2$ | $k\,c^{k+1} + (k+4)\,c^{k+3}$ | [[numcosmo-math\|ncm_spectral_get_s_d2_matrix]] |
+| $s^2\,\mathrm{d}^2/\mathrm{d}s^2$ | $\dfrac{k(k-1)c^k}{2(k+1)} + \dfrac{(k+2)\big((k+2)^2-3\big)c^{k+2}}{(k+1)(k+3)} + \dfrac{(k+4)(k+5)c^{k+4}}{2(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_s2_d2_matrix]] |
 
 Every row holds for all $k$ as written. The Kronecker-delta terms are the $T_0$ and
 $T_1$ special cases of Chebyshev multiplication, which contribute only to the first one
