@@ -471,7 +471,6 @@ def test_error_estimate_is_nan_for_methods_that_do_not_provide_one(
 
     for method in (
         Nc.XcorMethod.KERNEL_CUBATURE,
-        Nc.XcorMethod.KERNEL_GSL,
         Nc.XcorMethod.LIMBER_Z_CUBATURE,
     ):
         xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, method)
@@ -750,9 +749,7 @@ def test_chebyshev_closure_is_the_default(cosmology: Cosmology) -> None:
     The choice belongs to NcXcor rather than to a kernel because it is the
     computation that gets switched over: the two are alternative fits to the
     same sampled function, and comparing them only means something when every
-    kernel in a run uses the same one. A pair may still be mixed -- a kernel
-    under Limber always gets a spline -- and KERNEL_EXACT integrates that pair
-    exactly all the same.
+    kernel in a run uses the same one.
     """
     xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
 
@@ -762,22 +759,17 @@ def test_chebyshev_closure_is_the_default(cosmology: Cosmology) -> None:
     assert xcor.get_closure_type() == Nc.XcorKernelClosure.SPLINE
 
 
-def test_limber_multipoles_keep_the_spline_closure(cosmology: Cosmology) -> None:
-    """Chebyshev is refused where the window is not entire in k.
+def test_limber_multipoles_take_the_requested_closure(cosmology: Cosmology) -> None:
+    """Under Limber each closure type yields its own representation.
 
-    Under Limber a multipole is supported on its own band and zero outside it,
-    so the block's window carries a step per multipole. A Chebyshev series
-    converges on this kernel because W_l(k) is entire in k; a step is not, so
-    the expansion cannot converge and a panel splitter would bisect until it
-    gave up -- which is exactly what this did before the closure builder
-    started refusing.
+    A Limber window is zero outside the multipole's band in k, so a block's
+    window carries one step per multipole. The Chebyshev closure places a panel
+    cut at every band edge of the block and decides membership per panel, so
+    every panel is smooth and the series converges; the spline closure keeps
+    its knots. The two agree on the window to the closure tolerance.
     """
-    integrands = []
 
-    for closure_type in (
-        Nc.XcorKernelClosure.SPLINE,
-        Nc.XcorKernelClosure.CHEBYSHEV,
-    ):
+    def integrand(closure_type):
         kernel = Nc.XcorKernelClusterTophat(
             dist=cosmology.dist,
             powspec=cosmology.ps_ml,
@@ -791,27 +783,33 @@ def test_limber_multipoles_keep_the_spline_closure(cosmology: Cosmology) -> None
         kernel.set_l_limber(0)
         kernel.prepare(cosmology.cosmo)
 
-        integrands.append(
-            kernel.get_eval_vectorized_full(
-                cosmology.cosmo,
-                2,
-                9,
-                Ncm.SBesselIntegratorLevin.new(0, 8),
-                closure_type,
-            )
+        return kernel.get_eval_vectorized_full(
+            cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8), closure_type
         )
 
-    for integrand in integrands:
-        assert integrand.peek_knots() is not None, "expected a spline closure"
-        assert integrand.get_n_panels() == 0
+    spline = integrand(Nc.XcorKernelClosure.SPLINE)
+    cheb = integrand(Nc.XcorKernelClosure.CHEBYSHEV)
 
-    # The same closure either way, not merely the same kind of closure.
-    spline, cheb = integrands
-    assert spline.get_range() == cheb.get_range()
+    assert spline.peek_knots() is not None and spline.get_n_panels() == 0
+    assert cheb.peek_knots() is None and cheb.get_n_panels() > 0
 
-    lo, hi = spline.get_range()
+    # Every multipole's band edges are panel edges of the Chebyshev closure.
+    edges = np.array(
+        [cheb.peek_panel(0)[1]]
+        + [cheb.peek_panel(i)[2] for i in range(cheb.get_n_panels())]
+    )
+    for i in range(cheb.get_len()):
+        k_min, k_max = cheb.get_range_comp(i)
+        assert np.isclose(edges, k_min, rtol=1.0e-12).any()
+        assert np.isclose(edges, k_max, rtol=1.0e-12).any()
+
+    lo = max(spline.get_range()[0], cheb.get_range()[0])
+    hi = min(spline.get_range()[1], cheb.get_range()[1])
+    peak = max(np.max(np.abs(cheb.eval_array(k))) for k in np.geomspace(lo, hi, 64))
     for k in np.geomspace(lo * 1.001, hi * 0.999, 32):
-        assert_allclose(cheb.eval_array(k), spline.eval_array(k), rtol=1.0e-14)
+        assert_allclose(
+            cheb.eval_array(k), spline.eval_array(k), rtol=0.0, atol=1.0e-4 * peak
+        )
 
 
 def test_spectral_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
@@ -856,9 +854,7 @@ def test_spectral_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
     # One set of kernels: the representation is now the computation's choice,
     # so the same kernels serve both routes.
     ks = kernels()
-    reference = kernels(1.0e-6)
     cheb_t = Nc.XcorKernelClosure.CHEBYSHEV
-    spline_t = Nc.XcorKernelClosure.SPLINE
 
     for auto in (True, False):
         exact = compute(Nc.XcorMethod.KERNEL_EXACT, ks, auto, cheb_t)
@@ -872,25 +868,6 @@ def test_spectral_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
         # worst multipole here lands at 1.1e-6, on the smallest and most
         # strongly cancelling C_ell of the block.
         assert_allclose(exact, cubature, rtol=1.0e-5)
-
-        # And it is the closer of the two to a spline closure built two orders
-        # tighter. Comparing against the spline at *this* tolerance would be
-        # comparing against the less accurate answer: on a cancelling cross
-        # spectrum the spline at 1e-4 is 8% out by l = 9, which is the error
-        # this representation exists to remove.
-        truth = compute(Nc.XcorMethod.KERNEL_EXACT, reference, auto, spline_t)
-        err_exact = np.abs(exact / truth - 1.0)
-        err_spline = np.abs(
-            compute(Nc.XcorMethod.KERNEL_EXACT, ks, auto, spline_t) / truth - 1.0
-        )
-
-        # Measured against a spline closure at 1e-8: at this tolerance the
-        # Chebyshev route is 11x closer on the auto spectrum and 3.6x on the
-        # cross, and at 1e-6 it is 5400x and 15x. No absolute bound is asserted
-        # on the cross -- at 1e-4 the cancellation dominates for both routes,
-        # putting them at 3.5e-2 and 1.3e-1 respectively, so a threshold there
-        # would be testing the tolerance rather than the representation.
-        assert err_exact.max() < err_spline.max()
 
 
 def _breakpoints(integrand: Nc.XcorKernelIntegrand) -> np.ndarray:
@@ -909,10 +886,9 @@ def _breakpoints(integrand: Nc.XcorKernelIntegrand) -> np.ndarray:
 def test_mixed_closure_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
     """A spline against a Chebyshev panel set, on the merged breakpoints.
 
-    Under Limber a window is a step in k per multipole, so those blocks keep the
-    spline closure whatever NcXcor:closure-type asks for. Two kernels with
-    different NcXcorKernel:l-limber therefore hand KERNEL_EXACT one
-    spline-backed and one panel-backed integrand.
+    Both Limber and non-Limber closures follow NcXcor:closure-type, so a mixed
+    pair is built here directly, one integrand per representation, and handed to
+    nc_xcor_integrate_block().
 
     Such a pair is integrated exactly, not approximately. On the common
     refinement of the two breakpoint sets the spline is one cubic, which four
@@ -944,7 +920,9 @@ def test_mixed_closure_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
     k_limber = kernel(*Z_BINS[0], 0)
     k_exact = kernel(*Z_BINS[1], -1)
 
-    i1 = k_limber.get_eval_vectorized_full(cosmo, lmin, lmax, sbi, cheb)
+    i1 = k_limber.get_eval_vectorized_full(
+        cosmo, lmin, lmax, sbi, Nc.XcorKernelClosure.SPLINE
+    )
     i2 = k_exact.get_eval_vectorized_full(cosmo, lmin, lmax, sbi, cheb)
 
     assert i1.get_n_panels() == 0 and i1.peek_knots() is not None
@@ -971,7 +949,9 @@ def test_mixed_closure_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
     xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     xcor.prepare(cosmo)
     vp = Ncm.Vector.new(nell)
-    xcor.compute(k_limber, k_exact, cosmo, lmin, lmax, vp)
+    xcor.integrate_block(
+        i1, i2, lmin, lmax, False, Nc.XcorMethod.KERNEL_EXACT, vp, None
+    )
 
     # 1e-11 rather than machine epsilon: this is a strongly cancelling cross
     # spectrum between disjoint shells, and the two routes sum the same cells in

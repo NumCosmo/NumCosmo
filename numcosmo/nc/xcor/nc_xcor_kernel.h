@@ -97,8 +97,9 @@ typedef struct _NcXcorKernelIntegrand NcXcorKernelIntegrand;
  * series converges geometrically on it. The order follows from the total phase
  * $k_\mathrm{max}\chi_\mathrm{max}$ rather than being discovered: below the
  * order that resolves that phase the expansion carries nothing, and above it
- * accuracy is nearly free.
- *
+ * accuracy is nearly free. Under Limber $W_\ell(k)$ is zero outside the
+ * multipole's band in $k$; the Chebyshev closure places a panel cut at every
+ * band edge of the block, so every panel is again smooth.
  */
 typedef enum _NcXcorKernelClosure /*< prefix=NC_XCOR_KERNEL_CLOSURE >*/
 {

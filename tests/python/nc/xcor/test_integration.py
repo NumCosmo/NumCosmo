@@ -2,7 +2,8 @@
 
 This module tests different integration backends and methods for computing
 angular power spectra using the Xcor class. Tests include:
-- Different Xcor integration methods (LIMBER_Z_GSL, LIMBER_Z_CUBATURE, KERNEL_GSL)
+- Different Xcor integration methods (LIMBER_Z_GSL, LIMBER_Z_CUBATURE, KERNEL_CUBATURE,
+  KERNEL_EXACT)
 - Kernel-level integrator types (Limber approximation vs Levin integration)
 - Xcor property management (reltol, method switching)
 - Cross-correlation computation with various kernel pairs
@@ -36,7 +37,8 @@ pytestmark = pytest.mark.xcor
     [
         Nc.XcorMethod.LIMBER_Z_GSL,
         Nc.XcorMethod.LIMBER_Z_CUBATURE,
-        Nc.XcorMethod.KERNEL_GSL,
+        Nc.XcorMethod.KERNEL_CUBATURE,
+        Nc.XcorMethod.KERNEL_EXACT,
     ],
 )
 def test_xcor_method_creation(cosmology: Cosmology, method: Nc.XcorMethod) -> None:
@@ -99,7 +101,7 @@ def test_xcor_compute_methods(
 ) -> None:
     """Compare different Xcor integration methods for consistency.
 
-    Tests that LIMBER_Z_GSL, LIMBER_Z_CUBATURE, and KERNEL_GSL methods
+    Tests that LIMBER_Z_GSL and LIMBER_Z_CUBATURE
     produce consistent results for various kernel auto- and cross-correlations.
     """
     k1 = cast(Nc.XcorKernel, request.getfixturevalue(k1_name))
@@ -166,13 +168,13 @@ def test_xcor_kernel_methods(
     l_limber: int,
     request: pytest.FixtureRequest,
 ) -> None:
-    """Regression test for the sec. 3 outer-k-bound fix (KERNEL_GSL/KERNEL_CUBATURE).
+    """Regression test for the sec. 3 outer-k-bound fix (the kernel-space methods).
 
     Before the fix, these methods were wrong by 15-27 orders of magnitude and
     disagreed with each other by ell-dependent factors (evaluating the fitted
     k-space spline far outside its domain). Checks, for both tier 2
     (l_limber=0, kernel-Limber) and tier 3 (l_limber=-1, true non-Limber):
-    KERNEL_GSL and KERNEL_CUBATURE agree with each other, and both converge
+    KERNEL_EXACT per multipole and KERNEL_CUBATURE agree with each other, and both converge
     to LIMBER_Z_CUBATURE (tier 1) at moderate/high ell -- exactly, for tier 2
     (mathematically the same Limber approximation, just computed via k-space
     instead of z-space); within known Limber-approximation error, for tier 3.
@@ -255,14 +257,17 @@ def test_xcor_kernel_methods(
         if (l_limber == 0) and (involved & {"kernel_cmb_isw"}) and (k1_name != k2_name):
             tier1_rtol = 2.0e-3
 
-        vp_kernel_gsl = Ncm.Vector.new(n)
-        xcor_kg = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_GSL)
-        xcor_kg.prepare(cosmology.cosmo)
-        xcor_kg.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_gsl)
-        kernel_gsl = np.array(vp_kernel_gsl.dup_array())
+        vp_kernel_exact_1 = Ncm.Vector.new(n)
+        xcor_ke = Nc.Xcor.new(
+            cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT
+        )
+        xcor_ke.props.ell_batch_size = 1
+        xcor_ke.prepare(cosmology.cosmo)
+        xcor_ke.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_exact_1)
+        kernel_exact_1 = np.array(vp_kernel_exact_1.dup_array())
 
         if check_tier1:
-            assert_allclose(kernel_gsl, limber_z, rtol=tier1_rtol, atol=1.0e-50)
+            assert_allclose(kernel_exact_1, limber_z, rtol=tier1_rtol, atol=1.0e-50)
 
         def kernel_cubature(ell_batch_size: int) -> npt.NDArray[np.float64]:
             vp_kernel_cub = Ncm.Vector.new(n)
@@ -280,14 +285,13 @@ def test_xcor_kernel_methods(
         if check_tier1:
             assert_allclose(kernel_cub, limber_z, rtol=tier1_rtol, atol=1.0e-50)
 
-        # Two independent quadratures on one integrand: KERNEL_GSL builds a
-        # closure per multipole, so the comparison is against cubature blocked
-        # the same way. Blocked differently the two do not share an integrand
+        # Two independent quadratures on one integrand: KERNEL_EXACT with a
+        # closure per multipole, against cubature blocked the same way. Blocked differently the two do not share an integrand
         # at all -- the k-spline's refinement floor is a reduction over the
         # block, so a multipole's closure depends on its neighbours (measured
         # for CMB lensing x ISW at tier 3: 2.3e-2 at the default spline
         # tolerance, 1.5e-3 at 1e-6, i.e. converging).
-        assert_allclose(kernel_gsl, kernel_cubature(1), rtol=1.0e-5, atol=1.0e-50)
+        assert_allclose(kernel_exact_1, kernel_cubature(1), rtol=1.0e-5, atol=1.0e-50)
 
         # The blocked path against the exact quadrature on the same closures:
         # KERNEL_EXACT integrates the spline on its own knots, where GL(5) is
