@@ -65,7 +65,7 @@ def _load_table(name: str) -> np.ndarray:
     return np.array(matrix.dup_array()).reshape(matrix.nrows(), matrix.ncols())
 
 
-PBS_GOLDEN = _load_table(_PBS_TABLE)
+PBS_TRUTH_TABLE = _load_table(_PBS_TABLE)
 
 
 def _make_cosmo(w: float = -1.0) -> Nc.HICosmo:
@@ -170,7 +170,7 @@ def test_requires_second_derivative() -> None:
     assert psf.get_nderivs() == 2
 
 
-@pytest.mark.parametrize("row", PBS_GOLDEN)
+@pytest.mark.parametrize("row", PBS_TRUTH_TABLE)
 def test_pbs_matches_exact_derivative(row: np.ndarray) -> None:
     """b_PBS reproduces the complex-step reference derivative."""
     slope, z, sigma, expected = row
@@ -330,8 +330,8 @@ def _regenerate() -> None:  # pragma: no cover - developer tool
     step = 1.0e-20
     cosmo = _make_cosmo()
     rows = []
-    for slope in sorted(set(PBS_GOLDEN[:, 0])):
-        for z in sorted(set(PBS_GOLDEN[:, 1])):
+    for slope in sorted(set(PBS_TRUTH_TABLE[:, 0])):
+        for z in sorted(set(PBS_TRUTH_TABLE[:, 1])):
             om = cosmo.E2Omega_m(z) / cosmo.E2(z)
             d_c = (
                 3.0
@@ -339,7 +339,7 @@ def _regenerate() -> None:  # pragma: no cover - developer tool
                 * (12.0 * math.pi) ** (2.0 / 3.0)
                 * (1.0 + 0.012299 * math.log10(om))
             )
-            for sigma in sorted(set(PBS_GOLDEN[:, 2])):
+            for sigma in sorted(set(PBS_TRUTH_TABLE[:, 2])):
                 nu = d_c / sigma
                 f_0 = hmf.multiplicity_function_castro23(
                     nu, slope, om, hmf.best_fit_values_ROCKSTAR
