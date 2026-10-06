@@ -96,7 +96,11 @@ def _make(name, relpath, builder):
     # Each native likelihood self-configures the Boltzmann targets/lmax in
     # prepare(), so a bare CBE is enough.
     cbe = Nc.HIPertBoltzmannCBE.new()
-    cosmo = create_cosmo(prim_model=HIPrimModel.POWER_LAW)
+    # The fiducial cosmology of the golden vector, set explicitly so a change in
+    # the create_cosmo defaults cannot move it: N_eff = 3.046 massless species
+    # and Tgamma0 = 2.7245 K.
+    cosmo = create_cosmo(massive_nu=False, prim_model=HIPrimModel.POWER_LAW)
+    cosmo["Tgamma0"] = 2.7245
 
     if name == "smica_ttteee":
         planck = Nc.PlanckFICorTTTEEE()
