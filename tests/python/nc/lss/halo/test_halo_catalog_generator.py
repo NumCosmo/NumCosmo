@@ -22,12 +22,12 @@
 
 The generator owns the cluster-count sampling pipeline used by
 NcDataClusterNCount. These tests check its catalog output shape and that, run
-standalone with the same seed, it reproduces the NcDataClusterNCount golden
-snapshot (the two share the extracted pipeline).
+standalone with the same seed, it reproduces the NcDataClusterNCount truth
+table (the two share the extracted pipeline).
 
 The reference is the stored seed-0 NcDataClusterNCount catalog at
-``data/truth_tables/cluster/nc_data_cluster_ncount_golden_seed0.bin`` (see
-test_ncount_resample_golden.py). The comparison is tolerance-based so it survives
+``data/truth_tables/cluster/ncount_resample_seed0.bin`` (see
+test_ncount_resample_truth_table.py). The comparison is tolerance-based so it survives
 cross-stack sub-ULP rounding while still catching real regressions.
 """
 
@@ -42,27 +42,27 @@ Ncm.cfg_init()
 
 AREA = 270 * (math.pi / 180.0) ** 2
 
-GOLDEN_FILE = "truth_tables/cluster/nc_data_cluster_ncount_golden_seed0.bin"
-GOLDEN_RTOL = 1.0e-7
-GOLDEN_ATOL = 1.0e-12
+TRUTH_TABLE_FILE = "truth_tables/cluster/ncount_resample_seed0.bin"
+TRUTH_TABLE_RTOL = 1.0e-7
+TRUTH_TABLE_ATOL = 1.0e-12
 
 
-def _load_golden_columns() -> dict[str, np.ndarray]:
+def _load_truth_table_columns() -> dict[str, np.ndarray]:
     """Load the reference seed-0 catalog as plain arrays keyed by column."""
-    path = Ncm.cfg_get_data_filename(GOLDEN_FILE, True)
+    path = Ncm.cfg_get_data_filename(TRUTH_TABLE_FILE, True)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
-    golden = ser.from_binfile(path)
-    assert isinstance(golden, Nc.DataClusterNCount)
+    truth = ser.from_binfile(path)
+    assert isinstance(truth, Nc.DataClusterNCount)
     return {
-        "lnM_obs": np.array(golden.get_lnM_obs().dup_array()),
-        "z_obs": np.array(golden.get_z_obs().dup_array()),
-        "lnM_true": np.array(golden.get_lnM_true().dup_array()),
-        "z_true": np.array(golden.get_z_true().dup_array()),
+        "lnM_obs": np.array(truth.get_lnM_obs().dup_array()),
+        "z_obs": np.array(truth.get_z_obs().dup_array()),
+        "lnM_true": np.array(truth.get_lnM_true().dup_array()),
+        "z_true": np.array(truth.get_z_true().dup_array()),
     }
 
 
 def _setup():
-    """Build cosmology, abundance, models and mset matching the golden test."""
+    """Build cosmology, abundance, models and mset matching the truth-table test."""
     cosmo = Nc.HICosmoDEXcdm(reion=Nc.HIReionCamb(), prim=Nc.HIPrimPowerLaw())
 
     dist = Nc.Distance.new(2.0)
@@ -70,7 +70,7 @@ def _setup():
     psml.require_kmin(1.0e-3)
     psml.require_kmax(1.0e3)
     psf = Ncm.PowspecFilter.new(psml, Ncm.PowspecFilterType.TOPHAT)
-    # Explicit: the golden was drawn with the filter at this tolerance.
+    # Explicit: the truth table was drawn with the filter at this tolerance.
     psf.set_reltol(1.0e-6)
     psf.set_best_lnr0()
 
@@ -188,8 +188,8 @@ def test_generate_with_radius_adds_r_delta() -> None:
     np.testing.assert_allclose(r_delta, expected, rtol=1e-12)
 
 
-def test_generate_matches_golden_snapshot() -> None:
-    """Standalone generation reproduces the NcDataClusterNCount golden snapshot."""
+def test_generate_matches_truth_table() -> None:
+    """Standalone generation reproduces the NcDataClusterNCount truth table."""
     cosmo, cad, cluster_z, cluster_m, mset = _setup()
     cad.set_area(AREA)
     cad.prepare(cosmo, cluster_z, cluster_m)
@@ -204,11 +204,15 @@ def test_generate_matches_golden_snapshot() -> None:
         "z_obs": np.asarray(table["z_obs_0"], dtype=np.float64),
         "lnM_obs": np.asarray(table["lnM_obs_0"], dtype=np.float64),
     }
-    golden = _load_golden_columns()
+    truth = _load_truth_table_columns()
 
-    for column, ref in golden.items():
+    for column, ref in truth.items():
         np.testing.assert_allclose(
-            got[column], ref, rtol=GOLDEN_RTOL, atol=GOLDEN_ATOL, err_msg=column
+            got[column],
+            ref,
+            rtol=TRUTH_TABLE_RTOL,
+            atol=TRUTH_TABLE_ATOL,
+            err_msg=column,
         )
 
     # The sampled (z, lnM) move at 1e-8 with the knots of the splines behind the
@@ -217,14 +221,14 @@ def test_generate_matches_golden_snapshot() -> None:
     # (z_obs - z_true) / (1 + z_true): both pinned exactly.
     np.testing.assert_allclose(
         got["lnM_obs"] - got["lnM_true"],
-        golden["lnM_obs"] - golden["lnM_true"],
+        truth["lnM_obs"] - truth["lnM_true"],
         rtol=0.0,
         atol=1.0e-12,
         err_msg="lnM draw",
     )
     np.testing.assert_allclose(
         (got["z_obs"] - got["z_true"]) / (1.0 + got["z_true"]),
-        (golden["z_obs"] - golden["z_true"]) / (1.0 + golden["z_true"]),
+        (truth["z_obs"] - truth["z_true"]) / (1.0 + truth["z_true"]),
         rtol=0.0,
         atol=1.0e-12,
         err_msg="z draw",
