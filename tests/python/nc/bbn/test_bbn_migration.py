@@ -40,7 +40,7 @@ Ncm.cfg_init()
 
 # Yp used to be a parameter of the cosmology, with its fit type doubling as the
 # switch between "use this value" and "predict it from BBN". The fixtures in
-# data/truth_tables/bbn were written by that code; golden.json records what each
+# data/truth_tables/bbn were written by that code; pre_migration_values.json records what each
 # one evaluated to then. The compat properties are inert sinks now: a fixed-Yp
 # file lands on the default NcBBNParthenope (the same physics its fit type
 # meant), while a free-Yp file requests a removed mode and must fail loudly --
@@ -58,9 +58,11 @@ EXPECTED = {
 FORMATS = ("obj", "bin", "yaml")
 
 
-def load_golden():
+def load_pre_migration_values():
     """The values each fixture evaluated to before the migration."""
-    filename = Ncm.cfg_get_data_filename("truth_tables/bbn/golden.json", True)
+    filename = Ncm.cfg_get_data_filename(
+        "truth_tables/bbn/pre_migration_values.json", True
+    )
 
     with open(filename, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -99,13 +101,13 @@ def test_old_file_gets_the_right_bbn_model(name, fmt):
 @pytest.mark.parametrize("fmt", FORMATS)
 def test_old_file_still_evaluates_the_same(name, fmt):
     """Yp is unchanged, except where the migration deliberately changes it."""
-    golden = load_golden()[name]
+    before = load_pre_migration_values()[name]
     cosmo = read_fixture(name, fmt)
 
     expected = EXPECTED[name][1]
 
     if expected is None:
-        expected = golden["Yp_4He"]
+        expected = before["Yp_4He"]
 
     assert_allclose(Nc.HICosmo.Yp_4He(cosmo), expected, rtol=1.0e-9)
 
@@ -332,13 +334,13 @@ def load_sparam_desc():
 @pytest.mark.parametrize("fmt", FORMATS)
 def test_a_stored_description_lands_on_its_parameter(name, fmt):
     """Each stored description goes to the parameter of the same name."""
-    golden = load_sparam_desc()[name]
+    stored = load_sparam_desc()[name]
     cosmo = read_fixture(name, fmt)
 
-    assert cosmo.__gtype__.name == golden["type"]
-    assert cosmo.sparam_len() == len(golden["params"])
+    assert cosmo.__gtype__.name == stored["type"]
+    assert cosmo.sparam_len() == len(stored["params"])
 
-    for param, desc in golden["params"].items():
+    for param, desc in stored["params"].items():
         ok, i = cosmo.param_index_from_name(param)
 
         assert ok, param
