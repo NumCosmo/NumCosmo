@@ -36,7 +36,6 @@
 
 #define TEST_MU (log (30.0))
 #define TEST_SIGMA (0.33)
-#define TEST_LNL_MIN (log (1.0))
 #define TEST_LNL_MAX (log (300.0))
 
 typedef struct _TestNcClusterRichnessProjection
@@ -56,10 +55,9 @@ void test_nc_cluster_richness_projection_eval_lnlambda (TestNcClusterRichnessPro
 void test_nc_cluster_richness_projection_eval_int (TestNcClusterRichnessProjection *test, gconstpointer pdata);
 void test_nc_cluster_richness_projection_norma (TestNcClusterRichnessProjection *test, gconstpointer pdata);
 void test_nc_cluster_richness_projection_lnnormal_limit (TestNcClusterRichnessProjection *test, gconstpointer pdata);
-void test_nc_cluster_richness_projection_invalid_range (TestNcClusterRichnessProjection *test, gconstpointer pdata);
 void test_nc_cluster_richness_projection_invalid_reltol (TestNcClusterRichnessProjection *test, gconstpointer pdata);
 void test_nc_cluster_richness_projection_invalid_sigma (TestNcClusterRichnessProjection *test, gconstpointer pdata);
-void test_nc_cluster_richness_projection_out_of_range (TestNcClusterRichnessProjection *test, gconstpointer pdata);
+void test_nc_cluster_richness_projection_unbounded (TestNcClusterRichnessProjection *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -96,10 +94,6 @@ main (gint argc, gchar *argv[])
               &test_nc_cluster_richness_projection_new,
               &test_nc_cluster_richness_projection_lnnormal_limit,
               &test_nc_cluster_richness_projection_free);
-  g_test_add ("/nc/cluster_richness_projection/invalid/range", TestNcClusterRichnessProjection, NULL,
-              &test_nc_cluster_richness_projection_new,
-              &test_nc_cluster_richness_projection_invalid_range,
-              &test_nc_cluster_richness_projection_free);
   g_test_add ("/nc/cluster_richness_projection/invalid/reltol", TestNcClusterRichnessProjection, NULL,
               &test_nc_cluster_richness_projection_new,
               &test_nc_cluster_richness_projection_invalid_reltol,
@@ -108,9 +102,9 @@ main (gint argc, gchar *argv[])
               &test_nc_cluster_richness_projection_new,
               &test_nc_cluster_richness_projection_invalid_sigma,
               &test_nc_cluster_richness_projection_free);
-  g_test_add ("/nc/cluster_richness_projection/invalid/out_of_range", TestNcClusterRichnessProjection, NULL,
+  g_test_add ("/nc/cluster_richness_projection/unbounded", TestNcClusterRichnessProjection, NULL,
               &test_nc_cluster_richness_projection_new,
-              &test_nc_cluster_richness_projection_out_of_range,
+              &test_nc_cluster_richness_projection_unbounded,
               &test_nc_cluster_richness_projection_free);
 
   g_test_run ();
@@ -127,8 +121,6 @@ test_nc_cluster_richness_projection_new (TestNcClusterRichnessProjection *test, 
   test->tau   = 0.2;
 
   g_assert_true (NC_IS_CLUSTER_RICHNESS_PROJECTION (test->crp));
-
-  nc_cluster_richness_projection_set_lnlambda_range (test->crp, TEST_LNL_MIN, TEST_LNL_MAX);
 }
 
 void
@@ -234,33 +226,16 @@ void
 test_nc_cluster_richness_projection_properties (TestNcClusterRichnessProjection *test, gconstpointer pdata)
 {
   NcClusterRichnessProjection *crp2;
-  gdouble lnl_min, lnl_max, reltol;
+  gdouble reltol;
 
-  g_object_get (test->crp,
-                "lnlambda-min", &lnl_min,
-                "lnlambda-max", &lnl_max,
-                "reltol", &reltol,
-                NULL);
+  g_object_get (test->crp, "reltol", &reltol, NULL);
 
-  ncm_assert_cmpdouble (lnl_min, ==, TEST_LNL_MIN);
-  ncm_assert_cmpdouble (lnl_max, ==, TEST_LNL_MAX);
   ncm_assert_cmpdouble (reltol, ==, NC_CLUSTER_RICHNESS_PROJECTION_DEFAULT_RELTOL);
   ncm_assert_cmpdouble (nc_cluster_richness_projection_get_reltol (test->crp), ==, reltol);
 
-  g_object_set (test->crp,
-                "lnlambda-min", log (2.0),
-                "lnlambda-max", log (400.0),
-                "reltol", 1.0e-9,
-                NULL);
+  g_object_set (test->crp, "reltol", 1.0e-9, NULL);
+  g_object_get (test->crp, "reltol", &reltol, NULL);
 
-  g_object_get (test->crp,
-                "lnlambda-min", &lnl_min,
-                "lnlambda-max", &lnl_max,
-                "reltol", &reltol,
-                NULL);
-
-  ncm_assert_cmpdouble (lnl_min, ==, log (2.0));
-  ncm_assert_cmpdouble (lnl_max, ==, log (400.0));
   ncm_assert_cmpdouble (reltol, ==, 1.0e-9);
 
   nc_cluster_richness_projection_set_reltol (test->crp, 1.0e-10);
@@ -376,8 +351,6 @@ test_nc_cluster_richness_projection_norma (TestNcClusterRichnessProjection *test
   const gdouble tau_a[2] = { 0.5, 5.0 };
   guint i;
 
-  nc_cluster_richness_projection_set_lnlambda_range (test->crp, log (1.0e-6), log (1.0e4));
-
   for (i = 0; i < 2; i++)
   {
     nc_cluster_richness_projection_prepare (test->crp, test->mu, test->sigma, tau_a[i]);
@@ -408,12 +381,6 @@ test_nc_cluster_richness_projection_lnnormal_limit (TestNcClusterRichnessProject
 }
 
 void
-test_nc_cluster_richness_projection_invalid_range (TestNcClusterRichnessProjection *test, gconstpointer pdata)
-{
-  NCM_TEST_FAIL (nc_cluster_richness_projection_set_lnlambda_range (test->crp, log (10.0), log (1.0)));
-}
-
-void
 test_nc_cluster_richness_projection_invalid_reltol (TestNcClusterRichnessProjection *test, gconstpointer pdata)
 {
   NCM_TEST_FAIL (nc_cluster_richness_projection_set_reltol (test->crp, 2.0));
@@ -426,9 +393,15 @@ test_nc_cluster_richness_projection_invalid_sigma (TestNcClusterRichnessProjecti
 }
 
 void
-test_nc_cluster_richness_projection_out_of_range (TestNcClusterRichnessProjection *test, gconstpointer pdata)
+test_nc_cluster_richness_projection_unbounded (TestNcClusterRichnessProjection *test, gconstpointer pdata)
 {
+  /* The quadrature runs per richness, so no range has to be declared: any
+   * lnlambda is valid, and the density vanishes below mu - 10 sigma. */
   nc_cluster_richness_projection_prepare (test->crp, test->mu, test->sigma, test->tau);
-  NCM_TEST_FAIL (nc_cluster_richness_projection_eval (test->crp, TEST_LNL_MAX + 1.0));
+
+  g_assert_true (gsl_finite (nc_cluster_richness_projection_eval (test->crp, TEST_LNL_MAX + 10.0)));
+  g_assert_cmpfloat (nc_cluster_richness_projection_eval (test->crp, TEST_LNL_MAX + 10.0), >=, 0.0);
+  ncm_assert_cmpdouble (nc_cluster_richness_projection_eval (test->crp, test->mu - 10.0 * test->sigma - 1.0),
+                        ==, 0.0);
 }
 

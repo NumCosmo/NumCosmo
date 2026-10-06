@@ -38,9 +38,17 @@
  * It is a normalized density on its own and carries no mixture weight; the caller
  * combines it with the unprojected term.
  *
- * The convolution is evaluated as an ODE in $x = \ln\lambda$ using a
- * #NcmOdeSpline, so a single prepare() serves every $\lambda$, and its integral
- * follows from a closed-form identity rather than a second solve. See
+ * Writing the integral over the standardized $\ln t$, that is $u = (\ln t -
+ * \mu)/\sigma$, puts it in the form
+ * \begin{equation}
+ * T(\lambda) = \frac{\tau}{\sqrt{2\pi}} \int_{-\infty}^{X} e^{\psi(u)} \mathrm{d}u,
+ * \qquad \psi(u) = -\frac{u^2}{2} - s \left(1 - e^{-\sigma (X - u)}\right),
+ * \end{equation}
+ * with $X = (\ln\lambda - \mu)/\sigma$ and $s = \tau\lambda$. The integrand is
+ * positive and bounded by the standard normal, and is evaluated by a composite
+ * Gauss-Legendre rule: a single call returns one $\lambda$, so nothing is computed
+ * that the caller does not consume. Its integral follows from a closed-form
+ * identity rather than a second quadrature. See
  * <a href="../../theory/cluster_richness_projection.html">Richness projection</a>
  * for the derivation.
  *
@@ -53,33 +61,36 @@
 
 #include "nc/lss/cluster/nc_cluster_richness_projection.h"
 #include "ncm/core/ncm_c.h"
-#include "ncm/spline/ncm_ode_spline.h"
-#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_sf_erf.h>
+#include <gsl/gsl_integration.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-/* Start of the integration, in units of sigma below mu. The log-normal CDF there,
- * 1.0e-23, bounds both T and the error of the initial value below. */
+/* Lower limit of the integration, in units of sigma below mu. The log-normal CDF
+ * there, 1.0e-23, bounds both T and the error of the truncation. */
 #define _NC_CLUSTER_RICHNESS_PROJECTION_NSIGMA (10.0)
 
-/* Minimum knot density of the solver output. T is f_LN smoothed by a kernel of
- * width 1/tau, so in x it never varies faster than sigma. */
-#define _NC_CLUSTER_RICHNESS_PROJECTION_KNOTS_PER_SIGMA (32.0)
+/* Widest panel of the composite rule, in units of sigma. One unit is the scale on
+ * which the log-normal bulk varies, so this resolves it with room to spare. */
+#define _NC_CLUSTER_RICHNESS_PROJECTION_STEP_CAP (2.0)
+
+/* Geometric grading of the panels toward u = X, where the exponential kernel
+ * confines the integrand to a layer of width 1 / (tau * lambda * sigma). */
+#define _NC_CLUSTER_RICHNESS_PROJECTION_RATIO (4.0)
+
+/* Smallest panel allowed, so that a degenerate layer cannot stall the march. */
+#define _NC_CLUSTER_RICHNESS_PROJECTION_MIN_STEP (1.0e-14)
 
 typedef struct _NcClusterRichnessProjectionPrivate
 {
-  gdouble lnlambda_min;
-  gdouble lnlambda_max;
   gdouble reltol;
+  gdouble log_drop;
   gdouble mu;
   gdouble sigma;
   gdouble tau;
-  gdouble xi;
-  NcmOdeSpline *T_ode;
-  NcmSpline *T;
+  gsl_integration_glfixed_table *gl;
   gboolean prepared;
 } NcClusterRichnessProjectionPrivate;
 
@@ -91,8 +102,6 @@ struct _NcClusterRichnessProjection
 enum
 {
   PROP_0,
-  PROP_LNLAMBDA_MIN,
-  PROP_LNLAMBDA_MAX,
   PROP_RELTOL,
   PROP_SIZE,
 };
@@ -100,55 +109,48 @@ enum
 G_DEFINE_TYPE_WITH_PRIVATE (NcClusterRichnessProjection, nc_cluster_richness_projection, G_TYPE_OBJECT)
 
 /*
- * dT/dx = tau * (g(x) - e^x T), with x = ln(lambda) and
- * g(x) = lambda * f_LN(lambda) the log-normal density in ln(lambda).
+ * psi(u) = -u^2/2 - s (1 - e^{-sigma (X - u)}), the log of the integrand up to the
+ * normal prefactor. Written with expm1 so that the kernel keeps its relative
+ * accuracy inside the layer, where sigma (X - u) underflows the cancellation.
  */
-static gdouble
-_nc_cluster_richness_projection_dTdx (gdouble T, gdouble x, gpointer userdata)
+static inline gdouble
+_nc_cluster_richness_projection_psi (const gdouble u, const gdouble X, const gdouble s, const gdouble sigma)
 {
-  NcClusterRichnessProjectionPrivate * const self = (NcClusterRichnessProjectionPrivate *) userdata;
-  const gdouble u                                 = (x - self->mu) / self->sigma;
-  const gdouble g                                 = exp (-0.5 * u * u) / (ncm_c_sqrt_2pi () * self->sigma);
+  return -0.5 * u * u + s * expm1 (-sigma * (X - u));
+}
 
-  return self->tau * (g - exp (x) * T);
+/* psi'(u). Used only to tell whether the march has passed the peak. */
+static inline gdouble
+_nc_cluster_richness_projection_dpsi (const gdouble u, const gdouble X, const gdouble s, const gdouble sigma)
+{
+  return -u + s * sigma * exp (-sigma * (X - u));
 }
 
 static void
 nc_cluster_richness_projection_init (NcClusterRichnessProjection *crp)
 {
   NcClusterRichnessProjectionPrivate * const self = nc_cluster_richness_projection_get_instance_private (crp);
-  NcmSpline *s                                    = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
-  self->lnlambda_min = 0.0;
-  self->lnlambda_max = 0.0;
-  self->reltol       = NC_CLUSTER_RICHNESS_PROJECTION_DEFAULT_RELTOL;
-  self->mu           = 0.0;
-  self->sigma        = 0.0;
-  self->tau          = 0.0;
-  self->xi           = 0.0;
-  self->T_ode        = ncm_ode_spline_new (s, &_nc_cluster_richness_projection_dTdx);
-  self->T            = NULL;
-  self->prepared     = FALSE;
+  self->reltol   = 0.0;
+  self->log_drop = 0.0;
+  self->mu       = 0.0;
+  self->sigma    = 0.0;
+  self->tau      = 0.0;
+  self->gl       = NULL;
+  self->prepared = FALSE;
 
-  ncm_spline_free (s);
+  nc_cluster_richness_projection_set_reltol (crp, NC_CLUSTER_RICHNESS_PROJECTION_DEFAULT_RELTOL);
 }
 
 static void
 _nc_cluster_richness_projection_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcClusterRichnessProjection *crp                = NC_CLUSTER_RICHNESS_PROJECTION (object);
-  NcClusterRichnessProjectionPrivate * const self = nc_cluster_richness_projection_get_instance_private (crp);
+  NcClusterRichnessProjection *crp = NC_CLUSTER_RICHNESS_PROJECTION (object);
 
   g_return_if_fail (NC_IS_CLUSTER_RICHNESS_PROJECTION (object));
 
   switch (prop_id)
   {
-    case PROP_LNLAMBDA_MIN:
-      nc_cluster_richness_projection_set_lnlambda_range (crp, g_value_get_double (value), self->lnlambda_max);
-      break;
-    case PROP_LNLAMBDA_MAX:
-      nc_cluster_richness_projection_set_lnlambda_range (crp, self->lnlambda_min, g_value_get_double (value));
-      break;
     case PROP_RELTOL:
       nc_cluster_richness_projection_set_reltol (crp, g_value_get_double (value));
       break;
@@ -168,12 +170,6 @@ _nc_cluster_richness_projection_get_property (GObject *object, guint prop_id, GV
 
   switch (prop_id)
   {
-    case PROP_LNLAMBDA_MIN:
-      g_value_set_double (value, self->lnlambda_min);
-      break;
-    case PROP_LNLAMBDA_MAX:
-      g_value_set_double (value, self->lnlambda_max);
-      break;
     case PROP_RELTOL:
       g_value_set_double (value, self->reltol);
       break;
@@ -189,8 +185,7 @@ _nc_cluster_richness_projection_dispose (GObject *object)
   NcClusterRichnessProjection *crp                = NC_CLUSTER_RICHNESS_PROJECTION (object);
   NcClusterRichnessProjectionPrivate * const self = nc_cluster_richness_projection_get_instance_private (crp);
 
-  ncm_ode_spline_clear (&self->T_ode);
-  self->T        = NULL;
+  g_clear_pointer (&self->gl, gsl_integration_glfixed_table_free);
   self->prepared = FALSE;
 
   G_OBJECT_CLASS (nc_cluster_richness_projection_parent_class)->dispose (object);
@@ -213,37 +208,11 @@ nc_cluster_richness_projection_class_init (NcClusterRichnessProjectionClass *kla
   object_class->finalize     = &_nc_cluster_richness_projection_finalize;
 
   /**
-   * NcClusterRichnessProjection:lnlambda-min:
-   *
-   * Lower end $\ln\lambda_\mathrm{min}$ of the range over which the density is
-   * evaluated.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_LNLAMBDA_MIN,
-                                   g_param_spec_double ("lnlambda-min",
-                                                        NULL,
-                                                        "Minimum ln(lambda)",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcClusterRichnessProjection:lnlambda-max:
-   *
-   * Upper end $\ln\lambda_\mathrm{max}$ of the range over which the density is
-   * evaluated.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_LNLAMBDA_MAX,
-                                   g_param_spec_double ("lnlambda-max",
-                                                        NULL,
-                                                        "Maximum ln(lambda)",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
    * NcClusterRichnessProjection:reltol:
    *
-   * Relative tolerance of the ODE solver.
+   * Relative accuracy asked of the quadrature. It selects the order of the
+   * Gauss-Legendre rule and the depth at which the integrand is treated as
+   * negligible; the cost grows with the logarithm of it, not with its inverse.
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
@@ -257,8 +226,7 @@ nc_cluster_richness_projection_class_init (NcClusterRichnessProjectionClass *kla
 /**
  * nc_cluster_richness_projection_new:
  *
- * Creates a new #NcClusterRichnessProjection. The range must be set with
- * nc_cluster_richness_projection_set_lnlambda_range() before preparing.
+ * Creates a new #NcClusterRichnessProjection.
  *
  * Returns: (transfer full): a new #NcClusterRichnessProjection.
  */
@@ -310,55 +278,48 @@ nc_cluster_richness_projection_clear (NcClusterRichnessProjection **crp)
 }
 
 /**
- * nc_cluster_richness_projection_set_lnlambda_range:
- * @crp: a #NcClusterRichnessProjection
- * @lnlambda_min: minimum $\ln\lambda$
- * @lnlambda_max: maximum $\ln\lambda$
- *
- * Sets the range over which the density is evaluated. Calling it invalidates any
- * previous nc_cluster_richness_projection_prepare().
- *
- */
-void
-nc_cluster_richness_projection_set_lnlambda_range (NcClusterRichnessProjection *crp, gdouble lnlambda_min, gdouble lnlambda_max)
-{
-  NcClusterRichnessProjectionPrivate * const self = nc_cluster_richness_projection_get_instance_private (crp);
-
-  g_assert_cmpfloat (lnlambda_min, <, lnlambda_max);
-  /* exp (lnlambda_max) enters the ODE right-hand side and must not overflow. */
-  g_assert_cmpfloat (lnlambda_max, <, 0.5 * GSL_LOG_DBL_MAX);
-
-  self->lnlambda_min = lnlambda_min;
-  self->lnlambda_max = lnlambda_max;
-  self->prepared     = FALSE;
-}
-
-/**
  * nc_cluster_richness_projection_set_reltol:
  * @crp: a #NcClusterRichnessProjection
  * @reltol: relative tolerance
  *
- * Sets the relative tolerance of the ODE solver. Calling it invalidates any
- * previous nc_cluster_richness_projection_prepare().
+ * Sets the relative accuracy asked of the quadrature.
  *
  */
 void
 nc_cluster_richness_projection_set_reltol (NcClusterRichnessProjection *crp, gdouble reltol)
 {
   NcClusterRichnessProjectionPrivate * const self = nc_cluster_richness_projection_get_instance_private (crp);
+  gsize nodes;
 
   g_assert_cmpfloat (reltol, >=, GSL_DBL_EPSILON);
   g_assert_cmpfloat (reltol, <, 1.0);
 
+  if (reltol == self->reltol)
+    return;
+
+  /* Measured against a refined rule over the whole parameter box: 1.3e-6 at
+   * eight nodes, 1.4e-11 at twelve, and the double-precision floor of the
+   * composite rule, 1.1e-11, from sixteen on. */
+  if (reltol > 1.0e-5)
+    nodes = 8;
+  else if (reltol > 1.0e-10)
+    nodes = 12;
+  else
+    nodes = 16;
+
+  /* Depth, in e-folds below the peak, at which the integrand stops contributing. */
+  self->log_drop = CLAMP (-log (reltol) + 25.0, 40.0, 80.0);
   self->reltol   = reltol;
-  self->prepared = FALSE;
+
+  g_clear_pointer (&self->gl, gsl_integration_glfixed_table_free);
+  self->gl = gsl_integration_glfixed_table_alloc (nodes);
 }
 
 /**
  * nc_cluster_richness_projection_get_reltol:
  * @crp: a #NcClusterRichnessProjection
  *
- * Returns: the relative tolerance of the ODE solver.
+ * Returns: the relative accuracy asked of the quadrature.
  */
 gdouble
 nc_cluster_richness_projection_get_reltol (NcClusterRichnessProjection *crp)
@@ -375,54 +336,22 @@ nc_cluster_richness_projection_get_reltol (NcClusterRichnessProjection *crp)
  * @sigma: log-normal scale $\sigma$
  * @tau: exponential rate $\tau$
  *
- * Solves $\mathrm{d}T/\mathrm{d}x = \tau (g(x) - e^x T)$, with $x = \ln\lambda$ and $g$
- * the log-normal density in $\ln\lambda$, over the range set by
- * nc_cluster_richness_projection_set_lnlambda_range(). One call serves every
- * $\lambda$ in that range.
+ * Sets the parameters the next evaluations refer to. The work is done per
+ * $\lambda$ by nc_cluster_richness_projection_eval(), so this call is $O(1)$ and
+ * carries no range of its own.
  *
  */
 void
 nc_cluster_richness_projection_prepare (NcClusterRichnessProjection *crp, gdouble mu, gdouble sigma, gdouble tau)
 {
   NcClusterRichnessProjectionPrivate * const self = nc_cluster_richness_projection_get_instance_private (crp);
-  gdouble xi, yi, F_LN_i, f_LN_i;
-  guint min_sub;
 
   g_assert_cmpfloat (sigma, >, 0.0);
   g_assert_cmpfloat (tau, >, 0.0);
-  g_assert_cmpfloat (self->lnlambda_min, <, self->lnlambda_max);
 
-  self->mu    = mu;
-  self->sigma = sigma;
-  self->tau   = tau;
-
-  xi = mu - _NC_CLUSTER_RICHNESS_PROJECTION_NSIGMA * sigma;
-
-  g_assert_cmpfloat (xi, <, self->lnlambda_max);
-
-  self->xi = xi;
-
-  min_sub = (guint) ceil ((self->lnlambda_max - xi) * _NC_CLUSTER_RICHNESS_PROJECTION_KNOTS_PER_SIGMA / sigma);
-
-  /* Initial value at xi. T is bounded by tau * F_LN and by f_LN, each attained in
-   * one of the two limits of tau, so the smaller is correct to the 1.0e-23 scale
-   * of both. A zero initial value leaves the solver with no scale and it fails
-   * the error test on the first step. */
-  F_LN_i = 0.5 * erfc (_NC_CLUSTER_RICHNESS_PROJECTION_NSIGMA / M_SQRT2);
-  f_LN_i = exp (-0.5 * gsl_pow_2 (_NC_CLUSTER_RICHNESS_PROJECTION_NSIGMA))
-           / (ncm_c_sqrt_2pi () * sigma * exp (xi));
-  yi = MIN (tau * F_LN_i, f_LN_i);
-
-  ncm_ode_spline_set_interval (self->T_ode, yi, xi, self->lnlambda_max);
-  ncm_ode_spline_set_reltol (self->T_ode, self->reltol);
-  ncm_ode_spline_set_abstol (self->T_ode, self->reltol * yi);
-  ncm_ode_spline_set_min_subdivisions (self->T_ode, MAX (min_sub, 16));
-
-  /* The step derived from the initial slope is too small to advance x. */
-  ncm_ode_spline_set_ini_step (self->T_ode, (self->lnlambda_max - xi) / MAX (min_sub, 16));
-  ncm_ode_spline_prepare (self->T_ode, self);
-
-  self->T        = ncm_ode_spline_peek_spline (self->T_ode);
+  self->mu       = mu;
+  self->sigma    = sigma;
+  self->tau      = tau;
   self->prepared = TRUE;
 }
 
@@ -434,21 +363,92 @@ nc_cluster_richness_projection_prepare (NcClusterRichnessProjection *crp, gdoubl
  * Evaluates the density with respect to $\mathrm{d}\lambda$. Below $\mu - 10\sigma$,
  * where $T$ is under $10^{-23}$ of its peak, zero is returned.
  *
+ * The integrand $e^{\psi}$ carries two scales: the log-normal bulk, of width one
+ * in $u$, and a layer of width $1/(s\sigma)$ at the upper limit, left by the
+ * exponential kernel. Since $\psi'' = -1 + s\sigma^2 e^{-\sigma(X-u)}$ grows with
+ * $u$, the integrand is concave below $u_\mathrm{inf} = X - \ln(s\sigma^2)/\sigma$
+ * and convex above it, so the two scales are the only ones there are. Panels
+ * march down from $X$, geometrically graded so that the first one matches the
+ * layer, and the march stops once it is past the peak of the concave part and the
+ * integrand has dropped below the accuracy asked for.
+ *
  * Returns: $T(\lambda)$.
  */
 gdouble
 nc_cluster_richness_projection_eval (NcClusterRichnessProjection *crp, gdouble lnlambda)
 {
   NcClusterRichnessProjectionPrivate * const self = nc_cluster_richness_projection_get_instance_private (crp);
+  const gdouble sigma                             = self->sigma;
+  const gdouble X                                 = (lnlambda - self->mu) / sigma;
+  const gdouble s                                 = self->tau * exp (lnlambda);
+  const gdouble nsigma                            = _NC_CLUSTER_RICHNESS_PROJECTION_NSIGMA;
+  const gdouble L                                 = X + nsigma;
+  const gsize nodes                               = self->gl->n;
+  gdouble u_inf, step, v, tot, psi_max;
 
   g_assert (self->prepared);
-  g_assert_cmpfloat (lnlambda, >=, self->lnlambda_min);
-  g_assert_cmpfloat (lnlambda, <=, self->lnlambda_max);
 
-  if (lnlambda < self->xi)
+  if (X <= -nsigma)
     return 0.0;
 
-  return ncm_spline_eval (self->T, lnlambda);
+  /* tau * lambda beyond the double range: nothing is added, T is the log-normal. */
+  if (!gsl_finite (s))
+    return exp (-0.5 * X * X - lnlambda) / (ncm_c_sqrt_2pi () * sigma);
+
+  {
+    const gdouble ssig2 = s * sigma * sigma;
+
+    u_inf = (ssig2 > 1.0) ? X - log (ssig2) / sigma : X;
+  }
+
+  step = MIN (_NC_CLUSTER_RICHNESS_PROJECTION_STEP_CAP,
+              MAX (1.0 / (s * sigma), _NC_CLUSTER_RICHNESS_PROJECTION_MIN_STEP));
+
+  v       = 0.0;
+  tot     = 0.0;
+  psi_max = -G_MAXDOUBLE;
+
+  while (v < L)
+  {
+    const gdouble b = X - v;
+    gdouble a, psi_a, psi_b;
+
+    step  = MIN (step, L - v);
+    a     = b - step;
+    psi_a = _nc_cluster_richness_projection_psi (a, X, s, sigma);
+    psi_b = _nc_cluster_richness_projection_psi (b, X, s, sigma);
+
+    /* Where psi is convex the panel lies below its endpoints, so a panel whose
+     * endpoints are already negligible can be skipped outright. */
+    if (!((a >= u_inf) && (MAX (psi_a, psi_b) < psi_max - self->log_drop)))
+    {
+      gsize i;
+
+      for (i = 0; i < nodes; i++)
+      {
+        gdouble u_i, w_i, psi_i;
+
+        gsl_integration_glfixed_point (a, b, i, &u_i, &w_i, self->gl);
+        psi_i    = _nc_cluster_richness_projection_psi (u_i, X, s, sigma);
+        tot     += w_i * exp (psi_i);
+        psi_max  = MAX (psi_max, psi_i);
+      }
+    }
+
+    psi_max = MAX (psi_max, MAX (psi_a, psi_b));
+    v      += step;
+
+    /* Concave from here down and past the peak: psi only decreases further left. */
+    if ((a < u_inf) &&
+        (_nc_cluster_richness_projection_dpsi (a, X, s, sigma) > 0.0) &&
+        (psi_a < psi_max - self->log_drop))
+      break;
+
+    step = MIN (_NC_CLUSTER_RICHNESS_PROJECTION_STEP_CAP,
+                _NC_CLUSTER_RICHNESS_PROJECTION_RATIO * step);
+  }
+
+  return self->tau * tot / ncm_c_sqrt_2pi ();
 }
 
 /**
@@ -474,9 +474,10 @@ nc_cluster_richness_projection_eval_lnlambda (NcClusterRichnessProjection *crp, 
  * @lnlambda_hi: upper end $\ln\lambda_\mathrm{hi}$
  *
  * Integrates the density over $[\lambda_\mathrm{lo}, \lambda_\mathrm{hi}]$ using
- * $\int_0^\lambda T = F_\mathrm{LN}(\lambda) - T(\lambda)/\tau$, a consequence of the
- * ODE, so no quadrature is involved. The two terms cancel to leading order for
- * $\tau\lambda \ll 1$, costing about $\epsilon / (\tau\lambda)$ in relative accuracy.
+ * $\int_0^\lambda T = F_\mathrm{LN}(\lambda) - T(\lambda)/\tau$, a property of $T$
+ * itself, so no quadrature of the cumulative is involved. The two terms cancel to
+ * leading order for $\tau\lambda \ll 1$, costing about $\epsilon / (\tau\lambda)$
+ * in relative accuracy.
  *
  * Returns: $\int_{\lambda_\mathrm{lo}}^{\lambda_\mathrm{hi}} T(\lambda) \, \mathrm{d}\lambda$.
  */
@@ -501,4 +502,3 @@ nc_cluster_richness_projection_eval_int (NcClusterRichnessProjection *crp, gdoub
 
   return dF - (T_hi - T_lo) / self->tau;
 }
-

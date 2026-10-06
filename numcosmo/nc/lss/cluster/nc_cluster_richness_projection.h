@@ -42,7 +42,6 @@ NcClusterRichnessProjection *nc_cluster_richness_projection_ref (NcClusterRichne
 void nc_cluster_richness_projection_free (NcClusterRichnessProjection *crp);
 void nc_cluster_richness_projection_clear (NcClusterRichnessProjection **crp);
 
-void nc_cluster_richness_projection_set_lnlambda_range (NcClusterRichnessProjection *crp, gdouble lnlambda_min, gdouble lnlambda_max);
 void nc_cluster_richness_projection_set_reltol (NcClusterRichnessProjection *crp, gdouble reltol);
 gdouble nc_cluster_richness_projection_get_reltol (NcClusterRichnessProjection *crp);
 

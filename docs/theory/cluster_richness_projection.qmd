@@ -90,41 +90,51 @@ $$
 \qquad
 T(0) = 0 .
 $$
-This is a first-order linear ODE with bounded coefficients, integrated by
-[[numcosmo-math|NcmOdeSpline]]. A single solve covers every $\lambda$ at fixed
-$(\ln M, z)$, whereas a quadrature of the original expression runs once per
-point.
+This first-order linear equation is an exact consequence of the integral, not a
+further modelling step. It is not how the class evaluates $T$ --- the cumulative
+below is its one use --- but it is what makes that cumulative free.
 
-The class integrates in $x = \ln\lambda$, where $\lambda f_\mathrm{LN}(\lambda)$
-is the log-normal density in $\ln\lambda$ and $\lambda$ drops out of the source
-term,
+## Evaluation
+
+[[numcosmo|NcClusterRichnessProjection]] integrates the convolution directly, one
+richness per call. Writing it over the standardized $\ln t$, that is
+$u = (\ln t - \mu)/\sigma$, and pairing the prefactor with the kernel as above,
 $$
-\frac{\mathrm{d}T}{\mathrm{d}x}
-= \tau \left[ \frac{1}{\sigma} \varphi\!\left(\frac{x - \mu}{\sigma}\right) - e^{x} T \right],
+T(\lambda) = \frac{\tau}{\sqrt{2\pi}} \int_{-\infty}^{X} e^{\psi(u)} \, \mathrm{d}u,
 \qquad
-\varphi(u) = \frac{e^{-u^2/2}}{\sqrt{2\pi}} .
+\psi(u) = -\frac{u^2}{2} - s \left( 1 - e^{-\sigma (X - u)} \right),
 $$
-Integration starts at $x_i = \mu - 10\sigma$, and the density is reported as zero
-below that point.
+with $X = (\ln\lambda - \mu)/\sigma$ and $s = \tau\lambda$. The integrand is
+positive and bounded by the standard normal, so nothing large is carried to
+produce something small. Integration starts at $u = -10$, and the density is
+reported as zero below that point: the log-normal CDF there, $10^{-23}$, bounds
+the truncation.
 
-The initial value there is not zero. $T(x_i)$ is bounded by $\tau
-F_\mathrm{LN}(x_i)$ and by $f_\mathrm{LN}(x_i)$, each attained in one of the two
-limits of $\tau$, so the smaller of the two is correct to the $10^{-23}$ scale of
-both. Starting from $T = 0$ instead leaves the solver with no scale for its error
-test, and any absolute tolerance small enough for the tail is then rejected on
-the first step.
+Two scales are present and no more. The second derivative,
+$$
+\psi''(u) = -1 + s\sigma^2 e^{-\sigma (X - u)},
+$$
+increases with $u$, so $\psi$ is concave below
+$u_\mathrm{inf} = X - \ln(s\sigma^2)/\sigma$ and convex above it: a log-normal
+bulk of unit width, and a layer of width $1/(s\sigma)$ left at the upper limit by
+the exponential kernel. A composite Gauss--Legendre rule marches down from $X$ on
+panels graded geometrically, the first matching the layer and each one four times
+the last up to a cap of two. Where $\psi$ is convex a panel lies below its
+endpoints and is skipped once both are negligible; where it is concave, the march
+stops for good once it is past the peak and below the accuracy asked for. Against
+a refined rule over the whole parameter box the result agrees to $10^{-11}$,
+costing about 150 evaluations of $\psi$.
 
-The depth $10\sigma$ follows from the error of that initial value rather than
-from conditioning: it enters the solution as a fraction $\Phi(-n)$ of the peak,
-measured at $3.3 \times 10^{-5}$ for $n = 4$ and below $10^{-8}$ for $n \ge 8$.
-A minimum knot density is imposed on the solver output as well, since $T$ is
-$f_\mathrm{LN}$ smoothed by a kernel of width $1/\tau$ and so never varies faster
-than $\sigma$ in $x$.
+The alternative, integrating the ODE once over a grid in $\lambda$, serves every
+richness from one solve. That pays only when many richnesses are wanted at fixed
+$(\mu, \sigma, \tau)$, and the likelihood does the opposite: $\mu$ and $\sigma$
+follow $(\ln M, z)$, so they move at every node of the mass--redshift quadrature,
+while each node consumes one richness --- or two, through the cumulative below.
 
 ## Cumulative Distribution
 
 Integrating the ODE from $0$ to $\lambda$ and rearranging gives the cumulative
-in closed form in terms of the solution already available,
+in closed form in terms of $T$ itself,
 $$
 \int_0^{\lambda} T(\lambda') \, \mathrm{d}\lambda'
 = F_\mathrm{LN}(\lambda) - \frac{T(\lambda)}{\tau},
@@ -132,8 +142,8 @@ $$
 F_\mathrm{LN}(\lambda) = \frac{1}{2}
   \mathrm{erfc}\!\left(\frac{\mu - \ln\lambda}{\sqrt{2}\sigma}\right),
 $$
-so a bin integral costs two spline evaluations and two $\mathrm{erfc}$ calls,
-with no second ODE and no quadrature. Taking $\lambda \to \infty$, where
+so a bin integral costs two evaluations of $T$ and two $\mathrm{erfc}$ calls, and
+no quadrature of the cumulative itself. Taking $\lambda \to \infty$, where
 $T \to 0$ and $F_\mathrm{LN} \to 1$, confirms the normalization.
 
 The two terms cancel to leading order when $\tau\lambda \ll 1$, costing about

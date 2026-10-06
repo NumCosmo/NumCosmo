@@ -44,12 +44,11 @@
  * #NcClusterRichnessProjection. This covers the first two components of the
  * mixture of Costanzi et al. 2019; percolation and masking are not included.
  *
- * $T$ costs one ODE solve per $(\ln M, z)$, controlled by
+ * $T$ costs one quadrature per richness it is asked for, to the accuracy set by
  * #NcClusterMassProjection:reltol. The default $10^{-7}$ is far tighter than a
- * likelihood needs and about ten times cheaper than the tolerance
- * #NcClusterRichnessProjection uses on its own.
+ * likelihood needs; the cost grows with its logarithm, so it is left there.
  *
- * Sampling never touches the ODE: nc_cluster_mass_projection_resample() draws the
+ * Sampling never evaluates $T$: nc_cluster_mass_projection_resample() draws the
  * mixture component, then the log-normal, then adds the exponential.
  *
  */
@@ -74,12 +73,6 @@ typedef struct _NcClusterMassProjectionPrivate
 {
   NcClusterRichnessProjection *crp;
   gdouble reltol;
-  gdouble mu;
-  gdouble sigma;
-  gdouble tau;
-  gdouble lnl_min;
-  gdouble lnl_max;
-  gboolean prepared;
 } NcClusterMassProjectionPrivate;
 
 struct _NcClusterMassProjection
@@ -113,14 +106,8 @@ nc_cluster_mass_projection_init (NcClusterMassProjection *mp)
 {
   NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (mp);
 
-  self->crp      = nc_cluster_richness_projection_new ();
-  self->reltol   = NC_CLUSTER_MASS_PROJECTION_DEFAULT_RELTOL;
-  self->mu       = GSL_NAN;
-  self->sigma    = GSL_NAN;
-  self->tau      = GSL_NAN;
-  self->lnl_min  = GSL_NAN;
-  self->lnl_max  = GSL_NAN;
-  self->prepared = FALSE;
+  self->crp    = nc_cluster_richness_projection_new ();
+  self->reltol = NC_CLUSTER_MASS_PROJECTION_DEFAULT_RELTOL;
 
   nc_cluster_richness_projection_set_reltol (self->crp, self->reltol);
 }
@@ -169,7 +156,6 @@ _nc_cluster_mass_projection_dispose (GObject *object)
   NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (mp);
 
   nc_cluster_richness_projection_clear (&self->crp);
-  self->prepared = FALSE;
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_cluster_mass_projection_parent_class)->dispose (object);
@@ -296,13 +282,13 @@ nc_cluster_mass_projection_class_init (NcClusterMassProjectionClass *klass)
   /**
    * NcClusterMassProjection:reltol:
    *
-   * Relative tolerance of the ODE that evaluates the projection term.
+   * Relative accuracy of the quadrature that evaluates the projection term.
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
                                    g_param_spec_double ("reltol",
                                                         NULL,
-                                                        "Relative tolerance of the projection ODE",
+                                                        "Relative accuracy of the projection quadrature",
                                                         GSL_DBL_EPSILON, 1.0, NC_CLUSTER_MASS_PROJECTION_DEFAULT_RELTOL,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -345,37 +331,15 @@ _nc_cluster_mass_projection_sigma (NcClusterMassRichness *mr, gdouble lnM, gdoub
 }
 
 /*
- * Solves the projection ODE for the current (mu, sigma, tau), reusing the previous
- * solution whenever the three are unchanged. The range follows CUT and lnR_max,
- * which are model state and may move between likelihood evaluations.
+ * Points the projection term at the current (mu, sigma, tau). The quadrature runs
+ * per richness, so this is a plain assignment and needs no range of its own.
  */
 static void
 _nc_cluster_mass_projection_prepare (NcClusterMassProjection *mp, const gdouble mu, const gdouble sigma)
 {
   NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (mp);
-  const gdouble tau                           = TAU;
-  gdouble lnl_min                             = CUT;
-  gdouble lnl_max                             = 0.0;
 
-  g_object_get (mp, "lnRichness-max", &lnl_max, NULL);
-  g_assert_cmpfloat (lnl_min, <, lnl_max);
-
-  if ((lnl_min != self->lnl_min) || (lnl_max != self->lnl_max))
-  {
-    nc_cluster_richness_projection_set_lnlambda_range (self->crp, lnl_min, lnl_max);
-    self->lnl_min  = lnl_min;
-    self->lnl_max  = lnl_max;
-    self->prepared = FALSE;
-  }
-
-  if (!self->prepared || (mu != self->mu) || (sigma != self->sigma) || (tau != self->tau))
-  {
-    nc_cluster_richness_projection_prepare (self->crp, mu, sigma, tau);
-    self->mu       = mu;
-    self->sigma    = sigma;
-    self->tau      = tau;
-    self->prepared = TRUE;
-  }
+  nc_cluster_richness_projection_prepare (self->crp, mu, sigma, TAU);
 }
 
 static gdouble
@@ -496,7 +460,7 @@ _nc_cluster_mass_projection_resample (NcClusterMass *clusterm, NcHICosmo *cosmo,
 
   ncm_rng_lock (rng);
 
-  /* The mixture is sampled directly: no ODE is involved. */
+  /* The mixture is sampled directly: no quadrature is involved. */
   lnl = ncm_rng_gaussian_gen (rng, mu, sigma_t);
 
   if ((f_prj > 0.0) && (ncm_rng_uniform01_gen (rng) < f_prj))
@@ -530,9 +494,9 @@ _nc_cluster_mass_projection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *
  * @mp: a #NcClusterMassProjection
  * @reltol: relative tolerance
  *
- * Sets the relative tolerance of the ODE that evaluates the projection term. The
- * cost of each evaluation falls steeply with a looser tolerance; the default
- * $10^{-7}$ already keeps the relative error of the term near $10^{-5}$.
+ * Sets the relative accuracy of the quadrature that evaluates the projection
+ * term. The cost grows with the logarithm of it, so the default $10^{-7}$ is
+ * kept even though a likelihood needs far less.
  *
  */
 void
@@ -540,8 +504,7 @@ nc_cluster_mass_projection_set_reltol (NcClusterMassProjection *mp, gdouble relt
 {
   NcClusterMassProjectionPrivate * const self = nc_cluster_mass_projection_get_instance_private (mp);
 
-  self->reltol   = reltol;
-  self->prepared = FALSE;
+  self->reltol = reltol;
 
   nc_cluster_richness_projection_set_reltol (self->crp, reltol);
 }
@@ -550,7 +513,7 @@ nc_cluster_mass_projection_set_reltol (NcClusterMassProjection *mp, gdouble relt
  * nc_cluster_mass_projection_get_reltol:
  * @mp: a #NcClusterMassProjection
  *
- * Returns: the relative tolerance of the projection ODE.
+ * Returns: the relative accuracy of the projection quadrature.
  */
 gdouble
 nc_cluster_mass_projection_get_reltol (NcClusterMassProjection *mp)
