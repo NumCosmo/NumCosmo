@@ -22,7 +22,7 @@
 These exercise ``NcGalaxyRedshiftPop`` (LSST-SRD variant) in isolation
 from any calculator: the marginal ``P(z|I)`` is validated for normalization over
 ``z``, consistency of ``ln_eval`` with ``eval`` and of ``gen()`` with the pdf, and
-(historically) golden parity against the legacy ``NcGalaxySDTrueRedshiftLSSTSRD``
+(historically) parity against the legacy ``NcGalaxySDTrueRedshiftLSSTSRD``
 oracle -- the two shared identical math.
 
 FROZEN REFERENCE VALUES: the parity documented above was proven by running
@@ -35,7 +35,7 @@ legacy-comparison code, at git rev ``77313f22`` (2026-07-16), then legacy
 no longer depend on legacy at runtime -- legacy is slated for deletion in a
 follow-up PR. The captured sequences are stored as ``Ncm.Matrix`` binfiles
 (``data/truth_tables/wl/``) rather than inline literals; see
-``_load_eval_golden``/``_load_gen_golden``.
+``_load_eval_truth_table``/``_load_gen_truth_table``.
 """
 
 import pytest
@@ -92,19 +92,19 @@ def test_gen_consistency(variant):
     assert_allclose(s.mean(), mean_z, atol=5.0 * s.std() / np.sqrt(n_samples))
 
 
-_EVAL_GOLDEN_FILE = "truth_tables/wl/nc_galaxy_redshift_pop_eval_parity.bin"
+_EVAL_TRUTH_TABLE_FILE = "truth_tables/wl/nc_galaxy_redshift_pop_eval_parity.bin"
 
 
-def _load_eval_golden() -> np.ndarray:
+def _load_eval_truth_table() -> np.ndarray:
     """Load the frozen eval/ln_eval sequences as a (len(_VARIANTS), 2, 1024) array."""
-    path = Ncm.cfg_get_data_filename(_EVAL_GOLDEN_FILE, True)
+    path = Ncm.cfg_get_data_filename(_EVAL_TRUTH_TABLE_FILE, True)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     matrix = ser.from_binfile(path)
     assert isinstance(matrix, Ncm.Matrix)
     return np.array(matrix.dup_array()).reshape(len(_VARIANTS), 2, 1024)
 
 
-_PARITY_EVAL_FROZEN = _load_eval_golden()
+_PARITY_EVAL_FROZEN = _load_eval_truth_table()
 
 
 @pytest.mark.parametrize("variant", _VARIANTS)
@@ -123,19 +123,19 @@ def test_parity_eval(variant):
     assert_allclose(new_ln, _PARITY_EVAL_FROZEN[idx, 1], rtol=1.0e-12, atol=1.0e-12)
 
 
-_GEN_GOLDEN_FILE = "truth_tables/wl/nc_galaxy_redshift_pop_gen_parity.bin"
+_GEN_TRUTH_TABLE_FILE = "truth_tables/wl/nc_galaxy_redshift_pop_gen_parity.bin"
 
 
-def _load_gen_golden() -> np.ndarray:
+def _load_gen_truth_table() -> np.ndarray:
     """Load the frozen gen() draw sequences as a (len(_VARIANTS), 5000) array."""
-    path = Ncm.cfg_get_data_filename(_GEN_GOLDEN_FILE, True)
+    path = Ncm.cfg_get_data_filename(_GEN_TRUTH_TABLE_FILE, True)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     matrix = ser.from_binfile(path)
     assert isinstance(matrix, Ncm.Matrix)
     return np.array(matrix.dup_array()).reshape(len(_VARIANTS), 5000)
 
 
-_PARITY_GEN_FROZEN = _load_gen_golden()
+_PARITY_GEN_FROZEN = _load_gen_truth_table()
 
 
 @pytest.mark.parametrize("variant", _VARIANTS)
