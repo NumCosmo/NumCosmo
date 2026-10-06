@@ -23,7 +23,7 @@ f(x) = \sum_{k=0}^{N-1} a_k\,T_k(t),
 \tag{1}
 $$
 where $T_k$ is the Chebyshev polynomial of the first kind. The forward and inverse maps
-are [[numcosmo-math|ncm_spectral_x_to_t]] and [[numcosmo-math|ncm_spectral_t_to_x]].
+are [[numcosmo-math|ncm_spectral_x_to_s]] and [[numcosmo-math|ncm_spectral_s_to_x]].
 
 ## Computing the Coefficients
 
@@ -239,7 +239,7 @@ the recurrence
 $$
 t\,C^{(2)}_n = \frac{(n+1)\,C^{(2)}_{n+1} + (n+3)\,C^{(2)}_{n-1}}{2(n+2)},
 $$
-is [[numcosmo-math|ncm_spectral_gegenbauer_alpha2_xmul]].
+is [[numcosmo-math|ncm_spectral_gegenbauer_alpha2_mul_affine]].
 
 ## Ultraspherical Operators
 
@@ -254,13 +254,13 @@ $c_k \equiv 0$ for $k < 0$, so a term whose index runs off the start simply vani
 | Operator | $C^{(2)}$ coefficient of the output | Method |
 |---|---|---|
 | identity | $\dfrac{c_k}{2(k+1)} - \dfrac{(k+2)c_{k+2}}{(k+1)(k+3)} + \dfrac{c_{k+4}}{2(k+3)} + \tfrac12 c_0\,\delta_{k,0}$ | [[numcosmo-math\|ncm_spectral_get_proj_matrix]] |
-| $x$ | $\dfrac{c_{k-1}}{4(k+1)} - \dfrac{c_{k+1}}{4(k+3)} - \dfrac{c_{k+3}}{4(k+1)} + \dfrac{c_{k+5}}{4(k+3)} + \tfrac14 c_1\,\delta_{k,0} + \tfrac18 c_0\,\delta_{k,1}$ | [[numcosmo-math\|ncm_spectral_get_x_matrix]] |
-| $x^2$ | $\dfrac{c_{k-2}}{8(k+1)} + \dfrac{c_k}{4(k+1)(k+3)} - \dfrac{(k+2)c_{k+2}}{4(k+1)(k+3)} - \dfrac{c_{k+4}}{4(k+1)(k+3)} + \dfrac{c_{k+6}}{8(k+3)} + \big(\tfrac1{12}c_0 + \tfrac18 c_2\big)\delta_{k,0} + \tfrac1{16}c_1\,\delta_{k,1} + \tfrac1{24}c_0\,\delta_{k,2}$ | [[numcosmo-math\|ncm_spectral_get_x2_matrix]] |
+| $x$ | $\dfrac{c_{k-1}}{4(k+1)} - \dfrac{c_{k+1}}{4(k+3)} - \dfrac{c_{k+3}}{4(k+1)} + \dfrac{c_{k+5}}{4(k+3)} + \tfrac14 c_1\,\delta_{k,0} + \tfrac18 c_0\,\delta_{k,1}$ | [[numcosmo-math\|ncm_spectral_get_s_matrix]] |
+| $x^2$ | $\dfrac{c_{k-2}}{8(k+1)} + \dfrac{c_k}{4(k+1)(k+3)} - \dfrac{(k+2)c_{k+2}}{4(k+1)(k+3)} - \dfrac{c_{k+4}}{4(k+1)(k+3)} + \dfrac{c_{k+6}}{8(k+3)} + \big(\tfrac1{12}c_0 + \tfrac18 c_2\big)\delta_{k,0} + \tfrac1{16}c_1\,\delta_{k,1} + \tfrac1{24}c_0\,\delta_{k,2}$ | [[numcosmo-math\|ncm_spectral_get_s2_matrix]] |
 | $\mathrm{d}/\mathrm{d}x$ | $c_{k+1} - c_{k+3}$ | [[numcosmo-math\|ncm_spectral_get_d_matrix]] |
-| $x\,\mathrm{d}/\mathrm{d}x$ | $\dfrac{k\,c_k}{2(k+1)} + \dfrac{(k+2)c_{k+2}}{(k+1)(k+3)} - \dfrac{(k+4)c_{k+4}}{2(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_x_d_matrix]] |
+| $x\,\mathrm{d}/\mathrm{d}x$ | $\dfrac{k\,c_k}{2(k+1)} + \dfrac{(k+2)c_{k+2}}{(k+1)(k+3)} - \dfrac{(k+4)c_{k+4}}{2(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_s_d_matrix]] |
 | $\mathrm{d}^2/\mathrm{d}x^2$ | $2(k+2)\,c_{k+2}$ | [[numcosmo-math\|ncm_spectral_get_d2_matrix]] |
-| $x\,\mathrm{d}^2/\mathrm{d}x^2$ | $k\,c_{k+1} + (k+4)\,c_{k+3}$ | [[numcosmo-math\|ncm_spectral_get_x_d2_matrix]] |
-| $x^2\,\mathrm{d}^2/\mathrm{d}x^2$ | $\dfrac{k(k-1)c_k}{2(k+1)} + \dfrac{(k+2)\big((k+2)^2-3\big)c_{k+2}}{(k+1)(k+3)} + \dfrac{(k+4)(k+5)c_{k+4}}{2(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_x2_d2_matrix]] |
+| $x\,\mathrm{d}^2/\mathrm{d}x^2$ | $k\,c_{k+1} + (k+4)\,c_{k+3}$ | [[numcosmo-math\|ncm_spectral_get_s_d2_matrix]] |
+| $x^2\,\mathrm{d}^2/\mathrm{d}x^2$ | $\dfrac{k(k-1)c_k}{2(k+1)} + \dfrac{(k+2)\big((k+2)^2-3\big)c_{k+2}}{(k+1)(k+3)} + \dfrac{(k+4)(k+5)c_{k+4}}{2(k+3)}$ | [[numcosmo-math\|ncm_spectral_get_s2_d2_matrix]] |
 
 Every row holds for all $k$ as written. The Kronecker-delta terms are the $T_0$ and
 $T_1$ special cases of Chebyshev multiplication, which contribute only to the first one
@@ -292,10 +292,10 @@ methods are:
   [[numcosmo-math|ncm_spectral_chebT_to_gegenbauer_alpha2]],
   [[numcosmo-math|ncm_spectral_chebT_deriv_to_gegenbauer_alpha2]],
   [[numcosmo-math|ncm_spectral_chebT_deriv2_to_gegenbauer_alpha2]],
-  [[numcosmo-math|ncm_spectral_gegenbauer_alpha2_xmul]],
+  [[numcosmo-math|ncm_spectral_gegenbauer_alpha2_mul_affine]],
   [[numcosmo-math|ncm_spectral_gegenbauer_alpha1_eval]],
   [[numcosmo-math|ncm_spectral_gegenbauer_alpha2_eval]]
 - operator matrices: [[numcosmo-math|ncm_spectral_get_proj_matrix]],
-  [[numcosmo-math|ncm_spectral_get_x_matrix]],
+  [[numcosmo-math|ncm_spectral_get_s_matrix]],
   [[numcosmo-math|ncm_spectral_get_d_matrix]],
   [[numcosmo-math|ncm_spectral_get_d2_matrix]]

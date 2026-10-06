@@ -10562,23 +10562,23 @@ class Spectral(GObject.Object):
 
         Spectral(**properties)
         new() -> NumCosmoMath.Spectral
-        new_with_max_order(max_order:int) -> NumCosmoMath.Spectral
+        new_with_max_level(max_level:int) -> NumCosmoMath.Spectral
 
     Object NcmSpectral
 
     Properties from NcmSpectral:
-      max-order -> guint: max-order
-        Maximum refinement order
+      max-level -> guint: max-level
+        Maximum refinement level
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
-        max_order: int
+        max_level: int
 
     props: Props = ...
-    def __init__(self, max_order: int = ...) -> None: ...
+    def __init__(self, max_level: int = ...) -> None: ...
     @staticmethod
     def chebT_deriv2_to_gegenbauer_alpha2(
         c: typing.Sequence[float] | npt.NDArray[np.float64],
@@ -10597,29 +10597,29 @@ class Spectral(GObject.Object):
     ) -> list[float]: ...
     @staticmethod
     def chebyshev_deriv(
-        a: typing.Sequence[float] | npt.NDArray[np.float64], t: float
+        c: typing.Sequence[float] | npt.NDArray[np.float64], s: float
     ) -> float: ...
     @staticmethod
     def chebyshev_deriv_x(
-        a: typing.Sequence[float] | npt.NDArray[np.float64],
-        a_v: float,
+        c: typing.Sequence[float] | npt.NDArray[np.float64],
+        a: float,
         b: float,
         x: float,
     ) -> float: ...
     @staticmethod
     def chebyshev_eval(
-        a: typing.Sequence[float] | npt.NDArray[np.float64], t: float
+        c: typing.Sequence[float] | npt.NDArray[np.float64], s: float
     ) -> float: ...
     @staticmethod
     def chebyshev_eval_x(
-        a: typing.Sequence[float] | npt.NDArray[np.float64],
-        a_v: float,
+        c: typing.Sequence[float] | npt.NDArray[np.float64],
+        a: float,
         b: float,
         x: float,
     ) -> float: ...
     @staticmethod
     def chebyshev_integrate(
-        a: typing.Sequence[float] | npt.NDArray[np.float64], a_v: float, b: float
+        c: typing.Sequence[float] | npt.NDArray[np.float64], a: float, b: float
     ) -> float: ...
     def chebyshev_rebase(
         self,
@@ -10645,7 +10645,7 @@ class Spectral(GObject.Object):
         F: typing.Callable[..., float],
         a: float,
         b: float,
-        k_min: int,
+        level_min: int,
         tol: float,
         *user_data: typing.Any,
     ) -> typing.Tuple[int, list[float]]: ...
@@ -10654,7 +10654,7 @@ class Spectral(GObject.Object):
         F: typing.Callable[..., float],
         a: float,
         b: float,
-        k_min: int,
+        level_min: int,
         reltol: float,
         abstol: float,
         *user_data: typing.Any,
@@ -10664,8 +10664,8 @@ class Spectral(GObject.Object):
         F: typing.Callable[..., float],
         a: float,
         b: float,
-        k_min: int,
-        k_cap: int,
+        level_min: int,
+        level_cap: int,
         reltol: float,
         abstol: float,
         *user_data: typing.Any,
@@ -10676,7 +10676,7 @@ class Spectral(GObject.Object):
         n_comp: int,
         a: float,
         b: float,
-        k_min: int,
+        level_min: int,
         reltol: float,
         abstol: float,
         *user_data: typing.Any,
@@ -10687,8 +10687,8 @@ class Spectral(GObject.Object):
         n_comp: int,
         a: float,
         b: float,
-        k_min: int,
-        k_cap: int,
+        level_min: int,
+        level_cap: int,
         reltol: float,
         abstol: float,
         fatal: bool,
@@ -10703,73 +10703,73 @@ class Spectral(GObject.Object):
         row_data: float, k: int, offset: int, coeff: float
     ) -> None: ...
     @staticmethod
-    def compute_x2_d2_row(
+    def compute_s2_d2_row(
         row_data: float, k: int, offset: int, coeff: float
     ) -> None: ...
     @staticmethod
-    def compute_x2_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
+    def compute_s2_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
     @staticmethod
-    def compute_x_d2_row(
+    def compute_s_d2_row(
         row_data: float, k: int, offset: int, coeff: float
     ) -> None: ...
     @staticmethod
-    def compute_x_d_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
+    def compute_s_d_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
     @staticmethod
-    def compute_x_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
+    def compute_s_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
     def free(self) -> None: ...
     @staticmethod
     def gegenbauer_alpha1_eval(
-        c: typing.Sequence[float] | npt.NDArray[np.float64], t: float
+        g: typing.Sequence[float] | npt.NDArray[np.float64], s: float
     ) -> float: ...
     @staticmethod
     def gegenbauer_alpha1_eval_x(
-        c: typing.Sequence[float] | npt.NDArray[np.float64],
+        g: typing.Sequence[float] | npt.NDArray[np.float64],
         a: float,
         b: float,
         x: float,
     ) -> float: ...
     @staticmethod
     def gegenbauer_alpha2_eval(
-        c: typing.Sequence[float] | npt.NDArray[np.float64], t: float
+        g: typing.Sequence[float] | npt.NDArray[np.float64], s: float
     ) -> float: ...
     @staticmethod
     def gegenbauer_alpha2_eval_x(
-        c: typing.Sequence[float] | npt.NDArray[np.float64],
+        g: typing.Sequence[float] | npt.NDArray[np.float64],
         a: float,
         b: float,
         x: float,
     ) -> float: ...
     @staticmethod
-    def gegenbauer_alpha2_xmul(
+    def gegenbauer_alpha2_mul_affine(
         g: typing.Sequence[float] | npt.NDArray[np.float64], alpha: float, beta: float
     ) -> list[float]: ...
     @staticmethod
     def get_d2_matrix(N: int) -> Matrix: ...
     @staticmethod
     def get_d_matrix(N: int) -> Matrix: ...
-    def get_max_order(self) -> int: ...
+    def get_max_level(self) -> int: ...
     @staticmethod
     def get_proj_matrix(N: int) -> Matrix: ...
     @staticmethod
-    def get_x2_d2_matrix(N: int) -> Matrix: ...
+    def get_s2_d2_matrix(N: int) -> Matrix: ...
     @staticmethod
-    def get_x2_matrix(N: int) -> Matrix: ...
+    def get_s2_matrix(N: int) -> Matrix: ...
     @staticmethod
-    def get_x_d2_matrix(N: int) -> Matrix: ...
+    def get_s_d2_matrix(N: int) -> Matrix: ...
     @staticmethod
-    def get_x_d_matrix(N: int) -> Matrix: ...
+    def get_s_d_matrix(N: int) -> Matrix: ...
     @staticmethod
-    def get_x_matrix(N: int) -> Matrix: ...
+    def get_s_matrix(N: int) -> Matrix: ...
     @classmethod
     def new(cls) -> Spectral: ...
     @classmethod
-    def new_with_max_order(cls, max_order: int) -> Spectral: ...
+    def new_with_max_level(cls, max_level: int) -> Spectral: ...
     def ref(self) -> Spectral: ...
-    def set_max_order(self, max_order: int) -> None: ...
     @staticmethod
-    def t_to_x(a: float, b: float, t: float) -> float: ...
+    def s_to_x(a: float, b: float, s: float) -> float: ...
+    def set_max_level(self, max_level: int) -> None: ...
     @staticmethod
-    def x_to_t(a: float, b: float, x: float) -> float: ...
+    def x_to_s(a: float, b: float, x: float) -> float: ...
 
 class SpectralClass(GObject.GPointer):
     r"""

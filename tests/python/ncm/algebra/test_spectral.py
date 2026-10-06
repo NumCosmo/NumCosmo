@@ -94,7 +94,7 @@ def test_arrays_returned_by_conversions() -> None:
     assert len(Ncm.Spectral.chebT_to_gegenbauer_alpha2(c)) == 4
     assert len(Ncm.Spectral.chebT_deriv_to_gegenbauer_alpha2(c)) == 3
     assert len(Ncm.Spectral.chebT_deriv2_to_gegenbauer_alpha2(c)) == 2
-    assert len(Ncm.Spectral.gegenbauer_alpha2_xmul(c, 1.0, 0.0)) == 5
+    assert len(Ncm.Spectral.gegenbauer_alpha2_mul_affine(c, 1.0, 0.0)) == 5
 
     norm, rebased = spectral.chebyshev_rebase(c, 0, -1.0, 1.0, 0.0, 1.0)
     assert len(rebased) == 4

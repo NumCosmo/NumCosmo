@@ -855,7 +855,7 @@ _cheb_integrand_eval (gpointer data, gdouble k, gdouble *W)
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
   const ChebPanel *panel = _cheb_integrand_find_panel (cid, k);
-  const gdouble t        = ncm_spectral_x_to_t (panel->a, panel->b, k);
+  const gdouble t        = ncm_spectral_x_to_s (panel->a, panel->b, k);
   guint i;
 
   for (i = 0; i < cid->len; i++)
@@ -867,7 +867,7 @@ _cheb_integrand_eval_comps (gpointer data, gdouble k, guint offset, guint len, g
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
   const ChebPanel *panel = _cheb_integrand_find_panel (cid, k);
-  const gdouble t        = ncm_spectral_x_to_t (panel->a, panel->b, k);
+  const gdouble t        = ncm_spectral_x_to_s (panel->a, panel->b, k);
   guint i;
 
   for (i = 0; i < len; i++)
@@ -1843,7 +1843,7 @@ _nc_xcor_kernel_cheb_panel_matches_samples (const ChebPanel *panel, NcmFunctionS
     if ((x > panel->a) && (x < panel->b))
     {
       NcmVector *y    = ncm_function_sample_set_iter_get_y (iter);
-      const gdouble t = ncm_spectral_x_to_t (panel->a, panel->b, x);
+      const gdouble t = ncm_spectral_x_to_s (panel->a, panel->b, x);
       guint c;
 
       for (c = 0; c < n_l; c++)

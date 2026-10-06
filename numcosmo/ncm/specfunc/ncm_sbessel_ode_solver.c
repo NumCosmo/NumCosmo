@@ -1238,13 +1238,13 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeOperator *op, NcmSBesselOdeSolver
 
   /* Second derivative term: (m^2/h^2) d^2 + (2m/h) x d^2 + x^2 d^2 */
   ncm_spectral_compute_d2_row (row_data, k, offset, m2 / h2);
-  ncm_spectral_compute_x_d2_row (row_data, k, offset, 2.0 * m / h);
-  ncm_spectral_compute_x2_d2_row (row_data, k, offset, 1.0);
+  ncm_spectral_compute_s_d2_row (row_data, k, offset, 2.0 * m / h);
+  ncm_spectral_compute_s2_d2_row (row_data, k, offset, 1.0);
 
   /* Identity term: (m^2 - ell(ell+1)) I + 2m h t + h^2 t^2 */
   ncm_spectral_compute_proj_row (row_data, k, offset, m2 - llp1);
-  ncm_spectral_compute_x_row (row_data, k, offset, 2.0 * m * h);
-  ncm_spectral_compute_x2_row (row_data, k, offset, h2);
+  ncm_spectral_compute_s_row (row_data, k, offset, 2.0 * m * h);
+  ncm_spectral_compute_s2_row (row_data, k, offset, h2);
 }
 
 /**
@@ -1294,12 +1294,12 @@ _ncm_sbessel_create_row_operator_batched (NcmSBesselOdeOperator *op, NcmSBesselO
 
   /* Second derivative term: (m^2/h^2) d^2 + (2m/h) x d^2 + x^2 d^2 - ell-independent */
   ncm_spectral_compute_d2_row (row[0].data, k, offset, m2 / h2);
-  ncm_spectral_compute_x_d2_row (row[0].data, k, offset, 2.0 * m / h);
-  ncm_spectral_compute_x2_d2_row (row[0].data, k, offset, 1.0);
+  ncm_spectral_compute_s_d2_row (row[0].data, k, offset, 2.0 * m / h);
+  ncm_spectral_compute_s2_d2_row (row[0].data, k, offset, 1.0);
 
   /* Identity term: 2m h x + h^2 x^2 - ell-independent part */
-  ncm_spectral_compute_x_row (row[0].data, k, offset, 2.0 * m * h);
-  ncm_spectral_compute_x2_row (row[0].data, k, offset, h2);
+  ncm_spectral_compute_s_row (row[0].data, k, offset, 2.0 * m * h);
+  ncm_spectral_compute_s2_row (row[0].data, k, offset, h2);
 
   /* Copy template from row[0] to all other rows, then add ell-dependent corrections in one pass */
   for (i = 1; i < n_ell; i++)

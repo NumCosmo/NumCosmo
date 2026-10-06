@@ -1009,16 +1009,16 @@ def test_component_chebyshev_decomposition(
 
         # Compute Chebyshev coefficients adaptively
         cheb_reltol = 1.0e-8
-        final_k, coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+        final_level, coeffs = spectral.compute_chebyshev_coeffs_adaptive(
             g_k, x_min, x_max, 4, cheb_reltol
         )
-        max_order_k = spectral.get_max_order()
+        max_level = spectral.get_max_level()
 
         # Verify we got coefficients
-        assert final_k >= 5
+        assert final_level >= 5
         assert coeffs is not None
         assert len(coeffs) >= 2**5 + 1
-        assert len(coeffs) <= 2**max_order_k + 1
+        assert len(coeffs) <= 2**max_level + 1
 
         # Verify the expansion is accurate at test points
         x_test_points = np.linspace(x_min, x_max, 500)
@@ -1041,7 +1041,7 @@ def test_component_chebyshev_decomposition(
             atol=cheb_reltol * max_direct,
             err_msg=(
                 f"Chebyshev expansion mismatch at k={k}, max_direct={max_direct} "
-                f"max_order_k={max_order_k}"
+                f"max_level={max_level}"
             ),
         )
 

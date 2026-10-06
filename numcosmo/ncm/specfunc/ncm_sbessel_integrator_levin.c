@@ -1192,7 +1192,7 @@ _ncm_sbessel_integrator_levin_build_rhs (NcmSBesselIntegratorLevin *sbilv, gdoub
       for (i = 0; i < sbilv->deriv_gegen_coeffs->len; i++)
         g_array_index (sbilv->deriv_gegen_coeffs, gdouble, i) *= scale;
 
-      ncm_spectral_gegenbauer_alpha2_xmul (sbilv->deriv_gegen_coeffs, half, mid, &sbilv->gegen_coeffs);
+      ncm_spectral_gegenbauer_alpha2_mul_affine (sbilv->deriv_gegen_coeffs, half, mid, &sbilv->gegen_coeffs);
       break;
     }
     default:                   /* LCOV_EXCL_LINE */
