@@ -243,7 +243,9 @@ _component_states_init_limber_u (NcXcorKernel *xclk, gint lmin, guint n_l,
  * wave number factor at k = nu u is per multipole. Outside its band a
  * component is zero. A derivative component adds the j_{l+1} term at the point
  * chi_p = (1 + 1 / nu) / u, one more window evaluation per multipole, dropped
- * when that point is beyond chi_max.
+ * when that point is beyond chi_max. In panel mode both choices are made at the
+ * panel midpoint, so a panel ending on one of these steps takes the limit from
+ * its own side.
  */
 static void
 _component_states_compute_limber_u (const gdouble u, NcmVector *y, gpointer user_data)
@@ -299,7 +301,7 @@ _component_states_compute_limber_u (const gdouble u, NcmVector *y, gpointer user
         const gdouble chi_p = nup / k;
         gdouble peak_lp1    = 0.0;
 
-        if (chi_p <= state->chi_max)
+        if (nup / (nu * u_side) <= state->chi_max)
         {
           NcXcorKinetic xck_p;
 

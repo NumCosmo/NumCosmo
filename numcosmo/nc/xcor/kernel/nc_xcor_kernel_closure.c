@@ -228,9 +228,11 @@ _nc_xcor_kernel_cmp_gdouble (gconstpointer a, gconstpointer b)
 /*
  * Collects into cuts the k strictly inside (k_min, k_max) at which the block
  * W_l(k) is discontinuous, sorted ascending with exact duplicates removed:
- * the truncation boundary of every component whose boundary was found, and
- * under Limber the band edges nu / chi_max and nu / chi_min of every component
- * for every multipole of the block. Each cut becomes a panel edge, with the
+ * the truncation boundary of every component whose boundary was found, under
+ * Limber the band edges nu / chi_max and nu / chi_min of every component for
+ * every multipole of the block, and under Limber in u, for every component with
+ * a Bessel derivative and every multipole, u = (1 + 1 / nu) / chi_max, where its
+ * j_{l+1} term stops (see _component_states_compute_limber_u()). Each cut becomes a panel edge, with the
  * component or multipole off on the outer side, so that every panel is a
  * smooth function; a polynomial interpolating across a jump does not converge
  * below the size of the jump. The boundaries are fixed before this runs: only
@@ -269,6 +271,22 @@ _component_states_collect_cuts (ComponentStates *comp_states, gdouble k_min, gdo
 
         if ((state->k_max_limber_ell[j] > k_min) && (state->k_max_limber_ell[j] < k_max))
           g_array_append_val (cuts, state->k_max_limber_ell[j]);
+      }
+    }
+
+    /* The j_{l+1} term of a derivative component is dropped once its peak
+     * (nu + 1) / k passes chi_max, a step at u = (1 + 1 / nu) / chi_max inside the band. */
+    if (comp_states->is_limber && comp_states->in_u && (nc_xcor_kernel_component_get_bessel_deriv (state->comp) > 0))
+    {
+      guint j;
+
+      for (j = 0; j < comp_states->n_l; j++)
+      {
+        const gdouble nu     = comp_states->lmin + j + 0.5;
+        const gdouble u_step = (1.0 + 1.0 / nu) / state->chi_max;
+
+        if ((u_step > k_min) && (u_step < k_max))
+          g_array_append_val (cuts, u_step);
       }
     }
   }

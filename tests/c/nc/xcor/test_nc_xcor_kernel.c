@@ -598,6 +598,73 @@ test_nc_xcor_kernel_integrator (void)
   nc_hicosmo_free (cosmo);
 }
 
+/* A Gaussian dN/dz truncated on [0.4, 0.9], nonzero at both ends as a photometric bin is. */
+static NcmSpline *
+_dndz_truncated_new (void)
+{
+  NcmVector *z = ncm_vector_new (TEST_DNDZ_KNOTS);
+  NcmVector *n = ncm_vector_new (TEST_DNDZ_KNOTS);
+  NcmSpline *s;
+  guint i;
+
+  for (i = 0; i < TEST_DNDZ_KNOTS; i++)
+  {
+    const gdouble zi = 0.4 + 0.5 * i / (gdouble) (TEST_DNDZ_KNOTS - 1);
+    const gdouble t  = (zi - TEST_DNDZ_MEAN) / TEST_DNDZ_SIGMA;
+
+    ncm_vector_set (z, i, zi);
+    ncm_vector_set (n, i, exp (-0.5 * t * t));
+  }
+
+  s = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (z, n, TRUE));
+
+  ncm_vector_free (z);
+  ncm_vector_free (n);
+
+  return s;
+}
+
+/* Under Limber in u an RSD component steps at u = (1 + 1 / nu) / chi_max for each
+ * multipole, where its j_{l+1} term stops, and the window is nonzero there when dN/dz is
+ * truncated. The Chebyshev closure must take those steps as panel edges: across one, no
+ * panel converges, and the splitter ends in a forced expansion that aborts. */
+static void
+test_nc_xcor_kernel_gal_rsd_limber_steps (void)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist = nc_distance_new (TEST_ZMAX);
+  NcmPowspec *ps   = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                            NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  NcmSpline *dndz    = _dndz_truncated_new ();
+  NcXcorKernelGal *g = g_object_new (NC_TYPE_XCOR_KERNEL_GAL,
+                                     "dist", dist,
+                                     "powspec", ps,
+                                     "bparam-length", (gsize) 1,
+                                     "nbarm1", 0.0,
+                                     "dndz", dndz,
+                                     "domagbias", FALSE,
+                                     "dorsd", TRUE,
+                                     NULL);
+  NcXcorKernelIntegrand *xclki;
+
+  ncm_model_orig_vparam_set (NCM_MODEL (g), NC_XCOR_KERNEL_GAL_BIAS, 0, 1.5);
+  nc_distance_prepare (dist, cosmo);
+  ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
+  nc_xcor_kernel_set_l_limber (NC_XCOR_KERNEL (g), 0);
+  nc_xcor_kernel_prepare (NC_XCOR_KERNEL (g), cosmo);
+
+  xclki = nc_xcor_kernel_get_eval_vectorized (NC_XCOR_KERNEL (g), cosmo, 2, 33, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
+
+  g_assert_cmpuint (nc_xcor_kernel_integrand_get_n_panels (xclki), >, 0);
+
+  nc_xcor_kernel_integrand_unref (xclki);
+  nc_xcor_kernel_free (NC_XCOR_KERNEL (g));
+  ncm_spline_free (dndz);
+  ncm_powspec_free (ps);
+  nc_distance_free (dist);
+  nc_hicosmo_free (cosmo);
+}
+
 /* RSD kernels have no representation in the redshift-space Limber tier, and asking
  * for one must abort rather than silently drop the term. */
 static void
@@ -876,6 +943,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/xcor/kernel/integrator", &test_nc_xcor_kernel_integrator);
   g_test_add_func ("/nc/xcor/kernel/gal/bias", &test_nc_xcor_kernel_gal_bias);
   g_test_add_func ("/nc/xcor/kernel/cluster_tophat/volume_normalized", &test_nc_xcor_kernel_cluster_tophat_volume_normalized);
+  g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_steps", &test_nc_xcor_kernel_gal_rsd_limber_steps);
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/subprocess", &test_nc_xcor_kernel_gal_rsd_limber_z_st);
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/trap", &test_nc_xcor_kernel_gal_rsd_limber_z_trap);
   g_test_add_func ("/nc/xcor/kernel/table/new_full", &test_nc_xcor_kernel_table_full);
