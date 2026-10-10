@@ -45,6 +45,7 @@ void ncm_spectral_panels_free (NcmSpectralPanels *sp);
 void ncm_spectral_panels_clear (NcmSpectralPanels **sp);
 
 void ncm_spectral_panels_append (NcmSpectralPanels *sp, gdouble a, gdouble b, NcmMatrix *coeffs);
+void ncm_spectral_panels_append_data (NcmSpectralPanels *sp, gdouble a, gdouble b, const gdouble *c, guint N, guint tda);
 void ncm_spectral_panels_reset (NcmSpectralPanels *sp);
 
 guint ncm_spectral_panels_get_fdim (NcmSpectralPanels *sp);

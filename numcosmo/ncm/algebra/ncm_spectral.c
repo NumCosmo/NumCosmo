@@ -100,6 +100,7 @@ struct _NcmSpectral
   NcmMatrix *batch_c_prev; /* Scratch of the adaptive expansion, grown on demand */
   NcmMatrix *batch_c_curr;
   NcmVector *batch_fval;
+  NcmMatrix *batch_result; /* batch_c_prev or batch_c_curr after a converged expansion, else NULL */
 };
 
 G_DEFINE_TYPE (NcmSpectral, ncm_spectral, G_TYPE_OBJECT)
@@ -122,6 +123,7 @@ ncm_spectral_init (NcmSpectral *spectral)
   spectral->batch_len         = 0;
   spectral->batch_c_prev      = NULL;
   spectral->batch_c_curr      = NULL;
+  spectral->batch_result      = NULL;
   spectral->batch_fval        = NULL;
 
   spectral->rebase_work     = NULL;
@@ -422,6 +424,7 @@ ncm_spectral_free_buffers (NcmSpectral *spectral)
   spectral->batch_fdim = 0;
   ncm_matrix_clear (&spectral->batch_c_prev);
   ncm_matrix_clear (&spectral->batch_c_curr);
+  spectral->batch_result = NULL;
   ncm_vector_clear (&spectral->batch_fval);
 
   g_clear_pointer (&spectral->rebase_work, g_free);
@@ -714,7 +717,7 @@ static void _ncm_spectral_batch_ends (NcmSpectral *spectral, NcmSpectralFBatch F
  * @f_a: (nullable): $F(a)$, of length @fdim
  * @f_b: (nullable): $F(b)$, of length @fdim
  * @ends: (nullable): a 3 by @fdim #NcmMatrix for $F$ at $a$, $(a + b) / 2$ and $b$
- * @coeffs: (out) (transfer full): an @fdim by $N$ #NcmMatrix of coefficients
+ * @coeffs: (out) (optional) (transfer full): an @fdim by $N$ #NcmMatrix of coefficients
  * @user_data: user data for @F
  *
  * As ncm_spectral_compute_chebyshev_coeffs_batch_adaptive(), stopping at the smaller of
@@ -729,6 +732,9 @@ static void _ncm_spectral_batch_ends (NcmSpectral *spectral, NcmSpectralFBatch F
  * level above 0, and on level 0 $F$ is evaluated there. A caller that splits $[a, b]$ in
  * two at the midpoint passes rows 0 and 1 as the ends of the lower half and rows 1 and 2
  * as those of the upper half.
+ *
+ * With @coeffs %NULL the coefficients are not copied out, and
+ * ncm_spectral_peek_batch_coeffs() reads them in the scratch space of @spectral.
  *
  * Returns: the level reached, or 0 when @fatal is %FALSE and the expansion did not converge.
  */
@@ -757,9 +763,10 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
 
   _ncm_spectral_batch_prepare_scratch (spectral, fdim, (1 << level_cap) + 1);
 
-  fval       = spectral->batch_fval;
-  c_previous = spectral->batch_c_prev;
-  c_current  = spectral->batch_c_curr;
+  fval                   = spectral->batch_fval;
+  c_previous             = spectral->batch_c_prev;
+  spectral->batch_result = NULL;
+  c_current              = spectral->batch_c_curr;
 
   _ncm_spectral_prepare_level (spectral, level);
   _ncm_spectral_batch_evaluate_all_nodes (spectral, F, fval, a, b, level, f_a, f_b, user_data);
@@ -822,6 +829,9 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
   if (!converged)
     return 0;
 
+  spectral->batch_result = c_current;
+
+  if (coeffs != NULL)
   {
     const guint N = (1 << level) + 1;
     guint r, i;
@@ -872,6 +882,30 @@ _ncm_spectral_batch_ends (NcmSpectral *spectral, NcmSpectralFBatch F, NcmVector 
     for (r = 0; r < fdim; r++)
       ncm_matrix_set (ends, 1, r, ncm_vector_get (fval, r));
   }
+}
+
+/**
+ * ncm_spectral_peek_batch_coeffs: (skip)
+ * @spectral: a #NcmSpectral
+ * @tda: (out): distance between the starts of consecutive rows
+ *
+ * Gets the coefficients of the last batch expansion on @spectral, when it converged, in
+ * the scratch space of @spectral: @fdim rows of $N = 2^r + 1$ coefficients, $r$ the level
+ * that expansion returned. They are valid until the next expansion on @spectral or
+ * ncm_spectral_free_buffers().
+ *
+ * Returns: (transfer none) (nullable): the coefficients, or %NULL when the last batch
+ *   expansion did not converge.
+ */
+const gdouble *
+ncm_spectral_peek_batch_coeffs (NcmSpectral *spectral, guint *tda)
+{
+  if (spectral->batch_result == NULL)
+    return NULL;
+
+  *tda = ncm_matrix_tda (spectral->batch_result);
+
+  return ncm_matrix_data (spectral->batch_result);
 }
 
 /**

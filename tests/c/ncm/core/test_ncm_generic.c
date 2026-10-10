@@ -63,6 +63,7 @@ void test_ncm_pln1d_basic (void);
 void test_ncm_function_cache_basic (void);
 void test_ncm_iset_basic (void);
 void test_ncm_spectral_panels_basic (void);
+void test_ncm_spectral_panels_builder_basic (void);
 
 void test_nc_data_cluster_mass_rich_basic (void);
 void test_nc_data_cluster_mass_rich_count_basic (void);
@@ -158,6 +159,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/function_cache/basic", test_ncm_function_cache_basic);
   g_test_add_func ("/ncm/iset/basic", test_ncm_iset_basic);
   g_test_add_func ("/ncm/spectral_panels/basic", test_ncm_spectral_panels_basic);
+  g_test_add_func ("/ncm/spectral_panels_builder/basic", test_ncm_spectral_panels_builder_basic);
 
   g_test_add_func ("/nc/data/cluster_mass_rich/basic", test_nc_data_cluster_mass_rich_basic);
   g_test_add_func ("/nc/data/cluster_mass_rich_count/basic", test_nc_data_cluster_mass_rich_count_basic);
@@ -1956,5 +1958,22 @@ test_ncm_spectral_panels_basic (void)
   g_assert_true (NCM_IS_SPECTRAL_PANELS (sp));
 
   NCM_TEST_FREE (ncm_spectral_panels_free, sp);
+}
+
+void
+test_ncm_spectral_panels_builder_basic (void)
+{
+  NcmSpectralPanelsBuilder *builder = ncm_spectral_panels_builder_new ();
+  NcmSpectralPanelsBuilder *builder2;
+
+  g_assert_true (NCM_IS_SPECTRAL_PANELS_BUILDER (builder));
+
+  builder2 = ncm_spectral_panels_builder_ref (builder);
+  ncm_spectral_panels_builder_clear (&builder2);
+  g_assert_true (builder2 == NULL);
+
+  g_assert_true (NCM_IS_SPECTRAL_PANELS_BUILDER (builder));
+
+  NCM_TEST_FREE (ncm_spectral_panels_builder_free, builder);
 }
 

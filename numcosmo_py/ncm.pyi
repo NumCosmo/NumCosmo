@@ -10863,6 +10863,84 @@ class SpectralPanels(GObject.Object):
         self, spectral: Spectral, a: float, b: float
     ) -> typing.Tuple[bool, Matrix]: ...
 
+class SpectralPanelsBuilder(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsBuilder(**properties)
+        new() -> NumCosmoMath.SpectralPanelsBuilder
+
+    Object NcmSpectralPanelsBuilder
+
+    Properties from NcmSpectralPanelsBuilder:
+      level-min -> guint: level-min
+        Starting level of a panel
+      level-cap -> guint: level-cap
+        Highest level of a panel
+      min-panels-per-efold -> gdouble: min-panels-per-efold
+        Minimum panels per e-fold
+      min-panel-fraction -> gdouble: min-panel-fraction
+        Minimum panel width fraction
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        level_cap: int
+        level_min: int
+        min_panel_fraction: float
+        min_panels_per_efold: float
+
+    props: Props = ...
+    def __init__(
+        self,
+        level_cap: int = ...,
+        level_min: int = ...,
+        min_panel_fraction: float = ...,
+        min_panels_per_efold: float = ...,
+    ) -> None: ...
+    def build(
+        self,
+        F: typing.Callable[..., None],
+        a: float,
+        b: float,
+        breakpoints: typing.Optional[Vector],
+        f_minus: typing.Optional[Matrix],
+        f_plus: typing.Optional[Matrix],
+        reltol: float,
+        abstol: float,
+        sp: SpectralPanels,
+        *user_data: typing.Any,
+    ) -> None: ...
+    @staticmethod
+    def clear(builder: SpectralPanelsBuilder) -> None: ...
+    def free(self) -> None: ...
+    def get_level_cap(self) -> int: ...
+    def get_level_min(self) -> int: ...
+    def get_min_panel_fraction(self) -> float: ...
+    def get_min_panels_per_efold(self) -> float: ...
+    @classmethod
+    def new(cls) -> SpectralPanelsBuilder: ...
+    def ref(self) -> SpectralPanelsBuilder: ...
+    def set_level_cap(self, level_cap: int) -> None: ...
+    def set_level_min(self, level_min: int) -> None: ...
+    def set_min_panel_fraction(self, min_panel_fraction: float) -> None: ...
+    def set_min_panels_per_efold(self, min_panels_per_efold: float) -> None: ...
+
+class SpectralPanelsBuilderClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsBuilderClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
 class SpectralPanelsClass(GObject.GPointer):
     r"""
     :Constructors:

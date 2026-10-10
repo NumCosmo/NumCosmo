@@ -146,8 +146,6 @@ _ncm_spectral_panels_get_variant (NcmSpectralPanels *sp)
   return g_variant_ref_sink (g_variant_new ("(@ad@aad)", edges, g_variant_builder_end (&builder)));
 }
 
-static void _ncm_spectral_panels_append_data (NcmSpectralPanels *sp, gdouble a, gdouble b, const gdouble *c, guint N, guint tda);
-
 /* The panels given as a property, added in order so that each is checked as an appended one */
 static void
 _ncm_spectral_panels_constructed (GObject *object)
@@ -178,7 +176,7 @@ _ncm_spectral_panels_constructed (GObject *object)
       if (len % sp->fdim != 0)
         g_error ("ncm_spectral_panels: panel %u has %zu coefficients, not a multiple of fdim = %u.", i, len, sp->fdim);
 
-      _ncm_spectral_panels_append_data (sp, edges[i], edges[i + 1], c, len / sp->fdim, len / sp->fdim);
+      ncm_spectral_panels_append_data (sp, edges[i], edges[i + 1], c, len / sp->fdim, len / sp->fdim);
       g_variant_unref (coeffs_var);
     }
 
@@ -313,12 +311,22 @@ ncm_spectral_panels_append (NcmSpectralPanels *sp, gdouble a, gdouble b, NcmMatr
     g_error ("ncm_spectral_panels_append: the coefficients have %u rows, expected fdim = %u.",
              ncm_matrix_nrows (coeffs), sp->fdim);
 
-  _ncm_spectral_panels_append_data (sp, a, b, ncm_matrix_data (coeffs), ncm_matrix_ncols (coeffs), ncm_matrix_tda (coeffs));
+  ncm_spectral_panels_append_data (sp, a, b, ncm_matrix_data (coeffs), ncm_matrix_ncols (coeffs), ncm_matrix_tda (coeffs));
 }
 
-/* Copies fdim rows of N coefficients, tda apart in c, into the next pooled array as the panel [a, b] */
-static void
-_ncm_spectral_panels_append_data (NcmSpectralPanels *sp, gdouble a, gdouble b, const gdouble *c, guint N, guint tda)
+/**
+ * ncm_spectral_panels_append_data: (skip)
+ * @sp: a #NcmSpectralPanels
+ * @a: left edge of the panel
+ * @b: right edge of the panel
+ * @c: the coefficients of the panel, #NcmSpectralPanels:fdim rows of @N
+ * @N: number of coefficients in each row
+ * @tda: distance between the starts of consecutive rows of @c
+ *
+ * As ncm_spectral_panels_append(), for coefficients stored in a buffer.
+ */
+void
+ncm_spectral_panels_append_data (NcmSpectralPanels *sp, gdouble a, gdouble b, const gdouble *c, guint N, guint tda)
 {
   GArray *coeffs;
   guint r;

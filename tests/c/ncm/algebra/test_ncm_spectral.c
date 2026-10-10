@@ -612,6 +612,37 @@ test_ncm_spectral_batch_cap (void)
 
 /* The end nodes of every level are a and b: given F there, the expansion is the same to
  * the bit, two calls of F cheaper, and ends holds F at a, the midpoint and b. */
+
+/* Without a result matrix the coefficients stay in the scratch space, the same as copied
+ * out; after an expansion that did not converge there are none */
+static void
+test_ncm_spectral_batch_peek (void)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  NcmMatrix *coeffs     = NULL;
+  const gdouble *c;
+  guint k, k_peek, N, tda, r, i;
+
+  k      = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch3, 3, -1.0, 2.0, 3, 8, 1.0e-12, 0.0, TRUE, NULL, NULL, NULL, &coeffs, &(Counted) {0});
+  k_peek = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch3, 3, -1.0, 2.0, 3, 8, 1.0e-12, 0.0, TRUE, NULL, NULL, NULL, NULL, &(Counted) {0});
+  c      = ncm_spectral_peek_batch_coeffs (spectral, &tda);
+  N      = (1 << k) + 1;
+
+  g_assert_cmpuint (k_peek, ==, k);
+  g_assert_nonnull (c);
+
+  for (r = 0; r < 3; r++)
+    for (i = 0; i < N; i++)
+      g_assert_cmpfloat (c[r * tda + i], ==, ncm_matrix_get (coeffs, r, i));
+
+  k = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch_hard, 2, -1.0, 1.0, 2, 4, 1.0e-10, 0.0, FALSE, NULL, NULL, NULL, NULL, NULL);
+  g_assert_cmpuint (k, ==, 0);
+  g_assert_null (ncm_spectral_peek_batch_coeffs (spectral, &tda));
+
+  ncm_matrix_free (coeffs);
+  ncm_spectral_free (spectral);
+}
+
 static void
 test_ncm_spectral_batch_known_ends (void)
 {
@@ -1188,6 +1219,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral/batch", &test_ncm_spectral_batch);
   g_test_add_func ("/ncm/spectral/batch/small_entry", &test_ncm_spectral_batch_small_entry);
   g_test_add_func ("/ncm/spectral/batch/cap", &test_ncm_spectral_batch_cap);
+  g_test_add_func ("/ncm/spectral/batch/peek", &test_ncm_spectral_batch_peek);
   g_test_add_func ("/ncm/spectral/batch/known_ends", &test_ncm_spectral_batch_known_ends);
   g_test_add_func ("/ncm/spectral/batch/ends_on_failure", &test_ncm_spectral_batch_ends_on_failure);
   g_test_add_func ("/ncm/spectral/batch/no_prediction_below_four", &test_ncm_spectral_batch_no_prediction_below_four);
