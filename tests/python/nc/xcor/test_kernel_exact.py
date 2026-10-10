@@ -201,6 +201,11 @@ def test_kernel_exact_over_ell_block(cosmology: Cosmology) -> None:
     cubature = Nc.Xcor.new(
         cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE
     )
+    # The cubature's tolerance is relative to the block's norm, and the last
+    # multipole of this separated-bin cross spectrum is a thousand times below
+    # the first; at the integrator's floor the two integrations of one closure
+    # agree to 1e-9 on every element.
+    cubature.set_reltol(1.0e-8)
     cubature.prepare(cosmo)
 
     got, expected = Ncm.Vector.new(n_l), Ncm.Vector.new(n_l)
@@ -208,7 +213,7 @@ def test_kernel_exact_over_ell_block(cosmology: Cosmology) -> None:
     cubature.compute(kernels[0], kernels[2], cosmo, lmin, lmax, expected)
 
     assert_allclose(
-        np.array(got.dup_array()), np.array(expected.dup_array()), rtol=1.0e-3
+        np.array(got.dup_array()), np.array(expected.dup_array()), rtol=1.0e-6
     )
 
 
@@ -518,7 +523,7 @@ def test_closure_records_the_residual_it_achieved(cosmology: Cosmology) -> None:
         Nc.XcorKernelClosure.SPLINE,
     )
 
-    residuals = integrand.peek_residuals()
+    residuals = integrand.peek_closure_error()
     assert residuals is not None
 
     knots = _knots(integrand)
@@ -575,7 +580,7 @@ def test_tracking_off_leaves_no_record_and_a_looser_estimate(
 
     def estimate(track):
         kernel = _kernels(cosmology)[0]
-        kernel.set_track_fit_residual(track)
+        kernel.set_track_closure_error(track)
         kernel.prepare(cosmo)
 
         integrand = kernel.get_eval_vectorized_full(
@@ -585,14 +590,14 @@ def test_tracking_off_leaves_no_record_and_a_looser_estimate(
             Ncm.SBesselIntegratorLevin.new(0, 8),
             closure_type,
         )
-        assert (integrand.peek_residuals() is not None) == track
+        assert (integrand.peek_closure_error() is not None) == track
 
         vp, vp_err = Ncm.Vector.new(nell), Ncm.Vector.new(nell)
         exact.compute_full(kernel, None, cosmo, lmin, lmax, vp, vp_err)
 
         return np.abs(np.array(vp_err.dup_array()) / np.array(vp.dup_array()))
 
-    assert _kernels(cosmology)[0].get_track_fit_residual(), "on by default"
+    assert _kernels(cosmology)[0].get_track_closure_error(), "on by default"
 
     achieved = estimate(True)
     ceiling = estimate(False)
@@ -762,11 +767,12 @@ def test_chebyshev_closure_is_the_default(cosmology: Cosmology) -> None:
 def test_limber_multipoles_take_the_requested_closure(cosmology: Cosmology) -> None:
     """Under Limber each closure type yields its own representation.
 
-    A Limber window is zero outside the multipole's band in k, so a block's
-    window carries one step per multipole. The Chebyshev closure places a panel
-    cut at every band edge of the block and decides membership per panel, so
-    every panel is smooth and the series converges; the spline closure keeps
-    its knots. The two agree on the window to the closure tolerance.
+    A Limber window is zero outside the multipole's band in k. The Chebyshev
+    closure is built in u = k / nu, where the band is the same for every
+    multipole of the block, with the band edges as panel cuts and membership
+    decided per panel, so every panel is smooth and the series converges; the
+    spline closure is built in k and keeps its knots. The two agree on the
+    window to the closure tolerance.
     """
 
     def integrand(closure_type):
@@ -793,15 +799,19 @@ def test_limber_multipoles_take_the_requested_closure(cosmology: Cosmology) -> N
     assert spline.peek_knots() is not None and spline.get_n_panels() == 0
     assert cheb.peek_knots() is None and cheb.get_n_panels() > 0
 
-    # Every multipole's band edges are panel edges of the Chebyshev closure.
+    # The Chebyshev closure is in u = k / nu, where every multipole has the same
+    # band, so each multipole's band edges in k are the panel edges times its
+    # scale.
     edges = np.array(
         [cheb.peek_panel(0)[1]]
         + [cheb.peek_panel(i)[2] for i in range(cheb.get_n_panels())]
     )
     for i in range(cheb.get_len()):
         k_min, k_max = cheb.get_range_comp(i)
-        assert np.isclose(edges, k_min, rtol=1.0e-12).any()
-        assert np.isclose(edges, k_max, rtol=1.0e-12).any()
+        scale = cheb.get_scale(i)
+        assert scale == 2 + i + 0.5
+        assert np.isclose(edges * scale, k_min, rtol=1.0e-12).any()
+        assert np.isclose(edges * scale, k_max, rtol=1.0e-12).any()
 
     lo = max(spline.get_range()[0], cheb.get_range()[0])
     hi = min(spline.get_range()[1], cheb.get_range()[1])

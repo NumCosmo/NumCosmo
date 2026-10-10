@@ -323,6 +323,7 @@ ncm_headers_internal = files(
     'nc/perturbations/nc_hipert_private.h',
     'nc/data/nc_data_download_priv.h',
     'nc/xcor/nc_xcor_priv.h',
+    'nc/xcor/kernel/nc_xcor_kernel_private.h',
 )
 
 nc_headers = files(
@@ -727,6 +728,10 @@ nc_sources = files(
     'nc/xcor/nc_xcor_solver.c',
     'nc/xcor/nc_xcor_ssc_sij.c',
     'nc/xcor/nc_xcor_kernel.c',
+    'nc/xcor/kernel/nc_xcor_kernel_closure.c',
+    'nc/xcor/kernel/nc_xcor_kernel_integrand.c',
+    'nc/xcor/kernel/nc_xcor_kernel_limber.c',
+    'nc/xcor/kernel/nc_xcor_kernel_nonlimber.c',
     'nc/xcor/nc_xcor_kernel_component.c',
     'nc/xcor/nc_xcor_kernel_cmb_isw.c',
     'nc/xcor/nc_xcor_kernel_CMB_lensing.c',

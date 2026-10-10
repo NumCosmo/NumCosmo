@@ -301,7 +301,7 @@ test_nc_xcor_kernel_knobs (TestNcXcorKernel *test, gconstpointer pdata)
   nc_xcor_kernel_set_max_iter (xclk, 5);
   nc_xcor_kernel_set_expansion_factor (xclk, 0.5);
   nc_xcor_kernel_set_panel_order_cap (xclk, 12);
-  nc_xcor_kernel_set_track_fit_residual (xclk, TRUE);
+  nc_xcor_kernel_set_track_closure_error (xclk, TRUE);
 
   g_assert_cmpuint (nc_xcor_kernel_get_lmax (xclk), ==, TEST_LMAX);
   ncm_assert_cmpdouble_e (nc_xcor_kernel_get_adaptive_epsilon (xclk), ==, 1.0e-5, 1.0e-15, 0.0);
@@ -312,7 +312,7 @@ test_nc_xcor_kernel_knobs (TestNcXcorKernel *test, gconstpointer pdata)
   g_assert_cmpuint (nc_xcor_kernel_get_max_iter (xclk), ==, 5);
   ncm_assert_cmpdouble_e (nc_xcor_kernel_get_expansion_factor (xclk), ==, 0.5, 1.0e-15, 0.0);
   g_assert_cmpuint (nc_xcor_kernel_get_panel_order_cap (xclk), ==, 12);
-  g_assert_true (nc_xcor_kernel_get_track_fit_residual (xclk));
+  g_assert_true (nc_xcor_kernel_get_track_closure_error (xclk));
 }
 
 static void
@@ -361,6 +361,7 @@ test_nc_xcor_kernel_limber (TestNcXcorKernel *test, gconstpointer pdata)
      * and chi_z is in Hubble-radius units, which is the easy thing to get wrong. */
     xck.chi_z = nc_distance_comoving (test->dist, test->cosmo, z);
     xck.E_z   = nc_hicosmo_E (test->cosmo, z);
+    xck.z     = z;
 
     ncm_assert_cmpdouble_e (nc_xcor_kernel_eval_limber_z (test->xclk, test->cosmo, z, &xck, l) *
                             nc_xcor_kernel_eval_limber_z_prefactor (test->xclk, test->cosmo, l),
@@ -445,6 +446,52 @@ test_nc_xcor_kernel_components (TestNcXcorKernel *test, gconstpointer pdata)
                                                                      sqrt (k_min * k_max))));
     g_assert_true (gsl_finite (nc_xcor_kernel_component_eval_prefactor (comp, test->cosmo,
                                                                         sqrt (k_min * k_max), 10)));
+
+    /* The kernel factorizes into the point factor and the wave number factor. */
+    {
+      const guint n_chi = 5;
+      const guint n_k   = 5;
+      guint a, b;
+
+      for (a = 0; a < n_chi; a++)
+      {
+        const gdouble chi = xi_min + (xi_max - xi_min) * (a + 0.5) / n_chi;
+        NcXcorKinetic xck;
+
+        xck.chi_z = chi;
+        xck.z     = nc_distance_inv_comoving (test->dist, test->cosmo, chi);
+        xck.E_z   = nc_hicosmo_E (test->cosmo, xck.z);
+
+        for (b = 0; b < n_k; b++)
+        {
+          const gdouble k      = k_min * exp (log (k_max / k_min) * (b + 0.5) / n_k);
+          const gdouble kernel = nc_xcor_kernel_component_eval_kernel (comp, test->cosmo, chi, k);
+          const gdouble split  = nc_xcor_kernel_component_eval_window (comp, test->cosmo, &xck) *
+                                 nc_xcor_kernel_component_eval_kfactor (comp, test->cosmo, &xck, k);
+
+          ncm_assert_cmpdouble_e (split, ==, kernel, 1.0e-13, 0.0);
+        }
+
+        /* The vector form reproduces the scalar factor at every wave number. */
+        {
+          NcmVector *kv  = ncm_vector_new (n_k);
+          NcmVector *out = ncm_vector_new (n_k);
+
+          for (b = 0; b < n_k; b++)
+            ncm_vector_set (kv, b, k_min * exp (log (k_max / k_min) * (b + 0.5) / n_k));
+
+          nc_xcor_kernel_component_eval_kfactor_vec (comp, test->cosmo, &xck, kv, out);
+
+          for (b = 0; b < n_k; b++)
+            ncm_assert_cmpdouble_e (ncm_vector_get (out, b), ==,
+                                    nc_xcor_kernel_component_eval_kfactor (comp, test->cosmo, &xck, ncm_vector_get (kv, b)),
+                                    1.0e-13, 0.0);
+
+          ncm_vector_free (kv);
+          ncm_vector_free (out);
+        }
+      }
+    }
 
     /* The k-limit searches: bounded by max_iter above, so they take their branches
      * without being run to convergence. */

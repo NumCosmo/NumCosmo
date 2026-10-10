@@ -10630,6 +10630,15 @@ class Spectral(GObject.Object):
         a_out: float,
         b_out: float,
     ) -> typing.Tuple[float, list[float]]: ...
+    def chebyshev_rebase_rows(
+        self,
+        c: Matrix,
+        a_in: float,
+        b_in: float,
+        a_out: float,
+        b_out: float,
+        rebased: Matrix,
+    ) -> float: ...
     @staticmethod
     def clear(spectral: Spectral) -> None: ...
     def compute_chebyshev_coeffs(
@@ -10717,6 +10726,7 @@ class Spectral(GObject.Object):
     @staticmethod
     def compute_s_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
     def free(self) -> None: ...
+    def free_buffers(self) -> None: ...
     @staticmethod
     def gegenbauer_alpha1_eval(
         g: typing.Sequence[float] | npt.NDArray[np.float64], s: float

@@ -71,6 +71,7 @@
 #include "build_cfg.h"
 
 #include "nc/xcor/nc_xcor_kernel_component.h"
+#include "nc/xcor/nc_xcor_kernel.h"
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/core/ncm_cfg.h"
 
@@ -897,6 +898,80 @@ nc_xcor_kernel_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *co
   NcXcorKernelComponentClass *klass = NC_XCOR_KERNEL_COMPONENT_GET_CLASS (comp);
 
   return klass->eval_kernel (comp, cosmo, chi, k);
+}
+
+/**
+ * nc_xcor_kernel_component_eval_window: (virtual eval_window)
+ * @comp: a #NcXcorKernelComponent
+ * @cosmo: a #NcHICosmo
+ * @xck: the line-of-sight point
+ *
+ * Evaluates the factor of $K(k, \chi)$ that depends on the point @xck alone,
+ * such that nc_xcor_kernel_component_eval_kernel() equals this factor times
+ * nc_xcor_kernel_component_eval_kfactor(). At a point shared by a block of
+ * multipoles it is evaluated once for the block.
+ *
+ * Returns: the window factor at @xck
+ */
+gdouble
+nc_xcor_kernel_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck)
+{
+  NcXcorKernelComponentClass *klass = NC_XCOR_KERNEL_COMPONENT_GET_CLASS (comp);
+
+  return klass->eval_window (comp, cosmo, xck);
+}
+
+/**
+ * nc_xcor_kernel_component_eval_kfactor: (virtual eval_kfactor)
+ * @comp: a #NcXcorKernelComponent
+ * @cosmo: a #NcHICosmo
+ * @xck: the line-of-sight point
+ * @k: wave number
+ *
+ * Evaluates the factor of $K(k, \chi)$ that depends on @k: the power spectrum
+ * at $(k, z)$ and the operators in $k$ of the component. See
+ * nc_xcor_kernel_component_eval_window().
+ *
+ * Returns: the wave number factor at @xck and @k
+ */
+gdouble
+nc_xcor_kernel_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k)
+{
+  NcXcorKernelComponentClass *klass = NC_XCOR_KERNEL_COMPONENT_GET_CLASS (comp);
+
+  return klass->eval_kfactor (comp, cosmo, xck, k);
+}
+
+/**
+ * nc_xcor_kernel_component_eval_kfactor_vec: (virtual eval_kfactor_vec)
+ * @comp: a #NcXcorKernelComponent
+ * @cosmo: a #NcHICosmo
+ * @xck: the line-of-sight point
+ * @k: wave numbers
+ * @out: output, the same length as @k
+ *
+ * Evaluates nc_xcor_kernel_component_eval_kfactor() at @xck for every wave
+ * number of @k. A component whose factor is the power spectrum times a power
+ * of $k$ evaluates the spectrum through ncm_powspec_eval_vec(), which shares
+ * the redshift-dependent part across @k; the others evaluate one by one.
+ */
+void
+nc_xcor_kernel_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out)
+{
+  NcXcorKernelComponentClass *klass = NC_XCOR_KERNEL_COMPONENT_GET_CLASS (comp);
+
+  if (klass->eval_kfactor_vec != NULL)
+  {
+    klass->eval_kfactor_vec (comp, cosmo, xck, k, out);
+  }
+  else
+  {
+    const guint len = ncm_vector_len (k);
+    guint i;
+
+    for (i = 0; i < len; i++)
+      ncm_vector_set (out, i, klass->eval_kfactor (comp, cosmo, xck, ncm_vector_get (k, i)));
+  }
 }
 
 /**

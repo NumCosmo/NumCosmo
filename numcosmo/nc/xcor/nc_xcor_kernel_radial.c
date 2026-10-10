@@ -125,6 +125,8 @@ typedef struct _RadialComponentData
         ((RadialComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
 static gdouble _radial_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
+static gdouble _radial_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck);
+static gdouble _radial_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k);
 static gdouble _radial_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
 static void _radial_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _radial_component_data_clear (RadialComponentData *data);
@@ -133,6 +135,9 @@ NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_RADIAL,
                                       NcXcorKernelComponentRadial,
                                       nc_xcor_kernel_component_radial,
                                       _radial_component_eval_kernel,
+                                      _radial_component_eval_window,
+                                      _radial_component_eval_kfactor,
+                                      NULL,
                                       _radial_component_eval_prefactor,
                                       _radial_component_get_limits,
                                       RadialComponentData,
@@ -748,6 +753,30 @@ _radial_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gd
   const gdouble f           = nc_xcor_kernel_radial_eval_kernel_factor (data->xcka, data->comp, cosmo, chi_Mpc, k_Mpc);
 
   return RH_Mpc * W * g * f * sqrt (powspec);
+}
+
+static gdouble
+_radial_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck)
+{
+  RadialComponentData *data = _NC_XCOR_KERNEL_COMPONENT_RADIAL_GET_DATA (comp);
+  const gdouble RH_Mpc      = nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble chi_Mpc     = xck->chi_z * RH_Mpc;
+
+  return RH_Mpc * _nc_xcor_kernel_radial_eval_W_comp_clamped (data->xcka, data->comp, chi_Mpc);
+}
+
+static gdouble
+_radial_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k)
+{
+  RadialComponentData *data = _NC_XCOR_KERNEL_COMPONENT_RADIAL_GET_DATA (comp);
+  const gdouble RH_Mpc      = nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble chi_Mpc     = xck->chi_z * RH_Mpc;
+  const gdouble k_Mpc       = k / RH_Mpc;
+  const gdouble powspec     = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), 0.0, k_Mpc);
+  const gdouble g           = (data->kdep != NULL) ? nc_xcor_kernel_radial_kdep_eval (data->kdep, chi_Mpc, k_Mpc) : 1.0;
+  const gdouble f           = nc_xcor_kernel_radial_eval_kernel_factor (data->xcka, data->comp, cosmo, chi_Mpc, k_Mpc);
+
+  return g * f * sqrt (powspec);
 }
 
 static gdouble

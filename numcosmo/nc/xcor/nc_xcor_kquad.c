@@ -159,7 +159,7 @@ static const gdouble _nc_xcor_gl5_w[NC_XCOR_GL5_N] = {
  *
  * The estimate propagates d(W1 W2) = |W1| dW2 + |W2| dW1, with dW_i the
  * closure fit's own error. A cell whose achieved residual was recorded by
- * nc_xcor_kernel_integrand_peek_residuals() uses that residual and
+ * nc_xcor_kernel_integrand_peek_closure_error() uses that residual and
  * accumulates into @res. A cell with no record -- tracking off, or a
  * refinement never accepted -- accumulates into @unk_i instead and is closed
  * afterwards with the requested tolerance times the peak.
@@ -242,7 +242,7 @@ _nc_xcor_closure_cell_residual (NcmMatrix *residuals, GArray *rows, const guint 
  * cell lies inside one of those intervals, so a single marching index does it.
  */
 static GArray *
-_nc_xcor_closure_cell_rows (NcXcorKernelIntegrand *xclki, GArray *edges)
+_nc_xcor_closure_cell_rows (NcXcorKernelIntegrand *xclki, GArray *edges, const gdouble c)
 {
   const guint n_panels = nc_xcor_kernel_integrand_get_n_panels (xclki);
   GArray *rows         = g_array_sized_new (FALSE, FALSE, sizeof (guint), edges->len);
@@ -252,7 +252,7 @@ _nc_xcor_closure_cell_rows (NcXcorKernelIntegrand *xclki, GArray *edges)
   {
     for (ie = 0; ie + 1 < edges->len; ie++)
     {
-      const gdouble cell_lo = g_array_index (edges, gdouble, ie);
+      const gdouble cell_lo = c * g_array_index (edges, gdouble, ie);
 
       while (j + 1 < n_panels)
       {
@@ -277,7 +277,7 @@ _nc_xcor_closure_cell_rows (NcXcorKernelIntegrand *xclki, GArray *edges)
 
     for (ie = 0; ie + 1 < edges->len; ie++)
     {
-      const gdouble cell_lo = g_array_index (edges, gdouble, ie);
+      const gdouble cell_lo = c * g_array_index (edges, gdouble, ie);
 
       while ((j + 2 < nknots) && (ncm_vector_get (knots, j + 1) <= cell_lo))
         j++;
@@ -346,7 +346,7 @@ _nc_xcor_gl5_sweep_cross (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *
  * one set of residuals to accumulate.
  */
 static void
-_nc_xcor_closure_err_init (NcXcorClosureErr *err, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, gboolean isauto, GArray *edges)
+_nc_xcor_closure_err_init (NcXcorClosureErr *err, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, gboolean isauto)
 {
   guint i;
 
@@ -365,11 +365,47 @@ _nc_xcor_closure_err_init (NcXcorClosureErr *err, NcXcorKernelIntegrand *xclki1,
   err->m1    = err->store[9];
   err->m2    = isauto ? err->store[9] : err->store[10];
 
-  err->residuals1 = nc_xcor_kernel_integrand_peek_residuals (xclki1);
-  err->residuals2 = isauto ? err->residuals1 : nc_xcor_kernel_integrand_peek_residuals (xclki2);
-  err->rows1      = (err->residuals1 != NULL) ? _nc_xcor_closure_cell_rows (xclki1, edges) : NULL;
-  err->rows2      = isauto ? err->rows1 :
-                    ((err->residuals2 != NULL) ? _nc_xcor_closure_cell_rows (xclki2, edges) : NULL);
+  err->residuals1 = nc_xcor_kernel_integrand_peek_closure_error (xclki1);
+  err->residuals2 = isauto ? err->residuals1 : nc_xcor_kernel_integrand_peek_closure_error (xclki2);
+  err->rows1      = NULL;
+  err->rows2      = NULL;
+}
+
+/* The cell-to-row maps of one edge set, in each closure's own variable x_j = c_j x */
+static void
+_nc_xcor_closure_err_set_rows (NcXcorClosureErr *err, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2,
+                               gboolean isauto, GArray *edges, const gdouble c1, const gdouble c2)
+{
+  g_clear_pointer (&err->rows1, g_array_unref);
+
+  if (!isauto)
+    g_clear_pointer (&err->rows2, g_array_unref);
+
+  err->rows1 = (err->residuals1 != NULL) ? _nc_xcor_closure_cell_rows (xclki1, edges, c1) : NULL;
+  err->rows2 = isauto ? err->rows1 :
+               ((err->residuals2 != NULL) ? _nc_xcor_closure_cell_rows (xclki2, edges, c2) : NULL);
+}
+
+/*
+ * The multipoles [il0, il0 + n) at the node x of a cell: k = sigma[il] x, one
+ * component lookup each, or one evaluation of the whole vector when sigma is
+ * NULL, which stands for every scale equal to 1.
+ */
+static void
+_nc_xcor_closure_eval_group (NcXcorKernelIntegrand *xclki, const gdouble x, const guint il0, const guint n,
+                             const gdouble *sigma, gdouble *W)
+{
+  guint il;
+
+  if (sigma == NULL)
+  {
+    nc_xcor_kernel_integrand_eval (xclki, x, W);
+
+    return;
+  }
+
+  for (il = il0; il < il0 + n; il++)
+    nc_xcor_kernel_integrand_eval_comps (xclki, sigma[il] * x, il, 1, W);
 }
 
 /*
@@ -382,7 +418,8 @@ _nc_xcor_closure_err_init (NcXcorClosureErr *err, NcXcorKernelIntegrand *xclki1,
  * means the auto case must add each term once and let the assembly double it.
  */
 static void
-_nc_xcor_closure_err_sweep_auto (NcXcorKernelIntegrand *xclki, GArray *edges, guint nell, gdouble *W, NcXcorClosureErr *err)
+_nc_xcor_closure_err_sweep_auto (NcXcorKernelIntegrand *xclki, GArray *edges, const guint il0, const guint n,
+                                 const gdouble *sigma, gdouble *W, NcXcorClosureErr *err)
 {
   guint ie, ig, il;
 
@@ -393,24 +430,25 @@ _nc_xcor_closure_err_sweep_auto (NcXcorKernelIntegrand *xclki, GArray *edges, gu
     const gdouble mid     = 0.5 * (cell_lo + cell_hi);
     const gdouble half    = 0.5 * (cell_hi - cell_lo);
 
-    _nc_xcor_closure_cell_residual (err->residuals1, err->rows1, ie, nell, err->dW1, err->m1);
+    _nc_xcor_closure_cell_residual (err->residuals1, err->rows1, ie, il0 + n, err->dW1, err->m1);
 
     for (ig = 0; ig < NC_XCOR_GL5_N; ig++)
     {
-      const gdouble k = mid + half * _nc_xcor_gl5_x[ig];
-      const gdouble w = half * _nc_xcor_gl5_w[ig] * k * k;
+      const gdouble x = mid + half * _nc_xcor_gl5_x[ig];
+      const gdouble w = half * _nc_xcor_gl5_w[ig] * x * x;
 
-      nc_xcor_kernel_integrand_eval (xclki, k, W);
+      _nc_xcor_closure_eval_group (xclki, x, il0, n, sigma, W);
 
-      for (il = 0; il < nell; il++)
+      for (il = il0; il < il0 + n; il++)
       {
+        const gdouble s3   = (sigma != NULL) ? gsl_pow_3 (sigma[il]) : 1.0;
         const gdouble absW = fabs (W[il]);
 
         /* d(W^2) = 2 |W| dW, and the aliased unk2/prod2/peak2 supply the
          * second half of the unknown-cell term in the assembly. */
-        err->res[il]   += 2.0 * w * absW * err->dW1[il];
-        err->unk1[il]  += w * absW * err->m1[il];
-        err->prod1[il] += fabs (w * W[il] * W[il]) * err->m1[il];
+        err->res[il]   += 2.0 * s3 * w * absW * err->dW1[il];
+        err->unk1[il]  += s3 * w * absW * err->m1[il];
+        err->prod1[il] += fabs (s3 * w * W[il] * W[il]) * err->m1[il];
         err->peak1[il]  = GSL_MAX (err->peak1[il], absW);
       }
     }
@@ -418,7 +456,9 @@ _nc_xcor_closure_err_sweep_auto (NcXcorKernelIntegrand *xclki, GArray *edges, gu
 }
 
 static void
-_nc_xcor_closure_err_sweep_cross (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, GArray *edges, guint nell, gdouble *W1, gdouble *W2, NcXcorClosureErr *err)
+_nc_xcor_closure_err_sweep_cross (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, GArray *edges,
+                                  const guint il0, const guint n, const gdouble *sigma,
+                                  gdouble *W1, gdouble *W2, NcXcorClosureErr *err)
 {
   guint ie, ig, il;
 
@@ -429,26 +469,27 @@ _nc_xcor_closure_err_sweep_cross (NcXcorKernelIntegrand *xclki1, NcXcorKernelInt
     const gdouble mid     = 0.5 * (cell_lo + cell_hi);
     const gdouble half    = 0.5 * (cell_hi - cell_lo);
 
-    _nc_xcor_closure_cell_residual (err->residuals1, err->rows1, ie, nell, err->dW1, err->m1);
-    _nc_xcor_closure_cell_residual (err->residuals2, err->rows2, ie, nell, err->dW2, err->m2);
+    _nc_xcor_closure_cell_residual (err->residuals1, err->rows1, ie, il0 + n, err->dW1, err->m1);
+    _nc_xcor_closure_cell_residual (err->residuals2, err->rows2, ie, il0 + n, err->dW2, err->m2);
 
     for (ig = 0; ig < NC_XCOR_GL5_N; ig++)
     {
-      const gdouble k = mid + half * _nc_xcor_gl5_x[ig];
-      const gdouble w = half * _nc_xcor_gl5_w[ig] * k * k;
+      const gdouble x = mid + half * _nc_xcor_gl5_x[ig];
+      const gdouble w = half * _nc_xcor_gl5_w[ig] * x * x;
 
-      nc_xcor_kernel_integrand_eval (xclki1, k, W1);
-      nc_xcor_kernel_integrand_eval (xclki2, k, W2);
+      _nc_xcor_closure_eval_group (xclki1, x, il0, n, sigma, W1);
+      _nc_xcor_closure_eval_group (xclki2, x, il0, n, sigma, W2);
 
-      for (il = 0; il < nell; il++)
+      for (il = il0; il < il0 + n; il++)
       {
-        const gdouble term  = w * W1[il] * W2[il];
+        const gdouble s3    = (sigma != NULL) ? gsl_pow_3 (sigma[il]) : 1.0;
+        const gdouble term  = s3 * w * W1[il] * W2[il];
         const gdouble absW1 = fabs (W1[il]);
         const gdouble absW2 = fabs (W2[il]);
 
-        err->res[il]   += w * (absW1 * err->dW2[il] + absW2 * err->dW1[il]);
-        err->unk1[il]  += w * absW2 * err->m1[il];
-        err->unk2[il]  += w * absW1 * err->m2[il];
+        err->res[il]   += s3 * w * (absW1 * err->dW2[il] + absW2 * err->dW1[il]);
+        err->unk1[il]  += s3 * w * absW2 * err->m1[il];
+        err->unk2[il]  += s3 * w * absW1 * err->m2[il];
         err->prod1[il] += fabs (term) * err->m1[il];
         err->prod2[il] += fabs (term) * err->m2[il];
         err->peak1[il]  = GSL_MAX (err->peak1[il], absW1);
@@ -468,7 +509,7 @@ _nc_xcor_closure_err_sweep_cross (NcXcorKernelIntegrand *xclki1, NcXcorKernelInt
  * was asked for. That fallback keeps the two halves of the criterion apart the
  * way the criterion does -- the relative one riding on the product, the
  * peak-scaled floor against the other closure's amplitude -- so with
- * #NcXcorKernel:track-fit-residual off it is the whole estimate, and is then
+ * #NcXcorKernel:track-closure-error off it is the whole estimate, and is then
  * exactly the tolerance-only bound.
  */
 static void
@@ -567,7 +608,7 @@ _nc_xcor_cmp_edge (gconstpointer a, gconstpointer b)
  * representations enter it on the same footing.
  */
 static void
-_nc_xcor_append_breakpoints (NcXcorKernelIntegrand *xclki, gdouble k_min, gdouble k_max, GArray *edges)
+_nc_xcor_append_breakpoints (NcXcorKernelIntegrand *xclki, gdouble x_min, gdouble x_max, const gdouble c, GArray *edges)
 {
   const guint n_panels = nc_xcor_kernel_integrand_get_n_panels (xclki);
   guint i;
@@ -580,8 +621,9 @@ _nc_xcor_append_breakpoints (NcXcorKernelIntegrand *xclki, gdouble k_min, gdoubl
       gdouble a, b;
 
       nc_xcor_kernel_integrand_peek_panel (xclki, i, &ignored, &a, &b);
+      b /= c;
 
-      if ((b > k_min) && (b < k_max))
+      if ((b > x_min) && (b < x_max))
         g_array_append_val (edges, b);
     }
   }
@@ -592,9 +634,9 @@ _nc_xcor_append_breakpoints (NcXcorKernelIntegrand *xclki, gdouble k_min, gdoubl
 
     for (i = 0; i < nknots; i++)
     {
-      const gdouble knot = ncm_vector_get (knots, i);
+      const gdouble knot = ncm_vector_get (knots, i) / c;
 
-      if ((knot > k_min) && (knot < k_max))
+      if ((knot > x_min) && (knot < x_max))
         g_array_append_val (edges, knot);
     }
   }
@@ -608,19 +650,19 @@ _nc_xcor_append_breakpoints (NcXcorKernelIntegrand *xclki, gdouble k_min, gdoubl
  */
 static GArray *
 _nc_xcor_merge_panel_edges (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2,
-                            gboolean isauto, gdouble k_min, gdouble k_max)
+                            gboolean isauto, gdouble x_min, gdouble x_max, const gdouble c1, const gdouble c2)
 {
   GArray *edges = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
-  g_array_append_val (edges, k_min);
+  g_array_append_val (edges, x_min);
 
-  _nc_xcor_append_breakpoints (xclki1, k_min, k_max, edges);
+  _nc_xcor_append_breakpoints (xclki1, x_min, x_max, c1, edges);
 
   if (!isauto)
-    _nc_xcor_append_breakpoints (xclki2, k_min, k_max, edges);
+    _nc_xcor_append_breakpoints (xclki2, x_min, x_max, c2, edges);
 
   g_array_sort (edges, _nc_xcor_cmp_edge);
-  g_array_append_val (edges, k_max);
+  g_array_append_val (edges, x_max);
 
   /* Drop duplicates: two closures often break at the same place. */
   {
@@ -635,22 +677,6 @@ _nc_xcor_merge_panel_edges (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand
   }
 
   return edges;
-}
-
-/*
- * INT_{-1}^{1} T_i T_j dt, from T_i T_j = (T_{i+j} + T_{|i-j|}) / 2 and
- * INT T_n dt = 2 / (1 - n^2) for even n, zero for odd.
- */
-static inline gdouble
-_nc_xcor_cheb_TT_integral (const guint i, const guint j)
-{
-  const guint sum  = i + j;
-  const guint diff = (i > j) ? i - j : j - i;
-
-  if (sum % 2 != 0)
-    return 0.0;
-
-  return 1.0 / (1.0 - (gdouble) (sum * sum)) + 1.0 / (1.0 - (gdouble) (diff * diff));
 }
 
 /*
@@ -669,10 +695,10 @@ _nc_xcor_cheb_TT_integral (const guint i, const guint j)
  * The four-node transform is written out instead of taken from a DCT because
  * at four nodes it is four sums.
  */
-static NcmMatrix *
-_nc_xcor_cell_coeffs (NcXcorKernelIntegrand *xclki, gdouble a, gdouble b, guint nell, const gchar *side)
+static void
+_nc_xcor_cell_coeffs (NcXcorKernelIntegrand *xclki, gdouble a, gdouble b, guint nell, const gchar *side, NcmMatrix **coeffs_ptr)
 {
-  NcmMatrix *coeffs = NULL;
+  NcmMatrix *coeffs = *coeffs_ptr;
 
   if (nc_xcor_kernel_integrand_get_n_panels (xclki) > 0)
   {
@@ -681,11 +707,11 @@ _nc_xcor_cell_coeffs (NcXcorKernelIntegrand *xclki, gdouble a, gdouble b, guint 
      * identical doubles. A failure here would mean the refinement and the
      * panels disagree, and dropping the cell would return a quietly wrong
      * C_ell. */
-    if (!nc_xcor_kernel_integrand_restrict (xclki, a, b, &coeffs))
+    if (!nc_xcor_kernel_integrand_restrict (xclki, a, b, coeffs_ptr))
       g_error ("_nc_xcor_kernel_integrate_block_spectral: cell [%.17g, %.17g] "
                "is not inside a single panel of the %s closure.", a, b, side);
 
-    return coeffs;
+    return;
   }
 
   {
@@ -699,7 +725,13 @@ _nc_xcor_cell_coeffs (NcXcorKernelIntegrand *xclki, gdouble a, gdouble b, guint 
     for (j = 0; j < 4; j++)
       nc_xcor_kernel_integrand_eval (xclki, mid + half * node_t[j], f[j]);
 
-    coeffs = ncm_matrix_new (nell, 4);
+    if ((coeffs != NULL) && ((ncm_matrix_nrows (coeffs) != nell) || (ncm_matrix_ncols (coeffs) != 4)))
+      ncm_matrix_clear (&coeffs);
+
+    if (coeffs == NULL)
+      coeffs = ncm_matrix_new (nell, 4);
+
+    *coeffs_ptr = coeffs;
 
     for (il = 0; il < nell; il++)
     {
@@ -714,23 +746,266 @@ _nc_xcor_cell_coeffs (NcXcorKernelIntegrand *xclki, gdouble a, gdouble b, guint 
       ncm_matrix_set (coeffs, il, 3, (0.5 * f0 - f1 + f2 - 0.5 * f3) / 3.0);
     }
 
-    return coeffs;
+    return;
   }
 }
 
 /*
- * Exact outer integral on the common refinement of two closures' breakpoints.
- *
- * On each cell both closures are a single polynomial over the same interval, so
- * k^2 W_i W_j is a polynomial there and its integral is a fixed bilinear form
- * in the two coefficient sets -- no nodes, no adaptivity, no tolerance. The
- * k^2 weight is itself degree two in the cell's own variable and is folded into
- * one side.
- *
- * This is what a Chebyshev closure gains over feeding it to an adaptive rule:
- * the quadrature does not rediscover per pair what the closure already
- * describes. Either side may equally be a spline, at four coefficients per
- * cell, which is what a pair split across the Limber threshold produces.
+ * Scratch of the spectral integration of one block. The tables A_k[i][j] =
+ * int_{-1}^{1} T_i T_j T_k dt, k = 0, 1, 2, depend only on (i, j); up to
+ * NC_XCOR_CHEB_PRODUCT_TABLE_N coefficients they are built once per process,
+ * above it once per call for the largest count seen. G holds one cell's
+ * bilinear form.
+ */
+typedef struct _NcXcorSpectralScratch
+{
+  GArray *A;            /* tables built here, for counts above the process-wide ones */
+  GArray *G;            /* n1 n2 doubles */
+  const gdouble *A_ptr; /* the tables in use: A_0, A_1, A_2, row-major in (i, j) */
+  guint nmax;           /* their row stride */
+  guint nmax_local;     /* the count A was built for */
+} NcXcorSpectralScratch;
+
+/* inv(m) = 1 / (1 - m^2) for even m, 0 for odd m: half the integral of T_m over [-1, 1] */
+static inline gdouble
+_nc_xcor_cheb_half_int (const guint m)
+{
+  return (m % 2 == 0) ? 1.0 / (1.0 - (gdouble) m * (gdouble) m) : 0.0;
+}
+
+/*
+ * Fills the tables A_k for coefficient counts n1 and n2, from
+ * T_i T_j = (T_{i+j} + T_{|i-j|}) / 2 applied twice:
+ * A_k[i][j] = (inv(p + k) + inv(|p - k|) + inv(q + k) + inv(|q - k|)) / 2, with
+ * p = i + j and q = |i - j|.
+ */
+
+/* Fills the three tables for coefficient counts below nmax, row stride nmax */
+static void
+_nc_xcor_cheb_product_tables_fill (gdouble *A, const guint nmax)
+{
+  guint i, j, k;
+
+  for (k = 0; k < 3; k++)
+  {
+    for (i = 0; i < nmax; i++)
+    {
+      for (j = 0; j < nmax; j++)
+      {
+        const guint p = i + j;
+        const guint q = (i > j) ? i - j : j - i;
+
+        A[(k * nmax + i) * nmax + j] = 0.5 * (_nc_xcor_cheb_half_int (p + k) +
+                                              _nc_xcor_cheb_half_int ((p > k) ? p - k : k - p) +
+                                              _nc_xcor_cheb_half_int (q + k) +
+                                              _nc_xcor_cheb_half_int ((q > k) ? q - k : k - q));
+      }
+    }
+  }
+}
+
+/* The tables are constants: up to this count they are built once per process. */
+#define NC_XCOR_CHEB_PRODUCT_TABLE_N (65)
+
+static const gdouble *
+_nc_xcor_cheb_product_tables_static (void)
+{
+  static gsize init = 0;
+  static gdouble *A = NULL;
+
+  if (g_once_init_enter (&init))
+  {
+    A = g_new (gdouble, 3 * NC_XCOR_CHEB_PRODUCT_TABLE_N * NC_XCOR_CHEB_PRODUCT_TABLE_N);
+    _nc_xcor_cheb_product_tables_fill (A, NC_XCOR_CHEB_PRODUCT_TABLE_N);
+    g_once_init_leave (&init, 1);
+  }
+
+  return A;
+}
+
+/*
+ * Points sc->A_ptr at tables valid for counts n1 and n2, with row stride
+ * sc->nmax: the process-wide tables when both counts fit, otherwise tables
+ * built here for the larger count.
+ */
+static void
+_nc_xcor_spectral_scratch_prepare (NcXcorSpectralScratch *sc, const guint n1, const guint n2)
+{
+  const guint nmax = MAX (n1, n2);
+
+  g_array_set_size (sc->G, n1 * n2);
+
+  if (nmax <= NC_XCOR_CHEB_PRODUCT_TABLE_N)
+  {
+    sc->A_ptr = _nc_xcor_cheb_product_tables_static ();
+    sc->nmax  = NC_XCOR_CHEB_PRODUCT_TABLE_N;
+
+    return;
+  }
+
+  if (nmax > sc->nmax_local)
+  {
+    g_array_set_size (sc->A, 3 * nmax * nmax);
+    _nc_xcor_cheb_product_tables_fill (&g_array_index (sc->A, gdouble, 0), nmax);
+    sc->nmax_local = nmax;
+  }
+
+  sc->A_ptr = &g_array_index (sc->A, gdouble, 0);
+  sc->nmax  = sc->nmax_local;
+}
+
+/* A closure's range in its own variable: the span of its panels, or its k range */
+static void
+_nc_xcor_closure_var_range (NcXcorKernelIntegrand *xclki, gdouble *lo, gdouble *hi)
+{
+  const guint n_panels = nc_xcor_kernel_integrand_get_n_panels (xclki);
+
+  if (n_panels > 0)
+  {
+    NcmMatrix *ignored = NULL;
+    gdouble a, b;
+
+    nc_xcor_kernel_integrand_peek_panel (xclki, 0, &ignored, lo, &b);
+    nc_xcor_kernel_integrand_peek_panel (xclki, n_panels - 1, &ignored, &a, hi);
+  }
+  else
+  {
+    nc_xcor_kernel_integrand_get_range (xclki, lo, hi);
+  }
+}
+
+/*
+ * Integrates the multipoles [il0, il0 + n) of a pair on the common refinement
+ * of the two closures' breakpoints in a variable x, with k = sigma[il] x for
+ * multipole il (sigma NULL: every scale 1) and closure j in x_j = c_j x. On
+ * each cell both closures are polynomials in the cell's variable t, so the
+ * product is integrated as a bilinear form of their coefficients, with k^2 dk
+ * = sigma^3 x^2 dx. Adds sigma^3 times the integral in x to sum[il], and the
+ * closure error terms to err when it is not NULL.
+ */
+static void
+_nc_xcor_spectral_group (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, gboolean isauto,
+                         const guint il0, const guint n, const gdouble *sigma, const gdouble c1, const gdouble c2,
+                         gdouble *sum, gdouble *W1, gdouble *W2, NcXcorClosureErr *err, NcXcorSpectralScratch *sc)
+{
+  const guint len1 = nc_xcor_kernel_integrand_get_len (xclki1);
+  const guint len2 = nc_xcor_kernel_integrand_get_len (xclki2);
+  NcmMatrix *cell1 = NULL;
+  NcmMatrix *cell2 = NULL;
+  gdouble lo1, hi1, lo2, hi2, x_min, x_max;
+  GArray *edges;
+  guint ie, il;
+
+  _nc_xcor_closure_var_range (xclki1, &lo1, &hi1);
+  _nc_xcor_closure_var_range (xclki2, &lo2, &hi2);
+
+  x_min = GSL_MAX (lo1 / c1, lo2 / c2);
+  x_max = GSL_MIN (hi1 / c1, hi2 / c2);
+
+  if (x_min >= x_max)
+    return;
+
+  edges = _nc_xcor_merge_panel_edges (xclki1, xclki2, isauto, x_min, x_max, c1, c2);
+
+  for (ie = 0; ie + 1 < edges->len; ie++)
+  {
+    const gdouble a    = g_array_index (edges, gdouble, ie);
+    const gdouble b    = g_array_index (edges, gdouble, ie + 1);
+    const gdouble mid  = 0.5 * (a + b);
+    const gdouble half = 0.5 * (b - a);
+    NcmMatrix *cm1, *cm2;
+
+    _nc_xcor_cell_coeffs (xclki1, a * c1, b * c1, len1, "first", &cell1);
+    cm1 = cell1;
+
+    if (isauto)
+    {
+      cm2 = cell1;
+    }
+    else
+    {
+      _nc_xcor_cell_coeffs (xclki2, a * c2, b * c2, len2, "second", &cell2);
+      cm2 = cell2;
+    }
+
+    {
+      /* x^2 = w0 T_0 + w1 T_1 + w2 T_2 in the cell's variable x = mid + half t, so
+       * int x^2 p q dx = half a^T G b with G = w0 A_0 + w1 A_1 + w2 A_2, the
+       * same G for every multipole of the cell. */
+      const gdouble w0   = mid * mid + 0.5 * half * half;
+      const gdouble w1   = 2.0 * mid * half;
+      const gdouble w2   = 0.5 * half * half;
+      const guint n1     = ncm_matrix_ncols (cm1);
+      const guint n2     = ncm_matrix_ncols (cm2);
+      const guint tda1   = ncm_matrix_tda (cm1);
+      const guint tda2   = ncm_matrix_tda (cm2);
+      const gdouble *dc1 = ncm_matrix_data (cm1);
+      const gdouble *dc2 = ncm_matrix_data (cm2);
+      const gdouble *A0, *A1, *A2;
+      gdouble *G;
+      guint i, j;
+
+      _nc_xcor_spectral_scratch_prepare (sc, n1, n2);
+
+      A0 = sc->A_ptr;
+      A1 = A0 + sc->nmax * sc->nmax;
+      A2 = A1 + sc->nmax * sc->nmax;
+      G  = &g_array_index (sc->G, gdouble, 0);
+
+      for (i = 0; i < n1; i++)
+      {
+        const guint row = i * sc->nmax;
+
+        for (j = 0; j < n2; j++)
+          G[i * n2 + j] = w0 * A0[row + j] + w1 * A1[row + j] + w2 * A2[row + j];
+      }
+
+      for (il = il0; il < il0 + n; il++)
+      {
+        const gdouble s3 = (sigma != NULL) ? gsl_pow_3 (sigma[il]) : 1.0;
+        const gdouble *a = &dc1[il * tda1];
+        const gdouble *b = &dc2[il * tda2];
+        gdouble acc      = 0.0;
+
+        for (i = 0; i < n1; i++)
+        {
+          const gdouble *Gi = &G[i * n2];
+          gdouble r         = 0.0;
+
+          for (j = 0; j < n2; j++)
+            r += Gi[j] * b[j];
+
+          acc += a[i] * r;
+        }
+
+        sum[il] += s3 * half * acc;
+      }
+    }
+  }
+
+  ncm_matrix_clear (&cell1);
+  ncm_matrix_clear (&cell2);
+
+  if (err != NULL)
+  {
+    _nc_xcor_closure_err_set_rows (err, xclki1, xclki2, isauto, edges, c1, c2);
+
+    if (isauto)
+      _nc_xcor_closure_err_sweep_auto (xclki1, edges, il0, n, sigma, W1, err);
+    else
+      _nc_xcor_closure_err_sweep_cross (xclki1, xclki2, edges, il0, n, sigma, W1, W2, err);
+  }
+
+  g_array_unref (edges);
+}
+
+/*
+ * Integrates a pair with a spectral closure on at least one side. Two closures
+ * in k, or a spectral closure with a spline, share one edge set for the block.
+ * Two closures in u = k / nu share one edge set too, with sigma = nu per
+ * multipole. A closure in u paired with one in k has no common edge set, and
+ * each multipole is integrated on its own refinement, the k closure's
+ * breakpoints divided by that multipole's nu.
  */
 static void
 _nc_xcor_kernel_integrate_block_spectral (NcXcor *xc, NcXcorKernelIntegrand *xclki1,
@@ -740,107 +1015,66 @@ _nc_xcor_kernel_integrate_block_spectral (NcXcor *xc, NcXcorKernelIntegrand *xcl
 {
   const guint nell           = lmax - lmin + 1;
   const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
-  gdouble k_min1, k_max1, k_min2, k_max2, k_min, k_max;
   NcXcorClosureErr err_acc;
-  GArray *edges;
+  gboolean scaled1 = FALSE;
+  gboolean scaled2 = FALSE;
 
   /* One accumulator per multipole; a block is capped at
    * NC_XCOR_KERNEL_MAX_ELL_BLOCK by the closure builder. */
   gdouble sum[NC_XCOR_KERNEL_MAX_ELL_BLOCK] = { 0.0 };
+  gdouble s1[NC_XCOR_KERNEL_MAX_ELL_BLOCK];
+  gdouble s2[NC_XCOR_KERNEL_MAX_ELL_BLOCK];
   gdouble W1_store[NC_XCOR_KERNEL_MAX_ELL_BLOCK];
   gdouble W2_store[NC_XCOR_KERNEL_MAX_ELL_BLOCK];
-  GArray *folded_a;
-  guint ie, il;
-
-  nc_xcor_kernel_integrand_get_range (xclki1, &k_min1, &k_max1);
-  nc_xcor_kernel_integrand_get_range (xclki2, &k_min2, &k_max2);
-
-  k_min = GSL_MAX (k_min1, k_min2);
-  k_max = GSL_MIN (k_max1, k_max2);
+  NcXcorSpectralScratch sc;
+  guint il;
 
   ncm_vector_set_zero (vp);
 
   if (vp_err != NULL)
-    ncm_vector_set_zero (vp_err);
-
-  if (k_min >= k_max)
-    return;
-
-  edges = _nc_xcor_merge_panel_edges (xclki1, xclki2, isauto, k_min, k_max);
-
-  /* One buffer for every cell, grown to fit. Its length is a Chebyshev
-   * coefficient count, so it is the one piece of scratch here with no bound to
-   * size a fixed array by; it is local rather than kept on @xc because the
-   * solver's OpenMP team shares @xc across threads. */
-  folded_a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 0);
-
-  for (ie = 0; ie + 1 < edges->len; ie++)
   {
-    const gdouble a    = g_array_index (edges, gdouble, ie);
-    const gdouble b    = g_array_index (edges, gdouble, ie + 1);
-    const gdouble mid  = 0.5 * (a + b);
-    const gdouble half = 0.5 * (b - a);
-    NcmMatrix *c1      = _nc_xcor_cell_coeffs (xclki1, a, b, nell, "first");
-    NcmMatrix *c2      = isauto ? ncm_matrix_ref (c1) :
-                         _nc_xcor_cell_coeffs (xclki2, a, b, nell, "second");
+    ncm_vector_set_zero (vp_err);
+    _nc_xcor_closure_err_init (&err_acc, xclki1, xclki2, isauto);
+  }
 
-    {
-      /* k^2 in the cell's variable: k = mid + half t. */
-      const gdouble w0 = mid * mid + 0.5 * half * half;
-      const gdouble w1 = 2.0 * mid * half;
-      const gdouble w2 = 0.5 * half * half;
-      const guint n1   = ncm_matrix_ncols (c1);
-      const guint n2   = ncm_matrix_ncols (c2);
-      gdouble *folded;
+  for (il = 0; il < nell; il++)
+  {
+    s1[il]   = nc_xcor_kernel_integrand_get_scale (xclki1, il);
+    s2[il]   = nc_xcor_kernel_integrand_get_scale (xclki2, il);
+    scaled1 |= (s1[il] != 1.0);
+    scaled2 |= (s2[il] != 1.0);
+  }
 
-      g_array_set_size (folded_a, n2 + 2);
-      folded = &g_array_index (folded_a, gdouble, 0);
+  /* Local rather than kept on @xc: the solver's OpenMP team shares @xc across threads. */
+  sc.A          = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  sc.G          = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  sc.nmax       = 0;
+  sc.nmax_local = 0;
+  sc.A_ptr      = NULL;
 
-      for (il = 0; il < nell; il++)
-      {
-        guint i, j;
+  if (!scaled1 && !scaled2)
+  {
+    _nc_xcor_spectral_group (xclki1, xclki2, isauto, 0, nell, NULL, 1.0, 1.0,
+                             sum, W1_store, W2_store, (vp_err != NULL) ? &err_acc : NULL, &sc);
+  }
+  else if (scaled1 && scaled2)
+  {
+    for (il = 0; il < nell; il++)
+      if (s1[il] != s2[il])
+        g_error ("_nc_xcor_kernel_integrate_block_spectral: the two closures scale multipole %u "
+                 "differently (%.17g and %.17g).", lmin + il, s1[il], s2[il]);
 
-        /* Fold k^2 into the second factor, once per multipole. */
-        for (j = 0; j < n2 + 2; j++)
-          folded[j] = 0.0;
+    _nc_xcor_spectral_group (xclki1, xclki2, isauto, 0, nell, s1, 1.0, 1.0,
+                             sum, W1_store, W2_store, (vp_err != NULL) ? &err_acc : NULL, &sc);
+  }
+  else
+  {
+    const gdouble *sigma = scaled1 ? s1 : s2;
 
-        for (j = 0; j < n2; j++)
-        {
-          const gdouble bj = ncm_matrix_get (c2, il, j);
-
-          folded[j]     += w0 * bj;
-          folded[j + 1] += 0.5 * w1 * bj;
-          folded[j + 2] += 0.5 * w2 * bj;
-
-          if (j >= 1)
-            folded[j - 1] += 0.5 * w1 * bj;
-          else
-            folded[1] += 0.5 * w1 * bj;
-
-          if (j >= 2)
-            folded[j - 2] += 0.5 * w2 * bj;
-          else
-            folded[2 - j] += 0.5 * w2 * bj;
-        }
-
-        for (i = 0; i < n1; i++)
-        {
-          const gdouble ai = ncm_matrix_get (c1, il, i);
-          gdouble acc      = 0.0;
-
-          if (ai == 0.0)
-            continue;
-
-          for (j = 0; j < n2 + 2; j++)
-            acc += folded[j] * _nc_xcor_cheb_TT_integral (i, j);
-
-          sum[il] += half * ai * acc;
-        }
-      }
-    }
-
-    ncm_matrix_clear (&c1);
-    ncm_matrix_clear (&c2);
+    for (il = 0; il < nell; il++)
+      _nc_xcor_spectral_group (xclki1, xclki2, isauto, il, 1, sigma,
+                               scaled1 ? 1.0 : sigma[il], scaled2 ? 1.0 : sigma[il],
+                               sum, W1_store, W2_store, (vp_err != NULL) ? &err_acc : NULL, &sc);
   }
 
   for (il = 0; il < nell; il++)
@@ -849,19 +1083,10 @@ _nc_xcor_kernel_integrate_block_spectral (NcXcor *xc, NcXcorKernelIntegrand *xcl
   /* The same estimate the merged-knot path reports, on the same cells: the
    * bilinear form is exact, so what is left is the closures' own fit error. */
   if (vp_err != NULL)
-  {
-    _nc_xcor_closure_err_init (&err_acc, xclki1, xclki2, isauto, edges);
-
-    if (isauto)
-      _nc_xcor_closure_err_sweep_auto (xclki1, edges, nell, W1_store, &err_acc);
-    else
-      _nc_xcor_closure_err_sweep_cross (xclki1, xclki2, edges, nell, W1_store, W2_store, &err_acc);
-
     _nc_xcor_closure_err_assemble (&err_acc, xclki1, xclki2, isauto, nell, const_factor, vp_err);
-  }
 
-  g_array_unref (folded_a);
-  g_array_unref (edges);
+  g_array_unref (sc.A);
+  g_array_unref (sc.G);
 }
 
 void
@@ -962,12 +1187,13 @@ _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1
 
   if (vp_err != NULL)
   {
-    _nc_xcor_closure_err_init (&err_acc, xclki1, side2, isauto, edges);
+    _nc_xcor_closure_err_init (&err_acc, xclki1, side2, isauto);
+    _nc_xcor_closure_err_set_rows (&err_acc, xclki1, side2, isauto, edges, 1.0, 1.0);
 
     if (isauto)
-      _nc_xcor_closure_err_sweep_auto (xclki1, edges, nell, W1, &err_acc);
+      _nc_xcor_closure_err_sweep_auto (xclki1, edges, 0, nell, NULL, W1, &err_acc);
     else
-      _nc_xcor_closure_err_sweep_cross (xclki1, side2, edges, nell, W1, W2, &err_acc);
+      _nc_xcor_closure_err_sweep_cross (xclki1, side2, edges, 0, nell, NULL, W1, W2, &err_acc);
 
     _nc_xcor_closure_err_assemble (&err_acc, xclki1, side2, isauto, nell, const_factor, vp_err);
   }

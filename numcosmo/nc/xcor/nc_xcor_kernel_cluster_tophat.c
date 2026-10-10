@@ -112,6 +112,9 @@ typedef struct _ClusteringComponentData
         ((ClusteringComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
 static gdouble _clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
+static gdouble _clustering_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck);
+static gdouble _clustering_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k);
+static void _clustering_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out);
 static gdouble _clustering_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
 static void _clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _clustering_component_data_clear (ClusteringComponentData *data);
@@ -121,6 +124,9 @@ NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_CLUSTER_TOPHAT,
                                       NcXcorKernelComponentClusterTophat,
                                       nc_xcor_kernel_component_cluster_tophat,
                                       _clustering_component_eval_kernel,
+                                      _clustering_component_eval_window,
+                                      _clustering_component_eval_kfactor,
+                                      _clustering_component_eval_kfactor_vec,
                                       _clustering_component_eval_prefactor,
                                       _clustering_component_get_limits,
                                       ClusteringComponentData,
@@ -441,6 +447,40 @@ _clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo
   const gdouble window          = _nc_xcor_kernel_cluster_tophat_window (data->xclkc, z);
 
   return chi * chi * window * sqrt (powspec);
+}
+
+static gdouble
+_clustering_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck)
+{
+  ClusteringComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CLUSTER_TOPHAT_GET_DATA (comp);
+  const gdouble window          = _nc_xcor_kernel_cluster_tophat_window (data->xclkc, xck->z);
+
+  return xck->chi_z * xck->chi_z * window;
+}
+
+static gdouble
+_clustering_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k)
+{
+  ClusteringComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CLUSTER_TOPHAT_GET_DATA (comp);
+  const gdouble powspec         = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), xck->z, k / nc_hicosmo_RH_Mpc (cosmo));
+
+  return sqrt (powspec);
+}
+
+static void
+_clustering_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out)
+{
+  ClusteringComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CLUSTER_TOPHAT_GET_DATA (comp);
+  const gdouble RH_Mpc          = nc_hicosmo_RH_Mpc (cosmo);
+  const guint len               = ncm_vector_len (k);
+  guint i;
+
+  ncm_vector_scale (k, 1.0 / RH_Mpc);
+  ncm_powspec_eval_vec (data->ps, NCM_MODEL (cosmo), xck->z, k, out);
+  ncm_vector_scale (k, RH_Mpc);
+
+  for (i = 0; i < len; i++)
+    ncm_vector_set (out, i, sqrt (ncm_vector_get (out, i)));
 }
 
 static gdouble

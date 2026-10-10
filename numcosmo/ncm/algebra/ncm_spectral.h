@@ -67,6 +67,7 @@ void ncm_spectral_free (NcmSpectral *spectral);
 void ncm_spectral_clear (NcmSpectral **spectral);
 
 void ncm_spectral_set_max_level (NcmSpectral *spectral, guint max_level);
+void ncm_spectral_free_buffers (NcmSpectral *spectral);
 guint ncm_spectral_get_max_level (NcmSpectral *spectral);
 
 void ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint order, GArray **coeffs, gpointer user_data);
@@ -84,6 +85,7 @@ void ncm_spectral_chebT_deriv2_to_gegenbauer_alpha2 (GArray *c, GArray **g);
 void ncm_spectral_gegenbauer_alpha2_mul_affine (GArray *g, gdouble alpha, gdouble beta, GArray **out);
 
 gdouble ncm_spectral_chebyshev_rebase (NcmSpectral *spectral, GArray *c, guint len, gdouble a_in, gdouble b_in, gdouble a_out, gdouble b_out, GArray **rebased);
+gdouble ncm_spectral_chebyshev_rebase_rows (NcmSpectral *spectral, NcmMatrix *c, gdouble a_in, gdouble b_in, gdouble a_out, gdouble b_out, NcmMatrix *rebased);
 
 gdouble ncm_spectral_gegenbauer_alpha1_eval (GArray *g, gdouble s);
 gdouble ncm_spectral_gegenbauer_alpha1_eval_x (GArray *g, gdouble a, gdouble b, gdouble x);

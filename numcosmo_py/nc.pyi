@@ -23031,10 +23031,14 @@ class XcorKernel(NumCosmoMath.Model):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23070,11 +23074,13 @@ class XcorKernel(NumCosmoMath.Model):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -23098,11 +23104,13 @@ class XcorKernel(NumCosmoMath.Model):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23155,10 +23163,12 @@ class XcorKernel(NumCosmoMath.Model):
     def get_lmax(self) -> int: ...
     def get_max_border_expansions(self) -> int: ...
     def get_max_iter(self) -> int: ...
+    def get_panel_level_min(self) -> int: ...
     def get_panel_order_cap(self) -> int: ...
+    def get_panels_per_efold(self) -> float: ...
     def get_peak_epsilon(self) -> float: ...
     def get_reltol(self) -> float: ...
-    def get_track_fit_residual(self) -> bool: ...
+    def get_track_closure_error(self) -> bool: ...
     def get_z_range(self) -> typing.Tuple[float, float, float]: ...
     @staticmethod
     def id() -> int: ...
@@ -23180,10 +23190,12 @@ class XcorKernel(NumCosmoMath.Model):
     def set_lmax(self, lmax: int) -> None: ...
     def set_max_border_expansions(self, max_border_expansions: int) -> None: ...
     def set_max_iter(self, max_iter: int) -> None: ...
+    def set_panel_level_min(self, panel_level_min: int) -> None: ...
     def set_panel_order_cap(self, panel_order_cap: int) -> None: ...
+    def set_panels_per_efold(self, panels_per_efold: float) -> None: ...
     def set_peak_epsilon(self, peak_epsilon: float) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
-    def set_track_fit_residual(self, track_fit_residual: bool) -> None: ...
+    def set_track_closure_error(self, track_closure_error: bool) -> None: ...
 
 class XcorKernelAnalyticGauss(XcorKernelRadial):
     r"""
@@ -23236,10 +23248,14 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23280,11 +23296,13 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -23312,11 +23330,13 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23406,10 +23426,14 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23450,11 +23474,13 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -23482,11 +23508,13 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23577,10 +23605,14 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23622,11 +23654,13 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -23655,11 +23689,13 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23757,10 +23793,14 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23803,11 +23843,13 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -23837,11 +23879,13 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23937,10 +23981,14 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23982,11 +24030,13 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -24015,11 +24065,13 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24111,10 +24163,14 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24154,11 +24210,13 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -24185,11 +24243,13 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24278,10 +24338,14 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24323,11 +24387,13 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -24356,11 +24422,13 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24445,10 +24513,14 @@ class XcorKernelCMBISW(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24487,11 +24559,13 @@ class XcorKernelCMBISW(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -24517,11 +24591,13 @@ class XcorKernelCMBISW(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24597,10 +24673,14 @@ class XcorKernelCMBLensing(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24639,11 +24719,13 @@ class XcorKernelCMBLensing(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -24669,11 +24751,13 @@ class XcorKernelCMBLensing(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24758,10 +24842,14 @@ class XcorKernelCluster(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24797,11 +24885,13 @@ class XcorKernelCluster(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -24825,11 +24915,13 @@ class XcorKernelCluster(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24890,10 +24982,14 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24931,11 +25027,13 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -24960,11 +25058,13 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -25040,7 +25140,16 @@ class XcorKernelComponent(GObject.Object):
     @staticmethod
     def clear(comp: XcorKernelComponent) -> None: ...
     def do_eval_kernel(self, cosmo: HICosmo, chi: float, k: float) -> float: ...
+    def do_eval_kfactor(self, cosmo: HICosmo, xck: XcorKinetic, k: float) -> float: ...
+    def do_eval_kfactor_vec(
+        self,
+        cosmo: HICosmo,
+        xck: XcorKinetic,
+        k: NumCosmoMath.Vector,
+        out: NumCosmoMath.Vector,
+    ) -> None: ...
     def do_eval_prefactor(self, cosmo: HICosmo, k: float, l: int) -> float: ...
+    def do_eval_window(self, cosmo: HICosmo, xck: XcorKinetic) -> float: ...
     def do_get_limits(
         self, cosmo: HICosmo
     ) -> typing.Tuple[float, float, float, float]: ...
@@ -25048,7 +25157,16 @@ class XcorKernelComponent(GObject.Object):
     def eval_k_epsilon(self, x: float) -> float: ...
     def eval_k_max(self, x: float) -> float: ...
     def eval_kernel(self, cosmo: HICosmo, chi: float, k: float) -> float: ...
+    def eval_kfactor(self, cosmo: HICosmo, xck: XcorKinetic, k: float) -> float: ...
+    def eval_kfactor_vec(
+        self,
+        cosmo: HICosmo,
+        xck: XcorKinetic,
+        k: NumCosmoMath.Vector,
+        out: NumCosmoMath.Vector,
+    ) -> None: ...
     def eval_prefactor(self, cosmo: HICosmo, k: float, l: int) -> float: ...
+    def eval_window(self, cosmo: HICosmo, xck: XcorKinetic) -> float: ...
     def free(self) -> None: ...
     def get_bessel_deriv(self) -> int: ...
     def get_epsilon(self) -> float: ...
@@ -25084,6 +25202,22 @@ class XcorKernelComponentClass(GObject.GPointer):
     ] = ...
     get_limits: typing.Callable[
         [XcorKernelComponent, HICosmo], typing.Tuple[float, float, float, float]
+    ] = ...
+    eval_window: typing.Callable[[XcorKernelComponent, HICosmo, XcorKinetic], float] = (
+        ...
+    )
+    eval_kfactor: typing.Callable[
+        [XcorKernelComponent, HICosmo, XcorKinetic, float], float
+    ] = ...
+    eval_kfactor_vec: typing.Callable[
+        [
+            XcorKernelComponent,
+            HICosmo,
+            XcorKinetic,
+            NumCosmoMath.Vector,
+            NumCosmoMath.Vector,
+        ],
+        None,
     ] = ...
     padding: list[None] = ...
 
@@ -25149,10 +25283,14 @@ class XcorKernelGal(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -25200,11 +25338,13 @@ class XcorKernelGal(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -25239,11 +25379,13 @@ class XcorKernelGal(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -25305,7 +25447,8 @@ class XcorKernelIntegrand(GObject.GBoxed):
     restrict_func: typing.Callable[
         [None, float, float], typing.Tuple[bool, NumCosmoMath.Matrix]
     ] = ...
-    residuals: NumCosmoMath.Matrix = ...
+    get_scale_func: typing.Callable[[None, int], float] = ...
+    closure_error: NumCosmoMath.Matrix = ...
     reltol: float = ...
     peak_epsilon: float = ...
     @staticmethod
@@ -25317,6 +25460,7 @@ class XcorKernelIntegrand(GObject.GBoxed):
     def get_range(self) -> typing.Tuple[float, float]: ...
     def get_range_comp(self, i: int) -> typing.Tuple[float, float]: ...
     def get_reltol(self) -> float: ...
+    def get_scale(self, i: int) -> float: ...
     @classmethod
     def new(
         cls,
@@ -25325,9 +25469,9 @@ class XcorKernelIntegrand(GObject.GBoxed):
         get_range: typing.Callable[..., typing.Tuple[float, float]],
         *data: typing.Any,
     ) -> XcorKernelIntegrand: ...
+    def peek_closure_error(self) -> typing.Optional[NumCosmoMath.Matrix]: ...
     def peek_knots(self) -> typing.Optional[NumCosmoMath.Vector]: ...
     def peek_panel(self, i: int) -> typing.Tuple[NumCosmoMath.Matrix, float, float]: ...
-    def peek_residuals(self) -> typing.Optional[NumCosmoMath.Matrix]: ...
     def peek_spectral(
         self,
     ) -> typing.Tuple[bool, NumCosmoMath.Matrix, float, float]: ...
@@ -25335,8 +25479,8 @@ class XcorKernelIntegrand(GObject.GBoxed):
     def restrict(
         self, a: float, b: float
     ) -> typing.Tuple[bool, NumCosmoMath.Matrix]: ...
-    def set_residuals(
-        self, residuals: typing.Optional[NumCosmoMath.Matrix] = None
+    def set_closure_error(
+        self, closure_error: typing.Optional[NumCosmoMath.Matrix] = None
     ) -> None: ...
     def set_tolerances(self, reltol: float, peak_epsilon: float) -> None: ...
     def unref(self) -> None: ...
@@ -25382,10 +25526,14 @@ class XcorKernelRadial(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -25423,11 +25571,13 @@ class XcorKernelRadial(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -25453,11 +25603,13 @@ class XcorKernelRadial(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -25648,10 +25800,14 @@ class XcorKernelTable(XcorKernelRadial):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -25695,11 +25851,13 @@ class XcorKernelTable(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -25730,11 +25888,13 @@ class XcorKernelTable(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -25834,10 +25994,14 @@ class XcorKernelWeakLensing(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -25876,11 +26040,13 @@ class XcorKernelWeakLensing(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -25906,11 +26072,13 @@ class XcorKernelWeakLensing(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -25978,10 +26146,14 @@ class XcorKerneltSZ(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-fit-residual -> gboolean: track-fit-residual
-        Whether to record the residual the closure fit achieved
+      track-closure-error -> gboolean: track-closure-error
+        Whether to record the interpolation error the closure achieved
       panel-order-cap -> guint: panel-order-cap
         Highest Chebyshev order tried per panel before bisecting
+      panels-per-efold -> gdouble: panels-per-efold
+        Panels per e-fold of k in the initial Chebyshev grid
+      panel-level-min -> guint: panel-level-min
+        Level at which the Chebyshev expansion of a panel starts
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -26019,11 +26191,13 @@ class XcorKerneltSZ(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_level_min: int
         panel_order_cap: int
+        panels_per_efold: float
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_fit_residual: bool
+        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -26048,11 +26222,13 @@ class XcorKerneltSZ(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_level_min: int = ...,
         panel_order_cap: int = ...,
+        panels_per_efold: float = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_fit_residual: bool = ...,
+        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -26084,6 +26260,7 @@ class XcorKinetic(GObject.GBoxed):
 
     chi_z: float = ...
     E_z: float = ...
+    z: float = ...
     def copy(self) -> XcorKinetic: ...
     def free(self) -> None: ...
 

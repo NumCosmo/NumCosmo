@@ -141,6 +141,8 @@ _nc_xcor_kernel_cmb_isw_survival (NcXcorKernelCMBISWSource source, NcRecomb *rec
 
 
 static gdouble _isw_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
+static gdouble _isw_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck);
+static gdouble _isw_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k);
 static gdouble _isw_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
 static void _isw_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _isw_component_data_clear (ISWComponentData *data);
@@ -150,6 +152,9 @@ NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_ISW,
                                       NcXcorKernelComponentISW,
                                       nc_xcor_kernel_component_isw,
                                       _isw_component_eval_kernel,
+                                      _isw_component_eval_window,
+                                      _isw_component_eval_kfactor,
+                                      NULL,
                                       _isw_component_eval_prefactor,
                                       _isw_component_get_limits,
                                       ISWComponentData,
@@ -413,6 +418,29 @@ _isw_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdoub
                                                                    data->exp_mtau_min, data->exp_mtau_max, z);
 
   return operator * E_z * d1pz_growth_dz * F_z * sqrt (powspec);
+}
+
+static gdouble
+_isw_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck)
+{
+  ISWComponentData *data = _NC_XCOR_KERNEL_COMPONENT_ISW_GET_DATA (comp);
+  const gdouble F_z      = _nc_xcor_kernel_cmb_isw_survival (data->source, data->recomb, cosmo, data->z_src_min, data->z_src_max,
+                                                             data->exp_mtau_min, data->exp_mtau_max, xck->z);
+
+  return xck->E_z * F_z;
+}
+
+static gdouble
+_isw_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k)
+{
+  ISWComponentData *data       = _NC_XCOR_KERNEL_COMPONENT_ISW_GET_DATA (comp);
+  const gdouble z              = xck->z;
+  const gdouble k_RH           = k / nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble powspec        = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k_RH);
+  const gdouble dpowspec_dz    = ncm_powspec_deriv_z (data->ps, NCM_MODEL (cosmo), z, k_RH);
+  const gdouble d1pz_growth_dz = 1.0 + (1.0 + z) * dpowspec_dz / (2.0 * powspec);
+
+  return d1pz_growth_dz * sqrt (powspec) / gsl_pow_2 (k);
 }
 
 static gdouble

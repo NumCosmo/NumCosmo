@@ -143,6 +143,9 @@ typedef struct _ClusteringComponentData
         ((ClusteringComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
 static gdouble _clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
+static gdouble _clustering_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck);
+static gdouble _clustering_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k);
+static void _clustering_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out);
 static gdouble _clustering_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
 static void _clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _clustering_component_data_clear (ClusteringComponentData *data);
@@ -152,6 +155,9 @@ NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_CLUSTERING,
                                       NcXcorKernelComponentClustering,
                                       nc_xcor_kernel_component_clustering,
                                       _clustering_component_eval_kernel,
+                                      _clustering_component_eval_window,
+                                      _clustering_component_eval_kfactor,
+                                      _clustering_component_eval_kfactor_vec,
                                       _clustering_component_eval_prefactor,
                                       _clustering_component_get_limits,
                                       ClusteringComponentData,
@@ -175,6 +181,8 @@ typedef struct _RSDComponentData
         ((RSDComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
 static gdouble _rsd_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
+static gdouble _rsd_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck);
+static gdouble _rsd_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k);
 static gdouble _rsd_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
 static void _rsd_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _rsd_component_data_clear (RSDComponentData *data);
@@ -184,6 +192,9 @@ NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_RSD,
                                       NcXcorKernelComponentRSD,
                                       nc_xcor_kernel_component_rsd,
                                       _rsd_component_eval_kernel,
+                                      _rsd_component_eval_window,
+                                      _rsd_component_eval_kfactor,
+                                      NULL,
                                       _rsd_component_eval_prefactor,
                                       _rsd_component_get_limits,
                                       RSDComponentData,
@@ -206,6 +217,9 @@ typedef struct _MagBiasComponentData
         ((MagBiasComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
 static gdouble _magbias_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
+static gdouble _magbias_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck);
+static gdouble _magbias_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k);
+static void _magbias_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out);
 static gdouble _magbias_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
 static void _magbias_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _magbias_component_data_clear (MagBiasComponentData *data);
@@ -215,6 +229,9 @@ NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_MAGBIAS,
                                       NcXcorKernelComponentMagBias,
                                       nc_xcor_kernel_component_magbias,
                                       _magbias_component_eval_kernel,
+                                      _magbias_component_eval_window,
+                                      _magbias_component_eval_kfactor,
+                                      _magbias_component_eval_kfactor_vec,
                                       _magbias_component_eval_prefactor,
                                       _magbias_component_get_limits,
                                       MagBiasComponentData,
@@ -644,7 +661,7 @@ _nc_xcor_kernel_gal_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zma
 
   *zmin = 0.0; /* xclkg->dn_dz_zmin; */
   *zmax = xclkg->dn_dz_zmax;
-  *zmid = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz)));
+  *zmid = ncm_vector_get (ncm_spline_peek_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_peek_yv (xclkg->dn_dz)));
 }
 
 static gdouble
@@ -706,6 +723,41 @@ _clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo
   const gdouble bias_z          = _nc_xcor_kernel_gal_bias (data->xclkg, z);
 
   return bias_z * dn_dz_z * E_z * sqrt (powspec);
+}
+
+static gdouble
+_clustering_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck)
+{
+  ClusteringComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CLUSTERING_GET_DATA (comp);
+  const gdouble dn_dz_z         = _nc_xcor_kernel_gal_dndz (data->xclkg, xck->z);
+  const gdouble bias_z          = _nc_xcor_kernel_gal_bias (data->xclkg, xck->z);
+
+  return bias_z * dn_dz_z * xck->E_z;
+}
+
+static gdouble
+_clustering_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k)
+{
+  ClusteringComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CLUSTERING_GET_DATA (comp);
+  const gdouble powspec         = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), xck->z, k / nc_hicosmo_RH_Mpc (cosmo));
+
+  return sqrt (powspec);
+}
+
+static void
+_clustering_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out)
+{
+  ClusteringComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CLUSTERING_GET_DATA (comp);
+  const gdouble RH_Mpc          = nc_hicosmo_RH_Mpc (cosmo);
+  const guint len               = ncm_vector_len (k);
+  guint i;
+
+  ncm_vector_scale (k, 1.0 / RH_Mpc);
+  ncm_powspec_eval_vec (data->ps, NCM_MODEL (cosmo), xck->z, k, out);
+  ncm_vector_scale (k, RH_Mpc);
+
+  for (i = 0; i < len; i++)
+    ncm_vector_set (out, i, sqrt (ncm_vector_get (out, i)));
 }
 
 static gdouble
@@ -787,6 +839,28 @@ _rsd_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdoub
 }
 
 static gdouble
+_rsd_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck)
+{
+  RSDComponentData *data = _NC_XCOR_KERNEL_COMPONENT_RSD_GET_DATA (comp);
+  const gdouble dn_dz_z  = _nc_xcor_kernel_gal_dndz (data->xclkg, xck->z);
+
+  return dn_dz_z * xck->E_z;
+}
+
+static gdouble
+_rsd_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k)
+{
+  RSDComponentData *data = _NC_XCOR_KERNEL_COMPONENT_RSD_GET_DATA (comp);
+  const gdouble z        = xck->z;
+  const gdouble k_RH     = k / nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble powspec  = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k_RH);
+  const gdouble dpowspec = ncm_powspec_deriv_z (data->ps, NCM_MODEL (cosmo), z, k_RH);
+  const gdouble f_kz     = -(1.0 + z) * dpowspec / (2.0 * powspec);
+
+  return -f_kz *sqrt (powspec);
+}
+
+static gdouble
 _rsd_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l)
 {
   return 1.0;
@@ -845,6 +919,39 @@ _magbias_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, g
   const gdouble operator_k   = 1.0 / gsl_pow_2 (k);
 
   return operator_k * g_z * sqrt (powspec);
+}
+
+static gdouble
+_magbias_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck)
+{
+  MagBiasComponentData *data = _NC_XCOR_KERNEL_COMPONENT_MAGBIAS_GET_DATA (comp);
+
+  return nc_xcor_lensing_efficiency_eval (data->xclkg->lens_eff, xck->z) * (1.0 + xck->z) / xck->chi_z;
+}
+
+static gdouble
+_magbias_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k)
+{
+  MagBiasComponentData *data = _NC_XCOR_KERNEL_COMPONENT_MAGBIAS_GET_DATA (comp);
+  const gdouble powspec      = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), xck->z, k / nc_hicosmo_RH_Mpc (cosmo));
+
+  return sqrt (powspec) / gsl_pow_2 (k);
+}
+
+static void
+_magbias_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out)
+{
+  MagBiasComponentData *data = _NC_XCOR_KERNEL_COMPONENT_MAGBIAS_GET_DATA (comp);
+  const gdouble RH_Mpc       = nc_hicosmo_RH_Mpc (cosmo);
+  const guint len            = ncm_vector_len (k);
+  guint i;
+
+  ncm_vector_scale (k, 1.0 / RH_Mpc);
+  ncm_powspec_eval_vec (data->ps, NCM_MODEL (cosmo), xck->z, k, out);
+  ncm_vector_scale (k, RH_Mpc);
+
+  for (i = 0; i < len; i++)
+    ncm_vector_set (out, i, sqrt (ncm_vector_get (out, i)) / gsl_pow_2 (ncm_vector_get (k, i)));
 }
 
 static gdouble
