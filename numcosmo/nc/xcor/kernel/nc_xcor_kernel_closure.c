@@ -209,11 +209,11 @@ typedef struct _ChebCompute
 } ChebCompute;
 
 static void
-_cheb_compute_call (gpointer user_data, gdouble k, NcmVector *y)
+_cheb_compute_call (gpointer user_data, gdouble k, NcmVector *fval)
 {
   ChebCompute *compute = (ChebCompute *) user_data;
 
-  compute->compute_func (k, y, compute->comp_states);
+  compute->compute_func (k, fval, compute->comp_states);
 }
 
 static gint

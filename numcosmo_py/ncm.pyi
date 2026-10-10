@@ -10704,7 +10704,7 @@ class Spectral(GObject.Object):
     def compute_chebyshev_coeffs_batch_adaptive(
         self,
         F: typing.Callable[..., None],
-        n_comp: int,
+        fdim: int,
         a: float,
         b: float,
         level_min: int,
@@ -10715,7 +10715,7 @@ class Spectral(GObject.Object):
     def compute_chebyshev_coeffs_batch_adaptive_cap(
         self,
         F: typing.Callable[..., None],
-        n_comp: int,
+        fdim: int,
         a: float,
         b: float,
         level_min: int,
