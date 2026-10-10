@@ -76,7 +76,7 @@ guint ncm_spectral_compute_chebyshev_coeffs_adaptive_full (NcmSpectral *spectral
 guint ncm_spectral_compute_chebyshev_coeffs_adaptive_try (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint level_min, guint level_cap, gdouble reltol, gdouble abstol, GArray **coeffs, gpointer user_data, gboolean *converged);
 
 guint ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, NcmSpectralFBatch F, guint n_comp, gdouble a, gdouble b, guint level_min, gdouble reltol, gdouble abstol, NcmMatrix **coeffs, gpointer user_data);
-guint ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral, NcmSpectralFBatch F, guint n_comp, gdouble a, gdouble b, guint level_min, guint level_cap, gdouble reltol, gdouble abstol, gboolean fatal, NcmMatrix **coeffs, gpointer user_data);
+guint ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral, NcmSpectralFBatch F, guint n_comp, gdouble a, gdouble b, guint level_min, guint level_cap, gdouble reltol, gdouble abstol, gboolean fatal, NcmVector *f_a, NcmVector *f_b, NcmMatrix *ends, NcmMatrix **coeffs, gpointer user_data);
 
 void ncm_spectral_chebT_to_gegenbauer_alpha1 (GArray *c, GArray **g);
 void ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g);

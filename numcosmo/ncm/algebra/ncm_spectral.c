@@ -486,10 +486,14 @@ _ncm_spectral_batch_grow_to_level (NcmSpectral *spectral, guint level)
                               &spectral->batch_len, (gsize) N * n_comp, MIN (keep, spectral->batch_len));
 }
 
+/*
+ * F at every node of the level, node j at mid + half_h cos (j pi / 2^level), so node 0 is b
+ * and node N - 1 is a. A known f_b or f_a is copied into its end node instead of evaluated.
+ */
 static void
 _ncm_spectral_batch_evaluate_all_nodes (NcmSpectral *spectral, NcmSpectralFBatch F,
                                         NcmVector *y, gdouble a, gdouble b, guint level,
-                                        gpointer user_data)
+                                        NcmVector *f_a, NcmVector *f_b, gpointer user_data)
 {
   const guint N           = (1 << level) + 1;
   const guint n_comp      = spectral->batch_n_comp;
@@ -502,12 +506,18 @@ _ncm_spectral_batch_evaluate_all_nodes (NcmSpectral *spectral, NcmSpectralFBatch
 
   for (j = 0; j < N; j++)
   {
-    const gdouble x = mid + half_h * cos_vals[j];
+    NcmVector *known = (j == 0) ? f_b : ((j == N - 1) ? f_a : NULL);
 
-    F (user_data, x, y);
+    if (known == NULL)
+    {
+      const gdouble x = mid + half_h * cos_vals[j];
+
+      F (user_data, x, y);
+      known = y;
+    }
 
     for (c = 0; c < n_comp; c++)
-      spectral->batch_f_vals[j * n_comp + c] = ncm_vector_get (y, c);
+      spectral->batch_f_vals[j * n_comp + c] = ncm_vector_get (known, c);
   }
 }
 
@@ -683,9 +693,11 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, Ncm
 {
   return ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, F, n_comp, a, b,
                                                                    level_min, spectral->max_level,
-                                                                   reltol, abstol, TRUE,
+                                                                   reltol, abstol, TRUE, NULL, NULL, NULL,
                                                                    coeffs, user_data);
 }
+
+static void _ncm_spectral_batch_ends (NcmSpectral *spectral, NcmSpectralFBatch F, NcmVector *y, gdouble a, gdouble b, guint level, NcmMatrix *ends, gpointer user_data);
 
 /**
  * ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap:
@@ -699,6 +711,9 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, Ncm
  * @reltol: relative tolerance
  * @abstol: absolute tolerance, in units of @F
  * @fatal: whether not converging is an error
+ * @f_a: (nullable): $F(a)$, of length @n_comp
+ * @f_b: (nullable): $F(b)$, of length @n_comp
+ * @ends: (nullable): a 3 by @n_comp #NcmMatrix for $F$ at $a$, $(a + b) / 2$ and $b$
  * @coeffs: (out) (transfer full): an @n_comp by $N$ #NcmMatrix of coefficients
  * @user_data: user data for @F
  *
@@ -707,6 +722,14 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, Ncm
  * unchanged and returns 0, and the last doubling is skipped when the level below predicts
  * that it cannot converge. That suits a caller that splits its interval on failure.
  *
+ * The end nodes of every level are $a$ and $b$, so a given @f_a or @f_b is used there
+ * instead of evaluating $F$, and must be what $F$ returns at that end. @ends, when given,
+ * is filled on every return, converged or not, with the rows $F(a)$, $F((a + b) / 2)$ and
+ * $F(b)$, taken from the nodes of the last level evaluated; the midpoint is a node of every
+ * level above 0, and on level 0 $F$ is evaluated there. A caller that splits $[a, b]$ in
+ * two at the midpoint passes rows 0 and 1 as the ends of the lower half and rows 1 and 2
+ * as those of the upper half.
+ *
  * Returns: the level reached, or 0 when @fatal is %FALSE and the expansion did not converge.
  */
 guint
@@ -714,8 +737,8 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
                                                           guint n_comp, gdouble a, gdouble b,
                                                           guint level_min, guint level_cap,
                                                           gdouble reltol, gdouble abstol,
-                                                          gboolean fatal,
-                                                          NcmMatrix **coeffs, gpointer user_data)
+                                                          gboolean fatal, NcmVector *f_a, NcmVector *f_b,
+                                                          NcmMatrix *ends, NcmMatrix **coeffs, gpointer user_data)
 {
   guint level        = level_min;
   gboolean converged = FALSE;
@@ -726,6 +749,9 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
 
   g_assert (level_min <= level_cap);
   g_assert_cmpuint (n_comp, >, 0);
+  g_assert ((f_a == NULL) || (ncm_vector_len (f_a) == n_comp));
+  g_assert ((f_b == NULL) || (ncm_vector_len (f_b) == n_comp));
+  g_assert ((ends == NULL) || ((ncm_matrix_nrows (ends) == 3) && (ncm_matrix_ncols (ends) == n_comp)));
 
   _ncm_spectral_batch_prepare_buffers (spectral, n_comp);
 
@@ -736,7 +762,7 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
   c_current  = spectral->batch_c_curr;
 
   _ncm_spectral_prepare_level (spectral, level);
-  _ncm_spectral_batch_evaluate_all_nodes (spectral, F, y, a, b, level, user_data);
+  _ncm_spectral_batch_evaluate_all_nodes (spectral, F, y, a, b, level, f_a, f_b, user_data);
 
   {
     const guint N = (1 << level) + 1;
@@ -782,6 +808,9 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
     }
   }
 
+  if (ends != NULL)
+    _ncm_spectral_batch_ends (spectral, F, y, a, b, level, ends, user_data);
+
   if (!converged && fatal)
     g_error ("ncm_spectral_compute_chebyshev_coeffs_batch_adaptive: reached the "
              "maximum order %u (N = %u) without converging to reltol %.3e, "
@@ -811,6 +840,38 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
   }
 
   return level;
+}
+
+/*
+ * F at a, (a + b) / 2 and b into the rows of ends, from the nodes N - 1, (N - 1) / 2 and 0
+ * of the last level evaluated. Level 0 has no middle node, so F is evaluated there.
+ */
+static void
+_ncm_spectral_batch_ends (NcmSpectral *spectral, NcmSpectralFBatch F, NcmVector *y,
+                          gdouble a, gdouble b, guint level, NcmMatrix *ends, gpointer user_data)
+{
+  const guint N      = (1 << level) + 1;
+  const guint n_comp = spectral->batch_n_comp;
+  guint c;
+
+  for (c = 0; c < n_comp; c++)
+  {
+    ncm_matrix_set (ends, 0, c, spectral->batch_f_vals[(N - 1) * n_comp + c]);
+    ncm_matrix_set (ends, 2, c, spectral->batch_f_vals[c]);
+  }
+
+  if (level > 0)
+  {
+    for (c = 0; c < n_comp; c++)
+      ncm_matrix_set (ends, 1, c, spectral->batch_f_vals[((N - 1) / 2) * n_comp + c]);
+  }
+  else
+  {
+    F (user_data, 0.5 * (a + b), y);
+
+    for (c = 0; c < n_comp; c++)
+      ncm_matrix_set (ends, 1, c, ncm_vector_get (y, c));
+  }
 }
 
 /**
