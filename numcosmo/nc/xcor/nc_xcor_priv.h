@@ -60,13 +60,6 @@ typedef struct _NcXcorArg
   NcXcorKernel *xclk2;
   gint *ells;
   guint nells;
-  guint comp_offset; /* index of the block component the first output maps to */
-
-  /* Vectorized kernel integrands (for kernel cubature methods) */
-  NcXcorKernelIntegrand *xclki1;
-  NcXcorKernelIntegrand *xclki2;
-  gdouble *W1;
-  gdouble *W2;
 
   gdouble RH;
 } NcXcorArg;
@@ -93,16 +86,14 @@ typedef void (*NcXcorKQuadBlock) (NcXcor *xc,
                                   NcmVector *vp, NcmVector *vp_err);
 
 /*
- * What one kernel-space method is: a block quadrature, the closure builder it
- * wants, and whether it reports an error. The table is the single place a
- * fourth quadrature is added, and the single place nc_xcor.c and
- * nc_xcor_solver.c both select from.
+ * What one kernel-space method is: a block quadrature and whether it reports
+ * an error. The table is the single place a further quadrature is added, and
+ * the single place nc_xcor.c and nc_xcor_solver.c both select from.
  */
 typedef struct _NcXcorKQuad
 {
   NcXcorKQuadBlock block;
-  gboolean needs_integrator; /* get_eval_vectorized_full vs _vectorized */
-  gboolean has_err;          /* fills @vp_err, or leaves it alone       */
+  gboolean has_err; /* fills @vp_err, or leaves it alone */
   const gchar *name;
 } NcXcorKQuad;
 
@@ -111,7 +102,7 @@ const NcXcorKQuad *_nc_xcor_kquad_for_method (NcXcorMethod meth);
 
 /*
  * The shared runner: batches [@lmin, @lmax] by #NcXcor:ell-batch-size, builds
- * one closure per kernel per batch with the builder @kquad asks for, and hands
+ * one closure per kernel per batch with the kernels' integrators, and hands
  * each batch to @kquad's block quadrature.
  */
 void _nc_xcor_kernel_space_run (NcXcor *xc, const NcXcorKQuad *kquad, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp, NcmVector *vp_err);
@@ -123,18 +114,12 @@ void _nc_xcor_kernel_space_run (NcXcor *xc, const NcXcorKQuad *kquad, NcXcorKern
 void _nc_xcor_check_qag_status (const gchar *where, gint ret, gdouble reltol, gdouble result, gdouble err);
 
 /*
- * The block quadratures the table above points at, one per method. Declared
- * here because nc_xcor_solver.c reaches them through the table with
- * integrand(s) it built and cached itself, instead of letting
- * nc_xcor_compute() rebuild them once per pair. The public entry point onto
- * the same functions is nc_xcor_integrate_block().
- */
-void _nc_xcor_kernel_integrate_block_cubature (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp, NcmVector *vp_err);
-
-/*
- * %NC_XCOR_METHOD_KERNEL_EXACT: exact 5-node Gauss-Legendre over the common
- * refinement of the two integrands' own knot sets. The only one of the three
- * that fills @vp_err, and @vp_err is nullable there too.
+ * The block quadrature of %NC_XCOR_METHOD_KERNEL_EXACT: the closures integrated
+ * exactly on the common refinement of the two integrands' breakpoints. It fills
+ * @vp_err, which is nullable. Declared here because nc_xcor_solver.c reaches it
+ * through the table with integrands it built and cached itself, instead of
+ * letting nc_xcor_compute() rebuild them once per pair. The public entry point
+ * onto the same function is nc_xcor_integrate_block().
  */
 void _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp, NcmVector *vp_err);
 

@@ -555,7 +555,7 @@ _nc_xcor_kernel_radial_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdou
     if (nc_xcor_kernel_radial_get_comp_bessel_deriv (xcka, i) > 0)
       g_error ("_nc_xcor_kernel_radial_eval_limber_z: component %u of %s is weighted by a "
                "derivative of the spherical Bessel function, which the redshift-space Limber "
-               "methods do not support; use the kernel-space methods (NC_XCOR_METHOD_KERNEL_*).",
+               "methods do not support; use the kernel-space method NC_XCOR_METHOD_KERNEL_EXACT.",
                i, G_OBJECT_TYPE_NAME (xclk));
 
     nc_xcor_kernel_radial_get_comp_support (xcka, i, &lo, &hi);

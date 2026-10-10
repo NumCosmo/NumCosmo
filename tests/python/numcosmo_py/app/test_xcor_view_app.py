@@ -236,15 +236,6 @@ def test_view_kernel_rejects_both_comparisons() -> None:
     assert "Kernel evaluation complete" not in result.output
 
 
-@pytest.mark.parametrize("method", ["exact", "cubature"])
-def test_view_kernel_cls_method(method: str) -> None:
-    """Every quadrature is reachable for the C_ell computation."""
-    result = _view("--cls", "--cls-method", method)
-
-    assert result.exit_code == 0, result.output
-    assert f"method={method}" in result.output
-
-
 def test_integrator_tolerance_setting() -> None:
     """Test the setting of integrator tolerances."""
     args = (5.0, 1.0, 0.1, 10.0, 50.0, 2)

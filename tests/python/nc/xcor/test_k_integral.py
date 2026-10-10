@@ -24,9 +24,8 @@
 
 """The outer k-integral: each kernel-space method against its own truth.
 
-Every method is handed frozen closures and compared to a reference built from
-the closures it integrates, one per ell block for KERNEL_EXACT and
-KERNEL_CUBATURE alike.
+KERNEL_EXACT is handed frozen closures and compared to a reference built from
+the closures it integrates, one per ell block.
 
 What is measured here is therefore the quadrature alone. The closure's own
 error against certified Arb values is ``test_xcor_window_truth_table.py``'s
@@ -81,22 +80,19 @@ CLOSURE_PARAMS = [
 
 METHODS = {
     "exact": Nc.XcorMethod.KERNEL_EXACT,
-    "cubature": Nc.XcorMethod.KERNEL_CUBATURE,
 }
 
 # Measured over the case matrix at reltol = peak_epsilon = 1e-4, as the worst
 # deviation from the matching reference relative to the block's peak, with an
 # order of headroom. Measured worst, on cases.ELLS_SUITE:
 #
-#   exact    spline     8.1e-12       cubature spline     1.7e-05
-#   exact    chebyshev  2.3e-08       cubature chebyshev  1.1e-05
+#   exact    spline     8.1e-12
+#   exact    chebyshev  2.3e-08
 #
 # These are an order or two above what a [2, 20, 200] ladder reported, because
 # that ladder missed the l = 4-10 region where every method is worst; see
-# cases.ELLS_SUITE. Read the two exact rows as the claim they are: GL(5) on the
-# merged knot set is exact and sits at the reference's own floor. Cubature is
-# not converging to the closure, it is stopping at the relative tolerance it was
-# asked for.
+# cases.ELLS_SUITE. Read the two rows as the claim they are: GL(5) on the merged
+# knot set is exact and sits at the reference's own floor.
 #
 # The exact spline entry was raised (1.0e-10 -> 1.5e-9) when X10 entered the
 # matrix, and the reason is worth keeping: on that pair (SRD lens 0 crossed
@@ -111,8 +107,6 @@ METHODS = {
 TOLERANCE = {
     ("exact", "spline"): 1.5e-9,
     ("exact", "chebyshev"): 5.0e-7,
-    ("cubature", "spline"): 2.0e-4,
-    ("cubature", "chebyshev"): 2.0e-4,
 }
 
 # The reference's own convergence, likewise measured on cases.ELLS_SUITE: the

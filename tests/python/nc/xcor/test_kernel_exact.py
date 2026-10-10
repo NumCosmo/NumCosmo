@@ -24,13 +24,13 @@
 
 """NC_XCOR_METHOD_KERNEL_EXACT: exact GL(5) on per-pair knot unions.
 
-Each kernel is sampled independently -- the same closures KERNEL_CUBATURE
-builds and NcXcorSolver caches -- so a pair's two splines live on different
-abscissas. On the common refinement of those abscissas each spline is still a
-single cubic piece per panel, so k^2 W_i W_j is degree 8 there and a 5-node
-Gauss-Legendre rule integrates it exactly. Merging two knot sets is all the
-coupling exactness needs; sampling the kernels onto one shared abscissa is not
-required and costs about twice as much to produce.
+Each kernel is sampled independently -- the closures NcXcorSolver caches --
+so a pair's two splines live on different abscissas. On the common refinement
+of those abscissas each spline is still a single cubic piece per panel, so
+k^2 W_i W_j is degree 8 there and a 5-node Gauss-Legendre rule integrates it
+exactly. Merging two knot sets is all the coupling exactness needs; sampling
+the kernels onto one shared abscissa is not required and costs about twice as
+much to produce.
 """
 
 import numpy as np
@@ -120,12 +120,10 @@ def test_kernels_keep_their_own_knot_sets(cosmology: Cosmology) -> None:
 def test_kernel_exact_batches_wide_ell_range(cosmology: Cosmology) -> None:
     """KERNEL_EXACT batches a range wider than NC_XCOR_KERNEL_MAX_ELL_BLOCK.
 
-    A single k-space closure is capped at 64 multipoles, so an unbatched sweep
-    aborted the process on any wider request -- while KERNEL_CUBATURE, which the
-    two are meant to be interchangeable through, sliced the range into
-    NcXcor:ell-batch-size sub-blocks and handled it. The batching is what makes
-    the request legal, so the result must also be independent of where the
-    batch boundaries fall.
+    A single k-space closure is capped at 64 multipoles, so the range is sliced
+    into NcXcor:ell-batch-size sub-blocks. The batching is what makes the request
+    legal, so the result must also be independent of where the batch boundaries
+    fall.
     """
     kernel = _kernels(cosmology)[0]
     cosmo = cosmology.cosmo

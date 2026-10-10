@@ -78,9 +78,7 @@ typedef struct _TestMethod
  * default closure is the Chebyshev one, so asking for the spline is the only way
  * through that second branch. */
 static const TestMethod test_methods[] = {
-  {"kernel_cubature/spline",    NC_XCOR_METHOD_KERNEL_CUBATURE, NC_XCOR_KERNEL_CLOSURE_SPLINE   },
   {"kernel_exact/spline",       NC_XCOR_METHOD_KERNEL_EXACT,    NC_XCOR_KERNEL_CLOSURE_SPLINE   },
-  {"kernel_cubature/chebyshev", NC_XCOR_METHOD_KERNEL_CUBATURE, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
   {"kernel_exact/chebyshev",    NC_XCOR_METHOD_KERNEL_EXACT,    NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
 };
 
@@ -247,7 +245,7 @@ test_nc_xcor_kquad_method_table (void)
 {
   const NcXcorMethod all[] = {
     NC_XCOR_METHOD_LIMBER_Z_GSL, NC_XCOR_METHOD_LIMBER_Z_CUBATURE,
-    NC_XCOR_METHOD_KERNEL_CUBATURE, NC_XCOR_METHOD_KERNEL_EXACT
+    NC_XCOR_METHOD_KERNEL_EXACT
   };
   guint i, j;
 

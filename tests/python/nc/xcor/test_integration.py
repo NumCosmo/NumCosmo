@@ -2,8 +2,7 @@
 
 This module tests different integration backends and methods for computing
 angular power spectra using the Xcor class. Tests include:
-- Different Xcor integration methods (LIMBER_Z_GSL, LIMBER_Z_CUBATURE, KERNEL_CUBATURE,
-  KERNEL_EXACT)
+- Different Xcor integration methods (LIMBER_Z_GSL, LIMBER_Z_CUBATURE, KERNEL_EXACT)
 - Kernel-level integrator types (Limber approximation vs Levin integration)
 - Xcor property management (reltol, method switching)
 - Cross-correlation computation with various kernel pairs
@@ -15,12 +14,12 @@ Purpose: Refactored from test_py_xcor.py for better organization
 from typing import cast
 
 import numpy as np
-import numpy.typing as npt
 import pytest
 from numpy.testing import assert_allclose
 
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.cosmology import Cosmology
+from xcor import cases_k_integral as cases
 
 pytest_plugins = [
     "python.fixtures_xcor",
@@ -30,24 +29,6 @@ pytestmark = pytest.mark.xcor
 
 
 # Xcor Integration Method Tests
-
-
-@pytest.mark.parametrize(
-    "method",
-    [
-        Nc.XcorMethod.LIMBER_Z_GSL,
-        Nc.XcorMethod.LIMBER_Z_CUBATURE,
-        Nc.XcorMethod.KERNEL_CUBATURE,
-        Nc.XcorMethod.KERNEL_EXACT,
-    ],
-)
-def test_xcor_method_creation(cosmology: Cosmology, method: Nc.XcorMethod) -> None:
-    """Test that Xcor can be created with all integration methods."""
-    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, method)
-
-    assert xcor.props.meth == method
-    assert xcor.props.power_spec is cosmology.ps_ml
-    xcor.prepare(cosmology.cosmo)
 
 
 def test_xcor_properties(cosmology: Cosmology) -> None:
@@ -173,9 +154,9 @@ def test_xcor_kernel_methods(
     Before the fix, these methods were wrong by 15-27 orders of magnitude and
     disagreed with each other by ell-dependent factors (evaluating the fitted
     k-space spline far outside its domain). Checks, for both tier 2
-    (l_limber=0, kernel-Limber) and tier 3 (l_limber=-1, true non-Limber):
-    KERNEL_EXACT per multipole and KERNEL_CUBATURE agree with each other, and both converge
-    to LIMBER_Z_CUBATURE (tier 1) at moderate/high ell -- exactly, for tier 2
+    (l_limber=0, kernel-Limber) and tier 3 (l_limber=-1, true non-Limber), that
+    KERNEL_EXACT, one multipole per closure and four per closure, converges to
+    LIMBER_Z_CUBATURE (tier 1) at moderate/high ell -- exactly, for tier 2
     (mathematically the same Limber approximation, just computed via k-space
     instead of z-space); within known Limber-approximation error, for tier 3.
     The tier-3 comparison against tier 1 is dropped for the ISW
@@ -269,36 +250,6 @@ def test_xcor_kernel_methods(
         if check_tier1:
             assert_allclose(kernel_exact_1, limber_z, rtol=tier1_rtol, atol=1.0e-50)
 
-        def kernel_cubature(ell_batch_size: int) -> npt.NDArray[np.float64]:
-            vp_kernel_cub = Ncm.Vector.new(n)
-            xcor_kc = Nc.Xcor.new(
-                cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE
-            )
-            xcor_kc.props.ell_batch_size = ell_batch_size
-            # At the integrator's floor, so that the comparison with the exact
-            # integration below measures the closures and not the cubature.
-            xcor_kc.set_reltol(1.0e-8)
-            xcor_kc.prepare(cosmology.cosmo)
-            xcor_kc.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_cub)
-
-            return np.array(vp_kernel_cub.dup_array())
-
-        kernel_cub = kernel_cubature(4)
-
-        if check_tier1:
-            assert_allclose(kernel_cub, limber_z, rtol=tier1_rtol, atol=1.0e-50)
-
-        # Two independent quadratures on one integrand: KERNEL_EXACT with a
-        # closure per multipole, against cubature blocked the same way. Blocked differently the two do not share an integrand
-        # at all -- the k-spline's refinement floor is a reduction over the
-        # block, so a multipole's closure depends on its neighbours (measured
-        # for CMB lensing x ISW at tier 3: 2.3e-2 at the default spline
-        # tolerance, 1.5e-3 at 1e-6, i.e. converging).
-        assert_allclose(kernel_exact_1, kernel_cubature(1), rtol=1.0e-5, atol=1.0e-50)
-
-        # The blocked path against the exact quadrature on the same closures:
-        # KERNEL_EXACT integrates the spline on its own knots, where GL(5) is
-        # exact, so any difference here is the adaptive rule's alone.
         vp_kernel_exact = Ncm.Vector.new(n)
         xcor_kf = Nc.Xcor.new(
             cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT
@@ -307,9 +258,49 @@ def test_xcor_kernel_methods(
         xcor_kf.prepare(cosmology.cosmo)
         xcor_kf.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_exact)
 
-        assert_allclose(
-            kernel_cub, np.array(vp_kernel_exact.dup_array()), rtol=1.0e-5, atol=1.0e-50
-        )
+        if check_tier1:
+            assert_allclose(
+                np.array(vp_kernel_exact.dup_array()),
+                limber_z,
+                rtol=tier1_rtol,
+                atol=1.0e-50,
+            )
+        else:
+            # Limber is no reference here, so the quadrature is checked on its own:
+            # KERNEL_EXACT on the first block's closures against
+            # cases_k_integral.reference_cl on the same closures.
+            block_lmax = lmin + 3
+            isauto = k1_name == k2_name
+            sbi = Ncm.SBesselIntegratorLevin.new(lmin, block_lmax)
+            closure = Nc.XcorKernelClosure.CHEBYSHEV
+            ia = k1.get_eval_vectorized_full(
+                cosmology.cosmo, lmin, block_lmax, sbi, closure
+            )
+            ib = (
+                None
+                if isauto
+                else k2.get_eval_vectorized_full(
+                    cosmology.cosmo, lmin, block_lmax, sbi, closure
+                )
+            )
+            vp_block = Ncm.Vector.new(block_lmax - lmin + 1)
+            xcor_kf.integrate_block(
+                ia,
+                ib,
+                lmin,
+                block_lmax,
+                isauto,
+                Nc.XcorMethod.KERNEL_EXACT,
+                vp_block,
+                None,
+            )
+            reference = cases.reference_cl(cosmology.cosmo.RH_Mpc(), ia, ib)
+            peak = np.abs(reference.cl).max()
+            dev = np.abs(np.array(vp_block.dup_array()) - reference.cl).max() / peak
+            # Measured 1.7e-15 on the ISW auto at tier 3, the reference converged to
+            # the same level.
+            assert reference.worst_cell_move < 1.0e-12
+            assert dev < 1.0e-12
     finally:
         k1.set_l_limber(original_l_limber[k1_name])
         k2.set_l_limber(original_l_limber[k2_name])

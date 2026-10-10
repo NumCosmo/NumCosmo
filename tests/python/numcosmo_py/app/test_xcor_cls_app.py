@@ -77,17 +77,12 @@ def test_cls_runs_and_writes_the_figure(tmp_path: Path) -> None:
     assert output.exists()
 
 
-def test_cls_defaults_to_the_exact_chebyshev_pair() -> None:
-    """Unset, the command takes the quadrature that cannot fail to converge.
-
-    'exact' integrates the closures on the common refinement of their knots and
-    needs no tolerance, so an unattended run over a wide multipole range cannot
-    abort partway for missing one.
-    """
+def test_cls_defaults_to_the_chebyshev_closure() -> None:
+    """Unset, the command takes the Chebyshev closure."""
     result = _cls()
 
     assert result.exit_code == 0, result.output
-    assert "method=exact, closure=chebyshev" in result.output
+    assert "closure=chebyshev" in result.output
 
 
 @pytest.mark.parametrize(

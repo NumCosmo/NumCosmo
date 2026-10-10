@@ -31,7 +31,7 @@
  * This is a different approximation from the rest of #NcXcor, not a different
  * quadrature of the same integral: it integrates over z with k fixed at
  * (l + 1/2) / chi(z), so it shares no closure, no knot set and no code with
- * the kernel-space methods in nc_xcor_kquad.c.
+ * the kernel-space method in nc_xcor_kquad.c.
  */
 
 #ifdef HAVE_CONFIG_H

@@ -24,7 +24,7 @@
 """Cross-correlation kernel visualization and analysis tools."""
 
 from .cls import ComputeCls, EllSpacing, sample_ells
-from .common import XcorClosureOption, XcorKernelCommon, XcorMethodOption
+from .common import XcorClosureOption, XcorKernelCommon
 from .kernels import (
     KERNEL_CONFIG_REGISTRY,
     KernelCMBISWConfig,
@@ -52,7 +52,6 @@ __all__ = [
     "ViewKernel",
     "XcorClosureOption",
     "XcorKernelCommon",
-    "XcorMethodOption",
     "get_kernel_registry_help_text",
     "parse_kernel_spec",
     "sample_ells",

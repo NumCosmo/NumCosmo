@@ -93,20 +93,13 @@
  * object rebuilds S at every likelihood step, where tightening costs about 2x
  * per rebuild for accuracy no forecast can use.
  *
- * The offset is not there to avoid the p-adaptive cubature failure described
- * in numcosmo_py/ssc.py, which equal values are the one setting to trigger.
- * That failure needs an adaptive outer rule refining against a tolerance the
- * closure's own fit error puts out of reach; this object defaults to
- * %NC_XCOR_METHOD_KERNEL_EXACT, which has no outer tolerance and no adaptive
- * step, so it cannot occur here. Equal values would be safe, only more
- * expensive.
+ * The offset is not a matter of convergence: %NC_XCOR_METHOD_KERNEL_EXACT, this
+ * object's default, has no outer tolerance and no adaptive step, so equal
+ * values would be safe, only more expensive.
  *
  * Must be kept equal to DEFAULT_PEAK_EPSILON in numcosmo_py/ssc.py, which is
  * what the frozen path uses: the two are documented to differ only in whether
- * S_ij follows the cosmology, not in how it is computed. That correspondence
- * is already imperfect on a second axis: the frozen path builds its NcXcor
- * with %NC_XCOR_METHOD_KERNEL_CUBATURE while this one defaults to
- * %NC_XCOR_METHOD_KERNEL_EXACT. */
+ * S_ij follows the cosmology, not in how it is computed. */
 #define NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON (1.0e-5)
 
 #define NC_XCOR_SSC_SIJ_DEFAULT_RELTOL (1.0e-6)

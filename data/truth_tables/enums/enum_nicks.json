@@ -3319,10 +3319,6 @@
     "nick": "len",
     "type": "Nc.XcorKernelWeakLensingVParams"
   },
-  "NC_XCOR_METHOD_KERNEL_CUBATURE": {
-    "nick": "kernel-cubature",
-    "type": "Nc.XcorMethod"
-  },
   "NC_XCOR_METHOD_KERNEL_EXACT": {
     "nick": "kernel-exact",
     "type": "Nc.XcorMethod"

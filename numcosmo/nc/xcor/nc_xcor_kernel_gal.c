@@ -530,8 +530,7 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
    * $j_\ell''(k\chi)$, where $f(k,z) = -(1+z)\,\partial_z P(k,z) / (2P)$ is the
    * linear growth rate read from the power spectrum, scale dependence included.
    * Supported by the
-   * kernel-space methods only (%NC_XCOR_METHOD_KERNEL_EXACT and
-   * %NC_XCOR_METHOD_KERNEL_CUBATURE): the
+   * kernel-space method only (%NC_XCOR_METHOD_KERNEL_EXACT): the
    * redshift-space Limber methods, including the #NcXcor:meth default
    * %NC_XCOR_METHOD_LIMBER_Z_GSL, stop with an error on a kernel with this
    * property set.
@@ -672,8 +671,8 @@ _nc_xcor_kernel_gal_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble
 
   if (xclkg->dorsd)
     g_error ("nc_xcor_kernel_gal: redshift-space distortions are not supported by the "
-             "redshift-space Limber methods; use the kernel-space methods "
-             "(NC_XCOR_METHOD_KERNEL_*).");
+             "redshift-space Limber methods; use the kernel-space method "
+             "NC_XCOR_METHOD_KERNEL_EXACT.");
 
   const gdouble bias_z = _nc_xcor_kernel_gal_bias (xclkg, z);
   gdouble res          = bias_z * dn_dz_z * xck->E_z;

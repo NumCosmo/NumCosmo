@@ -34,15 +34,14 @@ Usage::
     python3 tests/python/nc/xcor/bench_k_integral.py --baseline sweep.json
 
 Every row carries the settings it was taken at. Threads are the caller's
-business, but a method comparison belongs at ``OMP_NUM_THREADS=1``: the ell
-block is where the OpenMP team lives, so a thread count silently changes what
-is being compared.
+business, but a timing belongs at ``OMP_NUM_THREADS=1``: the ell block is where
+the OpenMP team lives, so a thread count silently changes what is measured.
 
 Timing is reported in three numbers per block, never collapsed into one:
 
 ``build``
     both closures for the block, built through a *fresh* Levin integrator. A
-    property of the closure, not of the method: both methods pay it.
+    property of the closure, not of the quadrature.
     Timing a rebuild through an integrator that has already served this kernel
     reads 1.7x cheap, because it carries warm per-ell Bessel caches.
 ``compute``
@@ -51,12 +50,6 @@ Timing is reported in three numbers per block, never collapsed into one:
 ``quad``
     the outer quadrature alone, through ``Nc.Xcor.integrate_block()`` on the
     closures this harness already holds.
-``delta``
-    ``compute`` minus the cheapest method's ``compute`` on the same pair,
-    closure and block. Everything but the quadrature is common to the methods,
-    so this is the part that is the method's, without the subtraction of two
-    differently-warmed quantities that a ``compute - build`` would be.
-    ``quad`` is the better number.
 """
 
 from __future__ import annotations
@@ -80,11 +73,6 @@ except ImportError:  # running from the repository root
     sys.path.insert(0, str(pathlib.Path(__file__).parent))
     import cases_k_integral as cases  # type: ignore[no-redef]
 
-
-METHODS: typing.Final[dict[str, Nc.XcorMethod]] = {
-    "exact": Nc.XcorMethod.KERNEL_EXACT,
-    "cubature": Nc.XcorMethod.KERNEL_CUBATURE,
-}
 
 CLOSURES: typing.Final[dict[str, Nc.XcorKernelClosure]] = {
     "spline": Nc.XcorKernelClosure.SPLINE,
@@ -113,11 +101,10 @@ def _closure_size(integrand: Nc.XcorKernelIntegrand) -> int:
 def sweep_case(
     pair: cases.PairSpec,
     settings: cases.Settings,
-    method_names: list[str],
     block_starts: list[int],
     repeats: int,
 ) -> list[dict]:
-    """Every method on one pair, against the reference on frozen closures."""
+    """KERNEL_EXACT on one pair, against the reference on frozen closures."""
     cosmo, dist, ps = cases.make_cosmo_bits()
     RH = Nc.HICosmo.RH_Mpc(cosmo)
     rows: list[dict] = []
@@ -169,132 +156,113 @@ def sweep_case(
             "k_max": reference.k_max,
         }
 
-        compute_times: dict[str, float] = {}
+        xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
+        xcor.set_closure_type(settings.closure)
+        xcor.set_ell_batch_size(settings.ell_batch_size)
+        xcor.set_reltol(settings.reltol)
+        xcor.prepare(cosmo)
 
-        for method_name in method_names:
-            xcor = Nc.Xcor.new(dist, ps, METHODS[method_name])
-            xcor.set_closure_type(settings.closure)
-            xcor.set_ell_batch_size(settings.ell_batch_size)
-            xcor.set_reltol(settings.reltol)
-            xcor.prepare(cosmo)
+        vp = Ncm.Vector.new(len(ells))
+        timings = []
 
-            vp = Ncm.Vector.new(len(ells))
-            timings = []
+        for _ in range(repeats):
+            start = time.perf_counter()
+            xcor.compute(kernel_a, kernel_b, cosmo, lmin, lmax, vp)
+            timings.append(time.perf_counter() - start)
 
-            for _ in range(repeats):
-                start = time.perf_counter()
-                xcor.compute(kernel_a, kernel_b, cosmo, lmin, lmax, vp)
-                timings.append(time.perf_counter() - start)
+        # The quadrature on its own, over the closures already built above.
+        vp_quad = Ncm.Vector.new(len(ells))
+        quad_timings = []
 
-            # The quadrature on its own, over the closures already built above.
-            vp_quad = Ncm.Vector.new(len(ells))
-            quad_timings = []
-
-            for _ in range(repeats):
-                start = time.perf_counter()
-                xcor.integrate_block(
-                    integrand_a,
-                    integrand_b,
-                    lmin,
-                    lmax,
-                    pair.isauto,
-                    METHODS[method_name],
-                    vp_quad,
-                    None,
-                )
-                quad_timings.append(time.perf_counter() - start)
-
-            quad_time = float(np.median(quad_timings))
-
-            # Same closures, same method: any difference here is the
-            # entry point disagreeing with itself, not a tolerance.
-            drift = np.abs(
-                np.array(vp_quad.dup_array()) - np.array(vp.dup_array())
-            ).max()
-
-            if drift > 0.0:
-                print(
-                    f"  ! {pair.case} {method_name}: integrate_block "
-                    f"differs from compute by {drift:.3e}",
-                    flush=True,
-                )
-
-            got = np.array(vp.dup_array())
-            truth = reference.cl
-            scale = np.abs(truth).max()
-            relative = np.where(
-                np.abs(truth) > 0.0,
-                np.abs(got / np.where(truth == 0.0, 1.0, truth) - 1.0),
-                np.abs(got),
+        for _ in range(repeats):
+            start = time.perf_counter()
+            xcor.integrate_block(
+                integrand_a,
+                integrand_b,
+                lmin,
+                lmax,
+                pair.isauto,
+                Nc.XcorMethod.KERNEL_EXACT,
+                vp_quad,
+                None,
             )
-            compute_time = float(np.median(timings))
-            compute_times[method_name] = compute_time
+            quad_timings.append(time.perf_counter() - start)
 
-            for index, ell in enumerate(ells):
-                rows.append(
-                    {
-                        **common,
-                        "method": method_name,
-                        "reference_kind": reference_kind,
-                        "ell": ell,
-                        "cl": float(got[index]),
-                        "cl_reference": float(truth[index]),
-                        "cl_block_reference": float(reference.cl[index]),
-                        # Against the block's own peak, not against a value
-                        # five orders below it: a relative tolerance on the
-                        # smallest entry of a cancelling pair is a much harder
-                        # request than the same number on an auto spectrum.
-                        "rel_err": float(relative[index]),
-                        "peak_err": (
-                            float(abs(got[index] - truth[index]) / scale)
-                            if scale > 0.0
-                            else 0.0
-                        ),
-                        "cancellation": float(cancellation[index]),
-                        "conditioned_err": (
-                            float(relative[index] / cancellation[index])
-                            if np.isfinite(cancellation[index])
-                            else float("nan")
-                        ),
-                        "compute_time": compute_time,
-                        "quad_time": quad_time,
-                    }
-                )
+        quad_time = float(np.median(quad_timings))
 
-        cheapest = min(compute_times.values())
+        # Same closures, same method: any difference here is the entry point
+        # disagreeing with itself, not a tolerance.
+        drift = np.abs(np.array(vp_quad.dup_array()) - np.array(vp.dup_array())).max()
 
-        for row in rows[-len(ells) * len(method_names) :]:
-            row["compute_delta"] = row["compute_time"] - cheapest
+        if drift > 0.0:
+            print(
+                f"  ! {pair.case}: integrate_block differs from compute by "
+                f"{drift:.3e}",
+                flush=True,
+            )
+
+        got = np.array(vp.dup_array())
+        truth = reference.cl
+        scale = np.abs(truth).max()
+        relative = np.where(
+            np.abs(truth) > 0.0,
+            np.abs(got / np.where(truth == 0.0, 1.0, truth) - 1.0),
+            np.abs(got),
+        )
+        compute_time = float(np.median(timings))
+
+        for index, ell in enumerate(ells):
+            rows.append(
+                {
+                    **common,
+                    "ell": ell,
+                    "cl": float(got[index]),
+                    "cl_reference": float(truth[index]),
+                    # Against the block's own peak, not against a value five
+                    # orders below it: a relative tolerance on the smallest
+                    # entry of a cancelling pair is a much harder request than
+                    # the same number on an auto spectrum.
+                    "rel_err": float(relative[index]),
+                    "peak_err": (
+                        float(abs(got[index] - truth[index]) / scale)
+                        if scale > 0.0
+                        else 0.0
+                    ),
+                    "cancellation": float(cancellation[index]),
+                    "conditioned_err": (
+                        float(relative[index] / cancellation[index])
+                        if np.isfinite(cancellation[index])
+                        else float("nan")
+                    ),
+                    "compute_time": compute_time,
+                    "quad_time": quad_time,
+                }
+            )
 
     return rows
 
 
 def summarize(rows: list[dict]) -> str:
-    """Worst relative error and median cost per (case, closure, method)."""
-    keys = sorted({(r["case"], r["closure"], r["method"]) for r in rows})
+    """Worst relative error and median cost per (case, closure)."""
+    keys = sorted({(r["case"], r["closure"]) for r in rows})
     lines = [
-        f"{'case':5s} {'closure':10s} {'method':9s} "
+        f"{'case':5s} {'closure':10s} "
         f"{'worst rel':>10s} {'worst peak':>10s} {'max C':>9s} "
-        f"{'build s':>9s} {'quad s':>9s} {'delta s':>9s}"
+        f"{'build s':>9s} {'quad s':>9s} {'compute s':>9s}"
     ]
 
-    for case, closure, method in keys:
-        selected = [
-            r
-            for r in rows
-            if r["case"] == case and r["closure"] == closure and r["method"] == method
-        ]
+    for case, closure in keys:
+        selected = [r for r in rows if r["case"] == case and r["closure"] == closure]
         worst_rel = max(r["rel_err"] for r in selected)
         worst_peak = max(r["peak_err"] for r in selected)
         max_c = max(r["cancellation"] for r in selected)
         build = float(np.median([r["build_time"] for r in selected]))
-        delta = float(np.median([r["compute_delta"] for r in selected]))
-        quads = [r["quad_time"] for r in selected if r["quad_time"] is not None]
-        quad = f"{float(np.median(quads)):9.3f}" if quads else f"{'--':>9s}"
+        quad = float(np.median([r["quad_time"] for r in selected]))
+        compute = float(np.median([r["compute_time"] for r in selected]))
         lines.append(
-            f"{case:5s} {closure:10s} {method:9s} "
+            f"{case:5s} {closure:10s} "
             f"{worst_rel:10.2e} {worst_peak:10.2e} {max_c:9.2e} "
-            f"{build:9.3f} {quad} {delta:9.3f}"
+            f"{build:9.3f} {quad:9.3f} {compute:9.3f}"
         )
 
     return "\n".join(lines)
@@ -304,7 +272,7 @@ def diff_against(rows: list[dict], baseline: list[dict]) -> str:
     """What moved since a baseline sweep, keyed by everything but the numbers."""
 
     def key(row: dict) -> tuple:
-        return (row["case"], row["closure"], row["method"], row["ell"])
+        return (row["case"], row["closure"], row["ell"])
 
     old = {key(r): r for r in baseline}
     lines = ["moved rows (rel_err ratio, compute time ratio):"]
@@ -338,9 +306,6 @@ def main() -> None:
         "--cases", nargs="*", default=None, help="case ids, default all of them"
     )
     parser.add_argument(
-        "--methods", nargs="*", default=list(METHODS), choices=list(METHODS)
-    )
-    parser.add_argument(
         "--closures", nargs="*", default=list(CLOSURES), choices=list(CLOSURES)
     )
     parser.add_argument("--ells", nargs="*", type=int, default=cases.ELLS)
@@ -369,9 +334,7 @@ def main() -> None:
 
         for pair in selected:
             start = time.perf_counter()
-            rows.extend(
-                sweep_case(pair, settings, args.methods, args.ells, args.repeats)
-            )
+            rows.extend(sweep_case(pair, settings, args.ells, args.repeats))
             print(
                 f"{pair.case} {closure_name}: {time.perf_counter() - start:.1f} s",
                 flush=True,

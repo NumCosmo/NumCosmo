@@ -119,13 +119,12 @@ Quadrature
 ----------
 
 Both this module and `NcXcorSSCSij`, the varying path, integrate over $k$ with
-`KERNEL_EXACT`: GL(5) on each panel of the kernels' Chebyshev closures, with no
-outer tolerance and no adaptive refinement. The panel edges are integration
-limits, which matters because the slope of $W(k)$ is continuous across an edge
-only to the closure's accuracy, set by `peak_epsilon`. `KERNEL_CUBATURE`
-integrates over the whole range as if $W$ were smooth; on well-separated bins,
-whose cross integral cancels to $10^{-7}$ of $\int |k^3 W_i W_j|$, it must
-resolve those breaks and its p-adaptive rule fails.
+`KERNEL_EXACT`: the kernels' Chebyshev closures are integrated exactly, panel by
+panel on the union of their edges, with no outer tolerance and no adaptive
+refinement. The panel edges are integration limits, which matters because the
+slope of $W(k)$ is continuous across an edge only to the closure's accuracy, set
+by `peak_epsilon`, and well-separated bins cancel to $10^{-7}$ of
+$\int |k^3 W_i W_j|$.
 
 `DEFAULT_PEAK_EPSILON = 1e-5` stays equal to
 `NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON` (`nc_xcor_ssc_sij.c`), which the varying
