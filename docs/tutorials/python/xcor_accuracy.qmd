@@ -117,11 +117,7 @@ $a^{-1/4}$ --- textbook cubic-spline convergence, since halving the error four
 times over needs twice the knots.
 
 ::: {.callout-warning}
-## Do not set the two equal, and do not go below $10^{-10}$
-
-Equal values are the one setting that starves the $p$-adaptive cubature of
-Clenshaw--Curtis levels: refinement then stops exactly at the level the outer
-rule is trying to resolve. [[numcosmo|NcXcorSSCSij]] offsets them deliberately, upwards.
+## Do not go below $10^{-10}$
 
 Below $a \simeq 10^{-10}$ the refinement starts resolving the radial
 integrator's own numerical noise rather than the function, and the knot count

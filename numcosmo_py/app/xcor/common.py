@@ -68,25 +68,6 @@ from .plotting import style_ratio_axis
 Ncm.cfg_init()
 
 
-class XcorMethodOption(str, enum.Enum):
-    """Quadrature methods available for the C_ell computation."""
-
-    CUBATURE = "cubature"
-    EXACT = "exact"
-
-    def to_nc(self) -> Nc.XcorMethod:
-        """Convert to the corresponding #NcXcorMethod value.
-
-        :return: The NumCosmo enumeration value.
-        """
-        match self:
-            case XcorMethodOption.CUBATURE:
-                return Nc.XcorMethod.KERNEL_CUBATURE
-            case XcorMethodOption.EXACT:
-                return Nc.XcorMethod.KERNEL_EXACT
-        raise ValueError(f"Unknown method: {self}")
-
-
 class XcorClosureOption(str, enum.Enum):
     """Representations available for the k-space closure."""
 
@@ -240,20 +221,6 @@ class XcorKernelCommon:
             ),
         ),
     ] = None
-
-    cls_method: Annotated[
-        XcorMethodOption,
-        typer.Option(
-            help=(
-                "Quadrature used for the C_ell computation. 'cubature' and 'gsl' "
-                "target a tolerance and abort if they cannot reach it; 'exact' "
-                "integrates the closures exactly, on the common refinement of "
-                "their knots, so it needs no tolerance and cannot fail to "
-                "converge."
-            ),
-            show_default=True,
-        ),
-    ] = XcorMethodOption.EXACT
 
     cls_block_size: Annotated[
         int,
@@ -844,7 +811,7 @@ class XcorKernelCommon:
         )
         print(
             f"  {len(self.kernels)} kernel(s), {len(pairs)} spectra, "
-            f"method={self.cls_method.value}, closure={closure_type.value}, "
+            f"closure={closure_type.value}, "
             f"block size={self.cls_block_size}"
         )
 
@@ -854,7 +821,7 @@ class XcorKernelCommon:
         for _, kernel_obj in self.kernels:
             kernel_obj.set_l_limber(l_limber)
 
-        xcor = Nc.Xcor.new(self.dist, self.ps_ml, self.cls_method.to_nc())
+        xcor = Nc.Xcor.new(self.dist, self.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
         xcor.set_closure_type(closure_type.to_nc())
 
         # One solver for the whole command: it keeps a factorised integrator per

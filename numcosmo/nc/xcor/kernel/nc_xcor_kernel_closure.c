@@ -204,6 +204,8 @@ typedef struct _ChebCompute
 
   ComponentStates *comp_states;
   NcmFunctionSampleSet *expansion; /* the values of W_l(k) computed during the domain expansion */
+  GPtrArray *ends;                 /* per split depth, the 3 by n_l W_l at a, the midpoint and b */
+  GPtrArray *ends_rows;            /* per split depth, the three row views of its ends matrix */
 } ChebCompute;
 
 static void
@@ -411,16 +413,34 @@ _nc_xcor_kernel_cheb_panel_matches_expansion (const ChebPanel *panel, NcmFunctio
 static void
 _nc_xcor_kernel_cheb_split (NcmSpectral *spectral, ChebCompute *compute, guint n_l,
                             gdouble a, gdouble b, gdouble reltol, gdouble abstol,
-                            guint level_min, guint k_cap, GArray *panels)
+                            guint level_min, guint k_cap, guint depth,
+                            NcmVector *W_a, NcmVector *W_b, GArray *panels)
 {
   NcmMatrix *coeffs = NULL;
+  NcmMatrix *ends;
   guint k_ord;
+
+  /* One ends matrix per depth, made the first time the depth is reached: a split hands
+   * rows 0, 1 to its lower half and rows 1, 2 to its upper half, and the lower half's
+   * own splits write one depth further down, so the rows survive for the upper half. */
+  if (compute->ends->len <= depth)
+  {
+    NcmMatrix *m = ncm_matrix_new (3, n_l);
+    guint r;
+
+    g_ptr_array_add (compute->ends, m);
+
+    for (r = 0; r < 3; r++)
+      g_ptr_array_add (compute->ends_rows, ncm_matrix_get_row (m, r));
+  }
+
+  ends = g_ptr_array_index (compute->ends, depth);
 
   compute->comp_states->panel_mid = 0.5 * (a + b);
 
   k_ord = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (
     spectral, _cheb_compute_call, n_l, a, b, level_min,
-    k_cap, reltol, abstol, FALSE, &coeffs, compute);
+    k_cap, reltol, abstol, FALSE, W_a, W_b, ends, &coeffs, compute);
 
   if (k_ord > 0)
   {
@@ -446,7 +466,7 @@ _nc_xcor_kernel_cheb_split (NcmSpectral *spectral, ChebCompute *compute, guint n
     {
       const guint k_forced = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (
         spectral, _cheb_compute_call, n_l, a, b, level_min,
-        k_cap, reltol, abstol, TRUE, &coeffs, compute);
+        k_cap, reltol, abstol, TRUE, W_a, W_b, NULL, &coeffs, compute);
       ChebPanel panel = { a, b, coeffs, (1u << k_forced) + 1u };
 
       g_array_append_val (panels, panel);
@@ -454,8 +474,14 @@ _nc_xcor_kernel_cheb_split (NcmSpectral *spectral, ChebCompute *compute, guint n
       return;
     }
 
-    _nc_xcor_kernel_cheb_split (spectral, compute, n_l, a, mid, reltol, abstol, level_min, k_cap, panels);
-    _nc_xcor_kernel_cheb_split (spectral, compute, n_l, mid, b, reltol, abstol, level_min, k_cap, panels);
+    {
+      NcmVector *W_lo  = g_ptr_array_index (compute->ends_rows, 3 * depth + 0);
+      NcmVector *W_mid = g_ptr_array_index (compute->ends_rows, 3 * depth + 1);
+      NcmVector *W_hi  = g_ptr_array_index (compute->ends_rows, 3 * depth + 2);
+
+      _nc_xcor_kernel_cheb_split (spectral, compute, n_l, a, mid, reltol, abstol, level_min, k_cap, depth + 1, W_lo, W_mid, panels);
+      _nc_xcor_kernel_cheb_split (spectral, compute, n_l, mid, b, reltol, abstol, level_min, k_cap, depth + 1, W_mid, W_hi, panels);
+    }
   }
 }
 
@@ -580,8 +606,12 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
   {
     NcmFunctionSampleSet *fss = ncm_function_sample_set_new (n_l);
     GArray *k_seeds           = g_array_new (FALSE, FALSE, sizeof (gdouble));
-    ChebCompute compute       = { compute_func, comp_states, fss };
-    NcmMatrix *closure_error  = NULL;
+    ChebCompute compute       = {
+      compute_func, comp_states, fss,
+      g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_matrix_free),
+      g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free)
+    };
+    NcmMatrix *closure_error = NULL;
     gdouble abstol;
     guint i;
 
@@ -644,10 +674,12 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
 
       comp_states->panel_mode = TRUE;
 
+      /* An initial edge can be a cut, where W_l(k) jumps, so an initial panel starts
+       * with no known ends; the halves of a split share them with their parent. */
       for (i = 0; i + 1 < edges0->len; i++)
         _nc_xcor_kernel_cheb_split (*spectral, &compute, n_l,
                                     g_array_index (edges0, gdouble, i), g_array_index (edges0, gdouble, i + 1),
-                                    reltol, abstol, self->panel_level_min, k_cap, cid->panels);
+                                    reltol, abstol, self->panel_level_min, k_cap, 0, NULL, NULL, cid->panels);
 
       comp_states->panel_mode = FALSE;
 
@@ -656,6 +688,8 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
     }
 
     ncm_function_sample_set_clear (&fss);
+    g_ptr_array_unref (compute.ends_rows);
+    g_ptr_array_unref (compute.ends);
 
     {
       const gdouble first = g_array_index (cid->panels, ChebPanel, 0).a;

@@ -28,8 +28,8 @@ The outer integral is
     C_ell^AB = 2 / (pi RH^3) * INT dkappa kappa^2 W1_ell(kappa) W2_ell(kappa)
 
 in the internal variable kappa = k RH, over the intersection of the two
-closures' fitted ranges. The three kernel-space methods differ only in how they
-evaluate that integral from the same two closures.
+closures' fitted ranges. KERNEL_EXACT and the reference of this module evaluate
+that integral from the same two closures.
 
 This module is the single source of truth for what is measured: the kernels,
 the pairs, the multipoles, the tolerance settings, and the reference. It is

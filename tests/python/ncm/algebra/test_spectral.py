@@ -79,7 +79,7 @@ def test_batch_from_python_callback() -> None:
     assert coeffs.ncols() == (1 << k) + 1
 
     k, coeffs = spectral.compute_chebyshev_coeffs_batch_adaptive_cap(
-        batch, 2, -1.0, 1.0, 2, 10, 1.0e-12, 0.0, False, None
+        batch, 2, -1.0, 1.0, 2, 10, 1.0e-12, 0.0, False, None, None, None, None
     )
     assert k > 0
     assert coeffs.ncols() == (1 << k) + 1

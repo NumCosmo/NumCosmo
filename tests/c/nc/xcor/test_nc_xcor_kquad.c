@@ -24,16 +24,15 @@
 
 /*
  * The kernel-space outer integral: given two $W_\ell(k)$ representations, integrate
- * $k^2 W^1_\ell W^2_\ell$ over a multipole block. Each method does it differently
- * (fixed cubature or exact GL(5) on the panel union), and this checks the parts that
- * are the same whichever is chosen: the band is filled, the auto path agrees with
- * passing one kernel twice to the cross path, and an error estimate accompanies the
- * result exactly when the method claims to offer one.
+ * $k^2 W^1_\ell W^2_\ell$ over a multipole block, for both closures. This checks the
+ * mechanics: the band is filled, the auto path agrees with passing one kernel twice to
+ * the cross path, an error estimate accompanies the result exactly when the method
+ * claims to offer one, and every method describes itself.
  *
  * Everything is sized to keep this in the unit lane: two narrow windows close in, the
  * power spectrum capped well below its default, a four-multipole block, and the kernels'
- * adaptive apparatus capped rather than run to convergence. Accuracy of these methods
- * against their own reference is tests/python/nc/xcor/test_k_integral.py.
+ * adaptive apparatus capped rather than run to convergence. Accuracy against an
+ * independent integral of the same closures is test_nc_xcor_kquad_exact.c.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -46,18 +45,15 @@
 #include <glib.h>
 #include <glib-object.h>
 
-#define TEST_ZMAX 6.0
-#define TEST_KMAX 0.5
+#include "test_nc_xcor_kquad_common.h"
+
 #define TEST_LMIN 2
 #define TEST_LMAX 5
 #define TEST_NELL (TEST_LMAX - TEST_LMIN + 1)
 
 typedef struct _TestNcXcorKQuad
 {
-  NcHICosmo *cosmo;
-  NcDistance *dist;
-  NcmPowspec *ps;
-  NcmSBesselIntegrator *sbi;
+  TestNcXcorKQuadEnv env;
   NcXcorKernel *k1;
   NcXcorKernel *k2;
   NcXcor *xc;
@@ -82,69 +78,27 @@ typedef struct _TestMethod
  * default closure is the Chebyshev one, so asking for the spline is the only way
  * through that second branch. */
 static const TestMethod test_methods[] = {
-  {"kernel_cubature/spline",    NC_XCOR_METHOD_KERNEL_CUBATURE, NC_XCOR_KERNEL_CLOSURE_SPLINE   },
   {"kernel_exact/spline",       NC_XCOR_METHOD_KERNEL_EXACT,    NC_XCOR_KERNEL_CLOSURE_SPLINE   },
-  {"kernel_cubature/chebyshev", NC_XCOR_METHOD_KERNEL_CUBATURE, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
   {"kernel_exact/chebyshev",    NC_XCOR_METHOD_KERNEL_EXACT,    NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
 };
-
-static NcXcorKernel *
-_tophat (TestNcXcorKQuad *test, gdouble chi_lower, gdouble chi_upper)
-{
-  NcXcorKernel *xclk = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_tophat_new_full (test->dist, test->ps,
-                                                                                chi_lower, chi_upper,
-                                                                                test->sbi));
-
-  /* Capped, not converged: the branches are what is under test, not the accuracy. */
-  nc_xcor_kernel_set_max_border_expansions (xclk, 1);
-  nc_xcor_kernel_set_max_iter (xclk, 4);
-  nc_xcor_kernel_set_reltol (xclk, 1.0e-3);
-  nc_xcor_kernel_set_peak_epsilon (xclk, 1.0e-4);
-  nc_xcor_kernel_set_panel_order_cap (xclk, 12);
-  nc_xcor_kernel_set_lmax (xclk, 16);
-
-  /* Never Limber: the kernel-space methods integrate a W_l(k) representation, which is
-   * what the non-Limber builder produces. */
-  nc_xcor_kernel_set_l_limber (xclk, -1);
-
-  nc_xcor_kernel_prepare (xclk, test->cosmo);
-
-  return xclk;
-}
 
 static void
 test_nc_xcor_kquad_new (TestNcXcorKQuad *test, gconstpointer pdata)
 {
   const TestMethod *tm = pdata;
-  NcHICosmo *cosmo     = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
 
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
-  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
-  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
+  test_nc_xcor_kquad_env_init (&test->env);
 
-  test->cosmo = cosmo;
-  test->dist  = nc_distance_new (TEST_ZMAX);
-  test->ps    = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
-                                                       NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
-  test->sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 8));
+  /* Overlapping, so the cross spectrum is not numerically zero. Never Limber: the
+   * kernel-space methods integrate a W_l(k) representation, which is what the
+   * non-Limber builder produces. */
+  test->k1 = test_nc_xcor_kquad_tophat (&test->env, 200.0, 400.0, -1);
+  test->k2 = test_nc_xcor_kquad_tophat (&test->env, 250.0, 450.0, -1);
 
-  ncm_powspec_set_kmax (test->ps, TEST_KMAX);
-
-  nc_distance_prepare (test->dist, cosmo);
-  ncm_powspec_prepare (test->ps, NCM_MODEL (cosmo));
-
-  /* Overlapping, so the cross spectrum is not numerically zero. */
-  test->k1 = _tophat (test, 200.0, 400.0);
-  test->k2 = _tophat (test, 250.0, 450.0);
-
-  test->xc = nc_xcor_new (test->dist, test->ps, tm->meth);
+  test->xc = nc_xcor_new (test->env.dist, test->env.ps, tm->meth);
   nc_xcor_set_closure_type (test->xc, tm->closure);
   nc_xcor_set_ell_batch_size (test->xc, TEST_NELL);
-  nc_xcor_prepare (test->xc, cosmo);
+  nc_xcor_prepare (test->xc, test->env.cosmo);
 
   g_assert_true (nc_xcor_method_is_kernel_space (tm->meth));
 }
@@ -154,10 +108,7 @@ test_nc_xcor_kquad_free (TestNcXcorKQuad *test, gconstpointer pdata)
 {
   nc_xcor_kernel_free (test->k1);
   nc_xcor_kernel_free (test->k2);
-  ncm_sbessel_integrator_free (test->sbi);
-  ncm_powspec_free (test->ps);
-  nc_distance_free (test->dist);
-  nc_hicosmo_free (test->cosmo);
+  test_nc_xcor_kquad_env_clear (&test->env);
 
   NCM_TEST_FREE (nc_xcor_free, test->xc);
 }
@@ -169,7 +120,7 @@ test_nc_xcor_kquad_compute (TestNcXcorKQuad *test, gconstpointer pdata)
   guint i;
 
   ncm_vector_set_all (cl, GSL_NAN);
-  nc_xcor_compute (test->xc, test->k1, test->k2, test->cosmo, TEST_LMIN, TEST_LMAX, cl);
+  nc_xcor_compute (test->xc, test->k1, test->k2, test->env.cosmo, TEST_LMIN, TEST_LMAX, cl);
 
   for (i = 0; i < TEST_NELL; i++)
     g_assert_true (gsl_finite (ncm_vector_get (cl, i)));
@@ -186,7 +137,7 @@ test_nc_xcor_kquad_auto (TestNcXcorKQuad *test, gconstpointer pdata)
   /* The auto path samples one kernel once and squares it; the cross path samples two.
    * Handing the same kernel to both must therefore agree, and the auto spectrum of a
    * real field is positive. */
-  nc_xcor_compute (test->xc, test->k1, test->k1, test->cosmo, TEST_LMIN, TEST_LMAX, cl);
+  nc_xcor_compute (test->xc, test->k1, test->k1, test->env.cosmo, TEST_LMIN, TEST_LMAX, cl);
 
   for (i = 0; i < TEST_NELL; i++)
   {
@@ -206,7 +157,7 @@ test_nc_xcor_kquad_error (TestNcXcorKQuad *test, gconstpointer pdata)
   guint i;
 
   ncm_vector_set_all (cl_err, GSL_NAN);
-  nc_xcor_compute_full (test->xc, test->k1, test->k2, test->cosmo, TEST_LMIN, TEST_LMAX, cl, cl_err);
+  nc_xcor_compute_full (test->xc, test->k1, test->k2, test->env.cosmo, TEST_LMIN, TEST_LMAX, cl, cl_err);
 
   for (i = 0; i < TEST_NELL; i++)
   {
@@ -243,8 +194,8 @@ test_nc_xcor_kquad_integrate_block (TestNcXcorKQuad *test, gconstpointer pdata)
   NcmVector *direct;
   guint i;
 
-  i1 = nc_xcor_kernel_get_eval_vectorized (test->k1, test->cosmo, TEST_LMIN, TEST_LMAX, closure);
-  i2 = nc_xcor_kernel_get_eval_vectorized (test->k2, test->cosmo, TEST_LMIN, TEST_LMAX, closure);
+  i1 = nc_xcor_kernel_get_eval_vectorized (test->k1, test->env.cosmo, TEST_LMIN, TEST_LMAX, closure);
+  i2 = nc_xcor_kernel_get_eval_vectorized (test->k2, test->env.cosmo, TEST_LMIN, TEST_LMAX, closure);
 
   block  = ncm_vector_new (TEST_NELL);
   err    = ncm_vector_new (TEST_NELL);
@@ -253,7 +204,7 @@ test_nc_xcor_kquad_integrate_block (TestNcXcorKQuad *test, gconstpointer pdata)
   ncm_vector_set_all (block, GSL_NAN);
 
   nc_xcor_integrate_block (test->xc, i1, i2, TEST_LMIN, TEST_LMAX, FALSE, tm->meth, block, err);
-  nc_xcor_compute (test->xc, test->k1, test->k2, test->cosmo, TEST_LMIN, TEST_LMAX, direct);
+  nc_xcor_compute (test->xc, test->k1, test->k2, test->env.cosmo, TEST_LMIN, TEST_LMAX, direct);
 
   for (i = 0; i < TEST_NELL; i++)
   {
@@ -294,7 +245,7 @@ test_nc_xcor_kquad_method_table (void)
 {
   const NcXcorMethod all[] = {
     NC_XCOR_METHOD_LIMBER_Z_GSL, NC_XCOR_METHOD_LIMBER_Z_CUBATURE,
-    NC_XCOR_METHOD_KERNEL_CUBATURE, NC_XCOR_METHOD_KERNEL_EXACT
+    NC_XCOR_METHOD_KERNEL_EXACT
   };
   guint i, j;
 

@@ -26,7 +26,7 @@
 
 Covers registration/request bookkeeping (dev-notes/xcor_ultralevin_batching_plan.md
 sec 5.1), the ell-block planner (sec 5), and solve() (sec 5-6): the
-per-block shared-closure KERNEL_CUBATURE path and the direct-delegation
+per-block shared-closure kernel-space path and the direct-delegation
 fallback for every other method.
 """
 
@@ -224,13 +224,13 @@ def test_plan_blocks_replaces_previous_plan(kernel_tsz: Nc.XcorKernel) -> None:
     assert n_blocks_second > n_blocks_first
 
 
-def test_solve_kernel_cubature_matches_compute(
+def test_solve_kernel_exact_matches_compute(
     cosmology: Cosmology,
     kernel_tsz: Nc.XcorKernel,
     kernel_cmb_lens: Nc.XcorKernel,
     kernel_gal_bin0: Nc.XcorKernel,
 ) -> None:
-    """solve()'s KERNEL_CUBATURE shared-closure path matches nc_xcor_compute().
+    """solve()'s KERNEL_EXACT shared-closure path matches nc_xcor_compute().
 
     Three kernels, three requests all in one 8-ell block: an auto (A), a
     cross reusing A (A-B), and a cross reusing B (B-C) -- exercises the
@@ -249,7 +249,7 @@ def test_solve_kernel_cubature_matches_compute(
             k.set_l_limber(0)  # tier 2: kernel-Limber
             k.prepare(cosmology.cosmo)
 
-        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
         xc.prepare(cosmology.cosmo)
 
         solver = Nc.XcorSolver.new()
@@ -299,7 +299,7 @@ def test_solve_spans_multiple_blocks(
         kernel_tsz.set_l_limber(0)
         kernel_tsz.prepare(cosmology.cosmo)
 
-        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
         xc.prepare(cosmology.cosmo)
 
         solver = Nc.XcorSolver.new()
@@ -386,7 +386,7 @@ def test_solve_block_parallel_stress(
             k.set_l_limber(0)  # tier 2: kernel-Limber, cheap enough for 15 blocks
             k.prepare(cosmology.cosmo)
 
-        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
         xc.prepare(cosmology.cosmo)
 
         solver = Nc.XcorSolver.new()
@@ -476,7 +476,7 @@ def test_solve_tier3_duplicated_kernel_shrinking_last_block(
     kernel.set_l_limber(-1)  # tier 3: true non-Limber
     kernel.prepare(cosmology.cosmo)
 
-    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     # The integrator above is deliberately loose to keep this test quick; the
     # outer integral cannot ask for more precision than that closure carries.
     xc.props.reltol = 1.0e-2
@@ -528,7 +528,7 @@ def test_peek_block_integrator_before_and_after_solve(cosmology: Cosmology) -> N
     lmin, lmax = 2, 17
     kernel = _tier3_wl_kernel(cosmology, lmin, lmax)
 
-    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     xc.props.reltol = 1.0e-2
     xc.prepare(cosmology.cosmo)
 
@@ -574,7 +574,7 @@ def test_set_integrator_overrides_and_resets_the_cache(cosmology: Cosmology) -> 
     lmin, lmax = 2, 17
     kernel = _tier3_wl_kernel(cosmology, lmin, lmax)
 
-    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     xc.props.reltol = 1.0e-2
     xc.prepare(cosmology.cosmo)
 
@@ -657,7 +657,7 @@ def test_solve_accepts_a_kernel_without_a_levin_integrator(
     kernel.set_l_limber(0)  # tier 2: kernel-Limber, no Levin closure involved
     kernel.prepare(cosmology.cosmo)
 
-    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     xc.prepare(cosmology.cosmo)
 
     solver = Nc.XcorSolver.new()
@@ -820,7 +820,7 @@ def test_replan_with_the_same_blocks_keeps_the_integrators(
     them.
     """
     kernel = _tier3_wl_kernel(cosmology, 2, 17)
-    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     xc.props.reltol = 1.0e-2
     xc.prepare(cosmology.cosmo)
 

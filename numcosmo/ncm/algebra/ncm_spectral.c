@@ -486,10 +486,14 @@ _ncm_spectral_batch_grow_to_level (NcmSpectral *spectral, guint level)
                               &spectral->batch_len, (gsize) N * n_comp, MIN (keep, spectral->batch_len));
 }
 
+/*
+ * F at every node of the level, node j at mid + half_h cos (j pi / 2^level), so node 0 is b
+ * and node N - 1 is a. A known f_b or f_a is copied into its end node instead of evaluated.
+ */
 static void
 _ncm_spectral_batch_evaluate_all_nodes (NcmSpectral *spectral, NcmSpectralFBatch F,
                                         NcmVector *y, gdouble a, gdouble b, guint level,
-                                        gpointer user_data)
+                                        NcmVector *f_a, NcmVector *f_b, gpointer user_data)
 {
   const guint N           = (1 << level) + 1;
   const guint n_comp      = spectral->batch_n_comp;
@@ -502,12 +506,18 @@ _ncm_spectral_batch_evaluate_all_nodes (NcmSpectral *spectral, NcmSpectralFBatch
 
   for (j = 0; j < N; j++)
   {
-    const gdouble x = mid + half_h * cos_vals[j];
+    NcmVector *known = (j == 0) ? f_b : ((j == N - 1) ? f_a : NULL);
 
-    F (user_data, x, y);
+    if (known == NULL)
+    {
+      const gdouble x = mid + half_h * cos_vals[j];
+
+      F (user_data, x, y);
+      known = y;
+    }
 
     for (c = 0; c < n_comp; c++)
-      spectral->batch_f_vals[j * n_comp + c] = ncm_vector_get (y, c);
+      spectral->batch_f_vals[j * n_comp + c] = ncm_vector_get (known, c);
   }
 }
 
@@ -565,27 +575,35 @@ _ncm_spectral_batch_normalize_coeffs (NcmSpectral *spectral, NcmMatrix *coeffs, 
   }
 }
 
-/* Every component must pass against its own norm, so a small one is still resolved */
+/*
+ * Whether every component passed: the l1 change of its coefficients between the levels,
+ * the top of the finer level included, is at most max(reltol vscale, abstol), vscale its
+ * largest |f| on the N_2N finer nodes. The l1 change bounds the sup change of the
+ * interpolant (|T_n| <= 1). Each component has its own scale, so a small one is still
+ * resolved.
+ */
 static gboolean
-_ncm_spectral_batch_check_convergence (NcmMatrix *c_2N, NcmMatrix *c_N, guint N,
-                                       guint n_comp, gdouble reltol, gdouble abstol)
+_ncm_spectral_batch_check_convergence (NcmSpectral *spectral, NcmMatrix *c_2N, NcmMatrix *c_N,
+                                       guint N, guint N_2N, guint n_comp,
+                                       gdouble reltol, gdouble abstol)
 {
   guint i, c;
 
   for (c = 0; c < n_comp; c++)
   {
-    gdouble norm2_diff = 0.0;
-    gdouble norm2_2N   = 0.0;
+    gdouble l1_diff = 0.0;
+    gdouble vscale  = 0.0;
 
     for (i = 0; i < N; i++)
-    {
-      const gdouble diff = ncm_matrix_get (c_2N, c, i) - ncm_matrix_get (c_N, c, i);
+      l1_diff += fabs (ncm_matrix_get (c_2N, c, i) - ncm_matrix_get (c_N, c, i));
 
-      norm2_diff += diff * diff;
-      norm2_2N   += ncm_matrix_get (c_2N, c, i) * ncm_matrix_get (c_2N, c, i);
-    }
+    for (i = N; i < N_2N; i++)
+      l1_diff += fabs (ncm_matrix_get (c_2N, c, i));
 
-    if (!(norm2_diff < MAX (reltol * reltol * norm2_2N, abstol * abstol) + 1.0e-100))
+    for (i = 0; i < N_2N; i++)
+      vscale = MAX (vscale, fabs (spectral->batch_f_vals[i * n_comp + c]));
+
+    if (!(l1_diff <= MAX (reltol * vscale, abstol)))
       return FALSE;
   }
 
@@ -593,47 +611,51 @@ _ncm_spectral_batch_check_convergence (NcmMatrix *c_2N, NcmMatrix *c_N, guint N,
 }
 
 /*
- * Whether the next doubling is predicted to fail. The envelope falls by
- * d = |c_{N-1}| / e_{N/2} over the top half of the spectrum, so the N - 1 modes the next
- * level adds carry an l2 mass of about |c_{N-1}| d sqrt(N), compared here with
- * max(reltol ||c||, abstol). The safety factor 10 abandons none of the panels accepted
- * on LSST-Y1 lensing and number counts, a Gaussian and two top-hat shells, at reltol
- * 1e-4 and 1e-6.
+ * Whether the next doubling is predicted to fail its test, for any component. That test is
+ * twice the l1 mass of the next level's top band (M, 2M], M = N - 1, since the coarse
+ * coefficients are the fine ones folded. With B_km1 and B_k the l1 masses of the current
+ * coefficients over (M/4, M/2] and (M/2, M], geometric decay |c_j| ~ rho^j, q = rho^(M/4),
+ * gives B_k / B_km1 = q (1 + q) and a next band of B_k q^2 (1 + q^2), compared with
+ * max(reltol vscale, abstol) on the current nodes. Below M = 4 the two bands do not exist
+ * and nothing is predicted. A wrong prediction costs a doubling or a split, never accuracy.
  */
-#define NCM_SPECTRAL_ABANDON_SAFETY (10.0)
-
 static gboolean
-_ncm_spectral_batch_cannot_converge (NcmMatrix *c, guint N, guint n_comp,
+_ncm_spectral_batch_cannot_converge (NcmSpectral *spectral, NcmMatrix *c, guint N, guint n_comp,
                                      gdouble reltol, gdouble abstol)
 {
-  const guint half = N / 2;
+  const guint M = N - 1;
   guint comp, i;
+
+  if (M < 4)
+    return FALSE;
 
   for (comp = 0; comp < n_comp; comp++)
   {
-    const gdouble c_end = fabs (ncm_matrix_get (c, comp, N - 1));
-    gdouble env_half    = 0.0;
-    gdouble norm2       = 0.0;
-    gdouble d, tol_eff;
+    gdouble B_km1 = 0.0, B_k = 0.0, vscale = 0.0;
 
-    for (i = 0; i < N; i++)
-    {
-      const gdouble a = fabs (ncm_matrix_get (c, comp, i));
+    for (i = M / 4 + 1; i <= M / 2; i++)
+      B_km1 += fabs (ncm_matrix_get (c, comp, i));
 
-      norm2 += a * a;
+    for (i = M / 2 + 1; i <= M; i++)
+      B_k += fabs (ncm_matrix_get (c, comp, i));
 
-      if (i >= half)
-        env_half = MAX (env_half, a);
-    }
-
-    if (env_half <= 0.0)
+    if (B_k == 0.0)
       continue;
 
-    d       = c_end / env_half;
-    tol_eff = MAX (reltol * sqrt (norm2), abstol);
-
-    if (c_end * d * sqrt (N) > NCM_SPECTRAL_ABANDON_SAFETY * tol_eff)
+    if (B_km1 == 0.0)
       return TRUE;
+
+    for (i = 0; i < N; i++)
+      vscale = MAX (vscale, fabs (spectral->batch_f_vals[i * n_comp + comp]));
+
+    {
+      const gdouble R    = B_k / B_km1;
+      const gdouble q    = 0.5 * (sqrt (1.0 + 4.0 * R) - 1.0);
+      const gdouble pred = 2.0 * B_k * q * q * (1.0 + q * q);
+
+      if (pred > MAX (reltol * vscale, abstol))
+        return TRUE;
+    }
   }
 
   return FALSE;
@@ -648,14 +670,18 @@ _ncm_spectral_batch_cannot_converge (NcmMatrix *c, guint N, guint n_comp,
  * @b: interval upper bound
  * @level_min: starting refinement level
  * @reltol: relative tolerance
- * @abstol: absolute tolerance, in units of the coefficients
+ * @abstol: absolute tolerance, in units of @F
  * @coeffs: (out) (transfer full): an @n_comp by $N$ #NcmMatrix of coefficients
  * @user_data: user data for @F
  *
- * Computes the Chebyshev coefficients of the @n_comp components of $F$ on one shared
- * grid, as ncm_spectral_compute_chebyshev_coeffs_adaptive_full(). Each node is evaluated
- * once for all components. Every component must converge, so the one needing the highest
- * level sets it for all. Reaching #NcmSpectral:max-level without converging is an error.
+ * Computes the Chebyshev coefficients of the @n_comp components of $F$ on one shared grid,
+ * doubling the nested Chebyshev-Lobatto grid from level @level_min. Level $r$ is accepted
+ * when, for every component, the $\ell_1$ norm of the change of its coefficients from
+ * level $r - 1$, the new top coefficients included, is at most the larger of @reltol
+ * times the largest $|F|$ on the level-$r$ nodes and @abstol. That norm bounds the
+ * largest change of the interpolant on $[a, b]$. Each node is evaluated once for all
+ * components, and the component needing the highest level sets it for all. Reaching
+ * #NcmSpectral:max-level without converging is an error.
  *
  * Returns: the level $r$ reached, with $N = 2^r + 1$.
  */
@@ -667,9 +693,11 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, Ncm
 {
   return ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, F, n_comp, a, b,
                                                                    level_min, spectral->max_level,
-                                                                   reltol, abstol, TRUE,
+                                                                   reltol, abstol, TRUE, NULL, NULL, NULL,
                                                                    coeffs, user_data);
 }
+
+static void _ncm_spectral_batch_ends (NcmSpectral *spectral, NcmSpectralFBatch F, NcmVector *y, gdouble a, gdouble b, guint level, NcmMatrix *ends, gpointer user_data);
 
 /**
  * ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap:
@@ -681,8 +709,11 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, Ncm
  * @level_min: starting refinement level
  * @level_cap: highest refinement level
  * @reltol: relative tolerance
- * @abstol: absolute tolerance, in units of the coefficients
+ * @abstol: absolute tolerance, in units of @F
  * @fatal: whether not converging is an error
+ * @f_a: (nullable): $F(a)$, of length @n_comp
+ * @f_b: (nullable): $F(b)$, of length @n_comp
+ * @ends: (nullable): a 3 by @n_comp #NcmMatrix for $F$ at $a$, $(a + b) / 2$ and $b$
  * @coeffs: (out) (transfer full): an @n_comp by $N$ #NcmMatrix of coefficients
  * @user_data: user data for @F
  *
@@ -691,6 +722,14 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, Ncm
  * unchanged and returns 0, and the last doubling is skipped when the level below predicts
  * that it cannot converge. That suits a caller that splits its interval on failure.
  *
+ * The end nodes of every level are $a$ and $b$, so a given @f_a or @f_b is used there
+ * instead of evaluating $F$, and must be what $F$ returns at that end. @ends, when given,
+ * is filled on every return, converged or not, with the rows $F(a)$, $F((a + b) / 2)$ and
+ * $F(b)$, taken from the nodes of the last level evaluated; the midpoint is a node of every
+ * level above 0, and on level 0 $F$ is evaluated there. A caller that splits $[a, b]$ in
+ * two at the midpoint passes rows 0 and 1 as the ends of the lower half and rows 1 and 2
+ * as those of the upper half.
+ *
  * Returns: the level reached, or 0 when @fatal is %FALSE and the expansion did not converge.
  */
 guint
@@ -698,8 +737,8 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
                                                           guint n_comp, gdouble a, gdouble b,
                                                           guint level_min, guint level_cap,
                                                           gdouble reltol, gdouble abstol,
-                                                          gboolean fatal,
-                                                          NcmMatrix **coeffs, gpointer user_data)
+                                                          gboolean fatal, NcmVector *f_a, NcmVector *f_b,
+                                                          NcmMatrix *ends, NcmMatrix **coeffs, gpointer user_data)
 {
   guint level        = level_min;
   gboolean converged = FALSE;
@@ -710,6 +749,9 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
 
   g_assert (level_min <= level_cap);
   g_assert_cmpuint (n_comp, >, 0);
+  g_assert ((f_a == NULL) || (ncm_vector_len (f_a) == n_comp));
+  g_assert ((f_b == NULL) || (ncm_vector_len (f_b) == n_comp));
+  g_assert ((ends == NULL) || ((ncm_matrix_nrows (ends) == 3) && (ncm_matrix_ncols (ends) == n_comp)));
 
   _ncm_spectral_batch_prepare_buffers (spectral, n_comp);
 
@@ -720,7 +762,7 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
   c_current  = spectral->batch_c_curr;
 
   _ncm_spectral_prepare_level (spectral, level);
-  _ncm_spectral_batch_evaluate_all_nodes (spectral, F, y, a, b, level, user_data);
+  _ncm_spectral_batch_evaluate_all_nodes (spectral, F, y, a, b, level, f_a, f_b, user_data);
 
   {
     const guint N = (1 << level) + 1;
@@ -737,7 +779,7 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
 
     /* c_previous holds the coefficients at level */
     if (!fatal && (level + 1 == level_cap) &&
-        _ncm_spectral_batch_cannot_converge (c_previous, N_prev, n_comp,
+        _ncm_spectral_batch_cannot_converge (spectral, c_previous, N_prev, n_comp,
                                              reltol, abstol))
       break;
 
@@ -751,7 +793,7 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
     _ncm_spectral_batch_normalize_coeffs (spectral, c_current, N);
 
     /* Compared over the coefficients of the coarser level */
-    if (_ncm_spectral_batch_check_convergence (c_current, c_previous, N_prev,
+    if (_ncm_spectral_batch_check_convergence (spectral, c_current, c_previous, N_prev, N,
                                                n_comp, reltol, abstol))
     {
       converged = TRUE;
@@ -765,6 +807,9 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
       c_current  = tmp;
     }
   }
+
+  if (ends != NULL)
+    _ncm_spectral_batch_ends (spectral, F, y, a, b, level, ends, user_data);
 
   if (!converged && fatal)
     g_error ("ncm_spectral_compute_chebyshev_coeffs_batch_adaptive: reached the "
@@ -795,6 +840,38 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
   }
 
   return level;
+}
+
+/*
+ * F at a, (a + b) / 2 and b into the rows of ends, from the nodes N - 1, (N - 1) / 2 and 0
+ * of the last level evaluated. Level 0 has no middle node, so F is evaluated there.
+ */
+static void
+_ncm_spectral_batch_ends (NcmSpectral *spectral, NcmSpectralFBatch F, NcmVector *y,
+                          gdouble a, gdouble b, guint level, NcmMatrix *ends, gpointer user_data)
+{
+  const guint N      = (1 << level) + 1;
+  const guint n_comp = spectral->batch_n_comp;
+  guint c;
+
+  for (c = 0; c < n_comp; c++)
+  {
+    ncm_matrix_set (ends, 0, c, spectral->batch_f_vals[(N - 1) * n_comp + c]);
+    ncm_matrix_set (ends, 2, c, spectral->batch_f_vals[c]);
+  }
+
+  if (level > 0)
+  {
+    for (c = 0; c < n_comp; c++)
+      ncm_matrix_set (ends, 1, c, spectral->batch_f_vals[((N - 1) / 2) * n_comp + c]);
+  }
+  else
+  {
+    F (user_data, 0.5 * (a + b), y);
+
+    for (c = 0; c < n_comp; c++)
+      ncm_matrix_set (ends, 1, c, ncm_vector_get (y, c));
+  }
 }
 
 /**
@@ -942,29 +1019,32 @@ _ncm_spectral_normalize_coeffs (gdouble *coeffs_work, GArray *coeffs, guint N)
   }
 }
 
+/*
+ * Whether the expansion passed: the l1 change of the coefficients between the levels, the
+ * top of the finer level included, is at most max(reltol vscale, abstol), vscale the
+ * largest |f| on the finer nodes. The l1 change bounds the sup change of the interpolant
+ * (|T_n| <= 1).
+ */
 static gboolean
-_ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble tol, gdouble abstol)
+_ncm_spectral_check_convergence (NcmSpectral *spectral, GArray *coeffs_2N, GArray *coeffs_N,
+                                 gdouble reltol, gdouble abstol)
 {
   const gdouble *coeffs_2N_data = (gdouble *) coeffs_2N->data;
   const gdouble *coeffs_N_data  = (gdouble *) coeffs_N->data;
-  gdouble norm2_diff            = 0.0;
-  gdouble norm2_2N              = 0.0;
+  gdouble l1_diff               = 0.0;
+  gdouble vscale                = 0.0;
   guint i;
 
   for (i = 0; i < coeffs_N->len; i++)
-  {
-    const gdouble diff  = (coeffs_2N_data[i] - coeffs_N_data[i]);
-    const gdouble diff2 = diff * diff;
+    l1_diff += fabs (coeffs_2N_data[i] - coeffs_N_data[i]);
 
-    norm2_diff += diff2;
-    norm2_2N   += coeffs_2N_data[i] * coeffs_2N_data[i];
-  }
+  for (i = coeffs_N->len; i < coeffs_2N->len; i++)
+    l1_diff += fabs (coeffs_2N_data[i]);
 
+  for (i = 0; i < coeffs_2N->len; i++)
+    vscale = MAX (vscale, fabs (spectral->f_vals[i]));
 
-  if (norm2_diff < MAX (tol * tol * norm2_2N, abstol * abstol) + 1.0e-100)
-    return TRUE;
-
-  return FALSE;
+  return l1_diff <= MAX (reltol * vscale, abstol);
 }
 
 static guint
@@ -1020,7 +1100,7 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
       _ncm_spectral_normalize_coeffs (spectral->coeffs_work, c_current, N);
     }
 
-    if (_ncm_spectral_check_convergence (c_current, c_previous, tol, abstol))
+    if (_ncm_spectral_check_convergence (spectral, c_current, c_previous, tol, abstol))
     {
       converged = TRUE;
       break;
@@ -1074,11 +1154,11 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
  * @user_data: user data for @F
  *
  * Computes the Chebyshev coefficients of $F$ on $[a, b]$, doubling the nested
- * Chebyshev-Lobatto grid from level @level_min until, at level $r$, the $\ell_2$ norm of the
- * change of the first $2^{r-1} + 1$ coefficients is below @tol times the norm of the level-$r$
- * coefficients.
- * Each doubling evaluates $F$ only at the new nodes. Reaching #NcmSpectral:max-level
- * without converging is an error.
+ * Chebyshev-Lobatto grid from level @level_min until, at level $r$, the $\ell_1$ norm of the
+ * change of the coefficients from level $r - 1$, the new top coefficients included, is at
+ * most @tol times the largest $|F|$ on the level-$r$ nodes. That norm bounds the largest
+ * change of the interpolant on $[a, b]$. Each doubling evaluates $F$ only at the new nodes.
+ * Reaching #NcmSpectral:max-level without converging is an error.
  *
  * Returns: the level $r$ reached, with $2^r + 1$ coefficients.
  */
@@ -1102,12 +1182,12 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
  * @b: right endpoint of the interval
  * @level_min: starting refinement level
  * @reltol: relative tolerance
- * @abstol: absolute tolerance, in units of the coefficients
+ * @abstol: absolute tolerance, in units of @F
  * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): the coefficients
  * @user_data: user data for @F
  *
  * As ncm_spectral_compute_chebyshev_coeffs_adaptive(), with the change compared to the
- * larger of @reltol times the norm and @abstol. An @abstol of 0.0 gives
+ * larger of @reltol times the largest $|F|$ on the nodes and @abstol. An @abstol of 0.0 gives
  * ncm_spectral_compute_chebyshev_coeffs_adaptive(); a positive one stops the refinement of
  * a function known to be negligible.
  *
@@ -1135,7 +1215,7 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive_full (NcmSpectral *spectral, NcmS
  * @level_min: starting refinement level
  * @level_cap: highest refinement level
  * @reltol: relative tolerance
- * @abstol: absolute tolerance, in units of the coefficients
+ * @abstol: absolute tolerance, in units of @F
  * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): the coefficients
  * @user_data: user data for @F
  * @converged: (out): whether the tolerance was met

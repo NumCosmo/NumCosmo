@@ -662,7 +662,7 @@ nc_xcor_solver_get_block (NcXcorSolver *solver, guint block_index, guint *lmin, 
 /*
  * Computes and stitches in one request's contribution from one block,
  * using an already-built (or freshly cached) pair of integrands. Shared by
- * both the serial and block-parallel KERNEL_CUBATURE loops below; @results
+ * both the serial and block-parallel loops below; @results
  * is written at request-relative offsets that never overlap between two
  * different blocks (blocks tile disjoint $\ell$-ranges), so concurrent calls
  * from different blocks/threads writing into the same @results array are
@@ -760,9 +760,8 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
  * to have been called first. Replaces any results from a previous
  * nc_xcor_solver_solve() call.
  *
- * When @xc's method is kernel-space (%NC_XCOR_METHOD_KERNEL_CUBATURE or
- * %NC_XCOR_METHOD_KERNEL_EXACT), each distinct
- * kernel's k-space closure (nc_xcor_kernel_get_eval_vectorized()) is built
+ * When @xc's method is kernel-space (%NC_XCOR_METHOD_KERNEL_EXACT), each distinct
+ * kernel's k-space closure (nc_xcor_kernel_get_eval_vectorized_full()) is built
  * once per $\ell$-block and shared across every request needing it in that
  * block, instead of rebuilding it once per pair the way nc_xcor_compute()
  * does -- see plan doc dev-notes/xcor_ultralevin_batching_plan.md sec. 5-6.

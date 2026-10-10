@@ -10701,6 +10701,9 @@ class Spectral(GObject.Object):
         reltol: float,
         abstol: float,
         fatal: bool,
+        f_a: typing.Optional[Vector] = None,
+        f_b: typing.Optional[Vector] = None,
+        ends: typing.Optional[Matrix] = None,
         *user_data: typing.Any,
     ) -> typing.Tuple[int, Matrix]: ...
     @staticmethod

@@ -736,7 +736,19 @@ xcor_tests = [
     },
     {
         'name': 'nc_xcor_kquad',
-        'sources': ['nc/xcor/test_nc_xcor_kquad.c'],
+        'sources': ['nc/xcor/test_nc_xcor_kquad.c', 'nc/xcor/test_nc_xcor_kquad_common.c'],
+    },
+    {
+        'name': 'nc_xcor_kquad_exact',
+        'sources': ['nc/xcor/test_nc_xcor_kquad_exact.c', 'nc/xcor/test_nc_xcor_kquad_common.c'],
+    },
+    {
+        'name': 'nc_xcor_kquad_error',
+        'sources': ['nc/xcor/test_nc_xcor_kquad_error.c', 'nc/xcor/test_nc_xcor_kquad_common.c'],
+    },
+    {
+        'name': 'nc_xcor_disjoint',
+        'sources': ['nc/xcor/test_nc_xcor_disjoint.c', 'nc/xcor/test_nc_xcor_kquad_common.c'],
     },
     {
         'name': 'nc_xcor_kernel_analytic',

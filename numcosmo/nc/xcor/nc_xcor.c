@@ -447,10 +447,9 @@ nc_xcor_get_reltol (NcXcor *xc)
  * @xc: a #NcXcor
  * @ell_batch_size: multipole batch size
  *
- * Sets the multipole batch size used by the kernel-space methods
- * (%NC_XCOR_METHOD_KERNEL_CUBATURE and %NC_XCOR_METHOD_KERNEL_EXACT): each
- * batch builds one k-space closure per kernel and shares it across the whole
- * batch.
+ * Sets the multipole batch size used by the kernel-space method,
+ * %NC_XCOR_METHOD_KERNEL_EXACT: each batch builds one k-space closure per kernel
+ * and shares it across the whole batch.
  *
  * The Levin machinery is tuned for 8 (the default) or 16; wider batches are
  * counterproductive, not faster. #NC_XCOR_KERNEL_MAX_ELL_BLOCK is a hard

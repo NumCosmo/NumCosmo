@@ -600,13 +600,128 @@ test_ncm_spectral_batch_cap (void)
 
   ncm_matrix_set_all (coeffs, 7.0);
 
-  k = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch_hard, 2, -1.0, 1.0, 2, 4, 1.0e-10, 0.0, FALSE, &coeffs, NULL);
+  k = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch_hard, 2, -1.0, 1.0, 2, 4, 1.0e-10, 0.0, FALSE, NULL, NULL, NULL, &coeffs, NULL);
 
   g_assert_cmpuint (k, ==, 0);
   g_assert_true (coeffs == orig);
   g_assert_cmpfloat (ncm_matrix_get (coeffs, 1, 2), ==, 7.0);
 
   ncm_matrix_free (coeffs);
+  ncm_spectral_free (spectral);
+}
+
+/* The end nodes of every level are a and b: given F there, the expansion is the same to
+ * the bit, two calls of F cheaper, and ends holds F at a, the midpoint and b. */
+static void
+test_ncm_spectral_batch_known_ends (void)
+{
+  const gdouble a       = -1.0;
+  const gdouble b       = 2.0;
+  NcmSpectral *spectral = ncm_spectral_new ();
+  NcmMatrix *coeffs0    = NULL;
+  NcmMatrix *coeffs1    = NULL;
+  NcmMatrix *ends       = ncm_matrix_new (3, 3);
+  NcmVector *f_a        = ncm_vector_new (3);
+  NcmVector *f_b        = ncm_vector_new (3);
+  NcmVector *f_mid      = ncm_vector_new (3);
+  Counted c0            = {0};
+  Counted c1            = {0};
+  Counted cx            = {0};
+  guint k0, k1, i, j;
+
+  _batch3 (&cx, a, f_a);
+  _batch3 (&cx, b, f_b);
+  _batch3 (&cx, 0.5 * (a + b), f_mid);
+
+  k0 = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch3, 3, a, b, 2, 10, 1.0e-10, 0.0, TRUE, NULL, NULL, NULL, &coeffs0, &c0);
+  k1 = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch3, 3, a, b, 2, 10, 1.0e-10, 0.0, TRUE, f_a, f_b, ends, &coeffs1, &c1);
+
+  g_assert_cmpuint (k1, ==, k0);
+  g_assert_cmpuint (c1.calls + 2, ==, c0.calls);
+
+  for (i = 0; i < 3; i++)
+  {
+    for (j = 0; j < ncm_matrix_ncols (coeffs0); j++)
+      g_assert_cmpfloat (ncm_matrix_get (coeffs1, i, j), ==, ncm_matrix_get (coeffs0, i, j));
+
+    g_assert_cmpfloat (ncm_matrix_get (ends, 0, i), ==, ncm_vector_get (f_a, i));
+    g_assert_cmpfloat (ncm_matrix_get (ends, 2, i), ==, ncm_vector_get (f_b, i));
+    ncm_assert_cmpdouble_e (ncm_matrix_get (ends, 1, i), ==, ncm_vector_get (f_mid, i), 1.0e-14, 1.0e-15);
+  }
+
+  ncm_matrix_free (coeffs0);
+  ncm_matrix_free (coeffs1);
+  ncm_matrix_free (ends);
+  ncm_vector_free (f_a);
+  ncm_vector_free (f_b);
+  ncm_vector_free (f_mid);
+  ncm_spectral_free (spectral);
+}
+
+/* ends is filled when the expansion fails too, which is when a splitter needs it; on
+ * level 0 the midpoint is not a node and costs one more call of F. */
+static void
+test_ncm_spectral_batch_ends_on_failure (void)
+{
+  const gdouble a       = -1.0;
+  const gdouble b       = 2.0;
+  NcmSpectral *spectral = ncm_spectral_new ();
+  NcmMatrix *coeffs     = NULL;
+  NcmMatrix *ends       = ncm_matrix_new (3, 3);
+  NcmVector *f          = ncm_vector_new (3);
+  const gdouble x[3]    = {a, 0.5 * (a + b), b};
+  guint level, r, i;
+
+  for (level = 0; level <= 2; level += 2)
+  {
+    Counted calls = {0};
+    Counted cx    = {0};
+    guint k;
+
+    ncm_matrix_set_all (ends, GSL_NAN);
+
+    /* level_cap == level_min: one level, no doubling, so no convergence either */
+    k = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch3, 3, a, b, level, level, 1.0e-10, 0.0, FALSE, NULL, NULL, ends, &coeffs, &calls);
+
+    g_assert_cmpuint (k, ==, 0);
+    g_assert_null (coeffs);
+    g_assert_cmpuint (calls.calls, ==, (1u << level) + 1u + ((level == 0) ? 1u : 0u));
+
+    for (r = 0; r < 3; r++)
+    {
+      _batch3 (&cx, x[r], f);
+
+      for (i = 0; i < 3; i++)
+        ncm_assert_cmpdouble_e (ncm_matrix_get (ends, r, i), ==, ncm_vector_get (f, i), 1.0e-14, 1.0e-15);
+    }
+  }
+
+  ncm_matrix_free (ends);
+  ncm_vector_free (f);
+  ncm_spectral_free (spectral);
+}
+
+/* Below four intervals the coefficients have no two bands to extrapolate from, so the
+ * last doubling the cap allows is always tried: every node of the next level is
+ * evaluated, even though it cannot converge at these tolerances. */
+static void
+test_ncm_spectral_batch_no_prediction_below_four (void)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  NcmMatrix *coeffs     = NULL;
+  guint level_min;
+
+  for (level_min = 0; level_min <= 1; level_min++)
+  {
+    Counted calls = {0};
+    guint k;
+
+    k = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch3, 3, -1.0, 2.0, level_min, level_min + 1, 1.0e-10, 0.0, FALSE, NULL, NULL, NULL, &coeffs, &calls);
+
+    g_assert_cmpuint (k, ==, 0);
+    g_assert_cmpuint (calls.calls, ==, (1u << (level_min + 1)) + 1u);
+  }
+
   ncm_spectral_free (spectral);
 }
 
@@ -1073,6 +1188,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral/batch", &test_ncm_spectral_batch);
   g_test_add_func ("/ncm/spectral/batch/small_component", &test_ncm_spectral_batch_small_component);
   g_test_add_func ("/ncm/spectral/batch/cap", &test_ncm_spectral_batch_cap);
+  g_test_add_func ("/ncm/spectral/batch/known_ends", &test_ncm_spectral_batch_known_ends);
+  g_test_add_func ("/ncm/spectral/batch/ends_on_failure", &test_ncm_spectral_batch_ends_on_failure);
+  g_test_add_func ("/ncm/spectral/batch/no_prediction_below_four", &test_ncm_spectral_batch_no_prediction_below_four);
   g_test_add_func ("/ncm/spectral/batch/fatal", &test_ncm_spectral_batch_fatal);
   g_test_add_func ("/ncm/spectral/batch/fatal/subprocess", &test_ncm_spectral_batch_fatal_subprocess);
   g_test_add_func ("/ncm/spectral/free_buffers", &test_ncm_spectral_free_buffers);

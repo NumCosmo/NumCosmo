@@ -125,12 +125,12 @@ against a converged independent quadrature:
 | $10^{-8}$                     | $0.001\%$ | $-0.003\%$ |  $0.02\%$ | $-0.06\%$ |
 
 The residual at $10^{-8}$ is consistent with the reference's own convergence
-rather than with a NumCosmo error. It is not the default because the adaptive
-cubature can run out of Clenshaw--Curtis levels at that setting on masked runs and
-abort, which is fatal inside a Monte Carlo chain. For the same reason the default
-quadrature is `NC_XCOR_METHOD_KERNEL_EXACT`, an exact Gauss--Legendre rule on the
-union of the pair's spline knots: it targets no tolerance, so it cannot fail to
-reach one.
+rather than with a NumCosmo error. It is not the default because
+[[numcosmo|NcXcorSSCSij]] rebuilds $S_{ij}$ at every likelihood step, where a tighter
+floor costs rebuild time for accuracy no forecast can use, and below $10^{-6}$ the floor
+is past what the outer integral carries (`nc_xcor_kernel_set_peak_epsilon` warns there).
+The quadrature is `NC_XCOR_METHOD_KERNEL_EXACT`, which integrates the closures exactly on
+the union of their breakpoints: it targets no tolerance, so it cannot fail to reach one.
 
 ## Varying $S_{ij}$ along a chain
 

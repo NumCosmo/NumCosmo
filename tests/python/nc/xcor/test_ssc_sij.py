@@ -66,16 +66,11 @@ def _matrix_to_np(matrix: Ncm.Matrix) -> np.ndarray:
     )
 
 
-def _make_ssc_sij(cosmology: Cosmology, method=None) -> Nc.XcorSSCSij:
+def _make_ssc_sij(cosmology: Cosmology) -> Nc.XcorSSCSij:
     """Build a calculator over Z_EDGES for the test cosmology."""
-    ssc_sij = Nc.XcorSSCSij.new(
+    return Nc.XcorSSCSij.new(
         cosmology.dist, cosmology.ps_ml, Ncm.Vector.new_array(Z_EDGES.tolist())
     )
-
-    if method is not None:
-        ssc_sij.set_method(method)
-
-    return ssc_sij
 
 
 def _make_reference(cosmology: Cosmology) -> SijCalculator:
@@ -143,26 +138,6 @@ def test_fullsky_matches_python_reference(cosmology: Cosmology) -> None:
     expected = _make_reference(cosmology).fullsky(cosmology.cosmo)
 
     assert_allclose(got, expected, rtol=1.0e-12)
-
-
-def test_fullsky_cubature_matches_python_reference(cosmology: Cosmology) -> None:
-    """The adaptive quadrature agrees with the fixed Python reference.
-
-    KERNEL_EXACT is the default because it cannot fail to converge, so the
-    adaptive KERNEL_CUBATURE result must reproduce it rather than merely be close.
-
-    The comparison is against the peak of the matrix, not element-wise: the
-    off-diagonals are four orders of magnitude below the diagonal, so their own
-    relative error is set by how the two quadratures resolve a near total
-    cancellation, and is not the quantity that matters for the covariance.
-    """
-    ssc_sij = _make_ssc_sij(cosmology, Nc.XcorMethod.KERNEL_CUBATURE)
-
-    got = _matrix_to_np(ssc_sij.eval(cosmology.cosmo))
-    expected = _make_reference(cosmology).fullsky(cosmology.cosmo)
-    peak = np.abs(expected).max()
-
-    assert_allclose(got, expected, rtol=1.0e-5, atol=1.0e-7 * peak)
 
 
 def test_sij_is_symmetric(cosmology: Cosmology) -> None:
