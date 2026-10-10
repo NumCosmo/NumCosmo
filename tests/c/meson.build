@@ -131,6 +131,10 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_spectral.c'],
     },
     {
+        'name': 'ncm_spectral_panels',
+        'sources': ['ncm/algebra/test_ncm_spectral_panels.c'],
+    },
+    {
         'name': 'ncm_nnls',
         'sources': ['ncm/algebra/test_ncm_nnls.c'],
     },

@@ -10817,6 +10817,63 @@ class SpectralClass(GObject.GPointer):
 
     parent_class: GObject.ObjectClass = ...
 
+class SpectralPanels(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanels(**properties)
+        new(fdim:int) -> NumCosmoMath.SpectralPanels
+
+    Object NcmSpectralPanels
+
+    Properties from NcmSpectralPanels:
+      fdim -> guint: fdim
+        Dimension of the values
+      panels -> GVariant: panels
+        Panel edges and coefficients
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        fdim: int
+        panels: GLib.Variant
+
+    props: Props = ...
+    def __init__(self, fdim: int = ..., panels: GLib.Variant = ...) -> None: ...
+    def append(self, a: float, b: float, coeffs: Matrix) -> None: ...
+    @staticmethod
+    def clear(sp: SpectralPanels) -> None: ...
+    def eval(self, x: float, fval: Vector) -> None: ...
+    def eval_row(self, r: int, x: float) -> float: ...
+    def find_panel(self, x: float) -> int: ...
+    def free(self) -> None: ...
+    def get_fdim(self) -> int: ...
+    def get_n_panels(self) -> int: ...
+    def get_panel(self, i: int) -> typing.Tuple[Matrix, float, float]: ...
+    def get_range(self) -> typing.Tuple[float, float]: ...
+    @classmethod
+    def new(cls, fdim: int) -> SpectralPanels: ...
+    def ref(self) -> SpectralPanels: ...
+    def reset(self) -> None: ...
+    def restrict(
+        self, spectral: Spectral, a: float, b: float
+    ) -> typing.Tuple[bool, Matrix]: ...
+
+class SpectralPanelsClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
 class SphereMap(GObject.Object):
     r"""
     :Constructors:

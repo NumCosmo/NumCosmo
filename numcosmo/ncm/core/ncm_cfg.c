@@ -101,6 +101,7 @@
 #include "ncm/specfunc/ncm_sbessel_ode_solver.h"
 #include "ncm/fftlog/ncm_fftlog_sbessel_j.h"
 #include "ncm/algebra/ncm_spectral.h"
+#include "ncm/algebra/ncm_spectral_panels.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/bbn/nc_bbn.h"
 #include "nc/bbn/nc_bbn_parametrized.h"
@@ -807,6 +808,7 @@ ncm_cfg_register_objects (void)
 
   ncm_cfg_register_obj (NCM_TYPE_PLN1D);
   ncm_cfg_register_obj (NCM_TYPE_SPECTRAL);
+  ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_PANELS);
 
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_GL);
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN);

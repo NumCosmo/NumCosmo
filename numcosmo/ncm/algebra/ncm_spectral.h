@@ -86,6 +86,7 @@ void ncm_spectral_gegenbauer_alpha2_mul_affine (GArray *g, gdouble alpha, gdoubl
 
 gdouble ncm_spectral_chebyshev_rebase (NcmSpectral *spectral, GArray *c, guint len, gdouble a_in, gdouble b_in, gdouble a_out, gdouble b_out, GArray **rebased);
 gdouble ncm_spectral_chebyshev_rebase_rows (NcmSpectral *spectral, NcmMatrix *c, gdouble a_in, gdouble b_in, gdouble a_out, gdouble b_out, NcmMatrix *rebased);
+gdouble ncm_spectral_chebyshev_rebase_rows_data (NcmSpectral *spectral, const gdouble *c, guint n_rows, guint n, guint tda, gdouble a_in, gdouble b_in, gdouble a_out, gdouble b_out, NcmMatrix *rebased);
 
 gdouble ncm_spectral_gegenbauer_alpha1_eval (GArray *g, gdouble s);
 gdouble ncm_spectral_gegenbauer_alpha1_eval_x (GArray *g, gdouble a, gdouble b, gdouble x);

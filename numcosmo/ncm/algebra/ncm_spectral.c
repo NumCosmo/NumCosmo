@@ -1607,14 +1607,42 @@ ncm_spectral_chebyshev_rebase_rows (NcmSpectral *spectral, NcmMatrix *c,
                                     gdouble a_out, gdouble b_out,
                                     NcmMatrix *rebased)
 {
-  const guint n_rows            = ncm_matrix_nrows (c);
-  const guint n                 = ncm_matrix_ncols (c);
-  const guint tda_in            = ncm_matrix_tda (c);
+  return ncm_spectral_chebyshev_rebase_rows_data (spectral, ncm_matrix_data (c),
+                                                  ncm_matrix_nrows (c), ncm_matrix_ncols (c), ncm_matrix_tda (c),
+                                                  a_in, b_in, a_out, b_out, rebased);
+}
+
+/**
+ * ncm_spectral_chebyshev_rebase_rows_data: (skip)
+ * @spectral: a #NcmSpectral
+ * @c: Chebyshev coefficients on [@a_in, @b_in], one series per row
+ * @n_rows: number of rows of @c
+ * @n: number of coefficients in each row of @c
+ * @tda: distance between the starts of consecutive rows of @c
+ * @a_in: left endpoint of the interval of @c
+ * @b_in: right endpoint of the interval of @c
+ * @a_out: left endpoint of the target interval
+ * @b_out: right endpoint of the target interval
+ * @rebased: output of @n_rows by @n, the coefficients on [@a_out, @b_out]
+ *
+ * As ncm_spectral_chebyshev_rebase_rows(), for coefficients stored in a buffer.
+ *
+ * Returns: the largest $\sum_j |c_\mathrm{out}^j|$ over the rows, or infinity
+ *   if a coefficient is not finite.
+ */
+gdouble
+ncm_spectral_chebyshev_rebase_rows_data (NcmSpectral *spectral, const gdouble *c,
+                                         guint n_rows, guint n, guint tda,
+                                         gdouble a_in, gdouble b_in,
+                                         gdouble a_out, gdouble b_out,
+                                         NcmMatrix *rebased)
+{
+  const guint tda_in            = tda;
   const guint tda_out           = ncm_matrix_tda (rebased);
   const gdouble alpha           = (b_out - a_out) / (b_in - a_in);
   const gdouble beta            = (b_out + a_out - b_in - a_in) / (b_in - a_in);
   const gdouble two_beta        = 2.0 * beta;
-  const gdouble * restrict c_in = ncm_matrix_data (c);
+  const gdouble * restrict c_in = c;
   gdouble * restrict c_out      = ncm_matrix_data (rebased);
   gdouble *previous, *current, *next, *next2;
   gdouble norm_max = 0.0;
