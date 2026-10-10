@@ -610,6 +610,30 @@ test_ncm_spectral_batch_cap (void)
   ncm_spectral_free (spectral);
 }
 
+/* Below four intervals the coefficients have no two bands to extrapolate from, so the
+ * last doubling the cap allows is always tried: every node of the next level is
+ * evaluated, even though it cannot converge at these tolerances. */
+static void
+test_ncm_spectral_batch_no_prediction_below_four (void)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  NcmMatrix *coeffs     = NULL;
+  guint level_min;
+
+  for (level_min = 0; level_min <= 1; level_min++)
+  {
+    Counted calls = {0};
+    guint k;
+
+    k = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch3, 3, -1.0, 2.0, level_min, level_min + 1, 1.0e-10, 0.0, FALSE, &coeffs, &calls);
+
+    g_assert_cmpuint (k, ==, 0);
+    g_assert_cmpuint (calls.calls, ==, (1u << (level_min + 1)) + 1u);
+  }
+
+  ncm_spectral_free (spectral);
+}
+
 static void
 test_ncm_spectral_batch_fatal (void)
 {
@@ -1073,6 +1097,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral/batch", &test_ncm_spectral_batch);
   g_test_add_func ("/ncm/spectral/batch/small_component", &test_ncm_spectral_batch_small_component);
   g_test_add_func ("/ncm/spectral/batch/cap", &test_ncm_spectral_batch_cap);
+  g_test_add_func ("/ncm/spectral/batch/no_prediction_below_four", &test_ncm_spectral_batch_no_prediction_below_four);
   g_test_add_func ("/ncm/spectral/batch/fatal", &test_ncm_spectral_batch_fatal);
   g_test_add_func ("/ncm/spectral/batch/fatal/subprocess", &test_ncm_spectral_batch_fatal_subprocess);
   g_test_add_func ("/ncm/spectral/free_buffers", &test_ncm_spectral_free_buffers);

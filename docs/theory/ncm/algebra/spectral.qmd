@@ -69,25 +69,39 @@ evaluated, halving the number of function calls per level.
 
 Starting from a minimum level $r_\mathrm{min}$ (`level_min`), the level is raised one step
 at a time until the coefficients $c^k_{(r)}$ at level $r$ agree with the coefficients
-$c^k_{(r-1)}$ at level $r-1$,
+$c^k_{(r-1)}$ at level $r-1$ in the $\ell_1$ norm, the new top coefficients included,
 $$
-\sum_{k \le 2^{r-1}} \left(c^k_{(r)} - c^k_{(r-1)}\right)^2
-\;<\;
-\max\!\left(
-\varepsilon_\mathrm{rel}^2 \sum_{k \le 2^{r-1}} \left(c^k_{(r)}\right)^2,\;\;
-\varepsilon_\mathrm{abs}^2
-\right).
+\sum_{k \le 2^{r-1}} \left|c^k_{(r)} - c^k_{(r-1)}\right|
++ \sum_{2^{r-1} < k \le 2^r} \left|c^k_{(r)}\right|
+\;\le\;
+\max\!\left(\varepsilon_\mathrm{rel} V_r,\; \varepsilon_\mathrm{abs}\right),
+\qquad
+V_r = \max_j \left|f(x_j)\right|,
 \tag{2}
 $$
-The sums run over the coarser level's $2^{r-1} + 1$ coefficients, the ones both expansions
-carry. The entry point is [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive]],
-which returns the final level $r$.
+with $V_r$ the largest $|f|$ on the level-$r$ nodes. Since $|T_k| \le 1$ on $[-1, 1]$, the
+left-hand side bounds the largest change of the interpolant on $[a, b]$, so
+$\varepsilon_\mathrm{rel}$ is a relative tolerance on that change in the sup norm, and
+its scale $V_r$ is a property of the approximation alone, not of what it is used for. The
+level-$r$ expansion is the one returned: its nodes are already evaluated. The entry point
+is [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive]], which returns the
+final level $r$.
 
-$\varepsilon_\mathrm{abs}$ is measured in the units of the coefficients themselves and
-is zero unless asked for, which leaves the relative test alone. It is for a caller that
-knows $f$ to be negligible on $[a,b]$ against some larger quantity $f$ contributes to:
-refining a term that cannot affect the result to full relative accuracy is pure cost,
-and for a sharply varying $f$ it can exhaust `max-level`.
+Because the grids are nested, the level-$(r-1)$ interpolant is the level-$r$ one folded:
+$T_{2^r - k}$ and $T_k$ agree on the coarse nodes, so
+$c^k_{(r-1)} = c^k_{(r)} + c^{2^r - k}_{(r)}$ for $k < 2^{r-1}$. The left-hand side of Eq. (2)
+is therefore exactly twice the $\ell_1$ mass of the level-$r$ coefficients above
+$2^{r-1}$,
+$$
+2 \sum_{2^{r-1} < k \le 2^r} \left|c^k_{(r)}\right|.
+\tag{3}
+$$
+
+$\varepsilon_\mathrm{abs}$ is measured in the units of $f$ and is zero unless asked for,
+which leaves the relative test alone. It is for a caller that knows $f$ to be negligible
+on $[a,b]$ against some larger quantity $f$ contributes to: refining a term that cannot
+affect the result to full relative accuracy is pure cost, and for a sharply varying $f$
+it can exhaust `max-level`.
 
 ### When the tolerance is not met
 
@@ -126,6 +140,16 @@ is also what leaves the resulting coefficients directly combinable, which is the
 when the components are to be summed or multiplied afterwards.
 [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap]] exposes a
 cap and a fatal flag, for the same reasons as the scalar variants above.
+
+Without the fatal flag, the last doubling the cap allows is skipped when it is predicted
+to fail, since its caller would then split the interval anyway. By Eq. (3) the test of
+that doubling is twice the $\ell_1$ mass of the next level's top band. With $M = 2^r$, let
+$B_{r-1}$ and $B_r$ be the masses of the current coefficients over $(M/4, M/2]$ and
+$(M/2, M]$. Geometric decay $|c^k| \propto \rho^k$, with $q = \rho^{M/4}$, gives
+$B_r / B_{r-1} = q (1 + q)$ and a next band of $B_r q^2 (1 + q^2)$. Failure is predicted
+when twice that exceeds the right-hand side of Eq. (2) on the current nodes. The model
+has no tuned constant, and a wrong prediction costs a doubling or a split, never
+accuracy, since every interval kept still passes Eq. (2).
 
 The batch path keeps its own node and transform buffers on the
 [[numcosmo-math|NcmSpectral]] instance and is therefore not reentrant: a fit performed
