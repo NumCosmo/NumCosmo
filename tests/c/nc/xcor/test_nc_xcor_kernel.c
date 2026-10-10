@@ -40,6 +40,7 @@
 #include <math.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <gsl/gsl_integration.h>
 
 #define TEST_DNDZ_MEAN 0.6
 #define TEST_DNDZ_SIGMA 0.15
@@ -674,6 +675,47 @@ test_nc_xcor_kernel_gal_bias (void)
   nc_hicosmo_free (cosmo);
 }
 
+/* The cluster top-hat's radial window is normalized in comoving volume alone: its
+ * Limber-z window chi_t^2 integrated over dchi = dz / E(z), times the prefactor
+ * 1 / (V_upper - V_lower), is one, so that C_0 / 4 pi is the bin's super-sample
+ * covariance. An extra 1 / (z_upper - z_lower) would rescale every C_l. GL(32) is exact
+ * here to rounding, the integrand being smooth inside the bin. */
+static void
+test_nc_xcor_kernel_cluster_tophat_volume_normalized (void)
+{
+  const gdouble z_lower = 0.1;
+  const gdouble z_upper = 0.2;
+  NcHICosmo *cosmo      = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist      = nc_distance_new (TEST_ZMAX);
+  NcmPowspec *ps        = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                                 NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  NcXcorKernel *xclk                = NC_XCOR_KERNEL (nc_xcor_kernel_cluster_tophat_new (dist, ps, z_lower, z_upper));
+  gsl_integration_glfixed_table *gl = gsl_integration_glfixed_table_alloc (32);
+  NcXcorKinetic xck                 = {0.0, 0.0, 0.0};
+  gdouble integral                  = 0.0;
+  guint i;
+
+  nc_distance_prepare (dist, cosmo);
+  ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
+  nc_xcor_kernel_prepare (xclk, cosmo);
+
+  for (i = 0; i < gl->n; i++)
+  {
+    gdouble z, w;
+
+    gsl_integration_glfixed_point (z_lower, z_upper, i, &z, &w, gl);
+    integral += w * nc_xcor_kernel_eval_limber_z (xclk, cosmo, z, &xck, 0) / nc_hicosmo_E (cosmo, z);
+  }
+
+  ncm_assert_cmpdouble_e (integral * nc_xcor_kernel_eval_limber_z_prefactor (xclk, cosmo, 0), ==, 1.0, 1.0e-10, 0.0);
+
+  gsl_integration_glfixed_table_free (gl);
+  nc_xcor_kernel_free (xclk);
+  ncm_powspec_free (ps);
+  nc_distance_free (dist);
+  nc_hicosmo_free (cosmo);
+}
+
 /* nc_xcor_kernel_table_new() takes the density kind, cubic order and normalization as
  * given; _new_full() is where a caller chooses them, and the shear kind is a different
  * radial factor rather than a different scaling. */
@@ -833,6 +875,7 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/nc/xcor/kernel/integrator", &test_nc_xcor_kernel_integrator);
   g_test_add_func ("/nc/xcor/kernel/gal/bias", &test_nc_xcor_kernel_gal_bias);
+  g_test_add_func ("/nc/xcor/kernel/cluster_tophat/volume_normalized", &test_nc_xcor_kernel_cluster_tophat_volume_normalized);
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/subprocess", &test_nc_xcor_kernel_gal_rsd_limber_z_st);
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/trap", &test_nc_xcor_kernel_gal_rsd_limber_z_trap);
   g_test_add_func ("/nc/xcor/kernel/table/new_full", &test_nc_xcor_kernel_table_full);
