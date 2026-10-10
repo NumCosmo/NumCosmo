@@ -627,6 +627,59 @@ test_ncm_spectral_batch_fatal_subprocess (void)
   ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (spectral, _batch_hard, 2, -1.0, 1.0, 2, 1.0e-12, 0.0, &coeffs, NULL);
 }
 
+/* Every expansion path gives the same coefficients after the buffers, plans and node
+ * tables are released and recreated. */
+static void
+test_ncm_spectral_free_buffers (void)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  GArray *fixed_a       = NULL;
+  GArray *fixed_b       = NULL;
+  GArray *adapt_a       = NULL;
+  GArray *adapt_b       = NULL;
+  NcmMatrix *batch_a    = NULL;
+  NcmMatrix *batch_b    = NULL;
+  Counted counted_a     = {0};
+  Counted counted_b     = {0};
+  guint k_a, k_b, i, c;
+
+  ncm_spectral_compute_chebyshev_coeffs (spectral, _exp, 0.5, 2.0, 24, &fixed_a, NULL);
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, _exp, -1.0, 1.0, 2, 1.0e-12, &adapt_a, NULL);
+  k_a = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (spectral, _batch3, 3, -1.0, 2.0, 3, 1.0e-12, 0.0, &batch_a, &counted_a);
+
+  ncm_spectral_free_buffers (spectral);
+
+  ncm_spectral_compute_chebyshev_coeffs (spectral, _exp, 0.5, 2.0, 24, &fixed_b, NULL);
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, _exp, -1.0, 1.0, 2, 1.0e-12, &adapt_b, NULL);
+  k_b = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (spectral, _batch3, 3, -1.0, 2.0, 3, 1.0e-12, 0.0, &batch_b, &counted_b);
+
+  g_assert_cmpuint (fixed_a->len, ==, fixed_b->len);
+  g_assert_cmpuint (adapt_a->len, ==, adapt_b->len);
+  g_assert_cmpuint (k_a, ==, k_b);
+
+  for (i = 0; i < fixed_a->len; i++)
+    g_assert_cmpfloat (g_array_index (fixed_a, gdouble, i), ==, g_array_index (fixed_b, gdouble, i));
+
+  for (i = 0; i < adapt_a->len; i++)
+    g_assert_cmpfloat (g_array_index (adapt_a, gdouble, i), ==, g_array_index (adapt_b, gdouble, i));
+
+  for (c = 0; c < 3; c++)
+    for (i = 0; i < ncm_matrix_ncols (batch_a); i++)
+      g_assert_cmpfloat (ncm_matrix_get (batch_a, c, i), ==, ncm_matrix_get (batch_b, c, i));
+
+  /* Releasing twice, and releasing an instance that never expanded, is allowed */
+  ncm_spectral_free_buffers (spectral);
+  ncm_spectral_free_buffers (spectral);
+
+  g_array_unref (fixed_a);
+  g_array_unref (fixed_b);
+  g_array_unref (adapt_a);
+  g_array_unref (adapt_b);
+  ncm_matrix_free (batch_a);
+  ncm_matrix_free (batch_b);
+  ncm_spectral_free (spectral);
+}
+
 static void
 test_ncm_spectral_eval_deriv (void)
 {
@@ -933,6 +986,42 @@ test_ncm_spectral_rebase (void)
     g_assert_cmpfloat (ncm_spectral_chebyshev_rebase (spectral, c, 0, -1.0, 3.0, -1.0, 30.0, &r), >, 100.0 * norm_in);
   }
 
+  /* The rows variant equals the scalar rebase on every row */
+  {
+    const guint n_rows = 4;
+    const guint ncol   = c->len;
+    NcmMatrix *cm      = ncm_matrix_new (n_rows, ncol);
+    NcmMatrix *rm      = ncm_matrix_new (n_rows, ncol);
+    gdouble norm_rows, norm_max = 0.0;
+    guint row;
+
+    for (row = 0; row < n_rows; row++)
+      for (i = 0; i < ncol; i++)
+        ncm_matrix_set (cm, row, i, g_array_index (c, gdouble, i) * (row + 1.0) * ((i % 3 == row % 3) ? -1.0 : 1.0));
+
+    norm_rows = ncm_spectral_chebyshev_rebase_rows (spectral, cm, -1.0, 3.0, 0.5, 5.0, rm);
+
+    for (row = 0; row < n_rows; row++)
+    {
+      GArray *crow = _array_new (ncol);
+
+      for (i = 0; i < ncol; i++)
+        g_array_index (crow, gdouble, i) = ncm_matrix_get (cm, row, i);
+
+      norm_max = MAX (norm_max, ncm_spectral_chebyshev_rebase (spectral, crow, 0, -1.0, 3.0, 0.5, 5.0, &r));
+
+      for (i = 0; i < ncol; i++)
+        g_assert_cmpfloat (ncm_matrix_get (rm, row, i), ==, g_array_index (r, gdouble, i));
+
+      g_array_unref (crow);
+    }
+
+    g_assert_cmpfloat (norm_rows, ==, norm_max);
+
+    ncm_matrix_free (cm);
+    ncm_matrix_free (rm);
+  }
+
   /* len keeps the leading coefficients */
   c5 = _array_new (5);
   memcpy (c5->data, c->data, 5 * sizeof (gdouble));
@@ -986,6 +1075,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral/batch/cap", &test_ncm_spectral_batch_cap);
   g_test_add_func ("/ncm/spectral/batch/fatal", &test_ncm_spectral_batch_fatal);
   g_test_add_func ("/ncm/spectral/batch/fatal/subprocess", &test_ncm_spectral_batch_fatal_subprocess);
+  g_test_add_func ("/ncm/spectral/free_buffers", &test_ncm_spectral_free_buffers);
   g_test_add_func ("/ncm/spectral/eval_deriv", &test_ncm_spectral_eval_deriv);
   g_test_add_func ("/ncm/spectral/integrate", &test_ncm_spectral_integrate);
   g_test_add_func ("/ncm/spectral/gegenbauer/eval", &test_ncm_spectral_gegenbauer_eval);

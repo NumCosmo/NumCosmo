@@ -604,8 +604,8 @@ _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xc
  *
  * The per-cell $\delta W^i$ is the residual the fit achieved, recorded per
  * interval on which the closure is a single polynomial -- a knot interval, or
- * a Chebyshev panel -- while #NcXcorKernel:track-fit-residual is on, which is
- * the default; see nc_xcor_kernel_integrand_peek_residuals(). With tracking
+ * a Chebyshev panel -- while #NcXcorKernel:track-closure-error is on, which is
+ * the default; see nc_xcor_kernel_integrand_peek_closure_error(). With tracking
  * off, or on an interval whose refinement was never accepted, $\delta W^i$
  * falls back to the criterion the fit was asked for,
  * $\delta W^i \le \epsilon_i \vert W^i \vert + a_i W^i_\mathrm{max}$, and the

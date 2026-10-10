@@ -277,10 +277,15 @@ test_nc_xcor_kernel_integrand_panels (TestNcXcorKernelIntegrand *test, gconstpoi
   g_assert_true (n_panels > 0 || has_spectral || knots != NULL);
 
   /* The panels tile the range in order and without gaps: the block integrators walk them
-   * assuming exactly that, and a gap is silently lost integrand. */
+   * assuming exactly that, and a gap is silently lost integrand. The panels are in the
+   * closure's variable x = k / scale, so the range is converted with the scale of the
+   * first and the last multipole. */
   if (n_panels > 0)
   {
-    gdouble prev_b = k_min;
+    const guint len = nc_xcor_kernel_integrand_get_len (integ);
+    gdouble prev_b  = k_min / nc_xcor_kernel_integrand_get_scale (integ, 0);
+
+    k_max /= nc_xcor_kernel_integrand_get_scale (integ, len - 1);
 
     for (i = 0; i < n_panels; i++)
     {
@@ -358,8 +363,8 @@ test_nc_xcor_kernel_integrand_tolerances (TestNcXcorKernelIntegrand *test, gcons
   ncm_assert_cmpdouble_e (nc_xcor_kernel_integrand_get_peak_epsilon (integ), ==, 1.0e-5, 1.0e-15, 0.0);
 
   ncm_matrix_set_all (residuals, 1.0e-9);
-  nc_xcor_kernel_integrand_set_residuals (integ, residuals);
-  g_assert_true (nc_xcor_kernel_integrand_peek_residuals (integ) == residuals);
+  nc_xcor_kernel_integrand_set_closure_error (integ, residuals);
+  g_assert_true (nc_xcor_kernel_integrand_peek_closure_error (integ) == residuals);
 
   nc_xcor_kernel_integrand_clear (&ref);
   g_assert_true (ref == NULL);
@@ -453,3 +458,4 @@ main (gint argc, gchar *argv[])
 
   g_test_run ();
 }
+

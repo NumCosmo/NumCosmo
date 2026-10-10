@@ -275,6 +275,9 @@ def test_xcor_kernel_methods(
                 cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE
             )
             xcor_kc.props.ell_batch_size = ell_batch_size
+            # At the integrator's floor, so that the comparison with the exact
+            # integration below measures the closures and not the cubature.
+            xcor_kc.set_reltol(1.0e-8)
             xcor_kc.prepare(cosmology.cosmo)
             xcor_kc.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_cub)
 
