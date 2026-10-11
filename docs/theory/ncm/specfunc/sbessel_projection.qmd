@@ -343,11 +343,14 @@ $x\,F(x)$ on the
 panel, computed adaptively: the function is sampled at Chebyshev--Lobatto nodes
 $t_j = \cos(j\pi/2^k)$, whose grids nest so that going from level $k$ to $k+1$
 evaluates only the new odd nodes, and the level is doubled until the
-coefficients shared by two successive levels agree,
+coefficients of two successive levels agree in the $\ell^1$ norm, the new top
+coefficients included,
 $$
-\|c^{(2N)}_{0:N} - c^{(N)}\|_2^2 < \max\!\big(\epsilon_F^2\,\|c^{(2N)}\|_2^2,\; \epsilon_{\rm abs}^2\big).
+\sum_{n \le N} \big|c^{(2N)}_n - c^{(N)}_n\big| + \sum_{N < n \le 2N} \big|c^{(2N)}_n\big|
+\le \max\!\big(\epsilon_F\, V,\; \epsilon_{\rm abs}\big),
 \tag{8}
 $$
+with $V$ the largest absolute value of $x\,F(x)$ on the finer nodes.
 The transform is a type-I DCT and the details are on the
 [Spectral Methods](../algebra/spectral.qmd) page. The default $\epsilon_F = 10^{-8}$ is the
 looser of the two solver tolerances and therefore the one that bounds the

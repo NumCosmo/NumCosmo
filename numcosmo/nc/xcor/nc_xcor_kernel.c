@@ -436,9 +436,11 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    *
    * Relative tolerance of the closure of $W_\ell(k)$. The absolute tolerance $a$ is
    * #NcXcorKernel:peak-epsilon times the smallest of the block's peaks. A panel is
-   * accepted when, for every multipole, the coefficient vectors $c_N$ and $c_{2N}$ at
-   * consecutive orders satisfy $\Vert c_{2N} - c_N \Vert_2 < \max (\mathrm{reltol}\,
-   * \Vert c_{2N} \Vert_2, a)$.
+   * accepted when, for every multipole, the $\ell^1$ change of its Chebyshev coefficients
+   * between two consecutive levels, the new top coefficients included, is at most
+   * $\max (\mathrm{reltol}\, V, a)$, with $V$ the largest $|W_\ell|$ on the finer level's
+   * nodes. Since $|T_n| \le 1$, the change bounds the difference between the two levels'
+   * interpolants at every point.
    *
    * Each computed value of $W_\ell(k)$ carries the relative error of the integrator,
    * and a closure is not more accurate than the values it interpolates. The
