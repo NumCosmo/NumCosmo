@@ -37,7 +37,6 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/ncm/spline/ncm_spline_vec.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_integrator.h>
 #include <numcosmo/ncm/algebra/ncm_spectral.h>
 #include <numcosmo/ncm/algebra/ncm_spectral_panels.h>
@@ -63,34 +62,16 @@ typedef struct _NcXcorKernelPrivate
   gdouble reltol;
   gdouble peak_epsilon;
   guint max_border_expansions;
-  guint max_iter;
   gdouble expansion_factor;
   NcmSpectralPanelsBuilder *builder; /* the panels of the Chebyshev closures */
-  gboolean track_closure_error;
-  gboolean tolerance_balance_warned;
   gboolean constructed;
   NcmModelCtrl *cosmo_ctrl;
   guint64 prepared_pkey;
   gboolean outdated;
 } NcXcorKernelPrivate;
 
-/* Spline closure of one ell block, built by both the Limber and the non-Limber paths. */
-typedef struct _SplineIntegrandData
-{
-  NcHICosmo *cosmo;
-  gdouble RH_Mpc;
-  gint lmin;
-  guint len;
-  NcmSplineVec *spline_vec;
-  NcmVector *eval_result;
-  gdouble k_min;
-  gdouble k_max;
-  gdouble *k_min_comp;
-  gdouble *k_max_comp;
-} SplineIntegrandData;
-
 /* Chebyshev closure of one ell block: contiguous panels of coefficients over the
- * domain [k_min, k_max], with the per-component ranges of SplineIntegrandData. */
+ * domain [k_min, k_max], with the range of each component. */
 typedef struct _ChebIntegrandData
 {
   NcHICosmo *cosmo;
@@ -128,8 +109,6 @@ typedef struct _ComponentState
   gdouble k_max_hard;
   gdouble last_k_left;
   gdouble last_k_right;
-  gdouble last_values_left[MAX_ELL_BLOCK];
-  gdouble last_values_right[MAX_ELL_BLOCK];
   guint left_boundary_found;
   guint right_boundary_found;
   guint group;                             /* Components truncated together, see _component_states_init_non_limber */
@@ -155,30 +134,26 @@ typedef struct _ComponentStates
   const gboolean in_u;      /* the sampled variable is u = k / nu: k_min_hard, k_max_hard,
                              * the band arrays and every sample are in u */
 
-  /* Chebyshev path only. While a panel is being expanded a component is on or
-   * off for the whole panel, decided at panel_mid against its boundaries. */
+  /* While a panel is being expanded a component is on or off for the whole
+   * panel, decided at panel_mid against its boundaries. */
   gboolean panel_mode;
   gdouble panel_mid;
 
-  /* Limber in u only: the block's wave numbers and wave number factors at one node */
+  /* Limber only: the block's wave numbers and wave number factors at one node */
   NcmVector *k_vec;
   NcmVector *kf_vec;
 } ComponentStates;
-
-#define DECAY_RATE 1.0e10
 
 NcXcorKernelPrivate *_nc_xcor_kernel_get_private (NcXcorKernel *xclk);
 
 NcmSpectral **_nc_xcor_kernel_spectral_get (void);
 NcXcorKernelIntegrand *_nc_xcor_kernel_cheb_integrand_new (guint n_l, ChebIntegrandData *cid);
-NcXcorKernelIntegrand *_nc_xcor_kernel_spline_integrand_new (guint n_l, SplineIntegrandData *sid);
 
 void _nc_xcor_kernel_component_state_init (ComponentState *state, NcXcorKernelComponent *comp, guint comp_idx, NcHICosmo *cosmo, guint n_l);
 void _nc_xcor_kernel_component_states_clear (ComponentStates *comp_states);
 GPtrArray *_nc_xcor_kernel_validate_component_list (NcXcorKernel *xclk, guint n_l);
 void _nc_xcor_kernel_check_integrator_tolerance (NcXcorKernel *xclk, NcmSBesselIntegrator *sbi);
 NcXcorKernelIntegrand *_nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, ComponentStates *comp_states, void (*expand_func) (const gdouble, NcmVector *, gpointer), void (*compute_func) (const gdouble, NcmVector *, gpointer), gdouble reltol, gdouble peak_epsilon);
-NcXcorKernelIntegrand *_nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, ComponentStates *comp_states, void (*expand_func) (const gdouble, NcmVector *, gpointer), void (*compute_func) (const gdouble, NcmVector *, gpointer), gdouble reltol, gdouble peak_epsilon);
 
 NcXcorKernelIntegrand *_nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcXcorKernelClosure closure_type);
 

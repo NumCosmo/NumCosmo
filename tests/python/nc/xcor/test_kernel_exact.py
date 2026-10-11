@@ -22,15 +22,12 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""NC_XCOR_METHOD_KERNEL_EXACT: exact GL(5) on per-pair knot unions.
+"""NC_XCOR_METHOD_KERNEL_EXACT: exact integrals of pairs of Chebyshev closures.
 
 Each kernel is sampled independently -- the closures NcXcorSolver caches --
-so a pair's two splines live on different abscissas. On the common refinement
-of those abscissas each spline is still a single cubic piece per panel, so
-k^2 W_i W_j is degree 8 there and a 5-node Gauss-Legendre rule integrates it
-exactly. Merging two knot sets is all the coupling exactness needs; sampling
-the kernels onto one shared abscissa is not required and costs about twice as
-much to produce.
+so a pair's two closures have different panels. On the common refinement of
+the two sets of edges both are polynomials, so k^2 W_i W_j is integrated
+exactly as a bilinear form in their coefficients.
 """
 
 import numpy as np
@@ -193,13 +190,10 @@ def test_error_estimate_scales_with_the_fit_criterion(
     """Tightening the kernels must reduce the reported error.
 
     This is what makes the estimate a lever rather than a label. The factor by
-    which it falls is the representation's own convergence rate, so the two
-    closures get different bounds. Both halves of the spline's criterion enter
-    its refinement linearly, so a request 100x tighter reduces the estimate by
-    about 100x -- to within a factor of two, the closures being rebuilt on
-    different knots. The Chebyshev closure answers a tighter request with a
-    higher order instead, and converges spectrally in that order, so the same
-    request reduces the estimate by more: 205x here.
+    which it falls is the representation's own convergence rate. The Chebyshev
+    closure answers a tighter request with a higher order, and converges
+    spectrally in that order, so a request 100x tighter reduces the estimate by
+    more than 100x: 205x here.
     """
     cosmo = cosmology.cosmo
     lmin, lmax = 2, 9
@@ -286,63 +280,6 @@ def test_compute_full_without_an_error_vector_matches_compute(
 
     assert_allclose(np.array(with_err.dup_array()), np.array(plain.dup_array()))
     assert_allclose(np.array(discarded.dup_array()), np.array(plain.dup_array()))
-
-
-@pytest.mark.parametrize(
-    "closure_type,min_gap",
-    [
-        (Nc.XcorKernelClosure.CHEBYSHEV, 3.0),
-    ],
-)
-def test_tracking_off_leaves_no_record_and_a_looser_estimate(
-    cosmology: Cosmology, closure_type, min_gap
-) -> None:
-    """Turning the record off falls back to the tolerance-only ceiling.
-
-    The size of the gap between the two is itself a statement about the
-    representation. The spline's bisection overshoots the criterion it stops
-    at, by 12 to 3100x depending on the kernel, so its achieved residual sits
-    far below the tolerance-only ceiling. A Chebyshev panel is accepted as soon
-    as doubling its order moves it less than the tolerance, so it delivers
-    close to what was asked and no more, and the gap is correspondingly
-    narrower -- 3.4 to 7.1x here against the spline's 5 to 20x. A narrower gap
-    does not mean a worse closure: at the same tolerance the Chebyshev fit is
-    the more accurate of the two.
-    """
-    cosmo = cosmology.cosmo
-    lmin, lmax = 2, 9
-    nell = lmax - lmin + 1
-
-    exact = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-    exact.set_closure_type(closure_type)
-    exact.prepare(cosmo)
-
-    def estimate(track):
-        kernel = _kernels(cosmology)[0]
-        kernel.set_track_closure_error(track)
-        kernel.prepare(cosmo)
-
-        integrand = kernel.get_eval_vectorized_full(
-            cosmo,
-            lmin,
-            lmax,
-            Ncm.SBesselIntegratorLevin.new(0, 8),
-            closure_type,
-        )
-        assert (integrand.peek_closure_error() is not None) == track
-
-        vp, vp_err = Ncm.Vector.new(nell), Ncm.Vector.new(nell)
-        exact.compute_full(kernel, None, cosmo, lmin, lmax, vp, vp_err)
-
-        return np.abs(np.array(vp_err.dup_array()) / np.array(vp.dup_array()))
-
-    assert _kernels(cosmology)[0].get_track_closure_error(), "on by default"
-
-    achieved = estimate(True)
-    ceiling = estimate(False)
-
-    assert np.all(achieved < ceiling)
-    assert np.all(ceiling / achieved > min_gap)
 
 
 def test_achieved_residual_estimate_still_bounds_the_true_error(
@@ -493,11 +430,9 @@ def test_limber_multipoles_take_the_requested_closure(cosmology: Cosmology) -> N
 def test_spectral_path_reports_an_error_estimate(cosmology: Cosmology) -> None:
     """The panel route carries vp_err, and the estimate still covers the truth.
 
-    The estimate is the same object the merged-knot route reports -- the
-    closures' own fit error propagated through the pair's conditioning --
-    because it is a property of the closures rather than of the quadrature
-    above them. So a computation on the default closure reports an error like
-    any other, and that error still bounds the deviation from a tighter run.
+    The estimate is the closures' own fit error propagated through the pair's
+    conditioning, a property of the closures rather than of the quadrature
+    above them, and it bounds the deviation from a tighter run.
     """
     cosmo = cosmology.cosmo
     lmin, lmax = 2, 9

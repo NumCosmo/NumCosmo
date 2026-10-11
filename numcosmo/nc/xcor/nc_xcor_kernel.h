@@ -80,15 +80,10 @@ typedef struct _NcXcorKernelIntegrand NcXcorKernelIntegrand;
 
 /**
  * NcXcorKernelClosure:
- * @NC_XCOR_KERNEL_CLOSURE_SPLINE: cubic spline on an adaptively refined grid
  * @NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV: Chebyshev series on a Chebyshev-Lobatto grid
  *
  * Representation of $W_\ell(k)$ interpolating its computed values. Selected by
  * #NcXcor:closure-type for all kernels in a computation.
- *
- * %NC_XCOR_KERNEL_CLOSURE_SPLINE discovers its grid: it bisects until the interpolation
- * error meets a tolerance, so the knot count grows as $\epsilon^{-1/4}$ and the
- * resulting spacing is uneven.
  *
  * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV prescribes its grid. $W_\ell(k)$ is an
  * integral of a compactly supported window against $j_\ell(k\chi)$, which is
@@ -102,8 +97,7 @@ typedef struct _NcXcorKernelIntegrand NcXcorKernelIntegrand;
  */
 typedef enum _NcXcorKernelClosure /*< prefix=NC_XCOR_KERNEL_CLOSURE >*/
 {
-  NC_XCOR_KERNEL_CLOSURE_SPLINE = 0,
-  NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV,
+  NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV = 1,
 } NcXcorKernelClosure;
 
 /**
@@ -170,41 +164,24 @@ typedef void (*NcXcorKernelIntegrandGetRangeComp) (gpointer data, guint i, gdoub
 typedef void (*NcXcorKernelIntegrandEvalComps) (gpointer data, gdouble k, guint offset, guint len, gdouble *W);
 
 /**
- * NcXcorKernelIntegrandGetKnots:
- * @data: user data
- *
- * Function type for getting the knots the integrand is represented on, when it
- * is spline-backed. See nc_xcor_kernel_integrand_peek_knots().
- *
- * Returns: (transfer none): the knot vector.
- */
-typedef NcmVector *(*NcXcorKernelIntegrandGetKnots) (gpointer data);
-
-/**
  * NcXcorKernelIntegrand:
  * @refcount: atomic reference count
  * @len: number of components in the integrand
  * @eval_func: function to evaluate the integrand at @k, filling @W[@len]
  * @get_range_func: function to get the valid k range for this integrand
- * @get_knots_func: function to get the integrand's knots, or %NULL when it is
- *   not spline-backed
  * @get_range_comp_func: function to get the valid k range of one component, or
  *   %NULL when every component covers the whole range
  * @eval_comps_func: function to evaluate a run of components, or %NULL when
  *   only the whole vector can be evaluated at once
- * @reltol: relative tolerance of the acceptance test the closure was built
- *   with, or 0.0 when it is exact or unknown
- * @peak_epsilon: absolute tolerance of that test, as a fraction of the
- *   closure's own peak, or 0.0 when there was none
- * @data: user data passed to @eval_func, @get_range_func and @get_knots_func
+ * @data: user data passed to @eval_func and @get_range_func
  * @data_free: function to free @data, or %NULL if no cleanup needed
  *
  * A reference-counted closure for computing kernel integrands.
  *
- * **One integrand must be evaluated by one thread at a time.** A spline-backed
- * integrand keeps a scratch vector for the result of each evaluation, so
- * concurrent nc_xcor_kernel_integrand_eval() calls on the *same* integrand
- * would race on it.
+ * **One integrand must be evaluated by one thread at a time.** Its @eval_func
+ * may keep scratch for the result of each evaluation, so concurrent
+ * nc_xcor_kernel_integrand_eval() calls on the *same* integrand could race on
+ * it.
  *
  * #NcXcorSolver satisfies this by construction rather than by convention: an
  * integrand is built for one (kernel, ell-block) pair, and the ell block is
@@ -226,13 +203,9 @@ struct _NcXcorKernelIntegrand
   NcXcorKernelIntegrandGetRange get_range_func;
   gpointer data;
   GDestroyNotify data_free;
-  NcXcorKernelIntegrandGetKnots get_knots_func;
   NcXcorKernelIntegrandGetRangeComp get_range_comp_func;
   NcXcorKernelIntegrandEvalComps eval_comps_func;
   NcXcorKernelIntegrandGetScale get_scale_func;
-  NcmMatrix *closure_error;
-  gdouble reltol;
-  gdouble peak_epsilon;
   NcmSpectralPanels *panels;
 };
 
@@ -318,15 +291,10 @@ void nc_xcor_kernel_set_peak_epsilon (NcXcorKernel *xclk, gdouble peak_epsilon);
 guint nc_xcor_kernel_get_max_border_expansions (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_max_border_expansions (NcXcorKernel *xclk, guint max_border_expansions);
 
-guint nc_xcor_kernel_get_max_iter (NcXcorKernel *xclk);
-void nc_xcor_kernel_set_max_iter (NcXcorKernel *xclk, guint max_iter);
-
 gdouble nc_xcor_kernel_get_expansion_factor (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_expansion_factor (NcXcorKernel *xclk, gdouble expansion_factor);
 NcmSpectralPanelsBuilder *nc_xcor_kernel_peek_panels_builder (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_panels_builder (NcXcorKernel *xclk, NcmSpectralPanelsBuilder *builder);
-gboolean nc_xcor_kernel_get_track_closure_error (NcXcorKernel *xclk);
-void nc_xcor_kernel_set_track_closure_error (NcXcorKernel *xclk, gboolean track_closure_error);
 
 NcDistance *nc_xcor_kernel_peek_dist (NcXcorKernel *xclk);
 NcmPowspec *nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk);
@@ -354,17 +322,10 @@ void nc_xcor_kernel_log_all_models (void);
 GType nc_xcor_kernel_integrand_get_type (void) G_GNUC_CONST;
 
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_new (guint len, NcXcorKernelIntegrandEval eval, NcXcorKernelIntegrandGetRange get_range, gpointer data, GDestroyNotify data_free);
-void nc_xcor_kernel_integrand_set_get_knots (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetKnots get_knots);
 void nc_xcor_kernel_integrand_set_get_range_comp (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetRangeComp get_range_comp);
 void nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandEvalComps eval_comps);
-NcmVector *nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_set_get_scale (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetScale get_scale);
 gdouble nc_xcor_kernel_integrand_get_scale (NcXcorKernelIntegrand *integrand, guint i);
-void nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdouble reltol, gdouble peak_epsilon);
-gdouble nc_xcor_kernel_integrand_get_reltol (NcXcorKernelIntegrand *integrand);
-gdouble nc_xcor_kernel_integrand_get_peak_epsilon (NcXcorKernelIntegrand *integrand);
-void nc_xcor_kernel_integrand_set_closure_error (NcXcorKernelIntegrand *integrand, NcmMatrix *closure_error);
-NcmMatrix *nc_xcor_kernel_integrand_peek_closure_error (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_set_panels (NcXcorKernelIntegrand *integrand, NcmSpectralPanels *sp);
 NcmSpectralPanels *nc_xcor_kernel_integrand_peek_panels (NcXcorKernelIntegrand *integrand);
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_ref (NcXcorKernelIntegrand *integrand);

@@ -92,7 +92,6 @@ test_nc_xcor_kquad_tophat (TestNcXcorKQuadEnv *env, gdouble chi_lower, gdouble c
                                                                                 env->sbi));
 
   nc_xcor_kernel_set_max_border_expansions (xclk, 1);
-  nc_xcor_kernel_set_max_iter (xclk, 4);
   nc_xcor_kernel_set_reltol (xclk, 1.0e-3);
   nc_xcor_kernel_set_peak_epsilon (xclk, 1.0e-4);
   ncm_spectral_panels_builder_set_level_cap (nc_xcor_kernel_peek_panels_builder (xclk), 12);

@@ -30,8 +30,7 @@
 /*
  * Construction of the closures of W_l(k): the component states shared by the
  * Limber and non-Limber paths, the tolerance checks, the seeds of the k domain,
- * the panelling and acceptance of the Chebyshev closure, and the spline and
- * Chebyshev builders.
+ * the panelling and acceptance of the Chebyshev closure, and its builder.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -44,7 +43,6 @@
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_serialize.h"
 #include "ncm/powspec/ncm_powspec.h"
-#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/specfunc/ncm_sbessel_ode_solver.h"
 #include "ncm/specfunc/ncm_sbessel_integrator_levin.h"
 #include "ncm/stats/ncm_function_sample_set.h"
@@ -106,7 +104,7 @@ _nc_xcor_kernel_validate_component_list (NcXcorKernel *xclk, guint n_l)
   }
 
   /* Hard errors rather than g_assert(): both bound writes into fixed-size
-   * stack arrays (ComponentStates::last_values_*, kernel_out[][]), and asserts
+   * stack arrays (ComponentState::k_min_limber_ell, kernel_out[][]), and asserts
    * compile out under -Dnumcosmo_assert=false, which would turn an
    * out-of-range block into a stack overflow instead of a clean abort. */
   if (n_l > MAX_ELL_BLOCK)
@@ -121,43 +119,6 @@ _nc_xcor_kernel_validate_component_list (NcXcorKernel *xclk, guint n_l)
              G_OBJECT_TYPE_NAME (xclk), comp_list->len, MAX_COMP_BLOCK);
 
   return comp_list; /* Caller must unref */
-}
-
-/*
- * The refinement criterion is reltol * ||f||_2 + a * ||f||_2^max, a *sum*, so
- * the larger of the two terms sets what refinement stops at and the smaller one
- * is inert. Setting one far tighter than the other therefore buys nothing while
- * still being paid for in knots, and nothing else reports it.
- *
- * The two terms are not compared directly -- one is scaled to the block's norm
- * and the other to its peak, a factor of order sqrt(n_l) apart -- so the
- * threshold is deliberately loose at two orders, triggering only where the
- * imbalance cannot be anything else. Once per kernel: closures are built per
- * ell block, and the tolerances do not change between them.
- */
-static void
-_nc_xcor_kernel_check_tolerance_balance (NcXcorKernel *xclk)
-{
-  NcXcorKernelPrivate *self = _nc_xcor_kernel_get_private (xclk);
-  const gdouble ratio       = self->reltol / self->peak_epsilon;
-
-  if (self->tolerance_balance_warned)
-    return;
-
-  if ((ratio > 1.0e2) || (ratio < 1.0e-2))
-  {
-    const gboolean reltol_inert = (ratio < 1.0e-2);
-
-    self->tolerance_balance_warned = TRUE;
-
-    g_warning ("_nc_xcor_kernel_check_tolerance_balance: %s has reltol %.3e and "
-               "peak-epsilon %.3e, %.0f orders apart. The refinement criterion adds "
-               "the two, so the looser one decides where refinement stops and %s is "
-               "inert -- tightening it alone cannot improve the result, and it is "
-               "still paid for in spline knots. Move them together.",
-               G_OBJECT_TYPE_NAME (xclk), self->reltol, self->peak_epsilon,
-               fabs (log10 (ratio)), reltol_inert ? "reltol" : "peak-epsilon");
-  }
 }
 
 /*
@@ -399,14 +360,12 @@ _component_states_compute_k_seeds (ComponentStates *comp_states, GArray *k_seeds
 }
 
 /*
- * Builds the closure as a Chebyshev series rather than a refined spline.
+ * Builds the closure as a Chebyshev series.
  *
- * The domain is found exactly as the spline path finds it -- the seeds and
- * ncm_function_sample_set_expand_domain() are shared, since where W is
- * negligible is a property of the kernel and not of the representation. What
- * changes is everything after: instead of bisecting until the acceptance test is
- * met, the whole ell block is expanded on one Chebyshev-Lobatto grid per
- * panel, doubling the order until every multipole's coefficients converge.
+ * The domain is found from the seeds by ncm_function_sample_set_expand_domain(),
+ * which stops where W is negligible. On it the whole ell block is expanded on one
+ * Chebyshev-Lobatto grid per panel, doubling the order until every multipole's
+ * coefficients converge.
  *
  * The panels start from the component boundaries the expansion found, since
  * the block W_l(k) jumps there (see _component_states_collect_cuts), and from
@@ -430,10 +389,12 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
     ChebCompute compute       = {
       compute_func, comp_states, g_array_new (FALSE, FALSE, sizeof (gdouble))
     };
-    NcmMatrix *closure_error = NULL;
     gdouble abstol;
     guint i;
 
+    /* The seeds are local to the call, not kernel state: one kernel may be
+     * evaluated concurrently for different ell blocks, each with its own
+     * integrator. */
     _component_states_compute_k_seeds (comp_states, k_seeds);
 
     for (i = 0; i < k_seeds->len; i++)
@@ -460,9 +421,8 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
     cid->k_min = ncm_function_sample_set_get_x_min (fss);
     cid->k_max = ncm_function_sample_set_get_x_max (fss);
 
-    /* Same meaning the spline path gives it: a floor scaled to the smallest of
-     * the block's peaks, so a sub-dominant multipole is not held to a
-     * tolerance relative to its neighbours. */
+    /* A floor scaled to the smallest of the block's peaks, so a sub-dominant
+     * multipole is not held to a tolerance relative to its neighbours. */
     abstol = ncm_function_sample_set_get_absmaxF_min (fss) * peak_epsilon;
 
     /* Expand on the continuous intervals between the cuts, from the builder's grid,
@@ -501,34 +461,6 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
     ncm_function_sample_set_clear (&fss);
     g_array_unref (compute.interval_mid);
 
-    /* Record the interpolation error of each panel, one row per panel and one
-     * column per multipole, as the sum of the absolute coefficients above the
-     * order of the previous level; see NcXcorKernel:track-closure-error. */
-    if (self->track_closure_error)
-    {
-      const guint n_panels = ncm_spectral_panels_get_n_panels (cid->sp);
-
-      closure_error = ncm_matrix_new (n_panels, n_l);
-
-      for (i = 0; i < n_panels; i++)
-      {
-        gdouble a, b;
-        guint N, r, j;
-        const gdouble *c   = ncm_spectral_panels_peek_panel (cid->sp, i, &a, &b, &N);
-        const guint n_prev = (N + 1) / 2;
-
-        for (r = 0; r < n_l; r++)
-        {
-          gdouble tail = 0.0;
-
-          for (j = n_prev; j < N; j++)
-            tail += fabs (c[r * N + j]);
-
-          ncm_matrix_set (closure_error, i, r, tail);
-        }
-      }
-    }
-
     cid->k_min_comp = g_new (gdouble, n_l);
     cid->k_max_comp = g_new (gdouble, n_l);
     cid->x_min_comp = g_new (gdouble, n_l);
@@ -563,6 +495,9 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
         k_min_i = GSL_MAX (k_min_i, band_min);
         k_max_i = GSL_MIN (k_max_i, band_max);
 
+        /* A band disjoint from the closure's domain leaves nothing to integrate;
+         * report the empty range as the domain's lower edge rather than an
+         * inverted one. */
         if (k_min_i >= k_max_i)
           k_min_i = k_max_i = x_min;
       }
@@ -584,141 +519,7 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
     cid->RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
     cid->cosmo  = nc_hicosmo_ref (cosmo);
 
-    {
-      NcXcorKernelIntegrand *integrand = _nc_xcor_kernel_cheb_integrand_new (n_l, cid);
-
-      nc_xcor_kernel_integrand_set_tolerances (integrand, reltol, peak_epsilon);
-      nc_xcor_kernel_integrand_set_closure_error (integrand, closure_error);
-      ncm_matrix_clear (&closure_error);
-
-      return integrand;
-    }
-  }
-}
-
-NcXcorKernelIntegrand *
-_nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax,
-                                        ComponentStates *comp_states,
-                                        void (*expand_func) (const gdouble, NcmVector *, gpointer),
-                                        void (*compute_func) (const gdouble, NcmVector *, gpointer),
-                                        const gdouble reltol, const gdouble peak_epsilon)
-{
-  NcXcorKernelPrivate *self = _nc_xcor_kernel_get_private (xclk);
-  SplineIntegrandData *sid  = g_new0 (SplineIntegrandData, 1);
-  const guint n_l           = lmax - lmin + 1;
-
-  {
-    NcmFunctionSampleSet *fss = ncm_function_sample_set_new (n_l);
-    NcmSpline *spline         = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-    GArray *k_seeds           = g_array_new (FALSE, FALSE, sizeof (gdouble));
-    NcmMatrix *closure_error  = NULL;
-    guint i;
-
-    _nc_xcor_kernel_check_tolerance_balance (xclk);
-    ncm_function_sample_set_set_track_residual (fss, self->track_closure_error);
-
-    /* Compute the k seeds, the first k at which W is evaluated. Local to the call, not kernel
-     * state: one kernel may be evaluated concurrently for different ell
-     * blocks, each with its own integrator. */
-    _component_states_compute_k_seeds (comp_states, k_seeds);
-
-    /* Evaluate W at every seed */
-    for (i = 0; i < k_seeds->len; i++)
-    {
-      const gdouble k_seed = g_array_index (k_seeds, gdouble, i);
-
-      ncm_function_sample_set_add_old_func (fss, k_seed, expand_func, comp_states);
-    }
-
-    g_array_unref (k_seeds);
-
-    {
-      /* Domain expansion */
-      ncm_function_sample_set_expand_domain (
-        fss,
-        expand_func,
-        comp_states->k_min_hard,
-        comp_states->k_max_hard,
-        self->expansion_factor,
-        comp_states->epsilon,
-        self->max_border_expansions,
-        comp_states->adaptive_boundary_tries,
-        comp_states
-      );
-    }
-
-    ncm_function_sample_set_mark_all_old (fss);
-    ncm_function_sample_set_reset_interval_ok (fss);
-    {
-      const gdouble max_absF_total = ncm_function_sample_set_get_absmaxF_min (fss);
-
-      ncm_function_sample_set_adaptive_midpoint (
-        fss, compute_func,
-        reltol, max_absF_total * peak_epsilon, self->max_iter, 1,
-        spline, comp_states
-      );
-    }
-
-    closure_error   = ncm_function_sample_set_get_residuals (fss);
-    sid->spline_vec = ncm_function_sample_set_to_spline_vec (fss, spline);
-    sid->k_min      = ncm_function_sample_set_get_x_min (fss);
-    sid->k_max      = ncm_function_sample_set_get_x_max (fss);
-    sid->k_min_comp = g_new (gdouble, n_l);
-    sid->k_max_comp = g_new (gdouble, n_l);
-
-    /* Per-multipole support within the block's shared domain. Only the Limber
-     * branch confines a multipole to a band of its own; outside it the window
-     * is zero, so the band edge falling inside the shared domain is a step.
-     * The band is taken over all components, since the window is their sum. */
-    for (i = 0; i < n_l; i++)
-    {
-      gdouble k_min_i = sid->k_min;
-      gdouble k_max_i = sid->k_max;
-
-      if (comp_states->is_limber)
-      {
-        gdouble band_min = G_MAXDOUBLE;
-        gdouble band_max = 0.0;
-        guint ci;
-
-        for (ci = 0; ci < comp_states->n_comp; ci++)
-        {
-          band_min = GSL_MIN (band_min, comp_states->states[ci].k_min_limber_ell[i]);
-          band_max = GSL_MAX (band_max, comp_states->states[ci].k_max_limber_ell[i]);
-        }
-
-        k_min_i = GSL_MAX (k_min_i, band_min);
-        k_max_i = GSL_MIN (k_max_i, band_max);
-
-        /* A band disjoint from the closure's domain leaves nothing to integrate;
-         * report the empty range as the domain's lower edge rather than an
-         * inverted one. */
-        if (k_min_i >= k_max_i)
-          k_min_i = k_max_i = sid->k_min;
-      }
-
-      sid->k_min_comp[i] = k_min_i;
-      sid->k_max_comp[i] = k_max_i;
-    }
-
-    sid->lmin        = lmin;
-    sid->len         = n_l;
-    sid->RH_Mpc      = nc_hicosmo_RH_Mpc (cosmo);
-    sid->cosmo       = nc_hicosmo_ref (cosmo);
-    sid->eval_result = ncm_vector_new (n_l);
-
-    ncm_function_sample_set_clear (&fss);
-    ncm_spline_free (spline);
-
-    {
-      NcXcorKernelIntegrand *integrand = _nc_xcor_kernel_spline_integrand_new (n_l, sid);
-
-      nc_xcor_kernel_integrand_set_tolerances (integrand, reltol, peak_epsilon);
-      nc_xcor_kernel_integrand_set_closure_error (integrand, closure_error);
-      ncm_matrix_clear (&closure_error);
-
-      return integrand;
-    }
+    return _nc_xcor_kernel_cheb_integrand_new (n_l, cid);
   }
 }
 

@@ -140,10 +140,9 @@ test_nc_xcor_kernel_integrand_new (TestNcXcorKernelIntegrand *test, gconstpointe
                                                                           TEST_CHI_UPPER,
                                                                           test->sbi));
 
-  /* Cap the adaptive apparatus rather than let it converge: one border expansion, few
-   * iterations, loose tolerances, a low panel order. Each branch is still entered. */
+  /* Cap the adaptive apparatus rather than let it converge: one border expansion,
+   * loose tolerances, a low panel order. Each branch is still entered. */
   nc_xcor_kernel_set_max_border_expansions (test->xclk, 1);
-  nc_xcor_kernel_set_max_iter (test->xclk, 4);
   nc_xcor_kernel_set_reltol (test->xclk, 1.0e-3);
   nc_xcor_kernel_set_peak_epsilon (test->xclk, 1.0e-4);
   ncm_spectral_panels_builder_set_level_cap (nc_xcor_kernel_peek_panels_builder (test->xclk), 12);
@@ -282,37 +281,27 @@ test_nc_xcor_kernel_integrand_panels (TestNcXcorKernelIntegrand *test, gconstpoi
 }
 
 static void
-test_nc_xcor_kernel_integrand_tolerances (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
+test_nc_xcor_kernel_integrand_ref_clear (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
   const TestCase *tc           = pdata;
   NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
   NcXcorKernelIntegrand *ref   = nc_xcor_kernel_integrand_ref (integ);
-  NcmMatrix *residuals         = ncm_matrix_new (2, 3);
 
-  nc_xcor_kernel_integrand_set_tolerances (integ, 1.0e-7, 1.0e-5);
-  ncm_assert_cmpdouble_e (nc_xcor_kernel_integrand_get_reltol (integ), ==, 1.0e-7, 1.0e-15, 0.0);
-  ncm_assert_cmpdouble_e (nc_xcor_kernel_integrand_get_peak_epsilon (integ), ==, 1.0e-5, 1.0e-15, 0.0);
-
-  ncm_matrix_set_all (residuals, 1.0e-9);
-  nc_xcor_kernel_integrand_set_closure_error (integ, residuals);
-  g_assert_true (nc_xcor_kernel_integrand_peek_closure_error (integ) == residuals);
+  g_assert_true (ref == integ);
 
   nc_xcor_kernel_integrand_clear (&ref);
   g_assert_true (ref == NULL);
 
-  ncm_matrix_free (residuals);
   nc_xcor_kernel_integrand_unref (integ);
 }
 
 /* The vectorized form builds one representation for a whole multipole block, with one
  * entry per multipole rather than per component.
  *
- * Only the shape is checked, not agreement with the single-l form. The fixture caps
- * max_iter at 4, so neither fit is converged -- the sampler says as much -- and two
- * unconverged fits of the same function are not approximations of it that can be
- * required to agree: on the two-bump kernel they differ by more than 100% at the same k.
- * Agreement between the block and single-l paths is a statement about accuracy and needs
- * converged fits, so it is checked in tests/python/nc/xcor at real tolerances. */
+ * Only the shape is checked, not agreement with the single-l form. The fixture caps the
+ * adaptive apparatus, and agreement between the block and single-l paths is a statement
+ * about accuracy that needs converged fits, so it is checked in tests/python/nc/xcor at
+ * real tolerances. */
 static void
 test_nc_xcor_kernel_integrand_vectorized (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
@@ -355,7 +344,7 @@ static const TestCheck test_checks[] = {
   {"eval",       &test_nc_xcor_kernel_integrand_eval      },
   {"comps",      &test_nc_xcor_kernel_integrand_comps     },
   {"panels",     &test_nc_xcor_kernel_integrand_panels    },
-  {"tolerances", &test_nc_xcor_kernel_integrand_tolerances},
+  {"ref_clear",  &test_nc_xcor_kernel_integrand_ref_clear },
   {"vectorized", &test_nc_xcor_kernel_integrand_vectorized},
 };
 

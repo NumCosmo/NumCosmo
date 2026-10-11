@@ -71,7 +71,6 @@ Ncm.cfg_init()
 class XcorClosureOption(str, enum.Enum):
     """Representations available for the k-space closure."""
 
-    SPLINE = "spline"
     CHEBYSHEV = "chebyshev"
 
     def to_nc(self) -> Nc.XcorKernelClosure:
@@ -80,8 +79,6 @@ class XcorClosureOption(str, enum.Enum):
         :return: The NumCosmo enumeration value.
         """
         match self:
-            case XcorClosureOption.SPLINE:
-                return Nc.XcorKernelClosure.SPLINE
             case XcorClosureOption.CHEBYSHEV:
                 return Nc.XcorKernelClosure.CHEBYSHEV
         raise ValueError(f"Unknown closure type: {self}")
@@ -148,10 +145,8 @@ class XcorKernelCommon:
         XcorClosureOption,
         typer.Option(
             help=(
-                "Representation fitted to the sampled kernel. 'spline' bisects "
-                "until it meets a tolerance; 'chebyshev' expands on panels of a "
-                "prescribed order. Both plot and both compute C_ell, so the two "
-                "can be compared directly."
+                "Representation fitted to the sampled kernel: 'chebyshev' "
+                "expands on panels of a prescribed order."
             ),
             show_default=True,
         ),
@@ -163,20 +158,6 @@ class XcorKernelCommon:
             help=(
                 "Also show Limber approximation for comparison "
                 "(with thinner dashed lines)."
-            ),
-            show_default=True,
-        ),
-    ] = False
-
-    compare_closure: Annotated[
-        bool,
-        typer.Option(
-            help=(
-                "Also show the other closure representation for comparison "
-                "(with thinner dashed lines). Mutually exclusive with "
-                "--compare-limber: there is one alternative curve. Under Limber "
-                "both representations are the spline, so pair this with "
-                "--l-limber -1 for it to show anything."
             ),
             show_default=True,
         ),
@@ -268,13 +249,6 @@ class XcorKernelCommon:
         :raises ValueError: If the kernel specification is invalid.
         :raises typer.BadParameter: If two mutually exclusive options are given.
         """
-        # One alternative curve, so one thing to compare against.
-        if self.compare_limber and self.compare_closure:
-            raise ValueError(
-                "--compare-limber and --compare-closure both draw the "
-                "alternative curve; pick one."
-            )
-
         # typer's min is inclusive, but zero tolerance aborts in the library.
         for name, tol in (
             ("--integrator-reltol", self.integrator_reltol),
@@ -381,22 +355,12 @@ class XcorKernelCommon:
         print()
 
     @property
-    def _alt_closure_type(self) -> XcorClosureOption:
-        """The representation the comparison curve uses.
-
-        :return: The option other than the one --closure-type selected.
-        """
-        if self.closure_type is XcorClosureOption.SPLINE:
-            return XcorClosureOption.CHEBYSHEV
-        return XcorClosureOption.SPLINE
-
-    @property
     def _comparing(self) -> bool:
         """Whether a second, alternative curve is drawn beside the main one.
 
-        :return: True when either comparison mode is on.
+        :return: True when --compare-limber is on.
         """
-        return self.compare_limber or self.compare_closure
+        return self.compare_limber
 
     @property
     def _curve_labels(self) -> tuple[str, str]:
@@ -404,10 +368,6 @@ class XcorKernelCommon:
 
         :return: Tuple of (main label, alternative label).
         """
-        if self.compare_closure:
-            return self.closure_type.value.capitalize(), (
-                self._alt_closure_type.value.capitalize()
-            )
         main = (
             "Non-Limber"
             if self.l_limber < 0
@@ -759,8 +719,6 @@ class XcorKernelCommon:
         cls_alt = None
         if self.compare_limber:
             cls_alt = self._compute_cls(ells, 0, self.closure_type)
-        elif self.compare_closure:
-            cls_alt = self._compute_cls(ells, self.l_limber, self._alt_closure_type)
         self._plot_cls(ells, cls_main, cls_alt)
 
     def _solver(self) -> tuple[Nc.XcorSolver, list[int]]:

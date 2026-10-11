@@ -23022,17 +23022,13 @@ class XcorKernel(NumCosmoMath.Model):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -23069,12 +23065,10 @@ class XcorKernel(NumCosmoMath.Model):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -23097,12 +23091,10 @@ class XcorKernel(NumCosmoMath.Model):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23154,10 +23146,8 @@ class XcorKernel(NumCosmoMath.Model):
     def get_l_limber(self) -> int: ...
     def get_lmax(self) -> int: ...
     def get_max_border_expansions(self) -> int: ...
-    def get_max_iter(self) -> int: ...
     def get_peak_epsilon(self) -> float: ...
     def get_reltol(self) -> float: ...
-    def get_track_closure_error(self) -> bool: ...
     def get_z_range(self) -> typing.Tuple[float, float, float]: ...
     @staticmethod
     def id() -> int: ...
@@ -23179,13 +23169,11 @@ class XcorKernel(NumCosmoMath.Model):
     def set_l_limber(self, l_limber: int) -> None: ...
     def set_lmax(self, lmax: int) -> None: ...
     def set_max_border_expansions(self, max_border_expansions: int) -> None: ...
-    def set_max_iter(self, max_iter: int) -> None: ...
     def set_panels_builder(
         self, builder: NumCosmoMath.SpectralPanelsBuilder
     ) -> None: ...
     def set_peak_epsilon(self, peak_epsilon: float) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
-    def set_track_closure_error(self, track_closure_error: bool) -> None: ...
 
 class XcorKernelAnalyticGauss(XcorKernelRadial):
     r"""
@@ -23229,17 +23217,13 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -23281,12 +23265,10 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -23313,12 +23295,10 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23399,17 +23379,13 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -23451,12 +23427,10 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -23483,12 +23457,10 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23570,17 +23542,13 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -23623,12 +23591,10 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -23656,12 +23622,10 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23750,17 +23714,13 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -23804,12 +23764,10 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -23838,12 +23796,10 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23930,17 +23886,13 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -23983,12 +23935,10 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -24016,12 +23966,10 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24104,17 +24052,13 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -24155,12 +24099,10 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -24186,12 +24128,10 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24271,17 +24211,13 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -24324,12 +24260,10 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -24357,12 +24291,10 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24438,17 +24370,13 @@ class XcorKernelCMBISW(XcorKernel):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -24488,12 +24416,10 @@ class XcorKernelCMBISW(XcorKernel):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -24518,12 +24444,10 @@ class XcorKernelCMBISW(XcorKernel):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24590,17 +24514,13 @@ class XcorKernelCMBLensing(XcorKernel):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -24640,12 +24560,10 @@ class XcorKernelCMBLensing(XcorKernel):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -24670,12 +24588,10 @@ class XcorKernelCMBLensing(XcorKernel):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24751,17 +24667,13 @@ class XcorKernelCluster(XcorKernel):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -24798,12 +24710,10 @@ class XcorKernelCluster(XcorKernel):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -24826,12 +24736,10 @@ class XcorKernelCluster(XcorKernel):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24883,17 +24791,13 @@ class XcorKernelClusterTophat(XcorKernelCluster):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -24932,12 +24836,10 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -24961,12 +24863,10 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -25176,17 +25076,13 @@ class XcorKernelGal(XcorKernel):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -25235,12 +25131,10 @@ class XcorKernelGal(XcorKernel):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -25274,12 +25168,10 @@ class XcorKernelGal(XcorKernel):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -25326,24 +25218,18 @@ class XcorKernelIntegrand(GObject.GBoxed):
     get_range_func: typing.Callable[[None], typing.Tuple[float, float]] = ...
     data: None = ...
     data_free: typing.Callable[[None], None] = ...
-    get_knots_func: typing.Callable[[None], NumCosmoMath.Vector] = ...
     get_range_comp_func: typing.Callable[[None, int], typing.Tuple[float, float]] = ...
     eval_comps_func: typing.Callable[
         [None, float, int, int, typing.Sequence[float] | npt.NDArray[np.float64]], None
     ] = ...
     get_scale_func: typing.Callable[[None, int], float] = ...
-    closure_error: NumCosmoMath.Matrix = ...
-    reltol: float = ...
-    peak_epsilon: float = ...
     panels: NumCosmoMath.SpectralPanels = ...
     @staticmethod
     def clear(integrand: XcorKernelIntegrand) -> None: ...
     def eval_array(self, k: float) -> list[float]: ...
     def get_len(self) -> int: ...
-    def get_peak_epsilon(self) -> float: ...
     def get_range(self) -> typing.Tuple[float, float]: ...
     def get_range_comp(self, i: int) -> typing.Tuple[float, float]: ...
-    def get_reltol(self) -> float: ...
     def get_scale(self, i: int) -> float: ...
     @classmethod
     def new(
@@ -25353,17 +25239,11 @@ class XcorKernelIntegrand(GObject.GBoxed):
         get_range: typing.Callable[..., typing.Tuple[float, float]],
         *data: typing.Any,
     ) -> XcorKernelIntegrand: ...
-    def peek_closure_error(self) -> typing.Optional[NumCosmoMath.Matrix]: ...
-    def peek_knots(self) -> typing.Optional[NumCosmoMath.Vector]: ...
     def peek_panels(self) -> typing.Optional[NumCosmoMath.SpectralPanels]: ...
     def ref(self) -> XcorKernelIntegrand: ...
-    def set_closure_error(
-        self, closure_error: typing.Optional[NumCosmoMath.Matrix] = None
-    ) -> None: ...
     def set_panels(
         self, sp: typing.Optional[NumCosmoMath.SpectralPanels] = None
     ) -> None: ...
-    def set_tolerances(self, reltol: float, peak_epsilon: float) -> None: ...
     def unref(self) -> None: ...
 
 class XcorKernelRadial(XcorKernel):
@@ -25398,17 +25278,13 @@ class XcorKernelRadial(XcorKernel):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -25447,12 +25323,10 @@ class XcorKernelRadial(XcorKernel):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -25477,12 +25351,10 @@ class XcorKernelRadial(XcorKernel):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -25664,17 +25536,13 @@ class XcorKernelTable(XcorKernelRadial):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -25719,12 +25587,10 @@ class XcorKernelTable(XcorKernelRadial):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -25754,12 +25620,10 @@ class XcorKernelTable(XcorKernelRadial):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -25850,17 +25714,13 @@ class XcorKernelWeakLensing(XcorKernel):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -25900,12 +25760,10 @@ class XcorKernelWeakLensing(XcorKernel):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -25930,12 +25788,10 @@ class XcorKernelWeakLensing(XcorKernel):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -25994,17 +25850,13 @@ class XcorKerneltSZ(XcorKernel):
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance for adaptive midpoint refinement
+        Relative tolerance of the k-space closure
       peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the k-space closure
+        Peak-relative absolute tolerance of the k-space closure
       max-border-expansions -> guint: max-border-expansions
         Maximum number of border expansion iterations
-      max-iter -> guint: max-iter
-        Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
-      track-closure-error -> gboolean: track-closure-error
-        Whether to record the interpolation error the closure achieved
       panels-builder -> NcmSpectralPanelsBuilder: panels-builder
         Builder of the Chebyshev closure panels
 
@@ -26043,12 +25895,10 @@ class XcorKerneltSZ(XcorKernel):
         l_limber: int
         lmax: int
         max_border_expansions: int
-        max_iter: int
         panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
-        track_closure_error: bool
         implementation: int
         name: str
         nick: str
@@ -26072,12 +25922,10 @@ class XcorKerneltSZ(XcorKernel):
         l_limber: int = ...,
         lmax: int = ...,
         max_border_expansions: int = ...,
-        max_iter: int = ...,
         panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        track_closure_error: bool = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -28482,7 +28330,6 @@ class XcorKernelCMBLensingSource(GObject.GEnum):
 
 class XcorKernelClosure(GObject.GEnum):
     CHEBYSHEV: XcorKernelClosure = ...
-    SPLINE: XcorKernelClosure = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

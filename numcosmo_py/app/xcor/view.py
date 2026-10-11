@@ -457,16 +457,11 @@ class ViewKernel(XcorKernelCommon):
         if self._comparing:
             _, alt_label = self._curve_labels
 
-            if self.compare_limber:
-                # Same representation, the Limber approximation instead.
-                kernel_obj.set_l_limber(0)
-                alt_closure = self.closure_type
-            else:
-                # Same evaluation tier, the other representation of it.
-                alt_closure = self._alt_closure_type
+            # Same representation, the Limber approximation instead.
+            kernel_obj.set_l_limber(0)
 
             eval_alt = kernel_obj.get_eval_vectorized(
-                self.cosmo, self.ell, lmax, alt_closure.to_nc()
+                self.cosmo, self.ell, lmax, self.closure_type.to_nc()
             )
             kernel_eval_alt = KernelEvaluation(
                 name=kernel_label,

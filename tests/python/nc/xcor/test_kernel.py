@@ -579,8 +579,8 @@ def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
     """Test that all kernel properties can be set and retrieved correctly.
 
     Validates the getter/setter methods and GObject properties for the adaptive
-    refinement parameters: reltol, peak_epsilon, max_border_expansions, max_iter,
-    and expansion_factor.
+    refinement parameters: reltol, peak_epsilon, max_border_expansions and
+    expansion_factor.
     """
     # Test reltol property
     original_reltol = kernel.get_reltol()
@@ -626,20 +626,6 @@ def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
 
     # Restore original
     kernel.set_max_border_expansions(original_max_border_expansions)
-
-    # Test max_iter property
-    original_max_iter = kernel.get_max_iter()
-    assert original_max_iter == kernel.props.max_iter
-
-    kernel.set_max_iter(5000)
-    assert kernel.get_max_iter() == 5000
-    assert kernel.props.max_iter == 5000
-
-    kernel.props.max_iter = 8000
-    assert kernel.get_max_iter() == 8000
-
-    # Restore original
-    kernel.set_max_iter(original_max_iter)
 
     # Test expansion_factor property
     original_expansion_factor = kernel.get_expansion_factor()

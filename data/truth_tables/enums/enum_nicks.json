@@ -3235,10 +3235,6 @@
     "nick": "chebyshev",
     "type": "Nc.XcorKernelClosure"
   },
-  "NC_XCOR_KERNEL_CLOSURE_SPLINE": {
-    "nick": "spline",
-    "type": "Nc.XcorKernelClosure"
-  },
   "NC_XCOR_KERNEL_CMB_ISW_SOURCE_THIN_SCREEN": {
     "nick": "thin-screen",
     "type": "Nc.XcorKernelCMBISWSource"

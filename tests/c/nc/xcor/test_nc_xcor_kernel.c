@@ -300,10 +300,8 @@ test_nc_xcor_kernel_knobs (TestNcXcorKernel *test, gconstpointer pdata)
   nc_xcor_kernel_set_reltol (xclk, 1.0e-3);
   nc_xcor_kernel_set_peak_epsilon (xclk, 1.0e-4);
   nc_xcor_kernel_set_max_border_expansions (xclk, 1);
-  nc_xcor_kernel_set_max_iter (xclk, 5);
   nc_xcor_kernel_set_expansion_factor (xclk, 0.5);
   nc_xcor_kernel_set_panels_builder (xclk, builder);
-  nc_xcor_kernel_set_track_closure_error (xclk, TRUE);
 
   g_assert_cmpuint (nc_xcor_kernel_get_lmax (xclk), ==, TEST_LMAX);
   ncm_assert_cmpdouble_e (nc_xcor_kernel_get_adaptive_epsilon (xclk), ==, 1.0e-5, 1.0e-15, 0.0);
@@ -311,10 +309,8 @@ test_nc_xcor_kernel_knobs (TestNcXcorKernel *test, gconstpointer pdata)
   ncm_assert_cmpdouble_e (nc_xcor_kernel_get_reltol (xclk), ==, 1.0e-3, 1.0e-15, 0.0);
   ncm_assert_cmpdouble_e (nc_xcor_kernel_get_peak_epsilon (xclk), ==, 1.0e-4, 1.0e-15, 0.0);
   g_assert_cmpuint (nc_xcor_kernel_get_max_border_expansions (xclk), ==, 1);
-  g_assert_cmpuint (nc_xcor_kernel_get_max_iter (xclk), ==, 5);
   ncm_assert_cmpdouble_e (nc_xcor_kernel_get_expansion_factor (xclk), ==, 0.5, 1.0e-15, 0.0);
   g_assert_true (nc_xcor_kernel_peek_panels_builder (xclk) == builder);
-  g_assert_true (nc_xcor_kernel_get_track_closure_error (xclk));
 
   ncm_spectral_panels_builder_free (builder);
 }

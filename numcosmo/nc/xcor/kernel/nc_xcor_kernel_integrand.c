@@ -29,8 +29,8 @@
 
 /*
  * NcXcorKernelIntegrand: the closure of W_l(k) of an ell block, as the k
- * integrals see it. The boxed type and its public API, and the two private
- * data layouts behind it, spline and Chebyshev, with the accessors each sets.
+ * integrals see it. The boxed type and its public API, and the private
+ * Chebyshev data layout behind it with the accessors it sets.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -43,7 +43,6 @@
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_serialize.h"
 #include "ncm/powspec/ncm_powspec.h"
-#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/specfunc/ncm_sbessel_ode_solver.h"
 #include "ncm/specfunc/ncm_sbessel_integrator_levin.h"
 #include "ncm/stats/ncm_function_sample_set.h"
@@ -58,90 +57,6 @@
 #include "nc/xcor/kernel/nc_xcor_kernel_private.h"
 
 G_DEFINE_BOXED_TYPE (NcXcorKernelIntegrand, nc_xcor_kernel_integrand, nc_xcor_kernel_integrand_ref, nc_xcor_kernel_integrand_unref)
-
-static NcmVector *
-_spline_integrand_get_knots (gpointer data)
-{
-  SplineIntegrandData *sid = (SplineIntegrandData *) data;
-
-  /* Every component of the spline vec shares the same knots, so the first
-   * component's knots are the knots of the whole block. */
-  return ncm_spline_peek_xv (ncm_spline_vec_peek_spline (sid->spline_vec, 0));
-}
-
-static void
-_spline_integrand_eval (gpointer data, gdouble k, gdouble *W)
-{
-  SplineIntegrandData *sid = (SplineIntegrandData *) data;
-  guint i;
-
-  ncm_spline_vec_eval (sid->spline_vec, k, sid->eval_result);
-
-  for (i = 0; i < sid->len; i++)
-  {
-    W[i] = ncm_vector_get (sid->eval_result, i);
-  }
-}
-
-/*
- * Evaluates the components [offset, offset + len) at k, writing each at its own
- * index of W. All components share the knots, so the interval index found on
- * the first spline is used for every one of them.
- */
-static void
-_spline_integrand_eval_comps (gpointer data, gdouble k, guint offset, guint len, gdouble *W)
-{
-  SplineIntegrandData *sid = (SplineIntegrandData *) data;
-  NcmSpline *spline_0      = ncm_spline_vec_peek_spline (sid->spline_vec, 0);
-  const gsize idx          = ncm_spline_get_index (spline_0, k);
-  guint i;
-
-  for (i = 0; i < len; i++)
-  {
-    NcmSpline *spline_i = ncm_spline_vec_peek_spline (sid->spline_vec, offset + i);
-
-    W[offset + i] = ncm_spline_eval_idx (spline_i, k, idx);
-  }
-}
-
-static void
-_spline_integrand_get_range (gpointer data, gdouble *kmin, gdouble *kmax)
-{
-  SplineIntegrandData *sid = (SplineIntegrandData *) data;
-
-  *kmin = sid->k_min;
-  *kmax = sid->k_max;
-}
-
-/*
- * Returns the k range on which component i is nonzero. Under the Limber
- * approximation this is the band [nu / chi_max, nu / chi_min] of multipole i
- * intersected with the block's domain, and W_i steps to zero at its edges; the
- * outer integral uses the range as its limits so that the steps fall on them.
- * Otherwise it is the block's domain.
- */
-static void
-_spline_integrand_get_range_comp (gpointer data, guint i, gdouble *kmin, gdouble *kmax)
-{
-  SplineIntegrandData *sid = (SplineIntegrandData *) data;
-
-  *kmin = sid->k_min_comp[i];
-  *kmax = sid->k_max_comp[i];
-}
-
-static void
-_spline_integrand_data_free (gpointer data)
-{
-  SplineIntegrandData *sid = (SplineIntegrandData *) data;
-
-  nc_hicosmo_clear (&sid->cosmo);
-  ncm_spline_vec_clear (&sid->spline_vec);
-  ncm_vector_clear (&sid->eval_result);
-
-  g_free (sid->k_min_comp);
-  g_free (sid->k_max_comp);
-  g_free (data);
-}
 
 /* Chebyshev closure of one ell block, built by both the Limber and the non-Limber paths. */
 
@@ -316,26 +231,6 @@ _nc_xcor_kernel_cheb_integrand_new (guint n_l, ChebIntegrandData *cid)
   return integrand;
 }
 
-/*
- * Creates the integrand of a spline closure from its data, taking ownership of
- * @sid, with every spline accessor set.
- */
-NcXcorKernelIntegrand *
-_nc_xcor_kernel_spline_integrand_new (guint n_l, SplineIntegrandData *sid)
-{
-  NcXcorKernelIntegrand *integrand = nc_xcor_kernel_integrand_new (n_l,
-                                                                   _spline_integrand_eval,
-                                                                   _spline_integrand_get_range,
-                                                                   sid,
-                                                                   _spline_integrand_data_free);
-
-  nc_xcor_kernel_integrand_set_get_knots (integrand, _spline_integrand_get_knots);
-  nc_xcor_kernel_integrand_set_get_range_comp (integrand, _spline_integrand_get_range_comp);
-  nc_xcor_kernel_integrand_set_eval_comps (integrand, _spline_integrand_eval_comps);
-
-  return integrand;
-}
-
 /**
  * nc_xcor_kernel_integrand_new:
  * @len: number of components in the integrand
@@ -359,35 +254,14 @@ nc_xcor_kernel_integrand_new (guint len, void (*eval) (gpointer, gdouble, gdoubl
   integrand->get_range_func = get_range;
   integrand->data           = data;
   integrand->data_free      = data_free;
-  integrand->get_knots_func = NULL;
 
   integrand->get_range_comp_func = NULL;
   integrand->eval_comps_func     = NULL;
   integrand->get_scale_func      = NULL;
 
-  integrand->closure_error = NULL;
-  integrand->panels        = NULL;
-  integrand->reltol        = 0.0;
-  integrand->peak_epsilon  = 0.0;
+  integrand->panels = NULL;
 
   return integrand;
-}
-
-/**
- * nc_xcor_kernel_integrand_set_get_knots: (skip)
- * @integrand: a #NcXcorKernelIntegrand
- * @get_knots: (scope async): function returning @integrand's knots
- *
- * Declares @integrand as spline-backed, by installing the accessor returning
- * the knots its components are represented on. Left unset by
- * nc_xcor_kernel_integrand_new(), so integrands that are not spline-backed
- * report no knots.
- *
- */
-void
-nc_xcor_kernel_integrand_set_get_knots (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetKnots get_knots)
-{
-  integrand->get_knots_func = get_knots;
 }
 
 /**
@@ -460,125 +334,6 @@ nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, NcXco
 }
 
 /**
- * nc_xcor_kernel_integrand_peek_knots:
- * @integrand: a #NcXcorKernelIntegrand
- *
- * Peeks the knots @integrand's components are represented on, shared by every
- * component (multipole) it carries, or %NULL when @integrand is not
- * spline-backed.
- *
- * These knots are what makes the outer $k$ integral exactly integrable, and
- * are why %NC_XCOR_METHOD_KERNEL_EXACT needs no tolerance. Each component is a
- * cubic spline in $k$, so on any interval over which both members of a pair
- * are a single cubic piece, the product $k^2 W_i(k) W_j(k)$ entering $C_\ell$
- * is a polynomial of degree $8$ and a $5$-node Gauss-Legendre rule integrates
- * it exactly.
- *
- * Two closures are built independently and so do not share knots: the
- * intervals with that property are the panels of the *common refinement* of
- * the two knot sets. Merging two sorted knot vectors is all the coupling the
- * argument needs -- building the closures jointly on one shared knot set
- * would also work but costs about twice as much to produce, and forces every
- * pair to carry every kernel's knots.
- *
- * Returns: (transfer none) (nullable): the knot vector, or %NULL.
- */
-
-/**
- * nc_xcor_kernel_integrand_set_tolerances:
- * @integrand: a #NcXcorKernelIntegrand
- * @reltol: relative tolerance of the acceptance test
- * @peak_epsilon: absolute tolerance of the acceptance test, as a fraction of the closure's peak
- *
- * Records the two tolerances the closure was built with, see
- * #NcXcorKernel:reltol and #NcXcorKernel:peak-epsilon. nc_xcor_compute_full()
- * uses them in its error estimate of $C_\ell$ where no interpolation error was
- * recorded, see nc_xcor_kernel_integrand_set_closure_error().
- */
-void
-nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdouble reltol, gdouble peak_epsilon)
-{
-  g_return_if_fail (integrand != NULL);
-  g_return_if_fail (reltol >= 0.0);
-  g_return_if_fail (peak_epsilon >= 0.0);
-
-  integrand->reltol       = reltol;
-  integrand->peak_epsilon = peak_epsilon;
-}
-
-/**
- * nc_xcor_kernel_integrand_get_reltol:
- * @integrand: a #NcXcorKernelIntegrand
- *
- * Returns: the relative tolerance of the acceptance test, or 0.0 when exact or
- * unknown. See nc_xcor_kernel_integrand_set_tolerances().
- */
-gdouble
-nc_xcor_kernel_integrand_get_reltol (NcXcorKernelIntegrand *integrand)
-{
-  g_return_val_if_fail (integrand != NULL, 0.0);
-
-  return integrand->reltol;
-}
-
-/**
- * nc_xcor_kernel_integrand_get_peak_epsilon:
- * @integrand: a #NcXcorKernelIntegrand
- *
- * Returns: the absolute tolerance of the acceptance test as a fraction of the
- * closure's peak, or 0.0 when there was none. See
- * nc_xcor_kernel_integrand_set_tolerances().
- */
-gdouble
-nc_xcor_kernel_integrand_get_peak_epsilon (NcXcorKernelIntegrand *integrand)
-{
-  g_return_val_if_fail (integrand != NULL, 0.0);
-
-  return integrand->peak_epsilon;
-}
-
-/**
- * nc_xcor_kernel_integrand_set_closure_error:
- * @integrand: a #NcXcorKernelIntegrand
- * @closure_error: (nullable): the interpolation error, or %NULL
- *
- * Records the interpolation error the closure achieved, one row per interval
- * on which it is a single polynomial (a knot interval or a panel) and one
- * column per component, as defined under #NcXcorKernel:track-closure-error.
- * nc_xcor_compute_full() uses it in its error estimate of $C_\ell$, and uses
- * the tolerances of nc_xcor_kernel_integrand_set_tolerances() on intervals
- * whose entry is NaN.
- */
-void
-nc_xcor_kernel_integrand_set_closure_error (NcXcorKernelIntegrand *integrand, NcmMatrix *closure_error)
-{
-  g_return_if_fail (integrand != NULL);
-
-  ncm_matrix_clear (&integrand->closure_error);
-
-  if (closure_error != NULL)
-    integrand->closure_error = ncm_matrix_ref (closure_error);
-}
-
-/**
- * nc_xcor_kernel_integrand_peek_closure_error:
- * @integrand: a #NcXcorKernelIntegrand
- *
- * Peeks the interpolation error, or %NULL when the closure was built with
- * #NcXcorKernel:track-closure-error off. See
- * nc_xcor_kernel_integrand_set_closure_error().
- *
- * Returns: (transfer none) (nullable): the interpolation error matrix, or %NULL
- */
-NcmMatrix *
-nc_xcor_kernel_integrand_peek_closure_error (NcXcorKernelIntegrand *integrand)
-{
-  g_return_val_if_fail (integrand != NULL, NULL);
-
-  return integrand->closure_error;
-}
-
-/**
  * nc_xcor_kernel_integrand_set_panels:
  * @integrand: a #NcXcorKernelIntegrand
  * @sp: (nullable): the panels of the closure, or %NULL
@@ -611,15 +366,6 @@ nc_xcor_kernel_integrand_peek_panels (NcXcorKernelIntegrand *integrand)
   g_return_val_if_fail (integrand != NULL, NULL);
 
   return integrand->panels;
-}
-
-NcmVector *
-nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand)
-{
-  if (integrand->get_knots_func == NULL)
-    return NULL;
-
-  return integrand->get_knots_func (integrand->data);
 }
 
 /**
@@ -655,7 +401,6 @@ nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand)
     if (integrand->data_free != NULL)
       integrand->data_free (integrand->data);
 
-    ncm_matrix_clear (&integrand->closure_error);
     ncm_spectral_panels_clear (&integrand->panels);
 
     g_free (integrand);

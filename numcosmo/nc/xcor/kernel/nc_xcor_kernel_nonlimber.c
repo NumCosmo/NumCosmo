@@ -43,7 +43,6 @@
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_serialize.h"
 #include "ncm/powspec/ncm_powspec.h"
-#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/specfunc/ncm_sbessel_ode_solver.h"
 #include "ncm/specfunc/ncm_sbessel_integrator_levin.h"
 #include "ncm/stats/ncm_function_sample_set.h"
@@ -204,9 +203,6 @@ _component_states_expand_non_limber (const gdouble k, NcmVector *y, gpointer use
     {
       state->last_k_right = k;
 
-      for (i = 0; i < comp_states->n_l; i++)
-        state->last_values_right[i] = kernel_out[ci][i];
-
       if (below_epsilon)
         state->right_boundary_found++;
       else
@@ -215,9 +211,6 @@ _component_states_expand_non_limber (const gdouble k, NcmVector *y, gpointer use
     else if (k < state->last_k_left)
     {
       state->last_k_left = k;
-
-      for (i = 0; i < comp_states->n_l; i++)
-        state->last_values_left[i] = kernel_out[ci][i];
 
       if (below_epsilon)
         state->left_boundary_found++;
@@ -277,46 +270,11 @@ _component_states_eval_non_limber (ComponentStates *comp_states, const gdouble k
     }
     else
     {
-      /* Exponential tail extrapolation beyond boundaries.
-       *
-       * At DECAY_RATE this falls by e^-100 within a *relative* 1e-8 of the
-       * boundary, so it adds nothing to the integral. Its purpose is
-       * continuity: the block W_l(k) has no jump at the boundary, so one
-       * cubic spline can span it. The first derivative still jumps, by the
-       * component's value at the boundary.
-       *
-       * A Chebyshev panel needs none of that: the boundary is one of its
-       * edges, so the whole panel is outside and the component is zero on it,
-       * including at the shared edge. */
-      if (comp_states->panel_mode)
-      {
-        for (i = 0; i < comp_states->n_l; i++)
-          kernel_out[ci][i] = 0.0;
-      }
-      else if (!within_right_boundary)
-      {
-        for (i = 0; i < comp_states->n_l; i++)
-        {
-          const gdouble val              = state->last_values_right[i];
-          const gdouble delta_k          = k - state->last_k_right;
-          const gdouble decay_rate       = DECAY_RATE;
-          const gdouble val_extrapolated = val * exp (-decay_rate * delta_k / state->last_k_right);
-
-          kernel_out[ci][i] = val_extrapolated;
-        }
-      }
-      else
-      {
-        for (i = 0; i < comp_states->n_l; i++)
-        {
-          const gdouble val              = state->last_values_left[i];
-          const gdouble delta_k          = state->last_k_left - k;
-          const gdouble decay_rate       = DECAY_RATE;
-          const gdouble val_extrapolated = val * exp (-decay_rate * delta_k / state->last_k_left);
-
-          kernel_out[ci][i] = val_extrapolated;
-        }
-      }
+      /* Beyond its truncation boundary a component is zero. In the panels the
+       * boundary is a cut, so a panel is wholly on one side of it, see
+       * _component_states_collect_cuts(). */
+      for (i = 0; i < comp_states->n_l; i++)
+        kernel_out[ci][i] = 0.0;
     }
 
     ncm_vector_clear (&integ_result);
@@ -377,18 +335,11 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
 
     g_ptr_array_unref (comp_list);
 
-    if (closure_type == NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV)
-      integrand = _nc_xcor_kernel_build_cheb_integrand (xclk, cosmo, lmin, lmax,
-                                                        &comp_states,
-                                                        _component_states_expand_non_limber,
-                                                        _component_states_compute_non_limber,
-                                                        self->reltol, self->peak_epsilon);
-    else
-      integrand = _nc_xcor_kernel_build_spline_integrand (xclk, cosmo, lmin, lmax,
-                                                          &comp_states,
-                                                          _component_states_expand_non_limber,
-                                                          _component_states_compute_non_limber,
-                                                          self->reltol, self->peak_epsilon);
+    integrand = _nc_xcor_kernel_build_cheb_integrand (xclk, cosmo, lmin, lmax,
+                                                      &comp_states,
+                                                      _component_states_expand_non_limber,
+                                                      _component_states_compute_non_limber,
+                                                      self->reltol, self->peak_epsilon);
 
     _nc_xcor_kernel_component_states_clear (&comp_states);
 

@@ -293,10 +293,10 @@ def test_sampled_multipoles_match_the_contiguous_solve() -> None:
     assert [label for label, _ in command.kernels] == ["Top-hat (1)", "Top-hat (2)"]
 
     dense_ells = np.arange(10, 17)
-    dense = command._compute_cls(dense_ells, -1, XcorClosureOption.SPLINE)
+    dense = command._compute_cls(dense_ells, -1, XcorClosureOption.CHEBYSHEV)
 
     sparse_ells = np.array([10, 13, 16])
-    sparse = command._compute_cls(sparse_ells, -1, XcorClosureOption.SPLINE)
+    sparse = command._compute_cls(sparse_ells, -1, XcorClosureOption.CHEBYSHEV)
 
     picked = np.searchsorted(dense_ells, sparse_ells)
 
