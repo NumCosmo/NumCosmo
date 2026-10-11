@@ -47,7 +47,6 @@ from scipy.special import (
 from scipy.stats import t as student_t
 
 from numcosmo_py import Nc, Ncm
-from xcor import closure_check
 from numcosmo_py.cosmology import Cosmology
 
 pytest_plugins = [
@@ -1397,52 +1396,3 @@ def test_pieces_of_one_window_are_truncated_together(cosmology: Cosmology) -> No
         )
 
         assert np.all(_interior_edges_are_dyadic(_panel_edges(closure)))
-
-
-def test_chebyshev_closure_finds_a_narrow_peak_on_a_wide_domain(
-    cosmology: Cosmology,
-) -> None:
-    """A tiny adaptive-epsilon makes the domain five decades wide. A first
-    Chebyshev grid spread over all of it would start past the peak, and both
-    levels of the doubling test would see a small smooth function and agree;
-    the initial grid of panels-per-efold puts panels on the peak's scale. The
-    closure is compared with W_ell(k) computed directly, inside every panel and
-    on a grid over the whole domain, which a missed peak cannot avoid."""
-    kernel = _multi(cosmology, MULTI_DISJOINT_MEAN, MULTI_DISJOINT_SIGMA)
-    kernel.set_adaptive_epsilon(1.0e-11)
-    kernel.set_reltol(1.0e-6)
-    kernel.set_peak_epsilon(1.0e-6)
-    ell = 10
-
-    closure = kernel.get_eval_vectorized_full(
-        cosmology.cosmo,
-        ell,
-        ell,
-        Ncm.SBesselIntegratorLevin.new(ell, ell),
-        Nc.XcorKernelClosure.CHEBYSHEV,
-    )
-    check = closure_check.check_against_direct(kernel, cosmology.cosmo, closure, ell)
-
-    assert (
-        check.worst < 1.0
-    ), f"closure off W_ell(k) by {check.worst:.3g}x its bound at k = {check.at_k:.4g}"
-
-
-def test_closure_check_detects_a_wrong_closure(cosmology: Cosmology) -> None:
-    """The direct comparison has to fail on a closure that is not the kernel's: the
-    same closure held against W_(ell + 1)(k) is far outside its bound."""
-    kernel = _multi(cosmology, MULTI_DISJOINT_MEAN, MULTI_DISJOINT_SIGMA)
-    ell = 10
-
-    closure = kernel.get_eval_vectorized_full(
-        cosmology.cosmo,
-        ell,
-        ell,
-        Ncm.SBesselIntegratorLevin.new(ell, ell),
-        Nc.XcorKernelClosure.CHEBYSHEV,
-    )
-    check = closure_check.check_against_direct(
-        kernel, cosmology.cosmo, closure, ell + 1
-    )
-
-    assert check.worst > 100.0

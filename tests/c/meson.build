@@ -768,7 +768,7 @@ xcor_tests = [
     },
     {
         'name': 'nc_xcor_kernel_analytic',
-        'sources': ['nc/xcor/test_nc_xcor_kernel_analytic.c'],
+        'sources': ['nc/xcor/test_nc_xcor_kernel_analytic.c', 'nc/xcor/test_nc_xcor_closure_check.c'],
     },
     {
         'name': 'nc_xcor_kernel_integrand',

@@ -44,6 +44,8 @@
 #include <glib.h>
 #include <glib-object.h>
 
+#include "test_nc_xcor_closure_check.h"
+
 /* Comoving distances (Mpc) the windows are placed at: well inside the distance object's
  * z <= 6 range for this cosmology, and narrow enough that a support grid is cheap. */
 #define TEST_CHI_MEAN 1500.0
@@ -641,6 +643,84 @@ test_nc_xcor_kernel_analytic_new_full (TestNcXcorKernelAnalytic *test, gconstpoi
   ncm_sbessel_integrator_free (sbi);
 }
 
+/* The non-Limber Chebyshev closure of the window matches W_ell(k) computed directly, in
+ * two multipole blocks, within what the closure was asked for */
+static void
+test_nc_xcor_kernel_analytic_closure (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
+{
+  const gint lmins[2]              = {2, 50};
+  NcmSBesselIntegrator *kernel_sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 8));
+  guint b;
+
+  g_object_set (test->xclk, "integrator", kernel_sbi, NULL);
+  nc_xcor_kernel_set_l_limber (test->xclk, -1);
+  ncm_sbessel_integrator_free (kernel_sbi);
+
+  for (b = 0; b < 2; b++)
+  {
+    NcmSBesselIntegrator *sbi      = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (lmins[b], lmins[b] + 7));
+    NcXcorKernelIntegrand *closure = nc_xcor_kernel_get_eval_vectorized_full (test->xclk, test->cosmo, lmins[b], lmins[b] + 7,
+                                                                              sbi, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
+    const TestNcXcorClosureCheck check = test_nc_xcor_closure_check (test->xclk, test->cosmo, closure, lmins[b]);
+
+    g_test_message ("ell %d-%d: worst %.3g of the bound at ell %d, k %.4g, over %u points",
+                    lmins[b], lmins[b] + 7, check.worst, check.at_ell, check.at_k, check.n_points);
+    g_assert_cmpfloat (check.worst, <, 1.0);
+
+    nc_xcor_kernel_integrand_unref (closure);
+    ncm_sbessel_integrator_free (sbi);
+  }
+}
+
+/* The closure of one multipole of the window at the given tolerances, non-Limber */
+static NcXcorKernelIntegrand *
+_closure_at (TestNcXcorKernelAnalytic *test, gint ell, gdouble adaptive_epsilon, gdouble tol)
+{
+  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (ell, ell));
+  NcXcorKernelIntegrand *closure;
+
+  g_object_set (test->xclk, "integrator", sbi, NULL);
+  nc_xcor_kernel_set_l_limber (test->xclk, -1);
+  nc_xcor_kernel_set_adaptive_epsilon (test->xclk, adaptive_epsilon);
+  nc_xcor_kernel_set_reltol (test->xclk, tol);
+  nc_xcor_kernel_set_peak_epsilon (test->xclk, tol);
+
+  closure = nc_xcor_kernel_get_eval_vectorized_full (test->xclk, test->cosmo, ell, ell, sbi, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
+  ncm_sbessel_integrator_free (sbi);
+
+  return closure;
+}
+
+/* A tiny adaptive-epsilon makes the domain of the disjoint window five decades wide. A
+ * first Chebyshev grid spread over all of it would start past the peak, and both levels
+ * of the doubling test would see a small smooth function and agree; the initial grid of
+ * min-panels-per-efold puts panels on the peak's scale. The direct comparison samples
+ * every panel and a grid over the whole domain, which a missed peak cannot avoid. */
+static void
+test_nc_xcor_kernel_analytic_narrow_peak (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
+{
+  NcXcorKernelIntegrand *closure     = _closure_at (test, 10, 1.0e-11, 1.0e-6);
+  const TestNcXcorClosureCheck check = test_nc_xcor_closure_check (test->xclk, test->cosmo, closure, 10);
+
+  g_test_message ("worst %.3g of the bound at k %.4g, over %u points", check.worst, check.at_k, check.n_points);
+  g_assert_cmpfloat (check.worst, <, 1.0);
+
+  nc_xcor_kernel_integrand_unref (closure);
+}
+
+/* The direct comparison fails on a closure that is not the kernel's: the closure of
+ * ell = 10 held against W_11(k) is far outside its bound */
+static void
+test_nc_xcor_kernel_analytic_closure_check_control (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
+{
+  NcXcorKernelIntegrand *closure     = _closure_at (test, 10, nc_xcor_kernel_get_adaptive_epsilon (test->xclk), 1.0e-4);
+  const TestNcXcorClosureCheck check = test_nc_xcor_closure_check (test->xclk, test->cosmo, closure, 11);
+
+  g_assert_cmpfloat (check.worst, >, 100.0);
+
+  nc_xcor_kernel_integrand_unref (closure);
+}
+
 typedef struct _TestCheck
 {
   const gchar *name;
@@ -658,6 +738,7 @@ static const TestCheck test_checks[] = {
   {"z_range",   &test_nc_xcor_kernel_analytic_z_range},
   {"limber",    &test_nc_xcor_kernel_analytic_limber},
   {"serialize", &test_nc_xcor_kernel_analytic_serialize},
+  {"closure",   &test_nc_xcor_kernel_analytic_closure},
 };
 
 gint
@@ -685,6 +766,21 @@ main (gint argc, gchar *argv[])
 
       g_free (path);
     }
+  }
+
+  for (i = 0; i < TEST_N_KERNELS; i++)
+  {
+    if (g_strcmp0 (test_kernels[i].name, "multi_disjoint") != 0)
+      continue;
+
+    g_test_add ("/nc/xcor/kernel/analytic/multi_disjoint/narrow_peak", TestNcXcorKernelAnalytic, &test_kernels[i],
+                &test_nc_xcor_kernel_analytic_new,
+                &test_nc_xcor_kernel_analytic_narrow_peak,
+                &test_nc_xcor_kernel_analytic_free);
+    g_test_add ("/nc/xcor/kernel/analytic/multi_disjoint/closure_check_control", TestNcXcorKernelAnalytic, &test_kernels[i],
+                &test_nc_xcor_kernel_analytic_new,
+                &test_nc_xcor_kernel_analytic_closure_check_control,
+                &test_nc_xcor_kernel_analytic_free);
   }
 
   g_test_run ();
