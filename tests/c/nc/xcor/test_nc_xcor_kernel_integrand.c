@@ -255,97 +255,35 @@ test_nc_xcor_kernel_integrand_comps (TestNcXcorKernelIntegrand *test, gconstpoin
   nc_xcor_kernel_integrand_unref (integ);
 }
 
-/* Every accessor beyond eval/get_range is optional -- an integrand that does not offer
- * one answers 0 or FALSE rather than failing. What is not optional is that an integrator
- * can reach the representation by *some* route, and that whichever routes are offered
- * describe the same thing. */
+/* A closure carries panels or knots. The panels hold one row per multipole and span the
+ * closure's range in its variable x = k / scale, converted with the scale of the first and
+ * the last multipole. */
 static void
 test_nc_xcor_kernel_integrand_panels (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
   const TestCase *tc           = pdata;
   NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
-  NcmMatrix *coeffs            = NULL;
+  NcmSpectralPanels *sp        = nc_xcor_kernel_integrand_peek_panels (integ);
   NcmVector *knots             = nc_xcor_kernel_integrand_peek_knots (integ);
-  gdouble k_min, k_max, s_min, s_max;
-  guint n_panels, i;
-  gboolean has_spectral;
 
-  nc_xcor_kernel_integrand_get_range (integ, &k_min, &k_max);
-  n_panels     = nc_xcor_kernel_integrand_get_n_panels (integ);
-  has_spectral = nc_xcor_kernel_integrand_peek_spectral (integ, &coeffs, &s_min, &s_max);
+  g_assert_true ((sp != NULL) || (knots != NULL));
 
-  g_assert_true (n_panels > 0 || has_spectral || knots != NULL);
-
-  /* The panels tile the range in order and without gaps: the block integrators walk them
-   * assuming exactly that, and a gap is silently lost integrand. The panels are in the
-   * closure's variable x = k / scale, so the range is converted with the scale of the
-   * first and the last multipole. */
-  if (n_panels > 0)
+  if (sp != NULL)
   {
     const guint len = nc_xcor_kernel_integrand_get_len (integ);
-    gdouble prev_b  = k_min / nc_xcor_kernel_integrand_get_scale (integ, 0);
+    gdouble k_min, k_max, x_min, x_max;
 
-    k_max /= nc_xcor_kernel_integrand_get_scale (integ, len - 1);
+    nc_xcor_kernel_integrand_get_range (integ, &k_min, &k_max);
+    ncm_spectral_panels_get_range (sp, &x_min, &x_max);
 
-    for (i = 0; i < n_panels; i++)
-    {
-      gdouble a, b;
-
-      coeffs = NULL;
-      nc_xcor_kernel_integrand_peek_panel (integ, i, &coeffs, &a, &b);
-
-      g_assert_nonnull (coeffs);
-      g_assert_cmpuint (ncm_matrix_nrows (coeffs), >, 0);
-      g_assert_cmpfloat (a, <, b);
-      ncm_assert_cmpdouble_e (a, ==, prev_b, 1.0e-12, 0.0);
-
-      prev_b = b;
-    }
-
-    ncm_assert_cmpdouble_e (prev_b, ==, k_max, 1.0e-12, 0.0);
+    g_assert_cmpuint (ncm_spectral_panels_get_fdim (sp), ==, len);
+    g_assert_cmpuint (ncm_spectral_panels_get_n_panels (sp), >, 0);
+    ncm_assert_cmpdouble_e (x_min, ==, k_min / nc_xcor_kernel_integrand_get_scale (integ, 0), 1.0e-12, 0.0);
+    ncm_assert_cmpdouble_e (x_max, ==, k_max / nc_xcor_kernel_integrand_get_scale (integ, len - 1), 1.0e-12, 0.0);
   }
 
   if (knots != NULL)
     g_assert_cmpuint (ncm_vector_len (knots), >, 1);
-
-  /* Restricting to a sub-interval yields a series over it, when the representation
-   * supports being restricted at all. */
-  coeffs = NULL;
-
-  if (nc_xcor_kernel_integrand_restrict (integ,
-                                         k_min + 0.25 * (k_max - k_min),
-                                         k_min + 0.75 * (k_max - k_min),
-                                         &coeffs))
-  {
-    g_assert_nonnull (coeffs);
-    g_assert_cmpuint (ncm_matrix_nrows (coeffs), >, 0);
-  }
-
-  nc_xcor_kernel_integrand_unref (integ);
-}
-
-/* The single-series spectral form exists exactly when the Chebyshev representation did
- * not have to split, so it is one panel spanning the whole range. */
-static void
-test_nc_xcor_kernel_integrand_spectral (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
-{
-  const TestCase *tc           = pdata;
-  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
-  NcmMatrix *coeffs            = NULL;
-  gdouble k_min, k_max;
-
-  if (nc_xcor_kernel_integrand_peek_spectral (integ, &coeffs, &k_min, &k_max))
-  {
-    g_assert_nonnull (coeffs);
-    g_assert_cmpuint (ncm_matrix_nrows (coeffs), >, 0);
-    g_assert_cmpuint (ncm_matrix_ncols (coeffs), >, 0);
-    g_assert_cmpfloat (k_min, <, k_max);
-    g_assert_cmpuint (nc_xcor_kernel_integrand_get_n_panels (integ), ==, 1);
-  }
-  else
-  {
-    g_assert_cmpuint (nc_xcor_kernel_integrand_get_n_panels (integ), !=, 1);
-  }
 
   nc_xcor_kernel_integrand_unref (integ);
 }
@@ -424,7 +362,6 @@ static const TestCheck test_checks[] = {
   {"eval",       &test_nc_xcor_kernel_integrand_eval      },
   {"comps",      &test_nc_xcor_kernel_integrand_comps     },
   {"panels",     &test_nc_xcor_kernel_integrand_panels    },
-  {"spectral",   &test_nc_xcor_kernel_integrand_spectral  },
   {"tolerances", &test_nc_xcor_kernel_integrand_tolerances},
   {"vectorized", &test_nc_xcor_kernel_integrand_vectorized},
 };

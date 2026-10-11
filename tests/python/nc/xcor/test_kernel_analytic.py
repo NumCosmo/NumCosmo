@@ -1303,11 +1303,11 @@ def test_limber_agrees_with_non_limber_under_scale_dependence():
 
 
 def _panel_edges(integrand: Nc.XcorKernelIntegrand) -> np.ndarray:
-    n_panels = integrand.get_n_panels()
+    panels = integrand.peek_panels()
 
     return np.array(
-        [integrand.peek_panel(0)[1]]
-        + [integrand.peek_panel(i)[2] for i in range(n_panels)]
+        [panels.get_panel(0)[1]]
+        + [panels.get_panel(i)[2] for i in range(panels.get_n_panels())]
     )
 
 
@@ -1366,7 +1366,7 @@ def test_a_visible_jump_at_a_component_boundary_does_not_split_the_panel(
         ks = np.geomspace(lo, hi, 2000)
         values = np.array([closure.eval_array(k) for k in ks])
 
-        return np.abs(values).max(axis=0), closure.get_n_panels()
+        return np.abs(values).max(axis=0), closure.peek_panels().get_n_panels()
 
     peaks_ref, _ = peaks_and_panels(1.0e-5)
     peaks, n_panels = peaks_and_panels(1.0e-3)

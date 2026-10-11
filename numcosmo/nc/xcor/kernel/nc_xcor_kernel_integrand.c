@@ -242,84 +242,6 @@ _cheb_integrand_get_range_comp (gpointer data, guint i, gdouble *kmin, gdouble *
   *kmax = cid->k_max_comp[i];
 }
 
-/*
- * Returns the coefficients and interval of the closure when it consists of a
- * single panel, and FALSE otherwise.
- */
-static gboolean
-_cheb_integrand_get_spectral (gpointer data, NcmMatrix **coeffs, gdouble *k_min, gdouble *k_max)
-{
-  ChebIntegrandData *cid = (ChebIntegrandData *) data;
-
-  if (ncm_spectral_panels_get_n_panels (cid->sp) != 1)
-    return FALSE;
-
-  ncm_spectral_panels_get_range (cid->sp, k_min, k_max);
-  *coeffs = g_ptr_array_index (cid->views, 0);
-
-  return TRUE;
-}
-
-static guint
-_cheb_integrand_get_panels (gpointer data)
-{
-  ChebIntegrandData *cid = (ChebIntegrandData *) data;
-
-  return ncm_spectral_panels_get_n_panels (cid->sp);
-}
-
-static void
-_cheb_integrand_peek_panel (gpointer data, guint i, NcmMatrix **coeffs, gdouble *a, gdouble *b)
-{
-  ChebIntegrandData *cid = (ChebIntegrandData *) data;
-  guint N;
-
-  ncm_spectral_panels_peek_panel (cid->sp, i, a, b, &N);
-  *coeffs = g_ptr_array_index (cid->views, i);
-}
-
-/*
- * Computes the Chebyshev coefficients of every component on [a, b], which must
- * lie inside one panel, and returns FALSE when it does not. The restriction of
- * a polynomial to a subinterval is a polynomial of the same degree, so the
- * coefficients follow from those of the panel by a change of basis
- * (ncm_spectral_chebyshev_rebase_rows()), exact and of cost O(N^2) per
- * component, without new evaluations of W_l(k). A matrix of the right shape in
- * @coeffs is reused.
- */
-static gboolean
-_cheb_integrand_restrict (gpointer data, gdouble a, gdouble b, NcmMatrix **coeffs)
-{
-  ChebIntegrandData *cid = (ChebIntegrandData *) data;
-  const guint i          = ncm_spectral_panels_find_panel (cid->sp, 0.5 * (a + b));
-  gdouble pa, pb;
-  guint N;
-
-  ncm_spectral_panels_peek_panel (cid->sp, i, &pa, &pb, &N);
-
-  /* A cell of the common refinement reaches a panel edge through a conversion
-   * between the two closures' variables, so an endpoint can land a rounding
-   * outside the panel; within that slack it is clamped to the edge. */
-  {
-    const gdouble slack = 1.0e-12 * (pb - pa);
-
-    if ((a < pa - slack) || (b > pb + slack))
-      return FALSE;
-
-    a = GSL_MAX (a, pa);
-    b = GSL_MIN (b, pb);
-  }
-
-  {
-    NcmSpectral **spectral = _nc_xcor_kernel_spectral_get ();
-
-    ncm_spectral_panels_restrict (cid->sp, *spectral, a, b, coeffs);
-    ncm_memory_pool_return (spectral);
-  }
-
-  return TRUE;
-}
-
 static void
 _cheb_integrand_data_free (gpointer data)
 {
@@ -327,7 +249,6 @@ _cheb_integrand_data_free (gpointer data)
 
   nc_hicosmo_clear (&cid->cosmo);
   ncm_spectral_panels_clear (&cid->sp);
-  g_ptr_array_unref (cid->views);
 
   g_free (cid->scale);
   g_free (cid->k_min_comp);
@@ -342,33 +263,14 @@ _cheb_integrand_data_free (gpointer data)
 NcXcorKernelIntegrand *
 _nc_xcor_kernel_cheb_integrand_new (guint n_l, ChebIntegrandData *cid)
 {
-  const guint n_panels             = ncm_spectral_panels_get_n_panels (cid->sp);
   NcXcorKernelIntegrand *integrand = nc_xcor_kernel_integrand_new (n_l,
                                                                    _cheb_integrand_eval,
                                                                    _cheb_integrand_get_range,
                                                                    cid,
                                                                    _cheb_integrand_data_free);
-  guint i;
-
-  /* The NcmMatrix views of the panels that nc_xcor_kernel_integrand_peek_panel() hands out */
-  cid->views = g_ptr_array_new_full (n_panels, (GDestroyNotify) ncm_matrix_free);
-
-  for (i = 0; i < n_panels; i++)
-  {
-    gdouble a, b;
-    guint N;
-    const gdouble *c = ncm_spectral_panels_peek_panel (cid->sp, i, &a, &b, &N);
-
-    g_ptr_array_add (cid->views, ncm_matrix_new_data_static ((gdouble *) c, n_l, N));
-  }
 
   nc_xcor_kernel_integrand_set_get_range_comp (integrand, _cheb_integrand_get_range_comp);
   nc_xcor_kernel_integrand_set_eval_comps (integrand, _cheb_integrand_eval_comps);
-  nc_xcor_kernel_integrand_set_get_spectral (integrand, _cheb_integrand_get_spectral);
-  nc_xcor_kernel_integrand_set_panel_accessors (integrand,
-                                                _cheb_integrand_get_panels,
-                                                _cheb_integrand_peek_panel);
-  nc_xcor_kernel_integrand_set_restrict (integrand, _cheb_integrand_restrict);
   nc_xcor_kernel_integrand_set_get_scale (integrand, _cheb_integrand_get_scale);
   nc_xcor_kernel_integrand_set_panels (integrand, cid->sp);
 
@@ -422,10 +324,6 @@ nc_xcor_kernel_integrand_new (guint len, void (*eval) (gpointer, gdouble, gdoubl
 
   integrand->get_range_comp_func = NULL;
   integrand->eval_comps_func     = NULL;
-  integrand->get_spectral_func   = NULL;
-  integrand->get_panels_func     = NULL;
-  integrand->peek_panel_func     = NULL;
-  integrand->restrict_func       = NULL;
   integrand->get_scale_func      = NULL;
 
   integrand->closure_error = NULL;
@@ -454,105 +352,6 @@ nc_xcor_kernel_integrand_set_get_knots (NcXcorKernelIntegrand *integrand, NcXcor
 }
 
 /**
- * nc_xcor_kernel_integrand_set_get_spectral: (skip)
- * @integrand: a #NcXcorKernelIntegrand
- * @get_spectral: (scope async): function reporting a spectral representation
- *
- * Installs the accessor reporting @integrand's Chebyshev expansion. Left unset
- * by nc_xcor_kernel_integrand_new(), in which case @integrand has none and
- * nc_xcor_kernel_integrand_peek_spectral() returns %FALSE.
- *
- */
-void
-nc_xcor_kernel_integrand_set_get_spectral (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetSpectral get_spectral)
-{
-  integrand->get_spectral_func = get_spectral;
-}
-
-/**
- * nc_xcor_kernel_integrand_peek_spectral:
- * @integrand: a #NcXcorKernelIntegrand
- * @coeffs: (out) (transfer none): the coefficient matrix, one row per component
- * @k_min: (out): lower end of the expansion interval
- * @k_max: (out): upper end of the expansion interval
- *
- * Peeks @integrand's Chebyshev expansion, when it has one.
- *
- * A pair of integrands that both report one, over the same interval, can have
- * their outer integral evaluated on the coefficients rather than by quadrature:
- * a product of Chebyshev series is a Chebyshev series, and its integral is a
- * fixed weighted sum of the coefficients.
- *
- * Returns: %TRUE when @integrand carries an expansion
- */
-gboolean
-nc_xcor_kernel_integrand_peek_spectral (NcXcorKernelIntegrand *integrand, NcmMatrix **coeffs, gdouble *k_min, gdouble *k_max)
-{
-  if (integrand->get_spectral_func == NULL)
-    return FALSE;
-
-  return integrand->get_spectral_func (integrand->data, coeffs, k_min, k_max);
-}
-
-/**
- * nc_xcor_kernel_integrand_set_panel_accessors: (skip)
- * @integrand: a #NcXcorKernelIntegrand
- * @get_panels: (scope async): function reporting the panel count
- * @peek_panel: (scope async): function reporting one panel
- *
- * Installs the accessors enumerating @integrand's panels, for a spectral
- * representation split into more than one.
- *
- */
-void
-nc_xcor_kernel_integrand_set_panel_accessors (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetPanels get_panels, NcXcorKernelIntegrandPeekPanel peek_panel)
-{
-  integrand->get_panels_func = get_panels;
-  integrand->peek_panel_func = peek_panel;
-}
-
-/**
- * nc_xcor_kernel_integrand_set_restrict: (skip)
- * @integrand: a #NcXcorKernelIntegrand
- * @restrict_func: (scope async): function restricting a panel to a subinterval
- *
- * Installs the accessor producing coefficients on a subinterval of a panel.
- *
- */
-void
-nc_xcor_kernel_integrand_set_restrict (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandRestrict restrict_func)
-{
-  integrand->restrict_func = restrict_func;
-}
-
-/**
- * nc_xcor_kernel_integrand_restrict:
- * @integrand: a #NcXcorKernelIntegrand
- * @a: lower edge of the target interval
- * @b: upper edge of the target interval
- * @coeffs: (out) (transfer full): coefficients on [@a, @b], one row per component
- *
- * Produces @integrand's coefficients on [@a, @b], which has to lie inside a
- * single panel.
- *
- * This is what lets a pair of spectral closures be integrated on the common
- * refinement of their panel edges: on each merged panel both are polynomials
- * over the same interval, so the product is exact and needs no quadrature.
- * Restricting is a change of basis rather than a refit, so it costs arithmetic
- * at panel order rather than fresh radial solves.
- *
- * Returns: %TRUE when @integrand could produce them
- */
-gboolean
-nc_xcor_kernel_integrand_restrict (NcXcorKernelIntegrand *integrand, gdouble a, gdouble b, NcmMatrix **coeffs)
-{
-  if (integrand->restrict_func == NULL)
-    return FALSE;
-
-  return integrand->restrict_func (integrand->data, a, b, coeffs);
-}
-
-/**
  * nc_xcor_kernel_integrand_set_get_scale: (skip)
  * @integrand: a #NcXcorKernelIntegrand
  * @get_scale: (scope async): function reporting the scale of one component
@@ -574,9 +373,8 @@ nc_xcor_kernel_integrand_set_get_scale (NcXcorKernelIntegrand *integrand, NcXcor
  * The panels of a spectral integrand are in the variable $x = k / s_i$, with
  * $s_i$ the scale of component @i: $s_i = 1$ for a closure built in $k$, and
  * $s_i = \nu_i = \ell_i + 1/2$ for a Limber closure built in $u = k / \nu$, whose
- * panels are then common to the block. The edges reported by
- * nc_xcor_kernel_integrand_peek_panel() and the interval given to
- * nc_xcor_kernel_integrand_restrict() are in $x$.
+ * panels are then common to the block. The panels of
+ * nc_xcor_kernel_integrand_peek_panels() are in $x$.
  *
  * Returns: the scale of component @i
  */
@@ -587,43 +385,6 @@ nc_xcor_kernel_integrand_get_scale (NcXcorKernelIntegrand *integrand, guint i)
     return 1.0;
 
   return integrand->get_scale_func (integrand->data, i);
-}
-
-/**
- * nc_xcor_kernel_integrand_get_n_panels:
- * @integrand: a #NcXcorKernelIntegrand
- *
- * Returns: how many panels @integrand is split into, or 0 when it carries no
- * spectral representation
- */
-guint
-nc_xcor_kernel_integrand_get_n_panels (NcXcorKernelIntegrand *integrand)
-{
-  if (integrand->get_panels_func == NULL)
-    return 0;
-
-  return integrand->get_panels_func (integrand->data);
-}
-
-/**
- * nc_xcor_kernel_integrand_peek_panel:
- * @integrand: a #NcXcorKernelIntegrand
- * @i: panel index, below nc_xcor_kernel_integrand_get_n_panels()
- * @coeffs: (out) (transfer none): the panel's coefficients, one row per component
- * @a: (out): the panel's lower edge
- * @b: (out): the panel's upper edge
- *
- * Peeks one panel. Panels are contiguous and ascending, so panel @i ends where
- * panel @i + 1 begins.
- *
- */
-void
-nc_xcor_kernel_integrand_peek_panel (NcXcorKernelIntegrand *integrand, guint i, NcmMatrix **coeffs, gdouble *a, gdouble *b)
-{
-  g_assert (integrand->peek_panel_func != NULL);
-  g_assert_cmpuint (i, <, nc_xcor_kernel_integrand_get_n_panels (integrand));
-
-  integrand->peek_panel_func (integrand->data, i, coeffs, a, b);
 }
 
 /**

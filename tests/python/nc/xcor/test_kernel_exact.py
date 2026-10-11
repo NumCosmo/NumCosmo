@@ -503,14 +503,15 @@ def test_chebyshev_closure_reports_a_spectral_representation(
     cheb = _closure(cosmology, Nc.XcorKernelClosure.CHEBYSHEV)
     spline = _closure(cosmology, Nc.XcorKernelClosure.SPLINE)
 
-    n_panels = cheb.get_n_panels()
+    panels = cheb.peek_panels()
+    n_panels = panels.get_n_panels()
     assert n_panels > 0
 
     # Panels are contiguous and ascending, and together they tile the range.
     lo, hi = cheb.get_range()
     prev_b = lo
     for i in range(n_panels):
-        coeffs, a, b = cheb.peek_panel(i)
+        coeffs, a, b = panels.get_panel(i)
         assert coeffs.nrows() == 8
         assert coeffs.ncols() > 1
         assert a == pytest.approx(prev_b)
@@ -518,16 +519,11 @@ def test_chebyshev_closure_reports_a_spectral_representation(
         prev_b = b
     assert prev_b == pytest.approx(hi)
 
-    # The single-expansion accessor answers only when there is one panel, since
-    # that is the case a caller working on coefficients can use directly.
-    assert cheb.peek_spectral()[0] == (n_panels == 1)
-
-    # A spline closure reports knots and no expansion; the Chebyshev one the
+    # A spline closure reports knots and no panels; the Chebyshev one the
     # reverse. Neither is asked to pretend it has the other.
     assert cheb.peek_knots() is None
     assert spline.peek_knots() is not None
-    assert not spline.peek_spectral()[0]
-    assert spline.get_n_panels() == 0
+    assert spline.peek_panels() is None
 
 
 def test_chebyshev_closure_agrees_with_the_spline_one(cosmology: Cosmology) -> None:
@@ -569,7 +565,8 @@ def test_chebyshev_closure_agrees_with_the_spline_one(cosmology: Cosmology) -> N
     # The Chebyshev closure reaches that on fewer samples than the spline needs
     # knots -- the accuracy per evaluation is the point, evaluations being
     # radial solves.
-    n_cheb = sum(cheb.peek_panel(i)[0].ncols() for i in range(cheb.get_n_panels()))
+    panels = cheb.peek_panels()
+    n_cheb = sum(panels.get_panel(i)[0].ncols() for i in range(panels.get_n_panels()))
     assert n_cheb < spline.peek_knots().len()
 
 
@@ -621,15 +618,16 @@ def test_limber_multipoles_take_the_requested_closure(cosmology: Cosmology) -> N
     spline = integrand(Nc.XcorKernelClosure.SPLINE)
     cheb = integrand(Nc.XcorKernelClosure.CHEBYSHEV)
 
-    assert spline.peek_knots() is not None and spline.get_n_panels() == 0
-    assert cheb.peek_knots() is None and cheb.get_n_panels() > 0
+    panels = cheb.peek_panels()
+    assert spline.peek_knots() is not None and spline.peek_panels() is None
+    assert cheb.peek_knots() is None and panels.get_n_panels() > 0
 
     # The Chebyshev closure is in u = k / nu, where every multipole has the same
     # band, so each multipole's band edges in k are the panel edges times its
     # scale.
     edges = np.array(
-        [cheb.peek_panel(0)[1]]
-        + [cheb.peek_panel(i)[2] for i in range(cheb.get_n_panels())]
+        [panels.get_panel(0)[1]]
+        + [panels.get_panel(i)[2] for i in range(panels.get_n_panels())]
     )
     for i in range(cheb.get_len()):
         k_min, k_max = cheb.get_range_comp(i)
@@ -729,16 +727,18 @@ def test_panel_order_cap_is_tunable(cosmology: Cosmology) -> None:
 
     # Zero selects the default, so it must land exactly where naming it does.
     _, explicit = closure(5)
-    assert default_closure.get_n_panels() == explicit.get_n_panels()
+    default_panels = default_closure.peek_panels()
+    assert default_panels.get_n_panels() == explicit.peek_panels().get_n_panels()
 
     # A lower cap gives more, smaller panels; a higher one fewer, larger.
     _, coarse = closure(7)
     _, fine = closure(4)
-    assert fine.get_n_panels() > default_closure.get_n_panels()
-    assert coarse.get_n_panels() < default_closure.get_n_panels()
+    coarse_panels = coarse.peek_panels()
+    assert fine.peek_panels().get_n_panels() > default_panels.get_n_panels()
+    assert coarse_panels.get_n_panels() < default_panels.get_n_panels()
 
-    for i in range(coarse.get_n_panels()):
-        assert coarse.peek_panel(i)[0].ncols() <= (1 << 7) + 1
+    for i in range(coarse_panels.get_n_panels()):
+        assert coarse_panels.get_panel(i)[0].ncols() <= (1 << 7) + 1
 
     # And they describe one function: the cap changes how the domain is carved,
     # not what is being fitted. Compared against the block's own peak rather

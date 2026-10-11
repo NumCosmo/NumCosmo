@@ -205,8 +205,8 @@ test_ncm_spectral_panels_eval (void)
   ncm_spectral_panels_free (sp);
 }
 
-/* A subinterval of a panel gives the same polynomial; the whole panel gives its own
- * coefficients; an interval across an edge is refused */
+/* A subinterval of a panel gives the same polynomial; the whole panel, up to rounding at its
+ * edges, gives its own coefficients; an interval across an edge is refused */
 static void
 test_ncm_spectral_panels_restrict (void)
 {
@@ -248,6 +248,18 @@ test_ncm_spectral_panels_restrict (void)
   for (r = 0; r < 2; r++)
     for (n = 0; n < N; n++)
       g_assert_cmpfloat (ncm_matrix_get (coeffs, r, n), ==, c[r * N + n]);
+
+  /* Ends a rounding outside the panel are clamped to its edges; beyond 1e-12 of its width
+   * the interval is refused */
+  g_assert_true (ncm_spectral_panels_restrict (sp, spectral, 1.0 - 1.0e-13, 2.5 + 1.0e-13, &coeffs));
+
+  for (r = 0; r < 2; r++)
+    for (n = 0; n < N; n++)
+      g_assert_cmpfloat (ncm_matrix_get (coeffs, r, n), ==, c[r * N + n]);
+
+  kept = coeffs;
+  g_assert_false (ncm_spectral_panels_restrict (sp, spectral, 1.0 - 1.0e-9, 2.0, &coeffs));
+  g_assert_true (coeffs == kept);
 
   g_assert_true (ncm_spectral_panels_restrict (sp, spectral, 3.0, 3.5, &coeffs));
   g_assert_cmpuint (ncm_matrix_ncols (coeffs), ==, test_N[2]);

@@ -313,9 +313,10 @@ _test_ref_cells (TestNcXcorKQuadRef *ref)
 static void
 _test_ref_breakpoints (NcXcorKernelIntegrand *xclki, GArray *edges)
 {
-  const guint len      = nc_xcor_kernel_integrand_get_len (xclki);
-  const guint n_panels = nc_xcor_kernel_integrand_get_n_panels (xclki);
-  NcmVector *knots     = nc_xcor_kernel_integrand_peek_knots (xclki);
+  const guint len       = nc_xcor_kernel_integrand_get_len (xclki);
+  NcmSpectralPanels *sp = nc_xcor_kernel_integrand_peek_panels (xclki);
+  const guint n_panels  = (sp != NULL) ? ncm_spectral_panels_get_n_panels (sp) : 0;
+  NcmVector *knots      = nc_xcor_kernel_integrand_peek_knots (xclki);
   guint c, i;
 
   for (c = 0; c < len; c++)
@@ -333,10 +334,10 @@ _test_ref_breakpoints (NcXcorKernelIntegrand *xclki, GArray *edges)
 
     for (i = 0; i < n_panels; i++)
     {
-      NcmMatrix *coeffs;
       gdouble a, b;
+      guint N;
 
-      nc_xcor_kernel_integrand_peek_panel (xclki, i, &coeffs, &a, &b);
+      ncm_spectral_panels_peek_panel (sp, i, &a, &b, &N);
       a *= s;
       b *= s;
       g_array_append_val (edges, a);

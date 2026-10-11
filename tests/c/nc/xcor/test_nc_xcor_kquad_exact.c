@@ -131,7 +131,7 @@ _test_nc_xcor_kquad_exact_assert_closure (NcXcorKernelIntegrand *xclki, NcXcorKe
   const gboolean spline = (closure == NC_XCOR_KERNEL_CLOSURE_SPLINE);
 
   g_assert_true ((nc_xcor_kernel_integrand_peek_knots (xclki) != NULL) == spline);
-  g_assert_true ((nc_xcor_kernel_integrand_get_n_panels (xclki) > 0) == !spline);
+  g_assert_true ((nc_xcor_kernel_integrand_peek_panels (xclki) != NULL) == !spline);
 }
 
 static void

@@ -584,11 +584,13 @@ _ncm_spectral_panels_clenshaw (const gdouble *c, guint N, const gdouble s)
  * @coeffs: (out) (transfer full): the coefficients on [@a, @b]
  *
  * Computes the Chebyshev coefficients of every entry of $F$ on [@a, @b], which must lie
- * inside one panel. The restriction of a polynomial to a subinterval is a polynomial of the
- * same degree, so they follow exactly from those of the panel by
- * ncm_spectral_chebyshev_rebase_rows_data(), with the scratch space of @spectral; when [@a,
- * @b] is the panel they are its own. A matrix of the right shape in @coeffs is reused, and
- * a new one is allocated otherwise. @a must be below @b.
+ * inside one panel. An end that edges computed in another variable put a rounding outside
+ * the panel, within $10^{-12}$ of its width, is clamped to the edge. The restriction of a
+ * polynomial to a subinterval is a polynomial of the same degree, so the coefficients follow
+ * exactly from those of the panel by ncm_spectral_chebyshev_rebase_rows_data(), with the
+ * scratch space of @spectral; when [@a, @b] is the panel they are its own. A matrix of the
+ * right shape in @coeffs is reused, and a new one is allocated otherwise. @a must be below
+ * @b.
  *
  * Returns: whether [@a, @b] lies inside one panel; when it does not, @coeffs is unchanged.
  */
@@ -600,10 +602,15 @@ ncm_spectral_panels_restrict (NcmSpectralPanels *sp, NcmSpectral *spectral, gdou
   guint N;
   const gdouble *c = ncm_spectral_panels_peek_panel (sp, i, &pa, &pb, &N);
 
+  const gdouble slack = 1.0e-12 * (pb - pa);
+
   g_assert_cmpfloat (a, <, b);
 
-  if ((a < pa) || (b > pb))
+  if ((a < pa - slack) || (b > pb + slack))
     return FALSE;
+
+  a = MAX (a, pa);
+  b = MIN (b, pb);
 
   if ((*coeffs != NULL) && ((ncm_matrix_nrows (*coeffs) != sp->fdim) || (ncm_matrix_ncols (*coeffs) != N)))
     ncm_matrix_clear (coeffs);

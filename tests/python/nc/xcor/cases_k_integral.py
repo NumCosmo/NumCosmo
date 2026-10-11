@@ -842,7 +842,7 @@ def build_integrand(
     )
 
     wanted_panels = settings.closure == Nc.XcorKernelClosure.CHEBYSHEV
-    got_panels = integrand.get_n_panels() > 0
+    got_panels = integrand.peek_panels() is not None
 
     if wanted_panels != got_panels:
         raise AssertionError(
@@ -857,13 +857,13 @@ def build_integrand(
 
 def breakpoints(integrand: Nc.XcorKernelIntegrand) -> np.ndarray:
     """Where the closure stops being one polynomial: panel edges, or knots."""
-    n_panels = integrand.get_n_panels()
+    panels = integrand.peek_panels()
 
-    if n_panels > 0:
+    if panels is not None:
         edges = []
 
-        for i in range(n_panels):
-            _, a, b = integrand.peek_panel(i)
+        for i in range(panels.get_n_panels()):
+            _, a, b = panels.get_panel(i)
             edges.extend((a, b))
 
         return np.unique(np.array(edges))

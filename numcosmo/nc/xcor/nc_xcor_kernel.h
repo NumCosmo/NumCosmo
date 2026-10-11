@@ -106,55 +106,6 @@ typedef enum _NcXcorKernelClosure /*< prefix=NC_XCOR_KERNEL_CLOSURE >*/
 } NcXcorKernelClosure;
 
 /**
- * NcXcorKernelIntegrandGetSpectral:
- * @data: user data
- * @coeffs: (out) (transfer none): the coefficient matrix, one row per component
- * @k_min: (out): lower end of the expansion interval
- * @k_max: (out): upper end of the expansion interval
- *
- * Function type reporting a spectral representation of the integrand, when it
- * has one.
- *
- * Returns: %TRUE when @data carries a Chebyshev expansion
- */
-typedef gboolean (*NcXcorKernelIntegrandGetSpectral) (gpointer data, NcmMatrix **coeffs, gdouble *k_min, gdouble *k_max);
-
-/**
- * NcXcorKernelIntegrandGetPanels:
- * @data: user data
- *
- * Function type reporting how many panels a spectral integrand is split into.
- *
- * Returns: the panel count, or 0 when @data has no spectral representation
- */
-typedef guint (*NcXcorKernelIntegrandGetPanels) (gpointer data);
-
-/**
- * NcXcorKernelIntegrandPeekPanel:
- * @data: user data
- * @i: panel index
- * @coeffs: (out) (transfer none): the panel's coefficients, one row per component
- * @a: (out): the panel's lower edge
- * @b: (out): the panel's upper edge
- *
- * Function type reporting one panel of a spectral integrand.
- */
-typedef void (*NcXcorKernelIntegrandPeekPanel) (gpointer data, guint i, NcmMatrix **coeffs, gdouble *a, gdouble *b);
-
-/**
- * NcXcorKernelIntegrandRestrict:
- * @data: user data
- * @a: lower edge of the target interval
- * @b: upper edge of the target interval
- * @coeffs: (out) (transfer full): coefficients on [@a, @b]
- *
- * Function type producing coefficients on a subinterval of one panel.
- *
- * Returns: %TRUE on success
- */
-typedef gboolean (*NcXcorKernelIntegrandRestrict) (gpointer data, gdouble a, gdouble b, NcmMatrix **coeffs);
-
-/**
  * NcXcorKernelIntegrandGetScale:
  * @data: user data
  * @i: component index
@@ -277,10 +228,6 @@ struct _NcXcorKernelIntegrand
   NcXcorKernelIntegrandGetKnots get_knots_func;
   NcXcorKernelIntegrandGetRangeComp get_range_comp_func;
   NcXcorKernelIntegrandEvalComps eval_comps_func;
-  NcXcorKernelIntegrandGetSpectral get_spectral_func;
-  NcXcorKernelIntegrandGetPanels get_panels_func;
-  NcXcorKernelIntegrandPeekPanel peek_panel_func;
-  NcXcorKernelIntegrandRestrict restrict_func;
   NcXcorKernelIntegrandGetScale get_scale_func;
   NcmMatrix *closure_error;
   gdouble reltol;
@@ -414,13 +361,6 @@ void nc_xcor_kernel_integrand_set_get_knots (NcXcorKernelIntegrand *integrand, N
 void nc_xcor_kernel_integrand_set_get_range_comp (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetRangeComp get_range_comp);
 void nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandEvalComps eval_comps);
 NcmVector *nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand);
-void nc_xcor_kernel_integrand_set_get_spectral (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetSpectral get_spectral);
-gboolean nc_xcor_kernel_integrand_peek_spectral (NcXcorKernelIntegrand *integrand, NcmMatrix **coeffs, gdouble *k_min, gdouble *k_max);
-void nc_xcor_kernel_integrand_set_panel_accessors (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetPanels get_panels, NcXcorKernelIntegrandPeekPanel peek_panel);
-guint nc_xcor_kernel_integrand_get_n_panels (NcXcorKernelIntegrand *integrand);
-void nc_xcor_kernel_integrand_peek_panel (NcXcorKernelIntegrand *integrand, guint i, NcmMatrix **coeffs, gdouble *a, gdouble *b);
-void nc_xcor_kernel_integrand_set_restrict (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandRestrict restrict_func);
-gboolean nc_xcor_kernel_integrand_restrict (NcXcorKernelIntegrand *integrand, gdouble a, gdouble b, NcmMatrix **coeffs);
 void nc_xcor_kernel_integrand_set_get_scale (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetScale get_scale);
 gdouble nc_xcor_kernel_integrand_get_scale (NcXcorKernelIntegrand *integrand, guint i);
 void nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdouble reltol, gdouble peak_epsilon);

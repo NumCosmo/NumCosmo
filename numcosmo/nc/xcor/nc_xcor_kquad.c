@@ -157,8 +157,9 @@ _nc_xcor_closure_cell_residual (NcmMatrix *residuals, GArray *rows, const guint 
 static GArray *
 _nc_xcor_closure_cell_rows (NcXcorKernelIntegrand *xclki, GArray *edges, const gdouble c)
 {
-  const guint n_panels = nc_xcor_kernel_integrand_get_n_panels (xclki);
-  GArray *rows         = g_array_sized_new (FALSE, FALSE, sizeof (guint), edges->len);
+  NcmSpectralPanels *sp = nc_xcor_kernel_integrand_peek_panels (xclki);
+  const guint n_panels  = (sp != NULL) ? ncm_spectral_panels_get_n_panels (sp) : 0;
+  GArray *rows          = g_array_sized_new (FALSE, FALSE, sizeof (guint), edges->len);
   guint ie, j = 0;
 
   if (n_panels > 0)
@@ -169,10 +170,10 @@ _nc_xcor_closure_cell_rows (NcXcorKernelIntegrand *xclki, GArray *edges, const g
 
       while (j + 1 < n_panels)
       {
-        NcmMatrix *ignored = NULL;
         gdouble a, b;
+        guint N;
 
-        nc_xcor_kernel_integrand_peek_panel (xclki, j, &ignored, &a, &b);
+        ncm_spectral_panels_peek_panel (sp, j, &a, &b, &N);
 
         if (b > cell_lo)
           break;
@@ -523,17 +524,17 @@ _nc_xcor_cmp_edge (gconstpointer a, gconstpointer b)
 static void
 _nc_xcor_append_breakpoints (NcXcorKernelIntegrand *xclki, gdouble x_min, gdouble x_max, const gdouble c, GArray *edges)
 {
-  const guint n_panels = nc_xcor_kernel_integrand_get_n_panels (xclki);
+  NcmSpectralPanels *sp = nc_xcor_kernel_integrand_peek_panels (xclki);
   guint i;
 
-  if (n_panels > 0)
+  if (sp != NULL)
   {
-    for (i = 0; i < n_panels; i++)
+    for (i = 0; i < ncm_spectral_panels_get_n_panels (sp); i++)
     {
-      NcmMatrix *ignored = NULL;
       gdouble a, b;
+      guint N;
 
-      nc_xcor_kernel_integrand_peek_panel (xclki, i, &ignored, &a, &b);
+      ncm_spectral_panels_peek_panel (sp, i, &a, &b, &N);
       b /= c;
 
       if ((b > x_min) && (b < x_max))
@@ -609,18 +610,19 @@ _nc_xcor_merge_panel_edges (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand
  * at four nodes it is four sums.
  */
 static void
-_nc_xcor_cell_coeffs (NcXcorKernelIntegrand *xclki, gdouble a, gdouble b, guint nell, const gchar *side, NcmMatrix **coeffs_ptr)
+_nc_xcor_cell_coeffs (NcXcorKernelIntegrand *xclki, NcmSpectral *spectral, gdouble a, gdouble b, guint nell, const gchar *side, NcmMatrix **coeffs_ptr)
 {
-  NcmMatrix *coeffs = *coeffs_ptr;
+  NcmSpectralPanels *sp = nc_xcor_kernel_integrand_peek_panels (xclki);
+  NcmMatrix *coeffs     = *coeffs_ptr;
 
-  if (nc_xcor_kernel_integrand_get_n_panels (xclki) > 0)
+  if (sp != NULL)
   {
     /* Every cell of the common refinement lies inside one panel -- its edges
      * are the panels' own, so the containment test in restrict() compares
      * identical doubles. A failure here would mean the refinement and the
      * panels disagree, and dropping the cell would return a quietly wrong
      * C_ell. */
-    if (!nc_xcor_kernel_integrand_restrict (xclki, a, b, coeffs_ptr))
+    if (!ncm_spectral_panels_restrict (sp, spectral, a, b, coeffs_ptr))
       g_error ("_nc_xcor_kernel_integrate_block_spectral: cell [%.17g, %.17g] "
                "is not inside a single panel of the %s closure.", a, b, side);
 
@@ -672,11 +674,12 @@ _nc_xcor_cell_coeffs (NcXcorKernelIntegrand *xclki, gdouble a, gdouble b, guint 
  */
 typedef struct _NcXcorSpectralScratch
 {
-  GArray *A;            /* tables built here, for counts above the process-wide ones */
-  GArray *G;            /* n1 n2 doubles */
-  const gdouble *A_ptr; /* the tables in use: A_0, A_1, A_2, row-major in (i, j) */
-  guint nmax;           /* their row stride */
-  guint nmax_local;     /* the count A was built for */
+  GArray *A;             /* tables built here, for counts above the process-wide ones */
+  GArray *G;             /* n1 n2 doubles */
+  const gdouble *A_ptr;  /* the tables in use: A_0, A_1, A_2, row-major in (i, j) */
+  NcmSpectral *spectral; /* scratch of the restriction of a panel to a cell */
+  guint nmax;            /* their row stride */
+  guint nmax_local;      /* the count A was built for */
 } NcXcorSpectralScratch;
 
 /* inv(m) = 1 / (1 - m^2) for even m, 0 for odd m: half the integral of T_m over [-1, 1] */
@@ -771,20 +774,12 @@ _nc_xcor_spectral_scratch_prepare (NcXcorSpectralScratch *sc, const guint n1, co
 static void
 _nc_xcor_closure_var_range (NcXcorKernelIntegrand *xclki, gdouble *lo, gdouble *hi)
 {
-  const guint n_panels = nc_xcor_kernel_integrand_get_n_panels (xclki);
+  NcmSpectralPanels *sp = nc_xcor_kernel_integrand_peek_panels (xclki);
 
-  if (n_panels > 0)
-  {
-    NcmMatrix *ignored = NULL;
-    gdouble a, b;
-
-    nc_xcor_kernel_integrand_peek_panel (xclki, 0, &ignored, lo, &b);
-    nc_xcor_kernel_integrand_peek_panel (xclki, n_panels - 1, &ignored, &a, hi);
-  }
+  if (sp != NULL)
+    ncm_spectral_panels_get_range (sp, lo, hi);
   else
-  {
     nc_xcor_kernel_integrand_get_range (xclki, lo, hi);
-  }
 }
 
 /*
@@ -828,7 +823,7 @@ _nc_xcor_spectral_group (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *x
     const gdouble half = 0.5 * (b - a);
     NcmMatrix *cm1, *cm2;
 
-    _nc_xcor_cell_coeffs (xclki1, a * c1, b * c1, len1, "first", &cell1);
+    _nc_xcor_cell_coeffs (xclki1, sc->spectral, a * c1, b * c1, len1, "first", &cell1);
     cm1 = cell1;
 
     if (isauto)
@@ -837,7 +832,7 @@ _nc_xcor_spectral_group (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *x
     }
     else
     {
-      _nc_xcor_cell_coeffs (xclki2, a * c2, b * c2, len2, "second", &cell2);
+      _nc_xcor_cell_coeffs (xclki2, sc->spectral, a * c2, b * c2, len2, "second", &cell2);
       cm2 = cell2;
     }
 
@@ -1014,6 +1009,7 @@ _nc_xcor_kernel_integrate_block_spectral (NcXcor *xc, NcXcorKernelIntegrand *xcl
   sc.nmax       = 0;
   sc.nmax_local = 0;
   sc.A_ptr      = NULL;
+  sc.spectral   = ncm_spectral_new ();
 
   if (!scaled1 && !scaled2)
   {
@@ -1050,6 +1046,7 @@ _nc_xcor_kernel_integrate_block_spectral (NcXcor *xc, NcXcorKernelIntegrand *xcl
 
   g_array_unref (sc.A);
   g_array_unref (sc.G);
+  ncm_spectral_free (sc.spectral);
 }
 
 void
@@ -1115,8 +1112,8 @@ _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1
     return;
   }
 
-  if ((nc_xcor_kernel_integrand_get_n_panels (xclki1) > 0) ||
-      (nc_xcor_kernel_integrand_get_n_panels (side2) > 0))
+  if ((nc_xcor_kernel_integrand_peek_panels (xclki1) != NULL) ||
+      (nc_xcor_kernel_integrand_peek_panels (side2) != NULL))
   {
     _nc_xcor_kernel_integrate_block_spectral (xc, xclki1, side2, lmin, lmax, isauto, vp, vp_err);
 

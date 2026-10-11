@@ -102,7 +102,6 @@ typedef struct _ChebIntegrandData
   gint lmin;
   guint len;
   NcmSpectralPanels *sp; /* one row per multipole, in x = k / scale[i] */
-  GPtrArray *views;      /* NcmMatrix views of the panels, made on the first peek */
   gdouble *scale;        /* per multipole; 1 when the closure is in k */
   gboolean scaled;       /* whether any scale differs from 1 */
   gdouble k_min;         /* the k range of the whole block */

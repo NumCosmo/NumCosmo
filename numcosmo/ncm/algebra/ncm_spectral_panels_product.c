@@ -491,7 +491,6 @@ _ncm_spectral_panels_product_scales (NcmVector *s, guint fdim, GArray *out, gboo
 }
 
 static void _ncm_spectral_panels_product_edges (const NcmSpectralPanelsProductGroup *group, gdouble x_min, gdouble x_max, GArray *edges);
-static gboolean _ncm_spectral_panels_product_restrict (NcmSpectralPanels *sp, NcmSpectral *spectral, gdouble a, gdouble b, NcmMatrix **cell);
 static void _ncm_spectral_panels_product_weights (const guint p, const gdouble mid, const gdouble half, GArray *w, GArray *w_next);
 static const gdouble *_ncm_spectral_panels_product_tables (NcmSpectralPanelsProduct *prod, NcmSpectralPanelsProductWork *work, const guint n1, const guint n2, guint *nmax);
 static gdouble _ncm_spectral_panels_product_pow (const gdouble s, const guint n);
@@ -534,7 +533,7 @@ _ncm_spectral_panels_product_group (NcmSpectralPanelsProduct *prod, NcmSpectralP
     const gdouble half = 0.5 * (b - a);
     NcmMatrix *cm1, *cm2;
 
-    if (!_ncm_spectral_panels_product_restrict (group->P, work->spectral, a * group->c1, b * group->c1, &work->cell1))
+    if (!ncm_spectral_panels_restrict (group->P, work->spectral, a * group->c1, b * group->c1, &work->cell1))
       g_error ("ncm_spectral_panels_product_integrate: cell [%.17g, %.17g] is not inside a single panel "
                "of the first panel set.", a, b);
 
@@ -546,7 +545,7 @@ _ncm_spectral_panels_product_group (NcmSpectralPanelsProduct *prod, NcmSpectralP
     }
     else
     {
-      if (!_ncm_spectral_panels_product_restrict (group->Q, work->spectral, a * group->c2, b * group->c2, &work->cell2))
+      if (!ncm_spectral_panels_restrict (group->Q, work->spectral, a * group->c2, b * group->c2, &work->cell2))
         g_error ("ncm_spectral_panels_product_integrate: cell [%.17g, %.17g] is not inside a single panel "
                  "of the second panel set.", a, b);
 
@@ -666,48 +665,6 @@ _ncm_spectral_panels_product_edges (const NcmSpectralPanelsProductGroup *group, 
       g_array_index (edges, gdouble, w++) = g_array_index (edges, gdouble, i);
 
   g_array_set_size (edges, w);
-}
-
-/*
- * The coefficients of every row of sp on [a, b], which lies inside one panel. A cell
- * reaches a panel edge through the conversion between the two sides' variables, so an
- * end can land a rounding outside the panel; within that slack it is clamped to the edge.
- */
-static gboolean
-_ncm_spectral_panels_product_restrict (NcmSpectralPanels *sp, NcmSpectral *spectral, gdouble a, gdouble b, NcmMatrix **cell)
-{
-  const guint fdim = ncm_spectral_panels_get_fdim (sp);
-  const guint i    = ncm_spectral_panels_find_panel (sp, 0.5 * (a + b));
-  gdouble pa, pb;
-  guint N;
-  const gdouble *c    = ncm_spectral_panels_peek_panel (sp, i, &pa, &pb, &N);
-  const gdouble slack = 1.0e-12 * (pb - pa);
-
-  if ((a < pa - slack) || (b > pb + slack))
-    return FALSE;
-
-  a = MAX (a, pa);
-  b = MIN (b, pb);
-
-  if ((*cell != NULL) && ((ncm_matrix_nrows (*cell) != fdim) || (ncm_matrix_ncols (*cell) != N)))
-    ncm_matrix_clear (cell);
-
-  if (*cell == NULL)
-    *cell = ncm_matrix_new (fdim, N);
-
-  if ((a == pa) && (b == pb))
-  {
-    guint r;
-
-    for (r = 0; r < fdim; r++)
-      memcpy (ncm_matrix_ptr (*cell, r, 0), c + (gsize) r * N, sizeof (gdouble) * N);
-  }
-  else
-  {
-    ncm_spectral_chebyshev_rebase_rows_data (spectral, c, fdim, N, N, pa, pb, a, b, *cell);
-  }
-
-  return TRUE;
 }
 
 /*

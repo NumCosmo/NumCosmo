@@ -655,7 +655,7 @@ test_nc_xcor_kernel_gal_rsd_limber_steps (void)
 
   xclki = nc_xcor_kernel_get_eval_vectorized (NC_XCOR_KERNEL (g), cosmo, 2, 33, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
 
-  g_assert_cmpuint (nc_xcor_kernel_integrand_get_n_panels (xclki), >, 0);
+  g_assert_cmpuint (ncm_spectral_panels_get_n_panels (nc_xcor_kernel_integrand_peek_panels (xclki)), >, 0);
 
   nc_xcor_kernel_integrand_unref (xclki);
   nc_xcor_kernel_free (NC_XCOR_KERNEL (g));

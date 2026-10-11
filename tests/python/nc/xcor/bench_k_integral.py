@@ -82,17 +82,17 @@ CLOSURES: typing.Final[dict[str, Nc.XcorKernelClosure]] = {
 
 def _closure_size(integrand: Nc.XcorKernelIntegrand) -> int:
     """Knots for a spline closure, coefficients summed over panels otherwise."""
-    n_panels = integrand.get_n_panels()
+    panels = integrand.peek_panels()
 
-    if n_panels == 0:
+    if panels is None:
         knots = integrand.peek_knots()
 
         return 0 if knots is None else knots.len()
 
     total = 0
 
-    for i in range(n_panels):
-        coeffs, _, _ = integrand.peek_panel(i)
+    for i in range(panels.get_n_panels()):
+        coeffs, _, _ = panels.get_panel(i)
         total += Ncm.Matrix.ncols(coeffs)
 
     return total
@@ -147,7 +147,11 @@ def sweep_case(
             "ell_batch_size": settings.ell_batch_size,
             "size_a": _closure_size(integrand_a),
             "size_b": None if integrand_b is None else _closure_size(integrand_b),
-            "n_panels_a": integrand_a.get_n_panels(),
+            "n_panels_a": (
+                0
+                if integrand_a.peek_panels() is None
+                else integrand_a.peek_panels().get_n_panels()
+            ),
             "build_time": build_time,
             "reference_cells": reference.n_cells,
             "reference_max_order": reference.max_order,
