@@ -44,7 +44,6 @@ struct _NcXcor
   NcmPowspec *ps;
   gdouble RH;
   NcXcorMethod meth;
-  NcXcorKernelClosure closure_type;
   gdouble reltol;
   guint ell_batch_size;
 };

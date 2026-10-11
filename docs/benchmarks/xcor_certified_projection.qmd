@@ -1267,7 +1267,6 @@ def ultralevin_cls(grid, ells):
     """The library's C_ell at each of `ells`, from one batched solve."""
     kernels = pair_kernels(grid)
     xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
-    xcor.set_closure_type(Nc.XcorKernelClosure.CHEBYSHEV)
     xcor.set_reltol(1.0e-6)
     xcor.prepare(cosmo)
 
@@ -1456,7 +1455,6 @@ def warm_solver(grid, block_size):
     """A solver with its per-block integrators already built, and its Xcor."""
     kernels = pair_kernels(grid)
     xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
-    xcor.set_closure_type(Nc.XcorKernelClosure.CHEBYSHEV)
     xcor.set_reltol(1.0e-6)
     xcor.prepare(cosmo)
     solver = Nc.XcorSolver.new()

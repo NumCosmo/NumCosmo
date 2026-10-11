@@ -781,7 +781,6 @@ nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdoubl
  * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @l: multipole
- * @closure_type: how to represent $W_\ell(k)$, see #NcXcor:closure-type
  *
  * Gets an evaluation function for the kernel at multipole @l.
  * Convenience wrapper around nc_xcor_kernel_get_eval_vectorized() for a single multipole.
@@ -789,9 +788,9 @@ nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdoubl
  * Returns: (transfer full): the evaluation function for the kernel.
  */
 NcXcorKernelIntegrand *
-nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, NcXcorKernelClosure closure_type)
+nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
-  return nc_xcor_kernel_get_eval_vectorized (xclk, cosmo, l, l, closure_type);
+  return nc_xcor_kernel_get_eval_vectorized (xclk, cosmo, l, l);
 }
 
 /**
@@ -800,7 +799,6 @@ nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, NcXcorKer
  * @cosmo: a #NcHICosmo
  * @lmin: minimum multipole
  * @lmax: maximum multipole
- * @closure_type: how to represent $W_\ell(k)$, see #NcXcor:closure-type
  *
  * Gets a vectorized evaluation function for the kernel over a range of multipoles.
  * The returned integrand will have len = lmax - lmin + 1, and will evaluate all
@@ -815,11 +813,11 @@ nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, NcXcorKer
  * Returns: (transfer full): the vectorized evaluation function for the kernel.
  */
 NcXcorKernelIntegrand *
-nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcXcorKernelClosure closure_type)
+nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  return nc_xcor_kernel_get_eval_vectorized_full (xclk, cosmo, lmin, lmax, self->sbi, closure_type);
+  return nc_xcor_kernel_get_eval_vectorized_full (xclk, cosmo, lmin, lmax, self->sbi);
 }
 
 /**
@@ -829,10 +827,17 @@ nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l
  * @lmin: minimum multipole
  * @lmax: maximum multipole
  * @sbi: (nullable): the #NcmSBesselIntegrator to use, or %NULL for @xclk's own
- * @closure_type: how to represent $W_\ell(k)$, see #NcXcor:closure-type
  *
  * Same as nc_xcor_kernel_get_eval_vectorized(), but integrates with @sbi
  * instead of the kernel's `integrator` property.
+ *
+ * The closure is a Chebyshev series on panels, one row per multipole. $W_\ell(k)$ is
+ * an integral of a compactly supported window against $j_\ell(k\chi)$, which is entire
+ * in $k$, so $W_\ell$ is entire in $k$ for any window and a Chebyshev series converges
+ * geometrically on it. Every component boundary found by the domain expansion is a
+ * panel edge, and under Limber so is every multipole's band edge, where its window
+ * steps to zero, so every panel is smooth. The panels are built by
+ * #NcXcorKernel:panels-builder to #NcXcorKernel:reltol and #NcXcorKernel:peak-epsilon.
  *
  * A #NcmSBesselIntegratorLevin holds reusable state tied to one multipole
  * range, so a caller computing several ell blocks does better keeping one
@@ -847,14 +852,14 @@ nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l
  * Returns: (transfer full): the kernel integrand over [@lmin, @lmax]
  */
 NcXcorKernelIntegrand *
-nc_xcor_kernel_get_eval_vectorized_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi, NcXcorKernelClosure closure_type)
+nc_xcor_kernel_get_eval_vectorized_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   if ((self->l_limber == 0) || ((self->l_limber > 0) && (lmin >= self->l_limber)))
-    return _nc_xcor_kernel_build_limber_integrand (xclk, cosmo, lmin, lmax, closure_type);
+    return _nc_xcor_kernel_build_limber_integrand (xclk, cosmo, lmin, lmax);
   else
-    return _nc_xcor_kernel_build_non_limber_integrand (xclk, cosmo, lmin, lmax, sbi, closure_type);
+    return _nc_xcor_kernel_build_non_limber_integrand (xclk, cosmo, lmin, lmax, sbi);
 }
 
 /**

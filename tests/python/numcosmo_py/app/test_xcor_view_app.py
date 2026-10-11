@@ -119,21 +119,6 @@ def test_view_kernel_defaults_leave_library_precision_alone() -> None:
     assert "cheb_reltol=1.0e-08" in result.output
 
 
-def test_view_kernel_plots_the_closure() -> None:
-    """The representation is reachable from the command line.
-
-    The viewer holds no NcXcor when it builds a closure for the plot, so the
-    representation has to come from its own option rather than from the
-    computation -- and the C_ell path has to pass the same one on to NcXcor,
-    or a plot and the spectrum beside it would be showing different fits.
-    """
-    result = _view("--l-limber", "-1", "--closure-type", "chebyshev", "--cls")
-
-    assert result.exit_code == 0, result.output
-    assert "Kernel evaluation complete" in result.output
-    assert "closure=chebyshev" in result.output
-
-
 def test_view_kernel_cls_single() -> None:
     """--cls computes the auto-spectrum of a single kernel."""
     result = _view("--cls")

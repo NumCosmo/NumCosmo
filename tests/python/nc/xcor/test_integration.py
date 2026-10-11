@@ -272,16 +272,11 @@ def test_xcor_kernel_methods(
             block_lmax = lmin + 3
             isauto = k1_name == k2_name
             sbi = Ncm.SBesselIntegratorLevin.new(lmin, block_lmax)
-            closure = Nc.XcorKernelClosure.CHEBYSHEV
-            ia = k1.get_eval_vectorized_full(
-                cosmology.cosmo, lmin, block_lmax, sbi, closure
-            )
+            ia = k1.get_eval_vectorized_full(cosmology.cosmo, lmin, block_lmax, sbi)
             ib = (
                 None
                 if isauto
-                else k2.get_eval_vectorized_full(
-                    cosmology.cosmo, lmin, block_lmax, sbi, closure
-                )
+                else k2.get_eval_vectorized_full(cosmology.cosmo, lmin, block_lmax, sbi)
             )
             vp_block = Ncm.Vector.new(block_lmax - lmin + 1)
             xcor_kf.integrate_block(
@@ -345,8 +340,8 @@ def test_kernel_integrator_types(cosmology: Cosmology) -> None:
     kernel_levin.prepare(cosmo)
 
     # Verify both integrators work
-    eval_limber = kernel_limber.get_eval(cosmo, 200, Nc.XcorKernelClosure.CHEBYSHEV)
-    eval_levin = kernel_levin.get_eval(cosmo, 200, Nc.XcorKernelClosure.CHEBYSHEV)
+    eval_limber = kernel_limber.get_eval(cosmo, 200)
+    eval_levin = kernel_levin.get_eval(cosmo, 200)
 
     result_limber = eval_limber.eval_array(1.0e2)
     result_levin = eval_levin.eval_array(1.0e2)

@@ -63,17 +63,15 @@ typedef struct _TestNcXcorKQuad
  * TestMethod:
  * @name: path component naming the method
  * @meth: the method itself
- * @closure: how the kernels represent W_l(k) for this case
  */
 typedef struct _TestMethod
 {
   const gchar *name;
   NcXcorMethod meth;
-  NcXcorKernelClosure closure;
 } TestMethod;
 
 static const TestMethod test_methods[] = {
-  {"kernel_exact/chebyshev",    NC_XCOR_METHOD_KERNEL_EXACT,    NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
+  {"kernel_exact", NC_XCOR_METHOD_KERNEL_EXACT},
 };
 
 static void
@@ -90,7 +88,6 @@ test_nc_xcor_kquad_new (TestNcXcorKQuad *test, gconstpointer pdata)
   test->k2 = test_nc_xcor_kquad_tophat (&test->env, 250.0, 450.0, -1);
 
   test->xc = nc_xcor_new (test->env.dist, test->env.ps, tm->meth);
-  nc_xcor_set_closure_type (test->xc, tm->closure);
   nc_xcor_set_ell_batch_size (test->xc, TEST_NELL);
   nc_xcor_prepare (test->xc, test->env.cosmo);
 
@@ -179,8 +176,7 @@ test_nc_xcor_kquad_error (TestNcXcorKQuad *test, gconstpointer pdata)
 static void
 test_nc_xcor_kquad_integrate_block (TestNcXcorKQuad *test, gconstpointer pdata)
 {
-  const TestMethod *tm              = pdata;
-  const NcXcorKernelClosure closure = nc_xcor_get_closure_type (test->xc);
+  const TestMethod *tm = pdata;
   NcXcorKernelIntegrand *i1;
   NcXcorKernelIntegrand *i2;
   NcmVector *block;
@@ -188,8 +184,8 @@ test_nc_xcor_kquad_integrate_block (TestNcXcorKQuad *test, gconstpointer pdata)
   NcmVector *direct;
   guint i;
 
-  i1 = nc_xcor_kernel_get_eval_vectorized (test->k1, test->env.cosmo, TEST_LMIN, TEST_LMAX, closure);
-  i2 = nc_xcor_kernel_get_eval_vectorized (test->k2, test->env.cosmo, TEST_LMIN, TEST_LMAX, closure);
+  i1 = nc_xcor_kernel_get_eval_vectorized (test->k1, test->env.cosmo, TEST_LMIN, TEST_LMAX);
+  i2 = nc_xcor_kernel_get_eval_vectorized (test->k2, test->env.cosmo, TEST_LMIN, TEST_LMAX);
 
   block  = ncm_vector_new (TEST_NELL);
   err    = ncm_vector_new (TEST_NELL);

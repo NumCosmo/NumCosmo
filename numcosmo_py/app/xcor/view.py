@@ -427,9 +427,7 @@ class ViewKernel(XcorKernelCommon):
 
         RH_Mpc = self.cosmo.RH_Mpc()
         kernel_obj.set_l_limber(self.l_limber)
-        eval_kernel = kernel_obj.get_eval_vectorized(
-            self.cosmo, self.ell, lmax, self.closure_type.to_nc()
-        )
+        eval_kernel = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, lmax)
 
         primary_method = (
             "Non-Limber"
@@ -460,9 +458,7 @@ class ViewKernel(XcorKernelCommon):
             # Same representation, the Limber approximation instead.
             kernel_obj.set_l_limber(0)
 
-            eval_alt = kernel_obj.get_eval_vectorized(
-                self.cosmo, self.ell, lmax, self.closure_type.to_nc()
-            )
+            eval_alt = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, lmax)
             kernel_eval_alt = KernelEvaluation(
                 name=kernel_label,
                 kernel=kernel_obj,

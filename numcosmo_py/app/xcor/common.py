@@ -30,7 +30,6 @@ through inheritance rather than through duplicated option blocks.
 """
 
 import dataclasses
-import enum
 import time
 from pathlib import Path
 from typing import Annotated, Any
@@ -66,22 +65,6 @@ from .kernels import (
 from .plotting import style_ratio_axis
 
 Ncm.cfg_init()
-
-
-class XcorClosureOption(str, enum.Enum):
-    """Representations available for the k-space closure."""
-
-    CHEBYSHEV = "chebyshev"
-
-    def to_nc(self) -> Nc.XcorKernelClosure:
-        """Convert to the corresponding #NcXcorKernelClosure value.
-
-        :return: The NumCosmo enumeration value.
-        """
-        match self:
-            case XcorClosureOption.CHEBYSHEV:
-                return Nc.XcorKernelClosure.CHEBYSHEV
-        raise ValueError(f"Unknown closure type: {self}")
 
 
 def contiguous_runs(ells: np.ndarray) -> list[tuple[int, int]]:
@@ -140,17 +123,6 @@ class XcorKernelCommon:
             show_default=True,
         ),
     ] = -1
-
-    closure_type: Annotated[
-        XcorClosureOption,
-        typer.Option(
-            help=(
-                "Representation fitted to the sampled kernel: 'chebyshev' "
-                "expands on panels of a prescribed order."
-            ),
-            show_default=True,
-        ),
-    ] = XcorClosureOption.CHEBYSHEV
 
     compare_limber: Annotated[
         bool,
@@ -715,10 +687,10 @@ class XcorKernelCommon:
 
         :param ells: Strictly increasing array of multipoles.
         """
-        cls_main = self._compute_cls(ells, self.l_limber, self.closure_type)
+        cls_main = self._compute_cls(ells, self.l_limber)
         cls_alt = None
         if self.compare_limber:
-            cls_alt = self._compute_cls(ells, 0, self.closure_type)
+            cls_alt = self._compute_cls(ells, 0)
         self._plot_cls(ells, cls_main, cls_alt)
 
     def _solver(self) -> tuple[Nc.XcorSolver, list[int]]:
@@ -736,7 +708,6 @@ class XcorKernelCommon:
         self,
         ells: np.ndarray,
         l_limber: int,
-        closure_type: XcorClosureOption,
     ) -> dict[tuple[int, int], np.ndarray]:
         """Compute C_ell for every requested pair of the created kernels.
 
@@ -751,7 +722,6 @@ class XcorKernelCommon:
 
         :param ells: Strictly increasing array of multipoles.
         :param l_limber: Limber threshold to apply to every kernel.
-        :param closure_type: Representation to fit to every kernel.
         :return: Mapping from (i, j) kernel index pair to the C_ell array, one
             entry per multipole in @ells.
         """
@@ -769,7 +739,6 @@ class XcorKernelCommon:
         )
         print(
             f"  {len(self.kernels)} kernel(s), {len(pairs)} spectra, "
-            f"closure={closure_type.value}, "
             f"block size={self.cls_block_size}"
         )
 
@@ -780,7 +749,6 @@ class XcorKernelCommon:
             kernel_obj.set_l_limber(l_limber)
 
         xcor = Nc.Xcor.new(self.dist, self.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-        xcor.set_closure_type(closure_type.to_nc())
 
         # One solver for the whole command: it keeps a factorised integrator per
         # block, and plan_blocks() hands those back whenever the plan comes out

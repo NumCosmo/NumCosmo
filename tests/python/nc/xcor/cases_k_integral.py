@@ -118,7 +118,6 @@ class Settings:
     peak_epsilon: float = 1.0e-4
     l_limber: int = -1
     ell_batch_size: int = 8
-    closure: Nc.XcorKernelClosure = Nc.XcorKernelClosure.CHEBYSHEV
 
     def replace(self, **kwargs: typing.Any) -> "Settings":
         """A copy with some fields changed."""
@@ -825,13 +824,10 @@ def build_integrand(
         lmin,
         lmax,
         sbi if sbi is not None else Ncm.SBesselIntegratorLevin.new(lmin, lmax),
-        settings.closure,
     )
 
     if integrand.peek_panels() is None:
-        raise AssertionError(
-            f"the {settings.closure.value_nick} closure carries no panels"
-        )
+        raise AssertionError("the closure carries no panels")
 
     return integrand
 

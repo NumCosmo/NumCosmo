@@ -120,7 +120,6 @@ def cl_ultralevin(omega_c):
     kernel.set_l_limber(-1)
     kernel.prepare(n.cosmo)
     xcor = Nc.Xcor.new(n.dist, n.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-    xcor.set_closure_type(Nc.XcorKernelClosure.CHEBYSHEV)
     xcor.set_ell_batch_size(8)
     xcor.prepare(n.cosmo)
     xcor.compute(kernel, None, n.cosmo, LMIN, LMAX, vp)

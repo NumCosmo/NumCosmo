@@ -178,15 +178,7 @@ def test_kernel_exact_all_limber_needs_no_integrator(cosmology: Cosmology) -> No
     )
 
 
-@pytest.mark.parametrize(
-    "closure_type,bounds",
-    [
-        (Nc.XcorKernelClosure.CHEBYSHEV, (100.0, 1.0e4)),
-    ],
-)
-def test_error_estimate_scales_with_the_fit_criterion(
-    cosmology: Cosmology, closure_type, bounds
-) -> None:
+def test_error_estimate_scales_with_the_fit_criterion(cosmology: Cosmology) -> None:
     """Tightening the kernels must reduce the reported error.
 
     This is what makes the estimate a lever rather than a label. The factor by
@@ -200,7 +192,6 @@ def test_error_estimate_scales_with_the_fit_criterion(
     nell = lmax - lmin + 1
 
     exact = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-    exact.set_closure_type(closure_type)
     exact.prepare(cosmo)
 
     def worst_relative(tol):
@@ -223,7 +214,7 @@ def test_error_estimate_scales_with_the_fit_criterion(
 
     loose = worst_relative(1.0e-4)
     tight = worst_relative(1.0e-6)
-    lo, hi = bounds
+    lo, hi = 100.0, 1.0e4
 
     assert lo < loose / tight < hi
 
@@ -324,8 +315,8 @@ def test_achieved_residual_estimate_still_bounds_the_true_error(
     assert np.all(est_rel > true_rel)
 
 
-def _closure(cosmology: Cosmology, closure_type, reltol=1.0e-4, peak_epsilon=1.0e-4):
-    """A cluster top-hat closure in the requested representation."""
+def _closure(cosmology: Cosmology, reltol=1.0e-4, peak_epsilon=1.0e-4):
+    """A cluster top-hat closure, non-Limber, ell 2 to 9."""
     kernel = Nc.XcorKernelClusterTophat(
         dist=cosmology.dist,
         powspec=cosmology.ps_ml,
@@ -339,7 +330,7 @@ def _closure(cosmology: Cosmology, closure_type, reltol=1.0e-4, peak_epsilon=1.0
     kernel.prepare(cosmology.cosmo)
 
     return kernel.get_eval_vectorized_full(
-        cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8), closure_type
+        cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8)
     )
 
 
@@ -348,7 +339,7 @@ def test_chebyshev_closure_reports_a_spectral_representation(
 ) -> None:
     """A Chebyshev closure carries its panels: one row per multipole, contiguous, tiling
     the closure's range."""
-    cheb = _closure(cosmology, Nc.XcorKernelClosure.CHEBYSHEV)
+    cheb = _closure(cosmology)
 
     panels = cheb.peek_panels()
     n_panels = panels.get_n_panels()
@@ -367,20 +358,7 @@ def test_chebyshev_closure_reports_a_spectral_representation(
     assert prev_b == pytest.approx(hi)
 
 
-def test_chebyshev_closure_is_the_default(cosmology: Cosmology) -> None:
-    """The more accurate representation is the default one.
-
-    The choice belongs to NcXcor rather than to a kernel because it is the
-    computation that gets switched over: the two are alternative fits to the
-    same sampled function, and comparing them only means something when every
-    kernel in a run uses the same one.
-    """
-    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-
-    assert xcor.get_closure_type() == Nc.XcorKernelClosure.CHEBYSHEV
-
-
-def test_limber_multipoles_take_the_requested_closure(cosmology: Cosmology) -> None:
+def test_limber_closure_is_built_in_u(cosmology: Cosmology) -> None:
     """Under Limber the Chebyshev closure is built in u = k / nu.
 
     A Limber window is zero outside the multipole's band in k. In u the band is
@@ -389,7 +367,7 @@ def test_limber_multipoles_take_the_requested_closure(cosmology: Cosmology) -> N
     converges.
     """
 
-    def integrand(closure_type):
+    def integrand():
         kernel = Nc.XcorKernelClusterTophat(
             dist=cosmology.dist,
             powspec=cosmology.ps_ml,
@@ -404,10 +382,10 @@ def test_limber_multipoles_take_the_requested_closure(cosmology: Cosmology) -> N
         kernel.prepare(cosmology.cosmo)
 
         return kernel.get_eval_vectorized_full(
-            cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8), closure_type
+            cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8)
         )
 
-    cheb = integrand(Nc.XcorKernelClosure.CHEBYSHEV)
+    cheb = integrand()
 
     panels = cheb.peek_panels()
     assert panels.get_n_panels() > 0
@@ -453,7 +431,6 @@ def test_spectral_path_reports_an_error_estimate(cosmology: Cosmology) -> None:
 
         xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
         xcor.prepare(cosmo)
-        assert xcor.get_closure_type() == Nc.XcorKernelClosure.CHEBYSHEV
 
         vp, vp_err = Ncm.Vector.new(nell), Ncm.Vector.new(nell)
         xcor.compute_full(kernel, None, cosmo, lmin, lmax, vp, vp_err)
@@ -500,7 +477,6 @@ def test_panel_level_cap_is_tunable(cosmology: Cosmology) -> None:
             2,
             9,
             Ncm.SBesselIntegratorLevin.new(0, 8),
-            Nc.XcorKernelClosure.CHEBYSHEV,
         )
 
     default_kernel, default_closure = closure(None)

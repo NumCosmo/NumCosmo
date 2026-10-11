@@ -232,7 +232,7 @@ _component_states_compute_limber_u (const gdouble u, NcmVector *y, gpointer user
 }
 
 NcXcorKernelIntegrand *
-_nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcXcorKernelClosure closure_type)
+_nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax)
 {
   NcXcorKernelPrivate *self = _nc_xcor_kernel_get_private (xclk);
   const guint n_l           = lmax - lmin + 1;

@@ -66,20 +66,19 @@ typedef struct _TestNcXcorKernelIntegrand
 typedef struct _TestCase
 {
   const gchar *name;
-  NcXcorKernelClosure closure;
   gboolean non_limber;
   gboolean multi_comp;
 } TestCase;
 
 static const TestCase test_cases[] = {
-  {"limber/chebyshev",      NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV, FALSE, FALSE},
-  {"non_limber/chebyshev",  NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV, TRUE,  FALSE},
+  {"limber",     FALSE, FALSE},
+  {"non_limber", TRUE,  FALSE},
 
   /* Two disjoint bumps: the only case where the per-component accessors have more than
    * one component to split, and where the panel edges have to be merged across them.
    * This is also the case that lands the last point of the sampling grid on a k range
    * degenerate to within rounding -- see NC_XCOR_KERNEL_COMPONENT_K_RANGE_MIN_WIDTH. */
-  {"multi/chebyshev",      NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV, TRUE,  TRUE },
+  {"multi",      TRUE,  TRUE },
 };
 
 static NcXcorKernel *
@@ -169,8 +168,7 @@ test_nc_xcor_kernel_integrand_free (TestNcXcorKernelIntegrand *test, gconstpoint
 static void
 test_nc_xcor_kernel_integrand_eval (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
-  const TestCase *tc           = pdata;
-  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
+  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL);
   const guint len              = nc_xcor_kernel_integrand_get_len (integ);
   gdouble k_min, k_max;
   gdouble *W = g_new0 (gdouble, len);
@@ -211,8 +209,7 @@ test_nc_xcor_kernel_integrand_eval (TestNcXcorKernelIntegrand *test, gconstpoint
 static void
 test_nc_xcor_kernel_integrand_comps (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
-  const TestCase *tc           = pdata;
-  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
+  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL);
   const guint len              = nc_xcor_kernel_integrand_get_len (integ);
   gdouble *W                   = g_new0 (gdouble, len);
   gdouble *Wc                  = g_new0 (gdouble, len);
@@ -258,8 +255,7 @@ test_nc_xcor_kernel_integrand_comps (TestNcXcorKernelIntegrand *test, gconstpoin
 static void
 test_nc_xcor_kernel_integrand_panels (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
-  const TestCase *tc           = pdata;
-  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
+  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL);
   NcmSpectralPanels *sp        = nc_xcor_kernel_integrand_peek_panels (integ);
 
   g_assert_nonnull (sp);
@@ -283,8 +279,7 @@ test_nc_xcor_kernel_integrand_panels (TestNcXcorKernelIntegrand *test, gconstpoi
 static void
 test_nc_xcor_kernel_integrand_ref_clear (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
-  const TestCase *tc           = pdata;
-  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
+  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL);
   NcXcorKernelIntegrand *ref   = nc_xcor_kernel_integrand_ref (integ);
 
   g_assert_true (ref == integ);
@@ -305,10 +300,9 @@ test_nc_xcor_kernel_integrand_ref_clear (TestNcXcorKernelIntegrand *test, gconst
 static void
 test_nc_xcor_kernel_integrand_vectorized (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
-  const TestCase *tc           = pdata;
   NcXcorKernelIntegrand *block = nc_xcor_kernel_get_eval_vectorized (test->xclk, test->cosmo,
-                                                                     TEST_ELL, TEST_ELL + 1, tc->closure);
-  NcXcorKernelIntegrand *one = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
+                                                                     TEST_ELL, TEST_ELL + 1);
+  NcXcorKernelIntegrand *one = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL);
   const guint block_len      = nc_xcor_kernel_integrand_get_len (block);
   gdouble *Wb                = g_new0 (gdouble, block_len);
   gdouble k_min, k_max, b_min, b_max;

@@ -721,7 +721,7 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
     cosmo = cosmology.cosmo
     z_bins = [(0.1, 0.2), (0.3, 0.4)]
 
-    def solve(closure_type):
+    def solve():
         solver = Nc.XcorSolver.new()
         ids = []
 
@@ -747,7 +747,6 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
         solver.set_integrator(Ncm.SBesselIntegratorLevin.new(0, 8))
 
         xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-        xcor.set_closure_type(closure_type)
         xcor.prepare(cosmo)
         solver.solve(xcor, cosmo)
 
@@ -756,7 +755,7 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
             for r in range(solver.get_n_requests())
         ]
 
-    def compute_directly(closure_type):
+    def compute_directly():
         kernels = []
 
         for z_lower, z_upper in z_bins:
@@ -774,7 +773,6 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
             kernels.append(kernel)
 
         xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-        xcor.set_closure_type(closure_type)
         xcor.prepare(cosmo)
 
         out = []
@@ -792,8 +790,8 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
                 out.append(np.array(vp.dup_array()))
         return out
 
-    through_solver = solve(Nc.XcorKernelClosure.CHEBYSHEV)
-    direct = compute_directly(Nc.XcorKernelClosure.CHEBYSHEV)
+    through_solver = solve()
+    direct = compute_directly()
 
     assert len(through_solver) == 3
 

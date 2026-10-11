@@ -45,21 +45,6 @@
 #define TEST_LMAX 5
 #define TEST_NELL (TEST_LMAX - TEST_LMIN + 1)
 
-/**
- * TestCase:
- * @name: path component naming the case
- * @closure: how the kernel represents W_l(k)
- */
-typedef struct _TestCase
-{
-  const gchar *name;
-  NcXcorKernelClosure closure;
-} TestCase;
-
-static const TestCase test_cases[] = {
-  {"chebyshev", NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
-};
-
 typedef struct _TestNcXcorKQuadError
 {
   TestNcXcorKQuadEnv env;
@@ -72,8 +57,6 @@ typedef struct _TestNcXcorKQuadError
 static void
 test_nc_xcor_kquad_error_new (TestNcXcorKQuadError *test, gconstpointer pdata)
 {
-  const TestCase *tc = pdata;
-
   test_nc_xcor_kquad_env_init (&test->env);
 
   test->sbi_tight = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 8));
@@ -83,7 +66,6 @@ test_nc_xcor_kquad_error_new (TestNcXcorKQuadError *test, gconstpointer pdata)
   test->tight  = test_nc_xcor_kquad_tophat_converged (&test->env, test->sbi_tight, 200.0, 400.0, -1, 1.0e-8, 1.0e-6);
 
   test->xc = nc_xcor_new (test->env.dist, test->env.ps, NC_XCOR_METHOD_KERNEL_EXACT);
-  nc_xcor_set_closure_type (test->xc, tc->closure);
   nc_xcor_prepare (test->xc, test->env.cosmo);
 }
 
@@ -130,23 +112,14 @@ test_nc_xcor_kquad_error_bounds_truth (TestNcXcorKQuadError *test, gconstpointer
 gint
 main (gint argc, gchar *argv[])
 {
-  guint i;
-
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
   g_test_set_nonfatal_assertions ();
 
-  for (i = 0; i < G_N_ELEMENTS (test_cases); i++)
-  {
-    gchar *path = g_strdup_printf ("/nc/xcor/kquad/error/%s/bounds_truth", test_cases[i].name);
-
-    g_test_add (path, TestNcXcorKQuadError, &test_cases[i],
-                &test_nc_xcor_kquad_error_new, &test_nc_xcor_kquad_error_bounds_truth, &test_nc_xcor_kquad_error_free);
-
-    g_free (path);
-  }
+  g_test_add ("/nc/xcor/kquad/error/bounds_truth", TestNcXcorKQuadError, NULL,
+              &test_nc_xcor_kquad_error_new, &test_nc_xcor_kquad_error_bounds_truth, &test_nc_xcor_kquad_error_free);
 
   g_test_run ();
 }

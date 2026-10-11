@@ -42,7 +42,7 @@ import matplotlib.pyplot as plt
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.app import app
 from numcosmo_py.app.xcor.cls import ComputeCls, EllSpacing, sample_ells
-from numcosmo_py.app.xcor.common import XcorClosureOption, contiguous_runs
+from numcosmo_py.app.xcor.common import contiguous_runs
 from numcosmo_py.app.xcor.plotting import percent_tick, style_ratio_axis
 
 pytestmark = pytest.mark.app
@@ -75,14 +75,6 @@ def test_cls_runs_and_writes_the_figure(tmp_path: Path) -> None:
     assert "1 kernel(s), 1 spectra" in result.output
     assert "Angular power spectra complete" in result.output
     assert output.exists()
-
-
-def test_cls_defaults_to_the_chebyshev_closure() -> None:
-    """Unset, the command takes the Chebyshev closure."""
-    result = _cls()
-
-    assert result.exit_code == 0, result.output
-    assert "closure=chebyshev" in result.output
 
 
 @pytest.mark.parametrize(
@@ -293,10 +285,10 @@ def test_sampled_multipoles_match_the_contiguous_solve() -> None:
     assert [label for label, _ in command.kernels] == ["Top-hat (1)", "Top-hat (2)"]
 
     dense_ells = np.arange(10, 17)
-    dense = command._compute_cls(dense_ells, -1, XcorClosureOption.CHEBYSHEV)
+    dense = command._compute_cls(dense_ells, -1)
 
     sparse_ells = np.array([10, 13, 16])
-    sparse = command._compute_cls(sparse_ells, -1, XcorClosureOption.CHEBYSHEV)
+    sparse = command._compute_cls(sparse_ells, -1)
 
     picked = np.searchsorted(dense_ells, sparse_ells)
 

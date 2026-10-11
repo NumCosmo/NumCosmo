@@ -660,7 +660,7 @@ test_nc_xcor_kernel_analytic_closure (TestNcXcorKernelAnalytic *test, gconstpoin
   {
     NcmSBesselIntegrator *sbi      = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (lmins[b], lmins[b] + 7));
     NcXcorKernelIntegrand *closure = nc_xcor_kernel_get_eval_vectorized_full (test->xclk, test->cosmo, lmins[b], lmins[b] + 7,
-                                                                              sbi, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
+                                                                              sbi);
     const TestNcXcorClosureCheck check = test_nc_xcor_closure_check (test->xclk, test->cosmo, closure, lmins[b]);
 
     g_test_message ("ell %d-%d: worst %.3g of the bound at ell %d, k %.4g, over %u points",
@@ -685,7 +685,7 @@ _closure_at (TestNcXcorKernelAnalytic *test, gint ell, gdouble adaptive_epsilon,
   nc_xcor_kernel_set_reltol (test->xclk, tol);
   nc_xcor_kernel_set_peak_epsilon (test->xclk, tol);
 
-  closure = nc_xcor_kernel_get_eval_vectorized_full (test->xclk, test->cosmo, ell, ell, sbi, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
+  closure = nc_xcor_kernel_get_eval_vectorized_full (test->xclk, test->cosmo, ell, ell, sbi);
   ncm_sbessel_integrator_free (sbi);
 
   return closure;

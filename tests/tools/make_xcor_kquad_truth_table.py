@@ -101,7 +101,7 @@ def library_k_range(pair: cases.PairSpec, ell: int) -> tuple[float, float]:
     Ncm.cfg_init()
     cosmo, dist, ps = cases.make_cosmo_bits()
     RH = Nc.HICosmo.RH_Mpc(cosmo)
-    settings = cases.Settings(closure=Nc.XcorKernelClosure.CHEBYSHEV)
+    settings = cases.Settings()
 
     kernel_a = cases.build_kernel(pair.kernel_a, cosmo, dist, ps, settings)
     kernel_b = (

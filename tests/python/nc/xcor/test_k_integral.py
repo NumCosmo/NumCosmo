@@ -57,22 +57,15 @@ from numcosmo_py import Nc, Ncm
 pytest_plugins = ["python.fixtures_xcor"]
 
 # Under --dist loadgroup every test that uses the frozen fixture is pinned to one
-# worker through CLOSURE_PARAMS below; the module-level group holds the rest. An
+# worker through FROZEN_GROUP below; the module-level group holds the rest. An
 # xdist worker is its own session, so the module-scoped frozen cache exists once
 # per worker: unbounded it reaches 3.5 GB (measured OOM at 12 workers under plain
 # --dist load), bounded by FROZEN_CACHE_MAXSIZE it is under 1 GB.
 pytestmark = [pytest.mark.xcor, pytest.mark.xdist_group("k_integral")]
 
-CLOSURES = {
-    "chebyshev": Nc.XcorKernelClosure.CHEBYSHEV,
-}
-
-# The closure axis of every frozen-fixture test, each value carrying its worker
-# group. Use this, not sorted(CLOSURES), wherever the test takes `frozen`.
-CLOSURE_PARAMS = [
-    pytest.param(name, marks=pytest.mark.xdist_group(f"k_integral_{name}"))
-    for name in sorted(CLOSURES)
-]
+# The worker group of every test that takes `frozen`; a function mark is closer than
+# the module's, so it is the one xdist reads.
+FROZEN_GROUP = pytest.mark.xdist_group("k_integral_frozen")
 
 METHODS = {
     "exact": Nc.XcorMethod.KERNEL_EXACT,
@@ -85,7 +78,7 @@ METHODS = {
 # because that ladder missed the l = 4-10 region where every method is worst; see
 # cases.ELLS_SUITE.
 TOLERANCE = {
-    ("exact", "chebyshev"): 5.0e-7,
+    "exact": 5.0e-7,
 }
 
 # The reference's own convergence, likewise measured on cases.ELLS_SUITE: the
@@ -96,16 +89,16 @@ TOLERANCE = {
 # about a Chebyshev closure at that multipole: exact/chebyshev's own 2.3e-08
 # sits less than a factor of two above it, so that entry bounds the method
 # rather than discriminating between methods.
-REFERENCE_FLOOR = {"chebyshev": 1.0e-7}
+REFERENCE_FLOOR = 1.0e-7
 
 
 class Frozen:
     """Hold two prepared kernels, their closures for one block, and the references."""
 
-    def __init__(self, case: str, closure: str, lmin: int) -> None:
-        """Build the kernels and closures for one (case, closure, block) once."""
+    def __init__(self, case: str, lmin: int) -> None:
+        """Build the kernels and closures for one (case, block) once."""
         self.pair = cases.PAIRS_BY_CASE[case]
-        self.settings = cases.Settings(closure=CLOSURES[closure])
+        self.settings = cases.Settings()
         self.lmin = lmin
         self.lmax = lmin + self.settings.ell_batch_size - 1
         self.cosmo, self.dist, self.ps = cases.make_cosmo_bits()
@@ -151,7 +144,6 @@ class Frozen:
     def compute(self, method: str) -> np.ndarray:
         """Compute one block through the library, by the named kernel-space method."""
         xcor = Nc.Xcor.new(self.dist, self.ps, METHODS[method])
-        xcor.set_closure_type(self.settings.closure)
         xcor.set_ell_batch_size(self.settings.ell_batch_size)
         xcor.set_reltol(self.settings.reltol)
         xcor.prepare(self.cosmo)
@@ -169,7 +161,6 @@ class Frozen:
         rather than on two separately fitted ones.
         """
         xcor = Nc.Xcor.new(self.dist, self.ps, METHODS[method])
-        xcor.set_closure_type(self.settings.closure)
         xcor.set_ell_batch_size(self.settings.ell_batch_size)
         xcor.set_reltol(self.settings.reltol)
         xcor.prepare(self.cosmo)
@@ -204,26 +195,24 @@ FROZEN_CACHE_MAXSIZE = int(os.environ.get("XCOR_FROZEN_CACHE", "8"))
 
 
 @pytest.fixture(name="frozen", scope="module")
-def fixture_frozen() -> Callable[[str, str, int], Frozen]:
-    """Build each (case, closure, block) once and hand it to every test.
+def fixture_frozen() -> Callable[[str, int], Frozen]:
+    """Build each (case, block) once and hand it to every test.
 
     Least-recently-used beyond FROZEN_CACHE_MAXSIZE, because holding all of
     them is what makes this file the memory ceiling of the whole xcor lane.
     """
-    cache: collections.OrderedDict[tuple[str, str, int], Frozen] = (
-        collections.OrderedDict()
-    )
+    cache: collections.OrderedDict[tuple[str, int], Frozen] = collections.OrderedDict()
 
-    def get(case: str, closure: str, lmin: int) -> Frozen:
+    def get(case: str, lmin: int) -> Frozen:
         """Return the Frozen for one key, building it on a miss."""
-        key = (case, closure, lmin)
+        key = (case, lmin)
 
         if key in cache:
             cache.move_to_end(key)
 
             return cache[key]
 
-        cache[key] = Frozen(case, closure, lmin)
+        cache[key] = Frozen(case, lmin)
 
         while FROZEN_CACHE_MAXSIZE and len(cache) > FROZEN_CACHE_MAXSIZE:
             cache.popitem(last=False)
@@ -234,9 +223,9 @@ def fixture_frozen() -> Callable[[str, str, int], Frozen]:
 
 
 @pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS])
-@pytest.mark.parametrize("closure", CLOSURE_PARAMS)
+@FROZEN_GROUP
 @pytest.mark.parametrize("lmin", cases.ELLS_SUITE)
-def test_reference_is_a_reference(frozen, case: str, closure: str, lmin: int) -> None:
+def test_reference_is_a_reference(frozen, case: str, lmin: int) -> None:
     """Check that the reference converges before any method is compared to it.
 
     Raising the Gauss-Legendre order on a cell has to stop moving the answer,
@@ -244,31 +233,29 @@ def test_reference_is_a_reference(frozen, case: str, closure: str, lmin: int) ->
     Chebyshev cell carries up to 129 coefficients and settles when the order
     passes its degree.
     """
-    reference = frozen(case, closure, lmin).reference
+    reference = frozen(case, lmin).reference
 
     assert reference.n_cells > 0
-    assert reference.worst_cell_move < REFERENCE_FLOOR[closure]
+    assert reference.worst_cell_move < REFERENCE_FLOOR
 
 
 # Parameter order is cache order. pytest exhausts the top decorator fastest and
 # the bottom one slowest, and the frozen fixture keeps eight keys: with `method`
-# innermost the four methods of one (case, closure, lmin) run back to back on one
+# innermost the methods of one (case, lmin) run back to back on one
 # build. With `case` innermost the 35 cases stream through the cache for each
 # method in turn and every key is rebuilt once per method.
 @pytest.mark.parametrize("method", sorted(METHODS))
 @pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS])
-@pytest.mark.parametrize("closure", CLOSURE_PARAMS)
+@FROZEN_GROUP
 @pytest.mark.parametrize("lmin", cases.ELLS_SUITE)
-def test_method_matches_reference(
-    frozen, case: str, closure: str, method: str, lmin: int
-) -> None:
+def test_method_matches_reference(frozen, case: str, method: str, lmin: int) -> None:
     """Check every kernel-space method against the quadrature's own reference."""
-    state = frozen(case, closure, lmin)
+    state = frozen(case, lmin)
     error = state.peak_error(state.compute(method), state.reference.cl)
-    tolerance = TOLERANCE[(method, closure)]
+    tolerance = TOLERANCE[method]
 
     assert error < tolerance, (
-        f"{case} ({state.pair.regime}): {method} on a {closure} closure "
+        f"{case} ({state.pair.regime}): {method} "
         f"deviates by {error:.3e} of the block's peak at ell "
         f"{state.lmin}-{state.lmax}, above the measured {tolerance:.1e}"
     )
@@ -276,10 +263,10 @@ def test_method_matches_reference(
 
 @pytest.mark.parametrize("method", sorted(METHODS))
 @pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS])
-@pytest.mark.parametrize("closure", CLOSURE_PARAMS)
+@FROZEN_GROUP
 @pytest.mark.parametrize("lmin", cases.ELLS_SUITE)
 def test_block_entry_point_matches_compute(
-    frozen, case: str, closure: str, method: str, lmin: int
+    frozen, case: str, method: str, lmin: int
 ) -> None:
     """Check that integrate_block() and compute() agree exactly on shared closures.
 
@@ -289,7 +276,7 @@ def test_block_entry_point_matches_compute(
     this the sharpest check on the table -- it removes the closure rebuild
     that every other comparison has to allow for.
     """
-    state = frozen(case, closure, lmin)
+    state = frozen(case, lmin)
     direct = state.integrate_block(method)
     through_compute = state.compute(method)
 
@@ -297,7 +284,7 @@ def test_block_entry_point_matches_compute(
         direct,
         through_compute,
         err_msg=(
-            f"{case}: {method} on a {closure} closure disagrees with itself "
+            f"{case}: {method} disagrees with itself "
             f"between Nc.Xcor.integrate_block() and nc_xcor_compute() at ell "
             f"{state.lmin}-{state.lmax}"
         ),
@@ -328,8 +315,8 @@ def test_limber_z_methods_have_no_block_quadrature() -> None:
 
 
 @pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS if pair.isauto])
-@pytest.mark.parametrize("closure", CLOSURE_PARAMS)
-def test_auto_spectra_cannot_cancel(frozen, case: str, closure: str) -> None:
+@FROZEN_GROUP
+def test_auto_spectra_cannot_cancel(frozen, case: str) -> None:
     """Check that an auto spectrum does not cancel: W^2 >= 0 leaves nothing to.
 
     This is why the matrix is not all auto spectra: a method's per-node error
@@ -337,18 +324,18 @@ def test_auto_spectra_cannot_cancel(frozen, case: str, closure: str) -> None:
     far-separated cross pair. A case set that lost its cross pairs would still
     pass every tolerance above and measure nothing.
     """
-    assert frozen(case, closure, 2).cancellation == pytest.approx(1.0, abs=1.0e-12)
+    assert frozen(case, 2).cancellation == pytest.approx(1.0, abs=1.0e-12)
 
 
-@pytest.mark.parametrize("closure", CLOSURE_PARAMS)
-def test_far_separated_bins_cancel_by_orders(frozen, closure: str) -> None:
+@FROZEN_GROUP
+def test_far_separated_bins_cancel_by_orders(frozen) -> None:
     """Check that the far-separated cross pair cancels by orders of magnitude.
 
     Tail against tail at ell = 2 is where a quadrature's per-node error is
     amplified the most; by ell = 200 each window is confined near its own
     turning point and the overlap is small rather than cancelling.
     """
-    low = frozen("X3", closure, 2).cancellation[0]
+    low = frozen("X3", 2).cancellation[0]
 
     assert low > 1.0e3
 
@@ -377,7 +364,7 @@ TRUTH_TABLE = "truth_tables/xcor/xcor_kquad.json.gz"
 # table stayed under the old gate of 1e-1. A tolerance-independent deviation is
 # a wrong reference, not a bad fit -- worth a ladder check before widening the
 # number here.
-CERTIFIED_TOLERANCE = {"chebyshev": 3.0e-2}
+CERTIFIED_TOLERANCE = 3.0e-2
 
 # Tail x tail with hard edges is its own regime rather than a harder version of
 # the roster, and X14 is the one pair that leaves the general budget behind.
@@ -386,14 +373,12 @@ CERTIFIED_TOLERANCE = {"chebyshev": 3.0e-2}
 # worst: 1.34e-1 of the pair's scale at ell = 2, against 1.37e-2 for X10, the
 # next pair down and the same configuration with Gaussian edges. Carving it out
 # keeps 3e-2 a real statement about the other thirty-four.
-CERTIFIED_TOLERANCE_BY_CASE = {("X14", "chebyshev"): 2.0e-1}
+CERTIFIED_TOLERANCE_BY_CASE = {"X14": 2.0e-1}
 
 
-def _certified_budget(case: str, closure: str) -> float:
-    """Return the certified tolerance for one (case, closure) pair, with headroom."""
-    return CERTIFIED_TOLERANCE_BY_CASE.get(
-        (case, closure), CERTIFIED_TOLERANCE[closure]
-    )
+def _certified_budget(case: str) -> float:
+    """Return the certified tolerance for one case, with headroom."""
+    return CERTIFIED_TOLERANCE_BY_CASE.get(case, CERTIFIED_TOLERANCE)
 
 
 @pytest.fixture(name="certified", scope="module")
@@ -416,10 +401,10 @@ def _pair_scale(table: dict) -> dict:
     return scale
 
 
-def _library_cl(case: str, ell: int, closure: str) -> float:
-    """Return the library's C_ell for one (case, ell, closure) entry."""
+def _library_cl(case: str, ell: int) -> float:
+    """Return the library's C_ell for one (case, ell) entry."""
     pair = cases.PAIRS_BY_CASE[case]
-    settings = cases.Settings(closure=CLOSURES[closure])
+    settings = cases.Settings()
     cosmo, dist, ps = cases.make_cosmo_bits()
 
     kernel_a = cases.build_kernel(pair.kernel_a, cosmo, dist, ps, settings)
@@ -430,7 +415,6 @@ def _library_cl(case: str, ell: int, closure: str) -> float:
     )
 
     xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
-    xcor.set_closure_type(settings.closure)
     xcor.set_ell_batch_size(1)
     xcor.set_reltol(settings.reltol)
     xcor.prepare(cosmo)
@@ -456,14 +440,13 @@ def test_certified_table_is_certified(certified: dict) -> None:
     assert worst < 1.0e-8
 
 
-@pytest.mark.parametrize("closure", sorted(CLOSURES))
-def test_closure_matches_certified_c_ell(certified: dict, closure: str) -> None:
-    """Check both closures against Arb over every entry the table certifies."""
+def test_closure_matches_certified_c_ell(certified: dict) -> None:
+    """Check the closure against Arb over every entry the table certifies."""
     scale = _pair_scale(certified)
     worst: dict[str, tuple[float, int]] = {}
 
     for entry in certified["cases"].values():
-        got = _library_cl(entry["case"], entry["ell"], closure)
+        got = _library_cl(entry["case"], entry["ell"])
         deviation = abs(got - float(entry["value"])) / scale[entry["case"]]
         case = entry["case"]
 
@@ -473,13 +456,13 @@ def test_closure_matches_certified_c_ell(certified: dict, closure: str) -> None:
     over = [
         (
             f"{case} ell={ell} by {deviation:.3e} "
-            f"(budget {_certified_budget(case, closure):.1e})"
+            f"(budget {_certified_budget(case):.1e})"
         )
         for case, (deviation, ell) in sorted(worst.items())
-        if deviation >= _certified_budget(case, closure)
+        if deviation >= _certified_budget(case)
     ]
 
     assert not over, (
-        f"{closure} deviates from the certified C_ell, as a fraction of the "
+        f"the closure deviates from the certified C_ell, as a fraction of the "
         f"pair's scale: " + "; ".join(over)
     )

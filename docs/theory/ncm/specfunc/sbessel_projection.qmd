@@ -451,7 +451,7 @@ for (name, ctor), col in zip(
     win.set_l_limber(-1)
     win.prepare(cosmo)
     lo_c, hi_c = win.get_comp_support(0)  # Mpc
-    k_lo, k_hi = win.get_eval_vectorized_full(cosmo, 2, 9, sbi_r, Nc.XcorKernelClosure.CHEBYSHEV).get_range()
+    k_lo, k_hi = win.get_eval_vectorized_full(cosmo, 2, 9, sbi_r).get_range()
     for k in np.geomspace(k_lo, k_hi, 14):
         x_lo, x_hi = k / RH * lo_c, k / RH * hi_c
         ax_b.hlines(row, x_lo, x_hi, color=col, lw=4, label=name if row in (0, 14) else None)
@@ -621,10 +621,9 @@ below makes that jump a panel edge.
 
 ### The representation of the window
 
-The window is represented by Chebyshev panels, selected through
-[[numcosmo|NcXcor]]:closure-type. The domain is split into panels on which the whole block
-is expanded on one Chebyshev--Lobatto grid, doubling the order from 9 to at most
-33 nodes until Eq. (8) holds for every multipole, with $\epsilon_{\rm abs} =
+The window is represented by Chebyshev panels. The domain is split into panels
+on which the whole block is expanded on one Chebyshev--Lobatto grid, doubling
+the order from 9 to at most 33 nodes until Eq. (8) holds for every multipole, with $\epsilon_{\rm abs} =
 \epsilon_a W_{\max}$; a panel that does not converge at 33 is bisected and its
 evaluations discarded. Two rules constrain where a panel may sit and when it
 may be accepted. First, every component boundary found by the expansion is a
@@ -653,7 +652,7 @@ sbi = Ncm.SBesselIntegratorLevin.new(2, 9)
 gauss = Nc.XcorKernelAnalyticGauss.new_full(dist, ps, 1500.0, 300.0, 4.0, sbi)
 gauss.set_l_limber(-1)
 gauss.prepare(cosmo)
-cheb = gauss.get_eval_vectorized_full(cosmo, 2, 9, sbi, Nc.XcorKernelClosure.CHEBYSHEV)
+cheb = gauss.get_eval_vectorized_full(cosmo, 2, 9, sbi)
 lo, hi = cheb.get_range()
 ks = np.geomspace(lo, hi, 3000)
 W = np.array([cheb.eval_array(k) for k in ks])
@@ -688,7 +687,7 @@ multi = Nc.XcorKernelAnalyticMulti.new_full(
     Ncm.Vector.new_array([1.0, 1.0]), 4.0, sbi2)
 multi.set_l_limber(-1)
 multi.prepare(cosmo)
-mc = multi.get_eval_vectorized_full(cosmo, 2, 9, sbi2, Nc.XcorKernelClosure.CHEBYSHEV)
+mc = multi.get_eval_vectorized_full(cosmo, 2, 9, sbi2)
 lo, hi = mc.get_range()
 ks = np.geomspace(lo, hi, 4000)
 Wm = np.array([mc.eval_array(k)[0] for k in ks])

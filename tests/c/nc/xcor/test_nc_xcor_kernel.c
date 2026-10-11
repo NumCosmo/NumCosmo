@@ -647,7 +647,7 @@ test_nc_xcor_kernel_cluster_limber_range_ends (void)
   nc_xcor_kernel_set_l_limber (xclk, 0);
   nc_xcor_kernel_prepare (xclk, cosmo);
 
-  closure = nc_xcor_kernel_get_eval_vectorized (xclk, cosmo, lmin, lmax, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
+  closure = nc_xcor_kernel_get_eval_vectorized (xclk, cosmo, lmin, lmax);
 
   for (l = lmin; l <= lmax; l++)
   {
@@ -718,7 +718,7 @@ test_nc_xcor_kernel_gal_limber_capped_powspec (void)
   nc_xcor_kernel_set_l_limber (NC_XCOR_KERNEL (g), 0);
   nc_xcor_kernel_prepare (NC_XCOR_KERNEL (g), cosmo);
 
-  closure = nc_xcor_kernel_get_eval_vectorized (NC_XCOR_KERNEL (g), cosmo, lmin, lmax, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
+  closure = nc_xcor_kernel_get_eval_vectorized (NC_XCOR_KERNEL (g), cosmo, lmin, lmax);
 
   /* The block's peak, from the Limber formula between the far edge of dN/dz, z = 2, and the cap */
   for (l = lmin; l <= lmax; l++)
@@ -793,7 +793,7 @@ test_nc_xcor_kernel_gal_rsd_limber_steps (void)
   nc_xcor_kernel_set_l_limber (NC_XCOR_KERNEL (g), 0);
   nc_xcor_kernel_prepare (NC_XCOR_KERNEL (g), cosmo);
 
-  xclki = nc_xcor_kernel_get_eval_vectorized (NC_XCOR_KERNEL (g), cosmo, 2, 33, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
+  xclki = nc_xcor_kernel_get_eval_vectorized (NC_XCOR_KERNEL (g), cosmo, 2, 33);
 
   g_assert_cmpuint (ncm_spectral_panels_get_n_panels (nc_xcor_kernel_integrand_peek_panels (xclki)), >, 0);
 

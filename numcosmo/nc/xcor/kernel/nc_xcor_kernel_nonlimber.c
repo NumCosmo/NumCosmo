@@ -305,7 +305,7 @@ _component_states_sum_non_limber (ComponentStates *comp_states, gdouble kernel_o
 }
 
 NcXcorKernelIntegrand *
-_nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi, NcXcorKernelClosure closure_type)
+_nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi)
 {
   NcXcorKernelPrivate *self = _nc_xcor_kernel_get_private (xclk);
   const guint n_l           = lmax - lmin + 1;

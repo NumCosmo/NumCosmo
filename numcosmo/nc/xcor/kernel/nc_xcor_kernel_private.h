@@ -155,9 +155,9 @@ GPtrArray *_nc_xcor_kernel_validate_component_list (NcXcorKernel *xclk, guint n_
 void _nc_xcor_kernel_check_integrator_tolerance (NcXcorKernel *xclk, NcmSBesselIntegrator *sbi);
 NcXcorKernelIntegrand *_nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, ComponentStates *comp_states, void (*expand_func) (const gdouble, NcmVector *, gpointer), void (*compute_func) (const gdouble, NcmVector *, gpointer), gdouble reltol, gdouble peak_epsilon);
 
-NcXcorKernelIntegrand *_nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcXcorKernelClosure closure_type);
+NcXcorKernelIntegrand *_nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax);
 
-NcXcorKernelIntegrand *_nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi, NcXcorKernelClosure closure_type);
+NcXcorKernelIntegrand *_nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi);
 
 G_END_DECLS
 

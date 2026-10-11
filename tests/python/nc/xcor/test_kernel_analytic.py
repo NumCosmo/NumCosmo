@@ -586,9 +586,7 @@ def _cl_reference(
     """
     cosmo, powspec = cosmology.cosmo, cosmology.ps_ml
     chi_min, chi_max = kernel.get_support()
-    k_min, k_max = kernel.get_eval(
-        cosmo, ell, Nc.XcorKernelClosure.CHEBYSHEV
-    ).get_range()
+    k_min, k_max = kernel.get_eval(cosmo, ell).get_range()
     rh = cosmo.RH_Mpc()
     window = _window(shape)
 
@@ -1329,9 +1327,7 @@ def test_disjoint_component_boundaries_are_panel_edges(cosmology: Cosmology) -> 
     kernel.peek_panels_builder().set_min_panels_per_efold(0.0)
     lmin, lmax = 2, 9
 
-    cheb = kernel.get_eval_vectorized_full(
-        cosmology.cosmo, lmin, lmax, _integrator(), Nc.XcorKernelClosure.CHEBYSHEV
-    )
+    cheb = kernel.get_eval_vectorized_full(cosmology.cosmo, lmin, lmax, _integrator())
 
     assert not np.all(_interior_edges_are_dyadic(_panel_edges(cheb)))
 
@@ -1354,7 +1350,6 @@ def test_a_visible_jump_at_a_component_boundary_does_not_split_the_panel(
             lmin,
             lmax,
             _integrator(),
-            Nc.XcorKernelClosure.CHEBYSHEV,
         )
         lo, hi = closure.get_range()
         ks = np.geomspace(lo, hi, 2000)
@@ -1386,7 +1381,6 @@ def test_pieces_of_one_window_are_truncated_together(cosmology: Cosmology) -> No
             lmin,
             lmax,
             Ncm.SBesselIntegratorLevin.new(lmin, lmax),
-            Nc.XcorKernelClosure.CHEBYSHEV,
         )
 
         assert np.all(_interior_edges_are_dyadic(_panel_edges(closure)))

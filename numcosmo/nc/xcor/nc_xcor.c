@@ -74,7 +74,6 @@ enum
   PROP_DISTANCE,
   PROP_MATTER_POWER_SPECTRUM,
   PROP_METH,
-  PROP_CLOSURE_TYPE,
   PROP_RELTOL,
   PROP_ELL_BATCH_SIZE,
 };
@@ -88,7 +87,6 @@ nc_xcor_init (NcXcor *xc)
   xc->dist           = NULL;
   xc->RH             = 0.0;
   xc->meth           = NC_XCOR_METHOD_LIMBER_Z_GSL;
-  xc->closure_type   = NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV;
   xc->ell_batch_size = 8;
 }
 
@@ -111,9 +109,6 @@ _nc_xcor_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       break;
     case PROP_METH:
       xc->meth = g_value_get_enum (value);
-      break;
-    case PROP_CLOSURE_TYPE:
-      nc_xcor_set_closure_type (xc, g_value_get_enum (value));
       break;
     case PROP_RELTOL:
       nc_xcor_set_reltol (xc, g_value_get_double (value));
@@ -144,9 +139,6 @@ _nc_xcor_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
       break;
     case PROP_METH:
       g_value_set_enum (value, xc->meth);
-      break;
-    case PROP_CLOSURE_TYPE:
-      g_value_set_enum (value, nc_xcor_get_closure_type (xc));
       break;
     case PROP_RELTOL:
       g_value_set_double (value, nc_xcor_get_reltol (xc));
@@ -229,34 +221,6 @@ nc_xcor_class_init (NcXcorClass *klass)
                                                       "Method.",
                                                       NC_TYPE_XCOR_METHOD,
                                                       NC_XCOR_METHOD_LIMBER_Z_GSL,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcXcor:closure-type:
-   *
-   * How each kernel represents its sampled $W_\ell(k)$:
-   * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV, the one representation; see
-   * #NcXcorKernelClosure.
-   *
-   * Measured against the certified Arb $C_\ell$ table (93 entries, 35 pairs),
-   * with #NcXcorKernel:reltol equal to #NcXcorKernel:peak-epsilon and the
-   * deviation as a fraction of each pair's largest $|C_\ell|$: the median
-   * deviation is $1.8 \times 10^{-6}$ at $10^{-4}$ and $6.9 \times 10^{-8}$ at
-   * $10^{-6}$. The closure returns the wrong sign at $\ell = 50$ on pairs whose
-   * certified $C_\ell$ there is eight to eleven orders below the pair's largest.
-   *
-   * Under Limber each multipole is supported on its own band in $k$ and is
-   * zero outside it, so a block's window carries one step per multipole. The
-   * closure makes every band edge a panel cut and decides band membership per
-   * panel, so each panel is smooth.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_CLOSURE_TYPE,
-                                   g_param_spec_enum ("closure-type",
-                                                      NULL,
-                                                      "Representation used for the k-space closures.",
-                                                      NC_TYPE_XCOR_KERNEL_CLOSURE,
-                                                      NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -360,34 +324,6 @@ NcXcorMethod
 nc_xcor_get_meth (NcXcor *xc)
 {
   return xc->meth;
-}
-
-/**
- * nc_xcor_set_closure_type:
- * @xc: a #NcXcor
- * @closure_type: a #NcXcorKernelClosure
- *
- * Sets #NcXcor:closure-type. Read when a closure is built, so one already built
- * keeps the representation it was built with.
- *
- */
-void
-nc_xcor_set_closure_type (NcXcor *xc, NcXcorKernelClosure closure_type)
-{
-  xc->closure_type = closure_type;
-}
-
-/**
- * nc_xcor_get_closure_type:
- * @xc: a #NcXcor
- *
- * Returns: the representation used for the k-space closures. See
- * #NcXcor:closure-type.
- */
-NcXcorKernelClosure
-nc_xcor_get_closure_type (NcXcor *xc)
-{
-  return xc->closure_type;
 }
 
 /**

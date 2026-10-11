@@ -636,7 +636,6 @@ def test_chebyshev_closure_matches_arb(
             ell,
             ell,
             Ncm.SBesselIntegratorLevin.new(ell, ell),
-            Nc.XcorKernelClosure.CHEBYSHEV,
         )
         k_min, k_max = integrand.get_range()
 

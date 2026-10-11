@@ -215,8 +215,8 @@ _nc_xcor_kernel_space_run (NcXcor *xc, const NcXcorKQuad *kquad, NcXcorKernel *x
     NcXcorKernelIntegrand *xclki1;
     NcXcorKernelIntegrand *xclki2;
 
-    xclki1 = nc_xcor_kernel_get_eval_vectorized_full (xclk1, cosmo, block_lmin, block_lmax, sbi1, xc->closure_type);
-    xclki2 = isauto ? NULL : nc_xcor_kernel_get_eval_vectorized_full (xclk2, cosmo, block_lmin, block_lmax, sbi2, xc->closure_type);
+    xclki1 = nc_xcor_kernel_get_eval_vectorized_full (xclk1, cosmo, block_lmin, block_lmax, sbi1);
+    xclki2 = isauto ? NULL : nc_xcor_kernel_get_eval_vectorized_full (xclk2, cosmo, block_lmin, block_lmax, sbi2);
 
     kquad->block (xc, xclki1, isauto ? xclki1 : xclki2, block_lmin, block_lmax, isauto, vp_i, vp_err_i);
 
@@ -258,9 +258,9 @@ _nc_xcor_kernel_space_run (NcXcor *xc, const NcXcorKQuad *kquad, NcXcorKernel *x
  * Limber methods have no block quadrature, being a different approximation
  * rather than a different quadrature.
  *
- * @xc still supplies #NcXcor:reltol, #NcXcor:closure-type and the $2/(\pi
- * R_H^3)$ factor, so nc_xcor_prepare() must have been called for the cosmology
- * the closures were built at.
+ * @xc still supplies #NcXcor:reltol and the $2/(\pi R_H^3)$ factor, so
+ * nc_xcor_prepare() must have been called for the cosmology the closures were
+ * built at.
  *
  * @vp_err is filled only by the methods nc_xcor_method_has_error_estimate()
  * reports; the rest fill it with NaN, as nc_xcor_compute_full() does, since a
