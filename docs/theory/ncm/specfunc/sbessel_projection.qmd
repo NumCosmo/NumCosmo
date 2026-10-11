@@ -356,7 +356,7 @@ follow. A kernel evaluated with noise above $\epsilon_F$ makes Eq. (8) fail on
 every level, and the expansion refuses to return rather than returning a
 wrong number. And anything fitted downstream to the samples this stage produces
 cannot be asked for more than $\epsilon_F$;
-[Two representations of the window](#two-representations-of-the-window)
+[The representation of the window](#the-representation-of-the-window)
 enforces that.
 
 The number of kernel evaluations per panel is set by the smoothness of $K$,
@@ -613,40 +613,17 @@ leave its partner's uncancelled edge tail behind, an oscillation the true window
 never had.
 
 The sampled block therefore jumps where a component is dropped, by the
-component's value there, at most $\epsilon\,W_{\rm ref}$. What is done about
-that jump depends on the representation.
+component's value there, at most $\epsilon\,W_{\rm ref}$. The representation
+below makes that jump a panel edge.
 
-### Two representations of the window
+### The representation of the window
 
-Both representations are fits to the same samples on the same domain, and
-either can be selected for a whole computation through
-[[numcosmo|NcXcor]]:closure-type. The default is the Chebyshev one.
-
-Cubic spline. The domain is refined by inserting midpoints where an out-of-sample
-test fails: a not-a-knot cubic spline is built from the accepted points only,
-evaluated at the candidate, and the candidate is accepted when
-$\|f - f_{\rm spl}\|_2 \le \epsilon_r \|f\|_2 + \epsilon_a\, W_{\max}$ in the norm over
-the block, with $f_{\rm spl}$ the spline's value at the candidate and $W_{\max}$ the
-smallest of the block's per-multipole peaks. The two tolerances add, so the larger one
-decides where refinement stops. Once every
-interval has passed, the settled set is closed as in
-[AutoKnots: Adaptive Knot Placement](../spline/spline_func.qmd): an interval wider
-than the mean of its two neighbors is tested once at its midpoint, a failure also
-reopens the run of equal widths around it, and refinement resumes until a
-closure round finds no failure. A jump is
-handled by continuing a dropped component beyond its boundary as
-$v\,\exp[-10^{10}\,\delta k/k_R]$: the sampled function stays continuous, one
-cubic can span the boundary, and what remains is a jump in the first
-derivative. At the default tolerances this costs nothing measurable. At a
-large $\epsilon$ the refinement chases the $10^{-8}$-wide transition and the
-cubic through knots with spacing ratios of $10^7$ overshoots between them;
-this is a limitation of the spline representation at non-default settings.
-
-Chebyshev panels. The domain is split into panels on which the whole block
+The window is represented by Chebyshev panels, selected through
+[[numcosmo|NcXcor]]:closure-type. The domain is split into panels on which the whole block
 is expanded on one Chebyshev--Lobatto grid, doubling the order from 9 to at most
 33 nodes until Eq. (8) holds for every multipole, with $\epsilon_{\rm abs} =
 \epsilon_a W_{\max}$; a panel that does not converge at 33 is bisected and its
-evaluations discarded. Three rules constrain where a panel may sit and when it
+evaluations discarded. Two rules constrain where a panel may sit and when it
 may be accepted. First, every component boundary found by the expansion is a
 panel edge, and while a panel is fitted each component is either on or off for
 the whole panel, decided at the panel's midpoint, so the outer panel reads
@@ -657,13 +634,9 @@ $10$ passes a tolerance of $10^{-6}$ and fails $10^{-7}$, where the splitter
 bisects to its width guard and gives up. As an edge the same jump costs
 nothing.
 
-Second, an accepted panel is checked against the expansion's own samples that
-fall strictly inside it, which are independent of the Lobatto nodes and sit on
-every component's scale; a panel whose first grid straddled a narrow peak
-passes Eq. (8) on two levels of a small smooth function, and is caught here
-and bisected instead. Third, the fit tolerance may not be tighter than the
+Second, the fit tolerance may not be tighter than the
 sampler's $\epsilon_F$, which is enforced as a fatal check: below it the samples
-are not a smooth function of $k$ and neither representation converges.
+are not a smooth function of $k$ and the expansion does not converge.
 
 ```{python}
 #| label: fig-window
@@ -684,38 +657,16 @@ W = np.array([cheb.eval_array(k) for k in ks])
 fig, ax = plt.subplots(figsize=(8, 3.6))
 for i in range(0, 8, 2):
     ax.plot(ks / RH, W[:, i] / np.abs(W[:, i]).max(), lw=1, label=f"l = {2 + i}")
-for i in range(cheb.get_n_panels()):
-    _, pa, pb = cheb.peek_panel(i)
+for i in range(cheb.peek_panels().get_n_panels()):
+    _, pa, pb = cheb.peek_panels().get_panel(i)
     ax.axvline(pb / RH, color="0.6", lw=0.7)
 ax.set_xscale("log")
 ax.set_xlabel("k [1/Mpc]")
 ax.set_ylabel("W_l(k) / max |W_l|")
 ax.legend(fontsize=8)
 plt.tight_layout()
-orders = [cheb.peek_panel(i)[0].ncols() for i in range(cheb.get_n_panels())]
-print(f"{cheb.get_n_panels()} panels, coefficients per panel: {orders}")
-```
-
-```{python}
-#| label: fig-two-closures
-#| fig-cap: >
-#|   The same window fitted by both representations: knots of the cubic spline against
-#|   the panel edges of the Chebyshev expansion. The spline needs a knot every few
-#|   oscillations; a panel holds up to 33 coefficients and covers as much as the
-#|   oscillation count allows.
-#| code-fold: true
-spline = gauss.get_eval_vectorized_full(cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(2, 9), Nc.XcorKernelClosure.SPLINE)
-knots_k = np.array(spline.peek_knots().dup_array())
-fig, ax = plt.subplots(figsize=(8, 2.0))
-ax.plot(knots_k / RH, np.ones_like(knots_k), "|", ms=12, color="C0", label=f"spline knots ({knots_k.size})")
-edges_k = np.array([cheb.peek_panel(0)[1]] + [cheb.peek_panel(i)[2] for i in range(cheb.get_n_panels())])
-ax.plot(edges_k / RH, 0.4 * np.ones_like(edges_k), "|", ms=18, color="C3", label=f"Chebyshev panel edges ({edges_k.size})")
-ax.set_xscale("log")
-ax.set_ylim(0, 1.4)
-ax.set_yticks([])
-ax.set_xlabel("k [1/Mpc]")
-ax.legend(loc="upper left", fontsize=8)
-plt.tight_layout()
+orders = [cheb.peek_panels().get_panel(i)[0].ncols() for i in range(cheb.peek_panels().get_n_panels())]
+print(f"{cheb.peek_panels().get_n_panels()} panels, coefficients per panel: {orders}")
 ```
 
 ```{python}
@@ -738,7 +689,7 @@ mc = multi.get_eval_vectorized_full(cosmo, 2, 9, sbi2, Nc.XcorKernelClosure.CHEB
 lo, hi = mc.get_range()
 ks = np.geomspace(lo, hi, 4000)
 Wm = np.array([mc.eval_array(k)[0] for k in ks])
-edges = np.array([mc.peek_panel(0)[1]] + [mc.peek_panel(i)[2] for i in range(mc.get_n_panels())])
+edges = np.array([mc.peek_panels().get_panel(0)[1]] + [mc.peek_panels().get_panel(i)[2] for i in range(mc.peek_panels().get_n_panels())])
 frac = (edges[1:-1] - edges[0]) / (edges[-1] - edges[0])
 dyadic = np.abs(frac * 2**16 - np.round(frac * 2**16)) < 1e-6
 fig, ax = plt.subplots(figsize=(8, 3.4))
@@ -756,19 +707,14 @@ plt.tight_layout()
 ## The outer integral
 
 Two closures of a pair, $W^X_\ell$ and $W^Y_\ell$, are each a single polynomial
-between consecutive breakpoints: knots for a spline, panel edges for a
-Chebyshev expansion. On every cell of the common refinement of the two
-breakpoint sets, over the intersection of the two domains, the integrand
+between consecutive panel edges. On every cell of the common refinement of
+the two sets of edges, over the intersection of the two domains, the integrand
 $k^2 W^X_\ell W^Y_\ell$ is therefore one polynomial, and it is integrated
 exactly. No node, no adaptive step and no tolerance enter this stage; the only
 error of the final $C_\ell$ is the closures' own fit error and the truncation
 of the domain.
 
-Two splines. The cell integrand is $k^2$ times two cubics, degree 8, and
-five-point Gauss--Legendre is exact through degree 9. Both closures are
-evaluated at the five nodes of each cell; the sum is the integral.
-
-Two Chebyshev panels. On a cell $[k_a, k_b]$ with $k = m + h s$, each
+On a cell $[k_a, k_b]$ with $k = m + h s$, each
 closure's panel polynomial is restricted to the cell by the affine change of
 variable, which is a change of basis and exact. Write the restrictions as
 $W^X = \sum_i c^i(W^X)\, T_i(s)$ and $W^Y = \sum_j c^j(W^Y)\, T_j(s)$. The weight is a
@@ -791,21 +737,11 @@ for $i+j$ even and zero otherwise, from $\int_{-1}^{1} T_n\,\mathrm{d}s = 2/(1-n
 even $n$. The form is $O(N^2)$ per cell with $N \le 33$; it is affordable
 because the panels bound $N$.
 
-A spline against a panel. A cell of the common refinement lies inside one
-knot interval, so the spline is one cubic there, and interpolation at four
-Chebyshev--Lobatto nodes reproduces a cubic exactly. The spline side is thus
-turned into four Chebyshev coefficients and Eq. (9) applies. Both tiers follow
-[[numcosmo|NcXcor]]:closure-type, so [[numcosmo|nc_xcor_compute]] never pairs the
-two representations; such a pair comes only from closures built separately and
-passed to [[numcosmo|nc_xcor_integrate_block]].
-
 The error reported with $C_\ell$ propagates the closures' fit residuals,
 $\delta(W^X W^Y) \simeq |W^X|\,\delta W^Y + |W^Y|\,\delta W^X$, integrated
-with the same $k^2$ weight over the same cells. A spline records the residual
-its refinement achieved on each knot interval; a Chebyshev panel records the
+with the same $k^2$ weight over the same cells. On a panel, $\delta W$ is the
 $\ell^1$ mass of the coefficients above the level its convergence test compared
-against. Where no record exists the requested tolerance is used, which is a
-ceiling rather than an estimate.
+against.
 
 Complex windows. Nothing above requires $W_\ell(k)$ to be real. A
 field-theoretic treatment writes the observable as the real part of $\langle
@@ -836,8 +772,8 @@ lo = max(cheb.get_range()[0], mc.get_range()[0])
 hi = min(cheb.get_range()[1], mc.get_range()[1])
 ks = np.geomspace(lo, hi, 6000)
 prod = np.array([k * k * cheb.eval_array(k)[0] * mc.eval_array(k)[0] for k in ks])
-e1 = np.array([cheb.peek_panel(i)[2] for i in range(cheb.get_n_panels())])
-e2 = np.array([mc.peek_panel(i)[2] for i in range(mc.get_n_panels())])
+e1 = np.array([cheb.peek_panels().get_panel(i)[2] for i in range(cheb.peek_panels().get_n_panels())])
+e2 = np.array([mc.peek_panels().get_panel(i)[2] for i in range(mc.peek_panels().get_n_panels())])
 cells = np.unique(np.concatenate([[lo], e1[(e1 > lo) & (e1 < hi)], e2[(e2 > lo) & (e2 < hi)], [hi]]))
 fig, ax = plt.subplots(figsize=(8, 3.4))
 ax.plot(ks / RH, prod / np.abs(prod).max(), lw=1)
@@ -869,8 +805,7 @@ print(f"C_2: library {vp.get(0):.15e}   GL(40) on the same cells {ref:.15e}   re
 | multipoles per block | prescribed by the caller | 8 |
 | domain in $k$ | expansion until $\|W\| < \epsilon W_{\rm ref}$ five times | $\epsilon = 10^{-5}$, $\alpha = 0.2$ |
 | component boundaries | same test per group of touching components | --- |
-| spline knots | out-of-sample midpoint refinement | $\epsilon_r = \epsilon_a = 10^{-4}$ |
-| Chebyshev panels in $k$ | bisection with order cap, cuts at boundaries, sample check | cap $2^5+1$ |
+| Chebyshev panels in $k$ | bisection with order cap, cuts at boundaries | cap $2^5+1$ |
 | outer integral | exact on the common refinement | none |
 
 Two floors remain that no tolerance moves. The sampler's own accuracy
