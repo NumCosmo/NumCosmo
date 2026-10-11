@@ -172,8 +172,8 @@ test_ncm_spectral_panels_find_panel (void)
   ncm_spectral_panels_free (sp);
 }
 
-/* Both rows match the exact functions inside the panels, and on an interior edge row 1
- * takes the value of the panel to its right */
+/* Both rows match the exact functions inside the panels; on an interior edge row 1 takes
+ * the value of the panel to its right, and on a given panel the limit from inside it */
 static void
 test_ncm_spectral_panels_eval (void)
 {
@@ -200,6 +200,12 @@ test_ncm_spectral_panels_eval (void)
 
   g_assert_cmpfloat (fabs (ncm_spectral_panels_eval_row (sp, 1, 1.0) - 2.0), <=, 1.0e-14);
   g_assert_cmpfloat (fabs (ncm_spectral_panels_eval_row (sp, 1, 2.5) - 3.0), <=, 1.0e-14);
+
+  /* On a given panel an edge reads the limit from inside it: the jumping row takes the
+   * value of the panel that ends there */
+  g_assert_cmpfloat (fabs (ncm_spectral_panels_eval_row_on (sp, 0, 1, 1.0) - 1.0), <=, 1.0e-14);
+  g_assert_cmpfloat (fabs (ncm_spectral_panels_eval_row_on (sp, 1, 1, 2.5) - 2.0), <=, 1.0e-14);
+  g_assert_cmpfloat (fabs (ncm_spectral_panels_eval_row_on (sp, 1, 1, 1.0) - 2.0), <=, 1.0e-14);
 
   ncm_vector_free (fval);
   ncm_spectral_panels_free (sp);

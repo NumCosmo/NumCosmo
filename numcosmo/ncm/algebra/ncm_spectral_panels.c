@@ -547,7 +547,25 @@ ncm_spectral_panels_eval (NcmSpectralPanels *sp, gdouble x, NcmVector *fval)
 gdouble
 ncm_spectral_panels_eval_row (NcmSpectralPanels *sp, guint r, gdouble x)
 {
-  const guint i = ncm_spectral_panels_find_panel (sp, x);
+  return ncm_spectral_panels_eval_row_on (sp, ncm_spectral_panels_find_panel (sp, x), r, x);
+}
+
+/**
+ * ncm_spectral_panels_eval_row_on:
+ * @sp: a #NcmSpectralPanels
+ * @i: panel index
+ * @r: row index
+ * @x: a point
+ *
+ * Evaluates the entry $F_r$ at @x on panel @i, whatever panel holds @x. On an edge of
+ * panel @i this is the limit from inside it, where ncm_spectral_panels_eval_row() takes
+ * the panel that starts at the edge.
+ *
+ * Returns: the series of row @r of panel @i at @x.
+ */
+gdouble
+ncm_spectral_panels_eval_row_on (NcmSpectralPanels *sp, guint i, guint r, gdouble x)
+{
   gdouble a, b;
   guint N;
   const gdouble *c = ncm_spectral_panels_peek_panel (sp, i, &a, &b, &N);

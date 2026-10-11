@@ -627,6 +627,57 @@ _dndz_truncated_new (void)
   return s;
 }
 
+/* A closure in u read at exactly the ends of a multipole's k range gives its value from
+ * inside the range, as just inside it does, however k / nu rounds: the cluster top-hat is
+ * far from zero at its band edges, where it steps to zero */
+static void
+test_nc_xcor_kernel_cluster_limber_range_ends (void)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist = nc_distance_new (TEST_ZMAX);
+  NcmPowspec *ps   = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                            NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  NcXcorKernel *xclk;
+  NcXcorKernelIntegrand *closure;
+  const gint lmin = 10;
+  const gint lmax = 17;
+  gdouble W_end[TEST_LMAX], W_in[TEST_LMAX];
+  gint l;
+
+  nc_distance_prepare (dist, cosmo);
+  ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
+
+  xclk = NC_XCOR_KERNEL (nc_xcor_kernel_cluster_tophat_new (dist, ps, 0.3, 0.6));
+  nc_xcor_kernel_set_l_limber (xclk, 0);
+  nc_xcor_kernel_prepare (xclk, cosmo);
+
+  closure = nc_xcor_kernel_get_eval_vectorized (xclk, cosmo, lmin, lmax, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
+
+  for (l = lmin; l <= lmax; l++)
+  {
+    const guint r = l - lmin;
+    gdouble k_lo, k_hi;
+
+    nc_xcor_kernel_integrand_get_range_comp (closure, r, &k_lo, &k_hi);
+
+    nc_xcor_kernel_integrand_eval (closure, k_hi, W_end);
+    nc_xcor_kernel_integrand_eval (closure, k_hi * (1.0 - 1.0e-12), W_in);
+    g_assert_cmpfloat (fabs (W_in[r]), >, 0.0);
+    g_assert_cmpfloat (fabs (W_end[r] - W_in[r]), <=, 1.0e-9 * fabs (W_in[r]));
+
+    nc_xcor_kernel_integrand_eval (closure, k_lo, W_end);
+    nc_xcor_kernel_integrand_eval (closure, k_lo * (1.0 + 1.0e-12), W_in);
+    g_assert_cmpfloat (fabs (W_in[r]), >, 0.0);
+    g_assert_cmpfloat (fabs (W_end[r] - W_in[r]), <=, 1.0e-9 * fabs (W_in[r]));
+  }
+
+  nc_xcor_kernel_integrand_unref (closure);
+  nc_xcor_kernel_free (xclk);
+  ncm_powspec_free (ps);
+  nc_distance_free (dist);
+  nc_hicosmo_free (cosmo);
+}
+
 /* Under Limber in u each multipole's support ends at k_max / nu of the power spectrum,
  * one end per multipole. With the power spectrum capped where the window is still large,
  * every multipole must reach the cap: between (nu / nu_max) k_max and k_max it matches
@@ -1038,6 +1089,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/xcor/kernel/cluster_tophat/volume_normalized", &test_nc_xcor_kernel_cluster_tophat_volume_normalized);
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_steps", &test_nc_xcor_kernel_gal_rsd_limber_steps);
   g_test_add_func ("/nc/xcor/kernel/gal/limber_capped_powspec", &test_nc_xcor_kernel_gal_limber_capped_powspec);
+  g_test_add_func ("/nc/xcor/kernel/cluster/limber_range_ends", &test_nc_xcor_kernel_cluster_limber_range_ends);
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/subprocess", &test_nc_xcor_kernel_gal_rsd_limber_z_st);
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/trap", &test_nc_xcor_kernel_gal_rsd_limber_z_trap);
   g_test_add_func ("/nc/xcor/kernel/table/new_full", &test_nc_xcor_kernel_table_full);

@@ -104,6 +104,8 @@ typedef struct _ChebIntegrandData
   gdouble k_max;
   gdouble *k_min_comp;
   gdouble *k_max_comp;
+  gdouble *x_min_comp; /* per multipole, the support in x: k_min_comp and k_max_comp over the scale */
+  gdouble *x_max_comp;
 } ChebIntegrandData;
 
 typedef struct _ComponentParams

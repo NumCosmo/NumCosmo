@@ -531,6 +531,8 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
 
     cid->k_min_comp = g_new (gdouble, n_l);
     cid->k_max_comp = g_new (gdouble, n_l);
+    cid->x_min_comp = g_new (gdouble, n_l);
+    cid->x_max_comp = g_new (gdouble, n_l);
     cid->scale      = g_new (gdouble, n_l);
     cid->scaled     = comp_states->in_u;
 
@@ -565,6 +567,8 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
           k_min_i = k_max_i = x_min;
       }
 
+      cid->x_min_comp[i] = k_min_i;
+      cid->x_max_comp[i] = k_max_i;
       cid->k_min_comp[i] = k_min_i * cid->scale[i];
       cid->k_max_comp[i] = k_max_i * cid->scale[i];
     }

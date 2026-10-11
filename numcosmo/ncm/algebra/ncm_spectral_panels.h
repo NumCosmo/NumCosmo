@@ -57,6 +57,7 @@ guint ncm_spectral_panels_find_panel (NcmSpectralPanels *sp, gdouble x);
 
 void ncm_spectral_panels_eval (NcmSpectralPanels *sp, gdouble x, NcmVector *fval);
 gdouble ncm_spectral_panels_eval_row (NcmSpectralPanels *sp, guint r, gdouble x);
+gdouble ncm_spectral_panels_eval_row_on (NcmSpectralPanels *sp, guint i, guint r, gdouble x);
 gboolean ncm_spectral_panels_restrict (NcmSpectralPanels *sp, NcmSpectral *spectral, gdouble a, gdouble b, NcmMatrix **coeffs);
 
 G_END_DECLS

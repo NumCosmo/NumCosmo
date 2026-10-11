@@ -183,28 +183,65 @@ _nc_xcor_kernel_spectral_get (void)
 }
 
 /*
- * Evaluates the components [offset, offset + len) at k. With per-multipole
- * scales each component is evaluated at its own x = k / scale[i]. Outside the
- * panels' span the closure is zero: the domain was expanded until the block
- * was negligible there.
+ * Evaluates the components [offset, offset + len) at k. Outside the panels' span
+ * the closure is zero: the domain was expanded until the block was negligible there.
+ *
+ * With per-multipole scales each component lives in its own x = k / scale[i] and is
+ * nonzero on its own support [x_min_comp, x_max_comp], whose ends are panel edges.
+ * Whether k is inside is decided in k, against that support times the scale, and x is
+ * then clamped to the support: k / scale can round past an end that k reaches exactly.
+ * The upper end is read from inside the support, on the panel that ends there, where
+ * the panel that starts there may already be past the component's support.
  */
 static void
 _cheb_integrand_eval_comps (gpointer data, gdouble k, guint offset, guint len, gdouble *W)
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
-  gdouble x_min, x_max;
   guint i;
 
-  ncm_spectral_panels_get_range (cid->sp, &x_min, &x_max);
-
-  for (i = 0; i < len; i++)
+  if (!cid->scaled)
   {
-    const gdouble x = cid->scaled ? k / cid->scale[offset + i] : k;
+    gdouble x_min, x_max;
 
-    if ((x < x_min) || (x > x_max))
-      W[offset + i] = 0.0;
-    else
-      W[offset + i] = ncm_spectral_panels_eval_row (cid->sp, offset + i, x);
+    ncm_spectral_panels_get_range (cid->sp, &x_min, &x_max);
+
+    for (i = 0; i < len; i++)
+    {
+      if ((k < x_min) || (k > x_max))
+        W[offset + i] = 0.0;
+      else
+        W[offset + i] = ncm_spectral_panels_eval_row (cid->sp, offset + i, k);
+    }
+  }
+  else
+  {
+    for (i = 0; i < len; i++)
+    {
+      const guint r = offset + i;
+
+      if ((k < cid->k_min_comp[r]) || (k > cid->k_max_comp[r]))
+      {
+        W[r] = 0.0;
+      }
+      else
+      {
+        const gdouble x = GSL_MIN (GSL_MAX (k / cid->scale[r], cid->x_min_comp[r]), cid->x_max_comp[r]);
+        guint p         = ncm_spectral_panels_find_panel (cid->sp, x);
+
+        if ((x == cid->x_max_comp[r]) && (p > 0))
+        {
+          gdouble a, b;
+          guint N;
+
+          ncm_spectral_panels_peek_panel (cid->sp, p, &a, &b, &N);
+
+          if (a == x)
+            p--;
+        }
+
+        W[r] = ncm_spectral_panels_eval_row_on (cid->sp, p, r, x);
+      }
+    }
   }
 }
 
@@ -253,6 +290,8 @@ _cheb_integrand_data_free (gpointer data)
   g_free (cid->scale);
   g_free (cid->k_min_comp);
   g_free (cid->k_max_comp);
+  g_free (cid->x_min_comp);
+  g_free (cid->x_max_comp);
   g_free (data);
 }
 
