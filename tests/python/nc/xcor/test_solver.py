@@ -792,22 +792,15 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
                 out.append(np.array(vp.dup_array()))
         return out
 
-    for closure_type in (
-        Nc.XcorKernelClosure.CHEBYSHEV,
-        Nc.XcorKernelClosure.SPLINE,
-    ):
-        through_solver = solve(closure_type)
-        direct = compute_directly(closure_type)
+    through_solver = solve(Nc.XcorKernelClosure.CHEBYSHEV)
+    direct = compute_directly(Nc.XcorKernelClosure.CHEBYSHEV)
 
-        assert len(through_solver) == 3
+    assert len(through_solver) == 3
 
-        # The two entry points must reach the same integrator. Asserting the two
-        # *representations* agree instead would be asserting the wrong thing:
-        # on the cross request at l ~ 17 the spline is several hundred percent
-        # out, which is the error this representation exists to remove.
-        for got, expected in zip(through_solver, direct):
-            assert np.all(np.isfinite(got))
-            assert_allclose(got, expected, rtol=1.0e-10)
+    # The two entry points must reach the same integrator.
+    for got, expected in zip(through_solver, direct):
+        assert np.all(np.isfinite(got))
+        assert_allclose(got, expected, rtol=1.0e-10)
 
 
 def test_replan_with_the_same_blocks_keeps_the_integrators(

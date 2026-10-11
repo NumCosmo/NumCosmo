@@ -72,9 +72,7 @@ typedef struct _TestCase
 } TestCase;
 
 static const TestCase test_cases[] = {
-  {"limber/spline",         NC_XCOR_KERNEL_CLOSURE_SPLINE,    FALSE, FALSE},
   {"limber/chebyshev",      NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV, FALSE, FALSE},
-  {"non_limber/spline",     NC_XCOR_KERNEL_CLOSURE_SPLINE,    TRUE,  FALSE},
   {"non_limber/chebyshev",  NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV, TRUE,  FALSE},
 
   /* Two disjoint bumps: the only case where the per-component accessors have more than
@@ -255,7 +253,7 @@ test_nc_xcor_kernel_integrand_comps (TestNcXcorKernelIntegrand *test, gconstpoin
   nc_xcor_kernel_integrand_unref (integ);
 }
 
-/* A closure carries panels or knots. The panels hold one row per multipole and span the
+/* A closure carries panels. They hold one row per multipole and span the
  * closure's range in its variable x = k / scale, converted with the scale of the first and
  * the last multipole. */
 static void
@@ -264,11 +262,9 @@ test_nc_xcor_kernel_integrand_panels (TestNcXcorKernelIntegrand *test, gconstpoi
   const TestCase *tc           = pdata;
   NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
   NcmSpectralPanels *sp        = nc_xcor_kernel_integrand_peek_panels (integ);
-  NcmVector *knots             = nc_xcor_kernel_integrand_peek_knots (integ);
 
-  g_assert_true ((sp != NULL) || (knots != NULL));
+  g_assert_nonnull (sp);
 
-  if (sp != NULL)
   {
     const guint len = nc_xcor_kernel_integrand_get_len (integ);
     gdouble k_min, k_max, x_min, x_max;
@@ -281,9 +277,6 @@ test_nc_xcor_kernel_integrand_panels (TestNcXcorKernelIntegrand *test, gconstpoi
     ncm_assert_cmpdouble_e (x_min, ==, k_min / nc_xcor_kernel_integrand_get_scale (integ, 0), 1.0e-12, 0.0);
     ncm_assert_cmpdouble_e (x_max, ==, k_max / nc_xcor_kernel_integrand_get_scale (integ, len - 1), 1.0e-12, 0.0);
   }
-
-  if (knots != NULL)
-    g_assert_cmpuint (ncm_vector_len (knots), >, 1);
 
   nc_xcor_kernel_integrand_unref (integ);
 }

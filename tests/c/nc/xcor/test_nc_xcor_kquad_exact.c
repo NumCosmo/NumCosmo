@@ -25,11 +25,11 @@
 /*
  * NC_XCOR_METHOD_KERNEL_EXACT against an independent integral of the same closures:
  * nc_xcor_integrate_block() on a pair of integrands, compared with
- * test_nc_xcor_kquad_ref_eval() on the same pair, for spline, Chebyshev and
- * spline x Chebyshev closures, non-Limber, Limber and mixed tiers, auto and cross (auto
- * only where both kernels agree, since an auto spectrum uses the first alone). Exact is a bilinear form in the
- * coefficients or GL(5) on merged knots; the reference raises Gauss-Legendre per cell,
- * so the two share the closures and nothing else.
+ * test_nc_xcor_kquad_ref_eval() on the same pair, for Chebyshev closures in the
+ * non-Limber, Limber and mixed tiers, auto and cross (auto only where both kernels agree,
+ * since an auto spectrum uses the first alone). Exact is a bilinear form in the
+ * coefficients; the reference raises Gauss-Legendre per cell, so the two share the
+ * closures and nothing else.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -65,18 +65,12 @@ typedef struct _TestCase
   gint l_limber2;
 } TestCase;
 
-#define SPLINE NC_XCOR_KERNEL_CLOSURE_SPLINE
 #define CHEB NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV
 
 static const TestCase test_cases[] = {
-  {"spline/non_limber",           SPLINE, SPLINE, -1, -1},
-  {"spline/limber",               SPLINE, SPLINE,  0,  0},
-  {"spline/mixed",                SPLINE, SPLINE, -1,  0},
   {"chebyshev/non_limber",        CHEB,   CHEB,   -1, -1},
   {"chebyshev/limber",            CHEB,   CHEB,    0,  0},
   {"chebyshev/mixed",             CHEB,   CHEB,   -1,  0},
-  {"spline_chebyshev/non_limber", SPLINE, CHEB,   -1, -1},
-  {"spline_chebyshev/mixed",      SPLINE, CHEB,    0, -1},
 };
 
 typedef struct _TestNcXcorKQuadExact
@@ -124,14 +118,11 @@ test_nc_xcor_kquad_exact_free (TestNcXcorKQuadExact *test, gconstpointer pdata)
   NCM_TEST_FREE (nc_xcor_free, test->xc);
 }
 
-/* A spline closure carries knots and no panels, a Chebyshev one the reverse. */
+/* A Chebyshev closure carries panels */
 static void
 _test_nc_xcor_kquad_exact_assert_closure (NcXcorKernelIntegrand *xclki, NcXcorKernelClosure closure)
 {
-  const gboolean spline = (closure == NC_XCOR_KERNEL_CLOSURE_SPLINE);
-
-  g_assert_true ((nc_xcor_kernel_integrand_peek_knots (xclki) != NULL) == spline);
-  g_assert_true ((nc_xcor_kernel_integrand_peek_panels (xclki) != NULL) == !spline);
+  g_assert_nonnull (nc_xcor_kernel_integrand_peek_panels (xclki));
 }
 
 static void

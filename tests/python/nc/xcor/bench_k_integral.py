@@ -75,20 +75,13 @@ except ImportError:  # running from the repository root
 
 
 CLOSURES: typing.Final[dict[str, Nc.XcorKernelClosure]] = {
-    "spline": Nc.XcorKernelClosure.SPLINE,
     "chebyshev": Nc.XcorKernelClosure.CHEBYSHEV,
 }
 
 
 def _closure_size(integrand: Nc.XcorKernelIntegrand) -> int:
-    """Knots for a spline closure, coefficients summed over panels otherwise."""
+    """The coefficients of the closure, summed over its panels."""
     panels = integrand.peek_panels()
-
-    if panels is None:
-        knots = integrand.peek_knots()
-
-        return 0 if knots is None else knots.len()
-
     total = 0
 
     for i in range(panels.get_n_panels()):

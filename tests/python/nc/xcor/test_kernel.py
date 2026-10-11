@@ -44,6 +44,11 @@ pytest_plugins = ["python.fixtures_xcor"]
 
 RELTOL = 1.0e-7
 PEAK_EPSILON = 1.0e-4
+# The projection tests compare the Limber approximation's error in the integrated power,
+# a few 1e-6, which closures at PEAK_EPSILON move by about 3e-6. At 1e-6 they move it by
+# under 1e-7 (lensing bins, ell 500 and 804, against closures at 1e-8), so the comparison
+# is the physics.
+CONVERGED_TOL = 1.0e-6
 
 # The tests below that build non-Limber closures run the Levin ODE over
 # x = k chi, and its cost -- both time and the spectral order the panels must
@@ -94,7 +99,7 @@ def test_limber_vs_limber_z(kernel: Nc.XcorKernel, cosmology: Cosmology) -> None
 
     # Get vectorized evaluation functions
     for ell in ell_array:
-        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
+        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.CHEBYSHEV)
         nu = ell + 0.5
 
         # Evaluate both methods
@@ -152,7 +157,7 @@ def test_limber_vs_limber_z_vectorized(
 
     # Get vectorized evaluation function for ell range
     limber_func = kernel.get_eval_vectorized(
-        cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+        cosmo, ell_start, ell_end, Nc.XcorKernelClosure.CHEBYSHEV
     )
     kmin, kmax = limber_func.get_range()
 
@@ -272,7 +277,7 @@ def test_limber_vs_non_limber(
         rtol = kernel_tol.get(kernel_id, {}).get(ell, default_rtol)
         kernel.set_l_limber(0)
         kernel.prepare(cosmo)
-        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
+        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.CHEBYSHEV)
         kmin_limber, kmax_limber = limber_func.get_range()
 
         # Get non-limber result (this is the "exact" reference)
@@ -280,7 +285,9 @@ def test_limber_vs_non_limber(
         kernel.prepare(cosmo)
 
         for _ in range(1):
-            non_limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
+            non_limber_func = kernel.get_eval(
+                cosmo, ell, Nc.XcorKernelClosure.CHEBYSHEV
+            )
 
         kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
         kmin = max(kmin_limber, kmin_non_limber)
@@ -344,21 +351,21 @@ def test_k_projection_limber_vs_non_limber(
         "kernel_wl_bin4": {100: 1.0e-4, 500: 6.0e-6, 800: 4.0e-6},
     }
     default_rtol = 1.0e-13
-    kernel.set_reltol(RELTOL)  # Use tight tolerance for this test
-    kernel.set_peak_epsilon(PEAK_EPSILON)  # Use tight absolute minimum for this test
+    kernel.set_reltol(CONVERGED_TOL)
+    kernel.set_peak_epsilon(CONVERGED_TOL)
 
     for ell in ell_array:
         # Get limber result
         rtol = kernel_tol.get(kernel_id, {}).get(ell, default_rtol)
         kernel.set_l_limber(0)
         kernel.prepare(cosmo)
-        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
+        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.CHEBYSHEV)
         kmin_limber, kmax_limber = limber_func.get_range()
 
         # Get non-limber result (this is the "exact" reference)
         kernel.set_l_limber(-1)
         kernel.prepare(cosmo)
-        non_limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
+        non_limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.CHEBYSHEV)
         kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
 
         kmin = max(kmin_limber, kmin_non_limber)
@@ -440,7 +447,7 @@ def test_limber_vs_non_limber_vectorized(
         kernel.set_l_limber(0)
         kernel.prepare(cosmo)
         limber_func = kernel.get_eval_vectorized(
-            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.CHEBYSHEV
         )
         kmin_limber, kmax_limber = limber_func.get_range()
 
@@ -448,7 +455,7 @@ def test_limber_vs_non_limber_vectorized(
         kernel.set_l_limber(-1)
         kernel.prepare(cosmo)
         non_limber_func = kernel.get_eval_vectorized(
-            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.CHEBYSHEV
         )
         kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
 
@@ -513,8 +520,8 @@ def test_k_projection_limber_vs_non_limber_vectorized(
     ]
 
     default_rtol = 1.0e-13
-    kernel.set_reltol(RELTOL)
-    kernel.set_peak_epsilon(PEAK_EPSILON)
+    kernel.set_reltol(CONVERGED_TOL)
+    kernel.set_peak_epsilon(CONVERGED_TOL)
 
     for ell_start, n_ells in test_configs:
         ell_end = ell_start + n_ells - 1
@@ -524,7 +531,7 @@ def test_k_projection_limber_vs_non_limber_vectorized(
         kernel.set_l_limber(0)
         kernel.prepare(cosmo)
         limber_func = kernel.get_eval_vectorized(
-            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.CHEBYSHEV
         )
         kmin_limber, kmax_limber = limber_func.get_range()
 
@@ -532,7 +539,7 @@ def test_k_projection_limber_vs_non_limber_vectorized(
         kernel.set_l_limber(-1)
         kernel.prepare(cosmo)
         non_limber_func = kernel.get_eval_vectorized(
-            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.CHEBYSHEV
         )
         kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
 
@@ -672,53 +679,3 @@ def test_peak_epsilon_below_the_floor_warns(
 
     assert "below the useful floor" not in capfd.readouterr().err
     assert kernel.get_peak_epsilon() == 1.0e-6
-
-
-def test_tolerances_more_than_two_orders_apart_warn(
-    cosmology: Cosmology, capfd: pytest.CaptureFixture[str]
-) -> None:
-    """An inert tolerance is worth saying out loud.
-
-    Refinement stops at reltol * ||f||_2 + a * ||f||_2^max, a sum, so the looser
-    term decides and the tighter one changes nothing while still being paid for
-    in knots. Measured on a Gaussian: reltol 1e-8 against a = 1e-4 is worth 1.2x
-    over the 1e-4/1e-4 defaults, where moving both to 1e-6/1e-5 is worth 15x.
-    """
-
-    def build(reltol: float, peak_epsilon: float) -> str:
-        kernel = Nc.XcorKernelAnalyticGauss(
-            dist=cosmology.dist,
-            powspec=cosmology.ps_ml,
-            chi_mean=1500.0,
-            chi_sigma=300.0,
-            integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
-            reltol=reltol,
-            peak_epsilon=peak_epsilon,
-        )
-        kernel.set_l_limber(-1)
-        kernel.prepare(cosmology.cosmo)
-        capfd.readouterr()
-
-        # Two blocks: the tolerances cannot change between them, so the warning
-        # must not repeat.
-        for lmin, lmax in ((2, 9), (10, 17)):
-            kernel.get_eval_vectorized_full(
-                cosmology.cosmo,
-                lmin,
-                lmax,
-                Ncm.SBesselIntegratorLevin.new(0, 8),
-                Nc.XcorKernelClosure.SPLINE,
-            )
-
-        return capfd.readouterr().err
-
-    assert "orders apart" not in build(1.0e-4, 1.0e-4), "the balanced default"
-    assert "orders apart" not in build(1.0e-6, 1.0e-5), "the pair NcXcorSSCSij uses"
-
-    inert_reltol = build(1.0e-8, 1.0e-4)
-    assert inert_reltol.count("orders apart") == 1
-    assert "and reltol is inert" in inert_reltol
-
-    inert_floor = build(1.0e-4, 1.0e-8)
-    assert inert_floor.count("orders apart") == 1
-    assert "and peak-epsilon is inert" in inert_floor

@@ -57,17 +57,13 @@ from numcosmo_py import Nc, Ncm
 pytest_plugins = ["python.fixtures_xcor"]
 
 # Under --dist loadgroup every test that uses the frozen fixture is pinned to one
-# of two workers, by closure, through CLOSURE_PARAMS below; the module-level
-# group holds the rest. An xdist worker is its own session, so the module-scoped
-# frozen cache exists once per worker: unbounded it reaches 3.5 GB (measured OOM
-# at 12 workers under plain --dist load), bounded by FROZEN_CACHE_MAXSIZE it is
-# under 1 GB, and a worker that only ever sees one closure never builds the other
-# closure's keys. Two groups let a two-core runner work on this file with both
-# cores; the file was the lane's critical path as a single group.
+# worker through CLOSURE_PARAMS below; the module-level group holds the rest. An
+# xdist worker is its own session, so the module-scoped frozen cache exists once
+# per worker: unbounded it reaches 3.5 GB (measured OOM at 12 workers under plain
+# --dist load), bounded by FROZEN_CACHE_MAXSIZE it is under 1 GB.
 pytestmark = [pytest.mark.xcor, pytest.mark.xdist_group("k_integral")]
 
 CLOSURES = {
-    "spline": Nc.XcorKernelClosure.SPLINE,
     "chebyshev": Nc.XcorKernelClosure.CHEBYSHEV,
 }
 
@@ -84,48 +80,23 @@ METHODS = {
 
 # Measured over the case matrix at reltol = peak_epsilon = 1e-4, as the worst
 # deviation from the matching reference relative to the block's peak, with an
-# order of headroom. Measured worst, on cases.ELLS_SUITE:
-#
-#   exact    spline     8.1e-12
-#   exact    chebyshev  2.3e-08
-#
-# These are an order or two above what a [2, 20, 200] ladder reported, because
-# that ladder missed the l = 4-10 region where every method is worst; see
-# cases.ELLS_SUITE. Read the two rows as the claim they are: GL(5) on the merged
-# knot set is exact and sits at the reference's own floor.
-#
-# The exact spline entry was raised (1.0e-10 -> 1.5e-9) when X10 entered the
-# matrix, and the reason is worth keeping: on that pair (SRD lens 0 crossed
-# with lens 9, disjoint supports) the spline *reference* itself only converges
-# to 2.2e-11 (see REFERENCE_FLOOR), and exact lands at 3.2e-10 of the block's
-# peak. A gate of 1.0e-10 was asking a method to agree with a reference more
-# tightly than that reference converges, which is not a statement about the
-# method. The Chebyshev entries are untouched and remain four orders tighter on
-# the same pair: this is the catastrophic spline regime of section 14, reached
-# now by a cross a 3x2pt analysis actually computes rather than by one chosen to
-# be hard.
+# order of headroom. Measured worst, on cases.ELLS_SUITE: exact/chebyshev
+# 2.3e-08. That is an order or two above what a [2, 20, 200] ladder reported,
+# because that ladder missed the l = 4-10 region where every method is worst; see
+# cases.ELLS_SUITE.
 TOLERANCE = {
-    ("exact", "spline"): 1.5e-9,
     ("exact", "chebyshev"): 5.0e-7,
 }
 
 # The reference's own convergence, likewise measured on cases.ELLS_SUITE: the
-# worst any cell still moved at the top of the escalation, 9.0e-13 on spline
-# closures and 1.3e-08 on Chebyshev ones, both at l = 6. On Chebyshev the floor
-# is the conditioning of evaluating a degree-128 polynomial rather than the
+# worst any cell still moved at the top of the escalation, 1.3e-08, at l = 6. The
+# floor is the conditioning of evaluating a degree-128 polynomial rather than the
 # quadrature, and l = 6 is where that bites -- 130x worse than the 1.0e-10 at
 # l = 2 that a [2, 20, 200] ladder saw. It bounds what any test here can claim
 # about a Chebyshev closure at that multipole: exact/chebyshev's own 2.3e-08
 # sits less than a factor of two above it, so that entry bounds the method
 # rather than discriminating between methods.
-# Raised for spline from 1.0e-11 after X10 joined the matrix: the SRD lens 0 x
-# lens 9 cross, whose supports are disjoint, leaves the spline reference still
-# moving by 2.2e-11 at the top of its escalation at l = 10. That is the
-# catastrophic regime section 14 documents -- a far-separated pair on a spline
-# closure -- reached by a pair a 3x2pt analysis actually computes rather than by
-# one chosen to be hard. The floor is what the reference achieves there, with a
-# factor of two of headroom, not a target it meets.
-REFERENCE_FLOOR = {"spline": 5.0e-11, "chebyshev": 1.0e-7}
+REFERENCE_FLOOR = {"chebyshev": 1.0e-7}
 
 
 class Frozen:
@@ -270,9 +241,8 @@ def test_reference_is_a_reference(frozen, case: str, closure: str, lmin: int) ->
 
     Raising the Gauss-Legendre order on a cell has to stop moving the answer,
     or the comparisons below measure the reference rather than the method. A
-    spline cell is a cubic and settles at the first order; a Chebyshev cell
-    carries up to 129 coefficients and settles when the order passes its
-    degree.
+    Chebyshev cell carries up to 129 coefficients and settles when the order
+    passes its degree.
     """
     reference = frozen(case, closure, lmin).reference
 
@@ -383,86 +353,6 @@ def test_far_separated_bins_cancel_by_orders(frozen, closure: str) -> None:
     assert low > 1.0e3
 
 
-def test_narrow_shell_spline_follows_peak_epsilon() -> None:
-    """Check that the spline closure resolves a 56 Mpc hard shell down to peak-epsilon.
-
-    The knob that matters is ``peak-epsilon``, not ``reltol``. Measured on
-    this shell, four decades of ``reltol`` (1e-4 to 1e-8) change the answer by
-    nothing at all for either closure and cost nothing either; every decade of
-    ``peak-epsilon`` moves both. So the comparison is taken along that axis,
-    down to the library's own documented floor of 1e-6 -- below it the setter
-    warns, because the value is measured against the peak of W(k) while the
-    C_ell integrand is k^2 W_a W_b, so it enters squared.
-
-    Measured against the spectral closure at 1e-6 (2e-8 from the one at 1e-8):
-    the spline lands at 8.4e-6, 8.9e-7 and 1.2e-7 of the peak at peak-epsilon
-    1e-4, 1e-5 and 1e-6, a decade per decade. The closure of the settled sample
-    set (ncm_function_sample_set_adaptive_midpoint()) is what keeps the spline
-    from stalling here at 2e-5, so that is asserted rather than remembered.
-    """
-    cosmo, dist, ps = cases.make_cosmo_bits()
-    RH = Nc.HICosmo.RH_Mpc(cosmo)
-    pair = cases.PAIRS_BY_CASE["N1"]
-
-    def solve(closure: Nc.XcorKernelClosure, peak_epsilon: float) -> np.ndarray:
-        """Return the N1 auto block for one closure at one peak-epsilon."""
-        settings = cases.Settings(
-            reltol=1.0e-6, peak_epsilon=peak_epsilon, closure=closure
-        )
-        kernel = cases.build_kernel(pair.kernel_a, cosmo, dist, ps, settings)
-
-        return cases.reference_cl(
-            RH, cases.build_integrand(kernel, cosmo, 2, 9, settings), None
-        ).cl
-
-    truth = solve(Nc.XcorKernelClosure.CHEBYSHEV, 1.0e-6)
-    peak = np.abs(truth).max()
-
-    def error(values: np.ndarray) -> float:
-        """Return the worst deviation from the reference, relative to its peak."""
-        return float(np.abs(values - truth).max() / peak)
-
-    spline = {
-        pe: error(solve(Nc.XcorKernelClosure.SPLINE, pe))
-        for pe in (1.0e-4, 1.0e-5, 1.0e-6)
-    }
-
-    # A decade of peak-epsilon buys a decade of accuracy, down to the floor.
-    assert 5.0 < spline[1.0e-4] / spline[1.0e-5] < 20.0
-    assert 5.0 < spline[1.0e-5] / spline[1.0e-6] < 20.0
-    assert spline[1.0e-6] < 1.0e-6
-
-
-def test_reltol_is_not_what_moves_the_narrow_shell() -> None:
-    """Check that reltol does not move the narrow-shell answer.
-
-    Guards the reading above: if a future change makes ``reltol`` matter on
-    this shell, the comparison in ``test_narrow_shell_spline_follows_peak_epsilon``
-    is taken along the wrong axis and has to be revisited.
-    """
-    cosmo, dist, ps = cases.make_cosmo_bits()
-    RH = Nc.HICosmo.RH_Mpc(cosmo)
-    pair = cases.PAIRS_BY_CASE["N1"]
-
-    def solve(reltol: float) -> np.ndarray:
-        """Return the N1 auto block on the spline closure at one reltol."""
-        settings = cases.Settings(
-            reltol=reltol,
-            peak_epsilon=1.0e-5,
-            closure=Nc.XcorKernelClosure.SPLINE,
-        )
-        kernel = cases.build_kernel(pair.kernel_a, cosmo, dist, ps, settings)
-
-        return cases.reference_cl(
-            RH, cases.build_integrand(kernel, cosmo, 2, 9, settings), None
-        ).cl
-
-    loose = solve(1.0e-4)
-    tight = solve(1.0e-8)
-
-    assert np.abs(tight - loose).max() / np.abs(loose).max() < 1.0e-2
-
-
 # ---------------------------------------------------------------- Level 2 ---
 #
 # Against certified Arb values rather than against a reference of our own. The
@@ -477,20 +367,17 @@ def test_reltol_is_not_what_moves_the_narrow_shell() -> None:
 
 TRUTH_TABLE = "truth_tables/xcor/xcor_kquad.json.gz"
 
-# Measured over the 43 certified entries, with headroom. These are loose
-# because one regime is genuinely bad and the table says so rather than hiding
-# it: on the far-separated pair at ell = 2 the spline closure is wrong by 435%
-# of the pair's own scale. The chebyshev worst is that same pair at ell = 50,
-# 1.04e-2 of scale, on a certified value eleven orders below the pair's peak.
+# Measured over the 43 certified entries, with headroom. The worst is the
+# far-separated pair at ell = 50, 1.04e-2 of scale, on a certified value eleven
+# orders below the pair's peak.
 #
 # A loose gate has a cost, paid once already: the X9 entries were certified
 # with the generator's side-b leak (kdep applied to both windows), putting
-# the reference 5.3% off at ell = 50, and both closures' agreement with each
-# other while sitting 2.9e-2 from the table stayed under the old chebyshev
-# gate of 1e-1. A tolerance-independent, closure-independent deviation is a
-# wrong reference, not a bad fit -- worth a ladder check before widening
-# either number here.
-CERTIFIED_TOLERANCE = {"spline": 1.5e1, "chebyshev": 3.0e-2}
+# the reference 5.3% off at ell = 50, and the closure sitting 2.9e-2 from the
+# table stayed under the old gate of 1e-1. A tolerance-independent deviation is
+# a wrong reference, not a bad fit -- worth a ladder check before widening the
+# number here.
+CERTIFIED_TOLERANCE = {"chebyshev": 3.0e-2}
 
 # Tail x tail with hard edges is its own regime rather than a harder version of
 # the roster, and X14 is the one pair that leaves the general budget behind.

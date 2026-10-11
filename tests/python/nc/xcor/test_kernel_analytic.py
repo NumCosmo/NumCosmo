@@ -586,7 +586,9 @@ def _cl_reference(
     """
     cosmo, powspec = cosmology.cosmo, cosmology.ps_ml
     chi_min, chi_max = kernel.get_support()
-    k_min, k_max = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE).get_range()
+    k_min, k_max = kernel.get_eval(
+        cosmo, ell, Nc.XcorKernelClosure.CHEBYSHEV
+    ).get_range()
     rh = cosmo.RH_Mpc()
     window = _window(shape)
 
@@ -1320,26 +1322,18 @@ def _interior_edges_are_dyadic(edges: np.ndarray) -> np.ndarray:
 
 def test_disjoint_component_boundaries_are_panel_edges(cosmology: Cosmology) -> None:
     """Two disjoint bumps have different k supports, so each is cut inside the
-    other's range; the cut is a panel edge and the closure still describes the
-    same truncated function the spline closure does."""
+    other's range, and the cut is a panel edge. That the closure still describes
+    the truncated window is checked against W_ell(k) computed directly, in C
+    (nc_xcor_kernel_analytic, multi_disjoint/closure)."""
     kernel = _multi(cosmology, MULTI_DISJOINT_MEAN, MULTI_DISJOINT_SIGMA)
+    kernel.peek_panels_builder().set_min_panels_per_efold(0.0)
     lmin, lmax = 2, 9
 
     cheb = kernel.get_eval_vectorized_full(
         cosmology.cosmo, lmin, lmax, _integrator(), Nc.XcorKernelClosure.CHEBYSHEV
     )
-    spline = kernel.get_eval_vectorized_full(
-        cosmology.cosmo, lmin, lmax, _integrator(), Nc.XcorKernelClosure.SPLINE
-    )
 
     assert not np.all(_interior_edges_are_dyadic(_panel_edges(cheb)))
-
-    lo, hi = cheb.get_range()
-    ks = np.geomspace(lo * 1.001, hi * 0.999, 400)
-    got = np.array([cheb.eval_array(k) for k in ks])
-    ref = np.array([spline.eval_array(k) for k in ks])
-
-    assert np.all(np.abs(got - ref).max(axis=0) / np.abs(ref).max(axis=0) < 1.0e-4)
 
 
 def test_a_visible_jump_at_a_component_boundary_does_not_split_the_panel(

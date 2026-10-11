@@ -71,24 +71,21 @@ ELLS: typing.Final[list[int]] = [2, 3, 4, 6, 10, 20, 50, 100, 200]
 # peak, over the case matrix:
 #
 #   exact/chebyshev  2.3e-08 at l=6
-#   exact/spline     8.1e-12 at l=6
 #
-# against 4.7e-10 and 5.3e-13 at l=200. The error peaks
+# against 4.7e-10 at l=200. The error peaks
 # around l = 4-10 and falls away by l = 50, so a ladder of [2, 20, 200] tested
 # the easy end hard and the hard end not at all. l = 2 stays for the
 # cancellation reason above; 6 and 10 are the peak; 50 keeps a high-l point
 # without paying for l = 200, whose Levin operator is the most expensive of the
-# ladder (its closure is the *smallest* -- 159 knots against 263 at l = 2 --
-# so the cost is the operator, not the fit).
+# ladder.
 #
 # Knowingly not covered: cubature/chebyshev is worst at l = 20 (4.1e-05 against
 # 1.1e-05 here), within a factor of four of a point that is covered.
 ELLS_SUITE: typing.Final[list[int]] = [2, 6, 10, 50]
 
-# Gauss-Legendre orders the reference escalates through, per cell. A spline
-# cell is a cubic and a k^2-weighted product of two is degree 8, so it is exact
-# at the first order; a Chebyshev cell carries up to 129 coefficients, so the
-# escalation is what the top of this list is for.
+# Gauss-Legendre orders the reference escalates through, per cell. A Chebyshev
+# cell carries up to 129 coefficients, so the escalation is what the top of this
+# list is for.
 _GL_ORDERS: typing.Final[tuple[int, ...]] = (8, 16, 32, 64, 128, 264)
 
 # The order of the first pass, which exists only to learn the block's peak.
@@ -121,7 +118,7 @@ class Settings:
     peak_epsilon: float = 1.0e-4
     l_limber: int = -1
     ell_batch_size: int = 8
-    closure: Nc.XcorKernelClosure = Nc.XcorKernelClosure.SPLINE
+    closure: Nc.XcorKernelClosure = Nc.XcorKernelClosure.CHEBYSHEV
 
     def replace(self, **kwargs: typing.Any) -> "Settings":
         """A copy with some fields changed."""
@@ -332,11 +329,8 @@ KERNELS: typing.Final[dict[str, KernelSpec]] = {
             "tophat",
             {"chi-lower": 500.0, "chi-upper": 2500.0},
         ),
-        # The regime the Chebyshev closure exists for. On a shell this narrow
-        # the adaptive spline closure's accuracy is capped by peak-epsilon at
-        # the library's own documented floor, where it sits at ~2e-5 while the
-        # spectral closure reaches machine zero. No case built from wide bins
-        # reaches it.
+        # The narrowest hard shell: the closure has to resolve a 56 Mpc window
+        # over the whole k range, which no case built from wide bins reaches.
         KernelSpec(
             "shell_narrow",
             _tophat(1000.0, 1056.0),
@@ -727,8 +721,7 @@ PAIRS: typing.Final[list[PairSpec]] = [
     ),
     # Tail x tail, from the survey rather than constructed: bins 0 and 9 of the
     # Y10 lens sample have disjoint supports, so their spectrum lives entirely in
-    # the product of two exponential tails -- the regime where the spline closure
-    # returns the wrong sign at loose tolerance (section 14). X3 probes the same
+    # the product of two exponential tails, the regime of section 14. X3 probes the same
     # corner with chosen parameters; these say it is not a corner case.
     # The separation ladder: one pair per rung, the ratio of the two turning
     # points being 1.4, 2.3 and 3.5. Only the separation differs, so a method's
@@ -826,13 +819,7 @@ def build_integrand(
     settings: Settings,
     sbi: Ncm.SBesselIntegrator | None = None,
 ) -> Nc.XcorKernelIntegrand:
-    """Freeze one closure for an ell block, and check it is the one asked for.
-
-    A Chebyshev closure carries panels and a spline closure carries knots, so
-    the two are told apart by what came back rather than by what was requested
-    -- which is the only way to catch the silent fallback to splines when the
-    block is taken under Limber.
-    """
+    """Freeze one closure for an ell block, and check that it carries panels."""
     integrand = kernel.get_eval_vectorized_full(
         cosmo,
         lmin,
@@ -841,41 +828,24 @@ def build_integrand(
         settings.closure,
     )
 
-    wanted_panels = settings.closure == Nc.XcorKernelClosure.CHEBYSHEV
-    got_panels = integrand.peek_panels() is not None
-
-    if wanted_panels != got_panels:
+    if integrand.peek_panels() is None:
         raise AssertionError(
-            f"asked for a {settings.closure.value_nick} closure and got "
-            f"{'panels' if got_panels else 'knots'}; l_limber is "
-            f"{kernel.get_l_limber()} and multipoles taken under Limber keep "
-            f"the spline closure"
+            f"the {settings.closure.value_nick} closure carries no panels"
         )
 
     return integrand
 
 
 def breakpoints(integrand: Nc.XcorKernelIntegrand) -> np.ndarray:
-    """Where the closure stops being one polynomial: panel edges, or knots."""
+    """Where the closure stops being one polynomial: its panel edges."""
     panels = integrand.peek_panels()
+    edges = []
 
-    if panels is not None:
-        edges = []
+    for i in range(panels.get_n_panels()):
+        _, a, b = panels.get_panel(i)
+        edges.extend((a, b))
 
-        for i in range(panels.get_n_panels()):
-            _, a, b = panels.get_panel(i)
-            edges.extend((a, b))
-
-        return np.unique(np.array(edges))
-
-    knots = integrand.peek_knots()
-
-    if knots is None:
-        a, b = integrand.get_range()
-
-        return np.array([a, b])
-
-    return np.unique(np.array(knots.dup_array()))
+    return np.unique(np.array(edges))
 
 
 def _neumaier_sum(terms: list[np.ndarray]) -> np.ndarray:

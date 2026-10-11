@@ -74,49 +74,6 @@ def _kernels(cosmology: Cosmology, l_limber: int = -1) -> list[Nc.XcorKernel]:
     return out
 
 
-def _knots(integrand: Nc.XcorKernelIntegrand) -> np.ndarray:
-    """Extract an integrand's knots as a numpy array."""
-    knots = integrand.peek_knots()
-
-    return np.array([knots.get(i) for i in range(knots.len())])
-
-
-def test_integrand_exposes_knots(cosmology: Cosmology) -> None:
-    """A spline-backed integrand reports the knots it is represented on."""
-    kernel = _kernels(cosmology)[0]
-    integrand = kernel.get_eval(cosmology.cosmo, 0, Nc.XcorKernelClosure.SPLINE)
-
-    knots = _knots(integrand)
-    k_min, k_max = integrand.get_range()
-
-    assert knots.size > 2
-    assert np.all(np.diff(knots) > 0.0)
-    assert_allclose([knots[0], knots[-1]], [k_min, k_max], rtol=1.0e-14)
-
-
-def test_kernels_keep_their_own_knot_sets(cosmology: Cosmology) -> None:
-    """Kernels are sampled separately, so their knot sets differ.
-
-    This is the premise of the union quadrature: two independently adapted
-    splines resolve the same oscillation at nearby but distinct abscissas, so
-    the pair has to be integrated on the merged set rather than on either one.
-    """
-    kernels = _kernels(cosmology)
-    sets = [
-        _knots(k.get_eval(cosmology.cosmo, 0, Nc.XcorKernelClosure.SPLINE))
-        for k in kernels
-    ]
-
-    for i in range(len(sets)):
-        for j in range(i + 1, len(sets)):
-            union = np.union1d(sets[i], sets[j])
-
-            # Genuinely different abscissas: the union is strictly larger than
-            # either, and close to their sum.
-            assert union.size > max(sets[i].size, sets[j].size)
-            assert union.size > 0.75 * (sets[i].size + sets[j].size)
-
-
 def test_kernel_exact_batches_wide_ell_range(cosmology: Cosmology) -> None:
     """KERNEL_EXACT batches a range wider than NC_XCOR_KERNEL_MAX_ELL_BLOCK.
 
@@ -227,7 +184,6 @@ def test_kernel_exact_all_limber_needs_no_integrator(cosmology: Cosmology) -> No
 @pytest.mark.parametrize(
     "closure_type,bounds",
     [
-        (Nc.XcorKernelClosure.SPLINE, (50.0, 200.0)),
         (Nc.XcorKernelClosure.CHEBYSHEV, (100.0, 1.0e4)),
     ],
 )
@@ -332,51 +288,9 @@ def test_compute_full_without_an_error_vector_matches_compute(
     assert_allclose(np.array(discarded.dup_array()), np.array(plain.dup_array()))
 
 
-def test_closure_records_the_residual_it_achieved(cosmology: Cosmology) -> None:
-    """The closure reports the fit error it reached, per knot interval.
-
-    This is what the error estimate is built on. The record is a matrix aligned
-    with the knots -- row i owns the interval [k_i, k_i+1], so the last row is
-    the trailing edge and carries no interval.
-    """
-    kernel = _kernels(cosmology)[0]
-    integrand = kernel.get_eval_vectorized_full(
-        cosmology.cosmo,
-        2,
-        9,
-        Ncm.SBesselIntegratorLevin.new(0, 8),
-        Nc.XcorKernelClosure.SPLINE,
-    )
-
-    residuals = integrand.peek_closure_error()
-    assert residuals is not None
-
-    knots = _knots(integrand)
-    assert residuals.nrows() == knots.size
-    assert residuals.ncols() == 8
-
-    values = np.array(residuals.dup_array()).reshape(residuals.nrows(), -1)
-    assert np.all(np.isnan(values[-1]))
-    assert np.all(np.isfinite(values[:-1]))
-    assert np.all(values[:-1] >= 0.0)
-
-    # It must be an achieved residual, not the tolerance that was requested.
-    # The criterion refinement stops at is reltol * ||W(k)||_2 + a * W_max, so
-    # the worst interval sits just under it -- that is where refinement quit --
-    # while the typical one is orders below. A record echoing the tolerance
-    # back would be flat instead.
-    window = np.array([integrand.eval_array(k) for k in knots])
-    criterion = kernel.get_reltol() * np.linalg.norm(window, axis=1).max()
-    criterion += kernel.get_peak_epsilon() * np.abs(window).max()
-
-    assert values[:-1].max() < criterion
-    assert np.median(values[:-1]) < 0.05 * criterion
-
-
 @pytest.mark.parametrize(
     "closure_type,min_gap",
     [
-        (Nc.XcorKernelClosure.SPLINE, 5.0),
         (Nc.XcorKernelClosure.CHEBYSHEV, 3.0),
     ],
 )
@@ -495,13 +409,9 @@ def _closure(cosmology: Cosmology, closure_type, reltol=1.0e-4, peak_epsilon=1.0
 def test_chebyshev_closure_reports_a_spectral_representation(
     cosmology: Cosmology,
 ) -> None:
-    """A Chebyshev closure carries coefficients; a spline one does not.
-
-    The two are parallel implementations rather than a replacement: each reports what it has,
-    and a caller that wants coefficients asks for them.
-    """
+    """A Chebyshev closure carries its panels: one row per multipole, contiguous, tiling
+    the closure's range."""
     cheb = _closure(cosmology, Nc.XcorKernelClosure.CHEBYSHEV)
-    spline = _closure(cosmology, Nc.XcorKernelClosure.SPLINE)
 
     panels = cheb.peek_panels()
     n_panels = panels.get_n_panels()
@@ -519,56 +429,6 @@ def test_chebyshev_closure_reports_a_spectral_representation(
         prev_b = b
     assert prev_b == pytest.approx(hi)
 
-    # A spline closure reports knots and no panels; the Chebyshev one the
-    # reverse. Neither is asked to pretend it has the other.
-    assert cheb.peek_knots() is None
-    assert spline.peek_knots() is not None
-    assert spline.peek_panels() is None
-
-
-def test_chebyshev_closure_agrees_with_the_spline_one(cosmology: Cosmology) -> None:
-    """Same sampled function, same domain, so the two must describe one W.
-
-    Both are graded against a spline closure built six orders tighter. At equal
-    *requested* tolerance the two land in the same place -- panels converge to
-    what was asked and no further, so the Chebyshev closure is comparable here
-    rather than better. Where it wins is samples for that accuracy, and how
-    cheaply it tightens: spectral convergence rather than h^4.
-    """
-    cheb = _closure(cosmology, Nc.XcorKernelClosure.CHEBYSHEV)
-    spline = _closure(cosmology, Nc.XcorKernelClosure.SPLINE)
-    ref = _closure(cosmology, Nc.XcorKernelClosure.SPLINE, 1.0e-10, 1.0e-7)
-
-    lo = max(c.get_range()[0] for c in (cheb, spline, ref)) * 1.001
-    hi = min(c.get_range()[1] for c in (cheb, spline, ref)) * 0.999
-    ks = np.geomspace(lo, hi, 400)
-
-    truth = np.array([ref.eval_array(k) for k in ks])
-    got_cheb = np.array([cheb.eval_array(k) for k in ks])
-    got_spline = np.array([spline.eval_array(k) for k in ks])
-    peak = np.abs(truth).max(axis=0)
-
-    err_cheb = np.abs(got_cheb - truth).max(axis=0) / peak
-    err_spline = np.abs(got_spline - truth).max(axis=0) / peak
-
-    # Both meet the tolerance they were asked for, on every multipole.
-    assert np.all(err_cheb < 1.0e-3)
-    assert np.all(err_spline < 1.0e-3)
-
-    # And they describe the same function: the gap between them is no larger
-    # than either one's own distance from the reference.
-    assert np.all(
-        np.abs(got_cheb - got_spline).max(axis=0) / peak
-        < 10.0 * np.maximum(err_cheb, err_spline)
-    )
-
-    # The Chebyshev closure reaches that on fewer samples than the spline needs
-    # knots -- the accuracy per evaluation is the point, evaluations being
-    # radial solves.
-    panels = cheb.peek_panels()
-    n_cheb = sum(panels.get_panel(i)[0].ncols() for i in range(panels.get_n_panels()))
-    assert n_cheb < spline.peek_knots().len()
-
 
 def test_chebyshev_closure_is_the_default(cosmology: Cosmology) -> None:
     """The more accurate representation is the default one.
@@ -582,19 +442,14 @@ def test_chebyshev_closure_is_the_default(cosmology: Cosmology) -> None:
 
     assert xcor.get_closure_type() == Nc.XcorKernelClosure.CHEBYSHEV
 
-    xcor.set_closure_type(Nc.XcorKernelClosure.SPLINE)
-    assert xcor.get_closure_type() == Nc.XcorKernelClosure.SPLINE
-
 
 def test_limber_multipoles_take_the_requested_closure(cosmology: Cosmology) -> None:
-    """Under Limber each closure type yields its own representation.
+    """Under Limber the Chebyshev closure is built in u = k / nu.
 
-    A Limber window is zero outside the multipole's band in k. The Chebyshev
-    closure is built in u = k / nu, where the band is the same for every
-    multipole of the block, with the band edges as panel cuts and membership
-    decided per panel, so every panel is smooth and the series converges; the
-    spline closure is built in k and keeps its knots. The two agree on the
-    window to the closure tolerance.
+    A Limber window is zero outside the multipole's band in k. In u the band is
+    the same for every multipole of the block, with the band edges as panel cuts
+    and membership decided per panel, so every panel is smooth and the series
+    converges.
     """
 
     def integrand(closure_type):
@@ -615,12 +470,10 @@ def test_limber_multipoles_take_the_requested_closure(cosmology: Cosmology) -> N
             cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8), closure_type
         )
 
-    spline = integrand(Nc.XcorKernelClosure.SPLINE)
     cheb = integrand(Nc.XcorKernelClosure.CHEBYSHEV)
 
     panels = cheb.peek_panels()
-    assert spline.peek_knots() is not None and spline.peek_panels() is None
-    assert cheb.peek_knots() is None and panels.get_n_panels() > 0
+    assert panels.get_n_panels() > 0
 
     # The Chebyshev closure is in u = k / nu, where every multipole has the same
     # band, so each multipole's band edges in k are the panel edges times its
@@ -635,14 +488,6 @@ def test_limber_multipoles_take_the_requested_closure(cosmology: Cosmology) -> N
         assert scale == 2 + i + 0.5
         assert np.isclose(edges * scale, k_min, rtol=1.0e-12).any()
         assert np.isclose(edges * scale, k_max, rtol=1.0e-12).any()
-
-    lo = max(spline.get_range()[0], cheb.get_range()[0])
-    hi = min(spline.get_range()[1], cheb.get_range()[1])
-    peak = max(np.max(np.abs(cheb.eval_array(k))) for k in np.geomspace(lo, hi, 64))
-    for k in np.geomspace(lo * 1.001, hi * 0.999, 32):
-        assert_allclose(
-            cheb.eval_array(k), spline.eval_array(k), rtol=0.0, atol=1.0e-4 * peak
-        )
 
 
 def test_spectral_path_reports_an_error_estimate(cosmology: Cosmology) -> None:

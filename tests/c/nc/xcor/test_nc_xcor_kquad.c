@@ -72,13 +72,7 @@ typedef struct _TestMethod
   NcXcorKernelClosure closure;
 } TestMethod;
 
-/* Both closures, because they are not interchangeable downstream: a Chebyshev closure
- * gives the integrands panels, and NC_XCOR_METHOD_KERNEL_EXACT hands a pair that has
- * them to the spectral block quadrature instead of the merged-knot GL(5) sweep. The
- * default closure is the Chebyshev one, so asking for the spline is the only way
- * through that second branch. */
 static const TestMethod test_methods[] = {
-  {"kernel_exact/spline",       NC_XCOR_METHOD_KERNEL_EXACT,    NC_XCOR_KERNEL_CLOSURE_SPLINE   },
   {"kernel_exact/chebyshev",    NC_XCOR_METHOD_KERNEL_EXACT,    NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
 };
 

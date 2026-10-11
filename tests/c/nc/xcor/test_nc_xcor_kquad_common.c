@@ -308,7 +308,7 @@ _test_ref_cells (TestNcXcorKQuadRef *ref)
 /*
  * Appends to edges the abscissas in k between which every component of xclki is a
  * single polynomial: each component's range ends, and its panel edges, which are in
- * k / s_i, times its scale s_i; or the knots of a spline closure.
+ * k / s_i, times its scale s_i.
  */
 static void
 _test_ref_breakpoints (NcXcorKernelIntegrand *xclki, GArray *edges)
@@ -316,7 +316,6 @@ _test_ref_breakpoints (NcXcorKernelIntegrand *xclki, GArray *edges)
   const guint len       = nc_xcor_kernel_integrand_get_len (xclki);
   NcmSpectralPanels *sp = nc_xcor_kernel_integrand_peek_panels (xclki);
   const guint n_panels  = (sp != NULL) ? ncm_spectral_panels_get_n_panels (sp) : 0;
-  NcmVector *knots      = nc_xcor_kernel_integrand_peek_knots (xclki);
   guint c, i;
 
   for (c = 0; c < len; c++)
@@ -342,16 +341,6 @@ _test_ref_breakpoints (NcXcorKernelIntegrand *xclki, GArray *edges)
       b *= s;
       g_array_append_val (edges, a);
       g_array_append_val (edges, b);
-    }
-  }
-
-  if (knots != NULL)
-  {
-    for (i = 0; i < ncm_vector_len (knots); i++)
-    {
-      const gdouble k = ncm_vector_get (knots, i);
-
-      g_array_append_val (edges, k);
     }
   }
 }

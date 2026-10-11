@@ -57,7 +57,6 @@ typedef struct _TestCase
 } TestCase;
 
 static const TestCase test_cases[] = {
-  {"spline",    NC_XCOR_KERNEL_CLOSURE_SPLINE   },
   {"chebyshev", NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV},
 };
 
