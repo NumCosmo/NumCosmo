@@ -782,6 +782,26 @@ xcor_tests = [
         'name': 'nc_xcor_ssc_sij',
         'sources': ['nc/xcor/test_nc_xcor_ssc_sij.c'],
     },
+    # One binary per Bessel-derivative order, selected by its test-path prefix, so the
+    # three run in parallel.
+    {
+        'name': 'nc_xcor_window_dense_d0',
+        'sources': ['nc/xcor/test_nc_xcor_window_dense.c'],
+        'args': ['-p', '/nc/xcor/window_dense/d0'],
+        'timeout': 180,
+    },
+    {
+        'name': 'nc_xcor_window_dense_d1',
+        'sources': ['nc/xcor/test_nc_xcor_window_dense.c'],
+        'args': ['-p', '/nc/xcor/window_dense/d1'],
+        'timeout': 180,
+    },
+    {
+        'name': 'nc_xcor_window_dense_d2',
+        'sources': ['nc/xcor/test_nc_xcor_window_dense.c'],
+        'args': ['-p', '/nc/xcor/window_dense/d2'],
+        'timeout': 180,
+    },
 ]
 
 # The Arb reference generator behind the certified tables. Its output reaches
@@ -820,6 +840,7 @@ foreach c_test : all_c_tests
     # dependency and such a test is registered only where it was found.
     extra_deps = c_test.has_key('dependencies') ? c_test['dependencies'] : []
     extra_inc = c_test.has_key('include_directories') ? c_test['include_directories'] : []
+    extra_args = c_test.has_key('args') ? c_test['args'] : []
     executable_test = executable(
         c_test['name'],
         c_test['sources'],
@@ -859,7 +880,7 @@ foreach c_test : all_c_tests
         c_test['name'],
         test_is_omp ? omp_thread_wrapper : executable_test,
         args: test_is_omp ? [executable_test.full_path()]
-        + test_seed_args : test_seed_args,
+        + extra_args + test_seed_args : extra_args + test_seed_args,
         depends: test_is_omp ? [executable_test] : [],
         timeout: timeout,
         env: test_env,

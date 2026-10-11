@@ -34,6 +34,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
+#include "nc/data/nc_data_download.h"
 #include "nc/data/nc_data_download_priv.h"
 #include "ncm/core/ncm_cfg.h"
 
@@ -41,6 +42,43 @@
 #include <errno.h>
 #include <signal.h>
 #include <unistd.h>
+
+/* The GitHub release holding NumCosmo's downloadable data files */
+#define NC_DATA_DOWNLOAD_RELEASE_URL "https://github.com/NumCosmo/NumCosmo/releases/download/datafile-release-v1.0.0"
+
+/**
+ * nc_data_download_release_file:
+ * @filename: the name of a file of the NumCosmo data-file release
+ *
+ * Downloads @filename from the NumCosmo datafile-release-v1.0.0 GitHub release into
+ * the NumCosmo user data directory (see ncm_cfg_get_fullpath_base()) the first time it
+ * is asked for, and returns the path of the local copy; later calls reuse it. A
+ * process that finds another one fetching the same file waits for it, and a file is
+ * renamed into place only once complete.
+ *
+ * Returns: (transfer full): the full path of the local copy
+ */
+gchar *
+nc_data_download_release_file (const gchar *filename)
+{
+  gchar *full_filename = ncm_cfg_get_fullpath (filename);
+
+  if (!g_file_test (full_filename, G_FILE_TEST_EXISTS))
+  {
+    gchar *url_str = g_strdup_printf ("%s/%s", NC_DATA_DOWNLOAD_RELEASE_URL, filename);
+    gchar *lockdir = NULL;
+
+    if (_nc_data_download_lock (full_filename, full_filename, 900, &lockdir))
+    {
+      _nc_data_download_file (url_str, full_filename, filename, lockdir);
+      _nc_data_download_unlock (lockdir);
+    }
+
+    g_free (url_str);
+  }
+
+  return full_filename;
+}
 
 static void _nc_data_download_lock_set_owner (const gchar *lockdir);
 static gboolean _nc_data_download_lock_owner_is_dead (const gchar *lockdir);

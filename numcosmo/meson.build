@@ -361,6 +361,7 @@ nc_headers = files(
     'nc/data/nc_data_cmb_dist_priors.h',
     'nc/data/nc_data_cmb_shift_param.h',
     'nc/data/nc_data_dist_mu.h',
+    'nc/data/nc_data_download.h',
     'nc/data/nc_data_hubble.h',
     'nc/data/nc_data_hubble_bao.h',
     'nc/data/nc_data_planck_lkl.h',
