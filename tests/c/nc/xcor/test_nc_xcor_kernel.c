@@ -627,6 +627,96 @@ _dndz_truncated_new (void)
   return s;
 }
 
+/* Under Limber in u each multipole's support ends at k_max / nu of the power spectrum,
+ * one end per multipole. With the power spectrum capped where the window is still large,
+ * every multipole must reach the cap: between (nu / nu_max) k_max and k_max it matches
+ * the Limber formula in z within what the closure was asked for. */
+static void
+test_nc_xcor_kernel_gal_limber_capped_powspec (void)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist = nc_distance_new (TEST_ZMAX);
+  NcmPowspec *ps   = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                            NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  NcmSpline *dndz    = _dndz_new ();
+  const gint lmin    = 100;
+  const gint lmax    = 131;
+  const gdouble nu_0 = lmin + 0.5;
+  const gdouble nu_n = lmax + 0.5;
+  NcXcorKernelGal *g;
+  NcXcorKernelIntegrand *closure;
+  gdouble RH, k_cap, peak = 0.0, bound;
+  gdouble W[TEST_LMAX];
+  gint l;
+  guint j;
+
+  nc_distance_prepare (dist, cosmo);
+  RH = nc_hicosmo_RH_Mpc (cosmo);
+
+  /* The cap at chi = chi(z = 0.6) for the middle multipole, near the peak of dN/dz */
+  k_cap = 0.5 * (nu_0 + nu_n) / nc_distance_comoving (dist, cosmo, 0.6);
+  ncm_powspec_set_kmax (ps, k_cap / RH);
+  ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
+
+  g = g_object_new (NC_TYPE_XCOR_KERNEL_GAL,
+                    "dist", dist,
+                    "powspec", ps,
+                    "bparam-length", (gsize) 1,
+                    "nbarm1", 0.0,
+                    "dndz", dndz,
+                    "domagbias", FALSE,
+                    "dorsd", FALSE,
+                    NULL);
+  ncm_model_orig_vparam_set (NCM_MODEL (g), NC_XCOR_KERNEL_GAL_BIAS, 0, 1.5);
+  nc_xcor_kernel_set_l_limber (NC_XCOR_KERNEL (g), 0);
+  nc_xcor_kernel_prepare (NC_XCOR_KERNEL (g), cosmo);
+
+  closure = nc_xcor_kernel_get_eval_vectorized (NC_XCOR_KERNEL (g), cosmo, lmin, lmax, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
+
+  /* The block's peak, from the Limber formula between the far edge of dN/dz, z = 2, and the cap */
+  for (l = lmin; l <= lmax; l++)
+  {
+    const gdouble nu    = l + 0.5;
+    const gdouble k_far = nu / nc_distance_comoving (dist, cosmo, 2.0);
+
+    for (j = 0; j <= 200; j++)
+    {
+      const gdouble k  = k_far + (0.999 * k_cap - k_far) * j / 200.0;
+      const gdouble z  = nc_distance_inv_comoving (dist, cosmo, nu / k);
+      const gdouble Wz = nc_xcor_kernel_eval_limber_z_full (NC_XCOR_KERNEL (g), cosmo, z, dist, l) *
+                         sqrt (ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k / RH)) * sqrt (M_PI / (2.0 * nu)) / k;
+
+      peak = MAX (peak, fabs (Wz));
+    }
+  }
+
+  bound = MAX (nc_xcor_kernel_get_reltol (NC_XCOR_KERNEL (g)), nc_xcor_kernel_get_peak_epsilon (NC_XCOR_KERNEL (g))) * peak;
+
+  for (l = lmin; l < lmax; l++)
+  {
+    const gdouble nu    = l + 0.5;
+    const gdouble k_low = k_cap * nu / nu_n;
+
+    for (j = 1; j <= 3; j++)
+    {
+      const gdouble k  = k_low + (k_cap - k_low) * j / 4.0;
+      const gdouble z  = nc_distance_inv_comoving (dist, cosmo, nu / k);
+      const gdouble Wz = nc_xcor_kernel_eval_limber_z_full (NC_XCOR_KERNEL (g), cosmo, z, dist, l) *
+                         sqrt (ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k / RH)) * sqrt (M_PI / (2.0 * nu)) / k;
+
+      nc_xcor_kernel_integrand_eval (closure, k, W);
+      g_assert_cmpfloat (fabs (W[l - lmin] - Wz), <=, bound);
+    }
+  }
+
+  nc_xcor_kernel_integrand_unref (closure);
+  nc_xcor_kernel_free (NC_XCOR_KERNEL (g));
+  ncm_spline_free (dndz);
+  ncm_powspec_free (ps);
+  nc_distance_free (dist);
+  nc_hicosmo_free (cosmo);
+}
+
 /* Under Limber in u an RSD component steps at u = (1 + 1 / nu) / chi_max for each
  * multipole, where its j_{l+1} term stops, and the window is nonzero there when dN/dz is
  * truncated. The Chebyshev closure must take those steps as panel edges: across one, no
@@ -947,6 +1037,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/xcor/kernel/gal/bias", &test_nc_xcor_kernel_gal_bias);
   g_test_add_func ("/nc/xcor/kernel/cluster_tophat/volume_normalized", &test_nc_xcor_kernel_cluster_tophat_volume_normalized);
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_steps", &test_nc_xcor_kernel_gal_rsd_limber_steps);
+  g_test_add_func ("/nc/xcor/kernel/gal/limber_capped_powspec", &test_nc_xcor_kernel_gal_limber_capped_powspec);
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/subprocess", &test_nc_xcor_kernel_gal_rsd_limber_z_st);
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/trap", &test_nc_xcor_kernel_gal_rsd_limber_z_trap);
   g_test_add_func ("/nc/xcor/kernel/table/new_full", &test_nc_xcor_kernel_table_full);

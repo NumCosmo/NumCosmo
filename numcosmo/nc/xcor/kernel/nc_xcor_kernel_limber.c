@@ -174,10 +174,12 @@ _component_states_init_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
 
 /*
  * Initializes the component states of a Limber block sampled in u = k / nu.
- * Every multipole has the band [1 / chi_max, 1 / chi_min] of its component, so
- * the per-multipole band arrays hold the same two values for every multipole.
- * The hard limits are the intersection over the multipoles of
- * [k_min / nu, k_max / nu], in u.
+ * Every multipole has the band [1 / chi_max, 1 / chi_min] of its component, the
+ * same in u, but the component's hard k limits are [k_min / nu, k_max / nu] in u,
+ * one range per multipole. The per-multipole band arrays hold the band within that
+ * range, where the multipole is nonzero, and the block's hard limits are the union
+ * over the multipoles, [k_min / nu_max, k_max / nu_min], narrowed to the union of
+ * the bands.
  */
 static ComponentStates
 _component_states_init_limber_u (NcXcorKernel *xclk, gint lmin, guint n_l,
@@ -213,16 +215,18 @@ _component_states_init_limber_u (NcXcorKernel *xclk, gint lmin, guint n_l,
 
     _nc_xcor_kernel_component_state_init (state, g_ptr_array_index (comp_list, i), i, cosmo, n_l);
 
-    comp_states.k_min_hard = GSL_MAX (comp_states.k_min_hard, state->k_min_hard / nu_min);
-    comp_states.k_max_hard = GSL_MIN (comp_states.k_max_hard, state->k_max_hard / nu_max);
+    comp_states.k_min_hard = GSL_MAX (comp_states.k_min_hard, state->k_min_hard / nu_max);
+    comp_states.k_max_hard = GSL_MIN (comp_states.k_max_hard, state->k_max_hard / nu_min);
 
     u_band_min = 1.0 / state->chi_max;
     u_band_max = 1.0 / state->chi_min;
 
     for (j = 0; j < n_l; j++)
     {
-      state->k_min_limber_ell[j] = u_band_min;
-      state->k_max_limber_ell[j] = u_band_max;
+      const gdouble nu_j = lmin + j + 0.5;
+
+      state->k_min_limber_ell[j] = GSL_MAX (u_band_min, state->k_min_hard / nu_j);
+      state->k_max_limber_ell[j] = GSL_MIN (u_band_max, state->k_max_hard / nu_j);
     }
 
     u_min_union = GSL_MIN (u_min_union, u_band_min);
@@ -266,29 +270,46 @@ _component_states_compute_limber_u (const gdouble u, NcmVector *y, gpointer user
 
   for (ci = 0; ci < comp_states->n_comp; ci++)
   {
-    ComponentState *state       = &comp_states->states[ci];
-    const gboolean within_range = (u_side >= state->k_min_limber_ell[0]) && (u_side <= state->k_max_limber_ell[0]);
-    const guint deriv           = nc_xcor_kernel_component_get_bessel_deriv (state->comp);
+    ComponentState *state = &comp_states->states[ci];
+    const guint deriv     = nc_xcor_kernel_component_get_bessel_deriv (state->comp);
+    gboolean active[MAX_ELL_BLOCK];
+    gint first_active = -1;
     gdouble window;
 
-    if (!within_range)
+    /* Each multipole is nonzero within its own range, which differs between multipoles
+     * where the component's hard k limits bind */
+    for (i = 0; i < comp_states->n_l; i++)
+    {
+      active[i] = (u_side >= state->k_min_limber_ell[i]) && (u_side <= state->k_max_limber_ell[i]);
+
+      if (active[i] && (first_active < 0))
+        first_active = i;
+    }
+
+    if (first_active < 0)
       continue;
 
     window = nc_xcor_kernel_component_eval_window (state->comp, cosmo, &xck);
 
+    /* An inactive multipole takes the k of an active one, inside the component's k
+     * range; its value is not used */
     for (i = 0; i < comp_states->n_l; i++)
-      ncm_vector_set (comp_states->k_vec, i, (comp_states->lmin + i + 0.5) * u);
+      ncm_vector_set (comp_states->k_vec, i, (comp_states->lmin + (active[i] ? i : (guint) first_active) + 0.5) * u);
 
     nc_xcor_kernel_component_eval_kfactor_vec (state->comp, cosmo, &xck, comp_states->k_vec, comp_states->kf_vec);
 
     for (i = 0; i < comp_states->n_l; i++)
     {
-      const gint l            = comp_states->lmin + i;
-      const gdouble nu        = l + 0.5;
-      const gdouble k         = nu * u;
-      const gdouble prefactor = nc_xcor_kernel_component_eval_prefactor (state->comp, cosmo, k, l);
-      const gdouble peak_l    = sqrt (M_PI / (2.0 * nu)) * window * ncm_vector_get (comp_states->kf_vec, i);
-      gdouble val;
+      const gint l     = comp_states->lmin + i;
+      const gdouble nu = l + 0.5;
+      const gdouble k  = nu * u;
+      gdouble prefactor, peak_l, val;
+
+      if (!active[i])
+        continue;
+
+      prefactor = nc_xcor_kernel_component_eval_prefactor (state->comp, cosmo, k, l);
+      peak_l    = sqrt (M_PI / (2.0 * nu)) * window * ncm_vector_get (comp_states->kf_vec, i);
 
       if (deriv == 0)
       {
