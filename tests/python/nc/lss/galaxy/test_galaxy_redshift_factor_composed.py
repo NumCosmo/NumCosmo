@@ -100,7 +100,9 @@ def test_serialize_deserialize():
 # by case (matching _CASES order) then by use_lnp (False, True). Regenerate
 # with Ncm.Serialize.to_binfile on an Ncm.Matrix built from the rows in that
 # order.
-_TRUTH_TABLE_FILE = "truth_tables/wl/nc_galaxy_redshift_factor_composed_integrand_parity.bin"
+_TRUTH_TABLE_FILE = (
+    "truth_tables/wl/nc_galaxy_redshift_factor_composed_integrand_parity.bin"
+)
 _TRUTH_TABLE_N = 200
 
 
@@ -221,8 +223,8 @@ def test_zp_lim_get_matches_new_and_property():
 @pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
 def test_gen1_matches_gen_semantics(variant, zp, sigma0, zp_min, zp_max):
     """gen1() draws the same way as gen() but reports (via its boolean
-return) whether the drawn zp fell inside the selection window,
-    instead of rejection-sampling until it does."""
+    return) whether the drawn zp fell inside the selection window,
+        instead of rejection-sampling until it does."""
     composed, mset, pop, data = _build_new(variant, zp, sigma0, zp_min, zp_max)
     z_lo, z_hi = pop.get_lim()
     rng = Ncm.RNG.seeded_new(None, 77)

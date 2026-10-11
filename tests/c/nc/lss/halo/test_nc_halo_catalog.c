@@ -189,7 +189,7 @@ test_nc_halo_catalog_no_linkage (TestNcHaloCatalog *test, gconstpointer pdata)
   const gchar *col_names[]            = {"Mass", NULL};
   const NcmCatalogColType col_types[] = {NCM_CATALOG_COL_TYPE_DOUBLE};
   NcHaloCatalog *hcat                 = nc_halo_catalog_new (NC_HALO_CATALOG_KIND_HALO, NULL, NULL,
-                                                            1, (GStrv) col_names, col_types, 1);
+                                                             1, (GStrv) col_names, col_types, 1);
   GError *error = NULL;
 
   nc_halo_catalog_get_id (hcat, 0, &error);
@@ -223,3 +223,4 @@ test_nc_halo_catalog_bad_column (TestNcHaloCatalog *test, gconstpointer pdata)
 
   NCM_TEST_FREE (nc_halo_catalog_free, hcat);
 }
+

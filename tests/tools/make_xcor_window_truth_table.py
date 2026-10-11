@@ -132,6 +132,7 @@ def default_output(bessel_deriv: int) -> pathlib.Path:
 
     return TABLE_DIR / f"xcor_window_ilk_d{bessel_deriv}.json.gz"
 
+
 # The generator's arguments and the library's constructor arguments for each
 # case. `ctor` is written into the table so the test builds its kernel from
 # the same numbers that were certified, and `arb` stays separate so a
@@ -468,9 +469,7 @@ def one_cell(
     grid = [xnu for xnu in x_nu_grid if xnu >= 0.8 or ell <= POWER_LAW_ELL_MAX]
     ks = [xnu * (ell + 0.5) / chi_ref for xnu in grid]
     t0 = time.monotonic()
-    _, vals, rads = run_tool(
-        exe, shape, ell, ks, target_rel, bessel_deriv=bessel_deriv
-    )
+    _, vals, rads = run_tool(exe, shape, ell, ks, target_rel, bessel_deriv=bessel_deriv)
     elapsed = time.monotonic() - t0
     # One line per cell: the only way to judge how long a run has left, since the
     # cost per multipole grows steeply and unevenly across shapes.
@@ -705,9 +704,7 @@ def main() -> int:
                 cells[f"{shape}|{ell}"] = future.result()
                 write_partial(output, cells)
 
-                payload = assemble(
-                    cells, ells, targets, x_nu_grid, args.bessel_deriv
-                )
+                payload = assemble(cells, ells, targets, x_nu_grid, args.bessel_deriv)
 
                 # The table is rewritten whenever a shape becomes complete, so a
                 # run that is stopped early still leaves a usable, rectangular

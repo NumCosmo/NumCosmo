@@ -22,7 +22,12 @@ from numcosmo_py import Nc, Ncm
 Ncm.cfg_init()
 
 OUT = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "truth_tables", "bbn"
+    os.path.dirname(os.path.abspath(__file__)),
+    "..",
+    "..",
+    "data",
+    "truth_tables",
+    "bbn",
 )
 
 
@@ -31,9 +36,7 @@ def set_yp(cosmo, value, free):
     ok, idx = cosmo.param_index_from_name("Yp")
     assert ok
     cosmo.param_set(idx, value)
-    cosmo.param_set_ftype(
-        idx, Ncm.ParamType.FREE if free else Ncm.ParamType.FIXED
-    )
+    cosmo.param_set_ftype(idx, Ncm.ParamType.FREE if free else Ncm.ParamType.FIXED)
 
 
 def de_xcdm(yp, free):
@@ -110,11 +113,15 @@ def main():
                 for i in range(cosmo.get_submodel_len())
             ],
         }
-        print(f"{name:20s} Yp_4He={values[name]['Yp_4He']:.10f} "
-              f"free={values[name]['Yp_free']} "
-              f"submodels={values[name]['submodels']}")
+        print(
+            f"{name:20s} Yp_4He={values[name]['Yp_4He']:.10f} "
+            f"free={values[name]['Yp_free']} "
+            f"submodels={values[name]['submodels']}"
+        )
 
-    with open(os.path.join(OUT, "pre_migration_values.json"), "w", encoding="utf-8") as f:
+    with open(
+        os.path.join(OUT, "pre_migration_values.json"), "w", encoding="utf-8"
+    ) as f:
         json.dump(values, f, indent=2, sort_keys=True)
         f.write("\n")
 

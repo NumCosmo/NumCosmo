@@ -112,9 +112,9 @@ def test_generator_case_matches_the_vocabulary(case: str) -> None:
     from_generator = [f"--shape={spec.get('shape', case)}"] + list(spec["arb"])
     from_vocabulary = W.arb_args(W.resolve(case))
 
-    assert _normalise(from_generator) == _normalise(from_vocabulary), (
-        f"{case} differs between the generator and windows.py"
-    )
+    assert _normalise(from_generator) == _normalise(
+        from_vocabulary
+    ), f"{case} differs between the generator and windows.py"
 
 
 @pytest.mark.parametrize("name", sorted(cases.KERNELS))
@@ -133,9 +133,9 @@ def test_pair_kernel_matches_the_vocabulary(name: str) -> None:
     from_pairs = cases.KERNELS[name].arb_args("a")
     from_vocabulary = W.arb_args(canonical, side="a")
 
-    assert _normalise(from_pairs) == _normalise(from_vocabulary), (
-        f"{name} differs between cases_k_integral and windows.py"
-    )
+    assert _normalise(from_pairs) == _normalise(
+        from_vocabulary
+    ), f"{name} differs between cases_k_integral and windows.py"
 
 
 def test_no_two_names_mean_different_windows() -> None:

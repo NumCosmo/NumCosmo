@@ -222,7 +222,11 @@ def test_radial_integral_matches_arb(
     entry = truth_table["shapes"][shape]
 
     kernel = _make_kernel(
-        _shape_of(entry, shape), dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
+        _shape_of(entry, shape),
+        dist,
+        ps,
+        Ncm.SBesselIntegratorLevin.new(0, 8),
+        entry["ctor"],
     )
     kernel.set_l_limber(-1)
     kernel.prepare(cosmo)
@@ -326,7 +330,9 @@ def test_deriv_table_is_certified_far_below_the_tolerance(
             default=0.0,
         )
 
-        assert worst < target, f"deriv {deriv}, ell = {ell} certified only to {worst:.2e}"
+        assert (
+            worst < target
+        ), f"deriv {deriv}, ell = {ell} certified only to {worst:.2e}"
 
 
 @pytest.mark.parametrize("n_block", [1, 8])
@@ -354,7 +360,11 @@ def test_radial_integral_deriv_matches_arb(
     entry = table["shapes"][shape]
 
     kernel = _make_kernel(
-        _shape_of(entry, shape), dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
+        _shape_of(entry, shape),
+        dist,
+        ps,
+        Ncm.SBesselIntegratorLevin.new(0, 8),
+        entry["ctor"],
     )
     kernel.set_l_limber(-1)
     kernel.prepare(cosmo)
@@ -428,7 +438,11 @@ def test_radial_integral_matches_arb_with_tau_constraint(
     entry = truth_table["shapes"][shape]
 
     kernel = _make_kernel(
-        _shape_of(entry, shape), dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
+        _shape_of(entry, shape),
+        dist,
+        ps,
+        Ncm.SBesselIntegratorLevin.new(0, 8),
+        entry["ctor"],
     )
     kernel.set_l_limber(-1)
     kernel.prepare(cosmo)
@@ -488,7 +502,11 @@ def test_radial_integral_batched_matches_arb_with_tau_constraint(
     n_block = 8
 
     kernel = _make_kernel(
-        _shape_of(entry, shape), dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
+        _shape_of(entry, shape),
+        dist,
+        ps,
+        Ncm.SBesselIntegratorLevin.new(0, 8),
+        entry["ctor"],
     )
     kernel.set_l_limber(-1)
     kernel.prepare(cosmo)
@@ -602,7 +620,11 @@ def test_chebyshev_closure_matches_arb(
 
     for index, ell in enumerate(truth_table["ells"]):
         kernel = _make_kernel(
-            _shape_of(entry, shape), dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
+            _shape_of(entry, shape),
+            dist,
+            ps,
+            Ncm.SBesselIntegratorLevin.new(0, 8),
+            entry["ctor"],
         )
         kernel.set_l_limber(-1)
         kernel.set_property("reltol", 1.0e-6)
