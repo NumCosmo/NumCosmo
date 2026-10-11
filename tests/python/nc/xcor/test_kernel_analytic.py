@@ -1398,13 +1398,13 @@ def test_pieces_of_one_window_are_truncated_together(cosmology: Cosmology) -> No
         assert np.all(_interior_edges_are_dyadic(_panel_edges(closure)))
 
 
-def test_chebyshev_panels_are_checked_against_the_expansion_samples(
+def test_chebyshev_closure_finds_a_narrow_peak_on_a_wide_domain(
     cosmology: Cosmology,
 ) -> None:
-    """A tiny adaptive-epsilon makes the domain five decades wide, and the
-    first Chebyshev grid starts past the peak. Both levels of the doubling test
-    then see a small smooth function and agree. The expansion's own samples sit
-    on the peak, and a panel that misses them is split rather than kept."""
+    """A tiny adaptive-epsilon makes the domain five decades wide. A first
+    Chebyshev grid spread over all of it would start past the peak, and both
+    levels of the doubling test would see a small smooth function and agree;
+    the initial grid of panels-per-efold puts panels on the peak's scale."""
     kernel = _multi(cosmology, MULTI_DISJOINT_MEAN, MULTI_DISJOINT_SIGMA)
     kernel.set_adaptive_epsilon(1.0e-11)
     kernel.set_reltol(1.0e-6)

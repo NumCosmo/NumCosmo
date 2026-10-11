@@ -419,38 +419,6 @@ test_ncm_spectral_panels_builder_grid (void)
   ncm_spectral_panels_builder_free (builder);
 }
 
-static gboolean
-_accept_narrow (gpointer user_data, gdouble a, gdouble b, const gdouble *c, guint N, guint tda)
-{
-  return (b - a) <= 0.25;
-}
-
-/* A converged panel that accept refuses is bisected */
-static void
-test_ncm_spectral_panels_builder_accept (void)
-{
-  NcmSpectralPanelsBuilder *builder = _builder_new (0.0);
-  NcmSpectralPanels *sp             = ncm_spectral_panels_new (1);
-  guint i;
-
-  ncm_spectral_panels_builder_build_full (builder, _linear, _accept_narrow, NULL, 0.0, 1.0, NULL, NULL, NULL, 1.0e-12, 0.0, sp);
-
-  _assert_contiguous (sp, 0.0, 1.0);
-  g_assert_cmpuint (ncm_spectral_panels_get_n_panels (sp), ==, 4);
-
-  for (i = 0; i < 4; i++)
-  {
-    gdouble pa, pb;
-    guint N;
-
-    ncm_spectral_panels_peek_panel (sp, i, &pa, &pb, &N);
-    g_assert_cmpfloat (pb - pa, ==, 0.25);
-  }
-
-  ncm_spectral_panels_free (sp);
-  ncm_spectral_panels_builder_free (builder);
-}
-
 /* A builder and a panel set reused across builds, of another dimension too, give the
  * panels of a fresh pair */
 static void
@@ -635,7 +603,6 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral_panels_builder/breakpoints", &test_ncm_spectral_panels_builder_breakpoints);
   g_test_add_func ("/ncm/spectral_panels_builder/known_values", &test_ncm_spectral_panels_builder_known_values);
   g_test_add_func ("/ncm/spectral_panels_builder/grid", &test_ncm_spectral_panels_builder_grid);
-  g_test_add_func ("/ncm/spectral_panels_builder/accept", &test_ncm_spectral_panels_builder_accept);
   g_test_add_func ("/ncm/spectral_panels_builder/reuse", &test_ncm_spectral_panels_builder_reuse);
   g_test_add_func ("/ncm/spectral_panels_builder/threads", &test_ncm_spectral_panels_builder_threads);
   g_test_add_func ("/ncm/spectral_panels_builder/undeclared_step", &test_ncm_spectral_panels_builder_undeclared_step);

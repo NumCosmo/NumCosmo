@@ -47,21 +47,6 @@ G_BEGIN_DECLS
  */
 typedef void (*NcmSpectralPanelsF) (gpointer user_data, guint i, gdouble x, NcmVector *fval);
 
-/**
- * NcmSpectralPanelsAccept:
- * @user_data: (closure): user data
- * @a: left edge of the panel
- * @b: right edge of the panel
- * @c: the coefficients of the panel, rows of @N
- * @N: number of coefficients in each row
- * @tda: distance between the starts of consecutive rows of @c
- *
- * Further acceptance test of a converged panel.
- *
- * Returns: whether the panel is accepted.
- */
-typedef gboolean (*NcmSpectralPanelsAccept) (gpointer user_data, gdouble a, gdouble b, const gdouble *c, guint N, guint tda);
-
 #define NCM_TYPE_SPECTRAL_PANELS_BUILDER (ncm_spectral_panels_builder_get_type ())
 
 G_DECLARE_FINAL_TYPE (NcmSpectralPanelsBuilder, ncm_spectral_panels_builder, NCM, SPECTRAL_PANELS_BUILDER, GObject)
@@ -83,7 +68,6 @@ gdouble ncm_spectral_panels_builder_get_min_panels_per_efold (NcmSpectralPanelsB
 gdouble ncm_spectral_panels_builder_get_min_panel_fraction (NcmSpectralPanelsBuilder *builder);
 
 void ncm_spectral_panels_builder_build (NcmSpectralPanelsBuilder *builder, NcmSpectralPanelsF F, gpointer user_data, gdouble a, gdouble b, NcmVector *breakpoints, NcmMatrix *f_minus, NcmMatrix *f_plus, gdouble reltol, gdouble abstol, NcmSpectralPanels *sp);
-void ncm_spectral_panels_builder_build_full (NcmSpectralPanelsBuilder *builder, NcmSpectralPanelsF F, NcmSpectralPanelsAccept accept, gpointer user_data, gdouble a, gdouble b, NcmVector *breakpoints, NcmMatrix *f_minus, NcmMatrix *f_plus, gdouble reltol, gdouble abstol, NcmSpectralPanels *sp);
 
 G_END_DECLS
 

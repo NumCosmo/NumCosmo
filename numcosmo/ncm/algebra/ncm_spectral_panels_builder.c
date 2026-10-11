@@ -96,7 +96,6 @@ typedef struct _NcmSpectralPanelsBuilderEdge
 typedef struct _NcmSpectralPanelsBuilderCall
 {
   NcmSpectralPanelsF F;
-  NcmSpectralPanelsAccept accept;
   gpointer user_data;
   guint interval;
   guint level_min;
@@ -438,6 +437,12 @@ ncm_spectral_panels_builder_get_min_panel_fraction (NcmSpectralPanelsBuilder *bu
   return builder->min_panel_fraction;
 }
 
+static void _ncm_spectral_panels_builder_check (NcmSpectralPanelsBuilder *builder, guint fdim, gdouble a, gdouble b, NcmVector *breakpoints, NcmMatrix *f_minus, NcmMatrix *f_plus);
+static void _ncm_spectral_panels_builder_work_prepare (NcmSpectralPanelsBuilderWork *work, guint fdim, guint level_cap);
+static void _ncm_spectral_panels_builder_initial_edges (NcmSpectralPanelsBuilder *builder, NcmSpectralPanelsBuilderWork *work, gdouble a, gdouble b, NcmVector *breakpoints);
+static void _ncm_spectral_panels_builder_copy_row (NcmMatrix *m, guint row, NcmVector *v);
+static void _ncm_spectral_panels_builder_split (NcmSpectralPanelsBuilderCall *call, gdouble a, gdouble b, guint depth, NcmVector *f_a, NcmVector *f_b);
+
 /**
  * ncm_spectral_panels_builder_build:
  * @builder: a #NcmSpectralPanelsBuilder
@@ -464,47 +469,11 @@ ncm_spectral_panels_builder_build (NcmSpectralPanelsBuilder *builder, NcmSpectra
                                    gdouble a, gdouble b, NcmVector *breakpoints, NcmMatrix *f_minus, NcmMatrix *f_plus,
                                    gdouble reltol, gdouble abstol, NcmSpectralPanels *sp)
 {
-  ncm_spectral_panels_builder_build_full (builder, F, NULL, user_data, a, b, breakpoints, f_minus, f_plus,
-                                          reltol, abstol, sp);
-}
-
-static void _ncm_spectral_panels_builder_check (NcmSpectralPanelsBuilder *builder, guint fdim, gdouble a, gdouble b, NcmVector *breakpoints, NcmMatrix *f_minus, NcmMatrix *f_plus);
-static void _ncm_spectral_panels_builder_work_prepare (NcmSpectralPanelsBuilderWork *work, guint fdim, guint level_cap);
-static void _ncm_spectral_panels_builder_initial_edges (NcmSpectralPanelsBuilder *builder, NcmSpectralPanelsBuilderWork *work, gdouble a, gdouble b, NcmVector *breakpoints);
-static void _ncm_spectral_panels_builder_copy_row (NcmMatrix *m, guint row, NcmVector *v);
-static void _ncm_spectral_panels_builder_split (NcmSpectralPanelsBuilderCall *call, gdouble a, gdouble b, guint depth, NcmVector *f_a, NcmVector *f_b);
-
-/**
- * ncm_spectral_panels_builder_build_full: (skip)
- * @builder: a #NcmSpectralPanelsBuilder
- * @F: function to expand
- * @accept: (nullable): further acceptance test of a converged panel
- * @user_data: user data for @F and @accept
- * @a: left end of the range
- * @b: right end of the range
- * @breakpoints: (nullable): points where $F$ may jump, ascending and inside $(a, b)$
- * @f_minus: (nullable): $F$ at each breakpoint from the left, one row per breakpoint
- * @f_plus: (nullable): $F$ at each breakpoint from the right, one row per breakpoint
- * @reltol: relative tolerance of a panel
- * @abstol: absolute tolerance of a panel, in units of $F$
- * @sp: the panel set to fill
- *
- * As ncm_spectral_panels_builder_build(), with a converged panel kept only when @accept
- * returns %TRUE and bisected otherwise. A panel narrower than
- * #NcmSpectralPanelsBuilder:min-panel-fraction is kept without @accept.
- */
-void
-ncm_spectral_panels_builder_build_full (NcmSpectralPanelsBuilder *builder, NcmSpectralPanelsF F, NcmSpectralPanelsAccept accept,
-                                        gpointer user_data, gdouble a, gdouble b, NcmVector *breakpoints,
-                                        NcmMatrix *f_minus, NcmMatrix *f_plus, gdouble reltol, gdouble abstol,
-                                        NcmSpectralPanels *sp)
-{
   const guint fdim                   = ncm_spectral_panels_get_fdim (sp);
   NcmSpectralPanelsBuilderWork **ptr = ncm_memory_pool_get (builder->work_pool);
   NcmSpectralPanelsBuilderWork *work = *ptr;
   NcmSpectralPanelsBuilderCall call  = {
     .F                  = F,
-    .accept             = accept,
     .user_data          = user_data,
     .interval           = 0,
     .level_min          = builder->level_min,
@@ -697,7 +666,7 @@ static void _ncm_spectral_panels_builder_F (gpointer user_data, gdouble x, NcmVe
 
 /*
  * Expands on [a, b] and appends the panel to the panel set, bisecting where the expansion
- * up to level-cap does not converge or accept refuses it. A split hands rows 0 and 1 of
+ * up to level-cap does not converge. A split hands rows 0 and 1 of
  * the ends of its depth to the lower half and rows 1 and 2 to the upper half; the lower
  * half's own splits write one depth further down, so the rows survive for the upper half.
  */
@@ -734,12 +703,9 @@ _ncm_spectral_panels_builder_split (NcmSpectralPanelsBuilderCall *call, gdouble 
 
     c = ncm_spectral_peek_batch_coeffs (work->spectral, &tda);
 
-    if ((call->accept == NULL) || call->accept (call->user_data, a, b, c, N, tda))
-    {
-      ncm_spectral_panels_append_data (call->sp, a, b, c, N, tda);
+    ncm_spectral_panels_append_data (call->sp, a, b, c, N, tda);
 
-      return;
-    }
+    return;
   }
 
   /* A panel that does not converge however far it is split is not a resolution

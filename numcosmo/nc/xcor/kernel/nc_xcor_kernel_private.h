@@ -68,8 +68,7 @@ typedef struct _NcXcorKernelPrivate
   guint panel_order_cap;
   gdouble panels_per_efold;
   guint panel_level_min;
-  NcmSpectralPanelsBuilder *builder_u; /* Chebyshev closures in u = k / nu, with the panels-per-efold grid */
-  NcmSpectralPanelsBuilder *builder_k; /* Chebyshev closures in k, without a grid */
+  NcmSpectralPanelsBuilder *builder; /* the panels of the Chebyshev closures */
   gboolean track_closure_error;
   gboolean tolerance_balance_warned;
   gboolean constructed;
