@@ -194,9 +194,10 @@ _nc_xcor_kernel_check_integrator_tolerance (NcXcorKernel *xclk, NcmSBesselIntegr
 }
 
 /*
- * NcmSpectralFBatch takes user data first; the compute functions here take k
- * first, as NcmFunctionSampleSetFunc does. One adapter rather than changing
- * either.
+ * What the panel builder hands back to the compute functions: they take k first, as
+ * NcmFunctionSampleSetFunc does, and decide which components are on at a point of the
+ * continuous interval the panel lies in, so a panel ending on a cut takes the limit from
+ * its own side.
  */
 typedef struct _ChebCompute
 {
@@ -204,15 +205,18 @@ typedef struct _ChebCompute
 
   ComponentStates *comp_states;
   NcmFunctionSampleSet *expansion; /* the values of W_l(k) computed during the domain expansion */
-  GPtrArray *ends;                 /* per split depth, the 3 by n_l W_l at a, the midpoint and b */
-  GPtrArray *ends_rows;            /* per split depth, the three row views of its ends matrix */
+  GArray *interval_mid;            /* gdouble, the midpoint of each continuous interval */
+  guint n_l;
+  gdouble reltol;
+  gdouble abstol;
 } ChebCompute;
 
 static void
-_cheb_compute_call (gpointer user_data, gdouble k, NcmVector *fval)
+_cheb_compute_call (gpointer user_data, guint i, gdouble k, NcmVector *fval)
 {
   ChebCompute *compute = (ChebCompute *) user_data;
 
+  compute->comp_states->panel_mid = g_array_index (compute->interval_mid, gdouble, i);
   compute->compute_func (k, fval, compute->comp_states);
 }
 
@@ -306,69 +310,9 @@ _component_states_collect_cuts (ComponentStates *comp_states, gdouble k_min, gdo
 }
 
 /*
- * Fills edges with the initial panel edges of the Chebyshev closure on
- * [k_min, k_max], ascending, from k_min to k_max: the cuts of
- * _component_states_collect_cuts() and the geometric grid exp (j / panels_per_efold),
- * j integer, inside the range. The grid is anchored at 1 rather than at k_min
- * so that two closures share their grid edges wherever their ranges overlap,
- * and the exact integration then restricts neither of them on those cells. A
- * grid point closer than a quarter of the grid spacing, in ln k, to an edge
- * already present is dropped. With panels_per_efold zero the edges are the
- * cuts alone.
- */
-static void
-_nc_xcor_kernel_cheb_panel_edges (ComponentStates *comp_states, gdouble k_min, gdouble k_max,
-                                  gdouble panels_per_efold, GArray *edges)
-{
-  GArray *cuts = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  guint i;
-
-  _component_states_collect_cuts (comp_states, k_min, k_max, cuts);
-
-  g_array_set_size (edges, 0);
-  g_array_append_val (edges, k_min);
-  g_array_append_vals (edges, cuts->data, cuts->len);
-  g_array_append_val (edges, k_max);
-
-  if (panels_per_efold > 0.0)
-  {
-    const gdouble h    = 1.0 / panels_per_efold;
-    const glong j_min  = (glong) floor (log (k_min) / h) + 1;
-    const glong j_max  = (glong) ceil (log (k_max) / h) - 1;
-    const guint n_cuts = edges->len;
-    glong j;
-
-    for (j = j_min; j <= j_max; j++)
-    {
-      const gdouble k = exp (j * h);
-      gboolean near   = FALSE;
-
-      for (i = 0; i < n_cuts; i++)
-      {
-        if (fabs (log (k / g_array_index (edges, gdouble, i))) < 0.25 * h)
-        {
-          near = TRUE;
-          break;
-        }
-      }
-
-      if (!near)
-        g_array_append_val (edges, k);
-    }
-
-    g_array_sort (edges, _nc_xcor_kernel_cmp_gdouble);
-  }
-
-  g_array_unref (cuts);
-}
-
-/* Default panel-order cap for Chebyshev closures. */
-#define NC_XCOR_KERNEL_CHEB_PANEL_K_CAP (5)
-#define NC_XCOR_KERNEL_CHEB_MIN_PANEL_FRAC (1.0e-6)
-
-/*
- * Whether an accepted panel on (a, b) reproduces the values of W_l(k) computed
- * during the domain expansion at k strictly inside it.
+ * Whether a converged panel on (a, b) reproduces the values of W_l(k) computed
+ * during the domain expansion at k strictly inside it; a panel that does not is
+ * bisected.
  *
  * The doubling test compares two expansions of what the nodes saw, and a
  * feature narrower than the first grid's spacing is seen by neither: the
@@ -385,30 +329,46 @@ _nc_xcor_kernel_cheb_panel_edges (ComponentStates *comp_states, gdouble k_min, g
  * slack, which is an l2 statement over the coefficients, not a pointwise one.
  */
 static gboolean
-_nc_xcor_kernel_cheb_panel_matches_expansion (const ChebPanel *panel, NcmFunctionSampleSet *samples,
-                                              guint n_l, gdouble reltol, gdouble abstol)
+_cheb_panel_accept (gpointer user_data, gdouble a, gdouble b, const gdouble *c, guint N, guint tda)
 {
+  ChebCompute *compute           = (ChebCompute *) user_data;
   NcmFunctionSampleSetIter *iter = NULL;
   gboolean ok                    = TRUE;
 
-  ncm_function_sample_set_iter_begin (samples, &iter);
+  ncm_function_sample_set_iter_begin (compute->expansion, &iter);
 
   for ( ; ok && ncm_function_sample_set_iter_is_valid (iter); ncm_function_sample_set_iter_next (iter))
   {
     const gdouble x = ncm_function_sample_set_iter_get_x (iter);
 
-    if ((x > panel->a) && (x < panel->b))
+    if ((x > a) && (x < b))
     {
-      NcmVector *y    = ncm_function_sample_set_iter_get_y (iter);
-      const gdouble s = ncm_spectral_x_to_s (panel->a, panel->b, x);
-      guint c;
+      NcmVector *y        = ncm_function_sample_set_iter_get_y (iter);
+      const gdouble s     = ncm_spectral_x_to_s (a, b, x);
+      const gdouble two_s = 2.0 * s;
+      guint r;
 
-      for (c = 0; c < n_l; c++)
+      for (r = 0; r < compute->n_l; r++)
       {
-        const gdouble yc    = ncm_vector_get (y, c);
-        const gdouble value = _nc_xcor_kernel_cheb_panel_eval_one (panel, c, s);
+        const gdouble *row = c + (gsize) r * tda;
+        const gdouble yr   = ncm_vector_get (y, r);
+        gdouble b_1        = 0.0;
+        gdouble b_2        = 0.0;
+        gdouble value;
+        gint n;
 
-        if (fabs (value - yc) > 10.0 * (reltol * fabs (yc) + abstol))
+        /* Clenshaw, as ncm_spectral_panels_eval_row() evaluates the panel once kept */
+        for (n = (gint) N - 1; n >= 1; n--)
+        {
+          const gdouble b_0 = two_s * b_1 - b_2 + row[n];
+
+          b_2 = b_1;
+          b_1 = b_0;
+        }
+
+        value = s * b_1 - b_2 + row[0];
+
+        if (fabs (value - yr) > 10.0 * (compute->reltol * fabs (yr) + compute->abstol))
         {
           ok = FALSE;
           break;
@@ -420,87 +380,6 @@ _nc_xcor_kernel_cheb_panel_matches_expansion (const ChebPanel *panel, NcmFunctio
   ncm_function_sample_set_iter_free (iter);
 
   return ok;
-}
-
-/*
- * Expands on [a, b], bisecting where the capped order does not converge or
- * where the accepted panel misses a value of W_l(k) computed during the domain
- * expansion.
- * Panels are appended in ascending order, so the result is contiguous.
- */
-static void
-_nc_xcor_kernel_cheb_split (NcmSpectral *spectral, ChebCompute *compute, guint n_l,
-                            gdouble a, gdouble b, gdouble reltol, gdouble abstol,
-                            guint level_min, guint k_cap, guint depth,
-                            NcmVector *W_a, NcmVector *W_b, GArray *panels)
-{
-  NcmMatrix *coeffs = NULL;
-  NcmMatrix *ends;
-  guint k_ord;
-
-  /* One ends matrix per depth, made the first time the depth is reached: a split hands
-   * rows 0, 1 to its lower half and rows 1, 2 to its upper half, and the lower half's
-   * own splits write one depth further down, so the rows survive for the upper half. */
-  if (compute->ends->len <= depth)
-  {
-    NcmMatrix *m = ncm_matrix_new (3, n_l);
-    guint r;
-
-    g_ptr_array_add (compute->ends, m);
-
-    for (r = 0; r < 3; r++)
-      g_ptr_array_add (compute->ends_rows, ncm_matrix_get_row (m, r));
-  }
-
-  ends = g_ptr_array_index (compute->ends, depth);
-
-  compute->comp_states->panel_mid = 0.5 * (a + b);
-
-  k_ord = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (
-    spectral, _cheb_compute_call, n_l, a, b, level_min,
-    k_cap, reltol, abstol, FALSE, W_a, W_b, ends, &coeffs, compute);
-
-  if (k_ord > 0)
-  {
-    ChebPanel panel = { a, b, coeffs, (1u << k_ord) + 1u };
-
-    if (_nc_xcor_kernel_cheb_panel_matches_expansion (&panel, compute->expansion, n_l, reltol, abstol))
-    {
-      g_array_append_val (panels, panel);
-
-      return;
-    }
-
-    ncm_matrix_clear (&coeffs);
-  }
-
-  {
-    const gdouble mid = 0.5 * (a + b);
-
-    /* A panel that will not converge however far it is split is not a
-     * resolution problem; refusing to bisect past a fraction of the domain
-     * turns a hang into a diagnosable expansion. */
-    if ((b - a) < NC_XCOR_KERNEL_CHEB_MIN_PANEL_FRAC * b)
-    {
-      const guint k_forced = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (
-        spectral, _cheb_compute_call, n_l, a, b, level_min,
-        k_cap, reltol, abstol, TRUE, W_a, W_b, NULL, &coeffs, compute);
-      ChebPanel panel = { a, b, coeffs, (1u << k_forced) + 1u };
-
-      g_array_append_val (panels, panel);
-
-      return;
-    }
-
-    {
-      NcmVector *W_lo  = g_ptr_array_index (compute->ends_rows, 3 * depth + 0);
-      NcmVector *W_mid = g_ptr_array_index (compute->ends_rows, 3 * depth + 1);
-      NcmVector *W_hi  = g_ptr_array_index (compute->ends_rows, 3 * depth + 2);
-
-      _nc_xcor_kernel_cheb_split (spectral, compute, n_l, a, mid, reltol, abstol, level_min, k_cap, depth + 1, W_lo, W_mid, panels);
-      _nc_xcor_kernel_cheb_split (spectral, compute, n_l, mid, b, reltol, abstol, level_min, k_cap, depth + 1, W_mid, W_hi, panels);
-    }
-  }
 }
 
 static gboolean
@@ -609,7 +488,7 @@ _component_states_compute_k_seeds (ComponentStates *comp_states, GArray *k_seeds
  * The panels start from the component boundaries the expansion found, since
  * the block W_l(k) jumps there (see _component_states_collect_cuts), and a
  * converged panel is checked against the values computed during the domain
- * expansion before it is kept (see _nc_xcor_kernel_cheb_panel_matches_expansion).
+ * expansion before it is kept (see _cheb_panel_accept()).
  */
 NcXcorKernelIntegrand *
 _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax,
@@ -625,9 +504,7 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
     NcmFunctionSampleSet *fss = ncm_function_sample_set_new (n_l);
     GArray *k_seeds           = g_array_new (FALSE, FALSE, sizeof (gdouble));
     ChebCompute compute       = {
-      compute_func, comp_states, fss,
-      g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_matrix_free),
-      g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free)
+      compute_func, comp_states, fss, g_array_new (FALSE, FALSE, sizeof (gdouble)), n_l, reltol, 0.0
     };
     NcmMatrix *closure_error = NULL;
     gdouble abstol;
@@ -664,81 +541,80 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
      * tolerance relative to its neighbours. */
     abstol = ncm_function_sample_set_get_absmaxF_min (fss) * peak_epsilon;
 
-    cid->panels = g_array_new (FALSE, FALSE, sizeof (ChebPanel));
-    cid->edges  = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    compute.abstol = abstol;
 
-    /* Expand each initial panel, bisecting where it does not converge. In
-     * panel mode the compute function decides at the panel midpoint which
-     * components and multipoles are on, so every discontinuity has to be an
-     * initial edge, which _nc_xcor_kernel_cheb_panel_edges() guarantees. */
+    /* Expand on the continuous intervals between the cuts, bisecting where a panel
+     * does not converge. In panel mode the compute function decides at a point of
+     * the panel's interval which components and multipoles are on, so every
+     * discontinuity has to be a cut, which _component_states_collect_cuts()
+     * guarantees. The grid of the builder in u serves the Limber closure, where the
+     * window does not oscillate; a non-Limber W_l(k) oscillates with the period
+     * pi / chi_max, and a grid panel whose width lets it alias on the first levels
+     * of the ladder is accepted wrongly, which the bisection from the whole domain
+     * has not shown on the certified windows. */
     {
-      NcmSpectral **spectral = _nc_xcor_kernel_spectral_get ();
-      GArray *edges0         = g_array_new (FALSE, FALSE, sizeof (gdouble));
-      const guint k_cap      = (self->panel_order_cap == 0) ?
-                               NC_XCOR_KERNEL_CHEB_PANEL_K_CAP : self->panel_order_cap;
+      NcmSpectralPanelsBuilder *builder = comp_states->in_u ? self->builder_u : self->builder_k;
+      GArray *cuts                      = g_array_new (FALSE, FALSE, sizeof (gdouble));
+      const guint k_cap                 = (self->panel_order_cap == 0) ?
+                                          NC_XCOR_KERNEL_CHEB_PANEL_LEVEL_CAP : self->panel_order_cap;
+      NcmVector *breakpoints;
 
       if (self->panel_level_min >= k_cap)
         g_error ("_nc_xcor_kernel_build_cheb_integrand: kernel %s has panel-level-min %u, "
                  "not below its panel-order-cap %u.",
                  G_OBJECT_TYPE_NAME (xclk), self->panel_level_min, k_cap);
 
-      /* The grid serves the Limber closure in u, where the window does not
-       * oscillate. A non-Limber W_l(k) oscillates with the period pi / chi_max,
-       * and a grid panel whose width lets it alias on the first levels of the
-       * ladder is accepted wrongly, which the bisection from the whole domain
-       * has not shown on the certified windows. */
-      _nc_xcor_kernel_cheb_panel_edges (comp_states, cid->k_min, cid->k_max,
-                                        comp_states->in_u ? self->panels_per_efold : 0.0, edges0);
+      _component_states_collect_cuts (comp_states, cid->k_min, cid->k_max, cuts);
+
+      for (i = 0; i <= cuts->len; i++)
+      {
+        const gdouble lo  = (i == 0) ? cid->k_min : g_array_index (cuts, gdouble, i - 1);
+        const gdouble hi  = (i == cuts->len) ? cid->k_max : g_array_index (cuts, gdouble, i);
+        const gdouble mid = 0.5 * (lo + hi);
+
+        g_array_append_val (compute.interval_mid, mid);
+      }
+
+      breakpoints = (cuts->len > 0) ? ncm_vector_new_array (cuts) : NULL;
+      cid->sp     = ncm_spectral_panels_new (n_l);
 
       comp_states->panel_mode = TRUE;
-
-      /* An initial edge can be a cut, where W_l(k) jumps, so an initial panel starts
-       * with no known ends; the halves of a split share them with their parent. */
-      for (i = 0; i + 1 < edges0->len; i++)
-        _nc_xcor_kernel_cheb_split (*spectral, &compute, n_l,
-                                    g_array_index (edges0, gdouble, i), g_array_index (edges0, gdouble, i + 1),
-                                    reltol, abstol, self->panel_level_min, k_cap, 0, NULL, NULL, cid->panels);
-
+      ncm_spectral_panels_builder_build_full (builder, _cheb_compute_call, _cheb_panel_accept, &compute,
+                                              cid->k_min, cid->k_max, breakpoints, NULL, NULL,
+                                              reltol, abstol, cid->sp);
       comp_states->panel_mode = FALSE;
 
-      g_array_unref (edges0);
-      ncm_memory_pool_return (spectral);
+      ncm_vector_clear (&breakpoints);
+      g_array_unref (cuts);
     }
 
     ncm_function_sample_set_clear (&fss);
-    g_ptr_array_unref (compute.ends_rows);
-    g_ptr_array_unref (compute.ends);
-
-    {
-      const gdouble first = g_array_index (cid->panels, ChebPanel, 0).a;
-
-      g_array_append_val (cid->edges, first);
-
-      for (i = 0; i < cid->panels->len; i++)
-        g_array_append_val (cid->edges, g_array_index (cid->panels, ChebPanel, i).b);
-    }
+    g_array_unref (compute.interval_mid);
 
     /* Record the interpolation error of each panel, one row per panel and one
      * column per multipole, as the sum of the absolute coefficients above the
      * order of the previous level; see NcXcorKernel:track-closure-error. */
     if (self->track_closure_error)
     {
-      closure_error = ncm_matrix_new (cid->panels->len, n_l);
+      const guint n_panels = ncm_spectral_panels_get_n_panels (cid->sp);
 
-      for (i = 0; i < cid->panels->len; i++)
+      closure_error = ncm_matrix_new (n_panels, n_l);
+
+      for (i = 0; i < n_panels; i++)
       {
-        const ChebPanel *panel = &g_array_index (cid->panels, ChebPanel, i);
-        const guint n_prev     = (panel->N + 1) / 2;
-        guint c, j;
+        gdouble a, b;
+        guint N, r, j;
+        const gdouble *c   = ncm_spectral_panels_peek_panel (cid->sp, i, &a, &b, &N);
+        const guint n_prev = (N + 1) / 2;
 
-        for (c = 0; c < n_l; c++)
+        for (r = 0; r < n_l; r++)
         {
           gdouble tail = 0.0;
 
-          for (j = n_prev; j < panel->N; j++)
-            tail += fabs (ncm_matrix_get (panel->coeffs, c, j));
+          for (j = n_prev; j < N; j++)
+            tail += fabs (c[r * N + j]);
 
-          ncm_matrix_set (closure_error, i, c, tail);
+          ncm_matrix_set (closure_error, i, r, tail);
         }
       }
     }

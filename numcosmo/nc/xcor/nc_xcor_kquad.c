@@ -40,6 +40,7 @@
 
 #include "ncm/integration/ncm_integrate.h"
 #include "ncm/core/ncm_memory_pool.h"
+#include "ncm/algebra/ncm_spectral_panels_product.h"
 #include "nc/xcor/nc_xcor.h"
 #include "ncm/specfunc/ncm_sbessel_integrator_levin.h"
 #include "nc/xcor/nc_xcor_priv.h"
@@ -919,6 +920,56 @@ _nc_xcor_spectral_group (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *x
  * each multipole is integrated on its own refinement, the k closure's
  * breakpoints divided by that multipole's nu.
  */
+
+/* The product integrator of k^2 W_1 W_2 dk, one per process: it is reentrant */
+static NcmSpectralPanelsProduct *
+_nc_xcor_panels_product (void)
+{
+  static gsize init                     = 0;
+  static NcmSpectralPanelsProduct *prod = NULL;
+
+  if (g_once_init_enter (&init))
+  {
+    prod = ncm_spectral_panels_product_new (2);
+    g_once_init_leave (&init, 1);
+  }
+
+  return prod;
+}
+
+/*
+ * Integrates a pair of Chebyshev closures with NcmSpectralPanelsProduct: each
+ * closure's panels in its own variable k / s_i, one row per multipole. An auto
+ * spectrum is the product of the first closure with itself.
+ */
+static void
+_nc_xcor_kernel_integrate_block_panels (NcXcor *xc, NcXcorKernelIntegrand *xclki1,
+                                        NcXcorKernelIntegrand *xclki2, guint nell,
+                                        gboolean isauto, NcmVector *vp, NcmVector *vp_err)
+{
+  const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
+  NcmSpectralPanels *sp1     = nc_xcor_kernel_integrand_peek_panels (xclki1);
+  NcmSpectralPanels *sp2     = isauto ? sp1 : nc_xcor_kernel_integrand_peek_panels (xclki2);
+  NcmVector *s1              = ncm_vector_new (nell);
+  NcmVector *s2              = ncm_vector_new (nell);
+  guint il;
+
+  for (il = 0; il < nell; il++)
+  {
+    ncm_vector_set (s1, il, nc_xcor_kernel_integrand_get_scale (xclki1, il));
+    ncm_vector_set (s2, il, nc_xcor_kernel_integrand_get_scale (isauto ? xclki1 : xclki2, il));
+  }
+
+  ncm_spectral_panels_product_integrate (_nc_xcor_panels_product (), sp1, s1, sp2, s2, vp, vp_err);
+  ncm_vector_scale (vp, const_factor);
+
+  if (vp_err != NULL)
+    ncm_vector_scale (vp_err, const_factor);
+
+  ncm_vector_free (s2);
+  ncm_vector_free (s1);
+}
+
 static void
 _nc_xcor_kernel_integrate_block_spectral (NcXcor *xc, NcXcorKernelIntegrand *xclki1,
                                           NcXcorKernelIntegrand *xclki2, guint lmin,
@@ -1048,7 +1099,22 @@ _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1
    * the merged-knot GL(5) sweep below: on a merged interval the product is
    * two cubics times k^2, degree 8, and five-point Gauss-Legendre is exact
    * through degree 9. Either way the closures handed in are integrated
-   * exactly. */
+   * exactly.
+   *
+   * Two panel-backed closures go through NcmSpectralPanelsProduct, unless an
+   * error estimate needs a closure without its interpolation error recorded,
+   * which falls back to the tolerances (see _nc_xcor_closure_err_assemble()). */
+  if ((nc_xcor_kernel_integrand_peek_panels (xclki1) != NULL) &&
+      (nc_xcor_kernel_integrand_peek_panels (side2) != NULL) &&
+      ((vp_err == NULL) ||
+       ((nc_xcor_kernel_integrand_peek_closure_error (xclki1) != NULL) &&
+        (nc_xcor_kernel_integrand_peek_closure_error (side2) != NULL))))
+  {
+    _nc_xcor_kernel_integrate_block_panels (xc, xclki1, side2, lmax - lmin + 1, isauto, vp, vp_err);
+
+    return;
+  }
+
   if ((nc_xcor_kernel_integrand_get_n_panels (xclki1) > 0) ||
       (nc_xcor_kernel_integrand_get_n_panels (side2) > 0))
   {

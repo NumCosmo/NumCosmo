@@ -183,80 +183,28 @@ _nc_xcor_kernel_spectral_get (void)
 }
 
 /*
- * Returns the panel containing k, found by bisection over the panel edges.
- * A k below the first edge returns the first panel, a k at or above the last
- * edge returns the last.
- */
-static const ChebPanel *
-_cheb_integrand_find_panel (const ChebIntegrandData *cid, const gdouble k)
-{
-  const gdouble *edges = (const gdouble *) cid->edges->data;
-  guint lo             = 0;
-  guint hi             = cid->panels->len - 1;
-
-  while (lo < hi)
-  {
-    const guint mid = (lo + hi + 1) / 2;
-
-    if (k >= edges[mid])
-      lo = mid;
-    else
-      hi = mid - 1;
-  }
-
-  return &g_array_index (cid->panels, ChebPanel, lo);
-}
-
-/*
- * Evaluates the components [offset, offset + len) at k. With one scale the
- * panel lookup is shared; with per-multipole scales each component is looked up
- * at its own x = k / scale[i]. Outside the panels' span the closure is zero:
- * the domain was expanded until the block was negligible there.
+ * Evaluates the components [offset, offset + len) at k. With per-multipole
+ * scales each component is evaluated at its own x = k / scale[i]. Outside the
+ * panels' span the closure is zero: the domain was expanded until the block
+ * was negligible there.
  */
 static void
 _cheb_integrand_eval_comps (gpointer data, gdouble k, guint offset, guint len, gdouble *W)
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
-  const gdouble x_min    = g_array_index (cid->edges, gdouble, 0);
-  const gdouble x_max    = g_array_index (cid->edges, gdouble, cid->edges->len - 1);
+  gdouble x_min, x_max;
   guint i;
 
-  if (!cid->scaled)
+  ncm_spectral_panels_get_range (cid->sp, &x_min, &x_max);
+
+  for (i = 0; i < len; i++)
   {
-    if ((k < x_min) || (k > x_max))
-    {
-      for (i = 0; i < len; i++)
-        W[offset + i] = 0.0;
+    const gdouble x = cid->scaled ? k / cid->scale[offset + i] : k;
 
-      return;
-    }
-
-    {
-      const ChebPanel *panel = _cheb_integrand_find_panel (cid, k);
-      const gdouble s        = ncm_spectral_x_to_s (panel->a, panel->b, k);
-
-      for (i = 0; i < len; i++)
-        W[offset + i] = _nc_xcor_kernel_cheb_panel_eval_one (panel, offset + i, s);
-    }
-  }
-  else
-  {
-    for (i = 0; i < len; i++)
-    {
-      const gdouble x = k / cid->scale[offset + i];
-
-      if ((x < x_min) || (x > x_max))
-      {
-        W[offset + i] = 0.0;
-      }
-      else
-      {
-        const ChebPanel *panel = _cheb_integrand_find_panel (cid, x);
-        const gdouble s        = ncm_spectral_x_to_s (panel->a, panel->b, x);
-
-        W[offset + i] = _nc_xcor_kernel_cheb_panel_eval_one (panel, offset + i, s);
-      }
-    }
+    if ((x < x_min) || (x > x_max))
+      W[offset + i] = 0.0;
+    else
+      W[offset + i] = ncm_spectral_panels_eval_row (cid->sp, offset + i, x);
   }
 }
 
@@ -303,16 +251,11 @@ _cheb_integrand_get_spectral (gpointer data, NcmMatrix **coeffs, gdouble *k_min,
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
 
-  if (cid->panels->len != 1)
+  if (ncm_spectral_panels_get_n_panels (cid->sp) != 1)
     return FALSE;
 
-  {
-    const ChebPanel *panel = &g_array_index (cid->panels, ChebPanel, 0);
-
-    *coeffs = panel->coeffs;
-    *k_min  = panel->a;
-    *k_max  = panel->b;
-  }
+  ncm_spectral_panels_get_range (cid->sp, k_min, k_max);
+  *coeffs = g_ptr_array_index (cid->views, 0);
 
   return TRUE;
 }
@@ -322,18 +265,17 @@ _cheb_integrand_get_panels (gpointer data)
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
 
-  return cid->panels->len;
+  return ncm_spectral_panels_get_n_panels (cid->sp);
 }
 
 static void
 _cheb_integrand_peek_panel (gpointer data, guint i, NcmMatrix **coeffs, gdouble *a, gdouble *b)
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
-  const ChebPanel *panel = &g_array_index (cid->panels, ChebPanel, i);
+  guint N;
 
-  *coeffs = panel->coeffs;
-  *a      = panel->a;
-  *b      = panel->b;
+  ncm_spectral_panels_peek_panel (cid->sp, i, a, b, &N);
+  *coeffs = g_ptr_array_index (cid->views, i);
 }
 
 /*
@@ -349,40 +291,29 @@ static gboolean
 _cheb_integrand_restrict (gpointer data, gdouble a, gdouble b, NcmMatrix **coeffs)
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
-  const ChebPanel *panel = _cheb_integrand_find_panel (cid, 0.5 * (a + b));
+  const guint i          = ncm_spectral_panels_find_panel (cid->sp, 0.5 * (a + b));
+  gdouble pa, pb;
+  guint N;
+
+  ncm_spectral_panels_peek_panel (cid->sp, i, &pa, &pb, &N);
 
   /* A cell of the common refinement reaches a panel edge through a conversion
    * between the two closures' variables, so an endpoint can land a rounding
    * outside the panel; within that slack it is clamped to the edge. */
   {
-    const gdouble slack = 1.0e-12 * (panel->b - panel->a);
+    const gdouble slack = 1.0e-12 * (pb - pa);
 
-    if ((a < panel->a - slack) || (b > panel->b + slack))
+    if ((a < pa - slack) || (b > pb + slack))
       return FALSE;
 
-    a = GSL_MAX (a, panel->a);
-    b = GSL_MIN (b, panel->b);
-  }
-
-  /* A matrix of the right shape is reused. */
-  if ((*coeffs != NULL) && ((ncm_matrix_nrows (*coeffs) != cid->len) || (ncm_matrix_ncols (*coeffs) != panel->N)))
-    ncm_matrix_clear (coeffs);
-
-  if (*coeffs == NULL)
-    *coeffs = ncm_matrix_new (cid->len, panel->N);
-
-  /* The cell is the panel: the coefficients are its own. */
-  if ((a == panel->a) && (b == panel->b))
-  {
-    ncm_matrix_memcpy (*coeffs, panel->coeffs);
-
-    return TRUE;
+    a = GSL_MAX (a, pa);
+    b = GSL_MIN (b, pb);
   }
 
   {
     NcmSpectral **spectral = _nc_xcor_kernel_spectral_get ();
 
-    ncm_spectral_chebyshev_rebase_rows (*spectral, panel->coeffs, panel->a, panel->b, a, b, *coeffs);
+    ncm_spectral_panels_restrict (cid->sp, *spectral, a, b, coeffs);
     ncm_memory_pool_return (spectral);
   }
 
@@ -393,15 +324,10 @@ static void
 _cheb_integrand_data_free (gpointer data)
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
-  guint i;
 
   nc_hicosmo_clear (&cid->cosmo);
-
-  for (i = 0; i < cid->panels->len; i++)
-    ncm_matrix_clear (&g_array_index (cid->panels, ChebPanel, i).coeffs);
-
-  g_array_unref (cid->panels);
-  g_array_unref (cid->edges);
+  ncm_spectral_panels_clear (&cid->sp);
+  g_ptr_array_unref (cid->views);
 
   g_free (cid->scale);
   g_free (cid->k_min_comp);
@@ -416,11 +342,25 @@ _cheb_integrand_data_free (gpointer data)
 NcXcorKernelIntegrand *
 _nc_xcor_kernel_cheb_integrand_new (guint n_l, ChebIntegrandData *cid)
 {
+  const guint n_panels             = ncm_spectral_panels_get_n_panels (cid->sp);
   NcXcorKernelIntegrand *integrand = nc_xcor_kernel_integrand_new (n_l,
                                                                    _cheb_integrand_eval,
                                                                    _cheb_integrand_get_range,
                                                                    cid,
                                                                    _cheb_integrand_data_free);
+  guint i;
+
+  /* The NcmMatrix views of the panels that nc_xcor_kernel_integrand_peek_panel() hands out */
+  cid->views = g_ptr_array_new_full (n_panels, (GDestroyNotify) ncm_matrix_free);
+
+  for (i = 0; i < n_panels; i++)
+  {
+    gdouble a, b;
+    guint N;
+    const gdouble *c = ncm_spectral_panels_peek_panel (cid->sp, i, &a, &b, &N);
+
+    g_ptr_array_add (cid->views, ncm_matrix_new_data_static ((gdouble *) c, n_l, N));
+  }
 
   nc_xcor_kernel_integrand_set_get_range_comp (integrand, _cheb_integrand_get_range_comp);
   nc_xcor_kernel_integrand_set_eval_comps (integrand, _cheb_integrand_eval_comps);
@@ -430,6 +370,7 @@ _nc_xcor_kernel_cheb_integrand_new (guint n_l, ChebIntegrandData *cid)
                                                 _cheb_integrand_peek_panel);
   nc_xcor_kernel_integrand_set_restrict (integrand, _cheb_integrand_restrict);
   nc_xcor_kernel_integrand_set_get_scale (integrand, _cheb_integrand_get_scale);
+  nc_xcor_kernel_integrand_set_panels (integrand, cid->sp);
 
   return integrand;
 }
@@ -488,6 +429,7 @@ nc_xcor_kernel_integrand_new (guint len, void (*eval) (gpointer, gdouble, gdoubl
   integrand->get_scale_func      = NULL;
 
   integrand->closure_error = NULL;
+  integrand->panels        = NULL;
   integrand->reltol        = 0.0;
   integrand->peak_epsilon  = 0.0;
 
@@ -836,6 +778,41 @@ nc_xcor_kernel_integrand_peek_closure_error (NcXcorKernelIntegrand *integrand)
   return integrand->closure_error;
 }
 
+/**
+ * nc_xcor_kernel_integrand_set_panels:
+ * @integrand: a #NcXcorKernelIntegrand
+ * @sp: (nullable): the panels of the closure, or %NULL
+ *
+ * Sets the panels of a Chebyshev closure, one row per component, in the variable
+ * $k / s_i$ of nc_xcor_kernel_integrand_get_scale().
+ */
+void
+nc_xcor_kernel_integrand_set_panels (NcXcorKernelIntegrand *integrand, NcmSpectralPanels *sp)
+{
+  g_return_if_fail (integrand != NULL);
+
+  ncm_spectral_panels_clear (&integrand->panels);
+
+  if (sp != NULL)
+    integrand->panels = ncm_spectral_panels_ref (sp);
+}
+
+/**
+ * nc_xcor_kernel_integrand_peek_panels:
+ * @integrand: a #NcXcorKernelIntegrand
+ *
+ * Peeks the panels of a Chebyshev closure, see nc_xcor_kernel_integrand_set_panels().
+ *
+ * Returns: (transfer none) (nullable): the panels, or %NULL when the closure has none
+ */
+NcmSpectralPanels *
+nc_xcor_kernel_integrand_peek_panels (NcXcorKernelIntegrand *integrand)
+{
+  g_return_val_if_fail (integrand != NULL, NULL);
+
+  return integrand->panels;
+}
+
 NcmVector *
 nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand)
 {
@@ -879,6 +856,7 @@ nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand)
       integrand->data_free (integrand->data);
 
     ncm_matrix_clear (&integrand->closure_error);
+    ncm_spectral_panels_clear (&integrand->panels);
 
     g_free (integrand);
   }

@@ -40,6 +40,8 @@
 #include <numcosmo/ncm/spline/ncm_spline_vec.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_integrator.h>
 #include <numcosmo/ncm/algebra/ncm_spectral.h>
+#include <numcosmo/ncm/algebra/ncm_spectral_panels.h>
+#include <numcosmo/ncm/algebra/ncm_spectral_panels_builder.h>
 #include <numcosmo/ncm/stats/ncm_function_sample_set.h>
 #include <numcosmo/ncm/model/ncm_model_ctrl.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel.h>
@@ -66,6 +68,8 @@ typedef struct _NcXcorKernelPrivate
   guint panel_order_cap;
   gdouble panels_per_efold;
   guint panel_level_min;
+  NcmSpectralPanelsBuilder *builder_u; /* Chebyshev closures in u = k / nu, with the panels-per-efold grid */
+  NcmSpectralPanelsBuilder *builder_k; /* Chebyshev closures in k, without a grid */
   gboolean track_closure_error;
   gboolean tolerance_balance_warned;
   gboolean constructed;
@@ -89,15 +93,6 @@ typedef struct _SplineIntegrandData
   gdouble *k_max_comp;
 } SplineIntegrandData;
 
-/* One panel [a, b] of the Chebyshev closure, with N coefficients per multipole. */
-typedef struct _ChebPanel
-{
-  gdouble a;
-  gdouble b;
-  NcmMatrix *coeffs; /* len x N, one row per multipole */
-  guint N;
-} ChebPanel;
-
 /* Chebyshev closure of one ell block: contiguous panels of coefficients over the
  * domain [k_min, k_max], with the per-component ranges of SplineIntegrandData. */
 typedef struct _ChebIntegrandData
@@ -106,38 +101,15 @@ typedef struct _ChebIntegrandData
   gdouble RH_Mpc;
   gint lmin;
   guint len;
-  GArray *panels;  /* ChebPanel, ascending and contiguous, in x = k / scale[i] */
-  GArray *edges;   /* gdouble, panels->len + 1 entries, for the lookup */
-  gdouble *scale;  /* per multipole; 1 when the closure is in k */
-  gboolean scaled; /* whether any scale differs from 1 */
-  gdouble k_min;   /* the k range of the whole block */
+  NcmSpectralPanels *sp; /* one row per multipole, in x = k / scale[i] */
+  GPtrArray *views;      /* NcmMatrix views of the panels, made on the first peek */
+  gdouble *scale;        /* per multipole; 1 when the closure is in k */
+  gboolean scaled;       /* whether any scale differs from 1 */
+  gdouble k_min;         /* the k range of the whole block */
   gdouble k_max;
   gdouble *k_min_comp;
   gdouble *k_max_comp;
 } ChebIntegrandData;
-
-/*
- * Evaluates the Chebyshev series of component comp at s in [-1, 1] by the
- * Clenshaw recurrence, in O(N) operations.
- */
-static inline gdouble
-_nc_xcor_kernel_cheb_panel_eval_one (const ChebPanel *panel, guint comp, const gdouble s)
-{
-  const gdouble two_s = 2.0 * s;
-  gdouble b_1         = 0.0;
-  gdouble b_2         = 0.0;
-  gint n;
-
-  for (n = (gint) panel->N - 1; n >= 1; n--)
-  {
-    const gdouble b_0 = two_s * b_1 - b_2 + ncm_matrix_get (panel->coeffs, comp, n);
-
-    b_2 = b_1;
-    b_1 = b_0;
-  }
-
-  return s * b_1 - b_2 + ncm_matrix_get (panel->coeffs, comp, 0);
-}
 
 typedef struct _ComponentParams
 {
@@ -147,6 +119,9 @@ typedef struct _ComponentParams
 
 #define MAX_ELL_BLOCK NC_XCOR_KERNEL_MAX_ELL_BLOCK
 #define MAX_COMP_BLOCK 6
+
+/* The level-cap of a Chebyshev panel when NcXcorKernel:panel-order-cap is 0 */
+#define NC_XCOR_KERNEL_CHEB_PANEL_LEVEL_CAP (5)
 
 typedef struct _ComponentState
 {

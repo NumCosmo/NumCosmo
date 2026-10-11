@@ -33,6 +33,7 @@
 #include <glib-object.h>
 #include <glib.h>
 
+#include <numcosmo/ncm/algebra/ncm_spectral_panels.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/powspec/nc_growth_func.h>
 #include <numcosmo/nc/powspec/nc_transfer_func.h>
@@ -284,6 +285,7 @@ struct _NcXcorKernelIntegrand
   NcmMatrix *closure_error;
   gdouble reltol;
   gdouble peak_epsilon;
+  NcmSpectralPanels *panels;
 };
 
 struct _NcXcorKernelClass
@@ -426,6 +428,8 @@ gdouble nc_xcor_kernel_integrand_get_reltol (NcXcorKernelIntegrand *integrand);
 gdouble nc_xcor_kernel_integrand_get_peak_epsilon (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_set_closure_error (NcXcorKernelIntegrand *integrand, NcmMatrix *closure_error);
 NcmMatrix *nc_xcor_kernel_integrand_peek_closure_error (NcXcorKernelIntegrand *integrand);
+void nc_xcor_kernel_integrand_set_panels (NcXcorKernelIntegrand *integrand, NcmSpectralPanels *sp);
+NcmSpectralPanels *nc_xcor_kernel_integrand_peek_panels (NcXcorKernelIntegrand *integrand);
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_ref (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_clear (NcXcorKernelIntegrand **integrand);

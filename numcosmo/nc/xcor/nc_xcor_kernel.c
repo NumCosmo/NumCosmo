@@ -100,25 +100,29 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->dist                     = NULL;
-  self->ps                       = NULL;
-  self->sbi                      = NULL;
-  self->cosmo_ctrl               = ncm_model_ctrl_new (NULL);
-  self->prepared_pkey            = 0;
-  self->outdated                 = TRUE;
-  self->lmax                     = 0;
-  self->l_limber                 = 0;
-  self->adaptive_epsilon         = 0.0;
-  self->adaptive_boundary_tries  = 0;
-  self->reltol                   = 0.0;
-  self->peak_epsilon             = 0.0;
-  self->max_border_expansions    = 0;
-  self->max_iter                 = 0;
-  self->expansion_factor         = 0.0;
-  self->panel_order_cap          = 0;
-  self->panels_per_efold         = 0.0;
-  self->panel_level_min          = 0;
-  self->track_closure_error      = FALSE;
+  self->dist                    = NULL;
+  self->ps                      = NULL;
+  self->sbi                     = NULL;
+  self->cosmo_ctrl              = ncm_model_ctrl_new (NULL);
+  self->prepared_pkey           = 0;
+  self->outdated                = TRUE;
+  self->lmax                    = 0;
+  self->l_limber                = 0;
+  self->adaptive_epsilon        = 0.0;
+  self->adaptive_boundary_tries = 0;
+  self->reltol                  = 0.0;
+  self->peak_epsilon            = 0.0;
+  self->max_border_expansions   = 0;
+  self->max_iter                = 0;
+  self->expansion_factor        = 0.0;
+  self->panel_order_cap         = 0;
+  self->panels_per_efold        = 0.0;
+  self->panel_level_min         = 0;
+  self->builder_u               = ncm_spectral_panels_builder_new ();
+  self->builder_k               = ncm_spectral_panels_builder_new ();
+  self->track_closure_error     = FALSE;
+
+  ncm_spectral_panels_builder_set_min_panels_per_efold (self->builder_k, 0.0);
   self->tolerance_balance_warned = FALSE;
   self->constructed              = FALSE;
 }
@@ -133,6 +137,8 @@ _nc_xcor_kernel_dispose (GObject *object)
   ncm_powspec_clear (&self->ps);
   ncm_sbessel_integrator_clear (&self->sbi);
   ncm_model_ctrl_clear (&self->cosmo_ctrl);
+  ncm_spectral_panels_builder_clear (&self->builder_u);
+  ncm_spectral_panels_builder_clear (&self->builder_k);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_parent_class)->dispose (object);
@@ -1342,6 +1348,9 @@ nc_xcor_kernel_set_panel_order_cap (NcXcorKernel *xclk, guint panel_order_cap)
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   self->panel_order_cap = panel_order_cap;
+
+  ncm_spectral_panels_builder_set_level_cap (self->builder_u, (panel_order_cap == 0) ? NC_XCOR_KERNEL_CHEB_PANEL_LEVEL_CAP : panel_order_cap);
+  ncm_spectral_panels_builder_set_level_cap (self->builder_k, (panel_order_cap == 0) ? NC_XCOR_KERNEL_CHEB_PANEL_LEVEL_CAP : panel_order_cap);
 }
 
 /**
@@ -1374,6 +1383,8 @@ nc_xcor_kernel_set_panels_per_efold (NcXcorKernel *xclk, gdouble panels_per_efol
 
   g_assert_cmpfloat (panels_per_efold, >=, 0.0);
   self->panels_per_efold = panels_per_efold;
+
+  ncm_spectral_panels_builder_set_min_panels_per_efold (self->builder_u, panels_per_efold);
 }
 
 /**
@@ -1406,6 +1417,9 @@ nc_xcor_kernel_set_panel_level_min (NcXcorKernel *xclk, guint panel_level_min)
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   self->panel_level_min = panel_level_min;
+
+  ncm_spectral_panels_builder_set_level_min (self->builder_u, panel_level_min);
+  ncm_spectral_panels_builder_set_level_min (self->builder_k, panel_level_min);
 }
 
 /**

@@ -538,7 +538,7 @@ def test_radial_integral_batched_matches_arb_with_tau_constraint(
 
 # Worst deviation measured per shape, closure at reltol = peak-epsilon = 1e-6,
 # with roughly a factor of three of headroom. Re-measure these after changing
-# NC_XCOR_KERNEL_CHEB_PANEL_K_CAP: a smaller cap makes more, lower-order panels,
+# NC_XCOR_KERNEL_CHEB_PANEL_LEVEL_CAP: a smaller cap makes more, lower-order panels,
 # which converge to the requested tolerance by a different route.
 #
 # Read the spread against the spline's, not on its own. Held to this same allowance
