@@ -416,6 +416,7 @@ _component_states_compute_k_seeds (ComponentStates *comp_states, GArray *k_seeds
 NcXcorKernelIntegrand *
 _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax,
                                       ComponentStates *comp_states,
+                                      void (*expand_func) (const gdouble, NcmVector *, gpointer),
                                       void (*compute_func) (const gdouble, NcmVector *, gpointer),
                                       const gdouble reltol, const gdouble peak_epsilon)
 {
@@ -439,14 +440,14 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
     {
       const gdouble k_seed = g_array_index (k_seeds, gdouble, i);
 
-      ncm_function_sample_set_add_old_func (fss, k_seed, compute_func, comp_states);
+      ncm_function_sample_set_add_old_func (fss, k_seed, expand_func, comp_states);
     }
 
     g_array_unref (k_seeds);
 
     ncm_function_sample_set_expand_domain (
       fss,
-      compute_func,
+      expand_func,
       comp_states->k_min_hard,
       comp_states->k_max_hard,
       self->expansion_factor,
@@ -594,6 +595,7 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
 NcXcorKernelIntegrand *
 _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax,
                                         ComponentStates *comp_states,
+                                        void (*expand_func) (const gdouble, NcmVector *, gpointer),
                                         void (*compute_func) (const gdouble, NcmVector *, gpointer),
                                         const gdouble reltol, const gdouble peak_epsilon)
 {
@@ -621,7 +623,7 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
     {
       const gdouble k_seed = g_array_index (k_seeds, gdouble, i);
 
-      ncm_function_sample_set_add_old_func (fss, k_seed, compute_func, comp_states);
+      ncm_function_sample_set_add_old_func (fss, k_seed, expand_func, comp_states);
     }
 
     g_array_unref (k_seeds);
@@ -630,7 +632,7 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
       /* Domain expansion */
       ncm_function_sample_set_expand_domain (
         fss,
-        compute_func,
+        expand_func,
         comp_states->k_min_hard,
         comp_states->k_max_hard,
         self->expansion_factor,

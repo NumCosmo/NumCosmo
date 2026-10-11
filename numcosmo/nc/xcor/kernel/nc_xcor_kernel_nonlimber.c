@@ -140,17 +140,108 @@ _component_states_init_non_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
   return comp_states;
 }
 
+static void _component_states_eval_non_limber (ComponentStates *comp_states, const gdouble k, gdouble kernel_out[][MAX_ELL_BLOCK], gboolean *integrated);
+static gdouble _component_states_sum_non_limber (ComponentStates *comp_states, gdouble kernel_out[][MAX_ELL_BLOCK], NcmVector *y);
+
+/*
+ * The block W_l(k) at k, the sum of its components. Used by the closures once the
+ * domain is found; it reads the truncation boundaries the expansion found and changes
+ * nothing.
+ */
 static void
 _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer user_data)
 {
   ComponentStates *comp_states = (ComponentStates *) user_data;
   gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
+  gboolean integrated[MAX_COMP_BLOCK];
+
+  _component_states_eval_non_limber (comp_states, k, kernel_out, integrated);
+  _component_states_sum_non_limber (comp_states, kernel_out, y);
+}
+
+/*
+ * The block W_l(k) at k, as _component_states_compute_non_limber(), tracking the
+ * truncation boundaries on the way: used for the seeds and the domain expansion,
+ * which evaluate outward from the seeds. For each component still integrated, it
+ * records the outermost k on each side and counts the consecutive outermost k at
+ * which the norm of its group's sum is below epsilon times the block's running
+ * maximum; adaptive-boundary-tries such k mark the boundary on that side.
+ */
+static void
+_component_states_expand_non_limber (const gdouble k, NcmVector *y, gpointer user_data)
+{
+  ComponentStates *comp_states = (ComponentStates *) user_data;
+  gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
   gdouble group_sum[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
   gboolean integrated[MAX_COMP_BLOCK];
-  gdouble l2_norm = 0.0;
+  gdouble l2_norm;
   guint ci, i;
 
+  _component_states_eval_non_limber (comp_states, k, kernel_out, integrated);
+
   memset (group_sum, 0, sizeof (group_sum));
+
+  for (ci = 0; ci < comp_states->n_comp; ci++)
+    if (integrated[ci])
+      for (i = 0; i < comp_states->n_l; i++)
+        group_sum[comp_states->states[ci].group][i] += kernel_out[ci][i];
+
+  for (ci = 0; ci < comp_states->n_comp; ci++)
+  {
+    ComponentState *state  = &comp_states->states[ci];
+    gdouble group_l2_norm2 = 0.0;
+    gboolean below_epsilon;
+
+    if (!integrated[ci])
+      continue;
+
+    for (i = 0; i < comp_states->n_l; i++)
+      group_l2_norm2 += gsl_pow_2 (group_sum[state->group][i]);
+
+    below_epsilon = group_l2_norm2 < gsl_pow_2 (comp_states->epsilon * comp_states->l2_norm);
+
+    if (k > state->last_k_right)
+    {
+      state->last_k_right = k;
+
+      for (i = 0; i < comp_states->n_l; i++)
+        state->last_values_right[i] = kernel_out[ci][i];
+
+      if (below_epsilon)
+        state->right_boundary_found++;
+      else
+        state->right_boundary_found = 0;
+    }
+    else if (k < state->last_k_left)
+    {
+      state->last_k_left = k;
+
+      for (i = 0; i < comp_states->n_l; i++)
+        state->last_values_left[i] = kernel_out[ci][i];
+
+      if (below_epsilon)
+        state->left_boundary_found++;
+      else
+        state->left_boundary_found = 0;
+    }
+  }
+
+  /* The running maximum of the block's norm, against which the next points are tested */
+  l2_norm = _component_states_sum_non_limber (comp_states, kernel_out, y);
+
+  if (l2_norm > comp_states->l2_norm)
+    comp_states->l2_norm = l2_norm;
+}
+
+/*
+ * Each component at k, one row of kernel_out per component, and whether it was
+ * integrated: a component whose truncation boundary was found is integrated only on
+ * its side of it.
+ */
+static void
+_component_states_eval_non_limber (ComponentStates *comp_states, const gdouble k, gdouble kernel_out[][MAX_ELL_BLOCK], gboolean *integrated)
+{
+  guint ci, i;
 
   /* Compute kernel for each component */
   for (ci = 0; ci < comp_states->n_comp; ci++)
@@ -181,8 +272,7 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
           state->comp, state->params.cosmo, k, comp_states->lmin + i
         );
 
-        kernel_out[ci][i]          *= prefactor * k * sqrt (k);
-        group_sum[state->group][i] += kernel_out[ci][i];
+        kernel_out[ci][i] *= prefactor * k * sqrt (k);
       }
     }
     else
@@ -231,59 +321,15 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
 
     ncm_vector_clear (&integ_result);
   }
+}
 
-  /*
-   * Boundary tracking. For each component still integrated, record the
-   * outermost k on each side and count the consecutive outermost k at which
-   * the norm of its group's sum is below epsilon times the block's running
-   * maximum; adaptive-boundary-tries such k mark the boundary on that side.
-   * Skipped in panel mode: the boundaries are fixed by then and the panel
-   * nodes do not move outward.
-   */
-  if (!comp_states->panel_mode)
-  {
-    for (ci = 0; ci < comp_states->n_comp; ci++)
-    {
-      ComponentState *state  = &comp_states->states[ci];
-      gdouble group_l2_norm2 = 0.0;
-      gboolean below_epsilon;
+/* The sum of the components into y; returns its norm over the multipoles */
+static gdouble
+_component_states_sum_non_limber (ComponentStates *comp_states, gdouble kernel_out[][MAX_ELL_BLOCK], NcmVector *y)
+{
+  gdouble l2_norm = 0.0;
+  guint ci, i;
 
-      if (!integrated[ci])
-        continue;
-
-      for (i = 0; i < comp_states->n_l; i++)
-        group_l2_norm2 += gsl_pow_2 (group_sum[state->group][i]);
-
-      below_epsilon = group_l2_norm2 < gsl_pow_2 (comp_states->epsilon * comp_states->l2_norm);
-
-      if (k > state->last_k_right)
-      {
-        state->last_k_right = k;
-
-        for (i = 0; i < comp_states->n_l; i++)
-          state->last_values_right[i] = kernel_out[ci][i];
-
-        if (below_epsilon)
-          state->right_boundary_found++;
-        else
-          state->right_boundary_found = 0;
-      }
-      else if (k < state->last_k_left)
-      {
-        state->last_k_left = k;
-
-        for (i = 0; i < comp_states->n_l; i++)
-          state->last_values_left[i] = kernel_out[ci][i];
-
-        if (below_epsilon)
-          state->left_boundary_found++;
-        else
-          state->left_boundary_found = 0;
-      }
-    }
-  }
-
-  /* Sum contributions from all components and compute total L2 norm */
   g_assert_cmpuint (ncm_vector_len (y), ==, comp_states->n_l);
 
   for (i = 0; i < comp_states->n_l; i++)
@@ -297,11 +343,7 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
     l2_norm += sum * sum;
   }
 
-  l2_norm = sqrt (l2_norm);
-
-  /* Update reference L2 norm for convergence testing */
-  if (l2_norm > comp_states->l2_norm)
-    comp_states->l2_norm = l2_norm;
+  return sqrt (l2_norm);
 }
 
 NcXcorKernelIntegrand *
@@ -338,11 +380,13 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
     if (closure_type == NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV)
       integrand = _nc_xcor_kernel_build_cheb_integrand (xclk, cosmo, lmin, lmax,
                                                         &comp_states,
+                                                        _component_states_expand_non_limber,
                                                         _component_states_compute_non_limber,
                                                         self->reltol, self->peak_epsilon);
     else
       integrand = _nc_xcor_kernel_build_spline_integrand (xclk, cosmo, lmin, lmax,
                                                           &comp_states,
+                                                          _component_states_expand_non_limber,
                                                           _component_states_compute_non_limber,
                                                           self->reltol, self->peak_epsilon);
 

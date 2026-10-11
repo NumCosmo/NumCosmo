@@ -256,7 +256,6 @@ _component_states_compute_limber_u (const gdouble u, NcmVector *y, gpointer user
   const gdouble u_side         = comp_states->panel_mode ? comp_states->panel_mid : u;
   const gdouble chi            = 1.0 / u;
   NcXcorKinetic xck;
-  gdouble l2_norm = 0.0;
   guint ci, i;
 
   gdouble W[MAX_ELL_BLOCK] = { 0.0 };
@@ -325,15 +324,7 @@ _component_states_compute_limber_u (const gdouble u, NcmVector *y, gpointer user
   }
 
   for (i = 0; i < comp_states->n_l; i++)
-  {
     ncm_vector_set (y, i, W[i]);
-    l2_norm += W[i] * W[i];
-  }
-
-  l2_norm = sqrt (l2_norm);
-
-  if (l2_norm > comp_states->l2_norm)
-    comp_states->l2_norm = l2_norm;
 }
 
 static void
@@ -341,7 +332,6 @@ _component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_d
 {
   ComponentStates *comp_states = (ComponentStates *) user_data;
   gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
-  gdouble l2_norm = 0.0;
   guint ci, i;
 
   /* Compute kernel for each component using Limber approximation */
@@ -379,7 +369,7 @@ _component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_d
     }
   }
 
-  /* Sum contributions from all components and compute total L2 norm */
+  /* Sum contributions from all components */
   for (i = 0; i < comp_states->n_l; i++)
   {
     gdouble sum = 0.0;
@@ -388,14 +378,7 @@ _component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_d
       sum += kernel_out[ci][i];
 
     ncm_vector_set (y, i, sum);
-    l2_norm += sum * sum;
   }
-
-  l2_norm = sqrt (l2_norm);
-
-  /* Update reference L2 norm for overall convergence testing */
-  if (l2_norm > comp_states->l2_norm)
-    comp_states->l2_norm = l2_norm;
 }
 
 NcXcorKernelIntegrand *
@@ -425,6 +408,7 @@ _nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
     integrand = _nc_xcor_kernel_build_cheb_integrand (xclk, cosmo, lmin, lmax,
                                                       &comp_states,
                                                       _component_states_compute_limber_u,
+                                                      _component_states_compute_limber_u,
                                                       self->reltol, self->peak_epsilon);
 
     _nc_xcor_kernel_component_states_clear (&comp_states);
@@ -440,6 +424,7 @@ _nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
 
     integrand = _nc_xcor_kernel_build_spline_integrand (xclk, cosmo, lmin, lmax,
                                                         &comp_states,
+                                                        _component_states_compute_limber,
                                                         _component_states_compute_limber,
                                                         self->reltol, self->peak_epsilon);
 
