@@ -431,6 +431,7 @@ def tracer_kernel(
     *,
     order: int = 8,
     kernel_reltol: float | None = None,
+    kernel_adaptive_epsilon: float | None = None,
     integrator: Ncm.SBesselIntegrator | None = None,
 ) -> Nc.XcorKernelTable:
     r"""A CCL tracer as a prepared :class:`Nc.XcorKernelTable`, never Limber.
@@ -448,6 +449,9 @@ def tracer_kernel(
     :param order: B-spline order of the window reconstruction.
     :param kernel_reltol: when given, sets both the kernel's closure ``reltol``
         and ``peak-epsilon``; the library default (1e-4) applies otherwise.
+    :param kernel_adaptive_epsilon: when given, sets the kernel's
+        ``adaptive-epsilon``, the truncation of its k domain; the library default
+        (1e-5) applies otherwise.
     :param integrator: the integrator the kernel carries, shared when several
         kernels go to one solver; a library-default Levin one otherwise.
     """
@@ -465,6 +469,8 @@ def tracer_kernel(
     if kernel_reltol is not None:
         kernel.set_reltol(kernel_reltol)
         kernel.set_peak_epsilon(kernel_reltol)
+    if kernel_adaptive_epsilon is not None:
+        kernel.set_adaptive_epsilon(kernel_adaptive_epsilon)
     kernel.set_l_limber(-1)
     kernel.prepare(cosmology.cosmo)
 
@@ -489,6 +495,8 @@ class TracerClSolver:
         blocks of up to ``block_size`` sharing one operator factorisation.
     :param order: B-spline order of the window reconstruction.
     :param kernel_reltol: closure tolerance for every kernel; see :func:`tracer_kernel`.
+    :param kernel_adaptive_epsilon: domain truncation for every kernel; see
+        :func:`tracer_kernel`.
     :param block_size: largest number of consecutive multipoles per block,
         clamped to what the solver honours.
     """
@@ -502,6 +510,7 @@ class TracerClSolver:
         *,
         order: int = 8,
         kernel_reltol: float | None = None,
+        kernel_adaptive_epsilon: float | None = None,
         block_size: int = 8,
     ) -> None:
         self.cosmology = cosmology
@@ -516,6 +525,7 @@ class TracerClSolver:
                 cosmology,
                 order=order,
                 kernel_reltol=kernel_reltol,
+                kernel_adaptive_epsilon=kernel_adaptive_epsilon,
                 integrator=self.integrator,
             )
             for t in tracers
@@ -590,6 +600,7 @@ def angular_cl(
     *,
     order: int = 8,
     kernel_reltol: float | None = None,
+    kernel_adaptive_epsilon: float | None = None,
     block_size: int = 8,
 ) -> np.ndarray:
     r"""Non-Limber angular power spectrum of two CCL tracers, solved by NumCosmo.
@@ -604,6 +615,8 @@ def angular_cl(
 
     :param order: B-spline order of the window reconstruction.
     :param kernel_reltol: closure tolerance for both kernels; see :func:`tracer_kernel`.
+    :param kernel_adaptive_epsilon: domain truncation for both kernels; see
+        :func:`tracer_kernel`.
     :param block_size: largest number of consecutive multipoles per block.
     """
     tracers = [tracer1] if tracer2 is tracer1 else [tracer1, tracer2]
@@ -615,6 +628,7 @@ def angular_cl(
         ells,
         order=order,
         kernel_reltol=kernel_reltol,
+        kernel_adaptive_epsilon=kernel_adaptive_epsilon,
         block_size=block_size,
     )
 

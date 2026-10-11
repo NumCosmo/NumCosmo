@@ -1357,10 +1357,13 @@ def test_a_visible_jump_at_a_component_boundary_does_not_split_the_panel(
 
         return np.abs(values).max(axis=0), closure.peek_panels().get_n_panels()
 
-    peaks_ref, _ = peaks_and_panels(1.0e-5)
+    peaks_ref, n_panels_ref = peaks_and_panels(1.0e-5)
     peaks, n_panels = peaks_and_panels(1.0e-3)
 
-    assert n_panels <= 12
+    # Split at the jump, the count would run to the width guard; as an edge it
+    # stays at what the smooth pieces need, no more than the finer truncation's
+    # (measured 13 against 15).
+    assert n_panels <= n_panels_ref
     assert_allclose(peaks, peaks_ref, rtol=1.0e-3)
 
 

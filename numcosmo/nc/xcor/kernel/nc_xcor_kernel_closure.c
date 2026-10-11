@@ -357,6 +357,31 @@ _component_states_compute_k_seeds (ComponentStates *comp_states, GArray *k_seeds
   /* Add k_max_soft */
   if (_is_new_k (k_max_soft, (gdouble *) k_seeds->data, k_seeds->len))
     g_array_append_val (k_seeds, k_max_soft);
+
+  /* A window that does not vanish at its near edge chi_min adds a feature of its own
+   * where that edge reaches the turning point of j_l, k = nu / chi_min, falling as a power
+   * of k beyond it. Between the main peak and that feature the block can stay below the
+   * truncation threshold for several points in a row, where the domain expansion stops,
+   * so the feature is seeded, at the block's largest nu. Not under Limber, where a band
+   * edge is a step the panels cut at. */
+  if (!comp_states->is_limber)
+  {
+    const gdouble nu_max = comp_states->lmin + comp_states->n_l - 1 + 0.5;
+
+    for (i = 0; i < comp_states->n_comp; i++)
+    {
+      const gdouble chi_min = comp_states->states[i].chi_min;
+
+      if (chi_min > 0.0)
+      {
+        const gdouble k_edge = nu_max / chi_min;
+
+        if ((k_edge > comp_states->k_min_hard) && (k_edge < comp_states->k_max_hard) &&
+            _is_new_k (k_edge, (gdouble *) k_seeds->data, k_seeds->len))
+          g_array_append_val (k_seeds, k_edge);
+      }
+    }
+  }
 }
 
 /*
