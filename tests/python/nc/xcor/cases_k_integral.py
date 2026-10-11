@@ -818,18 +818,13 @@ def build_integrand(
     settings: Settings,
     sbi: Ncm.SBesselIntegrator | None = None,
 ) -> Nc.XcorKernelIntegrand:
-    """Freeze one closure for an ell block, and check that it carries panels."""
-    integrand = kernel.get_eval_vectorized_full(
+    """Freeze one closure for an ell block."""
+    return kernel.get_eval_vectorized_full(
         cosmo,
         lmin,
         lmax,
         sbi if sbi is not None else Ncm.SBesselIntegratorLevin.new(lmin, lmax),
     )
-
-    if integrand.peek_panels() is None:
-        raise AssertionError("the closure carries no panels")
-
-    return integrand
 
 
 def breakpoints(integrand: Nc.XcorKernelIntegrand) -> np.ndarray:

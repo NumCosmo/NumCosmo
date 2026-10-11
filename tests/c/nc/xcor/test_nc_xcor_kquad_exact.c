@@ -111,13 +111,6 @@ test_nc_xcor_kquad_exact_free (TestNcXcorKQuadExact *test, gconstpointer pdata)
   NCM_TEST_FREE (nc_xcor_free, test->xc);
 }
 
-/* A Chebyshev closure carries panels */
-static void
-_test_nc_xcor_kquad_exact_assert_closure (NcXcorKernelIntegrand *xclki)
-{
-  g_assert_nonnull (nc_xcor_kernel_integrand_peek_panels (xclki));
-}
-
 static void
 _test_nc_xcor_kquad_exact_check (TestNcXcorKQuadExact *test, const TestCase *tc, gboolean isauto)
 {
@@ -127,9 +120,6 @@ _test_nc_xcor_kquad_exact_check (TestNcXcorKQuadExact *test, const TestCase *tc,
   const gdouble RH          = nc_hicosmo_RH_Mpc (test->env.cosmo);
   gdouble move, peak = 0.0, dev = 0.0;
   guint i;
-
-  _test_nc_xcor_kquad_exact_assert_closure (test->i1);
-  _test_nc_xcor_kquad_exact_assert_closure (test->i2);
 
   nc_xcor_integrate_block (test->xc, test->i1, i2, TEST_LMIN, TEST_LMAX, isauto,
                            NC_XCOR_METHOD_KERNEL_EXACT, exact, NULL);

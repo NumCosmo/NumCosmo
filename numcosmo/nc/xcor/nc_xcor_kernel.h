@@ -78,115 +78,6 @@ G_DECLARE_DERIVABLE_TYPE (NcXcorKernel, nc_xcor_kernel, NC, XCOR_KERNEL, NcmMode
 typedef struct _NcXcorKinetic NcXcorKinetic;
 typedef struct _NcXcorKernelIntegrand NcXcorKernelIntegrand;
 
-/**
- * NcXcorKernelIntegrandGetScale:
- * @data: user data
- * @i: component index
- *
- * Function type reporting the scale $s_i$ of component @i: the panels of a
- * spectral integrand are in the variable $x = k / s_i$. See
- * nc_xcor_kernel_integrand_get_scale().
- *
- * Returns: the scale of component @i
- */
-typedef gdouble (*NcXcorKernelIntegrandGetScale) (gpointer data, guint i);
-
-/**
- * NcXcorKernelIntegrandEval:
- * @data: user data
- * @k: wavenumber
- * @W: (array) (out): output array to fill with integrand values
- *
- * Function type for evaluating kernel integrands.
- */
-typedef void (*NcXcorKernelIntegrandEval) (gpointer data, gdouble k, gdouble *W);
-
-/**
- * NcXcorKernelIntegrandGetRange:
- * @data: user data
- * @k_min: (out): minimum wavenumber
- * @k_max: (out): maximum wavenumber
- *
- * Function type for getting the valid k range.
- */
-typedef void (*NcXcorKernelIntegrandGetRange) (gpointer data, gdouble *k_min, gdouble *k_max);
-
-/**
- * NcXcorKernelIntegrandGetRangeComp:
- * @data: user data
- * @i: component index
- * @k_min: (out): minimum wavenumber
- * @k_max: (out): maximum wavenumber
- *
- * Function type for getting the valid k range of a single component. A block
- * of multipoles shares one k-domain, but each multipole may be supported on
- * only part of it -- under the Limber approximation a multipole's window
- * vanishes outside $[\nu/\chi_\mathrm{max}, \nu/\chi_\mathrm{min}]$, and the
- * edge of that band is a step in the shared domain. See
- * nc_xcor_kernel_integrand_get_range_comp().
- */
-typedef void (*NcXcorKernelIntegrandGetRangeComp) (gpointer data, guint i, gdouble *k_min, gdouble *k_max);
-
-/**
- * NcXcorKernelIntegrandEvalComps:
- * @data: user data
- * @k: wavenumber
- * @offset: index of the first component to evaluate
- * @len: number of components to evaluate
- * @W: (array): full-length buffer, of which only
- *   [@offset, @offset + @len) need be filled
- *
- * Function type for evaluating a contiguous run of components, leaving the
- * rest of @W untouched. See nc_xcor_kernel_integrand_eval_comps().
- */
-typedef void (*NcXcorKernelIntegrandEvalComps) (gpointer data, gdouble k, guint offset, guint len, gdouble *W);
-
-/**
- * NcXcorKernelIntegrand:
- * @refcount: atomic reference count
- * @len: number of components in the integrand
- * @eval_func: function to evaluate the integrand at @k, filling @W[@len]
- * @get_range_func: function to get the valid k range for this integrand
- * @get_range_comp_func: function to get the valid k range of one component, or
- *   %NULL when every component covers the whole range
- * @eval_comps_func: function to evaluate a run of components, or %NULL when
- *   only the whole vector can be evaluated at once
- * @data: user data passed to @eval_func and @get_range_func
- * @data_free: function to free @data, or %NULL if no cleanup needed
- *
- * A reference-counted closure for computing kernel integrands.
- *
- * **One integrand must be evaluated by one thread at a time.** Its @eval_func
- * may keep scratch for the result of each evaluation, so concurrent
- * nc_xcor_kernel_integrand_eval() calls on the *same* integrand could race on
- * it.
- *
- * #NcXcorSolver satisfies this by construction rather than by convention: an
- * integrand is built for one (kernel, ell-block) pair, and the ell block is
- * the unit of parallelism -- one integrator per block, blocks distributed
- * across the OpenMP team, kernels shared and read-only throughout. No two
- * threads ever hold the same integrand. Anything that made kernel *pairs* the
- * unit of parallelism instead would share integrands across threads and would
- * need per-thread evaluation scratch.
- * The @eval_func function should fill @len values in the @W array
- * for the given wavenumber @k.
- */
-struct _NcXcorKernelIntegrand
-{
-  /*< private >*/
-  gint refcount;
-  /*< public >*/
-  guint len;
-  NcXcorKernelIntegrandEval eval_func;
-  NcXcorKernelIntegrandGetRange get_range_func;
-  gpointer data;
-  GDestroyNotify data_free;
-  NcXcorKernelIntegrandGetRangeComp get_range_comp_func;
-  NcXcorKernelIntegrandEvalComps eval_comps_func;
-  NcXcorKernelIntegrandGetScale get_scale_func;
-  NcmSpectralPanels *panels;
-};
-
 struct _NcXcorKernelClass
 {
   /*< private >*/
@@ -299,91 +190,20 @@ void nc_xcor_kernel_log_all_models (void);
 
 GType nc_xcor_kernel_integrand_get_type (void) G_GNUC_CONST;
 
-NcXcorKernelIntegrand *nc_xcor_kernel_integrand_new (guint len, NcXcorKernelIntegrandEval eval, NcXcorKernelIntegrandGetRange get_range, gpointer data, GDestroyNotify data_free);
-void nc_xcor_kernel_integrand_set_get_range_comp (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetRangeComp get_range_comp);
-void nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandEvalComps eval_comps);
-void nc_xcor_kernel_integrand_set_get_scale (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetScale get_scale);
-gdouble nc_xcor_kernel_integrand_get_scale (NcXcorKernelIntegrand *integrand, guint i);
-void nc_xcor_kernel_integrand_set_panels (NcXcorKernelIntegrand *integrand, NcmSpectralPanels *sp);
-NcmSpectralPanels *nc_xcor_kernel_integrand_peek_panels (NcXcorKernelIntegrand *integrand);
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_ref (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_clear (NcXcorKernelIntegrand **integrand);
 
-NCM_INLINE guint nc_xcor_kernel_integrand_get_len (NcXcorKernelIntegrand *integrand);
-NCM_INLINE void nc_xcor_kernel_integrand_eval (NcXcorKernelIntegrand *integrand, gdouble k, gdouble *W);
-NCM_INLINE void nc_xcor_kernel_integrand_get_range (NcXcorKernelIntegrand *integrand, gdouble *k_min, gdouble *k_max);
-NCM_INLINE void nc_xcor_kernel_integrand_get_range_comp (NcXcorKernelIntegrand *integrand, guint i, gdouble *k_min, gdouble *k_max);
-NCM_INLINE void nc_xcor_kernel_integrand_eval_comps (NcXcorKernelIntegrand *integrand, gdouble k, guint offset, guint len, gdouble *W);
-NCM_INLINE GArray *nc_xcor_kernel_integrand_eval_array (NcXcorKernelIntegrand *integrand, gdouble k);
+guint nc_xcor_kernel_integrand_get_len (NcXcorKernelIntegrand *integrand);
+void nc_xcor_kernel_integrand_get_range (NcXcorKernelIntegrand *integrand, gdouble *k_min, gdouble *k_max);
+void nc_xcor_kernel_integrand_get_range_comp (NcXcorKernelIntegrand *integrand, guint i, gdouble *k_min, gdouble *k_max);
+gdouble nc_xcor_kernel_integrand_get_scale (NcXcorKernelIntegrand *integrand, guint i);
+NcmSpectralPanels *nc_xcor_kernel_integrand_peek_panels (NcXcorKernelIntegrand *integrand);
+void nc_xcor_kernel_integrand_eval (NcXcorKernelIntegrand *integrand, gdouble k, gdouble *W);
+void nc_xcor_kernel_integrand_eval_comps (NcXcorKernelIntegrand *integrand, gdouble k, guint offset, guint len, gdouble *W);
+GArray *nc_xcor_kernel_integrand_eval_array (NcXcorKernelIntegrand *integrand, gdouble k);
 
 G_END_DECLS
 
 #endif /* _NC_XCOR_KERNEL_H_ */
-
-
-#ifndef _NC_XCOR_KERNEL_INLINE_H_
-#define _NC_XCOR_KERNEL_INLINE_H_
-#ifdef NUMCOSMO_HAVE_INLINE
-#ifndef __GTK_DOC_IGNORE__
-#ifndef NUMCOSMO_GIR_SCAN
-
-G_BEGIN_DECLS
-
-NCM_INLINE guint
-nc_xcor_kernel_integrand_get_len (NcXcorKernelIntegrand *integrand)
-{
-  return integrand->len;
-}
-
-NCM_INLINE void
-nc_xcor_kernel_integrand_eval (NcXcorKernelIntegrand *integrand, gdouble k, gdouble *W)
-{
-  integrand->eval_func (integrand->data, k, W);
-}
-
-NCM_INLINE void
-nc_xcor_kernel_integrand_get_range (NcXcorKernelIntegrand *integrand, gdouble *k_min, gdouble *k_max)
-{
-  integrand->get_range_func (integrand->data, k_min, k_max);
-}
-
-NCM_INLINE void
-nc_xcor_kernel_integrand_get_range_comp (NcXcorKernelIntegrand *integrand, guint i, gdouble *k_min, gdouble *k_max)
-{
-  if (integrand->get_range_comp_func != NULL)
-    integrand->get_range_comp_func (integrand->data, i, k_min, k_max);
-  else
-    integrand->get_range_func (integrand->data, k_min, k_max);
-}
-
-/* Fills only W[offset, offset + len) when the integrand can evaluate a run of
- * components on its own, and the whole of W when it cannot -- either way those
- * entries are what the caller reads. */
-NCM_INLINE void
-nc_xcor_kernel_integrand_eval_comps (NcXcorKernelIntegrand *integrand, gdouble k, guint offset, guint len, gdouble *W)
-{
-  if (integrand->eval_comps_func != NULL)
-    integrand->eval_comps_func (integrand->data, k, offset, len, W);
-  else
-    integrand->eval_func (integrand->data, k, W);
-}
-
-NCM_INLINE GArray *
-nc_xcor_kernel_integrand_eval_array (NcXcorKernelIntegrand *integrand, gdouble k)
-{
-  GArray *arr = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), integrand->len);
-
-  g_array_set_size (arr, integrand->len);
-  integrand->eval_func (integrand->data, k, (gdouble *) arr->data);
-
-  return arr;
-}
-
-G_END_DECLS
-
-#endif /* NUMCOSMO_GIR_SCAN */
-#endif /* __GTK_DOC_IGNORE__ */
-#endif /* NUMCOSMO_HAVE_INLINE */
-#endif /* _NC_XCOR_KERNEL_INLINE_H_ */
 

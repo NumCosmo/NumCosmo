@@ -76,7 +76,7 @@ class KernelEvaluation:
         k = k_Mpc * self.RH_Mpc
         result = np.array([self.evaluator.eval_array(ki) for ki in k])
         # If single ell, flatten to 1D for backward compatibility
-        if self.evaluator.len == 1:
+        if self.evaluator.get_len() == 1:
             return result[:, 0]
         return result
 
@@ -124,7 +124,7 @@ class KernelEvaluation:
         kernel_values = self.evaluate(k_Mpc)
         k3_2 = k_Mpc ** (3 / 2)
 
-        if self.evaluator.len == 1:
+        if self.evaluator.get_len() == 1:
             # Single ell: plot one line
             ax.plot(
                 k_Mpc,
@@ -139,10 +139,10 @@ class KernelEvaluation:
             # Multiple ells: use shades of the same color
             # Create color shades from darker to lighter
             base_rgb = mcolors.to_rgb(color)
-            for i in range(self.evaluator.len):
+            for i in range(self.evaluator.get_len()):
                 # Interpolate between 0.5 (darker) and 1.3 (lighter) of base color
                 # Clamp to valid RGB range [0, 1]
-                factor = 0.5 + (0.8 * i / max(1, self.evaluator.len - 1))
+                factor = 0.5 + (0.8 * i / max(1, self.evaluator.get_len() - 1))
                 shade_rgb = tuple(min(1.0, c * factor) for c in base_rgb)
 
                 ax.plot(
@@ -156,7 +156,7 @@ class KernelEvaluation:
             # Single legend entry for all ells
             label = (
                 f"{self.name} ({self.method}), "
-                f"$\\ell={self.lmin}$-${self.lmin + self.evaluator.len - 1}$"
+                f"$\\ell={self.lmin}$-${self.lmin + self.evaluator.get_len() - 1}$"
             )
 
         ax.set_xscale("log")
@@ -187,16 +187,16 @@ class KernelEvaluation:
         kernel_values = self.evaluate(k_Mpc)
         other_values = other.evaluate(k_Mpc)
 
-        if self.evaluator.len == 1:
+        if self.evaluator.get_len() == 1:
             # Single ell comparison
             ratio = other_values / kernel_values - 1.0
             ax.loglog(k_Mpc, np.abs(ratio), color=color, linestyle=linestyle)
         else:
             # Multiple ells: use shades of the same color
             base_rgb = mcolors.to_rgb(color)
-            for i in range(self.evaluator.len):
+            for i in range(self.evaluator.get_len()):
                 # Create color shades from darker to lighter
-                factor = 0.5 + (0.8 * i / max(1, self.evaluator.len - 1))
+                factor = 0.5 + (0.8 * i / max(1, self.evaluator.get_len() - 1))
                 shade_rgb = tuple(min(1.0, c * factor) for c in base_rgb)
 
                 ratio = other_values[:, i] / kernel_values[:, i] - 1.0

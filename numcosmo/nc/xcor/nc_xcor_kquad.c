@@ -98,8 +98,8 @@ _nc_xcor_kernel_integrate_block_panels (NcXcor *xc, NcXcorKernelIntegrand *xclki
 }
 
 /*
- * Integrates a pair of closures on one multipole block exactly: both are Chebyshev
- * closures, whose panels the product integrates.
+ * Integrates a pair of closures on one multipole block exactly, as the product of
+ * their panels.
  */
 void
 _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp, NcmVector *vp_err)
@@ -116,10 +116,6 @@ _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1
   if ((nc_xcor_kernel_integrand_get_len (xclki1) != nell) || (nc_xcor_kernel_integrand_get_len (side2) != nell))
     g_error ("_nc_xcor_kernel_integrate_block_exact: the closures hold %u and %u multipoles, the block %u.",
              nc_xcor_kernel_integrand_get_len (xclki1), nc_xcor_kernel_integrand_get_len (side2), nell);
-
-  if ((nc_xcor_kernel_integrand_peek_panels (xclki1) == NULL) || (nc_xcor_kernel_integrand_peek_panels (side2) == NULL))
-    g_error ("_nc_xcor_kernel_integrate_block_exact: %s needs Chebyshev closures, which carry panels.",
-             "NC_XCOR_METHOD_KERNEL_EXACT");
 
   _nc_xcor_kernel_integrate_block_panels (xc, xclki1, side2, nell, isauto, vp, vp_err);
 }

@@ -70,24 +70,29 @@ typedef struct _NcXcorKernelPrivate
   gboolean outdated;
 } NcXcorKernelPrivate;
 
-/* Chebyshev closure of one ell block: contiguous panels of coefficients over the
- * domain [k_min, k_max], with the range of each component. */
-typedef struct _ChebIntegrandData
+/* One row of a closure: the scale s of its variable x = k / s, and its support in k
+ * and in x. */
+typedef struct _NcXcorKernelIntegrandRow
 {
-  NcHICosmo *cosmo;
-  gdouble RH_Mpc;
-  gint lmin;
+  gdouble scale; /* 1 when the closure is in k, nu = l + 1/2 when it is in u = k / nu */
+  gdouble k_min;
+  gdouble k_max;
+  gdouble x_min; /* the ends of the support in x, panel edges: k_min and k_max over the scale */
+  gdouble x_max;
+} NcXcorKernelIntegrandRow;
+
+/* The Chebyshev closure of one ell block: panels of coefficients, one row per
+ * multipole, over the block's domain. */
+struct _NcXcorKernelIntegrand
+{
+  gint refcount;
   guint len;
-  NcmSpectralPanels *sp; /* one row per multipole, in x = k / scale[i] */
-  gdouble *scale;        /* per multipole; 1 when the closure is in k */
+  NcmSpectralPanels *sp; /* one row per multipole, in x = k / scale */
+  GArray *rows;          /* NcXcorKernelIntegrandRow, one per multipole */
   gboolean scaled;       /* whether any scale differs from 1 */
   gdouble k_min;         /* the k range of the whole block */
   gdouble k_max;
-  gdouble *k_min_comp;
-  gdouble *k_max_comp;
-  gdouble *x_min_comp; /* per multipole, the support in x: k_min_comp and k_max_comp over the scale */
-  gdouble *x_max_comp;
-} ChebIntegrandData;
+};
 
 typedef struct _ComponentParams
 {
@@ -146,8 +151,7 @@ typedef struct _ComponentStates
 
 NcXcorKernelPrivate *_nc_xcor_kernel_get_private (NcXcorKernel *xclk);
 
-NcmSpectral **_nc_xcor_kernel_spectral_get (void);
-NcXcorKernelIntegrand *_nc_xcor_kernel_cheb_integrand_new (guint n_l, ChebIntegrandData *cid);
+NcXcorKernelIntegrand *_nc_xcor_kernel_integrand_new (guint len);
 
 void _nc_xcor_kernel_component_state_init (ComponentState *state, NcXcorKernelComponent *comp, guint comp_idx, NcHICosmo *cosmo, guint n_l);
 void _nc_xcor_kernel_component_states_clear (ComponentStates *comp_states);

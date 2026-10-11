@@ -379,9 +379,9 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
                                       void (*compute_func) (const gdouble, NcmVector *, gpointer),
                                       const gdouble reltol, const gdouble peak_epsilon)
 {
-  NcXcorKernelPrivate *self = _nc_xcor_kernel_get_private (xclk);
-  ChebIntegrandData *cid    = g_new0 (ChebIntegrandData, 1);
-  const guint n_l           = lmax - lmin + 1;
+  NcXcorKernelPrivate *self        = _nc_xcor_kernel_get_private (xclk);
+  NcXcorKernelIntegrand *integrand = _nc_xcor_kernel_integrand_new (lmax - lmin + 1);
+  const guint n_l                  = lmax - lmin + 1;
 
   {
     NcmFunctionSampleSet *fss = ncm_function_sample_set_new (n_l);
@@ -418,8 +418,8 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
       comp_states
     );
 
-    cid->k_min = ncm_function_sample_set_get_x_min (fss);
-    cid->k_max = ncm_function_sample_set_get_x_max (fss);
+    integrand->k_min = ncm_function_sample_set_get_x_min (fss);
+    integrand->k_max = ncm_function_sample_set_get_x_max (fss);
 
     /* A floor scaled to the smallest of the block's peaks, so a sub-dominant
      * multipole is not held to a tolerance relative to its neighbours. */
@@ -434,24 +434,23 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
       GArray *cuts = g_array_new (FALSE, FALSE, sizeof (gdouble));
       NcmVector *breakpoints;
 
-      _component_states_collect_cuts (comp_states, cid->k_min, cid->k_max, cuts);
+      _component_states_collect_cuts (comp_states, integrand->k_min, integrand->k_max, cuts);
 
       for (i = 0; i <= cuts->len; i++)
       {
-        const gdouble lo  = (i == 0) ? cid->k_min : g_array_index (cuts, gdouble, i - 1);
-        const gdouble hi  = (i == cuts->len) ? cid->k_max : g_array_index (cuts, gdouble, i);
+        const gdouble lo  = (i == 0) ? integrand->k_min : g_array_index (cuts, gdouble, i - 1);
+        const gdouble hi  = (i == cuts->len) ? integrand->k_max : g_array_index (cuts, gdouble, i);
         const gdouble mid = 0.5 * (lo + hi);
 
         g_array_append_val (compute.interval_mid, mid);
       }
 
       breakpoints = (cuts->len > 0) ? ncm_vector_new_array (cuts) : NULL;
-      cid->sp     = ncm_spectral_panels_new (n_l);
 
       comp_states->panel_mode = TRUE;
       ncm_spectral_panels_builder_build (self->builder, _cheb_compute_call, &compute,
-                                         cid->k_min, cid->k_max, breakpoints, NULL, NULL,
-                                         reltol, abstol, cid->sp);
+                                         integrand->k_min, integrand->k_max, breakpoints, NULL, NULL,
+                                         reltol, abstol, integrand->sp);
       comp_states->panel_mode = FALSE;
 
       ncm_vector_clear (&breakpoints);
@@ -461,24 +460,17 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
     ncm_function_sample_set_clear (&fss);
     g_array_unref (compute.interval_mid);
 
-    cid->k_min_comp = g_new (gdouble, n_l);
-    cid->k_max_comp = g_new (gdouble, n_l);
-    cid->x_min_comp = g_new (gdouble, n_l);
-    cid->x_max_comp = g_new (gdouble, n_l);
-    cid->scale      = g_new (gdouble, n_l);
-    cid->scaled     = comp_states->in_u;
-
-    for (i = 0; i < n_l; i++)
-      cid->scale[i] = comp_states->in_u ? (lmin + i + 0.5) : 1.0;
+    integrand->scaled = comp_states->in_u;
 
     /* The sampled range is in x; each multipole's k range is its scale times
      * the part of it inside the band, and the block's k range is their union. */
     for (i = 0; i < n_l; i++)
     {
-      const gdouble x_min = cid->k_min;
-      const gdouble x_max = cid->k_max;
-      gdouble k_min_i     = x_min;
-      gdouble k_max_i     = x_max;
+      NcXcorKernelIntegrandRow *row = &g_array_index (integrand->rows, NcXcorKernelIntegrandRow, i);
+      const gdouble x_min           = integrand->k_min;
+      const gdouble x_max           = integrand->k_max;
+      gdouble k_min_i               = x_min;
+      gdouble k_max_i               = x_max;
 
       if (comp_states->is_limber)
       {
@@ -502,24 +494,20 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
           k_min_i = k_max_i = x_min;
       }
 
-      cid->x_min_comp[i] = k_min_i;
-      cid->x_max_comp[i] = k_max_i;
-      cid->k_min_comp[i] = k_min_i * cid->scale[i];
-      cid->k_max_comp[i] = k_max_i * cid->scale[i];
+      row->scale = comp_states->in_u ? (lmin + i + 0.5) : 1.0;
+      row->x_min = k_min_i;
+      row->x_max = k_max_i;
+      row->k_min = k_min_i * row->scale;
+      row->k_max = k_max_i * row->scale;
     }
 
-    if (cid->scaled)
+    if (integrand->scaled)
     {
-      cid->k_min = cid->k_min * cid->scale[0];
-      cid->k_max = cid->k_max * cid->scale[n_l - 1];
+      integrand->k_min *= g_array_index (integrand->rows, NcXcorKernelIntegrandRow, 0).scale;
+      integrand->k_max *= g_array_index (integrand->rows, NcXcorKernelIntegrandRow, n_l - 1).scale;
     }
 
-    cid->lmin   = lmin;
-    cid->len    = n_l;
-    cid->RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
-    cid->cosmo  = nc_hicosmo_ref (cosmo);
-
-    return _nc_xcor_kernel_cheb_integrand_new (n_l, cid);
+    return integrand;
   }
 }
 

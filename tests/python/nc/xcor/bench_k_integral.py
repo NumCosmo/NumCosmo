@@ -134,11 +134,7 @@ def sweep_case(
             "ell_batch_size": settings.ell_batch_size,
             "size_a": _closure_size(integrand_a),
             "size_b": None if integrand_b is None else _closure_size(integrand_b),
-            "n_panels_a": (
-                0
-                if integrand_a.peek_panels() is None
-                else integrand_a.peek_panels().get_n_panels()
-            ),
+            "n_panels_a": integrand_a.peek_panels().get_n_panels(),
             "build_time": build_time,
             "reference_cells": reference.n_cells,
             "reference_max_order": reference.max_order,
