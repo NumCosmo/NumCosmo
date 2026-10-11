@@ -34,6 +34,7 @@
 #include <glib.h>
 
 #include <numcosmo/ncm/algebra/ncm_spectral_panels.h>
+#include <numcosmo/ncm/algebra/ncm_spectral_panels_builder.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/powspec/nc_growth_func.h>
 #include <numcosmo/nc/powspec/nc_transfer_func.h>
@@ -322,12 +323,8 @@ void nc_xcor_kernel_set_max_iter (NcXcorKernel *xclk, guint max_iter);
 
 gdouble nc_xcor_kernel_get_expansion_factor (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_expansion_factor (NcXcorKernel *xclk, gdouble expansion_factor);
-guint nc_xcor_kernel_get_panel_order_cap (NcXcorKernel *xclk);
-void nc_xcor_kernel_set_panel_order_cap (NcXcorKernel *xclk, guint panel_order_cap);
-gdouble nc_xcor_kernel_get_panels_per_efold (NcXcorKernel *xclk);
-void nc_xcor_kernel_set_panels_per_efold (NcXcorKernel *xclk, gdouble panels_per_efold);
-guint nc_xcor_kernel_get_panel_level_min (NcXcorKernel *xclk);
-void nc_xcor_kernel_set_panel_level_min (NcXcorKernel *xclk, guint panel_level_min);
+NcmSpectralPanelsBuilder *nc_xcor_kernel_peek_panels_builder (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_panels_builder (NcXcorKernel *xclk, NcmSpectralPanelsBuilder *builder);
 gboolean nc_xcor_kernel_get_track_closure_error (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_track_closure_error (NcXcorKernel *xclk, gboolean track_closure_error);
 

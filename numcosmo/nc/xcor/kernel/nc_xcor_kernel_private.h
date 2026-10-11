@@ -65,9 +65,6 @@ typedef struct _NcXcorKernelPrivate
   guint max_border_expansions;
   guint max_iter;
   gdouble expansion_factor;
-  guint panel_order_cap;
-  gdouble panels_per_efold;
-  guint panel_level_min;
   NcmSpectralPanelsBuilder *builder; /* the panels of the Chebyshev closures */
   gboolean track_closure_error;
   gboolean tolerance_balance_warned;
@@ -118,8 +115,6 @@ typedef struct _ComponentParams
 #define MAX_ELL_BLOCK NC_XCOR_KERNEL_MAX_ELL_BLOCK
 #define MAX_COMP_BLOCK 6
 
-/* The level-cap of a Chebyshev panel when NcXcorKernel:panel-order-cap is 0 */
-#define NC_XCOR_KERNEL_CHEB_PANEL_LEVEL_CAP (5)
 
 typedef struct _ComponentState
 {

@@ -1384,7 +1384,7 @@ def test_pieces_of_one_window_are_truncated_together(cosmology: Cosmology) -> No
 
     # Without the initial grid every interior edge comes from a cut or a bisection,
     # so the dyadic test below detects a cut inside the domain.
-    kernel.set_panels_per_efold(0.0)
+    kernel.peek_panels_builder().set_min_panels_per_efold(0.0)
 
     for lmin, lmax in ((2, 9), (50, 57)):
         closure = kernel.get_eval_vectorized_full(

@@ -410,7 +410,7 @@ _component_states_compute_k_seeds (ComponentStates *comp_states, GArray *k_seeds
  *
  * The panels start from the component boundaries the expansion found, since
  * the block W_l(k) jumps there (see _component_states_collect_cuts), and from
- * the grid of #NcXcorKernel:panels-per-efold, so that a feature narrower than
+ * the grid of #NcmSpectralPanelsBuilder:min-panels-per-efold, so that a feature narrower than
  * the domain is not missed by a first grid spread over all of it.
  */
 NcXcorKernelIntegrand *
@@ -470,15 +470,8 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
      * on, so every discontinuity has to be a cut, which
      * _component_states_collect_cuts() guarantees. */
     {
-      GArray *cuts      = g_array_new (FALSE, FALSE, sizeof (gdouble));
-      const guint k_cap = (self->panel_order_cap == 0) ?
-                          NC_XCOR_KERNEL_CHEB_PANEL_LEVEL_CAP : self->panel_order_cap;
+      GArray *cuts = g_array_new (FALSE, FALSE, sizeof (gdouble));
       NcmVector *breakpoints;
-
-      if (self->panel_level_min >= k_cap)
-        g_error ("_nc_xcor_kernel_build_cheb_integrand: kernel %s has panel-level-min %u, "
-                 "not below its panel-order-cap %u.",
-                 G_OBJECT_TYPE_NAME (xclk), self->panel_level_min, k_cap);
 
       _component_states_collect_cuts (comp_states, cid->k_min, cid->k_max, cuts);
 

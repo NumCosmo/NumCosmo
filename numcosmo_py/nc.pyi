@@ -23033,12 +23033,8 @@ class XcorKernel(NumCosmoMath.Model):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23074,9 +23070,7 @@ class XcorKernel(NumCosmoMath.Model):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -23104,9 +23098,7 @@ class XcorKernel(NumCosmoMath.Model):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -23163,9 +23155,6 @@ class XcorKernel(NumCosmoMath.Model):
     def get_lmax(self) -> int: ...
     def get_max_border_expansions(self) -> int: ...
     def get_max_iter(self) -> int: ...
-    def get_panel_level_min(self) -> int: ...
-    def get_panel_order_cap(self) -> int: ...
-    def get_panels_per_efold(self) -> float: ...
     def get_peak_epsilon(self) -> float: ...
     def get_reltol(self) -> float: ...
     def get_track_closure_error(self) -> bool: ...
@@ -23179,6 +23168,7 @@ class XcorKernel(NumCosmoMath.Model):
     def obs_params_len(self) -> int: ...
     def peek_dist(self) -> Distance: ...
     def peek_integrator(self) -> typing.Optional[NumCosmoMath.SBesselIntegrator]: ...
+    def peek_panels_builder(self) -> NumCosmoMath.SpectralPanelsBuilder: ...
     def peek_powspec(self) -> NumCosmoMath.Powspec: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def prepare_if_needed(self, cosmo: HICosmo) -> None: ...
@@ -23190,9 +23180,9 @@ class XcorKernel(NumCosmoMath.Model):
     def set_lmax(self, lmax: int) -> None: ...
     def set_max_border_expansions(self, max_border_expansions: int) -> None: ...
     def set_max_iter(self, max_iter: int) -> None: ...
-    def set_panel_level_min(self, panel_level_min: int) -> None: ...
-    def set_panel_order_cap(self, panel_order_cap: int) -> None: ...
-    def set_panels_per_efold(self, panels_per_efold: float) -> None: ...
+    def set_panels_builder(
+        self, builder: NumCosmoMath.SpectralPanelsBuilder
+    ) -> None: ...
     def set_peak_epsilon(self, peak_epsilon: float) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_track_closure_error(self, track_closure_error: bool) -> None: ...
@@ -23250,12 +23240,8 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23296,9 +23282,7 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -23330,9 +23314,7 @@ class XcorKernelAnalyticGauss(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -23428,12 +23410,8 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23474,9 +23452,7 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -23508,9 +23484,7 @@ class XcorKernelAnalyticLensing(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -23607,12 +23581,8 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23654,9 +23624,7 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -23689,9 +23657,7 @@ class XcorKernelAnalyticMulti(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -23795,12 +23761,8 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23843,9 +23805,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -23879,9 +23839,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -23983,12 +23941,8 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24030,9 +23984,7 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -24065,9 +24017,7 @@ class XcorKernelAnalyticStudentT(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -24165,12 +24115,8 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24210,9 +24156,7 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -24243,9 +24187,7 @@ class XcorKernelAnalyticTophat(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -24340,12 +24282,8 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24387,9 +24325,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -24422,9 +24358,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -24515,12 +24449,8 @@ class XcorKernelCMBISW(XcorKernel):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24559,9 +24489,7 @@ class XcorKernelCMBISW(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -24591,9 +24519,7 @@ class XcorKernelCMBISW(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -24675,12 +24601,8 @@ class XcorKernelCMBLensing(XcorKernel):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24719,9 +24641,7 @@ class XcorKernelCMBLensing(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -24751,9 +24671,7 @@ class XcorKernelCMBLensing(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -24844,12 +24762,8 @@ class XcorKernelCluster(XcorKernel):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24885,9 +24799,7 @@ class XcorKernelCluster(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -24915,9 +24827,7 @@ class XcorKernelCluster(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -24984,12 +24894,8 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -25027,9 +24933,7 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -25058,9 +24962,7 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -25285,12 +25187,8 @@ class XcorKernelGal(XcorKernel):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -25338,9 +25236,7 @@ class XcorKernelGal(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -25379,9 +25275,7 @@ class XcorKernelGal(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -25515,12 +25409,8 @@ class XcorKernelRadial(XcorKernel):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -25558,9 +25448,7 @@ class XcorKernelRadial(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -25590,9 +25478,7 @@ class XcorKernelRadial(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -25789,12 +25675,8 @@ class XcorKernelTable(XcorKernelRadial):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -25838,9 +25720,7 @@ class XcorKernelTable(XcorKernelRadial):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -25875,9 +25755,7 @@ class XcorKernelTable(XcorKernelRadial):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -25983,12 +25861,8 @@ class XcorKernelWeakLensing(XcorKernel):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -26027,9 +25901,7 @@ class XcorKernelWeakLensing(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -26059,9 +25931,7 @@ class XcorKernelWeakLensing(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
@@ -26135,12 +26005,8 @@ class XcorKerneltSZ(XcorKernel):
         Expansion factor for domain extension
       track-closure-error -> gboolean: track-closure-error
         Whether to record the interpolation error the closure achieved
-      panel-order-cap -> guint: panel-order-cap
-        Highest Chebyshev order tried per panel before bisecting
-      panels-per-efold -> gdouble: panels-per-efold
-        Panels per e-fold of k in the initial Chebyshev grid
-      panel-level-min -> guint: panel-level-min
-        Level at which the Chebyshev expansion of a panel starts
+      panels-builder -> NcmSpectralPanelsBuilder: panels-builder
+        Builder of the Chebyshev closure panels
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -26178,9 +26044,7 @@ class XcorKerneltSZ(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
-        panel_level_min: int
-        panel_order_cap: int
-        panels_per_efold: float
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder
         peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
@@ -26209,9 +26073,7 @@ class XcorKerneltSZ(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
-        panel_level_min: int = ...,
-        panel_order_cap: int = ...,
-        panels_per_efold: float = ...,
+        panels_builder: NumCosmoMath.SpectralPanelsBuilder = ...,
         peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,

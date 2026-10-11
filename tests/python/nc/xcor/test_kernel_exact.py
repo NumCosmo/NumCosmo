@@ -691,7 +691,7 @@ def test_spectral_path_reports_an_error_estimate(cosmology: Cosmology) -> None:
     assert np.all(np.abs(err / cl) > true_rel)
 
 
-def test_panel_order_cap_is_tunable(cosmology: Cosmology) -> None:
+def test_panel_level_cap_is_tunable(cosmology: Cosmology) -> None:
     """The cap is a fitted heuristic, so a caller has to be able to sweep it.
 
     Its default came from a sweep on two kernel families at one multipole range;
@@ -709,8 +709,9 @@ def test_panel_order_cap_is_tunable(cosmology: Cosmology) -> None:
             integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
             reltol=1.0e-4,
             peak_epsilon=1.0e-4,
-            panel_order_cap=cap,
         )
+        if cap is not None:
+            kernel.peek_panels_builder().set_level_cap(cap)
         kernel.set_l_limber(-1)
         kernel.prepare(cosmology.cosmo)
 
@@ -722,13 +723,9 @@ def test_panel_order_cap_is_tunable(cosmology: Cosmology) -> None:
             Nc.XcorKernelClosure.CHEBYSHEV,
         )
 
-    default_kernel, default_closure = closure(0)
-    assert default_kernel.get_panel_order_cap() == 0
-
-    # Zero selects the default, so it must land exactly where naming it does.
-    _, explicit = closure(5)
+    default_kernel, default_closure = closure(None)
+    assert default_kernel.peek_panels_builder().get_level_cap() == 5
     default_panels = default_closure.peek_panels()
-    assert default_panels.get_n_panels() == explicit.peek_panels().get_n_panels()
 
     # A lower cap gives more, smaller panels; a higher one fewer, larger.
     _, coarse = closure(7)

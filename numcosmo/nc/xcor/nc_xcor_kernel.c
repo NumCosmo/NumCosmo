@@ -86,9 +86,7 @@ enum
   PROP_MAX_ITER,
   PROP_EXPANSION_FACTOR,
   PROP_TRACK_CLOSURE_ERROR,
-  PROP_PANEL_ORDER_CAP,
-  PROP_PANELS_PER_EFOLD,
-  PROP_PANEL_LEVEL_MIN,
+  PROP_PANELS_BUILDER,
   PROP_SIZE,
 };
 
@@ -115,9 +113,6 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
   self->max_border_expansions    = 0;
   self->max_iter                 = 0;
   self->expansion_factor         = 0.0;
-  self->panel_order_cap          = 0;
-  self->panels_per_efold         = 0.0;
-  self->panel_level_min          = 0;
   self->builder                  = ncm_spectral_panels_builder_new ();
   self->track_closure_error      = FALSE;
   self->tolerance_balance_warned = FALSE;
@@ -230,15 +225,15 @@ _nc_xcor_kernel_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_TRACK_CLOSURE_ERROR:
       nc_xcor_kernel_set_track_closure_error (xclk, g_value_get_boolean (value));
       break;
-    case PROP_PANEL_ORDER_CAP:
-      nc_xcor_kernel_set_panel_order_cap (xclk, g_value_get_uint (value));
+    case PROP_PANELS_BUILDER:
+    {
+      NcmSpectralPanelsBuilder *builder = g_value_get_object (value);
+
+      if (builder != NULL)
+        nc_xcor_kernel_set_panels_builder (xclk, builder);
+
       break;
-    case PROP_PANELS_PER_EFOLD:
-      nc_xcor_kernel_set_panels_per_efold (xclk, g_value_get_double (value));
-      break;
-    case PROP_PANEL_LEVEL_MIN:
-      nc_xcor_kernel_set_panel_level_min (xclk, g_value_get_uint (value));
-      break;
+    }
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -294,14 +289,8 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_TRACK_CLOSURE_ERROR:
       g_value_set_boolean (value, nc_xcor_kernel_get_track_closure_error (xclk));
       break;
-    case PROP_PANEL_ORDER_CAP:
-      g_value_set_uint (value, nc_xcor_kernel_get_panel_order_cap (xclk));
-      break;
-    case PROP_PANELS_PER_EFOLD:
-      g_value_set_double (value, nc_xcor_kernel_get_panels_per_efold (xclk));
-      break;
-    case PROP_PANEL_LEVEL_MIN:
-      g_value_set_uint (value, nc_xcor_kernel_get_panel_level_min (xclk));
+    case PROP_PANELS_BUILDER:
+      g_value_set_object (value, nc_xcor_kernel_peek_panels_builder (xclk));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -576,65 +565,20 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcXcorKernel:panel-order-cap:
+   * NcXcorKernel:panels-builder:
    *
-   * Highest level $k$ of the Chebyshev expansion tried on one panel, with $N = 2^k +
-   * 1$ nodes and coefficients at level $k$. Zero selects the default, $k = 5$.
-   *
-   * A panel is expanded from #NcXcorKernel:panel-level-min upward, doubling the order
-   * until the acceptance test of #NcXcorKernel:reltol passes. When the test fails at
-   * the cap, or when the coefficients at the level below it predict that it will fail
-   * there (see ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap()), the panel
-   * is bisected and each half is expanded again from the minimum level. The nodes of
-   * the parent panel are not nodes of its halves, so the values of $W_\ell$ computed
-   * for a failed panel are not reused. A panel narrower than $10^{-6}$ of its upper
-   * edge is kept at the cap without further bisection.
+   * The #NcmSpectralPanelsBuilder of the Chebyshev closures: its levels, minimum panels
+   * per e-fold (of $u = k/\nu$ under Limber, of $k$ otherwise) and minimum panel width.
+   * Read when a closure is built, so one already built keeps the panels it was built
+   * with. One builder may serve several kernels.
    */
   g_object_class_install_property (object_class,
-                                   PROP_PANEL_ORDER_CAP,
-                                   g_param_spec_uint ("panel-order-cap",
-                                                      NULL,
-                                                      "Highest Chebyshev order tried per panel before bisecting",
-                                                      0, 12, 0,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcXcorKernel:panels-per-efold:
-   *
-   * Number of panels per e-fold, of $u = k/\nu$ for a Limber Chebyshev closure and of $k$
-   * otherwise, in the initial grid of the closure. The initial panel edges are the
-   * closure's cuts (component boundaries, band edges) together with a geometric grid of
-   * this density over its domain; a grid point closer than a quarter of the grid spacing
-   * to another edge is dropped. Each initial panel is then expanded and bisected where
-   * it does not converge, see #NcXcorKernel:panel-order-cap. Zero disables the grid, and
-   * each segment between cuts starts as one panel.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_PANELS_PER_EFOLD,
-                                   g_param_spec_double ("panels-per-efold",
+                                   PROP_PANELS_BUILDER,
+                                   g_param_spec_object ("panels-builder",
                                                         NULL,
-                                                        "Panels per e-fold of k in the initial Chebyshev grid",
-                                                        0.0, 1000.0, 1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcXcorKernel:panel-level-min:
-   *
-   * Level $k$ at which the Chebyshev expansion of a panel starts, with $N = 2^k + 1$
-   * nodes; the order is doubled from there until the acceptance test of
-   * #NcXcorKernel:reltol passes or #NcXcorKernel:panel-order-cap is reached. The first
-   * test compares the levels $k$ and $k + 1$. A low level accepts a panel on which
-   * $W_\ell(k)$ is near zero or near linear with few nodes; the check of each accepted
-   * panel against the values computed during the domain expansion guards against a
-   * coarse first grid that misses a feature.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_PANEL_LEVEL_MIN,
-                                   g_param_spec_uint ("panel-level-min",
-                                                      NULL,
-                                                      "Level at which the Chebyshev expansion of a panel starts",
-                                                      0, 12, 3,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        "Builder of the Chebyshev closure panels",
+                                                        NCM_TYPE_SPECTRAL_PANELS_BUILDER,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcXcorKernel:expansion-factor:
@@ -1313,105 +1257,37 @@ nc_xcor_kernel_set_expansion_factor (NcXcorKernel *xclk, gdouble expansion_facto
 }
 
 /**
- * nc_xcor_kernel_get_panel_order_cap:
+ * nc_xcor_kernel_peek_panels_builder:
  * @xclk: a #NcXcorKernel
  *
- * Returns: the panel order cap, or 0 for the default. See
- * #NcXcorKernel:panel-order-cap.
+ * Returns: (transfer none): the builder of the Chebyshev closure panels. See
+ * #NcXcorKernel:panels-builder.
  */
-guint
-nc_xcor_kernel_get_panel_order_cap (NcXcorKernel *xclk)
+NcmSpectralPanelsBuilder *
+nc_xcor_kernel_peek_panels_builder (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  return self->panel_order_cap;
+  return self->builder;
 }
 
 /**
- * nc_xcor_kernel_set_panel_order_cap:
+ * nc_xcor_kernel_set_panels_builder:
  * @xclk: a #NcXcorKernel
- * @panel_order_cap: the cap, or 0 for the default
+ * @builder: a #NcmSpectralPanelsBuilder
  *
- * Sets #NcXcorKernel:panel-order-cap. Read when a closure is built, so one already
- * built keeps the panels it was built with.
- *
+ * Sets #NcXcorKernel:panels-builder.
  */
 void
-nc_xcor_kernel_set_panel_order_cap (NcXcorKernel *xclk, guint panel_order_cap)
+nc_xcor_kernel_set_panels_builder (NcXcorKernel *xclk, NcmSpectralPanelsBuilder *builder)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->panel_order_cap = panel_order_cap;
+  g_return_if_fail (NCM_IS_SPECTRAL_PANELS_BUILDER (builder));
 
-  ncm_spectral_panels_builder_set_level_cap (self->builder, (panel_order_cap == 0) ? NC_XCOR_KERNEL_CHEB_PANEL_LEVEL_CAP : panel_order_cap);
-}
-
-/**
- * nc_xcor_kernel_get_panels_per_efold:
- * @xclk: a #NcXcorKernel
- *
- * Returns: the number of panels per e-fold of $k$ in the initial Chebyshev grid, or
- * 0.0 for no grid. See #NcXcorKernel:panels-per-efold.
- */
-gdouble
-nc_xcor_kernel_get_panels_per_efold (NcXcorKernel *xclk)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  return self->panels_per_efold;
-}
-
-/**
- * nc_xcor_kernel_set_panels_per_efold:
- * @xclk: a #NcXcorKernel
- * @panels_per_efold: panels per e-fold of $k$, or 0.0 for no grid
- *
- * Sets #NcXcorKernel:panels-per-efold. Read when a closure is built, so one already
- * built keeps the panels it was built with.
- */
-void
-nc_xcor_kernel_set_panels_per_efold (NcXcorKernel *xclk, gdouble panels_per_efold)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  g_assert_cmpfloat (panels_per_efold, >=, 0.0);
-  self->panels_per_efold = panels_per_efold;
-
-  ncm_spectral_panels_builder_set_min_panels_per_efold (self->builder, panels_per_efold);
-}
-
-/**
- * nc_xcor_kernel_get_panel_level_min:
- * @xclk: a #NcXcorKernel
- *
- * Returns: the level at which the Chebyshev expansion of a panel starts. See
- * #NcXcorKernel:panel-level-min.
- */
-guint
-nc_xcor_kernel_get_panel_level_min (NcXcorKernel *xclk)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  return self->panel_level_min;
-}
-
-/**
- * nc_xcor_kernel_set_panel_level_min:
- * @xclk: a #NcXcorKernel
- * @panel_level_min: the starting level
- *
- * Sets #NcXcorKernel:panel-level-min. Read when a closure is built, so one already
- * built keeps the panels it was built with. Aborts when the level is not below
- * #NcXcorKernel:panel-order-cap at build time.
- */
-void
-nc_xcor_kernel_set_panel_level_min (NcXcorKernel *xclk, guint panel_level_min)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  self->panel_level_min = panel_level_min;
-
-  ncm_spectral_panels_builder_set_level_min (self->builder, panel_level_min);
+  ncm_spectral_panels_builder_ref (builder);
+  ncm_spectral_panels_builder_clear (&self->builder);
+  self->builder = builder;
 }
 
 /**

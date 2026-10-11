@@ -148,7 +148,7 @@ test_nc_xcor_kernel_integrand_new (TestNcXcorKernelIntegrand *test, gconstpointe
   nc_xcor_kernel_set_max_iter (test->xclk, 4);
   nc_xcor_kernel_set_reltol (test->xclk, 1.0e-3);
   nc_xcor_kernel_set_peak_epsilon (test->xclk, 1.0e-4);
-  nc_xcor_kernel_set_panel_order_cap (test->xclk, 12);
+  ncm_spectral_panels_builder_set_level_cap (nc_xcor_kernel_peek_panels_builder (test->xclk), 12);
   nc_xcor_kernel_set_lmax (test->xclk, 16);
 
   /* The threshold is "use Limber for l >= this": 0 means always, -1 means never. Both
