@@ -64,6 +64,7 @@ void test_ncm_function_cache_basic (void);
 void test_ncm_iset_basic (void);
 void test_ncm_spectral_panels_basic (void);
 void test_ncm_spectral_panels_builder_basic (void);
+void test_ncm_spectral_panels_product_basic (void);
 
 void test_nc_data_cluster_mass_rich_basic (void);
 void test_nc_data_cluster_mass_rich_count_basic (void);
@@ -160,6 +161,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/iset/basic", test_ncm_iset_basic);
   g_test_add_func ("/ncm/spectral_panels/basic", test_ncm_spectral_panels_basic);
   g_test_add_func ("/ncm/spectral_panels_builder/basic", test_ncm_spectral_panels_builder_basic);
+  g_test_add_func ("/ncm/spectral_panels_product/basic", test_ncm_spectral_panels_product_basic);
 
   g_test_add_func ("/nc/data/cluster_mass_rich/basic", test_nc_data_cluster_mass_rich_basic);
   g_test_add_func ("/nc/data/cluster_mass_rich_count/basic", test_nc_data_cluster_mass_rich_count_basic);
@@ -1975,5 +1977,22 @@ test_ncm_spectral_panels_builder_basic (void)
   g_assert_true (NCM_IS_SPECTRAL_PANELS_BUILDER (builder));
 
   NCM_TEST_FREE (ncm_spectral_panels_builder_free, builder);
+}
+
+void
+test_ncm_spectral_panels_product_basic (void)
+{
+  NcmSpectralPanelsProduct *prod = ncm_spectral_panels_product_new (2);
+  NcmSpectralPanelsProduct *prod2;
+
+  g_assert_true (NCM_IS_SPECTRAL_PANELS_PRODUCT (prod));
+
+  prod2 = ncm_spectral_panels_product_ref (prod);
+  ncm_spectral_panels_product_clear (&prod2);
+  g_assert_true (prod2 == NULL);
+
+  g_assert_true (NCM_IS_SPECTRAL_PANELS_PRODUCT (prod));
+
+  NCM_TEST_FREE (ncm_spectral_panels_product_free, prod);
 }
 

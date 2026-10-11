@@ -36,7 +36,7 @@ G_BEGIN_DECLS
 
 /**
  * NcmSpectralPanelsF:
- * @user_data: user data
+ * @user_data: (closure): user data
  * @i: index of the continuous interval holding @x
  * @x: the point
  * @fval: $F(x)$, filled in place
@@ -49,7 +49,7 @@ typedef void (*NcmSpectralPanelsF) (gpointer user_data, guint i, gdouble x, NcmV
 
 /**
  * NcmSpectralPanelsAccept:
- * @user_data: user data
+ * @user_data: (closure): user data
  * @a: left edge of the panel
  * @b: right edge of the panel
  * @c: the coefficients of the panel, rows of @N

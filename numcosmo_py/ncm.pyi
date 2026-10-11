@@ -10952,6 +10952,58 @@ class SpectralPanelsClass(GObject.GPointer):
 
     parent_class: GObject.ObjectClass = ...
 
+class SpectralPanelsProduct(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsProduct(**properties)
+        new(p:int) -> NumCosmoMath.SpectralPanelsProduct
+
+    Object NcmSpectralPanelsProduct
+
+    Properties from NcmSpectralPanelsProduct:
+      p -> guint: p
+        Power of k
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        p: int
+
+    props: Props = ...
+    def __init__(self, p: int = ...) -> None: ...
+    @staticmethod
+    def clear(prod: SpectralPanelsProduct) -> None: ...
+    def free(self) -> None: ...
+    def get_p(self) -> int: ...
+    def integrate(
+        self,
+        P: SpectralPanels,
+        s1: typing.Optional[Vector],
+        Q: SpectralPanels,
+        s2: typing.Optional[Vector],
+        result: Vector,
+        err: typing.Optional[Vector] = None,
+    ) -> None: ...
+    @classmethod
+    def new(cls, p: int) -> SpectralPanelsProduct: ...
+    def ref(self) -> SpectralPanelsProduct: ...
+
+class SpectralPanelsProductClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsProductClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
 class SphereMap(GObject.Object):
     r"""
     :Constructors:
