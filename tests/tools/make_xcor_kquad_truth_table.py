@@ -189,7 +189,7 @@ def run_chunk(
     k_lo: float,
     k_hi: float,
     scale: float,
-    index: int,
+    index: int | str,
 ) -> dict:
     """One part [k_lo, k_hi] of a pair's k range, certified against the whole C_ell.
 
@@ -222,15 +222,13 @@ def run_chunk(
     }
 
 
-def merge_chunks(pair: cases.PairSpec, ell: int, chunks: list[dict]) -> dict:
-    """The entry of a pair at one multipole from its certified parts.
+def _sum_balls(chunks: list[dict]) -> tuple[decimal.Decimal, float]:
+    """The sum of certified balls: values added in decimal, radii added.
 
-    The values add and the radii add. Each part's value is printed with only the digits
-    its radius supports, so half a unit of its last printed digit is added to its radius:
-    the sum of the printed values is then still inside the sum of the balls. The entry is
-    held to the same certification as one run, in run_one().
+    Each value is printed with only the digits its radius supports, so half a unit of its
+    last printed digit is added to its radius: the sum of the printed values is then still
+    inside the sum of the balls.
     """
-    chunks = sorted(chunks, key=lambda c: c["index"])
     context = decimal.Context(prec=50)
     total = decimal.Decimal(0)
     radius = 0.0
@@ -239,6 +237,35 @@ def merge_chunks(pair: cases.PairSpec, ell: int, chunks: list[dict]) -> dict:
         value = decimal.Decimal(chunk["value"])
         total = context.add(total, value)
         radius += chunk["radius"] + 0.5 * 10.0 ** value.as_tuple().exponent
+
+    return total, radius
+
+
+def merge_subparts(index: int, subparts: list[dict]) -> dict:
+    """Part @index of an entry from the certified sub-parts it was re-split into."""
+    subparts = sorted(subparts, key=lambda c: int(str(c["index"]).split(".")[1]))
+    total, radius = _sum_balls(subparts)
+
+    return {
+        "case": subparts[0]["case"],
+        "ell": subparts[0]["ell"],
+        "index": index,
+        "k_lo": subparts[0]["k_lo"],
+        "k_hi": subparts[-1]["k_hi"],
+        "value": f"{total:e}",
+        "radius": radius,
+        "prec": max(c["prec"] for c in subparts),
+        "seconds": sum(c["seconds"] for c in subparts),
+        "subparts": subparts,
+    }
+
+
+def merge_chunks(pair: cases.PairSpec, ell: int, chunks: list[dict]) -> dict:
+    """The entry of a pair at one multipole from its certified parts, summed as
+    _sum_balls() does, and held to the same certification as one run, in run_one().
+    """
+    chunks = sorted(chunks, key=lambda c: c["index"])
+    total, radius = _sum_balls(chunks)
 
     entry = {
         "case": pair.case,
@@ -355,6 +382,15 @@ def main() -> None:
             "entries one run cannot finish within --timeout"
         ),
     )
+    parser.add_argument(
+        "--resplit",
+        type=int,
+        default=1,
+        help=(
+            "with --k-chunks and --resume, certify each part still missing (one that "
+            "timed out) as this many sub-parts of its own interval"
+        ),
+    )
     args = parser.parse_args()
 
     pairs = (
@@ -418,11 +454,66 @@ def main() -> None:
     report(args, entries, tasks, failed)
 
 
+def _entry_range(
+    stored: dict, pair: cases.PairSpec, ell: int, n_chunks: int
+) -> tuple[float, float, float]:
+    """The k range an entry is split over and the scale its parts certify against.
+
+    Fixed when the entry is first split and kept with its parts: the library's own range
+    moves whenever the closures' domains do, and parts of two different splits do not sum
+    to the integral. Parts saved before the range was kept give it back, since they tile the
+    range uniformly.
+    """
+    if "_range" not in stored:
+        done = [v for k, v in stored.items() if "." not in k and k.isdigit()]
+
+        if done:
+            p = done[0]
+            width = (p["k_hi"] - p["k_lo"]) * n_chunks
+            k_lo = p["k_lo"] - (p["k_hi"] - p["k_lo"]) * p["index"]
+            k_range = (k_lo, k_lo + width)
+        else:
+            k_range = library_k_range(pair, ell)
+
+        stored["_range"] = {
+            "k_lo": k_range[0],
+            "k_hi": k_range[1],
+            "scale": abs(library_cl(pair, ell)),
+        }
+
+    r = stored["_range"]
+
+    return r["k_lo"], r["k_hi"], r["scale"]
+
+
+def _check_parts(key: str, stored: dict, edges: list[float], n_chunks: int) -> None:
+    """Abort when a stored part does not sit on the edges it is summed between."""
+    for name, part in stored.items():
+        if name == "_range":
+            continue
+
+        i = int(name.split(".")[0])
+        lo, hi = edges[i], edges[i + 1]
+
+        if "." in name:
+            continue
+
+        if (
+            abs(part["k_lo"] - lo) > 1.0e-12 * hi
+            or abs(part["k_hi"] - hi) > 1.0e-12 * hi
+        ):
+            raise ValueError(
+                f"{key}: part {name} covers [{part['k_lo']}, {part['k_hi']}], "
+                f"the split puts it on [{lo}, {hi}]"
+            )
+
+
 def run_chunked(args, tasks: list, entries: dict, failed: list[str]) -> None:
     """Certify each entry as --k-chunks parts in parallel, and merge them as they complete.
 
     Finished parts are kept beside --out, so a rerun with --resume certifies only the
-    parts still missing.
+    parts still missing. With --resplit M a missing part is certified as M sub-parts of its
+    own interval instead, labelled "<part>.<sub>", and summed into the part once all are in.
     """
     parts_path = args.out.parent / (args.out.name + ".chunks.json")
     parts: dict[str, dict] = {}
@@ -434,16 +525,26 @@ def run_chunked(args, tasks: list, entries: dict, failed: list[str]) -> None:
 
     for pair, ell in tasks:
         key = f"{pair.case}_l{ell}"
-        k_lo, k_hi = library_k_range(pair, ell)
-        scale = abs(library_cl(pair, ell))
+        parts.setdefault(key, {})
+        k_lo, k_hi, scale = _entry_range(parts[key], pair, ell, args.k_chunks)
         edges = [
             k_lo + (k_hi - k_lo) * i / args.k_chunks for i in range(args.k_chunks + 1)
         ]
-        parts.setdefault(key, {})
+        _check_parts(key, parts[key], edges, args.k_chunks)
 
         for i in range(args.k_chunks):
-            if str(i) not in parts[key]:
+            if str(i) in parts[key]:
+                continue
+
+            if args.resplit <= 1:
                 jobs.append((pair, ell, edges[i], edges[i + 1], scale, i))
+                continue
+
+            for j in range(args.resplit):
+                if f"{i}.{j}" not in parts[key]:
+                    lo = edges[i] + (edges[i + 1] - edges[i]) * j / args.resplit
+                    hi = edges[i] + (edges[i + 1] - edges[i]) * (j + 1) / args.resplit
+                    jobs.append((pair, ell, lo, hi, scale, f"{i}.{j}"))
 
     print(f"{len(jobs)} parts to certify", flush=True)
 
@@ -472,21 +573,42 @@ def run_chunked(args, tasks: list, entries: dict, failed: list[str]) -> None:
             if "failed" in chunk:
                 failed.append(f"{key} part {chunk['index']}: {chunk['failed']}")
                 print(
-                    f"  {key:12s} part {chunk['index']:2d} FAILED {chunk['failed']}",
+                    f"  {key:12s} part {str(chunk['index']):>5s} FAILED {chunk['failed']}",
                     flush=True,
                 )
                 continue
 
             parts[key][str(chunk["index"])] = chunk
-            parts_path.write_text(json.dumps(parts, indent=1))
             print(
-                f"  {key:12s} part {chunk['index']:2d} ok  {chunk['seconds']:7.1f} s  "
+                f"  {key:12s} part {str(chunk['index']):>5s} ok  {chunk['seconds']:7.1f} s  "
                 f"k in [{chunk['k_lo']:.3g}, {chunk['k_hi']:.3g}]",
                 flush=True,
             )
 
-            if len(parts[key]) == args.k_chunks:
-                entry = merge_chunks(pair, ell, list(parts[key].values()))
+            # A re-split part is whole once all its sub-parts are in.
+            if isinstance(chunk["index"], str):
+                i = int(chunk["index"].split(".")[0])
+                subs = [
+                    parts[key][f"{i}.{j}"]
+                    for j in range(args.resplit)
+                    if f"{i}.{j}" in parts[key]
+                ]
+
+                if len(subs) == args.resplit:
+                    parts[key][str(i)] = merge_subparts(i, subs)
+                    for j in range(args.resplit):
+                        del parts[key][f"{i}.{j}"]
+                    print(
+                        f"  {key:12s} part {i:5d} ok  in {args.resplit} sub-parts",
+                        flush=True,
+                    )
+
+            parts_path.write_text(json.dumps(parts, indent=1))
+
+            if all(str(i) in parts[key] for i in range(args.k_chunks)):
+                entry = merge_chunks(
+                    pair, ell, [parts[key][str(i)] for i in range(args.k_chunks)]
+                )
 
                 if "failed" in entry:
                     failed.append(f"{key}: {entry['failed']}")
