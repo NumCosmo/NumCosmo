@@ -1,5 +1,6 @@
 src_site_theory_ncm_spline_files = files(
     'spline_func.qmd',
+    'hermite.qmd',
 )
 
 if get_option('documentation')

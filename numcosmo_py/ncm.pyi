@@ -70,7 +70,9 @@ MSET_CATALOG_SAMPLER_OPTS_LABEL: str = r"SAMPOPT"
 MSET_CATALOG_WEIGHTED_LABEL: str = r"WEIGHTED"
 MSET_INIT_MARRAY: int = 32
 MSET_MAX_STACKSIZE: int = 1000
+ODE_SPLINE_CUBIC_MAX_ORDER: int = 3
 ODE_SPLINE_DEFAULT_ABSTOL: float = 0.0
+ODE_SPLINE_HERMITE_MAX_ORDER: int = 7
 ODE_SPLINE_MIN_STEP: float = 0.0
 POWSPEC_CORR3D_DEFAULT_SIZE: int = 100
 POWSPEC_FILTER_DEFAULT_SIZE: int = 200
@@ -8012,6 +8014,7 @@ class OdeSpline(GObject.Object):
         OdeSpline(**properties)
         new(s:NumCosmoMath.Spline, dydx:NumCosmoMath.OdeSplineDydx) -> NumCosmoMath.OdeSpline
         new_full(s:NumCosmoMath.Spline, dydx:NumCosmoMath.OdeSplineDydx, yi:float, xi:float, xf:float) -> NumCosmoMath.OdeSpline
+        new_hermite(dydx:NumCosmoMath.OdeSplineDydx, d2ydx2:NumCosmoMath.OdeSplineD2ydx2=None, yi:float, xi:float, xf:float) -> NumCosmoMath.OdeSpline
 
     Object NcmOdeSpline
 
@@ -8040,6 +8043,10 @@ class OdeSpline(GObject.Object):
         Integration initial step size
       min-subdivisions -> guint: min-subdivisions
         Minimum number of integration subdivisions
+      d2ydx2 -> gpointer: d2ydx2
+        Pointer to the d2ydx2 function
+      max-order -> guint: max-order
+        Maximum order of the Adams method, 0 for the spline's default
 
     Signals from GObject:
       notify (GParam)
@@ -8048,8 +8055,10 @@ class OdeSpline(GObject.Object):
     class Props:
         abstol: float
         auto_abstol: bool
+        d2ydx2: None
         dydx: None
         ini_step: float
+        max_order: int
         min_subdivisions: int
         reltol: float
         spline: Spline
@@ -8064,8 +8073,10 @@ class OdeSpline(GObject.Object):
         self,
         abstol: float = ...,
         auto_abstol: bool = ...,
+        d2ydx2: None = ...,
         dydx: None = ...,
         ini_step: float = ...,
+        max_order: int = ...,
         min_subdivisions: int = ...,
         reltol: float = ...,
         spline: Spline = ...,
@@ -8080,6 +8091,7 @@ class OdeSpline(GObject.Object):
     def clear(os: OdeSpline) -> None: ...
     def free(self) -> None: ...
     def get_ini_step(self) -> float: ...
+    def get_max_order(self) -> int: ...
     def get_min_subdivisions(self) -> int: ...
     def get_yf_attained(self) -> float: ...
     @classmethod
@@ -8095,11 +8107,21 @@ class OdeSpline(GObject.Object):
         xi: float,
         xf: float,
     ) -> OdeSpline: ...
+    @classmethod
+    def new_hermite(
+        cls,
+        dydx: typing.Callable[[float, float, None], float],
+        d2ydx2: typing.Optional[typing.Callable[[float, float, None], float]],
+        yi: float,
+        xi: float,
+        xf: float,
+    ) -> OdeSpline: ...
     def peek_spline(self) -> Spline: ...
     def prepare(self, userdata: None) -> None: ...
     def set_abstol(self, abstol: float) -> None: ...
     def set_ini_step(self, ini_step: float) -> None: ...
     def set_interval(self, yi: float, xi: float, xf: float) -> None: ...
+    def set_max_order(self, max_order: int) -> None: ...
     def set_min_subdivisions(self, min_subdivisions: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_xf(self, xf: float) -> None: ...
@@ -11738,6 +11760,73 @@ class SplineGslClass(GObject.GPointer):
     ::
 
         SplineGslClass()
+    """
+
+    parent_class: SplineClass = ...
+
+class SplineHermite(Spline):
+    r"""
+    :Constructors:
+
+    ::
+
+        SplineHermite(**properties)
+        new() -> NumCosmoMath.SplineHermite
+        new_full(xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, d1v:NumCosmoMath.Vector, d2v:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.SplineHermite
+
+    Object NcmSplineHermite
+
+    Properties from NcmSplineHermite:
+      d1 -> NcmVector: d1
+        First derivatives at the knots
+      d2 -> NcmVector: d2
+        Second derivatives at the knots
+
+    Properties from NcmSpline:
+      length -> guint: length
+        Spline length
+      x -> NcmVector: x
+        Spline knots
+      y -> NcmVector: y
+        Spline values
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        d1: Vector
+        d2: Vector
+        length: int
+        x: Vector
+        y: Vector
+
+    props: Props = ...
+    def __init__(
+        self,
+        d1: Vector = ...,
+        d2: Vector = ...,
+        length: int = ...,
+        x: Vector = ...,
+        y: Vector = ...,
+    ) -> None: ...
+    @classmethod
+    def new(cls) -> SplineHermite: ...
+    @classmethod
+    def new_full(
+        cls, xv: Vector, yv: Vector, d1v: Vector, d2v: Vector, init: bool
+    ) -> SplineHermite: ...
+    def peek_d1v(self) -> typing.Optional[Vector]: ...
+    def peek_d2v(self) -> typing.Optional[Vector]: ...
+    def set_derivs(self, d1v: Vector, d2v: Vector, init: bool) -> None: ...
+
+class SplineHermiteClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SplineHermiteClass()
     """
 
     parent_class: SplineClass = ...

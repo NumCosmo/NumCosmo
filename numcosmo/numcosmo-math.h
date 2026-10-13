@@ -78,6 +78,7 @@
 #include <numcosmo/ncm/spline/ncm_spline_cubic.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic_notaknot.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic_d2.h>
+#include <numcosmo/ncm/spline/ncm_spline_hermite.h>
 #include <numcosmo/ncm/spline/ncm_spline_vec.h>
 #include <numcosmo/ncm/stats/ncm_function_sample_set.h>
 #include <numcosmo/ncm/spline/ncm_spline2d.h>

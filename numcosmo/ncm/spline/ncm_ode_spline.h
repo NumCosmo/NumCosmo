@@ -50,8 +50,22 @@ G_DECLARE_FINAL_TYPE (NcmOdeSpline, ncm_ode_spline, NCM, ODE_SPLINE, GObject)
  */
 typedef gdouble (*NcmOdeSplineDydx) (gdouble y, gdouble x, gpointer userdata);
 
+/**
+ * NcmOdeSplineD2ydx2:
+ * @y: the value of $y$
+ * @x: the point
+ * @userdata: user data
+ *
+ * The second derivative of the solution of #NcmOdeSpline along the ODE,
+ * $\mathrm{d}^2y/\mathrm{d}x^2 = \partial_x f + f\,\partial_y f$.
+ *
+ * Returns: $\mathrm{d}^2y/\mathrm{d}x^2$ at $(y, x)$.
+ */
+typedef gdouble (*NcmOdeSplineD2ydx2) (gdouble y, gdouble x, gpointer userdata);
+
 NcmOdeSpline *ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx);
 NcmOdeSpline *ncm_ode_spline_new_full (NcmSpline *s, NcmOdeSplineDydx dydx, gdouble yi, gdouble xi, gdouble xf);
+NcmOdeSpline *ncm_ode_spline_new_hermite (NcmOdeSplineDydx dydx, NcmOdeSplineD2ydx2 d2ydx2, gdouble yi, gdouble xi, gdouble xf);
 
 void ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata);
 void ncm_ode_spline_free (NcmOdeSpline *os);
@@ -71,6 +85,9 @@ gdouble ncm_ode_spline_get_ini_step (NcmOdeSpline *os);
 
 void ncm_ode_spline_set_min_subdivisions (NcmOdeSpline *os, guint min_subdivisions);
 guint ncm_ode_spline_get_min_subdivisions (NcmOdeSpline *os);
+
+void ncm_ode_spline_set_max_order (NcmOdeSpline *os, guint max_order);
+guint ncm_ode_spline_get_max_order (NcmOdeSpline *os);
 
 gdouble ncm_ode_spline_get_yf_attained (NcmOdeSpline *os);
 
@@ -96,6 +113,21 @@ NcmSpline *ncm_ode_spline_peek_spline (NcmOdeSpline *os);
  * Smallest relative spacing between knots kept by #NcmOdeSpline.
  */
 #define NCM_ODE_SPLINE_MIN_STEP (1.0e-10)
+
+/**
+ * NCM_ODE_SPLINE_CUBIC_MAX_ORDER:
+ *
+ * The ODE order #NcmOdeSpline uses with a cubic spline when #NcmOdeSpline:max-order is zero.
+ */
+#define NCM_ODE_SPLINE_CUBIC_MAX_ORDER (3)
+
+/**
+ * NCM_ODE_SPLINE_HERMITE_MAX_ORDER:
+ *
+ * The ODE order #NcmOdeSpline uses with a #NcmSplineHermite when #NcmOdeSpline:max-order
+ * is zero.
+ */
+#define NCM_ODE_SPLINE_HERMITE_MAX_ORDER (7)
 
 G_END_DECLS
 

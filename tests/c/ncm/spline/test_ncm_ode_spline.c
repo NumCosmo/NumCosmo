@@ -214,6 +214,171 @@ test_ncm_ode_spline_ends_at_xf (TestNcmOdeSpline *test, gconstpointer pdata)
 }
 
 static gdouble
+_test_ode_d2ydx2 (gdouble y, gdouble x, gpointer userdata)
+{
+  TestNcmOdeSpline *test = (TestNcmOdeSpline *) userdata;
+
+  return test->alpha * test->alpha * y;
+}
+
+/* With a NcmSplineHermite the knots carry y' and y'': from the callback, or from CVODE
+ * with the difference quotient at the first knots. Measured at reltol 1e-10: 198 knots
+ * against 2782 with the cubic, both sources of y'' give exp (alpha x) to 6.0e-10 (the
+ * cubic to 4.8e-8), and CVODE's y'' is within 9.9e-5 of the exact one; the bounds are 10
+ * times these. */
+static void
+_test_ode_spline_hermite (TestNcmOdeSpline *test, NcmOdeSplineD2ydx2 d2ydx2, const gdouble d2_bound)
+{
+  NcmOdeSpline *os = ncm_ode_spline_new_hermite (_test_ode_dydx, d2ydx2, 1.0, 0.0, 5.0);
+  NcmSpline *ss    = ncm_ode_spline_peek_spline (os);
+  NcmVector *xv, *d1v, *d2v;
+  guint i;
+
+  test->alpha = 2.5;
+  ncm_ode_spline_set_reltol (os, 1.0e-10);
+  ncm_ode_spline_prepare (os, test);
+
+  g_assert_true (NCM_IS_SPLINE_HERMITE (ss));
+  xv  = ncm_spline_peek_xv (ss);
+  d1v = ncm_spline_hermite_peek_d1v (NCM_SPLINE_HERMITE (ss));
+  d2v = ncm_spline_hermite_peek_d2v (NCM_SPLINE_HERMITE (ss));
+  g_assert_cmpuint (ncm_vector_len (d1v), ==, ncm_vector_len (xv));
+  g_assert_cmpuint (ncm_vector_len (d2v), ==, ncm_vector_len (xv));
+
+  for (i = 0; i < ncm_vector_len (xv); i++)
+  {
+    const gdouble y = ncm_spline_eval (ss, ncm_vector_get (xv, i));
+
+    g_assert_cmpfloat (ncm_vector_get (d1v, i), ==, test->alpha * y);
+    g_assert_true (gsl_finite (ncm_vector_get (d2v, i)));
+    ncm_assert_cmpdouble_e (ncm_vector_get (d2v, i), ==, test->alpha * test->alpha * y, d2_bound, 0.0);
+  }
+
+  for (i = 0; i <= 1000; i++)
+  {
+    const gdouble x = 5.0 * i / 1000.0;
+
+    ncm_assert_cmpdouble_e (ncm_spline_eval (ss, x), ==, exp (test->alpha * x), 6.0e-9, 0.0);
+  }
+
+  g_assert_cmpuint (ncm_vector_len (xv), <, 400);
+
+  ncm_ode_spline_free (os);
+}
+
+void
+test_ncm_ode_spline_hermite_d2ydx2 (TestNcmOdeSpline *test, gconstpointer pdata)
+{
+  _test_ode_spline_hermite (test, _test_ode_d2ydx2, 0.0);
+}
+
+void
+test_ncm_ode_spline_hermite_dky (TestNcmOdeSpline *test, gconstpointer pdata)
+{
+  _test_ode_spline_hermite (test, NULL, 1.0e-3);
+}
+
+/* The yf stop and the knot replacement at xf also carry the derivatives */
+void
+test_ncm_ode_spline_hermite_yf_and_xf (TestNcmOdeSpline *test, gconstpointer pdata)
+{
+  NcmOdeSpline *os = ncm_ode_spline_new_hermite (_test_ode_dydx, _test_ode_d2ydx2, 1.0, 0.0, 5.0);
+  NcmSpline *ss    = ncm_ode_spline_peek_spline (os);
+  NcmVector *xv;
+
+  test->alpha = 2.5;
+  ncm_ode_spline_set_reltol (os, 1.0e-10);
+  ncm_ode_spline_set_min_subdivisions (os, 7);
+  ncm_ode_spline_prepare (os, test);
+  xv = ncm_spline_peek_xv (ss);
+  g_assert_cmpfloat (ncm_vector_get (xv, ncm_vector_len (xv) - 1), ==, 5.0);
+  g_assert_cmpfloat (ncm_vector_get (ncm_spline_hermite_peek_d1v (NCM_SPLINE_HERMITE (ss)), ncm_vector_len (xv) - 1), ==,
+                     test->alpha * ncm_vector_get (ncm_spline_peek_yv (ss), ncm_vector_len (xv) - 1));
+
+  ncm_ode_spline_set_xf (os, GSL_NAN);
+  ncm_ode_spline_set_yf (os, exp (10.0));
+  ncm_ode_spline_prepare (os, test);
+  xv = ncm_spline_peek_xv (ss);
+  ncm_assert_cmpdouble_e (ncm_vector_get (xv, ncm_vector_len (xv) - 1), ==, 10.0 / test->alpha, 1.0e-7, 0.0);
+  g_assert_cmpuint (ncm_vector_len (ncm_spline_hermite_peek_d2v (NCM_SPLINE_HERMITE (ss))), ==, ncm_vector_len (xv));
+
+  ncm_ode_spline_free (os);
+}
+
+/* An xf within NCM_ODE_SPLINE_MIN_STEP of the knot before it: the last step replaces that
+ * knot, with its derivatives, and the spline ends at xf with one knot fewer. A fixed initial
+ * step keeps the knots independent of xf (CVODE's own initial step depends on it). */
+void
+test_ncm_ode_spline_hermite_replace_last (TestNcmOdeSpline *test, gconstpointer pdata)
+{
+  NcmOdeSpline *os = ncm_ode_spline_new_hermite (_test_ode_dydx, _test_ode_d2ydx2, 1.0, 0.0, 5.0);
+  NcmSpline *ss    = ncm_ode_spline_peek_spline (os);
+  NcmVector *xv;
+  gdouble x_prev, xf;
+  guint n;
+
+  test->alpha = 2.5;
+  ncm_ode_spline_set_reltol (os, 1.0e-10);
+  ncm_ode_spline_set_ini_step (os, 1.0e-3);
+  ncm_ode_spline_prepare (os, test);
+  xv     = ncm_spline_peek_xv (ss);
+  n      = ncm_vector_len (xv);
+  x_prev = ncm_vector_get (xv, n - 2);
+  xf     = x_prev * (1.0 + 0.3 * NCM_ODE_SPLINE_MIN_STEP);
+
+  ncm_ode_spline_set_xf (os, xf);
+  ncm_ode_spline_prepare (os, test);
+  xv = ncm_spline_peek_xv (ss);
+  g_assert_cmpuint (ncm_vector_len (xv), ==, n - 1);
+  g_assert_cmpfloat (ncm_vector_get (xv, n - 2), ==, xf);
+  g_assert_cmpfloat (ncm_vector_get (ncm_spline_hermite_peek_d1v (NCM_SPLINE_HERMITE (ss)), n - 2), ==,
+                     test->alpha * ncm_vector_get (ncm_spline_peek_yv (ss), n - 2));
+  ncm_assert_cmpdouble_e (ncm_spline_eval (ss, xf), ==, exp (test->alpha * xf), 6.0e-9, 0.0);
+
+  ncm_ode_spline_free (os);
+}
+
+/* max-order: zero selects the spline's default, 3 for a cubic and 7 for a Hermite spline;
+ * a higher order takes fewer steps */
+void
+test_ncm_ode_spline_max_order (TestNcmOdeSpline *test, gconstpointer pdata)
+{
+  NcmOdeSpline *osh = ncm_ode_spline_new_hermite (_test_ode_dydx, _test_ode_d2ydx2, 1.0, 0.0, 5.0);
+  guint n3, n7, retrieved;
+
+  g_assert_cmpuint (ncm_ode_spline_get_max_order (test->os), ==, 0);
+  g_assert_cmpuint (ncm_ode_spline_get_max_order (osh), ==, 0);
+
+  ncm_ode_spline_set_reltol (osh, 1.0e-10);
+  ncm_ode_spline_prepare (osh, test);
+  n7 = ncm_spline_get_len (ncm_ode_spline_peek_spline (osh));
+
+  ncm_ode_spline_set_max_order (osh, NCM_ODE_SPLINE_CUBIC_MAX_ORDER);
+  ncm_ode_spline_prepare (osh, test);
+  n3 = ncm_spline_get_len (ncm_ode_spline_peek_spline (osh));
+  g_assert_cmpuint (n7, <, n3);
+
+  ncm_ode_spline_set_interval (test->os, 1.0, 0.0, 5.0);
+  ncm_ode_spline_prepare (test->os, test);
+  g_assert_cmpuint (ncm_spline_get_len (ncm_ode_spline_peek_spline (test->os)), ==, n3);
+
+  g_object_set (osh, "max-order", 5, NULL);
+  g_object_get (osh, "max-order", &retrieved, NULL);
+  g_assert_cmpuint (retrieved, ==, 5);
+
+  {
+    gpointer d2ydx2 = NULL;
+
+    g_object_get (osh, "d2ydx2", &d2ydx2, NULL);
+    g_assert_true (d2ydx2 == (gpointer) & _test_ode_d2ydx2);
+  }
+  ncm_ode_spline_prepare (osh, test);
+  g_assert_cmpuint (ncm_spline_get_len (ncm_ode_spline_peek_spline (osh)), <, n3);
+
+  ncm_ode_spline_free (osh);
+}
+
+static gdouble
 _test_ode_dydx_blowup (gdouble y, gdouble x, gpointer userdata)
 {
   return (x < 1.0) ? y : GSL_NAN;
@@ -282,6 +447,26 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/ode_spline/ends_at_xf", TestNcmOdeSpline, NULL,
               &test_ncm_ode_spline_new,
               &test_ncm_ode_spline_ends_at_xf,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/hermite/d2ydx2", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_hermite_d2ydx2,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/hermite/dky", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_hermite_dky,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/hermite/yf_and_xf", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_hermite_yf_and_xf,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/hermite/replace_last", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_hermite_replace_last,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/max_order", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_max_order,
               &test_ncm_ode_spline_free);
   g_test_add_func ("/ncm/ode_spline/failure", &test_ncm_ode_spline_failure);
   g_test_add_func ("/ncm/ode_spline/failure/subprocess", &test_ncm_ode_spline_failure_subprocess);

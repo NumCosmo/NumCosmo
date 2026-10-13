@@ -56,6 +56,7 @@ void test_ncm_mpi_job_fit_basic (void);
 void test_ncm_mpi_job_mcmc_basic (void);
 void test_ncm_mpi_job_feval_basic (void);
 void test_ncm_spline_bspline_basic (void);
+void test_ncm_spline_hermite_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
 void test_ncm_powspec_analytic_basic (void);
 void test_ncm_pln1d_basic (void);
@@ -149,6 +150,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mpi_job_mcmc/basic", test_ncm_mpi_job_mcmc_basic);
   g_test_add_func ("/ncm/mpi_job_feval/basic", test_ncm_mpi_job_feval_basic);
   g_test_add_func ("/ncm/spline_bspline/basic", test_ncm_spline_bspline_basic);
+  g_test_add_func ("/ncm/spline_hermite/basic", test_ncm_spline_hermite_basic);
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
   g_test_add_func ("/ncm/powspec_analytic/basic", test_ncm_powspec_analytic_basic);
   g_test_add_func ("/ncm/pln1d/basic", test_ncm_pln1d_basic);
@@ -647,6 +649,26 @@ test_ncm_spline_bspline_basic (void)
   g_assert_true (NCM_IS_SPLINE_BSPLINE (sbs));
 
   NCM_TEST_FREE (ncm_spline_free, NCM_SPLINE (sbs));
+}
+
+void
+test_ncm_spline_hermite_basic (void)
+{
+  NcmSplineHermite *sh = ncm_spline_hermite_new ();
+  NcmSplineHermite *sh2;
+
+  g_assert_true (sh != NULL);
+  g_assert_true (NCM_IS_SPLINE_HERMITE (sh));
+  g_assert_null (ncm_spline_hermite_peek_d1v (sh));
+  g_assert_null (ncm_spline_hermite_peek_d2v (sh));
+
+  sh2 = NCM_SPLINE_HERMITE (ncm_spline_ref (NCM_SPLINE (sh)));
+  ncm_spline_clear ((NcmSpline **) &sh2);
+  g_assert_true (sh2 == NULL);
+
+  g_assert_true (NCM_IS_SPLINE_HERMITE (sh));
+
+  NCM_TEST_FREE (ncm_spline_free, NCM_SPLINE (sh));
 }
 
 void
