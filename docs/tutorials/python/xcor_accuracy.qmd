@@ -145,6 +145,10 @@ for name, (reltol, peak_epsilon) in cost_settings.items():
 
 ```{python}
 #| echo: false
+# The claims of the paragraph below, checked so that a change breaks the render.
+assert cost["NcXcorSSCSij default"] == cost["reltol 100 times smaller"]
+assert cost["peak-epsilon 10 times smaller"][1] > cost["NcXcorSSCSij default"][1]
+
 display(Markdown(rf"""
 At peak-epsilon $10^{{-5}}$, reltol $10^{{-6}}$ and $10^{{-8}}$ give the same
 {cost['NcXcorSSCSij default'][0]} panels and {cost['NcXcorSSCSij default'][1]} nodes. A
@@ -233,6 +237,7 @@ pairs = {
 }
 
 rel_err = {label: np.abs(err / cl).max() for label, (cl, err, _) in pairs.items()}
+abs_err = {label: np.abs(err).max() for label, (_, err, _) in pairs.items()}
 print(f"{'pair':<24} {'max |C_l|':>11} {'max sigma_l':>12} {'max sigma_l/|C_l|':>18}")
 for label, (cl, err, _) in pairs.items():
     print(
@@ -243,6 +248,12 @@ for label, (cl, err, _) in pairs.items():
 
 ```{python}
 #| echo: false
+# The claims of the paragraph below and of the figure caption that follows.
+assert 1.0e-6 < rel_err["auto, 0.1 < z < 0.2"] < 1.0e-5
+assert max(abs_err.values()) < 10.0 * min(abs_err.values())
+assert rel_err["cross, separated bins"] > 1.0
+assert np.abs(auto).max() > 1.0e3 * np.abs(separated).max()
+
 display(Markdown(rf"""
 The estimate is {sci(rel_err['auto, 0.1 < z < 0.2'])} of the auto spectrum, between the
 two tolerances the closures were built with, $10^{{-6}}$ and $10^{{-5}}$. The relative
@@ -356,9 +367,9 @@ for name in ("NcXcorKernel default", "NcXcorSSCSij default"):
 ```{python}
 #| echo: false
 display(Markdown(rf"""
-At the defaults of `NcXcorKernel` the deviations are {sci(dev['NcXcorKernel default'][0])}
+At the defaults of [[numcosmo|NcXcorKernel]] the deviations are {sci(dev['NcXcorKernel default'][0])}
 of the auto spectrum and {sci(dev['NcXcorKernel default'][1])} of the diagonal. At the
-defaults of `NcXcorSSCSij` the auto spectrum agrees with the reference to
+defaults of [[numcosmo|NcXcorSSCSij]] the auto spectrum agrees with the reference to
 {sci(dev['NcXcorSSCSij default'][0])} and the separated cross spectrum to
 {sci(dev['NcXcorSSCSij default'][1])} of the diagonal. At this setting the estimates of
 the previous section exceed these deviations by a factor of
@@ -501,19 +512,30 @@ than peak-epsilon.
 
 ```{python}
 #| echo: false
+_a2_ssc = certified_deviation['A2', 'NcXcorSSCSij default']
+_a2_val = certified_deviation['A2', 'validation']
+_a2_dom = certified_deviation['A2', 'validation, adaptive-epsilon 1e-9']
+_x14_val = certified_deviation['X14', 'validation']
+_x14_dom = certified_deviation['X14', 'validation, adaptive-epsilon 1e-9']
+
+# The claims of the paragraph above, of the paragraphs below and of the summary.
+for (_case, _name), (_dev, _) in certified_deviation.items():
+    assert _dev < CERTIFIED_SETTINGS[_name][1], (_case, _name)
+assert _a2_val[0] > 0.5 * _a2_ssc[0]
+assert closure_range["default"][1] < entry["k_hi"]
+assert closure_range["1e-9"][1] >= entry["k_hi"] * (1.0 - 1.0e-9)
+assert _a2_dom[0] < _a2_val[0]
+assert _x14_val[0] < _x14_dom[0] < CERTIFIED_SETTINGS['validation'][1]
+
 _ratio = max(
     certified_deviation['X14', n][0] / certified_deviation['A2', n][0]
     for n in CERTIFIED_SETTINGS
 )
-_a2_ssc = certified_deviation['A2', 'NcXcorSSCSij default']
-_a2_val = certified_deviation['A2', 'validation']
-_a2_dom = certified_deviation['A2', 'validation, adaptive-epsilon 1e-9']
-_x14_dom = certified_deviation['X14', 'validation, adaptive-epsilon 1e-9']
 display(Markdown(rf"""
 At the same setting the separated pair X14, with its hard edges, deviates by at most
 {_ratio:.1f} times the deviation of the auto spectrum A2.
 
-A2 deviates by {sci(_a2_ssc[0])} at the `NcXcorSSCSij` setting ($\ell = {_a2_ssc[1]}$)
+A2 deviates by {sci(_a2_ssc[0])} at the [[numcosmo|NcXcorSSCSij]] setting ($\ell = {_a2_ssc[1]}$)
 and by {sci(_a2_val[0])} at the validation setting ($\ell = {_a2_val[1]}$), so this part
 of its deviation does not decrease with peak-epsilon. It is the range of $k$: at
 $\ell = 5$ the closure ends at {closure_range['default'][1]:.2f} $\mathrm{{Mpc^{{-1}}}}$
@@ -551,7 +573,7 @@ shapes = {
     ),
 }
 
-shape_cost = {}
+shape_cost, shape_k_max = {}, {}
 print(f"{'window':<18} {'panels':>7} {'nodes':>6} {'k range [1/Mpc]':>22}")
 for name, kernel in shapes.items():
     if name != "top-hat":
@@ -564,11 +586,17 @@ for name, kernel in shapes.items():
     k_min, k_max = closure.get_range()
     n_panels, nodes = closure_cost(kernel)
     shape_cost[name] = nodes
+    shape_k_max[name] = k_max / RH
     print(f"{name:<18} {n_panels:>7} {nodes:>6} {f'{k_min / RH:.2e} to {k_max / RH:.2e}':>22}")
 ```
 
 ```{python}
 #| echo: false
+# The claims of the paragraph below.
+assert 0.5 < shape_k_max["smoothed top-hat"] / shape_k_max["top-hat"] < 2.0
+assert shape_k_max["Gaussian"] < 0.2 * shape_k_max["top-hat"]
+assert shape_cost["top-hat"] > max(shape_cost["smoothed top-hat"], shape_cost["Gaussian"])
+
 display(Markdown(rf"""
 The top-hat costs {shape_cost['top-hat']} nodes,
 {shape_cost['top-hat'] / shape_cost['smoothed top-hat']:.1f} times the smoothed top-hat on
