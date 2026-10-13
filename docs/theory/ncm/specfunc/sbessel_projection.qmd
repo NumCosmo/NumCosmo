@@ -344,8 +344,8 @@ $x\,F(x)$ on the
 panel, computed adaptively: the function is sampled at Chebyshev--Lobatto nodes
 $t_j = \cos(j\pi/2^k)$, whose grids nest so that going from level $k$ to $k+1$
 evaluates only the new odd nodes, and the level is doubled until the
-coefficients of two successive levels agree in the $\ell^1$ norm, the new top
-coefficients included,
+coefficients of two successive levels pass the acceptance test of the
+[Spectral Methods](../algebra/spectral.qmd) page, Eq. (2), which for the forcing reads
 $$
 \sum_{n \le N} \big|c^{(2N)}_n - c^{(N)}_n\big| + \sum_{N < n \le 2N} \big|c^{(2N)}_n\big|
 \le \max\!\big(\epsilon_F\, V,\; \epsilon_{\rm abs}\big),
@@ -502,7 +502,7 @@ block's multipoles and the component's support in $\chi$. The domain is then
 grown outward, alternately to the left and to the right by a factor
 $1 \mp \alpha$ with $\alpha = 0.2$, and each new point is evaluated. Growth on
 a side stops after `NcXcorKernel:adaptive-boundary-tries` consecutive points, five by
-default, with $\|W\|_2 < \epsilon\, W_{\rm ref}$, where $\epsilon$ is
+default, with $\|W\|_2 < \epsilon_{\rm dom}\, W_{\rm ref}$, where $\epsilon_{\rm dom}$ is
 `NcXcorKernel:adaptive-epsilon`, $10^{-5}$ by default, and $W_{\rm ref}$ the running
 maximum over the block, or at a hard bound set by the range on which the kernel is defined.
 Five consecutive small values distinguish a tail from a zero crossing of an
@@ -635,8 +635,8 @@ expansion is a panel edge, and while a panel is fitted each component is either 
 or off for the whole panel, as evaluated at the panel's midpoint, so a dropped
 component contributes exactly zero beyond its boundary, including at the shared
 edge. A jump inside a panel would instead
-produce an aliasing residual in Eq. (8) of order $\Delta/\sqrt N$, with $\Delta$ the
-height of the jump relative to the block's peak: a jump of $4\times10^{-5}$ on a peak
+produce an aliasing residual in Eq. (8) of order $\delta_{\rm jump}/\sqrt N$, with
+$\delta_{\rm jump}$ the height of the jump relative to the block's peak: a jump of $4\times10^{-5}$ on a peak
 of $10$ passes a tolerance of $10^{-6}$ and fails $10^{-7}$. Bisection does not reduce
 this residual, since the sub-panel that contains the jump carries a jump of the same
 height. At a panel edge the jump adds no residual.

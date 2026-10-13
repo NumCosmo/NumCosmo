@@ -627,9 +627,10 @@ precision parameters, which tune CCL's internal background and $P(k)$ splines, a
 used. On CCL's side the window is a table that CCL interpolates with an Akima spline,
 and FKEM resamples that spline onto its own grid; both densities are stated below.
 FKEM extrapolates the table linearly beyond its ends, so each table carries two zero
-samples beyond each end of the support; without them FKEM integrates a different
-window, a top-hat continued as a constant or a Gaussian continued as a ramp. Every
-component of a window is a separate table.
+samples beyond each end of the support, none below a support that starts at
+$\chi = 0$; without them FKEM integrates a different window, a top-hat continued as a
+constant or a Gaussian continued as a ramp. Every component of a window is a separate
+table.
 
 ```{python}
 # | code-fold: true
@@ -642,10 +643,8 @@ FKEM_NCHI = 4096
 FKEM_CHI_MIN = 1.0e-6
 TRACER_NCHI = 2048
 
-# CCL's Limber path treats a kernel as zero outside its table, but FKEM resamples the
-# table with a linear spline that extrapolates its end segments. Two zero samples beyond
-# each end of the support make that extrapolation zero, so FKEM integrates the certified
-# window.
+# The zero samples beyond each end of a table, see the text above, at this fraction of
+# the support's upper end.
 TABLE_PAD = 1.0e-9
 
 
@@ -803,13 +802,9 @@ def fkem_on_certified(ccl_cosmo, kernel, ell, k_cert, deriv=0, nchi=None):
 # | layout-ncol: 2
 # | code-fold: true
 
-# One panel per case, and the panel names itself in its title -- so there is no
-# per-panel caption list here on purpose. The list this cell used to carry named
-# the seven closed *forms* while the loop emits one figure per *case*: at seven
-# captions and sixteen cases Quarto laid out the first six cleanly and put every
-# panel after them in a `page-full` row, which is a figure breaking out of the
-# content column. A caption list has to be kept in step with the set of windows by
-# hand, and that set has grown twice; a title read from the table cannot fall behind.
+# One panel per case, titled from the table, and no per-panel caption list: a list
+# shorter than the number of cases makes Quarto lay out the panels past its end in a
+# `page-full` row, outside the content column.
 
 for shape in CASES:
     name = label_of(shape, table0)
@@ -1191,8 +1186,8 @@ for the same three pairs and windows, with CCL in calculator mode, so both codes
 integrate the same tabulated $P(k)$. The certified column comes from
 `data/truth_tables/xcor/xcor_kquad.json.gz`, whose entries are nested Arb integrations
 of this expression: the outer integral over $k$ is evaluated on balls of the inner one.
-Each entry is certified on its stored interval $[k_{\rm lo}, k_{\rm hi}]$; restricting
-UltraLevin to that interval leaves its deviations below unchanged to two digits.
+Each entry is certified on its stored interval $[k_{\rm lo}, k_{\rm hi}]$; the library
+below integrates over the range of $k$ its closures find.
 
 ```{python}
 # | tbl-cap: "Angular power spectrum of the three pairs against certified values, as fractions of the diagonal and relative to the certified value"
@@ -1512,12 +1507,8 @@ of multipoles in the block, and the batched solves have specialized kernels only
 32 lanes. FKEM is 2.5 to 3 times cheaper per multipole at these settings. The accuracy
 of the two methods at the same settings is in the table of the previous section.
 
-Where a warm solve spends its time, from a profile of the adjacent pair X12 at
-B = 8: half in replaying stored factorizations and back-substituting, one sixth in
-evaluating the window and $P(k)$ at the panel nodes, one tenth in the Chebyshev fits of
-the forcing, and the rest in the remaining code. Two thirds of the panel solves are
-partial panels, which contain a bound $ka$ or $kb$, and a partial panel costs about 2.5
-times an interior panel; the number of partial panels sets the cost.
+Where a warm solve spends its time is recorded in the development notes
+(`NumCosmoDevNotes/xcor_certified_page_measurements.md`).
 
 The certificate itself cost 56 core-hours of Arb arithmetic for the $C_\ell$
 table alone, recorded entry by entry in its `seconds` field, against

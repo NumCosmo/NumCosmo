@@ -205,17 +205,13 @@ the difference between the derivatives. The difference between the two spectra
 therefore **changes with $\Omega_c$**.
 
 Two conditions apply to this result. First, it depends on the number of points of the
-$n(z)$ table given to CCL: with 1200 points the spectra agree to $7\times10^{-5}$ and the
-derivatives to $10^{-3}$. The deviation comes from FKEM's sampling in $\chi$, which by
-default has twice as many points as the table. Second, the page does not compare speed;
+$n(z)$ table given to CCL, since FKEM's sampling in $\chi$ has by default twice as many
+points as the table; the deviations at 1200 points are recorded in the development
+notes (`NumCosmoDevNotes/xcor_certified_page_measurements.md`). Second, the page does not compare speed;
 CCL evaluates this spectrum faster than UltraLevin. It measures the error in
 $\mathrm{d}C_\ell/\mathrm{d}\theta$ of a method with a fixed sampling resolution,
 against a method that meets a tolerance at every evaluation.
 
-The forward variant of NcmDiff, `rf_d1_1_to_M`, gave the same derivatives to
-$10^{-9}$ at every multipole but one, where its value deviated by $6\times10^{-4}$ and
-its reported error was of the same size; the central variant used here has no such
-multipole. On the UltraLevin spectrum the second differences of $C_\ell(\Omega_c)$ on a
-grid of 81 points around the fiducial value are of order $10^{-7}$ everywhere, as for a
-smooth function, so that deviation came from the forward estimator and not from the
-spectrum.
+The central variant of NcmDiff is used because its forward variant, `rf_d1_1_to_M`,
+deviates at one multipole where the spectrum itself is smooth; the measurement is in
+the same development notes.

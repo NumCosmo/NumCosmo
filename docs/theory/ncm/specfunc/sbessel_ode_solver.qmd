@@ -1048,7 +1048,7 @@ fourteen digits, while the pinned constraint of the same panel is accurate to $1
 for every pin pair tried. The pinned member of [[numcosmo-math|NcmSBesselOdeConstraint]]
 is for this case: it imposes no endpoint condition, so it has no boundary determinant,
 and on a panel short enough for Dirichlet data to be the cheaper choice, low pins, which
-keep the oscillation in the solution, are the right choice. The tau constraint does not
+keep the oscillation in the solution, are used. The tau constraint does not
 apply here, since it is invalid on these short panels.
 
 A grid laid out to avoid conjugate points, rather than checked against them, spaces its
