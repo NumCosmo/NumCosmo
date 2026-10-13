@@ -9,7 +9,7 @@ format:
   html:
     tbl-cap-location: margin
     fig-cap-location: margin
-  ipynb: 
+  ipynb:
     echo: true
 
 format-links: [ipynb]
@@ -18,21 +18,20 @@ format-links: [ipynb]
 
 ## Introduction
 
-Compares two-point cosmological observables from CCL and NumCosmo.
+This page compares the angular power spectra and their kernels computed by CCL and
+NumCosmo.
 
 ### Scope of the comparison
 
 Both libraries are run in the Limber approximation throughout this page.
 NumCosmo uses `Nc.XcorMethod.LIMBER_Z_CUBATURE`, the redshift-space Limber
 integral, as the closest counterpart to CCL's own `angular_cl` path. Every
-difference reported below is therefore between two Limber implementations, not
-between an approximate and an exact calculation. NumCosmo's non-Limber solvers
-(the `KERNEL_*` methods, which integrate the kernel closures against
-$j_\ell(k\chi)$ directly) are not exercised here.
+difference reported below is therefore between two Limber implementations.
+NumCosmo's non-Limber method, `NC_XCOR_METHOD_KERNEL_EXACT`, is not used here.
 
 Both codes also run at their default precision settings: `setup_models` is
 called with `high_precision=False`, so CCL's `CCLParams.set_high_prec_params()`
-is not applied. Tightening it improves the agreement at the cost of runtime.
+is not applied. With it, the agreement improves and CCL's runtime increases.
 
 ```{python}
 import sys
@@ -56,7 +55,7 @@ import numcosmo_py.ccl.comparison as nc_cmp
 
 ### Initializing NumCosmo
 
-To begin, we configure NumCosmo and redirect its output to this notebook using the following code:
+The cell below configures NumCosmo and sends its log output to this notebook.
 
 ```{python}
 Ncm.cfg_init()
@@ -77,8 +76,9 @@ ell_kernel_test = 80
 
 ### Parameter Overview
 
-The table below summarizes the parameter sets. 
-We consider five sets, designed to cover a broad range of cosmologies, including models with and without neutrinos, spatial curvature, $\Lambda$CDM, and alternative values for the dark energy equation of state.
+The table below lists the five parameter sets: flat $\Lambda$CDM without and with one
+massive neutrino, flat XCDM, spherical XCDM with two massive neutrinos, and hyperbolic
+XCDM. The XCDM sets have $w_0 = -0.9$ and $w_a = 0.1$.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-params
@@ -93,8 +93,8 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 
 ## CMB Lensing
 
-The following code compares the CMB lensing power spectrum implemented in CCL and NumCosmo.
-We plot the lensing kernel and power spectrum for each set.
+The cells below compute the CMB lensing kernel at $\ell = 80$ and the CMB lensing power
+spectrum with both libraries, for each set.
 
 ```{python}
 
@@ -147,18 +147,21 @@ df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
 ```
 
-All CCL calculations are consistent with the results from NumCosmo, though this agreement decreases as the number of samples increases.
+The kernels agree to $1.3 \times 10^{-7}$. CCL computes the distance from $z$ to
+$z_\mathrm{lss}$ as the difference of the two comoving distances, and this difference
+loses relative precision as $z$ approaches $z_\mathrm{lss}$; this cancellation is the
+largest part of the kernel deviation.
 
-This counterintuitive behavior occurs because CCL computes the distance from $z_\mathrm{lss}$ to $z$ as the difference between their comoving distances, rather than directly calculating the distance between the two redshifts. As the number of samples increases, $\chi(z_\mathrm{lss})$ and $\chi(z)$ become more similar, leading to a cancellation error that dominates the kernel.
-
-Additionally, several spikes appear in the relative difference of $C_\ell^{\kappa\kappa}$, which are attributed to errors in the CCL Limber integration.
+The spectra deviate by less than $10^{-5}$ on average. At isolated multipoles the
+deviation reaches $2.8 \times 10^{-3}$; these multipoles come from errors in CCL's
+Limber integration.
 
 ## CMB Integrated Sachs-Wolfe (ISW)
 
-The following code compares the CMB ISW power spectrum as implemented in CCL and NumCosmo. 
-We show both the ISW kernel and the final $C_\ell$ values to highlight the agreement and differences between the two frameworks.
+The cells below compute the ISW kernel at $\ell = 80$ and the ISW power spectrum with
+both libraries, for each set.
 
-```{python} 
+```{python}
 
 cmb_isw_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
     [
@@ -212,16 +215,20 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 ```
 
 
-The CCL calculations show marginal agreement with those from NumCosmo. This discrepancy stems from CCL's reduced accuracy in computing the growth function and growth factor at high redshifts ($z \gtrsim 10$). While this limitation does not significantly impact cross-correlations involving the ISW kernel when combined with probes anchored at lower redshifts, it introduces pronounced errors in the ISW autocorrelation, which depends on precise integration over the full redshift range up to $z_\mathrm{lss}$.  
+The ISW spectra deviate by $2.4 \times 10^{-2}$ on average in the three sets without
+massive neutrinos, and by $1.2 \times 10^{-3}$ and $2.2 \times 10^{-3}$ in the two sets
+with massive neutrinos. The deviation comes from CCL's growth function and growth factor
+at $z \gtrsim 10$: the kernels in the figure agree up to $z \sim 10$ and deviate beyond.
+The ISW autocorrelation integrates the kernel up to $z_\mathrm{lss}$ and contains this
+deviation. A cross-correlation of the ISW kernel with a probe at low redshift weights it
+by that probe's kernel, which is small at $z \gtrsim 10$.
 
-As illustrated in the ISW kernel plot, the results exhibit strong agreement up to $z \sim 10$, beyond which discrepancies grow increasingly pronounced, reflecting the cumulative effect of inaccuracies in CCL's high-$z$ growth calculations.  
+## Thermal Sunyaev-Zel'dovich (tSZ) Effect
 
-## Thermal Sunyaev-Zel'dovich (tSZ) Effect  
+The cells below compute the tSZ kernel at $\ell = 80$ and the tSZ power spectrum with
+both libraries, for each set.
 
-The code below benchmarks the thermal Sunyaev-Zel'dovich (tSZ) kernel and angular power spectrum ($C_\ell$) implementations in CCL and NumCosmo. 
-This comparison cross-validates the two frameworks, focusing on relative differences in the kernel and $C_\ell$ values.
-
-```{python} 
+```{python}
 
 tsz_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
     [
@@ -235,7 +242,7 @@ tsz_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 ]
 ```
 
-```{python} 
+```{python}
 # | label: fig-ccl-vs-nc-tsz-sets
 # | fig-cap:
 # |   - "Thermal Sunyaev-Zel'dovich kernel, $\\ell = 80$"
@@ -273,13 +280,15 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 
 ```
 
-All CCL calculations show good agreement with the results from NumCosmo.  
-
-However, the same Limber integration errors present in CCL also manifest here, leading to eventual spikes in the relative difference between the two frameworks at random multipoles ($\ell$). 
+The kernels differ by $9.6 \times 10^{-9}$, nearly the same value at every redshift.
+The spectra deviate by $1.2 \times 10^{-5}$ on average, and by up to
+$2.4 \times 10^{-3}$ at isolated multipoles, from CCL's Limber integration as for CMB
+lensing.
 
 ## Galaxy Weak Lensing
 
-The following code compares the galaxy weak lensing kernel and angular power spectrum implemented in CCL and NumCosmo.
+The cells below compute the weak-lensing kernel at $\ell = 80$ and the weak-lensing
+power spectrum with both libraries, for each set.
 
 ```{python}
 
@@ -298,7 +307,7 @@ gwl_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 ]
 ```
 
-```{python} 
+```{python}
 # | label: fig-ccl-vs-nc-gwl-sets
 # | fig-cap:
 # |   - "Galaxy Weak Lensing kernel, $\\ell = 80$"
@@ -336,11 +345,14 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 
 ```
 
-All CCL calculations agree with the results from NumCosmo. Again the same Limber integration errors present in CCL also manifest here, leading to eventual spikes in the relative difference between the two frameworks at random multipoles ($\ell$).
+The kernels deviate by $1.5 \times 10^{-4}$ on average and by $1.6 \times 10^{-3}$ at
+most. The spectra deviate by less than $5 \times 10^{-6}$ on average, and by up to
+$4.0 \times 10^{-3}$ at isolated multipoles, from CCL's Limber integration.
 
 ## Galaxy Number Count
 
-The following code compares the galaxy number count power spectrum implemented in CCL and NumCosmo.
+The cells below compute the galaxy number-count kernel at $\ell = 80$ and power spectrum
+with both libraries, for each set.
 
 ```{python}
 
@@ -358,7 +370,7 @@ gnc_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 ]
 ```
 
-```{python} 
+```{python}
 # | label: fig-ccl-vs-nc-gnc-sets
 # | fig-cap:
 # |   - "Galaxy Number Count kernel, $\\ell = 80$"
@@ -396,23 +408,21 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 
 ```
 
-The results are in very good agreement with the results from NumCosmo. Note the same Limber integration errors present in CCL also manifest here.
+The kernels agree to $5.0 \times 10^{-6}$. The spectra deviate by $2 \times 10^{-6}$ on
+average and by $3.7 \times 10^{-5}$ at most.
 
 ## Time Comparison
 
-Timing a library fairly here takes some care, because the two codes cache
-different things. CCL stores its background splines and the `Pk2D` object on the
-`Cosmology`, so a repeated call re-uses most of that work; NumCosmo builds a
-fresh kernel and `Xcor` object and re-runs `prepare()` each time. Timing a
-lambda that constructs everything therefore charges NumCosmo for setup that CCL
-has already amortized away.
+The two codes cache different objects. CCL stores its background splines and the
+`Pk2D` object on the `Cosmology`, and a repeated call reuses them; the NumCosmo cell
+builds a new kernel and `Xcor` object and calls `prepare()` each time. A timing that
+constructs everything inside the timed region therefore includes NumCosmo's setup and
+not CCL's.
 
-We report both stages instead. Setup + $C_\ell$ builds the tracer/kernel and
-computes the spectrum, as a cold call would; $C_\ell$ only re-uses objects
-that have already been prepared, which is what an inner loop over $\ell$ or a
-repeated evaluation at fixed cosmology actually costs. Neither number is
-accuracy-matched: both codes run at the default settings described above, so
-these are runtimes at each library's default precision, not at equal error.
+The table reports two timings. Setup + $C_\ell$ builds the tracer or kernel and
+computes the spectrum. $C_\ell$ only reuses prepared objects, as a repeated evaluation
+at fixed cosmology does. Neither timing is at matched accuracy: both codes run at their
+default settings.
 
 ```{python}
 # Lets first get a simple dndz function. We use 1000 knots and a width of 0.1.
@@ -499,9 +509,9 @@ def setup_nc_using_nc(
     )
 ```
 
-Each entry is timed twice: once as `setup(...)()`, which pays the construction
-cost on every repetition, and once as the closure alone, with construction
-hoisted out of the timed region.
+Each entry is timed twice: as `setup(...)()`, which constructs the objects in every
+repetition, and as the function `setup(...)` returns, with the construction outside the
+timed region.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-times
@@ -558,17 +568,14 @@ df = pd.DataFrame(table, columns=columns)
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
 ```
 
-## Summary  
+## Summary
 
-In summary, the two frameworks demonstrate strong agreement across most calculations, with discrepancies at random multipoles ($\ell$). These differences are due to the Limber integral errors in CCL, which introduces numerical inaccuracies whenever the integration fails. 
-Additionally, the ISW computation in CCL exhibits large deviations at high redshifts ($z \gtrsim 10$), stemming from inaccuracies in the growth function and growth factor. While these errors do not significantly impact cross-correlations with low-redshift probes, they become critical in the ISW autocorrelation, which depends on precise integration over the full redshift range up to $z_\mathrm{lss}$.  
+For CMB lensing, tSZ, weak lensing and number counts, the spectra deviate by at most
+$1.2 \times 10^{-5}$ on average. The largest deviations, up to $4.0 \times 10^{-3}$ for
+CMB lensing, tSZ and weak lensing, are at isolated multipoles where CCL's Limber
+integration fails. The ISW autocorrelation deviates by $2.4 \times 10^{-2}$ on average
+in the sets without massive neutrinos, from CCL's growth function at $z \gtrsim 10$.
 
-The Limber integration errors in CCL further manifest as spikes in random values of $\ell$, particularly, when there is good agreement between the two frameworks they 
-become more noticeable.
-
-On runtime, the two-stage table separates construction from evaluation. Both
-libraries pay a real setup cost, but only CCL's is amortized by caching on the
-`Cosmology` object, so a single-stage measurement that constructs inside the
-timed region flatters CCL and penalizes NumCosmo. The gap between the two codes
-is genuine either way; the $C_\ell$-only column is the one to read when
-comparing the integrators themselves. 
+The Setup + $C_\ell$ column includes NumCosmo's construction and not CCL's, which is
+cached on the `Cosmology`. The $C_\ell$-only column excludes construction for both and
+compares the integrations.
