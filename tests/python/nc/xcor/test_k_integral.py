@@ -75,8 +75,7 @@ METHODS = {
 # Measured over the case matrix at reltol = peak_epsilon = 1e-4, as the worst
 # deviation from the matching reference relative to the block's peak, with an
 # order of headroom. Measured worst, on cases.ELLS_SUITE: exact/chebyshev
-# 2.3e-08. That is an order or two above what a [2, 20, 200] ladder reported,
-# because that ladder missed the l = 4-10 region where every method is worst; see
+# 2.3e-08, in the l = 4-10 region where every method is worst; see
 # cases.ELLS_SUITE.
 TOLERANCE = {
     "exact": 5.0e-7,
@@ -85,11 +84,10 @@ TOLERANCE = {
 # The reference's own convergence, likewise measured on cases.ELLS_SUITE: the
 # worst any cell still moved at the top of the escalation, 1.3e-08, at l = 6. The
 # floor is the conditioning of evaluating a degree-128 polynomial rather than the
-# quadrature, and l = 6 is where that bites -- 130x worse than the 1.0e-10 at
-# l = 2 that a [2, 20, 200] ladder saw. It bounds what any test here can claim
-# about a Chebyshev closure at that multipole: exact/chebyshev's own 2.3e-08
-# sits less than a factor of two above it, so that entry bounds the method
-# rather than discriminating between methods.
+# quadrature, and it is largest at l = 6: 130 times the 1.0e-10 at l = 2. It
+# bounds what any test here can claim about a Chebyshev closure at that
+# multipole: exact/chebyshev's own 2.3e-08 is less than a factor of two above
+# it, so that entry bounds the method rather than discriminating between methods.
 REFERENCE_FLOOR = 1.0e-7
 
 # The pairs and multipoles the quadrature is checked on; bench_k_integral.py runs
@@ -97,10 +95,10 @@ REFERENCE_FLOOR = 1.0e-7
 # quadrature meets: Gaussian and top-hat autos, an overlapping and a far-separated
 # cross, the RSD weight, a lensing kernel, a disconnected support, and X9, the only
 # non-separable kernel, whose closure is built differently. The multipoles are the
-# low end, l = 6, where every method and the reference are worst (the l = 4-10
-# region a [2, 20, 200] ladder missed), and l = 50 above it.
+# low end, l = 6 and 10 in the l = 4-10 region where every method and the
+# reference are worst, and l = 50 above it.
 CHECKED_CASES = ("A1", "A2", "X1", "X10", "R2", "X6", "A5", "X9")
-CHECKED_ELLS = (2, 6, 50)
+CHECKED_ELLS = (2, 6, 10, 50)
 
 
 class Frozen:
