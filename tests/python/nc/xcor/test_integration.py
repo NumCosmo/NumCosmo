@@ -149,14 +149,12 @@ def test_xcor_kernel_methods(
     l_limber: int,
     request: pytest.FixtureRequest,
 ) -> None:
-    """Regression test for the sec. 3 outer-k-bound fix (the kernel-space methods).
+    """The kernel-space method against the z-space Limber integral.
 
-    Before the fix, these methods were wrong by 15-27 orders of magnitude and
-    disagreed with each other by ell-dependent factors (evaluating the fitted
-    k-space spline far outside its domain). Checks, for both tier 2
-    (l_limber=0, kernel-Limber) and tier 3 (l_limber=-1, true non-Limber), that
-    KERNEL_EXACT, with four multipoles per closure, converges to
-    LIMBER_Z_CUBATURE (tier 1) at moderate/high ell -- exactly, for tier 2
+    Checks, for both tier 2 (l_limber=0, kernel-Limber) and tier 3
+    (l_limber=-1, true non-Limber), that KERNEL_EXACT, with four multipoles per
+    closure, converges to LIMBER_Z_CUBATURE (tier 1) at moderate/high ell:
+    exactly, for tier 2
     (mathematically the same Limber approximation, just computed via k-space
     instead of z-space); within known Limber-approximation error, for tier 3.
     The tier-3 comparison against tier 1 is dropped for the ISW
@@ -227,8 +225,8 @@ def test_xcor_kernel_methods(
         # the other kernel's un-suppressed values.
         #
         # Measured for CMB lensing x ISW at ell 20-27: 1.05e-3 low against
-        # tier 1, flat under refinement of the spline tolerance (1e-4 through
-        # 1e-6, so it is the domain and not the sampling), and collapsing to
+        # tier 1, flat under refinement of the closure tolerance (1e-4 through
+        # 1e-6, so it is the domain and not the closure), and collapsing to
         # 1.5e-6 once adaptive-epsilon is tightened to 1e-8. No per-kernel
         # criterion can do better in principle, since a closure is built
         # without knowing what it will be paired with. The scale that makes

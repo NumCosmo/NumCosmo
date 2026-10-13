@@ -280,8 +280,9 @@ test_nc_xcor_window_levin (gconstpointer pdata)
     g_free (key);
   }
 
-  /* The table samples below the turning point for every shape; without the guard those
-   * entries were wrong by 1e10 and more. */
+  /* The table samples below the turning point for every shape, where the forced
+   * constraint is invalid and the integrator must fall back; no fallback would mean
+   * the guard did not act on those entries. */
   if (tc->forced)
     g_assert_cmpuint (fallbacks, >, 0);
 
