@@ -49,13 +49,11 @@
  * Limber approximation is not valid at the low multipoles that dominate
  * $S_{ij}$, and it makes the cross spectrum of two disjoint bins vanish.
  *
- * The default quadrature is %NC_XCOR_METHOD_KERNEL_EXACT, which needs no
- * tolerance and cannot fail to converge. The adaptive alternatives target a
- * tolerance the integrand may not support and abort when they cannot reach it,
- * which would end a Monte Carlo chain mid-run.
+ * The default quadrature is %NC_XCOR_METHOD_KERNEL_EXACT, which integrates the
+ * kernel closures exactly and needs no tolerance.
  *
  * A single #NcXcorSolver is built once and reused across cosmologies, so the
- * per-block spherical Bessel factorizations are paid for only on the first
+ * per-block spherical Bessel factorizations are computed only on the first
  * nc_xcor_ssc_sij_prepare().
  *
  */
@@ -83,23 +81,16 @@
  * dev-notes/xcor_ultralevin_batching_plan.md section 1.3. */
 #define NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE (8)
 
-/* Scaled absolute tolerance for the closure fit, one order tighter than
- * #NcXcorKernel's own 1.0e-4 default. This, not `reltol`, is what limits the
- * accuracy of the off-diagonal S_ij: they are a small residual of a large
- * cancellation, four orders of magnitude below the diagonal for well-separated
- * bins.
+/* Peak-relative absolute tolerance of the kernel closures, one order tighter than
+ * #NcXcorKernel's 1.0e-4 default. With NC_XCOR_SSC_SIJ_DEFAULT_RELTOL below, this
+ * is the larger term of the closure test, so it sets the closures and the accuracy
+ * of the off-diagonal S_ij, four orders of magnitude below the diagonal for
+ * well-separated bins. It is ten times the reltol because S_ij is rebuilt at every
+ * likelihood step, and peak-epsilon 1.0e-6 increases the closure nodes of a cluster
+ * top-hat by a factor of 1.5.
  *
- * It is offset upwards from NC_XCOR_SSC_SIJ_DEFAULT_RELTOL below because this
- * object rebuilds S at every likelihood step, where tightening costs about 2x
- * per rebuild for accuracy no forecast can use.
- *
- * The offset is not a matter of convergence: %NC_XCOR_METHOD_KERNEL_EXACT, this
- * object's default, has no outer tolerance and no adaptive step, so equal
- * values would be safe, only more expensive.
- *
- * Must be kept equal to DEFAULT_PEAK_EPSILON in numcosmo_py/ssc.py, which is
- * what the frozen path uses: the two are documented to differ only in whether
- * S_ij follows the cosmology, not in how it is computed. */
+ * Must be kept equal to DEFAULT_PEAK_EPSILON in numcosmo_py/ssc.py: the frozen and
+ * the varying paths differ only in whether S_ij follows the cosmology. */
 #define NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON (1.0e-5)
 
 #define NC_XCOR_SSC_SIJ_DEFAULT_RELTOL (1.0e-6)
@@ -734,10 +725,9 @@ nc_xcor_ssc_sij_get_block_size (NcXcorSSCSij *ssc_sij)
  * @ssc_sij: a #NcXcorSSCSij
  * @reltol: the relative tolerance
  *
- * Sets the relative tolerance of the kernel splines and of the outer $k$
- * integral. This is not the knob limiting the accuracy of the off-diagonal
- * $S_{ij}$, see nc_xcor_ssc_sij_set_peak_epsilon().
- *
+ * Sets #NcXcorKernel:reltol of every kernel and the relative tolerance of the
+ * #NcXcor. At the default peak-epsilon the closures are set by peak-epsilon, see
+ * nc_xcor_ssc_sij_set_peak_epsilon().
  */
 void
 nc_xcor_ssc_sij_set_reltol (NcXcorSSCSij *ssc_sij, gdouble reltol)
@@ -770,21 +760,14 @@ nc_xcor_ssc_sij_get_reltol (NcXcorSSCSij *ssc_sij)
 /**
  * nc_xcor_ssc_sij_set_peak_epsilon:
  * @ssc_sij: a #NcXcorSSCSij
- * @peak_epsilon: the absolute floor of the adaptive refinement
+ * @peak_epsilon: the peak-relative absolute tolerance
  *
- * Sets the absolute floor of the adaptive refinement building the $U_i(k)$
- * spline of every kernel. This, not the relative tolerance, is what limits
- * the accuracy of the off-diagonal $S_{ij}$, which are a small residual of a
- * large cancellation: tightening it from #NcXcorKernel's own `1.0e-4` default
- * to the `1.0e-6` used here moves $S_{06}$ by tens of percent for J-PAS-like
- * bins while barely moving $S_{00}$.
- *
- * `1.0e-6` is the end of that road, not a waypoint. The floor is a fraction of
- * the peak of $W_i(k)$ while the integrand is $k^2 W_i W_j$, so it enters
- * squared: `1.0e-6` is already `1.0e-12` there. Below it
- * nc_xcor_kernel_set_peak_epsilon() warns and the accuracy is not recoverable
- * at any cost -- see %NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON.
- *
+ * Sets #NcXcorKernel:peak-epsilon of every kernel. At the default reltol it is the
+ * larger term of the closure test, so it sets the closures and the accuracy of the
+ * off-diagonal $S_{ij}$, which are four orders of magnitude below the diagonal for
+ * well-separated bins. nc_xcor_kernel_set_peak_epsilon() warns below
+ * %NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON. The accuracy at the defaults is on the
+ * <a href="../../theory/nc/xcor/ssc.html">Super-sample covariance</a> page.
  */
 void
 nc_xcor_ssc_sij_set_peak_epsilon (NcXcorSSCSij *ssc_sij, gdouble peak_epsilon)
@@ -817,10 +800,8 @@ nc_xcor_ssc_sij_get_peak_epsilon (NcXcorSSCSij *ssc_sij)
  * @method: a #NcXcorMethod
  *
  * Sets the quadrature method used for the angular power spectra. The default,
- * %NC_XCOR_METHOD_KERNEL_EXACT, needs no tolerance and cannot fail to
- * converge; the adaptive alternatives abort when they cannot reach their
- * target tolerance, which is fatal inside a Monte Carlo chain.
- *
+ * %NC_XCOR_METHOD_KERNEL_EXACT, integrates the kernel closures exactly and needs
+ * no tolerance.
  */
 void
 nc_xcor_ssc_sij_set_method (NcXcorSSCSij *ssc_sij, NcXcorMethod method)
