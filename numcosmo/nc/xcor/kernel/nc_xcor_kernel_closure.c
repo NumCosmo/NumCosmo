@@ -173,7 +173,7 @@ _cheb_compute_call (gpointer user_data, guint i, gdouble k, NcmVector *fval)
 {
   ChebCompute *compute = (ChebCompute *) user_data;
 
-  compute->comp_states->panel_mid = g_array_index (compute->interval_mid, gdouble, i);
+  compute->comp_states->interval_mid = g_array_index (compute->interval_mid, gdouble, i);
   compute->compute_func (k, fval, compute->comp_states);
 }
 

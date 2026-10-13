@@ -243,7 +243,7 @@ _component_states_eval_non_limber (ComponentStates *comp_states, const gdouble k
     ComponentState *state                = &comp_states->states[ci];
     const gboolean right_boundary_found  = state->right_boundary_found >= comp_states->adaptive_boundary_tries;
     const gboolean left_boundary_found   = state->left_boundary_found >= comp_states->adaptive_boundary_tries;
-    const gdouble k_side                 = comp_states->panel_mode ? comp_states->panel_mid : k;
+    const gdouble k_side                 = comp_states->panel_mode ? comp_states->interval_mid : k;
     const gboolean within_left_boundary  = !left_boundary_found || (k_side >= state->last_k_left);
     const gboolean within_right_boundary = !right_boundary_found || (k_side <= state->last_k_right);
 

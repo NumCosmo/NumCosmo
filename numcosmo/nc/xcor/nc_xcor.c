@@ -500,10 +500,10 @@ _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xc
  * Only %NC_XCOR_METHOD_KERNEL_EXACT provides an estimate. Other methods set
  * @vp_err to NaN rather than zero, which would read as "no error".
  *
- * For %NC_XCOR_METHOD_KERNEL_EXACT, the outer integral is exact on both
- * closures -- on each cell of the common refinement of their panels both are
- * polynomials, and the integral is a bilinear form in the coefficients -- so
- * the quadrature contributes no error and @vp_err reports the closure fit
+ * For %NC_XCOR_METHOD_KERNEL_EXACT the outer integral is exact on both
+ * closures: on each cell of the common refinement of their panels both are
+ * polynomials, and the integral is a bilinear form in the coefficients. The
+ * quadrature contributes no error, and @vp_err reports the closure fit
  * error, how well nc_xcor_kernel_get_eval_vectorized_full() fitted
  * $W_\ell(k)$, propagated through this pair's conditioning. It propagates
  * $\delta (W^A W^B) = \vert W^A \vert \delta W^B + \vert W^B \vert \delta W^A$:

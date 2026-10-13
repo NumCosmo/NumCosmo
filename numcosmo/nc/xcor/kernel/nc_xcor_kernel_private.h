@@ -139,9 +139,10 @@ typedef struct _ComponentStates
                              * the band arrays and every sample are in u */
 
   /* While a panel is being expanded a component is on or off for the whole
-   * panel, decided at panel_mid against its boundaries. */
+   * panel, decided at interval_mid, the midpoint of the continuous interval
+   * holding the panel, against its boundaries. */
   gboolean panel_mode;
-  gdouble panel_mid;
+  gdouble interval_mid;
 
   /* Limber only: the block's wave numbers and wave number factors at one node */
   NcmVector *k_vec;

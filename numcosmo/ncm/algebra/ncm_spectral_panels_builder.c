@@ -708,9 +708,10 @@ _ncm_spectral_panels_builder_split (NcmSpectralPanelsBuilderCall *call, gdouble 
     return;
   }
 
-  /* A panel that does not converge however far it is split is not a resolution
-   * problem; refusing to bisect past a fraction of its scale turns a hang into an
-   * error that names the tolerances. */
+  /* Below min-panel-fraction of its scale a panel is not bisected again: the
+   * expansion is repeated up to level-cap with fatal on, which skips the convergence
+   * prediction, and the panel is appended when it converges; otherwise the build is
+   * an error. */
   if ((b - a) < call->min_panel_fraction * MAX (fabs (a), fabs (b)))
   {
     level = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (work->spectral, _ncm_spectral_panels_builder_F, work->fdim,

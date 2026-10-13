@@ -140,7 +140,7 @@ _component_states_compute_limber_u (const gdouble u, NcmVector *y, gpointer user
   ComponentStates *comp_states = (ComponentStates *) user_data;
   NcDistance *dist             = nc_xcor_kernel_peek_dist (comp_states->xclk);
   NcHICosmo *cosmo             = comp_states->states[0].params.cosmo;
-  const gdouble u_side         = comp_states->panel_mode ? comp_states->panel_mid : u;
+  const gdouble u_side         = comp_states->panel_mode ? comp_states->interval_mid : u;
   const gdouble chi            = 1.0 / u;
   NcXcorKinetic xck;
   guint ci, i;
