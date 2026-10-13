@@ -132,9 +132,6 @@ test_nc_xcor_basic (TestNcXcor *test, gconstpointer pdata)
   nc_xcor_set_ell_batch_size (test->xc, 4);
   g_assert_cmpuint (nc_xcor_get_ell_batch_size (test->xc), ==, 4);
 
-  nc_xcor_set_closure_type (test->xc, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
-  g_assert_cmpuint (nc_xcor_get_closure_type (test->xc), ==, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
-
   nc_xcor_clear (&xc2);
   g_assert_true (xc2 == NULL);
 }
@@ -271,19 +268,16 @@ test_nc_xcor_properties (TestNcXcor *test, gconstpointer pdata)
   NcDistance *dist     = NULL;
   NcmPowspec *ps       = NULL;
   NcXcorMethod meth;
-  NcXcorKernelClosure closure;
   gdouble reltol;
   guint batch;
 
   nc_xcor_set_reltol (test->xc, 1.0e-7);
   nc_xcor_set_ell_batch_size (test->xc, 8);
-  nc_xcor_set_closure_type (test->xc, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
 
   g_object_get (test->xc,
                 "distance", &dist,
                 "power-spec", &ps,
                 "meth", &meth,
-                "closure-type", &closure,
                 "reltol", &reltol,
                 "ell-batch-size", &batch,
                 NULL);
@@ -291,7 +285,6 @@ test_nc_xcor_properties (TestNcXcor *test, gconstpointer pdata)
   g_assert_true (dist == test->dist);
   g_assert_true (ps == test->ps);
   g_assert_cmpuint (meth, ==, tm->meth);
-  g_assert_cmpuint (closure, ==, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
   ncm_assert_cmpdouble_e (reltol, ==, 1.0e-7, 1.0e-15, 0.0);
   g_assert_cmpuint (batch, ==, 8);
 

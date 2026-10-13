@@ -74,25 +74,13 @@ except ImportError:  # running from the repository root
     import cases_k_integral as cases  # type: ignore[no-redef]
 
 
-CLOSURES: typing.Final[dict[str, Nc.XcorKernelClosure]] = {
-    "spline": Nc.XcorKernelClosure.SPLINE,
-    "chebyshev": Nc.XcorKernelClosure.CHEBYSHEV,
-}
-
-
 def _closure_size(integrand: Nc.XcorKernelIntegrand) -> int:
-    """Knots for a spline closure, coefficients summed over panels otherwise."""
-    n_panels = integrand.get_n_panels()
-
-    if n_panels == 0:
-        knots = integrand.peek_knots()
-
-        return 0 if knots is None else knots.len()
-
+    """The coefficients of the closure, summed over its panels."""
+    panels = integrand.peek_panels()
     total = 0
 
-    for i in range(n_panels):
-        coeffs, _, _ = integrand.peek_panel(i)
+    for i in range(panels.get_n_panels()):
+        coeffs, _, _ = panels.get_panel(i)
         total += Ncm.Matrix.ncols(coeffs)
 
     return total
@@ -140,14 +128,13 @@ def sweep_case(
             "isauto": pair.isauto,
             "lmin": lmin,
             "lmax": lmax,
-            "closure": settings.closure.value_nick,
             "reltol": settings.reltol,
             "peak_epsilon": settings.peak_epsilon,
             "l_limber": settings.l_limber,
             "ell_batch_size": settings.ell_batch_size,
             "size_a": _closure_size(integrand_a),
             "size_b": None if integrand_b is None else _closure_size(integrand_b),
-            "n_panels_a": integrand_a.get_n_panels(),
+            "n_panels_a": integrand_a.peek_panels().get_n_panels(),
             "build_time": build_time,
             "reference_cells": reference.n_cells,
             "reference_max_order": reference.max_order,
@@ -157,7 +144,6 @@ def sweep_case(
         }
 
         xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
-        xcor.set_closure_type(settings.closure)
         xcor.set_ell_batch_size(settings.ell_batch_size)
         xcor.set_reltol(settings.reltol)
         xcor.prepare(cosmo)
@@ -243,16 +229,16 @@ def sweep_case(
 
 
 def summarize(rows: list[dict]) -> str:
-    """Worst relative error and median cost per (case, closure)."""
-    keys = sorted({(r["case"], r["closure"]) for r in rows})
+    """Worst relative error and median cost per case."""
+    keys = sorted({r["case"] for r in rows})
     lines = [
-        f"{'case':5s} {'closure':10s} "
+        f"{'case':5s} "
         f"{'worst rel':>10s} {'worst peak':>10s} {'max C':>9s} "
         f"{'build s':>9s} {'quad s':>9s} {'compute s':>9s}"
     ]
 
-    for case, closure in keys:
-        selected = [r for r in rows if r["case"] == case and r["closure"] == closure]
+    for case in keys:
+        selected = [r for r in rows if r["case"] == case]
         worst_rel = max(r["rel_err"] for r in selected)
         worst_peak = max(r["peak_err"] for r in selected)
         max_c = max(r["cancellation"] for r in selected)
@@ -260,7 +246,7 @@ def summarize(rows: list[dict]) -> str:
         quad = float(np.median([r["quad_time"] for r in selected]))
         compute = float(np.median([r["compute_time"] for r in selected]))
         lines.append(
-            f"{case:5s} {closure:10s} "
+            f"{case:5s} "
             f"{worst_rel:10.2e} {worst_peak:10.2e} {max_c:9.2e} "
             f"{build:9.3f} {quad:9.3f} {compute:9.3f}"
         )
@@ -272,7 +258,7 @@ def diff_against(rows: list[dict], baseline: list[dict]) -> str:
     """What moved since a baseline sweep, keyed by everything but the numbers."""
 
     def key(row: dict) -> tuple:
-        return (row["case"], row["closure"], row["ell"])
+        return (row["case"], row["ell"])
 
     old = {key(r): r for r in baseline}
     lines = ["moved rows (rel_err ratio, compute time ratio):"]
@@ -305,9 +291,6 @@ def main() -> None:
     parser.add_argument(
         "--cases", nargs="*", default=None, help="case ids, default all of them"
     )
-    parser.add_argument(
-        "--closures", nargs="*", default=list(CLOSURES), choices=list(CLOSURES)
-    )
     parser.add_argument("--ells", nargs="*", type=int, default=cases.ELLS)
     parser.add_argument("--reltol", type=float, default=1.0e-4)
     parser.add_argument("--peak-epsilon", type=float, default=1.0e-4)
@@ -324,21 +307,19 @@ def main() -> None:
     )
     rows: list[dict] = []
 
-    for closure_name in args.closures:
-        settings = cases.Settings(
-            reltol=args.reltol,
-            peak_epsilon=args.peak_epsilon,
-            ell_batch_size=args.ell_batch_size,
-            closure=CLOSURES[closure_name],
-        )
+    settings = cases.Settings(
+        reltol=args.reltol,
+        peak_epsilon=args.peak_epsilon,
+        ell_batch_size=args.ell_batch_size,
+    )
 
-        for pair in selected:
-            start = time.perf_counter()
-            rows.extend(sweep_case(pair, settings, args.ells, args.repeats))
-            print(
-                f"{pair.case} {closure_name}: {time.perf_counter() - start:.1f} s",
-                flush=True,
-            )
+    for pair in selected:
+        start = time.perf_counter()
+        rows.extend(sweep_case(pair, settings, args.ells, args.repeats))
+        print(
+            f"{pair.case}: {time.perf_counter() - start:.1f} s",
+            flush=True,
+        )
 
     print()
     print(summarize(rows))

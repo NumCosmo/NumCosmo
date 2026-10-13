@@ -472,3 +472,4 @@ main (gint argc, gchar *argv[])
 
   return g_test_run ();
 }
+

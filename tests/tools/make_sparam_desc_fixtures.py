@@ -45,7 +45,12 @@ from numcosmo_py import Nc, Ncm
 Ncm.cfg_init()
 
 OUT = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "truth_tables", "bbn"
+    os.path.dirname(os.path.abspath(__file__)),
+    "..",
+    "..",
+    "data",
+    "truth_tables",
+    "bbn",
 )
 
 

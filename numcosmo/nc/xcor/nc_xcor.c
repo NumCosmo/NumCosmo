@@ -74,7 +74,6 @@ enum
   PROP_DISTANCE,
   PROP_MATTER_POWER_SPECTRUM,
   PROP_METH,
-  PROP_CLOSURE_TYPE,
   PROP_RELTOL,
   PROP_ELL_BATCH_SIZE,
 };
@@ -88,7 +87,6 @@ nc_xcor_init (NcXcor *xc)
   xc->dist           = NULL;
   xc->RH             = 0.0;
   xc->meth           = NC_XCOR_METHOD_LIMBER_Z_GSL;
-  xc->closure_type   = NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV;
   xc->ell_batch_size = 8;
 }
 
@@ -111,9 +109,6 @@ _nc_xcor_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       break;
     case PROP_METH:
       xc->meth = g_value_get_enum (value);
-      break;
-    case PROP_CLOSURE_TYPE:
-      nc_xcor_set_closure_type (xc, g_value_get_enum (value));
       break;
     case PROP_RELTOL:
       nc_xcor_set_reltol (xc, g_value_get_double (value));
@@ -144,9 +139,6 @@ _nc_xcor_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
       break;
     case PROP_METH:
       g_value_set_enum (value, xc->meth);
-      break;
-    case PROP_CLOSURE_TYPE:
-      g_value_set_enum (value, nc_xcor_get_closure_type (xc));
       break;
     case PROP_RELTOL:
       g_value_set_double (value, nc_xcor_get_reltol (xc));
@@ -229,60 +221,6 @@ nc_xcor_class_init (NcXcorClass *klass)
                                                       "Method.",
                                                       NC_TYPE_XCOR_METHOD,
                                                       NC_XCOR_METHOD_LIMBER_Z_GSL,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcXcor:closure-type:
-   *
-   * How each kernel represents its sampled $W_\ell(k)$. Defaults to
-   * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV; see #NcXcorKernelClosure.
-   *
-   * The property is on #NcXcor rather than on #NcXcorKernel because the two
-   * representations are alternative fits to the same sampled function:
-   * comparing them means something only when every kernel in one computation
-   * uses the same one. %NC_XCOR_METHOD_KERNEL_EXACT also integrates a mixed
-   * pair exactly, a spline against a panel set on the common refinement of the
-   * two breakpoint sets.
-   *
-   * Measured against the certified Arb $C_\ell$ table (93 entries, 35 pairs),
-   * with #NcXcorKernel:reltol equal to #NcXcorKernel:peak-epsilon and the
-   * deviation as a fraction of each pair's largest $|C_\ell|$: the median
-   * deviation is $2.8 \times 10^{-6}$ for the spline and $1.8 \times 10^{-6}$
-   * for the Chebyshev closure at $10^{-4}$, and $1.1 \times 10^{-7}$ and
-   * $6.9 \times 10^{-8}$ at $10^{-6}$. At $10^{-4}$ the spline returns the wrong
-   * sign at $\ell = 10$ on three far-separated pairs, by up to $1.7 \times
-   * 10^{3}$ times the entry's own $|C_\ell|$. Both closures return the wrong
-   * sign at $\ell = 50$ on pairs whose certified $C_\ell$ there is eight to
-   * eleven orders below the pair's largest.
-   *
-   * Cost through #NcXcorSolver with %NC_XCOR_METHOD_KERNEL_EXACT, one thread,
-   * closures built for each solve. On 5 Gaussian windows, 15 pairs and
-   * $\ell \le 60$, the Chebyshev closure takes 1.2 times the spline's time at
-   * $10^{-4}$ and 0.78 times at $10^{-6}$, with a median deviation from its own
-   * $10^{-8}$ result 3 and 60 times smaller. On 4 hard-edged top-hats, 10 pairs
-   * and $\ell \le 40$, it takes 0.62 times the spline's time at $10^{-4}$ with
-   * a median deviation 8 times larger, and 0.97 times at $10^{-6}$. At
-   * $10^{-8}$ the two closures agree to a median $5 \times 10^{-10}$ of the
-   * pair's largest $|C_\ell|$.
-   *
-   * %NC_XCOR_KERNEL_CLOSURE_SPLINE is the independent cross-check: a deviation
-   * both closures show at every tolerance is a wrong reference rather than a
-   * bad fit, and that diagnostic needs two structurally different
-   * representations.
-   *
-   * Under Limber each multipole is supported on its own band in $k$ and is
-   * zero outside it, so a block's window carries one step per multipole. The
-   * Chebyshev closure makes every band edge a panel cut and decides band
-   * membership per panel, so each panel is smooth; the spline closure confines
-   * each multipole to its band when integrating.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_CLOSURE_TYPE,
-                                   g_param_spec_enum ("closure-type",
-                                                      NULL,
-                                                      "Representation used for the k-space closures.",
-                                                      NC_TYPE_XCOR_KERNEL_CLOSURE,
-                                                      NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -386,34 +324,6 @@ NcXcorMethod
 nc_xcor_get_meth (NcXcor *xc)
 {
   return xc->meth;
-}
-
-/**
- * nc_xcor_set_closure_type:
- * @xc: a #NcXcor
- * @closure_type: a #NcXcorKernelClosure
- *
- * Sets #NcXcor:closure-type. Read when a closure is built, so one already built
- * keeps the representation it was built with.
- *
- */
-void
-nc_xcor_set_closure_type (NcXcor *xc, NcXcorKernelClosure closure_type)
-{
-  xc->closure_type = closure_type;
-}
-
-/**
- * nc_xcor_get_closure_type:
- * @xc: a #NcXcor
- *
- * Returns: the representation used for the k-space closures. See
- * #NcXcor:closure-type.
- */
-NcXcorKernelClosure
-nc_xcor_get_closure_type (NcXcor *xc)
-{
-  return xc->closure_type;
 }
 
 /**
@@ -590,41 +500,30 @@ _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xc
  * Only %NC_XCOR_METHOD_KERNEL_EXACT provides an estimate. Other methods set
  * @vp_err to NaN rather than zero, which would read as "no error".
  *
- * For %NC_XCOR_METHOD_KERNEL_EXACT, the outer integral is exact on both
- * closures -- GL(5) on merged knot panels of two cubics, a bilinear form in
- * the coefficients on cells where either side is a Chebyshev panel -- so the
- * quadrature contributes no error and @vp_err reports the closure fit error,
- * how well nc_xcor_kernel_get_eval_vectorized_full() fitted $W_\ell(k)$,
- * propagated through this pair's conditioning. It propagates
+ * For %NC_XCOR_METHOD_KERNEL_EXACT the outer integral is exact on both
+ * closures: on each cell of the common refinement of their panels both are
+ * polynomials, and the integral is a bilinear form in the coefficients. The
+ * quadrature contributes no error, and @vp_err reports the closure fit
+ * error, how well nc_xcor_kernel_get_eval_vectorized_full() fitted
+ * $W_\ell(k)$, propagated through this pair's conditioning. It propagates
  * $\delta (W^A W^B) = \vert W^A \vert \delta W^B + \vert W^B \vert \delta W^A$:
  *
  * $$ \sigma_\ell \simeq \int \mathrm{d}k\, k^2 \left( \vert W^A_\ell \vert\, \delta W^B_\ell
  *    + \vert W^B_\ell \vert\, \delta W^A_\ell \right) $$
  *
- * The per-cell $\delta W^i$ is the residual the fit achieved, recorded per
- * interval on which the closure is a single polynomial -- a knot interval, or
- * a Chebyshev panel -- while #NcXcorKernel:track-closure-error is on, which is
- * the default; see nc_xcor_kernel_integrand_peek_closure_error(). With tracking
- * off, or on an interval whose refinement was never accepted, $\delta W^i$
- * falls back to the criterion the fit was asked for,
- * $\delta W^i \le \epsilon_i \vert W^i \vert + a_i W^i_\mathrm{max}$, and the
- * same propagation gives
- *
- * $$ \sigma_\ell \simeq (\epsilon_A + \epsilon_B) \int \mathrm{d}k\, k^2 \vert W^A_\ell W^B_\ell \vert
- *    + a_A W^A_{\ell,\mathrm{max}} \int \mathrm{d}k\, k^2 \vert W^B_\ell \vert
- *    + a_B W^B_{\ell,\mathrm{max}} \int \mathrm{d}k\, k^2 \vert W^A_\ell \vert $$
+ * On a panel accepted at order $N$, $\delta W^i$ is the sum of the absolute
+ * coefficients above the order of the level below, a bound on the difference
+ * between the two expansions the acceptance test compared; see
+ * ncm_spectral_panels_product_integrate().
  *
  * Read @vp_err as an upper bound, not as a tight estimate: it is built on
  * absolute values, so it adds error that the integral cancels, and it exceeds
  * the true relative error by 1.2 to 1467 times over the measured cases.
  *
- * Two limits qualify that bound. The fit criterion is an $L^2$ norm over the
- * whole multipole block at each $k$, so a multipole that is sub-dominant
- * within its block is held only to the block's norm and its error can be
- * understated. And the outer integral runs over the intersection of the two
- * closures' fitted $k$ ranges, so @vp_err cannot account for what the
- * intersection discarded. A small @vp_err means the quadrature and the fit are
- * under control, not that the $C_\ell$ is correct.
+ * One limit qualifies that bound: the outer integral runs over the
+ * intersection of the two closures' fitted $k$ ranges, so @vp_err cannot
+ * account for what the intersection discarded. A small @vp_err means the
+ * quadrature and the fit are under control, not that the $C_\ell$ is correct.
  *
  * See `dev-notes/xcor_exact_quadrature.md` section 10 for the measured
  * calibration.

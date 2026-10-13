@@ -81,23 +81,23 @@ $$
 $$
 The unknown is expanded in Chebyshev polynomials, $u = \sum_n c^n T_n(s)$, while the
 equation is imposed in the ultraspherical (Gegenbauer) basis $C^{(2)}_n$ of the
-[Spectral Methods](../algebra/spectral.qmd) page, following @Olver2013. That involves two separate
-steps, and it helps to keep them apart.
+[Spectral Methods](../algebra/spectral.qmd) page, following @Olver2013. This takes two
+steps.
 
-The first is that differentiation raises the basis. From $\mathrm{d}T_n/\mathrm{d}s =
+First, differentiation maps $T_n$ to $C^{(1)}$ and $C^{(\lambda)}$ to $C^{(\lambda+1)}$.
+From $\mathrm{d}T_n/\mathrm{d}s =
 n\,C^{(1)}_{n-1}$ and $\mathrm{d}C^{(\lambda)}_n/\mathrm{d}s =
 2\lambda\,C^{(\lambda+1)}_{n-1}$,
 $$
 \frac{\mathrm{d}^2 T_n}{\mathrm{d}s^2} = 2n\,C^{(2)}_{n-2},
 $$
-so the second derivative carries the Chebyshev coefficients of $u$ straight into
-$C^{(2)}$ coefficients along a single shifted diagonal: the $k$-th $C^{(2)}$
-coefficient of $u''$ is $2(k+2)\,c^{k+2}$. That is the reason to work in $C^{(2)}$ for a
-second-order problem: the highest derivative, the term that a collocation
-discretization, one that imposes the equation pointwise on a grid, renders dense and ill
-conditioned, is one diagonal here.
+so the second derivative maps the Chebyshev coefficients of $u$ to $C^{(2)}$
+coefficients on a single shifted diagonal: the $k$-th $C^{(2)}$ coefficient of $u''$ is
+$2(k+2)\,c^{k+2}$. This is the reason to impose a second-order equation in $C^{(2)}$:
+the highest derivative is one diagonal, while a collocation discretization, which imposes
+the equation pointwise on a grid, makes it a dense and ill-conditioned matrix.
 
-The second is that the undifferentiated terms have to be moved to the same basis. The
+Second, the undifferentiated terms are converted to the same basis. The
 $[\,\cdot\,]\,u$ bracket of Eq. (2) is still written in Chebyshev polynomials, so
 before it can be added to the derivative term it must be re-expressed in $C^{(2)}$.
 That conversion is itself a banded matrix acting on coefficients, obtained by composing
@@ -112,13 +112,12 @@ The same construction covers every term. A term $p(s)\,\mathrm{d}^j u/\mathrm{d}
 with polynomial $p$ becomes one banded matrix from the Chebyshev coefficients of $u$ to
 the $C^{(2)}$ coefficients of that term: the $j$-th derivative delivers $C^{(j)}$
 coefficients, further conversions raise those to $C^{(2)}$, and multiplication by $p$ is
-banded once everything is in the same basis. It is that composite that gets assembled
-and tabulated, never a multiplication on its own; multiplication by $s$ is only the case
-this particular equation happens to need. Eq. (2) uses six of them: three with $j = 2$,
-where the derivative already lands in $C^{(2)}$ and no conversion is left to do, and
-three with $j = 0$, where the conversion is the whole of it. Their sum is the
-discretized operator; assembled, it has bandwidth $2$ below and $6$ above the diagonal,
-independent of the truncation order. Nothing here is approximated: the only
+banded once everything is in the same basis. The library tabulates and assembles these
+composites, never a multiplication alone; multiplication by $s$ and $s^2$ are the cases
+Eq. (2) needs. Eq. (2) uses six of them: three with $j = 2$, where the derivative maps
+directly to $C^{(2)}$ and no conversion follows, and three with $j = 0$, which are
+conversions only. Their sum is the discretized operator; assembled, it has bandwidth $2$
+below and $6$ above the diagonal, independent of the truncation order. The only
 approximation is the truncation of the expansions.
 
 The right-hand side is treated the same way. The term $x F(x)$ is expanded in Chebyshev
@@ -128,18 +127,18 @@ the forcing alone, and the caller supplies it with the right-hand side.
 
 Two rows still have to be supplied. The differential equation on its own does not
 determine $u$: any homogeneous solution can be added to it, and Eq. (1) has two of
-them. The discretization inherits that. Truncating the expansion at $N$ Chebyshev
+them. The discretization has the same freedom. Truncating the expansion at $N$ Chebyshev
 coefficients and keeping the first $N-2$ rows of the equation leaves $N$ unknowns
 against $N-2$ equations, short by two however large $N$ is.
 
 The two missing rows are two further linear conditions on the coefficients $c^n$, and
-they are what closes the system. They are the *constraint*, the enumeration
+they complete the system. They are the *constraint*, the enumeration
 [[numcosmo-math|NcmSBesselOdeConstraint]]. The literature usually calls such rows
 boundary conditions, after the commonest choice; the wider name is used here because
-only one of the three implemented is a boundary condition. What matters for the
-discretization is only that a constraint row may be dense, and a dense row reaches every
-column: that is what makes $A$ almost banded rather than banded, and it sets the layout
-the factorization of [Incremental Givens QR](#incremental-givens-qr) is built for.
+only one of the three implemented is a boundary condition. For the discretization, the
+relevant property is that a constraint row may be dense, with an entry in every column:
+this makes $A$ almost banded rather than banded, and sets the layout that the
+factorization of [Incremental Givens QR](#incremental-givens-qr) uses.
 
 ### The three constraints
 
@@ -154,16 +153,16 @@ uses; [Choosing the constraint](#choosing-the-constraint) is where they are comp
   coefficients of the expansion to zero, $c^{p_1} = c^{p_2} = 0$, so each row carries a
   single entry, in the column of the coefficient it pins. The indices $p_1$ and $p_2$
   belong to one interval and one solve, and are given per operator with
-  [[numcosmo-math|ncm_sbessel_ode_operator_set_pinned_constraint]]. Where they are put
-  decides what the constraint is worth; [Where to pin](#where-to-pin) derives the
-  choice the library makes.
-- **Tau**, `NCM_SBESSEL_ODE_CONSTRAINT_TAU`. The two rows are empty. The system is then
-  short two pivots, and the truncation of the expansion is what closes it, which is the
-  classical tau construction the name comes from.
+  [[numcosmo-math|ncm_sbessel_ode_operator_set_pinned_constraint]]. The accuracy of the
+  constraint depends on these indices; [Where to pin](#where-to-pin) derives the choice
+  the library makes.
+- **Tau**, `NCM_SBESSEL_ODE_CONSTRAINT_TAU`. The two rows are empty. The system then
+  lacks two pivots, and the truncation of the expansion completes it; this is the
+  classical tau construction that gives the constraint its name.
 
 In all three cases the first two entries of the right-hand side are the values the two
 functionals take. Every caller in the library passes zero, and under the tau constraint
-they multiply empty rows and do not reach the solution at all.
+they multiply empty rows and do not enter the solution.
 
 ```{python}
 #| label: fig-operator
@@ -201,8 +200,8 @@ identity term, and $(\ell+1)(\ell+2) - \ell(\ell+1) = 2(\ell+1)$. A block of
 consecutive multipoles therefore shares every derivative and multiplication entry; the
 rows for $\ell+1$ are those for $\ell$ with $-2(\ell+1)$ added to the three
 identity-term entries. The block is factorized together and the stopping test below is
-a max-reduction over the block, so the whole block is solved to the tolerance the
-hardest member needs.
+a max-reduction over the block, so the factorization continues until every multipole of
+the block passes it.
 
 ## Incremental Givens QR
 
@@ -229,9 +228,9 @@ upper triangular.
 Column $j$ has four entries below the diagonal, in rows $j+1$ to $j+4$: two from the
 lower bandwidth of the band, and two from the constraint rows, which under Dirichlet
 data are dense and so reach every column. Four rotations clear them, working upward,
-each pairing a row with the one above it. Moving on to column $j+1$ draws in one further
-row, so the work per column is constant however long the expansion becomes. That count
-belongs to the layout, not to the constraint: the pinned rows carry one entry each and
+each pairing a row with the one above it. Column $j+1$ adds one further row, so the work
+per column is constant however long the expansion becomes. This count is set by the
+layout and is the same for every constraint: the pinned rows carry one entry each and
 the tau rows none, but the same four rotations per column are applied and stored in all
 three cases. What the constraint changes is how many columns are needed, which is the
 subject of [Choosing the constraint](#choosing-the-constraint).
@@ -241,7 +240,7 @@ After column $j$ the transformed component $\tilde r^j$ divided by the diagonal 
 $R^j{}_j$ is therefore the value back-substitution would assign to $c^j$ if the expansion stopped
 there.
 
-The stopping test watches exactly that ratio. Let $\rho_j \equiv |\tilde r^j /
+The stopping test uses that ratio. Let $\rho_j \equiv |\tilde r^j /
 R^j{}_j|$ and $\rho_{\max}$ its running maximum. With $\epsilon_{\rm ODE}$ the tolerance the operator
 was created with, the factorization stops at the first column such that
 $\rho_j/\rho_{\max} < \epsilon_{\rm ODE}$ for five consecutive columns and $j + 1$ has reached the
@@ -253,13 +252,14 @@ N_{\min} = \left\lceil \frac{2}{\pi}\,\big(x_b - \max(x_a, \nu)\big) \right\rcei
 $$
 $N_{\min}$ is the number of Chebyshev coefficients the oscillatory part of the panel
 needs, two per half-oscillation beyond the turning point $x = \nu$; below the turning
-point $j_\ell$ does not oscillate and the solution is smooth. Without a floor the test
-can be satisfied by leading coefficients that are small only because the expansion has
-not reached the oscillatory part of the panel yet, and are small next to the ones that
-part will add; the delivered error then fails to decrease with the requested tolerance.
+point $j_\ell$ does not oscillate and the solution is smooth. Without a floor, the test
+can pass on leading coefficients that are small because the expansion has not yet
+reached the coefficients of the oscillatory part; the error then does not decrease with
+the requested tolerance.
 
 The other two constraints need floors of their own. The reason is the same, but the
-value is not $N_{\min}$, because neither of them puts the oscillation into $u$. The
+value is not $N_{\min}$, because neither of them adds the homogeneous oscillation to
+$u$. The
 pinned constraint uses $\max(p_1,p_2) + 1$, one past the larger of the two indices it
 pins, $c^{p_1} = c^{p_2} = 0$. Each of its rows carries a single entry, in the column of
 the coefficient it pins; stopping before that column leaves the row empty in the block
@@ -280,9 +280,9 @@ u'(x_b) = \frac{1}{h}\sum_n n^2 c^n,
 $$
 from $T_n'(\pm1) = (\pm1)^{n+1} n^2$. The rotations are stored with the operator. A new
 right-hand side on the same panel and block replays them in $O(N)$ and extends the
-factorization only if its own stopping test asks for more columns. Because the
-bandwidth is fixed, the whole solve is $O(N)$ per multipole, which is what makes
-discovering $N$ affordable.
+factorization only if its own stopping test requires more columns. Because the
+bandwidth is fixed, the whole solve, including the search for $N$, is $O(N)$ per
+multipole.
 
 ```{python}
 #| label: fig-qr-stop
@@ -291,7 +291,7 @@ discovering $N$ affordable.
 #|   tolerances return the same coefficients to within 1e-9 and differ only in where
 #|   the factorization stops, so the curve is drawn once and each tolerance is marked
 #|   by its stopping column. The floor N_min of Eq. (3) is 138 here, which is where
-#|   the loosest tolerance stops: the floor holds it, not the decay test.
+#|   the loosest tolerance stops: the floor sets this column, not the decay test.
 #| code-fold: true
 fig, ax = plt.subplots(figsize=(6, 3.4))
 nmin = int(np.ceil(2.0 / np.pi * (b - max(a, np.sqrt(ell * (ell + 1))))))
@@ -318,8 +318,7 @@ ax.legend(fontsize=8)
 plt.tight_layout()
 ```
 
-The factorization is easiest to follow column by column. The animation below
-replays it on the operator matrix the library returns for the same panel and
+The animation below replays the factorization column by column, on the operator matrix the library returns for the same panel and
 forcing, with the rotation order described above, and tracks the stopping
 ratio beside it; the column it stops at is checked against the library's own
 solve. The dense fill above the band is the content of the two constraint
@@ -407,8 +406,8 @@ HTML(video)
 #| fig-cap: >
 #|   Four stages of the factorization above: as built, one third and two thirds of the
 #|   way, and the column where the stopping test is met. Below the diagonal of every
-#|   processed column the entries are gone; the two constraint rows travel along, and
-#|   their content is the fill above the band.
+#|   processed column the entries are zero; the two constraint rows are rotated down,
+#|   and their content is the fill above the band.
 #| code-fold: true
 fig, axs = plt.subplots(1, 4, figsize=(9.6, 2.6))
 for ax, c in zip(axs, (0, len(snapshots) // 3, 2 * len(snapshots) // 3, len(snapshots) - 1)):
@@ -424,22 +423,21 @@ plt.tight_layout()
 
 ## Choosing the constraint
 
-The three constraints [defined above](#the-three-constraints) are not three
-approximations of one answer. They select different members of the same solution family,
-and the quantity their caller wants is the same for all of them.
+The three constraints [defined above](#the-three-constraints) select different members
+of the same solution family, and the panel integral is the same for all of them.
 
 The reason is the missing first-derivative term. Let $v$ solve the homogeneous equation
 and let $\mathcal{W} = v u' - v' u$. Then $\mathcal{W}' = v u'' - v'' u = F j_\ell$ from
 Eq. (1), so $\mathcal{W}(x_b) - \mathcal{W}(x_a)$ is the panel integral of $F j_\ell$,
 the [Levin
 reduction](sbessel_projection.qmd#from-the-integral-to-a-boundary-value-problem).
-Replace $u$ by $u + w$ with $w$ any homogeneous solution: $\mathcal{W}$ picks up the
+Replace $u$ by $u + w$ with $w$ any homogeneous solution: $\mathcal{W}$ changes by the
 Wronskian of $v$ and $w$, which is *constant*, since both solve the same equation and
 that equation has no first-derivative term. It therefore contributes the same value at
-both ends and cancels from the difference. The panel integral does not see the
-constraint. What the constraint decides is which member of the two-parameter family the
-expansion has to represent, and the members differ by orders of magnitude in how many
-coefficients that takes.
+both ends and cancels from the difference. The panel integral is therefore independent
+of the constraint. The constraint selects the member of the two-parameter family that
+the expansion represents, and the members differ by orders of magnitude in the number of
+coefficients they need.
 
 ### Which member the constraint selects
 
@@ -447,56 +445,55 @@ Write the panel solution as
 $$
 u = u_p + \gamma_1\,x j_\ell(x) + \gamma_2\,x y_\ell(x),
 $$
-with $u_p$ a particular solution. The constraint is what fixes $\gamma_1$ and
-$\gamma_2$, and the cost of the choice is decided by how the two homogeneous terms
-expand. Above the turning point they oscillate with a period of about $2\pi$ in $x$, so
+with $u_p$ a particular solution. The constraint fixes $\gamma_1$ and $\gamma_2$, and
+the number of coefficients depends on the expansion of the two homogeneous terms. Above the turning point they oscillate with a period of about $2\pi$ in $x$, so
 a panel reaching from $\max(x_a,\nu)$ to $x_b$ holds $(x_b - \max(x_a,\nu))/2\pi$ of
-their oscillations and needs the $N_{\min}$ coefficients of Eq. (3) to carry them at
-all.
+their oscillations and needs the $N_{\min}$ coefficients of Eq. (3) to represent them.
 
-One member of the family costs nothing of the sort. Away from the turning point the
+One member of the family does not contain these oscillations. Away from the turning point the
 undifferentiated term of Eq. (1) dominates, and the equation can be solved by iterating
 $$
 u = \frac{x F(x) - x^2 u''}{x^2 - \nu^2},
 $$
 from $u^{(0)} = x F/(x^2 - \nu^2)$. Each pass differentiates twice and divides by $x^2 -
 \nu^2$, so on a panel that stays clear of the turning point, and for a forcing smooth
-there, the series converges and every term of it is as smooth as $F$. What it converges
-to is the member with $\gamma_1 = \gamma_2 = 0$: its coefficients decay with those of $x
+there, the series converges and every term of it is as smooth as $F$. It converges to
+the member with $\gamma_1 = \gamma_2 = 0$: its coefficients decay with those of $x
 F$, so its order is $n_F$ whatever the panel width, and its size is bounded by $x_b
-\sum_k |c^k(xF)| / (x_a^2 - \nu^2)$, with $c^k(xF)$ the Chebyshev coefficients of $x F$. That is the bound
-[Enforcement](#enforcement) tests against. It is *the smooth member* below.
+\sum_k |c^k(xF)| / (x_a^2 - \nu^2)$, with $c^k(xF)$ the Chebyshev coefficients of $x F$.
+[Enforcement](#enforcement) tests against this bound. This member is called *the smooth
+member* below.
 
-Dirichlet data fixes the two endpoint values, and the smooth member does not take them:
+Dirichlet data fixes the two endpoint values, which the smooth member does not have in
+general:
 reaching $u(x_a) = \alpha$ and $u(x_b) = \beta$ needs $\gamma_1$ and $\gamma_2$ of the
 size of the mismatch at the ends. Oscillation is then present across the whole panel,
 not only near the ends, because the homogeneous solutions oscillate everywhere above the
 turning point; the expansion has to resolve all of it, so the working order is
 $N_{\min}$ and it grows with the panel width.
 
-The tau constraint asks for nothing, and that is what selects the smooth member: at a
-working order well below $N_{\min}$ the homogeneous solutions are not representable, so
-no multiple of them can appear in what the truncated system returns. The selection is a
-consequence of stopping early rather than a condition imposed, which is why it holds
-only in a window. [Where the tau constraint is
-valid](#where-the-tau-constraint-is-valid) is that window, measured.
+The tau constraint imposes no condition, and the truncation selects the smooth member:
+at a working order well below $N_{\min}$ the homogeneous solutions are not
+representable, so no multiple of them can appear in what the truncated system returns.
+The selection follows from the truncation order, so it holds only in a range of orders;
+[Where the tau constraint is valid](#where-the-tau-constraint-is-valid) measures that
+range.
 
-The pinned constraint states the same selection instead of inheriting it from the
-truncation. At two indices above $n_F$ and below $N_{\min}$ the smooth member's
-coefficients have already decayed, while a homogeneous term still has coefficients of
-order one there, so $c^{p_1} = c^{p_2} = 0$ costs the smooth member nothing and admits
-nothing else. Pinning below $n_F$ does the reverse: it constrains coefficients the
-smooth member needs, homogeneous content returns to satisfy the two conditions, and the
-oscillation returns with it. That is what the choice of pins decides; the same section
-measures it, pair by pair.
+The pinned constraint imposes the same selection as two conditions. At two indices above
+$n_F$ and below $N_{\min}$ the smooth member's coefficients have already decayed, while
+a homogeneous term still has coefficients of order one there, so
+$c^{p_1} = c^{p_2} = 0$ holds for the smooth member and excludes any homogeneous term.
+Pinning below $n_F$ sets to zero coefficients that the smooth member has, so a
+homogeneous term is added to satisfy the two conditions, and with it the oscillation.
+The same section measures this, pair by pair.
 
-@fig-constraint-spectra is the three selections seen in the coefficients themselves, on
-one panel and one forcing.
+@fig-constraint-spectra shows the coefficients of the three selections, on one panel
+and one forcing.
 
 ### Where to pin
 
-The pinned constraint is only as good as the choice of $p_1$ and $p_2$, and that choice
-can be made from the asymptotics. Above the turning point the two homogeneous solutions
+The accuracy of the pinned constraint depends on $p_1$ and $p_2$, which follow from the
+asymptotics. Above the turning point the two homogeneous solutions
 are $x j_\ell(x) \simeq \sin(x - \ell\pi/2)$ and $x y_\ell(x) \simeq -\cos(x -
 \ell\pi/2)$. On the panel mapped to $s \in [-1,1]$ that is $\sin(\Delta s + \phi)$ with
 $\Delta = (b-a)/2$ and $\phi = m - \ell\pi/2$, and the Chebyshev inner product becomes a
@@ -508,13 +505,12 @@ $$
 with $\phi$ selecting which parity carries the weight, and the same for $x y_\ell$ with
 the parities exchanged. $|J_n(\Delta)|$ rises to a maximum just below $n = \Delta$, at
 $n_{\mathrm{peak}} \simeq \Delta - 0.81\,\Delta^{1/3}$, and past it decays faster than
-any exponential in $n$. That is the decay the tau constraint relies on, seen from the
-other side: the plateau of
-[Where the tau constraint is valid](#where-the-tau-constraint-is-valid) ends there
-because $|J_n(\Delta)|$ does.
+any exponential in $n$. The tau constraint uses the same decay: in
+[Where the tau constraint is valid](#where-the-tau-constraint-is-valid) the homogeneous
+coefficients are of order one up to the order where $|J_n(\Delta)|$ decays.
 
-Fitting the two solutions with the library's own adaptive Chebyshev fit puts the maximum
-where the expansion says:
+The library's adaptive Chebyshev fit of the two solutions places the maximum at this
+index:
 
 | $\Delta$ | 50 | 125 | 500 | 1500 |
 |---|---|---|---|---|
@@ -522,31 +518,31 @@ where the expansion says:
 | $\arg\max_n \lvert c^n(x y_\ell)\rvert$ | 47 | 120 | 493 | 1490 |
 | $\Delta - 0.81\,\Delta^{1/3}$ | 47 | 121 | 494 | 1491 |
 
-So the pins go at $n_{\mathrm{peak}}$ and $n_{\mathrm{peak}} + 1$. There the two
-conditions fall where the homogeneous content is largest, which makes the multiple a
-truncation can admit, $|c^n(u_p)|/|c^n(v)|$, as small as the panel allows; and taking
-two adjacent indices covers one even and one odd mode, so the parity $\phi$ selects does
-not matter. Measured over a phase scan of $x_a$ across a full period, the error moves
-between $1.7\times10^{-12}$ and $7.4\times10^{-11}$ while Dirichlet data on the same
-panels stays between $10^{-10}$ and $5\times10^{-9}$, and pinning $(p, p+1)$, $(p, p+2)$
-or $(p+1, p+3)$ agrees to a factor of two.
+So the pins go at $n_{\mathrm{peak}}$ and $n_{\mathrm{peak}} + 1$. At these indices the
+homogeneous coefficients are largest, so the multiple a truncation can admit,
+$|c^n(u_p)|/|c^n(v)|$, is the smallest the panel allows; and two adjacent indices cover
+one even and one odd mode, so the result does not depend on the parity that $\phi$
+selects. Over a phase scan of $x_a$ across a full period, the error lies between
+$1.7\times10^{-12}$ and $7.4\times10^{-11}$, while Dirichlet data on the same panels
+gives between $10^{-10}$ and $5\times10^{-9}$; pinning $(p, p+1)$, $(p, p+2)$ or
+$(p+1, p+3)$ agrees to a factor of two.
 
-This is what [[numcosmo-math|NcmSBesselIntegratorLevin]] gives a panel whose oscillation
-count falls below its tau threshold, in place of the Dirichlet data such a panel used to
-keep. Against the certified window table the change is uniformly an improvement or a
-wash, up to $55$ times more accurate on the quarter of panels that reach it, at the same
-column count and the same wall time. A panel too short for $n_{\mathrm{peak}} \ge 4$
-keeps Dirichlet data, where the two are the same thing anyway.
+[[numcosmo-math|NcmSBesselIntegratorLevin]] uses this constraint on a panel whose
+oscillation count is below its tau threshold. Against the certified window table it is
+as accurate as Dirichlet data or more, up to $55$ times more accurate on a quarter of
+the panels, at the same column count and the same wall time. A panel too short for
+$n_{\mathrm{peak}} \ge 4$ keeps Dirichlet data, which gives the same result there.
 
 ```{python}
 #| label: fig-constraint-spectra
 #| fig-cap: >
 #|   Chebyshev coefficients of u on [1000, 4000] at l = 20, under the three constraints,
-#|   for one Gaussian forcing fitted to 129 coefficients. Dirichlet data holds the
-#|   homogeneous solutions, whose coefficients stay at 1e-4 of the peak out to about
+#|   for one Gaussian forcing fitted to 129 coefficients. The Dirichlet solution contains
+#|   the homogeneous solutions, whose coefficients stay at 1e-4 of the peak out to about
 #|   N_min = 1910 and decay faster than any exponential past it; the pinned and tau
-#|   solutions are the smooth member and reach machine precision by j = 50. The three are the same solution up to
-#|   homogeneous content, and all three give the same panel integral.
+#|   solutions are the smooth member and reach machine precision by j = 50. The three
+#|   are the same solution up to homogeneous content, and all three give the same panel
+#|   integral.
 #| code-fold: true
 
 sel_ell, sel_a, sel_b = 20, 1000.0, 4000.0
@@ -615,8 +611,8 @@ plt.tight_layout()
 #|   boundary term (6) against composite 20-point Gauss-Legendre quadrature on the
 #|   oscillatory integrand. Where all three are valid they agree with the quadrature to
 #|   1e-12..1e-9; at spans of 100 and below the tau and pinned solves admit the
-#|   homogeneous solutions and fail outright. Dotted line: where the tau working order
-#|   equals N_min. Dash-dotted: where the order check of the next section refuses it.
+#|   homogeneous solutions and fail. Dotted line: where the tau working order equals
+#|   N_min. Dash-dotted: where the order check of the next section excludes it.
 #| code-fold: true
 nu = np.sqrt(ell * (ell + 1.0))
 
@@ -702,48 +698,48 @@ axe.legend(fontsize=8)
 plt.tight_layout()
 ```
 
-The left panel of @fig-constraint-cost is the whole cost argument. The forcing is held
+The left panel of @fig-constraint-cost shows the cost. The forcing is held
 at a fixed relative width so that its own order stays at 129 coefficients across four
 decades of panel span; Dirichlet runs from 42 columns to 19099, while the tau constraint
 stays at 142 and the pinned one at 196. Since the stored Givens rotations are
 proportional to the column count, the same ratio applies to the memory a cached operator
-holds, which is what makes the choice matter for a block of multipoles, where that
-storage is multiplied by the block size.
+holds, and for a block of multipoles that storage is multiplied by the block size.
 
-Cheaper is not always cheaper, though. Below a span of about 290 the Dirichlet solve
-needs fewer columns than the forcing's order does, so there it is the cheaper of the
-two; and below about 160, as the next section shows, it is also the only valid one. Both
-crossings sit at the same end of the axis, which is why a rule that keeps Dirichlet on
-short panels costs nothing.
+Below a span of about 290 the Dirichlet solve needs fewer columns than the forcing's
+order, so there it is the cheaper of the two; below about 160, as the next section
+shows, it is also the only valid one. Both spans are at the short end, so a rule that
+keeps Dirichlet data on short panels does not increase the cost.
 
 ### Where the tau constraint is valid
 
-Closing the system by truncation is a choice of solution only while the homogeneous
-solutions cannot be represented at the working order. Write $c^j(v)$ for the Chebyshev
+Completing the system by truncation selects the smooth member only while the
+homogeneous solutions cannot be represented at the working order. Write $c^j(v)$ for the Chebyshev
 coefficients of the oscillatory homogeneous solution on the panel. They are $O(1)$ up to
 about $N_{\min}$ and decay faster than any exponential in $j$ past it, while the
 coefficients $c^j(u_p)$ of the particular solution decay from $j = 0$. Truncating at order $n$
 therefore admits a homogeneous multiple of relative size $|c^n(u_p)|/|c^n(v)|$, and that
-is small only while $n$ is still on the plateau. Both sides of $n$ matter: the floor
+is small only while $n < N_{\min}$, where $|c^n(v)|$ is of order one. The order is
+bounded on both sides: the
+floor
 $1.1\,n_F$ of the previous section is needed because $u'(\pm1) = \sum_n n^2 c^n$
-amplifies the truncation tail, and the ceiling is $N_{\min}$. Together they are one
+amplifies the truncation tail, and the upper bound is $N_{\min}$. Together they are one
 condition on the panel: the order check below allows the tau constraint while $1.1\,n_F
 < 0.75\,N_{\min}$, that is while $N_{\min} \gtrsim 1.5\,n_F$.
-@fig-constraint-spectra-failed is that plateau appearing in the coefficients, on a panel
-short enough for it to fit under the working order.
+@fig-constraint-spectra-failed shows these order-one homogeneous coefficients, on a
+panel short enough for them to end below the working order.
 
 ```{python}
 #| label: fig-constraint-spectra-failed
 #| fig-cap: >
-#|   The coefficients of @fig-constraint-spectra on a panel where the tau constraint has
-#|   lost: [1000, 1125] at l = 20, same forcing shape, n_F = 129 against N_min = 80. The
+#|   The coefficients of @fig-constraint-spectra on a panel where the tau constraint is
+#|   invalid: [1000, 1125] at l = 20, same forcing shape, n_F = 129 against N_min = 80. The
 #|   tau and pinned solutions no longer decay from j = 0; they carry the homogeneous
 #|   solution, whose coefficients are of order one out to N_min and decay faster than any
 #|   exponential past it, and their boundary terms are wrong by 0.41 and 1.4 against a
 #|   converged quadrature.
-#|   Dirichlet on the same panel is unaffected, at 2.9e-9. The pins sit at (194, 195),
-#|   above N_min, where the homogeneous coefficients have already decayed, so pinning
-#|   there excludes nothing and the pinned solution is the tau one.
+#|   Dirichlet data on the same panel gives 2.9e-9. The pins are at (194, 195), above
+#|   N_min, where the homogeneous coefficients have already decayed, so pinning there
+#|   excludes no homogeneous term and the pinned solution is the tau one.
 #| code-fold: true
 fail_a, fail_b = 1000.0, 1125.0
 fail_bump, fail_rhs, fail_nF = panel_rhs(fail_a, fail_b)
@@ -799,16 +795,17 @@ ax.legend(fontsize=8)
 plt.tight_layout()
 ```
 
-The right panel of @fig-constraint-cost measures where the ceiling actually bites, at a
+The right panel of @fig-constraint-cost measures where the upper bound applies, at a
 working order held at $n = 194$ throughout. Reading down the spans: at 400
 ($n/N_{\min} = 0.76$) the tau error is $5\times10^{-11}$, at 250 ($1.21$)
 $3\times10^{-11}$, at 160 ($1.90$) $3\times10^{-12}$. Then at 100 ($3.03$) it is
 $10^{11}$, at 60 ($4.97$) $10^{38}$, at 30 ($9.70$) $10^{75}$. A finer sweep places the
-turn at $n/N_{\min} \approx 2$, where the error is $10^{-8}$. So $n < N_{\min}$ is not
-the boundary; the boundary is nearer $n \approx 2 N_{\min}$, and neither it nor
-$N_{\min}$ itself is sharp, $N_{\min}$ being an estimate of the plateau edge rather than
-a measurement of it. Nor is there a graceful zone: the failure is catastrophic
-cancellation in $\mathcal{W}$, so it costs every digit at once rather than a few.
+transition at $n/N_{\min} \approx 2$, where the error is $10^{-8}$. The boundary is
+therefore near $n \approx 2 N_{\min}$ and not at $n = N_{\min}$; neither value is
+sharp, since $N_{\min}$ estimates the order where the homogeneous coefficients start to
+decay. Past the boundary the error
+does not grow gradually: the failure is catastrophic cancellation in $\mathcal{W}$,
+which loses all digits at once.
 
 Two more facts about the failure. It is not confined to short panels: below the turning
 point the homogeneous solutions are $x^{\ell+1}$ and $x^{-\ell}$, smooth and
@@ -816,35 +813,33 @@ representable at any order, so there the tau constraint is invalid whatever the 
 The same condition covers that case, because $N_{\min}$ counts only the oscillatory part
 of the panel and is zero below the turning point.
 
-And the failure is detectable after the fact, because what grows is the coefficient
-norm. Comparing $\max_j |c^j|$ of the tau solve against the bound $x_b \sum_k |c^k(xF)| /
+The failure is detectable after the solve, because the coefficient norm grows. Comparing $\max_j |c^j|$ of the tau solve against the bound $x_b \sum_k |c^k(xF)| /
 (x_a^2 - \nu^2)$ on the smooth member, on the panels of @fig-constraint-cost where the
 constraint is valid the ratio is $3\times10^{-4}$, and on the failing ones it is
-$10^{19}$, $10^{46}$ and $10^{85}$ at spans 100, 60 and 30. Nineteen orders of margin is
-what makes a single threshold serviceable.
+$10^{19}$, $10^{46}$ and $10^{85}$ at spans 100, 60 and 30. With nineteen orders of
+magnitude between the two cases, a single threshold separates them.
 [[numcosmo-math|ncm_sbessel_ode_operator_get_last_max_coeff]] reports the norm per
 multipole for that purpose.
 
-Where the pins sit decides the same question for the pinned constraint. On $[1000,
-4000]$ with the same forcing, $n_F = 129$ and $N_{\min} = 1910$, pinning any pair above
+For the pinned constraint, the same question depends on the position of the pins. On
+$[1000, 4000]$ with the same forcing, $n_F = 129$ and $N_{\min} = 1910$, pinning any pair above
 the forcing's order reproduces the tau solution, $1.0\times10^{-12}$ at pins $(160,161)$
-and at every pair from there up to $(1900,1901)$, while pinning inside it puts
+and at every pair from there up to $(1900,1901)$, while pinning inside it adds the
 oscillation back: $9.1\times10^{-12}$ at $(130,131)$, $4.1\times10^{-10}$ at
-$(100,101)$, and $3.9\times10^{-7}$ at $(10,11)$, where the decay test also runs on to
-1603 columns instead of 132. The pinned constraint is the intermediate form in that
-literal sense, and the tau constraint is its limit. That is also why it is not the
-production choice: it needs two indices that only a measurement of the forcing's order
-can supply, and once supplied it gives what the tau constraint gives for free.
+$(100,101)$, and $3.9\times10^{-7}$ at $(10,11)$, where the stopping test also continues
+to 1603 columns instead of 132. Where the tau constraint is valid, the pinned constraint
+with pins above $n_F$ gives the tau solution and needs two indices that depend on the
+forcing's order, so the tau constraint is used there.
 
 ### Why this constraint and not another
 
-Leaving the rows empty is not the only way to drop the Dirichlet data, and it is worth
-saying why the alternatives are not used, since each looks better on paper.
+Two other ways to replace the Dirichlet data select the smooth member more directly.
+This section states why they are not used.
 
 Asking for the *minimum-norm* solution of the rectangular system, $n$ operator rows
 against $n+2$ unknowns, states the requirement directly: the smallest coefficient vector
 is the one with no homogeneous content, since homogeneous solutions have $O(1)$
-coefficients on the plateau. Replacing the two rows with explicit orthogonality to the
+coefficients below $N_{\min}$. Replacing the two rows with explicit orthogonality to the
 homogeneous solutions, $\langle a(x j_\ell), a\rangle = \langle a(x y_\ell), a\rangle =
 0$, states it even more directly. Both work where the tau constraint fails, and both
 fail where it works: measured at the same working order on the panels of
@@ -853,27 +848,26 @@ where tau returns $10^{-11}$.
 
 The reason is that the null space of the *truncated* operator is not the space of
 homogeneous solutions. It is two-dimensional either way, but for $n \ll N_{\min}$ the
-homogeneous solutions are not representable at order $n$ and the null vectors are
-truncation artefacts instead: directions along which the true solution has a
-legitimate component, which minimizing the norm then strips out. Both alternatives
-therefore minimize a proxy that is faithful only in the regime tau has already lost.
-Since that regime is also where Dirichlet data is *cheaper* (its column count is
-$N_{\min}$, so it undercuts a working order of $1.1\,n_F$ exactly when $n_F$ approaches
-$N_{\min}$), neither buys anything the two constraints in use do not.
+homogeneous solutions are not representable at order $n$ and the null vectors come from
+the truncation: directions in which the true solution has a nonzero component, which
+minimizing the norm removes. Both alternatives therefore minimize a quantity that
+measures the homogeneous content only where the tau constraint is invalid. There
+Dirichlet data is *cheaper* (its column count is $N_{\min}$, smaller than a working
+order of $1.1\,n_F$ when $n_F$ approaches $N_{\min}$), so neither alternative improves on
+the two constraints in use.
 
-Removing the homogeneous content after the fact does not work either, and cannot: the
-panel integral is *exactly* invariant under that subtraction, so it carries no
-information the solve did not already have. Fitting and subtracting the components along
-$x j_\ell$ and $x y_\ell$ recovers their amplitudes correctly and still makes the answer
-two to five orders worse, because the smooth part is already below the roundoff of the
-stored coefficients and differencing two large numbers only adds to it.
+Removing the homogeneous content after the solve does not work: the panel integral is
+*exactly* invariant under that subtraction. Fitting and subtracting the components along
+$x j_\ell$ and $x y_\ell$ recovers their amplitudes correctly, and the result is two to
+five orders of magnitude less accurate, because the smooth part is below the roundoff of
+the stored coefficients and the subtraction of two large numbers adds roundoff.
 
 ### Predicting the failure
 
 The failure is predictable to within about an order of magnitude, after the solve, with
 no fitted constant. Since the admitted homogeneous component cancels exactly in
 $\mathcal{W}$ and the boundary functional reads the endpoint derivatives as $u'(\pm1) =
-h^{-1}\sum_j (\pm1)^{j+1} j^2 c^j$, what survives is the floating-point residue of that
+h^{-1}\sum_j (\pm1)^{j+1} j^2 c^j$, what remains is the rounding error of that
 cancellation. The relative error $\delta_\mathrm{rel}$ of $\mathcal{W}$ it leaves is
 $$
 \delta_\mathrm{rel} \;\approx\;
@@ -886,38 +880,38 @@ to $10^{75}$; it is never above it. That sum is what
 [[numcosmo-math|ncm_sbessel_ode_operator_get_last_deriv_error]] reports, per multipole,
 on all three solve paths.
 
-What Eq. (5) is not is a total error estimate. It accounts for the cancellation alone,
-and on a panel where the constraint is sound the error is dominated by the forcing's own
-fit instead, and there Eq. (5) is orders of magnitude smaller than the actual error. It is a
-detector, not an error bar.
+Eq. (5) is not an estimate of the total error. It accounts for the cancellation alone;
+on a panel where the constraint is valid, the error comes from the fit of the forcing,
+and there Eq. (5) is orders of magnitude smaller than the error. Eq. (5) detects the
+failure; it does not bound the error.
 
-Two quantities that look like they should predict the failure do not, and the reason is
-the same invariance that makes the constraint work at all. The ratio
+Two other quantities do not predict the failure, for the same reason that the panel
+integral is independent of the constraint. The ratio
 $|c^n(u_p)|/|c^n(v)|$ of the previous section over-predicts by up to forty-six orders of
 magnitude: it says $10^{46}$ on a panel whose answer is right to $3\times10^{-12}$. The
 condition number of the truncated $n \times n$ system reaches $3\times10^{19}$ on a
-panel accurate to $3\times10^{-11}$. Both are measuring growth along the homogeneous
-direction, and the functional does not depend on that direction, so ill conditioning
-there is free. This is why the guard has to run after the solve rather than before it.
+panel accurate to $3\times10^{-11}$. Both measure growth along the homogeneous
+direction, and the functional does not depend on that direction, so ill conditioning in
+it does not affect the result. The guard therefore runs after the solve.
 
 ### Enforcement
 
-[[numcosmo-math|NcmSBesselIntegratorLevin]] decides per panel and checks the decision
-twice more, all three tests being cheap next to a solve:
+[[numcosmo-math|NcmSBesselIntegratorLevin]] chooses the constraint per panel and checks
+the choice twice more; each of the three tests costs little compared with a solve:
 
 - The rule. A panel takes the tau constraint when its oscillation count $\frac{2}{\pi}(x_b
   - \max(x_a, \nu_{\max}))$ exceeds
   [[numcosmo-math|NcmSBesselIntegratorLevin]]:tau-constraint-min-osc, default 50. The
-  count uses $\nu_{\max}$ from the highest multipole of the block, the conservative
-  direction for a switch, where the floor $N_{\min}$ uses $\ell_{\min}$ because a floor
-  wants the widest span. A panel below the threshold does not go to Dirichlet data: it
+  count uses $\nu_{\max}$ from the highest multipole of the block, which gives the
+  smallest count, while the floor $N_{\min}$ uses $\ell_{\min}$, which gives the largest
+  span. A panel below the threshold does not go to Dirichlet data: it
   takes the pinned constraint with the pins at $n_{\mathrm{peak}}$ and
   $n_{\mathrm{peak}} + 1$, which is cheaper and, measured against the certified window
   table, at least as accurate. Only a panel too short to leave room for those pins keeps
   Dirichlet data.
 - The order check. Once the forcing is fitted the working order is known, and
   [[numcosmo-math|NcmSBesselIntegratorLevin]]:tau-constraint-order-fraction, default
-  0.75, refuses the tau constraint when
+  0.75, excludes the tau constraint when
   [[numcosmo-math|ncm_sbessel_ode_operator_get_tau_constraint_order]] reaches that
   fraction of the panel's oscillation count. Against the measured boundary of $n \approx
   2 N_{\min}$ that is a margin of about a factor of 2.7. The rule alone cannot do this
@@ -925,57 +919,58 @@ twice more, all three tests being cheap next to a solve:
 - The guard. After a tau solve, $\max_j |c^j|$ is compared per multipole against
   [[numcosmo-math|NcmSBesselIntegratorLevin]]:tau-constraint-guard, default 10, times
   the bound $x_b \sum_k |c^k(xF)| / (x_a^2 - \nu_\ell^2)$ on the smooth member, and the
-  check also rejects a non-finite result. On excess the panel is redone with Dirichlet
-  data and the operator keeps them from then on.
+  check also rejects a non-finite result. If the norm exceeds that bound, the panel is
+  solved again with Dirichlet data, and the operator keeps Dirichlet data for later
+  solves.
   [[numcosmo-math|ncm_sbessel_integrator_levin_get_n_constraint_fallbacks]] counts how
   often that has happened.
 
-The three are not redundant, because they know different things and run at different
-times. The rule is a property of the panel alone, so it can be applied when the operator
-is built, before any forcing exists, and it is what keeps the wrong panels from being
-factorized at all. The order check needs the right-hand side. The guard needs the
-solution. Dropping the rule and leaving the other two still gives finite answers, but a
-panel whose coefficient norm lands between the bound and the threshold passes while
-mildly contaminated, which the rule would have refused outright.
+The three tests use different information and run at different times. The rule is a
+property of the panel alone, so it is applied when the operator is built, before any
+forcing exists, and the panels it excludes are never factorized with the tau constraint.
+The order check needs the right-hand side. The guard needs the solution. Without the
+rule the other two still give finite answers, but a panel whose coefficient norm lies
+between the bound and the threshold passes with a small homogeneous component, which
+the rule excludes.
 
 ### What the guard asks of the panel grid
 
 The bound the guard tests against carries $x_a^2 - \nu_\ell^2$ in its denominator, so on
-a panel that *straddles* the turning point there is no finite bound and the guard cannot
-certify the constraint there at all. That is the guard being right, since the smooth
-member is unbounded inside such a panel, but it puts a requirement on the grid, and a
-grid laid out without reference to $\ell$ does not meet it.
+a panel that *straddles* the turning point there is no finite bound and the guard
+rejects the tau constraint there. This is correct, since the smooth member is unbounded
+inside such a panel, but it requires a knot near the turning point, and a grid that does
+not depend on $\ell$ does not have one.
 
-The consequence is not marginal. On the logarithmic grid of [Panels fixed in
+On the logarithmic grid of [Panels fixed in
 x](sbessel_projection.qmd#panels-fixed-in-x), aligned to the decades, a knot sits at
 $x=10^3$ while $\ell = 1000$ has $\nu = 1000.5$; the panel holding the turning point
 runs to the next knot at $x = 10^{3.5}$, and a kernel whose support ends before that has
-its entire oscillatory region inside that one straddling panel. Every solve there is
-refused on the widest panel of the range: measured on the analytic windows, no tau solve
-at all for $\ell \gtrsim 500$.
+its entire oscillatory region inside that one straddling panel. On that panel, the
+widest of the range, every tau solve is rejected: measured on the analytic windows, no
+tau solve at all for $\ell \gtrsim 500$.
 
-One knot per block fixes it.
+One knot per block removes this.
 [[numcosmo-math|NcmSBesselIntegratorLevin]]:turning-knot-margin, default 1.05, adds a
 knot at that multiple of $\nu_{\max}$ inside the straddling panel, so the oscillatory
-region gets an edge the guard can certify. It is 1.3 to 4.8 times faster at $\ell \ge
+region starts at a knot and the guard accepts the panels after it. It is 1.3 to 4.8 times faster at $\ell \ge
 1000$ over the analytic windows and leaves no fallbacks at any multipole, and the two
 grids agree to $10^{-11}$ of peak. The insertion is gated on the same oscillation count
-as the rule, so where the straddling panel would have been Dirichlet anyway no knot is
-added and low multipoles are untouched.
+as the rule, so where the straddling panel uses Dirichlet data no knot is added and the
+grid of the low multipoles is unchanged.
 
-Two things this does not do. It is not a knot-density change: with the straddling panel
-split, refining the rest of the grid buys a further factor of only 1.1 to 1.6, and the
-total Dirichlet column count over a fixed range, $2(x_b-x_a)/\pi$, does not depend on
-how the range is divided at all. And it is per block, since $\nu_{\max}$ is, which is
-why the base grid is shared while the working grid is not.
+The knot does not change the knot density elsewhere: with the straddling panel split,
+refining the rest of the grid gives a further factor of only 1.1 to 1.6, and the total
+Dirichlet column count over a fixed range, $2(x_b-x_a)/\pi$, does not depend on how the
+range is divided. The knot is per block, since $\nu_{\max}$ is, so the base grid is
+shared and the working grid is not.
 
 ## Conjugate points
 
 This section is about the Dirichlet constraint alone: a conjugate point is the vanishing
 of a determinant built from the two endpoint conditions, and a constraint that imposes
-no endpoint condition has no such determinant. Since every panel outside the validity
-window of [Choosing the constraint](#choosing-the-constraint) is solved with Dirichlet
-data, the two concerns are complementary rather than alternatives.
+no endpoint condition has no such determinant. Every panel outside the validity range
+of [Choosing the constraint](#choosing-the-constraint) is solved with Dirichlet data, so
+this section applies to those panels.
 
 A two-point Dirichlet problem is singular when the homogeneous equation has a
 solution vanishing at both ends. Write the pair $(j_\ell, y_\ell)$ in polar form,
@@ -986,8 +981,7 @@ $$
 \Phi_\ell(x_a, x_b) = j_\ell(x_a)\,y_\ell(x_b) - j_\ell(x_b)\,y_\ell(x_a)
  = M(x_a)\,M(x_b)\,\sin\!\big(\theta(x_b) - \theta(x_a)\big),
 $$
-which is an identity rather than an approximation: it is angle subtraction applied to
-a definition. The panel is singular when the phase advances by a multiple of $\pi$
+an identity, from angle subtraction applied to the definitions. The panel is singular when the phase advances by a multiple of $\pi$
 across it.
 
 The approximation enters when that phase is evaluated. The phase is not $x$; above the
@@ -998,9 +992,9 @@ $$
 $$
 whose accuracy improves with $\ell$: measured against $\arctan(y_\ell/j_\ell)$ over a
 window of $60$ in $x$ above the turning point, the two phases drift apart by
-$4\times10^{-2}$ rad at $\ell = 2$ and by $3\times10^{-4}$ rad at $\ell = 300$. Only the
-increment $\Delta\theta$ across a panel decides a conjugate point, so a constant offset
-between the two is harmless. Eq. (4) reproduces the measured conjugate spans to four
+$4\times10^{-2}$ rad at $\ell = 2$ and by $3\times10^{-4}$ rad at $\ell = 300$. A
+conjugate point depends only on the increment $\Delta\theta$ across a panel, so a
+constant offset between the two phases does not affect it. Eq. (4) reproduces the measured conjugate spans to four
 decimals for $\ell$ from 2 to 300, while the rule "span equal to $n\pi$" is off by up to
 half a period at $\ell \gtrsim 50$. Below the turning point Eq. (4) is not real and
 there are no conjugate points. The condition number of the boundary matrix
@@ -1013,8 +1007,8 @@ whatever its span.
 #| label: fig-conjugate
 #| fig-cap: >
 #|   Condition number of the 2x2 boundary matrix [[j(A), x(A)], [j(B), x(B)]] on panels
-#|   starting at A = 200 as the panel span varies, for l = 2 and l = 50. The spikes are
-#|   conjugate points. They sit at integer multiples of pi for l = 2 and shift for l =
+#|   starting at A = 200 as the panel span varies, for l = 2 and l = 50. The peaks are
+#|   conjugate points. They are at integer multiples of pi for l = 2 and shift for l =
 #|   50, exactly where the WKB phase (4) advances by n pi (dotted lines).
 #| code-fold: true
 A0 = 200.0
@@ -1040,45 +1034,41 @@ plt.tight_layout()
 ```
 
 The knot grid of [Panels fixed in x](sbessel_projection.qmd#panels-fixed-in-x) is
-logarithmic in $x$, so panel spans land where the grid puts them, and one grid serves a
-whole block of multipoles whose conjugate spans differ. Measured on the configurations
-in use, no solved oscillatory panel lies within $0.15\pi$ of a conjugate span, against a
-maximum possible distance of $0.5\pi$, so the effect is not active; the library records
+logarithmic in $x$, so panel spans are set by the grid, and one grid serves a whole
+block of multipoles whose conjugate spans differ. Measured on the configurations in use,
+no solved oscillatory panel lies within $0.15\pi$ of a conjugate span, against a maximum
+possible distance of $0.5\pi$, so no panel is near a conjugate point; the library records
 per-panel contributions on request so that this can be checked for any new
 configuration.
 
-Where it does bite, the error is $\epsilon$ times the condition number of that
-$2\times2$ matrix, so @fig-conjugate reads directly as an error plot. At the exact
+Near a conjugate span, the error is $\epsilon$ times the condition number of that
+$2\times2$ matrix, so @fig-conjugate is also a plot of the error. At the exact
 conjugate span of a panel at $\ell = 2$ the Dirichlet solve loses between two and
 fourteen digits, while the pinned constraint of the same panel is accurate to $10^{-12}$
-for every pin pair tried. That is the use for
-[[numcosmo-math|NcmSBesselOdeConstraint]]'s pinned member: it imposes no endpoint
-condition, so it has no boundary determinant to degenerate, and on a panel short enough
-for the Dirichlet problem to be the cheap one the low pins that leave the oscillation in
-place are also the right ones. The tau constraint is no help here, being invalid on
-exactly the short panels where this arises.
+for every pin pair tried. The pinned member of [[numcosmo-math|NcmSBesselOdeConstraint]]
+is for this case: it imposes no endpoint condition, so it has no boundary determinant,
+and on a panel short enough for Dirichlet data to be the cheaper choice, low pins, which
+keep the oscillation in the solution, are used. The tau constraint does not
+apply here, since it is invalid on these short panels.
 
-If the grid is ever to be laid out to avoid the condition rather than to be checked
-against it, the quantity to space knots by is the phase (4), and the increment must be
-an
-*odd multiple of $\pi/2$*, not any increment of the phase, and not a knot at any
-particular phase value. Conjugacy is $\sin\Delta\theta = 0$, so a panel spanning any
+A grid laid out to avoid conjugate points, rather than checked against them, spaces its
+knots by the phase (4), with an increment that is an *odd multiple of $\pi/2$*; neither
+an arbitrary increment of the phase nor a knot at a particular phase value avoids
+them. Conjugacy is $\sin\Delta\theta = 0$, so a panel spanning any
 multiple of $\pi$ is singular no matter where it starts. Knots at the zeros of $j_\ell$
-are therefore the worst available choice, since both ends of every panel would sit on a
-zero and the determinant would vanish identically: measured, condition numbers of
-$10^{13}$ to $10^{15}$. The extrema are no better, being spaced by $\pi$ in the same
-sense, and they degrade with $\ell$, from $84$ at $\ell = 2$ to $1.6\times10^5$ at $\ell
-= 200$. At an odd multiple of $\pi/2$ the condition number is $1.0$, and one grid built
+are therefore the worst choice, since both ends of every panel would lie on a zero and
+the determinant would vanish identically: measured, condition numbers of $10^{13}$ to
+$10^{15}$. Knots at the extrema are also spaced by $\pi$, and their condition number
+grows with $\ell$, from $84$ at $\ell = 2$ to $1.6\times10^5$ at $\ell = 200$. At an odd multiple of $\pi/2$ the condition number is $1.0$, and one grid built
 from $\nu_{\max}$ serves a whole block: over eight multipoles the worst member stays
 between $1.0$ and $2.5$, because the phase spread across the block is at most $0.25\pi$
-against a $\pi/2$ margin. The increment may be widened to $(n+\tfrac12)\pi$ for cost,
-bounded by that spread: $n \lesssim 16$ at $\ell = 1000$ but $n \lesssim 4$ at $\ell =
+against a $\pi/2$ margin. To reduce the cost, the increment may be widened to
+$(n+\tfrac12)\pi$, with $n$ bounded by that spread: $n \lesssim 16$ at $\ell = 1000$ but $n \lesssim 4$ at $\ell =
 20$, since the drift accumulates as $n\pi$ times the spread.
 
-None of this is implemented, and it would not be free: a phase-spaced grid bounds the
-oscillation count per panel, which lowers $N_{\min}$, and the order check of the
-previous section needs $n_F$ below a fraction of $N_{\min}$, so the same construction
-that retires the conjugate points narrows the window in which the tau constraint is
-allowed. The other known fix, closing the problem as an initial-value problem with both
-conditions at one end, is immune by construction but needs a derivative row in the
-innermost loop.
+This grid is not implemented. A phase-spaced grid bounds the oscillation count per
+panel, which lowers $N_{\min}$, and the order check of the previous section needs $n_F$
+below a fraction of $N_{\min}$, so the same grid that removes the conjugate points
+narrows the range in which the tau constraint is allowed. Another option, posing the
+problem as an initial-value problem with both conditions at one end, has no conjugate
+points but needs a derivative row in the innermost loop.

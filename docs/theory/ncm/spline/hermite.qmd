@@ -92,11 +92,12 @@ for n in (11, 21, 41):
     rows.append((n, max_d3_jump(cubic_sin(n)), max_d3_jump(hermite_sin(n))))
 ```
 
-| knots | cubic not-a-knot | quintic Hermite |
-|------:|-----------------:|----------------:|
 ```{python}
 #| echo: false
 #| output: asis
+# The whole table from one cell: a header written outside it is a separate block.
+print("| knots | cubic not-a-knot | quintic Hermite |")
+print("|------:|-----------------:|----------------:|")
 for n, jc, jh in rows:
     print(f"| {n} | {jc:.2e} | {jh:.2e} |")
 ```
@@ -136,11 +137,11 @@ for n in (11, 21, 41):
     err_rows.append((n, h**6 / 46080.0, midpoint_error(hermite_sin(n))))
 ```
 
-| knots | bound | measured on $\sin x$ |
-|------:|------:|---------------------:|
 ```{python}
 #| echo: false
 #| output: asis
+print("| knots | bound | measured on $\\sin x$ |")
+print("|------:|------:|---------------------:|")
 for n, bound, err in err_rows:
     print(f"| {n} | {bound:.2e} | {err:.2e} |")
 ```

@@ -177,7 +177,6 @@ def test_spectra_agree_between_thin_screen_and_visibility(
     """The CMB lensing auto spectrum barely sees the width of the shell."""
     cosmo = cosmology.cosmo
     xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-    xcor.set_closure_type(Nc.XcorKernelClosure.CHEBYSHEV)
     xcor.set_ell_batch_size(8)
     xcor.prepare(cosmo)
     cls = {}

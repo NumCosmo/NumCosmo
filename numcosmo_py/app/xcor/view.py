@@ -76,7 +76,7 @@ class KernelEvaluation:
         k = k_Mpc * self.RH_Mpc
         result = np.array([self.evaluator.eval_array(ki) for ki in k])
         # If single ell, flatten to 1D for backward compatibility
-        if self.evaluator.len == 1:
+        if self.evaluator.get_len() == 1:
             return result[:, 0]
         return result
 
@@ -124,7 +124,7 @@ class KernelEvaluation:
         kernel_values = self.evaluate(k_Mpc)
         k3_2 = k_Mpc ** (3 / 2)
 
-        if self.evaluator.len == 1:
+        if self.evaluator.get_len() == 1:
             # Single ell: plot one line
             ax.plot(
                 k_Mpc,
@@ -139,10 +139,10 @@ class KernelEvaluation:
             # Multiple ells: use shades of the same color
             # Create color shades from darker to lighter
             base_rgb = mcolors.to_rgb(color)
-            for i in range(self.evaluator.len):
+            for i in range(self.evaluator.get_len()):
                 # Interpolate between 0.5 (darker) and 1.3 (lighter) of base color
                 # Clamp to valid RGB range [0, 1]
-                factor = 0.5 + (0.8 * i / max(1, self.evaluator.len - 1))
+                factor = 0.5 + (0.8 * i / max(1, self.evaluator.get_len() - 1))
                 shade_rgb = tuple(min(1.0, c * factor) for c in base_rgb)
 
                 ax.plot(
@@ -156,7 +156,7 @@ class KernelEvaluation:
             # Single legend entry for all ells
             label = (
                 f"{self.name} ({self.method}), "
-                f"$\\ell={self.lmin}$-${self.lmin + self.evaluator.len - 1}$"
+                f"$\\ell={self.lmin}$-${self.lmin + self.evaluator.get_len() - 1}$"
             )
 
         ax.set_xscale("log")
@@ -187,16 +187,16 @@ class KernelEvaluation:
         kernel_values = self.evaluate(k_Mpc)
         other_values = other.evaluate(k_Mpc)
 
-        if self.evaluator.len == 1:
+        if self.evaluator.get_len() == 1:
             # Single ell comparison
             ratio = other_values / kernel_values - 1.0
             ax.loglog(k_Mpc, np.abs(ratio), color=color, linestyle=linestyle)
         else:
             # Multiple ells: use shades of the same color
             base_rgb = mcolors.to_rgb(color)
-            for i in range(self.evaluator.len):
+            for i in range(self.evaluator.get_len()):
                 # Create color shades from darker to lighter
-                factor = 0.5 + (0.8 * i / max(1, self.evaluator.len - 1))
+                factor = 0.5 + (0.8 * i / max(1, self.evaluator.get_len() - 1))
                 shade_rgb = tuple(min(1.0, c * factor) for c in base_rgb)
 
                 ratio = other_values[:, i] / kernel_values[:, i] - 1.0
@@ -427,9 +427,7 @@ class ViewKernel(XcorKernelCommon):
 
         RH_Mpc = self.cosmo.RH_Mpc()
         kernel_obj.set_l_limber(self.l_limber)
-        eval_kernel = kernel_obj.get_eval_vectorized(
-            self.cosmo, self.ell, lmax, self.closure_type.to_nc()
-        )
+        eval_kernel = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, lmax)
 
         primary_method = (
             "Non-Limber"
@@ -454,20 +452,13 @@ class ViewKernel(XcorKernelCommon):
         print(f"  Non-Limber kernel k range: [{k_min:.2e}, {k_max:.2e}] Mpc^-1")
 
         kernel_eval_alt: KernelEvaluation | None = None
-        if self._comparing:
+        if self.compare_limber:
             _, alt_label = self._curve_labels
 
-            if self.compare_limber:
-                # Same representation, the Limber approximation instead.
-                kernel_obj.set_l_limber(0)
-                alt_closure = self.closure_type
-            else:
-                # Same evaluation tier, the other representation of it.
-                alt_closure = self._alt_closure_type
+            # The same kernel under the Limber approximation.
+            kernel_obj.set_l_limber(0)
 
-            eval_alt = kernel_obj.get_eval_vectorized(
-                self.cosmo, self.ell, lmax, alt_closure.to_nc()
-            )
+            eval_alt = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, lmax)
             kernel_eval_alt = KernelEvaluation(
                 name=kernel_label,
                 kernel=kernel_obj,
@@ -500,7 +491,7 @@ class ViewKernel(XcorKernelCommon):
         ax1: plt.Axes
         ax2: plt.Axes
 
-        if self._comparing:
+        if self.compare_limber:
             # Create figure with two subplots for comparison
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12), sharex=True)
             if self.n_ell > 1:

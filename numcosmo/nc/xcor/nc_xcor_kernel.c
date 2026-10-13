@@ -56,7 +56,6 @@
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_serialize.h"
 #include "ncm/powspec/ncm_powspec.h"
-#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/specfunc/ncm_sbessel_ode_solver.h"
 #include "ncm/specfunc/ncm_sbessel_integrator_levin.h"
 #include "ncm/stats/ncm_function_sample_set.h"
@@ -83,12 +82,8 @@ enum
   PROP_RELTOL,
   PROP_PEAK_EPSILON,
   PROP_MAX_BORDER_EXPANSIONS,
-  PROP_MAX_ITER,
   PROP_EXPANSION_FACTOR,
-  PROP_TRACK_CLOSURE_ERROR,
-  PROP_PANEL_ORDER_CAP,
-  PROP_PANELS_PER_EFOLD,
-  PROP_PANEL_LEVEL_MIN,
+  PROP_PANELS_BUILDER,
   PROP_SIZE,
 };
 
@@ -100,27 +95,22 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->dist                     = NULL;
-  self->ps                       = NULL;
-  self->sbi                      = NULL;
-  self->cosmo_ctrl               = ncm_model_ctrl_new (NULL);
-  self->prepared_pkey            = 0;
-  self->outdated                 = TRUE;
-  self->lmax                     = 0;
-  self->l_limber                 = 0;
-  self->adaptive_epsilon         = 0.0;
-  self->adaptive_boundary_tries  = 0;
-  self->reltol                   = 0.0;
-  self->peak_epsilon             = 0.0;
-  self->max_border_expansions    = 0;
-  self->max_iter                 = 0;
-  self->expansion_factor         = 0.0;
-  self->panel_order_cap          = 0;
-  self->panels_per_efold         = 0.0;
-  self->panel_level_min          = 0;
-  self->track_closure_error      = FALSE;
-  self->tolerance_balance_warned = FALSE;
-  self->constructed              = FALSE;
+  self->dist                    = NULL;
+  self->ps                      = NULL;
+  self->sbi                     = NULL;
+  self->cosmo_ctrl              = ncm_model_ctrl_new (NULL);
+  self->prepared_pkey           = 0;
+  self->outdated                = TRUE;
+  self->lmax                    = 0;
+  self->l_limber                = 0;
+  self->adaptive_epsilon        = 0.0;
+  self->adaptive_boundary_tries = 0;
+  self->reltol                  = 0.0;
+  self->peak_epsilon            = 0.0;
+  self->max_border_expansions   = 0;
+  self->expansion_factor        = 0.0;
+  self->builder                 = ncm_spectral_panels_builder_new ();
+  self->constructed             = FALSE;
 }
 
 static void
@@ -133,6 +123,7 @@ _nc_xcor_kernel_dispose (GObject *object)
   ncm_powspec_clear (&self->ps);
   ncm_sbessel_integrator_clear (&self->sbi);
   ncm_model_ctrl_clear (&self->cosmo_ctrl);
+  ncm_spectral_panels_builder_clear (&self->builder);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_parent_class)->dispose (object);
@@ -219,24 +210,18 @@ _nc_xcor_kernel_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_MAX_BORDER_EXPANSIONS:
       nc_xcor_kernel_set_max_border_expansions (xclk, g_value_get_uint (value));
       break;
-    case PROP_MAX_ITER:
-      nc_xcor_kernel_set_max_iter (xclk, g_value_get_uint (value));
-      break;
     case PROP_EXPANSION_FACTOR:
       nc_xcor_kernel_set_expansion_factor (xclk, g_value_get_double (value));
       break;
-    case PROP_TRACK_CLOSURE_ERROR:
-      nc_xcor_kernel_set_track_closure_error (xclk, g_value_get_boolean (value));
+    case PROP_PANELS_BUILDER:
+    {
+      NcmSpectralPanelsBuilder *builder = g_value_get_object (value);
+
+      if (builder != NULL)
+        nc_xcor_kernel_set_panels_builder (xclk, builder);
+
       break;
-    case PROP_PANEL_ORDER_CAP:
-      nc_xcor_kernel_set_panel_order_cap (xclk, g_value_get_uint (value));
-      break;
-    case PROP_PANELS_PER_EFOLD:
-      nc_xcor_kernel_set_panels_per_efold (xclk, g_value_get_double (value));
-      break;
-    case PROP_PANEL_LEVEL_MIN:
-      nc_xcor_kernel_set_panel_level_min (xclk, g_value_get_uint (value));
-      break;
+    }
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -283,23 +268,11 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_MAX_BORDER_EXPANSIONS:
       g_value_set_uint (value, nc_xcor_kernel_get_max_border_expansions (xclk));
       break;
-    case PROP_MAX_ITER:
-      g_value_set_uint (value, nc_xcor_kernel_get_max_iter (xclk));
-      break;
     case PROP_EXPANSION_FACTOR:
       g_value_set_double (value, nc_xcor_kernel_get_expansion_factor (xclk));
       break;
-    case PROP_TRACK_CLOSURE_ERROR:
-      g_value_set_boolean (value, nc_xcor_kernel_get_track_closure_error (xclk));
-      break;
-    case PROP_PANEL_ORDER_CAP:
-      g_value_set_uint (value, nc_xcor_kernel_get_panel_order_cap (xclk));
-      break;
-    case PROP_PANELS_PER_EFOLD:
-      g_value_set_double (value, nc_xcor_kernel_get_panels_per_efold (xclk));
-      break;
-    case PROP_PANEL_LEVEL_MIN:
-      g_value_set_uint (value, nc_xcor_kernel_get_panel_level_min (xclk));
+    case PROP_PANELS_BUILDER:
+      g_value_set_object (value, nc_xcor_kernel_peek_panels_builder (xclk));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -462,29 +435,24 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * NcXcorKernel:reltol:
    *
    * Relative tolerance of the closure of $W_\ell(k)$. The absolute tolerance $a$ is
-   * #NcXcorKernel:peak-epsilon times the smallest of the block's peaks. The
-   * norm $\Vert \cdot \Vert_2$ is taken over the multipoles of the block.
-   *
-   * - Spline closure. ncm_function_sample_set_adaptive_midpoint() accepts an interval
-   *   when, at its midpoint, $\Vert W - \tilde W \Vert_2 \le \mathrm{reltol}\, \Vert W
-   *   \Vert_2 + a$, with $\tilde W$ the spline. The two terms are added, so the larger
-   *   of them determines the accuracy reached.
-   * - Chebyshev closure. A panel is accepted when, for every multipole, the
-   *   coefficient vectors $c_N$ and $c_{2N}$ at consecutive orders satisfy $\Vert
-   *   c_{2N} - c_N \Vert_2 < \max (\mathrm{reltol}\, \Vert c_{2N} \Vert_2, a)$.
+   * #NcXcorKernel:peak-epsilon times the smallest of the block's peaks. A panel is
+   * accepted when, for every multipole, the $\ell^1$ change of its Chebyshev coefficients
+   * between two consecutive levels, the new top coefficients included, is at most
+   * $\max (\mathrm{reltol}\, V, a)$, with $V$ the largest $|W_\ell|$ on the finer level's
+   * nodes. Since $|T_n| \le 1$, the change bounds the difference between the two levels'
+   * interpolants at every point.
    *
    * Each computed value of $W_\ell(k)$ carries the relative error of the integrator,
    * and a closure is not more accurate than the values it interpolates. The
    * construction of a closure therefore aborts with g_error() when the larger of
    * @reltol and #NcXcorKernel:peak-epsilon is below the integrator's relative
-   * tolerance. The spline closure warns once when @reltol and
-   * #NcXcorKernel:peak-epsilon differ by more than two orders of magnitude.
+   * tolerance.
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
                                    g_param_spec_double ("reltol",
                                                         NULL,
-                                                        "Relative tolerance for adaptive midpoint refinement",
+                                                        "Relative tolerance of the k-space closure",
                                                         0.0, 1.0, 1.0e-4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -510,7 +478,7 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                    PROP_PEAK_EPSILON,
                                    g_param_spec_double ("peak-epsilon",
                                                         NULL,
-                                                        "Peak-relative floor of the adaptive refinement of the k-space closure",
+                                                        "Peak-relative absolute tolerance of the k-space closure",
                                                         GSL_DBL_MIN, 1.0, 1.0e-4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -530,111 +498,20 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcXcorKernel:max-iter:
+   * NcXcorKernel:panels-builder:
    *
-   * Maximum number of adaptive midpoint refinement iterations per interval.
-   *
+   * The #NcmSpectralPanelsBuilder of the Chebyshev closures: its levels, minimum panels
+   * per e-fold (of $u = k/\nu$ under Limber, of $k$ otherwise) and minimum panel width.
+   * Read when a closure is built, so one already built keeps the panels it was built
+   * with. One builder may serve several kernels.
    */
   g_object_class_install_property (object_class,
-                                   PROP_MAX_ITER,
-                                   g_param_spec_uint ("max-iter",
-                                                      NULL,
-                                                      "Maximum number of adaptive midpoint refinement iterations",
-                                                      1, G_MAXUINT, 10000,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcXcorKernel:track-closure-error:
-   *
-   * Whether the closure records its interpolation error $\delta W_\ell$ on each
-   * interval on which it is a single polynomial: a knot interval of the spline
-   * closure, a panel of the Chebyshev closure. nc_xcor_compute_full() propagates
-   * this record to the error estimate of $C_\ell$. Without the record it uses
-   * #NcXcorKernel:reltol and #NcXcorKernel:peak-epsilon in its place.
-   *
-   * Each closure records the quantity its acceptance test measured.
-   *
-   * - Spline closure. On the interval between two consecutive knots,
-   *   $\delta W_\ell$ is the largest value of $\vert W_\ell - \tilde W_\ell \vert$
-   *   measured at a midpoint of that interval during refinement; see
-   *   ncm_function_sample_set_get_residuals().
-   * - Chebyshev closure. On a panel accepted at order $N$ after the test at
-   *   order $N/2$, $\delta W_\ell = \sum_{j \ge N/2} \vert c_j \vert$, the sum
-   *   over the coefficients the order $N/2$ did not carry. The sum bounds the
-   *   difference between the two expansions in the supremum norm.
-   *
-   * The record is one double per interval per multipole of the block.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_TRACK_CLOSURE_ERROR,
-                                   g_param_spec_boolean ("track-closure-error",
-                                                         NULL,
-                                                         "Whether to record the interpolation error the closure achieved",
-                                                         TRUE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcXcorKernel:panel-order-cap:
-   *
-   * Highest level $k$ of the Chebyshev expansion tried on one panel, with $N = 2^k +
-   * 1$ nodes and coefficients at level $k$. Zero selects the default, $k = 5$.
-   *
-   * A panel is expanded from #NcXcorKernel:panel-level-min upward, doubling the order
-   * until the acceptance test of #NcXcorKernel:reltol passes. When the test fails at
-   * the cap, or when the coefficients at the level below it predict that it will fail
-   * there (see ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap()), the panel
-   * is bisected and each half is expanded again from the minimum level. The nodes of
-   * the parent panel are not nodes of its halves, so the values of $W_\ell$ computed
-   * for a failed panel are not reused. A panel narrower than $10^{-6}$ of its upper
-   * edge is kept at the cap without further bisection.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_PANEL_ORDER_CAP,
-                                   g_param_spec_uint ("panel-order-cap",
-                                                      NULL,
-                                                      "Highest Chebyshev order tried per panel before bisecting",
-                                                      0, 12, 0,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcXcorKernel:panels-per-efold:
-   *
-   * Number of panels per e-fold of $u = k/\nu$ in the initial grid of the Limber
-   * Chebyshev closure. The initial panel edges are the band edges of the components
-   * together with a geometric grid in $u$ of this density over the closure's domain; a
-   * grid point closer than a quarter of the grid spacing to another edge is dropped.
-   * Each initial panel is then expanded and bisected where it does not converge, see
-   * #NcXcorKernel:panel-order-cap. Zero disables the grid, and each segment between
-   * band edges starts as one panel. A non-Limber closure takes no grid: its
-   * $W_\ell(k)$ oscillates, and its panels start from the whole domain, cut at the
-   * component boundaries.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_PANELS_PER_EFOLD,
-                                   g_param_spec_double ("panels-per-efold",
+                                   PROP_PANELS_BUILDER,
+                                   g_param_spec_object ("panels-builder",
                                                         NULL,
-                                                        "Panels per e-fold of k in the initial Chebyshev grid",
-                                                        0.0, 1000.0, 1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcXcorKernel:panel-level-min:
-   *
-   * Level $k$ at which the Chebyshev expansion of a panel starts, with $N = 2^k + 1$
-   * nodes; the order is doubled from there until the acceptance test of
-   * #NcXcorKernel:reltol passes or #NcXcorKernel:panel-order-cap is reached. The first
-   * test compares the levels $k$ and $k + 1$. A low level accepts a panel on which
-   * $W_\ell(k)$ is near zero or near linear with few nodes; the check of each accepted
-   * panel against the values computed during the domain expansion guards against a
-   * coarse first grid that misses a feature.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_PANEL_LEVEL_MIN,
-                                   g_param_spec_uint ("panel-level-min",
-                                                      NULL,
-                                                      "Level at which the Chebyshev expansion of a panel starts",
-                                                      0, 12, 3,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        "Builder of the Chebyshev closure panels",
+                                                        NCM_TYPE_SPECTRAL_PANELS_BUILDER,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcXcorKernel:expansion-factor:
@@ -904,7 +781,6 @@ nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdoubl
  * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @l: multipole
- * @closure_type: how to represent $W_\ell(k)$, see #NcXcor:closure-type
  *
  * Gets an evaluation function for the kernel at multipole @l.
  * Convenience wrapper around nc_xcor_kernel_get_eval_vectorized() for a single multipole.
@@ -912,9 +788,9 @@ nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdoubl
  * Returns: (transfer full): the evaluation function for the kernel.
  */
 NcXcorKernelIntegrand *
-nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, NcXcorKernelClosure closure_type)
+nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
-  return nc_xcor_kernel_get_eval_vectorized (xclk, cosmo, l, l, closure_type);
+  return nc_xcor_kernel_get_eval_vectorized (xclk, cosmo, l, l);
 }
 
 /**
@@ -923,7 +799,6 @@ nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, NcXcorKer
  * @cosmo: a #NcHICosmo
  * @lmin: minimum multipole
  * @lmax: maximum multipole
- * @closure_type: how to represent $W_\ell(k)$, see #NcXcor:closure-type
  *
  * Gets a vectorized evaluation function for the kernel over a range of multipoles.
  * The returned integrand will have len = lmax - lmin + 1, and will evaluate all
@@ -938,11 +813,11 @@ nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, NcXcorKer
  * Returns: (transfer full): the vectorized evaluation function for the kernel.
  */
 NcXcorKernelIntegrand *
-nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcXcorKernelClosure closure_type)
+nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  return nc_xcor_kernel_get_eval_vectorized_full (xclk, cosmo, lmin, lmax, self->sbi, closure_type);
+  return nc_xcor_kernel_get_eval_vectorized_full (xclk, cosmo, lmin, lmax, self->sbi);
 }
 
 /**
@@ -952,10 +827,17 @@ nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l
  * @lmin: minimum multipole
  * @lmax: maximum multipole
  * @sbi: (nullable): the #NcmSBesselIntegrator to use, or %NULL for @xclk's own
- * @closure_type: how to represent $W_\ell(k)$, see #NcXcor:closure-type
  *
  * Same as nc_xcor_kernel_get_eval_vectorized(), but integrates with @sbi
  * instead of the kernel's `integrator` property.
+ *
+ * The closure is a Chebyshev series on panels, one row per multipole. $W_\ell(k)$ is
+ * an integral of a compactly supported window against $j_\ell(k\chi)$, which is entire
+ * in $k$, so $W_\ell$ is entire in $k$ for any window and a Chebyshev series converges
+ * geometrically on it. Every component boundary found by the domain expansion is a
+ * panel edge, and under Limber so is every multipole's band edge, where its window
+ * steps to zero, so every panel is smooth. The panels are built by
+ * #NcXcorKernel:panels-builder to #NcXcorKernel:reltol and #NcXcorKernel:peak-epsilon.
  *
  * A #NcmSBesselIntegratorLevin holds reusable state tied to one multipole
  * range, so a caller computing several ell blocks does better keeping one
@@ -970,14 +852,14 @@ nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l
  * Returns: (transfer full): the kernel integrand over [@lmin, @lmax]
  */
 NcXcorKernelIntegrand *
-nc_xcor_kernel_get_eval_vectorized_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi, NcXcorKernelClosure closure_type)
+nc_xcor_kernel_get_eval_vectorized_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   if ((self->l_limber == 0) || ((self->l_limber > 0) && (lmin >= self->l_limber)))
-    return _nc_xcor_kernel_build_limber_integrand (xclk, cosmo, lmin, lmax, closure_type);
+    return _nc_xcor_kernel_build_limber_integrand (xclk, cosmo, lmin, lmax);
   else
-    return _nc_xcor_kernel_build_non_limber_integrand (xclk, cosmo, lmin, lmax, sbi, closure_type);
+    return _nc_xcor_kernel_build_non_limber_integrand (xclk, cosmo, lmin, lmax, sbi);
 }
 
 /**
@@ -1132,8 +1014,8 @@ nc_xcor_kernel_set_adaptive_boundary_tries (NcXcorKernel *xclk, guint adaptive_b
  * nc_xcor_kernel_get_reltol:
  * @xclk: a #NcXcorKernel
  *
- * Gets the relative tolerance used for adaptive midpoint refinement in the
- * non-Limber integrand construction.
+ * Gets #NcXcorKernel:reltol, the relative tolerance of the closure of
+ * $W_\ell(k)$.
  *
  * Returns: the relative tolerance value
  */
@@ -1150,9 +1032,8 @@ nc_xcor_kernel_get_reltol (NcXcorKernel *xclk)
  * @xclk: a #NcXcorKernel
  * @reltol: the relative tolerance (must be > 0)
  *
- * Sets the relative tolerance for adaptive midpoint refinement. Smaller values
- * provide more accurate spline interpolation at the cost of more knots.
- * Typical values range from 1e-4 to 1e-8.
+ * Sets #NcXcorKernel:reltol. Smaller values give a more accurate closure at the
+ * cost of more panels and higher orders. Typical values range from 1e-4 to 1e-8.
  *
  */
 void
@@ -1198,7 +1079,7 @@ nc_xcor_kernel_set_peak_epsilon (NcXcorKernel *xclk, gdouble peak_epsilon)
                "This floor is measured against the peak of W(k), but the C_l integrand "
                "is k^2 W_a W_b, so it enters squared: %.3e here is %.3e on the integrand, "
                "past what the outer integral carries. It cannot improve the result and can "
-               "cost orders of magnitude in spline knots.",
+               "cost orders of magnitude in closure panels.",
                peak_epsilon, NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON,
                peak_epsilon, peak_epsilon * peak_epsilon);
 
@@ -1242,42 +1123,6 @@ nc_xcor_kernel_set_max_border_expansions (NcXcorKernel *xclk, guint max_border_e
 }
 
 /**
- * nc_xcor_kernel_get_max_iter:
- * @xclk: a #NcXcorKernel
- *
- * Gets the maximum number of adaptive midpoint refinement iterations allowed
- * in the non-Limber integrand construction.
- *
- * Returns: the maximum number of iterations
- */
-guint
-nc_xcor_kernel_get_max_iter (NcXcorKernel *xclk)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  return self->max_iter;
-}
-
-/**
- * nc_xcor_kernel_set_max_iter:
- * @xclk: a #NcXcorKernel
- * @max_iter: the maximum number of iterations (must be >= 1)
- *
- * Sets the maximum number of adaptive midpoint refinement iterations. Higher values
- * allow for more refinement passes when needed. Typical values range from 1000 to
- * 100000.
- *
- */
-void
-nc_xcor_kernel_set_max_iter (NcXcorKernel *xclk, guint max_iter)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  g_assert (max_iter >= 1);
-  self->max_iter = max_iter;
-}
-
-/**
  * nc_xcor_kernel_get_expansion_factor:
  * @xclk: a #NcXcorKernel
  *
@@ -1313,131 +1158,37 @@ nc_xcor_kernel_set_expansion_factor (NcXcorKernel *xclk, gdouble expansion_facto
 }
 
 /**
- * nc_xcor_kernel_get_panel_order_cap:
+ * nc_xcor_kernel_peek_panels_builder:
  * @xclk: a #NcXcorKernel
  *
- * Returns: the panel order cap, or 0 for the default. See
- * #NcXcorKernel:panel-order-cap.
+ * Returns: (transfer none): the builder of the Chebyshev closure panels. See
+ * #NcXcorKernel:panels-builder.
  */
-guint
-nc_xcor_kernel_get_panel_order_cap (NcXcorKernel *xclk)
+NcmSpectralPanelsBuilder *
+nc_xcor_kernel_peek_panels_builder (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  return self->panel_order_cap;
+  return self->builder;
 }
 
 /**
- * nc_xcor_kernel_set_panel_order_cap:
+ * nc_xcor_kernel_set_panels_builder:
  * @xclk: a #NcXcorKernel
- * @panel_order_cap: the cap, or 0 for the default
+ * @builder: a #NcmSpectralPanelsBuilder
  *
- * Sets #NcXcorKernel:panel-order-cap. Read when a closure is built, so one already
- * built keeps the panels it was built with.
- *
+ * Sets #NcXcorKernel:panels-builder.
  */
 void
-nc_xcor_kernel_set_panel_order_cap (NcXcorKernel *xclk, guint panel_order_cap)
+nc_xcor_kernel_set_panels_builder (NcXcorKernel *xclk, NcmSpectralPanelsBuilder *builder)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->panel_order_cap = panel_order_cap;
-}
+  g_return_if_fail (NCM_IS_SPECTRAL_PANELS_BUILDER (builder));
 
-/**
- * nc_xcor_kernel_get_panels_per_efold:
- * @xclk: a #NcXcorKernel
- *
- * Returns: the number of panels per e-fold of $k$ in the initial Chebyshev grid, or
- * 0.0 for no grid. See #NcXcorKernel:panels-per-efold.
- */
-gdouble
-nc_xcor_kernel_get_panels_per_efold (NcXcorKernel *xclk)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  return self->panels_per_efold;
-}
-
-/**
- * nc_xcor_kernel_set_panels_per_efold:
- * @xclk: a #NcXcorKernel
- * @panels_per_efold: panels per e-fold of $k$, or 0.0 for no grid
- *
- * Sets #NcXcorKernel:panels-per-efold. Read when a closure is built, so one already
- * built keeps the panels it was built with.
- */
-void
-nc_xcor_kernel_set_panels_per_efold (NcXcorKernel *xclk, gdouble panels_per_efold)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  g_assert_cmpfloat (panels_per_efold, >=, 0.0);
-  self->panels_per_efold = panels_per_efold;
-}
-
-/**
- * nc_xcor_kernel_get_panel_level_min:
- * @xclk: a #NcXcorKernel
- *
- * Returns: the level at which the Chebyshev expansion of a panel starts. See
- * #NcXcorKernel:panel-level-min.
- */
-guint
-nc_xcor_kernel_get_panel_level_min (NcXcorKernel *xclk)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  return self->panel_level_min;
-}
-
-/**
- * nc_xcor_kernel_set_panel_level_min:
- * @xclk: a #NcXcorKernel
- * @panel_level_min: the starting level
- *
- * Sets #NcXcorKernel:panel-level-min. Read when a closure is built, so one already
- * built keeps the panels it was built with. Aborts when the level is not below
- * #NcXcorKernel:panel-order-cap at build time.
- */
-void
-nc_xcor_kernel_set_panel_level_min (NcXcorKernel *xclk, guint panel_level_min)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  self->panel_level_min = panel_level_min;
-}
-
-/**
- * nc_xcor_kernel_get_track_closure_error:
- * @xclk: a #NcXcorKernel
- *
- * Returns: whether the closure records its interpolation error. See
- * #NcXcorKernel:track-closure-error.
- */
-gboolean
-nc_xcor_kernel_get_track_closure_error (NcXcorKernel *xclk)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  return self->track_closure_error;
-}
-
-/**
- * nc_xcor_kernel_set_track_closure_error:
- * @xclk: a #NcXcorKernel
- * @track_closure_error: whether to record the interpolation error
- *
- * Sets #NcXcorKernel:track-closure-error. It is read when a closure is built, so a
- * closure already built keeps whatever it was built with.
- *
- */
-void
-nc_xcor_kernel_set_track_closure_error (NcXcorKernel *xclk, gboolean track_closure_error)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  self->track_closure_error = track_closure_error;
+  ncm_spectral_panels_builder_ref (builder);
+  ncm_spectral_panels_builder_clear (&self->builder);
+  self->builder = builder;
 }
 
 /**

@@ -92,10 +92,9 @@ test_nc_xcor_kquad_tophat (TestNcXcorKQuadEnv *env, gdouble chi_lower, gdouble c
                                                                                 env->sbi));
 
   nc_xcor_kernel_set_max_border_expansions (xclk, 1);
-  nc_xcor_kernel_set_max_iter (xclk, 4);
   nc_xcor_kernel_set_reltol (xclk, 1.0e-3);
   nc_xcor_kernel_set_peak_epsilon (xclk, 1.0e-4);
-  nc_xcor_kernel_set_panel_order_cap (xclk, 12);
+  ncm_spectral_panels_builder_set_level_cap (nc_xcor_kernel_peek_panels_builder (xclk), 12);
   nc_xcor_kernel_set_lmax (xclk, 16);
   nc_xcor_kernel_set_l_limber (xclk, l_limber);
 
@@ -308,14 +307,14 @@ _test_ref_cells (TestNcXcorKQuadRef *ref)
 /*
  * Appends to edges the abscissas in k between which every component of xclki is a
  * single polynomial: each component's range ends, and its panel edges, which are in
- * k / s_i, times its scale s_i; or the knots of a spline closure.
+ * k / s_i, times its scale s_i.
  */
 static void
 _test_ref_breakpoints (NcXcorKernelIntegrand *xclki, GArray *edges)
 {
-  const guint len      = nc_xcor_kernel_integrand_get_len (xclki);
-  const guint n_panels = nc_xcor_kernel_integrand_get_n_panels (xclki);
-  NcmVector *knots     = nc_xcor_kernel_integrand_peek_knots (xclki);
+  const guint len       = nc_xcor_kernel_integrand_get_len (xclki);
+  NcmSpectralPanels *sp = nc_xcor_kernel_integrand_peek_panels (xclki);
+  const guint n_panels  = (sp != NULL) ? ncm_spectral_panels_get_n_panels (sp) : 0;
   guint c, i;
 
   for (c = 0; c < len; c++)
@@ -333,24 +332,14 @@ _test_ref_breakpoints (NcXcorKernelIntegrand *xclki, GArray *edges)
 
     for (i = 0; i < n_panels; i++)
     {
-      NcmMatrix *coeffs;
       gdouble a, b;
+      guint N;
 
-      nc_xcor_kernel_integrand_peek_panel (xclki, i, &coeffs, &a, &b);
+      ncm_spectral_panels_peek_panel (sp, i, &a, &b, &N);
       a *= s;
       b *= s;
       g_array_append_val (edges, a);
       g_array_append_val (edges, b);
-    }
-  }
-
-  if (knots != NULL)
-  {
-    for (i = 0; i < ncm_vector_len (knots); i++)
-    {
-      const gdouble k = ncm_vector_get (knots, i);
-
-      g_array_append_val (edges, k);
     }
   }
 }

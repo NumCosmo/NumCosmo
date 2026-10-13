@@ -5,10 +5,10 @@ date: "2026-09-11"
 abstract: |
     The same clustering spectrum projected by UltraLevin and by CCL's FKEM agrees to a
     few parts in a thousand. Its derivative with respect to a cosmological parameter,
-    taken with the same Richardson-extrapolated differentiator on both, disagrees
-    fifteen times more, while both derivatives are numerically converged: the
-    approximation error of an angular power spectrum depends on the cosmology, and
-    differencing keeps its slope while dropping its value.
+    taken with the same Richardson-extrapolated differentiator on both, differs 14 times
+    more, and the differentiation error of both derivatives is at least four orders of magnitude
+    smaller than that difference. The deviation between the two codes depends on the
+    cosmology, and its derivative is larger than the deviation itself.
 
 format:
   html:
@@ -23,13 +23,14 @@ format-links: [ipynb]
 
 ## What this page shows
 
-A data-vector comparison judges two codes by $|C_\ell^A / C_\ell^B - 1|$. For a Fisher
-forecast, a Newton or gradient step, or an emulator trained on gradients, the quantity
-that matters is $\mathrm{d}C_\ell/\mathrm{d}\theta$, and a difference between two codes
-that is small but **changes with $\theta$** survives differencing undiminished while the
-spectrum itself drops out. This page measures that on one spectrum.
+A data-vector comparison of two codes measures $|C_\ell^A / C_\ell^B - 1|$. A Fisher
+forecast, a Newton or gradient step, or an emulator trained on gradients uses
+$\mathrm{d}C_\ell/\mathrm{d}\theta$ instead. If the difference $C_\ell^A - C_\ell^B$
+**changes with $\theta$**, the derivatives differ by its derivative, which can be larger,
+relative to $\mathrm{d}C_\ell/\mathrm{d}\theta$, than the difference is relative to
+$C_\ell$. This page measures both on one spectrum.
 
-The setup is deliberately simple and identical on both sides: one LSST-Y1 clustering
+The setup is the same on both sides: one LSST-Y1 clustering
 bin without redshift-space distortions or magnification, unit bias, the linear
 Eisenstein--Hu power spectrum, and a flat cosmology normalized to $\sigma_8$. The
 NumCosmo cosmology is built from the CCL one by `create_nc_obj` at every parameter
@@ -39,9 +40,9 @@ a 200-point table, which is what a photometric analysis typically has. CCL runs 
 non-Limber FKEM method at its default settings.
 
 The derivative is taken by [[numcosmo-math|NcmDiff]], Richardson extrapolation of
-central differences from an initial step on which $C_\ell$ changes by a few percent,
-and NcmDiff reports the error it believes it achieved. Neither derivative is a
-hand-picked finite difference.
+central differences from an initial step on which $C_\ell$ changes by a few percent.
+NcmDiff also returns an estimate of its own error. Neither derivative uses a step chosen
+by hand.
 
 ```{python}
 # | code-fold: true
@@ -50,6 +51,7 @@ import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 import pyccl
+from IPython.display import Markdown, display
 
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.ccl.nc_ccl import create_nc_obj
@@ -59,7 +61,7 @@ warnings.filterwarnings("ignore")
 
 plt.rcParams.update(
     {
-        "figure.figsize": (11.0, 4.6),
+        "figure.figsize": (7.0, 4.6),
         "figure.dpi": 110,
         "font.size": 13,
         "axes.titlesize": 13,
@@ -120,18 +122,21 @@ def cl_ultralevin(omega_c):
     kernel.set_l_limber(-1)
     kernel.prepare(n.cosmo)
     xcor = Nc.Xcor.new(n.dist, n.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-    xcor.set_closure_type(Nc.XcorKernelClosure.CHEBYSHEV)
     xcor.set_ell_batch_size(8)
     xcor.prepare(n.cosmo)
     xcor.compute(kernel, None, n.cosmo, LMIN, LMAX, vp)
     return np.array(vp.dup_array())
 
 
-def cl_ccl(omega_c):
-    """CCL's FKEM non-Limber method at its defaults, at one Omega_c."""
+def cl_ccl(omega_c, table=None):
+    """CCL's FKEM non-Limber method at its defaults, at one Omega_c.
+
+    table is the (z, n(z)) table given to CCL, the N_TABLE-point one when None.
+    """
     c = ccl_cosmology(omega_c)
+    z, nz = (z_tab, nz_tab) if table is None else table
     tracer = pyccl.NumberCountsTracer(
-        c, has_rsd=False, dndz=(z_tab, nz_tab), bias=(z_tab, np.ones_like(z_tab))
+        c, has_rsd=False, dndz=(z, nz), bias=(z, np.ones_like(z))
     )
     return np.asarray(
         pyccl.angular_cl(c, tracer, tracer, ELLS, l_limber=1000,
@@ -165,12 +170,11 @@ d_ccl, e_ccl = ncm_diff(cl_ccl)
 
 ```{python}
 # | label: fig-derivatives
-# | fig-cap: "Left: CCL's FKEM against UltraLevin on the clustering spectrum. Right: the same comparison for the derivative with respect to Omega_c, with the error NcmDiff reports on each derivative."
+# | fig-cap: "Top: CCL's FKEM against UltraLevin on the clustering spectrum. Bottom: the same comparison for the derivative with respect to Omega_c, with the error NcmDiff reports on each derivative."
 # | code-fold: true
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.0, 4.6))
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7.0, 7.4), sharex=True)
 ax1.plot(ELLS, c_ccl / c_ul - 1.0, "o-", ms=4, color="C3")
 ax1.axhline(0.0, color="k", lw=0.8)
-ax1.set_xlabel(r"$\ell$")
 ax1.set_ylabel(r"$C_\ell^{\rm CCL} / C_\ell^{\rm UltraLevin} - 1$")
 ax1.set_title(f"spectra: median |deviation| {np.median(np.abs(c_ccl / c_ul - 1.0)):.1e}")
 ax1.grid(alpha=0.3)
@@ -179,7 +183,11 @@ ax2.semilogy(ELLS, e_ccl / np.abs(d_ccl), "s--", ms=3, color="C3", alpha=0.6, la
 ax2.semilogy(ELLS, e_ul / np.abs(d_ul), "s--", ms=3, color="C0", alpha=0.8, label="error NcmDiff reports on UltraLevin")
 ax2.set_xlabel(r"$\ell$")
 ax2.set_ylabel(r"$\mathrm{d}C_\ell/\mathrm{d}\Omega_c$, relative")
-ax2.set_ylim(2e-7, 5e-1)
+# The y range holds every curve: the error NcmDiff reports on UltraLevin is the lowest.
+rel_curves = np.concatenate(
+    [np.abs(d_ccl / d_ul - 1.0), e_ccl / np.abs(d_ccl), e_ul / np.abs(d_ul)]
+)
+ax2.set_ylim(0.3 * rel_curves[rel_curves > 0.0].min(), 1.0)
 ax2.set_title(f"derivatives: median |deviation| {np.median(np.abs(d_ccl / d_ul - 1.0)):.1e}")
 ax2.legend(loc="center left")
 ax2.grid(alpha=0.3)
@@ -197,24 +205,64 @@ print(f"NcmDiff error, median over ell: UltraLevin {np.median(e_ul / np.abs(d_ul
 
 ## Reading the result
 
-The two spectra differ by a few $10^{-3}$, a smooth function of $\ell$, and would
-pass any comparison at the level a photometric survey demands of its theory code.
-The derivatives differ by a few $10^{-2}$. NcmDiff's own error estimate on each
-derivative is two orders below that disagreement, so neither derivative is noisy:
-the difference between the two spectra **moves with the cosmology**, and its slope is
-about fifteen times its value, in units of the derivative.
+The two spectra differ by $3 \times 10^{-3}$ (median over $\ell$), and the difference
+is a smooth function of $\ell$. The derivatives differ by $4.3 \times 10^{-2}$, 14
+times more. The error NcmDiff estimates is $6 \times 10^{-8}$ on the UltraLevin
+derivative and $2 \times 10^{-6}$ on the CCL one, four to six orders of magnitude below
+the difference between the derivatives. The difference between the two spectra
+therefore **changes with $\Omega_c$**.
 
-Two remarks bound the statement. First, it depends on the table CCL is handed: with
-$n(z)$ on 1200 points the spectra agree to $7\times10^{-5}$ and the derivatives to
-$10^{-3}$. The mechanism is not FKEM's transform but how coarsely its $\chi$ sampling,
-which defaults to twice the table's length, follows the kernel. Second, it is not a
-speed comparison and does not want to be one: CCL evaluates this spectrum faster than
-UltraLevin does. It is a measurement of what a resolution chosen once, rather than a
-tolerance met every time, costs in the quantity a forecast actually consumes.
+Two conditions apply to this result. First, it depends on the number of points of the
+$n(z)$ table given to CCL, since FKEM's sampling in $\chi$ has by default twice as many
+points as the table; the cell below repeats the comparison with a 1200-point table.
+Second, the page does not compare speed; CCL evaluates this spectrum faster than
+UltraLevin. It measures the error in $\mathrm{d}C_\ell/\mathrm{d}\theta$ of a method
+with a fixed sampling resolution, against a method that meets a tolerance at every
+evaluation.
 
-The forward variant of NcmDiff, `rf_d1_1_to_M`, gave the same derivatives to
-$10^{-9}$ at every multipole but one, where its value was off by $6\times10^{-4}$ and
-its reported error correctly flagged it; the central variant used here has no such
-point. On the UltraLevin spectrum the second differences of $C_\ell(\Omega_c)$ on a grid
-of 81 points around the fiducial value are at the $10^{-7}$ level everywhere, the
-curvature of a smooth function, so the flag was the estimator's, not the spectrum's.
+The derivatives above use the central variant of NcmDiff, `rc_d1_1_to_M`. The cell
+below also takes the UltraLevin derivative with the forward variant, `rf_d1_1_to_M`.
+
+```{python}
+# | code-fold: true
+def sci(x):
+    """x as a power of ten for the prose."""
+    mantissa, exponent = f"{x:.1e}".split("e")
+
+    return rf"${mantissa.rstrip('0').rstrip('.')} \times 10^{{{int(exponent)}}}$"
+
+
+z_1200 = np.linspace(0.0, 3.0, 1200)
+nz_1200 = np.array([dndz.eval(z) if z_lo <= z <= z_hi else 0.0 for z in z_1200])
+c_ccl_1200 = cl_ccl(OMEGA_C0, (z_1200, nz_1200))
+d_ccl_1200, _ = ncm_diff(lambda omega_c: cl_ccl(omega_c, (z_1200, nz_1200)))
+
+
+def ncm_diff_forward(f):
+    """dC_ell/dOmega_c and its reported error, forward Richardson extrapolation."""
+
+    def fill(x, y, *_):
+        for i, v in enumerate(f(x)):
+            y.set(i, v)
+
+    d, err = diff.rf_d1_1_to_M(OMEGA_C0, LMAX - LMIN + 1, fill, None)
+    return np.array(d), np.array(err)
+
+
+d_fwd, e_fwd = ncm_diff_forward(cl_ultralevin)
+dev_fwd = np.abs(d_fwd / d_ul - 1.0)
+worst = int(np.argmax(dev_fwd))
+
+display(Markdown(rf"""
+With the 1200-point table the spectra differ by
+{sci(np.median(np.abs(c_ccl_1200 / c_ul - 1.0)))} and the derivatives by
+{sci(np.median(np.abs(d_ccl_1200 / d_ul - 1.0)))} (median over $\ell$), against
+{sci(np.median(np.abs(c_ccl / c_ul - 1.0)))} and
+{sci(np.median(np.abs(d_ccl / d_ul - 1.0)))} with {N_TABLE} points.
+
+The forward variant agrees with the central one to {sci(np.median(dev_fwd))} (median over
+$\ell$); its largest deviation, {sci(dev_fwd[worst])} at $\ell = {ELLS[worst]}$, comes
+with a reported error of {sci(e_fwd[worst] / abs(d_fwd[worst]))}, while the central
+variant reports {sci(e_ul[worst] / abs(d_ul[worst]))} at that multipole.
+"""))
+```

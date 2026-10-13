@@ -66,6 +66,13 @@
  * the windows have decayed, and it is emitted with every row for the caller to
  * judge rather than folded into a radius that would not deserve the name.
  *
+ * --scale=S takes the magnitude of the whole C_ell as given instead of the run's own total.
+ * It is for a run over part of a pair's k range, one of several whose sum is the entry:
+ * each part then certifies its panels against the scale of the whole integral, as one
+ * run over the whole range would, rather than against its own total, which in the tail
+ * is orders smaller and would cost precision for nothing. The sum of the parts' balls is
+ * itself a certified ball.
+ *
  * Emits one TSV row per multipole: ell value radius prec_max n_eval k_lo k_hi.
  *
  * Build (standalone):
@@ -416,7 +423,7 @@ main (int argc, char **argv)
   Par a, b;
   Pair pr;
   Powspec ps = { .amplitude = 2.08e7, .n_s = 0.9875, .k_eq = 0.10594 };
-  double k_lo = 1.0e-6, k_hi = 10.0, target = 1.0e-20, chi_max;
+  double k_lo = 1.0e-6, k_hi = 10.0, target = 1.0e-20, given_scale = 0.0, chi_max;
   slong prec_max = 4096, eval_limit = 2000;
   long ells[64];
   int n_ells = 0, i, isauto = 1, verbose = 0;
@@ -485,6 +492,10 @@ main (int argc, char **argv)
     else if (!strncmp (s, "--target-rel=", 13))
     {
       target = atof (s + 13);
+    }
+    else if (!strncmp (s, "--scale=", 8))
+    {
+      given_scale = atof (s + 8);
     }
     else if (!strncmp (s, "--prec-max=", 11))
     {
@@ -595,6 +606,10 @@ main (int argc, char **argv)
       }
 
       scale = fabs (arf_get_d (arb_midref (acb_realref (total)), ARF_RND_NEAR));
+
+      /* The total before the 2 / pi of the output, for a run over part of the range. */
+      if (given_scale > 0.0)
+        scale = given_scale * M_PI / 2.0;
 
       for (j = 1; j < n_oct; j++)
         if (mag[j] > mag[j_peak])

@@ -15,7 +15,7 @@ env:
   # the datafile release tag changes; this knob covers everything else, such as
   # a file replaced in place under an unchanged tag. See
   # .github/actions/data-cache.
-  DATA_CACHE_VERSION: 1
+  DATA_CACHE_VERSION: 2
   # Thread policy is set PER TEST by meson (tests/meson.build), not here: concurrent tests
   # get OMP/BLAS = 1 (avoid cores^2 oversubscription + the mixed-OpenBLAS deadlock, e.g.
   # scipy.linalg.solve in test_sbessel_ode_solver), and the run-alone OpenMP tests
@@ -355,9 +355,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Restore data cache
-        # Only these shards read downloaded data files; the others skip the ~470 MB
-        # restore.
-        if: contains(fromJSON('["python", "py-app"]'), matrix.name)
+        # Only these shards read downloaded data files (the c shard reads the dense
+        # certified windows); the others skip the ~470 MB restore.
+        if: contains(fromJSON('["python", "py-app", "c"]'), matrix.name)
         uses: ./.github/actions/data-cache
         with:
           version: ${{ env.DATA_CACHE_VERSION }}

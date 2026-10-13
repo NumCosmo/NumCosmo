@@ -79,6 +79,9 @@ def main() -> int:
         pnr.load_planck_release(release_id)
         print(f"# {pnr.release_filename(release_id)}", flush=True)
 
+    # Dense certified windows of the closure tests (tests/c/nc/xcor), one file.
+    print(f"# {Nc.data_download_release_file('xcor_window_ilk_dense.bin')}", flush=True)
+
     return 0
 
 

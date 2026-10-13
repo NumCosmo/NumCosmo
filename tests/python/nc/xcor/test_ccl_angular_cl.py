@@ -163,9 +163,12 @@ def test_angular_cl_spin2_weight_matches_the_lensing_kernel(cosmology, ccl_cosmo
     j_l(k chi) / (k chi)^2 and the prefactor sqrt((l+2)(l+1)l(l-1)) are the
     library's, applied exactly; its Limber value 1 / nu^2 would be 6% off at
     ell = 2. What remains is the reconstruction of CCL's table and the two
-    kernels' independent closure fits: measured 3.6e-6, 6.2e-6, 8.3e-6 at
-    ell 2, 5, 10 at the default closure tolerance and 1.1e-7, 1.9e-7, 3.2e-7
-    at 1e-6, which is what is asserted.
+    kernels' independent closure fits. Both are converged: closure tolerance
+    1e-6 and adaptive-epsilon 1e-9 on both sides, since the two kernels' k
+    domains end in different places (the table starts at chi > 0 and is seeded
+    at its near edge, the native kernel at chi = 0) and at the default
+    truncation each carries its own share of the dropped tail, up to 4.7e-6 of
+    C_ell. Measured 1.2e-8, 1.3e-8, 1.9e-8 at ell 2, 5, 10.
     """
     ells = np.array([2, 5, 10])
     z = np.linspace(0.0, 2.5, 1000)
@@ -185,6 +188,7 @@ def test_angular_cl_spin2_weight_matches_the_lensing_kernel(cosmology, ccl_cosmo
     )
     wl_nc.set_reltol(1.0e-6)
     wl_nc.set_peak_epsilon(1.0e-6)
+    wl_nc.set_adaptive_epsilon(1.0e-9)
     wl_nc.set_l_limber(-1)
     wl_nc.prepare(cosmology.cosmo)
 
@@ -195,9 +199,16 @@ def test_angular_cl_spin2_weight_matches_the_lensing_kernel(cosmology, ccl_cosmo
     xcor.compute(wl_nc, wl_nc, cosmology.cosmo, lmin, lmax, res)
     expected = np.array(res.dup_array())[ells - lmin]
 
-    got = angular_cl(cosmology, wl_ccl, wl_ccl, ells, kernel_reltol=1.0e-6)
+    got = angular_cl(
+        cosmology,
+        wl_ccl,
+        wl_ccl,
+        ells,
+        kernel_reltol=1.0e-6,
+        kernel_adaptive_epsilon=1.0e-9,
+    )
 
-    assert_allclose(got, expected, rtol=2.0e-6)
+    assert_allclose(got, expected, rtol=5.0e-8)
 
 
 def test_angular_cl_convergence_kind_matches_the_cmb_lensing_kernel(
@@ -211,7 +222,9 @@ def test_angular_cl_convergence_kind_matches_the_cmb_lensing_kernel(
     distance object's reach as every kernel does, so the default cosmology
     serves. Its source redshift must be the recombination value the NumCosmo
     kernel uses (z_source = 1100 instead leaves a 1e-4 difference that is the
-    kernel, not the method). Measured 2.7e-9, 1e-11, 2e-11 at ell 2, 5, 10.
+    kernel, not the method). Converged on both sides, closure tolerance 1e-6 and
+    adaptive-epsilon 1e-9, for the reason the shear test gives: measured
+    1.1e-9, 3e-10, 1.5e-11 at ell 2, 5, 10.
     """
     ells = np.array([2, 5, 10])
     z_lss = cosmology.dist.decoupling_redshift(cosmology.cosmo)
@@ -225,6 +238,7 @@ def test_angular_cl_convergence_kind_matches_the_cmb_lensing_kernel(
     cmb_nc.props.integrator = Ncm.SBesselIntegratorLevin.new(2, int(ells[-1]))
     cmb_nc.set_reltol(1.0e-6)
     cmb_nc.set_peak_epsilon(1.0e-6)
+    cmb_nc.set_adaptive_epsilon(1.0e-9)
     cmb_nc.set_l_limber(-1)
     cmb_nc.prepare(cosmology.cosmo)
 
@@ -235,9 +249,16 @@ def test_angular_cl_convergence_kind_matches_the_cmb_lensing_kernel(
     xcor.compute(cmb_nc, cmb_nc, cosmology.cosmo, lmin, lmax, res)
     expected = np.array(res.dup_array())[ells - lmin]
 
-    got = angular_cl(cosmology, cmb_ccl, cmb_ccl, ells, kernel_reltol=1.0e-6)
+    got = angular_cl(
+        cosmology,
+        cmb_ccl,
+        cmb_ccl,
+        ells,
+        kernel_reltol=1.0e-6,
+        kernel_adaptive_epsilon=1.0e-9,
+    )
 
-    assert_allclose(got, expected, rtol=1.0e-7)
+    assert_allclose(got, expected, rtol=5.0e-9)
 
 
 def test_tracer_cl_solver_updates_in_place(cosmology, ccl_cosmo, tracer):

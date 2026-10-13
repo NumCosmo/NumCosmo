@@ -44,6 +44,11 @@ pytest_plugins = ["python.fixtures_xcor"]
 
 RELTOL = 1.0e-7
 PEAK_EPSILON = 1.0e-4
+# The projection tests compare the Limber approximation's error in the integrated power,
+# a few 1e-6, which closures at PEAK_EPSILON move by about 3e-6. At 1e-6 they move it by
+# under 1e-7 (lensing bins, ell 500 and 804, against closures at 1e-8), so the comparison
+# is the physics.
+CONVERGED_TOL = 1.0e-6
 
 # The tests below that build non-Limber closures run the Levin ODE over
 # x = k chi, and its cost -- both time and the spectral order the panels must
@@ -57,6 +62,43 @@ PEAK_EPSILON = 1.0e-4
 # (2711 knots against 2739). The unbounded range belongs in a stress test, not
 # in a unit test.
 NON_LIMBER_KMAX = 10.0
+
+
+def _k2_integrals(
+    integrand: Nc.XcorKernelIntegrand, k_min: float, k_max: float
+) -> np.ndarray:
+    """Return int_{k_min}^{k_max} k^2 W_r(k)^2 dk for every row of a closure.
+
+    The closure is piecewise polynomial, and NcmSpectralPanelsProduct integrates the
+    square of a panel set exactly. Row r lives in x = k / s_r, so the panels are
+    restricted to [k_min / s_r, k_max / s_r] before its product is taken.
+    """
+    sp = integrand.peek_panels()
+    n_rows = integrand.get_len()
+    scales = Ncm.Vector.new_array([integrand.get_scale(r) for r in range(n_rows)])
+    spectral = Ncm.Spectral.new()
+    product = Ncm.SpectralPanelsProduct.new(2)
+    result = Ncm.Vector.new(n_rows)
+    out = np.zeros(n_rows)
+
+    for r in range(n_rows):
+        lo, hi = k_min / scales.get(r), k_max / scales.get(r)
+        restricted = Ncm.SpectralPanels.new(sp.get_fdim())
+
+        for i in range(sp.get_n_panels()):
+            _, a, b = sp.get_panel(i)
+            a_r, b_r = max(a, lo), min(b, hi)
+
+            if a_r < b_r:
+                inside, coeffs = sp.restrict(spectral, a_r, b_r)
+                assert inside
+                restricted.append(a_r, b_r, coeffs)
+
+        if restricted.get_n_panels() > 0:
+            product.integrate(restricted, scales, restricted, scales, result, None)
+            out[r] = result.get(r)
+
+    return out
 
 
 @pytest.fixture(name="capped_powspec")
@@ -94,7 +136,7 @@ def test_limber_vs_limber_z(kernel: Nc.XcorKernel, cosmology: Cosmology) -> None
 
     # Get vectorized evaluation functions
     for ell in ell_array:
-        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
+        limber_func = kernel.get_eval(cosmo, ell)
         nu = ell + 0.5
 
         # Evaluate both methods
@@ -151,9 +193,7 @@ def test_limber_vs_limber_z_vectorized(
     ell_end = ell_start + 8  # 9 elements total
 
     # Get vectorized evaluation function for ell range
-    limber_func = kernel.get_eval_vectorized(
-        cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
-    )
+    limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
     kmin, kmax = limber_func.get_range()
 
     # Test at multiple k values
@@ -221,176 +261,6 @@ def test_limber_vs_limber_z_vectorized(
     )
 
 
-def test_limber_vs_non_limber(
-    kernel_case: tuple[str, Nc.XcorKernel],
-    cosmology: Cosmology,
-    capped_powspec: Ncm.Powspec,
-) -> None:
-    """Test Limber approximation accuracy against exact non-Limber calculation.
-
-    Validates that the Limber approximation converges to the exact (non-Limber) result
-    at moderate to high multipoles (ell = 200, 500, 800). The test evaluates both
-    methods over a k-range and verifies that the maximum relative difference stays
-    within kernel-specific tolerances.
-
-    The Limber approximation accuracy exhibits characteristic behavior:
-
-    - Most accurate in the high-k region at moderate to high ell
-    - Degrades toward lower k values where the flat-sky approximation breaks down
-    - Improves with increasing ell (higher multipoles)
-
-    Different kernel types have different tolerance thresholds based on their physical
-    characteristics, ranging from ~1e-4 for weak lensing kernels to ~0.3 for more
-    complex kernels like tSZ.
-    """
-    kernel_id, kernel = kernel_case
-    cosmo = cosmology.cosmo
-    kernel_tol = {
-        "kernel_cmb_lens": {200: 5.0e-2, 500: 3.0e-2, 800: 2.8e-2},
-        "kernel_cmb_isw": {200: 4.0, 500: 2.5, 800: 2.0},
-        "kernel_tsz": {200: 0.3, 500: 0.3, 800: 0.3},
-        "kernel_cluster_tophat": {200: 0.64, 500: 0.6, 800: 0.6},
-        "kernel_gal_bin0": {200: 4.0e-3, 500: 6.0e-4, 800: 3.0e-4},
-        "kernel_gal_bin1": {200: 8.0e-3, 500: 2.0e-3, 800: 5.1e-4},
-        "kernel_gal_bin2": {200: 2.0e-2, 500: 3.0e-3, 800: 9.6e-4},
-        "kernel_gal_bin3": {200: 3.0e-2, 500: 4.0e-3, 800: 2.0e-3},
-        "kernel_gal_bin4": {200: 4.0e-2, 500: 6.0e-3, 800: 3.0e-3},
-        "kernel_wl_bin0": {200: 8.0e-4, 500: 2.0e-4, 800: 6.0e-5},
-        "kernel_wl_bin1": {200: 2.0e-3, 500: 2.0e-4, 800: 8.0e-5},
-        "kernel_wl_bin2": {200: 2.0e-3, 500: 3.0e-4, 800: 1.0e-4},
-        "kernel_wl_bin3": {200: 2.0e-3, 500: 3.0e-4, 800: 2.0e-4},
-        "kernel_wl_bin4": {200: 7.0e-4, 500: 2.0e-4, 800: 5.0e-5},
-    }
-    # Test at moderate to high ell where limber should be accurate
-    ell_array = np.array([200, 500, 800])
-    default_rtol = 1.0e-13
-    kernel.set_reltol(RELTOL)
-    kernel.set_peak_epsilon(PEAK_EPSILON)
-
-    for ell in ell_array:
-        # Get limber result
-        rtol = kernel_tol.get(kernel_id, {}).get(ell, default_rtol)
-        kernel.set_l_limber(0)
-        kernel.prepare(cosmo)
-        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
-        kmin_limber, kmax_limber = limber_func.get_range()
-
-        # Get non-limber result (this is the "exact" reference)
-        kernel.set_l_limber(-1)
-        kernel.prepare(cosmo)
-
-        for _ in range(1):
-            non_limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
-
-        kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
-        kmin = max(kmin_limber, kmin_non_limber)
-        kmax = min(kmax_limber, kmax_non_limber)
-
-        # Generate 1000 k values for statistical validation
-        k_array = np.geomspace(kmin, kmax, 1000)
-
-        limber_result = np.array([limber_func.eval_array(k)[0] for k in k_array])
-        non_limber_result = np.array(
-            [non_limber_func.eval_array(k)[0] for k in k_array]
-        )
-        max_non_limber = np.max(np.abs(non_limber_result))
-        rel_diff = np.abs((limber_result - non_limber_result) / max_non_limber)
-
-        assert np.max(rel_diff) < rtol, (
-            f"Limber and non-Limber differ for {kernel_id} at ell={ell}: "
-            f"max_rel_diff={np.max(rel_diff):.6e} (rtol={rtol:.6e})"
-        )
-
-
-def test_k_projection_limber_vs_non_limber(
-    kernel_case: tuple[str, Nc.XcorKernel],
-    cosmology: Cosmology,
-    capped_powspec: Ncm.Powspec,
-) -> None:
-    """Test k-space projection integral agreement between Limber and non-Limber.
-
-    Validates that the k-space projection integral I = int k^3 K^2(k) d(ln k) computed
-    using the Limber approximation agrees with the exact non-Limber calculation at
-    moderate to high multipoles. This tests whether the Limber approximation preserves
-    the integrated power, which is the physically relevant quantity for cosmological
-    observables like angular power spectra.
-
-    The test evaluates both methods over a trimmed k-range (excluding boundary regions)
-    and verifies that the integrated quantities agree within specified tolerance. This
-    provides a stronger validation than pointwise comparison, as small local errors can
-    cancel when integrated, demonstrating that the Limber approximation is suitable for
-    computing physical observables even where pointwise differences exist.
-    """
-    kernel_id, kernel = kernel_case
-    cosmo = cosmology.cosmo
-
-    # Test at moderate to high ell where Limber should be accurate
-    ell_array = np.array([100, 500, 800])
-
-    kernel_tol = {
-        "kernel_cmb_lens": {100: 5.0e-5, 500: 6.0e-5, 800: 8.0e-5},
-        "kernel_cmb_isw": {100: 2.0, 500: 0.5, 800: 0.5},
-        "kernel_tsz": {100: 2.0e-4, 500: 2.0e-4, 800: 8.0e-5},
-        "kernel_cluster_tophat": {100: 4.0e-2, 500: 2.0e-2, 800: 1.0e-2},
-        "kernel_gal_bin0": {100: 1.0e-3, 500: 6.0e-5, 800: 3.0e-5},
-        "kernel_gal_bin1": {100: 2.0e-3, 500: 2.0e-4, 800: 6.0e-5},
-        "kernel_gal_bin2": {100: 3.0e-3, 500: 3.0e-4, 800: 1.0e-4},
-        "kernel_gal_bin3": {100: 4.0e-3, 500: 4.0e-4, 800: 2.0e-4},
-        "kernel_gal_bin4": {100: 7.0e-3, 500: 7.1e-4, 800: 4.0e-4},
-        "kernel_wl_bin0": {100: 4.0e-4, 500: 2.0e-5, 800: 7.0e-6},
-        "kernel_wl_bin1": {100: 2.0e-4, 500: 8.0e-6, 800: 8.0e-6},
-        "kernel_wl_bin2": {100: 7.0e-5, 500: 4.0e-6, 800: 2.0e-6},
-        "kernel_wl_bin3": {100: 4.0e-5, 500: 8.0e-7, 800: 8.0e-7},
-        "kernel_wl_bin4": {100: 1.0e-4, 500: 6.0e-6, 800: 4.0e-6},
-    }
-    default_rtol = 1.0e-13
-    kernel.set_reltol(RELTOL)  # Use tight tolerance for this test
-    kernel.set_peak_epsilon(PEAK_EPSILON)  # Use tight absolute minimum for this test
-
-    for ell in ell_array:
-        # Get limber result
-        rtol = kernel_tol.get(kernel_id, {}).get(ell, default_rtol)
-        kernel.set_l_limber(0)
-        kernel.prepare(cosmo)
-        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
-        kmin_limber, kmax_limber = limber_func.get_range()
-
-        # Get non-limber result (this is the "exact" reference)
-        kernel.set_l_limber(-1)
-        kernel.prepare(cosmo)
-        non_limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
-        kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
-
-        kmin = max(kmin_limber, kmin_non_limber)
-        kmax = min(kmax_limber, kmax_non_limber)
-
-        # Use 2000 k points for accurate integration
-        k_array = np.geomspace(kmin, kmax, 5000)
-        lnk = np.log(k_array)
-
-        # Evaluate kernels
-        limber_result = np.array([limber_func.eval_array(k)[0] for k in k_array])
-        non_limber_result = np.array(
-            [non_limber_func.eval_array(k)[0] for k in k_array]
-        )
-
-        # Compute k-space projection integrals: I = int k^3 K^2(k) d(ln k)
-        integrand_limber = k_array**3 * limber_result**2
-        integrand_non_limber = k_array**3 * non_limber_result**2
-
-        I_limber = np.trapezoid(integrand_limber, x=lnk)
-        I_exact = np.trapezoid(integrand_non_limber, x=lnk)
-
-        # Check relative agreement
-        rel_diff = np.abs((I_limber - I_exact) / I_exact)
-
-        assert rel_diff < rtol, (
-            f"k-space projection integral differs for {kernel_id} at ell={ell}: "
-            f"I_limber={I_limber:.6e}, I_exact={I_exact:.6e}, "
-            f"rel_diff={rel_diff:.6e} (rtol={rtol:.6e})"
-        )
-
-
 def test_limber_vs_non_limber_vectorized(
     kernel_case: tuple[str, Nc.XcorKernel],
     cosmology: Cosmology,
@@ -439,17 +309,13 @@ def test_limber_vs_non_limber_vectorized(
         # Get limber result with vectorized evaluation
         kernel.set_l_limber(0)
         kernel.prepare(cosmo)
-        limber_func = kernel.get_eval_vectorized(
-            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
-        )
+        limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
         kmin_limber, kmax_limber = limber_func.get_range()
 
         # Get non-limber result with vectorized evaluation
         kernel.set_l_limber(-1)
         kernel.prepare(cosmo)
-        non_limber_func = kernel.get_eval_vectorized(
-            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
-        )
+        non_limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
         kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
 
         kmin = max(kmin_limber, kmin_non_limber)
@@ -491,7 +357,7 @@ def test_k_projection_limber_vs_non_limber_vectorized(
     kernel_tol = {
         "kernel_cmb_lens": {100: 2.0e-5, 500: 6.0e-5, 800: 8.0e-5},
         "kernel_cmb_isw": {100: 2.0, 500: 0.5, 800: 0.5},
-        "kernel_tsz": {100: 2.0e-4, 500: 2.0e-4, 800: 1.0e-4},
+        "kernel_tsz": {100: 2.0e-4, 500: 2.0e-4, 800: 8.0e-5},
         "kernel_cluster_tophat": {100: 4.0e-2, 500: 2.0e-2, 800: 1.0e-2},
         "kernel_gal_bin0": {100: 1.0e-3, 500: 6.0e-5, 800: 3.0e-5},
         "kernel_gal_bin1": {100: 2.0e-3, 500: 2.0e-4, 800: 6.0e-5},
@@ -513,8 +379,8 @@ def test_k_projection_limber_vs_non_limber_vectorized(
     ]
 
     default_rtol = 1.0e-13
-    kernel.set_reltol(RELTOL)
-    kernel.set_peak_epsilon(PEAK_EPSILON)
+    kernel.set_reltol(CONVERGED_TOL)
+    kernel.set_peak_epsilon(CONVERGED_TOL)
 
     for ell_start, n_ells in test_configs:
         ell_end = ell_start + n_ells - 1
@@ -523,39 +389,26 @@ def test_k_projection_limber_vs_non_limber_vectorized(
         # Get limber result with vectorized evaluation
         kernel.set_l_limber(0)
         kernel.prepare(cosmo)
-        limber_func = kernel.get_eval_vectorized(
-            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
-        )
+        limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
         kmin_limber, kmax_limber = limber_func.get_range()
 
         # Get non-limber result with vectorized evaluation
         kernel.set_l_limber(-1)
         kernel.prepare(cosmo)
-        non_limber_func = kernel.get_eval_vectorized(
-            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
-        )
+        non_limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
         kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
 
         kmin = max(kmin_limber, kmin_non_limber)
         kmax = min(kmax_limber, kmax_non_limber)
 
-        # Use 5000 k points for accurate integration
-        k_array = np.geomspace(kmin, kmax, 5000)
-        lnk = np.log(k_array)
+        # I = int k^3 K^2(k) d(ln k) = int k^2 K^2 dk per multipole, exact on the panels
+        I_limber_block = _k2_integrals(limber_func, kmin, kmax)
+        I_exact_block = _k2_integrals(non_limber_func, kmin, kmax)
 
-        # Evaluate kernels - each returns array of n_ells values per k
-        limber_results = np.array([limber_func.eval_array(k) for k in k_array])
-        non_limber_results = np.array([non_limber_func.eval_array(k) for k in k_array])
-
-        # Compute k-space projection integrals for each ell
-        # Shape: (n_k, n_ells) -> integrate over k axis for each ell
         for i in range(n_ells):
             ell = ell_start + i
-            integrand_limber = k_array**3 * limber_results[:, i] ** 2
-            integrand_non_limber = k_array**3 * non_limber_results[:, i] ** 2
-
-            I_limber = np.trapezoid(integrand_limber, x=lnk)
-            I_exact = np.trapezoid(integrand_non_limber, x=lnk)
+            I_limber = I_limber_block[i]
+            I_exact = I_exact_block[i]
 
             # Check relative agreement for this ell
             rel_diff = np.abs((I_limber - I_exact) / I_exact)
@@ -572,8 +425,8 @@ def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
     """Test that all kernel properties can be set and retrieved correctly.
 
     Validates the getter/setter methods and GObject properties for the adaptive
-    refinement parameters: reltol, peak_epsilon, max_border_expansions, max_iter,
-    and expansion_factor.
+    refinement parameters: reltol, peak_epsilon, max_border_expansions and
+    expansion_factor.
     """
     # Test reltol property
     original_reltol = kernel.get_reltol()
@@ -620,20 +473,6 @@ def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
     # Restore original
     kernel.set_max_border_expansions(original_max_border_expansions)
 
-    # Test max_iter property
-    original_max_iter = kernel.get_max_iter()
-    assert original_max_iter == kernel.props.max_iter
-
-    kernel.set_max_iter(5000)
-    assert kernel.get_max_iter() == 5000
-    assert kernel.props.max_iter == 5000
-
-    kernel.props.max_iter = 8000
-    assert kernel.get_max_iter() == 8000
-
-    # Restore original
-    kernel.set_max_iter(original_max_iter)
-
     # Test expansion_factor property
     original_expansion_factor = kernel.get_expansion_factor()
     assert original_expansion_factor == kernel.props.expansion_factor
@@ -672,53 +511,3 @@ def test_peak_epsilon_below_the_floor_warns(
 
     assert "below the useful floor" not in capfd.readouterr().err
     assert kernel.get_peak_epsilon() == 1.0e-6
-
-
-def test_tolerances_more_than_two_orders_apart_warn(
-    cosmology: Cosmology, capfd: pytest.CaptureFixture[str]
-) -> None:
-    """An inert tolerance is worth saying out loud.
-
-    Refinement stops at reltol * ||f||_2 + a * ||f||_2^max, a sum, so the looser
-    term decides and the tighter one changes nothing while still being paid for
-    in knots. Measured on a Gaussian: reltol 1e-8 against a = 1e-4 is worth 1.2x
-    over the 1e-4/1e-4 defaults, where moving both to 1e-6/1e-5 is worth 15x.
-    """
-
-    def build(reltol: float, peak_epsilon: float) -> str:
-        kernel = Nc.XcorKernelAnalyticGauss(
-            dist=cosmology.dist,
-            powspec=cosmology.ps_ml,
-            chi_mean=1500.0,
-            chi_sigma=300.0,
-            integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
-            reltol=reltol,
-            peak_epsilon=peak_epsilon,
-        )
-        kernel.set_l_limber(-1)
-        kernel.prepare(cosmology.cosmo)
-        capfd.readouterr()
-
-        # Two blocks: the tolerances cannot change between them, so the warning
-        # must not repeat.
-        for lmin, lmax in ((2, 9), (10, 17)):
-            kernel.get_eval_vectorized_full(
-                cosmology.cosmo,
-                lmin,
-                lmax,
-                Ncm.SBesselIntegratorLevin.new(0, 8),
-                Nc.XcorKernelClosure.SPLINE,
-            )
-
-        return capfd.readouterr().err
-
-    assert "orders apart" not in build(1.0e-4, 1.0e-4), "the balanced default"
-    assert "orders apart" not in build(1.0e-6, 1.0e-5), "the pair NcXcorSSCSij uses"
-
-    inert_reltol = build(1.0e-8, 1.0e-4)
-    assert inert_reltol.count("orders apart") == 1
-    assert "and reltol is inert" in inert_reltol
-
-    inert_floor = build(1.0e-4, 1.0e-8)
-    assert inert_floor.count("orders apart") == 1
-    assert "and peak-epsilon is inert" in inert_floor

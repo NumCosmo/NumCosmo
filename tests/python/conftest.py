@@ -16,6 +16,7 @@ warnings.filterwarnings(
 )
 
 from gi.repository import GLib
+
 # flake8: noqa: E402
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.cosmology import Cosmology

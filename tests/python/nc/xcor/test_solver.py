@@ -721,7 +721,7 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
     cosmo = cosmology.cosmo
     z_bins = [(0.1, 0.2), (0.3, 0.4)]
 
-    def solve(closure_type):
+    def solve():
         solver = Nc.XcorSolver.new()
         ids = []
 
@@ -747,7 +747,6 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
         solver.set_integrator(Ncm.SBesselIntegratorLevin.new(0, 8))
 
         xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-        xcor.set_closure_type(closure_type)
         xcor.prepare(cosmo)
         solver.solve(xcor, cosmo)
 
@@ -756,7 +755,7 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
             for r in range(solver.get_n_requests())
         ]
 
-    def compute_directly(closure_type):
+    def compute_directly():
         kernels = []
 
         for z_lower, z_upper in z_bins:
@@ -774,7 +773,6 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
             kernels.append(kernel)
 
         xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-        xcor.set_closure_type(closure_type)
         xcor.prepare(cosmo)
 
         out = []
@@ -792,22 +790,15 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
                 out.append(np.array(vp.dup_array()))
         return out
 
-    for closure_type in (
-        Nc.XcorKernelClosure.CHEBYSHEV,
-        Nc.XcorKernelClosure.SPLINE,
-    ):
-        through_solver = solve(closure_type)
-        direct = compute_directly(closure_type)
+    through_solver = solve()
+    direct = compute_directly()
 
-        assert len(through_solver) == 3
+    assert len(through_solver) == 3
 
-        # The two entry points must reach the same integrator. Asserting the two
-        # *representations* agree instead would be asserting the wrong thing:
-        # on the cross request at l ~ 17 the spline is several hundred percent
-        # out, which is the error this representation exists to remove.
-        for got, expected in zip(through_solver, direct):
-            assert np.all(np.isfinite(got))
-            assert_allclose(got, expected, rtol=1.0e-10)
+    # The two entry points must reach the same integrator.
+    for got, expected in zip(through_solver, direct):
+        assert np.all(np.isfinite(got))
+        assert_allclose(got, expected, rtol=1.0e-10)
 
 
 def test_replan_with_the_same_blocks_keeps_the_integrators(

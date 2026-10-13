@@ -260,7 +260,7 @@ for i in range(N):
 
 The $N \times N$ matrix is the leading block of the larger one, and the missing piece of
 the last column is the entry the larger matrix has in row $N$. Adding that term back
-closes the difference:
+removes the difference:
 
 ```{python}
 M_s_big = Ncm.Spectral.get_s_matrix(N + 1).to_numpy()
@@ -273,7 +273,7 @@ print(f"M^{N}_{N - 1} = {Fraction(missing[N]).limit_denominator(1000)}")
 print(f"with it, largest difference {np.max(np.abs(residual - s * Chebyshev.basis(N - 1)(s))):.1e}")
 ```
 
-This loses nothing in the coefficients the matrix keeps. A function with $N$ Chebyshev
+The truncation does not change the coefficients the matrix keeps. A function with $N$ Chebyshev
 coefficients has $c^j = 0$ for $j \ge N$, so every row $k < N$ of the product is complete:
 the matrix returns the first $N$ coefficients $g^0, \dots, g^{N-1}$ of $s f$ exactly and
 drops $g^N$, the coefficient of degree $N$. For $s^2$
@@ -300,8 +300,7 @@ for name, get_matrix, factor in (
 
 The projection and the derivative operators do not raise the degree, so their $N \times N$
 matrices drop nothing. In a solver the equation is imposed on rows $k < N$ only, so the
-dropped coefficients belong to the truncation of the expansion, not to an error in the
-operator.
+dropped coefficients are part of the truncation of the expansion.
 
 ## Assembling an equation {#sec-assembly}
 

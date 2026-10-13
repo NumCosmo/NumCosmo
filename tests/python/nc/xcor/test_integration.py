@@ -149,14 +149,12 @@ def test_xcor_kernel_methods(
     l_limber: int,
     request: pytest.FixtureRequest,
 ) -> None:
-    """Regression test for the sec. 3 outer-k-bound fix (the kernel-space methods).
+    """The kernel-space method against the z-space Limber integral.
 
-    Before the fix, these methods were wrong by 15-27 orders of magnitude and
-    disagreed with each other by ell-dependent factors (evaluating the fitted
-    k-space spline far outside its domain). Checks, for both tier 2
-    (l_limber=0, kernel-Limber) and tier 3 (l_limber=-1, true non-Limber), that
-    KERNEL_EXACT, one multipole per closure and four per closure, converges to
-    LIMBER_Z_CUBATURE (tier 1) at moderate/high ell -- exactly, for tier 2
+    Checks, for both tier 2 (l_limber=0, kernel-Limber) and tier 3
+    (l_limber=-1, true non-Limber), that KERNEL_EXACT, with four multipoles per
+    closure, converges to LIMBER_Z_CUBATURE (tier 1) at moderate/high ell:
+    exactly, for tier 2
     (mathematically the same Limber approximation, just computed via k-space
     instead of z-space); within known Limber-approximation error, for tier 3.
     The tier-3 comparison against tier 1 is dropped for the ISW
@@ -227,8 +225,8 @@ def test_xcor_kernel_methods(
         # the other kernel's un-suppressed values.
         #
         # Measured for CMB lensing x ISW at ell 20-27: 1.05e-3 low against
-        # tier 1, flat under refinement of the spline tolerance (1e-4 through
-        # 1e-6, so it is the domain and not the sampling), and collapsing to
+        # tier 1, flat under refinement of the closure tolerance (1e-4 through
+        # 1e-6, so it is the domain and not the closure), and collapsing to
         # 1.5e-6 once adaptive-epsilon is tightened to 1e-8. No per-kernel
         # criterion can do better in principle, since a closure is built
         # without knowing what it will be paired with. The scale that makes
@@ -237,18 +235,6 @@ def test_xcor_kernel_methods(
         # sets the cross spectrum's sample variance.
         if (l_limber == 0) and (involved & {"kernel_cmb_isw"}) and (k1_name != k2_name):
             tier1_rtol = 2.0e-3
-
-        vp_kernel_exact_1 = Ncm.Vector.new(n)
-        xcor_ke = Nc.Xcor.new(
-            cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT
-        )
-        xcor_ke.props.ell_batch_size = 1
-        xcor_ke.prepare(cosmology.cosmo)
-        xcor_ke.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_exact_1)
-        kernel_exact_1 = np.array(vp_kernel_exact_1.dup_array())
-
-        if check_tier1:
-            assert_allclose(kernel_exact_1, limber_z, rtol=tier1_rtol, atol=1.0e-50)
 
         vp_kernel_exact = Ncm.Vector.new(n)
         xcor_kf = Nc.Xcor.new(
@@ -272,16 +258,11 @@ def test_xcor_kernel_methods(
             block_lmax = lmin + 3
             isauto = k1_name == k2_name
             sbi = Ncm.SBesselIntegratorLevin.new(lmin, block_lmax)
-            closure = Nc.XcorKernelClosure.CHEBYSHEV
-            ia = k1.get_eval_vectorized_full(
-                cosmology.cosmo, lmin, block_lmax, sbi, closure
-            )
+            ia = k1.get_eval_vectorized_full(cosmology.cosmo, lmin, block_lmax, sbi)
             ib = (
                 None
                 if isauto
-                else k2.get_eval_vectorized_full(
-                    cosmology.cosmo, lmin, block_lmax, sbi, closure
-                )
+                else k2.get_eval_vectorized_full(cosmology.cosmo, lmin, block_lmax, sbi)
             )
             vp_block = Ncm.Vector.new(block_lmax - lmin + 1)
             xcor_kf.integrate_block(
@@ -301,6 +282,74 @@ def test_xcor_kernel_methods(
             # the same level.
             assert reference.worst_cell_move < 1.0e-12
             assert dev < 1.0e-12
+    finally:
+        k1.set_l_limber(original_l_limber[k1_name])
+        k2.set_l_limber(original_l_limber[k2_name])
+        k1.props.integrator = original_integrator[k1_name]
+        k2.props.integrator = original_integrator[k2_name]
+
+
+# Measured 3.1e-10 of the block's peak on the tier-2 pair and 2.0e-11 on the
+# tier-3 one, at the fixtures' defaults; an order of headroom.
+SINGLE_VS_BLOCK_TOL = 1.0e-8
+
+
+@pytest.mark.parametrize(
+    "k1_name,k2_name,l_limber",
+    [
+        ("kernel_gal_bin0", "kernel_wl_bin0", 0),
+        ("kernel_gal_bin0", "kernel_gal_bin0", -1),
+    ],
+    ids=["tier2_gal_x_wl", "tier3_gal_auto"],
+)
+def test_single_ell_closures_match_block(
+    cosmology: Cosmology,
+    k1_name: str,
+    k2_name: str,
+    l_limber: int,
+    request: pytest.FixtureRequest,
+) -> None:
+    """One multipole per closure against four per closure, on the same spectra.
+
+    The library builds its closures per multipole block, and every other test uses
+    blocks; this is the one place the single-multipole closures are checked against
+    them. The two build different fits of the same W_ell(k), so they agree to the
+    closures' own accuracy, not exactly; the deviation is taken over the block's
+    peak.
+    """
+    k1 = cast(Nc.XcorKernel, request.getfixturevalue(k1_name))
+    k2 = cast(Nc.XcorKernel, request.getfixturevalue(k2_name))
+    lmin, lmax = 20, 27
+    n = lmax - lmin + 1
+
+    original_l_limber = {k1_name: k1.get_l_limber(), k2_name: k2.get_l_limber()}
+    original_integrator = {k1_name: k1.peek_integrator(), k2_name: k2.peek_integrator()}
+
+    try:
+        k1.props.integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
+        k2.props.integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
+        k1.set_l_limber(l_limber)
+        k2.set_l_limber(l_limber)
+        k1.prepare(cosmology.cosmo)
+        k2.prepare(cosmology.cosmo)
+
+        cl = {}
+        for batch in (1, 4):
+            xcor = Nc.Xcor.new(
+                cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT
+            )
+            xcor.props.ell_batch_size = batch
+            xcor.prepare(cosmology.cosmo)
+            vp = Ncm.Vector.new(n)
+            xcor.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp)
+            cl[batch] = np.array(vp.dup_array())
+
+        dev = np.abs(cl[1] - cl[4]).max() / np.abs(cl[4]).max()
+
+        assert dev < SINGLE_VS_BLOCK_TOL, (
+            f"{k1_name} x {k2_name} (l_limber {l_limber}): single-multipole closures "
+            f"deviate from the block's by {dev:.3e} of its peak"
+        )
     finally:
         k1.set_l_limber(original_l_limber[k1_name])
         k2.set_l_limber(original_l_limber[k2_name])
@@ -345,8 +394,8 @@ def test_kernel_integrator_types(cosmology: Cosmology) -> None:
     kernel_levin.prepare(cosmo)
 
     # Verify both integrators work
-    eval_limber = kernel_limber.get_eval(cosmo, 200, Nc.XcorKernelClosure.SPLINE)
-    eval_levin = kernel_levin.get_eval(cosmo, 200, Nc.XcorKernelClosure.SPLINE)
+    eval_limber = kernel_limber.get_eval(cosmo, 200)
+    eval_levin = kernel_levin.get_eval(cosmo, 200)
 
     result_limber = eval_limber.eval_array(1.0e2)
     result_levin = eval_levin.eval_array(1.0e2)

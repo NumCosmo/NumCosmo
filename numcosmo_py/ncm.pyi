@@ -10704,7 +10704,7 @@ class Spectral(GObject.Object):
     def compute_chebyshev_coeffs_batch_adaptive(
         self,
         F: typing.Callable[..., None],
-        n_comp: int,
+        fdim: int,
         a: float,
         b: float,
         level_min: int,
@@ -10715,7 +10715,7 @@ class Spectral(GObject.Object):
     def compute_chebyshev_coeffs_batch_adaptive_cap(
         self,
         F: typing.Callable[..., None],
-        n_comp: int,
+        fdim: int,
         a: float,
         b: float,
         level_min: int,
@@ -10813,6 +10813,194 @@ class SpectralClass(GObject.GPointer):
     ::
 
         SpectralClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
+class SpectralPanels(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanels(**properties)
+        new(fdim:int) -> NumCosmoMath.SpectralPanels
+
+    Object NcmSpectralPanels
+
+    Properties from NcmSpectralPanels:
+      fdim -> guint: fdim
+        Dimension of the values
+      panels -> GVariant: panels
+        Panel edges and coefficients
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        fdim: int
+        panels: GLib.Variant
+
+    props: Props = ...
+    def __init__(self, fdim: int = ..., panels: GLib.Variant = ...) -> None: ...
+    def append(self, a: float, b: float, coeffs: Matrix) -> None: ...
+    @staticmethod
+    def clear(sp: SpectralPanels) -> None: ...
+    def eval(self, x: float, fval: Vector) -> None: ...
+    def eval_row(self, r: int, x: float) -> float: ...
+    def eval_row_on(self, i: int, r: int, x: float) -> float: ...
+    def find_panel(self, x: float) -> int: ...
+    def free(self) -> None: ...
+    def get_fdim(self) -> int: ...
+    def get_n_panels(self) -> int: ...
+    def get_panel(self, i: int) -> typing.Tuple[Matrix, float, float]: ...
+    def get_range(self) -> typing.Tuple[float, float]: ...
+    @classmethod
+    def new(cls, fdim: int) -> SpectralPanels: ...
+    def ref(self) -> SpectralPanels: ...
+    def reset(self) -> None: ...
+    def restrict(
+        self, spectral: Spectral, a: float, b: float
+    ) -> typing.Tuple[bool, Matrix]: ...
+
+class SpectralPanelsBuilder(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsBuilder(**properties)
+        new() -> NumCosmoMath.SpectralPanelsBuilder
+
+    Object NcmSpectralPanelsBuilder
+
+    Properties from NcmSpectralPanelsBuilder:
+      level-min -> guint: level-min
+        Starting level of a panel
+      level-cap -> guint: level-cap
+        Highest level of a panel
+      min-panels-per-efold -> gdouble: min-panels-per-efold
+        Minimum panels per e-fold
+      min-panel-fraction -> gdouble: min-panel-fraction
+        Minimum panel width fraction
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        level_cap: int
+        level_min: int
+        min_panel_fraction: float
+        min_panels_per_efold: float
+
+    props: Props = ...
+    def __init__(
+        self,
+        level_cap: int = ...,
+        level_min: int = ...,
+        min_panel_fraction: float = ...,
+        min_panels_per_efold: float = ...,
+    ) -> None: ...
+    def build(
+        self,
+        F: typing.Callable[..., None],
+        a: float,
+        b: float,
+        breakpoints: typing.Optional[Vector],
+        f_minus: typing.Optional[Matrix],
+        f_plus: typing.Optional[Matrix],
+        reltol: float,
+        abstol: float,
+        sp: SpectralPanels,
+        *user_data: typing.Any,
+    ) -> None: ...
+    @staticmethod
+    def clear(builder: SpectralPanelsBuilder) -> None: ...
+    def free(self) -> None: ...
+    def get_level_cap(self) -> int: ...
+    def get_level_min(self) -> int: ...
+    def get_min_panel_fraction(self) -> float: ...
+    def get_min_panels_per_efold(self) -> float: ...
+    @classmethod
+    def new(cls) -> SpectralPanelsBuilder: ...
+    def ref(self) -> SpectralPanelsBuilder: ...
+    def set_level_cap(self, level_cap: int) -> None: ...
+    def set_level_min(self, level_min: int) -> None: ...
+    def set_min_panel_fraction(self, min_panel_fraction: float) -> None: ...
+    def set_min_panels_per_efold(self, min_panels_per_efold: float) -> None: ...
+
+class SpectralPanelsBuilderClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsBuilderClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
+class SpectralPanelsClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
+class SpectralPanelsProduct(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsProduct(**properties)
+        new(p:int) -> NumCosmoMath.SpectralPanelsProduct
+
+    Object NcmSpectralPanelsProduct
+
+    Properties from NcmSpectralPanelsProduct:
+      p -> guint: p
+        Power of k
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        p: int
+
+    props: Props = ...
+    def __init__(self, p: int = ...) -> None: ...
+    @staticmethod
+    def clear(prod: SpectralPanelsProduct) -> None: ...
+    def free(self) -> None: ...
+    def get_p(self) -> int: ...
+    def integrate(
+        self,
+        P: SpectralPanels,
+        s1: typing.Optional[Vector],
+        Q: SpectralPanels,
+        s2: typing.Optional[Vector],
+        result: Vector,
+        err: typing.Optional[Vector] = None,
+    ) -> None: ...
+    @classmethod
+    def new(cls, p: int) -> SpectralPanelsProduct: ...
+    def ref(self) -> SpectralPanelsProduct: ...
+
+class SpectralPanelsProductClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsProductClass()
     """
 
     parent_class: GObject.ObjectClass = ...

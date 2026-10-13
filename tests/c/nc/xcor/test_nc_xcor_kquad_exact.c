@@ -25,11 +25,11 @@
 /*
  * NC_XCOR_METHOD_KERNEL_EXACT against an independent integral of the same closures:
  * nc_xcor_integrate_block() on a pair of integrands, compared with
- * test_nc_xcor_kquad_ref_eval() on the same pair, for spline, Chebyshev and
- * spline x Chebyshev closures, non-Limber, Limber and mixed tiers, auto and cross (auto
- * only where both kernels agree, since an auto spectrum uses the first alone). Exact is a bilinear form in the
- * coefficients or GL(5) on merged knots; the reference raises Gauss-Legendre per cell,
- * so the two share the closures and nothing else.
+ * test_nc_xcor_kquad_ref_eval() on the same pair, for Chebyshev closures in the
+ * non-Limber, Limber and mixed tiers, auto and cross (auto only where both kernels agree,
+ * since an auto spectrum uses the first alone). Exact is a bilinear form in the
+ * coefficients; the reference raises Gauss-Legendre per cell, so the two share the
+ * closures and nothing else.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -51,32 +51,20 @@
 /**
  * TestCase:
  * @name: path component naming the case
- * @closure1: how the first kernel represents W_l(k)
- * @closure2: how the second kernel represents W_l(k)
  * @l_limber1: tier of the first kernel
  * @l_limber2: tier of the second kernel
  */
 typedef struct _TestCase
 {
   const gchar *name;
-  NcXcorKernelClosure closure1;
-  NcXcorKernelClosure closure2;
   gint l_limber1;
   gint l_limber2;
 } TestCase;
 
-#define SPLINE NC_XCOR_KERNEL_CLOSURE_SPLINE
-#define CHEB NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV
-
 static const TestCase test_cases[] = {
-  {"spline/non_limber",           SPLINE, SPLINE, -1, -1},
-  {"spline/limber",               SPLINE, SPLINE,  0,  0},
-  {"spline/mixed",                SPLINE, SPLINE, -1,  0},
-  {"chebyshev/non_limber",        CHEB,   CHEB,   -1, -1},
-  {"chebyshev/limber",            CHEB,   CHEB,    0,  0},
-  {"chebyshev/mixed",             CHEB,   CHEB,   -1,  0},
-  {"spline_chebyshev/non_limber", SPLINE, CHEB,   -1, -1},
-  {"spline_chebyshev/mixed",      SPLINE, CHEB,    0, -1},
+  {"non_limber", -1, -1},
+  {"limber",      0,  0},
+  {"mixed",      -1,  0},
 };
 
 typedef struct _TestNcXcorKQuadExact
@@ -100,11 +88,10 @@ test_nc_xcor_kquad_exact_new (TestNcXcorKQuadExact *test, gconstpointer pdata)
   k1 = test_nc_xcor_kquad_tophat (&test->env, 200.0, 400.0, tc->l_limber1);
   k2 = test_nc_xcor_kquad_tophat (&test->env, 250.0, 450.0, tc->l_limber2);
 
-  test->i1 = nc_xcor_kernel_get_eval_vectorized (k1, test->env.cosmo, TEST_LMIN, TEST_LMAX, tc->closure1);
-  test->i2 = nc_xcor_kernel_get_eval_vectorized (k2, test->env.cosmo, TEST_LMIN, TEST_LMAX, tc->closure2);
+  test->i1 = nc_xcor_kernel_get_eval_vectorized (k1, test->env.cosmo, TEST_LMIN, TEST_LMAX);
+  test->i2 = nc_xcor_kernel_get_eval_vectorized (k2, test->env.cosmo, TEST_LMIN, TEST_LMAX);
 
   test->xc = nc_xcor_new (test->env.dist, test->env.ps, NC_XCOR_METHOD_KERNEL_EXACT);
-  nc_xcor_set_closure_type (test->xc, tc->closure1);
   nc_xcor_prepare (test->xc, test->env.cosmo);
 
   test->ref = test_nc_xcor_kquad_ref_new ();
@@ -124,16 +111,6 @@ test_nc_xcor_kquad_exact_free (TestNcXcorKQuadExact *test, gconstpointer pdata)
   NCM_TEST_FREE (nc_xcor_free, test->xc);
 }
 
-/* A spline closure carries knots and no panels, a Chebyshev one the reverse. */
-static void
-_test_nc_xcor_kquad_exact_assert_closure (NcXcorKernelIntegrand *xclki, NcXcorKernelClosure closure)
-{
-  const gboolean spline = (closure == NC_XCOR_KERNEL_CLOSURE_SPLINE);
-
-  g_assert_true ((nc_xcor_kernel_integrand_peek_knots (xclki) != NULL) == spline);
-  g_assert_true ((nc_xcor_kernel_integrand_get_n_panels (xclki) > 0) == !spline);
-}
-
 static void
 _test_nc_xcor_kquad_exact_check (TestNcXcorKQuadExact *test, const TestCase *tc, gboolean isauto)
 {
@@ -143,9 +120,6 @@ _test_nc_xcor_kquad_exact_check (TestNcXcorKQuadExact *test, const TestCase *tc,
   const gdouble RH          = nc_hicosmo_RH_Mpc (test->env.cosmo);
   gdouble move, peak = 0.0, dev = 0.0;
   guint i;
-
-  _test_nc_xcor_kquad_exact_assert_closure (test->i1, tc->closure1);
-  _test_nc_xcor_kquad_exact_assert_closure (test->i2, tc->closure2);
 
   nc_xcor_integrate_block (test->xc, test->i1, i2, TEST_LMIN, TEST_LMAX, isauto,
                            NC_XCOR_METHOD_KERNEL_EXACT, exact, NULL);
@@ -195,7 +169,7 @@ main (gint argc, gchar *argv[])
     gchar *path_auto  = g_strdup_printf ("/nc/xcor/kquad/exact/%s/auto", test_cases[i].name);
     gchar *path_cross = g_strdup_printf ("/nc/xcor/kquad/exact/%s/cross", test_cases[i].name);
 
-    if ((test_cases[i].l_limber1 == test_cases[i].l_limber2) && (test_cases[i].closure1 == test_cases[i].closure2))
+    if (test_cases[i].l_limber1 == test_cases[i].l_limber2)
       g_test_add (path_auto, TestNcXcorKQuadExact, &test_cases[i],
                   &test_nc_xcor_kquad_exact_new, &test_nc_xcor_kquad_exact_auto, &test_nc_xcor_kquad_exact_free);
 

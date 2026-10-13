@@ -131,6 +131,18 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_spectral.c'],
     },
     {
+        'name': 'ncm_spectral_panels',
+        'sources': ['ncm/algebra/test_ncm_spectral_panels.c'],
+    },
+    {
+        'name': 'ncm_spectral_panels_builder',
+        'sources': ['ncm/algebra/test_ncm_spectral_panels_builder.c'],
+    },
+    {
+        'name': 'ncm_spectral_panels_product',
+        'sources': ['ncm/algebra/test_ncm_spectral_panels_product.c'],
+    },
+    {
         'name': 'ncm_nnls',
         'sources': ['ncm/algebra/test_ncm_nnls.c'],
     },
@@ -756,7 +768,7 @@ xcor_tests = [
     },
     {
         'name': 'nc_xcor_kernel_analytic',
-        'sources': ['nc/xcor/test_nc_xcor_kernel_analytic.c'],
+        'sources': ['nc/xcor/test_nc_xcor_kernel_analytic.c', 'nc/xcor/test_nc_xcor_closure_check.c'],
     },
     {
         'name': 'nc_xcor_kernel_integrand',
@@ -769,6 +781,45 @@ xcor_tests = [
     {
         'name': 'nc_xcor_ssc_sij',
         'sources': ['nc/xcor/test_nc_xcor_ssc_sij.c'],
+    },
+    # One binary per table and Bessel-derivative order. The timeout follows the
+    # -O0 coverage build, which runs these 6.3 to 7.8 times slower than the Optimized
+    # build (measured): sparse_d1 (ell 1000) takes 539 s there, under the lane's
+    # multiplier of 3.
+    {
+        'name': 'nc_xcor_window_dense_d0',
+        'sources': ['nc/xcor/test_nc_xcor_window_dense_d0.c', 'nc/xcor/test_nc_xcor_window_common.c'],
+        'timeout': 360,
+    },
+    {
+        'name': 'nc_xcor_window_dense_d1',
+        'sources': ['nc/xcor/test_nc_xcor_window_dense_d1.c', 'nc/xcor/test_nc_xcor_window_common.c'],
+        'timeout': 360,
+    },
+    {
+        'name': 'nc_xcor_window_dense_d2',
+        'sources': ['nc/xcor/test_nc_xcor_window_dense_d2.c', 'nc/xcor/test_nc_xcor_window_common.c'],
+        'timeout': 360,
+    },
+    {
+        'name': 'nc_xcor_window_levin',
+        'sources': ['nc/xcor/test_nc_xcor_window_levin.c'],
+        'timeout': 180,
+    },
+    {
+        'name': 'nc_xcor_window_sparse_d0',
+        'sources': ['nc/xcor/test_nc_xcor_window_sparse_d0.c', 'nc/xcor/test_nc_xcor_window_common.c'],
+        'timeout': 360,
+    },
+    {
+        'name': 'nc_xcor_window_sparse_d1',
+        'sources': ['nc/xcor/test_nc_xcor_window_sparse_d1.c', 'nc/xcor/test_nc_xcor_window_common.c'],
+        'timeout': 360,
+    },
+    {
+        'name': 'nc_xcor_window_sparse_d2',
+        'sources': ['nc/xcor/test_nc_xcor_window_sparse_d2.c', 'nc/xcor/test_nc_xcor_window_common.c'],
+        'timeout': 360,
     },
 ]
 
@@ -808,6 +859,7 @@ foreach c_test : all_c_tests
     # dependency and such a test is registered only where it was found.
     extra_deps = c_test.has_key('dependencies') ? c_test['dependencies'] : []
     extra_inc = c_test.has_key('include_directories') ? c_test['include_directories'] : []
+    extra_args = c_test.has_key('args') ? c_test['args'] : []
     executable_test = executable(
         c_test['name'],
         c_test['sources'],
@@ -847,7 +899,7 @@ foreach c_test : all_c_tests
         c_test['name'],
         test_is_omp ? omp_thread_wrapper : executable_test,
         args: test_is_omp ? [executable_test.full_path()]
-        + test_seed_args : test_seed_args,
+        + extra_args + test_seed_args : extra_args + test_seed_args,
         depends: test_is_omp ? [executable_test] : [],
         timeout: timeout,
         env: test_env,

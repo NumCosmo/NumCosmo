@@ -117,8 +117,8 @@ test_nc_galaxy_hod_means (TestNcGalaxyHOD *test, gconstpointer pdata)
 void
 test_nc_galaxy_hod_gen (TestNcGalaxyHOD *test, gconstpointer pdata)
 {
-  NcGalaxyHOD *hod = NC_GALAXY_HOD (test->zheng07);
-  NcmRNG *rng      = ncm_rng_seeded_new (NULL, 42);
+  NcGalaxyHOD *hod  = NC_GALAXY_HOD (test->zheng07);
+  NcmRNG *rng       = ncm_rng_seeded_new (NULL, 42);
   const gdouble lnM = 14.0 * M_LN10;
   guint i;
 
@@ -156,3 +156,4 @@ test_nc_galaxy_hod_deterministic (TestNcGalaxyHOD *test, gconstpointer pdata)
 
   ncm_rng_free (rng);
 }
+

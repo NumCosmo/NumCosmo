@@ -228,3 +228,4 @@ test_nc_halo_catalog_member_generator_missing_column (TestNcHaloCatalogMemberGen
   ncm_rng_free (rng);
   nc_halo_catalog_free (bad);
 }
+

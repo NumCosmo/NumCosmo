@@ -59,6 +59,7 @@ typedef struct
 {
   const char *name;
   Shape shape;
+
   void (*setup) (Par *p);
 } ShapeCase;
 
@@ -276,7 +277,6 @@ test_sph_bessel_deriv_matches_differences (void)
   acb_clear (t);
 }
 
-
 /* d = 0 has to be the plain Bessel, not a derivative formula evaluated at
  * order zero: the drivers reach j_l through this entry point. */
 static void
@@ -435,10 +435,10 @@ test_kdep_growth_runs (void)
 
   case_init (&p, &shape_cases[0]);
 
-  p.kdep_on            = 1;
-  p.kdep_amplitude     = 0.1;
-  p.kdep_k_transition  = 0.05;
-  p.kdep_chi_ref       = 0.5 * (p.chi_min + p.chi_max);
+  p.kdep_on           = 1;
+  p.kdep_amplitude    = 0.1;
+  p.kdep_k_transition = 0.05;
+  p.kdep_chi_ref      = 0.5 * (p.chi_min + p.chi_max);
   acb_set_d (p.k, 0.05);
 
   acb_init (chi);
@@ -473,7 +473,6 @@ test_parse_list (void)
   g_assert_cmpint (n, ==, 1);
   g_assert_cmpfloat (out[0], ==, 300.0);
 }
-
 
 /* Every shape name the drivers accept round-trips through the parser. */
 static void
@@ -512,3 +511,4 @@ main (gint argc, gchar *argv[])
 
   return g_test_run ();
 }
+
