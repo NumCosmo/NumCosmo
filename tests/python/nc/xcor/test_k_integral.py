@@ -342,31 +342,17 @@ def test_far_separated_bins_cancel_by_orders(frozen) -> None:
 
 TRUTH_TABLE = "truth_tables/xcor/xcor_kquad.json.gz"
 
-# Measured over the 43 certified entries, with headroom. The worst is the
-# far-separated pair at ell = 50, 1.04e-2 of scale, on a certified value eleven
-# orders below the pair's peak.
-#
-# A loose gate has a cost, paid once already: the X9 entries were certified
-# with the generator's side-b leak (kdep applied to both windows), putting
-# the reference 5.3% off at ell = 50, and the closure sitting 2.9e-2 from the
-# table stayed under the old gate of 1e-1. A tolerance-independent deviation is
-# a wrong reference, not a bad fit -- worth a ladder check before widening the
-# number here.
-CERTIFIED_TOLERANCE = 3.0e-2
-
-# Tail x tail with hard edges is its own regime rather than a harder version of
-# the roster, and X14 is the one pair that leaves the general budget behind.
-# Both top-hat transforms decay as power laws, so their product stays
-# significant far out in k where a Chebyshev closure resolves the integrand
-# worst: 1.34e-1 of the pair's scale at ell = 2, against 1.37e-2 for X10, the
-# next pair down and the same configuration with Gaussian edges. Carving it out
-# keeps 3e-2 a real statement about the other thirty-four.
-CERTIFIED_TOLERANCE_BY_CASE = {"X14": 2.0e-1}
-
-
-def _certified_budget(case: str) -> float:
-    """Return the certified tolerance for one case, with headroom."""
-    return CERTIFIED_TOLERANCE_BY_CASE.get(case, CERTIFIED_TOLERANCE)
+# The library's C_ell is taken on each entry's own [k_lo, k_hi], the power spectrum's kmin and
+# kmax, which the radial kernels take as their hard k range; the library and Arb then
+# integrate the same interval and what is left is the closures' fit. An error eps on each
+# window moves C_ell by at most about 2 eps sqrt(C_aa C_bb), so the deviation is taken over
+# the diagonal at the same ell and on the same interval, from the library's autos at the
+# tight setting below. Measured over the 129 entries at the defaults (peak-epsilon 1e-4):
+# worst 1.6 peak-epsilon, R11 at ell = 10, an RSD weight against a wide hard shell, the
+# hard-edge oscillation of the windows' transforms that the dense window test sees at 1.9 on
+# W_ell(k) itself. Held to 3, that test's factor at the defaults.
+CERTIFIED_FACTOR = 3.0
+DIAGONAL_SETTINGS = cases.Settings(reltol=1.0e-8, peak_epsilon=1.0e-6)
 
 
 @pytest.fixture(name="certified", scope="module")
@@ -378,37 +364,27 @@ def fixture_certified() -> dict:
         return json.load(handle)
 
 
-def _pair_scale(table: dict) -> dict:
-    """Return each pair's largest certified |C_ell| over the multipoles present."""
-    scale: dict[str, float] = {}
-
-    for entry in table["cases"].values():
-        value = abs(float(entry["value"]))
-        scale[entry["case"]] = max(scale.get(entry["case"], 0.0), value)
-
-    return scale
-
-
-def _library_cl(case: str, ell: int) -> float:
-    """Return the library's C_ell for one (case, ell) entry."""
-    pair = cases.PAIRS_BY_CASE[case]
-    settings = cases.Settings()
+def _restricted_cl(
+    entry: dict, names: tuple[str, str], settings: cases.Settings
+) -> float:
+    """Return the library's C_ell of two windows on the entry's [k_lo, k_hi]."""
     cosmo, dist, ps = cases.make_cosmo_bits()
+    ps.set_kmin(entry["k_lo"])
+    ps.set_kmax(entry["k_hi"])
 
-    kernel_a = cases.build_kernel(pair.kernel_a, cosmo, dist, ps, settings)
+    kernel_a = cases.build_kernel(names[0], cosmo, dist, ps, settings)
     kernel_b = (
         kernel_a
-        if pair.isauto
-        else cases.build_kernel(pair.kernel_b, cosmo, dist, ps, settings)
+        if names[1] == names[0]
+        else cases.build_kernel(names[1], cosmo, dist, ps, settings)
     )
 
     xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
-    xcor.set_ell_batch_size(1)
     xcor.set_reltol(settings.reltol)
     xcor.prepare(cosmo)
 
     vp = Ncm.Vector.new(1)
-    xcor.compute(kernel_a, kernel_b, cosmo, ell, ell, vp)
+    xcor.compute(kernel_a, kernel_b, cosmo, entry["ell"], entry["ell"], vp)
 
     return vp.get(0)
 
@@ -429,28 +405,27 @@ def test_certified_table_is_certified(certified: dict) -> None:
 
 
 def test_closure_matches_certified_c_ell(certified: dict) -> None:
-    """Check the closure against Arb over every entry the table certifies."""
-    scale = _pair_scale(certified)
-    worst: dict[str, tuple[float, int]] = {}
+    """Check the library against Arb on every entry's own certified interval."""
+    settings = cases.Settings()
+    over = []
 
-    for entry in certified["cases"].values():
-        got = _library_cl(entry["case"], entry["ell"])
-        deviation = abs(got - float(entry["value"])) / scale[entry["case"]]
-        case = entry["case"]
-
-        if deviation > worst.get(case, (0.0, 0))[0]:
-            worst[case] = (deviation, entry["ell"])
-
-    over = [
-        (
-            f"{case} ell={ell} by {deviation:.3e} "
-            f"(budget {_certified_budget(case):.1e})"
+    for key, entry in sorted(certified["cases"].items()):
+        pair = cases.PAIRS_BY_CASE[entry["case"]]
+        got = _restricted_cl(entry, (pair.kernel_a, pair.kernel_b), settings)
+        diagonal = np.sqrt(
+            abs(
+                _restricted_cl(entry, (pair.kernel_a, pair.kernel_a), DIAGONAL_SETTINGS)
+            )
+            * abs(
+                _restricted_cl(entry, (pair.kernel_b, pair.kernel_b), DIAGONAL_SETTINGS)
+            )
         )
-        for case, (deviation, ell) in sorted(worst.items())
-        if deviation >= _certified_budget(case)
-    ]
+        deviation = abs(got - float(entry["value"])) / diagonal
+
+        if deviation > CERTIFIED_FACTOR * settings.peak_epsilon:
+            over.append(f"{key} by {deviation / settings.peak_epsilon:.2f}")
 
     assert not over, (
-        f"the closure deviates from the certified C_ell, as a fraction of the "
-        f"pair's scale: " + "; ".join(over)
+        "the library deviates from the certified C_ell by more than "
+        f"{CERTIFIED_FACTOR} peak-epsilon of sqrt(C_aa C_bb): " + "; ".join(over)
     )

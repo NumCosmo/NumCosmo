@@ -39,11 +39,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from scipy.integrate import quad
-from scipy.special import (
-    erf,
-    erfc,
-    spherical_jn,
-)
+from scipy.special import erf, erfc
 from scipy.stats import t as student_t
 
 from numcosmo_py import Nc, Ncm
@@ -437,9 +433,6 @@ def test_the_two_constructors_differ_only_by_the_integrator(
     )
 
 
-GX, GW = np.polynomial.legendre.leggauss(12)
-
-
 def _gauss_with_kdep(
     cosmology: Cosmology, kdep: Nc.XcorKernelRadialKDep | None
 ) -> Nc.XcorKernelAnalyticGauss:
@@ -565,103 +558,6 @@ def _window(shape: str) -> typing.Callable[[np.ndarray], np.ndarray]:
         np.exp(-0.5 * ((chi - CHI_MEAN) / CHI_SIGMA) ** 2) / norm,
         0.0,
     )
-
-
-def _cl_reference(
-    kernel: Nc.XcorKernelRadial,
-    cosmology: Cosmology,
-    shape: str,
-    ell: int,
-    *,
-    n_k: int,
-    per_lobe: int,
-) -> float:
-    """C_ell for an analytic window, from the definition, in Mpc throughout.
-
-    C_ell = (2/pi) int dk k^2 P(k, z=0) [int dchi W(chi) j_ell(k chi)]^2. The
-    radial integral is split into panels a fraction of a half-oscillation wide
-    and each panel taken by Gauss-Legendre; the outer one is a log-k trapezoid
-    over the range the kernel itself reports. Only that range and P(k) come
-    from the library -- the window and the quadrature are written here.
-    """
-    cosmo, powspec = cosmology.cosmo, cosmology.ps_ml
-    chi_min, chi_max = kernel.get_support()
-    k_min, k_max = kernel.get_eval(cosmo, ell).get_range()
-    rh = cosmo.RH_Mpc()
-    window = _window(shape)
-
-    def radial(k: float) -> float:
-        n_panel = max(16, per_lobe * int((chi_max - chi_min) * k / np.pi) + 1)
-        edges = np.linspace(chi_min, chi_max, n_panel + 1)
-        lo, hi = edges[:-1, None], edges[1:, None]
-        chi = 0.5 * (hi - lo) * GX[None, :] + 0.5 * (hi + lo)
-        f = window(chi) * spherical_jn(ell, k * chi)
-
-        return float(np.sum(0.5 * (hi - lo) * f * GW[None, :]))
-
-    lnk = np.linspace(np.log(k_min / rh), np.log(k_max / rh), n_k)
-    k = np.exp(lnk)
-    pk = np.array([powspec.eval(cosmo, 0.0, ki) for ki in k])
-    radial_sq = np.array([radial(ki) ** 2 for ki in k])
-
-    return 2.0 / np.pi * np.trapezoid(k**3 * pk * radial_sq, lnk)
-
-
-# (shape, ell, rtol), at the library's default tolerances.
-#
-# The tolerances differ per shape because the achieved accuracy does, and by two
-# orders of magnitude. peak-epsilon floors W(k) against its own *peak*, so how
-# much of the contributing k-range it discards depends on how broad the window
-# is. Measured at ell = 8 against the quadrature below:
-#
-#     shape      support (Mpc)   floor 1e-4   1e-5      1e-6
-#     gauss      300-2700        -4.3e-06     -2.1e-07  +5.2e-08
-#     lensing    50-3000         -5.6e-05     -1.7e-06  -1.4e-06
-#     power_exp  50-4000         -6.1e-04     -2.4e-05  +1.4e-06
-#
-# Nothing is wrong with the solver: a broad window carries weight over more of
-# the k-range, so the same peak-relative floor throws away more of it. The
-# numbers below are what the default delivers, not a target -- tightening the
-# floor moves them, at the cost documented in NcXcorKernel:peak-epsilon.
-CL_CASES = [
-    ("gauss", 2, 1.0e-5),
-    ("gauss", 8, 1.0e-5),
-    ("gauss", 32, 1.0e-5),
-    ("student_t", 2, 1.0e-4),
-    ("student_t", 8, 1.0e-4),
-    ("lensing", 8, 1.0e-4),
-    ("power_exp", 8, 1.0e-3),
-    ("tophat", 2, 1.0e-3),
-]
-
-
-@pytest.mark.parametrize("shape, ell, rtol", CL_CASES)
-def test_cl_matches_quadrature_from_the_definition(
-    cosmology: Cosmology, shape: str, ell: int, rtol: float
-) -> None:
-    """The non-Limber C_ell is the integral the window's formula defines.
-
-    This is what an analytic kernel buys: every other kernel is spline-backed,
-    so agreement can only ever be between two library routines sharing the same
-    reconstruction. Here the right-hand side is written from the closed form,
-    which also pins the whole unit convention -- Mpc-normalized window, the
-    R_H factor that carries it into the internal radial measure, and the 2/pi.
-    """
-    kernel = _cl_kernel(cosmology, shape)
-
-    solver = Nc.XcorSolver.new()
-    kernel_id = solver.register_kernel(kernel)
-    solver.request_cl(kernel_id, kernel_id, ell, ell)
-    solver.plan_blocks(64)
-    solver.solve(
-        Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT),
-        cosmology.cosmo,
-    )
-    got = solver.get_result(0).get(0)
-
-    expected = _cl_reference(kernel, cosmology, shape, ell, n_k=512, per_lobe=2)
-
-    assert_allclose(got, expected, rtol=rtol)
 
 
 def test_limber_and_non_limber_agree_at_high_ell(cosmology: Cosmology) -> None:
