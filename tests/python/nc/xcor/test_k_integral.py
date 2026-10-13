@@ -302,29 +302,6 @@ def test_block_entry_point_matches_compute(
     )
 
 
-@pytest.mark.parametrize("method", sorted(METHODS))
-def test_method_introspection_is_consistent(method: str) -> None:
-    """Check that the method table's flags match what the method does."""
-    meth = METHODS[method]
-
-    assert Nc.xcor_method_is_kernel_space(meth)
-    assert Nc.xcor_method_get_name(meth).startswith("NC_XCOR_METHOD_KERNEL_")
-
-    # Only KERNEL_EXACT reports an error, and it is the only one whose block
-    # quadrature carries no tolerance of its own to report instead.
-    assert Nc.xcor_method_has_error_estimate(meth) == (method == "exact")
-
-
-def test_limber_z_methods_have_no_block_quadrature() -> None:
-    """Check that the redshift-space tier is not kernel-space and reports no error."""
-    for meth in (
-        Nc.XcorMethod.LIMBER_Z_GSL,
-        Nc.XcorMethod.LIMBER_Z_CUBATURE,
-    ):
-        assert not Nc.xcor_method_is_kernel_space(meth)
-        assert not Nc.xcor_method_has_error_estimate(meth)
-
-
 @pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS if pair.isauto])
 @FROZEN_GROUP
 def test_auto_spectra_cannot_cancel(frozen, case: str) -> None:

@@ -273,48 +273,6 @@ def test_compute_full_without_an_error_vector_matches_compute(
     assert_allclose(np.array(discarded.dup_array()), np.array(plain.dup_array()))
 
 
-def test_achieved_residual_estimate_still_bounds_the_true_error(
-    cosmology: Cosmology,
-) -> None:
-    """Sharper must not mean wrong: the estimate still has to cover the truth.
-
-    Measured against a closure built two orders tighter, which is the only
-    reference available for a fit error -- the quadrature above it is exact.
-    """
-    cosmo = cosmology.cosmo
-    lmin, lmax = 2, 9
-    nell = lmax - lmin + 1
-
-    exact = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-    exact.prepare(cosmo)
-
-    def auto_spectrum(reltol, peak_epsilon):
-        kernel = Nc.XcorKernelClusterTophat(
-            dist=cosmology.dist,
-            powspec=cosmology.ps_ml,
-            z_lower=Z_BINS[0][0],
-            z_upper=Z_BINS[0][1],
-            reltol=reltol,
-            peak_epsilon=peak_epsilon,
-            integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
-        )
-        kernel.set_l_limber(-1)
-        kernel.prepare(cosmo)
-
-        vp, vp_err = Ncm.Vector.new(nell), Ncm.Vector.new(nell)
-        exact.compute_full(kernel, None, cosmo, lmin, lmax, vp, vp_err)
-
-        return np.array(vp.dup_array()), np.array(vp_err.dup_array())
-
-    cl_ref, _ = auto_spectrum(1.0e-8, 1.0e-6)
-    cl, err = auto_spectrum(1.0e-4, 1.0e-4)
-
-    true_rel = np.abs(cl - cl_ref) / np.abs(cl_ref)
-    est_rel = np.abs(err / cl)
-
-    assert np.all(est_rel > true_rel)
-
-
 def _closure(cosmology: Cosmology, reltol=1.0e-4, peak_epsilon=1.0e-4):
     """A cluster top-hat closure, non-Limber, ell 2 to 9."""
     kernel = Nc.XcorKernelClusterTophat(

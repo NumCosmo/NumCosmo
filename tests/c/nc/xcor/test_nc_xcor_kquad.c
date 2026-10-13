@@ -250,13 +250,17 @@ test_nc_xcor_kquad_method_table (void)
     for (j = 0; j < i; j++)
       g_assert_cmpstr (name, !=, nc_xcor_method_get_name (all[j]));
 
-    /* Only the two Limber methods are not kernel-space. */
+    /* Only the two Limber methods are not kernel-space, and the kernel-space names say so. */
     g_assert_cmpint (nc_xcor_method_is_kernel_space (all[i]), ==,
                      (all[i] != NC_XCOR_METHOD_LIMBER_Z_GSL) &&
                      (all[i] != NC_XCOR_METHOD_LIMBER_Z_CUBATURE));
 
-    /* Just has to answer without asserting. */
-    (void) nc_xcor_method_has_error_estimate (all[i]);
+    if (nc_xcor_method_is_kernel_space (all[i]))
+      g_assert_true (g_str_has_prefix (name, "NC_XCOR_METHOD_KERNEL_"));
+
+    /* Only KERNEL_EXACT reports an error: its block quadrature carries no tolerance of
+     * its own to report instead, and the redshift-space tier reports none. */
+    g_assert_cmpint (nc_xcor_method_has_error_estimate (all[i]), ==, all[i] == NC_XCOR_METHOD_KERNEL_EXACT);
   }
 }
 
