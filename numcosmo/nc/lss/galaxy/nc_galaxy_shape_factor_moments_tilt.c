@@ -1335,7 +1335,7 @@ _moments_tilt_stamp (NcGalaxyShapeFactorMomentsTiltPrivate * const self)
 static gpointer
 _moments_tilt_spectral_alloc (gpointer userdata)
 {
-  return ncm_spectral_new_with_max_order (6);
+  return ncm_spectral_new_with_max_level (6);
 }
 
 static void

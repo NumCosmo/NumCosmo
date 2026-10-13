@@ -209,7 +209,7 @@ _moments_gauss_build_table (NcGalaxyShapeFactorMomentsGaussPrivate * const self,
 static gpointer
 _moments_gauss_spectral_alloc (gpointer userdata)
 {
-  return ncm_spectral_new_with_max_order (6);
+  return ncm_spectral_new_with_max_level (6);
 }
 
 static void

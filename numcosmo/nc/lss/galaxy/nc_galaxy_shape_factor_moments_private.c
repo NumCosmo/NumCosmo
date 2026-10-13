@@ -767,14 +767,15 @@ _nc_galaxy_shape_factor_moments_build (NcmSpectral *spectral, const guint n_comp
 
     if (ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, &_nc_galaxy_shape_factor_moments_batch_f,
                                                                   n_comp, lo, hi, k_min, k_cap, 0.0, abstol, FALSE,
-                                                                  &cm, &ctx) > 0)
+                                                                  NULL, NULL, NULL, &cm, &ctx) > 0)
     {
       d = ncm_matrix_ncols (cm) - 1;
     }
     else
     {
-      /* Not converged at the cap: take the cap level itself. Every node of
-       * it is already in the memo, so this solves nothing. */
+      /* Not converged at the cap: interpolate at the cap level. Its nodes
+       * come from the memo, except those of a doubling NcmSpectral skipped
+       * after predicting that it would not converge, which are solved here. */
       d = 1U << k_cap;
       g_clear_pointer (&cm, ncm_matrix_free);
       cm = ncm_matrix_new (n_comp, d + 1);
