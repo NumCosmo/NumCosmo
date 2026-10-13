@@ -36,6 +36,14 @@ reads it with no extra dependency.
 Each entry carries its certified radius. A test that asserts against a value
 whose accuracy is proved is doing something different from one that asserts
 against a value someone believed.
+
+An entry one run cannot finish within ``--timeout`` is certified in parts of its
+k range with ``--k-chunks N``, in parallel, and the parts are summed as balls;
+a part that times out is re-run as ``--resplit M`` sub-parts, and a sub-part as
+``--resplit-sub L`` pieces, each with ``--resume``. The finished parts live in
+``<out>.chunks.json`` beside the table until the entry is merged, and a merged
+entry records its parts under ``chunks``, so the split it was made with is in
+the table.
 """
 
 from __future__ import annotations

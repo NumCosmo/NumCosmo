@@ -71,7 +71,7 @@ sys.path.insert(
 
 from numcosmo_py import Nc, Ncm  # noqa: E402
 
-from test_xcor_window_truth_table import _make_kernel  # noqa: E402
+from windows import make_kernel  # noqa: E402
 
 DERIVS = (0, 1, 2)
 
@@ -135,7 +135,7 @@ def main() -> None:
     n_shapes = 0
     for shape in sorted({shape for shape, _ in keys}):
         s = shapes[shape]
-        kernel = _make_kernel(
+        kernel = make_kernel(
             s["shape"], dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), s["ctor"]
         )
         text = ser.to_string(kernel, True)

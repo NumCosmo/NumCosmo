@@ -66,6 +66,8 @@ from __future__ import annotations
 
 import typing
 
+from numcosmo_py import Nc, Ncm
+
 # form -> the parameters that form takes, in constructor order. Documented here
 # so a case's tuple can be read without opening the generator.
 FORM_PARAMS: typing.Final[dict[str, tuple[str, ...]]] = {
@@ -299,3 +301,34 @@ def arb_args(name: str, side: str | None = None) -> list[str]:
         out.append(f"{prefix}{flag}={value}")
 
     return out
+
+
+def make_kernel(shape, dist, ps, sbi, ctor):
+    """Build one analytic kernel from the constructor arguments in the table."""
+    match shape:
+        case "gauss":
+            return Nc.XcorKernelAnalyticGauss.new_full(dist, ps, *ctor, sbi)
+        case "tophat":
+            return Nc.XcorKernelAnalyticTophat.new_full(dist, ps, *ctor, sbi)
+        case "tophat_smooth":
+            return Nc.XcorKernelAnalyticTophatSmooth.new_full(dist, ps, *ctor, sbi)
+        case "student_t":
+            return Nc.XcorKernelAnalyticStudentT.new_full(dist, ps, *ctor, sbi)
+        case "power_exp":
+            return Nc.XcorKernelAnalyticPowerExp.new_full(dist, ps, *ctor, sbi)
+        case "lensing":
+            return Nc.XcorKernelAnalyticLensing.new_full(dist, ps, *ctor, sbi)
+        case "multi":
+            mu, sigma, weight, n_sigma = ctor
+
+            return Nc.XcorKernelAnalyticMulti.new_full(
+                dist,
+                ps,
+                Ncm.Vector.new_array(mu),
+                Ncm.Vector.new_array(sigma),
+                Ncm.Vector.new_array(weight),
+                n_sigma,
+                sbi,
+            )
+        case _:
+            raise ValueError(f"truth table names an unknown shape {shape!r}")

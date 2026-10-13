@@ -48,7 +48,7 @@ import pathlib
 
 import pytest
 
-from numcosmo_py import Nc, Ncm
+from numcosmo_py import Ncm
 
 Ncm.cfg_init()
 
@@ -65,37 +65,6 @@ DERIV_TRUTH_TABLE = {
 # d = 0 and at d = 1, 2; the certified radii have to sit far below them.
 RTOL = 1.0e-8
 DERIV_RTOL = 1.0e-8
-
-
-def _make_kernel(shape, dist, ps, sbi, ctor):
-    """Build one analytic kernel from the constructor arguments in the table."""
-    match shape:
-        case "gauss":
-            return Nc.XcorKernelAnalyticGauss.new_full(dist, ps, *ctor, sbi)
-        case "tophat":
-            return Nc.XcorKernelAnalyticTophat.new_full(dist, ps, *ctor, sbi)
-        case "tophat_smooth":
-            return Nc.XcorKernelAnalyticTophatSmooth.new_full(dist, ps, *ctor, sbi)
-        case "student_t":
-            return Nc.XcorKernelAnalyticStudentT.new_full(dist, ps, *ctor, sbi)
-        case "power_exp":
-            return Nc.XcorKernelAnalyticPowerExp.new_full(dist, ps, *ctor, sbi)
-        case "lensing":
-            return Nc.XcorKernelAnalyticLensing.new_full(dist, ps, *ctor, sbi)
-        case "multi":
-            mu, sigma, weight, n_sigma = ctor
-
-            return Nc.XcorKernelAnalyticMulti.new_full(
-                dist,
-                ps,
-                Ncm.Vector.new_array(mu),
-                Ncm.Vector.new_array(sigma),
-                Ncm.Vector.new_array(weight),
-                n_sigma,
-                sbi,
-            )
-        case _:
-            raise ValueError(f"truth table names an unknown shape {shape!r}")
 
 
 @pytest.fixture(name="truth_table", scope="module")
