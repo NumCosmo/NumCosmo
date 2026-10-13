@@ -385,11 +385,11 @@ ends.
 
 A partial panel is a knot interval that contains $ka$ or $kb$, which move with
 $k$. The forced equation is solved on a fixed sub-cell of the knot interval that contains the
-bound, the smallest one of a half-octave ladder that is wider than the piece to
-integrate, so that sub-cell operators are also reusable and the piece fills more
-than $1/\sqrt{2}$ of its cell. The fill matters: the piece fit is extrapolated
-over the rest of the cell, and on an octave ladder, where a piece can fill only
-half the cell, about eight percent of the pieces fail the growth check below and
+bound, the smallest of a sequence of sub-cells whose widths differ by factors of
+$\sqrt{2}$ that is wider than the piece to integrate, so that sub-cell operators are
+also reusable and the piece fills more than $1/\sqrt{2}$ of its cell. The filled
+fraction matters: the piece fit is extrapolated over the rest of the cell, and with
+widths differing by factors of 2, where a piece can fill only half the cell, about eight percent of the pieces fail the growth check below and
 fall back to an operator factorized anew at every $k$. The forcing is fitted on the
 true piece $[ka, x_i]$ only, so the kernel is never evaluated outside its support, and the fit is rebased onto the
 sub-cell by the exact affine change of variable. Since Eq. (6) holds for any
@@ -809,14 +809,14 @@ print(f"C_2: library {vp.get(0):.15e}   GL(40) on the same cells {ref:.15e}   re
 | truncation order $N$ of each panel solve | adaptive QR, stopping test with floor $N_{\min}$ | $\epsilon_{\rm ODE} = 10^{-13}$ |
 | Chebyshev order of the forcing on a panel | level doubling until Eq. (8) | $\epsilon_F = 10^{-8}$ |
 | panel grid in $x$ | prescribed, two knots per decade on $[10^{-4}, 10^6]$ | 21 knots |
-| partial panels at the ends | smallest half-octave sub-cell containing the piece | none |
+| partial panels at the ends | smallest sub-cell containing the piece, widths in factors of $\sqrt{2}$ | none |
 | multipoles per block | prescribed by the caller | 8 |
 | domain in $k$ | expansion until $\|W\| < \epsilon W_{\rm ref}$ five times | $\epsilon = 10^{-5}$, $\alpha = 0.2$ |
 | component boundaries | same test per group of touching components | none |
 | Chebyshev panels in $k$ | Eq. (8), bisection with order cap, cuts at boundaries | reltol = peak-epsilon = $10^{-4}$, at most 33 nodes |
 | outer integral | exact on the common refinement | none |
 
-Two floors remain that no tolerance moves. The sampler's own accuracy
+Two limits on the accuracy remain that no tolerance changes. The sampler's own accuracy
 $\epsilon_F$ bounds every fit made to its samples. And the result is a sum of
 per-panel boundary terms that can cancel, so the attainable relative accuracy
 is bounded by the cancellation ratio $\sum_p |I_p| / |\sum_p I_p|$ times the

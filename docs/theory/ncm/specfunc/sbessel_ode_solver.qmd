@@ -505,9 +505,9 @@ $$
 with $\phi$ selecting which parity carries the weight, and the same for $x y_\ell$ with
 the parities exchanged. $|J_n(\Delta)|$ rises to a maximum just below $n = \Delta$, at
 $n_{\mathrm{peak}} \simeq \Delta - 0.81\,\Delta^{1/3}$, and past it decays faster than
-any exponential in $n$. The tau constraint uses the same decay: the plateau of
-[Where the tau constraint is valid](#where-the-tau-constraint-is-valid) ends where
-$|J_n(\Delta)|$ decays.
+any exponential in $n$. The tau constraint uses the same decay: in
+[Where the tau constraint is valid](#where-the-tau-constraint-is-valid) the homogeneous
+coefficients are of order one up to the order where $|J_n(\Delta)|$ decays.
 
 The library's adaptive Chebyshev fit of the two solutions places the maximum at this
 index:
@@ -718,14 +718,15 @@ coefficients of the oscillatory homogeneous solution on the panel. They are $O(1
 about $N_{\min}$ and decay faster than any exponential in $j$ past it, while the
 coefficients $c^j(u_p)$ of the particular solution decay from $j = 0$. Truncating at order $n$
 therefore admits a homogeneous multiple of relative size $|c^n(u_p)|/|c^n(v)|$, and that
-is small only while $n$ is still on the plateau. The order is bounded on both sides: the
+is small only while $n < N_{\min}$, where $|c^n(v)|$ is of order one. The order is
+bounded on both sides: the
 floor
 $1.1\,n_F$ of the previous section is needed because $u'(\pm1) = \sum_n n^2 c^n$
-amplifies the truncation tail, and the ceiling is $N_{\min}$. Together they are one
+amplifies the truncation tail, and the upper bound is $N_{\min}$. Together they are one
 condition on the panel: the order check below allows the tau constraint while $1.1\,n_F
 < 0.75\,N_{\min}$, that is while $N_{\min} \gtrsim 1.5\,n_F$.
-@fig-constraint-spectra-failed shows that plateau in the coefficients, on a panel short
-enough for the plateau to end below the working order.
+@fig-constraint-spectra-failed shows these order-one homogeneous coefficients, on a
+panel short enough for them to end below the working order.
 
 ```{python}
 #| label: fig-constraint-spectra-failed
@@ -801,7 +802,8 @@ $3\times10^{-11}$, at 160 ($1.90$) $3\times10^{-12}$. Then at 100 ($3.03$) it is
 $10^{11}$, at 60 ($4.97$) $10^{38}$, at 30 ($9.70$) $10^{75}$. A finer sweep places the
 transition at $n/N_{\min} \approx 2$, where the error is $10^{-8}$. The boundary is
 therefore near $n \approx 2 N_{\min}$ and not at $n = N_{\min}$; neither value is
-sharp, since $N_{\min}$ estimates the end of the plateau. Past the boundary the error
+sharp, since $N_{\min}$ estimates the order where the homogeneous coefficients start to
+decay. Past the boundary the error
 does not grow gradually: the failure is catastrophic cancellation in $\mathcal{W}$,
 which loses all digits at once.
 
@@ -837,7 +839,7 @@ This section states why they are not used.
 Asking for the *minimum-norm* solution of the rectangular system, $n$ operator rows
 against $n+2$ unknowns, states the requirement directly: the smallest coefficient vector
 is the one with no homogeneous content, since homogeneous solutions have $O(1)$
-coefficients on the plateau. Replacing the two rows with explicit orthogonality to the
+coefficients below $N_{\min}$. Replacing the two rows with explicit orthogonality to the
 homogeneous solutions, $\langle a(x j_\ell), a\rangle = \langle a(x y_\ell), a\rangle =
 0$, states it even more directly. Both work where the tau constraint fails, and both
 fail where it works: measured at the same working order on the panels of
@@ -1005,7 +1007,7 @@ whatever its span.
 #| label: fig-conjugate
 #| fig-cap: >
 #|   Condition number of the 2x2 boundary matrix [[j(A), x(A)], [j(B), x(B)]] on panels
-#|   starting at A = 200 as the panel span varies, for l = 2 and l = 50. The spikes are
+#|   starting at A = 200 as the panel span varies, for l = 2 and l = 50. The peaks are
 #|   conjugate points. They are at integer multiples of pi for l = 2 and shift for l =
 #|   50, exactly where the WKB phase (4) advances by n pi (dotted lines).
 #| code-fold: true
