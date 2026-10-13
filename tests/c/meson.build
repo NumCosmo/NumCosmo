@@ -225,6 +225,10 @@ math_tests = [
         'name': 'ncm_spline_bspline',
         'sources': ['ncm/spline/test_ncm_spline_bspline.c'],
     },
+    {
+        'name': 'ncm_spline_hermite',
+        'sources': ['ncm/spline/test_ncm_spline_hermite.c'],
+    },
     # Bit-exact agreement between serial and concurrent evaluation of one shared
     # prepared NcmSplineBSpline: its GSL workspace is per-call scratch, so this is
     # the regression test for evaluating it from parallel kernel integrands.
