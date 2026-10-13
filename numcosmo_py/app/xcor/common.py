@@ -219,7 +219,7 @@ class XcorKernelCommon:
         """Build the cosmology, the integrator and every requested kernel.
 
         :raises ValueError: If the kernel specification is invalid.
-        :raises typer.BadParameter: If two mutually exclusive options are given.
+        :raises typer.BadParameter: If a tolerance is not positive.
         """
         # typer's min is inclusive, but zero tolerance aborts in the library.
         for name, tol in (
@@ -325,14 +325,6 @@ class XcorKernelCommon:
             f"max_order={self.integrator.get_max_order()})"
         )
         print()
-
-    @property
-    def _comparing(self) -> bool:
-        """Whether a second, alternative curve is drawn beside the main one.
-
-        :return: True when --compare-limber is on.
-        """
-        return self.compare_limber
 
     @property
     def _curve_labels(self) -> tuple[str, str]:

@@ -452,10 +452,10 @@ class ViewKernel(XcorKernelCommon):
         print(f"  Non-Limber kernel k range: [{k_min:.2e}, {k_max:.2e}] Mpc^-1")
 
         kernel_eval_alt: KernelEvaluation | None = None
-        if self._comparing:
+        if self.compare_limber:
             _, alt_label = self._curve_labels
 
-            # Same representation, the Limber approximation instead.
+            # The same kernel under the Limber approximation.
             kernel_obj.set_l_limber(0)
 
             eval_alt = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, lmax)
@@ -491,7 +491,7 @@ class ViewKernel(XcorKernelCommon):
         ax1: plt.Axes
         ax2: plt.Axes
 
-        if self._comparing:
+        if self.compare_limber:
             # Create figure with two subplots for comparison
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12), sharex=True)
             if self.n_ell > 1:
