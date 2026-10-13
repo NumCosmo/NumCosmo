@@ -274,10 +274,9 @@ Z_GRID_CHI = np.array(
 # | code-fold: true
 
 # One panel per closed form, carrying every location and scale certified for it.
-# Grouping this way is what makes the roster legible: the forms differ in how
-# their transform decays -- exponentially for a Gaussian, as 1/k for a hard edge
-# -- while within a form only the centre and the width move, and those are the
-# axes the solver's difficulty actually runs along.
+# The forms differ in how their transform decays (exponentially for a Gaussian, as
+# 1/k for a hard edge); within a form only the center and the width change, and the
+# cost of the solve depends on these two.
 groups: dict[str, list[str]] = {}
 
 for case in CASES:
@@ -420,7 +419,7 @@ spaced against the comoving distance below it.
 Within a panel only the center and the width change, which is the comparison the
 LSST-SRD bins motivate: the survey's own bins run from $\chi = 1.1$ to
 $5.4$ Gpc with $\sigma_\chi/\chi$ between $0.04$ and $0.36$, and each Gaussian
-here is paired with a top-hat at the same centre and the same variance, so a
+here is paired with a top-hat at the same center and the same variance, so a
 difference between a pair is the edge and nothing else. The two CMB-sourced
 windows run to the last-scattering surface and have most of their support beyond the
 range of galaxy surveys.
@@ -608,29 +607,29 @@ with one more derivative.
 
 ## How each method handles the modes
 
-The window decides which $k$ modes carry the spectrum, and the certified curve
-says what the answer is at each of them. That makes it possible to ask the
-question this page exists for: where in $k$ does each method still have the mode?
+The window determines which modes $k$ contribute to the spectrum, and the certified
+values give $I_\ell(k)$ at those modes. This section compares the two methods there.
 
-CCL's non-Limber method, FKEM, reaches the same integral by a different
-route — it resamples the window onto a logarithmic $\chi$ grid of its
-own and takes an FFTLog transform of $W(\chi)\chi$. Its per-tracer projection can
+CCL's non-Limber method, FKEM, computes the same integral differently: it resamples
+the window onto a logarithmic $\chi$ grid of its own and takes an FFTLog transform of
+$W(\chi)\chi$. Its per-tracer projection can
 be read back after a spectrum call, and it needs no conversion: with the growth
 factor and transfer function set to unity, what FKEM transforms is exactly
 $\int W j_\ell^{(d)}\,\mathrm{d}\chi$ in the same units and the same convention.
-This is measured, not assumed: on the Gaussian at $\chi_0 = 1500$ Mpc, where
-FKEM resolves the window, the ratio of its projection to the certified one at the
-modes carrying the spectrum is one to within the value printed under the table
-below, a few times $10^{-4}$. A convention error would be a constant factor on
-every shape; the differences below vary by shape and by mode, so they are
-accuracy.
+On the Gaussian at $\chi_0 = 1500$ Mpc, FKEM's projection agrees with the certified one
+at the modes that contribute to the spectrum to $1.3\times10^{-4}$, the value printed
+under the table below. A convention error would be a constant factor on every shape;
+the deviations below vary by shape and by mode.
 
-Two settings keep the comparison to the method itself. CCL is built in
-**calculator mode**, so both codes integrate the same tabulated $P(k)$, and the
-`CCLParams` precision knobs, which tune CCL's internal background and $P(k)$
-splines, are not used. What remains on CCL's side belongs to the method: the
-window arrives as a table it Akima-splines, and FKEM resamples that spline onto
-its own grid. Both densities are stated below.
+Two settings restrict the comparison to the method. CCL is built in **calculator
+mode**, so both codes integrate the same tabulated $P(k)$, and the `CCLParams`
+precision parameters, which tune CCL's internal background and $P(k)$ splines, are not
+used. On CCL's side the window is a table that CCL interpolates with an Akima spline,
+and FKEM resamples that spline onto its own grid; both densities are stated below.
+FKEM extrapolates the table linearly beyond its ends, so each table carries two zero
+samples beyond each end of the support; without them FKEM integrates a different
+window, a top-hat continued as a constant or a Gaussian continued as a ramp. Every
+component of a window is a separate table.
 
 ```{python}
 # | code-fold: true
@@ -642,6 +641,35 @@ import pyccl
 FKEM_NCHI = 4096
 FKEM_CHI_MIN = 1.0e-6
 TRACER_NCHI = 2048
+
+# CCL's Limber path treats a kernel as zero outside its table, but FKEM resamples the
+# table with a linear spline that extrapolates its end segments. Two zero samples beyond
+# each end of the support make that extrapolation zero, so FKEM integrates the certified
+# window.
+TABLE_PAD = 1.0e-9
+
+
+def ccl_tracer(ccl_cosmo, kernel, deriv=None):
+    """A CCL tracer with every component of the kernel's window, zero-padded at both ends.
+
+    Returns the tracer and the largest chi of its tables, which keys FKEM's cache.
+    """
+    trc = pyccl.Tracer()
+    chi_max = 0.0
+
+    for comp in range(kernel.get_n_comps()):
+        lo, hi = kernel.get_comp_support(comp)
+        chi = np.linspace(lo, hi, TRACER_NCHI)
+        w = np.array([kernel.eval_W_comp(comp, c) for c in chi])
+        e = TABLE_PAD * hi
+        below = [lo - 2.0 * e, lo - e] if lo - 2.0 * e > 0.0 else []
+        chi = np.concatenate([below, chi, [hi + e, hi + 2.0 * e]])
+        w = np.concatenate([np.zeros(len(below)), w, np.zeros(2)])
+        d = kernel.get_comp_bessel_deriv(comp) if deriv is None else deriv
+        trc.add_tracer(ccl_cosmo, kernel=(chi, w), der_bessel=d)
+        chi_max = max(chi_max, chi.max())
+
+    return trc, chi_max
 
 
 def ccl_calculator():
@@ -706,15 +734,12 @@ def fkem_ilk(ccl_cosmo, kernel, ell, deriv=0, nchi=None):
 
     ``_get_fkem_fft`` is a cache getter keyed on
     ``(tracer, Nchi, chi_min, chi_max, ell, cosmo_hash)``, so the key has to be
-    the one FKEM used: chi_max is the largest chi in the tracer's table, and Nchi
+    the one FKEM used: chi_max is the largest chi in the tracer's tables, and Nchi
     and chi_min are whatever the call passed. A mismatch returns ``(None, None)``
-    rather than an error.
+    rather than an error. All components share FKEM's k grid, so the projection of
+    the window is the sum over the components.
     """
-    lo, hi = kernel.get_comp_support(0)
-    chi = np.linspace(lo, hi, TRACER_NCHI)
-    w = np.array([kernel.eval_W_comp(0, c) for c in chi])
-    trc = pyccl.Tracer()
-    trc.add_tracer(ccl_cosmo, kernel=(chi, w), der_bessel=deriv)
+    trc, chi_max = ccl_tracer(ccl_cosmo, kernel, deriv)
 
     psp = ccl_cosmo.get_linear_power()
     with warnings.catch_warnings():
@@ -731,14 +756,17 @@ def fkem_ilk(ccl_cosmo, kernel, ell, deriv=0, nchi=None):
             p_of_k_a_lin=psp,
         )
 
-    return trc._get_fkem_fft(
-        trc._trc[0],
-        FKEM_NCHI if nchi is None else nchi,
-        FKEM_CHI_MIN,
-        chi.max(),
-        ell,
-        ccl_cosmo,
-    )
+    parts = [
+        trc._get_fkem_fft(
+            sub, FKEM_NCHI if nchi is None else nchi, FKEM_CHI_MIN, chi_max, ell, ccl_cosmo
+        )
+        for sub in trc._trc
+    ]
+
+    if any(k_f is None for k_f, _ in parts):
+        return None, None
+
+    return parts[0][0], sum(fk for _, fk in parts)
 
 
 ccl_cosmo = ccl_calculator()
@@ -780,8 +808,8 @@ def fkem_on_certified(ccl_cosmo, kernel, ell, k_cert, deriv=0, nchi=None):
 # the seven closed *forms* while the loop emits one figure per *case*: at seven
 # captions and sixteen cases Quarto laid out the first six cleanly and put every
 # panel after them in a `page-full` row, which is a figure breaking out of the
-# content column. A caption list has to be kept in step with the roster by hand,
-# and the roster has grown twice; a title read from the table cannot fall behind.
+# content column. A caption list has to be kept in step with the set of windows by
+# hand, and that set has grown twice; a title read from the table cannot fall behind.
 
 for shape in CASES:
     name = label_of(shape, table0)
@@ -855,10 +883,9 @@ plt.close()
 
 The shaded band on the left of several panels is the part of the certified grid
 FKEM does not reach. Its $k$ values are the reciprocal of its logarithmic $\chi$
-grid, so they begin near $1/\chi_\mathrm{max}$ and no resampling density moves
-that edge: the sub-turning-point modes are outside the method; it does not
-compute them. Every deviation quoted below is taken only where FKEM has a
-value.
+grid, so they begin near $1/\chi_\mathrm{max}$ for any resampling density, and FKEM
+does not compute the modes below that edge. Every deviation quoted below is taken
+only where FKEM has a value.
 
 ```{python}
 # | tbl-cap: Worst deviation from the certified values, in units of the peak
@@ -918,26 +945,26 @@ display(
 )
 ```
 
-The physical reading is per shape. A Gaussian window of width $\sigma_\chi$ has a
-transform that dies exponentially above $k \sim 1/\sigma_\chi$, so the spectrum is
-carried by a narrow band of modes and any method that resolves that band gets the
-answer. A top-hat does not: its hard edges make $I_\ell(k)$ decay as a power law
-with undamped oscillation, so modes two decades above the peak still contribute,
-and a method is judged by how far out it keeps them.
+The deviations depend on the shape. A Gaussian window of width $\sigma_\chi$ has a
+transform that decays exponentially above $k \sim 1/\sigma_\chi$, and FKEM deviates by
+$1.4\times10^{-4}$ to $4.6\times10^{-4}$ of the peak with 2048 points and by
+$1.8\times10^{-5}$ to $8.5\times10^{-5}$ with 8192. A top-hat has hard edges, so
+$I_\ell(k)$ decays as a power law and oscillates, and modes two decades above the peak
+still contribute; there FKEM deviates by $2.4\times10^{-2}$ to $6.6\times10^{-2}$ of the
+peak with 2048 points and by $5.0\times10^{-3}$ to $1.6\times10^{-2}$ with 8192.
+UltraLevin deviates by at most $3.3\times10^{-13}$ of the peak on every shape.
 
-## Tail against tail: where a pair spectrum actually lives
+## Cross spectra of separated bins
 
-A cross spectrum of two well-separated bins is not a small version of an auto
-spectrum. Its integrand is the *product* of the two projections, and each
-projection peaks near $k \simeq (\ell + 1/2)/\chi_0$, at its own bin's distance.
-Two bins at different distances therefore peak at different $k$, and the product
-is supported where **both** are far below their own peak -- in the oscillatory
-tail of one and the power-law rise of the other. Nothing about a method's
-behaviour at the peak predicts what it does there.
+The integrand of a cross spectrum is the *product* of the two projections, and each
+projection peaks near $k \simeq (\ell + 1/2)/\chi_0$, at its own bin's distance. Two
+bins at different distances therefore peak at different $k$, and the product is
+largest where **both** projections are below their own peaks: in the oscillatory tail
+of one and the power-law rise of the other.
 
-This configuration is ordinary in the LSST-SRD:
-bins 0 and 9 of the Y10 lens sample sit at $\chi = 1.1$ and $3.8$ Gpc with
-disjoint supports, and any 3x2pt analysis computes their cross.
+This configuration occurs in the LSST-SRD: bins 0 and 9 of the Y10 lens sample are at
+$\chi = 1.1$ and $3.8$ Gpc with disjoint supports, and a 3x2pt analysis computes their
+cross spectrum.
 
 ```{python}
 # | code-fold: true
@@ -983,8 +1010,8 @@ def tail_kernel(cls, ctor):
 # grid on its own turning point, so two windows at different distances carry
 # certified values at different k and their product is certified nowhere. These
 # files exist for that reason (tests/tools/make_xcor_pair_grid.py).
-# Three rungs of one ladder: the ratio of the two turning points, 1.4, 2.3 and
-# 3.5. Nothing else differs between them.
+# Three pairs whose turning points differ by the factors 1.4, 2.3 and 3.5. Nothing
+# else differs between them.
 PAIR_GRIDS = {
     "adjacent": "truth_tables/xcor/xcor_pair_grid_mild.json.gz",
     "apart": "truth_tables/xcor/xcor_pair_grid_apart.json.gz",
@@ -1129,79 +1156,50 @@ plt.show()
 plt.close()
 ```
 
-The two figures differ in one thing only: how far apart the bins are. Everything
-else -- the multipole, the method, the settings, the form of both windows -- is
-held fixed, which is what makes the comparison a statement about the
-configuration rather than about the codes.
+The three figures differ only in the distance between the bins; the multipole, the
+methods, the settings and the form of both windows are the same.
 
-**Adjacent bins, 1.1 and 1.5 Gpc.** The turning points nearly coincide, the
-product sits under both peaks, and FKEM lies *on top of* the certified product
-through the entire band that carries the spectrum. It departs from it only in the
-far tail, where the product is already eight orders below its maximum and
-contributes nothing. On this pair FKEM is correct.
+In the upper panel each window's projection peaks at its own turning point (dotted
+lines). For the adjacent bins, 1.1 and 1.5 Gpc, the turning points are a factor of 1.4
+apart, and the product is largest where both projections are near their peaks. For the
+separated bins, 1.1 and 3.8 Gpc, they are a factor of 3.5 apart: at the near bin's peak
+the far bin's projection oscillates, and at the far bin's peak the near bin's projection
+is in its power-law rise, so the product is largest where both projections are orders
+of magnitude below their peaks.
 
-**Separated bins, 1.1 and 3.8 Gpc.** The turning points are a factor of 3.5
-apart, the product peaks between them where both factors are deep in their own
-tails, and FKEM's product sits three to four orders *above* the certified one
-across that whole band. Same method, same multipole; only the separation changed.
+The markers in the lower panel are products of two certified values at the same $k$.
+The per-shape tables place each window's grid relative to its own turning point, so two
+windows at different distances are certified at different $k$;
+`tests/tools/make_xcor_pair_grid.py` certifies both windows of a pair on one grid that
+spans both turning points, with a worst relative radius of $2.4\times10^{-26}$.
 
-That is the answer to when a method fails here, and it is not "on hard cases":
-it is whenever the pair's integrand is built out of tails rather than peaks.
-
-Read the upper panel at the dotted lines. Each window's projection peaks at its
-own turning point, and the two are a factor of 3.5 apart in $k$. At the near
-bin's peak the far bin's projection is already oscillating; at the far bin's peak
-the near bin's is in its exponentially small power-law rise. There is no $k$ at
-which both are large.
-
-The markers in the lower panel are a product of *two certified numbers* at the
-same $k$, which is why this pair needed its own table: the per-shape grids hang
-on each window's own turning point, so two windows at different distances are
-certified at different $k$ and their product is certified nowhere.
-`tests/tools/make_xcor_pair_grid.py` fixes one grid spanning both turning points
-and certifies both windows on it, at a worst relative radius of 2.4e-26.
-
-The lower panel is what that costs. The product carries its weight in a band
-where each factor is orders below its own maximum -- so the pair spectrum is
-built entirely out of the part of each kernel that a method is least likely to
-represent well. Where FKEM's curve in the upper panel stops oscillating and
-becomes a smooth power law, its product in the lower panel departs from the
-certified one by orders of magnitude, and the deviation does not shrink when its
-resampling density is raised: an FFTLog on a logarithmic grid cannot resolve an
-oscillation whose period keeps shrinking, so it fits through it.
-
-**The same figure states our own limit, which is a different one.** UltraLevin
-represents the oscillation -- that is what the certified markers in the upper
-panel establish -- but the accuracy it can deliver on the *product* is bounded by
-cancellation, not by representation: the panel integrals the Levin solve sums
-cancel heavily in the tail, so the attainable relative accuracy there is the
-cancellation ratio times the machine epsilon. A method fails here for one of two
-reasons, and they are worth keeping apart: FKEM because it does not describe the
-oscillatory tail, ours because summing an oscillating series in double precision
-eventually loses digits to cancellation however well each term is known.
+FKEM agrees with the certified product down to ten orders of magnitude below its maximum
+for the adjacent bins, and down to six to eight orders below for the two other pairs.
+Further out, where FKEM's projection of the far window stops oscillating (upper panel),
+its product falls below the certified one. UltraLevin's curves pass through every
+certified marker.
 
 ## What it costs in the spectrum
 
-The panels above are about the integrand. What a reader wants next is the
-consequence: if a method misrepresents the tails, how wrong is the $C_\ell$ that
-integrates them?
-
+The figures above show the integrand. This section compares the angular power
+spectrum,
 $$
 C_\ell = \frac{2}{\pi} \int \mathrm{d}k\, k^2 P(k)\,
-         I^{(1)}_\ell(k)\, I^{(2)}_\ell(k)
+         I^{(1)}_\ell(k)\, I^{(2)}_\ell(k),
 $$
-
-Same three rungs, same windows, and the same CCL built in calculator mode, so
-both codes integrate the identical tabulated $P(k)$. The certified column comes
-from `data/truth_tables/xcor/xcor_kquad.json.gz`, whose entries are nested Arb
-integrations of this expression -- the outer integral over $k$ evaluated on balls
-of the inner one, not a quadrature of interpolated values.
+for the same three pairs and windows, with CCL in calculator mode, so both codes
+integrate the same tabulated $P(k)$. The certified column comes from
+`data/truth_tables/xcor/xcor_kquad.json.gz`, whose entries are nested Arb integrations
+of this expression: the outer integral over $k$ is evaluated on balls of the inner one.
+Each entry is certified on its stored interval $[k_{\rm lo}, k_{\rm hi}]$; restricting
+UltraLevin to that interval leaves its deviations below unchanged to two digits.
 
 ```{python}
-# | tbl-cap: "Angular power spectrum for the three rungs, against certified values"
+# | tbl-cap: "Angular power spectrum of the three pairs against certified values, as fractions of the diagonal and relative to the certified value"
 # | code-fold: true
 
-LADDER = (("adjacent", "X12"), ("apart", "X13"), ("separated", "X10"))
+# (pair grid, kquad case, ratio of the two turning points)
+PAIR_CASES = (("adjacent", "X12", 1.4), ("apart", "X13", 2.3), ("separated", "X10", 3.5))
 
 # The production configuration: every multipole from LMIN_SOLVE to the largest
 # certified one in one request, planned in blocks of BLOCK_SIZE, solved once. This
@@ -1248,7 +1246,10 @@ def pair_kernels(grid):
 
 
 def ultralevin_cls(grid, ells):
-    """The library's C_ell at each of `ells`, from one batched solve."""
+    """The library's cross C_ell and the diagonal sqrt(|C_11 C_22|) at each of `ells`.
+
+    One batched solve computes the cross spectrum and the two auto spectra.
+    """
     kernels = pair_kernels(grid)
     xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
     xcor.set_reltol(1.0e-6)
@@ -1256,12 +1257,19 @@ def ultralevin_cls(grid, ells):
 
     solver = Nc.XcorSolver.new()
     ids = [solver.register_kernel(kernel) for kernel in kernels]
-    solver.request_cl(ids[0], ids[1], LMIN_SOLVE, max(ells))
+    for i, j in ((0, 1), (0, 0), (1, 1)):
+        solver.request_cl(ids[i], ids[j], LMIN_SOLVE, max(ells))
     solver.plan_blocks(BLOCK_SIZE)
     solver.solve(xcor, cosmo)
-    result = solver.get_result(0)
+    cross, auto_1, auto_2 = (solver.get_result(i) for i in range(3))
 
-    return {ell: result.get(ell - LMIN_SOLVE) for ell in ells}
+    def at(vec, ell):
+        return vec.get(ell - LMIN_SOLVE)
+
+    return (
+        {ell: at(cross, ell) for ell in ells},
+        {ell: np.sqrt(abs(at(auto_1, ell) * at(auto_2, ell))) for ell in ells},
+    )
 
 
 def fkem_cls(grid, ells):
@@ -1269,12 +1277,7 @@ def fkem_cls(grid, ells):
     tracers = []
 
     for kernel in pair_kernels(grid):
-        lo, hi = kernel.get_comp_support(0)
-        chi = np.linspace(lo, hi, TRACER_NCHI)
-        w = np.array([kernel.eval_W_comp(0, c) for c in chi])
-        trc = pyccl.Tracer()
-        trc.add_tracer(ccl_cosmo, kernel=(chi, w), der_bessel=kernel.get_comp_bessel_deriv(0))
-        tracers.append(trc)
+        tracers.append(ccl_tracer(ccl_cosmo, kernel)[0])
 
     psp = ccl_cosmo.get_linear_power()
 
@@ -1297,18 +1300,16 @@ def fkem_cls(grid, ells):
 
 rows = []
 
-for name, case in LADDER:
+for name, case, ratio in PAIR_CASES:
     grid = load_pair_grid(name)
 
     if grid is None:
         continue
 
-    # Each rung's own scale: the largest certified |C_ell| it carries, or the
-    # largest the library returns where no certificate exists yet. Deviations are
-    # measured against that rather than pointwise, because a separated pair's
-    # C_ell crosses zero and a relative error at a near-null is arbitrarily large
-    # while saying nothing -- the same reason the projection panels scale by peak.
-    values = ultralevin_cls(grid, grid["ells"])
+    # Deviations are fractions of the diagonal sqrt(|C_11 C_22|), the scale of a
+    # cross spectrum: a separated pair's C_ell crosses zero, and a relative error
+    # near a zero is arbitrarily large.
+    values, diagonal = ultralevin_cls(grid, grid["ells"])
     fkem_values = fkem_cls(grid, grid["ells"])
     truths = {
         ell: (
@@ -1318,33 +1319,38 @@ for name, case in LADDER:
         )
         for ell in grid["ells"]
     }
-    known = [abs(v) for v in truths.values() if v is not None]
-    scale = max(known) if known else max(abs(v) for v in values.values())
 
     for ell in grid["ells"]:
         truth = truths[ell]
         ul_cl = values[ell]
         fk_cl = fkem_values[ell]
+        diag = diagonal[ell]
         rows.append(
             [
-                name,
+                f"{case}, ratio {ratio}",
                 str(ell),
                 f"{ul_cl: .3e}",
                 "--" if truth is None else f"{truth: .3e}",
-                "--" if truth is None else f"{abs(ul_cl - truth) / scale:.1e}",
-                "--" if truth is None else f"{abs(fk_cl - truth) / scale:.1e}",
-                f"{abs(fk_cl - ul_cl) / scale:.1e}",
+                f"{diag:.3e}",
+                "--" if truth is None else f"{abs(ul_cl - truth) / diag:.1e}",
+                "--" if truth is None else f"{abs(fk_cl - truth) / diag:.1e}",
+                "--" if truth is None else f"{abs(ul_cl / truth - 1.0):.1e}",
+                "--" if truth is None else f"{abs(fk_cl / truth - 1.0):.1e}",
+                f"{abs(fk_cl - ul_cl) / diag:.1e}",
             ]
         )
 
 header = [
-    "rung",
+    "pair",
     "ell",
     "C_ell (UltraLevin)",
     "C_ell (certified)",
-    "UltraLevin dev.",
-    "FKEM dev.",
-    "FKEM vs UltraLevin",
+    "diagonal",
+    "UltraLevin dev. / diag.",
+    "FKEM dev. / diag.",
+    "UltraLevin rel. error",
+    "FKEM rel. error",
+    "FKEM vs UltraLevin / diag.",
 ]
 table = [
     "| " + " | ".join(header) + " |",
@@ -1353,49 +1359,30 @@ table = [
 display(Markdown("\n".join(table)))
 ```
 
-Three things to read off it.
+The table gives each deviation in two forms: as a fraction of the diagonal
+$\sqrt{C^{11}_\ell C^{22}_\ell}$, the scale of a cross spectrum (see [The scale of a
+cross spectrum](../tutorials/python/xcor_accuracy.qmd#sec-diagonal)), and relative to the
+certified value. The diagonal column is UltraLevin's. The last column compares the two
+codes and involves no certified value.
 
-**The ladder is monotonic, and it is steeper for one method than the other.**
-Against certified values at $\ell = 10$, as a fraction of each rung's own scale:
+For the adjacent bins, X12, the certified $C_\ell$ is about half the diagonal, and the
+two measures agree: UltraLevin deviates from the certified value by $3\times10^{-10}$
+($\ell = 10$) and $5\times10^{-11}$ ($\ell = 50$) of it, FKEM by $7.4\times10^{-6}$ and
+$2.2\times10^{-6}$.
 
-| separation ratio | UltraLevin | FKEM |
-|---|---|---|
-| 1.4, adjacent | 2.3e-10 | 2.8e-05 |
-| 2.3, apart | 2.6e-07 | 1.2e+03 |
-| 3.5, separated | 1.1e-04 | 4.6e+05 |
+As the bins separate, the cross spectrum becomes small against the diagonal: at
+$\ell = 10$ it is $6.4\times10^{-5}$ of the diagonal for X13 and $2.4\times10^{-7}$ for
+X10. There UltraLevin's relative errors are $2.7\times10^{-7}$ and $1.2\times10^{-4}$,
+and FKEM's $0.20$ and $0.48$. Against the diagonal FKEM deviates by $1.3\times10^{-5}$
+and $1.2\times10^{-7}$, and UltraLevin by less than $3\times10^{-11}$.
 
-Both degrade as the bins separate, which is the cancellation the integrand panels
-show. UltraLevin moves through six orders while FKEM moves through ten, and
-crosses unity -- an error larger than the spectrum itself -- between the first and
-second rung.
-
-**On adjacent bins both are usable.** FKEM's $2.8\times10^{-5}$ is the ordinary
-case, which is why it serves most of a 3x2pt data vector; UltraLevin is five
-orders better on the same pair.
-
-**One rung out, at a turning-point ratio of 2.3, FKEM is wrong by a thousand
-times the pair's own scale** while UltraLevin is at $3\times10^{-7}$. Nothing
-changed but the separation. That is the consequence the integrand panels predict:
-the product moved off both peaks into the tails, and the tails are what FKEM
-smooths.
-
-**At the widest separation both methods fail, for different reasons.**
-UltraLevin sits at $1\times10^{-4}$ of the pair's scale at $\ell = 10$ and
-$3\times10^{-2}$ at $\ell = 50$. That is not a solver failure: the certified
-$C_\ell$ at $\ell = 50$ is $2.8\times10^{-21}$, nine orders below the rung's own
-scale, so the pair's spectrum at that multipole is below what double precision
-can represent once the oscillating panel sums have cancelled. UltraLevin's error
-is the cancellation floor. FKEM's is $2\times10^{5}$ of scale at the same
-multipole, seven orders above that floor, because it is not integrating the right
-integrand. A method can be limited by arithmetic or by representation, and only a
-certificate separates the two.
-
-Deviations are fractions of each rung's own scale -- its largest $|C_\ell|$ --
-not pointwise relative errors: a separated pair's spectrum crosses zero, and a
-relative error at a near-null is arbitrarily large while saying nothing. The last
-column compares the two codes to each other and involves no certified value. Read
-the certified columns: two codes agreeing says less than either code's distance
-from a proven value.
+At $\ell = 50$ the certified $C_\ell$ is $3.5\times10^{-10}$ of the diagonal for X13 and
+$1.2\times10^{-16}$ for X10. For X13, FKEM's relative error is $1.2\times10^{-2}$ and
+UltraLevin's is $6.7$; UltraLevin's deviation, $2.4\times10^{-9}$ of the diagonal, is
+below the peak-epsilon of $10^{-6}$ at which its closures were built. For X10 both
+relative errors are far above one, $5.4\times10^{7}$ for UltraLevin and $3.0\times10^{4}$
+for FKEM: neither code computes this value, and the deviations over the diagonal,
+$6.4\times10^{-9}$ and $3.6\times10^{-12}$, only state which result is closer to zero.
 
 ## What it costs in time
 
@@ -1415,7 +1402,7 @@ $P(k)$ evaluations are inside the loop, since the right-hand side depends on $k$
 they are repeated in every solve.
 
 ```{python}
-# | tbl-cap: "Time per multipole for the three rungs, warm solve, against FKEM on the same multipoles"
+# | tbl-cap: "Time per multipole for the three pairs, warm solve, against FKEM on the same multipoles"
 # | code-fold: true
 
 import os
@@ -1454,12 +1441,7 @@ def fkem_call(grid):
     tracers = []
 
     for kernel in pair_kernels(grid):
-        lo, hi = kernel.get_comp_support(0)
-        chi = np.linspace(lo, hi, TRACER_NCHI)
-        w = np.array([kernel.eval_W_comp(0, c) for c in chi])
-        trc = pyccl.Tracer()
-        trc.add_tracer(ccl_cosmo, kernel=(chi, w), der_bessel=kernel.get_comp_bessel_deriv(0))
-        tracers.append(trc)
+        tracers.append(ccl_tracer(ccl_cosmo, kernel)[0])
 
     psp = ccl_cosmo.get_linear_power()
     ells = np.arange(TIMING_LMIN, TIMING_LMAX + 1, dtype=float)
@@ -1485,7 +1467,7 @@ def fkem_call(grid):
 
 rows = []
 
-for name, _case in LADDER:
+for name, case, ratio in PAIR_CASES:
     grid = load_pair_grid(name)
 
     if grid is None:
@@ -1496,7 +1478,7 @@ for name, _case in LADDER:
         seconds = timed_min(lambda: solver.solve(xcor, cosmo), TIMING_REPEAT)
         rows.append(
             [
-                name,
+                f"{case}, ratio {ratio}",
                 f"UltraLevin, B = {block_size}",
                 str(solver.get_n_blocks()),
                 f"{1.0e3 * seconds:.0f}",
@@ -1505,9 +1487,9 @@ for name, _case in LADDER:
         )
 
     seconds = timed_min(fkem_call(grid), TIMING_REPEAT)
-    rows.append([name, "FKEM", "--", f"{1.0e3 * seconds:.0f}", f"{1.0e3 * seconds / n_ell_timed:.2f}"])
+    rows.append([f"{case}, ratio {ratio}", "FKEM", "--", f"{1.0e3 * seconds:.0f}", f"{1.0e3 * seconds / n_ell_timed:.2f}"])
 
-header = ["rung", "method", "blocks", f"ms for {n_ell_timed} multipoles", "ms per multipole"]
+header = ["pair", "method", "blocks", f"ms for {n_ell_timed} multipoles", "ms per multipole"]
 table = [
     "| " + " | ".join(header) + " |",
     "|" + "---|" * len(header),
@@ -1522,27 +1504,15 @@ display(
 )
 ```
 
-Measured on one performance core of an i7-1255U with a single OpenMP thread,
-minimum of three warm solves, the three rungs give the same picture:
+Measured on an AMD Ryzen 9 9900X with one OpenMP thread, blocks of 8 and 16 multipoles
+cost about the same, 32 costs 1.3 to 1.4 times more and 64 about twice as much, on all
+three pairs. A block's truncation order is set by the multipole that needs the most
+columns, the replay of stored rotations and the convergence check scale with the number
+of multipoles in the block, and the batched solves have specialized kernels only up to
+32 lanes. FKEM is 2.5 to 3 times cheaper per multipole at these settings. The accuracy
+of the two methods at the same settings is in the table of the previous section.
 
-| method | ms per multipole |
-|---|---|
-| UltraLevin, B = 8 | 4.3 to 4.8 |
-| UltraLevin, B = 16 | 3.6 to 4.5 |
-| UltraLevin, B = 32 | 4.5 to 5.5 |
-| UltraLevin, B = 64 | 14 to 24 |
-| FKEM | 1.2 |
-
-Blocks of 8 and 16 cost the same; 32 costs a fifth more and 64 several times more.
-A block's truncation order is set by its hardest multipole, the replay of stored
-rotations and the convergence check scale with the number of multipoles in the
-block, and the batched solves have specialized kernels only up to 32 lanes. FKEM is four times
-cheaper per multipole at these settings. The accuracy that buys is in the table
-above: on the adjacent rung the two methods differ by five orders of magnitude
-against the certificate, and on the other two rungs FKEM's error exceeds the
-spectrum itself.
-
-Where a warm solve spends its time, from a profile of the adjacent rung at
+Where a warm solve spends its time, from a profile of the adjacent pair X12 at
 B = 8: half in replaying stored factorizations and back-substituting, one sixth in
 evaluating the window and $P(k)$ at the panel nodes, one tenth in the Chebyshev fits of
 the forcing, and the rest in the remaining code. Two thirds of the panel solves are
@@ -1558,6 +1528,6 @@ regenerated.
 
 The tables cover the closed-form windows, the three Bessel-derivative orders, and
 the multipoles and $k$ values printed above. They do not cover a physical
-kernel's window, a Limber tier of any kind, or the outer $k$ quadrature; the
+kernel's window, a Limber method of any kind, or the outer $k$ quadrature; the
 last of these has its own certified table, `xcor_kquad.json.gz`, holding $C_\ell$
 for pairs of these same windows.
