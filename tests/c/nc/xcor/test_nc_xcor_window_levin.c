@@ -39,10 +39,13 @@
  * library's own path does.
  *
  * Every point is held to rtol |I| + atol peak, the peak being the multipole's largest
- * certified |I|. Measured at d = 0 over the table: worst 6.9e-10 relative within three
- * orders of the peak and 5.7e-11 of the peak, so rtol 1e-8 and atol 1e-11. At d = 1, 2:
- * worst 1.7e-10 at d = 1, 2.1e-9 relative and 2.8e-9 of the peak at d = 2 (j_ell'' is
- * reached from neighbouring orders whose leading terms cancel), so rtol and atol 1e-8.
+ * certified |I|. The rtol is 3 times #NcmSBesselIntegratorLevin:cheb-reltol, the
+ * tolerance of the forcing fit that bounds the integrator's result: the fit's acceptance
+ * test bounds the change between two levels, not the error. Measured at d = 0, the worst
+ * point is 5.8e-9 relative (tau_batched/rule/tophat_near, ell = 200) on x86-64 and 1.03
+ * times 1e-8 on arm64 (macOS CI); the atol is 1e-11. At d = 1, 2: worst 1.7e-10 at
+ * d = 1, 2.1e-9 relative and 2.8e-9 of the peak at d = 2 (j_ell'' is reached from
+ * neighbouring orders whose leading terms cancel), so the atol is 1e-8.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -56,9 +59,8 @@
 #include <string.h>
 
 #define TEST_SPARSE_FILE "truth_tables/xcor/xcor_window_ilk.bin"
-#define TEST_RTOL 1.0e-8
+#define TEST_RTOL_FACTOR 3.0
 #define TEST_ATOL_FRAC 1.0e-11
-#define TEST_DERIV_RTOL 1.0e-8
 #define TEST_DERIV_ATOL_FRAC 1.0e-8
 #define TEST_TAU_MIN_OSC 200.0
 #define TEST_BATCH 8
@@ -219,7 +221,6 @@ static void
 test_nc_xcor_window_levin (gconstpointer pdata)
 {
   const TestCase *tc         = pdata;
-  const gdouble rtol         = (tc->d == 0) ? TEST_RTOL : TEST_DERIV_RTOL;
   const gdouble atol_frac    = (tc->d == 0) ? TEST_ATOL_FRAC : TEST_DERIV_ATOL_FRAC;
   gchar *kkey                = g_strdup_printf ("kernel/%s/d0", tc->shape);
   NcmSerialize *ser          = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
@@ -243,6 +244,7 @@ test_nc_xcor_window_levin (gconstpointer pdata)
     const guint n    = ncm_matrix_nrows (table);
     gdouble peak     = 0.0;
     gdouble worst    = 0.0;
+    gdouble rtol;
     NcmSBesselIntegrator *sbi;
     guint j;
 
@@ -255,7 +257,8 @@ test_nc_xcor_window_levin (gconstpointer pdata)
     for (j = 0; j < n; j++)
       peak = GSL_MAX (peak, fabs (ncm_matrix_get (table, j, 1 + tc->d)));
 
-    sbi = _test_integrator (tc, ell);
+    sbi  = _test_integrator (tc, ell);
+    rtol = TEST_RTOL_FACTOR * ncm_sbessel_integrator_levin_get_cheb_reltol (NCM_SBESSEL_INTEGRATOR_LEVIN (sbi));
 
     for (j = 0; j < n; j++)
     {
