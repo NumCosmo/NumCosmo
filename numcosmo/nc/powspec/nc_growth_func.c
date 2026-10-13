@@ -62,6 +62,11 @@
  *
  * As usual, the growth function is set to unit at the present time, $D(a_0) = 1$.
  *
+ *
+ * The system is integrated in $a$ with CVODE (Adams method, order at most
+ * %NCM_ODE_SPLINE_HERMITE_MAX_ORDER) and every step is a knot of a #NcmSplineHermite,
+ * which receives $D$, $\mathrm{d}D/\mathrm{d}a$ from the state and
+ * $\mathrm{d}^2D/\mathrm{d}a^2$ from the right-hand side.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -70,17 +75,14 @@
 #include "build_cfg.h"
 
 #include "nc/powspec/nc_growth_func.h"
-#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline_hermite.h"
+#include "ncm/spline/ncm_ode_spline.h"
 #include "ncm/core/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvode/cvode.h>
 
-#include <sundials/sundials_matrix.h>
-#include <sunmatrix/sunmatrix_dense.h>
-#include <sunlinsol/sunlinsol_dense.h>
-#define SUN_DENSE_ACCESS SM_ELEMENT_D
-
+#include <sunnonlinsol/sunnonlinsol_fixedpoint.h>
 #include <nvector/nvector_serial.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -89,8 +91,12 @@ struct _NcGrowthFuncPrivate
   gpointer cvode;
   SUNContext sunctx;
   N_Vector yv;
-  SUNMatrix A;
-  SUNLinearSolver LS;
+  N_Vector ydot;
+  SUNNonlinearSolver NLS;
+  GArray *x_array;
+  GArray *y_array;
+  GArray *d1_array;
+  GArray *d2_array;
   gdouble x_i;
   gdouble reltol;
   gdouble abstol;
@@ -117,18 +123,21 @@ nc_growth_func_init (NcGrowthFunc *gf)
 
   self->cvode      = NULL;
   self->yv         = N_VNew_Serial (3, self->sunctx);
-  self->A          = SUNDenseMatrix (3, 3, self->sunctx);
-  self->LS         = SUNLinSol_Dense (self->yv, self->A, self->sunctx);
+  self->ydot       = N_VNew_Serial (3, self->sunctx);
+  self->NLS        = SUNNonlinSol_FixedPoint (self->yv, 0, self->sunctx);
+  self->x_array    = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  self->y_array    = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  self->d1_array   = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  self->d2_array   = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   self->x_i        = 0.0;
   self->reltol     = 0.0;
   self->abstol     = 0.0;
   self->ctrl_cosmo = ncm_model_ctrl_new (NULL);
 
-  gf->s   = NULL;
+  gf->s   = NCM_SPLINE (ncm_spline_hermite_new ());
   gf->Da0 = 0.0;
 
-  NCM_CVODE_CHECK ((gpointer) self->A, "SUNDenseMatrix", 0, );
-  NCM_CVODE_CHECK ((gpointer) self->LS, "SUNDenseLinearSolver", 0, );
+  NCM_CVODE_CHECK ((gpointer) self->NLS, "SUNNonlinSol_FixedPoint", 0, );
 }
 
 static void
@@ -187,6 +196,10 @@ _nc_growth_func_dispose (GObject *object)
 
   ncm_spline_clear (&gf->s);
   ncm_model_ctrl_clear (&self->ctrl_cosmo);
+  g_clear_pointer (&self->x_array, g_array_unref);
+  g_clear_pointer (&self->y_array, g_array_unref);
+  g_clear_pointer (&self->d1_array, g_array_unref);
+  g_clear_pointer (&self->d2_array, g_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_growth_func_parent_class)->dispose (object);
@@ -200,17 +213,12 @@ _nc_growth_func_finalize (GObject *object)
 
   CVodeFree (&self->cvode);
   N_VDestroy (self->yv);
+  N_VDestroy (self->ydot);
 
-  if (self->A != NULL)
+  if (self->NLS != NULL)
   {
-    SUNMatDestroy (self->A);
-    self->A = NULL;
-  }
-
-  if (self->LS != NULL)
-  {
-    SUNLinSolFree (self->LS);
-    self->LS = NULL;
+    SUNNonlinSolFree (self->NLS);
+    self->NLS = NULL;
   }
 
   SUNContext_Free (&self->sunctx);
@@ -457,37 +465,6 @@ growth_f (sunrealtype a, N_Vector y, N_Vector ydot, gpointer f_data)
   return 0;
 }
 
-static gint
-growth_J (sunrealtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-{
-  NcHICosmo *cosmo        = NC_HICOSMO (jac_data);
-  const gdouble a2        = a * a;
-  const gdouble z         = 1.0 / a - 1.0;
-  const gdouble E2        = nc_hicosmo_E2 (cosmo, z);
-  const gdouble dE2dz     = nc_hicosmo_dE2_dz (cosmo, z);
-  const gdouble E2Omega_m = nc_hicosmo_E2Omega_m (cosmo, z);
-
-  NCM_UNUSED (y);
-  NCM_UNUSED (fy);
-  NCM_UNUSED (tmp1);
-  NCM_UNUSED (tmp2);
-  NCM_UNUSED (tmp3);
-
-  SUN_DENSE_ACCESS (J, 0, 0) = 0.0;
-  SUN_DENSE_ACCESS (J, 0, 1) = 1.0;
-  SUN_DENSE_ACCESS (J, 0, 2) = 0.0;
-
-  SUN_DENSE_ACCESS (J, 1, 0) = 3.0 * E2Omega_m / (2.0 * a2 * E2);
-  SUN_DENSE_ACCESS (J, 1, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a);
-  SUN_DENSE_ACCESS (J, 1, 2) = 0.0;
-
-  SUN_DENSE_ACCESS (J, 2, 0) = 0.0;
-  SUN_DENSE_ACCESS (J, 2, 1) = 0.0;
-  SUN_DENSE_ACCESS (J, 2, 2) = 0.0;
-
-  return 0;
-}
-
 /**
  * nc_growth_func_prepare:
  * @gf: a #NcGrowthFunc
@@ -502,31 +479,16 @@ void
 nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
 {
   NcGrowthFuncPrivate * const self = gf->priv;
-  GArray *x_array, *y_array;
-  gdouble ai, a;
-  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
-  const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (cosmo);
-  gdouble dDa0;
+  const gdouble Omega_m0           = nc_hicosmo_Omega_m0 (cosmo);
+  const gdouble Omega_r0           = nc_hicosmo_Omega_r0 (cosmo);
+  const gdouble ai                 = 1.0 / self->x_i;
+  gdouble dDa0, a;
   gint flag;
 
-  ai = 1.0 / self->x_i;
-
-  if (gf->s != NULL)
-  {
-    NcmVector *xv = ncm_spline_peek_xv (gf->s);
-    NcmVector *yv = ncm_spline_peek_yv (gf->s);
-
-    x_array = ncm_vector_get_array (xv);
-    y_array = ncm_vector_get_array (yv);
-  }
-  else
-  {
-    x_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-    y_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-  }
-
-  g_array_set_size (x_array, 0);
-  g_array_set_size (y_array, 0);
+  g_array_set_size (self->x_array, 0);
+  g_array_set_size (self->y_array, 0);
+  g_array_set_size (self->d1_array, 0);
+  g_array_set_size (self->d2_array, 0);
 
   dDa0 = 1.0e-20 / gsl_pow_3 (ai * nc_hicosmo_E (cosmo, 1.0 / ai - 1.0));
 
@@ -536,28 +498,22 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
 
   if (self->cvode == NULL)
   {
-    self->cvode = CVodeCreate (CV_BDF, self->sunctx);
+    self->cvode = CVodeCreate (CV_ADAMS, self->sunctx);
 
     flag = CVodeInit (self->cvode, &growth_f, ai, self->yv);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
-
-    flag = CVodeSetLinearSolver (self->cvode, self->LS, self->A);
-    NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
-
-    flag = CVodeSetJacFn (self->cvode, &growth_J);
-    NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
   }
   else
   {
     flag = CVodeReInit (self->cvode, ai, self->yv);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
-
-    flag = CVodeSetLinearSolver (self->cvode, self->LS, self->A);
-    NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
-
-    flag = CVodeSetJacFn (self->cvode, &growth_J);
-    NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
   }
+
+  flag = CVodeSetNonlinearSolver (self->cvode, self->NLS);
+  NCM_CVODE_CHECK (&flag, "CVodeSetNonlinearSolver", 1, );
+
+  flag = CVodeSetMaxOrd (self->cvode, NCM_ODE_SPLINE_HERMITE_MAX_ORDER);
+  NCM_CVODE_CHECK (&flag, "CVodeSetMaxOrd", 1, );
 
   flag = CVodeSStolerances (self->cvode, self->reltol, self->abstol);
   NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
@@ -571,40 +527,45 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
   flag = CVodeSetStopTime (self->cvode, 1.0);
   NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
 
-  g_array_append_val (x_array, ai);
-  g_array_append_val (y_array, NV_Ith_S (self->yv, 0));
+  a = ai;
 
+  /* Every step is a knot with D, dD/da from the state and d^2D/da^2 from the right-hand side */
   while (TRUE)
   {
-    gint flag = CVode (self->cvode, 1.0, self->yv, &a, CV_ONE_STEP);
-
-    NCM_CVODE_CHECK (&flag, "CVode", 1, );
-
-    g_array_append_val (x_array, a);
-    g_array_append_val (y_array, NV_Ith_S (self->yv, 0));
+    growth_f (a, self->yv, self->ydot, cosmo);
+    g_array_append_val (self->x_array, a);
+    g_array_append_val (self->y_array, NV_Ith_S (self->yv, 0));
+    g_array_append_val (self->d1_array, NV_Ith_S (self->ydot, 0));
+    g_array_append_val (self->d2_array, NV_Ith_S (self->ydot, 1));
 
     if (a == 1.0)
       break;
+
+    flag = CVode (self->cvode, 1.0, self->yv, &a, CV_ONE_STEP);
+    NCM_CVODE_CHECK (&flag, "CVode", 1, );
   }
 
   gf->Da0 = 2.5 * Omega_m0 * (NV_Ith_S (self->yv, 2) - dDa0);
 
-  if (gf->s == NULL)
-    gf->s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-
   {
-    NcmVector *xv = ncm_vector_new_array (x_array);
-    NcmVector *yv = ncm_vector_new_array (y_array);
+    const gdouble norm = 1.0 / g_array_index (self->y_array, gdouble, self->y_array->len - 1);
+    NcmVector *d1v     = ncm_vector_new_array (self->d1_array);
+    NcmVector *d2v     = ncm_vector_new_array (self->d2_array);
+    guint i;
 
-    ncm_vector_scale (yv, 1.0 / ncm_vector_get (yv, y_array->len - 1));
-    ncm_spline_set (gf->s, xv, yv, TRUE);
+    for (i = 0; i < self->y_array->len; i++)
+    {
+      g_array_index (self->y_array, gdouble, i)  *= norm;
+      g_array_index (self->d1_array, gdouble, i) *= norm;
+      g_array_index (self->d2_array, gdouble, i) *= norm;
+    }
 
-    ncm_vector_free (xv);
-    ncm_vector_free (yv);
+    ncm_spline_set_array (gf->s, self->x_array, self->y_array, FALSE);
+    ncm_spline_hermite_set_derivs (NCM_SPLINE_HERMITE (gf->s), d1v, d2v, TRUE);
+
+    ncm_vector_free (d1v);
+    ncm_vector_free (d2v);
   }
-
-  g_array_unref (x_array);
-  g_array_unref (y_array);
 
   ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo));
 
