@@ -35,15 +35,16 @@
  * kernel holds sqrt(P(k)) I_ell(k), so each certified point is compared with it directly.
  *
  * A multipole's scale is its peak. The dense table's points find it; the sparse table's
- * x/nu grid finds it for d = 0 but misses the peak of the derivative orders by 10 to 100
- * times, so there the scale is the closure's own largest |W| over a dense scan of its
- * domain. The deviations are still taken against the certified values.
+ * x/nu grid misses the peak of the derivative orders by 10 to 100 times, so for the
+ * sparse table, at every order, the scale is the larger of the table's and the closure's
+ * own largest |W| over a dense scan of its domain. The deviations are still taken against
+ * the certified values.
  *
  * Per multipole, as a fraction of its peak: inside the closure's domain the deviation is
- * held to a multiple of #NcXcorKernel:peak-epsilon, measured at 1.9 at the defaults and
- * 1.2 at the tight setting over the 16 shapes and three orders (the excess at the
- * defaults is the windows' hard-edge oscillation in k, left unresolved at the size of
- * the tolerance); beyond it, the certified values the domain drops are held below
+ * held to a multiple of #NcXcorKernel:peak-epsilon, measured at 1.24 at the defaults and
+ * 1.95 at the tight setting over the 16 shapes and three orders (the excess over 1 is
+ * the windows' hard-edge oscillation in k, left unresolved at the size of the
+ * tolerance); beyond it, the certified values the domain drops are held below
  * #NcXcorKernel:adaptive-epsilon times the block's norm, the truncation that sets the
  * domain.
  */
