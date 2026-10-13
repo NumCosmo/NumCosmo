@@ -507,8 +507,9 @@ default, with $\|W\|_2 < \epsilon_{\rm dom}\, W_{\rm ref}$, where $\epsilon_{\rm
 maximum over the block, or at a hard bound set by the range on which the kernel is defined.
 Five consecutive small values distinguish a tail from a zero crossing of an
 oscillatory window. Taking the running maximum as $W_{\rm ref}$, rather than the
-value at the seeds, keeps the threshold correct when a seed lies on a rising flank. The truncation error of the outer integral is then of order
-$\epsilon$ for a window whose amplitude and integrand fall off together, and
+value at the seeds, keeps the threshold correct when a seed lies on a rising flank.
+The truncation error of the outer integral is then of order $\epsilon_{\rm dom}$ for a
+window whose amplitude and integrand fall off together, and
 larger for windows with power-law tails, where a pointwise criterion truncates
 late.
 
@@ -607,7 +608,7 @@ plt.tight_layout()
 
 A kernel may be a sum of components with different supports in $\chi$, and
 therefore different ranges in $k$. Each component is tracked separately during
-the expansion and dropped from the sum once it is below $\epsilon\,W_{\rm ref}$
+the expansion and dropped from the sum once it is below $\epsilon_{\rm dom}\,W_{\rm ref}$
 for five consecutive outward points, so that its radial integral is not
 computed where it is below that threshold. Components whose supports in $\chi$
 touch or overlap are pieces of one window and are tested and dropped together, on the
@@ -617,7 +618,7 @@ leave its partner's uncancelled edge tail behind, an oscillation the true window
 never had.
 
 The sampled block therefore jumps where a component is dropped, by the
-component's value there, at most $\epsilon\,W_{\rm ref}$. The representation
+component's value there, at most $\epsilon_{\rm dom}\,W_{\rm ref}$. The representation
 below makes that jump a panel edge.
 
 ### The representation of the window
@@ -811,7 +812,7 @@ print(f"C_2: library {vp.get(0):.15e}   GL(40) on the same cells {ref:.15e}   re
 | panel grid in $x$ | prescribed, two knots per decade on $[10^{-4}, 10^6]$ | 21 knots |
 | partial panels at the ends | smallest sub-cell containing the piece, widths in factors of $\sqrt{2}$ | none |
 | multipoles per block | prescribed by the caller | 8 |
-| domain in $k$ | expansion until $\|W\| < \epsilon W_{\rm ref}$ five times | $\epsilon = 10^{-5}$, $\alpha = 0.2$ |
+| domain in $k$ | expansion until $\|W\| < \epsilon_{\rm dom} W_{\rm ref}$ five times | $\epsilon_{\rm dom} = 10^{-5}$, $\alpha = 0.2$ |
 | component boundaries | same test per group of touching components | none |
 | Chebyshev panels in $k$ | Eq. (8), bisection with order cap, cuts at boundaries | reltol = peak-epsilon = $10^{-4}$, at most 33 nodes |
 | outer integral | exact on the common refinement | none |
