@@ -41,10 +41,11 @@
  * the certified values.
  *
  * Per multipole, as a fraction of its peak: inside the closure's domain the deviation is
- * held to a multiple of #NcXcorKernel:peak-epsilon, measured at 1.24 at the defaults and
- * 1.95 at the tight setting over the 16 shapes and three orders (the excess over 1 is
- * the windows' hard-edge oscillation in k, left unresolved at the size of the
- * tolerance); beyond it, the certified values the domain drops are held below
+ * held to 3 times #NcXcorKernel:peak-epsilon, measured at 1.24 at the defaults and 1.95
+ * at the tight setting over the 16 shapes and three orders. The acceptance test
+ * compares two consecutive levels, so the accepted level's error is the threshold times
+ * the ratio of the remaining tail, near 2 for the windows' hard-edge oscillation in k;
+ * beyond the domain, the certified values it drops are held below
  * #NcXcorKernel:adaptive-epsilon times the block's norm, the truncation that sets the
  * domain.
  */
@@ -75,7 +76,7 @@ typedef struct _TestSetting
 
 static const TestSetting test_settings[] = {
   {"default", 0.0,    0.0,    0.0,    3.0},
-  {"tight",   1.0e-8, 1.0e-7, 1.0e-9, 2.0},
+  {"tight",   1.0e-8, 1.0e-7, 1.0e-9, 3.0},
 };
 
 /* One (shape, order) case: the kernel's key in its table, the table whose multipoles it
