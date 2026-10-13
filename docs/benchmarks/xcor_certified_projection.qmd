@@ -372,7 +372,7 @@ for idx, form in enumerate(order):
 
     if idx < n_col:
         top = ax.secondary_xaxis("top", functions=(chi_to_z, z_to_chi))
-        top.set_xticks([0.5, 1, 2, 5, 100])
+        top.set_xticks([1, 3, 100])
         top.tick_params(pad=2)
 
 for idx in range(len(order), n_row * n_col):
@@ -518,12 +518,13 @@ the turning point, where a relative error is arbitrarily large.
 ```{python}
 # | label: fig-certified-projection
 # | fig-cap: "Radial integral at $\\ell = 50$, every shape"
+# | code-fold: true
 ELL = 50
 
 fig, (ax1, ax2) = plt.subplots(
-    2, sharex=True, height_ratios=[2, 1], figsize=(11.0, 7.0)
+    2, sharex=True, height_ratios=[2, 1], figsize=(7.0, 6.4)
 )
-fig.subplots_adjust(hspace=0)
+fig.subplots_adjust(hspace=0.08)
 
 for idx, shape in enumerate(CASES):
     panel(ax1, ax2, shape, ELL, 0, table0, COLORS[idx % len(COLORS)])
@@ -532,7 +533,11 @@ ax1.set_xscale("log")
 ax1.set_yscale("log")
 ax1.set_ylabel(r"$|I_\ell(k)|$ [Mpc]")
 ax1.set_title(rf"Radial integral at $\ell = {ELL}$ (markers: certified in Arb)")
-ax1.legend(fontsize=9, ncol=2)
+# Below the figure: inside the axes the 16 entries cover the curves.
+fig.legend(
+    *ax1.get_legend_handles_labels(), loc="upper center", bbox_to_anchor=(0.5, 0.0),
+    ncol=2, fontsize=8, frameon=False,
+)
 ax1.grid(alpha=0.3)
 
 ax2.set_yscale("log")
@@ -569,10 +574,11 @@ their $d = 0$ counterparts.
 ```{python}
 # | label: fig-certified-deriv
 # | fig-cap: "Derivative weights on the Gaussian window, $d = 0, 1, 2$"
+# | code-fold: true
 fig, (ax1, ax2) = plt.subplots(
-    2, sharex=True, height_ratios=[2, 1], figsize=(11.0, 7.0)
+    2, sharex=True, height_ratios=[2, 1], figsize=(7.0, 6.4)
 )
-fig.subplots_adjust(hspace=0)
+fig.subplots_adjust(hspace=0.08)
 
 for idx, deriv in enumerate((0, 1, 2)):
     table = load_table(deriv)
@@ -587,7 +593,7 @@ ax1.set_yscale("log")
 ax1.set_ylabel(r"$|I_\ell(k)|$ [Mpc]")
 ax1.set_title(rf"$\int W j_\ell^{{(d)}}$ at $\ell = {ELL}$, $d = 0, 1, 2$")
 ax1.legend(
-    [f"$d = {d}$" for d in (0, 1, 2)], loc="lower left"
+    [f"$d = {d}$" for d in (0, 1, 2)], loc="lower right"
 )
 ax1.grid(alpha=0.3)
 
@@ -824,7 +830,7 @@ for shape in CASES:
     fig, axs = plt.subplots(
         2, sharex=True, height_ratios=[2, 1], figsize=(3.7, 3.4)
     )
-    fig.subplots_adjust(hspace=0)
+    fig.subplots_adjust(hspace=0.08)
 
     axs[0].plot(k_dense, np.abs(i_dense), color=COLORS[0], lw=1.2, label="UltraLevin")
     axs[0].plot(
@@ -932,10 +938,20 @@ i_cert = np.array([float(v) for v in entry["table"][index]])
 i_fkem, covered, _ = fkem_on_certified(ccl_cosmo, build("gauss_mid", table0), ELL, k_cert)
 carrying = covered & (np.abs(i_cert) > 1.0e-2 * np.abs(i_cert).max())
 ratio = i_fkem[carrying] / i_cert[carrying]
+
+
+def mantissa_power(x):
+    """x as m \\times 10^{e} inside math."""
+    m, e = f"{x:.1e}".split("e")
+
+    return rf"{m.rstrip('0').rstrip('.')} \times 10^{{{int(e)}}}"
+
+
 display(
     Markdown(
         f"FKEM / certified on the Gaussian at $\\chi_0 = 1500$ Mpc, $\\ell = {ELL}$, "
-        f"{int(carrying.sum())} modes: $|{{\\rm ratio}} - 1| \\le {np.abs(ratio - 1).max():.1e}$."
+        f"{int(carrying.sum())} modes: $|{{\\rm ratio}} - 1| \\le "
+        f"{mantissa_power(np.abs(ratio - 1).max())}$."
     )
 )
 ```
@@ -994,9 +1010,9 @@ def tail_kernel(cls, ctor):
 ```{python}
 # | label: fig-tail-by-tail
 # | fig-cap:
-# |   - "Adjacent bins: the product sits under both peaks"
-# |   - "Bins apart: the product moves off both peaks"
-# |   - "Separated bins: the product lives in both tails"
+# |   - "Adjacent bins: the product is largest where both projections peak"
+# |   - "Bins apart: the product is largest away from both peaks"
+# |   - "Separated bins: the product is largest in the tails of both projections"
 # | fig-cap-location: top
 # | layout-ncol: 1
 # | code-fold: true
@@ -1461,6 +1477,7 @@ def fkem_call(grid):
 
 
 rows = []
+ms_per_ell = {}
 
 for name, case, ratio in PAIR_CASES:
     grid = load_pair_grid(name)
@@ -1471,6 +1488,7 @@ for name, case, ratio in PAIR_CASES:
     for block_size in TIMING_BLOCKS:
         solver, xcor = warm_solver(grid, block_size)
         seconds = timed_min(lambda: solver.solve(xcor, cosmo), TIMING_REPEAT)
+        ms_per_ell[case, block_size] = 1.0e3 * seconds / n_ell_timed
         rows.append(
             [
                 f"{case}, ratio {ratio}",
@@ -1482,6 +1500,7 @@ for name, case, ratio in PAIR_CASES:
         )
 
     seconds = timed_min(fkem_call(grid), TIMING_REPEAT)
+    ms_per_ell[case, "FKEM"] = 1.0e3 * seconds / n_ell_timed
     rows.append([f"{case}, ratio {ratio}", "FKEM", "--", f"{1.0e3 * seconds:.0f}", f"{1.0e3 * seconds / n_ell_timed:.2f}"])
 
 header = ["pair", "method", "blocks", f"ms for {n_ell_timed} multipoles", "ms per multipole"]
@@ -1499,13 +1518,35 @@ display(
 )
 ```
 
-Measured on an AMD Ryzen 9 9900X with one OpenMP thread, blocks of 8 and 16 multipoles
-cost about the same, 32 costs 1.3 to 1.4 times more and 64 about twice as much, on all
-three pairs. A block's truncation order is set by the multipole that needs the most
-columns, the replay of stored rotations and the convergence check scale with the number
-of multipoles in the block, and the batched solves have specialized kernels only up to
-32 lanes. FKEM is 2.5 to 3 times cheaper per multipole at these settings. The accuracy
-of the two methods at the same settings is in the table of the previous section.
+```{python}
+# | echo: false
+_cases = sorted({case for case, _ in ms_per_ell})
+
+
+def _span(values):
+    """The range of a ratio over the pairs, for the prose; one value when they agree."""
+    lo, hi = f"{min(values):.1f}", f"{max(values):.1f}"
+
+    return lo if lo == hi else f"{lo} to {hi}"
+
+
+_r16 = [ms_per_ell[c, 16] / ms_per_ell[c, 8] for c in _cases]
+_r32 = [ms_per_ell[c, 32] / min(ms_per_ell[c, 8], ms_per_ell[c, 16]) for c in _cases]
+_r64 = [ms_per_ell[c, 64] / min(ms_per_ell[c, 8], ms_per_ell[c, 16]) for c in _cases]
+_fkem = [min(ms_per_ell[c, 8], ms_per_ell[c, 16]) / ms_per_ell[c, "FKEM"] for c in _cases]
+
+display(Markdown(rf"""
+On the machine and threads stated under the table, blocks of 16 multipoles cost
+{_span(_r16)} times blocks of 8, and blocks of 32 and 64 cost {_span(_r32)} and
+{_span(_r64)} times the cheaper of the two, over the three pairs. A block's truncation
+order is set by the multipole that needs the most columns, the replay of stored
+rotations and the convergence check scale with the number of multipoles in the block,
+and the batched solves have specialized kernels only up to 32 lanes. FKEM is
+{_span(_fkem)} times cheaper per multipole than the cheaper block size at these
+settings. The accuracy of the two methods at the same settings is in the table of the
+previous section.
+"""))
+```
 
 The certificate itself cost 56 core-hours of Arb arithmetic for the $C_\ell$
 table alone, recorded entry by entry in its `seconds` field, against
