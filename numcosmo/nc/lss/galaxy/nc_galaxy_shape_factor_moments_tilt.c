@@ -1369,19 +1369,19 @@ nc_galaxy_shape_factor_moments_tilt_init (NcGalaxyShapeFactorMomentsTilt *gsfmt)
   self->spectral_pool  = ncm_memory_pool_new (&_moments_tilt_spectral_alloc, NULL, &_moments_tilt_spectral_free);
   g_mutex_init (&self->cache_lock);
   g_mutex_init (&self->range_lock);
-  self->pending_tables       = NULL;
-  self->tables_stamp         = NULL;
-  self->pop_ref              = NULL;
-  self->stamp_warned         = 0;
+  self->pending_tables          = NULL;
+  self->tables_stamp            = NULL;
+  self->pop_ref                 = NULL;
+  self->stamp_warned            = 0;
   self->shared_tables_cache     = NULL;
   self->shared_tables_cache_gen = 0;
   self->tables_generation       = 0;
-  self->solve_error_count = 0;
-  self->solve_warned      = 0;
-  self->table_build_count = 0;
-  self->range_error_count = 0;
-  self->range_warned      = 0;
-  self->panels_warned     = 0;
+  self->solve_error_count       = 0;
+  self->solve_warned            = 0;
+  self->table_build_count       = 0;
+  self->range_error_count       = 0;
+  self->range_warned            = 0;
+  self->panels_warned           = 0;
 }
 
 /* The convention is a construct-only property of the parent, so it is read
@@ -2495,12 +2495,13 @@ void
 nc_galaxy_shape_factor_moments_tilt_register_shared (NcGalaxyShapeFactorMomentsTilt *gsfmt, NcmSerialize *ser)
 {
   NcGalaxyShapeFactorMomentsTiltPrivate * const self = nc_galaxy_shape_factor_moments_tilt_get_instance_private (gsfmt);
-  NcmObjArray *tables = _nc_galaxy_shape_factor_moments_tilt_get_shared_tables (self);
+  NcmObjArray *tables                                = _nc_galaxy_shape_factor_moments_tilt_get_shared_tables (self);
   guint i;
 
   for (i = 0; i < ncm_obj_array_len (tables); i++)
   {
     GObject *vec = ncm_obj_array_peek (tables, i);
+
     /* NcmSerialize's named-instance syntax only accepts [A-Za-z0-9:] inside
      * the brackets (see its is_named_regex): no "0x" prefix, no
      * underscore. */

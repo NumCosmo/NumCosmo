@@ -27,14 +27,29 @@ from numcosmo_py import Nc, Ncm
 Ncm.cfg_init()
 
 OUT = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "truth_tables", "moments"
+    os.path.dirname(os.path.abspath(__file__)),
+    "..",
+    "..",
+    "data",
+    "truth_tables",
+    "moments",
 )
 TRUNC_ORDER = 9
-CONVS = {"trace": Nc.GalaxyWLObsEllipConv.TRACE, "trace-det": Nc.GalaxyWLObsEllipConv.TRACE_DET}
+CONVS = {
+    "trace": Nc.GalaxyWLObsEllipConv.TRACE,
+    "trace-det": Nc.GalaxyWLObsEllipConv.TRACE_DET,
+}
 SIGMA_POPS = (0.2, 0.4658)
 STD_NOISES = (0.02, 0.1)
 SHEARS = (0.005, 0.01, 0.02, 0.05, 0.1, 0.2)
-EPS_OBS = ((0.05, 0.02), (0.3, -0.1), (-0.4, 0.25), (0.6, 0.3), (0.1, -0.7), (0.85, 0.0))
+EPS_OBS = (
+    (0.05, 0.02),
+    (0.3, -0.1),
+    (-0.4, 0.25),
+    (0.6, 0.3),
+    (0.1, -0.7),
+    (0.85, 0.0),
+)
 TOL_FACTOR = 10.0
 TOL_FLOOR = 1.0e-8
 
@@ -67,7 +82,9 @@ def make_data(gsf, mset, std_noise):
     zf = Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0)
     z_data = Nc.GalaxyRedshiftFactorData.new(zf, mset)
     data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)
-    gsf.data_set(data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
+    gsf.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
     gsf.prepare_data_array(mset, [data], True, True)
     return data, (pos_data, z_data)
 
@@ -85,7 +102,9 @@ def main():
         ),
     }
     cases = []
-    gap = {old: {conv: {str(g): 0.0 for g in SHEARS} for conv in CONVS} for old in pairs}
+    gap = {
+        old: {conv: {str(g): 0.0 for g in SHEARS} for conv in CONVS} for old in pairs
+    }
 
     for conv_name, conv in CONVS.items():
         for sigma_pop in SIGMA_POPS:
@@ -94,31 +113,65 @@ def main():
                 objs = {}
                 for old, (make_old, make_new) in pairs.items():
                     gsf_old, gsf_new = make_old(conv), make_new(conv)
-                    objs[old] = (gsf_old, make_data(gsf_old, mset, std_noise),
-                                 gsf_new, make_data(gsf_new, mset, std_noise))
+                    objs[old] = (
+                        gsf_old,
+                        make_data(gsf_old, mset, std_noise),
+                        gsf_new,
+                        make_data(gsf_new, mset, std_noise),
+                    )
                 for g in SHEARS:
                     for e1, e2 in EPS_OBS:
-                        case = {"conv": conv_name, "sigma_pop": sigma_pop, "std_noise": std_noise,
-                                "g": g, "e1": e1, "e2": e2}
-                        for old, (gsf_old, (d_old, _), gsf_new, (d_new, _)) in objs.items():
+                        case = {
+                            "conv": conv_name,
+                            "sigma_pop": sigma_pop,
+                            "std_noise": std_noise,
+                            "g": g,
+                            "e1": e1,
+                            "e2": e2,
+                        }
+                        for old, (
+                            gsf_old,
+                            (d_old, _),
+                            gsf_new,
+                            (d_new, _),
+                        ) in objs.items():
                             v_old = gsf_old.eval_ln_marginal(pop, d_old, g, 0.0, e1, e2)
                             v_new = gsf_new.eval_ln_marginal(pop, d_new, g, 0.0, e1, e2)
                             case[old] = v_old
-                            gap[old][conv_name][str(g)] = max(gap[old][conv_name][str(g)], abs(v_old - v_new))
+                            gap[old][conv_name][str(g)] = max(
+                                gap[old][conv_name][str(g)], abs(v_old - v_new)
+                            )
                         cases.append(case)
 
-    tol = {old: {conv: {g: max(TOL_FACTOR * v, TOL_FLOOR) for g, v in per_g.items()}
-                 for conv, per_g in per_conv.items()}
-           for old, per_conv in gap.items()}
+    tol = {
+        old: {
+            conv: {g: max(TOL_FACTOR * v, TOL_FLOOR) for g, v in per_g.items()}
+            for conv, per_g in per_conv.items()
+        }
+        for old, per_conv in gap.items()
+    }
 
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, "golden.json"), "w", encoding="utf-8") as f:
-        json.dump({"trunc_order": TRUNC_ORDER, "tol_factor": TOL_FACTOR, "tol_floor": TOL_FLOOR,
-                   "measured_gap": gap, "tol": tol, "cases": cases}, f, indent=1)
+        json.dump(
+            {
+                "trunc_order": TRUNC_ORDER,
+                "tol_factor": TOL_FACTOR,
+                "tol_floor": TOL_FLOOR,
+                "measured_gap": gap,
+                "tol": tol,
+                "cases": cases,
+            },
+            f,
+            indent=1,
+        )
     print(f"wrote {len(cases)} cases to {os.path.join(OUT, 'golden.json')}")
     for old, per_conv in gap.items():
         for conv, per_g in per_conv.items():
-            print(f"  {old:14s} {conv:10s} max gap by g: " + ", ".join(f"{g}:{v:.1e}" for g, v in per_g.items()))
+            print(
+                f"  {old:14s} {conv:10s} max gap by g: "
+                + ", ".join(f"{g}:{v:.1e}" for g, v in per_g.items())
+            )
 
 
 if __name__ == "__main__":
