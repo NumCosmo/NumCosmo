@@ -5,10 +5,10 @@ date: "2026-09-11"
 abstract: |
     The same clustering spectrum projected by UltraLevin and by CCL's FKEM agrees to a
     few parts in a thousand. Its derivative with respect to a cosmological parameter,
-    taken with the same Richardson-extrapolated differentiator on both, disagrees
-    fifteen times more, while both derivatives are numerically converged: the
-    approximation error of an angular power spectrum depends on the cosmology, and
-    differencing keeps its slope while dropping its value.
+    taken with the same Richardson-extrapolated differentiator on both, differs 14 times
+    more, and the differentiation error of both derivatives is at least four orders of magnitude
+    smaller than that difference. The deviation between the two codes depends on the
+    cosmology, and its derivative is larger than the deviation itself.
 
 format:
   html:
@@ -23,13 +23,14 @@ format-links: [ipynb]
 
 ## What this page shows
 
-A data-vector comparison judges two codes by $|C_\ell^A / C_\ell^B - 1|$. For a Fisher
-forecast, a Newton or gradient step, or an emulator trained on gradients, the quantity
-that matters is $\mathrm{d}C_\ell/\mathrm{d}\theta$, and a difference between two codes
-that is small but **changes with $\theta$** survives differencing undiminished while the
-spectrum itself drops out. This page measures that on one spectrum.
+A data-vector comparison of two codes measures $|C_\ell^A / C_\ell^B - 1|$. A Fisher
+forecast, a Newton or gradient step, or an emulator trained on gradients uses
+$\mathrm{d}C_\ell/\mathrm{d}\theta$ instead. If the difference $C_\ell^A - C_\ell^B$
+**changes with $\theta$**, the derivatives differ by its derivative, which can be larger,
+relative to $\mathrm{d}C_\ell/\mathrm{d}\theta$, than the difference is relative to
+$C_\ell$. This page measures both on one spectrum.
 
-The setup is deliberately simple and identical on both sides: one LSST-Y1 clustering
+The setup is the same on both sides: one LSST-Y1 clustering
 bin without redshift-space distortions or magnification, unit bias, the linear
 Eisenstein--Hu power spectrum, and a flat cosmology normalized to $\sigma_8$. The
 NumCosmo cosmology is built from the CCL one by `create_nc_obj` at every parameter
@@ -39,9 +40,9 @@ a 200-point table, which is what a photometric analysis typically has. CCL runs 
 non-Limber FKEM method at its default settings.
 
 The derivative is taken by [[numcosmo-math|NcmDiff]], Richardson extrapolation of
-central differences from an initial step on which $C_\ell$ changes by a few percent,
-and NcmDiff reports the error it believes it achieved. Neither derivative is a
-hand-picked finite difference.
+central differences from an initial step on which $C_\ell$ changes by a few percent.
+NcmDiff also returns an estimate of its own error. Neither derivative uses a step chosen
+by hand.
 
 ```{python}
 # | code-fold: true
@@ -196,24 +197,25 @@ print(f"NcmDiff error, median over ell: UltraLevin {np.median(e_ul / np.abs(d_ul
 
 ## Reading the result
 
-The two spectra differ by a few $10^{-3}$, a smooth function of $\ell$, and would
-pass any comparison at the level a photometric survey demands of its theory code.
-The derivatives differ by a few $10^{-2}$. NcmDiff's own error estimate on each
-derivative is two orders below that disagreement, so neither derivative is noisy:
-the difference between the two spectra **moves with the cosmology**, and its slope is
-about fifteen times its value, in units of the derivative.
+The two spectra differ by $3 \times 10^{-3}$ (median over $\ell$), and the difference
+is a smooth function of $\ell$. The derivatives differ by $4.3 \times 10^{-2}$, 14
+times more. The error NcmDiff estimates is $6 \times 10^{-8}$ on the UltraLevin
+derivative and $2 \times 10^{-6}$ on the CCL one, four to six orders of magnitude below
+the difference between the derivatives. The difference between the two spectra
+therefore **changes with $\Omega_c$**.
 
-Two remarks bound the statement. First, it depends on the table CCL is handed: with
-$n(z)$ on 1200 points the spectra agree to $7\times10^{-5}$ and the derivatives to
-$10^{-3}$. The mechanism is not FKEM's transform but how coarsely its $\chi$ sampling,
-which defaults to twice the table's length, follows the kernel. Second, it is not a
-speed comparison and does not want to be one: CCL evaluates this spectrum faster than
-UltraLevin does. It is a measurement of what a resolution chosen once, rather than a
-tolerance met every time, costs in the quantity a forecast actually consumes.
+Two conditions apply to this result. First, it depends on the number of points of the
+$n(z)$ table given to CCL: with 1200 points the spectra agree to $7\times10^{-5}$ and the
+derivatives to $10^{-3}$. The deviation comes from FKEM's sampling in $\chi$, which by
+default has twice as many points as the table. Second, the page does not compare speed;
+CCL evaluates this spectrum faster than UltraLevin. It measures the error in
+$\mathrm{d}C_\ell/\mathrm{d}\theta$ of a method with a fixed sampling resolution,
+against a method that meets a tolerance at every evaluation.
 
 The forward variant of NcmDiff, `rf_d1_1_to_M`, gave the same derivatives to
-$10^{-9}$ at every multipole but one, where its value was off by $6\times10^{-4}$ and
-its reported error correctly flagged it; the central variant used here has no such
-point. On the UltraLevin spectrum the second differences of $C_\ell(\Omega_c)$ on a grid
-of 81 points around the fiducial value are at the $10^{-7}$ level everywhere, the
-curvature of a smooth function, so the flag was the estimator's, not the spectrum's.
+$10^{-9}$ at every multipole but one, where its value deviated by $6\times10^{-4}$ and
+its reported error was of the same size; the central variant used here has no such
+multipole. On the UltraLevin spectrum the second differences of $C_\ell(\Omega_c)$ on a
+grid of 81 points around the fiducial value are of order $10^{-7}$ everywhere, as for a
+smooth function, so that deviation came from the forward estimator and not from the
+spectrum.
