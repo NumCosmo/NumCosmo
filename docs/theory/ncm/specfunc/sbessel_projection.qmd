@@ -52,8 +52,8 @@ panel splitting and from the ODE solution have different behavior. Consecutive
 multipoles give discretizations that differ only by a constant, allowing a block of
 multipoles to be factorized together and solved in one pass.
 
-The outer stage decides which $k$ to ask for, builds a representation of $I^X_\ell(k)$
-over $k$ for each kernel, and integrates the product of two such representations
+The outer stage finds the range of $k$, samples $I^X_\ell(k)$ on it, builds a
+representation of $I^X_\ell(k)$ over $k$ for each kernel, and integrates the product of two such representations
 exactly ([The window over k](#the-window-over-k) through [The outer
 integral](#the-outer-integral)).
 
@@ -73,8 +73,8 @@ As in any numerical calculation, this control is not absolute. Errors in the inp
 functions, round-off, cancellations, and other numerical effects can limit the accuracy
 that is actually attained. Two parameters are prescribed rather than adapted (the
 panel grid in $x$ and the number of multipoles per block), but neither is a
-resolution: panel splitting is exact, and the block size only decides how many
-multipoles share a factorization. They therefore do not set the target accuracy,
+resolution: panel splitting is exact, and the block size is only the number of
+multipoles that share a factorization. They therefore do not set the target accuracy,
 although the grid does affect what is attainable, through the cancellation between
 panel terms. [What is adaptive and what is
 prescribed](#what-is-adaptive-and-what-is-prescribed) summarizes both kinds of choice
@@ -110,7 +110,8 @@ $\pi$ apart, and an oscillation always means one such half-wave here, so over a 
 $[a,b]$ the weight completes about $k(b-a)/\pi$ oscillations and a quadrature rule
 needs several nodes per oscillation. The kernel $K$, by contrast, is smooth and needs a
 few dozen samples however large $k$ is. Any method that resolves the oscillations by
-sampling the integrand pays a cost in kernel evaluations that grows linearly in $k$.
+sampling the integrand needs a number of kernel evaluations that grows linearly in
+$k$.
 
 ```{python}
 #| label: fig-cost-k
@@ -190,9 +191,9 @@ $j_\ell$ itself is evaluated only at the two ends of each panel. The unknown
 $u$ is not free of oscillation: with Dirichlet data it carries homogeneous
 solutions of Eq. (4), and its Chebyshev expansion needs about two coefficients
 per oscillation of the panel, which is the floor $N_{\min}$ of [Incremental
-Givens QR](sbessel_ode_solver.qmd#incremental-givens-qr). What the
-reduction changes is where the oscillations are paid for. They cost $O(1)$
-per coefficient in a banded linear solve and no evaluation of the kernel,
+Givens QR](sbessel_ode_solver.qmd#incremental-givens-qr). After the reduction,
+the oscillations cost $O(1)$ per coefficient in a banded linear solve and no
+evaluation of the kernel,
 which enters only through the forcing $xF$ and is sampled as its own
 smoothness requires.
 
@@ -365,10 +366,9 @@ enforces that.
 
 The number of kernel evaluations per panel is set by the smoothness of $K$,
 typically nine to thirty-three, and does not depend on how many oscillations
-the panel holds. The oscillations are paid for in the solve, $O(N)$ per panel
+the panel holds. The oscillations enter the cost of the solve, $O(N)$ per panel
 with $N$ at least the floor $N_{\min}$, about two per oscillation. Kernel
-evaluations dominate the cost of a call, which is what makes this split the
-one to optimize.
+evaluations dominate the cost of a call.
 
 ## Panels fixed in x
 
@@ -486,9 +486,9 @@ This stage is [[numcosmo|NcXcorKernel]], and its output is an
 [[numcosmo|NcXcorKernelIntegrand]] holding one closure per kernel per block.
 
 The inner stage returns $I_\ell(k)$, for a block of $\ell$, at whatever $k$ it
-is asked. The outer stage has to decide the range of $k$ that matters, sample
-it, represent $I_\ell(k)$ over that range, and integrate the product of two
-such representations. In the library the block window is
+is asked. The outer stage finds the range of $k$, samples it, represents
+$I_\ell(k)$ over that range, and integrates the product of two such
+representations. In the library the block window is
 $W_\ell(k) = p_\ell(k)\, I_\ell(k)$ with a smooth prefactor $p_\ell$ that the
 kernel supplies, and the outer integral is Eq. (1) with $W$ in place of the
 brackets.
@@ -608,9 +608,9 @@ plt.tight_layout()
 A kernel may be a sum of components with different supports in $\chi$, and
 therefore different ranges in $k$. Each component is tracked separately during
 the expansion and dropped from the sum once it is below $\epsilon\,W_{\rm ref}$
-for five consecutive outward points, so that its radial integral is not paid
-for where it cannot matter. Components whose supports in $\chi$ touch or
-overlap are pieces of one window and are judged and dropped together, on the
+for five consecutive outward points, so that its radial integral is not
+computed where it is below that threshold. Components whose supports in $\chi$
+touch or overlap are pieces of one window and are tested and dropped together, on the
 norm of their sum: the $k$-space tail of a piece is set by its edges, the two
 pieces cancel at the edge they share, and a piece cut on its own size would
 leave its partner's uncancelled edge tail behind, an oscillation the true window
@@ -629,11 +629,12 @@ Eq. (8), $\epsilon_F$ is replaced by `NcXcorKernel:reltol`, $V$ is the largest
 $\vert W_\ell \vert$ on the finer nodes, and
 $\epsilon_{\rm abs} = a \equiv \text{peak-epsilon} \times \min_\ell \max_k \vert W_\ell(k) \vert$,
 with peak-epsilon `NcXcorKernel:peak-epsilon`. A panel that does not converge at 33
-nodes is bisected and its evaluations discarded. Two rules constrain where a panel may sit and when it
-may be accepted. First, every component boundary found by the expansion is a
-panel edge, and while a panel is fitted each component is either on or off for
-the whole panel, decided at the panel's midpoint, so the outer panel reads
-exactly zero including at the shared edge. A jump inside a panel would instead
+nodes is bisected and its evaluations discarded. Two rules apply to the placement
+and the acceptance of a panel. First, every component boundary found by the
+expansion is a panel edge, and while a panel is fitted each component is either on
+or off for the whole panel, as evaluated at the panel's midpoint, so a dropped
+component contributes exactly zero beyond its boundary, including at the shared
+edge. A jump inside a panel would instead
 produce an aliasing residual in Eq. (8) of order $\Delta/\sqrt N$, with $\Delta$ the
 height of the jump relative to the block's peak: a jump of $4\times10^{-5}$ on a peak
 of $10$ passes a tolerance of $10^{-6}$ and fails $10^{-7}$. Bisection does not reduce

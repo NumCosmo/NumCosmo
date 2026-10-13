@@ -465,7 +465,7 @@ interval, and the worst deviation of A2 falls to $4.2 \times 10^{-8}$, the last 
 the table. In the same row X14 deviates by $1.8 \times 10^{-7}$, more than with the
 default adaptive-epsilon and less than peak-epsilon.
 
-## Kernel shape sets the cost {#sec-shape}
+## Kernel shape and cost {#sec-shape}
 
 The cost of a closure depends on the window as well as on the tolerances. A window with a
 step at its edges, such as a top-hat, has a $W_\ell(k)$ that decays as a power of $k$ and
