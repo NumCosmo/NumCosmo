@@ -158,8 +158,8 @@ $10^{-8}$ by default.
 The range of $k$ of a closure is found by sampling. Starting from seeds near the peaks of
 $W_\ell(k)$, each end of the range is extended step by step until
 `NcXcorKernel:adaptive-boundary-tries` consecutive values of $k$ satisfy
-$\Vert W(k) \Vert_2 < \epsilon\, W_{\max}$, where $\Vert W(k) \Vert_2$ is the norm over
-the multipoles of the block, $W_{\max}$ its largest value over the $k$ already evaluated,
+$\Vert W(k) \Vert_2 < \epsilon\, W_{\rm ref}$, where $\Vert W(k) \Vert_2$ is the norm over
+the multipoles of the block, $W_{\rm ref}$ its largest value over the $k$ already evaluated,
 and $\epsilon$ is `NcXcorKernel:adaptive-epsilon`, $10^{-5}$ by default. The closure is
 zero beyond the range. What the range leaves out is part of neither $C_\ell$ nor its
 error estimate; [Certified values](#sec-certified) measures its size.
