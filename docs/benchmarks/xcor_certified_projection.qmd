@@ -22,13 +22,11 @@ format-links: [ipynb]
 ## What this page shows
 
 Three quarters of an `NcXcorSolver` run is spent in the radial integral
-
 $$
 I_\ell(k) = \int W(\chi)\, j_\ell^{(d)}(k\chi)\,\mathrm{d}\chi ,
 $$
-
-and inside NumCosmo every route to it goes through the same Levin machinery, so
-no internal comparison can establish that it is right. The tables under
+and inside NumCosmo every computation of it uses the same Levin integrator, so no
+internal comparison can verify it. The tables under
 `data/truth_tables/xcor/` hold it computed in Arb ball arithmetic instead,
 certified to a relative ball radius below $10^{-25}$ for the plain weight and
 below $10^{-18}$ at the highest multipoles.
@@ -36,39 +34,35 @@ below $10^{-18}$ at the highest multipoles.
 This page reads those **precomputed** tables. Regenerating them needs FLINT and
 a cluster: the generators are `tests/tools/make_xcor_window_truth_table.py`,
 `make_xcor_pair_grid.py` and `make_xcor_kquad_truth_table.py`, the campaign that
-runs them lives outside the library, and the $C_\ell$ table alone records 56
+runs them is not part of the library, and the $C_\ell$ table alone records 56
 core-hours of Arb time in its per-entry `seconds` field. Reading the tables needs
 neither, so this page renders anywhere the library does.
 
 Two things are not on the axes below.
 
 The quantity plotted is the radial integral of the window alone,
-$\int W j_\ell^{(d)}\,\mathrm{d}\chi$ in Mpc, with $W$ normalised to unit
+$\int W j_\ell^{(d)}\,\mathrm{d}\chi$ in Mpc, with $W$ normalized to unit
 integral over its truncated support. It is not what `numcosmo xcor kernel view`
-draws, and the difference is not a factor pulled outside: a physical kernel's
-component evaluates
-
+draws, and the two differ by more than a factor: a physical kernel's component
+evaluates
 $$
 K(\chi, k) = W(\chi)\,\sqrt{P\!\left(k, z(\chi)\right)}
 $$
-
-*inside* the radial integral, at each shell's own redshift. There is no
-$\sqrt{P(k,0)}$ waiting to be multiplied back afterwards and no growth factor
-taken out — the power spectrum is part of the integrand, which is what makes the
-kernels non-separable in $\chi$ and $k$ from the start, and what lets a
-scale-dependent growth be carried correctly with no change to the machinery.
+*inside* the radial integral, at each shell's own redshift. No factor
+$\sqrt{P(k,0)}$ is multiplied afterwards and no growth factor is taken out. The power
+spectrum is part of the integrand, so the kernels are not separable in $\chi$ and $k$,
+and a scale-dependent growth needs no change to the integrator.
 
 These analytic windows carry no power spectrum at all, by construction: their
 closed forms are functions of $\chi$, so both sides of the comparison below are
 the same bare integral, with no $P$, no Hubble radius and no $k^{3/2}$ that could
-put a $k$-dependent factor between the library and its reference.
+introduce a $k$-dependent factor between the library and its reference.
 
-And only the closed-form windows appear. The physical kernels — `cmb_lensing`,
-`cmb_isw`, `tsz`, the LSST-Y1 number-counts and weak-lensing bins — have no
-closed form, so no certified value exists for them; they are cross-checked
-against CCL and against an independent quadrature elsewhere. That is the whole
-reason this roster of analytic shapes exists: it emulates the support and decay
-of every physical kernel in a setting where a certificate is possible.
+Only the closed-form windows appear. The physical kernels (`cmb_lensing`, `cmb_isw`,
+`tsz`, the LSST-Y1 number-counts and weak-lensing bins) have no closed form, so no
+certified value exists for them; they are compared with CCL and with an independent
+quadrature elsewhere. The analytic shapes reproduce the support and decay of the
+physical kernels with closed forms that can be certified.
 
 ```{python}
 # | code-fold: true
@@ -108,11 +102,11 @@ COLORS = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
 ## The windows
 
-Seven shapes, each a subclass of `NcXcorKernelRadial`, spanning what the solver
-has to survive: a photometric bin, hard edges, a smoothed edge, a non-exponential
+Seven shapes, each a subclass of `NcXcorKernelRadial`, covering the cases the solver
+has to handle: a photometric bin, hard edges, a smoothed edge, a non-exponential
 tail, a skewed and broad window, a lensing efficiency, and disconnected support.
 The constructor arguments are read from the truth table itself, so the curves
-below are the certified windows, not a retyping of them.
+below are the certified windows.
 
 ```{python}
 # | code-fold: true
@@ -423,30 +417,27 @@ plt.close()
 The panels share both axes, and the top axis carries redshift, non-linearly
 spaced against the comoving distance below it.
 
-Within a panel only the centre and the width change, which is the comparison the
+Within a panel only the center and the width change, which is the comparison the
 LSST-SRD bins motivate: the survey's own bins run from $\chi = 1.1$ to
 $5.4$ Gpc with $\sigma_\chi/\chi$ between $0.04$ and $0.36$, and each Gaussian
 here is paired with a top-hat at the same centre and the same variance, so a
 difference between a pair is the edge and nothing else. The two CMB-sourced
-windows run to the last-scattering surface and spend most of their support
-beyond any galaxy survey.
+windows run to the last-scattering surface and have most of their support beyond the
+range of galaxy surveys.
 
 ## The projections, against the certificate
 
 The library's value is drawn as a continuous curve: `integrate_ell` costs well
 under a millisecond per $k$, so the curve is as dense as the figure can show.
 The certified values are the markers. There are eleven of them per shape and
-multipole, and their placement is the point — they are laid down on
-
+multipole, placed on
 $$
 x_\nu = \frac{k\,\chi_\mathrm{ref}}{\ell + 1/2},
 $$
-
-with $\chi_\mathrm{ref}$ the midpoint of the window's support, so that one marker
-falls in each regime the solver distinguishes: the power-law branch below the
-turning point, the turning point itself, the moderately oscillatory band, and the
-deeply oscillatory tail at $x_\nu = 20$ and $60$. A dense grid of markers would
-say less than these eleven do.
+with $\chi_\mathrm{ref}$ the midpoint of the window's support, so that markers fall in
+each regime the solver distinguishes: the power-law branch below the turning point, the
+turning point itself, the moderately oscillatory band, and the deeply oscillatory tail
+at $x_\nu = 20$ and $60$.
 
 ```{python}
 # | code-fold: true
@@ -515,17 +506,15 @@ def panel(ax_curve, ax_dev, shape, ell, deriv, table, color):
     )
 ```
 
-Each window is normalised to unit integral over its own truncated support, and
+Each window is normalized to unit integral over its own truncated support, and
 that truncation is part of the shape's definition rather than a numerical cutoff:
-the window is exactly zero beyond it, which is what lets two codes be asked for
-the same integral.
+the window is exactly zero beyond it, so two codes compute the same integral.
 
 The lower panel of every comparison below reports the deviation as a fraction of
 the multipole's own peak, not as a relative error. The shared helper the other
 benchmark pages use, `nc_cmp.CompareFunc1d`, reports $\Delta P/P$, and that
 measure cannot be used here: the probed grid reaches $|I_\ell| = 10^{-22}$ below
-the turning point, where a relative error is arbitrarily large and says nothing
-about the solve.
+the turning point, where a relative error is arbitrarily large.
 
 ```{python}
 # | label: fig-certified-projection
@@ -555,32 +544,28 @@ plt.show()
 plt.close()
 ```
 
-The deviations sit near $10^{-11}$ of the peak and are bounded by the
-conditioning of the integrand rather than by the requested tolerance: the panel
-integrals that the Levin solve assembles cancel heavily, so the attainable
-relative accuracy is the cancellation ratio times the machine epsilon. The
-integrator's nominal $10^{-13}$ is not the right anchor and is not reached.
+The deviations are near $10^{-11}$ of the peak, set by the conditioning of the
+integrand and not by the requested tolerance: the panel integrals that the Levin solve
+sums cancel, so the attainable relative accuracy is the cancellation ratio times the
+machine epsilon. The integrator's tolerance, $10^{-13}$, is not reached.
 
 ## The redshift-space weight
 
 A redshift-space distortion term reaches the solver as a component carrying
-`bessel-deriv = 2`: the same window, integrated against $j_\ell''$. The library
-never differentiates a Bessel function to get there — it integrates by parts, so
-the derivative lands on the window's own Chebyshev fit plus the boundary terms
-that leaves. The reference does the opposite, evaluating $j_\ell^{(d)}$ pointwise
-through the recurrences in the *order*,
-
+`bessel-deriv = 2`: the same window, integrated against $j_\ell''$. The library does
+not differentiate a Bessel function: it integrates by parts, so the derivative acts on
+the window's Chebyshev fit, plus boundary terms. The reference instead evaluates
+$j_\ell^{(d)}$ pointwise through the recurrences in the *order*,
 $$
 j_\ell' = \frac{\ell\, j_{\ell-1} - (\ell+1)\, j_{\ell+1}}{2\ell+1},
 $$
+and integrates $W j_\ell^{(d)}$ directly. The two computations share only the window,
+so their agreement is an independent check.
 
-and integrating $W j_\ell^{(d)}$ directly. The two share the window and nothing
-else, which is what makes their agreement evidence rather than a restatement.
-
-The $j_\ell''$ transform decays far more slowly in $k$ than the plain one -- two
-orders more power at $x_\nu = 20$ -- which is why a redshift-space term costs the
-solver a wider $k$ range, and why the certified $C_\ell$ entries for those pairs
-are integrated further out than their $d = 0$ counterparts.
+The $j_\ell''$ transform decays more slowly in $k$ than the plain one (two orders of
+magnitude larger at $x_\nu = 20$), so a redshift-space term needs a wider $k$ range,
+and the certified $C_\ell$ entries for those pairs are integrated further out than
+their $d = 0$ counterparts.
 
 ```{python}
 # | label: fig-certified-deriv
@@ -615,12 +600,11 @@ plt.show()
 plt.close()
 ```
 
-Taking one derivative costs nothing: $d = 1$ lands on the same floor as $d = 0$.
-Taking two costs about an order of magnitude, and the worst cells are the ones
-where cancellation is structural anyway — the lowest multipoles, with the fewest
-oscillations to average over, and the multi-bump window with its disjoint groups.
-That is the integrand's conditioning one derivative deeper, not a defect in the
-solve.
+With $d = 1$ the deviations are at the same level as with $d = 0$. With $d = 2$ they
+are about an order of magnitude larger, and the largest are where the cancellation is
+largest: at the lowest multipoles, which have the fewest oscillations, and on the
+multi-bump window with its disjoint groups. This is the conditioning of the integrand
+with one more derivative.
 
 ## How each method handles the modes
 
@@ -1415,7 +1399,7 @@ from a proven value.
 
 ## What it costs in time
 
-The number that matters is the one a likelihood evaluation pays: one call to
+The timing below is that of a likelihood evaluation: one call to
 `NcXcorSolver.solve()` with the kernels already registered and prepared, every
 multipole of a range requested at once, and the per-block integrators built by an
 earlier solve. The cell below times exactly that. The first solve is run and
@@ -1425,10 +1409,10 @@ called once on the same multipole array through `pyccl.angular_cl`.
 The timed solve contains the work that cannot be moved out of it: for
 every multipole block, every $k$ node of the closure and every panel of the
 radial integral, the forcing $W(\chi)\sqrt{P(k, z(\chi))}$ is evaluated at the
-panel's Chebyshev nodes, fitted, and the stored factorisation of the panel operator
-is replayed against it. Nothing is factorised anew in a warm solve. The window and
-$P(k)$ evaluations are inside the loop by construction, since the right-hand side
-depends on $k$, and they do not amortise over repetitions.
+panel's Chebyshev nodes, fitted, and the stored factorization of the panel operator
+is replayed against it. Nothing is factorized anew in a warm solve. The window and
+$P(k)$ evaluations are inside the loop, since the right-hand side depends on $k$, and
+they are repeated in every solve.
 
 ```{python}
 # | tbl-cap: "Time per multipole for the three rungs, warm solve, against FKEM on the same multipoles"
@@ -1552,29 +1536,28 @@ minimum of three warm solves, the three rungs give the same picture:
 Blocks of 8 and 16 cost the same; 32 costs a fifth more and 64 several times more.
 A block's truncation order is set by its hardest multipole, the replay of stored
 rotations and the convergence check scale with the number of multipoles in the
-block, and the batched solves have specialised kernels only up to 32 lanes. FKEM is four times
+block, and the batched solves have specialized kernels only up to 32 lanes. FKEM is four times
 cheaper per multipole at these settings. The accuracy that buys is in the table
 above: on the adjacent rung the two methods differ by five orders of magnitude
 against the certificate, and on the other two rungs FKEM's error exceeds the
 spectrum itself.
 
 Where a warm solve spends its time, from a profile of the adjacent rung at
-B = 8: half in replaying stored factorisations and back-substituting, one
-sixth in evaluating the window and $P(k)$ at the panel nodes, one tenth in the
-Chebyshev fits of the forcing, and the rest in glue. Nothing is factorised in a
-warm solve. Two thirds of the panel solves are edge pieces, where a moving bound
-meets a fixed cell, and an edge piece costs about 2.5 times an interior panel;
-that count, not the factorisation, is what sets the cost now.
+B = 8: half in replaying stored factorizations and back-substituting, one sixth in
+evaluating the window and $P(k)$ at the panel nodes, one tenth in the Chebyshev fits of
+the forcing, and the rest in the remaining code. Two thirds of the panel solves are
+partial panels, which contain a bound $ka$ or $kb$, and a partial panel costs about 2.5
+times an interior panel; the number of partial panels sets the cost.
 
 The certificate itself cost 56 core-hours of Arb arithmetic for the $C_\ell$
 table alone, recorded entry by entry in its `seconds` field, against
-milliseconds for either library. That ratio is the reason the tables are
-committed rather than regenerated.
+milliseconds for either library. The tables are therefore committed and not
+regenerated.
 
 ## Where the certificate stops
 
 The tables cover the closed-form windows, the three Bessel-derivative orders, and
 the multipoles and $k$ values printed above. They do not cover a physical
-kernel's window, a Limber tier of any kind, or the outer $k$ quadrature — the
+kernel's window, a Limber tier of any kind, or the outer $k$ quadrature; the
 last of these has its own certified table, `xcor_kquad.json.gz`, holding $C_\ell$
 for pairs of these same windows.
