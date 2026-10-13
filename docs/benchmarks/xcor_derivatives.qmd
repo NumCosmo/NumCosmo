@@ -51,6 +51,7 @@ import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 import pyccl
+from IPython.display import Markdown, display
 
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.ccl.nc_ccl import create_nc_obj
@@ -127,11 +128,15 @@ def cl_ultralevin(omega_c):
     return np.array(vp.dup_array())
 
 
-def cl_ccl(omega_c):
-    """CCL's FKEM non-Limber method at its defaults, at one Omega_c."""
+def cl_ccl(omega_c, table=None):
+    """CCL's FKEM non-Limber method at its defaults, at one Omega_c.
+
+    table is the (z, n(z)) table given to CCL, the N_TABLE-point one when None.
+    """
     c = ccl_cosmology(omega_c)
+    z, nz = (z_tab, nz_tab) if table is None else table
     tracer = pyccl.NumberCountsTracer(
-        c, has_rsd=False, dndz=(z_tab, nz_tab), bias=(z_tab, np.ones_like(z_tab))
+        c, has_rsd=False, dndz=(z, nz), bias=(z, np.ones_like(z))
     )
     return np.asarray(
         pyccl.angular_cl(c, tracer, tracer, ELLS, l_limber=1000,
@@ -206,12 +211,55 @@ therefore **changes with $\Omega_c$**.
 
 Two conditions apply to this result. First, it depends on the number of points of the
 $n(z)$ table given to CCL, since FKEM's sampling in $\chi$ has by default twice as many
-points as the table; the deviations at 1200 points are recorded in the development
-notes (`NumCosmoDevNotes/xcor_certified_page_measurements.md`). Second, the page does not compare speed;
-CCL evaluates this spectrum faster than UltraLevin. It measures the error in
-$\mathrm{d}C_\ell/\mathrm{d}\theta$ of a method with a fixed sampling resolution,
-against a method that meets a tolerance at every evaluation.
+points as the table; the cell below repeats the comparison with a 1200-point table.
+Second, the page does not compare speed; CCL evaluates this spectrum faster than
+UltraLevin. It measures the error in $\mathrm{d}C_\ell/\mathrm{d}\theta$ of a method
+with a fixed sampling resolution, against a method that meets a tolerance at every
+evaluation.
 
-The central variant of NcmDiff is used because its forward variant, `rf_d1_1_to_M`,
-deviates at one multipole where the spectrum itself is smooth; the measurement is in
-the same development notes.
+The derivatives above use the central variant of NcmDiff, `rc_d1_1_to_M`. The cell
+below also takes the UltraLevin derivative with the forward variant, `rf_d1_1_to_M`.
+
+```{python}
+# | code-fold: true
+def sci(x):
+    """x as a power of ten for the prose."""
+    mantissa, exponent = f"{x:.1e}".split("e")
+
+    return rf"${mantissa.rstrip('0').rstrip('.')} \times 10^{{{int(exponent)}}}$"
+
+
+z_1200 = np.linspace(0.0, 3.0, 1200)
+nz_1200 = np.array([dndz.eval(z) if z_lo <= z <= z_hi else 0.0 for z in z_1200])
+c_ccl_1200 = cl_ccl(OMEGA_C0, (z_1200, nz_1200))
+d_ccl_1200, _ = ncm_diff(lambda omega_c: cl_ccl(omega_c, (z_1200, nz_1200)))
+
+
+def ncm_diff_forward(f):
+    """dC_ell/dOmega_c and its reported error, forward Richardson extrapolation."""
+
+    def fill(x, y, *_):
+        for i, v in enumerate(f(x)):
+            y.set(i, v)
+
+    d, err = diff.rf_d1_1_to_M(OMEGA_C0, LMAX - LMIN + 1, fill, None)
+    return np.array(d), np.array(err)
+
+
+d_fwd, e_fwd = ncm_diff_forward(cl_ultralevin)
+dev_fwd = np.abs(d_fwd / d_ul - 1.0)
+worst = int(np.argmax(dev_fwd))
+
+display(Markdown(rf"""
+With the 1200-point table the spectra differ by
+{sci(np.median(np.abs(c_ccl_1200 / c_ul - 1.0)))} and the derivatives by
+{sci(np.median(np.abs(d_ccl_1200 / d_ul - 1.0)))} (median over $\ell$), against
+{sci(np.median(np.abs(c_ccl / c_ul - 1.0)))} and
+{sci(np.median(np.abs(d_ccl / d_ul - 1.0)))} with {N_TABLE} points.
+
+The forward variant agrees with the central one to {sci(np.median(dev_fwd))} (median over
+$\ell$); its largest deviation, {sci(dev_fwd[worst])} at $\ell = {ELLS[worst]}$, comes
+with a reported error of {sci(e_fwd[worst] / abs(d_fwd[worst]))}, while the central
+variant reports {sci(e_ul[worst] / abs(d_ul[worst]))} at that multipole.
+"""))
+```

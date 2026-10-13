@@ -1507,9 +1507,6 @@ of multipoles in the block, and the batched solves have specialized kernels only
 32 lanes. FKEM is 2.5 to 3 times cheaper per multipole at these settings. The accuracy
 of the two methods at the same settings is in the table of the previous section.
 
-Where a warm solve spends its time is recorded in the development notes
-(`NumCosmoDevNotes/xcor_certified_page_measurements.md`).
-
 The certificate itself cost 56 core-hours of Arb arithmetic for the $C_\ell$
 table alone, recorded entry by entry in its `seconds` field, against
 milliseconds for either library. The tables are therefore committed and not
