@@ -38,6 +38,7 @@ import json
 
 import numpy as np
 import matplotlib.pyplot as plt
+from IPython.display import Markdown, display
 
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.cosmology import Cosmology
@@ -50,6 +51,14 @@ RH = cosmo.RH_Mpc()
 
 LMIN, LMAX = 2, 9
 NELL = LMAX - LMIN + 1
+
+
+def sci(x, digits=1):
+    """x as a power of ten for the prose, e.g. $4 \\times 10^{-6}$."""
+    mantissa, exponent = f"{x:.{digits}e}".split("e")
+    mantissa = mantissa.rstrip("0").rstrip(".")
+
+    return f"${mantissa} \\times 10^{{{int(exponent)}}}$"
 
 # The settings compared on this page: (reltol, peak-epsilon).
 SETTINGS = {
@@ -127,15 +136,23 @@ cost_settings = {
     "peak-epsilon 10 times smaller": (1.0e-6, 1.0e-6),
 }
 
+cost = {}
 print(f"{'setting':<30} {'reltol':>8} {'peak-epsilon':>13} {'panels':>7} {'nodes':>6}")
 for name, (reltol, peak_epsilon) in cost_settings.items():
-    n_panels, nodes = closure_cost(make_kernel(0.1, 0.2, reltol, peak_epsilon))
-    print(f"{name:<30} {reltol:>8.0e} {peak_epsilon:>13.0e} {n_panels:>7} {nodes:>6}")
+    cost[name] = closure_cost(make_kernel(0.1, 0.2, reltol, peak_epsilon))
+    print(f"{name:<30} {reltol:>8.0e} {peak_epsilon:>13.0e} {cost[name][0]:>7} {cost[name][1]:>6}")
 ```
 
-At peak-epsilon $10^{-5}$, reltol $10^{-6}$ and $10^{-8}$ give the same 77 panels and
-1645 nodes. A peak-epsilon 10 times smaller increases the nodes from 1645 to 2541. On this
-kernel the cost of a closure is set by peak-epsilon.
+```{python}
+#| echo: false
+display(Markdown(rf"""
+At peak-epsilon $10^{{-5}}$, reltol $10^{{-6}}$ and $10^{{-8}}$ give the same
+{cost['NcXcorSSCSij default'][0]} panels and {cost['NcXcorSSCSij default'][1]} nodes. A
+peak-epsilon 10 times smaller increases the nodes from {cost['NcXcorSSCSij default'][1]}
+to {cost['peak-epsilon 10 times smaller'][1]}. On this kernel the cost of a closure is set
+by peak-epsilon.
+"""))
+```
 
 ::: {.callout-important}
 ## Two limits on the tolerances
@@ -158,9 +175,9 @@ $10^{-8}$ by default.
 The range of $k$ of a closure is found by sampling. Starting from seeds near the peaks of
 $W_\ell(k)$, each end of the range is extended step by step until
 `NcXcorKernel:adaptive-boundary-tries` consecutive values of $k$ satisfy
-$\Vert W(k) \Vert_2 < \epsilon\, W_{\rm ref}$, where $\Vert W(k) \Vert_2$ is the norm over
+$\Vert W(k) \Vert_2 < \epsilon_{\rm dom}\, W_{\rm ref}$, where $\Vert W(k) \Vert_2$ is the norm over
 the multipoles of the block, $W_{\rm ref}$ its largest value over the $k$ already evaluated,
-and $\epsilon$ is `NcXcorKernel:adaptive-epsilon`, $10^{-5}$ by default. The closure is
+and $\epsilon_{\rm dom}$ is `NcXcorKernel:adaptive-epsilon`, $10^{-5}$ by default. The closure is
 zero beyond the range. What the range leaves out is part of neither $C_\ell$ nor its
 error estimate; [Certified values](#sec-certified) measures its size.
 
@@ -215,18 +232,25 @@ pairs = {
     "cross, separated bins": (separated, separated_err, auto_far),
 }
 
+rel_err = {label: np.abs(err / cl).max() for label, (cl, err, _) in pairs.items()}
 print(f"{'pair':<24} {'max |C_l|':>11} {'max sigma_l':>12} {'max sigma_l/|C_l|':>18}")
 for label, (cl, err, _) in pairs.items():
     print(
         f"{label:<24} {np.abs(cl).max():>11.3e} {np.abs(err).max():>12.3e} "
-        f"{np.abs(err / cl).max():>18.1e}"
+        f"{rel_err[label]:>18.1e}"
     )
 ```
 
-The estimate is $4 \times 10^{-6}$ of the auto spectrum, between the two tolerances the
-closures were built with, $10^{-6}$ and $10^{-5}$. The relative estimate of the adjacent cross spectrum is
-$1.5 \times 10^{-2}$, and that of the separated cross spectrum is above one. The three
+```{python}
+#| echo: false
+display(Markdown(rf"""
+The estimate is {sci(rel_err['auto, 0.1 < z < 0.2'])} of the auto spectrum, between the
+two tolerances the closures were built with, $10^{{-6}}$ and $10^{{-5}}$. The relative
+estimate of the adjacent cross spectrum is {sci(rel_err['cross, adjacent bins'])}, and
+that of the separated cross spectrum is {sci(rel_err['cross, separated bins'])}. The three
 estimates are of the same order in absolute value; what differs is the size of $C_\ell$.
+"""))
+```
 
 Two properties of $\sigma_\ell$ follow from its construction. It integrates absolute
 values, so the cancellation of errors in the integral does not reduce it. The outer
@@ -274,20 +298,25 @@ $2\epsilon \sqrt{C_\ell^{XX} C_\ell^{YY}}$ to first order in $\epsilon$, whateve
 cancellation in $C_\ell^{XY}$ itself.
 
 ```{python}
+diag_cl, diag_err = {}, {}
 print(f"{'pair':<24} {'max |C_l|/diag':>15} {'max sigma_l/diag':>17}")
 for label, (cl, err, auto_y) in pairs.items():
     diagonal = np.sqrt(np.abs(auto * auto_y))
-    print(
-        f"{label:<24} {np.abs(cl / diagonal).max():>15.2e} "
-        f"{np.abs(err / diagonal).max():>17.2e}"
-    )
+    diag_cl[label] = np.abs(cl / diagonal).max()
+    diag_err[label] = np.abs(err / diagonal).max()
+    print(f"{label:<24} {diag_cl[label]:>15.2e} {diag_err[label]:>17.2e}")
 ```
 
+```{python}
+#| echo: false
+display(Markdown(rf"""
 Measured against the diagonal, the estimates of the three pairs lie between
-$4 \times 10^{-6}$ and $1.6 \times 10^{-5}$. The separated cross spectrum is
-$1.1 \times 10^{-3}$ of the diagonal, so its estimate relative to $\vert C_\ell \vert$
-is larger than relative to the diagonal by about $10^3$. The closures of the three pairs
-are built at the same tolerances.
+{sci(min(diag_err.values()))} and {sci(max(diag_err.values()))}. The separated cross
+spectrum is {sci(diag_cl['cross, separated bins'])} of the diagonal, so its estimate
+relative to $\vert C_\ell \vert$ is larger than relative to the diagonal by that factor.
+The closures of the three pairs are built at the same tolerances.
+"""))
+```
 
 ## Two references {#sec-references}
 
@@ -312,22 +341,34 @@ def pair_spectra(reltol, peak_epsilon):
 ref_auto, ref_separated, ref_far = pair_spectra(*SETTINGS["validation"])
 ref_diagonal = np.sqrt(np.abs(ref_auto * ref_far))
 
+dev = {}
 print(f"{'setting':<22} {'auto':>10} {'separated':>10}")
 for name in ("NcXcorKernel default", "NcXcorSSCSij default"):
     cl_auto, cl_separated, _ = pair_spectra(*SETTINGS[name])
-    dev_auto = np.abs(cl_auto - ref_auto).max() / np.abs(ref_auto).max()
-    dev_separated = np.abs(cl_separated - ref_separated).max() / ref_diagonal.max()
-    print(f"{name:<22} {dev_auto:>10.1e} {dev_separated:>10.1e}")
+    dev[name] = (
+        np.abs(cl_auto - ref_auto).max() / np.abs(ref_auto).max(),
+        np.abs(cl_separated - ref_separated).max() / ref_diagonal.max(),
+    )
+    print(f"{name:<22} {dev[name][0]:>10.1e} {dev[name][1]:>10.1e}")
 ```
 
-At the defaults of [[numcosmo|NcXcorKernel]] both deviations are $2 \times 10^{-6}$ of
-the diagonal. At the defaults of [[numcosmo|NcXcorSSCSij]] the auto spectrum agrees with
-the reference to $6 \times 10^{-13}$ and the separated cross spectrum to
-$1 \times 10^{-7}$ of the diagonal. At this setting the estimates of
-[The error estimate](#sec-error) exceed these deviations by a factor of $160$ for the
-separated cross spectrum and $7 \times 10^6$ for the auto spectrum. A tighter closure as
-reference does not show an error the two settings share; the certified values below
-do.
+```{python}
+#| echo: false
+display(Markdown(rf"""
+At the defaults of `NcXcorKernel` the deviations are {sci(dev['NcXcorKernel default'][0])}
+of the auto spectrum and {sci(dev['NcXcorKernel default'][1])} of the diagonal. At the
+defaults of `NcXcorSSCSij` the auto spectrum agrees with the reference to
+{sci(dev['NcXcorSSCSij default'][0])} and the separated cross spectrum to
+{sci(dev['NcXcorSSCSij default'][1])} of the diagonal. At this setting the estimates of
+the previous section exceed these deviations by a factor of
+{diag_err['cross, separated bins'] / dev['NcXcorSSCSij default'][1]:.0f} for the separated
+cross spectrum and {sci(rel_err['auto, 0.1 < z < 0.2'] / dev['NcXcorSSCSij default'][0])}
+for the auto spectrum.
+"""))
+```
+
+A tighter closure as reference does not show an error the two settings share; the
+certified values below do.
 
 ### Certified values {#sec-certified}
 
@@ -425,6 +466,7 @@ The closure's range of $k$ for A2 at $\ell = 5$, against the certified interval:
 
 ```{python}
 entry = certified["A2_l5"]
+closure_range = {}
 for label, adaptive_epsilon in (("default", None), ("1e-9", 1.0e-9)):
     ps_bbks = Ncm.PowspecAnalytic.new(
         Ncm.PowspecAnalyticShape.BBKS, Ncm.PowspecAnalyticGrowth.LCDM
@@ -445,6 +487,7 @@ for label, adaptive_epsilon in (("default", None), ("1e-9", 1.0e-9)):
     )
     k_min, k_max = closure.get_range()
     rh = cosmo_bbks.RH_Mpc()
+    closure_range[label] = (k_min / rh, k_max / rh)
     print(
         f"adaptive-epsilon {label:>7}: closure [{k_min / rh:.3g}, {k_max / rh:.3g}] 1/Mpc, "
         f"certified [{entry['k_lo']:.3g}, {entry['k_hi']:.3g}] 1/Mpc"
@@ -453,17 +496,33 @@ for label, adaptive_epsilon in (("default", None), ("1e-9", 1.0e-9)):
 
 The first table gives the worst deviation over each case's multipoles, over the
 diagonal, and the multipole where it occurs. At every setting both cases deviate by less
-than peak-epsilon. At the same setting the separated pair X14, with its hard edges,
-deviates by at most 4.3 times the deviation of the auto spectrum A2.
+than peak-epsilon.
 
-A2 deviates by $8.5 \times 10^{-7}$ at both the [[numcosmo|NcXcorSSCSij]] setting
-($\ell = 2$) and the validation setting ($\ell = 5$), so this part of its deviation does not decrease with peak-epsilon.
-It is the range of $k$: at $\ell = 5$ the closure ends at $0.73\ \mathrm{Mpc^{-1}}$ with
-the default adaptive-epsilon, while the certified interval extends to
-$1.37\ \mathrm{Mpc^{-1}}$. With adaptive-epsilon $10^{-9}$ the closure covers the
-interval, and the worst deviation of A2 falls to $4.2 \times 10^{-8}$, the last row of
-the table. In the same row X14 deviates by $1.8 \times 10^{-7}$, more than with the
+```{python}
+#| echo: false
+_ratio = max(
+    certified_deviation['X14', n][0] / certified_deviation['A2', n][0]
+    for n in CERTIFIED_SETTINGS
+)
+_a2_ssc = certified_deviation['A2', 'NcXcorSSCSij default']
+_a2_val = certified_deviation['A2', 'validation']
+_a2_dom = certified_deviation['A2', 'validation, adaptive-epsilon 1e-9']
+_x14_dom = certified_deviation['X14', 'validation, adaptive-epsilon 1e-9']
+display(Markdown(rf"""
+At the same setting the separated pair X14, with its hard edges, deviates by at most
+{_ratio:.1f} times the deviation of the auto spectrum A2.
+
+A2 deviates by {sci(_a2_ssc[0])} at the `NcXcorSSCSij` setting ($\ell = {_a2_ssc[1]}$)
+and by {sci(_a2_val[0])} at the validation setting ($\ell = {_a2_val[1]}$), so this part
+of its deviation does not decrease with peak-epsilon. It is the range of $k$: at
+$\ell = 5$ the closure ends at {closure_range['default'][1]:.2f} $\mathrm{{Mpc^{{-1}}}}$
+with the default adaptive-epsilon, while the certified interval extends to
+{entry['k_hi']:.2f} $\mathrm{{Mpc^{{-1}}}}$. With adaptive-epsilon $10^{{-9}}$ the closure
+covers the interval, and the worst deviation of A2 falls to {sci(_a2_dom[0])}, the last
+row of the table. In the same row X14 deviates by {sci(_x14_dom[0])}, more than with the
 default adaptive-epsilon and less than peak-epsilon.
+"""))
+```
 
 ## Kernel shape and cost {#sec-shape}
 
@@ -491,6 +550,7 @@ shapes = {
     ),
 }
 
+shape_cost = {}
 print(f"{'window':<18} {'panels':>7} {'nodes':>6} {'k range [1/Mpc]':>22}")
 for name, kernel in shapes.items():
     if name != "top-hat":
@@ -502,12 +562,20 @@ for name, kernel in shapes.items():
     )
     k_min, k_max = closure.get_range()
     n_panels, nodes = closure_cost(kernel)
+    shape_cost[name] = nodes
     print(f"{name:<18} {n_panels:>7} {nodes:>6} {f'{k_min / RH:.2e} to {k_max / RH:.2e}':>22}")
 ```
 
-The top-hat costs 974 nodes, 3.4 times the smoothed top-hat on a similar range of $k$
-and 4.4 times the Gaussian, whose range ends an order of magnitude lower. The costs
-measured above on a top-hat are therefore larger than those of a smooth window.
+```{python}
+#| echo: false
+display(Markdown(rf"""
+The top-hat costs {shape_cost['top-hat']} nodes,
+{shape_cost['top-hat'] / shape_cost['smoothed top-hat']:.1f} times the smoothed top-hat on
+a similar range of $k$ and {shape_cost['top-hat'] / shape_cost['Gaussian']:.1f} times the
+Gaussian, whose range ends an order of magnitude lower. The costs measured above on a
+top-hat are therefore larger than those of a smooth window.
+"""))
+```
 
 ## Summary {#sec-summary}
 
@@ -520,15 +588,14 @@ measured above on a top-hat are therefore larger than those of a smooth window.
   construction aborts when the larger of the two is below the integrator's
   `cheb-reltol`.
 - `NcXcorKernel:adaptive-epsilon` ends the range of $k$. What lies beyond it is part of
-  neither $C_\ell$ nor its error estimate. For A2 the default $10^{-5}$ leaves out
-  $8.5 \times 10^{-7}$ of the diagonal at $\ell = 5$; with $10^{-9}$ the worst deviation
-  of A2 is $4.2 \times 10^{-8}$.
+  neither $C_\ell$ nor its error estimate; what the default leaves out of A2 is measured
+  in [Certified values](#sec-certified).
 - With `NC_XCOR_METHOD_KERNEL_EXACT` the quadrature contributes no error.
   [[numcosmo|nc_xcor_compute_full]] reports the closures' fit error propagated through
-  the pair. It integrates absolute values, and on this page it exceeds the deviation from
-  a tighter closure by factors from 160 to $7 \times 10^6$.
-- An error on a cross spectrum is measured against $\sqrt{C_\ell^{XX} C_\ell^{YY}}$.
-  Against that scale the estimates of the three pairs of this page lie between
-  $4 \times 10^{-6}$ and $1.6 \times 10^{-5}$.
+  the pair. It integrates absolute values, and it exceeds the deviation from a tighter
+  closure by the factors of [A tighter closure](#sec-self-reference).
+- An error on a cross spectrum is measured against $\sqrt{C_\ell^{XX} C_\ell^{YY}}$;
+  the estimates of the three pairs of this page against that scale are in
+  [The scale of a cross spectrum](#sec-diagonal).
 - Against certified values, every setting on this page deviates by less than its
   peak-epsilon times the diagonal.
