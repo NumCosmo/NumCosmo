@@ -123,6 +123,25 @@ _undeclared_step (gpointer user_data, guint i, gdouble x, NcmVector *fval)
   ncm_vector_set (fval, 0, (x < 0.3) ? 0.0 : 1.0);
 }
 
+/* Kinks not given as breakpoints, at a point no bisection lands on: exp(x) plus
+ * |x - a| (C^0), or plus (x - a)|x - a| (C^1) and |x - a|^3 (C^2) */
+#define TEST_KINK_A 0.3137
+
+static void
+_undeclared_kink_c0 (gpointer user_data, guint i, gdouble x, NcmVector *fval)
+{
+  ncm_vector_set (fval, 0, exp (x) + fabs (x - TEST_KINK_A));
+}
+
+static void
+_undeclared_kinks_c1_c2 (gpointer user_data, guint i, gdouble x, NcmVector *fval)
+{
+  const gdouble d = x - TEST_KINK_A;
+
+  ncm_vector_set (fval, 0, exp (x) + d * fabs (d));
+  ncm_vector_set (fval, 1, exp (x) + fabs (d) * d * d);
+}
+
 static gint
 _cmp_gdouble (gconstpointer pa, gconstpointer pb)
 {
@@ -516,6 +535,106 @@ test_ncm_spectral_panels_builder_undeclared_step_subprocess (void)
   ncm_spectral_panels_builder_build (builder, _undeclared_step, NULL, 0.1, 1.0, NULL, NULL, NULL, 1.0e-10, 0.0, sp);
 }
 
+/* The panel holding TEST_KINK_A is the narrowest of @sp */
+static void
+_assert_narrowest_at_kink (NcmSpectralPanels *sp)
+{
+  const guint n_panels = ncm_spectral_panels_get_n_panels (sp);
+  gdouble w_min        = G_MAXDOUBLE;
+  gdouble w_kink       = 0.0;
+  guint i;
+
+  for (i = 0; i < n_panels; i++)
+  {
+    gdouble a, b;
+    guint N;
+
+    ncm_spectral_panels_peek_panel (sp, i, &a, &b, &N);
+    w_min = MIN (w_min, b - a);
+
+    if ((a <= TEST_KINK_A) && (TEST_KINK_A <= b))
+      w_kink = b - a;
+  }
+
+  g_assert_cmpfloat (w_kink, ==, w_min);
+}
+
+/*
+ * A kink the builder is not told about is resolved by bisecting at it: near a kink of order
+ * m the error of a panel of width h scales as h^(m + 1), so the width it needs goes as
+ * reltol^(1 / (m + 1)). Measured on [0, 1]: C^1 and C^2 at reltol 1e-12 in 16 and 10 panels,
+ * to 0.03 and 0.02 reltol; C^0 at 1e-8 in 22 panels, to 0.18 reltol, the panel at the kink
+ * 4.8e-7 wide. The panel at the kink is the narrowest in every case.
+ */
+static void
+test_ncm_spectral_panels_builder_undeclared_kinks (void)
+{
+  NcmSpectralPanelsBuilder *builder = _builder_new (0.0);
+  NcmSpectralPanels *sp_c1_c2       = ncm_spectral_panels_new (2);
+  NcmSpectralPanels *sp_c0          = ncm_spectral_panels_new (1);
+
+  ncm_spectral_panels_builder_build (builder, _undeclared_kinks_c1_c2, NULL, 0.0, 1.0, NULL, NULL, NULL, 1.0e-12, 0.0, sp_c1_c2);
+  _assert_contiguous (sp_c1_c2, 0.0, 1.0);
+  g_assert_cmpfloat (_sup_rel_error (sp_c1_c2, _undeclared_kinks_c1_c2, 0, 0.0, 1.0, 20000), <=, 1.0e-12);
+  g_assert_cmpfloat (_sup_rel_error (sp_c1_c2, _undeclared_kinks_c1_c2, 1, 0.0, 1.0, 20000), <=, 1.0e-12);
+  g_assert_cmpuint (ncm_spectral_panels_get_n_panels (sp_c1_c2), <=, 32);
+  _assert_narrowest_at_kink (sp_c1_c2);
+
+  ncm_spectral_panels_builder_build (builder, _undeclared_kink_c0, NULL, 0.0, 1.0, NULL, NULL, NULL, 1.0e-8, 0.0, sp_c0);
+  _assert_contiguous (sp_c0, 0.0, 1.0);
+  g_assert_cmpfloat (_sup_rel_error (sp_c0, _undeclared_kink_c0, 0, 0.0, 1.0, 20000), <=, 1.0e-8);
+  g_assert_cmpuint (ncm_spectral_panels_get_n_panels (sp_c0), <=, 32);
+  _assert_narrowest_at_kink (sp_c0);
+
+  ncm_spectral_panels_free (sp_c1_c2);
+  ncm_spectral_panels_free (sp_c0);
+  ncm_spectral_panels_builder_free (builder);
+}
+
+/* A level-cap above the spectral object's own maximum level raises it: the Runge and tanh
+ * pair at level-cap 7 is resolved as accurately as at the default 5, in no more panels */
+static void
+test_ncm_spectral_panels_builder_level_cap_raised (void)
+{
+  NcmSpectralPanelsBuilder *builder = _builder_new (0.0);
+  NcmSpectralPanels *sp5            = ncm_spectral_panels_new (2);
+  NcmSpectralPanels *sp7            = ncm_spectral_panels_new (2);
+  const gdouble reltol              = 1.0e-12;
+
+  ncm_spectral_panels_builder_build (builder, _hard, NULL, -1.0, 1.0, NULL, NULL, NULL, reltol, 0.0, sp5);
+
+  ncm_spectral_panels_builder_set_level_cap (builder, 7);
+  ncm_spectral_panels_builder_build (builder, _hard, NULL, -1.0, 1.0, NULL, NULL, NULL, reltol, 0.0, sp7);
+
+  _assert_contiguous (sp7, -1.0, 1.0);
+  g_assert_cmpfloat (_sup_rel_error (sp7, _hard, 0, -1.0, 1.0, 4000), <=, reltol);
+  g_assert_cmpfloat (_sup_rel_error (sp7, _hard, 1, -1.0, 1.0, 4000), <=, reltol);
+  g_assert_cmpuint (ncm_spectral_panels_get_n_panels (sp7), <=, ncm_spectral_panels_get_n_panels (sp5));
+
+  ncm_spectral_panels_free (sp5);
+  ncm_spectral_panels_free (sp7);
+  ncm_spectral_panels_builder_free (builder);
+}
+
+/* A C^0 kink at reltol 1e-10 needs a panel about 1e-9 wide, below min-panel-fraction: the
+ * builder refuses with the tolerances rather than bisecting on */
+static void
+test_ncm_spectral_panels_builder_undeclared_kink_floor (void)
+{
+  g_test_trap_subprocess ("/ncm/spectral_panels_builder/undeclared_kink_floor/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*without converging*");
+}
+
+static void
+test_ncm_spectral_panels_builder_undeclared_kink_floor_subprocess (void)
+{
+  NcmSpectralPanelsBuilder *builder = _builder_new (0.0);
+  NcmSpectralPanels *sp             = ncm_spectral_panels_new (1);
+
+  ncm_spectral_panels_builder_build (builder, _undeclared_kink_c0, NULL, 0.0, 1.0, NULL, NULL, NULL, 1.0e-10, 0.0, sp);
+}
+
 static void
 test_ncm_spectral_panels_builder_levels (void)
 {
@@ -607,6 +726,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral_panels_builder/threads", &test_ncm_spectral_panels_builder_threads);
   g_test_add_func ("/ncm/spectral_panels_builder/undeclared_step", &test_ncm_spectral_panels_builder_undeclared_step);
   g_test_add_func ("/ncm/spectral_panels_builder/undeclared_step/subprocess", &test_ncm_spectral_panels_builder_undeclared_step_subprocess);
+  g_test_add_func ("/ncm/spectral_panels_builder/undeclared_kinks", &test_ncm_spectral_panels_builder_undeclared_kinks);
+  g_test_add_func ("/ncm/spectral_panels_builder/level_cap_raised", &test_ncm_spectral_panels_builder_level_cap_raised);
+  g_test_add_func ("/ncm/spectral_panels_builder/undeclared_kink_floor", &test_ncm_spectral_panels_builder_undeclared_kink_floor);
+  g_test_add_func ("/ncm/spectral_panels_builder/undeclared_kink_floor/subprocess", &test_ncm_spectral_panels_builder_undeclared_kink_floor_subprocess);
   g_test_add_func ("/ncm/spectral_panels_builder/levels", &test_ncm_spectral_panels_builder_levels);
   g_test_add_func ("/ncm/spectral_panels_builder/levels/subprocess", &test_ncm_spectral_panels_builder_levels_subprocess);
   g_test_add_func ("/ncm/spectral_panels_builder/grid_range", &test_ncm_spectral_panels_builder_grid_range);

@@ -235,8 +235,12 @@ static void
 test_ncm_spectral_panels_product_p (void)
 {
   NcmSpectralPanelsProduct *prod = ncm_spectral_panels_product_new (3);
+  guint p;
 
   g_assert_cmpuint (ncm_spectral_panels_product_get_p (prod), ==, 3);
+
+  g_object_get (prod, "p", &p, NULL);
+  g_assert_cmpuint (p, ==, 3);
 
   ncm_spectral_panels_product_free (prod);
 }
