@@ -90,66 +90,60 @@ final level $r$.
 Because the grids are nested, the level-$(r-1)$ interpolant is the level-$r$ one folded:
 $T_{2^r - k}$ and $T_k$ agree on the coarse nodes, so
 $c^k_{(r-1)} = c^k_{(r)} + c^{2^r - k}_{(r)}$ for $k < 2^{r-1}$. The left-hand side of Eq. (2)
-is therefore exactly twice the $\ell_1$ mass of the level-$r$ coefficients above
+is therefore exactly twice the $\ell_1$ norm of the level-$r$ coefficients above
 $2^{r-1}$,
 $$
 2 \sum_{2^{r-1} < k \le 2^r} \left|c^k_{(r)}\right|.
 \tag{3}
 $$
-
-$\varepsilon_\mathrm{abs}$ is measured in the units of $f$ and is zero unless asked for,
-which leaves the relative test alone. It is for a caller that knows $f$ to be negligible
-on $[a,b]$ against some larger quantity $f$ contributes to: refining a term that cannot
-affect the result to full relative accuracy is pure cost, and for a sharply varying $f$
-it can exhaust `max-level`.
+$\varepsilon_\mathrm{abs}$ is in the units of $f$ and is zero by default, and then only
+the relative term applies. A caller sets it when $f$ on $[a,b]$ is negligible against a
+larger quantity to which $f$ contributes. Without it, the refinement reaches full
+relative accuracy on a term that does not change the result, and for a sharply varying
+$f$ it can reach `max-level`.
 
 ### When the tolerance is not met
 
-The maximum level (`max-level`) is not a second stopping condition. It bounds the size
-of the sample and transform buffers; Eq. (2) is what must end the refinement. Falling
-out of the loop at `max-level` therefore means the coefficients on hand are
-unconverged, and the three entry points differ only in what they do about that.
+The maximum level (`max-level`) bounds the size of the sample and transform buffers;
+only Eq. (2) ends the refinement. Reaching `max-level` therefore means the coefficients
+do not satisfy Eq. (2), and the three entry points differ only in what they do then.
 
 - [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive]] takes
-  $\varepsilon_\mathrm{rel}$ alone and treats reaching `max-level` as fatal. That is
-  the right default for a caller expanding on one interval it cannot change: it has no
-  recourse, so returning an unconverged series would only move the failure downstream,
-  where its origin is no longer visible.
+  $\varepsilon_\mathrm{rel}$ alone and aborts at `max-level`. This is for a caller that
+  expands on one fixed interval and has no alternative: an unconverged series returned to
+  it would cause a failure later, away from its origin.
 - [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive_full]] adds
   $\varepsilon_\mathrm{abs}$ and is otherwise identical, fatal included. Passing zero
   reproduces the previous entry point exactly.
 - [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive_try]] accepts a cap
-  $r_\mathrm{cap}$ (`level_cap`) of its own, at or below `max-level`, and reports through an output
-  flag whether the tolerance was met rather than failing. It is for a caller that has a
-  fallback, and for which not converging is information: not converging on a panel is
-  how such a caller learns to subdivide, or to take a different route entirely. Its use
-  in [UltraLevin](../specfunc/sbessel_projection.qmd) is to decide whether a fixed cell can be
-  fitted directly, the alternative being to refit on a moving interval.
+  $r_\mathrm{cap}$ (`level_cap`) of its own, at or below `max-level`, and returns through
+  an output flag whether Eq. (2) was met, without aborting. It is for a caller that has a
+  fallback: on an interval where Eq. (2) is not met, the caller subdivides it or uses
+  another method. [UltraLevin](../specfunc/sbessel_projection.qmd) uses it to test whether
+  a fixed cell can be fitted directly; otherwise it fits on the exact piece.
 
 ### Batch Expansions
 
 When one evaluation yields several functions at once, expanding them separately repeats
-that evaluation once per component, which is the whole cost whenever the evaluation is
-what costs. [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_batch_adaptive]]
+that evaluation once per component. [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_batch_adaptive]]
 takes an [[numcosmo-math|NcmSpectralFBatch]] instead, visits every node once, and
 performs a single batched DCT-I over the interleaved components.
 
-Convergence is judged per component and the component needing the highest level sets
-it for all of them: the level is shared because the grid is. Sharing the grid
-is also what leaves the resulting coefficients directly combinable, which is the point
-when the components are to be summed or multiplied afterwards.
+Eq. (2) is tested per component, and the level is the highest that any component
+needs, since all components share one grid. On a shared grid the coefficients of the
+components can be combined directly, for example summed.
 [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap]] exposes a
 cap and a fatal flag, for the same reasons as the scalar variants above.
 
 Without the fatal flag, the last doubling the cap allows is skipped when it is predicted
 to fail, since its caller would then split the interval anyway. By Eq. (3) the test of
-that doubling is twice the $\ell_1$ mass of the next level's top band. With $M = 2^r$, let
-$B_{r-1}$ and $B_r$ be the masses of the current coefficients over $(M/4, M/2]$ and
-$(M/2, M]$. Geometric decay $|c^k| \propto \rho^k$, with $q = \rho^{M/4}$, gives
+that doubling is twice the $\ell_1$ norm of the next level's top band. With $M = 2^r$,
+let $B_{r-1}$ and $B_r$ be the $\ell_1$ norms of the current coefficients over
+$(M/4, M/2]$ and $(M/2, M]$. Geometric decay $|c^k| \propto \rho^k$, with $q = \rho^{M/4}$, gives
 $B_r / B_{r-1} = q (1 + q)$ and a next band of $B_r q^2 (1 + q^2)$. Failure is predicted
-when twice that exceeds the right-hand side of Eq. (2) on the current nodes. The model
-has no tuned constant, and a wrong prediction costs a doubling or a split, never
-accuracy, since every interval kept still passes Eq. (2).
+when twice that exceeds the right-hand side of Eq. (2) on the current nodes. The
+prediction has no tuned constant. A wrong prediction adds a doubling or a split and does
+not change the accuracy, since every accepted interval satisfies Eq. (2).
 
 The batch path keeps its own node and transform buffers on the
 [[numcosmo-math|NcmSpectral]] instance and is therefore not reentrant: a fit performed
@@ -219,15 +213,15 @@ affine argument. [[numcosmo-math|ncm_spectral_chebyshev_rebase]] runs the recurr
 costs $O(n^2)$ in the number of coefficients kept.
 
 The target interval need not lie inside the source one. Outside it the result is the
-polynomial's own continuation, which is what makes a rebase usable as a smooth
-extension of a fit, but only for a short series. Once $|s_\mathrm{in}| > 1$ the Chebyshev
+continuation of the polynomial, a smooth extension of the fit that is usable only for a
+short series. Once $|s_\mathrm{in}| > 1$ the Chebyshev
 polynomials grow like $\left(|s_\mathrm{in}| + \sqrt{s_\mathrm{in}^2-1}\right)^k$, so widening the interval by a
 factor $\alpha$ amplifies the coefficient of $T_k$ by about $\left(\alpha +
-\sqrt{\alpha^2-1}\right)^k$: at $\alpha = 2$ that is $3.7^k$, and a coefficient sitting
-at roundoff level in a degree-65 fit returns larger than the function it belongs to.
-The function returns $\sum_j |c_\mathrm{out}^j|$, the sum over the rebased coefficients,
-which bounds $|f|$ over the whole target interval
-and is the cheapest way to tell a continuation apart from amplified roundoff.
+\sqrt{\alpha^2-1}\right)^k$: at $\alpha = 2$ that is $3.7^k$, and a coefficient at
+roundoff level in a degree-65 fit becomes larger than the function. The function returns
+$\sum_j |c_\mathrm{out}^j|$, the sum over the rebased coefficients, which bounds $|f|$
+over the whole target interval; comparing it with $|f|$ on the source interval separates
+a continuation from amplified roundoff without further evaluations.
 
 ## Ultraspherical Bases
 
@@ -262,9 +256,9 @@ evaluated by [[numcosmo-math|ncm_spectral_gegenbauer_alpha1_eval]] and
 [[numcosmo-math|ncm_spectral_gegenbauer_alpha2_eval]] with the same Clenshaw strategy
 as above.
 
-Two derivative maps are tabulated on their own because they reduce to something
-shorter than a general composition. Combining $T_n' = n\,C^{(1)}_{n-1}$ with the ladder
-$C^{(1)}_m = \left(C^{(2)}_m - C^{(2)}_{m-2}\right)/(m+1)$ leaves the two-term rule
+Two derivative maps have functions of their own because they are shorter than a
+general composition. Combining $T_n' = n\,C^{(1)}_{n-1}$ with the relation
+$C^{(1)}_m = \left(C^{(2)}_m - C^{(2)}_{m-2}\right)/(m+1)$ gives the two-term rule
 $g^k = c^{k+1} - c^{k+3}$ for the $C^{(2)}$ coefficients of $f'$, and $T_n'' =
 2n\,C^{(2)}_{n-2}$ makes the second derivative diagonal, $g^k = 2(k+2)\,c^{k+2}$. These
 are [[numcosmo-math|ncm_spectral_chebT_deriv_to_gegenbauer_alpha2]] and
