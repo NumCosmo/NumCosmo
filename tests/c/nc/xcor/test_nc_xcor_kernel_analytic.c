@@ -748,7 +748,7 @@ _window_tophat (gdouble chi)
   return 1.0 / (TEST_CHI_UPPER - TEST_CHI_LOWER);
 }
 
-#define TEST_CL_N_K 512
+#define TEST_CL_N_K 8192
 #define TEST_CL_GL_ORDER 12
 #define TEST_CL_PER_LOBE 2
 
@@ -820,10 +820,13 @@ typedef struct _TestClDefinition
 } TestClDefinition;
 
 /* Held an order above the deviation measured at the library's default tolerances,
- * 8.2e-10 for the Gaussian at ell 8 and 7.9e-5 for the top-hat at ell 2. */
+ * 8.1e-10 for the Gaussian at ell 8 and 3.5e-6 for the top-hat at ell 2. The top-hat's
+ * transform oscillates over the whole k range, and the log-k trapezoid of the
+ * definition needs TEST_CL_N_K = 8192 to resolve it: at 512 and 2048 points the
+ * deviation is 7.9e-5 and 5.0e-6, the reference's own error. */
 static const TestClDefinition test_cl_definitions[] = {
   {"gauss",  &_window_gauss,  8, 1.0e-8},
-  {"tophat", &_window_tophat, 2, 1.0e-3},
+  {"tophat", &_window_tophat, 2, 3.0e-5},
 };
 
 /*
