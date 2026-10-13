@@ -61,7 +61,7 @@ warnings.filterwarnings("ignore")
 
 plt.rcParams.update(
     {
-        "figure.figsize": (11.0, 4.6),
+        "figure.figsize": (7.0, 4.6),
         "figure.dpi": 110,
         "font.size": 13,
         "axes.titlesize": 13,
@@ -170,12 +170,11 @@ d_ccl, e_ccl = ncm_diff(cl_ccl)
 
 ```{python}
 # | label: fig-derivatives
-# | fig-cap: "Left: CCL's FKEM against UltraLevin on the clustering spectrum. Right: the same comparison for the derivative with respect to Omega_c, with the error NcmDiff reports on each derivative."
+# | fig-cap: "Top: CCL's FKEM against UltraLevin on the clustering spectrum. Bottom: the same comparison for the derivative with respect to Omega_c, with the error NcmDiff reports on each derivative."
 # | code-fold: true
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.0, 4.6))
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7.0, 7.4), sharex=True)
 ax1.plot(ELLS, c_ccl / c_ul - 1.0, "o-", ms=4, color="C3")
 ax1.axhline(0.0, color="k", lw=0.8)
-ax1.set_xlabel(r"$\ell$")
 ax1.set_ylabel(r"$C_\ell^{\rm CCL} / C_\ell^{\rm UltraLevin} - 1$")
 ax1.set_title(f"spectra: median |deviation| {np.median(np.abs(c_ccl / c_ul - 1.0)):.1e}")
 ax1.grid(alpha=0.3)
@@ -184,7 +183,11 @@ ax2.semilogy(ELLS, e_ccl / np.abs(d_ccl), "s--", ms=3, color="C3", alpha=0.6, la
 ax2.semilogy(ELLS, e_ul / np.abs(d_ul), "s--", ms=3, color="C0", alpha=0.8, label="error NcmDiff reports on UltraLevin")
 ax2.set_xlabel(r"$\ell$")
 ax2.set_ylabel(r"$\mathrm{d}C_\ell/\mathrm{d}\Omega_c$, relative")
-ax2.set_ylim(2e-7, 5e-1)
+# The y range holds every curve: the error NcmDiff reports on UltraLevin is the lowest.
+rel_curves = np.concatenate(
+    [np.abs(d_ccl / d_ul - 1.0), e_ccl / np.abs(d_ccl), e_ul / np.abs(d_ul)]
+)
+ax2.set_ylim(0.3 * rel_curves[rel_curves > 0.0].min(), 1.0)
 ax2.set_title(f"derivatives: median |deviation| {np.median(np.abs(d_ccl / d_ul - 1.0)):.1e}")
 ax2.legend(loc="center left")
 ax2.grid(alpha=0.3)
