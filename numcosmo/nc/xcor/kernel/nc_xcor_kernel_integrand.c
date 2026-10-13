@@ -70,6 +70,7 @@ _nc_xcor_kernel_integrand_new (guint len)
   integrand->len      = len;
   integrand->sp       = ncm_spectral_panels_new (len);
   integrand->rows     = g_array_sized_new (FALSE, TRUE, sizeof (NcXcorKernelIntegrandRow), len);
+  integrand->scales   = ncm_vector_new (len);
 
   g_array_set_size (integrand->rows, len);
 
@@ -106,6 +107,7 @@ nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand)
   {
     ncm_spectral_panels_clear (&integrand->sp);
     g_array_unref (integrand->rows);
+    ncm_vector_clear (&integrand->scales);
     g_free (integrand);
   }
 }
@@ -188,7 +190,21 @@ nc_xcor_kernel_integrand_get_range_comp (NcXcorKernelIntegrand *integrand, guint
 gdouble
 nc_xcor_kernel_integrand_get_scale (NcXcorKernelIntegrand *integrand, guint i)
 {
-  return g_array_index (integrand->rows, NcXcorKernelIntegrandRow, i).scale;
+  return ncm_vector_get (integrand->scales, i);
+}
+
+/**
+ * nc_xcor_kernel_integrand_peek_scales:
+ * @integrand: a #NcXcorKernelIntegrand
+ *
+ * Peeks the scales of every row, see nc_xcor_kernel_integrand_get_scale().
+ *
+ * Returns: (transfer none): the scales, one per row
+ */
+NcmVector *
+nc_xcor_kernel_integrand_peek_scales (NcXcorKernelIntegrand *integrand)
+{
+  return integrand->scales;
 }
 
 /**
@@ -270,7 +286,7 @@ nc_xcor_kernel_integrand_eval_comps (NcXcorKernelIntegrand *integrand, gdouble k
     }
     else
     {
-      const gdouble x = GSL_MIN (GSL_MAX (k / row->scale, row->x_min), row->x_max);
+      const gdouble x = GSL_MIN (GSL_MAX (k / ncm_vector_fast_get (integrand->scales, i), row->x_min), row->x_max);
       guint p         = ncm_spectral_panels_find_panel (integrand->sp, x);
 
       if ((x == row->x_max) && (p > 0))

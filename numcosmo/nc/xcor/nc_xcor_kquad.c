@@ -71,30 +71,20 @@ _nc_xcor_panels_product (void)
  */
 static void
 _nc_xcor_kernel_integrate_block_panels (NcXcor *xc, NcXcorKernelIntegrand *xclki1,
-                                        NcXcorKernelIntegrand *xclki2, guint nell,
+                                        NcXcorKernelIntegrand *xclki2,
                                         gboolean isauto, NcmVector *vp, NcmVector *vp_err)
 {
   const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
   NcmSpectralPanels *sp1     = nc_xcor_kernel_integrand_peek_panels (xclki1);
   NcmSpectralPanels *sp2     = isauto ? sp1 : nc_xcor_kernel_integrand_peek_panels (xclki2);
-  NcmVector *s1              = ncm_vector_new (nell);
-  NcmVector *s2              = ncm_vector_new (nell);
-  guint il;
-
-  for (il = 0; il < nell; il++)
-  {
-    ncm_vector_set (s1, il, nc_xcor_kernel_integrand_get_scale (xclki1, il));
-    ncm_vector_set (s2, il, nc_xcor_kernel_integrand_get_scale (isauto ? xclki1 : xclki2, il));
-  }
+  NcmVector *s1              = nc_xcor_kernel_integrand_peek_scales (xclki1);
+  NcmVector *s2              = isauto ? s1 : nc_xcor_kernel_integrand_peek_scales (xclki2);
 
   ncm_spectral_panels_product_integrate (_nc_xcor_panels_product (), sp1, s1, sp2, s2, vp, vp_err);
   ncm_vector_scale (vp, const_factor);
 
   if (vp_err != NULL)
     ncm_vector_scale (vp_err, const_factor);
-
-  ncm_vector_free (s2);
-  ncm_vector_free (s1);
 }
 
 /*
@@ -117,7 +107,7 @@ _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1
     g_error ("_nc_xcor_kernel_integrate_block_exact: the closures hold %u and %u multipoles, the block %u.",
              nc_xcor_kernel_integrand_get_len (xclki1), nc_xcor_kernel_integrand_get_len (side2), nell);
 
-  _nc_xcor_kernel_integrate_block_panels (xc, xclki1, side2, nell, isauto, vp, vp_err);
+  _nc_xcor_kernel_integrate_block_panels (xc, xclki1, side2, isauto, vp, vp_err);
 }
 
 /*

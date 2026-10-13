@@ -519,17 +519,19 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
           k_min_i = k_max_i = x_min;
       }
 
-      row->scale = comp_states->in_u ? (lmin + i + 0.5) : 1.0;
+      const gdouble scale = comp_states->in_u ? (lmin + i + 0.5) : 1.0;
+
+      ncm_vector_set (integrand->scales, i, scale);
       row->x_min = k_min_i;
       row->x_max = k_max_i;
-      row->k_min = k_min_i * row->scale;
-      row->k_max = k_max_i * row->scale;
+      row->k_min = k_min_i * scale;
+      row->k_max = k_max_i * scale;
     }
 
     if (integrand->scaled)
     {
-      integrand->k_min *= g_array_index (integrand->rows, NcXcorKernelIntegrandRow, 0).scale;
-      integrand->k_max *= g_array_index (integrand->rows, NcXcorKernelIntegrandRow, n_l - 1).scale;
+      integrand->k_min *= ncm_vector_get (integrand->scales, 0);
+      integrand->k_max *= ncm_vector_get (integrand->scales, n_l - 1);
     }
 
     return integrand;

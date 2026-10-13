@@ -198,6 +198,7 @@ guint nc_xcor_kernel_integrand_get_len (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_get_range (NcXcorKernelIntegrand *integrand, gdouble *k_min, gdouble *k_max);
 void nc_xcor_kernel_integrand_get_range_comp (NcXcorKernelIntegrand *integrand, guint i, gdouble *k_min, gdouble *k_max);
 gdouble nc_xcor_kernel_integrand_get_scale (NcXcorKernelIntegrand *integrand, guint i);
+NcmVector *nc_xcor_kernel_integrand_peek_scales (NcXcorKernelIntegrand *integrand);
 NcmSpectralPanels *nc_xcor_kernel_integrand_peek_panels (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_eval (NcXcorKernelIntegrand *integrand, gdouble k, gdouble *W);
 void nc_xcor_kernel_integrand_eval_comps (NcXcorKernelIntegrand *integrand, gdouble k, guint offset, guint len, gdouble *W);

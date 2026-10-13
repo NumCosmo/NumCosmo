@@ -70,11 +70,9 @@ typedef struct _NcXcorKernelPrivate
   gboolean outdated;
 } NcXcorKernelPrivate;
 
-/* One row of a closure: the scale s of its variable x = k / s, and its support in k
- * and in x. */
+/* One row of a closure: its support in k and in its variable x = k / s, s its scale. */
 typedef struct _NcXcorKernelIntegrandRow
 {
-  gdouble scale; /* 1 when the closure is in k, nu = l + 1/2 when it is in u = k / nu */
   gdouble k_min;
   gdouble k_max;
   gdouble x_min; /* the ends of the support in x, panel edges: k_min and k_max over the scale */
@@ -89,6 +87,7 @@ struct _NcXcorKernelIntegrand
   guint len;
   NcmSpectralPanels *sp; /* one row per multipole, in x = k / scale */
   GArray *rows;          /* NcXcorKernelIntegrandRow, one per multipole */
+  NcmVector *scales;     /* per multipole, 1 when the closure is in k, nu = l + 1/2 when it is in u = k / nu */
   gboolean scaled;       /* whether any scale differs from 1 */
   gdouble k_min;         /* the k range of the whole block */
   gdouble k_max;
