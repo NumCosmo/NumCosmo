@@ -41,11 +41,9 @@
  * the certified values.
  *
  * Per multipole, as a fraction of its peak: inside the closure's domain the deviation is
- * held to 3 times #NcXcorKernel:peak-epsilon, measured at 1.24 at the defaults and 1.95
- * at the tight setting over the 16 shapes and three orders. The acceptance test
- * compares two consecutive levels, so the accepted level's error is the threshold times
- * the ratio of the remaining tail, near 2 for the windows' hard-edge oscillation in k;
- * beyond the domain, the certified values it drops are held below
+ * held to 3 times #NcXcorKernel:peak-epsilon; the worst measured over the 16 shapes and
+ * three orders is 1.24 at the defaults and 1.95 at the tight setting (power_exp_isw,
+ * d = 0). Beyond the domain, the certified values it drops are held below
  * #NcXcorKernel:adaptive-epsilon times the block's norm, the truncation that sets the
  * domain.
  */
