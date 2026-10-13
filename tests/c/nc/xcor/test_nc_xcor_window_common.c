@@ -1,5 +1,5 @@
 /***************************************************************************
- *            test_nc_xcor_window_dense.c
+ *            test_nc_xcor_window_common.c
  *
  *  Sun Oct 11 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
@@ -23,7 +23,8 @@
  */
 
 /*
- * The Chebyshev closures against the certified windows.
+ * The Chebyshev closures against the certified windows: the checks and their
+ * registration, shared by one test binary per table and Bessel-derivative order.
  *
  * Two tables hold I_ell^(d)(k) = int W(chi) j_ell^(d)(k chi) dchi of the analytic windows,
  * with the kernels that define them (tests/tools/make_xcor_window_bin.py): the dense one,
@@ -51,7 +52,7 @@
 #  include "config.h"
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "test_nc_xcor_window_common.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -86,9 +87,6 @@ typedef struct _TestCase
   NcmObjDictStr *exclude;
   gboolean closure_peak;
 } TestCase;
-
-static NcmObjDictStr *test_dense  = NULL;
-static NcmObjDictStr *test_sparse = NULL;
 
 static gint
 _test_cmp_int (gconstpointer a, gconstpointer b)
@@ -334,9 +332,18 @@ test_nc_xcor_window (gconstpointer pdata)
   g_free (kkey);
 }
 
-/* Registers a test per kernel of @table under @prefix, leaving out @exclude's multipoles */
-static void
-_test_register (NcmObjDictStr *table, NcmObjDictStr *exclude, gboolean closure_peak, const gchar *prefix)
+/**
+ * test_nc_xcor_window_register:
+ * @table: the table of certified windows and their kernels
+ * @exclude: (nullable): a table whose multipoles are left out
+ * @closure_peak: whether a multipole's scale is the closure's own peak
+ * @d: Bessel-derivative order
+ * @prefix: test-path prefix
+ *
+ * Registers a test per kernel of order @d in @table, at @prefix/d@d/shape.
+ */
+void
+test_nc_xcor_window_register (NcmObjDictStr *table, NcmObjDictStr *exclude, gboolean closure_peak, guint d, const gchar *prefix)
 {
   GStrv all_keys  = ncm_obj_dict_str_keys (table);
   GPtrArray *keys = g_ptr_array_new ();
@@ -364,7 +371,10 @@ _test_register (NcmObjDictStr *table, NcmObjDictStr *exclude, gboolean closure_p
       tc->closure_peak = closure_peak;
       path             = g_strdup_printf ("%s/d%u/%s", prefix, tc->d, tc->shape);
 
-      g_test_add_data_func_full (path, tc, &test_nc_xcor_window, &_test_case_free);
+      if (tc->d == d)
+        g_test_add_data_func_full (path, tc, &test_nc_xcor_window, &_test_case_free);
+      else
+        _test_case_free (tc);
 
       g_free (path);
       g_strfreev (parts);
@@ -375,36 +385,51 @@ _test_register (NcmObjDictStr *table, NcmObjDictStr *exclude, gboolean closure_p
   g_free (all_keys); /* transfer container */
 }
 
-gint
-main (gint argc, gchar *argv[])
+/* The table in @filename, a dictionary of the certified windows and their kernels */
+static NcmObjDictStr *
+_test_table (const gchar *filename)
 {
-  NcmSerialize *ser;
-  gchar *dense_file;
-  gchar *sparse_file;
+  NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmObjDictStr *table = ncm_serialize_dict_str_from_binfile (ser, filename);
 
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  dense_file  = nc_data_download_release_file (TEST_DENSE_FILE);
-  sparse_file = ncm_cfg_get_data_filename (TEST_SPARSE_FILE, TRUE);
-  ser         = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-  test_dense  = ncm_serialize_dict_str_from_binfile (ser, dense_file);
-  ncm_serialize_reset (ser, TRUE);
-  test_sparse = ncm_serialize_dict_str_from_binfile (ser, sparse_file);
-
-  _test_register (test_dense, NULL, FALSE, "/nc/xcor/window_dense");
-  _test_register (test_sparse, test_dense, TRUE, "/nc/xcor/window_sparse");
-
-  g_free (dense_file);
-  g_free (sparse_file);
-
-  g_test_run ();
-
-  ncm_obj_dict_str_unref (test_dense);
-  ncm_obj_dict_str_unref (test_sparse);
   ncm_serialize_free (ser);
+
+  return table;
+}
+
+/**
+ * test_nc_xcor_window_dense_table:
+ *
+ * Loads the dense table, downloading it from the data-file release when it is absent.
+ *
+ * Returns: (transfer full): the dense table
+ */
+NcmObjDictStr *
+test_nc_xcor_window_dense_table (void)
+{
+  gchar *filename      = nc_data_download_release_file (TEST_DENSE_FILE);
+  NcmObjDictStr *table = _test_table (filename);
+
+  g_free (filename);
+
+  return table;
+}
+
+/**
+ * test_nc_xcor_window_sparse_table:
+ *
+ * Loads the sparse table from the truth tables.
+ *
+ * Returns: (transfer full): the sparse table
+ */
+NcmObjDictStr *
+test_nc_xcor_window_sparse_table (void)
+{
+  gchar *filename      = ncm_cfg_get_data_filename (TEST_SPARSE_FILE, TRUE);
+  NcmObjDictStr *table = _test_table (filename);
+
+  g_free (filename);
+
+  return table;
 }
 
