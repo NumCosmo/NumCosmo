@@ -1209,9 +1209,8 @@ def test_limber_agrees_with_non_limber_at_high_ell():
         ps = Ncm.PowspecAnalytic.new(Ncm.PowspecAnalyticShape.BBKS, growth)
 
         for ell in (100, 200):
-            # One integrator per multipole: new_full(lmin, lmax) allocates over
-            # the whole contiguous range.
-            sbi = Ncm.SBesselIntegratorLevin.new(ell, ell)
+            # A block of four multipoles, as the library builds its closures.
+            sbi = Ncm.SBesselIntegratorLevin.new(ell, ell + 3)
             k_nl = Nc.XcorKernelAnalyticGauss.new_full(
                 dist, ps, 1500.0, 300.0, 4.0, sbi
             )
@@ -1225,14 +1224,14 @@ def test_limber_agrees_with_non_limber_at_high_ell():
             def _cl(kernel, method):
                 xc = Nc.Xcor.new(dist, ps, method)
                 xc.prepare(cosmo)
-                v = Ncm.Vector.new(1)
-                xc.compute(kernel, kernel, cosmo, ell, ell, v)
-                return v.get(0)
+                v = Ncm.Vector.new(4)
+                xc.compute(kernel, kernel, cosmo, ell, ell + 3, v)
+                return np.array(v.dup_array())
 
             non_limber = _cl(k_nl, Nc.XcorMethod.KERNEL_EXACT)
             limber = _cl(k_li, Nc.XcorMethod.LIMBER_Z_CUBATURE)
 
-            assert limber == pytest.approx(non_limber, rel=2.0e-3)
+            assert_allclose(limber, non_limber, rtol=2.0e-3)
 
 
 def test_limber_agrees_with_non_limber_under_scale_dependence():
@@ -1251,7 +1250,7 @@ def test_limber_agrees_with_non_limber_under_scale_dependence():
     )
 
     for ell in (100, 200):
-        sbi = Ncm.SBesselIntegratorLevin.new(ell, ell)
+        sbi = Ncm.SBesselIntegratorLevin.new(ell, ell + 3)
         kdep_a = Nc.XcorKernelRadialKDepGrowth.new(0.3, 0.05, 1500.0)
         kdep_b = Nc.XcorKernelRadialKDepGrowth.new(0.3, 0.05, 1500.0)
 
@@ -1281,14 +1280,14 @@ def test_limber_agrees_with_non_limber_under_scale_dependence():
         def _cl(kernel, method):
             xc = Nc.Xcor.new(dist, ps, method)
             xc.prepare(cosmo)
-            v = Ncm.Vector.new(1)
-            xc.compute(kernel, kernel, cosmo, ell, ell, v)
-            return v.get(0)
+            v = Ncm.Vector.new(4)
+            xc.compute(kernel, kernel, cosmo, ell, ell + 3, v)
+            return np.array(v.dup_array())
 
         non_limber = _cl(k_nl, Nc.XcorMethod.KERNEL_EXACT)
         limber = _cl(k_li, Nc.XcorMethod.LIMBER_Z_CUBATURE)
 
-        assert limber == pytest.approx(non_limber, rel=5.0e-3)
+        assert_allclose(limber, non_limber, rtol=5.0e-3)
 
 
 # ------------------------------------------------ component boundaries ---
