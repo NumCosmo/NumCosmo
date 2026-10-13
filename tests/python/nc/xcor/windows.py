@@ -66,8 +66,6 @@ from __future__ import annotations
 
 import typing
 
-from numcosmo_py import Nc, Ncm
-
 # form -> the parameters that form takes, in constructor order. Documented here
 # so a case's tuple can be read without opening the generator.
 FORM_PARAMS: typing.Final[dict[str, tuple[str, ...]]] = {
@@ -304,7 +302,13 @@ def arb_args(name: str, side: str | None = None) -> list[str]:
 
 
 def make_kernel(shape, dist, ps, sbi, ctor):
-    """Build one analytic kernel from the constructor arguments in the table."""
+    """Build one analytic kernel from the constructor arguments in the table.
+
+    numcosmo_py is imported here and not at module level: the Arb generators in
+    tests/tools import this module for the vocabulary alone.
+    """
+    from numcosmo_py import Nc, Ncm  # noqa: PLC0415
+
     match shape:
         case "gauss":
             return Nc.XcorKernelAnalyticGauss.new_full(dist, ps, *ctor, sbi)
