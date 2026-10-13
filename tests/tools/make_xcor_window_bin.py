@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 #
-# make_xcor_window_dense_bin.py
+# make_xcor_window_bin.py
 #
 # Sun Oct 11 2026
 # Copyright  2026  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# make_xcor_window_dense_bin.py
+# make_xcor_window_bin.py
 # Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
@@ -22,17 +22,24 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Write the dense certified windows as one NcmSerialize file for the C tests.
+"""Write certified window tables as one NcmSerialize file for the C tests.
 
-The certified values are the gzipped JSON tables of the dense window run, one per
-Bessel-derivative order d = 0, 1, 2, with the convention of
-``make_xcor_window_truth_table.py``:
+The certified values are gzipped JSON tables, one per Bessel-derivative order d = 0, 1,
+2, with the convention of ``make_xcor_window_truth_table.py``:
 
     I_ell^(d)(k) = int W(chi) j_ell^(d)(k chi) dchi,  chi in Mpc, k in 1/Mpc,
 
-with W the normalized analytic window, on 50 k per decade over the library closure's
-domain of each (shape, ell), certified to a relative radius of 1e-25. The three orders
-share one k grid.
+with W the normalized analytic window. Two sets:
+
+- ``dense``: ``xcor_window_ilk_dense_d<d>.json.gz``, 50 k per decade over the library
+  closure's domain of each (shape, ell), certified to a relative radius of 1e-25; the
+  cells all three orders certify;
+- ``sparse``: ``xcor_window_ilk.json.gz``, ``xcor_window_ilk_d1.json.gz`` and
+  ``xcor_window_ilk_d2.json.gz`` (data/truth_tables/xcor), 11 points in x/nu per
+  multipole up to ell = 1000; every cell any order certifies, NaN in an order's column
+  where that order has none (d = 2 stops at ell = 500).
+
+The orders of a cell share one k grid.
 
 The output is one NcmObjDictStr holding:
 
@@ -42,10 +49,13 @@ The output is one NcmObjDictStr holding:
 - ``table/<shape>|<ell>``: an NcmMatrix, one row per k, columns (k, I^(0), I^(1), I^(2)),
   as doubles.
 
-It is a file of the NumCosmo data-file release, too large for the repository:
+The dense file is part of the NumCosmo data-file release, too large for the repository;
+the sparse one is small enough to live in data/truth_tables/xcor:
 
-    python3 tests/tools/make_xcor_window_dense_bin.py <dir with the json.gz> \\
+    python3 tests/tools/make_xcor_window_bin.py dense <dir with the json.gz> \\
         xcor_window_ilk_dense.bin
+    python3 tests/tools/make_xcor_window_bin.py sparse data/truth_tables/xcor \\
+        data/truth_tables/xcor/xcor_window_ilk.bin
 """
 
 from __future__ import annotations
@@ -64,6 +74,15 @@ from numcosmo_py import Nc, Ncm  # noqa: E402
 from test_xcor_window_truth_table import _make_kernel  # noqa: E402
 
 DERIVS = (0, 1, 2)
+
+SOURCES = {
+    "dense": [f"xcor_window_ilk_dense_d{d}.json.gz" for d in DERIVS],
+    "sparse": [
+        "xcor_window_ilk.json.gz",
+        "xcor_window_ilk_d1.json.gz",
+        "xcor_window_ilk_d2.json.gz",
+    ],
+}
 
 
 def _cells(path: pathlib.Path) -> tuple[dict, dict]:
@@ -86,14 +105,23 @@ def _cells(path: pathlib.Path) -> tuple[dict, dict]:
 
 
 def main() -> None:
-    """Read the three tables and write the NcmSerialize file."""
-    src = pathlib.Path(sys.argv[1])
-    out = sys.argv[2]
+    """Read the three tables of a set and write the NcmSerialize file."""
+    kind = sys.argv[1]
+    src = pathlib.Path(sys.argv[2])
+    out = sys.argv[3]
+
+    if kind not in SOURCES:
+        raise SystemExit(f"unknown set {kind}, expected one of {sorted(SOURCES)}")
 
     Ncm.cfg_init()
-    tables = [_cells(src / f"xcor_window_ilk_dense_d{d}.json.gz") for d in DERIVS]
+    tables = [_cells(src / name) for name in SOURCES[kind]]
     shapes = tables[0][1]
-    keys = sorted(set.intersection(*(set(cells) for cells, _ in tables)))
+    cell_sets = [set(cells) for cells, _ in tables]
+
+    if kind == "dense":
+        keys = sorted(set.intersection(*cell_sets))
+    else:
+        keys = sorted(set.union(*cell_sets))
 
     cosmo = Nc.HICosmoDEXcdm.new()
     dist = Nc.Distance.new(5.0)
@@ -126,16 +154,22 @@ def main() -> None:
             )
 
     for shape, ell in keys:
-        kvals = tables[0][0][(shape, ell)][0]
-        for cells, _ in tables[1:]:
-            if cells[(shape, ell)][0] != kvals:
+        present = [cells[(shape, ell)] for cells, _ in tables if (shape, ell) in cells]
+        kvals = present[0][0]
+        for cell in present[1:]:
+            if cell[0] != kvals:
                 raise ValueError(f"{shape} ell = {ell}: the orders' k grids differ")
 
         m = Ncm.Matrix.new(len(kvals), 1 + len(DERIVS))
         for j, k in enumerate(kvals):
             m.set(j, 0, k)
             for d, (cells, _) in enumerate(tables):
-                m.set(j, 1 + d, float(cells[(shape, ell)][1][j]))
+                value = (
+                    float(cells[(shape, ell)][1][j])
+                    if (shape, ell) in cells
+                    else float("nan")
+                )
+                m.set(j, 1 + d, value)
         root.add(f"table/{shape}|{ell}", m)
 
     ser.reset(True)

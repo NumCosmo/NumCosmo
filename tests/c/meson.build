@@ -782,8 +782,8 @@ xcor_tests = [
         'name': 'nc_xcor_ssc_sij',
         'sources': ['nc/xcor/test_nc_xcor_ssc_sij.c'],
     },
-    # One binary per Bessel-derivative order, selected by its test-path prefix, so the
-    # three run in parallel.
+    # One binary per table and Bessel-derivative order, selected by its test-path
+    # prefix, so they run in parallel.
     {
         'name': 'nc_xcor_window_dense_d0',
         'sources': ['nc/xcor/test_nc_xcor_window_dense.c'],
@@ -800,6 +800,24 @@ xcor_tests = [
         'name': 'nc_xcor_window_dense_d2',
         'sources': ['nc/xcor/test_nc_xcor_window_dense.c'],
         'args': ['-p', '/nc/xcor/window_dense/d2'],
+        'timeout': 180,
+    },
+    {
+        'name': 'nc_xcor_window_sparse_d0',
+        'sources': ['nc/xcor/test_nc_xcor_window_dense.c'],
+        'args': ['-p', '/nc/xcor/window_sparse/d0'],
+        'timeout': 180,
+    },
+    {
+        'name': 'nc_xcor_window_sparse_d1',
+        'sources': ['nc/xcor/test_nc_xcor_window_dense.c'],
+        'args': ['-p', '/nc/xcor/window_sparse/d1'],
+        'timeout': 180,
+    },
+    {
+        'name': 'nc_xcor_window_sparse_d2',
+        'sources': ['nc/xcor/test_nc_xcor_window_dense.c'],
+        'args': ['-p', '/nc/xcor/window_sparse/d2'],
         'timeout': 180,
     },
 ]

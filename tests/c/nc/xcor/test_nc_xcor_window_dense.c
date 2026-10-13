@@ -23,13 +23,20 @@
  */
 
 /*
- * The Chebyshev closures against the dense certified windows.
+ * The Chebyshev closures against the certified windows.
  *
- * The table holds I_ell^(d)(k) = int W(chi) j_ell^(d)(k chi) dchi of the analytic windows,
+ * Two tables hold I_ell^(d)(k) = int W(chi) j_ell^(d)(k chi) dchi of the analytic windows,
+ * with the kernels that define them (tests/tools/make_xcor_window_bin.py): the dense one,
  * certified in Arb to a relative radius of 1e-25 on 50 k per decade over the closure's
- * domain, for d = 0, 1, 2 and ell 2..10, 50, 100, 200, with the kernels that define them
- * (tests/tools/make_xcor_window_dense_bin.py). A closure of an analytic kernel holds
- * sqrt(P(k)) I_ell(k), so each certified point is compared with it directly.
+ * domain, for d = 0, 1, 2 and ell 2..10, 50, 100, 200 (a data-file release file); and the
+ * sparse one, 11 points in x/nu per multipole up to ell = 1000 (data/truth_tables/xcor),
+ * of which only the multipoles the dense one lacks are checked. A closure of an analytic
+ * kernel holds sqrt(P(k)) I_ell(k), so each certified point is compared with it directly.
+ *
+ * A multipole's scale is its peak. The dense table's points find it; the sparse table's
+ * x/nu grid finds it for d = 0 but misses the peak of the derivative orders by 10 to 100
+ * times, so there the scale is the closure's own largest |W| over a dense scan of its
+ * domain. The deviations are still taken against the certified values.
  *
  * Per multipole, as a fraction of its peak: inside the closure's domain the deviation is
  * held to a multiple of #NcXcorKernel:peak-epsilon, measured at 1.9 at the defaults and
@@ -51,6 +58,8 @@
 #include <string.h>
 
 #define TEST_DENSE_FILE "xcor_window_ilk_dense.bin"
+#define TEST_SPARSE_FILE "truth_tables/xcor/xcor_window_ilk.bin"
+#define TEST_PEAK_SCAN 4096
 
 /* One setting the closures are built at, with the deviation it is held to */
 typedef struct _TestSetting
@@ -67,14 +76,19 @@ static const TestSetting test_settings[] = {
   {"tight",   1.0e-8, 1.0e-7, 1.0e-9, 2.0},
 };
 
-/* One (shape, order) case: the kernel's key in the table */
+/* One (shape, order) case: the kernel's key in its table, the table whose multipoles it
+ * leaves out (NULL: none), and whether the scale is the closure's own peak */
 typedef struct _TestCase
 {
   gchar *shape;
   guint d;
+  NcmObjDictStr *table;
+  NcmObjDictStr *exclude;
+  gboolean closure_peak;
 } TestCase;
 
-static NcmObjDictStr *test_table = NULL;
+static NcmObjDictStr *test_dense  = NULL;
+static NcmObjDictStr *test_sparse = NULL;
 
 static gint
 _test_cmp_int (gconstpointer a, gconstpointer b)
@@ -97,11 +111,11 @@ _test_case_free (gpointer data)
   g_free (tc);
 }
 
-/* The multipoles the table certifies for @shape, ascending */
+/* The multipoles @table certifies for @shape, ascending */
 static GArray *
-_test_ells (const gchar *shape)
+_test_ells (NcmObjDictStr *table, const gchar *shape)
 {
-  GStrv keys    = ncm_obj_dict_str_keys (test_table);
+  GStrv keys    = ncm_obj_dict_str_keys (table);
   gchar *prefix = g_strdup_printf ("table/%s|", shape);
   GArray *ells  = g_array_new (FALSE, FALSE, sizeof (gint));
   guint i;
@@ -186,7 +200,7 @@ _test_block (NcXcorKernel *proto, NcHICosmo *cosmo, const TestCase *tc, const Te
   for (ell = lmin; ell <= lmax; ell++)
   {
     gchar *key       = g_strdup_printf ("table/%s|%d", tc->shape, ell);
-    NcmMatrix *table = NCM_MATRIX (ncm_obj_dict_str_peek (test_table, key));
+    NcmMatrix *table = NCM_MATRIX (ncm_obj_dict_str_peek (tc->table, key));
     const guint n    = ncm_matrix_nrows (table);
     const guint i    = ell - lmin;
     guint j;
@@ -213,10 +227,28 @@ _test_block (NcXcorKernel *proto, NcHICosmo *cosmo, const TestCase *tc, const Te
       }
     }
 
-    norm2 += gsl_pow_2 (g_array_index (peak, gdouble, i));
-
     g_free (key);
   }
+
+  if (tc->closure_peak)
+  {
+    for (ell = lmin; ell <= lmax; ell++)
+    {
+      const guint i = ell - lmin;
+      guint j;
+
+      for (j = 0; j < TEST_PEAK_SCAN; j++)
+      {
+        const gdouble k = k_lo * pow (k_hi / k_lo, (j + 0.5) / TEST_PEAK_SCAN);
+
+        nc_xcor_kernel_integrand_eval_comps (xclki, k, i, 1, &g_array_index (W, gdouble, 0));
+        g_array_index (peak, gdouble, i) = MAX (g_array_index (peak, gdouble, i), fabs (g_array_index (W, gdouble, i)));
+      }
+    }
+  }
+
+  for (ell = lmin; ell <= lmax; ell++)
+    norm2 += gsl_pow_2 (g_array_index (peak, gdouble, ell - lmin));
 
   for (ell = lmin; ell <= lmax; ell++)
   {
@@ -246,18 +278,32 @@ _test_block (NcXcorKernel *proto, NcHICosmo *cosmo, const TestCase *tc, const Te
   ncm_serialize_free (ser);
 }
 
+/* Whether @tc checks @ell: present in its table for its order, absent from the excluded one */
+static gboolean
+_test_checks_ell (const TestCase *tc, gint ell)
+{
+  gchar *key       = g_strdup_printf ("table/%s|%d", tc->shape, ell);
+  NcmMatrix *table = NCM_MATRIX (ncm_obj_dict_str_peek (tc->table, key));
+  gboolean checks  = gsl_finite (ncm_matrix_get (table, 0, 1 + tc->d)) &&
+                     ((tc->exclude == NULL) || (ncm_obj_dict_str_peek (tc->exclude, key) == NULL));
+
+  g_free (key);
+
+  return checks;
+}
+
 /*
  * One (shape, order): the closures at every setting, the multipoles 2..9 as one block,
  * as the solver builds them, and every other multipole alone.
  */
 static void
-test_nc_xcor_window_dense (gconstpointer pdata)
+test_nc_xcor_window (gconstpointer pdata)
 {
   const TestCase *tc = pdata;
   gchar *kkey        = g_strdup_printf ("kernel/%s/d%u", tc->shape, tc->d);
-  NcXcorKernel *xclk = NC_XCOR_KERNEL (ncm_obj_dict_str_peek (test_table, kkey));
+  NcXcorKernel *xclk = NC_XCOR_KERNEL (ncm_obj_dict_str_peek (tc->table, kkey));
   NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  GArray *ells       = _test_ells (tc->shape);
+  GArray *ells       = _test_ells (tc->table, tc->shape);
   guint s, i;
 
   g_assert_nonnull (xclk);
@@ -267,7 +313,8 @@ test_nc_xcor_window_dense (gconstpointer pdata)
     guint n_block = 0;
 
     for (i = 0; i < ells->len; i++)
-      if ((g_array_index (ells, gint, i) >= 2) && (g_array_index (ells, gint, i) <= 9))
+      if ((g_array_index (ells, gint, i) >= 2) && (g_array_index (ells, gint, i) <= 9) &&
+          _test_checks_ell (tc, g_array_index (ells, gint, i)))
         n_block++;
 
     if (n_block == 8)
@@ -277,7 +324,7 @@ test_nc_xcor_window_dense (gconstpointer pdata)
     {
       const gint ell = g_array_index (ells, gint, i);
 
-      if ((n_block != 8) || (ell > 9))
+      if (((n_block != 8) || (ell > 9)) && _test_checks_ell (tc, ell))
         _test_block (xclk, cosmo, tc, &test_settings[s], ell, ell);
     }
   }
@@ -287,26 +334,13 @@ test_nc_xcor_window_dense (gconstpointer pdata)
   g_free (kkey);
 }
 
-gint
-main (gint argc, gchar *argv[])
+/* Registers a test per kernel of @table under @prefix, leaving out @exclude's multipoles */
+static void
+_test_register (NcmObjDictStr *table, NcmObjDictStr *exclude, gboolean closure_peak, const gchar *prefix)
 {
-  NcmSerialize *ser;
-  GPtrArray *keys;
-  GStrv all_keys;
-  gchar *filename;
+  GStrv all_keys  = ncm_obj_dict_str_keys (table);
+  GPtrArray *keys = g_ptr_array_new ();
   guint i;
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  filename   = nc_data_download_release_file (TEST_DENSE_FILE);
-  ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-  test_table = ncm_serialize_dict_str_from_binfile (ser, filename);
-  all_keys   = ncm_obj_dict_str_keys (test_table);
-  keys       = g_ptr_array_new ();
 
   for (i = 0; all_keys[i] != NULL; i++)
     g_ptr_array_add (keys, all_keys[i]);
@@ -323,11 +357,14 @@ main (gint argc, gchar *argv[])
       TestCase *tc  = g_new0 (TestCase, 1);
       gchar *path;
 
-      tc->shape = g_strdup (parts[1]);
-      tc->d     = atoi (parts[2] + 1);
-      path      = g_strdup_printf ("/nc/xcor/window_dense/d%u/%s", tc->d, tc->shape);
+      tc->shape        = g_strdup (parts[1]);
+      tc->d            = atoi (parts[2] + 1);
+      tc->table        = table;
+      tc->exclude      = exclude;
+      tc->closure_peak = closure_peak;
+      path             = g_strdup_printf ("%s/d%u/%s", prefix, tc->d, tc->shape);
 
-      g_test_add_data_func_full (path, tc, &test_nc_xcor_window_dense, &_test_case_free);
+      g_test_add_data_func_full (path, tc, &test_nc_xcor_window, &_test_case_free);
 
       g_free (path);
       g_strfreev (parts);
@@ -336,11 +373,38 @@ main (gint argc, gchar *argv[])
 
   g_ptr_array_unref (keys);
   g_free (all_keys); /* transfer container */
-  g_free (filename);
+}
+
+gint
+main (gint argc, gchar *argv[])
+{
+  NcmSerialize *ser;
+  gchar *dense_file;
+  gchar *sparse_file;
+
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  dense_file  = nc_data_download_release_file (TEST_DENSE_FILE);
+  sparse_file = ncm_cfg_get_data_filename (TEST_SPARSE_FILE, TRUE);
+  ser         = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  test_dense  = ncm_serialize_dict_str_from_binfile (ser, dense_file);
+  ncm_serialize_reset (ser, TRUE);
+  test_sparse = ncm_serialize_dict_str_from_binfile (ser, sparse_file);
+
+  _test_register (test_dense, NULL, FALSE, "/nc/xcor/window_dense");
+  _test_register (test_sparse, test_dense, TRUE, "/nc/xcor/window_sparse");
+
+  g_free (dense_file);
+  g_free (sparse_file);
 
   g_test_run ();
 
-  ncm_obj_dict_str_unref (test_table);
+  ncm_obj_dict_str_unref (test_dense);
+  ncm_obj_dict_str_unref (test_sparse);
   ncm_serialize_free (ser);
 }
 

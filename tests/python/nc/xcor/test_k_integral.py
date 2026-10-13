@@ -28,8 +28,9 @@ KERNEL_EXACT is handed frozen closures and compared to a reference built from
 the closures it integrates, one per ell block.
 
 What is measured here is therefore the quadrature alone. The closure's own
-error against certified Arb values is ``test_xcor_window_truth_table.py``'s
-subject, and the two together are what ``bench_k_integral.py`` reports.
+error against certified Arb values is the subject of the C test
+``tests/c/nc/xcor/test_nc_xcor_window_dense.c``, and the two together are what
+``bench_k_integral.py`` reports.
 
 The case matrix lives in ``cases_k_integral.py``. Every tolerance below was
 read off that bench driver; none was chosen.
