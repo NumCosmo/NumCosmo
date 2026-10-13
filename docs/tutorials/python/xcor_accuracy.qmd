@@ -313,7 +313,8 @@ display(Markdown(rf"""
 Measured against the diagonal, the estimates of the three pairs lie between
 {sci(min(diag_err.values()))} and {sci(max(diag_err.values()))}. The separated cross
 spectrum is {sci(diag_cl['cross, separated bins'])} of the diagonal, so its estimate
-relative to $\vert C_\ell \vert$ is larger than relative to the diagonal by that factor.
+relative to $\vert C_\ell \vert$ is larger than relative to the diagonal by the inverse
+of that fraction, about {sci(1.0 / diag_cl['cross, separated bins'])}.
 The closures of the three pairs are built at the same tolerances.
 """))
 ```
