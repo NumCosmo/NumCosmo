@@ -64,6 +64,43 @@ CONVERGED_TOL = 1.0e-6
 NON_LIMBER_KMAX = 10.0
 
 
+def _k2_integrals(
+    integrand: Nc.XcorKernelIntegrand, k_min: float, k_max: float
+) -> np.ndarray:
+    """Return int_{k_min}^{k_max} k^2 W_r(k)^2 dk for every row of a closure.
+
+    The closure is piecewise polynomial, and NcmSpectralPanelsProduct integrates the
+    square of a panel set exactly. Row r lives in x = k / s_r, so the panels are
+    restricted to [k_min / s_r, k_max / s_r] before its product is taken.
+    """
+    sp = integrand.peek_panels()
+    n_rows = integrand.get_len()
+    scales = Ncm.Vector.new_array([integrand.get_scale(r) for r in range(n_rows)])
+    spectral = Ncm.Spectral.new()
+    product = Ncm.SpectralPanelsProduct.new(2)
+    result = Ncm.Vector.new(n_rows)
+    out = np.zeros(n_rows)
+
+    for r in range(n_rows):
+        lo, hi = k_min / scales.get(r), k_max / scales.get(r)
+        restricted = Ncm.SpectralPanels.new(sp.get_fdim())
+
+        for i in range(sp.get_n_panels()):
+            _, a, b = sp.get_panel(i)
+            a_r, b_r = max(a, lo), min(b, hi)
+
+            if a_r < b_r:
+                inside, coeffs = sp.restrict(spectral, a_r, b_r)
+                assert inside
+                restricted.append(a_r, b_r, coeffs)
+
+        if restricted.get_n_panels() > 0:
+            product.integrate(restricted, scales, restricted, scales, result, None)
+            out[r] = result.get(r)
+
+    return out
+
+
 @pytest.fixture(name="capped_powspec")
 def fixture_capped_powspec(cosmology: Cosmology):
     """Cap the fixture power spectrum for one test, then restore it.
@@ -367,22 +404,9 @@ def test_k_projection_limber_vs_non_limber(
         kmin = max(kmin_limber, kmin_non_limber)
         kmax = min(kmax_limber, kmax_non_limber)
 
-        # Use 2000 k points for accurate integration
-        k_array = np.geomspace(kmin, kmax, 5000)
-        lnk = np.log(k_array)
-
-        # Evaluate kernels
-        limber_result = np.array([limber_func.eval_array(k)[0] for k in k_array])
-        non_limber_result = np.array(
-            [non_limber_func.eval_array(k)[0] for k in k_array]
-        )
-
-        # Compute k-space projection integrals: I = int k^3 K^2(k) d(ln k)
-        integrand_limber = k_array**3 * limber_result**2
-        integrand_non_limber = k_array**3 * non_limber_result**2
-
-        I_limber = np.trapezoid(integrand_limber, x=lnk)
-        I_exact = np.trapezoid(integrand_non_limber, x=lnk)
+        # I = int k^3 K^2(k) d(ln k) = int k^2 K^2 dk, exact on the closures' panels
+        I_limber = _k2_integrals(limber_func, kmin, kmax)[0]
+        I_exact = _k2_integrals(non_limber_func, kmin, kmax)[0]
 
         # Check relative agreement
         rel_diff = np.abs((I_limber - I_exact) / I_exact)
@@ -534,23 +558,14 @@ def test_k_projection_limber_vs_non_limber_vectorized(
         kmin = max(kmin_limber, kmin_non_limber)
         kmax = min(kmax_limber, kmax_non_limber)
 
-        # Use 5000 k points for accurate integration
-        k_array = np.geomspace(kmin, kmax, 5000)
-        lnk = np.log(k_array)
+        # I = int k^3 K^2(k) d(ln k) = int k^2 K^2 dk per multipole, exact on the panels
+        I_limber_block = _k2_integrals(limber_func, kmin, kmax)
+        I_exact_block = _k2_integrals(non_limber_func, kmin, kmax)
 
-        # Evaluate kernels - each returns array of n_ells values per k
-        limber_results = np.array([limber_func.eval_array(k) for k in k_array])
-        non_limber_results = np.array([non_limber_func.eval_array(k) for k in k_array])
-
-        # Compute k-space projection integrals for each ell
-        # Shape: (n_k, n_ells) -> integrate over k axis for each ell
         for i in range(n_ells):
             ell = ell_start + i
-            integrand_limber = k_array**3 * limber_results[:, i] ** 2
-            integrand_non_limber = k_array**3 * non_limber_results[:, i] ** 2
-
-            I_limber = np.trapezoid(integrand_limber, x=lnk)
-            I_exact = np.trapezoid(integrand_non_limber, x=lnk)
+            I_limber = I_limber_block[i]
+            I_exact = I_exact_block[i]
 
             # Check relative agreement for this ell
             rel_diff = np.abs((I_limber - I_exact) / I_exact)
