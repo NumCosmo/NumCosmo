@@ -587,8 +587,8 @@ def test_range_edges():
         rel=1.0e-12,
     )
 
-    # A support with no upper end: the shear there is not finite, so it
-    # bounds nothing and the galaxy keeps the full mesh.
+    # A redshift support with no upper end: the shear is not evaluated at
+    # z = inf and the galaxy keeps the full mesh.
     unbounded = Nc.GalaxyShapeFactorMomentsTilt.new(conv)
     d_inf, _i = _make_data(unbounded, mset, 0.1, ra=0.3)
     unbounded.prepare(mset)

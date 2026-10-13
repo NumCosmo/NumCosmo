@@ -1735,6 +1735,12 @@ _nc_galaxy_shape_factor_moments_tilt_data_prepare (NcGalaxyShapeFactor *gsf, Ncm
      * halo itself: nothing to bound. */
     ghat_max = (z_sup <= self->z_cl) ? 0.0 : 1.0;
   }
+  else if (!gsl_finite (z_sup))
+  {
+    /* Redshift support with no upper end: keep the full mesh, since the
+     * shear cannot be evaluated at z = inf. */
+    ghat_max = 1.0;
+  }
   else
   {
     gdouble g_lo, g_hi;
